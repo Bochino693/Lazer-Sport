@@ -1,0 +1,255 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>{% block title %}Painel Administrativo{% endblock %}</title>
+
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #f7f9fc;
+  }
+
+  /* BOTÃO HAMBÚRGUER — destacado, SEM transformar em X */
+  .hamburger {
+    position: fixed;
+    top: 16px;
+    left: 16px;
+    width: 46px;
+    height: 36px;
+    cursor: pointer;
+    z-index: 2100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.12);
+    padding: 6px;
+  }
+
+  .hamburger div {
+    width: 26px;
+    height: 3.5px;
+    background: #0d6efd;
+    margin: 4px 0;
+    border-radius: 3px;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+  }
+
+  .hamburger.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+
+  /* overlay para fechar ao clicar fora */
+  .overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    display: none;
+    z-index: 1600;
+    backdrop-filter: blur(2px);
+  }
+  .overlay.show { display: block; }
+
+  /* SIDEBAR */
+  .sidebar {
+    width: 300px;                     /* um pouco maior para botões */
+    background: #0d6efd;
+    color: #fff;
+    padding: 28px 18px 90px 18px;     /* espaço inferior para botão "Fechar" */
+    position: fixed;
+    top: 0;
+    left: -320px;
+    height: 100vh;
+    transition: left 0.28s ease;
+    z-index: 1700;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    text-align: center; /* centraliza títulos e textos */
+  }
+
+  .sidebar.open { left: 0; }
+
+  /* Evitar sobreposição do botão (hamburger) com o título */
+  .sidebar .header-wrap {
+    padding-top: 20px;  /* mantém distância do topo (hamburger) */
+  }
+
+  .sidebar h2 {
+    margin: 0 0 6px 0;
+    font-size: 20px;
+    font-weight: 700;
+    color: #fff;
+  }
+
+  .sidebar a {
+    color: #fff;
+    text-decoration: none;
+    text-align: center; /* centraliza títulos e textos */
+    padding: 10px 12px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 6px;
+    transition: background 0.18s ease;
+    display: block;
+  }
+  .sidebar a:hover { background: rgba(255,255,255,0.18); }
+
+  /* Botão FECHAR dentro do painel — fixo abaixo dos links */
+  .sidebar .close-btn {
+    margin-top: auto; /* empurra para baixo */
+    display: block;
+    width: calc(100% - 36px);
+    align-self: center;
+    background: #ffffff;
+    color: #0d6efd;
+    border: none;
+    padding: 12px 14px;
+    font-weight: 700;
+    border-radius: 10px;
+    cursor: pointer;
+    text-align: center;
+    box-shadow: 0 6px 18px rgba(13,110,253,0.12);
+  }
+  .sidebar .close-btn:hover {
+    transform: translateY(-2px);
+  }
+
+  /* CONTEÚDO PRINCIPAL */
+  .content {
+    padding: 70px 25px 100px 25px;
+    transition: margin-left 0.28s ease;
+    min-height: 100vh;
+  }
+
+  @media (min-width: 1000px) {
+    /* conteúdo empurra quando painel está aberto em desktop */
+    .content.with-sidebar { margin-left: 300px; }
+  }
+
+  footer {
+    background: #0d6efd;
+    color: #fff;
+    text-align: center;
+    padding: 12px;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    z-index: 5;
+  }
+
+  /* pequenos ajustes para legibilidade */
+  .sidebar .meta { font-size: 0.9rem; opacity: 0.95; }
+</style>
+</head>
+<body>
+
+<!-- overlay -->
+<div id="overlay" class="overlay" aria-hidden="true"></div>
+
+<!-- hambúrguer (não vira X) -->
+<button id="hamburger" class="hamburger" aria-label="Abrir menu">
+  <div></div>
+  <div></div>
+  <div></div>
+</button>
+
+<!-- SIDEBAR -->
+<aside id="sidebar" class="sidebar" role="navigation" aria-label="Menu administrativo">
+  <div class="header-wrap">
+    <h2>Administração</h2>
+    <div class="meta">Painel de controle</div>
+  </div>
+
+  <a href="#">Dashboard</a>
+  <a href="{% url 'brinquedos_admin' %}">Brinquedos</a>
+  <a href="#">Combos</a>
+  <a href="#">Promoções</a>
+  <a href="#">Eventos</a>
+  <a href="#">Projetos</a>
+
+  <a href="#">Relatório de Vendas</a>
+
+
+  <a href="#">Usuários</a>
+
+  <!-- BOTÃO DE FECHAR VISÍVEL -->
+  <button id="close-sidebar-btn" class="close-btn" type="button">Fechar</button>
+</aside>
+
+<!-- CONTEÚDO PRINCIPAL -->
+<main id="content" class="content" role="main">
+  {% block content %}
+  <h1>Bem-vindo ao painel administrativo</h1>
+  {% endblock %}
+</main>
+
+<footer>
+  Painel Administrativo — Desenvolvido por Sua Empresa © {{ now|date:"Y" }}
+</footer>
+
+<script>
+  const hamburger = document.getElementById('hamburger');
+  const sidebar = document.getElementById('sidebar');
+  const overlay = document.getElementById('overlay');
+  const content = document.getElementById('content');
+  const closeBtn = document.getElementById('close-sidebar-btn');
+
+  function abrirSidebar() {
+    sidebar.classList.add('open');
+    overlay.classList.add('show');
+    hamburger.classList.add('hidden'); // ← esconder hambúrguer
+    if (window.innerWidth >= 1000) content.classList.add('with-sidebar');
+
+    const primeiroLink = sidebar.querySelector('a');
+    if (primeiroLink) primeiroLink.focus();
+}
+
+function fecharSidebar() {
+    sidebar.classList.remove('open');
+    overlay.classList.remove('show');
+    content.classList.remove('with-sidebar');
+    hamburger.classList.remove('hidden'); // ← mostrar hambúrguer novamente
+    hamburger.focus();
+}
+
+
+  hamburger.addEventListener('click', () => {
+    if (sidebar.classList.contains('open')) fecharSidebar();
+    else abrirSidebar();
+  });
+
+  // fechar ao clicar no overlay (fora do painel)
+  overlay.addEventListener('click', fecharSidebar);
+
+  // fechar através do botão interno "Fechar"
+  closeBtn.addEventListener('click', fecharSidebar);
+
+  // teclado: fechar com ESC
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && sidebar.classList.contains('open')) {
+      fecharSidebar();
+    }
+  });
+
+  // fechar ao redimensionar para evitar estado inconsistente
+  window.addEventListener('resize', () => {
+    if (window.innerWidth < 1000) {
+      // não empurre conteúdo em telas pequenas
+      content.classList.remove('with-sidebar');
+    }
+  });
+</script>
+
+</body>
+</html>

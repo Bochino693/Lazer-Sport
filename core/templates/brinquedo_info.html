@@ -1,0 +1,300 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+
+<style>
+
+/* ======== BREADCRUMB ======== */
+.breadcrumb {
+    max-width: 1200px;
+    margin: 25px auto;
+    font-size: 1rem;
+    color: #444;
+}
+
+.breadcrumb a {
+    color: #007BFF;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.breadcrumb span {
+    margin: 0 6px;
+    color: #888;
+}
+
+.breadcrumb strong {
+    color: #1f2d3d;
+}
+
+/* ======== CORREÇÃO DO HOVER ======== */
+.breadcrumb a:hover {
+    color: #0056C9 !important;
+    text-decoration: underline !important;
+    transition: .25s ease !important;
+}
+
+/* ====== CONTAINER GERAL ====== */
+.produto-container {
+    max-width: 1100px;
+    margin: 40px auto;
+    padding: 30px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 40px;
+    background: #ffffff;
+    border-radius: 22px;
+    box-shadow: 0 10px 35px rgba(0,0,0,0.1);
+    animation: fade .4s ease-in-out;
+}
+
+/* Fade de entrada */
+@keyframes fade {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* ====== IMAGEM ====== */
+.produto-img img {
+    width: 100%;
+    border-radius: 22px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+    transition: transform .3s ease;
+}
+.produto-img img:hover {
+    transform: scale(1.02);
+}
+
+/* ====== TÍTULO ====== */
+.produto-info h1 {
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: #222;
+    margin-bottom: 12px;
+}
+
+/* ====== ESTRELAS ====== */
+.avaliacao {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 12px 0 20px 0;
+}
+
+.stars {
+    display: flex;
+    gap: 3px;
+}
+
+.star {
+    font-size: 1.4rem;
+    color: #ffd200;
+    animation: pop .3s ease;
+}
+@keyframes pop {
+    from { transform: scale(0.5); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+.nota-texto {
+    font-size: 1rem;
+    opacity: 0.8;
+}
+
+/* ====== PREÇO ====== */
+.preco {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #0cb52d;
+    margin-bottom: 20px;
+}
+
+/* ====== TÍTULOS INTERNOS ====== */
+.sec-titulo {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-top: 20px;
+    margin-bottom: 6px;
+    color: #333;
+}
+
+/* ====== TEXTO DESCRIÇÃO ====== */
+.descricao-produto {
+    font-size: 1.02rem;
+    line-height: 1.7;
+    color: #444;
+    text-align: justify;
+}
+
+/* ====== BADGES ====== */
+.categoria,
+.tag {
+    padding: 6px 12px;
+    border-radius: 12px;
+    display: inline-block;
+    font-size: .85rem;
+    margin: 4px;
+    font-weight: 500;
+}
+
+.categoria {
+    background: #dff0ff;
+    color: #005e9c;
+}
+
+.tag {
+    background: #f1f1f1;
+    color: #555;
+}
+
+/* ===== BOTÕES DO PRODUTO ===== */
+.acoes-produto {
+    margin-top: 20px;
+    display: flex;
+    justify-content: flex-end; /* empurra os botões para a direita */
+    gap: 12px;
+    flex-wrap: wrap; /* caso quebre linha em telas pequenas */
+}
+
+.btn-produto {
+    flex: 1; /* todos ocupam o mesmo espaço */
+    text-align: center;
+    padding: 14px 6px;  /* gordinho mas não largo */
+    font-size: 0.95rem;
+    font-weight: 700;
+    border-radius: 14px;
+    text-decoration: none;
+    transition: .25s ease;
+    white-space: nowrap;  /* impede quebrar linha */
+}
+
+/* Botão azul – Carrinho */
+.btn-carrinho {
+    background: #0d6efd;
+    color: white;
+    box-shadow: 0 4px 16px rgba(13,110,253,0.4);
+}
+.btn-carrinho:hover {
+    background: #0056d6;
+    transform: translateY(-2px);
+}
+
+/* Botão verde – Comprar */
+.btn-comprar {
+    background: #14a61a;
+    color: white;
+    box-shadow: 0 4px 16px rgba(20,166,26,0.4);
+}
+.btn-comprar:hover {
+    background: #0e7f14;
+    transform: translateY(-2px);
+}
+
+/* Botão cinza – Voltar */
+.btn-voltar {
+    background: #f1f1f1;
+    color: #333;
+    border: 1px solid #ddd;
+}
+.btn-voltar:hover {
+    background: #e4e4e4;
+    transform: translateY(-2px);
+}
+</style>
+
+
+<div class="breadcrumb" id="bread">
+    <a href="/#brinquedos">Home</a>
+    <span>›</span>
+    <a href="{% url 'brinquedos' %}#bread">Todos os Brinquedos</a>
+    <span>›</span>
+    <strong>{{ brinquedo.nome_brinquedo }}</strong>
+</div>
+
+
+
+<!-- ====== CONTEÚDO ====== -->
+<div class="produto-container" id="produto-box">
+
+    <!-- IMAGEM -->
+    <div class="produto-img">
+        <img src="{{ brinquedo.imagem_brinquedo.url }}" alt="{{ brinquedo.nome_brinquedo }}">
+    </div>
+
+<!-- INFORMAÇÕES -->
+<div class="produto-info">
+
+    <!-- TÍTULO -->
+    <h1>{{ brinquedo.nome_brinquedo }}</h1>
+
+
+    <!-- PREÇO -->
+    <p class="preco">R$ {{ brinquedo.valor_brinquedo }}</p>
+
+    <!-- DESCRIÇÃO -->
+    <p class="sec-titulo">Descrição do Produto</p>
+    <p class="descricao-produto">
+        {{ brinquedo.descricao }}
+    </p>
+
+       <!-- AVALIAÇÃO COM ESTRELAS -->
+    <div class="avaliacao" data-rating="{{ brinquedo.avaliacao }}">
+        <div class="stars" id="estrelinhas"></div>
+        <span class="nota-texto">{{ brinquedo.avaliacao|floatformat:2 }}/5</span>
+    </div>
+
+
+    <!-- VOLTAGEM -->
+    <p class="sec-titulo">Voltagem</p>
+    <p>{{ brinquedo.voltz }}</p>
+
+    <!-- CATEGORIAS -->
+    <p class="sec-titulo">Categorias</p>
+    {% for cat in brinquedo.categorias_brinquedos.all %}
+        <span class="categoria">{{ cat.nome_categoria }}</span>
+    {% endfor %}
+
+    <!-- TAGS -->
+    <p class="sec-titulo">Tags</p>
+    {% for tag in brinquedo.tags.all %}
+        <span class="tag">#{{ tag.nome_tags }}</span>
+    {% endfor %}
+
+    <!-- BOTÕES DE AÇÃO -->
+    <div class="acoes-produto">
+        <a href="#" class="btn-produto btn-carrinho">🛒 Adicionar ao Carrinho</a>
+        <a href="#" class="btn-produto btn-comprar">⚡ Comprar Agora</a>
+        <a href="/#brinquedos" class="btn-produto btn-voltar">← Voltar</a>
+    </div>
+
+</div>
+
+</div> <!-- fecha produto-container -->
+
+
+
+
+<!-- ====== JS DAS ESTRELAS ====== -->
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const rating = parseFloat("{{ brinquedo.avaliacao }}");
+    const container = document.getElementById("estrelinhas");
+
+    let stars = "";
+
+    for (let i = 1; i <= 5; i++) {
+        if (rating >= i) {
+            stars += `<span class="star">⭐</span>`;
+        } else if (rating >= i - 0.5) {
+            stars += `<span class="star">✨</span>`;
+        } else {
+            stars += `<span class="star" style="opacity:0.25">⭐</span>`;
+        }
+    }
+
+    container.innerHTML = stars;
+});
+</script>
+
+{% endblock %}

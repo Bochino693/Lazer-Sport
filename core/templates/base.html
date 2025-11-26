@@ -1,0 +1,645 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %} Lazer & Sports {% endblock %}</title>
+  <link rel="icon" type="image/x-icon" href="{% static 'images/logoofi.png' %}">
+
+<style>
+    /* ======= RESET ======= */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: "Poppins", sans-serif;
+    }
+
+    body {
+      background: #f5f8ff;
+      color: #2c3e50;
+    }
+
+    /* ======= CABEÇALHO ======= */
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: linear-gradient(90deg, #004AAD, #007BFF);
+      padding: 12px 25px;
+      color: white;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+    }
+
+/* ======= LOGO ======= */
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logo img {
+  height: 65px;                /* Aumenta o tamanho da logo */
+  width: auto;
+  border-radius: 0;            /* Remove cantos arredondados */
+  background: transparent;     /* Remove fundo branco */
+  padding: 0;                  /* Remove espaço interno */
+  box-shadow: none;            /* Remove a sombra */
+  object-fit: contain;         /* Garante proporção correta */
+}
+
+.logo span {
+  font-weight: 700;
+  font-size: 1.5em;            /* Um pouco maior para equilibrar */
+  letter-spacing: 1px;
+  color: #ffffff;              /* Garante contraste no fundo azul */
+  text-shadow: 1px 1px 3px rgba(0,0,0,0.3); /* Melhora legibilidade */
+}
+
+
+    /* ======= MENU ======= */
+    nav {
+      display: flex;
+      gap: 25px;
+      align-items: center;
+    }
+
+    nav a {
+      color: white;
+      text-decoration: none;
+      font-weight: 500;
+      position: relative;
+      transition: color 0.3s;
+    }
+
+    nav a::after {
+      content: '';
+      position: absolute;
+      bottom: -4px;
+      left: 0;
+      width: 0%;
+      height: 2px;
+      background: #E63946;
+      transition: width 0.3s ease;
+    }
+
+    nav a:hover {
+      color: #FFD700;
+    }
+
+    nav a:hover::after {
+      width: 100%;
+    }
+
+    /* ======= MENU HAMBÚRGUER ======= */
+    .menu-toggle {
+      display: none;
+      flex-direction: column;
+      cursor: pointer;
+    }
+
+    .menu-toggle span {
+      height: 3px;
+      width: 26px;
+      background: white;
+      margin: 4px 0;
+      border-radius: 5px;
+      transition: all 0.3s ease;
+    }
+
+    /* ======= PESQUISA ======= */
+    .search-section {
+      background: #ffffff;
+      padding: 20px;
+      box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .search-box {
+      display: flex;
+      gap: 10px;
+      max-width: 700px;
+      margin: 0 auto;
+    }
+
+    .search-box input {
+      flex: 1;
+      padding: 10px 15px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 1em;
+      outline: none;
+      transition: border-color 0.3s;
+    }
+
+    .search-box input:focus {
+      border-color: #007BFF;
+    }
+
+    .search-box button {
+      background: #E63946;
+      border: none;
+      padding: 10px 20px;
+      color: white;
+      font-weight: 600;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    .search-box button:hover {
+      background: #c92a38;
+    }
+
+    /* ======= FILTROS ======= */
+    .filter-suggestions {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 15px;
+    }
+
+    .filter-suggestions span {
+      background: #E3F2FD;
+      color: #007BFF;
+      padding: 8px 15px;
+      border-radius: 20px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-size: 0.9em;
+      border: 1px solid transparent;
+    }
+
+    .filter-suggestions span:hover {
+      background: #007BFF;
+      color: white;
+      border-color: #E63946;
+    }
+
+    /* ======= CONTEÚDO PRINCIPAL ======= */
+    main.content-section {
+      max-width: 1200px;
+      margin: 50px auto;
+      padding: 0 20px;
+      min-height: 60vh;
+    }
+
+    /* ======= RESPONSIVIDADE ======= */
+    @media (max-width: 768px) {
+      nav {
+        display: none;
+        flex-direction: column;
+        position: absolute;
+        background: #0056b3;
+        top: 65px;
+        left: 0;
+        width: 100%;
+        padding: 15px 0;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+      }
+
+      nav.active {
+        display: flex;
+      }
+
+      nav a {
+        padding: 12px 20px;
+        text-align: center;
+      }
+
+      .menu-toggle {
+        display: flex;
+      }
+    }
+
+/* ======= TÍTULOS CENTRALIZADOS ======= */
+.search-title {
+  text-align: center;
+  font-size: 1.8em;
+  color: #004AAD;
+  font-weight: 700;
+  margin-bottom: 20px;
+}
+
+.search-suggestions {
+  text-align: center;
+}
+
+.search-suggestions h3 {
+  color: #003366;
+  font-size: 1.2em;
+  font-weight: 600;
+  margin: 25px auto 15px auto;
+  display: inline-block;
+  position: relative;
+}
+
+.search-suggestions h3::after {
+  content: "";
+  display: block;
+  width: 60%;
+  height: 3px;
+  background: #004aad;
+  margin: 6px auto 0;
+  border-radius: 3px;
+}
+
+    html {
+    scroll-behavior: smooth;
+}
+
+    nav a.active-link {
+  color: #FFD700 !important;
+}
+
+nav a.active-link::after {
+  width: 100%;
+}
+
+nav a.btn-login {
+    background: #E63946;
+    width: 80%;
+    margin: 10px auto;
+    text-align: center;
+    padding: 12px;
+    border-radius: 10px;
+}
+
+/* === ÁREA DO ÍCONE DO USUÁRIO === */
+.user-area {
+    display: flex;
+    align-items: center;
+}
+
+/* Estilo compacto: ícone + texto em coluna */
+.user-icon {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-decoration: none;
+    color: white;
+    font-weight: 600;
+    gap: 4px;
+    margin-left: 15px;
+}
+
+/* Ícone */
+.user-icon i {
+    font-size: 28px;
+}
+
+/* Texto embaixo do ícone */
+.user-icon span {
+    font-size: 13px;
+    line-height: 1.1;
+    text-align: center;
+}
+
+/* Hover suave */
+.user-icon:hover {
+    color: #FFD700;
+}
+
+    /* Área do usuário alinhada à direita */
+.user-area {
+    display: flex;
+    align-items: center;
+    margin-left: auto;
+    margin-right: 20px;
+}
+
+/* Container do dropdown */
+.user-dropdown {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.user-icon {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-decoration: none;
+    color: white;
+    font-weight: 600;
+    gap: 4px;
+    cursor: pointer;
+}
+
+.user-icon i {
+    font-size: 26px;
+}
+
+.user-icon:hover {
+    color: #FFD700;
+}
+
+/* === DROPDOWN MELHORADO === */
+.user-dropdown {
+    position: relative;
+}
+
+.dropdown-menu {
+    position: absolute;
+    top: 60px;
+    right: 0;
+    background: white;
+    color: #333;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+    width: 160px;
+    padding: 10px 0;
+
+    /* Estado inicial (escondido) */
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(10px);
+
+    transition:
+        opacity 0.25s ease,
+        transform 0.25s ease,
+        visibility 0.25s;
+
+    z-index: 9999;
+}
+
+/* Quando o mouse está sobre o ícone OU sobre o menu */
+.user-dropdown:hover .dropdown-menu {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+/* Links dentro do menu */
+.dropdown-menu a {
+    display: block;
+    padding: 10px 16px;
+    text-decoration: none;
+    color: #004AAD;
+    font-weight: 600;
+    transition: background 0.2s, color 0.2s;
+}
+
+.dropdown-menu a:hover {
+    background: #E6F0FF;
+    color: #003680;
+}
+
+/* Animação */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-5px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.social-icons {
+    display: flex;
+    gap: 15px; /* mais espaço entre os ícones */
+    margin-left: 15px; /* separação do texto do logo */
+}
+
+.social-icons a {
+    font-size: 2rem; /* ícones maiores */
+    transition: transform 0.3s;
+}
+
+/* Cores específicas de cada rede */
+.social-icons a.instagram {
+    color: #C13584; /* Rosa/gradiente típico Instagram */
+}
+
+.social-icons a.whatsapp {
+    color: #25D366; /* Verde WhatsApp */
+}
+
+.social-icons a.facebook {
+    color: #0D4D91; /* Azul escuro Facebook */
+}
+
+.social-icons a.linkedin {
+     background-color: #0A66C2; /* azul LinkedIn */
+    color: #ffffff; /* ícone branco */
+    padding: 8px;
+    border-radius: 5px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    transition: transform 0.3s, background-color 0.3s;
+}
+
+
+
+/* Hover: aumenta tamanho levemente */
+.social-icons a:hover {
+    transform: scale(1.2);
+}
+
+    .social-icons a.linkedin:hover {
+    background-color: #084d8a; /* azul mais escuro ao passar o mouse */
+    transform: scale(1.2);
+}
+
+/* Threads */
+.social-icons a.threads {
+    background-color: #000000; /* fundo preto */
+    color: #ffffff; /* ícone branco */
+    padding: 8px;
+    border-radius: 5px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    transition: transform 0.3s, background-color 0.3s;
+}
+
+.social-icons a.threads:hover {
+    background-color: #333333; /* preto mais claro ao passar o mouse */
+    transform: scale(1.2);
+}
+
+
+  </style>
+
+</head>
+<body>
+
+<!-- ======= CABEÇALHO ======= -->
+<header>
+  <!-- Logo -->
+  <div class="logo">
+    <img src="{% static 'images/logoofi.png' %}" alt="Logo">
+    <span>Lazer & Sports Brinquedos</span>
+  </div>
+
+ <!-- Ícones de redes sociais -->
+<div class="social-icons">
+    <a href="https://www.instagram.com/lazersportbrinquedos" target="_blank" rel="noopener" title="Instagram" class="instagram">
+        <i class="fa-brands fa-instagram"></i>
+    </a>
+    <a href="https://wa.me/5511960563135" target="_blank" rel="noopener" title="WhatsApp" class="whatsapp">
+        <i class="fa-brands fa-whatsapp"></i>
+    </a>
+    <a href="https://www.facebook.com/LazerSportBrinquedos1" target="_blank" rel="noopener" title="Facebook" class="facebook">
+        <i class="fa-brands fa-facebook"></i>
+    </a>
+    <a href="https://www.linkedin.com/company/brinquedos-lazer-sport" target="_blank" rel="noopener" title="LinkedIn" class="linkedin">
+        <i class="fa-brands fa-linkedin"></i>
+    </a>
+    <a href="https://www.threads.com/@lazersportbrinquedos?xmt=AQF01c59c6UZtE4QcHQgxUo-tcUtuujbUK4j8rzckZJl1is" target="_blank" rel="noopener" title="Threads" class="threads">
+        <i class="fa-brands fa-threads"></i>
+    </a>
+</div>
+
+
+  <!-- Área do usuário -->
+  <div class="user-area">
+    {% if user.is_authenticated %}
+      <div class="user-dropdown">
+        <a class="user-icon">
+          <i class="fa-solid fa-user"></i>
+          <span>Bem-vindo<br>{{ user.get_full_name }}</span>
+        </a>
+        <div class="dropdown-menu">
+          <a href="{% url 'perfil' %}">👤 Meu Perfil</a>
+          <a href="{% url 'logout' %}#logout-box">🚪 Sair</a>
+        </div>
+      </div>
+    {% else %}
+      <div class="user-dropdown">
+        <a class="user-icon">
+          <i class="fa-solid fa-user"></i>
+          <span>Entrar / Cadastro</span>
+        </a>
+        <div class="dropdown-menu">
+         <a href="{% url 'login'  %}#login-box" >🔐 Fazer Login</a>
+          <a href="{% url 'registrar' %}#register-box">📝 Criar Conta</a>
+        </div>
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Menu toggle -->
+  <div class="menu-toggle" id="menu-toggle">
+    <span></span>
+    <span></span>
+    <span></span>
+  </div>
+
+  <!-- Navegação -->
+  <nav id="nav">
+    <a href="{% url 'home' %}#inicio">Início</a>
+      <a href="{% url 'home' %}#categorias-section">Categorias</a>
+    <a href="{% url 'home' %}#combos-section">Combos</a>
+    <a href="{% url 'home' %}#promocoes-section">Promoções</a>
+    <a href="{% url 'home' %}#brinquedos">Produtos</a>
+    <a href="{% url 'home' %}#eventos">Eventos</a>
+    <a href="{% url 'home' %}#projetos">Projetos</a>
+    <a href="{% url 'home' %}#contato">Contato</a>
+  </nav>
+</header>
+
+
+<!-- ======= SEÇÃO DE PESQUISA MODERNA ======= -->
+<section class="search-section">
+  <div class="search-container">
+    <h2 class="search-title">O que você está procurando hoje?</h2>
+
+    <!-- Campo de busca -->
+    <div class="search-box">
+      <input type="text" placeholder="Digite o nome do brinquedo, categoria ou modelo...">
+      <button><i class="fas fa-search"></i> Buscar</button>
+    </div>
+
+<!-- Sugestões de pesquisa -->
+<div class="search-suggestions">
+  <h3>Sugestões de pesquisa 🔍</h3>
+  <div class="filter-suggestions">
+    <span>BRINQUEDÕES</span>
+    <span>ÁREA BABY</span>
+    <span>BRINQUEDOS ELETRÔNICOS</span>
+    <span>SIMULADORES</span>
+    <span>BRINQUEDÃO KID PLAY</span>
+    <span>TRAMPOLINS</span>
+  </div>
+</div>
+  </div>
+</section>
+
+<!-- Adicione Font Awesome no <head> -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+<!-- ======= CONTEÚDO DINÂMICO ======= -->
+<main class="content-section">
+  {% block content %}
+  {% endblock %}
+</main>
+
+<script>
+  document.querySelectorAll('.scroll-to-login').forEach(link => {
+    link.addEventListener('click', function(e) {
+        e.preventDefault(); // evita o salto padrão
+        const target = document.querySelector(this.getAttribute('href'));
+        if (target) {
+            target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    });
+});
+
+
+  // Controle do menu hambúrguer
+  const menuToggle = document.getElementById('menu-toggle');
+  const nav = document.getElementById('nav');
+
+  menuToggle.addEventListener('click', () => {
+    nav.classList.toggle('active');
+  });
+
+
+  document.addEventListener("DOMContentLoaded", () => {
+  const sections = document.querySelectorAll("section[id]");
+  const menuLinks = document.querySelectorAll("#nav a");
+
+  function updateActiveLink() {
+    let scrollY = window.pageYOffset + 200; // margem para ativar antes
+
+    sections.forEach(section => {
+      let sectionTop = section.offsetTop;
+      let sectionHeight = section.offsetHeight;
+      let sectionId = section.getAttribute("id");
+
+      if (scrollY >= sectionTop && scrollY < sectionTop + sectionHeight) {
+        menuLinks.forEach(link => link.classList.remove("active-link"));
+
+        const activeLink = document.querySelector(`#nav a[href$="#${sectionId}"]`);
+        if (activeLink) activeLink.classList.add("active-link");
+      }
+    });
+  }
+
+  window.addEventListener("scroll", updateActiveLink);
+  updateActiveLink();
+});
+
+
+
+window.addEventListener("load", function() {
+    const element = document.getElementById("logout-box");
+    if(element) {
+        element.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+});
+</script>
+
+</body>
+</html>

@@ -1,0 +1,236 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+
+<!-- ======== BREADCRUMB ======== -->
+<div class="breadcrumb">
+    <a href="{% url 'home' %}#eventos ">Home</a>
+    <span>›</span>
+    <strong>Todos os Eventos</strong>
+</div>
+
+<section id="todos-eventos" class="py-5 bg-light">
+    <div class="container">
+        <h2 class="text-primary mb-5 text-center">Todos os Eventos</h2>
+
+        <div class="row g-4">
+            {% for evento in eventos %}
+            <div class="col-md-6 col-lg-4">
+                <div class="card shadow-sm h-100 evento-card" data-modal="modal-evento-{{ evento.id }}">
+                    <div class="card-img-wrapper position-relative">
+                        {% if evento.imagens_evento.all %}
+                        <!-- Mostra a primeira imagem grande -->
+                        <img src="{{ evento.imagens_evento.first.imagem.url }}" class="card-img-top" alt="{{ evento.titulo }}">
+                        <!-- Miniaturas sobrepostas -->
+                        <div class="card-thumbnails">
+                            {% for img in evento.imagens_evento.all|slice:"1:4" %}
+                            <img src="{{ img.imagem.url }}" alt="{{ img.legenda }}">
+                            {% endfor %}
+                            {% if evento.imagens_evento.count > 4 %}
+                            <span class="more-images">+{{ evento.imagens_evento.count|add:"-4" }}</span>
+                            {% endif %}
+                        </div>
+                        {% else %}
+                        <img src="{% static 'images/default.jpg' %}" class="card-img-top" alt="Sem imagem">
+                        {% endif %}
+                        <div class="card-overlay">
+                            <span>Ver Detalhes</span>
+                        </div>
+                    </div>
+                    <div class="card-body d-flex flex-column">
+                        <h5 class="card-title text-primary">{{ evento.titulo }}</h5>
+                        <p class="card-text text-muted">{{ evento.descricao|truncatewords:20 }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal do Evento -->
+            <div id="modal-evento-{{ evento.id }}" class="evento-modal">
+                <div class="modal-content">
+                    <span class="modal-close">&times;</span>
+                    <h2 class="text-primary mb-3">{{ evento.titulo }}</h2>
+                    <p class="text-muted mb-4">{{ evento.descricao }}</p>
+
+                    <div class="event-gallery">
+                        {% for img in evento.imagens_evento.all %}
+                        <div class="gallery-slide">
+                            <img src="{{ img.imagem.url }}" alt="{{ img.legenda }}">
+                        </div>
+                        {% empty %}
+                        <p>Sem imagens adicionais.</p>
+                        {% endfor %}
+                    </div>
+                    <div class="gallery-thumbs mt-3 d-flex gap-2 justify-content-center">
+                        {% for img in evento.imagens_evento.all %}
+                        <img src="{{ img.imagem.url }}" class="thumb" alt="{{ img.legenda }}">
+                        {% endfor %}
+                    </div>
+
+                    <hr>
+
+                    <h4 class="mb-3">🎪 Brinquedos Utilizados</h4>
+                    <div class="modal-brinquedos d-flex flex-wrap gap-3 justify-content-center">
+                        {% for b in evento.brinquedos.all %}
+                        <div class="brinquedo-card text-center p-2 border rounded shadow-sm">
+                            <img src="{{ b.imagem_brinquedo.url }}" class="img-fluid rounded mb-2" style="height:120px; object-fit:cover;" alt="{{ b.nome_brinquedo }}">
+                            <h6>{{ b.nome_brinquedo }}</h6>
+                        </div>
+                        {% empty %}
+                        <p>Nenhum brinquedo informado.</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+<style>
+/* ======== BREADCRUMB ======== */
+.breadcrumb {
+    max-width: 1200px;
+    margin: 25px auto;
+    font-size: 1rem;
+    color: #444;
+}
+.breadcrumb a {
+    color: #007BFF;
+    text-decoration: none;
+    font-weight: 600;
+}
+.breadcrumb span {
+    margin: 0 6px;
+    color: #888;
+}
+.breadcrumb strong {
+    color: #1f2d3d;
+}
+.breadcrumb a:hover {
+    color: #0056C9 !important;
+    text-decoration: underline !important;
+    transition: .25s ease !important;
+}
+
+/* ======== CARDS DE EVENTOS ======== */
+.evento-card {
+    position: relative;
+    cursor: pointer;
+    border-radius: 15px;
+    overflow: hidden;
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+.evento-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 30px rgba(0,0,0,0.2);
+}
+.card-img-wrapper {
+    position: relative;
+}
+.card-img-top {
+    width: 100%;
+    height: 250px;
+    object-fit: cover;
+    transition: transform 0.3s;
+}
+.evento-card:hover .card-img-top {
+    transform: scale(1.05);
+}
+.card-overlay {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    background: rgba(0, 74, 173, 0.7);
+    text-align: center;
+    color: #fff;
+    padding: 8px;
+    font-weight: bold;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+.evento-card:hover .card-overlay {
+    opacity: 1;
+}
+.card-thumbnails {
+    position: absolute;
+    bottom: 8px;
+    left: 8px;
+    display: flex;
+    gap: 3px;
+}
+.card-thumbnails img {
+    width: 40px;
+    height: 40px;
+    object-fit: cover;
+    border: 2px solid #fff;
+    border-radius: 5px;
+}
+.card-thumbnails .more-images {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background: rgba(0,0,0,0.5);
+    color: #fff;
+    font-size: 0.8rem;
+    border-radius: 5px;
+}
+
+/* ======== MODAL ======== */
+.evento-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    overflow-y: auto;
+    z-index: 99999;
+    padding: 40px 20px;
+}
+.modal-content {
+    max-width: 1000px;
+    margin: 20px auto;
+    padding: 30px;
+    border-radius: 20px;
+    background: #fff;
+}
+.modal-close {
+    float: right;
+    font-size: 32px;
+    cursor: pointer;
+    color: #E63946;
+}
+
+/* ======== GALERIA MODAL ======== */
+.event-gallery {
+    width: 100%;
+    display: flex;
+    overflow-x: auto;
+    gap: 10px;
+    scroll-behavior: smooth;
+    margin-bottom: 10px;
+}
+.gallery-slide img {
+    width: 100%;
+    max-height: 400px;
+    object-fit: cover;
+    border-radius: 12px;
+}
+.gallery-thumbs img.thumb {
+    width: 80px;
+    height: 60px;
+    object-fit: cover;
+    border: 2px solid #fff;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: transform 0.3s;
+}
+.gallery-thumbs img.thumb:hover {
+    transform: scale(1.05);
+    border-color: #004AAD;
+}
+</style>
+
+{% endblock content %}

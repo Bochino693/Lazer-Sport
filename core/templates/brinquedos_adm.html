@@ -1,0 +1,1312 @@
+{% extends "base_adm.html" %}
+
+{% block title %}Gerenciar Brinquedos{% endblock %}
+
+{% block content %}
+
+<h1 class="titulo-pagina">Gerenciar Brinquedos</h1>
+<p class="subtitulo-pagina">Visualize, edite e gerencie todos os brinquedos cadastrados no sistema.</p>
+
+<!-- BOTÃO ADICIONAR E FILTROS -->
+<div class="top-bar">
+
+    <!-- FILTROS -->
+    <div class="filtros">
+        <a href="?categoria=todas" class="filtro-btn {% if categoria_ativa == 'todas' %}ativo{% endif %}">
+            Todos os Brinquedos
+        </a>
+
+        {% for cat in categorias %}
+        <a href="?categoria={{ cat }}" class="filtro-btn {% if categoria_ativa == cat %}ativo{% endif %}">
+            {{ cat }}
+        </a>
+        {% endfor %}
+    </div>
+
+    <!-- BOTÃO ADICIONAR -->
+    <button class="btn-add" onclick="abrirModalNovo()">+ Adicionar Brinquedo</button>
+</div>
+
+
+<!-- MODAL NOVO BRINQUEDO -->
+<div class="modal-bg" id="modal-novo">
+    <div class="modal-box modal-novo-box">
+
+        <!-- Botão fechar -->
+        <span class="modal-x" onclick="fecharModalNovo()">&times;</span>
+
+        <h2 class="modal-titulo">Adicionar Novo Brinquedo</h2>
+        <p class="modal-subtitulo">Preencha corretamente os dados abaixo</p>
+
+        <!-- ÁREA DE MENSAGENS -->
+        <div id="modal-mensagem"></div>
+
+        <form method="POST" enctype="multipart/form-data" action="{% url 'brinquedos_admin' %}">
+            {% csrf_token %}
+
+            <div class="grid-dupla">
+                <div>
+                    <label>Nome do Brinquedo:</label>
+                    <input type="text" name="nome_brinquedo" class="input-modal" required>
+                </div>
+
+                <div>
+                    <label>Imagem:</label>
+                    <input type="file" name="imagem_brinquedo" class="input-modal" required>
+                </div>
+            </div>
+
+            <!-- Categorias -->
+            <label style="font-weight:700; margin-top:10px;">Categorias:</label>
+            <div class="dual-select">
+
+                <div class="dual-box">
+                    <label>Disponíveis</label>
+                    <select id="categorias-disponiveis" multiple>
+                        {% for c in categorias %}
+                            <option value="{{ c.id }}">{{ c.nome_categoria }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="dual-controls">
+                    <button type="button" onclick="adicionarCategoria()">→</button>
+                    <button type="button" onclick="removerCategoria()">←</button>
+                    <button type="button" class="btn-add-categoria" onclick="abrirModalCategoria()">+</button>
+                </div>
+
+                <div class="dual-box">
+                    <label>Selecionadas</label>
+                    <select id="categorias-selecionadas" name="categorias_brinquedos" multiple required></select>
+                </div>
+
+            </div>
+
+            <small>Use CTRL para selecionar várias, depois clique →</small>
+
+            <!-- TAGS -->
+            <label style="margin-top:12px; font-weight:700;">Tags:</label>
+            <div class="dual-select">
+
+                <div class="dual-box">
+                    <label>Disponíveis</label>
+                    <select id="tags-disponiveis" multiple>
+                        {% for t in tags %}
+                            <option value="{{ t.id }}">{{ t.nome_tags }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="dual-controls">
+                    <button type="button" onclick="adicionarTag()">→</button>
+                    <button type="button" onclick="removerTag()">←</button>
+                    <button type="button" class="btn-add-categoria" onclick="abrirModalTag()">+</button>
+                </div>
+
+                <div class="dual-box">
+                    <label>Selecionadas</label>
+                    <select id="tags-selecionadas" name="tags" multiple></select>
+                </div>
+
+            </div>
+
+            <label>Descrição:</label>
+            <textarea name="descricao" class="input-modal" rows="3" required></textarea>
+
+            <div class="grid-dupla">
+                <div>
+                    <label>Preço (R$):</label>
+                    <input type="text" name="valor_brinquedo" class="input-modal decimal" placeholder="0,00">
+                </div>
+
+                <div>
+                    <label>Avaliação (0-5):</label>
+                    <input type="text" name="avaliacao" class="input-modal decimal-avaliacao" placeholder="0,00">
+                </div>
+
+            </div>
+
+            <div class="grid-dupla">
+                <div>
+                    <label>Voltagem:</label>
+                    <select name="voltz" class="input-modal" required>
+                        <option value="110V">110V</option>
+                        <option value="220V">220V</option>
+                        <option value="Bivolt">Bivolt</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label>Altura (m):</label>
+                    <input type="text" name="altura_m" class="input-modal decimal" placeholder="0,00">
+                </div>
+            </div>
+
+            <div class="grid-dupla">
+                <div>
+                    <label>Largura (m):</label>
+                    <input type="text" name="largura_m" class="input-modal decimal" placeholder="0,00">
+                </div>
+
+                <div>
+                    <label>Profundidade (m):</label>
+                    <input type="text" name="profundidade_m" class="input-modal decimal" placeholder="0,00">
+                </div>
+            </div>
+
+            <button type="submit" class="btn-ver btn-salvar" name="acao" value="salvar">
+                Salvar Brinquedo
+            </button>
+
+            <button type="submit" class="btn-ver btn-salvar" name="acao" value="salvar_adicionar">
+                Salvar e adicionar outro
+            </button>
+
+            <button type="button" class="btn-excluir btn-fechar" onclick="fecharModalNovo()">Fechar</button>
+
+        </form>
+    </div>
+</div>
+
+
+<style>
+#mensagem-categoria.success {
+    text-align: center;
+    color: #0f5132;
+}
+
+#mensagem-categoria.error {
+    text-align: center;
+    color: #842029;
+}
+
+
+#modal-categoria.modal-bg {
+    display: none;
+    opacity: 0;
+    transition: 0.25s ease;
+}
+
+#modal-categoria.show {
+    display: flex;
+    opacity: 1;
+}
+
+
+    .dual-select {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 10px;
+}
+
+.dual-box {
+    display: flex;
+    flex-direction: column;
+}
+
+.dual-box select {
+    width: 180px;
+    height: 140px;
+    padding: 5px;
+    font-size: 14px;
+    border: 1px solid #bbb;
+    border-radius: 6px;
+}
+
+.dual-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.dual-controls button {
+    padding: 6px 12px;
+    font-size: 16px;
+    cursor: pointer;
+    border-radius: 6px;
+    border: none;
+    background: #3498db;
+    color: #fff;
+    transition: 0.2s;
+}
+
+.dual-controls button:hover {
+    background: #1d6fa5;
+}
+
+.btn-add-categoria {
+    background: #2ecc71 !important;
+    display: flex;               /* CENTRALIZA */
+    align-items: center;         /* VERTICAL */
+    justify-content: center;
+    cursor: pointer;
+    transition: 0.2s ease;
+}
+
+.btn-add-categoria:hover {
+    background: #25a85b !important;
+
+}
+
+
+    #select-categorias {
+    height: 120px;
+    padding: 6px;
+    font-size: 15px;
+    color: #222;
+    background: #ffffff;
+    border: 1px solid #bbb;
+    border-radius: 8px;
+    outline: none;
+    text-align: center;
+}
+
+#select-categorias option {
+    padding: 6px;
+    margin-bottom: 3px;
+    border-radius: 6px;
+    background: #f0f4ff;
+    color: #0d3b80;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+#select-categorias option:hover {
+    background: #d9e6ff;
+}
+
+    /* ===== TÍTULOS ===== */
+    .titulo-pagina {
+        text-align: center;
+        font-size: 32px;
+        margin-bottom: 5px;
+        font-weight: 800;
+        color: #0d6efd;
+        text-shadow: 0 2px 6px rgba(13,110,253,0.2);
+    }
+
+    .subtitulo-pagina {
+        text-align: center;
+        font-size: 17px;
+        color: #555;
+        margin-bottom: 25px;
+    }
+
+
+    /* --- TOP BAR --- */
+    .top-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 25px;
+        flex-wrap: wrap;
+        gap: 10px; /* espaço entre filtros e botão */
+    }
+
+    /* FILTROS */
+    .filtros {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .filtro-btn {
+        padding: 8px 14px;
+        background: #e9f1ff;
+        color: #0d6efd;
+        border-radius: 20px;
+        font-weight: 600;
+        text-decoration: none;
+        transition: 0.25s;
+        border: 2px solid transparent;
+    }
+
+    .filtro-btn:hover {
+        background: #d6e8ff;
+    }
+
+    .filtro-btn.ativo {
+        background: #0d6efd;
+        color: #fff;
+        border-color: #0b5ed7;
+        box-shadow: 0 3px 10px rgba(13,110,253,0.35);
+    }
+
+    /* BOTÃO ADICIONAR */
+   /* Faz o botão “Adicionar” sempre ficar à direita */
+.btn-add {
+    margin-left: auto; /* força alinhamento à direita */
+    background: #198754;
+    color: white;
+    padding: 10px 18px;
+    border-radius: 10px;
+    font-weight: 700;
+    box-shadow: 0 3px 10px rgba(25,135,84,0.35);
+    transition: 0.25s;
+    white-space: nowrap;
+}
+
+    .btn-add:hover {
+        background: #157347;
+        transform: translateY(-2px);
+    }
+
+
+    /* ===== TABELA ===== */
+    table.brinquedos-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+        background: #ffffff;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 6px 18px rgba(0,0,0,0.1);
+    }
+
+    table.brinquedos-table th {
+        background: linear-gradient(90deg, #0a58ca, #0d6efd);
+        color: white;
+        padding: 14px;
+        text-align: center;
+        font-size: 15px;
+        letter-spacing: 0.5px;
+    }
+
+    table.brinquedos-table td {
+        padding: 14px;
+        border-bottom: 1px solid #e7e7e7;
+        text-align: center;
+    }
+
+    table.brinquedos-table tr:hover {
+        background: rgba(13, 110, 253, 0.08);
+        transition: 0.25s;
+    }
+
+    /* ===== BOTÃO AÇÕES ===== */
+    .btn-acoes {
+        background: #0d6efd;
+        color: #fff;
+        padding: 7px 14px;
+        border-radius: 8px;
+        cursor: pointer;
+        border: none;
+        font-weight: 600;
+        box-shadow: 0 3px 10px rgba(13,110,253,0.35);
+        transition: 0.2s;
+    }
+
+    .btn-acoes:hover {
+        background: #0b5ed7;
+        transform: translateY(-2px);
+    }
+
+
+    /* ===== MODAL ===== */
+    .modal-bg {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.55);
+        display: none;
+        justify-content: center;
+        align-items: center;
+        backdrop-filter: blur(3px);
+        animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+
+    .modal-box {
+        background: #ffffff;
+        padding: 28px;
+        width: 450px;
+        border-radius: 16px;
+        box-shadow: 0 14px 40px rgba(0,0,0,0.25);
+        animation: popUp 0.33s ease;
+        text-align: center;
+    }
+
+    @keyframes popUp {
+        from { transform: scale(0.85); opacity: 0; }
+        to { transform: scale(1); opacity: 1; }
+    }
+
+    .modal-close {
+        float: right;
+        font-size: 26px;
+        cursor: pointer;
+        color: #dc3545;
+        font-weight: bold;
+    }
+
+    .modal-box h2 {
+        font-size: 25px;
+        font-weight: 700;
+        color: #0d6efd;
+        margin-bottom: 8px;
+    }
+
+    .modal-box p {
+        color: #444;
+        margin-bottom: 12px;
+    }
+
+    .modal-box h4 {
+        font-size: 20px;
+        font-weight: 600;
+        margin-bottom: 15px;
+        color: #0b5ed7;
+    }
+
+    .modal-botoes a {
+        display: block;
+        margin-top: 12px;
+        padding: 12px;
+        border-radius: 10px;
+        font-weight: 600;
+        text-align: center;
+        text-decoration: none;
+        transition: 0.2s;
+    }
+
+    /* Botões do modal */
+    .btn-editar {
+        background: #ffc107;
+        color: #3d3d00;
+    }
+    .btn-editar:hover {
+        background: #e0ac06;
+    }
+
+    .btn-ver {
+        background: #0d6efd;
+        color: white;
+    }
+    .btn-ver:hover {
+        background: #0b5ed7;
+    }
+
+    .btn-excluir {
+        background: #dc3545;
+        color: white;
+    }
+    .btn-excluir:hover {
+        background: #b02a37;
+    }
+
+    /* PAGINAÇÃO */
+    .paginacao {
+        margin: 30px auto 10px auto;
+        text-align: center;
+    }
+
+    .paginacao a, .paginacao span {
+        display: inline-block;
+        margin: 0 4px;
+        padding: 8px 14px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 600;
+        color: #0d6efd;
+        background: #eef4ff;
+        transition: 0.25s;
+    }
+
+    .paginacao a:hover {
+        background: #dce9ff;
+    }
+
+    .paginacao .ativo {
+        background: #0d6efd;
+        color: #fff;
+        box-shadow: 0 3px 10px rgba(13,110,253,0.4);
+    }
+
+ /* ===========================================
+   🔵 ESTILO MODERNO DOS INPUTS
+   =========================================== */
+.input-modal, textarea.input-modal, select.input-modal {
+    width: 100%;
+    padding: 12px 14px;
+    border-radius: 14px;
+    border: 2px solid #d6e8ff;
+    background: #ffffff;
+    font-size: 15px;
+    outline: none;
+    transition: 0.25s;
+    box-shadow: 0 1px 6px rgba(13,110,253,0.08);
+}
+
+.input-modal:hover {
+    border-color: #0d6efd;
+}
+
+.input-modal:focus {
+    border-color: #0d6efd;
+    box-shadow: 0 0 12px rgba(13,110,253,0.35);
+    background: #f8fbff;
+}
+
+
+/* ===========================================
+   🟢 BOTÃO ADICIONAR (NOVO ESTILO)
+   =========================================== */
+.btn-add {
+    background: linear-gradient(135deg, #20c997, #0aa26b);
+    color: white !important;
+    padding: 12px 22px;
+    border-radius: 14px;
+    font-size: 16px;
+    font-weight: 700;
+    box-shadow: 0 6px 14px rgba(32,201,151,0.35);
+    border: none;
+    cursor: pointer;
+    transition: all 0.25s ease;
+}
+
+.btn-add:hover {
+    transform: translateY(-3px) scale(1.03);
+    box-shadow: 0 8px 20px rgba(32,201,151,0.45);
+}
+
+/* ===========================
+   🔵 MODAL NOVO BRINQUEDO
+   =========================== */
+.modal-novo-box {
+    width: 900px !important;          /* 🔥 AUMENTA HORIZONTAL */
+    max-height: 85vh;                 /* 🔥 CONTROLA ALTURA */
+    overflow-y: auto;                 /* 🔥 SCROLL INTERNO */
+
+    background: linear-gradient(180deg, #ffffff, #f4f8ff);
+    padding: 35px;
+    border-radius: 22px;
+    border: none;
+    box-shadow: 0 15px 45px rgba(0, 0, 0, 0.20);
+    position: relative;
+}
+
+/* Título moderno */
+.modal-titulo {
+    font-size: 28px;
+    text-align: center;
+    font-weight: 800;
+    background: linear-gradient(90deg, #0a58ca, #0d6efd);
+    -webkit-background-clip: text;
+    color: transparent;
+    margin-bottom: 5px;
+}
+
+
+/* Scroll suave */
+.modal-novo-box::-webkit-scrollbar {
+    width: 10px;
+}
+
+.modal-novo-box::-webkit-scrollbar-track {
+    background: #e9e9e9;
+    border-radius: 10px;
+}
+
+.modal-novo-box::-webkit-scrollbar-thumb {
+    background: #0d6efd;
+    border-radius: 10px;
+}
+
+/* Para modais muito largos em telas pequenas */
+@media (max-width: 950px) {
+    .modal-novo-box {
+        width: 96% !important;
+    }
+}
+
+
+/* Subtítulo suave */
+.modal-subtitulo {
+    text-align: center;
+    color: #6b6b6b;
+    font-size: 15px;
+    margin-bottom: 22px;
+}
+
+/* ===========================
+   🔵 GRID dos campos
+   =========================== */
+.grid-dupla {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+    margin-bottom: 18px;
+}
+
+/* RESPONSIVO */
+@media (max-width: 750px) {
+    .grid-dupla {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Labels mais bonitas */
+.modal-box label {
+    font-weight: 600;
+    font-size: 14px;
+    color: #0d47a1;
+    margin-bottom: 5px;
+    display: block;
+}
+
+/* Botão salvar moderno */
+.btn-salvar {
+    background: linear-gradient(135deg, #0d6efd, #0b5ed7);
+    border: none;
+    padding: 13px;
+    color: white;
+    border-radius: 14px;
+    font-size: 17px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-top: 15px;
+    box-shadow: 0 6px 16px rgba(13,110,253,0.35);
+    transition: 0.25s;
+}
+
+.btn-salvar:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 22px rgba(13,110,253,0.45);
+}
+
+/* Botão fechar */
+.btn-fechar {
+    background: #ff4d67;
+    border: none;
+    padding: 12px;
+    color: white;
+    border-radius: 14px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-top: 10px;
+    transition: 0.25s;
+    box-shadow: 0 6px 16px rgba(255,77,103,0.35);
+}
+
+.btn-fechar:hover {
+    background: #d93a53;
+    transform: translateY(-3px);
+}
+
+
+/* ===========================================
+   🔘 Melhor efeito no fundo modal
+   =========================================== */
+.modal-bg {
+    backdrop-filter: blur(6px);
+    background: rgba(0,0,0,0.45) !important;
+}
+
+    .modal-bg {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.55);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+}
+
+.modal-box {
+    background: #fff;
+    padding: 25px;
+    border-radius: 12px;
+    width: 450px;
+    box-shadow: 0 5px 25px rgba(0,0,0,0.25);
+    position: relative;
+}
+
+.modal-close-btn {
+    display:block;
+    width:100%;
+    padding:10px;
+    margin-bottom:15px;
+    background:#dc3545;
+    color:white;
+    border:none;
+    border-radius:8px;
+    font-size:16px;
+    cursor:pointer;
+}
+
+/* ===========================
+   ❌ ÍCONE X FECHAR
+   =========================== */
+.modal-x {
+    position: absolute;
+    top: 15px;
+    right: 18px;
+    font-size: 30px;
+    font-weight: bold;
+    color: #444;
+    cursor: pointer;
+    transition: .2s;
+    z-index: 9999;
+}
+
+.modal-x:hover {
+    color: #000;
+    transform: scale(1.15);
+}
+
+/* ===========================
+   🟦 DUAL SELECT (Categorias e Tags)
+   =========================== */
+.dual-select {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    margin-bottom: 18px;
+    width: 100%;
+}
+
+.dual-select .dual-box {
+    flex: 1;
+}
+
+.dual-select select {
+    width: 100%;
+    height: 180px;
+    padding: 8px;
+    font-size: 14px;
+    border: 2px solid #d6e8ff;
+    border-radius: 10px;
+    background: #fff;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.05);
+}
+
+.dual-select select option {
+    background: #eef4ff;
+    margin: 4px 0;
+    padding: 6px;
+    border-radius: 6px;
+    color: #0a58ca;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.dual-select select option:hover {
+    background: #d7e6ff;
+}
+
+/* Controles (setas e +) */
+.dual-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.dual-controls button {
+    padding: 10px 15px;
+    border-radius: 8px;
+    font-size: 18px;
+    border: none;
+    cursor: pointer;
+    background: #0d6efd;
+    color: white;
+    transition: 0.2s;
+}
+
+.dual-controls button:hover {
+    background: #0b5ed7;
+}
+
+.btn-add-categoria {
+    background: #10c26f !important;
+}
+.btn-add-categoria:hover {
+    background: #0e9b59 !important;
+}
+
+/* ===========================
+   🔵 INPUTS
+   =========================== */
+.input-modal, textarea.input-modal, select.input-modal {
+    width: 100%;
+    padding: 12px 14px;
+    border-radius: 14px;
+    border: 2px solid #d6e8ff;
+    background: #ffffff;
+    font-size: 15px;
+    outline: none;
+    transition: 0.25s;
+    box-shadow: 0 1px 6px rgba(13,110,253,0.08);
+}
+
+.input-modal:focus {
+    border-color: #0d6efd;
+    box-shadow: 0 0 12px rgba(13,110,253,0.35);
+    background: #f8fbff;
+}
+#modal-mensagem {
+    margin-bottom: 12px;
+}
+
+.alerta-modal {
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-weight: 600;
+    animation: fadeIn 0.3s ease;
+    text-align: left;
+}
+
+.alerta-modal.success {
+    background: #d1e7dd;
+    color: #0f5132;
+    border-left: 5px solid #0f5132;
+}
+
+.alerta-modal.error {
+    background: #f8d7da;
+    color: #842029;
+    border-left: 5px solid #842029;
+}
+
+.categoria-box {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-add-categoria {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #0d6efd;
+    color: white;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    transition: .2s;
+}
+
+.btn-add-categoria:hover {
+    background: #084298;
+    transform: scale(1.1);
+}
+
+
+
+</style>
+
+<table class="brinquedos-table">
+    <tr>
+        <th>ID</th>
+        <th>Imagem</th>
+        <th>Nome</th>
+        <th>Preço</th>
+        <th>Ações</th>
+    </tr>
+
+    {% for b in brinquedos %}
+    <tr>
+        <td>#{{ b.id }}</td>
+
+        <td>
+            <img src="{{ b.imagem_brinquedo.url }}" width="60"
+                 style="border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.15);">
+        </td>
+
+        <td><strong>{{ b.nome_brinquedo }}</strong></td>
+
+        <td>
+            <span style="color:#0d6efd; font-weight:700;">
+                R$ {{ b.valor_brinquedo }}
+            </span>
+        </td>
+
+        <td>
+            <button class="btn-acoes" onclick="abrirModal({{ b.id }})">Gerenciar</button>
+        </td>
+    </tr>
+
+    <!-- MODAL DE GERENCIAR BRINQUEDO -->
+    <div class="modal-bg" id="modal-{{ b.id }}">
+        <div class="modal-box">
+
+            <!-- FECHAR -->
+            <span class="modal-x" onclick="fecharModal({{ b.id }})">&times;</span>
+
+
+            <h2>{{ b.nome_brinquedo }}</h2>
+            <p>{{ b.descricao }}</p>
+            <h4>Preço: R$ {{ b.valor_brinquedo }}</h4>
+
+            <hr style="margin: 15px 0;">
+
+            <div class="modal-botoes">
+                <a href="#" class="btn-editar">✏ Editar Brinquedo</a>
+                <a href="#" class="btn-ver">👁 Ver Detalhes</a>
+                <a href="#" class="btn-excluir">🗑 Excluir Brinquedo</a>
+            </div>
+
+        </div>
+    </div>
+    {% endfor %}
+</table>
+
+{% if page_obj.paginator.num_pages > 1 %}
+<div class="paginacao">
+    {% if page_obj.has_previous %}
+        <a href="?page={{ page_obj.previous_page_number }}&categoria={{ categoria_ativa }}">Anterior</a>
+    {% endif %}
+
+    {% for num in page_obj.paginator.page_range %}
+        {% if num == page_obj.number %}
+            <span class="ativo">{{ num }}</span>
+        {% elif num > page_obj.number|add:-3 and num < page_obj.number|add:3 %}
+            <a href="?page={{ num }}&categoria={{ categoria_ativa }}">{{ num }}</a>
+        {% endif %}
+    {% endfor %}
+
+    {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}&categoria={{ categoria_ativa }}">Próxima</a>
+    {% endif %}
+</div>
+{% endif %}
+
+
+<!-- MODAL NOVA CATEGORIA -->
+<div class="modal-bg" id="modal-categoria">
+    <div class="modal-box modal-novo-box">
+
+        <span class="modal-x" onclick="fecharModalCategoria()">&times;</span>
+
+        <h2 class="modal-titulo">Nova Categoria</h2>
+        <p class="modal-subtitulo">Preencha os dados da nova categoria</p>
+
+        <div id="mensagem-categoria"></div>
+
+        <form id="form-categoria" enctype="multipart/form-data">
+            {% csrf_token %}
+            <label>Imagem da Categoria:</label>
+            <input type="file" name="imagem_categoria" class="input-modal" required>
+
+            <label>Nome da Categoria:</label>
+            <input type="text" name="nome_categoria" class="input-modal" required>
+
+            <button type="submit" class="btn-ver btn-salvar">Salvar Categoria</button>
+            <button type="button" class="btn-excluir btn-fechar" onclick="fecharModalCategoria()">Fechar</button>
+        </form>
+
+
+    </div>
+</div>
+
+
+<!-- MODAL NOVA TAG -->
+<div class="modal-bg" id="modal-tag">
+    <div class="modal-box modal-novo-box">
+
+        <span class="modal-x" onclick="fecharModalTag()">&times;</span>
+
+        <h2 class="modal-titulo">Nova Tag</h2>
+        <p class="modal-subtitulo">Adicionar uma nova tag</p>
+
+        <div id="mensagem-tag"></div>
+
+        <form method="POST" action="{% url 'tag_new' %}">
+            {% csrf_token %}
+
+            <label>Nome da Tag:</label>
+            <input type="text" name="nome_tag" class="input-modal" required>
+
+            <button type="submit" class="btn-ver btn-salvar">Salvar Tag</button>
+
+            <button type="button" class="btn-excluir btn-fechar" onclick="fecharModalTag()">Fechar</button>
+        </form>
+
+    </div>
+</div>
+
+
+
+<script>
+
+/* --------------------------------------------------
+   MODAL "NOVO BRINQUEDO"
+-------------------------------------------------- */
+function abrirModalNovo() {
+    document.getElementById("modal-novo").style.display = "flex";
+}
+
+function fecharModalNovo() {
+    document.getElementById("modal-novo").style.display = "none";
+}
+
+/* Fechar ao clicar fora */
+document.addEventListener("click", function(e) {
+    const modalNovo = document.getElementById("modal-novo");
+    if (modalNovo && e.target === modalNovo) {
+        modalNovo.style.display = "none";
+    }
+});
+
+
+/* --------------------------------------------------
+   MODAIS DE GERENCIAR (DINÂMICOS POR ID)
+-------------------------------------------------- */
+function abrirModal(id) {
+    document.getElementById("modal-" + id).style.display = "flex";
+}
+
+function fecharModal(id) {
+    document.getElementById("modal-" + id).style.display = "none";
+}
+
+/* Fechar ao clicar fora para QUALQUER modal gerenciar */
+document.addEventListener("click", function(e) {
+
+    document.querySelectorAll(".modal-bg").forEach(modal => {
+        if (e.target === modal && modal.id !== "modal-novo") {
+            modal.style.display = "none";
+        }
+    });
+
+});
+
+/* Formatação dos campos decimais (0,00) */
+document.querySelectorAll(".decimal").forEach(input => {
+    input.addEventListener("input", function() {
+
+        let val = this.value.replace(/\D/g, "");
+
+        if (val === "") {
+            this.value = "";
+            return;
+        }
+
+        val = (parseInt(val) / 100).toFixed(2);
+
+        this.value = val.replace(".", ",");
+    });
+});
+
+/* 🔥 Reabrir modal se houver ?modal_aberto=1 */
+document.addEventListener("DOMContentLoaded", function () {
+    const params = new URLSearchParams(window.location.search);
+
+    if (params.get("modal_aberto") == "1") {
+        abrirModalNovo();
+
+        {% if messages %}
+            let msgHTML = "";
+            {% for m in messages %}
+                msgHTML += `<div class="alerta-modal {{ m.tags }}">{{ m }}</div>`;
+            {% endfor %}
+            document.getElementById("modal-mensagem").innerHTML = msgHTML;
+
+            setTimeout(() => {
+                document.getElementById("modal-mensagem").innerHTML = "";
+            }, 3000);
+        {% endif %}
+
+        /* 🔥 limpar os campos se for salvar e adicionar outro */
+        if (params.get("limpar") == "1") {
+            document.querySelector("input[name='nome_brinquedo']").value = "";
+            document.querySelector("textarea[name='descricao']").value = "";
+            document.querySelector("input[name='valor_brinquedo']").value = "";
+            document.querySelector("input[name='avaliacao']").value = "";
+            document.querySelector("input[name='altura_m']").value = "";
+            document.querySelector("input[name='largura_m']").value = "";
+            document.querySelector("input[name='profundidade_m']").value = "";
+
+            let img = document.querySelector("input[name='imagem_brinquedo']");
+            img.value = "";
+
+            setTimeout(() => { img.value = ""; }, 1000);
+        }
+    }
+});
+
+// FUNÇÕES PARA ABRIR / FECHAR MODAL
+function abrirModalCategoria() {
+    const modal = document.getElementById("modal-categoria");
+    modal.classList.add("show");
+}
+
+function fecharModalCategoria() {
+    const modal = document.getElementById("modal-categoria");
+    modal.classList.remove("show");
+}
+
+// FECHAR AO CLICAR FORA
+(function() {
+    const modal = document.getElementById("modal-categoria");
+    modal.addEventListener("click", function(e) {
+        // Se o clique foi exatamente no fundo, fecha
+        if (e.target === modal) {
+            fecharModalCategoria();
+        }
+    });
+})();
+
+/* Salvar categoria (AJAX) */
+function salvarCategoria() {
+    let form = document.getElementById("form-categoria");
+    let formData = new FormData(form);
+
+    fetch("categoria", {
+        method: "POST",
+        body: formData
+    })
+    .then(res => res.json())
+    .then(data => {
+        let msg = document.getElementById("msg-categoria");
+
+        if (data.status === "sucesso") {
+            msg.innerHTML = `<div class='alerta sucesso'>${data.msg}</div>`;
+
+            // adiciona ao select de categorias
+            const select = document.getElementById("select-categorias");
+            let opt = document.createElement("option");
+            opt.value = data.id;
+            opt.textContent = data.nome;
+            opt.selected = true;
+            select.appendChild(opt);
+
+            // limpa inputs
+            form.reset();
+
+            // limpa mensagem depois de 2s
+            setTimeout(() => { msg.innerHTML = ""; }, 2000);
+
+        } else {
+            msg.innerHTML = `<div class='alerta erro'>${data.msg}</div>`;
+        }
+    });
+}
+
+
+
+function moverSelecionados(origemId, destinoId) {
+    let origem = document.getElementById(origemId);
+    let destino = document.getElementById(destinoId);
+
+    Array.from(origem.selectedOptions).forEach(opt => {
+        destino.appendChild(opt);
+    });
+}
+
+function adicionarCategoria() {
+    moverSelecionados("categorias-disponiveis", "categorias-selecionadas");
+}
+
+function removerCategoria() {
+    moverSelecionados("categorias-selecionadas", "categorias-disponiveis");
+}
+
+function adicionarTag() {
+    moverSelecionados("tags-disponiveis", "tags-selecionadas");
+}
+
+function removerTag() {
+    moverSelecionados("tags-selecionadas", "tags-disponiveis");
+}
+
+function abrirModalTag() {
+    document.getElementById("modal-tag").classList.add("show");
+}
+
+function fecharModalTag() {
+    document.getElementById("modal-tag").classList.remove("show");
+}
+
+// Fechar clicando fora
+document.addEventListener("click", function (e) {
+    const modal = document.getElementById("modal-tag");
+    if (modal.classList.contains("show")) {
+        const box = modal.querySelector(".modal-box");
+        if (!box.contains(e.target) && e.target.id !== 'modal-tag') {
+            fecharModalTag();
+        }
+    }
+});
+
+    /* Formatação e limite para AVALIAÇÃO */
+const avaliacaoInput = document.querySelector(".decimal-avaliacao");
+
+if (avaliacaoInput) {
+    avaliacaoInput.addEventListener("input", function() {
+
+        // remove tudo que não for número
+        let val = this.value.replace(/\D/g, "");
+
+        if (val === "") {
+            this.value = "";
+            return;
+        }
+
+        // formata como 0,00
+        val = (parseInt(val) / 100);
+
+        // impede ultrapassar 5
+        if (val > 5) val = 5;
+
+        // formata
+        this.value = val.toFixed(2).replace(".", ",");
+    });
+}
+document.getElementById("form-categoria").addEventListener("submit", function(e) {
+    e.preventDefault(); // evita o submit padrão
+
+    const formData = new FormData(this);
+
+    fetch("{% url 'categoria_new' %}", {
+        method: "POST",
+        headers: {
+            "X-CSRFToken": formData.get("csrfmiddlewaretoken")
+        },
+        body: formData
+    })
+    .then(res => res.json())
+    .then(data => {
+        const msgDiv = document.getElementById("mensagem-categoria");
+        msgDiv.innerHTML = ""; // limpa mensagens anteriores
+
+        if(data.status === "sucesso") {
+            msgDiv.innerHTML = `<div class="alerta-modal success">${data.msg}</div>`;
+
+            setTimeout(() => {
+                fecharModalCategoria();
+
+                // Adiciona a nova categoria no select do modal de brinquedos
+                const select = document.getElementById("categorias-disponiveis");
+                const option = document.createElement("option");
+                option.value = data.id;
+                option.text = data.nome;
+                select.appendChild(option);
+
+                // Adiciona a nova categoria também nos filtros do topo
+                const filtrosDiv = document.querySelector(".filtros");
+                const link = document.createElement("a");
+                link.href = `?categoria=${data.nome}`;
+                link.className = "filtro-btn";
+                link.textContent = data.nome;
+                filtrosDiv.appendChild(link);
+
+            }, 800);
+        } else {
+            msgDiv.innerHTML = `<div class="alerta-modal error">${data.msg}</div>`;
+        }
+    })
+    .catch(err => console.error(err));
+});
+
+
+</script>
+
+{% endblock %}

@@ -1,0 +1,350 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+
+<style>
+
+
+    /* ======== BREADCRUMB ======== */
+.breadcrumb {
+    max-width: 1200px;
+    margin: 25px auto;
+    font-size: 1rem;
+    color: #444;
+}
+
+.breadcrumb a {
+    color: #007BFF;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.breadcrumb span {
+    margin: 0 6px;
+    color: #888;
+}
+
+.breadcrumb strong {
+    color: #1f2d3d;
+}
+
+/* ======== HEADER DA CATEGORIA ======== */
+.categoria-header {
+    text-align: center;
+    margin-bottom: 40px;
+}
+
+.categoria-banner {
+    width: 100%;
+    max-height: 320px;
+    object-fit: cover;
+    border-radius: 18px;
+}
+
+.categoria-titulo {
+    font-size: 2.4rem;
+    color: #004AAD;
+    font-weight: 700;
+    margin-top: 20px;
+}
+
+.categoria-sub {
+    font-size: 1.1rem;
+    color: #5a5a5a;
+    margin-top: 8px;
+}
+
+/* ======== FILTROS COM EFEITO ======== */
+
+.filtros-horizontal {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 30px;
+}
+
+.filtro-btn {
+    padding: 10px 18px;
+    border-radius: 25px;
+    background: #f1f4ff;
+    border: 2px solid #d9e2ff;
+    color: #004AAD;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.25s ease;
+    box-shadow: 0 0 0 rgba(0,0,0,0);
+}
+
+.filtro-btn:hover {
+    background: #004AAD;
+    color: #fff;
+    transform: translateY(-3px);
+    box-shadow: 0 6px 14px rgba(0, 74, 173, 0.25);
+}
+
+.filtro-btn:active {
+    transform: scale(0.93);
+}
+
+.filtro-btn.ativo {
+    background: #004AAD;
+    color: #fff;
+    border-color: #004AAD;
+    box-shadow: 0 6px 14px rgba(0, 74, 173, 0.25);
+}
+
+/* ===================== CARDS DOS PRODUTOS ===================== */
+
+.grid-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 28px;
+}
+
+/* CARD */
+.card-produto {
+    background: #ffffff;
+    border-radius: 14px;
+    padding: 15px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+    transition: all 0.25s ease;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    cursor: pointer;
+    border: 1px solid #e7e7e7;
+    justify-content: space-between;
+}
+
+/* EFEITO HOVER */
+.card-produto:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 10px 22px rgba(0, 0, 0, 0.15);
+    border-color: #c8d9ff;
+}
+
+/* EFEITO CLICK */
+.card-produto:active {
+    transform: scale(0.96);
+}
+
+/* IMAGEM */
+.img-area {
+    width: 100%;
+    height: 190px;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #f3f5fd;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.img-area img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform .3s ease;
+}
+
+/* Zoom suave da imagem */
+.card-produto:hover img {
+    transform: scale(1.07);
+}
+
+/* TÍTULO */
+.card-produto h3 {
+    margin-top: 15px;
+    font-size: 1.2rem;
+    color: #004AAD;
+    font-weight: 700;
+}
+
+/* DESCRIÇÃO */
+.card-produto .descricao {
+    font-size: .95rem;
+    color: #555;
+    margin-top: 6px;
+    height: 50px;
+}
+
+/* PREÇO */
+.card-produto .preco {
+    font-size: 1.2rem;
+    color: #00913f;
+    font-weight: 700;
+    margin-top: auto;
+}
+
+/* BOTÃO */
+.btn-vermais {
+    margin-top: 12px;
+    padding: 10px;
+    background: #004AAD;
+    color: #fff;
+    border-radius: 25px;
+    text-align: center;
+    text-decoration: none;
+    font-weight: 600;
+    transition: all .25s ease;
+}
+
+.btn-vermais:hover {
+    background: #00337a;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0, 51, 122, 0.25);
+}
+
+    /* Força o conteúdo a ocupar todo o espaço até o botão */
+.conteudo {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    height: 100%;
+}
+
+/* Ajusta a descrição para não empurrar o botão */
+.conteudo .descricao {
+    flex-grow: 1;
+}
+
+/* Deixa o botão no final do card e mais destacado */
+.btn-vermais {
+    margin-top: 18px !important;
+    padding: 12px 0;
+    font-size: 1rem;
+    border-radius: 30px;
+    background: linear-gradient(135deg, #004AAD, #0066D6);
+    color: #fff;
+    font-weight: 600;
+    text-align: center;
+    display: block;
+    transition: all .25s ease;
+}
+
+.btn-vermais:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 18px rgba(0, 74, 173, 0.35);
+    background: linear-gradient(135deg, #003B88, #005BC0);
+}
+
+
+
+</style>
+
+<!-- 🔵 BREADCRUMB / NAVEGAÇÃO DO USUÁRIO -->
+<nav class="breadcrumb">
+    <a href="{% url 'home' %}">Home</a>
+    <span>›</span>
+    <a href="{% url 'home' %}#categorias-section">Categorias</a>
+    <span>›</span>
+    <strong>{{ categoria.nome_categoria }}</strong>
+</nav>
+
+<!-- 🔵 HEADER DA CATEGORIA -->
+<div class="categoria-header">
+    {% if categoria.imagem_categoria %}
+        <img src="{{ categoria.imagem_categoria.url }}" class="categoria-banner">
+    {% else %}
+        <img src="{% static 'images/default_categoria.jpg' %}" class="categoria-banner">
+    {% endif %}
+
+    <h1 class="categoria-titulo">{{ categoria.nome_categoria }}</h1>
+    <p class="categoria-sub">
+        {{ page_obj.paginator.count }} brinquedo(s) encontrados
+    </p>
+</div>
+
+<!-- 🔵 FILTROS -->
+<div class="filtros-horizontal">
+    <a href="?ordenar=az" class="filtro-btn {% if ordenar == 'az' %}ativo{% endif %}">
+        A → Z
+    </a>
+
+    <a href="?ordenar=za" class="filtro-btn {% if ordenar == 'za' %}ativo{% endif %}">
+        Z → A
+    </a>
+
+    <a href="?ordenar=melhor-avaliados" class="filtro-btn {% if ordenar == 'melhor-avaliados' %}ativo{% endif %}">
+        ⭐ Melhor avaliados
+    </a>
+
+    <a href="?ordenar=custo-beneficio" class="filtro-btn {% if ordenar == 'custo-beneficio' %}ativo{% endif %}">
+        🏆 Custo-benefício
+    </a>
+</div>
+
+
+<!-- 🔵 LISTAGEM DE PRODUTOS -->
+<div class="produtos-wrapper">
+
+    {% if page_obj %}
+        <div class="grid-cards">
+
+            {% for item in page_obj %}
+
+                <div class="card-produto">
+
+                    <div class="img-area">
+                        <img src="{{ item.imagem_brinquedo.url }}" alt="{{ item.nome_brinquedo }}">
+                    </div>
+
+                    <div class="conteudo">
+
+                        <h3>{{ item.nome_brinquedo }}</h3>
+
+                        <!-- ⭐ AVALIAÇÃO -->
+                        <div class="avaliacao">
+                            <div class="stars">
+                                {% for i in "12345" %}
+                                    {% if forloop.counter <= item.avaliacao %}
+                                        ⭐
+                                    {% else %}
+                                        ☆
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                            <span class="nota">{{ item.avaliacao }}</span>
+                        </div>
+
+                        <p class="descricao">{{ item.descricao|truncatechars:90 }}</p>
+
+                        <p class="preco">
+                            R$ {{ item.valor_brinquedo }}
+                        </p>
+
+                        <!-- BOTÃO -->
+                        <a href="{% url 'brinquedo_detalhe' item.id %}" class="btn-vermais">
+                            Ver mais
+                        </a>
+
+                    </div>
+
+                </div>
+
+            {% endfor %}
+
+        </div>
+
+        <!-- 🔵 PAGINAÇÃO -->
+        <div class="paginacao">
+            {% if page_obj.has_previous %}
+                <a class="page-btn" href="?page={{ page_obj.previous_page_number }}&ordenar={{ ordenar }}">Anterior</a>
+            {% endif %}
+
+            <span class="page-atual">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
+
+            {% if page_obj.has_next %}
+                <a class="page-btn" href="?page={{ page_obj.next_page_number }}&ordenar={{ ordenar }}">Próxima</a>
+            {% endif %}
+        </div>
+
+    {% else %}
+        <p class="texto-vazio">Nenhum brinquedo foi encontrado nesta categoria.</p>
+    {% endif %}
+
+</div>
+
+{% endblock %}

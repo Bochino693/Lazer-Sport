@@ -1,0 +1,2534 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Home | Lazer & Sports {% endblock %}
+
+{% block content %}
+
+
+
+<style>
+
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600&display=swap');
+
+
+/* ======= RESET ======= */
+body {
+  margin: 0;
+  font-family: "Poppins", sans-serif;
+  background: #f8f9fa;
+  color: #2c3e50;
+}
+/* Título padrão */
+.titulo-sec,
+.carousel-box h2,
+.categorias-section .section-title {
+    text-align: center;
+    font-size: 2.4rem;
+    font-weight: 800;
+    color: #007BFF;
+    margin-bottom: 45px;
+    letter-spacing: .5px;
+}
+
+.empty-message {
+    width: 100%;
+    text-align: center;
+    padding: 20px 0;
+    font-size: 1.1rem;
+    color: #777;
+}
+
+
+/* ======= HERO ======= */
+.hero {
+  text-align: center;
+  padding: 80px 20px;
+  background: linear-gradient(135deg, #007BFF, #00B4D8);
+  color: white;
+  border-radius: 0 0 50px 50px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+}
+
+.hero h1 {
+  font-size: 2.5em;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+.hero p {
+  font-size: 1.1em;
+  margin-bottom: 20px;
+  opacity: 0.9;
+}
+
+.hero .btn {
+  background: white;
+  color: #007BFF;
+  padding: 12px 30px;
+  border-radius: 8px;
+  text-decoration: none;
+  font-weight: 600;
+  transition: 0.3s;
+}
+
+.hero .btn:hover {
+  background: #E63946;
+  color: white;
+  transform: scale(1.05);
+}
+
+
+.carousel-container {
+  width: 100%;       /* ocupa 100% do container pai */
+  max-width: 100%;   /* não limita a largura */
+  margin: 0 auto;    /* centraliza dentro do container */
+  position: relative;
+  overflow: hidden;
+  border-radius: 0;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+}
+
+.carousel-wrapper {
+  position: relative;
+  width: 100%;
+  height: 500px;      /* altura fixa ou via media query */
+}
+
+.carousel-slide {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;   /* cobre todo o espaço horizontal e vertical do wrapper */
+  border-radius: 0;
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 1s ease-in-out;
+}
+
+.carousel-slide.active {
+  opacity: 1;
+  z-index: 1;
+}
+
+
+/* ====== SETAS ====== */
+.carousel-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(0, 74, 173, 0.6);
+  color: white;
+  border: none;
+  font-size: 2rem;
+  padding: 10px 15px;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background 0.3s, transform 0.3s;
+  z-index: 10;
+}
+
+.carousel-btn.prev {
+  left: 15px;
+}
+
+.carousel-btn.next {
+  right: 15px;
+}
+
+.carousel-btn:hover {
+  background: #E63946;
+  transform: translateY(-50%) scale(1.1);
+}
+
+/* ====== DOTS ====== */
+.carousel-dots {
+  position: absolute;
+  bottom: 15px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 10px;
+  z-index: 10;
+}
+
+.dot {
+  width: 12px;
+  height: 12px;
+  background: rgba(255,255,255,0.5);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.dot.active {
+  background: #E63946;
+}
+
+.dot:hover {
+  transform: scale(1.3);
+}
+
+/* ====== RESPONSIVO ====== */
+@media (max-width: 768px) {
+  .carousel-wrapper {
+    height: 300px;
+  }
+  .carousel-btn {
+    font-size: 1.5rem;
+    padding: 8px 12px;
+  }
+}
+
+
+/* ===========================
+   MELHORIAS EXCLUSIVAS DO GRID DE PRODUTOS
+   =========================== */
+
+/* Container */
+.destaques {
+    padding: 70px 20px;
+    background: #E3F2FD;
+}
+
+/* Título */
+.destaques h2 {
+    text-align: center;
+    font-size: 2.4em;
+    font-weight: 800;
+    color: #007BFF;
+    margin-bottom: 45px;
+    letter-spacing: .5px;
+}
+
+/* Grid atualizado */
+.destaques .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 30px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+/* Card aprimorado */
+.destaques .card {
+    background: white;
+    border-radius: 18px;
+    overflow: hidden;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+    transition: all .35s ease-in-out;
+    text-align: center;
+    padding-bottom: 20px;
+    cursor: pointer;
+    position: relative;
+}
+
+/* Hover premium */
+.destaques .card:hover {
+    transform: translateY(-10px) scale(1.03);
+    box-shadow: 0 12px 28px rgba(0,0,0,0.18);
+}
+
+/* Imagem com efeito zoom */
+.destaques .card img {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+    transition: transform .5s ease;
+}
+
+.destaques .card:hover img {
+    transform: scale(1.1);
+}
+
+/* Título */
+.destaques .card h3 {
+    margin-top: 15px;
+    font-size: 1.3em;
+    font-weight: 600;
+    color: #1f2d3d;
+}
+
+/* Descrição */
+.destaques .card p {
+    padding: 0 15px;
+    color: #4a4a4a;
+    font-size: 0.95em;
+    margin: 8px 0 15px 0;
+    min-height: 45px;
+}
+
+/* Botão melhorado */
+.destaques .btn-pequeno {
+    display: inline-block;
+    background: #007BFF;
+    color: white;
+    padding: 10px 22px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 600;
+    transition: .3s ease;
+    box-shadow: 0 4px 10px rgba(0,123,255,0.35);
+}
+
+.destaques .btn-pequeno:hover {
+    background: #E63946;
+    transform: translateY(-3px);
+    box-shadow: 0 6px 14px rgba(230,57,70,0.5);
+}
+
+/* Efeito suave ao entrar */
+@keyframes fadeCard {
+    from { opacity: 0; transform: translateY(25px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.destaques .card {
+    animation: fadeCard .6s ease forwards;
+}
+
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 25px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.card {
+  background: white;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+  transition: all 0.3s ease;
+  text-align: center;
+  padding-bottom: 20px;
+}
+
+.card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+}
+
+.card img {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+}
+
+.card h3 {
+  margin-top: 15px;
+  font-size: 1.2em;
+  color: #2c3e50;
+}
+
+.card p {
+  padding: 0 15px;
+  color: #555;
+  font-size: 0.95em;
+  margin: 10px 0 15px 0;
+}
+
+.btn-pequeno {
+  display: inline-block;
+  background: #007BFF;
+  color: white;
+  padding: 8px 18px;
+  border-radius: 6px;
+  text-decoration: none;
+  font-weight: 600;
+  transition: 0.3s;
+}
+
+.btn-pequeno:hover {
+  background: #E63946;
+}
+
+/* ======= CONTATO ======= */
+#contato {
+  background: linear-gradient(135deg, #007BFF, #E63946);
+  color: white;
+  padding: 60px 20px;
+}
+
+#contato h2 {
+  font-size: 2em;
+  font-weight: 700;
+  margin-bottom: 25px;
+}
+
+#contato a {
+  color: #FFD166;
+  text-decoration: none;
+}
+
+#contato a:hover {
+  text-decoration: underline;
+}
+
+#contato .grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 40px;
+}
+
+#contato iframe {
+  width: 100%;
+  height: 300px;
+  border-radius: 12px;
+  border: 0;
+}
+
+@media (max-width: 768px) {
+  #contato .grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ======= CATEGORIAS ======= */
+.categorias-section {
+  padding: 60px 20px;
+  background: #ffffff;
+}
+
+.categorias-section .section-title {
+  text-align: center;
+  color: #007BFF;
+  font-size: 2em;
+  font-weight: 700;
+  margin-bottom: 30px;
+}
+
+/* Contêiner externo */
+.scroll-wrapper {
+  position: relative;
+  max-width: 1200px;
+  margin: 0 auto;
+  overflow: hidden;
+}
+
+/* Faixa rolável */
+.scroll-container {
+  display: flex;
+  gap: 20px;
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  padding: 20px 10px;
+}
+
+.scroll-container::-webkit-scrollbar {
+  height: 8px;
+}
+.scroll-container::-webkit-scrollbar-thumb {
+  background: #007BFF;
+  border-radius: 4px;
+}
+.categoria-card {
+    background: white;
+    border-radius: 20px;
+    min-width: 240px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+    transition: transform .32s ease, box-shadow .32s ease;
+    cursor: pointer;
+    overflow: hidden;
+    text-align: center;
+    animation: fadeCard .6s ease forwards;
+}
+
+/* Hover igual ao card-produto */
+.categoria-card:hover {
+    transform: translateY(-10px) scale(1.02);
+    box-shadow: 0 12px 28px rgba(0,0,0,0.15);
+}
+
+/* Imagem ajustada */
+.categoria-card img {
+    width: 100%;
+    height: 160px;
+    object-fit: cover;
+    transition: transform .4s ease;
+}
+
+.categoria-card:hover img {
+    transform: scale(1.08);
+}
+
+/* Título */
+.categoria-info h3 {
+    color: #1f2d3d;
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+
+/* Total de produtos */
+.categoria-info p {
+    color: #007BFF;
+    font-weight: 600;
+    font-size: 1rem;
+}
+
+/* Botões de navegação */
+.scroll-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(0, 123, 255, 0.9);
+  color: white;
+  border: none;
+  font-size: 24px;
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.3s;
+  z-index: 10;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+}
+
+.scroll-btn:hover {
+  background: #E63946;
+  transform: translateY(-50%) scale(1.1);
+}
+
+.scroll-btn.left {
+  left: 0;
+}
+
+.scroll-btn.right {
+  right: 0;
+}
+
+@media (max-width: 768px) {
+  .scroll-btn {
+    display: none;
+  }
+}
+
+.grid-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 30px;
+    max-width: 1200px;
+    margin: 0 auto;
+    align-items: stretch;
+    /* Se quiser que os cards ocupem menos (não expandam) quando poucos, use justify-content no JS. */
+}
+
+/* Wrapper do título + botão */
+.titulo-sec-wrapper {
+    display: flex;
+    justify-content: space-between; /* título à esquerda, botão à direita */
+    align-items: center;
+    margin-bottom: 30px; /* espaçamento abaixo */
+}
+
+
+.btn-vertodos {
+    display: inline-block;
+    background: #007BFF;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background .25s, transform .2s;
+    font-size: 0.95rem;
+}
+
+.btn-vertodos:hover {
+    background: #E63946;
+    transform: translateY(-2px);
+}
+
+
+/* CARD com largura máxima fixa para evitar esticar demais */
+.card-produto {
+    display: flex; /* ESSENCIAL para flex-direction e justify-content funcionarem */
+    flex-direction: column; /* empilha verticalmente */
+    justify-content: space-between; /* empurra o botão para baixo */
+    width: 320px;
+    max-width: 100%;
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+    overflow: hidden;
+    transition: transform .32s ease, box-shadow .32s ease;
+    margin: 0 auto;
+    height: 100%;
+}
+
+/* hover */
+.card-produto:hover {
+    transform: translateY(-10px) scale(1.02);
+    box-shadow: 0 12px 28px rgba(0,0,0,0.15);
+}
+
+/* imagem */
+.card-produto .img-area {
+    height: 200px;
+    overflow: hidden;
+}
+
+.card-produto .img-area img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform .4s ease;
+}
+
+.card-produto:hover .img-area img {
+    transform: scale(1.08);
+}
+
+/* conteúdo */
+.card-produto .conteudo {
+    flex: 1; /* ocupa todo espaço disponível acima do botão */
+    display: flex;
+    flex-direction: column;
+}
+
+/* título */
+.card-produto h3 {
+    font-size: 1.15rem;
+    margin: 0 0 8px 0;
+    color: #1f2d3d;
+    font-weight: 700;
+    text-align: center;
+}
+
+/* avaliacao: estrelas + nota */
+.avaliacao {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.stars {
+    display: inline-flex;
+    gap: 6px;
+    color: #FFD700; /* cor das estrelas */
+    line-height: 0;
+}
+
+.star svg { display: block; }
+
+/* nota numérica */
+.avaliacao .nota {
+    color: #333;
+    font-size: 0.9rem;
+}
+
+
+/* descrição */
+.card-produto .descricao {
+    color: #555;
+    font-size: 0.95rem;
+    margin: 8px 0 12px;
+    min-height: 48px;
+}
+
+/* ===== NOVOS ESTILOS DE DIMENSÕES E VOLUME ===== */
+
+.dimensoes {
+    margin: 6px 0 12px 0;
+    color: #1f2d3d;
+    font-size: 0.92rem;
+    font-weight: 500;
+}
+
+
+.dimensoes-metros {
+    margin: 6px 0 12px 0;
+    color: #1f2d3d;
+    font-size: 0.90rem;
+    font-weight: 500;
+    opacity: 0.9; /* deixa levemente mais suave, estilo informativo */
+}
+
+.volume {
+    margin: 6px 0 14px 0;
+    color: #1f2d3d;
+    font-size: 0.95rem;
+    font-weight: 700; /* destaque porque é um dado importante */
+    background: #F3F8FF; /* azul bem leve, segue padrão das tags */
+    padding: 6px 10px;
+    border-radius: 10px;
+    display: inline-block;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+}
+
+
+/* Categorias (pills) */
+.categorias {
+    margin-bottom: 10px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.categoria-pill {
+    background: #f0f7ff;
+    color: #007BFF;
+    padding: 4px 10px;
+    font-size: 0.8rem;
+    border-radius: 12px;
+    font-weight: 600;
+}
+
+/* Voltagem */
+.voltagem {
+    margin: 6px 0 12px 0;
+    color: #1f2d3d;
+    font-size: 0.92rem;
+    font-weight: 500;
+}
+
+
+/* preco */
+.preco {
+    color: #007BFF;
+    font-weight: 700;
+    font-size: 1.2rem;
+    margin-bottom: 12px;
+    text-align: center; /* centraliza o texto */
+}
+
+/* tags */
+.tags { margin-bottom: 12px; }
+.tag {
+    display: inline-block;
+    background: #E3F2FD;
+    color: #007BFF;
+    padding: 5px 8px;
+    border-radius: 10px;
+    font-size: 0.82rem;
+    margin-right: 6px;
+}
+
+/* botão */
+.btn-vermais {
+    display: inline-block;
+    width: 100%;
+    text-align: center;
+    background: #007BFF;
+    color: white;
+    padding: 11px 14px;
+    border-radius: 10px;
+    font-weight: 700;
+    text-decoration: none;
+    transition: background .25s, transform .2s;
+    margin-top: auto; /* força o botão a ir para a base do container */
+}
+
+.btn-vermais:hover { background: #E63946; transform: translateY(-3px); }
+
+/* animação de entrada */
+@keyframes fadeCard {
+    from { opacity: 0; transform: translateY(18px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.card-produto { animation: fadeCard .5s ease forwards; }
+
+/* responsivo */
+@media (max-width: 520px) {
+    .card-produto { width: 100%; }
+    .grid-cards { grid-template-columns: 1fr; justify-items: center; }
+}
+
+/* Sidebar */
+/* Sidebar que fica fixa apenas dentro da área */
+.sidebar-filtros {
+    width: 220px;
+    position: sticky;
+    top: 120px; /* distância do topo antes de travar */
+}
+
+/* Barra horizontal */
+.filtros-horizontal {
+    display: flex;
+    justify-content: center; /* CENTRALIZA OS BOTÕES */
+    gap: 14px;
+    margin: 20px 0 30px 0;
+    flex-wrap: wrap;
+}
+
+/* Botões modernos */
+.filtro-btn {
+    display: block;
+    width: 220px;
+    text-align: center;
+
+    padding: 14px 0;
+
+    background: #ffffff;
+    color: #3a3a3a;
+    text-decoration: none;
+    font-weight: 600;
+    border-radius: 14px;
+
+    border: 1px solid #e5e5e5;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.06);
+
+    transition: all .25s ease;
+    cursor: pointer;
+}
+
+/* Hover suave */
+.filtro-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.12);
+    background: #f8f8f8;
+}
+
+/* Botão ativo */
+.filtro-btn.ativo {
+    background: linear-gradient(135deg, #0d6efd, #4aa3ff);
+    color: white;
+    border-color: transparent;
+    box-shadow: 0 5px 15px rgba(13,110,253,0.45);
+}
+
+
+/* Container da paginação */
+.paginacao {
+    display: flex;
+    justify-content: center;      /* CENTRALIZA */
+    align-items: center;
+    gap: 18px;                    /* espaçamento */
+    margin: 40px 0;               /* distância dos cards */
+    font-family: "Poppins", sans-serif;
+}
+
+/* Botões */
+.page-btn {
+    padding: 10px 18px;
+    background: #ffffff;
+    border-radius: 12px;
+    border: 2px solid #007BFF;
+    text-decoration: none;
+    color: #007BFF;
+    font-weight: 600;
+    transition: all .25s ease;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+}
+
+/* Hover estiloso */
+.page-btn:hover {
+    background: #007BFF;
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0,123,255,0.35);
+}
+
+/* Número da página */
+.page-atual {
+    font-weight: 700;
+    font-size: 1.05rem;
+    color: #1f2d3d;
+    background: #f1f7ff;
+    padding: 10px 18px;
+    border-radius: 10px;
+    border: 1px solid #cce1ff;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+}
+
+/* ======== SECTIONS DE EVENTOS E PROJETOS ======== */
+.carousel-box {
+  width: 100%;
+  min-height: 420px;         /* 🔥 deixa a área grande mesmo sem itens */
+  padding: 60px 0;           /* 🔥 grande espaçamento vertical */
+  background: #f0f4ff;       /* leve fundo suave */
+  margin: 80px auto;         /* 🔥 separação maior entre sections */
+  border-radius: 18px;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.08);
+}
+
+.carousel-box h2 {
+  font-size: 2.2rem;
+  margin-bottom: 35px;   /* 🔥 título mais afastado */
+  color: #004AAD;
+  font-weight: 700;
+  text-align: center;    /* ✅ centraliza o título */
+}
+
+/* ======== ÁREA DO CARROSSEL ======== */
+.carousel {
+  display: flex;
+  gap: 25px;
+  overflow: hidden;
+  scroll-behavior: smooth;
+  padding: 10px 0;
+  justify-content: center;    /* 🔥 alinha ao meio */
+}
+
+/* ======== PADRONIZAÇÃO DOS CARDS DE EVENTOS E PROJETOS ======== */
+
+/* Item do carrossel seguindo o padrão do card-produto */
+.carousel-item {
+    min-width: 340px;
+    background: white;
+    border-radius: 20px;
+    padding: 18px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+    transition: transform .32s ease, box-shadow .32s ease;
+    overflow: hidden;
+    cursor: pointer;
+    animation: fadeCard .6s ease forwards;
+}
+
+/* Hover igual ao card-produto */
+.carousel-item:hover {
+    transform: translateY(-10px) scale(1.02);
+    box-shadow: 0 12px 28px rgba(0,0,0,0.15);
+}
+
+/* Imagem → zoom igual */
+.carousel-image {
+    height: 220px;
+    overflow: hidden;
+    border-radius: 16px;
+}
+
+.carousel-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform .4s ease;
+}
+
+.carousel-item:hover .carousel-image img {
+    transform: scale(1.08);
+}
+
+/* Títulos */
+.carousel-info h3 {
+    font-size: 1.3rem;
+    margin: 14px 0 6px;
+    font-weight: 700;
+    color: #1f2d3d;
+}
+
+/* Texto */
+.carousel-info p {
+    color: #555;
+    font-size: 0.95rem;
+    min-height: 48px;
+}
+
+/* ======== BOTÕES DO CARROSSEL ======== */
+.carousel-btn {
+  background: #004AAD;
+  color: white;
+  border: none;
+  padding: 14px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 24px;
+
+  position: relative;
+  top: -260px;               /* 🔥 move mais para cima */
+  transition: background .3s, transform .3s;
+
+  box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+}
+
+.carousel-btn:hover {
+  background: #003b82;
+  transform: scale(1.08);
+}
+
+.carousel-btn.left {
+  float: left;
+  margin-left: 20px;
+}
+
+.carousel-btn.right {
+  float: right;
+  margin-right: 20px;
+}
+
+ .categoria-link {
+    text-decoration: none;
+    color: inherit;
+}
+
+/* =========================================================
+   EVENTOS
+   ========================================================= */
+
+.eventos-section {
+    padding: 50px 0;
+    background: #e8f3ff;
+}
+
+/* Container do header dos eventos */
+.eventos-header {
+    display: flex;
+    justify-content: space-between; /* espaço entre título e botão */
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+}
+
+.titulo-eventos {
+    font-size: 2.4rem;
+    color: #004AAD;
+}
+/* Botão Ver Todos */
+.ver-todos-eventos {
+    display: inline-block;
+    padding: 14px 32px;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #fff;
+    background: #004AAD;
+    border-radius: 30px;
+    text-decoration: none;
+    transition: 0.25s ease;
+    box-shadow: 0 6px 15px rgba(0, 74, 173, 0.35);
+    margin-left: 0; /* garante que não fique afastado da esquerda */
+}
+
+.ver-todos-eventos:hover {
+    background: #E63946;
+    box-shadow: 0 8px 20px rgba(230, 57, 70, 0.45);
+    transform: translateY(-3px);
+}
+
+/* =========================================================
+   GRID DE EVENTOS
+   ========================================================= */
+.eventos-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+    gap: 25px;
+    padding: 0 20px;
+}
+
+.evento-card {
+    background: #fff;
+    border-radius: 18px;
+    overflow: hidden;
+    box-shadow: 0 5px 18px rgba(0,0,0,0.15);
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.evento-thumb img {
+    width: 100%;
+    height: 200px; /* altura fixa para todos os cards */
+    object-fit: cover; /* mantém proporção e corta excesso */
+    display: block;
+    transition: transform 0.3s;
+    border-bottom: 1px solid #eee;
+}
+
+.evento-card:hover .evento-thumb img {
+    transform: scale(1.05);
+}
+
+.evento-card:hover {
+    transform: translateY(-6px);
+}
+
+/* ===========================================
+   MODAL
+=========================================== */
+
+.evento-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.75);
+    backdrop-filter: blur(4px);
+    padding: 30px;
+    overflow-y: auto;
+    z-index: 99999;
+}
+
+.modal-content {
+    text-align: center;
+    background: #ffffff;
+    max-width: 900px;
+    margin: 40px auto;
+    padding: 40px;
+    border-radius: 25px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+    animation: fadeInUp .4s ease-out;
+}
+
+.modal-close {
+    float: right;
+    font-size: 34px;
+    cursor: pointer;
+    color: #E63946;
+    transition: 0.2s;
+}
+.modal-close:hover {
+    transform: scale(1.2);
+}
+
+/* ===========================================
+   TÍTULOS DO MODAL
+=========================================== */
+.modal-title {
+    font-size: 2.2rem;
+    color: #004AAD;
+    margin-bottom: 10px;
+    font-weight: 800;
+}
+
+.modal-descricao {
+    font-size: 1.2rem;
+    color: #444;
+    margin-bottom: 25px;
+    line-height: 1.6;
+}
+
+/* ===========================================
+   CARROSSEL
+=========================================== */
+.modal-carousel {
+    position: relative;
+    margin: 25px 0 35px;
+}
+
+.modal-carousel-track {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    scroll-behavior: smooth;
+    padding-bottom: 10px;
+}
+
+.modal-carousel-track img {
+    width: 260px;
+    height: 170px;
+    object-fit: cover;
+    border-radius: 16px;
+    flex-shrink: 0;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+/* Botões */
+.carousel-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    border: none;
+    background: #004AAD;
+    color: white;
+    font-size: 22px;
+    padding: 10px 14px;
+    border-radius: 50%;
+    cursor: pointer;
+    opacity: .85;
+    transition: .25s;
+    z-index: 10;
+}
+
+.carousel-btn:hover {
+    opacity: 1;
+    transform: translateY(-50%) scale(1.15);
+}
+
+.carousel-btn.left { left: -8px; }
+.carousel-btn.right { right: -8px; }
+
+/* ===========================================
+   BRINQUEDOS
+=========================================== */
+.modal-brinquedos {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 22px;
+}
+
+.brinquedo-card {
+    background: #f5f9ff;
+    padding: 18px;
+    border-radius: 20px;
+    box-shadow: 0 5px 18px rgba(0, 0, 0, 0.12);
+    transition: 0.25s;
+}
+.brinquedo-card:hover {
+    transform: translateY(-5px);
+}
+
+.brinquedo-card img {
+    width: 100%;
+    height: 160px;
+    border-radius: 14px;
+    object-fit: cover;
+}
+
+/* animação */
+@keyframes fadeInUp {
+    0% { opacity: 0; transform: translateY(40px); }
+    100% { opacity: 1; transform: translateY(0); }
+}
+
+.brinquedo-card h4 {
+    font-size: 1.3rem;
+    margin: 12px 0 8px;
+    color: #004AAD;
+    font-weight: 700;
+}
+
+
+
+/* =========================================================
+   GALERIA STACK (IMAGENS DO MODAL)
+   ========================================================= */
+.stack-gallery {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    scroll-behavior: smooth;
+    padding: 10px 0;
+    scrollbar-width: none; /* Firefox */
+}
+
+.stack-gallery::-webkit-scrollbar {
+    display: none; /* Chrome */
+}
+
+.stack-gallery .stack-img {
+    width: 260px;
+    height: 165px;
+    object-fit: cover;
+    border-radius: 14px;
+    flex-shrink: 0;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    transition: transform .25s ease;
+}
+
+.stack-gallery .stack-img:hover {
+    transform: scale(1.05);
+}
+
+
+/* =========================================================
+   6. ANIMAÇÕES
+   ========================================================= */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+@keyframes slideIn {
+    from { transform: translateY(40px); opacity: 0; }
+    to   { transform: translateY(0); opacity: 1; }
+}
+
+
+.ver-todos-eventos:active {
+    transform: scale(0.97);
+}
+
+/* ================== MODAL PROJETO ================== */
+.projeto-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.75); /* fundo mais escuro para destaque */
+    padding: 40px 20px;
+    overflow-y: auto;
+    z-index: 99999;
+    backdrop-filter: blur(4px); /* efeito de desfoque */
+}
+
+.modal-content {
+    background: linear-gradient(145deg, #ffffff, #f0f4ff); /* fundo sutil azulado */
+    max-width: 900px;
+    margin: 60px auto;
+    padding: 40px 30px;
+    border-radius: 25px;
+    text-align: center;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3); /* sombra elegante */
+    position: relative;
+    transition: transform 0.3s ease;
+}
+
+.modal-content:hover {
+    transform: scale(1.02);
+}
+
+.modal-close {
+    position: absolute;
+    top: 15px;
+    right: 20px;
+    font-size: 32px;
+    cursor: pointer;
+    color: #E63946; /* mantém vermelho vibrante */
+    transition: color 0.25s;
+}
+
+.modal-close:hover {
+    color: #ff5a6e;
+}
+
+.modal-content h2 {
+    color: #004AAD; /* azul do site */
+    font-size: 2rem;
+    margin-bottom: 15px;
+    font-weight: 700;
+}
+
+.modal-content p {
+    color: #1a1a1a;
+    font-size: 1.1rem;
+    line-height: 1.6;
+    margin-bottom: 25px;
+}
+
+/* ================== CARROSSEL ================== */
+.modal-carousel {
+    position: relative;
+    overflow: hidden;
+    margin: 30px 0;
+    border-radius: 16px;
+}
+
+.modal-carousel-track {
+    display: flex;
+    gap: 15px;
+    overflow-x: auto;
+    scroll-behavior: smooth;
+    padding-bottom: 10px;
+}
+
+.modal-carousel-track img {
+    width: 300px;
+    height: 200px;
+    object-fit: cover;
+    border-radius: 14px;
+    transition: transform 0.3s ease;
+}
+
+.modal-carousel-track img:hover {
+    transform: scale(1.05);
+    cursor: pointer;
+}
+
+/* ================== BOTÕES DO CARROSSEL ================== */
+.carousel-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: #004AAD; /* azul do site */
+    border: none;
+    color: white;
+    font-size: 22px;
+    padding: 12px 16px;
+    border-radius: 50%;
+    cursor: pointer;
+    opacity: 0.85;
+    transition: transform 0.25s, background 0.25s;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.carousel-btn:hover {
+    transform: translateY(-50%) scale(1.2);
+    background: #0066FF; /* azul mais vivo ao passar */
+}
+
+.carousel-btn.left { left: 10px; }
+.carousel-btn.right { right: 10px; }
+
+/* ================== LEGENDAS & INFO ================== */
+.modal-subtitle {
+    font-size: 1.3rem;
+    color: #004AAD;
+    font-weight: 600;
+    margin-top: 25px;
+    margin-bottom: 15px;
+    text-align: left;
+}
+
+.modal-brinquedos {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 20px;
+    margin-top: 20px;
+}
+
+.brinquedo-card {
+    background: #e6f0ff; /* leve azul de fundo */
+    padding: 18px;
+    border-radius: 18px;
+    text-align: center;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.brinquedo-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+}
+
+.brinquedo-card img {
+    width: 100%;
+    height: 170px;
+    object-fit: cover;
+    border-radius: 14px;
+    margin-bottom: 12px;
+}
+
+.brinquedo-card h4 {
+    font-size: 1.2rem;
+    color: #004AAD;
+    margin-bottom: 8px;
+    font-weight: 700;
+}
+
+.brinquedo-card p {
+    font-size: 0.95rem;
+    color: #1a1a1a;
+    margin-bottom: 6px;
+}
+
+.brinquedo-card .preco {
+    font-weight: 700;
+    color: #E63946; /* vermelho destacado */
+    font-size: 1rem;
+}
+
+/* Botão Ver Todos Projetos */
+.ver-todos-projetos {
+    display: inline-block;
+    padding: 14px 32px;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #fff;
+    background: #004AAD;
+    border-radius: 30px;
+    text-decoration: none;
+    transition: 0.25s ease;
+    box-shadow: 0 6px 15px rgba(0, 74, 173, 0.35);
+}
+
+.ver-todos-projetos:hover {
+    background: #E63946;
+    box-shadow: 0 8px 20px rgba(230, 57, 70, 0.45);
+    transform: translateY(-3px);
+}
+
+/* Header Projetos */
+.projetos-header {
+    margin-bottom: 20px;
+}
+
+/* Carrossel */
+.carousel-item {
+    cursor: pointer;
+    transition: transform 0.3s, box-shadow 0.3s;
+    border-radius: 15px;
+    overflow: hidden;
+}
+.carousel-item:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+}
+
+    .projetos-header {
+    display: flex;
+    justify-content: space-between; /* Título à esquerda, botão à direita */
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 25px;
+}
+
+
+.section-divider {
+    width: 100%;
+    background: #007BFF;
+    color: #fff;
+    text-align: center;
+    padding: 30px 20px;
+    position: relative;
+    overflow: hidden;
+    font-size: 1.1rem;
+    font-weight: 600;
+    border-radius: 8px;
+    margin: 60px 0;
+}
+
+.rotating-messages {
+    display: inline-block;
+    position: relative;
+    height: 1.5em; /* altura de uma linha */
+}
+
+.rotating-messages .message {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    opacity: 0;
+    transition: opacity 0.6s ease-in-out;
+    white-space: nowrap;
+}
+
+.rotating-messages .message.active {
+    opacity: 1;
+}
+
+#carousel-projetos {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 20px;
+    overflow: hidden;
+    position: relative;
+}
+
+.carousel-item {
+    flex: 0 0 calc(33.333% - 13.33px); /* 3 itens por linha */
+    display: none;
+}
+
+.carousel-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(0,0,0,0.3);
+    color: #fff;
+    border: none;
+    font-size: 2rem;
+    padding: 5px 10px;
+    cursor: pointer;
+    border-radius: 5px;
+    z-index: 10;
+}
+
+.carousel-nav.left { left: 0; }
+.carousel-nav.right { right: 0; }
+
+
+.section-title {
+    text-align: center;
+    color: #007BFF;
+    font-size: 2em;
+    font-weight: 700;
+    margin-top: 60px;      /* distância do elemento acima */
+    margin-bottom: 30px;   /* igual ao das categorias */
+}
+.combos-section,
+.promocoes-section {
+    background: #e8f1ff; /* azul fraquinho */
+    padding: 40px 0;     /* dá espaço para o fundo aparecer */
+    border-radius: 14px;
+    margin-top: 40px;
+}
+
+
+.nome-brinquedo {
+    margin-bottom: 6px;
+    color: #555;
+    font-size: 0.95rem;
+}
+
+/* PREÇOS */
+.preco-box {
+    margin-bottom: 12px;
+}
+
+.preco-original span {
+    text-decoration: line-through;
+    color: #888;
+}
+
+.preco-promocao strong {
+    font-size: 1.25rem;
+    color: #00B341;
+    text-shadow: 0 0 6px rgba(0, 179, 65, 0.4);
+}
+
+
+.total-riscado {
+  color: #999;
+  text-decoration: line-through;
+  font-size: 0.9em;
+}
+
+.preco-promo {
+  color: #28a745;
+  font-size: 1.4em;
+  font-weight: bold;
+}
+
+.economia-verde {
+  color: #2ecc71;
+  font-weight: bold;
+}
+
+.combo-economia {
+  margin-top: 8px;
+  font-size: 1.1em;
+}
+
+.section-subtitle {
+    font-family: 'Montserrat', sans-serif;
+    text-align: center;
+    font-size: 1.2rem;
+    color: #444;
+    margin-top: 30px;
+    margin-bottom: 35px;
+    letter-spacing: .3px;
+    font-weight: 400;
+}
+
+.espacador {
+    height: 80px;      /* Ajuste o tamanho do espaço se quiser */
+    width: 100%;
+    background: #ffffff; /* Fundo branco */
+}
+
+
+</style>
+
+
+<!-- ======= CARROSSEL ======= -->
+<section id="inicio" class="carousel-container">
+  <div class="carousel-wrapper">
+    <img src="{% static 'images/IMAG1.png' %}" class="carousel-slide active" alt="Promoção 1">
+    <img src="{% static 'images/IMAG2.png' %}" class="carousel-slide" alt="Promoção 2">
+    <img src="{% static 'images/IMAG3.png' %}" class="carousel-slide" alt="Promoção 3">
+
+    <!-- Setas internas -->
+    <button class="carousel-btn prev">❮</button>
+    <button class="carousel-btn next">❯</button>
+
+    <!-- Dots -->
+    <div class="carousel-dots">
+      <span class="dot active"></span>
+      <span class="dot"></span>
+      <span class="dot"></span>
+    </div>
+  </div>
+</section>
+
+
+
+
+<!-- ======= CATEGORIAS ======= -->
+<section id="categorias-section" class="categorias-section">
+  <h2 class="section-title">Categorias</h2>
+        <p class="section-subtitle">
+  Encontre o brinquedo ideal para transformar seu espaço em diversão garantida.
+</p>
+
+  <div class="scroll-wrapper">
+    <button class="scroll-btn left" id="scroll-left">&#10094;</button>
+
+    <div class="scroll-container" id="scroll-container">
+      {% for categoria in categorias_brinquedos %}
+        <a href="{% url 'categoria_detalhe' categoria.id %}" class="categoria-link">
+  <div class="categoria-card">
+    {% if categoria.imagem_categoria %}
+      <img src="{{ categoria.imagem_categoria.url }}" alt="{{ categoria.nome_categoria }}">
+    {% else %}
+      <img src="{% static 'images/default_categoria.jpg' %}" alt="Categoria sem imagem">
+    {% endif %}
+    <div class="categoria-info">
+      <h3>{{ categoria.nome_categoria }}</h3>
+      <p>{{ categoria.total_produtos }} brinquedos</p>
+    </div>
+  </div>
+</a>
+      {% empty %}
+      <p>Nenhuma categoria encontrada.</p>
+      {% endfor %}
+    </div>
+
+    <button class="scroll-btn right" id="scroll-right">&#10095;</button>
+  </div>
+</section>
+
+<!-- DIVISOR ENTRE SEÇÕES -->
+<div class="section-divider">
+  <div class="rotating-messages">
+    <span class="message active">Use o Cupom: newuser10 para ganhar 10% de desconto em qualquer produto!</span>
+    <span class="message">Veja e aproveite os combos para comércios novos!</span>
+    <span class="message">Vendemos brinquedos e jogos eletrônicos para todas as idades!</span>
+  </div>
+</div>
+
+<!-- ======= COMBOS ======= -->
+<section id="combos-section" class="combos-section">
+  <h2 class="section-title">Combos</h2>
+    <p class="section-subtitle">
+  Selecionamos os melhores brinquedos em pacotes especiais para você economizar mais e garantir a diversão da festa.
+</p>
+
+
+  <div class="scroll-wrapper">
+    <button class="scroll-btn left" id="scroll-left-combos">&#10094;</button>
+
+    <div class="scroll-container" id="scroll-container-combos">
+      {% for combo in combos %}
+      <a href="#" class="categoria-link">
+        <div class="categoria-card">
+
+          <!-- IMAGEM -->
+          {% if combo.imagem_combo %}
+            <img src="{{ combo.imagem_combo.url }}" alt="{{ combo.descricao }}">
+          {% else %}
+            <img src="{% static 'images/default_combo.jpg' %}" alt="Combo sem imagem">
+          {% endif %}
+
+          <div class="categoria-info">
+            <h3>{{ combo.descricao }}</h3>
+
+           <!-- VALOR TOTAL ORIGINAL -->
+            <p class="combo-total">
+              Valor dos brinquedos:
+              <span class="total-riscado money">R$ {{ combo.total_original }}</span>
+            </p>
+
+            <!-- PREÇO DO COMBO -->
+            <p class="combo-preco">
+              Preço do combo:
+            <strong class="preco-promo money">R$ {{ combo.valor_combo }}</strong>
+            </p>
+
+            <!-- ECONOMIA -->
+            <p class="combo-economia">
+              💰 Economia:
+              <strong class="economia-verde money">R$ {{ combo.economia }}</strong>
+              ({{ combo.porcentagem|floatformat:0 }}% OFF)
+            </p>
+
+            <!-- BOTÃO VER MAIS -->
+            <a href="{% url 'combo' combo.id %}#combo-pagina" class="btn-vermais">Ver mais</a>
+
+          </div>
+        </div>
+      </a>
+      {% empty %}
+        <div class="empty-message">Nenhum combo disponível.</div>
+      {% endfor %}
+    </div>
+
+    <button class="scroll-btn right" id="scroll-right-combos">&#10095;</button>
+  </div>
+</section>
+
+
+<!-- ======= PROMOÇÕES ======= -->
+<section id="promocoes-section" class="promocoes-section">
+  <h2 class="section-title">Promoções</h2>
+    <p class="section-subtitle">
+  Ofertas exclusivas com descontos imperdíveis em brinquedos selecionados. Aproveite antes que acabe!
+</p>
+
+
+  <div class="scroll-wrapper">
+    <button class="scroll-btn left" id="scroll-left-promocoes">&#10094;</button>
+
+    <div class="scroll-container" id="scroll-container-promocoes">
+      {% for promo in promocoes %}
+      <a href="{% url 'promocao' promo.id %}#promocao-pagina" class="categoria-link">
+        <div class="categoria-card">
+
+          <!-- IMAGEM -->
+          {% if promo.brinquedos.imagem_brinquedo %}
+            <a href="{% url 'promocao' promo.id %}#promocao-pagina">
+                <img src="{{ promo.brinquedos.imagem_brinquedo.url }}" alt="{{ promo.descricao }}">
+            </a>
+          {% else %}
+            <img src="{% static 'images/default_promocao.jpg' %}" alt="Promoção sem imagem">
+          {% endif %}
+
+          <!-- INFORMACOES -->
+          <div class="categoria-info">
+            <h3>{{ promo.descricao }}</h3>
+
+            <p class="nome-brinquedo">
+              {{ promo.brinquedos.nome_brinquedo }}
+            </p>
+
+             <!-- PREÇOS PROMO -->
+            <div class="preco-box">
+                <p class="preco-original">
+                    De:
+                    <span class="money">
+                      R$ {{ promo.brinquedos.valor_brinquedo }}
+                    </span>
+                  </p>
+
+                  <p class="preco-promocao">
+                    Por:
+                    <strong class="money">
+                      R$ {{ promo.preco_promocao }}
+                    </strong>
+                  </p>
+            </div>
+
+            <!-- BOTÃO -->
+            <a href="{% url 'promocao' promo.id %}#promocao-pagina" class="btn-vermais">Ver mais</a>
+
+          </div>
+        </div>
+      </a>
+      {% empty %}
+        <div class="empty-message">Nenhuma promoção disponível.</div>
+      {% endfor %}
+    </div>
+
+    <button class="scroll-btn right" id="scroll-right-promocoes">&#10095;</button>
+  </div>
+</section>
+
+<!-- Div invisível para espaçamento -->
+<div class="espacador"></div>
+
+<!-- ======= PRODUTOS ======= -->
+<section id="brinquedos" class="destaques">
+  <h2 class="titulo-sec">Brinquedos em Destaque</h2>
+        <p class="section-subtitle">
+  Brinquedos que fazem a diferença e encantam qualquer festa.
+</p>
+    <a href="{% url 'brinquedos' %}" class="btn-vertodos">Ver todos os brinquedos</a>
+
+  <!-- BARRA HORIZONTAL DE FILTROS -->
+  <div class="filtros-horizontal" id="filtros-bar">
+      <a data-order="az"
+         class="filtro-btn {% if ordenar == 'az' or not ordenar %}ativo{% endif %}">
+         A → Z
+      </a>
+
+      <a data-order="za"
+         class="filtro-btn {% if ordenar == 'za' %}ativo{% endif %}">
+         Z → A
+      </a>
+
+      <a data-order="melhor-avaliados"
+         class="filtro-btn {% if ordenar == 'melhor-avaliados' %}ativo{% endif %}">
+         ⭐ Melhores avaliados
+      </a>
+
+      <a data-order="custo-beneficio"
+         class="filtro-btn {% if ordenar == 'custo-beneficio' %}ativo{% endif %}">
+         💰 Custo-benefício
+      </a>
+  </div>
+
+  <!-- CONTAINER ATUALIZÁVEL -->
+  <div id="produtos-container">
+
+      <div class="grid-cards" id="grid-cards">
+      {% for brinquedo in page_obj %}
+        <div class="card-produto">
+
+          <div class="img-area">
+            <img src="{{ brinquedo.imagem_brinquedo.url }}" alt="{{ brinquedo.nome_brinquedo }}">
+          </div>
+
+          <div class="conteudo">
+
+            <!-- NOME -->
+            <h3>{{ brinquedo.nome_brinquedo }}</h3>
+
+            <!-- AVALIAÇÃO (estrelas geradas via JS) -->
+            <div class="avaliacao" data-rating="{{ brinquedo.avaliacao }}">
+              <div class="stars"></div>
+              <span class="nota">({{ brinquedo.avaliacao|floatformat:2 }})</span>
+            </div>
+
+            <!-- CATEGORIAS DO PRODUTO -->
+            <div class="categorias">
+              {% for cat in brinquedo.categorias_brinquedos.all %}
+                <span class="categoria-pill">{{ cat.nome_categoria }}</span>
+              {% endfor %}
+            </div>
+
+            <!-- DESCRIÇÃO CURTA -->
+            <p class="descricao">
+              {{ brinquedo.descricao|truncatewords:16 }}
+            </p>
+
+            <!-- VOLTAGEM -->
+            <div class="voltagem">
+              🔌 Voltagem <strong>{{ brinquedo.voltz }}</strong>
+            </div>
+
+            <!-- DIMENSÕES EM METROS -->
+            <div class="dimensoes">
+                {% if brinquedo.dimensoes_m %}
+                    📏 Dimensões: {{ brinquedo.dimensoes_m }}
+                {% else %}
+                    📏 Dimensões não informadas
+                {% endif %}
+            </div>
+
+            <!-- VOLUME EM METROS CÚBICOS -->
+            <div class="volume">
+                {% if brinquedo.metros_cubicos %}
+                    📦 Volume: <strong>{{ brinquedo.volume_formatado }}</strong>
+                {% else %}
+                    📦 Volume não informado
+                {% endif %}
+            </div>
+
+
+            <!-- PREÇO -->
+            <div class="preco">
+              R$ {{ brinquedo.valor_brinquedo }}
+            </div>
+
+            <!-- TAGS COM # -->
+            <div class="tags">
+              {% for tag in brinquedo.tags.all %}
+                <span class="tag">#{{ tag.nome_tags }}</span>
+              {% endfor %}
+            </div>
+
+            <!-- BOTÃO -->
+            <a href="{% url 'brinquedo_detalhe' brinquedo.id %}#bread" class="btn-vermais">
+                Ver mais
+            </a>
+          </div>
+        </div>
+
+      {% empty %}
+        <p>Nenhum produto encontrado.</p>
+      {% endfor %}
+      </div>
+
+
+<div id="paginacao-wrapper">
+    <div class="paginacao">
+        {% if page_obj.has_previous %}
+            <a class="page-btn" href="?page={{ page_obj.previous_page_number }}{% if ordenar %}&ordenar={{ ordenar }}{% endif %}#brinquedos">« Anterior</a>
+        {% endif %}
+
+        <span class="page-atual">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
+
+        {% if page_obj.has_next %}
+            <a class="page-btn" href="?page={{ page_obj.next_page_number }}{% if ordenar %}&ordenar={{ ordenar }}{% endif %}#brinquedos">Próxima »</a>
+        {% endif %}
+    </div>
+</div>
+</div>
+</section>
+
+<!-- Div invisível para espaçamento -->
+<div class="espacador"></div>
+
+
+<!-- ======= EVENTOS ======= -->
+<section id="eventos" class="eventos-section">
+    <div class="eventos-header">
+        <h2 class="titulo-eventos">Eventos Realizados</h2>
+
+        <!-- BOTÃO VER TODOS -->
+        <a href="{% url 'eventos' %}" class="ver-todos-eventos">Ver todos os eventos →</a>
+    </div>
+
+               <p class="section-subtitle">
+  Confira alguns dos eventos que transformamos em experiências inesquecíveis.
+</p>
+
+
+    <div class="eventos-grid">
+        {% for evento in eventos %}
+        <div class="evento-card" data-modal="modal-evento-{{ evento.id }}">
+
+            <div class="evento-thumb">
+                {% if evento.imagens_evento.first %}
+                    <img src="{{ evento.imagens_evento.first.imagem.url }}" alt="{{ evento.titulo }}">
+                {% else %}
+                    <img src="{% static 'images/default.jpg' %}" alt="Sem imagem">
+                {% endif %}
+            </div>
+
+            <div class="evento-info">
+                <h3>{{ evento.titulo }}</h3>
+                <p>{{ evento.descricao|truncatewords:20 }}</p>
+            </div>
+        </div>
+
+
+        <!-- ===== MODAL DO EVENTO ===== -->
+<div id="modal-evento-{{ evento.id }}" class="evento-modal">
+    <div class="modal-content">
+
+        <span class="modal-close">&times;</span>
+
+        <h2 class="modal-title">{{ evento.titulo }}</h2>
+        <p class="modal-descricao">{{ evento.descricao }}</p>
+
+        <hr>
+
+        <!-- GALERIA / CARROSSEL -->
+        <h3 class="modal-subtitle">📸 Imagens do Evento</h3>
+
+        <div class="modal-carousel">
+            <button class="carousel-btn left" data-target="carousel-{{ evento.id }}">❮</button>
+
+            <div id="carousel-{{ evento.id }}" class="modal-carousel-track">
+                {% for img in evento.imagens_evento.all %}
+                <img src="{{ img.imagem.url }}" alt="{{ img.legenda }}">
+                {% empty %}
+                <p>Sem imagens adicionais.</p>
+                {% endfor %}
+            </div>
+
+            <button class="carousel-btn right" data-target="carousel-{{ evento.id }}">❯</button>
+        </div>
+
+        <hr>
+
+        <h3 class="modal-subtitle">🎪 Brinquedos Utilizados</h3>
+
+        <div class="modal-brinquedos">
+            {% for b in evento.brinquedos.all %}
+            <div class="brinquedo-card">
+                <img src="{{ b.imagem_brinquedo.url }}">
+                <h4>{{ b.nome_brinquedo }}</h4>
+                <p>{{ b.descricao|truncatechars:120 }}</p>
+                {% if b.valor_brinquedo %}
+                <span class="preco">R$ {{ b.valor_brinquedo }}</span>
+                {% endif %}
+            </div>
+            {% empty %}
+            <p>Nenhum brinquedo informado.</p>
+            {% endfor %}
+        </div>
+
+    </div>
+</div>
+
+        {% endfor %}
+    </div>
+</section>
+
+
+<!-- Div invisível para espaçamento -->
+<div class="espacador"></div>
+
+
+<!-- ======= PROJETOS ======= -->
+<section id="projetos" class="eventos-section">
+    <div class="projetos-header">
+        <h2 class="titulo-eventos">Projetos Realizados</h2>
+
+        <!-- BOTÃO VER TODOS -->
+        <a href="{% url 'projetos' %}" class="ver-todos-eventos">Ver todos os projetos →</a>
+    </div>
+
+               <p class="section-subtitle">
+  Transformamos ideias em ambientes divertidos e seguros — veja alguns exemplos.
+</p>
+
+    <!-- CARROSSEL PRINCIPAL -->
+    <div class="carousel" id="carousel-projetos">
+        {% for projeto in projetos %}
+        <div class="carousel-item" data-modal="modal-projeto-{{ projeto.id }}">
+            <!-- Imagem principal do projeto -->
+            <div class="carousel-image">
+                {% if projeto.brinquedo_projetado.imagens_brinquedo_projeto.first %}
+                    <img src="{{ projeto.brinquedo_projetado.imagens_brinquedo_projeto.first.imagem.url }}"
+                         alt="{{ projeto.titulo }}">
+                {% else %}
+                    <img src="{% static 'images/default.jpg' %}" alt="Sem imagem">
+                {% endif %}
+            </div>
+
+            <!-- Info do projeto -->
+            <div class="carousel-info">
+                <h3>{{ projeto.titulo }}</h3>
+                <p>{{ projeto.descricao|truncatewords:25 }}</p>
+            </div>
+        </div>
+
+        <!-- ===== MODAL DO PROJETO ===== -->
+        <div id="modal-projeto-{{ projeto.id }}" class="projeto-modal">
+            <div class="modal-content">
+                <span class="modal-close">&times;</span>
+
+                <h2>{{ projeto.titulo }}</h2>
+                <p>{{ projeto.descricao }}</p>
+
+                <hr>
+
+                <h3>📸 Galeria de Imagens do Brinquedo Projetado</h3>
+
+                <div class="modal-carousel">
+                    <div class="modal-carousel-track" id="carousel-track-{{ projeto.id }}">
+                        {% for img in projeto.brinquedo_projetado.imagens_brinquedo_projeto.all %}
+                            <img src="{{ img.imagem.url }}" alt="{{ img.legenda }}">
+                        {% endfor %}
+                    </div>
+
+                    <button class="carousel-btn left" data-target="carousel-track-{{ projeto.id }}">❮</button>
+                    <button class="carousel-btn right" data-target="carousel-track-{{ projeto.id }}">❯</button>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+
+    </div>
+</section>
+
+
+
+
+<!-- ======= CONTATO ======= -->
+<section id="contato">
+  <div class="grid">
+    <div>
+      <h2>Contato</h2>
+
+      <p><strong>Email:</strong>
+        <a href="mailto:comercial@lazersport.com.br">comercial@lazersport.com.br</a>
+      </p>
+
+      <p><strong>Telefone de Contato:</strong>
+        <a href="tel:+551122328823">(11) 2232-8823</a>
+        <!-- opcional: atalho para WhatsApp -->
+        <span style="margin-left:8px;">
+          • <a href="https://wa.me/5511960563135" target="_blank" rel="noopener"> WhatsApp | +55 11 96056-3135</a>
+        </span>
+      </p>
+
+      <p><strong>Endereço:</strong>
+        Rua São Roque de Minas, 104 — Jardim Peri, São Paulo — SP | Cep 02679-110
+      </p>
+    </div>
+
+    <div>
+      <!-- iframe Google Maps apontando para o endereço real -->
+      <iframe
+        src="https://maps.google.com/maps?q=Rua%20S%C3%A3o%20Roque%20de%20Minas%2C%20104%20-%20Jardim%20Peri%20S%C3%A3o%20Paulo%20-%20SP%2002679-110&t=&z=15&ie=UTF8&iwloc=&output=embed"
+        width="100%"
+        height="350"
+        style="border:0; border-radius: 8px;"
+        allowfullscreen=""
+        loading="lazy"
+        referrerpolicy="no-referrer-when-downgrade">
+      </iframe>
+    </div>
+  </div>
+</section>
+
+
+<script>
+function formatBR(num) {
+    if (!num) return "";
+    num = num.replace(/[^\d.,]/g, "").replace(",", ".");
+    let n = parseFloat(num);
+    if (isNaN(n)) return num;
+
+    return n.toLocaleString("pt-BR", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    });
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    document.querySelectorAll(".money").forEach(el => {
+        const original = el.textContent;
+        el.textContent = formatBR(original);
+    });
+});
+
+
+
+document.addEventListener("DOMContentLoaded", function() {
+    const carousel = document.getElementById("carousel-projetos");
+    const items = carousel.querySelectorAll(".carousel-item");
+    const visibleCount = 3; // Quantos itens mostrar por vez
+    let currentIndex = 0;
+    const intervalTime = 5000;
+
+    // Inicializa
+    function showItems(index) {
+        items.forEach((item, i) => {
+            item.style.display = (i >= index && i < index + visibleCount) ? "block" : "none";
+        });
+    }
+
+    showItems(currentIndex);
+
+    function nextItems() {
+        currentIndex += visibleCount;
+        if (currentIndex >= items.length) currentIndex = 0;
+        showItems(currentIndex);
+    }
+
+    function prevItems() {
+        currentIndex -= visibleCount;
+        if (currentIndex < 0) currentIndex = Math.max(items.length - visibleCount, 0);
+        showItems(currentIndex);
+    }
+
+    // Botões de navegação
+    const leftBtn = document.createElement("button");
+    leftBtn.innerHTML = "&#10094;";
+    leftBtn.className = "carousel-nav left";
+    const rightBtn = document.createElement("button");
+    rightBtn.innerHTML = "&#10095;";
+    rightBtn.className = "carousel-nav right";
+
+    carousel.appendChild(leftBtn);
+    carousel.appendChild(rightBtn);
+
+    leftBtn.addEventListener("click", function() {
+        prevItems();
+        resetInterval();
+    });
+
+    rightBtn.addEventListener("click", function() {
+        nextItems();
+        resetInterval();
+    });
+
+    // Loop automático
+    let autoSlide = setInterval(nextItems, intervalTime);
+
+    function resetInterval() {
+        clearInterval(autoSlide);
+        autoSlide = setInterval(nextItems, intervalTime);
+    }
+});
+
+document.querySelectorAll('.carousel-wrapper').forEach(wrapper => {
+  const slides = wrapper.querySelectorAll('.carousel-slide');
+  const dots = wrapper.querySelectorAll('.dot');
+  const prevBtn = wrapper.querySelector('.carousel-btn.prev');
+  const nextBtn = wrapper.querySelector('.carousel-btn.next');
+  let index = 0;
+
+  if (!slides.length) return; // não inicia se não houver slides
+
+  function showSlide(i) {
+    slides.forEach((slide, n) => {
+      slide.classList.toggle('active', n === i);
+      if (dots[n]) dots[n].classList.toggle('active', n === i);
+    });
+  }
+
+  // Dots clicáveis
+  dots.forEach((dot, i) => {
+    dot.addEventListener('click', () => {
+      index = i;
+      showSlide(index);
+    });
+  });
+
+  // Botões internos
+  if (prevBtn) prevBtn.addEventListener('click', () => {
+    index = (index - 1 + slides.length) % slides.length;
+    showSlide(index);
+  });
+
+  if (nextBtn) nextBtn.addEventListener('click', () => {
+    index = (index + 1) % slides.length;
+    showSlide(index);
+  });
+
+  // Troca automática
+  setInterval(() => {
+    index = (index + 1) % slides.length;
+    showSlide(index);
+  }, 4000);
+
+  // Exibe o primeiro slide ao carregar
+  showSlide(index);
+});
+
+
+document.addEventListener("DOMContentLoaded", function() {
+    const container = document.getElementById("scroll-container");
+    const btnLeft = document.getElementById("scroll-left");
+    const btnRight = document.getElementById("scroll-right");
+
+    const scrollAmount = 300; // pixels a cada clique/scroll
+    let autoScrollDirection = 1; // 1 = direita, -1 = esquerda
+
+    // Setas funcionais
+    btnLeft.addEventListener("click", () => {
+        container.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
+    });
+
+    btnRight.addEventListener("click", () => {
+        container.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+    });
+
+    // Autoscroll com loop vai e volta
+    setInterval(() => {
+        const maxScroll = container.scrollWidth - container.clientWidth;
+
+        if (container.scrollLeft >= maxScroll) autoScrollDirection = -1;
+        if (container.scrollLeft <= 0) autoScrollDirection = 1;
+
+        container.scrollBy({ left: scrollAmount * autoScrollDirection, behavior: 'smooth' });
+    }, 5000);
+});
+
+// ===============================
+// ⭐ FUNÇÃO GLOBAL – AGORA FUNCIONA EM TODO LUGAR
+// ===============================
+const fullStar = `<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M12 .587l3.668 7.431 8.2 1.192-5.934 5.789 1.402 8.176L12 18.896l-7.336 3.878 1.402-8.176L.132 9.21l8.2-1.192z"/></svg>`;
+const halfStar = `<svg width="18" height="18" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="halfGrad"><stop offset="50%" stop-color="currentColor"/><stop offset="50%" stop-color="transparent"/></linearGradient></defs><path d="M12 .587l3.668 7.431 8.2 1.192-5.934 5.789 1.402 8.176L12 18.896 4.664 22.774l1.402-8.176L.13 9.21l8.2-1.192z" fill="url(#halfGrad)"/><path d="M12 .587v18.309l-7.336 3.878 1.402-8.176L.132 9.21l8.2-1.192L12 .587z" fill="none" stroke="currentColor" stroke-width="0"/></svg>`;
+const emptyStar = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M12 .587l3.668 7.431 8.2 1.192-5.934 5.789 1.402 8.176L12 18.896l-7.336 3.878 1.402-8.176L.132 9.21l8.2-1.192z" stroke-width="1.2" /></svg>`;
+
+function renderStars(container, rating) {
+    const starsWrap = container.querySelector('.stars');
+    if (!starsWrap) return;
+
+    starsWrap.innerHTML = '';
+    const r = parseFloat(rating) || 0;
+
+    for (let i = 1; i <= 5; i++) {
+        if (r >= i) starsWrap.insertAdjacentHTML('beforeend', `<span class="star full">${fullStar}</span>`);
+        else if (r >= (i - 0.5)) starsWrap.insertAdjacentHTML('beforeend', `<span class="star half">${halfStar}</span>`);
+        else starsWrap.insertAdjacentHTML('beforeend', `<span class="star empty">${emptyStar}</span>`);
+    }
+}
+// ===============================
+// ⭐ ESTRELAS NO CARREGAMENTO NORMAL DA PÁGINA
+// ===============================
+document.addEventListener('DOMContentLoaded', function () {
+
+    document.querySelectorAll('.avaliacao').forEach(el => {
+        const rating = el.dataset.rating;
+        renderStars(el, rating);
+    });
+
+    const grid = document.getElementById('grid-cards');
+    if (grid) grid.style.justifyContent = 'center';
+});
+
+// ===============================
+// ⭐ INICIALIZAÇÃO DE CARDS
+// ===============================
+function initCards() {
+    document.querySelectorAll('.card-produto').forEach(card => {
+        const ratingEl = card.querySelector('.avaliacao');
+        if (ratingEl) renderStars(ratingEl, ratingEl.dataset.rating);
+    });
+}
+
+
+// ===============================
+// ⭐ ESTRELAS APÓS FILTRAR VIA AJAX
+// ===============================
+function atualizarProdutos(url) {
+    fetch(url)
+        .then(res => res.text())
+        .then(html => {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, "text/html");
+
+            // Substitui os cards
+            const grid = document.querySelector("#grid-cards");
+            grid.innerHTML = doc.querySelector("#grid-cards").innerHTML;
+
+            // Atualiza a paginação
+            const paginacao = document.querySelector("#paginacao-wrapper");
+            paginacao.innerHTML = doc.querySelector("#paginacao-wrapper").innerHTML;
+
+            adicionarEventosPaginacao(); // mantém a paginação funcionando
+
+            // ⭐ Renderizar estrelas após o DOM ser atualizado
+            requestAnimationFrame(() => {
+                grid.querySelectorAll('.avaliacao').forEach(el => {
+                    const rating = el.dataset.rating;
+                    renderStars(el, rating);
+                });
+            });
+        });
+}
+
+
+// ===============================
+// ⭐ EVENTOS DOS FILTROS
+// ===============================
+function adicionarEventosFiltros() {
+    document.querySelectorAll(".filtro-btn").forEach(btn => {
+        btn.addEventListener("click", function(e) {
+            e.preventDefault();
+
+            document.querySelectorAll(".filtro-btn").forEach(b => b.classList.remove("ativo"));
+            this.classList.add("ativo");
+
+            const ordenacao = this.dataset.order;
+            const url = `/?ordenar=${ordenacao}`;
+            atualizarProdutos(url);
+        });
+    });
+}
+
+// ===============================
+// ⭐ INICIALIZAÇÃO GERAL AO CARREGAR
+// ===============================
+document.addEventListener("DOMContentLoaded", () => {
+    initCards();
+    adicionarEventosFiltros();
+    adicionarEventosPaginacao();
+});
+
+document.addEventListener("DOMContentLoaded", () => {
+
+    /* ================= SCROLL PARA PRODUTOS ================= */
+    const params = new URLSearchParams(window.location.search);
+    if (params.has("scroll")) {
+        const alvo = document.querySelector(".produto-container");
+        if (alvo) {
+            const posicao = alvo.offsetTop - window.innerHeight / 3;
+            window.scrollTo({ top: posicao, behavior: "smooth" });
+        }
+    }
+
+    /* ================= ABRIR MODAL ================= */
+    document.querySelectorAll("[data-modal]").forEach(card => {
+        card.addEventListener("click", () => {
+            const modalId = card.dataset.modal;
+            const modal = document.getElementById(modalId);
+            if (!modal) return;
+
+            modal.style.display = "block";
+            document.body.style.overflow = "hidden";
+
+            // Inicia todos os carrosséis internos desse modal
+            modal.querySelectorAll(".modal-carousel-track").forEach(track => initCarousel(track));
+        });
+    });
+
+    /* ================= FECHAR MODAL ================= */
+    document.querySelectorAll(".modal-close").forEach(btn => {
+        btn.addEventListener("click", () => {
+            const modal = btn.closest(".evento-modal, .projeto-modal");
+            if (!modal) return;
+            modal.style.display = "none";
+            document.body.style.overflow = "auto";
+        });
+    });
+
+    // Fechar ao clicar fora do conteúdo
+    document.querySelectorAll(".evento-modal, .projeto-modal").forEach(modal => {
+        modal.addEventListener("click", e => {
+            if (e.target === modal) {
+                modal.style.display = "none";
+                document.body.style.overflow = "auto";
+            }
+        });
+    });
+
+    /* ================= CARROSSEL BOTÕES ================= */
+    document.querySelectorAll(".carousel-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+            const track = document.getElementById(btn.dataset.target);
+            if (!track) return;
+            const cardWidth = track.querySelector("img")?.offsetWidth + 12 || 300;
+
+            if (btn.classList.contains("left")) track.scrollLeft -= cardWidth;
+            else track.scrollLeft += cardWidth;
+        });
+    });
+
+});
+
+/* ================= FUNÇÃO DE CARROSSEL AUTOMÁTICO ================= */
+function initCarousel(track) {
+    if (track.dataset.initiated) return; // evita iniciar 2x
+    track.dataset.initiated = "true";
+
+    const imgs = track.querySelectorAll("img");
+    if (!imgs.length) return;
+
+    const cardWidth = imgs[0].offsetWidth + 12;
+
+    setInterval(() => {
+        track.scrollLeft += cardWidth;
+        if (track.scrollLeft + track.offsetWidth >= track.scrollWidth - 10) {
+            track.scrollLeft = 0;
+        }
+    }, 3000);
+}
+
+
+document.addEventListener("DOMContentLoaded", () => {
+
+    // Abrir modal ao clicar no item do carrossel
+    document.querySelectorAll(".carousel-item").forEach(item => {
+        item.addEventListener("click", () => {
+            const modal = document.getElementById(item.dataset.modal);
+            modal.style.display = "block";
+            document.body.style.overflow = "hidden";
+
+            // Inicia carrossel interno
+            modal.querySelectorAll(".modal-carousel-track").forEach(track => initCarousel(track));
+        });
+    });
+
+    // Fechar modal
+    document.querySelectorAll(".modal-close").forEach(btn => {
+        btn.addEventListener("click", () => {
+            const modal = btn.closest(".projeto-modal");
+            modal.style.display = "none";
+            document.body.style.overflow = "auto";
+        });
+    });
+
+    // Fechar ao clicar fora
+    document.querySelectorAll(".projeto-modal").forEach(modal => {
+        modal.addEventListener("click", e => {
+            if (e.target === modal) {
+                modal.style.display = "none";
+                document.body.style.overflow = "auto";
+            }
+        });
+    });
+
+    // Botões carrossel interno
+    document.querySelectorAll(".carousel-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+            const track = document.getElementById(btn.dataset.target);
+            const cardWidth = track.querySelector("img")?.offsetWidth + 12 || 300;
+
+            if (btn.classList.contains("left")) track.scrollLeft -= cardWidth;
+            else track.scrollLeft += cardWidth;
+        });
+    });
+});
+
+function initCarousel(track) {
+    if (track.dataset.initiated) return;
+    track.dataset.initiated = "true";
+
+    const imgs = track.querySelectorAll("img");
+    if (!imgs.length) return;
+
+    let cardWidth = imgs[0].offsetWidth + 12;
+
+    setInterval(() => {
+        track.scrollLeft += cardWidth;
+        if (track.scrollLeft + track.offsetWidth >= track.scrollWidth - 10) track.scrollLeft = 0;
+    }, 3000);
+}
+
+
+const messages = document.querySelectorAll('.rotating-messages .message');
+let currentIndex = 0;
+
+// Inicializa a primeira mensagem ativa
+messages[0].classList.add('active');
+
+function rotateMessages() {
+    messages[currentIndex].classList.remove('active');
+    currentIndex = (currentIndex + 1) % messages.length;
+    messages[currentIndex].classList.add('active');
+}
+
+// Troca a cada 5 segundos
+setInterval(rotateMessages, 5000)
+
+
+</script>
+{% endblock %}

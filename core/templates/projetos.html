@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+
+<!-- ======== BREADCRUMB ======== -->
+<div class="breadcrumb">
+    <a href="{% url 'home' %}#projetos ">Home</a>
+    <span>›</span>
+    <strong>Todos os Projetos</strong>
+</div>
+
+<section id="todos-projetos" class="py-5 bg-light">
+    <div class="container">
+        <h2 class="text-primary mb-5 text-center">Todos os Projetos</h2>
+
+        <div class="row g-4">
+            {% for projeto in projetos %}
+            <div class="col-md-6 col-lg-4">
+                <div class="card shadow-sm h-100 projeto-card" data-modal="modal-projeto-{{ projeto.id }}">
+                    <!-- Imagem principal -->
+                    <div class="card-img-wrapper">
+                        {% if projeto.brinquedo_projetado.imagens_brinquedo_projeto.first %}
+                        <img src="{{ projeto.brinquedo_projetado.imagens_brinquedo_projeto.first.imagem.url }}"
+                             class="card-img-top" alt="{{ projeto.titulo }}">
+                        {% else %}
+                        <img src="{% static 'images/default.jpg' %}" class="card-img-top" alt="Sem imagem">
+                        {% endif %}
+                        <div class="card-overlay">
+                            <span>Ver Detalhes</span>
+                        </div>
+                    </div>
+
+                    <div class="card-body d-flex flex-column">
+                        <h5 class="card-title text-primary">{{ projeto.titulo }}</h5>
+                        <p class="card-text text-muted">{{ projeto.descricao|truncatewords:25 }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal do Projeto -->
+            <div id="modal-projeto-{{ projeto.id }}" class="projeto-modal">
+                <div class="modal-content">
+                    <span class="modal-close">&times;</span>
+                    <h2 class="text-primary mb-3">{{ projeto.titulo }}</h2>
+                    <p class="text-muted mb-4">{{ projeto.descricao }}</p>
+
+                    <h4 class="mb-3">📸 Galeria de Imagens</h4>
+                    <div class="modal-gallery">
+                        {% for img in projeto.brinquedo_projetado.imagens_brinquedo_projeto.all %}
+                        <div class="gallery-item">
+                            <img src="{{ img.imagem.url }}" alt="{{ img.legenda }}">
+                        </div>
+                        {% empty %}
+                        <p>Sem imagens adicionais.</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+<style>
+/* ======== CARDS DE PROJETOS ======== */
+.projeto-card {
+    position: relative;
+    cursor: pointer;
+    transition: transform 0.3s, box-shadow 0.3s;
+    border-radius: 15px;
+    overflow: hidden;
+}
+.projeto-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 30px rgba(0,0,0,0.2);
+}
+.card-img-wrapper {
+    position: relative;
+    overflow: hidden;
+}
+.card-img-top {
+    transition: transform 0.4s;
+}
+.projeto-card:hover .card-img-top {
+    transform: scale(1.1);
+}
+.card-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(0, 74, 173, 0.7);
+    color: #fff;
+    padding: 10px;
+    text-align: center;
+    font-weight: bold;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+.projeto-card:hover .card-overlay {
+    opacity: 1;
+}
+
+/* ======== MODAL ======== */
+.projeto-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    padding: 40px 20px;
+    overflow-y: auto;
+    z-index: 99999;
+}
+.modal-content {
+    background: #fff;
+    max-width: 1000px;
+    margin: 20px auto;
+    padding: 30px;
+    border-radius: 20px;
+    text-align: left;
+}
+.modal-close {
+    float: right;
+    font-size: 32px;
+    cursor: pointer;
+    color: #E63946;
+}
+
+/* ======== GALERIA MODAL ======== */
+.modal-gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+}
+.modal-gallery img {
+    width: 100%;
+    border-radius: 12px;
+    object-fit: cover;
+    transition: transform 0.3s;
+}
+.modal-gallery img:hover {
+    transform: scale(1.05);
+}
+
+/* ======== BREADCRUMB ======== */
+.breadcrumb {
+    max-width: 1200px;
+    margin: 25px auto;
+    font-size: 1rem;
+    color: #444;
+}
+.breadcrumb a {
+    color: #007BFF;
+    text-decoration: none;
+    font-weight: 600;
+}
+.breadcrumb span {
+    margin: 0 6px;
+    color: #888;
+}
+.breadcrumb strong {
+    color: #1f2d3d;
+}
+.breadcrumb a:hover {
+    color: #0056C9 !important;
+    text-decoration: underline !important;
+    transition: .25s ease !important;
+}
+</style>
+
+{% endblock content %}

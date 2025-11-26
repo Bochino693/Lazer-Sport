@@ -1,0 +1,231 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Meu Perfil{% endblock %}
+
+{% block content %}
+
+<!-- ======= BREADCRUMB ======= -->
+<div class="breadcrumb">
+    <a href="{% url 'home' %}">Home</a>
+    <span>›</span>
+    <strong>Meu Perfil</strong>
+</div>
+
+<!-- ======= PERFIL ======= -->
+<section class="perfil-wrapper">
+
+    <!-- CARD DE INFORMAÇÕES -->
+    <div class="perfil-card">
+        <div class="perfil-header">
+            <!-- Avatar -->
+            <div class="avatar">
+                {% if user.perfil.avatar %}
+                    <img src="{{ user.perfil.avatar.url }}" alt="Avatar">
+                {% else %}
+                    <img src="{% static 'images/default_avatar.png' %}" alt="Avatar">
+                {% endif %}
+            </div>
+            <div class="user-info">
+                <h2>{{ user.first_name }} {{ user.last_name }}</h2>
+                <p>{{ user.email }}</p>
+                {% if user.perfil.nome_completo %}
+                    <small>Nome completo: {{ user.perfil.nome_completo }}</small>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- FORMULÁRIO DE EDIÇÃO -->
+        <div class="perfil-form">
+            {% if messages %}
+                <ul class="messages">
+                    {% for message in messages %}
+                        <li class="{{ message.tags }}">{{ message }}</li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+
+            <form method="POST" enctype="multipart/form-data">
+                {% csrf_token %}
+
+                <!-- Avatar -->
+                <div class="form-group">
+                    <label for="id_avatar">Avatar</label>
+                    {{ perfil_form.avatar }}
+                </div>
+
+                <!-- Nome -->
+                <div class="form-group">
+                    <label for="id_first_name">Nome</label>
+                    {{ user_form.first_name }}
+                </div>
+
+                <!-- Sobrenome -->
+                <div class="form-group">
+                    <label for="id_last_name">Sobrenome</label>
+                    {{ user_form.last_name }}
+                </div>
+
+                <!-- Nome completo -->
+                <div class="form-group">
+                    <label for="id_nome_completo">Nome completo</label>
+                    {{ perfil_form.nome_completo }}
+                </div>
+
+                <!-- Email -->
+                <div class="form-group">
+                    <label for="id_email">Email</label>
+                    {{ user_form.email }}
+                </div>
+
+                <button type="submit" class="btn btn-primary">Salvar Alterações</button>
+            </form>
+        </div>
+    </div>
+
+</section>
+
+<style>
+/* ======= BREADCRUMB ======= */
+.breadcrumb {
+    max-width: 1200px;
+    margin: 25px auto;
+    font-size: 1rem;
+    color: #444;
+}
+.breadcrumb a {
+    color: #007BFF;
+    text-decoration: none;
+    font-weight: 600;
+}
+.breadcrumb span {
+    margin: 0 6px;
+    color: #888;
+}
+.breadcrumb strong {
+    color: #1f2d3d;
+}
+.breadcrumb a:hover {
+    color: #0056C9 !important;
+    text-decoration: underline !important;
+    transition: .25s ease !important;
+}
+
+/* ======= PERFIL ======= */
+.perfil-wrapper {
+    max-width: 800px;
+    margin: 20px auto;
+    padding: 0 15px;
+}
+
+.perfil-card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 25px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.perfil-header {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.avatar img {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #007BFF;
+}
+
+.user-info h2 {
+    margin: 0;
+    font-size: 1.6rem;
+    color: #1f2d3d;
+}
+
+.user-info p {
+    margin: 3px 0;
+    color: #555;
+}
+
+.user-info small {
+    color: #888;
+}
+
+/* ======= FORMULÁRIO ======= */
+.perfil-form {
+    margin-top: 20px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    font-weight: 600;
+    margin-bottom: 5px;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    font-size: 1rem;
+    transition: all .3s ease;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #007BFF;
+    box-shadow: 0 0 5px rgba(0,123,255,0.3);
+}
+
+.btn-primary {
+    padding: 12px 20px;
+    background-color: #007BFF;
+    color: #fff;
+    font-weight: 600;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all .3s ease;
+}
+
+.btn-primary:hover {
+    background-color: #0056C9;
+}
+
+.messages {
+    list-style: none;
+    padding: 0;
+    margin-bottom: 15px;
+}
+
+.messages li {
+    padding: 10px 12px;
+    border-radius: 6px;
+    margin-bottom: 8px;
+}
+
+.messages li.success {
+    background: #d4edda;
+    color: #155724;
+}
+
+.messages li.error {
+    background: #f8d7da;
+    color: #721c24;
+}
+</style>
+{% endblock %}

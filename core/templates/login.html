@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Login — Lazer & Sports{% endblock %}
+
+{% block content %}
+<style>
+/* ===== CONTAINER CENTRAL ===== */
+.login-container {
+    max-width: 420px;
+    margin: 60px auto;
+    background: #ffffff;
+    padding: 35px;
+    border-radius: 18px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+    animation: fadeSlide 0.4s ease-out;
+}
+
+/* ===== TÍTULO ===== */
+.login-container h2 {
+    text-align: center;
+    margin-bottom: 10px;
+    color: #004AAD;
+    font-size: 1.9em;
+    font-weight: 700;
+}
+
+.login-container p.subtitle {
+    text-align: center;
+    margin-bottom: 25px;
+    color: #444;
+    font-size: 1.05em;
+}
+
+/* ===== LABELS ===== */
+.login-container label {
+    font-weight: 600;
+    color: #003B7A;
+    margin-bottom: 6px;
+    display: block;
+}
+
+/* ===== CAMPOS ===== */
+.login-container input {
+    width: 100%;
+    padding: 12px 14px;
+    margin-bottom: 18px;
+    border-radius: 10px;
+    border: 1px solid #b5c9ff;
+    outline: none;
+    background: #f9fbff;
+    transition: 0.3s;
+    font-size: 1em;
+}
+
+.login-container input:focus {
+    border-color: #004AAD;
+    box-shadow: 0 0 6px rgba(0, 74, 173, 0.3);
+}
+
+/* ===== SENHA + OLHINHO ===== */
+.password-wrapper {
+    position: relative;
+}
+
+.toggle-password {
+    position: absolute;
+    top: 50%;
+    right: 14px;
+    transform: translateY(-50%);
+    cursor: pointer;
+    color: #004AAD;
+    font-size: 18px;
+    transition: 0.25s;
+}
+
+.toggle-password:hover {
+    color: #E63946;
+}
+
+/* ===== BOTÃO ===== */
+.login-btn {
+    width: 100%;
+    padding: 12px;
+    background: #E63946;
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-weight: 700;
+    font-size: 1.1em;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.login-btn:hover {
+    background: #c92a38;
+}
+
+/* ===== LINKS ===== */
+.login-links {
+    margin-top: 15px;
+    text-align: center;
+}
+
+.login-links a {
+    color: #004AAD;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.login-links a:hover {
+    color: #E63946;
+}
+
+/* ===== MENSAGENS ===== */
+.alert {
+    padding: 12px 15px;
+    border-radius: 10px;
+    margin-bottom: 15px;
+    font-weight: 600;
+    animation: fadeSlide 0.4s ease-out;
+}
+
+.alert-error {
+    background: #ffe5e7;
+    color: #b30012;
+    border-left: 4px solid #E63946;
+}
+
+.alert-success {
+    background: #e6ffed;
+    color: #056d33;
+    border-left: 4px solid #06c167;
+}
+
+/* ===== ANIMAÇÃO ===== */
+@keyframes fadeSlide {
+    from { opacity: 0; transform: translateY(-10px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+</style>
+
+
+<div class="login-container" id="login-box">
+
+    <h2>Entrar na sua conta</h2>
+    <p class="subtitle">Bem-vindo de volta! 👋</p>
+
+    <!-- MENSAGENS DJANGO -->
+    {% if messages %}
+        {% for m in messages %}
+            <div class="alert {% if m.tags == 'error' %}alert-error{% else %}alert-success{% endif %}">
+                {{ m }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <form method="POST">
+        {% csrf_token %}
+
+        <label for="id_username">Usuário ou E-mail</label>
+        <input type="text" id="id_username" name="username" required>
+
+        <label for="id_password">Senha</label>
+        <div class="password-wrapper">
+            <input type="password" id="id_password" name="password" required>
+            <i class="fa-solid fa-eye toggle-password" data-target="id_password"></i>
+        </div>
+
+        <button type="submit" class="login-btn">Entrar</button>
+    </form>
+
+    <div class="login-links">
+        <p><a href="#">Esqueceu a senha?</a></p>
+        <p>Não tem conta? <a href="{% url 'registrar' %}">Criar conta</a></p>
+    </div>
+</div>
+
+<script>
+/* ===== MOSTRAR/OCULTAR SENHA ===== */
+document.querySelectorAll(".toggle-password").forEach(icon => {
+    icon.addEventListener("click", function() {
+        const input = document.getElementById(this.dataset.target);
+        const isPassword = input.type === "password";
+        input.type = isPassword ? "text" : "password";
+
+        this.classList.toggle("fa-eye-slash", isPassword);
+    });
+});
+</script>
+
+{% endblock %}

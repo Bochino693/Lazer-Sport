@@ -1,0 +1,134 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Brinquedos | Minha Loja{% endblock %}
+
+{% block content %}
+<style>
+/* ======= GRID DE PRODUTOS ======= */
+.grid-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 30px;
+    max-width: 1200px;
+    margin: 50px auto;
+    justify-items: center;
+}
+
+.card-produto {
+    width: 320px;
+    background: white;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+    transition: transform 0.3s, box-shadow 0.3s;
+    cursor: pointer;
+}
+
+.card-produto:hover {
+    transform: translateY(-8px) scale(1.03);
+    box-shadow: 0 12px 28px rgba(0,0,0,0.15);
+}
+
+.card-produto img {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+    transition: transform 0.4s ease;
+}
+
+.card-produto:hover img {
+    transform: scale(1.05);
+}
+
+.card-produto .conteudo {
+    padding: 16px;
+    text-align: left;
+}
+
+.card-produto h3 {
+    font-size: 1.2rem;
+    margin-bottom: 8px;
+    color: #1f2d3d;
+}
+
+.card-produto .preco {
+    font-size: 1.2rem;
+    color: #007BFF;
+    font-weight: 700;
+    margin-bottom: 12px;
+}
+
+.card-produto .btn-vermais {
+    display: inline-block;
+    width: 100%;
+    text-align: center;
+    background: #007BFF;
+    color: white;
+    padding: 10px 0;
+    border-radius: 8px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background 0.3s;
+}
+
+.card-produto .btn-vermais:hover {
+    background: #E63946;
+}
+
+.breadcrumb {
+    max-width: 1200px;
+    margin: 25px auto;
+    font-size: 1rem;
+    color: #444;
+}
+.breadcrumb a {
+    color: #007BFF;
+    text-decoration: none;
+    font-weight: 600;
+}
+.breadcrumb span {
+    margin: 0 6px;
+    color: #888;
+}
+.breadcrumb strong {
+    color: #1f2d3d;
+}
+.breadcrumb a:hover {
+    color: #0056C9 !important;
+    text-decoration: underline !important;
+    transition: .25s ease !important;
+}
+
+</style>
+
+
+<!-- ======== BREADCRUMB ======== -->
+<div class="breadcrumb" id="bread">
+    <a href="{% url 'home' %}#brinquedos">Home</a>
+    <span>›</span>
+    <strong>Todos os Brinquedos</strong>
+</div>
+
+
+<section class="destaques">
+    <h2 style="text-align:center; font-size:2rem; margin-bottom:40px; color:#007BFF;">
+        Todos os Brinquedos
+    </h2>
+
+    <div class="grid-cards">
+        {% for brinquedo in brinquedos %}
+        <div class="card-produto">
+            <img src="{{ brinquedo.imagem_brinquedo.url }}" alt="{{ brinquedo.nome_brinquedo }}">
+            <div class="conteudo">
+                <h3>{{ brinquedo.nome_brinquedo }}</h3>
+                <div class="preco">R$ {{ brinquedo.valor_brinquedo }}</div>
+                <a href="{% url 'brinquedo_detalhe' brinquedo.id %}" class="btn-vermais">Ver mais</a>
+            </div>
+        </div>
+        {% empty %}
+            <p>Nenhum brinquedo encontrado.</p>
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}

@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+
+{% block title %}Entrando...{% endblock %}
+
+{% block content %}
+
+<style>
+/* ======= BOX PRINCIPAL ======= */
+.login-sucesso-box {
+    max-width: 450px;
+    margin: 120px auto;
+    background: #ffffff;
+    padding: 40px;
+    border-radius: 20px;
+    text-align: center;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+    animation: fadeSlide 0.5s ease-out;
+    position: relative;
+    z-index: 2;
+}
+
+.login-sucesso-box h2 {
+    font-size: 2em;
+    font-weight: 700;
+    margin-bottom: 10px;
+}
+
+.login-sucesso-box p {
+    font-size: 1.2em;
+    color: #666;
+}
+
+/* BARRA DE PROGRESSO */
+.progress-bar {
+    width: 100%;
+    height: 10px;
+    background: #ddd;
+    border-radius: 20px;
+    overflow: hidden;
+    margin-top: 25px;
+}
+
+.progress-fill {
+    width: 0%;
+    height: 100%;
+    background: #2ecc71;
+    animation: preencher 4s linear forwards;
+}
+
+/* APARIÇÃO */
+@keyframes fadeSlide {
+    from { opacity: 0; transform: translateY(30px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ANIMAÇÃO DA BARRA */
+@keyframes preencher {
+    from { width: 0%; }
+    to   { width: 100%; }
+}
+
+/* CONFETES */
+#confetti-canvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 1;
+}
+</style>
+
+<!-- CANVAS PARA CONFETES -->
+<canvas id="confetti-canvas"></canvas>
+
+<div class="login-sucesso-box" id="login-box">
+    <h2>Entrando...</h2>
+    <p>Olá, {{ user.get_full_name }}! Aguarde um instante 🎯</p>
+
+    <div class="progress-bar">
+        <div class="progress-fill"></div>
+    </div>
+
+    <p style="margin-top: 10px; font-size: 0.9em; color:#777;">
+        Você será redirecionado em 4 segundos.
+    </p>
+</div>
+
+<script>
+// REDIRECIONAMENTO AUTOMÁTICO
+setTimeout(function() {
+    window.location.href = "{% url 'home' %}";
+}, 4000);
+
+// ===== CONFETES =====
+(function() {
+    const canvas = document.getElementById("confetti-canvas");
+    const ctx = canvas.getContext("2d");
+
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    let confettis = [];
+
+    function Confetti() {
+        this.x = Math.random() * canvas.width;
+        this.y = Math.random() * -canvas.height;
+        this.radius = Math.random() * 6 + 4;
+        this.color = `hsl(${Math.floor(Math.random()*360)}, 90%, 60%)`;
+        this.speed = Math.random() * 3 + 2;
+        this.rotation = Math.random() * 360;
+    }
+
+    function createConfetti() {
+        for (let i = 0; i < 150; i++) {
+            confettis.push(new Confetti());
+        }
+    }
+
+    function update() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        confettis.forEach((c, i) => {
+            c.y += c.speed;
+            c.rotation += 3;
+
+            ctx.save();
+            ctx.translate(c.x, c.y);
+            ctx.rotate(c.rotation * Math.PI/180);
+            ctx.fillStyle = c.color;
+            ctx.fillRect(-c.radius, -c.radius, c.radius*2, c.radius*2);
+            ctx.restore();
+
+            if (c.y > canvas.height) confettis[i] = new Confetti();
+        });
+
+        requestAnimationFrame(update);
+    }
+
+    createConfetti();
+    update();
+})();
+
+
+// Scroll automático para a caixa de login
+window.addEventListener("load", function() {
+    const element = document.getElementById("login-box");
+    if (element) {
+        element.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+});
+</script>
+
+{% endblock %}

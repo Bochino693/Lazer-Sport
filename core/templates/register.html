@@ -1,0 +1,217 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Criar Conta — Lazer & Sports{% endblock %}
+
+{% block content %}
+<style>
+
+/* ===== CONTAINER ===== */
+.register-container {
+    max-width: 480px;
+    margin: 50px auto;
+    background: #ffffff;
+    padding: 35px;
+    border-radius: 20px;
+    box-shadow: 0 6px 22px rgba(0,0,0,0.15);
+    animation: fadeSlide 0.4s ease-out;
+}
+
+/* TÍTULO */
+.register-container h2 {
+    text-align: center;
+    margin-bottom: 25px;
+    color: #004AAD;
+    font-weight: 700;
+    font-size: 1.9em;
+}
+
+/* === LABELS === */
+.register-container label {
+    font-weight: 600;
+    color: #004AAD;
+    margin-top: 12px;
+    display: block;
+
+}
+
+/* === CAMPOS === */
+.register-container input {
+    width: 100%;
+    padding: 12px 14px;
+    margin-top: 6px;
+    border-radius: 10px;
+    border: 1px solid #b5c9ff;
+    background: #f9fbff;
+    outline: none;
+    transition: 0.25s;
+    font-size: 1.2em; /* aumente para o tamanho desejado */
+
+}
+
+.register-container input:focus {
+    border-color: #004AAD;
+    box-shadow: 0 0 6px rgba(0, 74, 173, 0.3);
+}
+
+/* ===== BOTÃO ===== */
+.register-btn {
+    width: 100%;
+    padding: 12px;
+    margin-top: 20px;
+    background: #E63946;
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    font-size: 1.1em;
+    font-weight: 700;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.register-btn:hover {
+    background: #c92a38;
+}
+
+/* ===== MENSAGENS ===== */
+.alert {
+    padding: 12px;
+    background: #ffe6e6;
+    color: #b30000;
+    border-left: 4px solid #ff4d4d;
+    border-radius: 6px;
+    margin-bottom: 15px;
+    font-weight: 600;
+    animation: fadeSlide 0.3s ease-out;
+}
+
+.alert.success {
+    background: #e6ffed;
+    color: #006622;
+    border-left: 4px solid #00cc44;
+}
+
+/* ===== Efeito de Fade ===== */
+@keyframes fadeSlide {
+    from { opacity: 0; transform: translateY(-10px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ===== efeito de sucesso ===== */
+.success-animation {
+    text-align: center;
+    font-size: 1.4em;
+    font-weight: bold;
+    color: #00aa44;
+    animation: pop 0.4s ease-out;
+}
+@keyframes pop {
+    from { transform: scale(0.7); opacity: 0; }
+    to   { transform: scale(1); opacity: 1; }
+}
+
+
+/* Wrapper do campo de senha */
+.password-wrapper {
+    position: relative;
+    width: 100%;
+}
+
+/* Campo de senha */
+.password-wrapper input {
+    width: 100%;
+    padding-right: 45px !important; /* espaço para o ícone */
+}
+
+/* Ícone do olho */
+.toggle-password {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 20px;
+    color: #666;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.toggle-password:hover {
+    color: #004AAD;
+    transform: translateY(-50%) scale(1.1);
+}
+
+/* Ajuste de toque para celular */
+@media (max-width: 600px) {
+    .toggle-password {
+        font-size: 22px;
+        right: 10px;
+    }
+}
+
+</style>
+
+
+<div class="register-container" id="register-box">
+
+    <h2>Criar sua Conta</h2>
+
+    {% if messages %}
+        {% for m in messages %}
+            <div class="alert {% if m.tags %}{{ m.tags }}{% endif %}">{{ m }}</div>
+        {% endfor %}
+    {% endif %}
+
+    <form method="POST" id="formCadastro">
+        {% csrf_token %}
+
+        <label>Nome</label>
+        <input type="text" name="first_name" required>
+
+        <label>Sobrenome</label>
+        <input type="text" name="last_name" required>
+
+        <label>Nome de Usuário</label>
+        <input type="text" name="username" required>
+
+        <label>E-mail</label>
+        <input type="email" name="email" required>
+
+        <label>Senha</label>
+        <div class="password-wrapper">
+            <input type="password" name="password" id="password" required>
+            <i class="fa-solid fa-eye toggle-password" data-target="password"></i>
+        </div>
+
+        <label>Confirmar Senha</label>
+        <div class="password-wrapper">
+            <input type="password" name="password2" id="password2" required>
+            <i class="fa-solid fa-eye toggle-password" data-target="password2"></i>
+        </div>
+
+
+        <button type="submit" class="register-btn">Criar Conta</button>
+    </form>
+
+</div>
+
+<script>
+document.querySelectorAll(".toggle-password").forEach(icon => {
+    icon.addEventListener("click", function() {
+        const inputId = this.getAttribute("data-target");
+        const input = document.getElementById(inputId);
+
+        if (input.type === "password") {
+            input.type = "text";
+            this.classList.remove("fa-eye");
+            this.classList.add("fa-eye-slash");
+        } else {
+            input.type = "password";
+            this.classList.remove("fa-eye-slash");
+            this.classList.add("fa-eye");
+        }
+    });
+});
+</script>
+
+
+{% endblock %}
