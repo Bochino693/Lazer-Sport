@@ -14,6 +14,18 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from .models import Brinquedos, CategoriasBrinquedos, Projetos, Eventos, ClientePerfil, Combos, Cupom, Promocoes, \
     TagsBrinquedos
 
+import os
+from django.http import FileResponse, Http404
+from django.conf import settings
+
+def media_serve(request, path):
+    file_path = os.path.join(settings.MEDIA_ROOT, path)
+
+    if not os.path.isfile(file_path):
+        raise Http404("Arquivo não encontrado")
+
+    return FileResponse(open(file_path, 'rb'), content_type='image/jpeg')
+
 
 class HomeView(View):
 
