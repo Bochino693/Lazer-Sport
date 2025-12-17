@@ -2373,10 +2373,30 @@ document.addEventListener("DOMContentLoaded", () => {
     renderizarTodasEstrelas();
     adicionarEventosFiltros();
     adicionarEventosPaginacao();
+    observarGridProdutos();
 
     const grid = document.getElementById('grid-cards');
     if (grid) grid.style.justifyContent = 'center';
 });
+
+
+// ===============================
+// ⭐ OBSERVA MUDANÇAS NO GRID (SOLUÇÃO FINAL)
+// ===============================
+function observarGridProdutos() {
+    const grid = document.getElementById('grid-cards');
+    if (!grid) return;
+
+    const observer = new MutationObserver(() => {
+        renderizarTodasEstrelas(grid);
+    });
+
+    observer.observe(grid, {
+        childList: true,
+        subtree: true
+    });
+}
+
 
 document.addEventListener("DOMContentLoaded", () => {
 
