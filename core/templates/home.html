@@ -10,6 +10,15 @@
 
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600&display=swap');
 
+.nenhum-produto {
+  text-align: center;
+  width: 100%;
+  margin: 40px 0;
+  font-size: 1.1rem;
+  color: #666;
+}
+
+
 
 /* ======= RESET ======= */
 body {
@@ -1897,8 +1906,9 @@ body {
         </div>
 
       {% empty %}
-        <p>Nenhum produto encontrado.</p>
+         <p class="nenhum-produto">Nenhum produto encontrado.</p>
       {% endfor %}
+
       </div>
 
 

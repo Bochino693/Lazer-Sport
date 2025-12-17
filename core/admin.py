@@ -18,7 +18,6 @@ from django.utils.html import format_html
 from .models import ImagensSite
 
 
-
 @admin.register(ImagensSite)
 class ImagensSiteAdmin(admin.ModelAdmin):
     list_display = ("id", "preview_imagem")
@@ -33,6 +32,7 @@ class ImagensSiteAdmin(admin.ModelAdmin):
         return "—"
 
     preview_imagem.short_description = "Imagem"
+
 
 # ========= MODELOS PRINCIPAIS =========
 @admin.register(Clientes)
@@ -105,6 +105,7 @@ class ProjetosAdmin(admin.ModelAdmin):
     list_display = ("titulo", "brinquedo_projetado")
     search_fields = ("titulo", "descricao")
     # OneToOneField usa dropdown padrão
+
 
 class ImagemEventoInline(admin.TabularInline):
     model = ImagemEvento
