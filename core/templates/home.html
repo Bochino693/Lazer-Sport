@@ -1637,7 +1637,7 @@ body {
 
     <div class="scroll-container" id="scroll-container">
       {% for categoria in categorias_brinquedos %}
-        <a href="{% url 'categoria_detalhe' categoria.id %}" class="categoria-link">
+        <a href="{% url 'categoria_detalhe' categoria.id %}#list" class="categoria-link">
   <div class="categoria-card">
     {% if categoria.imagem_categoria %}
       <img src="{{ categoria.imagem_categoria.url }}" alt="{{ categoria.nome_categoria }}">
