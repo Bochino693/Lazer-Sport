@@ -12,7 +12,7 @@ from .forms import UserForm, PerfilForm
 from django.contrib.auth.mixins import LoginRequiredMixin
 
 from .models import Brinquedos, CategoriasBrinquedos, Projetos, Eventos, ClientePerfil, Combos, Cupom, Promocoes, \
-    TagsBrinquedos
+    TagsBrinquedos, ImagensSite
 
 import os
 from django.http import FileResponse, Http404
@@ -32,6 +32,9 @@ class HomeView(View):
     def get(self, request):  # ---------------------------
         # 1. Captura do filtro
         # ---------------------------
+
+        imagens_site = ImagensSite.objects.exclude(imagem="")
+
         filtro = request.GET.get("ordenar", "az")  # padrão = A-Z
 
         brinquedos = Brinquedos.objects.all()
@@ -97,6 +100,7 @@ class HomeView(View):
             "projetos": projetos,
             "combos": combos,
             "promocoes": promocoes,
+            "imagens_site": imagens_site,
         }
         return render(request, 'home.html', context)
 

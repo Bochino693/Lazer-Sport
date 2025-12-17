@@ -1590,20 +1590,26 @@ body {
 <!-- ======= CARROSSEL ======= -->
 <section id="inicio" class="carousel-container">
   <div class="carousel-wrapper">
-    <img src="{% static 'images/IMAG1.png' %}" class="carousel-slide active" alt="Promoção 1">
-    <img src="{% static 'images/IMAG2.png' %}" class="carousel-slide" alt="Promoção 2">
-    <img src="{% static 'images/IMAG3.png' %}" class="carousel-slide" alt="Promoção 3">
 
-    <!-- Setas internas -->
+    {% for imagem in imagens_site %}
+      <img
+        src="{{ imagem.imagem.url }}"
+        class="carousel-slide {% if forloop.first %}active{% endif %}"
+        alt="Imagem do site {{ forloop.counter }}"
+      >
+    {% endfor %}
+
+    <!-- Setas -->
     <button class="carousel-btn prev">❮</button>
     <button class="carousel-btn next">❯</button>
 
     <!-- Dots -->
     <div class="carousel-dots">
-      <span class="dot active"></span>
-      <span class="dot"></span>
-      <span class="dot"></span>
+      {% for imagem in imagens_site %}
+        <span class="dot {% if forloop.first %}active{% endif %}"></span>
+      {% endfor %}
     </div>
+
   </div>
 </section>
 
