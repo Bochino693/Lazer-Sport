@@ -469,6 +469,84 @@ nav a.btn-login {
 }
 
 
+    @media (max-width: 768px) {
+
+  /* ===== HEADER ===== */
+  header {
+    padding: 8px 12px;
+  }
+
+  .logo img {
+    height: 45px;
+  }
+
+  .logo span {
+    font-size: 1.1em;
+  }
+
+  /* ===== REDES SOCIAIS ===== */
+  .social-icons {
+    gap: 10px;
+  }
+
+  .social-icons a {
+    font-size: 1.3rem;
+  }
+
+  /* ===== MENU ===== */
+  nav {
+    gap: 0;
+  }
+
+  nav a {
+    font-size: 1rem;
+  }
+
+  /* ===== BUSCA ===== */
+  .search-box {
+    flex-direction: column;
+  }
+
+  .search-box input,
+  .search-box button {
+    width: 100%;
+  }
+
+  /* ===== TÍTULOS ===== */
+  .search-title {
+    font-size: 1.4em;
+  }
+
+  .search-suggestions h3 {
+    font-size: 1.05em;
+  }
+
+  /* ===== CONTEÚDO ===== */
+  main.content-section {
+    margin: 25px auto;
+    padding: 0 15px;
+  }
+
+  /* ===== TEXTO VAZIO (Nenhum produto etc) ===== */
+  .texto-vazio,
+  .nenhum-produto {
+    text-align: center;
+    font-size: 1rem;
+    margin: 30px auto;
+    color: #666;
+  }
+
+  /* ===== DROPDOWN USUÁRIO ===== */
+  .dropdown-menu {
+    right: 50%;
+    transform: translateX(50%) translateY(10px);
+  }
+
+  .user-dropdown:hover .dropdown-menu {
+    transform: translateX(50%) translateY(0);
+  }
+}
+
   </style>
 
 </head>

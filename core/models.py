@@ -48,6 +48,9 @@ def criar_perfil_cliente(sender, instance, created, **kwargs):
 class ImagensSite(Prime):
     imagem = models.ImageField(upload_to='imagens_site', blank=True, null=True)
 
+    def __str__(self):
+        return f'{self.imagem.url} foto'
+
     class Meta:
         verbose_name = "Imagem do Site"
         verbose_name_plural = "Imagens do Site"
@@ -71,6 +74,10 @@ class CategoriasBrinquedos(Prime):
 
     def __str__(self):
         return self.nome_categoria
+
+    class Meta:
+        verbose_name = "Categoria de Produto"
+        verbose_name_plural = "Categorias de Produtos"
 
 
 class TagsBrinquedos(Prime):
