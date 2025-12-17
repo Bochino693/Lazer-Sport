@@ -14,7 +14,25 @@ from .models import (
     Promocoes,
     Cupom
 )
+from django.utils.html import format_html
+from .models import ImagensSite
 
+
+
+@admin.register(ImagensSite)
+class ImagensSiteAdmin(admin.ModelAdmin):
+    list_display = ("id", "preview_imagem")
+    list_display_links = ("id", "preview_imagem")
+
+    def preview_imagem(self, obj):
+        if obj.imagem:
+            return format_html(
+                '<img src="{}" style="height:60px; width:auto; border-radius:6px;" />',
+                obj.imagem.url
+            )
+        return "—"
+
+    preview_imagem.short_description = "Imagem"
 
 # ========= MODELOS PRINCIPAIS =========
 @admin.register(Clientes)
