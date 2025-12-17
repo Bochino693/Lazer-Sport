@@ -18,8 +18,6 @@
   color: #666;
 }
 
-
-
 /* ======= RESET ======= */
 body {
   margin: 0;
@@ -1623,8 +1621,6 @@ body {
 </section>
 
 
-
-
 <!-- ======= CATEGORIAS ======= -->
 <section id="categorias-section" class="categorias-section">
   <h2 class="section-title">Categorias</h2>
@@ -2088,6 +2084,8 @@ body {
 </section>
 
 
+<!-- Div invisível para espaçamento -->
+<div class="espacador"></div>
 
 
 <!-- ======= CONTATO ======= -->
@@ -2286,10 +2284,18 @@ document.addEventListener("DOMContentLoaded", function() {
 // ===============================
 // ⭐ FUNÇÃO GLOBAL – AGORA FUNCIONA EM TODO LUGAR
 // ===============================
+// ===============================
+// ⭐ SVG DAS ESTRELAS
+// ===============================
 const fullStar = `<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M12 .587l3.668 7.431 8.2 1.192-5.934 5.789 1.402 8.176L12 18.896l-7.336 3.878 1.402-8.176L.132 9.21l8.2-1.192z"/></svg>`;
-const halfStar = `<svg width="18" height="18" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="halfGrad"><stop offset="50%" stop-color="currentColor"/><stop offset="50%" stop-color="transparent"/></linearGradient></defs><path d="M12 .587l3.668 7.431 8.2 1.192-5.934 5.789 1.402 8.176L12 18.896 4.664 22.774l1.402-8.176L.13 9.21l8.2-1.192z" fill="url(#halfGrad)"/><path d="M12 .587v18.309l-7.336 3.878 1.402-8.176L.132 9.21l8.2-1.192L12 .587z" fill="none" stroke="currentColor" stroke-width="0"/></svg>`;
-const emptyStar = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M12 .587l3.668 7.431 8.2 1.192-5.934 5.789 1.402 8.176L12 18.896l-7.336 3.878 1.402-8.176L.132 9.21l8.2-1.192z" stroke-width="1.2" /></svg>`;
 
+const halfStar = `<svg width="18" height="18" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="halfGrad"><stop offset="50%" stop-color="currentColor"/><stop offset="50%" stop-color="transparent"/></linearGradient></defs><path d="M12 .587l3.668 7.431 8.2 1.192-5.934 5.789 1.402 8.176L12 18.896 4.664 22.774l1.402-8.176L.13 9.21l8.2-1.192z" fill="url(#halfGrad)"/></svg>`;
+
+const emptyStar = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M12 .587l3.668 7.431 8.2 1.192-5.934 5.789 1.402 8.176L12 18.896l-7.336 3.878 1.402-8.176L.132 9.21l8.2-1.192z" stroke-width="1.2"/></svg>`;
+
+// ===============================
+// ⭐ RENDERIZA UMA AVALIAÇÃO
+// ===============================
 function renderStars(container, rating) {
     const starsWrap = container.querySelector('.stars');
     if (!starsWrap) return;
@@ -2298,38 +2304,27 @@ function renderStars(container, rating) {
     const r = parseFloat(rating) || 0;
 
     for (let i = 1; i <= 5; i++) {
-        if (r >= i) starsWrap.insertAdjacentHTML('beforeend', `<span class="star full">${fullStar}</span>`);
-        else if (r >= (i - 0.5)) starsWrap.insertAdjacentHTML('beforeend', `<span class="star half">${halfStar}</span>`);
-        else starsWrap.insertAdjacentHTML('beforeend', `<span class="star empty">${emptyStar}</span>`);
+        if (r >= i) {
+            starsWrap.insertAdjacentHTML('beforeend', fullStar);
+        } else if (r >= i - 0.5) {
+            starsWrap.insertAdjacentHTML('beforeend', halfStar);
+        } else {
+            starsWrap.insertAdjacentHTML('beforeend', emptyStar);
+        }
     }
 }
-// ===============================
-// ⭐ ESTRELAS NO CARREGAMENTO NORMAL DA PÁGINA
-// ===============================
-document.addEventListener('DOMContentLoaded', function () {
-
-    document.querySelectorAll('.avaliacao').forEach(el => {
-        const rating = el.dataset.rating;
-        renderStars(el, rating);
-    });
-
-    const grid = document.getElementById('grid-cards');
-    if (grid) grid.style.justifyContent = 'center';
-});
 
 // ===============================
-// ⭐ INICIALIZAÇÃO DE CARDS
+// ⭐ FUNÇÃO GLOBAL (CHAME SEMPRE)
 // ===============================
-function initCards() {
-    document.querySelectorAll('.card-produto').forEach(card => {
-        const ratingEl = card.querySelector('.avaliacao');
-        if (ratingEl) renderStars(ratingEl, ratingEl.dataset.rating);
+function renderizarTodasEstrelas(root = document) {
+    root.querySelectorAll('.avaliacao').forEach(el => {
+        renderStars(el, el.dataset.rating);
     });
 }
 
-
 // ===============================
-// ⭐ ESTRELAS APÓS FILTRAR VIA AJAX
+// ⭐ AJAX – ATUALIZA PRODUTOS
 // ===============================
 function atualizarProdutos(url) {
     fetch(url)
@@ -2338,52 +2333,49 @@ function atualizarProdutos(url) {
             const parser = new DOMParser();
             const doc = parser.parseFromString(html, "text/html");
 
-            // Substitui os cards
             const grid = document.querySelector("#grid-cards");
             grid.innerHTML = doc.querySelector("#grid-cards").innerHTML;
 
-            // Atualiza a paginação
             const paginacao = document.querySelector("#paginacao-wrapper");
-            paginacao.innerHTML = doc.querySelector("#paginacao-wrapper").innerHTML;
+            if (paginacao) {
+                paginacao.innerHTML = doc.querySelector("#paginacao-wrapper").innerHTML;
+                adicionarEventosPaginacao();
+            }
 
-            adicionarEventosPaginacao(); // mantém a paginação funcionando
-
-            // ⭐ Renderizar estrelas após o DOM ser atualizado
+            // ⭐ ESTRELAS FUNCIONAM SEMPRE
             requestAnimationFrame(() => {
-                grid.querySelectorAll('.avaliacao').forEach(el => {
-                    const rating = el.dataset.rating;
-                    renderStars(el, rating);
-                });
+                renderizarTodasEstrelas(grid);
             });
         });
 }
-
 
 // ===============================
 // ⭐ EVENTOS DOS FILTROS
 // ===============================
 function adicionarEventosFiltros() {
     document.querySelectorAll(".filtro-btn").forEach(btn => {
-        btn.addEventListener("click", function(e) {
+        btn.addEventListener("click", function (e) {
             e.preventDefault();
 
             document.querySelectorAll(".filtro-btn").forEach(b => b.classList.remove("ativo"));
             this.classList.add("ativo");
 
             const ordenacao = this.dataset.order;
-            const url = `/?ordenar=${ordenacao}`;
-            atualizarProdutos(url);
+            atualizarProdutos(`/?ordenar=${ordenacao}`);
         });
     });
 }
 
 // ===============================
-// ⭐ INICIALIZAÇÃO GERAL AO CARREGAR
+// ⭐ INICIALIZAÇÃO GERAL
 // ===============================
 document.addEventListener("DOMContentLoaded", () => {
-    initCards();
+    renderizarTodasEstrelas();
     adicionarEventosFiltros();
     adicionarEventosPaginacao();
+
+    const grid = document.getElementById('grid-cards');
+    if (grid) grid.style.justifyContent = 'center';
 });
 
 document.addEventListener("DOMContentLoaded", () => {
