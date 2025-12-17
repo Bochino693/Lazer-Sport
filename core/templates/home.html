@@ -2287,11 +2287,42 @@ document.addEventListener("DOMContentLoaded", function() {
 // ===============================
 // ⭐ SVG DAS ESTRELAS
 // ===============================
-const fullStar = `<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M12 .587l3.668 7.431 8.2 1.192-5.934 5.789 1.402 8.176L12 18.896l-7.336 3.878 1.402-8.176L.132 9.21l8.2-1.192z"/></svg>`;
+const fullStar = `
+<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"
+     xmlns="http://www.w3.org/2000/svg">
+  <path d="M12 .587l3.668 7.431 8.2 1.192-5.934 5.789
+           1.402 8.176L12 18.896l-7.336 3.878
+           1.402-8.176L.132 9.21l8.2-1.192z"/>
+</svg>`;
 
-const halfStar = `<svg width="18" height="18" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="halfGrad"><stop offset="50%" stop-color="currentColor"/><stop offset="50%" stop-color="transparent"/></linearGradient></defs><path d="M12 .587l3.668 7.431 8.2 1.192-5.934 5.789 1.402 8.176L12 18.896 4.664 22.774l1.402-8.176L.13 9.21l8.2-1.192z" fill="url(#halfGrad)"/></svg>`;
+const emptyStar = `
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+     stroke="currentColor" xmlns="http://www.w3.org/2000/svg">
+  <path d="M12 .587l3.668 7.431 8.2 1.192-5.934 5.789
+           1.402 8.176L12 18.896l-7.336 3.878
+           1.402-8.176L.132 9.21l8.2-1.192z"
+        stroke-width="1.2"/>
+</svg>`;
 
-const emptyStar = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M12 .587l3.668 7.431 8.2 1.192-5.934 5.789 1.402 8.176L12 18.896l-7.336 3.878 1.402-8.176L.132 9.21l8.2-1.192z" stroke-width="1.2"/></svg>`;
+// ===============================
+// ⭐ MEIA ESTRELA COM ID ÚNICO
+// ===============================
+function gerarHalfStar(id) {
+    return `
+    <svg width="18" height="18" viewBox="0 0 24 24"
+         xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="halfGrad-${id}">
+          <stop offset="50%" stop-color="currentColor"/>
+          <stop offset="50%" stop-color="transparent"/>
+        </linearGradient>
+      </defs>
+      <path d="M12 .587l3.668 7.431 8.2 1.192-5.934 5.789
+               1.402 8.176L12 18.896 4.664 22.774
+               l1.402-8.176L.13 9.21l8.2-1.192z"
+            fill="url(#halfGrad-${id})"/>
+    </svg>`;
+}
 
 // ===============================
 // ⭐ RENDERIZA UMA AVALIAÇÃO
@@ -2307,7 +2338,8 @@ function renderStars(container, rating) {
         if (r >= i) {
             starsWrap.insertAdjacentHTML('beforeend', fullStar);
         } else if (r >= i - 0.5) {
-            starsWrap.insertAdjacentHTML('beforeend', halfStar);
+            const uid = `${Date.now()}-${Math.random()}`;
+            starsWrap.insertAdjacentHTML('beforeend', gerarHalfStar(uid));
         } else {
             starsWrap.insertAdjacentHTML('beforeend', emptyStar);
         }
@@ -2315,7 +2347,7 @@ function renderStars(container, rating) {
 }
 
 // ===============================
-// ⭐ FUNÇÃO GLOBAL (CHAME SEMPRE)
+// ⭐ RENDERIZA TODAS AS ESTRELAS
 // ===============================
 function renderizarTodasEstrelas(root = document) {
     root.querySelectorAll('.avaliacao').forEach(el => {
@@ -2337,15 +2369,12 @@ function atualizarProdutos(url) {
             grid.innerHTML = doc.querySelector("#grid-cards").innerHTML;
 
             const paginacao = document.querySelector("#paginacao-wrapper");
-            if (paginacao) {
+            if (paginacao && doc.querySelector("#paginacao-wrapper")) {
                 paginacao.innerHTML = doc.querySelector("#paginacao-wrapper").innerHTML;
                 adicionarEventosPaginacao();
             }
 
-            // ⭐ ESTRELAS FUNCIONAM SEMPRE
-            requestAnimationFrame(() => {
-                renderizarTodasEstrelas(grid);
-            });
+            renderizarTodasEstrelas(grid);
         });
 }
 
@@ -2357,11 +2386,11 @@ function adicionarEventosFiltros() {
         btn.addEventListener("click", function (e) {
             e.preventDefault();
 
-            document.querySelectorAll(".filtro-btn").forEach(b => b.classList.remove("ativo"));
+            document.querySelectorAll(".filtro-btn")
+                .forEach(b => b.classList.remove("ativo"));
             this.classList.add("ativo");
 
-            const ordenacao = this.dataset.order;
-            atualizarProdutos(`/?ordenar=${ordenacao}`);
+            atualizarProdutos(`/?ordenar=${this.dataset.order}`);
         });
     });
 }
@@ -2373,11 +2402,11 @@ document.addEventListener("DOMContentLoaded", () => {
     renderizarTodasEstrelas();
     adicionarEventosFiltros();
     adicionarEventosPaginacao();
-    observarGridProdutos();
 
     const grid = document.getElementById('grid-cards');
     if (grid) grid.style.justifyContent = 'center';
 });
+
 
 
 // ===============================
