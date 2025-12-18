@@ -18,6 +18,7 @@ import os
 from django.http import FileResponse, Http404
 from django.conf import settings
 
+
 def media_serve(request, path):
     file_path = os.path.join(settings.MEDIA_ROOT, path)
 
@@ -27,9 +28,13 @@ def media_serve(request, path):
     return FileResponse(open(file_path, 'rb'), content_type='image/jpeg')
 
 
-
 def erro_404(request, exception):
     return render(request, 'erro_404.html', status=404)
+
+
+# views.py
+def erro_500(request):
+    return render(request, 'erro_500.html', status=500)
 
 
 class HomeView(View):
