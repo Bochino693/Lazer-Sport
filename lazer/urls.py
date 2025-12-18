@@ -4,8 +4,8 @@ from django.conf import settings
 from django.conf.urls.static import static
 from core.views import media_serve
 
-handler404 = 'lazer.views.404'
-handler500 = 'lazer.views.500'
+handler404 = 'lazer.views.erro_404'
+handler500 = 'lazer.views.erro_500'
 
 urlpatterns = [
     path('system/', admin.site.urls),
