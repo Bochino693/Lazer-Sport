@@ -43,7 +43,7 @@
 }
 
 .logo img {
-  height: 65px;                /* Aumenta o tamanho da logo */
+  height: 120px;                /* Aumenta o tamanho da logo */
   width: auto;
   border-radius: 0;            /* Remove cantos arredondados */
   background: transparent;     /* Remove fundo branco */
@@ -156,7 +156,17 @@
 
     /* ======= FILTROS ======= */
   /* reaproveita o estilo antigo dos spans */
-.filter-suggestions a.suggestion-tag {
+/* ======= SUGESTÕES DE PESQUISA ======= */
+.filter-suggestions {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 15px;
+}
+
+/* 🔥 estilo único para TODAS as sugestões */
+.filter-suggestions .suggestion-tag {
   background: #E3F2FD;
   color: #007BFF;
   padding: 8px 15px;
@@ -165,21 +175,20 @@
   transition: all 0.3s ease;
   font-size: 0.9em;
   border: 1px solid transparent;
-  text-decoration: none; /* remove sublinhado */
-  display: inline-block;
+  text-decoration: none;       /* remove sublinhado */
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
-.filter-suggestions a.suggestion-tag:hover {
+/* hover moderno */
+.filter-suggestions .suggestion-tag:hover {
   background: #007BFF;
-  color: white;
+  color: #ffffff;
   border-color: #E63946;
+  transform: translateY(-2px);
 }
 
-/* sugestões estáticas (opcional visual diferente) */
-.filter-suggestions a.suggestion-tag.static {
-  background: #f0f0f0;
-  color: #555;
-}
 
 
     /* ======= CONTEÚDO PRINCIPAL ======= */
@@ -642,25 +651,25 @@ nav a.btn-login {
     </div>
 
 <!-- Sugestões de pesquisa -->
-<div class="search-suggestions">
-  <h3>Sugestões de pesquisa 🔍</h3>
-  <div class="filter-suggestions">
+        <div class="search-suggestions">
+          <h3>Sugestões de pesquisa 🔍</h3>
+          <div class="filter-suggestions">
 
-   <!-- ✅ CATEGORIAS DINÂMICAS -->
-        {% for categoria in categorias_header %}
-          <a href="{% url 'categoria_detalhe' categoria.pk %}" class="suggestion-tag">
-            {{ categoria.nome_categoria|upper }}
-          </a>
-        {% endfor %}
+          <!-- 🔄 CATEGORIAS DINÂMICAS -->
+          {% for categoria in categorias_header %}
+            <a href="{% url 'categoria_detalhe' categoria.pk %}"
+               class="suggestion-tag">
+              {{ categoria.nome_categoria|upper }}
+            </a>
+          {% endfor %}
 
-              <!-- ✅ SUGESTÕES ESTÁTICAS -->
-        <a href="#" class="suggestion-tag static">BRINQUEDOS PARA BUFFETS</a>
-        <a href="#" class="suggestion-tag static">BRINQUEDOS PARA EVENTOS</a>
-        <a href="#" class="suggestion-tag static">LOCAÇÃO DE BRINQUEDOS</a>
+          <!-- ⭐ SUGESTÕES ESTÁTICAS -->
+          <a href="#" class="suggestion-tag">BRINQUEDOS PARA BUFFETS</a>
+          <a href="#" class="suggestion-tag">BRINQUEDOS PARA EVENTOS</a>
+          <a href="#" class="suggestion-tag">LOCAÇÃO DE BRINQUEDOS</a>
 
-
-  </div>
-</div>
+        </div>
+    </div>
   </div>
 </section>
 
