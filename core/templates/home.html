@@ -1793,6 +1793,7 @@ body {
 <!-- Div invisível para espaçamento -->
 <div class="espacador"></div>
 
+
 <!-- ======= PRODUTOS ======= -->
 <section id="brinquedos" class="destaques">
   <h2 class="titulo-sec">Brinquedos em Destaque</h2>
@@ -2402,6 +2403,7 @@ document.addEventListener("DOMContentLoaded", () => {
     renderizarTodasEstrelas();
     adicionarEventosFiltros();
     adicionarEventosPaginacao();
+    observarGridProdutos(); // 👈 ISSO FALTAVA
 
     const grid = document.getElementById('grid-cards');
     if (grid) grid.style.justifyContent = 'center';
