@@ -1,124 +1,28 @@
-{% extends "base_error.html" %}
 {% load static %}
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Erro no servidor</title>
 
-{% block title %}Erro interno do servidor{% endblock %}
+    <link rel="stylesheet" href="{% static 'css/base.css' %}">
+</head>
+<body>
 
+<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;">
+    <div style="text-align:center;max-width:400px;">
+        <img src="{% static 'img/mascote.png' %}" width="200">
 
-{% block content %}
-<style>
-    /* ===== ERRO 404 / 500 ===== */
+        <h1>Algo deu errado 😕</h1>
 
-.erro-wrapper {
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: linear-gradient(
-        135deg,
-        var(--cor-primaria),
-        var(--cor-secundaria)
-    );
-    padding: 20px;
-}
-
-.erro-card {
-    background: #fff;
-    border-radius: 20px;
-    padding: 50px 40px;
-    max-width: 420px;
-    width: 100%;
-    text-align: center;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
-    animation: fadeUp 0.8s ease;
-}
-
-.erro-mascote {
-    max-width: 220px;
-    margin-bottom: 20px;
-    animation: float 3s ease-in-out infinite;
-}
-
-.erro-codigo {
-    font-size: 96px;
-    font-weight: bold;
-    color: var(--cor-primaria);
-    margin: 10px 0;
-}
-
-.erro-titulo {
-    font-size: 24px;
-    margin-bottom: 12px;
-}
-
-.erro-texto {
-    color: #555;
-    margin-bottom: 30px;
-    line-height: 1.5;
-}
-
-.btn-erro {
-    display: inline-block;
-    padding: 14px 30px;
-    background-color: var(--cor-primaria);
-    color: #fff;
-    text-decoration: none;
-    border-radius: 30px;
-    font-weight: bold;
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-}
-
-.btn-erro:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 10px 20px rgba(0,0,0,0.25);
-}
-
-/* ===== ANIMAÇÕES ===== */
-
-@keyframes fadeUp {
-    from {
-        opacity: 0;
-        transform: translateY(30px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-@keyframes float {
-    0% {
-        transform: translateY(0px);
-    }
-    50% {
-        transform: translateY(-12px);
-    }
-    100% {
-        transform: translateY(0px);
-    }
-}
-
-
-
-
-</style>
-
-
-<div class="erro-wrapper">
-    <div class="erro-card">
-        <img src="{% static 'img/mascote.png' %}" alt="Mascote" class="erro-mascote">
-
-        <h1 class="erro-codigo">500</h1>
-
-        <h2 class="erro-titulo">Algo deu errado 😕</h2>
-
-        <p class="erro-texto">
-            Ocorreu um erro interno no servidor.<br>
-            Nossa equipe já foi notificada e está trabalhando nisso.
+        <p>
+            Ocorreu um erro inesperado.<br>
+            Nossa equipe já foi notificada.
         </p>
 
-        <a href="/" class="btn-erro">
-            Voltar para a página inicial
-        </a>
+        <a href="/">Voltar para o início</a>
     </div>
 </div>
-{% endblock %}
+
+</body>
+</html>
