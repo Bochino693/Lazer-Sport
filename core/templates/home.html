@@ -2366,18 +2366,25 @@ function atualizarProdutos(url) {
             const parser = new DOMParser();
             const doc = parser.parseFromString(html, "text/html");
 
-            const grid = document.querySelector("#grid-cards");
-            grid.innerHTML = doc.querySelector("#grid-cards").innerHTML;
+            const gridAtual = document.querySelector("#grid-cards");
+            const gridNovo = doc.querySelector("#grid-cards");
 
-            const paginacao = document.querySelector("#paginacao-wrapper");
-            if (paginacao && doc.querySelector("#paginacao-wrapper")) {
-                paginacao.innerHTML = doc.querySelector("#paginacao-wrapper").innerHTML;
+            // 🚨 TROCA CORRETA DO DOM
+            gridAtual.replaceChildren(...gridNovo.cloneNode(true).children);
+
+            const pagAtual = document.querySelector("#paginacao-wrapper");
+            const pagNova = doc.querySelector("#paginacao-wrapper");
+
+            if (pagAtual && pagNova) {
+                pagAtual.replaceChildren(...pagNova.cloneNode(true).children);
                 adicionarEventosPaginacao();
             }
 
-            renderizarTodasEstrelas(grid);
+            // ⭐ AGORA AS ESTRELAS SEMPRE APARECEM
+            renderizarTodasEstrelas(gridAtual);
         });
 }
+
 
 // ===============================
 // ⭐ EVENTOS DOS FILTROS
