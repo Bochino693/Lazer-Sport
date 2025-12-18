@@ -155,30 +155,32 @@
     }
 
     /* ======= FILTROS ======= */
-    .filter-suggestions {
-      display: flex;
-      justify-content: center;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-top: 15px;
-    }
+  /* reaproveita o estilo antigo dos spans */
+.filter-suggestions a.suggestion-tag {
+  background: #E3F2FD;
+  color: #007BFF;
+  padding: 8px 15px;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 0.9em;
+  border: 1px solid transparent;
+  text-decoration: none; /* remove sublinhado */
+  display: inline-block;
+}
 
-    .filter-suggestions span {
-      background: #E3F2FD;
-      color: #007BFF;
-      padding: 8px 15px;
-      border-radius: 20px;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      font-size: 0.9em;
-      border: 1px solid transparent;
-    }
+.filter-suggestions a.suggestion-tag:hover {
+  background: #007BFF;
+  color: white;
+  border-color: #E63946;
+}
 
-    .filter-suggestions span:hover {
-      background: #007BFF;
-      color: white;
-      border-color: #E63946;
-    }
+/* sugestões estáticas (opcional visual diferente) */
+.filter-suggestions a.suggestion-tag.static {
+  background: #f0f0f0;
+  color: #555;
+}
+
 
     /* ======= CONTEÚDO PRINCIPAL ======= */
     main.content-section {
@@ -650,7 +652,7 @@ nav a.btn-login {
             {{ categoria.nome_categoria|upper }}
           </a>
         {% endfor %}
-      
+
               <!-- ✅ SUGESTÕES ESTÁTICAS -->
         <a href="#" class="suggestion-tag static">BRINQUEDOS PARA BUFFETS</a>
         <a href="#" class="suggestion-tag static">BRINQUEDOS PARA EVENTOS</a>
