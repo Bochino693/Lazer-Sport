@@ -4,6 +4,8 @@ from django.conf import settings
 from django.conf.urls.static import static
 from core.views import media_serve
 
+handler404 = 'lazer.views.erro_404'
+
 urlpatterns = [
     path('system/', admin.site.urls),
     # MEDIA FORÇADO (produção)

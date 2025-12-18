@@ -27,6 +27,11 @@ def media_serve(request, path):
     return FileResponse(open(file_path, 'rb'), content_type='image/jpeg')
 
 
+
+def erro_404(request, exception):
+    return render(request, 'erro_404.html', status=404)
+
+
 class HomeView(View):
 
     def get(self, request):  # ---------------------------

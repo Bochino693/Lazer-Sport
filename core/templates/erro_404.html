@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}404 - Página não encontrada{% endblock %}
+
+<style>
+    .container-404 {
+    text-align: center;
+    padding: 80px 20px;
+}
+
+.container-404 img {
+    max-width: 240px;
+    margin-bottom: 24px;
+}
+
+.container-404 h1 {
+    font-size: 72px;
+    color: var(--cor-primaria);
+}
+
+.container-404 p {
+    color: var(--cor-texto);
+    margin-bottom: 24px;
+}
+
+.btn-voltar {
+    padding: 12px 24px;
+    background-color: var(--cor-primaria);
+    color: #fff;
+    text-decoration: none;
+    border-radius: 6px;
+}
+
+.btn-voltar:hover {
+    opacity: 0.9;
+}
+
+
+
+</style>
+
+{% block content %}
+
+<div class="container-404">
+    <!-- 🖼️ Imagem estática do mascote -->
+    <img src="{% static 'img/mascote.png' %}" alt="Mascote do site">
+
+    <h1>404</h1>
+
+    <p>
+        A pesquisa não foi sucedida.<br>
+        Não encontramos o que você estava procurando.
+    </p>
+
+    <a href="/" class="btn-voltar">
+        Voltar para a página inicial
+    </a>
+</div>
+{% endblock %}
