@@ -28,27 +28,6 @@ def media_serve(request, path):
     return FileResponse(open(file_path, 'rb'), content_type='image/jpeg')
 
 
-from django.shortcuts import render
-from django.http import HttpResponseServerError
-
-class GlobalExceptionMiddleware:
-
-    def __init__(self, get_response):
-        self.get_response = get_response
-
-    def __call__(self, request):
-        try:
-            response = self.get_response(request)
-            return response
-
-        except Exception as e:
-            # Aqui captura QUALQUER erro
-            return render(
-                request,
-                "500.html",
-                status=500,
-                context={"erro": str(e)}
-            )
 
 class HomeView(View):
 
