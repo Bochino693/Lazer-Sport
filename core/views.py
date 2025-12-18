@@ -29,12 +29,12 @@ def media_serve(request, path):
 
 
 def erro_404(request, exception):
-    return render(request, 'erro_404.html', status=404)
+    return render(request, '404.html', status=404)
 
 
 # views.py
 def erro_500(request):
-    return render(request, 'erro_500.html', status=500)
+    return render(request, '500.html', status=500)
 
 
 class HomeView(View):
