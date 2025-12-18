@@ -2288,67 +2288,58 @@ document.addEventListener("DOMContentLoaded", function() {
 // ===============================
 // ⭐ SVG DAS ESTRELAS
 // ===============================
+// ===============================
+// ⭐ 1. SVG CONSTANTES
+// ===============================
 const fullStar = `
-<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"
-     xmlns="http://www.w3.org/2000/svg">
-  <path d="M12 .587l3.668 7.431 8.2 1.192-5.934 5.789
-           1.402 8.176L12 18.896l-7.336 3.878
-           1.402-8.176L.132 9.21l8.2-1.192z"/>
+<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+  <path d="M12 .587l3.668 7.431 8.2 1.192-5.934 5.789 1.402 8.176L12 18.896l-7.336 3.878 1.402-8.176L.132 9.21l8.2-1.192z"/>
 </svg>`;
 
 const emptyStar = `
-<svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-     stroke="currentColor" xmlns="http://www.w3.org/2000/svg">
-  <path d="M12 .587l3.668 7.431 8.2 1.192-5.934 5.789
-           1.402 8.176L12 18.896l-7.336 3.878
-           1.402-8.176L.132 9.21l8.2-1.192z"
-        stroke-width="1.2"/>
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" xmlns="http://www.w3.org/2000/svg">
+  <path d="M12 .587l3.668 7.431 8.2 1.192-5.934 5.789 1.402 8.176L12 18.896l-7.336 3.878 1.402-8.176L.132 9.21l8.2-1.192z" stroke-width="1.2"/>
 </svg>`;
 
 // ===============================
-// ⭐ MEIA ESTRELA COM ID ÚNICO
+// ⭐ 2. GERADOR DE MEIA ESTRELA
 // ===============================
 function gerarHalfStar(id) {
     return `
-    <svg width="18" height="18" viewBox="0 0 24 24"
-         xmlns="http://www.w3.org/2000/svg">
+    <svg width="18" height="18" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
       <defs>
         <linearGradient id="halfGrad-${id}">
           <stop offset="50%" stop-color="currentColor"/>
           <stop offset="50%" stop-color="transparent"/>
         </linearGradient>
       </defs>
-      <path d="M12 .587l3.668 7.431 8.2 1.192-5.934 5.789
-               1.402 8.176L12 18.896 4.664 22.774
-               l1.402-8.176L.13 9.21l8.2-1.192z"
-            fill="url(#halfGrad-${id})"/>
+      <path d="M12 .587l3.668 7.431 8.2 1.192-5.934 5.789 1.402 8.176L12 18.896 4.664 22.774 l1.402-8.176L.13 9.21l8.2-1.192z" fill="url(#halfGrad-${id})"/>
     </svg>`;
 }
 
 // ===============================
-// ⭐ RENDERIZA UMA AVALIAÇÃO
+// ⭐ 3. RENDERIZA UMA AVALIAÇÃO ESPECÍFICA
 // ===============================
 function renderStars(container, rating) {
     let starsWrap = container.querySelector('.stars');
 
-    // ✅ CRIA SE NÃO EXISTIR (CORREÇÃO CRÍTICA)
+    // Se não existir wrapper .stars, cria um
     if (!starsWrap) {
         starsWrap = document.createElement('div');
         starsWrap.className = 'stars';
         container.appendChild(starsWrap);
     }
 
-    starsWrap.innerHTML = '';
+    starsWrap.innerHTML = ''; // Limpa antes de renderizar para não duplicar
 
-    const r = parseFloat(
-        String(rating).replace(',', '.')
-    ) || 0;
+    // Converte string "4,50" para float 4.5
+    const r = parseFloat(String(rating).replace(',', '.')) || 0;
 
     for (let i = 1; i <= 5; i++) {
         if (r >= i) {
             starsWrap.insertAdjacentHTML('beforeend', fullStar);
         } else if (r >= i - 0.5) {
-            const uid = crypto.randomUUID();
+            const uid = crypto.randomUUID(); // ID único para o gradiente SVG
             starsWrap.insertAdjacentHTML('beforeend', gerarHalfStar(uid));
         } else {
             starsWrap.insertAdjacentHTML('beforeend', emptyStar);
@@ -2356,18 +2347,19 @@ function renderStars(container, rating) {
     }
 }
 
-
 // ===============================
-// ⭐ RENDERIZA TODAS AS ESTRELAS
+// ⭐ 4. RENDERIZA TUDO (CHAMADA PRINCIPAL)
 // ===============================
 function renderizarTodasEstrelas(root = document) {
-    root.querySelectorAll('.avaliacao').forEach(el => {
+    // Procura por elementos .avaliacao dentro do escopo (root)
+    const elementos = root.querySelectorAll('.avaliacao');
+    elementos.forEach(el => {
         renderStars(el, el.dataset.rating);
     });
 }
 
 // ===============================
-// ⭐ AJAX – ATUALIZA PRODUTOS
+// ⭐ 5. AJAX – ATUALIZA PRODUTOS E RE-RENDERIZA
 // ===============================
 function atualizarProdutos(url) {
     fetch(url)
@@ -2379,54 +2371,62 @@ function atualizarProdutos(url) {
             const gridAtual = document.querySelector("#grid-cards");
             const gridNovo = doc.querySelector("#grid-cards");
 
-            // 🚨 TROCA CORRETA DO DOM
-            gridAtual.replaceChildren(...gridNovo.cloneNode(true).children);
+            if (gridAtual && gridNovo) {
+                // Troca o conteúdo HTML
+                gridAtual.innerHTML = gridNovo.innerHTML;
 
-            const pagAtual = document.querySelector("#paginacao-wrapper");
-            const pagNova = doc.querySelector("#paginacao-wrapper");
-
-            if (pagAtual && pagNova) {
-                pagAtual.replaceChildren(...pagNova.cloneNode(true).children);
-                adicionarEventosPaginacao();
+                // ⭐ PONTO CRÍTICO: Chama a função IMEDIATAMENTE após inserir o HTML
+                // Passamos 'gridAtual' como escopo para ser mais performático
+                renderizarTodasEstrelas(gridAtual);
             }
 
-            // ⭐ AGORA AS ESTRELAS SEMPRE APARECEM
-            renderizarTodasEstrelas(gridAtual);
-        });
+            // Atualiza Paginação se existir
+            const pagAtual = document.querySelector("#paginacao-wrapper");
+            const pagNova = doc.querySelector("#paginacao-wrapper");
+            if (pagAtual && pagNova) {
+                pagAtual.innerHTML = pagNova.innerHTML;
+                // Se tiver função de eventos de paginação, chame aqui:
+                // adicionarEventosPaginacao();
+            }
+        })
+        .catch(err => console.error("Erro ao filtrar:", err));
 }
 
-
 // ===============================
-// ⭐ EVENTOS DOS FILTROS
+// ⭐ 6. EVENTOS DOS FILTROS
 // ===============================
 function adicionarEventosFiltros() {
     document.querySelectorAll(".filtro-btn").forEach(btn => {
         btn.addEventListener("click", function (e) {
             e.preventDefault();
 
-            document.querySelectorAll(".filtro-btn")
-                .forEach(b => b.classList.remove("ativo"));
+            // Remove classe ativo dos outros
+            document.querySelectorAll(".filtro-btn").forEach(b => b.classList.remove("ativo"));
             this.classList.add("ativo");
 
-            atualizarProdutos(`/?ordenar=${this.dataset.order}`);
+            // Chama o AJAX
+            const ordem = this.dataset.order;
+            atualizarProdutos(`?ordenar=${ordem}`);
+            // Nota: Ajustei a URL para query string relativa (ex: ?ordenar=az)
+            // Se precisar da raiz, use `/?ordenar=${ordem}`
         });
     });
 }
 
 // ===============================
-// ⭐ INICIALIZAÇÃO GERAL
+// ⭐ 7. INICIALIZAÇÃO
 // ===============================
 document.addEventListener("DOMContentLoaded", () => {
+    // 1. Renderiza no carregamento inicial da página
     renderizarTodasEstrelas();
-    adicionarEventosFiltros();
-    adicionarEventosPaginacao();
-    observarGridProdutos(); // 👈 ISSO FALTAVA
 
+    // 2. Ativa os botões
+    adicionarEventosFiltros();
+
+    // 3. Centraliza Grid (CSS via JS opcional)
     const grid = document.getElementById('grid-cards');
     if (grid) grid.style.justifyContent = 'center';
 });
-
-
 
 // ===============================
 // ⭐ OBSERVA MUDANÇAS NO GRID (SOLUÇÃO FINAL)
