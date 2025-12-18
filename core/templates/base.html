@@ -590,6 +590,27 @@ nav a.btn-login {
     </a>
 </div>
 
+  <!-- Menu toggle -->
+  <div class="menu-toggle" id="menu-toggle">
+    <span></span>
+    <span></span>
+    <span></span>
+  </div>
+
+  <!-- Navegação -->
+  <nav id="nav">
+    <a href="{% url 'home' %}#inicio">Início</a>
+      <a href="{% url 'home' %}#categorias-section">Categorias</a>
+    <a href="{% url 'home' %}#combos-section">Combos</a>
+    <a href="{% url 'home' %}#promocoes-section">Promoções</a>
+    <a href="{% url 'home' %}#brinquedos">Produtos</a>
+    <a href="{% url 'home' %}#eventos">Eventos</a>
+    <a href="{% url 'home' %}#projetos">Projetos</a>
+    <a href="{% url 'home' %}#contato">Contato</a>
+  </nav>
+
+
+
 
   <!-- Área do usuário -->
   <div class="user-area">
@@ -618,24 +639,6 @@ nav a.btn-login {
     {% endif %}
   </div>
 
-  <!-- Menu toggle -->
-  <div class="menu-toggle" id="menu-toggle">
-    <span></span>
-    <span></span>
-    <span></span>
-  </div>
-
-  <!-- Navegação -->
-  <nav id="nav">
-    <a href="{% url 'home' %}#inicio">Início</a>
-      <a href="{% url 'home' %}#categorias-section">Categorias</a>
-    <a href="{% url 'home' %}#combos-section">Combos</a>
-    <a href="{% url 'home' %}#promocoes-section">Promoções</a>
-    <a href="{% url 'home' %}#brinquedos">Produtos</a>
-    <a href="{% url 'home' %}#eventos">Eventos</a>
-    <a href="{% url 'home' %}#projetos">Projetos</a>
-    <a href="{% url 'home' %}#contato">Contato</a>
-  </nav>
 </header>
 
 
