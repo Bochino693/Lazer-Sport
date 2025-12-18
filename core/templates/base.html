@@ -565,42 +565,37 @@ nav a.btn-login {
 
 <!-- ======= CABEÇALHO ======= -->
 <header>
-  <!-- Logo -->
-  <div class="logo">
-    <img src="{% static 'images/logoofi.png' %}" alt="Logo">
+   <!-- ===== ESQUERDA: LOGO + REDES ===== -->
+  <div class="header-left">
 
-  </div>
+    <div class="logo">
+      <img src="{% static 'images/logoofi.png' %}" alt="Logo">
+    </div>
 
- <!-- Ícones de redes sociais -->
-<div class="social-icons">
-    <a href="https://www.instagram.com/lazersportbrinquedos" target="_blank" rel="noopener" title="Instagram" class="instagram">
+    <div class="social-icons">
+      <a href="https://www.instagram.com/lazersportbrinquedos" target="_blank" class="instagram">
         <i class="fa-brands fa-instagram"></i>
-    </a>
-    <a href="https://wa.me/5511960563135" target="_blank" rel="noopener" title="WhatsApp" class="whatsapp">
+      </a>
+      <a href="https://wa.me/5511960563135" target="_blank" class="whatsapp">
         <i class="fa-brands fa-whatsapp"></i>
-    </a>
-    <a href="https://www.facebook.com/LazerSportBrinquedos1" target="_blank" rel="noopener" title="Facebook" class="facebook">
+      </a>
+      <a href="https://www.facebook.com/LazerSportBrinquedos1" target="_blank" class="facebook">
         <i class="fa-brands fa-facebook"></i>
-    </a>
-    <a href="https://www.linkedin.com/company/brinquedos-lazer-sport" target="_blank" rel="noopener" title="LinkedIn" class="linkedin">
+      </a>
+      <a href="https://www.linkedin.com/company/brinquedos-lazer-sport" target="_blank" class="linkedin">
         <i class="fa-brands fa-linkedin"></i>
-    </a>
-    <a href="https://www.threads.com/@lazersportbrinquedos?xmt=AQF01c59c6UZtE4QcHQgxUo-tcUtuujbUK4j8rzckZJl1is" target="_blank" rel="noopener" title="Threads" class="threads">
+      </a>
+      <a href="https://www.threads.com/@lazersportbrinquedos" target="_blank" class="threads">
         <i class="fa-brands fa-threads"></i>
-    </a>
-</div>
+      </a>
+    </div>
 
-  <!-- Menu toggle -->
-  <div class="menu-toggle" id="menu-toggle">
-    <span></span>
-    <span></span>
-    <span></span>
   </div>
 
-  <!-- Navegação -->
+  <!-- ===== MENU CENTRAL ===== -->
   <nav id="nav">
     <a href="{% url 'home' %}#inicio">Início</a>
-      <a href="{% url 'home' %}#categorias-section">Categorias</a>
+    <a href="{% url 'home' %}#categorias-section">Categorias</a>
     <a href="{% url 'home' %}#combos-section">Combos</a>
     <a href="{% url 'home' %}#promocoes-section">Promoções</a>
     <a href="{% url 'home' %}#brinquedos">Produtos</a>
@@ -609,34 +604,30 @@ nav a.btn-login {
     <a href="{% url 'home' %}#contato">Contato</a>
   </nav>
 
-
-
-
-  <!-- Área do usuário -->
+  <!-- ===== USUÁRIO ===== -->
   <div class="user-area">
-    {% if user.is_authenticated %}
-      <div class="user-dropdown">
-        <a class="user-icon">
-          <i class="fa-solid fa-user"></i>
-          <span>Bem-vindo<br>{{ user.get_full_name }}</span>
-        </a>
-        <div class="dropdown-menu">
+    <div class="user-dropdown">
+      <a class="user-icon">
+        <i class="fa-solid fa-user"></i>
+        <span>
+          {% if user.is_authenticated %}
+            Bem-vindo<br>{{ user.get_full_name }}
+          {% else %}
+            Entrar / Cadastro
+          {% endif %}
+        </span>
+      </a>
+
+      <div class="dropdown-menu">
+        {% if user.is_authenticated %}
           <a href="{% url 'perfil' %}">👤 Meu Perfil</a>
-          <a href="{% url 'logout' %}#logout-box">🚪 Sair</a>
-        </div>
+          <a href="{% url 'logout' %}">🚪 Sair</a>
+        {% else %}
+          <a href="{% url 'login' %}">🔐 Login</a>
+          <a href="{% url 'registrar' %}">📝 Criar Conta</a>
+        {% endif %}
       </div>
-    {% else %}
-      <div class="user-dropdown">
-        <a class="user-icon">
-          <i class="fa-solid fa-user"></i>
-          <span>Entrar / Cadastro</span>
-        </a>
-        <div class="dropdown-menu">
-         <a href="{% url 'login'  %}#login-box" >🔐 Fazer Login</a>
-          <a href="{% url 'registrar' %}#register-box">📝 Criar Conta</a>
-        </div>
-      </div>
-    {% endif %}
+    </div>
   </div>
 
 </header>
