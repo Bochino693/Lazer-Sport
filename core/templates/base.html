@@ -643,12 +643,20 @@ nav a.btn-login {
 <div class="search-suggestions">
   <h3>Sugestões de pesquisa 🔍</h3>
   <div class="filter-suggestions">
-    <span>BRINQUEDÕES</span>
-    <span>ÁREA BABY</span>
-    <span>BRINQUEDOS ELETRÔNICOS</span>
-    <span>SIMULADORES</span>
-    <span>BRINQUEDÃO KID PLAY</span>
-    <span>TRAMPOLINS</span>
+
+   <!-- ✅ CATEGORIAS DINÂMICAS -->
+        {% for categoria in categorias_header %}
+          <a href="{% url 'categoria_detalhe' categoria.pk %}" class="suggestion-tag">
+            {{ categoria.nome_categoria|upper }}
+          </a>
+        {% endfor %}
+      
+              <!-- ✅ SUGESTÕES ESTÁTICAS -->
+        <a href="#" class="suggestion-tag static">BRINQUEDOS PARA BUFFETS</a>
+        <a href="#" class="suggestion-tag static">BRINQUEDOS PARA EVENTOS</a>
+        <a href="#" class="suggestion-tag static">LOCAÇÃO DE BRINQUEDOS</a>
+
+
   </div>
 </div>
   </div>
