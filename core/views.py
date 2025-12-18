@@ -28,7 +28,6 @@ def media_serve(request, path):
     return FileResponse(open(file_path, 'rb'), content_type='image/jpeg')
 
 
-
 class HomeView(View):
 
     def get(self, request):  # ---------------------------
