@@ -2329,23 +2329,33 @@ function gerarHalfStar(id) {
 // ⭐ RENDERIZA UMA AVALIAÇÃO
 // ===============================
 function renderStars(container, rating) {
-    const starsWrap = container.querySelector('.stars');
-    if (!starsWrap) return;
+    let starsWrap = container.querySelector('.stars');
+
+    // ✅ CRIA SE NÃO EXISTIR (CORREÇÃO CRÍTICA)
+    if (!starsWrap) {
+        starsWrap = document.createElement('div');
+        starsWrap.className = 'stars';
+        container.appendChild(starsWrap);
+    }
 
     starsWrap.innerHTML = '';
-    const r = parseFloat(rating) || 0;
+
+    const r = parseFloat(
+        String(rating).replace(',', '.')
+    ) || 0;
 
     for (let i = 1; i <= 5; i++) {
         if (r >= i) {
             starsWrap.insertAdjacentHTML('beforeend', fullStar);
         } else if (r >= i - 0.5) {
-            const uid = `${Date.now()}-${Math.random()}`;
+            const uid = crypto.randomUUID();
             starsWrap.insertAdjacentHTML('beforeend', gerarHalfStar(uid));
         } else {
             starsWrap.insertAdjacentHTML('beforeend', emptyStar);
         }
     }
 }
+
 
 // ===============================
 // ⭐ RENDERIZA TODAS AS ESTRELAS
