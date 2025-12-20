@@ -190,11 +190,14 @@ class CategoriasInfoView(View):
 
 from django.core.paginator import Paginator
 from django.db.models import F, FloatField, ExpressionWrapper
-from django.http import HttpResponse
-# ... seus outros imports
+from django.db.models import F, FloatField, ExpressionWrapper, DecimalField
+from django.db.models.functions import Cast
+
+
 class BrinquedosView(View):
     def get(self, request):
         ordenar = request.GET.get('ordenar', 'az')
+        # Iniciamos o queryset
         brinquedos_list = Brinquedos.objects.all()
 
         # ORDENAÇÃO
@@ -205,9 +208,11 @@ class BrinquedosView(View):
         elif ordenar == 'melhor-avaliados':
             brinquedos_list = brinquedos_list.order_by('-avaliacao')
         elif ordenar == 'custo-beneficio':
+            # Garantimos que o valor seja tratado como Float para o cálculo
+            # E adicionamos um valor mínimo para evitar divisão por zero absoluta
             brinquedos_list = brinquedos_list.annotate(
                 score=ExpressionWrapper(
-                    F('avaliacao') / (F('valor_brinquedo') + 0.01),
+                    Cast(F('avaliacao'), FloatField()) / (Cast(F('valor_brinquedo'), FloatField()) + 0.1),
                     output_field=FloatField()
                 )
             ).order_by('-score')
@@ -215,7 +220,12 @@ class BrinquedosView(View):
         # PAGINAÇÃO
         paginator = Paginator(brinquedos_list, 9)
         page_number = request.GET.get('page')
-        page_obj = paginator.get_page(page_number)
+
+        try:
+            page_obj = paginator.get_page(page_number)
+        except Exception:
+            # Caso o número da página seja inválido, volta para a 1
+            page_obj = paginator.get_page(1)
 
         context = {
             'brinquedos': page_obj,
@@ -223,7 +233,6 @@ class BrinquedosView(View):
             'ordenar': ordenar,
         }
 
-        # Retorna sempre o template principal
         return render(request, 'brinquedos.html', context)
 
 

@@ -131,6 +131,22 @@
     color: #444;
     margin: 0 10px;
 }
+
+.avaliacao {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 10px;
+}
+
+.avaliacao i {
+    color: #FFD700; /* dourado */
+    font-size: 1rem;
+}
+
+.avaliacao i.vazia {
+    color: #ccc;
+}
+
 </style>
 
 
@@ -174,12 +190,23 @@
         {% for brinquedo in brinquedos %}
             <div class="card-produto">
                 <img src="{{ brinquedo.imagem_brinquedo.url }}" alt="{{ brinquedo.nome_brinquedo }}">
+
                 <div class="conteudo">
                     <h3>{{ brinquedo.nome_brinquedo }}</h3>
+
+                    <!-- ⭐ ESTRELAS -->
+                    <div class="avaliacao"
+                         data-avaliacao="{{ brinquedo.avaliacao }}">
+                    </div>
+
                     <div class="preco">R$ {{ brinquedo.valor_brinquedo }}</div>
-                    <a href="{% url 'brinquedo_detalhe' brinquedo.id %}" class="btn-vermais">Ver mais</a>
+
+                    <a href="{% url 'brinquedo_detalhe' brinquedo.id %}" class="btn-vermais">
+                        Ver mais
+                    </a>
                 </div>
             </div>
+
         {% empty %}
             <p>Nenhum brinquedo encontrado.</p>
         {% endfor %}
@@ -229,6 +256,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 grid.innerHTML = novoGrid;
                 paginacaoWrapper.innerHTML = novaPaginacao;
 
+                renderStars(grid);
+
                 grid.style.opacity = '1';
 
                 // Atualiza a URL lá no topo do navegador
@@ -269,5 +298,31 @@ document.addEventListener('DOMContentLoaded', function() {
         carregarConteudo(window.location.href);
     });
 });
+
+function renderStars(context = document) {
+    const avaliacoes = context.querySelectorAll('.avaliacao');
+
+    avaliacoes.forEach(container => {
+        const nota = parseFloat(container.dataset.avaliacao) || 0;
+        const estrelasCheias = Math.floor(nota);
+        const meiaEstrela = nota % 1 >= 0.5;
+
+        container.innerHTML = '';
+
+        for (let i = 1; i <= 5; i++) {
+            const star = document.createElement('i');
+
+            if (i <= estrelasCheias) {
+                star.className = 'fa-solid fa-star';
+            } else if (i === estrelasCheias + 1 && meiaEstrela) {
+                star.className = 'fa-solid fa-star-half-stroke';
+            } else {
+                star.className = 'fa-regular fa-star vazia';
+            }
+
+            container.appendChild(star);
+        }
+    });
+}
 </script>
 {% endblock %}
