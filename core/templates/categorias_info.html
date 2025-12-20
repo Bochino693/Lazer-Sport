@@ -315,25 +315,30 @@
 
 <!-- 🔵 FILTROS -->
 <div class="filtros-horizontal filtros-wrapper">
-    <a href="?ordenar=az" class="filtro-btn"
-       onclick="event.preventDefault(); ordenarProdutos(this.href)">
-        A → Z
-    </a>
+    <a href="?ordenar=az"
+   class="filtro-btn {% if ordenar == 'az' %}ativo{% endif %}"
+   onclick="event.preventDefault(); ordenarProdutos(this.href)">
+    A → Z
+</a>
 
-    <a href="?ordenar=za" class="filtro-btn"
-       onclick="event.preventDefault(); ordenarProdutos(this.href)">
-        Z → A
-    </a>
+<a href="?ordenar=za"
+   class="filtro-btn {% if ordenar == 'za' %}ativo{% endif %}"
+   onclick="event.preventDefault(); ordenarProdutos(this.href)">
+    Z → A
+</a>
 
-    <a href="?ordenar=melhor-avaliados" class="filtro-btn"
-       onclick="event.preventDefault(); ordenarProdutos(this.href)">
-        ⭐ Melhor avaliados
-    </a>
+<a href="?ordenar=melhor-avaliados"
+   class="filtro-btn {% if ordenar == 'melhor-avaliados' %}ativo{% endif %}"
+   onclick="event.preventDefault(); ordenarProdutos(this.href)">
+    ⭐ Melhor avaliados
+</a>
 
-    <a href="?ordenar=custo-beneficio" class="filtro-btn"
-       onclick="event.preventDefault(); ordenarProdutos(this.href)">
-        🏆 Custo-benefício
-    </a>
+<a href="?ordenar=custo-beneficio"
+   class="filtro-btn {% if ordenar == 'custo-beneficio' %}ativo{% endif %}"
+   onclick="event.preventDefault(); ordenarProdutos(this.href)">
+    🏆 Custo-benefício
+</a>
+
 </div>
 
 
@@ -414,6 +419,7 @@
     {% endif %}
 
 </div>
+
 <script>
 function ordenarProdutos(url) {
     fetch(url, {
@@ -426,13 +432,19 @@ function ordenarProdutos(url) {
         const parser = new DOMParser();
         const doc = parser.parseFromString(html, 'text/html');
 
+        // Atualiza lista de produtos
         const novaLista = doc.querySelector('#list');
         document.querySelector('#list').innerHTML = novaLista.innerHTML;
+
+        // Atualiza estado visual dos filtros
+        const novoFiltro = doc.querySelector('.filtros-horizontal');
+        document.querySelector('.filtros-horizontal').innerHTML = novoFiltro.innerHTML;
 
         // Atualiza URL sem recarregar
         history.pushState(null, '', url);
     });
 }
-</script>
 
+
+</script>
 {% endblock %}
