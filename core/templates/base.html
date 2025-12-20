@@ -419,7 +419,9 @@ nav a.btn-login {
     margin-left: 15px; /* separação do texto do logo */
 }
 
+/* Configuração padrão para todos */
 .social-icons a {
+    /* ... mantenha as configurações de tamanho/display anteriores ... */
     width: 42px;
     height: 42px;
     font-size: 1.4rem;
@@ -428,48 +430,45 @@ nav a.btn-login {
     justify-content: center;
     border-radius: 6px;
     transition: transform 0.3s, background-color 0.3s;
-}
 
-/* Cores específicas de cada rede */
-.social-icons a.instagram {
-    color: #C13584; /* Rosa/gradiente típico Instagram */
-}
-
-.social-icons a.whatsapp {
-    color: #25D366; /* Verde WhatsApp */
-}
-
-.social-icons a.facebook {
-    color: #0D4D91; /* Azul escuro Facebook */
-}
-
-.social-icons a.linkedin {
-    background-color: #0A66C2;
+    /* PADRÃO: Todos com texto branco */
     color: #ffffff;
 }
 
+/* --- CORES DE FUNDO --- */
 
-/* Hover: aumenta tamanho levemente */
-.social-icons a:hover {
-    transform: scale(1.2);
+/* Instagram */
+.social-icons a.instagram {
+    background: radial-gradient(circle at 30% 107%, #fdf497 0%, #fdf497 5%, #fd5949 45%, #d6249f 60%, #285AEB 90%);
+    /* Ou use a cor sólida se preferir: background-color: #C13584; */
 }
 
-    .social-icons a.linkedin:hover {
-    background-color: #084d8a; /* azul mais escuro ao passar o mouse */
-    transform: scale(1.2);
+/* WhatsApp */
+.social-icons a.whatsapp {
+    background-color: #25D366;
+}
+
+/* Facebook */
+.social-icons a.facebook {
+    background-color: #1877F2; /* Azul oficial atualizado */
+}
+
+/* LinkedIn */
+.social-icons a.linkedin {
+    background-color: #0A66C2;
 }
 
 /* Threads */
 .social-icons a.threads {
     background-color: #000000;
-    color: #ffffff;
 }
 
-.social-icons a.threads:hover {
-    background-color: #333333; /* preto mais claro ao passar o mouse */
-    transform: scale(1.2);
+/* --- HOVER (Passar o mouse) --- */
+/* Escurece levemente ou apenas dá zoom */
+.social-icons a:hover {
+    transform: scale(1.1);
+    filter: brightness(0.9); /* Escurece levemente qualquer cor no hover */
 }
-
 
     @media (max-width: 768px) {
 
