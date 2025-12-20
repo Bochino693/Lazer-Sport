@@ -157,6 +157,31 @@
 </div>
 </section>
 <script>
+function carregarProdutos(params = {}) {
+    const url = new URL(window.location.href);
+
+    if (params.ordenar) {
+        url.searchParams.set('ordenar', params.ordenar);
+        url.searchParams.delete('page');
+    }
+
+    fetch(url)
+        .then(res => res.text())
+        .then(html => {
+            const doc = new DOMParser().parseFromString(html, 'text/html');
+
+            document.querySelector('#grid-cards').innerHTML =
+                doc.querySelector('#grid-cards').innerHTML;
+
+            document.querySelector('#paginacao-wrapper').innerHTML =
+                doc.querySelector('#paginacao-wrapper').innerHTML;
+
+            history.pushState(null, '', url);
+        });
+}
+
+
+
 document.addEventListener('click', function (e) {
     const filtro = e.target.closest('#filtros-bar .filtro-btn');
     if (!filtro) return;
