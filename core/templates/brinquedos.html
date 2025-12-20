@@ -386,7 +386,7 @@
                 {% endif %}
 
                 <!-- PREÇO -->
-                <div class="preco">
+                <div class="preco" data-valor="{{ brinquedo.valor_brinquedo }}">
                     R$ {{ brinquedo.valor_brinquedo }}
                 </div>
 
@@ -447,6 +447,24 @@
 </div>
 </section>
 <script>
+
+function formatarPrecos(context = document) {
+    const precos = context.querySelectorAll('.preco[data-valor]');
+
+    precos.forEach(precoEl => {
+        const valor = parseFloat(precoEl.dataset.valor);
+
+        if (isNaN(valor)) return;
+
+        const valorFormatado = valor.toLocaleString('pt-BR', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+
+        precoEl.innerHTML = `R$ ${valorFormatado}`;
+    });
+}
+
 document.addEventListener('DOMContentLoaded', function () {
     const grid = document.querySelector('#grid-cards');
     const paginacaoWrapper = document.querySelector('#paginacao-wrapper');
@@ -469,6 +487,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 paginacaoWrapper.innerHTML = novaPaginacao.innerHTML;
 
                 renderStars(grid);
+                formatarPrecos(grid);
 
                 // 👉 SCROLL CONTROLADO (NÃO SOBE PARA O TOPO)
                 const offset = 140;
