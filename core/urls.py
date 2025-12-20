@@ -22,7 +22,7 @@ urlpatterns = [
     path("projetos/", ProjetosView.as_view(), name='projetos'),
 
 
-    path('brinquedos/admin/', BrinquedoAdmin.as_view(), name='brinquedos_admin'),
+    path('adm/brinquedos/', BrinquedoAdmin.as_view(), name='brinquedos_admin'),
     path('categoria/admin/new/', NovaCategoria.as_view(), name='categoria_new'),
     path('tags/admin/new/', NovaTag.as_view(), name='tag_new'),
 
