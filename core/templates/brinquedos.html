@@ -390,17 +390,12 @@
                     R$ {{ brinquedo.valor_brinquedo }}
                 </div>
 
-                <a href="https://wa.me/5511960563135
-                    ?text=Olá!%20👋%0A
-                    Gostaria%20de%20fazer%20um%20orçamento%20para%20este%20brinquedo:%0A%0A
-                    🧸%20Nome:%20{{ brinquedo.nome_brinquedo|urlencode }}%0A
-                    🔗%20Página:%20{{ request.build_absolute_uri|urlencode }}%0A
-                    🖼️%20Imagem:%20{{ brinquedo.imagem_brinquedo.url|urlencode }}%0A%0A
-                    Aguardo%20retorno%20😊"
-                       target="_blank"
-                       class="btn-whatsapp">
-                        <i class="fab fa-whatsapp"></i> Orçamento via WhatsApp
-                    </a>
+                <a href="https://wa.me/5511960563135?text=Ol%C3%A1!%0AGostaria%20de%20fazer%20um%20or%C3%A7amento%20para%20este%20brinquedo:%0A%0A%F0%9F%A7%B8%20Nome:%20{{ brinquedo.nome_brinquedo|urlencode }}%0A%F0%9F%94%97%20P%C3%A1gina:%20{{ request.build_absolute_uri|urlencode }}%0A%F0%9F%96%BC%20Imagem:%20{{ brinquedo.imagem_brinquedo.url|urlencode }}%0A%0AAguardo%20retorno!"
+                   target="_blank"
+                   class="btn-whatsapp">
+                    <i class="fab fa-whatsapp"></i> Orçamento via WhatsApp
+                </a>
+
 
 
                 <a href="{% url 'brinquedo_detalhe' brinquedo.id %}"
