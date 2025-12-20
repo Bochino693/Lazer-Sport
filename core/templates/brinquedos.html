@@ -147,6 +147,65 @@
     color: #ccc;
 }
 
+
+/* ===============================
+   FILTROS – BARRA HORIZONTAL
+   =============================== */
+
+.filtros-horizontal {
+    display: flex;
+    justify-content: center;
+    gap: 14px;
+    margin: 20px auto 35px auto;
+    flex-wrap: wrap;
+    max-width: 1200px;
+}
+
+/* Botões */
+.filtro-btn {
+    display: block;
+    width: 220px;
+    text-align: center;
+
+    padding: 14px 0;
+
+    background: #ffffff;
+    color: #3a3a3a;
+    text-decoration: none;
+    font-weight: 600;
+
+    border-radius: 14px;
+    border: 1px solid #e5e5e5;
+
+    box-shadow: 0 3px 10px rgba(0,0,0,0.06);
+
+    transition: all 0.25s ease;
+    cursor: pointer;
+}
+
+/* Hover */
+.filtro-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.12);
+    background: #f8f8f8;
+}
+
+/* Ativo */
+.filtro-btn.ativo {
+    background: linear-gradient(135deg, #0d6efd, #4aa3ff);
+    color: #ffffff;
+    border-color: transparent;
+    box-shadow: 0 5px 15px rgba(13,110,253,0.45);
+}
+
+/* Mobile */
+@media (max-width: 600px) {
+    .filtro-btn {
+        width: 100%;
+    }
+}
+
+
 </style>
 
 
