@@ -459,11 +459,19 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 renderStars(grid);
 
+                // Scroll suave apenas até o GRID de produtos
+                const offset = 120; // ajuste se tiver header fixo
+                const topGrid = grid.getBoundingClientRect().top + window.pageYOffset - offset;
+
+                window.scrollTo({
+                    top: topGrid,
+                    behavior: 'smooth'
+                });
+
+
                 grid.style.opacity = '1';
 
 
-                // Rola para o topo da seção de brinquedos para o usuário não ficar no fim da página
-                document.querySelector('#grid-cards').scrollIntoView({ behavior: 'smooth' });
             })
             .catch(err => {
                 console.error("Erro ao carregar:", err);
