@@ -114,8 +114,31 @@
     <h2 style="text-align:center; font-size:2rem; margin-bottom:40px; color:#007BFF;">
         Todos os Brinquedos
     </h2>
+    <!-- ======= FILTROS ======= -->
+<div class="filtros-horizontal" id="filtros-bar">
+    <a data-order="az"
+       class="filtro-btn {% if ordenar == 'az' or not ordenar %}ativo{% endif %}">
+        A → Z
+    </a>
 
-    <div class="grid-cards">
+    <a data-order="za"
+       class="filtro-btn {% if ordenar == 'za' %}ativo{% endif %}">
+        Z → A
+    </a>
+
+    <a data-order="melhor-avaliados"
+       class="filtro-btn {% if ordenar == 'melhor-avaliados' %}ativo{% endif %}">
+        ⭐ Melhores avaliados
+    </a>
+
+    <a data-order="custo-beneficio"
+       class="filtro-btn {% if ordenar == 'custo-beneficio' %}ativo{% endif %}">
+        💰 Custo-benefício
+    </a>
+</div>
+
+
+    <div class="grid-cards" id="grid-cards">
         {% for brinquedo in brinquedos %}
         <div class="card-produto">
             <img src="{{ brinquedo.imagem_brinquedo.url }}" alt="{{ brinquedo.nome_brinquedo }}">
@@ -129,5 +152,23 @@
             <p>Nenhum brinquedo encontrado.</p>
         {% endfor %}
     </div>
+    <div id="paginacao-wrapper">
+    {% include "partials/paginacao.html" %}
+</div>
 </section>
+<script>
+document.addEventListener('click', function (e) {
+    const filtro = e.target.closest('#filtros-bar .filtro-btn');
+    if (!filtro) return;
+
+    e.preventDefault();
+
+    document.querySelectorAll('#filtros-bar .filtro-btn')
+        .forEach(b => b.classList.remove('ativo'));
+    filtro.classList.add('ativo');
+
+    const ordenar = filtro.dataset.order;
+    carregarProdutos({ ordenar });
+});
+</script>
 {% endblock %}
