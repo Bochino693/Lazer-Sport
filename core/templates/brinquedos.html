@@ -98,7 +98,39 @@
 .breadcrumb strong {
     color: #1f2d3d;
 }
+/* ======= PAGINAÇÃO ======= */
+#paginacao-wrapper {
+    display: flex;
+    justify-content: center;
+    margin: 40px 0;
+}
 
+.paginacao {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.page-btn {
+    padding: 8px 16px;
+    border: 2px solid #007BFF;
+    border-radius: 25px;
+    color: #007BFF;
+    text-decoration: none;
+    font-weight: 600;
+    transition: all 0.3s;
+}
+
+.page-btn:hover {
+    background: #007BFF;
+    color: white;
+}
+
+.page-atual {
+    font-weight: 600;
+    color: #444;
+    margin: 0 10px;
+}
 </style>
 
 
@@ -115,12 +147,27 @@
     </h2>
 
     <!-- ======= FILTROS ======= -->
-    <div class="filtros-horizontal" id="filtros-bar">
-        <a class="filtro-btn {% if ordenar == 'az' %}ativo{% endif %}" data-order="az">A → Z</a>
-        <a class="filtro-btn {% if ordenar == 'za' %}ativo{% endif %}" data-order="za">Z → A</a>
-        <a class="filtro-btn {% if ordenar == 'melhor-avaliados' %}ativo{% endif %}" data-order="melhor-avaliados">⭐ Melhores avaliados</a>
-        <a class="filtro-btn {% if ordenar == 'custo-beneficio' %}ativo{% endif %}" data-order="custo-beneficio">💰 Custo-benefício</a>
-    </div>
+<div class="filtros-horizontal">
+    <a href="?ordenar=az"
+       class="filtro-btn {% if ordenar == 'az' %}ativo{% endif %}">
+        A → Z
+    </a>
+
+    <a href="?ordenar=za"
+       class="filtro-btn {% if ordenar == 'za' %}ativo{% endif %}">
+        Z → A
+    </a>
+
+    <a href="?ordenar=melhor-avaliados"
+       class="filtro-btn {% if ordenar == 'melhor-avaliados' %}ativo{% endif %}">
+        ⭐ Melhores avaliados
+    </a>
+
+    <a href="?ordenar=custo-beneficio"
+       class="filtro-btn {% if ordenar == 'custo-beneficio' %}ativo{% endif %}">
+        💰 Custo-benefício
+    </a>
+</div>
 
     <!-- ======= GRID ======= -->
     <div class="grid-cards" id="grid-cards">
@@ -184,6 +231,64 @@ document.addEventListener('click', function (e) {
 
     e.preventDefault();
     carregarProdutos(link.href);
+});
+
+
+document.addEventListener('DOMContentLoaded', function() {
+    const grid = document.querySelector('#grid-cards');
+    const paginacaoWrapper = document.querySelector('#paginacao-wrapper');
+
+    function carregarProdutos(url) {
+        // Feedback visual
+        grid.style.opacity = '0.5';
+
+        fetch(url, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(res => res.text())
+        .then(html => {
+            // No seu caso, o HTML que volta contém os cards E podemos colocar a paginação nele
+            // ou atualizar ambos. Para simplificar, vamos atualizar o grid:
+            grid.innerHTML = html;
+            grid.style.opacity = '1';
+
+            // Como a paginação muitas vezes está fora do loop,
+            // precisamos recarregar ela também ou garantir que venha no AJAX.
+            // Uma técnica simples é fazer o fetch da página inteira e extrair as partes:
+
+            // Se você usar a técnica do DOMParser (que você tentou no seu código):
+            /*
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            grid.innerHTML = doc.querySelector('#grid-cards').innerHTML;
+            paginacaoWrapper.innerHTML = doc.querySelector('#paginacao-wrapper').innerHTML;
+            */
+
+            window.history.pushState(null, '', url);
+        })
+        .catch(err => console.error("Erro no carregamento:", err));
+    }
+
+    // Evento para Filtros e Paginação (Delegação de evento)
+    document.addEventListener('click', function(e) {
+        // Se clicou num botão de filtro ou num link de página
+        const link = e.target.closest('.filtro-btn, #paginacao-wrapper a');
+
+        if (link) {
+            e.preventDefault();
+            const url = link.getAttribute('href');
+
+            // Se for filtro, remove 'ativo' dos outros
+            if (link.classList.contains('filtro-btn')) {
+                document.querySelectorAll('.filtro-btn').forEach(b => b.classList.remove('ativo'));
+                link.classList.add('ativo');
+            }
+
+            carregarProdutos(url);
+        }
+    });
 });
 </script>
 {% endblock %}

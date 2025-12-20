@@ -190,33 +190,31 @@ class CategoriasInfoView(View):
 
 from django.core.paginator import Paginator
 from django.db.models import F, FloatField, ExpressionWrapper
+from django.http import HttpResponse
+# ... seus outros imports
 
 class BrinquedosView(View):
-
     def get(self, request):
         ordenar = request.GET.get('ordenar', 'az')
-        brinquedos = Brinquedos.objects.all()
+        brinquedos_list = Brinquedos.objects.all()
 
-        # ===== ORDENAÇÃO =====
+        # ORDENAÇÃO (mantive sua lógica)
         if ordenar == 'az':
-            brinquedos = brinquedos.order_by('nome_brinquedo')
-
+            brinquedos_list = brinquedos_list.order_by('nome_brinquedo')
         elif ordenar == 'za':
-            brinquedos = brinquedos.order_by('-nome_brinquedo')
-
+            brinquedos_list = brinquedos_list.order_by('-nome_brinquedo')
         elif ordenar == 'melhor-avaliados':
-            brinquedos = brinquedos.order_by('-avaliacao')
-
+            brinquedos_list = brinquedos_list.order_by('-avaliacao')
         elif ordenar == 'custo-beneficio':
-            brinquedos = brinquedos.annotate(
+            brinquedos_list = brinquedos_list.annotate(
                 score=ExpressionWrapper(
                     F('avaliacao') / (F('valor_brinquedo') + 0.01),
                     output_field=FloatField()
                 )
             ).order_by('-score')
 
-        # ===== PAGINAÇÃO =====
-        paginator = Paginator(brinquedos, 9)
+        # PAGINAÇÃO
+        paginator = Paginator(brinquedos_list, 9)
         page_number = request.GET.get('page')
         page_obj = paginator.get_page(page_number)
 
@@ -226,8 +224,11 @@ class BrinquedosView(View):
             'ordenar': ordenar,
         }
 
-        return render(request, 'brinquedos.html', context)
+        # SE FOR AJAX, renderiza apenas os cards e paginação
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return render(request, 'partials/lista_brinquedos_ajax.html', context)
 
+        return render(request, 'brinquedos.html', context)
 
 class ComboInfoView(View):
 
