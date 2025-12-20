@@ -1678,8 +1678,8 @@ body {
 <section id="combos-section" class="combos-section">
   <h2 class="section-title">Combos</h2>
     <p class="section-subtitle">
-  Selecionamos os melhores brinquedos em pacotes especiais para você economizar mais e garantir a diversão da festa.
-</p>
+      Selecionamos os melhores brinquedos em pacotes especiais para você economizar mais e garantir a diversão da festa.
+    </p>
 
 
   <div class="scroll-wrapper">
@@ -2410,26 +2410,6 @@ function atualizarProdutos(url) {
         .catch(err => console.error("Erro ao filtrar:", err));
 }
 
-// ===============================
-// ⭐ 6. EVENTOS DOS FILTROS
-// ===============================
-function adicionarEventosFiltros() {
-    document.querySelectorAll(".filtro-btn").forEach(btn => {
-        btn.addEventListener("click", function (e) {
-            e.preventDefault();
-
-            // Remove classe ativo dos outros
-            document.querySelectorAll(".filtro-btn").forEach(b => b.classList.remove("ativo"));
-            this.classList.add("ativo");
-
-            // Chama o AJAX
-            const ordem = this.dataset.order;
-            atualizarProdutos(`?ordenar=${ordem}`);
-            // Nota: Ajustei a URL para query string relativa (ex: ?ordenar=az)
-            // Se precisar da raiz, use `/?ordenar=${ordem}`
-        });
-    });
-}
 
 // ===============================
 // ⭐ 7. INICIALIZAÇÃO
@@ -2438,8 +2418,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // 1. Renderiza no carregamento inicial da página
     renderizarTodasEstrelas();
 
-    // 2. Ativa os botões
-    adicionarEventosFiltros();
+
 
     // 3. Centraliza Grid (CSS via JS opcional)
     const grid = document.getElementById('grid-cards');
@@ -2670,6 +2649,11 @@ document.addEventListener('click', function (e) {
     if (!filtro) return;
 
     e.preventDefault();
+
+    // classe ativa
+    document.querySelectorAll('#filtros-bar .filtro-btn')
+        .forEach(b => b.classList.remove('ativo'));
+    filtro.classList.add('ativo');
 
     const ordenar = filtro.dataset.order;
     carregarProdutos({ ordenar });
