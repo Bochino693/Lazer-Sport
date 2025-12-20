@@ -191,96 +191,55 @@
     </div>
 </section>
 <script>
-function carregarProdutos(url) {
-    fetch(url)
-        .then(res => res.text())
-        .then(html => {
-            const doc = new DOMParser().parseFromString(html, 'text/html');
-
-            document.querySelector('#grid-cards').innerHTML =
-                doc.querySelector('#grid-cards').innerHTML;
-
-            document.querySelector('#paginacao-wrapper').innerHTML =
-                doc.querySelector('#paginacao-wrapper').innerHTML;
-
-            history.pushState(null, '', url);
-        });
-}
-
-// ===== FILTROS =====
-document.addEventListener('click', function (e) {
-    const filtro = e.target.closest('#filtros-bar .filtro-btn');
-    if (!filtro) return;
-
-    e.preventDefault();
-
-    const url = new URL(window.location.href);
-    url.searchParams.set('ordenar', filtro.dataset.order);
-    url.searchParams.delete('page');
-
-    carregarProdutos(url);
-
-    document.querySelectorAll('.filtro-btn').forEach(b => b.classList.remove('ativo'));
-    filtro.classList.add('ativo');
-});
-
-// ===== PAGINAÇÃO =====
-document.addEventListener('click', function (e) {
-    const link = e.target.closest('#paginacao-wrapper a');
-    if (!link) return;
-
-    e.preventDefault();
-    carregarProdutos(link.href);
-});
-
-
 document.addEventListener('DOMContentLoaded', function() {
     const grid = document.querySelector('#grid-cards');
     const paginacaoWrapper = document.querySelector('#paginacao-wrapper');
 
     function carregarProdutos(url) {
-        // Feedback visual
-        grid.style.opacity = '0.5';
+        // Feedback visual de carregamento
+        grid.style.opacity = '0.4';
+        grid.style.transition = 'opacity 0.2s ease';
 
-        fetch(url, {
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest'
-            }
-        })
-        .then(res => res.text())
-        .then(html => {
-            // No seu caso, o HTML que volta contém os cards E podemos colocar a paginação nele
-            // ou atualizar ambos. Para simplificar, vamos atualizar o grid:
-            grid.innerHTML = html;
-            grid.style.opacity = '1';
+        fetch(url)
+            .then(res => res.text())
+            .then(html => {
+                // Criamos um documento virtual com o HTML recebido
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
 
-            // Como a paginação muitas vezes está fora do loop,
-            // precisamos recarregar ela também ou garantir que venha no AJAX.
-            // Uma técnica simples é fazer o fetch da página inteira e extrair as partes:
+                // Extraímos apenas o que interessa do documento virtual
+                const novoGrid = doc.querySelector('#grid-cards').innerHTML;
+                const novaPaginacao = doc.querySelector('#paginacao-wrapper').innerHTML;
 
-            // Se você usar a técnica do DOMParser (que você tentou no seu código):
-            /*
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(html, 'text/html');
-            grid.innerHTML = doc.querySelector('#grid-cards').innerHTML;
-            paginacaoWrapper.innerHTML = doc.querySelector('#paginacao-wrapper').innerHTML;
-            */
+                // Atualizamos a página atual
+                grid.innerHTML = novoGrid;
+                paginacaoWrapper.innerHTML = novaPaginacao;
 
-            window.history.pushState(null, '', url);
-        })
-        .catch(err => console.error("Erro no carregamento:", err));
+                // Remove o efeito de carregamento
+                grid.style.opacity = '1';
+
+                // Atualiza a URL no navegador
+                window.history.pushState(null, '', url);
+
+                // Rola a página para o topo dos produtos suavemente
+                document.querySelector('#bread').scrollIntoView({ behavior: 'smooth' });
+            })
+            .catch(err => {
+                console.error("Erro ao carregar produtos:", err);
+                grid.style.opacity = '1';
+            });
     }
 
-    // Evento para Filtros e Paginação (Delegação de evento)
+    // Escuta cliques em Filtros e na Paginação
     document.addEventListener('click', function(e) {
-        // Se clicou num botão de filtro ou num link de página
+        // Verifica se o clique foi em um filtro ou em um link de página
         const link = e.target.closest('.filtro-btn, #paginacao-wrapper a');
 
         if (link) {
             e.preventDefault();
             const url = link.getAttribute('href');
 
-            // Se for filtro, remove 'ativo' dos outros
+            // Se for botão de filtro, gerencia a classe 'ativo'
             if (link.classList.contains('filtro-btn')) {
                 document.querySelectorAll('.filtro-btn').forEach(b => b.classList.remove('ativo'));
                 link.classList.add('ativo');
@@ -288,6 +247,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
             carregarProdutos(url);
         }
+    });
+
+    // Garante que o botão 'voltar' do navegador funcione corretamente
+    window.addEventListener('popstate', function() {
+        carregarProdutos(window.location.href);
     });
 });
 </script>

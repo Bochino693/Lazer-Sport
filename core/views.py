@@ -192,13 +192,12 @@ from django.core.paginator import Paginator
 from django.db.models import F, FloatField, ExpressionWrapper
 from django.http import HttpResponse
 # ... seus outros imports
-
 class BrinquedosView(View):
     def get(self, request):
         ordenar = request.GET.get('ordenar', 'az')
         brinquedos_list = Brinquedos.objects.all()
 
-        # ORDENAÇÃO (mantive sua lógica)
+        # ORDENAÇÃO
         if ordenar == 'az':
             brinquedos_list = brinquedos_list.order_by('nome_brinquedo')
         elif ordenar == 'za':
@@ -224,11 +223,9 @@ class BrinquedosView(View):
             'ordenar': ordenar,
         }
 
-        # SE FOR AJAX, renderiza apenas os cards e paginação
-        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-            return render(request, 'partials/lista_brinquedos_ajax.html', context)
-
+        # Retorna sempre o template principal
         return render(request, 'brinquedos.html', context)
+
 
 class ComboInfoView(View):
 
