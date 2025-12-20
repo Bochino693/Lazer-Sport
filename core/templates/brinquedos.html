@@ -23,6 +23,8 @@
     box-shadow: 0 6px 20px rgba(0,0,0,0.08);
     transition: transform 0.3s, box-shadow 0.3s;
     cursor: pointer;
+    display: flex;
+    flex-direction: column;
 }
 
 .card-produto:hover {
@@ -35,6 +37,11 @@
     height: 200px;
     object-fit: cover;
     transition: transform 0.4s ease;
+    background: #f2f2f2;
+
+     display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .card-produto:hover img {
@@ -248,23 +255,33 @@
     <div class="grid-cards" id="grid-cards">
         {% for brinquedo in brinquedos %}
             <div class="card-produto">
-                <img src="{{ brinquedo.imagem_brinquedo.url }}" alt="{{ brinquedo.nome_brinquedo }}">
 
-                <div class="conteudo">
-                    <h3>{{ brinquedo.nome_brinquedo }}</h3>
-
-                    <!-- ⭐ ESTRELAS -->
-                    <div class="avaliacao"
-                         data-avaliacao="{{ brinquedo.avaliacao }}">
-                    </div>
-
-                    <div class="preco">R$ {{ brinquedo.valor_brinquedo }}</div>
-
-                    <a href="{% url 'brinquedo_detalhe' brinquedo.id %}" class="btn-vermais">
-                        Ver mais
-                    </a>
-                </div>
+            <div class="card-img">
+                {% if brinquedo.imagem_brinquedo %}
+                    <img src="{{ brinquedo.imagem_brinquedo.url }}"
+                         alt="{{ brinquedo.nome_brinquedo }}">
+                {% else %}
+                    <img src="{% static 'img/placeholder.png' %}"
+                         alt="Sem imagem">
+                {% endif %}
             </div>
+
+            <div class="conteudo">
+                <h3>{{ brinquedo.nome_brinquedo }}</h3>
+
+                <!-- ⭐ ESTRELAS -->
+                <div class="avaliacao"
+                     data-avaliacao="{{ brinquedo.avaliacao }}">
+                </div>
+
+                <div class="preco">R$ {{ brinquedo.valor_brinquedo }}</div>
+
+                <a href="{% url 'brinquedo_detalhe' brinquedo.id %}"
+                   class="btn-vermais">
+                    Ver mais
+                </a>
+            </div>
+        </div>
 
         {% empty %}
             <p>Nenhum brinquedo encontrado.</p>
