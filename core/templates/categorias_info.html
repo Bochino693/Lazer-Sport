@@ -275,6 +275,11 @@
     margin: 0 10px;
 }
 
+/* Espaço real entre filtros e cards */
+.filtros-wrapper {
+    margin-bottom: 50px;
+}
+
 
 </style>
 
@@ -302,26 +307,27 @@
 </div>
 
 <!-- 🔵 FILTROS -->
-<a href="?ordenar=az" class="filtro-btn"
-   onclick="event.preventDefault(); ordenarProdutos(this.href)">
-    A → Z
-</a>
+<div class="filtros-horizontal filtros-wrapper">
+    <a href="?ordenar=az" class="filtro-btn"
+       onclick="event.preventDefault(); ordenarProdutos(this.href)">
+        A → Z
+    </a>
 
-<a href="?ordenar=za" class="filtro-btn"
-   onclick="event.preventDefault(); ordenarProdutos(this.href)">
-    Z → A
-</a>
+    <a href="?ordenar=za" class="filtro-btn"
+       onclick="event.preventDefault(); ordenarProdutos(this.href)">
+        Z → A
+    </a>
 
-<a href="?ordenar=melhor-avaliados" class="filtro-btn"
-   onclick="event.preventDefault(); ordenarProdutos(this.href)">
-    ⭐ Melhor avaliados
-</a>
+    <a href="?ordenar=melhor-avaliados" class="filtro-btn"
+       onclick="event.preventDefault(); ordenarProdutos(this.href)">
+        ⭐ Melhor avaliados
+    </a>
 
-<a href="?ordenar=custo-beneficio" class="filtro-btn"
-   onclick="event.preventDefault(); ordenarProdutos(this.href)">
-    🏆 Custo-benefício
-</a>
-
+    <a href="?ordenar=custo-beneficio" class="filtro-btn"
+       onclick="event.preventDefault(); ordenarProdutos(this.href)">
+        🏆 Custo-benefício
+    </a>
+</div>
 
 
 <!-- 🔵 LISTAGEM DE PRODUTOS -->
