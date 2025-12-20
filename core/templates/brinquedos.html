@@ -325,8 +325,12 @@
                 <h3>{{ brinquedo.nome_brinquedo }}</h3>
 
                 <!-- ⭐ AVALIAÇÃO -->
-                <div class="avaliacao"
-                     data-avaliacao="{{ brinquedo.avaliacao|default:0 }}">
+                <div class="avaliacao-container" style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+                    <div class="avaliacao" data-avaliacao="{{ brinquedo.avaliacao|default:0 }}">
+                        </div>
+                    <span class="nota-numerica" style="font-weight: bold; color: #444; font-size: 0.9rem;">
+                        {{ brinquedo.avaliacao|default:"0.0" }}
+                    </span>
                 </div>
 
                 <!-- DESCRIÇÃO CURTA -->
@@ -436,6 +440,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.error("Erro ao carregar:", err);
                 grid.style.opacity = '1';
             });
+
+            renderStars();
     }
 
     // Gerenciador de cliques unificado
@@ -466,25 +472,35 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function renderStars(context = document) {
-    const avaliacoes = context.querySelectorAll('.avaliacao');
+    const containers = context.querySelectorAll('.avaliacao');
 
-    avaliacoes.forEach(container => {
-        const nota = parseFloat(container.dataset.avaliacao) || 0;
+    containers.forEach(container => {
+        // Pega a nota e garante que é um número com ponto (ex: 4.5)
+        const notaStr = container.dataset.avaliacao.replace(',', '.');
+        const nota = parseFloat(notaStr) || 0;
+
         const estrelasCheias = Math.floor(nota);
-        const meiaEstrela = nota % 1 >= 0.5;
+        const meiaEstrela = (nota - estrelasCheias) >= 0.5;
 
-        container.innerHTML = '';
+        container.innerHTML = ''; // Limpa o conteúdo anterior
 
         for (let i = 1; i <= 5; i++) {
             const star = document.createElement('i');
 
             if (i <= estrelasCheias) {
-                star.className = 'fa-solid fa-star';
+                // Estrela inteira (Cheia)
+                star.className = 'fas fa-star';
             } else if (i === estrelasCheias + 1 && meiaEstrela) {
-                star.className = 'fa-solid fa-star-half-stroke';
+                // Meia estrela
+                star.className = 'fas fa-star-half-alt';
             } else {
-                star.className = 'fa-regular fa-star vazia';
+                // Estrela vazia
+                star.className = 'far fa-star vazia';
             }
+
+            // Estilo rápido caso não queira depender só do CSS externo
+            star.style.color = i <= (estrelasCheias + (meiaEstrela ? 1 : 0)) ? "#FFD700" : "#ccc";
+            star.style.marginRight = "2px";
 
             container.appendChild(star);
         }
