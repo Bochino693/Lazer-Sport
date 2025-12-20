@@ -186,72 +186,87 @@
     </div>
 
     <!-- ======= PAGINAÇÃO ======= -->
-    <div id="paginacao-wrapper">
-        {% include "partials/paginacao.html" %}
+ <div id="paginacao-wrapper">
+    <div class="paginacao">
+        {% if page_obj.has_previous %}
+            <a class="page-btn" href="?page={{ page_obj.previous_page_number }}&ordenar={{ ordenar }}">
+                « Anterior
+            </a>
+        {% endif %}
+
+        <span class="page-atual">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
+
+        {% if page_obj.has_next %}
+            <a class="page-btn" href="?page={{ page_obj.next_page_number }}&ordenar={{ ordenar }}">
+                Próxima »
+            </a>
+        {% endif %}
     </div>
+</div>
 </section>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const grid = document.querySelector('#grid-cards');
     const paginacaoWrapper = document.querySelector('#paginacao-wrapper');
 
-    function carregarProdutos(url) {
-        // Feedback visual de carregamento
+    function carregarConteudo(url) {
+        // Feedback visual: escurece os cards enquanto carrega
         grid.style.opacity = '0.4';
         grid.style.transition = 'opacity 0.2s ease';
 
         fetch(url)
             .then(res => res.text())
             .then(html => {
-                // Criamos um documento virtual com o HTML recebido
+                // Criamos um documento virtual para extrair as partes
                 const parser = new DOMParser();
                 const doc = parser.parseFromString(html, 'text/html');
 
-                // Extraímos apenas o que interessa do documento virtual
+                // Pegamos o novo conteúdo do grid e da paginação
                 const novoGrid = doc.querySelector('#grid-cards').innerHTML;
                 const novaPaginacao = doc.querySelector('#paginacao-wrapper').innerHTML;
 
-                // Atualizamos a página atual
+                // Substituímos na tela sem dar refresh
                 grid.innerHTML = novoGrid;
                 paginacaoWrapper.innerHTML = novaPaginacao;
 
-                // Remove o efeito de carregamento
                 grid.style.opacity = '1';
 
-                // Atualiza a URL no navegador
+                // Atualiza a URL lá no topo do navegador
                 window.history.pushState(null, '', url);
 
-                // Rola a página para o topo dos produtos suavemente
+                // Rola para o topo da seção de brinquedos para o usuário não ficar no fim da página
                 document.querySelector('#bread').scrollIntoView({ behavior: 'smooth' });
             })
             .catch(err => {
-                console.error("Erro ao carregar produtos:", err);
+                console.error("Erro ao carregar:", err);
                 grid.style.opacity = '1';
             });
     }
 
-    // Escuta cliques em Filtros e na Paginação
+    // Gerenciador de cliques unificado
     document.addEventListener('click', function(e) {
-        // Verifica se o clique foi em um filtro ou em um link de página
-        const link = e.target.closest('.filtro-btn, #paginacao-wrapper a');
+        // Verifica se clicou em um link de filtro OU link de paginação
+        const link = e.target.closest('.filtro-btn, .page-btn');
 
         if (link) {
             e.preventDefault();
             const url = link.getAttribute('href');
 
-            // Se for botão de filtro, gerencia a classe 'ativo'
-            if (link.classList.contains('filtro-btn')) {
-                document.querySelectorAll('.filtro-btn').forEach(b => b.classList.remove('ativo'));
-                link.classList.add('ativo');
-            }
+            if (url) {
+                // Se for filtro, atualiza a classe visual 'ativo'
+                if (link.classList.contains('filtro-btn')) {
+                    document.querySelectorAll('.filtro-btn').forEach(b => b.classList.remove('ativo'));
+                    link.classList.add('ativo');
+                }
 
-            carregarProdutos(url);
+                carregarConteudo(url);
+            }
         }
     });
 
-    // Garante que o botão 'voltar' do navegador funcione corretamente
+    // Faz o botão "Voltar" do navegador funcionar
     window.addEventListener('popstate', function() {
-        carregarProdutos(window.location.href);
+        carregarConteudo(window.location.href);
     });
 });
 </script>
