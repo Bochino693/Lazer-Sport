@@ -27,6 +27,9 @@ urlpatterns = [
     path('tags/admin/new/', NovaTag.as_view(), name='tag_new'),
 
 
+
+
+
     path('perfil/', ClientePerfilView.as_view(), name='perfil'),
     path("login/", LoginUsuarioView.as_view(), name="login"),
     path("logout/", LogoutUsuarioView.as_view(), name="logout"),
