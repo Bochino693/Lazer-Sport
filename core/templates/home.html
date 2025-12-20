@@ -2638,19 +2638,14 @@ function carregarProdutos(params = {}) {
         .then(html => {
             const doc = new DOMParser().parseFromString(html, 'text/html');
 
-            // Atualiza produtos
-            document.querySelector('#grid-cards').innerHTML =
-                doc.querySelector('#grid-cards').innerHTML;
+            const grid = document.querySelector('#grid-cards');
+            const pag = document.querySelector('#paginacao-wrapper');
+            const filtros = document.querySelector('#filtros-bar');
 
-            // Atualiza paginação
-            document.querySelector('#paginacao-wrapper').innerHTML =
-                doc.querySelector('#paginacao-wrapper').innerHTML;
+            grid.innerHTML = doc.querySelector('#grid-cards').innerHTML;
+            pag.innerHTML = doc.querySelector('#paginacao-wrapper').innerHTML;
+            filtros.innerHTML = doc.querySelector('#filtros-bar').innerHTML;
 
-            // Atualiza filtros ativos
-            document.querySelector('#filtros-bar').innerHTML =
-                doc.querySelector('#filtros-bar').innerHTML;
-
-            // Atualiza URL sem reload
             history.pushState(null, '', url);
 
             // Recria estrelas
@@ -2668,11 +2663,16 @@ document.addEventListener('click', function(e) {
     }
 });
 
-document.querySelectorAll('#filtros-bar .filtro-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-        carregarProdutos({ ordenar: btn.dataset.order });
-    });
+document.addEventListener('click', function (e) {
+    const filtro = e.target.closest('#filtros-bar .filtro-btn');
+    if (!filtro) return;
+
+    e.preventDefault();
+
+    const ordenar = filtro.dataset.order;
+    carregarProdutos({ ordenar });
 });
+
 
 </script>
 {% endblock %}
