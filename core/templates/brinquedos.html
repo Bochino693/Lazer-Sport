@@ -405,6 +405,7 @@ document.addEventListener('DOMContentLoaded', function() {
         grid.style.transition = 'opacity 0.2s ease';
 
         fetch(url)
+        grid.style.opacity = '0.4';
             .then(res => res.text())
             .then(html => {
                 // Criamos um documento virtual para extrair as partes
@@ -416,8 +417,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 const novaPaginacao = doc.querySelector('#paginacao-wrapper').innerHTML;
 
                 // Substituímos na tela sem dar refresh
-                grid.innerHTML = novoGrid;
-                paginacaoWrapper.innerHTML = novaPaginacao;
+
+                grid.innerHTML = doc.querySelector('#grid-cards').innerHTML;
+                paginacaoWrapper.innerHTML =
+                    doc.querySelector('#paginacao-wrapper').innerHTML;
 
                 renderStars(grid);
 
