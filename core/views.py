@@ -188,14 +188,44 @@ class CategoriasInfoView(View):
 
         return render(request, "categorias_info.html", ctx)
 
+from django.core.paginator import Paginator
+from django.db.models import F, FloatField, ExpressionWrapper
 
 class BrinquedosView(View):
 
     def get(self, request):
+        ordenar = request.GET.get('ordenar', 'az')
         brinquedos = Brinquedos.objects.all()
+
+        # ===== ORDENAÇÃO =====
+        if ordenar == 'az':
+            brinquedos = brinquedos.order_by('nome_brinquedo')
+
+        elif ordenar == 'za':
+            brinquedos = brinquedos.order_by('-nome_brinquedo')
+
+        elif ordenar == 'melhor-avaliados':
+            brinquedos = brinquedos.order_by('-avaliacao')
+
+        elif ordenar == 'custo-beneficio':
+            brinquedos = brinquedos.annotate(
+                score=ExpressionWrapper(
+                    F('avaliacao') / (F('valor_brinquedo') + 0.01),
+                    output_field=FloatField()
+                )
+            ).order_by('-score')
+
+        # ===== PAGINAÇÃO =====
+        paginator = Paginator(brinquedos, 9)
+        page_number = request.GET.get('page')
+        page_obj = paginator.get_page(page_number)
+
         context = {
-            'brinquedos': brinquedos,
+            'brinquedos': page_obj,
+            'page_obj': page_obj,
+            'ordenar': ordenar,
         }
+
         return render(request, 'brinquedos.html', context)
 
 

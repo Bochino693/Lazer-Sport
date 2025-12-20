@@ -109,62 +109,42 @@
     <strong>Todos os Brinquedos</strong>
 </div>
 
-
 <section class="destaques">
     <h2 style="text-align:center; font-size:2rem; margin-bottom:40px; color:#007BFF;">
         Todos os Brinquedos
     </h2>
+
     <!-- ======= FILTROS ======= -->
-<div class="filtros-horizontal" id="filtros-bar">
-    <a data-order="az"
-       class="filtro-btn {% if ordenar == 'az' or not ordenar %}ativo{% endif %}">
-        A → Z
-    </a>
+    <div class="filtros-horizontal" id="filtros-bar">
+        <a class="filtro-btn {% if ordenar == 'az' %}ativo{% endif %}" data-order="az">A → Z</a>
+        <a class="filtro-btn {% if ordenar == 'za' %}ativo{% endif %}" data-order="za">Z → A</a>
+        <a class="filtro-btn {% if ordenar == 'melhor-avaliados' %}ativo{% endif %}" data-order="melhor-avaliados">⭐ Melhores avaliados</a>
+        <a class="filtro-btn {% if ordenar == 'custo-beneficio' %}ativo{% endif %}" data-order="custo-beneficio">💰 Custo-benefício</a>
+    </div>
 
-    <a data-order="za"
-       class="filtro-btn {% if ordenar == 'za' %}ativo{% endif %}">
-        Z → A
-    </a>
-
-    <a data-order="melhor-avaliados"
-       class="filtro-btn {% if ordenar == 'melhor-avaliados' %}ativo{% endif %}">
-        ⭐ Melhores avaliados
-    </a>
-
-    <a data-order="custo-beneficio"
-       class="filtro-btn {% if ordenar == 'custo-beneficio' %}ativo{% endif %}">
-        💰 Custo-benefício
-    </a>
-</div>
-
-
+    <!-- ======= GRID ======= -->
     <div class="grid-cards" id="grid-cards">
         {% for brinquedo in brinquedos %}
-        <div class="card-produto">
-            <img src="{{ brinquedo.imagem_brinquedo.url }}" alt="{{ brinquedo.nome_brinquedo }}">
-            <div class="conteudo">
-                <h3>{{ brinquedo.nome_brinquedo }}</h3>
-                <div class="preco">R$ {{ brinquedo.valor_brinquedo }}</div>
-                <a href="{% url 'brinquedo_detalhe' brinquedo.id %}" class="btn-vermais">Ver mais</a>
+            <div class="card-produto">
+                <img src="{{ brinquedo.imagem_brinquedo.url }}" alt="{{ brinquedo.nome_brinquedo }}">
+                <div class="conteudo">
+                    <h3>{{ brinquedo.nome_brinquedo }}</h3>
+                    <div class="preco">R$ {{ brinquedo.valor_brinquedo }}</div>
+                    <a href="{% url 'brinquedo_detalhe' brinquedo.id %}" class="btn-vermais">Ver mais</a>
+                </div>
             </div>
-        </div>
         {% empty %}
             <p>Nenhum brinquedo encontrado.</p>
         {% endfor %}
     </div>
+
+    <!-- ======= PAGINAÇÃO ======= -->
     <div id="paginacao-wrapper">
-    {% include "partials/paginacao.html" %}
-</div>
+        {% include "partials/paginacao.html" %}
+    </div>
 </section>
 <script>
-function carregarProdutos(params = {}) {
-    const url = new URL(window.location.href);
-
-    if (params.ordenar) {
-        url.searchParams.set('ordenar', params.ordenar);
-        url.searchParams.delete('page');
-    }
-
+function carregarProdutos(url) {
     fetch(url)
         .then(res => res.text())
         .then(html => {
@@ -180,20 +160,30 @@ function carregarProdutos(params = {}) {
         });
 }
 
-
-
+// ===== FILTROS =====
 document.addEventListener('click', function (e) {
     const filtro = e.target.closest('#filtros-bar .filtro-btn');
     if (!filtro) return;
 
     e.preventDefault();
 
-    document.querySelectorAll('#filtros-bar .filtro-btn')
-        .forEach(b => b.classList.remove('ativo'));
-    filtro.classList.add('ativo');
+    const url = new URL(window.location.href);
+    url.searchParams.set('ordenar', filtro.dataset.order);
+    url.searchParams.delete('page');
 
-    const ordenar = filtro.dataset.order;
-    carregarProdutos({ ordenar });
+    carregarProdutos(url);
+
+    document.querySelectorAll('.filtro-btn').forEach(b => b.classList.remove('ativo'));
+    filtro.classList.add('ativo');
+});
+
+// ===== PAGINAÇÃO =====
+document.addEventListener('click', function (e) {
+    const link = e.target.closest('#paginacao-wrapper a');
+    if (!link) return;
+
+    e.preventDefault();
+    carregarProdutos(link.href);
 });
 </script>
 {% endblock %}
