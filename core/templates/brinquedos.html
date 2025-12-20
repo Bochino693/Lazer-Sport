@@ -217,6 +217,55 @@
 }
 
 
+/* CONTEÚDO FLEXÍVEL */
+.card-produto .conteudo {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+/* DESCRIÇÃO */
+.descricao {
+    font-size: 0.9rem;
+    color: #555;
+    margin: 8px 0;
+    min-height: 40px; /* garante altura igual */
+}
+
+/* DADOS */
+.dados-tecnicos {
+    list-style: none;
+    padding: 0;
+    margin: 8px 0;
+    font-size: 0.85rem;
+    color: #444;
+}
+
+.dados-tecnicos li {
+    margin-bottom: 4px;
+}
+
+/* BADGES */
+.categorias {
+    margin: 6px 0;
+}
+
+.badge {
+    display: inline-block;
+    background: #eef3ff;
+    color: #0d6efd;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    margin: 2px;
+}
+
+/* PREÇO SEM EMPURRAR BOTÃO */
+.preco {
+    margin-top: auto;
+}
+
+
 </style>
 
 
@@ -255,11 +304,12 @@
     </a>
 </div>
 
-    <!-- ======= GRID ======= -->
-    <div class="grid-cards" id="grid-cards">
-        {% for brinquedo in brinquedos %}
-            <div class="card-produto">
+<!-- ======= GRID ======= -->
+<div class="grid-cards" id="grid-cards">
+    {% for brinquedo in brinquedos %}
+        <div class="card-produto">
 
+            <!-- IMAGEM -->
             <div class="card-img">
                 {% if brinquedo.imagem_brinquedo %}
                     <img src="{{ brinquedo.imagem_brinquedo.url }}"
@@ -270,15 +320,48 @@
                 {% endif %}
             </div>
 
+            <!-- CONTEÚDO -->
             <div class="conteudo">
                 <h3>{{ brinquedo.nome_brinquedo }}</h3>
 
-                <!-- ⭐ ESTRELAS -->
+                <!-- ⭐ AVALIAÇÃO -->
                 <div class="avaliacao"
-                     data-avaliacao="{{ brinquedo.avaliacao }}">
+                     data-avaliacao="{{ brinquedo.avaliacao|default:0 }}">
                 </div>
 
-                <div class="preco">R$ {{ brinquedo.valor_brinquedo }}</div>
+                <!-- DESCRIÇÃO CURTA -->
+                <p class="descricao">
+                    {{ brinquedo.descricao|truncatechars:80 }}
+                </p>
+
+                <!-- DADOS TÉCNICOS -->
+                <ul class="dados-tecnicos">
+                    {% if brinquedo.voltz %}
+                        <li>⚡ {{ brinquedo.voltz }}</li>
+                    {% endif %}
+
+                    {% if brinquedo.dimensoes_m %}
+                        <li>📐 {{ brinquedo.dimensoes_m }}</li>
+                    {% endif %}
+
+                    {% if brinquedo.volume_formatado %}
+                        <li>📦 {{ brinquedo.volume_formatado }}</li>
+                    {% endif %}
+                </ul>
+
+                <!-- CATEGORIAS -->
+                {% if brinquedo.categorias_brinquedos.exists %}
+                    <div class="categorias">
+                        {% for cat in brinquedo.categorias_brinquedos.all %}
+                            <span class="badge">{{ cat.nome }}</span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+
+                <!-- PREÇO -->
+                <div class="preco">
+                    R$ {{ brinquedo.valor_brinquedo }}
+                </div>
 
                 <a href="{% url 'brinquedo_detalhe' brinquedo.id %}"
                    class="btn-vermais">
@@ -286,11 +369,11 @@
                 </a>
             </div>
         </div>
+    {% empty %}
+        <p>Nenhum brinquedo encontrado.</p>
+    {% endfor %}
+</div>
 
-        {% empty %}
-            <p>Nenhum brinquedo encontrado.</p>
-        {% endfor %}
-    </div>
 
     <!-- ======= PAGINAÇÃO ======= -->
  <div id="paginacao-wrapper">
