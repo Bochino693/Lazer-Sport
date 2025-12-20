@@ -2668,5 +2668,11 @@ document.addEventListener('click', function(e) {
     }
 });
 
+document.querySelectorAll('#filtros-bar .filtro-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        carregarProdutos({ ordenar: btn.dataset.order });
+    });
+});
+
 </script>
 {% endblock %}
