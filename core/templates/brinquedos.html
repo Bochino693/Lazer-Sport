@@ -430,81 +430,69 @@
 </div>
 </section>
 <script>
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     const grid = document.querySelector('#grid-cards');
     const paginacaoWrapper = document.querySelector('#paginacao-wrapper');
 
     function carregarConteudo(url) {
-        // Feedback visual: escurece os cards enquanto carrega
         grid.style.opacity = '0.4';
-        grid.style.transition = 'opacity 0.2s ease';
 
-        fetch(url)
-        grid.style.opacity = '0.4';
+        fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
             .then(res => res.text())
             .then(html => {
-                // Criamos um documento virtual para extrair as partes
                 const parser = new DOMParser();
                 const doc = parser.parseFromString(html, 'text/html');
 
-                // Pegamos o novo conteúdo do grid e da paginação
-                const novoGrid = doc.querySelector('#grid-cards').innerHTML;
-                const novaPaginacao = doc.querySelector('#paginacao-wrapper').innerHTML;
+                const novoGrid = doc.querySelector('#grid-cards');
+                const novaPaginacao = doc.querySelector('#paginacao-wrapper');
 
-                // Substituímos na tela sem dar refresh
+                if (!novoGrid || !novaPaginacao) return;
 
-                grid.innerHTML = doc.querySelector('#grid-cards').innerHTML;
-                paginacaoWrapper.innerHTML =
-                    doc.querySelector('#paginacao-wrapper').innerHTML;
+                grid.innerHTML = novoGrid.innerHTML;
+                paginacaoWrapper.innerHTML = novaPaginacao.innerHTML;
 
                 renderStars(grid);
 
-                // Scroll suave apenas até o GRID de produtos
-                const offset = 120; // ajuste se tiver header fixo
-                const topGrid = grid.getBoundingClientRect().top + window.pageYOffset - offset;
+                // 👉 SCROLL CONTROLADO (NÃO SOBE PARA O TOPO)
+                const offset = 140;
+                const y = grid.getBoundingClientRect().top + window.pageYOffset - offset;
 
                 window.scrollTo({
-                    top: topGrid,
+                    top: y,
                     behavior: 'smooth'
                 });
 
-
                 grid.style.opacity = '1';
 
-
+                // Atualiza URL sem reload
+                history.pushState(null, '', url);
             })
             .catch(err => {
-                console.error("Erro ao carregar:", err);
+                console.error(err);
                 grid.style.opacity = '1';
             });
-
-            renderStars();
     }
 
-    // Gerenciador de cliques unificado
-    document.addEventListener('click', function(e) {
-        // Verifica se clicou em um link de filtro OU link de paginação
+    document.addEventListener('click', function (e) {
         const link = e.target.closest('.filtro-btn, .page-btn');
+        if (!link) return;
 
-        if (link) {
-            e.preventDefault();
-            const url = link.getAttribute('href');
+        e.preventDefault(); // ⛔ impede navegação real
 
-            if (url) {
-                // Se for filtro, atualiza a classe visual 'ativo'
-                if (link.classList.contains('filtro-btn')) {
-                    document.querySelectorAll('.filtro-btn').forEach(b => b.classList.remove('ativo'));
-                    link.classList.add('ativo');
-                }
+        const url = link.getAttribute('href');
+        if (!url) return;
 
-                carregarConteudo(url);
-            }
+        if (link.classList.contains('filtro-btn')) {
+            document.querySelectorAll('.filtro-btn')
+                .forEach(b => b.classList.remove('ativo'));
+            link.classList.add('ativo');
         }
+
+        carregarConteudo(url);
     });
 
-    // Faz o botão "Voltar" do navegador funcionar
-    window.addEventListener('popstate', function() {
-        carregarConteudo(window.location.href);
+    window.addEventListener('popstate', function () {
+        carregarConteudo(location.href);
     });
 });
 
