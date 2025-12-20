@@ -2630,7 +2630,7 @@ function carregarProdutos(params = {}) {
 
     if (params.ordenar) {
         url.searchParams.set('ordenar', params.ordenar);
-        url.searchParams.delete('page'); // reset página ao filtrar
+        url.searchParams.delete('page');
     }
 
     fetch(url)
@@ -2638,20 +2638,22 @@ function carregarProdutos(params = {}) {
         .then(html => {
             const doc = new DOMParser().parseFromString(html, 'text/html');
 
-            const grid = document.querySelector('#grid-cards');
-            const pag = document.querySelector('#paginacao-wrapper');
-            const filtros = document.querySelector('#filtros-bar');
+            document.querySelector('#grid-cards').innerHTML =
+                doc.querySelector('#grid-cards').innerHTML;
 
-            grid.innerHTML = doc.querySelector('#grid-cards').innerHTML;
-            pag.innerHTML = doc.querySelector('#paginacao-wrapper').innerHTML;
-            filtros.innerHTML = doc.querySelector('#filtros-bar').innerHTML;
+            document.querySelector('#paginacao-wrapper').innerHTML =
+                doc.querySelector('#paginacao-wrapper').innerHTML;
+
+            document.querySelector('#filtros-bar').innerHTML =
+                doc.querySelector('#filtros-bar').innerHTML;
 
             history.pushState(null, '', url);
 
-            // Recria estrelas
-            renderStars();
+            // ⭐ correto
+            renderizarTodasEstrelas(document.querySelector('#grid-cards'));
         });
 }
+
 
 document.addEventListener('click', function(e) {
     const btn = e.target.closest('.page-btn');
