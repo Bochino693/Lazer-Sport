@@ -1892,10 +1892,9 @@ body {
                 {% endif %}
             </div>
 
-
             <!-- PREÇO -->
-            <div class="preco">
-              R$ {{ brinquedo.valor_brinquedo }}
+            <div class="preco js-moeda" data-valor="{{ brinquedo.valor_brinquedo }}">
+                R$ 0,00
             </div>
 
             <!-- TAGS COM # -->
@@ -2147,6 +2146,27 @@ body {
 
 
 <script>
+    function formatarMoedaBR(valor) {
+    if (!valor || isNaN(valor)) return '0,00';
+    return Number(valor).toLocaleString('pt-BR', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    });
+}
+
+// Formata todas as variáveis com a classe "js-moeda"
+function atualizarMoedas() {
+    document.querySelectorAll('.js-moeda').forEach(el => {
+        const valor = parseFloat(el.dataset.valor);
+        el.innerText = 'R$ ' + formatarMoedaBR(valor);
+    });
+}
+
+// Atualiza os preços ao carregar a página
+document.addEventListener('DOMContentLoaded', () => {
+    atualizarMoedas();
+});
+
 function formatBR(num) {
     if (!num) return "";
     num = num.replace(/[^\d.,]/g, "").replace(",", ".");
