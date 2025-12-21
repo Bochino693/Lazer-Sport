@@ -459,17 +459,17 @@
             <div class="medidas-grid">
                 <div>
                     <label>Altura (m)</label>
-                    <input type="number" step="0.1" id="alturaInput">
+                    <input type="text" step="0.1" id="alturaInput">
                 </div>
 
                 <div>
                     <label>Largura (m)</label>
-                    <input type="number" step="0.1" id="larguraInput">
+                    <input type="text" step="0.1" id="larguraInput">
                 </div>
 
                 <div>
                     <label>Profundidade (m)</label>
-                    <input type="number" step="0.1" id="profundidadeInput">
+                    <input type="text" step="0.1" id="profundidadeInput">
                 </div>
             </div>
 
@@ -526,9 +526,10 @@ function abrirModalSobMedida(btn) {
 
     document.querySelector('.produto-nome').innerText = produtoAtual.nome;
 
-    alturaInput.value = produtoAtual.altura;
-    larguraInput.value = produtoAtual.largura;
-    profundidadeInput.value = produtoAtual.profundidade;
+    alturaInput.value = (produtoAtual.altura).toFixed(2).replace('.', ',');
+    larguraInput.value = (produtoAtual.largura).toFixed(2).replace('.', ',');
+    profundidadeInput.value = (produtoAtual.profundidade).toFixed(2).replace('.', ',');
+
 
     calcularValor();
     document.getElementById('modalSobMedida').style.display = 'flex';
@@ -543,9 +544,10 @@ function fecharModal() {
 });
 
 function calcularValor() {
-    const a = parseFloat(alturaInput.value) || 0;
-    const l = parseFloat(larguraInput.value) || 0;
-    const p = parseFloat(profundidadeInput.value) || 0;
+    const a = parseDecimalBR(alturaInput.value);
+    const l = parseDecimalBR(larguraInput.value);
+    const p = parseDecimalBR(profundidadeInput.value);
+
 
     if (!a || !l || !p) return;
 
@@ -564,6 +566,40 @@ function adicionarSobMedida() {
     alert('Produto sob medida adicionado (implementar backend)');
     fecharModal();
 }
+
+function formatarDecimalBR(valor) {
+    // Remove tudo que não for número
+    valor = valor.replace(/\D/g, '');
+
+    if (!valor) return '0,00';
+
+    // Garante pelo menos 2 casas decimais
+    while (valor.length < 3) {
+        valor = '0' + valor;
+    }
+
+    const inteiro = valor.slice(0, -2);
+    const decimal = valor.slice(-2);
+
+    return inteiro.replace(/^0+/, '') + ',' + decimal;
+}
+
+function parseDecimalBR(valor) {
+    if (!valor) return 0;
+    return parseFloat(valor.replace('.', '').replace(',', '.')) || 0;
+}
+
+
+['alturaInput', 'larguraInput', 'profundidadeInput'].forEach(id => {
+    const input = document.getElementById(id);
+
+    input.addEventListener('input', () => {
+        const pos = input.selectionStart;
+        input.value = formatarDecimalBR(input.value);
+        input.setSelectionRange(pos, pos);
+        calcularValor();
+    });
+});
 </script>
 
 {% endblock %}
