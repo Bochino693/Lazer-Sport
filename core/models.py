@@ -319,6 +319,21 @@ class ImagemEvento(models.Model):
         verbose_name_plural = "Imagens dos Eventos"
 
 
+class BrinquedoSobMedida(models.Model):
+    brinquedo_original = models.ForeignKey(Brinquedos, on_delete=models.CASCADE)
+    altura = models.DecimalField(max_digits=10, decimal_places=2)
+    largura = models.DecimalField(max_digits=10, decimal_places=2)
+    profundidade = models.DecimalField(max_digits=10, decimal_places=2)
+    valor_calculado = models.DecimalField(max_digits=10, decimal_places=2)
+
+    def __str__(self):
+        return self.brinquedo_original.nome_brinquedo
+
+    class Meta:
+        verbose_name = "Brinquedo Sob Medida"
+        verbose_name_plural = "Brinquedos Sob Medida"
+
+
 class Carrinho(Prime):
     usuario = models.ForeignKey(User, on_delete=models.CASCADE, related_name='carrinho', null=True)
 
