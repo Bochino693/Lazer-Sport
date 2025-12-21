@@ -382,7 +382,11 @@
 
 
     <!-- PREÇO -->
-    <p class="preco">R$ {{ brinquedo.valor_brinquedo }}</p>
+    <p class="preco js-preco"
+       data-valor="{{ brinquedo.valor_brinquedo }}">
+       R$ 0,00
+    </p>
+
 
     <!-- DESCRIÇÃO -->
     <p class="sec-titulo">Descrição do Produto</p>
@@ -630,6 +634,22 @@ function parseDecimalBR(valor) {
         input.value = formatarDecimalBR(input.value);
         input.setSelectionRange(pos, pos);
         calcularValor();
+    });
+});
+
+function formatarMoedaBR(valor) {
+    if (!valor || isNaN(valor)) return '0,00';
+
+    return Number(valor).toLocaleString('pt-BR', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.js-preco').forEach(el => {
+        const valor = parseFloat(el.dataset.valor);
+        el.innerText = 'R$ ' + formatarMoedaBR(valor);
     });
 });
 </script>
