@@ -201,6 +201,52 @@
     background: #e4e4e4;
     transform: translateY(-2px);
 }
+
+
+/* ===================== AÇÕES DE ORÇAMENTO ===================== */
+
+.acoes-orcamento {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+/* Base dos botões */
+.btn-acao {
+    display: block;
+    width: 100%;
+    padding: 10px 0;
+    border-radius: 22px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    text-align: center;
+    text-decoration: none;
+    transition: all .25s ease;
+}
+
+/* WhatsApp */
+.btn-acao.whatsapp {
+    background: linear-gradient(135deg, #25D366, #1ebe5d);
+    color: #fff;
+}
+
+.btn-acao.whatsapp:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 14px rgba(37, 211, 102, 0.35);
+}
+
+/* Sob medida */
+.btn-acao.sob-medida {
+    background: linear-gradient(135deg, #FF9800, #FFB74D);
+    color: #fff;
+}
+
+.btn-acao.sob-medida:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 14px rgba(255, 152, 0, 0.35);
+}
+
 </style>
 
 
@@ -265,6 +311,22 @@
     <div class="acoes-produto">
         <a href="#" class="btn-produto btn-carrinho">🛒 Adicionar ao Carrinho</a>
         <a href="#" class="btn-produto btn-comprar">⚡ Comprar Agora</a>
+          <!-- WhatsApp -->
+                <a href="https://wa.me/5511960563135?text=
+                Ol%C3%A1!%0A
+                Gostaria%20de%20um%20or%C3%A7amento%20para%20o%20produto:%0A%0A
+                🧸%20{{ item.nome_brinquedo|urlencode }}%0A
+                🔗%20{{ request.build_absolute_uri|urlencode }}"
+                   target="_blank"
+                   class="btn-acao whatsapp">
+                    💬 Orçamento via WhatsApp
+                </a>
+
+                <!-- Sob medida -->
+                <a href="{% url 'brinquedo_detalhe' item.id %}#orcamento-sob-medida"
+                   class="btn-acao sob-medida">
+                    📐 Orçamento sob medida
+                </a>
         <a href="/#brinquedos" class="btn-produto btn-voltar">← Voltar</a>
     </div>
 
