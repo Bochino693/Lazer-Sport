@@ -351,6 +351,8 @@
     cursor: pointer;
 }
 
+
+
 </style>
 
 
@@ -415,14 +417,26 @@
     <div class="acoes-produto">
         <a href="#" class="btn-produto btn-carrinho">🛒 Adicionar ao Carrinho</a>
         <a href="#" class="btn-produto btn-comprar">⚡ Comprar Agora</a>
-          <!-- WhatsApp -->
-                <a href="https://wa.me/5511960563135?text=
-                Ol%C3%A1!%0A
-                Gostaria%20de%20um%20or%C3%A7amento%20para%20o%20produto:%0A%0A
-                🧸%20{{ item.nome_brinquedo|urlencode }}%0A
-                🔗%20{{ request.build_absolute_uri|urlencode }}"
-                   target="_blank"
-                   class="btn-acao whatsapp">
+            <!-- WhatsApp -->
+                <a
+                    href="https://wa.me/5511960563135?text=
+            Olá! 👋%0A
+            Gostaria de um orçamento para o brinquedo abaixo:%0A%0A
+            🧸 Nome: {{ brinquedo.nome_brinquedo|urlencode }}%0A
+            💰 Valor: R$ {{ brinquedo.valor_brinquedo }}%0A
+            ⭐ Avaliação: {{ brinquedo.avaliacao|floatformat:2 }}/5%0A
+            ⚡ Voltagem: {{ brinquedo.voltz|urlencode }}%0A%0A
+            📐 Dimensões:%0A
+            ↕️ Altura: {{ brinquedo.altura_m }} m%0A
+            ↔️ Largura: {{ brinquedo.largura_m }} m%0A
+            ↗️ Profundidade: {{ brinquedo.profundidade_m }} m%0A
+            📦 Volume: {{ brinquedo.volume_formatado|urlencode }}%0A%0A
+            🔗 Página do produto:%0A
+            {{ request.build_absolute_uri|urlencode }}%0A%0A
+            Fico no aguardo 😊"
+                    target="_blank"
+                    class="btn-acao whatsapp"
+                >
                     <i class="fab fa-whatsapp"></i> Orçamento via WhatsApp
                 </a>
 
