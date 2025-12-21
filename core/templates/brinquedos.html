@@ -380,7 +380,7 @@
                 {% if brinquedo.categorias_brinquedos.exists %}
                     <div class="categorias">
                         {% for cat in brinquedo.categorias_brinquedos.all %}
-                            <span class="badge">{{ cat.nome }}</span>
+                            <span class="badge">{{ cat.nome_categoria }}</span>
                         {% endfor %}
                     </div>
                 {% endif %}
