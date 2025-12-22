@@ -2149,21 +2149,27 @@ body {
 
 
 <script>
-    function formatarMoedaBR(valor) {
-    if (!valor || isNaN(valor)) return '0,00';
+
+function formatarMoedaBR(valor) {
+    if (valor === null || valor === undefined || isNaN(valor)) {
+        return '0,00';
+    }
+
     return Number(valor).toLocaleString('pt-BR', {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2
     });
 }
 
-// Formata todas as variáveis com a classe "js-moeda"
-function atualizarMoedas() {
-    document.querySelectorAll('.js-moeda').forEach(el => {
-        const valor = parseFloat(el.dataset.valor);
-        el.innerText = 'R$ ' + formatarMoedaBR(valor);
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.money').forEach(el => {
+        const valor = el.dataset.valor;
+
+        if (valor !== undefined) {
+            el.textContent = 'R$ ' + formatarMoedaBR(valor);
+        }
     });
-}
+});
 
 // Atualiza os preços ao carregar a página
 document.addEventListener('DOMContentLoaded', () => {
