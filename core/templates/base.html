@@ -652,7 +652,7 @@ nav a.btn-login {
 
           <!-- 🔄 CATEGORIAS DINÂMICAS -->
           {% for categoria in categorias_header %}
-            <a href="{% url 'categoria_detalhe' categoria.pk %}#list"
+            <a href="{% url 'categoria_detalhe' categoria.pk %}#header"
                class="suggestion-tag">
               {{ categoria.nome_categoria|upper }}
             </a>
