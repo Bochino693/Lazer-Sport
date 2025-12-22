@@ -9,6 +9,25 @@
     padding: 20px;
 }
 
+/* Botão novo combo */
+.btn-novo-combo {
+    display: inline-block;
+    margin-bottom: 25px;
+    background: linear-gradient(135deg, #198754, #28c76f);
+    color: white;
+    padding: 12px 22px;
+    border-radius: 16px;
+    font-weight: 700;
+    text-decoration: none;
+    transition: .25s ease;
+}
+
+.btn-novo-combo:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(25,135,84,.35);
+}
+
+/* GRID */
 .combos-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -60,6 +79,13 @@
     margin-bottom: 15px;
 }
 
+/* AÇÕES */
+.combo-acoes {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
 .combo-acoes a {
     display: block;
     text-align: center;
@@ -67,18 +93,43 @@
     border-radius: 14px;
     text-decoration: none;
     font-weight: 600;
-    background: #0d6efd;
-    color: white;
     transition: .25s ease;
+    color: white;
 }
 
-.combo-acoes a:hover {
+/* Ver */
+.btn-ver {
+    background: #0d6efd;
+}
+.btn-ver:hover {
     background: #004fc5;
+}
+
+/* Editar */
+.btn-editar {
+    background: #ffc107;
+    color: #222;
+}
+.btn-editar:hover {
+    background: #e0a800;
+}
+
+/* Excluir */
+.btn-excluir {
+    background: #dc3545;
+}
+.btn-excluir:hover {
+    background: #b02a37;
 }
 </style>
 
 <div class="combos-container">
     <h1>🎁 Combos disponíveis</h1>
+
+    <!-- BOTÃO CRIAR -->
+    <a href="{% url 'combo_create' %}" class="btn-novo-combo">
+        ➕ Novo Combo
+    </a>
 
     <div class="combos-grid">
 
@@ -107,7 +158,9 @@
                 </div>
 
                 <div class="combo-acoes">
-                    <a href="#">Ver combo</a>
+                    <a href="{% url 'combo' combo.id %}" class="btn-ver">Ver combo</a>
+                    <a href="{% url 'combo_update' combo.id %}" class="btn-editar">✏️ Editar</a>
+                    <a href="{% url 'combo_delete' combo.id %}" class="btn-excluir">🗑️ Excluir</a>
                 </div>
             </div>
 
@@ -120,7 +173,6 @@
 </div>
 
 <script>
-/* ===== FORMATAÇÃO GLOBAL DE MOEDA ===== */
 function formatarMoedaBR(valor) {
     if (isNaN(valor)) valor = 0;
     return valor.toLocaleString('pt-BR', {
