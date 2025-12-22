@@ -376,7 +376,7 @@
 
                         <p class="descricao">{{ item.descricao|truncatechars:90 }}</p>
 
-                        <p class="preco">
+                        <p class="preco money">
                             R$ {{ item.valor_brinquedo }}
                         </p>
 
@@ -445,6 +445,29 @@ function ordenarProdutos(url) {
     });
 }
 
+function formatarMoedaBR(valor) {
+    if (valor === null || valor === undefined) return '0,00';
+
+    // garante número válido
+    const numero = Number(valor);
+
+    if (isNaN(numero)) return '0,00';
+
+    return numero.toLocaleString('pt-BR', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    });
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    document.querySelectorAll(".money").forEach(el => {
+        const valor = el.dataset.valor;
+
+        if (valor !== undefined && valor !== "") {
+            el.textContent = "R$ " + formatarMoedaBR(valor);
+        }
+    });
+});
 
 </script>
 {% endblock %}
