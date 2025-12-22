@@ -1,0 +1,18 @@
+{% extends "base_adm.html" %}
+{% block content %}
+
+<div class="form-box">
+    <h2>⚠️ Excluir Combo</h2>
+    <p>Tem certeza que deseja excluir <strong>{{ object.descricao }}</strong>?</p>
+
+    <form method="post">
+        {% csrf_token %}
+        <button style="background:#dc3545">Excluir</button>
+    </form>
+
+    <a href="{% url 'combos_admin' %}" style="display:block;text-align:center;margin-top:15px;">
+        Cancelar
+    </a>
+</div>
+
+{% endblock %}

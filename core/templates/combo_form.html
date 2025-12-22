@@ -1,0 +1,38 @@
+{% extends "base_adm.html" %}
+{% block content %}
+
+<style>
+.form-box {
+    max-width: 600px;
+    margin: 40px auto;
+    background: white;
+    padding: 25px;
+    border-radius: 18px;
+    box-shadow: 0 10px 30px rgba(0,0,0,.15);
+}
+.form-box h2 {
+    margin-bottom: 20px;
+}
+.form-box button {
+    background:#0d6efd;
+    color:white;
+    border:none;
+    padding:12px;
+    width:100%;
+    border-radius:14px;
+    font-weight:600;
+}
+</style>
+
+<div class="form-box">
+    <h2>🎁 {{ view.object|default:"Novo Combo" }}</h2>
+
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        {{ form.as_p }}
+
+        <button type="submit">Salvar Combo</button>
+    </form>
+</div>
+
+{% endblock %}

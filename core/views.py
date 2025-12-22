@@ -329,12 +329,38 @@ class ProjetosView(View):
 from .models import Combos
 
 
-class ComboView(View):
-    def get(self, request):
-        context = {
-            'combos': Combos.objects.all(),
-        }
-        return render(request, 'combos_adm.html', context)
+from django.views.generic import ListView, CreateView, UpdateView, DeleteView
+from django.urls import reverse_lazy
+from .models import Combos
+
+
+class ComboListView(ListView):
+    model = Combos
+    template_name = 'combos_adm.html'
+    context_object_name = 'combos'
+
+    def get_queryset(self):
+        return Combos.objects.prefetch_related('brinquedos')
+
+
+class ComboCreateView(CreateView):
+    model = Combos
+    fields = ['descricao', 'imagem_combo', 'brinquedos', 'valor_combo']
+    template_name = 'combo_form.html'
+    success_url = reverse_lazy('combos_admin')
+
+
+class ComboUpdateView(UpdateView):
+    model = Combos
+    fields = ['descricao', 'imagem_combo', 'brinquedos', 'valor_combo']
+    template_name = 'combo_form.html'
+    success_url = reverse_lazy('combos_admin')
+
+
+class ComboDeleteView(DeleteView):
+    model = Combos
+    template_name = 'combo_confirm_delete.html'
+    success_url = reverse_lazy('combos_admin')
 
 
 from django.contrib.auth import logout
