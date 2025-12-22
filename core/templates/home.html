@@ -2151,11 +2151,21 @@ body {
 <script>
 
 function formatarMoedaBR(valor) {
-    if (valor === null || valor === undefined || isNaN(valor)) {
+    if (valor === null || valor === undefined) {
         return '0,00';
     }
 
-    return Number(valor).toLocaleString('pt-BR', {
+    // Normaliza: "1.234,56" → "1234.56"
+    const normalizado = valor
+        .toString()
+        .replace(/\./g, '')
+        .replace(',', '.');
+
+    const numero = Number(normalizado);
+
+    if (isNaN(numero)) return '0,00';
+
+    return numero.toLocaleString('pt-BR', {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2
     });
@@ -2170,12 +2180,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 });
-
-// Atualiza os preços ao carregar a página
-document.addEventListener('DOMContentLoaded', () => {
-    atualizarMoedas();
-});
-
 
 document.addEventListener("DOMContentLoaded", function() {
     const carousel = document.getElementById("carousel-projetos");
