@@ -376,8 +376,8 @@
 
                         <p class="descricao">{{ item.descricao|truncatechars:90 }}</p>
 
-                        <p class="preco money">
-                            R$ {{ item.valor_brinquedo }}
+                        <p class="preco money" data-valor="{{ item.valor_brinquedo }}">
+                            R$ 0,00
                         </p>
 
                         <!-- BOTÃO -->
