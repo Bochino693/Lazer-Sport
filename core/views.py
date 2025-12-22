@@ -330,7 +330,7 @@ from .models import Combos
 
 class ComboListView(ListView):
     model = Combos
-    template_name = "combos.html"
+    template_name = "combos_adm.html"
     context_object_name = "combos"
 
 

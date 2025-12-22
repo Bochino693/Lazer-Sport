@@ -29,6 +29,7 @@ urlpatterns = [
     path("adm/combos/", ComboListView.as_view(), name="combos_admin"),
 
 
+
     path('perfil/', ClientePerfilView.as_view(), name='perfil'),
     path("login/", LoginUsuarioView.as_view(), name="login"),
     path("logout/", LogoutUsuarioView.as_view(), name="logout"),
