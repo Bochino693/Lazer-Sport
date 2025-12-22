@@ -1703,18 +1703,22 @@ body {
            <!-- VALOR TOTAL ORIGINAL -->
             <p class="combo-total">
               Valor dos brinquedos:
-              <span class="total-riscado money" data-valor="{{ combo.total_original }}">R$ 0,00</span>
+              <span class="total-riscado money"
+      data-valor="{{ combo.total_original }}"></span>
             </p>
 
             <!-- PREÇO DO COMBO -->
             <p class="combo-preco">
               Preço do combo:
-              <strong class="preco-promo money" data-valor="{{ combo.valor_combo }}">R$ 0,00</strong>
+              <strong class="preco-promo money"
+        data-valor="{{ combo.valor_combo }}"></strong>
+
             </p>
 
             <p class="combo-economia">
               💰 Economia:
-              <strong class="economia-verde money" data-valor="{{ combo.economia }}">R$ 0,00</strong>
+              <strong class="economia-verde money"
+        data-valor="{{ combo.economia }}"></strong>
               ({{ combo.porcentagem|floatformat:0 }}% OFF)
 
 
