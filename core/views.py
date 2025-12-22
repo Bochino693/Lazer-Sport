@@ -325,6 +325,16 @@ class ProjetosView(View):
         return render(request, 'projetos.html', context)
 
 
+from django.views.generic import ListView
+from .models import Combos
+
+class ComboListView(ListView):
+    model = Combos
+    template_name = "combos.html"
+    context_object_name = "combos"
+
+
+
 from django.contrib.auth import logout
 
 
