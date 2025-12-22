@@ -26,7 +26,7 @@ urlpatterns = [
     path('categoria/admin/new/', NovaCategoria.as_view(), name='categoria_new'),
     path('tags/admin/new/', NovaTag.as_view(), name='tag_new'),
 
-    path("adm/combos/", ComboListView.as_view(), name="combos"),
+    path("adm/combos/", ComboListView.as_view(), name="combos_admin"),
 
 
     path('perfil/', ClientePerfilView.as_view(), name='perfil'),
