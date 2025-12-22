@@ -2170,26 +2170,6 @@ document.addEventListener('DOMContentLoaded', () => {
     atualizarMoedas();
 });
 
-function formatBR(num) {
-    if (!num) return "";
-    num = num.replace(/[^\d.,]/g, "").replace(",", ".");
-    let n = parseFloat(num);
-    if (isNaN(n)) return num;
-
-    return n.toLocaleString("pt-BR", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-    });
-}
-
-document.addEventListener("DOMContentLoaded", () => {
-    document.querySelectorAll(".money").forEach(el => {
-        const original = el.textContent;
-        el.textContent = formatBR(original);
-    });
-});
-
-
 
 document.addEventListener("DOMContentLoaded", function() {
     const carousel = document.getElementById("carousel-projetos");
