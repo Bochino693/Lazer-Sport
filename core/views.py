@@ -188,6 +188,7 @@ class CategoriasInfoView(View):
 
         return render(request, "categorias_info.html", ctx)
 
+
 from django.core.paginator import Paginator
 from django.db.models import F, FloatField, ExpressionWrapper
 from django.db.models import F, FloatField, ExpressionWrapper, DecimalField
@@ -325,14 +326,15 @@ class ProjetosView(View):
         return render(request, 'projetos.html', context)
 
 
-from django.views.generic import ListView
 from .models import Combos
 
-class ComboListView(ListView):
-    model = Combos
-    template_name = "combos_adm.html"
-    context_object_name = "combos"
 
+class ComboView(View):
+    def get(self, request):
+        context = {
+            'combos': Combos.objects.all(),
+        }
+        return render(request, 'combos_adm.html', context)
 
 
 from django.contrib.auth import logout
