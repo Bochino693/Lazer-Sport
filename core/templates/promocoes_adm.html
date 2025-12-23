@@ -92,9 +92,10 @@
                 <h3>{{ promo.descricao }}</h3>
                 <p>🧸 {{ promo.brinquedos.nome_brinquedo }}</p>
 
-                <div class="preco money" data-valor="{{ promo.preco_promocao }}">
+                <div class="preco money" data-valor="{{ promo.preco_promocao|unlocalize }}">
                     R$ 0,00
                 </div>
+
 
                 <div class="acoes">
                     <a href="{% url 'promocao_update' promo.id %}" class="btn-editar">✏️ Editar</a>
