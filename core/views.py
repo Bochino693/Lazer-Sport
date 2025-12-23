@@ -376,6 +376,34 @@ class LogoutUsuarioView(View):
         return render(request, "logout_sucesso.html")
 
 
+from .models import Promocoes
+
+
+class PromocaoListView(ListView):
+    model = Promocoes
+    template_name = "promocoes_adm.html"
+    context_object_name = "promocoes"
+
+
+class PromocaoCreateView(CreateView):
+    model = Promocoes
+    fields = ['descricao', 'imagem_promocao', 'brinquedos', 'preco_promocao']
+    template_name = "promocao_form.html"
+    success_url = reverse_lazy("promocoes_admin")
+
+
+class PromocaoUpdateView(UpdateView):
+    model = Promocoes
+    fields = ['descricao', 'imagem_promocao', 'brinquedos', 'preco_promocao']
+    template_name = "promocao_form.html"
+    success_url = reverse_lazy("promocoes_admin")
+
+
+class PromocaoDeleteView(DeleteView):
+    model = Promocoes
+    template_name = "promocao_confirm_delete.html"
+    success_url = reverse_lazy("promocoes_admin")
+
 class RegistrarView(View):
     template_name = "register.html"
 

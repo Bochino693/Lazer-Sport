@@ -1,10 +1,128 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-</head>
-<body>
+{% extends "base_adm.html" %}
+{% block content %}
 
-</body>
-</html>
+<style>
+.promocoes-container {
+    max-width: 1200px;
+    margin: 40px auto;
+    padding: 20px;
+}
+
+.btn-novo {
+    display:inline-block;
+    margin-bottom:25px;
+    background:linear-gradient(135deg,#ff9800,#ff5722);
+    color:white;
+    padding:12px 22px;
+    border-radius:16px;
+    font-weight:700;
+    text-decoration:none;
+}
+
+.grid-promocoes {
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(280px,1fr));
+    gap:25px;
+}
+
+.card-promocao {
+    background:#fff;
+    border-radius:20px;
+    box-shadow:0 8px 25px rgba(0,0,0,.1);
+    overflow:hidden;
+    transition:.3s;
+}
+
+.card-promocao:hover {
+    transform:translateY(-6px);
+}
+
+.card-promocao img {
+    width:100%;
+    height:200px;
+    object-fit:cover;
+}
+
+.card-body {
+    padding:18px;
+}
+
+.card-body h3 {
+    margin-bottom:6px;
+}
+
+.preco {
+    font-size:1.4rem;
+    font-weight:bold;
+    color:#e53935;
+    margin:10px 0;
+}
+
+.acoes a {
+    display:block;
+    text-align:center;
+    padding:10px;
+    border-radius:14px;
+    color:white;
+    font-weight:600;
+    text-decoration:none;
+    margin-top:6px;
+}
+
+.btn-editar { background:#ffc107; color:#222; }
+.btn-excluir { background:#dc3545; }
+</style>
+
+<div class="promocoes-container">
+    <h1>🔥 Promoções</h1>
+
+    <a href="{% url 'promocao_create' %}" class="btn-novo">
+        ➕ Nova Promoção
+    </a>
+
+    <div class="grid-promocoes">
+        {% for promo in promocoes %}
+        <div class="card-promocao">
+
+            {% if promo.imagem_promocao %}
+                <img src="{{ promo.imagem_promocao.url }}">
+            {% endif %}
+
+            <div class="card-body">
+                <h3>{{ promo.descricao }}</h3>
+                <p>🧸 {{ promo.brinquedos.nome_brinquedo }}</p>
+
+                <div class="preco money" data-valor="{{ promo.preco_promocao }}">
+                    R$ 0,00
+                </div>
+
+                <div class="acoes">
+                    <a href="{% url 'promocao_update' promo.id %}" class="btn-editar">✏️ Editar</a>
+                    <a href="{% url 'promocao_delete' promo.id %}" class="btn-excluir">🗑️ Excluir</a>
+                </div>
+            </div>
+
+        </div>
+        {% empty %}
+            <p>Nenhuma promoção cadastrada.</p>
+        {% endfor %}
+    </div>
+</div>
+
+<script>
+function formatarMoedaBR(valor) {
+    if (isNaN(valor)) valor = 0;
+    return Number(valor).toLocaleString('pt-BR', {
+        minimumFractionDigits:2,
+        maximumFractionDigits:2
+    });
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    document.querySelectorAll(".money").forEach(el => {
+        el.textContent = "R$ " + formatarMoedaBR(el.dataset.valor);
+    });
+});
+</script>
+
+{% endblock %}

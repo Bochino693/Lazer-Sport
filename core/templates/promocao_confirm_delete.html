@@ -1,0 +1,17 @@
+{% extends "base_adm.html" %}
+{% block content %}
+
+<div style="max-width:500px;margin:80px auto;text-align:center;">
+    <h2>🗑️ Excluir promoção?</h2>
+    <p>{{ object.descricao }}</p>
+
+    <form method="post">
+        {% csrf_token %}
+        <button style="background:#dc3545;color:white;padding:12px 22px;border:none;border-radius:12px;">
+            Confirmar exclusão
+        </button>
+        <a href="{% url 'promocoes_admin' %}" style="margin-left:10px;">Cancelar</a>
+    </form>
+</div>
+
+{% endblock %}

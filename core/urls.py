@@ -3,7 +3,8 @@ from .views import (HomeView, BrinquedoInfoView, CategoriasInfoView, BrinquedosV
                     RegistrarView, LoginUsuarioView, LogoutUsuarioView, EventosView,
                     ProjetosView, ClientePerfilView, ComboInfoView, PromocaoInfoView,
                     BrinquedoAdmin, NovaCategoria, NovaTag, ComboListView, ComboCreateView,
-                    ComboUpdateView, ComboDeleteView
+                    ComboUpdateView, ComboDeleteView, PromocaoListView, PromocaoCreateView,
+                    PromocaoDeleteView, PromocaoUpdateView
                     )   # importa views do mesmo app
 from django.conf import settings
 from django.conf.urls.static import static
@@ -31,6 +32,13 @@ urlpatterns = [
     path('adm/combos/novo/', ComboCreateView.as_view(), name='combo_create'),
     path('adm/combos/editar/<int:pk>/', ComboUpdateView.as_view(), name='combo_update'),
     path('adm/combos/excluir/<int:pk>/', ComboDeleteView.as_view(), name='combo_delete'),
+
+
+    path("adm/promocoes/", PromocaoListView.as_view(), name="promocoes_admin"),
+    path("adm/promocoes/nova/", PromocaoCreateView.as_view(), name="promocao_create"),
+    path("adm/promocoes/<int:pk>/editar/", PromocaoUpdateView.as_view(), name="promocao_update"),
+    path("adm/promocoes/<int:pk>/excluir/", PromocaoDeleteView.as_view(), name="promocao_delete"),
+
 
     path('perfil/', ClientePerfilView.as_view(), name='perfil'),
     path("login/", LoginUsuarioView.as_view(), name="login"),
