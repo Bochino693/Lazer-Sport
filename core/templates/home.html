@@ -1948,7 +1948,6 @@ body {
 <!-- Div invisível para espaçamento -->
 <div class="espacador"></div>
 
-
 <!-- ======= EVENTOS ======= -->
 <section id="eventos" class="eventos-section">
     <div class="eventos-header">
@@ -2170,16 +2169,15 @@ function formatarMoedaBR(valor) {
         maximumFractionDigits: 2
     });
 }
-
-document.addEventListener('DOMContentLoaded', () => {
-    document.querySelectorAll('.money').forEach(el => {
+function renderizarMoedas(root = document) {
+    root.querySelectorAll('.money').forEach(el => {
         const valor = el.dataset.valor;
 
-        if (valor !== undefined) {
+        if (valor !== undefined && valor !== null && valor !== '') {
             el.textContent = 'R$ ' + formatarMoedaBR(valor);
         }
     });
-});
+}
 
 document.addEventListener("DOMContentLoaded", function() {
     const carousel = document.getElementById("carousel-projetos");
@@ -2431,6 +2429,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // 1. Renderiza no carregamento inicial da página
     renderizarTodasEstrelas();
 
+      renderizarMoedas();
 
 
     // 3. Centraliza Grid (CSS via JS opcional)
@@ -2643,6 +2642,10 @@ function carregarProdutos(params = {}) {
 
             // ⭐ correto
             renderizarTodasEstrelas(document.querySelector('#grid-cards'));
+
+            // Depois de trocar o HTML
+            renderizarMoedas(document.querySelector('#grid-cards'));
+
         });
 }
 
