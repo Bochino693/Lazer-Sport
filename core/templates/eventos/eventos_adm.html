@@ -75,7 +75,7 @@
 <div class="eventos-container">
     <h1>🎉 Eventos</h1>
 
-    <a href="{% url 'evento_create' %}" class="btn-novo">
+    <a href="{% url 'eventos_create' %}" class="btn-novo">
         ➕ Novo Evento
     </a>
 
@@ -97,8 +97,8 @@
             </ul>
 
             <div class="evento-acoes">
-                <a href="{% url 'evento_update' evento.id %}" class="btn-editar">✏️ Editar</a>
-                <a href="{% url 'evento_delete' evento.id %}" class="btn-excluir">🗑️ Excluir</a>
+                <a href="{% url 'eventos_update' evento.id %}" class="btn-editar">✏️ Editar</a>
+                <a href="{% url 'eventos_delete' evento.id %}" class="btn-excluir">🗑️ Excluir</a>
             </div>
         </div>
         {% empty %}
