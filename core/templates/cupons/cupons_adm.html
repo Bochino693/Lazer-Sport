@@ -1,0 +1,150 @@
+{% extends "base_adm.html" %}
+{% block content %}
+
+<style>
+.cupons-container {
+    max-width:1200px;
+    margin:40px auto;
+    padding:20px;
+}
+
+.cupons-header {
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:30px;
+}
+
+.cupons-header h1 {
+    font-size:1.8rem;
+}
+
+.btn-novo-cupom {
+    background:linear-gradient(135deg,#6a11cb,#2575fc);
+    color:#fff;
+    border:none;
+    padding:12px 22px;
+    border-radius:16px;
+    font-weight:700;
+    cursor:pointer;
+}
+
+.grid-cupons {
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(260px,1fr));
+    gap:20px;
+}
+
+.cupom-card {
+    background:#fff;
+    border-radius:20px;
+    padding:20px;
+    box-shadow:0 8px 25px rgba(0,0,0,.08);
+    transition:.25s;
+    position:relative;
+}
+
+.cupom-card:hover {
+    transform:translateY(-5px);
+}
+
+.cupom-codigo {
+    font-size:1.4rem;
+    font-weight:800;
+    letter-spacing:1px;
+    color:#2575fc;
+}
+
+.cupom-desconto {
+    font-size:1.2rem;
+    font-weight:700;
+    margin:12px 0;
+}
+
+.cupom-acoes {
+    display:flex;
+    gap:10px;
+}
+
+.cupom-acoes a {
+    flex:1;
+    text-align:center;
+    padding:10px;
+    border-radius:12px;
+    font-weight:600;
+    text-decoration:none;
+}
+
+.btn-editar {
+    background:#ffc107;
+    color:#222;
+}
+
+.btn-excluir {
+    background:#dc3545;
+    color:white;
+}
+</style>
+
+<div class="cupons-container">
+
+    <div class="cupons-header">
+        <h1>🎟️ Cupons de Desconto</h1>
+        <button class="btn-novo-cupom"
+                onclick="abrirModal('{% url 'cupom_create' %}')">
+            ➕ Novo Cupom
+        </button>
+    </div>
+
+    <div class="grid-cupons">
+        {% for cupom in cupons %}
+        <div class="cupom-card">
+            <div class="cupom-codigo">{{ cupom.codigo }}</div>
+            <div class="cupom-desconto">
+                🔻 {{ cupom.desconto_percentual }}% OFF
+            </div>
+
+            <div class="cupom-acoes">
+                <a href="{% url 'cupom_update' cupom.id %}" class="btn-editar">
+                    ✏️ Editar
+                </a>
+                <a href="{% url 'cupom_delete' cupom.id %}" class="btn-excluir">
+                    🗑️
+                </a>
+            </div>
+        </div>
+        {% empty %}
+            <p>Nenhum cupom cadastrado.</p>
+        {% endfor %}
+    </div>
+
+</div>
+
+<!-- MODAL -->
+<div id="modalCupom" style="display:none">
+    <div class="modal-overlay" onclick="fecharModal()"></div>
+
+    <div class="modal-card" style="max-width:480px">
+        <div class="modal-header">
+            <h3>Novo Cupom</h3>
+            <button class="btn-close" onclick="fecharModal()">✕</button>
+        </div>
+
+        <div id="modalConteudo">Carregando...</div>
+    </div>
+</div>
+
+<script>
+function abrirModal(url){
+    document.getElementById("modalCupom").style.display = "block";
+    fetch(url).then(r=>r.text()).then(html=>{
+        document.getElementById("modalConteudo").innerHTML = html;
+    });
+}
+
+function fecharModal(){
+    document.getElementById("modalCupom").style.display = "none";
+}
+</script>
+
+{% endblock %}

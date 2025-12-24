@@ -1,0 +1,110 @@
+{% extends "base_adm.html" %}
+{% block content %}
+
+<style>
+.eventos-container {
+    max-width:1200px;
+    margin:40px auto;
+    padding:20px;
+}
+
+.btn-novo {
+    display:inline-block;
+    margin-bottom:25px;
+    background:linear-gradient(135deg,#0d6efd,#0a58ca);
+    color:white;
+    padding:12px 22px;
+    border-radius:16px;
+    font-weight:700;
+    text-decoration:none;
+}
+
+.grid-eventos {
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(300px,1fr));
+    gap:25px;
+}
+
+.evento-card {
+    background:#fff;
+    border-radius:22px;
+    box-shadow:0 10px 30px rgba(0,0,0,.12);
+    padding:20px;
+    transition:.3s;
+}
+
+.evento-card:hover {
+    transform:translateY(-6px);
+}
+
+.evento-card h3 {
+    font-size:1.25rem;
+    margin-bottom:10px;
+}
+
+.evento-descricao {
+    font-size:.95rem;
+    color:#555;
+    margin-bottom:12px;
+}
+
+.evento-brinquedos {
+    font-size:.85rem;
+    margin-bottom:15px;
+}
+
+.evento-brinquedos li {
+    list-style:none;
+}
+
+.evento-acoes a {
+    display:block;
+    text-align:center;
+    padding:10px;
+    border-radius:14px;
+    font-weight:600;
+    text-decoration:none;
+    margin-top:6px;
+    color:white;
+}
+
+.btn-editar { background:#ffc107; color:#222; }
+.btn-excluir { background:#dc3545; }
+</style>
+
+<div class="eventos-container">
+    <h1>🎉 Eventos</h1>
+
+    <a href="{% url 'evento_create' %}" class="btn-novo">
+        ➕ Novo Evento
+    </a>
+
+    <div class="grid-eventos">
+        {% for evento in eventos %}
+        <div class="evento-card">
+            <h3>{{ evento.titulo }}</h3>
+
+            <p class="evento-descricao">
+                {{ evento.descricao|truncatechars:120 }}
+            </p>
+
+            <ul class="evento-brinquedos">
+                {% for brinquedo in evento.brinquedos.all %}
+                    <li>🧸 {{ brinquedo.nome_brinquedo }}</li>
+                {% empty %}
+                    <li>Nenhum brinquedo vinculado</li>
+                {% endfor %}
+            </ul>
+
+            <div class="evento-acoes">
+                <a href="{% url 'evento_update' evento.id %}" class="btn-editar">✏️ Editar</a>
+                <a href="{% url 'evento_delete' evento.id %}" class="btn-excluir">🗑️ Excluir</a>
+            </div>
+        </div>
+        {% empty %}
+            <p>Nenhum evento cadastrado.</p>
+        {% endfor %}
+    </div>
+</div>
+
+{% endblock %}

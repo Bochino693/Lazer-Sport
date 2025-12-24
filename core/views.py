@@ -12,7 +12,7 @@ from .forms import UserForm, PerfilForm
 from django.contrib.auth.mixins import LoginRequiredMixin
 
 from .models import Brinquedos, CategoriasBrinquedos, Projetos, Eventos, ClientePerfil, Combos, Cupom, Promocoes, \
-    TagsBrinquedos, ImagensSite
+    TagsBrinquedos, ImagensSite, BrinquedosProjeto
 
 import os
 from django.http import FileResponse, Http404
@@ -328,7 +328,6 @@ class ProjetosView(View):
 
 from .models import Combos
 
-
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView
 from django.urls import reverse_lazy
 from .models import Combos
@@ -403,6 +402,90 @@ class PromocaoDeleteView(DeleteView):
     model = Promocoes
     template_name = "promocao_confirm_delete.html"
     success_url = reverse_lazy("promocoes_admin")
+
+
+class CupomListView(ListView):
+    model = Cupom
+    template_name = "cupons/cupons_adm.html"
+    context_object_name = "cupons"
+
+
+class CupomCreateView(CreateView):
+    model = Cupom
+    fields = ["codigo", "desconto_percentual"]
+    template_name = "cupons/partials/cupom_modal.html"
+    success_url = reverse_lazy("cupons_admin")
+
+
+class CupomUpdateView(UpdateView):
+    model = Cupom
+    fields = ["codigo", "desconto_percentual"]
+    template_name = "cupons/cupons_form.html"
+    success_url = reverse_lazy("cupons_admin")
+
+
+class CupomDeleteView(DeleteView):
+    model = Cupom
+    template_name = "cupons/cupons_confirm_delete.html"
+    success_url = reverse_lazy("cupons_admin")
+
+
+class BrinquedoProjetoListView(ListView):
+    model = BrinquedosProjeto
+    template_name = "projetos/brinquedos_projeto_adm.html"
+    context_object_name = "brinquedos"
+
+class ProjetoListView(ListView):
+    model = Projetos
+    template_name = "projetos/projetos_adm.html"
+    context_object_name = "projetos"
+
+
+class ProjetoCreateView(CreateView):
+    model = Projetos
+    fields = ["titulo", "descricao", "brinquedo_projetado"]
+    template_name = "projetos/partials/projeto_modal.html"
+    success_url = reverse_lazy("projetos_admin")
+
+
+class ProjetoUpdateView(UpdateView):
+    model = Projetos
+    fields = ["titulo", "descricao", "brinquedo_projetado"]
+    template_name = "projetos/projetos_form.html"
+    success_url = reverse_lazy("projetos_admin")
+
+
+class ProjetoDeleteView(DeleteView):
+    model = Projetos
+    template_name = "projetos/projetos_confirm_delete.html"
+    success_url = reverse_lazy("projetos_admin")
+
+
+
+class EventoListView(ListView):
+    model = Eventos
+    template_name = "eventos/eventos_adm.html"
+    context_object_name = "eventos"
+
+
+class EventoCreateView(CreateView):
+    model = Eventos
+    fields = ["titulo", "descricao", "brinquedos"]
+    template_name = "eventos/partials/evento_modal.html"
+    success_url = reverse_lazy("eventos_admin")
+
+
+class EventoUpdateView(UpdateView):
+    model = Eventos
+    fields = ["titulo", "descricao", "brinquedos"]
+    template_name = "eventos/eventos_form.html"
+    success_url = reverse_lazy("eventos_admin")
+
+
+class EventoDeleteView(DeleteView):
+    model = Eventos
+    template_name = "eventos/eventos_confirm_delete.html"
+    success_url = reverse_lazy("eventos_admin")
 
 
 class RegistrarView(View):
