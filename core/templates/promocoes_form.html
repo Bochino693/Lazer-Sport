@@ -2,6 +2,11 @@
 {% block content %}
 
 <style>
+#id_brinquedos {
+    display:none;
+}
+
+
 :root {
     --primary:#ff5722;
     --primary-dark:#e64a19;
@@ -125,6 +130,59 @@ body {
         padding:24px 20px;
     }
 }
+
+.modal-overlay {
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,.55);
+}
+
+.modal-card {
+    position:fixed;
+    top:50%;
+    left:50%;
+    transform:translate(-50%,-50%);
+    width:90%;
+    max-width:600px;
+    background:white;
+    border-radius:20px;
+    padding:22px;
+    box-shadow:0 30px 80px rgba(0,0,0,.35);
+}
+
+.modal-card h3 {
+    text-align:center;
+    margin-bottom:15px;
+}
+
+.modal-card input {
+    width:100%;
+    margin-bottom:15px;
+}
+
+.grid-brinquedos {
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(140px,1fr));
+    gap:12px;
+    max-height:350px;
+    overflow:auto;
+}
+
+.card-brinquedo {
+    padding:14px;
+    border-radius:14px;
+    background:#f5f5f5;
+    cursor:pointer;
+    text-align:center;
+    transition:.2s;
+}
+
+.card-brinquedo:hover {
+    background:#ff5722;
+    color:white;
+    transform:scale(1.03);
+}
+
 </style>
 
 <div class="form-wrapper">
@@ -138,6 +196,16 @@ body {
             {% csrf_token %}
             {{ form.as_p }}
 
+
+            <div style="margin-bottom:20px">
+    <label>🧸 Brinquedo</label>
+    <button type="button" class="btn-submit" onclick="abrirModal()">
+        Selecionar Brinquedo
+    </button>
+    <p id="brinquedoSelecionado" style="margin-top:8px;font-weight:600;"></p>
+</div>
+
+
             <button type="submit" class="btn-submit">
                 💾 Salvar Promoção
             </button>
@@ -145,5 +213,57 @@ body {
 
     </div>
 </div>
+
+
+
+<div id="modalBrinquedos" style="display:none">
+    <div class="modal-overlay" onclick="fecharModal()"></div>
+
+    <div class="modal-card">
+        <h3>Selecionar Brinquedo</h3>
+
+        <input type="text" id="filtro" placeholder="🔍 Filtrar por nome ou ID" onkeyup="filtrarBrinquedos()">
+
+        <div class="grid-brinquedos">
+            {% for brinquedo in form.fields.brinquedos.queryset %}
+            <div class="card-brinquedo"
+                 data-id="{{ brinquedo.id }}"
+                 data-nome="{{ brinquedo.nome_brinquedo }}"
+                 onclick="selecionarBrinquedo('{{ brinquedo.id }}','{{ brinquedo.nome_brinquedo }}')">
+                <strong>#{{ brinquedo.id }}</strong>
+                <span>{{ brinquedo.nome_brinquedo }}</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+
+
+<script>
+function abrirModal() {
+    document.getElementById("modalBrinquedos").style.display = "block";
+}
+
+function fecharModal() {
+    document.getElementById("modalBrinquedos").style.display = "none";
+}
+
+function selecionarBrinquedo(id, nome) {
+    document.getElementById("id_brinquedos").value = id;
+    document.getElementById("brinquedoSelecionado").innerText =
+        "Selecionado: " + nome + " (ID " + id + ")";
+    fecharModal();
+}
+
+function filtrarBrinquedos() {
+    const termo = document.getElementById("filtro").value.toLowerCase();
+    document.querySelectorAll(".card-brinquedo").forEach(card => {
+        const texto = card.dataset.nome.toLowerCase() + card.dataset.id;
+        card.style.display = texto.includes(termo) ? "block" : "none";
+    });
+}
+</script>
+
 
 {% endblock %}

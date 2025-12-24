@@ -1,6 +1,7 @@
 from django import forms
 from django.contrib.auth.models import User
-from .models import ClientePerfil
+from .models import ClientePerfil, Promocoes
+
 
 class UserForm(forms.ModelForm):
     class Meta:
@@ -18,4 +19,12 @@ class PerfilForm(forms.ModelForm):
         fields = ['nome_completo']
         widgets = {
             'nome_completo': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Nome completo'}),
+        }
+
+class PromocaoForm(forms.ModelForm):
+    class Meta:
+        model = Promocoes
+        fields = "__all__"
+        widgets = {
+            "brinquedos": forms.Select(attrs={"id": "id_brinquedos"}),
         }
