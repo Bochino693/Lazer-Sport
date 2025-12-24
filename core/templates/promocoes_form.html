@@ -284,11 +284,43 @@ body {
     .grid-brinquedos { grid-template-columns:repeat(2,1fr); }
 }
 
+/* ================= BREADCRUMB ================= */
+
+.breadcrumb {
+    display:flex;
+    align-items:center;
+    gap:8px;
+    font-size:.9rem;
+    margin-bottom:18px;
+    color:#777;
+}
+
+.breadcrumb a {
+    color:var(--primary);
+    text-decoration:none;
+    font-weight:600;
+    transition:.2s;
+}
+
+.breadcrumb a:hover {
+    text-decoration:underline;
+}
+
+.breadcrumb span {
+    opacity:.6;
+}
 
 </style>
 
 <div class="form-wrapper">
     <div class="form-card">
+
+        <div class="breadcrumb">
+    <a href="{% url 'promocoes_admin' %}">Promoções</a>
+    <span>›</span>
+    <span>Editar</span>
+</div>
+
 
         <h2>
             🔥 {{ view.object|default:"Nova Promoção" }}
