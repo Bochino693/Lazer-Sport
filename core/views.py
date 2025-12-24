@@ -390,6 +390,11 @@ class PromocaoCreateView(CreateView):
     template_name = "promocoes_form.html"
     success_url = reverse_lazy("promocoes_admin")
 
+    def get_template_names(self):
+        if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return ['promocoes_modal.html']
+        return ['promocoes_form.html']
+
 
 class PromocaoUpdateView(UpdateView):
     model = Promocoes
@@ -435,6 +440,7 @@ class BrinquedoProjetoListView(ListView):
     template_name = "projetos/brinquedos_projeto_adm.html"
     context_object_name = "brinquedos"
 
+
 class ProjetoListView(ListView):
     model = Projetos
     template_name = "projetos/projetos_adm.html"
@@ -459,7 +465,6 @@ class ProjetoDeleteView(DeleteView):
     model = Projetos
     template_name = "projetos/projetos_confirm_delete.html"
     success_url = reverse_lazy("projetos_admin")
-
 
 
 class EventoListView(ListView):

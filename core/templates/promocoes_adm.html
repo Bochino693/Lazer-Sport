@@ -129,10 +129,11 @@
 
 <div class="promocoes-container">
     <h1>🔥 Promoções</h1>
-
-<a href="{% url 'promocao_create' %}" class="btn-novo">
+<button class="btn-novo"
+        onclick="abrirModal('{% url 'promocao_create' %}')">
     ➕ Nova Promoção
-</a>
+</button>
+
 
     <div class="grid-promocoes">
         {% for promo in promocoes %}
@@ -197,16 +198,23 @@ document.addEventListener("DOMContentLoaded", () => {
         el.textContent = "R$ " + formatarMoedaBR(el.dataset.valor);
     });
 });
-    function abrirModal(url) {
+
+
+function abrirModal(url) {
     document.getElementById("modalPromocao").style.display = "block";
     document.getElementById("modalConteudo").innerHTML = "Carregando...";
 
-    fetch(url)
-        .then(response => response.text())
-        .then(html => {
-            document.getElementById("modalConteudo").innerHTML = html;
-        });
+    fetch(url, {
+        headers: {
+            "X-Requested-With": "XMLHttpRequest"
+        }
+    })
+    .then(response => response.text())
+    .then(html => {
+        document.getElementById("modalConteudo").innerHTML = html;
+    });
 }
+
 
 function fecharModal() {
     document.getElementById("modalPromocao").style.display = "none";
