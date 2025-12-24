@@ -131,10 +131,14 @@ body {
     }
 }
 
+/* ===== MODAL APP STYLE (override) ===== */
+
 .modal-overlay {
     position:fixed;
     inset:0;
-    background:rgba(0,0,0,.55);
+    background:rgba(0,0,0,.65);
+    backdrop-filter:blur(4px);
+    z-index:999;
 }
 
 .modal-card {
@@ -142,46 +146,123 @@ body {
     top:50%;
     left:50%;
     transform:translate(-50%,-50%);
-    width:90%;
-    max-width:600px;
+    width:92%;
+    max-width:640px;
     background:white;
-    border-radius:20px;
-    padding:22px;
-    box-shadow:0 30px 80px rgba(0,0,0,.35);
+    border-radius:26px;
+    padding:20px;
+    box-shadow:0 35px 100px rgba(0,0,0,.45);
+    animation:scaleIn .25s ease;
+    z-index:1000;
 }
 
-.modal-card h3 {
-    text-align:center;
-    margin-bottom:15px;
+@keyframes scaleIn {
+    from {
+        opacity:0;
+        transform:translate(-50%,-50%) scale(.95);
+    }
+    to {
+        opacity:1;
+        transform:translate(-50%,-50%) scale(1);
+    }
 }
 
-.modal-card input {
-    width:100%;
-    margin-bottom:15px;
+/* Header do modal */
+.modal-header {
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding-bottom:12px;
+    border-bottom:1px solid #eee;
 }
 
-.grid-brinquedos {
-    display:grid;
-    grid-template-columns:repeat(auto-fill,minmax(140px,1fr));
-    gap:12px;
-    max-height:350px;
-    overflow:auto;
+.modal-header h3 {
+    margin:0;
+    font-size:1.25rem;
+    font-weight:700;
 }
 
-.card-brinquedo {
-    padding:14px;
-    border-radius:14px;
-    background:#f5f5f5;
+/* Botão fechar */
+.btn-close {
+    border:none;
+    background:#f3f3f3;
+    width:36px;
+    height:36px;
+    border-radius:50%;
     cursor:pointer;
-    text-align:center;
+    font-size:18px;
+    line-height:1;
     transition:.2s;
 }
 
-.card-brinquedo:hover {
+.btn-close:hover {
     background:#ff5722;
     color:white;
-    transform:scale(1.03);
 }
+
+/* Campo de busca estilo app */
+.search-box {
+    display:flex;
+    align-items:center;
+    background:#f4f6f9;
+    padding:12px 14px;
+    border-radius:16px;
+    margin:18px 0;
+}
+
+.search-box span {
+    margin-right:8px;
+    font-size:18px;
+    opacity:.6;
+}
+
+.search-box input {
+    border:none;
+    background:transparent;
+    outline:none;
+    width:100%;
+    font-size:.95rem;
+}
+
+/* Grid de brinquedos (override) */
+.grid-brinquedos {
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(160px,1fr));
+    gap:14px;
+    max-height:380px;
+    overflow:auto;
+    padding-right:4px;
+}
+
+/* Cards (override) */
+.card-brinquedo {
+    background:#f8f9fb;
+    border-radius:18px;
+    padding:16px 14px;
+    cursor:pointer;
+    transition:.25s;
+    text-align:center;
+    border:1px solid transparent;
+}
+
+.card-brinquedo strong {
+    display:block;
+    font-size:.85rem;
+    opacity:.6;
+}
+
+.card-brinquedo span {
+    font-weight:600;
+}
+
+.card-brinquedo:hover {
+    background:white;
+    border-color:#ff5722;
+    box-shadow:0 10px 30px rgba(0,0,0,.12);
+    transform:translateY(-3px);
+}
+
+
 
 </style>
 
@@ -199,9 +280,11 @@ body {
 
             <div style="margin-bottom:20px">
     <label>🧸 Brinquedo</label>
-    <button type="button" class="btn-submit" onclick="abrirModal()">
-        Selecionar Brinquedo
-    </button>
+    <div class="modal-header">
+    <h3>Selecionar Brinquedo</h3>
+    <button class="btn-close" onclick="fecharModal()">✕</button>
+    </div>
+
     <p id="brinquedoSelecionado" style="margin-top:8px;font-weight:600;"></p>
 </div>
 
@@ -222,7 +305,11 @@ body {
     <div class="modal-card">
         <h3>Selecionar Brinquedo</h3>
 
-        <input type="text" id="filtro" placeholder="🔍 Filtrar por nome ou ID" onkeyup="filtrarBrinquedos()">
+        <div class="search-box">
+            <span>🔍</span>
+            <input type="text" id="filtro" placeholder="Buscar por nome ou ID" onkeyup="filtrarBrinquedos()">
+        </div>
+
 
         <div class="grid-brinquedos">
             {% for brinquedo in form.fields.brinquedos.queryset %}
