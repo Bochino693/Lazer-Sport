@@ -388,7 +388,7 @@ class PromocaoListView(ListView):
 class PromocaoCreateView(CreateView):
     model = Promocoes
     fields = ['descricao', 'imagem_promocao', 'brinquedos', 'preco_promocao']
-    template_name = "promocoes_adm.html"
+    template_name = "promocoes_form.html"
     success_url = reverse_lazy("promocoes_admin")
 
 
@@ -403,6 +403,7 @@ class PromocaoDeleteView(DeleteView):
     model = Promocoes
     template_name = "promocao_confirm_delete.html"
     success_url = reverse_lazy("promocoes_admin")
+
 
 class RegistrarView(View):
     template_name = "register.html"
