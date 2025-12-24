@@ -245,36 +245,40 @@ body {
     overflow:auto;
     padding-right:4px;
 }
-
-/* Cards (override) */
 .card-brinquedo {
-    padding:14px;
-    border-radius:14px;
-    background:#f5f5f5;
     background:#f8f9fb;
     border-radius:18px;
-    padding:16px 14px;
+    padding:12px;
     cursor:pointer;
     transition:.25s;
-    text-align:center;
-    transition:.2s;
     border:1px solid transparent;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+}
+
+.card-brinquedo img {
+    width:100%;
+    height:120px;
+    object-fit:cover;
+    border-radius:14px;
+}
+
+.card-brinquedo .info {
+    text-align:center;
+}
+
+.card-brinquedo small {
+    font-size:.75rem;
+    opacity:.6;
 }
 
 .card-brinquedo strong {
     display:block;
-    font-size:.85rem;
-    opacity:.6;
-}
-
-.card-brinquedo span {
-    font-weight:600;
+    font-size:.9rem;
 }
 
 .card-brinquedo:hover {
-    background:#ff5722;
-    color:white;
-    transform:scale(1.03);
     background:white;
     border-color:#ff5722;
     box-shadow:0 10px 30px rgba(0,0,0,.12);
@@ -319,9 +323,17 @@ body {
     <div class="modal-overlay" onclick="fecharModal()"></div>
 
     <div class="modal-card">
-        <h3>Selecionar Brinquedo</h3>
 
-        <input type="text" id="filtro" placeholder="🔍 Filtrar por nome ou ID" onkeyup="filtrarBrinquedos()">
+        <div class="modal-header">
+            <h3>Selecionar Brinquedo</h3>
+            <button class="btn-close" onclick="fecharModal()">✕</button>
+        </div>
+
+        <div class="search-box">
+            <span>🔍</span>
+            <input type="text" id="filtro" placeholder="Buscar por nome ou ID"
+                   onkeyup="filtrarBrinquedos()">
+        </div>
 
         <div class="grid-brinquedos">
             {% for brinquedo in form.fields.brinquedos.queryset %}
@@ -329,13 +341,23 @@ body {
                  data-id="{{ brinquedo.id }}"
                  data-nome="{{ brinquedo.nome_brinquedo }}"
                  onclick="selecionarBrinquedo('{{ brinquedo.id }}','{{ brinquedo.nome_brinquedo }}')">
-                <strong>#{{ brinquedo.id }}</strong>
-                <span>{{ brinquedo.nome_brinquedo }}</span>
+
+                {% if brinquedo.imagem %}
+                    <img src="{{ brinquedo.imagem.url }}" alt="{{ brinquedo.nome_brinquedo }}">
+                {% endif %}
+
+                <div class="info">
+                    <small>ID {{ brinquedo.id }}</small>
+                    <strong>{{ brinquedo.nome_brinquedo }}</strong>
+                </div>
+
             </div>
             {% endfor %}
         </div>
+
     </div>
 </div>
+
 
 
 <script>
