@@ -392,7 +392,7 @@ class PromocaoCreateView(CreateView):
 
     def get_template_names(self):
         if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
-            return ['promocoes_modal.html']
+            return ['partials/promocao_form.html']
         return ['promocoes_form.html']
 
 
