@@ -72,14 +72,68 @@
 
 .btn-editar { background:#ffc107; color:#222; }
 .btn-excluir { background:#dc3545; }
+
+
+
+.modal-overlay {
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,.6);
+    backdrop-filter:blur(5px);
+    z-index:1000;
+}
+
+.modal-card {
+    position:fixed;
+    top:50%;
+    left:50%;
+    transform:translate(-50%,-50%);
+    width:92%;
+    background:white;
+    border-radius:24px;
+    padding:24px;
+    box-shadow:0 30px 80px rgba(0,0,0,.45);
+    z-index:1001;
+    animation:modalIn .25s ease;
+}
+
+@keyframes modalIn {
+    from {
+        opacity:0;
+        transform:translate(-50%,-45%) scale(.96);
+    }
+    to {
+        opacity:1;
+        transform:translate(-50%,-50%) scale(1);
+    }
+}
+
+.modal-header {
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:15px;
+}
+
+.btn-close {
+    width:38px;
+    height:38px;
+    border-radius:50%;
+    border:none;
+    background:#f3f3f3;
+    cursor:pointer;
+    font-size:18px;
+}
+
 </style>
 
 <div class="promocoes-container">
     <h1>🔥 Promoções</h1>
 
-    <a href="{% url 'promocao_create' %}" class="btn-novo">
-        ➕ Nova Promoção
-    </a>
+   <button class="btn-novo"
+        onclick="abrirModal('{% url 'promocao_create' %}')">
+    ➕ Nova Promoção
+    </button>
 
     <div class="grid-promocoes">
         {% for promo in promocoes %}
@@ -111,6 +165,25 @@
     </div>
 </div>
 
+<!-- MODAL PROMOÇÃO -->
+<div id="modalPromocao" style="display:none">
+
+    <div class="modal-overlay" onclick="fecharModal()"></div>
+
+    <div class="modal-card" style="max-width:600px">
+        <div class="modal-header">
+            <h3>Nova Promoção</h3>
+            <button class="btn-close" onclick="fecharModal()">✕</button>
+        </div>
+
+        <div id="modalConteudo">
+            <p style="text-align:center">Carregando...</p>
+        </div>
+    </div>
+
+</div>
+
+
 <script>
 function formatarMoedaBR(valor) {
     if (isNaN(valor)) valor = 0;
@@ -125,6 +198,22 @@ document.addEventListener("DOMContentLoaded", () => {
         el.textContent = "R$ " + formatarMoedaBR(el.dataset.valor);
     });
 });
+    function abrirModal(url) {
+    document.getElementById("modalPromocao").style.display = "block";
+    document.getElementById("modalConteudo").innerHTML = "Carregando...";
+
+    fetch(url)
+        .then(response => response.text())
+        .then(html => {
+            document.getElementById("modalConteudo").innerHTML = html;
+        });
+}
+
+function fecharModal() {
+    document.getElementById("modalPromocao").style.display = "none";
+}
+
+
 </script>
 
 {% endblock %}
