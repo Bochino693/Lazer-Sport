@@ -5,7 +5,9 @@ from .views import (HomeView, BrinquedoInfoView, CategoriasInfoView, BrinquedosV
                     BrinquedoAdmin, NovaCategoria, NovaTag, ComboListView, ComboCreateView,
                     ComboUpdateView, ComboDeleteView, PromocaoListView, PromocaoCreateView,
                     PromocaoDeleteView, PromocaoUpdateView, EventoListView, EventoCreateView,
-                    EventoDeleteView, EventoUpdateView
+                    EventoDeleteView, EventoUpdateView, CupomListView, CupomUpdateView, CupomCreateView,
+                    CupomDeleteView, ProjetoListView, ProjetoUpdateView, ProjetoCreateView, ProjetoDeleteView
+
                     )   # importa views do mesmo app
 from django.conf import settings
 from django.conf.urls.static import static
@@ -46,7 +48,15 @@ urlpatterns = [
     path("adm/eventos/<int:pk>/editar/", EventoUpdateView.as_view(), name='eventos_update'),
     path("adm/eventos/<int:pk>/excluir/", EventoDeleteView.as_view(), name='eventos_delete'),
 
+    path("adm/cupons/", CupomListView.as_view(), name='cupons_admin'),
+    path("adm/cupons/novo/", CupomCreateView.as_view(), name='cupons_create'),
+    path("adm/cupons/<int:pk>/editar", CupomUpdateView.as_view(), name='cupons_update'),
+    path("adm/cupons/<int:pk>/excluir/", CupomDeleteView.as_view(), name='cupons_delete'),
 
+    path("adm/projetos/", ProjetoListView.as_view(), name='projetos_admin'),
+    path("adm/projetos/novo/", ProjetoCreateView.as_view(), name='projetos_create'),
+    path('adm/projetos/<int:pk>/editar', ProjetoUpdateView.as_view(), name='projetos_update'),
+    path("adm/projetos/<int:pk>/excluir/", ProjetoDeleteView.as_view(), name='projetos_delete'),
 
     path('perfil/', ClientePerfilView.as_view(), name='perfil'),
     path("login/", LoginUsuarioView.as_view(), name="login"),
