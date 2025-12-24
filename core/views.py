@@ -395,7 +395,7 @@ class PromocaoCreateView(CreateView):
 class PromocaoUpdateView(UpdateView):
     model = Promocoes
     fields = ['descricao', 'imagem_promocao', 'brinquedos', 'preco_promocao']
-    template_name = "promocao_form.html"
+    template_name = "promocoes_form.html"
     success_url = reverse_lazy("promocoes_admin")
 
 
