@@ -130,85 +130,7 @@ body {
         padding:24px 20px;
     }
 }
-
-.modal-overlay {
-    position:fixed;
-    inset:0;
-    background:rgba(0,0,0,.55);
-    background:rgba(0,0,0,.65);
-    backdrop-filter:blur(4px);
-    z-index:999;
-}
-
-.modal-card {
-    position:fixed;
-    top:50%;
-    left:50%;
-    transform:translate(-50%,-50%);
-    width:90%;
-    max-width:600px;
-    width:92%;
-    max-width:640px;
-    background:white;
-    border-radius:20px;
-    padding:22px;
-    box-shadow:0 30px 80px rgba(0,0,0,.35);
-    border-radius:26px;
-    padding:20px;
-    box-shadow:0 35px 100px rgba(0,0,0,.45);
-    animation:scaleIn .25s ease;
-    z-index:1000;
-}
-
-.modal-card h3 {
-    text-align:center;
-    margin-bottom:15px;
-@keyframes scaleIn {
-    from {
-        opacity:0;
-        transform:translate(-50%,-50%) scale(.95);
-    }
-    to {
-        opacity:1;
-        transform:translate(-50%,-50%) scale(1);
-    }
-}
-
-/* Header do modal */
-.modal-header {
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    padding-bottom:12px;
-    border-bottom:1px solid #eee;
-}
-
-.modal-header h3 {
-    margin:0;
-    font-size:1.25rem;
-    font-weight:700;
-}
-
-/* Botão fechar */
-.btn-close {
-    border:none;
-    background:#f3f3f3;
-    width:36px;
-    height:36px;
-    border-radius:50%;
-    cursor:pointer;
-    font-size:18px;
-    line-height:1;
-    transition:.2s;
-}
-
-.modal-card input {
-.btn-close:hover {
-    background:#ff5722;
-    color:white;
-}
-
-/* ================= MODAL APP PREMIUM ================= */
+/* ================= MODAL SELEÇÃO DE BRINQUEDO ================= */
 
 .modal-overlay {
     position:fixed;
@@ -223,11 +145,11 @@ body {
     top:50%;
     left:50%;
     transform:translate(-50%,-50%);
-    width:94%;
+    width:95%;
     max-width:1100px;
     background:#fff;
     border-radius:28px;
-    padding:22px 26px;
+    padding:24px;
     box-shadow:0 40px 120px rgba(0,0,0,.45);
     animation:modalIn .25s ease;
     z-index:1000;
@@ -249,14 +171,13 @@ body {
     display:flex;
     align-items:center;
     justify-content:space-between;
-    padding-bottom:14px;
+    padding-bottom:16px;
     border-bottom:1px solid #eee;
 }
 
 .modal-header h3 {
     font-size:1.4rem;
     font-weight:700;
-    margin:0;
 }
 
 .btn-close {
@@ -275,20 +196,15 @@ body {
     color:white;
 }
 
-/* Search */
+/* Busca */
 .search-box {
     display:flex;
     align-items:center;
-    gap:10px;
+    gap:12px;
     margin:20px 0;
     background:#f5f6fa;
     padding:14px 18px;
     border-radius:18px;
-}
-
-.search-box span {
-    font-size:20px;
-    opacity:.5;
 }
 
 .search-box input {
@@ -299,24 +215,24 @@ body {
     font-size:1rem;
 }
 
-/* Grid 5 por linha */
+/* Grid */
 .grid-brinquedos {
     display:grid;
     grid-template-columns:repeat(5, 1fr);
     gap:18px;
     max-height:65vh;
-    overflow:auto;
+    overflow-y:auto;
     padding-right:6px;
 }
 
-/* Cards */
+/* Card */
 .card-brinquedo {
     background:#f8f9fb;
     border-radius:20px;
     padding:14px;
     cursor:pointer;
     transition:.25s;
-    border:1px solid transparent;
+    border:2px solid transparent;
     display:flex;
     flex-direction:column;
     gap:10px;
@@ -342,6 +258,7 @@ body {
     font-size:.95rem;
 }
 
+/* Hover */
 .card-brinquedo:hover {
     background:#fff;
     border-color:var(--primary);
@@ -349,21 +266,21 @@ body {
     box-shadow:0 15px 40px rgba(0,0,0,.15);
 }
 
+/* Selecionado (EDIÇÃO) */
+.card-brinquedo.selecionado {
+    border-color:var(--primary);
+    box-shadow:0 0 0 3px rgba(255,87,34,.25);
+}
+
 /* Responsivo */
 @media (max-width:1100px) {
-    .grid-brinquedos {
-        grid-template-columns:repeat(4, 1fr);
-    }
+    .grid-brinquedos { grid-template-columns:repeat(4,1fr); }
 }
 @media (max-width:900px) {
-    .grid-brinquedos {
-        grid-template-columns:repeat(3, 1fr);
-    }
+    .grid-brinquedos { grid-template-columns:repeat(3,1fr); }
 }
 @media (max-width:600px) {
-    .grid-brinquedos {
-        grid-template-columns:repeat(2, 1fr);
-    }
+    .grid-brinquedos { grid-template-columns:repeat(2,1fr); }
 }
 
 
@@ -419,9 +336,10 @@ body {
         <div class="grid-brinquedos">
             {% for brinquedo in form.fields.brinquedos.queryset %}
             <div class="card-brinquedo"
-                 data-id="{{ brinquedo.id }}"
-                 data-nome="{{ brinquedo.nome_brinquedo }}"
-                 onclick="selecionarBrinquedo('{{ brinquedo.id }}','{{ brinquedo.nome_brinquedo }}')">
+             data-id="{{ brinquedo.id }}"
+             data-nome="{{ brinquedo.nome_brinquedo }}"
+             onclick="selecionarBrinquedo('{{ brinquedo.id }}','{{ brinquedo.nome_brinquedo }}')">
+
 
                 {% if brinquedo.imagem %}
                     <img src="{{ brinquedo.imagem.url }}" alt="{{ brinquedo.nome_brinquedo }}">
@@ -442,8 +360,11 @@ body {
 
 
 <script>
+
+
     function abrirModal() {
     document.getElementById("modalBrinquedos").style.display = "block";
+    marcarSelecionadoAtual();
 }
 
 function fecharModal() {
@@ -453,19 +374,19 @@ function fecharModal() {
 function selecionarBrinquedo(id, nome) {
     document.getElementById("id_brinquedos").value = id;
     document.getElementById("brinquedoSelecionado").innerText =
-        "Selecionado: " + nome + " (ID " + id + ")";
+        `Selecionado: ${nome} (ID ${id})`;
+
+    document.querySelectorAll(".card-brinquedo").forEach(c =>
+        c.classList.remove("selecionado")
+    );
+
+    document.querySelector(`.card-brinquedo[data-id="${id}"]`)
+        ?.classList.add("selecionado");
+
     fecharModal();
 }
 
-function filtrarBrinquedos() {
-    const termo = document.getElementById("filtro").value.toLowerCase();
-    document.querySelectorAll(".card-brinquedo").forEach(card => {
-        const texto = card.dataset.nome.toLowerCase() + card.dataset.id;
-        card.style.display = texto.includes(termo) ? "block" : "none";
-    });
-}
-
-
+/* Busca dinâmica */
 function filtrarBrinquedos() {
     const termo = document.getElementById("filtro").value.toLowerCase();
     document.querySelectorAll(".card-brinquedo").forEach(card => {
@@ -478,6 +399,21 @@ function filtrarBrinquedos() {
     });
 }
 
+/* Marca brinquedo já salvo (EDIÇÃO) */
+function marcarSelecionadoAtual() {
+    const idAtual = document.getElementById("id_brinquedos").value;
+    if (!idAtual) return;
+
+    const card = document.querySelector(
+        `.card-brinquedo[data-id="${idAtual}"]`
+    );
+
+    if (card) {
+        card.classList.add("selecionado");
+        document.getElementById("brinquedoSelecionado").innerText =
+            `Selecionado: ${card.dataset.nome} (ID ${idAtual})`;
+    }
+}
 
 </script>
 
