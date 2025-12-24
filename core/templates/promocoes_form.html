@@ -208,60 +208,125 @@ body {
     color:white;
 }
 
-/* Campo de busca estilo app */
+/* ================= MODAL APP PREMIUM ================= */
+
+.modal-overlay {
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,.65);
+    backdrop-filter:blur(6px);
+    z-index:999;
+}
+
+.modal-card {
+    position:fixed;
+    top:50%;
+    left:50%;
+    transform:translate(-50%,-50%);
+    width:94%;
+    max-width:1100px;
+    background:#fff;
+    border-radius:28px;
+    padding:22px 26px;
+    box-shadow:0 40px 120px rgba(0,0,0,.45);
+    animation:modalIn .25s ease;
+    z-index:1000;
+}
+
+@keyframes modalIn {
+    from {
+        opacity:0;
+        transform:translate(-50%,-45%) scale(.95);
+    }
+    to {
+        opacity:1;
+        transform:translate(-50%,-50%) scale(1);
+    }
+}
+
+/* Header */
+.modal-header {
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding-bottom:14px;
+    border-bottom:1px solid #eee;
+}
+
+.modal-header h3 {
+    font-size:1.4rem;
+    font-weight:700;
+    margin:0;
+}
+
+.btn-close {
+    width:40px;
+    height:40px;
+    border-radius:50%;
+    border:none;
+    background:#f2f2f2;
+    font-size:20px;
+    cursor:pointer;
+    transition:.2s;
+}
+
+.btn-close:hover {
+    background:var(--primary);
+    color:white;
+}
+
+/* Search */
 .search-box {
     display:flex;
     align-items:center;
-    background:#f4f6f9;
-    padding:12px 14px;
-    border-radius:16px;
-    margin:18px 0;
+    gap:10px;
+    margin:20px 0;
+    background:#f5f6fa;
+    padding:14px 18px;
+    border-radius:18px;
 }
 
 .search-box span {
-    margin-right:8px;
-    font-size:18px;
-    opacity:.6;
+    font-size:20px;
+    opacity:.5;
 }
 
 .search-box input {
+    width:100%;
     border:none;
     background:transparent;
     outline:none;
-    width:100%;
-    margin-bottom:15px;
-    font-size:.95rem;
+    font-size:1rem;
 }
 
-/* Grid de brinquedos (override) */
+/* Grid 5 por linha */
 .grid-brinquedos {
     display:grid;
-    grid-template-columns:repeat(auto-fill,minmax(140px,1fr));
-    gap:12px;
-    max-height:350px;
-    grid-template-columns:repeat(auto-fill,minmax(160px,1fr));
-    gap:14px;
-    max-height:380px;
+    grid-template-columns:repeat(5, 1fr);
+    gap:18px;
+    max-height:65vh;
     overflow:auto;
-    padding-right:4px;
+    padding-right:6px;
 }
+
+/* Cards */
 .card-brinquedo {
     background:#f8f9fb;
-    border-radius:18px;
-    padding:12px;
+    border-radius:20px;
+    padding:14px;
     cursor:pointer;
     transition:.25s;
     border:1px solid transparent;
     display:flex;
     flex-direction:column;
-    gap:8px;
+    gap:10px;
 }
 
 .card-brinquedo img {
     width:100%;
-    height:120px;
+    height:140px;
     object-fit:cover;
-    border-radius:14px;
+    border-radius:16px;
 }
 
 .card-brinquedo .info {
@@ -270,19 +335,35 @@ body {
 
 .card-brinquedo small {
     font-size:.75rem;
-    opacity:.6;
+    opacity:.55;
 }
 
 .card-brinquedo strong {
-    display:block;
-    font-size:.9rem;
+    font-size:.95rem;
 }
 
 .card-brinquedo:hover {
-    background:white;
-    border-color:#ff5722;
-    box-shadow:0 10px 30px rgba(0,0,0,.12);
-    transform:translateY(-3px);
+    background:#fff;
+    border-color:var(--primary);
+    transform:translateY(-6px);
+    box-shadow:0 15px 40px rgba(0,0,0,.15);
+}
+
+/* Responsivo */
+@media (max-width:1100px) {
+    .grid-brinquedos {
+        grid-template-columns:repeat(4, 1fr);
+    }
+}
+@media (max-width:900px) {
+    .grid-brinquedos {
+        grid-template-columns:repeat(3, 1fr);
+    }
+}
+@media (max-width:600px) {
+    .grid-brinquedos {
+        grid-template-columns:repeat(2, 1fr);
+    }
 }
 
 
