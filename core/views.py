@@ -387,13 +387,8 @@ class PromocaoListView(ListView):
 class PromocaoCreateView(CreateView):
     model = Promocoes
     fields = ['descricao', 'imagem_promocao', 'brinquedos', 'preco_promocao']
-    template_name = "promocoes_form.html"
+    template_name = "partials/promocoes_form.html"
     success_url = reverse_lazy("promocoes_admin")
-
-    def get_template_names(self):
-        if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
-            return ['partials/promocao_form.html']
-        return ['promocoes_form.html']
 
 
 class PromocaoUpdateView(UpdateView):
