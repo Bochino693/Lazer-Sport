@@ -130,10 +130,9 @@
 <div class="promocoes-container">
     <h1>🔥 Promoções</h1>
 
-   <button class="btn-novo"
-        onclick="abrirModal('{% url 'promocao_create' %}')">
+<a href="{% url 'promocao_create' %}" class="btn-novo">
     ➕ Nova Promoção
-    </button>
+</a>
 
     <div class="grid-promocoes">
         {% for promo in promocoes %}
