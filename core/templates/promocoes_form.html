@@ -466,6 +466,19 @@ function filtrarBrinquedos() {
 }
 
 
+function filtrarBrinquedos() {
+    const termo = document.getElementById("filtro").value.toLowerCase();
+    document.querySelectorAll(".card-brinquedo").forEach(card => {
+        const nome = card.dataset.nome.toLowerCase();
+        const id = card.dataset.id;
+        card.style.display =
+            nome.includes(termo) || id.includes(termo)
+            ? "flex"
+            : "none";
+    });
+}
+
+
 </script>
 
 
