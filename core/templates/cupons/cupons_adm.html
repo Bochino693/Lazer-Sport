@@ -84,6 +84,48 @@
     background:#dc3545;
     color:white;
 }
+
+
+.modal-wrapper {
+    position:fixed;
+    inset:0;
+    z-index:9999;
+}
+
+.modal-overlay {
+    position:absolute;
+    inset:0;
+    background:rgba(0,0,0,.45);
+    backdrop-filter:blur(4px);
+}
+
+.modal-card {
+    position:relative;
+    background:#fff;
+    max-width:480px;
+    width:90%;
+    margin:auto;
+    margin-top:10vh;
+    padding:28px;
+    border-radius:26px;
+    box-shadow:0 25px 60px rgba(0,0,0,.3);
+    animation:modalIn .3s ease;
+}
+
+.btn-close {
+    position:absolute;
+    top:14px;
+    right:18px;
+    background:none;
+    border:none;
+    font-size:1.3rem;
+    cursor:pointer;
+}
+
+@keyframes modalIn {
+    from { opacity:0; transform:translateY(20px) scale(.97); }
+    to { opacity:1; transform:none; }
+}
 </style>
 
 <div class="cupons-container">
@@ -119,32 +161,36 @@
     </div>
 
 </div>
-
-<!-- MODAL -->
-<div id="modalCupom" style="display:none">
+<!-- MODAL CUPOM -->
+<div id="modalCupom" class="modal-wrapper" style="display:none">
     <div class="modal-overlay" onclick="fecharModal()"></div>
 
-    <div class="modal-card" style="max-width:480px">
-        <div class="modal-header">
-            <h3>Novo Cupom</h3>
-            <button class="btn-close" onclick="fecharModal()">✕</button>
-        </div>
-
-        <div id="modalConteudo">Carregando...</div>
+    <div class="modal-card">
+        <button class="btn-close" onclick="fecharModal()">✕</button>
+        <div id="modalConteudo"></div>
     </div>
 </div>
 
+
+
 <script>
-function abrirModal(url){
-    document.getElementById("modalCupom").style.display = "block";
-    fetch(url).then(r=>r.text()).then(html=>{
-        document.getElementById("modalConteudo").innerHTML = html;
-    });
+    function abrirModal(url){
+    const modal = document.getElementById("modalCupom");
+    modal.style.display = "block";
+
+    fetch(url)
+        .then(r => r.text())
+        .then(html => {
+            document.getElementById("modalConteudo").innerHTML = html;
+        });
 }
 
 function fecharModal(){
-    document.getElementById("modalCupom").style.display = "none";
+    const modal = document.getElementById("modalCupom");
+    modal.style.display = "none";
+    document.getElementById("modalConteudo").innerHTML = "";
 }
+
 </script>
 
 {% endblock %}
