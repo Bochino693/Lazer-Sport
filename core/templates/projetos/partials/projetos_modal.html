@@ -1,10 +1,41 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-</head>
-<body>
+<h3 style="text-align:center;margin-bottom:18px">🧩 Novo Projeto</h3>
 
-</body>
-</html>
+<form method="post" class="modal-form">
+    {% csrf_token %}
+    {{ form.as_p }}
+
+    <button class="btn-submit">💾 Criar Projeto</button>
+</form>
+
+<style>
+.modal-form p {
+    display:flex;
+    flex-direction:column;
+    margin-bottom:16px;
+}
+
+.modal-form label {
+    font-weight:600;
+    margin-bottom:6px;
+}
+
+.modal-form input,
+.modal-form textarea,
+.modal-form select {
+    padding:13px;
+    border-radius:14px;
+    border:1px solid #ddd;
+}
+
+.btn-submit {
+    width:100%;
+    margin-top:10px;
+    padding:14px;
+    border:none;
+    border-radius:18px;
+    background:linear-gradient(135deg,#0d6efd,#0a58ca);
+    color:white;
+    font-weight:700;
+    cursor:pointer;
+}
+</style>

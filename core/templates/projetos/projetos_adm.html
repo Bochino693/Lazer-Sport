@@ -1,10 +1,107 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-</head>
-<body>
+{% extends "base_adm.html" %}
+{% block content %}
 
-</body>
-</html>
+<style>
+.projetos-container {
+    max-width:1200px;
+    margin:40px auto;
+    padding:20px;
+}
+
+.header {
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:30px;
+}
+
+.btn-novo {
+    background:linear-gradient(135deg,#0d6efd,#0a58ca);
+    color:#fff;
+    padding:12px 22px;
+    border-radius:16px;
+    font-weight:700;
+    text-decoration:none;
+}
+
+.grid {
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(300px,1fr));
+    gap:25px;
+}
+
+.card {
+    background:#fff;
+    border-radius:22px;
+    padding:20px;
+    box-shadow:0 10px 30px rgba(0,0,0,.12);
+    transition:.3s;
+}
+
+.card:hover {
+    transform:translateY(-6px);
+}
+
+.card h3 {
+    font-size:1.3rem;
+    margin-bottom:10px;
+}
+
+.card p {
+    color:#555;
+    font-size:.95rem;
+}
+
+.acoes {
+    display:flex;
+    gap:10px;
+    margin-top:15px;
+}
+
+.acoes a {
+    flex:1;
+    text-align:center;
+    padding:10px;
+    border-radius:12px;
+    font-weight:600;
+    text-decoration:none;
+    color:#fff;
+}
+
+.btn-editar { background:#ffc107; color:#222; }
+.btn-excluir { background:#dc3545; }
+</style>
+
+<div class="projetos-container">
+    <div class="header">
+        <h1>🧩 Projetos</h1>
+        <a href="{% url 'projetos_create' %}" class="btn-novo">➕ Novo Projeto</a>
+    </div>
+
+    <div class="grid">
+        {% for projeto in projetos %}
+        <div class="card">
+            <h3>{{ projeto.titulo }}</h3>
+            <p>{{ projeto.descricao|truncatechars:120 }}</p>
+
+            <small>
+                🧸
+                {% if projeto.brinquedo_projetado %}
+                    {{ projeto.brinquedo_projetado.nome_brinquedo_projeto }}
+                {% else %}
+                    <em>Sem brinquedo</em>
+                {% endif %}
+            </small>
+
+            <div class="acoes">
+                <a href="{% url 'projetos_update' projeto.id %}" class="btn-editar">✏️ Editar</a>
+                <a href="{% url 'projetos_delete' projeto.id %}" class="btn-excluir">🗑️ Excluir</a>
+            </div>
+        </div>
+        {% empty %}
+            <p>Nenhum projeto cadastrado.</p>
+        {% endfor %}
+    </div>
+</div>
+
+{% endblock %}
