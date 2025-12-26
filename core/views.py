@@ -432,7 +432,7 @@ class CupomDeleteView(DeleteView):
 
 class BrinquedoProjetoListView(ListView):
     model = BrinquedosProjeto
-    template_name = "projetos/brinquedos_projeto_adm.html"
+    template_name = "projeto_adm.html"
     context_object_name = "brinquedos"
 
 

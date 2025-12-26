@@ -1775,18 +1775,19 @@ body {
             <div class="preco-box">
                 <p class="preco-original">
                     De:
-                    <span class="money">
-                      R$ {{ promo.brinquedos.valor_brinquedo }}
+                    <span class="money"
+                          data-valor="{{ promo.brinquedos.valor_brinquedo }}">
                     </span>
-                  </p>
+                </p>
 
-                  <p class="preco-promocao">
+                <p class="preco-promocao">
                     Por:
-                    <strong class="money">
-                      R$ {{ promo.preco_promocao }}
+                    <strong class="money"
+                            data-valor="{{ promo.preco_promocao }}">
                     </strong>
-                  </p>
+                </p>
             </div>
+
 
             <!-- BOTÃO -->
             <a href="{% url 'promocao' promo.id %}#promocao-pagina" class="btn-vermais">Ver mais</a>
