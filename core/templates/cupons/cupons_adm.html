@@ -91,7 +91,7 @@
     <div class="cupons-header">
         <h1>🎟️ Cupons de Desconto</h1>
         <button class="btn-novo-cupom"
-                onclick="abrirModal('{% url 'cupom_create' %}')">
+                onclick="abrirModal('{% url 'cupons_create' %}')">
             ➕ Novo Cupom
         </button>
     </div>
@@ -105,10 +105,10 @@
             </div>
 
             <div class="cupom-acoes">
-                <a href="{% url 'cupom_update' cupom.id %}" class="btn-editar">
+                <a href="{% url 'cupons_update' cupom.id %}" class="btn-editar">
                     ✏️ Editar
                 </a>
-                <a href="{% url 'cupom_delete' cupom.id %}" class="btn-excluir">
+                <a href="{% url 'cupons_delete' cupom.id %}" class="btn-excluir">
                     🗑️
                 </a>
             </div>
