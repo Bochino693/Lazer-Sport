@@ -155,7 +155,10 @@
 <div class="projetos-container">
     <div class="header">
         <h1>🧩 Projetos</h1>
-        <a href="#" class="btn-novo" onclick="openProjetoModal()">➕ Novo Projeto</a>
+        <button type="button" class="btn-novo" onclick="openProjetoModal()">
+            ➕ Novo Projeto
+        </button>
+
     </div>
 
     <div class="grid">
@@ -187,34 +190,69 @@
 
 <!-- MODAL PROJETO -->
 <div id="modalProjeto" class="modal-wrapper" style="display:none">
+
     <div class="modal-overlay" onclick="closeProjetoModal()"></div>
 
     <div class="modal-box">
         <button class="close-btn" onclick="closeProjetoModal()">✖</button>
-        <div id="modalProjetoConteudo"></div>
+
+        <h3 style="text-align:center;margin-bottom:18px">
+            🧩 Novo Projeto
+        </h3>
+
+        <form method="post" action="{% url 'projetos_criar' %}">
+            {% csrf_token %}
+
+            <div class="form-group">
+                <label>Título</label>
+                {{ form.titulo }}
+            </div>
+
+            <div class="form-group">
+                <label>Descrição</label>
+                {{ form.descricao }}
+            </div>
+
+            <hr>
+
+            <h4>🧸 Brinquedo Projetado</h4>
+
+            <div class="form-group">
+                {{ form.brinquedo_projetado }}
+            </div>
+
+            <p class="ou">— ou criar novo —</p>
+
+            <div class="form-group">
+                <input type="text" name="novo_brinquedo_nome"
+                       placeholder="Nome do brinquedo">
+            </div>
+
+            <div class="form-group">
+                <textarea name="novo_brinquedo_descricao"
+                          placeholder="Descrição do brinquedo"></textarea>
+            </div>
+
+            <button type="submit" class="btn-salvar">
+                💾 Salvar Projeto
+            </button>
+        </form>
+
     </div>
 </div>
 
 
+
 <script>
 
-
 function openProjetoModal() {
-    const modal = document.getElementById("modalProjeto");
-    modal.style.display = "block";
-
-    fetch("{% url 'projetos_create' %}")
-        .then(res => res.text())
-        .then(html => {
-            document.getElementById("modalProjetoConteudo").innerHTML = html;
-        });
+    document.getElementById("modalProjeto").style.display = "flex";
 }
 
 function closeProjetoModal() {
     document.getElementById("modalProjeto").style.display = "none";
-    document.getElementById("modalProjetoConteudo").innerHTML = "";
 }
-
-
 </script>
+
+
 {% endblock %}

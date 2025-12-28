@@ -54,7 +54,7 @@ urlpatterns = [
     path("adm/cupons/<int:pk>/excluir/", CupomDeleteView.as_view(), name='cupons_delete'),
 
     path("adm/projetos/", ProjetoListView.as_view(), name='projetos_admin'),
-    path("adm/projetos/novo/", ProjetoCreateView.as_view(), name='projetos_create'),
+    path("projetos/criar/", ProjetoCreateView.as_view(), name="projetos_criar"),
     path('adm/projetos/<int:pk>/editar', ProjetoUpdateView.as_view(), name='projetos_update'),
     path("adm/projetos/<int:pk>/excluir/", ProjetoDeleteView.as_view(), name='projetos_delete'),
 

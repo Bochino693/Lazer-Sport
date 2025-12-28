@@ -446,20 +446,16 @@ class ProjetoListView(ListView):
         context["form"] = ProjetoForm()
         return context
 
+class ProjetoCreateView(View):
 
-class ProjetoCreateView(CreateView):
-    model = Projetos
-    form_class = ProjetoForm
-    success_url = reverse_lazy("projetos_admin")
-
-    def post(self, request, *args, **kwargs):
-        form = self.form_class(request.POST)
+    def post(self, request):
+        form = ProjetoForm(request.POST)
 
         if form.is_valid():
+            projeto = form.save(commit=False)
+
             nome = request.POST.get("novo_brinquedo_nome")
             descricao = request.POST.get("novo_brinquedo_descricao")
-
-            projeto = form.save(commit=False)
 
             if nome:
                 brinquedo = BrinquedosProjeto.objects.create(
@@ -470,7 +466,7 @@ class ProjetoCreateView(CreateView):
 
             projeto.save()
 
-        return redirect(self.success_url)
+        return redirect("projetos_admin")
 
 
 class ProjetoUpdateView(UpdateView):
