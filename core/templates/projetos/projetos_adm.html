@@ -140,6 +140,13 @@
     cursor:pointer;
 }
 
+.modal-wrapper {
+    position:fixed;
+    inset:0;
+    z-index:1000;
+}
+
+
 
 .btn-editar { background:#ffc107; color:#222; }
 .btn-excluir { background:#dc3545; }
@@ -178,21 +185,35 @@
 </div>
 
 
+<!-- MODAL PROJETO -->
+<div id="modalProjeto" class="modal-wrapper" style="display:none">
+    <div class="modal-overlay" onclick="closeProjetoModal()"></div>
+
+    <div class="modal-box">
+        <button class="close-btn" onclick="closeProjetoModal()">✖</button>
+        <div id="modalProjetoConteudo"></div>
+    </div>
+</div>
+
+
 <script>
-     function openProjetoModal() {
+
+
+function openProjetoModal() {
+    const modal = document.getElementById("modalProjeto");
+    modal.style.display = "block";
+
     fetch("{% url 'projetos_create' %}")
         .then(res => res.text())
         .then(html => {
-            document.body.insertAdjacentHTML("beforeend", html);
-            document.getElementById("modalProjeto").style.display = "flex";
+            document.getElementById("modalProjetoConteudo").innerHTML = html;
         });
 }
 
 function closeProjetoModal() {
-    document.getElementById("modalProjeto").remove();
+    document.getElementById("modalProjeto").style.display = "none";
+    document.getElementById("modalProjetoConteudo").innerHTML = "";
 }
-
-
 
 
 </script>

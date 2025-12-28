@@ -462,7 +462,6 @@ class ProjetoCreateView(CreateView):
         return super().form_valid(form)
 
 
-
 class ProjetoUpdateView(UpdateView):
     model = Projetos
     fields = ["titulo", "descricao", "brinquedo_projetado"]
