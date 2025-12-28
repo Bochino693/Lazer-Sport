@@ -448,6 +448,20 @@ class ProjetoCreateView(CreateView):
     template_name = "projetos/partials/projeto_modal.html"
     success_url = reverse_lazy("projetos_admin")
 
+    def form_valid(self, form):
+        nome = self.request.POST.get("novo_brinquedo_nome")
+        descricao = self.request.POST.get("novo_brinquedo_descricao")
+
+        if nome:
+            brinquedo = BrinquedosProjeto.objects.create(
+                nome_brinquedo_projeto=nome,
+                descricao=descricao
+            )
+            form.instance.brinquedo_projetado = brinquedo
+
+        return super().form_valid(form)
+
+
 
 class ProjetoUpdateView(UpdateView):
     model = Projetos
