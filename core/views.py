@@ -7,7 +7,7 @@ from django.contrib import messages
 from django.contrib.auth import authenticate, login
 from decimal import Decimal
 
-from .forms import UserForm, PerfilForm
+from .forms import UserForm, PerfilForm, ProjetoForm
 
 from django.contrib.auth.mixins import LoginRequiredMixin
 
@@ -441,25 +441,36 @@ class ProjetoListView(ListView):
     template_name = "projetos/projetos_adm.html"
     context_object_name = "projetos"
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["form"] = ProjetoForm()
+        return context
+
 
 class ProjetoCreateView(CreateView):
     model = Projetos
-    fields = ["titulo", "descricao", "brinquedo_projetado"]
-    template_name = "projetos/partials/projeto_modal.html"
+    form_class = ProjetoForm
     success_url = reverse_lazy("projetos_admin")
 
-    def form_valid(self, form):
-        nome = self.request.POST.get("novo_brinquedo_nome")
-        descricao = self.request.POST.get("novo_brinquedo_descricao")
+    def post(self, request, *args, **kwargs):
+        form = self.form_class(request.POST)
 
-        if nome:
-            brinquedo = BrinquedosProjeto.objects.create(
-                nome_brinquedo_projeto=nome,
-                descricao=descricao
-            )
-            form.instance.brinquedo_projetado = brinquedo
+        if form.is_valid():
+            nome = request.POST.get("novo_brinquedo_nome")
+            descricao = request.POST.get("novo_brinquedo_descricao")
 
-        return super().form_valid(form)
+            projeto = form.save(commit=False)
+
+            if nome:
+                brinquedo = BrinquedosProjeto.objects.create(
+                    nome_brinquedo_projeto=nome,
+                    descricao=descricao
+                )
+                projeto.brinquedo_projetado = brinquedo
+
+            projeto.save()
+
+        return redirect(self.success_url)
 
 
 class ProjetoUpdateView(UpdateView):

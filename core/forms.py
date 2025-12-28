@@ -1,6 +1,6 @@
 from django import forms
 from django.contrib.auth.models import User
-from .models import ClientePerfil, Promocoes
+from .models import ClientePerfil, Promocoes, Projetos
 
 
 class UserForm(forms.ModelForm):
@@ -28,3 +28,11 @@ class PromocaoForm(forms.ModelForm):
         widgets = {
             "brinquedos": forms.Select(attrs={"id": "id_brinquedos"}),
         }
+
+
+class ProjetoForm(forms.ModelForm):
+    class Meta:
+        model = Projetos
+        fields = ["titulo", "descricao", "brinquedo_projetado"]
+
+
