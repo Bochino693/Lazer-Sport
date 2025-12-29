@@ -121,7 +121,12 @@
     <div class="card-produto">
 
         <div class="img-area">
-            <img src="{{ item.imagem_brinquedo.url }}" alt="{{ item.nome_brinquedo }}">
+            {% if item.imagem_brinquedo %}
+                <img src="{{ item.imagem_brinquedo.url }}" alt="{{ item.nome_brinquedo }}">
+            {% else %}
+                <img src="{% static 'img/placeholder.png' %}" alt="Sem imagem">
+            {% endif %}
+
         </div>
 
         <h3>{{ item.nome_brinquedo }}</h3>
