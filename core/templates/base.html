@@ -659,7 +659,7 @@ nav a.btn-login {
           {% endfor %}
 
           {% for est in estabelecimentos_globais|slice:":3" %}
-               <a href="{% url 'estabelecimento_detalhe' est.id %}" class="suggestion-tag">
+               <a href="{% url 'estabelecimento_brinquedo' est.id %}" class="suggestion-tag">
                    Brinquedos para {{ est.nome_estabelecimento }}
                </a>
           {% endfor %}
