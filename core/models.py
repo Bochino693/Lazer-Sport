@@ -201,9 +201,6 @@ class Brinquedos(Prime):
         verbose_name_plural = "Brinquedos"
 
 
-
-
-
 class Combos(Prime):
     descricao = models.CharField(max_length=90)
     imagem_combo = models.ImageField(upload_to='combos/', null=True)

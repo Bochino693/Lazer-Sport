@@ -658,9 +658,13 @@ nav a.btn-login {
             </a>
           {% endfor %}
 
+          {% for est in estabelecimentos_globais|slice:":3" %}
+               <a href="{% url 'estabelecimento_detalhe' est.id %}" class="suggestion-tag">
+                   Brinquedos para {{ est.nome_estabelecimento }}
+               </a>
+          {% endfor %}
+
           <!-- ⭐ SUGESTÕES ESTÁTICAS -->
-          <a href="#" class="suggestion-tag">BRINQUEDOS PARA BUFFETS</a>
-          <a href="#" class="suggestion-tag">BRINQUEDOS PARA EVENTOS</a>
           <a href="#" class="suggestion-tag">SOLICITAR MANUTENÇÃO DE BRINQUEDO</a>
           <a href="#" class="suggestion-tag">LOCAÇÃO DE BRINQUEDOS</a>
 

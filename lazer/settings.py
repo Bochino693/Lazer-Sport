@@ -89,6 +89,7 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
 
                 'core.context_processors.categorias_globais',
+                'core.context_processors.estabelecimentos_globais',
 
             ],
         },

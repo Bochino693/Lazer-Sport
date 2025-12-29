@@ -81,6 +81,8 @@ class HomeView(View):
         combos = Combos.objects.all()
         promocoes = Promocoes.objects.all()
 
+        estabelecimentos = Estabelecimentos.objects.all()
+
         eventos = Eventos.objects.all()
         projetos = Projetos.objects.all()
 
@@ -107,6 +109,7 @@ class HomeView(View):
             "projetos": projetos,
             "combos": combos,
             "promocoes": promocoes,
+            "estabelecimentos": estabelecimentos,
             "imagens_site": imagens_site,
         }
         return render(request, 'home.html', context)
