@@ -69,9 +69,9 @@ class EstabelecimentosAdmin(admin.ModelAdmin):
 
 @admin.register(Brinquedos)
 class BrinquedosAdmin(admin.ModelAdmin):
-    list_display = ('nome_brinquedo', 'avaliacao', 'voltz', 'ativo', 'criacao')
-    search_fields = ('nome_brinquedo', 'descricao')
-    list_filter = ('ativo', 'categorias_brinquedos', 'tags')
+    list_display = ('nome_brinquedo', 'estabelecimento', 'avaliacao', 'voltz', 'ativo', 'criacao')
+    search_fields = ('nome_brinquedo', 'descricao', 'estabelecimento__nome_estabelecimento')
+    list_filter = ('ativo', 'estabelecimento', 'categorias_brinquedos', 'tags')
     readonly_fields = ('criacao', 'atualizado')
     filter_horizontal = ('categorias_brinquedos', 'tags')
     ordering = ('-criacao',)
