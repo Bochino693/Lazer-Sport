@@ -145,11 +145,9 @@ class Brinquedos(Prime):
         related_name='brinquedos_tags'
     )
 
-    estabelecimento = models.ForeignKey(
+    estabelecimentos = models.ManyToManyField(
         Estabelecimentos,
-        on_delete=models.CASCADE,
-        related_name="brinquedos",
-        null=True,
+        related_name='brinquedos',
         blank=True
     )
 

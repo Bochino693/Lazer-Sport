@@ -61,19 +61,24 @@ class TagsBrinquedosAdmin(admin.ModelAdmin):
 
 @admin.register(Estabelecimentos)
 class EstabelecimentosAdmin(admin.ModelAdmin):
-    list_display = ('nome_estabelecimento', 'ativo', 'criacao')
+    list_display = ('nome_estabelecimento', 'total_brinquedos', 'ativo', 'criacao')
     search_fields = ('nome_estabelecimento',)
     list_filter = ('ativo',)
     ordering = ('nome_estabelecimento',)
 
+    def total_brinquedos(self, obj):
+        return obj.brinquedos.count()
+
+    total_brinquedos.short_description = "Brinquedos"
+
 
 @admin.register(Brinquedos)
 class BrinquedosAdmin(admin.ModelAdmin):
-    list_display = ('nome_brinquedo', 'estabelecimento', 'avaliacao', 'voltz', 'ativo', 'criacao')
+    list_display = ('nome_brinquedo', 'avaliacao', 'voltz', 'ativo', 'criacao')
     search_fields = ('nome_brinquedo', 'descricao', 'estabelecimento__nome_estabelecimento')
-    list_filter = ('ativo', 'estabelecimento', 'categorias_brinquedos', 'tags')
+    list_filter = ('ativo', 'estabelecimentos', 'categorias_brinquedos', 'tags')
     readonly_fields = ('criacao', 'atualizado')
-    filter_horizontal = ('categorias_brinquedos', 'tags')
+    filter_horizontal = ('categorias_brinquedos', 'tags', 'estabelecimentos')
     ordering = ('-criacao',)
 
 
