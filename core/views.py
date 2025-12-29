@@ -294,7 +294,7 @@ class EstabelecimentoInfoView(View):
         estabelecimento = get_object_or_404(Estabelecimentos, pk=pk)
         brinquedos = Brinquedos.objects.filter(estabelecimento=estabelecimento)
 
-        return render(request, "estabelecimento_detalhe.html", {
+        return render(request, "estabelecimento_info.html", {
             "estabelecimento": estabelecimento,
             "brinquedos": brinquedos
         })
