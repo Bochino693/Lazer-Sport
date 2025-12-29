@@ -421,6 +421,39 @@
 </div>
 
 <script>
+/* ================================
+   FORMATA MOEDA BR
+================================ */
+function formatarMoedaBR(valor) {
+    if (valor === null || valor === undefined) return '0,00';
+
+    // garante conversão correta (29,90 → 29.90)
+    const numero = Number(valor.toString().replace(',', '.'));
+
+    if (isNaN(numero)) return '0,00';
+
+    return numero.toLocaleString('pt-BR', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    });
+}
+
+/* ================================
+   APLICA FORMATAÇÃO NOS PREÇOS
+================================ */
+function aplicarFormatacaoMoeda() {
+    document.querySelectorAll(".money").forEach(el => {
+        const valor = el.dataset.valor;
+
+        if (valor !== undefined && valor !== "") {
+            el.textContent = "R$ " + formatarMoedaBR(valor);
+        }
+    });
+}
+
+/* ================================
+   ORDENA / FILTRA VIA AJAX
+================================ */
 function ordenarProdutos(url) {
     fetch(url, {
         headers: {
@@ -436,39 +469,24 @@ function ordenarProdutos(url) {
         const novaLista = doc.querySelector('#list');
         document.querySelector('#list').innerHTML = novaLista.innerHTML;
 
-        // Atualiza estado visual dos filtros
+        // Atualiza filtros ativos
         const novoFiltro = doc.querySelector('.filtros-horizontal');
         document.querySelector('.filtros-horizontal').innerHTML = novoFiltro.innerHTML;
 
+        // 🔥 REAPLICA FORMATAÇÃO DE PREÇO
+        aplicarFormatacaoMoeda();
+
         // Atualiza URL sem recarregar
         history.pushState(null, '', url);
-    });
+    })
+    .catch(err => console.error("Erro ao ordenar produtos:", err));
 }
 
-function formatarMoedaBR(valor) {
-    if (valor === null || valor === undefined) return '0,00';
-
-    // troca vírgula por ponto
-    const numero = Number(valor.toString().replace(',', '.'));
-
-    if (isNaN(numero)) return '0,00';
-
-    return numero.toLocaleString('pt-BR', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-    });
-}
-
-
+/* ================================
+   EXECUTA NA CARGA INICIAL
+================================ */
 document.addEventListener("DOMContentLoaded", () => {
-    document.querySelectorAll(".money").forEach(el => {
-        const valor = el.dataset.valor;
-
-        if (valor !== undefined && valor !== "") {
-            el.textContent = "R$ " + formatarMoedaBR(valor);
-        }
-    });
+    aplicarFormatacaoMoeda();
 });
-
 </script>
 {% endblock %}
