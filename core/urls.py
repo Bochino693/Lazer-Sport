@@ -22,7 +22,7 @@ urlpatterns = [
     path("categoria/<int:pk>/", CategoriasInfoView.as_view(), name="categoria_detalhe"),
     path("combo/<int:pk>", ComboInfoView.as_view(), name='combo'),
     path("promocao/<int:pk>", PromocaoInfoView.as_view(), name='promocao'),
-    path("estabelecimentos/<int:pk>/brinquedos/", EstabelecimentoInfoView.as_view(), name='estabelecimento_brinquedo'),
+    path("estabelecimentos/<int:pk>/", EstabelecimentoInfoView.as_view(), name='estabelecimento_brinquedo'),
 
 
     path("eventos/", EventosView.as_view(), name='eventos'),

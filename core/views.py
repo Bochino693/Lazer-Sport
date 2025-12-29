@@ -292,7 +292,7 @@ class PromocaoInfoView(View):
 class EstabelecimentoInfoView(View):
     def get(self, request, pk):
         estabelecimento = get_object_or_404(Estabelecimentos, pk=pk)
-        brinquedos = Brinquedos.objects.filter(estabelecimento=estabelecimento)
+        brinquedos = estabelecimento.brinquedos.all()
 
         return render(request, "estabelecimento_info.html", {
             "estabelecimento": estabelecimento,
