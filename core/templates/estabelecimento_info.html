@@ -104,6 +104,7 @@
     display: flex;
     gap: 15px;
     flex-wrap: wrap;
+     justify-content: center; /* 👈 centraliza */
 }
 
 .filtros-horizontal a {
@@ -214,8 +215,18 @@
 
 <script>
 function formatarMoedaBR(valor) {
-    if (!valor) return '0,00';
-    return Number(valor).toLocaleString('pt-BR', {
+    if (valor === null || valor === undefined || valor === "") {
+        return "0,00";
+    }
+
+    // garante conversão correta (vírgula → ponto)
+    const numero = Number(valor.toString().replace(",", "."));
+
+    if (isNaN(numero)) {
+        return "0,00";
+    }
+
+    return numero.toLocaleString("pt-BR", {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2
     });
