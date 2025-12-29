@@ -96,6 +96,45 @@
     color: #00913f;
     font-weight: 700;
 }
+
+
+.filtros-horizontal {
+    max-width: 1200px;
+    margin: 0 auto 30px;
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.filtros-horizontal a {
+    padding: 8px 14px;
+    border-radius: 20px;
+    background: #eef2ff;
+    color: #004AAD;
+    font-weight: 600;
+    text-decoration: none;
+    transition: .2s;
+}
+
+.filtros-horizontal a:hover {
+    background: #004AAD;
+    color: #fff;
+}
+
+.avaliacao {
+    margin: 6px 0;
+}
+
+.star {
+    font-size: 1.1rem;
+    color: #ccc;
+}
+
+.star.filled {
+    color: #f5b301;
+}
+
+
 </style>
 
 <!-- 🔵 BREADCRUMB -->
@@ -107,18 +146,30 @@
     <strong>{{ estabelecimento.nome_estabelecimento }}</strong>
 </nav>
 
+
+
 <!-- 🔵 HEADER -->
 <div class="header-estabelecimento">
     <h1>{{ estabelecimento.nome_estabelecimento }}</h1>
-    <p>{{ brinquedos.count }} brinquedo(s) disponíveis</p>
+    <p>{{ brinquedos|length }} brinquedo(s) disponíveis</p>
 </div>
+
+<div class="filtros-horizontal">
+    <a href="?order=az">A–Z</a>
+    <a href="?order=za">Z–A</a>
+    <a href="?order=avaliacao">⭐ Melhores avaliados</a>
+    <a href="?order=custo">💰 Custo-benefício</a>
+</div>
+
+
+
 
 <!-- 🔵 LISTA DE BRINQUEDOS -->
 {% if brinquedos %}
 <div class="grid-cards">
 
     {% for item in brinquedos %}
-    <div class="card-produto">
+    <div class="card-produto" id="brinquedos">
 
         <div class="img-area">
             {% if item.imagem_brinquedo %}
@@ -131,13 +182,25 @@
 
         <h3>{{ item.nome_brinquedo }}</h3>
 
+        <div class="avaliacao">
+    {% for i in "12345" %}
+        {% if forloop.counter <= item.avaliacao|floatformat:0 %}
+            <span class="star filled">★</span>
+        {% else %}
+            <span class="star">★</span>
+        {% endif %}
+    {% endfor %}
+</div>
+
+
         <p class="descricao">
             {{ item.descricao|truncatechars:80 }}
         </p>
 
-        <p class="preco">
-            R$ {{ item.valor_brinquedo|floatformat:2 }}
+        <p class="preco money" data-valor="{{ item.valor_brinquedo }}">
+            R$ 0,00
         </p>
+
 
     </div>
     {% endfor %}
@@ -148,5 +211,25 @@
     Nenhum brinquedo disponível neste estabelecimento.
 </p>
 {% endif %}
+
+<script>
+function formatarMoedaBR(valor) {
+    if (!valor) return '0,00';
+    return Number(valor).toLocaleString('pt-BR', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    });
+}
+
+function aplicarFormatacaoMoeda() {
+    document.querySelectorAll(".money").forEach(el => {
+        const valor = el.dataset.valor;
+        el.textContent = "R$ " + formatarMoedaBR(valor);
+    });
+}
+
+document.addEventListener("DOMContentLoaded", aplicarFormatacaoMoeda);
+</script>
+
 
 {% endblock %}

@@ -292,11 +292,24 @@ class PromocaoInfoView(View):
 class EstabelecimentoInfoView(View):
     def get(self, request, pk):
         estabelecimento = get_object_or_404(Estabelecimentos, pk=pk)
+
+        order = request.GET.get("order", "")
+
         brinquedos = estabelecimento.brinquedos.all()
+
+        if order == "az":
+            brinquedos = brinquedos.order_by("nome_brinquedo")
+        elif order == "za":
+            brinquedos = brinquedos.order_by("-nome_brinquedo")
+        elif order == "avaliacao":
+            brinquedos = brinquedos.order_by("-avaliacao")
+        elif order == "custo":
+            brinquedos = brinquedos.order_by("valor_brinquedo")
 
         return render(request, "estabelecimento_info.html", {
             "estabelecimento": estabelecimento,
-            "brinquedos": brinquedos
+            "brinquedos": brinquedos,
+            "order": order
         })
 
 
