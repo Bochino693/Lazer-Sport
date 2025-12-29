@@ -12,7 +12,7 @@ from .forms import UserForm, PerfilForm, ProjetoForm
 from django.contrib.auth.mixins import LoginRequiredMixin
 
 from .models import Brinquedos, CategoriasBrinquedos, Projetos, Eventos, ClientePerfil, Combos, Cupom, Promocoes, \
-    TagsBrinquedos, ImagensSite, BrinquedosProjeto
+    TagsBrinquedos, ImagensSite, BrinquedosProjeto, Estabelecimentos
 
 import os
 from django.http import FileResponse, Http404
@@ -27,6 +27,12 @@ def media_serve(request, path):
 
     return FileResponse(open(file_path, 'rb'), content_type='image/jpeg')
 
+
+def erro_404(request, exception):
+    return render(request, "404.html", status=404)
+
+def erro_500(request):
+    return render(request, "500.html", status=500)
 
 class HomeView(View):
 
@@ -280,6 +286,17 @@ class PromocaoInfoView(View):
         return render(request, 'promocao_info.html', context)
 
 
+class EstabelecimentoInfoView(View):
+    def get(self, request, pk):
+        estabelecimento = get_object_or_404(Estabelecimentos, pk=pk)
+        brinquedos = Brinquedos.objects.filter(estabelecimento=estabelecimento)
+
+        return render(request, "estabelecimento_detalhe.html", {
+            "estabelecimento": estabelecimento,
+            "brinquedos": brinquedos
+        })
+
+
 class SobreView(View):
 
     def get(self, request):
@@ -445,6 +462,7 @@ class ProjetoListView(ListView):
         context = super().get_context_data(**kwargs)
         context["form"] = ProjetoForm()
         return context
+
 
 class ProjetoCreateView(View):
 

@@ -91,6 +91,17 @@ class TagsBrinquedos(Prime):
         verbose_name_plural = "Tags"
 
 
+class Estabelecimentos(Prime):
+    nome_estabelecimento = models.CharField(max_length=180)
+
+    def __str__(self):
+        return self.nome_estabelecimento
+
+    class Meta:
+        verbose_name = "Estabelecimentos"
+        verbose_name_plural = "Estabelecimentos"
+
+
 def parse_metro(value):
     """
     Converte entradas como "2,19" ou "2.19" ou 2.19 para Decimal('2.19').
@@ -132,6 +143,14 @@ class Brinquedos(Prime):
     tags = models.ManyToManyField(
         TagsBrinquedos,
         related_name='brinquedos_tags'
+    )
+
+    estabelecimento = models.ForeignKey(
+        Estabelecimentos,
+        on_delete=models.CASCADE,
+        related_name="brinquedos",
+        null=True,
+        blank=True
     )
 
     voltz = models.CharField(max_length=10)
@@ -182,16 +201,7 @@ class Brinquedos(Prime):
         verbose_name_plural = "Brinquedos"
 
 
-class Estabelecimentos(Prime):
-    nome_estabelecimento = models.CharField(max_length=180)
-    brinquedos = models.ForeignKey(Brinquedos, on_delete=models.CASCADE, related_name='estabelecimento', null=True)
 
-    def __str__(self):
-        return self.nome_estabelecimento
-
-    class Meta:
-        verbose_name = "Estabelecimentos"
-        verbose_name_plural = "Estabelecimentos"
 
 
 class Combos(Prime):

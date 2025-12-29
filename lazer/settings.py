@@ -34,7 +34,8 @@ SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key")
 
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = ENVIRONMENT != "production"
+
 
 ALLOWED_HOSTS = [
     "lazer-sport-1.onrender.com",
@@ -99,13 +100,25 @@ WSGI_APPLICATION = 'lazer.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-DATABASES = {
-    'default': dj_database_url.config(
-        default=os.getenv("DATABASE_URL"),
-        conn_max_age=600,
-        ssl_require=True
-    )
-}
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+if DATABASE_URL:
+    # PRODUÇÃO (Render, Postgres, etc)
+    DATABASES = {
+        'default': dj_database_url.config(
+            default=DATABASE_URL,
+            conn_max_age=600,
+            ssl_require=True
+        )
+    }
+else:
+    # LOCAL (SQLite)
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 
 # Password validation
@@ -126,7 +139,6 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-WSGI_APPLICATION = 'lazer.wsgi.application'
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
