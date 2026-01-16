@@ -336,6 +336,23 @@ body {
   margin: 10px 0 15px 0;
 }
 
+.card-link {
+  text-decoration: none;
+  color: inherit;
+  display: block;
+}
+
+.card-produto {
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card-link:hover .card-produto {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 20px rgba(0,0,0,0.12);
+}
+
+
 .btn-pequeno {
   display: inline-block;
   background: #007BFF;
@@ -1839,87 +1856,75 @@ body {
       </a>
   </div>
 
-  <!-- CONTAINER ATUALIZÁVEL -->
-  <div id="produtos-container">
+<!-- CONTAINER ATUALIZÁVEL -->
+<div id="produtos-container">
 
-      <div class="grid-cards" id="grid-cards">
-      {% for brinquedo in page_obj %}
-        <div class="card-produto">
+  <div class="grid-cards" id="grid-cards">
 
-          <div class="img-area">
-            <img src="{{ brinquedo.imagem_brinquedo.url }}" alt="{{ brinquedo.nome_brinquedo }}">
-          </div>
+    {% for brinquedo in page_obj %}
+    <a href="{% url 'brinquedo_detalhe' brinquedo.id %}#bread" class="card-link">
 
-          <div class="conteudo">
+      <div class="card-produto">
 
-            <!-- NOME -->
-            <h3>{{ brinquedo.nome_brinquedo }}</h3>
-
-            <!-- AVALIAÇÃO (estrelas geradas via JS) -->
-            <div class="avaliacao" data-rating="{{ brinquedo.avaliacao }}">
-              <div class="stars"></div>
-              <span class="nota">({{ brinquedo.avaliacao|floatformat:2 }})</span>
-            </div>
-
-            <!-- CATEGORIAS DO PRODUTO -->
-            <div class="categorias">
-              {% for cat in brinquedo.categorias_brinquedos.all %}
-                <span class="categoria-pill">{{ cat.nome_categoria }}</span>
-              {% endfor %}
-            </div>
-
-            <!-- DESCRIÇÃO CURTA -->
-            <p class="descricao">
-              {{ brinquedo.descricao|truncatewords:16 }}
-            </p>
-
-            <!-- VOLTAGEM -->
-            <div class="voltagem">
-              🔌 Voltagem <strong>{{ brinquedo.voltz }}</strong>
-            </div>
-
-            <!-- DIMENSÕES EM METROS -->
-            <div class="dimensoes">
-                {% if brinquedo.dimensoes_m %}
-                    📏 Dimensões: {{ brinquedo.dimensoes_m }}
-                {% else %}
-                    📏 Dimensões não informadas
-                {% endif %}
-            </div>
-
-            <!-- VOLUME EM METROS CÚBICOS -->
-            <div class="volume">
-                {% if brinquedo.metros_cubicos %}
-                    📦 Volume: <strong>{{ brinquedo.volume_formatado }}</strong>
-                {% else %}
-                    📦 Volume não informado
-                {% endif %}
-            </div>
-
-            <!-- PREÇO -->
-            <div class="preco money" data-valor="{{ brinquedo.valor_brinquedo }}">
-                R$ 0,00
-            </div>
-
-            <!-- TAGS COM # -->
-            <div class="tags">
-              {% for tag in brinquedo.tags.all %}
-                <span class="tag">#{{ tag.nome_tags }}</span>
-              {% endfor %}
-            </div>
-
-            <!-- BOTÃO -->
-            <a href="{% url 'brinquedo_detalhe' brinquedo.id %}#bread" class="btn-vermais">
-                Ver mais
-            </a>
-          </div>
+        <div class="img-area">
+          <img src="{{ brinquedo.imagem_brinquedo.url }}" alt="{{ brinquedo.nome_brinquedo }}">
         </div>
 
-      {% empty %}
-         <p class="nenhum-produto">Nenhum produto encontrado.</p>
-      {% endfor %}
+        <div class="conteudo">
 
+          <h3>{{ brinquedo.nome_brinquedo }}</h3>
+
+          <div class="avaliacao" data-rating="{{ brinquedo.avaliacao }}">
+            <div class="stars"></div>
+            <span class="nota">({{ brinquedo.avaliacao|floatformat:2 }})</span>
+          </div>
+
+          <div class="categorias">
+            {% for cat in brinquedo.categorias_brinquedos.all %}
+              <span class="categoria-pill">{{ cat.nome_categoria }}</span>
+            {% endfor %}
+          </div>
+
+          <p class="descricao">
+            {{ brinquedo.descricao|truncatewords:16 }}
+          </p>
+
+          <div class="voltagem">
+            🔌 Voltagem <strong>{{ brinquedo.voltz }}</strong>
+          </div>
+
+          <div class="dimensoes">
+            📏 Dimensões: {{ brinquedo.dimensoes_m|default:"Não informadas" }}
+          </div>
+
+          <div class="volume">
+            📦 Volume: {{ brinquedo.volume_formatado|default:"Não informado" }}
+          </div>
+
+          <div class="preco money" data-valor="{{ brinquedo.valor_brinquedo }}">
+            R$ 0,00
+          </div>
+
+          <div class="tags">
+            {% for tag in brinquedo.tags.all %}
+              <span class="tag">#{{ tag.nome_tags }}</span>
+            {% endfor %}
+          </div>
+
+          <!-- Agora é só visual, não link -->
+          <span class="btn-vermais">Ver mais</span>
+
+        </div>
       </div>
+
+    </a>
+    {% empty %}
+      <p class="nenhum-produto">Nenhum produto encontrado.</p>
+    {% endfor %}
+
+  </div>
+</div>
+
 
 
 <div id="paginacao-wrapper">
