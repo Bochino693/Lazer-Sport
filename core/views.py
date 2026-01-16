@@ -109,7 +109,7 @@ class HomeView(View):
             "projetos": projetos,
             "combos": combos,
             "promocoes": promocoes,
-            "estabelecimentos": estabelecimentos,
+            "estabelecimentos_globais": Estabelecimentos.objects.all(),
             "imagens_site": imagens_site,
         }
         return render(request, 'home.html', context)
