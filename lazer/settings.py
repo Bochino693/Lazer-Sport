@@ -19,6 +19,11 @@ import os
 env = Env()
 Env.read_env()
 
+
+print("ENV:", env('ENVIRONMENT', default='não encontrado'))
+print("CLOUD:", env('CLOUD_NAME', default='não encontrado'))
+
+
 ENVIRONMENT = env('ENVIRONMENT', default="production")
 
 import dj_database_url
@@ -57,6 +62,9 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django.contrib.humanize',
     'core',
+
+    'cloudinary_storage',
+    'cloudinary',
 ]
 
 MIDDLEWARE = [
@@ -157,7 +165,6 @@ USE_TZ = True
 
 
 STATIC_URL = '/static/'
-MEDIA_ROOT = '/opt/render/project/src/media'
 MEDIA_URL = '/media/'
 
 # Default primary key field type
@@ -165,6 +172,18 @@ MEDIA_URL = '/media/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+
+POSTGRES_LOCALLY = False
+if ENVIRONMENT == 'production':
+    CLOUDINARY_STORAGE = {
+        'CLOUD_NAME': env('CLOUD_NAME'),
+        'API_KEY': env('API_KEY'),
+        'API_SECRET': env('CLOUD_API_SECRET'),
+    }
+
+    DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+else:
+    MEDIA_ROOT = BASE_DIR / 'media'
 
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'static'),
