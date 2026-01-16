@@ -183,7 +183,7 @@
 
         <h3>{{ item.nome_brinquedo }}</h3>
 
-        <div class="avaliacao">
+        <div class="avaliacao" id="avaliacao">
     {% for i in "12345" %}
         {% if forloop.counter <= item.avaliacao|floatformat:0 %}
             <span class="star filled">★</span>
