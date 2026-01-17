@@ -136,6 +136,33 @@
 .star.filled {
     color: #f5b301;
 }
+
+    .avaliacao {
+    display: flex;
+    gap: 3px;
+    margin: 6px 0;
+}
+
+.star {
+    font-size: 1.1rem;
+    color: #ddd;
+    position: relative;
+}
+
+.star.cheia {
+    color: #f5b301;
+}
+
+.star.meia::before {
+    content: "★";
+    position: absolute;
+    left: 0;
+    width: 50%;
+    overflow: hidden;
+    color: #f5b301;
+}
+
+
 </style>
 
 <!-- 🔵 BREADCRUMB -->
@@ -170,7 +197,8 @@
      data-nome="{{ item.nome_brinquedo|lower }}"
      data-avaliacao="{{ item.avaliacao }}"
      data-preco="{{ item.valor_brinquedo }}"
-     data-url="{% url 'brinquedo_detalhe' item.id %}#produto-box">
+     data-url="{% url 'brinquedo_detalhe' item.id %}#produto-box"
+     id="estabelecimentos"   >
 
     <div class="img-area">
         {% if item.imagem_brinquedo %}
@@ -182,17 +210,10 @@
 
     <h3>{{ item.nome_brinquedo }}</h3>
 
-    <div>
-        {% for i in "12345" %}
-            {% if forloop.counter <= item.avaliacao|floatformat:0 %}
-                <span class="star filled">★</span>
-            {% else %}
-                <span class="star">★</span>
-            {% endif %}
-        {% endfor %}
-    </div>
+   <div class="avaliacao" data-avaliacao="{{ item.avaliacao }}"></div>
 
-    <p class="descricao">{{ item.descricao|truncatechars:80 }}</p>
+
+    <p class="descricao">{{ item.descricao|truncatechars:400 }}</p>
 
     <p class="preco money" data-valor="{{ item.valor_brinquedo }}">R$ 0,00</p>
 </div>
@@ -239,21 +260,11 @@ function aplicarFiltro(tipo) {
         const precoA = parseFloat(a.dataset.preco) || 999999;
         const precoB = parseFloat(b.dataset.preco) || 999999;
 
-        if (tipo === "az") {
-            return nomeA.localeCompare(nomeB);
-        }
-
-        if (tipo === "za") {
-            return nomeB.localeCompare(nomeA);
-        }
-
-        if (tipo === "avaliacao") {
-            // ⭐ MAIOR AVALIAÇÃO DECIMAL
-            return avaliacaoB - avaliacaoA;
-        }
+        if (tipo === "az") return nomeA.localeCompare(nomeB);
+        if (tipo === "za") return nomeB.localeCompare(nomeA);
+        if (tipo === "avaliacao") return avaliacaoB - avaliacaoA;
 
         if (tipo === "preco") {
-            // 💰 CUSTO-BENEFÍCIO → avaliação ÷ preço
             const scoreA = avaliacaoA / precoA;
             const scoreB = avaliacaoB / precoB;
             return scoreB - scoreA;
@@ -261,11 +272,44 @@ function aplicarFiltro(tipo) {
     });
 
     cards.forEach(card => container.appendChild(card));
+
+    // ⭐ SEMPRE renderiza após reordenar
+    renderizarEstrelas();
 }
+
+
+function renderizarEstrelas() {
+    document.querySelectorAll(".avaliacao").forEach(container => {
+        const nota = parseFloat(container.dataset.avaliacao) || 0;
+        container.innerHTML = "";
+
+        const inteiras = Math.floor(nota);
+        const temDecimal = nota % 1 !== 0;
+
+        for (let i = 1; i <= 5; i++) {
+            const star = document.createElement("span");
+            star.classList.add("star");
+            star.textContent = "★";
+
+            // estrela cheia apenas se for inteiro OU 5 exato
+            if (i <= inteiras && (!temDecimal || nota === 5)) {
+                star.classList.add("cheia");
+            }
+            // meia estrela somente na próxima posição
+            else if (i === inteiras + 1 && temDecimal && nota < 5) {
+                star.classList.add("meia");
+            }
+
+            container.appendChild(star);
+        }
+    });
+}
+
 
 /* ================= INIT ================= */
 document.addEventListener("DOMContentLoaded", () => {
     aplicarMoeda();
+    renderizarEstrelas(); // ⭐ inicial
 
     // filtros
     document.querySelectorAll(".filtro-btn").forEach(btn => {

@@ -199,7 +199,7 @@
 
 <!-- 🔵 BREADCRUMB -->
 <nav class="breadcrumb">
-    <a href="{% url 'home' %}">Home</a>
+    <a href="{% url 'home' %}#estabelecimentos">Home</a>
     <span>›</span>
     <strong>Estabelecimentos</strong>
 </nav>
@@ -214,7 +214,7 @@
 </div>
 
 <!-- 🔵 LISTAGEM -->
-<div class="produtos-wrapper">
+<div class="produtos-wrapper" >
 
 {% if estabelecimentos %}
 <div class="grid-cards">
@@ -244,7 +244,7 @@
 
     <!-- 🔵 ESTABELECIMENTOS -->
     {% for est in estabelecimentos %}
-    <div class="card-produto">
+    <div class="card-produto" id="estabelecimentos">
         <div class="img-area">
             {% if est.imagem_estabelecimento %}
                 <img src="{{ est.imagem_estabelecimento.url }}" alt="{{ est.nome_estabelecimento }}">

@@ -1957,13 +1957,14 @@ body {
 <div class="espacador"></div>
 
 <!-- ======= ESTABELECIMENTOS ======= -->
+<!-- ======= ESTABELECIMENTOS ======= -->
 <section id="estabelecimentos" class="estabelecimentos-section">
 
     <div class="eventos-header">
         <h2 class="titulo-eventos">Nossos Estabelecimentos</h2>
 
         <!-- BOTÃO VER TODOS -->
-        <a href="{% url 'estabelecimentos' %}" class="ver-todos-eventos">
+        <a href="{% url 'estabelecimentos' %}#estabelecimentos" class="ver-todos-eventos">
             Ver todos os estabelecimentos →
         </a>
     </div>
@@ -1974,13 +1975,17 @@ body {
 
     <div class="eventos-grid">
         {% for est in estabelecimentos|slice:":6" %}
-        <div class="evento-card">
+        <div class="evento-card"
+             onclick="window.location.href='{% url 'estabelecimento_brinquedo' est.id %}#estabelecimentos'"
+             style="cursor: pointer;">
 
             <div class="evento-thumb">
                 {% if est.imagem_estabelecimento %}
-                    <img src="{{ est.imagem_estabelecimento.url }}" alt="{{ est.nome_estabelecimento }}">
+                    <img src="{{ est.imagem_estabelecimento.url }}"
+                         alt="{{ est.nome_estabelecimento }}">
                 {% else %}
-                    <img src="{% static 'images/default_estabelecimento.jpg' %}" alt="Sem imagem">
+                    <img src="{% static 'images/default_estabelecimento.jpg' %}"
+                         alt="Sem imagem">
                 {% endif %}
             </div>
 
