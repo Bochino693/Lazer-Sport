@@ -18,13 +18,19 @@
     justify-items: center;
 }
 
+.card-link {
+    display: block;
+    color: inherit;
+    text-decoration: none;
+}
+
 .card-produto {
     width: 320px;
     background: white;
     border-radius: 16px;
     overflow: hidden;
     box-shadow: 0 6px 20px rgba(0,0,0,0.08);
-    transition: transform 0.3s, box-shadow 0.3s;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
     cursor: pointer;
     display: flex;
     flex-direction: column;
@@ -32,8 +38,8 @@
 }
 
 .card-produto:hover {
-    transform: translateY(-8px) scale(1.03);
-    box-shadow: 0 12px 28px rgba(0,0,0,0.15);
+    transform: translateY(-2px) scale(1.03);
+    box-shadow: 0 12px 28px rgba(0,0,0,0.08);
 }
 
 .card-produto img {
@@ -354,6 +360,7 @@
 <div class="grid-cards" id="grid-cards">
     {% for brinquedo in brinquedos %}
         <div class="card-produto">
+            <a href="{% url 'brinquedo_detalhe' brinquedo.id %}#bread" class="card-link">
 
             <!-- IMAGEM -->
             <div class="card-img">
@@ -381,7 +388,7 @@
 
                 <!-- DESCRIÇÃO CURTA -->
                 <p class="descricao">
-                    {{ brinquedo.descricao|truncatechars:80 }}
+                    {{ brinquedo.descricao|truncatechars:120 }}
                 </p>
 
                 <ul class="dados-tecnicos">
@@ -451,7 +458,7 @@
 
 
 
-                <a href="{% url 'brinquedo_detalhe' brinquedo.id %}"
+                <a href="{% url 'brinquedo_detalhe' brinquedo.id %}#bread"
                    class="btn-vermais">
                     Ver mais
                 </a>
