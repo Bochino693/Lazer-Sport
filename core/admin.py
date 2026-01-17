@@ -196,7 +196,7 @@ class ManutencaoAdmin(admin.ModelAdmin):
     )
 
     search_fields = (
-        'brinquedo__nome',
+        'brinquedo__nome_brinquedo',  # ajuste comum
         'usuario__user__username',
         'usuario__nome_completo',
         'telefone_contato',

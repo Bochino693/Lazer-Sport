@@ -7,7 +7,8 @@ from django.contrib import messages
 from django.contrib.auth import authenticate, login
 from decimal import Decimal
 
-from .forms import UserForm, PerfilForm, ProjetoForm
+from .forms import UserForm, PerfilForm, ProjetoForm, ManutencaoForm
+from django.views.generic.edit import FormView
 
 from django.contrib.auth.mixins import LoginRequiredMixin
 
@@ -31,8 +32,10 @@ def media_serve(request, path):
 def erro_404(request, exception):
     return render(request, "404.html", status=404)
 
+
 def erro_500(request):
     return render(request, "500.html", status=500)
+
 
 class HomeView(View):
 
@@ -205,6 +208,7 @@ from django.db.models.functions import Cast
 
 from django.views.generic import ListView
 from .models import Estabelecimentos
+
 
 class EstabelecimentosListView(ListView):
     model = Estabelecimentos
@@ -752,3 +756,21 @@ class NovaTag(View):
         messages.success(request, "Tag criada com sucesso!")
 
         return redirect("/brinquedos/admin/?modal_aberto=1")
+
+
+class SolicitarManutencaoView(FormView):
+    template_name = 'manutencao.html'  # seu template
+    form_class = ManutencaoForm
+    success_url = reverse_lazy('pagina_inicial')  # ou outra página para redirecionar
+
+    def form_valid(self, form):
+        # Não salva ainda, queremos adicionar o usuário
+        manutencao = form.save(commit=False)
+        manutencao.usuario = self.request.user.perfil  # assume que o usuário está logado e tem perfil
+        manutencao.save()
+        messages.success(self.request, "Solicitação enviada com sucesso!")
+        return super().form_valid(form)
+
+    def form_invalid(self, form):
+        messages.error(self.request, "Verifique os erros no formulário.")
+        return super().form_invalid(form)

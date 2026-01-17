@@ -169,14 +169,14 @@
 <nav class="breadcrumb">
     <a href="{% url 'home' %}">Home</a>
     <span>›</span>
-    <a href="{% url 'estabelecimentos' %}">Estabelecimentos</a>
+    <a href="{% url 'estabelecimentos' %}#estabelecimento">Estabelecimentos</a>
     <span>›</span>
-    <strong>{{ estabelecimento.nome_estabelecimento }}</strong>
+    <strong> {{ estabelecimento.nome_estabelecimento }}</strong>
 </nav>
 
 <!-- 🔵 HEADER -->
 <div class="header-estabelecimento">
-    <h1>{{ estabelecimento.nome_estabelecimento }}</h1>
+    <h1>Brinquedos recmendados para {{ estabelecimento.nome_estabelecimento }}</h1>
     <p>{{ brinquedos|length }} brinquedo(s) disponíveis</p>
 </div>
 
