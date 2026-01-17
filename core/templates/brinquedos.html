@@ -470,6 +470,11 @@ document.addEventListener('DOMContentLoaded', function () {
     const grid = document.querySelector('#grid-cards');
     const paginacaoWrapper = document.querySelector('#paginacao-wrapper');
 
+    // ✅ RENDERIZA NA CARGA INICIAL
+    renderStars(document);
+    formatarPrecos(document);
+
+
     function carregarConteudo(url) {
         grid.style.opacity = '0.4';
 
