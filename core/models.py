@@ -421,11 +421,35 @@ class Manutencao(models.Model):
         related_name='brinquedo_manutencoes'
     )
     descricao = models.TextField(max_length=999)
+
     usuario = models.ForeignKey(
         ClientePerfil,
         on_delete=models.CASCADE,
         related_name='manutencoes'
     )
+
+    telefone_contato = models.CharField(
+        max_length=20,
+        help_text="Telefone para contato",
+        null=True
+    )
+
+    cep = models.CharField(
+        max_length=9,
+        help_text="Formato: 00000-000",
+        null=True
+    )
+    endereco = models.CharField(max_length=255, null=True)
+    numero = models.CharField(max_length=20, null=True)
+    complemento = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True
+    )
+    bairro = models.CharField(max_length=100, null=True, blank=True)
+    cidade = models.CharField(max_length=100, null=True, blank=True)
+    estado = models.CharField(max_length=2, null=True, blank=True)
+
     status = models.CharField(
         max_length=1,
         choices=STATUS_CHOICES,
@@ -435,6 +459,7 @@ class Manutencao(models.Model):
 
     def __str__(self):
         return f"{self.brinquedo} - {self.get_status_display()}"
+
 
 
 class ManutencaoImagem(models.Model):
