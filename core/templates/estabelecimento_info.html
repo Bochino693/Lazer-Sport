@@ -4,12 +4,22 @@
 {% block content %}
 
 <style>
+/* ================= CARD ATIVO ================= */
+.card-produto.ativo {
+    border: 2px solid #004AAD;
+    box-shadow: 0 12px 26px rgba(0, 74, 173, 0.35);
+    transform: translateY(-6px);
+}
+
+.card-produto.ativo h3 {
+    color: #004AAD;
+}
+
 /* ===== BREADCRUMB ===== */
 .breadcrumb {
     max-width: 1200px;
     margin: 25px auto;
     font-size: 1rem;
-    color: #444;
 }
 
 .breadcrumb a {
@@ -23,20 +33,42 @@
     color: #888;
 }
 
-.breadcrumb strong {
-    color: #1f2d3d;
-}
-
 /* ===== HEADER ===== */
 .header-estabelecimento {
     text-align: center;
-    margin-bottom: 40px;
+    margin-bottom: 30px;
 }
 
 .header-estabelecimento h1 {
     font-size: 2.4rem;
     color: #004AAD;
-    font-weight: 700;
+}
+
+/* ===== FILTROS ===== */
+.filtros-horizontal {
+    max-width: 1200px;
+    margin: 0 auto 30px;
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.filtro-btn {
+    padding: 8px 14px;
+    border-radius: 20px;
+    background: #eef2ff;
+    color: #004AAD;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: .2s;
+}
+
+.filtro-btn:hover,
+.filtro-btn.ativo {
+    background: #004AAD;
+    color: #fff;
 }
 
 /* ===== GRID ===== */
@@ -46,13 +78,14 @@
     gap: 28px;
 }
 
-/* CARD */
+/* ===== CARD ===== */
 .card-produto {
     background: #fff;
     border-radius: 14px;
     padding: 15px;
     box-shadow: 0 4px 10px rgba(0,0,0,.08);
     transition: .25s ease;
+    cursor: pointer;
     display: flex;
     flex-direction: column;
 }
@@ -62,7 +95,7 @@
     box-shadow: 0 10px 22px rgba(0,0,0,.15);
 }
 
-/* IMAGEM */
+/* ===== IMAGEM ===== */
 .img-area {
     height: 180px;
     border-radius: 12px;
@@ -76,12 +109,11 @@
     object-fit: cover;
 }
 
-/* TEXTO */
+/* ===== TEXTO ===== */
 .card-produto h3 {
     margin-top: 14px;
     font-size: 1.2rem;
     color: #004AAD;
-    font-weight: 700;
 }
 
 .descricao {
@@ -97,45 +129,13 @@
     font-weight: 700;
 }
 
-
-.filtros-horizontal {
-    max-width: 1200px;
-    margin: 0 auto 30px;
-    display: flex;
-    gap: 15px;
-    flex-wrap: wrap;
-     justify-content: center; /* 👈 centraliza */
-}
-
-.filtros-horizontal a {
-    padding: 8px 14px;
-    border-radius: 20px;
-    background: #eef2ff;
-    color: #004AAD;
-    font-weight: 600;
-    text-decoration: none;
-    transition: .2s;
-}
-
-.filtros-horizontal a:hover {
-    background: #004AAD;
-    color: #fff;
-}
-
-.avaliacao {
-    margin: 6px 0;
-}
-
 .star {
-    font-size: 1.1rem;
     color: #ccc;
 }
 
 .star.filled {
     color: #f5b301;
 }
-
-
 </style>
 
 <!-- 🔵 BREADCRUMB -->
@@ -147,84 +147,71 @@
     <strong>{{ estabelecimento.nome_estabelecimento }}</strong>
 </nav>
 
-
-
 <!-- 🔵 HEADER -->
 <div class="header-estabelecimento">
     <h1>{{ estabelecimento.nome_estabelecimento }}</h1>
     <p>{{ brinquedos|length }} brinquedo(s) disponíveis</p>
 </div>
 
+<!-- 🔵 FILTROS -->
 <div class="filtros-horizontal">
-    <a href="?order=az">A–Z</a>
-    <a href="?order=za">Z–A</a>
-    <a href="?order=avaliacao">⭐ Melhores avaliados</a>
-    <a href="?order=custo">💰 Custo-benefício</a>
+    <button class="filtro-btn ativo" data-filtro="az">A–Z</button>
+    <button class="filtro-btn" data-filtro="za">Z–A</button>
+    <button class="filtro-btn" data-filtro="avaliacao">⭐ Melhores avaliados</button>
+    <button class="filtro-btn" data-filtro="preco">💰 Menor preço</button>
 </div>
 
-
-
-
-<!-- 🔵 LISTA DE BRINQUEDOS -->
+<!-- 🔵 LISTAGEM -->
 {% if brinquedos %}
-<div class="grid-cards">
+<div class="grid-cards" id="lista-brinquedos">
 
-    {% for item in brinquedos %}
-    <div class="card-produto" id="brinquedos">
+{% for item in brinquedos %}
+<div class="card-produto"
+     data-nome="{{ item.nome_brinquedo|lower }}"
+     data-avaliacao="{{ item.avaliacao }}"
+     data-preco="{{ item.valor_brinquedo }}"
+     data-url="{% url 'brinquedo_detalhe' item.id %}#produto-box">
 
-        <div class="img-area">
-            {% if item.imagem_brinquedo %}
-                <img src="{{ item.imagem_brinquedo.url }}" alt="{{ item.nome_brinquedo }}">
-            {% else %}
-                <img src="{% static 'img/placeholder.png' %}" alt="Sem imagem">
-            {% endif %}
-
-        </div>
-
-        <h3>{{ item.nome_brinquedo }}</h3>
-
-        <div class="avaliacao" id="avaliacao">
-    {% for i in "12345" %}
-        {% if forloop.counter <= item.avaliacao|floatformat:0 %}
-            <span class="star filled">★</span>
+    <div class="img-area">
+        {% if item.imagem_brinquedo %}
+            <img src="{{ item.imagem_brinquedo.url }}">
         {% else %}
-            <span class="star">★</span>
+            <img src="{% static 'img/placeholder.png' %}">
         {% endif %}
-    {% endfor %}
-</div>
-
-
-        <p class="descricao">
-            {{ item.descricao|truncatechars:80 }}
-        </p>
-
-        <p class="preco money" data-valor="{{ item.valor_brinquedo }}">
-            R$ 0,00
-        </p>
-
-
     </div>
-    {% endfor %}
+
+    <h3>{{ item.nome_brinquedo }}</h3>
+
+    <div>
+        {% for i in "12345" %}
+            {% if forloop.counter <= item.avaliacao|floatformat:0 %}
+                <span class="star filled">★</span>
+            {% else %}
+                <span class="star">★</span>
+            {% endif %}
+        {% endfor %}
+    </div>
+
+    <p class="descricao">{{ item.descricao|truncatechars:80 }}</p>
+
+    <p class="preco money" data-valor="{{ item.valor_brinquedo }}">R$ 0,00</p>
+</div>
+{% endfor %}
 
 </div>
 {% else %}
-<p style="text-align:center; color:#666;">
-    Nenhum brinquedo disponível neste estabelecimento.
-</p>
+<p style="text-align:center">Nenhum brinquedo disponível.</p>
 {% endif %}
 
+<!-- 🔵 JS -->
 <script>
 function formatarMoedaBR(valor) {
-    if (valor === null || valor === undefined || valor === "") {
-        return "0,00";
-    }
+    if (!valor) return "0,00";
 
-    // garante conversão correta (vírgula → ponto)
+    // troca vírgula por ponto
     const numero = Number(valor.toString().replace(",", "."));
 
-    if (isNaN(numero)) {
-        return "0,00";
-    }
+    if (isNaN(numero)) return "0,00";
 
     return numero.toLocaleString("pt-BR", {
         minimumFractionDigits: 2,
@@ -232,15 +219,49 @@ function formatarMoedaBR(valor) {
     });
 }
 
-function aplicarFormatacaoMoeda() {
+function aplicarMoeda() {
     document.querySelectorAll(".money").forEach(el => {
-        const valor = el.dataset.valor;
-        el.textContent = "R$ " + formatarMoedaBR(valor);
+        el.textContent = "R$ " + formatarMoedaBR(el.dataset.valor);
     });
 }
 
-document.addEventListener("DOMContentLoaded", aplicarFormatacaoMoeda);
-</script>
+document.addEventListener("DOMContentLoaded", aplicarMoeda);
 
+function aplicarFiltro(tipo) {
+    const container = document.getElementById("lista-brinquedos");
+    const cards = Array.from(container.children);
+
+    cards.sort((a, b) => {
+        if (tipo === "az") return a.dataset.nome.localeCompare(b.dataset.nome);
+        if (tipo === "za") return b.dataset.nome.localeCompare(a.dataset.nome);
+        if (tipo === "avaliacao") return b.dataset.avaliacao - a.dataset.avaliacao;
+        if (tipo === "preco") return a.dataset.preco - b.dataset.preco;
+    });
+
+    cards.forEach(card => container.appendChild(card));
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    aplicarMoeda();
+
+    document.querySelectorAll(".filtro-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+
+            document.querySelectorAll(".filtro-btn").forEach(b => b.classList.remove("ativo"));
+            btn.classList.add("ativo");
+
+            aplicarFiltro(btn.dataset.filtro);
+        });
+    });
+
+    document.querySelectorAll(".card-produto").forEach(card => {
+        card.addEventListener("click", () => {
+            document.querySelectorAll(".card-produto").forEach(c => c.classList.remove("ativo"));
+            card.classList.add("ativo");
+            window.location.href = card.dataset.url;
+        });
+    });
+});
+</script>
 
 {% endblock %}

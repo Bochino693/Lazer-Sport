@@ -211,6 +211,18 @@ class EstabelecimentosListView(ListView):
     template_name = "estabelecimentos_info.html"
     context_object_name = "estabelecimentos"
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        # brinquedos para o carrossel (limite para não pesar)
+        context["brinquedos_carrossel"] = (
+            Brinquedos.objects
+            .exclude(imagem_brinquedo="")
+            [:8]
+        )
+
+        return context
+
 
 class BrinquedosView(View):
     def get(self, request):
