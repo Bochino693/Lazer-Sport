@@ -132,7 +132,7 @@ def parse_metro(value):
 
 class Brinquedos(Prime):
     nome_brinquedo = models.CharField(max_length=150)
-    imagem_brinquedo = models.ImageField(upload_to='imagens_brinquedos',  blank=True, null=True)
+    imagem_brinquedo = models.ImageField(upload_to='imagens_brinquedos', blank=True, null=True)
     descricao = models.CharField(max_length=999)
     valor_brinquedo = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     avaliacao = models.DecimalField(decimal_places=2, max_digits=6)
@@ -461,7 +461,6 @@ class Manutencao(models.Model):
         return f"{self.brinquedo} - {self.get_status_display()}"
 
 
-
 class ManutencaoImagem(models.Model):
     manutencao = models.ForeignKey(
         Manutencao,
@@ -469,6 +468,7 @@ class ManutencaoImagem(models.Model):
         related_name='imagens'
     )
     imagem = models.ImageField(upload_to='manutencoes/')
+
 
 class Venda(Prime):
     carrinho = models.ForeignKey(Carrinho, on_delete=models.SET_NULL, related_name='vendas', null=True)

@@ -4,6 +4,9 @@
 {% block title %}Brinquedos | Minha Loja{% endblock %}
 
 {% block content %}
+
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap">
+
 <style>
 /* ======= GRID DE PRODUTOS ======= */
 .grid-cards {
@@ -25,6 +28,7 @@
     cursor: pointer;
     display: flex;
     flex-direction: column;
+    font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
 }
 
 .card-produto:hover {
@@ -236,13 +240,32 @@
 .dados-tecnicos {
     list-style: none;
     padding: 0;
-    margin: 8px 0;
+    margin: 10px 0;
     font-size: 0.85rem;
     color: #444;
 }
 
 .dados-tecnicos li {
+    margin-bottom: 6px;
+}
+
+.dt-label {
+    display: block;
+    font-weight: 600;
+    color: #333;
     margin-bottom: 4px;
+}
+
+.dimensoes-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 4px 10px;
+    padding-left: 4px;
+}
+
+.dimensoes-grid span {
+    font-size: 0.8rem;
+    color: #555;
 }
 
 /* BADGES */
@@ -361,20 +384,32 @@
                     {{ brinquedo.descricao|truncatechars:80 }}
                 </p>
 
-                <!-- DADOS TÉCNICOS -->
                 <ul class="dados-tecnicos">
-                    {% if brinquedo.voltz %}
-                        <li>⚡ {{ brinquedo.voltz }}</li>
-                    {% endif %}
+    {% if brinquedo.voltz %}
+        <li>
+            <span class="dt-label">⚡ Voltagem</span>
+            <span class="dt-valor">{{ brinquedo.voltz }}</span>
+        </li>
+    {% endif %}
 
-                    {% if brinquedo.dimensoes_m %}
-                        <li>📐 {{ brinquedo.dimensoes_m }}</li>
-                    {% endif %}
+    {% if brinquedo.altura_m or brinquedo.largura_m or brinquedo.profundidade_m %}
+        <li class="dimensoes">
+            <span class="dt-label">📐 Dimensões (m)</span>
+            <div class="dimensoes-grid">
+                {% if brinquedo.altura_m %}
+                    <span><strong>Altura:</strong> {{ brinquedo.altura_m }} m</span>
+                {% endif %}
+                {% if brinquedo.largura_m %}
+                    <span><strong>Largura:</strong> {{ brinquedo.largura_m }} m</span>
+                {% endif %}
+                {% if brinquedo.profundidade_m %}
+                    <span><strong>Comprimento:</strong> {{ brinquedo.profundidade_m }} m</span>
+                {% endif %}
+            </div>
+        </li>
+    {% endif %}
+</ul>
 
-                    {% if brinquedo.volume_formatado %}
-                        <li>📦 {{ brinquedo.volume_formatado }}</li>
-                    {% endif %}
-                </ul>
 
                 <!-- CATEGORIAS -->
                 {% if brinquedo.categorias_brinquedos.exists %}
