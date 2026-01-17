@@ -248,7 +248,7 @@ class BrinquedosView(View):
             ).order_by('-score')
 
         # PAGINAÇÃO
-        paginator = Paginator(brinquedos_list, 9)
+        paginator = Paginator(brinquedos_list, 12)
         page_number = request.GET.get('page')
 
         try:

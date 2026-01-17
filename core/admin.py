@@ -12,7 +12,9 @@ from .models import (
     BrinquedosProjeto,
     Combos,
     Promocoes,
-    Cupom
+    Cupom,
+    Manutencao,
+    ManutencaoImagem
 )
 from django.utils.html import format_html
 from .models import ImagensSite
@@ -166,3 +168,78 @@ class PromocoesAdmin(admin.ModelAdmin):
 class CupomAdmin(admin.ModelAdmin):
     list_display = ('codigo', 'desconto_percentual')
     search_fields = ('codigo',)
+
+
+
+class ManutencaoImagemInline(admin.TabularInline):
+    model = ManutencaoImagem
+    extra = 1
+
+
+@admin.register(Manutencao)
+class ManutencaoAdmin(admin.ModelAdmin):
+    list_display = (
+        'id',
+        'brinquedo',
+        'usuario',
+        'telefone_contato',
+        'cidade',
+        'estado',
+        'status',
+        'criado_em',
+    )
+
+    list_filter = (
+        'status',
+        'estado',
+        'criado_em',
+    )
+
+    search_fields = (
+        'brinquedo__nome',
+        'usuario__user__username',
+        'usuario__nome_completo',
+        'telefone_contato',
+        'cep',
+    )
+
+    readonly_fields = ('criado_em',)
+
+    fieldsets = (
+        ('Informações da Manutenção', {
+            'fields': (
+                'brinquedo',
+                'descricao',
+                'status',
+            )
+        }),
+        ('Cliente', {
+            'fields': (
+                'usuario',
+                'telefone_contato',
+            )
+        }),
+        ('Endereço', {
+            'fields': (
+                'cep',
+                'endereco',
+                'numero',
+                'complemento',
+                'bairro',
+                'cidade',
+                'estado',
+            )
+        }),
+        ('Datas', {
+            'fields': (
+                'criado_em',
+            )
+        }),
+    )
+
+    inlines = [ManutencaoImagemInline]
+
+
+@admin.register(ManutencaoImagem)
+class ManutencaoImagemAdmin(admin.ModelAdmin):
+    list_display = ('id', 'manutencao')
