@@ -203,14 +203,13 @@
 <p style="text-align:center">Nenhum brinquedo disponível.</p>
 {% endif %}
 
-<!-- 🔵 JS -->
 <script>
 function formatarMoedaBR(valor) {
-    if (!valor) return "0,00";
+    if (valor === null || valor === undefined || valor === "" || valor === "None") {
+        return "0,00";
+    }
 
-    // troca vírgula por ponto
     const numero = Number(valor.toString().replace(",", "."));
-
     if (isNaN(numero)) return "0,00";
 
     return numero.toLocaleString("pt-BR", {
@@ -225,35 +224,59 @@ function aplicarMoeda() {
     });
 }
 
-document.addEventListener("DOMContentLoaded", aplicarMoeda);
-
+/* ================= FILTROS ================= */
 function aplicarFiltro(tipo) {
     const container = document.getElementById("lista-brinquedos");
     const cards = Array.from(container.children);
 
     cards.sort((a, b) => {
-        if (tipo === "az") return a.dataset.nome.localeCompare(b.dataset.nome);
-        if (tipo === "za") return b.dataset.nome.localeCompare(a.dataset.nome);
-        if (tipo === "avaliacao") return b.dataset.avaliacao - a.dataset.avaliacao;
-        if (tipo === "preco") return a.dataset.preco - b.dataset.preco;
+        const nomeA = a.dataset.nome;
+        const nomeB = b.dataset.nome;
+
+        const avaliacaoA = parseFloat(a.dataset.avaliacao) || 0;
+        const avaliacaoB = parseFloat(b.dataset.avaliacao) || 0;
+
+        const precoA = parseFloat(a.dataset.preco) || 999999;
+        const precoB = parseFloat(b.dataset.preco) || 999999;
+
+        if (tipo === "az") {
+            return nomeA.localeCompare(nomeB);
+        }
+
+        if (tipo === "za") {
+            return nomeB.localeCompare(nomeA);
+        }
+
+        if (tipo === "avaliacao") {
+            // ⭐ MAIOR AVALIAÇÃO DECIMAL
+            return avaliacaoB - avaliacaoA;
+        }
+
+        if (tipo === "preco") {
+            // 💰 CUSTO-BENEFÍCIO → avaliação ÷ preço
+            const scoreA = avaliacaoA / precoA;
+            const scoreB = avaliacaoB / precoB;
+            return scoreB - scoreA;
+        }
     });
 
     cards.forEach(card => container.appendChild(card));
 }
 
+/* ================= INIT ================= */
 document.addEventListener("DOMContentLoaded", () => {
     aplicarMoeda();
 
+    // filtros
     document.querySelectorAll(".filtro-btn").forEach(btn => {
         btn.addEventListener("click", () => {
-
             document.querySelectorAll(".filtro-btn").forEach(b => b.classList.remove("ativo"));
             btn.classList.add("ativo");
-
             aplicarFiltro(btn.dataset.filtro);
         });
     });
 
+    // card ativo + redirect
     document.querySelectorAll(".card-produto").forEach(card => {
         card.addEventListener("click", () => {
             document.querySelectorAll(".card-produto").forEach(c => c.classList.remove("ativo"));
@@ -261,6 +284,9 @@ document.addEventListener("DOMContentLoaded", () => {
             window.location.href = card.dataset.url;
         });
     });
+
+    // filtro inicial
+    aplicarFiltro("az");
 });
 </script>
 

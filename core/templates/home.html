@@ -1951,11 +1951,101 @@ body {
         {% endif %}
     </div>
 </div>
-</div>
 </section>
 
 <!-- Div invisível para espaçamento -->
 <div class="espacador"></div>
+
+<!-- ======= ESTABELECIMENTOS ======= -->
+<section id="estabelecimentos" class="estabelecimentos-section">
+
+    <div class="eventos-header">
+        <h2 class="titulo-eventos">Nossos Estabelecimentos</h2>
+
+        <!-- BOTÃO VER TODOS -->
+        <a href="{% url 'estabelecimentos' %}" class="ver-todos-eventos">
+            Ver todos os estabelecimentos →
+        </a>
+    </div>
+
+    <p class="section-subtitle">
+        Conheça os parceiros responsáveis por levar diversão e qualidade aos eventos.
+    </p>
+
+    <div class="eventos-grid">
+        {% for est in estabelecimentos|slice:":6" %}
+        <div class="evento-card">
+
+            <div class="evento-thumb">
+                {% if est.imagem_estabelecimento %}
+                    <img src="{{ est.imagem_estabelecimento.url }}" alt="{{ est.nome_estabelecimento }}">
+                {% else %}
+                    <img src="{% static 'images/default_estabelecimento.jpg' %}" alt="Sem imagem">
+                {% endif %}
+            </div>
+
+            <div class="evento-info">
+                <h3>{{ est.nome_estabelecimento }}</h3>
+                <p>
+                    Clique para conhecer os brinquedos, avaliações e informações
+                    deste estabelecimento.
+                </p>
+            </div>
+
+        </div>
+        {% endfor %}
+    </div>
+
+</section>
+
+
+<!-- Div invisível para espaçamento -->
+<div class="espacador"></div>
+
+
+<!-- ======= MANUTENÇÃO ======= -->
+<section id="manutencao" class="manutencao-section">
+
+    <div class="manutencao-container">
+
+        <h2 class="titulo-eventos">Solicitar Manutenção de Brinquedo</h2>
+
+        <p class="section-subtitle">
+            Seu brinquedo precisa de reparo ou revisão?
+            Nossa equipe está pronta para ajudar.
+        </p>
+
+        <div class="manutencao-card">
+
+            <div class="manutencao-icon">
+                🛠
+            </div>
+
+            <div class="manutencao-info">
+                <h3>Manutenção preventiva e corretiva</h3>
+
+                <p>
+                    Solicite manutenção para garantir segurança,
+                    qualidade e o melhor desempenho dos brinquedos.
+                </p>
+
+                <a href="#"
+                   class="btn-vermais">
+                    Solicitar manutenção
+                </a>
+            </div>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+
+<!-- Div invisível para espaçamento -->
+<div class="espacador"></div>
+
 
 <!-- ======= EVENTOS ======= -->
 <section id="eventos" class="eventos-section">
