@@ -12,12 +12,12 @@
 .grid-cards {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-    gap: 30px;
+    gap: 50px; /* aumenta ainda mais a distância entre os cards */
     max-width: 1200px;
     margin: 50px auto;
     justify-items: center;
+    padding: 0 20px; /* espaço interno nas laterais da grid */
 }
-
 .card-link {
     display: block;
     color: inherit;
@@ -35,8 +35,10 @@
     display: flex;
     flex-direction: column;
     font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+    height: 100%;
 }
 
+/* Hover no card inteiro */
 .card-produto:hover {
     transform: translateY(-2px) scale(1.03);
     box-shadow: 0 12px 28px rgba(0,0,0,0.08);
@@ -48,21 +50,21 @@
     object-fit: cover;
     transition: transform 0.4s ease;
     background: #f2f2f2;
-
-     display: flex;
+    display: flex;
     align-items: center;
     justify-content: center;
-    position: relative; /* necessário para o ::before */
+    position: relative;
 }
 
 .card-produto:hover img {
     transform: scale(1.05);
 }
 
-
-
-
+/* CONTEÚDO FLEXÍVEL */
 .card-produto .conteudo {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
     padding: 16px;
     text-align: left;
 }
@@ -71,167 +73,6 @@
     font-size: 1.2rem;
     margin-bottom: 8px;
     color: #1f2d3d;
-}
-
-.card-produto .preco {
-    font-size: 1.2rem;
-    color: #007BFF;
-    font-weight: 700;
-    margin-bottom: 12px;
-}
-
-.card-produto .btn-vermais {
-    display: inline-block;
-    width: 100%;
-    text-align: center;
-    background: #007BFF;
-    color: white;
-    padding: 10px 0;
-    border-radius: 8px;
-    font-weight: 600;
-    text-decoration: none;
-    transition: background 0.3s;
-}
-
-.card-produto .btn-vermais:hover {
-    background: #E63946;
-}
-
-    /* ======== BREADCRUMB ======== */
-.breadcrumb {
-    max-width: 1200px;
-    margin: 25px auto;
-    font-size: 1rem;
-    color: #444;
-}
-
-.breadcrumb a {
-    color: #007BFF;
-    text-decoration: none;
-    font-weight: 600;
-}
-
-.breadcrumb span {
-    margin: 0 6px;
-    color: #888;
-}
-
-.breadcrumb strong {
-    color: #1f2d3d;
-}
-/* ======= PAGINAÇÃO ======= */
-#paginacao-wrapper {
-    display: flex;
-    justify-content: center;
-    margin: 40px 0;
-}
-
-.paginacao {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-}
-
-.page-btn {
-    padding: 8px 16px;
-    border: 2px solid #007BFF;
-    border-radius: 25px;
-    color: #007BFF;
-    text-decoration: none;
-    font-weight: 600;
-    transition: all 0.3s;
-}
-
-.page-btn:hover {
-    background: #007BFF;
-    color: white;
-}
-
-.page-atual {
-    font-weight: 600;
-    color: #444;
-    margin: 0 10px;
-}
-
-.avaliacao {
-    display: flex;
-    gap: 4px;
-    margin-bottom: 10px;
-}
-
-.avaliacao i {
-    color: #FFD700; /* dourado */
-    font-size: 1rem;
-}
-
-.avaliacao i.vazia {
-    color: #ccc;
-}
-
-
-/* ===============================
-   FILTROS – BARRA HORIZONTAL
-   =============================== */
-
-.filtros-horizontal {
-    display: flex;
-    justify-content: center;
-    gap: 14px;
-    margin: 20px auto 35px auto;
-    flex-wrap: wrap;
-    max-width: 1200px;
-}
-
-/* Botões */
-.filtro-btn {
-    display: block;
-    width: 220px;
-    text-align: center;
-
-    padding: 14px 0;
-
-    background: #ffffff;
-    color: #3a3a3a;
-    text-decoration: none;
-    font-weight: 600;
-
-    border-radius: 14px;
-    border: 1px solid #e5e5e5;
-
-    box-shadow: 0 3px 10px rgba(0,0,0,0.06);
-
-    transition: all 0.25s ease;
-    cursor: pointer;
-}
-
-/* Hover */
-.filtro-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(0,0,0,0.12);
-    background: #f8f8f8;
-}
-
-/* Ativo */
-.filtro-btn.ativo {
-    background: linear-gradient(135deg, #0d6efd, #4aa3ff);
-    color: #ffffff;
-    border-color: transparent;
-    box-shadow: 0 5px 15px rgba(13,110,253,0.45);
-}
-
-/* Mobile */
-@media (max-width: 600px) {
-    .filtro-btn {
-        width: 100%;
-    }
-}
-
-
-/* CONTEÚDO FLEXÍVEL */
-.card-produto .conteudo {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
 }
 
 /* DESCRIÇÃO */
@@ -289,22 +130,41 @@
     margin: 2px;
 }
 
-/* PREÇO SEM EMPURRAR BOTÃO */
-.preco {
-    margin-top: auto;
+/* PREÇO E BOTÕES – RODAPÉ FIXO */
+.card-footer {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 12px;
 }
-.btn-whatsapp {
-    display: inline-block;
-    width: 100%;
+
+.card-produto .preco {
+    margin-top: auto;
+    font-size: 1.2rem;
+    color: #007BFF;
+    font-weight: 700;
     text-align: center;
-    background: #25D366;
-    color: #ffffff;
+}
+
+.card-produto .btn-whatsapp,
+.card-produto .btn-vermais {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    min-height: 44px; /* altura fixa */
     padding: 10px 0;
     border-radius: 8px;
     font-weight: 600;
     text-decoration: none;
     margin-top: 8px;
     transition: background 0.3s, transform 0.2s;
+    box-sizing: border-box;
+}
+
+.btn-whatsapp {
+    background: #25D366;
+    color: #fff;
 }
 
 .btn-whatsapp i {
@@ -317,6 +177,136 @@
     transform: scale(1.02);
 }
 
+.btn-vermais {
+    background: #007BFF;
+    color: #fff;
+}
+
+.btn-vermais:hover {
+    background: #E63946;
+}
+
+
+/* ================= BREADCRUMB ================= */
+.breadcrumb {
+    max-width: 1200px;
+    margin: 25px auto;
+    font-size: 1rem;
+    color: #444;
+}
+
+.breadcrumb a {
+    color: #007BFF;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.breadcrumb span {
+    margin: 0 6px;
+    color: #888;
+}
+
+.breadcrumb strong {
+    color: #1f2d3d;
+}
+
+
+/* ======= PAGINAÇÃO ======= */
+#paginacao-wrapper {
+    display: flex;
+    justify-content: center;
+    margin: 40px 0;
+}
+
+.paginacao {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.page-btn {
+    padding: 8px 16px;
+    border: 2px solid #007BFF;
+    border-radius: 25px;
+    color: #007BFF;
+    text-decoration: none;
+    font-weight: 600;
+    transition: all 0.3s;
+}
+
+.page-btn:hover {
+    background: #007BFF;
+    color: white;
+}
+
+.page-atual {
+    font-weight: 600;
+    color: #444;
+    margin: 0 10px;
+}
+
+/* AVALIAÇÃO */
+.avaliacao {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 10px;
+}
+
+.avaliacao i {
+    color: #FFD700; /* dourado */
+    font-size: 1rem;
+}
+
+.avaliacao i.vazia {
+    color: #ccc;
+}
+
+/* ===============================
+   FILTROS – BARRA HORIZONTAL
+   =============================== */
+.filtros-horizontal {
+    display: flex;
+    justify-content: center;
+    gap: 14px;
+    margin: 20px auto 35px auto;
+    flex-wrap: wrap;
+    max-width: 1200px;
+}
+
+.filtro-btn {
+    display: block;
+    width: 220px;
+    text-align: center;
+    padding: 14px 0;
+    background: #ffffff;
+    color: #3a3a3a;
+    text-decoration: none;
+    font-weight: 600;
+    border-radius: 14px;
+    border: 1px solid #e5e5e5;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.06);
+    transition: all 0.25s ease;
+    cursor: pointer;
+}
+
+.filtro-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.12);
+    background: #f8f8f8;
+}
+
+.filtro-btn.ativo {
+    background: linear-gradient(135deg, #0d6efd, #4aa3ff);
+    color: #ffffff;
+    border-color: transparent;
+    box-shadow: 0 5px 15px rgba(13,110,253,0.45);
+}
+
+@media (max-width: 600px) {
+    .filtro-btn {
+        width: 100%;
+    }
+}
 
 </style>
 
@@ -334,161 +324,127 @@
     </h2>
 
     <!-- ======= FILTROS ======= -->
-<div class="filtros-horizontal">
-    <a href="?ordenar=az"
-       class="filtro-btn {% if ordenar == 'az' %}ativo{% endif %}">
-        A → Z
-    </a>
+    <div class="filtros-horizontal">
+        <a href="?ordenar=az" class="filtro-btn {% if ordenar == 'az' %}ativo{% endif %}">A → Z</a>
+        <a href="?ordenar=za" class="filtro-btn {% if ordenar == 'za' %}ativo{% endif %}">Z → A</a>
+        <a href="?ordenar=melhor-avaliados" class="filtro-btn {% if ordenar == 'melhor-avaliados' %}ativo{% endif %}">⭐ Melhores avaliados</a>
+        <a href="?ordenar=custo-beneficio" class="filtro-btn {% if ordenar == 'custo-beneficio' %}ativo{% endif %}">💰 Custo-benefício</a>
+    </div>
 
-    <a href="?ordenar=za"
-       class="filtro-btn {% if ordenar == 'za' %}ativo{% endif %}">
-        Z → A
-    </a>
+    <!-- ======= GRID ======= -->
+    <div class="grid-cards" id="grid-cards">
+        {% for brinquedo in brinquedos %}
+            <div class="card-produto">
 
-    <a href="?ordenar=melhor-avaliados"
-       class="filtro-btn {% if ordenar == 'melhor-avaliados' %}ativo{% endif %}">
-        ⭐ Melhores avaliados
-    </a>
+                <!-- LINK PRINCIPAL -->
+                <a href="{% url 'brinquedo_detalhe' brinquedo.id %}#bread" class="card-link">
 
-    <a href="?ordenar=custo-beneficio"
-       class="filtro-btn {% if ordenar == 'custo-beneficio' %}ativo{% endif %}">
-        💰 Custo-benefício
-    </a>
-</div>
-
-<!-- ======= GRID ======= -->
-<div class="grid-cards" id="grid-cards">
-    {% for brinquedo in brinquedos %}
-        <div class="card-produto">
-            <a href="{% url 'brinquedo_detalhe' brinquedo.id %}#bread" class="card-link">
-
-            <!-- IMAGEM -->
-            <div class="card-img">
-                {% if brinquedo.imagem_brinquedo %}
-                    <img src="{{ brinquedo.imagem_brinquedo.url }}"
-                         alt="{{ brinquedo.nome_brinquedo }}">
-                {% else %}
-                    <img src="{% static 'img/placeholder.png' %}"
-                         alt="Sem imagem">
-                {% endif %}
-            </div>
-
-            <!-- CONTEÚDO -->
-            <div class="conteudo">
-                <h3>{{ brinquedo.nome_brinquedo }}</h3>
-
-                <!-- ⭐ AVALIAÇÃO -->
-                <div class="avaliacao-container" style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
-                    <div class="avaliacao" data-avaliacao="{{ brinquedo.avaliacao|default:0 }}">
-                        </div>
-                    <span class="nota-numerica" style="font-weight: bold; color: #444; font-size: 0.9rem;">
-                        {{ brinquedo.avaliacao|default:"0.0" }}
-                    </span>
-                </div>
-
-                <!-- DESCRIÇÃO CURTA -->
-                <p class="descricao">
-                    {{ brinquedo.descricao|truncatechars:120 }}
-                </p>
-
-                <ul class="dados-tecnicos">
-    {% if brinquedo.voltz %}
-        <li>
-            <span class="dt-label">⚡ Voltagem</span>
-            <span class="dt-valor">{{ brinquedo.voltz }}</span>
-        </li>
-    {% endif %}
-
-    {% if brinquedo.altura_m or brinquedo.largura_m or brinquedo.profundidade_m %}
-        <li class="dimensoes">
-            <span class="dt-label">📐 Dimensões (m)</span>
-            <div class="dimensoes-grid">
-                {% if brinquedo.altura_m %}
-                    <span><strong>Altura:</strong> {{ brinquedo.altura_m }} m</span>
-                {% endif %}
-                {% if brinquedo.largura_m %}
-                    <span><strong>Largura:</strong> {{ brinquedo.largura_m }} m</span>
-                {% endif %}
-                {% if brinquedo.profundidade_m %}
-                    <span><strong>Comprimento:</strong> {{ brinquedo.profundidade_m }} m</span>
-                {% endif %}
-            </div>
-        </li>
-    {% endif %}
-</ul>
-
-
-                <!-- CATEGORIAS -->
-                {% if brinquedo.categorias_brinquedos.exists %}
-                    <div class="categorias">
-                        {% for cat in brinquedo.categorias_brinquedos.all %}
-                            <span class="badge">{{ cat.nome_categoria }}</span>
-                        {% endfor %}
+                    <!-- IMAGEM -->
+                    <div class="card-img">
+                        {% if brinquedo.imagem_brinquedo %}
+                            <img src="{{ brinquedo.imagem_brinquedo.url }}" alt="{{ brinquedo.nome_brinquedo }}">
+                        {% else %}
+                            <img src="{% static 'img/placeholder.png' %}" alt="Sem imagem">
+                        {% endif %}
                     </div>
-                {% endif %}
 
-                <!-- PREÇO -->
-                <div class="preco" data-valor="{{ brinquedo.valor_brinquedo }}">
-                    R$ {{ brinquedo.valor_brinquedo }}
-                </div>
+                    <!-- CONTEÚDO -->
+                    <div class="conteudo">
+                        <h3>{{ brinquedo.nome_brinquedo }}</h3>
 
-                <a
-                        href="https://wa.me/5511960563135?text=
-                    Olá!%0A
-                    Gostaria de fazer um orçamento para este brinquedo:%0A%0A
-                    Nome: {{ brinquedo.nome_brinquedo|urlencode }}%0A
-                    Valor: R$ {{ brinquedo.valor_brinquedo }}%0A
-                    {% if brinquedo.altura_m and brinquedo.largura_m and brinquedo.profundidade_m %}
-                    Dimensões:%0A
-                    Altura: {{ brinquedo.altura_m }} m%0A
-                    Largura: {{ brinquedo.largura_m }} m%0A
-                    Profundidade: {{ brinquedo.profundidade_m }} m%0A
-                    {% endif %}
-                    %0A
-                    Página do produto:%0A
-                    {{ request.build_absolute_uri|urlencode }}%0A
-                    %0A
-                    Aguardo retorno!"
-                        target="_blank"
-                        class="btn-whatsapp"
-                    >
-                    <i class="fab fa-whatsapp"></i> Orçamento via WhatsApp
-                </a>
+                        <!-- ⭐ AVALIAÇÃO -->
+                        <div class="avaliacao-container" style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+                            <div class="avaliacao" data-avaliacao="{{ brinquedo.avaliacao|default:0 }}"></div>
+                            <span class="nota-numerica" style="font-weight: bold; color: #444; font-size: 0.9rem;">
+                                {{ brinquedo.avaliacao|default:"0.0" }}
+                            </span>
+                        </div>
 
+                        <!-- DESCRIÇÃO CURTA -->
+                        <p class="descricao">
+                            {{ brinquedo.descricao|truncatechars:120 }}
+                        </p>
 
+                        <!-- DADOS TÉCNICOS -->
+                        <ul class="dados-tecnicos">
+                            {% if brinquedo.voltz %}
+                                <li>
+                                    <span class="dt-label">⚡ Voltagem</span>
+                                    <span class="dt-valor">{{ brinquedo.voltz }}</span>
+                                </li>
+                            {% endif %}
 
+                            {% if brinquedo.altura_m or brinquedo.largura_m or brinquedo.profundidade_m %}
+                                <li class="dimensoes">
+                                    <span class="dt-label">📐 Dimensões (m)</span>
+                                    <div class="dimensoes-grid">
+                                        {% if brinquedo.altura_m %}
+                                            <span><strong>Altura:</strong> {{ brinquedo.altura_m }} m</span>
+                                        {% endif %}
+                                        {% if brinquedo.largura_m %}
+                                            <span><strong>Largura:</strong> {{ brinquedo.largura_m }} m</span>
+                                        {% endif %}
+                                        {% if brinquedo.profundidade_m %}
+                                            <span><strong>Comprimento:</strong> {{ brinquedo.profundidade_m }} m</span>
+                                        {% endif %}
+                                    </div>
+                                </li>
+                            {% endif %}
+                        </ul>
 
-                <a href="{% url 'brinquedo_detalhe' brinquedo.id %}#bread"
-                   class="btn-vermais">
-                    Ver mais
-                </a>
-            </div>
-        </div>
-    {% empty %}
-        <p>Nenhum brinquedo encontrado.</p>
-    {% endfor %}
-</div>
+                        <!-- CATEGORIAS -->
+                        {% if brinquedo.categorias_brinquedos.exists %}
+                            <div class="categorias">
+                                {% for cat in brinquedo.categorias_brinquedos.all %}
+                                    <span class="badge">{{ cat.nome_categoria }}</span>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div> <!-- fecha conteudo -->
+                </a> <!-- fecha card-link -->
 
+                <!-- RODAPÉ FIXO -->
+                <div class="card-footer">
+                    <div class="preco" data-valor="{{ brinquedo.valor_brinquedo }}">
+                        R$ {{ brinquedo.valor_brinquedo }}
+                    </div>
+
+                    <a href="https://wa.me/5511960563135?text=..."
+                       target="_blank"
+                       class="btn-whatsapp"
+                       onclick="event.stopPropagation()">
+                        <i class="fab fa-whatsapp"></i> Orçamento via WhatsApp
+                    </a>
+
+                    <a href="{% url 'brinquedo_detalhe' brinquedo.id %}#bread"
+                       class="btn-vermais"
+                       onclick="event.stopPropagation()">
+                        Ver mais
+                    </a>
+                </div> <!-- fecha card-footer -->
+
+            </div> <!-- fecha card-produto -->
+        {% empty %}
+            <p>Nenhum brinquedo encontrado.</p>
+        {% endfor %}
+    </div> <!-- fecha grid-cards -->
 
     <!-- ======= PAGINAÇÃO ======= -->
- <div id="paginacao-wrapper">
-    <div class="paginacao">
-        {% if page_obj.has_previous %}
-            <a class="page-btn" href="?page={{ page_obj.previous_page_number }}&ordenar={{ ordenar }}">
-                « Anterior
-            </a>
-        {% endif %}
+    <div id="paginacao-wrapper">
+        <div class="paginacao">
+            {% if page_obj.has_previous %}
+                <a class="page-btn" href="?page={{ page_obj.previous_page_number }}&ordenar={{ ordenar }}">« Anterior</a>
+            {% endif %}
 
-        <span class="page-atual">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
+            <span class="page-atual">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
 
-        {% if page_obj.has_next %}
-            <a class="page-btn" href="?page={{ page_obj.next_page_number }}&ordenar={{ ordenar }}">
-                Próxima »
-            </a>
-        {% endif %}
+            {% if page_obj.has_next %}
+                <a class="page-btn" href="?page={{ page_obj.next_page_number }}&ordenar={{ ordenar }}">Próxima »</a>
+            {% endif %}
+        </div>
     </div>
-</div>
 </section>
+
 <script>
 
 function formatarPrecos(context = document) {
