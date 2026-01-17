@@ -408,5 +408,42 @@ class ItemCarrinho(Prime):
         return f"Item {self.item} (x{self.quantidade})"
 
 
+class Manutencao(models.Model):
+    STATUS_CHOICES = [
+        ('P', 'Pendente'),
+        ('A', 'Em andamento'),
+        ('C', 'Concluída'),
+    ]
+
+    brinquedo = models.ForeignKey(
+        Brinquedos,
+        on_delete=models.CASCADE,
+        related_name='brinquedo_manutencoes'
+    )
+    descricao = models.TextField(max_length=999)
+    usuario = models.ForeignKey(
+        ClientePerfil,
+        on_delete=models.CASCADE,
+        related_name='manutencoes'
+    )
+    status = models.CharField(
+        max_length=1,
+        choices=STATUS_CHOICES,
+        default='P'
+    )
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.brinquedo} - {self.get_status_display()}"
+
+
+class ManutencaoImagem(models.Model):
+    manutencao = models.ForeignKey(
+        Manutencao,
+        on_delete=models.CASCADE,
+        related_name='imagens'
+    )
+    imagem = models.ImageField(upload_to='manutencoes/')
+
 class Venda(Prime):
     carrinho = models.ForeignKey(Carrinho, on_delete=models.SET_NULL, related_name='vendas', null=True)
