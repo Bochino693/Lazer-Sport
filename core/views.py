@@ -203,6 +203,14 @@ from django.db.models import F, FloatField, ExpressionWrapper
 from django.db.models import F, FloatField, ExpressionWrapper, DecimalField
 from django.db.models.functions import Cast
 
+from django.views.generic import ListView
+from .models import Estabelecimentos
+
+class EstabelecimentosListView(ListView):
+    model = Estabelecimentos
+    template_name = "estabelecimentos_info.html"
+    context_object_name = "estabelecimentos"
+
 
 class BrinquedosView(View):
     def get(self, request):

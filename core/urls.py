@@ -7,7 +7,7 @@ from .views import (HomeView, BrinquedoInfoView, CategoriasInfoView, BrinquedosV
                     PromocaoDeleteView, PromocaoUpdateView, EventoListView, EventoCreateView,
                     EventoDeleteView, EventoUpdateView, CupomListView, CupomUpdateView, CupomCreateView,
                     CupomDeleteView, ProjetoListView, ProjetoUpdateView, ProjetoCreateView, ProjetoDeleteView,
-                    EstabelecimentoInfoView
+                    EstabelecimentoInfoView, EstabelecimentosListView
 
                     )   # importa views do mesmo app
 from django.conf import settings
@@ -23,6 +23,8 @@ urlpatterns = [
     path("combo/<int:pk>", ComboInfoView.as_view(), name='combo'),
     path("promocao/<int:pk>", PromocaoInfoView.as_view(), name='promocao'),
     path("estabelecimentos/<int:pk>/", EstabelecimentoInfoView.as_view(), name='estabelecimento_brinquedo'),
+
+    path("estabelecimentos/", EstabelecimentosListView.as_view(), name="estabelecimentos"),
 
 
     path("eventos/", EventosView.as_view(), name='eventos'),

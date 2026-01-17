@@ -1,10 +1,230 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-</head>
-<body>
+{% extends 'base.html' %}
+{% load static %}
 
-</body>
-</html>
+{% block content %}
+
+<style>
+/* ================= TEXTO VAZIO ================= */
+.texto-vazio {
+    width: 100%;
+    text-align: center;
+    margin: 40px auto;
+    font-size: 1.1rem;
+    color: #666;
+}
+
+/* ================= BREADCRUMB ================= */
+.breadcrumb {
+    max-width: 1200px;
+    margin: 25px auto;
+    font-size: 1rem;
+    color: #444;
+}
+
+.breadcrumb a {
+    color: #007BFF;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.breadcrumb span {
+    margin: 0 6px;
+    color: #888;
+}
+
+.breadcrumb strong {
+    color: #1f2d3d;
+}
+
+/* ================= HEADER ================= */
+.categoria-header {
+    text-align: center;
+    margin-bottom: 40px;
+}
+
+.categoria-banner {
+    width: 100%;
+    max-height: 320px;
+    object-fit: cover;
+    border-radius: 18px;
+}
+
+.categoria-titulo {
+    font-size: 2.4rem;
+    color: #004AAD;
+    font-weight: 700;
+    margin-top: 20px;
+}
+
+.categoria-sub {
+    font-size: 1.1rem;
+    color: #5a5a5a;
+    margin-top: 8px;
+}
+
+/* ================= GRID / CARDS ================= */
+.grid-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 28px;
+}
+
+.card-produto {
+    background: linear-gradient(180deg, #ffffff 0%, #f5f8ff 100%);
+    border-radius: 14px;
+    padding: 15px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+    transition: all 0.25s ease;
+    display: flex;
+    flex-direction: column;
+    cursor: pointer;
+    border: 1px solid #e7e7e7;
+}
+
+.card-produto:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 10px 22px rgba(0, 0, 0, 0.15);
+}
+
+/* ================= CARD TODOS ================= */
+.card-todos {
+    border: 2px dashed #004AAD;
+    background: linear-gradient(180deg, #f1f6ff, #ffffff);
+}
+
+.card-todos:hover {
+    background: linear-gradient(180deg, #004AAD, #0066D6);
+}
+
+.card-todos:hover h3,
+.card-todos:hover p {
+    color: #fff;
+}
+
+/* ================= IMAGEM ================= */
+.img-area {
+    width: 100%;
+    height: 190px;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #f3f5fd;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.img-area img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.img-todos {
+    font-size: 3.2rem;
+    background: linear-gradient(135deg, #eef3ff, #f9fbff);
+}
+
+/* ================= CONTEÚDO ================= */
+.conteudo {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    height: 100%;
+}
+
+.card-produto h3 {
+    margin-top: 15px;
+    font-size: 1.2rem;
+    color: #004AAD;
+    font-weight: 700;
+}
+
+.descricao {
+    font-size: .95rem;
+    color: #555;
+    flex-grow: 1;
+}
+
+/* ================= BOTÃO ================= */
+.btn-vermais {
+    margin-top: 18px;
+    padding: 12px 0;
+    font-size: 1rem;
+    border-radius: 30px;
+    background: linear-gradient(135deg, #004AAD, #0066D6);
+    color: #fff;
+    font-weight: 600;
+    text-align: center;
+    text-decoration: none;
+    transition: all .25s ease;
+}
+
+.btn-vermais:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 18px rgba(0, 74, 173, 0.35);
+}
+</style>
+
+<!-- 🔵 BREADCRUMB -->
+<nav class="breadcrumb">
+    <a href="{% url 'home' %}">Home</a>
+    <span>›</span>
+    <strong>Estabelecimentos</strong>
+</nav>
+
+<!-- 🔵 HEADER -->
+<div class="categoria-header">
+    <img src="{% static 'images/default_categoria.jpg' %}" class="categoria-banner">
+    <h1 class="categoria-titulo">Estabelecimentos</h1>
+    <p class="categoria-sub">
+        {{ estabelecimentos|length }} estabelecimento(s) cadastrados
+    </p>
+</div>
+
+<!-- 🔵 LISTAGEM -->
+<div class="produtos-wrapper">
+
+{% if estabelecimentos %}
+<div class="grid-cards">
+
+    <!-- 🔵 CARD ESTÁTICO - TODOS -->
+    <div class="card-produto card-todos">
+        <div class="img-area img-todos">🎯</div>
+        <div class="conteudo">
+            <h3>Todos os brinquedos</h3>
+            <p class="descricao">
+                Veja todos os brinquedos disponíveis de todos os estabelecimentos.
+            </p>
+            <a href="#" class="btn-vermais">Ver todos</a>
+        </div>
+    </div>
+
+    <!-- 🔵 ESTABELECIMENTOS -->
+    {% for est in estabelecimentos %}
+    <div class="card-produto">
+        <div class="img-area">
+            {% if est.imagem_estabelecimento %}
+                <img src="{{ est.imagem_estabelecimento.url }}" alt="{{ est.nome_estabelecimento }}">
+            {% else %}
+                <img src="{% static 'images/default_estabelecimento.jpg' %}">
+            {% endif %}
+        </div>
+
+        <div class="conteudo">
+            <h3>{{ est.nome_estabelecimento }}</h3>
+            <p class="descricao">
+                Veja os brinquedos e avaliações deste estabelecimento.
+            </p>
+            <a href="#" class="btn-vermais">Ver brinquedos</a>
+        </div>
+    </div>
+    {% endfor %}
+
+</div>
+{% else %}
+    <p class="texto-vazio">Nenhum estabelecimento foi encontrado.</p>
+{% endif %}
+
+</div>
+
+{% endblock %}
