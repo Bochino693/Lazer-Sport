@@ -758,19 +758,15 @@ class NovaTag(View):
         return redirect("/brinquedos/admin/?modal_aberto=1")
 
 
-class SolicitarManutencaoView(FormView):
-    template_name = 'manutencao.html'  # seu template
+from django.contrib.auth.mixins import LoginRequiredMixin
+
+
+class SolicitarManutencaoView(FormView, LoginRequiredMixin):
+    login_url = 'login'
+    template_name = 'manutencao.html'
     form_class = ManutencaoForm
-    success_url = reverse_lazy('pagina_inicial')  # ou outra página para redirecionar
+    success_url = reverse_lazy('pagina_inicial')
 
     def form_valid(self, form):
-        # Não salva ainda, queremos adicionar o usuário
-        manutencao = form.save(commit=False)
-        manutencao.usuario = self.request.user.perfil  # assume que o usuário está logado e tem perfil
-        manutencao.save()
         messages.success(self.request, "Solicitação enviada com sucesso!")
         return super().form_valid(form)
-
-    def form_invalid(self, form):
-        messages.error(self.request, "Verifique os erros no formulário.")
-        return super().form_invalid(form)

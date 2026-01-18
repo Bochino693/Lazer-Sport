@@ -1602,6 +1602,39 @@ body {
     font-weight: 400;
 }
 
+/* BOTÃO MODERNO */
+.btn-manutencao {
+    width: 100%;
+    padding: 24px;
+    border-radius: 16px;
+    border: none;
+    background: linear-gradient(135deg, #ff9800, #ff5722);
+    color: #fff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    font-size: 18px;
+    box-shadow: 0 12px 30px rgba(0,0,0,.2);
+    transition: all .3s ease;
+    text-align: center;
+}
+
+.btn-manutencao:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 18px 40px rgba(0,0,0,.3);
+}
+
+.btn-manutencao .icon {
+    font-size: 36px;
+}
+
+.btn-manutencao small {
+    display: block;
+    font-size: 13px;
+    opacity: .9;
+}
+
 .manutencao-card {
     display: flex;
     gap: 16px;
@@ -1612,10 +1645,7 @@ body {
     flex-wrap: wrap;
     max-width: 700px;
     margin: 0 auto;
-}
-
-.manutencao-icon {
-    font-size: 2.5rem;
+    text-align: center;
 }
 
 .manutencao-info {
@@ -1635,6 +1665,7 @@ body {
     border: 1px solid #ccc;
     font-size: 0.9rem;
     box-sizing: border-box;
+
 }
 
 .manutencao-info button.btn-vermais {
@@ -1654,58 +1685,74 @@ body {
     background: #E63946;
 }
 
-/* Modal geral */
 /* MODAL */
 .modal {
     display: none;
     position: fixed;
-    z-index: 9999;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0,0,0,0.5);
-    justify-content: center;
-    align-items: center;
+    inset: 0;
+    background: rgba(0,0,0,.6);
+    z-index: 1000;
 }
 
 .modal-conteudo {
-    background: white;
+    background: #fff;
+    max-width: 600px;
+    margin: 5% auto;
+    padding: 30px;
     border-radius: 16px;
-    padding: 20px;
-    width: 90%;
-    max-width: 500px;
     position: relative;
+    max-height: 90vh;
+    overflow-y: auto;
 }
 
-.modal .fechar {
+.modal h3 {
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+/* FECHAR */
+.fechar {
     position: absolute;
-    top: 12px;
-    right: 16px;
-    font-size: 24px;
-    font-weight: bold;
+    top: 16px;
+    right: 20px;
+    font-size: 28px;
     cursor: pointer;
 }
 
-/* Formulário dentro do modal */
-.modal-conteudo form .form-group {
-    margin-bottom: 12px;
+/* FORM */
+.form-group {
+    margin-bottom: 14px;
 }
 
-.modal-conteudo form input,
-.modal-conteudo form textarea,
-.modal-conteudo form select {
+.form-group label {
+    font-weight: 600;
+    display: block;
+    margin-bottom: 4px;
+}
+
+.form-group input,
+.form-group textarea,
+.form-group select {
     width: 100%;
-    padding: 8px 10px;
+    padding: 10px;
     border-radius: 8px;
     border: 1px solid #ccc;
-    font-size: 0.95rem;
-    box-sizing: border-box;
 }
 
-.modal-conteudo form button.btn-vermais {
+/* BOTÃO SUBMIT */
+.btn-enviar {
     width: 100%;
-    margin-top: 12px;
+    padding: 14px;
+    background: #ff5722;
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+.btn-enviar:hover {
+    background: #e64a19;
 }
 
 .espacador {
@@ -1755,6 +1802,99 @@ body {
     </div>
 
   </div>
+</section>
+
+<!-- Div invisível para espaçamento -->
+<div class="espacador"></div>
+
+
+<!-- ======= MANUTENÇÃO ======= -->
+<!-- ======= MANUTENÇÃO ======= -->
+<section id="manutencao" class="manutencao-section">
+
+    <div class="manutencao-container">
+
+        <!-- BOTÃO PRINCIPAL -->
+        <button id="abrirModalManutencao" class="btn-manutencao">
+            <span class="icon">🛠</span>
+            <span class="texto">
+                Solicitar Manutenção
+                <small>Reparo ou revisão do brinquedo</small>
+            </span>
+        </button>
+
+        <!-- MODAL -->
+        <div id="modalManutencao" class="modal">
+
+            <div class="modal-conteudo">
+                <span class="fechar">&times;</span>
+
+                <h3>Solicitação de Manutenção</h3>
+
+                <form method="post">
+                    {% csrf_token %}
+
+                    {{ form.non_field_errors }}
+
+                    <div class="form-group">
+                        {{ form.brinquedo.label_tag }}
+                        {{ form.brinquedo }}
+                    </div>
+
+                    <div class="form-group">
+                        {{ form.descricao.label_tag }}
+                        {{ form.descricao }}
+                    </div>
+
+                    <div class="form-group">
+                        {{ form.telefone_contato.label_tag }}
+                        {{ form.telefone_contato }}
+                    </div>
+
+                    <div class="form-group">
+                        {{ form.cep.label_tag }}
+                        {{ form.cep }}
+                    </div>
+
+                    <div class="form-group">
+                        {{ form.endereco.label_tag }}
+                        {{ form.endereco }}
+                    </div>
+
+                    <div class="form-group">
+                        {{ form.numero.label_tag }}
+                        {{ form.numero }}
+                    </div>
+
+                    <div class="form-group">
+                        {{ form.complemento.label_tag }}
+                        {{ form.complemento }}
+                    </div>
+
+                    <div class="form-group">
+                        {{ form.bairro.label_tag }}
+                        {{ form.bairro }}
+                    </div>
+
+                    <div class="form-group">
+                        {{ form.cidade.label_tag }}
+                        {{ form.cidade }}
+                    </div>
+
+                    <div class="form-group">
+                        {{ form.estado.label_tag }}
+                        {{ form.estado }}
+                    </div>
+
+                    <button type="submit" class="btn-enviar">
+                        Enviar Solicitação
+                    </button>
+
+                </form>
+            </div>
+        </div>
+
+    </div>
 </section>
 
 
@@ -2110,105 +2250,6 @@ body {
 </section>
 
 
-<!-- Div invisível para espaçamento -->
-<div class="espacador"></div>
-
-
-<!-- ======= MANUTENÇÃO ======= -->
-<!-- ======= MANUTENÇÃO ======= -->
-<section id="manutencao" class="manutencao-section">
-    <div class="manutencao-container">
-        <h2 class="titulo-eventos">Solicitar Manutenção de Brinquedo</h2>
-        <p class="section-subtitle">
-            Seu brinquedo precisa de reparo ou revisão? Nossa equipe está pronta para ajudar.
-        </p>
-
-        <!-- Botão uniforme -->
-        <button id="abrirModalManutencao" class="btn-vermais">
-            Solicitar manutenção
-        </button>
-
-        <!-- MODAL -->
-        <div id="modalManutencao" class="modal">
-            <div class="modal-conteudo">
-                <span class="fechar">&times;</span>
-                <h3>Solicitar Manutenção</h3>
-
-                <form method="post" id="formManutencao">
-                    {% csrf_token %}
-
-                    {{ form.non_field_errors }}
-
-                    <div class="form-group">
-                        {{ form.brinquedo.label_tag }}
-                        {{ form.brinquedo }}
-                        {{ form.brinquedo.errors }}
-                    </div>
-
-                    <div class="form-group">
-                        {{ form.descricao.label_tag }}
-                        {{ form.descricao }}
-                        {{ form.descricao.errors }}
-                    </div>
-
-                    <div class="form-group">
-                        {{ form.telefone_contato.label_tag }}
-                        {{ form.telefone_contato }}
-                        {{ form.telefone_contato.errors }}
-                    </div>
-
-                    <div class="form-group">
-                        {{ form.cep.label_tag }}
-                        {{ form.cep }}
-                        {{ form.cep.errors }}
-                    </div>
-
-                    <div class="form-group">
-                        {{ form.endereco.label_tag }}
-                        {{ form.endereco }}
-                        {{ form.endereco.errors }}
-                    </div>
-
-                    <div class="form-group">
-                        {{ form.numero.label_tag }}
-                        {{ form.numero }}
-                        {{ form.numero.errors }}
-                    </div>
-
-                    <div class="form-group">
-                        {{ form.complemento.label_tag }}
-                        {{ form.complemento }}
-                        {{ form.complemento.errors }}
-                    </div>
-
-                    <div class="form-group">
-                        {{ form.bairro.label_tag }}
-                        {{ form.bairro }}
-                        {{ form.bairro.errors }}
-                    </div>
-
-                    <div class="form-group">
-                        {{ form.cidade.label_tag }}
-                        {{ form.cidade }}
-                        {{ form.cidade.errors }}
-                    </div>
-
-                    <div class="form-group">
-                        {{ form.estado.label_tag }}
-                        {{ form.estado }}
-                        {{ form.estado.errors }}
-                    </div>
-
-                    <button type="submit" class="btn-vermais">
-                        Enviar Solicitação
-                    </button>
-                </form>
-            </div>
-        </div>
-    </div>
-</section>
-
-
 
 <!-- Div invisível para espaçamento -->
 <div class="espacador"></div>
@@ -2415,23 +2456,20 @@ body {
 
 <script>
 
-const btnAbrir = document.getElementById("abrirModalManutencao");
 const modal = document.getElementById("modalManutencao");
-const fechar = document.querySelector(".modal .fechar");
+    const abrir = document.getElementById("abrirModalManutencao");
+    const fechar = document.querySelector(".fechar");
 
-btnAbrir.addEventListener("click", () => {
-    modal.style.display = "flex";
-});
+    abrir.onclick = () => modal.style.display = "block";
+    fechar.onclick = () => modal.style.display = "none";
 
-fechar.addEventListener("click", () => {
-    modal.style.display = "none";
-});
-
-window.addEventListener("click", (e) => {
-    if(e.target === modal){
-        modal.style.display = "none";
+    window.onclick = (e) => {
+        if (e.target === modal) {
+            modal.style.display = "none";
+        }
     }
-});
+
+
 function formatarMoedaBR(valor) {
     if (valor === null || valor === undefined) {
         return '0,00';

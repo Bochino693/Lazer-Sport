@@ -42,17 +42,21 @@ class ManutencaoForm(forms.ModelForm):
     class Meta:
         model = Manutencao
         fields = [
-            'brinquedo', 'descricao', 'telefone_contato', 'cep', 'endereco',
-            'numero', 'complemento', 'bairro', 'cidade', 'estado'
+            'brinquedo',
+            'descricao',
+            'telefone_contato',
+            'cep',
+            'endereco',
+            'numero',
+            'complemento',
+            'bairro',
+            'cidade',
+            'estado',
         ]
-        widgets = {
-            'descricao': forms.Textarea(attrs={'rows': 3, 'placeholder': 'Descreva o problema'}),
-            'telefone_contato': forms.TextInput(attrs={'placeholder': '(00) 00000-0000'}),
-            'cep': forms.TextInput(attrs={'placeholder': '00000-000'}),
-            'endereco': forms.TextInput(attrs={'placeholder': 'Rua / Avenida'}),
-            'numero': forms.TextInput(attrs={'placeholder': 'Número'}),
-            'complemento': forms.TextInput(attrs={'placeholder': 'Complemento'}),
-            'bairro': forms.TextInput(attrs={'placeholder': 'Bairro'}),
-            'cidade': forms.TextInput(attrs={'placeholder': 'Cidade'}),
-            'estado': forms.TextInput(attrs={'placeholder': 'UF'}),
-        }
+
+    def save(self, commit=True):
+        manutencao = super().save(commit=False)
+        manutencao.usuario = self.initial['usuario']
+        if commit:
+            manutencao.save()
+        return manutencao
