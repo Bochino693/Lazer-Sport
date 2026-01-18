@@ -54,9 +54,13 @@ class ManutencaoForm(forms.ModelForm):
             'estado',
         ]
 
-    def save(self, commit=True):
+    def save(self, commit=True, usuario=None):
         manutencao = super().save(commit=False)
-        manutencao.usuario = self.initial['usuario']
+
+        if usuario:
+            manutencao.usuario = usuario
+
         if commit:
             manutencao.save()
+
         return manutencao

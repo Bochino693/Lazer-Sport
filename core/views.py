@@ -104,6 +104,9 @@ class HomeView(View):
             combo.economia = economia
             combo.porcentagem = porcentagem
 
+        manutencao_form = ManutencaoForm()
+
+
         context = {
             "categorias_brinquedos": categorias_brinquedos,
             "page_obj": page_obj,
@@ -114,6 +117,7 @@ class HomeView(View):
             "promocoes": promocoes,
             "estabelecimentos": Estabelecimentos.objects.all(),
             "imagens_site": imagens_site,
+            "form": manutencao_form,
         }
         return render(request, 'home.html', context)
 
