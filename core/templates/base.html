@@ -827,9 +827,90 @@ window.addEventListener("load", function() {
         element.scrollIntoView({ behavior: "smooth", block: "start" });
     }
 });
+
+function criarFloatCarrinho(total) {
+    let carrinho = document.getElementById('float-carrinho');
+    if (carrinho) return; // já existe
+
+    carrinho = document.createElement('a');
+    carrinho.id = 'float-carrinho';
+    carrinho.href = '{% url "carrinho" %}';
+    carrinho.className = 'float-carrinho';
+    carrinho.innerHTML = `
+        <i class="fa-solid fa-cart-shopping"></i>
+        <span id="badge-carrinho" class="badge">${total}</span>
+    `;
+    document.body.appendChild(carrinho);
+}
+
+function atualizarBadgeCarrinho(total) {
+    let badge = document.getElementById('badge-carrinho');
+    let carrinho = document.getElementById('float-carrinho');
+
+    if (!carrinho) {
+        criarFloatCarrinho(total);
+        return;
+    }
+
+    badge.innerText = total;
+
+    // efeito pulse
+    badge.classList.remove('pulse');
+    void badge.offsetWidth;
+    badge.classList.add('pulse');
+
+    carrinho.style.display = 'flex';
+}
+
+// Função genérica para adicionar ao carrinho via AJAX
+function adicionarAoCarrinho(tipo, id) {
+    fetch(`/carrinho/adicionar/${tipo}/${id}/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(res => res.ok ? res.json() : Promise.reject('Erro HTTP'))
+    .then(data => {
+        if (data.sucesso && data.total_itens !== undefined) {
+            mostrarToast('🛒 Produto adicionado ao carrinho!');
+            atualizarBadgeCarrinho(data.total_itens);
+        } else {
+            mostrarToast(data.erro || 'Erro ao adicionar', true);
+        }
+    })
+    .catch(() => mostrarToast('Erro ao adicionar ao carrinho', true));
+}
+
+// Toast
+function mostrarToast(msg, erro = false) {
+    let toast = document.getElementById('toast-carrinho');
+    if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'toast-carrinho';
+        toast.className = 'toast-carrinho';
+        document.body.appendChild(toast);
+    }
+
+    toast.innerText = msg;
+    toast.style.background = erro
+        ? 'linear-gradient(135deg, #dc3545, #a71d2a)'
+        : 'linear-gradient(135deg, #14a61a, #0e7f14)';
+
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 3000);
+}
+
+// Inicializa badge se já houver itens do contexto
+document.addEventListener("DOMContentLoaded", () => {
+    const total = {{ carrinho_total_itens|default:0 }};
+    if (total > 0) criarFloatCarrinho(total);
+});
+
 </script>
 {% if user.is_authenticated and mostrar_float_carrinho|default:False %}
-<a href="{% url 'carrinho' %}"
+<a href="{% url 'carrinho' %}#car"
    id="float-carrinho"
    class="float-carrinho">
 

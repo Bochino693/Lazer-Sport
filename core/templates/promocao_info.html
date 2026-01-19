@@ -198,7 +198,7 @@
                 <button
                     type="button"
                     class="btn-combo carrinho"
-                    onclick="adicionarAoCarrinho(event, 'promocao', {{ promocao.id }})">
+                    onclick="adicionarAoCarrinho('promocao', {{ promocao.id }})">
                     🛒 Adicionar ao Carrinho
                 </button>
                 <a href="#" class="btn-combo comprar">🔥 Comprar Agora</a>
@@ -235,9 +235,7 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 
-function adicionarAoCarrinho(event, tipo, id) {
-    event.preventDefault();
-
+function adicionarAoCarrinho(tipo, id) {
     fetch(`/carrinho/adicionar/${tipo}/${id}/`, {
         method: 'POST',
         headers: {
@@ -262,14 +260,26 @@ function adicionarAoCarrinho(event, tipo, id) {
     });
 }
 
+
 function atualizarBadgeCarrinho(total) {
-    const badge = document.getElementById('badge-carrinho');
-    const carrinho = document.getElementById('float-carrinho');
+    let carrinho = document.getElementById('float-carrinho');
+    let badge = document.getElementById('badge-carrinho');
 
-    if (!badge || !carrinho) return;
+    // Se não existir, cria
+    if (!carrinho) {
+        carrinho = document.createElement('a');
+        carrinho.id = 'float-carrinho';
+        carrinho.href = '{% url "carrinho" %}';
+        carrinho.className = 'float-carrinho';
+        carrinho.innerHTML = `<i class="fa-solid fa-cart-shopping"></i><span id="badge-carrinho" class="badge">${total}</span>`;
+        document.body.appendChild(carrinho);
+        badge = document.getElementById('badge-carrinho');
+    }
 
+    // Atualiza badge
     badge.innerText = total;
 
+    // Animação de pulse
     badge.classList.remove('pulse');
     void badge.offsetWidth;
     badge.classList.add('pulse');

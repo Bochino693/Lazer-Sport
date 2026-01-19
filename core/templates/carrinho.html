@@ -161,7 +161,7 @@
 }
 
 </style>
-<div class="carrinho-container">
+<div class="carrinho-container" id="car">
 
 <h1 class="carrinho-titulo">🛒 Meu Carrinho</h1>
 
@@ -173,7 +173,7 @@
 {% else %}
 
     {% for item in itens %}
-        <div class="item-card">
+        <div class="item-card" >
             <div class="item-nome">{{ item.item }}</div>
 
             <div class="item-linha">
