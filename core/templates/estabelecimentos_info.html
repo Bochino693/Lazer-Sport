@@ -205,7 +205,7 @@
 </nav>
 
 <!-- 🔵 HEADER -->
-<div class="categoria-header">
+<div class="categoria-header" id="header">
     <img src="{% static 'images/default_categoria.jpg' %}" class="categoria-banner">
     <h1 class="categoria-titulo">Estabelecimentos</h1>
     <p class="categoria-sub">
@@ -236,7 +236,7 @@
             Veja todos os brinquedos disponíveis de todos os estabelecimentos.
         </p>
 
-        <a href="#" class="btn-vermais">
+        <a href="{% url 'brinquedos' %}#grid-cards" class="btn-vermais">
             Ver todos
         </a>
     </div>
@@ -258,7 +258,7 @@
             <p class="descricao">
                 Veja os brinquedos e avaliações deste estabelecimento.
             </p>
-            <a href="#" class="btn-vermais">Ver brinquedos</a>
+            <a href="{% url 'estabelecimento_brinquedo' est.id %}#filter" class="btn-vermais">Ver brinquedos</a>
         </div>
     </div>
     {% endfor %}

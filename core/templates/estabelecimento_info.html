@@ -169,7 +169,7 @@
 <nav class="breadcrumb">
     <a href="{% url 'home' %}">Home</a>
     <span>›</span>
-    <a href="{% url 'estabelecimentos' %}#estabelecimento">Estabelecimentos</a>
+    <a href="{% url 'estabelecimentos' %}#header">Estabelecimentos</a>
     <span>›</span>
     <strong> {{ estabelecimento.nome_estabelecimento }}</strong>
 </nav>
@@ -181,7 +181,7 @@
 </div>
 
 <!-- 🔵 FILTROS -->
-<div class="filtros-horizontal">
+<div class="filtros-horizontal" id="filter">
     <button class="filtro-btn ativo" data-filtro="az">A–Z</button>
     <button class="filtro-btn" data-filtro="za">Z–A</button>
     <button class="filtro-btn" data-filtro="avaliacao">⭐ Melhores avaliados</button>
