@@ -13,7 +13,7 @@ from django.views.generic.edit import FormView
 from django.contrib.auth.mixins import LoginRequiredMixin
 
 from .models import Brinquedos, CategoriasBrinquedos, Projetos, Eventos, ClientePerfil, Combos, Cupom, Promocoes, \
-    TagsBrinquedos, ImagensSite, BrinquedosProjeto, Estabelecimentos
+    TagsBrinquedos, ImagensSite, BrinquedosProjeto, Estabelecimentos, Manutencao
 
 import os
 from django.http import FileResponse, Http404
@@ -104,9 +104,6 @@ class HomeView(View):
             combo.economia = economia
             combo.porcentagem = porcentagem
 
-        manutencao_form = ManutencaoForm()
-
-
         context = {
             "categorias_brinquedos": categorias_brinquedos,
             "page_obj": page_obj,
@@ -117,10 +114,63 @@ class HomeView(View):
             "promocoes": promocoes,
             "estabelecimentos": Estabelecimentos.objects.all(),
             "imagens_site": imagens_site,
-            "form": manutencao_form,
         }
         return render(request, 'home.html', context)
 
+
+from django.shortcuts import render, redirect
+from django.views import View
+from .forms import ManutencaoForm
+from .models import Manutencao
+from .models import ClientePerfil
+
+
+class ManutencaoView(View):
+
+    template_name = 'manutencao.html'
+
+    def get_usuario(self, request):
+        # ajuste se sua relação for diferente
+        return ClientePerfil.objects.get(user=request.user)
+
+    def get(self, request):
+        usuario = self.get_usuario(request)
+
+        form = ManutencaoForm(
+            initial={'usuario': usuario}
+        )
+
+        manutencoes = Manutencao.objects.filter(
+            usuario=usuario
+        ).order_by('-criado_em')
+
+        context = {
+            'form': form,
+            'manutencoes': manutencoes,
+        }
+        return render(request, self.template_name, context)
+
+    def post(self, request):
+        usuario = self.get_usuario(request)
+
+        form = ManutencaoForm(
+            request.POST,
+            initial={'usuario': usuario}
+        )
+
+        if form.is_valid():
+            form.save()
+            return redirect('manutencoes')
+
+        manutencoes = Manutencao.objects.filter(
+            usuario=usuario
+        ).order_by('-criado_em')
+
+        context = {
+            'form': form,
+            'manutencoes': manutencoes,
+        }
+        return render(request, self.template_name, context)
 
 class ClientePerfilView(LoginRequiredMixin, View):
     template_name = "profile.html"

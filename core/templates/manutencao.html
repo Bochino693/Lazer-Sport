@@ -1,0 +1,415 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<style>
+    /* ======= CONTAINER GERAL ======= */
+.manutencao-header,
+.manutencao-tabs,
+.tab-content,
+.breadcrumb {
+    max-width: 900px;
+    margin: 0 auto;
+}
+/* ===== BREADCRUMB PADRÃO (UNIFICADO) ===== */
+.breadcrumb {
+    max-width: 1200px;
+    margin: 30px auto 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.95rem;
+}
+
+.breadcrumb a {
+    color: #004AAD;
+    text-decoration: none;
+    font-weight: 600;
+    transition: opacity 0.2s ease;
+}
+
+.breadcrumb a:hover {
+    opacity: 0.75;
+}
+
+.breadcrumb span {
+    color: #888;
+}
+
+/* separador visual */
+.breadcrumb span:not(:last-child)::after {
+    content: "›";
+    margin-left: 8px;
+    color: #bbb;
+}
+
+
+/* ======= CABEÇALHO ======= */
+.manutencao-header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.manutencao-header h1 {
+    font-size: 32px;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.manutencao-header p {
+    color: #666;
+    font-size: 16px;
+}
+
+/* ======= ABAS ======= */
+.manutencao-tabs {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 30px;
+}
+
+.tab-btn {
+    padding: 12px 24px;
+    border: none;
+    background: #f2f2f2;
+    color: #555;
+    border-radius: 30px;
+    cursor: pointer;
+    font-size: 15px;
+    transition: all 0.3s ease;
+}
+
+.tab-btn:hover {
+    background: #e4e4e4;
+}
+
+.tab-btn.active {
+    background: #0d6efd;
+    color: #fff;
+    box-shadow: 0 6px 18px rgba(13, 110, 253, 0.25);
+}
+
+/* ======= CONTEÚDO DAS ABAS ======= */
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+/* ======= FORMULÁRIO ======= */
+.manutencao-form {
+    background: #ffffff;
+    padding: 35px;
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 18px;
+}
+
+.form-group label {
+    font-size: 14px;
+    font-weight: 500;
+    margin-bottom: 6px;
+}
+
+.form-group input,
+.form-group textarea,
+.form-group select {
+    padding: 12px 14px;
+    border-radius: 10px;
+    border: 1px solid #ccc;
+    font-size: 14px;
+}
+
+.form-group input:focus,
+.form-group textarea:focus,
+.form-group select:focus {
+    outline: none;
+    border-color: #0d6efd;
+}
+
+/* ======= BOTÃO ======= */
+.btn-enviar {
+    margin-top: 10px;
+    padding: 14px;
+    width: 100%;
+    border: none;
+    border-radius: 30px;
+    background: #0d6efd;
+    color: #fff;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-enviar:hover {
+    background: #084fc7;
+}
+
+/* ======= LISTA DE MANUTENÇÕES ======= */
+.manutencao-lista {
+    list-style: none;
+    padding: 0;
+    margin-top: 20px;
+}
+
+.manutencao-item {
+    background: #fff;
+    padding: 18px 22px;
+    border-radius: 14px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+}
+
+.manutencao-item strong {
+    font-weight: 500;
+}
+
+.status {
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 13px;
+}
+
+.status-P {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.status-A {
+    background: #cce5ff;
+    color: #004085;
+}
+
+.status-C {
+    background: #d4edda;
+    color: #155724;
+}
+
+
+/* ======= TABELA ======= */
+.tabela-wrapper {
+    background: #fff;
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+}
+
+.tabela-manutencoes {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.tabela-manutencoes thead {
+    background: #f5f7ff;
+}
+
+.tabela-manutencoes th {
+    text-align: left;
+    padding: 14px;
+    font-size: 14px;
+    color: #004AAD;
+    font-weight: 600;
+}
+
+.tabela-manutencoes td {
+    padding: 14px;
+    border-top: 1px solid #eee;
+    font-size: 14px;
+}
+
+.tabela-manutencoes tr:hover {
+    background: #f9fbff;
+}
+
+.sem-registros {
+    text-align: center;
+    padding: 30px;
+    color: #777;
+}
+
+/* ======= BOTÃO AÇÃO ======= */
+.btn-detalhe {
+    padding: 6px 14px;
+    border-radius: 20px;
+    background: #eef2ff;
+    color: #004AAD;
+    font-weight: 600;
+    text-decoration: none;
+    font-size: 13px;
+    transition: 0.2s;
+}
+
+.btn-detalhe:hover {
+    background: #004AAD;
+    color: #fff;
+}
+
+
+</style>
+
+<!-- ======= BREADCRUMB ======= -->
+<nav class="breadcrumb" id="bread">
+    <a href="{% url 'home' %}">Home</a>
+    <span></span>
+    <span>Manutenções</span>
+</nav>
+
+<!-- ======= CABEÇALHO ======= -->
+<header class="manutencao-header">
+    <h1>Manutenções</h1>
+    <p>Solicite uma nova manutenção ou acompanhe suas solicitações</p>
+</header>
+
+<!-- ======= ABAS ======= -->
+<div class="manutencao-tabs">
+    <button class="tab-btn active" data-tab="nova">
+        Solicitar manutenção
+    </button>
+    <button class="tab-btn" data-tab="lista">
+        Manutenções solicitadas
+    </button>
+</div>
+
+<!-- ======= ABA: NOVA MANUTENÇÃO ======= -->
+<section class="tab-content active" id="nova">
+
+    <form method="post" class="manutencao-form">
+        {% csrf_token %}
+        {{ form.non_field_errors }}
+
+        <div class="form-group">
+            {{ form.brinquedo.label_tag }}
+            {{ form.brinquedo }}
+        </div>
+
+        <div class="form-group">
+            {{ form.descricao.label_tag }}
+            {{ form.descricao }}
+        </div>
+
+        <div class="form-group">
+            {{ form.telefone_contato.label_tag }}
+            {{ form.telefone_contato }}
+        </div>
+
+        <div class="form-group">
+            {{ form.cep.label_tag }}
+            {{ form.cep }}
+        </div>
+
+        <div class="form-group">
+            {{ form.endereco.label_tag }}
+            {{ form.endereco }}
+        </div>
+
+        <div class="form-group">
+            {{ form.numero.label_tag }}
+            {{ form.numero }}
+        </div>
+
+        <div class="form-group">
+            {{ form.complemento.label_tag }}
+            {{ form.complemento }}
+        </div>
+
+        <div class="form-group">
+            {{ form.bairro.label_tag }}
+            {{ form.bairro }}
+        </div>
+
+        <div class="form-group">
+            {{ form.cidade.label_tag }}
+            {{ form.cidade }}
+        </div>
+
+        <div class="form-group">
+            {{ form.estado.label_tag }}
+            {{ form.estado }}
+        </div>
+
+        <button type="submit" class="btn-enviar">
+            Enviar solicitação
+        </button>
+    </form>
+
+</section>
+
+<!-- ======= ABA: LISTA ======= -->
+<section class="tab-content" id="lista">
+
+    <div class="tabela-wrapper">
+        <table class="tabela-manutencoes">
+            <thead>
+                <tr>
+                    <th>Brinquedo</th>
+                    <th>Status</th>
+                    <th>Data</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% if manutencoes %}
+                {% for manutencao in manutencoes %}
+                    <tr>
+                        <td>{{ manutencao.brinquedo }}</td>
+                        <td>
+                            <span class="status status-{{ manutencao.status }}">
+                                {{ manutencao.get_status_display }}
+                            </span>
+                        </td>
+                        <td>{{ manutencao.criado_em|date:"d/m/Y H:i" }}</td>
+                        <td>
+                            <a href="#" class="btn-detalhe">Ver</a>
+                        </td>
+                    </tr>
+                {% endfor %}
+            {% else %}
+                <tr>
+                    <td colspan="4" class="sem-registros">
+                        Nenhuma manutenção solicitada.
+                    </td>
+                </tr>
+            {% endif %}
+            </tbody>
+        </table>
+    </div>
+
+</section>
+
+
+<script>
+
+document.addEventListener("DOMContentLoaded", function () {
+    const tabs = document.querySelectorAll(".tab-btn");
+    const contents = document.querySelectorAll(".tab-content");
+
+    tabs.forEach(tab => {
+        tab.addEventListener("click", () => {
+
+            tabs.forEach(t => t.classList.remove("active"));
+            contents.forEach(c => c.classList.remove("active"));
+
+            tab.classList.add("active");
+            document.getElementById(tab.dataset.tab).classList.add("active");
+        });
+    });
+
+    // força iniciar sempre na aba "nova"
+    document.querySelector('[data-tab="nova"]').click();
+});
+</script>
+
+
+{% endblock %}

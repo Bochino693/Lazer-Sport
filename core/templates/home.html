@@ -1809,92 +1809,21 @@ body {
 
 
 <!-- ======= MANUTENÇÃO ======= -->
-<!-- ======= MANUTENÇÃO ======= -->
 <section id="manutencao" class="manutencao-section">
 
     <div class="manutencao-container">
 
         <!-- BOTÃO PRINCIPAL -->
-        <button id="abrirModalManutencao" class="btn-manutencao">
+        <a href="{% url 'manutencoes' %}#bread" class="btn-manutencao">
             <span class="icon">🛠</span>
             <span class="texto">
                 Solicitar Manutenção
                 <small>Reparo ou revisão do brinquedo</small>
             </span>
-        </button>
+        </a>
 
-        <!-- MODAL -->
-        <div id="modalManutencao" class="modal">
 
-            <div class="modal-conteudo">
-                <span class="fechar">&times;</span>
-
-                <h3>Solicitação de Manutenção</h3>
-
-                <form method="post">
-                    {% csrf_token %}
-
-                    {{ form.non_field_errors }}
-
-                    <div class="form-group">
-                        {{ form.brinquedo.label_tag }}
-                        {{ form.brinquedo }}
-                    </div>
-
-                    <div class="form-group">
-                        {{ form.descricao.label_tag }}
-                        {{ form.descricao }}
-                    </div>
-
-                    <div class="form-group">
-                        {{ form.telefone_contato.label_tag }}
-                        {{ form.telefone_contato }}
-                    </div>
-
-                    <div class="form-group">
-                        {{ form.cep.label_tag }}
-                        {{ form.cep }}
-                    </div>
-
-                    <div class="form-group">
-                        {{ form.endereco.label_tag }}
-                        {{ form.endereco }}
-                    </div>
-
-                    <div class="form-group">
-                        {{ form.numero.label_tag }}
-                        {{ form.numero }}
-                    </div>
-
-                    <div class="form-group">
-                        {{ form.complemento.label_tag }}
-                        {{ form.complemento }}
-                    </div>
-
-                    <div class="form-group">
-                        {{ form.bairro.label_tag }}
-                        {{ form.bairro }}
-                    </div>
-
-                    <div class="form-group">
-                        {{ form.cidade.label_tag }}
-                        {{ form.cidade }}
-                    </div>
-
-                    <div class="form-group">
-                        {{ form.estado.label_tag }}
-                        {{ form.estado }}
-                    </div>
-
-                    <button type="submit" class="btn-enviar">
-                        Enviar Solicitação
-                    </button>
-
-                </form>
-            </div>
         </div>
-
-    </div>
 </section>
 
 
@@ -2456,18 +2385,6 @@ body {
 
 <script>
 
-const modal = document.getElementById("modalManutencao");
-    const abrir = document.getElementById("abrirModalManutencao");
-    const fechar = document.querySelector(".fechar");
-
-    abrir.onclick = () => modal.style.display = "block";
-    fechar.onclick = () => modal.style.display = "none";
-
-    window.onclick = (e) => {
-        if (e.target === modal) {
-            modal.style.display = "none";
-        }
-    }
 
 
 function formatarMoedaBR(valor) {
