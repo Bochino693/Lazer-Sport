@@ -341,7 +341,12 @@ class BrinquedoSobMedida(models.Model):
 
 
 class Carrinho(Prime):
-    usuario = models.ForeignKey(User, on_delete=models.CASCADE, related_name='carrinho', null=True)
+    cliente = models.ForeignKey(
+        ClientePerfil,
+        on_delete=models.CASCADE,
+        related_name='carrinhos',
+        null=True
+    )
 
     cupom = models.ForeignKey(
         Cupom,
@@ -351,33 +356,35 @@ class Carrinho(Prime):
         related_name='carrinhos'
     )
 
-    # TOTAL BRUTO = soma dos itens SEM desconto
     @property
     def total_bruto(self):
         return round(sum(item.subtotal for item in self.itens.all()), 2)
 
-    # VALOR DO CUPOM (se houver)
     @property
     def valor_desconto(self):
         if not self.cupom:
-            return 0
+            return Decimal('0.00')
 
-        desconto = (self.total_bruto * float(self.cupom.desconto_percentual)) / 100
-        return round(desconto, 2)
+        percentual = self.cupom.desconto_percentual  # ex: Decimal('10.00')
+        desconto = (self.total_bruto * percentual) / Decimal('100')
 
-    # TOTAL FINAL = total_bruto - desconto
+        return desconto.quantize(Decimal('0.01'))
+
     @property
     def total_liquido(self):
-        return round(self.total_bruto - self.valor_desconto, 2)
+        return (self.total_bruto - self.valor_desconto).quantize(Decimal('0.01'))
 
     def __str__(self):
-        return f"Carrinho de {self.usuario.username}"
+        return f"Carrinho de {self.cliente.user.username}"
 
 
 class ItemCarrinho(Prime):
-    carrinho = models.ForeignKey(Carrinho, on_delete=models.CASCADE, related_name='itens')
+    carrinho = models.ForeignKey(
+        Carrinho,
+        on_delete=models.CASCADE,
+        related_name='itens'
+    )
 
-    # Generic ForeignKey
     content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
     object_id = models.PositiveIntegerField()
     item = GenericForeignKey('content_type', 'object_id')
@@ -386,15 +393,12 @@ class ItemCarrinho(Prime):
 
     @property
     def preco_unitario(self):
-        # Brinquedo
         if hasattr(self.item, 'valor_brinquedo'):
             return self.item.valor_brinquedo
 
-        # Combo
         if hasattr(self.item, 'valor_combo'):
             return self.item.valor_combo
 
-        # Promoção
         if hasattr(self.item, 'preco_promocao'):
             return self.item.preco_promocao
 
@@ -406,6 +410,98 @@ class ItemCarrinho(Prime):
 
     def __str__(self):
         return f"Item {self.item} (x{self.quantidade})"
+
+
+class Pedido(Prime):
+    STATUS_CHOICES = (
+        ('criado', 'Criado'),
+        ('aguardando_pagamento', 'Aguardando pagamento'),
+        ('pago', 'Pago'),
+        ('em_preparacao', 'Em preparação'),
+        ('finalizado', 'Finalizado'),
+        ('cancelado', 'Cancelado'),
+    )
+
+    cliente = models.ForeignKey(
+        ClientePerfil,
+        on_delete=models.PROTECT,
+        related_name='pedidos'
+    )
+
+    status = models.CharField(
+        max_length=30,
+        choices=STATUS_CHOICES,
+        default='criado'
+    )
+
+    # 🔒 snapshot financeiro
+    total_bruto = models.DecimalField(max_digits=10, decimal_places=2)
+    valor_desconto = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    total_liquido = models.DecimalField(max_digits=10, decimal_places=2)
+
+    cupom_codigo = models.CharField(max_length=20, blank=True, null=True)
+    cupom_percentual = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+
+    observacoes = models.TextField(blank=True)
+
+    def __str__(self):
+        return f"Pedido #{self.id} - {self.cliente.user.username}"
+
+
+class ItemPedido(Prime):
+    pedido = models.ForeignKey(
+        Pedido,
+        on_delete=models.CASCADE,
+        related_name='itens'
+    )
+
+    # referência apenas histórica
+    content_type = models.ForeignKey(ContentType, on_delete=models.SET_NULL, null=True)
+    object_id = models.PositiveIntegerField(null=True)
+    item_original = GenericForeignKey('content_type', 'object_id')
+
+    nome_item = models.CharField(max_length=255)
+    tipo_item = models.CharField(
+        max_length=30,
+        choices=(
+            ('brinquedo', 'Brinquedo'),
+            ('combo', 'Combo'),
+            ('promocao', 'Promoção'),
+        )
+    )
+
+    preco_unitario = models.DecimalField(max_digits=10, decimal_places=2)
+    quantidade = models.PositiveIntegerField()
+    subtotal = models.DecimalField(max_digits=10, decimal_places=2)
+
+    def __str__(self):
+        return f"{self.nome_item} (x{self.quantidade})"
+
+
+class Venda(Prime):
+    pedido = models.OneToOneField(
+        Pedido,
+        on_delete=models.PROTECT,
+        related_name='venda',
+        null=True
+    )
+
+    valor_pago = models.DecimalField(max_digits=10, decimal_places=2, null=True)
+    forma_pagamento = models.CharField(max_length=30,
+                                       choices=(
+                                           ('pix', 'PIX'),
+                                           ('cartao', 'Cartão'),
+                                           ('dinheiro', 'Dinheiro'),
+                                           ('whatsapp', 'WhatsApp'),
+                                       ),
+                                       null=True
+
+                                       )
+
+    confirmado = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"Venda do Pedido #{self.pedido.id}"
 
 
 class Manutencao(models.Model):
@@ -456,6 +552,7 @@ class Manutencao(models.Model):
         default='P'
     )
     criado_em = models.DateTimeField(auto_now_add=True)
+    atualizada_em = models.DateTimeField(auto_now=True, null=True)
 
     def __str__(self):
         return f"{self.brinquedo} - {self.get_status_display()}"
@@ -468,7 +565,3 @@ class ManutencaoImagem(models.Model):
         related_name='imagens'
     )
     imagem = models.ImageField(upload_to='manutencoes/')
-
-
-class Venda(Prime):
-    carrinho = models.ForeignKey(Carrinho, on_delete=models.SET_NULL, related_name='vendas', null=True)

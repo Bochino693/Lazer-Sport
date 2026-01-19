@@ -243,3 +243,83 @@ class ManutencaoAdmin(admin.ModelAdmin):
 @admin.register(ManutencaoImagem)
 class ManutencaoImagemAdmin(admin.ModelAdmin):
     list_display = ('id', 'manutencao')
+
+
+from django.contrib import admin
+from django.contrib.contenttypes.admin import GenericTabularInline
+
+from .models import Carrinho, ItemCarrinho
+
+
+# ===============================
+# INLINE DOS ITENS DO CARRINHO
+# ===============================
+class ItemCarrinhoInline(GenericTabularInline):
+    model = ItemCarrinho
+    extra = 0
+    readonly_fields = (
+        'item',
+        'preco_unitario_admin',
+        'subtotal_admin',
+    )
+    fields = (
+        'item',
+        'quantidade',
+        'preco_unitario_admin',
+        'subtotal_admin',
+    )
+
+    def preco_unitario_admin(self, obj):
+        return f"R$ {obj.preco_unitario:.2f}"
+    preco_unitario_admin.short_description = "Preço Unitário"
+
+    def subtotal_admin(self, obj):
+        return f"R$ {obj.subtotal:.2f}"
+    subtotal_admin.short_description = "Subtotal"
+
+
+# ===============================
+# ADMIN DO CARRINHO
+# ===============================
+@admin.register(Carrinho)
+class CarrinhoAdmin(admin.ModelAdmin):
+    list_display = (
+        'cliente',
+        'total_bruto_admin',
+        'desconto_admin',
+        'total_liquido_admin',
+        'cupom',
+
+    )
+
+    list_filter = ('cupom',)
+    search_fields = (
+        'cliente__user__username',
+        'cliente__user__email',
+    )
+
+    readonly_fields = (
+        'total_bruto_admin',
+        'desconto_admin',
+        'total_liquido_admin',
+    )
+
+    inlines = [ItemCarrinhoInline]
+
+    def total_bruto_admin(self, obj):
+        return f"R$ {obj.total_bruto:.2f}"
+    total_bruto_admin.short_description = "Total Bruto"
+
+    def desconto_admin(self, obj):
+        return f"- R$ {obj.valor_desconto:.2f}"
+    desconto_admin.short_description = "Desconto"
+
+    def total_liquido_admin(self, obj):
+        return f"R$ {obj.total_liquido:.2f}"
+    total_liquido_admin.short_description = "Total Líquido"
+
+    def has_change_permission(self, request, obj=None):
+        if obj and obj.status == 'finalizado':
+            return False
+        return super().has_change_permission(request, obj)
+

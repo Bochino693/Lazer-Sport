@@ -1,11 +1,69 @@
-from .models import CategoriasBrinquedos, Estabelecimentos
+from .models import CategoriasBrinquedos, Estabelecimentos, Manutencao, Carrinho
+
 
 def categorias_globais(request):
     return {
         "categorias_header": CategoriasBrinquedos.objects.all().order_by("nome_categoria")
     }
 
+
 def estabelecimentos_globais(request):
     return {
         "estabelecimentos_globais": Estabelecimentos.objects.all()
+    }
+
+
+def manutencao_notificacao(request):
+    if not request.user.is_authenticated:
+        return {}
+
+    # ClientePerfil já existe por causa do signal
+    cliente = request.user.perfil
+
+    manutencoes = Manutencao.objects.filter(usuario=cliente)
+
+    pendentes = manutencoes.filter(status='P').count()
+    em_andamento = manutencoes.filter(status='A').count()
+
+    return {
+        'manutencao_pendente': pendentes,
+        'manutencao_andamento': em_andamento,
+        'tem_manutencao': (pendentes + em_andamento) > 0
+    }
+
+
+from django.db.models import Sum
+
+
+def carrinho_context(request):
+    if not request.user.is_authenticated:
+        return {
+            'carrinho_total_itens': 0,
+            'mostrar_float_carrinho': False
+        }
+
+    # Usuário logado mas sem perfil ainda
+    if not hasattr(request.user, 'perfil'):
+        return {
+            'carrinho_total_itens': 0,
+            'mostrar_float_carrinho': False
+        }
+
+    cliente = request.user.perfil
+
+    carrinho = Carrinho.objects.filter(cliente=cliente).first()
+
+    if not carrinho:
+        return {
+            'carrinho_total_itens': 0,
+            'mostrar_float_carrinho': False
+        }
+
+    total_itens = carrinho.itens.aggregate(
+        total=Sum('quantidade')
+    )['total'] or 0
+
+    return {
+        'carrinho_total_itens': total_itens,
+        'mostrar_float_carrinho': total_itens > 0
     }

@@ -1,7 +1,7 @@
 from django.views.generic import View
 from django.shortcuts import render, get_object_or_404, redirect
 from django.core.paginator import Paginator
-from django.db.models import Count, F, ExpressionWrapper, FloatField
+from django.db.models import Count, F, ExpressionWrapper, FloatField, Sum
 from django.contrib.auth.models import User
 from django.contrib import messages
 from django.contrib.auth import authenticate, login
@@ -126,7 +126,6 @@ from .models import ClientePerfil
 
 
 class ManutencaoView(View):
-
     template_name = 'manutencao.html'
 
     def get_usuario(self, request):
@@ -162,6 +161,8 @@ class ManutencaoView(View):
             form.save()
             return redirect('manutencoes')
 
+        tab_ativa = request.GET.get('tab', 'nova')
+
         manutencoes = Manutencao.objects.filter(
             usuario=usuario
         ).order_by('-criado_em')
@@ -169,8 +170,10 @@ class ManutencaoView(View):
         context = {
             'form': form,
             'manutencoes': manutencoes,
+            'tab_ativa': tab_ativa,
         }
         return render(request, self.template_name, context)
+
 
 class ClientePerfilView(LoginRequiredMixin, View):
     template_name = "profile.html"
@@ -824,3 +827,186 @@ class SolicitarManutencaoView(FormView, LoginRequiredMixin):
     def form_valid(self, form):
         messages.success(self.request, "Solicitação enviada com sucesso!")
         return super().form_valid(form)
+
+
+from django.contrib.contenttypes.models import ContentType
+from django.shortcuts import get_object_or_404, redirect
+from django.contrib.auth.decorators import login_required
+from .models import ItemCarrinho, Carrinho
+
+
+from django.http import JsonResponse
+@login_required
+def adicionar_ao_carrinho(request, tipo, object_id):
+    if not hasattr(request.user, 'perfil'):
+        return JsonResponse({'erro': 'Usuário inválido'}, status=403)
+
+    cliente = request.user.perfil
+    carrinho, _ = Carrinho.objects.get_or_create(cliente=cliente)
+
+    modelos = {
+        'brinquedo': Brinquedos,
+        'combo': Combos,
+        'promocao': Promocoes,
+    }
+
+    model = modelos.get(tipo)
+    if not model:
+        return JsonResponse({'erro': 'Tipo inválido'}, status=400)
+
+    objeto = get_object_or_404(model, id=object_id)
+    content_type = ContentType.objects.get_for_model(objeto)
+
+    item, created = ItemCarrinho.objects.get_or_create(
+        carrinho=carrinho,
+        content_type=content_type,
+        object_id=objeto.id,
+        defaults={'quantidade': 1}
+    )
+
+    if not created:
+        item.quantidade += 1
+        item.save()
+
+    total_itens = carrinho.itens.aggregate(
+        total=Sum('quantidade')
+    )['total'] or 0
+
+    return JsonResponse({
+        'sucesso': True,
+        'total_itens': total_itens
+    })
+
+
+
+@login_required
+def carrinho_view(request):
+    # 🔒 só cliente pode acessar carrinho
+    if not hasattr(request.user, 'perfil'):
+        return redirect('home')
+
+    cliente = request.user.perfil
+
+    carrinho, _ = Carrinho.objects.get_or_create(cliente=cliente)
+
+    itens = carrinho.itens.select_related('content_type')
+
+    context = {
+        'carrinho': carrinho,
+        'itens': itens,
+    }
+
+    return render(request, 'carrinho.html', context)
+
+
+import json
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
+from django.contrib.auth.decorators import login_required
+from .models import Pedido, ItemPedido
+
+@login_required
+@require_POST
+def aplicar_cupom(request):
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'status': 'error',
+            'title': 'Erro',
+            'message': 'Dados inválidos enviados'
+        }, status=400)
+
+    codigo = data.get('codigo', '').strip()
+
+    if not codigo:
+        return JsonResponse({
+            'status': 'warning',
+            'title': 'Cupom vazio',
+            'message': 'Digite um código de cupom'
+        })
+
+    if not hasattr(request.user, 'perfil'):
+        return JsonResponse({
+            'status': 'error',
+            'title': 'Erro',
+            'message': 'Perfil do cliente não encontrado'
+        }, status=400)
+
+    carrinho = Carrinho.objects.filter(cliente=request.user.perfil).first()
+
+    if not carrinho:
+        return JsonResponse({
+            'status': 'error',
+            'title': 'Carrinho vazio',
+            'message': 'Crie um carrinho antes de aplicar o cupom'
+        })
+
+    try:
+        cupom = Cupom.objects.get(codigo__iexact=codigo)
+    except Cupom.DoesNotExist:
+        return JsonResponse({
+            'status': 'error',
+            'title': 'Cupom inválido',
+            'message': 'Este cupom não existe ou é inválido'
+        })
+
+    # 🔮 FUTURA REGRA: cupom primeira compra
+    if codigo.lower() == 'newuser10':
+        ja_comprou = Pedido.objects.filter(cliente=request.user.perfil).exists()
+        if ja_comprou:
+            return JsonResponse({
+                'status': 'warning',
+                'title': 'Cupom indisponível',
+                'message': 'Este cupom é válido apenas na primeira compra'
+            })
+
+    carrinho.cupom = cupom
+    carrinho.save(update_fields=['cupom'])
+
+    return JsonResponse({
+        'status': 'success',
+        'title': 'Cupom aplicado 🎉',
+        'message': f'Você economizou {cupom.desconto_percentual}% com o cupom {cupom.codigo}'
+    })
+
+from django.contrib.contenttypes.models import ContentType
+from django.db import transaction
+
+def criar_pedido_do_carrinho(carrinho):
+
+    with transaction.atomic():
+
+        pedido = Pedido.objects.create(
+            cliente=carrinho.cliente,
+            total_bruto=carrinho.total_bruto,
+            valor_desconto=carrinho.valor_desconto,
+            total_liquido=carrinho.total_liquido,
+            cupom_codigo=carrinho.cupom.codigo if carrinho.cupom else None,
+            cupom_percentual=carrinho.cupom.desconto_percentual if carrinho.cupom else None,
+        )
+
+        for item in carrinho.itens.all():
+            ItemPedido.objects.create(
+                pedido=pedido,
+                content_type=item.content_type,
+                object_id=item.object_id,
+                nome_item=str(item.item),
+                tipo_item=item.content_type.model,
+                preco_unitario=item.preco_unitario,
+                quantidade=item.quantidade,
+                subtotal=item.subtotal
+            )
+
+        # opcional: limpar carrinho
+        carrinho.itens.all().delete()
+        carrinho.cupom = None
+        carrinho.save()
+
+        return pedido
+
+
+class PaymentView(View):
+
+    def get(self, request):
+        return request, render('paymente.html')

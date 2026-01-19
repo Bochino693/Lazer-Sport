@@ -283,7 +283,7 @@
 </div>
 
 <!-- ======= ABA: NOVA MANUTENÇÃO ======= -->
-<section class="tab-content active" id="nova">
+<section class="tab-content {% if tab_ativa == 'nova' %}active{% endif %}" id="nova">
 
     <form method="post" class="manutencao-form">
         {% csrf_token %}
@@ -347,7 +347,7 @@
 </section>
 
 <!-- ======= ABA: LISTA ======= -->
-<section class="tab-content" id="lista">
+<section class="tab-content {% if tab_ativa == 'lista' %}active{% endif %}" id="lista">
 
     <div class="tabela-wrapper">
         <table class="tabela-manutencoes">
@@ -397,7 +397,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
     tabs.forEach(tab => {
         tab.addEventListener("click", () => {
-
             tabs.forEach(t => t.classList.remove("active"));
             contents.forEach(c => c.classList.remove("active"));
 
@@ -405,9 +404,6 @@ document.addEventListener("DOMContentLoaded", function () {
             document.getElementById(tab.dataset.tab).classList.add("active");
         });
     });
-
-    // força iniciar sempre na aba "nova"
-    document.querySelector('[data-tab="nova"]').click();
 });
 </script>
 

@@ -126,6 +126,41 @@
     background: #e4e4e4;
     transform: translateY(-2px);
 }
+
+
+
+/* ======= TOAST MODERNO ======= */
+/* ======= TOAST MODERNO (SURGE DE BAIXO) ======= */
+.toast-carrinho {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px) scale(0.95);
+
+    background: linear-gradient(135deg, #14a61a, #0e7f14);
+    color: #fff;
+
+    padding: 14px 26px;
+    border-radius: 16px;
+
+    font-weight: 700;
+    font-size: 0.95rem;
+
+    box-shadow: 0 12px 35px rgba(0,0,0,0.28);
+
+    opacity: 0;
+    pointer-events: none;
+
+    transition: all 0.35s cubic-bezier(.4,0,.2,1);
+    z-index: 99999;
+}
+
+/* Estado visível */
+.toast-carrinho.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+}
+
 </style>
 
 
@@ -160,7 +195,12 @@
 
             <!-- BOTÕES -->
             <div class="combo-acoes">
-                <a href="#" class="btn-combo carrinho">🛒 Adicionar ao Carrinho</a>
+                <button
+                    type="button"
+                    class="btn-combo carrinho"
+                    onclick="adicionarAoCarrinho(event, 'promocao', {{ promocao.id }})">
+                    🛒 Adicionar ao Carrinho
+                </button>
                 <a href="#" class="btn-combo comprar">🔥 Comprar Agora</a>
                 <a href="{% url 'home' %}#promocoes-section" class="btn-combo voltar">← Voltar</a>
             </div>
@@ -168,6 +208,11 @@
         </div>
     </div>
 </div>
+
+<div id="toast-carrinho" class="toast-carrinho">
+    <span id="toast-msg"></span>
+</div>
+
 
 
 <!-- FORMATADOR DE MOEDAS -->
@@ -188,6 +233,67 @@ document.addEventListener("DOMContentLoaded", () => {
         el.textContent = formatBR(el.textContent);
     });
 });
+
+
+function adicionarAoCarrinho(event, tipo, id) {
+    event.preventDefault();
+
+    fetch(`/carrinho/adicionar/${tipo}/${id}/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(res => {
+        if (!res.ok) throw new Error();
+        return res.json();
+    })
+    .then(data => {
+        if (data.sucesso) {
+            mostrarToast('🛒 Promoção adicionada ao carrinho!');
+            atualizarBadgeCarrinho(data.total_itens);
+        } else {
+            mostrarToast(data.erro || 'Erro ao adicionar', true);
+        }
+    })
+    .catch(() => {
+        mostrarToast('Erro de conexão', true);
+    });
+}
+
+function atualizarBadgeCarrinho(total) {
+    const badge = document.getElementById('badge-carrinho');
+    const carrinho = document.getElementById('float-carrinho');
+
+    if (!badge || !carrinho) return;
+
+    badge.innerText = total;
+
+    badge.classList.remove('pulse');
+    void badge.offsetWidth;
+    badge.classList.add('pulse');
+
+    carrinho.style.display = 'flex';
+}
+
+function mostrarToast(msg, erro = false) {
+    const toast = document.getElementById('toast-carrinho');
+    const texto = document.getElementById('toast-msg');
+
+    if (!toast || !texto) return;
+
+    texto.innerText = msg;
+    toast.style.background = erro
+        ? 'linear-gradient(135deg, #dc3545, #a71d2a)'
+        : 'linear-gradient(135deg, #14a61a, #0e7f14)';
+
+    toast.classList.add('show');
+
+    setTimeout(() => {
+        toast.classList.remove('show');
+    }, 3000);
+}
 </script>
 
 {% endblock %}

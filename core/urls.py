@@ -7,7 +7,7 @@ from .views import (HomeView, BrinquedoInfoView, CategoriasInfoView, BrinquedosV
                     PromocaoDeleteView, PromocaoUpdateView, EventoListView, EventoCreateView,
                     EventoDeleteView, EventoUpdateView, CupomListView, CupomUpdateView, CupomCreateView,
                     CupomDeleteView, ProjetoListView, ProjetoUpdateView, ProjetoCreateView, ProjetoDeleteView,
-                    EstabelecimentoInfoView, EstabelecimentosListView, ManutencaoView
+                    EstabelecimentoInfoView, EstabelecimentosListView, ManutencaoView, adicionar_ao_carrinho, carrinho_view, aplicar_cupom
 
                     )   # importa views do mesmo app
 from django.conf import settings
@@ -31,6 +31,21 @@ urlpatterns = [
         ManutencaoView.as_view(),
         name='manutencoes'
     ),
+
+    path(
+        'carrinho/',
+        carrinho_view,
+        name='carrinho'
+    ),
+
+
+    path(
+        'carrinho/adicionar/<str:tipo>/<int:object_id>/',
+        adicionar_ao_carrinho,
+        name='adicionar_ao_carrinho'
+    ),
+
+    path('carrinho/aplicar-cupom/', aplicar_cupom, name='aplicar_cupom'),
 
 
     path("eventos/", EventosView.as_view(), name='eventos'),

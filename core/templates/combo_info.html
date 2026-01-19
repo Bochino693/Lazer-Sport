@@ -175,6 +175,49 @@
 }
 
 
+.toast-carrinho {
+    position: fixed;
+    bottom: 90px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(135deg, #14a61a, #0e7f14);
+    color: #fff;
+    padding: 14px 22px;
+    border-radius: 14px;
+    font-weight: 700;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.25);
+    opacity: 0;
+    pointer-events: none;
+    transition: .3s ease;
+    z-index: 9999;
+}
+
+.toast-carrinho.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(-10px);
+}
+
+.badge {
+    background: #dc3545;
+    color: #fff;
+    border-radius: 50%;
+    padding: 4px 8px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    transition: .2s ease;
+}
+
+.badge.pulse {
+    animation: pulse 0.35s ease;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.35); }
+    100% { transform: scale(1); }
+}
+
+
 </style>
 
 
@@ -226,7 +269,14 @@
 
             <!-- BOTÕES -->
             <div class="combo-acoes">
-                <a href="#" class="btn-combo carrinho">🛒 Adicionar ao Carrinho</a>
+                <button
+                    type="button"
+                    class="btn-combo carrinho"
+                    onclick="adicionarAoCarrinho('combo', {{ combo.id }})">
+                    🛒 Adicionar ao Carrinho
+                </button>
+
+
                 <a href="#" class="btn-combo comprar">⚡ Comprar Agora</a>
                 <a href="{% url 'home' %}#combos-section" class="btn-combo voltar">← Voltar</a>
             </div>
@@ -234,6 +284,11 @@
         </div>
     </div>
 </div>
+
+<div id="toast-carrinho" class="toast-carrinho">
+    <span id="toast-msg"></span>
+</div>
+
 
 <!-- AUTO-FORMATADOR DE MOEDAS -->
 <script>
@@ -254,6 +309,67 @@ document.addEventListener("DOMContentLoaded", () => {
         el.textContent = formatBR(el.textContent);
     });
 });
+
+
+function adicionarAoCarrinho(tipo, id) {
+    fetch(`/carrinho/adicionar/${tipo}/${id}/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(res => {
+        if (!res.ok) throw new Error('Erro na requisição');
+        return res.json();
+    })
+    .then(data => {
+        if (data.sucesso) {
+            mostrarToast('🛒 Produto adicionado ao carrinho!');
+            atualizarBadgeCarrinho(data.total_itens);
+        } else {
+            mostrarToast(data.erro || 'Erro ao adicionar', true);
+        }
+    })
+    .catch(() => {
+        mostrarToast('Erro de conexão', true);
+    });
+}
+function atualizarBadgeCarrinho(total) {
+    const badge = document.getElementById('badge-carrinho');
+    const carrinho = document.getElementById('float-carrinho');
+
+    if (!badge || !carrinho) return;
+
+    badge.innerText = total;
+
+    // efeito pulse
+    badge.classList.remove('pulse');
+    void badge.offsetWidth;
+    badge.classList.add('pulse');
+
+    carrinho.style.display = 'flex';
+}
+
+
+function mostrarToast(msg, erro = false) {
+    const toast = document.getElementById('toast-carrinho');
+    const texto = document.getElementById('toast-msg');
+
+    if (!toast || !texto) return;
+
+    texto.innerText = msg;
+    toast.style.background = erro
+        ? 'linear-gradient(135deg, #dc3545, #a71d2a)'
+        : 'linear-gradient(135deg, #14a61a, #0e7f14)';
+
+    toast.classList.add('show');
+
+    setTimeout(() => {
+        toast.classList.remove('show');
+    }, 3000);
+}
+
 </script>
 
 {% endblock %}

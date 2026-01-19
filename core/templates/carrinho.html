@@ -1,0 +1,285 @@
+{% extends "base.html" %}
+{% block content %}
+
+<style>
+/* ====== CONTAINER ====== */
+.carrinho-container {
+    max-width: 420px;
+    margin: 30px auto 120px;
+    padding: 20px;
+}
+
+/* ====== TÍTULO ====== */
+.carrinho-titulo {
+    text-align: center;
+    font-size: 1.8rem;
+    font-weight: 800;
+    margin-bottom: 25px;
+}
+
+/* ====== ITEM CARD ====== */
+.item-card {
+    background: #fff;
+    border-radius: 18px;
+    padding: 16px;
+    margin-bottom: 16px;
+    box-shadow: 0 8px 22px rgba(0,0,0,0.08);
+    animation: fadeUp .3s ease;
+}
+
+@keyframes fadeUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.item-nome {
+    font-weight: 700;
+    font-size: 1.05rem;
+    margin-bottom: 8px;
+}
+
+.item-linha {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.95rem;
+    margin: 4px 0;
+    color: #444;
+}
+
+.item-subtotal {
+    font-weight: 700;
+    color: #0d6efd;
+}
+
+/* ====== RESUMO ====== */
+.resumo-box {
+    background: #f7faff;
+    border-radius: 18px;
+    padding: 18px;
+    margin-top: 25px;
+}
+
+.resumo-linha {
+    display: flex;
+    justify-content: space-between;
+    margin: 10px 0;
+    font-size: 1rem;
+}
+
+.resumo-total {
+    font-size: 1.2rem;
+    font-weight: 800;
+    color: #0d6efd;
+}
+
+/* ====== BOTÃO FIXO ====== */
+.finalizar-box {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: #fff;
+    padding: 14px;
+    box-shadow: 0 -6px 20px rgba(0,0,0,0.12);
+    text-align: center; /* 👈 importante */
+}
+
+
+.btn-finalizar {
+    display: inline-block;
+    padding: 14px 26px;
+    background: #14a61a;
+    color: #fff;
+    text-align: center;
+    font-size: 1.05rem;
+    font-weight: 700;
+    border-radius: 30px;
+    text-decoration: none;
+    transition: .25s ease;
+    min-width: 240px;
+}
+
+.btn-finalizar:hover {
+    background: #0e7f14;
+}
+
+/* ====== VAZIO ====== */
+.carrinho-vazio {
+    text-align: center;
+    margin-top: 80px;
+    color: #777;
+    font-size: 1.1rem;
+}
+
+
+/* ====== CARD COM BACKGROUND ====== */
+.item-card {
+    background: linear-gradient(135deg, #ffffff, #f3f7ff);
+    border: 1px solid #e3e9ff;
+}
+
+/* ====== CUPOM ====== */
+.cupom-box {
+    background: linear-gradient(135deg, #fff7e6, #fff);
+    border-radius: 18px;
+    padding: 16px;
+    margin-top: 20px;
+    border: 1px dashed #ffc107;
+}
+
+.cupom-input {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.cupom-input input {
+    flex: 1;
+    padding: 12px;
+    border-radius: 12px;
+    border: 1px solid #ddd;
+    font-size: 1rem;
+}
+
+.cupom-input button {
+    padding: 12px 18px;
+    border-radius: 12px;
+    border: none;
+    background: #ffc107;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.cupom-aplicado {
+    background: #e7f7ec;
+    border: 1px solid #b6e3c6;
+    border-radius: 14px;
+    padding: 14px;
+    margin-top: 15px;
+    font-size: 0.95rem;
+    color: #1c7c3d;
+}
+
+</style>
+<div class="carrinho-container">
+
+<h1 class="carrinho-titulo">🛒 Meu Carrinho</h1>
+
+{% if not itens %}
+    <div class="carrinho-vazio">
+        😕 Seu carrinho está vazio
+    </div>
+
+{% else %}
+
+    {% for item in itens %}
+        <div class="item-card">
+            <div class="item-nome">{{ item.item }}</div>
+
+            <div class="item-linha">
+                <span>Preço</span>
+                <span>R$ {{ item.preco_unitario|floatformat:2 }}</span>
+            </div>
+
+            <div class="item-linha">
+                <span>Quantidade</span>
+                <span>{{ item.quantidade }}</span>
+            </div>
+
+            <div class="item-linha item-subtotal">
+                <span>Subtotal</span>
+                <span>R$ {{ item.subtotal|floatformat:2 }}</span>
+            </div>
+        </div>
+    {% endfor %}
+
+    <div class="cupom-box">
+        <strong>🎟️ Cupom de desconto</strong>
+
+        {% if carrinho.cupom %}
+            <div class="cupom-aplicado">
+                🎉 Você economizou
+                <strong>{{ carrinho.cupom.desconto_percentual }}%</strong>
+                com o cupom
+                <strong>{{ carrinho.cupom.codigo }}</strong>
+            </div>
+        {% else %}
+            <div class="cupom-input">
+                <input type="text" id="cupomCodigo" placeholder="Digite seu cupom">
+                <button onclick="aplicarCupom()">Aplicar</button>
+            </div>
+            <small id="cupom-msg" style="color:red;"></small>
+        {% endif %}
+    </div>
+
+    <div class="resumo-box">
+        <div class="resumo-linha">
+            <span>Total bruto</span>
+            <span>R$ {{ carrinho.total_bruto|floatformat:2 }}</span>
+        </div>
+
+        {% if carrinho.cupom %}
+        <div class="resumo-linha">
+            <span>Desconto</span>
+            <span>- R$ {{ carrinho.valor_desconto|floatformat:2 }}</span>
+        </div>
+        {% endif %}
+
+        <div class="resumo-linha resumo-total">
+            <span>Total</span>
+            <span>R$ {{ carrinho.total_liquido|floatformat:2 }}</span>
+        </div>
+    </div>
+
+{% endif %}
+
+</div>
+
+{% if itens %}
+<div class="finalizar-box">
+    <a href="#" class="btn-finalizar">Finalizar pedido</a>
+</div>
+{% endif %}
+
+<script>
+function aplicarCupom() {
+    const codigo = document.getElementById('cupomCodigo').value.trim();
+    const msg = document.getElementById('cupom-msg');
+
+    msg.innerText = '';
+
+    if (!codigo) {
+        msg.innerText = 'Digite um código de cupom';
+        return;
+    }
+
+    fetch("{% url 'aplicar_cupom' %}", {
+        method: "POST",
+        headers: {
+            "X-CSRFToken": "{{ csrf_token }}",
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ codigo })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.status === 'success') {
+            // feedback imediato
+            msg.style.color = 'green';
+            msg.innerText = data.message;
+
+            // recarrega para atualizar valores e layout
+            setTimeout(() => location.reload(), 800);
+        } else {
+            msg.style.color = 'red';
+            msg.innerText = data.message || 'Erro ao aplicar cupom';
+        }
+    })
+    .catch(() => {
+        msg.style.color = 'red';
+        msg.innerText = 'Erro de conexão';
+    });
+}
+</script>
+
+{% endblock %}

@@ -351,7 +351,27 @@
     cursor: pointer;
 }
 
+.toast-carrinho {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: linear-gradient(135deg, #14a61a, #0e7f14);
+    color: white;
+    padding: 14px 24px;
+    border-radius: 30px;
+    font-weight: 600;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+    opacity: 0;
+    pointer-events: none;
+    transition: all .35s ease;
+    z-index: 99999;
+}
 
+.toast-carrinho.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
 
 </style>
 
@@ -364,6 +384,11 @@
     <strong>{{ brinquedo.nome_brinquedo }}</strong>
 </div>
 
+
+
+<div id="toast-carrinho" class="toast-carrinho">
+    <span id="toast-msg"></span>
+</div>
 
 
     <!-- ====== CONTEÚDO ====== -->
@@ -419,7 +444,13 @@
 
     <!-- BOTÕES DE AÇÃO -->
     <div class="acoes-produto">
-        <a href="#" class="btn-produto btn-carrinho">🛒 Adicionar ao Carrinho</a>
+            <button type="button"
+                    class="btn-produto btn-carrinho"
+                    onclick="adicionarAoCarrinho('brinquedo', {{ brinquedo.id }})">
+                🛒 Adicionar ao Carrinho
+            </button>
+
+
         <a href="#" class="btn-produto btn-comprar">⚡ Comprar Agora</a>
             <!-- WhatsApp -->
                 <a
@@ -499,11 +530,17 @@
         </div>
 
         <div class="modal-footer">
-            <button class="btn-cancelar" onclick="fecharModal()">Cancelar</button>
-            <button class="btn-confirmar" onclick="adicionarSobMedida()">
-                🛒 Adicionar ao carrinho
-            </button>
-        </div>
+    <button class="btn-cancelar" onclick="fecharModal()">Cancelar</button>
+
+    <form method="post"
+          action="{% url 'adicionar_ao_carrinho' 'brinquedo' brinquedo.id %}"
+          style="display:inline;">
+        {% csrf_token %}
+        <button type="submit" class="btn-produto btn-carrinho">
+            🛒 Adicionar ao Carrinho
+        </button>
+    </form>
+</div>
 
     </div>
 </div>
@@ -652,6 +689,70 @@ document.addEventListener('DOMContentLoaded', () => {
         el.innerText = 'R$ ' + formatarMoedaBR(valor);
     });
 });
+
+
+function adicionarAoCarrinho(tipo, id) {
+    fetch(`/carrinho/adicionar/${tipo}/${id}/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(res => {
+        if (!res.ok) throw new Error('HTTP error');
+        return res.json();
+    })
+    .then(data => {
+        if (data.sucesso) {
+            mostrarToast('🛒 Produto adicionado ao carrinho!');
+
+            // Atualiza o número do carrinho usando o total do backend
+            if (data.total_itens !== undefined) {
+                atualizarBadgeCarrinho(data.total_itens);
+            }
+        } else {
+            mostrarToast(data.erro || 'Erro ao adicionar', true);
+        }
+    })
+    .catch(() => {
+        mostrarToast('Erro ao adicionar ao carrinho', true);
+    });
+}
+
+
+function mostrarToast(msg, erro = false) {
+    const toast = document.getElementById('toast-carrinho');
+    const texto = document.getElementById('toast-msg');
+
+    texto.innerText = msg;
+    toast.style.background = erro
+        ? 'linear-gradient(135deg, #dc3545, #a71d2a)'
+        : 'linear-gradient(135deg, #14a61a, #0e7f14)';
+
+    toast.classList.add('show');
+
+    setTimeout(() => {
+        toast.classList.remove('show');
+    }, 3000);
+}
+
+
+function atualizarBadgeCarrinho(total) {
+    const badge = document.getElementById('badge-carrinho');
+    const carrinho = document.getElementById('float-carrinho');
+
+    if (!badge || !carrinho) return;
+
+    badge.innerText = total;
+
+    // efeito pulse
+    badge.classList.remove('pulse');
+    void badge.offsetWidth;
+    badge.classList.add('pulse');
+
+    carrinho.style.display = 'flex';
+}
 </script>
 
 {% endblock %}

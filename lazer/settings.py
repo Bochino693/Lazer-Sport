@@ -98,6 +98,8 @@ TEMPLATES = [
 
                 'core.context_processors.categorias_globais',
                 'core.context_processors.estabelecimentos_globais',
+                'core.context_processors.manutencao_notificacao',
+                'core.context_processors.carrinho_context',
 
             ],
         },
