@@ -3,7 +3,7 @@
 {% block content %}
 
 <style>
-    /* ======= CONTAINER GERAL ======= */
+/* ======= CONTAINER GERAL ======= */
 .manutencao-header,
 .manutencao-tabs,
 .tab-content,
@@ -11,7 +11,9 @@
     max-width: 900px;
     margin: 0 auto;
 }
-/* ===== BREADCRUMB PADRÃO (UNIFICADO) ===== */
+
+
+/* ===== BREADCRUMB ===== */
 .breadcrumb {
     max-width: 1200px;
     margin: 30px auto 20px;
@@ -36,18 +38,17 @@
     color: #888;
 }
 
-/* separador visual */
 .breadcrumb span:not(:last-child)::after {
     content: "›";
     margin-left: 8px;
     color: #bbb;
 }
 
-
 /* ======= CABEÇALHO ======= */
 .manutencao-header {
     text-align: center;
-    margin-bottom: 30px;
+    margin-bottom: 20px;
+    position: relative;
 }
 
 .manutencao-header h1 {
@@ -57,46 +58,57 @@
 }
 
 .manutencao-header p {
-    color: #666;
-    font-size: 16px;
+    font-size: 18px;           /* maior e mais legível */
+    font-weight: 600;           /* mais destaque */
+    color: #fff;            /* azul escuro mais visível */
+    line-height: 1.6;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.1); /* leve sombra para destacar sobre o fundo */
 }
 
+/* ======= ABAS ======= */
 /* ======= ABAS ======= */
 .manutencao-tabs {
     display: flex;
     justify-content: center;
-    gap: 10px;
-    margin-bottom: 30px;
+    gap: 15px;               /* aumenta o espaçamento entre os botões */
+    margin-bottom: 20px;
 }
 
 .tab-btn {
-    padding: 12px 24px;
+    padding: 14px 28px;      /* botões maiores */
     border: none;
-    background: #f2f2f2;
-    color: #555;
-    border-radius: 30px;
+    background: #f0f4ff;     /* leve tom azul de fundo */
+    color: #004AAD;          /* cor mais forte */
+    border-radius: 35px;     /* ainda arredondados */
     cursor: pointer;
-    font-size: 15px;
+    font-size: 16px;         /* fonte maior */
+    font-weight: 600;        /* mais enfático */
     transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08); /* sombra sutil */
 }
 
 .tab-btn:hover {
-    background: #e4e4e4;
+    background: #dce4ff;     /* destaca ao passar o mouse */
+    transform: translateY(-2px); /* leve "elevada" ao hover */
+    box-shadow: 0 6px 18px rgba(0,0,0,0.12);
 }
 
 .tab-btn.active {
-    background: #0d6efd;
+    background: #0d6efd;     /* azul principal */
     color: #fff;
-    box-shadow: 0 6px 18px rgba(13, 110, 253, 0.25);
+    box-shadow: 0 6px 20px rgba(13, 110, 253, 0.35); /* sombra mais intensa */
+    transform: translateY(-2px); /* sutil elevação */
 }
+
 
 /* ======= CONTEÚDO DAS ABAS ======= */
 .tab-content {
-    display: none;
+    display: none; /* escondemos todas por padrão */
+    margin-top: 10px;
 }
 
 .tab-content.active {
-    display: block;
+    display: block; /* exibimos somente a ativa */
 }
 
 /* ======= FORMULÁRIO ======= */
@@ -105,6 +117,8 @@
     padding: 35px;
     border-radius: 16px;
     box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+    max-width: 900px;
+    margin: 0 auto 30px;
 }
 
 .form-group {
@@ -154,56 +168,14 @@
     background: #084fc7;
 }
 
-/* ======= LISTA DE MANUTENÇÕES ======= */
-.manutencao-lista {
-    list-style: none;
-    padding: 0;
-    margin-top: 20px;
-}
-
-.manutencao-item {
-    background: #fff;
-    padding: 18px 22px;
-    border-radius: 14px;
-    box-shadow: 0 6px 18px rgba(0,0,0,0.06);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 14px;
-}
-
-.manutencao-item strong {
-    font-weight: 500;
-}
-
-.status {
-    padding: 6px 14px;
-    border-radius: 20px;
-    font-size: 13px;
-}
-
-.status-P {
-    background: #fff3cd;
-    color: #856404;
-}
-
-.status-A {
-    background: #cce5ff;
-    color: #004085;
-}
-
-.status-C {
-    background: #d4edda;
-    color: #155724;
-}
-
-
 /* ======= TABELA ======= */
 .tabela-wrapper {
     background: #fff;
     border-radius: 16px;
     padding: 20px;
     box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+    max-width: 900px;
+    margin: 0 auto 30px;
 }
 
 .tabela-manutencoes {
@@ -256,6 +228,286 @@
     color: #fff;
 }
 
+.btn-selecionar-brinquedo {
+    padding: 16px 24px;
+    border-radius: 12px;
+    border: 2px dashed #0d6efd;
+    background: #f0f8ff;
+    color: #0d6efd;
+    font-weight: 600;
+    cursor: pointer;
+    width: 100%;
+    text-align: center;
+    transition: all 0.2s ease;
+}
+
+.btn-selecionar-brinquedo:hover {
+    background: #dcecff;
+    transform: translateY(-2px);
+}
+
+.modal-brinquedos {
+    display: none;
+    position: fixed;
+    z-index: 9999;
+    left: 0; top: 0;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.6);
+    overflow-y: auto;
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn { from {opacity: 0;} to {opacity:1;} }
+
+
+.modal-content {
+    background: #fff;
+    margin: 50px auto;
+    border-radius: 16px;
+    max-width: 900px;
+    padding: 20px 30px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 24px;
+    color: #0d3b99;
+
+
+ }
+.close-modal {
+    background: none;
+    border: none;
+    font-size: 28px;
+    cursor: pointer;
+    color: #888;
+    transition: 0.2s;
+}
+
+.modal-ordenacao {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+
+.close-modal:hover {
+    color: #0d3b99;
+}
+
+.modal-filtros {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.modal-filtros input, .modal-filtros select {
+    padding: 8px 12px;
+    font-size: 14px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+}
+
+.btn-ordenar {
+    flex: 1;
+    padding: 10px 0;
+    border-radius: 12px;
+    border: 2px solid #0d6efd;
+    background: #f0f8ff;
+    color: #0d6efd;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-ordenar.active, .btn-ordenar:hover {
+    background: #0d6efd;
+    color: #fff;
+}
+
+/* Pesquisa */
+.modal-pesquisa {
+    margin-bottom: 15px;
+}
+
+.modal-pesquisa input {
+    width: 100%;
+    padding: 10px 14px;
+    font-size: 14px;
+    border-radius: 10px;
+    border: 1px solid #ccc;
+}
+
+/* Lista de brinquedos */
+.lista-brinquedos {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 15px;
+}
+
+.item-brinquedo {
+    background: #f9f9f9;
+    border-radius: 12px;
+    padding: 10px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.2s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.item-brinquedo img, .placeholder-img {
+    width: 100px;
+    height: 100px;
+    object-fit: cover;
+    border-radius: 8px;
+    margin-bottom: 10px;
+}
+
+.item-brinquedo strong {
+    font-size: 14px;
+    color: #0d3b99;
+}
+
+.item-brinquedo:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+
+/* Botão de selecionar brinquedo */
+.btn-selecionar-brinquedo {
+    width: 100%;
+    padding: 14px;
+    border-radius: 30px;
+    background: #0d6efd;
+    color: #fff;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    border: none;
+}
+.btn-selecionar-brinquedo:hover {
+    background: #084fc7;
+}
+
+/* Modal */
+.modal-brinquedos {
+    display: none;
+    position: fixed;
+    z-index: 9999;
+    left:0; top:0;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.6);
+    overflow-y: auto;
+}
+
+.modal-content {
+    background: #fff;
+    margin: 50px auto;
+    border-radius: 16px;
+    max-width: 900px;
+    padding: 20px 30px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 24px;
+    color: #0d3b99;
+}
+
+.close-modal {
+    background: none;
+    border: none;
+    font-size: 28px;
+    cursor: pointer;
+    color: #888;
+}
+.close-modal:hover {
+    color: #0d3b99;
+}
+
+/* Ordenação */
+.modal-ordenacao {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+.btn-ordenar {
+    flex: 1;
+    padding: 10px 0;
+    border-radius: 12px;
+    border: 2px solid #0d6efd;
+    background: #f0f8ff;
+    color: #0d6efd;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.btn-ordenar.active, .btn-ordenar:hover {
+    background: #0d6efd;
+    color: #fff;
+}
+
+/* Pesquisa */
+.modal-pesquisa input {
+    width: 100%;
+    padding: 10px 14px;
+    border-radius: 10px;
+    border: 1px solid #ccc;
+    margin-bottom: 15px;
+}
+
+/* Lista de brinquedos */
+.lista-brinquedos {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 15px;
+}
+.item-brinquedo {
+    background: #f9f9f9;
+    border-radius: 12px;
+    padding: 10px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.2s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+.item-brinquedo img, .placeholder-img {
+    width: 100px;
+    height: 100px;
+    border-radius: 8px;
+    object-fit: cover;
+    margin-bottom: 10px;
+}
+.item-brinquedo strong {
+    font-size: 14px;
+    color: #0d3b99;
+}
+.item-brinquedo:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
 
 </style>
 
@@ -273,82 +525,44 @@
 </header>
 
 <!-- ======= ABAS ======= -->
-<div class="manutencao-tabs">
-    <button class="tab-btn active" data-tab="nova">
+<div class="manutencao-tabs" id="tab">
+    <button class="tab-btn {% if tab_ativa == 'nova' %}active{% endif %}" data-tab="nova">
         Solicitar manutenção
     </button>
-    <button class="tab-btn" data-tab="lista">
+    <button class="tab-btn {% if tab_ativa == 'lista' %}active{% endif %}" data-tab="lista">
         Manutenções solicitadas
     </button>
 </div>
 
 <!-- ======= ABA: NOVA MANUTENÇÃO ======= -->
 <section class="tab-content {% if tab_ativa == 'nova' %}active{% endif %}" id="nova">
+            <form method="post" class="manutencao-form">
+                {% csrf_token %}
+                {{ form.non_field_errors }}
 
-    <form method="post" class="manutencao-form">
-        {% csrf_token %}
-        {{ form.non_field_errors }}
-
-        <div class="form-group">
-            {{ form.brinquedo.label_tag }}
-            {{ form.brinquedo }}
+                <div class="form-group">
+            <label>Brinquedo</label>
+            <button type="button" id="selecionar-brinquedo-btn" class="btn-selecionar-brinquedo">
+                Clique para selecionar um brinquedo
+            </button>
+            <input type="hidden" name="brinquedo" id="brinquedo-input">
         </div>
+        <div class="form-group">{{ form.descricao.label_tag }}{{ form.descricao }}</div>
+        <div class="form-group">{{ form.telefone_contato.label_tag }}{{ form.telefone_contato }}</div>
+        <div class="form-group">{{ form.cep.label_tag }}{{ form.cep }}</div>
+        <div class="form-group">{{ form.endereco.label_tag }}{{ form.endereco }}</div>
+        <div class="form-group">{{ form.numero.label_tag }}{{ form.numero }}</div>
+        <div class="form-group">{{ form.complemento.label_tag }}{{ form.complemento }}</div>
+        <div class="form-group">{{ form.bairro.label_tag }}{{ form.bairro }}</div>
+        <div class="form-group">{{ form.cidade.label_tag }}{{ form.cidade }}</div>
+        <div class="form-group">{{ form.estado.label_tag }}{{ form.estado }}</div>
 
-        <div class="form-group">
-            {{ form.descricao.label_tag }}
-            {{ form.descricao }}
-        </div>
-
-        <div class="form-group">
-            {{ form.telefone_contato.label_tag }}
-            {{ form.telefone_contato }}
-        </div>
-
-        <div class="form-group">
-            {{ form.cep.label_tag }}
-            {{ form.cep }}
-        </div>
-
-        <div class="form-group">
-            {{ form.endereco.label_tag }}
-            {{ form.endereco }}
-        </div>
-
-        <div class="form-group">
-            {{ form.numero.label_tag }}
-            {{ form.numero }}
-        </div>
-
-        <div class="form-group">
-            {{ form.complemento.label_tag }}
-            {{ form.complemento }}
-        </div>
-
-        <div class="form-group">
-            {{ form.bairro.label_tag }}
-            {{ form.bairro }}
-        </div>
-
-        <div class="form-group">
-            {{ form.cidade.label_tag }}
-            {{ form.cidade }}
-        </div>
-
-        <div class="form-group">
-            {{ form.estado.label_tag }}
-            {{ form.estado }}
-        </div>
-
-        <button type="submit" class="btn-enviar">
-            Enviar solicitação
-        </button>
+        <button type="submit" class="btn-enviar">Enviar solicitação</button>
     </form>
-
 </section>
 
 <!-- ======= ABA: LISTA ======= -->
 <section class="tab-content {% if tab_ativa == 'lista' %}active{% endif %}" id="lista">
-
     <div class="tabela-wrapper">
         <table class="tabela-manutencoes">
             <thead>
@@ -364,34 +578,61 @@
                 {% for manutencao in manutencoes %}
                     <tr>
                         <td>{{ manutencao.brinquedo }}</td>
-                        <td>
-                            <span class="status status-{{ manutencao.status }}">
-                                {{ manutencao.get_status_display }}
-                            </span>
-                        </td>
+                        <td><span class="status status-{{ manutencao.status }}">{{ manutencao.get_status_display }}</span></td>
                         <td>{{ manutencao.criado_em|date:"d/m/Y H:i" }}</td>
-                        <td>
-                            <a href="#" class="btn-detalhe">Ver</a>
-                        </td>
+                        <td><a href="#" class="btn-detalhe">Ver</a></td>
                     </tr>
                 {% endfor %}
             {% else %}
-                <tr>
-                    <td colspan="4" class="sem-registros">
-                        Nenhuma manutenção solicitada.
-                    </td>
-                </tr>
+                <tr><td colspan="4" class="sem-registros">Nenhuma manutenção solicitada.</td></tr>
             {% endif %}
             </tbody>
         </table>
     </div>
-
 </section>
 
+<!-- Modal de seleção de brinquedos -->
+<div id="modal-brinquedos" class="modal-brinquedos">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Selecione um Brinquedo</h2>
+            <button class="close-modal">&times;</button>
+        </div>
 
+        <!-- Botões de ordenação -->
+        <div class="modal-ordenacao">
+            <button class="btn-ordenar active" data-ordem="a-z">A-Z</button>
+            <button class="btn-ordenar" data-ordem="z-a">Z-A</button>
+        </div>
+
+        <!-- Pesquisa -->
+        <div class="modal-pesquisa">
+            <input type="text" id="pesquisa-brinquedo" placeholder="Digite para pesquisar...">
+        </div>
+
+        <!-- Lista de brinquedos -->
+        <div class="lista-brinquedos">
+            {% for brinquedo in brinquedos %}
+                <div class="item-brinquedo" data-id="{{ brinquedo.id }}" data-nome="{{ brinquedo.nome_brinquedo }}">
+                    {% if brinquedo.imagem_brinquedo %}
+                        <img src="{{ brinquedo.imagem_brinquedo.url }}" alt="{{ brinquedo.nome_brinquedo }}">
+                    {% else %}
+                        <div class="placeholder-img">📦</div>
+                    {% endif %}
+                    <strong>{{ brinquedo.nome_brinquedo }}</strong>
+                </div>
+            {% empty %}
+                <p>Nenhum brinquedo cadastrado.</p>
+            {% endfor %}
+
+        </div>
+    </div>
+</div>
 <script>
 
-document.addEventListener("DOMContentLoaded", function () {
+document.addEventListener("DOMContentLoaded", () => {
+
+    // ======= ABAS =======
     const tabs = document.querySelectorAll(".tab-btn");
     const contents = document.querySelectorAll(".tab-content");
 
@@ -404,8 +645,60 @@ document.addEventListener("DOMContentLoaded", function () {
             document.getElementById(tab.dataset.tab).classList.add("active");
         });
     });
-});
-</script>
 
+    // ======= MODAL BRINQUEDOS =======
+    const modal = document.getElementById("modal-brinquedos");
+    const btnSelecionar = document.getElementById("selecionar-brinquedo-btn");
+    const closeModal = modal.querySelector(".close-modal");
+    const inputHidden = document.getElementById("brinquedo-input");
+    const itens = Array.from(modal.querySelectorAll(".item-brinquedo"));
+    const pesquisa = document.getElementById("pesquisa-brinquedo");
+    const btnOrdenar = Array.from(modal.querySelectorAll(".btn-ordenar"));
+
+    // Abrir modal
+    btnSelecionar.addEventListener("click", () => modal.style.display = "block");
+
+    // Fechar modal
+    closeModal.addEventListener("click", () => modal.style.display = "none");
+    window.addEventListener("click", e => { if (e.target == modal) modal.style.display = "none"; });
+
+    // Selecionar brinquedo
+    itens.forEach(item => {
+        item.addEventListener("click", () => {
+            btnSelecionar.textContent = item.dataset.nome;
+            inputHidden.value = item.dataset.id;
+            modal.style.display = "none";
+        });
+    });
+
+    // Pesquisa em tempo real
+    pesquisa.addEventListener("input", () => {
+        const valor = pesquisa.value.toLowerCase();
+        itens.forEach(item => {
+            item.style.display = item.dataset.nome.toLowerCase().includes(valor) ? "flex" : "none";
+        });
+    });
+
+    // Ordenação A-Z / Z-A
+    btnOrdenar.forEach(btn => {
+        btn.addEventListener("click", () => {
+            btnOrdenar.forEach(b => b.classList.remove("active"));
+            btn.classList.add("active");
+
+            const ordem = btn.dataset.ordem;
+            const container = modal.querySelector(".lista-brinquedos");
+
+            const sorted = itens.sort((a, b) => {
+                return ordem === "a-z" ? a.dataset.nome.localeCompare(b.dataset.nome)
+                                       : b.dataset.nome.localeCompare(a.dataset.nome);
+            });
+
+            sorted.forEach(i => container.appendChild(i));
+        });
+    });
+});
+
+
+</script>
 
 {% endblock %}

@@ -535,7 +535,8 @@ body {
     gap: 30px;
     max-width: 1200px;
     margin: 0 auto;
-    align-items: stretch;
+    justify-content: center;
+    align-items: start;
     /* Se quiser que os cards ocupem menos (não expandam) quando poucos, use justify-content no JS. */
 }
 
@@ -610,7 +611,18 @@ body {
     flex: 1; /* ocupa todo espaço disponível acima do botão */
     display: flex;
     flex-direction: column;
+     text-align: center;
 }
+
+/* Container principal que segura os cards */
+#produtos-container {
+    width: 100%;
+    display: flex;
+    justify-content: center; /* centraliza horizontalmente */
+    padding: 20px 0;
+    box-sizing: border-box;
+}
+
 
 /* título */
 .card-produto h3 {
@@ -707,6 +719,7 @@ body {
     color: #1f2d3d;
     font-size: 0.92rem;
     font-weight: 500;
+
 }
 
 
@@ -1770,7 +1783,7 @@ body {
 
 <!-- ======= CARROSSEL ======= -->
 <section id="inicio" class="carousel-container">
-  <div class="carousel-wrapper">
+  <div class="carousel-wrapper" id="carrosel">
 
     <img
       src="{% static 'images/IMAG1.PNG' %}"
@@ -1814,7 +1827,7 @@ body {
     <div class="manutencao-container">
 
         <!-- BOTÃO PRINCIPAL -->
-        <a href="{% url 'manutencoes' %}#bread" class="btn-manutencao">
+        <a href="{% url 'manutencoes' %}#tab" class="btn-manutencao">
             <span class="icon">🛠</span>
             <span class="texto">
                 Solicitar Manutenção

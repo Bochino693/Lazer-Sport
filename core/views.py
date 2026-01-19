@@ -818,15 +818,69 @@ class NovaTag(View):
 from django.contrib.auth.mixins import LoginRequiredMixin
 
 
-class SolicitarManutencaoView(FormView, LoginRequiredMixin):
+from django.contrib import messages
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.urls import reverse_lazy
+from django.views.generic.edit import FormView
+from .forms import ManutencaoForm
+from .models import Manutencao
+
+class SolicitarManutencaoView(LoginRequiredMixin, View):
     login_url = 'login'
     template_name = 'manutencao.html'
-    form_class = ManutencaoForm
     success_url = reverse_lazy('pagina_inicial')
 
-    def form_valid(self, form):
-        messages.success(self.request, "Solicitação enviada com sucesso!")
-        return super().form_valid(form)
+    def get(self, request, *args, **kwargs):
+        # Formulário vazio
+        form = ManutencaoForm()
+
+        # Brinquedos para o modal (ordenados A-Z)
+        brinquedos = Brinquedos.objects.all().order_by('nome_brinquedo')
+
+        # Manutenções do usuário logado
+        manutencoes = Manutencao.objects.filter(usuario=request.user).order_by('-criado_em')
+
+        # Aba ativa
+        tab_ativa = request.GET.get('tab', 'nova')
+
+        # DEBUG: verificar no terminal
+        print(f"SQL Gerado: {brinquedos.query}")
+        print(f"Qtd encontrada: {brinquedos.count()}")
+        print("Formulário inválido:")
+        print(form.errors)
+        print(f"Qtd de brinquedos carregados: {brinquedos.count()}")
+        print(f"Qtd de manutenções: {manutencoes.count()}")
+
+        context = {
+            'form': form,
+            'brinquedos': brinquedos,
+            'manutencoes': manutencoes,
+            'tab_ativa': tab_ativa
+        }
+        return render(request, self.template_name, context)
+
+    def post(self, request, *args, **kwargs):
+        form = ManutencaoForm(request.POST)
+
+        if form.is_valid():
+            manutencao = form.save(commit=False)
+            manutencao.usuario = request.user
+            manutencao.save()
+            messages.success(request, "Solicitação enviada com sucesso!")
+            return redirect(self.success_url)
+        else:
+            # Brinquedos e manutenções também precisam ser passados caso o form dê erro
+            brinquedos = Brinquedos.objects.all().order_by('nome_brinquedo')
+            manutencoes = Manutencao.objects.filter(usuario=request.user).order_by('-criado_em')
+            tab_ativa = 'nova'
+            context = {
+                'form': form,
+                'brinquedos': brinquedos,
+                'manutencoes': manutencoes,
+                'tab_ativa': tab_ativa
+            }
+            return render(request, self.template_name, context)
+
 
 
 from django.contrib.contenttypes.models import ContentType
