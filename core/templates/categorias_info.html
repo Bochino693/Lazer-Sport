@@ -276,17 +276,22 @@
 
 .avaliacao {
     display: flex;
-    align-items: center;
     justify-content: center;
+    align-items: center;
     gap: 8px;
-    margin-top: 6px;
+    margin-bottom: 6px;
 }
 
 .stars {
-    display: flex;
-    gap: 4px;
-    font-size: 1.1rem;
+    color: #FFD700;
+    font-size: 0.9rem;
 }
+
+.nota {
+    font-size: 0.8rem;
+    color: #555;
+}
+
 
 .star {
     color: #d4d4d4;
@@ -307,6 +312,89 @@
     color: #555;
     font-weight: 600;
 }
+
+.info-rapida {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    margin-top: 6px;
+}
+
+.badge {
+    background: #eef3ff;
+    color: #004AAD;
+    font-size: 0.75rem;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-weight: 600;
+}
+
+.badge-voltz {
+    background: #fff3cd;
+    color: #9a6b00;
+}
+
+/* Dimensões */
+.dimensoes {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.dim {
+    background: #f0f4ff;
+    color: #00337a;
+    font-size: 0.72rem;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-weight: 700;
+    border-left: 3px solid #004AAD;
+}
+
+/* Tags */
+.tags {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    margin-top: 6px;
+}
+
+.tag-pill {
+    background: linear-gradient(135deg, #f0f4ff, #e1ebff);
+    color: #004AAD;
+    font-size: 0.7rem;
+    padding: 6px 14px;
+    border-radius: 999px;
+    font-weight: 600;
+    box-shadow: 0 2px 6px rgba(0, 74, 173, 0.15);
+}
+
+/* Conteúdo geral */
+.conteudo {
+    text-align: center;
+    padding: 14px;
+}
+
+.badge-info {
+    background: linear-gradient(135deg, #e9f1ff, #dce8ff);
+    color: #003b88;
+    font-size: 0.75rem;
+    padding: 6px 14px;
+    border-radius: 10px;
+    font-weight: 600;
+    box-shadow: inset 0 0 0 1px #c7d9ff;
+}
+
+.badge-volume {
+    background: linear-gradient(135deg, #e8f7ff, #d3efff);
+    color: #004e7c;
+    box-shadow: inset 0 0 0 1px #a8dcff;
+}
+
+
 </style>
 
 <!-- 🔵 BREADCRUMB / NAVEGAÇÃO DO USUÁRIO -->
@@ -363,49 +451,82 @@
 <!-- 🔵 LISTAGEM DE PRODUTOS -->
 <div class="produtos-wrapper" id="list">
 
-    {% if page_obj %}
-        <div class="grid-cards">
+{% if page_obj %}
+<div class="grid-cards">
 
-            {% for item in page_obj %}
+{% for item in page_obj %}
+<a href="{% url 'brinquedo_detalhe' item.id %}" class="card-produto">
 
-                <a href="{% url 'brinquedo_detalhe' item.id %}" class="card-produto">
+    <div class="img-area">
+        <img src="{{ item.imagem_brinquedo.url }}" alt="{{ item.nome_brinquedo }}">
+    </div>
 
-                    <div class="img-area">
-                        <img src="{{ item.imagem_brinquedo.url }}" alt="{{ item.nome_brinquedo }}">
-                    </div>
+    <div class="conteudo">
 
-                    <div class="conteudo">
+        <h3>{{ item.nome_brinquedo }}</h3>
 
-                        <h3>{{ item.nome_brinquedo }}</h3>
-
-                        <!-- ⭐ AVALIAÇÃO -->
-                        <div class="avaliacao">
-                            <div class="stars">
-                                {% for i in "12345" %}
-                                    <span class="star {% if forloop.counter <= item.avaliacao %}ativa{% endif %}">
-                                        ★
-                                    </span>
-                                {% endfor %}
-                            </div>
-                            <span class="nota">{{ item.avaliacao }}/5</span>
-                        </div>
-
-                        <p class="descricao">
-                            {{ item.descricao|truncatechars:90 }}
-                        </p>
-
-                        <p class="preco money" data-valor="{{ item.valor_brinquedo }}">
-                            R$ 0,00
-                        </p>
-
-                        <span class="btn-vermais">Ver mais</span>
-
-                    </div>
-                </a>
-
-            {% endfor %}
-
+        <!-- ⭐ AVALIAÇÃO -->
+        <div class="avaliacao">
+            <div class="stars">
+                {% for i in "12345" %}
+                    <span class="star {% if forloop.counter <= item.avaliacao %}ativa{% endif %}">★</span>
+                {% endfor %}
+            </div>
+            <span class="nota">{{ item.avaliacao }}/5</span>
         </div>
+
+        <!-- ⚡ INFORMAÇÕES RÁPIDAS -->
+        <div class="info-rapida">
+
+            <span class="badge badge-voltz">⚡Voltagem {{ item.voltz }}</span>
+
+                {% if item.altura_m or item.largura_m or item.profundidade_m %}
+                    <div class="dimensoes">
+                        {% if item.altura_m %}
+                            <span class="dim dim-alt">Altura: {{ item.altura_m }}m</span>
+                        {% endif %}
+                        {% if item.largura_m %}
+                            <span class="dim dim-larg">Largura: {{ item.largura_m }}m</span>
+                        {% endif %}
+                        {% if item.profundidade_m %}
+                            <span class="dim dim-prof">Profundidade: {{ item.profundidade_m }}m</span>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+
+                    {% if item.volume_formatado %}
+                        <span class="badge-info badge-volume">
+                            📦Volume/Metros Cúbicos (M³) {{ item.volume_formatado }}
+                        </span>
+                    {% endif %}
+
+                </div>
+
+        <!-- 🏷️ TAGS -->
+        {% if item.tags.all %}
+        <div class="tags">
+            {% for tag in item.tags.all|slice:":3" %}
+                <span class="tag-pill">#{{ tag.nome_tags }}</span>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <p class="descricao">
+            {{ item.descricao|truncatechars:200 }}
+        </p>
+
+        <p class="preco money" data-valor="{{ item.valor_brinquedo }}">
+            R$ 0,00
+        </p>
+
+        <span class="btn-vermais">Ver mais</span>
+
+    </div>
+</a>
+{% endfor %}
+
+</div>
+
 
         <!-- 🔵 PAGINAÇÃO -->
         <div class="paginacao">
