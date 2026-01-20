@@ -124,7 +124,6 @@ from .forms import ManutencaoForm
 from .models import Manutencao
 from .models import ClientePerfil
 
-
 class ManutencaoView(View):
     template_name = 'manutencao.html'
 
@@ -136,23 +135,35 @@ class ManutencaoView(View):
     def get(self, request):
         usuario = self.get_usuario(request)
 
+        # 🔓 VISITANTE (não logado)
         if not usuario:
-            return redirect('manutencoes')
+            return render(request, self.template_name, {
+                'form': None,
+                'manutencoes': [],
+                'brinquedos': [],
+                'tab_ativa': 'nova',
+            })
 
+        # 🔐 USUÁRIO LOGADO
         form = ManutencaoForm()
 
         manutencoes = Manutencao.objects.filter(
             usuario=usuario
         ).order_by('-criado_em')
 
+        brinquedos = Brinquedos.objects.all().order_by('nome_brinquedo')
+
         return render(request, self.template_name, {
             'form': form,
             'manutencoes': manutencoes,
+            'brinquedos': brinquedos,
+            'tab_ativa': 'nova',
         })
 
     def post(self, request):
         usuario = self.get_usuario(request)
 
+        # 🔒 POST sem login → login
         if not usuario:
             return redirect('login')
 
@@ -166,9 +177,12 @@ class ManutencaoView(View):
             usuario=usuario
         ).order_by('-criado_em')
 
+        brinquedos = Brinquedos.objects.all().order_by('nome_brinquedo')
+
         return render(request, self.template_name, {
             'form': form,
             'manutencoes': manutencoes,
+            'brinquedos': brinquedos,
             'tab_ativa': 'nova',
         })
 
@@ -827,6 +841,7 @@ from django.views import View
 from django.contrib import messages
 from django.urls import reverse_lazy
 
+
 class SolicitarManutencaoView(View):
     template_name = 'manutencao.html'
     success_url = reverse_lazy('pagina_inicial')
@@ -883,7 +898,6 @@ class SolicitarManutencaoView(View):
             'manutencoes': manutencoes,
             'tab_ativa': 'nova'
         })
-
 
 
 from django.contrib.contenttypes.models import ContentType
