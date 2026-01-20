@@ -829,7 +829,7 @@ from django.views import View
 from django.contrib import messages
 from django.urls import reverse_lazy
 
-class ManutencaoView(View):
+class SolicitarManutencaoView(View):
     template_name = 'manutencao.html'
     success_url = reverse_lazy('pagina_inicial')
 
