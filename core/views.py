@@ -137,7 +137,7 @@ class ManutencaoView(View):
         usuario = self.get_usuario(request)
 
         if not usuario:
-            return redirect('/manutencoes/#bread')
+            return redirect('manutencoes')
 
         form = ManutencaoForm()
 
