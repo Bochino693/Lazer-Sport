@@ -41,7 +41,6 @@ class ProjetoForm(forms.ModelForm):
 class ManutencaoForm(forms.ModelForm):
     class Meta:
         model = Manutencao
-        exclude = ['usuario']
         fields = [
             'brinquedo',
             'descricao',
@@ -54,14 +53,3 @@ class ManutencaoForm(forms.ModelForm):
             'cidade',
             'estado',
         ]
-
-    def save(self, commit=True, usuario=None):
-        manutencao = super().save(commit=False)
-
-        if usuario:
-            manutencao.usuario = usuario
-
-        if commit:
-            manutencao.save()
-
-        return manutencao

@@ -159,9 +159,7 @@ class ManutencaoView(View):
         form = ManutencaoForm(request.POST)
 
         if form.is_valid():
-            manutencao = form.save(commit=False)
-            manutencao.usuario = usuario
-            manutencao.save()
+            form.save(usuario=usuario)
             return redirect('manutencoes')
 
         manutencoes = Manutencao.objects.filter(
