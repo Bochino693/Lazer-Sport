@@ -14,15 +14,13 @@ from pathlib import Path
 
 from environ import Env
 
-
 import os
+
 env = Env()
 Env.read_env()
 
-
 print("ENV:", env('ENVIRONMENT', default='não encontrado'))
 print("CLOUD:", env('CLOUD_NAME', default='não encontrado'))
-
 
 ENVIRONMENT = env('ENVIRONMENT', default="production")
 
@@ -37,10 +35,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key")
 
-
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = ENVIRONMENT != "production"
-
 
 ALLOWED_HOSTS = [
     "lazer-sport-1.onrender.com",
@@ -49,7 +45,6 @@ ALLOWED_HOSTS = [
     "127.0.0.1",
     "0.0.0.0",
 ]
-
 
 # Application definition
 
@@ -63,6 +58,18 @@ INSTALLED_APPS = [
     'django.contrib.humanize',
     'core',
 
+    # Django
+    'django.contrib.sites',
+
+    # Allauth
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
+
+    # Providers
+    'allauth.socialaccount.providers.google',
+    'allauth.socialaccount.providers.facebook',
+
     'cloudinary_storage',
     'cloudinary',
 ]
@@ -73,17 +80,21 @@ MIDDLEWARE = [
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
+
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'allauth.account.middleware.AccountMiddleware',
+
+
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 
     # 👇 SEMPRE POR ÚLTIMO
     'core.middleware.GlobalExceptionMiddleware',
 
+
 ]
 
 ROOT_URLCONF = 'lazer.urls'
-
 
 TEMPLATES = [
     {
@@ -131,6 +142,11 @@ else:
         }
     }
 
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+    'allauth.account.auth_backends.AuthenticationBackend',
+]
+
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
@@ -149,7 +165,6 @@ AUTH_PASSWORD_VALIDATORS = [
         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
 ]
-
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
@@ -195,3 +210,14 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 WHITENOISE_AUTOREFRESH = DEBUG
 WHITENOISE_USE_FINDERS = True
+
+
+LOGIN_REDIRECT_URL = '/'
+LOGOUT_REDIRECT_URL = '/'
+ACCOUNT_LOGOUT_ON_GET = True
+
+ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_USERNAME_REQUIRED = True
+ACCOUNT_AUTHENTICATION_METHOD = 'username_email'
+
+SITE_ID = 1

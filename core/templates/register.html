@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
+{% load socialaccount %}
 
 {% block title %}Criar Conta — Lazer & Sports{% endblock %}
 
@@ -148,6 +149,95 @@
     }
 }
 
+/* ===== LOGIN SOCIAL ===== */
+.social-login {
+    margin-top: 25px;
+    text-align: center;
+}
+
+.social-divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 18px;
+    color: #777;
+    font-weight: 600;
+    font-size: 0.95em;
+}
+
+.social-divider::before,
+.social-divider::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: #ddd;
+}
+
+.social-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.social-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 13px;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 1em;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.25s ease;
+}
+
+/* Google */
+.social-btn.google {
+    background: #ffffff;
+    color: #333;
+    border: 1px solid #ddd;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.06);
+}
+
+.social-btn.google:hover {
+    background: #f7f9ff;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 14px rgba(0,0,0,0.1);
+}
+
+/* Facebook */
+.social-btn.facebook {
+    background: #1877f2;
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(24, 119, 242, 0.35);
+}
+
+.social-btn.facebook:hover {
+    background: #0f5dc8;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(24, 119, 242, 0.45);
+}
+
+.social-btn i {
+    font-size: 18px;
+}
+
+.social-btn img {
+    width: 20px;
+    height: 20px;
+}
+
+/* Mobile */
+@media (max-width: 480px) {
+    .social-btn {
+        font-size: 0.95em;
+        padding: 12px;
+    }
+}
+
+
 </style>
 
 
@@ -191,6 +281,30 @@
 
         <button type="submit" class="register-btn">Criar Conta</button>
     </form>
+
+</div>
+
+
+
+<div class="social-login">
+
+    <div class="social-divider">
+        Ou continue com
+    </div>
+
+    <div class="social-buttons">
+
+        <a href="{% provider_login_url 'google' %}" class="social-btn google">
+            <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google">
+            Continuar com Google
+        </a>
+
+        <a href="{% provider_login_url 'facebook' %}" class="social-btn facebook">
+            <i class="fa-brands fa-facebook-f"></i>
+            Continuar com Facebook
+        </a>
+
+    </div>
 
 </div>
 
