@@ -41,6 +41,7 @@ class ProjetoForm(forms.ModelForm):
 class ManutencaoForm(forms.ModelForm):
     class Meta:
         model = Manutencao
+        exclude = ['usuario']
         fields = [
             'brinquedo',
             'descricao',

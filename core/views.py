@@ -129,50 +129,50 @@ class ManutencaoView(View):
     template_name = 'manutencao.html'
 
     def get_usuario(self, request):
-        # ajuste se sua relação for diferente
+        if not request.user.is_authenticated:
+            return None
         return ClientePerfil.objects.get(user=request.user)
 
     def get(self, request):
         usuario = self.get_usuario(request)
 
-        form = ManutencaoForm(
-            initial={'usuario': usuario}
-        )
+        if not usuario:
+            return redirect('login')
+
+        form = ManutencaoForm()
 
         manutencoes = Manutencao.objects.filter(
             usuario=usuario
         ).order_by('-criado_em')
 
-        context = {
+        return render(request, self.template_name, {
             'form': form,
             'manutencoes': manutencoes,
-        }
-        return render(request, self.template_name, context)
+        })
 
     def post(self, request):
         usuario = self.get_usuario(request)
 
-        form = ManutencaoForm(
-            request.POST,
-            initial={'usuario': usuario}
-        )
+        if not usuario:
+            return redirect('login')
+
+        form = ManutencaoForm(request.POST)
 
         if form.is_valid():
-            form.save()
+            manutencao = form.save(commit=False)
+            manutencao.usuario = usuario
+            manutencao.save()
             return redirect('manutencoes')
-
-        tab_ativa = request.GET.get('tab', 'nova')
 
         manutencoes = Manutencao.objects.filter(
             usuario=usuario
         ).order_by('-criado_em')
 
-        context = {
+        return render(request, self.template_name, {
             'form': form,
             'manutencoes': manutencoes,
-            'tab_ativa': tab_ativa,
-        }
-        return render(request, self.template_name, context)
+            'tab_ativa': 'nova',
+        })
 
 
 class ClientePerfilView(LoginRequiredMixin, View):
