@@ -509,6 +509,92 @@
     box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
 
+.manutencao-guest {
+    display: flex;
+    justify-content: center;
+    margin: 40px 0;
+}
+
+.guest-card {
+    max-width: 420px;
+    width: 100%;
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 32px 26px;
+    text-align: center;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+}
+
+.guest-icon {
+    font-size: 42px;
+    margin-bottom: 10px;
+}
+
+.guest-card h2 {
+    font-size: 1.4rem;
+    margin-bottom: 10px;
+    color: #222;
+}
+
+.guest-text {
+    font-size: 0.95rem;
+    color: #555;
+    margin-bottom: 20px;
+    line-height: 1.5;
+}
+
+.guest-beneficios {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 24px;
+    text-align: left;
+}
+
+.guest-beneficios li {
+    font-size: 0.85rem;
+    color: #333;
+    margin-bottom: 8px;
+}
+
+.guest-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* Botões */
+.btn-primario {
+    background: linear-gradient(135deg, #004AAD, #0066ff);
+    color: #fff;
+    padding: 12px;
+    border-radius: 30px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: transform .2s ease, box-shadow .2s ease;
+}
+
+.btn-primario:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 74, 173, 0.35);
+}
+
+.btn-secundario {
+    background: transparent;
+    border: 2px solid #004AAD;
+    color: #004AAD;
+    padding: 10px;
+    border-radius: 30px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background .2s ease, color .2s ease;
+}
+
+.btn-secundario:hover {
+    background: #004AAD;
+    color: #fff;
+}
+
+
 </style>
 
 <!-- ======= BREADCRUMB ======= -->
@@ -518,6 +604,42 @@
     <span>Manutenções</span>
 </nav>
 
+
+{% if not user.is_authenticated %}
+<div class="manutencao-guest">
+
+    <div class="guest-card">
+        <div class="guest-icon">🔧</div>
+
+        <h2>Área exclusiva para clientes</h2>
+
+        <p class="guest-text">
+            Para solicitar manutenções, acompanhar pedidos e receber atualizações,
+            você precisa estar logado.
+        </p>
+
+        <ul class="guest-beneficios">
+            <li>✔ Solicitar manutenção online</li>
+            <li>✔ Acompanhar status do pedido</li>
+            <li>✔ Histórico de manutenções</li>
+        </ul>
+
+        <div class="guest-actions">
+            <a href="{% url 'registrar' %}#register-box" class="btn-primario">
+                Criar conta gratuita
+            </a>
+
+            <a href="{% url 'login' %}#login-box" class="btn-secundario">
+                Já tenho conta
+            </a>
+        </div>
+    </div>
+
+</div>
+{% endif %}
+
+
+{% if user.is_authenticated %}
 <!-- ======= CABEÇALHO ======= -->
 <header class="manutencao-header">
     <h1>Manutenções</h1>
@@ -525,6 +647,7 @@
 </header>
 
 <!-- ======= ABAS ======= -->
+
 <div class="manutencao-tabs" id="tab">
     <button class="tab-btn {% if tab_ativa == 'nova' %}active{% endif %}" data-tab="nova">
         Solicitar manutenção
@@ -533,8 +656,10 @@
         Manutenções solicitadas
     </button>
 </div>
+{% endif %}
 
 <!-- ======= ABA: NOVA MANUTENÇÃO ======= -->
+{% if user.is_authenticated %}
 <section class="tab-content {% if tab_ativa == 'nova' %}active{% endif %}" id="nova">
             <form method="post" class="manutencao-form">
                 {% csrf_token %}
@@ -561,7 +686,9 @@
     </form>
 </section>
 
+
 <!-- ======= ABA: LISTA ======= -->
+
 <section class="tab-content {% if tab_ativa == 'lista' %}active{% endif %}" id="lista">
     <div class="tabela-wrapper">
         <table class="tabela-manutencoes">
@@ -590,6 +717,7 @@
         </table>
     </div>
 </section>
+{% endif %}
 
 <!-- Modal de seleção de brinquedos -->
 <div id="modal-brinquedos" class="modal-brinquedos">

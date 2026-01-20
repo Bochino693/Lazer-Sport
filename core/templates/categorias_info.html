@@ -455,7 +455,7 @@
 <div class="grid-cards">
 
 {% for item in page_obj %}
-<a href="{% url 'brinquedo_detalhe' item.id %}" class="card-produto">
+<a href="{% url 'brinquedo_detalhe' item.id %}#produto-box" class="card-produto">
 
     <div class="img-area">
         <img src="{{ item.imagem_brinquedo.url }}" alt="{{ item.nome_brinquedo }}">

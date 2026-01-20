@@ -817,7 +817,6 @@ class NovaTag(View):
 
 from django.contrib.auth.mixins import LoginRequiredMixin
 
-
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse_lazy
@@ -825,41 +824,46 @@ from django.views.generic.edit import FormView
 from .forms import ManutencaoForm
 from .models import Manutencao
 
-class SolicitarManutencaoView(LoginRequiredMixin, View):
-    login_url = 'login'
+from django.shortcuts import render, redirect
+from django.views import View
+from django.contrib import messages
+from django.urls import reverse_lazy
+
+class ManutencaoView(View):
     template_name = 'manutencao.html'
     success_url = reverse_lazy('pagina_inicial')
 
     def get(self, request, *args, **kwargs):
-        # Formulário vazio
-        form = ManutencaoForm()
-
-        # Brinquedos para o modal (ordenados A-Z)
-        brinquedos = Brinquedos.objects.all().order_by('nome_brinquedo')
-
-        # Manutenções do usuário logado
-        manutencoes = Manutencao.objects.filter(usuario=request.user).order_by('-criado_em')
-
-        # Aba ativa
         tab_ativa = request.GET.get('tab', 'nova')
 
-        # DEBUG: verificar no terminal
-        print(f"SQL Gerado: {brinquedos.query}")
-        print(f"Qtd encontrada: {brinquedos.count()}")
-        print("Formulário inválido:")
-        print(form.errors)
-        print(f"Qtd de brinquedos carregados: {brinquedos.count()}")
-        print(f"Qtd de manutenções: {manutencoes.count()}")
+        # 🔓 USUÁRIO NÃO LOGADO → página liberada, mas vazia
+        if not request.user.is_authenticated:
+            return render(request, self.template_name, {
+                'form': None,
+                'brinquedos': [],
+                'manutencoes': [],
+                'tab_ativa': tab_ativa
+            })
 
-        context = {
+        # 🔐 USUÁRIO LOGADO
+        form = ManutencaoForm()
+        brinquedos = Brinquedos.objects.all().order_by('nome_brinquedo')
+        manutencoes = Manutencao.objects.filter(
+            usuario=request.user
+        ).order_by('-criado_em')
+
+        return render(request, self.template_name, {
             'form': form,
             'brinquedos': brinquedos,
             'manutencoes': manutencoes,
             'tab_ativa': tab_ativa
-        }
-        return render(request, self.template_name, context)
+        })
 
     def post(self, request, *args, **kwargs):
+        # 🔒 POST SEM LOGIN → manda cadastrar
+        if not request.user.is_authenticated:
+            return redirect('registrar')
+
         form = ManutencaoForm(request.POST)
 
         if form.is_valid():
@@ -868,18 +872,19 @@ class SolicitarManutencaoView(LoginRequiredMixin, View):
             manutencao.save()
             messages.success(request, "Solicitação enviada com sucesso!")
             return redirect(self.success_url)
-        else:
-            # Brinquedos e manutenções também precisam ser passados caso o form dê erro
-            brinquedos = Brinquedos.objects.all().order_by('nome_brinquedo')
-            manutencoes = Manutencao.objects.filter(usuario=request.user).order_by('-criado_em')
-            tab_ativa = 'nova'
-            context = {
-                'form': form,
-                'brinquedos': brinquedos,
-                'manutencoes': manutencoes,
-                'tab_ativa': tab_ativa
-            }
-            return render(request, self.template_name, context)
+
+        # Form inválido → re-render com dados
+        brinquedos = Brinquedos.objects.all().order_by('nome_brinquedo')
+        manutencoes = Manutencao.objects.filter(
+            usuario=request.user
+        ).order_by('-criado_em')
+
+        return render(request, self.template_name, {
+            'form': form,
+            'brinquedos': brinquedos,
+            'manutencoes': manutencoes,
+            'tab_ativa': 'nova'
+        })
 
 
 
@@ -888,8 +893,9 @@ from django.shortcuts import get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from .models import ItemCarrinho, Carrinho
 
-
 from django.http import JsonResponse
+
+
 @login_required
 def adicionar_ao_carrinho(request, tipo, object_id):
     if not hasattr(request.user, 'perfil'):
@@ -932,7 +938,6 @@ def adicionar_ao_carrinho(request, tipo, object_id):
     })
 
 
-
 @login_required
 def carrinho_view(request):
     # 🔒 só cliente pode acessar carrinho
@@ -958,6 +963,7 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from django.contrib.auth.decorators import login_required
 from .models import Pedido, ItemPedido
+
 
 @login_required
 @require_POST
@@ -1024,13 +1030,13 @@ def aplicar_cupom(request):
         'message': f'Você economizou {cupom.desconto_percentual}% com o cupom {cupom.codigo}'
     })
 
+
 from django.contrib.contenttypes.models import ContentType
 from django.db import transaction
 
+
 def criar_pedido_do_carrinho(carrinho):
-
     with transaction.atomic():
-
         pedido = Pedido.objects.create(
             cliente=carrinho.cliente,
             total_bruto=carrinho.total_bruto,
