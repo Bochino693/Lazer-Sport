@@ -129,6 +129,8 @@
     cursor: pointer;
     border: 1px solid #e7e7e7;
     justify-content: space-between;
+    text-decoration: none !important;
+    color: inherit;
 }
 
 /* EFEITO HOVER */
@@ -191,28 +193,10 @@
     margin-top: auto;
 }
 
-/* BOTÃO */
-.btn-vermais {
-    margin-top: 12px;
-    padding: 10px;
-    background: #004AAD;
-    color: #fff;
-    border-radius: 25px;
-    text-align: center;
-    text-decoration: none;
-    font-weight: 600;
-    transition: all .25s ease;
-}
-
-.btn-vermais:hover {
-    background: #00337a;
-    transform: translateY(-2px);
-    box-shadow: 0 6px 12px rgba(0, 51, 122, 0.25);
-}
-
     /* Força o conteúdo a ocupar todo o espaço até o botão */
 .conteudo {
     display: flex;
+    align-items: center;
     flex-direction: column;
     gap: 10px;
     height: 100%;
@@ -225,17 +209,19 @@
 
 /* Deixa o botão no final do card e mais destacado */
 .btn-vermais {
-    margin-top: 18px !important;
-    padding: 12px 0;
+    margin-top: 18px;
+    padding: 12px 28px;        /* 👈 aumenta largura */
     font-size: 1rem;
     border-radius: 30px;
     background: linear-gradient(135deg, #004AAD, #0066D6);
     color: #fff;
     font-weight: 600;
     text-align: center;
-    display: block;
+    display: inline-block;     /* 👈 não ocupa tudo */
+    min-width: 160px;          /* 👈 garante tamanho bonito */
     transition: all .25s ease;
 }
+
 
 .btn-vermais:hover {
     transform: translateY(-3px);
@@ -288,6 +274,39 @@
     background: linear-gradient(135deg, #eef3ff, #f9fbff);
 }
 
+.avaliacao {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 6px;
+}
+
+.stars {
+    display: flex;
+    gap: 4px;
+    font-size: 1.1rem;
+}
+
+.star {
+    color: #d4d4d4;
+    transition: transform .2s ease, color .2s ease;
+}
+
+.star.ativa {
+    color: #FFC107;
+    text-shadow: 0 1px 3px rgba(255, 193, 7, 0.5);
+}
+
+.card-produto:hover .star.ativa {
+    transform: scale(1.1);
+}
+
+.nota {
+    font-size: 0.85rem;
+    color: #555;
+    font-weight: 600;
+}
 </style>
 
 <!-- 🔵 BREADCRUMB / NAVEGAÇÃO DO USUÁRIO -->
@@ -341,7 +360,6 @@
 
 </div>
 
-
 <!-- 🔵 LISTAGEM DE PRODUTOS -->
 <div class="produtos-wrapper" id="list">
 
@@ -350,7 +368,7 @@
 
             {% for item in page_obj %}
 
-                <div class="card-produto">
+                <a href="{% url 'brinquedo_detalhe' item.id %}" class="card-produto">
 
                     <div class="img-area">
                         <img src="{{ item.imagem_brinquedo.url }}" alt="{{ item.nome_brinquedo }}">
@@ -364,30 +382,26 @@
                         <div class="avaliacao">
                             <div class="stars">
                                 {% for i in "12345" %}
-                                    {% if forloop.counter <= item.avaliacao %}
-                                        ⭐
-                                    {% else %}
-                                        ☆
-                                    {% endif %}
+                                    <span class="star {% if forloop.counter <= item.avaliacao %}ativa{% endif %}">
+                                        ★
+                                    </span>
                                 {% endfor %}
                             </div>
-                            <span class="nota">{{ item.avaliacao }}</span>
+                            <span class="nota">{{ item.avaliacao }}/5</span>
                         </div>
 
-                        <p class="descricao">{{ item.descricao|truncatechars:90 }}</p>
+                        <p class="descricao">
+                            {{ item.descricao|truncatechars:90 }}
+                        </p>
 
                         <p class="preco money" data-valor="{{ item.valor_brinquedo }}">
                             R$ 0,00
                         </p>
 
-                        <!-- BOTÃO -->
-                        <a href="{% url 'brinquedo_detalhe' item.id %}" class="btn-vermais">
-                            Ver mais
-                        </a>
+                        <span class="btn-vermais">Ver mais</span>
 
                     </div>
-
-                </div>
+                </a>
 
             {% endfor %}
 
@@ -396,14 +410,16 @@
         <!-- 🔵 PAGINAÇÃO -->
         <div class="paginacao">
             {% if page_obj.has_previous %}
-            <a class="page-btn"
-               href="?page={{ page_obj.previous_page_number }}&ordenar={{ ordenar }}"
-               onclick="event.preventDefault(); ordenarProdutos(this.href)">
-                Anterior
-            </a>
+                <a class="page-btn"
+                   href="?page={{ page_obj.previous_page_number }}&ordenar={{ ordenar }}"
+                   onclick="event.preventDefault(); ordenarProdutos(this.href)">
+                    Anterior
+                </a>
             {% endif %}
 
-            <span class="page-atual">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
+            <span class="page-atual">
+                Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
+            </span>
 
             {% if page_obj.has_next %}
                 <a class="page-btn"
@@ -415,7 +431,9 @@
         </div>
 
     {% else %}
-        <p class="texto-vazio">Nenhum brinquedo foi encontrado nesta categoria.</p>
+        <p class="texto-vazio">
+            Nenhum brinquedo foi encontrado nesta categoria.
+        </p>
     {% endif %}
 
 </div>
