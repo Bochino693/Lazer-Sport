@@ -343,13 +343,14 @@ class ItemPedidoInline(admin.TabularInline):
 class PedidoAdmin(admin.ModelAdmin):
     list_display = (
         'id', 'cliente_usuario', 'status', 'total_bruto',
-        'valor_desconto', 'total_liquido', 'cupom_codigo', 'criado_em'
+        'valor_desconto', 'total_liquido', 'cupom_codigo', 'criacao'
     )
-    list_filter = ('status', 'criado_em', 'forma_pagamento')
+    list_filter = ('status', 'criacao', 'forma_pagamento')
     search_fields = ('id', 'cliente__user__username', 'cupom_codigo')
     readonly_fields = ('total_bruto', 'valor_desconto', 'total_liquido')
     inlines = [ItemPedidoInline]
-    ordering = ('-criado_em',)
+    ordering = ('-criacao',)
+
 
     def cliente_usuario(self, obj):
         return obj.cliente.user.username if obj.cliente else "Guest"
