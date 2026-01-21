@@ -14,62 +14,58 @@
     max-width: 900px;
     margin: 0 auto;
 }
-
-/* ======== BREADCRUMB RESPONSIVO ======== */
+/* Breadcrumb global */
 .breadcrumb {
     display: flex;
-    flex-wrap: wrap; /* permite quebrar linhas no mobile */
+    flex-wrap: wrap;          /* permite quebrar linhas */
     align-items: center;
-    gap: 8px;
-    font-size: 0.95rem;
-    margin: 30px auto 20px;
-    max-width: 1200px;
+    gap: 6px;                 /* espaço entre itens */
+    font-size: 0.9rem;
+    margin: 20px auto;
+    padding: 0 10px;          /* evita sobreposição nas bordas da tela */
+    background: transparent;   /* remove qualquer cor de fundo azul do navegador */
+    color: #555;               /* cor padrão do breadcrumb */
 }
 
+/* Links */
 .breadcrumb a {
-    color: #004AAD;
-    text-decoration: none;
+    color: #004AAD !important; /* força azul escuro consistente */
+    text-decoration: none !important; /* remove sublinhado */
     font-weight: 600;
-    transition: opacity 0.2s ease;
+    line-height: 1.2;
 }
 
-.breadcrumb a:hover {
-    opacity: 0.75;
-}
-
+/* Span (seta) */
 .breadcrumb span {
     color: #888;
     position: relative;
 }
 
-/* Adiciona a seta apenas entre os itens, exceto o último */
+/* Seta entre itens */
 .breadcrumb span:not(:last-child)::after {
     content: "›";
-    margin-left: 6px;
-    margin-right: 6px;
+    margin: 0 6px;
     color: #bbb;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
 }
 
-/* ======= MOBILE ======= */
+/* MOBILE FIX: evita que textos longos sobreponham */
 @media (max-width: 600px) {
     .breadcrumb {
         font-size: 0.8rem;
-        gap: 4px;           /* menos espaço entre itens */
-    }
-
-    .breadcrumb span:not(:last-child)::after {
-        margin-left: 4px;
-        margin-right: 4px;
+        gap: 4px;
+        justify-content: flex-start;  /* força alinhamento à esquerda */
     }
 
     .breadcrumb a,
     .breadcrumb span {
-        white-space: nowrap; /* evita quebrar palavras */
-        overflow: hidden;    /* esconde overflow */
-        text-overflow: ellipsis; /* mostra "..." se necessário */
+        white-space: nowrap;          /* evita quebra de palavra */
+        overflow: hidden;             /* esconde excesso */
+        text-overflow: ellipsis;      /* mostra "..." se precisar */
+        max-width: 45%;               /* evita que dois itens grandes se sobreponham */
     }
 }
+
 
 
 /* ======= CABEÇALHO ======= */
