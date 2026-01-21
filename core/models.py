@@ -356,9 +356,15 @@ class Carrinho(Prime):
         related_name='carrinhos'
     )
 
+    from decimal import Decimal
+
     @property
     def total_bruto(self):
-        return round(sum(item.subtotal for item in self.itens.all()), 2)
+        total = sum(
+            (item.subtotal for item in self.itens.all()),
+            Decimal('0.00')
+        )
+        return total.quantize(Decimal('0.01'))
 
     @property
     def valor_desconto(self):

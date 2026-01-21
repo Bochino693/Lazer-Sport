@@ -160,20 +160,185 @@
     color: #1c7c3d;
 }
 
+/* ===== SCROLL DOS ITENS ===== */
+.itens-scroll {
+    max-height: 55vh;
+    overflow-y: auto;
+    padding-right: 6px;
+    padding-bottom: 120px; /* 🔥 ESSENCIAL */
+}
+
+
+/* ===== BOTÃO REMOVER ITEM ===== */
+.btn-remover {
+    margin-top: 12px;
+    background: yellow !important;
+    border: none;
+    color: #dc3545;
+    font-weight: 700;
+    cursor: pointer;
+    font-size: 0.95rem;
+}
+
+/* ===== BOTÃO LIMPAR CARRINHO ===== */
+.btn-limpar {
+    width: 100%;
+    margin: 18px 0 10px;
+    padding: 12px;
+    border-radius: 14px;
+    border: none;
+    background: #fde2e4;
+    color: #9b1c1c;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+
+/* ===== MODAL ===== */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    animation: fadeIn .2s ease;
+}
+
+.modal-box {
+    background: #fff;
+    width: 90%;
+    max-width: 360px;
+    border-radius: 20px;
+    padding: 24px;
+    text-align: center;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.25);
+    animation: scaleUp .25s ease;
+}
+
+.modal-icon {
+    font-size: 2.5rem;
+    margin-bottom: 10px;
+}
+
+.modal-box h2 {
+    font-size: 1.4rem;
+    margin-bottom: 10px;
+}
+
+.modal-box p {
+    font-size: 0.95rem;
+    color: #555;
+    margin-bottom: 22px;
+}
+
+.modal-actions {
+    display: flex;
+    gap: 12px;
+}
+
+.btn-cancelar {
+    flex: 1;
+    padding: 12px;
+    border-radius: 14px;
+    border: none;
+    background: #e9ecef;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.btn-confirmar {
+    flex: 1;
+    padding: 12px;
+    border-radius: 14px;
+    border: none;
+    background: #dc3545;
+    color: #fff;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+/* ===== ANIMAÇÕES ===== */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes scaleUp {
+    from { transform: scale(.9); }
+    to { transform: scale(1); }
+}
+
+/* ===== CARRINHO VAZIO MODERNO ===== */
+.carrinho-vazio-box {
+    text-align: center;
+    margin-top: 80px;
+    padding: 30px 20px;
+}
+
+.vazio-icon {
+    font-size: 3.5rem;
+    margin-bottom: 15px;
+}
+
+.carrinho-vazio-box h2 {
+    font-size: 1.6rem;
+    font-weight: 800;
+    margin-bottom: 10px;
+}
+
+.carrinho-vazio-box p {
+    font-size: 1rem;
+    color: #666;
+    margin-bottom: 25px;
+}
+
+.btn-explorar {
+    display: inline-block;
+    padding: 14px 28px;
+    border-radius: 30px;
+    background: linear-gradient(135deg, #0d6efd, #3b82f6);
+    color: #fff;
+    font-weight: 700;
+    text-decoration: none;
+    font-size: 1rem;
+    transition: transform .2s ease, box-shadow .2s ease;
+    box-shadow: 0 8px 20px rgba(13,110,253,0.35);
+}
+
+.btn-explorar:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 28px rgba(13,110,253,0.45);
+}
+
+
 </style>
 <div class="carrinho-container" id="car">
 
 <h1 class="carrinho-titulo">🛒 Meu Carrinho</h1>
 
 {% if not itens %}
-    <div class="carrinho-vazio">
-        😕 Seu carrinho está vazio
+    <div class="carrinho-vazio-box">
+        <div class="vazio-icon">🧸</div>
+
+        <h2>Seu carrinho está vazio</h2>
+        <p>
+            Que tal escolher alguns brinquedos incríveis
+            para alegrar o dia?
+        </p>
+
+        <a href="{% url 'brinquedos' %}" class="btn-explorar">
+            🎁 Explorar brinquedos
+        </a>
     </div>
 
 {% else %}
 
+
+    <div class="itens-scroll">
     {% for item in itens %}
-        <div class="item-card" >
+        <div class="item-card">
             <div class="item-nome">{{ item.item }}</div>
 
             <div class="item-linha">
@@ -190,8 +355,20 @@
                 <span>Subtotal</span>
                 <span>R$ {{ item.subtotal|floatformat:2 }}</span>
             </div>
+
+            <button class="btn-remover" onclick="removerItem({{ item.id }})">
+                ❌ Remover
+            </button>
         </div>
     {% endfor %}
+</div>
+
+    {% if itens %}
+    <button class="btn-limpar" onclick="limparCarrinho()">
+        🗑️ Limpar carrinho
+    </button>
+{% endif %}
+
 
     <div class="cupom-box">
         <strong>🎟️ Cupom de desconto</strong>
@@ -211,6 +388,7 @@
             <small id="cupom-msg" style="color:red;"></small>
         {% endif %}
     </div>
+
 
     <div class="resumo-box">
         <div class="resumo-linha">
@@ -280,6 +458,66 @@ function aplicarCupom() {
         msg.innerText = 'Erro de conexão';
     });
 }
+
+
+function removerItem(itemId) {
+    fetch("{% url 'remover_item_carrinho' %}", {
+        method: "POST",
+        headers: {
+            "X-CSRFToken": "{{ csrf_token }}",
+            "Content-Type": "application/x-www-form-urlencoded"
+        },
+        body: `item_id=${itemId}`
+    })
+    .then(() => location.reload());
+}
+
+function limparCarrinho() {
+    document.getElementById('modalLimpar').style.display = 'flex';
+}
+
+function fecharModalLimpar() {
+    document.getElementById('modalLimpar').style.display = 'none';
+}
+
+function confirmarLimparCarrinho() {
+    fetch("{% url 'limpar_carrinho' %}", {
+        method: "POST",
+        headers: {
+            "X-CSRFToken": "{{ csrf_token }}"
+        }
+    })
+    .then(() => location.reload());
+}
 </script>
 
+<!-- ===== MODAL LIMPAR CARRINHO ===== -->
+<div class="modal-overlay" id="modalLimpar">
+    <div class="modal-box">
+        <div class="modal-icon">🗑️</div>
+
+        <h2>Limpar carrinho?</h2>
+        <p>
+            Todos os produtos serão removidos do seu carrinho.
+            <br>Essa ação não pode ser desfeita.
+        </p>
+
+        <div class="modal-actions">
+            <button class="btn-cancelar" onclick="fecharModalLimpar()">
+                Cancelar
+            </button>
+            <button class="btn-confirmar" onclick="confirmarLimparCarrinho()">
+                Sim, limpar
+            </button>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
+
+
+<script>
+setTimeout(() => {
+    window.location.href = "{% url 'brinquedos' %}";
+}, 5000);
+</script>

@@ -124,6 +124,7 @@ from .forms import ManutencaoForm
 from .models import Manutencao
 from .models import ClientePerfil
 
+
 class ManutencaoView(View):
     template_name = 'manutencao.html'
 
@@ -950,17 +951,50 @@ def adicionar_ao_carrinho(request, tipo, object_id):
     })
 
 
+from django.views.decorators.http import require_POST
+
+
+@login_required
+@require_POST
+def remover_item_carrinho(request):
+    item_id = request.POST.get('item_id')
+
+    try:
+        item = ItemCarrinho.objects.get(
+            id=item_id,
+            carrinho__cliente=request.user.perfil
+        )
+        item.delete()
+        return JsonResponse({'status': 'success'})
+    except ItemCarrinho.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Item não encontrado'}, status=404)
+
+
+@login_required
+@require_POST
+def limpar_carrinho(request):
+    carrinho = Carrinho.objects.get(cliente=request.user.perfil)
+    carrinho.itens.all().delete()
+    carrinho.cupom = None
+    carrinho.save()
+
+    return JsonResponse({'status': 'success'})
+
+
 @login_required
 def carrinho_view(request):
-    # 🔒 só cliente pode acessar carrinho
     if not hasattr(request.user, 'perfil'):
         return redirect('home')
 
     cliente = request.user.perfil
 
-    carrinho, _ = Carrinho.objects.get_or_create(cliente=cliente)
+    carrinho = Carrinho.objects.select_related('cupom').get(cliente=cliente)
 
-    itens = carrinho.itens.select_related('content_type')
+    itens = (
+        ItemCarrinho.objects
+        .filter(carrinho=carrinho)
+        .select_related('content_type')
+    )
 
     context = {
         'carrinho': carrinho,
