@@ -861,6 +861,101 @@
     box-shadow: 0 6px 18px rgba(37,211,102,0.45);
 }
 
+/* ===== RESPONSIVIDADE ===== */
+@media (max-width: 1024px) {
+    .manutencao-form {
+        grid-template-columns: 1fr; /* uma coluna só */
+        gap: 10px;
+        padding: 25px;
+    }
+
+    .btn-enviar {
+        width: 100%;
+        padding: 14px 0;
+    }
+
+    .tabela-wrapper {
+        padding: 15px;
+        overflow-x: auto; /* permite scroll horizontal em tabelas grandes */
+    }
+
+    .tabela-manutencoes th,
+    .tabela-manutencoes td {
+        font-size: 13px;
+        padding: 10px;
+    }
+
+    .manutencao-tabs {
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    .tab-btn {
+        flex: 1 1 calc(50% - 10px);
+        padding: 12px 10px;
+        font-size: 14px;
+    }
+
+    .breadcrumb {
+        font-size: 0.85rem;
+        gap: 6px;
+    }
+}
+
+@media (max-width: 600px) {
+    .manutencao-form {
+        padding: 20px;
+    }
+
+    .manutencao-header h1 {
+        font-size: 26px;
+    }
+
+    .manutencao-header p {
+        font-size: 16px;
+    }
+
+    .tab-btn {
+        flex: 1 1 100%;
+        padding: 10px 8px;
+        font-size: 13px;
+    }
+
+    .tabela-manutencoes th,
+    .tabela-manutencoes td {
+        font-size: 12px;
+        padding: 8px;
+    }
+
+    .guest-card {
+        padding: 24px 20px;
+    }
+
+    .btn-selecionar-brinquedo,
+    .btn-enviar {
+        width: 100%;
+        padding: 12px 0;
+        font-size: 15px;
+    }
+
+    .upload-card {
+        max-width: 100%;
+        padding: 20px;
+    }
+
+    .lista-brinquedos {
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    }
+
+    .brinquedo-card img {
+        height: 120px;
+    }
+
+    .detalhe-fotos img {
+        width: 70px;
+        height: 70px;
+    }
+}
 
 </style>
 
