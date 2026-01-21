@@ -650,6 +650,88 @@ nav a.btn-login {
 }
 
 
+.float-pedidos {
+    position: fixed;
+    right: 18px;
+    bottom: 160px; /* 👈 acima da manutenção */
+    width: 58px;
+    height: 58px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #0d6efd, #3b82f6);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 10px 30px rgba(13,110,253,.45);
+    z-index: 999;
+    font-size: 1.4rem;
+}
+
+.float-pedidos:active {
+    transform: scale(0.92);
+}
+
+@media (max-width: 768px) {
+    .float-pedidos {
+        right: 16px;
+        bottom: 175px;
+    }
+}
+
+.float-pedidos .badge {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    background: #dc3545;
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 4px 7px;
+    border-radius: 20px;
+}
+
+    /* ===== ANIMAÇÕES SOMENTE PARA PEDIDOS ===== */
+@keyframes pedidos-pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.25); }
+    100% { transform: scale(1); }
+}
+
+@keyframes pedidos-blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+}
+
+/* Pulse padrão */
+.float-pedidos .badge-pedidos {
+    animation: pedidos-pulse 1.6s infinite;
+}
+
+/* Blink se aguardando pagamento */
+.float-pedidos.status-aguardando_pagamento .badge-pedidos {
+    animation: pedidos-blink 1s infinite;
+}
+
+/* ===== CORES DO BOTÃO PEDIDOS ===== */
+
+.float-pedidos.status-aguardando_pagamento {
+    background: linear-gradient(135deg, #ffc107, #ff9800);
+    box-shadow: 0 10px 25px rgba(255,193,7,.5);
+}
+
+.float-pedidos.status-pago {
+    background: linear-gradient(135deg, #198754, #2ecc71);
+}
+
+.float-pedidos.status-em_preparacao {
+    background: linear-gradient(135deg, #0dcaf0, #0d6efd);
+}
+
+/* fallback */
+.float-pedidos {
+    transition: transform .2s ease, box-shadow .2s ease;
+}
+
   </style>
 
 </head>
@@ -920,6 +1002,21 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 </script>
+
+
+{% if user.is_authenticated and tem_pedidos_ativos %}
+<a href="{% url 'meus_pedidos' %}"
+   class="float-pedidos">
+
+    <i class="fa-solid fa-box"></i>
+
+    <span class="badge">
+        {{ total_pedidos_ativos }}
+    </span>
+</a>
+{% endif %}
+
+
 
 
 {% if user.is_authenticated and mostrar_float_carrinho|default:False %}

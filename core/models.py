@@ -428,10 +428,17 @@ class Pedido(Prime):
         ('cancelado', 'Cancelado'),
     )
 
+    FORMA_PAGAMENTO_CHOICES = (
+        ('pix', 'PIX'),
+        ('credito', 'Cartão de Crédito'),
+        ('debito', 'Cartão de Débito'),
+    )
+
     cliente = models.ForeignKey(
         ClientePerfil,
         on_delete=models.PROTECT,
-        related_name='pedidos'
+        related_name='pedidos',
+        null=True, blank=True
     )
 
     status = models.CharField(

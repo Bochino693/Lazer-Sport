@@ -2,6 +2,73 @@
 {% block content %}
 
 <style>
+
+
+    /* ===== BREADCRUMB STRONG ===== */
+.breadcrumb-strong {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 18px;
+    margin-bottom: 30px;
+
+    background: linear-gradient(135deg, #f8fafc, #eef2ff);
+    border-radius: 14px;
+
+    font-size: 1.05rem;
+    font-weight: 700;
+    letter-spacing: .3px;
+
+    box-shadow: 0 8px 20px rgba(0,0,0,.08);
+}
+
+/* Links */
+.breadcrumb-strong a {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #1e3a8a;
+    text-decoration: none;
+    transition: all .2s ease;
+}
+
+.breadcrumb-strong a:hover {
+    transform: translateY(-1px);
+    color: #0d6efd;
+}
+
+/* Separador */
+.breadcrumb-strong .sep {
+    font-size: .85rem;
+    color: #94a3b8;
+}
+
+/* Página atual */
+.breadcrumb-strong strong {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #111827;
+}
+
+/* Ícones */
+.breadcrumb-strong i {
+    font-size: 1rem;
+}
+
+/* ===== MOBILE ===== */
+@media (max-width: 768px) {
+    .breadcrumb-strong {
+        font-size: .95rem;
+        padding: 12px 14px;
+        gap: 10px;
+    }
+
+    .breadcrumb-strong span {
+        display: none; /* só ícones no mobile */
+    }
+}
+
 /* ====== CONTAINER ====== */
 .carrinho-container {
     max-width: 420px;
@@ -314,9 +381,31 @@
 
 
 </style>
+
+
 <div class="carrinho-container" id="car">
 
+<nav class="breadcrumb-strong" id="bread">
+    <a href="{% url 'home' %}">
+        <i class="fa-solid fa-house"></i>
+        <span>Home</span>
+    </a>
+
+    <i class="fa-solid fa-chevron-right sep"></i>
+
+    <strong>
+        <i class="fa-solid fa-cart-shopping"></i>
+        Carrinho
+    </strong>
+</nav>
+
 <h1 class="carrinho-titulo">🛒 Meu Carrinho</h1>
+
+    {% if itens %}
+    <button class="btn-limpar" onclick="limparCarrinho()">
+        🗑️ Limpar carrinho
+    </button>
+    {% endif %}
 
 {% if not itens %}
     <div class="carrinho-vazio-box">
@@ -362,12 +451,6 @@
         </div>
     {% endfor %}
 </div>
-
-    {% if itens %}
-    <button class="btn-limpar" onclick="limparCarrinho()">
-        🗑️ Limpar carrinho
-    </button>
-{% endif %}
 
 
     <div class="cupom-box">
@@ -415,7 +498,7 @@
 
 {% if itens %}
 <div class="finalizar-box">
-    <a href="#" class="btn-finalizar">Finalizar pedido</a>
+    <a href="{% url 'pagamento' carrinho.id %}#bread" class="btn-finalizar">Finalizar pedido</a>
 </div>
 {% endif %}
 

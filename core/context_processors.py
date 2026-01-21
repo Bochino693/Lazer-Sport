@@ -67,3 +67,25 @@ def carrinho_context(request):
         'carrinho_total_itens': total_itens,
         'mostrar_float_carrinho': total_itens > 0
     }
+
+
+from .models import Pedido
+
+def pedidos_ativos_context(request):
+    if not request.user.is_authenticated:
+        return {}
+
+    perfil = getattr(request.user, 'perfil', None)
+    if not perfil:
+        return {}
+
+    pedidos_ativos = Pedido.objects.filter(
+        cliente=perfil
+    ).exclude(
+        status__in=['cancelado', 'finalizado']
+    )
+
+    return {
+        'tem_pedidos_ativos': pedidos_ativos.exists(),
+        'total_pedidos_ativos': pedidos_ativos.count()
+    }

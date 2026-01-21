@@ -222,9 +222,11 @@ class ManutencaoView(View):
             'tab_ativa': 'nova',
         })
 
+
 from django.views.decorators.http import require_POST
 from django.shortcuts import redirect, get_object_or_404
 from django.contrib import messages
+
 
 @require_POST
 def cancelar_manutencao(request):
@@ -244,7 +246,6 @@ def cancelar_manutencao(request):
         messages.error(request, "Esta manutenção não pode ser cancelada.")
 
     return redirect('/manutencoes?tab=lista')
-
 
 
 class ClientePerfilView(LoginRequiredMixin, View):
@@ -1077,6 +1078,78 @@ def aplicar_cupom(request):
     })
 
 
+from django.views import View
+from django.shortcuts import render, redirect
+from django.contrib import messages
+
+class PaymentView(View):
+
+    def get(self, request, carrinho_id):
+        carrinho = get_object_or_404(Carrinho, id=carrinho_id)
+
+        itens = carrinho.itens.all()
+        carrinho_vazio = not itens.exists()
+
+        somente_pix = (
+            not request.user.is_authenticated or carrinho_vazio
+        )
+
+        context = {
+            'carrinho': carrinho,
+            'itens': itens,
+            'carrinho_vazio': carrinho_vazio,
+            'total_bruto': carrinho.total_bruto,
+            'valor_desconto': carrinho.valor_desconto,
+            'total_liquido': carrinho.total_liquido,
+            'total_itens': itens.count(),
+            'somente_pix': somente_pix,
+        }
+
+        return render(request, 'payment.html', context)
+
+@require_POST
+def confirmar_pix(request):
+    carrinho = request.session.get('carrinho', {})
+
+    if not carrinho:
+        return redirect('carrinho')
+
+    cliente = None
+    if request.user.is_authenticated:
+        cliente = request.user.perfil
+
+    pedido = Pedido.objects.create(
+        cliente=carrinho.cliente if request.user.is_authenticated else None,
+        status='aguardando_pagamento',
+        total_bruto=carrinho.total_bruto,
+        valor_desconto=carrinho.valor_desconto,
+        total_liquido=carrinho.total_liquido,
+        cupom_codigo=carrinho.cupom.codigo if carrinho.cupom else None,
+        cupom_percentual=carrinho.cupom.desconto_percentual if carrinho.cupom else None,
+        observacoes='Pagamento via PIX'
+    )
+
+    total = 0
+
+    for item in carrinho.itens.all():
+        ItemPedido.objects.create(
+            pedido=pedido,
+            nome_item=str(item.item),
+            tipo_item=item.item.__class__.__name__.lower(),
+            preco_unitario=item.preco_unitario,
+            quantidade=item.quantidade,
+            subtotal=item.subtotal
+        )
+
+    pedido.total_bruto = total
+    pedido.total_liquido = total
+    pedido.save()
+
+    del request.session['carrinho']
+
+    return redirect('meus_pedidos')
+
+
 from django.contrib.contenttypes.models import ContentType
 from django.db import transaction
 
@@ -1112,7 +1185,55 @@ def criar_pedido_do_carrinho(carrinho):
         return pedido
 
 
-class PaymentView(View):
+@require_POST
+def confirmar_cartao(request, carrinho_id):
+    carrinho = get_object_or_404(Carrinho, id=carrinho_id)
+
+    numero = request.POST.get('numero_cartao', '')
+
+    # regra simples
+    if numero.startswith('6'):
+        forma = 'debito'
+    else:
+        forma = 'credito'
+
+    pedido = Pedido.objects.create(
+        cliente=carrinho.cliente,
+        status='pago',
+        forma_pagamento=forma,
+        total_bruto=carrinho.total_bruto,
+        valor_desconto=carrinho.valor_desconto,
+        total_liquido=carrinho.total_liquido,
+        observacoes='Pagamento via cartão'
+    )
+
+    for item in carrinho.itens.all():
+        ItemPedido.objects.create(
+            pedido=pedido,
+            nome_item=str(item.item),
+            tipo_item=item.item.__class__.__name__.lower(),
+            preco_unitario=item.preco_unitario,
+            quantidade=item.quantidade,
+            subtotal=item.subtotal
+        )
+
+    carrinho.delete()
+    return redirect('meus_pedidos')
+
+
+class MeusPedidosView(LoginRequiredMixin, View):
+    login_url = 'login'
 
     def get(self, request):
-        return request, render('paymente.html')
+        perfil = request.user.perfil
+
+        pedidos = (
+            Pedido.objects
+            .filter(cliente=perfil)
+            .prefetch_related('itens')
+            .order_by('-criado_em')
+        )
+
+        return render(request, 'meus_pedidos.html', {
+            'pedidos': pedidos
+        })

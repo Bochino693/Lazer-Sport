@@ -116,6 +116,7 @@ TEMPLATES = [
                 'core.context_processors.estabelecimentos_globais',
                 'core.context_processors.manutencao_notificacao',
                 'core.context_processors.carrinho_context',
+                'core.context_processors.pedidos_ativos_context',
 
             ],
         },
