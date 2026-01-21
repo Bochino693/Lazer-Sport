@@ -732,6 +732,12 @@ nav a.btn-login {
     transition: transform .2s ease, box-shadow .2s ease;
 }
 
+.toast-carrinho a {
+    color: #fff;
+    text-decoration: underline;
+    pointer-events: auto; /* garante que seja clicável */
+}
+
   </style>
 
 </head>
@@ -966,17 +972,17 @@ function adicionarAoCarrinho(tipo, id) {
         }
     })
     .then(res => {
-    if (res.status === 403) {
-        mostrarToast('⚠️ Você precisa fazer login para adicionar ao carrinho', true);
-        setTimeout(() => {
-            // Redireciona para a página de login com next e rolagem até #login-box
-            const loginUrl = "{% url 'login' %}#login-box?next=" + encodeURIComponent(window.location.pathname);
-            window.location.href = loginUrl;
-        }, 2500);
-        return Promise.reject('Usuário não logado');
-    }
-    return res.ok ? res.json() : Promise.reject('Erro HTTP');
-})
+        if (res.status === 403) {
+            // URL de login com next
+            const loginUrl = "{% url 'login' %}?next=" + encodeURIComponent(window.location.pathname) + "#login-box";
+
+            // Mostra toast com link clicável
+            mostrarToast(`⚠️ Você precisa fazer login para adicionar ao carrinho. <a href="${loginUrl}" style="color: #fff; text-decoration: underline;">Clique aqui para entrar</a>`, true, 6000);
+
+            return Promise.reject('Usuário não logado');
+        }
+        return res.ok ? res.json() : Promise.reject('Erro HTTP');
+    })
     .then(data => {
         if (data.sucesso && data.total_itens !== undefined) {
             mostrarToast('🛒 Produto adicionado ao carrinho!');
@@ -991,23 +997,29 @@ function adicionarAoCarrinho(tipo, id) {
 }
 
 // Toast
-function mostrarToast(msg, erro = false) {
+function mostrarToast(msg, erro = false, duracao = 3000) {
     let toast = document.getElementById('toast-carrinho');
     if (!toast) {
         toast = document.createElement('div');
         toast.id = 'toast-carrinho';
         toast.className = 'toast-carrinho';
+        // Permitir cliques dentro do toast
+        toast.style.pointerEvents = 'auto';
+        toast.style.cursor = 'pointer';
         document.body.appendChild(toast);
     }
 
-    toast.innerText = msg;
+    toast.innerHTML = msg; // usa innerHTML para links
     toast.style.background = erro
         ? 'linear-gradient(135deg, #dc3545, #a71d2a)'
         : 'linear-gradient(135deg, #14a61a, #0e7f14)';
 
     toast.classList.add('show');
-    setTimeout(() => toast.classList.remove('show'), 3000);
+
+    // Remove automaticamente após o tempo
+    setTimeout(() => toast.classList.remove('show'), duracao);
 }
+
 
 // Inicializa badge se já houver itens do contexto
 document.addEventListener("DOMContentLoaded", () => {
