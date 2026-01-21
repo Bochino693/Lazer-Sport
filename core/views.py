@@ -123,6 +123,7 @@ from django.views import View
 from .forms import ManutencaoForm
 from .models import Manutencao
 from .models import ClientePerfil
+from django.views.decorators.http import require_POST
 
 
 class ManutencaoView(View):
@@ -220,6 +221,31 @@ class ManutencaoView(View):
             'brinquedos': Brinquedos.objects.all().order_by('nome_brinquedo'),
             'tab_ativa': 'nova',
         })
+
+from django.views.decorators.http import require_POST
+from django.shortcuts import redirect, get_object_or_404
+from django.contrib import messages
+
+@require_POST
+def cancelar_manutencao(request):
+    usuario = request.user.perfil
+
+    manutencao = get_object_or_404(
+        Manutencao,
+        id=request.POST.get("manutencao_id"),
+        usuario=usuario
+    )
+
+    if manutencao.status in ['P', 'A']:
+        manutencao.status = 'X'
+        manutencao.save()
+        messages.success(request, "Manutenção cancelada com sucesso.")
+    else:
+        messages.error(request, "Esta manutenção não pode ser cancelada.")
+
+    return redirect('/manutencoes?tab=lista')
+
+
 
 class ClientePerfilView(LoginRequiredMixin, View):
     template_name = "profile.html"
@@ -874,8 +900,6 @@ from django.shortcuts import render, redirect
 from django.views import View
 from django.contrib import messages
 from django.urls import reverse_lazy
-
-
 
 from django.contrib.contenttypes.models import ContentType
 from django.shortcuts import get_object_or_404, redirect

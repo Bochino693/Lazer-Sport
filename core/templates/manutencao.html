@@ -136,11 +136,10 @@
 }
 
 .manutencao-form .form-group label {
-    font-size: 13px;
-    font-weight: 600;
-    color: #0d3b99;
+    font-size: 19.9px;      /* aumenta o tamanho */
+    font-weight: 600;       /* deixa mais forte */
+    color: #0d3b99;         /* azul elegante */
     margin-bottom: 6px;
-    transition: color 0.2s ease;
 }
 
 /* Foco no campo destaca o label */
@@ -230,21 +229,31 @@
     color: #777;
 }
 
-/* ======= BOTÃO AÇÃO ======= */
+/* ===== BOTÃO VER (APP STYLE) ===== */
 .btn-detalhe {
-    padding: 6px 14px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
     border-radius: 20px;
-    background: #eef2ff;
-    color: #004AAD;
+    background: linear-gradient(135deg, #0d6efd, #004AAD);
+    color: #fff;
     font-weight: 600;
-    text-decoration: none;
     font-size: 13px;
-    transition: 0.2s;
+    border: none;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    box-shadow: 0 4px 12px rgba(13,110,253,0.35);
+}
+
+.btn-detalhe::before {
+    content: "👁️";
+    font-size: 14px;
 }
 
 .btn-detalhe:hover {
-    background: #004AAD;
-    color: #fff;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(13,110,253,0.45);
 }
 
 .btn-selecionar-brinquedo {
@@ -776,7 +785,85 @@
     color: #aaa;
 }
 
+/* ===== MODAL DETALHE MANUTENÇÃO ===== */
+.modal-detalhe-body {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.detalhe-card {
+    background: #f9fbff;
+    border-radius: 14px;
+    padding: 16px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+}
+
+.detalhe-card h4 {
+    margin: 0 0 10px;
+    font-size: 14px;
+    color: #0d3b99;
+}
+
+.detalhe-info {
+    font-size: 14px;
+    color: #333;
+    line-height: 1.6;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.status-P { background:#fff3cd; color:#856404; }
+.status-A { background:#cce5ff; color:#004085; }
+.status-C { background:#d4edda; color:#155724; }
+.status-X { background:#f8d7da; color:#721c24; }
+
+/* ===== FOTOS ===== */
+.detalhe-fotos {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.detalhe-fotos img {
+    width: 90px;
+    height: 90px;
+    object-fit: cover;
+    border-radius: 12px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+}
+
+/* ===== WHATSAPP ===== */
+.btn-whatsapp {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 14px;
+    border-radius: 30px;
+    background: linear-gradient(135deg, #25D366, #128C7E);
+    color: #fff;
+    font-weight: 700;
+    text-decoration: none;
+    font-size: 15px;
+    transition: all 0.25s ease;
+    margin-top: 10px;
+}
+
+.btn-whatsapp:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(37,211,102,0.45);
+}
+
+
 </style>
+
 {% if not user.is_authenticated %}
 <!-- ======= BREADCRUMB ======= -->
 <nav class="breadcrumb" id="bread">
@@ -867,6 +954,7 @@
 </div>
 
         <div class="form-group">{{ form.descricao.label_tag }}{{ form.descricao }}</div>
+
        <div class="form-group">
             {{ form.telefone_contato.label_tag }}
             {% render_field form.telefone_contato class="mask-telefone" %}
@@ -924,7 +1012,28 @@
                         <td>{{ manutencao.brinquedo }}</td>
                         <td><span class="status status-{{ manutencao.status }}">{{ manutencao.get_status_display }}</span></td>
                         <td>{{ manutencao.criado_em|date:"d/m/Y H:i" }}</td>
-                        <td><a href="#" class="btn-detalhe">Ver</a></td>
+                        <td>
+                            <button
+                                class="btn-detalhe"
+                                data-id="{{ manutencao.id }}"
+                                data-brinquedo="{{ manutencao.brinquedo }}"
+                                data-status="{{ manutencao.get_status_display }}"
+                                data-descricao="{{ manutencao.descricao }}"
+                                data-data="{{ manutencao.criado_em|date:'d/m/Y H:i' }}"
+                                data-telefone="{{ manutencao.telefone_contato }}"
+                                data-cep="{{ manutencao.cep }}"
+                                data-endereco="{{ manutencao.endereco }}"
+                                data-bairro="{{ manutencao.bairro }}"
+                                data-cidade="{{ manutencao.cidade }}"
+                                data-estado="{{ manutencao.estado }}"
+                                data-imagens='[
+                                   {% for img in manutencao.imagens.all %}
+                                       "{{ img.imagem.url }}"{% if not forloop.last %},{% endif %}
+                                   {% endfor %}
+                               ]'>
+                                Ver
+                            </button>
+                        </td>
                     </tr>
                 {% endfor %}
             {% else %}
@@ -951,7 +1060,8 @@
             </p>
         {% endfor %}
 
-        <a href="{% url 'manutencoes' %}?tab=lista#cab" class="btn-primario">
+        <a href="{% url 'manutencoes' %}?tab=lista#cab"
+           class="btn-primario btn-ver-solicitacoes">
             Ver minhas solicitações
         </a>
     </div>
@@ -996,11 +1106,75 @@
         </div>
     </div>
 </div>
+
+<div id="modal-detalhe" class="modal-brinquedos" style="display:none;">
+    <div class="modal-content" style="max-width:650px;">
+        <div class="modal-header">
+            <h2>🔧 Detalhes da Manutenção</h2>
+            <button class="close-modal">&times;</button>
+        </div>
+
+        <div class="modal-detalhe-body">
+
+            <!-- Brinquedo e status -->
+            <div class="detalhe-card">
+                <h4>Brinquedo</h4>
+                <p class="detalhe-info" id="det-brinquedo"></p>
+                <span id="det-status" class="status-badge"></span>
+            </div>
+
+            <!-- Descrição -->
+            <div class="detalhe-card">
+                <h4>Descrição do problema</h4>
+                <p class="detalhe-info" id="det-descricao"></p>
+            </div>
+
+            <!-- Endereço -->
+            <div class="detalhe-card">
+                <h4>Endereço</h4>
+                <p class="detalhe-info">
+                    <span id="det-endereco"></span>,
+                    <span id="det-bairro"></span><br>
+                    <span id="det-cidade"></span>/<span id="det-estado"></span>
+                </p>
+            </div>
+
+            <!-- Fotos -->
+            <div class="detalhe-card">
+                <h4>Fotos enviadas</h4>
+                <div class="detalhe-fotos" id="det-fotos"></div>
+            </div>
+
+            <!-- WhatsApp -->
+            <a href="#" target="_blank" id="btn-whatsapp" class="btn-whatsapp">
+                💬 Falar pelo WhatsApp
+            </a>
+
+            <!-- Cancelar -->
+            <form method="post" action="{% url 'cancelar_manutencao' %}">
+                {% csrf_token %}
+                <input type="hidden" name="manutencao_id" id="cancelar-id">
+                <button type="submit" class="btn-secundario">
+                    Cancelar manutenção
+                </button>
+            </form>
+
+        </div>
+    </div>
+</div>
+
 <script>
 
 document.addEventListener("DOMContentLoaded", () => {
 
-    // ======= ABAS =======
+   /* ===============================
+       VARIÁVEIS GERAIS
+    =============================== */
+    const form = document.querySelector(".manutencao-form");
+
+    /* ===============================
+       ABAS
+    =============================== */
     const tabs = document.querySelectorAll(".tab-btn");
     const contents = document.querySelectorAll(".tab-content");
 
@@ -1014,68 +1188,72 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
-    // ======= MODAL BRINQUEDOS =======
-const modal = document.getElementById("modal-brinquedos");
-const btnSelecionar = document.getElementById("selecionar-brinquedo-btn");
-const closeModal = modal.querySelector(".close-modal");
-const inputHidden = document.getElementById("brinquedo-input");
-const itens = Array.from(modal.querySelectorAll(".item-brinquedo"));
-const pesquisa = document.getElementById("pesquisa-brinquedo");
-const btnOrdenar = Array.from(modal.querySelectorAll(".btn-ordenar"));
 
-bloquearEndereco();
+    /* ===============================
+       MODAL BRINQUEDOS
+    =============================== */
+    const modal = document.getElementById("modal-brinquedos");
+    const btnSelecionar = document.getElementById("selecionar-brinquedo-btn");
+    const closeModal = modal.querySelector(".close-modal");
+    const inputHidden = document.getElementById("brinquedo-input");
+    const itens = Array.from(modal.querySelectorAll(".item-brinquedo"));
+    const pesquisa = document.getElementById("pesquisa-brinquedo");
+    const btnOrdenar = Array.from(modal.querySelectorAll(".btn-ordenar"));
 
-// Card
-const card = document.getElementById("brinquedo-card");
-const img = document.getElementById("brinquedo-img");
-const nome = document.getElementById("brinquedo-nome");
-const btnRemover = card.querySelector(".remove-brinquedo");
+    // Card
+    const card = document.getElementById("brinquedo-card");
+    const img = document.getElementById("brinquedo-img");
+    const nome = document.getElementById("brinquedo-nome");
+    const btnRemover = card.querySelector(".remove-brinquedo");
+
+    bloquearEndereco();
 
 // Abrir modal
-btnSelecionar.addEventListener("click", () => {
-    modal.style.display = "block";
-});
+ btnSelecionar.addEventListener("click", () => {
+        modal.style.display = "block";
+    });
 
 // Fechar modal
-closeModal.addEventListener("click", () => modal.style.display = "none");
+
+closeModal.addEventListener("click", () => modal.style.display = "none")
+
 window.addEventListener("click", e => {
-    if (e.target === modal) modal.style.display = "none";
-});
+        if (e.target === modal) modal.style.display = "none";
+    });
 
 // Selecionar brinquedo
 itens.forEach(item => {
-    item.addEventListener("click", () => {
-        inputHidden.value = item.dataset.id;
+        item.addEventListener("click", () => {
+            inputHidden.value = item.dataset.id;
+            nome.textContent = item.dataset.nome;
+            img.src = item.querySelector("img")?.src || "";
 
-        // Preenche card
-        nome.textContent = item.dataset.nome;
-        img.src = item.querySelector("img")?.src || "";
-
-        // Alterna visual
-        btnSelecionar.style.display = "none";
-        card.style.display = "block";
-
-        modal.style.display = "none";
+            btnSelecionar.style.display = "none";
+            card.style.display = "flex";
+            modal.style.display = "none";
+        });
     });
-});
+
 
 // Remover brinquedo
-btnRemover.addEventListener("click", () => {
-    inputHidden.value = "";
-    card.style.display = "none";
-    btnSelecionar.style.display = "inline-flex";
-});
+ btnRemover.addEventListener("click", () => {
+        inputHidden.value = "";
+        card.style.display = "none";
+        btnSelecionar.style.display = "inline-flex";
+    });
 
     // Pesquisa em tempo real
     pesquisa.addEventListener("input", () => {
         const valor = pesquisa.value.toLowerCase();
         itens.forEach(item => {
-            item.style.display = item.dataset.nome.toLowerCase().includes(valor) ? "flex" : "none";
+            item.style.display = item.dataset.nome.toLowerCase().includes(valor)
+                ? "flex"
+                : "none";
         });
     });
 
     // Ordenação A-Z / Z-A
-    btnOrdenar.forEach(btn => {
+     btnOrdenar.forEach(btn => {
         btn.addEventListener("click", () => {
             btnOrdenar.forEach(b => b.classList.remove("active"));
             btn.classList.add("active");
@@ -1083,35 +1261,38 @@ btnRemover.addEventListener("click", () => {
             const ordem = btn.dataset.ordem;
             const container = modal.querySelector(".lista-brinquedos");
 
-            const sorted = itens.sort((a, b) => {
-                return ordem === "a-z" ? a.dataset.nome.localeCompare(b.dataset.nome)
-                                       : b.dataset.nome.localeCompare(a.dataset.nome);
-            });
-
-            sorted.forEach(i => container.appendChild(i));
+            itens
+                .sort((a, b) =>
+                    ordem === "a-z"
+                        ? a.dataset.nome.localeCompare(b.dataset.nome)
+                        : b.dataset.nome.localeCompare(a.dataset.nome)
+                )
+                .forEach(i => container.appendChild(i));
         });
     });
-});
 
 
-document.querySelector("form").addEventListener("submit", e => {
-    if (!inputHidden.value) {
-        e.preventDefault();
-        alert("Selecione um brinquedo antes de enviar.");
-    }
-});
+ /* ===============================
+       VALIDAÇÃO DO FORM
+    =============================== */
+    form.addEventListener("submit", e => {
+        if (!inputHidden.value) {
+            e.preventDefault();
+            alert("Selecione um brinquedo antes de enviar.");
+        }
+    });
 
-
-document.addEventListener("DOMContentLoaded", () => {
+ /* ===============================
+       MODAL SUCESSO
+    =============================== */
     const modalSucesso = document.getElementById("modal-sucesso");
-
     if (modalSucesso) {
         modalSucesso.style.display = "block";
 
-        const closeBtn = modalSucesso.querySelector(".close-modal");
-        closeBtn.addEventListener("click", () => {
-            modalSucesso.style.display = "none";
-        });
+        modalSucesso.querySelector(".close-modal")
+            .addEventListener("click", () => {
+                modalSucesso.style.display = "none";
+            });
 
         window.addEventListener("click", e => {
             if (e.target === modalSucesso) {
@@ -1119,7 +1300,108 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         });
     }
+
 });
+
+const modalDetalhe = document.getElementById("modal-detalhe");
+const closeDetalhe = modalDetalhe.querySelector(".close-modal");
+
+document.querySelectorAll(".btn-detalhe").forEach(btn => {
+    btn.addEventListener("click", () => {
+
+        // ===== IMAGENS =====
+        const fotosDiv = document.getElementById("det-fotos");
+        fotosDiv.innerHTML = "";
+
+        let imagens = [];
+
+        try {
+            imagens = JSON.parse(btn.dataset.imagens);
+        } catch (e) {
+            imagens = [];
+        }
+
+        if (imagens.length === 0) {
+            fotosDiv.innerHTML = "<span style='color:#777'>Nenhuma foto enviada</span>";
+        } else {
+            imagens.forEach(url => {
+                const img = document.createElement("img");
+                img.src = url;
+                img.alt = "Foto da manutenção";
+                fotosDiv.appendChild(img);
+            });
+        }
+
+        // ===== DADOS =====
+        document.getElementById("det-brinquedo").textContent = btn.dataset.brinquedo;
+        document.getElementById("det-descricao").textContent = btn.dataset.descricao;
+
+        const statusSpan = document.getElementById("det-status");
+        statusSpan.textContent = btn.dataset.status;
+        statusSpan.className = "status-badge status-" + btn.dataset.status.charAt(0);
+
+        document.getElementById("det-endereco").textContent = btn.dataset.endereco;
+        document.getElementById("det-bairro").textContent = btn.dataset.bairro;
+        document.getElementById("det-cidade").textContent = btn.dataset.cidade;
+        document.getElementById("det-estado").textContent = btn.dataset.estado;
+
+        document.getElementById("cancelar-id").value = btn.dataset.id;
+
+        // ===== WHATSAPP =====
+        if (btn.dataset.telefone) {
+            const telefone = btn.dataset.telefone.replace(/\D/g, "");
+            const msg = encodeURIComponent("Olá! Gostaria de falar sobre minha manutenção.");
+            document.getElementById("btn-whatsapp").href =
+                `https://wa.me/55${telefone}?text=${msg}`;
+        }
+
+        modalDetalhe.style.display = "block";
+    });
+});
+
+// Fechar modal
+closeDetalhe.addEventListener("click", () => {
+    modalDetalhe.style.display = "none";
+});
+
+window.addEventListener("click", e => {
+    if (e.target === modalDetalhe) {
+        modalDetalhe.style.display = "none";
+    }
+});
+
+
+
+document.addEventListener("DOMContentLoaded", () => {
+    const telefoneInput = document.querySelector(".mask-telefone");
+    if (!telefoneInput) return;
+
+    telefoneInput.addEventListener("input", () => {
+        telefoneInput.value = maskTelefoneBR(telefoneInput.value);
+    });
+});
+
+function maskTelefoneBR(value) {
+    value = value.replace(/\D/g, "");
+
+    if (value.length > 11) {
+        value = value.slice(0, 11);
+    }
+
+    if (value.length <= 10) {
+        // Telefone fixo: (00) 0000-0000
+        return value
+            .replace(/^(\d{2})(\d)/, "($1) $2")
+            .replace(/(\d{4})(\d)/, "$1-$2");
+    }
+
+    // Celular: (00) 00000-0000
+    return value
+        .replace(/^(\d{2})(\d)/, "($1) $2")
+        .replace(/(\d{5})(\d)/, "$1-$2");
+}
+
+
 
 
 function mask(input, pattern) {
