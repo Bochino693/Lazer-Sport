@@ -399,7 +399,7 @@
     </strong>
 </nav>
 
-<h1 class="carrinho-titulo">🛒 Meu Carrinho</h1>
+<h1 class="carrinho-titulo" id="carrinho">🛒 Meu Carrinho</h1>
 
     {% if itens %}
     <button class="btn-limpar" onclick="limparCarrinho()">
@@ -503,6 +503,40 @@
 {% endif %}
 
 <script>
+document.addEventListener('DOMContentLoaded', () => {
+
+    // ===== FUNÇÃO PARA FORMATAR NÚMEROS PARA PT-BR =====
+    function formatarNumeroBR(valor) {
+        return Number(valor).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    // ===== FUNÇÃO PARA FORMATAR TODOS OS VALORES DO CARRINHO =====
+    function formatarCarrinho() {
+        const carrinho = document.querySelector('.carrinho-container');
+        if (!carrinho) return;
+
+        // Preços unitários e subtotais dos itens
+        const itensPreco = carrinho.querySelectorAll('.item-linha span:last-child, .item-subtotal span:last-child');
+        itensPreco.forEach(el => {
+            let texto = el.textContent.replace(/\./g,'').replace(',', '.').replace(/[^\d.-]/g,'');
+            let numero = parseFloat(texto);
+            if (!isNaN(numero)) el.textContent = 'R$ ' + formatarNumeroBR(numero);
+        });
+
+        // Resumo total, desconto e total líquido
+        const resumoValores = carrinho.querySelectorAll('.resumo-linha span:last-child');
+        resumoValores.forEach(el => {
+            let texto = el.textContent.replace(/\./g,'').replace(',', '.').replace(/[^\d.-]/g,'');
+            let numero = parseFloat(texto);
+            if (!isNaN(numero)) el.textContent = (numero < 0 ? '-' : '') + 'R$ ' + formatarNumeroBR(Math.abs(numero));
+        });
+    }
+
+    // chama a formatação ao carregar
+    formatarCarrinho();
+});
+
+// ===== FUNÇÕES EXISTENTES =====
 function aplicarCupom() {
     const codigo = document.getElementById('cupomCodigo').value.trim();
     const msg = document.getElementById('cupom-msg');
@@ -525,11 +559,9 @@ function aplicarCupom() {
     .then(res => res.json())
     .then(data => {
         if (data.status === 'success') {
-            // feedback imediato
             msg.style.color = 'green';
             msg.innerText = data.message;
 
-            // recarrega para atualizar valores e layout
             setTimeout(() => location.reload(), 800);
         } else {
             msg.style.color = 'red';
@@ -541,7 +573,6 @@ function aplicarCupom() {
         msg.innerText = 'Erro de conexão';
     });
 }
-
 
 function removerItem(itemId) {
     fetch("{% url 'remover_item_carrinho' %}", {
@@ -572,6 +603,8 @@ function confirmarLimparCarrinho() {
     })
     .then(() => location.reload());
 }
+
+
 </script>
 
 <!-- ===== MODAL LIMPAR CARRINHO ===== -->
@@ -599,8 +632,3 @@ function confirmarLimparCarrinho() {
 {% endblock %}
 
 
-<script>
-setTimeout(() => {
-    window.location.href = "{% url 'brinquedos' %}";
-}, 5000);
-</script>

@@ -168,12 +168,29 @@
     margin-top: 10px;
 }
 
+.texto-destaque {
+    text-align: center;           /* centraliza o texto */
+    font-size: 1.5rem;            /* tamanho grande */
+    font-weight: 700;             /* negrito */
+    color: #1e40af;               /* azul destacado */
+    margin: 30px auto;            /* espaçamento acima e abaixo, centralizado */
+    padding: 15px 20px;           /* um pouco de espaço interno */
+    background: #f0f4ff;          /* leve fundo para destacar */
+    border-radius: 12px;          /* cantos arredondados */
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1); /* sombra suave */
+}
+
+
 .payment-alert {
     background: #fff7ed;
     border: 1px solid #fed7aa;
     padding: 12px;
     border-radius: 10px;
-    margin-top: 20px;
+
+    text-align: center;
+    margin: 20px auto;
+    font-size: 1.1rem;
+    font-weight: 600;
 }
 
 .btn-confirmar {
@@ -391,14 +408,14 @@
 </div>
 
     {% if carrinho_vazio %}
-        <div class="payment-alert">
-            🧾 Seu carrinho está vazio.  
-            Pagamentos disponíveis apenas via <strong>PIX</strong>.
-        </div>
+        <div class="texto-destaque">
+        🧾 Seu carrinho está vazio.
+        Pagamentos disponíveis apenas via <strong>PIX</strong>.
+    </div>
     {% else %}
-        <div class="payment-resumo">
-            <strong>{{ total_itens }}</strong> item(ns) no carrinho
-        </div>
+        <div class="texto-destaque">
+        <strong>{{ total_itens }}</strong> item(ns) no carrinho
+    </div>
     {% endif %}
 
    <form method="post" class="payment-form">
@@ -511,7 +528,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const cartaoBox = document.getElementById('cartao-box');
     const cards = document.querySelectorAll('.payment-card');
 
-    // Cartão interativo
     const numeroInput = document.getElementById('numero-cartao');
     const validadeInput = document.getElementById('validade-cartao');
     const nomeInput = document.getElementById('nome-cartao');
@@ -528,63 +544,84 @@ document.addEventListener('DOMContentLoaded', () => {
         cartaoBox.style.display = metodo === 'cartao' ? 'block' : 'none';
     }
 
+    // ===== FORMATA NÚMERO PARA BR =====
+    function formatarNumeroBR(valor) {
+        return Number(valor).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    // ===== FORMATA TODOS OS VALORES DO RESUMO =====
+    function formatarResumo() {
+        const box = document.querySelector('.payment-resumo-box');
+        if (!box) return;
+
+        // Total
+        const totalEl = box.querySelector('.valor-total');
+        if (totalEl) {
+            let numero = parseFloat(totalEl.textContent.replace(/\./g,'').replace(',', '.').replace(/[^\d.-]/g,''));
+            if (!isNaN(numero)) totalEl.textContent = 'R$ ' + formatarNumeroBR(numero);
+        }
+
+        // Subtotal e desconto
+        const totaisEl = box.querySelectorAll('.resumo-totais div span:last-child');
+        totaisEl.forEach(el => {
+            let texto = el.textContent.replace(/\./g,'').replace(',', '.').replace(/[^\d.-]/g,'');
+            let numero = parseFloat(texto);
+            if (!isNaN(numero)) el.textContent = (numero < 0 ? '-' : '') + 'R$ ' + formatarNumeroBR(Math.abs(numero));
+        });
+
+        // Preço unitário e subtotal dos itens
+        const itensEl = box.querySelectorAll('.resumo-item span:nth-child(2), .resumo-item strong');
+        itensEl.forEach(el => {
+            let texto = el.textContent.replace(/\./g,'').replace(',', '.').replace(/[^\d.-]/g,'');
+            let numero = parseFloat(texto);
+            if (!isNaN(numero)) el.textContent = 'R$ ' + formatarNumeroBR(numero);
+        });
+    }
+
+    formatarResumo(); // chama imediatamente
+
     // ===== CLIQUE NOS CARDS =====
     cards.forEach(card => {
         card.addEventListener('click', () => {
-
-            // ignora se desabilitado
             if (card.classList.contains('disabled')) return;
 
-            // ativa visual
             cards.forEach(c => c.classList.remove('active'));
             card.classList.add('active');
 
-            // marca o radio
             const radio = card.querySelector('input[type="radio"]');
             radio.checked = true;
 
-            // mostra box correto
             mostrarMetodo(radio.value);
         });
     });
 
-    // abre PIX por padrão
-    mostrarMetodo('pix');
+    mostrarMetodo('pix'); // abre PIX por padrão
 
     // ===== CARTÃO: MÁSCARA + ATUALIZAÇÃO VISUAL =====
     function detectarTipo(numero) {
         if (!numero) return '';
-
         if (/^4/.test(numero)) return 'Visa • Crédito';
         if (/^5[1-5]/.test(numero)) return 'Mastercard • Crédito';
         if (/^6/.test(numero)) return 'Débito';
         return 'Cartão';
     }
 
-    // ===== FUNÇÃO DE MÁSCARA PARA NÚMERO =====
     function mascaraNumeroCartao(valor) {
-        valor = valor.replace(/\D/g, '');          // remove tudo que não é número
-        valor = valor.substring(0, 16);            // limita a 16 dígitos
-        return valor.replace(/(.{4})/g, '$1 ').trim(); // adiciona espaço a cada 4 dígitos
+        valor = valor.replace(/\D/g, '').substring(0,16);
+        return valor.replace(/(.{4})/g, '$1 ').trim();
     }
 
-    // ===== FUNÇÃO DE MÁSCARA PARA VALIDADE =====
     function mascaraValidade(valor) {
-        valor = valor.replace(/\D/g, '');          // remove tudo que não é número
-        valor = valor.substring(0, 4);             // limita a 4 dígitos (MMYY)
-        if (valor.length > 2) {
-            valor = valor.substring(0,2) + '/' + valor.substring(2);
-        }
+        valor = valor.replace(/\D/g, '').substring(0,4);
+        if (valor.length > 2) valor = valor.substring(0,2) + '/' + valor.substring(2);
         return valor;
     }
 
     function atualizarCartao() {
-        // Número
-        let numero = numeroInput.value.replace(/\D/g, '').padEnd(16, '•');
+        let numero = numeroInput.value.replace(/\D/g, '').padEnd(16,'•');
         numero = numero.match(/.{1,4}/g)?.join(' ') || numero;
         numeroDisplay.textContent = numero;
 
-        // Bandeira
         if (/^4/.test(numero)) {
             bandeiraImg.src = "{% static 'images/visa.png' %}";
             bandeiraImg.style.display = 'block';
@@ -598,24 +635,19 @@ document.addEventListener('DOMContentLoaded', () => {
             bandeiraImg.style.display = 'none';
         }
 
-        // Tipo cartão
-        tipoCartao.textContent = detectarTipo(numero.replace(/\s/g, ''));
-
-        // Validade e nome
+        tipoCartao.textContent = detectarTipo(numero.replace(/\s/g,''));
         validadeDisplay.textContent = validadeInput.value || 'MM/AA';
         nomeDisplay.textContent = nomeInput.value || 'NOME DO TITULAR';
     }
 
     numeroInput.addEventListener('input', () => {
-    numeroInput.value = mascaraNumeroCartao(numeroInput.value);
-    atualizarCartao();
-});
-
+        numeroInput.value = mascaraNumeroCartao(numeroInput.value);
+        atualizarCartao();
+    });
     validadeInput.addEventListener('input', () => {
-    validadeInput.value = mascaraValidade(validadeInput.value);
-    atualizarCartao();
-});
-
+        validadeInput.value = mascaraValidade(validadeInput.value);
+        atualizarCartao();
+    });
     nomeInput.addEventListener('input', atualizarCartao);
 
     // ===== PIX CONFIRMAR =====
@@ -629,8 +661,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
 });
-
 </script>
+
 
 
 {% endblock %}

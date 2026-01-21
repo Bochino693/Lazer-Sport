@@ -909,9 +909,10 @@ from .models import ItemCarrinho, Carrinho
 
 from django.http import JsonResponse
 
-
-@login_required
 def adicionar_ao_carrinho(request, tipo, object_id):
+    if not request.user.is_authenticated:
+        return JsonResponse({'erro': 'Você precisa fazer login'}, status=403)
+
     if not hasattr(request.user, 'perfil'):
         return JsonResponse({'erro': 'Usuário inválido'}, status=403)
 
@@ -942,9 +943,7 @@ def adicionar_ao_carrinho(request, tipo, object_id):
         item.quantidade += 1
         item.save()
 
-    total_itens = carrinho.itens.aggregate(
-        total=Sum('quantidade')
-    )['total'] or 0
+    total_itens = carrinho.itens.aggregate(total=Sum('quantidade'))['total'] or 0
 
     return JsonResponse({
         'sucesso': True,

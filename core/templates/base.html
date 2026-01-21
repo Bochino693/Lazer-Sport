@@ -956,6 +956,7 @@ function atualizarBadgeCarrinho(total) {
 }
 
 // Função genérica para adicionar ao carrinho via AJAX
+// Função genérica para adicionar ao carrinho via AJAX
 function adicionarAoCarrinho(tipo, id) {
     fetch(`/carrinho/adicionar/${tipo}/${id}/`, {
         method: 'POST',
@@ -964,16 +965,29 @@ function adicionarAoCarrinho(tipo, id) {
             'X-Requested-With': 'XMLHttpRequest'
         }
     })
-    .then(res => res.ok ? res.json() : Promise.reject('Erro HTTP'))
+    .then(res => {
+    if (res.status === 403) {
+        mostrarToast('⚠️ Você precisa fazer login para adicionar ao carrinho', true);
+        setTimeout(() => {
+            // Redireciona para a página de login com next e rolagem até #login-box
+            const loginUrl = "{% url 'login' %}#login-box?next=" + encodeURIComponent(window.location.pathname);
+            window.location.href = loginUrl;
+        }, 2500);
+        return Promise.reject('Usuário não logado');
+    }
+    return res.ok ? res.json() : Promise.reject('Erro HTTP');
+})
     .then(data => {
         if (data.sucesso && data.total_itens !== undefined) {
             mostrarToast('🛒 Produto adicionado ao carrinho!');
             atualizarBadgeCarrinho(data.total_itens);
+        } else if (data.erro) {
+            mostrarToast(data.erro, true);
         } else {
-            mostrarToast(data.erro || 'Erro ao adicionar', true);
+            mostrarToast('Erro ao adicionar', true);
         }
     })
-    .catch(() => mostrarToast('Erro ao adicionar ao carrinho', true));
+    .catch(err => console.error(err));
 }
 
 // Toast
@@ -1000,7 +1014,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const total = {{ carrinho_total_itens|default:0 }};
     if (total > 0) criarFloatCarrinho(total);
 });
-
 </script>
 
 
@@ -1020,7 +1033,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
 {% if user.is_authenticated and mostrar_float_carrinho|default:False %}
-<a href="{% url 'carrinho' %}#car"
+<a href="{% url 'carrinho' %}#carrinho"
    id="float-carrinho"
    class="float-carrinho">
 
