@@ -14,7 +14,9 @@ from .models import (
     Promocoes,
     Cupom,
     Manutencao,
-    ManutencaoImagem
+    ManutencaoImagem,
+    Pedido,
+    ItemPedido
 )
 from django.utils.html import format_html
 from .models import ImagensSite
@@ -323,3 +325,42 @@ class CarrinhoAdmin(admin.ModelAdmin):
             return False
         return super().has_change_permission(request, obj)
 
+
+
+# ===========================
+# ADMIN DO ITEM DO PEDIDO
+# ===========================
+class ItemPedidoInline(admin.TabularInline):
+    model = ItemPedido
+    extra = 0  # sem linhas extras
+    readonly_fields = ('nome_item', 'tipo_item', 'preco_unitario', 'quantidade', 'subtotal')
+    can_delete = False  # apenas leitura no inline, se desejar
+
+# ===========================
+# ADMIN DO PEDIDO
+# ===========================
+@admin.register(Pedido)
+class PedidoAdmin(admin.ModelAdmin):
+    list_display = (
+        'id', 'cliente_usuario', 'status', 'total_bruto',
+        'valor_desconto', 'total_liquido', 'cupom_codigo', 'criado_em'
+    )
+    list_filter = ('status', 'criado_em', 'forma_pagamento')
+    search_fields = ('id', 'cliente__user__username', 'cupom_codigo')
+    readonly_fields = ('total_bruto', 'valor_desconto', 'total_liquido')
+    inlines = [ItemPedidoInline]
+    ordering = ('-criado_em',)
+
+    def cliente_usuario(self, obj):
+        return obj.cliente.user.username if obj.cliente else "Guest"
+    cliente_usuario.short_description = "Cliente"
+
+# ===========================
+# ADMIN DO ITEM DO PEDIDO (opcional separado)
+# ===========================
+@admin.register(ItemPedido)
+class ItemPedidoAdmin(admin.ModelAdmin):
+    list_display = ('nome_item', 'tipo_item', 'pedido', 'preco_unitario', 'quantidade', 'subtotal')
+    list_filter = ('tipo_item',)
+    search_fields = ('nome_item', 'pedido__id')
+    readonly_fields = ('nome_item', 'tipo_item', 'preco_unitario', 'quantidade', 'subtotal')
