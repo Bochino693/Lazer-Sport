@@ -584,22 +584,31 @@ nav a.btn-login {
     background: #007BFF;
 }
 
-/* Badge (número) */
+/* Badge (número de notificações) */
 .float-manutencao .badge {
     position: absolute;
-    top: -4px;
-    right: -4px;
+    top: -6px;
+    right: -6px;
     background: #E63946;
     color: white;
     font-size: 11px;
     font-weight: 700;
-    width: 18px;
+    min-width: 18px;
     height: 18px;
-    border-radius: 50%;
+    padding: 0 5px;
+    border-radius: 999px; /* vira cápsula se > 9 */
     display: flex;
     align-items: center;
     justify-content: center;
+    line-height: 1;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.25);
 }
+
+.float-manutencao.andamento .badge {
+    background: #0d6efd; /* azul quando em andamento */
+}
+
+
 
 /* ===== FLOAT BUTTON CARRINHO ===== */
 .float-carrinho {
@@ -911,6 +920,8 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 </script>
+
+
 {% if user.is_authenticated and mostrar_float_carrinho|default:False %}
 <a href="{% url 'carrinho' %}#car"
    id="float-carrinho"
@@ -924,20 +935,19 @@ document.addEventListener("DOMContentLoaded", () => {
 {% endif %}
 
 
-
-{% if user.is_authenticated %}
-<a href="{% url 'manutencoes' %}?tab=lista"
+{% if user.is_authenticated and tem_manutencao %}
+<a href="{% url 'manutencoes' %}?tab=lista#cab"
    class="float-manutencao
-   {% if manutencao_andamento > 0 %} andamento
-   {% elif manutencao_pendente > 0 %} pendente {% endif %}">
+   {% if manutencao_andamento > 0 %} andamento {% endif %}">
 
     <i class="fa-solid fa-screwdriver-wrench"></i>
 
-    {% if manutencao_andamento > 0 %}
-        <span class="badge">{{ manutencao_andamento }}</span>
-    {% endif %}
+    <span class="badge">
+        {{ manutencao_abertas }}
+    </span>
 </a>
 {% endif %}
+
 
 
 </body>

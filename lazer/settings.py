@@ -58,6 +58,8 @@ INSTALLED_APPS = [
     'django.contrib.humanize',
     'core',
 
+    'widget_tweaks',
+
     # Django
     'django.contrib.sites',
 

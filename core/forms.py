@@ -53,3 +53,7 @@ class ManutencaoForm(forms.ModelForm):
             'cidade',
             'estado',
         ]
+        widgets = {
+            'brinquedo': forms.HiddenInput()
+        }
+

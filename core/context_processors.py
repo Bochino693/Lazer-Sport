@@ -17,20 +17,20 @@ def manutencao_notificacao(request):
     if not request.user.is_authenticated:
         return {}
 
-    # ClientePerfil já existe por causa do signal
     cliente = request.user.perfil
 
     manutencoes = Manutencao.objects.filter(usuario=cliente)
 
     pendentes = manutencoes.filter(status='P').count()
     em_andamento = manutencoes.filter(status='A').count()
+    total_abertas = pendentes + em_andamento
 
     return {
         'manutencao_pendente': pendentes,
         'manutencao_andamento': em_andamento,
-        'tem_manutencao': (pendentes + em_andamento) > 0
+        'manutencao_abertas': total_abertas,
+        'tem_manutencao': total_abertas > 0
     }
-
 
 from django.db.models import Sum
 

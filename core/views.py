@@ -13,7 +13,7 @@ from django.views.generic.edit import FormView
 from django.contrib.auth.mixins import LoginRequiredMixin
 
 from .models import Brinquedos, CategoriasBrinquedos, Projetos, Eventos, ClientePerfil, Combos, Cupom, Promocoes, \
-    TagsBrinquedos, ImagensSite, BrinquedosProjeto, Estabelecimentos, Manutencao
+    TagsBrinquedos, ImagensSite, BrinquedosProjeto, Estabelecimentos, Manutencao, ManutencaoImagem
 
 import os
 from django.http import FileResponse, Http404
@@ -131,62 +131,95 @@ class ManutencaoView(View):
     def get_usuario(self, request):
         if not request.user.is_authenticated:
             return None
-        return ClientePerfil.objects.get(user=request.user)
+        perfil, _ = ClientePerfil.objects.get_or_create(user=request.user)
+        return perfil
 
     def get(self, request):
         usuario = self.get_usuario(request)
+        tab_ativa = request.GET.get('tab', 'nova')
 
-        # 🔓 VISITANTE (não logado)
         if not usuario:
             return render(request, self.template_name, {
                 'form': None,
                 'manutencoes': [],
                 'brinquedos': [],
-                'tab_ativa': 'nova',
+                'tab_ativa': tab_ativa,
             })
 
-        # 🔐 USUÁRIO LOGADO
         form = ManutencaoForm()
-
-        manutencoes = Manutencao.objects.filter(
-            usuario=usuario
-        ).order_by('-criado_em')
-
+        manutencoes = Manutencao.objects.filter(usuario=usuario).order_by('-criado_em')
         brinquedos = Brinquedos.objects.all().order_by('nome_brinquedo')
 
         return render(request, self.template_name, {
             'form': form,
             'manutencoes': manutencoes,
             'brinquedos': brinquedos,
-            'tab_ativa': 'nova',
+            'tab_ativa': tab_ativa,
         })
 
     def post(self, request):
         usuario = self.get_usuario(request)
 
-        # 🔒 POST sem login → login
         if not usuario:
             return redirect('login')
 
-        form = ManutencaoForm(request.POST)
+        form = ManutencaoForm(request.POST, request.FILES)
 
-        if form.is_valid():
-            form.save(usuario=usuario)
-            return redirect('manutencoes')
+        if not form.is_valid():
+            return self.render_form(request, form)
 
-        manutencoes = Manutencao.objects.filter(
-            usuario=usuario
-        ).order_by('-criado_em')
+        imagens = request.FILES.getlist('imagens')
 
-        brinquedos = Brinquedos.objects.all().order_by('nome_brinquedo')
+        # 🔒 Regras de negócio
+        LIMITE_IMAGENS = 5
+        TAMANHO_MAXIMO = 5 * 1024 * 1024  # 5MB
+
+        if len(imagens) > LIMITE_IMAGENS:
+            messages.error(
+                request,
+                f"Você pode enviar no máximo {LIMITE_IMAGENS} imagens."
+            )
+            return self.render_form(request, form)
+
+        for img in imagens:
+            if not img.content_type.startswith('image/'):
+                messages.error(request, "Apenas arquivos de imagem são permitidos.")
+                return self.render_form(request, form)
+
+            if img.size > TAMANHO_MAXIMO:
+                messages.error(
+                    request,
+                    "Cada imagem deve ter no máximo 5MB."
+                )
+                return self.render_form(request, form)
+
+        # ✅ Salvar manutenção
+        manutencao = form.save(commit=False)
+        manutencao.usuario = usuario
+        manutencao.save()
+
+        # 🖼️ Salvar imagens
+        for img in imagens:
+            ManutencaoImagem.objects.create(
+                manutencao=manutencao,
+                imagem=img
+            )
+
+        messages.success(request, "Manutenção solicitada com sucesso!")
+        return redirect('manutencoes')
+
+    # 🔁 Centraliza renderização do formulário
+    def render_form(self, request, form):
+        usuario = self.get_usuario(request)
 
         return render(request, self.template_name, {
             'form': form,
-            'manutencoes': manutencoes,
-            'brinquedos': brinquedos,
+            'manutencoes': Manutencao.objects.filter(
+                usuario=usuario
+            ).order_by('-criado_em'),
+            'brinquedos': Brinquedos.objects.all().order_by('nome_brinquedo'),
             'tab_ativa': 'nova',
         })
-
 
 class ClientePerfilView(LoginRequiredMixin, View):
     template_name = "profile.html"
@@ -842,63 +875,6 @@ from django.views import View
 from django.contrib import messages
 from django.urls import reverse_lazy
 
-
-class SolicitarManutencaoView(View):
-    template_name = 'manutencao.html'
-    success_url = reverse_lazy('pagina_inicial')
-
-    def get(self, request, *args, **kwargs):
-        tab_ativa = request.GET.get('tab', 'nova')
-
-        # 🔓 USUÁRIO NÃO LOGADO → página liberada, mas vazia
-        if not request.user.is_authenticated:
-            return render(request, self.template_name, {
-                'form': None,
-                'brinquedos': [],
-                'manutencoes': [],
-                'tab_ativa': tab_ativa
-            })
-
-        # 🔐 USUÁRIO LOGADO
-        form = ManutencaoForm()
-        brinquedos = Brinquedos.objects.all().order_by('nome_brinquedo')
-        manutencoes = Manutencao.objects.filter(
-            usuario=request.user
-        ).order_by('-criado_em')
-
-        return render(request, self.template_name, {
-            'form': form,
-            'brinquedos': brinquedos,
-            'manutencoes': manutencoes,
-            'tab_ativa': tab_ativa
-        })
-
-    def post(self, request, *args, **kwargs):
-        # 🔒 POST SEM LOGIN → manda cadastrar
-        if not request.user.is_authenticated:
-            return redirect('registrar')
-
-        form = ManutencaoForm(request.POST)
-
-        if form.is_valid():
-            manutencao = form.save(commit=False)
-            manutencao.usuario = request.user
-            manutencao.save()
-            messages.success(request, "Solicitação enviada com sucesso!")
-            return redirect(self.success_url)
-
-        # Form inválido → re-render com dados
-        brinquedos = Brinquedos.objects.all().order_by('nome_brinquedo')
-        manutencoes = Manutencao.objects.filter(
-            usuario=request.user
-        ).order_by('-criado_em')
-
-        return render(request, self.template_name, {
-            'form': form,
-            'brinquedos': brinquedos,
-            'manutencoes': manutencoes,
-            'tab_ativa': 'nova'
-        })
 
 
 from django.contrib.contenttypes.models import ContentType
