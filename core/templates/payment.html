@@ -459,7 +459,7 @@
     </div>
 
     <div style="margin-bottom:25px">
-        <small style="display:block; font-size:1.4rem; font-weight:700; color:#4f46e5;">
+        <small id="valor-total-box" style="display:block; font-size:1.4rem; font-weight:700; color:#2563eb;">
             Valor: R$ {{ total_liquido|floatformat:2 }}
         </small>
     </div>
@@ -577,7 +577,19 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!isNaN(numero)) el.textContent = 'R$ ' + formatarNumeroBR(numero);
         });
     }
+        // ===== FORMATA VALOR TOTAL PERSONALIZADO =====
+    function formatarValorTotal() {
+        const el = document.getElementById('valor-total-box');
+        if (!el) return;
 
+        let texto = el.textContent.replace(/\./g,'').replace(',', '.').replace(/[^\d.-]/g,'');
+        let numero = parseFloat(texto);
+        if (!isNaN(numero)) {
+            el.innerHTML = `Valor: <span style="color:#2563eb;">R$ ${formatarNumeroBR(numero)}</span>`;
+        }
+    }
+
+    formatarValorTotal();
     formatarResumo(); // chama imediatamente
 
     // ===== CLIQUE NOS CARDS =====
