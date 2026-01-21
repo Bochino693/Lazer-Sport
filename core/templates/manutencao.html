@@ -1097,6 +1097,26 @@
 }
 
 
+/* ======= MOBILE ======= */
+@media (max-width: 600px) {
+    .breadcrumb {
+        font-size: 0.8rem;
+        gap: 4px;           /* menos espaço entre itens */
+    }
+
+    .breadcrumb span:not(:last-child)::after {
+        margin-left: 4px;
+        margin-right: 4px;
+    }
+
+    .breadcrumb a,
+    .breadcrumb span {
+        white-space: nowrap; /* evita quebrar palavras */
+        overflow: hidden;    /* esconde overflow */
+        text-overflow: ellipsis; /* mostra "..." se necessário */
+    }
+}
+
 
 </style>
 
