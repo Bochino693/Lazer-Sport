@@ -957,66 +957,91 @@
     }
 }
 
-
-/* ======= FORMULÁRIO NOVA MANUTENÇÃO - MOBILE ======= */
-@media (max-width: 1024px) {
+/* ======== MOBILE RESPONSIVO VERDADEIRO ======== */
+@media (max-width: 768px) {
+    /* Formulário vertical */
     .manutencao-form {
-        grid-template-columns: 1fr; /* Uma coluna só no tablet */
-        gap: 12px;
-        padding: 25px;
-    }
-
-    .btn-enviar {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+        padding: 20px;
         width: 100%;
-        padding: 14px 0;
-        font-size: 15px;
+        box-sizing: border-box;
     }
 
-    /* Botão de selecionar brinquedo */
+    /* Cada form-group ocupa 100% */
+    .manutencao-form .form-group {
+        width: 100%;
+        margin-bottom: 15px;
+    }
+
+    /* Labels menores e legíveis */
+    .manutencao-form .form-group label {
+        font-size: 16px;
+        margin-bottom: 6px;
+    }
+
+    /* Inputs ocupam 100% */
+    .manutencao-form input,
+    .manutencao-form textarea,
+    .manutencao-form select {
+        width: 100%;
+        font-size: 14px;
+        padding: 10px 12px;
+    }
+
+    /* Botão enviar e selecionar brinquedo */
+    .btn-enviar,
     .btn-selecionar-brinquedo {
         width: 100%;
-        padding: 14px 0;
         font-size: 15px;
+        padding: 14px 0;
     }
 
     /* Card do brinquedo selecionado */
     .brinquedo-card {
-        max-width: 100%;
+        display: flex;
         flex-direction: row;
         align-items: center;
-        padding: 10px;
         gap: 12px;
+        width: 100%;
+        max-width: 100%;
+        padding: 10px;
     }
 
     .brinquedo-card img {
-        width: 80px;
-        height: 80px;
+        width: 70px;
+        height: 70px;
+        object-fit: cover;
+        border-radius: 8px;
     }
 
     .brinquedo-card span {
         font-size: 14px;
+        flex: 1;
     }
 
     .remove-brinquedo {
-        top: 0;
-        right: 0;
-        width: 22px;
-        height: 22px;
-        font-size: 16px;
+        width: 24px;
+        height: 24px;
+        font-size: 14px;
     }
 
     /* Upload de fotos */
     .fotos-group {
-        grid-column: 1fr;
+        width: 100%;
     }
 
     .upload-card {
+        width: 100%;
         max-width: 100%;
         padding: 18px;
+        flex-direction: column;
+        text-align: center;
     }
 
     .upload-icon {
-        font-size: 30px;
+        font-size: 28px;
     }
 
     .upload-card strong {
@@ -1027,13 +1052,15 @@
         font-size: 12px;
     }
 
+    /* Preview das fotos */
     .upload-preview {
+        justify-content: flex-start;
         gap: 10px;
     }
 
     .preview-item {
-        width: 70px;
-        height: 70px;
+        width: 60px;
+        height: 60px;
     }
 
     .preview-item button {
@@ -1042,62 +1069,33 @@
         font-size: 12px;
     }
 
-    /* Inputs */
-    .manutencao-form input,
-    .manutencao-form textarea,
-    .manutencao-form select {
-        font-size: 14px;
-        padding: 10px;
+    /* Ajuste do header */
+    .manutencao-header h1 {
+        font-size: 24px;
     }
 
-    /* Labels */
-    .manutencao-form .form-group label {
-        font-size: 16px;
+    .manutencao-header p {
+        font-size: 15px;
     }
-}
 
-@media (max-width: 600px) {
-    .manutencao-form {
-        padding: 20px;
+    /* Ajuste das tabs */
+    .manutencao-tabs {
+        flex-direction: column;
         gap: 10px;
     }
 
-    .btn-enviar,
-    .btn-selecionar-brinquedo {
+    .tab-btn {
+        width: 100%;
         font-size: 14px;
         padding: 12px 0;
     }
 
-    .brinquedo-card img {
-        width: 70px;
-        height: 70px;
-    }
-
-    .brinquedo-card span {
-        font-size: 13px;
-    }
-
-    .upload-card {
-        padding: 16px;
-    }
-
-    .upload-icon {
-        font-size: 28px;
-    }
-
-    .upload-card strong {
-        font-size: 13px;
-    }
-
-    .upload-card span {
-        font-size: 11px;
-    }
-
-    .preview-item {
-        width: 60px;
-        height: 60px;
+    /* Breadcrumb menor */
+    .breadcrumb {
+        font-size: 0.8rem;
     }
 }
+
 
 
 </style>
