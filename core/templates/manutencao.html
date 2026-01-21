@@ -15,15 +15,15 @@
     margin: 0 auto;
 }
 
-
-/* ===== BREADCRUMB ===== */
+/* ======== BREADCRUMB RESPONSIVO ======== */
 .breadcrumb {
-    max-width: 1200px;
-    margin: 30px auto 20px;
     display: flex;
+    flex-wrap: wrap; /* permite quebrar linhas no mobile */
     align-items: center;
     gap: 8px;
     font-size: 0.95rem;
+    margin: 30px auto 20px;
+    max-width: 1200px;
 }
 
 .breadcrumb a {
@@ -39,13 +39,38 @@
 
 .breadcrumb span {
     color: #888;
+    position: relative;
 }
 
+/* Adiciona a seta apenas entre os itens, exceto o último */
 .breadcrumb span:not(:last-child)::after {
     content: "›";
-    margin-left: 8px;
+    margin-left: 6px;
+    margin-right: 6px;
     color: #bbb;
+    font-size: 0.9rem;
 }
+
+/* ======= MOBILE ======= */
+@media (max-width: 600px) {
+    .breadcrumb {
+        font-size: 0.8rem;
+        gap: 4px;           /* menos espaço entre itens */
+    }
+
+    .breadcrumb span:not(:last-child)::after {
+        margin-left: 4px;
+        margin-right: 4px;
+    }
+
+    .breadcrumb a,
+    .breadcrumb span {
+        white-space: nowrap; /* evita quebrar palavras */
+        overflow: hidden;    /* esconde overflow */
+        text-overflow: ellipsis; /* mostra "..." se necessário */
+    }
+}
+
 
 /* ======= CABEÇALHO ======= */
 .manutencao-header {
@@ -1089,33 +1114,6 @@
         font-size: 14px;
         padding: 12px 0;
     }
-
-    /* Breadcrumb menor */
-    .breadcrumb {
-        font-size: 0.8rem;
-    }
-}
-
-
-/* ======= MOBILE ======= */
-@media (max-width: 600px) {
-    .breadcrumb {
-        font-size: 0.8rem;
-        gap: 4px;           /* menos espaço entre itens */
-    }
-
-    .breadcrumb span:not(:last-child)::after {
-        margin-left: 4px;
-        margin-right: 4px;
-    }
-
-    .breadcrumb a,
-    .breadcrumb span {
-        white-space: nowrap; /* evita quebrar palavras */
-        overflow: hidden;    /* esconde overflow */
-        text-overflow: ellipsis; /* mostra "..." se necessário */
-    }
-}
 
 
 </style>
