@@ -553,6 +553,54 @@ nav a.btn-login {
   }
 }
 
+/* ===== FLOAT STACK ===== */
+.float-stack {
+    position: fixed;
+    right: 25px;
+    bottom: 25px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    z-index: 10000;
+}
+
+/* BASE */
+.float-btn {
+    width: 58px;
+    height: 58px;
+    border-radius: 50%;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    position: relative;
+    box-shadow: 0 6px 15px rgba(0,0,0,.25);
+    transition: transform .25s ease;
+}
+
+.float-btn:hover {
+    transform: scale(1.08);
+}
+
+/* BADGE */
+.float-btn .badge {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    background: #dc3545;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 6px;
+    border-radius: 999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
 
 
     /* ===== FLOAT BUTTON MANUTENÇÃO ===== */
@@ -683,23 +731,15 @@ nav a.btn-login {
     padding: 4px 7px;
     border-radius: 20px;
 
+/* MOBILE */
 @media (max-width: 768px) {
-    .float-pedidos {
+    .float-stack {
         right: 16px;
-        bottom: 200px; /* mantém pedidos acima de tudo no mobile */
+        bottom: 16px;
+        gap: 14px;
     }
-
-    .float-carrinho {
-        right: 16px;
-        bottom: 120px;
-    }
-
-    .float-manutencao {
-        right: 16px;
-        bottom: 25px;
-    }
-
 }
+
 
 .float-pedidos .badge {
     position: absolute;
@@ -1052,42 +1092,31 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 </script>
 
+<div class="float-stack">
 
 {% if user.is_authenticated and tem_pedidos_ativos|default:false %}
-<a href="{% url 'meus_pedidos' %}" class="float-pedidos">
+<a href="{% url 'meus_pedidos' %}" class="float-btn float-pedidos">
     <i class="fa-solid fa-box"></i>
-    <span class="badge">{{ total_pedidos_ativos|default:0 }}</span>
+    <span class="badge">{{ total_pedidos_ativos }}</span>
 </a>
 {% endif %}
 
-
-
-{% if user.is_authenticated and mostrar_float_carrinho|default:False %}
-<a href="{% url 'carrinho' %}#carrinho"
-   id="float-carrinho"
-   class="float-carrinho">
-
+{% if user.is_authenticated and mostrar_float_carrinho|default:false %}
+<a href="{% url 'carrinho' %}#carrinho" class="float-btn float-carrinho">
     <i class="fa-solid fa-cart-shopping"></i>
-    <span id="badge-carrinho" class="badge">
-        {{ carrinho_total_itens }}
-    </span>
+    <span class="badge">{{ carrinho_total_itens }}</span>
 </a>
 {% endif %}
-
 
 {% if user.is_authenticated and tem_manutencao %}
 <a href="{% url 'manutencoes' %}?tab=lista#cab"
-   class="float-manutencao
-   {% if manutencao_andamento > 0 %} andamento {% endif %}">
-
+   class="float-btn float-manutencao {% if manutencao_andamento > 0 %} andamento {% endif %}">
     <i class="fa-solid fa-screwdriver-wrench"></i>
-
-    <span class="badge">
-        {{ manutencao_abertas }}
-    </span>
+    <span class="badge">{{ manutencao_abertas }}</span>
 </a>
 {% endif %}
 
+</div>
 
 
 </body>
