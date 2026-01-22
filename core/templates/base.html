@@ -613,7 +613,7 @@ nav a.btn-login {
 /* ===== FLOAT BUTTON CARRINHO ===== */
 .float-carrinho {
     position: fixed;
-    bottom: 95px; /* acima do botão de manutenção */
+    bottom: 100px; /* acima do botão de manutenção */
     right: 25px;
     width: 58px;
     height: 58px;
@@ -650,10 +650,11 @@ nav a.btn-login {
 }
 
 
+/* ===== FLOAT BUTTON PEDIDOS ===== */
 .float-pedidos {
     position: fixed;
     right: 18px;
-    bottom: 160px; /* 👈 acima da manutenção */
+    bottom: 180px; /* 👈 acima do carrinho */
     width: 58px;
     height: 58px;
     border-radius: 50%;
@@ -663,7 +664,7 @@ nav a.btn-login {
     align-items: center;
     justify-content: center;
     box-shadow: 0 10px 30px rgba(13,110,253,.45);
-    z-index: 999;
+    z-index: 10001; /* maior que carrinho e manutenção */
     font-size: 1.4rem;
 }
 
@@ -671,11 +672,33 @@ nav a.btn-login {
     transform: scale(0.92);
 }
 
+.float-pedidos .badge {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    background: #dc3545;
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 4px 7px;
+    border-radius: 20px;
+
 @media (max-width: 768px) {
     .float-pedidos {
         right: 16px;
-        bottom: 175px;
+        bottom: 200px; /* mantém pedidos acima de tudo no mobile */
     }
+
+    .float-carrinho {
+        right: 16px;
+        bottom: 120px;
+    }
+
+    .float-manutencao {
+        right: 16px;
+        bottom: 25px;
+    }
+
 }
 
 .float-pedidos .badge {
