@@ -2663,6 +2663,7 @@ function atualizarProdutos(url) {
                 // ⭐ PONTO CRÍTICO: Chama a função IMEDIATAMENTE após inserir o HTML
                 // Passamos 'gridAtual' como escopo para ser mais performático
                 renderizarTodasEstrelas(gridAtual);
+                igualarAlturaCards();
             }
 
             // Atualiza Paginação se existir
@@ -2877,7 +2878,13 @@ function carregarProdutos(params = {}) {
 
     if (params.ordenar) {
         url.searchParams.set('ordenar', params.ordenar);
-        url.searchParams.delete('page');
+        url.searchParams.delete('page'); // reset da página
+    }
+
+    // Garantir que o filtro atual esteja sempre
+    const filtroAtivo = document.querySelector('#filtros-bar .filtro-btn.ativo');
+    if (filtroAtivo && !params.ordenar) {
+        url.searchParams.set('ordenar', filtroAtivo.dataset.order);
     }
 
     fetch(url)
@@ -2891,18 +2898,27 @@ function carregarProdutos(params = {}) {
             document.querySelector('#paginacao-wrapper').innerHTML =
                 doc.querySelector('#paginacao-wrapper').innerHTML;
 
-            document.querySelector('#filtros-bar').innerHTML =
-                doc.querySelector('#filtros-bar').innerHTML;
-
-            history.pushState(null, '', url);
-
-            // ⭐ correto
             renderizarTodasEstrelas(document.querySelector('#grid-cards'));
-
-            // Depois de trocar o HTML
             renderizarMoedas(document.querySelector('#grid-cards'));
+            igualarAlturaCards();
+        })
+        .catch(err => console.error("Erro ao carregar produtos:", err));
+}
 
-        });
+function igualarAlturaCards() {
+    const cards = document.querySelectorAll('.card-produto');
+    let alturaMax = 0;
+
+    // Reset para medir corretamente
+    cards.forEach(card => card.style.height = 'auto');
+
+    // Descobre a maior altura
+    cards.forEach(card => {
+        if (card.offsetHeight > alturaMax) alturaMax = card.offsetHeight;
+    });
+
+    // Aplica a altura máxima a todos
+    cards.forEach(card => card.style.height = alturaMax + 'px');
 }
 
 
