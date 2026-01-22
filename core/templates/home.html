@@ -2418,43 +2418,56 @@ body {
 
 <script>
 
-function scrollParaProdutos() {
-    const container = document.querySelector('.produto-container');
-    if (!container) return;
 
-    const y = container.getBoundingClientRect().top + window.scrollY - 80;
-    window.scrollTo({ top: y, behavior: 'smooth' });
-}
-
-
+/* ======================================================
+   💰 MOEDA
+====================================================== */
 function formatarMoedaBR(valor) {
-    if (valor === null || valor === undefined) {
-        return '0,00';
-    }
-
-    // Normaliza: "1.234,56" → "1234.56"
-    const normalizado = valor
-        .toString()
-        .replace(/\./g, '')
-        .replace(',', '.');
-
+    if (valor === null || valor === undefined) return '0,00';
+    const normalizado = valor.toString().replace(/\./g, '').replace(',', '.');
     const numero = Number(normalizado);
-
     if (isNaN(numero)) return '0,00';
-
-    return numero.toLocaleString('pt-BR', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-    });
+    return numero.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
 }
+
 function renderizarMoedas(root = document) {
     root.querySelectorAll('.money').forEach(el => {
-        const valor = el.dataset.valor;
-
-        if (valor !== undefined && valor !== null && valor !== '') {
-            el.textContent = 'R$ ' + formatarMoedaBR(valor);
+        if (el.dataset.valor) {
+            el.textContent = 'R$ ' + formatarMoedaBR(el.dataset.valor);
         }
     });
+}
+
+/* ======================================================
+   📏 ALTURA DOS CARDS (PRODUÇÃO SAFE)
+====================================================== */
+function igualarAlturaCards() {
+    const cards = document.querySelectorAll('.card-produto');
+    if (!cards.length) return;
+
+    let imagensPendentes = [];
+    cards.forEach(card => {
+        const img = card.querySelector('img');
+        if (img && !img.complete) imagensPendentes.push(img);
+    });
+
+    function aplicar() {
+        let max = 0;
+        cards.forEach(c => c.style.height = 'auto');
+        cards.forEach(c => max = Math.max(max, c.offsetHeight));
+        cards.forEach(c => c.style.height = max + 'px');
+    }
+
+    if (!imagensPendentes.length) aplicar();
+    else {
+        let carregadas = 0;
+        imagensPendentes.forEach(img => {
+            img.addEventListener('load', () => {
+                carregadas++;
+                if (carregadas === imagensPendentes.length) aplicar();
+            });
+        });
+    }
 }
 
 document.addEventListener("DOMContentLoaded", function() {
@@ -2665,55 +2678,60 @@ function renderizarTodasEstrelas(root = document) {
     });
 }
 
-// ===============================
-// ⭐ 5. AJAX – ATUALIZA PRODUTOS E RE-RENDERIZA
-// ===============================
-function atualizarProdutos(url) {
-    fetch(url)
-        .then(res => res.text())
-        .then(html => {
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(html, "text/html");
 
-            const gridAtual = document.querySelector("#grid-cards");
-            const gridNovo = doc.querySelector("#grid-cards");
-
-            if (gridAtual && gridNovo) {
-                // Troca o conteúdo HTML
-                gridAtual.innerHTML = gridNovo.innerHTML;
-
-                // ⭐ PONTO CRÍTICO: Chama a função IMEDIATAMENTE após inserir o HTML
-                // Passamos 'gridAtual' como escopo para ser mais performático
-                renderizarTodasEstrelas(gridAtual);
-                igualarAlturaCards();
-            }
-
-            // Atualiza Paginação se existir
-            const pagAtual = document.querySelector("#paginacao-wrapper");
-            const pagNova = doc.querySelector("#paginacao-wrapper");
-            if (pagAtual && pagNova) {
-                pagAtual.innerHTML = pagNova.innerHTML;
-                // Se tiver função de eventos de paginação, chame aqui:
-                // adicionarEventosPaginacao();
-            }
-        })
-        .catch(err => console.error("Erro ao filtrar:", err));
+/* ======================================================
+   🔄 AJAX PRODUTOS
+====================================================== */
+function scrollParaProdutos() {
+    const c = document.querySelector('#produtos-container');
+    if (!c) return;
+    window.scrollTo({ top: c.getBoundingClientRect().top + window.scrollY - 80, behavior: 'smooth' });
 }
 
+function carregarProdutos(params = {}) {
+    const url = new URL(window.location.href);
+    if (params.page) url.searchParams.set('page', params.page);
+    if (params.ordenar) {
+        url.searchParams.set('ordenar', params.ordenar);
+        url.searchParams.delete('page');
+    }
 
-// ===============================
-// ⭐ 7. INICIALIZAÇÃO
-// ===============================
+    fetch(url)
+        .then(r => r.text())
+        .then(html => {
+            const doc = new DOMParser().parseFromString(html, 'text/html');
+            document.querySelector('#grid-cards').innerHTML = doc.querySelector('#grid-cards').innerHTML;
+            document.querySelector('#paginacao-wrapper').innerHTML = doc.querySelector('#paginacao-wrapper').innerHTML;
+
+            renderizarTodasEstrelas(document);
+            renderizarMoedas(document);
+
+            requestAnimationFrame(() => {
+                igualarAlturaCards();
+                scrollParaProdutos();
+            });
+        });
+}
+
+/* ======================================================
+   🚀 INIT GLOBAL
+====================================================== */
 document.addEventListener("DOMContentLoaded", () => {
-    // 1. Renderiza no carregamento inicial da página
     renderizarTodasEstrelas();
+    renderizarMoedas();
+    igualarAlturaCards();
 
-      renderizarMoedas();
-
-
-    // 3. Centraliza Grid (CSS via JS opcional)
-    const grid = document.getElementById('grid-cards');
-    if (grid) grid.style.justifyContent = 'center';
+    // rotating messages (safe)
+    const msgs = document.querySelectorAll('.rotating-messages .message');
+    if (msgs.length) {
+        let i = 0;
+        msgs[0].classList.add('active');
+        setInterval(() => {
+            msgs[i].classList.remove('active');
+            i = (i + 1) % msgs.length;
+            msgs[i].classList.add('active');
+        }, 5000);
+    }
 });
 
 // ===============================
@@ -2889,96 +2907,24 @@ function rotateMessages() {
 
 // Troca a cada 5 segundos
 setInterval(rotateMessages, 5000)
-
-
-function carregarProdutos(params = {}) {
-    const url = new URL(window.location.href);
-
-    if (params.page) {
-        url.searchParams.set('page', params.page);
+document.addEventListener('click', e => {
+    const btn = e.target.closest('.page-btn');
+    if (btn) {
+        e.preventDefault();
+        carregarProdutos({ page: btn.dataset.page });
+        return;
     }
 
-    if (params.ordenar) {
-        url.searchParams.set('ordenar', params.ordenar);
-        url.searchParams.delete('page'); // reset da página
-    }
-
-    // Garantir que o filtro atual esteja sempre
-    const filtroAtivo = document.querySelector('#filtros-bar .filtro-btn.ativo');
-    if (filtroAtivo && !params.ordenar) {
-        url.searchParams.set('ordenar', filtroAtivo.dataset.order);
-    }
-
-    fetch(url)
-    .then(res => res.text())
-    .then(html => {
-        const doc = new DOMParser().parseFromString(html, 'text/html');
-
-        const gridAtual = document.querySelector('#grid-cards');
-        const pagAtual = document.querySelector('#paginacao-wrapper');
-
-        gridAtual.innerHTML = doc.querySelector('#grid-cards').innerHTML;
-        pagAtual.innerHTML = doc.querySelector('#paginacao-wrapper').innerHTML;
-
-        renderizarTodasEstrelas(gridAtual);
-        renderizarMoedas(gridAtual);
-        igualarAlturaCards();
-
-        // ⭐⭐⭐ ISSO RESOLVE O “CAIR NAS PROMOÇÕES”
-        scrollParaProdutos();
-    })
-        .catch(err => console.error("Erro ao carregar produtos:", err));
-}
-
-function igualarAlturaCards() {
-    const cards = document.querySelectorAll('.card-produto');
-    let alturaMax = 0;
-
-    // Reset para medir corretamente
-    cards.forEach(card => card.style.height = 'auto');
-
-    // Descobre a maior altura
-    cards.forEach(card => {
-        if (card.offsetHeight > alturaMax) alturaMax = card.offsetHeight;
-    });
-
-    // Aplica a altura máxima a todos
-    cards.forEach(card => card.style.height = alturaMax + 'px');
-}
-
-document.addEventListener('click', function (e) {
-    let target = e.target;
-
-    // ⚠️ Se clicar no texto, sobe até o elemento pai
-    if (target.nodeType === Node.TEXT_NODE) {
-        target = target.parentElement;
-    }
-
-    const btn = target.closest('.page-btn');
-    if (!btn) return;
-
-    e.preventDefault();
-
-    const page = btn.getAttribute('data-page');
-    if (!page) return;
-
-    carregarProdutos({ page });
-});
-
-document.addEventListener('click', function (e) {
     const filtro = e.target.closest('#filtros-bar .filtro-btn');
-    if (!filtro) return;
-
-    e.preventDefault();
-
-    // classe ativa
-    document.querySelectorAll('#filtros-bar .filtro-btn')
-        .forEach(b => b.classList.remove('ativo'));
-    filtro.classList.add('ativo');
-
-    const ordenar = filtro.dataset.order;
-    carregarProdutos({ ordenar });
+    if (filtro) {
+        e.preventDefault();
+        document.querySelectorAll('#filtros-bar .filtro-btn')
+            .forEach(b => b.classList.remove('ativo'));
+        filtro.classList.add('ativo');
+        carregarProdutos({ ordenar: filtro.dataset.order });
+    }
 });
+
 
 
 </script>
