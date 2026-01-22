@@ -2080,11 +2080,11 @@ body {
         <span class="page-atual">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
 
         {% if page_obj.has_next %}
-                    <a class="page-btn"
-           data-page="{{ page_obj.next_page_number }}">
-           Próxima »
-        </a>
-
+          <a href="?page={{ page_obj.next_page_number }}&ordenar={{ ordenar }}"
+               class="page-btn"
+               data-page="{{ page_obj.next_page_number }}">
+               Próxima »
+            </a>
         {% endif %}
     </div>
 </div>
@@ -2907,24 +2907,37 @@ function rotateMessages() {
 
 // Troca a cada 5 segundos
 setInterval(rotateMessages, 5000)
+
+
+
+
 document.addEventListener('click', e => {
     const btn = e.target.closest('.page-btn');
     if (btn) {
         e.preventDefault();
-        carregarProdutos({ page: btn.dataset.page });
+
+        const page = btn.dataset.page;
+        if (!page) {
+            // fallback seguro (produção)
+            window.location.href = btn.href;
+            return;
+        }
+
+        carregarProdutos({ page });
         return;
     }
 
     const filtro = e.target.closest('#filtros-bar .filtro-btn');
     if (filtro) {
         e.preventDefault();
+
         document.querySelectorAll('#filtros-bar .filtro-btn')
             .forEach(b => b.classList.remove('ativo'));
         filtro.classList.add('ativo');
+
         carregarProdutos({ ordenar: filtro.dataset.order });
     }
 });
-
 
 
 </script>
