@@ -452,6 +452,13 @@ class Pedido(Prime):
     valor_desconto = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     total_liquido = models.DecimalField(max_digits=10, decimal_places=2)
 
+    forma_pagamento = models.CharField(
+        max_length=20,
+        choices=FORMA_PAGAMENTO_CHOICES,
+        null=True,
+        blank=True
+    )
+
     cupom_codigo = models.CharField(max_length=20, blank=True, null=True)
     cupom_percentual = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
 
@@ -486,6 +493,7 @@ class ItemPedido(Prime):
     preco_unitario = models.DecimalField(max_digits=10, decimal_places=2)
     quantidade = models.PositiveIntegerField()
     subtotal = models.DecimalField(max_digits=10, decimal_places=2)
+
 
     def __str__(self):
         return f"{self.nome_item} (x{self.quantidade})"

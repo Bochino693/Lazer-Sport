@@ -172,7 +172,6 @@ class CupomAdmin(admin.ModelAdmin):
     search_fields = ('codigo',)
 
 
-
 class ManutencaoImagemInline(admin.TabularInline):
     model = ManutencaoImagem
     extra = 1
@@ -273,10 +272,12 @@ class ItemCarrinhoInline(GenericTabularInline):
 
     def preco_unitario_admin(self, obj):
         return f"R$ {obj.preco_unitario:.2f}"
+
     preco_unitario_admin.short_description = "Preço Unitário"
 
     def subtotal_admin(self, obj):
         return f"R$ {obj.subtotal:.2f}"
+
     subtotal_admin.short_description = "Subtotal"
 
 
@@ -310,14 +311,17 @@ class CarrinhoAdmin(admin.ModelAdmin):
 
     def total_bruto_admin(self, obj):
         return f"R$ {obj.total_bruto:.2f}"
+
     total_bruto_admin.short_description = "Total Bruto"
 
     def desconto_admin(self, obj):
         return f"- R$ {obj.valor_desconto:.2f}"
+
     desconto_admin.short_description = "Desconto"
 
     def total_liquido_admin(self, obj):
         return f"R$ {obj.total_liquido:.2f}"
+
     total_liquido_admin.short_description = "Total Líquido"
 
     def has_change_permission(self, request, obj=None):
@@ -326,15 +330,16 @@ class CarrinhoAdmin(admin.ModelAdmin):
         return super().has_change_permission(request, obj)
 
 
-
 # ===========================
 # ADMIN DO ITEM DO PEDIDO
 # ===========================
+from django.contrib import admin
+
 class ItemPedidoInline(admin.TabularInline):
     model = ItemPedido
-    extra = 0  # sem linhas extras
-    readonly_fields = ('nome_item', 'tipo_item', 'preco_unitario', 'quantidade', 'subtotal')
-    can_delete = False  # apenas leitura no inline, se desejar
+    extra = 1  # Começa com uma linha vazia para facilitar a criação
+    readonly_fields = ()
+    can_delete = True
 
 # ===========================
 # ADMIN DO PEDIDO
@@ -342,19 +347,20 @@ class ItemPedidoInline(admin.TabularInline):
 @admin.register(Pedido)
 class PedidoAdmin(admin.ModelAdmin):
     list_display = (
-        'id', 'cliente_usuario', 'status', 'total_bruto',
-        'valor_desconto', 'total_liquido', 'cupom_codigo', 'criacao'
+        'id', 'cliente_usuario', 'status', 'forma_pagamento',
+        'total_bruto', 'valor_desconto', 'total_liquido', 'cupom_codigo', 'criacao'
     )
-    list_filter = ('status', 'criacao', 'forma_pagamento')
+    list_filter = ('status', 'forma_pagamento', 'criacao')
     search_fields = ('id', 'cliente__user__username', 'cupom_codigo')
-    readonly_fields = ('total_bruto', 'valor_desconto', 'total_liquido')
+    readonly_fields = ('total_bruto', 'valor_desconto', 'total_liquido')  # snapshot financeiro
     inlines = [ItemPedidoInline]
     ordering = ('-criacao',)
-
 
     def cliente_usuario(self, obj):
         return obj.cliente.user.username if obj.cliente else "Guest"
     cliente_usuario.short_description = "Cliente"
+
+
 
 # ===========================
 # ADMIN DO ITEM DO PEDIDO (opcional separado)
