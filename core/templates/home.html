@@ -1946,75 +1946,6 @@ body {
 </section>
 
 
-<!-- ======= PROMOÇÕES ======= -->
-<section id="promocoes-section" class="promocoes-section">
-  <h2 class="section-title">Promoções</h2>
-    <p class="section-subtitle">
-  Ofertas exclusivas com descontos imperdíveis em brinquedos selecionados. Aproveite antes que acabe!
-</p>
-
-
-  <div class="scroll-wrapper">
-    <button class="scroll-btn left" id="scroll-left-promocoes">&#10094;</button>
-
-    <div class="scroll-container" id="scroll-container-promocoes">
-      {% for promo in promocoes %}
-      <a href="{% url 'promocao' promo.id %}#promocao-pagina" class="categoria-link">
-        <div class="categoria-card">
-
-          <!-- IMAGEM -->
-          {% if promo.brinquedos.imagem_brinquedo %}
-            <a href="{% url 'promocao' promo.id %}#promocao-pagina">
-                <img src="{{ promo.brinquedos.imagem_brinquedo.url }}" alt="{{ promo.descricao }}">
-            </a>
-          {% else %}
-            <img src="{% static 'images/default_promocao.jpg' %}" alt="Promoção sem imagem">
-          {% endif %}
-
-          <!-- INFORMACOES -->
-          <div class="categoria-info">
-            <h3>{{ promo.descricao }}</h3>
-
-            <p class="nome-brinquedo">
-              {{ promo.brinquedos.nome_brinquedo }}
-            </p>
-
-             <!-- PREÇOS PROMO -->
-            <div class="preco-box">
-                <p class="preco-original">
-                    De:
-                    <span class="money"
-                          data-valor="{{ promo.brinquedos.valor_brinquedo }}">
-                    </span>
-                </p>
-
-                <p class="preco-promocao">
-                    Por:
-                    <strong class="money"
-                            data-valor="{{ promo.preco_promocao }}">
-                    </strong>
-                </p>
-            </div>
-
-
-            <!-- BOTÃO -->
-            <a href="{% url 'promocao' promo.id %}#promocao-pagina" class="btn-vermais">Ver mais</a>
-
-          </div>
-        </div>
-      </a>
-      {% empty %}
-        <div class="empty-message">Nenhuma promoção disponível.</div>
-      {% endfor %}
-    </div>
-
-    <button class="scroll-btn right" id="scroll-right-promocoes">&#10095;</button>
-  </div>
-</section>
-
-<!-- Div invisível para espaçamento -->
-<div class="espacador"></div>
-
 
 <!-- ======= PRODUTOS ======= -->
 <section id="brinquedos" class="destaques">
@@ -2140,6 +2071,80 @@ body {
     </div>
 </div>
 </section>
+
+
+
+
+
+
+<!-- ======= PROMOÇÕES ======= -->
+<section id="promocoes-section" class="promocoes-section">
+  <h2 class="section-title">Promoções</h2>
+    <p class="section-subtitle">
+  Ofertas exclusivas com descontos imperdíveis em brinquedos selecionados. Aproveite antes que acabe!
+</p>
+
+
+  <div class="scroll-wrapper">
+    <button class="scroll-btn left" id="scroll-left-promocoes">&#10094;</button>
+
+    <div class="scroll-container" id="scroll-container-promocoes">
+      {% for promo in promocoes %}
+      <a href="{% url 'promocao' promo.id %}#promocao-pagina" class="categoria-link">
+        <div class="categoria-card">
+
+          <!-- IMAGEM -->
+          {% if promo.brinquedos.imagem_brinquedo %}
+            <a href="{% url 'promocao' promo.id %}#promocao-pagina">
+                <img src="{{ promo.brinquedos.imagem_brinquedo.url }}" alt="{{ promo.descricao }}">
+            </a>
+          {% else %}
+            <img src="{% static 'images/default_promocao.jpg' %}" alt="Promoção sem imagem">
+          {% endif %}
+
+          <!-- INFORMACOES -->
+          <div class="categoria-info">
+            <h3>{{ promo.descricao }}</h3>
+
+            <p class="nome-brinquedo">
+              {{ promo.brinquedos.nome_brinquedo }}
+            </p>
+
+             <!-- PREÇOS PROMO -->
+            <div class="preco-box">
+                <p class="preco-original">
+                    De:
+                    <span class="money"
+                          data-valor="{{ promo.brinquedos.valor_brinquedo }}">
+                    </span>
+                </p>
+
+                <p class="preco-promocao">
+                    Por:
+                    <strong class="money"
+                            data-valor="{{ promo.preco_promocao }}">
+                    </strong>
+                </p>
+            </div>
+
+
+            <!-- BOTÃO -->
+            <a href="{% url 'promocao' promo.id %}#promocao-pagina" class="btn-vermais">Ver mais</a>
+
+          </div>
+        </div>
+      </a>
+      {% empty %}
+        <div class="empty-message">Nenhuma promoção disponível.</div>
+      {% endfor %}
+    </div>
+
+    <button class="scroll-btn right" id="scroll-right-promocoes">&#10095;</button>
+  </div>
+</section>
+
+<!-- Div invisível para espaçamento -->
+<div class="espacador"></div>
 
 <!-- Div invisível para espaçamento -->
 <div class="espacador"></div>
