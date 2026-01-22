@@ -2921,15 +2921,23 @@ function igualarAlturaCards() {
     cards.forEach(card => card.style.height = alturaMax + 'px');
 }
 
+document.addEventListener('click', function (e) {
+    let target = e.target;
 
-document.addEventListener('click', function(e) {
-    const btn = e.target.closest('.page-btn');
+    // ⚠️ Se clicar no texto, sobe até o elemento pai
+    if (target.nodeType === Node.TEXT_NODE) {
+        target = target.parentElement;
+    }
+
+    const btn = target.closest('.page-btn');
     if (!btn) return;
 
-    const page = btn.dataset.page;
-    if (page) {
-        carregarProdutos({ page });
-    }
+    e.preventDefault();
+
+    const page = btn.getAttribute('data-page');
+    if (!page) return;
+
+    carregarProdutos({ page });
 });
 
 document.addEventListener('click', function (e) {
