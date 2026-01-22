@@ -733,7 +733,6 @@ nav a.btn-login {
     }
 }
 
-
 .float-pedidos .badge {
     position: absolute;
     top: -6px;
@@ -792,6 +791,38 @@ nav a.btn-login {
     color: #fff;
     text-decoration: underline;
     pointer-events: auto; /* garante que seja clicável */
+}
+
+
+/* ===== FLOAT BUTTON ADMIN (NOVO / LIMPO) ===== */
+.float-admin-panel {
+    background: linear-gradient(135deg, #7c3aed, #5b21b6); /* roxo elegante */
+    color: #ffffff;
+    font-size: 22px;
+    box-shadow: 0 6px 18px rgba(124,58,237,0.45);
+    transition: transform .25s ease, box-shadow .25s ease;
+}
+
+/* Hover igual aos outros */
+.float-admin-panel:hover {
+    transform: scale(1.08);
+    box-shadow: 0 10px 28px rgba(124,58,237,0.65);
+}
+
+/* Clique */
+.float-admin-panel:active {
+    transform: scale(0.92);
+}
+
+/* Ícone */
+.float-admin-panel i {
+    font-size: 22px;
+}
+.float-btn.float-admin-panel {
+    background: linear-gradient(135deg, #7c3aed, #5b21b6) !important;
+    color: #fff;
+    font-size: 22px;
+    box-shadow: 0 10px 28px rgba(124,58,237,.55);
 }
 
   </style>
@@ -1079,7 +1110,16 @@ function atualizarBadgeCarrinho(total) {
 
 <div class="float-stack">
 
-    <!-- 🔼 MAIS ALTO: PEDIDOS -->
+ {% if user.is_authenticated and user.is_staff %}
+<a href="/system/"
+   id="float-admin-panel"
+   class="float-btn float-admin-panel"
+   title="Área administrativa">
+    <i class="fa-solid fa-crown"></i>
+</a>
+{% endif %}
+
+
     {% if user.is_authenticated %}
     <a href="{% url 'meus_pedidos' %}" class="float-btn float-pedidos">
         <i class="fa-solid fa-box"></i>
@@ -1087,7 +1127,6 @@ function atualizarBadgeCarrinho(total) {
     </a>
     {% endif %}
 
-    <!-- 🔽 MEIO: CARRINHO -->
     {% if user.is_authenticated and mostrar_float_carrinho %}
     <a href="{% url 'carrinho' %}#bread" class="float-btn float-carrinho">
         <i class="fa-solid fa-cart-shopping"></i>
@@ -1095,7 +1134,6 @@ function atualizarBadgeCarrinho(total) {
     </a>
     {% endif %}
 
-    <!-- ⬇️ MAIS BAIXO: MANUTENÇÕES -->
     {% if user.is_authenticated and tem_manutencao %}
     <a href="{% url 'manutencoes' %}?tab=lista#cab"
        class="float-btn float-manutencao {% if manutencao_andamento > 0 %} andamento {% endif %}">
