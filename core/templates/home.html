@@ -1774,7 +1774,25 @@ body {
     background: #ffffff; /* Fundo branco */
 }
 
+#produtos-container {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+}
 
+.grid-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 30px;
+    max-width: 1200px;
+    width: 100%;
+    margin: 0 auto;
+}
+
+/* garante estabilidade visual na paginação */
+.grid-cards {
+    min-height: 600px;
+}
 </style>
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -2071,9 +2089,6 @@ body {
     </div>
 </div>
 </section>
-
-
-
 
 
 
@@ -2403,6 +2418,13 @@ body {
 
 <script>
 
+function scrollParaProdutos() {
+    const container = document.querySelector('.produto-container');
+    if (!container) return;
+
+    const y = container.getBoundingClientRect().top + window.scrollY - 80;
+    window.scrollTo({ top: y, behavior: 'smooth' });
+}
 
 
 function formatarMoedaBR(valor) {
@@ -2888,20 +2910,23 @@ function carregarProdutos(params = {}) {
     }
 
     fetch(url)
-        .then(res => res.text())
-        .then(html => {
-            const doc = new DOMParser().parseFromString(html, 'text/html');
+    .then(res => res.text())
+    .then(html => {
+        const doc = new DOMParser().parseFromString(html, 'text/html');
 
-            document.querySelector('#grid-cards').innerHTML =
-                doc.querySelector('#grid-cards').innerHTML;
+        const gridAtual = document.querySelector('#grid-cards');
+        const pagAtual = document.querySelector('#paginacao-wrapper');
 
-            document.querySelector('#paginacao-wrapper').innerHTML =
-                doc.querySelector('#paginacao-wrapper').innerHTML;
+        gridAtual.innerHTML = doc.querySelector('#grid-cards').innerHTML;
+        pagAtual.innerHTML = doc.querySelector('#paginacao-wrapper').innerHTML;
 
-            renderizarTodasEstrelas(document.querySelector('#grid-cards'));
-            renderizarMoedas(document.querySelector('#grid-cards'));
-            igualarAlturaCards();
-        })
+        renderizarTodasEstrelas(gridAtual);
+        renderizarMoedas(gridAtual);
+        igualarAlturaCards();
+
+        // ⭐⭐⭐ ISSO RESOLVE O “CAIR NAS PROMOÇÕES”
+        scrollParaProdutos();
+    })
         .catch(err => console.error("Erro ao carregar produtos:", err));
 }
 
@@ -2957,4 +2982,6 @@ document.addEventListener('click', function (e) {
 
 
 </script>
+
+
 {% endblock %}
