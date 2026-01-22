@@ -1094,7 +1094,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 <div class="float-stack">
 
-{% if user.is_authenticated our tem_pedidos_ativos %}
+{% if user.is_authenticated and tem_pedidos_ativos %}
 <a href="{% url 'meus_pedidos' %}" class="float-btn float-pedidos">
     <i class="fa-solid fa-box"></i>
     <span class="badge">{{ total_pedidos_ativos }}</span>
@@ -1102,7 +1102,7 @@ document.addEventListener("DOMContentLoaded", () => {
 {% endif %}
 
 {% if user.is_authenticated and mostrar_float_carrinho|default:false %}
-<a href="{% url 'carrinho' %}#carrinho" class="float-btn float-carrinho">
+<a href="{% url 'carrinho' %}#bread" class="float-btn float-carrinho">
     <i class="fa-solid fa-cart-shopping"></i>
     <span class="badge">{{ carrinho_total_itens }}</span>
 </a>
