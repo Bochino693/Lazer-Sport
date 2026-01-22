@@ -2007,7 +2007,12 @@ body {
       <div class="card-produto">
 
         <div class="img-area">
-          <img src="{{ brinquedo.imagem_brinquedo.url }}" alt="{{ brinquedo.nome_brinquedo }}">
+          {% if brinquedo.imagem_brinquedo %}
+              <img src="{{ brinquedo.imagem_brinquedo.url }}" alt="{{ brinquedo.nome_brinquedo }}">
+            {% else %}
+              <img src="{% static 'img/placeholder-produto.png' %}" alt="{{ brinquedo.nome_brinquedo }}">
+            {% endif %}
+
         </div>
 
         <div class="conteudo">
