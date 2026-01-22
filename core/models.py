@@ -448,9 +448,9 @@ class Pedido(Prime):
     )
 
     # 🔒 snapshot financeiro
-    total_bruto = models.DecimalField(max_digits=10, decimal_places=2)
-    valor_desconto = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    total_liquido = models.DecimalField(max_digits=10, decimal_places=2)
+    total_bruto = models.DecimalField(max_digits=10, decimal_places=2, null=True)
+    valor_desconto = models.DecimalField(max_digits=10, decimal_places=2, default=0, null=True)
+    total_liquido = models.DecimalField(max_digits=10, decimal_places=2, null=True)
 
     forma_pagamento = models.CharField(
         max_length=20,
