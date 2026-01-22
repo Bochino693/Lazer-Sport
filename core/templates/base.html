@@ -605,9 +605,7 @@ nav a.btn-login {
 
     /* ===== FLOAT BUTTON MANUTENÇÃO ===== */
 .float-manutencao {
-    position: fixed;
-    bottom: 25px;
-    right: 25px;
+
     width: 58px;
     height: 58px;
     background: #f1c40f; /* amarelo padrão */
@@ -660,9 +658,7 @@ nav a.btn-login {
 
 /* ===== FLOAT BUTTON CARRINHO ===== */
 .float-carrinho {
-    position: fixed;
-    bottom: 100px; /* acima do botão de manutenção */
-    right: 25px;
+
     width: 58px;
     height: 58px;
     background: #2ecc71; /* verde */
@@ -700,9 +696,6 @@ nav a.btn-login {
 
 /* ===== FLOAT BUTTON PEDIDOS ===== */
 .float-pedidos {
-    position: fixed;
-    right: 18px;
-    bottom: 180px; /* 👈 acima do carrinho */
     width: 58px;
     height: 58px;
     border-radius: 50%;
@@ -711,9 +704,9 @@ nav a.btn-login {
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 10px 30px rgba(13,110,253,.45);
-    z-index: 10001; /* maior que carrinho e manutenção */
     font-size: 1.4rem;
+    box-shadow: 0 10px 30px rgba(13,110,253,.45);
+    transition: transform .2s ease, box-shadow .2s ease;
 }
 
 .float-pedidos:active {
@@ -846,7 +839,7 @@ nav a.btn-login {
           <span>Bem-vindo<br>{{ user.get_full_name }}</span>
         </a>
         <div class="dropdown-menu">
-          <a href="{% url 'perfil' %}">🎯 Meu Perfil</a>
+          <a href="{% url 'perfil' %}#perfil-box">🎯 Meu Perfil</a>
           <a href="{% url 'logout' %}#logout-box">🚪 Sair</a>
         </div>
       </div>
@@ -983,7 +976,6 @@ nav a.btn-login {
 });
 
 
-
 window.addEventListener("load", function() {
     const element = document.getElementById("logout-box");
     if(element) {
@@ -991,29 +983,7 @@ window.addEventListener("load", function() {
     }
 });
 
-function criarFloatCarrinho(total) {
-    let carrinho = document.getElementById('float-carrinho');
-    if (carrinho) return; // já existe
 
-    carrinho = document.createElement('a');
-    carrinho.id = 'float-carrinho';
-    carrinho.href = '{% url "carrinho" %}';
-    carrinho.className = 'float-carrinho';
-    carrinho.innerHTML = `
-        <i class="fa-solid fa-cart-shopping"></i>
-        <span id="badge-carrinho" class="badge">${total}</span>
-    `;
-    document.body.appendChild(carrinho);
-}
-
-function atualizarBadgeCarrinho(total) {
-    let badge = document.getElementById('badge-carrinho');
-    let carrinho = document.getElementById('float-carrinho');
-
-    if (!carrinho) {
-        criarFloatCarrinho(total);
-        return;
-    }
 
     badge.innerText = total;
 
@@ -1085,36 +1055,54 @@ function mostrarToast(msg, erro = false, duracao = 3000) {
 }
 
 
-// Inicializa badge se já houver itens do contexto
-document.addEventListener("DOMContentLoaded", () => {
-    const total = {{ carrinho_total_itens|default:0 }};
-    if (total > 0) criarFloatCarrinho(total);
-});
+function atualizarBadgeCarrinho(total) {
+    const carrinhoBtn = document.querySelector('.float-carrinho');
+    if (!carrinhoBtn) return;
+
+    const badge = carrinhoBtn.querySelector('.badge');
+    if (!badge) return;
+
+    badge.innerText = total;
+
+    // efeito pulse simples
+    badge.classList.remove('pulse');
+    void badge.offsetWidth;
+    badge.classList.add('pulse');
+
+    // garante visibilidade
+    carrinhoBtn.style.display = 'flex';
+}
+
+
+
 </script>
 
 <div class="float-stack">
 
-{% if user.is_authenticated and tem_pedidos_ativos %}
-<a href="{% url 'meus_pedidos' %}" class="float-btn float-pedidos">
-    <i class="fa-solid fa-box"></i>
-    <span class="badge">{{ total_pedidos_ativos }}</span>
-</a>
-{% endif %}
+    <!-- 🔼 MAIS ALTO: PEDIDOS -->
+    {% if user.is_authenticated %}
+    <a href="{% url 'meus_pedidos' %}" class="float-btn float-pedidos">
+        <i class="fa-solid fa-box"></i>
+        <span class="badge">{{ total_pedidos_ativos }}</span>
+    </a>
+    {% endif %}
 
-{% if user.is_authenticated and mostrar_float_carrinho|default:false %}
-<a href="{% url 'carrinho' %}#bread" class="float-btn float-carrinho">
-    <i class="fa-solid fa-cart-shopping"></i>
-    <span class="badge">{{ carrinho_total_itens }}</span>
-</a>
-{% endif %}
+    <!-- 🔽 MEIO: CARRINHO -->
+    {% if user.is_authenticated and mostrar_float_carrinho %}
+    <a href="{% url 'carrinho' %}#bread" class="float-btn float-carrinho">
+        <i class="fa-solid fa-cart-shopping"></i>
+        <span class="badge">{{ carrinho_total_itens }}</span>
+    </a>
+    {% endif %}
 
-{% if user.is_authenticated and tem_manutencao %}
-<a href="{% url 'manutencoes' %}?tab=lista#cab"
-   class="float-btn float-manutencao {% if manutencao_andamento > 0 %} andamento {% endif %}">
-    <i class="fa-solid fa-screwdriver-wrench"></i>
-    <span class="badge">{{ manutencao_abertas }}</span>
-</a>
-{% endif %}
+    <!-- ⬇️ MAIS BAIXO: MANUTENÇÕES -->
+    {% if user.is_authenticated and tem_manutencao %}
+    <a href="{% url 'manutencoes' %}?tab=lista#cab"
+       class="float-btn float-manutencao {% if manutencao_andamento > 0 %} andamento {% endif %}">
+        <i class="fa-solid fa-screwdriver-wrench"></i>
+        <span class="badge">{{ manutencao_abertas }}</span>
+    </a>
+    {% endif %}
 
 </div>
 
