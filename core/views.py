@@ -1230,7 +1230,7 @@ class MeusPedidosView(LoginRequiredMixin, View):
             Pedido.objects
             .filter(cliente=perfil)
             .prefetch_related('itens')
-            .order_by('-criado_em')
+            .order_by('-criacao')
         )
 
         return render(request, 'meus_pedidos.html', {

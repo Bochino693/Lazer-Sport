@@ -1053,18 +1053,12 @@ document.addEventListener("DOMContentLoaded", () => {
 </script>
 
 
-{% if user.is_authenticated and tem_pedidos_ativos %}
-<a href="{% url 'meus_pedidos' %}"
-   class="float-pedidos">
-
+{% if user.is_authenticated and tem_pedidos_ativos|default:false %}
+<a href="{% url 'meus_pedidos' %}" class="float-pedidos">
     <i class="fa-solid fa-box"></i>
-
-    <span class="badge">
-        {{ total_pedidos_ativos }}
-    </span>
+    <span class="badge">{{ total_pedidos_ativos|default:0 }}</span>
 </a>
 {% endif %}
-
 
 
 

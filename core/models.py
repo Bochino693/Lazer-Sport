@@ -465,7 +465,9 @@ class Pedido(Prime):
     observacoes = models.TextField(blank=True)
 
     def __str__(self):
-        return f"Pedido #{self.id} - {self.cliente.user.username}"
+        if self.cliente and self.cliente.user:
+            return f"Pedido #{self.id} - {self.cliente.user.username}"
+        return f"Pedido #{self.id}"
 
 
 class ItemPedido(Prime):
