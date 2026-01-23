@@ -703,24 +703,26 @@ class RegistrarView(View):
         return render(request, self.template_name)
 
     def post(self, request):
-
         first_name = request.POST.get("first_name")
         last_name = request.POST.get("last_name")
         username = request.POST.get("username")
         email = request.POST.get("email")
         password = request.POST.get("password")
 
-        # Verificar se username já existe
+        if not all([first_name, last_name, username, email, password]):
+            messages.error(request, "Preencha todos os campos.")
+            return render(request, self.template_name)
+
         if User.objects.filter(username=username).exists():
             messages.error(request, "Nome de usuário já está em uso.")
             return render(request, self.template_name)
 
-        # Verificar se email já existe
         if User.objects.filter(email=email).exists():
             messages.error(request, "Este e-mail já está registrado.")
             return render(request, self.template_name)
 
-        # Criar usuário
+        from django.contrib.auth import authenticate, login
+
         user = User.objects.create_user(
             username=username,
             email=email,
@@ -729,11 +731,20 @@ class RegistrarView(View):
             last_name=last_name
         )
 
-        # Fazer login automático após cadastro
-        login(request, user)
+        user = authenticate(
+            request,
+            username=username,
+            password=password
+        )
 
-        messages.success(request, f"Conta criada com sucesso! Bem-vindo(a), {first_name}.")
-        return redirect("home")  # ajuste para sua rota principal
+        if user:
+            login(request, user)
+
+        messages.success(
+            request,
+            f"Conta criada com sucesso! Bem-vindo(a), {first_name}."
+        )
+        return redirect("login")
 
 
 class BrinquedoAdmin(View):
@@ -1147,6 +1158,44 @@ def confirmar_pix(request):
     del request.session['carrinho']
 
     return redirect('meus_pedidos')
+
+
+@login_required
+@require_POST
+def criar_pedido_pix(request):
+    cliente = request.user.perfil
+    carrinho = Carrinho.objects.filter(cliente=cliente).first()
+
+    if not carrinho or not carrinho.itens.exists():
+        return JsonResponse({'error': 'Carrinho vazio'}, status=400)
+
+    with transaction.atomic():
+        pedido = Pedido.objects.create(
+            cliente=cliente,
+            status='aguardando_pagamento',
+            forma_pagamento='pix',
+            total_bruto=carrinho.total_bruto,
+            valor_desconto=carrinho.valor_desconto,
+            total_liquido=carrinho.total_liquido,
+            cupom_codigo=carrinho.cupom.codigo if carrinho.cupom else None,
+            cupom_percentual=carrinho.cupom.desconto_percentual if carrinho.cupom else None
+        )
+
+        for item in carrinho.itens.all():
+            ItemPedido.objects.create(
+                pedido=pedido,
+                content_type=item.content_type,
+                object_id=item.object_id,
+                nome_item=str(item.item),
+                tipo_item=item.item.__class__.__name__.lower(),
+                preco_unitario=item.preco_unitario,
+                quantidade=item.quantidade,
+                subtotal=item.subtotal
+            )
+
+        carrinho.itens.all().delete()
+
+    return JsonResponse({'success': True, 'pedido_id': pedido.id})
 
 
 from django.contrib.contenttypes.models import ContentType

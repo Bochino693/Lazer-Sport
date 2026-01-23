@@ -438,7 +438,7 @@
         </label>
 
         <!-- ===== PIX BOX ===== -->
-<div id="pix-box" class="payment-details" style="text-align:center; display:block; padding:30px; border-radius:18px; background:#f8f9ff; box-shadow:0 10px 30px rgba(0,0,0,.08);">
+<div id="pix-box" class="payment-details" style="text-align:center; padding:30px; border-radius:18px; background:#f8f9ff; box-shadow:0 10px 30px rgba(0,0,0,.08);">
 
     <div style="margin-bottom:25px">
         <img src="{% static 'images/img.png' %}"
@@ -448,26 +448,32 @@
     </div>
 
     <div style="margin-bottom:20px">
-        <label style="font-weight:700; font-size:1.2rem; display:block; margin-bottom:8px;">PIX Copia e Cola</label>
+        <label style="font-weight:700; font-size:1.2rem; display:block; margin-bottom:8px;">
+            PIX Copia e Cola
+        </label>
+
         <input
+            id="pix-code"
             type="text"
             readonly
             value="00020126360014BR.GOV.BCB.PIX...VALOR{{ total_liquido|floatformat:2 }}"
-            onclick="this.select()"
             style="width:100%; padding:16px; font-size:1.1rem; border-radius:12px; border:2px solid #cbd5e1; text-align:center; font-weight:600; background:#fff;"
         >
     </div>
 
-    <div style="margin-bottom:25px">
-        <small id="valor-total-box" style="display:block; font-size:1.4rem; font-weight:700; color:#2563eb;">
-            Valor: R$ {{ total_liquido|floatformat:2 }}
-        </small>
-    </div>
+    <!-- BOTÃO COPIAR -->
+    <button
+        id="btn-copiar-pix"
+        onclick="copiarPix()"
+        style="padding:14px 0; font-size:1rem; font-weight:700; border-radius:12px; background:#2563eb; color:#fff; width:60%; max-width:300px; cursor:pointer;">
+        Copiar PIX
+    </button>
 
-    <button type="button"
-            onclick="marcarComoPago()"
-            class="btn-confirmar"
-            style="padding:16px 0; font-size:1.1rem; font-weight:700; border-radius:12px; background:#16a34a; color:#fff; width:60%; max-width:300px; transition:.2s; cursor:pointer;">
+    <!-- BOTÃO JÁ PAGUEI (INICIALMENTE OCULTO) -->
+    <button
+        id="btn-ja-paguei"
+        onclick="marcarComoPago()"
+        style="display:none; margin-top:18px; padding:16px 0; font-size:1.1rem; font-weight:700; border-radius:12px; background:#16a34a; color:#fff; width:60%; max-width:300px; cursor:pointer;">
         Já paguei
     </button>
 
@@ -673,8 +679,61 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
 });
-</script>
 
+
+<script>
+function copiarPix() {
+    const pixInput = document.getElementById('pix-code');
+    pixInput.select();
+    pixInput.setSelectionRange(0, 99999);
+
+    navigator.clipboard.writeText(pixInput.value).then(() => {
+        mostrarToast("PIX copiado com sucesso ✅");
+
+        // mostra o botão "Já paguei"
+        document.getElementById('btn-ja-paguei').style.display = 'inline-block';
+    });
+}
+
+function mostrarToast(texto) {
+    const toast = document.createElement('div');
+    toast.innerText = texto;
+
+    toast.style.position = 'fixed';
+    toast.style.bottom = '30px';
+    toast.style.left = '50%';
+    toast.style.transform = 'translateX(-50%)';
+    toast.style.background = '#16a34a';
+    toast.style.color = '#fff';
+    toast.style.padding = '14px 22px';
+    toast.style.borderRadius = '12px';
+    toast.style.fontWeight = '700';
+    toast.style.boxShadow = '0 10px 25px rgba(0,0,0,.25)';
+    toast.style.zIndex = '99999';
+
+    document.body.appendChild(toast);
+
+    setTimeout(() => {
+        toast.remove();
+    }, 2500);
+}
+
+
+function marcarComoPago() {
+    fetch("{% url 'criar_pedido_pix' %}", {
+        method: "POST",
+        headers: {
+            "X-CSRFToken": "{{ csrf_token }}"
+        }
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            window.location.href = "/meus-pedidos/";
+        }
+    });
+}
+</script>
 
 
 {% endblock %}
