@@ -16,7 +16,8 @@ from .models import (
     Manutencao,
     ManutencaoImagem,
     Pedido,
-    ItemPedido
+    ItemPedido,
+    EnderecoEmpresa
 )
 from django.utils.html import format_html
 from .models import ImagensSite
@@ -389,3 +390,50 @@ class EnderecoEntregaForm(forms.ModelForm):
             'cidade',
             'estado',
         ]
+
+
+@admin.register(EnderecoEmpresa)
+class EnderecoEmpresaAdmin(admin.ModelAdmin):
+    list_display = (
+        'nome',
+        'cidade',
+        'estado',
+        'cep',
+        'telefone',
+    )
+
+    list_filter = (
+        'estado',
+        'cidade',
+    )
+
+    search_fields = (
+        'nome',
+        'cep',
+        'cidade',
+        'estado',
+        'rua',
+    )
+
+    fieldsets = (
+        ('Identificação', {
+            'fields': ('nome', 'telefone')
+        }),
+        ('Endereço', {
+            'fields': (
+                'cep',
+                'rua',
+                'numero',
+                'complemento',
+                'bairro',
+                'cidade',
+                'estado',
+            )
+        }),
+        # se você adicionar latitude/longitude depois
+        # ('Geolocalização', {
+        #     'fields': ('latitude', 'longitude')
+        # }),
+    )
+
+    ordering = ('nome',)

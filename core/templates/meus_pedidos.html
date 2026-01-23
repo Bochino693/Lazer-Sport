@@ -308,6 +308,46 @@ body {
 }
 
 
+/* badge base */
+.pedido-status {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #fff;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+}
+
+/* cores por status */
+.status-criado {
+    background: #9ca3af; /* cinza */
+}
+
+.status-aguardando_pagamento {
+    background: #f59e0b; /* amarelo */
+}
+
+.status-pago {
+    background: #22c55e; /* verde */
+}
+
+.status-em_preparacao {
+    background: #3b82f6; /* azul */
+}
+
+.status-finalizado {
+    background: #16a34a; /* verde escuro */
+}
+
+.status-cancelado {
+    background: #ef4444; /* vermelho */
+}
+
 </style>
 
 <!-- 📍 Breadcrumb -->
@@ -333,6 +373,11 @@ body {
 
     {% for pedido in pedidos %}
         <div class="pedido-card">
+
+            <div class="pedido-status status-{{ pedido.status }}">
+                {{ pedido.get_status_display }}
+            </div>
+
 
             <div class="pedido-header">
                 <div class="pedido-id">

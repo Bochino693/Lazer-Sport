@@ -1854,7 +1854,7 @@ body {
         </a>
 
 
-        </div>
+    </div>
 </section>
 
 
@@ -1900,69 +1900,76 @@ body {
   </div>
 </div>
 
-<!-- ======= COMBOS ======= -->
-<section id="combos-section" class="combos-section">
-  <h2 class="section-title">Combos</h2>
+
+
+<!-- ======= PROMOÇÕES ======= -->
+<section id="promocoes-section" class="promocoes-section">
+  <h2 class="section-title">Promoções</h2>
     <p class="section-subtitle">
-      Selecionamos os melhores brinquedos em pacotes especiais para você economizar mais e garantir a diversão da festa.
-    </p>
+  Ofertas exclusivas com descontos imperdíveis em brinquedos selecionados. Aproveite antes que acabe!
+</p>
 
 
   <div class="scroll-wrapper">
-    <button class="scroll-btn left" id="scroll-left-combos">&#10094;</button>
+    <button class="scroll-btn left" id="scroll-left-promocoes">&#10094;</button>
 
-    <div class="scroll-container" id="scroll-container-combos">
-      {% for combo in combos %}
-      <a href="#" class="categoria-link">
+    <div class="scroll-container" id="scroll-container-promocoes">
+      {% for promo in promocoes %}
+      <a href="{% url 'promocao' promo.id %}#promocao-pagina" class="categoria-link">
         <div class="categoria-card">
 
           <!-- IMAGEM -->
-          {% if combo.imagem_combo %}
-            <img src="{{ combo.imagem_combo.url }}" alt="{{ combo.descricao }}">
+          {% if promo.brinquedos.imagem_brinquedo %}
+            <a href="{% url 'promocao' promo.id %}#promocao-pagina">
+                <img src="{{ promo.brinquedos.imagem_brinquedo.url }}" alt="{{ promo.descricao }}">
+            </a>
           {% else %}
-            <img src="{% static 'images/default_combo.jpg' %}" alt="Combo sem imagem">
+            <img src="{% static 'images/default_promocao.jpg' %}" alt="Promoção sem imagem">
           {% endif %}
 
+          <!-- INFORMACOES -->
           <div class="categoria-info">
-            <h3>{{ combo.descricao }}</h3>
+            <h3>{{ promo.descricao }}</h3>
 
-           <!-- VALOR TOTAL ORIGINAL -->
-            <p class="combo-total">
-              Valor dos brinquedos:
-              <span class="total-riscado money"
-      data-valor="{{ combo.total_original }}"></span>
+            <p class="nome-brinquedo">
+              {{ promo.brinquedos.nome_brinquedo }}
             </p>
 
-            <!-- PREÇO DO COMBO -->
-            <p class="combo-preco">
-              Preço do combo:
-              <strong class="preco-promo money"
-        data-valor="{{ combo.valor_combo }}"></strong>
+             <!-- PREÇOS PROMO -->
+            <div class="preco-box">
+                <p class="preco-original">
+                    De:
+                    <span class="money"
+                          data-valor="{{ promo.brinquedos.valor_brinquedo }}">
+                    </span>
+                </p>
 
-            </p>
+                <p class="preco-promocao">
+                    Por:
+                    <strong class="money"
+                            data-valor="{{ promo.preco_promocao }}">
+                    </strong>
+                </p>
+            </div>
 
-            <p class="combo-economia">
-              💰 Economia:
-              <strong class="economia-verde money"
-        data-valor="{{ combo.economia }}"></strong>
-              ({{ combo.porcentagem|floatformat:0 }}% OFF)
 
-
-            <!-- BOTÃO VER MAIS -->
-            <a href="{% url 'combo' combo.id %}#combo-pagina" class="btn-vermais">Ver mais</a>
+            <!-- BOTÃO -->
+            <a href="{% url 'promocao' promo.id %}#promocao-pagina" class="btn-vermais">Ver mais</a>
 
           </div>
         </div>
       </a>
       {% empty %}
-        <div class="empty-message">Nenhum combo disponível.</div>
+        <div class="empty-message">Nenhuma promoção disponível.</div>
       {% endfor %}
     </div>
 
-    <button class="scroll-btn right" id="scroll-right-combos">&#10095;</button>
+    <button class="scroll-btn right" id="scroll-right-promocoes">&#10095;</button>
   </div>
 </section>
 
+<!-- Div invisível para espaçamento -->
+<div class="espacador"></div>
 
 
 <!-- ======= PRODUTOS ======= -->
@@ -2096,75 +2103,69 @@ body {
 </section>
 
 
-
-<!-- ======= PROMOÇÕES ======= -->
-<section id="promocoes-section" class="promocoes-section">
-  <h2 class="section-title">Promoções</h2>
+<!-- ======= COMBOS ======= -->
+<section id="combos-section" class="combos-section">
+  <h2 class="section-title">Combos</h2>
     <p class="section-subtitle">
-  Ofertas exclusivas com descontos imperdíveis em brinquedos selecionados. Aproveite antes que acabe!
-</p>
+      Selecionamos os melhores brinquedos em pacotes especiais para você economizar mais e garantir a diversão da festa.
+    </p>
 
 
   <div class="scroll-wrapper">
-    <button class="scroll-btn left" id="scroll-left-promocoes">&#10094;</button>
+    <button class="scroll-btn left" id="scroll-left-combos">&#10094;</button>
 
-    <div class="scroll-container" id="scroll-container-promocoes">
-      {% for promo in promocoes %}
-      <a href="{% url 'promocao' promo.id %}#promocao-pagina" class="categoria-link">
+    <div class="scroll-container" id="scroll-container-combos">
+      {% for combo in combos %}
+      <a href="{% url 'combo' combo.id %}#combo-pagina" class="categoria-link">
         <div class="categoria-card">
 
           <!-- IMAGEM -->
-          {% if promo.brinquedos.imagem_brinquedo %}
-            <a href="{% url 'promocao' promo.id %}#promocao-pagina">
-                <img src="{{ promo.brinquedos.imagem_brinquedo.url }}" alt="{{ promo.descricao }}">
-            </a>
+          {% if combo.imagem_combo %}
+            <img src="{{ combo.imagem_combo.url }}" alt="{{ combo.descricao }}">
           {% else %}
-            <img src="{% static 'images/default_promocao.jpg' %}" alt="Promoção sem imagem">
+            <img src="{% static 'images/default_combo.jpg' %}" alt="Combo sem imagem">
           {% endif %}
 
-          <!-- INFORMACOES -->
           <div class="categoria-info">
-            <h3>{{ promo.descricao }}</h3>
+            <h3>{{ combo.descricao }}</h3>
 
-            <p class="nome-brinquedo">
-              {{ promo.brinquedos.nome_brinquedo }}
+           <!-- VALOR TOTAL ORIGINAL -->
+            <p class="combo-total">
+              Valor dos brinquedos:
+              <span class="total-riscado money"
+      data-valor="{{ combo.total_original }}"></span>
             </p>
 
-             <!-- PREÇOS PROMO -->
-            <div class="preco-box">
-                <p class="preco-original">
-                    De:
-                    <span class="money"
-                          data-valor="{{ promo.brinquedos.valor_brinquedo }}">
-                    </span>
-                </p>
+            <!-- PREÇO DO COMBO -->
+            <p class="combo-preco">
+              Preço do combo:
+              <strong class="preco-promo money"
+        data-valor="{{ combo.valor_combo }}"></strong>
 
-                <p class="preco-promocao">
-                    Por:
-                    <strong class="money"
-                            data-valor="{{ promo.preco_promocao }}">
-                    </strong>
-                </p>
-            </div>
+            </p>
+
+            <p class="combo-economia">
+              💰 Economia:
+              <strong class="economia-verde money"
+        data-valor="{{ combo.economia }}"></strong>
+              ({{ combo.porcentagem|floatformat:0 }}% OFF)
 
 
-            <!-- BOTÃO -->
-            <a href="{% url 'promocao' promo.id %}#promocao-pagina" class="btn-vermais">Ver mais</a>
+            <!-- BOTÃO VER MAIS -->
+            <a href="{% url 'combo' combo.id %}#combo-pagina" class="btn-vermais">Ver mais</a>
 
           </div>
         </div>
       </a>
       {% empty %}
-        <div class="empty-message">Nenhuma promoção disponível.</div>
+        <div class="empty-message">Nenhum combo disponível.</div>
       {% endfor %}
     </div>
 
-    <button class="scroll-btn right" id="scroll-right-promocoes">&#10095;</button>
+    <button class="scroll-btn right" id="scroll-right-combos">&#10095;</button>
   </div>
 </section>
 
-<!-- Div invisível para espaçamento -->
-<div class="espacador"></div>
 
 <!-- Div invisível para espaçamento -->
 <div class="espacador"></div>

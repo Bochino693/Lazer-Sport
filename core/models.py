@@ -16,6 +16,27 @@ class Prime(models.Model):
         abstract = True
 
 
+class EnderecoEmpresa(Prime):
+    nome = models.CharField(max_length=100, default="Fabrica do Pery")
+
+    telefone = models.CharField(
+        max_length=20,
+        null=True,
+        blank=True
+    )
+
+    cep = models.CharField(max_length=9)
+    rua = models.CharField(max_length=255)
+    numero = models.CharField(max_length=20)
+    complemento = models.CharField(max_length=255, blank=True, null=True)
+    bairro = models.CharField(max_length=100)
+    cidade = models.CharField(max_length=100)
+    estado = models.CharField(max_length=2)
+
+    def __str__(self):
+        return f"{self.nome} - {self.cidade}/{self.estado}"
+
+
 class ClientePerfil(models.Model):
     user = models.OneToOneField(
         User,
