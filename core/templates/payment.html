@@ -736,15 +736,25 @@ document.addEventListener('DOMContentLoaded', () => {
     nomeInput.addEventListener('input', atualizarCartao);
 
     // ===== PIX CONFIRMAR =====
-    window.marcarComoPago = function() {
-        fetch("{% url 'criar_pedido_pix' %}", {
-            method: "POST",
-            headers: { "X-CSRFToken": "{{ csrf_token }}" }
-        }).then(() => {
-            window.location.href = "{% url 'meus_pedidos' %}";
-        });
-    }
-
+window.marcarComoPago = function() {
+    fetch("{% url 'criar_pedido_pix' %}", {
+        method: "POST",
+        headers: {
+            "X-CSRFToken": "{{ csrf_token }}"
+        }
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success && data.redirect_url) {
+            window.location.href = data.redirect_url;
+        } else {
+            mostrarToast("Erro ao criar pedido ❌");
+        }
+    })
+    .catch(() => {
+        mostrarToast("Erro ao confirmar pagamento ❌");
+    });
+}
 });
 
 
@@ -790,18 +800,23 @@ function marcarComoPago() {
         }
     })
     .then(res => {
-        if (!res.ok) throw new Error("Erro ao criar pedido");
+        if (!res.ok) {
+            throw new Error("Erro HTTP");
+        }
         return res.json();
     })
     .then(data => {
-        if (data.success) {
-            window.location.href = "{% url 'meus_pedidos' %}";
+        if (data.success && data.redirect_url) {
+            window.location.href = data.redirect_url;
+        } else {
+            mostrarToast("Erro ao criar pedido ❌");
         }
     })
     .catch(() => {
         mostrarToast("Erro ao confirmar pagamento ❌");
     });
 }
+
 
 
 </script>

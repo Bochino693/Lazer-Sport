@@ -267,6 +267,46 @@ body {
     background: linear-gradient(135deg, #fff3cd, #ffe69c);
 }
 
+/* 📍 Endereço de entrega */
+.endereco-card {
+    margin-top: 20px;
+    border-radius: 18px;
+    background: linear-gradient(135deg, #f8f9fc, #eef2ff);
+    box-shadow: 0 10px 30px rgba(13,110,253,.08);
+    overflow: hidden;
+    text-align: center;
+}
+
+.endereco-header {
+    padding: 12px 18px;
+    font-weight: 900;
+    font-size: 0.9rem;
+    color: #0d6efd;
+    background: rgba(13,110,253,.08);
+    text-align: center;
+}
+
+.endereco-body {
+    padding: 16px 18px;
+    font-size: 0.9rem;
+    color: #343a40;
+}
+
+.endereco-body p {
+    margin: 0 0 6px;
+    line-height: 1.4;
+}
+
+.endereco-body strong {
+    font-weight: 900;
+}
+
+.endereco-body .telefone {
+    margin-top: 8px;
+    font-weight: 800;
+    color: #198754;
+}
+
 
 </style>
 
@@ -277,7 +317,7 @@ body {
     <strong>Meus Pedidos</strong>
 </div>
 
-<section class="pedidos-container">
+<section class="pedidos-container" id="pedidos">
 
     <!-- 📦 Header -->
     <div class="pedidos-header">
@@ -297,7 +337,7 @@ body {
             <div class="pedido-header">
                 <div class="pedido-id">
                     Pedido #{{ pedido.id }} <br>
-                    <small>{{ pedido.created_at|date:"d/m/Y H:i" }}</small>
+                    <small>{{ pedido.criacao|date:"d/m/Y H:i" }}</small>
                 </div>
             </div>
 
@@ -343,6 +383,38 @@ body {
                 {% endif %}
 
             </div>
+
+
+            {% if pedido.endereco %}
+    <div class="endereco-card">
+        <div class="endereco-header">
+            📍 Endereço de Entrega
+        </div>
+
+        <div class="endereco-body">
+            <p>
+                <strong>{{ pedido.endereco.rua }}</strong>,
+                {{ pedido.endereco.numero }}
+                {% if pedido.endereco.complemento %}
+                    – {{ pedido.endereco.complemento }}
+                {% endif %}
+            </p>
+
+            <p>
+                {{ pedido.endereco.bairro }} <br>
+                {{ pedido.endereco.cidade }} / {{ pedido.endereco.estado }}
+                – CEP {{ pedido.endereco.cep }}
+            </p>
+
+            {% if pedido.endereco.telefone %}
+                <p class="telefone">
+                    📞 {{ pedido.endereco.telefone }}
+                </p>
+            {% endif %}
+        </div>
+    </div>
+{% endif %}
+
 
 
             <button class="toggle-itens" onclick="toggleItens({{ pedido.id }})">

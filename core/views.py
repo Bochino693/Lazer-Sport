@@ -13,7 +13,7 @@ from django.views.generic.edit import FormView
 from django.contrib.auth.mixins import LoginRequiredMixin
 
 from .models import Brinquedos, CategoriasBrinquedos, Projetos, Eventos, ClientePerfil, Combos, Cupom, Promocoes, \
-    TagsBrinquedos, ImagensSite, BrinquedosProjeto, Estabelecimentos, Manutencao, ManutencaoImagem
+    TagsBrinquedos, ImagensSite, BrinquedosProjeto, Estabelecimentos, Manutencao, ManutencaoImagem, EnderecoEntrega
 
 import os
 from django.http import FileResponse, Http404
@@ -918,6 +918,7 @@ from .models import ItemCarrinho, Carrinho
 
 from django.http import JsonResponse
 
+
 def adicionar_ao_carrinho(request, tipo, object_id):
     if not request.user.is_authenticated:
         return JsonResponse({'erro': 'Você precisa fazer login'}, status=403)
@@ -1090,6 +1091,7 @@ from django.views import View
 from django.shortcuts import render, redirect
 from django.contrib import messages
 
+
 class PaymentView(View):
 
     def get(self, request, carrinho_id):
@@ -1099,7 +1101,7 @@ class PaymentView(View):
         carrinho_vazio = not itens.exists()
 
         somente_pix = (
-            not request.user.is_authenticated or carrinho_vazio
+                not request.user.is_authenticated or carrinho_vazio
         )
 
         context = {
@@ -1116,6 +1118,9 @@ class PaymentView(View):
         return render(request, 'payment.html', context)
 
 
+from django.urls import reverse
+
+
 @login_required
 @require_POST
 def criar_pedido_pix(request):
@@ -1128,7 +1133,7 @@ def criar_pedido_pix(request):
     with transaction.atomic():
         pedido = Pedido.objects.create(
             cliente=cliente,
-            status='aguardando_pagamento',
+            status='criado',  # 👈 ainda NÃO pago
             forma_pagamento='pix',
             total_bruto=carrinho.total_bruto,
             valor_desconto=carrinho.valor_desconto,
@@ -1151,11 +1156,10 @@ def criar_pedido_pix(request):
 
         carrinho.itens.all().delete()
 
-    return JsonResponse({'success': True, 'pedido_id': pedido.id})
-
-
-from django.contrib.contenttypes.models import ContentType
-from django.db import transaction
+    return JsonResponse({
+        'success': True,
+        'redirect_url': reverse('payment_finally', args=[pedido.id])
+    })
 
 
 def criar_pedido_do_carrinho(carrinho):
@@ -1223,6 +1227,63 @@ def confirmar_cartao(request, carrinho_id):
 
     carrinho.delete()
     return redirect('meus_pedidos')
+
+
+from django.contrib.contenttypes.models import ContentType
+from django.db import transaction
+
+
+class PaymentFinallyView(LoginRequiredMixin, View):
+    template_name = 'payment_finally.html'
+
+    def get_pedido(self, pedido_id, user):
+        return get_object_or_404(
+            Pedido,
+            id=pedido_id,
+            cliente=user.perfil
+        )
+
+    def get(self, request, pedido_id):
+        pedido = self.get_pedido(pedido_id, request.user)
+
+        # 🔒 segurança
+        if pedido.status not in ['criado', 'aguardando_pagamento']:
+            return redirect('meus_pedidos')
+
+        return render(request, self.template_name, {
+            'pedido': pedido,
+            'endereco': getattr(pedido, 'endereco', None)
+        })
+
+    def post(self, request, pedido_id):
+        pedido = self.get_pedido(pedido_id, request.user)
+
+        if pedido.status not in ['criado', 'aguardando_pagamento']:
+            return redirect('meus_pedidos')
+
+        with transaction.atomic():
+
+            # 📍 cria ou atualiza endereço
+            EnderecoEntrega.objects.update_or_create(
+                pedido=pedido,
+                defaults={
+                    'cep': request.POST.get('cep'),
+                    'rua': request.POST.get('rua'),
+                    'numero': request.POST.get('numero'),
+                    'complemento': request.POST.get('complemento'),
+                    'bairro': request.POST.get('bairro'),
+                    'cidade': request.POST.get('cidade'),
+                    'estado': request.POST.get('estado'),
+                    'telefone': request.POST.get('telefone'),
+                }
+            )
+
+            # garante que o pedido fique aguardando pagamento
+            if pedido.status != 'aguardando_pagamento':
+                pedido.status = 'aguardando_pagamento'
+                pedido.save(update_fields=['status'])
+
+        return redirect('meus_pedidos')
 
 
 class MeusPedidosView(LoginRequiredMixin, View):

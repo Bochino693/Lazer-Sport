@@ -1121,7 +1121,7 @@ function atualizarBadgeCarrinho(total) {
 
 
     {% if user.is_authenticated %}
-    <a href="{% url 'meus_pedidos' %}" class="float-btn float-pedidos">
+    <a href="{% url 'meus_pedidos' %}#pedidos" class="float-btn float-pedidos">
         <i class="fa-solid fa-box"></i>
         <span class="badge">{{ total_pedidos_ativos }}</span>
     </a>

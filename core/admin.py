@@ -20,6 +20,8 @@ from .models import (
 )
 from django.utils.html import format_html
 from .models import ImagensSite
+from django import forms
+from .models import EnderecoEntrega
 
 
 @admin.register(ImagensSite)
@@ -335,11 +337,13 @@ class CarrinhoAdmin(admin.ModelAdmin):
 # ===========================
 from django.contrib import admin
 
+
 class ItemPedidoInline(admin.TabularInline):
     model = ItemPedido
     extra = 1  # Começa com uma linha vazia para facilitar a criação
     readonly_fields = ()
     can_delete = True
+
 
 # ===========================
 # ADMIN DO PEDIDO
@@ -358,8 +362,8 @@ class PedidoAdmin(admin.ModelAdmin):
 
     def cliente_usuario(self, obj):
         return obj.cliente.user.username if obj.cliente else "Guest"
-    cliente_usuario.short_description = "Cliente"
 
+    cliente_usuario.short_description = "Cliente"
 
 
 # ===========================
@@ -371,3 +375,17 @@ class ItemPedidoAdmin(admin.ModelAdmin):
     list_filter = ('tipo_item',)
     search_fields = ('nome_item', 'pedido__id')
     readonly_fields = ('nome_item', 'tipo_item', 'preco_unitario', 'quantidade', 'subtotal')
+
+
+class EnderecoEntregaForm(forms.ModelForm):
+    class Meta:
+        model = EnderecoEntrega
+        fields = [
+            'cep',
+            'rua',
+            'numero',
+            'complemento',
+            'bairro',
+            'cidade',
+            'estado',
+        ]

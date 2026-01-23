@@ -8,7 +8,7 @@ from .views import (HomeView, BrinquedoInfoView, CategoriasInfoView, BrinquedosV
                     EventoDeleteView, EventoUpdateView, CupomListView, CupomUpdateView, CupomCreateView,
                     CupomDeleteView, ProjetoListView, ProjetoUpdateView, ProjetoCreateView, ProjetoDeleteView,
                     EstabelecimentoInfoView, EstabelecimentosListView, ManutencaoView, adicionar_ao_carrinho, carrinho_view, aplicar_cupom,
-                    remover_item_carrinho, limpar_carrinho, cancelar_manutencao, PaymentView, MeusPedidosView, criar_pedido_pix
+                    remover_item_carrinho, limpar_carrinho, cancelar_manutencao, PaymentView, MeusPedidosView, criar_pedido_pix, PaymentFinallyView
 
                     )   # importa views do mesmo app
 from django.conf import settings
@@ -98,6 +98,12 @@ urlpatterns = [
     path('meus-pedidos/', MeusPedidosView.as_view(), name='meus_pedidos'),
 
     path('pedido/pix/criar/', criar_pedido_pix, name='criar_pedido_pix'),
+    path(
+        'pedido/<int:pedido_id>/endereco/',
+        PaymentFinallyView.as_view(),
+        name='payment_finally'
+    ),
+
 
     path('perfil/', ClientePerfilView.as_view(), name='perfil'),
     path("login/", LoginUsuarioView.as_view(), name="login"),

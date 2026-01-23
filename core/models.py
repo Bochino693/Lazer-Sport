@@ -417,6 +417,7 @@ class ItemCarrinho(Prime):
     def __str__(self):
         return f"Item {self.item} (x{self.quantidade})"
 
+from django.db import transaction
 
 class Pedido(Prime):
     STATUS_CHOICES = (
@@ -427,6 +428,30 @@ class Pedido(Prime):
         ('finalizado', 'Finalizado'),
         ('cancelado', 'Cancelado'),
     )
+
+    def finalizar(self, forma_pagamento=None):
+        """
+        Finaliza o pedido e cria a venda de forma segura.
+        """
+        if self.status == 'finalizado':
+            return self.venda if hasattr(self, 'venda') else None
+
+        with transaction.atomic():
+            # atualiza status
+            self.status = 'finalizado'
+            self.save(update_fields=['status'])
+
+            # cria venda se não existir
+            venda, created = Venda.objects.get_or_create(
+                pedido=self,
+                defaults={
+                    'valor_pago': self.total_liquido,
+                    'forma_pagamento': forma_pagamento,
+                    'confirmado': True
+                }
+            )
+
+            return venda
 
     FORMA_PAGAMENTO_CHOICES = (
         ('pix', 'PIX'),
@@ -501,6 +526,32 @@ class ItemPedido(Prime):
         return f"{self.nome_item} (x{self.quantidade})"
 
 
+class EnderecoEntrega(Prime):
+    pedido = models.OneToOneField(
+        Pedido,
+        on_delete=models.CASCADE,
+        related_name='endereco'
+    )
+
+    telefone = models.CharField(
+        max_length=20,
+        help_text="Telefone para contato na entrega",
+        null=True,
+        blank=True
+    )
+
+    cep = models.CharField(max_length=9)
+    rua = models.CharField(max_length=255)
+    numero = models.CharField(max_length=20)
+    complemento = models.CharField(max_length=255, blank=True, null=True)
+    bairro = models.CharField(max_length=100)
+    cidade = models.CharField(max_length=100)
+    estado = models.CharField(max_length=2)
+
+    def __str__(self):
+        return f"Entrega Pedido #{self.pedido.id} - {self.cidade}/{self.estado}"
+
+
 class Venda(Prime):
     pedido = models.OneToOneField(
         Pedido,
@@ -522,6 +573,7 @@ class Venda(Prime):
                                        )
 
     confirmado = models.BooleanField(default=False)
+    cpf = models.CharField(max_length=16, null=True)
 
     def __str__(self):
         return f"Venda do Pedido #{self.pedido.id}"
