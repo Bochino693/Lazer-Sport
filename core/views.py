@@ -73,7 +73,7 @@ class HomeView(View):
         # ---------------------------
         # 3. Paginação
         # ---------------------------
-        paginator = Paginator(brinquedos, 8)  # 8 por página
+        paginator = Paginator(brinquedos, 9)  # 9 por página
         page_number = request.GET.get("page")
         page_obj = paginator.get_page(page_number)
 
