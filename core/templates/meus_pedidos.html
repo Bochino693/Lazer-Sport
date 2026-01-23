@@ -90,48 +90,48 @@ body {
 }
 
 .status-aguardando_pagamento {
-    background:#fff3cd;
-    color:#856404;
+    background: #fff3cd;
+    color: #856404;
     box-shadow: 0 0 0 3px rgba(255,193,7,.15);
 }
 
 .status-pago {
-    background:#d4edda;
-    color:#155724;
+    background: #d4edda;
+    color: #155724;
     box-shadow: 0 0 0 3px rgba(40,167,69,.15);
 }
 
 .status-em_preparacao {
-    background:#e7f1ff;
-    color:#0d6efd;
+    background: #e7f1ff;
+    color: #0d6efd;
 }
 
 .status-finalizado {
-    background:#e6f4ea;
-    color:#137333;
+    background: #e6f4ea;
+    color: #137333;
 }
 
 .status-cancelado {
-    background:#fde2e4;
-    color:#9b1c1c;
+    background: #fde2e4;
+    color: #9b1c1c;
 }
 
 /* 📊 Infos */
 .pedido-info {
     display: grid;
-    grid-template-columns: repeat(auto-fit,minmax(200px,1fr));
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 16px;
     margin: 20px 0;
 }
 
 .info-box {
-    background:#f8f9fc;
+    background: #f8f9fc;
     border-radius: 16px;
     padding: 14px 16px;
 }
 
 .info-box small {
-    color:#6c757d;
+    color: #6c757d;
 }
 
 .valor-total {
@@ -149,15 +149,14 @@ body {
 }
 
 @keyframes fadeIn {
-    from { opacity:0; transform: translateY(-5px); }
-    to { opacity:1; transform: translateY(0); }
-}
-
-.item {
-    display: flex;
-    justify-content: space-between;
-    padding: 8px 0;
-    font-size: 0.95rem;
+    from {
+        opacity: 0;
+        transform: translateY(-5px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 /* 🔘 Botões */
@@ -175,13 +174,14 @@ body {
     display: inline-block;
     padding: 10px 20px;
     border-radius: 30px;
-    background: linear-gradient(135deg,#198754,#28a745);
-    color:#fff;
+    background: linear-gradient(135deg, #198754, #28a745);
+    color: #fff;
     font-weight: 800;
     text-decoration: none;
     box-shadow: 0 10px 25px rgba(40,167,69,.3);
 }
 
+/* 🧾 Item */
 .item-detalhe {
     display: grid;
     grid-template-columns: 64px 1fr auto;
@@ -225,9 +225,52 @@ body {
     color: #0d6efd;
 }
 
+/* 📌 Rodapé do pedido */
+.pedido-footer {
+    margin-top: 18px;
+    padding-top: 14px;
+    border-top: 1px dashed #ddd;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 14px;
+    align-items: center;
+}
+
+.footer-item {
+    background: #f8f9fc;
+    border-radius: 14px;
+    padding: 10px 14px;
+    text-align: center;
+}
+
+.footer-item small {
+    display: block;
+    font-size: 0.75rem;
+    color: #6c757d;
+}
+
+.footer-item strong {
+    font-size: 1rem;
+    font-weight: 900;
+}
+
+.footer-item.total strong {
+    color: #0d6efd;
+    font-size: 1.15rem;
+}
+
+.footer-item.desconto strong {
+    color: #dc3545;
+}
+
+.footer-item.cupom {
+    background: linear-gradient(135deg, #fff3cd, #ffe69c);
+}
+
+
 </style>
 
-<!-- 📍 Breadcrumb strong -->
+<!-- 📍 Breadcrumb -->
 <div class="breadcrumb-strong">
     <a href="{% url 'home' %}">Início</a>
     <span>›</span>
@@ -249,73 +292,94 @@ body {
     {% endif %}
 
     {% for pedido in pedidos %}
-    <div class="pedido-card">
+        <div class="pedido-card">
 
-        <div class="pedido-header">
-            <div class="pedido-id">Pedido #{{ pedido.id }}</div>
-            <span class="status status-{{ pedido.status }}">
-                {{ pedido.get_status_display }}
-            </span>
-        </div>
-
-        <div class="pedido-info">
-            <div class="info-box">
-                <small>Total bruto</small><br>
-                R$ {{ pedido.total_bruto|floatformat:2 }}
+            <div class="pedido-header">
+                <div class="pedido-id">
+                    Pedido #{{ pedido.id }} <br>
+                    <small>{{ pedido.created_at|date:"d/m/Y H:i" }}</small>
+                </div>
             </div>
 
-            <div class="info-box">
-                <small>Desconto</small><br>
-                R$ {{ pedido.valor_desconto|floatformat:2 }}
+            <div class="pedido-info">
+                <div class="info-box">
+                    <small>Total bruto</small><br>
+                    <span class="money" data-valor="{{ pedido.total_bruto }}"></span>
+                </div>
+
+                <div class="info-box">
+                    <small>Desconto</small><br>
+                    <span class="money desconto" data-valor="{{ pedido.valor_desconto }}"></span>
+                </div>
+
+                <div class="info-box valor-total">
+                    Total<br>
+                    <span class="money total" data-valor="{{ pedido.total_liquido }}"></span>
+                </div>
             </div>
 
-            <div class="info-box valor-total">
-                Total<br>
-                R$ {{ pedido.total_liquido|floatformat:2 }}
+
+            <div class="pedido-footer">
+
+                  <div class="footer-item">
+                        <small>Total bruto</small>
+                        <strong class="money" data-valor="{{ pedido.total_bruto }}"></strong>
+                    </div>
+
+                    <div class="footer-item desconto">
+                        <small>Desconto</small>
+                        <strong class="money desconto" data-valor="{{ pedido.valor_desconto }}"></strong>
+                    </div>
+
+                    <div class="footer-item total">
+                        <small>Total final</small>
+                        <strong class="money total" data-valor="{{ pedido.total_liquido }}"></strong>
+                    </div>
+                {% if pedido.cupom_codigo %}
+                    <div class="footer-item cupom">
+                        <small>Cupom</small>
+                        <strong>🎟️ {{ pedido.cupom_codigo }}</strong>
+                    </div>
+                {% endif %}
+
             </div>
+
+
+            <button class="toggle-itens" onclick="toggleItens({{ pedido.id }})">
+                Ver detalhes do pedido
+            </button>
+
+      <div class="itens-lista" id="itens-{{ pedido.id }}" style="display:none;">
+    {% for item in pedido.itens.all %}
+        <div class="item-detalhe">
+
+            <div class="item-img">
+                {% if item.item_original and item.item_original.imagem_brinquedo %}
+                    <img src="{{ item.item_original.imagem_brinquedo.url }}">
+                {% else %}
+                    <div class="img-placeholder">📦</div>
+                {% endif %}
+            </div>
+
+            <div class="item-info">
+                <strong>{{ item.nome_item }}</strong>
+                <small>Quantidade: {{ item.quantidade }}</small>
+                <small>
+                    Preço unitário:
+                    <span class="money" data-valor="{{ item.preco_unitario }}"></span>
+                </small>
+            </div>
+
+            <div class="item-subtotal money"
+                 data-valor="{{ pedido.total_liquido }}">
+            </div>
+
         </div>
-
-        {% if pedido.cupom_codigo %}
-            <small>🎟️ Cupom aplicado: <strong>{{ pedido.cupom_codigo }}</strong></small>
-        {% endif %}
-
-        <button class="toggle-itens" onclick="toggleItens({{ pedido.id }})">
-            Ver detalhes do pedido
-        </button>
-
-        <div class="itens-lista" id="itens-{{ pedido.id }}" style="display:none;">
-            {% for item in pedido.itens.all %}
-    <div class="item-detalhe">
-
-        <div class="item-img">
-            {% if item.item_original and item.item_original.imagem_brinquedo %}
-                <img src="{{ item.item_original.imagem_brinquedo.url }}">
-            {% else %}
-                <div class="img-placeholder">📦</div>
-            {% endif %}
-        </div>
-
-        <div class="item-info">
-            <strong>{{ item.nome_item }}</strong>
-            <small>Quantidade: {{ item.quantidade }}</small>
-            <small>Preço unitário: R$ {{ item.preco_unitario|floatformat:2 }}</small>
-        </div>
-
-        <div class="item-subtotal">
-            R$ {{ item.subtotal|floatformat:2 }}
-        </div>
-
-    </div>
     {% endfor %}
+</div>
+
+
         </div>
-
-        {% if pedido.status == 'aguardando_pagamento' %}
-            <a href="#" class="btn-finalizar">
-                💰 Confirmar pagamento
-            </a>
-        {% endif %}
-
-    </div>
     {% endfor %}
 
 </section>
@@ -325,6 +389,23 @@ function toggleItens(id) {
     const el = document.getElementById(`itens-${id}`);
     el.style.display = el.style.display === 'none' ? 'block' : 'none';
 }
+
+function formatarBRL(valor) {
+    if (valor === null || valor === undefined || valor === '') {
+        return 'R$ 0,00';
+    }
+
+    return new Intl.NumberFormat('pt-BR', {
+        style: 'currency',
+        currency: 'BRL'
+    }).format(parseFloat(valor));
+}
+
+document.querySelectorAll('.money').forEach(el => {
+    const valor = el.dataset.valor;
+    el.textContent = formatarBRL(valor);
+});
+
 </script>
 
 {% endblock %}

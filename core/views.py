@@ -513,8 +513,6 @@ class ProjetosView(View):
         return render(request, 'projetos.html', context)
 
 
-from .models import Combos
-
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView
 from django.urls import reverse_lazy
 from .models import Combos
@@ -1116,48 +1114,6 @@ class PaymentView(View):
         }
 
         return render(request, 'payment.html', context)
-
-@require_POST
-def confirmar_pix(request):
-    carrinho = request.session.get('carrinho', {})
-
-    if not carrinho:
-        return redirect('carrinho')
-
-    cliente = None
-    if request.user.is_authenticated:
-        cliente = request.user.perfil
-
-    pedido = Pedido.objects.create(
-        cliente=carrinho.cliente if request.user.is_authenticated else None,
-        status='aguardando_pagamento',
-        total_bruto=carrinho.total_bruto,
-        valor_desconto=carrinho.valor_desconto,
-        total_liquido=carrinho.total_liquido,
-        cupom_codigo=carrinho.cupom.codigo if carrinho.cupom else None,
-        cupom_percentual=carrinho.cupom.desconto_percentual if carrinho.cupom else None,
-        observacoes='Pagamento via PIX'
-    )
-
-    total = 0
-
-    for item in carrinho.itens.all():
-        ItemPedido.objects.create(
-            pedido=pedido,
-            nome_item=str(item.item),
-            tipo_item=item.item.__class__.__name__.lower(),
-            preco_unitario=item.preco_unitario,
-            quantidade=item.quantidade,
-            subtotal=item.subtotal
-        )
-
-    pedido.total_bruto = total
-    pedido.total_liquido = total
-    pedido.save()
-
-    del request.session['carrinho']
-
-    return redirect('meus_pedidos')
 
 
 @login_required

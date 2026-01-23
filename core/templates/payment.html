@@ -335,6 +335,69 @@
     font-weight: 500;
 }
 
+.btn-pix-copiar {
+    width: 100%;
+    max-width: 320px;
+    padding: 15px 0;
+    margin: 0 auto;
+    display: block;
+
+    background: linear-gradient(135deg, #2563eb, #1e40af);
+    color: #fff;
+
+    border: none;
+    border-radius: 14px;
+
+    font-size: 1.05rem;
+    font-weight: 700;
+
+    cursor: pointer;
+    transition: all .25s ease;
+}
+
+.btn-pix-copiar:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 30px rgba(37,99,235,.35);
+}
+
+.btn-pix-confirmar {
+    width: 100%;
+    max-width: 320px;
+    padding: 16px 0;
+    margin: 18px auto 0;
+    display: block;
+
+    background: linear-gradient(135deg, #16a34a, #22c55e);
+    color: #fff;
+
+    border: none;
+    border-radius: 14px;
+
+    font-size: 1.1rem;
+    font-weight: 800;
+
+    cursor: pointer;
+    transition: all .25s ease;
+
+    animation: aparecer .35s ease;
+}
+
+.btn-pix-confirmar:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 30px rgba(22,163,74,.35);
+}
+
+@keyframes aparecer {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
 </style>
 
 
@@ -462,20 +525,22 @@
     </div>
 
     <!-- BOTÃO COPIAR -->
-    <button
-        id="btn-copiar-pix"
-        onclick="copiarPix()"
-        style="padding:14px 0; font-size:1rem; font-weight:700; border-radius:12px; background:#2563eb; color:#fff; width:60%; max-width:300px; cursor:pointer;">
-        Copiar PIX
-    </button>
+<button
+    type="button"
+    class="btn-pix-copiar"
+    onclick="copiarPix()">
+    📋 Copiar PIX
+</button>
 
     <!-- BOTÃO JÁ PAGUEI (INICIALMENTE OCULTO) -->
-    <button
-        id="btn-ja-paguei"
-        onclick="marcarComoPago()"
-        style="display:none; margin-top:18px; padding:16px 0; font-size:1.1rem; font-weight:700; border-radius:12px; background:#16a34a; color:#fff; width:60%; max-width:300px; cursor:pointer;">
-        Já paguei
-    </button>
+<button
+    type="button"
+    id="btn-ja-paguei"
+    class="btn-pix-confirmar"
+    onclick="marcarComoPago()"
+    style="display:none">
+    ✅ Já paguei
+</button>
 
 </div>
 
@@ -527,6 +592,8 @@
 </section>
 
 <script>
+
+
 document.addEventListener('DOMContentLoaded', () => {
 
     // ===== ELEMENTOS =====
@@ -670,7 +737,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ===== PIX CONFIRMAR =====
     window.marcarComoPago = function() {
-        fetch("{% url 'confirmar_pix' %}", {
+        fetch("{% url 'criar_pedido_pix' %}", {
             method: "POST",
             headers: { "X-CSRFToken": "{{ csrf_token }}" }
         }).then(() => {
@@ -681,43 +748,39 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 
-<script>
+/* ===== COPIAR PIX ===== */
 function copiarPix() {
     const pixInput = document.getElementById('pix-code');
-    pixInput.select();
-    pixInput.setSelectionRange(0, 99999);
 
     navigator.clipboard.writeText(pixInput.value).then(() => {
         mostrarToast("PIX copiado com sucesso ✅");
-
-        // mostra o botão "Já paguei"
         document.getElementById('btn-ja-paguei').style.display = 'inline-block';
     });
 }
+
 
 function mostrarToast(texto) {
     const toast = document.createElement('div');
     toast.innerText = texto;
 
-    toast.style.position = 'fixed';
-    toast.style.bottom = '30px';
-    toast.style.left = '50%';
-    toast.style.transform = 'translateX(-50%)';
-    toast.style.background = '#16a34a';
-    toast.style.color = '#fff';
-    toast.style.padding = '14px 22px';
-    toast.style.borderRadius = '12px';
-    toast.style.fontWeight = '700';
-    toast.style.boxShadow = '0 10px 25px rgba(0,0,0,.25)';
-    toast.style.zIndex = '99999';
+    Object.assign(toast.style, {
+        position: 'fixed',
+        bottom: '30px',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        background: '#16a34a',
+        color: '#fff',
+        padding: '14px 22px',
+        borderRadius: '12px',
+        fontWeight: '700',
+        boxShadow: '0 10px 25px rgba(0,0,0,.25)',
+        zIndex: 99999
+    });
 
     document.body.appendChild(toast);
 
-    setTimeout(() => {
-        toast.remove();
-    }, 2500);
+    setTimeout(() => toast.remove(), 2500);
 }
-
 
 function marcarComoPago() {
     fetch("{% url 'criar_pedido_pix' %}", {
@@ -726,13 +789,21 @@ function marcarComoPago() {
             "X-CSRFToken": "{{ csrf_token }}"
         }
     })
-    .then(res => res.json())
+    .then(res => {
+        if (!res.ok) throw new Error("Erro ao criar pedido");
+        return res.json();
+    })
     .then(data => {
         if (data.success) {
-            window.location.href = "/meus-pedidos/";
+            window.location.href = "{% url 'meus_pedidos' %}";
         }
+    })
+    .catch(() => {
+        mostrarToast("Erro ao confirmar pagamento ❌");
     });
 }
+
+
 </script>
 
 
