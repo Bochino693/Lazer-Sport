@@ -767,7 +767,7 @@ window.marcarComoPago = function() {
     .then(res => res.json())
     .then(data => {
         if (data.success && data.redirect_url) {
-            window.location.href = data.redirect_url;
+            window.location.href = data.redirect_url + "#pedidos";
         } else {
             mostrarToast("Erro ao criar pedido ❌");
         }
