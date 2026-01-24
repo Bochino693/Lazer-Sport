@@ -458,8 +458,13 @@
 <a href="{% url 'brinquedo_detalhe' item.id %}#produto-box" class="card-produto">
 
     <div class="img-area">
+    {% if item.imagem_brinquedo %}
         <img src="{{ item.imagem_brinquedo.url }}" alt="{{ item.nome_brinquedo }}">
-    </div>
+    {% else %}
+        <img src="{% static 'images/placeholder.png' %}" alt="Imagem indisponível">
+    {% endif %}
+</div>
+
 
     <div class="conteudo">
 

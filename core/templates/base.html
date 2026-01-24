@@ -1104,6 +1104,16 @@ nav a.btn-login {
           setTimeout(() => { toast.style.display = 'none'; }, 300);
       }, duracao);
   }
+
+
+/* Detecta se a página foi carregada via botão "Voltar" (Cache) */
+window.addEventListener("pageshow", function (event) {
+    // Se persistido for true, a página veio do cache do navegador
+    if (event.persisted) {
+        // Opção A: Recarregar a página para garantir dados novos do servidor
+        window.location.reload();
+    }
+});
 </script>
 
 

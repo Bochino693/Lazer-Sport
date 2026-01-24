@@ -17,9 +17,18 @@ def manutencao_notificacao(request):
     if not request.user.is_authenticated:
         return {}
 
-    cliente = request.user.perfil
+    # Usa getattr para evitar erro caso o Perfil não tenha sido criado ainda
+    perfil = getattr(request.user, 'perfil', None)
 
-    manutencoes = Manutencao.objects.filter(usuario=cliente)
+    if not perfil:
+        return {
+            'manutencao_pendente': 0,
+            'manutencao_andamento': 0,
+            'manutencao_abertas': 0,
+            'tem_manutencao': False
+        }
+
+    manutencoes = Manutencao.objects.filter(usuario=perfil)
 
     pendentes = manutencoes.filter(status='P').count()
     em_andamento = manutencoes.filter(status='A').count()
