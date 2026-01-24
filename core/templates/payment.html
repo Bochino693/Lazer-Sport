@@ -547,7 +547,7 @@
 <!-- ===== CARTÃO BOX INTERATIVO ===== -->
 <div id="cartao-box" class="payment-details card-box" style="display:none">
 
-    <!-- visual do cartão -->
+     <!-- visual do cartão -->
     <div class="cartao-visual">
         <div class="cartao-bandeira">
             <img id="bandeira-cartao" src="" alt="" style="display:none">
@@ -583,8 +583,19 @@
         <input type="text" id="nome-cartao" placeholder="Nome completo">
     </div>
 
-    <button type="submit" class="btn-confirmar btn-cartao">💳 Pagar com cartão</button>
+    <div class="input-group">
+        <label>CPF do titular</label>
+        <input type="text" id="cpf-cartao" placeholder="000.000.000-00" maxlength="14">
+    </div>
 
+    <button type="button" class="btn-confirmar btn-cartao" onclick="processarPagamento()">💳 Pagar com cartão</button>
+</div>
+
+<!-- Modal de espera -->
+<div id="modal-aguarde" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; justify-content:center; align-items:center;">
+    <div style="background:#fff; padding:20px; border-radius:8px; text-align:center;">
+        ⏳ Processando pagamento...
+    </div>
 </div>
 
     </div>
@@ -817,6 +828,41 @@ function marcarComoPago() {
     });
 }
 
+
+async function processarPagamento() {
+    const numero = document.getElementById("numero-cartao").value;
+    const validade = document.getElementById("validade-cartao").value;
+    const cvv = document.getElementById("cvv-cartao").value;
+    const nome = document.getElementById("nome-cartao").value;
+    const cpf = document.getElementById("cpf-cartao").value;
+
+    // abre modal
+    document.getElementById("modal-aguarde").style.display = "flex";
+
+    try {
+        const response = await fetch("/processar_cartao/", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": "{{ csrf_token }}"
+            },
+            body: JSON.stringify({ numero, validade, cvv, nome, cpf })
+        });
+
+        const data = await response.json();
+        document.getElementById("modal-aguarde").style.display = "none";
+
+        if(data.sucesso){
+            // redireciona para página final de pagamento
+            window.location.href = `/checkout/payment_finally/${data.pedido_id}/`;
+        } else {
+            alert("Erro: " + data.mensagem);
+        }
+    } catch (e) {
+        document.getElementById("modal-aguarde").style.display = "none";
+        alert("Erro inesperado ao processar pagamento.");
+    }
+}
 
 
 </script>

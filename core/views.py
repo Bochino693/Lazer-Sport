@@ -1117,6 +1117,41 @@ class PaymentView(View):
 
         return render(request, 'payment.html', context)
 
+from django.views.decorators.csrf import csrf_exempt
+
+@csrf_exempt
+def processar_cartao(request):
+    if request.method != "POST":
+        return JsonResponse({"sucesso": False, "mensagem": "Método inválido."})
+
+    dados = json.loads(request.body)
+    numero = dados.get("numero")
+    validade = dados.get("validade")
+    cvv = dados.get("cvv")
+    nome = dados.get("nome")
+    cpf = dados.get("cpf")
+
+    # Simulação: aqui você chamaria a API de pagamento do seu gateway
+    saldo_disponivel = Decimal("1000.00")  # Exemplo
+    valor_compra = Decimal("123.45")       # Pegar do carrinho/pedido atual
+
+    if saldo_disponivel < valor_compra:
+        return JsonResponse({"sucesso": False, "mensagem": "Saldo insuficiente."})
+
+    # Se passou, cria o pedido
+    from .models import Pedido
+
+    pedido = Pedido.objects.create(
+        cliente=request.user.clienteperfil,
+        status="pago",
+        total_bruto=valor_compra,
+        total_liquido=valor_compra,
+        forma_pagamento="credito",
+        observacoes=f"CPF: {cpf}"
+    )
+
+    # Aqui você pode registrar venda, itens, etc.
+    return JsonResponse({"sucesso": True, "pedido_id": pedido.id})
 
 from django.urls import reverse
 
