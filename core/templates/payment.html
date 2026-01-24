@@ -854,7 +854,7 @@ async function processarPagamento() {
 
         if(data.sucesso){
             // redireciona para página final de pagamento
-            window.location.href = `/checkout/payment_finally/${data.pedido_id}/`;
+            window.location.href = `/payment_finally/${data.pedido_id}/`;
         } else {
             alert("Erro: " + data.mensagem);
         }
