@@ -5,6 +5,7 @@ from django.core.exceptions import ValidationError
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
+import requests
 
 
 class Prime(models.Model):
@@ -32,6 +33,13 @@ class EnderecoEmpresa(Prime):
     bairro = models.CharField(max_length=100)
     cidade = models.CharField(max_length=100)
     estado = models.CharField(max_length=2)
+
+    latitude = models.DecimalField(
+        max_digits=50, decimal_places=30, null=True, blank=True
+    )
+    longitude = models.DecimalField(
+        max_digits=50, decimal_places=30, null=True, blank=True
+    )
 
     def __str__(self):
         return f"{self.nome} - {self.cidade}/{self.estado}"
@@ -438,7 +446,9 @@ class ItemCarrinho(Prime):
     def __str__(self):
         return f"Item {self.item} (x{self.quantidade})"
 
+
 from django.db import transaction
+
 
 class Pedido(Prime):
     STATUS_CHOICES = (
@@ -493,6 +503,15 @@ class Pedido(Prime):
         default='criado'
     )
 
+    # 🚚 logística (preenchido só quando sair para entrega)
+    distancia_km = models.DecimalField(
+        max_digits=6, decimal_places=2, null=True, blank=True
+    )
+
+    tempo_estimado_min = models.PositiveIntegerField(
+        null=True, blank=True
+    )
+
     # 🔒 snapshot financeiro
     total_bruto = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     valor_desconto = models.DecimalField(max_digits=10, decimal_places=2, default=0, null=True, blank=True)
@@ -542,7 +561,6 @@ class ItemPedido(Prime):
     quantidade = models.PositiveIntegerField()
     subtotal = models.DecimalField(max_digits=10, decimal_places=2)
 
-
     def __str__(self):
         return f"{self.nome_item} (x{self.quantidade})"
 
@@ -568,6 +586,46 @@ class EnderecoEntrega(Prime):
     bairro = models.CharField(max_length=100)
     cidade = models.CharField(max_length=100)
     estado = models.CharField(max_length=2)
+
+    latitude = models.DecimalField(
+        max_digits=50, decimal_places=30, null=True, blank=True
+    )
+    longitude = models.DecimalField(
+        max_digits=50, decimal_places=30, null=True, blank=True
+    )
+
+    def geocodificar(self):
+        endereco = f"{self.rua}, {self.numero}, {self.bairro}, {self.cidade}, {self.estado}, Brasil"
+
+        url = "https://nominatim.openstreetmap.org/search"
+        params = {
+            "q": endereco,
+            "format": "json",
+            "limit": 1
+        }
+
+        headers = {
+            "User-Agent": "SeuSistemaEntrega/1.0"
+        }
+
+        try:
+            response = requests.get(url, params=params, headers=headers, timeout=10)
+            data = response.json()
+
+            if not data:
+                return None, None
+
+            lat = float(data[0]["lat"])
+            lon = float(data[0]["lon"])
+
+            self.latitude = lat
+            self.longitude = lon
+            self.save(update_fields=['latitude', 'longitude'])
+
+            return lat, lon
+
+        except Exception:
+            return None, None
 
     def __str__(self):
         return f"Entrega Pedido #{self.pedido.id} - {self.cidade}/{self.estado}"

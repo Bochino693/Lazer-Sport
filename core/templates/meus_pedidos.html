@@ -348,6 +348,128 @@ body {
     background: #ef4444; /* vermelho */
 }
 
+
+.entrega-box {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-top: 12px;
+    padding: 16px;
+    border-radius: 14px;
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+}
+
+.endereco-col h4 {
+    margin: 0 0 6px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #495057;
+}
+
+.endereco-col p {
+    margin: 0;
+    font-size: 0.8rem;
+    color: #6c757d;
+    line-height: 1.4;
+}
+
+.entrega-metricas {
+    grid-column: span 2;
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px dashed #dee2e6;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #212529;
+    text-align: center;
+}
+
+/* Card moderno de endereço */
+.endereco-card.modern-card {
+    background: linear-gradient(145deg, #ffffff, #f1f5f9);
+    border-radius: 18px;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.08);
+    padding: 20px;
+    margin-top: 20px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.endereco-card.modern-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 20px 45px rgba(0, 0, 0, 0.12);
+}
+
+/* Cabeçalho */
+.endereco-header.modern-header {
+    font-size: 1.1rem;
+    font-weight: 900;
+    color: #0d6efd;
+    background: rgba(13, 110, 253, 0.08);
+    text-align: center;
+    padding: 14px;
+    border-radius: 14px;
+    margin-bottom: 18px;
+    box-shadow: inset 0 -2px 4px rgba(13, 110, 253, 0.1);
+}
+
+/* Body */
+.endereco-body.modern-body {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 20px;
+}
+
+/* Colunas */
+.endereco-col.modern-col {
+    background: #ffffff;
+    border-radius: 14px;
+    padding: 14px 16px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.endereco-col.modern-col:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.08);
+}
+
+.endereco-col h4 {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #495057;
+    margin-bottom: 8px;
+}
+
+.endereco-col p {
+    font-size: 0.85rem;
+    color: #6c757d;
+    line-height: 1.4;
+    margin: 0;
+}
+
+/* Métricas de entrega */
+.entrega-metricas.modern-metrics {
+    grid-column: span 2;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    padding: 14px 0;
+    margin-top: 10px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #e7f1ff, #f0f8ff);
+    font-weight: 700;
+    color: #0d6efd;
+    box-shadow: 0 6px 15px rgba(13, 110, 253, 0.1);
+    font-size: 0.95rem;
+}
+
+.entrega-metricas.modern-metrics div {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
 </style>
 
 <!-- 📍 Breadcrumb -->
@@ -365,139 +487,135 @@ body {
         <p>Acompanhe pagamentos, status e itens comprados</p>
     </div>
 
-    {% if not pedidos %}
-        <p style="margin-top:40px; color:#777">
-            Você ainda não realizou nenhum pedido.
-        </p>
-    {% endif %}
-
+{% if pedidos %}
     {% for pedido in pedidos %}
-        <div class="pedido-card">
+    <div class="pedido-card">
 
-            <div class="pedido-status status-{{ pedido.status }}">
-                {{ pedido.get_status_display }}
+        <div class="pedido-header">
+            <div class="pedido-id">
+                Pedido #{{ pedido.id }} <br>
+                <small>{{ pedido.criacao|date:"d/m/Y H:i" }}</small>
             </div>
-
-
-            <div class="pedido-header">
-                <div class="pedido-id">
-                    Pedido #{{ pedido.id }} <br>
-                    <small>{{ pedido.criacao|date:"d/m/Y H:i" }}</small>
-                </div>
-            </div>
-
-            <div class="pedido-info">
-                <div class="info-box">
-                    <small>Total bruto</small><br>
-                    <span class="money" data-valor="{{ pedido.total_bruto }}"></span>
-                </div>
-
-                <div class="info-box">
-                    <small>Desconto</small><br>
-                    <span class="money desconto" data-valor="{{ pedido.valor_desconto }}"></span>
-                </div>
-
-                <div class="info-box valor-total">
-                    Total<br>
-                    <span class="money total" data-valor="{{ pedido.total_liquido }}"></span>
-                </div>
-            </div>
-
-
-            <div class="pedido-footer">
-
-                  <div class="footer-item">
-                        <small>Total bruto</small>
-                        <strong class="money" data-valor="{{ pedido.total_bruto }}"></strong>
-                    </div>
-
-                    <div class="footer-item desconto">
-                        <small>Desconto</small>
-                        <strong class="money desconto" data-valor="{{ pedido.valor_desconto }}"></strong>
-                    </div>
-
-                    <div class="footer-item total">
-                        <small>Total final</small>
-                        <strong class="money total" data-valor="{{ pedido.total_liquido }}"></strong>
-                    </div>
-                {% if pedido.cupom_codigo %}
-                    <div class="footer-item cupom">
-                        <small>Cupom</small>
-                        <strong>🎟️ {{ pedido.cupom_codigo }}</strong>
-                    </div>
-                {% endif %}
-
-            </div>
-
-
-            {% if pedido.endereco %}
-    <div class="endereco-card">
-        <div class="endereco-header">
-            📍 Endereço de Entrega
         </div>
 
-        <div class="endereco-body">
-            <p>
-                <strong>{{ pedido.endereco.rua }}</strong>,
-                {{ pedido.endereco.numero }}
-                {% if pedido.endereco.complemento %}
-                    – {{ pedido.endereco.complemento }}
-                {% endif %}
-            </p>
+        <div class="pedido-info">
+            <div class="info-box">
+                <small>Total bruto</small><br>
+                <span class="money" data-valor="{{ pedido.total_bruto }}"></span>
+            </div>
+            <div class="info-box">
+                <small>Desconto</small><br>
+                <span class="money desconto" data-valor="{{ pedido.valor_desconto }}"></span>
+            </div>
+            <div class="info-box valor-total">
+                Total<br>
+                <span class="money total" data-valor="{{ pedido.total_liquido }}"></span>
+            </div>
+        </div>
 
-            <p>
-                {{ pedido.endereco.bairro }} <br>
-                {{ pedido.endereco.cidade }} / {{ pedido.endereco.estado }}
-                – CEP {{ pedido.endereco.cep }}
-            </p>
-
-            {% if pedido.endereco.telefone %}
-                <p class="telefone">
-                    📞 {{ pedido.endereco.telefone }}
-                </p>
+        <div class="pedido-footer">
+            <div class="footer-item">
+                <small>Total bruto</small>
+                <strong class="money" data-valor="{{ pedido.total_bruto }}"></strong>
+            </div>
+            <div class="footer-item desconto">
+                <small>Desconto</small>
+                <strong class="money desconto" data-valor="{{ pedido.valor_desconto }}"></strong>
+            </div>
+            <div class="footer-item total">
+                <small>Total final</small>
+                <strong class="money total" data-valor="{{ pedido.total_liquido }}"></strong>
+            </div>
+            {% if pedido.cupom_codigo %}
+            <div class="footer-item cupom">
+                <small>Cupom</small>
+                <strong>🎟️ {{ pedido.cupom_codigo }}</strong>
+            </div>
             {% endif %}
         </div>
+
+       {% if pedido.endereco %}
+<div class="endereco-card modern-card">
+    <div class="endereco-header modern-header">
+        🚚 Informações de Entrega
     </div>
+
+    <div class="endereco-body modern-body">
+        <!-- Origem (Empresa) -->
+        <div class="endereco-col modern-col">
+            <h4>🏭 Origem</h4>
+            {% if empresa %}
+                <p>
+                    <strong>{{ empresa.rua }}</strong>, {{ empresa.numero }}<br>
+                    {{ empresa.bairro }}<br>
+                    {{ empresa.cidade }}/{{ empresa.estado }}<br>
+                    CEP {{ empresa.cep }}<br>
+                    {% if empresa.telefone %}📞 {{ empresa.telefone }}{% endif %}
+                </p>
+            {% else %}
+                <p>Endereço da empresa não cadastrado.</p>
+            {% endif %}
+        </div>
+
+        <!-- Destino (Cliente) -->
+        <div class="endereco-col modern-col">
+            <h4>📍 Destino</h4>
+            <p>
+                <strong>{{ pedido.endereco.rua }}</strong>, {{ pedido.endereco.numero }}
+                {% if pedido.endereco.complemento %} – {{ pedido.endereco.complemento }}{% endif %}<br>
+                {{ pedido.endereco.bairro }}<br>
+                {{ pedido.endereco.cidade }}/{{ pedido.endereco.estado }}<br>
+                CEP {{ pedido.endereco.cep }}<br>
+                {% if pedido.endereco.telefone %}📞 {{ pedido.endereco.telefone }}{% endif %}
+            </p>
+        </div>
+
+        <!-- Métricas de entrega -->
+        {% if pedido.distancia_km and pedido.tempo_estimado_min %}
+        <div class="entrega-metricas modern-metrics">
+            <div>
+                Distância em KM 🚚 <strong>{{ pedido.distancia_km }} km</strong>
+            </div>
+            <div>
+                Tempo de transporte aproximado ⏱️ <strong>{{ pedido.tempo_estimado_min }} min</strong>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
 {% endif %}
 
+        <button class="toggle-itens" onclick="toggleItens({{ pedido.id }})">Ver detalhes do pedido</button>
 
-
-            <button class="toggle-itens" onclick="toggleItens({{ pedido.id }})">
-                Ver detalhes do pedido
-            </button>
-
-      <div class="itens-lista" id="itens-{{ pedido.id }}" style="display:none;">
-    {% for item in pedido.itens.all %}
-        <div class="item-detalhe">
-
-            <div class="item-img">
-                {% if item.item_original and item.item_original.imagem_brinquedo %}
-                    <img src="{{ item.item_original.imagem_brinquedo.url }}">
-                {% else %}
-                    <div class="img-placeholder">📦</div>
-                {% endif %}
+        <div class="itens-lista" id="itens-{{ pedido.id }}" style="display:none;">
+            {% for item in pedido.itens.all %}
+            <div class="item-detalhe">
+                <div class="item-img">
+                    {% if item.item_original and item.item_original.imagem_brinquedo %}
+                        <img src="{{ item.item_original.imagem_brinquedo.url }}">
+                    {% else %}
+                        <div class="img-placeholder">📦</div>
+                    {% endif %}
+                </div>
+                <div class="item-info">
+                    <strong>{{ item.nome_item }}</strong>
+                    <small>Quantidade: {{ item.quantidade }}</small>
+                    <small>
+                        Preço unitário: <span class="money" data-valor="{{ item.preco_unitario }}"></span>
+                    </small>
+                </div>
+                <div class="item-subtotal money" data-valor="{{ item.subtotal|floatformat:2 }}"></div>
             </div>
-
-            <div class="item-info">
-                <strong>{{ item.nome_item }}</strong>
-                <small>Quantidade: {{ item.quantidade }}</small>
-                <small>
-                    Preço unitário:
-                    <span class="money" data-valor="{{ item.preco_unitario }}"></span>
-                </small>
-            </div>
-
-            <div class="item-subtotal money"
-                 data-valor="{{ pedido.total_liquido }}">
-            </div>
-
+            {% endfor %}
         </div>
-    {% endfor %}
-</div>
 
-
-        </div>
+    </div>
     {% endfor %}
+{% else %}
+    <p style="margin-top:40px; color:#777">
+        Você ainda não realizou nenhum pedido.
+    </p>
+{% endif %}
 
 </section>
 

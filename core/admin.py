@@ -400,6 +400,8 @@ class EnderecoEmpresaAdmin(admin.ModelAdmin):
         'estado',
         'cep',
         'telefone',
+        'latitude',
+        'longitude',
     )
 
     list_filter = (
@@ -430,10 +432,49 @@ class EnderecoEmpresaAdmin(admin.ModelAdmin):
                 'estado',
             )
         }),
-        # se você adicionar latitude/longitude depois
-        # ('Geolocalização', {
-        #     'fields': ('latitude', 'longitude')
-        # }),
+        ('Geolocalização', {
+            'description': 'Use valores como: -23.454013, -46.662676',
+            'fields': ('latitude', 'longitude')
+        }),
     )
 
     ordering = ('nome',)
+
+
+from .models import EnderecoEntrega, Pedido
+
+@admin.register(EnderecoEntrega)
+class EnderecoEntregaAdmin(admin.ModelAdmin):
+    list_display = (
+        'pedido',
+        'cep',
+        'rua',
+        'numero',
+        'bairro',
+        'cidade',
+        'estado',
+        'telefone',
+        'latitude',
+        'longitude',
+    )
+    list_filter = ('cidade', 'estado')
+    search_fields = ('pedido__id', 'cep', 'rua', 'bairro', 'cidade', 'estado', 'telefone')
+    #readonly_fields = ('latitude', 'longitude')  # latitude e longitude não devem ser editáveis manualmente
+    fieldsets = (
+        (None, {
+            'fields': (
+                'pedido',
+                'telefone',
+                'cep',
+                'rua',
+                'numero',
+                'complemento',
+                'bairro',
+                'cidade',
+                'estado',
+            )
+        }),
+        ('Coordenadas (geocodificação)', {
+            'fields': ('latitude', 'longitude'),
+        }),
+    )

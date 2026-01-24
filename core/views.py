@@ -1232,6 +1232,13 @@ def confirmar_cartao(request, carrinho_id):
 from django.contrib.contenttypes.models import ContentType
 from django.db import transaction
 
+from django.shortcuts import get_object_or_404, redirect
+from django.views import View
+from django.contrib.auth.mixins import LoginRequiredMixin
+
+from .models import Pedido, EnderecoEntrega, EnderecoEmpresa
+from .utils import calcular_distancia_km, estimar_tempo_minutos
+
 
 class PaymentFinallyView(LoginRequiredMixin, View):
     template_name = 'payment_finally.html'
@@ -1245,14 +1252,9 @@ class PaymentFinallyView(LoginRequiredMixin, View):
 
     def get(self, request, pedido_id):
         pedido = self.get_pedido(pedido_id, request.user)
-
-        # 🔒 segurança
-        if pedido.status not in ['criado', 'aguardando_pagamento']:
-            return redirect('meus_pedidos')
-
         return render(request, self.template_name, {
-            'pedido': pedido,
-            'endereco': getattr(pedido, 'endereco', None)
+            "pedido": pedido,
+            "endereco": getattr(pedido, 'endereco', None),
         })
 
     def post(self, request, pedido_id):
@@ -1262,9 +1264,8 @@ class PaymentFinallyView(LoginRequiredMixin, View):
             return redirect('meus_pedidos')
 
         with transaction.atomic():
-
-            # 📍 cria ou atualiza endereço
-            EnderecoEntrega.objects.update_or_create(
+            # Cria ou atualiza o endereço de entrega
+            endereco, _ = EnderecoEntrega.objects.update_or_create(
                 pedido=pedido,
                 defaults={
                     'cep': request.POST.get('cep'),
@@ -1278,27 +1279,56 @@ class PaymentFinallyView(LoginRequiredMixin, View):
                 }
             )
 
-            # garante que o pedido fique aguardando pagamento
+            # Geocodifica endereço do cliente
+            lat_entrega, lon_entrega = endereco.geocodificar()
+            if lat_entrega is not None and lon_entrega is not None:
+                endereco.latitude = round(lat_entrega, 6)
+                endereco.longitude = round(lon_entrega, 6)
+                endereco.save(update_fields=['latitude', 'longitude'])
+
+            # Atualiza status do pedido
             if pedido.status != 'aguardando_pagamento':
                 pedido.status = 'aguardando_pagamento'
                 pedido.save(update_fields=['status'])
 
         return redirect('meus_pedidos')
 
+#-23.453403648643707, -46.66151816239609  -23.472997309863196, -46.63041992925325
 
 class MeusPedidosView(LoginRequiredMixin, View):
     login_url = 'login'
 
     def get(self, request):
         perfil = request.user.perfil
+        empresa = EnderecoEmpresa.objects.first()  # único endereço da empresa
 
         pedidos = (
             Pedido.objects
             .filter(cliente=perfil)
-            .prefetch_related('itens')
+            .prefetch_related('itens', 'endereco')
             .order_by('-criacao')
         )
 
+        # Atualiza distância e tempo para pedidos que têm endereço e empresa
+        for pedido in pedidos:
+            endereco = getattr(pedido, 'endereco', None)
+            if endereco and endereco.latitude and endereco.longitude:
+                if empresa and empresa.latitude and empresa.longitude:
+                    # Evita recalcular se já estiver salvo
+                    if pedido.distancia_km is None or pedido.tempo_estimado_min is None:
+                        distancia = calcular_distancia_km(
+                            round(empresa.latitude, 6),
+                            round(empresa.longitude, 6),
+                            round(endereco.latitude, 6),
+                            round(endereco.longitude, 6)
+                        )
+                        tempo = estimar_tempo_minutos(distancia)
+
+                        pedido.distancia_km = round(distancia, 2)
+                        pedido.tempo_estimado_min = tempo
+                        pedido.save(update_fields=['distancia_km', 'tempo_estimado_min'])
+
         return render(request, 'meus_pedidos.html', {
-            'pedidos': pedidos
+            'pedidos': pedidos,
+            'empresa': empresa
         })
