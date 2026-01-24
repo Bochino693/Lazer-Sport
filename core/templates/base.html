@@ -960,154 +960,152 @@ nav a.btn-login {
   {% block content %}
   {% endblock %}
 </main>
-
 <script>
+  /* ==========================================
+     1. UTILITÁRIOS GERAIS (Scroll, Menu, etc)
+     ========================================== */
+
+  // Scroll suave para login
   document.querySelectorAll('.scroll-to-login').forEach(link => {
     link.addEventListener('click', function(e) {
-        e.preventDefault(); // evita o salto padrão
+        e.preventDefault();
         const target = document.querySelector(this.getAttribute('href'));
-        if (target) {
-            target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
+        if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
-});
-
-
-  // Controle do menu hambúrguer
-  const menuToggle = document.getElementById('menu-toggle');
-  const nav = document.getElementById('nav');
-
-  menuToggle.addEventListener('click', () => {
-    nav.classList.toggle('active');
   });
 
-
-  document.addEventListener("DOMContentLoaded", () => {
-  const sections = document.querySelectorAll("section[id]");
-  const menuLinks = document.querySelectorAll("#nav a");
-
-  function updateActiveLink() {
-    let scrollY = window.pageYOffset + 200; // margem para ativar antes
-
-    sections.forEach(section => {
-      let sectionTop = section.offsetTop;
-      let sectionHeight = section.offsetHeight;
-      let sectionId = section.getAttribute("id");
-
-      if (scrollY >= sectionTop && scrollY < sectionTop + sectionHeight) {
-        menuLinks.forEach(link => link.classList.remove("active-link"));
-
-        const activeLink = document.querySelector(`#nav a[href$="#${sectionId}"]`);
-        if (activeLink) activeLink.classList.add("active-link");
-      }
-    });
+  // Menu Hambúrguer
+  const menuToggle = document.getElementById('menu-toggle');
+  const nav = document.getElementById('nav');
+  if (menuToggle && nav) {
+      menuToggle.addEventListener('click', () => {
+        nav.classList.toggle('active');
+      });
   }
 
-  window.addEventListener("scroll", updateActiveLink);
-  updateActiveLink();
-});
+  // Controle de Link Ativo no Scroll
+  document.addEventListener("DOMContentLoaded", () => {
+      const sections = document.querySelectorAll("section[id]");
+      const menuLinks = document.querySelectorAll("#nav a");
 
+      function updateActiveLink() {
+        let scrollY = window.pageYOffset + 200;
+        sections.forEach(section => {
+          let sectionTop = section.offsetTop;
+          let sectionHeight = section.offsetHeight;
+          let sectionId = section.getAttribute("id");
 
-window.addEventListener("load", function() {
-    const element = document.getElementById("logout-box");
-    if(element) {
-        element.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
-});
+          if (scrollY >= sectionTop && scrollY < sectionTop + sectionHeight) {
+            menuLinks.forEach(link => link.classList.remove("active-link"));
+            const activeLink = document.querySelector(`#nav a[href$="#${sectionId}"]`);
+            if (activeLink) activeLink.classList.add("active-link");
+          }
+        });
+      }
+      window.addEventListener("scroll", updateActiveLink);
+      updateActiveLink();
+  });
 
+  // Scroll para logout/login boxes
+  window.addEventListener("load", function() {
+      const element = document.getElementById("logout-box");
+      if(element) element.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
 
+  /* ==========================================
+     2. LÓGICA DO CARRINHO (O FIX IMPORTANTE)
+     ========================================== */
 
-    badge.innerText = total;
+  // Função que atualiza o visual do botão flutuante
+  function atualizarBadgeCarrinho(total) {
+      console.log("Atualizando carrinho para:", total); // Log para debug
 
-    // efeito pulse
-    badge.classList.remove('pulse');
-    void badge.offsetWidth;
-    badge.classList.add('pulse');
+      const carrinhoBtn = document.getElementById('carrinho-float-btn');
+      const badge = document.getElementById('carrinho-contador');
 
-    carrinho.style.display = 'flex';
-}
+      // Se os elementos não existirem (ex: usuário não logado), para aqui.
+      if (!carrinhoBtn || !badge) return;
 
-// Função genérica para adicionar ao carrinho via AJAX
-// Função genérica para adicionar ao carrinho via AJAX
-function adicionarAoCarrinho(tipo, id) {
-    fetch(`/carrinho/adicionar/${tipo}/${id}/`, {
-        method: 'POST',
-        headers: {
-            'X-CSRFToken': '{{ csrf_token }}',
-            'X-Requested-With': 'XMLHttpRequest'
-        }
-    })
-    .then(res => {
-        if (res.status === 403) {
-            // URL de login com next
-            const loginUrl = "{% url 'login' %}?next=" + encodeURIComponent(window.location.pathname) + "#login-box";
+      // Atualiza o texto
+      badge.textContent = total;
 
-            // Mostra toast com link clicável
-            mostrarToast(`⚠️ Você precisa fazer login para adicionar ao carrinho. <a href="${loginUrl}" style="color: #fff; text-decoration: underline;">Clique aqui para entrar</a>`, true, 6000);
+      // Mostra ou esconde
+      if (total > 0) {
+          carrinhoBtn.style.display = 'flex';
+          // Animação visual
+          carrinhoBtn.style.transform = 'scale(1.2)';
+          setTimeout(() => carrinhoBtn.style.transform = 'scale(1)', 200);
+      } else {
+          carrinhoBtn.style.display = 'none';
+      }
+  }
 
-            return Promise.reject('Usuário não logado');
-        }
-        return res.ok ? res.json() : Promise.reject('Erro HTTP');
-    })
-    .then(data => {
-        if (data.sucesso && data.total_itens !== undefined) {
-            mostrarToast('🛒 Produto adicionado ao carrinho!');
-            atualizarBadgeCarrinho(data.total_itens);
-        } else if (data.erro) {
-            mostrarToast(data.erro, true);
-        } else {
-            mostrarToast('Erro ao adicionar', true);
-        }
-    })
-    .catch(err => console.error(err));
-}
+  // Função chamada pelo botão de compra
+  function adicionarAoCarrinho(tipo, id) {
+      // URL para onde vamos enviar
+      const url = `/carrinho/adicionar/${tipo}/${id}/`;
 
-// Toast
-function mostrarToast(msg, erro = false, duracao = 3000) {
-    let toast = document.getElementById('toast-carrinho');
-    if (!toast) {
-        toast = document.createElement('div');
-        toast.id = 'toast-carrinho';
-        toast.className = 'toast-carrinho';
-        // Permitir cliques dentro do toast
-        toast.style.pointerEvents = 'auto';
-        toast.style.cursor = 'pointer';
-        document.body.appendChild(toast);
-    }
+      fetch(url, {
+          method: 'POST',
+          headers: {
+              'X-CSRFToken': '{{ csrf_token }}',
+              'X-Requested-With': 'XMLHttpRequest'
+          }
+      })
+      .then(response => {
+          // Se o usuário não estiver logado (403), trata aqui
+          if (response.status === 403) {
+             const loginUrl = "{% url 'login' %}?next=" + encodeURIComponent(window.location.pathname) + "#login-box";
+             mostrarToast(`⚠️ Faça login para adicionar. <a href="${loginUrl}" style="color: #fff; text-decoration: underline;">Entrar</a>`, true, 5000);
+             throw new Error('Não autorizado');
+          }
+          return response.json();
+      })
+      .then(data => {
+          if (data.sucesso) {
+              mostrarToast('🛒 Adicionado com sucesso!');
+              // AQUI ATUALIZA O NÚMERO NA TELA
+              atualizarBadgeCarrinho(data.total_itens);
+          } else {
+              mostrarToast('Erro: ' + (data.erro || 'Desconhecido'), true);
+          }
+      })
+      .catch(error => {
+          if (error.message !== 'Não autorizado') {
+              console.error('Erro na requisição:', error);
+          }
+      });
+  }
 
-    toast.innerHTML = msg; // usa innerHTML para links
-    toast.style.background = erro
-        ? 'linear-gradient(135deg, #dc3545, #a71d2a)'
-        : 'linear-gradient(135deg, #14a61a, #0e7f14)';
+  // Sistema de Notificação (Toast)
+  function mostrarToast(msg, erro = false, duracao = 3000) {
+      let toast = document.getElementById('toast-carrinho');
+      if (!toast) {
+          toast = document.createElement('div');
+          toast.id = 'toast-carrinho';
+          // Estilos inline garantidos para funcionar
+          toast.style.cssText = "position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%); padding: 12px 24px; border-radius: 30px; color: white; font-weight: bold; z-index: 10001; box-shadow: 0 5px 15px rgba(0,0,0,0.3); opacity: 0; transition: opacity 0.3s; pointer-events: auto;";
+          document.body.appendChild(toast);
+      }
 
-    toast.classList.add('show');
+      toast.innerHTML = msg;
+      toast.style.background = erro
+          ? 'linear-gradient(135deg, #dc3545, #a71d2a)'
+          : 'linear-gradient(135deg, #2ecc71, #27ae60)';
 
-    // Remove automaticamente após o tempo
-    setTimeout(() => toast.classList.remove('show'), duracao);
-}
+      toast.style.display = 'block';
+      // Pequeno delay para permitir a transição de opacidade
+      requestAnimationFrame(() => {
+          toast.style.opacity = '1';
+      });
 
-
-function atualizarBadgeCarrinho(total) {
-    const carrinhoBtn = document.querySelector('.float-carrinho');
-    if (!carrinhoBtn) return;
-
-    const badge = carrinhoBtn.querySelector('.badge');
-    if (!badge) return;
-
-    badge.innerText = total;
-
-    // efeito pulse simples
-    badge.classList.remove('pulse');
-    void badge.offsetWidth;
-    badge.classList.add('pulse');
-
-    // garante visibilidade
-    carrinhoBtn.style.display = 'flex';
-}
-
-
-
+      setTimeout(() => {
+          toast.style.opacity = '0';
+          setTimeout(() => { toast.style.display = 'none'; }, 300);
+      }, duracao);
+  }
 </script>
+
 
 <div class="float-stack">
 
@@ -1128,12 +1126,16 @@ function atualizarBadgeCarrinho(total) {
     </a>
     {% endif %}
 
-    {% if user.is_authenticated and mostrar_float_carrinho %}
-    <a href="{% url 'carrinho' %}#bread" class="float-btn float-carrinho" title="Carrinho">
-        <i class="fa-solid fa-cart-shopping"></i>
-        <span class="badge">{{ carrinho_total_itens }}</span>
-    </a>
-    {% endif %}
+{% if user.is_authenticated %}
+<a href="{% url 'carrinho' %}"
+   id="carrinho-float-btn"
+   class="float-btn float-carrinho"
+   title="Carrinho"
+   style="display: {% if carrinho_total_itens > 0 %}flex{% else %}none{% endif %};">
+    <i class="fa-solid fa-cart-shopping"></i>
+    <span id="carrinho-contador" class="badge">{{ carrinho_total_itens|default:"0" }}</span>
+</a>
+{% endif %}
 
     {% if user.is_authenticated and tem_manutencao %}
     <a href="{% url 'manutencoes' %}?tab=lista#cab"
