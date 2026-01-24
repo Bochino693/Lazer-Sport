@@ -340,6 +340,10 @@ body {
     background: #3b82f6; /* azul */
 }
 
+.status-saiu_entrega {
+    background: #f97316; /* laranja vivo */
+}
+
 .status-finalizado {
     background: #16a34a; /* verde escuro */
 }
@@ -679,6 +683,12 @@ body {
                 <small>{{ pedido.criacao|date:"d/m/Y H:i" }}</small>
             </div>
         </div>
+
+            <!-- Badge de status -->
+        <div class="pedido-status status-{{ pedido.status }}">
+            {{ pedido.get_status_display }}
+        </div>
+
 
         <div class="pedido-info">
             <div class="info-box">

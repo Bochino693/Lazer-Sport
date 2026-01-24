@@ -456,6 +456,7 @@ class Pedido(Prime):
         ('aguardando_pagamento', 'Aguardando pagamento'),
         ('pago', 'Pago'),
         ('em_preparacao', 'Em preparação'),
+        ('saiu_entrega', 'Saiu para entrega'),
         ('finalizado', 'Finalizado'),
         ('cancelado', 'Cancelado'),
     )
