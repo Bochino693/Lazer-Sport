@@ -394,10 +394,14 @@
     <!-- ====== CONTEÚDO ====== -->
     <div class="produto-container" id="produto-box">
 
-        <!-- IMAGEM -->
-        <div class="produto-img">
+            <!-- IMAGEM -->
+    <div class="produto-img">
+        {% if brinquedo.imagem_brinquedo %}
             <img src="{{ brinquedo.imagem_brinquedo.url }}" alt="{{ brinquedo.nome_brinquedo }}">
-        </div>
+        {% else %}
+            <img src="{% static 'images/placeholder.png' %}" alt="Imagem indisponível">
+        {% endif %}
+    </div>
 
     <!-- INFORMAÇÕES -->
     <div class="produto-info">
