@@ -114,6 +114,35 @@
       transition: all 0.3s ease;
     }
 
+@media (max-width: 768px) {
+  nav {
+    position: absolute;
+    top: 70px;
+    right: 20px;
+    background: #111;
+    flex-direction: column;
+    gap: 16px;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-10px);
+    transition: all 0.3s ease;
+  }
+
+  nav.active {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+  }
+
+  .menu-toggle {
+    display: flex;
+  }
+}
+
     /* ======= PESQUISA ======= */
     .search-section {
       background: #ffffff;
@@ -893,7 +922,7 @@ nav a.btn-login {
   </div>
 
   <!-- Menu toggle -->
-  <div class="menu-toggle" id="menu-toggle">
+  <div class="menu-toggle" id="menu-toggle" aria-label="Abrir menu">
     <span></span>
     <span></span>
     <span></span>
