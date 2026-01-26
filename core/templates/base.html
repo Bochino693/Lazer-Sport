@@ -793,38 +793,42 @@ nav a.btn-login {
     pointer-events: auto; /* garante que seja clicável */
 }
 
+/* ===== OTIMIZAÇÃO FINAL DO BOTÃO ADMIN ===== */
+#float-admin-panel.float-btn.float-admin-panel {
+    /* Força o fundo roxo elétrico sem transparência */
+    background: #6200ea !important;
+    background: linear-gradient(135deg, #6200ea, #9d50bb) !important;
 
-/* ===== FLOAT BUTTON ADMIN (NOVO / LIMPO) ===== */
-.float-admin-panel {
-    background: linear-gradient(135deg, #7c3aed, #5b21b6); /* roxo elegante */
-    color: #ffffff;
-    font-size: 22px;
-    box-shadow: 0 6px 18px rgba(124,58,237,0.45);
-    transition: transform .25s ease, box-shadow .25s ease;
+    /* Garante que o botão apareça (remove transparências de outras regras) */
+    opacity: 1 !important;
+    display: flex !important;
+    visibility: visible !important;
+
+    /* Borda e Sombra para destacar no Mobile */
+    border: 2px solid #ffffff33 !important;
+    box-shadow: 0 10px 20px rgba(98, 0, 234, 0.5) !important;
+
+    /* Garante que ele fique acima de tudo */
+    z-index: 99999 !important;
 }
 
-/* Hover igual aos outros */
-.float-admin-panel:hover {
-    transform: scale(1.08);
-    box-shadow: 0 10px 28px rgba(124,58,237,0.65);
+/* Coroa Dourada */
+#float-admin-panel.float-admin-panel i {
+    color: #FFD700 !important; /* Dourado Vivo */
+    font-size: 26px !important;
+    opacity: 1 !important;
+    /* Efeito de profundidade na coroa */
+    filter: drop-shadow(1px 1px 1px rgba(0,0,0,0.4)) !important;
 }
 
-/* Clique */
-.float-admin-panel:active {
-    transform: scale(0.92);
+/* Ajuste específico para Mobile (evita que ele fique pequeno ou suma) */
+@media (max-width: 768px) {
+    #float-admin-panel.float-btn {
+        width: 62px !important; /* Ligeiramente maior no mobile para facilitar o toque */
+        height: 62px !important;
+        bottom: 20px !important;
+    }
 }
-
-/* Ícone */
-.float-admin-panel i {
-    font-size: 22px;
-}
-.float-btn.float-admin-panel {
-    background: linear-gradient(135deg, #7c3aed, #5b21b6) !important;
-    color: #fff;
-    font-size: 22px;
-    box-shadow: 0 10px 28px rgba(124,58,237,.55);
-}
-
   </style>
 
 </head>
@@ -838,7 +842,7 @@ nav a.btn-login {
 
   </div>
 
- <!-- Ícones de redes sociais -->
+ <!-- Ícones de redes sociais
 <div class="social-icons">
     <a href="https://www.instagram.com/lazersportbrinquedos" target="_blank" rel="noopener" title="Instagram" class="instagram">
         <i class="fa-brands fa-instagram"></i>
@@ -846,7 +850,7 @@ nav a.btn-login {
     <a href="https://wa.me/5511960563135" target="_blank" rel="noopener" title="WhatsApp" class="whatsapp">
         <i class="fa-brands fa-whatsapp"></i>
     </a>
-    <!--
+
     <a href="https://www.facebook.com/LazerSportBrinquedos1" target="_blank" rel="noopener" title="Facebook" class="facebook">
         <i class="fa-brands fa-facebook"></i>
     </a>
@@ -857,9 +861,9 @@ nav a.btn-login {
     <a href="https://www.threads.com/@lazersportbrinquedos?xmt=AQF01c59c6UZtE4QcHQgxUo-tcUtuujbUK4j8rzckZJl1is" target="_blank" rel="noopener" title="Threads" class="threads">
         <i class="fa-brands fa-threads"></i>
     </a>
-    -->
-</div>
 
+</div>
+-->
 
   <!-- Área do usuário -->
   <div class="user-area">
@@ -1119,15 +1123,14 @@ window.addEventListener("pageshow", function (event) {
 
 <div class="float-stack">
 
- {% if user.is_authenticated and user.is_staff %}
-<a href="/system/"
-   id="float-admin-panel"
-   class="float-btn float-admin-panel"
-   title="Área administrativa">
-    <i class="fa-solid fa-crown"></i>
-</a>
-{% endif %}
-
+{% if user.is_authenticated and user.is_staff %}
+    <a href="/system/"
+       id="float-admin-panel"
+       class="float-btn float-admin-panel"
+       title="Área administrativa">
+        <i class="fa-solid fa-crown"></i>
+    </a>
+    {% endif %}
 
     {% if user.is_authenticated %}
     <a href="{% url 'meus_pedidos' %}#pedidos" class="float-btn float-pedidos" title="Meus pedidos">
