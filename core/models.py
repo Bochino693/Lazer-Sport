@@ -1,7 +1,5 @@
 from django.db import models
 from django.contrib.auth.models import User
-from django.core.validators import MinValueValidator
-from django.core.exceptions import ValidationError
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType

@@ -138,9 +138,27 @@
     transform: translateY(0);
   }
 
-  .menu-toggle {
-    display: flex;
-  }
+  .menu-toggle span {
+  height: 3px;
+  width: 26px;
+  background: white;
+  margin: 4px 0;
+  border-radius: 5px;
+  transition: all 0.3s ease;
+}
+
+.menu-toggle.active span:nth-child(1) {
+  transform: rotate(45deg) translate(5px, 5px);
+}
+
+.menu-toggle.active span:nth-child(2) {
+  opacity: 0;
+}
+
+.menu-toggle.active span:nth-child(3) {
+  transform: rotate(-45deg) translate(6px, -6px);
+}
+
 }
 
     /* ======= PESQUISA ======= */
@@ -934,7 +952,7 @@ nav a.btn-login {
     <a href="{% url 'home' %}#carrosel">Manutenção</a>
     <a href="{% url 'home' %}#categorias-section">Categorias</a>
     <a href="{% url 'home' %}#promocoes-section">Promoções</a>
-    <a href="{% url 'home' %}#brinquedos">Produtos</a>
+    <a href="{% url 'home' %}#brinquedos">Brinquedos</a>
     <a href="{% url 'home' %}#combos-section">Combos</a>
     <a href="{% url 'home' %}#estabelecimentos">Estabelecimentos</a>
     <a href="{% url 'home' %}#eventos">Eventos</a>
@@ -993,6 +1011,50 @@ nav a.btn-login {
   {% block content %}
   {% endblock %}
 </main>
+
+
+
+<div class="float-stack">
+
+{% if user.is_authenticated and user.is_staff %}
+    <a href="/system/"
+       id="float-admin-panel"
+       class="float-btn float-admin-panel"
+       title="Área administrativa">
+        <i class="fa-solid fa-crown"></i>
+    </a>
+    {% endif %}
+
+    {% if user.is_authenticated %}
+    <a href="{% url 'meus_pedidos' %}#pedidos" class="float-btn float-pedidos" title="Meus pedidos">
+        <i class="fa-solid fa-box"></i>
+        <span class="badge">{{ total_pedidos_ativos }}</span>
+    </a>
+    {% endif %}
+
+{% if user.is_authenticated %}
+<a href="{% url 'carrinho' %}#bread"
+   id="carrinho-float-btn"
+   class="float-btn float-carrinho"
+   title="Carrinho"
+   style="display: {% if carrinho_total_itens > 0 %}flex{% else %}none{% endif %};">
+    <i class="fa-solid fa-cart-shopping"></i>
+    <span id="carrinho-contador" class="badge">{{ carrinho_total_itens|default:"0" }}</span>
+</a>
+{% endif %}
+
+    {% if user.is_authenticated and tem_manutencao %}
+    <a href="{% url 'manutencoes' %}?tab=lista#cab"
+       class="float-btn float-manutencao {% if manutencao_andamento > 0 %} andamento {% endif %}"
+        title="Manutenções">
+        <i class="fa-solid fa-screwdriver-wrench"></i>
+        <span class="badge">{{ manutencao_abertas }}</span>
+    </a>
+    {% endif %}
+
+</div>
+
+
 <script>
   /* ==========================================
      1. UTILITÁRIOS GERAIS (Scroll, Menu, etc)
@@ -1147,49 +1209,34 @@ window.addEventListener("pageshow", function (event) {
         window.location.reload();
     }
 });
+
+  const toggle = document.getElementById('menu-toggle');
+  const nav = document.getElementById('nav-menu');
+
+  // Abre / fecha ao clicar no botão
+  toggle.addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggle.classList.toggle('active');
+    nav.classList.toggle('active');
+  });
+
+  // Fecha ao clicar fora
+  document.addEventListener('click', (e) => {
+    if (!nav.contains(e.target) && !toggle.contains(e.target)) {
+      nav.classList.remove('active');
+      toggle.classList.remove('active');
+    }
+  });
+
+  // Fecha ao clicar em um link
+  nav.querySelectorAll('a').forEach(link => {
+    link.addEventListener('click', () => {
+      nav.classList.remove('active');
+      toggle.classList.remove('active');
+    });
+  });
+
 </script>
-
-
-<div class="float-stack">
-
-{% if user.is_authenticated and user.is_staff %}
-    <a href="/system/"
-       id="float-admin-panel"
-       class="float-btn float-admin-panel"
-       title="Área administrativa">
-        <i class="fa-solid fa-crown"></i>
-    </a>
-    {% endif %}
-
-    {% if user.is_authenticated %}
-    <a href="{% url 'meus_pedidos' %}#pedidos" class="float-btn float-pedidos" title="Meus pedidos">
-        <i class="fa-solid fa-box"></i>
-        <span class="badge">{{ total_pedidos_ativos }}</span>
-    </a>
-    {% endif %}
-
-{% if user.is_authenticated %}
-<a href="{% url 'carrinho' %}#bread"
-   id="carrinho-float-btn"
-   class="float-btn float-carrinho"
-   title="Carrinho"
-   style="display: {% if carrinho_total_itens > 0 %}flex{% else %}none{% endif %};">
-    <i class="fa-solid fa-cart-shopping"></i>
-    <span id="carrinho-contador" class="badge">{{ carrinho_total_itens|default:"0" }}</span>
-</a>
-{% endif %}
-
-    {% if user.is_authenticated and tem_manutencao %}
-    <a href="{% url 'manutencoes' %}?tab=lista#cab"
-       class="float-btn float-manutencao {% if manutencao_andamento > 0 %} andamento {% endif %}"
-        title="Manutenções">
-        <i class="fa-solid fa-screwdriver-wrench"></i>
-        <span class="badge">{{ manutencao_abertas }}</span>
-    </a>
-    {% endif %}
-
-</div>
-
 
 </body>
 
