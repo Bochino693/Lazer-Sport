@@ -41,6 +41,8 @@ DEBUG = ENVIRONMENT != "production"
 ALLOWED_HOSTS = [
     "lazer-sport-1.onrender.com",
     "lazerandsport.onrender.com",
+    "lazersport.com.br",
+    "www.lazersport.com.br",
     "localhost",
     "127.0.0.1",
     "0.0.0.0",

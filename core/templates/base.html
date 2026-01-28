@@ -284,6 +284,7 @@
   color: #004AAD;
   font-weight: 700;
   margin-bottom: 20px;
+  margin-top: 10px;
 }
 
 .search-suggestions {
@@ -876,6 +877,71 @@ nav a.btn-login {
         bottom: 20px !important;
     }
 }
+
+/* ===============================
+   HERO LOGO – VERSÃO DEFINITIVA
+================================ */
+
+.hero-logo-wrapper {
+    display: flex;
+    justify-content: center;
+    background: #f5f8ff;
+    padding: 22px 0 14px;
+}
+
+/* container */
+.hero-logo {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    opacity: 0;
+    animation: heroLogoReveal 1s ease forwards;
+    animation-delay: 0.2s;
+}
+
+/* imagem */
+.hero-logo img {
+    width: 100%;
+    max-width: 150px !important; /* FORÇA tamanho */
+    height: auto !important;
+    display: block;
+    filter: drop-shadow(0 6px 14px rgba(0,0,0,0.18));
+    transition: transform 0.35s ease, filter 0.35s ease;
+}
+
+/* hover apenas desktop */
+@media (hover: hover) {
+    .hero-logo img:hover {
+        transform: scale(1.05);
+        filter: drop-shadow(0 12px 26px rgba(0,0,0,0.28));
+    }
+}
+
+/* animação perceptível e elegante */
+@keyframes heroLogoReveal {
+    from {
+        opacity: 0;
+        transform: translateY(18px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* ===============================
+   MOBILE
+================================ */
+@media (max-width: 768px) {
+    .hero-logo-wrapper {
+        padding: 16px 0 10px;
+    }
+
+    .hero-logo img {
+        max-width: 120px !important;
+    }
+}
+
   </style>
 
 </head>
@@ -883,11 +949,7 @@ nav a.btn-login {
 
 <!-- ======= CABEÇALHO ======= -->
 <header>
-  <!-- Logo -->
-  <div class="logo">
-    <img src="{% static 'images/logoofi.png' %}" alt="Logo">
 
-  </div>
 
  <!-- Ícones de redes sociais
 <div class="social-icons">
@@ -960,6 +1022,14 @@ nav a.btn-login {
     <a href="{% url 'home' %}#contato">Contato</a>
   </nav>
 </header>
+
+
+<section class="hero-logo-wrapper">
+  <div class="hero-logo">
+    <img src="{% static 'images/logoofi.png' %}" alt="Lazer Sport Brinquedos">
+  </div>
+</section>
+
 
 
 <!-- ======= SEÇÃO DE PESQUISA MODERNA ======= -->
