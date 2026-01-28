@@ -373,6 +373,19 @@
     transform: translateX(-50%) translateY(0);
 }
 
+    .aviso-preco {
+    font-family: 'Poppins', 'Segoe UI', sans-serif;
+    font-size: 16px;
+    font-weight: 500;
+    color: #d97706; /* dourado elegante */
+    background: #fff7ed;
+    border-left: 4px solid #f59e0b;
+    padding: 10px 14px;
+    border-radius: 6px;
+    margin-top: 8px;
+}
+
+
 </style>
 
 
@@ -407,10 +420,16 @@
     <h1>{{ brinquedo.nome_brinquedo }}</h1>
 
 
-    <!-- PREÇO -->
+
+    <!-- PREÇO
     <p class="preco js-preco"
        data-valor="{{ brinquedo.valor_brinquedo }}">
        R$ 0,00
+    </p>
+        -->
+
+    <p class="preco aviso-preco">
+        Confira o preço com o fornecedor
     </p>
 
 
@@ -445,7 +464,7 @@
 
     <!-- BOTÕES DE AÇÃO -->
     <div class="acoes-produto">
-            <button type="button"
+   <!--         <button type="button"
                     class="btn-produto btn-carrinho"
                     onclick="adicionarAoCarrinho('brinquedo', {{ brinquedo.id }})">
                 🛒 Adicionar ao Carrinho
@@ -453,6 +472,8 @@
 
 
         <a href="#" class="btn-produto btn-comprar">⚡ Comprar Agora</a>
+
+-->
             <!-- WhatsApp -->
                 <a
                     href="https://wa.me/5511960563135?text=
@@ -476,6 +497,7 @@
                     <i class="fab fa-whatsapp"></i> Orçamento via WhatsApp
                 </a>
 
+        {% if brinquedo.nome_categoria == "brinquedao" or brinquedo.nome_categoria == "trampolins" or brinquedo.nome_categoria == "trampolim" %}
             <button class="btn-acao sob-medida"
                 onclick="abrirModalSobMedida(this)"
                 data-id="{{ brinquedo.id }}"
@@ -486,6 +508,7 @@
                 data-profundidade="{{ brinquedo.profundidade_m }}">
             📐 Orçamento sob medida
         </button>
+        {% endif %}
 
 
         <a href="/#brinquedos" class="btn-produto btn-voltar">← Voltar</a>
@@ -493,7 +516,7 @@
 
 </div>
 
-</div> <!-- fecha produto-container -->
+<!--</div>  fecha produto-container -->
 
 
 <div id="modalSobMedida" class="modal-overlay">

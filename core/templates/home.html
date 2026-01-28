@@ -1874,10 +1874,41 @@ body {
 .grid-cards {
     min-height: 600px;
 }
+
+.acoes-fixas {
+    margin-top: auto;        /* empurra para o fundo */
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+/* garante que o WhatsApp herde exatamente o mesmo texto */
+.btn-whatsapp {
+    background: #25D366;
+    font-family: inherit;     /* herda do .btn-vermais */
+    font-weight: 700;         /* igual ao Ver mais */
+    font-size: inherit;       /* mesmo tamanho */
+    letter-spacing: normal;   /* mesmo espaçamento */
+    text-transform: none;
+}
+
+.btn-whatsapp:hover {
+    background: #1ebe5d;
+}
+
+/* ícone alinhado com o texto */
+.btn-whatsapp i {
+    font-size: 1em;           /* igual à fonte */
+    margin-right: 6px;
+    vertical-align: middle;
+}
+
+
+
 </style>
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
 
 <!-- ======= CARROSSEL ======= -->
@@ -2133,19 +2164,28 @@ body {
           <div class="volume">
             📦 Volume: {{ brinquedo.volume_formatado|default:"Não informado" }}
           </div>
-
+            <!--
           <div class="preco money" data-valor="{{ brinquedo.valor_brinquedo }}">
             R$ 0,00
           </div>
-
+            -->
           <div class="tags">
             {% for tag in brinquedo.tags.all %}
               <span class="tag">#{{ tag.nome_tags }}</span>
             {% endfor %}
           </div>
 
-          <!-- Agora é só visual, não link -->
-          <span class="btn-vermais">Ver mais</span>
+           <div class="acoes-fixas">
+                  <button
+                    class="btn-vermais btn-whatsapp"
+                    onclick="abrirWhatsApp(event, '{{ brinquedo.nome_brinquedo|escapejs }}')"
+                  >
+                    <i class="fab fa-whatsapp"></i> <strong>Pedir orçamento no WhatsApp</strong>
+                  </button>
+
+                  <span class="btn-vermais">Ver mais</span>
+                </div>
+
 
         </div>
       </div>
@@ -2553,6 +2593,20 @@ body {
 
 
 <script>
+
+function abrirWhatsApp(event, nome) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const mensagem =
+        `Olá! 👋\n` +
+        `Gostaria de um orçamento para o brinquedo abaixo:\n\n` +
+        `🧸 Nome: ${nome}\n\n` +
+        `Fico no aguardo 😊`;
+
+    const url = `https://wa.me/5511960563135?text=${encodeURIComponent(mensagem)}`;
+    window.open(url, '_blank');
+}
 
 
 /* ======================================================

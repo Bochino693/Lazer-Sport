@@ -162,6 +162,17 @@
     color: #f5b301;
 }
 
+.aviso-preco {
+    font-family: 'Poppins', 'Segoe UI', sans-serif;
+    font-size: 16px;
+    font-weight: 500;
+    color: #d97706; /* dourado elegante */
+    background: #fff7ed;
+    border-left: 4px solid #f59e0b;
+    padding: 10px 14px;
+    border-radius: 6px;
+    margin-top: 8px;
+}
 
 </style>
 
@@ -215,7 +226,12 @@
 
     <p class="descricao">{{ item.descricao|truncatechars:90 }}</p>
 
+    <!--
     <p class="preco money" data-valor="{{ item.valor_brinquedo }}">R$ 0,00</p>
+    -->
+    <p class="preco aviso-preco">
+        Confira o preço com o fornecedor
+    </p>
 </div>
 {% endfor %}
 
