@@ -16,4 +16,6 @@ urlpatterns = [
 
     path('', include('core.urls')),
 
+   # path('interno/', include('sistema_interno.urls')),
+
 ]
