@@ -432,7 +432,7 @@
 
             <div class="item-linha">
                 <span>Preço</span>
-                <span>R$ {{ item.preco_unitario|floatformat:2 }}</span>
+                <span class="money">R$ {{ item.preco_unitario|floatformat:2 }}</span>
             </div>
 
             <div class="item-linha">
@@ -442,7 +442,8 @@
 
             <div class="item-linha item-subtotal">
                 <span>Subtotal</span>
-                <span>R$ {{ item.subtotal|floatformat:2 }}</span>
+                <span class="money">R$ {{ item.subtotal|floatformat:2 }}</span>
+
             </div>
 
             <button class="btn-remover" onclick="removerItem({{ item.id }})">
@@ -505,34 +506,53 @@
 <script>
 document.addEventListener('DOMContentLoaded', () => {
 
-    // ===== FUNÇÃO PARA FORMATAR NÚMEROS PARA PT-BR =====
-    function formatarNumeroBR(valor) {
-        return Number(valor).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    }
-
-    // ===== FUNÇÃO PARA FORMATAR TODOS OS VALORES DO CARRINHO =====
     function formatarCarrinho() {
         const carrinho = document.querySelector('.carrinho-container');
         if (!carrinho) return;
 
-        // Preços unitários e subtotais dos itens
-        const itensPreco = carrinho.querySelectorAll('.item-linha span:last-child, .item-subtotal span:last-child');
-        itensPreco.forEach(el => {
-            let texto = el.textContent.replace(/\./g,'').replace(',', '.').replace(/[^\d.-]/g,'');
+        // 👉 SOMENTE valores monetários
+        const valoresMoney = carrinho.querySelectorAll('.money');
+
+        valoresMoney.forEach(el => {
+            let texto = el.textContent
+                .replace(/\./g, '')
+                .replace(',', '.')
+                .replace(/[^\d.-]/g, '');
+
             let numero = parseFloat(texto);
-            if (!isNaN(numero)) el.textContent = 'R$ ' + formatarNumeroBR(numero);
+
+            if (!isNaN(numero)) {
+                el.textContent = 'R$ ' + numero.toLocaleString('pt-BR', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                });
+            }
         });
 
-        // Resumo total, desconto e total líquido
+        // 👉 RESUMO
         const resumoValores = carrinho.querySelectorAll('.resumo-linha span:last-child');
+
         resumoValores.forEach(el => {
-            let texto = el.textContent.replace(/\./g,'').replace(',', '.').replace(/[^\d.-]/g,'');
+            let texto = el.textContent
+                .replace(/\./g, '')
+                .replace(',', '.')
+                .replace(/[^\d.-]/g, '');
+
             let numero = parseFloat(texto);
-            if (!isNaN(numero)) el.textContent = (numero < 0 ? '-' : '') + 'R$ ' + formatarNumeroBR(Math.abs(numero));
+
+            if (!isNaN(numero)) {
+                el.textContent =
+                    (numero < 0 ? '- ' : '') +
+                    'R$ ' +
+                    Math.abs(numero).toLocaleString('pt-BR', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2
+                    });
+            }
         });
     }
 
-    // chama a formatação ao carregar
+    // ✅ AGORA SIM
     formatarCarrinho();
 });
 
