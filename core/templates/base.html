@@ -772,6 +772,8 @@ nav a.btn-login {
     padding: 4px 7px;
     border-radius: 20px;
 
+    }
+
 /* MOBILE */
 @media (max-width: 768px) {
     .float-stack {
@@ -878,75 +880,74 @@ nav a.btn-login {
     }
 }
 
-/* ===============================
-   HERO LOGO – MOBILE FIRST
-================================ */
 
-/* FUNDO E CENTRALIZAÇÃO */
-.hero-logo-wrapper {
+
+/* ======= FAIXA DE MARCA (NOVA VERSÃO BLINDADA) ======= */
+.mini-brand-section {
     width: 100%;
+    background: #f8fbff;
+    border-bottom: 2px solid #004AAD;
+    padding: 15px 0;
     display: flex;
     justify-content: center;
     align-items: center;
-    background: linear-gradient(
-        180deg,
-        #f5f8ff 0%,
-        #eef3ff 100%
-    );
-    padding: 18px 0 14px;
 }
 
-/* CONTAINER */
-.hero-logo {
+.mini-brand-container {
     display: flex;
-    justify-content: center;
     align-items: center;
-
-    opacity: 0;
-    animation: heroLogoReveal 0.9s ease forwards;
+    gap: 20px;
 }
 
-/* IMAGEM — CONTROLE TOTAL */
-.hero-logo img {
-    width: auto;              /* 🔥 impede estourar */
-    max-width: 120px;         /* MOBILE FIRST */
-    height: auto;
+/* AQUI ESTÁ A MÁGICA PARA A IMAGEM NÃO ESTOURAR */
+.img-controlada {
+    height: 120px !important;    /* Força altura fixa no Desktop */
+    width: auto !important;     /* Garante a proporção */
+    max-width: 100%;
+    object-fit: contain;
     display: block;
-
-    filter: drop-shadow(0 6px 14px rgba(0,0,0,0.18));
-    transition: transform 0.35s ease, filter 0.35s ease;
 }
 
-/* HOVER SOMENTE EM DESKTOP */
-@media (hover: hover) {
-    .hero-logo img:hover {
-        transform: scale(1.06);
-        filter: drop-shadow(0 14px 28px rgba(0,0,0,0.3));
-    }
+.texto-controlado {
+    display: flex;
+    flex-direction: column;
 }
 
-/* ANIMAÇÃO DE ENTRADA */
-@keyframes heroLogoReveal {
-    from {
-        opacity: 0;
-        transform: translateY(16px) scale(0.94);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0) scale(1);
-    }
+.texto-controlado h1 {
+    font-size: 1.8rem;
+    color: #004AAD;
+    font-weight: 800;
+    line-height: 1;
+    margin: 0;
+    text-transform: uppercase;
 }
 
-/* ===============================
-   TABLET / DESKTOP
-================================ */
-@media (min-width: 768px) {
-    .hero-logo-wrapper {
-        padding: 24px 0 18px;
+.texto-controlado span {
+    font-size: 0.9rem;
+    color: #E63946;
+    letter-spacing: 3px;
+    font-weight: 600;
+    margin-top: 2px;
+}
+
+/* RESPONSIVIDADE (CELULAR) */
+@media (max-width: 768px) {
+    .mini-brand-container {
+        flex-direction: column;
+        text-align: center;
+        gap: 8px;
     }
 
-    .hero-logo img {
-        max-width: 160px; /* desktop */
+    .img-controlada {
+        height: 93px !important;
+    }
+
+    .texto-controlado h1 {
+        font-size: 1.4rem;
+    }
+
+    .texto-controlado span {
+        font-size: 0.75rem;
     }
 }
 
@@ -958,29 +959,6 @@ nav a.btn-login {
 <!-- ======= CABEÇALHO ======= -->
 <header>
 
-
- <!-- Ícones de redes sociais
-<div class="social-icons">
-    <a href="https://www.instagram.com/lazersportbrinquedos" target="_blank" rel="noopener" title="Instagram" class="instagram">
-        <i class="fa-brands fa-instagram"></i>
-    </a>
-    <a href="https://wa.me/5511960563135" target="_blank" rel="noopener" title="WhatsApp" class="whatsapp">
-        <i class="fa-brands fa-whatsapp"></i>
-    </a>
-
-    <a href="https://www.facebook.com/LazerSportBrinquedos1" target="_blank" rel="noopener" title="Facebook" class="facebook">
-        <i class="fa-brands fa-facebook"></i>
-    </a>
-
-    <a href="https://www.linkedin.com/company/brinquedos-lazer-sport" target="_blank" rel="noopener" title="LinkedIn" class="linkedin">
-        <i class="fa-brands fa-linkedin"></i>
-    </a>
-    <a href="https://www.threads.com/@lazersportbrinquedos?xmt=AQF01c59c6UZtE4QcHQgxUo-tcUtuujbUK4j8rzckZJl1is" target="_blank" rel="noopener" title="Threads" class="threads">
-        <i class="fa-brands fa-threads"></i>
-    </a>
-
-</div>
--->
 
   <!-- Área do usuário -->
   <div class="user-area">
@@ -1031,15 +1009,23 @@ nav a.btn-login {
   </nav>
 </header>
 
-<div class="hero-logo-wrapper">
-    <div class="hero-logo">
-        <img src="{% static 'images/logoofi.png' %}" alt="Lazer Sport Brinquedos">
+<div style="width: 100%; background: #f8fbff; border-bottom: 2px solid #004AAD; padding: 15px 0; display: flex; justify-content: center; align-items: center;">
+    <div style="display: flex; align-items: center; gap: 20px; flex-wrap: wrap; justify-content: center;">
+
+        <img src="{% static 'images/logoofi.png' %}" alt="Logo Fábrica"
+             style="height: 150px; width: auto; object-fit: contain; max-width: 100%; display: block;">
+
+        <div style="display: flex; flex-direction: column; text-align: center;">
+            <h1 style="font-size: 1.9rem; color: #004AAD; font-weight: 800; line-height: 1; margin: 0; text-transform: uppercase; font-family: 'Poppins', sans-serif;">
+                Fábrica de Brinquedos
+            </h1>
+            <span style="font-size: 1.2rem; color: #E63946; letter-spacing: 3px; font-weight: 600; margin-top: 2px; font-family: 'Poppins', sans-serif;">
+                QUALIDADE E DIVERSÃO
+            </span>
+        </div>
     </div>
 </div>
 
-
-
-<!-- ======= SEÇÃO DE PESQUISA MODERNA ======= -->
 <section class="search-section">
   <div class="search-container">
     <h2 class="search-title">O que você está procurando hoje?</h2>
