@@ -879,49 +879,57 @@ nav a.btn-login {
 }
 
 /* ===============================
-   HERO LOGO – VERSÃO DEFINITIVA
+   HERO LOGO – MOBILE FIRST
 ================================ */
 
+/* FUNDO E CENTRALIZAÇÃO */
 .hero-logo-wrapper {
+    width: 100%;
     display: flex;
     justify-content: center;
-    background: #f5f8ff;
-    padding: 22px 0 14px;
+    align-items: center;
+    background: linear-gradient(
+        180deg,
+        #f5f8ff 0%,
+        #eef3ff 100%
+    );
+    padding: 18px 0 14px;
 }
 
-/* container */
+/* CONTAINER */
 .hero-logo {
     display: flex;
     justify-content: center;
     align-items: center;
+
     opacity: 0;
-    animation: heroLogoReveal 1s ease forwards;
-    animation-delay: 0.2s;
+    animation: heroLogoReveal 0.9s ease forwards;
 }
 
-/* imagem */
+/* IMAGEM — CONTROLE TOTAL */
 .hero-logo img {
-    width: 100%;
-    max-width: 150px !important; /* FORÇA tamanho */
-    height: auto !important;
+    width: auto;              /* 🔥 impede estourar */
+    max-width: 120px;         /* MOBILE FIRST */
+    height: auto;
     display: block;
+
     filter: drop-shadow(0 6px 14px rgba(0,0,0,0.18));
     transition: transform 0.35s ease, filter 0.35s ease;
 }
 
-/* hover apenas desktop */
+/* HOVER SOMENTE EM DESKTOP */
 @media (hover: hover) {
     .hero-logo img:hover {
-        transform: scale(1.05);
-        filter: drop-shadow(0 12px 26px rgba(0,0,0,0.28));
+        transform: scale(1.06);
+        filter: drop-shadow(0 14px 28px rgba(0,0,0,0.3));
     }
 }
 
-/* animação perceptível e elegante */
+/* ANIMAÇÃO DE ENTRADA */
 @keyframes heroLogoReveal {
     from {
         opacity: 0;
-        transform: translateY(18px) scale(0.95);
+        transform: translateY(16px) scale(0.94);
     }
     to {
         opacity: 1;
@@ -930,15 +938,15 @@ nav a.btn-login {
 }
 
 /* ===============================
-   MOBILE
+   TABLET / DESKTOP
 ================================ */
-@media (max-width: 768px) {
+@media (min-width: 768px) {
     .hero-logo-wrapper {
-        padding: 16px 0 10px;
+        padding: 24px 0 18px;
     }
 
     .hero-logo img {
-        max-width: 120px !important;
+        max-width: 160px; /* desktop */
     }
 }
 
@@ -1023,12 +1031,11 @@ nav a.btn-login {
   </nav>
 </header>
 
-
-<section class="hero-logo-wrapper">
-  <div class="hero-logo">
-    <img src="{% static 'images/logoofi.png' %}" alt="Lazer Sport Brinquedos">
-  </div>
-</section>
+<div class="hero-logo-wrapper">
+    <div class="hero-logo">
+        <img src="{% static 'images/logoofi.png' %}" alt="Lazer Sport Brinquedos">
+    </div>
+</div>
 
 
 
