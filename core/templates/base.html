@@ -334,7 +334,7 @@ nav a.btn-login {
 /* === ÁREA DO ÍCONE DO USUÁRIO === */
 .user-area {
     display: flex;
-    align-items: center;
+    align-items: left;
 }
 
 /* Estilo compacto: ícone + texto em coluna */
@@ -370,8 +370,8 @@ nav a.btn-login {
 .user-area {
     display: flex;
     align-items: center;
-    margin-left: auto;
-    margin-right: 20px;
+    margin-left: 20px;   /* controla o quão à esquerda */
+    margin-right: 0;
 }
 
 /* Container do dropdown */
@@ -464,63 +464,6 @@ nav a.btn-login {
     }
 }
 
-.social-icons {
-    display: flex;
-    gap: 15px; /* mais espaço entre os ícones */
-    margin-left: 15px; /* separação do texto do logo */
-}
-
-/* Configuração padrão para todos */
-.social-icons a {
-    /* ... mantenha as configurações de tamanho/display anteriores ... */
-    width: 42px;
-    height: 42px;
-    font-size: 1.4rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 6px;
-    transition: transform 0.3s, background-color 0.3s;
-
-    /* PADRÃO: Todos com texto branco */
-    color: #ffffff;
-}
-
-/* --- CORES DE FUNDO --- */
-
-/* Instagram */
-.social-icons a.instagram {
-    background: radial-gradient(circle at 30% 107%, #fdf497 0%, #fdf497 5%, #fd5949 45%, #d6249f 60%, #285AEB 90%);
-    /* Ou use a cor sólida se preferir: background-color: #C13584; */
-}
-
-/* WhatsApp */
-.social-icons a.whatsapp {
-    background-color: #25D366;
-}
-
-/* Facebook */
-.social-icons a.facebook {
-    background-color: #1877F2; /* Azul oficial atualizado */
-}
-
-/* LinkedIn */
-.social-icons a.linkedin {
-    background-color: #0A66C2;
-}
-
-/* Threads */
-.social-icons a.threads {
-    background-color: #000000;
-}
-
-/* --- HOVER (Passar o mouse) --- */
-/* Escurece levemente ou apenas dá zoom */
-.social-icons a:hover {
-    transform: scale(1.1);
-    filter: brightness(0.9); /* Escurece levemente qualquer cor no hover */
-}
-
     @media (max-width: 768px) {
 
   /* ===== HEADER ===== */
@@ -600,284 +543,92 @@ nav a.btn-login {
     transform: translateX(50%) translateY(0);
   }
 }
-
-/* ===== FLOAT STACK ===== */
+/* ===== FLOAT STACK (A PILHA) ===== */
 .float-stack {
     position: fixed;
     right: 25px;
     bottom: 25px;
     display: flex;
-    flex-direction: column;
-    gap: 18px;
+    flex-direction: column-reverse; /* Carrinho entra e empurra os de cima */
+    gap: 15px;
     z-index: 10000;
 }
 
-/* BASE */
+/* Base Comum (DNA do botão Admin) */
 .float-btn {
-    width: 58px;
-    height: 58px;
-    border-radius: 50%;
-    color: #fff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 24px;
-    position: relative;
-    box-shadow: 0 6px 15px rgba(0,0,0,.25);
-    transition: transform .25s ease;
+    width: 62px !important;
+    height: 62px !important;
+    border-radius: 50% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    color: #ffffff !important;
+    text-decoration: none !important;
+    font-size: 26px !important;
+    border: 2px solid rgba(255, 255, 255, 0.25) !important;
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3) !important;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+    position: relative !important;
 }
 
 .float-btn:hover {
-    transform: scale(1.08);
+    transform: scale(1.1) translateY(-5px) !important;
 }
 
-/* BADGE */
+/* Badges Estilo Admin */
 .float-btn .badge {
-    position: absolute;
-    top: -6px;
-    right: -6px;
-    background: #dc3545;
-    color: #fff;
-    font-size: 11px;
-    font-weight: 700;
-    min-width: 18px;
-    height: 18px;
-    padding: 0 6px;
-    border-radius: 999px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-
-
-    /* ===== FLOAT BUTTON MANUTENÇÃO ===== */
-.float-manutencao {
-
-    width: 58px;
-    height: 58px;
-    background: #f1c40f; /* amarelo padrão */
-    color: white;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 24px;
-    box-shadow: 0 6px 15px rgba(0,0,0,0.25);
-    z-index: 9999;
-    transition: all 0.3s ease;
-}
-
-/* Hover */
-.float-manutencao:hover {
-    transform: scale(1.08);
-}
-
-/* Em andamento → azul */
-.float-manutencao.andamento {
-    background: #007BFF;
-}
-
-/* Badge (número de notificações) */
-.float-manutencao .badge {
-    position: absolute;
-    top: -6px;
-    right: -6px;
-    background: #E63946;
-    color: white;
-    font-size: 11px;
-    font-weight: 700;
-    min-width: 18px;
-    height: 18px;
-    padding: 0 5px;
-    border-radius: 999px; /* vira cápsula se > 9 */
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    line-height: 1;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.25);
-}
-
-.float-manutencao.andamento .badge {
-    background: #0d6efd; /* azul quando em andamento */
-}
-
-
-
-/* ===== FLOAT BUTTON CARRINHO ===== */
-.float-carrinho {
-
-    width: 58px;
-    height: 58px;
-    background: #2ecc71; /* verde */
-    color: white;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 24px;
-    box-shadow: 0 6px 15px rgba(0,0,0,0.25);
-    z-index: 9999;
-    transition: all 0.3s ease;
-}
-
-.float-carrinho:hover {
-    transform: scale(1.08);
-}
-
-.float-carrinho .badge {
     position: absolute;
     top: -4px;
     right: -4px;
-    background: #E63946;
-    color: white;
-    font-size: 11px;
-    font-weight: 700;
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    background: #E63946 !important;
+    color: white !important;
+    font-size: 12px !important;
+    font-weight: 800 !important;
+    padding: 2px 8px !important;
+    border-radius: 20px !important;
+    border: 2px solid white !important;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3) !important;
 }
 
+/* --- ESTILOS PRÓPRIOS BASEADOS NO ADMIN --- */
 
-/* ===== FLOAT BUTTON PEDIDOS ===== */
-.float-pedidos {
-    width: 58px;
-    height: 58px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #0d6efd, #3b82f6);
-    color: #fff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.4rem;
-    box-shadow: 0 10px 30px rgba(13,110,253,.45);
-    transition: transform .2s ease, box-shadow .2s ease;
-}
-
-.float-pedidos:active {
-    transform: scale(0.92);
-}
-
-.float-pedidos .badge {
-    position: absolute;
-    top: -6px;
-    right: -6px;
-    background: #dc3545;
-    color: #fff;
-    font-size: 0.75rem;
-    font-weight: 700;
-    padding: 4px 7px;
-    border-radius: 20px;
-
-    }
-
-/* MOBILE */
-@media (max-width: 768px) {
-    .float-stack {
-        right: 16px;
-        bottom: 16px;
-        gap: 14px;
-    }
-}
-
-.float-pedidos .badge {
-    position: absolute;
-    top: -6px;
-    right: -6px;
-    background: #dc3545;
-    color: #fff;
-    font-size: 0.75rem;
-    font-weight: 700;
-    padding: 4px 7px;
-    border-radius: 20px;
-}
-
-    /* ===== ANIMAÇÕES SOMENTE PARA PEDIDOS ===== */
-@keyframes pedidos-pulse {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.25); }
-    100% { transform: scale(1); }
-}
-
-@keyframes pedidos-blink {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.3; }
-}
-
-/* Pulse padrão */
-.float-pedidos .badge-pedidos {
-    animation: pedidos-pulse 1.6s infinite;
-}
-
-/* Blink se aguardando pagamento */
-.float-pedidos.status-aguardando_pagamento .badge-pedidos {
-    animation: pedidos-blink 1s infinite;
-}
-
-/* ===== CORES DO BOTÃO PEDIDOS ===== */
-
-.float-pedidos.status-aguardando_pagamento {
-    background: linear-gradient(135deg, #ffc107, #ff9800);
-    box-shadow: 0 10px 25px rgba(255,193,7,.5);
-}
-
-.float-pedidos.status-pago {
-    background: linear-gradient(135deg, #198754, #2ecc71);
-}
-
-.float-pedidos.status-em_preparacao {
-    background: linear-gradient(135deg, #0dcaf0, #0d6efd);
-}
-
-/* fallback */
-.float-pedidos {
-    transition: transform .2s ease, box-shadow .2s ease;
-}
-
-.toast-carrinho a {
-    color: #fff;
-    text-decoration: underline;
-    pointer-events: auto; /* garante que seja clicável */
-}
-
-/* ===== OTIMIZAÇÃO FINAL DO BOTÃO ADMIN ===== */
-#float-admin-panel.float-btn.float-admin-panel {
-    /* Força o fundo roxo elétrico sem transparência */
-    background: #6200ea !important;
+/* 1. ADMIN (O Original - Roxo Real) */
+.float-admin-panel {
     background: linear-gradient(135deg, #6200ea, #9d50bb) !important;
+}
+.float-admin-panel i { color: #FFD700 !important; }
 
-    /* Garante que o botão apareça (remove transparências de outras regras) */
-    opacity: 1 !important;
-    display: flex !important;
-    visibility: visible !important;
+/* 2. CARRINHO (Verde Vitalidade) */
+.float-carrinho {
+    background: linear-gradient(135deg, #2ecc71, #27ae60) !important;
+    box-shadow: 0 10px 20px rgba(46, 204, 113, 0.4) !important;
+}
+.float-carrinho i { color: #ffffff !important; }
 
-    /* Borda e Sombra para destacar no Mobile */
-    border: 2px solid #ffffff33 !important;
-    box-shadow: 0 10px 20px rgba(98, 0, 234, 0.5) !important;
-
-    /* Garante que ele fique acima de tudo */
-    z-index: 99999 !important;
+/* 3. PEDIDOS (Azul Oceano/Confiança) */
+.float-pedidos {
+    background: linear-gradient(135deg, #004AAD, #007BFF) !important;
+    box-shadow: 0 10px 20px rgba(0, 74, 173, 0.4) !important;
 }
 
-/* Coroa Dourada */
-#float-admin-panel.float-admin-panel i {
-    color: #FFD700 !important; /* Dourado Vivo */
-    font-size: 26px !important;
-    opacity: 1 !important;
-    /* Efeito de profundidade na coroa */
-    filter: drop-shadow(1px 1px 1px rgba(0,0,0,0.4)) !important;
+/* 4. MANUTENÇÃO (Amarelo Alerta/Ouro) */
+.float-manutencao {
+    background: linear-gradient(135deg, #f1c40f, #f39c12) !important;
+    box-shadow: 0 10px 20px rgba(241, 196, 15, 0.4) !important;
+}
+.float-manutencao.andamento {
+    background: linear-gradient(135deg, #e67e22, #d35400) !important; /* Laranja se estiver em curso */
 }
 
-/* Ajuste específico para Mobile (evita que ele fique pequeno ou suma) */
-@media (max-width: 768px) {
-    #float-admin-panel.float-btn {
-        width: 62px !important; /* Ligeiramente maior no mobile para facilitar o toque */
-        height: 62px !important;
-        bottom: 20px !important;
-    }
+/* Animação de Pulso para o Carrinho quando tiver itens */
+@keyframes pulse-carrinho {
+    0% { box-shadow: 0 0 0 0 rgba(46, 204, 113, 0.7); }
+    70% { box-shadow: 0 0 0 15px rgba(46, 204, 113, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(46, 204, 113, 0); }
+}
+
+.float-carrinho {
+    animation: pulse-carrinho 2s infinite;
 }
 
 
@@ -949,6 +700,23 @@ nav a.btn-login {
     .texto-controlado span {
         font-size: 0.75rem;
     }
+}
+
+
+/* Força a atualização visual imediata */
+#carrinho-contador {
+    display: inline-flex !important;
+    transition: all 0.3s ease-in-out;
+}
+
+/* Animação quando o número muda */
+.update-bump {
+    transform: scale(1.8) !important;
+    background-color: #2ecc71 !important; /* Fica verde momentaneamente */
+}
+
+.hidden {
+    display: none !important;
 }
 
   </style>
@@ -1098,12 +866,14 @@ nav a.btn-login {
 {% if user.is_authenticated %}
 <a href="{% url 'carrinho' %}#bread"
    id="carrinho-float-btn"
-   class="float-btn float-carrinho"
-   title="Carrinho"
-   style="display: {% if carrinho_total_itens > 0 %}flex{% else %}none{% endif %};">
+   class="float-btn float-carrinho {% if carrinho_total_itens == 0 %}hidden{% endif %}"
+   title="Carrinho">
     <i class="fa-solid fa-cart-shopping"></i>
-    <span id="carrinho-contador" class="badge">{{ carrinho_total_itens|default:"0" }}</span>
+    <span id="carrinho-contador" class="badge">
+        {{ carrinho_total_itens|default:"0" }}
+    </span>
 </a>
+
 {% endif %}
 
     {% if user.is_authenticated and tem_manutencao %}
@@ -1133,13 +903,15 @@ nav a.btn-login {
   });
 
   // Menu Hambúrguer
-  const menuToggle = document.getElementById('menu-toggle');
-  const nav = document.getElementById('nav');
-  if (menuToggle && nav) {
-      menuToggle.addEventListener('click', () => {
-        nav.classList.toggle('active');
-      });
-  }
+/* ================== MENU ================== */
+const menuToggle = document.getElementById('menu-toggle');
+const nav = document.getElementById('nav');
+
+if (menuToggle && nav) {
+  menuToggle.addEventListener('click', () => {
+    nav.classList.toggle('active');
+  });
+}
 
   // Controle de Link Ativo no Scroll
   document.addEventListener("DOMContentLoaded", () => {
@@ -1174,95 +946,84 @@ nav a.btn-login {
      2. LÓGICA DO CARRINHO (O FIX IMPORTANTE)
      ========================================== */
 
-  // Função que atualiza o visual do botão flutuante
-  function atualizarBadgeCarrinho(total) {
-      console.log("Atualizando carrinho para:", total); // Log para debug
+/* ================== CARRINHO ================== */
+function atualizarBadgeCarrinho(total) {
+  const carrinhoBtn = document.getElementById('carrinho-float-btn');
+  const contador = document.getElementById('carrinho-contador');
 
-      const carrinhoBtn = document.getElementById('carrinho-float-btn');
-      const badge = document.getElementById('carrinho-contador');
+  if (!carrinhoBtn || !contador) return;
 
-      // Se os elementos não existirem (ex: usuário não logado), para aqui.
-      if (!carrinhoBtn || !badge) return;
+  const totalInt = Number(total) || 0;
+  contador.textContent = totalInt;
 
-      // Atualiza o texto
-      badge.textContent = total;
+  if (totalInt > 0) {
+    carrinhoBtn.classList.remove('hidden');
 
-      // Mostra ou esconde
-      if (total > 0) {
-          carrinhoBtn.style.display = 'flex';
-          // Animação visual
-          carrinhoBtn.style.transform = 'scale(1.2)';
-          setTimeout(() => carrinhoBtn.style.transform = 'scale(1)', 200);
-      } else {
-          carrinhoBtn.style.display = 'none';
+    // força repaint (garante visibilidade)
+    carrinhoBtn.offsetHeight;
+
+    contador.classList.add('update-bump');
+    setTimeout(() => contador.classList.remove('update-bump'), 350);
+  } else {
+    carrinhoBtn.classList.add('hidden');
+  }
+}
+
+/* ================== ADICIONAR AO CARRINHO ================== */
+function adicionarAoCarrinho(tipo, id) {
+  const url = `/carrinho/adicionar/${tipo}/${id}/`;
+
+  const getCookie = (name) => {
+    let cookieValue = null;
+    document.cookie.split(';').forEach(cookie => {
+      cookie = cookie.trim();
+      if (cookie.startsWith(name + '=')) {
+        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
       }
+    });
+    return cookieValue;
+  };
+
+  fetch(url, {
+    method: 'POST',
+    headers: {
+      'X-CSRFToken': getCookie('csrftoken'),
+      'X-Requested-With': 'XMLHttpRequest'
+    }
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.sucesso) {
+      atualizarBadgeCarrinho(data.total_itens);
+      mostrarToast('🛒 Adicionado ao carrinho!');
+    } else {
+      mostrarToast(data.erro || 'Erro', true);
+    }
+  })
+  .catch(() => mostrarToast('Erro de conexão', true));
+}
+
+/* ================== TOAST ================== */
+function mostrarToast(msg, erro = false, duracao = 3000) {
+  let toast = document.getElementById('toast-carrinho');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'toast-carrinho';
+    toast.style.cssText =
+      "position:fixed;bottom:100px;left:50%;transform:translateX(-50%);" +
+      "padding:12px 24px;border-radius:30px;color:white;font-weight:bold;" +
+      "z-index:10001;opacity:0;transition:opacity .3s";
+    document.body.appendChild(toast);
   }
 
-  // Função chamada pelo botão de compra
-  function adicionarAoCarrinho(tipo, id) {
-      // URL para onde vamos enviar
-      const url = `/carrinho/adicionar/${tipo}/${id}/`;
+  toast.textContent = msg;
+  toast.style.background = erro
+    ? 'linear-gradient(135deg,#dc3545,#a71d2a)'
+    : 'linear-gradient(135deg,#2ecc71,#27ae60)';
 
-      fetch(url, {
-          method: 'POST',
-          headers: {
-              'X-CSRFToken': '{{ csrf_token }}',
-              'X-Requested-With': 'XMLHttpRequest'
-          }
-      })
-      .then(response => {
-          // Se o usuário não estiver logado (403), trata aqui
-          if (response.status === 403) {
-             const loginUrl = "{% url 'login' %}?next=" + encodeURIComponent(window.location.pathname) + "#login-box";
-             mostrarToast(`⚠️ Faça login para adicionar. <a href="${loginUrl}" style="color: #fff; text-decoration: underline;">Entrar</a>`, true, 5000);
-             throw new Error('Não autorizado');
-          }
-          return response.json();
-      })
-      .then(data => {
-          if (data.sucesso) {
-              mostrarToast('🛒 Adicionado com sucesso!');
-              // AQUI ATUALIZA O NÚMERO NA TELA
-              atualizarBadgeCarrinho(data.total_itens);
-          } else {
-              mostrarToast('Erro: ' + (data.erro || 'Desconhecido'), true);
-          }
-      })
-      .catch(error => {
-          if (error.message !== 'Não autorizado') {
-              console.error('Erro na requisição:', error);
-          }
-      });
-  }
-
-  // Sistema de Notificação (Toast)
-  function mostrarToast(msg, erro = false, duracao = 3000) {
-      let toast = document.getElementById('toast-carrinho');
-      if (!toast) {
-          toast = document.createElement('div');
-          toast.id = 'toast-carrinho';
-          // Estilos inline garantidos para funcionar
-          toast.style.cssText = "position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%); padding: 12px 24px; border-radius: 30px; color: white; font-weight: bold; z-index: 10001; box-shadow: 0 5px 15px rgba(0,0,0,0.3); opacity: 0; transition: opacity 0.3s; pointer-events: auto;";
-          document.body.appendChild(toast);
-      }
-
-      toast.innerHTML = msg;
-      toast.style.background = erro
-          ? 'linear-gradient(135deg, #dc3545, #a71d2a)'
-          : 'linear-gradient(135deg, #2ecc71, #27ae60)';
-
-      toast.style.display = 'block';
-      // Pequeno delay para permitir a transição de opacidade
-      requestAnimationFrame(() => {
-          toast.style.opacity = '1';
-      });
-
-      setTimeout(() => {
-          toast.style.opacity = '0';
-          setTimeout(() => { toast.style.display = 'none'; }, 300);
-      }, duracao);
-  }
-
+  toast.style.opacity = '1';
+  setTimeout(() => toast.style.opacity = '0', duracao);
+}
 
 /* Detecta se a página foi carregada via botão "Voltar" (Cache) */
 window.addEventListener("pageshow", function (event) {
@@ -1273,31 +1034,7 @@ window.addEventListener("pageshow", function (event) {
     }
 });
 
-  const toggle = document.getElementById('menu-toggle');
-  const nav = document.getElementById('nav-menu');
 
-  // Abre / fecha ao clicar no botão
-  toggle.addEventListener('click', (e) => {
-    e.stopPropagation();
-    toggle.classList.toggle('active');
-    nav.classList.toggle('active');
-  });
-
-  // Fecha ao clicar fora
-  document.addEventListener('click', (e) => {
-    if (!nav.contains(e.target) && !toggle.contains(e.target)) {
-      nav.classList.remove('active');
-      toggle.classList.remove('active');
-    }
-  });
-
-  // Fecha ao clicar em um link
-  nav.querySelectorAll('a').forEach(link => {
-    link.addEventListener('click', () => {
-      nav.classList.remove('active');
-      toggle.classList.remove('active');
-    });
-  });
 
 </script>
 
