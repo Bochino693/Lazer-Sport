@@ -43,7 +43,7 @@ ALLOWED_HOSTS = [
     "lazerandsport.onrender.com",
     "lazersport.com.br",
     "www.lazersport.com.br",
-    "interno.lazerspor.com.br",
+    "interno.lazersport.com.br",
     "localhost",
     "127.0.0.1",
     "0.0.0.0",
