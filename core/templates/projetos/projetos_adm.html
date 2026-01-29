@@ -30,43 +30,100 @@
     gap:25px;
 }
 
+Para criar um visual moderno e garantir que os botões estejam perfeitamente centralizados e harmoniosos dentro do card, fiz alguns ajustes pontuais no CSS e na estrutura flexível das ações.
+
+Aqui estão os estilos atualizados para a seção de projetos:
+
+CSS Atualizado
+CSS
+/* ===== CARD AJUSTADO ===== */
 .card {
-    background:#fff;
-    border-radius:22px;
-    padding:20px;
-    box-shadow:0 10px 30px rgba(0,0,0,.12);
-    transition:.3s;
+    background: #fff;
+    border-radius: 24px;
+    padding: 24px;
+    box-shadow: 0 10px 30px rgba(0,0,0,.08);
+    transition: all .3s ease;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    border: 1px solid #f1f5f9;
 }
 
 .card:hover {
-    transform:translateY(-6px);
+    transform: translateY(-8px);
+    box-shadow: 0 20px 40px rgba(0,0,0,.12);
 }
 
 .card h3 {
-    font-size:1.3rem;
-    margin-bottom:10px;
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: #1e293b;
+    margin-bottom: 12px;
 }
 
 .card p {
-    color:#555;
-    font-size:.95rem;
+    color: #64748b;
+    font-size: .95rem;
+    line-height: 1.6;
+    margin-bottom: 16px;
 }
 
+/* Informação do Brinquedo */
+.card small {
+    display: block;
+    background: #f8fafc;
+    padding: 8px 12px;
+    border-radius: 12px;
+    color: #475569;
+    font-weight: 600;
+    margin-bottom: 20px;
+}
+
+/* ===== POSICIONAMENTO CENTRALIZADO DOS BOTÕES ===== */
 .acoes {
-    display:flex;
-    gap:10px;
-    margin-top:15px;
+    display: flex;
+    justify-content: center; /* Centraliza o grupo de botões */
+    align-items: center;
+    gap: 12px;
+    padding-top: 15px;
+    border-top: 1px solid #f1f5f9; /* Linha sutil separando as ações */
 }
 
-.acoes a {
-    flex:1;
-    text-align:center;
-    padding:10px;
-    border-radius:12px;
-    font-weight:600;
-    text-decoration:none;
-    color:#fff;
+/* Estilo Individual dos Botões de Ação */
+.acoes button {
+    flex: 1; /* Faz ambos terem o mesmo tamanho proporcional */
+    max-width: 140px; /* Evita que fiquem exageradamente largos em telas grandes */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 16px;
+    border-radius: 14px;
+    font-weight: 700;
+    font-size: 0.9rem;
+    border: none;
+    cursor: pointer;
+    transition: all .2s ease;
 }
+
+.btn-editar {
+    background: #fef9c3;
+    color: #854d0e;
+}
+.btn-editar:hover {
+    background: #fde047;
+    transform: scale(1.05);
+}
+
+.btn-excluir {
+    background: #fee2e2;
+    color: #991b1b;
+}
+.btn-excluir:hover {
+    background: #fecaca;
+    transform: scale(1.05);
+}
+
 .modal-box {
     position:relative;
     background:#fff;
@@ -260,49 +317,210 @@
 }
 
 
-.btn-salvar:hover {
-    transform:translateY(-2px);
-    box-shadow:0 18px 45px rgba(13,110,253,.45);
+
+    /* Ajuste para descrições menores */
+    textarea[name="descricao"],
+    textarea[name="novo_brinquedo_descricao"] {
+        height: 80px !important;
+        min-height: 80px !important;
+        resize: none;
+    }
+
+    /* Estilo do Modal 2 (Brinquedo) - Superior ao Modal 1 */
+    #modalBrinquedo {
+        z-index: 10001; /* Maior que o 9999 do modal projeto */
+    }
+
+    .modal-box.small {
+        max-width: 450px;
+    }
+
+    .form-row {
+        display: flex;
+        gap: 15px;
+        align-items: flex-end;
+    }
+    .form-row .form-group { flex: 1; }
+
+
+    /* ===== MODAL DELETE (PADRÃO EVENTOS, AJUSTADO PARA PROJETOS) ===== */
+.modal {
+    position:fixed;
+    inset:0;
+    background:rgba(15,23,42,.55);
+    backdrop-filter:blur(6px);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    z-index:9999;
+    padding:16px;
 }
 
-.btn-editar { background:#ffc107; color:#222; }
-.btn-excluir { background:#dc3545; }
+/* CARD DO MODAL DELETE */
+.modal-card {
+    background:#ffffff;
+    width:100%;
+    max-width:760px;
+    max-height:90vh;
+    border-radius:20px;
+    box-shadow:0 40px 80px rgba(0,0,0,.25);
+    overflow:hidden;
+    display:flex;
+    flex-direction:column;
+    animation:scaleIn .25s ease;
+}
 
+.modal-header {
+    padding:22px 26px;
+    border-bottom:1px solid #eef1f6;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+}
+
+
+.modal-header h2 {
+    font-size:1.4rem;
+    font-weight:800;
+    color:#0f172a;
+}
+
+
+.modal-close {
+    background:#f1f5f9;
+    border:none;
+    width:38px;
+    height:38px;
+    border-radius:12px;
+    cursor:pointer;
+    font-size:18px;
+}
+
+.modal-body {
+    padding:26px;
+    overflow-y:auto;
+}
+
+
+.modal-body p {
+    color:#475569;
+    font-size:.95rem;
+    line-height:1.5;
+}
+
+/* FOOTER */
+.modal-card .modal-footer {
+    padding-top: 18px;
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+}
+
+/* INPUT CONFIRMAÇÃO */
+#confirmDeleteInput {
+    text-transform:uppercase;
+    font-weight:700;
+    letter-spacing:1px;
+}
+
+    .field-group {
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+}
+
+.field-group label {
+    font-size:.85rem;
+    font-weight:700;
+    color:#334155;
+}
+
+.field-group input {
+    background:#f8fafc;
+    padding:14px 16px;
+    border-radius:14px;
+    border:1px solid #e2e8f0;
+    font-size:.95rem;
+}
+
+.modal-footer {
+    padding:20px 26px;
+    border-top:1px solid #eef1f6;
+    display:flex;
+    gap:12px;
+    justify-content:flex-end;
+}
+
+
+    .btn-ghost {
+    background:#f1f5f9;
+    padding:14px 22px;
+    border-radius:16px;
+    border:none;
+    font-weight:700;
+    cursor:pointer;
+}
+
+
+    .btn-danger {
+    background:linear-gradient(135deg,#dc3545,#b02a37);
+    color:white;
+    padding:14px 22px;
+    border-radius:16px;
+    font-weight:700;
+    border:none;
+    cursor:pointer;
+}
+
+
+    #btnConfirmDelete:disabled {
+    opacity:.45;
+    cursor:not-allowed;
+}
 
 </style>
 
 <div class="projetos-container">
     <div class="header">
         <h1>🧩 Projetos</h1>
-       <button type="button"
-                class="btn-novo"
-                onclick="openProjetoModal()">
+        <button type="button" class="btn-novo" onclick="openCreateProjeto()">
             <span>➕</span> Novo Projeto
-       </button>
-
-
+        </button>
     </div>
 
     <div class="grid">
         {% for projeto in projetos %}
-        <div class="card">
-            <h3>{{ projeto.titulo }}</h3>
-            <p>{{ projeto.descricao|truncatechars:120 }}</p>
+            <div class="card">
+                <div>
+                    <h3>{{ projeto.titulo }}</h3>
+                    <p>{{ projeto.descricao|truncatechars:120 }}</p>
+                    <small>
+                        🧸
+                        {% if projeto.brinquedo_projetado %}
+                            {{ projeto.brinquedo_projetado.nome_brinquedo_projeto }}
+                        {% else %}
+                            <em>Sem brinquedo</em>
+                        {% endif %}
+                    </small>
+                </div>
 
-            <small>
-                🧸
-                {% if projeto.brinquedo_projetado %}
-                    {{ projeto.brinquedo_projetado.nome_brinquedo_projeto }}
-                {% else %}
-                    <em>Sem brinquedo</em>
-                {% endif %}
-            </small>
+                <div class="acoes">
+                    <button class="btn-editar"
+                            onclick="openEditProjeto(
+                                {{ projeto.id }},
+                                '{{ projeto.titulo|escapejs }}',
+                                '{{ projeto.descricao|escapejs }}',
+                                '{{ projeto.brinquedo_projetado.id|default:'' }}'
+                            )">
+                        ✏️ Editar
+                    </button>
 
-            <div class="acoes">
-                <a href="{% url 'projetos_update' projeto.id %}" class="btn-editar">✏️ Editar</a>
-                <a href="{% url 'projetos_delete' projeto.id %}" class="btn-excluir">🗑️ Excluir</a>
+<button class="btn-excluir"
+        onclick="openDelete({{ projeto.id }})">
+    🗑️ Excluir
+</button>
+                </div>
             </div>
-        </div>
         {% empty %}
             <p>Nenhum projeto cadastrado.</p>
         {% endfor %}
@@ -310,75 +528,323 @@
 </div>
 
 
-<!-- MODAL PROJETO -->
 <div id="modalProjeto" class="modal-wrapper" style="display:none">
-
     <div class="modal-overlay" onclick="closeProjetoModal()"></div>
 
     <div class="modal-box">
         <button class="close-btn" onclick="closeProjetoModal()">✖</button>
+        <h3 id="modalProjetoTitle" style="text-align:center; margin-bottom:18px">🧩 Configurar Projeto</h3>
 
-        <h3 style="text-align:center;margin-bottom:18px">
-            🧩 Novo Projeto
-        </h3>
-
-        <form method="post" action="{% url 'projetos_criar' %}">
+        <form id="formProjeto">
             {% csrf_token %}
+            <input type="hidden" name="action" value="save_projeto">
+            <input type="hidden" name="id" id="projetoId">
 
             <div class="form-grid">
-    <div class="form-group">
-        <label>Título</label>
-        {{ form.titulo }}
-    </div>
+                <div class="form-group">
+                    <label>Título do Projeto</label>
+                    {{ form.titulo }}
+                </div>
+                <div class="form-group">
+                    <label>Descrição</label>
+                    {{ form.descricao }}
+                </div>
+            </div>
 
-    <div class="form-group">
-        <label>Descrição</label>
-        {{ form.descricao }}
-    </div>
-</div>
-
-            <hr>
+            <hr style="margin: 20px 0; border: 0; border-top: 1px solid #eee;">
 
             <h4>🧸 Brinquedo Projetado</h4>
 
-            <div class="form-group">
-                {{ form.brinquedo_projetado }}
+            <div class="form-row" style="display: flex; gap: 15px; align-items: flex-end;">
+                <div class="form-group" style="flex: 1;">
+                    <label>Selecione um Brinquedo</label>
+                    <select name="brinquedo_projetado" id="selectBrinquedo" class="form-control">
+                        <option value="">---------</option>
+                        {% for b in brinquedos_disponiveis %}
+                            <option value="{{ b.id }}">{{ b.nome_brinquedo_projeto }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group" style="flex: 0 0 auto;">
+                    <button type="button" class="btn-novo" onclick="openBrinquedoModal()" style="padding: 12px; font-size: 0.8rem;">
+                        + Criar Novo
+                    </button>
+                </div>
             </div>
 
-            <p class="ou">— ou criar novo —</p>
+            <button type="submit" class="btn-salvar">💾 Salvar Projeto Completo</button>
+        </form>
+    </div>
+</div>
 
+<div id="modalBrinquedo" class="modal-wrapper" style="display:none">
+    <div class="modal-overlay" onclick="closeBrinquedoModal()" style="background: rgba(0,0,0,0.3);"></div>
+
+    <div class="modal-box small">
+        <button class="close-btn" onclick="closeBrinquedoModal()">✖</button>
+        <h4 style="margin-bottom:15px">🧸 Novo Brinquedo</h4>
+
+        <form id="formBrinquedoRapido">
             <div class="form-group">
-                <input type="text" name="novo_brinquedo_nome"
-                       placeholder="Nome do brinquedo">
+                <label>Nome</label>
+                <input type="text" id="nb_nome" class="form-control" required>
             </div>
-
             <div class="form-group">
-                <textarea name="novo_brinquedo_descricao"
-                          placeholder="Descrição do brinquedo"></textarea>
+                <label>Descrição</label>
+                <textarea id="nb_desc" class="form-control"></textarea>
             </div>
-
-            <button type="submit" class="btn-salvar">
-                💾 Salvar Projeto
+            <button type="button" class="btn-salvar" onclick="ajaxCriarBrinquedo()">
+                Criar e Selecionar
             </button>
         </form>
+    </div>
+</div>
+
+<!-- MODAL DELETE -->
+<div id="modalDelete" class="modal">
+
+    <div class="modal-card">
+
+        <!-- HEADER -->
+        <div class="modal-header">
+            <h2>Excluir Projeto</h2>
+            <button class="modal-close" onclick="closeDeleteModal()">✕</button>
+        </div>
+
+        <!-- BODY -->
+        <div class="modal-body">
+            <p>
+                Para confirmar a exclusão deste projeto, digite
+                <strong>EXCLUIR</strong> abaixo.
+                <br>
+                <strong>Essa ação não poderá ser desfeita.</strong>
+            </p>
+
+            <form id="deleteForm">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="delete">
+                <input type="hidden" name="id" id="deleteId">
+
+                <div class="field-group">
+                    <label>Digite EXCLUIR para confirmar</label>
+                    <input type="text"
+                           id="confirmDeleteInput"
+                           placeholder="EXCLUIR"
+                           autocomplete="off">
+                </div>
+
+                <!-- FOOTER -->
+                <div class="modal-footer">
+                    <button type="button"
+                            class="btn-ghost"
+                            onclick="closeDeleteModal()">
+                        Cancelar
+                    </button>
+
+                    <button type="submit"
+                            class="btn-danger"
+                            id="btnConfirmDelete"
+                            disabled>
+                        🗑️ Excluir
+                    </button>
+                </div>
+            </form>
+        </div>
 
     </div>
 </div>
 
-
-
 <script>
+/* =========================
+   CONTROLE DE MODAIS
+========================= */
 
-function openProjetoModal() {
-    document.getElementById("modalProjeto").style.display = "flex";
+function openModal(id) {
+    document.getElementById(id).style.display = "flex";
     document.body.style.overflow = "hidden";
 }
 
-function closeProjetoModal() {
-    document.getElementById("modalProjeto").style.display = "none";
+function closeModal(id) {
+    document.getElementById(id).style.display = "none";
     document.body.style.overflow = "";
 }
+
+function openProjetoModal() {
+    openModal("modalProjeto");
+}
+
+function closeProjetoModal() {
+    closeModal("modalProjeto");
+}
+
+function openBrinquedoModal() {
+    openModal("modalBrinquedo");
+}
+
+function closeBrinquedoModal() {
+    closeModal("modalBrinquedo");
+}
+
+
+/* =========================
+   CRIAR BRINQUEDO (AJAX)
+========================= */
+
+function ajaxCriarBrinquedo() {
+    const nome = document.getElementById("nb_nome").value.trim();
+    const desc = document.getElementById("nb_desc").value.trim();
+
+    if (!nome) {
+        alert("Nome é obrigatório");
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append("action", "create_brinquedo");
+    formData.append("nome_brinquedo", nome);
+    formData.append("desc_brinquedo", desc);
+    formData.append("csrfmiddlewaretoken", "{{ csrf_token }}");
+
+    fetch("{% url 'projetos_admin' %}", {
+        method: "POST",
+        body: formData,
+        headers: { "X-Requested-With": "XMLHttpRequest" }
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            const select = document.getElementById("selectBrinquedo");
+            const option = new Option(data.nome, data.id, true, true);
+            select.add(option);
+
+            closeBrinquedoModal();
+            document.getElementById("formBrinquedoRapido").reset();
+        } else {
+            alert("Erro ao criar brinquedo.");
+        }
+    });
+}
+
+
+/* =========================
+   SALVAR PROJETO (AJAX)
+========================= */
+
+document.getElementById("formProjeto").addEventListener("submit", function (e) {
+    e.preventDefault();
+
+    const formData = new FormData(this);
+
+    fetch("{% url 'projetos_admin' %}", {
+        method: "POST",
+        body: formData,
+        headers: { "X-Requested-With": "XMLHttpRequest" }
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert("Erro ao salvar projeto.");
+            console.error(data.errors);
+        }
+    });
+});
+
+
+/* =========================
+   EDITAR PROJETO
+========================= */
+
+function openEditProjeto(id, titulo, descricao, brinquedoId) {
+    const modal = document.getElementById("modalProjeto");
+    const form = document.getElementById("formProjeto");
+
+    modal.querySelector("h3").innerText = "✏️ Editar Projeto";
+
+    form.querySelector('[name="id"]').value = id;
+    form.querySelector('[name="titulo"]').value = titulo;
+    form.querySelector('[name="descricao"]').value = descricao;
+
+    const select = document.getElementById("selectBrinquedo");
+    if (brinquedoId) {
+        select.value = brinquedoId;
+    }
+
+    openProjetoModal();
+}
+
+
+/* =========================
+   NOVO PROJETO
+========================= */
+
+function openCreateProjeto() {
+    const modal = document.getElementById("modalProjeto");
+    const form = document.getElementById("formProjeto");
+
+    form.reset();
+    form.querySelector('[name="id"]').value = "";
+    modal.querySelector("h3").innerText = "🧩 Novo Projeto";
+
+    openProjetoModal();
+}
+
+const modalDelete = document.getElementById("modalDelete");
+const deleteId = document.getElementById("deleteId");
+const confirmDeleteInput = document.getElementById("confirmDeleteInput");
+const btnConfirmDelete = document.getElementById("btnConfirmDelete");
+
+/* ABRIR MODAL */
+function openDelete(id) {
+    modalDelete.style.display = "flex";
+    document.body.style.overflow = "hidden";
+
+    deleteId.value = id;
+    confirmDeleteInput.value = "";
+    btnConfirmDelete.disabled = true;
+}
+
+/* FECHAR MODAL */
+function closeDeleteModal() {
+    modalDelete.style.display = "none";
+    document.body.style.overflow = "";
+}
+
+/* FECHAR AO CLICAR FORA */
+modalDelete.addEventListener("click", e => {
+    if (e.target === modalDelete) {
+        closeDeleteModal();
+    }
+});
+
+/* HABILITA BOTÃO APENAS SE DIGITAR EXCLUIR */
+confirmDeleteInput.addEventListener("input", () => {
+    btnConfirmDelete.disabled = confirmDeleteInput.value !== "EXCLUIR";
+});
+
+/* SUBMIT DELETE (AJAX) */
+document.getElementById("deleteForm").addEventListener("submit", function(e){
+    e.preventDefault();
+
+    fetch("{% url 'projetos_admin' %}", {
+        method: "POST",
+        body: new FormData(this),
+        headers: { "X-Requested-With": "XMLHttpRequest" }
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert("Erro ao excluir projeto.");
+        }
+    });
+});
+
+
 </script>
+
 
 
 {% endblock %}

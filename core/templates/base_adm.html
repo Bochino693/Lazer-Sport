@@ -181,14 +181,26 @@
   <a href="#">Relatório de Vendas</a>
   <a href="#">Usuários</a>
 
-  <!-- BOTÃO DE FECHAR VISÍVEL -->
-  <button id="close-sidebar-btn" class="close-btn" type="button">Fechar</button>
+
+    <!-- <button id="close-sidebar-btn" class="close-btn" type="button">Fechar Menu</button> -->
+
 </aside>
 
 <!-- CONTEÚDO PRINCIPAL -->
 <main id="content" class="content" role="main">
   {% block content %}
   <h1>Bem-vindo ao painel administrativo</h1>
+  {% if messages %}
+<div class="messages">
+    {% for message in messages %}
+        <div class="alert alert-{{ message.tags }}">
+            {{ message }}
+        </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+
   {% endblock %}
 </main>
 

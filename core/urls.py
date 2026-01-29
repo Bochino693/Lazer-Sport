@@ -4,11 +4,11 @@ from .views import (HomeView, BrinquedoInfoView, CategoriasInfoView, BrinquedosV
                     ProjetosView, ClientePerfilView, ComboInfoView, PromocaoInfoView,
                     BrinquedoAdmin, NovaCategoria, NovaTag, ComboListView, ComboCreateView,
                     ComboUpdateView, ComboDeleteView, PromocaoListView, PromocaoCreateView,
-                    PromocaoDeleteView, PromocaoUpdateView, EventoListView, EventoCreateView,
-                    EventoDeleteView, EventoUpdateView, CupomListView, CupomUpdateView, CupomCreateView,
-                    CupomDeleteView, ProjetoListView, ProjetoUpdateView, ProjetoCreateView, ProjetoDeleteView,
-                    EstabelecimentoInfoView, EstabelecimentosListView, ManutencaoView, adicionar_ao_carrinho, carrinho_view, aplicar_cupom,
-                    remover_item_carrinho, limpar_carrinho, cancelar_manutencao, PaymentView, MeusPedidosView, criar_pedido_pix, PaymentFinallyView, processar_cartao
+                    CupomAdminView, PromocaoDeleteView, PromocaoUpdateView, ProjetoAdminView,
+                    EstabelecimentoInfoView, EstabelecimentosListView, ManutencaoView, adicionar_ao_carrinho,
+                    carrinho_view, aplicar_cupom,  remover_item_carrinho, limpar_carrinho, cancelar_manutencao,
+                    PaymentView, MeusPedidosView, criar_pedido_pix, PaymentFinallyView, processar_cartao
+                    , EventoAdminView
 
                     )   # importa views do mesmo app
 from django.conf import settings
@@ -74,20 +74,10 @@ urlpatterns = [
     path("adm/promocoes/<int:pk>/excluir/", PromocaoDeleteView.as_view(), name="promocao_delete"),
 
 
-    path("adm/eventos/", EventoListView.as_view(), name='eventos_admin'),
-    path("adm/eventos/novo/", EventoCreateView.as_view(), name='eventos_create'),
-    path("adm/eventos/<int:pk>/editar/", EventoUpdateView.as_view(), name='eventos_update'),
-    path("adm/eventos/<int:pk>/excluir/", EventoDeleteView.as_view(), name='eventos_delete'),
+    path("adm/eventos/", EventoAdminView.as_view(), name="eventos_admin"),
+    path("adm/cupons/", CupomAdminView.as_view(), name="cupons_admin"),
 
-    path("adm/cupons/", CupomListView.as_view(), name='cupons_admin'),
-    path("adm/cupons/novo/", CupomCreateView.as_view(), name='cupons_create'),
-    path("adm/cupons/<int:pk>/editar", CupomUpdateView.as_view(), name='cupons_update'),
-    path("adm/cupons/<int:pk>/excluir/", CupomDeleteView.as_view(), name='cupons_delete'),
-
-    path("adm/projetos/", ProjetoListView.as_view(), name='projetos_admin'),
-    path("projetos/criar/", ProjetoCreateView.as_view(), name="projetos_criar"),
-    path('adm/projetos/<int:pk>/editar', ProjetoUpdateView.as_view(), name='projetos_update'),
-    path("adm/projetos/<int:pk>/excluir/", ProjetoDeleteView.as_view(), name='projetos_delete'),
+    path("adm/projetos/", ProjetoAdminView.as_view(), name='projetos_admin'),
 
     path(
         'pagamento/<int:carrinho_id>/',

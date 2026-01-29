@@ -57,3 +57,11 @@ class ManutencaoForm(forms.ModelForm):
             'brinquedo': forms.HiddenInput()
         }
 
+# forms.py
+from django import forms
+from .models import Cupom
+
+class CupomForm(forms.ModelForm):
+    class Meta:
+        model = Cupom
+        fields = ["codigo", "desconto_percentual"]

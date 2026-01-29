@@ -15,14 +15,18 @@
 <div class="form-wrapper">
     <h2>✏️ Editar Cupom</h2>
 
-    <form method="post">
-        {% csrf_token %}
-        {{ form.as_p }}
+   <form id="formCupom"
+      method="post"
+      action="{% url 'cupons_create' %}">
+    {% csrf_token %}
 
-        <button class="btn-salvar" style="margin-top:15px">
-            💾 Salvar Alterações
-        </button>
-    </form>
+    {{ form.as_p }}
+
+    <button type="submit" class="btn-novo-cupom">
+        💾 Salvar
+    </button>
+</form>
+
 </div>
 
 {% endblock %}

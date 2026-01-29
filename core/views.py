@@ -7,7 +7,7 @@ from django.contrib import messages
 from django.contrib.auth import authenticate, login
 from decimal import Decimal
 
-from .forms import UserForm, PerfilForm, ProjetoForm, ManutencaoForm
+from .forms import UserForm, PerfilForm, ProjetoForm, ManutencaoForm, CupomForm
 from django.views.generic.edit import FormView
 
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -588,110 +588,177 @@ class PromocaoDeleteView(DeleteView):
     template_name = "promocao_confirm_delete.html"
     success_url = reverse_lazy("promocoes_admin")
 
+class CupomAdminView(View):
 
-class CupomListView(ListView):
-    model = Cupom
-    template_name = "cupons/cupons_adm.html"
-    context_object_name = "cupons"
-
-
-class CupomCreateView(CreateView):
-    model = Cupom
-    fields = ["codigo", "desconto_percentual"]
-    template_name = "cupons/partials/cupom_modal.html"
-    success_url = reverse_lazy("cupons_admin")
-
-
-class CupomUpdateView(UpdateView):
-    model = Cupom
-    fields = ["codigo", "desconto_percentual"]
-    template_name = "cupons/cupons_form.html"
-    success_url = reverse_lazy("cupons_admin")
-
-
-class CupomDeleteView(DeleteView):
-    model = Cupom
-    template_name = "cupons/cupons_confirm_delete.html"
-    success_url = reverse_lazy("cupons_admin")
-
-
-class BrinquedoProjetoListView(ListView):
-    model = BrinquedosProjeto
-    template_name = "projeto_adm.html"
-    context_object_name = "brinquedos"
-
-
-class ProjetoListView(ListView):
-    model = Projetos
-    template_name = "projetos/projetos_adm.html"
-    context_object_name = "projetos"
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context["form"] = ProjetoForm()
-        return context
-
-
-class ProjetoCreateView(View):
+    def get(self, request):
+        cupons = Cupom.objects.all()
+        return render(request, "cupons_adm.html", {
+            "cupons": cupons
+        })
 
     def post(self, request):
-        form = ProjetoForm(request.POST)
+        codigo = request.POST.get("codigo")
+        desconto = request.POST.get("desconto_percentual")
 
-        if form.is_valid():
-            projeto = form.save(commit=False)
+        if not codigo or not desconto:
+            return JsonResponse({
+                "success": False,
+                "html": self.render_form(error="Preencha todos os campos")
+            })
 
-            nome = request.POST.get("novo_brinquedo_nome")
-            descricao = request.POST.get("novo_brinquedo_descricao")
+        Cupom.objects.create(
+            codigo=codigo,
+            desconto_percentual=desconto
+        )
 
+        return JsonResponse({"success": True})
+
+    def delete(self, request, cupom_id):
+        cupom = get_object_or_404(Cupom, id=cupom_id)
+        cupom.delete()
+        return JsonResponse({"success": True})
+
+    def render_form(self, error=None):
+        return f"""
+        <form id="formCupom" method="post" action="/adm/cupons/">
+            <input type="hidden" name="csrfmiddlewaretoken" value="{{{{ csrf_token }}}}">
+
+            <label>Código</label>
+            <input type="text" name="codigo" required>
+
+            <label>Desconto (%)</label>
+            <input type="number" step="0.01" name="desconto_percentual" required>
+
+            {"<p style='color:red'>" + error + "</p>" if error else ""}
+
+            <button type="submit" class="btn-novo-cupom">
+                💾 Salvar
+            </button>
+        </form>
+        """
+
+
+class ProjetoAdminView(View):
+    template_name = "projetos/projetos_adm.html"
+
+    def get(self, request):
+        context = {
+            "projetos": Projetos.objects.select_related('brinquedo_projetado').all(),
+            "brinquedos_disponiveis": BrinquedosProjeto.objects.all(),
+            "form": ProjetoForm()
+        }
+        return render(request, self.template_name, context)
+
+    def post(self, request):
+        action = request.POST.get("action")
+
+        # 1. CRIAR APENAS O BRINQUEDO (Via Modal 2)
+        if action == "create_brinquedo":
+            nome = request.POST.get("nome_brinquedo")
+            desc = request.POST.get("desc_brinquedo")
             if nome:
                 brinquedo = BrinquedosProjeto.objects.create(
                     nome_brinquedo_projeto=nome,
-                    descricao=descricao
+                    descricao=desc
                 )
-                projeto.brinquedo_projetado = brinquedo
+                return JsonResponse({
+                    "success": True,
+                    "id": brinquedo.id,
+                    "nome": brinquedo.nome_brinquedo_projeto
+                })
 
-            projeto.save()
+        # 2. SALVAR PROJETO COMPLETO
+        if action == "save_projeto":
+            projeto_id = request.POST.get("id")
+            if projeto_id:  # Update
+                projeto = get_object_or_404(Projetos, id=projeto_id)
+                form = ProjetoForm(request.POST, instance=projeto)
+            else:  # Create
+                form = ProjetoForm(request.POST)
 
-        return redirect("projetos_admin")
+            if form.is_valid():
+                projeto = form.save()
+                return JsonResponse({"success": True})
+
+            return JsonResponse({"success": False, "errors": form.errors})
+
+        # 3. EXCLUIR
+        if action == "delete":
+            projeto = get_object_or_404(Projetos, id=request.POST.get("id"))
+            projeto.delete()
+            return JsonResponse({"success": True})
+
+        return JsonResponse({"success": False})
 
 
-class ProjetoUpdateView(UpdateView):
-    model = Projetos
-    fields = ["titulo", "descricao", "brinquedo_projetado"]
-    template_name = "projetos/projetos_form.html"
-    success_url = reverse_lazy("projetos_admin")
+from django.forms import modelform_factory
 
 
-class ProjetoDeleteView(DeleteView):
-    model = Projetos
-    template_name = "projetos/projetos_confirm_delete.html"
-    success_url = reverse_lazy("projetos_admin")
+EventoForm = modelform_factory(
+    Eventos,
+    fields=["titulo", "descricao", "brinquedos"]
+)
 
 
-class EventoListView(ListView):
-    model = Eventos
+class EventoAdminView(View):
     template_name = "eventos/eventos_adm.html"
-    context_object_name = "eventos"
 
+    def get(self, request):
+        # Use prefetch_related para otimizar a busca das imagens também
+        eventos = Eventos.objects.prefetch_related('brinquedos', 'imagens_evento')
+        form = EventoForm()
+        brinquedos = Brinquedos.objects.all()
 
-class EventoCreateView(CreateView):
-    model = Eventos
-    fields = ["titulo", "descricao", "brinquedos"]
-    template_name = "eventos/partials/evento_modal.html"
-    success_url = reverse_lazy("eventos_admin")
+        eventos_data = []
+        for evento in eventos:
+            eventos_data.append({
+                "id": evento.id,
+                "titulo": evento.titulo,
+                "descricao": evento.descricao,
+                "brinquedos": list(evento.brinquedos.values_list('id', flat=True)),
+                # Adicione esta linha para extrair as URLs das imagens:
+                "imagens_list": [img.imagem.url for img in evento.imagens_evento.all()]
+            })
 
+        return render(request, self.template_name, {
+            "eventos": eventos_data,
+            "form": form,
+            "brinquedos": brinquedos
+        })
 
-class EventoUpdateView(UpdateView):
-    model = Eventos
-    fields = ["titulo", "descricao", "brinquedos"]
-    template_name = "eventos/eventos_form.html"
-    success_url = reverse_lazy("eventos_admin")
+    def post(self, request):
+        action = request.POST.get("action")
 
+        # ===== CREATE =====
+        if action == "create":
+            form = EventoForm(request.POST)
+            if form.is_valid():
+                form.save()
+                return JsonResponse({"success": True})
+            return JsonResponse({
+                "success": False,
+                "errors": form.errors
+            })
 
-class EventoDeleteView(DeleteView):
-    model = Eventos
-    template_name = "eventos/eventos_confirm_delete.html"
-    success_url = reverse_lazy("eventos_admin")
+        # ===== UPDATE =====
+        if action == "update":
+            evento = get_object_or_404(Eventos, pk=request.POST.get("id"))
+            form = EventoForm(request.POST, instance=evento)
+            if form.is_valid():
+                form.save()
+                return JsonResponse({"success": True})
+            return JsonResponse({
+                "success": False,
+                "errors": form.errors
+            })
+
+        # ===== DELETE =====
+        if action == "delete":
+            evento = get_object_or_404(Eventos, pk=request.POST.get("id"))
+            evento.delete()
+            return JsonResponse({"success": True})
+
+        return JsonResponse({"success": False})
 
 
 class RegistrarView(View):

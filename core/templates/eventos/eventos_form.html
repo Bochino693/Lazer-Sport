@@ -2,109 +2,177 @@
 {% block content %}
 
 <style>
+/* ===== BASE ===== */
 .eventos-container {
     max-width:1200px;
-    margin:40px auto;
-    padding:20px;
+    margin:30px auto;
+    padding:16px;
+}
+
+.eventos-header {
+    display:flex;
+    flex-direction:column;
+    gap:14px;
+    margin-bottom:24px;
+}
+
+.eventos-header h1 {
+    font-size:1.6rem;
 }
 
 .btn-novo {
-    display:inline-block;
-    margin-bottom:25px;
+    align-self:flex-start;
     background:linear-gradient(135deg,#0d6efd,#0a58ca);
     color:white;
-    padding:12px 22px;
-    border-radius:16px;
+    padding:14px 22px;
+    border-radius:18px;
     font-weight:700;
     text-decoration:none;
 }
 
+/* ===== GRID ===== */
 .grid-eventos {
     display:grid;
-    grid-template-columns:repeat(auto-fill,minmax(300px,1fr));
-    gap:25px;
+    grid-template-columns:1fr;
+    gap:20px;
 }
 
+/* ===== CARD ===== */
 .evento-card {
     background:#fff;
-    border-radius:22px;
-    box-shadow:0 10px 30px rgba(0,0,0,.12);
+    border-radius:24px;
+    box-shadow:0 10px 28px rgba(0,0,0,.1);
     padding:20px;
+    display:flex;
+    flex-direction:column;
+    gap:14px;
     transition:.3s;
 }
 
 .evento-card:hover {
-    transform:translateY(-6px);
+    transform:translateY(-4px);
 }
 
+/* ===== CONTEÚDO ===== */
 .evento-card h3 {
     font-size:1.25rem;
-    margin-bottom:10px;
+    font-weight:700;
 }
 
 .evento-descricao {
     font-size:.95rem;
     color:#555;
-    margin-bottom:12px;
+    line-height:1.4;
 }
 
 .evento-brinquedos {
-    font-size:.85rem;
-    margin-bottom:15px;
+    display:flex;
+    flex-wrap:wrap;
+    gap:6px;
+    padding:0;
 }
 
 .evento-brinquedos li {
     list-style:none;
+    background:#f1f3f5;
+    padding:6px 10px;
+    border-radius:12px;
+    font-size:.8rem;
+}
+
+/* ===== AÇÕES ===== */
+.evento-acoes {
+    display:flex;
+    gap:10px;
+    margin-top:auto;
 }
 
 .evento-acoes a {
-    display:block;
+    flex:1;
     text-align:center;
-    padding:10px;
+    padding:12px;
     border-radius:14px;
-    font-weight:600;
+    font-weight:700;
     text-decoration:none;
-    margin-top:6px;
     color:white;
+    font-size:.9rem;
 }
 
-.btn-editar { background:#ffc107; color:#222; }
-.btn-excluir { background:#dc3545; }
+.btn-editar {
+    background:#ffc107;
+    color:#222;
+}
+
+.btn-excluir {
+    background:#dc3545;
+}
+
+/* ===== DESKTOP ===== */
+@media (min-width:768px) {
+    .eventos-header {
+        flex-direction:row;
+        justify-content:space-between;
+        align-items:center;
+    }
+
+    .eventos-header h1 {
+        font-size:2rem;
+    }
+
+    .grid-eventos {
+        grid-template-columns:repeat(auto-fill,minmax(320px,1fr));
+        gap:24px;
+    }
+
+    .evento-card {
+        padding:24px;
+    }
+}
 </style>
 
 <div class="eventos-container">
-    <h1>🎉 Eventos</h1>
 
-    <a href="{% url 'evento_create' %}" class="btn-novo">
-        ➕ Novo Evento
-    </a>
+    <div class="eventos-header">
+        <h1>🎉 Eventos</h1>
+
+        <a href="{% url 'evento_create' %}" class="btn-novo">
+            ➕ Novo Evento
+        </a>
+    </div>
 
     <div class="grid-eventos">
         {% for evento in eventos %}
         <div class="evento-card">
+
             <h3>{{ evento.titulo }}</h3>
 
             <p class="evento-descricao">
-                {{ evento.descricao|truncatechars:120 }}
+                {{ evento.descricao|truncatechars:140 }}
             </p>
 
             <ul class="evento-brinquedos">
                 {% for brinquedo in evento.brinquedos.all %}
                     <li>🧸 {{ brinquedo.nome_brinquedo }}</li>
                 {% empty %}
-                    <li>Nenhum brinquedo vinculado</li>
+                    <li>Sem brinquedos</li>
                 {% endfor %}
             </ul>
 
             <div class="evento-acoes">
-                <a href="{% url 'evento_update' evento.id %}" class="btn-editar">✏️ Editar</a>
-                <a href="{% url 'evento_delete' evento.id %}" class="btn-excluir">🗑️ Excluir</a>
+                <a href="{% url 'evento_update' evento.id %}" class="btn-editar">
+                    ✏️ Editar
+                </a>
+                <a href="{% url 'evento_delete' evento.id %}" class="btn-excluir">
+                    🗑️ Excluir
+                </a>
             </div>
+
         </div>
         {% empty %}
             <p>Nenhum evento cadastrado.</p>
         {% endfor %}
     </div>
+
 </div>
 
 {% endblock %}

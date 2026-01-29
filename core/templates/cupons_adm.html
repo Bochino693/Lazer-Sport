@@ -41,7 +41,6 @@
     padding:20px;
     box-shadow:0 8px 25px rgba(0,0,0,.08);
     transition:.25s;
-    position:relative;
 }
 
 .cupom-card:hover {
@@ -85,11 +84,12 @@
     color:white;
 }
 
-
+/* ===== MODAL ===== */
 .modal-wrapper {
     position:fixed;
     inset:0;
     z-index:9999;
+    display:none;
 }
 
 .modal-overlay {
@@ -126,6 +126,33 @@
     from { opacity:0; transform:translateY(20px) scale(.97); }
     to { opacity:1; transform:none; }
 }
+
+    /* ===== FORM MODAL CUPOM ===== */
+.modal-card form {
+    display:flex;
+    flex-direction:column;
+    gap:14px;
+}
+
+.modal-card label {
+    font-weight:600;
+    font-size:.95rem;
+    color:#444;
+}
+
+.modal-card input {
+    width:100%;
+    padding:12px 14px;
+    border-radius:14px;
+    border:1px solid #ddd;
+    font-size:1rem;
+    transition:.2s;
+    outline:none;
+}
+
+.modal-card input:focus {
+    border-color:#2575fc;
+
 </style>
 
 <div class="cupons-container">
@@ -133,7 +160,7 @@
     <div class="cupons-header">
         <h1>🎟️ Cupons de Desconto</h1>
         <button class="btn-novo-cupom"
-                onclick="abrirModal('{% url 'cupons_create' %}')">
+                onclick="abrirModal()">
             ➕ Novo Cupom
         </button>
     </div>
@@ -145,15 +172,6 @@
             <div class="cupom-desconto">
                 🔻 {{ cupom.desconto_percentual }}% OFF
             </div>
-
-            <div class="cupom-acoes">
-                <a href="{% url 'cupons_update' cupom.id %}" class="btn-editar">
-                    ✏️ Editar
-                </a>
-                <a href="{% url 'cupons_delete' cupom.id %}" class="btn-excluir">
-                    🗑️
-                </a>
-            </div>
         </div>
         {% empty %}
             <p>Nenhum cupom cadastrado.</p>
@@ -161,35 +179,64 @@
     </div>
 
 </div>
-<!-- MODAL CUPOM -->
-<div id="modalCupom" class="modal-wrapper" style="display:none">
+
+<!-- ===== MODAL ===== -->
+<div id="modalCupom" class="modal-wrapper">
     <div class="modal-overlay" onclick="fecharModal()"></div>
 
     <div class="modal-card">
         <button class="btn-close" onclick="fecharModal()">✕</button>
-        <div id="modalConteudo"></div>
+
+        <form id="formCupom" method="post" action="{% url 'cupons_admin' %}">
+            {% csrf_token %}
+
+            <label>Código</label>
+            <input type="text" name="codigo" required>
+
+            <label>Desconto (%)</label>
+            <input type="number" step="0.01" name="desconto_percentual" required>
+
+            <button type="submit" class="btn-novo-cupom" style="margin-top:15px">
+                💾 Salvar
+            </button>
+        </form>
+
     </div>
 </div>
 
-
-
 <script>
-    function abrirModal(url){
-    const modal = document.getElementById("modalCupom");
-    modal.style.display = "block";
-
-    fetch(url)
-        .then(r => r.text())
-        .then(html => {
-            document.getElementById("modalConteudo").innerHTML = html;
-        });
+function abrirModal(){
+    document.getElementById("modalCupom").style.display = "block";
 }
 
 function fecharModal(){
-    const modal = document.getElementById("modalCupom");
-    modal.style.display = "none";
-    document.getElementById("modalConteudo").innerHTML = "";
+    document.getElementById("modalCupom").style.display = "none";
 }
+
+document.addEventListener("submit", function(e){
+    if(e.target.id === "formCupom"){
+        e.preventDefault();
+
+        const form = e.target;
+        const formData = new FormData(form);
+
+        fetch(form.action, {
+            method: "POST",
+            body: formData,
+            headers: {
+                "X-Requested-With": "XMLHttpRequest"
+            }
+        })
+        .then(r => r.json())
+        .then(data => {
+            if(data.success){
+                fecharModal();
+                location.reload();
+            }
+        });
+    }
+});
+
 
 </script>
 
