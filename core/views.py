@@ -588,6 +588,7 @@ class PromocaoDeleteView(DeleteView):
     template_name = "promocao_confirm_delete.html"
     success_url = reverse_lazy("promocoes_admin")
 
+
 class CupomAdminView(View):
 
     def get(self, request):
@@ -692,7 +693,6 @@ class ProjetoAdminView(View):
 
 
 from django.forms import modelform_factory
-
 
 EventoForm = modelform_factory(
     Eventos,
@@ -1184,7 +1184,9 @@ class PaymentView(View):
 
         return render(request, 'payment.html', context)
 
+
 from django.views.decorators.csrf import csrf_exempt
+
 
 @csrf_exempt
 def processar_cartao(request):
@@ -1200,7 +1202,7 @@ def processar_cartao(request):
 
     # Simulação: aqui você chamaria a API de pagamento do seu gateway
     saldo_disponivel = Decimal("1000.00")  # Exemplo
-    valor_compra = Decimal("123.45")       # Pegar do carrinho/pedido atual
+    valor_compra = Decimal("123.45")  # Pegar do carrinho/pedido atual
 
     if saldo_disponivel < valor_compra:
         return JsonResponse({"sucesso": False, "mensagem": "Saldo insuficiente."})
@@ -1219,6 +1221,7 @@ def processar_cartao(request):
 
     # Aqui você pode registrar venda, itens, etc.
     return JsonResponse({"sucesso": True, "pedido_id": pedido.id})
+
 
 from django.urls import reverse
 
@@ -1395,6 +1398,7 @@ class PaymentFinallyView(LoginRequiredMixin, View):
 
         return redirect('meus_pedidos')
 
+
 #-23.453403648643707, -46.66151816239609  -23.472997309863196, -46.63041992925325
 
 class MeusPedidosView(LoginRequiredMixin, View):
@@ -1434,3 +1438,39 @@ class MeusPedidosView(LoginRequiredMixin, View):
             'pedidos': pedidos,
             'empresa': empresa
         })
+
+
+from .forms import ImagensSiteForm
+class BannerAdminView(LoginRequiredMixin, View):
+
+    def get(self, request):
+        imagens_site = ImagensSite.objects.all()
+        form = ImagensSiteForm()
+
+        return render(request, 'banner_adm.html', {
+            'imagens_site': imagens_site,
+            'form': form
+        })
+
+    def post(self, request):
+        form = ImagensSiteForm(request.POST, request.FILES)
+
+        if form.is_valid():
+            form.save()
+            return redirect('banner_adm')
+
+        imagens_site = ImagensSite.objects.all()
+
+        return render(request, 'banner_adm.html', {
+            'imagens_site': imagens_site,
+            'form': form
+        })
+
+
+class BannerDeleteView(LoginRequiredMixin, View):
+
+    def post(self, request, pk):
+        banner = get_object_or_404(ImagensSite, pk=pk)
+        banner.delete()
+        return redirect('banner_adm')
+

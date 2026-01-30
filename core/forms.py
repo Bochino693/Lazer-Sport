@@ -65,3 +65,13 @@ class CupomForm(forms.ModelForm):
     class Meta:
         model = Cupom
         fields = ["codigo", "desconto_percentual"]
+
+
+
+from .models import ImagensSite
+
+
+class ImagensSiteForm(forms.ModelForm):
+    class Meta:
+        model = ImagensSite
+        fields = ['imagem']

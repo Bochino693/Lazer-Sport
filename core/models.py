@@ -76,12 +76,11 @@ class ImagensSite(Prime):
     imagem = models.ImageField(upload_to='imagens_site', blank=True, null=True)
 
     def __str__(self):
-        return f'{self.imagem.url} foto'
+        return f'Imagem {self.id}'
 
     class Meta:
         verbose_name = "Imagem do Site"
         verbose_name_plural = "Imagens do Site"
-
 
 class Clientes(Prime):
     descricao_cliente = models.CharField(max_length=120, null=True)

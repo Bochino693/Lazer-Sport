@@ -8,7 +8,7 @@ from .views import (HomeView, BrinquedoInfoView, CategoriasInfoView, BrinquedosV
                     EstabelecimentoInfoView, EstabelecimentosListView, ManutencaoView, adicionar_ao_carrinho,
                     carrinho_view, aplicar_cupom,  remover_item_carrinho, limpar_carrinho, cancelar_manutencao,
                     PaymentView, MeusPedidosView, criar_pedido_pix, PaymentFinallyView, processar_cartao
-                    , EventoAdminView
+                    , EventoAdminView, BannerAdminView, BannerDeleteView
 
                     )   # importa views do mesmo app
 from django.conf import settings
@@ -67,6 +67,8 @@ urlpatterns = [
     path('adm/combos/editar/<int:pk>/', ComboUpdateView.as_view(), name='combo_update'),
     path('adm/combos/excluir/<int:pk>/', ComboDeleteView.as_view(), name='combo_delete'),
 
+    path('adm/banners/', BannerAdminView.as_view(), name='banner_adm'),
+    path('adm/banners/excluir/<int:pk>/', BannerDeleteView.as_view(), name='banner_delete'),
 
     path("adm/promocoes/", PromocaoListView.as_view(), name="promocoes_admin"),
     path("adm/promocoes/nova/", PromocaoCreateView.as_view(), name="promocao_create"),
