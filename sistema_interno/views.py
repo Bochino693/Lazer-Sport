@@ -4,6 +4,7 @@ from .models import (Material, EstoqueMaterial, TipoMaterial,
                      CentralPedidos, CentralVendas, Venda, EnderecoCliente
 
                      )
+from django.contrib.auth import logout
 
 from django.contrib.auth import authenticate, login
 
@@ -55,6 +56,12 @@ class LoginInternoView(View):
         return redirect('home_inner')
 
 
+class LogoutInnerView(View):
+    def get(self, request):
+        logout(request)
+        return render(request, 'logout_inner.html')
+
+
 class HomeInnerView(InternoRequiredMixin, View):
 
     def get(self, request):
@@ -93,3 +100,5 @@ class EstoqueInnerView(InternoRequiredMixin, View):
             'estoques': estoques,
         }
         return render(request, 'estoque_inner.html', ctx)
+
+

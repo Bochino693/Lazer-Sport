@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Logout realizado</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <style>
+        :root {
+            --primary: #38bdf8;
+            --secondary: #0ea5e9;
+            --bg-dark: #020617;
+            --glass: rgba(255,255,255,0.08);
+            --border: rgba(255,255,255,0.15);
+            --text-muted: #94a3b8;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            min-height: 100vh;
+            margin: 0;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background:
+                radial-gradient(circle at top, #0f172a, #020617 70%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+        }
+
+        .container {
+            max-width: 520px;
+            width: 100%;
+            padding: 20px;
+        }
+
+        .card {
+            background: linear-gradient(
+                180deg,
+                rgba(255,255,255,0.10),
+                rgba(255,255,255,0.04)
+            );
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 40px 30px;
+            box-shadow: 0 25px 60px rgba(0,0,0,.6);
+            text-align: center;
+            animation: fadeIn .6s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            margin-bottom: 8px;
+            color: var(--primary);
+        }
+
+        p {
+            color: var(--text-muted);
+            margin-bottom: 25px;
+        }
+
+        .actions {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 14px;
+            margin-top: 30px;
+        }
+
+        .btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 14px;
+            border-radius: 12px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all .25s ease;
+            border: 1px solid transparent;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: #020617;
+        }
+
+        .btn-primary:hover {
+            filter: brightness(1.1);
+            transform: translateY(-2px);
+        }
+
+        .btn-outline {
+            background: transparent;
+            border-color: var(--border);
+            color: #e5e7eb;
+        }
+
+        .btn-outline:hover {
+            background: rgba(255,255,255,0.08);
+            transform: translateY(-2px);
+        }
+
+        .footer {
+            margin-top: 25px;
+            font-size: .85rem;
+            color: var(--text-muted);
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="card">
+        <h1>🚪 Logout realizado</h1>
+        <p>Você saiu com segurança do sistema interno.</p>
+
+        <div class="actions">
+            <!-- Área financeira / interno -->
+            <a href="{% url 'login_inner' %}" class="btn btn-primary">
+                💼 Entrar na área financeira
+            </a>
+
+            <!-- Admin Django -->
+            <a href="/system/" class="btn btn-outline">
+                🔐 Admin do sistema (Django)
+            </a>
+
+            <!-- Admin de brinquedos -->
+            <a href="/adm/brinquedos/" class="btn btn-outline">
+                🧸 Gestão de brinquedos
+            </a>
+
+            <!-- Site público -->
+            <a href="/" class="btn btn-outline">
+                🌐 Voltar para o site
+            </a>
+        </div>
+
+        <div class="footer">
+            Lazer & Sport • Sistema de Gestão
+        </div>
+    </div>
+</div>
+
+</body>
+</html>
