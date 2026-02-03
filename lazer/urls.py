@@ -17,7 +17,7 @@ urlpatterns = [
     path('', include('core.urls')),
 
     # INTERNO (subdomínio)
-    #path('', include('lazer.urls_interno')),
+    path('', include('lazer.urls_interno')),
 
 
 
