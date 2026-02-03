@@ -104,6 +104,11 @@
 </head>
 <body>
 
+{% if bloqueio %}
+<p>Tentativas excessivas detectadas. Acesso temporariamente bloqueado.</p>
+{% endif %}
+
+
 <div class="card">
     <div class="icon">⛔</div>
     <h1>Acesso Negado</h1>

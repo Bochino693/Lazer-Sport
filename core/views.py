@@ -517,36 +517,81 @@ from django.views.generic import ListView, CreateView, UpdateView, DeleteView
 from django.urls import reverse_lazy
 from .models import Combos
 
+from django.core.cache import cache
+import time
+
 class AdminLoginView(View):
     template_name = 'admin_login.html'
+
+    MAX_ATTEMPTS = 3
+    BLOCK_TIME = 600  # 10 minutos (em segundos)
+
+    def get_client_ip(self, request):
+        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+        if x_forwarded_for:
+            return x_forwarded_for.split(',')[0].strip()
+        return request.META.get('REMOTE_ADDR')
 
     def get(self, request):
         if request.user.is_authenticated and request.user.is_staff and request.user.is_superuser:
             return redirect('/adm/banners/')
+
+        ip = self.get_client_ip(request)
+        cache_key = f'admin_login:{ip}'
+        data = cache.get(cache_key)
+
+        # ⛔ IP bloqueado
+        if data and data.get('blocked_until', 0) > time.time():
+            return redirect('acesso_negado')
+
         return render(request, self.template_name)
 
     def post(self, request):
+        ip = self.get_client_ip(request)
+        cache_key = f'admin_login:{ip}'
+
+        data = cache.get(cache_key, {
+            'attempts': 0,
+            'blocked_until': 0
+        })
+
+        # ⛔ Ainda bloqueado
+        if data['blocked_until'] > time.time():
+            return redirect('acesso_negado')
+
         username = request.POST.get('username')
         password = request.POST.get('password')
 
         user = authenticate(request, username=username, password=password)
 
-        if not user:
+        # ❌ Login inválido
+        if not user or not (user.is_staff and user.is_superuser):
+            data['attempts'] += 1
+
+            # 🔒 Estourou limite
+            if data['attempts'] >= self.MAX_ATTEMPTS:
+                data['blocked_until'] = time.time() + self.BLOCK_TIME
+                cache.set(cache_key, data, timeout=self.BLOCK_TIME)
+                return redirect('acesso_negado')
+
+            cache.set(cache_key, data, timeout=self.BLOCK_TIME)
+
             return render(request, self.template_name, {
                 'error': 'Usuário ou senha inválidos.'
             })
 
-        if not (user.is_staff and user.is_superuser):
-            return redirect('acesso_negado')
-
+        # ✅ Login OK → limpa tudo
+        cache.delete(cache_key)
         login(request, user)
+
         return redirect('/adm/banners/')
 
 
 class AcessoNegadoView(View):
     def get(self, request):
-        return render(request, 'acesso_negado.html')
-
+        return render(request, 'acesso_negado.html', {
+            'bloqueio': True
+        })
 
 class AdminOnlyMixin(View):
     def dispatch(self, request, *args, **kwargs):
