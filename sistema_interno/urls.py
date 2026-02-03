@@ -5,6 +5,8 @@ from .views import HomeInnerView, EstoqueInnerView
 urlpatterns = [
 
     path('', HomeInnerView.as_view(), name='home_inner'),
-    path('relatorios/stock/', EstoqueInnerView.as_view(), name='relatorio_estoque')
+    path('stock/', EstoqueInnerView.as_view(), name='stock'),
+
+
 
 ]

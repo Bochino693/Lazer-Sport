@@ -33,14 +33,16 @@ class MaterialInnerView(View):
 
 
 class EstoqueInnerView(View):
-
     def get(self, request):
-        estoque = EstoqueMaterial.objects.all()
+        estoques = (
+            EstoqueMaterial.objects
+            .select_related('material', 'material__tipo_material')
+            .all()
+        )
 
         ctx = {
-            'estoque_material': estoque,
+            'estoques': estoques,
         }
         return render(request, 'estoque_inner.html', ctx)
-
 
 
