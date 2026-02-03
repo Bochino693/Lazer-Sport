@@ -15,10 +15,10 @@ class InternoRequiredMixin(View):
             return redirect('/')
 
         if not request.user.is_authenticated:
-            return redirect('login_interno')
+            return redirect('login_inner')
 
         if not (request.user.is_staff or hasattr(request.user, 'gerente')):
-            return redirect('login_interno')
+            return redirect('login_inner')
 
         return super().dispatch(request, *args, **kwargs)
 
