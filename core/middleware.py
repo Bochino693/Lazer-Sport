@@ -20,16 +20,22 @@ class SubdomainURLMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
-        # 🔒 deixa o admin passar intacto
-        if request.path.startswith(('/system/', '/accounts/')):
+        path = request.path
+
+        # 🔥 LIBERA MEDIA E STATIC
+        if (
+            path.startswith('/media/')
+            or path.startswith('/static/')
+            or path.startswith('/favicon.ico')
+        ):
             return self.get_response(request)
 
-        host = request.get_host().split(':')[0]
+        host = request.get_host()
 
+        # interno.lazersport.com.br
         if host.startswith('interno.'):
-            request.urlconf = 'sistema_interno.urls'
+            request.is_interno = True
         else:
-            request.urlconf = 'core.urls'
+            request.is_interno = False
 
         return self.get_response(request)
-
