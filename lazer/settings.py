@@ -24,6 +24,9 @@ print("CLOUD:", env('CLOUD_NAME', default='não encontrado'))
 
 ENVIRONMENT = env('ENVIRONMENT', default="production")
 
+SESSION_COOKIE_DOMAIN = ".lazersport.com.br"
+CSRF_COOKIE_DOMAIN = ".lazersport.com.br"
+
 import dj_database_url
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -83,7 +86,6 @@ INSTALLED_APPS = [
 
 SITE_ID = 1
 
-
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
@@ -94,13 +96,12 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'allauth.account.middleware.AccountMiddleware',
 
-
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 
     # 👇 SEMPRE POR ÚLTIMO
+    'core.middleware.SubdomainURLMiddleware',
     'core.middleware.GlobalExceptionMiddleware',
-
 
 ]
 
@@ -157,7 +158,6 @@ AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
     'allauth.account.auth_backends.AuthenticationBackend',
 ]
-
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
@@ -222,7 +222,6 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 WHITENOISE_AUTOREFRESH = DEBUG
 WHITENOISE_USE_FINDERS = True
 
-
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/'
 ACCOUNT_LOGOUT_ON_GET = True
@@ -230,4 +229,3 @@ ACCOUNT_LOGOUT_ON_GET = True
 ACCOUNT_EMAIL_REQUIRED = True
 ACCOUNT_USERNAME_REQUIRED = True
 ACCOUNT_AUTHENTICATION_METHOD = 'username_email'
-
