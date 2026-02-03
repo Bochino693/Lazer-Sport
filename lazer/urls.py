@@ -14,10 +14,7 @@ urlpatterns = [
 
     path('accounts/', include('allauth.urls')),
 
-    path('', include('core.urls')),
 
-    # INTERNO (subdomínio)
-    path('', include('lazer.urls_interno')),
 
 
 

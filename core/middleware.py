@@ -22,7 +22,7 @@ class SubdomainURLMiddleware:
     def __call__(self, request):
         path = request.path
 
-        # 🔥 LIBERA MEDIA E STATIC
+        # 🔥 LIBERA MEDIA, STATIC E FAVICON
         if (
             path.startswith('/media/')
             or path.startswith('/static/')
@@ -30,12 +30,14 @@ class SubdomainURLMiddleware:
         ):
             return self.get_response(request)
 
-        host = request.get_host()
+        host = request.get_host().split(':')[0]
 
         # interno.lazersport.com.br
         if host.startswith('interno.'):
             request.is_interno = True
+            request.urlconf = 'lazer.urls_interno'
         else:
             request.is_interno = False
+            request.urlconf = 'core.urls'
 
         return self.get_response(request)
