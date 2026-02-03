@@ -8,7 +8,8 @@ from .views import (HomeView, BrinquedoInfoView, CategoriasInfoView, BrinquedosV
                     EstabelecimentoInfoView, EstabelecimentosListView, ManutencaoView, adicionar_ao_carrinho,
                     carrinho_view, aplicar_cupom,  remover_item_carrinho, limpar_carrinho, cancelar_manutencao,
                     PaymentView, MeusPedidosView, criar_pedido_pix, PaymentFinallyView, processar_cartao,
-                    EventoAdminView, BannerAdminView, BannerDeleteView, AdminLoginView, AcessoNegadoView
+                    EventoAdminView, BannerAdminView, BannerDeleteView, AdminLoginView, AcessoNegadoView,
+                    DashboardAdminView
 
                     )   # importa views do mesmo app
 from django.conf import settings
@@ -76,6 +77,8 @@ urlpatterns = [
     path("adm/promocoes/nova/", PromocaoCreateView.as_view(), name="promocao_create"),
     path("adm/promocoes/<int:pk>/editar/", PromocaoUpdateView.as_view(), name="promocao_update"),
     path("adm/promocoes/<int:pk>/excluir/", PromocaoDeleteView.as_view(), name="promocao_delete"),
+
+    path("adm/dashboards/", DashboardAdminView.as_view(), name='dashboards'),
 
 
     path("adm/eventos/", EventoAdminView.as_view(), name="eventos_admin"),

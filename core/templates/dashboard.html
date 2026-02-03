@@ -1,10 +1,270 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-</head>
-<body>
+{% extends 'base_adm.html' %}
+{% load static %}
 
-</body>
-</html>
+{% block title %}Dashboards{% endblock %}
+
+{% block content %}
+
+<style>
+    :root {
+        --bg: #0f172a;          /* fundo geral da página */
+        --wrapper-bg: #1e293b;  /* fundo do card maior que envolve tudo */
+        --primary: #3b82f6;     /* azul principal */
+        --secondary: #2563eb;   /* azul médio */
+        --accent: #1e40af;      /* azul escuro */
+        --kpi-bg1: #1e3a8a;
+        --kpi-bg2: #2563eb;
+        --kpi-bg3: #1e40af;
+        --kpi-bg4: #3b82f6;
+        --chart-bg: #1e293b;
+        --card-radius: 16px;
+        --shadow: 0 8px 20px rgba(0,0,0,0.3);
+        --text-light: #f1f5f9;
+    }
+
+    body {
+        background-color: var(--bg);
+        color: var(--text-light);
+        font-family: 'Segoe UI', sans-serif;
+    }
+
+    /* Card principal que envolve tudo */
+    .dashboard-wrapper {
+        background-color: var(--wrapper-bg);
+        padding: 40px 30px;
+        border-radius: var(--card-radius);
+        box-shadow: var(--shadow);
+        max-width: 1200px;
+        margin: 30px auto;
+    }
+
+    .dashboard-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 30px;
+    }
+
+    .dashboard-header h2 {
+        margin: 0;
+        font-weight: 600;
+        color: var(--text-light);
+    }
+
+    .dashboard-filters {
+    display: flex;
+    gap: 10px;
+}
+
+.filter-btn {
+    padding: 8px 16px;
+    border-radius: 8px;
+    background-color: rgba(255,255,255,0.1);
+    color: var(--text-light);
+    font-weight: 500;
+    text-decoration: none;
+    transition: 0.3s;
+}
+
+.filter-btn:hover {
+    background-color: var(--accent);
+}
+
+.filter-btn.active {
+    background-color: var(--primary);
+    color: white;
+}
+
+    /* KPIs */
+    .kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+
+    .kpi-card {
+        border-radius: var(--card-radius);
+        padding: 20px;
+        text-align: center;
+        color: var(--text-light);
+        font-weight: 500;
+        box-shadow: var(--shadow);
+    }
+
+    .kpi-card h4 {
+        margin: 0;
+        font-size: 14px;
+        color: rgba(255,255,255,0.7);
+    }
+
+    .kpi-card span {
+        font-size: 28px;
+        font-weight: bold;
+        display: block;
+        margin-top: 10px;
+    }
+
+    .kpi-card.kpi-1 { background-color: var(--kpi-bg1); }
+    .kpi-card.kpi-2 { background-color: var(--kpi-bg2); }
+    .kpi-card.kpi-3 { background-color: var(--kpi-bg3); }
+    .kpi-card.kpi-4 { background-color: var(--kpi-bg4); }
+
+    /* Charts */
+    .charts-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+        gap: 20px;
+    }
+
+    .chart-card {
+        background-color: var(--chart-bg);
+        border-radius: var(--card-radius);
+        padding: 20px;
+        box-shadow: var(--shadow);
+    }
+
+    .chart-card h4 {
+        margin-bottom: 15px;
+        color: var(--text-light);
+        font-weight: 500;
+    }
+
+    canvas {
+        background-color: transparent;
+    }
+</style>
+
+<div class="dashboard-wrapper">
+
+    <!-- Header -->
+<div class="dashboard-header">
+    <h2>DASHBOARDS GERAIS</h2>
+    <div class="dashboard-filters">
+        <a href="?filtro=geral" class="filter-btn {% if filtro == 'geral' %}active{% endif %}">Geral</a>
+        <a href="?filtro=7dias" class="filter-btn {% if filtro == '7dias' %}active{% endif %}">Últimos 7 dias</a>
+        <a href="?filtro=30dias" class="filter-btn {% if filtro == '30dias' %}active{% endif %}">Últimos 30 dias</a>
+        <a href="?filtro=ano" class="filter-btn {% if filtro == 'ano' %}active{% endif %}">Este ano</a>
+    </div>
+</div>
+
+    <!-- KPIs -->
+    <div class="kpi-grid">
+        <div class="kpi-card kpi-1">
+            <h4>Total de Vendas</h4>
+            <span>{{ vendas_total }}</span>
+        </div>
+
+        <div class="kpi-card kpi-2">
+            <h4>Usuários Ativos</h4>
+            <span>{{ total_clientes }}</span>
+        </div>
+
+        <div class="kpi-card kpi-3">
+            <h4>Pedidos</h4>
+            <span>{{ total_pedidos }}</span>
+        </div>
+
+        <div class="kpi-card kpi-4">
+            <h4>Conversão</h4>
+            <span>{{ taxa_conversao }}</span>
+        </div>
+    </div>
+
+    <!-- Gráficos -->
+    <div class="charts-grid">
+        <div class="chart-card">
+             <h4>Vendas por Período</h4>
+    {% if chart_labels and chart_data %}
+        <canvas id="chartVendas"></canvas>
+    {% else %}
+        <p style="color: #f1f5f9; text-align:center; margin-top:30px;">
+            Nenhuma venda registrada para o período selecionado.
+        </p>
+    {% endif %}
+        </div>
+
+        <div class="chart-card">
+            <h4>Usuários por Categoria</h4>
+            <canvas id="chartUsuarios"></canvas>
+        </div>
+    </div>
+
+</div>
+
+<!-- Chart.js -->
+<script src="{% static 'js/Chart.min.js' %}"></script>
+<script>
+  {% if chart_labels and chart_data %}
+const ctxVendas = document.getElementById('chartVendas').getContext('2d');
+const dataVals = {{ chart_data|safe }};
+const labelsVals = {{ chart_labels|safe }};
+
+// Cor das barras: verde se aumento, vermelho se queda
+const colors = dataVals.map((val, i) => {
+    if(i === 0) return 'rgba(52, 152, 219, 0.7)';
+    return val >= dataVals[i-1] ? 'rgba(46, 204, 113, 0.7)' : 'rgba(231, 76, 60, 0.7)';
+});
+
+new Chart(ctxVendas, {
+    type: 'bar',
+    data: {
+        labels: labelsVals,
+        datasets: [{
+            label: 'Vendas (R$)',
+            data: dataVals,
+            backgroundColor: colors,
+            borderColor: colors.map(c => c.replace('0.7','1')),
+            borderWidth: 1
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: { display: false },
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        return "R$ " + context.raw.toLocaleString('pt-BR', {minimumFractionDigits: 2});
+                    }
+                }
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    callback: function(value) {
+                        return 'R$ ' + value.toLocaleString('pt-BR');
+                    }
+                }
+            }
+        }
+    }
+});
+{% endif %}
+
+
+
+    // Exemplo de gráfico de usuários
+    const ctxUsuarios = document.getElementById('chartUsuarios').getContext('2d');
+    const chartUsuarios = new Chart(ctxUsuarios, {
+        type: 'bar',
+        data: {
+            labels: ['Free', 'Premium', 'Enterprise'],
+            datasets: [{
+                label: 'Usuários',
+                data: [850, 300, 98],
+                backgroundColor: ['#2c3e50', '#3498db', '#1abc9c']
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { display: false }
+            }
+        }
+    });
+</script>
+
+{% endblock %}

@@ -334,7 +334,7 @@ class CategoriasInfoView(View):
 from django.core.paginator import Paginator
 from django.db.models import F, FloatField, ExpressionWrapper
 from django.db.models import F, FloatField, ExpressionWrapper, DecimalField
-from django.db.models.functions import Cast
+from django.db.models.functions import Cast, TruncDate
 
 from django.views.generic import ListView
 from .models import Estabelecimentos
@@ -520,6 +520,7 @@ from .models import Combos
 from django.core.cache import cache
 import time
 
+
 class AdminLoginView(View):
     template_name = 'admin_login.html'
 
@@ -592,6 +593,7 @@ class AcessoNegadoView(View):
         return render(request, 'acesso_negado.html', {
             'bloqueio': True
         })
+
 
 class AdminOnlyMixin(View):
     def dispatch(self, request, *args, **kwargs):
@@ -1055,10 +1057,16 @@ from django.utils.timesince import timesince
 from django.utils import timezone
 
 from .forms import ImagensSiteForm
+
+MAX_BANNERS = 5
+
+
 class BannerAdminView(LoginRequiredMixin, View):
 
     def get(self, request):
         imagens_site = ImagensSite.objects.all()
+        total = imagens_site.count()
+        limite_restante = max(0, MAX_BANNERS - total)
 
         for banner in imagens_site:
             if banner.atualizado and banner.atualizado != banner.criacao:
@@ -1071,28 +1079,57 @@ class BannerAdminView(LoginRequiredMixin, View):
 
         return render(request, 'banner_adm.html', {
             'imagens_site': imagens_site,
-            'form': form
+            'form': form,
+            'limite_restante': limite_restante,
+            'max_banners': MAX_BANNERS,
         })
 
     def post(self, request):
-        imagens = request.FILES.getlist('imagens')  # 👈 vem do input multiple
+        # =============================
+        # ATUALIZAÇÃO DE BANNER
+        # =============================
+        update_id = request.POST.get('update_id')
+        imagem_update = request.FILES.get('imagem')
 
-        if not imagens:
+        if update_id and imagem_update:
+            banner = get_object_or_404(ImagensSite, pk=update_id)
+            banner.imagem = imagem_update
+            banner.atualizado = timezone.now()
+            banner.save()
+
+            messages.success(request, 'Banner atualizado com sucesso.')
             return redirect('banner_adm')
 
-        if len(imagens) > 5:
-            messages.error(request, 'Você pode enviar no máximo 5 imagens.')
+        # =============================
+        # UPLOAD DE NOVOS BANNERS
+        # =============================
+        imagens = request.FILES.getlist('imagens')
+
+        if not imagens:
+            messages.warning(request, 'Nenhuma imagem selecionada.')
+            return redirect('banner_adm')
+
+        total_atual = ImagensSite.objects.count()
+        restante = MAX_BANNERS - total_atual
+
+        if restante <= 0:
+            messages.error(
+                request,
+                f'Limite máximo de {MAX_BANNERS} banners atingido.'
+            )
+            return redirect('banner_adm')
+
+        if len(imagens) > restante:
+            messages.error(
+                request,
+                f'Você só pode adicionar mais {restante} banner(s).'
+            )
             return redirect('banner_adm')
 
         for imagem in imagens:
-            form = ImagensSiteForm(
-                data=request.POST,
-                files={'imagem': imagem}
-            )
+            ImagensSite.objects.create(imagem=imagem)
 
-            if form.is_valid():
-                form.save()
-
+        messages.success(request, 'Banner(s) adicionados com sucesso.')
         return redirect('banner_adm')
 
 
@@ -1101,7 +1138,111 @@ class BannerDeleteView(LoginRequiredMixin, View):
     def post(self, request, pk):
         banner = get_object_or_404(ImagensSite, pk=pk)
         banner.delete()
+        messages.success(request, 'Banner removido com sucesso.')
         return redirect('banner_adm')
+
+
+from .models import ClientePerfil, Pedido  # ⚠️ muito importante
+from datetime import timedelta
+from django.db.models.functions import TruncDay, TruncMonth
+
+
+
+class DashboardAdminView(View):
+    def get(self, request):
+        filtro = request.GET.get('filtro', 'geral')
+        agora = timezone.now()
+
+        # Definir data inicial para filtro
+        if filtro == '7dias':
+            data_inicio = agora - timedelta(days=7)
+        elif filtro == '30dias':
+            data_inicio = agora - timedelta(days=30)
+        elif filtro == 'ano':
+            data_inicio = agora.replace(month=1, day=1, hour=0, minute=0, second=0)
+        else:  # geral
+            data_inicio = None
+
+        # Filtrar clientes
+        clientes_qs = ClientePerfil.objects.all()
+        if data_inicio:
+            clientes_qs = clientes_qs.filter(criado_em__gte=data_inicio)
+        total_clientes = clientes_qs.count()
+
+        # Filtrar pedidos
+        pedidos_qs = Pedido.objects.all()
+        if data_inicio:
+            pedidos_qs = pedidos_qs.filter(criacao__gte=data_inicio)
+
+        total_pedidos = pedidos_qs.count()
+        pedidos_finalizados = pedidos_qs.filter(status='finalizado').count()
+        taxa_conversao = (pedidos_finalizados / total_pedidos * 100) if total_pedidos else 0
+
+        # Total de vendas
+        vendas_total = pedidos_qs.filter(status='finalizado').aggregate(
+            total=Sum('total_liquido')
+        )['total'] or 0
+        vendas_total_formatado = f"R$ {vendas_total:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+
+        # ---------------------------
+        # Preparar dados do gráfico
+        # ---------------------------
+        # ----------------------------
+        # Preparar dados do gráfico
+        # ----------------------------
+        labels = []
+        vendas_data = []
+
+        if filtro == 'geral' or filtro == 'ano':
+            # Agrupar por mês usando TruncDate
+            vendas_qs = pedidos_qs.filter(status='finalizado').exclude(criacao__isnull=True)
+            vendas_agrupadas = vendas_qs.annotate(data=TruncDate('criacao')) \
+                .values('data') \
+                .annotate(total=Sum('total_liquido')) \
+                .order_by('data')
+
+            # Criar dicionário para somar por mês
+            from collections import defaultdict
+            mes_dict = defaultdict(float)
+            for item in vendas_agrupadas:
+                mes_label = item['data'].strftime('%b/%Y')  # formato: Jan/2026
+                mes_dict[mes_label] += float(item['total'])
+
+            labels = list(mes_dict.keys())
+            vendas_data = list(mes_dict.values())
+
+        elif filtro == '7dias':
+            vendas_por_dia = pedidos_qs.filter(status='finalizado').annotate(
+                dia=TruncDate('criacao')
+            ).values('dia').annotate(total=Sum('total_liquido')).order_by('dia')
+
+            for item in vendas_por_dia:
+                labels.append(item['dia'].strftime('%d/%m'))
+                vendas_data.append(float(item['total']))
+
+        elif filtro == '30dias':
+            # Dois blocos de 15 dias cada
+            vendas_por_15 = pedidos_qs.filter(status='finalizado').order_by('criacao')
+            first_half = vendas_por_15[:15]
+            second_half = vendas_por_15[15:30]
+
+            labels = ['Dias 1-15', 'Dias 16-30']
+            total_first = sum(p.total_liquido for p in first_half)
+            total_second = sum(p.total_liquido for p in second_half)
+            vendas_data = [float(total_first), float(total_second)]
+
+        ctx = {
+            'filtro': filtro,
+            'total_clientes': total_clientes,
+            'total_pedidos': total_pedidos,
+            'pedidos_finalizados': pedidos_finalizados,
+            'taxa_conversao': f"{taxa_conversao:.1f}%",
+            'vendas_total': vendas_total_formatado,
+            'chart_labels': labels,
+            'chart_data': vendas_data,
+        }
+
+        return render(request, 'dashboard.html', ctx)
 
 
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -1578,5 +1719,3 @@ class MeusPedidosView(LoginRequiredMixin, View):
             'pedidos': pedidos,
             'empresa': empresa
         })
-
-
