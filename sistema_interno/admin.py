@@ -1,6 +1,11 @@
 from django.contrib import admin
-from .models import Material, TipoMaterial
+from .models import Material, TipoMaterial, Gerente
 
+
+@admin.register(Gerente)
+class GerenteAdmin(admin.ModelAdmin):
+    list_display = ('nome', 'user', 'ativo')
+    search_fields = ('nome', 'user__username', 'user__email')
 
 @admin.register(TipoMaterial)
 class TipoMaterial(admin.ModelAdmin):

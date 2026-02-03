@@ -171,6 +171,12 @@
 <body>
 
 
+{% if not user.is_authenticated or not user.is_staff and not user.gerente %}
+<script>
+    window.location.href = "{% url 'login_inner' %}";
+</script>
+{% endif %}
+
 <!-- Header / Navbar -->
 <nav class="navbar navbar-dark bg-dark fixed-top shadow">
   <div class="container-fluid">
@@ -290,12 +296,12 @@
 
   <div class="logout mt-auto">
     {% if user.is_authenticated %}
-      <form method="post" action="#">
+      <form method="post" action="{% url 'logout' %}">
           {% csrf_token %}
           <button type="submit" class="btn btn-danger w-100">🚪 Logout</button>
       </form>
     {% else %}
-      <a href="#" class="btn btn-success w-100">🔑 Login</a>
+      <a href="{% url 'login_interno' %}" class="btn btn-success w-100">🔑 Login</a>
     {% endif %}
   </div>
 

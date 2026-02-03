@@ -1,5 +1,5 @@
 from django.db import models
-
+from django.conf import settings
 from core.models import Brinquedos, Pedido, Venda, ItemPedido
 
 
@@ -9,6 +9,25 @@ class Prime(models.Model):
 
     class Meta:
         abstract = True
+
+
+class Gerente(Prime):
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='gerente'
+    )
+
+    nome = models.CharField(max_length=120)
+    telefone = models.CharField(max_length=20, null=True, blank=True)
+    ativo = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f"Gerente: {self.nome}"
+
+    class Meta:
+        verbose_name = "Gerente"
+        verbose_name_plural = "Gerentes"
 
 
 class Cliente(Prime):
