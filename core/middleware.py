@@ -16,15 +16,15 @@ class GlobalExceptionMiddleware:
 
 
 class SubdomainURLMiddleware:
-    def __init__(self, get_response):
-        self.get_response = get_response
-
     def __call__(self, request):
-        host = request.get_host().split(':')[0]
+        host = request.get_host()
+        print("HOST:", host)
 
         if host.startswith('interno.'):
+            print("USANDO SISTEMA_INTERNO")
             request.urlconf = 'sistema_interno.urls'
         else:
+            print("USANDO CORE")
             request.urlconf = 'core.urls'
 
         return self.get_response(request)
