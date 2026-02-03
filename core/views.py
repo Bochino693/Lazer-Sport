@@ -517,8 +517,50 @@ from django.views.generic import ListView, CreateView, UpdateView, DeleteView
 from django.urls import reverse_lazy
 from .models import Combos
 
+class AdminLoginView(View):
+    template_name = 'admin_login.html'
 
-class ComboListView(ListView):
+    def get(self, request):
+        if request.user.is_authenticated and request.user.is_staff and request.user.is_superuser:
+            return redirect('/adm/banners/')
+        return render(request, self.template_name)
+
+    def post(self, request):
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+
+        user = authenticate(request, username=username, password=password)
+
+        if not user:
+            return render(request, self.template_name, {
+                'error': 'Usuário ou senha inválidos.'
+            })
+
+        if not (user.is_staff and user.is_superuser):
+            return redirect('acesso_negado')
+
+        login(request, user)
+        return redirect('/adm/banners/')
+
+
+class AcessoNegadoView(View):
+    def get(self, request):
+        return render(request, 'acesso_negado.html')
+
+
+class AdminOnlyMixin(View):
+    def dispatch(self, request, *args, **kwargs):
+
+        if not request.user.is_authenticated:
+            return redirect('acesso_negado')
+
+        if not (request.user.is_superuser and request.user.is_staff):
+            return redirect('acesso_negado')
+
+        return super().dispatch(request, *args, **kwargs)
+
+
+class ComboListView(AdminOnlyMixin, ListView):
     model = Combos
     template_name = 'combos_adm.html'
     context_object_name = 'combos'
@@ -527,7 +569,7 @@ class ComboListView(ListView):
         return Combos.objects.prefetch_related('brinquedos')
 
 
-class ComboCreateView(CreateView):
+class ComboCreateView(AdminOnlyMixin, CreateView):
     model = Combos
     fields = ['descricao', 'imagem_combo', 'brinquedos', 'valor_combo']
     template_name = 'combo_form.html'
@@ -541,7 +583,7 @@ class ComboUpdateView(UpdateView):
     success_url = reverse_lazy('combos_admin')
 
 
-class ComboDeleteView(DeleteView):
+class ComboDeleteView(AdminOnlyMixin, DeleteView):
     model = Combos
     template_name = 'combo_confirm_delete.html'
     success_url = reverse_lazy('combos_admin')
@@ -563,33 +605,33 @@ class LogoutUsuarioView(View):
 from .models import Promocoes
 
 
-class PromocaoListView(ListView):
+class PromocaoListView(AdminOnlyMixin, ListView):
     model = Promocoes
     template_name = "promocoes_adm.html"
     context_object_name = "promocoes"
 
 
-class PromocaoCreateView(CreateView):
+class PromocaoCreateView(AdminOnlyMixin, CreateView):
     model = Promocoes
     fields = ['descricao', 'imagem_promocao', 'brinquedos', 'preco_promocao']
     template_name = "partials/promocoes_form.html"
     success_url = reverse_lazy("promocoes_admin")
 
 
-class PromocaoUpdateView(UpdateView):
+class PromocaoUpdateView(AdminOnlyMixin, UpdateView):
     model = Promocoes
     fields = ['descricao', 'imagem_promocao', 'brinquedos', 'preco_promocao']
     template_name = "promocoes_form.html"
     success_url = reverse_lazy("promocoes_admin")
 
 
-class PromocaoDeleteView(DeleteView):
+class PromocaoDeleteView(AdminOnlyMixin, DeleteView):
     model = Promocoes
     template_name = "promocao_confirm_delete.html"
     success_url = reverse_lazy("promocoes_admin")
 
 
-class CupomAdminView(View):
+class CupomAdminView(AdminOnlyMixin, View):
 
     def get(self, request):
         cupons = Cupom.objects.all()
@@ -639,7 +681,7 @@ class CupomAdminView(View):
         """
 
 
-class ProjetoAdminView(View):
+class ProjetoAdminView(AdminOnlyMixin, View):
     template_name = "projetos/projetos_adm.html"
 
     def get(self, request):
@@ -700,7 +742,7 @@ EventoForm = modelform_factory(
 )
 
 
-class EventoAdminView(View):
+class EventoAdminView(AdminOnlyMixin, View):
     template_name = "eventos/eventos_adm.html"
 
     def get(self, request):
@@ -812,7 +854,7 @@ class RegistrarView(View):
         return redirect("login")
 
 
-class BrinquedoAdmin(View):
+class BrinquedoAdmin(AdminOnlyMixin, View):
 
     def get(self, request):
         categoria = request.GET.get("categoria", "todas")
@@ -920,7 +962,7 @@ from django.http import JsonResponse
 from django.db import IntegrityError
 
 
-class NovaCategoria(View):
+class NovaCategoria(AdminOnlyMixin, View):
 
     def post(self, request):
         try:
@@ -953,7 +995,7 @@ class NovaCategoria(View):
             return JsonResponse({"status": "erro", "msg": f"Erro inesperado: {str(e)}"})
 
 
-class NovaTag(View):
+class NovaTag(AdminOnlyMixin, View):
     def post(self, request):
         nome = request.POST.get("nome_tag")
 
@@ -962,6 +1004,52 @@ class NovaTag(View):
         messages.success(request, "Tag criada com sucesso!")
 
         return redirect("/brinquedos/admin/?modal_aberto=1")
+
+
+from django.utils.timesince import timesince
+from django.utils import timezone
+
+from .forms import ImagensSiteForm
+class BannerAdminView(LoginRequiredMixin, View):
+
+    def get(self, request):
+        imagens_site = ImagensSite.objects.all()
+
+        for banner in imagens_site:
+            if banner.atualizado and banner.atualizado != banner.criacao:
+                dias = timesince(banner.atualizado, timezone.now())
+                banner.status_atualizacao = f'Atualizado há {dias}'
+            else:
+                banner.status_atualizacao = 'Nunca foi alterado'
+
+        form = ImagensSiteForm()
+
+        return render(request, 'banner_adm.html', {
+            'imagens_site': imagens_site,
+            'form': form
+        })
+
+    def post(self, request):
+        form = ImagensSiteForm(request.POST, request.FILES)
+
+        if form.is_valid():
+            form.save()
+            return redirect('banner_adm')
+
+        imagens_site = ImagensSite.objects.all()
+
+        return render(request, 'banner_adm.html', {
+            'imagens_site': imagens_site,
+            'form': form
+        })
+
+
+class BannerDeleteView(LoginRequiredMixin, View):
+
+    def post(self, request, pk):
+        banner = get_object_or_404(ImagensSite, pk=pk)
+        banner.delete()
+        return redirect('banner_adm')
 
 
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -1439,48 +1527,4 @@ class MeusPedidosView(LoginRequiredMixin, View):
             'empresa': empresa
         })
 
-from django.utils.timesince import timesince
-from django.utils import timezone
-
-from .forms import ImagensSiteForm
-class BannerAdminView(LoginRequiredMixin, View):
-
-    def get(self, request):
-        imagens_site = ImagensSite.objects.all()
-
-        for banner in imagens_site:
-            if banner.atualizado and banner.atualizado != banner.criacao:
-                dias = timesince(banner.atualizado, timezone.now())
-                banner.status_atualizacao = f'Atualizado há {dias}'
-            else:
-                banner.status_atualizacao = 'Nunca foi alterado'
-
-        form = ImagensSiteForm()
-
-        return render(request, 'banner_adm.html', {
-            'imagens_site': imagens_site,
-            'form': form
-        })
-
-    def post(self, request):
-        form = ImagensSiteForm(request.POST, request.FILES)
-
-        if form.is_valid():
-            form.save()
-            return redirect('banner_adm')
-
-        imagens_site = ImagensSite.objects.all()
-
-        return render(request, 'banner_adm.html', {
-            'imagens_site': imagens_site,
-            'form': form
-        })
-
-
-class BannerDeleteView(LoginRequiredMixin, View):
-
-    def post(self, request, pk):
-        banner = get_object_or_404(ImagensSite, pk=pk)
-        banner.delete()
-        return redirect('banner_adm')
 

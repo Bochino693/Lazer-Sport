@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Login Administrativo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <style>
+        :root {
+            --bg: #020617;
+            --card: rgba(15, 23, 42, 0.9);
+            --primary: #38bdf8;
+            --danger: #ef4444;
+            --text: #e5e7eb;
+            --muted: #94a3b8;
+        }
+
+        * {
+            box-sizing: border-box;
+            font-family: 'Inter', system-ui, -apple-system;
+        }
+
+        body {
+            background: radial-gradient(circle at top, #020617, #000);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0;
+            color: var(--text);
+        }
+
+        .card {
+            background: var(--card);
+            backdrop-filter: blur(12px);
+            padding: 40px;
+            width: 100%;
+            max-width: 420px;
+            border-radius: 18px;
+            box-shadow: 0 25px 70px rgba(0,0,0,.7);
+            animation: fade .6s ease;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 10px;
+            color: var(--primary);
+        }
+
+        p {
+            text-align: center;
+            color: var(--muted);
+            margin-bottom: 30px;
+        }
+
+        input {
+            width: 100%;
+            padding: 14px;
+            margin-bottom: 15px;
+            border-radius: 10px;
+            border: none;
+            background: #020617;
+            color: var(--text);
+            outline: none;
+        }
+
+        input::placeholder {
+            color: var(--muted);
+        }
+
+        button {
+            width: 100%;
+            padding: 14px;
+            border-radius: 10px;
+            border: none;
+            font-weight: bold;
+            background: var(--primary);
+            color: #020617;
+            cursor: pointer;
+            transition: .3s;
+        }
+
+        button:hover {
+            filter: brightness(1.1);
+        }
+
+        .error {
+            background: rgba(239, 68, 68, 0.15);
+            color: var(--danger);
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            text-align: center;
+            font-size: .9rem;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .footer a {
+            color: var(--muted);
+            text-decoration: none;
+            font-size: .85rem;
+        }
+
+        .footer a:hover {
+            color: var(--primary);
+        }
+
+        @keyframes fade {
+            from {
+                opacity: 0;
+                transform: translateY(15px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h1>🔐 Área Administrativa</h1>
+    <p>Acesso restrito para administradores</p>
+
+    {% if error %}
+        <div class="error">{{ error }}</div>
+    {% endif %}
+
+    <form method="post">
+        {% csrf_token %}
+        <input type="text" name="username" placeholder="Usuário" required>
+        <input type="password" name="password" placeholder="Senha" required>
+
+        <button type="submit">Entrar</button>
+    </form>
+
+    <div class="footer">
+        <a href="/">← Voltar ao site</a>
+    </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Acesso Negado</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <style>
+        :root {
+            --bg: #020617;
+            --card: rgba(15, 23, 42, 0.85);
+            --primary: #ef4444;
+            --accent: #38bdf8;
+            --text: #e5e7eb;
+            --muted: #94a3b8;
+        }
+
+        * {
+            box-sizing: border-box;
+            font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont;
+        }
+
+        body {
+            background: radial-gradient(circle at top, #020617, #000);
+            height: 100vh;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: var(--text);
+        }
+
+        .card {
+            background: var(--card);
+            backdrop-filter: blur(12px);
+            border-radius: 16px;
+            padding: 40px;
+            width: 100%;
+            max-width: 420px;
+            text-align: center;
+            box-shadow: 0 25px 60px rgba(0,0,0,.6);
+            animation: fadeIn .6s ease;
+        }
+
+        h1 {
+            font-size: 2rem;
+            color: var(--primary);
+            margin-bottom: 10px;
+        }
+
+        p {
+            color: var(--muted);
+            margin-bottom: 25px;
+        }
+
+        .icon {
+            font-size: 3.5rem;
+            margin-bottom: 20px;
+        }
+
+        .actions {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        a {
+            text-decoration: none;
+            padding: 12px;
+            border-radius: 10px;
+            font-weight: 600;
+            transition: .3s;
+        }
+
+        .btn-admin {
+            background: var(--accent);
+            color: #020617;
+        }
+
+        .btn-admin:hover {
+            filter: brightness(1.1);
+        }
+
+        .btn-home {
+            border: 1px solid var(--muted);
+            color: var(--text);
+        }
+
+        .btn-home:hover {
+            background: rgba(255,255,255,.05);
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(15px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <div class="icon">⛔</div>
+    <h1>Acesso Negado</h1>
+    <p>
+        Você tentou acessar uma área restrita do sistema.<br>
+        Apenas administradores autorizados podem entrar aqui.
+    </p>
+
+    <div class="actions">
+        <a href="{% url 'admin_login' %}" class="btn-admin">🔐 Login Administrativo</a>
+        <a href="/" class="btn-home">🏠 Voltar ao site</a>
+    </div>
+</div>
+
+</body>
+</html>

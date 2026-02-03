@@ -7,8 +7,8 @@ from .views import (HomeView, BrinquedoInfoView, CategoriasInfoView, BrinquedosV
                     CupomAdminView, PromocaoDeleteView, PromocaoUpdateView, ProjetoAdminView,
                     EstabelecimentoInfoView, EstabelecimentosListView, ManutencaoView, adicionar_ao_carrinho,
                     carrinho_view, aplicar_cupom,  remover_item_carrinho, limpar_carrinho, cancelar_manutencao,
-                    PaymentView, MeusPedidosView, criar_pedido_pix, PaymentFinallyView, processar_cartao
-                    , EventoAdminView, BannerAdminView, BannerDeleteView
+                    PaymentView, MeusPedidosView, criar_pedido_pix, PaymentFinallyView, processar_cartao,
+                    EventoAdminView, BannerAdminView, BannerDeleteView, AdminLoginView, AcessoNegadoView
 
                     )   # importa views do mesmo app
 from django.conf import settings
@@ -26,6 +26,8 @@ urlpatterns = [
     path("estabelecimentos/<int:pk>/", EstabelecimentoInfoView.as_view(), name='estabelecimento_brinquedo'),
 
     path("estabelecimentos/", EstabelecimentosListView.as_view(), name="estabelecimentos"),
+
+    path('adm/login/', AdminLoginView.as_view(), name='admin_login'),
 
     path(
         'manutencoes/',
@@ -102,5 +104,8 @@ urlpatterns = [
     path("login/", LoginUsuarioView.as_view(), name="login"),
     path("logout/", LogoutUsuarioView.as_view(), name="logout"),
     path("registrar/", RegistrarView.as_view(), name="registrar"),
+
+
+    path('acesso-negado/', AcessoNegadoView.as_view(), name='acesso_negado'),
 ]
 
