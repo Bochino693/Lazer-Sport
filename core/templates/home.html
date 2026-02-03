@@ -2648,134 +2648,96 @@ function igualarAlturaCards() {
     }
 }
 
-document.addEventListener("DOMContentLoaded", function() {
-    const carousel = document.getElementById("carousel-projetos");
-    const items = carousel.querySelectorAll(".carousel-item");
-    const visibleCount = 3; // Quantos itens mostrar por vez
-    let currentIndex = 0;
-    const intervalTime = 5000;
+document.addEventListener("DOMContentLoaded", function () {
 
-    // Inicializa
-    function showItems(index) {
-        items.forEach((item, i) => {
-            item.style.display = (i >= index && i < index + visibleCount) ? "block" : "none";
-        });
+  /* ===============================
+     CARROSSEL DE IMAGENS (HERO)
+     =============================== */
+  document.querySelectorAll('.carousel-wrapper').forEach(wrapper => {
+
+    const slides = wrapper.querySelectorAll('.carousel-slide');
+    const dots = wrapper.querySelectorAll('.dot');
+    const prevBtn = wrapper.querySelector('.carousel-btn.prev');
+    const nextBtn = wrapper.querySelector('.carousel-btn.next');
+
+    let index = 0;
+    const intervalTime = 4000;
+
+    if (!slides.length) return;
+
+    function showSlide(i) {
+      slides.forEach((slide, n) => {
+        slide.classList.toggle('active', n === i);
+        if (dots[n]) {
+          dots[n].classList.toggle('active', n === i);
+        }
+      });
     }
 
-    showItems(currentIndex);
-
-    function nextItems() {
-        currentIndex += visibleCount;
-        if (currentIndex >= items.length) currentIndex = 0;
-        showItems(currentIndex);
+    if (prevBtn) {
+      prevBtn.addEventListener('click', () => {
+        index = (index - 1 + slides.length) % slides.length;
+        showSlide(index);
+      });
     }
 
-    function prevItems() {
-        currentIndex -= visibleCount;
-        if (currentIndex < 0) currentIndex = Math.max(items.length - visibleCount, 0);
-        showItems(currentIndex);
+    if (nextBtn) {
+      nextBtn.addEventListener('click', () => {
+        index = (index + 1) % slides.length;
+        showSlide(index);
+      });
     }
 
-    // Botões de navegação
-    const leftBtn = document.createElement("button");
-    leftBtn.innerHTML = "&#10094;";
-    leftBtn.className = "carousel-nav left";
-    const rightBtn = document.createElement("button");
-    rightBtn.innerHTML = "&#10095;";
-    rightBtn.className = "carousel-nav right";
-
-    carousel.appendChild(leftBtn);
-    carousel.appendChild(rightBtn);
-
-    leftBtn.addEventListener("click", function() {
-        prevItems();
-        resetInterval();
+    dots.forEach((dot, i) => {
+      dot.addEventListener('click', () => {
+        index = i;
+        showSlide(index);
+      });
     });
 
-    rightBtn.addEventListener("click", function() {
-        nextItems();
-        resetInterval();
-    });
-
-    // Loop automático
-    let autoSlide = setInterval(nextItems, intervalTime);
-
-    function resetInterval() {
-        clearInterval(autoSlide);
-        autoSlide = setInterval(nextItems, intervalTime);
-    }
-});
-
-document.querySelectorAll('.carousel-wrapper').forEach(wrapper => {
-  const slides = wrapper.querySelectorAll('.carousel-slide');
-  const dots = wrapper.querySelectorAll('.dot');
-  const prevBtn = wrapper.querySelector('.carousel-btn.prev');
-  const nextBtn = wrapper.querySelector('.carousel-btn.next');
-  let index = 0;
-
-  if (!slides.length) return;
-
-  function showSlide(i) {
-    slides.forEach((slide, n) => {
-      slide.classList.toggle('active', n === i);
-      if (dots[n]) dots[n].classList.toggle('active', n === i);
-    });
-  }
-
-  if (prevBtn) prevBtn.addEventListener('click', () => {
-    index = (index - 1 + slides.length) % slides.length;
-    showSlide(index);
-  });
-
-  if (nextBtn) nextBtn.addEventListener('click', () => {
-    index = (index + 1) % slides.length;
-    showSlide(index);
-  });
-
-  dots.forEach((dot, i) => {
-    dot.addEventListener('click', () => {
-      index = i;
+    setInterval(() => {
+      index = (index + 1) % slides.length;
       showSlide(index);
-    });
+    }, intervalTime);
+
+    showSlide(index);
   });
 
-  setInterval(() => {
-    index = (index + 1) % slides.length;
-    showSlide(index);
-  }, 4000);
 
-  showSlide(index);
-});
+  /* ===============================
+     SCROLL HORIZONTAL AUTOMÁTICO
+     =============================== */
+  const container = document.getElementById("scroll-container");
+  const btnLeft = document.getElementById("scroll-left");
+  const btnRight = document.getElementById("scroll-right");
 
+  if (container && btnLeft && btnRight) {
 
-document.addEventListener("DOMContentLoaded", function() {
-    const container = document.getElementById("scroll-container");
-    const btnLeft = document.getElementById("scroll-left");
-    const btnRight = document.getElementById("scroll-right");
+    const scrollAmount = 300;
+    let autoScrollDirection = 1;
 
-    const scrollAmount = 300; // pixels a cada clique/scroll
-    let autoScrollDirection = 1; // 1 = direita, -1 = esquerda
-
-    // Setas funcionais
     btnLeft.addEventListener("click", () => {
-        container.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
+      container.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
     });
 
     btnRight.addEventListener("click", () => {
-        container.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+      container.scrollBy({ left: scrollAmount, behavior: 'smooth' });
     });
 
-    // Autoscroll com loop vai e volta
     setInterval(() => {
-        const maxScroll = container.scrollWidth - container.clientWidth;
+      const maxScroll = container.scrollWidth - container.clientWidth;
 
-        if (container.scrollLeft >= maxScroll) autoScrollDirection = -1;
-        if (container.scrollLeft <= 0) autoScrollDirection = 1;
+      if (container.scrollLeft >= maxScroll) autoScrollDirection = -1;
+      if (container.scrollLeft <= 0) autoScrollDirection = 1;
 
-        container.scrollBy({ left: scrollAmount * autoScrollDirection, behavior: 'smooth' });
+      container.scrollBy({
+        left: scrollAmount * autoScrollDirection,
+        behavior: 'smooth'
+      });
     }, 5000);
-});
+  }
 
+});
 // ===============================
 // ⭐ FUNÇÃO GLOBAL – AGORA FUNCIONA EM TODO LUGAR
 // ===============================
