@@ -4,10 +4,13 @@
 <style>
 :root {
     --primary: #2563eb;
+    --primary-dark: #1e40af;
+    --success: #16a34a;
     --danger: #dc2626;
     --bg: #f1f5f9;
     --card: #ffffff;
     --radius: 18px;
+    --shadow: rgba(0,0,0,0.15);
 }
 
 body {
@@ -32,29 +35,46 @@ body {
     background: var(--card);
     border-radius: var(--radius);
     padding: 24px;
-    box-shadow: 0 12px 30px rgba(0,0,0,0.08);
+    box-shadow: 0 12px 30px var(--shadow);
     margin-bottom: 30px;
 }
 
-/* ===== Upload custom ===== */
+/* ===== Form Upload ===== */
+.upload-form, .update-form {
+    max-width: 520px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
 .upload-box {
+    width: 100%;
     border: 2px dashed #cbd5e1;
     border-radius: var(--radius);
     padding: 40px 20px;
     text-align: center;
     cursor: pointer;
     transition: 0.3s;
+    margin-bottom: 20px;
+    position: relative;
+    background: #f8fafc;
 }
 
 .upload-box:hover {
     border-color: var(--primary);
-    background: #f8fafc;
+    background: #e0f2fe;
+}
+
+.upload-box strong {
+    font-size: 1.1rem;
+    color: #1e3a8a;
 }
 
 .upload-box span {
     display: block;
-    font-size: 1.1rem;
-    margin-top: 10px;
+    font-size: 0.95rem;
+    margin-top: 6px;
     color: #475569;
 }
 
@@ -62,60 +82,89 @@ body {
     display: none;
 }
 
-.upload-preview {
-    margin-top: 20px;
-}
-
 .upload-preview img {
-    max-width: 240px;
+    max-width: 260px;
     border-radius: 14px;
-    box-shadow: 0 6px 16px rgba(0,0,0,0.15);
+    box-shadow: 0 8px 20px var(--shadow);
 }
 
 /* ===== Grid ===== */
 .banner-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
-    gap: 22px;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 24px;
+    justify-items: center;
 }
 
 /* ===== Banner Card ===== */
+.banner-wrapper {
+    text-align: center;
+    position: relative;
+}
+
 .banner-card {
     position: relative;
     border-radius: var(--radius);
     overflow: hidden;
     cursor: pointer;
-    box-shadow: 0 10px 22px rgba(0,0,0,0.12);
+    box-shadow: 0 10px 25px var(--shadow);
     transition: 0.3s;
-}
-
-.banner-card:hover {
-    transform: translateY(-4px);
+    width: 100%;
 }
 
 .banner-card img {
     width: 100%;
     height: 180px;
     object-fit: cover;
+    border-radius: var(--radius);
 }
 
-/* ===== Overlay seleção ===== */
-.banner-overlay {
-    position: absolute;
-    inset: 0;
-    background: rgba(0,0,0,0.55);
-    color: #fff;
+.banner-card:hover {
+    transform: translateY(-5px);
+}
+
+.banner-info {
+    margin-top: 8px;
+    font-size: 0.85rem;
+    color: #475569;
+}
+
+/* ===== Card Actions ===== */
+.banner-actions {
     display: flex;
-    align-items: center;
+    gap: 8px;
     justify-content: center;
-    opacity: 0;
-    transition: 0.3s;
-    font-size: 1.1rem;
-    font-weight: 600;
+    margin-top: 10px;
+    flex-wrap: wrap;
 }
 
-.banner-card.selected .banner-overlay {
-    opacity: 1;
+.banner-actions button {
+    padding: 6px 14px;
+    border-radius: 12px;
+    border: none;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: 0.3s;
+    font-weight: 500;
+}
+
+.btn-edit {
+    background: #facc15;
+    color: #1f2937;
+}
+
+.btn-edit:hover {
+    background: #f59e0b;
+    color: #fff;
+}
+
+.btn-delete {
+    background: var(--danger);
+    color: #fff;
+}
+
+.btn-delete:hover {
+    background: #b91c1c;
 }
 
 /* ===== Modal ===== */
@@ -127,6 +176,7 @@ body {
     align-items: center;
     justify-content: center;
     z-index: 999;
+    padding: 15px;
 }
 
 .modal-content {
@@ -140,6 +190,7 @@ body {
 
 .modal-content h3 {
     margin-bottom: 10px;
+    color: #1e40af;
 }
 
 .modal-content p {
@@ -147,15 +198,27 @@ body {
     color: #475569;
 }
 
-.modal-content input {
+.modal-content input[type="text"],
+.modal-content input[type="file"] {
     width: 100%;
     margin: 20px 0;
-    padding: 12px;
-    border-radius: 12px;
+    padding: 14px;
+    border-radius: 14px;
     border: 1px solid #cbd5e1;
     font-size: 1rem;
+    transition: 0.3s;
 }
 
+.modal-content input[type="file"] {
+    cursor: pointer;
+    background: #f1f5f9;
+}
+
+.modal-content input[type="file"]:hover {
+    background: #e0f2fe;
+}
+
+/* ===== Modal Buttons ===== */
 .modal-actions {
     display: flex;
     gap: 10px;
@@ -164,7 +227,7 @@ body {
 .modal-actions button {
     flex: 1;
     padding: 12px;
-    border-radius: 12px;
+    border-radius: 14px;
     border: none;
     font-size: 1rem;
     cursor: pointer;
@@ -177,120 +240,230 @@ body {
 .btn-danger {
     background: var(--danger);
     color: #fff;
-    opacity: 0.6;
+    opacity: 0.7;
 }
 
 .btn-danger.active {
     opacity: 1;
 }
 
+.btn-primary {
+    background: var(--primary);
+    color: #fff;
+    transition: 0.3s;
+}
 
-    /* ===== Centralização do formulário ===== */
-.upload-form {
-    max-width: 520px;
-    margin: 0 auto;
+.btn-primary:hover {
+    background: var(--primary-dark);
+}
+
+/* Mensagem de vazio */
+.empty-state {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 40px 0;
+    font-size: 1.1rem;
+    color: #64748b;
+}
+
+/* ===== Responsivo ===== */
+@media(max-width:600px){
+    .banner-card img {
+        height: 150px;
+    }
+    .banner-actions {
+        flex-direction: column;
+    }
+}
+
+
+/* ===== Dropzone Estilizado ===== */
+.update-dropzone {
     display: flex;
     flex-direction: column;
     align-items: center;
-}
-
-.upload-form button {
-    max-width: 320px;
-}
-.upload-box {
+    justify-content: center;
+    cursor: pointer;
     width: 100%;
+    padding: 30px;
+    border: 2px dashed #cbd5e1;
+    border-radius: 16px;
+    background: #f8fafc;
+    transition: 0.3s;
+    margin-bottom: 20px;
+    position: relative;
+    text-align: center;
 }
 
+.update-dropzone:hover {
+    border-color: #2563eb;
+    background: #e0f2fe;
+}
+
+.update-dropzone .dropzone-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+.update-dropzone .icon-upload {
+    color: #2563eb;
+}
+
+.update-dropzone span {
+    font-size: 1rem;
+    color: #1e3a8a;
+    font-weight: 500;
+}
+
+/* Esconde o input real */
+.update-dropzone input[type="file"] {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+}
+
+/* Preview do arquivo selecionado */
+.update-dropzone img {
+    max-width: 200px;
+    margin-top: 12px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+/* Mobile responsivo */
+@media(max-width:600px){
+    .update-dropzone {
+        padding: 20px;
+    }
+    .update-dropzone span {
+        font-size: 0.95rem;
+    }
+}
 </style>
 
 <div class="page-container">
     <h2 class="page-title">Gerenciar Banners</h2>
 
-    <!-- Upload -->
+    <!-- Upload Banner -->
     <div class="card">
         <h3>Adicionar novo banner</h3>
 
-      <form method="post" enctype="multipart/form-data" class="upload-form">
-    {% csrf_token %}
+        <form method="post" enctype="multipart/form-data" class="upload-form">
+            {% csrf_token %}
+            <label class="upload-box">
+                <strong>Clique ou arraste a imagem aqui</strong>
+                <span>PNG, JPG ou WEBP</span>
+                <input type="file" name="imagem" id="uploadInput" accept="image/*" required>
+            </label>
 
-    <label class="upload-box">
-        <strong>Clique ou arraste a imagem aqui</strong>
-        <span>PNG, JPG ou WEBP</span>
-        <input type="file"
-               name="imagem"
-               id="uploadInput"
-               accept="image/*"
-               required>
-    </label>
+            <div class="upload-preview" id="preview"></div>
 
-    <div class="upload-preview" id="preview"></div>
+            <button type="submit">Salvar banner</button>
+        </form>
+    </div>
 
-    <button type="submit"
-            style="margin-top:20px;background:var(--primary);color:#fff;border:none;padding:14px;border-radius:14px;width:100%;">
-        Salvar banner
-    </button>
-</form>
-</div>
-
-    <!-- Grid -->
+    <!-- Grid de banners -->
     <div class="card">
         <h3>Banners existentes</h3>
 
         <div class="banner-grid">
             {% for banner in imagens_site %}
-                <div class="banner-card"
-                     onclick="selectBanner('{{ banner.id }}')">
-                    <img src="{{ banner.imagem.url }}">
-                    <div class="banner-overlay">Selecionado</div>
-                </div>
+                <div class="banner-wrapper">
+                    <div class="banner-card">
+                        {% if banner.imagem %}
+                            <img src="{{ banner.imagem.url }}" alt="Banner">
+                        {% else %}
+                            <div class="no-image">Sem imagem</div>
+                        {% endif %}
+                    </div>
 
-                <form id="delete-form-{{ banner.id }}"
-                      method="post"
-                      action="{% url 'banner_delete' banner.id %}">
-                    {% csrf_token %}
-                </form>
+                    <small class="banner-info">
+                        Criado em {{ banner.criacao|date:"d/m/Y" }}<br>
+                        {{ banner.status_atualizacao }}
+                    </small>
+
+                    <div class="banner-actions">
+                        <button class="btn-edit" onclick="openUpdateModal('{{ banner.id }}')">Alterar</button>
+                        <button class="btn-delete" onclick="openDeleteModal('{{ banner.id }}')">Excluir</button>
+                    </div>
+
+                    <!-- Formulários escondidos -->
+                    <form id="delete-form-{{ banner.id }}" method="post" action="{% url 'banner_delete' banner.id %}">{% csrf_token %}</form>
+                    <form id="update-form-{{ banner.id }}" method="post" enctype="multipart/form-data" action="{% url 'banner_adm' %}">
+                        {% csrf_token %}
+                        <input type="file" name="imagem" class="update-input" style="display:none;">
+                        <input type="hidden" name="update_id" value="{{ banner.id }}">
+                    </form>
+                </div>
             {% empty %}
-                <p>Nenhuma imagem cadastrada.</p>
+                <div class="empty-state">
+                    <p>🚫 Nenhum banner cadastrado</p>
+                </div>
             {% endfor %}
         </div>
     </div>
 </div>
 
-<!-- Modal -->
+<!-- Modal Exclusão -->
 <div class="modal" id="deleteModal">
     <div class="modal-content">
         <h3>Confirmação necessária</h3>
         <p>Digite <strong>EXCLUIR</strong> para remover este banner.</p>
-
         <input type="text" id="confirmInput" placeholder="EXCLUIR">
-
         <div class="modal-actions">
-            <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
+            <button class="btn-cancel" onclick="closeDeleteModal()">Cancelar</button>
             <button class="btn-danger" id="confirmDelete" disabled>Excluir</button>
         </div>
     </div>
 </div>
 
-<script>
-let selectedId = null;
+<!-- Modal Atualização -->
+<div class="modal" id="updateModal">
+    <div class="modal-content">
+        <h3>Alterar Banner</h3>
+        <p>Escolha uma nova imagem</p>
 
-function selectBanner(id) {
-    document.querySelectorAll('.banner-card').forEach(c => c.classList.remove('selected'));
-    event.currentTarget.classList.add('selected');
-    selectedId = id;
+        <!-- Dropzone moderno -->
+        <label class="update-dropzone" for="updateFileInput">
+            <div class="dropzone-content">
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon-upload" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="40" height="40">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M12 12v8m0-8l-4 4m4-4l4 4M12 4v8"/>
+                </svg>
+                <span id="updateFileLabel">Clique ou arraste para selecionar a imagem</span>
+            </div>
+            <input type="file" id="updateFileInput" accept="image/*">
+        </label>
+
+        <div class="modal-actions">
+            <button class="btn-cancel" onclick="closeUpdateModal()">Cancelar</button>
+            <button class="btn-primary" id="confirmUpdate">Salvar</button>
+        </div>
+    </div>
+</div>
+
+<script>
+let selectedDeleteId = null;
+let selectedUpdateId = null;
+
+/* Exclusão */
+function openDeleteModal(id){
+    selectedDeleteId = id;
     document.getElementById('deleteModal').style.display = 'flex';
 }
-
-function closeModal() {
+function closeDeleteModal(){
     document.getElementById('deleteModal').style.display = 'none';
     document.getElementById('confirmInput').value = '';
     document.getElementById('confirmDelete').disabled = true;
     document.getElementById('confirmDelete').classList.remove('active');
 }
-
 document.getElementById('confirmInput').addEventListener('input', function () {
     const btn = document.getElementById('confirmDelete');
-    if (this.value === 'EXCLUIR') {
+    if(this.value === 'EXCLUIR'){
         btn.disabled = false;
         btn.classList.add('active');
     } else {
@@ -298,18 +471,53 @@ document.getElementById('confirmInput').addEventListener('input', function () {
         btn.classList.remove('active');
     }
 });
-
-document.getElementById('confirmDelete').addEventListener('click', function () {
-    document.getElementById(`delete-form-${selectedId}`).submit();
+document.getElementById('confirmDelete').addEventListener('click', function(){
+    document.getElementById(`delete-form-${selectedDeleteId}`).submit();
+    closeDeleteModal();
 });
 
-/* Preview upload */
-document.getElementById('uploadInput').addEventListener('change', function () {
-    const preview = document.getElementById('preview');
-    preview.innerHTML = '';
-    const img = document.createElement('img');
-    img.src = URL.createObjectURL(this.files[0]);
-    preview.appendChild(img);
+/* Atualização */
+function openUpdateModal(id){
+    selectedUpdateId = id;
+    document.getElementById('updateModal').style.display = 'flex';
+}
+function closeUpdateModal(){
+    document.getElementById('updateModal').style.display = 'none';
+    document.getElementById('updateFileInput').value = '';
+}
+document.getElementById('confirmUpdate').addEventListener('click', function(){
+    const fileInput = document.getElementById('updateFileInput');
+    if(fileInput.files.length > 0){
+        const updateForm = document.getElementById(`update-form-${selectedUpdateId}`);
+        updateForm.querySelector('.update-input').files = fileInput.files;
+        updateForm.submit();
+        closeUpdateModal();
+    } else {
+        alert('Selecione uma imagem para atualizar');
+    }
+});
+
+// Preview moderno dentro do modal
+const updateInput = document.getElementById('updateFileInput');
+const updateLabel = document.getElementById('updateFileLabel');
+
+updateInput.addEventListener('change', function(){
+    if(this.files && this.files[0]){
+        const fileName = this.files[0].name;
+        updateLabel.textContent = `Selecionado: ${fileName}`;
+
+        // Opcional: mostrar preview da imagem
+        const preview = document.createElement('img');
+        preview.src = URL.createObjectURL(this.files[0]);
+
+        // Remove preview antigo
+        const oldPreview = document.querySelector('.update-dropzone img');
+        if(oldPreview) oldPreview.remove();
+
+        document.querySelector('.update-dropzone').appendChild(preview);
+    } else {
+        updateLabel.textContent = "Clique ou arraste para selecionar a imagem";
+    }
 });
 </script>
 

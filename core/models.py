@@ -82,6 +82,7 @@ class ImagensSite(Prime):
         verbose_name = "Imagem do Site"
         verbose_name_plural = "Imagens do Site"
 
+
 class Clientes(Prime):
     descricao_cliente = models.CharField(max_length=120, null=True)
     logo_cliente = models.ImageField(upload_to='logo_clientes/', null=False, blank=False)
@@ -718,3 +719,50 @@ class ManutencaoImagem(models.Model):
         related_name='imagens'
     )
     imagem = models.ImageField(upload_to='manutencoes/')
+
+
+class BrinquedoClick(Prime):
+    brinquedo_clicado = models.ForeignKey(Brinquedos, on_delete=models.SET_NULL, related_name='clicks_brinquedo', null=True)
+    quantidade_click = models.IntegerField(default=1)
+
+    def __str__(self):
+        self.brinquedo_clicado.nome_brinquedo
+
+    class Meta:
+        verbose_name = "Brinquedo Clicado"
+        verbose_name_plural = "Brinquedos Clicados"
+
+
+class ComboClick(Prime):
+    combo_clicado = models.ForeignKey(Combos, on_delete=models.SET_NULL, related_name='clicks_combo', null=True)
+    quantidade_click = models.IntegerField(default=1)
+
+    def __str__(self):
+        self.combo_clicado.descricao
+
+    class Meta:
+        verbose_name = "Combo Clicado"
+        verbose_name_plural = "Combo Clicados"
+
+class PromocaoClick(Prime):
+    promocao_click = models.ForeignKey(Promocoes, on_delete=models.SET_NULL, related_name='clicks_promocao', null=True)
+    quantidade_click = models.IntegerField(default=1)
+
+    def __str__(self):
+        self.combo_clicado.descricao
+
+    class Meta:
+        verbose_name = "Promoção Clicada"
+        verbose_name_plural = "Promoções Clicadas"
+
+
+class CategoriaClick(Prime):
+    categoria_clicada = models.ForeignKey(CategoriasBrinquedos, on_delete=models.SET_NULL, related_name='clicks', null=True)
+    quantidade_click = models.IntegerField(default=1)
+
+    def __str__(self):
+        self.categoria_clicada.nome_categoria
+
+    class Meta:
+        verbose_name = "Categoria Clicada"
+        verbose_name_plural = "Categorias Clicadas"

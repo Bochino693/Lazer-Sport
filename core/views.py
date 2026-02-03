@@ -473,7 +473,7 @@ class SobreView(View):
         context = {
             'brinquedos': Brinquedos.object.all()
         }
-        return render(request, 'home.html', context)
+        return render(request, 'home_inner.html', context)
 
 
 class LoginUsuarioView(View):
@@ -1439,12 +1439,22 @@ class MeusPedidosView(LoginRequiredMixin, View):
             'empresa': empresa
         })
 
+from django.utils.timesince import timesince
+from django.utils import timezone
 
 from .forms import ImagensSiteForm
 class BannerAdminView(LoginRequiredMixin, View):
 
     def get(self, request):
         imagens_site = ImagensSite.objects.all()
+
+        for banner in imagens_site:
+            if banner.atualizado and banner.atualizado != banner.criacao:
+                dias = timesince(banner.atualizado, timezone.now())
+                banner.status_atualizacao = f'Atualizado há {dias}'
+            else:
+                banner.status_atualizacao = 'Nunca foi alterado'
+
         form = ImagensSiteForm()
 
         return render(request, 'banner_adm.html', {

@@ -1,0 +1,282 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}Lazer & Sport Gestão | Home{% endblock %}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!--<link rel="icon" type="image/png" href="{% static 'images/spencertransportes-logo.png' %}" /> -->
+
+    <style>
+       body {
+      background-color: #f8f9fa;
+      overflow-x: hidden;
+    }
+
+    /* Sidebar (drawer) */
+    .sidebar {
+      position: fixed;
+      top: 0;
+      left: -260px;
+      width: 260px;
+      height: 100%;
+      background: #212529;
+      color: #f8f9fa;
+      transition: left 0.3s ease;
+      z-index: 1040;
+      display: flex;
+      flex-direction: column;
+      padding-top: 70px;
+    }
+
+    .sidebar.show {
+      left: 0;
+    }
+
+    .sidebar .nav-link {
+      color: #f8f9fa;
+      font-weight: 500;
+      padding: 0.75rem 1.25rem;
+      border-radius: 6px;
+      transition: background 0.3s;
+    }
+
+    .sidebar .nav-link:hover {
+      background-color: #28a745;
+      color: #fff;
+    }
+
+    .sidebar h6 {
+      padding: 0.75rem 1.25rem;
+      text-transform: uppercase;
+      font-size: 0.8rem;
+      color: #adb5bd;
+      letter-spacing: 1px;
+      margin-top: 0.5rem;
+    }
+
+    .sidebar .logout {
+      margin-top: auto;
+      padding: 1rem;
+    }
+
+    /* Overlay para mobile */
+    .sidebar-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      display: none;
+      z-index: 1030;
+    }
+
+    .sidebar-overlay.show {
+      display: block;
+    }
+
+    main {
+      margin-top: 70px;
+      padding: 1.5rem;
+    }
+
+    /* Sub-itens do accordion */
+    .sidebar .accordion-button {
+      background: transparent;
+      color: #f8f9fa;
+      font-weight: 500;
+      padding: 0.75rem 1.25rem;
+      border: none;
+      box-shadow: none;
+    }
+
+    .sidebar .accordion-button:not(.collapsed) {
+      background: #28a745;
+      color: #fff;
+    }
+
+    .sidebar .accordion-body {
+      padding: 0;
+    }
+
+    .sidebar .accordion-body a {
+      padding-left: 2.5rem; /* recuo para diferenciar */
+      font-size: 0.9rem;
+    }
+    </style>
+
+</head>
+<body>
+
+
+<!-- Header / Navbar -->
+<nav class="navbar navbar-dark bg-dark fixed-top shadow">
+  <div class="container-fluid">
+    <button class="btn btn-outline-light me-3" id="menu-toggle">
+      ☰
+    </button>
+    <a class="navbar-brand d-flex align-items-center" href="/">
+      <img src="{% static 'images/logoofi.png' %}" alt="Logo Lazer" width="35" class="me-2">
+      GESTÃO LAZER & SPORT
+    </a>
+  </div>
+</nav>
+
+
+<!-- Sidebar (drawer) -->
+<div class="sidebar" id="sidebarMenu">
+  <h6>Navegação</h6>
+
+  <div class="accordion" id="accordionExample">
+
+    <!-- Tópico 1 -->
+    <div class="accordion-item bg-dark border-0">
+      <h2 class="accordion-header">
+        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#topic1Collapse" aria-expanded="false">
+          📊 Estatísticas das Linhas
+        </button>
+      </h2>
+      <div id="topic1Collapse" class="accordion-collapse collapse">
+        <div class="accordion-body">
+          <ul class="nav flex-column">
+            <li class="nav-item"><a class="nav-link" href="{% url 'home_inner' %}">Dash Boards/Relatórios Gráficos</a></li>
+            <li class="nav-item"><a class="nav-link" href="#">Percentual de cumprimento Linha x Faixa horária</a></li>
+            <li class="nav-item"><a class="nav-link" href="#">Ranking de Linhas por Percentual Médio</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tópico 2 -->
+    <div class="accordion-item bg-dark border-0">
+      <h2 class="accordion-header">
+        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#topic2Collapse" aria-expanded="false">
+          🚍 Gestão de Veículos
+        </button>
+      </h2>
+      <div id="topic2Collapse" class="accordion-collapse collapse">
+        <div class="accordion-body">
+          <ul class="nav flex-column">
+            <li class="nav-item"><a class="nav-link" href="#">Opção 1</a></li>
+            <li class="nav-item"><a class="nav-link" href="#">Opção 2</a></li>
+            <li class="nav-item"><a class="nav-link" href="#">Opção 3</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tópico 3 -->
+    <div class="accordion-item bg-dark border-0">
+      <h2 class="accordion-header">
+        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#topic3Collapse" aria-expanded="false">
+          🛠 Configurações do Sistema
+        </button>
+      </h2>
+      <div id="topic3Collapse" class="accordion-collapse collapse">
+        <div class="accordion-body">
+          <ul class="nav flex-column">
+            <li class="nav-item"><a class="nav-link" href="#">Opção 1</a></li>
+            <li class="nav-item"><a class="nav-link" href="#">Opção 2</a></li>
+            <li class="nav-item"><a class="nav-link" href="#">Opção 3</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tópico 4 -->
+    <div class="accordion-item bg-dark border-0">
+      <h2 class="accordion-header">
+        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#topic4Collapse" aria-expanded="false">
+          📁 Relatórios
+        </button>
+      </h2>
+      <div id="topic4Collapse" class="accordion-collapse collapse">
+        <div class="accordion-body">
+          <ul class="nav flex-column">
+            <li class="nav-item"><a class="nav-link" href="#">Opção 1</a></li>
+            <li class="nav-item"><a class="nav-link" href="#">Opção 2</a></li>
+            <li class="nav-item"><a class="nav-link" href="#">Opção 3</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tópico 5 -->
+    <div class="accordion-item bg-dark border-0">
+      <h2 class="accordion-header">
+        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#topic5Collapse" aria-expanded="false">
+          🔧 Administração
+        </button>
+      </h2>
+      <div id="topic5Collapse" class="accordion-collapse collapse">
+        <div class="accordion-body">
+          <ul class="nav flex-column">
+            <li class="nav-item"><a class="nav-link" href="#">Opção 1</a></li>
+            <li class="nav-item"><a class="nav-link" href="#">Opção 2</a></li>
+            <li class="nav-item"><a class="nav-link" href="#">Opção 3</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+  </div> <!-- Fim accordion -->
+
+  <div class="logout mt-auto">
+    {% if user.is_authenticated %}
+      <form method="post" action="{% url 'logout' %}">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger w-100">🚪 Logout</button>
+      </form>
+    {% else %}
+      <a href="{% url 'login' %}" class="btn btn-success w-100">🔑 Login</a>
+    {% endif %}
+  </div>
+
+</div>
+
+
+<!-- Overlay -->
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+<!-- Conteúdo principal -->
+<main>
+  {% block content %}
+  {% endblock %}
+
+  {% block grafico %}
+  {% endblock %}
+</main>
+
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<!-- Footer -->
+<footer class="bg-dark text-white text-center py-4 mt-4">
+  <div class="container">
+    <h5 class="mb-2">Parceria de:</h5>
+    <div class="d-flex justify-content-center align-items-center gap-4 mb-3 flex-wrap">
+      <img src="{% static 'images/spencertransportes-logo.png' %}" alt="Logo Spencer" width="180">
+      <img src="{% static 'images/logo-sun.png' %}" alt="Logo Parceiro" width="210">
+    </div>
+    <p class="mb-0">&copy; 2025 Velox Spencer. Todos os direitos reservados.</p>
+  </div>
+</footer>
+
+<script>
+  const menuToggle = document.getElementById('menu-toggle');
+  const sidebar = document.getElementById('sidebarMenu');
+  const overlay = document.getElementById('sidebarOverlay');
+
+  menuToggle.addEventListener('click', () => {
+    sidebar.classList.toggle('show');
+    overlay.classList.toggle('show');
+  });
+
+  overlay.addEventListener('click', () => {
+    sidebar.classList.remove('show');
+    overlay.classList.remove('show');
+  });
+</script>
+
+</body>
+</html>
