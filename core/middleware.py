@@ -21,7 +21,7 @@ class SubdomainURLMiddleware:
 
     def __call__(self, request):
         # 🔒 deixa o admin passar intacto
-        if request.path.startswith('/system/'):
+        if request.path.startswith(('/system/', '/accounts/')):
             return self.get_response(request)
 
         host = request.get_host().split(':')[0]
