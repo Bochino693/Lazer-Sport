@@ -102,7 +102,7 @@ MIDDLEWARE = [
 
     # 👇 SEMPRE POR ÚLTIMO
 
-   # 'core.middleware.GlobalExceptionMiddleware',
+    'core.middleware.GlobalExceptionMiddleware',
 
 ]
 

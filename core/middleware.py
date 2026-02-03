@@ -20,14 +20,15 @@ class SubdomainURLMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
+        # 🔒 deixa o admin passar intacto
+        if request.path.startswith('/system/'):
+            return self.get_response(request)
+
         host = request.get_host().split(':')[0]
-        print("HOST:", host)
 
         if host.startswith('interno.'):
-            print("USANDO SISTEMA_INTERNO")
             request.urlconf = 'sistema_interno.urls'
         else:
-            print("USANDO CORE")
             request.urlconf = 'core.urls'
 
         return self.get_response(request)
