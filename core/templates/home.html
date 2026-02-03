@@ -1974,7 +1974,7 @@ body {
 <section id="inicio" class="carousel-container">
   <div class="carousel-wrapper">
 
-    {% for imagem in imagens_carrossel %}
+    {% for imagem in imagens_site %}
       <img
         src="{{ imagem.imagem.url }}"
         class="carousel-slide {% if forloop.first %}active{% endif %}"
@@ -1988,7 +1988,7 @@ body {
 
     <!-- Dots -->
     <div class="carousel-dots">
-      {% for imagem in imagens_carrossel %}
+      {% for imagem in imagens_site %}
         <span class="dot {% if forloop.first %}active{% endif %}"></span>
       {% endfor %}
     </div>
