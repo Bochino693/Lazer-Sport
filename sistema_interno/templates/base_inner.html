@@ -16,94 +16,155 @@
       overflow-x: hidden;
     }
 
-    /* Sidebar (drawer) */
-    .sidebar {
-      position: fixed;
-      top: 0;
-      left: -260px;
-      width: 260px;
-      height: 100%;
-      background: #212529;
-      color: #f8f9fa;
-      transition: left 0.3s ease;
-      z-index: 1040;
-      display: flex;
-      flex-direction: column;
-      padding-top: 70px;
-    }
 
-    .sidebar.show {
-      left: 0;
-    }
 
-    .sidebar .nav-link {
-      color: #f8f9fa;
-      font-weight: 500;
-      padding: 0.75rem 1.25rem;
-      border-radius: 6px;
-      transition: background 0.3s;
-    }
+  :root {
+    --primary: #28a745;
+    --primary-hover: #218838;
+    --dark-main: #1e272e;
+    --dark-secondary: #212529;
+    --bg-light: #f4f6f8;
+    --text-light: #f8f9fa;
+    --text-muted: #adb5bd;
+  }
 
-    .sidebar .nav-link:hover {
-      background-color: #28a745;
-      color: #fff;
-    }
+  body {
+    background-color: var(--bg-light);
+    overflow-x: hidden;
+  }
 
-    .sidebar h6 {
-      padding: 0.75rem 1.25rem;
-      text-transform: uppercase;
-      font-size: 0.8rem;
-      color: #adb5bd;
-      letter-spacing: 1px;
-      margin-top: 0.5rem;
-    }
+  /* NAVBAR */
+  .navbar {
+    background-color: var(--dark-main) !important;
+  }
 
-    .sidebar .logout {
-      margin-top: auto;
-      padding: 1rem;
-    }
+  .navbar-brand {
+    font-weight: 600;
+    letter-spacing: 0.5px;
+  }
 
-    /* Overlay para mobile */
-    .sidebar-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.5);
-      display: none;
-      z-index: 1030;
-    }
+  /* SIDEBAR */
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: -260px;
+    width: 260px;
+    height: 100%;
+    background: var(--dark-secondary);
+    color: var(--text-light);
+    transition: left 0.3s ease;
+    z-index: 1040;
+    display: flex;
+    flex-direction: column;
+    padding-top: 70px;
+  }
 
-    .sidebar-overlay.show {
-      display: block;
-    }
+  .sidebar.show {
+    left: 0;
+  }
 
-    main {
-      margin-top: 70px;
-      padding: 1.5rem;
-    }
+  .sidebar h6 {
+    padding: 0.75rem 1.25rem;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    letter-spacing: 1px;
+  }
 
-    /* Sub-itens do accordion */
-    .sidebar .accordion-button {
-      background: transparent;
-      color: #f8f9fa;
-      font-weight: 500;
-      padding: 0.75rem 1.25rem;
-      border: none;
-      box-shadow: none;
-    }
+  .sidebar .nav-link {
+    color: var(--text-light);
+    font-weight: 500;
+    padding: 0.7rem 1.25rem;
+    border-radius: 6px;
+    transition: all 0.3s ease;
+  }
 
-    .sidebar .accordion-button:not(.collapsed) {
-      background: #28a745;
-      color: #fff;
-    }
+  .sidebar .nav-link:hover {
+    background-color: var(--primary);
+    color: #fff;
+  }
 
-    .sidebar .accordion-body {
-      padding: 0;
-    }
+  /* ACCORDION */
+  .accordion-item {
+    background-color: transparent;
+  }
 
-    .sidebar .accordion-body a {
-      padding-left: 2.5rem; /* recuo para diferenciar */
-      font-size: 0.9rem;
-    }
+  .sidebar .accordion-button {
+    background: transparent;
+    color: var(--text-light);
+    font-weight: 500;
+    padding: 0.75rem 1.25rem;
+    border: none;
+    box-shadow: none;
+  }
+
+  .sidebar .accordion-button:not(.collapsed) {
+    background: var(--primary);
+    color: #fff;
+  }
+
+  .sidebar .accordion-button::after {
+    filter: invert(1);
+  }
+
+  .sidebar .accordion-body {
+    padding: 0;
+    background-color: rgba(255,255,255,0.02);
+  }
+
+  .sidebar .accordion-body a {
+    padding-left: 2.5rem;
+    font-size: 0.9rem;
+  }
+
+  /* OVERLAY */
+  .sidebar-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    display: none;
+    z-index: 1030;
+  }
+
+  .sidebar-overlay.show {
+    display: block;
+  }
+
+  /* MAIN */
+  main {
+    margin-top: 70px;
+    padding: 1.5rem;
+  }
+
+  /* FOOTER */
+  footer {
+    background-color: var(--dark-main);
+  }
+
+  footer h5 {
+    font-weight: 500;
+  }
+
+  footer p {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+  }
+
+  /* BOTÕES */
+  .btn-outline-light:hover {
+    background-color: var(--primary);
+    border-color: var(--primary);
+  }
+
+  .btn-success {
+    background-color: var(--primary);
+    border-color: var(--primary);
+  }
+
+  .btn-success:hover {
+    background-color: var(--primary-hover);
+    border-color: var(--primary-hover);
+  }
     </style>
 
 </head>
@@ -134,7 +195,7 @@
     <div class="accordion-item bg-dark border-0">
       <h2 class="accordion-header">
         <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#topic1Collapse" aria-expanded="false">
-          📊 Estatísticas das Linhas
+          📊 Estatísticas Gerais
         </button>
       </h2>
       <div id="topic1Collapse" class="accordion-collapse collapse">
@@ -152,7 +213,7 @@
     <div class="accordion-item bg-dark border-0">
       <h2 class="accordion-header">
         <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#topic2Collapse" aria-expanded="false">
-          🚍 Gestão de Veículos
+          🏭 Escala de Produção
         </button>
       </h2>
       <div id="topic2Collapse" class="accordion-collapse collapse">
@@ -165,6 +226,44 @@
         </div>
       </div>
     </div>
+
+
+       <!-- Tópico 4 -->
+    <div class="accordion-item bg-dark border-0">
+      <h2 class="accordion-header">
+        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#topic4Collapse" aria-expanded="false">
+          📁 Relatórios
+        </button>
+      </h2>
+      <div id="topic4Collapse" class="accordion-collapse collapse">
+        <div class="accordion-body">
+          <ul class="nav flex-column">
+            <li class="nav-item"><a class="nav-link" href="#">Opção 1</a></li>
+            <li class="nav-item"><a class="nav-link" href="#">Opção 2</a></li>
+            <li class="nav-item"><a class="nav-link" href="#">Opção 3</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+        <!-- Tópico 5 -->
+    <div class="accordion-item bg-dark border-0">
+      <h2 class="accordion-header">
+        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#topic5Collapse" aria-expanded="false">
+          🔧 Administração
+        </button>
+      </h2>
+      <div id="topic5Collapse" class="accordion-collapse collapse">
+        <div class="accordion-body">
+          <ul class="nav flex-column">
+            <li class="nav-item"><a class="nav-link" href="#">Opção 1</a></li>
+            <li class="nav-item"><a class="nav-link" href="#">Opção 2</a></li>
+            <li class="nav-item"><a class="nav-link" href="#">Opção 3</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
 
     <!-- Tópico 3 -->
     <div class="accordion-item bg-dark border-0">
@@ -184,41 +283,8 @@
       </div>
     </div>
 
-    <!-- Tópico 4 -->
-    <div class="accordion-item bg-dark border-0">
-      <h2 class="accordion-header">
-        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#topic4Collapse" aria-expanded="false">
-          📁 Relatórios
-        </button>
-      </h2>
-      <div id="topic4Collapse" class="accordion-collapse collapse">
-        <div class="accordion-body">
-          <ul class="nav flex-column">
-            <li class="nav-item"><a class="nav-link" href="#">Opção 1</a></li>
-            <li class="nav-item"><a class="nav-link" href="#">Opção 2</a></li>
-            <li class="nav-item"><a class="nav-link" href="#">Opção 3</a></li>
-          </ul>
-        </div>
-      </div>
-    </div>
 
-    <!-- Tópico 5 -->
-    <div class="accordion-item bg-dark border-0">
-      <h2 class="accordion-header">
-        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#topic5Collapse" aria-expanded="false">
-          🔧 Administração
-        </button>
-      </h2>
-      <div id="topic5Collapse" class="accordion-collapse collapse">
-        <div class="accordion-body">
-          <ul class="nav flex-column">
-            <li class="nav-item"><a class="nav-link" href="#">Opção 1</a></li>
-            <li class="nav-item"><a class="nav-link" href="#">Opção 2</a></li>
-            <li class="nav-item"><a class="nav-link" href="#">Opção 3</a></li>
-          </ul>
-        </div>
-      </div>
-    </div>
+
 
   </div> <!-- Fim accordion -->
 
