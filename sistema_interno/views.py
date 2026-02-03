@@ -57,7 +57,7 @@ class LoginInternoView(View):
 
 
 class LogoutInnerView(View):
-    def get(self, request):
+    def post(self, request):
         logout(request)
         return render(request, 'logout_inner.html')
 
