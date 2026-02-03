@@ -43,7 +43,7 @@ class HomeView(View):
         # 1. Captura do filtro
         # ---------------------------
 
-        imagens_site = ImagensSite.objects.exclude(imagem="")
+        imagens_site = ImagensSite.objects.order_by('-id')[:4]
 
         filtro = request.GET.get("ordenar", "az")  # padrão = A-Z
 
@@ -1075,18 +1075,25 @@ class BannerAdminView(LoginRequiredMixin, View):
         })
 
     def post(self, request):
-        form = ImagensSiteForm(request.POST, request.FILES)
+        imagens = request.FILES.getlist('imagens')  # 👈 vem do input multiple
 
-        if form.is_valid():
-            form.save()
+        if not imagens:
             return redirect('banner_adm')
 
-        imagens_site = ImagensSite.objects.all()
+        if len(imagens) > 5:
+            messages.error(request, 'Você pode enviar no máximo 5 imagens.')
+            return redirect('banner_adm')
 
-        return render(request, 'banner_adm.html', {
-            'imagens_site': imagens_site,
-            'form': form
-        })
+        for imagem in imagens:
+            form = ImagensSiteForm(
+                data=request.POST,
+                files={'imagem': imagem}
+            )
+
+            if form.is_valid():
+                form.save()
+
+        return redirect('banner_adm')
 
 
 class BannerDeleteView(LoginRequiredMixin, View):

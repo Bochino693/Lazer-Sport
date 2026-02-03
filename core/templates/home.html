@@ -1911,27 +1911,16 @@ body {
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
 
-<!-- ======= CARROSSEL ======= -->
 <section id="inicio" class="carousel-container">
-  <div class="carousel-wrapper" id="carrosel">
+  <div class="carousel-wrapper">
 
-    <img
-      src="{% static 'images/IMAG1.PNG' %}"
-      class="carousel-slide active"
-      alt="Imagem do site 1"
-    >
-
-    <img
-      src="{% static 'images/IMAG2.PNG' %}"
-      class="carousel-slide"
-      alt="Imagem do site 2"
-    >
-
-    <img
-      src="{% static 'images/IMAG3.PNG' %}"
-      class="carousel-slide"
-      alt="Imagem do site 3"
-    >
+    {% for imagem in imagens_carrossel %}
+      <img
+        src="{{ imagem.imagem.url }}"
+        class="carousel-slide {% if forloop.first %}active{% endif %}"
+        alt="Imagem do site {{ forloop.counter }}"
+      >
+    {% endfor %}
 
     <!-- Setas -->
     <button class="carousel-btn prev">❮</button>
@@ -1939,15 +1928,14 @@ body {
 
     <!-- Dots -->
     <div class="carousel-dots">
-      <span class="dot active"></span>
-      <span class="dot"></span>
-      <span class="dot"></span>
+      {% for imagem in imagens_carrossel %}
+        <span class="dot {% if forloop.first %}active{% endif %}"></span>
+      {% endfor %}
     </div>
 
   </div>
 </section>
 
-<!-- Div invisível para espaçamento -->
 <div class="espacador"></div>
 
 
@@ -2725,7 +2713,7 @@ document.querySelectorAll('.carousel-wrapper').forEach(wrapper => {
   const nextBtn = wrapper.querySelector('.carousel-btn.next');
   let index = 0;
 
-  if (!slides.length) return; // não inicia se não houver slides
+  if (!slides.length) return;
 
   function showSlide(i) {
     slides.forEach((slide, n) => {
@@ -2734,15 +2722,6 @@ document.querySelectorAll('.carousel-wrapper').forEach(wrapper => {
     });
   }
 
-  // Dots clicáveis
-  dots.forEach((dot, i) => {
-    dot.addEventListener('click', () => {
-      index = i;
-      showSlide(index);
-    });
-  });
-
-  // Botões internos
   if (prevBtn) prevBtn.addEventListener('click', () => {
     index = (index - 1 + slides.length) % slides.length;
     showSlide(index);
@@ -2753,13 +2732,18 @@ document.querySelectorAll('.carousel-wrapper').forEach(wrapper => {
     showSlide(index);
   });
 
-  // Troca automática
+  dots.forEach((dot, i) => {
+    dot.addEventListener('click', () => {
+      index = i;
+      showSlide(index);
+    });
+  });
+
   setInterval(() => {
     index = (index + 1) % slides.length;
     showSlide(index);
   }, 4000);
 
-  // Exibe o primeiro slide ao carregar
   showSlide(index);
 });
 
