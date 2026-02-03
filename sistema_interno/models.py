@@ -58,7 +58,7 @@ class TipoMaterial(Prime):
 
 class Material(Prime):
     nome_material = models.CharField(max_length=90)
-    descricao = models.CharField(max_length=150)
+    descricao = models.CharField(max_length=150, null=True)
     tipo_material = models.ForeignKey(TipoMaterial, on_delete=models.SET_NULL, related_name='material', null=True)
     brinquedos_associados = models.ForeignKey(Brinquedos, on_delete=models.SET_NULL, related_name='material', null=True)
 
