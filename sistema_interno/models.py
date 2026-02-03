@@ -105,10 +105,13 @@ class CentralItemPedido(ItemPedido):
 
 
 class CentralVendas(Venda):
-    descricao_venda = models.CharField(max_length=90)
+    origem = models.CharField(
+        choices=(('site', 'Site'), ('interno', 'Interno')),
+        max_length=20
+    )
 
     def __str__(self):
-        return self.descricao_venda
+        return self.origem
 
     class Meta:
         verbose_name = "Central de Vendas"

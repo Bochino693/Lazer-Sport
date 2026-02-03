@@ -1,31 +1,147 @@
 {% extends 'base_inner.html' %}
 {% load static %}
 
-{% block title %}Dash Boards{% endblock %}
+{% block title %}Dashboards{% endblock %}
 
 {% block content %}
 
 <style>
-    .h2-home {
-    text-align: center;
-    color:2c3e50;
-
-
+    :root {
+        --primary: #2c3e50;
+        --secondary: #3498db;
+        --bg: #f4f6f8;
+        --card-bg: #ffffff;
+        --shadow: 0 4px 12px rgba(0,0,0,0.08);
+        --radius: 12px;
     }
 
-    .div-home {
+    body {
+        background-color: var(--bg);
+    }
 
+    .dashboard-container {
+        padding: 30px;
+    }
 
+    .dashboard-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 30px;
+    }
+
+    .dashboard-header h2 {
+        color: var(--primary);
+        font-weight: 600;
+        margin: 0;
+    }
+
+    .dashboard-filters select {
+        padding: 8px 12px;
+        border-radius: 8px;
+        border: 1px solid #ccc;
+    }
+
+    /* KPI Cards */
+    .kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+
+    .kpi-card {
+        background: var(--card-bg);
+        border-radius: var(--radius);
+        padding: 20px;
+        box-shadow: var(--shadow);
+    }
+
+    .kpi-card h4 {
+        margin: 0;
+        color: #7f8c8d;
+        font-size: 14px;
+    }
+
+    .kpi-card span {
+        font-size: 28px;
+        font-weight: bold;
+        color: var(--primary);
+    }
+
+    /* Charts */
+    .charts-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+        gap: 20px;
+    }
+
+    .chart-card {
+        background: var(--card-bg);
+        border-radius: var(--radius);
+        padding: 20px;
+        box-shadow: var(--shadow);
+    }
+
+    .chart-card h4 {
+        margin-bottom: 15px;
+        color: var(--primary);
+        font-weight: 500;
     }
 </style>
 
-<div class="div-home" id="div-home">
-    <h2 class="h2-home" id="h2-home">
-        DASH BOARDS GERAIS
-    </h2>
+<div class="dashboard-container">
 
+    <!-- Header -->
+    <div class="dashboard-header">
+        <h2>DASHBOARDS GERAIS</h2>
 
+        <!-- Filtro opcional -->
+        <div class="dashboard-filters">
+            <select>
+                <option>Últimos 7 dias</option>
+                <option>Últimos 30 dias</option>
+                <option>Este ano</option>
+            </select>
+        </div>
+    </div>
 
+    <!-- KPIs -->
+    <div class="kpi-grid">
+        <div class="kpi-card">
+            <h4>Total de Vendas</h4>
+            <span>R$ 25.430</span>
+        </div>
+
+        <div class="kpi-card">
+            <h4>Usuários Ativos</h4>
+            <span>1.248</span>
+        </div>
+
+        <div class="kpi-card">
+            <h4>Pedidos</h4>
+            <span>312</span>
+        </div>
+
+        <div class="kpi-card">
+            <h4>Conversão</h4>
+            <span>3,8%</span>
+        </div>
+    </div>
+
+    <!-- Gráficos -->
+    <div class="charts-grid">
+        <div class="chart-card">
+            <h4>Vendas por Período</h4>
+            <canvas id="chartVendas"></canvas>
+        </div>
+
+        <div class="chart-card">
+            <h4>Usuários por Categoria</h4>
+            <canvas id="chartUsuarios"></canvas>
+        </div>
+    </div>
 
 </div>
+
 {% endblock %}
