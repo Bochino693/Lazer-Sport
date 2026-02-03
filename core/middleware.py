@@ -32,3 +32,4 @@ class SubdomainURLMiddleware:
             request.urlconf = 'core.urls'
 
         return self.get_response(request)
+
