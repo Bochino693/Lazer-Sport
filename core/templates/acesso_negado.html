@@ -100,27 +100,58 @@
                 transform: translateY(0);
             }
         }
+
+
+        .card.locked {
+    pointer-events: none;       /* 🚫 bloqueia cliques */
+    opacity: 0.45;
+    filter: grayscale(1) blur(1px);
+    position: relative;
+}
+
+/* Overlay de bloqueio */
+.card.locked::after {
+    content: "⏱️ Acesso bloqueado temporariamente";
+    position: absolute;
+    inset: 0;
+    background: rgba(2, 6, 23, 0.85);
+    color: #38bdf8;
+    font-weight: 600;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 16px;
+    text-align: center;
+    padding: 20px;
+}
     </style>
 </head>
 <body>
 
-{% if bloqueio %}
-<p>Tentativas excessivas detectadas. Acesso temporariamente bloqueado.</p>
-{% endif %}
-
-
-<div class="card">
+<div class="card {% if bloqueio %}locked{% endif %}">
     <div class="icon">⛔</div>
-    <h1>Acesso Negado</h1>
-    <p>
-        Você tentou acessar uma área restrita do sistema.<br>
-        Apenas administradores autorizados podem entrar aqui.
-    </p>
 
-    <div class="actions">
-        <a href="{% url 'admin_login' %}" class="btn-admin">🔐 Login Administrativo</a>
-        <a href="/" class="btn-home">🏠 Voltar ao site</a>
-    </div>
+    <h1>Acesso Negado</h1>
+
+    {% if bloqueio %}
+        <p class="blocked-msg">
+            Muitas tentativas inválidas detectadas.<br>
+            Seu acesso foi <strong>temporariamente bloqueado</strong>.
+        </p>
+    {% else %}
+        <p>
+            Você tentou acessar uma área restrita do sistema.<br>
+            Apenas administradores autorizados podem entrar aqui.
+        </p>
+    {% endif %}
+
+    {% if not bloqueio %}
+<div class="actions">
+    <a href="{% url 'admin_login' %}" class="btn-admin">🔐 Login Administrativo</a>
+    <a href="/" class="btn-home">🏠 Voltar ao site</a>
+</div>
+{% endif %}
 </div>
 
 </body>
