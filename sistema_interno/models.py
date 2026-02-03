@@ -126,7 +126,7 @@ class CentralItemPedido(ItemPedido):
 class CentralVendas(Venda):
     origem = models.CharField(
         choices=(('site', 'Site'), ('interno', 'Interno')),
-        max_length=20
+        max_length=20, null=True
     )
 
     def __str__(self):
