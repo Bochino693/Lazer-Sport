@@ -81,6 +81,7 @@ class MaterialInnerView(InternoRequiredMixin, View):
 
     def get(self, request):
         material = Material.objects.all()
+        vendas = Venda.objects.all()
 
         ctx = {
             'material': material,

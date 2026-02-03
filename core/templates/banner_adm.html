@@ -198,6 +198,29 @@ body {
     color: #475569;
 }
 
+/* ===== Botões ===== */
+button {
+    background: var(--primary);
+    color: #fff;
+    border: none;
+    padding: 14px 26px;
+    border-radius: 14px;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+button:hover {
+    background: var(--primary-dark);
+}
+
+button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+
 .modal-content input[type="text"],
 .modal-content input[type="file"] {
     width: 100%;
@@ -343,6 +366,24 @@ body {
         font-size: 0.95rem;
     }
 }
+
+
+    .upload-preview-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 14px;
+    width: 100%;
+    margin-bottom: 20px;
+}
+
+.upload-preview-grid img {
+    width: 100%;
+    height: 120px;
+    object-fit: cover;
+    border-radius: 14px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.2);
+}
+
 </style>
 
 <div class="page-container">
@@ -357,10 +398,17 @@ body {
             <label class="upload-box">
                 <strong>Clique ou arraste a imagem aqui</strong>
                 <span>PNG, JPG ou WEBP</span>
-                <input type="file" name="imagem" id="uploadInput" accept="image/*" required>
+                <input type="file"
+                   name="imagem"
+                   id="uploadInput"
+                   accept="image/*"
+                   multiple
+                   required>
+
             </label>
 
-            <div class="upload-preview" id="preview"></div>
+            <div class="upload-preview-grid" id="preview"></div>
+
 
             <button type="submit">Salvar banner</button>
         </form>
@@ -517,6 +565,30 @@ updateInput.addEventListener('change', function(){
         document.querySelector('.update-dropzone').appendChild(preview);
     } else {
         updateLabel.textContent = "Clique ou arraste para selecionar a imagem";
+    }
+});
+
+
+    const uploadInput = document.getElementById('uploadInput');
+const preview = document.getElementById('preview');
+
+uploadInput.addEventListener('change', function () {
+    preview.innerHTML = '';
+
+    const files = Array.from(this.files).slice(0, 5); // limite 5
+
+    files.forEach(file => {
+        if (!file.type.startsWith('image/')) return;
+
+        const img = document.createElement('img');
+        img.src = URL.createObjectURL(file);
+        img.onload = () => URL.revokeObjectURL(img.src);
+
+        preview.appendChild(img);
+    });
+
+    if (this.files.length > 5) {
+        alert('Você pode selecionar no máximo 5 imagens');
     }
 });
 </script>
