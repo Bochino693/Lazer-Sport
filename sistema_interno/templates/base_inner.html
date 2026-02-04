@@ -207,13 +207,36 @@
       <div id="topic1Collapse" class="accordion-collapse collapse">
         <div class="accordion-body">
           <ul class="nav flex-column">
-            <li class="nav-item"><a class="nav-link" href="{% url 'home_inner' %}">Dash Boards/Relatórios Gráficos</a></li>
-            <li class="nav-item"><a class="nav-link" href="{% url 'stock' %}">Estoque de Materiais</a></li>
+            <li class="nav-item"><a class="nav-link" href="{% url 'home_inner' %}">Dash boards/Relatórios gráficos</a></li>
+            <li class="nav-item"><a class="nav-link" href="#">Brinquedos mais acessados</a></li>
             <li class="nav-item"><a class="nav-link" href="#">Ranking de Linhas por Percentual Médio</a></li>
           </ul>
         </div>
       </div>
     </div>
+
+
+    <!-- Tópico 2 -->
+    <div class="accordion-item bg-dark border-0">
+      <h2 class="accordion-header">
+        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#topic3Collapse" aria-expanded="false">
+          🔩 Estoque de Materiais
+        </button>
+      </h2>
+      <div id="topic2Collapse" class="accordion-collapse collapse">
+        <div class="accordion-body">
+          <ul class="nav flex-column">
+            <li class="nav-item"><a class="nav-link" href="#">Dash boards do Estoque</a></li>
+            <li class="nav-item"><a class="nav-link" href="{% url 'stock' %}">Estoque Geral</a></li>
+            <li class="nav-item"><a class="nav-link" href="#">Saídas de Estoque</a></li>
+            <li class="nav-item"><a class="nav-link" href="#">Compras para o Estoque</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+
+
 
     <!-- Tópico 2 -->
     <div class="accordion-item bg-dark border-0">
@@ -222,7 +245,7 @@
           🏭 Escala de Produção
         </button>
       </h2>
-      <div id="topic2Collapse" class="accordion-collapse collapse">
+      <div id="topic3Collapse" class="accordion-collapse collapse">
         <div class="accordion-body">
           <ul class="nav flex-column">
             <li class="nav-item"><a class="nav-link" href="#">Brinquedos á Fazer</a></li>
@@ -271,14 +294,14 @@
     </div>
 
 
-    <!-- Tópico 3 -->
+    <!-- Tópico 6 -->
     <div class="accordion-item bg-dark border-0">
       <h2 class="accordion-header">
         <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#topic3Collapse" aria-expanded="false">
           🛠 Configurações do Sistema
         </button>
       </h2>
-      <div id="topic3Collapse" class="accordion-collapse collapse">
+      <div id="topic6Collapse" class="accordion-collapse collapse">
         <div class="accordion-body">
           <ul class="nav flex-column">
             <li class="nav-item"><a class="nav-link" href="#">Opção 1</a></li>
