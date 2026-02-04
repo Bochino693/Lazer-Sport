@@ -31,47 +31,93 @@
 
 .grid-cupons {
     display:grid;
-    grid-template-columns:repeat(auto-fill,minmax(260px,1fr));
+    grid-template-columns:repeat(auto-fill,minmax(390px,1fr));
     gap:20px;
 }
-
 .cupom-card {
-    background:#fff;
-    border-radius:20px;
-    padding:20px;
-    box-shadow:0 8px 25px rgba(0,0,0,.08);
-    transition:.25s;
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 22px;
+    background: #fff;
+    border-radius: 22px;
+    padding: 28px 26px;
+    min-height: 130px;
+    box-shadow: 0 12px 35px rgba(0,0,0,.12);
+    overflow: hidden;
+    transition: .25s;
 }
 
 .cupom-card:hover {
-    transform:translateY(-5px);
+    transform: translateY(-6px);
+}
+
+/* faixa lateral */
+.cupom-lateral {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 14px;
+    background: linear-gradient(180deg,#6a11cb,#2575fc);
+}
+
+/* furinhos (recorte de cupom) */
+.cupom-card::before,
+.cupom-card::after {
+    content: "";
+    position: absolute;
+    width: 22px;
+    height: 22px;
+    background: #f4f6f8;
+    border-radius: 50%;
+    left: -11px;
+}
+
+.cupom-card::before { top: 30px; }
+.cupom-card::after  { bottom: 30px; }
+
+/* info */
+.cupom-info {
+    margin-left: 20px;
 }
 
 .cupom-codigo {
-    font-size:1.4rem;
-    font-weight:800;
-    letter-spacing:1px;
-    color:#2575fc;
+    font-size: 1.6rem;
+    font-weight: 900;
+    letter-spacing: 3px;
+    color: #2575fc;
 }
 
-.cupom-desconto {
-    font-size:1.2rem;
-    font-weight:700;
-    margin:12px 0;
+.cupom-desc {
+    font-size: .8rem;
+    font-weight: 700;
+    color: #888;
+    margin-top: 6px;
+    text-transform: uppercase;
 }
 
-.cupom-acoes {
-    display:flex;
-    gap:10px;
+/* valor */
+.cupom-valor {
+    margin-left: auto;
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    font-weight: 900;
+    color: #6a11cb;
+    min-width: 130px;
 }
 
-.cupom-acoes a {
-    flex:1;
-    text-align:center;
-    padding:10px;
-    border-radius:12px;
-    font-weight:600;
-    text-decoration:none;
+.cupom-valor span {
+    font-size: 3.8rem;
+    line-height: 1;
+}
+
+.cupom-valor small {
+    font-size: 1.1rem;
+    margin-top: 10px;
+    color: #444;
+    font-weight: 800;
 }
 
 .btn-editar {
@@ -168,11 +214,19 @@
     <div class="grid-cupons">
         {% for cupom in cupons %}
         <div class="cupom-card">
-            <div class="cupom-codigo">{{ cupom.codigo }}</div>
-            <div class="cupom-desconto">
-                🔻 {{ cupom.desconto_percentual }}% OFF
-            </div>
-        </div>
+    <div class="cupom-lateral"></div>
+
+    <div class="cupom-info">
+        <div class="cupom-codigo">{{ cupom.codigo }}</div>
+        <div class="cupom-desc">DESCONTO</div>
+    </div>
+
+    <div class="cupom-valor">
+    <span>{{ cupom.desconto_percentual|floatformat:0 }}</span>
+    <small>% OFF</small>
+</div>
+</div>
+
         {% empty %}
             <p>Nenhum cupom cadastrado.</p>
         {% endfor %}
