@@ -62,10 +62,13 @@ class LogoutInnerView(View):
         return render(request, 'logout_inner.html')
 
 
+from .models import CentralVendas
+
 class HomeInnerView(InternoRequiredMixin, View):
 
     def get(self, request):
         material = Material.objects.all()
+        todas_vendas = CentralVendas.objects.all()
         estoque = EstoqueMaterial.objects.all()
         tipo_material = TipoMaterial.objects.all()
 
