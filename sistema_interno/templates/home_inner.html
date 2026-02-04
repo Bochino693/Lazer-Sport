@@ -7,6 +7,7 @@
 
 <style>
     :root {
+    --ice-white: #ecf0f1;
         --primary: #2c3e50;
         --secondary: #3498db;
         --bg: #f4f6f8;
@@ -42,52 +43,20 @@
         border: 1px solid #ccc;
     }
 
-    /* KPI Cards */
-    .kpi-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-        gap: 20px;
-        margin-bottom: 30px;
-    }
+.dashboard-container {
+    --bs-heading-color: #ecf0f1; /* branco gelo */
+}
 
     .kpi-card {
-        background: var(--card-bg);
-        border-radius: var(--radius);
-        padding: 20px;
-        box-shadow: var(--shadow);
-    }
+    --bs-heading-color: #dfe6e9;
+}
 
-    .kpi-card h4 {
-        margin: 0;
-        color: #7f8c8d;
-        font-size: 14px;
-    }
+.chart-card {
+    --bs-heading-color: #ecf0f1;
+}
 
-    .kpi-card span {
-        font-size: 28px;
-        font-weight: bold;
-        color: var(--primary);
-    }
 
-    /* Charts */
-    .charts-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-        gap: 20px;
-    }
 
-    .chart-card {
-        background: var(--card-bg);
-        border-radius: var(--radius);
-        padding: 20px;
-        box-shadow: var(--shadow);
-    }
-
-    .chart-card h4 {
-        margin-bottom: 15px;
-        color: var(--primary);
-        font-weight: 500;
-    }
 </style>
 
 <div class="dashboard-container">
