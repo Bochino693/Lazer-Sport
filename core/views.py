@@ -1272,7 +1272,7 @@ class UserAdminView(LoginRequiredMixin, View):
         context = {
             'perfis_clientes': perfis_clientes
         }
-        return render(request, 'users.html', context)
+        return render(request, 'users_adm.html', context)
 
 
 from django.contrib.auth.mixins import LoginRequiredMixin
