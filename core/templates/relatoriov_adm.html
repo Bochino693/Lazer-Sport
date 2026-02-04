@@ -2,96 +2,229 @@
 {% load humanize %}
 
 {% block content %}
-<div class="container-fluid">
+<style>
+  body {
+    background: #071426;
+  }
 
-  <h1 class="mb-4">📊 Relatório de Vendas</h1>
+  .app {
+    max-width: 1200px;
+    margin: auto;
+    padding: 40px 20px;
+    color: #e5e7eb;
+  }
 
-  <!-- FILTROS -->
-  <form method="get" class="row g-3 mb-4">
-    <div class="col-md-3">
-      <label>Data início</label>
-      <input type="date" name="data_inicio" class="form-control"
-             value="{{ filtros.data_inicio }}">
+  h1 {
+    text-align: center;
+    font-weight: 800;
+    margin-bottom: 40px;
+    color: #e5e7eb;
+  }
+
+  /* SUMMARY */
+  .summary {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px;
+    margin-bottom: 40px;
+  }
+
+  .summary-card {
+    background: #0b2545;
+    border-radius: 20px;
+    padding: 32px;
+    text-align: center;
+    box-shadow: 0 12px 30px rgba(0,0,0,.4);
+  }
+
+  .summary-card span {
+    font-size: .7rem;
+    letter-spacing: .18em;
+    color: #94a3b8;
+  }
+
+  .summary-card h2 {
+    margin-top: 12px;
+    font-weight: 900;
+    color: #f8fafc;
+  }
+
+  /* FILTERS */
+  .filters {
+    background: #0b2545;
+    border-radius: 20px;
+    padding: 28px;
+    margin-bottom: 40px;
+    box-shadow: 0 12px 30px rgba(0,0,0,.35);
+  }
+
+  .filter-row {
+    display: flex;
+    justify-content: center;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+  }
+
+  .chip {
+    padding: 10px 22px;
+    border-radius: 999px;
+    background: #123a6f;
+    color: #c7d2fe;
+    font-weight: 700;
+    font-size: .8rem;
+    cursor: pointer;
+    border: none;
+    transition: .2s;
+  }
+
+  .chip:hover {
+    background: #1e40af;
+    color: #fff;
+  }
+
+  .chip.active {
+    background: #3b82f6;
+    color: #071426;
+  }
+
+  .date-row {
+    display: flex;
+    justify-content: center;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+
+  input[type="date"] {
+    background: #071426;
+    border: 1px solid #1e3a8a;
+    border-radius: 12px;
+    padding: 10px 14px;
+    font-weight: 600;
+    color: #e5e7eb;
+  }
+
+  /* SALES */
+  .sales {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .sale-row {
+    background: #0b2545;
+    border-radius: 18px;
+    padding: 22px 26px;
+    display: grid;
+    grid-template-columns: 1fr 1fr auto 1fr 1fr;
+    align-items: center;
+    box-shadow: 0 10px 26px rgba(0,0,0,.4);
+    color: #f8fafc;
+  }
+
+  .sale-row span {
+    font-size: .65rem;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: .1em;
+  }
+
+  .payment {
+    background: #1e40af;
+    color: #e0f2fe;
+    padding: 6px 16px;
+    border-radius: 999px;
+    font-size: .7rem;
+    font-weight: 800;
+    text-align: center;
+  }
+
+  .empty {
+    text-align: center;
+    margin-top: 40px;
+    color: #94a3b8;
+  }
+
+</style>
+
+<div class="app">
+
+  <h1>📊 Relatório de Vendas</h1>
+
+  <!-- SUMMARY -->
+  <div class="summary">
+    <div class="summary-card">
+      <span>TOTAL DE VENDAS</span>
+      <h2>{{ total_vendas }}</h2>
     </div>
-
-    <div class="col-md-3">
-      <label>Data fim</label>
-      <input type="date" name="data_fim" class="form-control"
-             value="{{ filtros.data_fim }}">
-    </div>
-
-    <div class="col-md-3">
-      <label>Forma de pagamento</label>
-      <select name="forma_pagamento" class="form-control">
-        <option value="">Todas</option>
-        {% for key, label in formas_pagamento %}
-          <option value="{{ key }}"
-            {% if filtros.forma_pagamento == key %}selected{% endif %}>
-            {{ label }}
-          </option>
-        {% endfor %}
-      </select>
-    </div>
-
-    <div class="col-md-3 d-flex align-items-end">
-      <button class="btn btn-primary w-100">Filtrar</button>
-    </div>
-  </form>
-
-  <!-- RESUMO -->
-  <div class="row mb-4">
-    <div class="col-md-4">
-      <div class="card shadow-sm">
-        <div class="card-body">
-          <h6>Total de vendas</h6>
-          <h3>{{ total_vendas }}</h3>
-        </div>
-      </div>
-    </div>
-
-    <div class="col-md-4">
-      <div class="card shadow-sm">
-        <div class="card-body">
-          <h6>Valor total</h6>
-          <h3>R$ {{ total_valor|floatformat:2 }}</h3>
-        </div>
-      </div>
+    <div class="summary-card">
+      <span>VALOR TOTAL</span>
+      <h2>R$ {{ total_valor|floatformat:2 }}</h2>
     </div>
   </div>
 
-  <!-- TABELA -->
-  <div class="card shadow-sm">
-    <div class="card-body table-responsive">
-      <table class="table table-hover align-middle">
-        <thead>
-          <tr>
-            <th>Pedido</th>
-            <th>CPF</th>
-            <th>Forma</th>
-            <th>Valor pago</th>
-            <th>Data</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for venda in vendas %}
-          <tr>
-            <td>#{{ venda.pedido.id }}</td>
-            <td>{{ venda.cpf }}</td>
-            <td>{{ venda.get_forma_pagamento_display }}</td>
-            <td>R$ {{ venda.valor_pago|floatformat:2 }}</td>
-            <td>{{ venda.created_at|date:"d/m/Y H:i" }}</td>
-          </tr>
-          {% empty %}
-          <tr>
-            <td colspan="5" class="text-center text-muted">
-              Nenhuma venda encontrada
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+  <!-- FILTERS -->
+  <div class="filters">
+
+    <div class="filter-row">
+      {% for key, label in formas_pagamento %}
+        <button
+          type="button"
+          class="chip {% if filtros.forma_pagamento == key %}active{% endif %}"
+          data-pagamento="{{ key }}">
+          {{ label }}
+        </button>
+      {% endfor %}
     </div>
+
+    <div class="date-row">
+      <input type="date" id="data_inicio" value="{{ filtros.data_inicio }}">
+      <input type="date" id="data_fim" value="{{ filtros.data_fim }}">
+    </div>
+
+  </div>
+
+  <!-- SALES -->
+  <div class="sales">
+    {% for venda in vendas %}
+      <div class="sale-row">
+        <div><span>Pedido</span><br>#{{ venda.pedido.id }}</div>
+        <div><span>CPF</span><br>{{ venda.cpf }}</div>
+        <div class="payment">{{ venda.get_forma_pagamento_display }}</div>
+        <div><span>Valor</span><br>R$ {{ venda.valor_pago|floatformat:2 }}</div>
+        <div><span>Data</span><br>{{ venda.criacao|date:"d/m/Y H:i" }}</div>
+      </div>
+    {% empty %}
+      <div class="empty">Nenhuma venda encontrada</div>
+    {% endfor %}
   </div>
 
 </div>
+
+<script>
+  const chips = document.querySelectorAll('.chip');
+  const dataInicio = document.getElementById('data_inicio');
+  const dataFim = document.getElementById('data_fim');
+
+  let params = new URLSearchParams(window.location.search);
+
+  function updateFilter() {
+    if (dataInicio.value && dataFim.value) {
+      params.set('data_inicio', dataInicio.value);
+      params.set('data_fim', dataFim.value);
+    }
+    window.location.search = params.toString();
+  }
+
+  chips.forEach(chip => {
+    chip.addEventListener('click', () => {
+      params.set('forma_pagamento', chip.dataset.pagamento);
+      window.location.search = params.toString();
+    });
+  });
+
+  dataInicio.addEventListener('change', updateFilter);
+  dataFim.addEventListener('change', updateFilter);
+</script>
+
 {% endblock %}

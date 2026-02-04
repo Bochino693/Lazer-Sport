@@ -651,31 +651,58 @@ class LogoutUsuarioView(View):
 
 from .models import Promocoes
 
+from django.shortcuts import render, redirect, get_object_or_404
+from django.views import View
+from django.http import JsonResponse
+from .models import Promocoes, Brinquedos  # Certifique-se dos nomes dos modelos
 
-class PromocaoListView(AdminOnlyMixin, ListView):
-    model = Promocoes
+
+class PromocaoAdminView(AdminOnlyMixin, View):
     template_name = "promocoes_adm.html"
-    context_object_name = "promocoes"
+
+    def get(self, request, *args, **kwargs):
+        # Dados para preencher a página e o modal
+        context = {
+            "promocoes": Promocoes.objects.all().order_by('-id'),
+            "brinquedos": Brinquedos.objects.all().order_by('nome_brinquedo'),
+        }
+        return render(request, self.template_name, context)
+
+    def post(self, request, *args, **kwargs):
+        # Captura os dados do formulário do modal
+        promo_id = request.POST.get('promo_id')  # Para o caso de edição
+        descricao = request.POST.get('descricao')
+        preco = request.POST.get('preco_promocao')
+        brinquedo_id = request.POST.get('brinquedos')
+        imagem = request.FILES.get('imagem_promocao')
+
+        # Busca a instância para editar ou cria uma nova
+        if promo_id:
+            promocao = get_object_or_404(Promocoes, id=promo_id)
+        else:
+            promocao = Promocoes()
+
+        # Atualiza os campos
+        promocao.descricao = descricao
+        promocao.preco_promocao = preco
+        promocao.brinquedos_id = brinquedo_id  # Django usa _id para chaves estrangeiras via ID direto
+
+        if imagem:
+            promocao.imagem_promocao = imagem
+
+        promocao.save()
+        return redirect('promocao_adm')  # Nome da sua URL de listagem
 
 
-class PromocaoCreateView(AdminOnlyMixin, CreateView):
-    model = Promocoes
-    fields = ['descricao', 'imagem_promocao', 'brinquedos', 'preco_promocao']
-    template_name = "partials/promocoes_form.html"
-    success_url = reverse_lazy("promocoes_admin")
+class PromocaoDeleteView(AdminOnlyMixin, View):
+    def post(self, request, pk, *args, **kwargs):
+        promocao = get_object_or_404(Promocoes, pk=pk)
+        try:
+            promocao.delete()
+            return JsonResponse({'success': True})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)}, status=400)
 
-
-class PromocaoUpdateView(AdminOnlyMixin, UpdateView):
-    model = Promocoes
-    fields = ['descricao', 'imagem_promocao', 'brinquedos', 'preco_promocao']
-    template_name = "promocoes_form.html"
-    success_url = reverse_lazy("promocoes_admin")
-
-
-class PromocaoDeleteView(AdminOnlyMixin, DeleteView):
-    model = Promocoes
-    template_name = "promocao_confirm_delete.html"
-    success_url = reverse_lazy("promocoes_admin")
 
 
 class CupomAdminView(AdminOnlyMixin, View):
@@ -1290,7 +1317,7 @@ from datetime import datetime
 
 from .models import Venda
 
-class RelatorioVendasView(TemplateView):
+class RelatorioVendasView(LoginRequiredMixin, TemplateView):
     template_name = 'relatoriov_adm.html'
 
     def get_context_data(self, **kwargs):

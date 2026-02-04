@@ -3,10 +3,10 @@ from .views import (HomeView, BrinquedoInfoView, CategoriasInfoView, BrinquedosV
                     RegistrarView, LoginUsuarioView, LogoutUsuarioView, EventosView,
                     ProjetosView, ClientePerfilView, ComboInfoView, PromocaoInfoView,
                     BrinquedoAdmin, NovaCategoria, NovaTag, ComboListView, ComboCreateView,
-                    ComboUpdateView, ComboDeleteView, PromocaoListView, PromocaoCreateView,
-                    CupomAdminView, PromocaoDeleteView, PromocaoUpdateView, ProjetoAdminView,
-                    EstabelecimentoInfoView, EstabelecimentosListView, ManutencaoView, adicionar_ao_carrinho,
-                    carrinho_view, aplicar_cupom,  remover_item_carrinho, limpar_carrinho, cancelar_manutencao,
+                    ComboUpdateView, ComboDeleteView, CupomAdminView, PromocaoDeleteView, ProjetoAdminView,
+                    EstabelecimentoInfoView, EstabelecimentosListView, ManutencaoView, PromocaoAdminView,
+                    PromocaoDeleteView, adicionar_ao_carrinho, carrinho_view, aplicar_cupom,  remover_item_carrinho,
+                    limpar_carrinho, cancelar_manutencao,
                     PaymentView, MeusPedidosView, criar_pedido_pix, PaymentFinallyView, processar_cartao,
                     EventoAdminView, BannerAdminView, BannerDeleteView, AdminLoginView, AcessoNegadoView,
                     DashboardAdminView, UserAdminView, ManutencaoAdminView, RelatorioVendasView
@@ -72,10 +72,8 @@ urlpatterns = [
     path('adm/banners/', BannerAdminView.as_view(), name='banner_adm'),
     path('adm/banners/excluir/<int:pk>/', BannerDeleteView.as_view(), name='banner_delete'),
 
-    path("adm/promocoes/", PromocaoListView.as_view(), name="promocoes_admin"),
-    path("adm/promocoes/nova/", PromocaoCreateView.as_view(), name="promocao_create"),
-    path("adm/promocoes/<int:pk>/editar/", PromocaoUpdateView.as_view(), name="promocao_update"),
-    path("adm/promocoes/<int:pk>/excluir/", PromocaoDeleteView.as_view(), name="promocao_delete"),
+    path("adm/promocoes/", PromocaoAdminView.as_view(), name="promocoes_admin"),
+    path("adm/promocoes/<int:pk>/delete/", PromocaoDeleteView.as_view(), name='promocao_delete'),
 
     path("adm/dashboards/", DashboardAdminView.as_view(), name='dashboards'),
     path("adm/clients/", UserAdminView.as_view(), name='clients'),

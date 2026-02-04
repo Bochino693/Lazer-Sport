@@ -1,226 +1,355 @@
 {% extends "base_adm.html" %}
 {% block content %}
-{% load l10n %}
 
 <style>
+/* ================= ESTRUTURA E LAYOUT ================= */
+.header-top {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 30px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 20px;
+}
 .promocoes-container {
-    max-width: 1200px;
-    margin: 40px auto;
-    padding: 20px;
+    max-width: 1200px; margin: 40px auto; padding: 20px;
+    font-family: 'Inter', sans-serif; color: #f3f4f6;
 }
-
-.btn-novo {
-    display:inline-block;
-    margin-bottom:25px;
-    background:linear-gradient(135deg,#ff9800,#ff5722);
-    color:white;
-    padding:12px 22px;
-    border-radius:16px;
-    font-weight:700;
-    text-decoration:none;
-}
-
 .grid-promocoes {
-    display:grid;
-    grid-template-columns:repeat(auto-fill,minmax(280px,1fr));
-    gap:25px;
+    display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:20px;
 }
 
+/* ================= CARDS ================= */
 .card-promocao {
-    background:#fff;
-    border-radius:20px;
-    box-shadow:0 8px 25px rgba(0,0,0,.1);
-    overflow:hidden;
-    transition:.3s;
+    background:#0b2545; border-radius:16px; box-shadow:0 6px 20px rgba(0,0,0,.4);
+    overflow:hidden; transition:.3s;
 }
-
-.card-promocao:hover {
-    transform:translateY(-6px);
-}
-
-.card-promocao img {
-    width:100%;
-    height:200px;
-    object-fit:cover;
-}
-
-.card-body {
-    padding:18px;
-}
-
-.card-body h3 {
-    margin-bottom:6px;
-}
-
-.preco {
-    font-size:1.4rem;
-    font-weight:bold;
-    color:#e53935;
-    margin:10px 0;
-}
-
+.card-promocao:hover { transform:translateY(-4px); }
+.card-promocao img { width:100%; height:180px; object-fit:cover; }
+.card-body { padding:16px; display:flex; flex-direction: column; align-items: center; text-align: center; }
+.card-body h3 { margin-bottom:6px; color:#e5e7eb; font-size:1.1rem; }
+.card-body p { margin:4px 0; color:#94a3b8; font-size:0.9rem; }
+.preco { font-size:1.2rem; font-weight:bold; color:#ffb703; margin:8px 0; }
+.acoes { display:flex; gap:6px; width:100%; justify-content:center; }
 .acoes a {
-    display:block;
-    text-align:center;
-    padding:10px;
-    border-radius:14px;
-    color:white;
-    font-weight:600;
-    text-decoration:none;
-    margin-top:6px;
+    display:inline-block; text-align:center; padding:6px 10px; border-radius:10px;
+    color:white; font-weight:600; font-size:0.8rem;
+}
+.btn-editar { background:#3b82f6; }
+.btn-excluir { background:#dc2626; }
+.btn-novo {
+    background: linear-gradient(135deg, #3b82f6, #2563eb); color: #fff; padding: 10px 24px;
+    border-radius: 12px; font-size: 0.9rem; font-weight: 700; border: none; cursor: pointer;
+    transition: all 0.3s; box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
+    display: flex; align-items: center; gap: 8px;
+}
+.btn-novo:hover { transform: translateY(-3px) scale(1.02); }
+
+/* ================= MODAL SYSTEM (BLINDADO) ================= */
+
+/* Classe auxiliar para travar o body via JS */
+body.modal-open {
+    overflow: hidden !important;
+    padding-right: 0 !important; /* Evita pulo de scroll */
 }
 
-.btn-editar { background:#ffc107; color:#222; }
-.btn-excluir { background:#dc3545; }
-
-
-
+/* 1. OVERLAY (Fundo Preto) */
 .modal-overlay {
-    position:fixed;
-    inset:0;
-    background:rgba(0,0,0,.6);
-    backdrop-filter:blur(5px);
-    z-index:1000;
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(4px);
+    z-index: 99990; /* Alta prioridade */
+
+    /* ESTADO INICIAL: Invisível e INTOCÁVEL */
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none; /* O SEGREDO: Clicks passam direto */
+
+    transition: opacity 0.3s ease, visibility 0.3s ease;
 }
 
+/* 2. OVERLAY ATIVO */
+.modal-overlay.active {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto; /* Agora bloqueia clicks */
+}
+
+/* 3. MODAL CARD */
 .modal-card {
-    position:fixed;
-    top:50%;
-    left:50%;
-    transform:translate(-50%,-50%);
-    width:92%;
-    background:white;
-    border-radius:24px;
-    padding:24px;
-    box-shadow:0 30px 80px rgba(0,0,0,.45);
-    z-index:1001;
-    animation:modalIn .25s ease;
+    position: fixed; top: 50%; left: 50%;
+    transform: translate(-50%, -50%) scale(0.95);
+    z-index: 99999; /* Acima do overlay */
+    background: #0b2545; border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 20px; padding: 30px; width: 90%; max-width: 550px;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.6);
+
+    /* ESTADO INICIAL */
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+
+    display: flex; flex-direction: column; max-height: 90vh; overflow-y: auto;
 }
 
-@keyframes modalIn {
-    from {
-        opacity:0;
-        transform:translate(-50%,-45%) scale(.96);
-    }
-    to {
-        opacity:1;
-        transform:translate(-50%,-50%) scale(1);
-    }
+.modal-card.active {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: translate(-50%, -50%) scale(1);
 }
 
-.modal-header {
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    margin-bottom:15px;
-}
+/* Ajustes Específicos Z-INDEX para o segundo modal */
+#modalSeletorBrinquedo { z-index: 100001; }
+#overlayBrinquedo { z-index: 100000; }
 
+/* ================= FORMULÁRIO E INPUTS ================= */
+.modal-header { display:flex; justify-content: space-between; align-items:center; margin-bottom:20px; }
 .btn-close {
-    width:38px;
-    height:38px;
-    border-radius:50%;
-    border:none;
-    background:#f3f3f3;
-    cursor:pointer;
-    font-size:18px;
+    width:32px; height:32px; border-radius:50%; border:none; background:#1e3a8a;
+    cursor:pointer; font-size:16px; color:#fff; transition:.2s;
+}
+.btn-close:hover { background:#3b82f6; }
+
+.modal-card label { display:block; font-size:0.75rem; color:#94a3b8; text-transform:uppercase; margin-bottom:6px; text-align:center; }
+.modal-card input:not([type="file"]), .modal-card select {
+    width: 100%; margin-bottom: 15px; padding:12px; border-radius:12px;
+    border:1px solid #334155; background:#1e293b; color:#fff; text-align:center;
+}
+.custom-file-upload {
+    border: 2px dashed #334155; border-radius: 16px; padding: 20px; text-align: center;
+    cursor: pointer; background: #1e293b; margin-bottom: 20px; display: block;
+}
+.custom-file-upload input { display: none; }
+.modal-card button[type="submit"] {
+    width:100%; padding:12px; border:none; border-radius:12px; background:#ffb703;
+    color:#0b2545; font-weight:700; cursor:pointer; margin-top: 10px;
 }
 
+/* SELETOR DE BRINQUEDOS */
+.grid-selecao-brinquedos {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 15px; max-height: 400px; overflow-y: auto; padding: 10px;
+    background: #071426; border-radius: 12px;
+}
+.card-opcao-brinquedo {
+    background: #1e3a8a; border-radius: 12px; padding: 8px; cursor: pointer;
+    border: 3px solid transparent; text-align: center;
+}
+.card-opcao-brinquedo.selecionado { border-color: #ffb703; background: #2563eb; }
+.card-opcao-brinquedo img { width: 100%; height: 100px; object-fit: cover; border-radius: 8px; }
+.trigger-brinquedo {
+    background: #1e3a8a; border: 1px solid #3b82f6; color: white; padding: 12px;
+    border-radius: 12px; display: flex; align-items: center; justify-content: space-between; cursor: pointer;
+}
 </style>
 
 <div class="promocoes-container">
+  <div class="header-top">
     <h1>🔥 Promoções</h1>
-<button class="btn-novo"
-        onclick="abrirModal('{% url 'promocao_create' %}')">
-    ➕ Nova Promoção
-</button>
+    <button class="btn-novo" onclick="abrirModalPrincipal('create')">➕ Nova Promoção</button>
+  </div>
 
+  <div class="grid-promocoes">
+    {% for promo in promocoes %}
+    <div class="card-promocao">
+      {% if promo.imagem_promocao %}
+        <img src="{{ promo.imagem_promocao.url }}">
+      {% endif %}
+      <div class="card-body">
+        <h3>{{ promo.descricao }}</h3>
+        <p>🧸 {{ promo.brinquedos.nome_brinquedo }}</p>
+        <div class="preco">R$ {{ promo.preco_promocao|floatformat:2 }}</div>
+        <div class="acoes">
+          <a href="#" class="btn-editar" onclick="abrirModalPrincipal('update', {{ promo.id }})">✏️ Editar</a>
+          <a href="#" class="btn-excluir" onclick="abrirModalPrincipal('delete', {{ promo.id }})">🗑️ Excluir</a>
+        </div>
+      </div>
+    </div>
+    {% empty %}
+      <p>Nenhuma promoção cadastrada.</p>
+    {% endfor %}
+  </div>
+</div>
 
-    <div class="grid-promocoes">
-        {% for promo in promocoes %}
-        <div class="card-promocao">
+<div id="overlayPrincipal" class="modal-overlay"></div>
+<div id="modalPromocao" class="modal-card">
+  <div class="modal-header">
+    <h3 id="modalTitulo">Nova Promoção</h3>
+    <button class="btn-close" onclick="fecharTudo()">✕</button>
+  </div>
+  <form id="modalForm" method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    <label>Título da Oferta</label>
+    <input type="text" name="descricao" id="descricao" placeholder="Ex: Queima de Estoque" required>
 
-            {% if promo.imagem_promocao %}
-                <img src="{{ promo.imagem_promocao.url }}">
-            {% endif %}
+    <label>Imagem de Capa</label>
+    <label for="imagem_promocao" class="custom-file-upload">
+        <span id="file-chosen">📁 Clique para enviar imagem</span>
+        <input type="file" name="imagem_promocao" id="imagem_promocao" onchange="updateFileName(this)">
+    </label>
 
-            <div class="card-body">
-                <h3>{{ promo.descricao }}</h3>
-                <p>🧸 {{ promo.brinquedos.nome_brinquedo }}</p>
-
-                <div class="preco money" data-valor="{{ promo.preco_promocao|unlocalize }}">
-                    R$ 0,00
-                </div>
-
-
-                <div class="acoes">
-                    <a href="{% url 'promocao_update' promo.id %}" class="btn-editar">✏️ Editar</a>
-                    <a href="{% url 'promocao_delete' promo.id %}" class="btn-excluir">🗑️ Excluir</a>
-                </div>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+        <div>
+            <label>Brinquedo Relacionado</label>
+            <div class="trigger-brinquedo" onclick="abrirSeletor()">
+                <span id="nomeBrinquedoEscolhido">Selecionar...</span>
             </div>
-
+            <input type="hidden" name="brinquedos" id="brinquedo_id_hidden">
         </div>
-        {% empty %}
-            <p>Nenhuma promoção cadastrada.</p>
-        {% endfor %}
-    </div>
-</div>
-
-<!-- MODAL PROMOÇÃO -->
-<div id="modalPromocao" style="display:none">
-
-    <div class="modal-overlay" onclick="fecharModal()"></div>
-
-    <div class="modal-card" style="max-width:600px">
-        <div class="modal-header">
-            <h3>Nova Promoção</h3>
-            <button class="btn-close" onclick="fecharModal()">✕</button>
-        </div>
-
-        <div id="modalConteudo">
-            <p style="text-align:center">Carregando...</p>
+        <div>
+            <label>Preço Especial</label>
+            <input type="number" step="0.01" name="preco_promocao" id="preco_promocao" placeholder="0,00">
         </div>
     </div>
-
+    <button type="submit">Finalizar Promoção</button>
+  </form>
 </div>
 
+<div id="modalDelete" class="modal-card">
+  <div class="modal-header">
+    <h3>Confirmar exclusão</h3>
+    <button class="btn-close" onclick="fecharTudo()">✕</button>
+  </div>
+  <p style="margin-bottom:15px;">Digite <b>EXCLUIR</b> para confirmar</p>
+  <input type="text" id="confirmacaoDelete" placeholder="EXCLUIR">
+  <button onclick="executarDelete()" class="btn-novo" style="width:100%; margin-top:10px; justify-content:center; background: #dc2626;">Confirmar Exclusão</button>
+</div>
+
+<div id="overlayBrinquedo" class="modal-overlay"></div>
+<div id="modalSeletorBrinquedo" class="modal-card">
+  <div class="modal-header">
+    <h3>Escolha o Brinquedo</h3>
+    <button class="btn-close" onclick="fecharSeletor()">✕</button>
+  </div>
+  <div class="grid-selecao-brinquedos">
+    {% for b in brinquedos %}
+    <div class="card-opcao-brinquedo" id="opt-{{ b.id }}" onclick="marcarBrinquedo('{{ b.id }}', '{{ b.nome_brinquedo }}')">
+      {% if b.imagem_brinquedo %}
+        <img src="{{ b.imagem_brinquedo.url }}">
+      {% else %}
+        <div style="height:100px; background:#071426; border-radius:8px; display:flex; align-items:center; justify-content:center;">🖼️</div>
+      {% endif %}
+      <span>{{ b.nome_brinquedo }}</span>
+    </div>
+    {% endfor %}
+  </div>
+  <div style="display:flex; gap:10px; margin-top:20px;">
+      <button class="btn-novo" style="flex:1; background:#10b981;" onclick="confirmarEscolha()">Confirmar</button>
+      <button class="btn-novo" style="flex:1; background:#ef4444;" onclick="fecharSeletor()">Cancelar</button>
+  </div>
+</div>
 
 <script>
-function formatarMoedaBR(valor) {
-    if (isNaN(valor)) valor = 0;
-    return Number(valor).toLocaleString('pt-BR', {
-        minimumFractionDigits:2,
-        maximumFractionDigits:2
-    });
-}
+let currentId = null;
+let tempBrinquedoId = null;
+let tempBrinquedoNome = null;
 
-document.addEventListener("DOMContentLoaded", () => {
-    document.querySelectorAll(".money").forEach(el => {
-        el.textContent = "R$ " + formatarMoedaBR(el.dataset.valor);
-    });
-});
+/* ================= GERENCIAMENTO DE MODAIS ================= */
 
+function abrirModalPrincipal(action, id = null) {
+    limparForm();
+    const modalForm = document.getElementById('modalPromocao');
+    const modalDel = document.getElementById('modalDelete');
+    const overlay = document.getElementById('overlayPrincipal');
 
-function abrirModal(url) {
-    document.getElementById("modalPromocao").style.display = "block";
-    document.getElementById("modalConteudo").innerHTML = "Carregando...";
+    document.body.classList.add('modal-open');
+    overlay.classList.add('active');
 
-    fetch(url, {
-        headers: {
-            "X-Requested-With": "XMLHttpRequest"
+    if (action === 'delete') {
+        currentId = id;
+        modalDel.classList.add('active');
+    } else {
+        modalForm.classList.add('active');
+
+        // A URL agora é sempre a mesma da view que criamos (PromocaoAdminView)
+        document.getElementById("modalForm").action = "{% url 'promocoes_admin' %}";
+
+        if (action === 'create') {
+            document.getElementById("modalTitulo").innerText = "🔥 Nova Promoção";
+            document.getElementById("promo_id_hidden_form").value = ""; // Vazio para criar
+        } else {
+            document.getElementById("modalTitulo").innerText = "✏️ Editar Promoção";
+            document.getElementById("promo_id_hidden_form").value = id; // Preenchido para editar
+
+            // Opcional: Aqui você pode fazer um fetch para buscar os dados
+            // da promoção e preencher os campos do modal automaticamente.
         }
-    })
-    .then(response => response.text())
-    .then(html => {
-        document.getElementById("modalConteudo").innerHTML = html;
+    }
+}
+
+function fecharTudo() {
+    // 1. Remove classe ativa de TODOS os modais e overlays
+    document.querySelectorAll('.modal-card, .modal-overlay').forEach(el => {
+        el.classList.remove('active');
     });
+
+    // 2. Destrava o Body
+    document.body.classList.remove('modal-open');
 }
 
+/* ================= LÓGICA DO SELETOR (NÍVEL 2) ================= */
 
-function fecharModal() {
-    document.getElementById("modalPromocao").style.display = "none";
+function abrirSeletor() {
+    // Abre o nível 2 sem fechar o nível 1
+    document.getElementById('overlayBrinquedo').classList.add('active');
+    document.getElementById('modalSeletorBrinquedo').classList.add('active');
 }
 
+function fecharSeletor() {
+    // Fecha apenas o nível 2
+    document.getElementById('overlayBrinquedo').classList.remove('active');
+    document.getElementById('modalSeletorBrinquedo').classList.remove('active');
+}
 
+function marcarBrinquedo(id, nome) {
+    document.querySelectorAll('.card-opcao-brinquedo').forEach(c => c.classList.remove('selecionado'));
+    document.getElementById(`opt-${id}`).classList.add('selecionado');
+    tempBrinquedoId = id;
+    tempBrinquedoNome = nome;
+}
+
+function confirmarEscolha() {
+    if(!tempBrinquedoId) { alert("Selecione um brinquedo!"); return; }
+    document.getElementById("brinquedo_id_hidden").value = tempBrinquedoId;
+    document.getElementById("nomeBrinquedoEscolhido").innerText = "🧸 " + tempBrinquedoNome;
+    fecharSeletor();
+}
+
+/* ================= UTILS ================= */
+
+function updateFileName(input) {
+    const label = document.getElementById('file-chosen');
+    if (input.files && input.files.length > 0) {
+        label.innerHTML = `<span>✅ Selecionado:</span> ${input.files[0].name}`;
+        label.style.color = "#10b981";
+    }
+}
+
+function limparForm() {
+    document.getElementById("modalForm").reset();
+    document.getElementById("brinquedo_id_hidden").value = "";
+    document.getElementById("nomeBrinquedoEscolhido").innerText = "Selecionar...";
+    document.getElementById("file-chosen").innerText = "📁 Clique para enviar imagem";
+    document.getElementById("file-chosen").style.color = "#94a3b8";
+}
+
+function executarDelete(){
+  const valor = document.getElementById("confirmacaoDelete").value;
+  if(valor !== "EXCLUIR") { alert("Digite EXCLUIR para confirmar"); return; }
+
+  // Ajuste a URL para bater com o seu urls.py
+  fetch(`/promocoes/${currentId}/delete/`, {
+    method:'POST',
+    headers: { "X-CSRFToken":"{{ csrf_token }}" },
+  }).then(r=>r.json()).then(d=>{
+    if(d.success) location.reload();
+    else alert(d.error);
+  });
+}
+
+// Fechamento ao clicar fora (Overlay)
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('overlayPrincipal').addEventListener('click', fecharTudo);
+    document.getElementById('overlayBrinquedo').addEventListener('click', fecharSeletor);
+});
 </script>
 
 {% endblock %}
