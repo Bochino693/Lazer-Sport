@@ -133,6 +133,27 @@
     canvas {
         background-color: transparent;
     }
+
+
+    /* KPIs */
+.kpi-title {
+    font-weight: 600;
+}
+
+/* cores individuais por KPI */
+.kpi-1-title { color: #f59e0b; }   /* amarelo */
+.kpi-2-title { color: #10b981; }   /* verde */
+.kpi-3-title { color: #ef4444; }   /* vermelho */
+.kpi-4-title { color: #3b82f6; }   /* azul */
+
+/* Gráficos */
+.chart-title {
+    font-weight: 600;
+}
+
+/* cores individuais por gráfico */
+.chart-vendas-title { color: #f97316; }   /* laranja */
+.chart-usuarios-title { color: #8b5cf6; } /* roxo */
 </style>
 
 <div class="dashboard-wrapper">
@@ -151,30 +172,31 @@
     <!-- KPIs -->
     <div class="kpi-grid">
         <div class="kpi-card kpi-1">
-            <h4>Total de Vendas</h4>
+            <h4 class="kpi-title kpi-1-title">Total de Vendas</h4>
             <span>{{ vendas_total }}</span>
         </div>
 
         <div class="kpi-card kpi-2">
-            <h4>Usuários Ativos</h4>
+            <h4 class="kpi-title kpi-2-title">Usuários Ativos</h4>
             <span>{{ total_clientes }}</span>
         </div>
 
         <div class="kpi-card kpi-3">
-            <h4>Pedidos</h4>
+            <h4 class="kpi-title kpi-3-title">Pedidos</h4>
             <span>{{ total_pedidos }}</span>
         </div>
 
         <div class="kpi-card kpi-4">
-            <h4>Conversão</h4>
+            <h4 class="kpi-title kpi-4-title">Conversão</h4>
             <span>{{ taxa_conversao }}</span>
         </div>
+
     </div>
 
     <!-- Gráficos -->
     <div class="charts-grid">
         <div class="chart-card">
-             <h4>Vendas por Período</h4>
+             <h4 class="chart-title chart-vendas-title">Vendas por Período</h4>
     {% if chart_labels and chart_data %}
         <canvas id="chartVendas"></canvas>
     {% else %}
@@ -185,7 +207,7 @@
         </div>
 
         <div class="chart-card">
-            <h4>Usuários por Categoria</h4>
+            <h4 class="chart-title chart-usuarios-title">Usuários por Categoria</h4>
             <canvas id="chartUsuarios"></canvas>
         </div>
     </div>
