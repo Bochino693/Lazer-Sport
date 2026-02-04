@@ -434,11 +434,12 @@ button:disabled {
     <div class="card">
     <h3>Adicionar novo banner</h3>
 
-    <p style="margin-bottom:12px; color:#475569;">
-        Você pode adicionar
-        <strong>{{ limite_restante }}</strong>
-        banner{{ limite_restante|pluralize }} (máx. {{ max_banners }}).
-    </p>
+
+<p style="margin-bottom:12px; color:#475569; text-align:center;">
+    Você pode adicionar
+    <strong>{{ limite_restante }}</strong>
+    banner{{ limite_restante|pluralize }} (máx. {{ max_banners }}).
+</p>
 
     <form method="post" enctype="multipart/form-data" class="upload-form">
         {% csrf_token %}

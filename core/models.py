@@ -77,7 +77,6 @@ class ClientePerfil(models.Model):
         ]
 
 
-
 # --- AQUI embaixo vem o signal ---
 
 from django.db.models.signals import post_save
@@ -740,7 +739,8 @@ class ManutencaoImagem(models.Model):
 
 
 class BrinquedoClick(Prime):
-    brinquedo_clicado = models.ForeignKey(Brinquedos, on_delete=models.SET_NULL, related_name='clicks_brinquedo', null=True)
+    brinquedo_clicado = models.ForeignKey(Brinquedos, on_delete=models.SET_NULL, related_name='clicks_brinquedo',
+                                          null=True)
     quantidade_click = models.IntegerField(default=1)
 
     def __str__(self):
@@ -762,6 +762,7 @@ class ComboClick(Prime):
         verbose_name = "Combo Clicado"
         verbose_name_plural = "Combo Clicados"
 
+
 class PromocaoClick(Prime):
     promocao_click = models.ForeignKey(Promocoes, on_delete=models.SET_NULL, related_name='clicks_promocao', null=True)
     quantidade_click = models.IntegerField(default=1)
@@ -775,7 +776,8 @@ class PromocaoClick(Prime):
 
 
 class CategoriaClick(Prime):
-    categoria_clicada = models.ForeignKey(CategoriasBrinquedos, on_delete=models.SET_NULL, related_name='clicks', null=True)
+    categoria_clicada = models.ForeignKey(CategoriasBrinquedos, on_delete=models.SET_NULL, related_name='clicks',
+                                          null=True)
     quantidade_click = models.IntegerField(default=1)
 
     def __str__(self):
