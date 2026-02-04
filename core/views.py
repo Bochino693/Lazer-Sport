@@ -1291,7 +1291,7 @@ from datetime import datetime
 from .models import Venda
 
 class RelatorioVendasView(TemplateView):
-    template_name = 'relatoriov.html'
+    template_name = 'relatoriov_adm.html'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
