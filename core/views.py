@@ -1147,7 +1147,6 @@ from datetime import timedelta
 from django.db.models.functions import TruncDay, TruncMonth
 
 
-
 class DashboardAdminView(View):
     def get(self, request):
         filtro = request.GET.get('filtro', 'geral')

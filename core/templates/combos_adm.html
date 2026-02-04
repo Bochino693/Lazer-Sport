@@ -9,23 +9,44 @@
     padding: 20px;
 }
 
-/* Botão novo combo */
-.btn-novo-combo {
-    display: inline-block;
-    margin-bottom: 25px;
-    background: linear-gradient(135deg, #198754, #28c76f);
-    color: white;
-    padding: 12px 22px;
-    border-radius: 16px;
-    font-weight: 700;
-    text-decoration: none;
-    transition: .25s ease;
+.btn-novo {
+    background:linear-gradient(135deg,#0d6efd,#0a58ca);
+    color:#fff;
+    padding:12px 22px;
+    border-radius:16px;
+    font-weight:700;
+    text-decoration:none;
 }
 
-.btn-novo-combo:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(25,135,84,.35);
+
+.btn-novo {
+    display:flex;
+    align-items:center;
+    gap:8px;
+
+    background:linear-gradient(135deg,#0d6efd,#0a58ca);
+    color:#fff;
+    padding:14px 26px;
+    border-radius:18px;
+    font-weight:800;
+    font-size:.95rem;
+
+    border:none;
+    cursor:pointer;
+    transition:.25s ease;
+    box-shadow:0 10px 30px rgba(13,110,253,.35);
 }
+
+.btn-novo:hover {
+    transform:translateY(-2px);
+    box-shadow:0 16px 40px rgba(13,110,253,.45);
+}
+
+.btn-novo:active {
+    transform:scale(.97);
+}
+
+
 
 /* GRID */
 .combos-grid {
@@ -127,9 +148,9 @@
     <h1>🎁 Combos disponíveis</h1>
 
     <!-- BOTÃO CRIAR -->
-    <a href="{% url 'combo_create' %}" class="btn-novo-combo">
-        ➕ Novo Combo
-    </a>
+    <button type="button" class="btn-novo" onclick="openCreateProjeto()">
+            <span>➕</span> Novo Projeto
+        </button>
 
     <div class="combos-grid">
 
