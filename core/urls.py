@@ -9,9 +9,8 @@ from .views import (HomeView, BrinquedoInfoView, CategoriasInfoView, BrinquedosV
                     carrinho_view, aplicar_cupom,  remover_item_carrinho, limpar_carrinho, cancelar_manutencao,
                     PaymentView, MeusPedidosView, criar_pedido_pix, PaymentFinallyView, processar_cartao,
                     EventoAdminView, BannerAdminView, BannerDeleteView, AdminLoginView, AcessoNegadoView,
-                    DashboardAdminView, UserAdminView
-
-                    )   # importa views do mesmo app
+                    DashboardAdminView, UserAdminView, ManutencaoAdminView
+                    )
 from django.conf import settings
 from django.conf.urls.static import static
 
@@ -80,6 +79,7 @@ urlpatterns = [
 
     path("adm/dashboards/", DashboardAdminView.as_view(), name='dashboards'),
     path("adm/clients/", UserAdminView.as_view(), name='clients'),
+    path("adm/manutencoes/", ManutencaoAdminView.as_view(), name='manutencoes_adm'),
 
 
     path("adm/eventos/", EventoAdminView.as_view(), name="eventos_admin"),

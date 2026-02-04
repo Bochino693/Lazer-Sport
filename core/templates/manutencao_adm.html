@@ -1,0 +1,263 @@
+{% extends "base_adm.html" %}
+{% block content %}
+
+<style>
+.manutencoes-container {
+    max-width:1200px;
+    margin:40px auto;
+    padding:20px;
+}
+
+.manutencoes-header {
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:30px;
+}
+
+.manutencoes-header h1 {
+    font-size:1.9rem;
+}
+
+/* ===== GRID ===== */
+.grid-manutencoes {
+     display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+    gap: 22px;
+    align-items: stretch;
+}
+
+/* ===== CARD ===== */
+.manut-card {
+    background:#fff;
+    border-radius:22px;
+    padding:26px 28px;
+    box-shadow:0 14px 40px rgba(0,0,0,.12);
+    display:flex;
+    flex-direction:column;
+    gap:18px;
+    transition:.25s;
+    height: 100%;
+     display: flex;
+    justify-content: space-between;
+     text-align:center;
+
+}
+
+.manut-card:hover {
+    transform:translateY(-6px);
+}
+
+/* ===== TOPO ===== */
+.manut-top {
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+}
+
+.manut-brinquedo {
+    font-weight:900;
+    font-size:1.25rem;
+    color:#2575fc;
+}
+
+/* ===== STATUS ===== */
+.status {
+    padding:8px 18px;
+    border-radius:30px;
+    font-size:.8rem;
+    font-weight:800;
+    text-transform:uppercase;
+    letter-spacing:.4px;
+}
+
+
+.status-P { background:#fff3cd; color:#856404; }
+.status-A { background:#cce5ff; color:#004085; }
+.status-C { background:#d4edda; color:#155724; }
+.status-X { background:#f8d7da; color:#721c24; }
+
+/* ===== INFO ===== */
+.manut-info {
+    font-size:1rem;
+    color:#444;
+    line-height:1.55;
+}
+
+.manut-info strong {
+    font-weight:700;
+    color:#111;
+}
+
+/* ===== ENDEREÇO ===== */
+.manut-endereco {
+    font-size:.95rem;
+    color:#555;
+    line-height:1.4;
+}
+
+.manut-info + .manut-info {
+    font-size:1rem;
+    color:#333;
+    line-height:1.6;
+}
+
+/* ===== IMAGENS ===== */
+.manut-imagens {
+    display:flex;
+    gap:10px;
+    margin-top:6px;
+}
+
+.manut-imagens img {
+    width:64px;
+    height:64px;
+    object-fit:cover;
+    border-radius:12px;
+    box-shadow:0 4px 12px rgba(0,0,0,.15);
+}
+
+/* ===== AÇÕES ===== */
+.manut-acoes {
+    display:flex;
+    gap:10px;
+    margin-top:10px;
+}
+
+.manut-acoes a {
+    flex:1;
+    text-align:center;
+    padding:12px;
+    border-radius:16px;
+    font-weight:800;
+    text-decoration:none;
+    font-size:.9rem;
+}
+
+
+.btn-ver {
+    background:#2575fc;
+    color:#fff;
+}
+
+.btn-status {
+    background:#6a11cb;
+    color:#fff;
+}
+
+/* ===== DATA ===== */
+.manut-data {
+    font-size:.8rem;
+    color:#666;
+    text-align:center;
+}
+
+.manut-footer {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+    /* ===== FUNDO POR STATUS ===== */
+.status-bg-P {
+    background: linear-gradient(
+        90deg,
+        rgba(255,193,7,.15) 0%,
+        #fff 25%
+    );
+    border-left: 6px solid #ffc107;
+}
+
+.status-bg-A {
+    background: linear-gradient(
+        90deg,
+        rgba(13,110,253,.12) 0%,
+        #fff 25%
+    );
+    border-left: 6px solid #0d6efd;
+}
+
+.status-bg-C {
+    background: linear-gradient(
+        90deg,
+        rgba(40,167,69,.12) 0%,
+        #fff 25%
+    );
+    border-left: 6px solid #28a745;
+}
+
+.status-bg-X {
+    background: linear-gradient(
+        90deg,
+        rgba(220,53,69,.12) 0%,
+        #fff 25%
+    );
+    border-left: 6px solid #dc3545;
+}
+
+</style>
+
+<div class="manutencoes-container">
+
+    <div class="manutencoes-header">
+        <h1>🛠️ Manutenções Solicitadas</h1>
+    </div>
+
+    <div class="grid-manutencoes">
+        {% for m in manutencoes %}
+        <div class="manut-card status-bg-{{ m.status }}">
+
+            <div class="manut-top">
+                <div class="manut-brinquedo">
+                    {{ m.brinquedo.nome_brinquedo }}
+                </div>
+
+                <span class="status status-{{ m.status }}">
+                    {{ m.get_status_display }}
+                </span>
+            </div>
+
+            <div class="manut-info">
+                <strong>Cliente:</strong> {{ m.usuario }} <br>
+                <strong>Telefone:</strong> {{ m.telefone_contato }}
+            </div>
+
+            <div class="manut-info">
+                <strong>Problema:</strong><br>
+                {{ m.descricao|truncatechars:120 }}
+            </div>
+
+            <div class="manut-endereco">
+                📍 {{ m.endereco }}, {{ m.numero }} – {{ m.bairro }} <br>
+                {{ m.cidade }}/{{ m.estado }} • CEP {{ m.cep }}
+            </div>
+
+            {% if m.imagens.all %}
+            <div class="manut-imagens">
+                {% for img in m.imagens.all|slice:":3" %}
+                    <img src="{{ img.imagem.url }}">
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <div class="manut-footer">
+                <div class="manut-acoes">
+                    <a href="#" class="btn-ver">👁️ Ver</a>
+                    <a href="#" class="btn-status">🔄 Status</a>
+                </div>
+
+                <div class="manut-data">
+                    Criado em {{ m.criado_em|date:"d/m/Y H:i" }}
+                </div>
+            </div>
+
+
+              </div>
+        {% empty %}
+            <p>Nenhuma manutenção encontrada.</p>
+        {% endfor %}
+    </div>
+
+</div>
+
+{% endblock %}

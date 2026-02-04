@@ -1251,6 +1251,18 @@ class DashboardAdminView(View):
 from django.http import HttpResponseForbidden
 
 
+class ManutencaoAdminView(LoginRequiredMixin, View):
+
+    def get(self, request):
+        manutencoes = Manutencao.objects.all()
+
+
+        ctx = {
+            'manutencoes': manutencoes,
+        }
+        return render(request, 'manutencao_adm.html', ctx)
+
+
 class UserAdminView(LoginRequiredMixin, View):
     login_url = '/adm/login/'  # redireciona se não estiver logado
 
