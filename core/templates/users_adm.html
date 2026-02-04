@@ -1,105 +1,249 @@
 {% extends 'base_adm.html' %}
-{% block title %}Lista de Usuários{% endblock %}
+{% block title %}Usuários{% endblock %}
 
 {% block content %}
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f7f9fc;
-            padding: 30px;
-        }
+<style>
+/* ===== Variáveis ===== */
+:root {
+    --primary: #2563eb;
+    --primary-dark: #1e40af;
+    --bg: #f1f5f9;
+    --card: #ffffff;
+    --text: #0f172a;
+    --muted: #64748b;
+    --success: #16a34a;
+    --warning: #f59e0b;
+    --danger: #dc2626;
+    --radius: 16px;
+    --shadow: 0 10px 30px rgba(0,0,0,0.1);
+}
 
-        h1 {
-            text-align: center;
-            margin-bottom: 20px;
-            color: #111;
-        }
+/* ===== Container ===== */
+.page-container {
+    max-width: 1200px;
+    margin: auto;
+    padding: 20px;
+}
 
-        /* Apenas estilos específicos da tabela */
-    table {
-        width: 100%;
-        border-collapse: collapse;
-        background-color: #ffffff;
-        border-radius: 12px;
-        overflow: hidden;
-        box-shadow: 0 6px 18px rgba(0,0,0,0.1);
-        margin-top: 20px;
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.page-title {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--text);
+}
+
+.page-subtitle {
+    color: var(--muted);
+    font-size: 0.95rem;
+}
+
+/* ===== Card ===== */
+.card {
+    background: var(--card);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+}
+
+/* ===== Tabela ===== */
+.table-wrapper {
+    overflow-x: auto;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+thead {
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+}
+
+th {
+    padding: 16px;
+    text-align: left;
+    color: #fff;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    white-space: nowrap;
+}
+
+td {
+    padding: 14px 16px;
+    font-size: 0.95rem;
+    color: var(--text);
+    border-bottom: 1px solid #e5e7eb;
+    vertical-align: middle;
+}
+
+tbody tr {
+    transition: background 0.2s ease;
+}
+
+tbody tr:hover {
+    background: #f8fafc;
+}
+
+/* ===== Badges ===== */
+.role-badge {
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #fff;
+    display: inline-block;
+}
+
+.admin { background: var(--danger); }
+.staff { background: var(--warning); }
+.cliente { background: var(--success); }
+
+/* ===== Ações ===== */
+.actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.action-btn {
+    border: none;
+    padding: 6px 12px;
+    font-size: 0.8rem;
+    border-radius: 10px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: 0.25s;
+}
+
+.btn-edit {
+    background: var(--primary);
+    color: #fff;
+}
+
+.btn-edit:hover {
+    background: var(--primary-dark);
+}
+
+.btn-disable {
+    background: #e5e7eb;
+    color: #111;
+}
+
+.btn-disable:hover {
+    background: #cbd5f5;
+}
+
+.btn-disabled {
+    background: #f1f5f9;
+    color: #94a3b8;
+    cursor: not-allowed;
+}
+
+/* ===== Estado vazio ===== */
+.empty {
+    text-align: center;
+    padding: 40px;
+    color: var(--muted);
+}
+
+/* ===== Responsivo ===== */
+@media (max-width: 768px) {
+    th, td {
+        padding: 12px;
     }
-        th, td {
-            padding: 12px 16px;
-            text-align: left;
-        }
 
-        th {
-            background-color: #2563eb;
-            color: white;
-            font-weight: bold;
-        }
-
-        tr:nth-child(even) {
-            background-color: #f1f5f9;
-        }
-
-        tr:hover {
-            background-color: #e0f2fe;
-        }
-
-        td {
-            color: #111;
-            font-weight: 500;
-        }
-
-        .role-badge {
-            padding: 4px 8px;
-            border-radius: 6px;
-            font-size: 0.85rem;
-            color: white;
-            display: inline-block;
-        }
-
-        .admin { background-color: #dc2626; }
-        .staff { background-color: #f59e0b; }
-        .cliente { background-color: #16a34a; }
-    </style>
-
+    .page-title {
+        font-size: 1.4rem;
+    }
+}
+</style>
 
 <div class="page-container">
-    <h2 class="page-title">Lista de Usuários do Sistema</h2>
 
-    <table>
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Usuário</th>
-                <th>Email</th>
-                <th>Tipo</th>
-                <th>Criado em</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for perfil in perfis_clientes %}
-            <tr>
-                <td>{{ perfil.user.id }}</td>
-                <td>{{ perfil.user.username }}</td>
-                <td>{{ perfil.user.email }}</td>
-                <td>
-                    {% if perfil.user.is_superuser %}
-                        <span class="role-badge admin">Admin</span>
-                    {% elif perfil.user.is_staff %}
-                        <span class="role-badge staff">Staff</span>
-                    {% else %}
-                        <span class="role-badge cliente">Cliente</span>
-                    {% endif %}
-                </td>
-                <td>{{ perfil.criado_em|date:"d/m/Y H:i" }}</td>
-            </tr>
-            {% empty %}
-            <tr>
-                <td colspan="5" style="text-align:center;">Nenhum usuário encontrado.</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <!-- Header -->
+    <div class="page-header">
+        <div>
+            <h2 class="page-title">Usuários do Sistema</h2>
+            <div class="page-subtitle">
+                Gerencie clientes, staff e permissões (admins protegidos)
+            </div>
+        </div>
+    </div>
+
+    <!-- Card -->
+    <div class="card">
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Usuário</th>
+                        <th>Email</th>
+                        <th>Tipo</th>
+                        <th>Criado em</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for perfil in perfis_clientes %}
+                    <tr>
+                        <td>#{{ perfil.user.id }}</td>
+
+                        <td>
+                            <strong>{{ perfil.user.username }}</strong>
+                        </td>
+
+                        <td>{{ perfil.user.email|default:"—" }}</td>
+
+                        <td>
+                            {% if perfil.user.is_superuser %}
+                                <span class="role-badge admin">Admin</span>
+                            {% elif perfil.user.is_staff %}
+                                <span class="role-badge staff">Staff</span>
+                            {% else %}
+                                <span class="role-badge cliente">Cliente</span>
+                            {% endif %}
+                        </td>
+
+                        <td>{{ perfil.criado_em|date:"d/m/Y H:i" }}</td>
+
+                        <td>
+                            <div class="actions">
+                                {% if perfil.user.is_superuser %}
+                                    <button class="action-btn btn-disabled" disabled>
+                                        Protegido
+                                    </button>
+                                {% else %}
+                                    <button class="action-btn btn-edit">
+                                        Editar
+                                    </button>
+                                    <button class="action-btn btn-disable">
+                                        Desativar
+                                    </button>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="empty">
+                            🚫 Nenhum usuário encontrado
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
 </div>
-
 {% endblock %}

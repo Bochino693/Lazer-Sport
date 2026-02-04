@@ -1258,11 +1258,6 @@ class UserAdminView(LoginRequiredMixin, View):
         # Pegamos todos os perfis de clientes
         perfis_clientes = ClientePerfil.objects.select_related('user').all().order_by('user__id')
 
-        def dispatch(self, request, *args, **kwargs):
-            if not request.user.is_staff:  # só staff/admin pode acessar
-                return HttpResponseForbidden("Acesso negado")
-            return super().dispatch(request, *args, **kwargs)
-
         # Alternativamente, se quiser todos os usuários (admins, staff e clientes):
         # perfis_clientes = ClientePerfil.objects.select_related('user').all()
         # Para usuários sem perfil (apenas User):
