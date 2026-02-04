@@ -165,6 +165,39 @@ tbody tr:hover {
         font-size: 1.4rem;
     }
 }
+
+    /* ===== Cabeçalho da tabela – destaque máximo ===== */
+table thead {
+    background: linear-gradient(
+        135deg,
+        #0ea5e9,   /* azul vibrante */
+        #2563eb,
+        #1e40af
+    );
+    box-shadow: 0 6px 20px rgba(14, 165, 233, 0.45);
+}
+
+table thead th {
+    text-align: center;
+    color: #ffffff !important;
+    font-weight: 800;
+    font-size: 0.85rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 18px 14px;
+    border-bottom: none;
+    white-space: nowrap;
+}
+
+/* Separadores sutis entre colunas */
+table thead th:not(:last-child) {
+    border-right: 1px solid rgba(255,255,255,0.2);
+}
+
+/* Ajuste no body para combinar */
+table tbody td {
+    text-align: center;
+}
 </style>
 
 <div class="page-container">
