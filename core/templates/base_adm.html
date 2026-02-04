@@ -25,13 +25,25 @@
     color: var(--text-light);
   }
 
-    main.content {
-    background-color: var(--wrapper-bg);  /* cor do conteúdo */
+ /* Conteúdo principal */
+main.content {
+    background-color: var(--wrapper-bg);
     padding: 70px 25px 100px 25px;
     transition: margin-left 0.28s ease;
     min-height: 100vh;
-    border-radius: 16px; /* opcional: deixar mais moderno */
-  }
+    border-radius: 16px;
+    color: var(--text-light); /* mantém textos normais claros */
+}
+
+  /* Sobrescreve apenas os títulos para ficarem escuros */
+main.content h1,
+main.content h2,
+main.content h3,
+main.content h4,
+main.content h5,
+main.content h6 {
+    color: #000000; /* ou qualquer cinza escuro #111, #222 */
+}
 
   /* BOTÃO HAMBÚRGUER — destacado, SEM transformar em X */
   .hamburger {
