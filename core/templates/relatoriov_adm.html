@@ -1,0 +1,97 @@
+{% extends "base_adm.html" %}
+{% load humanize %}
+
+{% block content %}
+<div class="container-fluid">
+
+  <h1 class="mb-4">📊 Relatório de Vendas</h1>
+
+  <!-- FILTROS -->
+  <form method="get" class="row g-3 mb-4">
+    <div class="col-md-3">
+      <label>Data início</label>
+      <input type="date" name="data_inicio" class="form-control"
+             value="{{ filtros.data_inicio }}">
+    </div>
+
+    <div class="col-md-3">
+      <label>Data fim</label>
+      <input type="date" name="data_fim" class="form-control"
+             value="{{ filtros.data_fim }}">
+    </div>
+
+    <div class="col-md-3">
+      <label>Forma de pagamento</label>
+      <select name="forma_pagamento" class="form-control">
+        <option value="">Todas</option>
+        {% for key, label in formas_pagamento %}
+          <option value="{{ key }}"
+            {% if filtros.forma_pagamento == key %}selected{% endif %}>
+            {{ label }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="col-md-3 d-flex align-items-end">
+      <button class="btn btn-primary w-100">Filtrar</button>
+    </div>
+  </form>
+
+  <!-- RESUMO -->
+  <div class="row mb-4">
+    <div class="col-md-4">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <h6>Total de vendas</h6>
+          <h3>{{ total_vendas }}</h3>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <h6>Valor total</h6>
+          <h3>R$ {{ total_valor|floatformat:2 }}</h3>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TABELA -->
+  <div class="card shadow-sm">
+    <div class="card-body table-responsive">
+      <table class="table table-hover align-middle">
+        <thead>
+          <tr>
+            <th>Pedido</th>
+            <th>CPF</th>
+            <th>Forma</th>
+            <th>Valor pago</th>
+            <th>Data</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for venda in vendas %}
+          <tr>
+            <td>#{{ venda.pedido.id }}</td>
+            <td>{{ venda.cpf }}</td>
+            <td>{{ venda.get_forma_pagamento_display }}</td>
+            <td>R$ {{ venda.valor_pago|floatformat:2 }}</td>
+            <td>{{ venda.created_at|date:"d/m/Y H:i" }}</td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="5" class="text-center text-muted">
+              Nenhuma venda encontrada
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

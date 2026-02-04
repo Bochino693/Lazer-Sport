@@ -1282,26 +1282,67 @@ class UserAdminView(LoginRequiredMixin, View):
         return render(request, 'users_adm.html', context)
 
 
-from django.contrib.auth.mixins import LoginRequiredMixin
 
-from django.contrib import messages
-from django.contrib.auth.mixins import LoginRequiredMixin
-from django.urls import reverse_lazy
-from django.views.generic.edit import FormView
+from django.views.generic import TemplateView
+from django.db.models import Sum, Count
+from django.utils.timezone import now
+from datetime import datetime
+
+from models import Venda
+
+class RelatorioVendasView(TemplateView):
+    template_name = 'relatoriov.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        vendas = Venda.objects.filter(confirmado=True)
+
+        # filtros
+        data_inicio = self.request.GET.get('data_inicio')
+        data_fim = self.request.GET.get('data_fim')
+        forma_pagamento = self.request.GET.get('forma_pagamento')
+
+        if data_inicio:
+            vendas = vendas.filter(created_at__date__gte=data_inicio)
+
+        if data_fim:
+            vendas = vendas.filter(created_at__date__lte=data_fim)
+
+        if forma_pagamento:
+            vendas = vendas.filter(forma_pagamento=forma_pagamento)
+
+        # totais
+        context['total_vendas'] = vendas.count()
+        context['total_valor'] = vendas.aggregate(
+            total=Sum('valor_pago')
+        )['total'] or 0
+
+        context['vendas'] = vendas.select_related('pedido').order_by('-created_at')
+
+        context['formas_pagamento'] = [
+            ('pix', 'PIX'),
+            ('cartao', 'Cartão'),
+            ('dinheiro', 'Dinheiro'),
+            ('whatsapp', 'WhatsApp'),
+        ]
+
+        context['filtros'] = {
+            'data_inicio': data_inicio or '',
+            'data_fim': data_fim or '',
+            'forma_pagamento': forma_pagamento or '',
+        }
+
+        return context
+
+
 from .forms import ManutencaoForm
 from .models import Manutencao
 
-from django.shortcuts import render, redirect
-from django.views import View
-from django.contrib import messages
-from django.urls import reverse_lazy
 
-from django.contrib.contenttypes.models import ContentType
-from django.shortcuts import get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from .models import ItemCarrinho, Carrinho
 
-from django.http import JsonResponse
 
 
 def adicionar_ao_carrinho(request, tipo, object_id):
