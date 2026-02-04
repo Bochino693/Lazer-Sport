@@ -9,10 +9,28 @@
 
 <style>
   * { box-sizing: border-box; }
+
+:root {
+    --bg: #0f172a;          /* fundo geral da página */
+    --wrapper-bg: #1e293b;  /* fundo dos cards/conteúdo */
+    --text-light: #f1f5f9;  /* cor do texto */
+    --primary: #3b82f6;     /* azul principal */
+    --accent: #2563eb;      /* azul secundário */
+  }
+
   body {
     margin: 0;
     font-family: Arial, sans-serif;
-    background: #f7f9fc;
+    background-color: var(--bg);  /* usa a variável */
+    color: var(--text-light);
+  }
+
+    main.content {
+    background-color: var(--wrapper-bg);  /* cor do conteúdo */
+    padding: 70px 25px 100px 25px;
+    transition: margin-left 0.28s ease;
+    min-height: 100vh;
+    border-radius: 16px; /* opcional: deixar mais moderno */
   }
 
   /* BOTÃO HAMBÚRGUER — destacado, SEM transformar em X */
