@@ -1248,6 +1248,33 @@ class DashboardAdminView(View):
         return render(request, 'dashboard.html', ctx)
 
 
+from django.http import HttpResponseForbidden
+
+
+class UserAdminView(LoginRequiredMixin, View):
+    login_url = '/adm/login/'  # redireciona se não estiver logado
+
+    def get(self, request):
+        # Pegamos todos os perfis de clientes
+        perfis_clientes = ClientePerfil.objects.select_related('user').all().order_by('user__id')
+
+        def dispatch(self, request, *args, **kwargs):
+            if not request.user.is_staff:  # só staff/admin pode acessar
+                return HttpResponseForbidden("Acesso negado")
+            return super().dispatch(request, *args, **kwargs)
+
+        # Alternativamente, se quiser todos os usuários (admins, staff e clientes):
+        # perfis_clientes = ClientePerfil.objects.select_related('user').all()
+        # Para usuários sem perfil (apenas User):
+        # usuarios_sem_perfil = User.objects.exclude(perfil__isnull=False)
+        # aí você poderia combinar no template ou na view
+
+        context = {
+            'perfis_clientes': perfis_clientes
+        }
+        return render(request, 'usuarios_list.html', context)
+
+
 from django.contrib.auth.mixins import LoginRequiredMixin
 
 from django.contrib import messages

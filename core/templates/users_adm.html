@@ -1,10 +1,105 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-</head>
-<body>
+{% extends 'base_adm.html' %}
+{% block title %}Lista de Usuários{% endblock %}
 
-</body>
-</html>
+{% block content %}
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f7f9fc;
+            padding: 30px;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #111;
+        }
+
+        /* Apenas estilos específicos da tabela */
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        background-color: #ffffff;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 6px 18px rgba(0,0,0,0.1);
+        margin-top: 20px;
+    }
+        th, td {
+            padding: 12px 16px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #2563eb;
+            color: white;
+            font-weight: bold;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f1f5f9;
+        }
+
+        tr:hover {
+            background-color: #e0f2fe;
+        }
+
+        td {
+            color: #111;
+            font-weight: 500;
+        }
+
+        .role-badge {
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            color: white;
+            display: inline-block;
+        }
+
+        .admin { background-color: #dc2626; }
+        .staff { background-color: #f59e0b; }
+        .cliente { background-color: #16a34a; }
+    </style>
+
+
+<div class="page-container">
+    <h2 class="page-title">Lista de Usuários do Sistema</h2>
+
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Usuário</th>
+                <th>Email</th>
+                <th>Tipo</th>
+                <th>Criado em</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for perfil in perfis_clientes %}
+            <tr>
+                <td>{{ perfil.user.id }}</td>
+                <td>{{ perfil.user.username }}</td>
+                <td>{{ perfil.user.email }}</td>
+                <td>
+                    {% if perfil.user.is_superuser %}
+                        <span class="role-badge admin">Admin</span>
+                    {% elif perfil.user.is_staff %}
+                        <span class="role-badge staff">Staff</span>
+                    {% else %}
+                        <span class="role-badge cliente">Cliente</span>
+                    {% endif %}
+                </td>
+                <td>{{ perfil.criado_em|date:"d/m/Y H:i" }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="5" style="text-align:center;">Nenhum usuário encontrado.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% endblock %}
