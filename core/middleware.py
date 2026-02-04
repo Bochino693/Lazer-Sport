@@ -3,6 +3,9 @@ class SubdomainURLMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
+        # GARANTE que sempre existe
+        request.is_interno = False
+
         path = request.path
         host = request.get_host().split(':')[0].lower()
 
@@ -21,7 +24,5 @@ class SubdomainURLMiddleware:
             request.is_interno = True
         else:
             request.urlconf = 'core.urls'
-            request.is_interno = False
 
         return self.get_response(request)
-
