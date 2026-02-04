@@ -20,7 +20,8 @@ class SubdomainURLMiddleware:
             request.urlconf = 'sistema_interno.urls'
             request.is_interno = True
         else:
-            request.urlconf = 'core_site.urls'
+            request.urlconf = 'core.urls'
             request.is_interno = False
 
         return self.get_response(request)
+
