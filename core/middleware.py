@@ -1,5 +1,7 @@
+from django.conf import settings
 from django.shortcuts import render
 
+from django.http import HttpResponseServerError
 
 class GlobalExceptionMiddleware:
     def __init__(self, get_response):
@@ -7,13 +9,11 @@ class GlobalExceptionMiddleware:
 
     def __call__(self, request):
         try:
-            response = self.get_response(request)
-            return response
-
-        except Exception:
-            # Captura QUALQUER erro inesperado
+            return self.get_response(request)
+        except Exception as e:
+            if settings.DEBUG:
+                raise  # 🔥 deixa o Django mostrar o erro real
             return render(request, "500.html", status=500)
-
 
 class SubdomainURLMiddleware:
     def __init__(self, get_response):
