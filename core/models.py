@@ -43,6 +43,10 @@ class EnderecoEmpresa(Prime):
         return f"{self.nome} - {self.cidade}/{self.estado}"
 
 
+from django.db import models
+from django.db.models import F, UniqueConstraint
+from django.contrib.auth.models import User
+
 class ClientePerfil(models.Model):
     user = models.OneToOneField(
         User,
@@ -58,6 +62,13 @@ class ClientePerfil(models.Model):
     class Meta:
         verbose_name = "Perfil de Cliente"
         verbose_name_plural = "Perfis de Clientes"
+        constraints = [
+            UniqueConstraint(
+                fields=['user'],  # garante que cada user só tenha 1 perfil
+                name='unique_user_perfil'
+            ),
+        ]
+
 
 
 # --- AQUI embaixo vem o signal ---
