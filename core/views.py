@@ -1163,9 +1163,13 @@ class DashboardAdminView(View):
             data_inicio = None
 
         # Filtrar clientes
-        clientes_qs = ClientePerfil.objects.all()
+        # Filtrar clientes (somente usuários "clientes")
+        clientes_qs = ClientePerfil.objects.select_related('user').all()
         if data_inicio:
             clientes_qs = clientes_qs.filter(criado_em__gte=data_inicio)
+
+        # Filtrar apenas usuários que não são staff nem superusers
+        clientes_qs = clientes_qs.filter(user__is_staff=False, user__is_superuser=False)
         total_clientes = clientes_qs.count()
 
         # Filtrar pedidos
