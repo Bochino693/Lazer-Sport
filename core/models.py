@@ -46,6 +46,8 @@ class EnderecoEmpresa(Prime):
 from django.db import models
 from django.db.models import F, UniqueConstraint
 from django.contrib.auth.models import User
+from django.core.exceptions import ValidationError
+
 
 class ClientePerfil(models.Model):
     user = models.OneToOneField(
@@ -58,6 +60,11 @@ class ClientePerfil(models.Model):
 
     def __str__(self):
         return self.user.username
+
+    def clean(self):
+        if ClientePerfil.objects.filter(user__username=self.user.username, user__email=self.user.email).exclude(
+                pk=self.pk).exists():
+            raise ValidationError("Já existe um perfil com esse usuário e email.")
 
     class Meta:
         verbose_name = "Perfil de Cliente"
