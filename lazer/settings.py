@@ -98,16 +98,18 @@ MIDDLEWARE = [
 
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
+
+    # 🔥 AQUI — antes de auth / csrf
+    'core.middleware.SubdomainURLMiddleware',
+
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-
     'allauth.account.middleware.AccountMiddleware',
-
-    'core.middleware.SubdomainURLMiddleware',
 
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
 
 ROOT_URLCONF = 'lazer.urls'
 

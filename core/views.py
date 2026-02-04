@@ -1288,7 +1288,7 @@ from django.db.models import Sum, Count
 from django.utils.timezone import now
 from datetime import datetime
 
-from models import Venda
+from .models import Venda
 
 class RelatorioVendasView(TemplateView):
     template_name = 'relatoriov.html'
