@@ -1298,27 +1298,25 @@ class RelatorioVendasView(TemplateView):
 
         vendas = Venda.objects.filter(confirmado=True)
 
-        # filtros
         data_inicio = self.request.GET.get('data_inicio')
         data_fim = self.request.GET.get('data_fim')
         forma_pagamento = self.request.GET.get('forma_pagamento')
 
         if data_inicio:
-            vendas = vendas.filter(created_at__date__gte=data_inicio)
+            vendas = vendas.filter(criacao__date__gte=data_inicio)
 
         if data_fim:
-            vendas = vendas.filter(created_at__date__lte=data_fim)
+            vendas = vendas.filter(criacao__date__lte=data_fim)
 
         if forma_pagamento:
             vendas = vendas.filter(forma_pagamento=forma_pagamento)
 
-        # totais
         context['total_vendas'] = vendas.count()
         context['total_valor'] = vendas.aggregate(
             total=Sum('valor_pago')
         )['total'] or 0
 
-        context['vendas'] = vendas.select_related('pedido').order_by('-created_at')
+        context['vendas'] = vendas.select_related('pedido').order_by('-criacao')
 
         context['formas_pagamento'] = [
             ('pix', 'PIX'),
@@ -1334,6 +1332,7 @@ class RelatorioVendasView(TemplateView):
         }
 
         return context
+
 
 
 from .forms import ManutencaoForm
