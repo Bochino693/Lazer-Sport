@@ -42,12 +42,12 @@ SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key")
 DEBUG = ENVIRONMENT != "production"
 
 ALLOWED_HOSTS = [
-    "lazer-sport-1.onrender.com",
     "lazerandsport.onrender.com",
     "lazersport.com.br",
     "www.lazersport.com.br",
     "interno.lazersport.com.br",
     "localhost",
+    "interno.localhost:8000",
     "127.0.0.1",
     "0.0.0.0",
 ]
@@ -106,9 +106,6 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 
-    # 👇 SEMPRE POR ÚLTIMO
-
-    'core.middleware.GlobalExceptionMiddleware',
 
 ]
 
