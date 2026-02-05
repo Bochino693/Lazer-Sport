@@ -9,7 +9,7 @@ from .views import (HomeView, BrinquedoInfoView, CategoriasInfoView, BrinquedosV
                     limpar_carrinho, cancelar_manutencao,
                     PaymentView, MeusPedidosView, criar_pedido_pix, PaymentFinallyView, processar_cartao,
                     EventoAdminView, BannerAdminView, BannerDeleteView, AdminLoginView, AcessoNegadoView,
-                    DashboardAdminView, UserAdminView, ManutencaoAdminView, RelatorioVendasView
+                    DashboardAdminView, UserAdminView, ManutencaoAdminView, RelatorioVendasView, PedidoAdminView
                     )
 from django.conf import settings
 from django.conf.urls.static import static
@@ -71,6 +71,7 @@ urlpatterns = [
 
     path('adm/banners/', BannerAdminView.as_view(), name='banner_adm'),
     path('adm/banners/excluir/<int:pk>/', BannerDeleteView.as_view(), name='banner_delete'),
+    path('adm/pedidos/', PedidoAdminView.as_view(), name='pedidos_adm'),
 
     path("adm/promocoes/", PromocaoAdminView.as_view(), name="promocoes_admin"),
     path("adm/promocoes/<int:pk>/delete/", PromocaoDeleteView.as_view(), name='promocao_delete'),

@@ -877,6 +877,19 @@ class EventoAdminView(AdminOnlyMixin, View):
         return JsonResponse({"success": False})
 
 
+class PedidoAdminView(AdminOnlyMixin, View):
+
+    def get(self, request):
+
+        pedidos = Pedido.objects.all()
+
+        ctx = {
+            'pedidos': pedidos,
+        }
+        return render(request, 'pedidos_adm.html', ctx)
+
+
+
 class RegistrarView(View):
     template_name = "register.html"
 

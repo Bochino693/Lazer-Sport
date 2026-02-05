@@ -1,0 +1,461 @@
+{% extends "base_adm.html" %}
+{% block content %}
+
+<style>
+
+    .page-container{
+    padding: 20px 30px;
+}
+
+.content-area{
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+    .valor {
+    font-weight: 700;
+    font-size: 15px;
+}
+
+/* Container principal com maior prioridade */
+.pedidos-wrapper {
+    background: linear-gradient(180deg, #ffffff 0%, #f7faff 100%) !important;
+    padding: 30px !important;
+    border-radius: 16px !important;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.08) !important;
+    margin: 20px 0;
+}
+
+/* Título */
+.pedidos-wrapper h1 {
+    margin: 0;
+    font-size: 28px;
+    font-weight: 700;
+    -webkit-background-clip: initial !important;
+    -webkit-text-fill-color: #000 !important;
+    color: #000 !important;
+}
+
+/* Topbar */
+.pedidos-wrapper .topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+}
+
+/* Tabela */
+.pedidos-wrapper .modern-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+/* Cabeçalho vibrante */
+/* Cabeçalho da tabela com texto branco */
+.pedidos-wrapper .modern-table thead th {
+    color: #ffffff !important;
+    background: linear-gradient(90deg, #2563eb, #1e40af) !important;
+    padding: 16px;
+    text-transform: uppercase;
+    font-size: 12px;
+    letter-spacing: 0.6px;
+    text-align: center; /* centraliza horizontalmente */
+
+}
+
+/* Linhas */
+.pedidos-wrapper .modern-table td {
+    padding: 16px;
+    text-align: center;
+}
+
+.pedidos-wrapper .modern-table tbody tr {
+    border-bottom: 1px solid #eef2ff;
+    transition: 0.2s ease;
+}
+
+.pedidos-wrapper .modern-table tbody tr:hover {
+    background: #f0f4ff !important;
+    transform: scale(1.002);
+}
+
+/* Destaques */
+.id {
+    font-weight: 700;
+    color: #4f46e5;
+}
+
+.valor {
+    font-weight: 700;
+    color: #059669;
+}
+
+/* Badges modernos */
+.badge {
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+}
+
+/* Cores vivas */
+.status-pendente {
+    background: #fff4e5;
+    color: #ff8800;
+}
+
+.status-aprovado {
+    background: #e6fff3;
+    color: #00a86b;
+}
+
+.status-cancelado {
+    background: #ffeaea;
+    color: #ff3b3b;
+}
+
+/* Botão moderno */
+.btn-view {
+    background: linear-gradient(90deg, #2563eb, #7c3aed);
+    color: white;
+    padding: 8px 14px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 13px;
+    transition: 0.2s ease;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+}
+
+.btn-view:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(124, 58, 237, 0.35);
+}
+
+/* Estado vazio */
+.empty {
+    padding: 40px;
+    text-align: center;
+    color: #6b7280;
+    font-size: 16px;
+}
+
+
+.modal-bg {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+}
+
+/* CAIXA DO MODAL */
+.modal-box {
+    width: 900px;
+    max-width: 95%;
+    background: #ffffff !important;
+    border-radius: 16px;
+    padding: 25px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+    animation: aparecer .18s ease;
+}
+
+/* GARANTE TEXTO ESCURO SEM QUEBRAR HERANÇA */
+.modal-box h1,
+.modal-box h2,
+.modal-box h3,
+.modal-box h4,
+.modal-box p,
+.modal-box span,
+.modal-box strong,
+.modal-box td,
+.modal-box th,
+.modal-box div {
+    color: #111 !important;
+}
+
+/* Cabeçalho */
+.modal-header {
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:20px;
+}
+
+.modal-header h2 {
+    color:#000 !important;
+}
+
+.close {
+    font-size:26px;
+    cursor:pointer;
+    font-weight:700;
+    color:#000 !important;
+}
+
+/* GRID */
+.modal-grid {
+    display:grid;
+    grid-template-columns: repeat(3,1fr);
+    gap:14px;
+}
+
+/* CARDS INTERNOS */
+.info-box {
+    background:#f7faff !important;
+    padding:12px;
+    border-radius:10px;
+    box-shadow:0 4px 10px rgba(0,0,0,0.05);
+}
+
+.info-box h3 {
+    margin:0 0 6px 0;
+    font-size:13px;
+    color:#2563eb !important;
+}
+
+/* TABELA */
+.modal-table {
+    width:100%;
+    margin-top:10px;
+    border-collapse:collapse;
+    background:#fff;
+}
+
+.modal-table th {
+    background:#111827;
+    color:#fff !important;
+    padding:8px;
+}
+
+.modal-table td {
+    padding:8px;
+    border-bottom:1px solid #eee;
+    color:#111 !important;
+    text-align: center;
+    vertical-align: middle;
+}
+
+@keyframes aparecer {
+    from { transform: translateY(20px); opacity:0; }
+    to { transform: translateY(0); opacity:1; }
+}
+</style>
+
+
+<div class="page-container">
+    <div class="content-area">
+        <div class="pedidos-wrapper">
+            <div class="topbar">
+                <h1>📦 Painel de Pedidos</h1>
+            </div>
+
+{% if pedidos %}
+<div class="table-responsive">
+    <table class="modern-table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Cliente</th>
+                <th>Itens</th>
+                <th>Bruto</th>
+                <th>Desconto</th>
+                <th>Líquido</th>
+                <th>Pagamento</th>
+                <th>Status</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            {% for pedido in pedidos %}
+            <tr>
+                <td class="id">#{{ pedido.id }}</td>
+                <td>{{ pedido.cliente }}</td>
+                <td>{{ pedido.itens.count }} itens</td>
+
+                <td class="valor">
+                    R$ {{ pedido.total_bruto|default:"0,00" }}
+                </td>
+
+                <td>
+                    <span style="color:#ff3b3b;font-weight:600;">
+                        - R$ {{ pedido.valor_desconto|default:"0,00" }}
+                    </span>
+                </td>
+
+                <td class="valor">
+                    R$ {{ pedido.total_liquido|default:"0,00" }}
+                </td>
+
+                <td>
+                    {{ pedido.get_forma_pagamento_display|default:"—" }}
+                </td>
+
+                <td>
+                    <span class="badge">
+                        {{ pedido.get_status_display }}
+                    </span>
+                </td>
+
+                <td>
+                    <a href="#" class="btn-view"
+                       onclick="abrirModalPedido({{ pedido.id }}); return false;">
+                       Ver Pedido
+                    </a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+<!-- MODAL PRINCIPAL -->
+<div id="modalPedido" class="modal-bg">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h2>📦 Detalhes do Pedido</h2>
+            <span class="close" onclick="fecharModal()">×</span>
+        </div>
+
+        <div id="conteudoPedido"></div>
+    </div>
+</div>
+
+
+<!-- DADOS OCULTOS DE CADA PEDIDO -->
+{% for pedido in pedidos %}
+<div id="pedido-data-{{ pedido.id }}" style="display:none">
+
+    <div class="modal-grid">
+
+        <div class="info-box">
+            <h3>👤 Cliente</h3>
+            <p>
+                {{ pedido.cliente.user.username|default:"—" }}
+            </p>
+        </div>
+
+        <div class="info-box">
+            <h3>📊 Status</h3>
+            <p>{{ pedido.get_status_display }}</p>
+        </div>
+
+        <div class="info-box">
+            <h3>💳 Pagamento</h3>
+            <p>{{ pedido.get_forma_pagamento_display|default:"—" }}</p>
+        </div>
+
+        <div class="info-box">
+            <h3>💰 Totais</h3>
+            <p>Bruto: R$ {{ pedido.total_bruto }}</p>
+            <p>Desconto: R$ {{ pedido.valor_desconto }}</p>
+            <p><strong>Líquido: R$ {{ pedido.total_liquido }}</strong></p>
+        </div>
+
+        <div class="info-box">
+            <h3>🏷 Cupom</h3>
+            <p>Código {{ pedido.cupom_codigo|default:"—" }}</p>
+            <p>Desconto Percentual {{ pedido.cupom_percentual|default:"0" }}%</p>
+        </div>
+
+        <div class="info-box">
+            <h3>🚚 Logística</h3>
+            <p>Distância: {{ pedido.distancia_km|default:"—" }} km</p>
+            <p>Tempo: {{ pedido.tempo_estimado_min|default:"—" }} min</p>
+        </div>
+
+    </div>
+
+    {% if pedido.endereco %}
+    <div class="info-box" style="margin-top:15px;">
+        <h3>📍 Endereço de Entrega</h3>
+
+        <p>
+            {{ pedido.endereco.rua }}, {{ pedido.endereco.numero }}
+            {% if pedido.endereco.complemento %}
+                - {{ pedido.endereco.complemento }}
+            {% endif %}
+        </p>
+
+        <p>
+            {{ pedido.endereco.bairro }} -
+            {{ pedido.endereco.cidade }}/{{ pedido.endereco.estado }}
+        </p>
+
+        <p>CEP: {{ pedido.endereco.cep }}</p>
+        <p>Telefone: {{ pedido.endereco.telefone|default:"—" }}</p>
+    </div>
+    {% endif %}
+
+    {% if pedido.observacoes %}
+    <div class="info-box" style="margin-top:15px;">
+        <h3>📝 Observações do Cliente</h3>
+        <p>{{ pedido.observacoes }}</p>
+    </div>
+    {% endif %}
+
+    <h3 style="margin-top:20px;">📦 Itens do Pedido</h3>
+
+    <table class="modal-table">
+        <tr>
+            <th>Item</th>
+            <th>Tipo</th>
+            <th>Qtd</th>
+            <th>Valor Unit</th>
+            <th>Subtotal</th>
+        </tr>
+
+        {% for item in pedido.itens.all %}
+        <tr>
+            <td>{{ item.nome_item }}</td>
+            <td>{{ item.get_tipo_item_display }}</td>
+            <td>{{ item.quantidade }}</td>
+            <td>R$ {{ item.preco_unitario }}</td>
+            <td><strong>R$ {{ item.subtotal }}</strong></td>
+        </tr>
+        {% endfor %}
+    </table>
+
+</div>
+{% endfor %}
+
+        </div> <!-- fecha pedidos-wrapper -->
+    </div> <!-- fecha content-area -->
+</div> <!-- fecha page-container -->
+
+
+<script>
+function abrirModalPedido(id) {
+    const modal = document.getElementById('modalPedido');
+    const conteudo = document.getElementById('conteudoPedido');
+    const dados = document.getElementById('pedido-data-' + id);
+
+    if (!dados) return;
+
+    conteudo.innerHTML = dados.innerHTML;
+    modal.style.display = 'flex';
+}
+
+function fecharModal() {
+    document.getElementById('modalPedido').style.display = 'none';
+}
+
+// fechar clicando fora
+window.onclick = function(event) {
+    const modal = document.getElementById('modalPedido');
+    if (event.target === modal) {
+        fecharModal();
+    }
+}
+</script>
+
+{% endblock %}
