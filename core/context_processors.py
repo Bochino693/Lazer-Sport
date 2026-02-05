@@ -98,3 +98,34 @@ def pedidos_ativos_context(request):
         'tem_pedidos_ativos': pedidos_ativos.exists(),
         'total_pedidos_ativos': pedidos_ativos.count()
     }
+
+
+def admin_alertas_context(request):
+    if not request.user.is_authenticated:
+        return {}
+
+    if not request.user.is_staff:
+        return {}
+
+    # PEDIDOS que precisam de ação
+    pedidos_alerta = Pedido.objects.filter(
+        status__in=[
+            'criado',
+            'aguardando_pagamento',
+            'pago',
+            'em_preparacao'
+        ]
+    ).count()
+
+    # MANUTENÇÕES abertas
+    manutencoes_alerta = Manutencao.objects.filter(
+        status__in=['P', 'A']
+    ).count()
+
+    return {
+        'pedidos_alerta': pedidos_alerta,
+        'tem_pedidos_alerta': pedidos_alerta > 0,
+
+        'manutencoes_alerta': manutencoes_alerta,
+        'tem_manutencoes_alerta': manutencoes_alerta > 0,
+    }

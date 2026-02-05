@@ -129,6 +129,7 @@ TEMPLATES = [
                 'core.context_processors.manutencao_notificacao',
                 'core.context_processors.carrinho_context',
                 'core.context_processors.pedidos_ativos_context',
+                'core.context_processors.admin_alertas_context',
 
             ],
         },
