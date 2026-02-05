@@ -13,8 +13,21 @@ from .views import (HomeView, BrinquedoInfoView, CategoriasInfoView, BrinquedosV
                     )
 from django.conf import settings
 from django.conf.urls.static import static
+from django.views.generic import RedirectView
+from django.urls import reverse_lazy
 
 urlpatterns = [
+
+    path(
+        'loja/',
+        RedirectView.as_view(url=reverse_lazy('brinquedos'), permanent=True)
+    ),
+
+    path('lancamentos/', RedirectView.as_view(url=reverse_lazy('brinquedos'))),
+
+    path('showroom/', RedirectView.as_view(url=reverse_lazy('eventos'))),
+
+    path('contato/', RedirectView.as_view(url='/?#contato')),
     path('', HomeView.as_view(), name='home'),
 
 
