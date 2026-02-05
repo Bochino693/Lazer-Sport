@@ -20,14 +20,36 @@ urlpatterns = [
 
     path(
         'loja/',
-        RedirectView.as_view(url=reverse_lazy('brinquedos'), permanent=True)
+        RedirectView.as_view(
+            url=reverse_lazy('brinquedos') + '#brinquedos',
+            permanent=True
+        )
     ),
 
-    path('lancamentos/', RedirectView.as_view(url=reverse_lazy('brinquedos'))),
+    path(
+        'lancamentos/',
+        RedirectView.as_view(
+            url=reverse_lazy('brinquedos') + '#brinquedos',
+            permanent=True
+        )
+    ),
 
-    path('showroom/', RedirectView.as_view(url=reverse_lazy('eventos'))),
+    path(
+        'showroom/',
+        RedirectView.as_view(
+            url=reverse_lazy('eventos') + '#todos-eventos',
+            permanent=True
+        )
+    ),
 
-    path('contato/', RedirectView.as_view(url='/?#contato')),
+    path(
+        'contato/',
+        RedirectView.as_view(
+            url=reverse_lazy('home') + '#contato',
+            permanent=True
+        )
+    ),
+
     path('', HomeView.as_view(), name='home'),
 
 
