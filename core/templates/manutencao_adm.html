@@ -210,17 +210,7 @@
     backdrop-filter: blur(4px);
 }
 
-.modal-content {
-    position: relative;
-    background: #fff;
-    max-width: 720px;
-    width: 92%;
-    margin: 6vh auto;
-    border-radius: 26px;
-    padding: 30px;
-    box-shadow: 0 30px 80px rgba(0,0,0,.35);
-    animation: modalIn .3s ease;
-}
+
 
 @keyframes modalIn {
     from { opacity:0; transform:translateY(20px) scale(.96); }
@@ -245,26 +235,44 @@
     display:block;
     margin-bottom:6px;
 }
-
-.modal-imagens {
-    display:grid;
-    grid-template-columns:repeat(auto-fill,minmax(120px,1fr));
-    gap:12px;
+/* FUNDO */
+#modalManutencao .modal-content {
+    text-align: center;
 }
 
-.modal-imagens img {
-    width:100%;
-    height:120px;
-    object-fit:cover;
-    border-radius:14px;
-    cursor:pointer;
-    transition:.2s;
+/* FORÇA TEXTO ESCURO (sobrescreve herança branca) */
+#modalManutencao h2,
+#modalManutencao p,
+#modalManutencao strong,
+#modalManutencao span {
+    color: #111 !important;
 }
 
-.modal-imagens img:hover {
-    transform:scale(1.05);
+/* Título principal */
+#modalManutencao h2 {
+    color: #000 !important;
+    font-weight: 700;
+    margin-bottom: 10px;
 }
 
+/* Seções */
+#modalManutencao .modal-section {
+    text-align: center;
+    margin-top: 15px;
+}
+
+/* Status badge (opcional, melhora contraste) */
+#modalManutencao .status {
+    color: #fff !important;
+}
+
+/* Imagens centralizadas */
+#modalManutencao .modal-imagens {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
 
 .lightbox {
     position:fixed;

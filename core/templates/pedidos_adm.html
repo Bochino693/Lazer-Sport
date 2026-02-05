@@ -417,7 +417,7 @@
         {% for item in pedido.itens.all %}
         <tr>
             <td>{{ item.nome_item }}</td>
-            <td>{{ item.get_tipo_item_display }}</td>
+            <td>{{ item.get_tipo_item_display|upper }}</td>
             <td>{{ item.quantidade }}</td>
             <td>R$ {{ item.preco_unitario }}</td>
             <td><strong>R$ {{ item.subtotal }}</strong></td>
