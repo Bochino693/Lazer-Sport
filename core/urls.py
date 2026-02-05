@@ -5,11 +5,15 @@ from .views import (HomeView, BrinquedoInfoView, CategoriasInfoView, BrinquedosV
                     BrinquedoAdmin, NovaCategoria, NovaTag, ComboListView, ComboCreateView,
                     ComboUpdateView, ComboDeleteView, CupomAdminView, PromocaoDeleteView, ProjetoAdminView,
                     EstabelecimentoInfoView, EstabelecimentosListView, ManutencaoView, PromocaoAdminView,
-                    PromocaoDeleteView, adicionar_ao_carrinho, carrinho_view, aplicar_cupom,  remover_item_carrinho,
+                    PromocaoDeleteView, adicionar_ao_carrinho, carrinho_view, aplicar_cupom, remover_item_carrinho,
                     limpar_carrinho, cancelar_manutencao,
                     PaymentView, MeusPedidosView, criar_pedido_pix, PaymentFinallyView, processar_cartao,
                     EventoAdminView, BannerAdminView, BannerDeleteView, AdminLoginView, AcessoNegadoView,
-                    DashboardAdminView, UserAdminView, ManutencaoAdminView, RelatorioVendasView, PedidoAdminView
+                    DashboardAdminView, UserAdminView, ManutencaoAdminView, RelatorioVendasView, PedidoAdminView,
+                    redirecionar_loja,
+                    redirecionar_lancamentos,
+                    redirecionar_showroom,
+                    redirecionar_contato,
                     )
 from django.conf import settings
 from django.conf.urls.static import static
@@ -18,40 +22,11 @@ from django.urls import reverse_lazy
 
 urlpatterns = [
 
-    path(
-        'loja/',
-        RedirectView.as_view(
-            url=reverse_lazy('brinquedos') + '#brinquedos',
-            permanent=True
-        )
-    ),
-
-    path(
-        'lancamentos/',
-        RedirectView.as_view(
-            url=reverse_lazy('brinquedos') + '#brinquedos',
-            permanent=True
-        )
-    ),
-
-    path(
-        'showroom/',
-        RedirectView.as_view(
-            url=reverse_lazy('eventos') + '#todos-eventos',
-            permanent=True
-        )
-    ),
-
-    path(
-        'contato/',
-        RedirectView.as_view(
-            url=reverse_lazy('home') + '#contato',
-            permanent=True
-        )
-    ),
-
     path('', HomeView.as_view(), name='home'),
-
+    path('loja/', redirecionar_loja),
+    path('lancamentos/', redirecionar_lancamentos),
+    path('showroom/', redirecionar_showroom),
+    path('contato/', redirecionar_contato),
 
     path('brinquedos/', BrinquedosView.as_view(), name='brinquedos'),
     path("brinquedo/<int:id>/", BrinquedoInfoView.as_view(), name="brinquedo_detalhe"),
@@ -71,13 +46,11 @@ urlpatterns = [
     ),
     path("manutencoes/cancelar/", cancelar_manutencao, name="cancelar_manutencao"),
 
-
     path(
         'carrinho/',
         carrinho_view,
         name='carrinho'
     ),
-
 
     path(
         'carrinho/adicionar/<str:tipo>/<int:object_id>/',
@@ -90,10 +63,8 @@ urlpatterns = [
 
     path('carrinho/aplicar-cupom/', aplicar_cupom, name='aplicar_cupom'),
 
-
     path("eventos/", EventosView.as_view(), name='eventos'),
     path("projetos/", ProjetosView.as_view(), name='projetos'),
-
 
     path('adm/brinquedos/', BrinquedoAdmin.as_view(), name='brinquedos_admin'),
     path('categoria/admin/new/', NovaCategoria.as_view(), name='categoria_new'),
@@ -115,7 +86,6 @@ urlpatterns = [
     path("adm/clients/", UserAdminView.as_view(), name='clients'),
     path("adm/manutencoes/", ManutencaoAdminView.as_view(), name='manutencoes_adm'),
     path('adm/relatorios-vendas/', RelatorioVendasView.as_view(), name='relatorio_vendas'),
-
 
     path("adm/eventos/", EventoAdminView.as_view(), name="eventos_admin"),
     path("adm/cupons/", CupomAdminView.as_view(), name="cupons_admin"),
@@ -144,7 +114,5 @@ urlpatterns = [
     path("logout/", LogoutUsuarioView.as_view(), name="logout"),
     path("registrar/", RegistrarView.as_view(), name="registrar"),
 
-
     path('acesso-negado/', AcessoNegadoView.as_view(), name='acesso_negado'),
 ]
-

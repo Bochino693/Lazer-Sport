@@ -1836,3 +1836,19 @@ class MeusPedidosView(LoginRequiredMixin, View):
             'pedidos': pedidos,
             'empresa': empresa
         })
+
+
+from django.shortcuts import redirect
+from django.urls import reverse
+
+def redirecionar_loja(request):
+    return redirect(reverse('brinquedos') + '#brinquedos')
+
+def redirecionar_lancamentos(request):
+    return redirect(reverse('brinquedos') + '#brinquedos')
+
+def redirecionar_showroom(request):
+    return redirect(reverse('eventos') + '#todos-eventos')
+
+def redirecionar_contato(request):
+    return redirect(reverse('home') + '#contato')
