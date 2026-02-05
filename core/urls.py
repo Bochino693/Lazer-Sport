@@ -10,10 +10,8 @@ from .views import (HomeView, BrinquedoInfoView, CategoriasInfoView, BrinquedosV
                     PaymentView, MeusPedidosView, criar_pedido_pix, PaymentFinallyView, processar_cartao,
                     EventoAdminView, BannerAdminView, BannerDeleteView, AdminLoginView, AcessoNegadoView,
                     DashboardAdminView, UserAdminView, ManutencaoAdminView, RelatorioVendasView, PedidoAdminView,
-                    redirecionar_loja, redirecionar_categoria_brinquedos,
-                    redirecionar_lancamentos,
-                    redirecionar_showroom,
-                    redirecionar_contato,
+                    redirecionar_loja, redirecionar_categoria_brinquedos, redirecionar_categoria_aventura, redirecionar_lancamentos,
+                    redirecionar_showroom, redirecionar_contato,
                     )
 from django.conf import settings
 from django.conf.urls.static import static
@@ -27,10 +25,11 @@ urlpatterns = [
     path('lancamentos/', redirecionar_lancamentos),
     path('nosso-showroom/', redirecionar_showroom),
     path('contato/', redirecionar_contato),
-path(
-    'categoria-produto/brinquedos/',
-    redirecionar_categoria_brinquedos
-),
+    path('categoria-produto/brinquedos/', redirecionar_categoria_brinquedos),
+    path(
+        'categoria-produto/aventura/',
+        redirecionar_categoria_aventura
+    ),
 
     path('brinquedos/', BrinquedosView.as_view(), name='brinquedos'),
     path("brinquedo/<int:id>/", BrinquedoInfoView.as_view(), name="brinquedo_detalhe"),

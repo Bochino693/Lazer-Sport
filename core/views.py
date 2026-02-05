@@ -1855,3 +1855,6 @@ def redirecionar_contato(request):
 
 def redirecionar_categoria_brinquedos(request):
     return redirect(reverse('brinquedo_detalhe', args=[12]))
+
+def redirecionar_categoria_aventura(request):
+    return redirect(reverse('categoria_detalhe', args=[12]))
