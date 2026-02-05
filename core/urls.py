@@ -10,7 +10,7 @@ from .views import (HomeView, BrinquedoInfoView, CategoriasInfoView, BrinquedosV
                     PaymentView, MeusPedidosView, criar_pedido_pix, PaymentFinallyView, processar_cartao,
                     EventoAdminView, BannerAdminView, BannerDeleteView, AdminLoginView, AcessoNegadoView,
                     DashboardAdminView, UserAdminView, ManutencaoAdminView, RelatorioVendasView, PedidoAdminView,
-                    redirecionar_loja,
+                    redirecionar_loja, redirecionar_categoria_brinquedos,
                     redirecionar_lancamentos,
                     redirecionar_showroom,
                     redirecionar_contato,
@@ -27,6 +27,10 @@ urlpatterns = [
     path('lancamentos/', redirecionar_lancamentos),
     path('nosso-showroom/', redirecionar_showroom),
     path('contato/', redirecionar_contato),
+path(
+    'categoria-produto/brinquedos/',
+    redirecionar_categoria_brinquedos
+),
 
     path('brinquedos/', BrinquedosView.as_view(), name='brinquedos'),
     path("brinquedo/<int:id>/", BrinquedoInfoView.as_view(), name="brinquedo_detalhe"),

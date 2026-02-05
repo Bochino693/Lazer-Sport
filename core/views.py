@@ -1852,3 +1852,6 @@ def redirecionar_showroom(request):
 
 def redirecionar_contato(request):
     return redirect(reverse('home') + '#contato')
+
+def redirecionar_categoria_brinquedos(request):
+    return redirect(reverse('brinquedo_detalhe', args=[12]))
