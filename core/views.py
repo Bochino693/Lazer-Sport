@@ -1842,10 +1842,10 @@ from django.shortcuts import redirect
 from django.urls import reverse
 
 def redirecionar_loja(request):
-    return redirect(reverse('brinquedos') + '#brinquedos')
+    return redirect(reverse('brinquedos') + '#grid-cards')
 
 def redirecionar_lancamentos(request):
-    return redirect(reverse('brinquedos') + '#brinquedos')
+    return redirect(reverse('brinquedos') + '#grid-cards')
 
 def redirecionar_showroom(request):
     return redirect(reverse('eventos') + '#todos-eventos')
