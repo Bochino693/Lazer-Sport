@@ -25,7 +25,7 @@ urlpatterns = [
     path('', HomeView.as_view(), name='home'),
     path('loja/', redirecionar_loja),
     path('lancamentos/', redirecionar_lancamentos),
-    path('showroom/', redirecionar_showroom),
+    path('nosso-showroom/', redirecionar_showroom),
     path('contato/', redirecionar_contato),
 
     path('brinquedos/', BrinquedosView.as_view(), name='brinquedos'),
