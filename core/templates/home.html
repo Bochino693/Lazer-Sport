@@ -671,6 +671,7 @@ body {
 }
 
 /* imagem */
+/* padrão (desktop) — mantém visual atual */
 .card-produto .img-area {
     height: 200px;
     overflow: hidden;
@@ -685,6 +686,22 @@ body {
 
 .card-produto:hover .img-area img {
     transform: scale(1.08);
+}
+
+/* MOBILE — mostrar imagem completa */
+@media (max-width: 768px) {
+    .card-produto .img-area {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #fff;
+        padding: 6px; /* cria o "afastamento" quando precisar */
+    }
+
+    .card-produto .img-area img {
+        object-fit: contain; /* mostra a imagem inteira */
+        transform: none;     /* evita zoom estranho no mobile */
+    }
 }
 
 /* conteúdo */
