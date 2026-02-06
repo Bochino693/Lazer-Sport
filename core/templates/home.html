@@ -96,20 +96,21 @@ body {
 }
 
 .carousel-wrapper {
-  position: relative;
   width: 100%;
-  height: 500px;
+  aspect-ratio: 16 / 7;
+  max-height: 520px;
 }
 
 .carousel-slide {
   width: 100%;
   height: 100%;
-  object-fit: contain;   /* MOSTRA IMAGEM COMPLETA */
+  object-fit: contain;
+  object-position: center;
   background: #000;
   position: absolute;
   inset: 0;
   opacity: 0;
-  transition: opacity .6s ease;
+  transition: opacity .5s ease;
 }
 
 .carousel-slide.active {
@@ -119,9 +120,11 @@ body {
 
 @media (max-width: 768px) {
   .carousel-wrapper {
-    height: 280px;
+    aspect-ratio: 16 / 10;
+    max-height: 300px;
   }
 }
+
 
 /* ====== SETAS ====== */
 .carousel-btn {
@@ -2041,7 +2044,7 @@ body {
     <!-- Dots -->
     <div class="carousel-dots">
       {% for imagem in imagens_site %}
-        <span class="dot {% if forloop.first %}active{% endif %}"></span>
+          <span class="dot {% if forloop.first %}active{% endif %}"></span>
       {% endfor %}
     </div>
 
@@ -2759,70 +2762,71 @@ function igualarAlturaCards() {
         });
     }
 }
-
 document.addEventListener("DOMContentLoaded", function () {
 
-  document.querySelectorAll('.carousel-wrapper').forEach(wrapper => {
+  /* ===============================
+     CARROSSEL HERO
+     =============================== */
+  const wrapper = document.querySelector('.carousel-wrapper');
+  if (!wrapper) return;
 
-    const slides = wrapper.querySelectorAll('.carousel-slide');
-    const dots = wrapper.querySelectorAll('.dot');
-    const prevBtn = wrapper.querySelector('.prev');
-    const nextBtn = wrapper.querySelector('.next');
+  const slides = wrapper.querySelectorAll('.carousel-slide');
+  const dots = wrapper.querySelectorAll('.dot');
+  const prevBtn = wrapper.querySelector('.prev');
+  const nextBtn = wrapper.querySelector('.next');
 
-    let index = 0;
-    let autoPlay;
+  let index = 0;
+  let auto;
 
-    function showSlide(i) {
-      slides.forEach((slide, n) => {
-        slide.classList.toggle('active', n === i);
-        if (dots[n]) dots[n].classList.toggle('active', n === i);
-      });
-    }
-
-    function nextSlide() {
-      index = (index + 1) % slides.length;
-      showSlide(index);
-    }
-
-    function prevSlide() {
-      index = (index - 1 + slides.length) % slides.length;
-      showSlide(index);
-    }
-
-    function startAuto() {
-      stopAuto();
-      autoPlay = setInterval(nextSlide, 4000);
-    }
-
-    function stopAuto() {
-      if (autoPlay) clearInterval(autoPlay);
-    }
-
-    nextBtn?.addEventListener('click', () => {
-      nextSlide();
-      startAuto();
+  function showSlide(i) {
+    slides.forEach((slide, n) => {
+      slide.classList.toggle('active', n === i);
     });
 
-    prevBtn?.addEventListener('click', () => {
-      prevSlide();
-      startAuto();
+    dots.forEach((dot, n) => {
+      dot.classList.toggle('active', n === i);
     });
+  }
 
-    dots.forEach((dot, i) => {
-      dot.addEventListener('click', () => {
-        index = i;
-        showSlide(index);
-        startAuto();
-      });
-    });
-
+  function nextSlide() {
+    index = (index + 1) % slides.length;
     showSlide(index);
+  }
+
+  function prevSlide() {
+    index = (index - 1 + slides.length) % slides.length;
+    showSlide(index);
+  }
+
+  function startAuto() {
+    clearInterval(auto);
+    auto = setInterval(nextSlide, 3500);
+  }
+
+  prevBtn.addEventListener('click', () => {
+    prevSlide();
     startAuto();
   });
-});
+
+  nextBtn.addEventListener('click', () => {
+    nextSlide();
+    startAuto();
+  });
+
+  dots.forEach((dot, i) => {
+    dot.addEventListener('click', () => {
+      index = i;
+      showSlide(index);
+      startAuto();
+    });
+  });
+
+  showSlide(index);
+  startAuto();
+
 
   /* ===============================
-     SCROLL HORIZONTAL AUTOMÁTICO
+     SCROLL HORIZONTAL
      =============================== */
   const container = document.getElementById("scroll-container");
   const btnLeft = document.getElementById("scroll-left");
@@ -2831,7 +2835,7 @@ document.addEventListener("DOMContentLoaded", function () {
   if (container && btnLeft && btnRight) {
 
     const scrollAmount = 300;
-    let autoScrollDirection = 1;
+    let direction = 1;
 
     btnLeft.addEventListener("click", () => {
       container.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
@@ -2842,20 +2846,19 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     setInterval(() => {
-      const maxScroll = container.scrollWidth - container.clientWidth;
+      const max = container.scrollWidth - container.clientWidth;
 
-      if (container.scrollLeft >= maxScroll) autoScrollDirection = -1;
-      if (container.scrollLeft <= 0) autoScrollDirection = 1;
+      if (container.scrollLeft >= max) direction = -1;
+      if (container.scrollLeft <= 0) direction = 1;
 
       container.scrollBy({
-        left: scrollAmount * autoScrollDirection,
+        left: scrollAmount * direction,
         behavior: 'smooth'
       });
     }, 5000);
   }
 
 });
-
 
 // ===============================
 // ⭐ FUNÇÃO GLOBAL – AGORA FUNCIONA EM TODO LUGAR

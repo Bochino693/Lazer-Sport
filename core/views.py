@@ -43,7 +43,7 @@ class HomeView(View):
         # 1. Captura do filtro
         # ---------------------------
 
-        imagens_site = ImagensSite.objects.order_by('-id')[:4]
+        imagens_site = ImagensSite.objects.order_by('-id')[:5]
 
         filtro = request.GET.get("ordenar", "az")  # padrão = A-Z
 
