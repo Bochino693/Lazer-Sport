@@ -47,10 +47,14 @@
 .card-produto img {
     width: 100%;
     height: 200px;
-    object-fit: cover;
+
+
+    /* A MÁGICA AQUI: */
+    object-fit: contain;
+    background-color: #f8f9fa; /* Um cinza bem claro para o fundo caso a imagem seja menor */
+    padding: 10px; /* Evita que a imagem encoste nas bordas do card */
     transition: transform 0.4s ease;
-    background: #f2f2f2;
-    display: flex;
+    display: block;
     align-items: center;
     justify-content: center;
     position: relative;
@@ -58,6 +62,16 @@
 
 .card-produto:hover img {
     transform: scale(1.05);
+}
+
+/* Para garantir responsividade em telas menores (Mobile) */
+@media (max-width: 480px) {
+    .card-produto {
+        width: 100%; /* Card ocupa a largura da tela no mobile */
+    }
+    .card-produto img {
+        height: 180px; /* Leve ajuste na altura para telas pequenas */
+    }
 }
 
 /* CONTEÚDO FLEXÍVEL */
