@@ -539,6 +539,10 @@ body {
     text-align: center;
     animation: fadeCard .6s ease forwards;
 
+    display: flex;
+    flex-direction: column;
+    height: 100%; /* importante */
+
 }
 
 /* Hover igual ao card-produto */
@@ -558,6 +562,17 @@ body {
 
 .categoria-card:hover img {
     transform: scale(1.04);
+}
+
+@media (max-width: 768px) {
+  .categoria-card {
+      min-width: 200px;
+      height: 240px;
+  }
+
+  .categoria-card img {
+      height: 140px;
+  }
 }
 
 
