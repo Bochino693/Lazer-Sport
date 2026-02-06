@@ -99,21 +99,15 @@ body {
   position: relative;
   width: 100%;
   height: 520px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #000;
+  overflow: hidden;
 }
 
 .carousel-slide {
-  max-width: 100%;
-  max-height: 100%;
-  width: auto;
-  height: auto;
-  object-fit: contain;
   position: absolute;
   inset: 0;
-  margin: auto;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
   opacity: 0;
   transition: opacity .4s ease;
 }
@@ -2779,8 +2773,9 @@ document.addEventListener("DOMContentLoaded", function () {
   const nextBtn = wrapper.querySelector('.next');
 
   let index = 0;
-  let auto;
-  let restartTimer;
+  let auto = null;
+  let userInteracting = false;
+  let interactionTimeout = null;
 
   function showSlide(i) {
     slides.forEach((slide, n) => {
@@ -2807,70 +2802,38 @@ document.addEventListener("DOMContentLoaded", function () {
     auto = setInterval(nextSlide, 3500);
   }
 
-  function pauseAndRestart() {
+  function stopAutoTemporarily() {
     clearInterval(auto);
-    clearTimeout(restartTimer);
+    clearTimeout(interactionTimeout);
 
-    restartTimer = setTimeout(() => {
+    userInteracting = true;
+
+    interactionTimeout = setTimeout(() => {
+      userInteracting = false;
       startAuto();
-    }, 5000); // volta depois de 5s sem interação
+    }, 5000);
   }
 
   prevBtn.addEventListener('click', () => {
     prevSlide();
-    pauseAndRestart();
+    stopAutoTemporarily();
   });
 
   nextBtn.addEventListener('click', () => {
     nextSlide();
-    pauseAndRestart();
+    stopAutoTemporarily();
   });
 
   dots.forEach((dot, i) => {
     dot.addEventListener('click', () => {
       index = i;
       showSlide(index);
-      pauseAndRestart();
+      stopAutoTemporarily();
     });
   });
 
   showSlide(index);
   startAuto();
-});
-
-  /* ===============================
-     SCROLL HORIZONTAL
-     =============================== */
-  const container = document.getElementById("scroll-container");
-  const btnLeft = document.getElementById("scroll-left");
-  const btnRight = document.getElementById("scroll-right");
-
-  if (container && btnLeft && btnRight) {
-
-    const scrollAmount = 300;
-    let direction = 1;
-
-    btnLeft.addEventListener("click", () => {
-      container.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
-    });
-
-    btnRight.addEventListener("click", () => {
-      container.scrollBy({ left: scrollAmount, behavior: 'smooth' });
-    });
-
-    setInterval(() => {
-      const max = container.scrollWidth - container.clientWidth;
-
-      if (container.scrollLeft >= max) direction = -1;
-      if (container.scrollLeft <= 0) direction = 1;
-
-      container.scrollBy({
-        left: scrollAmount * direction,
-        behavior: 'smooth'
-      });
-    }, 5000);
-  }
-
 });
 
 // ===============================
