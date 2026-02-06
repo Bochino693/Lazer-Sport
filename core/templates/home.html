@@ -529,7 +529,7 @@ body {
   border-radius: 4px;
 }
 .categoria-card {
-    background: white;
+    background: #fff; /* fundo neutro para quando sobrar espaço */
     border-radius: 20px;
     min-width: 240px;
     box-shadow: 0 6px 20px rgba(0,0,0,0.08);
@@ -538,6 +538,9 @@ body {
     overflow: hidden;
     text-align: center;
     animation: fadeCard .6s ease forwards;
+    height: 160px;
+    display: flex;
+    align-items: center;
 }
 
 /* Hover igual ao card-produto */
@@ -552,10 +555,19 @@ body {
     height: 160px;
     object-fit: cover;
     transition: transform .4s ease;
+     object-fit: contain;   /* MOSTRA SEMPRE A IMAGEM COMPLETA */
 }
 
 .categoria-card:hover img {
-    transform: scale(1.08);
+    transform: scale(1.04);
+}
+
+
+/* Hover só em telas maiores */
+@media (hover:hover) {
+    .categoria-card:hover img {
+        transform: scale(1.04);
+    }
 }
 
 /* Título */
@@ -669,23 +681,28 @@ body {
     transform: translateY(-10px) scale(1.02);
     box-shadow: 0 12px 28px rgba(0,0,0,0.15);
 }
-
-/* imagem */
-/* padrão (desktop) — mantém visual atual */
+/* área da imagem */
 .card-produto .img-area {
     height: 200px;
     overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #fff;
+    padding: 6px;
 }
 
+/* imagem sempre inteira */
 .card-produto .img-area img {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain; /* mostra 100% da imagem */
     transition: transform .4s ease;
 }
 
+/* zoom leve sem cortar */
 .card-produto:hover .img-area img {
-    transform: scale(1.08);
+    transform: scale(1.05);
 }
 
 /* MOBILE — mostrar imagem completa */
