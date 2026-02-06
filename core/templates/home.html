@@ -94,30 +94,35 @@ body {
   border-radius: 0;
   box-shadow: 0 6px 20px rgba(0,0,0,0.1);
 }
+
+
 .carousel-wrapper {
-position: relative;
-width: 100%;
-height: 520px;
-overflow: hidden;
-background: #000;
+  position: relative;
+  width: 100%;
+  height: 520px;
+  overflow: hidden;
+  background: #000;
+  /* Melhora performance de renderização */
+  backface-visibility: hidden;
 }
 
 .carousel-slide {
-position: absolute;
-inset: 0;
-width: 100%;
-height: 100%;
-object-fit: contain;   /* NUNCA corta */
-object-position: center;
-opacity: 0;
-transition: opacity .4s ease;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover; /* Mudei para cover para preencher melhor em telas diferentes, use contain se for essencial não cortar nada */
+  object-position: center;
+  opacity: 0;
+  transition: opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1); /* Transição mais natural */
+  will-change: opacity;
+  z-index: 0;
 }
 
 .carousel-slide.active {
-opacity: 1;
-z-index: 1;
+  opacity: 1;
+  z-index: 1;
 }
-
 
 
 @media (max-width: 768px) {
@@ -167,13 +172,16 @@ z-index: 1;
   z-index: 10;
 }
 
+/* Dots mais clicáveis no Mobile */
 .dot {
-  width: 12px;
-  height: 12px;
-  background: rgba(255,255,255,0.5);
+  width: 14px;
+  height: 14px;
+  background: rgba(255,255,255,0.4);
   border-radius: 50%;
   cursor: pointer;
-  transition: all 0.3s;
+  transition: background 0.3s, transform 0.2s;
+  padding: 5px; /* Aumenta área de toque sem aumentar o visual */
+  background-clip: content-box;
 }
 
 .dot.active {
@@ -2026,7 +2034,6 @@ z-index: 1;
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
-
 <section id="inicio" class="carousel-container">
   <div class="carousel-wrapper">
 
@@ -2034,20 +2041,23 @@ z-index: 1;
       <img
           src="{{ imagem.imagem.url }}"
           class="carousel-slide {% if forloop.first %}active{% endif %}"
-          loading="eager"
+          {% if forloop.first %}
+            fetchpriority="high"
+            loading="eager"
+          {% else %}
+            loading="lazy"
+          {% endif %}
           decoding="async"
-        alt="Imagem do site {{ forloop.counter }}"
+          alt="Imagem do site {{ forloop.counter }}"
       >
     {% endfor %}
 
-    <!-- Setas -->
-    <button class="carousel-btn prev">❮</button>
-    <button class="carousel-btn next">❯</button>
+    <button class="carousel-btn prev" aria-label="Anterior">❮</button>
+    <button class="carousel-btn next" aria-label="Próximo">❯</button>
 
-    <!-- Dots -->
     <div class="carousel-dots">
       {% for imagem in imagens_site %}
-          <span class="dot {% if forloop.first %}active{% endif %}"></span>
+          <span class="dot {% if forloop.first %}active{% endif %}" data-index="{{ forloop.counter0 }}"></span>
       {% endfor %}
     </div>
 
@@ -2774,75 +2784,70 @@ function igualarAlturaCards() {
         });
     }
 }
+
 document.addEventListener("DOMContentLoaded", () => {
+    const wrapper = document.querySelector(".carousel-wrapper");
+    if (!wrapper) return;
 
-const wrapper = document.querySelector(".carousel-wrapper");
-if (!wrapper) return;
+    const slides = Array.from(wrapper.querySelectorAll(".carousel-slide"));
+    const dots = Array.from(wrapper.querySelectorAll(".dot"));
+    const prev = wrapper.querySelector(".prev");
+    const next = wrapper.querySelector(".next");
 
-const slides = wrapper.querySelectorAll(".carousel-slide");
-const dots = wrapper.querySelectorAll(".dot");
-const prev = wrapper.querySelector(".prev");
-const next = wrapper.querySelector(".next");
+    let index = 0;
+    let autoPlayInterval;
 
-let index = 0;
-let auto = null;
-let restartTimer = null;
+    function updateCarousel(newIndex) {
+        // Remove classes do estado atual
+        slides[index].classList.remove("active");
+        dots[index].classList.remove("active");
 
-function showSlide(i) {
-slides.forEach((s, n) => s.classList.toggle("active", n === i));
-dots.forEach((d, n) => d.classList.toggle("active", n === i));
-}
+        // Atualiza o índice
+        index = (newIndex + slides.length) % slides.length;
 
-function nextSlide() {
-index = (index + 1) % slides.length;
-showSlide(index);
-}
+        // Adiciona classes no novo estado
+        slides[index].classList.add("active");
+        dots[index].classList.add("active");
+    }
 
-function prevSlide() {
-index = (index - 1 + slides.length) % slides.length;
-showSlide(index);
-}
+    function startAutoPlay() {
+        stopAutoPlay();
+        autoPlayInterval = setInterval(() => updateCarousel(index + 1), 4000);
+    }
 
-function startAuto() {
-clearInterval(auto);
-auto = setInterval(nextSlide, 3500);
-}
+    function stopAutoPlay() {
+        clearInterval(autoPlayInterval);
+    }
 
-function pauseAuto() {
-clearInterval(auto);
-clearTimeout(restartTimer);
-restartTimer = setTimeout(startAuto, 5000);
-}
+    // Eventos
+    next.addEventListener("click", () => {
+        updateCarousel(index + 1);
+        startAutoPlay(); // Reinicia o timer ao interagir
+    });
 
-prev.addEventListener("click", e => {
-e.stopPropagation();
-prevSlide();
-pauseAuto();
-});
+    prev.addEventListener("click", () => {
+        updateCarousel(index - 1);
+        startAutoPlay();
+    });
 
-next.addEventListener("click", e => {
-e.stopPropagation();
-nextSlide();
-pauseAuto();
-});
+    dots.forEach((dot, i) => {
+        dot.addEventListener("click", () => {
+            if (index === i) return;
+            updateCarousel(i);
+            startAutoPlay();
+        });
+    });
 
-dots.forEach((dot, i) => {
-dot.addEventListener("click", e => {
-e.stopPropagation();
-index = i;
-showSlide(index);
-pauseAuto();
-});
-});
+    // Swipe para Mobile (Opcional mas recomendado)
+    let touchStartX = 0;
+    wrapper.addEventListener("touchstart", e => touchStartX = e.touches[0].clientX, {passive: true});
+    wrapper.addEventListener("touchend", e => {
+        let touchEndX = e.changedTouches[0].clientX;
+        if (touchStartX - touchEndX > 50) next.click();
+        if (touchStartX - touchEndX < -50) prev.click();
+    }, {passive: true});
 
-// preload para carregar rápido
-slides.forEach(img => {
-const preload = new Image();
-preload.src = img.src;
-});
-
-showSlide(index);
-startAuto();
+    startAutoPlay();
 });
 
 
