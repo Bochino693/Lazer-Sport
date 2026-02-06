@@ -2032,8 +2032,10 @@ z-index: 1;
 
     {% for imagem in imagens_site %}
       <img
-        src="{{ imagem.imagem.url }}"
-        class="carousel-slide {% if forloop.first %}active{% endif %}"
+          src="{{ imagem.imagem.url }}"
+          class="carousel-slide {% if forloop.first %}active{% endif %}"
+          loading="eager"
+          decoding="async"
         alt="Imagem do site {{ forloop.counter }}"
       >
     {% endfor %}
@@ -2089,7 +2091,10 @@ z-index: 1;
         <a href="{% url 'categoria_detalhe' categoria.id %}#list" class="categoria-link">
   <div class="categoria-card">
     {% if categoria.imagem_categoria %}
-      <img src="{{ categoria.imagem_categoria.url }}" alt="{{ categoria.nome_categoria }}">
+      <img src="{{ categoria.imagem_categoria.url }}" alt="{{ categoria.nome_categoria }}"
+          loading="eager"
+          decoding="async"
+      >
     {% else %}
       <img src="{% static 'images/default_categoria.jpg' %}" alt="Categoria sem imagem">
     {% endif %}
@@ -2137,7 +2142,9 @@ z-index: 1;
           <!-- IMAGEM -->
           {% if promo.brinquedos.imagem_brinquedo %}
             <a href="{% url 'promocao' promo.id %}#promocao-pagina">
-                <img src="{{ promo.brinquedos.imagem_brinquedo.url }}" alt="{{ promo.descricao }}">
+                <img src="{{ promo.brinquedos.imagem_brinquedo.url }}" alt="{{ promo.descricao }}"
+                loading="eager"
+                  decoding="async">
             </a>
           {% else %}
             <img src="{% static 'images/default_promocao.jpg' %}" alt="Promoção sem imagem">
@@ -2231,7 +2238,9 @@ z-index: 1;
 
         <div class="img-area">
           {% if brinquedo.imagem_brinquedo %}
-              <img src="{{ brinquedo.imagem_brinquedo.url }}" alt="{{ brinquedo.nome_brinquedo }}">
+              <img src="{{ brinquedo.imagem_brinquedo.url }}" alt="{{ brinquedo.nome_brinquedo }}"
+              loading="eager"
+              decoding="async">
             {% else %}
               <img src="{% static 'img/placeholder-produto.png' %}" alt="{{ brinquedo.nome_brinquedo }}">
             {% endif %}
@@ -2346,7 +2355,9 @@ z-index: 1;
 
           <!-- IMAGEM -->
           {% if combo.imagem_combo %}
-            <img src="{{ combo.imagem_combo.url }}" alt="{{ combo.descricao }}">
+            <img src="{{ combo.imagem_combo.url }}" alt="{{ combo.descricao }}"
+            loading="eager"
+  decoding="async">
           {% else %}
             <img src="{% static 'images/default_combo.jpg' %}" alt="Combo sem imagem">
           {% endif %}
@@ -2763,53 +2774,23 @@ function igualarAlturaCards() {
         });
     }
 }
-
 document.addEventListener("DOMContentLoaded", () => {
 
 const wrapper = document.querySelector(".carousel-wrapper");
 if (!wrapper) return;
 
 const slides = wrapper.querySelectorAll(".carousel-slide");
+const dots = wrapper.querySelectorAll(".dot");
 const prev = wrapper.querySelector(".prev");
 const next = wrapper.querySelector(".next");
-
-// cria container de dots automático
-let dotsWrap = wrapper.querySelector(".carousel-dots");
-if (!dotsWrap) {
-dotsWrap = document.createElement("div");
-dotsWrap.className = "carousel-dots";
-wrapper.appendChild(dotsWrap);
-}
 
 let index = 0;
 let auto = null;
 let restartTimer = null;
 
-// cria bolinhas baseado no número de imagens
-slides.forEach((_, i) => {
-const d = document.createElement("div");
-d.className = "dot";
-d.addEventListener("click", () => {
-index = i;
-showSlide(index);
-pauseAuto();
-});
-dotsWrap.appendChild(d);
-});
-
-const dots = dotsWrap.querySelectorAll(".dot");
-
 function showSlide(i) {
-slides.forEach((s, n) => {
-s.classList.toggle("active", n === i);
-});
-
-```
-dots.forEach((d, n) => {
-  d.classList.toggle("active", n === i);
-});
-```
-
+slides.forEach((s, n) => s.classList.toggle("active", n === i));
+dots.forEach((d, n) => d.classList.toggle("active", n === i));
 }
 
 function nextSlide() {
@@ -2833,14 +2814,31 @@ clearTimeout(restartTimer);
 restartTimer = setTimeout(startAuto, 5000);
 }
 
-prev?.addEventListener("click", () => {
+prev.addEventListener("click", e => {
+e.stopPropagation();
 prevSlide();
 pauseAuto();
 });
 
-next?.addEventListener("click", () => {
+next.addEventListener("click", e => {
+e.stopPropagation();
 nextSlide();
 pauseAuto();
+});
+
+dots.forEach((dot, i) => {
+dot.addEventListener("click", e => {
+e.stopPropagation();
+index = i;
+showSlide(index);
+pauseAuto();
+});
+});
+
+// preload para carregar rápido
+slides.forEach(img => {
+const preload = new Image();
+preload.src = img.src;
 });
 
 showSlide(index);
@@ -3047,7 +3045,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     /* ================= CARROSSEL BOTÕES ================= */
-    document.querySelectorAll(".carousel-btn").forEach(btn => {
+    document.querySelectorAll(".carousel-btn[data-target]").forEach(btn => {
         btn.addEventListener("click", () => {
             const track = document.getElementById(btn.dataset.target);
             if (!track) return;
