@@ -96,21 +96,26 @@ body {
 }
 
 .carousel-wrapper {
+  position: relative;
   width: 100%;
-  aspect-ratio: 16 / 7;
-  max-height: 520px;
+  height: 520px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #000;
 }
 
 .carousel-slide {
-  width: 100%;
-  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
   object-fit: contain;
-  object-position: center;
-  background: #000;
   position: absolute;
   inset: 0;
+  margin: auto;
   opacity: 0;
-  transition: opacity .5s ease;
+  transition: opacity .4s ease;
 }
 
 .carousel-slide.active {
@@ -120,8 +125,7 @@ body {
 
 @media (max-width: 768px) {
   .carousel-wrapper {
-    aspect-ratio: 16 / 10;
-    max-height: 300px;
+    height: 280px;
   }
 }
 
@@ -2762,11 +2766,10 @@ function igualarAlturaCards() {
         });
     }
 }
+
+
 document.addEventListener("DOMContentLoaded", function () {
 
-  /* ===============================
-     CARROSSEL HERO
-     =============================== */
   const wrapper = document.querySelector('.carousel-wrapper');
   if (!wrapper) return;
 
@@ -2777,6 +2780,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
   let index = 0;
   let auto;
+  let restartTimer;
 
   function showSlide(i) {
     slides.forEach((slide, n) => {
@@ -2803,27 +2807,36 @@ document.addEventListener("DOMContentLoaded", function () {
     auto = setInterval(nextSlide, 3500);
   }
 
+  function pauseAndRestart() {
+    clearInterval(auto);
+    clearTimeout(restartTimer);
+
+    restartTimer = setTimeout(() => {
+      startAuto();
+    }, 5000); // volta depois de 5s sem interação
+  }
+
   prevBtn.addEventListener('click', () => {
     prevSlide();
-    startAuto();
+    pauseAndRestart();
   });
 
   nextBtn.addEventListener('click', () => {
     nextSlide();
-    startAuto();
+    pauseAndRestart();
   });
 
   dots.forEach((dot, i) => {
     dot.addEventListener('click', () => {
       index = i;
       showSlide(index);
-      startAuto();
+      pauseAndRestart();
     });
   });
 
   showSlide(index);
   startAuto();
-
+});
 
   /* ===============================
      SCROLL HORIZONTAL
