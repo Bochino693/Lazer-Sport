@@ -691,7 +691,7 @@ class PromocaoAdminView(AdminOnlyMixin, View):
             promocao.imagem_promocao = imagem
 
         promocao.save()
-        return redirect('promocao_adm')  # Nome da sua URL de listagem
+        return redirect('promocoes_admin')  # Nome da sua URL de listagem
 
 
 class PromocaoDeleteView(AdminOnlyMixin, View):
