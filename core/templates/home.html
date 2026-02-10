@@ -2527,13 +2527,9 @@ body {
         <div class="carousel-item" data-modal="modal-projeto-{{ projeto.id }}">
             <!-- Imagem principal do projeto -->
             <div class="carousel-image">
-             {% if projeto.brinquedo_projetado %}
+             {% if projeto.brinquedo_projetado and projeto.brinquedo_projetado.imagens_brinquedo_projeto.first %}
                 {% with img=projeto.brinquedo_projetado.imagens_brinquedo_projeto.first %}
-                    {% if img %}
-                        <img src="{{ img.imagem.url }}">
-                    {% else %}
-                        <img src="{% static 'images/default.jpg' %}">
-                    {% endif %}
+                    <img src="{{ img.imagem.url }}">
                 {% endwith %}
             {% else %}
                 <img src="{% static 'images/default.jpg' %}">
