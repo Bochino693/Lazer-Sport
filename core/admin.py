@@ -35,13 +35,13 @@ class BrinquedoClickAdmin(admin.ModelAdmin):
         "id",
         "brinquedo_clicado",
         "quantidade_click",
-        "cricao"
+        "criacao"
     )
     search_fields = (
         "brinquedo_clicado__nome_brinquedo",
     )
     list_filter = (
-        "brinquedo_clicado", "cricao"
+        "brinquedo_clicado", "criacao"
     )
     ordering = ("-quantidade_click",)
 
@@ -79,7 +79,7 @@ class PromocaoClickAdmin(admin.ModelAdmin):
         "descricao_promocao",
     )
     list_filter = (
-        "promocao", "cricao"
+        "promocao", "criacao"
     )
     ordering = ("-quantidade_click",)
 
@@ -91,13 +91,13 @@ class CategoriaClickAdmin(admin.ModelAdmin):
         "nome_categoria",
         "categoria",
         "quantidade_click",
-        "cricao"
+        "criacao"
     )
     search_fields = (
         "nome_categoria",
     )
     list_filter = (
-        "categoria", "cricao"
+        "categoria", "criacao"
     )
     ordering = ("-quantidade_click",)
 
