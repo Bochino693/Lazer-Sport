@@ -13,9 +13,8 @@ from django.views.generic.edit import FormView
 from django.contrib.auth.mixins import LoginRequiredMixin
 
 from .models import Brinquedos, CategoriasBrinquedos, Projetos, Eventos, ClientePerfil, Combos, Cupom, Promocoes, \
-    TagsBrinquedos, ImagensSite, BrinquedosProjeto, Estabelecimentos, Manutencao, ManutencaoImagem, EnderecoEntrega, BrinquedoClick, ComboClick, PromocaoClick, CategoriaClick
-
-
+    TagsBrinquedos, ImagensSite, BrinquedosProjeto, Estabelecimentos, Manutencao, ManutencaoImagem, EnderecoEntrega, \
+    BrinquedoClick, ComboClick, PromocaoClick, CategoriaClick
 
 import os
 from django.http import FileResponse, Http404
@@ -284,7 +283,9 @@ class ClientePerfilView(LoginRequiredMixin, View):
             'perfil_form': perfil_form
         })
 
+
 from django.db.models import F
+
 
 class BrinquedoInfoView(View):
 
@@ -302,6 +303,7 @@ class BrinquedoInfoView(View):
             )
 
         return render(request, "brinquedo_info.html", {"brinquedo": brinquedo})
+
 
 class CategoriasInfoView(View):
 
@@ -739,7 +741,6 @@ class PromocaoDeleteView(AdminOnlyMixin, View):
             return JsonResponse({'success': False, 'error': str(e)}, status=400)
 
 
-
 class CupomAdminView(AdminOnlyMixin, View):
 
     def get(self, request):
@@ -915,14 +916,12 @@ class EventoAdminView(AdminOnlyMixin, View):
 class PedidoAdminView(AdminOnlyMixin, View):
 
     def get(self, request):
-
         pedidos = Pedido.objects.all()
 
         ctx = {
             'pedidos': pedidos,
         }
         return render(request, 'pedidos_adm.html', ctx)
-
 
 
 class RegistrarView(View):
@@ -1336,12 +1335,10 @@ from django.http import HttpResponseForbidden
 from django.db.models.functions import TruncDate
 
 
-
 class EstatisticasGeraisView(View):
     def get(self, request):
         filtro = request.GET.get('filtro', 'geral')
         agora = timezone.now()
-
 
         if filtro == '7dias':
             data_inicio = agora - timedelta(days=7)
@@ -1461,7 +1458,6 @@ class ManutencaoAdminView(LoginRequiredMixin, View):
     def get(self, request):
         manutencoes = Manutencao.objects.all()
 
-
         ctx = {
             'manutencoes': manutencoes,
         }
@@ -1487,13 +1483,13 @@ class UserAdminView(LoginRequiredMixin, View):
         return render(request, 'users_adm.html', context)
 
 
-
 from django.views.generic import TemplateView
 from django.db.models import Sum, Count
 from django.utils.timezone import now
 from datetime import datetime
 
 from .models import Venda
+
 
 class RelatorioVendasView(LoginRequiredMixin, TemplateView):
     template_name = 'relatoriov_adm.html'
@@ -1539,14 +1535,11 @@ class RelatorioVendasView(LoginRequiredMixin, TemplateView):
         return context
 
 
-
 from .forms import ManutencaoForm
 from .models import Manutencao
 
-
 from django.contrib.auth.decorators import login_required
 from .models import ItemCarrinho, Carrinho
-
 
 
 def adicionar_ao_carrinho(request, tipo, object_id):
@@ -2006,20 +1999,26 @@ class MeusPedidosView(LoginRequiredMixin, View):
 from django.shortcuts import redirect
 from django.urls import reverse
 
+
 def redirecionar_loja(request):
     return redirect(reverse('brinquedos') + '#grid-cards')
+
 
 def redirecionar_lancamentos(request):
     return redirect(reverse('brinquedos') + '#grid-cards')
 
+
 def redirecionar_showroom(request):
     return redirect(reverse('eventos') + '#todos-eventos')
+
 
 def redirecionar_contato(request):
     return redirect(reverse('home') + '#contato')
 
+
 def redirecionar_categoria_brinquedos(request):
     return redirect(reverse('brinquedo_detalhe', args=[12]))
+
 
 def redirecionar_categoria_aventura(request):
     return redirect(reverse('categoria_detalhe', args=[12]))
