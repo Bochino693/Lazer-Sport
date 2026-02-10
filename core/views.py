@@ -1405,12 +1405,41 @@ class EstatisticasGeraisView(View):
             .order_by('-total')[:20]
         )
 
+        total_brinquedo_clicks = brinquedos.aggregate(
+            total=Sum('quantidade_click')
+        )['total'] or 0
+
+        total_combo_clicks = combos.aggregate(
+            total=Sum('quantidade_click')
+        )['total'] or 0
+
+        total_promocao_clicks = promocoes.aggregate(
+            total=Sum('quantidade_click')
+        )['total'] or 0
+
+        total_categoria_clicks = categorias.aggregate(
+            total=Sum('quantidade_click')
+        )['total'] or 0
+
+        total_geral = (
+                total_brinquedo_clicks +
+                total_combo_clicks +
+                total_promocao_clicks +
+                total_categoria_clicks
+        )
+
         ctx = {
             'filtro': filtro,
             'top_brinquedos': top_brinquedos,
             'top_combos': top_combos,
             'top_promocoes': top_promocoes,
             'top_categorias': top_categorias,
+
+            'total_brinquedo_clicks': total_brinquedo_clicks,
+            'total_combo_clicks': total_combo_clicks,
+            'total_promocao_clicks': total_promocao_clicks,
+            'total_categoria_clicks': total_categoria_clicks,
+            'total_geral': total_geral,
         }
 
         return render(request, 'estatisticas_gerais.html', ctx)
