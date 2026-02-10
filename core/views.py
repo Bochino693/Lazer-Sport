@@ -1340,6 +1340,28 @@ class EstatisticasGeraisView(View):
         filtro = request.GET.get('filtro', 'geral')
         agora = timezone.now()
 
+        # Exemplo genérico de como obter 'evolucao_diaria'
+        # Isso agrupa todos os cliques por data
+        daily_stats = ClickLog.objects.filter(data__gte=data_inicial) \
+            .annotate(data_formatada=TruncDate('data_criacao')) \
+            .values('data_formatada') \
+            .annotate(total=Count('id')) \
+            .order_by('-data_formatada')
+
+        # Calculando a porcentagem para a barra de progresso CSS
+        # Pega o dia com mais cliques para ser o "100%"
+        max_clicks = max([d['total'] for d in daily_stats]) if daily_stats else 1
+
+        evolucao_diaria = []
+        for item in daily_stats:
+            percent = (item['total'] / max_clicks) * 100
+            evolucao_diaria.append({
+                'data': item['data_formatada'],
+                'total': item['total'],
+                'percentual': int(percent),  # Usado no style="width: %"
+                'tipo_top': 'Geral'  # Você pode refinar isso se quiser
+            })
+
         if filtro == '7dias':
             data_inicio = agora - timedelta(days=7)
         elif filtro == '30dias':
@@ -1429,6 +1451,7 @@ class EstatisticasGeraisView(View):
         )
 
         ctx = {
+            'evolucao_diaria': evolucao_diaria,
             'filtro': filtro,
             'top_brinquedos': top_brinquedos,
             'top_combos': top_combos,

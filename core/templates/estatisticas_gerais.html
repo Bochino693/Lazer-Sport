@@ -3,196 +3,367 @@
 {% block content %}
 
 <style>
+/* --- VARIAVEIS E ANIMACOES --- */
+:root {
+    --primary: #8b5cf6;
+    --primary-glow: rgba(139, 92, 246, 0.5);
+    --bg-card: #1e293b;
+    --bg-dark: #0f172a;
+    --text-main: #f1f5f9;
+    --text-muted: #94a3b8;
+}
+
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
 .stats-wrapper {
     max-width: 1300px;
-    margin: auto;
+    margin: 0 auto;
+    padding: 20px;
+    animation: fadeInUp 0.6s ease-out;
 }
 
-/* KPIs */
-.stats-kpis {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px,1fr));
+/* --- HEADER & FILTROS MODERNOS --- */
+.dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 35px;
+    flex-wrap: wrap;
     gap: 20px;
-    margin-bottom: 25px;
 }
 
-.kpi-box {
-    background: linear-gradient(135deg,#1e293b,#0f172a);
-    padding: 22px;
-    border-radius: 14px;
-    box-shadow: 0 10px 25px rgba(0,0,0,.25);
-}
-
-.kpi-box h3 {
-    font-size: 13px;
-    color: #94a3b8;
+.dashboard-header h2 {
+    font-size: 24px;
+    background: linear-gradient(to right, #fff, #94a3b8);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-weight: 800;
+    letter-spacing: -0.5px;
     margin: 0;
 }
 
-.kpi-box span {
-    font-size: 30px;
-    font-weight: bold;
-    color: #f1f5f9;
+.dashboard-filters {
+    background: rgba(30, 41, 59, 0.7);
+    backdrop-filter: blur(10px);
+    padding: 6px;
+    border-radius: 50px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    display: inline-flex;
+    gap: 5px;
 }
 
-/* GRID TABELAS */
+.filter-btn {
+    padding: 8px 24px;
+    border-radius: 40px;
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    border: 1px solid transparent;
+}
+
+.filter-btn:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.filter-btn.active {
+    background: var(--primary);
+    color: #fff;
+    box-shadow: 0 0 15px var(--primary-glow);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* --- KPIS (Super Power) --- */
+.stats-kpis {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-bottom: 35px;
+}
+
+.kpi-box {
+    background: linear-gradient(145deg, #1e293b, #0f172a);
+    padding: 25px;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.kpi-box::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 4px;
+    background: linear-gradient(90deg, var(--primary), transparent);
+}
+
+.kpi-box:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.4);
+    border-color: rgba(139, 92, 246, 0.3);
+}
+
+.kpi-box h3 {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-muted);
+    margin: 0 0 10px 0;
+}
+
+.kpi-box span {
+    font-size: 36px;
+    font-weight: 800;
+    color: #fff;
+    display: block;
+    line-height: 1;
+}
+
+/* --- GRID LAYOUT --- */
 .stats-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(380px,1fr));
-    gap: 20px;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 25px;
+    margin-bottom: 25px;
 }
 
-/* CARD */
+/* --- ESTILO DOS CARDS E TABELAS --- */
 .stats-card {
-    background: #1e293b;
-    border-radius: 14px;
-    padding: 18px;
-    box-shadow: 0 8px 20px rgba(0,0,0,.25);
+    background: var(--bg-card);
+    border-radius: 16px;
+    padding: 25px;
+    border: 1px solid rgba(255, 255, 255, 0.03);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+    display: flex;
+    flex-direction: column;
 }
 
-/* TITULO */
 .stats-card h4 {
-    margin-bottom: 10px;
+    margin: 0 0 20px 0;
     font-size: 16px;
-    color: #8b5cf6;
+    color: var(--primary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
-/* TABELA */
 .stats-table {
     width: 100%;
-    border-collapse: collapse;
+    border-collapse: separate;
+    border-spacing: 0 8px; /* Espaço entre linhas */
+}
+
+.stats-table tr {
+    transition: transform 0.2s;
+}
+
+.stats-table tr:hover {
+    transform: scale(1.01);
 }
 
 .stats-table td {
-    padding: 10px 6px;
-    border-bottom: 1px solid rgba(255,255,255,.05);
+    padding: 12px 15px;
+    background: rgba(255, 255, 255, 0.02);
+    border: none;
 }
 
+.stats-table tr td:first-child {
+    border-top-left-radius: 8px;
+    border-bottom-left-radius: 8px;
+}
+.stats-table tr td:last-child {
+    border-top-right-radius: 8px;
+    border-bottom-right-radius: 8px;
+}
+
+/* Colunas específicas */
 .rank {
-    font-weight: bold;
-    color: #fbbf24;
+    width: 40px;
+    font-weight: 800;
+    color: #fbbf24; /* Amber */
+    text-align: center;
 }
 
 .name {
-    color: #f1f5f9;
+    color: #e2e8f0;
+    font-weight: 500;
 }
 
 .count {
     text-align: right;
-    color: #94a3b8;
-    font-weight: 600;
+    font-family: 'Courier New', monospace;
+    color: var(--primary);
+    font-weight: bold;
 }
 
-/* TOP 1 destaque */
-.top1 {
-    background: rgba(139,92,246,.12);
-    border-radius: 8px;
+/* Destaque Top 1 */
+.top1 td {
+    background: linear-gradient(90deg, rgba(139,92,246,0.15), rgba(139,92,246,0.05)) !important;
+    border: 1px solid rgba(139,92,246,0.2);
+    border-left: 3px solid var(--primary);
 }
+
+/* --- TABELA DE CRESCIMENTO (NOVA) --- */
+.full-width {
+    grid-column: 1 / -1;
+}
+
+.growth-bar-container {
+    background: rgba(255,255,255,0.05);
+    height: 6px;
+    border-radius: 10px;
+    width: 100px;
+    margin-left: auto;
+    overflow: hidden;
+}
+
+.growth-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+    border-radius: 10px;
+}
+
+.date-col {
+    color: #94a3b8;
+    font-size: 13px;
+}
+
 </style>
 
 <div class="stats-wrapper">
 
-<div class="dashboard-header">
-    <h2>ESTATÍSTICAS GERAIS</h2>
+    <div class="dashboard-header">
+        <h2>ESTATÍSTICAS GERAIS</h2>
 
-    <div class="dashboard-filters">
-        <a href="?filtro=geral" class="filter-btn {% if filtro == 'geral' %}active{% endif %}">Geral</a>
-        <a href="?filtro=7dias" class="filter-btn {% if filtro == '7dias' %}active{% endif %}">7 dias</a>
-        <a href="?filtro=30dias" class="filter-btn {% if filtro == '30dias' %}active{% endif %}">30 dias</a>
-        <a href="?filtro=ano" class="filter-btn {% if filtro == 'ano' %}active{% endif %}">Ano</a>
-    </div>
-</div>
-
-<!-- KPIs -->
-<div class="stats-kpis">
-    <div class="kpi-box">
-        <h3>Cliques Totais</h3>
-        <span>{{ total_geral }}</span>
+        <div class="dashboard-filters">
+            <a href="?filtro=geral" class="filter-btn {% if filtro == 'geral' or not filtro %}active{% endif %}">Geral</a>
+            <a href="?filtro=7dias" class="filter-btn {% if filtro == '7dias' %}active{% endif %}">7 dias</a>
+            <a href="?filtro=30dias" class="filter-btn {% if filtro == '30dias' %}active{% endif %}">30 dias</a>
+            <a href="?filtro=ano" class="filter-btn {% if filtro == 'ano' %}active{% endif %}">Ano</a>
+        </div>
     </div>
 
-    <div class="kpi-box">
-        <h3>Brinquedos</h3>
-        <span>{{ total_brinquedo_clicks }}</span>
+    <div class="stats-kpis">
+        <div class="kpi-box">
+            <h3>Cliques Totais</h3>
+            <span>{{ total_geral }}</span>
+        </div>
+        <div class="kpi-box">
+            <h3>Brinquedos</h3>
+            <span>{{ total_brinquedo_clicks }}</span>
+        </div>
+        <div class="kpi-box">
+            <h3>Combos</h3>
+            <span>{{ total_combo_clicks }}</span>
+        </div>
+        <div class="kpi-box">
+            <h3>Promoções</h3>
+            <span>{{ total_promocao_clicks }}</span>
+        </div>
+        <div class="kpi-box">
+            <h3>Categorias</h3>
+            <span>{{ total_categoria_clicks }}</span>
+        </div>
     </div>
 
-    <div class="kpi-box">
-        <h3>Combos</h3>
-        <span>{{ total_combo_clicks }}</span>
+    <div class="stats-grid">
+
+        <div class="stats-card full-width">
+            <h4>📈 Evolução de Tráfego (Dia a Dia)</h4>
+            <table class="stats-table">
+                <thead>
+                    <tr style="text-align: left; color: #64748b; font-size: 12px; text-transform: uppercase;">
+                        <th style="padding: 10px 15px;">Data</th>
+                        <th style="padding: 10px 15px;">Tipo Principal</th>
+                        <th style="padding: 10px 15px; text-align: right;">Volume</th>
+                        <th style="padding: 10px 15px; text-align: right;">Intensidade</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for dia in evolucao_diaria %}
+                <tr>
+                    <td class="date-col">{{ dia.data|date:"d/m/Y" }}</td>
+                    <td class="name">{{ dia.tipo_top }}</td> <td class="count">{{ dia.total }}</td>
+                    <td>
+                        <div class="growth-bar-container">
+                            <div class="growth-bar" style="width: {{ dia.percentual }}%;"></div>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4" style="text-align:center; color: #64748b; padding: 20px;">
+                        Nenhum dado de histórico disponível para este período.
+                    </td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="stats-card">
+            <h4>🧸 Brinquedos Top</h4>
+            <table class="stats-table">
+                {% for item in top_brinquedos %}
+                <tr class="{% if forloop.first %}top1{% endif %}">
+                    <td class="rank">#{{ forloop.counter }}</td>
+                    <td class="name">{{ item.brinquedo_clicado__nome_brinquedo }}</td>
+                    <td class="count">{{ item.total }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="3" style="text-align:center; color:#555;">Sem dados</td></tr>
+                {% endfor %}
+            </table>
+        </div>
+
+        <div class="stats-card">
+            <h4>🎁 Combos Top</h4>
+            <table class="stats-table">
+                {% for item in top_combos %}
+                <tr class="{% if forloop.first %}top1{% endif %}">
+                    <td class="rank">#{{ forloop.counter }}</td>
+                    <td class="name">{{ item.descricao_combo }}</td>
+                    <td class="count">{{ item.total }}</td>
+                </tr>
+                {% endfor %}
+            </table>
+        </div>
+
+        <div class="stats-card">
+            <h4>🔥 Promoções Top</h4>
+            <table class="stats-table">
+                {% for item in top_promocoes %}
+                <tr class="{% if forloop.first %}top1{% endif %}">
+                    <td class="rank">#{{ forloop.counter }}</td>
+                    <td class="name">{{ item.descricao_promocao }}</td>
+                    <td class="count">{{ item.total }}</td>
+                </tr>
+                {% endfor %}
+            </table>
+        </div>
+
+        <div class="stats-card">
+            <h4>📂 Categorias Top</h4>
+            <table class="stats-table">
+                {% for item in top_categorias %}
+                <tr class="{% if forloop.first %}top1{% endif %}">
+                    <td class="rank">#{{ forloop.counter }}</td>
+                    <td class="name">{{ item.nome_categoria }}</td>
+                    <td class="count">{{ item.total }}</td>
+                </tr>
+                {% endfor %}
+            </table>
+        </div>
+
     </div>
-
-    <div class="kpi-box">
-        <h3>Promoções</h3>
-        <span>{{ total_promocao_clicks }}</span>
-    </div>
-
-    <div class="kpi-box">
-        <h3>Categorias</h3>
-        <span>{{ total_categoria_clicks }}</span>
-    </div>
-</div>
-
-<!-- TABELAS -->
-<div class="stats-grid">
-
-<!-- BRINQUEDOS -->
-<div class="stats-card">
-<h4>🧸 Brinquedos mais clicados</h4>
-<table class="stats-table">
-{% for item in top_brinquedos %}
-<tr class="{% if forloop.first %}top1{% endif %}">
-<td class="rank">#{{ forloop.counter }}</td>
-<td class="name">{{ item.brinquedo_clicado__nome_brinquedo }}</td>
-<td class="count">{{ item.total }}</td>
-</tr>
-{% empty %}
-<tr><td>Sem dados</td></tr>
-{% endfor %}
-</table>
-</div>
-
-<!-- COMBOS -->
-<div class="stats-card">
-<h4>🎁 Combos mais clicados</h4>
-<table class="stats-table">
-{% for item in top_combos %}
-<tr class="{% if forloop.first %}top1{% endif %}">
-<td class="rank">#{{ forloop.counter }}</td>
-<td class="name">{{ item.descricao_combo }}</td>
-<td class="count">{{ item.total }}</td>
-</tr>
-{% endfor %}
-</table>
-</div>
-
-<!-- PROMOÇÕES -->
-<div class="stats-card">
-<h4>🔥 Promoções mais clicadas</h4>
-<table class="stats-table">
-{% for item in top_promocoes %}
-<tr class="{% if forloop.first %}top1{% endif %}">
-<td class="rank">#{{ forloop.counter }}</td>
-<td class="name">{{ item.descricao_promocao }}</td>
-<td class="count">{{ item.total }}</td>
-</tr>
-{% endfor %}
-</table>
-</div>
-
-<!-- CATEGORIAS -->
-<div class="stats-card">
-<h4>📂 Categorias mais clicadas</h4>
-<table class="stats-table">
-{% for item in top_categorias %}
-<tr class="{% if forloop.first %}top1{% endif %}">
-<td class="rank">#{{ forloop.counter }}</td>
-<td class="name">{{ item.nome_categoria }}</td>
-<td class="count">{{ item.total }}</td>
-</tr>
-{% endfor %}
-</table>
-</div>
-
-</div>
 </div>
 
 {% endblock %}
