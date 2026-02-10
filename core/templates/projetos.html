@@ -10,139 +10,231 @@
     <strong>Todos os Projetos</strong>
 </div>
 
-<section id="todos-projetos" class="py-5 bg-light">
-    <div class="container">
-        <h2 class="text-primary mb-5 text-center">Todos os Projetos</h2>
+<section class="projetos-wrapper">
 
-        <div class="row g-4">
-            {% for projeto in projetos %}
-            <div class="col-md-6 col-lg-4">
-                <div class="card shadow-sm h-100 projeto-card" data-modal="modal-projeto-{{ projeto.id }}">
-                    <!-- Imagem principal -->
-                    <div class="card-img-wrapper">
-                        {% if projeto.brinquedo_projetado.imagens_brinquedo_projeto.first %}
-                        <img src="{{ projeto.brinquedo_projetado.imagens_brinquedo_projeto.first.imagem.url }}"
-                             class="card-img-top" alt="{{ projeto.titulo }}">
-                        {% else %}
-                        <img src="{% static 'images/default.jpg' %}" class="card-img-top" alt="Sem imagem">
-                        {% endif %}
-                        <div class="card-overlay">
-                            <span>Ver Detalhes</span>
-                        </div>
-                    </div>
-
-                    <div class="card-body d-flex flex-column">
-                        <h5 class="card-title text-primary">{{ projeto.titulo }}</h5>
-                        <p class="card-text text-muted">{{ projeto.descricao|truncatewords:25 }}</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Modal do Projeto -->
-            <div id="modal-projeto-{{ projeto.id }}" class="projeto-modal">
-                <div class="modal-content">
-                    <span class="modal-close">&times;</span>
-                    <h2 class="text-primary mb-3">{{ projeto.titulo }}</h2>
-                    <p class="text-muted mb-4">{{ projeto.descricao }}</p>
-
-                    <h4 class="mb-3">📸 Galeria de Imagens</h4>
-                    <div class="modal-gallery">
-                        {% for img in projeto.brinquedo_projetado.imagens_brinquedo_projeto.all %}
-                        <div class="gallery-item">
-                            <img src="{{ img.imagem.url }}" alt="{{ img.legenda }}">
-                        </div>
-                        {% empty %}
-                        <p>Sem imagens adicionais.</p>
-                        {% endfor %}
-                    </div>
-                </div>
-            </div>
-            {% endfor %}
-        </div>
+    <!-- HEADER -->
+    <div class="proj-header">
+        <h1>Projetos Desenvolvidos</h1>
+        <p>Conheça os brinquedos planejados, desenhados e criados sob medida.</p>
     </div>
+
+    <!-- GRID DE PROJETOS -->
+    <div class="projetos-grid">
+        {% for projeto in projetos %}
+        <div class="proj-card" data-modal="modal-projeto-{{ projeto.id }}">
+
+            <!-- IMAGEM PRINCIPAL -->
+            <div class="proj-image">
+                {% if projeto.brinquedo_projetado.imagens_brinquedo_projeto.first %}
+                <img src="{{ projeto.brinquedo_projetado.imagens_brinquedo_projeto.first.imagem.url }}">
+                {% else %}
+                <img src="{% static 'images/default.jpg' %}">
+                {% endif %}
+            </div>
+
+            <!-- INFO -->
+            <div class="proj-info">
+                <h3>{{ projeto.titulo }}</h3>
+                <p>{{ projeto.descricao|truncatewords:18 }}</p>
+                <span class="proj-btn">Ver projeto</span>
+            </div>
+        </div>
+
+        <!-- MODAL -->
+        <div id="modal-projeto-{{ projeto.id }}" class="proj-modal">
+            <div class="proj-modal-box">
+                <span class="modal-close">&times;</span>
+
+                <div class="modal-top">
+                    <h2>{{ projeto.titulo }}</h2>
+                    <p>{{ projeto.descricao }}</p>
+                </div>
+
+                <!-- GALERIA -->
+                <div class="modal-gallery">
+                    {% for img in projeto.brinquedo_projetado.imagens_brinquedo_projeto.all %}
+                    <div class="modal-img">
+                        <img src="{{ img.imagem.url }}">
+                        {% if img.legenda %}
+                        <span>{{ img.legenda }}</span>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
 </section>
+
+<script>
+document.querySelectorAll('.proj-card').forEach(card=>{
+    card.addEventListener('click',()=>{
+        document.getElementById(card.dataset.modal).style.display='block';
+    });
+});
+
+document.querySelectorAll('.modal-close').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+        btn.closest('.proj-modal').style.display='none';
+    });
+});
+
+window.addEventListener('click',e=>{
+    if(e.target.classList.contains('proj-modal')){
+        e.target.style.display='none';
+    }
+});
+</script>
+
 
 <style>
 /* ======== CARDS DE PROJETOS ======== */
-.projeto-card {
-    position: relative;
-    cursor: pointer;
-    transition: transform 0.3s, box-shadow 0.3s;
-    border-radius: 15px;
-    overflow: hidden;
-}
-.projeto-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 15px 30px rgba(0,0,0,0.2);
-}
-.card-img-wrapper {
-    position: relative;
-    overflow: hidden;
-}
-.card-img-top {
-    transition: transform 0.4s;
-}
-.projeto-card:hover .card-img-top {
-    transform: scale(1.1);
-}
-.card-overlay {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    background: rgba(0, 74, 173, 0.7);
-    color: #fff;
-    padding: 10px;
-    text-align: center;
-    font-weight: bold;
-    opacity: 0;
-    transition: opacity 0.3s;
-}
-.projeto-card:hover .card-overlay {
-    opacity: 1;
+.projetos-wrapper{
+    max-width:1300px;
+    margin:auto;
+    padding:40px 20px 80px;
 }
 
-/* ======== MODAL ======== */
-.projeto-modal {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.85);
-    padding: 40px 20px;
-    overflow-y: auto;
-    z-index: 99999;
+/* HEADER */
+.proj-header{
+    text-align:center;
+    margin-bottom:40px;
 }
-.modal-content {
-    background: #fff;
-    max-width: 1000px;
-    margin: 20px auto;
-    padding: 30px;
-    border-radius: 20px;
-    text-align: left;
+.proj-header h1{
+    font-size:38px;
+    font-weight:700;
+    color:#0f172a;
 }
-.modal-close {
-    float: right;
-    font-size: 32px;
-    cursor: pointer;
-    color: #E63946;
+.proj-header p{
+    color:#64748b;
 }
 
-/* ======== GALERIA MODAL ======== */
-.modal-gallery {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 12px;
-    margin-bottom: 20px;
+/* GRID */
+.projetos-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(320px,1fr));
+    gap:25px;
 }
-.modal-gallery img {
-    width: 100%;
-    border-radius: 12px;
-    object-fit: cover;
-    transition: transform 0.3s;
+
+/* CARD */
+.proj-card{
+    background:#fff;
+    border-radius:18px;
+    overflow:hidden;
+    cursor:pointer;
+    transition:.3s;
+    box-shadow:0 8px 25px rgba(0,0,0,.08);
 }
-.modal-gallery img:hover {
-    transform: scale(1.05);
+.proj-card:hover{
+    transform:translateY(-6px);
+    box-shadow:0 18px 40px rgba(0,0,0,.15);
 }
+
+/* IMAGEM */
+.proj-image{
+    height:240px;
+    overflow:hidden;
+}
+.proj-image img{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    transition:.4s;
+}
+.proj-card:hover img{
+    transform:scale(1.08);
+}
+
+/* INFO */
+.proj-info{
+    padding:18px;
+}
+.proj-info h3{
+    font-size:18px;
+    margin-bottom:6px;
+    color:#0f172a;
+}
+.proj-info p{
+    font-size:14px;
+    color:#64748b;
+    min-height:45px;
+}
+.proj-btn{
+    display:inline-block;
+    margin-top:10px;
+    font-weight:600;
+    color:#6366f1;
+}
+
+/* MODAL */
+.proj-modal{
+    display:none;
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,.85);
+    z-index:9999;
+    overflow:auto;
+    padding:40px 20px;
+}
+
+.proj-modal-box{
+    background:white;
+    max-width:1100px;
+    margin:auto;
+    padding:30px;
+    border-radius:20px;
+    animation:fadeIn .3s ease;
+}
+
+.modal-close{
+    float:right;
+    font-size:32px;
+    cursor:pointer;
+    color:#ef4444;
+}
+
+.modal-top h2{
+    margin-bottom:8px;
+}
+.modal-top p{
+    color:#64748b;
+    margin-bottom:25px;
+}
+
+/* GALERIA */
+.modal-gallery{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+    gap:15px;
+}
+.modal-img{
+    position:relative;
+}
+.modal-img img{
+    width:100%;
+    border-radius:14px;
+    object-fit:cover;
+}
+.modal-img span{
+    position:absolute;
+    bottom:8px;
+    left:8px;
+    background:rgba(0,0,0,.6);
+    color:#fff;
+    padding:4px 8px;
+    font-size:12px;
+    border-radius:6px;
+}
+
+/* ANIMA */
+@keyframes fadeIn{
+    from{opacity:0; transform:scale(.95)}
+    to{opacity:1; transform:scale(1)}
+}
+
     /* ======== BREADCRUMB ======== */
 .breadcrumb {
     max-width: 1200px;
