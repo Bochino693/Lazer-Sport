@@ -278,6 +278,10 @@ class Promocoes(Prime):
 class Cupom(Prime):
     codigo = models.CharField(max_length=12)
     desconto_percentual = models.DecimalField(decimal_places=2, max_digits=10)
+    brinquedo = models.ForeignKey(Brinquedos, on_delete=models.CASCADE, related_name='cupom', null=True)
+    categoria = models.ForeignKey(CategoriasBrinquedos, on_delete=models.CASCADE, related_name='categoria', null=True)
+    cliente = models.ManyToManyField(ClientePerfil, related_name='cupons', null=True)
+    quantidade_uso = models.IntegerField(default=1, null=True)
 
     def __str__(self):
         return self.codigo
@@ -738,6 +742,17 @@ class ManutencaoImagem(models.Model):
     imagem = models.ImageField(upload_to='manutencoes/')
 
 
+class ListaDesejos(Prime):
+    brinquedos = models.ManyToManyField(Brinquedos, related_name='lista_desejos')
+
+    def __str__(self):
+        return self.brinquedos.nome_brinquedo
+
+    class Meta:
+        verbose_name = "Lista de Desejo"
+        verbose_name_plural = "Lista de Desejos"
+
+
 class BrinquedoClick(Prime):
     brinquedo_clicado = models.ForeignKey(Brinquedos, on_delete=models.SET_NULL, related_name='clicks_brinquedo',
                                           null=True)
@@ -772,6 +787,7 @@ class ComboClick(Prime):
     class Meta:
         verbose_name = "Combo Clicado"
         verbose_name_plural = "Combos Clicados"
+
 
 class PromocaoClick(Prime):
     promocao = models.ForeignKey(
@@ -816,4 +832,3 @@ class CategoriaClick(Prime):
     class Meta:
         verbose_name = "Categoria Clicada"
         verbose_name_plural = "Categorias Clicadas"
-
