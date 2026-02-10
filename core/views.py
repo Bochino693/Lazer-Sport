@@ -1309,6 +1309,11 @@ class DashboardAdminView(View):
             total_second = sum(p.total_liquido for p in second_half)
             vendas_data = [float(total_first), float(total_second)]
 
+        top_brinquedos = BrinquedoClick.objects.order_by('-quantidade_click')[:3]
+        top_combos = ComboClick.objects.order_by('-quantidade_click')[:3]
+        top_promocoes = PromocaoClick.objects.order_by('-quantidade_click')[:3]
+        top_categorias = CategoriaClick.objects.order_by('-quantidade_click')[:3]
+
         ctx = {
             'filtro': filtro,
             'total_clientes': total_clientes,
@@ -1318,6 +1323,10 @@ class DashboardAdminView(View):
             'vendas_total': vendas_total_formatado,
             'chart_labels': labels,
             'chart_data': vendas_data,
+            'top_brinquedos': top_brinquedos,
+            'top_combos': top_combos,
+            'top_promocoes': top_promocoes,
+            'top_categorias': top_categorias,
         }
 
         return render(request, 'dashboard.html', ctx)
