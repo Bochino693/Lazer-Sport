@@ -2527,12 +2527,17 @@ body {
         <div class="carousel-item" data-modal="modal-projeto-{{ projeto.id }}">
             <!-- Imagem principal do projeto -->
             <div class="carousel-image">
-                {% if projeto.brinquedo_projetado.imagens_brinquedo_projeto.first %}
-                    <img src="{{ projeto.brinquedo_projetado.imagens_brinquedo_projeto.first.imagem.url }}"
-                         alt="{{ projeto.titulo }}">
-                {% else %}
-                    <img src="{% static 'images/default.jpg' %}" alt="Sem imagem">
-                {% endif %}
+             {% if projeto.brinquedo_projetado %}
+                {% with img=projeto.brinquedo_projetado.imagens_brinquedo_projeto.first %}
+                    {% if img %}
+                        <img src="{{ img.imagem.url }}">
+                    {% else %}
+                        <img src="{% static 'images/default.jpg' %}">
+                    {% endif %}
+                {% endwith %}
+            {% else %}
+                <img src="{% static 'images/default.jpg' %}">
+            {% endif %}
             </div>
 
             <!-- Info do projeto -->
