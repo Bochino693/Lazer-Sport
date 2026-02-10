@@ -744,7 +744,7 @@ class BrinquedoClick(Prime):
     quantidade_click = models.IntegerField(default=1)
 
     def __str__(self):
-        self.brinquedo_clicado.nome_brinquedo
+        return self.brinquedo_clicado.nome_brinquedo
 
     class Meta:
         verbose_name = "Brinquedo Clicado"
@@ -752,23 +752,44 @@ class BrinquedoClick(Prime):
 
 
 class ComboClick(Prime):
-    combo_clicado = models.ForeignKey(Combos, on_delete=models.SET_NULL, related_name='clicks_combo', null=True)
+    combo_clicado = models.ForeignKey(
+        Combos,
+        on_delete=models.SET_NULL,
+        related_name='clicks_combo',
+        null=True,
+        blank=True
+    )
+
+    # Snapshot dos dados (permanece mesmo se apagar)
+    descricao_combo = models.CharField(max_length=90, null=True)
+    valor_combo = models.DecimalField(max_digits=10, decimal_places=2, null=True)
+
     quantidade_click = models.IntegerField(default=1)
 
     def __str__(self):
-        self.combo_clicado.descricao
+        return self.descricao_combo
 
     class Meta:
         verbose_name = "Combo Clicado"
-        verbose_name_plural = "Combo Clicados"
-
+        verbose_name_plural = "Combos Clicados"
 
 class PromocaoClick(Prime):
-    promocao_click = models.ForeignKey(Promocoes, on_delete=models.SET_NULL, related_name='clicks_promocao', null=True)
+    promocao = models.ForeignKey(
+        Promocoes,
+        on_delete=models.SET_NULL,
+        related_name='clicks_promocao',
+        null=True,
+        blank=True
+    )
+
+    # SNAPSHOT (permanece após exclusão)
+    descricao_promocao = models.CharField(max_length=120, null=True)
+    preco_promocao = models.DecimalField(max_digits=10, decimal_places=2, null=True)
+
     quantidade_click = models.IntegerField(default=1)
 
     def __str__(self):
-        self.combo_clicado.descricao
+        return self.descricao_promocao
 
     class Meta:
         verbose_name = "Promoção Clicada"
@@ -776,13 +797,23 @@ class PromocaoClick(Prime):
 
 
 class CategoriaClick(Prime):
-    categoria_clicada = models.ForeignKey(CategoriasBrinquedos, on_delete=models.SET_NULL, related_name='clicks',
-                                          null=True)
+    categoria = models.ForeignKey(
+        CategoriasBrinquedos,
+        on_delete=models.SET_NULL,
+        related_name='clicks_categoria',
+        null=True,
+        blank=True
+    )
+
+    # SNAPSHOT
+    nome_categoria = models.CharField(max_length=150, null=True)
+
     quantidade_click = models.IntegerField(default=1)
 
     def __str__(self):
-        self.categoria_clicada.nome_categoria
+        return self.nome_categoria
 
     class Meta:
         verbose_name = "Categoria Clicada"
         verbose_name_plural = "Categorias Clicadas"
+

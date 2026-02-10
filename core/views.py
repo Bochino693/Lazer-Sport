@@ -13,7 +13,9 @@ from django.views.generic.edit import FormView
 from django.contrib.auth.mixins import LoginRequiredMixin
 
 from .models import Brinquedos, CategoriasBrinquedos, Projetos, Eventos, ClientePerfil, Combos, Cupom, Promocoes, \
-    TagsBrinquedos, ImagensSite, BrinquedosProjeto, Estabelecimentos, Manutencao, ManutencaoImagem, EnderecoEntrega
+    TagsBrinquedos, ImagensSite, BrinquedosProjeto, Estabelecimentos, Manutencao, ManutencaoImagem, EnderecoEntrega, BrinquedoClick, ComboClick, PromocaoClick, CategoriaClick
+
+
 
 import os
 from django.http import FileResponse, Http404
@@ -282,30 +284,47 @@ class ClientePerfilView(LoginRequiredMixin, View):
             'perfil_form': perfil_form
         })
 
+from django.db.models import F
 
 class BrinquedoInfoView(View):
 
     def get(self, request, id):
         brinquedo = get_object_or_404(Brinquedos, id=id)
 
-        context = {
-            "brinquedo": brinquedo
-        }
+        obj, created = BrinquedoClick.objects.get_or_create(
+            brinquedo_clicado=brinquedo,
+            defaults={'quantidade_click': 1}
+        )
 
-        return render(request, "brinquedo_info.html", context)
+        if not created:
+            BrinquedoClick.objects.filter(id=obj.id).update(
+                quantidade_click=F('quantidade_click') + 1
+            )
 
+        return render(request, "brinquedo_info.html", {"brinquedo": brinquedo})
 
 class CategoriasInfoView(View):
 
     def get(self, request, pk):
 
-        # Categoria selecionada
         categoria = get_object_or_404(CategoriasBrinquedos, id=pk)
 
-        # Brinquedos desta categoria
+        # REGISTRA CLICK
+        obj, created = CategoriaClick.objects.get_or_create(
+            categoria=categoria,
+            defaults={
+                'nome_categoria': categoria.nome_categoria,
+                'quantidade_click': 1
+            }
+        )
+
+        if not created:
+            CategoriaClick.objects.filter(id=obj.id).update(
+                quantidade_click=F('quantidade_click') + 1
+            )
+
         brinquedos = categoria.brinquedos.all()
 
-        # FILTROS
         ordenar = request.GET.get("ordenar", "az")
 
         if ordenar == "az":
@@ -317,7 +336,6 @@ class CategoriasInfoView(View):
         elif ordenar == "custo-beneficio":
             brinquedos = brinquedos.order_by("-avaliacao", "valor_brinquedo")
 
-        # PAGINAÇÃO
         paginator = Paginator(brinquedos, 12)
         page_number = request.GET.get("page")
         page_obj = paginator.get_page(page_number)
@@ -405,30 +423,35 @@ class ComboInfoView(View):
     def get(self, request, pk):
         combo = get_object_or_404(Combos, id=pk)
 
-        # TOTAL ORIGINAL – já é Decimal
+        # REGISTRA O CLICK
+        obj, created = ComboClick.objects.get_or_create(
+            combo_clicado=combo,
+            defaults={
+                'descricao_combo': combo.descricao,
+                'valor_combo': combo.valor_combo,
+                'quantidade_click': 1
+            }
+        )
+
+        if not created:
+            ComboClick.objects.filter(id=obj.id).update(
+                quantidade_click=F('quantidade_click') + 1
+            )
+
+        # ===== CÁLCULOS =====
         total_original = sum(
             Decimal(b.valor_brinquedo) for b in combo.brinquedos.all()
         )
 
-        # Valor do combo – também Decimal
         valor_combo = Decimal(combo.valor_combo)
-
-        # Economia
         economia = total_original - valor_combo
-
-        # Porcentagem
         porcentagem = (economia / total_original * Decimal(100)) if total_original else Decimal(0)
 
-        # Enviando para o front
         combo.total_original = total_original
         combo.economia = economia
         combo.porcentagem = porcentagem
 
-        context = {
-            'combo': combo,
-        }
-
-        return render(request, 'combo_info.html', context)
+        return render(request, 'combo_info.html', {'combo': combo})
 
 
 class PromocaoInfoView(View):
@@ -436,11 +459,23 @@ class PromocaoInfoView(View):
     def get(self, request, pk):
         promocao = get_object_or_404(Promocoes, pk=pk)
 
-        context = {
-            'promocao': promocao,
+        obj, created = PromocaoClick.objects.get_or_create(
+            promocao=promocao,
+            defaults={
+                'descricao_promocao': promocao.descricao,
+                'preco_promocao': promocao.preco_promocao,
+                'quantidade_click': 1
+            }
+        )
 
-        }
-        return render(request, 'promocao_info.html', context)
+        if not created:
+            PromocaoClick.objects.filter(id=obj.id).update(
+                quantidade_click=F('quantidade_click') + 1
+            )
+
+        return render(request, 'promocao_info.html', {
+            'promocao': promocao
+        })
 
 
 class EstabelecimentoInfoView(View):
