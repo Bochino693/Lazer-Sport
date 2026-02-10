@@ -17,12 +17,89 @@ from .models import (
     ManutencaoImagem,
     Pedido,
     ItemPedido,
-    EnderecoEmpresa
+    EnderecoEmpresa,
+    BrinquedoClick,
+    CategoriaClick,
+    PromocaoClick,
+    ComboClick
 )
 from django.utils.html import format_html
 from .models import ImagensSite
 from django import forms
 from .models import EnderecoEntrega
+
+
+@admin.register(BrinquedoClick)
+class BrinquedoClickAdmin(admin.ModelAdmin):
+    list_display = (
+        "id",
+        "brinquedo_clicado",
+        "quantidade_click",
+        "cricao"
+    )
+    search_fields = (
+        "brinquedo_clicado__nome_brinquedo",
+    )
+    list_filter = (
+        "brinquedo_clicado", "cricao"
+    )
+    ordering = ("-quantidade_click",)
+
+
+@admin.register(ComboClick)
+class ComboClickAdmin(admin.ModelAdmin):
+    list_display = (
+        "id",
+        "descricao_combo",
+        "combo_clicado",
+        "valor_combo",
+        "quantidade_click",
+        "criacao"
+    )
+    search_fields = (
+        "descricao_combo",
+    )
+    list_filter = (
+        "combo_clicado", "criacao"
+    )
+    ordering = ("-quantidade_click",)
+
+
+@admin.register(PromocaoClick)
+class PromocaoClickAdmin(admin.ModelAdmin):
+    list_display = (
+        "id",
+        "descricao_promocao",
+        "promocao",
+        "preco_promocao",
+        "quantidade_click",
+        "criacao"
+    )
+    search_fields = (
+        "descricao_promocao",
+    )
+    list_filter = (
+        "promocao", "cricao"
+    )
+    ordering = ("-quantidade_click",)
+
+
+@admin.register(CategoriaClick)
+class CategoriaClickAdmin(admin.ModelAdmin):
+    list_display = (
+        "id",
+        "nome_categoria",
+        "categoria",
+        "quantidade_click",
+        "cricao"
+    )
+    search_fields = (
+        "nome_categoria",
+    )
+    list_filter = (
+        "categoria", "cricao"
+    )
+    ordering = ("-quantidade_click",)
 
 
 @admin.register(ImagensSite)
