@@ -1335,6 +1335,87 @@ class DashboardAdminView(View):
 from django.http import HttpResponseForbidden
 
 
+class EstatisticasGeraisView(View):
+    def get(self, request):
+        filtro = request.GET.get('filtro', 'geral')
+        agora = timezone.now()
+
+        if filtro == '7dias':
+            data_inicio = agora - timedelta(days=7)
+        elif filtro == '30dias':
+            data_inicio = agora - timedelta(days=30)
+        elif filtro == 'ano':
+            data_inicio = agora.replace(month=1, day=1, hour=0, minute=0, second=0)
+        else:
+            data_inicio = None
+
+        # -----------------------------
+        # BRINQUEDOS
+        # -----------------------------
+        brinquedos = BrinquedoClick.objects.all()
+        if data_inicio:
+            brinquedos = brinquedos.filter(criacao__gte=data_inicio)
+
+        top_brinquedos = (
+            brinquedos
+            .values('brinquedo_clicado__nome_brinquedo')
+            .annotate(total=Sum('quantidade_click'))
+            .order_by('-total')[:20]
+        )
+
+        # -----------------------------
+        # COMBOS
+        # -----------------------------
+        combos = ComboClick.objects.all()
+        if data_inicio:
+            combos = combos.filter(criacao__gte=data_inicio)
+
+        top_combos = (
+            combos
+            .values('descricao_combo')
+            .annotate(total=Sum('quantidade_click'))
+            .order_by('-total')[:20]
+        )
+
+        # -----------------------------
+        # PROMOÇÕES
+        # -----------------------------
+        promocoes = PromocaoClick.objects.all()
+        if data_inicio:
+            promocoes = promocoes.filter(criacao__gte=data_inicio)
+
+        top_promocoes = (
+            promocoes
+            .values('descricao_promocao')
+            .annotate(total=Sum('quantidade_click'))
+            .order_by('-total')[:20]
+        )
+
+        # -----------------------------
+        # CATEGORIAS
+        # -----------------------------
+        categorias = CategoriaClick.objects.all()
+        if data_inicio:
+            categorias = categorias.filter(criacao__gte=data_inicio)
+
+        top_categorias = (
+            categorias
+            .values('nome_categoria')
+            .annotate(total=Sum('quantidade_click'))
+            .order_by('-total')[:20]
+        )
+
+        ctx = {
+            'filtro': filtro,
+            'top_brinquedos': top_brinquedos,
+            'top_combos': top_combos,
+            'top_promocoes': top_promocoes,
+            'top_categorias': top_categorias,
+        }
+
+        return render(request, 'estatisticas_gerais.html', ctx)
+
+
 class ManutencaoAdminView(LoginRequiredMixin, View):
 
     def get(self, request):

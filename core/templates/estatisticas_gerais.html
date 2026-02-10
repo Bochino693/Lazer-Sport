@@ -1,0 +1,123 @@
+{% extends 'base_adm.html' %}
+{% block title %}Estatísticas Gerais{% endblock %}
+
+{% block content %}
+
+<style>
+
+    .stats-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.stats-table th {
+    text-align: left;
+    padding: 8px;
+    color: #94a3b8;
+    font-weight: 600;
+}
+
+.stats-table td {
+    padding: 8px;
+    border-top: 1px solid rgba(255,255,255,0.05);
+}
+
+.stats-table tr:hover {
+    background: rgba(255,255,255,0.03);
+}
+
+
+
+</style>
+<div class="dashboard-wrapper">
+
+<div class="dashboard-header">
+    <h2>ESTATÍSTICAS GERAIS</h2>
+
+    <div class="dashboard-filters">
+        <a href="?filtro=geral" class="filter-btn {% if filtro == 'geral' %}active{% endif %}">Geral</a>
+        <a href="?filtro=7dias" class="filter-btn {% if filtro == '7dias' %}active{% endif %}">7 dias</a>
+        <a href="?filtro=30dias" class="filter-btn {% if filtro == '30dias' %}active{% endif %}">30 dias</a>
+        <a href="?filtro=ano" class="filter-btn {% if filtro == 'ano' %}active{% endif %}">Ano</a>
+    </div>
+</div>
+
+    <div class="charts-grid">
+<div class="chart-card">
+    <h4>Brinquedos mais clicados</h4>
+
+    <table class="stats-table">
+        <tr>
+            <th>Brinquedo</th>
+            <th>Cliques</th>
+        </tr>
+        {% for item in top_brinquedos %}
+        <tr>
+            <td>{{ item.brinquedo_clicado__nome_brinquedo }}</td>
+            <td>{{ item.total }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="2">Sem dados</td></tr>
+        {% endfor %}
+    </table>
+</div>
+
+
+        <div class="chart-card">
+    <h4>Combos mais clicados</h4>
+
+    <table class="stats-table">
+        <tr>
+            <th>Combo</th>
+            <th>Cliques</th>
+        </tr>
+        {% for item in top_combos %}
+        <tr>
+            <td>{{ item.descricao_combo }}</td>
+            <td>{{ item.total }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="2">Sem dados</td></tr>
+        {% endfor %}
+    </table>
+</div>
+
+
+        <div class="chart-card">
+    <h4>Promoções mais clicadas</h4>
+
+    <table class="stats-table">
+        <tr>
+            <th>Promoção</th>
+            <th>Cliques</th>
+        </tr>
+        {% for item in top_promocoes %}
+        <tr>
+            <td>{{ item.descricao_promocao }}</td>
+            <td>{{ item.total }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+</div>
+
+
+        <div class="chart-card">
+    <h4>Categorias mais clicadas</h4>
+
+    <table class="stats-table">
+        <tr>
+            <th>Categoria</th>
+            <th>Cliques</th>
+        </tr>
+        {% for item in top_categorias %}
+        <tr>
+            <td>{{ item.nome_categoria }}</td>
+            <td>{{ item.total }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+</div>
+
+</div>
+</div>
+{% endblock %}

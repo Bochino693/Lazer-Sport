@@ -369,13 +369,12 @@ table td {
   <a href="{% url 'banner_adm' %}">Banners do Site</a>
   <a href="{% url 'dashboards' %}">Dashboard</a>
   <a href="{% url 'brinquedos_admin' %}">Brinquedos</a>
+  <a href="{% url 'estatisticas_gerais' %}">Estatisticas Gerais</a>
+
   <a href="{% url 'combos_admin' %}">Combos</a>
   <a href="{% url 'promocoes_admin' %}">Promoções</a>
-  <a href="{% url 'eventos_admin' %}">Eventos</a>
-  <a href="{% url 'projetos_admin' %}">Projetos</a>
-  <a href="{% url 'cupons_admin' %}">Cupons</a>
 
-<a href="{% url 'manutencoes_adm' %}"
+  <a href="{% url 'manutencoes_adm' %}"
    class="{% if tem_manutencoes_alerta %}menu-alert{% endif %}">
   Manutenções
   {% if tem_manutencoes_alerta %}
@@ -390,6 +389,10 @@ table td {
     <span class="badge-alert">{{ pedidos_alerta }}</span>
   {% endif %}
 </a>
+
+  <a href="{% url 'eventos_admin' %}">Eventos</a>
+  <a href="{% url 'projetos_admin' %}">Projetos</a>
+  <a href="{% url 'cupons_admin' %}">Cupons</a>
 
   <a href="{% url 'relatorio_vendas' %}">Relatório de Vendas</a>
   <a href="{% url 'clients' %}">Usuários</a>
