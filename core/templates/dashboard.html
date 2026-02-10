@@ -370,28 +370,8 @@ new Chart(ctxVendas, {
 
 
 
-    // Exemplo de gráfico de usuários
-    const ctxUsuarios = document.getElementById('chartUsuarios').getContext('2d');
-    const chartUsuarios = new Chart(ctxUsuarios, {
-        type: 'bar',
-        data: {
-            labels: ['Free', 'Premium', 'Enterprise'],
-            datasets: [{
-                label: 'Usuários',
-                data: [850, 300, 98],
-                backgroundColor: ['#2c3e50', '#3498db', '#1abc9c']
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                legend: { display: false }
-            }
-        }
-    });
 
-
-    const slides = document.querySelectorAll('.top-slide');
+const slides = document.querySelectorAll('.top-slide');
 const title = document.getElementById('topTitle');
 
 const titles = [
@@ -403,15 +383,14 @@ const titles = [
 
 let current = 0;
 
-setInterval(() => {
-    slides[current].classList.remove('active');
-
-    current = (current + 1) % slides.length;
-
-    slides[current].classList.add('active');
-    title.textContent = titles[current];
-
-}, 5000);
+if (slides.length > 0) {
+    setInterval(() => {
+        slides[current].classList.remove('active');
+        current = (current + 1) % slides.length;
+        slides[current].classList.add('active');
+        title.textContent = titles[current];
+    }, 5000);
+}
 </script>
 
 {% endblock %}
