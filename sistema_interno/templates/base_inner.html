@@ -166,44 +166,92 @@
     border-color: var(--primary-hover);
   }
 
-  .fab-container {
+/* Container dos FABs */
+.fab-container {
     position: fixed;
-    bottom: 20px;
-    right: 20px;
+    bottom: 30px;
+    right: 30px;
     display: flex;
     flex-direction: column;
-    gap: 15px;
+    gap: 20px;
     z-index: 1050;
 }
 
+/* FAB Base */
 .fab {
-    width: 60px;
-    height: 60px;
+    width: 70px;
+    height: 70px;
     border-radius: 50%;
     display: flex;
+    flex-direction: column;
     justify-content: center;
     align-items: center;
-    font-size: 24px;
     color: #fff;
     text-decoration: none;
     position: relative;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-    transition: transform 0.2s ease;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    cursor: pointer;
+    font-family: 'Segoe UI', sans-serif;
 }
 
+/* Cores específicas */
+.fab-green { background-color: #28a745; }
+.fab-blue { background-color: #007bff; }
+.fab-orange { background-color: #fd7e14; }
+
+/* Hover moderno */
 .fab:hover {
-    transform: scale(1.1);
+    transform: scale(1.15) rotate(-5deg);
+    box-shadow: 0 12px 25px rgba(0,0,0,0.4);
 }
 
-.fab .badge {
-    position: absolute;
-    top: -5px;
-    right: -5px;
+/* Ícone grande */
+.fab-icon {
+    font-size: 28px;
+    line-height: 1;
+}
+
+/* Label descritiva abaixo do ícone */
+.fab-label {
     font-size: 0.7rem;
-    padding: 3px 5px;
+    margin-top: 4px;
+    text-align: center;
 }
 
-    </style>
+/* Badge de notificação */
+.fab-badge {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    background-color: #dc3545;
+    color: #fff;
+    font-size: 0.65rem;
+    font-weight: 600;
+    padding: 3px 6px;
+    border-radius: 50%;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+}
+
+/* Tooltip simples ao passar o mouse */
+.fab[title]:hover::after {
+    content: attr(title);
+    position: absolute;
+    top: -35px;
+    right: 50%;
+    transform: translateX(50%);
+    background-color: rgba(0,0,0,0.85);
+    color: #fff;
+    padding: 5px 10px;
+    font-size: 0.75rem;
+    border-radius: 5px;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 1;
+    transition: opacity 0.2s ease;
+}
+
+</style>
 
 </head>
 <body>
@@ -405,32 +453,36 @@
   });
 </script>
 
-
-<!-- Floating Action Buttons -->
+<!-- Floating Action Buttons Modernos -->
 <div class="fab-container">
+
     <!-- Registro rápido de vendas -->
-    <a href="{% url 'vendas_inner' %}" class="fab btn btn-success" title="Registro rápido de vendas">
-        🛒
+    <a href="{% url 'vendas_inner' %}" class="fab fab-green" title="Registrar rapidamente uma venda">
+        <div class="fab-icon">🛒</div>
+        <div class="fab-label">Venda Rápida</div>
         {% if count_vendas > 0 %}
-            <span class="badge bg-danger">{{ count_vendas }}</span>
+            <span class="fab-badge">{{ count_vendas }}</span>
         {% endif %}
     </a>
 
     <!-- Pedidos do site -->
-    <a href="{% url 'pedidos_inner' %}" class="fab btn btn-primary" title="Pedidos do site">
-        📦
+    <a href="{% url 'pedidos_inner' %}" class="fab fab-blue" title="Visualizar pedidos do site não finalizados">
+        <div class="fab-icon">📦</div>
+        <div class="fab-label">Pedidos Site</div>
         {% if count_pedidos > 0 %}
-            <span class="badge bg-danger">{{ count_pedidos }}</span>
+            <span class="fab-badge">{{ count_pedidos }}</span>
         {% endif %}
     </a>
 
     <!-- Manutenções pendentes -->
-    <a href="{% url 'manutencao_inner' %}" class="fab btn btn-warning" title="Manutenções pendentes">
-        🔧
+    <a href="{% url 'manutencao_inner' %}" class="fab fab-orange" title="Ver manutenções pendentes">
+        <div class="fab-icon">🔧</div>
+        <div class="fab-label">Manutenção</div>
         {% if count_manutencao > 0 %}
-            <span class="badge bg-danger">{{ count_manutencao }}</span>
+            <span class="fab-badge">{{ count_manutencao }}</span>
         {% endif %}
     </a>
+
 </div>
 
 </body>
