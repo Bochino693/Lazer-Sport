@@ -93,6 +93,10 @@ class Material(Prime):
         verbose_name_plural = "materiais"
 
 
+class Montadores(Prime):
+    nome_montador = models.CharField(max_length=90)
+
+
 class Setores(Prime):
     nome_setor = models.CharField(max_length=120)
 

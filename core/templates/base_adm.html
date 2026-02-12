@@ -251,6 +251,43 @@ table td {
     animation: pulseBadge 2s infinite;
 }
 
+/* BADGE DENTRO DO MENU LATERAL */
+.badge-alert {
+    background: #ef4444; /* Mesmo vermelho dos FABs */
+    color: white;
+    font-size: 10px;
+    font-weight: 800;
+
+    /* Forma redonda/pílula */
+    min-width: 20px;
+    height: 20px;
+    padding: 0 5px;
+    border-radius: 10px;
+
+    /* Centralização */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    /* Efeito visual */
+    box-shadow: 0 2px 5px rgba(239, 68, 68, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    margin-left: auto; /* Empurra para a direita no flexbox */
+}
+
+/* Ajuste na classe menu-alert que você já tem */
+.menu-alert {
+    background: rgba(239, 68, 68, 0.1) !important; /* Fundo sutil para o item do menu */
+    color: #ef4444 !important;
+    border-right: 4px solid #ef4444; /* Barra lateral de atenção */
+    transition: all 0.3s ease;
+}
+
+.menu-alert:hover {
+    background: rgba(239, 68, 68, 0.2) !important;
+}
+
+
 /* Animação de pulso apenas no badge para não distrair tanto quanto o botão inteiro */
 @keyframes pulseBadge {
     0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
@@ -372,11 +409,12 @@ table td {
   <a href="{% url 'combos_admin' %}">Combos</a>
   <a href="{% url 'promocoes_admin' %}">Promoções</a>
 
-  <a href="{% url 'manutencoes_adm' %}"
-   class="{% if tem_manutencoes_alerta %}menu-alert{% endif %}">
-  Manutenções
-  {% if tem_manutencoes_alerta %}
-    <span class="badge-alert">{{ manutencoes_alerta }}</span>
+<a href="{% url 'manutencoes_adm' %}"
+   class="nav-link d-flex justify-content-between align-items-center {% if count_manutencao > 0 %}menu-alert{% endif %}">
+  <span>🛠 Manutenções</span>
+
+  {% if count_manutencao > 0 %}
+    <span class="badge-alert">{{ count_manutencao }}</span>
   {% endif %}
 </a>
 
