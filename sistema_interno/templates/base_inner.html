@@ -165,6 +165,44 @@
     background-color: var(--primary-hover);
     border-color: var(--primary-hover);
   }
+
+  .fab-container {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    z-index: 1050;
+}
+
+.fab {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 24px;
+    color: #fff;
+    text-decoration: none;
+    position: relative;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    transition: transform 0.2s ease;
+}
+
+.fab:hover {
+    transform: scale(1.1);
+}
+
+.fab .badge {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    font-size: 0.7rem;
+    padding: 3px 5px;
+}
+
     </style>
 
 </head>
@@ -246,7 +284,7 @@
     <div class="accordion-body">
       <ul class="nav flex-column">
         <li class="nav-item"><a class="nav-link" href="#">Brinquedos á Fazer</a></li>
-        <li class="nav-item"><a class="nav-link" href="#">Estatística de Montagem</a></li>
+        <li class="nav-item"><a class="nav-link" href="#">Estatística de Produção</a></li>
         <li class="nav-item"><a class="nav-link" href="#">Opção 3</a></li>
       </ul>
     </div>
@@ -263,8 +301,8 @@
   <div id="topic4Collapse" class="accordion-collapse collapse" data-bs-parent="#accordionExample">
     <div class="accordion-body">
       <ul class="nav flex-column">
-        <li class="nav-item"><a class="nav-link" href="#">Opção 1</a></li>
-        <li class="nav-item"><a class="nav-link" href="#">Opção 2</a></li>
+        <li class="nav-item"><a class="nav-link" href="#">Registro de Venda</a></li>
+        <li class="nav-item"><a class="nav-link" href="#">Relatório de Vendas</a></li>
         <li class="nav-item"><a class="nav-link" href="#">Opção 3</a></li>
       </ul>
     </div>
@@ -364,6 +402,36 @@
     overlay.classList.remove('show');
   });
 </script>
+
+
+<!-- Floating Action Buttons -->
+<div class="fab-container">
+
+   <!-- Registro rápido de vendas -->
+  <a href="{% url 'venda_rapida' %}" class="fab btn btn-success" title="Registro rápido de vendas">
+    🛒
+    {% if count_vendas > 0 %}
+      <span class="badge bg-danger">{{ count_vendas }}</span>
+    {% endif %}
+  </a>
+
+ <!-- Pedidos do site -->
+  <a href="{% url 'pedidos_site' %}" class="fab btn btn-primary" title="Pedidos do site">
+    📦
+    {% if count_pedidos > 0 %}
+      <span class="badge bg-danger">{{ count_pedidos }}</span>
+    {% endif %}
+  </a>
+
+
+ <!-- Manutenções pendentes -->
+  <a href="{% url 'manutencao_list' %}" class="fab btn btn-warning" title="Manutenções pendentes">
+    🔧
+    {% if count_manutencao > 0 %}
+      <span class="badge bg-danger">{{ count_manutencao }}</span>
+    {% endif %}
+  </a>
+</div>
 
 </body>
 </html>

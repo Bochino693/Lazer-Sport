@@ -130,6 +130,7 @@ TEMPLATES = [
                 'core.context_processors.carrinho_context',
                 'core.context_processors.pedidos_ativos_context',
                 'core.context_processors.admin_alertas_context',
+                'sistema_interno.context_processors.fab_counts'
 
             ],
         },
