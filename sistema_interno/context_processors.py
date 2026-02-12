@@ -1,4 +1,4 @@
-# core/context_processors.py
+
 from core.models import Venda, Pedido, Manutencao
 
 def fab_counts(request):
