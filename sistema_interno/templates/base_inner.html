@@ -167,20 +167,21 @@
   }
 
 /* Container dos FABs */
+/* Container dos FABs */
 .fab-container {
     position: fixed;
     bottom: 30px;
     right: 30px;
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: 25px; /* aumenta o espaçamento entre FABs */
     z-index: 1050;
 }
 
 /* FAB Base */
 .fab {
-    width: 70px;
-    height: 70px;
+    width: 80px; /* maior para caber texto */
+    height: 80px;
     border-radius: 50%;
     display: flex;
     flex-direction: column;
@@ -193,6 +194,7 @@
     transition: transform 0.3s ease, box-shadow 0.3s ease;
     cursor: pointer;
     font-family: 'Segoe UI', sans-serif;
+    padding: 5px;
 }
 
 /* Cores específicas */
@@ -202,21 +204,24 @@
 
 /* Hover moderno */
 .fab:hover {
-    transform: scale(1.15) rotate(-5deg);
+    transform: scale(1.2) rotate(-3deg);
     box-shadow: 0 12px 25px rgba(0,0,0,0.4);
 }
 
 /* Ícone grande */
 .fab-icon {
-    font-size: 28px;
+    font-size: 30px;
     line-height: 1;
 }
 
 /* Label descritiva abaixo do ícone */
 .fab-label {
-    font-size: 0.7rem;
-    margin-top: 4px;
+    font-size: 0.75rem;
+    margin-top: 6px;
     text-align: center;
+    line-height: 1.2;
+    word-wrap: break-word;
+    max-width: 70px; /* limitar largura para quebrar linha */
 }
 
 /* Badge de notificação */
@@ -226,29 +231,32 @@
     right: -6px;
     background-color: #dc3545;
     color: #fff;
-    font-size: 0.65rem;
+    font-size: 0.7rem;
     font-weight: 600;
-    padding: 3px 6px;
+    padding: 4px 7px;
     border-radius: 50%;
     box-shadow: 0 2px 5px rgba(0,0,0,0.3);
 }
 
-/* Tooltip simples ao passar o mouse */
+/* Tooltip melhorado */
 .fab[title]:hover::after {
     content: attr(title);
     position: absolute;
-    top: -35px;
+    top: -40px;
     right: 50%;
     transform: translateX(50%);
-    background-color: rgba(0,0,0,0.85);
+    background-color: rgba(0,0,0,0.9);
     color: #fff;
-    padding: 5px 10px;
+    padding: 6px 12px;
     font-size: 0.75rem;
-    border-radius: 5px;
-    white-space: nowrap;
+    border-radius: 6px;
+    white-space: normal; /* permite quebra de linha */
+    text-align: center;
+    max-width: 200px; /* largura máxima do tooltip */
+    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
     pointer-events: none;
     opacity: 1;
-    transition: opacity 0.2s ease;
+    z-index: 2000;
 }
 
 </style>
