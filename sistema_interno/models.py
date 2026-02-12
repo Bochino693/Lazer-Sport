@@ -93,6 +93,17 @@ class Material(Prime):
         verbose_name_plural = "materiais"
 
 
+class Setores(Prime):
+    nome_setor = models.CharField(max_length=120)
+
+    def __str__(self):
+        return self.nome_setor
+
+    class Meta:
+        verbose_name = "Setor"
+        verbose_name_plural = "Setores"
+
+
 class EstoqueMaterial(Prime):
     descricao_local = models.CharField(max_length=90)
     material = models.ForeignKey(Material, on_delete=models.CASCADE, related_name='estoque')
@@ -136,6 +147,13 @@ class CentralVendas(Venda):
 class ComprasMensais(Prime):
     descricao_compra = models.CharField(max_length=120)
     valor = models.DecimalField(decimal_places=2, max_digits=6)
+
+    def __str__(self):
+        return self.descricao_compra
+
+    class Meta:
+        verbose_name = "Compra Mensal"
+        verbose_name_plural = "Compras Mensais"
 
 
 class ItensCompra(Prime):
@@ -187,3 +205,6 @@ class FinanceiroMensal(Prime):
     class Meta:
         verbose_name = "Financeiro Mensal"
         verbose_name_plural = "Financeiros Mensais"
+
+
+
