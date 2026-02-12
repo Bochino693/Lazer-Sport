@@ -86,3 +86,4 @@ class FinanceiroMensalAdmin(admin.ModelAdmin):
     list_display = ('descricao', 'mes', 'valor_bruto', 'valor_liquido', 'lucro')
     filter_horizontal = ('despesas_mensais',) # Facilita selecionar várias despesas
     list_filter = ('mes',)
+

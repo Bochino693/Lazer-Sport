@@ -192,73 +192,71 @@ table td {
 
 
 
-
-
-  .badge-alert {
-    background: #ef4444;
-    color: white;
-    font-size: 11px;
-    padding: 3px 7px;
-    border-radius: 20px;
-    margin-left: 8px;
-    font-weight: 700;
-}
-
-/* FLOAT BUTTONS */
-
+/* BOTÕES FLUTUANTES (FLOAT BUTTONS) */
 .float-btn {
     position: fixed;
-    right: 22px;
-    width: 60px;
-    height: 60px;
+    right: 25px;
+    width: 65px; /* Ligeiramente maior para melhor toque */
+    height: 65px;
     border-radius: 50%;
-    background: #111827;
+    background: #1e293b; /* Um cinza azulado escuro mais moderno que o preto puro */
     color: white;
-    font-size: 26px;
+    font-size: 28px;
     display: flex;
     align-items: center;
     justify-content: center;
     text-decoration: none;
-    box-shadow: 0 6px 18px rgba(0,0,0,0.25);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.3);
     z-index: 9999;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); /* Efeito elástico */
+    border: 1px solid rgba(255, 255, 255, 0.1); /* Borda sutil de destaque */
+}
+
+.float-btn:hover {
+    transform: translateY(-5px) scale(1.1);
+    color: #fff;
+    box-shadow: 0 15px 30px rgba(0,0,0,0.4);
 }
 
 .float-pedidos {
-    bottom: 95px;
+    bottom: 105px;
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    border-left: 3px solid #3b82f6; /* Detalhe lateral azul para pedidos */
 }
 
 .float-manut {
-    bottom: 20px;
+    bottom: 25px;
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    border-left: 3px solid #f59e0b; /* Detalhe lateral laranja para manutenção */
 }
 
+/* BADGE DE NOTIFICAÇÃO ESTILIZADO */
 .float-badge {
     position: absolute;
-    top: -6px;
-    right: -6px;
-    background: #ef4444;
+    top: -2px;
+    right: -2px;
+    background: #ef4444; /* Vermelho vibrante */
     color: white;
-    font-size: 12px;
-    padding: 4px 7px;
-    border-radius: 50%;
-    font-weight: 700;
+    font-size: 11px;
+    min-width: 22px;
+    height: 22px;
+    padding: 2px;
+    border-radius: 50px; /* Estilo pílula se o número crescer */
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid #1e293b; /* Borda da cor do botão para "vazar" o fundo */
+    box-shadow: 0 4px 10px rgba(239, 68, 68, 0.5);
+    animation: pulseBadge 2s infinite;
 }
 
-  .menu-alert {
-    background: linear-gradient(90deg, #ef4444, #dc2626);
-    color: #fff !important;
-    font-weight: 700;
-    border-radius: 8px;
-    padding-left: 12px;
-    animation: pulseAlert 1.5s infinite;
+/* Animação de pulso apenas no badge para não distrair tanto quanto o botão inteiro */
+@keyframes pulseBadge {
+    0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+    70% { transform: scale(1.1); box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+    100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
 }
-
-/* efeito "respirando" */
-@keyframes pulseAlert {
-    0%   { box-shadow: 0 0 0px rgba(239,68,68,0.0); }
-    50%  { box-shadow: 0 0 12px rgba(239,68,68,0.7); }
-    100% { box-shadow: 0 0 0px rgba(239,68,68,0.0); }
-}
-
 
   .sidebar-bottom {
     margin-top: 30px;
@@ -526,19 +524,17 @@ document.getElementById('logoutModal').addEventListener('click', function(e){
 
 {% if request.user.is_staff %}
 
-<!-- FLOAT PEDIDOS -->
-<a href="{% url 'pedidos_adm' %}" class="float-btn float-pedidos">
+<a href="{% url 'pedidos_adm' %}" class="float-btn float-pedidos" title="Pedidos Ativos">
   📦
-  {% if tem_pedidos_alerta %}
-    <span class="float-badge">{{ pedidos_alerta }}</span>
+  {% if count_pedidos > 0 %}
+    <span class="float-badge">{{ count_pedidos }}</span>
   {% endif %}
 </a>
 
-<!-- FLOAT MANUTENÇÕES -->
-<a href="{% url 'manutencoes_adm' %}" class="float-btn float-manut">
+<a href="{% url 'manutencoes_adm' %}" class="float-btn float-manut" title="Manutenções Pendentes">
   🔧
-  {% if tem_manutencoes_alerta %}
-    <span class="float-badge">{{ manutencoes_alerta }}</span>
+  {% if count_manutencao > 0 %}
+    <span class="float-badge">{{ count_manutencao }}</span>
   {% endif %}
 </a>
 
