@@ -11,7 +11,7 @@ from .views import (HomeView, BrinquedoInfoView, CategoriasInfoView, BrinquedosV
                     EventoAdminView, BannerAdminView, BannerDeleteView, AdminLoginView, AcessoNegadoView,
                     DashboardAdminView, UserAdminView, ManutencaoAdminView, RelatorioVendasView, PedidoAdminView,
                     redirecionar_loja, redirecionar_categoria_brinquedos, redirecionar_categoria_aventura, redirecionar_lancamentos,
-                    redirecionar_showroom, redirecionar_contato,
+                    redirecionar_showroom, redirecionar_contato, EstatisticasGeraisView
                     )
 from django.conf import settings
 from django.conf.urls.static import static
@@ -77,6 +77,9 @@ urlpatterns = [
     path('adm/combos/novo/', ComboCreateView.as_view(), name='combo_create'),
     path('adm/combos/editar/<int:pk>/', ComboUpdateView.as_view(), name='combo_update'),
     path('adm/combos/excluir/<int:pk>/', ComboDeleteView.as_view(), name='combo_delete'),
+
+    path('adm/estatisticas/', EstatisticasGeraisView.as_view(), name='estatisticas_gerais'),
+
 
     path('adm/banners/', BannerAdminView.as_view(), name='banner_adm'),
     path('adm/banners/excluir/<int:pk>/', BannerDeleteView.as_view(), name='banner_delete'),

@@ -159,6 +159,53 @@
     color: var(--text-light);
 }
 
+
+.top-slider {
+    position: relative;
+    min-height: 120px;
+}
+
+.top-slide {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    transition: opacity 0.5s ease;
+}
+
+.top-slide.active {
+    opacity: 1;
+    position: relative;
+}
+
+.top-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+.top-item strong {
+    color: #f1f5f9;
+}
+
+.top-item span {
+    color: #94a3b8;
+}
+
+.stats-link {
+    display: block;
+    margin-top: 15px;
+    text-align: right;
+    color: #8b5cf6;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.stats-link:hover {
+    color: #a78bfa;
+}
+
+
 </style>
 
 <div class="dashboard-wrapper">
@@ -212,10 +259,60 @@
         </div>
 
         <div class="chart-card">
-            <h4 class="chart-title chart-usuarios-title">Usuários por Categoria</h4>
-            <canvas id="chartUsuarios"></canvas>
+    <h4 class="chart-title chart-usuarios-title" id="topTitle">
+        Brinquedos mais acessados
+    </h4>
+
+    <div class="top-slider">
+
+        <!-- BRINQUEDOS -->
+        <div class="top-slide active">
+            {% for item in top_brinquedos %}
+                <div class="top-item">
+                    <strong>{{ item.brinquedo_clicado.nome_brinquedo }}</strong>
+                    <span>{{ item.quantidade_click }} cliques</span>
+                </div>
+            {% empty %}
+                <p>Nenhum dado ainda</p>
+            {% endfor %}
         </div>
+
+        <!-- COMBOS -->
+        <div class="top-slide">
+            {% for item in top_combos %}
+                <div class="top-item">
+                    <strong>{{ item.descricao_combo }}</strong>
+                    <span>{{ item.quantidade_click }} cliques</span>
+                </div>
+            {% endfor %}
+        </div>
+
+        <!-- PROMOÇÕES -->
+        <div class="top-slide">
+            {% for item in top_promocoes %}
+                <div class="top-item">
+                    <strong>{{ item.descricao_promocao }}</strong>
+                    <span>{{ item.quantidade_click }} cliques</span>
+                </div>
+            {% endfor %}
+        </div>
+
+        <!-- CATEGORIAS -->
+        <div class="top-slide">
+            {% for item in top_categorias %}
+                <div class="top-item">
+                    <strong>{{ item.nome_categoria }}</strong>
+                    <span>{{ item.quantidade_click }} cliques</span>
+                </div>
+            {% endfor %}
+        </div>
+
     </div>
+
+    <a href="{% url 'estatisticas_gerais' %}" class="stats-link">Ver estatísticas gerais →</a>
+    </div>
+</div>
+
 
 </div>
 
@@ -273,25 +370,27 @@ new Chart(ctxVendas, {
 
 
 
-    // Exemplo de gráfico de usuários
-    const ctxUsuarios = document.getElementById('chartUsuarios').getContext('2d');
-    const chartUsuarios = new Chart(ctxUsuarios, {
-        type: 'bar',
-        data: {
-            labels: ['Free', 'Premium', 'Enterprise'],
-            datasets: [{
-                label: 'Usuários',
-                data: [850, 300, 98],
-                backgroundColor: ['#2c3e50', '#3498db', '#1abc9c']
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                legend: { display: false }
-            }
-        }
-    });
+
+const slides = document.querySelectorAll('.top-slide');
+const title = document.getElementById('topTitle');
+
+const titles = [
+    "Brinquedos mais acessados",
+    "Combos mais acessados",
+    "Promoções mais acessadas",
+    "Categorias mais acessadas"
+];
+
+let current = 0;
+
+if (slides.length > 0) {
+    setInterval(() => {
+        slides[current].classList.remove('active');
+        current = (current + 1) % slides.length;
+        slides[current].classList.add('active');
+        title.textContent = titles[current];
+    }, 5000);
+}
 </script>
 
 {% endblock %}

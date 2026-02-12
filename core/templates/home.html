@@ -46,6 +46,8 @@ body {
 }
 
 
+
+
 /* ======= HERO ======= */
 .hero {
   text-align: center;
@@ -101,12 +103,16 @@ body {
   width: 100%;
   height: 520px;
   overflow: hidden;
+<<<<<<< HEAD
 
   background: linear-gradient(
     135deg,
     #0a1d37,
     #001f3f
   );
+=======
+  background: transparent; /* REMOVE o azul */
+>>>>>>> 2aafc48c92b2105772a3fb8a4a40c1b1623b1cbd
 }
 
 
@@ -117,22 +123,38 @@ body {
   width: 100%;
   height: 100%;
 
+<<<<<<< HEAD
   object-fit: contain;      /* NÃO CORTA */
   object-position: center;
 
   background: #000;         /* cor de fundo se sobrar espaço */
   opacity: 0;
   transition: opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+=======
+  object-fit: contain;
+  object-position: center;
+
+  background: transparent;   /* remove o fundo preto */
+  opacity: 0;
+  transition: opacity 0.8s ease;
+>>>>>>> 2aafc48c92b2105772a3fb8a4a40c1b1623b1cbd
   will-change: opacity;
   z-index: 0;
+  filter: blur(8px);
+  transform: scale(1.02);
+  transition: opacity 0.8s ease, filter 0.8s ease, transform 0.8s ease;
 }
 
 
 .carousel-slide.active {
   opacity: 1;
-  z-index: 1;
+  filter: blur(0);
+  transform: scale(1);
 }
 
+.carousel-slide.active.loaded {
+  opacity: 1;
+}
 
 @media (max-width: 768px) {
   .carousel-wrapper {
@@ -438,87 +460,6 @@ body {
     grid-template-columns: 1fr;
   }
 }
-
-.social-icons {
-  margin-top: 16px;
-  display: flex;
-  gap: 16px;
-  align-items: center;
-}
-
-.social-icons a {
-  font-size: 28px;
-  text-decoration: none;
-  transition: transform 0.25s ease, opacity 0.25s ease;
-  opacity: 0.85;
-}
-
-.social-icons a:hover {
-  transform: translateY(-3px) scale(1.05);
-  opacity: 1;
-}
-
-/* Cores individuais */
-.social-icons .instagram {
-  color: #E1306C;
-}
-
-.social-icons .whatsapp {
-  color: #25D366;
-}
-
-
-.social-wrapper {
-  margin-top: 32px;
-}
-
-.social-title {
-  font-size: 15px;
-  font-weight: 600;
-  margin-bottom: 12px;
-  color: #333;
-}
-
-.social-icons {
-  display: flex;
-  gap: 16px;
-  align-items: center;
-}
-
-.social-icons a {
-  font-size: 28px;
-  text-decoration: none;
-  transition: transform 0.25s ease, opacity 0.25s ease;
-  opacity: 0.85;
-}
-
-.social-icons a:hover {
-  transform: translateY(-3px) scale(1.05);
-  opacity: 1;
-}
-
-/* Cores individuais */
-.social-icons .instagram {
-  color: #E1306C;
-}
-
-.social-icons .whatsapp {
-  color: #25D366;
-}
-
-.social-icons .facebook {
-  color: #1877F2;
-}
-
-.social-icons .linkedin {
-  color: #0A66C2;
-}
-
-.social-icons .threads {
-  color: #000000;
-}
-
-
 
 /* ======= CATEGORIAS ======= */
 .categorias-section {
@@ -1620,7 +1561,7 @@ body {
     cursor: pointer;
     transition: transform 0.3s, box-shadow 0.3s;
     border-radius: 15px;
-    overflow: hidden;
+
 }
 .carousel-item:hover {
     transform: translateY(-5px);
@@ -1677,10 +1618,6 @@ body {
     position: relative;
 }
 
-.carousel-item {
-    flex: 0 0 calc(33.333% - 13.33px); /* 3 itens por linha */
-    display: none;
-}
 
 .carousel-nav {
     position: absolute;
@@ -2041,11 +1978,35 @@ body {
   background: #fff;
 }
 
+
+    #carousel-projetos .carousel-item {
+    display: block !important;
+}
+
+
+    /* espaço acima */
+.redes-sociais {
+    margin-top: 25px;
+}
+
+/* aumenta tamanho dos ícones */
+.redes-sociais a {
+    font-size: 28px;
+    margin-right: 15px;
+}
+
+/* opcional: aumenta ainda mais no hover */
+.redes-sociais a:hover {
+    transform: scale(1.15);
+    transition: 0.2s;
+}
 </style>
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+
 
 <section id="inicio" class="carousel-container">
   <div class="carousel-wrapper">
@@ -2053,6 +2014,10 @@ body {
     {% for imagem in imagens_site %}
       <img
           src="{{ imagem.imagem.url }}"
+          srcset="
+            {{ imagem.imagem.url }} 1920w
+          "
+          sizes="100vw"
           class="carousel-slide {% if forloop.first %}active{% endif %}"
           {% if forloop.first %}
             fetchpriority="high"
@@ -2143,79 +2108,6 @@ body {
     <span class="message">Vendemos brinquedos e jogos eletrônicos para todas as idades!</span>
   </div>
 </div>
-
-
-
-<!-- ======= PROMOÇÕES ======= -->
-<section id="promocoes-section" class="promocoes-section">
-  <h2 class="section-title">Promoções</h2>
-    <p class="section-subtitle">
-  Ofertas exclusivas com descontos imperdíveis em brinquedos selecionados. Aproveite antes que acabe!
-</p>
-
-
-  <div class="scroll-wrapper">
-    <button class="scroll-btn left" id="scroll-left-promocoes">&#10094;</button>
-
-    <div class="scroll-container" id="scroll-container-promocoes">
-      {% for promo in promocoes %}
-      <a href="{% url 'promocao' promo.id %}#promocao-pagina" class="categoria-link">
-        <div class="categoria-card">
-
-          <!-- IMAGEM -->
-          {% if promo.brinquedos.imagem_brinquedo %}
-            <a href="{% url 'promocao' promo.id %}#promocao-pagina">
-                <img src="{{ promo.brinquedos.imagem_brinquedo.url }}" alt="{{ promo.descricao }}"
-                loading="eager"
-                  decoding="async">
-            </a>
-          {% else %}
-            <img src="{% static 'images/default_promocao.jpg' %}" alt="Promoção sem imagem">
-          {% endif %}
-
-          <!-- INFORMACOES -->
-          <div class="categoria-info">
-            <h3>{{ promo.descricao }}</h3>
-
-            <p class="nome-brinquedo">
-              {{ promo.brinquedos.nome_brinquedo }}
-            </p>
-
-             <!-- PREÇOS PROMO -->
-            <div class="preco-box">
-                <p class="preco-original">
-                    De:
-                    <span class="money"
-                          data-valor="{{ promo.brinquedos.valor_brinquedo }}">
-                    </span>
-                </p>
-
-                <p class="preco-promocao">
-                    Por:
-                    <strong class="money"
-                            data-valor="{{ promo.preco_promocao }}">
-                    </strong>
-                </p>
-            </div>
-
-
-            <!-- BOTÃO -->
-            <a href="{% url 'promocao' promo.id %}#promocao-pagina" class="btn-vermais">Ver mais</a>
-
-          </div>
-        </div>
-      </a>
-      {% empty %}
-        <div class="empty-message">Nenhuma promoção disponível.</div>
-      {% endfor %}
-    </div>
-
-    <button class="scroll-btn right" id="scroll-right-promocoes">&#10095;</button>
-  </div>
-</section>
-
-<!-- Div invisível para espaçamento -->
-<div class="espacador"></div>
 
 
 <!-- ======= PRODUTOS ======= -->
@@ -2358,6 +2250,84 @@ body {
     </div>
 </div>
 </section>
+
+<!-- Div invisível para espaçamento -->
+<div class="espacador"></div>
+
+
+
+<!-- ======= PROMOÇÕES ======= -->
+<section id="promocoes-section" class="promocoes-section">
+  <h2 class="section-title">Promoções</h2>
+    <p class="section-subtitle">
+  Ofertas exclusivas com descontos imperdíveis em brinquedos selecionados. Aproveite antes que acabe!
+</p>
+
+
+  <div class="scroll-wrapper">
+    <button class="scroll-btn left" id="scroll-left-promocoes">&#10094;</button>
+
+    <div class="scroll-container" id="scroll-container-promocoes">
+      {% for promo in promocoes %}
+      <a href="{% url 'promocao' promo.id %}#promocao-pagina" class="categoria-link">
+        <div class="categoria-card">
+
+          <!-- IMAGEM -->
+          {% if promo.brinquedos.imagem_brinquedo %}
+            <a href="{% url 'promocao' promo.id %}#promocao-pagina">
+                <img src="{{ promo.brinquedos.imagem_brinquedo.url }}" alt="{{ promo.descricao }}"
+                loading="eager"
+                  decoding="async">
+            </a>
+          {% else %}
+            <img src="{% static 'images/default_promocao.jpg' %}" alt="Promoção sem imagem">
+          {% endif %}
+
+          <!-- INFORMACOES -->
+          <div class="categoria-info">
+            <h3>{{ promo.descricao }}</h3>
+
+            <p class="nome-brinquedo">
+              {{ promo.brinquedos.nome_brinquedo }}
+            </p>
+
+             <!-- PREÇOS PROMO -->
+            <div class="preco-box">
+                <p class="preco-original">
+                    De:
+                    <span class="money"
+                          data-valor="{{ promo.brinquedos.valor_brinquedo }}">
+                    </span>
+                </p>
+
+                <p class="preco-promocao">
+                    Por:
+                    <strong class="money"
+                            data-valor="{{ promo.preco_promocao }}">
+                    </strong>
+                </p>
+            </div>
+
+
+            <!-- BOTÃO -->
+            <a href="{% url 'promocao' promo.id %}#promocao-pagina" class="btn-vermais">Ver mais</a>
+
+          </div>
+        </div>
+      </a>
+      {% empty %}
+        <div class="empty-message">Nenhuma promoção disponível.</div>
+      {% endfor %}
+    </div>
+
+    <button class="scroll-btn right" id="scroll-right-promocoes">&#10095;</button>
+  </div>
+</section>
+
+<!-- Div invisível para espaçamento -->
+<div class="espacador"></div>
+
+
 
 
 <!-- ======= COMBOS ======= -->
@@ -2578,37 +2548,33 @@ body {
 <section id="projetos" class="eventos-section">
     <div class="projetos-header">
         <h2 class="titulo-eventos">Projetos Realizados</h2>
-
-        <!-- BOTÃO VER TODOS -->
         <a href="{% url 'projetos' %}" class="ver-todos-eventos">Ver todos os projetos →</a>
     </div>
 
-               <p class="section-subtitle">
-  Transformamos ideias em ambientes divertidos e seguros — veja alguns exemplos.
-</p>
+    <p class="section-subtitle">
+        Transformamos ideias em ambientes divertidos e seguros — veja alguns exemplos.
+    </p>
 
-    <!-- CARROSSEL PRINCIPAL -->
+    {% if projetos %}
     <div class="carousel" id="carousel-projetos">
         {% for projeto in projetos %}
         <div class="carousel-item" data-modal="modal-projeto-{{ projeto.id }}">
-            <!-- Imagem principal do projeto -->
+
             <div class="carousel-image">
-                {% if projeto.brinquedo_projetado.imagens_brinquedo_projeto.first %}
-                    <img src="{{ projeto.brinquedo_projetado.imagens_brinquedo_projeto.first.imagem.url }}"
-                         alt="{{ projeto.titulo }}">
+                {% if projeto.brinquedo_projetado and projeto.brinquedo_projetado.imagens_brinquedo_projeto.first %}
+                    <img src="{{ projeto.brinquedo_projetado.imagens_brinquedo_projeto.first.imagem.url }}">
                 {% else %}
-                    <img src="{% static 'images/default.jpg' %}" alt="Sem imagem">
+                    <img src="{% static 'images/default.jpg' %}">
                 {% endif %}
             </div>
 
-            <!-- Info do projeto -->
             <div class="carousel-info">
                 <h3>{{ projeto.titulo }}</h3>
                 <p>{{ projeto.descricao|truncatewords:25 }}</p>
             </div>
         </div>
 
-        <!-- ===== MODAL DO PROJETO ===== -->
+        <!-- MODAL -->
         <div id="modal-projeto-{{ projeto.id }}" class="projeto-modal">
             <div class="modal-content">
                 <span class="modal-close">&times;</span>
@@ -2618,13 +2584,17 @@ body {
 
                 <hr>
 
-                <h3>📸 Galeria de Imagens do Brinquedo Projetado</h3>
+                <h3>📸 Galeria de Imagens</h3>
 
                 <div class="modal-carousel">
                     <div class="modal-carousel-track" id="carousel-track-{{ projeto.id }}">
-                        {% for img in projeto.brinquedo_projetado.imagens_brinquedo_projeto.all %}
-                            <img src="{{ img.imagem.url }}" alt="{{ img.legenda }}">
-                        {% endfor %}
+                        {% if projeto.brinquedo_projetado %}
+                            {% for img in projeto.brinquedo_projetado.imagens_brinquedo_projeto.all %}
+                                <img src="{{ img.imagem.url }}" alt="{{ img.legenda }}">
+                            {% empty %}
+                                <p>Sem imagens para este projeto.</p>
+                            {% endfor %}
+                        {% endif %}
                     </div>
 
                     <button class="carousel-btn left" data-target="carousel-track-{{ projeto.id }}">❮</button>
@@ -2633,8 +2603,13 @@ body {
             </div>
         </div>
         {% endfor %}
-
     </div>
+
+    {% else %}
+        <p style="margin-top:20px; font-weight:bold;">
+            Não há projetos realizados.
+        </p>
+    {% endif %}
 </section>
 
 
@@ -2799,70 +2774,134 @@ function igualarAlturaCards() {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+
+    /* =========================
+       CARROSSEL HERO
+    ========================= */
     const wrapper = document.querySelector(".carousel-wrapper");
-    if (!wrapper) return;
+    if (wrapper) {
+        const slides = Array.from(wrapper.querySelectorAll(".carousel-slide"));
+        const dots = Array.from(wrapper.querySelectorAll(".dot"));
+        const prev = wrapper.querySelector(".prev");
+        const next = wrapper.querySelector(".next");
 
-    const slides = Array.from(wrapper.querySelectorAll(".carousel-slide"));
-    const dots = Array.from(wrapper.querySelectorAll(".dot"));
-    const prev = wrapper.querySelector(".prev");
-    const next = wrapper.querySelector(".next");
+        let index = 0;
+        let autoPlayInterval;
 
-    let index = 0;
-    let autoPlayInterval;
+        function updateCarousel(newIndex) {
+            slides[index].classList.remove("active");
+            dots[index].classList.remove("active");
 
-    function updateCarousel(newIndex) {
-        // Remove classes do estado atual
-        slides[index].classList.remove("active");
-        dots[index].classList.remove("active");
+            index = (newIndex + slides.length) % slides.length;
 
-        // Atualiza o índice
-        index = (newIndex + slides.length) % slides.length;
+            slides[index].classList.add("active");
+            dots[index].classList.add("active");
+        }
 
-        // Adiciona classes no novo estado
-        slides[index].classList.add("active");
-        dots[index].classList.add("active");
-    }
+        function startAutoPlay() {
+            stopAutoPlay();
+            autoPlayInterval = setInterval(() => updateCarousel(index + 1), 4000);
+        }
 
-    function startAutoPlay() {
-        stopAutoPlay();
-        autoPlayInterval = setInterval(() => updateCarousel(index + 1), 4000);
-    }
+        function stopAutoPlay() {
+            clearInterval(autoPlayInterval);
+        }
 
-    function stopAutoPlay() {
-        clearInterval(autoPlayInterval);
-    }
-
-    // Eventos
-    next.addEventListener("click", () => {
-        updateCarousel(index + 1);
-        startAutoPlay(); // Reinicia o timer ao interagir
-    });
-
-    prev.addEventListener("click", () => {
-        updateCarousel(index - 1);
-        startAutoPlay();
-    });
-
-    dots.forEach((dot, i) => {
-        dot.addEventListener("click", () => {
-            if (index === i) return;
-            updateCarousel(i);
+        next.addEventListener("click", () => {
+            updateCarousel(index + 1);
             startAutoPlay();
         });
+
+        prev.addEventListener("click", () => {
+            updateCarousel(index - 1);
+            startAutoPlay();
+        });
+
+        dots.forEach((dot, i) => {
+            dot.addEventListener("click", () => {
+                if (index === i) return;
+                updateCarousel(i);
+                startAutoPlay();
+            });
+        });
+
+        // Swipe mobile
+        let touchStartX = 0;
+        wrapper.addEventListener("touchstart", e => touchStartX = e.touches[0].clientX, {passive: true});
+        wrapper.addEventListener("touchend", e => {
+            let touchEndX = e.changedTouches[0].clientX;
+            if (touchStartX - touchEndX > 50) next.click();
+            if (touchStartX - touchEndX < -50) prev.click();
+        }, {passive: true});
+
+        startAutoPlay();
+    }
+
+    /* =========================
+       AUTO SCROLL CATEGORIAS
+    ========================= */
+    const scrollContainer = document.getElementById("scroll-container");
+    const leftBtn = document.getElementById("scroll-left");
+    const rightBtn = document.getElementById("scroll-right");
+
+    if (scrollContainer) {
+
+        let autoScroll;
+
+        function startScroll() {
+            autoScroll = setInterval(() => {
+                scrollContainer.scrollBy({
+                    left: 220,
+                    behavior: "smooth"
+                });
+
+                // volta pro início quando chega no fim
+                if (scrollContainer.scrollLeft + scrollContainer.clientWidth >= scrollContainer.scrollWidth - 5) {
+                    scrollContainer.scrollTo({
+                        left: 0,
+                        behavior: "smooth"
+                    });
+                }
+            }, 2500);
+        }
+
+        function stopScroll() {
+            clearInterval(autoScroll);
+        }
+
+        rightBtn.addEventListener("click", () => {
+            scrollContainer.scrollBy({ left: 220, behavior: "smooth" });
+            stopScroll();
+            startScroll();
+        });
+
+        leftBtn.addEventListener("click", () => {
+            scrollContainer.scrollBy({ left: -220, behavior: "smooth" });
+            stopScroll();
+            startScroll();
+        });
+
+        // Pausa ao passar mouse
+        scrollContainer.addEventListener("mouseenter", stopScroll);
+        scrollContainer.addEventListener("mouseleave", startScroll);
+
+        startScroll();
+    }
+
+    /* =========================
+       FADE IN DAS IMAGENS
+    ========================= */
+    document.querySelectorAll(".carousel-slide").forEach(img => {
+        if (img.complete) {
+            img.classList.add("loaded");
+        } else {
+            img.addEventListener("load", () => {
+                img.classList.add("loaded");
+            });
+        }
     });
 
-    // Swipe para Mobile (Opcional mas recomendado)
-    let touchStartX = 0;
-    wrapper.addEventListener("touchstart", e => touchStartX = e.touches[0].clientX, {passive: true});
-    wrapper.addEventListener("touchend", e => {
-        let touchEndX = e.changedTouches[0].clientX;
-        if (touchStartX - touchEndX > 50) next.click();
-        if (touchStartX - touchEndX < -50) prev.click();
-    }, {passive: true});
-
-    startAutoPlay();
 });
-
 
 
 // ===============================

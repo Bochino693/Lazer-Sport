@@ -13,7 +13,8 @@ from django.views.generic.edit import FormView
 from django.contrib.auth.mixins import LoginRequiredMixin
 
 from .models import Brinquedos, CategoriasBrinquedos, Projetos, Eventos, ClientePerfil, Combos, Cupom, Promocoes, \
-    TagsBrinquedos, ImagensSite, BrinquedosProjeto, Estabelecimentos, Manutencao, ManutencaoImagem, EnderecoEntrega
+    TagsBrinquedos, ImagensSite, BrinquedosProjeto, Estabelecimentos, Manutencao, ManutencaoImagem, EnderecoEntrega, \
+    BrinquedoClick, ComboClick, PromocaoClick, CategoriaClick
 
 import os
 from django.http import FileResponse, Http404
@@ -283,29 +284,49 @@ class ClientePerfilView(LoginRequiredMixin, View):
         })
 
 
+from django.db.models import F
+
+
 class BrinquedoInfoView(View):
 
     def get(self, request, id):
         brinquedo = get_object_or_404(Brinquedos, id=id)
 
-        context = {
-            "brinquedo": brinquedo
-        }
+        obj, created = BrinquedoClick.objects.get_or_create(
+            brinquedo_clicado=brinquedo,
+            defaults={'quantidade_click': 1}
+        )
 
-        return render(request, "brinquedo_info.html", context)
+        if not created:
+            BrinquedoClick.objects.filter(id=obj.id).update(
+                quantidade_click=F('quantidade_click') + 1
+            )
+
+        return render(request, "brinquedo_info.html", {"brinquedo": brinquedo})
 
 
 class CategoriasInfoView(View):
 
     def get(self, request, pk):
 
-        # Categoria selecionada
         categoria = get_object_or_404(CategoriasBrinquedos, id=pk)
 
-        # Brinquedos desta categoria
+        # REGISTRA CLICK
+        obj, created = CategoriaClick.objects.get_or_create(
+            categoria=categoria,
+            defaults={
+                'nome_categoria': categoria.nome_categoria,
+                'quantidade_click': 1
+            }
+        )
+
+        if not created:
+            CategoriaClick.objects.filter(id=obj.id).update(
+                quantidade_click=F('quantidade_click') + 1
+            )
+
         brinquedos = categoria.brinquedos.all()
 
-        # FILTROS
         ordenar = request.GET.get("ordenar", "az")
 
         if ordenar == "az":
@@ -317,7 +338,6 @@ class CategoriasInfoView(View):
         elif ordenar == "custo-beneficio":
             brinquedos = brinquedos.order_by("-avaliacao", "valor_brinquedo")
 
-        # PAGINAÇÃO
         paginator = Paginator(brinquedos, 12)
         page_number = request.GET.get("page")
         page_obj = paginator.get_page(page_number)
@@ -405,30 +425,35 @@ class ComboInfoView(View):
     def get(self, request, pk):
         combo = get_object_or_404(Combos, id=pk)
 
-        # TOTAL ORIGINAL – já é Decimal
+        # REGISTRA O CLICK
+        obj, created = ComboClick.objects.get_or_create(
+            combo_clicado=combo,
+            defaults={
+                'descricao_combo': combo.descricao,
+                'valor_combo': combo.valor_combo,
+                'quantidade_click': 1
+            }
+        )
+
+        if not created:
+            ComboClick.objects.filter(id=obj.id).update(
+                quantidade_click=F('quantidade_click') + 1
+            )
+
+        # ===== CÁLCULOS =====
         total_original = sum(
             Decimal(b.valor_brinquedo) for b in combo.brinquedos.all()
         )
 
-        # Valor do combo – também Decimal
         valor_combo = Decimal(combo.valor_combo)
-
-        # Economia
         economia = total_original - valor_combo
-
-        # Porcentagem
         porcentagem = (economia / total_original * Decimal(100)) if total_original else Decimal(0)
 
-        # Enviando para o front
         combo.total_original = total_original
         combo.economia = economia
         combo.porcentagem = porcentagem
 
-        context = {
-            'combo': combo,
-        }
-
-        return render(request, 'combo_info.html', context)
+        return render(request, 'combo_info.html', {'combo': combo})
 
 
 class PromocaoInfoView(View):
@@ -436,11 +461,23 @@ class PromocaoInfoView(View):
     def get(self, request, pk):
         promocao = get_object_or_404(Promocoes, pk=pk)
 
-        context = {
-            'promocao': promocao,
+        obj, created = PromocaoClick.objects.get_or_create(
+            promocao=promocao,
+            defaults={
+                'descricao_promocao': promocao.descricao,
+                'preco_promocao': promocao.preco_promocao,
+                'quantidade_click': 1
+            }
+        )
 
-        }
-        return render(request, 'promocao_info.html', context)
+        if not created:
+            PromocaoClick.objects.filter(id=obj.id).update(
+                quantidade_click=F('quantidade_click') + 1
+            )
+
+        return render(request, 'promocao_info.html', {
+            'promocao': promocao
+        })
 
 
 class EstabelecimentoInfoView(View):
@@ -704,7 +741,6 @@ class PromocaoDeleteView(AdminOnlyMixin, View):
             return JsonResponse({'success': False, 'error': str(e)}, status=400)
 
 
-
 class CupomAdminView(AdminOnlyMixin, View):
 
     def get(self, request):
@@ -880,14 +916,12 @@ class EventoAdminView(AdminOnlyMixin, View):
 class PedidoAdminView(AdminOnlyMixin, View):
 
     def get(self, request):
-
         pedidos = Pedido.objects.all()
 
         ctx = {
             'pedidos': pedidos,
         }
         return render(request, 'pedidos_adm.html', ctx)
-
 
 
 class RegistrarView(View):
@@ -1274,6 +1308,11 @@ class DashboardAdminView(View):
             total_second = sum(p.total_liquido for p in second_half)
             vendas_data = [float(total_first), float(total_second)]
 
+        top_brinquedos = BrinquedoClick.objects.order_by('-quantidade_click')[:3]
+        top_combos = ComboClick.objects.order_by('-quantidade_click')[:3]
+        top_promocoes = PromocaoClick.objects.order_by('-quantidade_click')[:3]
+        top_categorias = CategoriaClick.objects.order_by('-quantidade_click')[:3]
+
         ctx = {
             'filtro': filtro,
             'total_clientes': total_clientes,
@@ -1283,19 +1322,141 @@ class DashboardAdminView(View):
             'vendas_total': vendas_total_formatado,
             'chart_labels': labels,
             'chart_data': vendas_data,
+            'top_brinquedos': top_brinquedos,
+            'top_combos': top_combos,
+            'top_promocoes': top_promocoes,
+            'top_categorias': top_categorias,
         }
 
         return render(request, 'dashboard.html', ctx)
 
 
 from django.http import HttpResponseForbidden
+from django.db.models.functions import TruncDate
+
+
+class EstatisticasGeraisView(View):
+    def get(self, request):
+        filtro = request.GET.get('filtro', 'geral')
+        agora = timezone.now()
+
+        if filtro == '7dias':
+            data_inicio = agora - timedelta(days=7)
+        elif filtro == '30dias':
+            data_inicio = agora - timedelta(days=30)
+        elif filtro == 'ano':
+            data_inicio = agora.replace(month=1, day=1, hour=0, minute=0, second=0)
+        else:
+            data_inicio = None
+
+        # -----------------------------
+        # BRINQUEDOS
+        # -----------------------------
+        brinquedos = BrinquedoClick.objects.all()
+        if data_inicio:
+            brinquedos = brinquedos.filter(criacao__gte=data_inicio)
+
+        top_brinquedos = (
+            brinquedos
+            .values('brinquedo_clicado__nome_brinquedo')
+            .annotate(total=Sum('quantidade_click'))
+            .order_by('-total')[:20]
+        )
+
+        # -----------------------------
+        # COMBOS
+        # -----------------------------
+        combos = ComboClick.objects.all()
+        if data_inicio:
+            combos = combos.filter(criacao__gte=data_inicio)
+
+        top_combos = (
+            combos
+            .values('descricao_combo')
+            .annotate(total=Sum('quantidade_click'))
+            .order_by('-total')[:20]
+        )
+
+        # -----------------------------
+        # PROMOÇÕES
+        # -----------------------------
+        promocoes = PromocaoClick.objects.all()
+        if data_inicio:
+            promocoes = promocoes.filter(criacao__gte=data_inicio)
+
+        top_promocoes = (
+            promocoes
+            .values('descricao_promocao')
+            .annotate(total=Sum('quantidade_click'))
+            .order_by('-total')[:20]
+        )
+
+        # -----------------------------
+        # CATEGORIAS
+        # -----------------------------
+        categorias = CategoriaClick.objects.all()
+        if data_inicio:
+            categorias = categorias.filter(criacao__gte=data_inicio)
+
+        top_categorias = (
+            categorias
+            .values('nome_categoria')
+            .annotate(total=Sum('quantidade_click'))
+            .order_by('-total')[:20]
+        )
+
+        total_brinquedo_clicks = brinquedos.aggregate(
+            total=Sum('quantidade_click')
+        )['total'] or 0
+
+        total_combo_clicks = combos.aggregate(
+            total=Sum('quantidade_click')
+        )['total'] or 0
+
+        total_promocao_clicks = promocoes.aggregate(
+            total=Sum('quantidade_click')
+        )['total'] or 0
+
+        total_categoria_clicks = categorias.aggregate(
+            total=Sum('quantidade_click')
+        )['total'] or 0
+
+        total_geral = (
+                total_brinquedo_clicks +
+                total_combo_clicks +
+                total_promocao_clicks +
+                total_categoria_clicks
+        )
+
+        crescimento_diario = (
+            BrinquedoClick.objects
+            .values(dia=TruncDate('criacao'))
+            .annotate(total=Sum('quantidade_click'))
+            .order_by('-dia')[:15]
+        )
+
+        ctx = {
+            'crescimento_diario': crescimento_diario,
+            'filtro': filtro,
+            'top_brinquedos': top_brinquedos,
+            'top_combos': top_combos,
+            'top_promocoes': top_promocoes,
+            'top_categorias': top_categorias,
+
+            'total_brinquedo_clicks': total_brinquedo_clicks,
+            'total_combo_clicks': total_combo_clicks,
+            'total_promocao_clicks': total_promocao_clicks,
+            'total_categoria_clicks': total_categoria_clicks,
+            'total_geral': total_geral,
+        }
+
+        return render(request, 'estatisticas_gerais.html', ctx)
 
 
 class ManutencaoAdminView(LoginRequiredMixin, View):
 
     def get(self, request):
         manutencoes = Manutencao.objects.all()
-
 
         ctx = {
             'manutencoes': manutencoes,
@@ -1322,13 +1483,13 @@ class UserAdminView(LoginRequiredMixin, View):
         return render(request, 'users_adm.html', context)
 
 
-
 from django.views.generic import TemplateView
 from django.db.models import Sum, Count
 from django.utils.timezone import now
 from datetime import datetime
 
 from .models import Venda
+
 
 class RelatorioVendasView(LoginRequiredMixin, TemplateView):
     template_name = 'relatoriov_adm.html'
@@ -1374,14 +1535,11 @@ class RelatorioVendasView(LoginRequiredMixin, TemplateView):
         return context
 
 
-
 from .forms import ManutencaoForm
 from .models import Manutencao
 
-
 from django.contrib.auth.decorators import login_required
 from .models import ItemCarrinho, Carrinho
-
 
 
 def adicionar_ao_carrinho(request, tipo, object_id):
@@ -1841,20 +1999,26 @@ class MeusPedidosView(LoginRequiredMixin, View):
 from django.shortcuts import redirect
 from django.urls import reverse
 
+
 def redirecionar_loja(request):
     return redirect(reverse('brinquedos') + '#grid-cards')
+
 
 def redirecionar_lancamentos(request):
     return redirect(reverse('brinquedos') + '#grid-cards')
 
+
 def redirecionar_showroom(request):
     return redirect(reverse('eventos') + '#todos-eventos')
+
 
 def redirecionar_contato(request):
     return redirect(reverse('home') + '#contato')
 
+
 def redirecionar_categoria_brinquedos(request):
     return redirect(reverse('brinquedo_detalhe', args=[12]))
+
 
 def redirecionar_categoria_aventura(request):
     return redirect(reverse('categoria_detalhe', args=[12]))
