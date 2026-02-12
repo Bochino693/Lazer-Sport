@@ -264,8 +264,8 @@
   <div id="topic2Collapse" class="accordion-collapse collapse">
     <div class="accordion-body">
       <ul class="nav flex-column">
-        <li class="nav-item"><a class="nav-link" href="#">Dash boards do Estoque</a></li>
-        <li class="nav-item"><a class="nav-link" href="{% url 'stock' %}">Estoque Geral</a></li>
+        <li class="nav-item"><a class="nav-link" href="#">Dashboards do Estoque</a></li>
+        <li class="nav-item"><a class="nav-link" href="{% url 'stock' %}">Gerenciar Estoque de Materiais</a></li>
         <li class="nav-item"><a class="nav-link" href="#">Saídas de Estoque</a></li>
         <li class="nav-item"><a class="nav-link" href="#">Compras para o Estoque</a></li>
       </ul>
@@ -283,6 +283,7 @@
   <div id="topic3Collapse" class="accordion-collapse collapse">
     <div class="accordion-body">
       <ul class="nav flex-column">
+        <li class="nav-item"><a class="nav-link" href="#">Dashboards de Produção</a></li>
         <li class="nav-item"><a class="nav-link" href="#">Brinquedos á Fazer</a></li>
         <li class="nav-item"><a class="nav-link" href="#">Estatística de Produção</a></li>
         <li class="nav-item"><a class="nav-link" href="#">Opção 3</a></li>
@@ -301,6 +302,7 @@
   <div id="topic4Collapse" class="accordion-collapse collapse" data-bs-parent="#accordionExample">
     <div class="accordion-body">
       <ul class="nav flex-column">
+        <li class="nav-item"><a class="nav-link" href="#">Dashboards de Vendas</a></li>
         <li class="nav-item"><a class="nav-link" href="#">Registro de Venda</a></li>
         <li class="nav-item"><a class="nav-link" href="#">Relatório de Vendas</a></li>
         <li class="nav-item"><a class="nav-link" href="#">Opção 3</a></li>
@@ -408,7 +410,7 @@
 <div class="fab-container">
 
    <!-- Registro rápido de vendas -->
-  <a href="{% url 'venda_rapida' %}" class="fab btn btn-success" title="Registro rápido de vendas">
+  <a href="#" class="fab btn btn-success" title="Registro rápido de vendas">
     🛒
     {% if count_vendas > 0 %}
       <span class="badge bg-danger">{{ count_vendas }}</span>
