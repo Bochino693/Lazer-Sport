@@ -1,20 +1,21 @@
+# core/context_processors.py
 from core.models import Venda, Pedido, Manutencao
 
 def fab_counts(request):
     """
-    Retorna contagens para os FABs (botões flutuantes):
+    Retorna contagens para os FABs (Floating Action Buttons):
     - vendas: registros rápidos
     - pedidos: pedidos do site não finalizados ou cancelados
     - manutencao: manutenções pendentes
     """
     if request.user.is_authenticated:
-        # Contagem de vendas pendentes de registro (exemplo: não confirmadas)
+        # Vendas que ainda não foram confirmadas
         count_vendas = Venda.objects.filter(confirmado=False).count()
 
-        # Contagem de pedidos que ainda não estão finalizados ou cancelados
+        # Pedidos que ainda não estão finalizados ou cancelados
         count_pedidos = Pedido.objects.exclude(status__in=['finalizado', 'cancelado']).count()
 
-        # Contagem de manutenções pendentes
+        # Manutenções pendentes (status 'P' = pendente)
         count_manutencao = Manutencao.objects.filter(status='P').count()
 
         return {
