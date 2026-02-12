@@ -473,22 +473,22 @@
         {% endif %}
     </a>
 
- <!-- Pedidos do site -->
 <a href="{% url 'pedidos_inner' %}" class="fab fab-blue" title="Visualizar pedidos do site não finalizados">
     <div class="fab-icon">📦</div>
     <div class="fab-label">Pedidos Site</div>
-    {% if total_pedidos_ativos > 0 %}
-        <span class="fab-badge">{{ total_pedidos_ativos }}</span>
+
+    {% if tem_pedidos_ativos %}
+        <span class="fab-badge">{{ count_pedidos }}</span>
     {% endif %}
 </a>
 
 
-<!-- Manutenções pendentes -->
 <a href="{% url 'manutencao_inner' %}" class="fab fab-orange" title="Ver manutenções pendentes">
     <div class="fab-icon">🔧</div>
     <div class="fab-label">Manutenção</div>
-    {% if manutencao_pendente > 0 %}
-        <span class="fab-badge">{{ manutencao_pendente }}</span>
+
+    {% if tem_manutencao_pendente %}
+        <span class="fab-badge">{{ count_manutencao }}</span>
     {% endif %}
 </a>
 
