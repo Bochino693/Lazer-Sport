@@ -225,17 +225,32 @@
 }
 
 /* Badge de notificação */
+/* Badge de notificação ajustado */
 .fab-badge {
     position: absolute;
-    top: -6px;
-    right: -6px;
-    background-color: #dc3545;
+    top: 2px;
+    right: 2px;
+    background-color: #dc3545; /* Vermelho vibrante */
     color: #fff;
-    font-size: 0.7rem;
-    font-weight: 600;
-    padding: 4px 7px;
-    border-radius: 50%;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+    font-size: 0.75rem;
+    font-weight: 700;
+
+    /* Mantém o círculo perfeito */
+    min-width: 22px;
+    height: 22px;
+    padding: 0 4px;
+    border-radius: 50px; /* Arredondado nas bordas */
+
+    /* Centralização total do número */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    /* Estética */
+    border: 2px solid #fff; /* Borda branca para destacar do botão */
+    box-shadow: 0 3px 8px rgba(0,0,0,0.4);
+    z-index: 2;
+    pointer-events: none;
 }
 
 /* Tooltip melhorado */
@@ -257,6 +272,18 @@
     pointer-events: none;
     opacity: 1;
     z-index: 2000;
+}
+
+
+/* Animação opcional: pulso discreto se houver notificação */
+@keyframes pulse-badge {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
+
+.fab-badge {
+    animation: pulse-badge 2s infinite ease-in-out;
 }
 
 </style>
