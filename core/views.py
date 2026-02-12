@@ -1,7 +1,4 @@
 from django.views.generic import View
-from django.shortcuts import render, get_object_or_404, redirect
-from django.core.paginator import Paginator
-from django.db.models import Count, F, ExpressionWrapper, FloatField, Sum
 from django.contrib.auth.models import User
 from django.contrib import messages
 from django.contrib.auth import authenticate, login
@@ -121,10 +118,6 @@ class HomeView(View):
 
 from django.shortcuts import render, redirect
 from django.views import View
-from .forms import ManutencaoForm
-from .models import Manutencao
-from .models import ClientePerfil
-from django.views.decorators.http import require_POST
 
 
 class ManutencaoView(View):
@@ -283,8 +276,6 @@ class ClientePerfilView(LoginRequiredMixin, View):
             'perfil_form': perfil_form
         })
 
-
-from django.db.models import F
 
 
 class BrinquedoInfoView(View):

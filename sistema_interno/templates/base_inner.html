@@ -409,7 +409,7 @@
 <!-- Floating Action Buttons -->
 <div class="fab-container">
     <!-- Registro rápido de vendas -->
-    <a href="{% url 'venda_registro' %}" class="fab btn btn-success" title="Registro rápido de vendas">
+    <a href="{% url 'vendas_inner' %}" class="fab btn btn-success" title="Registro rápido de vendas">
         🛒
         {% if count_vendas > 0 %}
             <span class="badge bg-danger">{{ count_vendas }}</span>
@@ -417,7 +417,7 @@
     </a>
 
     <!-- Pedidos do site -->
-    <a href="{% url 'pedidos_site' %}" class="fab btn btn-primary" title="Pedidos do site">
+    <a href="{% url 'pedidos_inner' %}" class="fab btn btn-primary" title="Pedidos do site">
         📦
         {% if count_pedidos > 0 %}
             <span class="badge bg-danger">{{ count_pedidos }}</span>
@@ -425,7 +425,7 @@
     </a>
 
     <!-- Manutenções pendentes -->
-    <a href="{% url 'manutencao_list' %}" class="fab btn btn-warning" title="Manutenções pendentes">
+    <a href="{% url 'manutencao_inner' %}" class="fab btn btn-warning" title="Manutenções pendentes">
         🔧
         {% if count_manutencao > 0 %}
             <span class="badge bg-danger">{{ count_manutencao }}</span>

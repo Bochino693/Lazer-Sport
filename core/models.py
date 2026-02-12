@@ -280,7 +280,7 @@ class Cupom(Prime):
     desconto_percentual = models.DecimalField(decimal_places=2, max_digits=10)
     brinquedo = models.ForeignKey(Brinquedos, on_delete=models.CASCADE, related_name='cupom', null=True)
     categoria = models.ForeignKey(CategoriasBrinquedos, on_delete=models.CASCADE, related_name='categoria', null=True)
-    cliente = models.ManyToManyField(ClientePerfil, related_name='cupons', null=True)
+    cliente = models.ManyToManyField(ClientePerfil, related_name='cupons')
     quantidade_uso = models.IntegerField(default=1, null=True)
 
     def __str__(self):

@@ -1,10 +1,13 @@
 from django.shortcuts import render, redirect
 from django.views.generic import View
 from .models import (Material, EstoqueMaterial, TipoMaterial,
-                     CentralPedidos, CentralVendas, Venda, EnderecoCliente
+                     CentralPedidos, CentralVendas, EnderecoCliente)
 
-                     )
+from core.models import Manutencao
+
 from django.contrib.auth import logout
+
+from django.shortcuts import redirect
 
 from django.contrib.auth import authenticate, login
 
@@ -84,7 +87,7 @@ class MaterialInnerView(InternoRequiredMixin, View):
 
     def get(self, request):
         material = Material.objects.all()
-        vendas = Venda.objects.all()
+
 
         ctx = {
             'material': material,
@@ -105,4 +108,44 @@ class EstoqueInnerView(InternoRequiredMixin, View):
         }
         return render(request, 'estoque_inner.html', ctx)
 
+
+
+class VendasView(InternoRequiredMixin, View):
+    def get(self, request):
+
+        vendas = CentralVendas.objects.all()
+
+        ctx = {
+            'vendas': vendas,
+
+        }
+
+        return render(request ,'vendas_inner.html', ctx)
+
+
+class PedidosView(InternoRequiredMixin, View):
+
+    def get(self, request):
+
+        pedidos = CentralPedidos.objects.all()
+
+        ctx = {
+            'pedidos': pedidos,
+        }
+
+
+        return render(request, 'pedidos_inner.html', ctx)
+
+
+class ManutencaoInnerView(InternoRequiredMixin, View):
+
+    def get(self, request):
+        manutencoes = Manutencao.objects.all()
+
+        ctx = {
+            'manutencoes': manutencoes,
+        }
+
+
+        return render(request, 'manutencao_inner.html', ctx)
 

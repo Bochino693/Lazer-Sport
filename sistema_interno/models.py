@@ -1,6 +1,7 @@
 from django.db import models
 from django.conf import settings
 from core.models import Brinquedos, Pedido, Venda, ItemPedido
+from django.views import View
 
 
 class Prime(models.Model):
@@ -107,9 +108,9 @@ class EstoqueMaterial(Prime):
         unique_together = ('material', 'descricao_local')
 
 
-class CentralPedidos(Prime):
+class CentralPedidos(Pedido):
     descricao_pedido = models.CharField(max_length=90)
-    pedido = models.ForeignKey(Pedido, max_length=90, on_delete=models.SET_NULL, null=True)
+
 
     def __str__(self):
         return self.descricao_pedido
@@ -117,10 +118,6 @@ class CentralPedidos(Prime):
     class Meta:
         verbose_name = "Central de Pedido"
         verbose_name_plural = "Central de Vendas"
-
-
-class CentralItemPedido(ItemPedido):
-    descricao = models.CharField(max_length=90)
 
 
 class CentralVendas(Venda):
