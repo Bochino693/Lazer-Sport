@@ -126,7 +126,6 @@ class EstoqueMaterial(Prime):
 class CentralPedidos(Pedido):
     descricao_pedido = models.CharField(max_length=90)
 
-
     def __str__(self):
         return self.descricao_pedido
 
@@ -209,6 +208,3 @@ class FinanceiroMensal(Prime):
     class Meta:
         verbose_name = "Financeiro Mensal"
         verbose_name_plural = "Financeiros Mensais"
-
-
-
