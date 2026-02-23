@@ -277,7 +277,6 @@ class ClientePerfilView(LoginRequiredMixin, View):
         })
 
 
-
 class BrinquedoInfoView(View):
 
     def get(self, request, id):
@@ -509,17 +508,25 @@ class LoginUsuarioView(View):
         return render(request, "login.html")
 
     def post(self, request):
-        username = request.POST.get("username")
+        login_input = request.POST.get("username")  # pode ser username ou email
         password = request.POST.get("password")
 
-        # Autentica
+        # Se for email, busca o username
+        if "@" in login_input:
+            try:
+                user_obj = User.objects.get(email=login_input)
+                username = user_obj.username
+            except User.DoesNotExist:
+                username = None
+        else:
+            username = login_input
+
         user = authenticate(request, username=username, password=password)
 
         if user is None:
-            messages.error(request, "Usuário ou senha incorretos.")
-            return render(request, "login.html")  # Recarrega com erro
+            messages.error(request, "Usuário/E-mail ou senha incorretos.")
+            return render(request, "login.html")
 
-        # Login OK — exibe tela de "Entrando..."
         login(request, user)
         return render(request, "login_sucesso.html", {"user": user})
 

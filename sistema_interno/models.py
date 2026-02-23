@@ -214,6 +214,3 @@ class FinanceiroMensal(Prime):
     class Meta:
         verbose_name = "Financeiro Mensal"
         verbose_name_plural = "Financeiros Mensais"
-
-
-
