@@ -1,7 +1,6 @@
 from django.db import models
 from django.conf import settings
 from core.models import Brinquedos, Pedido, Venda, ItemPedido
-from django.views import View
 
 
 class Prime(models.Model):
@@ -34,7 +33,7 @@ class Gerente(Prime):
 class Cliente(Prime):
     nome_cliente = models.CharField(max_length=90)
     telefone = models.CharField(max_length=14)
-    email = models.CharField(max_length=150)
+    email = models.CharField(max_length=150, null=True)
 
     def __str__(self):
         return self.nome_cliente
@@ -96,6 +95,13 @@ class Material(Prime):
 class Montadores(Prime):
     nome_montador = models.CharField(max_length=90)
 
+    def __str__(self):
+        return self.nome_montador
+
+    class Meta:
+        verbose_name = "Montadores"
+        verbose_name_plural = "Montadores"
+
 
 class Setores(Prime):
     nome_setor = models.CharField(max_length=120)
@@ -125,7 +131,6 @@ class EstoqueMaterial(Prime):
 
 class CentralPedidos(Pedido):
     descricao_pedido = models.CharField(max_length=90)
-
 
     def __str__(self):
         return self.descricao_pedido
