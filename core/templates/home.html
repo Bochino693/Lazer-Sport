@@ -2284,21 +2284,19 @@ body {
       <a href="{% url 'pecas_reposicao' %}#list" class="categoria-link">
         <div class="categoria-card">
 
-          <div class="pecas-slider premium" id="pecasSlider">
-  {% for peca in pecas_preview %}
-    {% with img=peca.imagem_peca_reposicao.all|first %}
-      {% if img and img.num_imagem %}
-        <div class="skeleton-box">
-          <img src="{{ img.num_imagem.url }}"
-               alt="{{ peca.nome }}"
-               loading="lazy">
-        </div>
-      {% endif %}
-    {% endwith %}
-  {% empty %}
-    <img src="{% static 'images/default_categoria.jpg' %}" alt="">
-  {% endfor %}
-</div>
+         <div class="pecas-slider premium" id="pecasSlider">
+              {% for peca in pecas_preview %}
+                {% if peca.imagem_principal and peca.imagem_principal.imagem %}
+                  <div class="skeleton-box">
+                    <img src="{{ peca.imagem_principal.imagem.url }}"
+                         alt="{{ peca.nome }}"
+                         loading="lazy">
+                  </div>
+                {% endif %}
+              {% empty %}
+                <img src="{% static 'images/default_categoria.jpg' %}" alt="">
+              {% endfor %}
+            </div>
 
           <div class="categoria-info">
             <h3>Peças de Reposição</h3>
