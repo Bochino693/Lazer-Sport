@@ -1,0 +1,233 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Peças de Reposição | Lazer Sport{% endblock %}
+
+{% block content %}
+
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap">
+
+<style>
+/* ===== GRID ===== */
+.grid-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 50px;
+    max-width: 1200px;
+    margin: 50px auto;
+    justify-items: center;
+    padding: 0 20px;
+}
+
+.card-link {
+    display: block;
+    color: inherit;
+    text-decoration: none;
+}
+
+.card-produto {
+    width: 300px;
+    background: white;
+    border-radius: 18px;
+    overflow: hidden;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+    transition: all 0.25s ease;
+    display: flex;
+    flex-direction: column;
+    font-family: 'Inter', sans-serif;
+    position: relative;
+}
+
+.card-produto:hover {
+    transform: translateY(-4px) scale(1.03);
+    box-shadow: 0 16px 34px rgba(0,0,0,0.12);
+}
+
+/* ===== IMAGEM ===== */
+.card-produto img {
+    width: 100%;
+    height: 200px;
+    object-fit: contain;
+    background: #f8f9fa;
+    padding: 12px;
+    transition: transform .4s ease;
+}
+
+.card-produto:hover img {
+    transform: scale(1.06);
+}
+
+/* ===== CONTEÚDO ===== */
+.conteudo {
+    padding: 16px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+
+.card-produto h3 {
+    font-size: 1.15rem;
+    color: #1f2d3d;
+    margin-bottom: 6px;
+}
+
+/* descrição */
+.descricao {
+    font-size: 0.9rem;
+    color: #555;
+    margin: 8px 0 14px;
+    min-height: 48px;
+}
+
+/* ===== PREÇO ===== */
+.preco {
+    font-size: 1.35rem;
+    color: #0d6efd;
+    font-weight: 800;
+    margin-top: auto;
+}
+
+/* ===== FOOTER ===== */
+.card-footer {
+    padding: 0 16px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* botão whatsapp */
+.btn-whatsapp {
+    background: #25D366;
+    color: #fff;
+    text-decoration: none;
+    padding: 11px 0;
+    border-radius: 10px;
+    font-weight: 600;
+    text-align: center;
+    transition: .25s;
+}
+
+.btn-whatsapp:hover {
+    background: #1ebe5d;
+    transform: scale(1.03);
+}
+
+/* botão detalhes */
+.btn-vermais {
+    background: linear-gradient(135deg,#0d6efd,#4aa3ff);
+    color: #fff;
+    text-decoration: none;
+    padding: 11px 0;
+    border-radius: 10px;
+    font-weight: 600;
+    text-align: center;
+    transition: .25s;
+}
+
+.btn-vermais:hover {
+    background: #e63946;
+}
+
+/* ===== BREADCRUMB ===== */
+.breadcrumb {
+    max-width: 1200px;
+    margin: 25px auto;
+    font-size: 1rem;
+    color: #444;
+}
+
+.breadcrumb a {
+    color: #007BFF;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.breadcrumb span {
+    margin: 0 6px;
+    color: #888;
+}
+
+.breadcrumb strong {
+    color: #1f2d3d;
+}
+</style>
+
+<!-- BREADCRUMB -->
+<div class="breadcrumb">
+    <a href="{% url 'home' %}">Home</a>
+    <span>›</span>
+    <strong>Peças de Reposição</strong>
+</div>
+
+<section class="destaques">
+    <h2 style="text-align:center; font-size:2rem; margin-bottom:40px; color:#0d6efd;">
+        Peças de Reposição
+    </h2>
+
+    <!-- GRID -->
+    <div class="grid-cards">
+
+        {% for peca in pecas %}
+        <div class="card-produto">
+
+            <a href="#" class="card-link">
+
+                <!-- IMAGEM -->
+                {% if peca.imagem_peca %}
+                    <img src="{{ peca.imagem_peca.url }}" alt="{{ peca.nome }}">
+                {% else %}
+                    <img src="{% static 'img/placeholder.png' %}" alt="Sem imagem">
+                {% endif %}
+
+                <!-- CONTEÚDO -->
+                <div class="conteudo">
+                    <h3>{{ peca.nome }}</h3>
+
+                    <p class="descricao">
+                        {{ peca.descricao_peca|truncatechars:120 }}
+                    </p>
+
+                    <div class="preco" data-valor="{{ peca.preco_venda }}">
+                        R$ {{ peca.preco_venda }}
+                    </div>
+                </div>
+            </a>
+
+            <!-- BOTÕES -->
+            <div class="card-footer">
+
+                <a href="https://wa.me/5511960563135?text=Olá! Tenho interesse na peça {{ peca.nome }}"
+                   target="_blank"
+                   class="btn-whatsapp">
+                    WhatsApp
+                </a>
+
+                <a href="#"
+                   class="btn-vermais">
+                    Ver detalhes
+                </a>
+
+            </div>
+        </div>
+        {% empty %}
+            <p>Nenhuma peça cadastrada.</p>
+        {% endfor %}
+
+    </div>
+</section>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.preco[data-valor]').forEach(el => {
+        const v = parseFloat(el.dataset.valor);
+        if (!isNaN(v)) {
+            el.innerHTML = 'R$ ' + v.toLocaleString('pt-BR', {
+                minimumFractionDigits: 2
+            });
+        }
+    });
+});
+</script>
+
+{% endblock %}

@@ -11,7 +11,7 @@ from .views import (HomeView, BrinquedoInfoView, CategoriasInfoView, BrinquedosV
                     EventoAdminView, BannerAdminView, BannerDeleteView, AdminLoginView, AcessoNegadoView,
                     DashboardAdminView, UserAdminView, ManutencaoAdminView, RelatorioVendasView, PedidoAdminView,
                     redirecionar_loja, redirecionar_categoria_brinquedos, redirecionar_categoria_aventura, redirecionar_lancamentos,
-                    redirecionar_showroom, redirecionar_contato, EstatisticasGeraisView
+                    redirecionar_showroom, redirecionar_contato, EstatisticasGeraisView, ReposicaoView
                     )
 from django.conf import settings
 from django.conf.urls.static import static
@@ -63,6 +63,8 @@ urlpatterns = [
 
     path('carrinho/remover-item/', remover_item_carrinho, name='remover_item_carrinho'),
     path('carrinho/limpar/', limpar_carrinho, name='limpar_carrinho'),
+
+    path('pecas-reposicao/', ReposicaoView.as_view(), name='pecas_reposicao'),
 
     path('carrinho/aplicar-cupom/', aplicar_cupom, name='aplicar_cupom'),
 

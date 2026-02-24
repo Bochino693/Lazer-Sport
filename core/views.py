@@ -115,6 +115,20 @@ class HomeView(View):
         }
         return render(request, 'home.html', context)
 
+from .models import PecasReposicao
+
+class ReposicaoView(View):
+    def get(self, request):
+
+
+
+        ctx = {
+            'pecas': PecasReposicao.objects.all(),
+        }
+
+
+        return render(request, 'reposicao.html', ctx)
+
 
 from django.shortcuts import render, redirect
 from django.views import View
