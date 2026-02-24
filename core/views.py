@@ -130,6 +130,14 @@ class ReposicaoView(View):
         return render(request, 'reposicao.html', ctx)
 
 
+class ReposicaoDetalheView(View):
+    def get(self, request, pk):
+        peca = get_object_or_404(PecasReposicao, pk=pk)
+
+        return render(request, 'reposicao_info.html', {
+            'peca': peca
+        })
+
 from django.shortcuts import render, redirect
 from django.views import View
 

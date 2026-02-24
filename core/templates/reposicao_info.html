@@ -1,10 +1,229 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-</head>
-<body>
+{% extends "base.html" %}
+{% load static %}
 
-</body>
-</html>
+{% block content %}
+
+<style>
+/* ===== CONTAINER ===== */
+.produto-container {
+    max-width: 1100px;
+    margin: 40px auto;
+    padding: 30px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 40px;
+    background: #ffffff;
+    border-radius: 22px;
+    box-shadow: 0 10px 35px rgba(0,0,0,0.1);
+}
+
+/* ===== IMAGEM ===== */
+.produto-img img {
+    width: 100%;
+    border-radius: 20px;
+    background: #f8f9fa;
+    padding: 14px;
+}
+
+/* ===== INFO ===== */
+.produto-info h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #222;
+    margin-bottom: 10px;
+}
+
+.preco {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #0d6efd;
+    margin-bottom: 18px;
+}
+
+/* ===== DESCRIÇÃO ===== */
+.sec-titulo {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-top: 18px;
+    margin-bottom: 6px;
+    color: #333;
+}
+
+.descricao-produto {
+    font-size: 1rem;
+    line-height: 1.6;
+    color: #444;
+}
+
+/* ===== BOTÕES ===== */
+.acoes-produto {
+    margin-top: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.btn-acao {
+    display: block;
+    width: 100%;
+    padding: 12px 0;
+    border-radius: 14px;
+    font-weight: 700;
+    text-align: center;
+    text-decoration: none;
+    transition: .25s ease;
+}
+
+/* WhatsApp */
+.btn-whatsapp {
+    background: linear-gradient(135deg, #25D366, #1ebe5d);
+    color: white;
+}
+
+.btn-whatsapp:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 14px rgba(37,211,102,.35);
+}
+
+/* Carrinho */
+.btn-carrinho {
+    background: #0d6efd;
+    color: white;
+}
+
+.btn-carrinho:hover {
+    background: #0b5ed7;
+}
+
+/* Voltar */
+.btn-voltar {
+    background: #f1f1f1;
+    color: #333;
+    border: 1px solid #ddd;
+}
+
+.btn-voltar:hover {
+    background: #e4e4e4;
+}
+
+@media (max-width: 768px) {
+    .produto-container {
+        grid-template-columns: 1fr;
+        padding: 18px;
+    }
+}
+</style>
+
+
+<!-- ===== BREADCRUMB ===== -->
+<div class="breadcrumb">
+    <a href="/">Home</a>
+    <span>›</span>
+    <a href="{% url 'reposicao' %}">Peças de Reposição</a>
+    <span>›</span>
+    <strong>{{ peca.nome }}</strong>
+</div>
+
+
+<!-- ===== CONTAINER ===== -->
+<div class="produto-container">
+
+    <!-- IMAGEM -->
+    <div class="produto-img">
+        {% if peca.imagem_peca %}
+            <img src="{{ peca.imagem_peca.url }}" alt="{{ peca.nome }}">
+        {% else %}
+            <img src="{% static 'img/placeholder.png' %}" alt="Sem imagem">
+        {% endif %}
+    </div>
+
+    <!-- INFO -->
+    <div class="produto-info">
+
+        <h1>{{ peca.nome }}</h1>
+
+        <p class="preco js-preco" data-valor="{{ peca.preco_venda }}">
+            R$ 0,00
+        </p>
+
+        <p class="sec-titulo">Descrição</p>
+        <p class="descricao-produto">
+            {{ peca.descricao_peca }}
+        </p>
+
+        <p class="sec-titulo">Preço fornecedor</p>
+        <p>
+            R$ {{ peca.preco_fornecedor|floatformat:2 }}
+        </p>
+
+        <!-- ===== AÇÕES ===== -->
+        <div class="acoes-produto">
+
+            <!-- WhatsApp -->
+            <a href="https://wa.me/5511960563135?text=
+Olá! 👋%0A
+Tenho interesse na peça:%0A
+🔧 {{ peca.nome|urlencode }}%0A
+💰 Preço: R$ {{ peca.preco_venda|floatformat:2 }}%0A%0A
+🔗 {{ request.build_absolute_uri|urlencode }}"
+               target="_blank"
+               class="btn-acao btn-whatsapp">
+               <i class="fab fa-whatsapp"></i>
+               Falar com um vendedor
+            </a>
+
+            <!-- Carrinho -->
+            <button type="button"
+                    class="btn-acao btn-carrinho"
+                    onclick="adicionarAoCarrinho('peca', {{ peca.id }})">
+                🛒 Adicionar ao Carrinho
+            </button>
+
+            <!-- Voltar -->
+            <a href="{% url 'reposicao' %}" class="btn-acao btn-voltar">
+                ← Voltar
+            </a>
+
+        </div>
+
+    </div>
+</div>
+
+
+<script>
+function formatarMoedaBR(valor) {
+    if (!valor || isNaN(valor)) return '0,00';
+
+    return Number(valor).toLocaleString('pt-BR', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.js-preco').forEach(el => {
+        const valor = parseFloat(el.dataset.valor);
+        el.innerText = 'R$ ' + formatarMoedaBR(valor);
+    });
+});
+
+/* ===== AJAX CARRINHO (mesmo padrão dos brinquedos) ===== */
+function adicionarAoCarrinho(tipo, id) {
+    fetch(`/carrinho/adicionar/${tipo}/${id}/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(res => res.json())
+    .then(data => {
+        alert('Produto adicionado ao carrinho!');
+    })
+    .catch(() => {
+        alert('Erro ao adicionar.');
+    });
+}
+</script>
+
+{% endblock %}
