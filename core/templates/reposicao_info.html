@@ -115,27 +115,29 @@
 </style>
 
 
-<!-- ===== BREADCRUMB ===== -->
-<div class="breadcrumb">
+{% block breadcrumb %}
+<nav class="breadcrumb">
     <a href="/">Home</a>
     <span>›</span>
     <a href="{% url 'pecas_reposicao' %}">Peças de Reposição</a>
     <span>›</span>
     <strong>{{ peca.nome }}</strong>
-</div>
-
+</nav>
+{% endblock %}
 
 <!-- ===== CONTAINER ===== -->
 <div class="produto-container">
 
     <!-- IMAGEM -->
-    <div class="produto-img">
-        {% if peca.imagem_peca %}
-            <img src="{{ peca.imagem_peca.url }}" alt="{{ peca.nome }}">
+   <div class="produto-img">
+    {% with img=peca.imagem_principal %}
+        {% if img and img.imagem %}
+            <img src="{{ img.imagem.url }}" alt="{{ peca.nome }}">
         {% else %}
             <img src="{% static 'img/placeholder.png' %}" alt="Sem imagem">
         {% endif %}
-    </div>
+    {% endwith %}
+</div>
 
     <!-- INFO -->
     <div class="produto-info">
