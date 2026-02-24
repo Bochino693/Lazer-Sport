@@ -5,6 +5,7 @@
 
 <style>
 /* ===== CONTAINER ===== */
+/* ===== CONTAINER ===== */
 .produto-container {
     max-width: 1100px;
     margin: 40px auto;
@@ -14,64 +15,90 @@
     gap: 40px;
     background: #ffffff;
     border-radius: 22px;
-    box-shadow: 0 10px 35px rgba(0,0,0,0.1);
+    box-shadow: 0 10px 35px rgba(0,0,0,0.08);
+    align-items: start;
+}
+
+/* ===== IMAGEM WRAPPER ===== */
+.produto-img {
+    position: relative;
+    overflow: hidden;
+    border-radius: 22px;
+    background: linear-gradient(180deg,#f8f9fa,#eef1f4);
 }
 
 /* ===== IMAGEM ===== */
 .produto-img img {
     width: 100%;
-    border-radius: 20px;
-    background: #f8f9fa;
-    padding: 14px;
+    height: auto;
+    display: block;
+    border-radius: 22px;
+    transition: transform .5s ease, filter .4s ease;
+}
+
+/* efeito premium hover */
+.produto-img:hover img {
+    transform: scale(1.06);
+    filter: brightness(1.03);
 }
 
 /* ===== INFO ===== */
+.produto-info {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+}
+
 .produto-info h1 {
     font-size: 2rem;
     font-weight: 700;
     color: #222;
     margin-bottom: 10px;
+    line-height: 1.2;
 }
 
+/* ===== PREÇO ===== */
 .preco {
-    font-size: 2rem;
-    font-weight: bold;
+    font-size: 2.1rem;
+    font-weight: 800;
     color: #0d6efd;
     margin-bottom: 18px;
+    letter-spacing: -0.5px;
 }
 
 /* ===== DESCRIÇÃO ===== */
 .sec-titulo {
-    font-size: 1.1rem;
-    font-weight: 600;
-    margin-top: 18px;
+    font-size: 1.05rem;
+    font-weight: 700;
+    margin-top: 20px;
     margin-bottom: 6px;
-    color: #333;
+    color: #2c2c2c;
 }
 
 .descricao-produto {
-    font-size: 1rem;
-    line-height: 1.6;
-    color: #444;
+    font-size: 0.98rem;
+    line-height: 1.7;
+    color: #555;
 }
 
 /* ===== BOTÕES ===== */
 .acoes-produto {
-    margin-top: 24px;
+    margin-top: 26px;
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 12px;
 }
 
 .btn-acao {
     display: block;
     width: 100%;
-    padding: 12px 0;
+    padding: 13px 0;
     border-radius: 14px;
     font-weight: 700;
     text-align: center;
     text-decoration: none;
     transition: .25s ease;
+    font-size: .95rem;
 }
 
 /* WhatsApp */
@@ -82,7 +109,7 @@
 
 .btn-whatsapp:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 14px rgba(37,211,102,.35);
+    box-shadow: 0 8px 18px rgba(37,211,102,.35);
 }
 
 /* Carrinho */
@@ -93,6 +120,7 @@
 
 .btn-carrinho:hover {
     background: #0b5ed7;
+    transform: translateY(-2px);
 }
 
 /* Voltar */
@@ -103,13 +131,61 @@
 }
 
 .btn-voltar:hover {
-    background: #e4e4e4;
+    background: #e7e7e7;
 }
 
+/* ===== TABLET ===== */
+@media (max-width: 992px) {
+    .produto-container {
+        gap: 28px;
+        padding: 24px;
+    }
+
+    .produto-info h1 {
+        font-size: 1.7rem;
+    }
+}
+
+/* ===== MOBILE ===== */
 @media (max-width: 768px) {
     .produto-container {
         grid-template-columns: 1fr;
-        padding: 18px;
+        padding: 16px;
+        gap: 22px;
+    }
+
+    /* ⭐ imagem vem primeiro */
+    .produto-img {
+        order: 1;
+    }
+
+    .produto-info {
+        order: 2;
+    }
+
+    .produto-info h1 {
+        font-size: 1.45rem;
+    }
+
+    .preco {
+        font-size: 1.7rem;
+    }
+
+    .btn-acao {
+        padding: 14px 0;
+        font-size: 1rem;
+    }
+}
+
+/* ===== MOBILE PEQUENO ===== */
+@media (max-width: 420px) {
+    .produto-container {
+        margin: 20px 10px;
+        border-radius: 18px;
+    }
+
+    .produto-img img {
+        border-radius: 18px;
     }
 }
 </style>
