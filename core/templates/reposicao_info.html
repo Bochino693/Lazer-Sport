@@ -95,10 +95,40 @@
 }
 
 .descricao-produto {
-    font-size: 0.98rem;
-    line-height: 1.7;
-    color: #555;
+    font-size: 1rem;
+    line-height: 1.75;
+    color: #495057;
+    background: #f8f9fa;
+    padding: 14px 16px;
+    border-radius: 12px;
+    border: 1px solid #eef1f4;
 }
+
+/* ===== PREÇO PRINCIPAL ===== */
+/* ===== PREÇO PRINCIPAL ===== */
+.preco {
+    font-size: 2.2rem;
+    font-weight: 800;
+    color: #0d6efd;
+    margin: 12px 0 22px;
+    letter-spacing: -0.5px;
+    text-align: left;
+}
+
+/* preço fornecedor */
+.preco-fornecedor {
+    font-size: 1.05rem;
+    color: #6c757d;
+    font-weight: 600;
+}
+
+.produto-info {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: 6px;
+}
+
 
 /* ===== BOTÕES ===== */
 .acoes-produto {
@@ -239,16 +269,14 @@
 
         <h1>{{ peca.nome }}</h1>
 
-        <p class="preco js-preco" data-valor="{{ peca.preco_venda }}">
-            R$ 0,00
-        </p>
+        <p class="preco js-preco" data-valor="{{ peca.preco_venda|floatformat:2 }}">
 
         <p class="sec-titulo">Descrição</p>
         <p class="descricao-produto">
             {{ peca.descricao_peca }}
         </p>
 
-        <p class="sec-titulo">Preço fornecedor</p>
+        <p class="preco-fornecedor">Preço fornecedor</p>
         <p>
             R$ {{ peca.preco_fornecedor|floatformat:2 }}
         </p>
@@ -289,9 +317,11 @@
 
 <script>
 function formatarMoedaBR(valor) {
-    if (!valor || isNaN(valor)) return '0,00';
+    const numero = Number(valor);
 
-    return Number(valor).toLocaleString('pt-BR', {
+    if (Number.isNaN(numero)) return '0,00';
+
+    return numero.toLocaleString('pt-BR', {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2
     });
@@ -299,7 +329,7 @@ function formatarMoedaBR(valor) {
 
 document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.js-preco').forEach(el => {
-        const valor = parseFloat(el.dataset.valor);
+        const valor = el.dataset.valor?.replace(',', '.');
         el.innerText = 'R$ ' + formatarMoedaBR(valor);
     });
 });
