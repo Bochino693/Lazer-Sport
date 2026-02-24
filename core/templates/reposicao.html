@@ -196,7 +196,7 @@
         {% for peca in pecas %}
         <div class="card-produto">
 
-            <a href="#" class="card-link">
+            <a href="{% url 'reposicao_detalhe' peca.pk %}" class="card-link">
 
                 <!-- IMAGEM -->
                 {% if peca.imagem_peca %}
@@ -229,8 +229,7 @@
                     Falar com um vendedor
                 </a>
 
-                <a href="#"
-                   class="btn-vermais">
+                <a href="{% url 'reposicao_detalhe' peca.pk %}" class="btn-vermais">
                     Ver detalhes
                 </a>
 
