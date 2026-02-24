@@ -11,14 +11,26 @@
 /* ===== GRID ===== */
 .grid-cards {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-    gap: 50px;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 40px;
     max-width: 1200px;
     margin: 50px auto;
-    justify-items: center;
     padding: 0 20px;
 }
 
+/* tablet */
+@media (max-width: 1024px) {
+    .grid-cards {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* mobile */
+@media (max-width: 520px) {
+    .grid-cards {
+        grid-template-columns: 1fr;
+    }
+}
 .card-link {
     display: block;
     color: inherit;
