@@ -276,10 +276,6 @@ class ImagemPeca(Prime):
         DETALHE = "detalhe", "Detalhe"
         OUTRO = "outro", "Outro"
 
-    descricao_imagem = models.CharField(
-        max_length=120,
-        verbose_name="Descrição"
-    )
 
     posicao = models.CharField(
         max_length=20,
@@ -291,7 +287,8 @@ class ImagemPeca(Prime):
 
     imagem = models.ImageField(
         upload_to="pecas_reposicao/",
-        verbose_name="Imagem"
+        verbose_name="Imagem",
+        null=True
     )
 
     peca_reposicao = models.ForeignKey(
@@ -301,21 +298,17 @@ class ImagemPeca(Prime):
         verbose_name="Peça"
     )
 
-    ordem_manual = models.PositiveIntegerField(
-        default=0,
-        verbose_name="Ordem manual"
-    )
 
     class Meta:
         verbose_name = "Imagem de Peça de Reposição"
         verbose_name_plural = "Imagens de Peças de Reposição"
-        ordering = ["ordem_manual", "id"]
+        ordering = ["id"]
         indexes = [
             models.Index(fields=["peca_reposicao"]),
         ]
 
     def __str__(self):
-        return f"{self.descricao_imagem} ({self.get_posicao_display()})"
+        return f" ({self.get_posicao_display()})"
 
     # 🚨 VALIDAÇÃO: máximo 3 imagens por peça
     def clean(self):
