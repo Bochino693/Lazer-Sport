@@ -89,7 +89,8 @@ class HomeView(View):
         pecas_preview = (
             PecasReposicao.objects
             .prefetch_related("imagem_peca_reposicao")
-            .all()[:12]
+            .filter(imagem_peca_reposicao__isnull=False)
+            .distinct()[:12]
         )
 
         eventos = Eventos.objects.all()
