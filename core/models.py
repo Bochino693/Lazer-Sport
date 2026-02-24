@@ -244,8 +244,20 @@ class Brinquedos(Prime):
         verbose_name_plural = "Brinquedos"
 
 
+class CategoriaPeca(Prime):
+    nome_categoria_peca = models.CharField(max_length=90)
+
+    def __str__(self):
+        return self.nome_categoria_peca
+
+    class Meta:
+        verbose_name = "Categoria de Peça"
+        verbose_name_plural = "Categorias de Peças"
+
+
 class PecasReposicao(Prime):
     nome = models.CharField(max_length=120)
+    categoria_peca = models.ForeignKey(CategoriaPeca, on_delete=models.CASCADE, related_name='peca', null=True)
     preco_venda = models.DecimalField(decimal_places=2, max_digits=9, null=True, blank=True)
     preco_fornecedor = models.DecimalField(decimal_places=2, max_digits=9, null=True, blank=True)
     descricao_peca = models.CharField(max_length=210)
@@ -283,13 +295,13 @@ class PecasReposicao(Prime):
         # ✅ se tem fornecedor e NÃO tem venda → calcula venda automática
         if self.preco_fornecedor and not self.preco_venda:
             self.preco_venda = (
-                self.preco_fornecedor * Decimal("1.12")
+                    self.preco_fornecedor * Decimal("1.12")
             ).quantize(Decimal("0.01"))
 
         # ✅ calcula ganho potencial se ambos existirem
         if self.preco_venda and self.preco_fornecedor:
             self.ganho_potencial = (
-                self.preco_venda - self.preco_fornecedor
+                    self.preco_venda - self.preco_fornecedor
             ).quantize(Decimal("0.01"))
         else:
             self.ganho_potencial = None
@@ -298,7 +310,6 @@ class PecasReposicao(Prime):
 
 
 class ImagemPeca(Prime):
-
     class PosicaoImagem(models.TextChoices):
         FRENTE = "frente", "Frente"
         LADO_DIREITO = "lado_direito", "Lado direito"
@@ -306,7 +317,6 @@ class ImagemPeca(Prime):
         TRAS = "tras", "Traseira"
         DETALHE = "detalhe", "Detalhe"
         OUTRO = "outro", "Outro"
-
 
     posicao = models.CharField(
         max_length=20,
@@ -328,7 +338,6 @@ class ImagemPeca(Prime):
         related_name="imagem_peca_reposicao",
         verbose_name="Peça"
     )
-
 
     class Meta:
         verbose_name = "Imagem de Peça de Reposição"
