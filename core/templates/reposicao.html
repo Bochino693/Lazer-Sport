@@ -16,6 +16,7 @@
     max-width: 1200px;
     margin: 50px auto;
     padding: 0 20px;
+    align-items: stretch; /* 🔥 garante mesma altura */
 }
 
 /* tablet */
@@ -38,7 +39,8 @@
 }
 
 .card-produto {
-    width: 300px;
+    width: 100%; /* 🔥 não usar 300px fixo */
+    height: 100%; /* 🔥 iguala alturas */
     background: white;
     border-radius: 18px;
     overflow: hidden;
@@ -75,7 +77,7 @@
     text-align: center;
     display: flex;
     flex-direction: column;
-    flex: 1;
+    flex: 1; /* 🔥 empurra footer para baixo */
 }
 
 .card-produto h3 {
@@ -89,7 +91,7 @@
     font-size: 0.9rem;
     color: #555;
     margin: 8px 0 14px;
-    min-height: 48px;
+    min-height: 3.6em; /* 🔥 baseado em linhas */
 }
 
 /* ===== PREÇO ===== */
@@ -167,6 +169,10 @@
 .btn-whatsapp i {
     margin-right: 6px;
     font-size: 1.1rem;
+}
+
+.card-footer {
+    margin-top: auto; /* 🔥 cola botões no fundo */
 }
 </style>
 
