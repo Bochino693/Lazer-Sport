@@ -259,6 +259,22 @@ class PecasReposicao(Prime):
         verbose_name_plural = "Peças de Reposição"
 
 
+class ImagemPeca(Prime):
+    num_imagem = models.CharField(max_length=120, null=False)
+    peca_reposicao = models.ForeignKey(PecasReposicao,
+                                       on_delete=models.CASCADE,
+                                       null=False, related_name='imagem_peca_reposicao')
+
+
+    class Meta:
+        verbose_name = "Imagem de Peça de Reposição"
+        verbose_name_plural = "Imagens de Peças de Reposição"
+
+
+    def __str__(self):
+        return self.num_imagem
+
+
 class Combos(Prime):
     descricao = models.CharField(max_length=90)
     imagem_combo = models.ImageField(upload_to='combos/', null=True)
