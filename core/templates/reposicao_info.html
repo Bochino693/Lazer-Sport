@@ -161,11 +161,11 @@
 
             <!-- WhatsApp -->
             <a href="https://wa.me/5511960563135?text=
-Olá! 👋%0A
-Tenho interesse na peça:%0A
-🔧 {{ peca.nome|urlencode }}%0A
-💰 Preço: R$ {{ peca.preco_venda|floatformat:2 }}%0A%0A
-🔗 {{ request.build_absolute_uri|urlencode }}"
+            Olá! 👋%0A
+            Tenho interesse na peça:%0A
+            🔧 {{ peca.nome|urlencode }}%0A
+            💰 Preço: R$ {{ peca.preco_venda|floatformat:2 }}%0A%0A
+            🔗 {{ request.build_absolute_uri|urlencode }}"
                target="_blank"
                class="btn-acao btn-whatsapp">
                <i class="fab fa-whatsapp"></i>
@@ -180,7 +180,7 @@ Tenho interesse na peça:%0A
             </button>
 
             <!-- Voltar -->
-            <a href="{% url 'reposicao' %}" class="btn-acao btn-voltar">
+            <a href="{% url 'pecas_reposicao' %}" class="btn-acao btn-voltar">
                 ← Voltar
             </a>
 

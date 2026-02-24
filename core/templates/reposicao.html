@@ -199,11 +199,13 @@
             <a href="{% url 'reposicao_detalhe' peca.pk %}" class="card-link">
 
                 <!-- IMAGEM -->
-                {% if peca.imagem_peca %}
-                    <img src="{{ peca.imagem_peca.url }}" alt="{{ peca.nome }}">
-                {% else %}
+                {% with img=peca.imagem_principal %}
+                  {% if img and img.imagem %}
+                    <img src="{{ img.imagem.url }}" alt="{{ peca.nome }}">
+                  {% else %}
                     <img src="{% static 'img/placeholder.png' %}" alt="Sem imagem">
-                {% endif %}
+                  {% endif %}
+                {% endwith %}
 
                 <!-- CONTEÚDO -->
                 <div class="conteudo">
