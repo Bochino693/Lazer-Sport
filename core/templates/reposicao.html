@@ -163,7 +163,14 @@
 .breadcrumb strong {
     color: #1f2d3d;
 }
+
+.btn-whatsapp i {
+    margin-right: 6px;
+    font-size: 1.1rem;
+}
 </style>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
 <!-- BREADCRUMB -->
 <div class="breadcrumb">
@@ -209,10 +216,11 @@
             <!-- BOTÕES -->
             <div class="card-footer">
 
-                <a href="https://wa.me/5511960563135?text=Olá! Tenho interesse na peça {{ peca.nome }}"
+                <a href="https://wa.me/5511960563135?text=Olá! Quero falar com um vendedor sobre a peça {{ peca.nome }}"
                    target="_blank"
                    class="btn-whatsapp">
-                    WhatsApp
+                    <i class="fab fa-whatsapp"></i>
+                    Falar com um vendedor
                 </a>
 
                 <a href="#"
