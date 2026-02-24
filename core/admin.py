@@ -21,13 +21,43 @@ from .models import (
     BrinquedoClick,
     CategoriaClick,
     PromocaoClick,
-    ComboClick
+    ComboClick,
+    PecasReposicao
 )
 from django.utils.html import format_html
 from .models import ImagensSite
 from django import forms
 from .models import EnderecoEntrega
 
+@admin.register(PecasReposicao)
+class PecasReposicaoAdmin(admin.ModelAdmin):
+    list_display = (
+        "id",
+        "nome",
+        "preco_venda",
+        "preco_fornecedor",
+        "descricao_peca",
+    )
+    list_display_links = ("id", "nome")
+    search_fields = ("nome", "descricao_peca")
+    list_filter = ("preco_venda", "preco_fornecedor")
+    readonly_fields = ()
+
+    fieldsets = (
+        ("Informações da Peça", {
+            "fields": (
+                "nome",
+                "descricao_peca",
+                "imagem_peca",
+            )
+        }),
+        ("Valores", {
+            "fields": (
+                "preco_venda",
+                "preco_fornecedor",
+            )
+        }),
+    )
 
 @admin.register(BrinquedoClick)
 class BrinquedoClickAdmin(admin.ModelAdmin):
