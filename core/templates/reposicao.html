@@ -188,8 +188,8 @@
                         {{ peca.descricao_peca|truncatechars:120 }}
                     </p>
 
-                    <div class="preco" data-valor="{{ peca.preco_venda }}">
-                        R$ {{ peca.preco_venda }}
+                    <div class="preco">
+                        R$ {{ peca.preco_venda|floatformat:2 }}
                     </div>
                 </div>
             </a>
