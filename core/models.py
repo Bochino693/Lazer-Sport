@@ -246,9 +246,18 @@ class Brinquedos(Prime):
 
 class PecasReposicao(Prime):
     nome = models.CharField(max_length=120)
-    preco_venda = models.DecimalField(decimal_places=2, max_digits=9)
-    preco_fornecedor = models.DecimalField(decimal_places=2, max_digits=9)
+    preco_venda = models.DecimalField(decimal_places=2, max_digits=9, null=True, blank=True)
+    preco_fornecedor = models.DecimalField(decimal_places=2, max_digits=9, null=True, blank=True)
     descricao_peca = models.CharField(max_length=210)
+
+    # ⭐ novo campo
+    ganho_potencial = models.DecimalField(
+        decimal_places=2,
+        max_digits=9,
+        null=True,
+        blank=True,
+        editable=False
+    )
 
     class Meta:
         verbose_name = "Peça de Reposição"
@@ -257,7 +266,7 @@ class PecasReposicao(Prime):
     def __str__(self):
         return self.nome
 
-    # ⭐ helper profissional (opcional, mas útil)
+    # ⭐ helper profissional (mantido)
     @property
     def imagem_principal(self):
         img = self.imagem_peca_reposicao.filter(
@@ -268,6 +277,24 @@ class PecasReposicao(Prime):
             return img
 
         return self.imagem_peca_reposicao.first()
+
+    # 🚀 SAVE INTELIGENTE
+    def save(self, *args, **kwargs):
+        # ✅ se tem fornecedor e NÃO tem venda → calcula venda automática
+        if self.preco_fornecedor and not self.preco_venda:
+            self.preco_venda = (
+                self.preco_fornecedor * Decimal("1.12")
+            ).quantize(Decimal("0.01"))
+
+        # ✅ calcula ganho potencial se ambos existirem
+        if self.preco_venda and self.preco_fornecedor:
+            self.ganho_potencial = (
+                self.preco_venda - self.preco_fornecedor
+            ).quantize(Decimal("0.01"))
+        else:
+            self.ganho_potencial = None
+
+        super().save(*args, **kwargs)
 
 
 class ImagemPeca(Prime):

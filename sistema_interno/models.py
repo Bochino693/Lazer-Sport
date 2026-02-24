@@ -128,8 +128,20 @@ class EstoqueMaterial(Prime):
         verbose_name_plural = "Estoque de Materiais"
         unique_together = ('material', 'descricao_local')
 
-
 class CentralPedidos(Prime):
+
+    class StatusPedido(models.TextChoices):
+        PENDENTE = "pendente", "Pendente"
+        EM_ANDAMENTO = "andamento", "Em andamento"
+        CONCLUIDO = "concluido", "Concluído"
+        CANCELADO = "cancelado", "Cancelado"
+
+    status = models.CharField(
+        max_length=20,
+        choices=StatusPedido.choices,
+        default=StatusPedido.PENDENTE,
+        db_index=True
+    )
     descricao_pedido = models.CharField(max_length=90)
 
     def __str__(self):
