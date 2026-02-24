@@ -71,6 +71,61 @@ body {
   display: none;
 }
 
+/* ===== slider premium ===== */
+.pecas-slider.premium {
+  width: 100%;
+  height: 170px;
+  display: flex;
+  overflow-x: auto;
+  gap: 10px;
+  padding: 10px;
+  scroll-behavior: smooth;
+  scrollbar-width: none;
+}
+
+.pecas-slider.premium::-webkit-scrollbar {
+  display: none;
+}
+
+.pecas-slider.premium img {
+  min-width: 130px;
+  height: 150px;
+  object-fit: contain;
+  background: #f6f7f8;
+  border-radius: 12px;
+  transition: transform .25s ease;
+}
+
+.pecas-slider.premium img:hover {
+  transform: scale(1.05);
+}
+
+/* ===== skeleton loading ===== */
+.skeleton-box {
+  position: relative;
+  overflow: hidden;
+  border-radius: 12px;
+  background: #eee;
+}
+
+.skeleton-box::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255,255,255,.5),
+    transparent
+  );
+  animation: skeleton-loading 1.2s infinite;
+}
+
+@keyframes skeleton-loading {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
 /* ======= HERO ======= */
 .hero {
   text-align: center;
@@ -135,22 +190,16 @@ body {
   inset: 0;
   width: 100%;
   height: 100%;
-
-<<<<<<< HEAD
   object-fit: contain;      /* NÃO CORTA */
   object-position: center;
-
   background: #000;         /* cor de fundo se sobrar espaço */
   opacity: 0;
   transition: opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-=======
   object-fit: contain;
   object-position: center;
-
   background: transparent;   /* remove o fundo preto */
   opacity: 0;
   transition: opacity 0.8s ease;
->>>>>>> 2aafc48c92b2105772a3fb8a4a40c1b1623b1cbd
   will-change: opacity;
   z-index: 0;
   filter: blur(8px);
@@ -2218,6 +2267,7 @@ body {
     </div>
 </section>
 
+
 <!-- ======= CATEGORIAS ======= -->
 <section id="categorias-section" class="categorias-section">
   <h2 class="section-title">Categorias</h2>
@@ -2230,17 +2280,19 @@ body {
 
     <div class="scroll-container" id="scroll-container">
 
-      <!-- ✅ CATEGORIA FIXA COM SCROLL DE IMAGENS -->
+      <!-- ⭐ CATEGORIA FIXA PREMIUM -->
       <a href="{% url 'reposicao_lista' %}#list" class="categoria-link">
         <div class="categoria-card">
 
-          <div class="pecas-slider">
+          <div class="pecas-slider premium" id="pecasSlider">
             {% for peca in pecas_preview %}
               {% with img=peca.imagem_peca_reposicao.first %}
                 {% if img %}
-                  <img src="{{ img.num_imagem.url }}"
-                       alt="{{ peca.nome }}"
-                       loading="lazy">
+                  <div class="skeleton-box">
+                    <img src="{{ img.num_imagem.url }}"
+                         alt="{{ peca.nome }}"
+                         loading="lazy">
+                  </div>
                 {% endif %}
               {% endwith %}
             {% empty %}
@@ -2256,7 +2308,7 @@ body {
         </div>
       </a>
 
-      <!-- ✅ CATEGORIAS DINÂMICAS -->
+      <!-- ✅ CATEGORIAS NORMAIS -->
       {% for categoria in categorias_brinquedos %}
         <a href="{% url 'categoria_detalhe' categoria.id %}#list" class="categoria-link">
           <div class="categoria-card">
@@ -2264,11 +2316,9 @@ body {
             {% if categoria.imagem_categoria %}
               <img src="{{ categoria.imagem_categoria.url }}"
                    alt="{{ categoria.nome_categoria }}"
-                   loading="eager"
-                   decoding="async">
+                   loading="lazy">
             {% else %}
-              <img src="{% static 'images/default_categoria.jpg' %}"
-                   alt="Categoria sem imagem">
+              <img src="{% static 'images/default_categoria.jpg' %}">
             {% endif %}
 
             <div class="categoria-info">
@@ -2278,8 +2328,6 @@ body {
 
           </div>
         </a>
-      {% empty %}
-        <p>Nenhuma categoria encontrada.</p>
       {% endfor %}
 
     </div>
@@ -2287,6 +2335,7 @@ body {
     <button class="scroll-btn right" id="scroll-right">&#10095;</button>
   </div>
 </section>
+
 
 <!-- DIVISOR ENTRE SEÇÕES -->
 <div class="section-divider">
@@ -3253,6 +3302,31 @@ document.addEventListener('click', e => {
     }
 });
 
+
+document.addEventListener("DOMContentLoaded", () => {
+  const slider = document.getElementById("pecasSlider");
+  if (!slider) return;
+
+  let speed = 0.4; // velocidade premium
+  let isHover = false;
+
+  slider.addEventListener("mouseenter", () => isHover = true);
+  slider.addEventListener("mouseleave", () => isHover = false);
+
+  function autoScroll() {
+    if (!isHover) {
+      slider.scrollLeft += speed;
+
+      // loop infinito suave
+      if (slider.scrollLeft >= slider.scrollWidth - slider.clientWidth) {
+        slider.scrollLeft = 0;
+      }
+    }
+    requestAnimationFrame(autoScroll);
+  }
+
+  autoScroll();
+});
 
 </script>
 
