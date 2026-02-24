@@ -246,7 +246,6 @@ class Brinquedos(Prime):
 
 class PecasReposicao(Prime):
     nome = models.CharField(max_length=120, null=False)
-    imagem_peca = models.ImageField(upload_to='pecas_reposicao/', blank=True, null=True)
     preco_venda = models.DecimalField(decimal_places=2, max_digits=9, null=False)
     preco_fornecedor = models.DecimalField(decimal_places=2, max_digits=9, null=False)
     descricao_peca = models.CharField(max_length=210)
