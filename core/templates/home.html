@@ -2195,39 +2195,72 @@ body {
     </div>
 </section>
 
-
 <!-- ======= CATEGORIAS ======= -->
 <section id="categorias-section" class="categorias-section">
   <h2 class="section-title">Categorias</h2>
-        <p class="section-subtitle">
-          Encontre o brinquedo ideal para transformar seu espaço em diversão garantida.
-        </p>
+  <p class="section-subtitle">
+    Encontre o brinquedo ideal para transformar seu espaço em diversão garantida.
+  </p>
 
   <div class="scroll-wrapper">
     <button class="scroll-btn left" id="scroll-left">&#10094;</button>
 
     <div class="scroll-container" id="scroll-container">
+
+      <!-- ✅ CATEGORIA FIXA COM SCROLL DE IMAGENS -->
+      <a href="{% url 'reposicao_lista' %}#list" class="categoria-link">
+        <div class="categoria-card">
+
+          <div class="pecas-slider">
+            {% for peca in pecas_preview %}
+              {% with img=peca.imagem_peca_reposicao.first %}
+                {% if img %}
+                  <img src="{{ img.num_imagem.url }}"
+                       alt="{{ peca.nome }}"
+                       loading="lazy">
+                {% endif %}
+              {% endwith %}
+            {% empty %}
+              <img src="{% static 'images/default_categoria.jpg' %}" alt="">
+            {% endfor %}
+          </div>
+
+          <div class="categoria-info">
+            <h3>Peças de Reposição</h3>
+            <p>{{ pecas_reposicao }} itens</p>
+          </div>
+
+        </div>
+      </a>
+
+      <!-- ✅ CATEGORIAS DINÂMICAS -->
       {% for categoria in categorias_brinquedos %}
         <a href="{% url 'categoria_detalhe' categoria.id %}#list" class="categoria-link">
-  <div class="categoria-card">
-    {% if categoria.imagem_categoria %}
-      <img src="{{ categoria.imagem_categoria.url }}" alt="{{ categoria.nome_categoria }}"
-          loading="eager"
-          decoding="async"
-      >
-    {% else %}
-      <img src="{% static 'images/default_categoria.jpg' %}" alt="Categoria sem imagem">
-    {% endif %}
-    <div class="categoria-info">
-      <h3>{{ categoria.nome_categoria }}</h3>
-      <p>{{ categoria.total_produtos }} brinquedos</p>
-    </div>
-  </div>
-</a>
+          <div class="categoria-card">
+
+            {% if categoria.imagem_categoria %}
+              <img src="{{ categoria.imagem_categoria.url }}"
+                   alt="{{ categoria.nome_categoria }}"
+                   loading="eager"
+                   decoding="async">
+            {% else %}
+              <img src="{% static 'images/default_categoria.jpg' %}"
+                   alt="Categoria sem imagem">
+            {% endif %}
+
+            <div class="categoria-info">
+              <h3>{{ categoria.nome_categoria }}</h3>
+              <p>{{ categoria.total_produtos }} brinquedos</p>
+            </div>
+
+          </div>
+        </a>
       {% empty %}
-<p>Nenhuma categoria encontrada.</p>
+        <p>Nenhuma categoria encontrada.</p>
       {% endfor %}
+
     </div>
+
     <button class="scroll-btn right" id="scroll-right">&#10095;</button>
   </div>
 </section>
