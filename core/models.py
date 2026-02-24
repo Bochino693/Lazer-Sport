@@ -245,33 +245,93 @@ class Brinquedos(Prime):
 
 
 class PecasReposicao(Prime):
-    nome = models.CharField(max_length=120, null=False)
-    preco_venda = models.DecimalField(decimal_places=2, max_digits=9, null=False)
-    preco_fornecedor = models.DecimalField(decimal_places=2, max_digits=9, null=False)
+    nome = models.CharField(max_length=120)
+    preco_venda = models.DecimalField(decimal_places=2, max_digits=9)
+    preco_fornecedor = models.DecimalField(decimal_places=2, max_digits=9)
     descricao_peca = models.CharField(max_length=210)
-
-    def __str__(self):
-        return self.descricao_peca
 
     class Meta:
         verbose_name = "Peça de Reposição"
         verbose_name_plural = "Peças de Reposição"
 
+    def __str__(self):
+        return self.nome
+
+    # ⭐ helper profissional (opcional, mas útil)
+    @property
+    def imagem_principal(self):
+        img = self.imagem_peca_reposicao.filter(
+            posicao=ImagemPeca.PosicaoImagem.FRENTE
+        ).first()
+        return img or self.imagem_peca_reposicao.first()
+
 
 class ImagemPeca(Prime):
-    num_imagem = models.CharField(max_length=120, null=False)
-    peca_reposicao = models.ForeignKey(PecasReposicao,
-                                       on_delete=models.CASCADE,
-                                       null=False, related_name='imagem_peca_reposicao')
 
+    class PosicaoImagem(models.TextChoices):
+        FRENTE = "frente", "Frente"
+        LADO_DIREITO = "lado_direito", "Lado direito"
+        LADO_ESQUERDO = "lado_esquerdo", "Lado esquerdo"
+        TRAS = "tras", "Traseira"
+        DETALHE = "detalhe", "Detalhe"
+        OUTRO = "outro", "Outro"
+
+    descricao_imagem = models.CharField(
+        max_length=120,
+        verbose_name="Descrição"
+    )
+
+    posicao = models.CharField(
+        max_length=20,
+        choices=PosicaoImagem.choices,
+        default=PosicaoImagem.FRENTE,
+        verbose_name="Posição da imagem",
+        db_index=True,
+    )
+
+    imagem = models.ImageField(
+        upload_to="pecas_reposicao/",
+        verbose_name="Imagem"
+    )
+
+    peca_reposicao = models.ForeignKey(
+        PecasReposicao,
+        on_delete=models.CASCADE,
+        related_name="imagem_peca_reposicao",
+        verbose_name="Peça"
+    )
+
+    ordem_manual = models.PositiveIntegerField(
+        default=0,
+        verbose_name="Ordem manual"
+    )
 
     class Meta:
         verbose_name = "Imagem de Peça de Reposição"
         verbose_name_plural = "Imagens de Peças de Reposição"
-
+        ordering = ["ordem_manual", "id"]
+        indexes = [
+            models.Index(fields=["peca_reposicao"]),
+        ]
 
     def __str__(self):
-        return self.num_imagem
+        return f"{self.descricao_imagem} ({self.get_posicao_display()})"
+
+    # 🚨 VALIDAÇÃO: máximo 3 imagens por peça
+    def clean(self):
+        if self.peca_reposicao_id:
+            qs = ImagemPeca.objects.filter(
+                peca_reposicao=self.peca_reposicao
+            )
+
+            # se estiver editando, exclui a própria instância
+            if self.pk:
+                qs = qs.exclude(pk=self.pk)
+
+            if qs.count() >= 3:
+                raise ValidationError(
+                    "Cada peça pode ter no máximo 3 imagens."
+                )
 
 
 class Combos(Prime):
