@@ -13,10 +13,7 @@ from .views import (HomeView, BrinquedoInfoView, CategoriasInfoView, BrinquedosV
                     redirecionar_loja, redirecionar_categoria_brinquedos, redirecionar_categoria_aventura, redirecionar_lancamentos,
                     redirecionar_showroom, redirecionar_contato, EstatisticasGeraisView, ReposicaoView, ReposicaoDetalheView
                     )
-from django.conf import settings
-from django.conf.urls.static import static
-from django.views.generic import RedirectView
-from django.urls import reverse_lazy
+
 
 urlpatterns = [
 
