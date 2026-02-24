@@ -29,6 +29,11 @@ from .models import ImagensSite
 from django import forms
 from .models import EnderecoEntrega
 
+
+admin.site.site_header = "Painel Lazer Sport"
+admin.site.site_title = "Lazer Sport Admin"
+admin.site.index_title = "Bem-vindo ao Painel"
+
 @admin.register(PecasReposicao)
 class PecasReposicaoAdmin(admin.ModelAdmin):
     list_display = (
