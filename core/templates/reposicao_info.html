@@ -208,9 +208,9 @@
    <div class="produto-img">
     {% with img=peca.imagem_principal %}
         {% if img and img.imagem %}
-            <img src="{{ img.imagem.url }}" alt="{{ peca.nome }}">
+            <img src="{{ img.imagem.url }}" alt="{{ peca.nome }}" loading="lazy">
         {% else %}
-            <img src="{% static 'img/placeholder.png' %}" alt="Sem imagem">
+            <img src="{% static 'img/placeholder.png' %}" alt="Sem imagem" loading="lazy">
         {% endif %}
     {% endwith %}
 </div>
