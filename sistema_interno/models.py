@@ -129,17 +129,17 @@ class EstoqueMaterial(Prime):
         unique_together = ('material', 'descricao_local')
 
 
-class CentralPedidos(Pedido):
-    descricao_pedido = models.CharField(max_length=90)
-
-    def __str__(self):
-        return self.descricao_pedido
-
-    class Meta:
-        verbose_name = "Central de Pedido"
-        verbose_name_plural = "Central de Vendas"
-
-
+#class CentralPedidos(Pedido):
+#    descricao_pedido = models.CharField(max_length=90)
+#
+ #   def __str__(self):
+  #      return self.descricao_pedido
+#
+ #   class Meta:
+  #      verbose_name = "Central de Pedido"
+   #     verbose_name_plural = "Central de Vendas"
+#
+#
 class CentralVendas(Venda):
     origem = models.CharField(
         choices=(('site', 'Site'), ('interno', 'Interno')),
