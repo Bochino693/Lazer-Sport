@@ -22,11 +22,12 @@ from .models import (
     CategoriaClick,
     PromocaoClick,
     ComboClick,
-    PecasReposicao
+    PecasReposicao, ImagemPeca
 )
 from django.utils.html import format_html
 from .models import ImagensSite
 from django import forms
+from django.core.exceptions import ValidationError
 from .models import EnderecoEntrega
 
 
@@ -34,6 +35,29 @@ admin.site.site_header = "Painel Lazer Sport"
 admin.site.site_title = "Lazer Sport Admin"
 admin.site.index_title = "Bem-vindo ao Painel"
 
+
+# ⭐ INLINE DAS IMAGENS
+class ImagemPecaInline(admin.TabularInline):
+    model = ImagemPeca
+    extra = 1
+    max_num = 3
+    min_num = 0
+    fields = ("posicao", "imagem")
+    verbose_name = "Imagem da peça"
+    verbose_name_plural = "Imagens da peça"
+
+    # 🔒 segurança extra no admin
+    def clean(self):
+        super().clean()
+        total = len([
+            form for form in self.forms
+            if form.cleaned_data and not form.cleaned_data.get("DELETE", False)
+        ])
+        if total > 3:
+            raise ValidationError("Máximo de 3 imagens por peça.")
+
+
+# ⭐ ADMIN PRINCIPAL
 @admin.register(PecasReposicao)
 class PecasReposicaoAdmin(admin.ModelAdmin):
     list_display = (
@@ -41,19 +65,19 @@ class PecasReposicaoAdmin(admin.ModelAdmin):
         "nome",
         "preco_venda",
         "preco_fornecedor",
-        "descricao_peca",
     )
     list_display_links = ("id", "nome")
     search_fields = ("nome", "descricao_peca")
     list_filter = ("preco_venda", "preco_fornecedor")
-    readonly_fields = ()
+
+    # 🔥 AQUI É O SEGREDO
+    inlines = [ImagemPecaInline]
 
     fieldsets = (
         ("Informações da Peça", {
             "fields": (
                 "nome",
                 "descricao_peca",
-                "imagem_peca",
             )
         }),
         ("Valores", {
@@ -63,6 +87,7 @@ class PecasReposicaoAdmin(admin.ModelAdmin):
             )
         }),
     )
+
 
 @admin.register(BrinquedoClick)
 class BrinquedoClickAdmin(admin.ModelAdmin):
