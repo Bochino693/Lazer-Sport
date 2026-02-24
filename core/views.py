@@ -88,8 +88,8 @@ class HomeView(View):
 
         pecas_preview = (
             PecasReposicao.objects
-            .prefetch_related('imagem_peca_reposicao')
-            [:10]
+            .prefetch_related("imagem_peca_reposicao")
+            .all()[:12]
         )
 
         eventos = Eventos.objects.all()
@@ -118,6 +118,7 @@ class HomeView(View):
             "eventos": eventos,
             "pecas_reposicao": pecas_reposicao,
             "pecas_count" : pecas_count,
+            "pecas_preview": pecas_preview,
             "projetos": projetos,
             "combos": combos,
             "promocoes": promocoes,

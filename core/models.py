@@ -263,7 +263,11 @@ class PecasReposicao(Prime):
         img = self.imagem_peca_reposicao.filter(
             posicao=ImagemPeca.PosicaoImagem.FRENTE
         ).first()
-        return img or self.imagem_peca_reposicao.first()
+
+        if img:
+            return img
+
+        return self.imagem_peca_reposicao.first()
 
 
 class ImagemPeca(Prime):
