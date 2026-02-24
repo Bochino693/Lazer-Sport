@@ -82,7 +82,6 @@ class HomeView(View):
         combos = Combos.objects.all()
         promocoes = Promocoes.objects.all()
 
-        pecas_reposicao = PecasReposicao.objects.all()
         pecas_count = PecasReposicao.objects.count()
         pecas_reposicao = PecasReposicao.objects.count()
 
