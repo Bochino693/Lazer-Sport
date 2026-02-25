@@ -579,6 +579,10 @@ class ItemCarrinho(Prime):
         if hasattr(self.item, 'preco_promocao'):
             return self.item.preco_promocao
 
+        # ✅ NOVO — peças de reposição
+        if hasattr(self.item, 'preco_venda'):
+            return self.item.preco_venda or 0
+
         return 0
 
     @property
