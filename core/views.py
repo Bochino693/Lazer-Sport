@@ -179,7 +179,7 @@ class ReposicaoDetalheView(View):
             'peca': peca
         })
 
-from django.shortcuts import render, redirect
+
 from django.views import View
 
 

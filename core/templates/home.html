@@ -503,12 +503,19 @@ body {
 }
 
 /* Grid Desktop */
+/* Grid Desktop */
 .pecas-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
     gap: 30px;
     max-width: 1200px;
     margin: 0 auto;
+    align-items: stretch; /* ⭐ garante mesma altura */
+}
+
+/* Link precisa ser flex */
+.pecas-card-link {
+    display: flex;
 }
 
 /* Card */
@@ -523,6 +530,31 @@ body {
     position: relative;
     transition: transform .2s ease, box-shadow .2s ease;
     animation: fadeCardPeca .6s ease forwards;
+
+    /* ⭐ ESSENCIAL */
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+}
+
+/* Área de conteúdo precisa expandir */
+.pecas-card .conteudo {
+    display: flex;
+    flex-direction: column;
+    flex: 1; /* ⭐ ocupa o espaço disponível */
+}
+
+/* Descrição ocupa espaço flexível */
+.pecas-card p {
+    padding: 0 15px;
+    color: #4a4a4a;
+    font-size: 0.95em;
+    margin: 8px 0 15px 0;
+}
+
+/* Área de ações sempre embaixo */
+.acoes-fixas {
+    margin-top: auto; /* ⭐ empurra para o final */
 }
 
 /* Hover */
@@ -3144,6 +3176,7 @@ function renderizarMoedas(root = document) {
         }
     });
 }
+
 
 /* ======================================================
    📏 ALTURA DOS CARDS (PRODUÇÃO SAFE)
