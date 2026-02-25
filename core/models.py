@@ -72,7 +72,7 @@ class ClientePerfil(models.Model):
         max_length=13,
         validators=[validar_telefone],
         blank=False,
-        null=False
+        null=True
     )
 
     criado_em = models.DateTimeField(auto_now_add=True)
