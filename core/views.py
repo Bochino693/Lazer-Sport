@@ -1744,7 +1744,7 @@ def aplicar_cupom(request):
 
 
 from django.views import View
-from django.shortcuts import render, redirect
+from django.shortcuts import render
 from django.contrib import messages
 
 

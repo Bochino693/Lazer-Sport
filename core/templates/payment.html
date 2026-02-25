@@ -431,7 +431,7 @@
         <p>Escolha a forma de pagamento para concluir</p>
     </header>
 
-    <div class="payment-resumo-box">
+    <div class="payment-resumo-box" id="roll">
 
     <h2 class="valor-total">
         R$ {{ total_liquido|floatformat:2 }}
@@ -445,7 +445,6 @@
                 <span>{{ item.item }}</span>
                 <span>
                     {{ item.quantidade }} ×
-                    R$ {{ item.preco_unitario|floatformat:2 }}
                 </span>
                 <strong>
                     R$ {{ item.subtotal|floatformat:2 }}

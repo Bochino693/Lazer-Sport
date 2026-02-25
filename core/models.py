@@ -527,7 +527,6 @@ class Carrinho(Prime):
         related_name='carrinhos'
     )
 
-    from decimal import Decimal
 
     @property
     def total_bruto(self):
