@@ -114,48 +114,38 @@ body {
   display: none;
 }
 /* ===== SLIDER PREMIUM CORRIGIDO ===== */
+/* ===== CARROSSEL 1 IMAGEM POR VEZ ===== */
 
 .pecas-slider.premium {
+  position: relative;
   width: 100%;
   height: 170px;
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 12px;
-  overflow-x: auto;
-  scroll-behavior: smooth;
-  scrollbar-width: none;
-}
-
-.pecas-slider.premium::-webkit-scrollbar {
-  display: none;
-}
-
-
-.pecas-slider.premium img {
-  flex: 0 0 auto;
-  height: 140px;
-  width: auto;
-  max-width: 160px;
-  object-fit: contain;
-  border-radius: 12px;
+  justify-content: center;
   background: #f6f7f8;
-  padding: 8px;
-  transition: transform .25s ease;
+  overflow: hidden;
 }
 
-
-.pecas-slider.premium img:hover {
-  transform: scale(1.06);
+/* todas ficam sobrepostas */
+.pecas-slider.premium img {
+  position: absolute;
+  max-width: 90%;
+  max-height: 150px;
+  object-fit: contain;
+  opacity: 0;
+  transition: opacity .6s ease;
 }
 
+/* somente a ativa aparece */
+.pecas-slider.premium img.active {
+  opacity: 1;
+}
 
 @keyframes skeleton-loading {
   0% { transform: translateX(-100%); }
   100% { transform: translateX(100%); }
 }
-
-
 
 
 .hero h1 {
@@ -164,11 +154,13 @@ body {
   margin-bottom: 10px;
 }
 
+
 .hero p {
   font-size: 1.1em;
   margin-bottom: 20px;
   opacity: 0.9;
 }
+
 
 .hero .btn {
   background: white;
@@ -179,6 +171,7 @@ body {
   font-weight: 600;
   transition: 0.3s;
 }
+
 
 .hero .btn:hover {
   background: #E63946;
@@ -2501,10 +2494,11 @@ body {
     <a href="{% url 'pecas_reposicao' %}#breadcrumb" class="categoria-link">
       <div class="categoria-card">
 
-        <div class="pecas-slider premium">
+        <div class="pecas-slider premium" id="pecasSlider">
           {% for peca in pecas_preview %}
             {% if peca.imagem_principal %}
               <img
+                class="peca-slide"
                 src="{{ peca.imagem_principal.imagem.url }}"
                 alt="{{ peca.nome }}"
                 loading="lazy">
@@ -3620,7 +3614,6 @@ document.addEventListener('click', e => {
     }
 });
 
-
 document.addEventListener("DOMContentLoaded", () => {
   const slider = document.getElementById("pecasSlider");
   if (!slider) return;
@@ -3636,12 +3629,12 @@ document.addEventListener("DOMContentLoaded", () => {
   setInterval(() => {
     slides[current].classList.remove("active");
 
-    current++;
-    if (current >= slides.length) current = 0;
+    current = (current + 1) % slides.length;
 
     slides[current].classList.add("active");
-  }, 3000); // ⭐ 3 segundos
+  }, 3000);
 });
+
 
 </script>
 
