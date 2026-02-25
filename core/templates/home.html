@@ -2434,8 +2434,6 @@ body {
   </div>
 </div>
 
-
-
 <div id="paginacao-wrapper">
      <div class="paginacao">
                 {% if page_obj.has_previous %}
@@ -2493,34 +2491,30 @@ body {
 
     <div class="scroll-container" id="scroll-container">
 
-      <!-- ⭐ CATEGORIA FIXA PREMIUM -->
-      <a href="{% url 'pecas_reposicao' %}#breadcrumb" class="categoria-link">
-        <div class="categoria-card">
+          <!-- ⭐ CATEGORIA FIXA PREMIUM -->
+    <a href="{% url 'pecas_reposicao' %}#breadcrumb" class="categoria-link">
+      <div class="categoria-card">
 
-        <div class="pecas-slider premium" id="pecasSlider">
-  {% for peca in pecas_preview %}
-    {% with img=peca.imagem_principal %}
-      {% if img and img.imagem %}
-        <img class="peca-slide"
-             src="{{ img.imagem.url }}"
-             alt="{{ peca.nome }}"
-             loading="lazy">
-      {% endif %}
-    {% endwith %}
-  {% empty %}
-    <img class="peca-slide"
-         src="{% static 'images/default_categoria.jpg' %}"
-         alt="Sem peças">
-  {% endfor %}
-</div>
-
-          <div class="categoria-info">
-            <h3>Peças de Reposição</h3>
-            <p>{{ pecas_reposicao }} itens</p>
-          </div>
-
+        <div class="pecas-slider premium">
+          {% for peca in pecas_preview %}
+            {% if peca.imagem_principal %}
+              <img
+                src="{{ peca.imagem_principal.imagem.url }}"
+                alt="{{ peca.nome }}"
+                loading="lazy">
+            {% endif %}
+          {% empty %}
+            <img src="{% static 'images/default_categoria.jpg' %}" alt="Sem peças">
+          {% endfor %}
         </div>
-      </a>
+
+        <div class="categoria-info">
+          <h3>Peças de Reposição</h3>
+          <p>{{ pecas_count }} itens</p>
+        </div>
+
+      </div>
+    </a>
 
       <!-- ✅ CATEGORIAS NORMAIS -->
       {% for categoria in categorias_brinquedos %}

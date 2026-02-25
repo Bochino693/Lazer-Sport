@@ -81,15 +81,6 @@ class HomeView(View):
 
         combos = Combos.objects.all()
         promocoes = Promocoes.objects.all()
-
-
-        pecas_preview = (
-            PecasReposicao.objects
-            .prefetch_related("imagem_peca_reposicao")
-            .filter(imagem_peca_reposicao__isnull=False)
-            .distinct()[:12]
-        )
-
         eventos = Eventos.objects.all()
         projetos = Projetos.objects.all()
 
@@ -110,6 +101,13 @@ class HomeView(View):
 
 
         categorias_peca = CategoriaPeca.objects.all()
+
+        pecas_preview = (
+            PecasReposicao.objects
+            .prefetch_related("imagem_peca_reposicao")
+            .filter(imagem_peca_reposicao__isnull=False)
+            .order_by("-id")[:12]
+        )
 
         # ---------------------------
         # peças (CORRETO)
