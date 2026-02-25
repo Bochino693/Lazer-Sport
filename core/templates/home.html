@@ -2529,9 +2529,9 @@ body {
 <div class="filtros-horizontal" id="filtros-peca">
 
     <!-- Todos -->
-    <a href="? "
+    <a href="{% url 'home' %}"
        class="filtro-btn {% if not categoria_ativa %}ativo{% endif %}">
-       Todas
+       Peças em Destaque
     </a>
 
     <!-- Categorias dinâmicas -->
@@ -2548,7 +2548,7 @@ body {
 <div id="pecas-container">
 
   <div class="pecas-grid" id="grid-pecas">
-        {% for peca in page_obj %}
+        {% for peca in pecas_reposicao %}
         <a href="{% url 'reposicao_detalhe' peca.id %}#bread" class="pecas-card-link">
 
           <div class="pecas-card pecas-card-produto">
@@ -2637,13 +2637,16 @@ body {
 </section>
 
 
-<!-- ======= COMBOS ======= -->
-<section id="combos-section" class="combos-section">
-  <h2 class="section-title">Combos</h2>
-    <p class="section-subtitle">
-      Selecionamos os melhores brinquedos em pacotes especiais para você economizar mais e garantir a diversão da festa.
-    </p>
+<!--
 
+ bilhares mercedes
+
+ ======= COMBOS ======= -->
+<section id="combos-section" class="combos-section">
+<h2 class="section-title">Combos</h2>
+  <p class="section-subtitle">
+    Selecionamos os melhores brinquedos em pacotes especiais para você economizar mais e garantir a diversão da festa.
+  </p>
 
   <div class="scroll-wrapper">
     <button class="scroll-btn left" id="scroll-left-combos">&#10094;</button>

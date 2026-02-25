@@ -82,8 +82,6 @@ class HomeView(View):
         combos = Combos.objects.all()
         promocoes = Promocoes.objects.all()
 
-        pecas_count = PecasReposicao.objects.count()
-        pecas_reposicao = PecasReposicao.objects.count()
 
         pecas_preview = (
             PecasReposicao.objects
@@ -113,12 +111,17 @@ class HomeView(View):
 
         categorias_peca = CategoriaPeca.objects.all()
 
-        # queryset das peças
-        pecas_lista = PecasReposicao.objects.all()  # ou PecaReposicao.objects.all()
+        # ---------------------------
+        # peças (CORRETO)
+        # ---------------------------
+        pecas_lista = PecasReposicao.objects.prefetch_related(
+            "imagem_peca_reposicao",
+            "categoria_peca",
+        )
 
-        paginator = Paginator(pecas_lista, 12)  # 12 por página
-        page_number = request.GET.get("page")
-        page_obj_pecas = paginator.get_page(page_number)
+        paginator_pecas = Paginator(pecas_lista, 12)
+        page_number_pecas = request.GET.get("page_pecas")
+        page_obj_pecas = paginator_pecas.get_page(page_number_pecas)
 
         context = {
             "categorias_brinquedos": categorias_brinquedos,
@@ -127,7 +130,7 @@ class HomeView(View):
             "eventos": eventos,
             "categorias_peca": categorias_peca,
             "pecas_reposicao": page_obj_pecas,  # ✅ AGORA PAGINADO
-            "pecas_count": pecas_count,
+            "pecas_count": PecasReposicao.objects.count(),
             "pecas_preview": pecas_preview,
             "projetos": projetos,
             "combos": combos,
