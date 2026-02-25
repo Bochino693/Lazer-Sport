@@ -476,6 +476,43 @@
   }
 }
 
+
+.quantidade-box {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.qtd-input {
+    width: 70px;
+    text-align: center;
+    font-size: 1rem;
+    padding: 8px;
+    border-radius: 10px;
+    border: 1px solid #ddd;
+    font-weight: 700;
+}
+
+.qtd-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    border: none;
+    background: #0d6efd;
+    color: white;
+    font-size: 18px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: .2s;
+}
+
+.qtd-btn:hover {
+    background: #0b5ed7;
+}
+
+
 </style>
 
 
@@ -552,9 +589,28 @@
         <span class="tag">#{{ tag.nome_tags }}</span>
     {% endfor %}
 
+        <!-- ===== QUANTIDADE =====
+
+<div class="quantidade-box">
+                <button type="button" class="qtd-btn" onclick="alterarQtd(-1)">−</button>
+
+                <input type="number"
+                       id="quantidade-input"
+                       value="1"
+                       min="1"
+                       class="qtd-input">
+
+                <button type="button" class="qtd-btn" onclick="alterarQtd(1)">+</button>
+            </div>
+
+
+ -->
     <!-- BOTÕES DE AÇÃO -->
     <div class="acoes-produto">
-   <!--         <button type="button"
+   <!--
+
+
+            <button type="button"
                     class="btn-produto btn-carrinho"
                     onclick="adicionarAoCarrinho('brinquedo', {{ brinquedo.id }})">
                 🛒 Adicionar ao Carrinho
@@ -866,6 +922,17 @@ function atualizarBadgeCarrinho(total) {
 
     carrinho.style.display = 'flex';
 }
+
+function alterarQtd(delta) {
+    const input = document.getElementById('quantidade-input');
+    let valor = parseInt(input.value) || 1;
+
+    valor += delta;
+    if (valor < 1) valor = 1;
+
+    input.value = valor;
+}
+
 </script>
 
 {% endblock %}
