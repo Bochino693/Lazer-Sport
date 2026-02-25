@@ -3332,7 +3332,8 @@ function carregarProdutos(params = {}) {
 document.addEventListener("DOMContentLoaded", () => {
     renderizarTodasEstrelas();
     renderizarMoedas();
-    igualarAlturaCards();
+    igualarAlturaCards('#grid-cards');
+    igualarAlturaCards('#grid-pecas');
 
     // rotating messages (safe)
     const msgs = document.querySelectorAll('.rotating-messages .message');
