@@ -817,7 +817,7 @@ nav a.btn-login {
     {% endif %}
 
 {% if user.is_authenticated %}
-<a href="{% url 'carrinho' %}#itens"
+<a href="{% url 'carrinho' %}#bread"
    id="carrinho-float-btn"
    class="float-btn float-carrinho {% if carrinho_total_itens == 0 %}hidden{% endif %}"
    title="Carrinho">
