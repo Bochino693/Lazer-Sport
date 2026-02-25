@@ -824,7 +824,7 @@ nav a.btn-login {
 <div class="float-stack">
 
 {% if user.is_authenticated and user.is_staff %}
-    <a href="{% url 'banner_adm' %}"
+    <a href="{% url 'dashboards' %}"
        id="float-admin-panel"
        class="float-btn float-admin-panel"
        title="Área administrativa">
