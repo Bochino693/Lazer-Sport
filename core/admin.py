@@ -22,7 +22,9 @@ from .models import (
     CategoriaClick,
     PromocaoClick,
     ComboClick,
-    PecasReposicao, ImagemPeca
+    PecasReposicao,
+    ImagemPeca,
+    CategoriaPeca
 )
 from django.utils.html import format_html
 from .models import ImagensSite
@@ -55,6 +57,17 @@ class ImagemPecaInline(admin.TabularInline):
         ])
         if total > 3:
             raise ValidationError("Máximo de 3 imagens por peça.")
+
+
+
+# ===============================
+# ⭐ CATEGORIA DE PEÇA
+# ===============================
+@admin.register(CategoriaPeca)
+class CategoriaPecaAdmin(admin.ModelAdmin):
+    list_display = ("id", "nome_categoria_peca")
+    search_fields = ("nome_categoria_peca",)
+    ordering = ("nome_categoria_peca",)
 
 
 # ⭐ ADMIN PRINCIPAL
