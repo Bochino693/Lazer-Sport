@@ -2618,7 +2618,7 @@ body {
     <p class="section-subtitle">
       Peças de reposição originais para manter seus brinquedos sempre seguros, funcionando como novos e prontos para a diversão. Ideais para manutenção preventiva, consertos rápidos ou até para uso individual em seus próprios projetos — qualidade profissional que prolonga a vida útil do seu investimento.
     </p>
-    <a href="{% url 'pecas_reposicao' %}#bread" class="btn-vertodos">Ver todas as peças</a>
+    <a href="{% url 'pecas_reposicao' %}#breadcrumb" class="btn-vertodos">Ver todas as peças</a>
 
     <!-- BARRA HORIZONTAL DE FILTROS -->
 <div class="filtros-horizontal" id="filtros-peca">
@@ -2644,7 +2644,7 @@ body {
 
   <div class="pecas-grid" id="grid-pecas">
         {% for peca in pecas_reposicao %}
-        <a href="{% url 'reposicao_detalhe' peca.id %}#bread" class="pecas-card-link">
+        <a href="{% url 'reposicao_detalhe' peca.id %}#breadcrumb" class="pecas-card-link">
 
           <div class="pecas-card pecas-card-produto">
 
