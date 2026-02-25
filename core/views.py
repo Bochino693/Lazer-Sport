@@ -134,14 +134,16 @@ class HomeView(View):
 from .models import PecasReposicao
 
 class ReposicaoView(View):
-    def get(self, request):
 
+    def get(self, request):
+        categorias_peca = CategoriaPeca.objects.all()
 
 
         ctx = {
+            'categoria_peca': categorias_peca,
             'pecas': PecasReposicao.objects.all(),
-        }
 
+        }
 
         return render(request, 'reposicao.html', ctx)
 
