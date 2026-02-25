@@ -2410,7 +2410,7 @@ body {
     </a>
 
     <!-- Categorias dinâmicas -->
-    {% for cat in categorias_pecas %}
+    {% for cat in categorias_peca %}
         <a href="?categoria={{ cat.id }}"
            class="filtro-btn {% if categoria_ativa|stringformat:'s' == cat.id|stringformat:'s' %}ativo{% endif %}">
            {{ cat.nome_categoria_peca }}
