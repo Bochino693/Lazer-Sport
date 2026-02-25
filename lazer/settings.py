@@ -66,6 +66,8 @@ INSTALLED_APPS = [
 
     'sistema_interno',
 
+    'cloud_jogos',
+
     'widget_tweaks',
 
     # Django
