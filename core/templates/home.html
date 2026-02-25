@@ -2637,7 +2637,6 @@ body {
 </section>
 
 
-
 <!-- ======= COMBOS ======= -->
 <section id="combos-section" class="combos-section">
   <h2 class="section-title">Combos</h2>
@@ -2751,10 +2750,7 @@ body {
         </div>
         {% endfor %}
     </div>
-
 </section>
-
-
 
 <!-- Div invisível para espaçamento -->
 <div class="espacador"></div>
@@ -2769,28 +2765,28 @@ body {
         <a href="{% url 'eventos' %}#todos-eventos" class="ver-todos-eventos">Ver todos os eventos →</a>
     </div>
 
-               <p class="section-subtitle">
-  Confira alguns dos eventos que transformamos em experiências inesquecíveis.
-</p>
+    <p class="section-subtitle">
+      Confira alguns dos eventos que transformamos em experiências inesquecíveis.
+    </p>
 
 
     <div class="eventos-grid">
         {% for evento in eventos %}
         <div class="evento-card" data-modal="modal-evento-{{ evento.id }}">
 
-            <div class="evento-thumb">
-                {% if evento.imagens_evento.first %}
-                    <img src="{{ evento.imagens_evento.first.imagem.url }}" alt="{{ evento.titulo }}">
-                {% else %}
-                    <img src="{% static 'images/default.jpg' %}" alt="Sem imagem">
-                {% endif %}
-            </div>
+        <div class="evento-thumb">
+            {% if evento.imagens_evento.first %}
+                <img src="{{ evento.imagens_evento.first.imagem.url }}" alt="{{ evento.titulo }}">
+            {% else %}
+                <img src="{% static 'images/default.jpg' %}" alt="Sem imagem">
+            {% endif %}
+        </div>
 
-            <div class="evento-info">
+        <div class="evento-info">
                 <h3>{{ evento.titulo }}</h3>
                 <p>{{ evento.descricao|truncatewords:20 }}</p>
-            </div>
         </div>
+    </div>
 
 
         <!-- ===== MODAL DO EVENTO ===== -->

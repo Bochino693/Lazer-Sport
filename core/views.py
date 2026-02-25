@@ -114,7 +114,7 @@ class HomeView(View):
         categorias_peca = CategoriaPeca.objects.all()
 
         # queryset das peças
-        pecas_lista = pecas_reposicao  # ou PecaReposicao.objects.all()
+        pecas_lista = PecasReposicao.objects.all()  # ou PecaReposicao.objects.all()
 
         paginator = Paginator(pecas_lista, 12)  # 12 por página
         page_number = request.GET.get("page")
