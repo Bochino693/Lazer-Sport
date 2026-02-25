@@ -1573,13 +1573,21 @@ from .models import Manutencao
 from django.contrib.auth.decorators import login_required
 from .models import ItemCarrinho, Carrinho
 
-
+@require_POST
 def adicionar_ao_carrinho(request, tipo, object_id):
     if not request.user.is_authenticated:
         return JsonResponse({'erro': 'Você precisa fazer login'}, status=403)
 
     if not hasattr(request.user, 'perfil'):
         return JsonResponse({'erro': 'Usuário inválido'}, status=403)
+
+    # ⭐ quantidade vinda do input
+    try:
+        quantidade = int(request.POST.get('quantidade', 1))
+        if quantidade < 1:
+            quantidade = 1
+    except (ValueError, TypeError):
+        quantidade = 1
 
     cliente = request.user.perfil
     carrinho, _ = Carrinho.objects.get_or_create(cliente=cliente)
@@ -1602,11 +1610,11 @@ def adicionar_ao_carrinho(request, tipo, object_id):
         carrinho=carrinho,
         content_type=content_type,
         object_id=objeto.id,
-        defaults={'quantidade': 1}
+        defaults={'quantidade': quantidade}
     )
 
     if not created:
-        item.quantidade += 1
+        item.quantidade += quantidade
         item.save()
 
     total_itens = carrinho.itens.aggregate(total=Sum('quantidade'))['total'] or 0

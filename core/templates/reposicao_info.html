@@ -237,6 +237,41 @@
         border-radius: 18px;
     }
 }
+
+
+.quantidade-box {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.qtd-input {
+    width: 70px;
+    text-align: center;
+    font-size: 1rem;
+    padding: 8px;
+    border-radius: 10px;
+    border: 1px solid #ddd;
+    font-weight: 700;
+}
+
+.qtd-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    border: none;
+    background: #0d6efd;
+    color: white;
+    font-size: 18px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: .2s;
+}
+
+.qtd-btn:hover {
+    background: #0b5ed7;
+}
 </style>
 
 
@@ -296,6 +331,18 @@
                Falar com um vendedor
             </a>
 
+            <div class="quantidade-box">
+                <button type="button" class="qtd-btn" onclick="alterarQtd(-1)">−</button>
+
+                <input type="number"
+                       id="quantidade-input"
+                       value="1"
+                       min="1"
+                       class="qtd-input">
+
+                <button type="button" class="qtd-btn" onclick="alterarQtd(1)">+</button>
+            </div>
+
             <!-- Carrinho -->
             <button type="button"
                     class="btn-acao btn-carrinho"
@@ -333,14 +380,29 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
-/* ===== AJAX CARRINHO (mesmo padrão dos brinquedos) ===== */
+function alterarQtd(delta) {
+    const input = document.getElementById('quantidade-input');
+    let valor = parseInt(input.value) || 1;
+
+    valor += delta;
+    if (valor < 1) valor = 1;
+
+    input.value = valor;
+}
+
 function adicionarAoCarrinho(tipo, id) {
+    const qtd = document.getElementById('quantidade-input')?.value || 1;
+
+    const formData = new FormData();
+    formData.append('quantidade', qtd);
+
     fetch(`/carrinho/adicionar/${tipo}/${id}/`, {
         method: 'POST',
         headers: {
             'X-CSRFToken': '{{ csrf_token }}',
             'X-Requested-With': 'XMLHttpRequest'
-        }
+        },
+        body: formData
     })
     .then(res => res.json())
     .then(data => {
