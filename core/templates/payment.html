@@ -444,7 +444,7 @@
             <div class="resumo-item">
                 <span>{{ item.item }}</span>
                 <span>
-                    {{ item.quantidade }} ×
+                    {{ item.quantidade|floatformat:0 }} ×
                 </span>
                 <strong>
                     R$ {{ item.subtotal|floatformat:2 }}
