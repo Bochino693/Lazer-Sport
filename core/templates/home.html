@@ -3178,6 +3178,33 @@ function renderizarMoedas(root = document) {
 }
 
 
+function igualarAlturaGridPecas() {
+
+    const grid = document.getElementById('grid-pecas');
+    if (!grid) return;
+
+    const cards = grid.querySelectorAll('.pecas-card');
+    if (!cards.length) return;
+
+    let maiorAltura = 0;
+
+    // Resetar alturas
+    cards.forEach(card => {
+        card.style.height = 'auto';
+    });
+
+    // Calcular maior altura
+    cards.forEach(card => {
+        maiorAltura = Math.max(maiorAltura, card.offsetHeight);
+    });
+
+    // Aplicar altura igual
+    cards.forEach(card => {
+        card.style.height = maiorAltura + 'px';
+    });
+}
+
+
 /* ======================================================
    📏 ALTURA DOS CARDS (PRODUÇÃO SAFE)
 ====================================================== */
@@ -3459,7 +3486,7 @@ document.addEventListener("DOMContentLoaded", () => {
     renderizarTodasEstrelas();
     renderizarMoedas();
     igualarAlturaCards('#grid-cards');
-    igualarAlturaCards('#grid-pecas');
+    igualarAlturaGridPecas();
 
     // rotating messages (safe)
     const msgs = document.querySelectorAll('.rotating-messages .message');
