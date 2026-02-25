@@ -48,6 +48,16 @@ from django.db.models import F, UniqueConstraint
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 
+import re
+from django.core.exceptions import ValidationError
+from django.db import models
+from django.contrib.auth.models import User
+from django.db.models import UniqueConstraint
+
+def validar_telefone(value):
+    padrao = r'^\(\d{2}\)\d{4}-\d{4}$'
+    if not re.match(padrao, value):
+        raise ValidationError("Telefone deve estar no formato (11)XXXX-XXXX")
 
 class ClientePerfil(models.Model):
     user = models.OneToOneField(
@@ -56,14 +66,25 @@ class ClientePerfil(models.Model):
         related_name="perfil"
     )
     nome_completo = models.CharField(max_length=150, blank=True, null=True)
+
+    # ✅ NOVO CAMPO
+    telefone = models.CharField(
+        max_length=13,
+        validators=[validar_telefone],
+        blank=False,
+        null=False
+    )
+
     criado_em = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return self.user.username
 
     def clean(self):
-        if ClientePerfil.objects.filter(user__username=self.user.username, user__email=self.user.email).exclude(
-                pk=self.pk).exists():
+        if ClientePerfil.objects.filter(
+            user__username=self.user.username,
+            user__email=self.user.email
+        ).exclude(pk=self.pk).exists():
             raise ValidationError("Já existe um perfil com esse usuário e email.")
 
     class Meta:
@@ -71,7 +92,7 @@ class ClientePerfil(models.Model):
         verbose_name_plural = "Perfis de Clientes"
         constraints = [
             UniqueConstraint(
-                fields=['user'],  # garante que cada user só tenha 1 perfil
+                fields=['user'],
                 name='unique_user_perfil'
             ),
         ]

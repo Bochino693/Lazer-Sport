@@ -2,8 +2,15 @@ from django import forms
 from django.contrib.auth.models import User
 from .models import ClientePerfil, Promocoes, Projetos, Manutencao
 
-
 class UserForm(forms.ModelForm):
+    telefone = forms.CharField(
+        max_length=13,
+        widget=forms.TextInput(attrs={
+            'class': 'form-input',
+            'placeholder': '(00)0000-0000'
+        })
+    )
+
     class Meta:
         model = User
         fields = ['first_name', 'last_name', 'email']
@@ -12,7 +19,6 @@ class UserForm(forms.ModelForm):
             'last_name': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Sobrenome'}),
             'email': forms.EmailInput(attrs={'class': 'form-input', 'placeholder': 'Email'}),
         }
-
 
 class PerfilForm(forms.ModelForm):
     class Meta:

@@ -823,7 +823,7 @@ nav a.btn-login {
 
 <div class="float-stack">
 
-{% if user.is_authenticated and user.is_staff %}
+    {% if user.is_authenticated and user.is_staff %}
     <a href="{% url 'dashboards' %}"
        id="float-admin-panel"
        class="float-btn float-admin-panel"
@@ -839,18 +839,17 @@ nav a.btn-login {
     </a>
     {% endif %}
 
-{% if user.is_authenticated %}
-<a href="{% url 'carrinho' %}#carrinho"
-   id="carrinho-float-btn"
-   class="float-btn float-carrinho {% if carrinho_total_itens == 0 %}hidden{% endif %}"
-   title="Carrinho">
-    <i class="fa-solid fa-cart-shopping"></i>
-    <span id="carrinho-contador" class="badge">
-        {{ carrinho_total_itens|default:"0" }}
-    </span>
-</a>
-
-{% endif %}
+    {% if user.is_authenticated %}
+    <a href="{% url 'carrinho' %}#carrinho"
+       id="carrinho-float-btn"
+       class="float-btn float-carrinho {% if carrinho_total_itens == 0 %}hidden{% endif %}"
+       title="Carrinho">
+        <i class="fa-solid fa-cart-shopping"></i>
+        <span id="carrinho-contador" class="badge">
+            {{ carrinho_total_itens|default:"0" }}
+        </span>
+    </a>
+    {% endif %}
 
     {% if user.is_authenticated and tem_manutencao %}
     <a href="{% url 'manutencoes' %}?tab=lista#cab"

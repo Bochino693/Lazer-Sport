@@ -997,9 +997,17 @@ class RegistrarView(View):
         username = request.POST.get("username")
         email = request.POST.get("email")
         password = request.POST.get("password")
+        telefone = request.POST.get("telefone")
 
-        if not all([first_name, last_name, username, email, password]):
+        # ✅ valida campos
+        if not all([first_name, last_name, username, email, password, telefone]):
             messages.error(request, "Preencha todos os campos.")
+            return render(request, self.template_name)
+
+        # ✅ valida formato telefone
+        import re
+        if not re.match(r'^\(\d{2}\)\d{4}-\d{4}$', telefone):
+            messages.error(request, "Telefone inválido. Use (11)XXXX-XXXX")
             return render(request, self.template_name)
 
         if User.objects.filter(username=username).exists():
@@ -1012,6 +1020,7 @@ class RegistrarView(View):
 
         from django.contrib.auth import authenticate, login
 
+        # ✅ cria usuário
         user = User.objects.create_user(
             username=username,
             email=email,
@@ -1020,6 +1029,14 @@ class RegistrarView(View):
             last_name=last_name
         )
 
+        # ✅ cria perfil com telefone
+        ClientePerfil.objects.create(
+            user=user,
+            nome_completo=f"{first_name} {last_name}",
+            telefone=telefone
+        )
+
+        # ✅ autentica
         user = authenticate(
             request,
             username=username,
