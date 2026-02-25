@@ -113,15 +113,16 @@ body {
 .pecas-slider::-webkit-scrollbar {
   display: none;
 }
+/* ===== SLIDER PREMIUM CORRIGIDO ===== */
 
-/* ===== slider premium ===== */
 .pecas-slider.premium {
   width: 100%;
   height: 170px;
   display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px;
   overflow-x: auto;
-  gap: 10px;
-  padding: 10px;
   scroll-behavior: smooth;
   scrollbar-width: none;
 }
@@ -130,17 +131,22 @@ body {
   display: none;
 }
 
+
 .pecas-slider.premium img {
-  min-width: 130px;
-  height: 150px;
+  flex: 0 0 auto;
+  height: 140px;
+  width: auto;
+  max-width: 160px;
   object-fit: contain;
-  background: #f6f7f8;
   border-radius: 12px;
+  background: #f6f7f8;
+  padding: 8px;
   transition: transform .25s ease;
 }
 
+
 .pecas-slider.premium img:hover {
-  transform: scale(1.05);
+  transform: scale(1.06);
 }
 
 
@@ -2503,11 +2509,8 @@ body {
                 alt="{{ peca.nome }}"
                 loading="lazy">
             {% endif %}
-          {% empty %}
-            <img src="{% static 'images/default_categoria.jpg' %}" alt="Sem peças">
           {% endfor %}
         </div>
-
         <div class="categoria-info">
           <h3>Peças de Reposição</h3>
           <p>{{ pecas_count }} itens</p>
