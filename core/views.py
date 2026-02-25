@@ -1588,6 +1588,7 @@ def adicionar_ao_carrinho(request, tipo, object_id):
         'brinquedo': Brinquedos,
         'combo': Combos,
         'promocao': Promocoes,
+        'peca': PecasReposicao,
     }
 
     model = modelos.get(tipo)
