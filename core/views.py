@@ -101,13 +101,28 @@ class HomeView(View):
 
 
         categorias_peca = CategoriaPeca.objects.all()
+        from .models import ImagemPeca
+        from django.db.models import Prefetch
+        from random import shuffle
 
-        pecas_preview = (
+        # pega peças que possuem pelo menos 1 imagem
+        pecas_preview = list(
             PecasReposicao.objects
-            .prefetch_related("imagem_peca_reposicao")
+            .prefetch_related(
+                Prefetch(
+                    "imagem_peca_reposicao",
+                    queryset=ImagemPeca.objects.order_by("id")
+                )
+            )
             .filter(imagem_peca_reposicao__isnull=False)
-            .order_by("-id")[:12]
+            .distinct()
         )
+
+        # embaralha no Python (mais performático que order_by("?"))
+        shuffle(pecas_preview)
+
+        # limita
+        pecas_preview = pecas_preview[:12]
 
         # ---------------------------
         # peças (CORRETO)
