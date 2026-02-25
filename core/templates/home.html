@@ -2416,9 +2416,100 @@ body {
            {{ cat.nome_categoria_peca }}
         </a>
     {% endfor %}
-
 </div>
 
+
+<!-- CONTAINER ATUALIZÁVEL -->
+<div id="pecas-container">
+
+  <div class="grid-cards" id="grid-pecas">
+
+    {% for peca in page_obj %}
+    <a href="{% url 'peca_detalhe' peca.id %}#bread" class="card-link">
+
+      <div class="card-produto">
+
+        <div class="img-area">
+          {% if peca.imagem_principal and peca.imagem_principal.imagem %}
+            <img src="{{ peca.imagem_principal.imagem.url }}"
+                 alt="{{ peca.nome }}"
+                 loading="eager"
+                 decoding="async">
+          {% else %}
+            <img src="{% static 'img/placeholder-produto.png' %}" alt="{{ peca.nome }}">
+          {% endif %}
+        </div>
+
+        <div class="conteudo">
+
+          <h3>{{ peca.nome }}</h3>
+
+          <div class="categorias">
+            {% if peca.categoria_peca %}
+              <span class="categoria-pill">
+                {{ peca.categoria_peca.nome_categoria_peca }}
+              </span>
+            {% endif %}
+          </div>
+
+          <p class="descricao">
+            {{ peca.descricao_peca|truncatewords:16 }}
+          </p>
+
+          {% if peca.preco_venda %}
+          <div class="preco money" data-valor="{{ peca.preco_venda }}">
+            R$ {{ peca.preco_venda }}
+          </div>
+          {% endif %}
+
+          <div class="acoes-fixas">
+            <button
+              class="btn-vermais btn-whatsapp"
+              onclick="abrirWhatsApp(event, '{{ peca.nome|escapejs }}')"
+            >
+              <i class="fab fa-whatsapp"></i>
+              <strong>Pedir orçamento no WhatsApp</strong>
+            </button>
+
+            <span class="btn-vermais">Ver mais</span>
+          </div>
+
+        </div>
+      </div>
+
+    </a>
+    {% empty %}
+      <p class="nenhum-produto">Nenhuma peça encontrada.</p>
+    {% endfor %}
+
+  </div>
+</div>
+
+
+<div id="paginacao-pecas">
+  <div class="paginacao">
+
+    {% if page_obj.has_previous %}
+      <a class="page-btn"
+         data-page="{{ page_obj.previous_page_number }}">
+         « Anterior
+      </a>
+    {% endif %}
+
+    <span class="page-atual">
+      Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
+    </span>
+
+    {% if page_obj.has_next %}
+      <a href="?page={{ page_obj.next_page_number }}"
+         class="page-btn"
+         data-page="{{ page_obj.next_page_number }}">
+         Próxima »
+      </a>
+    {% endif %}
+
+  </div>
+</div>
 </section>
 
 
