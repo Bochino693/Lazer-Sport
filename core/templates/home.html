@@ -2555,8 +2555,8 @@ body {
       <div class="pecas-card pecas-card-produto">
 
         <div class="img-area">
-          {% if peca.imagem_principal and peca.imagem_principal.imagem %}
-            <img src="{{ peca.imagem_principal.imagem.url }}"
+          {% if peca.imagem %}
+            <img src="{{ peca.imagem.url }}"
                  alt="{{ peca.nome }}"
                  loading="eager"
                  decoding="async">
