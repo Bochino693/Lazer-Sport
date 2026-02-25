@@ -484,7 +484,7 @@ body {
 
 
 /* ======================================================
-   🧩 GRID DE PEÇAS — CSS ISOLADO (SEM CONFLITO)
+   🧩 GRID DE PEÇAS — RESPONSIVO COMPLETO
 ====================================================== */
 
 /* Container */
@@ -503,7 +503,7 @@ body {
     letter-spacing: .5px;
 }
 
-/* Grid isolado */
+/* Grid Desktop */
 .pecas-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
@@ -512,35 +512,56 @@ body {
     margin: 0 auto;
 }
 
-/* Card isolado */
+/* Card */
 .pecas-card {
     background: white;
     border-radius: 18px;
     overflow: hidden;
     box-shadow: 0 4px 15px rgba(0,0,0,0.08);
-    transition: all .35s ease-in-out;
     text-align: center;
     padding-bottom: 20px;
     cursor: pointer;
     position: relative;
+    transition: transform .2s ease, box-shadow .2s ease;
+    animation: fadeCardPeca .6s ease forwards;
 }
 
 /* Hover */
-.pecas-card:hover {
-    transform: translateY(-10px) scale(1.03);
-    box-shadow: 0 12px 28px rgba(0,0,0,0.18);
+.pecas-card-link:hover .pecas-card {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.12);
 }
 
-/* Imagem */
-.pecas-card img {
+/* ===============================
+   ÁREA DA IMAGEM — SEM CORTE
+   =============================== */
+
+.img-area {
     width: 100%;
-    height: 200px;
-    object-fit: cover;
-    transition: transform .5s ease;
+    height: 220px;
+    background: #f6f7f8;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    border-bottom: 1px solid #eee;
 }
 
-.pecas-card:hover img {
-    transform: scale(1.1);
+/* Imagem sempre inteira */
+.img-area img {
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    object-position: center;
+    display: block;
+    transition: transform .25s ease;
+}
+
+/* Hover leve */
+.pecas-card:hover .img-area img {
+    transform: scale(1.03);
 }
 
 /* Título */
@@ -579,16 +600,6 @@ body {
     box-shadow: 0 6px 14px rgba(230,57,70,0.5);
 }
 
-/* Fade */
-@keyframes fadeCardPeca {
-    from { opacity: 0; transform: translateY(25px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-.pecas-card {
-    animation: fadeCardPeca .6s ease forwards;
-}
-
 /* Link wrapper */
 .pecas-card-link {
     text-decoration: none;
@@ -596,15 +607,71 @@ body {
     display: block;
 }
 
-/* Card produto (versão peças) */
-.pecas-card-produto {
-    cursor: pointer;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+/* Animação */
+@keyframes fadeCardPeca {
+    from { opacity: 0; transform: translateY(25px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
-.pecas-card-link:hover .pecas-card-produto {
-    transform: translateY(-4px);
-    box-shadow: 0 10px 20px rgba(0,0,0,0.12);
+/* ======================================================
+   📱 TABLET (até 1024px)
+====================================================== */
+
+@media (max-width: 1024px) {
+
+    .pecas-grid {
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 25px;
+    }
+
+    .img-area {
+        height: 200px;
+        padding: 14px;
+    }
+
+    .pecas-card h3 {
+        font-size: 1.15em;
+    }
+
+}
+
+/* ======================================================
+   📱 MOBILE (até 768px)
+====================================================== */
+
+@media (max-width: 768px) {
+
+    .pecas-destaques {
+        padding: 50px 15px;
+    }
+
+    .pecas-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+
+    .img-area {
+        height: 190px;
+        padding: 12px;
+    }
+
+    .pecas-card {
+        border-radius: 16px;
+    }
+
+    .pecas-card h3 {
+        font-size: 1.05em;
+    }
+
+    .pecas-card p {
+        font-size: 0.9em;
+        min-height: auto;
+    }
+
+    .pecas-btn-pequeno {
+        padding: 9px 18px;
+        font-size: 0.9em;
+    }
 }
 
 .btn-pequeno {
