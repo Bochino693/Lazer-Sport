@@ -111,7 +111,7 @@ class HomeView(View):
             combo.porcentagem = porcentagem
 
 
-        categoria_peca = CategoriaPeca.objects.all()
+        categorias_peca = CategoriaPeca.objects.all()
 
 
         context = {
@@ -119,7 +119,7 @@ class HomeView(View):
             "page_obj": page_obj,
             "ordenar": filtro,
             "eventos": eventos,
-            "categoria_peca": categoria_peca,
+            "categorias_peca": categorias_peca,
             "pecas_reposicao": pecas_reposicao,
             "pecas_count" : pecas_count,
             "pecas_preview": pecas_preview,
@@ -140,7 +140,7 @@ class ReposicaoView(View):
 
 
         ctx = {
-            'categoria_peca': categorias_peca,
+            'categorias_peca': categorias_peca,
             'pecas': PecasReposicao.objects.all(),
 
         }
