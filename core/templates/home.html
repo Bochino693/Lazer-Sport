@@ -2548,21 +2548,20 @@ body {
 <div id="pecas-container">
 
   <div class="pecas-grid" id="grid-pecas">
+        {% for peca in page_obj %}
+        <a href="{% url 'reposicao_detalhe' peca.id %}#bread" class="pecas-card-link">
 
-    {% for peca in page_obj %}
-    <a href="{% url 'reposicao_detalhe' peca.id %}#bread" class="pecas-card-link">
+          <div class="pecas-card pecas-card-produto">
 
-      <div class="pecas-card pecas-card-produto">
-
-        <div class="img-area">
-          {% if peca.imagem %}
-            <img src="{{ peca.imagem.url }}"
-                 alt="{{ peca.nome }}"
-                 loading="eager"
-                 decoding="async">
-          {% else %}
-            <img src="{% static 'img/placeholder-produto.png' %}" alt="{{ peca.nome }}">
-          {% endif %}
+            <div class="img-area">
+              {% if peca.imagem_principal and peca.imagem_principal.imagem %}
+      <img src="{{ peca.imagem_principal.imagem.url }}"
+           alt="{{ peca.nome }}"
+           loading="eager"
+           decoding="async">
+    {% else %}
+      <img src="{% static 'img/placeholder-produto.png' %}" alt="{{ peca.nome }}">
+    {% endif %}
         </div>
 
         <div class="conteudo">
@@ -2610,25 +2609,25 @@ body {
   </div>
 </div>
 
-
 <div id="paginacao-pecas">
   <div class="paginacao">
 
-    {% if page_obj.has_previous %}
+    {% if pecas_reposicao.has_previous %}
       <a class="page-btn"
-         data-page="{{ page_obj.previous_page_number }}">
+         href="?page_pecas={{ pecas_reposicao.previous_page_number }}"
+         data-page="{{ pecas_reposicao.previous_page_number }}">
          « Anterior
       </a>
     {% endif %}
 
     <span class="page-atual">
-      Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
+      Página {{ pecas_reposicao.number }} de {{ pecas_reposicao.paginator.num_pages }}
     </span>
 
-    {% if page_obj.has_next %}
-      <a href="?page={{ page_obj.next_page_number }}"
-         class="page-btn"
-         data-page="{{ page_obj.next_page_number }}">
+    {% if pecas_reposicao.has_next %}
+      <a class="page-btn"
+         href="?page_pecas={{ pecas_reposicao.next_page_number }}"
+         data-page="{{ pecas_reposicao.next_page_number }}">
          Próxima »
       </a>
     {% endif %}

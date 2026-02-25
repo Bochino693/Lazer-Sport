@@ -113,6 +113,12 @@ class HomeView(View):
 
         categorias_peca = CategoriaPeca.objects.all()
 
+        # queryset das peças
+        pecas_lista = pecas_reposicao  # ou PecaReposicao.objects.all()
+
+        paginator = Paginator(pecas_lista, 12)  # 12 por página
+        page_number = request.GET.get("page")
+        page_obj_pecas = paginator.get_page(page_number)
 
         context = {
             "categorias_brinquedos": categorias_brinquedos,
@@ -120,8 +126,8 @@ class HomeView(View):
             "ordenar": filtro,
             "eventos": eventos,
             "categorias_peca": categorias_peca,
-            "pecas_reposicao": pecas_reposicao,
-            "pecas_count" : pecas_count,
+            "pecas_reposicao": page_obj_pecas,  # ✅ AGORA PAGINADO
+            "pecas_count": pecas_count,
             "pecas_preview": pecas_preview,
             "projetos": projetos,
             "combos": combos,
@@ -129,7 +135,8 @@ class HomeView(View):
             "estabelecimentos": Estabelecimentos.objects.all(),
             "imagens_site": imagens_site,
         }
-        return render(request, 'home.html', context)
+
+        return render(request, "home.html", context)
 
 from .models import PecasReposicao
 
