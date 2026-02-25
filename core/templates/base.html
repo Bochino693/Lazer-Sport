@@ -38,6 +38,29 @@
       box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
     }
 
+/* ===== MOBILE POLISH ===== */
+@media (max-width: 768px) {
+
+    /* impede overflow horizontal */
+    html, body {
+        overflow-x: hidden;
+    }
+
+    /* botões mais confortáveis */
+    .btn-acao,
+    .btn-produto,
+    .btn-combo {
+        width: 100%;
+        white-space: normal;
+        text-align: center;
+    }
+
+    /* títulos mais seguros */
+    h1 {
+        line-height: 1.25;
+    }
+}
+
 /* ======= LOGO ======= */
 .logo {
   display: flex;
