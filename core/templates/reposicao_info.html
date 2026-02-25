@@ -269,7 +269,10 @@
 
         <h1>{{ peca.nome }}</h1>
 
-        <p class="preco js-preco" data-valor="{{ peca.preco_venda|floatformat:2 }}">
+        <p class="preco js-preco"
+           data-valor="{{ peca.preco_venda|floatformat:2 }}">
+           R$ 0,00
+        </p>
 
         <p class="sec-titulo">Descrição</p>
         <p class="descricao-produto">
