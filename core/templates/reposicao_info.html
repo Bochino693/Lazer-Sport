@@ -392,34 +392,37 @@ function alterarQtd(delta) {
     input.value = valor;
 }
 
+
 function adicionarAoCarrinho(tipo, id) {
     const input = document.getElementById('quantidade-input');
     let qtd = parseInt(input?.value);
 
     if (!qtd || qtd < 1) qtd = 1;
 
+    const body = new URLSearchParams();
+    body.append('quantidade', qtd);
+
     fetch(`/carrinho/adicionar/${tipo}/${id}/`, {
         method: 'POST',
+        credentials: 'same-origin', // ⭐ MUITO IMPORTANTE
         headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
             'X-CSRFToken': '{{ csrf_token }}',
-            'X-Requested-With': 'XMLHttpRequest'
+            'X-Requested-With': 'XMLHttpRequest',
+            'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
         },
-        body: new URLSearchParams({
-            quantidade: qtd
-        })
+        body: body.toString()
     })
     .then(res => res.json())
     .then(data => {
-        alert('Produto adicionado ao carrinho!');
         console.log('Quantidade enviada:', qtd);
         console.log('Resposta:', data);
+        alert('Produto adicionado ao carrinho!');
     })
-    .catch(() => {
+    .catch(err => {
+        console.error(err);
         alert('Erro ao adicionar.');
     });
 }
-
 
 </script>
 
