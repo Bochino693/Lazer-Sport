@@ -538,7 +538,7 @@ body {
 .img-area {
     width: 100%;
     height: 220px;
-    background: #f6f7f8;
+    background: #fff;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -2648,16 +2648,16 @@ body {
 
           <div class="pecas-card pecas-card-produto">
 
-            <div class="img-area">
-              {% if peca.imagem_principal and peca.imagem_principal.imagem %}
-      <img src="{{ peca.imagem_principal.imagem.url }}"
+  <div class="img-area">
+       {% if peca.imagem_principal and peca.imagem_principal.imagem %}
+       <img src="{{ peca.imagem_principal.imagem.url }}"
            alt="{{ peca.nome }}"
            loading="eager"
            decoding="async">
-    {% else %}
-      <img src="{% static 'img/placeholder-produto.png' %}" alt="{{ peca.nome }}">
-    {% endif %}
-        </div>
+        {% else %}
+          <img src="{% static 'img/placeholder-produto.png' %}" alt="{{ peca.nome }}">
+        {% endif %}
+  </div>
 
         <div class="conteudo">
 
