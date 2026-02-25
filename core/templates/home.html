@@ -47,62 +47,66 @@ body {
 }
 
 
-
-
 /* ===============================
-   ÁREA DA IMAGEM DO CARD
+   ÁREA DA IMAGEM — UNIVERSAL
    =============================== */
 
 .img-area {
   width: 100%;
-  height: 200px;
+  min-height: 200px; /* ⭐ não trava a imagem */
   background: #f6f7f8;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 12px;
-  overflow: hidden;
+  padding: 14px;
+  overflow: visible; /* ⭐ importante */
   border-bottom: 1px solid #eee;
 }
 
-/* IMAGEM PRINCIPAL — MOSTRAR COMPLETA */
+
+/* ⭐ AQUI ESTÁ O SEGREDO */
 .img-area img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain; /* ⭐ MOSTRA A IMAGEM INTEIRA */
+  width: auto;        /* ❗ NÃO forçar largura */
+  height: auto;       /* ❗ NÃO forçar altura */
+  max-width: 100%;    /* ⭐ limita sem cortar */
+  max-height: 180px;  /* ⭐ controla altura visual */
+  object-fit: contain;
   object-position: center;
+  display: block;
   transition: transform .25s ease;
 }
 
-/* hover suave (sem cortar) */
+
+/* hover suave opcional */
 .pecas-card:hover .img-area img {
-  transform: scale(1.04);
+  transform: scale(1.03);
 }
 
-/* ===== carousel peças ===== */
+
+/* ===== carousel peças — versão segura ===== */
 .pecas-slider {
-  position: relative;
   width: 100%;
-  height: 190px;
-  overflow: hidden;
+  min-height: 190px; /* ⭐ não fixa demais */
   display: flex;
   align-items: center;
   justify-content: center;
   background: #f6f7f8;
-  padding: 10px;
+  padding: 12px;
+  overflow: hidden;
 }
 
 .pecas-slider img {
+  width: auto;
+  height: auto;
   max-width: 100%;
-  max-height: 100%;
-  object-fit: contain; /* ⭐ chave */
+  max-height: 170px;
+  object-fit: contain;
   opacity: 0;
   transition: opacity .6s ease;
 }
 
 .pecas-slider img.active {
   opacity: 1;
-  z-index: 2;
 }
 
 /* esconder barra */
