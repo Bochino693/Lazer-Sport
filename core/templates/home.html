@@ -45,6 +45,8 @@ body {
     font-size: 1.1rem;
     color: #777;
 }
+
+
 /* ===== carousel peças ===== */
 .pecas-slider {
   position: relative;
@@ -56,13 +58,34 @@ body {
   justify-content: center;
 }
 
-.pecas-slider img {
-  position: absolute;
-  width: 130px;
-  height: 150px;
-  object-fit: contain;
-  opacity: 0;
-  transition: opacity .6s ease;
+/* ===============================
+   ÁREA DA IMAGEM DO CARD
+   =============================== */
+
+.img-area {
+  width: 100%;
+  height: 200px;
+  background: #f6f7f8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  overflow: hidden;
+  border-bottom: 1px solid #eee;
+}
+
+/* IMAGEM PRINCIPAL — MOSTRAR COMPLETA */
+.img-area img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain; /* ⭐ MOSTRA A IMAGEM INTEIRA */
+  object-position: center;
+  transition: transform .25s ease;
+}
+
+/* hover suave (sem cortar) */
+.pecas-card:hover .img-area img {
+  transform: scale(1.04);
 }
 
 .pecas-slider img.active {
