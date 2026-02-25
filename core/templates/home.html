@@ -2400,6 +2400,25 @@ body {
     </p>
     <a href="{% url 'pecas_reposicao' %}#bread" class="btn-vertodos">Ver todas as peças</a>
 
+    <!-- BARRA HORIZONTAL DE FILTROS -->
+<div class="filtros-horizontal" id="filtros-peca">
+
+    <!-- Todos -->
+    <a href="? "
+       class="filtro-btn {% if not categoria_ativa %}ativo{% endif %}">
+       Todas
+    </a>
+
+    <!-- Categorias dinâmicas -->
+    {% for cat in categorias_pecas %}
+        <a href="?categoria={{ cat.id }}"
+           class="filtro-btn {% if categoria_ativa|stringformat:'s' == cat.id|stringformat:'s' %}ativo{% endif %}">
+           {{ cat.nome_categoria_peca }}
+        </a>
+    {% endfor %}
+
+</div>
+
 </section>
 
 
@@ -2473,7 +2492,7 @@ body {
 <!-- Div invisível para espaçamento -->
 <div class="espacador"></div>
 
-<!-- ======= ESTABELECIMENTOS ======= -->
+
 <!-- ======= ESTABELECIMENTOS ======= -->
 <section id="estabelecimentos" class="estabelecimentos-section">
 

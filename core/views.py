@@ -11,7 +11,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 
 from .models import Brinquedos, CategoriasBrinquedos, Projetos, Eventos, ClientePerfil, Combos, Cupom, Promocoes, \
     TagsBrinquedos, ImagensSite, BrinquedosProjeto, Estabelecimentos, Manutencao, ManutencaoImagem, EnderecoEntrega, \
-    BrinquedoClick, ComboClick, PromocaoClick, CategoriaClick, PecasReposicao
+    BrinquedoClick, ComboClick, PromocaoClick, CategoriaClick, PecasReposicao, CategoriaPeca
 
 import os
 from django.http import FileResponse, Http404
@@ -111,11 +111,15 @@ class HomeView(View):
             combo.porcentagem = porcentagem
 
 
+        categoria_peca = CategoriaPeca.objects.all()
+
+
         context = {
             "categorias_brinquedos": categorias_brinquedos,
             "page_obj": page_obj,
             "ordenar": filtro,
             "eventos": eventos,
+            "categoria_peca": categoria_peca,
             "pecas_reposicao": pecas_reposicao,
             "pecas_count" : pecas_count,
             "pecas_preview": pecas_preview,
