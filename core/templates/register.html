@@ -344,18 +344,27 @@ const telefoneInput = document.getElementById("telefone");
 telefoneInput.addEventListener("input", function(e) {
     let v = e.target.value.replace(/\D/g, "");
 
-    if (v.length > 10) v = v.slice(0, 10);
+    // ✅ agora permite 11 dígitos
+    if (v.length > 11) v = v.slice(0, 11);
 
     if (v.length > 6) {
-        v = v.replace(/^(\d{2})(\d{4})(\d{0,4}).*/, "($1)$2-$3");
+        if (v.length === 11) {
+            // 📱 celular: (XX) 9XXXX-XXXX
+            v = v.replace(/^(\d{2})(\d{5})(\d{0,4}).*/, "($1)$2-$3");
+        } else {
+            // ☎️ fixo: (XX) XXXX-XXXX
+            v = v.replace(/^(\d{2})(\d{4})(\d{0,4}).*/, "($1)$2-$3");
+        }
     } else if (v.length > 2) {
-        v = v.replace(/^(\d{2})(\d{0,4})/, "($1)$2");
+        v = v.replace(/^(\d{2})(\d+)/, "($1)$2");
     } else if (v.length > 0) {
         v = v.replace(/^(\d*)/, "($1");
     }
 
     e.target.value = v;
 });
+
+
 </script>
 
 
