@@ -539,15 +539,6 @@
     📋 Copiar PIX
 </button>
 
-    <!-- BOTÃO JÁ PAGUEI (INICIALMENTE OCULTO) -->
-<button
-    type="button"
-    id="btn-ja-paguei"
-    class="btn-pix-confirmar"
-    onclick="marcarComoPago()"
-    style="display:none">
-    ✅ Já paguei
-</button>
 
 </div>
 
@@ -753,27 +744,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     nomeInput.addEventListener('input', atualizarCartao);
 
-    // ===== PIX CONFIRMAR =====
-window.marcarComoPago = function() {
-    fetch("{% url 'criar_pedido_pix' %}", {
-        method: "POST",
-        headers: {
-            "X-CSRFToken": "{{ csrf_token }}"
-        }
-    })
-    .then(res => res.json())
-    .then(data => {
-        if (data.success && data.redirect_url) {
-            window.location.href = data.redirect_url + "#pedidos";
-        } else {
-            mostrarToast("Erro ao criar pedido ❌");
-        }
-    })
-    .catch(() => {
-        mostrarToast("Erro ao confirmar pagamento ❌");
-    });
-}
-});
+
 
 
 /* ===== COPIAR PIX ===== */
@@ -782,7 +753,7 @@ function copiarPix() {
 
     navigator.clipboard.writeText(pixInput.value).then(() => {
         mostrarToast("PIX copiado com sucesso ✅");
-        document.getElementById('btn-ja-paguei').style.display = 'inline-block';
+
     });
 }
 
@@ -808,31 +779,6 @@ function mostrarToast(texto) {
     document.body.appendChild(toast);
 
     setTimeout(() => toast.remove(), 2500);
-}
-
-function marcarComoPago() {
-    fetch("{% url 'criar_pedido_pix' %}", {
-        method: "POST",
-        headers: {
-            "X-CSRFToken": "{{ csrf_token }}"
-        }
-    })
-    .then(res => {
-        if (!res.ok) {
-            throw new Error("Erro HTTP");
-        }
-        return res.json();
-    })
-    .then(data => {
-        if (data.success && data.redirect_url) {
-            window.location.href = data.redirect_url;
-        } else {
-            mostrarToast("Erro ao criar pedido ❌");
-        }
-    })
-    .catch(() => {
-        mostrarToast("Erro ao confirmar pagamento ❌");
-    });
 }
 
 
@@ -889,16 +835,22 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 });
 
-
 function iniciarVerificacaoPagamento() {
     const pedidoId = "{{ carrinho.id }}";
 
-    setInterval(async () => {
-        const res = await fetch(`/api/verificar-pagamento/${pedidoId}/`);
-        const data = await res.json();
+    const intervalo = setInterval(async () => {
+        try {
+            const res = await fetch(`/api/verificar-pagamento/${pedidoId}/`);
+            const data = await res.json();
 
-        if (data.pago) {
-            document.getElementById("btn-ja-paguei").style.display = "inline-block";
+            if (data.pago) {
+                clearInterval(intervalo);
+
+                // 🔥 redireciona automático
+                window.location.href = "/pedidos/#pedidos";
+            }
+        } catch (e) {
+            console.error("Erro ao verificar pagamento:", e);
         }
     }, 5000); // verifica a cada 5s
 }
@@ -911,7 +863,8 @@ async function carregarPix() {
     const data = await res.json();
 
     // QR code
-    document.querySelector("#pix-box img").src = data.qr_code;
+   document.querySelector("#pix-box img").src =
+    "data:image/png;base64," + data.qr_code;
 
     // copia e cola
     document.getElementById("pix-code").value = data.pix_copia_cola;

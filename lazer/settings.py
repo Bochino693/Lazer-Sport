@@ -24,6 +24,9 @@ print("CLOUD:", env('CLOUD_NAME', default='não encontrado'))
 
 ENVIRONMENT = env('ENVIRONMENT', default="production")
 
+
+MP_ACCESS_TOKEN = "APP_USR-705617687032173-022614-ce56b6aebdfea88b1d89477cd6d28eef-526313220"
+
 SESSION_COOKIE_DOMAIN = ".lazersport.com.br"
 CSRF_COOKIE_DOMAIN = ".lazersport.com.br"
 

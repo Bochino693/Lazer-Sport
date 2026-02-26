@@ -1906,47 +1906,45 @@ class PaymentView(View):
 
 from django.views.decorators.csrf import csrf_exempt
 
-
-
-# views.py
-import qrcode
-import base64
-from io import BytesIO
+import mercadopago
+from django.conf import settings
 from django.http import JsonResponse
 from decimal import Decimal
+import uuid
 
 
 def gerar_pix(request):
-    total = Decimal(request.GET.get("valor"))
+    valor = Decimal(request.GET.get("valor", "0"))
 
-    chave_pix = "336.517.618-78"
-    nome = "LAZER SPORT E-COMMERCE"
-    cidade = "SAO PAULO - SP"
+    sdk = mercadopago.SDK(settings.MP_ACCESS_TOKEN)
 
-    payload = f"""
-            000201
-            26360014BR.GOV.BCB.PIX
-            0114{chave_pix}
-            52040000
-            5303986
-            54{total:.2f}
-            5802BR
-            59{nome}
-            60{cidade}
-            62070503***
-            6304
-            """.replace("\n", "")
+    try:
+        payment_data = {
+            "transaction_amount": float(valor),
+            "description": "Pedido Lazer Sport",
+            "payment_method_id": "pix",
+            "external_reference": str(uuid.uuid4()),
+            "payer": {
+                "email": request.user.email if request.user.is_authenticated else "cliente@test.com",
+                "first_name": "Cliente"
+            }
+        }
 
-    # gerar QR
-    qr = qrcode.make(payload)
-    buffer = BytesIO()
-    qr.save(buffer, format="PNG")
-    img_base64 = base64.b64encode(buffer.getvalue()).decode()
+        payment_response = sdk.payment().create(payment_data)
+        payment = payment_response["response"]
 
-    return JsonResponse({
-        "qr_code": f"data:image/png;base64,{img_base64}",
-        "pix_copia_cola": payload
-    })
+        return JsonResponse({
+            "qr_code": payment["point_of_interaction"]["transaction_data"]["qr_code_base64"],
+            "pix_copia_cola": payment["point_of_interaction"]["transaction_data"]["qr_code"],
+            "payment_id": payment["id"]
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            "erro": str(e)
+        }, status=500)
+
+
 
 @csrf_exempt
 def processar_cartao(request):
