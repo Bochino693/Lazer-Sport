@@ -7,7 +7,7 @@ class UserForm(forms.ModelForm):
         max_length=14,
         widget=forms.TextInput(attrs={
             'class': 'form-input',
-            'placeholder': '(00)0000-0000'
+            'placeholder': '(00)90000-0000'
         })
     )
 
