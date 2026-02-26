@@ -4,7 +4,7 @@ from .models import ClientePerfil, Promocoes, Projetos, Manutencao
 
 class UserForm(forms.ModelForm):
     telefone = forms.CharField(
-        max_length=13,
+        max_length=14,
         widget=forms.TextInput(attrs={
             'class': 'form-input',
             'placeholder': '(00)0000-0000'
