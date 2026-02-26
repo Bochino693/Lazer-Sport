@@ -1960,9 +1960,12 @@ from django.db import transaction
 
 from .models import Carrinho, Pedido, ItemPedido
 
-
 @csrf_exempt
 def webhook_mercadopago(request):
+
+    # 🔹 Mercado Pago pode enviar GET para validação
+    if request.method == "GET":
+        return HttpResponse("OK", status=200)
 
     if request.method != "POST":
         return HttpResponse(status=200)
@@ -1974,32 +1977,31 @@ def webhook_mercadopago(request):
     signature = request.headers.get("x-signature")
     request_id = request.headers.get("x-request-id")
 
-    if not signature or not request_id:
-        return HttpResponse(status=401)
-
     secret = os.getenv("MP_WEBHOOK_SECRET")
+
     if not secret:
         return HttpResponse(status=500)
 
-    payload = request.body
+    if signature:
+        payload = request.body
 
-    expected_signature = hmac.new(
-        secret.encode(),
-        payload,
-        hashlib.sha256
-    ).hexdigest()
+        expected_signature = hmac.new(
+            secret.encode(),
+            payload,
+            hashlib.sha256
+        ).hexdigest()
 
-    received_signature = signature.split("v1=")[-1]
+        received_signature = signature.split("v1=")[-1]
 
-    if not hmac.compare_digest(expected_signature, received_signature):
-        return HttpResponse(status=401)
+        if not hmac.compare_digest(expected_signature, received_signature):
+            return HttpResponse(status=401)
 
     # ==============================
-    # 📩 PROCESSAMENTO DO WEBHOOK
+    # 📩 PROCESSAMENTO
     # ==============================
 
     try:
-        data = json.loads(payload.decode("utf-8"))
+        data = json.loads(request.body.decode("utf-8"))
     except Exception:
         return HttpResponse(status=200)
 
@@ -2024,13 +2026,8 @@ def webhook_mercadopago(request):
     if not carrinho:
         return HttpResponse(status=200)
 
-    # 🔒 evita duplicação
     if Pedido.objects.filter(mp_payment_id=payment_id).exists():
         return HttpResponse(status=200)
-
-    # ==============================
-    # 🧾 CRIAÇÃO DO PEDIDO
-    # ==============================
 
     with transaction.atomic():
 
@@ -2061,10 +2058,11 @@ def webhook_mercadopago(request):
 
         carrinho.itens.all().delete()
         carrinho.cupom = None
-        carrinho.mp_payment_id = None
         carrinho.save()
 
     return HttpResponse(status=200)
+
+
 
 @require_GET
 def verificar_pagamento(request):
@@ -2074,16 +2072,14 @@ def verificar_pagamento(request):
     if not carrinho_id:
         return JsonResponse({"pago": False})
 
-    carrinho = Carrinho.objects.filter(id=carrinho_id).first()
-    if not carrinho:
-        return JsonResponse({"pago": False})
-
-    if not carrinho.mp_payment_id:
-        return JsonResponse({"pago": False})
-
     pedido = Pedido.objects.filter(
-        mp_payment_id=carrinho.mp_payment_id,
-        status="pago"
+        mp_status="approved"
+    ).filter(
+        mp_payment_id__isnull=False
+    ).filter(
+        forma_pagamento="pix"
+    ).filter(
+        cliente__carrinhos__id=carrinho_id
     ).exists()
 
     return JsonResponse({"pago": pedido})
