@@ -497,16 +497,33 @@
             💳 Cartão
         </label>
 
-        <!-- ===== PIX BOX ===== -->
-<div id="pix-box" class="payment-details" style="text-align:center; padding:30px; border-radius:18px; background:#f8f9ff; box-shadow:0 10px 30px rgba(0,0,0,.08);">
 
-    <div style="margin-bottom:25px">
-        <img src="{% static 'images/img.png' %}"
-             alt="QR Code PIX"
-             width="220"
-             style="border-radius:12px; box-shadow:0 5px 15px rgba(0,0,0,.1);">
+<!-- ===== PIX BOX ===== -->
+<div id="pix-box"
+     class="payment-details"
+     style="text-align:center; padding:30px; border-radius:18px; background:#f8f9ff; box-shadow:0 10px 30px rgba(0,0,0,.08);">
+
+    <!-- VALOR -->
+    <div style="margin-bottom:20px;">
+        <h3 style="font-size:1.4rem; font-weight:700; margin-bottom:5px;">
+            Valor do Pagamento
+        </h3>
+        <div id="pix-valor"
+             style="font-size:2rem; font-weight:800; color:#0d6efd;">
+            Carregando...
+        </div>
     </div>
 
+    <!-- QR CODE -->
+    <div style="margin-bottom:25px">
+        <img id="pix-qrcode"
+             src=""
+             alt="QR Code PIX"
+             width="220"
+             style="border-radius:12px; box-shadow:0 5px 15px rgba(0,0,0,.1); display:none;">
+    </div>
+
+    <!-- COPIA E COLA -->
     <div style="margin-bottom:20px">
         <label style="font-weight:700; font-size:1.2rem; display:block; margin-bottom:8px;">
             PIX Copia e Cola
@@ -516,32 +533,18 @@
             id="pix-code"
             type="text"
             readonly
-            value="000201
-26360014BR.GOV.BCB.PIX
-0114+5511992211008
-52040000
-5303986
-54{VALOR}
-5802BR
-5909LOJA TESTE
-6009SAO PAULO
-62070503***
-6304"
-            style="width:100%; padding:16px; font-size:1.1rem; border-radius:12px; border:2px solid #cbd5e1; text-align:center; font-weight:600; background:#fff;"
-        >
+            value="Gerando código..."
+            style="width:100%; padding:16px; font-size:1.05rem; border-radius:12px; border:2px solid #cbd5e1; text-align:center; font-weight:600; background:#fff;">
     </div>
 
     <!-- BOTÃO COPIAR -->
-<button
-    type="button"
-    class="btn-pix-copiar"
-    onclick="copiarPix()">
-    📋 Copiar PIX
-</button>
-
+    <button type="button"
+            class="btn-pix-copiar"
+            onclick="copiarPix()">
+        📋 Copiar PIX
+    </button>
 
 </div>
-
 <!-- ===== CARTÃO BOX INTERATIVO ===== -->
 <div id="cartao-box" class="payment-details card-box" style="display:none">
 
@@ -744,42 +747,124 @@ document.addEventListener('DOMContentLoaded', () => {
         atualizarCartao();
     });
     nomeInput.addEventListener('input', atualizarCartao);
+ /* ==============================
+       GERAR PIX AUTOMATICAMENTE
+    ===============================*/
+    async function iniciarPix() {
 
+        try {
 
-    /* ===== COPIAR PIX ===== */
-    function copiarPix() {
-        const pixInput = document.getElementById('pix-code');
+            const res = await fetch(`/api/gerar-pix/?carrinho_id={{ carrinho.id }}`);
+            const data = await res.json();
 
-        navigator.clipboard.writeText(pixInput.value).then(() => {
-            mostrarToast("PIX copiado com sucesso ✅");
+            if (data.erro) {
+                console.error(data.erro);
+                return;
+            }
 
-        });
+            // 🔵 Atualiza valor (se você adicionou #pix-valor no HTML)
+            if (data.valor) {
+                const valorEl = document.getElementById("pix-valor");
+                if (valorEl) {
+                    valorEl.innerText =
+                        "R$ " + parseFloat(data.valor)
+                            .toFixed(2)
+                            .replace(".", ",");
+                }
+            }
+
+            // 🟢 Atualiza QR Code
+            const img = document.getElementById("pix-qrcode");
+            if (img) {
+                img.src = "data:image/png;base64," + data.qr_code;
+                img.style.display = "block";
+            }
+
+            // 🟡 Atualiza Copia e Cola
+            const pixInput = document.getElementById("pix-code");
+            if (pixInput) {
+                pixInput.value = data.pix_copia_cola;
+            }
+
+            iniciarVerificacao();
+
+        } catch (e) {
+            console.error("Erro ao iniciar PIX:", e);
+        }
     }
 
 
+    /* ==============================
+       VERIFICAR PAGAMENTO
+    ===============================*/
+    function iniciarVerificacao() {
+
+        const intervalo = setInterval(async () => {
+
+            try {
+
+                const res = await fetch(`/api/verificar-pagamento/`);
+                const data = await res.json();
+
+                if (data.pago) {
+                    clearInterval(intervalo);
+                    window.location.href = "/pedidos/#pedidos";
+                }
+
+            } catch (e) {
+                console.error("Erro ao verificar:", e);
+            }
+
+        }, 5000);
+    }
+
+
+    /* ==============================
+       COPIAR PIX
+    ===============================*/
+    window.copiarPix = function() {
+
+        const pixInput = document.getElementById("pix-code");
+
+        if (!pixInput.value) return;
+
+        navigator.clipboard.writeText(pixInput.value).then(() => {
+            mostrarToast("PIX copiado com sucesso ✅");
+        });
+
+    }
+
+
+    /* ==============================
+       TOAST
+    ===============================*/
     function mostrarToast(texto) {
-        const toast = document.createElement('div');
+
+        const toast = document.createElement("div");
         toast.innerText = texto;
 
         Object.assign(toast.style, {
-            position: 'fixed',
-            bottom: '30px',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            background: '#16a34a',
-            color: '#fff',
-            padding: '14px 22px',
-            borderRadius: '12px',
-            fontWeight: '700',
-            boxShadow: '0 10px 25px rgba(0,0,0,.25)',
+            position: "fixed",
+            bottom: "30px",
+            left: "50%",
+            transform: "translateX(-50%)",
+            background: "#16a34a",
+            color: "#fff",
+            padding: "14px 22px",
+            borderRadius: "12px",
+            fontWeight: "700",
+            boxShadow: "0 10px 25px rgba(0,0,0,.25)",
             zIndex: 99999
         });
 
         document.body.appendChild(toast);
-
         setTimeout(() => toast.remove(), 2500);
     }
-    // ===== SCROLL HASH =====
+
+
+    /* ==============================
+       SCROLL HASH
+    ===============================*/
     if (window.location.hash) {
         const el = document.querySelector(window.location.hash);
         if (el) {
@@ -790,66 +875,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
 
-    // ===== PIX =====
-    async function iniciarPix() {
-
-        try {
-            const criar = await fetch("/api/criar-pedido/", {
-                method: "POST",
-                headers: {
-                    "X-CSRFToken": "{{ csrf_token }}"
-                }
-            });
-
-            const pedidoData = await criar.json();
-            const pedidoId = pedidoData.pedido_id;
-
-            const res = await fetch(`/api/gerar-pix/?pedido_id=${pedidoId}`);
-            const data = await res.json();
-
-            if (data.erro) {
-                console.error(data.erro);
-                return;
-            }
-
-            const img = document.querySelector("#pix-box img");
-            if (img) {
-                img.src = "data:image/png;base64," + data.qr_code;
-            }
-
-            const pixInput = document.getElementById("pix-code");
-            if (pixInput) {
-                pixInput.value = data.pix_copia_cola;
-            }
-
-            iniciarVerificacao(pedidoId);
-
-        } catch (e) {
-            console.error("Erro ao iniciar PIX:", e);
-        }
-    }
-
-
-    function iniciarVerificacao(pedidoId) {
-
-        const intervalo = setInterval(async () => {
-
-            try {
-                const res = await fetch(`/api/verificar-pagamento/${pedidoId}/`);
-                const data = await res.json();
-
-                if (data.pago) {
-                    clearInterval(intervalo);
-                    window.location.href = "/pedidos/#pedidos";
-                }
-
-            } catch (e) {
-                console.error("Erro ao verificar pagamento:", e);
-            }
-
-        }, 5000);
-    }
-
+    /* ==============================
+       INICIA AUTOMATICAMENTE
+    ===============================*/
     iniciarPix();
 
 });
