@@ -11,7 +11,7 @@ from .views import (HomeView, BrinquedoInfoView, CategoriasInfoView, BrinquedosV
                     EventoAdminView, BannerAdminView, BannerDeleteView, AdminLoginView, AcessoNegadoView,
                     DashboardAdminView, UserAdminView, ManutencaoAdminView, RelatorioVendasView, PedidoAdminView,
                     redirecionar_loja, redirecionar_categoria_brinquedos, redirecionar_categoria_aventura, redirecionar_lancamentos,
-                    redirecionar_showroom, redirecionar_contato, EstatisticasGeraisView, ReposicaoView, ReposicaoDetalheView
+                    redirecionar_showroom, redirecionar_contato, EstatisticasGeraisView, ReposicaoView, ReposicaoDetalheView, filtrar_pecas
                     )
 
 
@@ -112,6 +112,8 @@ urlpatterns = [
         PaymentFinallyView.as_view(),
         name='payment_finally'
     ),
+
+    path("filtrar-pecas/", filtrar_pecas, name="filtrar_pecas"),
 
     path('processar_cartao/', processar_cartao, name='processar_cartao'),
 

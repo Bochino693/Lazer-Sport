@@ -127,10 +127,17 @@ class HomeView(View):
         # ---------------------------
         # peças (CORRETO)
         # ---------------------------
+        categoria_ativa = request.GET.get("categoria")
+
         pecas_lista = PecasReposicao.objects.prefetch_related(
             "imagem_peca_reposicao",
             "categoria_peca",
         )
+
+        if categoria_ativa:
+            pecas_lista = pecas_lista.filter(
+                categoria_peca__id=categoria_ativa
+            ).distinct()
 
         paginator_pecas = Paginator(pecas_lista, 12)
         page_number_pecas = request.GET.get("page_pecas")
@@ -142,6 +149,7 @@ class HomeView(View):
             "ordenar": filtro,
             "eventos": eventos,
             "categorias_peca": categorias_peca,
+            "categoria_ativa": categoria_ativa,
             "pecas_reposicao": page_obj_pecas,  # ✅ AGORA PAGINADO
             "pecas_count": PecasReposicao.objects.count(),
             "pecas_preview": pecas_preview,
@@ -153,6 +161,31 @@ class HomeView(View):
         }
 
         return render(request, "home.html", context)
+
+
+from django.template.loader import render_to_string
+
+
+def filtrar_pecas(request):
+    categoria_id = request.GET.get("categoria")
+
+    pecas = PecasReposicao.objects.prefetch_related(
+        "imagem_peca_reposicao",
+        "categoria_peca"
+    )
+
+    if categoria_id:
+        pecas = pecas.filter(categoria_peca__id=categoria_id)
+
+    pecas = pecas.distinct()[:12]
+
+    html = render_to_string(
+        "partials/_grid_pecas.html",
+        {"pecas_reposicao": pecas},
+        request=request
+    )
+
+    return JsonResponse({"html": html})
 
 from .models import PecasReposicao
 
