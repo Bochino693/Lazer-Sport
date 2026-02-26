@@ -460,123 +460,114 @@
 
 </style>
 
-
 <div class="carrinho-container" id="car">
 
-<nav class="breadcrumb-strong" id="bread">
-    <a href="{% url 'home' %}">
-        <i class="fa-solid fa-house"></i>
-        <span>Home</span>
-    </a>
+    <nav class="breadcrumb-strong" id="bread">
+        <a href="{% url 'home' %}">
+            <i class="fa-solid fa-house"></i>
+            <span>Home</span>
+        </a>
 
-    <i class="fa-solid fa-chevron-right sep"></i>
+        <i class="fa-solid fa-chevron-right sep"></i>
 
-    <strong>
-        <i class="fa-solid fa-cart-shopping"></i>
-        Carrinho
-    </strong>
-</nav>
+        <strong>
+            <i class="fa-solid fa-cart-shopping"></i>
+            Carrinho
+        </strong>
+    </nav>
 
-<h1 class="carrinho-titulo" id="carrinho">🛒 Meu Carrinho</h1>
+    <h1 class="carrinho-titulo" id="carrinho">🛒 Meu Carrinho</h1>
 
     {% if itens %}
-    <button class="btn-limpar" onclick="limparCarrinho()">
-        🗑️ Limpar carrinho
-    </button>
+
+        <button class="btn-limpar" onclick="limparCarrinho()">
+            🗑️ Limpar carrinho
+        </button>
+
+        <div class="itens-scroll">
+
+            {% for item in itens %}
+            <div class="item-card">
+
+                <div class="item-nome">{{ item.item }}</div>
+
+                <div class="item-linha">
+                    <span>Preço</span>
+                    <span class="money">R$ {{ item.preco_unitario|floatformat:2 }}</span>
+                </div>
+
+                <div class="item-linha">
+                    <span>Quantidade</span>
+
+                    <div class="qtd-box">
+                        <button onclick="alterarQtd({{ item.id }}, -1)">−</button>
+                        <span>{{ item.quantidade }}</span>
+                        <button onclick="alterarQtd({{ item.id }}, 1)">+</button>
+                    </div>
+                </div>
+
+                <div class="item-linha item-subtotal">
+                    <span>Subtotal</span>
+                    <span class="money">R$ {{ item.subtotal|floatformat:2 }}</span>
+                </div>
+
+                <button class="btn-remover" onclick="removerItem({{ item.id }})">
+                    ❌ Remover
+                </button>
+
+            </div>
+            {% endfor %}
+
+        </div><!-- itens-scroll -->
+
+        <!-- CUPOM -->
+        <div class="cupom-box {% if itens|length != 1 %}cupom-spaced{% endif %}">
+
+            <strong>🎟️ Cupom de desconto</strong>
+
+            {% if carrinho.cupom %}
+                <div class="cupom-aplicado">
+                    🎉 Você economizou
+                    <strong>{{ carrinho.cupom.desconto_percentual }}%</strong>
+                    com o cupom
+                    <strong>{{ carrinho.cupom.codigo }}</strong>
+                </div>
+            {% else %}
+                <div class="cupom-input">
+                    <input type="text" id="cupomCodigo" placeholder="Digite seu cupom">
+                    <button onclick="aplicarCupom()">Aplicar</button>
+                </div>
+                <small id="cupom-msg" style="color:red;"></small>
+            {% endif %}
+
+        </div><!-- cupom-box -->
+
+        <div class="resumo-box">
+            <div class="resumo-linha resumo-total">
+                <span>Total</span>
+                <span>R$ {{ carrinho.total_liquido|floatformat:2 }}</span>
+            </div>
+        </div>
+
+    {% else %}
+
+        <div class="carrinho-vazio-box">
+            <div class="vazio-icon">🧸</div>
+
+            <h2>Seu carrinho está vazio</h2>
+            <p>
+                Que tal escolher alguns brinquedos incríveis
+                para alegrar o dia?
+            </p>
+
+            <a href="{% url 'brinquedos' %}" class="btn-explorar">
+                🎁 Explorar brinquedos
+            </a>
+        </div>
+
     {% endif %}
 
-{% if not itens %}
-    <div class="carrinho-vazio-box">
-        <div class="vazio-icon">🧸</div>
-
-        <h2>Seu carrinho está vazio</h2>
-        <p>
-            Que tal escolher alguns brinquedos incríveis
-            para alegrar o dia?
-        </p>
-
-        <a href="{% url 'brinquedos' %}" class="btn-explorar">
-            🎁 Explorar brinquedos
-        </a>
-    </div>
-
-{% else %}
-
-
-    <div class="itens-scroll">
-
-{% for item in itens %}
-<div class="item-card">
-    <div class="item-nome">{{ item.item }}</div>
-
-    <div class="item-linha">
-        <span>Preço</span>
-        <span class="money">R$ {{ item.preco_unitario|floatformat:2 }}</span>
-    </div>
-
-    <div class="item-linha">
-        <span>Quantidade</span>
-
-        <div class="qtd-box">
-            <button onclick="alterarQtd({{ item.id }}, -1)">−</button>
-            <span>{{ item.quantidade }}</span>
-            <button onclick="alterarQtd({{ item.id }}, 1)">+</button>
-        </div>
-    </div>
-
-    <div class="item-linha item-subtotal">
-        <span>Subtotal</span>
-        <span class="money">R$ {{ item.subtotal|floatformat:2 }}</span>
-    </div>
-
-    <button class="btn-remover" onclick="removerItem({{ item.id }})">
-        ❌ Remover
-    </button>
-</div>
-{% endfor %}
-
-</div>
-
-
-   {# 🔥 CUPOM SOBE SE TIVER 1 ITEM #}
-{% if itens|length == 1 %}
-    <div class="cupom-box">
-{% else %}
-    <div class="cupom-box" style="margin-top:25px;">
-{% endif %}
-
-<strong>🎟️ Cupom de desconto</strong>
-
-{% if carrinho.cupom %}
-<div class="cupom-aplicado">
-    🎉 Você economizou
-    <strong>{{ carrinho.cupom.desconto_percentual }}%</strong>
-    com o cupom
-    <strong>{{ carrinho.cupom.codigo }}</strong>
-</div>
-{% else %}
-<div class="cupom-input">
-    <input type="text" id="cupomCodigo" placeholder="Digite seu cupom">
-    <button onclick="aplicarCupom()">Aplicar</button>
-</div>
-<small id="cupom-msg" style="color:red;"></small>
-{% endif %}
-
-</div>
-
-
-  <div class="resumo-box">
-    <div class="resumo-linha resumo-total">
-        <span>Total</span>
-        <span>R$ {{ carrinho.total_liquido|floatformat:2 }}</span>
-    </div>
-</div>
-
-{% else %}
-<div class="carrinho-vazio">Seu carrinho está vazio.</div>
-{% endif %}
-
-</div>
+</div><!-- carrinho-container -->
 
 
 {% if itens %}
@@ -587,7 +578,33 @@
 </div>
 {% endif %}
 
-<script>
+
+<!-- ===== MODAL LIMPAR CARRINHO ===== -->
+<div class="modal-overlay" id="modalLimpar">
+    <div class="modal-box">
+
+        <div class="modal-icon">🗑️</div>
+
+        <h2>Limpar carrinho?</h2>
+        <p>
+            Todos os produtos serão removidos do seu carrinho.
+            <br>Essa ação não pode ser desfeita.
+        </p>
+
+        <div class="modal-actions">
+            <button class="btn-cancelar" onclick="fecharModalLimpar()">
+                Cancelar
+            </button>
+            <button class="btn-confirmar" onclick="confirmarLimparCarrinho()">
+                Sim, limpar
+            </button>
+        </div>
+
+    </div>
+</div>
+
+
+    <script>
 document.addEventListener('DOMContentLoaded', () => {
 
     function formatarCarrinho() {
@@ -721,29 +738,6 @@ function alterarQtd(itemId, delta) {
 }
 
 </script>
-
-<!-- ===== MODAL LIMPAR CARRINHO ===== -->
-<div class="modal-overlay" id="modalLimpar">
-    <div class="modal-box">
-        <div class="modal-icon">🗑️</div>
-
-        <h2>Limpar carrinho?</h2>
-        <p>
-            Todos os produtos serão removidos do seu carrinho.
-            <br>Essa ação não pode ser desfeita.
-        </p>
-
-        <div class="modal-actions">
-            <button class="btn-cancelar" onclick="fecharModalLimpar()">
-                Cancelar
-            </button>
-            <button class="btn-confirmar" onclick="confirmarLimparCarrinho()">
-                Sim, limpar
-            </button>
-        </div>
-    </div>
-</div>
-
 {% endblock %}
 
 
