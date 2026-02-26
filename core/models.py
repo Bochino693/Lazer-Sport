@@ -278,7 +278,12 @@ class CategoriaPeca(Prime):
 
 class PecasReposicao(Prime):
     nome = models.CharField(max_length=120)
-    categoria_peca = models.ForeignKey(CategoriaPeca, on_delete=models.CASCADE, related_name='peca', null=True)
+    categoria_peca = models.ManyToManyField(
+        CategoriaPeca,
+        related_name='pecas',
+        blank=True,
+        verbose_name="Categorias"
+    )
     preco_venda = models.DecimalField(decimal_places=2, max_digits=9, null=True, blank=True)
     preco_fornecedor = models.DecimalField(decimal_places=2, max_digits=9, null=True, blank=True)
     descricao_peca = models.CharField(max_length=250)
