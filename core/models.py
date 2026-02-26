@@ -555,6 +555,8 @@ class Carrinho(Prime):
         related_name='carrinhos'
     )
 
+    mp_payment_id = models.CharField(max_length=100, null=True, blank=True)
+
 
     @property
     def total_bruto(self):

@@ -810,7 +810,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
 
-            const res = await fetch("/api/verificar-pagamento/");
+            const res = await fetch(`/api/verificar-pagamento/?carrinho_id={{ carrinho.id }}`);
             const data = await res.json();
 
             if (data.pago) {

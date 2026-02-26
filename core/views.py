@@ -1931,9 +1931,9 @@ def gerar_pix(request):
     response = sdk.payment().create(payment_data)
     payment = response["response"]
 
-    # salva payment_id na sessão
-    request.session["mp_payment_id"] = payment["id"]
-    request.session["carrinho_id"] = carrinho.id
+    carrinho.mp_payment_id = payment["id"]
+    carrinho.save()
+
 
     return JsonResponse({
         "qr_code": payment["point_of_interaction"]["transaction_data"]["qr_code_base64"],
@@ -1944,30 +1944,29 @@ def gerar_pix(request):
 from django.db import transaction
 from django.views.decorators.http import require_GET
 
+
 @require_GET
 def verificar_pagamento(request):
 
-    payment_id = request.session.get("mp_payment_id")
-    carrinho_id = request.session.get("carrinho_id")
+    carrinho_id = request.GET.get("carrinho_id")
 
-    if not payment_id or not carrinho_id:
+    if not carrinho_id:
+        return JsonResponse({"pago": False})
+
+    carrinho = Carrinho.objects.get(id=carrinho_id)
+
+    if not carrinho.mp_payment_id:
         return JsonResponse({"pago": False})
 
     sdk = mercadopago.SDK(settings.MP_ACCESS_TOKEN)
-    payment = sdk.payment().get(payment_id)["response"]
+    payment = sdk.payment().get(carrinho.mp_payment_id)["response"]
 
-    status_mp = payment.get("status")
-
-    # 🔄 ainda não pagou
-    if status_mp != "approved":
+    if payment.get("status") != "approved":
         return JsonResponse({"pago": False})
 
-    # 🔒 se já criou pedido antes, não cria de novo
-    pedido_existente = Pedido.objects.filter(mp_payment_id=payment_id).first()
-    if pedido_existente:
+    # evita duplicar
+    if Pedido.objects.filter(mp_payment_id=carrinho.mp_payment_id).exists():
         return JsonResponse({"pago": True})
-
-    carrinho = Carrinho.objects.get(id=carrinho_id)
 
     with transaction.atomic():
 
@@ -1978,10 +1977,8 @@ def verificar_pagamento(request):
             total_bruto=carrinho.total_bruto,
             valor_desconto=carrinho.valor_desconto,
             total_liquido=carrinho.total_liquido,
-            mp_payment_id=payment_id,
-            mp_status=status_mp,
-            cupom_codigo=carrinho.cupom.codigo if carrinho.cupom else None,
-            cupom_percentual=carrinho.cupom.desconto_percentual if carrinho.cupom else None,
+            mp_payment_id=carrinho.mp_payment_id,
+            mp_status="approved",
         )
 
         for item in carrinho.itens.all():
@@ -1998,9 +1995,12 @@ def verificar_pagamento(request):
 
         carrinho.itens.all().delete()
         carrinho.cupom = None
+        carrinho.mp_payment_id = None
         carrinho.save()
 
     return JsonResponse({"pago": True})
+
+
 
 @csrf_exempt
 def processar_cartao(request):
