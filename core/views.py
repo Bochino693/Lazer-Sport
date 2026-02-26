@@ -165,27 +165,37 @@ class HomeView(View):
 
 from django.template.loader import render_to_string
 
+from django.http import JsonResponse
+from django.template.loader import render_to_string
+from django.core.paginator import Paginator
 
-def filtrar_pecas(request):
-    categoria_id = request.GET.get("categoria")
+def filtrar_pecas_ajax(request):
+    categoria_ativa = request.GET.get("categoria")
+    page_number_pecas = request.GET.get("page_pecas")
 
-    pecas = PecasReposicao.objects.prefetch_related(
+    pecas_lista = PecasReposicao.objects.prefetch_related(
         "imagem_peca_reposicao",
-        "categoria_peca"
+        "categoria_peca",
     )
 
-    if categoria_id:
-        pecas = pecas.filter(categoria_peca__id=categoria_id)
+    if categoria_ativa:
+        pecas_lista = pecas_lista.filter(
+            categoria_peca__id=categoria_ativa
+        ).distinct()
 
-    pecas = pecas.distinct()[:12]
+    paginator_pecas = Paginator(pecas_lista, 12)
+    page_obj_pecas = paginator_pecas.get_page(page_number_pecas)
 
-    html = render_to_string(
-        "partials/_grid_pecas.html",
-        {"pecas_reposicao": pecas},
-        request=request
+    html_grid = render_to_string(
+        "home.html",
+        {"pecas_reposicao": page_obj_pecas},
+        request=request,
     )
 
-    return JsonResponse({"html": html})
+    return JsonResponse({
+        "html": html_grid
+    })
+
 
 from .models import PecasReposicao
 

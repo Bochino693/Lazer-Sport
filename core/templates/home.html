@@ -542,6 +542,7 @@ body {
     display: flex;
     flex-direction: column;
     flex: 1; /* ⭐ ocupa o espaço disponível */
+    text-align: center;
 }
 
 /* Descrição ocupa espaço flexível */
@@ -2745,7 +2746,7 @@ body {
 
     {% if pecas_reposicao.has_previous %}
       <a class="page-btn"
-         href="?page_pecas={{ pecas_reposicao.next_page_number }}{% if categoria_ativa %}&categoria={{ categoria_ativa }}{% endif %}"
+         href="#"
          data-page="{{ pecas_reposicao.previous_page_number }}">
          « Anterior
       </a>
@@ -2757,14 +2758,14 @@ body {
 
     {% if pecas_reposicao.has_next %}
       <a class="page-btn"
-         href="?page_pecas={{ pecas_reposicao.next_page_number }}"
+         href="#"
          data-page="{{ pecas_reposicao.next_page_number }}">
          Próxima »
       </a>
     {% endif %}
 
-  </div>
-</div>
+        </div>
+    </div>
 </section>
 
 
@@ -3699,29 +3700,58 @@ document.addEventListener("DOMContentLoaded", () => {
   }, 3000);
 });
 
-
-
 document.addEventListener("DOMContentLoaded", () => {
 
   const filtros = document.querySelectorAll("#filtros-peca .filtro-btn");
+  const container = document.getElementById("pecas-container");
+  const paginacao = document.getElementById("paginacao-pecas");
 
+  let categoriaAtual = "";
+
+  async function carregarPecas(page = 1) {
+    try {
+      const response = await fetch(
+        `/ajax/filtrar-pecas/?categoria=${categoriaAtual}&page_pecas=${page}`
+      );
+
+      const data = await response.text();
+
+      // cria DOM temporário
+      const temp = document.createElement("div");
+      temp.innerHTML = data;
+
+      // extrai só o que precisamos
+      const novoGrid = temp.querySelector("#pecas-container").innerHTML;
+      const novaPaginacao = temp.querySelector("#paginacao-pecas").innerHTML;
+
+      container.innerHTML = novoGrid;
+      paginacao.innerHTML = novaPaginacao;
+
+    } catch (e) {
+      console.error("Erro ao filtrar peças:", e);
+    }
+  }
+
+  // ✅ clique nos filtros
   filtros.forEach(btn => {
     btn.addEventListener("click", () => {
 
-      const categoria = btn.dataset.categoria || "";
+      filtros.forEach(b => b.classList.remove("ativo"));
+      btn.classList.add("ativo");
 
-      const url = new URL(window.location.href);
-
-      if (categoria) {
-        url.searchParams.set("categoria", categoria);
-      } else {
-        url.searchParams.delete("categoria");
-      }
-
-      url.searchParams.delete("page_pecas"); // reset pagina
-
-      window.location.href = url.toString();
+      categoriaAtual = btn.dataset.categoria || "";
+      carregarPecas(1);
     });
+  });
+
+  // ✅ paginação dinâmica
+  document.addEventListener("click", function(e) {
+    const pageBtn = e.target.closest(".page-btn");
+    if (!pageBtn) return;
+
+    e.preventDefault();
+    const page = pageBtn.dataset.page;
+    carregarPecas(page);
   });
 
 });
