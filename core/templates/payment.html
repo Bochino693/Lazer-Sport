@@ -593,10 +593,25 @@
     <button type="button" class="btn-confirmar btn-cartao" onclick="processarPagamento()">💳 Pagar com cartão</button>
 </div>
 
-<!-- Modal de espera -->
-<div id="modal-aguarde" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; justify-content:center; align-items:center;">
-    <div style="background:#fff; padding:20px; border-radius:8px; text-align:center;">
-        ⏳ Processando pagamento...
+<div id="modal-aguarde"
+     style="display:none; position:fixed; top:0; left:0; width:100%; height:100%;
+            background:rgba(0,0,0,0.6); z-index:9999;
+            justify-content:center; align-items:center;">
+
+    <div style="background:#fff; padding:30px; border-radius:16px;
+                text-align:center; width:300px;">
+
+        <div style="font-size:1.2rem; font-weight:700; margin-bottom:15px;">
+            ✅ Pagamento confirmado!
+        </div>
+
+        <div style="color:#64748b;">
+            Finalizando seu pedido...
+        </div>
+
+        <div style="margin-top:20px;">
+            ⏳ Aguarde...
+        </div>
     </div>
 </div>
 
@@ -798,12 +813,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
 
-    /* ==============================
-       VERIFICAR PAGAMENTO
-    ===============================*/
- function iniciarVerificacao() {
+function iniciarVerificacao() {
 
-    if (window.verificacaoAtiva) return; // evita duplicar interval
+    if (window.verificacaoAtiva) return;
     window.verificacaoAtiva = true;
 
     async function verificar() {
@@ -817,21 +829,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 window.verificacaoAtiva = false;
 
-                mostrarToast("Pagamento confirmado! Redirecionando...");
+                // 🔵 Mostra modal de carregamento
+                const modal = document.getElementById("modal-aguarde");
+                modal.style.display = "flex";
+
+                // 🔒 Bloqueia PIX
+                document.getElementById("pix-box").style.opacity = "0.6";
 
                 setTimeout(() => {
                     window.location.href = "/pedidos/#pedidos";
-                }, 1500);
+                }, 2000);
 
                 return;
             }
 
-            // continua verificando
-            setTimeout(verificar, 4000);
+            setTimeout(verificar, 3000);
 
         } catch (e) {
             console.error("Erro ao verificar pagamento:", e);
-            setTimeout(verificar, 6000); // retry com delay maior se erro
+            setTimeout(verificar, 5000);
         }
     }
 

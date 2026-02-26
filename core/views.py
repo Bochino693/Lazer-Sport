@@ -2066,8 +2066,6 @@ def webhook_mercadopago(request):
 
     return HttpResponse(status=200)
 
-
-
 @require_GET
 def verificar_pagamento(request):
 
@@ -2076,13 +2074,19 @@ def verificar_pagamento(request):
     if not carrinho_id:
         return JsonResponse({"pago": False})
 
+    carrinho = Carrinho.objects.filter(id=carrinho_id).first()
+    if not carrinho:
+        return JsonResponse({"pago": False})
+
+    if not carrinho.mp_payment_id:
+        return JsonResponse({"pago": False})
+
     pedido = Pedido.objects.filter(
-        mp_payment_id__isnull=False,
-        cliente__carrinhos__id=carrinho_id
+        mp_payment_id=carrinho.mp_payment_id,
+        status="pago"
     ).exists()
 
     return JsonResponse({"pago": pedido})
-
 
 
 @csrf_exempt
