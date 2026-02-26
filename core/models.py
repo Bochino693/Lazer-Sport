@@ -664,6 +664,15 @@ class Pedido(Prime):
         null=True, blank=True
     )
 
+    TIPO_ENVIO = [
+        ('frete', 'Frete'),
+        ('entrega', 'Entrega'),
+    ]
+
+    tipo_envio = models.CharField(max_length=30,
+                                  choices=TIPO_ENVIO,
+                                  default='frete')
+
     status = models.CharField(
         max_length=30,
         choices=STATUS_CHOICES,
