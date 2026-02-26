@@ -3709,28 +3709,31 @@ document.addEventListener("DOMContentLoaded", () => {
   let categoriaAtual = "";
 
   async function carregarPecas(page = 1) {
-    try {
-      const response = await fetch(
-        `/ajax/filtrar-pecas/?categoria=${categoriaAtual}&page_pecas=${page}`
-      );
+  try {
+    const response = await fetch(
+      `/ajax/filtrar-pecas/?categoria=${categoriaAtual}&page_pecas=${page}`
+    );
 
-      const data = await response.text();
+    const html = await response.text();
 
-      // cria DOM temporário
-      const temp = document.createElement("div");
-      temp.innerHTML = data;
+    const temp = document.createElement("div");
+    temp.innerHTML = html;
 
-      // extrai só o que precisamos
-      const novoGrid = temp.querySelector("#pecas-container").innerHTML;
-      const novaPaginacao = temp.querySelector("#paginacao-pecas").innerHTML;
+    const novoContainer = temp.querySelector("#pecas-container");
+    const novaPaginacao = temp.querySelector("#paginacao-pecas");
 
-      container.innerHTML = novoGrid;
-      paginacao.innerHTML = novaPaginacao;
-
-    } catch (e) {
-      console.error("Erro ao filtrar peças:", e);
+    if (novoContainer) {
+      container.innerHTML = novoContainer.innerHTML;
     }
+
+    if (novaPaginacao) {
+      paginacao.innerHTML = novaPaginacao.innerHTML;
+    }
+
+  } catch (e) {
+    console.error("Erro ao filtrar peças:", e);
   }
+}
 
   // ✅ clique nos filtros
   filtros.forEach(btn => {

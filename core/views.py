@@ -162,10 +162,7 @@ class HomeView(View):
 
         return render(request, "home.html", context)
 
-
-from django.template.loader import render_to_string
-
-from django.http import JsonResponse
+from django.http import HttpResponse
 from django.template.loader import render_to_string
 from django.core.paginator import Paginator
 
@@ -186,15 +183,16 @@ def filtrar_pecas_ajax(request):
     paginator_pecas = Paginator(pecas_lista, 12)
     page_obj_pecas = paginator_pecas.get_page(page_number_pecas)
 
-    html_grid = render_to_string(
+    html = render_to_string(
         "home.html",
-        {"pecas_reposicao": page_obj_pecas},
+        {
+            "pecas_reposicao": page_obj_pecas,
+            "categoria_ativa": categoria_ativa,
+        },
         request=request,
     )
 
-    return JsonResponse({
-        "html": html_grid
-    })
+    return HttpResponse(html)
 
 
 from .models import PecasReposicao
