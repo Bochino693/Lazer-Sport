@@ -443,7 +443,7 @@
         {% for item in itens %}
             <div class="resumo-item">
                 <span>{{ item.item }}</span>
-                <span>{{ item.quantidade|floatformat:0 }} ×</span>  ✅
+                <span>{{ item.quantidade }} ×</span>
                 <strong class="money">
                     R$ {{ item.subtotal|floatformat:2 }}
                 </strong>
@@ -661,7 +661,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         // Preço unitário e subtotal dos itens
-        const itensEl = box.querySelectorAll('.resumo-item span:nth-child(2), .resumo-item strong');
+        const itensEl = box.querySelectorAll('.resumo-item strong');
         itensEl.forEach(el => {
             let texto = el.textContent.replace(/\./g,'').replace(',', '.').replace(/[^\d.-]/g,'');
             let numero = parseFloat(texto);
