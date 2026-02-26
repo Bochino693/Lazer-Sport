@@ -706,6 +706,9 @@ class Pedido(Prime):
         blank=True
     )
 
+    mp_payment_id = models.CharField(max_length=100, null=True, blank=True)
+    mp_status = models.CharField(max_length=50, null=True, blank=True)
+
     cupom_codigo = models.CharField(max_length=20, blank=True, null=True)
     cupom_percentual = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
 

@@ -628,7 +628,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ===== FORMATA NÚMERO PARA BR =====
     function formatarNumeroBR(valor) {
-        return Number(valor).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        return Number(valor).toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
     }
 
     // ===== FORMATA TODOS OS VALORES DO RESUMO =====
@@ -639,14 +639,14 @@ document.addEventListener('DOMContentLoaded', () => {
         // Total
         const totalEl = box.querySelector('.valor-total');
         if (totalEl) {
-            let numero = parseFloat(totalEl.textContent.replace(/\./g,'').replace(',', '.').replace(/[^\d.-]/g,''));
+            let numero = parseFloat(totalEl.textContent.replace(/\./g, '').replace(',', '.').replace(/[^\d.-]/g, ''));
             if (!isNaN(numero)) totalEl.textContent = 'R$ ' + formatarNumeroBR(numero);
         }
 
         // Subtotal e desconto
         const totaisEl = box.querySelectorAll('.resumo-totais div span:last-child');
         totaisEl.forEach(el => {
-            let texto = el.textContent.replace(/\./g,'').replace(',', '.').replace(/[^\d.-]/g,'');
+            let texto = el.textContent.replace(/\./g, '').replace(',', '.').replace(/[^\d.-]/g, '');
             let numero = parseFloat(texto);
             if (!isNaN(numero)) el.textContent = (numero < 0 ? '-' : '') + 'R$ ' + formatarNumeroBR(Math.abs(numero));
         });
@@ -654,17 +654,18 @@ document.addEventListener('DOMContentLoaded', () => {
         // Preço unitário e subtotal dos itens
         const itensEl = box.querySelectorAll('.resumo-item strong');
         itensEl.forEach(el => {
-            let texto = el.textContent.replace(/\./g,'').replace(',', '.').replace(/[^\d.-]/g,'');
+            let texto = el.textContent.replace(/\./g, '').replace(',', '.').replace(/[^\d.-]/g, '');
             let numero = parseFloat(texto);
             if (!isNaN(numero)) el.textContent = 'R$ ' + formatarNumeroBR(numero);
         });
     }
-        // ===== FORMATA VALOR TOTAL PERSONALIZADO =====
+
+    // ===== FORMATA VALOR TOTAL PERSONALIZADO =====
     function formatarValorTotal() {
         const el = document.getElementById('valor-total-box');
         if (!el) return;
 
-        let texto = el.textContent.replace(/\./g,'').replace(',', '.').replace(/[^\d.-]/g,'');
+        let texto = el.textContent.replace(/\./g, '').replace(',', '.').replace(/[^\d.-]/g, '');
         let numero = parseFloat(texto);
         if (!isNaN(numero)) {
             el.innerHTML = `Valor: <span style="color:#2563eb;">R$ ${formatarNumeroBR(numero)}</span>`;
@@ -701,18 +702,18 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function mascaraNumeroCartao(valor) {
-        valor = valor.replace(/\D/g, '').substring(0,16);
+        valor = valor.replace(/\D/g, '').substring(0, 16);
         return valor.replace(/(.{4})/g, '$1 ').trim();
     }
 
     function mascaraValidade(valor) {
-        valor = valor.replace(/\D/g, '').substring(0,4);
-        if (valor.length > 2) valor = valor.substring(0,2) + '/' + valor.substring(2);
+        valor = valor.replace(/\D/g, '').substring(0, 4);
+        if (valor.length > 2) valor = valor.substring(0, 2) + '/' + valor.substring(2);
         return valor;
     }
 
     function atualizarCartao() {
-        let numero = numeroInput.value.replace(/\D/g, '').padEnd(16,'•');
+        let numero = numeroInput.value.replace(/\D/g, '').padEnd(16, '•');
         numero = numero.match(/.{1,4}/g)?.join(' ') || numero;
         numeroDisplay.textContent = numero;
 
@@ -729,7 +730,7 @@ document.addEventListener('DOMContentLoaded', () => {
             bandeiraImg.style.display = 'none';
         }
 
-        tipoCartao.textContent = detectarTipo(numero.replace(/\s/g,''));
+        tipoCartao.textContent = detectarTipo(numero.replace(/\s/g, ''));
         validadeDisplay.textContent = validadeInput.value || 'MM/AA';
         nomeDisplay.textContent = nomeInput.value || 'NOME DO TITULAR';
     }
@@ -745,135 +746,134 @@ document.addEventListener('DOMContentLoaded', () => {
     nomeInput.addEventListener('input', atualizarCartao);
 
 
+    /* ===== COPIAR PIX ===== */
+    function copiarPix() {
+        const pixInput = document.getElementById('pix-code');
+
+        navigator.clipboard.writeText(pixInput.value).then(() => {
+            mostrarToast("PIX copiado com sucesso ✅");
+
+        });
+    }
 
 
-/* ===== COPIAR PIX ===== */
-function copiarPix() {
-    const pixInput = document.getElementById('pix-code');
+    function mostrarToast(texto) {
+        const toast = document.createElement('div');
+        toast.innerText = texto;
 
-    navigator.clipboard.writeText(pixInput.value).then(() => {
-        mostrarToast("PIX copiado com sucesso ✅");
-
-    });
-}
-
-
-function mostrarToast(texto) {
-    const toast = document.createElement('div');
-    toast.innerText = texto;
-
-    Object.assign(toast.style, {
-        position: 'fixed',
-        bottom: '30px',
-        left: '50%',
-        transform: 'translateX(-50%)',
-        background: '#16a34a',
-        color: '#fff',
-        padding: '14px 22px',
-        borderRadius: '12px',
-        fontWeight: '700',
-        boxShadow: '0 10px 25px rgba(0,0,0,.25)',
-        zIndex: 99999
-    });
-
-    document.body.appendChild(toast);
-
-    setTimeout(() => toast.remove(), 2500);
-}
-
-
-async function processarPagamento() {
-    const numero = document.getElementById("numero-cartao").value;
-    const validade = document.getElementById("validade-cartao").value;
-    const cvv = document.getElementById("cvv-cartao").value;
-    const nome = document.getElementById("nome-cartao").value;
-    const cpf = document.getElementById("cpf-cartao").value;
-
-    // abre modal
-    document.getElementById("modal-aguarde").style.display = "flex";
-
-    try {
-        const response = await fetch("/processar_cartao/", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "X-CSRFToken": "{{ csrf_token }}"
-            },
-            body: JSON.stringify({ numero, validade, cvv, nome, cpf })
+        Object.assign(toast.style, {
+            position: 'fixed',
+            bottom: '30px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            background: '#16a34a',
+            color: '#fff',
+            padding: '14px 22px',
+            borderRadius: '12px',
+            fontWeight: '700',
+            boxShadow: '0 10px 25px rgba(0,0,0,.25)',
+            zIndex: 99999
         });
 
-        const data = await response.json();
-        document.getElementById("modal-aguarde").style.display = "none";
+        document.body.appendChild(toast);
 
-        if(data.sucesso){
-            // redireciona para página final de pagamento
-            window.location.href = `/payment_finally/${data.pedido_id}/`;
-        } else {
-            alert("Erro: " + data.mensagem);
-        }
-    } catch (e) {
-        document.getElementById("modal-aguarde").style.display = "none";
-        alert("Erro inesperado ao processar pagamento.");
+        setTimeout(() => toast.remove(), 2500);
     }
-}
 
 
+    async function processarPagamento() {
+        const numero = document.getElementById("numero-cartao").value;
+        const validade = document.getElementById("validade-cartao").value;
+        const cvv = document.getElementById("cvv-cartao").value;
+        const nome = document.getElementById("nome-cartao").value;
+        const cpf = document.getElementById("cpf-cartao").value;
 
+        // abre modal
+        document.getElementById("modal-aguarde").style.display = "flex";
 
-
-
-
-
-document.addEventListener("DOMContentLoaded", () => {
-    if (window.location.hash) {
-        const el = document.querySelector(window.location.hash);
-        if (el) {
-            setTimeout(() => {
-                el.scrollIntoView({ behavior: "smooth", block: "start" });
-            }, 100);
-        }
-    }
-});
-
-function iniciarVerificacaoPagamento() {
-    const pedidoId = "{{ carrinho.id }}";
-
-    const intervalo = setInterval(async () => {
         try {
-            const res = await fetch(`/api/verificar-pagamento/${pedidoId}/`);
-            const data = await res.json();
+            const response = await fetch("/processar_cartao/", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": "{{ csrf_token }}"
+                },
+                body: JSON.stringify({numero, validade, cvv, nome, cpf})
+            });
 
-            if (data.pago) {
-                clearInterval(intervalo);
+            const data = await response.json();
+            document.getElementById("modal-aguarde").style.display = "none";
 
-                // 🔥 redireciona automático
-                window.location.href = "/pedidos/#pedidos";
+            if (data.sucesso) {
+                // redireciona para página final de pagamento
+                window.location.href = `/payment_finally/${data.pedido_id}/`;
+            } else {
+                alert("Erro: " + data.mensagem);
             }
         } catch (e) {
-            console.error("Erro ao verificar pagamento:", e);
+            document.getElementById("modal-aguarde").style.display = "none";
+            alert("Erro inesperado ao processar pagamento.");
         }
-    }, 5000); // verifica a cada 5s
-}
+    }
+
+
+    document.addEventListener("DOMContentLoaded", () => {
+        if (window.location.hash) {
+            const el = document.querySelector(window.location.hash);
+            if (el) {
+                setTimeout(() => {
+                    el.scrollIntoView({behavior: "smooth", block: "start"});
+                }, 100);
+            }
+        }
+    });
+
+    function iniciarVerificacaoPagamento() {
+        const pedidoId = "{{ carrinho.id }}";
+
+        const intervalo = setInterval(async () => {
+            try {
+                const res = await fetch(`/api/verificar-pagamento/${pedidoId}/`);
+                const data = await res.json();
+
+                if (data.pago) {
+                    clearInterval(intervalo);
+
+                    // 🔥 redireciona automático
+                    window.location.href = "/pedidos/#pedidos";
+                }
+            } catch (e) {
+                console.error("Erro ao verificar pagamento:", e);
+            }
+        }, 5000); // verifica a cada 5s
+    }
 
 
 async function carregarPix() {
-    const valor = "{{ total_liquido|floatformat:2 }}";
+    try {
+        const valor = "{{ total_liquido|floatformat:2 }}";
 
-    const res = await fetch(`/api/gerar-pix/?valor=${valor}`);
-    const data = await res.json();
+        const res = await fetch(`/api/gerar-pix/?valor=${valor}`);
+        const data = await res.json();
 
-    // QR code
-   document.querySelector("#pix-box img").src =
-    "data:image/png;base64," + data.qr_code;
+        if (data.erro) {
+            console.error("Erro MP:", data.erro);
+            return;
+        }
 
-    // copia e cola
-    document.getElementById("pix-code").value = data.pix_copia_cola;
+        // QR code
+        document.querySelector("#pix-box img").src =
+            "data:image/png;base64," + data.qr_code;
 
-    // começa monitoramento
-    iniciarVerificacaoPagamento();
+        // copia e cola
+        document.getElementById("pix-code").value = data.pix_copia_cola;
+
+        iniciarVerificacaoPagamento();
+
+    } catch (e) {
+        console.error("Erro ao carregar PIX:", e);
+    }
 }
-
-document.addEventListener("DOMContentLoaded", carregarPix);
 
 
 </script>
