@@ -66,6 +66,8 @@ INSTALLED_APPS = [
 
     'sistema_interno',
 
+    'rest_framework',
+
     'cloud_jogos',
 
     'widget_tweaks',
@@ -88,6 +90,15 @@ INSTALLED_APPS = [
 
 SITE_ID = 1
 
+
+REST_FRAMEWORK = {
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.AllowAny',
+    ],
+    'DEFAULT_FILTER_BACKENDS': [
+        'django_filters.rest_framework.DjangoFilterBackend'
+    ]
+}
 
 CACHES = {
     'default': {
