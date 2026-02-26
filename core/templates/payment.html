@@ -812,46 +812,27 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+function iniciarVerificacao(carrinhoId) {
 
-function iniciarVerificacao() {
+    const intervalo = setInterval(function() {
 
-    if (window.verificacaoAtiva) return;
-    window.verificacaoAtiva = true;
+        fetch(`/verificar-pagamento/?carrinho_id=${carrinhoId}`)
+            .then(response => response.json())
+            .then(data => {
 
-    async function verificar() {
+                if (data.pago) {
 
-        try {
+                    clearInterval(intervalo);
 
-            const res = await fetch(`/api/verificar-pagamento/?carrinho_id={{ carrinho.id }}`);
-            const data = await res.json();
+                    // Fecha modal
+                    document.getElementById("modalPix").style.display = "none";
 
-            if (data.pago) {
+                    // Redireciona
+                    window.location.href = data.redirect_url;
+                }
+            });
 
-                window.verificacaoAtiva = false;
-
-                // 🔵 Mostra modal de carregamento
-                const modal = document.getElementById("modal-aguarde");
-                modal.style.display = "flex";
-
-                // 🔒 Bloqueia PIX
-                document.getElementById("pix-box").style.opacity = "0.6";
-
-                setTimeout(() => {
-                    window.location.href = "/pedidos/#pedidos";
-                }, 2000);
-
-                return;
-            }
-
-            setTimeout(verificar, 3000);
-
-        } catch (e) {
-            console.error("Erro ao verificar pagamento:", e);
-            setTimeout(verificar, 5000);
-        }
-    }
-
-    verificar();
+    }, 3000); // verifica a cada 3 segundos
 }
 
     /* ==============================
