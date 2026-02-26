@@ -1910,40 +1910,97 @@ import mercadopago
 from django.conf import settings
 from django.http import JsonResponse
 from decimal import Decimal
-import uuid
+from .models import Pedido
 
 
 def gerar_pix(request):
-    valor = Decimal(request.GET.get("valor", "0"))
 
-    sdk = mercadopago.SDK(settings.MP_ACCESS_TOKEN)
+    pedido_id = request.GET.get("pedido_id")
 
     try:
+        pedido = Pedido.objects.get(id=pedido_id)
+
+        sdk = mercadopago.SDK(settings.MP_ACCESS_TOKEN)
+
         payment_data = {
-            "transaction_amount": float(valor),
-            "description": "Pedido Lazer Sport",
+            "transaction_amount": float(pedido.total_liquido),
+            "description": f"Pedido #{pedido.id} - Lazer Sport",
             "payment_method_id": "pix",
-            "external_reference": str(uuid.uuid4()),
+            "external_reference": str(pedido.id),
+            "notification_url": "https://seudominio.com/api/webhook-mp/",
             "payer": {
-                "email": request.user.email if request.user.is_authenticated else "cliente@test.com",
-                "first_name": "Cliente"
+                "email": pedido.cliente.user.email,
+                "first_name": pedido.cliente.user.first_name or "Cliente"
             }
         }
 
-        payment_response = sdk.payment().create(payment_data)
-        payment = payment_response["response"]
+        response = sdk.payment().create(payment_data)
+        payment = response["response"]
+
+        pedido.mp_payment_id = payment["id"]
+        pedido.mp_status = payment["status"]
+        pedido.save()
 
         return JsonResponse({
             "qr_code": payment["point_of_interaction"]["transaction_data"]["qr_code_base64"],
             "pix_copia_cola": payment["point_of_interaction"]["transaction_data"]["qr_code"],
-            "payment_id": payment["id"]
+            "pedido_id": pedido.id
         })
 
     except Exception as e:
-        return JsonResponse({
-            "erro": str(e)
-        }, status=500)
+        return JsonResponse({"erro": str(e)}, status=500)
 
+
+from django.views.decorators.http import require_POST
+from django.contrib.auth.decorators import login_required
+
+@login_required
+@require_POST
+def criar_pedido(request):
+
+    carrinho = Carrinho.objects.get(cliente=request.user.clienteperfil)
+
+    pedido = Pedido.objects.create(
+        cliente=carrinho.cliente,
+        total_bruto=carrinho.total_bruto,
+        valor_desconto=carrinho.valor_desconto,
+        total_liquido=carrinho.total_liquido,
+        forma_pagamento='pix',
+        status='aguardando_pagamento'
+    )
+
+    return JsonResponse({
+        "pedido_id": pedido.id
+    })
+
+
+def verificar_pagamento(request, pedido_id):
+
+    try:
+        pedido = Pedido.objects.get(id=pedido_id)
+
+        sdk = mercadopago.SDK(settings.MP_ACCESS_TOKEN)
+
+        payment = sdk.payment().get(pedido.mp_payment_id)
+        status = payment["response"]["status"]
+
+        pedido.mp_status = status
+
+        if status == "approved":
+            pedido.status = "pago"
+            pedido.forma_pagamento = "pix"
+            pedido.save()
+
+            pedido.finalizar("pix")
+
+            return JsonResponse({"pago": True})
+
+        pedido.save()
+
+        return JsonResponse({"pago": False})
+
+    except Exception as e:
+        return JsonResponse({"erro": str(e)}, status=500)
 
 
 @csrf_exempt

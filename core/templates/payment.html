@@ -779,101 +779,80 @@ document.addEventListener('DOMContentLoaded', () => {
 
         setTimeout(() => toast.remove(), 2500);
     }
-
-
-    async function processarPagamento() {
-        const numero = document.getElementById("numero-cartao").value;
-        const validade = document.getElementById("validade-cartao").value;
-        const cvv = document.getElementById("cvv-cartao").value;
-        const nome = document.getElementById("nome-cartao").value;
-        const cpf = document.getElementById("cpf-cartao").value;
-
-        // abre modal
-        document.getElementById("modal-aguarde").style.display = "flex";
-
-        try {
-            const response = await fetch("/processar_cartao/", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "X-CSRFToken": "{{ csrf_token }}"
-                },
-                body: JSON.stringify({numero, validade, cvv, nome, cpf})
-            });
-
-            const data = await response.json();
-            document.getElementById("modal-aguarde").style.display = "none";
-
-            if (data.sucesso) {
-                // redireciona para página final de pagamento
-                window.location.href = `/payment_finally/${data.pedido_id}/`;
-            } else {
-                alert("Erro: " + data.mensagem);
-            }
-        } catch (e) {
-            document.getElementById("modal-aguarde").style.display = "none";
-            alert("Erro inesperado ao processar pagamento.");
+    // ===== SCROLL HASH =====
+    if (window.location.hash) {
+        const el = document.querySelector(window.location.hash);
+        if (el) {
+            setTimeout(() => {
+                el.scrollIntoView({behavior: "smooth", block: "start"});
+            }, 100);
         }
     }
 
 
-    document.addEventListener("DOMContentLoaded", () => {
-        if (window.location.hash) {
-            const el = document.querySelector(window.location.hash);
-            if (el) {
-                setTimeout(() => {
-                    el.scrollIntoView({behavior: "smooth", block: "start"});
-                }, 100);
-            }
-        }
-    });
+    // ===== PIX =====
+    async function iniciarPix() {
 
-    function iniciarVerificacaoPagamento() {
-        const pedidoId = "{{ carrinho.id }}";
+        try {
+            const criar = await fetch("/api/criar-pedido/", {
+                method: "POST",
+                headers: {
+                    "X-CSRFToken": "{{ csrf_token }}"
+                }
+            });
+
+            const pedidoData = await criar.json();
+            const pedidoId = pedidoData.pedido_id;
+
+            const res = await fetch(`/api/gerar-pix/?pedido_id=${pedidoId}`);
+            const data = await res.json();
+
+            if (data.erro) {
+                console.error(data.erro);
+                return;
+            }
+
+            const img = document.querySelector("#pix-box img");
+            if (img) {
+                img.src = "data:image/png;base64," + data.qr_code;
+            }
+
+            const pixInput = document.getElementById("pix-code");
+            if (pixInput) {
+                pixInput.value = data.pix_copia_cola;
+            }
+
+            iniciarVerificacao(pedidoId);
+
+        } catch (e) {
+            console.error("Erro ao iniciar PIX:", e);
+        }
+    }
+
+
+    function iniciarVerificacao(pedidoId) {
 
         const intervalo = setInterval(async () => {
+
             try {
                 const res = await fetch(`/api/verificar-pagamento/${pedidoId}/`);
                 const data = await res.json();
 
                 if (data.pago) {
                     clearInterval(intervalo);
-
-                    // 🔥 redireciona automático
                     window.location.href = "/pedidos/#pedidos";
                 }
+
             } catch (e) {
                 console.error("Erro ao verificar pagamento:", e);
             }
-        }, 5000); // verifica a cada 5s
+
+        }, 5000);
     }
 
+    iniciarPix();
 
-async function carregarPix() {
-    try {
-        const valor = "{{ total_liquido|floatformat:2 }}";
-
-        const res = await fetch(`/api/gerar-pix/?valor=${valor}`);
-        const data = await res.json();
-
-        if (data.erro) {
-            console.error("Erro MP:", data.erro);
-            return;
-        }
-
-        // QR code
-        document.querySelector("#pix-box img").src =
-            "data:image/png;base64," + data.qr_code;
-
-        // copia e cola
-        document.getElementById("pix-code").value = data.pix_copia_cola;
-
-        iniciarVerificacaoPagamento();
-
-    } catch (e) {
-        console.error("Erro ao carregar PIX:", e);
-    }
-}
+});
 
 
 </script>
