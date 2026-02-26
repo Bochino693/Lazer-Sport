@@ -1923,6 +1923,10 @@ def gerar_pix(request):
         "description": f"Pagamento Carrinho #{carrinho.id}",
         "payment_method_id": "pix",
         "external_reference": str(carrinho.id),
+
+        # 🔥 IMPORTANTE
+        "notification_url": "https://lazersport.com/api/webhook-mp/",
+
         "payer": {
             "email": request.user.email if request.user.is_authenticated else "cliente@email.com"
         }
@@ -1945,28 +1949,53 @@ from django.db import transaction
 from django.views.decorators.http import require_GET
 
 
-@require_GET
-def verificar_pagamento(request):
+from django.views.decorators.csrf import csrf_exempt
+from django.http import HttpResponse
+import json
+import mercadopago
+from django.conf import settings
 
-    carrinho_id = request.GET.get("carrinho_id")
 
-    if not carrinho_id:
-        return JsonResponse({"pago": False})
+@csrf_exempt
+def webhook_mercadopago(request):
 
-    carrinho = Carrinho.objects.get(id=carrinho_id)
+    if request.method != "POST":
+        return HttpResponse(status=200)
 
-    if not carrinho.mp_payment_id:
-        return JsonResponse({"pago": False})
+    try:
+        data = json.loads(request.body.decode("utf-8"))
+    except Exception:
+        return HttpResponse(status=200)
+
+    # Mercado Pago envia vários tipos de notificação
+    if data.get("type") != "payment":
+        return HttpResponse(status=200)
+
+    payment_id = data.get("data", {}).get("id")
+
+    if not payment_id:
+        return HttpResponse(status=200)
 
     sdk = mercadopago.SDK(settings.MP_ACCESS_TOKEN)
-    payment = sdk.payment().get(carrinho.mp_payment_id)["response"]
+    payment = sdk.payment().get(payment_id)["response"]
 
     if payment.get("status") != "approved":
-        return JsonResponse({"pago": False})
+        return HttpResponse(status=200)
 
-    # evita duplicar
-    if Pedido.objects.filter(mp_payment_id=carrinho.mp_payment_id).exists():
-        return JsonResponse({"pago": True})
+    carrinho_id = payment.get("external_reference")
+
+    if not carrinho_id:
+        return HttpResponse(status=200)
+
+    carrinho = Carrinho.objects.filter(id=carrinho_id).first()
+    if not carrinho:
+        return HttpResponse(status=200)
+
+    # 🔒 evita duplicar
+    if Pedido.objects.filter(mp_payment_id=payment_id).exists():
+        return HttpResponse(status=200)
+
+    from django.db import transaction
 
     with transaction.atomic():
 
@@ -1977,8 +2006,10 @@ def verificar_pagamento(request):
             total_bruto=carrinho.total_bruto,
             valor_desconto=carrinho.valor_desconto,
             total_liquido=carrinho.total_liquido,
-            mp_payment_id=carrinho.mp_payment_id,
+            mp_payment_id=payment_id,
             mp_status="approved",
+            cupom_codigo=carrinho.cupom.codigo if carrinho.cupom else None,
+            cupom_percentual=carrinho.cupom.desconto_percentual if carrinho.cupom else None,
         )
 
         for item in carrinho.itens.all():
@@ -1998,7 +2029,24 @@ def verificar_pagamento(request):
         carrinho.mp_payment_id = None
         carrinho.save()
 
-    return JsonResponse({"pago": True})
+    return HttpResponse(status=200)
+
+
+
+@require_GET
+def verificar_pagamento(request):
+
+    carrinho_id = request.GET.get("carrinho_id")
+
+    if not carrinho_id:
+        return JsonResponse({"pago": False})
+
+    pedido = Pedido.objects.filter(
+        mp_payment_id__isnull=False,
+        cliente__carrinhos__id=carrinho_id
+    ).exists()
+
+    return JsonResponse({"pago": pedido})
 
 
 

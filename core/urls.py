@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import (HomeView, BrinquedoInfoView, CategoriasInfoView, BrinquedosView,
+from .views import (HomeView, BrinquedoInfoView, CategoriasInfoView, BrinquedosView, webhook_mercadopago,
                     RegistrarView, LoginUsuarioView, LogoutUsuarioView, EventosView,
                     ProjetosView, ClientePerfilView, ComboInfoView, PromocaoInfoView,
                     BrinquedoAdmin, NovaCategoria, NovaTag, ComboListView, ComboCreateView,
@@ -122,6 +122,7 @@ urlpatterns = [
     ),
 
     path("ajax/filtrar-pecas/", filtrar_pecas_ajax, name="filtrar_pecas_ajax"),
+    path("api/webhook-mp/", webhook_mercadopago, name="webhook_mp"),
 
     path('processar_cartao/', processar_cartao, name='processar_cartao'),
 
