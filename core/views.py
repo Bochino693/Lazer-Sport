@@ -1956,23 +1956,66 @@ import mercadopago
 from django.conf import settings
 
 
+import json
+import hmac
+import hashlib
+import os
+import mercadopago
+
+from django.conf import settings
+from django.http import HttpResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.db import transaction
+
+from .models import Carrinho, Pedido, ItemPedido
+
+
 @csrf_exempt
 def webhook_mercadopago(request):
 
     if request.method != "POST":
         return HttpResponse(status=200)
 
+    # ==============================
+    # 🔐 VALIDAÇÃO DA ASSINATURA
+    # ==============================
+
+    signature = request.headers.get("x-signature")
+    request_id = request.headers.get("x-request-id")
+
+    if not signature or not request_id:
+        return HttpResponse(status=401)
+
+    secret = os.getenv("MP_WEBHOOK_SECRET")
+    if not secret:
+        return HttpResponse(status=500)
+
+    payload = request.body
+
+    expected_signature = hmac.new(
+        secret.encode(),
+        payload,
+        hashlib.sha256
+    ).hexdigest()
+
+    received_signature = signature.split("v1=")[-1]
+
+    if not hmac.compare_digest(expected_signature, received_signature):
+        return HttpResponse(status=401)
+
+    # ==============================
+    # 📩 PROCESSAMENTO DO WEBHOOK
+    # ==============================
+
     try:
-        data = json.loads(request.body.decode("utf-8"))
+        data = json.loads(payload.decode("utf-8"))
     except Exception:
         return HttpResponse(status=200)
 
-    # Mercado Pago envia vários tipos de notificação
     if data.get("type") != "payment":
         return HttpResponse(status=200)
 
     payment_id = data.get("data", {}).get("id")
-
     if not payment_id:
         return HttpResponse(status=200)
 
@@ -1983,7 +2026,6 @@ def webhook_mercadopago(request):
         return HttpResponse(status=200)
 
     carrinho_id = payment.get("external_reference")
-
     if not carrinho_id:
         return HttpResponse(status=200)
 
@@ -1991,11 +2033,13 @@ def webhook_mercadopago(request):
     if not carrinho:
         return HttpResponse(status=200)
 
-    # 🔒 evita duplicar
+    # 🔒 evita duplicação
     if Pedido.objects.filter(mp_payment_id=payment_id).exists():
         return HttpResponse(status=200)
 
-    from django.db import transaction
+    # ==============================
+    # 🧾 CRIAÇÃO DO PEDIDO
+    # ==============================
 
     with transaction.atomic():
 
@@ -2030,7 +2074,6 @@ def webhook_mercadopago(request):
         carrinho.save()
 
     return HttpResponse(status=200)
-
 
 
 @require_GET
