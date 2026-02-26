@@ -5,7 +5,7 @@ from .views import (HomeView, BrinquedoInfoView, CategoriasInfoView, BrinquedosV
                     BrinquedoAdmin, NovaCategoria, NovaTag, ComboListView, ComboCreateView,
                     ComboUpdateView, ComboDeleteView, CupomAdminView, ProjetoAdminView, EstabelecimentoInfoView,
                     EstabelecimentosListView, ManutencaoView, PromocaoAdminView, PromocaoDeleteView,
-                    adicionar_ao_carrinho, carrinho_view, aplicar_cupom, remover_item_carrinho,
+                    adicionar_ao_carrinho, CarrinhoView, aplicar_cupom, remover_item_carrinho,
                     limpar_carrinho, cancelar_manutencao,
                     PaymentView, MeusPedidosView, criar_pedido_pix, PaymentFinallyView, processar_cartao,
                     EventoAdminView, BannerAdminView, BannerDeleteView, AdminLoginView, AcessoNegadoView,
@@ -48,7 +48,7 @@ urlpatterns = [
 
     path(
         'carrinho/',
-        carrinho_view,
+        CarrinhoView.as_view(),
         name='carrinho'
     ),
 
