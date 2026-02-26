@@ -70,6 +70,7 @@ INSTALLED_APPS = [
     'sistema_interno',
 
     'rest_framework',
+    'mercadopago',
 
     'cloud_jogos',
 
