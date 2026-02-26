@@ -1947,15 +1947,6 @@ def gerar_pix(request):
 
 from django.db import transaction
 from django.views.decorators.http import require_GET
-
-
-from django.views.decorators.csrf import csrf_exempt
-from django.http import HttpResponse
-import json
-import mercadopago
-from django.conf import settings
-
-
 import json
 import hmac
 import hashlib
@@ -2074,6 +2065,7 @@ def webhook_mercadopago(request):
         carrinho.save()
 
     return HttpResponse(status=200)
+
 
 
 @require_GET
