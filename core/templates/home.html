@@ -3700,6 +3700,8 @@ document.addEventListener("DOMContentLoaded", () => {
   }, 3000);
 });
 
+
+
 document.addEventListener("DOMContentLoaded", () => {
 
   const filtros = document.querySelectorAll("#filtros-peca .filtro-btn");
@@ -3724,11 +3726,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (novoContainer) {
       container.innerHTML = novoContainer.innerHTML;
+
+      // ⭐ REAPLICAR FORMATAÇÃO
+      setTimeout(() => {
+        igualarAlturaGridPecas();
+        ajustarGridResponsivo();
+      }, 50);
     }
 
     if (novaPaginacao) {
       paginacao.innerHTML = novaPaginacao.innerHTML;
     }
+
 
   } catch (e) {
     console.error("Erro ao filtrar peças:", e);
