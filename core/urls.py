@@ -6,7 +6,7 @@ from .views import (HomeView, BrinquedoInfoView, CategoriasInfoView, BrinquedosV
                     ComboUpdateView, ComboDeleteView, CupomAdminView, ProjetoAdminView, EstabelecimentoInfoView,
                     EstabelecimentosListView, ManutencaoView, PromocaoAdminView, PromocaoDeleteView,
                     adicionar_ao_carrinho, CarrinhoView, aplicar_cupom, remover_item_carrinho,
-                    limpar_carrinho, cancelar_manutencao,
+                    limpar_carrinho, cancelar_manutencao, alterar_quantidade_item,
                     PaymentView, MeusPedidosView, criar_pedido_pix, PaymentFinallyView, processar_cartao,
                     EventoAdminView, BannerAdminView, BannerDeleteView, AdminLoginView, AcessoNegadoView,
                     DashboardAdminView, UserAdminView, ManutencaoAdminView, RelatorioVendasView, PedidoAdminView,
@@ -50,6 +50,12 @@ urlpatterns = [
         'carrinho/',
         CarrinhoView.as_view(),
         name='carrinho'
+    ),
+
+    path(
+        "carrinho/alterar-quantidade/",
+        alterar_quantidade_item,
+        name="alterar_quantidade_item"
     ),
 
     path(

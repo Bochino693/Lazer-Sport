@@ -55,9 +55,11 @@ from django.contrib.auth.models import User
 from django.db.models import UniqueConstraint
 
 def validar_telefone(value):
-    padrao = r'^\(\d{2}\)\d{4}-\d{4}$'
+    padrao = r'^\(\d{2}\)\d{4,5}-\d{4}$'
     if not re.match(padrao, value):
-        raise ValidationError("Telefone deve estar no formato (11)XXXX-XXXX")
+        raise ValidationError(
+            "Telefone deve estar no formato (11)91234-5678 ou (11)1234-5678"
+        )
 
 class ClientePerfil(models.Model):
     user = models.OneToOneField(
@@ -69,7 +71,7 @@ class ClientePerfil(models.Model):
 
     # ✅ NOVO CAMPO
     telefone = models.CharField(
-        max_length=13,
+        max_length=14,
         validators=[validar_telefone],
         blank=False,
         null=True
