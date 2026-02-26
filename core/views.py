@@ -1925,7 +1925,7 @@ def gerar_pix(request):
         "external_reference": str(carrinho.id),
 
         # 🔥 IMPORTANTE
-        "notification_url": "https://lazersport.com/api/webhook-mp/",
+        "notification_url": "https://lazersport.com.br/api/webhook-mp/",
 
         "payer": {
             "email": request.user.email if request.user.is_authenticated else "cliente@email.com"
