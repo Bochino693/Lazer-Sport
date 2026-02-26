@@ -1941,44 +1941,66 @@ def gerar_pix(request):
         "valor": f"{carrinho.total_liquido:.2f}"
     })
 
+from django.db import transaction
+from django.views.decorators.http import require_GET
+
+@require_GET
 def verificar_pagamento(request):
 
     payment_id = request.session.get("mp_payment_id")
     carrinho_id = request.session.get("carrinho_id")
 
-    if not payment_id:
+    if not payment_id or not carrinho_id:
         return JsonResponse({"pago": False})
 
     sdk = mercadopago.SDK(settings.MP_ACCESS_TOKEN)
     payment = sdk.payment().get(payment_id)["response"]
 
-    if payment["status"] == "approved":
+    status_mp = payment.get("status")
 
-        carrinho = Carrinho.objects.get(id=carrinho_id)
+    # 🔄 ainda não pagou
+    if status_mp != "approved":
+        return JsonResponse({"pago": False})
 
-        # 🔥 AGORA cria pedido
+    # 🔒 se já criou pedido antes, não cria de novo
+    pedido_existente = Pedido.objects.filter(mp_payment_id=payment_id).first()
+    if pedido_existente:
+        return JsonResponse({"pago": True})
+
+    carrinho = Carrinho.objects.get(id=carrinho_id)
+
+    with transaction.atomic():
+
         pedido = Pedido.objects.create(
             cliente=carrinho.cliente,
+            status="pago",
+            forma_pagamento="pix",
             total_bruto=carrinho.total_bruto,
             valor_desconto=carrinho.valor_desconto,
             total_liquido=carrinho.total_liquido,
-            forma_pagamento="pix",
-            status="pago"
+            mp_payment_id=payment_id,
+            mp_status=status_mp,
+            cupom_codigo=carrinho.cupom.codigo if carrinho.cupom else None,
+            cupom_percentual=carrinho.cupom.desconto_percentual if carrinho.cupom else None,
         )
 
-        pedido.finalizar("pix")
+        for item in carrinho.itens.all():
+            ItemPedido.objects.create(
+                pedido=pedido,
+                content_type=item.content_type,
+                object_id=item.object_id,
+                nome_item=str(item.item),
+                tipo_item=item.content_type.model,
+                preco_unitario=item.preco_unitario,
+                quantidade=item.quantidade,
+                subtotal=item.subtotal
+            )
 
-        # limpa sessão
-        del request.session["mp_payment_id"]
-        del request.session["carrinho_id"]
+        carrinho.itens.all().delete()
+        carrinho.cupom = None
+        carrinho.save()
 
-        return JsonResponse({
-            "pago": True
-        })
-
-    return JsonResponse({"pago": False})
-
-
+    return JsonResponse({"pago": True})
 
 @csrf_exempt
 def processar_cartao(request):

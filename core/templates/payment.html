@@ -514,7 +514,6 @@
         </div>
     </div>
 
-
     <!-- QR CODE -->
 <div style="margin-bottom:25px; display:flex; justify-content:center;">
     <img id="pix-qrcode"
@@ -544,8 +543,9 @@
             onclick="copiarPix()">
         📋 Copiar PIX
     </button>
-
 </div>
+
+
 <!-- ===== CARTÃO BOX INTERATIVO ===== -->
 <div id="cartao-box" class="payment-details card-box" style="display:none">
 
@@ -748,6 +748,9 @@ document.addEventListener('DOMContentLoaded', () => {
         atualizarCartao();
     });
     nomeInput.addEventListener('input', atualizarCartao);
+
+
+
  /* ==============================
        GERAR PIX AUTOMATICAMENTE
     ===============================*/
@@ -798,27 +801,42 @@ document.addEventListener('DOMContentLoaded', () => {
     /* ==============================
        VERIFICAR PAGAMENTO
     ===============================*/
-    function iniciarVerificacao() {
+ function iniciarVerificacao() {
 
-        const intervalo = setInterval(async () => {
+    if (window.verificacaoAtiva) return; // evita duplicar interval
+    window.verificacaoAtiva = true;
 
-            try {
+    async function verificar() {
 
-                const res = await fetch(`/api/verificar-pagamento/`);
-                const data = await res.json();
+        try {
 
-                if (data.pago) {
-                    clearInterval(intervalo);
+            const res = await fetch("/api/verificar-pagamento/");
+            const data = await res.json();
+
+            if (data.pago) {
+
+                window.verificacaoAtiva = false;
+
+                mostrarToast("Pagamento confirmado! Redirecionando...");
+
+                setTimeout(() => {
                     window.location.href = "/pedidos/#pedidos";
-                }
+                }, 1500);
 
-            } catch (e) {
-                console.error("Erro ao verificar:", e);
+                return;
             }
 
-        }, 5000);
+            // continua verificando
+            setTimeout(verificar, 4000);
+
+        } catch (e) {
+            console.error("Erro ao verificar pagamento:", e);
+            setTimeout(verificar, 6000); // retry com delay maior se erro
+        }
     }
 
+    verificar();
+}
 
     /* ==============================
        COPIAR PIX
