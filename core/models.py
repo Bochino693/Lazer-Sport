@@ -625,7 +625,6 @@ from django.db import transaction
 
 class Pedido(Prime):
     STATUS_CHOICES = (
-        ('criado', 'Criado'),
         ('aguardando_pagamento', 'Aguardando pagamento'),
         ('pago', 'Pago'),
         ('em_preparacao', 'Em preparação'),

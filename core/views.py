@@ -1907,6 +1907,47 @@ class PaymentView(View):
 from django.views.decorators.csrf import csrf_exempt
 
 
+
+# views.py
+import qrcode
+import base64
+from io import BytesIO
+from django.http import JsonResponse
+from decimal import Decimal
+
+
+def gerar_pix(request):
+    total = Decimal(request.GET.get("valor"))
+
+    chave_pix = "336.517.618-78"
+    nome = "LAZER SPORT E-COMMERCE"
+    cidade = "SAO PAULO - SP"
+
+    payload = f"""
+            000201
+            26360014BR.GOV.BCB.PIX
+            0114{chave_pix}
+            52040000
+            5303986
+            54{total:.2f}
+            5802BR
+            59{nome}
+            60{cidade}
+            62070503***
+            6304
+            """.replace("\n", "")
+
+    # gerar QR
+    qr = qrcode.make(payload)
+    buffer = BytesIO()
+    qr.save(buffer, format="PNG")
+    img_base64 = base64.b64encode(buffer.getvalue()).decode()
+
+    return JsonResponse({
+        "qr_code": f"data:image/png;base64,{img_base64}",
+        "pix_copia_cola": payload
+    })
+
 @csrf_exempt
 def processar_cartao(request):
     if request.method != "POST":

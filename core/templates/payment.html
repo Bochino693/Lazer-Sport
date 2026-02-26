@@ -888,6 +888,41 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 });
+
+
+function iniciarVerificacaoPagamento() {
+    const pedidoId = "{{ carrinho.id }}";
+
+    setInterval(async () => {
+        const res = await fetch(`/api/verificar-pagamento/${pedidoId}/`);
+        const data = await res.json();
+
+        if (data.pago) {
+            document.getElementById("btn-ja-paguei").style.display = "inline-block";
+        }
+    }, 5000); // verifica a cada 5s
+}
+
+
+async function carregarPix() {
+    const valor = "{{ total_liquido|floatformat:2 }}";
+
+    const res = await fetch(`/api/gerar-pix/?valor=${valor}`);
+    const data = await res.json();
+
+    // QR code
+    document.querySelector("#pix-box img").src = data.qr_code;
+
+    // copia e cola
+    document.getElementById("pix-code").value = data.pix_copia_cola;
+
+    // começa monitoramento
+    iniciarVerificacaoPagamento();
+}
+
+document.addEventListener("DOMContentLoaded", carregarPix);
+
+
 </script>
 
 
