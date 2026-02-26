@@ -682,7 +682,7 @@ class Pedido(Prime):
     status = models.CharField(
         max_length=30,
         choices=STATUS_CHOICES,
-        default='criado'
+        default='aguardando_pagamento'
     )
 
     # 🚚 logística (preenchido só quando sair para entrega)
