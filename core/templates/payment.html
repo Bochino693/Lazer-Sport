@@ -443,7 +443,7 @@
         {% for item in itens %}
             <div class="resumo-item">
                 <span>{{ item.item }}</span>
-                <span>{{ item.quantidade|int }} ×</span>   ✅
+                <span>{{ item.quantidade|floatformat:0 }} ×</span>  ✅
                 <strong class="money">
                     R$ {{ item.subtotal|floatformat:2 }}
                 </strong>
