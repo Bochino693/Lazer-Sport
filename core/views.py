@@ -1742,28 +1742,63 @@ def limpar_carrinho(request):
     return JsonResponse({'status': 'success'})
 
 
+class CarrinhoView(LoginRequiredMixin, View):
+
+    def get(self, request):
+        if not hasattr(request.user, 'perfil'):
+            return redirect('home')
+
+        cliente = request.user.perfil
+
+        carrinho = Carrinho.objects.select_related('cupom').get(cliente=cliente)
+
+        itens = (
+            ItemCarrinho.objects
+            .filter(carrinho=carrinho)
+            .select_related('content_type')
+        )
+
+        # 🔥 NOVO — valida cupom permitido
+        cupom_permitido = False
+
+        for item in itens:
+            model = item.content_type.model
+
+            if model in ['brinquedos', 'pecasreposicao']:
+                cupom_permitido = True
+                break
+
+        context = {
+            'carrinho': carrinho,
+            'itens': itens,
+            'cupom_permitido': cupom_permitido,  # ⭐ IMPORTANTE
+        }
+
+        return render(request, 'carrinho.html', context)
+
+
+from django.views.decorators.http import require_POST
+from django.http import JsonResponse
+import json
+
+@require_POST
 @login_required
-def carrinho_view(request):
-    if not hasattr(request.user, 'perfil'):
-        return redirect('home')
+def alterar_quantidade_item(request):
+    data = json.loads(request.body)
+    item_id = data.get("item_id")
+    delta = int(data.get("delta", 0))
 
-    cliente = request.user.perfil
+    item = ItemCarrinho.objects.get(id=item_id)
 
-    carrinho = Carrinho.objects.select_related('cupom').get(cliente=cliente)
+    nova_qtd = item.quantidade + delta
 
-    itens = (
-        ItemCarrinho.objects
-        .filter(carrinho=carrinho)
-        .select_related('content_type')
-    )
+    if nova_qtd <= 0:
+        item.delete()
+    else:
+        item.quantidade = nova_qtd
+        item.save()
 
-    context = {
-        'carrinho': carrinho,
-        'itens': itens,
-    }
-
-    return render(request, 'carrinho.html', context)
-
+    return JsonResponse({"status": "ok"})
 
 import json
 from django.http import JsonResponse

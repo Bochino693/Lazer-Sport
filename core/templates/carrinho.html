@@ -380,6 +380,29 @@
 }
 
 
+.qtd-box {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.qtd-box button {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    border: none;
+    background: #eef2ff;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.qtd-box span {
+    min-width: 22px;
+    text-align: center;
+    font-weight: 700;
+}
+
+
 </style>
 
 
@@ -437,7 +460,12 @@
 
             <div class="item-linha">
                 <span>Quantidade</span>
-                <span>{{ item.quantidade }}</span>
+
+                <div class="qtd-box">
+                    <button onclick="alterarQtd({{ item.id }}, -1)">−</button>
+                    <span id="qtd-{{ item.id }}">{{ item.quantidade }}</span>
+                    <button onclick="alterarQtd({{ item.id }}, 1)">+</button>
+                </div>
             </div>
 
             <div class="item-linha item-subtotal">
@@ -455,23 +483,29 @@
 
 
     <div class="cupom-box">
-        <strong>🎟️ Cupom de desconto</strong>
+    <strong>🎟️ Cupom de desconto</strong>
 
-        {% if carrinho.cupom %}
-            <div class="cupom-aplicado">
-                🎉 Você economizou
-                <strong>{{ carrinho.cupom.desconto_percentual }}%</strong>
-                com o cupom
-                <strong>{{ carrinho.cupom.codigo }}</strong>
-            </div>
-        {% else %}
-            <div class="cupom-input">
-                <input type="text" id="cupomCodigo" placeholder="Digite seu cupom">
-                <button onclick="aplicarCupom()">Aplicar</button>
-            </div>
-            <small id="cupom-msg" style="color:red;"></small>
-        {% endif %}
-    </div>
+    {% if not cupom_permitido %}
+        <div class="cupom-aplicado" style="background:#fff3cd;border-color:#ffc107;color:#856404;">
+            ⚠️ Cupons não são válidos para combos ou promoções.
+        </div>
+
+    {% elif carrinho.cupom %}
+        <div class="cupom-aplicado">
+            🎉 Você economizou
+            <strong>{{ carrinho.cupom.desconto_percentual }}%</strong>
+            com o cupom
+            <strong>{{ carrinho.cupom.codigo }}</strong>
+        </div>
+
+    {% else %}
+        <div class="cupom-input">
+            <input type="text" id="cupomCodigo" placeholder="Digite seu cupom">
+            <button onclick="aplicarCupom()">Aplicar</button>
+        </div>
+        <small id="cupom-msg" style="color:red;"></small>
+    {% endif %}
+</div>
 
 
     <div class="resumo-box">
@@ -622,6 +656,26 @@ function confirmarLimparCarrinho() {
         }
     })
     .then(() => location.reload());
+}
+
+function alterarQtd(itemId, delta) {
+    fetch("{% url 'alterar_quantidade_item' %}", {
+        method: "POST",
+        headers: {
+            "X-CSRFToken": "{{ csrf_token }}",
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            item_id: itemId,
+            delta: delta
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.status === "ok") {
+            location.reload(); // simples e seguro por enquanto
+        }
+    });
 }
 
 
