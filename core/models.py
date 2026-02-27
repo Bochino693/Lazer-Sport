@@ -283,6 +283,14 @@ class PecasReposicao(Prime):
     preco_fornecedor = models.DecimalField(decimal_places=2, max_digits=9, null=True, blank=True)
     descricao_peca = models.CharField(max_length=210)
 
+    CHOICE_VOLTZ = [
+        ('5V', '5 Volts'),
+        ('12v', '12 Volts'),
+        ('sem_volts', 'Sem Voltagem')
+    ]
+
+    voltagem = models.CharField(max_length=99, choices=CHOICE_VOLTZ, null=True, blank=True)
+
     # ⭐ novo campo
     ganho_potencial = models.DecimalField(
         decimal_places=2,
@@ -669,6 +677,13 @@ class Pedido(Prime):
         choices=STATUS_CHOICES,
         default='criado'
     )
+
+    TIPO_ENTREGA = [
+        ('retirada', 'Retirada'),
+        ('frete', 'Frete')
+    ]
+
+    tipo_entrega = models.CharField(max_length=90, choices=TIPO_ENTREGA, null=True, blank=True)
 
     # 🚚 logística (preenchido só quando sair para entrega)
     distancia_km = models.DecimalField(

@@ -78,6 +78,7 @@ class PecasReposicaoAdmin(admin.ModelAdmin):
         "nome",
         "preco_venda",
         "preco_fornecedor",
+        "voltagem"
     )
     list_display_links = ("id", "nome")
     search_fields = ("nome", "descricao_peca")
