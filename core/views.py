@@ -1026,6 +1026,14 @@ class PedidoAdminView(AdminOnlyMixin, View):
         return render(request, 'pedidos_adm.html', ctx)
 
 
+import re
+from django.shortcuts import render, redirect
+from django.views import View
+from django.contrib import messages
+from django.contrib.auth.models import User
+from django.contrib.auth import authenticate, login
+
+
 class RegistrarView(View):
     template_name = "register.html"
 
@@ -1045,10 +1053,9 @@ class RegistrarView(View):
             messages.error(request, "Preencha todos os campos.")
             return render(request, self.template_name)
 
-        # ✅ valida formato telefone
-        import re
-        if not re.match(r'^\(\d{2}\)\d{4}-\d{4}$', telefone):
-            messages.error(request, "Telefone inválido. Use (11)XXXX-XXXX")
+        # ✅ VALIDAÇÃO CORRIGIDA: aceita (XX)XXXX-XXXX e (XX)9XXXX-XXXX
+        if not re.match(r'^\(\d{2}\)\d{4,5}-\d{4}$', telefone):
+            messages.error(request, "Telefone inválido. Formatos aceitos: (11)9XXXX-XXXX ou (11)XXXX-XXXX.")
             return render(request, self.template_name)
 
         if User.objects.filter(username=username).exists():
@@ -1058,8 +1065,6 @@ class RegistrarView(View):
         if User.objects.filter(email=email).exists():
             messages.error(request, "Este e-mail já está registrado.")
             return render(request, self.template_name)
-
-        from django.contrib.auth import authenticate, login
 
         # ✅ cria usuário
         user = User.objects.create_user(
@@ -1091,6 +1096,9 @@ class RegistrarView(View):
             request,
             f"Conta criada com sucesso! Bem-vindo(a), {first_name}."
         )
+
+        # Dica: Como você já fez o login do usuário acima,
+        # talvez seja melhor redirecionar para a "home" ou "dashboard" em vez de "login".
         return redirect("login")
 
 

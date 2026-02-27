@@ -5,6 +5,15 @@ from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 import requests
 
+def mapear_tipo_item(model_name: str) -> str:
+    mapa = {
+        "brinquedo": "brinquedo",
+        "combo": "combo",
+        "promocao": "promocao",
+        "pecareposicao": "peca",
+        "peca": "peca",
+    }
+    return mapa.get(model_name.lower(), "brinquedo")
 
 class Prime(models.Model):
     ativo = models.BooleanField(default=True)
@@ -54,12 +63,14 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.db.models import UniqueConstraint
 
+
 def validar_telefone(value):
     padrao = r'^\(\d{2}\)\d{4,5}-\d{4}$'
     if not re.match(padrao, value):
         raise ValidationError(
             "Telefone deve estar no formato (11)91234-5678 ou (11)1234-5678"
         )
+
 
 class ClientePerfil(models.Model):
     user = models.OneToOneField(
@@ -84,8 +95,8 @@ class ClientePerfil(models.Model):
 
     def clean(self):
         if ClientePerfil.objects.filter(
-            user__username=self.user.username,
-            user__email=self.user.email
+                user__username=self.user.username,
+                user__email=self.user.email
         ).exclude(pk=self.pk).exists():
             raise ValidationError("Já existe um perfil com esse usuário e email.")
 
@@ -565,7 +576,6 @@ class Carrinho(Prime):
 
     mp_payment_id = models.CharField(max_length=100, null=True, blank=True)
 
-
     @property
     def total_bruto(self):
         total = sum(
@@ -589,7 +599,9 @@ class Carrinho(Prime):
         return (self.total_bruto - self.valor_desconto).quantize(Decimal('0.01'))
 
     def __str__(self):
-        return f"Carrinho de {self.cliente.user.username}"
+        if self.cliente and self.cliente.user:
+            return f"Carrinho de {self.cliente.user.username}"
+        return f"Carrinho #{self.id}"
 
 
 class ItemCarrinho(Prime):
@@ -624,7 +636,8 @@ class ItemCarrinho(Prime):
 
     @property
     def subtotal(self):
-        return round(self.preco_unitario * self.quantidade, 2)
+        valor = Decimal(self.preco_unitario) * self.quantidade
+        return valor.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
     def __str__(self):
         return f"Item {self.item} (x{self.quantidade})"
@@ -733,32 +746,46 @@ class Pedido(Prime):
 
     observacoes = models.TextField(blank=True)
 
+    def mapear_tipo_item(model_name):
+        mapa = {
+            "brinquedo": "brinquedo",
+            "combo": "combo",
+            "promocao": "promocao",
+            "peca": "peca",
+        }
+        return mapa.get(model_name, "brinquedo")
+
     def __str__(self):
         if self.cliente and self.cliente.user:
             return f"Pedido #{self.id} - {self.cliente.user.username}"
         return f"Pedido #{self.id}"
 
 
+
 class ItemPedido(Prime):
+    TIPO_ITEM_CHOICES = (
+        ('brinquedo', 'Brinquedo'),
+        ('combo', 'Combo'),
+        ('promocao', 'Promoção'),
+        ('peca', 'Peça'),
+    )
+
     pedido = models.ForeignKey(
         Pedido,
         on_delete=models.CASCADE,
         related_name='itens'
     )
 
-    # referência apenas histórica
     content_type = models.ForeignKey(ContentType, on_delete=models.SET_NULL, null=True)
     object_id = models.PositiveIntegerField(null=True)
     item_original = GenericForeignKey('content_type', 'object_id')
 
     nome_item = models.CharField(max_length=255)
+
+    # ✅ AGORA CORRETO
     tipo_item = models.CharField(
         max_length=30,
-        choices=(
-            ('brinquedo', 'Brinquedo'),
-            ('combo', 'Combo'),
-            ('promocao', 'Promoção'),
-        )
+        choices=TIPO_ITEM_CHOICES
     )
 
     preco_unitario = models.DecimalField(max_digits=10, decimal_places=2)
