@@ -815,26 +815,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function iniciarVerificacao(carrinhoId) {
 
-    const intervalo = setInterval(function() {
+    const intervalo = setInterval(async function() {
 
-        fetch(`/verificar-pagamento/?carrinho_id=${carrinhoId}`)
-            .then(response => response.json())
-            .then(data => {
+        try {
+            const response = await fetch(`/verificar-pagamento/?carrinho_id=${carrinhoId}`);
+            const data = await response.json();
 
-                if (data.pago) {
+            if (data.pago) {
 
-                    clearInterval(intervalo);
+                clearInterval(intervalo);
 
-                    // ✅ MOSTRA MODAL
-                    const modal = document.getElementById("modal-aguarde");
-                    modal.style.display = "flex";
+                const modal = document.getElementById("modal-aguarde");
+                modal.style.display = "flex";
 
-                    // ⏳ espera 10 segundos
-                    setTimeout(() => {
-                        window.location.href = data.redirect_url;
-                    }, 10000);
-                }
-            });
+                // 🔥 redireciona após 4s (melhor UX)
+                setTimeout(() => {
+                    window.location.href = data.redirect_url;
+                }, 4000);
+            }
+
+        } catch (e) {
+            console.error("Erro verificando pagamento:", e);
+        }
 
     }, 3000);
 }

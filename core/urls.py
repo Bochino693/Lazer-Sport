@@ -123,6 +123,7 @@ urlpatterns = [
 
     path("ajax/filtrar-pecas/", filtrar_pecas_ajax, name="filtrar_pecas_ajax"),
     path("api/webhook-mp/", webhook_mercadopago, name="webhook_mp"),
+    path("verificar-pagamento/", verificar_pagamento, name="verificar_pagamento"),
 
     path('processar_cartao/', processar_cartao, name='processar_cartao'),
 

@@ -1963,64 +1963,63 @@ from .models import Carrinho, Pedido, ItemPedido
 import logging
 logger = logging.getLogger(__name__)
 
-
 def processar_pagamento_mp(data):
+    try:
+        if data.get("type") != "payment":
+            return
 
-    if data.get("type") != "payment":
-        return
+        payment_id = data.get("data", {}).get("id")
+        if not payment_id:
+            return
 
-    payment_id = data.get("data", {}).get("id")
-    if not payment_id:
-        return
+        sdk = mercadopago.SDK(settings.MP_ACCESS_TOKEN)
+        payment = sdk.payment().get(payment_id)["response"]
 
-    sdk = mercadopago.SDK(settings.MP_ACCESS_TOKEN)
-    payment = sdk.payment().get(payment_id)["response"]
+        if payment.get("status") != "approved":
+            return
 
-    if payment.get("status") != "approved":
-        return
+        carrinho_id = payment.get("external_reference")
+        if not carrinho_id:
+            return
 
-    carrinho_id = payment.get("external_reference")
-    if not carrinho_id:
-        return
+        carrinho = Carrinho.objects.filter(id=carrinho_id).first()
+        if not carrinho:
+            return
 
-    carrinho = Carrinho.objects.filter(id=carrinho_id).first()
-    if not carrinho:
-        return
+        if Pedido.objects.filter(mp_payment_id=payment_id).exists():
+            return
 
-    if Pedido.objects.filter(mp_payment_id=payment_id).exists():
-        return
-
-    with transaction.atomic():
-        pedido = Pedido.objects.create(
-            cliente=carrinho.cliente,
-            status="pago",
-            forma_pagamento="pix",
-            total_bruto=carrinho.total_bruto,
-            valor_desconto=carrinho.valor_desconto,
-            total_liquido=carrinho.total_liquido,
-            mp_payment_id=payment_id,
-            mp_status="approved",
-            external_reference=str(carrinho.id),
-        )
-
-        for item in carrinho.itens.all():
-            ItemPedido.objects.create(
-                pedido=pedido,
-                content_type=item.content_type,
-                object_id=item.object_id,
-                nome_item=str(item.item),
-                tipo_item=item.content_type.model,
-                preco_unitario=item.preco_unitario,
-                quantidade=item.quantidade,
-                subtotal=item.subtotal
+        with transaction.atomic():
+            pedido = Pedido.objects.create(
+                cliente=carrinho.cliente,
+                status="pago",
+                forma_pagamento="pix",
+                total_bruto=carrinho.total_bruto,
+                valor_desconto=carrinho.valor_desconto,
+                total_liquido=carrinho.total_liquido,
+                mp_payment_id=payment_id,
+                mp_status="approved",
+                external_reference=str(carrinho.id),
             )
 
-        carrinho.itens.all().delete()
-        carrinho.cupom = None
-        carrinho.save()
+            for item in carrinho.itens.all():
+                ItemPedido.objects.create(
+                    pedido=pedido,
+                    content_type=item.content_type,
+                    object_id=item.object_id,
+                    nome_item=str(item.item),
+                    tipo_item=item.content_type.model,
+                    preco_unitario=item.preco_unitario,
+                    quantidade=item.quantidade,
+                    subtotal=item.subtotal
+                )
 
+            carrinho.itens.all().delete()
+            carrinho.cupom = None
+            carrinho.save()
 
-import threading
+    except Exception as e:
+        logger.exception("ERRO AO PROCESSAR PAGAMENTO MP")
 
 @csrf_exempt
 def webhook_mercadopago(request):
@@ -2034,10 +2033,31 @@ def webhook_mercadopago(request):
         return HttpResponse(status=200)
 
     # 🔥 processa em background (rápido)
-    threading.Thread(target=processar_pagamento_mp, args=(data,)).start()
+    processar_pagamento_mp(data)
 
     return HttpResponse(status=200)
 
+
+from django.http import JsonResponse
+
+def verificar_pagamento(request):
+    carrinho_id = request.GET.get("carrinho_id")
+
+    if not carrinho_id:
+        return JsonResponse({"pago": False})
+
+    pedido = Pedido.objects.filter(
+        external_reference=str(carrinho_id),
+        status="pago"
+    ).first()
+
+    if pedido:
+        return JsonResponse({
+            "pago": True,
+            "redirect_url": "/meus-pedidos/"  # ajuste sua URL real
+        })
+
+    return JsonResponse({"pago": False})
 
 @csrf_exempt
 def processar_cartao(request):
