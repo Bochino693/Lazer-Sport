@@ -1963,6 +1963,65 @@ from .models import Carrinho, Pedido, ItemPedido
 import logging
 logger = logging.getLogger(__name__)
 
+
+def processar_pagamento_mp(data):
+
+    if data.get("type") != "payment":
+        return
+
+    payment_id = data.get("data", {}).get("id")
+    if not payment_id:
+        return
+
+    sdk = mercadopago.SDK(settings.MP_ACCESS_TOKEN)
+    payment = sdk.payment().get(payment_id)["response"]
+
+    if payment.get("status") != "approved":
+        return
+
+    carrinho_id = payment.get("external_reference")
+    if not carrinho_id:
+        return
+
+    carrinho = Carrinho.objects.filter(id=carrinho_id).first()
+    if not carrinho:
+        return
+
+    if Pedido.objects.filter(mp_payment_id=payment_id).exists():
+        return
+
+    with transaction.atomic():
+        pedido = Pedido.objects.create(
+            cliente=carrinho.cliente,
+            status="pago",
+            forma_pagamento="pix",
+            total_bruto=carrinho.total_bruto,
+            valor_desconto=carrinho.valor_desconto,
+            total_liquido=carrinho.total_liquido,
+            mp_payment_id=payment_id,
+            mp_status="approved",
+            external_reference=str(carrinho.id),
+        )
+
+        for item in carrinho.itens.all():
+            ItemPedido.objects.create(
+                pedido=pedido,
+                content_type=item.content_type,
+                object_id=item.object_id,
+                nome_item=str(item.item),
+                tipo_item=item.content_type.model,
+                preco_unitario=item.preco_unitario,
+                quantidade=item.quantidade,
+                subtotal=item.subtotal
+            )
+
+        carrinho.itens.all().delete()
+        carrinho.cupom = None
+        carrinho.save()
+
+
+import threading
+
 @csrf_exempt
 def webhook_mercadopago(request):
 
@@ -1971,100 +2030,13 @@ def webhook_mercadopago(request):
 
     try:
         data = json.loads(request.body.decode("utf-8"))
-        print("MP WEBHOOK:", data)
-    except Exception as e:
-        logger.exception("Erro lendo JSON")
+    except Exception:
         return HttpResponse(status=200)
 
-    try:
-        if data.get("type") != "payment":
-            return HttpResponse(status=200)
-
-        payment_id = data.get("data", {}).get("id")
-        if not payment_id:
-            return HttpResponse(status=200)
-
-        sdk = mercadopago.SDK(settings.MP_ACCESS_TOKEN)
-
-        payment_response = sdk.payment().get(payment_id)
-        payment = payment_response.get("response", {})
-
-        print("PAYMENT STATUS:", payment.get("status"))
-
-        if payment.get("status") != "approved":
-            return HttpResponse(status=200)
-
-        carrinho_id = payment.get("external_reference")
-        if not carrinho_id:
-            logger.error("external_reference vazio")
-            return HttpResponse(status=200)
-
-        carrinho = Carrinho.objects.filter(id=carrinho_id).first()
-        if not carrinho:
-            logger.error("Carrinho não encontrado")
-            return HttpResponse(status=200)
-
-        # 🔒 evita duplicação
-        if Pedido.objects.filter(mp_payment_id=payment_id).exists():
-            return HttpResponse(status=200)
-
-        with transaction.atomic():
-
-            pedido = Pedido.objects.create(
-                cliente=carrinho.cliente,
-                status="pago",
-                forma_pagamento="pix",
-                total_bruto=carrinho.total_bruto,
-                valor_desconto=carrinho.valor_desconto,
-                total_liquido=carrinho.total_liquido,
-                mp_payment_id=payment_id,
-                mp_status="approved",
-                external_reference=str(carrinho.id),
-            )
-
-            for item in carrinho.itens.all():
-                ItemPedido.objects.create(
-                    pedido=pedido,
-                    content_type=item.content_type,
-                    object_id=item.object_id,
-                    nome_item=str(item.item),
-                    tipo_item=item.content_type.model,
-                    preco_unitario=item.preco_unitario,
-                    quantidade=item.quantidade,
-                    subtotal=item.subtotal
-                )
-
-            carrinho.itens.all().delete()
-            carrinho.cupom = None
-            carrinho.save()
-
-    except Exception as e:
-        logger.exception("ERRO NO WEBHOOK MP")
-        return HttpResponse(status=200)
+    # 🔥 processa em background (rápido)
+    threading.Thread(target=processar_pagamento_mp, args=(data,)).start()
 
     return HttpResponse(status=200)
-
-
-@require_GET
-def verificar_pagamento(request):
-    carrinho_id = request.GET.get("carrinho_id")
-
-    if not carrinho_id:
-        return JsonResponse({"pago": False})
-
-    pedido = Pedido.objects.filter(
-        external_reference=str(carrinho_id),
-        mp_status="approved",
-        forma_pagamento="pix"
-    ).first()
-
-    if pedido:
-        return JsonResponse({
-            "pago": True,
-            "redirect_url": f"/pedido/{pedido.id}/sucesso/"
-        })
-
-    return JsonResponse({"pago": False})
 
 
 @csrf_exempt
