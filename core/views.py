@@ -1965,28 +1965,38 @@ logger = logging.getLogger(__name__)
 
 def processar_pagamento_mp(data):
     try:
-        if data.get("type") != "payment":
-            return
+        logger.info(f"WEBHOOK MP RECEBIDO: {data}")
 
         payment_id = data.get("data", {}).get("id")
         if not payment_id:
+            logger.warning("MP: payment_id ausente")
             return
 
         sdk = mercadopago.SDK(settings.MP_ACCESS_TOKEN)
-        payment = sdk.payment().get(payment_id)["response"]
+
+        try:
+            payment_response = sdk.payment().get(payment_id)
+            payment = payment_response.get("response", {})
+        except Exception:
+            logger.exception("MP: erro ao consultar pagamento")
+            return
 
         if payment.get("status") != "approved":
+            logger.info(f"MP: pagamento ainda não aprovado ({payment.get('status')})")
             return
 
         carrinho_id = payment.get("external_reference")
         if not carrinho_id:
+            logger.warning("MP: external_reference ausente")
             return
 
         carrinho = Carrinho.objects.filter(id=carrinho_id).first()
         if not carrinho:
+            logger.warning(f"MP: carrinho {carrinho_id} não encontrado")
             return
 
         if Pedido.objects.filter(mp_payment_id=payment_id).exists():
+            logger.info("MP: pedido já existe")
             return
 
         with transaction.atomic():
@@ -2018,8 +2028,11 @@ def processar_pagamento_mp(data):
             carrinho.cupom = None
             carrinho.save()
 
-    except Exception as e:
+        logger.info("MP: pedido criado com sucesso")
+
+    except Exception:
         logger.exception("ERRO AO PROCESSAR PAGAMENTO MP")
+
 
 @csrf_exempt
 def webhook_mercadopago(request):
