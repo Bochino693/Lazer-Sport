@@ -2014,17 +2014,23 @@ def processar_pagamento_mp(data):
             if Pedido.objects.filter(mp_payment_id=str(payment_id)).exists():
                 return
 
-            pedido = Pedido.objects.create(
-                cliente=carrinho.cliente,
-                status="pago",
-                forma_pagamento="pix",
-                total_bruto=carrinho.total_bruto,
-                valor_desconto=carrinho.valor_desconto,
-                total_liquido=carrinho.total_liquido,
+            pedido, created = Pedido.objects.get_or_create(
                 mp_payment_id=str(payment_id),
-                mp_status=status,
-                external_reference=str(carrinho_id),
+                defaults={
+                    "cliente": carrinho.cliente,
+                    "status": "pago",
+                    "forma_pagamento": "pix",
+                    "total_bruto": carrinho.total_bruto,
+                    "valor_desconto": carrinho.valor_desconto,
+                    "total_liquido": carrinho.total_liquido,
+                    "mp_status": status,
+                    "external_reference": str(carrinho_id),
+                }
             )
+
+            if not created:
+                logger.info(f"[MP] Pedido já existia para {payment_id}")
+                return
 
             itens = []
 
@@ -2060,23 +2066,10 @@ def processar_pagamento_mp(data):
     except Exception:
         logger.exception("[MP] Erro fatal ao processar pagamento")
 
-
-
-import json
-import logging
-
-from django.http import HttpResponse
-from django.views.decorators.csrf import csrf_exempt
-
-logger = logging.getLogger(__name__)
-
+import threading
 
 @csrf_exempt
 def webhook_mercadopago(request):
-    """
-    Webhook robusto e compatível com Gunicorn.
-    SEM thread.
-    """
     if request.method != "POST":
         return HttpResponse(status=200)
 
@@ -2087,15 +2080,21 @@ def webhook_mercadopago(request):
         payment_id = payload.get("data", {}).get("id")
 
         if payment_id:
-            processar_pagamento_mp(payload)
+            # 🚀 processa em background
+            threading.Thread(
+                target=processar_pagamento_mp,
+                args=(payload,),
+                daemon=True
+            ).start()
 
     except Exception:
         logger.exception("[MP] Erro ao receber webhook")
 
+    # ⚡ responde IMEDIATO
     return HttpResponse(status=200)
 
-from django.http import JsonResponse
 
+from django.http import JsonResponse
 
 
 def verificar_pagamento(request):
