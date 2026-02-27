@@ -812,6 +812,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+
 function iniciarVerificacao(carrinhoId) {
 
     const intervalo = setInterval(function() {
@@ -824,16 +825,20 @@ function iniciarVerificacao(carrinhoId) {
 
                     clearInterval(intervalo);
 
-                    // Fecha modal
-                    document.getElementById("modalPix").style.display = "none";
+                    // ✅ MOSTRA MODAL
+                    const modal = document.getElementById("modal-aguarde");
+                    modal.style.display = "flex";
 
-                    // Redireciona
-                    window.location.href = data.redirect_url;
+                    // ⏳ espera 10 segundos
+                    setTimeout(() => {
+                        window.location.href = data.redirect_url;
+                    }, 10000);
                 }
             });
 
-    }, 3000); // verifica a cada 3 segundos
+    }, 3000);
 }
+
 
     /* ==============================
        COPIAR PIX

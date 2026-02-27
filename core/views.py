@@ -1960,6 +1960,9 @@ from django.db import transaction
 
 from .models import Carrinho, Pedido, ItemPedido
 
+import logging
+logger = logging.getLogger(__name__)
+
 @csrf_exempt
 def webhook_mercadopago(request):
 
@@ -1968,63 +1971,76 @@ def webhook_mercadopago(request):
 
     try:
         data = json.loads(request.body.decode("utf-8"))
-    except Exception:
+        print("MP WEBHOOK:", data)
+    except Exception as e:
+        logger.exception("Erro lendo JSON")
         return HttpResponse(status=200)
 
-    if data.get("type") != "payment":
-        return HttpResponse(status=200)
+    try:
+        if data.get("type") != "payment":
+            return HttpResponse(status=200)
 
-    payment_id = data.get("data", {}).get("id")
-    if not payment_id:
-        return HttpResponse(status=200)
+        payment_id = data.get("data", {}).get("id")
+        if not payment_id:
+            return HttpResponse(status=200)
 
-    sdk = mercadopago.SDK(settings.MP_ACCESS_TOKEN)
-    payment = sdk.payment().get(payment_id)["response"]
+        sdk = mercadopago.SDK(settings.MP_ACCESS_TOKEN)
 
-    if payment.get("status") != "approved":
-        return HttpResponse(status=200)
+        payment_response = sdk.payment().get(payment_id)
+        payment = payment_response.get("response", {})
 
-    carrinho_id = payment.get("external_reference")
-    if not carrinho_id:
-        return HttpResponse(status=200)
+        print("PAYMENT STATUS:", payment.get("status"))
 
-    carrinho = Carrinho.objects.filter(id=carrinho_id).first()
-    if not carrinho:
-        return HttpResponse(status=200)
+        if payment.get("status") != "approved":
+            return HttpResponse(status=200)
 
-    # 🔒 evita duplicação
-    if Pedido.objects.filter(mp_payment_id=payment_id).exists():
-        return HttpResponse(status=200)
+        carrinho_id = payment.get("external_reference")
+        if not carrinho_id:
+            logger.error("external_reference vazio")
+            return HttpResponse(status=200)
 
-    with transaction.atomic():
+        carrinho = Carrinho.objects.filter(id=carrinho_id).first()
+        if not carrinho:
+            logger.error("Carrinho não encontrado")
+            return HttpResponse(status=200)
 
-        pedido = Pedido.objects.create(
-            cliente=carrinho.cliente,
-            status="pago",
-            forma_pagamento="pix",
-            total_bruto=carrinho.total_bruto,
-            valor_desconto=carrinho.valor_desconto,
-            total_liquido=carrinho.total_liquido,
-            mp_payment_id=payment_id,
-            mp_status="approved",
-            external_reference=str(carrinho.id),  # 🔥 NOVO
-        )
+        # 🔒 evita duplicação
+        if Pedido.objects.filter(mp_payment_id=payment_id).exists():
+            return HttpResponse(status=200)
 
-        for item in carrinho.itens.all():
-            ItemPedido.objects.create(
-                pedido=pedido,
-                content_type=item.content_type,
-                object_id=item.object_id,
-                nome_item=str(item.item),
-                tipo_item=item.content_type.model,
-                preco_unitario=item.preco_unitario,
-                quantidade=item.quantidade,
-                subtotal=item.subtotal
+        with transaction.atomic():
+
+            pedido = Pedido.objects.create(
+                cliente=carrinho.cliente,
+                status="pago",
+                forma_pagamento="pix",
+                total_bruto=carrinho.total_bruto,
+                valor_desconto=carrinho.valor_desconto,
+                total_liquido=carrinho.total_liquido,
+                mp_payment_id=payment_id,
+                mp_status="approved",
+                external_reference=str(carrinho.id),
             )
 
-        carrinho.itens.all().delete()
-        carrinho.cupom = None
-        carrinho.save()
+            for item in carrinho.itens.all():
+                ItemPedido.objects.create(
+                    pedido=pedido,
+                    content_type=item.content_type,
+                    object_id=item.object_id,
+                    nome_item=str(item.item),
+                    tipo_item=item.content_type.model,
+                    preco_unitario=item.preco_unitario,
+                    quantidade=item.quantidade,
+                    subtotal=item.subtotal
+                )
+
+            carrinho.itens.all().delete()
+            carrinho.cupom = None
+            carrinho.save()
+
+    except Exception as e:
+        logger.exception("ERRO NO WEBHOOK MP")
+        return HttpResponse(status=200)
 
     return HttpResponse(status=200)
 
