@@ -127,10 +127,17 @@ class HomeView(View):
         # ---------------------------
         # peças (CORRETO)
         # ---------------------------
+        categoria_ativa = request.GET.get("categoria")
+
         pecas_lista = PecasReposicao.objects.prefetch_related(
             "imagem_peca_reposicao",
             "categoria_peca",
         )
+
+        if categoria_ativa:
+            pecas_lista = pecas_lista.filter(
+                categoria_peca__id=categoria_ativa
+            ).distinct()
 
         paginator_pecas = Paginator(pecas_lista, 12)
         page_number_pecas = request.GET.get("page_pecas")
@@ -142,6 +149,7 @@ class HomeView(View):
             "ordenar": filtro,
             "eventos": eventos,
             "categorias_peca": categorias_peca,
+            "categoria_ativa": categoria_ativa,
             "pecas_reposicao": page_obj_pecas,  # ✅ AGORA PAGINADO
             "pecas_count": PecasReposicao.objects.count(),
             "pecas_preview": pecas_preview,
@@ -153,6 +161,39 @@ class HomeView(View):
         }
 
         return render(request, "home.html", context)
+
+from django.http import HttpResponse
+from django.template.loader import render_to_string
+from django.core.paginator import Paginator
+
+def filtrar_pecas_ajax(request):
+    categoria_ativa = request.GET.get("categoria")
+    page_number_pecas = request.GET.get("page_pecas")
+
+    pecas_lista = PecasReposicao.objects.prefetch_related(
+        "imagem_peca_reposicao",
+        "categoria_peca",
+    )
+
+    if categoria_ativa:
+        pecas_lista = pecas_lista.filter(
+            categoria_peca__id=categoria_ativa
+        ).distinct()
+
+    paginator_pecas = Paginator(pecas_lista, 12)
+    page_obj_pecas = paginator_pecas.get_page(page_number_pecas)
+
+    html = render_to_string(
+        "home.html",
+        {
+            "pecas_reposicao": page_obj_pecas,
+            "categoria_ativa": categoria_ativa,
+        },
+        request=request,
+    )
+
+    return HttpResponse(html)
+
 
 from .models import PecasReposicao
 
@@ -1701,28 +1742,63 @@ def limpar_carrinho(request):
     return JsonResponse({'status': 'success'})
 
 
+class CarrinhoView(LoginRequiredMixin, View):
+
+    def get(self, request):
+        if not hasattr(request.user, 'perfil'):
+            return redirect('home')
+
+        cliente = request.user.perfil
+
+        carrinho = Carrinho.objects.select_related('cupom').get(cliente=cliente)
+
+        itens = (
+            ItemCarrinho.objects
+            .filter(carrinho=carrinho)
+            .select_related('content_type')
+        )
+
+        # 🔥 NOVO — valida cupom permitido
+        cupom_permitido = False
+
+        for item in itens:
+            model = item.content_type.model
+
+            if model in ['brinquedos', 'pecasreposicao']:
+                cupom_permitido = True
+                break
+
+        context = {
+            'carrinho': carrinho,
+            'itens': itens,
+            'cupom_permitido': cupom_permitido,  # ⭐ IMPORTANTE
+        }
+
+        return render(request, 'carrinho.html', context)
+
+
+from django.views.decorators.http import require_POST
+from django.http import JsonResponse
+import json
+
+@require_POST
 @login_required
-def carrinho_view(request):
-    if not hasattr(request.user, 'perfil'):
-        return redirect('home')
+def alterar_quantidade_item(request):
+    data = json.loads(request.body)
+    item_id = data.get("item_id")
+    delta = int(data.get("delta", 0))
 
-    cliente = request.user.perfil
+    item = ItemCarrinho.objects.get(id=item_id)
 
-    carrinho = Carrinho.objects.select_related('cupom').get(cliente=cliente)
+    nova_qtd = item.quantidade + delta
 
-    itens = (
-        ItemCarrinho.objects
-        .filter(carrinho=carrinho)
-        .select_related('content_type')
-    )
+    if nova_qtd <= 0:
+        item.delete()
+    else:
+        item.quantidade = nova_qtd
+        item.save()
 
-    context = {
-        'carrinho': carrinho,
-        'itens': itens,
-    }
-
-    return render(request, 'carrinho.html', context)
-
+    return JsonResponse({"status": "ok"})
 
 import json
 from django.http import JsonResponse
@@ -1829,6 +1905,151 @@ class PaymentView(View):
 
 
 from django.views.decorators.csrf import csrf_exempt
+
+import mercadopago
+from django.conf import settings
+from django.http import JsonResponse
+from decimal import Decimal
+from .models import Pedido
+def gerar_pix(request):
+
+    carrinho_id = request.GET.get("carrinho_id")
+    carrinho = Carrinho.objects.get(id=carrinho_id)
+
+    sdk = mercadopago.SDK(settings.MP_ACCESS_TOKEN)
+
+    payment_data = {
+        "transaction_amount": float(carrinho.total_liquido),
+        "description": f"Pagamento Carrinho #{carrinho.id}",
+        "payment_method_id": "pix",
+        "external_reference": str(carrinho.id),
+
+        # 🔥 IMPORTANTE
+        "notification_url": "https://lazersport.com.br/api/webhook-mp/",
+
+        "payer": {
+            "email": request.user.email if request.user.is_authenticated else "cliente@email.com"
+        }
+    }
+
+    response = sdk.payment().create(payment_data)
+    payment = response["response"]
+
+    carrinho.mp_payment_id = payment["id"]
+    carrinho.save()
+
+
+    return JsonResponse({
+        "qr_code": payment["point_of_interaction"]["transaction_data"]["qr_code_base64"],
+        "pix_copia_cola": payment["point_of_interaction"]["transaction_data"]["qr_code"],
+        "valor": f"{carrinho.total_liquido:.2f}"
+    })
+
+from django.db import transaction
+from django.views.decorators.http import require_GET
+import json
+import hmac
+import hashlib
+import os
+import mercadopago
+
+from django.conf import settings
+from django.http import HttpResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.db import transaction
+
+from .models import Carrinho, Pedido, ItemPedido
+
+@csrf_exempt
+def webhook_mercadopago(request):
+
+    if request.method != "POST":
+        return HttpResponse(status=200)
+
+    try:
+        data = json.loads(request.body.decode("utf-8"))
+    except Exception:
+        return HttpResponse(status=200)
+
+    if data.get("type") != "payment":
+        return HttpResponse(status=200)
+
+    payment_id = data.get("data", {}).get("id")
+    if not payment_id:
+        return HttpResponse(status=200)
+
+    sdk = mercadopago.SDK(settings.MP_ACCESS_TOKEN)
+    payment = sdk.payment().get(payment_id)["response"]
+
+    if payment.get("status") != "approved":
+        return HttpResponse(status=200)
+
+    carrinho_id = payment.get("external_reference")
+    if not carrinho_id:
+        return HttpResponse(status=200)
+
+    carrinho = Carrinho.objects.filter(id=carrinho_id).first()
+    if not carrinho:
+        return HttpResponse(status=200)
+
+    # 🔒 evita duplicação
+    if Pedido.objects.filter(mp_payment_id=payment_id).exists():
+        return HttpResponse(status=200)
+
+    with transaction.atomic():
+
+        pedido = Pedido.objects.create(
+            cliente=carrinho.cliente,
+            status="pago",
+            forma_pagamento="pix",
+            total_bruto=carrinho.total_bruto,
+            valor_desconto=carrinho.valor_desconto,
+            total_liquido=carrinho.total_liquido,
+            mp_payment_id=payment_id,
+            mp_status="approved",
+        )
+
+        for item in carrinho.itens.all():
+            ItemPedido.objects.create(
+                pedido=pedido,
+                content_type=item.content_type,
+                object_id=item.object_id,
+                nome_item=str(item.item),
+                tipo_item=item.content_type.model,
+                preco_unitario=item.preco_unitario,
+                quantidade=item.quantidade,
+                subtotal=item.subtotal
+            )
+
+        carrinho.itens.all().delete()
+        carrinho.cupom = None
+        carrinho.save()
+
+    return HttpResponse(status=200)
+
+@require_GET
+def verificar_pagamento(request):
+
+    carrinho_id = request.GET.get("carrinho_id")
+
+    if not carrinho_id:
+        return JsonResponse({"pago": False})
+
+    pedido = Pedido.objects.filter(
+        mp_status="approved",
+        forma_pagamento="pix",
+        mp_payment_id__isnull=False,
+        cliente__carrinhos__id=carrinho_id
+    ).first()
+
+    if pedido:
+        return JsonResponse({
+            "pago": True,
+            "redirect_url": f"/pedido/{pedido.id}/sucesso/"
+        })
+
+    return JsonResponse({"pago": False})
+
 
 
 @csrf_exempt

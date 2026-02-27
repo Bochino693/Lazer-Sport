@@ -424,7 +424,7 @@
 </nav>
 
 
-<section class="payment-container">
+<section class="payment-container" id="content">
 
     <header class="payment-header">
         <h1>Pagamento</h1>
@@ -443,10 +443,8 @@
         {% for item in itens %}
             <div class="resumo-item">
                 <span>{{ item.item }}</span>
-                <span>
-                    {{ item.quantidade|floatformat:0 }} ×
-                </span>
-                <strong>
+                <span>{{ item.quantidade }} ×</span>
+                <strong class="money">
                     R$ {{ item.subtotal|floatformat:2 }}
                 </strong>
             </div>
@@ -499,16 +497,33 @@
             💳 Cartão
         </label>
 
-        <!-- ===== PIX BOX ===== -->
-<div id="pix-box" class="payment-details" style="text-align:center; padding:30px; border-radius:18px; background:#f8f9ff; box-shadow:0 10px 30px rgba(0,0,0,.08);">
 
-    <div style="margin-bottom:25px">
-        <img src="{% static 'images/img.png' %}"
-             alt="QR Code PIX"
-             width="220"
-             style="border-radius:12px; box-shadow:0 5px 15px rgba(0,0,0,.1);">
+<!-- ===== PIX BOX ===== -->
+<div id="pix-box"
+     class="payment-details"
+     style="text-align:center; padding:30px; border-radius:18px; background:#f8f9ff; box-shadow:0 10px 30px rgba(0,0,0,.08);">
+
+    <!-- VALOR -->
+    <div style="margin-bottom:20px;">
+        <h3 style="font-size:1.4rem; font-weight:700; margin-bottom:5px;">
+            Valor do Pagamento
+        </h3>
+        <div id="pix-valor"
+             style="font-size:2rem; font-weight:800; color:#0d6efd;">
+            Carregando...
+        </div>
     </div>
 
+    <!-- QR CODE -->
+<div style="margin-bottom:25px; display:flex; justify-content:center;">
+    <img id="pix-qrcode"
+         src=""
+         alt="QR Code PIX"
+         width="220"
+         style="border-radius:12px; box-shadow:0 5px 15px rgba(0,0,0,.1); display:none;">
+</div>
+
+    <!-- COPIA E COLA -->
     <div style="margin-bottom:20px">
         <label style="font-weight:700; font-size:1.2rem; display:block; margin-bottom:8px;">
             PIX Copia e Cola
@@ -518,40 +533,18 @@
             id="pix-code"
             type="text"
             readonly
-            value="000201
-26360014BR.GOV.BCB.PIX
-0114+5511992211008
-52040000
-5303986
-54{VALOR}
-5802BR
-5909LOJA TESTE
-6009SAO PAULO
-62070503***
-6304"
-            style="width:100%; padding:16px; font-size:1.1rem; border-radius:12px; border:2px solid #cbd5e1; text-align:center; font-weight:600; background:#fff;"
-        >
+            value="Gerando código..."
+            style="width:100%; padding:16px; font-size:1.05rem; border-radius:12px; border:2px solid #cbd5e1; text-align:center; font-weight:600; background:#fff;">
     </div>
 
     <!-- BOTÃO COPIAR -->
-<button
-    type="button"
-    class="btn-pix-copiar"
-    onclick="copiarPix()">
-    📋 Copiar PIX
-</button>
-
-    <!-- BOTÃO JÁ PAGUEI (INICIALMENTE OCULTO) -->
-<button
-    type="button"
-    id="btn-ja-paguei"
-    class="btn-pix-confirmar"
-    onclick="marcarComoPago()"
-    style="display:none">
-    ✅ Já paguei
-</button>
-
+    <button type="button"
+            class="btn-pix-copiar"
+            onclick="copiarPix()">
+        📋 Copiar PIX
+    </button>
 </div>
+
 
 <!-- ===== CARTÃO BOX INTERATIVO ===== -->
 <div id="cartao-box" class="payment-details card-box" style="display:none">
@@ -600,10 +593,25 @@
     <button type="button" class="btn-confirmar btn-cartao" onclick="processarPagamento()">💳 Pagar com cartão</button>
 </div>
 
-<!-- Modal de espera -->
-<div id="modal-aguarde" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; justify-content:center; align-items:center;">
-    <div style="background:#fff; padding:20px; border-radius:8px; text-align:center;">
-        ⏳ Processando pagamento...
+<div id="modal-aguarde"
+     style="display:none; position:fixed; top:0; left:0; width:100%; height:100%;
+            background:rgba(0,0,0,0.6); z-index:9999;
+            justify-content:center; align-items:center;">
+
+    <div style="background:#fff; padding:30px; border-radius:16px;
+                text-align:center; width:300px;">
+
+        <div style="font-size:1.2rem; font-weight:700; margin-bottom:15px;">
+            ✅ Pagamento confirmado!
+        </div>
+
+        <div style="color:#64748b;">
+            Finalizando seu pedido...
+        </div>
+
+        <div style="margin-top:20px;">
+            ⏳ Aguarde...
+        </div>
     </div>
 </div>
 
@@ -639,7 +647,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ===== FORMATA NÚMERO PARA BR =====
     function formatarNumeroBR(valor) {
-        return Number(valor).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        return Number(valor).toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
     }
 
     // ===== FORMATA TODOS OS VALORES DO RESUMO =====
@@ -650,32 +658,33 @@ document.addEventListener('DOMContentLoaded', () => {
         // Total
         const totalEl = box.querySelector('.valor-total');
         if (totalEl) {
-            let numero = parseFloat(totalEl.textContent.replace(/\./g,'').replace(',', '.').replace(/[^\d.-]/g,''));
+            let numero = parseFloat(totalEl.textContent.replace(/\./g, '').replace(',', '.').replace(/[^\d.-]/g, ''));
             if (!isNaN(numero)) totalEl.textContent = 'R$ ' + formatarNumeroBR(numero);
         }
 
         // Subtotal e desconto
         const totaisEl = box.querySelectorAll('.resumo-totais div span:last-child');
         totaisEl.forEach(el => {
-            let texto = el.textContent.replace(/\./g,'').replace(',', '.').replace(/[^\d.-]/g,'');
+            let texto = el.textContent.replace(/\./g, '').replace(',', '.').replace(/[^\d.-]/g, '');
             let numero = parseFloat(texto);
             if (!isNaN(numero)) el.textContent = (numero < 0 ? '-' : '') + 'R$ ' + formatarNumeroBR(Math.abs(numero));
         });
 
         // Preço unitário e subtotal dos itens
-        const itensEl = box.querySelectorAll('.resumo-item span:nth-child(2), .resumo-item strong');
+        const itensEl = box.querySelectorAll('.resumo-item strong');
         itensEl.forEach(el => {
-            let texto = el.textContent.replace(/\./g,'').replace(',', '.').replace(/[^\d.-]/g,'');
+            let texto = el.textContent.replace(/\./g, '').replace(',', '.').replace(/[^\d.-]/g, '');
             let numero = parseFloat(texto);
             if (!isNaN(numero)) el.textContent = 'R$ ' + formatarNumeroBR(numero);
         });
     }
-        // ===== FORMATA VALOR TOTAL PERSONALIZADO =====
+
+    // ===== FORMATA VALOR TOTAL PERSONALIZADO =====
     function formatarValorTotal() {
         const el = document.getElementById('valor-total-box');
         if (!el) return;
 
-        let texto = el.textContent.replace(/\./g,'').replace(',', '.').replace(/[^\d.-]/g,'');
+        let texto = el.textContent.replace(/\./g, '').replace(',', '.').replace(/[^\d.-]/g, '');
         let numero = parseFloat(texto);
         if (!isNaN(numero)) {
             el.innerHTML = `Valor: <span style="color:#2563eb;">R$ ${formatarNumeroBR(numero)}</span>`;
@@ -712,18 +721,18 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function mascaraNumeroCartao(valor) {
-        valor = valor.replace(/\D/g, '').substring(0,16);
+        valor = valor.replace(/\D/g, '').substring(0, 16);
         return valor.replace(/(.{4})/g, '$1 ').trim();
     }
 
     function mascaraValidade(valor) {
-        valor = valor.replace(/\D/g, '').substring(0,4);
-        if (valor.length > 2) valor = valor.substring(0,2) + '/' + valor.substring(2);
+        valor = valor.replace(/\D/g, '').substring(0, 4);
+        if (valor.length > 2) valor = valor.substring(0, 2) + '/' + valor.substring(2);
         return valor;
     }
 
     function atualizarCartao() {
-        let numero = numeroInput.value.replace(/\D/g, '').padEnd(16,'•');
+        let numero = numeroInput.value.replace(/\D/g, '').padEnd(16, '•');
         numero = numero.match(/.{1,4}/g)?.join(' ') || numero;
         numeroDisplay.textContent = numero;
 
@@ -740,7 +749,7 @@ document.addEventListener('DOMContentLoaded', () => {
             bandeiraImg.style.display = 'none';
         }
 
-        tipoCartao.textContent = detectarTipo(numero.replace(/\s/g,''));
+        tipoCartao.textContent = detectarTipo(numero.replace(/\s/g, ''));
         validadeDisplay.textContent = validadeInput.value || 'MM/AA';
         nomeDisplay.textContent = nomeInput.value || 'NOME DO TITULAR';
     }
@@ -755,123 +764,139 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     nomeInput.addEventListener('input', atualizarCartao);
 
-    // ===== PIX CONFIRMAR =====
-window.marcarComoPago = function() {
-    fetch("{% url 'criar_pedido_pix' %}", {
-        method: "POST",
-        headers: {
-            "X-CSRFToken": "{{ csrf_token }}"
+
+
+ /* ==============================
+       GERAR PIX AUTOMATICAMENTE
+    ===============================*/
+    async function iniciarPix() {
+
+        try {
+
+            const res = await fetch(`/api/gerar-pix/?carrinho_id={{ carrinho.id }}`);
+            const data = await res.json();
+
+            if (data.erro) {
+                console.error(data.erro);
+                return;
+            }
+
+            // 🔵 Atualiza valor (se você adicionou #pix-valor no HTML)
+            if (data.valor) {
+                const valorEl = document.getElementById("pix-valor");
+                if (valorEl) {
+                    valorEl.innerText =
+                        "R$ " + parseFloat(data.valor)
+                            .toFixed(2)
+                            .replace(".", ",");
+                }
+            }
+
+            // 🟢 Atualiza QR Code
+            const img = document.getElementById("pix-qrcode");
+            if (img) {
+                img.src = "data:image/png;base64," + data.qr_code;
+                img.style.display = "block";
+            }
+
+            // 🟡 Atualiza Copia e Cola
+            const pixInput = document.getElementById("pix-code");
+            if (pixInput) {
+                pixInput.value = data.pix_copia_cola;
+            }
+
+            iniciarVerificacao();
+
+        } catch (e) {
+            console.error("Erro ao iniciar PIX:", e);
         }
-    })
-    .then(res => res.json())
-    .then(data => {
-        if (data.success && data.redirect_url) {
-            window.location.href = data.redirect_url + "#pedidos";
-        } else {
-            mostrarToast("Erro ao criar pedido ❌");
-        }
-    })
-    .catch(() => {
-        mostrarToast("Erro ao confirmar pagamento ❌");
-    });
-}
-});
+    }
 
+function iniciarVerificacao(carrinhoId) {
 
-/* ===== COPIAR PIX ===== */
-function copiarPix() {
-    const pixInput = document.getElementById('pix-code');
+    const intervalo = setInterval(function() {
 
-    navigator.clipboard.writeText(pixInput.value).then(() => {
-        mostrarToast("PIX copiado com sucesso ✅");
-        document.getElementById('btn-ja-paguei').style.display = 'inline-block';
-    });
-}
+        fetch(`/verificar-pagamento/?carrinho_id=${carrinhoId}`)
+            .then(response => response.json())
+            .then(data => {
 
+                if (data.pago) {
 
-function mostrarToast(texto) {
-    const toast = document.createElement('div');
-    toast.innerText = texto;
+                    clearInterval(intervalo);
 
-    Object.assign(toast.style, {
-        position: 'fixed',
-        bottom: '30px',
-        left: '50%',
-        transform: 'translateX(-50%)',
-        background: '#16a34a',
-        color: '#fff',
-        padding: '14px 22px',
-        borderRadius: '12px',
-        fontWeight: '700',
-        boxShadow: '0 10px 25px rgba(0,0,0,.25)',
-        zIndex: 99999
-    });
+                    // Fecha modal
+                    document.getElementById("modalPix").style.display = "none";
 
-    document.body.appendChild(toast);
+                    // Redireciona
+                    window.location.href = data.redirect_url;
+                }
+            });
 
-    setTimeout(() => toast.remove(), 2500);
-}
-
-function marcarComoPago() {
-    fetch("{% url 'criar_pedido_pix' %}", {
-        method: "POST",
-        headers: {
-            "X-CSRFToken": "{{ csrf_token }}"
-        }
-    })
-    .then(res => {
-        if (!res.ok) {
-            throw new Error("Erro HTTP");
-        }
-        return res.json();
-    })
-    .then(data => {
-        if (data.success && data.redirect_url) {
-            window.location.href = data.redirect_url;
-        } else {
-            mostrarToast("Erro ao criar pedido ❌");
-        }
-    })
-    .catch(() => {
-        mostrarToast("Erro ao confirmar pagamento ❌");
-    });
+    }, 3000); // verifica a cada 3 segundos
 }
 
+    /* ==============================
+       COPIAR PIX
+    ===============================*/
+    window.copiarPix = function() {
 
-async function processarPagamento() {
-    const numero = document.getElementById("numero-cartao").value;
-    const validade = document.getElementById("validade-cartao").value;
-    const cvv = document.getElementById("cvv-cartao").value;
-    const nome = document.getElementById("nome-cartao").value;
-    const cpf = document.getElementById("cpf-cartao").value;
+        const pixInput = document.getElementById("pix-code");
 
-    // abre modal
-    document.getElementById("modal-aguarde").style.display = "flex";
+        if (!pixInput.value) return;
 
-    try {
-        const response = await fetch("/processar_cartao/", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "X-CSRFToken": "{{ csrf_token }}"
-            },
-            body: JSON.stringify({ numero, validade, cvv, nome, cpf })
+        navigator.clipboard.writeText(pixInput.value).then(() => {
+            mostrarToast("PIX copiado com sucesso ✅");
         });
 
-        const data = await response.json();
-        document.getElementById("modal-aguarde").style.display = "none";
-
-        if(data.sucesso){
-            // redireciona para página final de pagamento
-            window.location.href = `/payment_finally/${data.pedido_id}/`;
-        } else {
-            alert("Erro: " + data.mensagem);
-        }
-    } catch (e) {
-        document.getElementById("modal-aguarde").style.display = "none";
-        alert("Erro inesperado ao processar pagamento.");
     }
-}
+
+
+    /* ==============================
+       TOAST
+    ===============================*/
+    function mostrarToast(texto) {
+
+        const toast = document.createElement("div");
+        toast.innerText = texto;
+
+        Object.assign(toast.style, {
+            position: "fixed",
+            bottom: "30px",
+            left: "50%",
+            transform: "translateX(-50%)",
+            background: "#16a34a",
+            color: "#fff",
+            padding: "14px 22px",
+            borderRadius: "12px",
+            fontWeight: "700",
+            boxShadow: "0 10px 25px rgba(0,0,0,.25)",
+            zIndex: 99999
+        });
+
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 2500);
+    }
+
+
+    /* ==============================
+       SCROLL HASH
+    ===============================*/
+    if (window.location.hash) {
+        const el = document.querySelector(window.location.hash);
+        if (el) {
+            setTimeout(() => {
+                el.scrollIntoView({behavior: "smooth", block: "start"});
+            }, 100);
+        }
+    }
+
+
+    /* ==============================
+       INICIA AUTOMATICAMENTE
+    ===============================*/
+    iniciarPix();
+
+});
 
 
 </script>

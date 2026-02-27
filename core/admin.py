@@ -70,7 +70,6 @@ class CategoriaPecaAdmin(admin.ModelAdmin):
     ordering = ("nome_categoria_peca",)
 
 
-# ⭐ ADMIN PRINCIPAL
 @admin.register(PecasReposicao)
 class PecasReposicaoAdmin(admin.ModelAdmin):
     list_display = (
@@ -78,13 +77,18 @@ class PecasReposicaoAdmin(admin.ModelAdmin):
         "nome",
         "preco_venda",
         "preco_fornecedor",
+<<<<<<< HEAD
         "voltagem"
+=======
+        "mostrar_categorias",
+>>>>>>> 16c24b37444a5f4b0ef01079ed57843a8479bdea
     )
     list_display_links = ("id", "nome")
     search_fields = ("nome", "descricao_peca")
-    list_filter = ("preco_venda", "preco_fornecedor")
+    list_filter = ("categoria_peca",)  # ⭐ filtro por categoria
 
-    # 🔥 AQUI É O SEGREDO
+    filter_horizontal = ("categoria_peca",)  # ⭐ UI melhor para ManyToMany
+
     inlines = [ImagemPecaInline]
 
     fieldsets = (
@@ -92,6 +96,7 @@ class PecasReposicaoAdmin(admin.ModelAdmin):
             "fields": (
                 "nome",
                 "descricao_peca",
+                "categoria_peca",  # ⭐ AQUI estava faltando
             )
         }),
         ("Valores", {
@@ -101,6 +106,11 @@ class PecasReposicaoAdmin(admin.ModelAdmin):
             )
         }),
     )
+
+    # ⭐ mostra categorias na lista
+    def mostrar_categorias(self, obj):
+        return ", ".join([c.nome_categoria_peca for c in obj.categoria_peca.all()])
+    mostrar_categorias.short_description = "Categorias"
 
 
 @admin.register(BrinquedoClick)

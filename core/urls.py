@@ -1,17 +1,17 @@
 from django.urls import path
-from .views import (HomeView, BrinquedoInfoView, CategoriasInfoView, BrinquedosView,
+from .views import (HomeView, BrinquedoInfoView, CategoriasInfoView, BrinquedosView, webhook_mercadopago,
                     RegistrarView, LoginUsuarioView, LogoutUsuarioView, EventosView,
                     ProjetosView, ClientePerfilView, ComboInfoView, PromocaoInfoView,
                     BrinquedoAdmin, NovaCategoria, NovaTag, ComboListView, ComboCreateView,
                     ComboUpdateView, ComboDeleteView, CupomAdminView, ProjetoAdminView, EstabelecimentoInfoView,
                     EstabelecimentosListView, ManutencaoView, PromocaoAdminView, PromocaoDeleteView,
-                    adicionar_ao_carrinho, carrinho_view, aplicar_cupom, remover_item_carrinho,
-                    limpar_carrinho, cancelar_manutencao,
+                    adicionar_ao_carrinho, CarrinhoView, aplicar_cupom, remover_item_carrinho,
+                    limpar_carrinho, cancelar_manutencao, alterar_quantidade_item, gerar_pix,
                     PaymentView, MeusPedidosView, criar_pedido_pix, PaymentFinallyView, processar_cartao,
                     EventoAdminView, BannerAdminView, BannerDeleteView, AdminLoginView, AcessoNegadoView,
                     DashboardAdminView, UserAdminView, ManutencaoAdminView, RelatorioVendasView, PedidoAdminView,
                     redirecionar_loja, redirecionar_categoria_brinquedos, redirecionar_categoria_aventura, redirecionar_lancamentos,
-                    redirecionar_showroom, redirecionar_contato, EstatisticasGeraisView, ReposicaoView, ReposicaoDetalheView
+                    redirecionar_showroom, redirecionar_contato, EstatisticasGeraisView, ReposicaoView, ReposicaoDetalheView, filtrar_pecas_ajax
                     )
 
 
@@ -48,8 +48,14 @@ urlpatterns = [
 
     path(
         'carrinho/',
-        carrinho_view,
+        CarrinhoView.as_view(),
         name='carrinho'
+    ),
+
+    path(
+        "carrinho/alterar-quantidade/",
+        alterar_quantidade_item,
+        name="alterar_quantidade_item"
     ),
 
     path(
@@ -104,6 +110,8 @@ urlpatterns = [
         name='pagamento'
     ),
 
+    path("api/gerar-pix/", gerar_pix, name="gerar_pix"),
+
     path('meus-pedidos/', MeusPedidosView.as_view(), name='meus_pedidos'),
 
     path('pedido/pix/criar/', criar_pedido_pix, name='criar_pedido_pix'),
@@ -112,6 +120,9 @@ urlpatterns = [
         PaymentFinallyView.as_view(),
         name='payment_finally'
     ),
+
+    path("ajax/filtrar-pecas/", filtrar_pecas_ajax, name="filtrar_pecas_ajax"),
+    path("api/webhook-mp/", webhook_mercadopago, name="webhook_mp"),
 
     path('processar_cartao/', processar_cartao, name='processar_cartao'),
 

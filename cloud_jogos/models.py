@@ -33,3 +33,4 @@ class BuildJogos(models.Model):
 
     def __str__(self):
         return self.descricao_build
+

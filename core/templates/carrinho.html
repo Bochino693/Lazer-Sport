@@ -86,7 +86,8 @@
 
 /* ====== ITEM CARD ====== */
 .item-card {
-    background: #fff;
+    background: linear-gradient(135deg, #ffffff, #f3f7ff);
+    border: 1px solid #e3e9ff;
     border-radius: 18px;
     padding: 16px;
     margin-bottom: 16px;
@@ -118,6 +119,44 @@
     color: #0d6efd;
 }
 
+/* ===== QUANTIDADE MODERNA ===== */
+.qtd-box {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: #f1f5ff;
+    padding: 4px;
+    border-radius: 12px;
+    width: fit-content;
+}
+
+.qtd-box button {
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    border: none;
+    background: #ffffff;
+    color: #1e3a8a;
+    font-weight: 900;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all .18s ease;
+    box-shadow: 0 2px 6px rgba(0,0,0,.08);
+}
+
+.qtd-box button:hover {
+    background: #0d6efd;
+    color: #fff;
+    transform: scale(1.08);
+}
+
+.qtd-box span {
+    min-width: 26px;
+    text-align: center;
+    font-weight: 800;
+    font-size: 0.95rem;
+}
+
 /* ====== RESUMO ====== */
 .resumo-box {
     background: #f7faff;
@@ -130,7 +169,6 @@
     display: flex;
     justify-content: space-between;
     margin: 10px 0;
-    font-size: 1rem;
 }
 
 .resumo-total {
@@ -138,6 +176,7 @@
     font-weight: 800;
     color: #0d6efd;
 }
+
 
 /* ====== BOTÃO FIXO ====== */
 .finalizar-box {
@@ -148,9 +187,8 @@
     background: #fff;
     padding: 14px;
     box-shadow: 0 -6px 20px rgba(0,0,0,0.12);
-    text-align: center; /* 👈 importante */
+    text-align: center;
 }
-
 
 .btn-finalizar {
     display: inline-block;
@@ -169,6 +207,15 @@
 .btn-finalizar:hover {
     background: #0e7f14;
 }
+
+/* ===== MOBILE ===== */
+@media (max-width: 768px) {
+    .carrinho-container {
+        max-width: 100%;
+        padding: 16px 14px 120px;
+    }
+}
+
 
 /* ====== VAZIO ====== */
 .carrinho-vazio {
@@ -205,8 +252,8 @@
     padding: 12px;
     border-radius: 12px;
     border: 1px solid #ddd;
-    font-size: 1rem;
 }
+
 
 .cupom-input button {
     padding: 12px 18px;
@@ -227,24 +274,42 @@
     color: #1c7c3d;
 }
 
+.cupom-spaced {
+    margin-top: 25px;
+}
+
 /* ===== SCROLL DOS ITENS ===== */
 .itens-scroll {
     max-height: 55vh;
     overflow-y: auto;
     padding-right: 6px;
-    padding-bottom: 120px; /* 🔥 ESSENCIAL */
+    padding-bottom: 120px;
 }
 
+/* 🔥 quando só tem 1 item */
+.itens-scroll.sem-scroll {
+    max-height: none;
+    overflow: visible;
+    padding-bottom: 10px;
+}
 
-/* ===== BOTÃO REMOVER ITEM ===== */
+/* ===== BOTÃO REMOVER ===== */
 .btn-remover {
     margin-top: 12px;
-    background: yellow !important;
-    border: none;
+    background: #fff1f2;
+    border: 1px solid #fecaca;
     color: #dc3545;
     font-weight: 700;
     cursor: pointer;
-    font-size: 0.95rem;
+    font-size: 0.9rem;
+    padding: 8px 12px;
+    border-radius: 10px;
+    transition: .2s ease;
+}
+
+.btn-remover:hover {
+    background: #dc3545;
+    color: #fff;
 }
 
 /* ===== BOTÃO LIMPAR CARRINHO ===== */
@@ -380,130 +445,208 @@
 }
 
 
-</style>
+.qtd-box {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
 
+.qtd-box button {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    border: none;
+    background: #eef2ff;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.qtd-box span {
+    min-width: 22px;
+    text-align: center;
+    font-weight: 700;
+}
+
+.cupom-top {
+    margin-top: 10px;
+}
+
+.subtotal-fixo {
+    position: fixed;
+    bottom: 70px;
+    left: 0;
+    right: 0;
+    background: #f7faff;
+    padding: 12px 16px;
+    box-shadow: 0 -4px 14px rgba(0,0,0,0.08);
+    z-index: 999;
+}
+
+.subtotal-fixo-inner {
+    max-width: 420px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    font-weight: 800;
+    font-size: 1.05rem;
+    color: #0d6efd;
+}
+
+
+</style>
 
 <div class="carrinho-container" id="car">
 
-<nav class="breadcrumb-strong" id="bread">
-    <a href="{% url 'home' %}">
-        <i class="fa-solid fa-house"></i>
-        <span>Home</span>
-    </a>
+    <nav class="breadcrumb-strong" id="bread">
+        <a href="{% url 'home' %}">
+            <i class="fa-solid fa-house"></i>
+            <span>Home</span>
+        </a>
 
-    <i class="fa-solid fa-chevron-right sep"></i>
+        <i class="fa-solid fa-chevron-right sep"></i>
 
-    <strong>
-        <i class="fa-solid fa-cart-shopping"></i>
-        Carrinho
-    </strong>
-</nav>
+        <strong>
+            <i class="fa-solid fa-cart-shopping"></i>
+            Carrinho
+        </strong>
+    </nav>
 
-<h1 class="carrinho-titulo" id="carrinho">🛒 Meu Carrinho</h1>
+    <h1 class="carrinho-titulo" id="carrinho">🛒 Meu Carrinho</h1>
 
     {% if itens %}
-    <button class="btn-limpar" onclick="limparCarrinho()">
-        🗑️ Limpar carrinho
-    </button>
+
+        <button class="btn-limpar" onclick="limparCarrinho()">
+            🗑️ Limpar carrinho
+        </button>
+
+        <div class="itens-scroll {% if itens|length <= 1 %}sem-scroll{% endif %}">
+
+            {% for item in itens %}
+            <div class="item-card">
+
+                <div class="item-nome">{{ item.item }}</div>
+
+                <div class="item-linha">
+                    <span>Preço</span>
+                    <span class="money">R$ {{ item.preco_unitario|floatformat:2 }}</span>
+                </div>
+
+                <div class="item-linha">
+                    <span>Quantidade</span>
+
+                    <div class="qtd-box">
+                        <button onclick="alterarQtd({{ item.id }}, -1)">−</button>
+                        <span>{{ item.quantidade }}</span>
+                        <button onclick="alterarQtd({{ item.id }}, 1)">+</button>
+                    </div>
+                </div>
+
+                <div class="item-linha item-subtotal">
+                    <span>Subtotal</span>
+                    <span class="money">R$ {{ item.subtotal|floatformat:2 }}</span>
+                </div>
+
+                <button class="btn-remover" onclick="removerItem({{ item.id }})">
+                    ❌ Remover
+                </button>
+
+            </div>
+            {% endfor %}
+
+        </div><!-- itens-scroll -->
+
+        <!-- CUPOM -->
+        <div class="cupom-box {% if itens|length != 1 %}cupom-spaced{% endif %}">
+
+            <strong>🎟️ Cupom de desconto</strong>
+
+            {% if carrinho.cupom %}
+                <div class="cupom-aplicado">
+                    🎉 Você economizou
+                    <strong>{{ carrinho.cupom.desconto_percentual }}%</strong>
+                    com o cupom
+                    <strong>{{ carrinho.cupom.codigo }}</strong>
+                </div>
+            {% else %}
+                <div class="cupom-input">
+                    <input type="text" id="cupomCodigo" placeholder="Digite seu cupom">
+                    <button onclick="aplicarCupom()">Aplicar</button>
+                </div>
+                <small id="cupom-msg" style="color:red;"></small>
+            {% endif %}
+
+        </div><!-- cupom-box -->
+
+        <div class="resumo-box">
+            <div class="resumo-linha resumo-total">
+                <span>Total</span>
+                <span>R$ {{ carrinho.total_liquido|floatformat:2 }}</span>
+            </div>
+        </div>
+
+    {% else %}
+
+        <div class="carrinho-vazio-box">
+            <div class="vazio-icon">🧸</div>
+
+            <h2>Seu carrinho está vazio</h2>
+            <p>
+                Que tal escolher alguns brinquedos incríveis
+                para alegrar o dia?
+            </p>
+
+            <a href="{% url 'brinquedos' %}" class="btn-explorar">
+                🎁 Explorar brinquedos
+            </a>
+        </div>
+
     {% endif %}
 
-{% if not itens %}
-    <div class="carrinho-vazio-box">
-        <div class="vazio-icon">🧸</div>
+</div><!-- carrinho-container -->
 
-        <h2>Seu carrinho está vazio</h2>
-        <p>
-            Que tal escolher alguns brinquedos incríveis
-            para alegrar o dia?
-        </p>
-
-        <a href="{% url 'brinquedos' %}" class="btn-explorar">
-            🎁 Explorar brinquedos
-        </a>
-    </div>
-
-{% else %}
-
-
-    <div class="itens-scroll" id="itens">
-    {% for item in itens %}
-        <div class="item-card">
-            <div class="item-nome">{{ item.item }}</div>
-
-            <div class="item-linha">
-                <span>Preço</span>
-                <span class="money">R$ {{ item.preco_unitario|floatformat:2 }}</span>
-            </div>
-
-            <div class="item-linha">
-                <span>Quantidade</span>
-                <span>{{ item.quantidade }}</span>
-            </div>
-
-            <div class="item-linha item-subtotal">
-                <span>Subtotal</span>
-                <span class="money">R$ {{ item.subtotal|floatformat:2 }}</span>
-
-            </div>
-
-            <button class="btn-remover" onclick="removerItem({{ item.id }})">
-                ❌ Remover
-            </button>
-        </div>
-    {% endfor %}
-</div>
-
-
-    <div class="cupom-box">
-        <strong>🎟️ Cupom de desconto</strong>
-
-        {% if carrinho.cupom %}
-            <div class="cupom-aplicado">
-                🎉 Você economizou
-                <strong>{{ carrinho.cupom.desconto_percentual }}%</strong>
-                com o cupom
-                <strong>{{ carrinho.cupom.codigo }}</strong>
-            </div>
-        {% else %}
-            <div class="cupom-input">
-                <input type="text" id="cupomCodigo" placeholder="Digite seu cupom">
-                <button onclick="aplicarCupom()">Aplicar</button>
-            </div>
-            <small id="cupom-msg" style="color:red;"></small>
-        {% endif %}
-    </div>
-
-
-    <div class="resumo-box">
-        <div class="resumo-linha">
-            <span>Total bruto</span>
-            <span>R$ {{ carrinho.total_bruto|floatformat:2 }}</span>
-        </div>
-
-        {% if carrinho.cupom %}
-        <div class="resumo-linha">
-            <span>Desconto</span>
-            <span>- R$ {{ carrinho.valor_desconto|floatformat:2 }}</span>
-        </div>
-        {% endif %}
-
-        <div class="resumo-linha resumo-total">
-            <span>Total</span>
-            <span>R$ {{ carrinho.total_liquido|floatformat:2 }}</span>
-        </div>
-    </div>
-
-{% endif %}
-
-</div>
 
 {% if itens %}
+<div class="subtotal-fixo">
+    <div class="subtotal-fixo-inner">
+        <span>Total do pedido</span>
+        <strong class="money">R$ {{ carrinho.total_liquido|floatformat:2 }}</strong>
+    </div>
+</div>
+
 <div class="finalizar-box">
-    <a href="{% url 'pagamento' carrinho.id %}#bread" class="btn-finalizar">Finalizar pedido</a>
+    <a href="{% url 'pagamento' carrinho.id %}#content" class="btn-finalizar">
+        Finalizar pedido
+    </a>
 </div>
 {% endif %}
 
-<script>
+
+<!-- ===== MODAL LIMPAR CARRINHO ===== -->
+<div class="modal-overlay" id="modalLimpar">
+    <div class="modal-box">
+
+        <div class="modal-icon">🗑️</div>
+
+        <h2>Limpar carrinho?</h2>
+        <p>
+            Todos os produtos serão removidos do seu carrinho.
+            <br>Essa ação não pode ser desfeita.
+        </p>
+
+        <div class="modal-actions">
+            <button class="btn-cancelar" onclick="fecharModalLimpar()">
+                Cancelar
+            </button>
+            <button class="btn-confirmar" onclick="confirmarLimparCarrinho()">
+                Sim, limpar
+            </button>
+        </div>
+
+    </div>
+</div>
+
+
+    <script>
 document.addEventListener('DOMContentLoaded', () => {
 
     function formatarCarrinho() {
@@ -624,31 +767,19 @@ function confirmarLimparCarrinho() {
     .then(() => location.reload());
 }
 
+function alterarQtd(itemId, delta) {
+    fetch("{% url 'alterar_quantidade_item' %}", {
+        method: "POST",
+        headers: {
+            "X-CSRFToken": "{{ csrf_token }}",
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ item_id: itemId, delta: delta })
+    })
+    .then(() => location.reload());
+}
 
 </script>
-
-<!-- ===== MODAL LIMPAR CARRINHO ===== -->
-<div class="modal-overlay" id="modalLimpar">
-    <div class="modal-box">
-        <div class="modal-icon">🗑️</div>
-
-        <h2>Limpar carrinho?</h2>
-        <p>
-            Todos os produtos serão removidos do seu carrinho.
-            <br>Essa ação não pode ser desfeita.
-        </p>
-
-        <div class="modal-actions">
-            <button class="btn-cancelar" onclick="fecharModalLimpar()">
-                Cancelar
-            </button>
-            <button class="btn-confirmar" onclick="confirmarLimparCarrinho()">
-                Sim, limpar
-            </button>
-        </div>
-    </div>
-</div>
-
 {% endblock %}
 
 

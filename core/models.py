@@ -55,9 +55,11 @@ from django.contrib.auth.models import User
 from django.db.models import UniqueConstraint
 
 def validar_telefone(value):
-    padrao = r'^\(\d{2}\)\d{4}-\d{4}$'
+    padrao = r'^\(\d{2}\)\d{4,5}-\d{4}$'
     if not re.match(padrao, value):
-        raise ValidationError("Telefone deve estar no formato (11)XXXX-XXXX")
+        raise ValidationError(
+            "Telefone deve estar no formato (11)91234-5678 ou (11)1234-5678"
+        )
 
 class ClientePerfil(models.Model):
     user = models.OneToOneField(
@@ -69,7 +71,7 @@ class ClientePerfil(models.Model):
 
     # ✅ NOVO CAMPO
     telefone = models.CharField(
-        max_length=13,
+        max_length=14,
         validators=[validar_telefone],
         blank=False,
         null=True
@@ -278,10 +280,15 @@ class CategoriaPeca(Prime):
 
 class PecasReposicao(Prime):
     nome = models.CharField(max_length=120)
-    categoria_peca = models.ForeignKey(CategoriaPeca, on_delete=models.CASCADE, related_name='peca', null=True)
+    categoria_peca = models.ManyToManyField(
+        CategoriaPeca,
+        related_name='pecas',
+        blank=True,
+        verbose_name="Categorias"
+    )
     preco_venda = models.DecimalField(decimal_places=2, max_digits=9, null=True, blank=True)
     preco_fornecedor = models.DecimalField(decimal_places=2, max_digits=9, null=True, blank=True)
-    descricao_peca = models.CharField(max_length=210)
+    descricao_peca = models.CharField(max_length=999)
 
     CHOICE_VOLTZ = [
         ('5V', '5 Volts'),
@@ -556,6 +563,8 @@ class Carrinho(Prime):
         related_name='carrinhos'
     )
 
+    mp_payment_id = models.CharField(max_length=100, null=True, blank=True)
+
 
     @property
     def total_bruto(self):
@@ -626,7 +635,6 @@ from django.db import transaction
 
 class Pedido(Prime):
     STATUS_CHOICES = (
-        ('criado', 'Criado'),
         ('aguardando_pagamento', 'Aguardando pagamento'),
         ('pago', 'Pago'),
         ('em_preparacao', 'Em preparação'),
@@ -672,10 +680,19 @@ class Pedido(Prime):
         null=True, blank=True
     )
 
+    TIPO_ENVIO = [
+        ('frete', 'Frete'),
+        ('entrega', 'Entrega'),
+    ]
+
+    tipo_envio = models.CharField(max_length=30,
+                                  choices=TIPO_ENVIO,
+                                  default='frete')
+
     status = models.CharField(
         max_length=30,
         choices=STATUS_CHOICES,
-        default='criado'
+        default='aguardando_pagamento'
     )
 
     TIPO_ENTREGA = [
@@ -705,6 +722,9 @@ class Pedido(Prime):
         null=True,
         blank=True
     )
+
+    mp_payment_id = models.CharField(max_length=100, null=True, blank=True)
+    mp_status = models.CharField(max_length=50, null=True, blank=True)
 
     cupom_codigo = models.CharField(max_length=20, blank=True, null=True)
     cupom_percentual = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)

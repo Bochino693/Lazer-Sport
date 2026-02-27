@@ -542,6 +542,8 @@ body {
     display: flex;
     flex-direction: column;
     flex: 1; /* ⭐ ocupa o espaço disponível */
+    text-align: center;
+    justify-content: center;
 }
 
 /* Descrição ocupa espaço flexível */
@@ -1097,10 +1099,12 @@ body {
 
 /* Categorias (pills) */
 .categorias {
+    margin-top: 10px;
     margin-bottom: 10px;
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
+    justify-content: center;
 }
 
 .categoria-pill {
@@ -1110,6 +1114,7 @@ body {
     font-size: 0.8rem;
     border-radius: 12px;
     font-weight: 600;
+    text-align: center;
 }
 
 /* Voltagem */
@@ -1126,7 +1131,7 @@ body {
 .preco {
     color: #007BFF;
     font-weight: 700;
-    font-size: 1.2rem;
+    font-size: 1.5rem;
     margin-bottom: 12px;
     text-align: center; /* centraliza o texto */
 }
@@ -1197,6 +1202,7 @@ body {
     text-align: center;
 
     padding: 14px 0;
+    font-size: 1rem;
 
     background: #ffffff;
     color: #3a3a3a;
@@ -2656,21 +2662,25 @@ body {
     <!-- BARRA HORIZONTAL DE FILTROS -->
 <div class="filtros-horizontal" id="filtros-peca">
 
-    <!-- Todos -->
-    <a href="{% url 'home' %}"
-       class="filtro-btn {% if not categoria_ativa %}ativo{% endif %}">
-       Peças em Destaque
-    </a>
+  <!-- Todos -->
+  <button
+      class="filtro-btn {% if not categoria_ativa %}ativo{% endif %}"
+      data-categoria=""
+  >
+      Peças em Destaque
+  </button>
 
-    <!-- Categorias dinâmicas -->
-    {% for cat in categorias_peca %}
-        <a href="?categoria={{ cat.id }}"
-           class="filtro-btn {% if categoria_ativa|stringformat:'s' == cat.id|stringformat:'s' %}ativo{% endif %}">
-           {{ cat.nome_categoria_peca }}
-        </a>
-    {% endfor %}
+  <!-- Categorias -->
+  {% for cat in categorias_peca %}
+      <button
+          class="filtro-btn {% if categoria_ativa|stringformat:'s' == cat.id|stringformat:'s' %}ativo{% endif %}"
+          data-categoria="{{ cat.id }}"
+      >
+          {{ cat.nome_categoria_peca }}
+      </button>
+  {% endfor %}
+
 </div>
-
 
 <!-- CONTAINER ATUALIZÁVEL -->
 <div id="pecas-container">
@@ -2697,12 +2707,12 @@ body {
           <h3>{{ peca.nome }}</h3>
 
           <div class="categorias">
-            {% if peca.categoria_peca %}
-              <span class="categoria-pill">
-                {{ peca.categoria_peca.nome_categoria_peca }}
-              </span>
-            {% endif %}
-          </div>
+             {% for cat in peca.categoria_peca.all %}
+               <span class="categoria-pill">
+                  {{ cat.nome_categoria_peca }}
+               </span>
+             {% endfor %}
+           </div>
 
           <p class="descricao">
             {{ peca.descricao_peca|truncatewords:16 }}
@@ -2720,7 +2730,7 @@ body {
               onclick="abrirWhatsApp(event, '{{ peca.nome|escapejs }}')"
             >
               <i class="fab fa-whatsapp"></i>
-              <strong>Pedir orçamento no WhatsApp</strong>
+              <strong>Falar diretamente com o vendedor</strong>
             </button>
 
             <span class="btn-vermais">Ver mais</span>
@@ -2742,7 +2752,7 @@ body {
 
     {% if pecas_reposicao.has_previous %}
       <a class="page-btn"
-         href="?page_pecas={{ pecas_reposicao.previous_page_number }}"
+         href="#"
          data-page="{{ pecas_reposicao.previous_page_number }}">
          « Anterior
       </a>
@@ -2754,14 +2764,14 @@ body {
 
     {% if pecas_reposicao.has_next %}
       <a class="page-btn"
-         href="?page_pecas={{ pecas_reposicao.next_page_number }}"
+         href="#"
          data-page="{{ pecas_reposicao.next_page_number }}">
          Próxima »
       </a>
     {% endif %}
 
-  </div>
-</div>
+        </div>
+    </div>
 </section>
 
 
@@ -3696,6 +3706,73 @@ document.addEventListener("DOMContentLoaded", () => {
   }, 3000);
 });
 
+
+
+document.addEventListener("DOMContentLoaded", () => {
+
+  const filtros = document.querySelectorAll("#filtros-peca .filtro-btn");
+  const container = document.getElementById("pecas-container");
+  const paginacao = document.getElementById("paginacao-pecas");
+
+  let categoriaAtual = "";
+
+  async function carregarPecas(page = 1) {
+  try {
+    const response = await fetch(
+      `/ajax/filtrar-pecas/?categoria=${categoriaAtual}&page_pecas=${page}`
+    );
+
+    const html = await response.text();
+
+    const temp = document.createElement("div");
+    temp.innerHTML = html;
+
+    const novoContainer = temp.querySelector("#pecas-container");
+    const novaPaginacao = temp.querySelector("#paginacao-pecas");
+
+    if (novoContainer) {
+      container.innerHTML = novoContainer.innerHTML;
+
+      // ⭐ REAPLICAR FORMATAÇÃO
+      setTimeout(() => {
+        igualarAlturaGridPecas();
+        ajustarGridResponsivo();
+      }, 50);
+    }
+
+    if (novaPaginacao) {
+      paginacao.innerHTML = novaPaginacao.innerHTML;
+    }
+
+
+  } catch (e) {
+    console.error("Erro ao filtrar peças:", e);
+  }
+}
+
+  // ✅ clique nos filtros
+  filtros.forEach(btn => {
+    btn.addEventListener("click", () => {
+
+      filtros.forEach(b => b.classList.remove("ativo"));
+      btn.classList.add("ativo");
+
+      categoriaAtual = btn.dataset.categoria || "";
+      carregarPecas(1);
+    });
+  });
+
+  // ✅ paginação dinâmica
+  document.addEventListener("click", function(e) {
+    const pageBtn = e.target.closest(".page-btn");
+    if (!pageBtn) return;
+
+    e.preventDefault();
+    const page = pageBtn.dataset.page;
+    carregarPecas(page);
+  });
+
+});
 
 </script>
 
