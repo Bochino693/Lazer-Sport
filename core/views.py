@@ -2042,9 +2042,14 @@ def processar_pagamento_mp(data):
         logger.exception("ERRO AO PROCESSAR PAGAMENTO MP")
 
 
+import json
+import threading
+from django.http import HttpResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.db import connection # Importante
+
 @csrf_exempt
 def webhook_mercadopago(request):
-
     if request.method != "POST":
         return HttpResponse(status=200)
 
@@ -2053,9 +2058,21 @@ def webhook_mercadopago(request):
     except Exception:
         return HttpResponse(status=200)
 
-    # 🔥 processa em background (rápido)
-    processar_pagamento_mp(data)
+    # Função wrapper para garantir o fechamento do banco
+    def processar_pagamento_seguro(payload):
+        try:
+            processar_pagamento_mp(payload)
+        finally:
+            # Garante que a conexão do DB seja fechada mesmo se der erro
+            connection.close()
 
+    # processa depois (thread simples corrigida)
+    threading.Thread(
+        target=processar_pagamento_seguro,
+        args=(data,)
+    ).start()
+
+    # responde primeiro
     return HttpResponse(status=200)
 
 
