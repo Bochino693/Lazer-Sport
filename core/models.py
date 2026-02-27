@@ -746,14 +746,6 @@ class Pedido(Prime):
 
     observacoes = models.TextField(blank=True)
 
-    def mapear_tipo_item(model_name):
-        mapa = {
-            "brinquedo": "brinquedo",
-            "combo": "combo",
-            "promocao": "promocao",
-            "peca": "peca",
-        }
-        return mapa.get(model_name, "brinquedo")
 
     def __str__(self):
         if self.cliente and self.cliente.user:

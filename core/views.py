@@ -1962,133 +1962,141 @@ from decimal import Decimal
 
 logger = logging.getLogger(__name__)
 
-
 def processar_pagamento_mp(data):
+    """
+    Processamento idempotente e seguro.
+    """
     try:
-        # Tenta pegar o ID de qualquer forma que venha
-        payment_id = data.get("data", {}).get("id") or data.get("resource", "").split("/")[-1]
+        payment_id = (
+            data.get("data", {}).get("id")
+            or str(data.get("resource", "")).split("/")[-1]
+        )
 
         if not payment_id:
+            logger.warning("[MP] payment_id não encontrado")
+            return
+
+        # 🔒 idempotência forte
+        if Pedido.objects.filter(mp_payment_id=str(payment_id)).exists():
+            logger.info(f"[MP] Pedido já existe para pagamento {payment_id}")
             return
 
         sdk = mercadopago.SDK(settings.MP_ACCESS_TOKEN)
         payment_info = sdk.payment().get(str(payment_id))
 
         if payment_info.get("status") != 200:
+            logger.error(f"[MP] Erro ao consultar pagamento {payment_id}")
             return
 
-        payment = payment_info.get("response")
+        payment = payment_info["response"]
         status = payment.get("status")
 
-        # Se for 'created' o status será 'pending'.
-        # Nós só queremos criar o pedido se for 'approved'.
         if status != "approved":
-            logger.info(f"Pagamento {payment_id} ignorado (Status: {status})")
+            logger.info(f"[MP] Pagamento {payment_id} ainda não aprovado ({status})")
             return
 
         carrinho_id = payment.get("external_reference")
         if not carrinho_id:
+            logger.error("[MP] external_reference ausente")
             return
 
-        # Busca o carrinho e usa select_related/prefetch para evitar problemas de conexão na thread
-        carrinho = Carrinho.objects.filter(id=carrinho_id).first()
+        carrinho = Carrinho.objects.select_related("cliente").prefetch_related("itens").filter(id=carrinho_id).first()
+
         if not carrinho:
+            logger.error(f"[MP] Carrinho {carrinho_id} não encontrado")
             return
 
-        # Verifica se o pedido já existe para evitar duplicidade
-        if Pedido.objects.filter(mp_payment_id=str(payment_id)).exists():
-            return
+        TIPOS_VALIDOS = {"brinquedo", "combo", "promocao", "peca"}
 
         with transaction.atomic():
-            # Extraímos os valores das @properties do carrinho explicitamente
-            v_total_bruto = carrinho.total_bruto
-            v_desconto = carrinho.valor_desconto
-            v_total_liquido = carrinho.total_liquido
+
+            # 🔒 trava de segurança contra corrida
+            if Pedido.objects.filter(mp_payment_id=str(payment_id)).exists():
+                return
 
             pedido = Pedido.objects.create(
                 cliente=carrinho.cliente,
                 status="pago",
                 forma_pagamento="pix",
-                total_bruto=v_total_bruto,
-                valor_desconto=v_desconto,
-                total_liquido=v_total_liquido,
+                total_bruto=carrinho.total_bruto,
+                valor_desconto=carrinho.valor_desconto,
+                total_liquido=carrinho.total_liquido,
                 mp_payment_id=str(payment_id),
                 mp_status=status,
                 external_reference=str(carrinho_id),
             )
 
-            for item in carrinho.itens.all():
-                # Mapeia o tipo_item para bater com as CHOICES do seu modelo ItemPedido
-                model_name = item.content_type.model  # ex: 'brinquedo'
+            itens = []
 
-                ItemPedido.objects.create(
-                    pedido=pedido,
-                    content_type=item.content_type,
-                    object_id=item.object_id,
-                    nome_item=str(item.item),
-                    tipo_item=model_name,  # Garanta que isso esteja no TIPO_ITEM_CHOICES
-                    preco_unitario=item.preco_unitario,
-                    quantidade=item.quantidade,
-                    subtotal=item.subtotal
+            for item in carrinho.itens.all():
+                model_name = item.content_type.model
+
+                if model_name not in TIPOS_VALIDOS:
+                    logger.error(f"[MP] Tipo inválido ignorado: {model_name}")
+                    continue
+
+                itens.append(
+                    ItemPedido(
+                        pedido=pedido,
+                        content_type=item.content_type,
+                        object_id=item.object_id,
+                        nome_item=str(item.item),
+                        tipo_item=model_name,
+                        preco_unitario=item.preco_unitario,
+                        quantidade=item.quantidade,
+                        subtotal=item.subtotal,
+                    )
                 )
 
-            # Limpeza do carrinho após sucesso
+            ItemPedido.objects.bulk_create(itens)
+
+            # 🧹 limpa carrinho
             carrinho.itens.all().delete()
             carrinho.cupom = None
-            carrinho.save()
+            carrinho.save(update_fields=["cupom"])
 
-        logger.info(f"Pedido #{pedido.id} criado com sucesso via Webhook.")
+        logger.info(f"[MP] Pedido {pedido.id} criado com sucesso")
 
-    except Exception as e:
-        logger.error(f"Erro fatal ao processar pagamento MP: {str(e)}", exc_info=True)
+    except Exception:
+        logger.exception("[MP] Erro fatal ao processar pagamento")
 
 
-import json
-import threading
-from django.http import HttpResponse
-from django.views.decorators.csrf import csrf_exempt
-from django.db import connection # Importante
 
 import json
-import threading
+import logging
+
 from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
-from django.db import connection
+
+logger = logging.getLogger(__name__)
 
 
 @csrf_exempt
 def webhook_mercadopago(request):
+    """
+    Webhook robusto e compatível com Gunicorn.
+    SEM thread.
+    """
     if request.method != "POST":
         return HttpResponse(status=200)
 
     try:
-        # 1. Resposta ultra rápida: apenas lê o JSON básico
         payload = json.loads(request.body.decode("utf-8"))
+        logger.info(f"[MP] Webhook recebido: {payload}")
 
-        # 2. Só processa se for pagamento
-        if payload.get("type") == "payment":
-            # Dispara a thread e ESQUECE.
-            # O Django vai responder 200 imediatamente.
-            t = threading.Thread(target=wrapper_processar_pagamento, args=(payload,))
-            t.daemon = True  # Thread daemon não trava o desligamento do servidor
-            t.start()
+        payment_id = payload.get("data", {}).get("id")
 
-    except Exception as e:
-        print(f"Erro ao receber webhook: {e}")
+        if payment_id:
+            processar_pagamento_mp(payload)
 
-    # Retorna 200 SEMPRE e IMEDIATAMENTE
+    except Exception:
+        logger.exception("[MP] Erro ao receber webhook")
+
     return HttpResponse(status=200)
 
-
-def wrapper_processar_pagamento(payload):
-    try:
-        processar_pagamento_mp(payload)
-    finally:
-        # Crucial para evitar o erro 502 em requisições futuras
-        connection.close()
-
-
 from django.http import JsonResponse
+
+
 
 def verificar_pagamento(request):
     carrinho_id = request.GET.get("carrinho_id")
@@ -2096,18 +2104,22 @@ def verificar_pagamento(request):
     if not carrinho_id:
         return JsonResponse({"pago": False})
 
-    pedido = Pedido.objects.filter(
-        external_reference=str(carrinho_id),
-        status="pago"
-    ).first()
+    pedido = (
+        Pedido.objects
+        .filter(external_reference=str(carrinho_id), status="pago")
+        .only("id")
+        .first()
+    )
 
     if pedido:
         return JsonResponse({
             "pago": True,
-            "redirect_url": "/meus-pedidos/"  # ajuste sua URL real
+            "redirect_url": "/meus-pedidos/",
+            "pedido_id": pedido.id,
         })
 
     return JsonResponse({"pago": False})
+
 
 @csrf_exempt
 def processar_cartao(request):
