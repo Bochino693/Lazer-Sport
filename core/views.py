@@ -2007,6 +2007,7 @@ def webhook_mercadopago(request):
             total_liquido=carrinho.total_liquido,
             mp_payment_id=payment_id,
             mp_status="approved",
+            external_reference=str(carrinho.id),  # 🔥 NOVO
         )
 
         for item in carrinho.itens.all():
@@ -2027,19 +2028,18 @@ def webhook_mercadopago(request):
 
     return HttpResponse(status=200)
 
+
 @require_GET
 def verificar_pagamento(request):
-
     carrinho_id = request.GET.get("carrinho_id")
 
     if not carrinho_id:
         return JsonResponse({"pago": False})
 
     pedido = Pedido.objects.filter(
+        external_reference=str(carrinho_id),
         mp_status="approved",
-        forma_pagamento="pix",
-        mp_payment_id__isnull=False,
-        cliente__carrinhos__id=carrinho_id
+        forma_pagamento="pix"
     ).first()
 
     if pedido:
@@ -2049,7 +2049,6 @@ def verificar_pagamento(request):
         })
 
     return JsonResponse({"pago": False})
-
 
 
 @csrf_exempt

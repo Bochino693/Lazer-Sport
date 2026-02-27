@@ -700,6 +700,8 @@ class Pedido(Prime):
         ('frete', 'Frete')
     ]
 
+    external_reference = models.CharField(max_length=100, null=True, blank=True)
+
     tipo_entrega = models.CharField(max_length=90, choices=TIPO_ENTREGA, null=True, blank=True)
 
     # 🚚 logística (preenchido só quando sair para entrega)

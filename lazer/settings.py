@@ -24,6 +24,9 @@ print("CLOUD:", env('CLOUD_NAME', default='não encontrado'))
 
 ENVIRONMENT = env('ENVIRONMENT', default="production")
 
+ACCOUNT_LOGIN_METHODS = {'email', 'username'}
+ACCOUNT_SIGNUP_FIELDS = ['email*', 'username*', 'password1*', 'password2*']
+
 
 MP_ACCESS_TOKEN = "APP_USR-705617687032173-022614-ce56b6aebdfea88b1d89477cd6d28eef-526313220"
 
@@ -56,7 +59,6 @@ ALLOWED_HOSTS = [
 ]
 
 # Application definition
-
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
