@@ -5,6 +5,7 @@ from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 import requests
 
+
 def mapear_tipo_item(model_name: str) -> str:
     mapa = {
         "brinquedo": "brinquedo",
@@ -14,6 +15,7 @@ def mapear_tipo_item(model_name: str) -> str:
         "peca": "peca",
     }
     return mapa.get(model_name.lower(), "brinquedo")
+
 
 class Prime(models.Model):
     ativo = models.BooleanField(default=True)
@@ -574,6 +576,13 @@ class Carrinho(Prime):
         related_name='carrinhos'
     )
 
+    TIPOS_ENTREGA = [
+        ('frete', 'Frete'),
+        ('retirada', 'Retirada')
+    ]
+    tipo_entrega = models.CharField(max_length=60, null=True, blank=True)
+
+    valor_entrega = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     mp_payment_id = models.CharField(max_length=100, null=True, blank=True)
 
     @property
@@ -602,6 +611,10 @@ class Carrinho(Prime):
         if self.cliente and self.cliente.user:
             return f"Carrinho de {self.cliente.user.username}"
         return f"Carrinho #{self.id}"
+
+    class Meta:
+        verbose_name = "Carrinho de Pedido"
+        verbose_name_plural = "Carrinhos de Pedido"
 
 
 class ItemCarrinho(Prime):
@@ -642,6 +655,10 @@ class ItemCarrinho(Prime):
     def __str__(self):
         return f"Item {self.item} (x{self.quantidade})"
 
+    class Meta:
+        verbose_name = "Item de Carrinho"
+        verbose_name_plural = "Itens de Carrinho"
+
 
 from django.db import transaction
 
@@ -655,6 +672,49 @@ class Pedido(Prime):
         ('finalizado', 'Finalizado'),
         ('cancelado', 'Cancelado'),
     )
+
+    FORMA_PAGAMENTO_CHOICES = (
+        ('pix', 'PIX'),
+        ('credito', 'Cartão de Crédito'),
+        ('debito', 'Cartão de Débito'),
+    )
+
+    cliente = models.ForeignKey(
+        ClientePerfil,
+        on_delete=models.PROTECT,
+        related_name='pedidos',
+        null=True, blank=True
+    )
+
+    status = models.CharField(
+        max_length=30,
+        choices=STATUS_CHOICES,
+        default='aguardando_pagamento'
+    )
+
+    # 🚚 logística (preenchido só quando sair para entrega)
+    distancia_km = models.DecimalField(
+        max_digits=6, decimal_places=2, null=True, blank=True
+    )
+
+    tempo_estimado_min = models.PositiveIntegerField(
+        null=True, blank=True
+    )
+    forma_pagamento = models.CharField(
+        max_length=20,
+        choices=FORMA_PAGAMENTO_CHOICES,
+        null=True,
+        blank=True
+    )
+
+    # 🔒 snapshot financeiro
+    total_bruto = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    valor_desconto = models.DecimalField(max_digits=10, decimal_places=2, default=0, null=True, blank=True)
+    total_liquido = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+
+    external_reference = models.CharField(max_length=100, null=True, blank=True)
+    mp_payment_id = models.CharField(max_length=100, null=True, blank=True)
+    mp_status = models.CharField(max_length=50, null=True, blank=True)
 
     def finalizar(self, forma_pagamento=None):
         """
@@ -680,78 +740,14 @@ class Pedido(Prime):
 
             return venda
 
-    FORMA_PAGAMENTO_CHOICES = (
-        ('pix', 'PIX'),
-        ('credito', 'Cartão de Crédito'),
-        ('debito', 'Cartão de Débito'),
-    )
-
-    cliente = models.ForeignKey(
-        ClientePerfil,
-        on_delete=models.PROTECT,
-        related_name='pedidos',
-        null=True, blank=True
-    )
-
-    TIPO_ENVIO = [
-        ('frete', 'Frete'),
-        ('entrega', 'Entrega'),
-    ]
-
-    tipo_envio = models.CharField(max_length=30,
-                                  choices=TIPO_ENVIO,
-                                  default='frete')
-
-    status = models.CharField(
-        max_length=30,
-        choices=STATUS_CHOICES,
-        default='aguardando_pagamento'
-    )
-
-    TIPO_ENTREGA = [
-        ('retirada', 'Retirada'),
-        ('frete', 'Frete')
-    ]
-
-    external_reference = models.CharField(max_length=100, null=True, blank=True)
-
-    tipo_entrega = models.CharField(max_length=90, choices=TIPO_ENTREGA, null=True, blank=True)
-
-    # 🚚 logística (preenchido só quando sair para entrega)
-    distancia_km = models.DecimalField(
-        max_digits=6, decimal_places=2, null=True, blank=True
-    )
-
-    tempo_estimado_min = models.PositiveIntegerField(
-        null=True, blank=True
-    )
-
-    # 🔒 snapshot financeiro
-    total_bruto = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    valor_desconto = models.DecimalField(max_digits=10, decimal_places=2, default=0, null=True, blank=True)
-    total_liquido = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-
-    forma_pagamento = models.CharField(
-        max_length=20,
-        choices=FORMA_PAGAMENTO_CHOICES,
-        null=True,
-        blank=True
-    )
-
-    mp_payment_id = models.CharField(max_length=100, null=True, blank=True)
-    mp_status = models.CharField(max_length=50, null=True, blank=True)
-
-    cupom_codigo = models.CharField(max_length=20, blank=True, null=True)
-    cupom_percentual = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-
-    observacoes = models.TextField(blank=True)
-
-
     def __str__(self):
         if self.cliente and self.cliente.user:
             return f"Pedido #{self.id} - {self.cliente.user.username}"
         return f"Pedido #{self.id}"
 
+    class Meta:
+        verbose_name = "Pedido"
+        verbose_name_plural = "Pedidos"
 
 
 class ItemPedido(Prime):
@@ -786,6 +782,10 @@ class ItemPedido(Prime):
 
     def __str__(self):
         return f"{self.nome_item} (x{self.quantidade})"
+
+    class Meta:
+        verbose_name = "Item de Pedido"
+        verbose_name_plural = "Itens de Pedido"
 
 
 class EnderecoEntrega(Prime):
@@ -853,6 +853,10 @@ class EnderecoEntrega(Prime):
     def __str__(self):
         return f"Entrega Pedido #{self.pedido.id} - {self.cidade}/{self.estado}"
 
+    class Meta:
+        verbose_name = "Endereço de Entrega"
+        verbose_name_plural = "Endereços de Entregas"
+
 
 class Venda(Prime):
     pedido = models.OneToOneField(
@@ -879,6 +883,10 @@ class Venda(Prime):
 
     def __str__(self):
         return f"Venda do Pedido #{self.pedido.id}"
+
+    class Meta:
+        verbose_name = "Venda"
+        verbose_name_plural = "Vendas"
 
 
 class Manutencao(models.Model):
@@ -935,6 +943,10 @@ class Manutencao(models.Model):
     def __str__(self):
         return f"{self.brinquedo} - {self.get_status_display()}"
 
+    class Meta:
+        verbose_name = "Manutenção"
+        verbose_name_plural = "Manutenções"
+
 
 class ManutencaoImagem(models.Model):
     manutencao = models.ForeignKey(
@@ -943,6 +955,10 @@ class ManutencaoImagem(models.Model):
         related_name='imagens'
     )
     imagem = models.ImageField(upload_to='manutencoes/')
+
+    class Meta:
+        verbose_name = "Imagem de Manutenção"
+        verbose_name_plural = "Imagens de Manutenções"
 
 
 class ListaDesejos(Prime):

@@ -511,12 +511,29 @@ class ItemPedidoInline(admin.TabularInline):
 @admin.register(Pedido)
 class PedidoAdmin(admin.ModelAdmin):
     list_display = (
-        'id', 'cliente_usuario', 'status', 'forma_pagamento',
-        'total_bruto', 'valor_desconto', 'total_liquido', 'cupom_codigo', 'criacao'
+        'id',
+        'cliente_usuario',
+        'status',
+        'forma_pagamento',
+        'total_bruto',
+        'valor_desconto',
+        'total_liquido',
+        'criacao'
     )
+
     list_filter = ('status', 'forma_pagamento', 'criacao')
-    search_fields = ('id', 'cliente__user__username', 'cupom_codigo')
-    readonly_fields = ('total_bruto', 'valor_desconto', 'total_liquido')  # snapshot financeiro
+
+    search_fields = (
+        'id',
+        'cliente__user__username',
+    )
+
+    readonly_fields = (
+        'total_bruto',
+        'valor_desconto',
+        'total_liquido',
+    )
+
     inlines = [ItemPedidoInline]
     ordering = ('-criacao',)
 
@@ -524,7 +541,6 @@ class PedidoAdmin(admin.ModelAdmin):
         return obj.cliente.user.username if obj.cliente else "Guest"
 
     cliente_usuario.short_description = "Cliente"
-
 
 # ===========================
 # ADMIN DO ITEM DO PEDIDO (opcional separado)
