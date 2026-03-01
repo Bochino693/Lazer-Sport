@@ -1964,28 +1964,30 @@ from decimal import Decimal
 
 logger = logging.getLogger(__name__)
 
-
 def processar_pagamento_mp(data):
     """
-    Processamento idempotente e seguro.
+    Processamento idempotente e seguro do webhook Mercado Pago.
     """
     try:
+        # =========================
+        # 🔎 extrai payment_id
+        # =========================
         payment_id = (
-                data.get("data", {}).get("id")
-                or str(data.get("resource", "")).split("/")[-1]
+            data.get("data", {}).get("id")
+            or str(data.get("resource", "")).split("/")[-1]
         )
 
         if not payment_id:
             logger.warning("[MP] payment_id não encontrado")
             return
 
-        # 🔒 idempotência forte
-        if Pedido.objects.filter(mp_payment_id=str(payment_id)).exists():
-            logger.info(f"[MP] Pedido já existe para pagamento {payment_id}")
-            return
+        payment_id = str(payment_id)
 
+        # =========================
+        # 🔎 consulta MP
+        # =========================
         sdk = mercadopago.SDK(settings.MP_ACCESS_TOKEN)
-        payment_info = sdk.payment().get(str(payment_id))
+        payment_info = sdk.payment().get(payment_id)
 
         if payment_info.get("status") != 200:
             logger.error(f"[MP] Erro ao consultar pagamento {payment_id}")
@@ -1998,53 +2000,75 @@ def processar_pagamento_mp(data):
             logger.info(f"[MP] Pagamento {payment_id} ainda não aprovado ({status})")
             return
 
+        # =========================
+        # 🛒 pega carrinho
+        # =========================
         carrinho_id = payment.get("external_reference")
+
         if not carrinho_id:
             logger.error("[MP] external_reference ausente")
             return
 
-        carrinho = Carrinho.objects.select_related("cliente").prefetch_related("itens").filter(id=carrinho_id).first()
+        carrinho = (
+            Carrinho.objects
+            .select_related("cliente")
+            .prefetch_related("itens")
+            .filter(id=carrinho_id)
+            .first()
+        )
 
         if not carrinho:
             logger.error(f"[MP] Carrinho {carrinho_id} não encontrado")
             return
 
+        itens_carrinho = list(carrinho.itens.all())
+
+        if not itens_carrinho:
+            logger.warning(f"[MP] Carrinho {carrinho_id} sem itens")
+            return
+
         TIPOS_VALIDOS = {"brinquedo", "combo", "promocao", "peca"}
 
+        # =========================
+        # 🔒 BLOCO ATÔMICO
+        # =========================
         with transaction.atomic():
-
-            # 🔒 trava de segurança contra corrida
-            if Pedido.objects.filter(mp_payment_id=str(payment_id)).exists():
+            try:
+                pedido, created = Pedido.objects.get_or_create(
+                    mp_payment_id=payment_id,
+                    defaults={
+                        "cliente": carrinho.cliente,
+                        "status": "pago",
+                        "forma_pagamento": "pix",
+                        "total_bruto": carrinho.total_bruto,
+                        "valor_desconto": carrinho.valor_desconto,
+                        "total_liquido": carrinho.total_liquido,
+                        "mp_status": status,
+                        "external_reference": str(carrinho_id),
+                    }
+                )
+            except IntegrityError:
+                # 🔥 corrida entre webhooks
+                logger.info(f"[MP] Corrida detectada para pagamento {payment_id}")
                 return
-
-            pedido, created = Pedido.objects.get_or_create(
-                mp_payment_id=str(payment_id),
-                defaults={
-                    "cliente": carrinho.cliente,
-                    "status": "pago",
-                    "forma_pagamento": "pix",
-                    "total_bruto": carrinho.total_bruto,
-                    "valor_desconto": carrinho.valor_desconto,
-                    "total_liquido": carrinho.total_liquido,
-                    "mp_status": status,
-                    "external_reference": str(carrinho_id),
-                }
-            )
 
             if not created:
                 logger.info(f"[MP] Pedido já existia para {payment_id}")
                 return
 
-            itens = []
+            # =========================
+            # 📦 cria itens do pedido
+            # =========================
+            itens_pedido = []
 
-            for item in carrinho.itens.all():
+            for item in itens_carrinho:
                 model_name = item.content_type.model
 
                 if model_name not in TIPOS_VALIDOS:
                     logger.error(f"[MP] Tipo inválido ignorado: {model_name}")
                     continue
 
-                itens.append(
+                itens_pedido.append(
                     ItemPedido(
                         pedido=pedido,
                         content_type=item.content_type,
@@ -2057,9 +2081,12 @@ def processar_pagamento_mp(data):
                     )
                 )
 
-            ItemPedido.objects.bulk_create(itens)
+            if itens_pedido:
+                ItemPedido.objects.bulk_create(itens_pedido)
 
+            # =========================
             # 🧹 limpa carrinho
+            # =========================
             carrinho.itens.all().delete()
             carrinho.cupom = None
             carrinho.save(update_fields=["cupom"])
@@ -2068,7 +2095,6 @@ def processar_pagamento_mp(data):
 
     except Exception:
         logger.exception("[MP] Erro fatal ao processar pagamento")
-
 
 import threading
 
