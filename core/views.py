@@ -1033,7 +1033,6 @@ from django.contrib import messages
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate, login
 from django.urls import reverse
-
 class RegistrarView(View):
     template_name = "register.html"
 
@@ -1048,16 +1047,20 @@ class RegistrarView(View):
         password = request.POST.get("password")
         telefone = request.POST.get("telefone")
 
-        # ✅ valida campos
+        # valida campos
         if not all([first_name, last_name, username, email, password, telefone]):
             messages.error(request, "Preencha todos os campos.")
             return render(request, self.template_name)
 
-        # ✅ VALIDAÇÃO CORRIGIDA: aceita (XX)XXXX-XXXX e (XX)9XXXX-XXXX
+        # valida telefone
         if not re.match(r'^\(\d{2}\)\d{4,5}-\d{4}$', telefone):
-            messages.error(request, "Telefone inválido. Formatos aceitos: (11)9XXXX-XXXX ou (11)XXXX-XXXX.")
+            messages.error(
+                request,
+                "Telefone inválido. Formatos aceitos: (11)9XXXX-XXXX ou (11)XXXX-XXXX."
+            )
             return render(request, self.template_name)
 
+        # valida duplicidade
         if User.objects.filter(username=username).exists():
             messages.error(request, "Nome de usuário já está em uso.")
             return render(request, self.template_name)
@@ -1075,32 +1078,24 @@ class RegistrarView(View):
             last_name=last_name
         )
 
-        # ✅ ATUALIZA perfil (signal já criou)
+        # atualiza perfil criado pelo signal
         perfil = user.perfil
         perfil.nome_completo = f"{first_name} {last_name}"
         perfil.telefone = telefone
         perfil.save()
 
-        # ✅ autentica
-        user = authenticate(
+        # autentica e loga
+        user_auth = authenticate(
             request,
             username=username,
             password=password
         )
 
-        if user:
-            login(request, user)
+        if user_auth:
+            login(request, user_auth)
 
-        messages.success(
-            request,
-            f"Conta criada com sucesso! Bem-vindo(a), {first_name}."
-        )
-
-        # Dica: Como você já fez o login do usuário acima,
-        # talvez seja melhor redirecionar para a "home" ou "dashboard" em vez de "login".
-        login_url = reverse("login") + "#login-box"
-        return redirect(login_url)
-
+        # ✅ AQUI: página de sucesso
+        return render(request, "login_sucesso.html", {"user": user_auth})
 
 class BrinquedoAdmin(AdminOnlyMixin, View):
 
