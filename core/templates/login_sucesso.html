@@ -72,6 +72,24 @@
 </style>
 
 
+<!-- CANVAS PARA CONFETES -->
+<canvas id="confetti-canvas"></canvas>
+
+<div class="login-sucesso-box" id="login-box">
+    <h2>Entrando...</h2>
+    <p>Olá, {{ user.get_full_name }}! Aguarde um instante 🎯</p>
+
+    <div class="progress-bar">
+        <div class="progress-fill"></div>
+    </div>
+
+    <p style="margin-top: 10px; font-size: 0.9em; color:#777;">
+        Você será redirecionado em 4 segundos.
+    </p>
+</div>
+
+
+
 <script>
 // REDIRECIONAMENTO AUTOMÁTICO
 setTimeout(function() {
@@ -137,22 +155,6 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 
 </script>
-<!-- CANVAS PARA CONFETES -->
-<canvas id="confetti-canvas"></canvas>
-
-<div class="login-sucesso-box" id="login-box">
-    <h2>Entrando...</h2>
-    <p>Olá, {{ user.get_full_name }}! Aguarde um instante 🎯</p>
-
-    <div class="progress-bar">
-        <div class="progress-fill"></div>
-    </div>
-
-    <p style="margin-top: 10px; font-size: 0.9em; color:#777;">
-        Você será redirecionado em 4 segundos.
-    </p>
-</div>
-
 
 
 {% endblock %}
