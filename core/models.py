@@ -84,7 +84,7 @@ class ClientePerfil(models.Model):
     telefone = models.CharField(
         max_length=14,
         validators=[validar_telefone],
-        blank=False,
+        blank=True,
         null=True
     )
 

@@ -1066,7 +1066,7 @@ class RegistrarView(View):
             messages.error(request, "Este e-mail já está registrado.")
             return render(request, self.template_name)
 
-        # ✅ cria usuário
+        # cria usuário
         user = User.objects.create_user(
             username=username,
             email=email,
@@ -1075,12 +1075,11 @@ class RegistrarView(View):
             last_name=last_name
         )
 
-        # ✅ cria perfil com telefone
-        ClientePerfil.objects.create(
-            user=user,
-            nome_completo=f"{first_name} {last_name}",
-            telefone=telefone
-        )
+        # ✅ ATUALIZA perfil (signal já criou)
+        perfil = user.perfil
+        perfil.nome_completo = f"{first_name} {last_name}"
+        perfil.telefone = telefone
+        perfil.save()
 
         # ✅ autentica
         user = authenticate(
