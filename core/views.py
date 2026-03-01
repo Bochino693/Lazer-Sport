@@ -1032,7 +1032,7 @@ from django.views import View
 from django.contrib import messages
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate, login
-
+from django.urls import reverse
 
 class RegistrarView(View):
     template_name = "register.html"
@@ -1098,7 +1098,8 @@ class RegistrarView(View):
 
         # Dica: Como você já fez o login do usuário acima,
         # talvez seja melhor redirecionar para a "home" ou "dashboard" em vez de "login".
-        return redirect("login")
+        login_url = reverse("login") + "#login-box"
+        return redirect(login_url)
 
 
 class BrinquedoAdmin(AdminOnlyMixin, View):
