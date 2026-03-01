@@ -1987,6 +1987,7 @@ def processar_pagamento_mp(data):
         # 🔎 consulta MP
         # =========================
         sdk = mercadopago.SDK(settings.MP_ACCESS_TOKEN)
+        sdk.config.set_timeout(15)  # evita travar webhook
         payment_info = sdk.payment().get(payment_id)
 
         if payment_info.get("status") != 200:
@@ -2099,6 +2100,7 @@ def processar_pagamento_mp(data):
 import threading
 
 
+
 @csrf_exempt
 def webhook_mercadopago(request):
     if request.method != "POST":
@@ -2108,20 +2110,13 @@ def webhook_mercadopago(request):
         payload = json.loads(request.body.decode("utf-8"))
         logger.info(f"[MP] Webhook recebido: {payload}")
 
-        payment_id = payload.get("data", {}).get("id")
-
-        if payment_id:
-            # 🚀 processa em background
-            threading.Thread(
-                target=processar_pagamento_mp,
-                args=(payload,),
-                daemon=True
-            ).start()
+        # ✅ PROCESSA DIRETO (rápido e seguro)
+        processar_pagamento_mp(payload)
 
     except Exception:
         logger.exception("[MP] Erro ao receber webhook")
 
-    # ⚡ responde IMEDIATO
+    # ✅ SEMPRE responder 200
     return HttpResponse(status=200)
 
 
