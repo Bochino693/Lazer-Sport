@@ -1033,6 +1033,8 @@ from django.contrib import messages
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate, login
 from django.urls import reverse
+
+
 class RegistrarView(View):
     template_name = "register.html"
 
@@ -1094,7 +1096,7 @@ class RegistrarView(View):
         if user_auth:
             login(request, user_auth)
 
-        # ✅ AQUI: página de sucesso
+        # página de sucesso (onde já existe o scroll)
         return render(request, "login_sucesso.html", {"user": user_auth})
 
 class BrinquedoAdmin(AdminOnlyMixin, View):
