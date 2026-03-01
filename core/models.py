@@ -713,7 +713,13 @@ class Pedido(Prime):
     total_liquido = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
 
     external_reference = models.CharField(max_length=100, null=True, blank=True)
-    mp_payment_id = models.CharField(max_length=100, null=True, blank=True)
+    mp_payment_id = models.CharField(
+        max_length=100,
+        null=True,
+        blank=True,
+        unique=True,
+        db_index=True,
+    )
     mp_status = models.CharField(max_length=50, null=True, blank=True)
 
     def finalizar(self, forma_pagamento=None):

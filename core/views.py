@@ -99,7 +99,6 @@ class HomeView(View):
             combo.economia = economia
             combo.porcentagem = porcentagem
 
-
         categorias_peca = CategoriaPeca.objects.all()
         from .models import ImagemPeca
         from django.db.models import Prefetch
@@ -162,9 +161,11 @@ class HomeView(View):
 
         return render(request, "home.html", context)
 
+
 from django.http import HttpResponse
 from django.template.loader import render_to_string
 from django.core.paginator import Paginator
+
 
 def filtrar_pecas_ajax(request):
     categoria_ativa = request.GET.get("categoria")
@@ -197,11 +198,11 @@ def filtrar_pecas_ajax(request):
 
 from .models import PecasReposicao
 
+
 class ReposicaoView(View):
 
     def get(self, request):
         categorias_peca = CategoriaPeca.objects.all()
-
 
         ctx = {
             'categorias_peca': categorias_peca,
@@ -1099,6 +1100,7 @@ class RegistrarView(View):
         # página de sucesso (onde já existe o scroll)
         return render(request, "login_sucesso.html", {"user": user_auth})
 
+
 class BrinquedoAdmin(AdminOnlyMixin, View):
 
     def get(self, request):
@@ -1665,6 +1667,7 @@ from .models import Manutencao
 from django.contrib.auth.decorators import login_required
 from .models import ItemCarrinho, Carrinho
 
+
 @require_POST
 def adicionar_ao_carrinho(request, tipo, object_id):
     if not request.user.is_authenticated:
@@ -1786,6 +1789,7 @@ from django.views.decorators.http import require_POST
 from django.http import JsonResponse
 import json
 
+
 @require_POST
 @login_required
 def alterar_quantidade_item(request):
@@ -1804,6 +1808,7 @@ def alterar_quantidade_item(request):
         item.save()
 
     return JsonResponse({"status": "ok"})
+
 
 import json
 from django.http import JsonResponse
@@ -1916,8 +1921,9 @@ from django.conf import settings
 from django.http import JsonResponse
 from decimal import Decimal
 from .models import Pedido
-def gerar_pix(request):
 
+
+def gerar_pix(request):
     carrinho_id = request.GET.get("carrinho_id")
     carrinho = Carrinho.objects.get(id=carrinho_id)
 
@@ -1943,7 +1949,6 @@ def gerar_pix(request):
     carrinho.mp_payment_id = payment["id"]
     carrinho.save()
 
-
     return JsonResponse({
         "qr_code": payment["point_of_interaction"]["transaction_data"]["qr_code_base64"],
         "pix_copia_cola": payment["point_of_interaction"]["transaction_data"]["qr_code"],
@@ -1959,14 +1964,15 @@ from decimal import Decimal
 
 logger = logging.getLogger(__name__)
 
+
 def processar_pagamento_mp(data):
     """
     Processamento idempotente e seguro.
     """
     try:
         payment_id = (
-            data.get("data", {}).get("id")
-            or str(data.get("resource", "")).split("/")[-1]
+                data.get("data", {}).get("id")
+                or str(data.get("resource", "")).split("/")[-1]
         )
 
         if not payment_id:
@@ -2063,7 +2069,9 @@ def processar_pagamento_mp(data):
     except Exception:
         logger.exception("[MP] Erro fatal ao processar pagamento")
 
+
 import threading
+
 
 @csrf_exempt
 def webhook_mercadopago(request):
