@@ -618,6 +618,14 @@ class BrinquedoSobMedida(models.Model):
 
 
 class Carrinho(Prime):
+    endereco_entrega = models.OneToOneField(
+        EnderecoEntrega,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='carrinho'
+    )
+
     cliente = models.ForeignKey(
         ClientePerfil,
         on_delete=models.CASCADE,
@@ -721,13 +729,6 @@ from django.db import transaction
 
 
 class Pedido(Prime):
-    endereco_entrega = models.OneToOneField(
-        EnderecoEntrega,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='pedido'
-    )
 
     STATUS_CHOICES = (
         ('aguardando_pagamento', 'Aguardando pagamento'),
