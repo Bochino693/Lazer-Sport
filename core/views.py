@@ -1916,12 +1916,6 @@ class PaymentView(View):
 
 from django.views.decorators.csrf import csrf_exempt
 
-import mercadopago
-from django.conf import settings
-from django.http import JsonResponse
-from decimal import Decimal
-from .models import Pedido
-
 
 def gerar_pix(request):
     carrinho_id = request.GET.get("carrinho_id")
@@ -1958,7 +1952,7 @@ def gerar_pix(request):
 
 import mercadopago
 from django.conf import settings
-from django.db import transaction
+
 import logging
 from decimal import Decimal
 
@@ -2097,9 +2091,6 @@ def processar_pagamento_mp(data):
     except Exception:
         logger.exception("[MP] Erro fatal ao processar pagamento")
 
-import threading
-
-
 
 @csrf_exempt
 def webhook_mercadopago(request):
@@ -2110,13 +2101,14 @@ def webhook_mercadopago(request):
         payload = json.loads(request.body.decode("utf-8"))
         logger.info(f"[MP] Webhook recebido: {payload}")
 
-        # ✅ PROCESSA DIRETO (rápido e seguro)
-        processar_pagamento_mp(payload)
+        payment_id = payload.get("data", {}).get("id")
+
+        if payment_id:
+            processar_pagamento_mp(payload)  # ✅ SEM THREAD
 
     except Exception:
         logger.exception("[MP] Erro ao receber webhook")
 
-    # ✅ SEMPRE responder 200
     return HttpResponse(status=200)
 
 

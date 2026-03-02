@@ -721,6 +721,7 @@ class Pedido(Prime):
         db_index=True,
     )
     mp_status = models.CharField(max_length=50, null=True, blank=True)
+    cpf_cliente = models.CharField(max_length=18, null=True, blank=True)
 
     def finalizar(self, forma_pagamento=None):
         """
