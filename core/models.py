@@ -545,6 +545,63 @@ class ImagemEvento(models.Model):
         verbose_name_plural = "Imagens dos Eventos"
 
 
+class EnderecoEntrega(Prime):
+    telefone = models.CharField(
+        max_length=20,
+        help_text="Telefone para contato na entrega",
+        null=True,
+        blank=True
+    )
+
+    cep = models.CharField(max_length=9)
+    rua = models.CharField(max_length=255)
+    numero = models.CharField(max_length=20)
+    complemento = models.CharField(max_length=255, blank=True, null=True)
+    bairro = models.CharField(max_length=100)
+    cidade = models.CharField(max_length=100)
+    estado = models.CharField(max_length=2)
+
+    latitude = models.DecimalField(
+        max_digits=50, decimal_places=30, null=True, blank=True
+    )
+    longitude = models.DecimalField(
+        max_digits=50, decimal_places=30, null=True, blank=True
+    )
+
+    def geocodificar(self):
+        endereco = f"{self.rua}, {self.numero}, {self.bairro}, {self.cidade}, {self.estado}, Brasil"
+
+        url = "https://nominatim.openstreetmap.org/search"
+        params = {"q": endereco, "format": "json", "limit": 1}
+        headers = {"User-Agent": "SeuSistemaEntrega/1.0"}
+
+        try:
+            response = requests.get(url, params=params, headers=headers, timeout=10)
+            data = response.json()
+
+            if not data:
+                return None, None
+
+            lat = float(data[0]["lat"])
+            lon = float(data[0]["lon"])
+
+            self.latitude = lat
+            self.longitude = lon
+            self.save(update_fields=['latitude', 'longitude'])
+
+            return lat, lon
+
+        except Exception:
+            return None, None
+
+    def __str__(self):
+        return f"{self.rua}, {self.numero} - {self.cidade}/{self.estado}"
+
+    class Meta:
+        verbose_name = "Endereço de Entrega"
+        verbose_name_plural = "Endereços de Entregas"
+
+
 class BrinquedoSobMedida(models.Model):
     brinquedo_original = models.ForeignKey(Brinquedos, on_delete=models.CASCADE)
     altura = models.DecimalField(max_digits=10, decimal_places=2)
@@ -664,6 +721,14 @@ from django.db import transaction
 
 
 class Pedido(Prime):
+    endereco_entrega = models.OneToOneField(
+        EnderecoEntrega,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='pedido'
+    )
+
     STATUS_CHOICES = (
         ('aguardando_pagamento', 'Aguardando pagamento'),
         ('pago', 'Pago'),
@@ -793,76 +858,6 @@ class ItemPedido(Prime):
     class Meta:
         verbose_name = "Item de Pedido"
         verbose_name_plural = "Itens de Pedido"
-
-
-class EnderecoEntrega(Prime):
-    pedido = models.OneToOneField(
-        Pedido,
-        on_delete=models.CASCADE,
-        related_name='endereco'
-    )
-
-    telefone = models.CharField(
-        max_length=20,
-        help_text="Telefone para contato na entrega",
-        null=True,
-        blank=True
-    )
-
-    cep = models.CharField(max_length=9)
-    rua = models.CharField(max_length=255)
-    numero = models.CharField(max_length=20)
-    complemento = models.CharField(max_length=255, blank=True, null=True)
-    bairro = models.CharField(max_length=100)
-    cidade = models.CharField(max_length=100)
-    estado = models.CharField(max_length=2)
-
-    latitude = models.DecimalField(
-        max_digits=50, decimal_places=30, null=True, blank=True
-    )
-    longitude = models.DecimalField(
-        max_digits=50, decimal_places=30, null=True, blank=True
-    )
-
-    def geocodificar(self):
-        endereco = f"{self.rua}, {self.numero}, {self.bairro}, {self.cidade}, {self.estado}, Brasil"
-
-        url = "https://nominatim.openstreetmap.org/search"
-        params = {
-            "q": endereco,
-            "format": "json",
-            "limit": 1
-        }
-
-        headers = {
-            "User-Agent": "SeuSistemaEntrega/1.0"
-        }
-
-        try:
-            response = requests.get(url, params=params, headers=headers, timeout=10)
-            data = response.json()
-
-            if not data:
-                return None, None
-
-            lat = float(data[0]["lat"])
-            lon = float(data[0]["lon"])
-
-            self.latitude = lat
-            self.longitude = lon
-            self.save(update_fields=['latitude', 'longitude'])
-
-            return lat, lon
-
-        except Exception:
-            return None, None
-
-    def __str__(self):
-        return f"Entrega Pedido #{self.pedido.id} - {self.cidade}/{self.estado}"
-
-    class Meta:
-        verbose_name = "Endereço de Entrega"
-        verbose_name_plural = "Endereços de Entregas"
 
 
 class Venda(Prime):
