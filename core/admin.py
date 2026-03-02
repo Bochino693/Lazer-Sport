@@ -621,7 +621,7 @@ from .models import EnderecoEntrega, Pedido
 @admin.register(EnderecoEntrega)
 class EnderecoEntregaAdmin(admin.ModelAdmin):
     list_display = (
-        'pedido',
+
         'cep',
         'rua',
         'numero',
@@ -633,12 +633,11 @@ class EnderecoEntregaAdmin(admin.ModelAdmin):
         'longitude',
     )
     list_filter = ('cidade', 'estado')
-    search_fields = ('pedido__id', 'cep', 'rua', 'bairro', 'cidade', 'estado', 'telefone')
+    search_fields = ('cep', 'rua', 'bairro', 'cidade', 'estado', 'telefone')
     #readonly_fields = ('latitude', 'longitude')  # latitude e longitude não devem ser editáveis manualmente
     fieldsets = (
         (None, {
             'fields': (
-                'pedido',
                 'telefone',
                 'cep',
                 'rua',
