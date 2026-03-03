@@ -1911,6 +1911,8 @@ from django.conf import settings
 from django.http import JsonResponse
 from decimal import Decimal
 from .models import Pedido
+
+
 def gerar_pix(request):
 
     carrinho_id = request.GET.get("carrinho_id")
@@ -2000,6 +2002,7 @@ def webhook_mercadopago(request):
 
         pedido = Pedido.objects.create(
             cliente=carrinho.cliente,
+            carrinho_origem=carrinho,  # ⭐ ESSENCIAL
             status="pago",
             forma_pagamento="pix",
             total_bruto=carrinho.total_bruto,
@@ -2027,6 +2030,7 @@ def webhook_mercadopago(request):
 
     return HttpResponse(status=200)
 
+
 @require_GET
 def verificar_pagamento(request):
 
@@ -2036,10 +2040,8 @@ def verificar_pagamento(request):
         return JsonResponse({"pago": False})
 
     pedido = Pedido.objects.filter(
-        mp_status="approved",
-        forma_pagamento="pix",
-        mp_payment_id__isnull=False,
-        cliente__carrinhos__id=carrinho_id
+        carrinho_origem_id=carrinho_id,
+        mp_status="approved"
     ).first()
 
     if pedido:

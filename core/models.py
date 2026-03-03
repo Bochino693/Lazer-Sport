@@ -581,7 +581,9 @@ class Carrinho(Prime):
         return (self.total_bruto - self.valor_desconto).quantize(Decimal('0.01'))
 
     def __str__(self):
-        return f"Carrinho de {self.cliente.user.username}"
+        if self.cliente and self.cliente.user:
+            return f"Carrinho de {self.cliente.user.username}"
+        return f"Carrinho #{self.id}"
 
 
 class ItemCarrinho(Prime):
@@ -614,9 +616,12 @@ class ItemCarrinho(Prime):
 
         return 0
 
+    from decimal import Decimal, ROUND_HALF_UP
+
     @property
     def subtotal(self):
-        return round(self.preco_unitario * self.quantidade, 2)
+        total = Decimal(self.preco_unitario) * Decimal(self.quantidade)
+        return total.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
     def __str__(self):
         return f"Item {self.item} (x{self.quantidade})"
@@ -633,6 +638,14 @@ class Pedido(Prime):
         ('saiu_entrega', 'Saiu para entrega'),
         ('finalizado', 'Finalizado'),
         ('cancelado', 'Cancelado'),
+    )
+
+    carrinho_origem = models.ForeignKey(
+        Carrinho,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='pedidos_gerados'
     )
 
     def finalizar(self, forma_pagamento=None):
@@ -708,7 +721,12 @@ class Pedido(Prime):
         blank=True
     )
 
-    mp_payment_id = models.CharField(max_length=100, null=True, blank=True)
+    mp_payment_id = models.CharField(
+        max_length=100,
+        null=True,
+        blank=True,
+        db_index=True
+    )
     mp_status = models.CharField(max_length=50, null=True, blank=True)
 
     cupom_codigo = models.CharField(max_length=20, blank=True, null=True)

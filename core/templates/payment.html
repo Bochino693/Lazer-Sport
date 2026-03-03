@@ -805,7 +805,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 pixInput.value = data.pix_copia_cola;
             }
 
-            iniciarVerificacao();
+            iniciarVerificacao({{ carrinho.id }});
 
         } catch (e) {
             console.error("Erro ao iniciar PIX:", e);
@@ -826,7 +826,7 @@ function iniciarVerificacao(carrinhoId) {
                     clearInterval(intervalo);
 
                     // Fecha modal
-                    document.getElementById("modalPix").style.display = "none";
+                    document.getElementById("modal-aguarde").style.display = "none";
 
                     // Redireciona
                     window.location.href = data.redirect_url;
