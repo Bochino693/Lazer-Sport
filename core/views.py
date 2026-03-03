@@ -1999,6 +1999,9 @@ from django.http import JsonResponse
 from django.db import transaction
 import mercadopago
 
+from django.http import JsonResponse
+from django.db import transaction
+import mercadopago
 
 @require_GET
 def verificar_pagamento(request):
@@ -2011,18 +2014,7 @@ def verificar_pagamento(request):
     if not carrinho or not carrinho.mp_payment_id:
         return JsonResponse({"pago": False})
 
-    # ✅ se já existe pedido, só retorna
-    pedido_existente = Pedido.objects.filter(
-        mp_payment_id=carrinho.mp_payment_id
-    ).first()
-
-    if pedido_existente:
-        return JsonResponse({
-            "pago": True,
-            "redirect_url": "/meus-pedidos/"
-        })
-
-    # 🔥 consulta Mercado Pago direto (SEM depender de webhook)
+    # consulta Mercado Pago
     try:
         sdk = mercadopago.SDK(settings.MP_ACCESS_TOKEN)
         payment = sdk.payment().get(carrinho.mp_payment_id)["response"]
@@ -2033,32 +2025,46 @@ def verificar_pagamento(request):
     if payment.get("status") != "approved":
         return JsonResponse({"pago": False})
 
-    # 🔥 cria pedido com proteção total
-    # 🔥 cria pedido com proteção total
+    # cria ou atualiza pedido de forma segura
     with transaction.atomic():
-
         pedido, created = Pedido.objects.get_or_create(
-            mp_payment_id=carrinho.mp_payment_id,  # <--- corrigido aqui
+            mp_payment_id=carrinho.mp_payment_id,
             defaults={
                 "cliente": carrinho.cliente,
-                "carrinho_origem": carrinho,  # ⭐ referência ao carrinho
+                "carrinho_origem": carrinho,
                 "status": "pago",
                 "forma_pagamento": "pix",
                 "total_bruto": carrinho.total_bruto,
                 "valor_desconto": carrinho.valor_desconto,
                 "total_liquido": carrinho.total_liquido,
                 "mp_status": "approved",
+                "cupom_codigo": carrinho.cupom.codigo if carrinho.cupom else None,
+                "cupom_percentual": carrinho.cupom.desconto_percentual if carrinho.cupom else None
             }
         )
 
-        # ⚡ Só cria os itens se o pedido acabou de ser criado
-        if created:
+        # atualiza campos caso pedido já existisse mas não tivesse valores
+        if not created:
+            pedido.cliente = carrinho.cliente
+            pedido.carrinho_origem = carrinho
+            pedido.status = "pago"
+            pedido.forma_pagamento = "pix"
+            pedido.total_bruto = carrinho.total_bruto
+            pedido.valor_desconto = carrinho.valor_desconto
+            pedido.total_liquido = carrinho.total_liquido
+            pedido.mp_status = "approved"
+            pedido.cupom_codigo = carrinho.cupom.codigo if carrinho.cupom else None
+            pedido.cupom_percentual = carrinho.cupom.desconto_percentual if carrinho.cupom else None
+            pedido.save()
+
+        # ⚡ garante que itens sejam criados se ainda não existirem
+        if not pedido.itens.exists():
             for item in carrinho.itens.all():
                 ItemPedido.objects.create(
                     pedido=pedido,
                     content_type=item.content_type,
                     object_id=item.object_id,
-                    item_original=item.item,  # referência real
+                    item_original=item.item,
                     nome_item=str(item.item),
                     tipo_item=item.content_type.model,
                     preco_unitario=item.preco_unitario,
@@ -2066,14 +2072,14 @@ def verificar_pagamento(request):
                     subtotal=item.subtotal
                 )
 
-            # limpa carrinho
-            carrinho.itens.all().delete()
-            carrinho.cupom = None
-            carrinho.save()
+        # limpa carrinho
+        carrinho.itens.all().delete()
+        carrinho.cupom = None
+        carrinho.save()
 
     return JsonResponse({
         "pago": True,
-        "redirect_url": "/meus-pedidos/"
+        "redirect_url": "/meus-pedidos/#pedidos"
     })
 
 @csrf_exempt
