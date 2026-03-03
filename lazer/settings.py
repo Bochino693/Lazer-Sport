@@ -204,6 +204,6 @@ WHITENOISE_USE_FINDERS = True
 # ------------------------------
 # MercadoPago
 # ------------------------------
-MP_ACCESS_TOKEN = "APP_USR-705617687032173-022614-ce56b6aebdfea88b1d89477cd6d28eef-526313220"
+MP_ACCESS_TOKEN = "APP_USR-8795517953113951-030313-7940e925097a2e9fb486d62a5f75e420-149578645"
 SESSION_COOKIE_DOMAIN = ".lazersport.com.br"
 CSRF_COOKIE_DOMAIN = ".lazersport.com.br"
