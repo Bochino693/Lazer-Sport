@@ -1995,9 +1995,7 @@ def webhook_mercadopago(request):
         carrinho.save()
 
     return HttpResponse(status=200)
-from django.http import JsonResponse
-from django.db import transaction
-import mercadopago
+
 
 from django.http import JsonResponse
 from django.db import transaction

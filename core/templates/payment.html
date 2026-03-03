@@ -913,7 +913,7 @@ function iniciarVerificacao(carrinhoId) {
 
     let pagamentoDetectado = false;
 
-    const intervalo = setInterval(function() {
+    const intervalo = setInterval(function () {
 
         fetch(`/verificar-pagamento/?carrinho_id=${carrinhoId}`)
             .then(response => response.json())
@@ -924,16 +924,19 @@ function iniciarVerificacao(carrinhoId) {
                     pagamentoDetectado = true;
                     clearInterval(intervalo);
 
-                    // 🔥 MOSTRA MODAL
+                    // 🔥 abre modal
                     const modal = document.getElementById("modal-aguarde");
-                    if (modal) {
-                        modal.style.display = "flex";
-                    }
+                    modal.style.display = "flex";
 
-                    // 🔥 pequena espera pra UX
+                    // 🔥 troca para sucesso após pequeno delay (efeito bonito)
                     setTimeout(() => {
-                        window.location.href = data.redirect_url;
-                    }, 1500);
+                        document.getElementById("estado-verificando").classList.remove("ativo");
+                        document.getElementById("estado-sucesso").classList.add("ativo");
+
+                        // guarda URL para o botão
+                        window.redirectPagamento = data.redirect_url;
+
+                    }, 1200);
                 }
             })
             .catch(err => {
@@ -1006,6 +1009,18 @@ function iniciarVerificacao(carrinhoId) {
 
 });
 
+
+document.addEventListener("DOMContentLoaded", function () {
+    const btnOk = document.getElementById("btn-ok-pagamento");
+
+    if (btnOk) {
+        btnOk.addEventListener("click", function () {
+            if (window.redirectPagamento) {
+                window.location.href = window.redirectPagamento;
+            }
+        });
+    }
+});
 
 </script>
 
