@@ -36,6 +36,10 @@ ALLOWED_HOSTS = [
 # Applications
 # ------------------------------
 INSTALLED_APPS = [
+
+    'cloudinary_storage',  # Deve ser o primeiro desta lista
+    'django.contrib.staticfiles',
+    'cloudinary',
     # Django
     'django.contrib.admin',
     'django.contrib.auth',
@@ -60,8 +64,7 @@ INSTALLED_APPS = [
     'allauth.socialaccount',
     'allauth.socialaccount.providers.google',
     'allauth.socialaccount.providers.facebook',
-    'cloudinary_storage',
-    'cloudinary',
+
 ]
 
 SITE_ID = 1
@@ -184,13 +187,12 @@ if ENVIRONMENT == "production":
         'API_SECRET': os.getenv('CLOUD_API_SECRET'),
     }
 
+    # Define o storage padrão para arquivos de mídia
     DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 
-    MEDIA_URL = '/media/'  # ⚠️ deixe assim
-
-else:
+    # Em produção, o MEDIA_URL deve apontar para o Cloudinary ou ser deixado como /media/
+    # se o storage estiver configurado corretamente, mas o importante é o DEFAULT_FILE_STORAGE.
     MEDIA_URL = '/media/'
-    MEDIA_ROOT = BASE_DIR / 'media'
 
 # ------------------------------
 # Django REST Framework
