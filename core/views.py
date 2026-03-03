@@ -2289,60 +2289,26 @@ class PaymentFinallyView(LoginRequiredMixin, View):
 
 
 #-23.453403648643707, -46.66151816239609  -23.472997309863196, -46.63041992925325
-
 class MeusPedidosView(LoginRequiredMixin, View):
     login_url = 'login'
 
     def get(self, request):
         perfil = getattr(request.user, 'perfil', None)
+
         if not perfil:
             messages.error(request, "Perfil não encontrado.")
             return redirect('home')
-        empresa = EnderecoEmpresa.objects.first()  # único endereço da empresa
 
         pedidos = (
             Pedido.objects
             .filter(cliente=perfil)
-            .select_related('endereco')  # ✅ CORRETO
             .prefetch_related('itens')
             .order_by('-criacao')
         )
 
-        # Atualiza distância e tempo para pedidos que têm endereço e empresa
-        for pedido in pedidos:
-            endereco = getattr(pedido, 'endereco', None)
-
-            try:
-                if (
-                        endereco and
-                        endereco.latitude and
-                        endereco.longitude and
-                        empresa and
-                        empresa.latitude and
-                        empresa.longitude
-                ):
-                    if pedido.distancia_km is None or pedido.tempo_estimado_min is None:
-                        distancia = calcular_distancia_km(
-                            round(float(empresa.latitude), 6),
-                            round(float(empresa.longitude), 6),
-                            round(float(endereco.latitude), 6),
-                            round(float(endereco.longitude), 6),
-                        )
-
-                        tempo = estimar_tempo_minutos(distancia)
-
-                        pedido.distancia_km = round(distancia, 2)
-                        pedido.tempo_estimado_min = tempo
-                        pedido.save(update_fields=['distancia_km', 'tempo_estimado_min'])
-
-            except Exception as e:
-                print("ERRO DISTANCIA:", e)
-
         return render(request, 'meus_pedidos.html', {
             'pedidos': pedidos,
-            'empresa': empresa
         })
-
 
 from django.shortcuts import redirect
 from django.urls import reverse

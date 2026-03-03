@@ -726,58 +726,6 @@ body {
             {% endif %}
         </div>
 
-        <!-- Endereço de entrega -->
-        {% if pedido.endereco %}
-        <div class="endereco-card modern-card">
-            <div class="endereco-header modern-header">
-                🚚 Informações de Entrega
-            </div>
-
-            <div class="endereco-body modern-body">
-                <!-- Origem (Empresa) -->
-                <div class="endereco-col modern-col">
-                    <h4>🏭 Origem</h4>
-                    {% if empresa %}
-                        <p>
-                            <strong>{{ empresa.rua }}</strong>, {{ empresa.numero }}<br>
-                            {{ empresa.bairro }}<br>
-                            {{ empresa.cidade }}/{{ empresa.estado }}<br>
-                            CEP {{ empresa.cep }}<br>
-                            {% if empresa.telefone %}📞 {{ empresa.telefone }}{% endif %}
-                        </p>
-                    {% else %}
-                        <p>Endereço da empresa não cadastrado.</p>
-                    {% endif %}
-                </div>
-
-                <!-- Destino (Cliente) -->
-                <div class="endereco-col modern-col">
-                    <h4>📍 Destino</h4>
-                    <p>
-                        <strong>{{ pedido.endereco.rua }}</strong>, {{ pedido.endereco.numero }}
-                        {% if pedido.endereco.complemento %} – {{ pedido.endereco.complemento }}{% endif %}<br>
-                        {{ pedido.endereco.bairro }}<br>
-                        {{ pedido.endereco.cidade }}/{{ pedido.endereco.estado }}<br>
-                        CEP {{ pedido.endereco.cep }}<br>
-                        {% if pedido.endereco.telefone %}📞 {{ pedido.endereco.telefone }}{% endif %}
-                    </p>
-                </div>
-
-                <!-- Métricas de entrega -->
-                {% if pedido.distancia_km and pedido.tempo_estimado_min %}
-                <div class="entrega-metricas modern-metrics">
-                    <div>
-                        Distância 🚚 <strong>{{ pedido.distancia_km }} km</strong>
-                    </div>
-                    <div>
-                        Tempo de transporte aproximado ⏱️ <strong>{{ pedido.tempo_estimado_min }} min</strong>
-                    </div>
-                </div>
-                {% endif %}
-            </div>
-        </div>
-        {% endif %}
-
         <!-- Itens do pedido -->
         <button class="toggle-itens" onclick="toggleItens({{ pedido.id }})">Ver detalhes do pedido</button>
         <div class="itens-lista" id="itens-{{ pedido.id }}" style="display:none;">
@@ -810,18 +758,6 @@ body {
 
 </section>
 
-O problema é puramente de formatação no JavaScript.
-
-Como o seu banco de dados está correto (mostrando 0,10, 0,01, etc.), o Django está enviando esses valores para o HTML usando a vírgula como separador decimal (padrão brasileiro). O JavaScript, por outro lado, usa o padrão americano (ponto). Quando o comando parseFloat("0,10") é executado, ele para na vírgula e entende que o valor é apenas 0.
-
-Aqui está o seu código ajustado. Fiz apenas duas alterações cruciais:
-
-No JavaScript: Adicionei uma limpeza que troca a vírgula por ponto antes de converter o número.
-
-No HTML: Garanti que o Django passe o valor bruto sem formatações de milhar que possam confundir o script.
-
-Substitua a parte final do seu arquivo (o Script e as tags de valor) por este:
-HTML
 <span class="money" data-valor="{{ pedido.total_bruto|floatformat:2 }}"></span>
 <span class="money total" data-valor="{{ pedido.total_liquido|floatformat:2 }}"></span>
 
