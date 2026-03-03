@@ -175,8 +175,7 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
-MEDIA_URL = '/media/'
-
+# 🔥 CLOUDINARY (PRODUÇÃO)
 # 🔥 CLOUDINARY (PRODUÇÃO)
 if ENVIRONMENT == "production":
     CLOUDINARY_STORAGE = {
@@ -187,8 +186,13 @@ if ENVIRONMENT == "production":
 
     DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 
+    # ⚠️ IMPORTANTE
+    MEDIA_URL = f"https://res.cloudinary.com/{os.getenv('CLOUD_NAME')}/"
+
 else:
+    MEDIA_URL = '/media/'
     MEDIA_ROOT = BASE_DIR / 'media'
+
 
 # ------------------------------
 # Django REST Framework
