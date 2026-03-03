@@ -186,13 +186,11 @@ if ENVIRONMENT == "production":
 
     DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 
-    # ⚠️ IMPORTANTE
-    MEDIA_URL = f"https://res.cloudinary.com/{os.getenv('CLOUD_NAME')}/"
+    MEDIA_URL = '/media/'  # ⚠️ deixe assim
 
 else:
     MEDIA_URL = '/media/'
     MEDIA_ROOT = BASE_DIR / 'media'
-
 
 # ------------------------------
 # Django REST Framework
