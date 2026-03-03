@@ -908,7 +908,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-
 function iniciarVerificacao(carrinhoId) {
 
     let pagamentoDetectado = false;
@@ -924,19 +923,19 @@ function iniciarVerificacao(carrinhoId) {
                     pagamentoDetectado = true;
                     clearInterval(intervalo);
 
-                    // 🔥 abre modal
                     const modal = document.getElementById("modal-aguarde");
                     modal.style.display = "flex";
 
-                    // 🔥 troca para sucesso após pequeno delay (efeito bonito)
+                    // garante estado inicial correto
+                    document.getElementById("estado-verificando").classList.add("ativo");
+                    document.getElementById("estado-sucesso").classList.remove("ativo");
+
+                    // efeito de transição
                     setTimeout(() => {
                         document.getElementById("estado-verificando").classList.remove("ativo");
                         document.getElementById("estado-sucesso").classList.add("ativo");
+                    }, 1400);
 
-                        // guarda URL para o botão
-                        window.redirectPagamento = data.redirect_url;
-
-                    }, 1200);
                 }
             })
             .catch(err => {
@@ -1015,9 +1014,15 @@ document.addEventListener("DOMContentLoaded", function () {
 
     if (btnOk) {
         btnOk.addEventListener("click", function () {
-            if (window.redirectPagamento) {
-                window.location.href = window.redirectPagamento;
-            }
+
+            // 🔥 bloqueia múltiplos cliques
+            btnOk.disabled = true;
+            btnOk.innerText = "Redirecionando...";
+
+            // 🔥 pequeno delay elegante
+            setTimeout(() => {
+                window.location.href = "/meus-pedidos/#pedidos";
+            }, 400);
         });
     }
 });
