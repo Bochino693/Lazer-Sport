@@ -52,7 +52,6 @@ INSTALLED_APPS = [
     'cloud_jogos',
 
     'cloudinary_storage',  # Deve ser o primeiro desta lista
-    'django.contrib.staticfiles',
     'cloudinary',
 
     # Terceiros
