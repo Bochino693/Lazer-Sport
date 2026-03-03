@@ -1,6 +1,6 @@
 from django.urls import path
 from .views import (HomeView, BrinquedoInfoView, CategoriasInfoView, BrinquedosView, webhook_mercadopago,
-                    RegistrarView, LoginUsuarioView, LogoutUsuarioView, EventosView,
+                    RegistrarView, LoginUsuarioView, LogoutUsuarioView, EventosView, verificar_pagamento,
                     ProjetosView, ClientePerfilView, ComboInfoView, PromocaoInfoView,
                     BrinquedoAdmin, NovaCategoria, NovaTag, ComboListView, ComboCreateView,
                     ComboUpdateView, ComboDeleteView, CupomAdminView, ProjetoAdminView, EstabelecimentoInfoView,
@@ -111,6 +111,7 @@ urlpatterns = [
     ),
 
     path("api/gerar-pix/", gerar_pix, name="gerar_pix"),
+    path("verificar-pagamento/", verificar_pagamento, name="verificar_pagamento"),
 
     path('meus-pedidos/', MeusPedidosView.as_view(), name='meus_pedidos'),
 

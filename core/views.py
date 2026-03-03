@@ -2029,6 +2029,9 @@ def webhook_mercadopago(request):
         carrinho.save()
 
     return HttpResponse(status=200)
+from django.http import JsonResponse
+from django.db import transaction
+import mercadopago
 
 
 @require_GET
@@ -2042,10 +2045,9 @@ def verificar_pagamento(request):
     if not carrinho or not carrinho.mp_payment_id:
         return JsonResponse({"pago": False})
 
-    # 🔥 já existe pedido?
+    # ✅ se já existe pedido, só retorna
     pedido_existente = Pedido.objects.filter(
-        carrinho_origem=carrinho,
-        mp_status="approved"
+        mp_payment_id=carrinho.mp_payment_id
     ).first()
 
     if pedido_existente:
@@ -2054,32 +2056,36 @@ def verificar_pagamento(request):
             "redirect_url": "/meus-pedidos/"
         })
 
-    # 🔥 consulta Mercado Pago diretamente (FALLBACK)
-    sdk = mercadopago.SDK(settings.MP_ACCESS_TOKEN)
-    payment = sdk.payment().get(carrinho.mp_payment_id)["response"]
+    # 🔥 consulta Mercado Pago direto (SEM depender de webhook)
+    try:
+        sdk = mercadopago.SDK(settings.MP_ACCESS_TOKEN)
+        payment = sdk.payment().get(carrinho.mp_payment_id)["response"]
+    except Exception as e:
+        print("Erro ao consultar MP:", e)
+        return JsonResponse({"pago": False})
 
     if payment.get("status") != "approved":
         return JsonResponse({"pago": False})
 
-    # 🔥 cria pedido se webhook falhou
+    # 🔥 cria pedido com proteção total
     with transaction.atomic():
 
-        # dupla proteção
-        if Pedido.objects.filter(mp_payment_id=carrinho.mp_payment_id).exists():
-            pedido = Pedido.objects.get(mp_payment_id=carrinho.mp_payment_id)
-        else:
-            pedido = Pedido.objects.create(
-                cliente=carrinho.cliente,
-                carrinho_origem=carrinho,
-                status="pago",
-                forma_pagamento="pix",
-                total_bruto=carrinho.total_bruto,
-                valor_desconto=carrinho.valor_desconto,
-                total_liquido=carrinho.total_liquido,
-                mp_payment_id=carrinho.mp_payment_id,
-                mp_status="approved",
-            )
+        pedido, created = Pedido.objects.get_or_create(
+            mp_payment_id=carrinho.mp_payment_id,
+            defaults={
+                "cliente": carrinho.cliente,
+                "carrinho_origem": carrinho,
+                "status": "pago",
+                "forma_pagamento": "pix",
+                "total_bruto": carrinho.total_bruto,
+                "valor_desconto": carrinho.valor_desconto,
+                "total_liquido": carrinho.total_liquido,
+                "mp_status": "approved",
+            }
+        )
 
+        # só cria itens se for novo
+        if created:
             for item in carrinho.itens.all():
                 ItemPedido.objects.create(
                     pedido=pedido,
@@ -2100,8 +2106,6 @@ def verificar_pagamento(request):
         "pago": True,
         "redirect_url": "/meus-pedidos/"
     })
-
-
 
 @csrf_exempt
 def processar_cartao(request):
