@@ -7,4 +7,5 @@ from .models import ClientePerfil
 @receiver(post_save, sender=User)
 def criar_perfil_cliente(sender, instance, created, **kwargs):
     if created:
-        ClientePerfil.objects.get_or_create(user=instance)
+        # cria perfil com telefone vazio (ou default)
+        ClientePerfil.objects.get_or_create(user=instance, defaults={'telefone': ''})

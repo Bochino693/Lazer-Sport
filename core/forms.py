@@ -2,22 +2,27 @@ from django import forms
 from django.contrib.auth.models import User
 from .models import ClientePerfil, Promocoes, Projetos, Manutencao
 
+from django import forms
+from django.contrib.auth.models import User
+
 class UserForm(forms.ModelForm):
     telefone = forms.CharField(
         max_length=14,
         widget=forms.TextInput(attrs={
             'class': 'form-input',
             'placeholder': '(00)90000-0000'
-        })
+        }),
+        required=False  # opcional, pois será salvo via perfil
     )
 
     class Meta:
         model = User
-        fields = ['first_name', 'last_name', 'email']
+        fields = ['first_name', 'last_name', 'username', 'email', 'password']
         widgets = {
             'first_name': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Nome'}),
             'last_name': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Sobrenome'}),
             'email': forms.EmailInput(attrs={'class': 'form-input', 'placeholder': 'Email'}),
+            'password': forms.PasswordInput(attrs={'class': 'form-input', 'placeholder': 'Senha'}),
         }
 
 class PerfilForm(forms.ModelForm):

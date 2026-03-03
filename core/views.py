@@ -1026,72 +1026,38 @@ class PedidoAdminView(AdminOnlyMixin, View):
         return render(request, 'pedidos_adm.html', ctx)
 
 
+# core/views.py
+from django.shortcuts import render, redirect
+from django.views import View
+from django.contrib import messages
+from django.contrib.auth import login, authenticate
+from django.contrib.auth.models import User
+from .forms import UserForm
+
 class RegistrarView(View):
     template_name = "register.html"
 
     def get(self, request):
-        return render(request, self.template_name)
+        form = UserForm()
+        return render(request, self.template_name, {'form': form})
 
     def post(self, request):
-        first_name = request.POST.get("first_name")
-        last_name = request.POST.get("last_name")
-        username = request.POST.get("username")
-        email = request.POST.get("email")
-        password = request.POST.get("password")
-        telefone = request.POST.get("telefone")
+        form = UserForm(request.POST)
+        if form.is_valid():
+            user = form.save(commit=False)
+            user.set_password(form.cleaned_data['password'])
+            user.save()  # signal vai criar ClientePerfil automaticamente
 
-        # ✅ valida campos
-        if not all([first_name, last_name, username, email, password, telefone]):
-            messages.error(request, "Preencha todos os campos.")
-            return render(request, self.template_name)
+            # autentica e faz login
+            user = authenticate(username=user.username, password=form.cleaned_data['password'])
+            if user:
+                login(request, user)
 
-        # ✅ valida formato telefone
-        import re
-        if not re.match(r'^\(\d{2}\)\d{4}-\d{4}$', telefone):
-            messages.error(request, "Telefone inválido. Use (11)XXXX-XXXX")
-            return render(request, self.template_name)
-
-        if User.objects.filter(username=username).exists():
-            messages.error(request, "Nome de usuário já está em uso.")
-            return render(request, self.template_name)
-
-        if User.objects.filter(email=email).exists():
-            messages.error(request, "Este e-mail já está registrado.")
-            return render(request, self.template_name)
-
-        from django.contrib.auth import authenticate, login
-
-        # ✅ cria usuário
-        user = User.objects.create_user(
-            username=username,
-            email=email,
-            password=password,
-            first_name=first_name,
-            last_name=last_name
-        )
-
-        # ✅ cria perfil com telefone
-        ClientePerfil.objects.create(
-            user=user,
-            nome_completo=f"{first_name} {last_name}",
-            telefone=telefone
-        )
-
-        # ✅ autentica
-        user = authenticate(
-            request,
-            username=username,
-            password=password
-        )
-
-        if user:
-            login(request, user)
-
-        messages.success(
-            request,
-            f"Conta criada com sucesso! Bem-vindo(a), {first_name}."
-        )
-        return redirect("login")
+            messages.success(request, f"Conta criada com sucesso! Bem-vindo(a), {user.first_name}.")
+            return redirect("login")
+        else:
+            messages.error(request, "Verifique os campos e tente novamente.")
+        return render(request, self.template_name, {'form': form})
 
 
 class BrinquedoAdmin(AdminOnlyMixin, View):
