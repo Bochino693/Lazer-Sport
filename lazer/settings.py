@@ -112,7 +112,6 @@ WSGI_APPLICATION = 'lazer.wsgi.application'
 # Database
 # ------------------------------
 if ENVIRONMENT == "production":
-    # Banco do Render
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
