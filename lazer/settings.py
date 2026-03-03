@@ -36,10 +36,6 @@ ALLOWED_HOSTS = [
 # Applications
 # ------------------------------
 INSTALLED_APPS = [
-
-    'cloudinary_storage',  # Deve ser o primeiro desta lista
-    'django.contrib.staticfiles',
-    'cloudinary',
     # Django
     'django.contrib.admin',
     'django.contrib.auth',
@@ -54,6 +50,10 @@ INSTALLED_APPS = [
     'core',
     'sistema_interno',
     'cloud_jogos',
+
+    'cloudinary_storage',  # Deve ser o primeiro desta lista
+    'django.contrib.staticfiles',
+    'cloudinary',
 
     # Terceiros
     'rest_framework',
