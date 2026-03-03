@@ -2034,10 +2034,11 @@ def verificar_pagamento(request):
         return JsonResponse({"pago": False})
 
     # 🔥 cria pedido com proteção total
+    # 🔥 cria pedido com proteção total
     with transaction.atomic():
 
         pedido, created = Pedido.objects.get_or_create(
-            mp_payment_id=payment_id,
+            mp_payment_id=carrinho.mp_payment_id,  # <--- corrigido aqui
             defaults={
                 "cliente": carrinho.cliente,
                 "carrinho_origem": carrinho,  # ⭐ referência ao carrinho
