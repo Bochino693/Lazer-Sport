@@ -555,6 +555,15 @@ class Carrinho(Prime):
         related_name='carrinhos'
     )
 
+    TIPO_ENVIO = [
+        ('frete', 'Frete'),
+        ('entrega', 'Entrega'),
+    ]
+
+    tipo_envio = models.CharField(max_length=30,
+                                  choices=TIPO_ENVIO,
+                                  default='frete')
+
     mp_payment_id = models.CharField(max_length=100, null=True, blank=True)
 
 
@@ -684,15 +693,6 @@ class Pedido(Prime):
         related_name='pedidos',
         null=True, blank=True
     )
-
-    TIPO_ENVIO = [
-        ('frete', 'Frete'),
-        ('entrega', 'Entrega'),
-    ]
-
-    tipo_envio = models.CharField(max_length=30,
-                                  choices=TIPO_ENVIO,
-                                  default='frete')
 
     status = models.CharField(
         max_length=30,
