@@ -815,25 +815,36 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function iniciarVerificacao(carrinhoId) {
 
+    let pagamentoDetectado = false;
+
     const intervalo = setInterval(function() {
 
         fetch(`/verificar-pagamento/?carrinho_id=${carrinhoId}`)
             .then(response => response.json())
             .then(data => {
 
-                if (data.pago) {
+                if (data.pago && !pagamentoDetectado) {
 
+                    pagamentoDetectado = true;
                     clearInterval(intervalo);
 
-                    // Fecha modal
-                    document.getElementById("modal-aguarde").style.display = "none";
+                    // 🔥 MOSTRA MODAL
+                    const modal = document.getElementById("modal-aguarde");
+                    if (modal) {
+                        modal.style.display = "flex";
+                    }
 
-                    // Redireciona
-                    window.location.href = data.redirect_url;
+                    // 🔥 pequena espera pra UX
+                    setTimeout(() => {
+                        window.location.href = data.redirect_url;
+                    }, 1500);
                 }
+            })
+            .catch(err => {
+                console.error("Erro ao verificar pagamento:", err);
             });
 
-    }, 3000); // verifica a cada 3 segundos
+    }, 3000);
 }
 
     /* ==============================

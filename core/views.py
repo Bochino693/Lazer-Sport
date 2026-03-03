@@ -2051,7 +2051,7 @@ def verificar_pagamento(request):
     if pedido_existente:
         return JsonResponse({
             "pago": True,
-            "redirect_url": f"/pedido/{pedido_existente.id}/sucesso/"
+            "redirect_url": "/meus-pedidos/"
         })
 
     # 🔥 consulta Mercado Pago diretamente (FALLBACK)
@@ -2098,7 +2098,7 @@ def verificar_pagamento(request):
 
     return JsonResponse({
         "pago": True,
-        "redirect_url": f"/pedido/{pedido.id}/sucesso/"
+        "redirect_url": "/meus-pedidos/"
     })
 
 
