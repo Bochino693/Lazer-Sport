@@ -2003,6 +2003,7 @@ from django.http import JsonResponse
 from django.db import transaction
 import mercadopago
 
+
 @require_GET
 def verificar_pagamento(request):
     carrinho_id = request.GET.get("carrinho_id")
@@ -2013,19 +2014,20 @@ def verificar_pagamento(request):
     if not carrinho or not carrinho.mp_payment_id:
         return JsonResponse({"pago": False})
 
-    # consulta Mercado Pago diretamente
     try:
         sdk = mercadopago.SDK(settings.MP_ACCESS_TOKEN)
-        payment = sdk.payment().get(carrinho.mp_payment_id)["response"]
+        payment_info = sdk.payment().get(carrinho.mp_payment_id)
+        payment = payment_info["response"]
     except Exception as e:
-        print("Erro ao consultar MP:", e)
+        print(f"Erro ao consultar MP: {e}")
         return JsonResponse({"pago": False})
 
     if payment.get("status") != "approved":
         return JsonResponse({"pago": False})
 
     with transaction.atomic():
-        pedido, created = Pedido.objects.get_or_create(
+        # 1. Criamos ou ATUALIZAMOS o pedido com os dados exatos do carrinho agora
+        pedido, created = Pedido.objects.update_or_create(
             mp_payment_id=carrinho.mp_payment_id,
             defaults={
                 "cliente": carrinho.cliente,
@@ -2041,44 +2043,38 @@ def verificar_pagamento(request):
             }
         )
 
-        # Atualiza snapshot financeiro caso já exista
-        if not created:
-            pedido.cliente = carrinho.cliente
-            pedido.carrinho_origem = carrinho
-            pedido.status = "pago"
-            pedido.forma_pagamento = "pix"
-            pedido.total_bruto = carrinho.total_bruto
-            pedido.valor_desconto = carrinho.valor_desconto
-            pedido.total_liquido = carrinho.total_liquido
-            pedido.mp_status = "approved"
-            pedido.cupom_codigo = carrinho.cupom.codigo if carrinho.cupom else None
-            pedido.cupom_percentual = carrinho.cupom.desconto_percentual if carrinho.cupom else None
-            pedido.save()
+        # 2. Sincronizamos os itens: limpamos o que existia no pedido e trazemos o carrinho real
+        # Isso evita que o pedido fique com "0,00" se houve uma tentativa anterior falha
+        pedido.itens.all().delete()
 
-        # Garante que todos os itens sejam criados com os valores corretos
-        if not pedido.itens.exists():
-            for item in carrinho.itens.all():
-                ItemPedido.objects.create(
-                    pedido=pedido,
-                    content_type=item.content_type,
-                    object_id=item.object_id,
-                    item_original=item.item,
-                    nome_item=str(item.item),
-                    tipo_item=item.content_type.model,
-                    preco_unitario=item.preco_unitario,
-                    quantidade=item.quantidade,
-                    subtotal=item.subtotal
-                )
+        for item in carrinho.itens.all():
+            # Fallback para o tipo de item para não quebrar as choices do Pedido
+            model_name = item.content_type.model
+            tipo_permitido = model_name if model_name in ['brinquedo', 'combo', 'promocao'] else 'brinquedo'
 
-        # Limpa carrinho somente após criar o pedido
+            ItemPedido.objects.create(
+                pedido=pedido,
+                content_type=item.content_type,
+                object_id=item.object_id,
+                item_original=item.item,
+                nome_item=str(item.item),
+                tipo_item=tipo_permitido,
+                preco_unitario=item.preco_unitario,
+                quantidade=item.quantidade,
+                subtotal=item.subtotal
+            )
+
+        # 3. Limpamos o carrinho APÓS garantir que o pedido tem os itens e valores
         carrinho.itens.all().delete()
         carrinho.cupom = None
+        carrinho.mp_payment_id = None # Limpa para evitar reuso do mesmo ID de pagamento
         carrinho.save()
 
     return JsonResponse({
         "pago": True,
         "redirect_url": "/meus-pedidos/#pedidos"
     })
+
 
 
 @csrf_exempt
