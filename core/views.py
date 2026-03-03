@@ -2037,10 +2037,10 @@ def verificar_pagamento(request):
     with transaction.atomic():
 
         pedido, created = Pedido.objects.get_or_create(
-            mp_payment_id=carrinho.mp_payment_id,
+            mp_payment_id=payment_id,
             defaults={
                 "cliente": carrinho.cliente,
-                "carrinho_origem": carrinho,
+                "carrinho_origem": carrinho,  # ⭐ referência ao carrinho
                 "status": "pago",
                 "forma_pagamento": "pix",
                 "total_bruto": carrinho.total_bruto,
@@ -2050,13 +2050,14 @@ def verificar_pagamento(request):
             }
         )
 
-        # só cria itens se for novo
+        # ⚡ Só cria os itens se o pedido acabou de ser criado
         if created:
             for item in carrinho.itens.all():
                 ItemPedido.objects.create(
                     pedido=pedido,
                     content_type=item.content_type,
                     object_id=item.object_id,
+                    item_original=item.item,  # referência real
                     nome_item=str(item.item),
                     tipo_item=item.content_type.model,
                     preco_unitario=item.preco_unitario,
@@ -2064,6 +2065,7 @@ def verificar_pagamento(request):
                     subtotal=item.subtotal
                 )
 
+            # limpa carrinho
             carrinho.itens.all().delete()
             carrinho.cupom = None
             carrinho.save()

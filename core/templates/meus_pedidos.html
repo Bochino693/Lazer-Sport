@@ -667,7 +667,6 @@ body {
 
 <section class="pedidos-container" id="pedidos">
 
-    <!-- 📦 Header -->
     <div class="pedidos-header">
         <h1>📦 Meus Pedidos</h1>
         <p>Acompanhe pagamentos, status e itens comprados</p>
@@ -677,6 +676,7 @@ body {
     {% for pedido in pedidos %}
     <div class="pedido-card">
 
+        <!-- Cabeçalho do pedido -->
         <div class="pedido-header">
             <div class="pedido-id">
                 Pedido #{{ pedido.id }} <br>
@@ -684,12 +684,12 @@ body {
             </div>
         </div>
 
-            <!-- Badge de status -->
+        <!-- Badge de status -->
         <div class="pedido-status status-{{ pedido.status }}">
             {{ pedido.get_status_display }}
         </div>
 
-
+        <!-- Informações financeiras -->
         <div class="pedido-info">
             <div class="info-box">
                 <small>Total bruto</small><br>
@@ -726,65 +726,66 @@ body {
             {% endif %}
         </div>
 
-       {% if pedido.endereco %}
-<div class="endereco-card modern-card">
-    <div class="endereco-header modern-header">
-        🚚 Informações de Entrega
-    </div>
-
-    <div class="endereco-body modern-body">
-        <!-- Origem (Empresa) -->
-        <div class="endereco-col modern-col">
-            <h4>🏭 Origem</h4>
-            {% if empresa %}
-                <p>
-                    <strong>{{ empresa.rua }}</strong>, {{ empresa.numero }}<br>
-                    {{ empresa.bairro }}<br>
-                    {{ empresa.cidade }}/{{ empresa.estado }}<br>
-                    CEP {{ empresa.cep }}<br>
-                    {% if empresa.telefone %}📞 {{ empresa.telefone }}{% endif %}
-                </p>
-            {% else %}
-                <p>Endereço da empresa não cadastrado.</p>
-            {% endif %}
-        </div>
-
-        <!-- Destino (Cliente) -->
-        <div class="endereco-col modern-col">
-            <h4>📍 Destino</h4>
-            <p>
-                <strong>{{ pedido.endereco.rua }}</strong>, {{ pedido.endereco.numero }}
-                {% if pedido.endereco.complemento %} – {{ pedido.endereco.complemento }}{% endif %}<br>
-                {{ pedido.endereco.bairro }}<br>
-                {{ pedido.endereco.cidade }}/{{ pedido.endereco.estado }}<br>
-                CEP {{ pedido.endereco.cep }}<br>
-                {% if pedido.endereco.telefone %}📞 {{ pedido.endereco.telefone }}{% endif %}
-            </p>
-        </div>
-
-        <!-- Métricas de entrega -->
-        {% if pedido.distancia_km and pedido.tempo_estimado_min %}
-        <div class="entrega-metricas modern-metrics">
-            <div>
-                Distância 🚚 <strong>{{ pedido.distancia_km }} km</strong>
+        <!-- Endereço de entrega -->
+        {% if pedido.endereco %}
+        <div class="endereco-card modern-card">
+            <div class="endereco-header modern-header">
+                🚚 Informações de Entrega
             </div>
-            <div>
-                Tempo de transporte aproximado ⏱️ <strong>{{ pedido.tempo_estimado_min }} min</strong>
+
+            <div class="endereco-body modern-body">
+                <!-- Origem (Empresa) -->
+                <div class="endereco-col modern-col">
+                    <h4>🏭 Origem</h4>
+                    {% if empresa %}
+                        <p>
+                            <strong>{{ empresa.rua }}</strong>, {{ empresa.numero }}<br>
+                            {{ empresa.bairro }}<br>
+                            {{ empresa.cidade }}/{{ empresa.estado }}<br>
+                            CEP {{ empresa.cep }}<br>
+                            {% if empresa.telefone %}📞 {{ empresa.telefone }}{% endif %}
+                        </p>
+                    {% else %}
+                        <p>Endereço da empresa não cadastrado.</p>
+                    {% endif %}
+                </div>
+
+                <!-- Destino (Cliente) -->
+                <div class="endereco-col modern-col">
+                    <h4>📍 Destino</h4>
+                    <p>
+                        <strong>{{ pedido.endereco.rua }}</strong>, {{ pedido.endereco.numero }}
+                        {% if pedido.endereco.complemento %} – {{ pedido.endereco.complemento }}{% endif %}<br>
+                        {{ pedido.endereco.bairro }}<br>
+                        {{ pedido.endereco.cidade }}/{{ pedido.endereco.estado }}<br>
+                        CEP {{ pedido.endereco.cep }}<br>
+                        {% if pedido.endereco.telefone %}📞 {{ pedido.endereco.telefone }}{% endif %}
+                    </p>
+                </div>
+
+                <!-- Métricas de entrega -->
+                {% if pedido.distancia_km and pedido.tempo_estimado_min %}
+                <div class="entrega-metricas modern-metrics">
+                    <div>
+                        Distância 🚚 <strong>{{ pedido.distancia_km }} km</strong>
+                    </div>
+                    <div>
+                        Tempo de transporte aproximado ⏱️ <strong>{{ pedido.tempo_estimado_min }} min</strong>
+                    </div>
+                </div>
+                {% endif %}
             </div>
         </div>
         {% endif %}
-    </div>
-</div>
-{% endif %}
 
+        <!-- Itens do pedido -->
         <button class="toggle-itens" onclick="toggleItens({{ pedido.id }})">Ver detalhes do pedido</button>
-
         <div class="itens-lista" id="itens-{{ pedido.id }}" style="display:none;">
             {% for item in pedido.itens.all %}
             <div class="item-detalhe">
                 <div class="item-img">
-                    {% if item.item_original and item.item_original.imagem_brinquedo %}
-                        <img src="{{ item.item_original.imagem_brinquedo.url }}">
+                    {% if item.imagem_brinquedo %}
+                        <img src="{{ item.imagem_brinquedo.url }}">
                     {% else %}
                         <div class="img-placeholder">📦</div>
                     {% endif %}
@@ -792,9 +793,7 @@ body {
                 <div class="item-info">
                     <strong>{{ item.nome_item }}</strong>
                     <small>Quantidade: {{ item.quantidade }}</small>
-                    <small>
-                        Preço unitário: <span class="money" data-valor="{{ item.preco_unitario }}"></span>
-                    </small>
+                    <small>Preço unitário: <span class="money" data-valor="{{ item.preco_unitario }}"></span></small>
                 </div>
                 <div class="item-subtotal money" data-valor="{{ item.subtotal|floatformat:2 }}"></div>
             </div>
@@ -818,21 +817,14 @@ function toggleItens(id) {
 }
 
 function formatarBRL(valor) {
-    if (valor === null || valor === undefined || valor === '') {
-        return 'R$ 0,00';
-    }
-
-    return new Intl.NumberFormat('pt-BR', {
-        style: 'currency',
-        currency: 'BRL'
-    }).format(parseFloat(valor));
+    if (!valor) return 'R$ 0,00';
+    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(parseFloat(valor));
 }
 
 document.querySelectorAll('.money').forEach(el => {
     const valor = el.dataset.valor;
     el.textContent = formatarBRL(valor);
 });
-
 </script>
 
 {% endblock %}
