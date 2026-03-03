@@ -2294,13 +2294,17 @@ class MeusPedidosView(LoginRequiredMixin, View):
     login_url = 'login'
 
     def get(self, request):
-        perfil = request.user.perfil
+        perfil = getattr(request.user, 'perfil', None)
+        if not perfil:
+            messages.error(request, "Perfil não encontrado.")
+            return redirect('home')
         empresa = EnderecoEmpresa.objects.first()  # único endereço da empresa
 
         pedidos = (
             Pedido.objects
             .filter(cliente=perfil)
-            .prefetch_related('itens', 'endereco')
+            .select_related('endereco')  # ✅ CORRETO
+            .prefetch_related('itens')
             .order_by('-criacao')
         )
 
