@@ -810,20 +810,53 @@ body {
 
 </section>
 
+O problema é puramente de formatação no JavaScript.
+
+Como o seu banco de dados está correto (mostrando 0,10, 0,01, etc.), o Django está enviando esses valores para o HTML usando a vírgula como separador decimal (padrão brasileiro). O JavaScript, por outro lado, usa o padrão americano (ponto). Quando o comando parseFloat("0,10") é executado, ele para na vírgula e entende que o valor é apenas 0.
+
+Aqui está o seu código ajustado. Fiz apenas duas alterações cruciais:
+
+No JavaScript: Adicionei uma limpeza que troca a vírgula por ponto antes de converter o número.
+
+No HTML: Garanti que o Django passe o valor bruto sem formatações de milhar que possam confundir o script.
+
+Substitua a parte final do seu arquivo (o Script e as tags de valor) por este:
+HTML
+<span class="money" data-valor="{{ pedido.total_bruto|floatformat:2 }}"></span>
+<span class="money total" data-valor="{{ pedido.total_liquido|floatformat:2 }}"></span>
+
 <script>
 function toggleItens(id) {
     const el = document.getElementById(`itens-${id}`);
-    el.style.display = el.style.display === 'none' ? 'block' : 'none';
+    if (el) {
+        el.style.display = el.style.display === 'none' ? 'block' : 'none';
+    }
 }
 
 function formatarBRL(valor) {
-    if (!valor) return 'R$ 0,00';
-    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(parseFloat(valor));
+    if (valor === undefined || valor === null || valor === '') return 'R$ 0,00';
+
+    // Converte para string e limpa: troca vírgula por ponto para o JS entender
+    let valorLimpo = valor.toString().replace(/\s/g, '').replace(',', '.');
+
+    const num = parseFloat(valorLimpo);
+
+    // Se não for um número válido, retorna zero formatado
+    if (isNaN(num)) return 'R$ 0,00';
+
+    return new Intl.NumberFormat('pt-BR', {
+        style: 'currency',
+        currency: 'BRL',
+        minimumFractionDigits: 2
+    }).format(num);
 }
 
-document.querySelectorAll('.money').forEach(el => {
-    const valor = el.dataset.valor;
-    el.textContent = formatarBRL(valor);
+// Executa a formatação em todos os elementos com a classe .money
+document.addEventListener("DOMContentLoaded", function() {
+    document.querySelectorAll('.money').forEach(el => {
+        const valorOriginal = el.getAttribute('data-valor');
+        el.textContent = formatarBRL(valorOriginal);
+    });
 });
 </script>
 
