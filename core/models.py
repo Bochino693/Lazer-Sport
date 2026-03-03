@@ -681,6 +681,16 @@ class Pedido(Prime):
 
             return venda
 
+    TIPO_ENVIO = [
+        ('frete', 'Frete'),
+        ('entrega', 'Entrega'),
+    ]
+
+    # ⚠ Temporário, apenas para permitir a migration antiga rodar
+    tipo_envio = models.CharField(max_length=30,
+                                  choices=TIPO_ENVIO,
+                                  default='frete')
+
     FORMA_PAGAMENTO_CHOICES = (
         ('pix', 'PIX'),
         ('credito', 'Cartão de Crédito'),
