@@ -2006,7 +2006,6 @@ import mercadopago
 @require_GET
 def verificar_pagamento(request):
     carrinho_id = request.GET.get("carrinho_id")
-
     if not carrinho_id:
         return JsonResponse({"pago": False})
 
@@ -2014,7 +2013,7 @@ def verificar_pagamento(request):
     if not carrinho or not carrinho.mp_payment_id:
         return JsonResponse({"pago": False})
 
-    # consulta Mercado Pago
+    # consulta Mercado Pago diretamente
     try:
         sdk = mercadopago.SDK(settings.MP_ACCESS_TOKEN)
         payment = sdk.payment().get(carrinho.mp_payment_id)["response"]
@@ -2025,7 +2024,6 @@ def verificar_pagamento(request):
     if payment.get("status") != "approved":
         return JsonResponse({"pago": False})
 
-    # cria ou atualiza pedido de forma segura
     with transaction.atomic():
         pedido, created = Pedido.objects.get_or_create(
             mp_payment_id=carrinho.mp_payment_id,
@@ -2039,11 +2037,11 @@ def verificar_pagamento(request):
                 "total_liquido": carrinho.total_liquido,
                 "mp_status": "approved",
                 "cupom_codigo": carrinho.cupom.codigo if carrinho.cupom else None,
-                "cupom_percentual": carrinho.cupom.desconto_percentual if carrinho.cupom else None
+                "cupom_percentual": carrinho.cupom.desconto_percentual if carrinho.cupom else None,
             }
         )
 
-        # atualiza campos caso pedido já existisse mas não tivesse valores
+        # Atualiza snapshot financeiro caso já exista
         if not created:
             pedido.cliente = carrinho.cliente
             pedido.carrinho_origem = carrinho
@@ -2057,7 +2055,7 @@ def verificar_pagamento(request):
             pedido.cupom_percentual = carrinho.cupom.desconto_percentual if carrinho.cupom else None
             pedido.save()
 
-        # ⚡ garante que itens sejam criados se ainda não existirem
+        # Garante que todos os itens sejam criados com os valores corretos
         if not pedido.itens.exists():
             for item in carrinho.itens.all():
                 ItemPedido.objects.create(
@@ -2072,7 +2070,7 @@ def verificar_pagamento(request):
                     subtotal=item.subtotal
                 )
 
-        # limpa carrinho
+        # Limpa carrinho somente após criar o pedido
         carrinho.itens.all().delete()
         carrinho.cupom = None
         carrinho.save()
@@ -2081,6 +2079,7 @@ def verificar_pagamento(request):
         "pago": True,
         "redirect_url": "/meus-pedidos/#pedidos"
     })
+
 
 @csrf_exempt
 def processar_cartao(request):
