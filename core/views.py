@@ -2033,24 +2033,73 @@ def webhook_mercadopago(request):
 
 @require_GET
 def verificar_pagamento(request):
-
     carrinho_id = request.GET.get("carrinho_id")
 
     if not carrinho_id:
         return JsonResponse({"pago": False})
 
-    pedido = Pedido.objects.filter(
-        carrinho_origem_id=carrinho_id,
+    carrinho = Carrinho.objects.filter(id=carrinho_id).first()
+    if not carrinho or not carrinho.mp_payment_id:
+        return JsonResponse({"pago": False})
+
+    # 🔥 já existe pedido?
+    pedido_existente = Pedido.objects.filter(
+        carrinho_origem=carrinho,
         mp_status="approved"
     ).first()
 
-    if pedido:
+    if pedido_existente:
         return JsonResponse({
             "pago": True,
-            "redirect_url": f"/pedido/{pedido.id}/sucesso/"
+            "redirect_url": f"/pedido/{pedido_existente.id}/sucesso/"
         })
 
-    return JsonResponse({"pago": False})
+    # 🔥 consulta Mercado Pago diretamente (FALLBACK)
+    sdk = mercadopago.SDK(settings.MP_ACCESS_TOKEN)
+    payment = sdk.payment().get(carrinho.mp_payment_id)["response"]
+
+    if payment.get("status") != "approved":
+        return JsonResponse({"pago": False})
+
+    # 🔥 cria pedido se webhook falhou
+    with transaction.atomic():
+
+        # dupla proteção
+        if Pedido.objects.filter(mp_payment_id=carrinho.mp_payment_id).exists():
+            pedido = Pedido.objects.get(mp_payment_id=carrinho.mp_payment_id)
+        else:
+            pedido = Pedido.objects.create(
+                cliente=carrinho.cliente,
+                carrinho_origem=carrinho,
+                status="pago",
+                forma_pagamento="pix",
+                total_bruto=carrinho.total_bruto,
+                valor_desconto=carrinho.valor_desconto,
+                total_liquido=carrinho.total_liquido,
+                mp_payment_id=carrinho.mp_payment_id,
+                mp_status="approved",
+            )
+
+            for item in carrinho.itens.all():
+                ItemPedido.objects.create(
+                    pedido=pedido,
+                    content_type=item.content_type,
+                    object_id=item.object_id,
+                    nome_item=str(item.item),
+                    tipo_item=item.content_type.model,
+                    preco_unitario=item.preco_unitario,
+                    quantidade=item.quantidade,
+                    subtotal=item.subtotal
+                )
+
+            carrinho.itens.all().delete()
+            carrinho.cupom = None
+            carrinho.save()
+
+    return JsonResponse({
+        "pago": True,
+        "redirect_url": f"/pedido/{pedido.id}/sucesso/"
+    })
 
 
 
