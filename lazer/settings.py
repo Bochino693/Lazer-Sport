@@ -2,6 +2,7 @@ from pathlib import Path
 import os
 import dj_database_url
 from environ import Env
+import cloudinary
 
 # ------------------------------
 # Environment
@@ -178,24 +179,24 @@ STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 # ==============================
-# Cloudinary (produção)
+# CLOUDINARY CONFIG GLOBAL
+# ==============================
+cloudinary.config(
+    cloud_name=os.getenv("CLOUD_NAME"),
+    api_key=os.getenv("CLOUD_API_KEY"),
+    api_secret=os.getenv("CLOUD_API_SECRET"),
+    secure=True,
+)
+
+# ==============================
+# MEDIA / STORAGE
 # ==============================
 if ENVIRONMENT == "production":
-    CLOUDINARY_STORAGE = {
-        "CLOUD_NAME": os.getenv("CLOUD_NAME"),
-        "API_KEY": os.getenv("CLOUD_API_KEY"),
-        "API_SECRET": os.getenv("CLOUD_API_SECRET"),
-    }
-
     DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"
 
-    # ⚠️ IMPORTANTE: NÃO usar /media em produção
     MEDIA_URL = f"https://res.cloudinary.com/{os.getenv('CLOUD_NAME')}/"
 
 else:
-    # ==============================
-    # Ambiente local
-    # ==============================
     MEDIA_URL = "/media/"
     MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 
