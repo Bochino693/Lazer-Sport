@@ -43,17 +43,16 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
+    'cloudinary_storage',
     'django.contrib.staticfiles',
     'django.contrib.humanize',
     'django.contrib.sites',
+    'cloudinary',
 
     # Apps internas
     'core',
     'sistema_interno',
     'cloud_jogos',
-
-    'cloudinary_storage',  # Deve ser o primeiro desta lista
-    'cloudinary',
 
     # Terceiros
     'rest_framework',
@@ -178,27 +177,24 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
-# ==============================
-# CLOUDINARY CONFIG GLOBAL
-# ==============================
-cloudinary.config(
-    cloud_name=os.getenv("CLOUD_NAME"),
-    api_key=os.getenv("CLOUD_API_KEY"),
-    api_secret=os.getenv("CLOUD_API_SECRET"),
-    secure=True,
-)
 
-# ==============================
-# MEDIA / STORAGE
-# ==============================
+# Em vez de cloudinary.config(...), use isso:
+CLOUDINARY_STORAGE = {
+    'CLOUD_NAME': os.getenv("CLOUD_NAME"),
+    'API_KEY': os.getenv("CLOUD_API_KEY"),
+    'API_SECRET': os.getenv("CLOUD_API_SECRET"),
+}
+
 if ENVIRONMENT == "production":
     DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"
-
-    MEDIA_URL = f"https://res.cloudinary.com/{os.getenv('CLOUD_NAME')}/"
-
+    # Dica: Não force a URL completa do Cloudinary no MEDIA_URL aqui,
+    # o storage já cuida disso para você.
+    MEDIA_URL = '/media/'
 else:
     MEDIA_URL = "/media/"
     MEDIA_ROOT = os.path.join(BASE_DIR, "media")
+
+
 
 # ------------------------------
 # Django REST Framework
