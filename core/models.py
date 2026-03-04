@@ -137,7 +137,7 @@ class Clientes(Prime):
 
 class CategoriasBrinquedos(Prime):
     imagem_categoria = models.ImageField(upload_to='categorias/', null=True, blank=False, unique=True)
-    nome_categoria = models.CharField(max_length=150, unique=True)
+    nome_categoria = models.CharField(max_length=150, null=True, blank=True)
 
     def __str__(self):
         return self.nome_categoria
