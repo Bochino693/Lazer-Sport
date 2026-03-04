@@ -1847,22 +1847,32 @@ from django.contrib import messages
 import requests
 from django.utils import timezone
 
+import requests
+import logging
+from django.utils import timezone
+
+logger = logging.getLogger("impressao")
+
 
 def enviar_para_impressao(pedido):
+    logger.warning("🧾 INICIANDO envio para impressão...")
+
     try:
         texto = montar_texto_pedido(pedido)
 
+        logger.warning("📦 Texto montado, enviando POST...")
+
         response = requests.post(
-            "http://localhost:3000/imprimir",
+            "http://127.0.0.1:3000/imprimir",  # 🔥 use 127.0.0.1
             json={"texto": texto},
-            timeout=5
+            timeout=10
         )
 
-        print("Status impressão:", response.status_code)
-        print("Resposta:", response.text)
+        logger.warning(f"✅ Status impressão: {response.status_code}")
+        logger.warning(f"📨 Resposta: {response.text}")
 
     except Exception as e:
-        print("Erro ao enviar para impressora:", e)
+        logger.error(f"❌ Erro ao enviar para impressora: {e}")
 
 
 def montar_texto_pedido(pedido):
