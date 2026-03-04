@@ -178,24 +178,31 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
+
+# -----------------------------
+# Cloudinary - inicialização obrigatória
+# -----------------------------
 CLOUDINARY_STORAGE = {
     "CLOUD_NAME": os.getenv("CLOUD_NAME"),
     "API_KEY": os.getenv("CLOUD_API_KEY"),
     "API_SECRET": os.getenv("CLOUD_API_SECRET"),
 }
 
-# Inicializa o Cloudinary obrigatoriamente
-import cloudinary
+# ⚠️ Inicializa o Cloudinary antes de qualquer storage
 cloudinary.config(
-    cloud_name=os.getenv("CLOUD_NAME"),
-    api_key=os.getenv("CLOUD_API_KEY"),
-    api_secret=os.getenv("CLOUD_API_SECRET"),
+    cloud_name=CLOUDINARY_STORAGE["CLOUD_NAME"],
+    api_key=CLOUDINARY_STORAGE["API_KEY"],
+    api_secret=CLOUDINARY_STORAGE["API_SECRET"],
     secure=True
 )
 
+# -----------------------------
+# Media / Storage
+# -----------------------------
 if ENVIRONMENT == "production":
+    # Todo ImageField usa Cloudinary
     DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"
-    MEDIA_URL = "/media/"  # pode ficar, não é usado para Cloudinary
+    MEDIA_URL = None  # Django não precisa servir /media
 else:
     MEDIA_URL = "/media/"
     MEDIA_ROOT = os.path.join(BASE_DIR, "media")
