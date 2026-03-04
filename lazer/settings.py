@@ -207,15 +207,13 @@ STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 # -----------------------------
 # Media / Storage
 # -----------------------------
+# **Media**
 if ENVIRONMENT == "production":
-    # Todo ImageField usa Cloudinary
+    # TODO: Todos os ImageField serão salvos no Cloudinary
     DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"
-
 else:
-    MEDIA_URL = "/media/"
-    MEDIA_ROOT = os.path.join(BASE_DIR, "media")
-
-
+    MEDIA_URL = '/media/'
+    MEDIA_ROOT = BASE_DIR / 'media'
 # ------------------------------
 # Django REST Framework
 # ------------------------------
