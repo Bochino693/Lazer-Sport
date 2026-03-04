@@ -2,7 +2,7 @@ from pathlib import Path
 import os
 import dj_database_url
 from environ import Env
-import cloudinary
+
 
 # ------------------------------
 # Environment
@@ -183,9 +183,9 @@ STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 # Cloudinary
 # ==============================
 CLOUDINARY_STORAGE = {
-    "CLOUD_NAME": os.getenv("CLOUD_NAME"),
-    "API_KEY": os.getenv("CLOUD_API_KEY"),
-    "API_SECRET": os.getenv("CLOUD_API_SECRET"),
+    "CLOUD_NAME": env("CLOUD_NAME"),
+    "API_KEY": env("CLOUD_API_KEY"),
+    "API_SECRET": env("CLOUD_API_SECRET"),
 }
 
 # ==============================
@@ -193,13 +193,14 @@ CLOUDINARY_STORAGE = {
 # ==============================
 if ENVIRONMENT == "production":
     DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"
-
-    # ✅ precisa ser string, mas não interfere no Cloudinary
-    MEDIA_URL = "/media/"
+    MEDIA_URL = "/media/"  # pode ficar
 
 else:
     MEDIA_URL = "/media/"
     MEDIA_ROOT = os.path.join(BASE_DIR, "media")
+
+
+
 # ------------------------------
 # Django REST Framework
 # ------------------------------
