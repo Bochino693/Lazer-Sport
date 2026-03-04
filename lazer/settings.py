@@ -202,7 +202,7 @@ cloudinary.config(
 if ENVIRONMENT == "production":
     # Todo ImageField usa Cloudinary
     DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"
-    MEDIA_URL = None  # Django não precisa servir /media
+
 else:
     MEDIA_URL = "/media/"
     MEDIA_ROOT = os.path.join(BASE_DIR, "media")
