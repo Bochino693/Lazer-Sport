@@ -43,11 +43,12 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
-    'cloudinary_storage',
+    'cloudinary_storage',    # PRIMEIRO
     'django.contrib.staticfiles',
+    'cloudinary',
     'django.contrib.humanize',
     'django.contrib.sites',
-    'cloudinary',
+
 
     # Apps internas
     'core',
@@ -184,12 +185,9 @@ CLOUDINARY_STORAGE = {
     'API_SECRET': 'nvL7BaJZQ-K2mxmTqpzuhxyzyHQ',
 }
 
-# 2. Em produção, force o storage
 if ENVIRONMENT == "production":
     DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
-    # Importante: Não mude o MEDIA_URL para o link do cloudinary aqui.
-    # Deixe como '/media/', o CloudinaryStorage vai sobrescrever isso automaticamente.
-    MEDIA_URL = '/media/'
+    MEDIA_URL = f"https://res.cloudinary.com/dgikjmki8/" # Force a URL aqui
 
 
 # ------------------------------
