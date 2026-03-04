@@ -1844,6 +1844,93 @@ from django.shortcuts import render
 from django.contrib import messages
 
 
+import requests
+from django.utils import timezone
+
+
+def enviar_para_impressao(pedido):
+    try:
+        texto = montar_texto_pedido(pedido)
+
+        response = requests.post(
+            "http://localhost:3000/imprimir",
+            json={"texto": texto},
+            timeout=5
+        )
+
+        print("Status impressão:", response.status_code)
+        print("Resposta:", response.text)
+
+    except Exception as e:
+        print("Erro ao enviar para impressora:", e)
+
+
+def montar_texto_pedido(pedido):
+    linhas = []
+
+    agora = timezone.localtime(timezone.now())
+    data_formatada = agora.strftime("%d/%m/%Y %H:%M")
+
+    # Cabeçalho
+    linhas.append("=" * 40)
+    linhas.append("        NOVO PEDIDO")
+    linhas.append("=" * 40)
+
+    linhas.append(f"Pedido: #{pedido.id}")
+    linhas.append(f"Data: {data_formatada}")
+
+    # Cliente
+    if pedido.cliente:
+        linhas.append(f"Cliente: {pedido.cliente}")
+    else:
+        linhas.append("Cliente: Não identificado")
+
+    # Status
+    linhas.append(f"Status: {pedido.get_status_display()}")
+
+    # Forma de pagamento
+    if pedido.forma_pagamento:
+        linhas.append(f"Pagamento: {pedido.get_forma_pagamento_display()}")
+
+    linhas.append("-" * 40)
+
+    # Itens
+    for item in pedido.itens.all():
+        nome = item.nome_item[:25]  # limita tamanho para cupom térmico
+        qtd = item.quantidade
+        subtotal = f"{item.subtotal:.2f}"
+
+        linhas.append(f"{nome}")
+        linhas.append(f"  {qtd} x {item.preco_unitario:.2f}   = {subtotal}")
+
+    linhas.append("-" * 40)
+
+    # Totais
+    if pedido.total_bruto:
+        linhas.append(f"Subtotal: R$ {pedido.total_bruto:.2f}")
+
+    if pedido.valor_desconto and pedido.valor_desconto > 0:
+        linhas.append(f"Desconto: -R$ {pedido.valor_desconto:.2f}")
+
+    linhas.append(f"TOTAL:    R$ {pedido.total_liquido:.2f}")
+
+    # Cupom
+    if pedido.cupom_codigo:
+        linhas.append(f"Cupom: {pedido.cupom_codigo} ({pedido.cupom_percentual}%)")
+
+    # Observações
+    if pedido.observacoes:
+        linhas.append("-" * 40)
+        linhas.append("OBSERVAÇÕES:")
+        linhas.append(pedido.observacoes[:200])
+
+    linhas.append("=" * 40)
+    linhas.append("     Obrigado pela preferência!")
+    linhas.append("\n\n\n")
+
+    return "\n".join(linhas)
+
+
 class PaymentView(View):
 
     def get(self, request, carrinho_id):
@@ -2002,6 +2089,7 @@ from django.db import transaction
 import mercadopago
 
 
+
 @require_GET
 def verificar_pagamento(request):
     carrinho_id = request.GET.get("carrinho_id")
@@ -2063,10 +2151,17 @@ def verificar_pagamento(request):
             )
 
         # 3. Limpamos o carrinho APÓS garantir que o pedido tem os itens e valores
+        # 3. Limpamos o carrinho
         carrinho.itens.all().delete()
         carrinho.cupom = None
-        carrinho.mp_payment_id = None # Limpa para evitar reuso do mesmo ID de pagamento
+        carrinho.mp_payment_id = None
         carrinho.save()
+
+        # 🖨️ DISPARA IMPRESSÃO (ASSÍNCRONO LEVE)
+        try:
+            enviar_para_impressao(pedido)
+        except Exception as e:
+            print("Erro ao imprimir pedido:", e)
 
     return JsonResponse({
         "pago": True,
