@@ -177,23 +177,19 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
-
-# Em vez de cloudinary.config(...), use isso:
+# 1. Use o dicionário, não o cloudinary.config
 CLOUDINARY_STORAGE = {
-    'CLOUD_NAME': os.getenv("CLOUD_NAME"),
-    'API_KEY': os.getenv("CLOUD_API_KEY"),
-    'API_SECRET': os.getenv("CLOUD_API_SECRET"),
+    'CLOUD_NAME': 'dgikjmki8',
+    'API_KEY': '318428596175492',
+    'API_SECRET': 'nvL7BaJZQ-K2mxmTqpzuhxyzyHQ',
 }
 
+# 2. Em produção, force o storage
 if ENVIRONMENT == "production":
-    DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"
-    # Dica: Não force a URL completa do Cloudinary no MEDIA_URL aqui,
-    # o storage já cuida disso para você.
+    DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+    # Importante: Não mude o MEDIA_URL para o link do cloudinary aqui.
+    # Deixe como '/media/', o CloudinaryStorage vai sobrescrever isso automaticamente.
     MEDIA_URL = '/media/'
-else:
-    MEDIA_URL = "/media/"
-    MEDIA_ROOT = os.path.join(BASE_DIR, "media")
-
 
 
 # ------------------------------
