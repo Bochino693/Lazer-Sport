@@ -3464,29 +3464,58 @@ function scrollParaProdutos() {
     window.scrollTo({ top: c.getBoundingClientRect().top + window.scrollY - 80, behavior: 'smooth' });
 }
 
-function carregarProdutos(params = {}) {
+let controllerProdutos = null;
+
+async function carregarProdutos(params = {}) {
     const url = new URL(window.location.href);
+
     if (params.page) url.searchParams.set('page', params.page);
+
     if (params.ordenar) {
         url.searchParams.set('ordenar', params.ordenar);
         url.searchParams.delete('page');
     }
 
-    fetch(url)
-        .then(r => r.text())
-        .then(html => {
-            const doc = new DOMParser().parseFromString(html, 'text/html');
-            document.querySelector('#grid-cards').innerHTML = doc.querySelector('#grid-cards').innerHTML;
-            document.querySelector('#paginacao-wrapper').innerHTML = doc.querySelector('#paginacao-wrapper').innerHTML;
+    // 🚀 cancela requisição anterior (MUUUUITO IMPORTANTE)
+    if (controllerProdutos) controllerProdutos.abort();
+    controllerProdutos = new AbortController();
 
-            renderizarTodasEstrelas(document);
-            renderizarMoedas(document);
-
-            requestAnimationFrame(() => {
-                igualarAlturaCards();
-                scrollParaProdutos();
-            });
+    try {
+        const r = await fetch(url, {
+            signal: controllerProdutos.signal,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
         });
+
+        const html = await r.text();
+
+        const doc = new DOMParser().parseFromString(html, 'text/html');
+
+        const novoGrid = doc.querySelector('#grid-cards');
+        const novaPag = doc.querySelector('#paginacao-wrapper');
+
+        if (novoGrid) {
+            document.querySelector('#grid-cards').innerHTML = novoGrid.innerHTML;
+        }
+
+        if (novaPag) {
+            document.querySelector('#paginacao-wrapper').innerHTML = novaPag.innerHTML;
+        }
+
+        // 🚀 roda só depois do DOM atualizar
+        requestAnimationFrame(() => {
+            renderizarTodasEstrelas();
+            renderizarMoedas();
+            igualarAlturaCards();
+            scrollParaProdutos();
+        });
+
+    } catch (e) {
+        if (e.name !== 'AbortError') {
+            console.error('Erro ao carregar produtos:', e);
+        }
+    }
 }
 
 /* ======================================================
