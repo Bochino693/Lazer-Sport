@@ -1863,7 +1863,7 @@ def enviar_para_impressao(pedido):
         logger.warning("📦 Texto montado, enviando POST...")
 
         response = requests.post(
-            "http://127.0.0.1:3000/imprimir",  # 🔥 use 127.0.0.1
+            "http://localhost:3000/imprimir",  # 🔥 use 127.0.0.1
             json={"texto": texto},
             timeout=10
         )
