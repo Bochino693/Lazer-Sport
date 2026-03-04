@@ -4,7 +4,7 @@ from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 import requests
-
+from cloudinary_storage.storage import MediaCloudinaryStorage
 
 class Prime(models.Model):
     ativo = models.BooleanField(default=True)
@@ -136,7 +136,9 @@ class Clientes(Prime):
 
 
 class CategoriasBrinquedos(Prime):
-    imagem_categoria = models.ImageField(upload_to='categorias/', null=True, blank=False, unique=True)
+    imagem_categoria = models.ImageField(upload_to='categorias/',
+                                         null=True, blank=False,
+                                         unique=True, storage=MediaCloudinaryStorage())
     nome_categoria = models.CharField(max_length=150, null=True, blank=True)
 
     def __str__(self):
@@ -160,7 +162,10 @@ class TagsBrinquedos(Prime):
 
 class Estabelecimentos(Prime):
     nome_estabelecimento = models.CharField(max_length=180)
-    imagem_estabelecimento = models.ImageField(upload_to='estabelecimentos/', null=True, blank=True)
+    imagem_estabelecimento = models.ImageField(upload_to='estabelecimentos/',
+                                               null=True,
+                                               blank=True,
+                                               storage=MediaCloudinaryStorage())
 
     def __str__(self):
         return self.nome_estabelecimento
@@ -199,7 +204,8 @@ def parse_metro(value):
 
 class Brinquedos(Prime):
     nome_brinquedo = models.CharField(max_length=150)
-    imagem_brinquedo = models.ImageField(upload_to='imagens_brinquedos', blank=True, null=True)
+    imagem_brinquedo = models.ImageField(upload_to='imagens_brinquedos',
+                                         blank=True, null=True, storage=MediaCloudinaryStorage())
     descricao = models.CharField(max_length=999)
     valor_brinquedo = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     avaliacao = models.DecimalField(decimal_places=2, max_digits=6)
@@ -357,7 +363,8 @@ class ImagemPeca(Prime):
     imagem = models.ImageField(
         upload_to="pecas_reposicao/",
         verbose_name="Imagem",
-        null=True
+        null=True,
+        storage=MediaCloudinaryStorage()
     )
 
     peca_reposicao = models.ForeignKey(
@@ -397,7 +404,8 @@ class ImagemPeca(Prime):
 
 class Combos(Prime):
     descricao = models.CharField(max_length=90)
-    imagem_combo = models.ImageField(upload_to='combos/', null=True)
+    imagem_combo = models.ImageField(upload_to='combos/', null=True,
+                                     blank=True, storage=MediaCloudinaryStorage())
     brinquedos = models.ManyToManyField(
         Brinquedos,
         related_name='combos'
@@ -414,7 +422,7 @@ class Combos(Prime):
 
 class Promocoes(Prime):
     descricao = models.CharField(max_length=120)
-    imagem_promocao = models.ImageField(upload_to='promocoes/', null=True)
+    imagem_promocao = models.ImageField(upload_to='promocoes/', null=True, storage=MediaCloudinaryStorage())
     brinquedos = models.ForeignKey(Brinquedos, related_name='promocoes', on_delete=models.CASCADE)
     preco_promocao = models.DecimalField(decimal_places=2, max_digits=10, null=True)
 
@@ -513,7 +521,7 @@ class ImagemEvento(models.Model):
         null=True
 
     )
-    imagem = models.ImageField(upload_to='eventos/')
+    imagem = models.ImageField(upload_to='eventos/', storage=MediaCloudinaryStorage())
     legenda = models.CharField(max_length=255, blank=True, null=True)
 
     def __str__(self):
