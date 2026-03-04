@@ -181,9 +181,9 @@ STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 # 🔥 CLOUDINARY (PRODUÇÃO)
 if ENVIRONMENT == "production":
     CLOUDINARY_STORAGE = {
-        'CLOUD_NAME': os.getenv('CLOUD_NAME'),
-        'API_KEY': os.getenv('CLOUD_API_KEY'),
-        'API_SECRET': os.getenv('CLOUD_API_SECRET'),
+        'CLOUD_NAME': 'dgikjmki8',
+        'API_KEY': '318428596175492',
+        'API_SECRET': 'nvL7BaJZQ-K2mxmTqpzuhxyzyHQ',
     }
 
     # Define o storage padrão para arquivos de mídia
