@@ -177,10 +177,9 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
-# 🔥 CLOUDINARY (PRODUÇÃO)
-# ------------------------------
-# Cloudinary - Produção
-# ------------------------------
+# ==============================
+# Cloudinary (produção)
+# ==============================
 if ENVIRONMENT == "production":
     CLOUDINARY_STORAGE = {
         "CLOUD_NAME": os.getenv("CLOUD_NAME"),
@@ -190,10 +189,13 @@ if ENVIRONMENT == "production":
 
     DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"
 
-    # ⚠️ IMPORTANTE: não force /media em produção
-    MEDIA_URL = f"https://res.cloudinary.com/{CLOUDINARY_STORAGE['CLOUD_NAME']}/"
+    # ⚠️ IMPORTANTE: NÃO usar /media em produção
+    MEDIA_URL = f"https://res.cloudinary.com/{os.getenv('CLOUD_NAME')}/"
+
 else:
+    # ==============================
     # Ambiente local
+    # ==============================
     MEDIA_URL = "/media/"
     MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 
