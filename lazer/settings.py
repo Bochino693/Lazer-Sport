@@ -178,20 +178,24 @@ STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 # 🔥 CLOUDINARY (PRODUÇÃO)
-# 🔥 CLOUDINARY (PRODUÇÃO)
+# ------------------------------
+# Cloudinary - Produção
+# ------------------------------
 if ENVIRONMENT == "production":
     CLOUDINARY_STORAGE = {
-        'CLOUD_NAME': 'dgikjmki8',
-        'API_KEY': '318428596175492',
-        'API_SECRET': 'nvL7BaJZQ-K2mxmTqpzuhxyzyHQ',
+        "CLOUD_NAME": os.getenv("CLOUD_NAME"),
+        "API_KEY": os.getenv("CLOUD_API_KEY"),
+        "API_SECRET": os.getenv("CLOUD_API_SECRET"),
     }
 
-    # Define o storage padrão para arquivos de mídia
-    DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+    DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"
 
-    # Em produção, o MEDIA_URL deve apontar para o Cloudinary ou ser deixado como /media/
-    # se o storage estiver configurado corretamente, mas o importante é o DEFAULT_FILE_STORAGE.
-    MEDIA_URL = '/media/'
+    # ⚠️ IMPORTANTE: não force /media em produção
+    MEDIA_URL = f"https://res.cloudinary.com/{CLOUDINARY_STORAGE['CLOUD_NAME']}/"
+else:
+    # Ambiente local
+    MEDIA_URL = "/media/"
+    MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 
 # ------------------------------
 # Django REST Framework
