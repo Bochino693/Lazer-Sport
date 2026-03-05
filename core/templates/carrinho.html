@@ -639,13 +639,11 @@
         </div><!-- cupom-box -->
 
 
-        <!-- CPF do comprador -->
+      <!-- CPF ou CNPJ do comprador -->
         <div class="cpf-box cupom-top">
-            <label for="cpfInput"><strong>📝 CPF</strong></label>
-            <input type="text" id="cpfInput" placeholder="000.000.000-00" maxlength="14">
+            <label for="cpfInput"><strong>📝 CPF ou CNPJ</strong></label>
+            <input type="text" id="cpfInput" placeholder="000.000.000-00 ou 00.000.000/0000-00" maxlength="18">
             <small id="cpf-msg"></small>
-            <!-- Nome do comprador será exibido aqui -->
-            <div id="nome-comprador" style="margin-top:5px; font-weight:700; color:#1e3a8a;"></div>
         </div>
 
         <div class="resumo-box">
@@ -852,12 +850,10 @@ function alterarQtd(itemId, delta) {
 
 
 
-
 document.addEventListener('DOMContentLoaded', () => {
     const cpfInput = document.getElementById('cpfInput');
     const btnFinalizar = document.getElementById('btnFinalizar');
     const cpfMsg = document.getElementById('cpf-msg');
-    const nomeComprador = document.getElementById('nome-comprador');
 
     function validarCPF(cpf) {
         cpf = cpf.replace(/\D/g, '');
@@ -878,45 +874,75 @@ document.addEventListener('DOMContentLoaded', () => {
         return true;
     }
 
+    function validarCNPJ(cnpj) {
+        cnpj = cnpj.replace(/\D/g, '');
+        if (cnpj.length !== 14 || /^(\d)\1+$/.test(cnpj)) return false;
+
+        let tamanho = cnpj.length - 2;
+        let numeros = cnpj.substring(0, tamanho);
+        let digitos = cnpj.substring(tamanho);
+        let soma = 0;
+        let pos = tamanho - 7;
+
+        for (let i = tamanho; i >= 1; i--) {
+            soma += parseInt(numeros.charAt(tamanho - i)) * pos--;
+            if (pos < 2) pos = 9;
+        }
+
+        let resultado = soma % 11 < 2 ? 0 : 11 - (soma % 11);
+        if (resultado !== parseInt(digitos.charAt(0))) return false;
+
+        tamanho = tamanho + 1;
+        numeros = cnpj.substring(0, tamanho);
+        soma = 0;
+        pos = tamanho - 7;
+
+        for (let i = tamanho; i >= 1; i--) {
+            soma += parseInt(numeros.charAt(tamanho - i)) * pos--;
+            if (pos < 2) pos = 9;
+        }
+
+        resultado = soma % 11 < 2 ? 0 : 11 - (soma % 11);
+        return resultado === parseInt(digitos.charAt(1));
+    }
+
     cpfInput.addEventListener('input', () => {
         let valor = cpfInput.value.replace(/\D/g, '');
-        if (valor.length > 3) valor = valor.replace(/^(\d{3})(\d)/, "$1.$2");
-        if (valor.length > 6) valor = valor.replace(/^(\d{3})\.(\d{3})(\d)/, "$1.$2.$3");
-        if (valor.length > 9) valor = valor.replace(/^(\d{3})\.(\d{3})\.(\d{3})(\d)/, "$1.$2.$3-$4");
+
+        // Formatar CPF ou CNPJ automaticamente
+        if (valor.length <= 11) {
+            if (valor.length > 3) valor = valor.replace(/^(\d{3})(\d)/, "$1.$2");
+            if (valor.length > 6) valor = valor.replace(/^(\d{3})\.(\d{3})(\d)/, "$1.$2.$3");
+            if (valor.length > 9) valor = valor.replace(/^(\d{3})\.(\d{3})\.(\d{3})(\d)/, "$1.$2.$3-$4");
+        } else {
+            if (valor.length > 2) valor = valor.replace(/^(\d{2})(\d)/, "$1.$2");
+            if (valor.length > 5) valor = valor.replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3");
+            if (valor.length > 8) valor = valor.replace(/^(\d{2})\.(\d{3})\.(\d{3})(\d)/, "$1.$2.$3/$4");
+            if (valor.length > 12) valor = valor.replace(/^(\d{2})\.(\d{3})\.(\d{3})\/(\d{4})(\d)/, "$1.$2.$3/$4-$5");
+        }
+
         cpfInput.value = valor;
 
-        if (valor.length === 14 && validarCPF(valor)) {
-            cpfMsg.innerText = '';
-            btnFinalizar.style.pointerEvents = 'auto';
-            btnFinalizar.style.opacity = 1;
+        let valido = false;
+        let tipo = '';
 
-            // 🔹 Buscar nome do comprador via AJAX
-            fetch("{% url 'buscar_nome_cpf' %}", {
-                method: "POST",
-                headers: {
-                    "X-CSRFToken": "{{ csrf_token }}",
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({ cpf: valor })
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.nome) {
-                    nomeComprador.innerText = `👤 ${data.nome}`;
-                } else {
-                    nomeComprador.innerText = '👤 Cliente não encontrado';
-                }
-            })
-            .catch(() => {
-                nomeComprador.innerText = '';
-            });
+        if (valor.replace(/\D/g, '').length === 11) {
+            valido = validarCPF(valor);
+            tipo = 'CPF';
+        } else if (valor.replace(/\D/g, '').length === 14) {
+            valido = validarCNPJ(valor);
+            tipo = 'CNPJ';
+        }
 
+        if (tipo) {
+            cpfMsg.innerText = (valido ? '✅ Válido' : '❌ Inválido') + ` (${tipo})`;
+            cpfMsg.style.color = valido ? 'green' : 'red';
+            btnFinalizar.style.pointerEvents = valido ? 'auto' : 'none';
+            btnFinalizar.style.opacity = valido ? 1 : 0.6;
         } else {
+            cpfMsg.innerText = '';
             btnFinalizar.style.pointerEvents = 'none';
             btnFinalizar.style.opacity = 0.6;
-            nomeComprador.innerText = '';
-            if (valor.length === 14) cpfMsg.innerText = 'CPF inválido';
-            else cpfMsg.innerText = '';
         }
     });
 });

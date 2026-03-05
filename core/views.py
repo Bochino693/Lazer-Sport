@@ -1742,17 +1742,31 @@ class CarrinhoView(LoginRequiredMixin, View):
 
         return render(request, 'carrinho.html', context)
 
+from django.views.decorators.csrf import csrf_exempt
+
 @csrf_exempt
 def buscar_nome_cpf(request):
     if request.method == "POST":
         data = json.loads(request.body)
         cpf = data.get("cpf", "").replace(".", "").replace("-", "")
-        try:
-            cliente = Cliente.objects.get(cpf=cpf)
-            return JsonResponse({"nome": cliente.nome})
-        except Cliente.DoesNotExist:
-            return JsonResponse({"nome": None})
+
+        # Simulação de requisição externa
+        nome = consultar_nome_por_cpf(cpf)  # função que você implementa ou integra API real
+
+        return JsonResponse({"nome": nome})
+
     return JsonResponse({"nome": None})
+
+
+# Função exemplo para simular retorno de nome
+def consultar_nome_por_cpf(cpf):
+    # Aqui você chamaria uma API ou consulta real
+    # Por enquanto retorna mock:
+    nomes_mock = {
+        "12345678909": "João da Silva",
+        "98765432100": "Maria Oliveira"
+    }
+    return nomes_mock.get(cpf, None)
 
 
 from django.views.decorators.http import require_POST
