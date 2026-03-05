@@ -5,6 +5,7 @@ from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 import requests
 from cloudinary_storage.storage import MediaCloudinaryStorage
+from .utils.frete import calcular_frete_por_cep, VALOR_POR_KM
 
 class Prime(models.Model):
     ativo = models.BooleanField(default=True)
@@ -547,19 +548,6 @@ class BrinquedoSobMedida(models.Model):
         verbose_name_plural = "Brinquedos Sob Medida"
 
 
-class Frete(Prime):
-    usuario = models.ForeignKey(ClientePerfil, on_delete=models.CASCADE, related_name='fretes')
-    cep = models.CharField(max_length=9)
-    rua = models.CharField(max_length=255)
-    numero = models.CharField(max_length=20)
-    complemento = models.CharField(max_length=255, blank=True, null=True)
-    bairro = models.CharField(max_length=100)
-    cidade = models.CharField(max_length=100)
-    estado = models.CharField(max_length=2)
-
-    def __str__(self):
-        return self.cep
-
 
 class Carrinho(Prime):
     cliente = models.ForeignKey(
@@ -611,6 +599,22 @@ class Carrinho(Prime):
     def total_liquido(self):
         return (self.total_bruto - self.valor_desconto).quantize(Decimal('0.01'))
 
+    def atualizar_frete(self, cep_cliente):
+        from .models import Frete
+        valor, distancia = calcular_frete_por_cep(cep_cliente)
+        frete_obj, created = Frete.objects.get_or_create(carrinho=self)
+        frete_obj.valor = valor
+        frete_obj.distancia_km = distancia
+        frete_obj.save(update_fields=["valor", "distancia_km"])
+        return frete_obj
+
+    @property
+    def total_liquido_com_frete(self):
+        total = self.total_liquido
+        if hasattr(self, "frete") and self.frete.valor:
+            total += self.frete.valor
+        return total.quantize(Decimal("0.01"))
+
     def __str__(self):
         if self.cliente and self.cliente.user:
             return f"Carrinho de {self.cliente.user.username}"
@@ -654,11 +658,39 @@ class ItemCarrinho(Prime):
         total = Decimal(self.preco_unitario) * Decimal(self.quantidade)
         return total.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
+    @property
+    def valor_frete(self):
+        # Só calcula se o tipo de envio for frete
+        if self.tipo_envio != 'frete':
+            return Decimal('0.00')
+
+        if hasattr(self, 'frete') and self.frete.valor:
+            return self.frete.valor
+
+        return Decimal('0.00')
+
     def __str__(self):
         return f"Item {self.item} (x{self.quantidade})"
 
 
 from django.db import transaction
+
+
+class Frete(Prime):
+    carrinho = models.OneToOneField(
+        'Carrinho',
+        on_delete=models.CASCADE,
+        related_name='frete',
+        null=True
+    )
+    valor = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    distancia_km = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
+    tempo_estimado_min = models.PositiveIntegerField(null=True, blank=True)
+    calculado_em = models.DateTimeField(auto_now_add=True, null=True)
+
+    def __str__(self):
+        return f"Frete do carrinho #{self.carrinho.id} - R$ {self.valor}"
+
 
 
 class Pedido(Prime):

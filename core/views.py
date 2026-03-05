@@ -1758,20 +1758,33 @@ def buscar_nome_cpf(request):
     return JsonResponse({"nome": None})
 
 
-# Função exemplo para simular retorno de nome
-def consultar_nome_por_cpf(cpf):
-    # Aqui você chamaria uma API ou consulta real
-    # Por enquanto retorna mock:
-    nomes_mock = {
-        "12345678909": "João da Silva",
-        "98765432100": "Maria Oliveira"
-    }
-    return nomes_mock.get(cpf, None)
+@csrf_exempt
+def calcular_frete(request):
+    if request.method != "POST":
+        return JsonResponse({"status": "error"}, status=400)
+
+    data = json.loads(request.body)
+    cep = data.get("cep")
+    if not cep:
+        return JsonResponse({"status": "error", "message": "CEP não informado"}, status=400)
+
+    if not hasattr(request.user, "perfil"):
+        return JsonResponse({"status": "error", "message": "Usuário não tem perfil"}, status=400)
+
+    carrinho = Carrinho.objects.filter(cliente=request.user.perfil).first()
+    if not carrinho:
+        return JsonResponse({"status": "error", "message": "Carrinho vazio"}, status=400)
+
+    frete = carrinho.atualizar_frete(cep)
+    return JsonResponse({
+        "status": "ok",
+        "valor_frete": float(frete.valor),
+        "distancia_km": float(frete.distancia_km or 0),
+        "total_com_frete": float(carrinho.total_liquido_com_frete)
+    })
 
 
 from django.views.decorators.http import require_POST
-from django.http import JsonResponse
-import json
 
 @require_POST
 @login_required

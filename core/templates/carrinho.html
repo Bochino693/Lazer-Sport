@@ -864,6 +864,11 @@
 </div>
 
         <div class="resumo-box">
+            <div class="resumo-linha" id="linha-frete" style="display:none;">
+                <span>Frete</span>
+                <span class="money" id="valor-frete">R$ 0,00</span>
+            </div>
+
             <div class="resumo-linha resumo-total">
                 <span>Total</span>
                 <span>R$ {{ carrinho.total_liquido|floatformat:2 }}</span>
@@ -1074,6 +1079,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const cpfMsg = document.getElementById('cpf-msg');
 
     const cepInput = document.getElementById('cepInput');
+    const valorFreteSpan = document.getElementById('valor-frete');
+    const linhaFrete = document.getElementById('linha-frete');
+    const totalPedido = document.getElementById('total-pedido');
+
     const enderecoDetalhes = document.getElementById('endereco-detalhes');
     const numeroInput = document.getElementById('numero');
 
@@ -1163,6 +1172,32 @@ document.addEventListener('DOMContentLoaded', () => {
         return /^\d{5}-?\d{3}$/.test(cep);
     }
 
+    function calcularFrete() {
+    const cepLimpo = cepInput.value.replace(/\D/g, '');
+    if (!validarCEP(cepInput.value) || cepLimpo.length !== 8) {
+        linhaFrete.style.display = 'none';
+        return;
+    }
+
+    // Aqui você coloca sua lógica de frete. Pode ser fixa ou via API
+    let valorFrete = 0;
+
+    // Exemplo de frete simples por estado
+    const estado = document.getElementById('estado').value;
+    switch (estado) {
+        case 'SP': valorFrete = 15.00; break;
+        case 'RJ': valorFrete = 20.00; break;
+        default: valorFrete = 25.00; break;
+    }
+
+    valorFreteSpan.innerText = valorFrete.toFixed(2);
+    linhaFrete.style.display = 'flex';
+
+    // Atualiza total do pedido
+    const subtotal = parseFloat(document.getElementById('subtotal-pedido').innerText);
+    totalPedido.innerText = (subtotal + valorFrete).toFixed(2);
+}
+
     cepInput.addEventListener('input', () => {
         cepInput.value = formatarCEP(cepInput.value);
         const cepLimpo = cepInput.value.replace(/\D/g, '');
@@ -1176,6 +1211,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         document.getElementById('bairro').value = data.bairro;
                         document.getElementById('cidade').value = data.localidade;
                         document.getElementById('estado').value = data.uf;
+
+                        calcularFrete(); // <-- Chamada aqui
                     } else {
                         enderecoDetalhes.style.display = 'none';
                     }
@@ -1188,21 +1225,24 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+
+
     numeroInput.addEventListener('input', atualizarBotaoFinalizar);
 
     // ===== Alternar abas Frete / Retirada =====
-    freteTabs.forEach(tab => {
-        tab.addEventListener('click', () => {
-            freteTabs.forEach(t => t.classList.remove('active'));
-            tab.classList.add('active');
+        freteTabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                freteTabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
 
-            const tipo = tab.dataset.tipo;
-            freteContent.forEach(c => c.style.display = 'none');
-            document.getElementById(tipo).style.display = 'block';
+                const tipo = tab.dataset.tipo;
+                freteContent.forEach(c => c.style.display = 'none');
+                document.getElementById(tipo).style.display = 'block';
 
-            atualizarBotaoFinalizar();
+                if (tipo === 'frete') calcularFrete(); // <-- Chamada aqui
+                atualizarBotaoFinalizar();
+            });
         });
-    });
 
     // ===== Habilitar botão somente quando válido =====
     function atualizarBotaoFinalizar() {
@@ -1240,6 +1280,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 });
+
+
 
 </script>
 {% endblock %}
