@@ -1216,71 +1216,58 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function calcularFrete() {
 
-    const cepLimpo = cepInput.value.replace(/\D/g, '');
+    const cep = cepInput.value.replace(/\D/g, '');
 
-    if (cepLimpo.length !== 8) {
-        linhaFrete.style.display = 'none';
+    if (cep.length !== 8) {
+        linhaFrete.style.display = "none";
         return;
     }
 
-    fetch("/calcular/frete/", {
+    fetch("{% url 'calcular_frete' %}", {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
             "X-CSRFToken": "{{ csrf_token }}"
         },
-        body: JSON.stringify({
-            cep: cepLimpo
-        })
+        body: JSON.stringify({ cep: cep })
     })
-    .then(response => {
-    if (!response.ok) {
-        throw new Error("Erro no servidor");
-    }
-    return response.json();
-})
+    .then(r => r.json())
     .then(data => {
 
-        if (data.status === "ok") {
+        if (data.status !== "ok") return;
 
-            const frete = parseFloat(data.valor_frete);
-            const totalProdutos = parseFloat(data.total_produtos);
-            const totalPedidoValor = parseFloat(data.total_pedido);
+        const frete = parseFloat(data.frete);
 
-            // Mostrar frete
-            valorFreteSpan.textContent =
-                "R$ " + frete.toLocaleString('pt-BR', {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2
-                });
+        const totalProdutos = parseFloat(
+            document.getElementById("valor-produtos")
+                .innerText
+                .replace("R$", "")
+                .replace(/\./g, "")
+                .replace(",", ".")
+        );
 
-            // Atualizar valor produtos
-            document.getElementById("valor-produtos").textContent =
-                "R$ " + totalProdutos.toLocaleString('pt-BR', {
-                    minimumFractionDigits: 2
-                });
+        const total = totalProdutos + frete;
 
-            // Atualizar total do pedido
-            document.getElementById("totalPedido").textContent =
-                "R$ " + totalPedidoValor.toLocaleString('pt-BR', {
-                    minimumFractionDigits: 2
-                });
+        valorFreteSpan.innerText =
+            "R$ " + frete.toLocaleString("pt-BR", {
+                minimumFractionDigits: 2
+            });
 
-            linhaFrete.style.display = "flex";
+        totalPedido.innerText =
+            "R$ " + total.toLocaleString("pt-BR", {
+                minimumFractionDigits: 2
+            });
 
-        } else {
+        linhaFrete.style.display = "flex";
 
-            console.error(data.message);
-
-        }
+        atualizarBotaoFinalizar();
 
     })
-    .catch(error => {
-        console.error("Erro frete:", error);
+    .catch(() => {
+        console.log("Erro ao calcular frete");
     });
 
 }
-
     cepInput.addEventListener('input', () => {
         cepInput.value = formatarCEP(cepInput.value);
         const cepLimpo = cepInput.value.replace(/\D/g, '');
