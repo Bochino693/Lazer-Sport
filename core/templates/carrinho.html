@@ -704,14 +704,42 @@
     }
 }
 
+/* ===== FRETE / VALOR ===== */
+#linha-frete {
+    display: flex;
+    justify-content: space-between;
+    margin: 10px 0;
+    font-weight: 700;
+    color: #0d6efd;
+    font-size: 1rem;
+}
 
-    #endereco-detalhes input {
+#valor-frete {
+    background: #e0f0ff;
+    padding: 4px 10px;
+    border-radius: 12px;
+    min-width: 70px;
+    text-align: right;
+    font-weight: 700;
+    color: #0d6efd;
+    display: inline-block;
+}
+
+/* Endereço detalhado: organiza inputs com gap */
+#endereco-detalhes {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 16px;
+}
+
+/* Inputs do endereço: força largura e padding consistentes */
+#endereco-detalhes input {
     padding: 12px 16px;
     border-radius: 12px;
     border: 1px solid #cbd5e1;
     width: 100%;
     box-sizing: border-box;
-    margin-top: 6px;
     background: #f9fafb;
     transition: all 0.2s ease;
 }
@@ -721,6 +749,8 @@
     box-shadow: 0 4px 12px rgba(13,110,253,0.15);
     outline: none;
 }
+
+
 </style>
 
 <div class="carrinho-container" id="car">
@@ -1172,17 +1202,14 @@ document.addEventListener('DOMContentLoaded', () => {
         return /^\d{5}-?\d{3}$/.test(cep);
     }
 
-    function calcularFrete() {
+function calcularFrete() {
     const cepLimpo = cepInput.value.replace(/\D/g, '');
     if (!validarCEP(cepInput.value) || cepLimpo.length !== 8) {
         linhaFrete.style.display = 'none';
         return;
     }
 
-    // Aqui você coloca sua lógica de frete. Pode ser fixa ou via API
     let valorFrete = 0;
-
-    // Exemplo de frete simples por estado
     const estado = document.getElementById('estado').value;
     switch (estado) {
         case 'SP': valorFrete = 15.00; break;
@@ -1190,12 +1217,22 @@ document.addEventListener('DOMContentLoaded', () => {
         default: valorFrete = 25.00; break;
     }
 
-    valorFreteSpan.innerText = valorFrete.toFixed(2);
+    // Formata como R$ xx,xx
+    valorFreteSpan.textContent = 'R$ ' + valorFrete.toLocaleString('pt-BR', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    });
     linhaFrete.style.display = 'flex';
 
-    // Atualiza total do pedido
-    const subtotal = parseFloat(document.getElementById('subtotal-pedido').innerText);
-    totalPedido.innerText = (subtotal + valorFrete).toFixed(2);
+    // Atualiza total do pedido (se houver subtotal fixo)
+    const subtotalEl = document.querySelector('.subtotal-fixo-inner strong');
+    if (subtotalEl) {
+        let subtotal = parseFloat(subtotalEl.textContent.replace(/\D/g, '').replace(',', '.')) || 0;
+        subtotalEl.textContent = 'R$ ' + (subtotal + valorFrete).toLocaleString('pt-BR', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+    }
 }
 
     cepInput.addEventListener('input', () => {
