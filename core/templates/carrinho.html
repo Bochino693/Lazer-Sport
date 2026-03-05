@@ -915,6 +915,7 @@
             </span>
         </div>
 
+
     {% else %}
 
         <div class="carrinho-vazio-box">
@@ -936,6 +937,7 @@
 
 
 </div><!-- carrinho-container -->
+</div>
 
 
 {% if itens %}
@@ -1236,61 +1238,30 @@ function calcularFrete() {
 
         if (data.status === "ok") {
 
-            const valorFrete = parseFloat(data.valor_frete);
+            const frete = parseFloat(data.valor_frete);
+            const totalProdutos = parseFloat(data.total_produtos);
+            const totalPedidoValor = parseFloat(data.total_pedido);
 
+            // Mostrar frete
             valorFreteSpan.textContent =
-                "R$ " + valorFrete.toLocaleString('pt-BR', {
+                "R$ " + frete.toLocaleString('pt-BR', {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2
                 });
 
-            linhaFrete.style.display = 'flex';
-
-            // 🔥 SOMAR COM TOTAL
-            const totalSpan = document.getElementById("totalPedido");
-
-            let totalAtual = totalSpan.textContent
-                .replace("R$", "")
-                .replace(/\./g, "")
-                .replace(",", ".")
-                .trim();
-
-            totalAtual = parseFloat(totalAtual);
-
-            .then(data => {
-
-                if (data.status === "ok") {
-
-                    const frete = parseFloat(data.valor_frete);
-                    const totalProdutos = parseFloat(data.total_produtos);
-                    const totalPedido = parseFloat(data.total_pedido);
-
-                    valorFreteSpan.textContent =
-                        "R$ " + frete.toLocaleString('pt-BR', {
-                            minimumFractionDigits: 2
-                        });
-
-                    document.getElementById("valor-produtos").textContent =
-                        "R$ " + totalProdutos.toLocaleString('pt-BR', {
-                            minimumFractionDigits: 2
-                        });
-
-                    document.getElementById("totalPedido").textContent =
-                        "R$ " + totalPedido.toLocaleString('pt-BR', {
-                            minimumFractionDigits: 2
-                        });
-
-                    linhaFrete.style.display = "flex";
-
-                }
-
-            });
-
-            totalSpan.textContent =
-                "R$ " + novoTotal.toLocaleString('pt-BR', {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2
+            // Atualizar valor produtos
+            document.getElementById("valor-produtos").textContent =
+                "R$ " + totalProdutos.toLocaleString('pt-BR', {
+                    minimumFractionDigits: 2
                 });
+
+            // Atualizar total do pedido
+            document.getElementById("totalPedido").textContent =
+                "R$ " + totalPedidoValor.toLocaleString('pt-BR', {
+                    minimumFractionDigits: 2
+                });
+
+            linhaFrete.style.display = "flex";
 
         } else {
 
