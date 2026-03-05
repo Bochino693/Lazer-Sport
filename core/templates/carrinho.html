@@ -493,6 +493,67 @@
 }
 
 
+/* ===== CPF ESTILIZADO ===== */
+.cpf-box {
+    margin-top: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.cpf-box label {
+    font-weight: 700;
+    font-size: 1rem;
+    color: #1e3a8a;
+}
+
+.cpf-box input {
+    padding: 12px 16px;
+    border-radius: 12px;
+    border: 1px solid #ddd;
+    font-size: 1rem;
+    outline: none;
+    transition: all 0.2s ease;
+    width: 100%;
+    box-sizing: border-box;
+    background: #f7faff;
+    color: #111827;
+}
+
+.cpf-box input:focus {
+    border-color: #0d6efd;
+    box-shadow: 0 4px 12px rgba(13, 110, 253, 0.25);
+}
+
+/* Mensagem de erro */
+.cpf-box small {
+    font-size: 0.85rem;
+    color: #dc3545;
+    min-height: 18px;
+}
+
+/* ===== MOBILE ===== */
+@media (max-width: 768px) {
+    .cpf-box input {
+        padding: 10px 14px;
+        font-size: 0.95rem;
+    }
+    .cpf-box label {
+        font-size: 0.95rem;
+    }
+}
+
+/* ===== TABLET ===== */
+@media (min-width: 769px) and (max-width: 1024px) {
+    .cpf-box input {
+        padding: 11px 15px;
+        font-size: 0.98rem;
+    }
+    .cpf-box label {
+        font-size: 0.98rem;
+    }
+}
+
 </style>
 
 <div class="carrinho-container" id="car">
@@ -577,12 +638,13 @@
 
         </div><!-- cupom-box -->
 
+
         <!-- CPF do comprador -->
-        <div class="cpf-box cupom-top">
-            <label for="cpfInput"><strong>📝 CPF</strong></label>
-            <input type="text" id="cpfInput" placeholder="Digite seu CPF" maxlength="14">
-            <small id="cpf-msg" style="color:red;"></small>
-        </div>
+            <div class="cpf-box cupom-top">
+                <label for="cpfInput"><strong>📝 CPF</strong></label>
+                <input type="text" id="cpfInput" placeholder="000.000.000-00" maxlength="14">
+                <small id="cpf-msg"></small>
+            </div>
 
         <div class="resumo-box">
             <div class="resumo-linha resumo-total">
@@ -812,23 +874,23 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     cpfInput.addEventListener('input', () => {
-        let valor = cpfInput.value.replace(/\D/g, '');
-        if (valor.length > 3) valor = valor.replace(/^(\d{3})(\d)/, "$1.$2");
-        if (valor.length > 6) valor = valor.replace(/^(\d{3})\.(\d{3})(\d)/, "$1.$2.$3");
-        if (valor.length > 9) valor = valor.replace(/^(\d{3})\.(\d{3})\.(\d{3})(\d)/, "$1.$2.$3-$4");
-        cpfInput.value = valor;
+    let valor = cpfInput.value.replace(/\D/g, '');
+    if (valor.length > 3) valor = valor.replace(/^(\d{3})(\d)/, "$1.$2");
+    if (valor.length > 6) valor = valor.replace(/^(\d{3})\.(\d{3})(\d)/, "$1.$2.$3");
+    if (valor.length > 9) valor = valor.replace(/^(\d{3})\.(\d{3})\.(\d{3})(\d)/, "$1.$2.$3-$4");
+    cpfInput.value = valor;
 
-        if (valor.length === 14 && validarCPF(valor)) {
-            cpfMsg.innerText = '';
-            btnFinalizar.style.pointerEvents = 'auto';
-            btnFinalizar.style.opacity = 1;
-        } else {
-            btnFinalizar.style.pointerEvents = 'none';
-            btnFinalizar.style.opacity = 0.6;
-            if (valor.length === 14) cpfMsg.innerText = 'CPF inválido';
-            else cpfMsg.innerText = '';
-        }
-    });
+    if (valor.length === 14 && validarCPF(valor)) {
+        cpfMsg.innerText = '';
+        btnFinalizar.style.pointerEvents = 'auto';
+        btnFinalizar.style.opacity = 1;
+    } else {
+        btnFinalizar.style.pointerEvents = 'none';
+        btnFinalizar.style.opacity = 0.6;
+        if (valor.length === 14) cpfMsg.innerText = 'CPF inválido';
+        else cpfMsg.innerText = '';
+    }
+});
 });
 
 </script>
