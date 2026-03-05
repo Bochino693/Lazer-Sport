@@ -1,36 +1,13 @@
 import math
-
-def calcular_distancia_km(lat1, lon1, lat2, lon2):
-    R = 6371  # raio da Terra em km
-
-    phi1 = math.radians(lat1)
-    phi2 = math.radians(lat2)
-    delta_phi = math.radians(lat2 - lat1)
-    delta_lambda = math.radians(lon2 - lon1)
-
-    a = (
-        math.sin(delta_phi / 2) ** 2 +
-        math.cos(phi1) * math.cos(phi2) *
-        math.sin(delta_lambda / 2) ** 2
-    )
-
-    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
-    return R * c
-
-
-def estimar_tempo_minutos(distancia_km, velocidade_media_kmh=30):
-    return int((distancia_km / velocidade_media_kmh) * 60)
-
-
 # utils/frete.py
 import requests
 from decimal import Decimal
 from math import radians, sin, cos, sqrt, atan2
 
-VALOR_POR_KM = Decimal("7.50")
+VALOR_POR_KM = Decimal("3.50")  # agora é 3,50 por km
 
 # CEP da empresa (origem)
-CEP_EMPRESA = "01001-000"  # ajustar conforme necessário
+CEP_EMPRESA = "02679-110"  # ajustar conforme necessário
 
 def buscar_lat_lon(cep):
     """Retorna (lat, lon) do CEP usando ViaCEP + API Nominatim"""
@@ -41,14 +18,12 @@ def buscar_lat_lon(cep):
     if dados.get("erro"):
         return None, None
 
-    # Monta endereço completo
     logradouro = dados.get("logradouro", "")
     bairro = dados.get("bairro", "")
     cidade = dados.get("localidade", "")
     uf = dados.get("uf", "")
     endereco = f"{logradouro}, {bairro}, {cidade} - {uf}, Brasil"
 
-    # Geocoding via Nominatim OpenStreetMap
     geo_res = requests.get(
         "https://nominatim.openstreetmap.org/search",
         params={"q": endereco, "format": "json"},
@@ -80,5 +55,5 @@ def calcular_frete_por_cep(cep_cliente):
         return Decimal("0.00"), None
 
     distancia = calcular_distancia_km(lat_origem, lon_origem, lat_dest, lon_dest)
-    valor_frete = (Decimal(distancia) * VALOR_POR_KM).quantize(Decimal("0.01"))
+    valor_frete = (Decimal(distancia) * VALOR_POR_KM).quantize(Decimal("0.01"))  # mantém 2 casas decimais
     return valor_frete, Decimal(distancia).quantize(Decimal("0.01"))

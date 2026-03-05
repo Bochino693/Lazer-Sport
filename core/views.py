@@ -1745,8 +1745,6 @@ class CarrinhoView(LoginRequiredMixin, View):
 from django.views.decorators.csrf import csrf_exempt
 
 
-
-
 @csrf_exempt
 def calcular_frete(request):
     if request.method != "POST":
@@ -1764,14 +1762,21 @@ def calcular_frete(request):
     if not carrinho:
         return JsonResponse({"status": "error", "message": "Carrinho vazio"}, status=400)
 
-    frete = carrinho.atualizar_frete(cep)
+    from utils.frete import calcular_frete_por_cep
+    valor_frete, distancia_km = calcular_frete_por_cep(cep)
+
+    # Atualiza o carrinho
+    carrinho.valor_frete = valor_frete
+    carrinho.save()
 
     return JsonResponse({
         "status": "ok",
-        "valor_frete": str(frete.valor),  # "15.00"
-        "distancia_km": str(frete.distancia_km or 0),
-        "total_com_frete": str(carrinho.total_liquido_com_frete)  # "15.01"
+        "valor_frete": str(valor_frete),            # ex: "15.01"
+        "distancia_km": str(distancia_km or 0),     # ex: "4.32"
+        "total_com_frete": str(carrinho.total_liquido + valor_frete)
     })
+
+
 
 from django.views.decorators.http import require_POST
 
