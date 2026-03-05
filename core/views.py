@@ -1762,7 +1762,7 @@ def calcular_frete(request):
     if not carrinho:
         return JsonResponse({"status": "error", "message": "Carrinho vazio"}, status=400)
 
-    from utils.frete import calcular_frete_por_cep
+    from .utils import calcular_frete_por_cep
     valor_frete, distancia_km = calcular_frete_por_cep(cep)
 
     # Atualiza o carrinho
