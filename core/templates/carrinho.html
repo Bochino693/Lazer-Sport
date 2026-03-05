@@ -1257,7 +1257,34 @@ function calcularFrete() {
 
             totalAtual = parseFloat(totalAtual);
 
-            const novoTotal = totalAtual + valorFrete;
+            .then(data => {
+
+                if (data.status === "ok") {
+
+                    const frete = parseFloat(data.valor_frete);
+                    const totalProdutos = parseFloat(data.total_produtos);
+                    const totalPedido = parseFloat(data.total_pedido);
+
+                    valorFreteSpan.textContent =
+                        "R$ " + frete.toLocaleString('pt-BR', {
+                            minimumFractionDigits: 2
+                        });
+
+                    document.getElementById("valor-produtos").textContent =
+                        "R$ " + totalProdutos.toLocaleString('pt-BR', {
+                            minimumFractionDigits: 2
+                        });
+
+                    document.getElementById("totalPedido").textContent =
+                        "R$ " + totalPedido.toLocaleString('pt-BR', {
+                            minimumFractionDigits: 2
+                        });
+
+                    linhaFrete.style.display = "flex";
+
+                }
+
+            });
 
             totalSpan.textContent =
                 "R$ " + novoTotal.toLocaleString('pt-BR', {
