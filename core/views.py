@@ -1745,56 +1745,29 @@ class CarrinhoView(LoginRequiredMixin, View):
 from django.views.decorators.csrf import csrf_exempt
 from .utils import calcular_frete_por_cep
 
-
 @csrf_exempt
 def calcular_frete(request):
 
-    if request.method != "POST":
-        return JsonResponse({"status": "error", "message": "Método inválido"}, status=400)
-
-    try:
+    if request.method == "POST":
         data = json.loads(request.body)
-    except Exception:
-        return JsonResponse({"status": "error", "message": "JSON inválido"}, status=400)
 
-    cep = data.get("cep")
+        cep = data.get("cep")
 
-    if not cep:
-        return JsonResponse({"status": "error", "message": "CEP não informado"}, status=400)
+        if not cep:
+            return JsonResponse({
+                "status": "erro",
+                "message": "CEP não informado"
+            })
 
-    if not request.user.is_authenticated or not hasattr(request.user, "perfil"):
-        return JsonResponse({"status": "error", "message": "Usuário inválido"}, status=401)
-
-    carrinho = Carrinho.objects.filter(cliente=request.user.perfil).first()
-
-    if not carrinho:
-        return JsonResponse({"status": "error", "message": "Carrinho não encontrado"}, status=404)
-
-    try:
-
-        valor_frete, distancia_km = calcular_frete_por_cep(cep)
-
-        valor_frete = Decimal(valor_frete)
-
-        carrinho.valor_frete = valor_frete
-        carrinho.save(update_fields=["valor_frete"])
-
-        total_com_frete = carrinho.total_liquido + valor_frete
+        # exemplo de cálculo simples
+        valor_frete = 15.90
 
         return JsonResponse({
             "status": "ok",
-            "valor_frete": str(valor_frete),
-            "distancia_km": str(distancia_km),
-            "total_com_frete": str(total_com_frete)
+            "valor_frete": valor_frete
         })
 
-    except Exception as e:
-
-        return JsonResponse({
-            "status": "error",
-            "message": str(e)
-        }, status=500)
-
+    return JsonResponse({"status": "erro"})
 
 
 from django.views.decorators.http import require_POST

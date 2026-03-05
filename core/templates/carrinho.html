@@ -901,7 +901,7 @@
 
             <div class="resumo-linha resumo-total">
                 <span>Total</span>
-                <span>R$ {{ carrinho.total_liquido|floatformat:2 }}</span>
+                <span id="totalPedido">R$ {{ carrinho.total_liquido|floatformat:2 }}</span>
             </div>
         </div>
 
@@ -1236,6 +1236,25 @@ function calcularFrete() {
 
             linhaFrete.style.display = 'flex';
 
+            // 🔥 SOMAR COM TOTAL
+            const totalSpan = document.getElementById("totalPedido");
+
+            let totalAtual = totalSpan.textContent
+                .replace("R$", "")
+                .replace(/\./g, "")
+                .replace(",", ".")
+                .trim();
+
+            totalAtual = parseFloat(totalAtual);
+
+            const novoTotal = totalAtual + valorFrete;
+
+            totalSpan.textContent =
+                "R$ " + novoTotal.toLocaleString('pt-BR', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                });
+
         } else {
 
             console.error(data.message);
@@ -1248,6 +1267,7 @@ function calcularFrete() {
     });
 
 }
+
     cepInput.addEventListener('input', () => {
         cepInput.value = formatarCEP(cepInput.value);
         const cepLimpo = cepInput.value.replace(/\D/g, '');
