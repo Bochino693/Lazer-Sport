@@ -1743,6 +1743,7 @@ class CarrinhoView(LoginRequiredMixin, View):
         return render(request, 'carrinho.html', context)
 
 from django.views.decorators.csrf import csrf_exempt
+from utils import calcular_frete_por_cep
 
 
 @csrf_exempt
