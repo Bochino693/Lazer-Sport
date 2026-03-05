@@ -1745,6 +1745,13 @@ class CarrinhoView(LoginRequiredMixin, View):
 from django.views.decorators.csrf import csrf_exempt
 from .utils import calcular_frete_por_cep
 
+from django.views.decorators.csrf import csrf_exempt
+from django.http import JsonResponse
+import json
+
+from .utils import calcular_frete_por_cep
+
+
 @csrf_exempt
 def calcular_frete(request):
 
@@ -1759,12 +1766,12 @@ def calcular_frete(request):
                 "message": "CEP não informado"
             })
 
-        # exemplo de cálculo simples
-        valor_frete = 15.90
+        valor_frete, distancia = calcular_frete_por_cep(cep)
 
         return JsonResponse({
             "status": "ok",
-            "valor_frete": valor_frete
+            "valor_frete": float(valor_frete),
+            "distancia_km": float(distancia)
         })
 
     return JsonResponse({"status": "erro"})
