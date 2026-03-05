@@ -64,3 +64,5 @@ def calcular_frete_por_cep(cep_cliente):
     distancia = calcular_distancia_km(lat_origem, lon_origem, lat_dest, lon_dest)
     valor_frete = (Decimal(distancia) * VALOR_POR_KM).quantize(Decimal("0.01"))  # mantém 2 casas decimais
     return valor_frete, Decimal(distancia).quantize(Decimal("0.01"))
+
+

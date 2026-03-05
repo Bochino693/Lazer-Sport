@@ -1748,35 +1748,46 @@ from django.views.decorators.csrf import csrf_exempt
 @csrf_exempt
 def calcular_frete(request):
     if request.method != "POST":
-        return JsonResponse({"status": "error"}, status=400)
+        return JsonResponse({"status": "error", "message": "Método inválido"}, status=400)
 
-    data = json.loads(request.body)
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({"status": "error", "message": "JSON inválido"}, status=400)
+
     cep = data.get("cep")
     if not cep:
         return JsonResponse({"status": "error", "message": "CEP não informado"}, status=400)
 
-    if not hasattr(request.user, "perfil"):
-        return JsonResponse({"status": "error", "message": "Usuário não tem perfil"}, status=400)
+    # Verifica se o usuário está autenticado e tem perfil
+    if not request.user.is_authenticated or not hasattr(request.user, "perfil"):
+        return JsonResponse({"status": "error", "message": "Usuário não autenticado ou sem perfil"}, status=401)
 
     carrinho = Carrinho.objects.filter(cliente=request.user.perfil).first()
-    if not carrinho:
+    if not carrinho or not carrinho.itens.exists():
         return JsonResponse({"status": "error", "message": "Carrinho vazio"}, status=400)
 
-    from .utils import calcular_frete_por_cep
-    valor_frete, distancia_km = calcular_frete_por_cep(cep)
+    try:
+        # Calcula o frete usando utils
+        valor_frete, distancia_km = calcular_frete_por_cep(cep)
 
-    # Atualiza o carrinho
-    carrinho.valor_frete = valor_frete
-    carrinho.save()
+        # Atualiza o carrinho
+        carrinho.valor_frete = valor_frete
+        carrinho.save(update_fields=["valor_frete"])
 
-    return JsonResponse({
-        "status": "ok",
-        "valor_frete": str(valor_frete),            # ex: "15.01"
-        "distancia_km": str(distancia_km or 0),     # ex: "4.32"
-        "total_com_frete": str(carrinho.total_liquido + valor_frete)
-    })
+        # Calcula total líquido com frete
+        total_com_frete = (carrinho.total_liquido + valor_frete).quantize(Decimal("0.01"))
 
+        return JsonResponse({
+            "status": "ok",
+            "valor_frete": str(valor_frete),             # ex: "15.01"
+            "distancia_km": str(distancia_km or 0),      # ex: "4.32"
+            "total_com_frete": str(total_com_frete)
+        })
 
+    except Exception as e:
+        # Retorna erro em JSON para o frontend
+        return JsonResponse({"status": "error", "message": f"Erro ao calcular frete: {str(e)}"}, status=500)
 
 from django.views.decorators.http import require_POST
 
@@ -1799,11 +1810,10 @@ def alterar_quantidade_item(request):
 
     return JsonResponse({"status": "ok"})
 
-import json
-from django.http import JsonResponse
+
 from django.views.decorators.http import require_POST
 from django.contrib.auth.decorators import login_required
-from .models import Pedido, ItemPedido
+
 
 
 @login_required
