@@ -1,67 +1,74 @@
-import math
-
-
-
-def estimar_tempo_minutos(distancia_km, velocidade_media_kmh=30):
-    return int((distancia_km / velocidade_media_kmh) * 60)
-
 import requests
-from decimal import Decimal
-from math import radians, sin, cos, sqrt, atan2
+import math
+import logging
 
-VALOR_POR_KM = Decimal("3.50")
+logger = logging.getLogger(__name__)
 
 CEP_EMPRESA = "02679-110"
+VALOR_KM = 3.50
 
 
-def buscar_lat_lon(cep):
-    url = f"https://nominatim.openstreetmap.org/search"
-    params = {
-        "postalcode": cep,
-        "country": "Brazil",
-        "format": "json"
-    }
+def buscar_coordenadas(cep):
 
-    r = requests.get(url, params=params, headers={"User-Agent": "django-app"})
-    data = r.json()
+    url = f"https://cep.awesomeapi.com.br/json/{cep}"
 
-    if not data:
+    try:
+        r = requests.get(url, timeout=5)
+        data = r.json()
+
+        lat = float(data["lat"])
+        lng = float(data["lng"])
+
+        logger.info(f"[FRETE] Coordenadas obtidas para CEP {cep}: {lat}, {lng}")
+
+        return lat, lng
+
+    except Exception as e:
+        logger.error(f"[FRETE] Erro ao buscar coordenadas do CEP {cep}: {e}")
         return None, None
 
-    return float(data[0]["lat"]), float(data[0]["lon"])
 
+def distancia_km(lat1, lon1, lat2, lon2):
 
-def calcular_distancia_km(lat1, lon1, lat2, lon2):
+    if None in (lat1, lon1, lat2, lon2):
+        logger.warning("[FRETE] Coordenadas inválidas para cálculo de distância")
+        return 0
 
     R = 6371
 
-    dlat = radians(lat2 - lat1)
-    dlon = radians(lon2 - lon1)
+    dlat = math.radians(lat2 - lat1)
+    dlon = math.radians(lon2 - lon1)
 
     a = (
-        sin(dlat / 2) ** 2
-        + cos(radians(lat1))
-        * cos(radians(lat2))
-        * sin(dlon / 2) ** 2
+        math.sin(dlat / 2) ** 2
+        + math.cos(math.radians(lat1))
+        * math.cos(math.radians(lat2))
+        * math.sin(dlon / 2) ** 2
     )
 
-    c = 2 * atan2(sqrt(a), sqrt(1 - a))
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
-    return R * c
+    distancia = R * c
+
+    logger.info(f"[FRETE] Distância calculada: {distancia:.2f} km")
+
+    return distancia
 
 
 def calcular_frete_por_cep(cep_cliente):
 
-    lat1, lon1 = buscar_lat_lon(CEP_EMPRESA)
-    lat2, lon2 = buscar_lat_lon(cep_cliente)
+    logger.info(f"[FRETE] Calculando frete para CEP {cep_cliente}")
 
-    if not lat1 or not lat2:
-        return Decimal("0.00"), Decimal("0.00")
+    lat1, lon1 = buscar_coordenadas(CEP_EMPRESA)
+    lat2, lon2 = buscar_coordenadas(cep_cliente)
 
-    distancia = Decimal(calcular_distancia_km(lat1, lon1, lat2, lon2))
+    distancia = distancia_km(lat1, lon1, lat2, lon2)
 
-    valor = (distancia * VALOR_POR_KM).quantize(Decimal("0.01"))
+    valor_frete = distancia * VALOR_KM
 
-    return valor, distancia.quantize(Decimal("0.01"))
+    logger.info(
+        f"[FRETE] Resultado -> distância: {distancia:.2f} km | frete: R$ {valor_frete:.2f}"
+    )
 
+    return valor_frete, distancia
 

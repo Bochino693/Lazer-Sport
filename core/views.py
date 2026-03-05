@@ -1768,6 +1768,10 @@ def calcular_frete(request):
 
         valor_frete, distancia = calcular_frete_por_cep(cep)
 
+        logger.info(
+            f"[FRETE VIEW] CEP: {cep} | Distância: {distancia} km | Valor: {valor_frete}"
+        )
+
         return JsonResponse({
             "status": "ok",
             "valor_frete": float(valor_frete),
@@ -2365,7 +2369,7 @@ from django.views import View
 from django.contrib.auth.mixins import LoginRequiredMixin
 
 from .models import Pedido, EnderecoEntrega, EnderecoEmpresa
-from .utils import calcular_distancia_km, estimar_tempo_minutos
+
 
 
 class PaymentFinallyView(LoginRequiredMixin, View):
