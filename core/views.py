@@ -1751,30 +1751,69 @@ from django.views.decorators.csrf import csrf_exempt
 from .utils import calcular_frete_por_cep
 from django.http import JsonResponse
 import json
+from django.http import JsonResponse
+import json
+import logging
+
+from .utils import calcular_frete_por_cep
+from .carrinho import obter_carrinho   # ajuste se seu carrinho estiver em outro arquivo
+
+logger = logging.getLogger(__name__)
+
 
 def calcular_frete(request):
 
-    if request.method != "POST":
-        return JsonResponse({"status": "erro"}, status=400)
+    try:
 
-    data = json.loads(request.body)
-    cep = data.get("cep")
+        if request.method != "POST":
+            return JsonResponse({"status": "erro", "message": "Método inválido"}, status=400)
 
-    carrinho = obter_carrinho(request)
+        data = json.loads(request.body or "{}")
 
-    total_produtos = carrinho.total_liquido
+        cep = data.get("cep")
 
-    # exemplo de cálculo
-    frete = 15.90
+        if not cep:
+            return JsonResponse({
+                "status": "erro",
+                "message": "CEP não informado"
+            }, status=400)
 
-    total_pedido = total_produtos + frete
+        logger.info(f"[FRETE] CEP recebido: {cep}")
 
-    return JsonResponse({
-        "status": "ok",
-        "valor_frete": frete,
-        "total_produtos": total_produtos,
-        "total_pedido": total_pedido
-    })
+        # carrinho
+        carrinho = obter_carrinho(request)
+
+        total_produtos = float(carrinho.total_liquido)
+
+        # 🔥 calcular frete real
+        valor_frete, distancia = calcular_frete_por_cep(cep)
+
+        valor_frete = float(valor_frete)
+
+        total_pedido = total_produtos + valor_frete
+
+        logger.info(
+            f"[FRETE] Produtos: {total_produtos} | Frete: {valor_frete} | Distância: {distancia} km"
+        )
+
+        return JsonResponse({
+            "status": "ok",
+            "valor_frete": valor_frete,
+            "distancia_km": distancia,
+            "total_produtos": total_produtos,
+            "total_pedido": total_pedido
+        })
+
+    except Exception as e:
+
+        logger.error(f"[FRETE] ERRO: {e}")
+
+        return JsonResponse({
+            "status": "erro",
+            "message": "Erro interno no cálculo de frete"
+        }, status=500)
+
+
 
 from django.views.decorators.http import require_POST
 
