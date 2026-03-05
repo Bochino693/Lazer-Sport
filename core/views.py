@@ -1742,6 +1742,18 @@ class CarrinhoView(LoginRequiredMixin, View):
 
         return render(request, 'carrinho.html', context)
 
+@csrf_exempt
+def buscar_nome_cpf(request):
+    if request.method == "POST":
+        data = json.loads(request.body)
+        cpf = data.get("cpf", "").replace(".", "").replace("-", "")
+        try:
+            cliente = Cliente.objects.get(cpf=cpf)
+            return JsonResponse({"nome": cliente.nome})
+        except Cliente.DoesNotExist:
+            return JsonResponse({"nome": None})
+    return JsonResponse({"nome": None})
+
 
 from django.views.decorators.http import require_POST
 from django.http import JsonResponse
