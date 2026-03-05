@@ -1744,18 +1744,7 @@ class CarrinhoView(LoginRequiredMixin, View):
 
 from django.views.decorators.csrf import csrf_exempt
 
-@csrf_exempt
-def buscar_nome_cpf(request):
-    if request.method == "POST":
-        data = json.loads(request.body)
-        cpf = data.get("cpf", "").replace(".", "").replace("-", "")
 
-        # Simulação de requisição externa
-        nome = consultar_nome_por_cpf(cpf)  # função que você implementa ou integra API real
-
-        return JsonResponse({"nome": nome})
-
-    return JsonResponse({"nome": None})
 
 
 @csrf_exempt
@@ -1776,13 +1765,13 @@ def calcular_frete(request):
         return JsonResponse({"status": "error", "message": "Carrinho vazio"}, status=400)
 
     frete = carrinho.atualizar_frete(cep)
+
     return JsonResponse({
         "status": "ok",
-        "valor_frete": float(frete.valor),
-        "distancia_km": float(frete.distancia_km or 0),
-        "total_com_frete": float(carrinho.total_liquido_com_frete)
+        "valor_frete": str(frete.valor),  # "15.00"
+        "distancia_km": str(frete.distancia_km or 0),
+        "total_com_frete": str(carrinho.total_liquido_com_frete)  # "15.01"
     })
-
 
 from django.views.decorators.http import require_POST
 

@@ -1209,6 +1209,7 @@ function calcularFrete() {
         return;
     }
 
+    // Define valor do frete por estado
     let valorFrete = 0;
     const estado = document.getElementById('estado').value;
     switch (estado) {
@@ -1217,21 +1218,23 @@ function calcularFrete() {
         default: valorFrete = 25.00; break;
     }
 
-    // Formata como R$ xx,xx
-    valorFreteSpan.textContent = 'R$ ' + valorFrete.toLocaleString('pt-BR', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-    });
+    // Mostra o valor do frete sem arredondar
+    valorFreteSpan.textContent = 'R$ ' + valorFrete.toFixed(2).replace('.', ',');
+
     linhaFrete.style.display = 'flex';
 
-    // Atualiza total do pedido (se houver subtotal fixo)
+    // Atualiza total do pedido sem arredondar
     const subtotalEl = document.querySelector('.subtotal-fixo-inner strong');
     if (subtotalEl) {
-        let subtotal = parseFloat(subtotalEl.textContent.replace(/\D/g, '').replace(',', '.')) || 0;
-        subtotalEl.textContent = 'R$ ' + (subtotal + valorFrete).toLocaleString('pt-BR', {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2
-        });
+        // pega subtotal atual como número
+        let subtotalTexto = subtotalEl.textContent.replace(/\./g, '').replace(',', '.').replace(/[^\d.-]/g, '');
+        let subtotal = parseFloat(subtotalTexto) || 0;
+
+        // soma o frete sem arredondar
+        let totalComFrete = subtotal + valorFrete;
+
+        // formata para duas casas decimais, mantendo o centavo exato
+        subtotalEl.textContent = 'R$ ' + totalComFrete.toFixed(2).replace('.', ',');
     }
 }
 
