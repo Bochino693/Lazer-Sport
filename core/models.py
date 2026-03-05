@@ -5,7 +5,7 @@ from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 import requests
 from cloudinary_storage.storage import MediaCloudinaryStorage
-from .utils import calcular_frete_por_cep, VALOR_POR_KM
+from .utils import calcular_frete_por_cep
 
 class Prime(models.Model):
     ativo = models.BooleanField(default=True)
