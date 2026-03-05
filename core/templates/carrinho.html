@@ -894,15 +894,25 @@
 </div>
 
         <div class="resumo-box">
+
+            <div class="resumo-linha">
+                <span>Produtos</span>
+                <span id="valor-produtos">
+                    R$ {{ carrinho.total_liquido|floatformat:2 }}
+                </span>
+            </div>
+
+
             <div class="resumo-linha" id="linha-frete" style="display:none;">
                 <span>Frete</span>
                 <span class="money" id="valor-frete">R$ 0,00</span>
             </div>
 
-            <div class="resumo-linha resumo-total">
-                <span>Total</span>
-                <span id="totalPedido">R$ {{ carrinho.total_liquido|floatformat:2 }}</span>
-            </div>
+       <div class="resumo-linha resumo-total">
+            <span>Total do pedido</span>
+            <span id="totalPedido">
+                R$ {{ carrinho.total_liquido|floatformat:2 }}
+            </span>
         </div>
 
     {% else %}
