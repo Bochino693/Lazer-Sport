@@ -1074,6 +1074,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnFinalizar = document.getElementById('btnFinalizar');
     const cpfMsg = document.getElementById('cpf-msg');
 
+    const cepInput = document.getElementById('cepInput');
+    const enderecoDetalhes = document.getElementById('endereco-detalhes');
+    const freteTab = document.querySelector('.frete-tab.active');
+
+    // Funções de validação (CPF e CNPJ) mantidas
     function validarCPF(cpf) {
         cpf = cpf.replace(/\D/g, '');
         if (cpf.length !== 11 || /^(\d)\1+$/.test(cpf)) return false;
@@ -1125,109 +1130,52 @@ document.addEventListener('DOMContentLoaded', () => {
         return resultado === parseInt(digitos.charAt(1));
     }
 
-    cpfInput.addEventListener('input', () => {
-        let valor = cpfInput.value.replace(/\D/g, '');
+    // Função que checa se o botão pode ser habilitado
+    function atualizarBotaoFinalizar() {
+        const valor = cpfInput.value.replace(/\D/g, '');
+        let cpfValido = false;
 
-        // Formatar CPF ou CNPJ automaticamente
-        if (valor.length <= 11) {
-            if (valor.length > 3) valor = valor.replace(/^(\d{3})(\d)/, "$1.$2");
-            if (valor.length > 6) valor = valor.replace(/^(\d{3})\.(\d{3})(\d)/, "$1.$2.$3");
-            if (valor.length > 9) valor = valor.replace(/^(\d{3})\.(\d{3})\.(\d{3})(\d)/, "$1.$2.$3-$4");
-        } else {
-            if (valor.length > 2) valor = valor.replace(/^(\d{2})(\d)/, "$1.$2");
-            if (valor.length > 5) valor = valor.replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3");
-            if (valor.length > 8) valor = valor.replace(/^(\d{2})\.(\d{3})\.(\d{3})(\d)/, "$1.$2.$3/$4");
-            if (valor.length > 12) valor = valor.replace(/^(\d{2})\.(\d{3})\.(\d{3})\/(\d{4})(\d)/, "$1.$2.$3/$4-$5");
+        if (valor.length === 11) cpfValido = validarCPF(valor);
+        else if (valor.length === 14) cpfValido = validarCNPJ(valor);
+
+        // Descobre a aba selecionada
+        const freteSelecionado = document.querySelector('.frete-tab.active').dataset.tipo;
+
+        let habilitar = false;
+
+        if (cpfValido) {
+            if (freteSelecionado === 'frete') {
+                // Frete: habilita só se endereço estiver preenchido
+                const logradouro = document.getElementById('logradouro').value.trim();
+                const bairro = document.getElementById('bairro').value.trim();
+                const cidade = document.getElementById('cidade').value.trim();
+                const estado = document.getElementById('estado').value.trim();
+                const numero = document.getElementById('numero').value.trim();
+
+                if (logradouro && bairro && cidade && estado && numero) habilitar = true;
+            } else {
+                // Retirada: basta CPF/CNPJ válido
+                habilitar = true;
+            }
         }
 
-        cpfInput.value = valor;
+        btnFinalizar.style.pointerEvents = habilitar ? 'auto' : 'none';
+        btnFinalizar.style.opacity = habilitar ? 1 : 0.6;
 
-        let valido = false;
-        let tipo = '';
-
-        if (valor.replace(/\D/g, '').length === 11) {
-            valido = validarCPF(valor);
-            tipo = 'CPF';
-        } else if (valor.replace(/\D/g, '').length === 14) {
-            valido = validarCNPJ(valor);
-            tipo = 'CNPJ';
-        }
-
-        if (tipo) {
-            cpfMsg.innerText = (valido ? '✅ Válido' : '❌ Inválido') + ` (${tipo})`;
-            cpfMsg.style.color = valido ? 'green' : 'red';
-            btnFinalizar.style.pointerEvents = valido ? 'auto' : 'none';
-            btnFinalizar.style.opacity = valido ? 1 : 0.6;
-        } else {
-            cpfMsg.innerText = '';
-            btnFinalizar.style.pointerEvents = 'none';
-            btnFinalizar.style.opacity = 0.6;
-        }
-    });
-});
-
-
-// ===== TAB FRETE / RETIRADA =====
-document.addEventListener('DOMContentLoaded', () => {
-    const tabs = document.querySelectorAll('.frete-tab');
-    const freteContent = document.querySelectorAll('.frete-content');
-
-    tabs.forEach(tab => {
-        tab.addEventListener('click', () => {
-            const tipo = tab.dataset.tipo;
-
-            // ativar botão
-            tabs.forEach(t => t.classList.remove('active'));
-            tab.classList.add('active');
-
-            // mostrar conteúdo correto
-            freteContent.forEach(c => c.style.display = c.id === tipo ? 'block' : 'none');
-        });
-    });
-
-    // FORMATAÇÃO SIMPLES DE CEP + BUSCA VIA API
-const cepInput = document.getElementById('cepInput');
-const cepMsg = document.getElementById('cep-msg');
-const enderecoDetalhes = document.getElementById('endereco-detalhes');
-
-cepInput.addEventListener('input', () => {
-    let valor = cepInput.value.replace(/\D/g, '');
-    if (valor.length > 5) valor = valor.replace(/^(\d{5})(\d)/, "$1-$2");
-    cepInput.value = valor;
-
-    if (valor.length === 9) {
-        cepMsg.innerText = '⏳ Consultando CEP...';
-        cepMsg.style.color = 'black';
-
-        // Consulta API ViaCEP
-        fetch(`https://viacep.com.br/ws/${valor.replace('-', '')}/json/`)
-            .then(res => res.json())
-            .then(data => {
-                if (!data.erro) {
-                    // Preenche campos
-                    document.getElementById('logradouro').value = data.logradouro;
-                    document.getElementById('bairro').value = data.bairro;
-                    document.getElementById('cidade').value = data.localidade;
-                    document.getElementById('estado').value = data.uf;
-
-                    enderecoDetalhes.style.display = 'block';
-                    cepMsg.innerText = '✅ CEP válido';
-                    cepMsg.style.color = 'green';
-                } else {
-                    enderecoDetalhes.style.display = 'none';
-                    cepMsg.innerText = '❌ CEP não encontrado';
-                    cepMsg.style.color = 'red';
-                }
-            })
-            .catch(() => {
-                enderecoDetalhes.style.display = 'none';
-                cepMsg.innerText = '❌ Erro ao consultar CEP';
-                cepMsg.style.color = 'red';
-            });
-    } else {
-        enderecoDetalhes.style.display = 'none';
-        cepMsg.innerText = '';
+        cpfMsg.innerText = cpfValido ? `✅ Válido (${valor.length === 11 ? 'CPF' : 'CNPJ'})` : '❌ Inválido';
+        cpfMsg.style.color = cpfValido ? 'green' : 'red';
     }
+
+    // Eventos
+    cpfInput.addEventListener('input', atualizarBotaoFinalizar);
+    document.getElementById('numero').addEventListener('input', atualizarBotaoFinalizar);
+    document.getElementById('cepInput').addEventListener('input', atualizarBotaoFinalizar);
+
+    // Observa mudança de aba
+    document.querySelectorAll('.frete-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            setTimeout(atualizarBotaoFinalizar, 100); // aguarda render da aba
+        });
     });
 });
 
