@@ -683,13 +683,22 @@ class Frete(Prime):
         related_name='frete',
         null=True
     )
+    rua = models.CharField(max_length=180, null=True, blank=True)
+    bairro = models.CharField(max_length=90, null=True, blank=True)
+    cidade = models.CharField(max_length=90, null=True, blank=True)
+    estado = models.CharField(max_length=90, null=True, blank=True)
+    numero = models.CharField(max_length=90, null=True, blank=True)
     valor = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     distancia_km = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
     tempo_estimado_min = models.PositiveIntegerField(null=True, blank=True)
-    calculado_em = models.DateTimeField(auto_now_add=True, null=True)
+
 
     def __str__(self):
         return f"Frete do carrinho #{self.carrinho.id} - R$ {self.valor}"
+
+    class Meta:
+        verbose_name = "Frete"
+        verbose_name_plural = "Fretes"
 
 
 
