@@ -1209,33 +1209,33 @@ function calcularFrete() {
         return;
     }
 
-    // Define valor do frete por estado
-    let valorFrete = 0;
-    const estado = document.getElementById('estado').value;
-    switch (estado) {
-        case 'SP': valorFrete = 15.00; break;
-        case 'RJ': valorFrete = 20.00; break;
-        default: valorFrete = 25.00; break;
-    }
+    fetch("{% url 'calcular_frete' %}", {
+        method: "POST",
+        headers: {
+            "X-CSRFToken": "{{ csrf_token }}",
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ cep: cepLimpo })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.status === 'ok') {
+            const valorFrete = parseFloat(data.valor_frete) || 0;
+            const distancia = parseFloat(data.distancia_km) || 0;
 
-    // Mostra o valor do frete sem arredondar
-    valorFreteSpan.textContent = 'R$ ' + valorFrete.toFixed(2).replace('.', ',');
+            valorFreteSpan.textContent = 'R$ ' + valorFrete.toFixed(2).replace('.', ',');
+            linhaFrete.style.display = 'flex';
 
-    linhaFrete.style.display = 'flex';
-
-    // Atualiza total do pedido sem arredondar
-    const subtotalEl = document.querySelector('.subtotal-fixo-inner strong');
-    if (subtotalEl) {
-        // pega subtotal atual como número
-        let subtotalTexto = subtotalEl.textContent.replace(/\./g, '').replace(',', '.').replace(/[^\d.-]/g, '');
-        let subtotal = parseFloat(subtotalTexto) || 0;
-
-        // soma o frete sem arredondar
-        let totalComFrete = subtotal + valorFrete;
-
-        // formata para duas casas decimais, mantendo o centavo exato
-        subtotalEl.textContent = 'R$ ' + totalComFrete.toFixed(2).replace('.', ',');
-    }
+            const subtotalEl = document.querySelector('.subtotal-fixo-inner strong');
+            if (subtotalEl) {
+                let subtotalTexto = subtotalEl.textContent.replace(/\./g,'').replace(',','.');
+                let subtotal = parseFloat(subtotalTexto) || 0;
+                subtotalEl.textContent = 'R$ ' + (subtotal + valorFrete).toFixed(2).replace('.', ',');
+            }
+        } else {
+            linhaFrete.style.display = 'none';
+        }
+    });
 }
 
     cepInput.addEventListener('input', () => {
