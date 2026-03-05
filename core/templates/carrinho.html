@@ -554,6 +554,58 @@
     }
 }
 
+/* ===== FRETE / RETIRADA ===== */
+.frete-box {
+    margin-top: 25px;
+    background: #f7faff;
+    border-radius: 18px;
+    padding: 16px;
+}
+
+.frete-tabs {
+    display: flex;
+    gap: 10px;
+    margin: 12px 0 16px;
+}
+
+.frete-tab {
+    flex: 1;
+    padding: 10px 0;
+    border-radius: 12px;
+    border: 1px solid #cbd5e1;
+    background: #fff;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.frete-tab.active {
+    background: #0d6efd;
+    color: #fff;
+    border-color: #0d6efd;
+}
+
+.frete-content input {
+    padding: 12px;
+    border-radius: 12px;
+    border: 1px solid #ddd;
+    width: 100%;
+    box-sizing: border-box;
+    margin-top: 6px;
+    background: #fff;
+}
+
+.frete-content small {
+    font-size: 0.85rem;
+    color: #dc3545;
+    min-height: 18px;
+}
+
+.frete-content ul {
+    list-style: disc;
+    margin-left: 20px;
+}
+
 </style>
 
 <div class="carrinho-container" id="car">
@@ -670,6 +722,38 @@
         </div>
 
     {% endif %}
+
+
+<!-- ===== TAB DE FRETE ===== -->
+<div class="frete-box">
+    <strong>🚚 Opção de entrega</strong>
+
+    <div class="frete-tabs">
+        <button class="frete-tab active" data-tipo="frete">Frete</button>
+        <button class="frete-tab" data-tipo="retirada">Retirada na loja</button>
+    </div>
+
+    <div class="frete-conteudo">
+
+        <!-- FRETE -->
+        <div class="frete-content" id="frete">
+            <label for="cepInput"><strong>📍 Informe seu CEP</strong></label>
+            <input type="text" id="cepInput" placeholder="00000-000" maxlength="9">
+            <small id="cep-msg"></small>
+        </div>
+
+        <!-- RETIRADA -->
+        <div class="frete-content" id="retirada" style="display:none;">
+            <p>🏬 Retire seus produtos em nossa loja física:</p>
+            <ul>
+                <li>Rua Exemplo, 123 – Centro</li>
+                <li>Horário: 09h às 18h (Seg-Sex)</li>
+                <li>Telefone: (11) 1234-5678</li>
+            </ul>
+        </div>
+
+    </div>
+</div>
 
 </div><!-- carrinho-container -->
 
@@ -943,6 +1027,43 @@ document.addEventListener('DOMContentLoaded', () => {
             cpfMsg.innerText = '';
             btnFinalizar.style.pointerEvents = 'none';
             btnFinalizar.style.opacity = 0.6;
+        }
+    });
+});
+
+
+// ===== TAB FRETE / RETIRADA =====
+document.addEventListener('DOMContentLoaded', () => {
+    const tabs = document.querySelectorAll('.frete-tab');
+    const freteContent = document.querySelectorAll('.frete-content');
+
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            const tipo = tab.dataset.tipo;
+
+            // ativar botão
+            tabs.forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+
+            // mostrar conteúdo correto
+            freteContent.forEach(c => c.style.display = c.id === tipo ? 'block' : 'none');
+        });
+    });
+
+    // FORMATAÇÃO SIMPLES DE CEP
+    const cepInput = document.getElementById('cepInput');
+    const cepMsg = document.getElementById('cep-msg');
+
+    cepInput.addEventListener('input', () => {
+        let valor = cepInput.value.replace(/\D/g, '');
+        if (valor.length > 5) valor = valor.replace(/^(\d{5})(\d)/, "$1-$2");
+        cepInput.value = valor;
+
+        if (valor.length === 9) {
+            cepMsg.innerText = '✅ CEP válido';
+            cepMsg.style.color = 'green';
+        } else {
+            cepMsg.innerText = '';
         }
     });
 });
