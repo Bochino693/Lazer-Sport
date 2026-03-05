@@ -944,7 +944,7 @@
 <div class="subtotal-fixo">
     <div class="subtotal-fixo-inner">
         <span>Total do pedido</span>
-        <strong class="money">R$ {{ carrinho.total_liquido|floatformat:2 }}</strong>
+        <strong class="money" id="subtotalFixo">R$ {{ carrinho.total_liquido|floatformat:2 }}</strong>
     </div>
 </div>
 
@@ -1248,17 +1248,30 @@ function calcularFrete() {
 
         const total = totalProdutos + frete;
 
+           const totalFormatado =
+        "R$ " + total.toLocaleString("pt-BR", {
+            minimumFractionDigits: 2
+        });
+
         valorFreteSpan.innerText =
             "R$ " + frete.toLocaleString("pt-BR", {
                 minimumFractionDigits: 2
             });
+
+        // atualizar total no resumo
+    totalPedido.innerText = totalFormatado;
 
         totalPedido.innerText =
             "R$ " + total.toLocaleString("pt-BR", {
                 minimumFractionDigits: 2
             });
 
-        linhaFrete.style.display = "flex";
+         const subtotalFixo = document.getElementById("subtotalFixo");
+    if (subtotalFixo) {
+        subtotalFixo.innerText = totalFormatado;
+    }
+
+    linhaFrete.style.display = "flex";
 
         atualizarBotaoFinalizar();
 
@@ -1294,7 +1307,6 @@ function calcularFrete() {
             atualizarBotaoFinalizar();
         }
     });
-
 
 
     numeroInput.addEventListener('input', atualizarBotaoFinalizar);
