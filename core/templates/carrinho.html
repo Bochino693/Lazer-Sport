@@ -1233,7 +1233,12 @@ function calcularFrete() {
             cep: cepLimpo
         })
     })
-    .then(response => response.json())
+    .then(response => {
+    if (!response.ok) {
+        throw new Error("Erro no servidor");
+    }
+    return response.json();
+})
     .then(data => {
 
         if (data.status === "ok") {

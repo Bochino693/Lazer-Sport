@@ -1746,30 +1746,35 @@ from django.views.decorators.csrf import csrf_exempt
 from .utils import calcular_frete_por_cep
 
 from django.views.decorators.csrf import csrf_exempt
+
+
+from .utils import calcular_frete_por_cep
 from django.http import JsonResponse
 import json
 
-from .utils import calcular_frete_por_cep
 def calcular_frete(request):
+
+    if request.method != "POST":
+        return JsonResponse({"status": "erro"}, status=400)
 
     data = json.loads(request.body)
     cep = data.get("cep")
 
-    valor_frete, distancia = calcular_frete_por_cep(cep)
-
-    carrinho = Carrinho.objects.get(usuario=request.user)
+    carrinho = obter_carrinho(request)
 
     total_produtos = carrinho.total_liquido
 
-    total_pedido = total_produtos + valor_frete
+    # exemplo de cálculo
+    frete = 15.90
+
+    total_pedido = total_produtos + frete
 
     return JsonResponse({
         "status": "ok",
-        "valor_frete": round(valor_frete, 2),
-        "total_produtos": round(total_produtos, 2),
-        "total_pedido": round(total_pedido, 2)
+        "valor_frete": frete,
+        "total_produtos": total_produtos,
+        "total_pedido": total_pedido
     })
-
 
 from django.views.decorators.http import require_POST
 
