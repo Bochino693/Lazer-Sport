@@ -1068,7 +1068,6 @@ function alterarQtd(itemId, delta) {
 }
 
 
-
 document.addEventListener('DOMContentLoaded', () => {
     const cpfInput = document.getElementById('cpfInput');
     const btnFinalizar = document.getElementById('btnFinalizar');
@@ -1076,9 +1075,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const cepInput = document.getElementById('cepInput');
     const enderecoDetalhes = document.getElementById('endereco-detalhes');
-    const freteTab = document.querySelector('.frete-tab.active');
+    const numeroInput = document.getElementById('numero');
 
-    // Funções de validação (CPF e CNPJ) mantidas
+    const freteTabs = document.querySelectorAll('.frete-tab');
+    const freteContent = document.querySelectorAll('.frete-content');
+
+    // ===== Formatação CPF/CNPJ =====
+    function formatarCPFouCNPJ(valor) {
+        let v = valor.replace(/\D/g, '');
+        if (v.length <= 11) { // CPF
+            v = v.replace(/(\d{3})(\d)/, '$1.$2');
+            v = v.replace(/(\d{3})(\d)/, '$1.$2');
+            v = v.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+        } else { // CNPJ
+            v = v.replace(/^(\d{2})(\d)/, '$1.$2');
+            v = v.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3');
+            v = v.replace(/\.(\d{3})(\d)/, '.$1/$2');
+            v = v.replace(/(\d{4})(\d{1,2})$/, '$1-$2');
+        }
+        return v;
+    }
+
     function validarCPF(cpf) {
         cpf = cpf.replace(/\D/g, '');
         if (cpf.length !== 11 || /^(\d)\1+$/.test(cpf)) return false;
@@ -1112,7 +1129,6 @@ document.addEventListener('DOMContentLoaded', () => {
             soma += parseInt(numeros.charAt(tamanho - i)) * pos--;
             if (pos < 2) pos = 9;
         }
-
         let resultado = soma % 11 < 2 ? 0 : 11 - (soma % 11);
         if (resultado !== parseInt(digitos.charAt(0))) return false;
 
@@ -1130,28 +1146,27 @@ document.addEventListener('DOMContentLoaded', () => {
         return resultado === parseInt(digitos.charAt(1));
     }
 
+    // ===== Formatação e validação do CPF/CNPJ =====
+    cpfInput.addEventListener('input', () => {
+        cpfInput.value = formatarCPFouCNPJ(cpfInput.value);
+        atualizarBotaoFinalizar();
+    });
+
+    // ===== Formatação e validação do CEP =====
     function formatarCEP(cep) {
-    // Remove tudo que não for número
-    cep = cep.replace(/\D/g, '');
-    if (cep.length > 5) {
-        return cep.replace(/(\d{5})(\d)/, '$1-$2');
+        cep = cep.replace(/\D/g, '');
+        if (cep.length > 5) cep = cep.replace(/(\d{5})(\d)/, '$1-$2');
+        return cep;
     }
-    return cep;
-}
 
-function validarCEP(cep) {
-    cep = cep.replace(/\D/g, '');
-    return /^\d{8}$/.test(cep);
-}
+    function validarCEP(cep) {
+        return /^\d{5}-?\d{3}$/.test(cep);
+    }
 
-cepInput.addEventListener('input', () => {
-    // Formata
-    cepInput.value = formatarCEP(cepInput.value);
-
-    // Se completo, valida e busca endereço
-    const cepLimpo = cepInput.value.replace(/\D/g, '');
-    if (cepLimpo.length === 8) {
-        if (validarCEP(cepLimpo)) {
+    cepInput.addEventListener('input', () => {
+        cepInput.value = formatarCEP(cepInput.value);
+        const cepLimpo = cepInput.value.replace(/\D/g, '');
+        if (cepLimpo.length === 8 && validarCEP(cepInput.value)) {
             fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`)
                 .then(res => res.json())
                 .then(data => {
@@ -1161,38 +1176,47 @@ cepInput.addEventListener('input', () => {
                         document.getElementById('bairro').value = data.bairro;
                         document.getElementById('cidade').value = data.localidade;
                         document.getElementById('estado').value = data.uf;
-                        atualizarBotaoFinalizar(); // atualiza botão
                     } else {
                         enderecoDetalhes.style.display = 'none';
                     }
+                    atualizarBotaoFinalizar();
                 })
-                .catch(() => {
-                    enderecoDetalhes.style.display = 'none';
-                });
+                .catch(() => enderecoDetalhes.style.display = 'none');
         } else {
             enderecoDetalhes.style.display = 'none';
+            atualizarBotaoFinalizar();
         }
-    } else {
-        enderecoDetalhes.style.display = 'none';
-    }
-});
+    });
 
-    // Função que checa se o botão pode ser habilitado
+    numeroInput.addEventListener('input', atualizarBotaoFinalizar);
+
+    // ===== Alternar abas Frete / Retirada =====
+    freteTabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            freteTabs.forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+
+            const tipo = tab.dataset.tipo;
+            freteContent.forEach(c => c.style.display = 'none');
+            document.getElementById(tipo).style.display = 'block';
+
+            atualizarBotaoFinalizar();
+        });
+    });
+
+    // ===== Habilitar botão somente quando válido =====
     function atualizarBotaoFinalizar() {
-        const valor = cpfInput.value.replace(/\D/g, '');
+        const cpfValor = cpfInput.value.replace(/\D/g, '');
         let cpfValido = false;
 
-        if (valor.length === 11) cpfValido = validarCPF(valor);
-        else if (valor.length === 14) cpfValido = validarCNPJ(valor);
+        if (cpfValor.length === 11) cpfValido = validarCPF(cpfValor);
+        else if (cpfValor.length === 14) cpfValido = validarCNPJ(cpfValor);
 
-        // Descobre a aba selecionada
         const freteSelecionado = document.querySelector('.frete-tab.active').dataset.tipo;
-
         let habilitar = false;
 
         if (cpfValido) {
             if (freteSelecionado === 'frete') {
-                // Frete: habilita só se endereço estiver preenchido
                 const logradouro = document.getElementById('logradouro').value.trim();
                 const bairro = document.getElementById('bairro').value.trim();
                 const cidade = document.getElementById('cidade').value.trim();
@@ -1201,29 +1225,20 @@ cepInput.addEventListener('input', () => {
 
                 if (logradouro && bairro && cidade && estado && numero) habilitar = true;
             } else {
-                // Retirada: basta CPF/CNPJ válido
-                habilitar = true;
+                habilitar = true; // Retirada só precisa do CPF/CNPJ válido
             }
         }
 
         btnFinalizar.style.pointerEvents = habilitar ? 'auto' : 'none';
         btnFinalizar.style.opacity = habilitar ? 1 : 0.6;
 
-        cpfMsg.innerText = cpfValido ? `✅ Válido (${valor.length === 11 ? 'CPF' : 'CNPJ'})` : '❌ Inválido';
-        cpfMsg.style.color = cpfValido ? 'green' : 'red';
+        if (cpfValor.length === 11 || cpfValor.length === 14) {
+            cpfMsg.innerText = cpfValido ? `✅ Válido (${cpfValor.length === 11 ? 'CPF' : 'CNPJ'})` : '❌ Inválido';
+            cpfMsg.style.color = cpfValido ? 'green' : 'red';
+        } else {
+            cpfMsg.innerText = '';
+        }
     }
-
-    // Eventos
-    cpfInput.addEventListener('input', atualizarBotaoFinalizar);
-    document.getElementById('numero').addEventListener('input', atualizarBotaoFinalizar);
-    document.getElementById('cepInput').addEventListener('input', atualizarBotaoFinalizar);
-
-    // Observa mudança de aba
-    document.querySelectorAll('.frete-tab').forEach(tab => {
-        tab.addEventListener('click', () => {
-            setTimeout(atualizarBotaoFinalizar, 100); // aguarda render da aba
-        });
-    });
 });
 
 </script>
