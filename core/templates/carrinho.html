@@ -1203,41 +1203,51 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
 function calcularFrete() {
+
     const cepLimpo = cepInput.value.replace(/\D/g, '');
-    if (!validarCEP(cepInput.value) || cepLimpo.length !== 8) {
+
+    if (cepLimpo.length !== 8) {
         linhaFrete.style.display = 'none';
         return;
     }
 
-    fetch("{% url 'calcular_frete' %}", {
+    fetch("/calcular/frete/", {
         method: "POST",
         headers: {
-            "X-CSRFToken": "{{ csrf_token }}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
+            "X-CSRFToken": "{{ csrf_token }}"
         },
-        body: JSON.stringify({ cep: cepLimpo })
+        body: JSON.stringify({
+            cep: cepLimpo
+        })
     })
-    .then(res => res.json())
+    .then(response => response.json())
     .then(data => {
-        if (data.status === 'ok') {
-            const valorFrete = parseFloat(data.valor_frete) || 0;
-            const distancia = parseFloat(data.distancia_km) || 0;
 
-            valorFreteSpan.textContent = 'R$ ' + valorFrete.toFixed(2).replace('.', ',');
+        if (data.status === "ok") {
+
+            const valorFrete = parseFloat(data.valor_frete);
+
+            valorFreteSpan.textContent =
+                "R$ " + valorFrete.toLocaleString('pt-BR', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                });
+
             linhaFrete.style.display = 'flex';
 
-            const subtotalEl = document.querySelector('.subtotal-fixo-inner strong');
-            if (subtotalEl) {
-                let subtotalTexto = subtotalEl.textContent.replace(/\./g,'').replace(',','.');
-                let subtotal = parseFloat(subtotalTexto) || 0;
-                subtotalEl.textContent = 'R$ ' + (subtotal + valorFrete).toFixed(2).replace('.', ',');
-            }
         } else {
-            linhaFrete.style.display = 'none';
-        }
-    });
-}
 
+            console.error(data.message);
+
+        }
+
+    })
+    .catch(error => {
+        console.error("Erro frete:", error);
+    });
+
+}
     cepInput.addEventListener('input', () => {
         cepInput.value = formatarCEP(cepInput.value);
         const cepLimpo = cepInput.value.replace(/\D/g, '');
