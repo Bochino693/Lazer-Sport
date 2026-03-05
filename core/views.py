@@ -1750,7 +1750,7 @@ from django.http import JsonResponse
 import json
 
 from .utils import calcular_frete_por_cep
-def calcular_frete_view(request):
+def calcular_frete(request):
 
     data = json.loads(request.body)
     cep = data.get("cep")
