@@ -1,7 +1,7 @@
 from django.urls import path
 from .views import (HomeView, BrinquedoInfoView, CategoriasInfoView, BrinquedosView, webhook_mercadopago,
                     RegistrarView, LoginUsuarioView, LogoutUsuarioView, EventosView, verificar_pagamento,
-                    ProjetosView, ClientePerfilView, ComboInfoView, PromocaoInfoView, buscar_nome_cpf,
+                    ProjetosView, ClientePerfilView, ComboInfoView, PromocaoInfoView,
                     BrinquedoAdmin, NovaCategoria, NovaTag, ComboListView, ComboCreateView,
                     ComboUpdateView, ComboDeleteView, CupomAdminView, ProjetoAdminView, EstabelecimentoInfoView,
                     EstabelecimentosListView, ManutencaoView, PromocaoAdminView, PromocaoDeleteView,
@@ -71,7 +71,7 @@ urlpatterns = [
     path('pecas/<int:pk>/', ReposicaoDetalheView.as_view(), name='reposicao_detalhe'),
 
     path('carrinho/aplicar-cupom/', aplicar_cupom, name='aplicar_cupom'),
-    path('buscar-nome-cpf/', buscar_nome_cpf, name='buscar_nome_cpf'),
+
 
     path("eventos/", EventosView.as_view(), name='eventos'),
     path("projetos/", ProjetosView.as_view(), name='projetos'),
