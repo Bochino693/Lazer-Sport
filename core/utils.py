@@ -1,4 +1,11 @@
 import math
+
+
+
+def estimar_tempo_minutos(distancia_km, velocidade_media_kmh=30):
+    return int((distancia_km / velocidade_media_kmh) * 60)
+
+
 # utils/frete.py
 import requests
 from decimal import Decimal
