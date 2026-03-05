@@ -7,24 +7,49 @@ logger = logging.getLogger(__name__)
 CEP_EMPRESA = "02679-110"
 VALOR_KM = 3.50
 
+import requests
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 def buscar_coordenadas(cep):
 
-    url = f"https://cep.awesomeapi.com.br/json/{cep}"
-
     try:
-        r = requests.get(url, timeout=5)
+
+        cep_limpo = cep.replace("-", "")
+
+        url = "https://nominatim.openstreetmap.org/search"
+
+        params = {
+            "postalcode": cep_limpo,
+            "country": "Brazil",
+            "format": "json"
+        }
+
+        headers = {
+            "User-Agent": "lazersport-frete"
+        }
+
+        r = requests.get(url, params=params, headers=headers, timeout=5)
+
         data = r.json()
 
-        lat = float(data["lat"])
-        lng = float(data["lng"])
+        if not data:
+            logger.error(f"[FRETE] Nenhum resultado para CEP {cep}")
+            return None, None
 
-        logger.info(f"[FRETE] Coordenadas obtidas para CEP {cep}: {lat}, {lng}")
+        lat = float(data[0]["lat"])
+        lon = float(data[0]["lon"])
 
-        return lat, lng
+        logger.info(f"[FRETE] Coordenadas obtidas para CEP {cep}: {lat}, {lon}")
+
+        return lat, lon
 
     except Exception as e:
+
         logger.error(f"[FRETE] Erro ao buscar coordenadas do CEP {cep}: {e}")
+
         return None, None
 
 

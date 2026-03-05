@@ -599,21 +599,6 @@ class Carrinho(Prime):
     def total_liquido(self):
         return (self.total_bruto - self.valor_desconto).quantize(Decimal('0.01'))
 
-    def atualizar_frete(self, cep_cliente):
-        from .models import Frete
-        valor, distancia = calcular_frete_por_cep(cep_cliente)
-        frete_obj, created = Frete.objects.get_or_create(carrinho=self)
-        frete_obj.valor = valor
-        frete_obj.distancia_km = distancia
-        frete_obj.save(update_fields=["valor", "distancia_km"])
-        return frete_obj
-
-    @property
-    def total_liquido_com_frete(self):
-        total = self.total_liquido
-        if hasattr(self, "frete") and self.frete.valor:
-            total += self.frete.valor
-        return total.quantize(Decimal("0.01"))
 
     def __str__(self):
         if self.cliente and self.cliente.user:
@@ -658,16 +643,6 @@ class ItemCarrinho(Prime):
         total = Decimal(self.preco_unitario) * Decimal(self.quantidade)
         return total.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
-    @property
-    def valor_frete(self):
-        # Só calcula se o tipo de envio for frete
-        if self.tipo_envio != 'frete':
-            return Decimal('0.00')
-
-        if hasattr(self, 'frete') and self.frete.valor:
-            return self.frete.valor
-
-        return Decimal('0.00')
 
     def __str__(self):
         return f"Item {self.item} (x{self.quantidade})"
