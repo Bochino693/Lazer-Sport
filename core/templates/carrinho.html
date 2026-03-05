@@ -577,6 +577,13 @@
 
         </div><!-- cupom-box -->
 
+        <!-- CPF do comprador -->
+        <div class="cpf-box cupom-top">
+            <label for="cpfInput"><strong>📝 CPF</strong></label>
+            <input type="text" id="cpfInput" placeholder="Digite seu CPF" maxlength="14">
+            <small id="cpf-msg" style="color:red;"></small>
+        </div>
+
         <div class="resumo-box">
             <div class="resumo-linha resumo-total">
                 <span>Total</span>
@@ -614,7 +621,7 @@
 </div>
 
 <div class="finalizar-box">
-    <a href="{% url 'pagamento' carrinho.id %}#content" class="btn-finalizar">
+    <a href="{% url 'pagamento' carrinho.id %}#content" class="btn-finalizar" id="btnFinalizar" style="pointer-events: none; opacity: 0.6;">
         Finalizar pedido
     </a>
 </div>
@@ -778,6 +785,51 @@ function alterarQtd(itemId, delta) {
     })
     .then(() => location.reload());
 }
+
+
+document.addEventListener('DOMContentLoaded', () => {
+    const cpfInput = document.getElementById('cpfInput');
+    const btnFinalizar = document.getElementById('btnFinalizar');
+    const cpfMsg = document.getElementById('cpf-msg');
+
+    function validarCPF(cpf) {
+        cpf = cpf.replace(/\D/g, '');
+        if (cpf.length !== 11 || /^(\d)\1+$/.test(cpf)) return false;
+
+        let soma = 0;
+        for (let i = 0; i < 9; i++) soma += parseInt(cpf.charAt(i)) * (10 - i);
+        let resto = (soma * 10) % 11;
+        if (resto === 10) resto = 0;
+        if (resto !== parseInt(cpf.charAt(9))) return false;
+
+        soma = 0;
+        for (let i = 0; i < 10; i++) soma += parseInt(cpf.charAt(i)) * (11 - i);
+        resto = (soma * 10) % 11;
+        if (resto === 10) resto = 0;
+        if (resto !== parseInt(cpf.charAt(10))) return false;
+
+        return true;
+    }
+
+    cpfInput.addEventListener('input', () => {
+        let valor = cpfInput.value.replace(/\D/g, '');
+        if (valor.length > 3) valor = valor.replace(/^(\d{3})(\d)/, "$1.$2");
+        if (valor.length > 6) valor = valor.replace(/^(\d{3})\.(\d{3})(\d)/, "$1.$2.$3");
+        if (valor.length > 9) valor = valor.replace(/^(\d{3})\.(\d{3})\.(\d{3})(\d)/, "$1.$2.$3-$4");
+        cpfInput.value = valor;
+
+        if (valor.length === 14 && validarCPF(valor)) {
+            cpfMsg.innerText = '';
+            btnFinalizar.style.pointerEvents = 'auto';
+            btnFinalizar.style.opacity = 1;
+        } else {
+            btnFinalizar.style.pointerEvents = 'none';
+            btnFinalizar.style.opacity = 0.6;
+            if (valor.length === 14) cpfMsg.innerText = 'CPF inválido';
+            else cpfMsg.innerText = '';
+        }
+    });
+});
 
 </script>
 {% endblock %}
