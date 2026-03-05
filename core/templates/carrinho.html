@@ -1130,6 +1130,53 @@ document.addEventListener('DOMContentLoaded', () => {
         return resultado === parseInt(digitos.charAt(1));
     }
 
+    function formatarCEP(cep) {
+    // Remove tudo que não for número
+    cep = cep.replace(/\D/g, '');
+    if (cep.length > 5) {
+        return cep.replace(/(\d{5})(\d)/, '$1-$2');
+    }
+    return cep;
+}
+
+function validarCEP(cep) {
+    cep = cep.replace(/\D/g, '');
+    return /^\d{8}$/.test(cep);
+}
+
+cepInput.addEventListener('input', () => {
+    // Formata
+    cepInput.value = formatarCEP(cepInput.value);
+
+    // Se completo, valida e busca endereço
+    const cepLimpo = cepInput.value.replace(/\D/g, '');
+    if (cepLimpo.length === 8) {
+        if (validarCEP(cepLimpo)) {
+            fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`)
+                .then(res => res.json())
+                .then(data => {
+                    if (!data.erro) {
+                        enderecoDetalhes.style.display = 'block';
+                        document.getElementById('logradouro').value = data.logradouro;
+                        document.getElementById('bairro').value = data.bairro;
+                        document.getElementById('cidade').value = data.localidade;
+                        document.getElementById('estado').value = data.uf;
+                        atualizarBotaoFinalizar(); // atualiza botão
+                    } else {
+                        enderecoDetalhes.style.display = 'none';
+                    }
+                })
+                .catch(() => {
+                    enderecoDetalhes.style.display = 'none';
+                });
+        } else {
+            enderecoDetalhes.style.display = 'none';
+        }
+    } else {
+        enderecoDetalhes.style.display = 'none';
+    }
+});
+
     // Função que checa se o botão pode ser habilitado
     function atualizarBotaoFinalizar() {
         const valor = cpfInput.value.replace(/\D/g, '');
