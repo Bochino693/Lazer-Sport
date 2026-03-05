@@ -554,58 +554,155 @@
     }
 }
 
-/* ===== FRETE / RETIRADA ===== */
+
+/* ===== FRETE / RETIRADA MODERNO ===== */
 .frete-box {
     margin-top: 25px;
-    background: #f7faff;
-    border-radius: 18px;
-    padding: 16px;
+    background: #ffffff;
+    border-radius: 20px;
+    padding: 20px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+    transition: all 0.3s ease;
 }
 
 .frete-tabs {
     display: flex;
-    gap: 10px;
-    margin: 12px 0 16px;
+    gap: 12px;
+    margin: 16px 0;
 }
 
 .frete-tab {
     flex: 1;
-    padding: 10px 0;
-    border-radius: 12px;
-    border: 1px solid #cbd5e1;
-    background: #fff;
-    font-weight: 700;
+    padding: 12px 0;
+    border-radius: 14px;
+    border: 1px solid #e2e8f0;
+    background: #f1f5f9;
+    font-weight: 600;
+    font-size: 1rem;
     cursor: pointer;
-    transition: all 0.2s ease;
+    text-align: center;
+    transition: all 0.25s ease;
+    color: #1e3a8a;
+}
+
+.frete-tab:hover {
+    background: #e0e7ff;
+    transform: translateY(-2px);
 }
 
 .frete-tab.active {
     background: #0d6efd;
     color: #fff;
     border-color: #0d6efd;
+    box-shadow: 0 4px 12px rgba(13, 110, 253, 0.3);
 }
 
+/* Conteúdo */
+.frete-content {
+    margin-top: 14px;
+    transition: all 0.3s ease;
+    color: #111827;
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+/* Input CEP */
 .frete-content input {
-    padding: 12px;
+    padding: 14px 16px;
     border-radius: 12px;
-    border: 1px solid #ddd;
+    border: 1px solid #cbd5e1;
     width: 100%;
     box-sizing: border-box;
-    margin-top: 6px;
-    background: #fff;
+    margin-top: 8px;
+    font-size: 0.95rem;
+    background: #f9fafb;
+    transition: all 0.2s ease;
+}
+
+.frete-content input:focus {
+    border-color: #0d6efd;
+    box-shadow: 0 4px 12px rgba(13,110,253,0.15);
+    outline: none;
 }
 
 .frete-content small {
     font-size: 0.85rem;
     color: #dc3545;
     min-height: 18px;
+    display: block;
+    margin-top: 4px;
 }
 
+/* Retirada em loja */
 .frete-content ul {
-    list-style: disc;
-    margin-left: 20px;
+    list-style: none;
+    padding-left: 0;
+    margin-top: 10px;
 }
 
+.frete-content ul li {
+    position: relative;
+    padding-left: 22px;
+    margin-bottom: 8px;
+    color: #374151;
+    font-size: 0.95rem;
+}
+
+.frete-content ul li::before {
+    content: '📍';
+    position: absolute;
+    left: 0;
+}
+
+/* ===== RESPONSIVO ===== */
+
+/* CELULAR */
+@media (max-width: 768px) {
+    .frete-box {
+        padding: 16px;
+    }
+
+    .frete-tab {
+        font-size: 0.9rem;
+        padding: 10px 0;
+    }
+
+    .frete-content {
+        font-size: 0.9rem;
+    }
+}
+
+/* TABLET */
+@media (min-width: 769px) and (max-width: 1024px) {
+    .frete-box {
+        padding: 18px 20px;
+    }
+
+    .frete-tab {
+        font-size: 0.95rem;
+        padding: 11px 0;
+    }
+
+    .frete-content {
+        font-size: 0.93rem;
+    }
+}
+
+/* DESKTOP */
+@media (min-width: 1025px) {
+    .frete-box {
+        padding: 22px 24px;
+    }
+
+    .frete-tab {
+        font-size: 1rem;
+        padding: 12px 0;
+    }
+
+    .frete-content {
+        font-size: 0.95rem;
+    }
+}
 </style>
 
 <div class="carrinho-container" id="car">
@@ -698,30 +795,6 @@
             <small id="cpf-msg"></small>
         </div>
 
-        <div class="resumo-box">
-            <div class="resumo-linha resumo-total">
-                <span>Total</span>
-                <span>R$ {{ carrinho.total_liquido|floatformat:2 }}</span>
-            </div>
-        </div>
-
-    {% else %}
-
-        <div class="carrinho-vazio-box">
-            <div class="vazio-icon">🧸</div>
-
-            <h2>Seu carrinho está vazio</h2>
-            <p>
-                Que tal escolher alguns brinquedos incríveis
-                para alegrar o dia?
-            </p>
-
-            <a href="{% url 'brinquedos' %}" class="btn-explorar">
-                🎁 Explorar brinquedos
-            </a>
-        </div>
-
-    {% endif %}
 
 
 <!-- ===== TAB DE FRETE ===== -->
@@ -754,6 +827,33 @@
 
     </div>
 </div>
+
+        <div class="resumo-box">
+            <div class="resumo-linha resumo-total">
+                <span>Total</span>
+                <span>R$ {{ carrinho.total_liquido|floatformat:2 }}</span>
+            </div>
+        </div>
+
+    {% else %}
+
+        <div class="carrinho-vazio-box">
+            <div class="vazio-icon">🧸</div>
+
+            <h2>Seu carrinho está vazio</h2>
+            <p>
+                Que tal escolher alguns brinquedos incríveis
+                para alegrar o dia?
+            </p>
+
+            <a href="{% url 'brinquedos' %}" class="btn-explorar">
+                🎁 Explorar brinquedos
+            </a>
+        </div>
+
+    {% endif %}
+
+
 
 </div><!-- carrinho-container -->
 
