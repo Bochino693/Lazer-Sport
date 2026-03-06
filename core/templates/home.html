@@ -3407,30 +3407,42 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
      */
-
- const track = document.getElementById("carousel-projetos");
+const track = document.getElementById("carousel-projetos");
 const prev = document.getElementById("prevProjetos");
 const next = document.getElementById("nextProjetos");
 
-if(track){
+let index = 0;
 
-    const cardWidth = 320;
-
-    next.addEventListener("click", ()=>{
-        track.scrollBy({
-            left: cardWidth,
-            behavior: "smooth"
-        });
-    });
-
-    prev.addEventListener("click", ()=>{
-        track.scrollBy({
-            left: -cardWidth,
-            behavior: "smooth"
-        });
-    });
-
+function visibleCards(){
+    if(window.innerWidth < 600) return 1;
+    if(window.innerWidth < 900) return 2;
+    return 3;
 }
+
+function cardWidth(){
+    return track.querySelector(".projeto-card").offsetWidth + 20;
+}
+
+next.addEventListener("click", ()=>{
+
+    const total = track.children.length;
+    const visible = visibleCards();
+
+    if(index < total - visible){
+        index++;
+        track.style.transform = `translateX(-${index * cardWidth()}px)`;
+    }
+
+});
+
+prev.addEventListener("click", ()=>{
+
+    if(index > 0){
+        index--;
+        track.style.transform = `translateX(-${index * cardWidth()}px)`;
+    }
+
+});
     /* =========================
        AUTO SCROLL CATEGORIAS
     ========================= */
