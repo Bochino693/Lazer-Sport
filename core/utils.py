@@ -23,7 +23,7 @@ def buscar_endereco(cep):
             logger.error(f"[FRETE] CEP não encontrado no ViaCEP: {cep}")
             return None
 
-        endereco = f"{data.get('logradouro','')}, {data.get('bairro','')}, {data.get('localidade','')}, {data.get('uf')}, Brazil"
+        endereco = f"{data.get('localidade')}, {data.get('uf')}, Brazil"
 
         logger.info(f"[FRETE] Endereço encontrado: {endereco}")
 
@@ -100,7 +100,6 @@ def distancia_km(lat1, lon1, lat2, lon2):
 
     return distancia
 
-
 def calcular_frete_por_cep(cep_cliente):
 
     logger.info(f"[FRETE] Calculando frete para CEP {cep_cliente}")
@@ -117,7 +116,7 @@ def calcular_frete_por_cep(cep_cliente):
 
     distancia = distancia_km(lat1, lon1, lat2, lon2)
 
-    valor_frete = distancia * VALOR_KM
+    valor_frete = round(distancia * VALOR_KM, 2)
 
     logger.info(
         f"[FRETE] Resultado -> {distancia:.2f} km | Frete R$ {valor_frete:.2f}"

@@ -1998,6 +1998,8 @@ def gerar_pix(request):
         "pix_copia_cola": payment["point_of_interaction"]["transaction_data"]["qr_code"],
         "valor": f"{total_final:.2f}"  # 🔥 valor final
     })
+
+
 from django.db import transaction
 from django.views.decorators.http import require_GET
 import json
