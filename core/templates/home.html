@@ -1302,7 +1302,7 @@ body {
   overflow: hidden;
   scroll-behavior: smooth;
   padding: 10px 0;
-  justify-content: center;    /* 🔥 alinha ao meio */
+  justify-content: center;
 }
 
 /* ======== PADRONIZAÇÃO DOS CARDS DE EVENTOS E PROJETOS ======== */
@@ -1318,6 +1318,10 @@ body {
     overflow: hidden;
     cursor: pointer;
     animation: fadeCard .6s ease forwards;
+}
+
+#carousel-projetos .carousel-item{
+  min-width: unset;
 }
 
 /* Hover igual ao card-produto */
@@ -1659,10 +1663,17 @@ body {
 /* botões */
 
 .carousel-container-projetos .carousel-btn{
-    position:absolute;
-    top:50%;
-    transform:translateY(-50%);
-    z-index:20;
+  position:absolute;
+  top:50%;
+  transform:translateY(-50%);
+  z-index:20;
+  background:#004AAD;
+  color:white;
+  border:none;
+  width:44px;
+  height:44px;
+  border-radius:50%;
+  cursor:pointer;
 }
 
 .carousel-container-projetos .prev{
