@@ -603,9 +603,10 @@ class Carrinho(Prime):
 
     @property
     def valor_frete(self):
-        if hasattr(self, "frete") and self.frete.valor:
-            return self.frete.valor
-        return Decimal("0.00")
+        try:
+            return self.frete.valor or Decimal("0.00")
+        except Frete.DoesNotExist:
+            return Decimal("0.00")
 
     @property
     def total_final(self):

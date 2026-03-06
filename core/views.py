@@ -1707,6 +1707,8 @@ def limpar_carrinho(request):
 
     return JsonResponse({'status': 'success'})
 
+
+
 class CarrinhoView(LoginRequiredMixin, View):
 
     def get(self, request):
@@ -1725,6 +1727,9 @@ class CarrinhoView(LoginRequiredMixin, View):
             .filter(carrinho=carrinho)
             .select_related('content_type')
         )
+
+        # garante objeto frete
+        Frete.objects.get_or_create(carrinho=carrinho)
 
         cupom_permitido = False
 
@@ -1780,17 +1785,22 @@ def calcular_frete(request):
 
         valor_frete, distancia = calcular_frete_por_cep(cep)
 
-        valor_frete = Decimal(valor_frete)
+        valor_frete = Decimal(str(valor_frete))
 
-        # 🔥 salva ou atualiza frete
-        frete, _ = Frete.objects.get_or_create(
-            carrinho=carrinho
+        frete, created = Frete.objects.get_or_create(
+            carrinho=carrinho,
+            defaults={
+                "cep": cep,
+                "valor": valor_frete,
+                "distancia_km": distancia
+            }
         )
 
-        frete.cep = cep
-        frete.valor = valor_frete
-        frete.distancia_km = distancia
-        frete.save()
+        if not created:
+            frete.cep = cep
+            frete.valor = valor_frete
+            frete.distancia_km = distancia
+            frete.save()
 
         logger.info(
             f"[FRETE] Distância: {distancia:.2f} km | Frete: R$ {valor_frete}"
