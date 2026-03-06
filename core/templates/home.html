@@ -1620,6 +1620,75 @@ body {
 }
 
 
+/* ===== CAROUSEL PROJETOS ===== */
+
+.carousel-container-projetos{
+    position: relative;
+    width: 100%;
+}
+
+.carousel-wrapper-projetos{
+    overflow: hidden;
+    width: 100%;
+}
+
+#carousel-projetos{
+    display: flex;
+    transition: transform 0.5s ease;
+}
+
+/* 3 cards por vez */
+
+#carousel-projetos .carousel-item{
+    min-width: 33.333%;
+    padding: 10px;
+    box-sizing: border-box;
+}
+
+/* imagem */
+
+.carousel-image img{
+    width:100%;
+    height:220px;
+    object-fit:cover;
+    border-radius:8px;
+}
+
+/* botões */
+
+.carousel-container-projetos .carousel-btn{
+    position:absolute;
+    top:50%;
+    transform:translateY(-50%);
+    z-index:20;
+}
+
+.carousel-container-projetos .prev{
+    left:-10px;
+}
+
+.carousel-container-projetos .next{
+    right:-10px;
+}
+
+/* RESPONSIVO */
+
+@media(max-width:900px){
+
+#carousel-projetos .carousel-item{
+    min-width:50%;
+}
+
+}
+
+@media(max-width:600px){
+
+#carousel-projetos .carousel-item{
+    min-width:100%;
+}
+
+}
+
 
 /* =========================================================
    GALERIA STACK (IMAGENS DO MODAL)
@@ -3000,53 +3069,68 @@ body {
     </p>
 
     {% if projetos %}
-    <div class="carousel" id="carousel-projetos">
-        {% for projeto in projetos %}
-        <div class="carousel-item" data-modal="modal-projeto-{{ projeto.id }}">
 
-            <div class="carousel-image">
-                {% if projeto.brinquedo_projetado and projeto.brinquedo_projetado.imagens_brinquedo_projeto.first %}
-                    <img src="{{ projeto.brinquedo_projetado.imagens_brinquedo_projeto.first.imagem.url }}">
-                {% else %}
-                    <img src="{% static 'images/default.jpg' %}">
-                {% endif %}
-            </div>
+    <div class="carousel-container-projetos">
 
-            <div class="carousel-info">
-                <h3>{{ projeto.titulo }}</h3>
-                <p>{{ projeto.descricao|truncatewords:25 }}</p>
-            </div>
-        </div>
+        <button class="carousel-btn prev" id="prevProjetos">❮</button>
 
-        <!-- MODAL -->
-        <div id="modal-projeto-{{ projeto.id }}" class="projeto-modal">
-            <div class="modal-content">
-                <span class="modal-close">&times;</span>
+        <div class="carousel-wrapper-projetos">
+            <div class="carousel" id="carousel-projetos">
 
-                <h2>{{ projeto.titulo }}</h2>
-                <p>{{ projeto.descricao }}</p>
+                {% for projeto in projetos %}
+                <div class="carousel-item" data-modal="modal-projeto-{{ projeto.id }}">
 
-                <hr>
-
-                <h3>📸 Galeria de Imagens</h3>
-
-                <div class="modal-carousel">
-                    <div class="modal-carousel-track" id="carousel-track-{{ projeto.id }}">
-                        {% if projeto.brinquedo_projetado %}
-                            {% for img in projeto.brinquedo_projetado.imagens_brinquedo_projeto.all %}
-                                <img src="{{ img.imagem.url }}" alt="{{ img.legenda }}">
-                            {% empty %}
-                                <p>Sem imagens para este projeto.</p>
-                            {% endfor %}
+                    <div class="carousel-image">
+                        {% if projeto.brinquedo_projetado and projeto.brinquedo_projetado.imagens_brinquedo_projeto.first %}
+                            <img src="{{ projeto.brinquedo_projetado.imagens_brinquedo_projeto.first.imagem.url }}">
+                        {% else %}
+                            <img src="{% static 'images/default.jpg' %}">
                         {% endif %}
                     </div>
 
-                    <button class="carousel-btn left" data-target="carousel-track-{{ projeto.id }}">❮</button>
-                    <button class="carousel-btn right" data-target="carousel-track-{{ projeto.id }}">❯</button>
+                    <div class="carousel-info">
+                        <h3>{{ projeto.titulo }}</h3>
+                        <p>{{ projeto.descricao|truncatewords:25 }}</p>
+                    </div>
+
                 </div>
+
+                <!-- MODAL -->
+                <div id="modal-projeto-{{ projeto.id }}" class="projeto-modal">
+                    <div class="modal-content">
+                        <span class="modal-close">&times;</span>
+
+                        <h2>{{ projeto.titulo }}</h2>
+                        <p>{{ projeto.descricao }}</p>
+
+                        <hr>
+
+                        <h3>📸 Galeria de Imagens</h3>
+
+                        <div class="modal-carousel">
+                            <div class="modal-carousel-track" id="carousel-track-{{ projeto.id }}">
+                                {% if projeto.brinquedo_projetado %}
+                                    {% for img in projeto.brinquedo_projetado.imagens_brinquedo_projeto.all %}
+                                        <img src="{{ img.imagem.url }}" alt="{{ img.legenda }}">
+                                    {% empty %}
+                                        <p>Sem imagens para este projeto.</p>
+                                    {% endfor %}
+                                {% endif %}
+                            </div>
+
+                            <button class="carousel-btn left" data-target="carousel-track-{{ projeto.id }}">❮</button>
+                            <button class="carousel-btn right" data-target="carousel-track-{{ projeto.id }}">❯</button>
+                        </div>
+                    </div>
+                </div>
+
+                {% endfor %}
+
             </div>
         </div>
-        {% endfor %}
+
+        <button class="carousel-btn next" id="nextProjetos">❯</button>
+
     </div>
 
     {% else %}
@@ -3313,6 +3397,56 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
      */
+
+    const carousel = document.getElementById("carousel-projetos");
+const cards = carousel.querySelectorAll(".carousel-item");
+
+const prev = document.getElementById("prevProjetos");
+const next = document.getElementById("nextProjetos");
+
+let index = 0;
+
+function getCardsVisible(){
+
+    if(window.innerWidth < 600) return 1;
+    if(window.innerWidth < 900) return 2;
+
+    return 3;
+
+}
+
+function updateCarousel(){
+
+    const cardWidth = cards[0].offsetWidth;
+    carousel.style.transform = `translateX(-${index * cardWidth}px)`;
+
+}
+
+next.addEventListener("click", function(){
+
+    const visible = getCardsVisible();
+
+    if(index < cards.length - visible){
+        index++;
+        updateCarousel();
+    }
+
+});
+
+prev.addEventListener("click", function(){
+
+    if(index > 0){
+        index--;
+        updateCarousel();
+    }
+
+});
+
+window.addEventListener("resize", function(){
+
+    updateCarousel();
+
+});
 
     /* =========================
        AUTO SCROLL CATEGORIAS
