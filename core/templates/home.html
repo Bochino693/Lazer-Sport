@@ -3047,71 +3047,39 @@ body {
 
     {% if projetos %}
 
-    <div class="carousel-container-projetos">
+<div class="carousel-container-projetos">
 
-        <button class="carousel-btn prev" id="prevProjetos">❮</button>
+    <button class="carousel-btn prev" id="prevProjetos">❮</button>
 
-        <div class="carousel-wrapper-projetos">
+    <div class="carousel-wrapper-projetos">
 
-            <div class="carousel-projetos-track" id="carousel-projetos">
+        <div class="carousel-projetos-track" id="carousel-projetos">
 
-                {% for projeto in projetos %}
-<div class="projeto-card" data-modal="modal-projeto-{{ projeto.id }}">
+            {% for projeto in projetos %}
+            <div class="projeto-card" data-modal="modal-projeto-{{ projeto.id }}">
 
-    <div class="carousel-image">
-            {% if projeto.brinquedo_projetado and projeto.brinquedo_projetado.imagens_brinquedo_projeto.first %}
-                <img src="{{ projeto.brinquedo_projetado.imagens_brinquedo_projeto.first.imagem.url }}">
-            {% else %}
-                <img src="{% static 'images/default.jpg' %}">
-            {% endif %}
-        </div>
+                <div class="carousel-image">
+                    {% if projeto.brinquedo_projetado and projeto.brinquedo_projetado.imagens_brinquedo_projeto.first %}
+                        <img src="{{ projeto.brinquedo_projetado.imagens_brinquedo_projeto.first.imagem.url }}">
+                    {% else %}
+                        <img src="{% static 'images/default.jpg' %}">
+                    {% endif %}
+                </div>
 
-        <div class="carousel-info">
-            <h3>{{ projeto.titulo }}</h3>
-            <p>{{ projeto.descricao|truncatewords:25 }}</p>
-        </div>
-
-    </div>
-    {% endfor %}
-{% for projeto in projetos %}
-<div id="modal-projeto-{{ projeto.id }}" class="projeto-modal">
-
-    <div class="modal-content">
-
-        <span class="modal-close">&times;</span>
-
-        <h2>{{ projeto.titulo }}</h2>
-        <p>{{ projeto.descricao }}</p>
-
-        <hr>
-
-        <h3>📸 Galeria de Imagens</h3>
-
-        <div class="modal-carousel">
-
-            <div class="modal-carousel-track" id="carousel-track-{{ projeto.id }}">
-
-                {% if projeto.brinquedo_projetado %}
-                    {% for img in projeto.brinquedo_projetado.imagens_brinquedo_projeto.all %}
-                        <img src="{{ img.imagem.url }}">
-                    {% endfor %}
-                {% endif %}
+                <div class="carousel-info">
+                    <h3>{{ projeto.titulo }}</h3>
+                    <p>{{ projeto.descricao|truncatewords:25 }}</p>
+                </div>
 
             </div>
+            {% endfor %}
 
         </div>
-
     </div>
+
+    <button class="carousel-btn next" id="nextProjetos">❯</button>
 
 </div>
-{% endfor %}
-
-            </div>
-        </div>
-
-        <button class="carousel-btn next" id="nextProjetos">❯</button>
-
-    </div>
 
     {% else %}
         <p style="margin-top:20px; font-weight:bold;">
