@@ -1364,7 +1364,28 @@ function calcularFrete() {
     }
 });
 
+document.querySelectorAll('.frete-tab').forEach(tab => {
 
+    tab.addEventListener('click', () => {
+
+        document.querySelectorAll('.frete-tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+
+        const tipo = tab.dataset.tipo;
+
+        document.getElementById('frete').style.display = tipo === 'frete' ? 'block' : 'none';
+        document.getElementById('retirada').style.display = tipo === 'retirada' ? 'block' : 'none';
+
+        if (tipo === 'retirada') {
+
+            document.getElementById('linha-frete').style.display = 'none';
+            document.getElementById('valor-frete').innerText = 'R$ 0,00';
+
+        }
+
+    });
+
+});
 
 </script>
 {% endblock %}

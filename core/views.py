@@ -1758,70 +1758,52 @@ import json
 import logging
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+import json
+from decimal import Decimal
 
+from .utils import calcular_frete_por_cep, buscar_coordenadas
+
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+import json
+from .models import Carrinho, Frete
 from .utils import calcular_frete_por_cep
 
-logger = logging.getLogger(__name__)
-
-@require_POST
-@login_required
+@csrf_exempt
 def calcular_frete(request):
 
+    if request.method != "POST":
+        return JsonResponse({"status": "erro"})
+
+    data = json.loads(request.body)
+    cep = data.get("cep")
+
+    if not cep:
+        return JsonResponse({"status": "erro"})
+
     try:
+        carrinho = Carrinho.objects.get(cliente=request.user.perfil)
+    except Carrinho.DoesNotExist:
+        return JsonResponse({"status": "erro"})
 
-        data = json.loads(request.body or "{}")
-        cep = data.get("cep")
+    # calcula frete corretamente
+    valor_frete, distancia = calcular_frete_por_cep(cep)
 
-        if not cep:
-            return JsonResponse({
-                "status": "erro",
-                "message": "CEP não informado"
-            }, status=400)
+    # salva no banco
+    frete, _ = Frete.objects.get_or_create(carrinho=carrinho)
 
-        cliente = request.user.perfil
-        carrinho = Carrinho.objects.get(cliente=cliente)
+    frete.cep = cep
+    frete.valor = valor_frete
+    frete.distancia_km = distancia
+    frete.save()
 
-        logger.info(f"[FRETE] CEP recebido: {cep}")
-
-        valor_frete, distancia = calcular_frete_por_cep(cep)
-
-        valor_frete = Decimal(str(valor_frete))
-
-        frete, created = Frete.objects.get_or_create(
-            carrinho=carrinho,
-            defaults={
-                "cep": cep,
-                "valor": valor_frete,
-                "distancia_km": distancia
-            }
-        )
-
-        if not created:
-            frete.cep = cep
-            frete.valor = valor_frete
-            frete.distancia_km = distancia
-            frete.save()
-
-        logger.info(
-            f"[FRETE] Distância: {distancia:.2f} km | Frete: R$ {valor_frete}"
-        )
-
-        return JsonResponse({
-            "status": "ok",
-            "frete": float(valor_frete),
-            "distancia": round(distancia, 2),
-            "total_final": float(carrinho.total_final)
-        })
-
-    except Exception as e:
-
-        logger.exception("[FRETE] ERRO ao calcular frete")
-
-        return JsonResponse({
-            "status": "erro",
-            "message": "Erro ao calcular frete"
-        }, status=500)
-
+    return JsonResponse({
+        "status": "ok",
+        "frete": float(valor_frete),
+        "distancia": distancia
+    })
 
 from django.views.decorators.http import require_POST
 
