@@ -1267,14 +1267,17 @@ body {
 
 /* 3 cards visíveis */
 
-.projeto-card{
-    flex:0 0 calc((100% - 40px)/3);
-    background:#fff;
-    border-radius:10px;
-    overflow:hidden;
-    box-shadow:0 4px 10px rgba(0,0,0,0.08);
+.carousel-projetos-track{
+    display:flex;
+    gap:20px;
+    overflow-x:auto;
+    scroll-behavior:smooth;
 }
 
+.projeto-card{
+    min-width:300px;
+    flex-shrink:0;
+}
 /* imagem */
 
 .carousel-image img{
@@ -1324,6 +1327,25 @@ body {
 }
 }
 
+
+.projeto-modal{
+    display:none;
+    position:fixed;
+    z-index:9999;
+    left:0;
+    top:0;
+    width:100%;
+    height:100%;
+    background:rgba(0,0,0,0.75);
+}
+
+.modal-content{
+    background:white;
+    margin:5% auto;
+    padding:30px;
+    max-width:900px;
+    border-radius:12px;
+}
 /* =========================================================
    EVENTOS
    ========================================================= */
@@ -3019,53 +3041,55 @@ body {
             <div class="carousel-projetos-track" id="carousel-projetos">
 
                 {% for projeto in projetos %}
-                <div class="projeto-card" data-modal="modal-projeto-{{ projeto.id }}">
+<div class="projeto-card" data-modal="modal-projeto-{{ projeto.id }}">
 
-                    <div class="carousel-image">
-                        {% if projeto.brinquedo_projetado and projeto.brinquedo_projetado.imagens_brinquedo_projeto.first %}
-                            <img src="{{ projeto.brinquedo_projetado.imagens_brinquedo_projeto.first.imagem.url }}">
-                        {% else %}
-                            <img src="{% static 'images/default.jpg' %}">
-                        {% endif %}
-                    </div>
+    <div class="carousel-image">
+            {% if projeto.brinquedo_projetado and projeto.brinquedo_projetado.imagens_brinquedo_projeto.first %}
+                <img src="{{ projeto.brinquedo_projetado.imagens_brinquedo_projeto.first.imagem.url }}">
+            {% else %}
+                <img src="{% static 'images/default.jpg' %}">
+            {% endif %}
+        </div>
 
-                    <div class="carousel-info">
-                        <h3>{{ projeto.titulo }}</h3>
-                        <p>{{ projeto.descricao|truncatewords:25 }}</p>
-                    </div>
+        <div class="carousel-info">
+            <h3>{{ projeto.titulo }}</h3>
+            <p>{{ projeto.descricao|truncatewords:25 }}</p>
+        </div>
 
-                </div>
+    </div>
+    {% endfor %}
+{% for projeto in projetos %}
+<div id="modal-projeto-{{ projeto.id }}" class="projeto-modal">
 
-                <!-- MODAL -->
-                <div id="modal-projeto-{{ projeto.id }}" class="projeto-modal">
-                    <div class="modal-content">
-                        <span class="modal-close">&times;</span>
+    <div class="modal-content">
 
-                        <h2>{{ projeto.titulo }}</h2>
-                        <p>{{ projeto.descricao }}</p>
+        <span class="modal-close">&times;</span>
 
-                        <hr>
+        <h2>{{ projeto.titulo }}</h2>
+        <p>{{ projeto.descricao }}</p>
 
-                        <h3>📸 Galeria de Imagens</h3>
+        <hr>
 
-                        <div class="modal-carousel">
-                            <div class="modal-carousel-track" id="carousel-track-{{ projeto.id }}">
-                                {% if projeto.brinquedo_projetado %}
-                                    {% for img in projeto.brinquedo_projetado.imagens_brinquedo_projeto.all %}
-                                        <img src="{{ img.imagem.url }}" alt="{{ img.legenda }}">
-                                    {% empty %}
-                                        <p>Sem imagens para este projeto.</p>
-                                    {% endfor %}
-                                {% endif %}
-                            </div>
+        <h3>📸 Galeria de Imagens</h3>
 
-                            <button class="carousel-btn left" data-target="carousel-track-{{ projeto.id }}">❮</button>
-                            <button class="carousel-btn right" data-target="carousel-track-{{ projeto.id }}">❯</button>
-                        </div>
-                    </div>
-                </div>
+        <div class="modal-carousel">
 
-                {% endfor %}
+            <div class="modal-carousel-track" id="carousel-track-{{ projeto.id }}">
+
+                {% if projeto.brinquedo_projetado %}
+                    {% for img in projeto.brinquedo_projetado.imagens_brinquedo_projeto.all %}
+                        <img src="{{ img.imagem.url }}">
+                    {% endfor %}
+                {% endif %}
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+{% endfor %}
 
             </div>
         </div>
@@ -3339,44 +3363,26 @@ document.addEventListener("DOMContentLoaded", () => {
 
      */
 
-  const carousel = document.getElementById("carousel-projetos");
+ const track = document.getElementById("carousel-projetos");
 const prev = document.getElementById("prevProjetos");
 const next = document.getElementById("nextProjetos");
 
-if(carousel){
+if(track){
 
-    const cards = carousel.querySelectorAll(".projeto-card");
+    const cardWidth = 320;
 
-    let index = 0;
-
-    function getCardWidth(){
-        const card = cards[0];
-        const gap = 20;
-        return card.offsetWidth + gap;
-    }
-
-    next.addEventListener("click", () => {
-
-        const visible =
-            window.innerWidth < 600 ? 1 :
-            window.innerWidth < 900 ? 2 : 3;
-
-        if(index < cards.length - visible){
-            index++;
-            carousel.style.transform =
-                `translateX(-${index * getCardWidth()}px)`;
-        }
-
+    next.addEventListener("click", ()=>{
+        track.scrollBy({
+            left: cardWidth,
+            behavior: "smooth"
+        });
     });
 
-    prev.addEventListener("click", () => {
-
-        if(index > 0){
-            index--;
-            carousel.style.transform =
-                `translateX(-${index * getCardWidth()}px)`;
-        }
-
+    prev.addEventListener("click", ()=>{
+        track.scrollBy({
+            left: -cardWidth,
+            behavior: "smooth"
+        });
     });
 
 }
