@@ -1619,7 +1619,6 @@ body {
     font-weight: 700;
 }
 
-
 /* ===== CAROUSEL PROJETOS ===== */
 
 .carousel-container-projetos{
@@ -1634,15 +1633,16 @@ body {
 
 #carousel-projetos{
     display: flex;
+    gap: 20px; /* espaço entre cards */
     transition: transform 0.5s ease;
 }
 
-/* 3 cards por vez */
+/* ===== 3 CARDS VISÍVEIS ===== */
 
 #carousel-projetos .carousel-item{
-    min-width: 33.333%;
-    padding: 10px;
+    flex: 0 0 calc((100% - 40px) / 3);
     box-sizing: border-box;
+    cursor: pointer;
 }
 
 /* imagem */
@@ -1664,19 +1664,19 @@ body {
 }
 
 .carousel-container-projetos .prev{
-    left:-10px;
+    left:-20px;
 }
 
 .carousel-container-projetos .next{
-    right:-10px;
+    right:-20px;
 }
 
-/* RESPONSIVO */
+/* ===== RESPONSIVO ===== */
 
 @media(max-width:900px){
 
 #carousel-projetos .carousel-item{
-    min-width:50%;
+    flex: 0 0 calc((100% - 20px) / 2);
 }
 
 }
@@ -1684,7 +1684,7 @@ body {
 @media(max-width:600px){
 
 #carousel-projetos .carousel-item{
-    min-width:100%;
+    flex: 0 0 100%;
 }
 
 }
