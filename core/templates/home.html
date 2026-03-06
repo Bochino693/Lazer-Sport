@@ -36,6 +36,7 @@ body {
     color: #007BFF;
     margin-bottom: 45px;
     letter-spacing: .5px;
+    text-decoration: none;
 }
 
 .empty-message {
@@ -177,70 +178,6 @@ body {
   background: #E63946;
   color: white;
   transform: scale(1.05);
-}
-
-
-.carousel-container {
-  width: 100%;       /* ocupa 100% do container pai */
-  max-width: 100%;   /* não limita a largura */
-  margin: 0 auto;    /* centraliza dentro do container */
-  position: relative;
-  overflow: hidden;
-  border-radius: 0;
-  box-shadow: 0 6px 20px rgba(0,0,0,0.1);
-}
-
-.carousel-wrapper {
-  position: relative;
-  width: 100%;
-  height: 520px;
-  overflow: hidden;
-
-  background: transparent; /* REMOVE o azul */
-}
-
-
-.carousel-slide {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;      /* NÃO CORTA */
-  object-position: center;
-  background: #000;         /* cor de fundo se sobrar espaço */
-  opacity: 0;
-  transition: opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-  object-fit: contain;
-  object-position: center;
-  background: transparent;   /* remove o fundo preto */
-  opacity: 0;
-  transition: opacity 0.8s ease;
-  will-change: opacity;
-  z-index: 0;
-  filter: blur(8px);
-  transform: scale(1.02);
-  transition: opacity 0.8s ease, filter 0.8s ease, transform 0.8s ease;
-}
-
-
-.carousel-slide.active {
-  opacity: 1;
-  filter: blur(0);
-  transform: scale(1);
-}
-
-.carousel-slide.active.loaded {
-  opacity: 1;
-}
-
-@media (max-width: 768px) {
-  .carousel-wrapper {
-    height: 280px;
-  }
-
-  .carousel-slide {
-    object-fit: contain; /* mantém regra no mobile */
-  }
 }
 
 
