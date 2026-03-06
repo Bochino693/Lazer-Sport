@@ -1373,14 +1373,40 @@ document.querySelectorAll('.frete-tab').forEach(tab => {
 
         const tipo = tab.dataset.tipo;
 
-        document.getElementById('frete').style.display = tipo === 'frete' ? 'block' : 'none';
-        document.getElementById('retirada').style.display = tipo === 'retirada' ? 'block' : 'none';
+        const freteDiv = document.getElementById('frete');
+        const retiradaDiv = document.getElementById('retirada');
+
+        freteDiv.style.display = tipo === 'frete' ? 'block' : 'none';
+        retiradaDiv.style.display = tipo === 'retirada' ? 'block' : 'none';
+
+        const linhaFrete = document.getElementById('linha-frete');
+        const valorFrete = document.getElementById('valor-frete');
+        const totalPedido = document.getElementById('totalPedido');
+        const subtotalFixo = document.getElementById('subtotalFixo');
+
+        const valorProdutos = parseFloat(
+            document.getElementById("valor-produtos")
+                .innerText
+                .replace("R$", "")
+                .replace(/\./g, "")
+                .replace(",", ".")
+        );
 
         if (tipo === 'retirada') {
 
-            document.getElementById('linha-frete').style.display = 'none';
-            document.getElementById('valor-frete').innerText = 'R$ 0,00';
+            linhaFrete.style.display = 'none';
+            valorFrete.innerText = 'R$ 0,00';
 
+            const totalFormatado =
+                "R$ " + valorProdutos.toLocaleString("pt-BR", {
+                    minimumFractionDigits: 2
+                });
+
+            totalPedido.innerText = totalFormatado;
+
+            if (subtotalFixo) {
+                subtotalFixo.innerText = totalFormatado;
+            }
         }
 
     });
