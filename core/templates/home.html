@@ -1572,81 +1572,96 @@ body {
 /* ===== CAROUSEL PROJETOS ===== */
 
 .carousel-container-projetos{
-    position: relative;
+    position:relative;
     width:100%;
+    max-width:1200px;
+    margin:auto;
 }
+
+/* WRAPPER */
 
 .carousel-wrapper-projetos{
-    overflow: hidden;
-    width: 100%;
+    overflow:hidden;
 }
 
-#carousel-projetos{
-    display: flex;
-    gap: 20px;
-    transition: transform 0.5s ease;
-    width: 100%;
+/* TRACK */
+
+.carousel-projetos-track{
+    display:flex;
+    gap:20px;
+    transition:transform .4s ease;
 }
 
-/* cards */
-#carousel-projetos .carousel-item{
-    flex: 0 0 calc((100% - 40px) / 3);
-    max-width: calc((100% - 40px) / 3);
-    box-sizing: border-box;
-    min-width: unset;
+/* CARD */
+
+.projeto-card{
+    flex:0 0 calc((100% - 40px)/3);
+    cursor:pointer;
 }
 
-
-/* imagem */
+/* IMAGEM */
 
 .carousel-image img{
     width:100%;
     height:220px;
     object-fit:cover;
-    border-radius:8px;
+    border-radius:10px;
 }
 
-/* botões */
-.carousel-container-projetos .carousel-btn{
-  position:absolute;
-  top:50%;
-  transform:translateY(-50%);
-  z-index:20;
-  background:#004AAD;
-  color:white;
-  border:none;
-  width:44px;
-  height:44px;
-  border-radius:50%;
-  cursor:pointer;
-}
-
-.carousel-container-projetos .prev{
-    left:-15px;
-}
-
-.carousel-container-projetos .next{
-    right:-15px;
-}
-
-/* ===== RESPONSIVO ===== */
+/* RESPONSIVO */
 
 @media(max-width:900px){
-
-#carousel-projetos .carousel-item{
-    flex:0 0 50%;
+.projeto-card{
+    flex:0 0 calc((100% - 20px)/2);
 }
-
 }
 
 @media(max-width:600px){
-
-#carousel-projetos .carousel-item{
+.projeto-card{
     flex:0 0 100%;
 }
-
 }
 
+/* BOTÕES */
+
+.carousel-btn{
+    position:absolute;
+    top:50%;
+    transform:translateY(-50%);
+    width:45px;
+    height:45px;
+    border-radius:50%;
+    border:none;
+    background:white;
+    font-size:22px;
+    cursor:pointer;
+    box-shadow:0 4px 10px rgba(0,0,0,0.2);
+    z-index:10;
+}
+
+.prev{ left:-10px; }
+.next{ right:-10px; }
+
+/* MODAL */
+
+.projeto-modal{
+    display:none;
+    position:fixed;
+    left:0;
+    top:0;
+    width:100%;
+    height:100%;
+    background:rgba(0,0,0,.7);
+    z-index:9999;
+}
+
+.modal-content{
+    background:white;
+    max-width:900px;
+    margin:5% auto;
+    padding:30px;
+    border-radius:10px;
+}
 /* =========================================================
    GALERIA STACK (IMAGENS DO MODAL)
    ========================================================= */
@@ -3105,6 +3120,36 @@ body {
     {% endif %}
 </section>
 
+
+{% for projeto in projetos %}
+<div id="modal-projeto-{{ projeto.id }}" class="projeto-modal">
+
+    <div class="modal-content">
+
+        <span class="modal-close">&times;</span>
+
+        <h2>{{ projeto.titulo }}</h2>
+        <p>{{ projeto.descricao }}</p>
+
+        <hr>
+
+        <h3>📸 Galeria de Imagens</h3>
+
+        <div class="modal-carousel">
+            <div class="modal-carousel-track">
+
+                {% if projeto.brinquedo_projetado %}
+                    {% for img in projeto.brinquedo_projetado.imagens_brinquedo_projeto.all %}
+                        <img src="{{ img.imagem.url }}">
+                    {% endfor %}
+                {% endif %}
+
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endfor %}
 
 <!-- Div invisível para espaçamento -->
 <div class="espacador"></div>
