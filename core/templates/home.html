@@ -1294,41 +1294,33 @@ body {
   font-weight: 700;
   text-align: center;    /* ✅ centraliza o título */
 }
-/* ===== PROJETOS CAROUSEL ===== */
+
+/* ===== CARROSSEL PROJETOS ===== */
 
 .carousel-container-projetos{
-    position:relative;
-    width:100%;
-    margin-top:40px;
+    position: relative;
+    width: 100%;
 }
 
 .carousel-wrapper-projetos{
-    overflow:hidden;
-    width:100%;
+    overflow: hidden;
+    width: 100%;
 }
 
-/* track */
-
-.carousel-projetos-track{
+#carousel-projetos{
     display:flex;
-    gap:25px;
-    transition:transform .5s ease;
+    gap:20px;
+    transition:transform .4s ease;
 }
 
-/* ===== CARD ===== */
+/* 3 cards visíveis */
 
 .projeto-card{
-    flex:0 0 calc(33.333% - 17px);
-    background:white;
-    border-radius:12px;
+    flex:0 0 calc((100% - 40px)/3);
+    background:#fff;
+    border-radius:10px;
     overflow:hidden;
-    box-shadow:0 6px 18px rgba(0,0,0,0.08);
-    cursor:pointer;
-    transition:.3s;
-}
-
-.projeto-card:hover{
-    transform:translateY(-5px);
+    box-shadow:0 4px 10px rgba(0,0,0,0.08);
 }
 
 /* imagem */
@@ -1339,77 +1331,42 @@ body {
     object-fit:cover;
 }
 
-/* info */
-
-.carousel-info{
-    padding:18px;
-}
-
-.carousel-info h3{
-    font-size:18px;
-    margin-bottom:8px;
-    color:#222;
-}
-
-.carousel-info p{
-    font-size:14px;
-    color:#666;
-    line-height:1.4;
-}
-
-/* ===== SETAS ===== */
+/* botões */
 
 .carousel-btn{
     position:absolute;
     top:50%;
     transform:translateY(-50%);
-    width:44px;
-    height:44px;
+    background:#fff;
     border:none;
+    font-size:28px;
+    width:42px;
+    height:42px;
     border-radius:50%;
-    background:#004AAD;
-    color:white;
-    font-size:20px;
     cursor:pointer;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    box-shadow:0 4px 10px rgba(0,0,0,0.2);
-    z-index:10;
+    box-shadow:0 3px 8px rgba(0,0,0,0.2);
 }
 
-.carousel-btn:hover{
-    background:#00357c;
+.prev{
+    left:-20px;
 }
 
-.carousel-btn.prev{
-    left:-22px;
+.next{
+    right:-20px;
 }
 
-.carousel-btn.next{
-    right:-22px;
-}
-
-/* ===== RESPONSIVO ===== */
+/* RESPONSIVO */
 
 @media(max-width:900px){
-
 .projeto-card{
-    flex:0 0 calc(50% - 13px);
+    flex:0 0 calc((100% - 20px)/2);
 }
-
 }
 
 @media(max-width:600px){
-
 .projeto-card{
     flex:0 0 100%;
 }
-
-.carousel-btn{
-    display:none;
-}
-
 }
 
 /* =========================================================

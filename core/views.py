@@ -162,9 +162,9 @@ class HomeView(View):
 
         return render(request, "home.html", context)
 
-from django.http import HttpResponse
+
 from django.template.loader import render_to_string
-from django.core.paginator import Paginator
+
 
 def filtrar_pecas_ajax(request):
     categoria_ativa = request.GET.get("categoria")
