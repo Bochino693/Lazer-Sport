@@ -1623,26 +1623,25 @@ body {
 
 .carousel-container-projetos{
     position: relative;
-    width: 100%;
+    width:100%;
 }
 
 .carousel-wrapper-projetos{
-    overflow: hidden;
-    width: 100%;
+    overflow:hidden;
+    width:100%;
 }
 
 #carousel-projetos{
-    display: flex;
-    gap: 20px; /* espaço entre cards */
-    transition: transform 0.5s ease;
+    display:flex;
+    transition: transform .5s ease;
 }
 
-/* ===== 3 CARDS VISÍVEIS ===== */
+/* cards */
 
 #carousel-projetos .carousel-item{
-    flex: 0 0 calc((100% - 40px) / 3);
-    box-sizing: border-box;
-    cursor: pointer;
+    flex:0 0 33.3333%;
+    padding:12px;
+    box-sizing:border-box;
 }
 
 /* imagem */
@@ -1664,11 +1663,11 @@ body {
 }
 
 .carousel-container-projetos .prev{
-    left:-20px;
+    left:-15px;
 }
 
 .carousel-container-projetos .next{
-    right:-20px;
+    right:-15px;
 }
 
 /* ===== RESPONSIVO ===== */
@@ -1676,7 +1675,7 @@ body {
 @media(max-width:900px){
 
 #carousel-projetos .carousel-item{
-    flex: 0 0 calc((100% - 20px) / 2);
+    flex:0 0 50%;
 }
 
 }
@@ -1684,11 +1683,10 @@ body {
 @media(max-width:600px){
 
 #carousel-projetos .carousel-item{
-    flex: 0 0 100%;
+    flex:0 0 100%;
 }
 
 }
-
 
 /* =========================================================
    GALERIA STACK (IMAGENS DO MODAL)
@@ -3398,52 +3396,56 @@ document.addEventListener("DOMContentLoaded", () => {
 
      */
 
-    const carousel = document.getElementById("carousel-projetos");
-const cards = carousel.querySelectorAll(".carousel-item");
+   const carousel = document.getElementById("carousel-projetos");
+const items = carousel.querySelectorAll(".carousel-item");
 
 const prev = document.getElementById("prevProjetos");
 const next = document.getElementById("nextProjetos");
 
-let index = 0;
+let page = 0;
 
-function getCardsVisible(){
+function cardsPerPage(){
 
     if(window.innerWidth < 600) return 1;
     if(window.innerWidth < 900) return 2;
 
     return 3;
-
 }
 
 function updateCarousel(){
 
-    const cardWidth = cards[0].offsetWidth;
-    carousel.style.transform = `translateX(-${index * cardWidth}px)`;
+    const wrapper = document.querySelector(".carousel-wrapper-projetos");
+    const width = wrapper.offsetWidth;
+
+    carousel.style.transform =
+        `translateX(-${page * width}px)`;
 
 }
 
-next.addEventListener("click", function(){
+next.addEventListener("click", () => {
 
-    const visible = getCardsVisible();
+    const visible = cardsPerPage();
+    const totalPages = Math.ceil(items.length / visible) - 1;
 
-    if(index < cards.length - visible){
-        index++;
+    if(page < totalPages){
+        page++;
         updateCarousel();
     }
 
 });
 
-prev.addEventListener("click", function(){
+prev.addEventListener("click", () => {
 
-    if(index > 0){
-        index--;
+    if(page > 0){
+        page--;
         updateCarousel();
     }
 
 });
 
-window.addEventListener("resize", function(){
+window.addEventListener("resize", () => {
 
+    page = 0;
     updateCarousel();
 
 });
