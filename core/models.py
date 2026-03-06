@@ -550,6 +550,7 @@ class BrinquedoSobMedida(models.Model):
 
 
 class Carrinho(Prime):
+
     cliente = models.ForeignKey(
         ClientePerfil,
         on_delete=models.CASCADE,
@@ -567,38 +568,48 @@ class Carrinho(Prime):
 
     TIPO_ENVIO = [
         ('frete', 'Frete'),
-        ('entrega', 'Entrega'),
+        ('retirada', 'Retirada'),
     ]
 
-    tipo_envio = models.CharField(max_length=30,
-                                  choices=TIPO_ENVIO,
-                                  default='frete')
+    tipo_envio = models.CharField(
+        max_length=30,
+        choices=TIPO_ENVIO,
+        default='frete'
+    )
 
     mp_payment_id = models.CharField(max_length=100, null=True, blank=True)
-
 
     @property
     def total_bruto(self):
         total = sum(
             (item.subtotal for item in self.itens.all()),
-            Decimal('0.00')
+            Decimal("0.00")
         )
-        return total.quantize(Decimal('0.01'))
+        return total.quantize(Decimal("0.01"))
 
     @property
     def valor_desconto(self):
         if not self.cupom:
-            return Decimal('0.00')
+            return Decimal("0.00")
 
-        percentual = self.cupom.desconto_percentual  # ex: Decimal('10.00')
-        desconto = (self.total_bruto * percentual) / Decimal('100')
+        percentual = self.cupom.desconto_percentual
+        desconto = (self.total_bruto * percentual) / Decimal("100")
 
-        return desconto.quantize(Decimal('0.01'))
+        return desconto.quantize(Decimal("0.01"))
 
     @property
     def total_liquido(self):
-        return (self.total_bruto - self.valor_desconto).quantize(Decimal('0.01'))
+        return (self.total_bruto - self.valor_desconto).quantize(Decimal("0.01"))
 
+    @property
+    def valor_frete(self):
+        if hasattr(self, "frete") and self.frete.valor:
+            return self.frete.valor
+        return Decimal("0.00")
+
+    @property
+    def total_final(self):
+        return (self.total_liquido + self.valor_frete).quantize(Decimal("0.01"))
 
     def __str__(self):
         if self.cliente and self.cliente.user:
@@ -607,6 +618,7 @@ class Carrinho(Prime):
 
 
 class ItemCarrinho(Prime):
+
     carrinho = models.ForeignKey(
         Carrinho,
         on_delete=models.CASCADE,
@@ -615,12 +627,14 @@ class ItemCarrinho(Prime):
 
     content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
     object_id = models.PositiveIntegerField()
+
     item = GenericForeignKey('content_type', 'object_id')
 
     quantidade = models.PositiveIntegerField(default=1)
 
     @property
     def preco_unitario(self):
+
         if hasattr(self.item, 'valor_brinquedo'):
             return self.item.valor_brinquedo
 
@@ -630,51 +644,62 @@ class ItemCarrinho(Prime):
         if hasattr(self.item, 'preco_promocao'):
             return self.item.preco_promocao
 
-        # ✅ NOVO — peças de reposição
         if hasattr(self.item, 'preco_venda'):
             return self.item.preco_venda or 0
 
         return 0
 
-    from decimal import Decimal, ROUND_HALF_UP
-
     @property
     def subtotal(self):
-        total = Decimal(self.preco_unitario) * Decimal(self.quantidade)
-        return total.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
+        preco = Decimal(self.preco_unitario or 0)
+
+        total = preco * Decimal(self.quantidade)
+
+        return total.quantize(
+            Decimal("0.01"),
+            rounding=ROUND_HALF_UP
+        )
 
     def __str__(self):
-        return f"Item {self.item} (x{self.quantidade})"
+        return f"{self.item} (x{self.quantidade})"
 
 
 from django.db import transaction
 
-
 class Frete(Prime):
+
     carrinho = models.OneToOneField(
-        'Carrinho',
+        Carrinho,
         on_delete=models.CASCADE,
         related_name='frete',
         null=True
     )
+
+    cep = models.CharField(max_length=9, null=True, blank=True)
+
     rua = models.CharField(max_length=180, null=True, blank=True)
     bairro = models.CharField(max_length=90, null=True, blank=True)
     cidade = models.CharField(max_length=90, null=True, blank=True)
     estado = models.CharField(max_length=90, null=True, blank=True)
-    numero = models.CharField(max_length=90, null=True, blank=True)
-    valor = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    distancia_km = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
-    tempo_estimado_min = models.PositiveIntegerField(null=True, blank=True)
+    numero = models.CharField(max_length=20, null=True, blank=True)
 
+    valor = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+
+    distancia_km = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        null=True,
+        blank=True
+    )
+
+    tempo_estimado_min = models.PositiveIntegerField(
+        null=True,
+        blank=True
+    )
 
     def __str__(self):
-        return f"Frete do carrinho #{self.carrinho.id} - R$ {self.valor}"
-
-    class Meta:
-        verbose_name = "Frete"
-        verbose_name_plural = "Fretes"
-
+        return f"Frete carrinho #{self.carrinho.id} - R$ {self.valor}"
 
 
 class Pedido(Prime):
@@ -694,6 +719,8 @@ class Pedido(Prime):
         blank=True,
         related_name='pedidos_gerados'
     )
+
+    impresso = models.BooleanField(default=False, null=True, blank=True)
 
     def finalizar(self, forma_pagamento=None):
         """
@@ -739,15 +766,7 @@ class Pedido(Prime):
         default='aguardando_pagamento'
     )
 
-    # 🚚 logística (preenchido só quando sair para entrega)
-    distancia_km = models.DecimalField(
-        max_digits=6, decimal_places=2, null=True, blank=True
-    )
-
-    tempo_estimado_min = models.PositiveIntegerField(
-        null=True, blank=True
-    )
-
+    valor_frete = models.DecimalField(max_digits=10, decimal_places=2, null=True)
     # 🔒 snapshot financeiro
     total_bruto = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     valor_desconto = models.DecimalField(max_digits=10, decimal_places=2, default=0, null=True, blank=True)

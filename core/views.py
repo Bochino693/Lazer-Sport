@@ -1707,16 +1707,18 @@ def limpar_carrinho(request):
 
     return JsonResponse({'status': 'success'})
 
-
 class CarrinhoView(LoginRequiredMixin, View):
 
     def get(self, request):
+
         if not hasattr(request.user, 'perfil'):
             return redirect('home')
 
         cliente = request.user.perfil
 
-        carrinho = Carrinho.objects.select_related('cupom').get(cliente=cliente)
+        carrinho, _ = Carrinho.objects.select_related(
+            'cupom'
+        ).get_or_create(cliente=cliente)
 
         itens = (
             ItemCarrinho.objects
@@ -1724,10 +1726,10 @@ class CarrinhoView(LoginRequiredMixin, View):
             .select_related('content_type')
         )
 
-        # 🔥 NOVO — valida cupom permitido
         cupom_permitido = False
 
         for item in itens:
+
             model = item.content_type.model
 
             if model in ['brinquedos', 'pecasreposicao']:
@@ -1737,13 +1739,15 @@ class CarrinhoView(LoginRequiredMixin, View):
         context = {
             'carrinho': carrinho,
             'itens': itens,
-            'cupom_permitido': cupom_permitido,  # ⭐ IMPORTANTE
+            'cupom_permitido': cupom_permitido,
+            'valor_frete': carrinho.valor_frete,
+            'total_final': carrinho.total_final
         }
 
         return render(request, 'carrinho.html', context)
 
 import logging
-
+from .models import Frete
 from .utils import calcular_frete_por_cep
 import json
 import logging
@@ -1754,14 +1758,13 @@ from .utils import calcular_frete_por_cep
 
 logger = logging.getLogger(__name__)
 
-
 @require_POST
+@login_required
 def calcular_frete(request):
 
     try:
 
         data = json.loads(request.body or "{}")
-
         cep = data.get("cep")
 
         if not cep:
@@ -1770,11 +1773,24 @@ def calcular_frete(request):
                 "message": "CEP não informado"
             }, status=400)
 
+        cliente = request.user.perfil
+        carrinho = Carrinho.objects.get(cliente=cliente)
+
         logger.info(f"[FRETE] CEP recebido: {cep}")
 
         valor_frete, distancia = calcular_frete_por_cep(cep)
 
-        valor_frete = round(float(valor_frete), 2)
+        valor_frete = Decimal(valor_frete)
+
+        # 🔥 salva ou atualiza frete
+        frete, _ = Frete.objects.get_or_create(
+            carrinho=carrinho
+        )
+
+        frete.cep = cep
+        frete.valor = valor_frete
+        frete.distancia_km = distancia
+        frete.save()
 
         logger.info(
             f"[FRETE] Distância: {distancia:.2f} km | Frete: R$ {valor_frete}"
@@ -1782,8 +1798,9 @@ def calcular_frete(request):
 
         return JsonResponse({
             "status": "ok",
-            "frete": valor_frete,
-            "distancia": round(distancia, 2)
+            "frete": float(valor_frete),
+            "distancia": round(distancia, 2),
+            "total_final": float(carrinho.total_final)
         })
 
     except Exception as e:
@@ -1794,6 +1811,7 @@ def calcular_frete(request):
             "status": "erro",
             "message": "Erro ao calcular frete"
         }, status=500)
+
 
 from django.views.decorators.http import require_POST
 
@@ -1888,128 +1906,52 @@ def aplicar_cupom(request):
     })
 
 
-from django.views import View
-from django.shortcuts import render
-from django.contrib import messages
-
-
-import requests
-from django.utils import timezone
-
-import requests
-import logging
-from django.utils import timezone
-
-logger = logging.getLogger("impressao")
-
-
-def enviar_para_impressao(pedido):
-    logger.warning("🧾 INICIANDO envio para impressão...")
-
-    try:
-        texto = montar_texto_pedido(pedido)
-
-        logger.warning("📦 Texto montado, enviando POST...")
-
-        response = requests.post(
-            "http://localhost:3000/imprimir",  # 🔥 use 127.0.0.1
-            json={"texto": texto},
-            timeout=10
-        )
-
-        logger.warning(f"✅ Status impressão: {response.status_code}")
-        logger.warning(f"📨 Resposta: {response.text}")
-
-    except Exception as e:
-        logger.error(f"❌ Erro ao enviar para impressora: {e}")
-
-
-def montar_texto_pedido(pedido):
-    linhas = []
-
-    agora = timezone.localtime(timezone.now())
-    data_formatada = agora.strftime("%d/%m/%Y %H:%M")
-
-    # Cabeçalho
-    linhas.append("=" * 40)
-    linhas.append("        NOVO PEDIDO")
-    linhas.append("=" * 40)
-
-    linhas.append(f"Pedido: #{pedido.id}")
-    linhas.append(f"Data: {data_formatada}")
-
-    # Cliente
-    if pedido.cliente:
-        linhas.append(f"Cliente: {pedido.cliente}")
-    else:
-        linhas.append("Cliente: Não identificado")
-
-    # Status
-    linhas.append(f"Status: {pedido.get_status_display()}")
-
-    # Forma de pagamento
-    if pedido.forma_pagamento:
-        linhas.append(f"Pagamento: {pedido.get_forma_pagamento_display()}")
-
-    linhas.append("-" * 40)
-
-    # Itens
-    for item in pedido.itens.all():
-        nome = item.nome_item[:25]  # limita tamanho para cupom térmico
-        qtd = item.quantidade
-        subtotal = f"{item.subtotal:.2f}"
-
-        linhas.append(f"{nome}")
-        linhas.append(f"  {qtd} x {item.preco_unitario:.2f}   = {subtotal}")
-
-    linhas.append("-" * 40)
-
-    # Totais
-    if pedido.total_bruto:
-        linhas.append(f"Subtotal: R$ {pedido.total_bruto:.2f}")
-
-    if pedido.valor_desconto and pedido.valor_desconto > 0:
-        linhas.append(f"Desconto: -R$ {pedido.valor_desconto:.2f}")
-
-    linhas.append(f"TOTAL:    R$ {pedido.total_liquido:.2f}")
-
-    # Cupom
-    if pedido.cupom_codigo:
-        linhas.append(f"Cupom: {pedido.cupom_codigo} ({pedido.cupom_percentual}%)")
-
-    # Observações
-    if pedido.observacoes:
-        linhas.append("-" * 40)
-        linhas.append("OBSERVAÇÕES:")
-        linhas.append(pedido.observacoes[:200])
-
-    linhas.append("=" * 40)
-    linhas.append("     Obrigado pela preferência!")
-    linhas.append("\n\n\n")
-
-    return "\n".join(linhas)
-
-
-class PaymentView(View):
+class PaymentView(LoginRequiredMixin, View):
 
     def get(self, request, carrinho_id):
+
         carrinho = get_object_or_404(Carrinho, id=carrinho_id)
 
-        itens = carrinho.itens.all()
-        carrinho_vazio = not itens.exists()
+        # 🔒 Segurança: validar dono do carrinho
+        if carrinho.cliente and carrinho.cliente.user != request.user:
+            return redirect('home')
+
+        # itens do carrinho
+        itens = carrinho.itens.select_related('content_type').all()
+
+        # carrinho vazio
+        if not itens.exists():
+            return redirect('carrinho')
+
+        # 🔄 Recalcular totais dos produtos
+        carrinho.recalcular_totais()
+
+        # 🔥 pegar valor do frete salvo
+        valor_frete = carrinho.valor_frete or 0
+
+        # 🔥 total final com frete
+        total_com_frete = carrinho.total_liquido + valor_frete
 
         somente_pix = (
-                not request.user.is_authenticated or carrinho_vazio
+            not request.user.is_authenticated or not itens.exists()
         )
 
         context = {
             'carrinho': carrinho,
             'itens': itens,
-            'carrinho_vazio': carrinho_vazio,
+
+            'carrinho_vazio': not itens.exists(),
+
             'total_bruto': carrinho.total_bruto,
             'valor_desconto': carrinho.valor_desconto,
+
+            'frete': valor_frete,  # ⭐ frete enviado para tela
+
             'total_liquido': carrinho.total_liquido,
+            'total_com_frete': total_com_frete,  # ⭐ total final
+
             'total_itens': itens.count(),
+
             'somente_pix': somente_pix,
         }
 
@@ -2023,8 +1965,6 @@ from django.conf import settings
 from django.http import JsonResponse
 from decimal import Decimal
 from .models import Pedido
-
-
 def gerar_pix(request):
 
     carrinho_id = request.GET.get("carrinho_id")
@@ -2032,13 +1972,14 @@ def gerar_pix(request):
 
     sdk = mercadopago.SDK(settings.MP_ACCESS_TOKEN)
 
+    total_final = carrinho.total_liquido + (carrinho.valor_frete or 0)
+
     payment_data = {
-        "transaction_amount": float(carrinho.total_liquido),
+        "transaction_amount": float(total_final),  # 🔥 com frete
         "description": f"Pagamento Carrinho #{carrinho.id}",
         "payment_method_id": "pix",
         "external_reference": str(carrinho.id),
 
-        # 🔥 IMPORTANTE
         "notification_url": "https://lazersport.com.br/api/webhook-mp/",
 
         "payer": {
@@ -2052,13 +1993,11 @@ def gerar_pix(request):
     carrinho.mp_payment_id = payment["id"]
     carrinho.save()
 
-
     return JsonResponse({
         "qr_code": payment["point_of_interaction"]["transaction_data"]["qr_code_base64"],
         "pix_copia_cola": payment["point_of_interaction"]["transaction_data"]["qr_code"],
-        "valor": f"{carrinho.total_liquido:.2f}"
+        "valor": f"{total_final:.2f}"  # 🔥 valor final
     })
-
 from django.db import transaction
 from django.views.decorators.http import require_GET
 import json
@@ -2216,11 +2155,6 @@ def verificar_pagamento(request):
         carrinho.mp_payment_id = None
         carrinho.save()
 
-        # 🖨️ DISPARA IMPRESSÃO (ASSÍNCRONO LEVE)
-        try:
-            enviar_para_impressao(pedido)
-        except Exception as e:
-            print("Erro ao imprimir pedido:", e)
 
     return JsonResponse({
         "pago": True,
