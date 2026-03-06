@@ -2401,6 +2401,71 @@ body {
 <div class="espacador"></div>
 -->
 
+<!-- ======= CATEGORIAS ======= -->
+<section id="categorias-section" class="categorias-section">
+  <h2 class="section-title">Categorias</h2>
+  <p class="section-subtitle">
+    Encontre o brinquedo ideal para transformar seu espaço em diversão garantida.
+  </p>
+
+  <div class="scroll-wrapper">
+    <button class="scroll-btn left" id="scroll-left">&#10094;</button>
+
+    <div class="scroll-container" id="scroll-container">
+
+          <!-- ⭐ CATEGORIA FIXA PREMIUM -->
+    <a href="{% url 'pecas_reposicao' %}#breadcrumb" class="categoria-link">
+      <div class="categoria-card">
+
+        <div class="pecas-slider premium" id="pecasSlider">
+          {% for peca in pecas_preview %}
+            {% if peca.imagem_principal %}
+              <img
+                class="peca-slide"
+                src="{{ peca.imagem_principal.imagem.url }}"
+                alt="{{ peca.nome }}"
+                loading="lazy">
+            {% endif %}
+          {% endfor %}
+        </div>
+        <div class="categoria-info">
+          <h3>Produtos em Geral</h3>
+          <p>{{ pecas_count }} itens</p>
+        </div>
+
+      </div>
+    </a>
+
+      <!-- ✅ CATEGORIAS NORMAIS -->
+      {% for categoria in categorias_brinquedos %}
+        <a href="{% url 'categoria_detalhe' categoria.id %}#list" class="categoria-link">
+          <div class="categoria-card">
+
+            {% if categoria.imagem_categoria %}
+              <img src="{{ categoria.imagem_categoria.url }}"
+                   alt="{{ categoria.nome_categoria }}"
+                   loading="lazy">
+            {% else %}
+              <img src="{% static 'images/default_categoria.jpg' %}">
+            {% endif %}
+
+            <div class="categoria-info">
+              <h3>{{ categoria.nome_categoria }}</h3>
+              <p>{{ categoria.total_produtos }} brinquedos</p>
+            </div>
+
+          </div>
+        </a>
+      {% endfor %}
+
+    </div>
+
+    <button class="scroll-btn right" id="scroll-right">&#10095;</button>
+  </div>
+</section>
+
+
+
 <!-- DIVISOR ENTRE SEÇÕES -->
 <div class="section-divider" id="propaganda">
   <div class="rotating-messages">
@@ -2409,6 +2474,75 @@ body {
     <span class="message">Vendemos brinquedos e jogos eletrônicos para todas as idades!</span>
   </div>
 </div>
+
+
+
+<!-- ======= PROMOÇÕES ======= -->
+<section id="promocoes-section" class="promocoes-section">
+  <h2 class="section-title">Promoções</h2>
+    <p class="section-subtitle">
+  Ofertas exclusivas com descontos imperdíveis em brinquedos selecionados. Aproveite antes que acabe!
+</p>
+
+  <div class="scroll-wrapper">
+    <button class="scroll-btn left" id="scroll-left-promocoes">&#10094;</button>
+
+    <div class="scroll-container" id="scroll-container-promocoes">
+      {% for promo in promocoes %}
+      <a href="{% url 'promocao' promo.id %}#promocao-pagina" class="categoria-link">
+        <div class="categoria-card">
+
+          <!-- IMAGEM -->
+          {% if promo.brinquedos.imagem_brinquedo %}
+            <a href="{% url 'promocao' promo.id %}#promocao-pagina">
+                <img src="{{ promo.brinquedos.imagem_brinquedo.url }}" alt="{{ promo.descricao }}"
+                loading="eager"
+                  decoding="async">
+            </a>
+          {% else %}
+            <img src="{% static 'images/default_promocao.jpg' %}" alt="Promoção sem imagem">
+          {% endif %}
+
+          <!-- INFORMACOES -->
+          <div class="categoria-info">
+            <h3>{{ promo.descricao }}</h3>
+
+            <p class="nome-brinquedo">
+              {{ promo.brinquedos.nome_brinquedo }}
+            </p>
+
+             <!-- PREÇOS PROMO -->
+            <div class="preco-box">
+                <p class="preco-original">
+                    De:
+                    <span class="money"
+                          data-valor="{{ promo.brinquedos.valor_brinquedo }}">
+                    </span>
+                </p>
+
+                <p class="preco-promocao">
+                    Por:
+                    <strong class="money"
+                            data-valor="{{ promo.preco_promocao }}">
+                    </strong>
+                </p>
+            </div>
+
+
+            <!-- BOTÃO -->
+            <a href="{% url 'promocao' promo.id %}#promocao-pagina" class="btn-vermais">Ver mais</a>
+
+          </div>
+        </div>
+      </a>
+      {% empty %}
+        <div class="empty-message">Nenhuma promoção disponível.</div>
+      {% endfor %}
+    </div>
+
+    <button class="scroll-btn right" id="scroll-right-promocoes">&#10095;</button>
+  </div>
+</section>
 
 
 <!-- ======= PRODUTOS ======= -->
@@ -2571,137 +2705,6 @@ body {
     </div>
 </section>
 
-
-<!-- ======= CATEGORIAS ======= -->
-<section id="categorias-section" class="categorias-section">
-  <h2 class="section-title">Categorias</h2>
-  <p class="section-subtitle">
-    Encontre o brinquedo ideal para transformar seu espaço em diversão garantida.
-  </p>
-
-  <div class="scroll-wrapper">
-    <button class="scroll-btn left" id="scroll-left">&#10094;</button>
-
-    <div class="scroll-container" id="scroll-container">
-
-          <!-- ⭐ CATEGORIA FIXA PREMIUM -->
-    <a href="{% url 'pecas_reposicao' %}#breadcrumb" class="categoria-link">
-      <div class="categoria-card">
-
-        <div class="pecas-slider premium" id="pecasSlider">
-          {% for peca in pecas_preview %}
-            {% if peca.imagem_principal %}
-              <img
-                class="peca-slide"
-                src="{{ peca.imagem_principal.imagem.url }}"
-                alt="{{ peca.nome }}"
-                loading="lazy">
-            {% endif %}
-          {% endfor %}
-        </div>
-        <div class="categoria-info">
-          <h3>Produtos em Geral</h3>
-          <p>{{ pecas_count }} itens</p>
-        </div>
-
-      </div>
-    </a>
-
-      <!-- ✅ CATEGORIAS NORMAIS -->
-      {% for categoria in categorias_brinquedos %}
-        <a href="{% url 'categoria_detalhe' categoria.id %}#list" class="categoria-link">
-          <div class="categoria-card">
-
-            {% if categoria.imagem_categoria %}
-              <img src="{{ categoria.imagem_categoria.url }}"
-                   alt="{{ categoria.nome_categoria }}"
-                   loading="lazy">
-            {% else %}
-              <img src="{% static 'images/default_categoria.jpg' %}">
-            {% endif %}
-
-            <div class="categoria-info">
-              <h3>{{ categoria.nome_categoria }}</h3>
-              <p>{{ categoria.total_produtos }} brinquedos</p>
-            </div>
-
-          </div>
-        </a>
-      {% endfor %}
-
-    </div>
-
-    <button class="scroll-btn right" id="scroll-right">&#10095;</button>
-  </div>
-</section>
-
-
-<!-- ======= PROMOÇÕES ======= -->
-<section id="promocoes-section" class="promocoes-section">
-  <h2 class="section-title">Promoções</h2>
-    <p class="section-subtitle">
-  Ofertas exclusivas com descontos imperdíveis em brinquedos selecionados. Aproveite antes que acabe!
-</p>
-
-  <div class="scroll-wrapper">
-    <button class="scroll-btn left" id="scroll-left-promocoes">&#10094;</button>
-
-    <div class="scroll-container" id="scroll-container-promocoes">
-      {% for promo in promocoes %}
-      <a href="{% url 'promocao' promo.id %}#promocao-pagina" class="categoria-link">
-        <div class="categoria-card">
-
-          <!-- IMAGEM -->
-          {% if promo.brinquedos.imagem_brinquedo %}
-            <a href="{% url 'promocao' promo.id %}#promocao-pagina">
-                <img src="{{ promo.brinquedos.imagem_brinquedo.url }}" alt="{{ promo.descricao }}"
-                loading="eager"
-                  decoding="async">
-            </a>
-          {% else %}
-            <img src="{% static 'images/default_promocao.jpg' %}" alt="Promoção sem imagem">
-          {% endif %}
-
-          <!-- INFORMACOES -->
-          <div class="categoria-info">
-            <h3>{{ promo.descricao }}</h3>
-
-            <p class="nome-brinquedo">
-              {{ promo.brinquedos.nome_brinquedo }}
-            </p>
-
-             <!-- PREÇOS PROMO -->
-            <div class="preco-box">
-                <p class="preco-original">
-                    De:
-                    <span class="money"
-                          data-valor="{{ promo.brinquedos.valor_brinquedo }}">
-                    </span>
-                </p>
-
-                <p class="preco-promocao">
-                    Por:
-                    <strong class="money"
-                            data-valor="{{ promo.preco_promocao }}">
-                    </strong>
-                </p>
-            </div>
-
-
-            <!-- BOTÃO -->
-            <a href="{% url 'promocao' promo.id %}#promocao-pagina" class="btn-vermais">Ver mais</a>
-
-          </div>
-        </div>
-      </a>
-      {% empty %}
-        <div class="empty-message">Nenhuma promoção disponível.</div>
-      {% endfor %}
-    </div>
-
-    <button class="scroll-btn right" id="scroll-right-promocoes">&#10095;</button>
-  </div>
-</section>
 
 <!-- Div invisível para espaçamento -->
 <div class="espacador"></div>

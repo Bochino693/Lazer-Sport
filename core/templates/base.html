@@ -736,11 +736,11 @@ nav a.btn-login {
 
   <!-- Navegação -->
 <nav id="nav">
-  <a href="{% url 'home' %}#propaganda">Home</a>
-  <a href="{% url 'home' %}#brinquedos">Brinquedos</a>
-  <a href="{% url 'home' %}#manutencao">Manutenção</a>
+  <a href="#image">Home</a>
   <a href="{% url 'home' %}#categorias-section">Categorias</a>
+  <a href="{% url 'home' %}#brinquedos">Brinquedos</a>
   <a href="{% url 'home' %}#promocoes-section">Promoções</a>
+  <a href="{% url 'home' %}#manutencao">Manutenção</a>
   <a href="{% url 'home' %}#pecas">Produtos</a>
   <a href="{% url 'home' %}#combos-section">Combos</a>
   <a href="{% url 'eventos' %}#todos-eventos">Eventos</a>
@@ -756,7 +756,7 @@ nav a.btn-login {
 <div style="width: 100%; background: #f8fbff; border-bottom: 2px solid #004AAD; padding: 15px 0; display: flex; justify-content: center; align-items: center;">
     <div style="display: flex; align-items: center; gap: 20px; flex-wrap: wrap; justify-content: center;">
 
-        <img src="{% static 'images/logoofi.png' %}" alt="Logo Fábrica"
+        <img id="image" src="{% static 'images/logoofi.png' %}" alt="Logo Fábrica"
              style="height: 150px; width: auto; object-fit: contain; max-width: 100%; display: block;">
 
         <div style="display: flex; flex-direction: column; text-align: center;">
