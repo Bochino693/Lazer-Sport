@@ -1295,11 +1295,15 @@ body {
   text-align: center;    /* ✅ centraliza o título */
 }
 
+
+
+
 /* ===== CARROSSEL PROJETOS ===== */
 
 .carousel-container-projetos{
-    position: relative;
-    width: 100%;
+    position:relative;
+    width:100%;
+    padding:0 40px;
 }
 
 .carousel-wrapper-projetos{
@@ -1348,11 +1352,11 @@ body {
 }
 
 .prev{
-    left:-20px;
+    left:10px;
 }
 
 .next{
-    right:-20px;
+    right:10px;
 }
 
 /* RESPONSIVO */
@@ -3733,7 +3737,7 @@ function initCarousel(track) {
 document.addEventListener("DOMContentLoaded", () => {
 
     // Abrir modal ao clicar no item do carrossel
-    document.querySelectorAll(".carousel-item").forEach(item => {
+    document.querySelectorAll(".projeto-card").forEach(item => {
         item.addEventListener("click", () => {
             const modal = document.getElementById(item.dataset.modal);
             modal.style.display = "block";
