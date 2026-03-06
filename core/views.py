@@ -1788,10 +1788,11 @@ def calcular_frete(request):
     except Carrinho.DoesNotExist:
         return JsonResponse({"status": "erro"})
 
-    # calcula frete corretamente
     valor_frete, distancia = calcular_frete_por_cep(cep)
 
-    # salva no banco
+    valor_frete = Decimal(str(valor_frete))
+    distancia = Decimal(str(distancia))
+
     frete, _ = Frete.objects.get_or_create(carrinho=carrinho)
 
     frete.cep = cep
@@ -1802,8 +1803,10 @@ def calcular_frete(request):
     return JsonResponse({
         "status": "ok",
         "frete": float(valor_frete),
-        "distancia": distancia
+        "distancia": float(distancia),
+        "total_final": float(carrinho.total_final)
     })
+
 
 from django.views.decorators.http import require_POST
 

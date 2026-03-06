@@ -668,6 +668,7 @@ class ItemCarrinho(Prime):
 
 from django.db import transaction
 
+
 class Frete(Prime):
 
     carrinho = models.OneToOneField(
