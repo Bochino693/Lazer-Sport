@@ -102,26 +102,31 @@ def distancia_km(lat1, lon1, lat2, lon2):
 
 def calcular_frete_por_cep(cep_cliente):
 
-    logger.info(f"[FRETE] Calculando frete para CEP {cep_cliente}")
+    print("CEP CLIENTE:", cep_cliente)
 
     endereco_empresa = buscar_endereco(CEP_EMPRESA)
     endereco_cliente = buscar_endereco(cep_cliente)
 
+    print("EMPRESA:", endereco_empresa)
+    print("CLIENTE:", endereco_cliente)
+
     if not endereco_empresa or not endereco_cliente:
-        logger.error("[FRETE] Não foi possível obter endereços")
+        print("ERRO ENDEREÇO")
         return 0, 0
 
     lat1, lon1 = buscar_coordenadas(endereco_empresa)
     lat2, lon2 = buscar_coordenadas(endereco_cliente)
 
+    print("COORD EMPRESA:", lat1, lon1)
+    print("COORD CLIENTE:", lat2, lon2)
+
     distancia = distancia_km(lat1, lon1, lat2, lon2)
+
+    print("DISTANCIA:", distancia)
 
     valor_frete = round(distancia * VALOR_KM, 2)
 
-    logger.info(
-        f"[FRETE] Resultado -> {distancia:.2f} km | Frete R$ {valor_frete:.2f}"
-    )
+    print("FRETE:", valor_frete)
 
     return valor_frete, distancia
-
 
