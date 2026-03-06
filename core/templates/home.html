@@ -1294,110 +1294,122 @@ body {
   font-weight: 700;
   text-align: center;    /* ✅ centraliza o título */
 }
+/* ===== PROJETOS CAROUSEL ===== */
 
-/* ======== ÁREA DO CARROSSEL ======== */
-.carousel {
-  display: flex;
-  gap: 25px;
-  overflow: hidden;
-  scroll-behavior: smooth;
-  padding: 10px 0;
-  justify-content: center;
+.carousel-container-projetos{
+    position:relative;
+    width:100%;
+    margin-top:40px;
 }
 
-/* ======== PADRONIZAÇÃO DOS CARDS DE EVENTOS E PROJETOS ======== */
-
-/* Item do carrossel seguindo o padrão do card-produto */
-.carousel-item {
-    min-width: 340px;
-    background: white;
-    border-radius: 20px;
-    padding: 18px;
-    box-shadow: 0 6px 20px rgba(0,0,0,0.08);
-    transition: transform .32s ease, box-shadow .32s ease;
-    overflow: hidden;
-    cursor: pointer;
-    animation: fadeCard .6s ease forwards;
+.carousel-wrapper-projetos{
+    overflow:hidden;
+    width:100%;
 }
 
-#carousel-projetos .carousel-item{
-  min-width: unset;
+/* track */
+
+.carousel-projetos-track{
+    display:flex;
+    gap:25px;
+    transition:transform .5s ease;
 }
 
-/* Hover igual ao card-produto */
-.carousel-item:hover {
-    transform: translateY(-10px) scale(1.02);
-    box-shadow: 0 12px 28px rgba(0,0,0,0.15);
+/* ===== CARD ===== */
+
+.projeto-card{
+    flex:0 0 calc(33.333% - 17px);
+    background:white;
+    border-radius:12px;
+    overflow:hidden;
+    box-shadow:0 6px 18px rgba(0,0,0,0.08);
+    cursor:pointer;
+    transition:.3s;
 }
 
-/* Imagem → zoom igual */
-.carousel-image {
-    height: 220px;
-    overflow: hidden;
-    border-radius: 16px;
+.projeto-card:hover{
+    transform:translateY(-5px);
 }
 
-.carousel-image img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    transition: transform .4s ease;
+/* imagem */
+
+.carousel-image img{
+    width:100%;
+    height:220px;
+    object-fit:cover;
 }
 
-.carousel-item:hover .carousel-image img {
-    transform: scale(1.08);
+/* info */
+
+.carousel-info{
+    padding:18px;
 }
 
-/* Títulos */
-.carousel-info h3 {
-    font-size: 1.3rem;
-    margin: 14px 0 6px;
-    font-weight: 700;
-    color: #1f2d3d;
+.carousel-info h3{
+    font-size:18px;
+    margin-bottom:8px;
+    color:#222;
 }
 
-/* Texto */
-.carousel-info p {
-    color: #555;
-    font-size: 0.95rem;
-    min-height: 48px;
+.carousel-info p{
+    font-size:14px;
+    color:#666;
+    line-height:1.4;
 }
 
-/* ======== BOTÕES DO CARROSSEL ======== */
-.carousel-btn {
-  background: #004AAD;
-  color: white;
-  border: none;
-  padding: 14px;
-  border-radius: 50%;
-  cursor: pointer;
-  font-size: 24px;
+/* ===== SETAS ===== */
 
-  position: relative;
-  top: -260px;               /* 🔥 move mais para cima */
-  transition: background .3s, transform .3s;
-
-  box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+.carousel-btn{
+    position:absolute;
+    top:50%;
+    transform:translateY(-50%);
+    width:44px;
+    height:44px;
+    border:none;
+    border-radius:50%;
+    background:#004AAD;
+    color:white;
+    font-size:20px;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    box-shadow:0 4px 10px rgba(0,0,0,0.2);
+    z-index:10;
 }
 
-.carousel-btn:hover {
-  background: #003b82;
-  transform: scale(1.08);
+.carousel-btn:hover{
+    background:#00357c;
 }
 
-.carousel-btn.left {
-  float: left;
-  margin-left: 20px;
+.carousel-btn.prev{
+    left:-22px;
 }
 
-.carousel-btn.right {
-  float: right;
-  margin-right: 20px;
+.carousel-btn.next{
+    right:-22px;
 }
 
- .categoria-link {
-    text-decoration: none;
-    color: inherit;
+/* ===== RESPONSIVO ===== */
+
+@media(max-width:900px){
+
+.projeto-card{
+    flex:0 0 calc(50% - 13px);
+}
+
+}
+
+@media(max-width:600px){
+
+.projeto-card{
+    flex:0 0 100%;
+}
+
+.carousel-btn{
+    display:none;
+}
+
 }
 
 /* =========================================================
@@ -1661,7 +1673,6 @@ body {
 }
 
 /* botões */
-
 .carousel-container-projetos .carousel-btn{
   position:absolute;
   top:50%;
@@ -3068,9 +3079,9 @@ body {
 <!-- Div invisível para espaçamento -->
 <div class="espacador"></div>
 
-
 <!-- ======= PROJETOS ======= -->
 <section id="projetos" class="eventos-section">
+
     <div class="projetos-header">
         <h2 class="titulo-eventos">Projetos Realizados</h2>
         <a href="{% url 'projetos' %}" class="ver-todos-eventos">Ver todos os projetos →</a>
@@ -3087,10 +3098,11 @@ body {
         <button class="carousel-btn prev" id="prevProjetos">❮</button>
 
         <div class="carousel-wrapper-projetos">
-            <div class="carousel" id="carousel-projetos">
+
+            <div class="carousel-projetos-track" id="carousel-projetos">
 
                 {% for projeto in projetos %}
-                <div class="carousel-item" data-modal="modal-projeto-{{ projeto.id }}">
+                <div class="projeto-card" data-modal="modal-projeto-{{ projeto.id }}">
 
                     <div class="carousel-image">
                         {% if projeto.brinquedo_projetado and projeto.brinquedo_projetado.imagens_brinquedo_projeto.first %}
