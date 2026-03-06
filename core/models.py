@@ -467,10 +467,9 @@ class ImagemProjetoBrinquedo(Prime):
     brinquedo = models.ForeignKey(
         BrinquedosProjeto,
         on_delete=models.CASCADE,
-        related_name='imagens_brinquedo_projeto',
-        storage=MediaCloudinaryStorage()
+        related_name='imagens_brinquedo_projeto'
     )
-    imagem = models.ImageField(upload_to='projetos/')
+    imagem = models.ImageField(upload_to='projetos/', storage=MediaCloudinaryStorage())
     legenda = models.CharField(max_length=255, blank=True, null=True)
 
     def __str__(self):
