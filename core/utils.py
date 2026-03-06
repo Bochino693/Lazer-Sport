@@ -23,7 +23,12 @@ def buscar_endereco(cep):
             logger.error(f"[FRETE] CEP não encontrado no ViaCEP: {cep}")
             return None
 
-        endereco = f"{data.get('localidade')}, {data.get('uf')}, Brazil"
+        logradouro = data.get("logradouro") or ""
+        bairro = data.get("bairro") or ""
+        cidade = data.get("localidade") or ""
+        estado = data.get("uf") or ""
+
+        endereco = f"{logradouro}, {bairro}, {cidade}, {estado}, Brazil"
 
         logger.info(f"[FRETE] Endereço encontrado: {endereco}")
 
