@@ -1627,22 +1627,25 @@ body {
 }
 
 .carousel-wrapper-projetos{
-    overflow:hidden;
-    width:100%;
+    overflow: hidden;
+    width: 100%;
 }
 
 #carousel-projetos{
-    display:flex;
-    transition: transform .5s ease;
+    display: flex;
+    gap: 20px;
+    transition: transform 0.5s ease;
+    width: 100%;
 }
 
 /* cards */
-
 #carousel-projetos .carousel-item{
-    flex:0 0 33.3333%;
-    padding:12px;
-    box-sizing:border-box;
+    flex: 0 0 calc((100% - 40px) / 3);
+    max-width: calc((100% - 40px) / 3);
+    box-sizing: border-box;
+    min-width: unset;
 }
+
 
 /* imagem */
 
