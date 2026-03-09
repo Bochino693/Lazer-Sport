@@ -1887,32 +1887,46 @@ def aplicar_cupom(request):
     })
 
 
-
 class PaymentView(LoginRequiredMixin, View):
 
     def get(self, request, carrinho_id):
-
         carrinho = get_object_or_404(Carrinho, id=carrinho_id)
 
-        # segurança
+        # Segurança: o carrinho pertence ao usuário
         if carrinho.cliente and carrinho.cliente.user != request.user:
             return redirect('home')
 
         itens = carrinho.itens.select_related('content_type').all()
-
         if not itens.exists():
             return redirect('carrinho')
 
-        valor_frete = carrinho.valor_frete
+        # ==========================
+        # 🔹 CRIAR OU ATUALIZAR FRETE
+        # ==========================
+        # Se o carrinho for do tipo 'frete', garante que exista um objeto de Frete
+        if carrinho.tipo_envio == 'frete':
+            frete, created = Frete.objects.get_or_create(
+                carrinho=carrinho,
+                defaults={
+                    'valor': Decimal("0.00"),
+                    'cep': '',
+                    'rua': '',
+                    'bairro': '',
+                    'cidade': '',
+                    'estado': '',
+                    'numero': '',
+                }
+            )
+        else:
+            frete = None  # não precisa criar se for retirada
 
-        somente_pix = (
-            not request.user.is_authenticated or not itens.exists()
-        )
+        valor_frete = frete.valor if frete else Decimal("0.00")
+
+        somente_pix = not request.user.is_authenticated or not itens.exists()
 
         context = {
             'carrinho': carrinho,
             'itens': itens,
-
             'carrinho_vazio': not itens.exists(),
 
             'total_bruto': carrinho.total_bruto,
@@ -1926,7 +1940,6 @@ class PaymentView(LoginRequiredMixin, View):
             'total_final': carrinho.total_final,
 
             'total_itens': itens.count(),
-
             'somente_pix': somente_pix,
         }
 
