@@ -2434,21 +2434,12 @@ def atualizar_tipo_envio(request, carrinho_id):
 
 
 
-
-from django.http import JsonResponse
-from django.views import View
-from .models import Pedido
-
-from django.http import JsonResponse
-from django.views import View
-from .models import Pedido
-
 class PedidosParaImpressaoAPI(View):
     def get(self, request):
         pedidos = (
             Pedido.objects
             .filter(impresso=False)
-            .select_related("cliente__user", "carrinho_origem__frete")
+            .select_related("cliente__user", "carrinho_origem__cliente__user", "carrinho_origem__frete")
             .prefetch_related("itens")
             .order_by("criacao")
         )
@@ -2487,12 +2478,21 @@ class PedidosParaImpressaoAPI(View):
                     "preco": float(getattr(item, "preco_unitario", 0) or 0),
                 })
 
-            # Cliente
+            # Cliente: tenta pegar do pedido, senão do carrinho, senão N/A
             cliente = pedido.cliente
+            if not cliente and pedido.carrinho_origem:
+                cliente = getattr(pedido.carrinho_origem, "cliente", None)
+
+            nome_cliente = getattr(cliente, "nome_completo", None) or (
+                getattr(getattr(cliente, "user", None), "username", "N/A")
+            )
+
+            telefone_cliente = getattr(cliente, "telefone", "N/A")
+
             data.append({
                 "id": pedido.id,
-                "cliente": getattr(cliente, "nome_completo", "N/A") if cliente else "N/A",
-                "telefone": getattr(cliente, "telefone", "N/A") if cliente else "N/A",
+                "cliente": nome_cliente,
+                "telefone": telefone_cliente,
                 "total": float(getattr(pedido, "total_liquido", 0) or 0),
                 "frete_valor": float(getattr(pedido, "valor_frete", 0) or 0),
                 "tipo_envio": getattr(getattr(pedido, "carrinho_origem", None), "tipo_envio", "frete"),
@@ -2502,7 +2502,6 @@ class PedidosParaImpressaoAPI(View):
             })
 
         return JsonResponse({"pedidos": data})
-
 
 
 class MarcarPedidoImpressoAPI(View):
