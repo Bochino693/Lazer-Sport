@@ -1751,21 +1751,7 @@ class CarrinhoView(LoginRequiredMixin, View):
 
         return render(request, 'carrinho.html', context)
 
-import logging
-from .models import Frete
-from .utils import calcular_frete_por_cep
-import json
-import logging
-from django.http import JsonResponse
-from django.views.decorators.http import require_POST
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-import json
-from decimal import Decimal
 
-from .utils import calcular_frete_por_cep, buscar_coordenadas
-
-from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 import json
 from .models import Carrinho, Frete

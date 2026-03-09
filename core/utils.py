@@ -48,7 +48,8 @@ def buscar_coordenadas(endereco):
         url = "https://nominatim.openstreetmap.org/search"
 
         params = {
-            "q": endereco,
+            "postalcode": endereco,
+            "country": "Brazil",
             "format": "json",
             "limit": 1
         }
