@@ -24,7 +24,8 @@ from .models import (
     ComboClick,
     PecasReposicao,
     ImagemPeca,
-    CategoriaPeca
+    CategoriaPeca,
+    Frete
 )
 from django.utils.html import format_html
 from .models import ImagensSite
@@ -123,6 +124,56 @@ class PecasReposicaoAdmin(admin.ModelAdmin):
         return ", ".join([c.nome_categoria_peca for c in obj.categoria_peca.all()])
 
     mostrar_categorias.short_description = "Categorias"
+
+
+@admin.register(Frete)
+class FreteAdmin(admin.ModelAdmin):
+    # Colunas que aparecerão na listagem
+    list_display = (
+        'get_carrinho_id',
+        'get_cliente',
+        'cidade',
+        'bairro',
+        'valor',
+        'distancia_km',
+        'tempo_estimado_min'
+    )
+
+    # Filtros laterais para facilitar a navegação
+    list_filter = ('estado', 'cidade', 'bairro')
+
+    # Campos de busca (CEP, Rua, Bairro e Nome do Usuário do Carrinho)
+    search_fields = (
+        'cep',
+        'rua',
+        'bairro',
+        'carrinho__cliente__user__username',
+        'carrinho__id'
+    )
+
+    # Organização dos campos dentro do formulário de edição
+    fieldsets = (
+        ('Vínculo', {
+            'fields': ('carrinho',)
+        }),
+        ('Endereço Completo', {
+            'fields': (('cep', 'numero'), 'rua', 'bairro', ('cidade', 'estado'))
+        }),
+        ('Logística e Valores', {
+            'fields': (('valor', 'distancia_km', 'tempo_estimado_min'),)
+        }),
+    )
+
+    # Métodos para exibir informações do Carrinho na listagem
+    @admin.display(ordering='carrinho__id', description='Carrinho #')
+    def get_carrinho_id(self, obj):
+        return f"#{obj.carrinho.id}" if obj.carrinho else "-"
+
+    @admin.display(description='Cliente')
+    def get_cliente(self, obj):
+        if obj.carrinho and obj.carrinho.cliente:
+            return obj.carrinho.cliente.user.username
+        return "Sem cliente"
 
 
 @admin.register(BrinquedoClick)
