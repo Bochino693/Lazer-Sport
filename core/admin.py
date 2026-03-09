@@ -73,6 +73,7 @@ class CategoriaPecaAdmin(admin.ModelAdmin):
 @admin.register(PecasReposicao)
 class PecasReposicaoAdmin(admin.ModelAdmin):
     list_display = (
+        "ativo",
         "id",
         "nome",
         "preco_venda",
