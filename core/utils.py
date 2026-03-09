@@ -3,6 +3,7 @@ import math
 import logging
 
 logger = logging.getLogger(__name__)
+from functools import lru_cache
 
 CEP_EMPRESA = "02679-110"
 VALOR_KM = 3.50
@@ -43,18 +44,20 @@ def buscar_endereco(cep):
 
         return None
 
-
+@lru_cache(maxsize=1000)
 def buscar_coordenadas(cep):
 
     try:
 
-        cep_limpo = cep.replace("-", "")
+        endereco = buscar_endereco(cep)
+
+        if not endereco:
+            return None, None
 
         url = "https://nominatim.openstreetmap.org/search"
 
         params = {
-            "postalcode": cep_limpo,
-            "country": "Brazil",
+            "q": endereco,
             "format": "json",
             "limit": 1
         }
@@ -68,20 +71,19 @@ def buscar_coordenadas(cep):
         data = r.json()
 
         if not data:
-            logger.error(f"[FRETE] Coordenadas não encontradas para CEP: {cep}")
+            logger.error(f"[FRETE] Coordenadas não encontradas para endereço: {endereco}")
             return None, None
 
         lat = float(data[0]["lat"])
         lon = float(data[0]["lon"])
 
-        logger.info(f"[FRETE] Coordenadas CEP {cep}: {lat}, {lon}")
+        logger.info(f"[FRETE] Coordenadas {cep}: {lat}, {lon}")
 
         return lat, lon
 
     except Exception as e:
         logger.error(f"[FRETE] Erro ao buscar coordenadas: {e}")
         return None, None
-
 
 def distancia_km(lat1, lon1, lat2, lon2):
 
