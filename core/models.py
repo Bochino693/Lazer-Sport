@@ -237,7 +237,7 @@ class Brinquedos(Prime):
     @property
     def dimensoes_m(self):
         if self.altura_m and self.largura_m and self.profundidade_m:
-            return f"{self.altura_m}m x {self.largura_m}m x {self.profundidade_m}m"
+            return f"Altura{self.altura_m}m x Largura{self.largura_m}m x Profundidade{self.profundidade_m}m"
         return None
 
     # Volume em metros cúbicos
