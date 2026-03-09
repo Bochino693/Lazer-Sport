@@ -2401,7 +2401,6 @@ from django.http import JsonResponse
 from django.views import View
 from .models import Pedido
 
-
 class PedidosParaImpressaoAPI(View):
 
     def get(self, request):
@@ -2409,13 +2408,24 @@ class PedidosParaImpressaoAPI(View):
         pedidos = (
             Pedido.objects
             .filter(impresso=False)
-            .select_related("cliente")
+            .select_related("cliente", "carrinho_origem")
+            .prefetch_related("itens")
             .order_by("criacao")
         )
 
         data = []
 
         for pedido in pedidos:
+
+            itens = []
+
+            for item in pedido.itens.all():
+                itens.append({
+                    "nome": item.nome_item,
+                    "quantidade": item.quantidade,
+                    "preco": float(item.preco_unitario),
+                    "subtotal": float(item.subtotal)
+                })
 
             data.append({
                 "id": pedido.id,
@@ -2429,7 +2439,8 @@ class PedidosParaImpressaoAPI(View):
                 "frete": float(pedido.valor_frete or 0),
                 "tipo_envio": pedido.carrinho_origem.tipo_envio if pedido.carrinho_origem else "",
                 "forma_pagamento": pedido.forma_pagamento,
-                "data": pedido.criacao.strftime("%d/%m/%Y %H:%M") if pedido.criacao else ""
+                "data": pedido.criacao.strftime("%d/%m/%Y %H:%M") if pedido.criacao else "",
+                "itens": itens
             })
 
         return JsonResponse({
