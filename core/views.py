@@ -2393,3 +2393,63 @@ def redirecionar_categoria_brinquedos(request):
 
 def redirecionar_categoria_aventura(request):
     return redirect(reverse('categoria_detalhe', args=[12]))
+
+
+
+
+from django.http import JsonResponse
+from django.views import View
+from .models import Pedido
+
+
+class PedidosParaImpressaoAPI(View):
+
+    def get(self, request):
+
+        pedidos = (
+            Pedido.objects
+            .filter(impresso=False)
+            .select_related("cliente")
+            .order_by("created_at")
+        )
+
+        data = []
+
+        for pedido in pedidos:
+
+            data.append({
+                "id": pedido.id,
+                "cliente": (
+                    pedido.cliente.user.username
+                    if pedido.cliente and pedido.cliente.user
+                    else "Cliente"
+                ),
+                "status": pedido.status,
+                "total": float(pedido.total_liquido or 0),
+                "frete": float(pedido.valor_frete or 0),
+                "forma_pagamento": pedido.forma_pagamento,
+                "data": pedido.created_at.strftime("%d/%m/%Y %H:%M")
+            })
+
+        return JsonResponse({
+            "pedidos": data
+        })
+
+
+
+
+class MarcarPedidoImpressoAPI(View):
+
+    def post(self, request, pedido_id):
+
+        try:
+
+            pedido = Pedido.objects.get(id=pedido_id)
+
+            pedido.impresso = True
+            pedido.save(update_fields=["impresso"])
+
+            return JsonResponse({"ok": True})
+
+        except Pedido.DoesNotExist:
+            return JsonResponse({"erro": "Pedido não encontrado"}, status=404)

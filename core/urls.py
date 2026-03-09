@@ -2,10 +2,10 @@ from django.urls import path
 from .views import (HomeView, BrinquedoInfoView, CategoriasInfoView, BrinquedosView, webhook_mercadopago,
                     RegistrarView, LoginUsuarioView, LogoutUsuarioView, EventosView, verificar_pagamento,
                     ProjetosView, ClientePerfilView, ComboInfoView, PromocaoInfoView, calcular_frete,
-                    BrinquedoAdmin, NovaCategoria, NovaTag, ComboListView, ComboCreateView,
+                    BrinquedoAdmin, NovaCategoria, NovaTag, ComboListView, ComboCreateView, PedidosParaImpressaoAPI,
                     ComboUpdateView, ComboDeleteView, CupomAdminView, ProjetoAdminView, EstabelecimentoInfoView,
                     EstabelecimentosListView, ManutencaoView, PromocaoAdminView, PromocaoDeleteView,
-                    adicionar_ao_carrinho, CarrinhoView, aplicar_cupom, remover_item_carrinho,
+                    adicionar_ao_carrinho, CarrinhoView, aplicar_cupom, remover_item_carrinho, MarcarPedidoImpressoAPI,
                     limpar_carrinho, cancelar_manutencao, alterar_quantidade_item, gerar_pix,
                     PaymentView, MeusPedidosView, criar_pedido_pix, PaymentFinallyView, processar_cartao,
                     EventoAdminView, BannerAdminView, BannerDeleteView, AdminLoginView, AcessoNegadoView,
@@ -136,4 +136,18 @@ urlpatterns = [
     path("registrar/", RegistrarView.as_view(), name="registrar"),
 
     path('acesso-negado/', AcessoNegadoView.as_view(), name='acesso_negado'),
+
+    #API V1
+
+    path(
+        "api/v1/pedidos-impressao/",
+        PedidosParaImpressaoAPI.as_view(),
+        name="api_pedidos_impressao"
+    ),
+
+path(
+    "api/v1/pedido-impresso/<int:pedido_id>/",
+    MarcarPedidoImpressoAPI.as_view()
+),
+
 ]
