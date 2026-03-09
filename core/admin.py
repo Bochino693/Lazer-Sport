@@ -80,22 +80,36 @@ class PecasReposicaoAdmin(admin.ModelAdmin):
         "preco_fornecedor",
         "mostrar_categorias",
     )
-    list_display_links = ("id", "nome")
-    search_fields = ("nome", "descricao_peca")
-    list_filter = ("categoria_peca",)  # ⭐ filtro por categoria
 
-    filter_horizontal = ("categoria_peca",)  # ⭐ UI melhor para ManyToMany
+    list_display_links = ("id", "nome")
+
+    # ⭐ permite marcar/desmarcar ativo direto na lista
+    list_editable = ("ativo",)
+
+    search_fields = ("nome", "descricao_peca")
+
+    list_filter = (
+        "ativo",          # ⭐ filtro por ativo/inativo
+        "categoria_peca",
+    )
+
+    filter_horizontal = ("categoria_peca",)
 
     inlines = [ImagemPecaInline]
 
     fieldsets = (
+        ("Status", {
+            "fields": ("ativo",)  # ⭐ campo agora aparece no formulário
+        }),
+
         ("Informações da Peça", {
             "fields": (
                 "nome",
                 "descricao_peca",
-                "categoria_peca",  # ⭐ AQUI estava faltando
+                "categoria_peca",
             )
         }),
+
         ("Valores", {
             "fields": (
                 "preco_venda",
@@ -107,6 +121,7 @@ class PecasReposicaoAdmin(admin.ModelAdmin):
     # ⭐ mostra categorias na lista
     def mostrar_categorias(self, obj):
         return ", ".join([c.nome_categoria_peca for c in obj.categoria_peca.all()])
+
     mostrar_categorias.short_description = "Categorias"
 
 
