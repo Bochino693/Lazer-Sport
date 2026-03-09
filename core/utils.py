@@ -7,6 +7,9 @@ logger = logging.getLogger(__name__)
 CEP_EMPRESA = "02679-110"
 VALOR_KM = 3.50
 
+LAT_EMPRESA = -23.459889
+LON_EMPRESA = -46.689654
+
 
 def buscar_endereco(cep):
 
@@ -106,11 +109,14 @@ def distancia_km(lat1, lon1, lat2, lon2):
 
     return distancia
 
+
 def calcular_frete_por_cep(cep_cliente):
 
     print("CEP CLIENTE:", cep_cliente)
 
-    lat1, lon1 = buscar_coordenadas(CEP_EMPRESA)
+    lat1 = LAT_EMPRESA
+    lon1 = LON_EMPRESA
+
     lat2, lon2 = buscar_coordenadas(cep_cliente)
 
     print("COORD EMPRESA:", lat1, lon1)
