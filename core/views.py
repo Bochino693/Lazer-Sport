@@ -2395,58 +2395,82 @@ def redirecionar_categoria_aventura(request):
     return redirect(reverse('categoria_detalhe', args=[12]))
 
 
+# views.py
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.shortcuts import get_object_or_404
+import json
+
+@csrf_exempt
+def atualizar_tipo_envio(request, carrinho_id):
+    if request.method == "POST":
+        carrinho = get_object_or_404(Carrinho, id=carrinho_id)
+        data = json.loads(request.body)
+        tipo = data.get("tipo_envio")
+
+        if tipo in dict(Carrinho.TIPO_ENVIO):
+            carrinho.tipo_envio = tipo
+            carrinho.save(update_fields=["tipo_envio"])
+            # Se for retirada, remove frete existente
+            if tipo == "retirada" and hasattr(carrinho, "frete"):
+                carrinho.frete.delete()
+            return JsonResponse({"status": "ok"})
+        return JsonResponse({"status": "erro", "message": "Tipo inválido"})
+
+
 
 
 from django.http import JsonResponse
 from django.views import View
 from .models import Pedido
 
+from django.http import JsonResponse
+from django.views import View
+from .models import Pedido
+
 class PedidosParaImpressaoAPI(View):
-
     def get(self, request):
-
         pedidos = (
             Pedido.objects
             .filter(impresso=False)
-            .select_related("cliente", "carrinho_origem")
+            .select_related("cliente__user", "carrinho_origem__frete")
             .prefetch_related("itens")
             .order_by("criacao")
         )
 
         data = []
-
         for pedido in pedidos:
+            # Captura endereço se existir frete
+            endereco_data = None
+            if pedido.carrinho_origem and hasattr(pedido.carrinho_origem, 'frete'):
+                f = pedido.carrinho_origem.frete
+                endereco_data = {
+                    "rua": f.rua,
+                    "numero": f.numero,
+                    "bairro": f.bairro,
+                    "cidade": f.cidade,
+                    "cep": f.cep
+                }
 
-            itens = []
-
-            for item in pedido.itens.all():
-                itens.append({
-                    "nome": item.nome_item,
-                    "quantidade": item.quantidade,
-                    "preco": float(item.preco_unitario),
-                    "subtotal": float(item.subtotal)
-                })
+            itens = [{
+                "nome": item.item.__str__(), # Usando o str do GenericForeignKey
+                "quantidade": item.quantidade,
+                "preco": float(item.preco_unitario),
+            } for item in pedido.itens.all()]
 
             data.append({
                 "id": pedido.id,
-                "cliente": (
-                    pedido.cliente.user.username
-                    if pedido.cliente and pedido.cliente.user
-                    else "Cliente"
-                ),
-                "status": pedido.status,
+                "cliente": pedido.cliente.nome_completo if pedido.cliente else "N/A",
+                "telefone": pedido.cliente.telefone if pedido.cliente else "N/A",
                 "total": float(pedido.total_liquido or 0),
-                "frete": float(pedido.valor_frete or 0),
-                "tipo_envio": pedido.carrinho_origem.tipo_envio if pedido.carrinho_origem else "",
-                "forma_pagamento": pedido.forma_pagamento,
-                "data": pedido.criacao.strftime("%d/%m/%Y %H:%M") if pedido.criacao else "",
+                "frete_valor": float(pedido.valor_frete or 0),
+                "tipo_envio": pedido.carrinho_origem.tipo_envio if pedido.carrinho_origem else "frete",
+                "forma_pagamento": pedido.get_forma_pagamento_display() if pedido.forma_pagamento else "N/A",
+                "endereco": endereco_data,
                 "itens": itens
             })
 
-        return JsonResponse({
-            "pedidos": data
-        })
-
+        return JsonResponse({"pedidos": data})
 
 
 
@@ -2465,3 +2489,6 @@ class MarcarPedidoImpressoAPI(View):
 
         except Pedido.DoesNotExist:
             return JsonResponse({"erro": "Pedido não encontrado"}, status=404)
+
+
+

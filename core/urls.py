@@ -6,7 +6,7 @@ from .views import (HomeView, BrinquedoInfoView, CategoriasInfoView, BrinquedosV
                     ComboUpdateView, ComboDeleteView, CupomAdminView, ProjetoAdminView, EstabelecimentoInfoView,
                     EstabelecimentosListView, ManutencaoView, PromocaoAdminView, PromocaoDeleteView,
                     adicionar_ao_carrinho, CarrinhoView, aplicar_cupom, remover_item_carrinho, MarcarPedidoImpressoAPI,
-                    limpar_carrinho, cancelar_manutencao, alterar_quantidade_item, gerar_pix,
+                    limpar_carrinho, cancelar_manutencao, alterar_quantidade_item, gerar_pix, atualizar_tipo_envio,
                     PaymentView, MeusPedidosView, criar_pedido_pix, PaymentFinallyView, processar_cartao,
                     EventoAdminView, BannerAdminView, BannerDeleteView, AdminLoginView, AcessoNegadoView,
                     DashboardAdminView, UserAdminView, ManutencaoAdminView, RelatorioVendasView, PedidoAdminView,
@@ -136,6 +136,8 @@ urlpatterns = [
     path("registrar/", RegistrarView.as_view(), name="registrar"),
 
     path('acesso-negado/', AcessoNegadoView.as_view(), name='acesso_negado'),
+
+    path('carrinho/<int:carrinho_id>/tipo-envio/', atualizar_tipo_envio, name='atualizar_tipo_envio'),
 
     #API V1
 

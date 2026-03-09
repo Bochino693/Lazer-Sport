@@ -1363,11 +1363,9 @@ function calcularFrete() {
         }
     }
 });
-
 document.querySelectorAll('.frete-tab').forEach(tab => {
-
     tab.addEventListener('click', () => {
-
+        // Remove classe active de todas
         document.querySelectorAll('.frete-tab').forEach(t => t.classList.remove('active'));
         tab.classList.add('active');
 
@@ -1393,24 +1391,42 @@ document.querySelectorAll('.frete-tab').forEach(tab => {
         );
 
         if (tipo === 'retirada') {
-
+            // Zera frete no frontend
             linhaFrete.style.display = 'none';
             valorFrete.innerText = 'R$ 0,00';
-
             const totalFormatado =
-                "R$ " + valorProdutos.toLocaleString("pt-BR", {
-                    minimumFractionDigits: 2
-                });
-
+                "R$ " + valorProdutos.toLocaleString("pt-BR", { minimumFractionDigits: 2 });
             totalPedido.innerText = totalFormatado;
+            if (subtotalFixo) subtotalFixo.innerText = totalFormatado;
 
-            if (subtotalFixo) {
-                subtotalFixo.innerText = totalFormatado;
-            }
+            // Atualiza o tipo_envio no backend
+            fetch("{% url 'atualizar_tipo_envio' carrinho.id %}", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": "{{ csrf_token }}"
+                },
+                body: JSON.stringify({ tipo_envio: 'retirada' })
+            });
+
+        } else {
+            // Tipo frete
+            fetch("{% url 'atualizar_tipo_envio' carrinho.id %}", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": "{{ csrf_token }}"
+                },
+                body: JSON.stringify({ tipo_envio: 'frete' })
+            });
+
+            // Recalcula frete se já tiver CEP
+            const cep = document.getElementById('cepInput').value.replace(/\D/g, '');
+            if (cep.length === 8) calcularFrete();
         }
 
+        atualizarBotaoFinalizar();
     });
-
 });
 
 </script>

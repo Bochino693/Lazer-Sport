@@ -44,11 +44,6 @@ class EnderecoEmpresa(Prime):
         return f"{self.nome} - {self.cidade}/{self.estado}"
 
 
-from django.db import models
-from django.db.models import F, UniqueConstraint
-from django.contrib.auth.models import User
-from django.core.exceptions import ValidationError
-
 import re
 from django.core.exceptions import ValidationError
 from django.db import models
