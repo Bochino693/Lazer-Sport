@@ -2440,23 +2440,30 @@ class PedidosParaImpressaoAPI(View):
 
         data = []
         for pedido in pedidos:
-            # Captura endereço se existir frete
             endereco_data = None
-            if pedido.carrinho_origem and hasattr(pedido.carrinho_origem, 'frete'):
-                f = pedido.carrinho_origem.frete
-                endereco_data = {
-                    "rua": f.rua,
-                    "numero": f.numero,
-                    "bairro": f.bairro,
-                    "cidade": f.cidade,
-                    "cep": f.cep
-                }
+            if pedido.carrinho_origem:
+                frete_obj = getattr(pedido.carrinho_origem, "frete", None)
+                if frete_obj:
+                    endereco_data = {
+                        "rua": frete_obj.rua,
+                        "numero": frete_obj.numero,
+                        "bairro": frete_obj.bairro,
+                        "cidade": frete_obj.cidade,
+                        "cep": frete_obj.cep
+                    }
 
-            itens = [{
-                "nome": item.item.__str__(), # Usando o str do GenericForeignKey
-                "quantidade": item.quantidade,
-                "preco": float(item.preco_unitario),
-            } for item in pedido.itens.all()]
+            itens = []
+            for item in pedido.itens.all():
+                try:
+                    nome_item = str(item.item) if item.item else getattr(item, "nome_item", "Item desconhecido")
+                except:
+                    nome_item = "Item desconhecido"
+
+                itens.append({
+                    "nome": nome_item,
+                    "quantidade": item.quantidade,
+                    "preco": float(item.preco_unitario or 0),
+                })
 
             data.append({
                 "id": pedido.id,
