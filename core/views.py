@@ -1916,7 +1916,7 @@ class PaymentView(LoginRequiredMixin, View):
             'total_bruto': carrinho.total_bruto,
             'valor_desconto': carrinho.valor_desconto,
 
-            'frete': valor_frete,
+            'frete': carrinho.valor_frete,
 
             'total_liquido': carrinho.total_liquido,
 

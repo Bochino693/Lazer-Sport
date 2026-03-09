@@ -546,18 +546,30 @@
         {% endfor %}
     </div>
 
-    <div class="resumo-totais">
-        <div>
-            <span>Subtotal</span>
-            <span>R$ {{ total_bruto|floatformat:2 }}</span>
-        </div>
+<div class="resumo-totais">
 
-        {% if valor_desconto > 0 %}
-        <div class="desconto">
-            <span>Desconto</span>
-            <span>- R$ {{ valor_desconto|floatformat:2 }}</span>
-        </div>
-        {% endif %}
+    <div>
+        <span>Subtotal</span>
+        <span>R$ {{ total_bruto|floatformat:2 }}</span>
+    </div>
+
+    {% if frete > 0 %}
+    <div>
+        <span>Frete</span>
+        <span>R$ {{ frete|floatformat:2 }}</span>
+    </div>
+    {% endif %}
+
+    {% if valor_desconto > 0 %}
+    <div class="desconto">
+        <span>Desconto</span>
+        <span>- R$ {{ valor_desconto|floatformat:2 }}</span>
+    </div>
+    {% endif %}
+
+    <div style="margin-top:10px; font-size:1.1rem;">
+        <span>Total</span>
+        <strong>R$ {{ total_final|floatformat:2 }}</strong>
     </div>
 
 </div>
