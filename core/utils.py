@@ -41,14 +41,16 @@ def buscar_endereco(cep):
         return None
 
 
-def buscar_coordenadas(endereco):
+def buscar_coordenadas(cep):
 
     try:
+
+        cep_limpo = cep.replace("-", "")
 
         url = "https://nominatim.openstreetmap.org/search"
 
         params = {
-            "postalcode": endereco,
+            "postalcode": cep_limpo,
             "country": "Brazil",
             "format": "json",
             "limit": 1
@@ -63,20 +65,18 @@ def buscar_coordenadas(endereco):
         data = r.json()
 
         if not data:
-            logger.error(f"[FRETE] Coordenadas não encontradas para: {endereco}")
+            logger.error(f"[FRETE] Coordenadas não encontradas para CEP: {cep}")
             return None, None
 
         lat = float(data[0]["lat"])
         lon = float(data[0]["lon"])
 
-        logger.info(f"[FRETE] Coordenadas: {lat}, {lon}")
+        logger.info(f"[FRETE] Coordenadas CEP {cep}: {lat}, {lon}")
 
         return lat, lon
 
     except Exception as e:
-
         logger.error(f"[FRETE] Erro ao buscar coordenadas: {e}")
-
         return None, None
 
 
@@ -110,18 +110,8 @@ def calcular_frete_por_cep(cep_cliente):
 
     print("CEP CLIENTE:", cep_cliente)
 
-    endereco_empresa = buscar_endereco(CEP_EMPRESA)
-    endereco_cliente = buscar_endereco(cep_cliente)
-
-    print("EMPRESA:", endereco_empresa)
-    print("CLIENTE:", endereco_cliente)
-
-    if not endereco_empresa or not endereco_cliente:
-        print("ERRO ENDEREÇO")
-        return 0, 0
-
-    lat1, lon1 = buscar_coordenadas(endereco_empresa)
-    lat2, lon2 = buscar_coordenadas(endereco_cliente)
+    lat1, lon1 = buscar_coordenadas(CEP_EMPRESA)
+    lat2, lon2 = buscar_coordenadas(cep_cliente)
 
     print("COORD EMPRESA:", lat1, lon1)
     print("COORD CLIENTE:", lat2, lon2)
@@ -135,4 +125,3 @@ def calcular_frete_por_cep(cep_cliente):
     print("FRETE:", valor_frete)
 
     return valor_frete, distancia
-
