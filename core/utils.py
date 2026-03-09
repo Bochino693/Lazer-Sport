@@ -44,7 +44,8 @@ def buscar_endereco(cep):
 
         return None
 
-@lru_cache(maxsize=1000)
+
+@lru_cache(maxsize=2000)
 def buscar_coordenadas(cep):
 
     try:
@@ -56,34 +57,49 @@ def buscar_coordenadas(cep):
 
         url = "https://nominatim.openstreetmap.org/search"
 
+        headers = {
+            "User-Agent": "lazersport-frete"
+        }
+
+        # tentativa 1 — endereço completo
         params = {
             "q": endereco,
             "format": "json",
             "limit": 1
         }
 
-        headers = {
-            "User-Agent": "lazersport-frete"
+        r = requests.get(url, params=params, headers=headers, timeout=5)
+        data = r.json()
+
+        if data:
+            return float(data[0]["lat"]), float(data[0]["lon"])
+
+        # tentativa 2 — cidade + estado
+        parts = endereco.split(",")
+
+        cidade = parts[-3].strip()
+        estado = parts[-2].strip()
+
+        params = {
+            "q": f"{cidade}, {estado}, Brazil",
+            "format": "json",
+            "limit": 1
         }
 
         r = requests.get(url, params=params, headers=headers, timeout=5)
-
         data = r.json()
 
-        if not data:
-            logger.error(f"[FRETE] Coordenadas não encontradas para endereço: {endereco}")
-            return None, None
+        if data:
+            return float(data[0]["lat"]), float(data[0]["lon"])
 
-        lat = float(data[0]["lat"])
-        lon = float(data[0]["lon"])
+        logger.error(f"[FRETE] Não foi possível geocodificar CEP: {cep}")
 
-        logger.info(f"[FRETE] Coordenadas {cep}: {lat}, {lon}")
-
-        return lat, lon
+        return None, None
 
     except Exception as e:
-        logger.error(f"[FRETE] Erro ao buscar coordenadas: {e}")
+        logger.error(f"[FRETE] erro geocode {cep}: {e}")
         return None, None
+
 
 def distancia_km(lat1, lon1, lat2, lon2):
 
