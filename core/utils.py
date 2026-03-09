@@ -129,6 +129,13 @@ def distancia_km(lat1, lon1, lat2, lon2):
 
 
 def calcular_frete_por_cep(cep_cliente):
+    # Se o CEP for igual ao da empresa, frete simbólico
+    cep_limpo_cliente = cep_cliente.replace("-", "")
+    cep_limpo_empresa = CEP_EMPRESA.replace("-", "")
+
+    if cep_limpo_cliente == cep_limpo_empresa:
+        print("CEP do cliente é igual ao da empresa. Frete simbólico.")
+        return 0.01, 0.0  # frete mínimo e distância 0 km
 
     print("CEP CLIENTE:", cep_cliente)
 
