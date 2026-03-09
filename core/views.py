@@ -1886,6 +1886,8 @@ def aplicar_cupom(request):
         'message': f'Você economizou {cupom.desconto_percentual}% com o cupom {cupom.codigo}'
     })
 
+
+
 class PaymentView(LoginRequiredMixin, View):
 
     def get(self, request, carrinho_id):
@@ -1916,7 +1918,7 @@ class PaymentView(LoginRequiredMixin, View):
             'total_bruto': carrinho.total_bruto,
             'valor_desconto': carrinho.valor_desconto,
 
-            'frete': carrinho.valor_frete,
+            'frete': valor_frete,
 
             'total_liquido': carrinho.total_liquido,
 

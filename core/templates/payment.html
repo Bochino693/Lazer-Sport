@@ -548,11 +548,6 @@
 
 <div class="resumo-totais">
 
-    <div>
-        <span>Subtotal</span>
-        <span>R$ {{ total_bruto|floatformat:2 }}</span>
-    </div>
-
     {% if frete > 0 %}
     <div>
         <span>Frete</span>
@@ -566,6 +561,11 @@
         <span>- R$ {{ valor_desconto|floatformat:2 }}</span>
     </div>
     {% endif %}
+
+    <div>
+        <span>Subtotal</span>
+        <span>R$ {{ total_bruto|floatformat:2 }}</span>
+    </div>
 
     <div style="margin-top:10px; font-size:1.1rem;">
         <span>Total</span>
