@@ -2428,7 +2428,7 @@ class PedidosParaImpressaoAPI(View):
                 "total": float(pedido.total_liquido or 0),
                 "frete": float(pedido.valor_frete or 0),
                 "forma_pagamento": pedido.forma_pagamento,
-                "data": pedido.created_at.strftime("%d/%m/%Y %H:%M")
+                "data": pedido.criacao.strftime("%d/%m/%Y %H:%M") if pedido.criacao else ""
             })
 
         return JsonResponse({
