@@ -2410,7 +2410,7 @@ class PedidosParaImpressaoAPI(View):
             Pedido.objects
             .filter(impresso=False)
             .select_related("cliente")
-            .order_by("created_at")
+            .order_by("criacao")
         )
 
         data = []
