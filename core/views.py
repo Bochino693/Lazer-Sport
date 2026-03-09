@@ -129,7 +129,7 @@ class HomeView(View):
         # ---------------------------
         categoria_ativa = request.GET.get("categoria")
 
-        pecas_lista = PecasReposicao.objects.prefetch_related(
+        pecas_lista = PecasReposicao.objects.filter(ativo=True).prefetch_related(
             "imagem_peca_reposicao",
             "categoria_peca",
         )
@@ -2132,7 +2132,7 @@ def verificar_pagamento(request):
             )
 
         # 3. Limpamos o carrinho APÓS garantir que o pedido tem os itens e valores
-        # 3. Limpamos o carrinho
+
         carrinho.itens.all().delete()
         carrinho.cupom = None
         carrinho.mp_payment_id = None
@@ -2179,9 +2179,6 @@ def processar_cartao(request):
 
     # Aqui você pode registrar venda, itens, etc.
     return JsonResponse({"sucesso": True, "pedido_id": pedido.id})
-
-
-from django.urls import reverse
 
 
 @login_required
