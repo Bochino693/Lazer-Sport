@@ -2454,39 +2454,48 @@ class PedidosParaImpressaoAPI(View):
         )
 
         data = []
+
         for pedido in pedidos:
+            # Endereço
             endereco_data = None
             if pedido.carrinho_origem:
                 frete_obj = getattr(pedido.carrinho_origem, "frete", None)
                 if frete_obj:
                     endereco_data = {
-                        "rua": frete_obj.rua,
-                        "numero": frete_obj.numero,
-                        "bairro": frete_obj.bairro,
-                        "cidade": frete_obj.cidade,
-                        "cep": frete_obj.cep
+                        "rua": getattr(frete_obj, "rua", ""),
+                        "numero": getattr(frete_obj, "numero", ""),
+                        "bairro": getattr(frete_obj, "bairro", ""),
+                        "cidade": getattr(frete_obj, "cidade", ""),
+                        "cep": getattr(frete_obj, "cep", "")
                     }
 
+            # Itens
             itens = []
             for item in pedido.itens.all():
                 try:
-                    nome_item = str(item.item) if item.item else getattr(item, "nome_item", "Item desconhecido")
+                    nome_item = getattr(item, "item", None)
+                    if nome_item:
+                        nome_item = str(nome_item)
+                    else:
+                        nome_item = getattr(item, "nome_item", "Item desconhecido")
                 except:
                     nome_item = "Item desconhecido"
 
                 itens.append({
                     "nome": nome_item,
-                    "quantidade": item.quantidade,
-                    "preco": float(item.preco_unitario or 0),
+                    "quantidade": getattr(item, "quantidade", 0),
+                    "preco": float(getattr(item, "preco_unitario", 0) or 0),
                 })
 
+            # Cliente
+            cliente = pedido.cliente
             data.append({
                 "id": pedido.id,
-                "cliente": pedido.cliente_nome or "N/A",
-                "telefone": pedido.cliente_telefone or "N/A",
-                "total": float(pedido.total_liquido or 0),
-                "frete_valor": float(pedido.valor_frete or 0),
-                "tipo_envio": pedido.carrinho_origem.tipo_envio if pedido.carrinho_origem else "frete",
+                "cliente": getattr(cliente, "nome_completo", "N/A") if cliente else "N/A",
+                "telefone": getattr(cliente, "telefone", "N/A") if cliente else "N/A",
+                "total": float(getattr(pedido, "total_liquido", 0) or 0),
+                "frete_valor": float(getattr(pedido, "valor_frete", 0) or 0),
+                "tipo_envio": getattr(getattr(pedido, "carrinho_origem", None), "tipo_envio", "frete"),
                 "forma_pagamento": pedido.get_forma_pagamento_display() if pedido.forma_pagamento else "N/A",
                 "endereco": endereco_data,
                 "itens": itens
