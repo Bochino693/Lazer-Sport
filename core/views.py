@@ -1886,32 +1886,22 @@ def aplicar_cupom(request):
         'message': f'Você economizou {cupom.desconto_percentual}% com o cupom {cupom.codigo}'
     })
 
-
 class PaymentView(LoginRequiredMixin, View):
 
     def get(self, request, carrinho_id):
 
         carrinho = get_object_or_404(Carrinho, id=carrinho_id)
 
-        # 🔒 Segurança: validar dono do carrinho
+        # segurança
         if carrinho.cliente and carrinho.cliente.user != request.user:
             return redirect('home')
 
-        # itens do carrinho
         itens = carrinho.itens.select_related('content_type').all()
 
-        # carrinho vazio
         if not itens.exists():
             return redirect('carrinho')
 
-        # 🔄 Recalcular totais dos produtos
-        carrinho.recalcular_totais()
-
-        # 🔥 pegar valor do frete salvo
-        valor_frete = carrinho.valor_frete or 0
-
-        # 🔥 total final com frete
-        total_com_frete = carrinho.total_liquido + valor_frete
+        valor_frete = carrinho.valor_frete
 
         somente_pix = (
             not request.user.is_authenticated or not itens.exists()
@@ -1926,10 +1916,12 @@ class PaymentView(LoginRequiredMixin, View):
             'total_bruto': carrinho.total_bruto,
             'valor_desconto': carrinho.valor_desconto,
 
-            'frete': valor_frete,  # ⭐ frete enviado para tela
+            'frete': valor_frete,
 
             'total_liquido': carrinho.total_liquido,
-            'total_com_frete': total_com_frete,  # ⭐ total final
+
+            # ⭐ TOTAL FINAL COM FRETE
+            'total_final': carrinho.total_final,
 
             'total_itens': itens.count(),
 
@@ -1939,13 +1931,10 @@ class PaymentView(LoginRequiredMixin, View):
         return render(request, 'payment.html', context)
 
 
-from django.views.decorators.csrf import csrf_exempt
 
-import mercadopago
-from django.conf import settings
-from django.http import JsonResponse
 from decimal import Decimal
-from .models import Pedido
+
+
 def gerar_pix(request):
 
     carrinho_id = request.GET.get("carrinho_id")
