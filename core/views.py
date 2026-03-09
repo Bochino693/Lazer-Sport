@@ -2427,6 +2427,7 @@ class PedidosParaImpressaoAPI(View):
                 "status": pedido.status,
                 "total": float(pedido.total_liquido or 0),
                 "frete": float(pedido.valor_frete or 0),
+                "tipo_envio": pedido.carrinho.tipo_envio if pedido.carrinho else "",
                 "forma_pagamento": pedido.forma_pagamento,
                 "data": pedido.criacao.strftime("%d/%m/%Y %H:%M") if pedido.criacao else ""
             })
