@@ -2102,6 +2102,8 @@ def verificar_pagamento(request):
             mp_payment_id=carrinho.mp_payment_id,
             defaults={
                 "cliente": carrinho.cliente,
+                "cliente_nome": carrinho.cliente.nome_completo,  # ⚡ salvar campo separado
+                "cliente_telefone": carrinho.cliente.telefone,
                 "carrinho_origem": carrinho,
                 "status": "pago",
                 "forma_pagamento": "pix",
@@ -2480,8 +2482,8 @@ class PedidosParaImpressaoAPI(View):
 
             data.append({
                 "id": pedido.id,
-                "cliente": pedido.cliente.nome_completo if pedido.cliente else "N/A",
-                "telefone": pedido.cliente.telefone if pedido.cliente else "N/A",
+                "cliente": pedido.cliente_nome or "N/A",
+                "telefone": pedido.cliente_telefone or "N/A",
                 "total": float(pedido.total_liquido or 0),
                 "frete_valor": float(pedido.valor_frete or 0),
                 "tipo_envio": pedido.carrinho_origem.tipo_envio if pedido.carrinho_origem else "frete",
