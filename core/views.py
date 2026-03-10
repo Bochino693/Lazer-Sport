@@ -2104,11 +2104,14 @@ import mercadopago
 
 @require_GET
 def verificar_pagamento(request):
+
     carrinho_id = request.GET.get("carrinho_id")
+
     if not carrinho_id:
         return JsonResponse({"pago": False})
 
     carrinho = Carrinho.objects.filter(id=carrinho_id).first()
+
     if not carrinho or not carrinho.mp_payment_id:
         return JsonResponse({"pago": False})
 
@@ -2116,6 +2119,7 @@ def verificar_pagamento(request):
         sdk = mercadopago.SDK(settings.MP_ACCESS_TOKEN)
         payment_info = sdk.payment().get(carrinho.mp_payment_id)
         payment = payment_info["response"]
+
     except Exception as e:
         print(f"Erro ao consultar MP: {e}")
         return JsonResponse({"pago": False})
@@ -2124,39 +2128,54 @@ def verificar_pagamento(request):
         return JsonResponse({"pago": False})
 
     with transaction.atomic():
-        # 1. Criamos ou ATUALIZAMOS o pedido com os dados exatos do carrinho agora
+
+        # calcular total final
+        valor_frete = carrinho.valor_frete
+        total_final = carrinho.total_liquido + valor_frete
+
+        # criar ou atualizar pedido
         pedido, created = Pedido.objects.update_or_create(
             mp_payment_id=carrinho.mp_payment_id,
             defaults={
+
                 "cliente": carrinho.cliente,
-                "cliente_nome": carrinho.cliente.nome_completo,  # ⚡ salvar campo separado
-                "cliente_telefone": carrinho.cliente.telefone,
                 "carrinho_origem": carrinho,
+
                 "status": "pago",
                 "forma_pagamento": "pix",
+
+                # snapshot financeiro
                 "total_bruto": carrinho.total_bruto,
                 "valor_desconto": carrinho.valor_desconto,
                 "total_liquido": carrinho.total_liquido,
+                "valor_frete": valor_frete,
+                "total_final": total_final,
+
                 "mp_status": "approved",
+
+                # snapshot cupom
                 "cupom_codigo": carrinho.cupom.codigo if carrinho.cupom else None,
                 "cupom_percentual": carrinho.cupom.desconto_percentual if carrinho.cupom else None,
             }
         )
 
-        # 2. Sincronizamos os itens: limpamos o que existia no pedido e trazemos o carrinho real
-        # Isso evita que o pedido fique com "0,00" se houve uma tentativa anterior falha
+        # limpar itens antigos
         pedido.itens.all().delete()
 
+        # copiar itens do carrinho
         for item in carrinho.itens.all():
-            # Fallback para o tipo de item para não quebrar as choices do Pedido
+
             model_name = item.content_type.model
-            tipo_permitido = model_name if model_name in ['brinquedo', 'combo', 'promocao'] else 'brinquedo'
+
+            tipo_permitido = (
+                model_name if model_name in ["brinquedo", "combo", "promocao"]
+                else "brinquedo"
+            )
 
             ItemPedido.objects.create(
                 pedido=pedido,
                 content_type=item.content_type,
                 object_id=item.object_id,
-                item_original=item.item,
                 nome_item=str(item.item),
                 tipo_item=tipo_permitido,
                 preco_unitario=item.preco_unitario,
@@ -2164,19 +2183,16 @@ def verificar_pagamento(request):
                 subtotal=item.subtotal
             )
 
-        # 3. Limpamos o carrinho APÓS garantir que o pedido tem os itens e valores
-
+        # limpar carrinho depois que pedido foi salvo
         carrinho.itens.all().delete()
         carrinho.cupom = None
         carrinho.mp_payment_id = None
-        carrinho.save()
-
+        carrinho.save(update_fields=["cupom", "mp_payment_id"])
 
     return JsonResponse({
         "pago": True,
         "redirect_url": "/meus-pedidos/#pedidos"
     })
-
 
 
 @csrf_exempt

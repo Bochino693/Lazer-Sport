@@ -783,6 +783,10 @@ class Pedido(Prime):
     valor_desconto = models.DecimalField(max_digits=10, decimal_places=2, default=0, null=True, blank=True)
     total_liquido = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
 
+    # ✅ novo campo
+    total_final = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+
+
     forma_pagamento = models.CharField(
         max_length=20,
         choices=FORMA_PAGAMENTO_CHOICES,
@@ -802,6 +806,19 @@ class Pedido(Prime):
     cupom_percentual = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
 
     observacoes = models.TextField(blank=True)
+
+    def save(self, *args, **kwargs):
+
+        if self.total_liquido is None:
+            self.total_liquido = Decimal("0.00")
+
+        if self.valor_frete is None:
+            self.valor_frete = Decimal("0.00")
+
+        # total final = liquido + frete
+        self.total_final = (self.total_liquido + self.valor_frete)
+
+        super().save(*args, **kwargs)
 
     @classmethod
     def criar_do_carrinho(cls, carrinho):
