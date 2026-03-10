@@ -1018,12 +1018,40 @@ class EventoAdminView(AdminOnlyMixin, View):
 class PedidoAdminView(AdminOnlyMixin, View):
 
     def get(self, request):
-        pedidos = Pedido.objects.all()
+
+        pedidos = Pedido.objects.all().select_related(
+            'cliente',
+            'carrinho_origem'
+        ).prefetch_related('itens')
+
+        # filtros recebidos da URL
+        impresso = request.GET.get("impresso")
+        pagamento = request.GET.get("pagamento")
+        status = request.GET.get("status")
+
+        # FILTRO IMPRESSO
+        if impresso == "true":
+            pedidos = pedidos.filter(impresso=True)
+
+        elif impresso == "false":
+            pedidos = pedidos.filter(impresso=False)
+
+        # FILTRO PAGAMENTO
+        if pagamento:
+            pedidos = pedidos.filter(forma_pagamento=pagamento)
+
+        # FILTRO STATUS
+        if status:
+            pedidos = pedidos.filter(status=status)
+
+        # ordenação mais útil no admin
+        pedidos = pedidos.order_by("-id")
 
         ctx = {
-            'pedidos': pedidos,
+            "pedidos": pedidos
         }
-        return render(request, 'pedidos_adm.html', ctx)
+
+        return render(request, "pedidos_adm.html", ctx)
 
 
 # core/views.py
