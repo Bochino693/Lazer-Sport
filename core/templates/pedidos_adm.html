@@ -3,8 +3,6 @@
 
 <style>
 
-/* (mantive seu CSS igual para não quebrar layout) */
-
 .page-container{padding:20px 30px;}
 .content-area{max-width:1400px;margin:0 auto;}
 .valor{font-weight:700;font-size:15px;}
@@ -28,7 +26,7 @@ color:#000;
 display:flex;
 justify-content:space-between;
 align-items:center;
-margin-bottom:25px;
+margin-bottom:20px;
 }
 
 .modern-table{
@@ -82,6 +80,8 @@ border-radius:8px;
 text-decoration:none;
 font-weight:600;
 font-size:13px;
+border:none;
+cursor:pointer;
 }
 
 .modal-bg{
@@ -108,6 +108,12 @@ display:flex;
 justify-content:space-between;
 align-items:center;
 margin-bottom:20px;
+}
+
+.modal-header h2{
+color:#000 !important;
+-webkit-text-fill-color:#000 !important;
+background:none !important;
 }
 
 .close{
@@ -146,6 +152,23 @@ border-bottom:1px solid #eee;
 text-align:center;
 }
 
+/* FILTROS */
+
+.filtros{
+display:flex;
+gap:10px;
+margin-bottom:20px;
+flex-wrap:wrap;
+}
+
+.filtros select{
+padding:8px 10px;
+border-radius:8px;
+border:1px solid #d1d5db;
+font-size:13px;
+background:white;
+}
+
 </style>
 
 <div class="page-container">
@@ -155,6 +178,35 @@ text-align:center;
 <div class="topbar">
 <h1>📦 Painel de Pedidos</h1>
 </div>
+
+<form method="get" class="filtros">
+
+<select name="impresso">
+<option value="">Todos</option>
+<option value="true" {% if request.GET.impresso == "true" %}selected{% endif %}>Impresso</option>
+<option value="false" {% if request.GET.impresso == "false" %}selected{% endif %}>Não impresso</option>
+</select>
+
+<select name="pagamento">
+<option value="">Pagamento</option>
+<option value="pix" {% if request.GET.pagamento == "pix" %}selected{% endif %}>PIX</option>
+<option value="credito" {% if request.GET.pagamento == "credito" %}selected{% endif %}>Cartão Crédito</option>
+<option value="debito" {% if request.GET.pagamento == "debito" %}selected{% endif %}>Cartão Débito</option>
+</select>
+
+<select name="status">
+<option value="">Status</option>
+<option value="aguardando_pagamento">Aguardando pagamento</option>
+<option value="pago">Pago</option>
+<option value="em_preparacao">Em preparação</option>
+<option value="saiu_entrega">Saiu para entrega</option>
+<option value="finalizado">Finalizado</option>
+<option value="cancelado">Cancelado</option>
+</select>
+
+<button type="submit" class="btn-view">Filtrar</button>
+
+</form>
 
 {% if pedidos %}
 <table class="modern-table">
@@ -177,17 +229,13 @@ text-align:center;
 <tbody>
 
 {% for pedido in pedidos %}
-<tr>
+<tr {% if not pedido.impresso %}style="background:#fff7ed"{% endif %}>
 
 <td class="id">#{{ pedido.id }}</td>
 
-<td>
-{{ pedido.cliente|default:"Cliente removido" }}
-</td>
+<td>{{ pedido.cliente|default:"Cliente removido" }}</td>
 
-<td>
-{{ pedido.itens.count }} itens
-</td>
+<td>{{ pedido.itens.count }} itens</td>
 
 <td class="valor">
 R$ {{ pedido.carrinho_origem.total_final|default:"0,00" }}
@@ -231,8 +279,6 @@ Ver Pedido
 </table>
 {% endif %}
 
-<!-- MODAL -->
-
 <div id="modalPedido" class="modal-bg">
 <div class="modal-box">
 
@@ -245,7 +291,6 @@ Ver Pedido
 
 </div>
 </div>
-
 
 {% for pedido in pedidos %}
 <div id="pedido-data-{{ pedido.id }}" style="display:none">
@@ -305,13 +350,9 @@ Ver Pedido
 <tr>
 
 <td>{{ item.nome_item }}</td>
-
 <td>{{ item.get_tipo_item_display|upper }}</td>
-
 <td>{{ item.quantidade }}</td>
-
 <td>R$ {{ item.preco_unitario }}</td>
-
 <td><strong>R$ {{ item.subtotal }}</strong></td>
 
 </tr>
@@ -325,7 +366,6 @@ Ver Pedido
 </div>
 </div>
 </div>
-
 
 <script>
 
