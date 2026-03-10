@@ -1,18 +1,20 @@
 from .models import CategoriasBrinquedos, Estabelecimentos, Manutencao, Carrinho
 from django.db.models import Q
 
-
 def categorias_globais(request):
     return {
         "categorias_header": CategoriasBrinquedos.objects.exclude(
-            Q(nome_categoria__iexact="competitivos") |
-            Q(nome_categoria__iexact="kids") |
-            Q(nome_categoria__iexact="famosos") |
-            Q(nome_categoria__iexact="espaço esportivo kids") |
-            Q(nome_categoria__iexact="espaço kids play")
+            nome_categoria__icontains="competitivos"
+        ).exclude(
+            nome_categoria__icontains="kids"
+        ).exclude(
+            nome_categoria__icontains="famosos"
+        ).exclude(
+            nome_categoria__icontains="espaço esportivo kids"
+        ).exclude(
+            nome_categoria__icontains="espaço kids play"
         ).order_by("nome_categoria")
     }
-
 
 def estabelecimentos_globais(request):
     return {
