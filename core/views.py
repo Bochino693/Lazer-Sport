@@ -2124,17 +2124,13 @@ from django.db import transaction
 import mercadopago
 
 
-
-@require_GET
 def verificar_pagamento(request):
 
     carrinho_id = request.GET.get("carrinho_id")
-
     if not carrinho_id:
         return JsonResponse({"pago": False})
 
     carrinho = Carrinho.objects.filter(id=carrinho_id).first()
-
     if not carrinho or not carrinho.mp_payment_id:
         return JsonResponse({"pago": False})
 
@@ -2152,68 +2148,46 @@ def verificar_pagamento(request):
 
     with transaction.atomic():
 
-        # calcular total final
-        valor_frete = carrinho.valor_frete
-        total_final = carrinho.total_liquido + valor_frete
+        # valor total = liquido + frete
+        valor_frete = carrinho.valor_frete or Decimal("0.00")
+        total_final = (carrinho.total_liquido or Decimal("0.00")) + valor_frete
 
-        # criar ou atualizar pedido
+        # criar ou atualizar pedido de forma segura
         pedido, created = Pedido.objects.update_or_create(
             mp_payment_id=carrinho.mp_payment_id,
             defaults={
-
                 "cliente": carrinho.cliente,
                 "carrinho_origem": carrinho,
-
                 "status": "pago",
                 "forma_pagamento": "pix",
-
-                # snapshot financeiro
-                "total_bruto": carrinho.total_bruto,
-                "valor_desconto": carrinho.valor_desconto,
-                "total_liquido": carrinho.total_liquido,
+                "total_bruto": carrinho.total_bruto or Decimal("0.00"),
+                "valor_desconto": carrinho.valor_desconto or Decimal("0.00"),
+                "total_liquido": carrinho.total_liquido or Decimal("0.00"),
                 "valor_frete": valor_frete,
                 "total_final": total_final,
-
                 "mp_status": "approved",
-
-                "cpf_cnpj": carrinho.cpf_cnpj,
-
-                # snapshot cupom
                 "cupom_codigo": carrinho.cupom.codigo if carrinho.cupom else None,
                 "cupom_percentual": carrinho.cupom.desconto_percentual if carrinho.cupom else None,
             }
         )
 
-        # limpar itens antigos
+        # remover itens antigos do pedido
         pedido.itens.all().delete()
 
         # copiar itens do carrinho
         for item in carrinho.itens.all():
-            model_name = item.content_type.model
-
-            mapa_tipos = {
-                "brinquedos": "brinquedo",
-                "combos": "combo",
-                "promocoes": "promocao",
-                "pecasreposicao": "brinquedo",
-            }
-
-            tipo_permitido = mapa_tipos.get(model_name, "brinquedo")
-
-            nome_item = str(item.item) if item.item else "Produto removido"
-
             ItemPedido.objects.create(
                 pedido=pedido,
                 content_type=item.content_type,
                 object_id=item.object_id,
-                nome_item=nome_item,
-                tipo_item=tipo_permitido,
-                preco_unitario=item.preco_unitario,
-                quantidade=item.quantidade,
-                subtotal=item.subtotal
+                nome_item=str(item.item) if item.item else "Produto removido",
+                tipo_item=item.content_type.model,
+                preco_unitario=item.preco_unitario or Decimal("0.00"),
+                quantidade=item.quantidade or 1,
+                subtotal=item.subtotal or Decimal("0.00"),
             )
 
-        # limpar carrinho depois que pedido foi salvo
+        # limpar carrinho
         carrinho.itens.all().delete()
         carrinho.cupom = None
         carrinho.mp_payment_id = None
@@ -2223,6 +2197,7 @@ def verificar_pagamento(request):
         "pago": True,
         "redirect_url": "/meus-pedidos/#pedidos"
     })
+
 
 
 @csrf_exempt
