@@ -230,7 +230,7 @@ background-clip:initial;
 
 </form>
 
-{% if pedidos %}
+{% if pedidos.exists %}
 <table class="modern-table">
 
 <thead>
@@ -299,6 +299,20 @@ Ver Pedido
 
 </tbody>
 </table>
+
+{% else %}
+
+<div style="
+padding:40px;
+text-align:center;
+color:#6b7280;
+font-size:16px;
+">
+
+📦 Nenhum pedido encontrado com os filtros aplicados.
+
+</div>
+
 {% endif %}
 
 <div id="modalPedido" class="modal-bg">

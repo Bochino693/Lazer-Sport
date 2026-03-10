@@ -1014,41 +1014,40 @@ class EventoAdminView(AdminOnlyMixin, View):
 
         return JsonResponse({"success": False})
 
-
 class PedidoAdminView(AdminOnlyMixin, View):
 
     def get(self, request):
 
-        pedidos = Pedido.objects.all().select_related(
-            'cliente',
-            'carrinho_origem'
-        ).prefetch_related('itens')
+        pedidos = (
+            Pedido.objects
+            .select_related("cliente", "carrinho_origem")
+            .prefetch_related("itens")
+        )
 
-        # filtros recebidos da URL
+        filtros = {}
+
         impresso = request.GET.get("impresso")
         pagamento = request.GET.get("pagamento")
         status = request.GET.get("status")
 
-        # FILTRO IMPRESSO
         if impresso == "true":
-            pedidos = pedidos.filter(impresso=True)
-
+            filtros["impresso"] = True
         elif impresso == "false":
-            pedidos = pedidos.filter(impresso=False)
+            filtros["impresso"] = False
 
-        # FILTRO PAGAMENTO
         if pagamento:
-            pedidos = pedidos.filter(forma_pagamento=pagamento)
+            filtros["forma_pagamento"] = pagamento
 
-        # FILTRO STATUS
         if status:
-            pedidos = pedidos.filter(status=status)
+            filtros["status"] = status
 
-        # ordenação mais útil no admin
+        if filtros:
+            pedidos = pedidos.filter(**filtros)
+
         pedidos = pedidos.order_by("-id")
 
         ctx = {
-            "pedidos": pedidos
+            "pedidos": pedidos,
         }
 
         return render(request, "pedidos_adm.html", ctx)
