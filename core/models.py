@@ -788,9 +788,7 @@ class Pedido(Prime):
     total_bruto = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     valor_desconto = models.DecimalField(max_digits=10, decimal_places=2, default=0, null=True, blank=True)
     total_liquido = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-
-    # ✅ novo campo
-    total_final = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    total_final = models.DecimalField(max_digits=10, decimal_places=2, default=0, null=True)
 
 
     forma_pagamento = models.CharField(
@@ -804,6 +802,7 @@ class Pedido(Prime):
         max_length=100,
         null=True,
         blank=True,
+        unique=True,
         db_index=True
     )
     mp_status = models.CharField(max_length=50, null=True, blank=True)
@@ -822,7 +821,10 @@ class Pedido(Prime):
             self.valor_frete = Decimal("0.00")
 
         # total final = liquido + frete
-        self.total_final = (self.total_liquido + self.valor_frete)
+        self.total_final = (
+                Decimal(self.total_liquido or 0) +
+                Decimal(self.valor_frete or 0)
+        )
 
         super().save(*args, **kwargs)
 
@@ -835,17 +837,17 @@ class Pedido(Prime):
             carrinho_origem=carrinho,
             cliente=carrinho.cliente,
 
-            # snapshot financeiro
             total_bruto=carrinho.total_bruto,
             valor_desconto=carrinho.valor_desconto,
             total_liquido=carrinho.total_liquido,
             valor_frete=valor_frete,
             total_final=carrinho.total_final,
 
-            # cupom snapshot
             cupom_codigo=carrinho.cupom.codigo if carrinho.cupom else None,
             cupom_percentual=carrinho.cupom.desconto_percentual if carrinho.cupom else None,
         )
+
+        return pedido
 
     def __str__(self):
         if self.cliente and self.cliente.user:
