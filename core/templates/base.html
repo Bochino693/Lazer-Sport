@@ -786,12 +786,23 @@ nav a.btn-login {
           <div class="filter-suggestions">
 
           <!-- 🔄 CATEGORIAS DINÂMICAS -->
-          {% for categoria in categorias_header %}
-            <a href="{% url 'categoria_detalhe' categoria.pk %}#header"
-               class="suggestion-tag">
-              {{ categoria.nome_categoria|upper }}
-            </a>
-          {% endfor %}
+         {% for categoria in categorias_header %}
+                  {% if categoria.nome_categoria != "COMPETITIVOS"
+              and categoria.nome_categoria != "KIDS"
+              and categoria.nome_categoria != "FAMOSOS"
+              and categoria.nome_categoria != "ESPAÇO ESPORTIVO KIDS"
+              and categoria.nome_categoria != "ESPAÇO KIDS PLAY"
+
+
+
+
+              %}
+                    <a href="{% url 'categoria_detalhe' categoria.pk %}#header"
+                       class="suggestion-tag">
+                      {{ categoria.nome_categoria|upper }}
+                    </a>
+                  {% endif %}
+                {% endfor %}
 
           {% for est in estabelecimentos_globais|slice:":3" %}
                 <a href="{% url 'estabelecimento_brinquedo' est.id %}#brinquedos" class="suggestion-tag">
@@ -801,7 +812,7 @@ nav a.btn-login {
 
 
           <!-- ⭐ SUGESTÕES ESTÁTICAS -->
-          <a href="{% url 'estabelecimentos' %}#estabelecimentos" class="suggestion-tag">PARA MEU ESTABELECIMENTO</a>
+          <!-- <a href="{% url 'estabelecimentos' %}#estabelecimentos" class="suggestion-tag">PARA MEU ESTABELECIMENTO</a> -->
           <a href="{% url 'pecas_reposicao' %}#breadcrumb" class="suggestion-tag">PEÇAS DE REPOSIÇÃO DE BRINQUEDO</a>
 
 
