@@ -2473,7 +2473,7 @@ class PedidosParaImpressaoAPI(View):
                     nome_item = "Item desconhecido"
 
                 itens.append({
-                    "nome": nome_item,
+                    "nome": getattr(item, "nome_item", "Item desconhecido"),
                     "quantidade": getattr(item, "quantidade", 0),
                     "preco": float(getattr(item, "preco_unitario", 0) or 0),
                 })
@@ -2488,15 +2488,22 @@ class PedidosParaImpressaoAPI(View):
             )
 
             telefone_cliente = getattr(cliente, "telefone", "N/A")
+            subtotal = getattr(pedido, "total_bruto", 0) or 0
+            frete = getattr(pedido, "valor_frete", 0) or 0
+            total = getattr(pedido, "total_liquido", 0) or 0
 
             data.append({
                 "id": pedido.id,
                 "cliente": nome_cliente,
                 "telefone": telefone_cliente,
-                "total": float(getattr(pedido, "total_liquido", 0) or 0),
-                "frete_valor": float(getattr(pedido, "valor_frete", 0) or 0),
+
+                "subtotal": float(subtotal),
+                "frete_valor": float(frete),
+                "total": float(total),
+
                 "tipo_envio": getattr(getattr(pedido, "carrinho_origem", None), "tipo_envio", "frete"),
                 "forma_pagamento": pedido.get_forma_pagamento_display() if pedido.forma_pagamento else "N/A",
+
                 "endereco": endereco_data,
                 "itens": itens
             })

@@ -58,43 +58,51 @@ def validar_telefone(value):
         )
 
 class ClientePerfil(models.Model):
+
     user = models.OneToOneField(
         User,
         on_delete=models.CASCADE,
         related_name="perfil"
     )
-    nome_completo = models.CharField(max_length=150, blank=True, null=True)
 
-    # ✅ NOVO CAMPO
+    nome_completo = models.CharField(
+        max_length=150,
+        blank=True,
+        null=True
+    )
+
     telefone = models.CharField(
         max_length=14,
         validators=[validar_telefone],
-        blank=False,
+        blank=True,
         null=True
     )
 
     criado_em = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return self.user.username
+        if self.user:
+            return self.user.username
+        return f"Perfil #{self.id}"
 
     def clean(self):
+        """
+        Evita duplicidade de perfil para o mesmo usuário/email
+        """
+        if not self.user:
+            return
+
         if ClientePerfil.objects.filter(
             user__username=self.user.username,
             user__email=self.user.email
         ).exclude(pk=self.pk).exists():
-            raise ValidationError("Já existe um perfil com esse usuário e email.")
+            raise ValidationError(
+                "Já existe um perfil com esse usuário e email."
+            )
 
     class Meta:
         verbose_name = "Perfil de Cliente"
         verbose_name_plural = "Perfis de Clientes"
-        constraints = [
-            UniqueConstraint(
-                fields=['user'],
-                name='unique_user_perfil'
-            ),
-        ]
-
 
 # --- AQUI embaixo vem o signal ---
 
@@ -762,6 +770,12 @@ class Pedido(Prime):
         choices=STATUS_CHOICES,
         default='aguardando_pagamento'
     )
+
+    rua = models.CharField(max_length=180, null=True, blank=True)
+    numero = models.CharField(max_length=20, null=True, blank=True)
+    bairro = models.CharField(max_length=90, null=True, blank=True)
+    cidade = models.CharField(max_length=90, null=True, blank=True)
+    cep = models.CharField(max_length=9, null=True, blank=True)
 
     valor_frete = models.DecimalField(max_digits=10, decimal_places=2, null=True)
     # 🔒 snapshot financeiro
