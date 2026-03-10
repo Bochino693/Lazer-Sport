@@ -2101,7 +2101,6 @@ from django.db import transaction
 import mercadopago
 
 
-
 @require_GET
 def verificar_pagamento(request):
 
@@ -2129,40 +2128,25 @@ def verificar_pagamento(request):
 
     with transaction.atomic():
 
-        # calcular total final
-        valor_frete = carrinho.valor_frete
-        total_final = carrinho.total_liquido + valor_frete
+        # 🔎 verifica se já existe pedido para esse pagamento
+        pedido = Pedido.objects.filter(
+            mp_payment_id=carrinho.mp_payment_id
+        ).first()
 
-        # criar ou atualizar pedido
-        pedido, created = Pedido.objects.update_or_create(
-            mp_payment_id=carrinho.mp_payment_id,
-            defaults={
+        if not pedido:
+            # cria usando o método central do modelo
+            pedido = Pedido.criar_do_carrinho(carrinho)
 
-                "cliente": carrinho.cliente,
-                "carrinho_origem": carrinho,
+        # atualiza dados de pagamento
+        pedido.status = "pago"
+        pedido.forma_pagamento = "pix"
+        pedido.mp_payment_id = carrinho.mp_payment_id
+        pedido.mp_status = "approved"
+        pedido.save()
 
-                "status": "pago",
-                "forma_pagamento": "pix",
-
-                # snapshot financeiro
-                "total_bruto": carrinho.total_bruto,
-                "valor_desconto": carrinho.valor_desconto,
-                "total_liquido": carrinho.total_liquido,
-                "valor_frete": valor_frete,
-                "total_final": total_final,
-
-                "mp_status": "approved",
-
-                # snapshot cupom
-                "cupom_codigo": carrinho.cupom.codigo if carrinho.cupom else None,
-                "cupom_percentual": carrinho.cupom.desconto_percentual if carrinho.cupom else None,
-            }
-        )
-
-        # limpar itens antigos
+        # garantir que os itens estão sincronizados
         pedido.itens.all().delete()
 
-        # copiar itens do carrinho
         for item in carrinho.itens.all():
 
             model_name = item.content_type.model
@@ -2183,7 +2167,7 @@ def verificar_pagamento(request):
                 subtotal=item.subtotal
             )
 
-        # limpar carrinho depois que pedido foi salvo
+        # limpar carrinho depois de garantir que pedido foi salvo
         carrinho.itens.all().delete()
         carrinho.cupom = None
         carrinho.mp_payment_id = None
@@ -2193,7 +2177,6 @@ def verificar_pagamento(request):
         "pago": True,
         "redirect_url": "/meus-pedidos/#pedidos"
     })
-
 
 @csrf_exempt
 def processar_cartao(request):

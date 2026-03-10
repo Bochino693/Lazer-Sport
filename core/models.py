@@ -822,9 +822,8 @@ class Pedido(Prime):
 
     @classmethod
     def criar_do_carrinho(cls, carrinho):
-        """
-        Cria um pedido copiando todos os dados do carrinho (snapshot).
-        """
+
+        valor_frete = carrinho.valor_frete or Decimal("0.00")
 
         pedido = cls.objects.create(
             carrinho_origem=carrinho,
@@ -834,29 +833,13 @@ class Pedido(Prime):
             total_bruto=carrinho.total_bruto,
             valor_desconto=carrinho.valor_desconto,
             total_liquido=carrinho.total_liquido,
-            valor_frete=carrinho.valor_frete,
+            valor_frete=valor_frete,
+            total_final=carrinho.total_final,
 
-            # snapshot cupom
+            # cupom snapshot
             cupom_codigo=carrinho.cupom.codigo if carrinho.cupom else None,
             cupom_percentual=carrinho.cupom.desconto_percentual if carrinho.cupom else None,
         )
-
-        # copiar itens do carrinho
-        for item in carrinho.itens.all():
-            ItemPedido.objects.create(
-                pedido=pedido,
-                content_type=item.content_type,
-                object_id=item.object_id,
-
-                nome_item=str(item.item),
-                tipo_item=item.content_type.model,
-
-                preco_unitario=item.preco_unitario,
-                quantidade=item.quantidade,
-                subtotal=item.subtotal
-            )
-
-        return pedido
 
     def __str__(self):
         if self.cliente and self.cliente.user:
