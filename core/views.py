@@ -2189,19 +2189,24 @@ def verificar_pagamento(request):
 
         # copiar itens do carrinho
         for item in carrinho.itens.all():
-
             model_name = item.content_type.model
 
-            tipo_permitido = (
-                model_name if model_name in ["brinquedo", "combo", "promocao"]
-                else "brinquedo"
-            )
+            mapa_tipos = {
+                "brinquedos": "brinquedo",
+                "combos": "combo",
+                "promocoes": "promocao",
+                "pecasreposicao": "brinquedo",
+            }
+
+            tipo_permitido = mapa_tipos.get(model_name, "brinquedo")
+
+            nome_item = str(item.item) if item.item else "Produto removido"
 
             ItemPedido.objects.create(
                 pedido=pedido,
                 content_type=item.content_type,
                 object_id=item.object_id,
-                nome_item=str(item.item),
+                nome_item=nome_item,
                 tipo_item=tipo_permitido,
                 preco_unitario=item.preco_unitario,
                 quantidade=item.quantidade,
