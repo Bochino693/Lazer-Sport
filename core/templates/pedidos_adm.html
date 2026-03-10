@@ -95,7 +95,7 @@ cursor:pointer;
 .modal-bg{
 position:fixed;
 inset:0;
-background:rgba(0,0,0,.85);
+background:rgba(0,0,0,.85) !important;
 display:none;
 align-items:center;
 justify-content:center;
@@ -105,10 +105,11 @@ z-index:9999;
 .modal-box{
 width:900px;
 max-width:95%;
-background:#fff;
+background:#ffffff !important;
 border-radius:16px;
 padding:25px;
 box-shadow:0 20px 60px rgba(0,0,0,.35);
+color:#111 !important;
 }
 
 .modal-header{
@@ -116,48 +117,90 @@ display:flex;
 justify-content:space-between;
 align-items:center;
 margin-bottom:20px;
+border-bottom:1px solid #e5e7eb;
+padding-bottom:10px;
 }
 
 .modal-header h2{
+all:unset;
+font-size:22px;
+font-weight:700;
 color:#000 !important;
--webkit-text-fill-color:#000 !important;
-background:none !important;
+display:block;
 }
 
 .close{
 font-size:26px;
 cursor:pointer;
 font-weight:700;
+color:#000;
 }
 
 .modal-grid{
 display:grid;
 grid-template-columns:repeat(3,1fr);
 gap:14px;
+margin-bottom:10px;
 }
 
 .info-box{
-background:#f7faff;
+background:#f3f4f6 !important;
 padding:12px;
 border-radius:10px;
+color:#111 !important;
+border:1px solid #e5e7eb;
 }
+
+.info-box h3{
+margin:0 0 6px 0;
+font-size:14px;
+color:#374151;
+}
+
+.info-box p{
+margin:0;
+font-size:14px;
+color:#111;
+}
+
+/* tabela itens */
 
 .modal-table{
 width:100%;
 margin-top:10px;
 border-collapse:collapse;
+background:white;
 }
 
 .modal-table th{
-background:#111827;
-color:#fff;
-padding:8px;
+background:#111827 !important;
+color:#fff !important;
+padding:10px;
+font-size:13px;
 }
 
 .modal-table td{
-padding:8px;
-border-bottom:1px solid #eee;
+padding:10px;
+border-bottom:1px solid #e5e7eb;
 text-align:center;
+color:#111;
+}
+
+/* botão imprimir */
+
+.btn-print{
+background:linear-gradient(90deg,#16a34a,#15803d);
+color:white;
+border:none;
+padding:10px 16px;
+border-radius:8px;
+font-weight:600;
+cursor:pointer;
+margin-top:15px;
+}
+
+.btn-print:hover{
+opacity:.9;
 }
 
 /* FILTROS */
@@ -321,7 +364,7 @@ font-size:16px;
 <div class="modal-box">
 
 <div class="modal-header">
-<h2 class="modal-title">📦 Detalhes do Pedido</h2>
+<h2>📦 Detalhes do Pedido</h2>
 <span class="close" onclick="fecharModal()">×</span>
 </div>
 
@@ -398,6 +441,12 @@ font-size:16px;
 
 </table>
 
+    <div style="margin-top:20px;text-align:right;">
+<button class="btn-print" onclick="imprimirPedido({{ pedido.id }})">
+🖨 Imprimir Pedido
+</button>
+</div>
+
 </div>
 {% endfor %}
 
@@ -428,6 +477,9 @@ if(event.target===modal){
 fecharModal();
 }
 }
+
+
+    
 
 </script>
 

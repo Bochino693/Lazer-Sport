@@ -1023,7 +1023,7 @@ class PedidoAdminView(AdminOnlyMixin, View):
             .select_related("cliente", "cliente__user")
             .prefetch_related("itens")
         )
-
+#dnadocrime
         filtros = {}
 
         impresso = request.GET.get("impresso")
