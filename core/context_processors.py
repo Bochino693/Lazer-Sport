@@ -3,7 +3,15 @@ from .models import CategoriasBrinquedos, Estabelecimentos, Manutencao, Carrinho
 
 def categorias_globais(request):
     return {
-        "categorias_header": CategoriasBrinquedos.objects.all().order_by("nome_categoria")
+        "categorias_header": CategoriasBrinquedos.objects.exclude(
+    nome_categoria__in=[
+        "COMPETITIVOS",
+        "KIDS",
+        "FAMOSOS",
+        "ESPAÇO ESPORTIVO KIDS",
+        "ESPAÇO KIDS PLAY",
+    ]
+).order_by("nome_categoria")
     }
 
 

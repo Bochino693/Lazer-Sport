@@ -780,29 +780,18 @@ nav a.btn-login {
       <button><i class="fas fa-search"></i> Buscar</button>
     </div>
 
-<!-- Sugestões de pesquisa -->
-        <div class="search-suggestions">
-          <h3>Sugestões de pesquisa 🔍</h3>
-          <div class="filter-suggestions">
+            <!-- Sugestões de pesquisa -->
+                    <div class="search-suggestions">
+                      <h3>Sugestões de pesquisa 🔍</h3>
+                      <div class="filter-suggestions">
 
-          <!-- 🔄 CATEGORIAS DINÂMICAS -->
-         {% for categoria in categorias_header %}
-                  {% if categoria.nome_categoria != "COMPETITIVOS"
-              and categoria.nome_categoria != "KIDS"
-              and categoria.nome_categoria != "FAMOSOS"
-              and categoria.nome_categoria != "ESPAÇO ESPORTIVO KIDS"
-              and categoria.nome_categoria != "ESPAÇO KIDS PLAY"
-
-
-
-
-              %}
-                    <a href="{% url 'categoria_detalhe' categoria.pk %}#header"
-                       class="suggestion-tag">
-                      {{ categoria.nome_categoria|upper }}
-                    </a>
-                  {% endif %}
-                {% endfor %}
+                      <!-- 🔄 CATEGORIAS DINÂMICAS -->
+                     {% for categoria in categorias_header %}
+            <a href="{% url 'categoria_detalhe' categoria.pk %}#header"
+               class="suggestion-tag">
+              {{ categoria.nome_categoria|upper }}
+            </a>
+            {% endfor %}
 
           {% for est in estabelecimentos_globais|slice:":3" %}
                 <a href="{% url 'estabelecimento_brinquedo' est.id %}#brinquedos" class="suggestion-tag">
