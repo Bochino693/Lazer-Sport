@@ -2557,10 +2557,11 @@ class PedidosParaImpressaoAPI(View):
 
             telefone_cliente = getattr(cliente, "telefone", "N/A")
             subtotal = getattr(pedido, "total_bruto", 0) or 0
+            total_liquido = getattr(pedido, 'total_liquido')
             frete = pedido.valor_frete or (
                 pedido.carrinho_origem.valor_frete if pedido.carrinho_origem else 0
             )
-            total = getattr(pedido, "total_liquido", 0) or 0
+            total = getattr(pedido, "total_final", 0) or 0
 
             data.append({
                 "id": pedido.id,
@@ -2568,6 +2569,7 @@ class PedidosParaImpressaoAPI(View):
                 "telefone": telefone_cliente,
 
                 "subtotal": float(subtotal),
+                "total_liquido": float(total_liquido),
                 "frete_valor": float(frete),
                 "total": float(total),
 
