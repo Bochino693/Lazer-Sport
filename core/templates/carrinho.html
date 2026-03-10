@@ -839,7 +839,13 @@
       <!-- CPF ou CNPJ do comprador -->
         <div class="cpf-box cupom-top">
             <label for="cpfInput"><strong>📝 CPF ou CNPJ</strong></label>
-            <input type="text" id="cpfInput" placeholder="000.000.000-00 ou 00.000.000/0000-00" maxlength="18">
+            <input
+                type="text"
+                id="cpfInput"
+                value="{{ carrinho.cpf_cnpj|default:'' }}"
+                placeholder="000.000.000-00 ou 00.000.000/0000-00"
+                maxlength="18"
+            >
             <small id="cpf-msg"></small>
         </div>
 
@@ -1200,9 +1206,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ===== Formatação e validação do CPF/CNPJ =====
     cpfInput.addEventListener('input', () => {
-        cpfInput.value = formatarCPFouCNPJ(cpfInput.value);
-        atualizarBotaoFinalizar();
-    });
+
+    cpfInput.value = formatarCPFouCNPJ(cpfInput.value);
+
+    const cpf = cpfInput.value.replace(/\D/g, '');
+
+    if (cpf.length === 11 || cpf.length === 14) {
+
+        fetch("{% url 'salvar_cpf_carrinho' %}", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": "{{ csrf_token }}"
+            },
+            body: JSON.stringify({
+                cpf: cpfInput.value
+            })
+        });
+
+    }
+
+    atualizarBotaoFinalizar();
+});
 
     // ===== Formatação e validação do CEP =====
     function formatarCEP(cep) {

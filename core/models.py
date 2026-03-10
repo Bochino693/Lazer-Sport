@@ -580,6 +580,12 @@ class Carrinho(Prime):
         default='frete'
     )
 
+    cpf_cnpj = models.CharField(
+        max_length=18,
+        null=True,
+        blank=True
+    )
+
     mp_payment_id = models.CharField(max_length=100, null=True, blank=True)
 
     @property

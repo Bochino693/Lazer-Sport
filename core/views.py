@@ -1914,6 +1914,29 @@ def aplicar_cupom(request):
     })
 
 
+
+def salvar_cpf_carrinho(request):
+
+    if request.method != "POST":
+        return JsonResponse({"status": "erro"})
+
+    try:
+        data = json.loads(request.body)
+        cpf = data.get("cpf")
+    except:
+        return JsonResponse({"status": "erro"})
+
+    carrinho = Carrinho.objects.filter(cliente=request.user.perfil).first()
+
+    if not carrinho:
+        return JsonResponse({"status": "erro"})
+
+    carrinho.cpf_cnpj = cpf
+    carrinho.save(update_fields=["cpf_cnpj"])
+
+    return JsonResponse({"status": "ok"})
+
+
 class PaymentView(LoginRequiredMixin, View):
 
     def get(self, request, carrinho_id):
@@ -2152,6 +2175,8 @@ def verificar_pagamento(request):
                 "total_final": total_final,
 
                 "mp_status": "approved",
+
+                "cpf_cnpj": carrinho.cpf_cnpj,
 
                 # snapshot cupom
                 "cupom_codigo": carrinho.cupom.codigo if carrinho.cupom else None,

@@ -1,7 +1,7 @@
 from django.urls import path
 from .views import (HomeView, BrinquedoInfoView, CategoriasInfoView, BrinquedosView, webhook_mercadopago,
                     RegistrarView, LoginUsuarioView, LogoutUsuarioView, EventosView, verificar_pagamento,
-                    ProjetosView, ClientePerfilView, ComboInfoView, PromocaoInfoView, calcular_frete,
+                    ProjetosView, ClientePerfilView, ComboInfoView, PromocaoInfoView, calcular_frete, salvar_cpf_carrinho,
                     BrinquedoAdmin, NovaCategoria, NovaTag, ComboListView, ComboCreateView, PedidosParaImpressaoAPI,
                     ComboUpdateView, ComboDeleteView, CupomAdminView, ProjetoAdminView, EstabelecimentoInfoView,
                     EstabelecimentosListView, ManutencaoView, PromocaoAdminView, PromocaoDeleteView,
@@ -45,6 +45,12 @@ urlpatterns = [
         name='manutencoes'
     ),
     path("manutencoes/cancelar/", cancelar_manutencao, name="cancelar_manutencao"),
+
+    path(
+        "salvar-cpf-carrinho/",
+        salvar_cpf_carrinho,
+        name="salvar_cpf_carrinho"
+    ),
 
     path(
         'carrinho/',
