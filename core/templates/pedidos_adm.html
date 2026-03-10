@@ -240,8 +240,8 @@ background-clip:initial;
 <th>Itens</th>
 <th>Bruto</th>
 <th>Desconto</th>
-<th>Líquido</th>
 <th>Frete</th>
+<th>Total</th>
 <th>Pagamento</th>
 <th>Status</th>
 <th>Ações</th>
@@ -255,12 +255,14 @@ background-clip:initial;
 
 <td class="id">#{{ pedido.id }}</td>
 
-<td>{{ pedido.cliente|default:"Cliente removido" }}</td>
+<td>
+{{ pedido.cliente.user.username|default:"Cliente removido" }}
+</td>
 
 <td>{{ pedido.itens.count }} itens</td>
 
 <td class="valor">
-R$ {{ pedido.carrinho_origem.total_final|default:"0,00" }}
+R$ {{ pedido.total_bruto|default:"0,00" }}
 </td>
 
 <td>
@@ -270,11 +272,11 @@ R$ {{ pedido.carrinho_origem.total_final|default:"0,00" }}
 </td>
 
 <td class="valor">
-R$ {{ pedido.total_liquido|default:"0,00" }}
+R$ {{ pedido.valor_frete|default:"0,00" }}
 </td>
 
 <td class="valor">
-R$ {{ pedido.carrinho_origem.valor_frete|default:"0,00" }}
+R$ {{ pedido.total_liquido|default:"0,00" }}
 </td>
 
 <td>

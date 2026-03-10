@@ -1020,7 +1020,7 @@ class PedidoAdminView(AdminOnlyMixin, View):
 
         pedidos = (
             Pedido.objects
-            .select_related("cliente", "carrinho_origem")
+            .select_related("cliente", "cliente__user")
             .prefetch_related("itens")
         )
 
