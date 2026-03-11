@@ -18,14 +18,14 @@
     <!-- CARD DE INFORMAÇÕES -->
     <div class="perfil-card">
         <div class="perfil-header">
-            <!-- Avatar -->
+            <!-- Avatar
             <div class="avatar">
                 {% if user.perfil.avatar %}
                     <img src="{{ user.perfil.avatar.url }}" alt="Avatar">
                 {% else %}
                     <img src="{% static 'images/default_avatar.png' %}" alt="Avatar">
                 {% endif %}
-            </div>
+            </div> -->
             <div class="user-info">
                 <h2>{{ user.first_name }} {{ user.last_name }}</h2>
                 <p>{{ user.email }}</p>
