@@ -1,6 +1,6 @@
 from decimal import Decimal
 from django.contrib.contenttypes.models import ContentType
-from core.models import Pedido, ItemPedido, Carrinho
+from .models import Pedido, ItemPedido, Carrinho
 
 
 def criar_pedido_a_partir_do_carrinho(carrinho: Carrinho) -> Pedido:

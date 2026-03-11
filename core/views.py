@@ -2553,6 +2553,7 @@ class PedidosParaImpressaoAPI(View):
         return JsonResponse({"pedidos": data})
 
 
+@method_decorator(csrf_exempt, name='dispatch')
 class MarcarPedidoImpressoAPI(View):
 
     def post(self, request, pedido_id):
