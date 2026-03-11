@@ -3555,19 +3555,24 @@ function renderizarTodasEstrelas(root = document) {
     });
 }
 
-
 /* ======================================================
-   🔄 AJAX PRODUTOS
+   🔄 AJAX PRODUTOS (OTIMIZADO)
 ====================================================== */
+
 function scrollParaProdutos() {
     const c = document.querySelector('#produtos-container');
     if (!c) return;
-    window.scrollTo({ top: c.getBoundingClientRect().top + window.scrollY - 80, behavior: 'smooth' });
+
+    window.scrollTo({
+        top: c.getBoundingClientRect().top + window.scrollY - 80,
+        behavior: 'smooth'
+    });
 }
 
 let controllerProdutos = null;
 
 async function carregarProdutos(params = {}) {
+
     const url = new URL(window.location.href);
 
     if (params.page) url.searchParams.set('page', params.page);
@@ -3577,46 +3582,64 @@ async function carregarProdutos(params = {}) {
         url.searchParams.delete('page');
     }
 
-    // 🚀 cancela requisição anterior (MUUUUITO IMPORTANTE)
+    /* 🚀 cancela requisição anterior */
     if (controllerProdutos) controllerProdutos.abort();
     controllerProdutos = new AbortController();
 
     try {
+
         const r = await fetch(url, {
             signal: controllerProdutos.signal,
             headers: {
                 'X-Requested-With': 'XMLHttpRequest'
-            }
+            },
+            cache: "no-store"
         });
 
         const html = await r.text();
 
-        const doc = new DOMParser().parseFromString(html, 'text/html');
+        /* 🚀 parse mais leve */
+        const temp = document.createElement("div");
+        temp.innerHTML = html;
 
-        const novoGrid = doc.querySelector('#grid-cards');
-        const novaPag = doc.querySelector('#paginacao-wrapper');
+        const novoGrid = temp.querySelector('#grid-cards');
+        const novaPag = temp.querySelector('#paginacao-wrapper');
 
-        if (novoGrid) {
-            document.querySelector('#grid-cards').innerHTML = novoGrid.innerHTML;
+        const gridAtual = document.querySelector('#grid-cards');
+        const pagAtual = document.querySelector('#paginacao-wrapper');
+
+        /* 🚀 substituição de nós mais rápida */
+        if (novoGrid && gridAtual) {
+            gridAtual.replaceChildren(...novoGrid.children);
         }
 
-        if (novaPag) {
-            document.querySelector('#paginacao-wrapper').innerHTML = novaPag.innerHTML;
+        if (novaPag && pagAtual) {
+            pagAtual.replaceChildren(...novaPag.children);
         }
 
-        // 🚀 roda só depois do DOM atualizar
+        /* 🚀 roda depois do paint */
         requestAnimationFrame(() => {
+
             renderizarTodasEstrelas();
             renderizarMoedas();
-            igualarAlturaCards();
+
+            /* evita layout thrashing */
+            setTimeout(() => {
+                igualarAlturaCards();
+            }, 30);
+
             scrollParaProdutos();
+
         });
 
     } catch (e) {
+
         if (e.name !== 'AbortError') {
             console.error('Erro ao carregar produtos:', e);
         }
+
     }
+
 }
 
 /* ======================================================
