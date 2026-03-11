@@ -1,3 +1,4 @@
+from django.utils.decorators import method_decorator
 from django.views.generic import View
 from django.contrib.auth.models import User
 from django.contrib import messages
@@ -2552,7 +2553,7 @@ class PedidosParaImpressaoAPI(View):
 
         return JsonResponse({"pedidos": data})
 
-
+from django.views.decorators.csrf import csrf_exempt
 @method_decorator(csrf_exempt, name='dispatch')
 class MarcarPedidoImpressoAPI(View):
 
