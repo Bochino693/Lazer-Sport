@@ -24,11 +24,10 @@ class UserForm(forms.ModelForm):
             'email': forms.EmailInput(attrs={'class': 'form-input', 'placeholder': 'Email'}),
             'password': forms.PasswordInput(attrs={'class': 'form-input', 'placeholder': 'Senha'}),
         }
-
 class PerfilForm(forms.ModelForm):
     class Meta:
         model = ClientePerfil
-        fields = ['nome_completo', 'telefone', 'avatar']
+        fields = ['nome_completo', 'telefone']
 
         widgets = {
             'nome_completo': forms.TextInput(
@@ -37,7 +36,6 @@ class PerfilForm(forms.ModelForm):
                     'placeholder': 'Nome completo'
                 }
             ),
-
             'telefone': forms.TextInput(
                 attrs={
                     'class': 'form-input',
