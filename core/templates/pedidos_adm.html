@@ -326,10 +326,9 @@ background-clip:initial;
 R$ {{ pedido.total_bruto|default:"0,00" }}
 </td>
 
-    <td class="valor">
+<td class="valor">
 R$ {{ pedido.total_liquido|default:"0,00" }}
 </td>
-
 
 <td>
 <span style="color:#ff3b3b;font-weight:600;">
@@ -464,11 +463,6 @@ font-size:16px;
 
 </table>
 
-    <div style="margin-top:20px;text-align:right;">
-<button class="btn-print" onclick="imprimirPedido({{ pedido.id }})">
-🖨 Imprimir Pedido
-</button>
-</div>
 
 </div>
 {% endfor %}
@@ -502,6 +496,71 @@ fecharModal();
 }
 
 
+
+    function imprimirPedido(id){
+
+fetch("/admin/imprimir-pedido/",{
+
+method:"POST",
+
+headers:{
+"Content-Type":"application/json",
+"X-CSRFToken":getCookie("csrftoken")
+},
+
+body:JSON.stringify({
+pedido_id:id
+})
+
+})
+
+.then(r=>r.json())
+.then(data=>{
+
+if(data.status=="ok"){
+
+alert("🖨 Impresso na impressora: "+data.printer)
+
+}
+
+else{
+
+alert("❌ Impressora offline")
+
+}
+
+})
+
+}
+
+function getCookie(name){
+let cookieValue=null;
+
+if(document.cookie && document.cookie!==''){
+
+const cookies=document.cookie.split(';');
+
+for(let i=0;i<cookies.length;i++){
+
+const cookie=cookies[i].trim();
+
+if(cookie.substring(0,name.length+1)===(name+'=')){
+
+cookieValue=decodeURIComponent(
+cookie.substring(name.length+1)
+);
+
+break;
+
+}
+
+}
+
+}
+
+return cookieValue;
+
+}
 
 
 </script>

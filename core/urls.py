@@ -7,7 +7,7 @@ from .views import (HomeView, BrinquedoInfoView, CategoriasInfoView, BrinquedosV
                     EstabelecimentosListView, ManutencaoView, PromocaoAdminView, PromocaoDeleteView,
                     adicionar_ao_carrinho, CarrinhoView, aplicar_cupom, remover_item_carrinho, MarcarPedidoImpressoAPI,
                     limpar_carrinho, cancelar_manutencao, alterar_quantidade_item, gerar_pix, atualizar_tipo_envio,
-                    PaymentView, MeusPedidosView, criar_pedido_pix, processar_cartao,
+                    PaymentView, MeusPedidosView, criar_pedido_pix, processar_cartao, imprimir_pedido,
                     EventoAdminView, BannerAdminView, BannerDeleteView, AdminLoginView, AcessoNegadoView,
                     DashboardAdminView, UserAdminView, ManutencaoAdminView, RelatorioVendasView, PedidoAdminView,
                     redirecionar_loja, redirecionar_categoria_brinquedos, redirecionar_categoria_aventura, redirecionar_lancamentos,
@@ -153,5 +153,12 @@ path(
     "api/v1/pedido-impresso/<int:pedido_id>/",
     MarcarPedidoImpressoAPI.as_view()
 ),
+
+
+path(
+    "admin/imprimir-pedido/",
+    imprimir_pedido,
+    name="imprimir_pedido"
+)
 
 ]

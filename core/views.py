@@ -2571,3 +2571,72 @@ class MarcarPedidoImpressoAPI(View):
 
 
 
+from .impressao import imprimir_texto
+
+
+def montar_ticket_pedido(pedido):
+
+    linhas = []
+
+    linhas.append("LAZER SPORT")
+    linhas.append("-"*48)
+
+    linhas.append(f"PEDIDO #{pedido.id}")
+    linhas.append("")
+
+    linhas.append(f"CLIENTE: {pedido.cliente}")
+    linhas.append(f"PAGAMENTO: {pedido.get_forma_pagamento_display()}")
+
+    linhas.append("-"*48)
+    linhas.append("ITENS")
+
+    for item in pedido.itens.all():
+
+        linhas.append(f"{item.quantidade}x {item.nome_item}")
+        linhas.append(f"R$ {item.preco_unitario}")
+
+    linhas.append("-"*48)
+
+    linhas.append(f"FRETE: R$ {pedido.carrinho_origem.valor_frete}")
+    linhas.append(f"TOTAL: R$ {pedido.total_final}")
+
+    linhas.append("-"*48)
+
+    return "\n".join(linhas)
+
+
+def imprimir_pedido(request):
+
+    if request.method != "POST":
+        return JsonResponse({"status": "erro"})
+
+    data = json.loads(request.body)
+
+    pedido_id = data.get("pedido_id")
+
+    try:
+
+        pedido = Pedido.objects.get(id=pedido_id)
+
+        texto = montar_ticket_pedido(pedido)
+
+        sucesso, printer = imprimir_texto(texto)
+
+        if sucesso:
+            pedido.impresso = True
+            pedido.save()
+
+            return JsonResponse({
+                "status": "ok",
+                "printer": printer
+            })
+
+        return JsonResponse({
+            "status": "erro",
+            "printer": printer
+        })
+
+    except Exception as e:
+        print(e)
+
+        return JsonResponse({"status": "erro"})
