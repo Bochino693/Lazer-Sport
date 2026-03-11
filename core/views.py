@@ -2179,7 +2179,6 @@ def verificar_pagamento(request):
         pedido, created = Pedido.objects.update_or_create(
             mp_payment_id=carrinho.mp_payment_id,
             defaults={
-
                 "cliente": carrinho.cliente,
                 "carrinho_origem": carrinho,
 
@@ -2196,7 +2195,6 @@ def verificar_pagamento(request):
                 "rua": frete.rua if frete else None,
                 "bairro": frete.bairro if frete else None,
                 "cidade": frete.cidade if frete else None,
-                "estado": frete.estado if frete else None,
                 "numero": frete.numero if frete else None,
 
                 "mp_status": "approved",
