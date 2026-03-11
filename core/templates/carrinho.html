@@ -1239,7 +1239,6 @@ document.addEventListener('DOMContentLoaded', () => {
     function validarCEP(cep) {
         return /^\d{5}-?\d{3}$/.test(cep);
     }
-
 function calcularFrete() {
 
     const cep = cepInput.value.replace(/\D/g, '');
@@ -1255,7 +1254,14 @@ function calcularFrete() {
             "Content-Type": "application/json",
             "X-CSRFToken": "{{ csrf_token }}"
         },
-        body: JSON.stringify({ cep: cep })
+        body: JSON.stringify({
+            cep: cep,
+            rua: document.getElementById("logradouro")?.value || "",
+            bairro: document.getElementById("bairro")?.value || "",
+            cidade: document.getElementById("cidade")?.value || "",
+            estado: document.getElementById("estado")?.value || "",
+            numero: document.getElementById("numero")?.value || ""
+        })
     })
     .then(r => r.json())
     .then(data => {
@@ -1274,30 +1280,24 @@ function calcularFrete() {
 
         const total = totalProdutos + frete;
 
-           const totalFormatado =
-        "R$ " + total.toLocaleString("pt-BR", {
-            minimumFractionDigits: 2
-        });
+        const totalFormatado =
+            "R$ " + total.toLocaleString("pt-BR", {
+                minimumFractionDigits: 2
+            });
 
         valorFreteSpan.innerText =
             "R$ " + frete.toLocaleString("pt-BR", {
                 minimumFractionDigits: 2
             });
 
-        // atualizar total no resumo
-    totalPedido.innerText = totalFormatado;
+        totalPedido.innerText = totalFormatado;
 
-        totalPedido.innerText =
-            "R$ " + total.toLocaleString("pt-BR", {
-                minimumFractionDigits: 2
-            });
+        const subtotalFixo = document.getElementById("subtotalFixo");
+        if (subtotalFixo) {
+            subtotalFixo.innerText = totalFormatado;
+        }
 
-         const subtotalFixo = document.getElementById("subtotalFixo");
-    if (subtotalFixo) {
-        subtotalFixo.innerText = totalFormatado;
-    }
-
-    linhaFrete.style.display = "flex";
+        linhaFrete.style.display = "flex";
 
         atualizarBotaoFinalizar();
 
@@ -1305,37 +1305,64 @@ function calcularFrete() {
     .catch(() => {
         console.log("Erro ao calcular frete");
     });
-
 }
-    cepInput.addEventListener('input', () => {
-        cepInput.value = formatarCEP(cepInput.value);
-        const cepLimpo = cepInput.value.replace(/\D/g, '');
-        if (cepLimpo.length === 8 && validarCEP(cepInput.value)) {
-            fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`)
-                .then(res => res.json())
-                .then(data => {
-                    if (!data.erro) {
-                        enderecoDetalhes.style.display = 'block';
-                        document.getElementById('logradouro').value = data.logradouro;
-                        document.getElementById('bairro').value = data.bairro;
-                        document.getElementById('cidade').value = data.localidade;
-                        document.getElementById('estado').value = data.uf;
-
-                        calcularFrete(); // <-- Chamada aqui
-                    } else {
-                        enderecoDetalhes.style.display = 'none';
-                    }
-                    atualizarBotaoFinalizar();
-                })
-                .catch(() => enderecoDetalhes.style.display = 'none');
-        } else {
-            enderecoDetalhes.style.display = 'none';
-            atualizarBotaoFinalizar();
-        }
-    });
 
 
-    numeroInput.addEventListener('input', atualizarBotaoFinalizar);
+cepInput.addEventListener('input', () => {
+
+    cepInput.value = formatarCEP(cepInput.value);
+
+    const cepLimpo = cepInput.value.replace(/\D/g, '');
+
+    if (cepLimpo.length === 8 && validarCEP(cepInput.value)) {
+
+        fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`)
+            .then(res => res.json())
+            .then(data => {
+
+                if (!data.erro) {
+
+                    enderecoDetalhes.style.display = 'block';
+
+                    document.getElementById('logradouro').value = data.logradouro || "";
+                    document.getElementById('bairro').value = data.bairro || "";
+                    document.getElementById('cidade').value = data.localidade || "";
+                    document.getElementById('estado').value = data.uf || "";
+
+                    calcularFrete();
+
+                } else {
+                    enderecoDetalhes.style.display = 'none';
+                }
+
+                atualizarBotaoFinalizar();
+            })
+            .catch(() => {
+                enderecoDetalhes.style.display = 'none';
+            });
+
+    } else {
+
+        enderecoDetalhes.style.display = 'none';
+        linhaFrete.style.display = "none";
+
+        atualizarBotaoFinalizar();
+    }
+
+});
+
+
+numeroInput.addEventListener('input', () => {
+
+    atualizarBotaoFinalizar();
+
+    const cepLimpo = cepInput.value.replace(/\D/g, '');
+
+    if (cepLimpo.length === 8) {
+        calcularFrete();
+    }
+
+});
 
     // ===== Alternar abas Frete / Retirada =====
         freteTabs.forEach(tab => {

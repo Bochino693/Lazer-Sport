@@ -672,6 +672,19 @@ body {
         <p>Acompanhe pagamentos, status e itens comprados</p>
     </div>
 
+    {% if pedido.carrinho_origem %}
+<div class="info-box">
+    <small>Tipo de envio</small><br>
+    <strong>
+        {% if pedido.carrinho_origem.tipo_envio == "frete" %}
+            🚚 Entrega
+        {% else %}
+            🏪 Retirada no local
+        {% endif %}
+    </strong>
+</div>
+{% endif %}
+
 {% if pedidos %}
     {% for pedido in pedidos %}
     <div class="pedido-card">
@@ -735,6 +748,61 @@ body {
         {% endif %}
 
     </div>
+
+        {% if pedido.carrinho_origem and pedido.carrinho_origem.tipo_envio == "frete" and pedido.carrinho_origem.frete %}
+<div class="endereco-card modern-card">
+
+    <div class="endereco-header modern-header">
+        📍 Endereço de Entrega
+    </div>
+
+    <div class="endereco-body modern-body">
+
+        <div class="endereco-col modern-col">
+            <h4>Endereço</h4>
+            <p>
+                {{ pedido.carrinho_origem.frete.rua }},
+                {{ pedido.carrinho_origem.frete.numero }} <br>
+                {{ pedido.carrinho_origem.frete.bairro }}
+            </p>
+        </div>
+
+        <div class="endereco-col modern-col">
+            <h4>Cidade</h4>
+            <p>
+                {{ pedido.carrinho_origem.frete.cidade }} -
+                {{ pedido.carrinho_origem.frete.estado }} <br>
+                CEP: {{ pedido.carrinho_origem.frete.cep }}
+            </p>
+        </div>
+
+        <div class="entrega-metricas modern-metrics">
+
+            {% if pedido.carrinho_origem.frete.distancia_km %}
+            <div>
+                📏 Distância
+                <strong>{{ pedido.carrinho_origem.frete.distancia_km }} km</strong>
+            </div>
+            {% endif %}
+
+            {% if pedido.carrinho_origem.frete.tempo_estimado_min %}
+            <div>
+                ⏱ Tempo estimado
+                <strong>{{ pedido.carrinho_origem.frete.tempo_estimado_min }} min</strong>
+            </div>
+            {% endif %}
+
+            <div>
+                🚚 Frete
+                <strong class="money" data-valor="{{ pedido.valor_frete }}"></strong>
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+{% endif %}
 
         <!-- Itens do pedido -->
         <button class="toggle-itens" onclick="toggleItens({{ pedido.id }})">Ver detalhes do pedido</button>

@@ -1784,14 +1784,24 @@ import json
 from .models import Carrinho, Frete
 from .utils import calcular_frete_por_cep
 
+
 @csrf_exempt
 def calcular_frete(request):
 
     if request.method != "POST":
         return JsonResponse({"status": "erro"})
 
-    data = json.loads(request.body)
+    try:
+        data = json.loads(request.body)
+    except:
+        return JsonResponse({"status": "erro"})
+
     cep = data.get("cep")
+    rua = data.get("rua")
+    bairro = data.get("bairro")
+    cidade = data.get("cidade")
+    estado = data.get("estado")
+    numero = data.get("numero")
 
     if not cep:
         return JsonResponse({"status": "erro"})
@@ -1801,16 +1811,27 @@ def calcular_frete(request):
     except Carrinho.DoesNotExist:
         return JsonResponse({"status": "erro"})
 
+    # calcula frete
     valor_frete, distancia = calcular_frete_por_cep(cep)
 
     valor_frete = Decimal(str(valor_frete))
     distancia = Decimal(str(distancia))
 
+    # cria ou pega o frete do carrinho
     frete, _ = Frete.objects.get_or_create(carrinho=carrinho)
 
+    # salva endereço
     frete.cep = cep
+    frete.rua = rua
+    frete.bairro = bairro
+    frete.cidade = cidade
+    frete.estado = estado
+    frete.numero = numero
+
+    # salva valores do frete
     frete.valor = valor_frete
     frete.distancia_km = distancia
+
     frete.save()
 
     return JsonResponse({
@@ -1827,6 +1848,7 @@ from django.views.decorators.http import require_POST
 @login_required
 def alterar_quantidade_item(request):
     data = json.loads(request.body)
+
     item_id = data.get("item_id")
     delta = int(data.get("delta", 0))
 
@@ -2151,23 +2173,33 @@ def verificar_pagamento(request):
         # valor total = liquido + frete
         valor_frete = carrinho.valor_frete or Decimal("0.00")
         total_final = (carrinho.total_liquido or Decimal("0.00")) + valor_frete
+        frete = getattr(carrinho, "frete", None)
 
         # criar ou atualizar pedido de forma segura
         pedido, created = Pedido.objects.update_or_create(
             mp_payment_id=carrinho.mp_payment_id,
             defaults={
+
                 "cliente": carrinho.cliente,
                 "carrinho_origem": carrinho,
+
                 "status": "pago",
                 "forma_pagamento": "pix",
-                "total_bruto": carrinho.total_bruto or Decimal("0.00"),
-                "valor_desconto": carrinho.valor_desconto or Decimal("0.00"),
-                "total_liquido": carrinho.total_liquido or Decimal("0.00"),
-                "valor_frete": valor_frete,
+
+                "total_bruto": carrinho.total_bruto,
+                "valor_desconto": carrinho.valor_desconto,
+                "total_liquido": carrinho.total_liquido,
+                "valor_frete": carrinho.valor_frete,
                 "total_final": total_final,
+
+                "cep": frete.cep if frete else None,
+                "rua": frete.rua if frete else None,
+                "bairro": frete.bairro if frete else None,
+                "cidade": frete.cidade if frete else None,
+                "estado": frete.estado if frete else None,
+                "numero": frete.numero if frete else None,
+
                 "mp_status": "approved",
-                "cupom_codigo": carrinho.cupom.codigo if carrinho.cupom else None,
-                "cupom_percentual": carrinho.cupom.desconto_percentual if carrinho.cupom else None,
             }
         )
 
