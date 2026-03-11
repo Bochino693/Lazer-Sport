@@ -45,7 +45,22 @@ class HomeView(View):
 
         filtro = request.GET.get("ordenar", "az")  # padrão = A-Z
 
-        brinquedos = Brinquedos.objects.all()
+        brinquedos = Brinquedos.objects.only(
+            "id",
+            "nome_brinquedo",
+            "imagem_brinquedo",
+            "descricao",
+            "avaliacao",
+            "valor_brinquedo",
+            "voltz",
+            "altura_m",
+            "largura_m",
+            "profundidade_m"
+        ).prefetch_related(
+            "categorias_brinquedos",
+            "tags",
+            "estabelecimentos"
+        )
 
         # ---------------------------
         # 2. Lógica de ordenação

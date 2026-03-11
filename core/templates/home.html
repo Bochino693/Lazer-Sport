@@ -2576,9 +2576,10 @@ body {
 
         <div class="img-area">
           {% if brinquedo.imagem_brinquedo %}
-              <img src="{{ brinquedo.imagem_brinquedo.url }}" alt="{{ brinquedo.nome_brinquedo }}"
-              loading="eager"
-              decoding="async">
+              <img src="{{ brinquedo.imagem_brinquedo.url }}"
+                 alt="brinquedo.nome_brinquedo"
+                 loading="lazy"
+                 decoding="async">
             {% else %}
               <img src="{% static 'img/placeholder-produto.png' %}" alt="{{ brinquedo.nome_brinquedo }}">
             {% endif %}
