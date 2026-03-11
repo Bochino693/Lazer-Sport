@@ -766,7 +766,7 @@ class Pedido(Prime):
 
     cliente = models.ForeignKey(
         ClientePerfil,
-        on_delete=models.PROTECT,
+        on_delete=models.SET_NULL,
         related_name='pedidos',
         null=True, blank=True
     )
@@ -873,6 +873,7 @@ class ItemPedido(Prime):
             ('brinquedo', 'Brinquedo'),
             ('combo', 'Combo'),
             ('promocao', 'Promoção'),
+            ('pecas', 'Peças'),
         )
     )
 
