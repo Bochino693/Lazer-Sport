@@ -28,11 +28,24 @@ class UserForm(forms.ModelForm):
 class PerfilForm(forms.ModelForm):
     class Meta:
         model = ClientePerfil
-        fields = ['nome_completo']
-        widgets = {
-            'nome_completo': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Nome completo'}),
-        }
+        fields = ['nome_completo', 'telefone', 'avatar']
 
+        widgets = {
+            'nome_completo': forms.TextInput(
+                attrs={
+                    'class': 'form-input',
+                    'placeholder': 'Nome completo'
+                }
+            ),
+
+            'telefone': forms.TextInput(
+                attrs={
+                    'class': 'form-input',
+                    'placeholder': '(11)91234-5678',
+                    'maxlength': '14'
+                }
+            ),
+        }
 
 class PromocaoForm(forms.ModelForm):
     class Meta:
