@@ -40,10 +40,10 @@ class PerfilForm(forms.ModelForm):
                 attrs={
                     'class': 'form-input',
                     'placeholder': '(11)91234-5678',
-                    'maxlength': '14'
+                    'maxlength': '15'
                 }
-            ),
-        }
+            )
+                    }
 
 class PromocaoForm(forms.ModelForm):
     class Meta:
