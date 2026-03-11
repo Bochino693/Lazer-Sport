@@ -3310,8 +3310,108 @@ function igualarAlturaCards() {
     }
 }
 
+document.addEventListener("DOMContentLoaded", () => {
+
+    /* =========================
+       CARROSSEL HERO
+    =========================
+    const wrapper = document.querySelector(".carousel-wrapper");
+    if (wrapper) {
+        const slides = Array.from(wrapper.querySelectorAll(".carousel-slide"));
+        const dots = Array.from(wrapper.querySelectorAll(".dot"));
+        const prev = wrapper.querySelector(".prev");
+        const next = wrapper.querySelector(".next");
+
+        let index = 0;
+        let autoPlayInterval;
+
+        function updateCarousel(newIndex) {
+            slides[index].classList.remove("active");
+            dots[index].classList.remove("active");
+
+            index = (newIndex + slides.length) % slides.length;
+
+            slides[index].classList.add("active");
+            dots[index].classList.add("active");
+        }
+
+        function startAutoPlay() {
+            stopAutoPlay();
+            autoPlayInterval = setInterval(() => updateCarousel(index + 1), 4000);
+        }
+
+        function stopAutoPlay() {
+            clearInterval(autoPlayInterval);
+        }
+
+        next.addEventListener("click", () => {
+            updateCarousel(index + 1);
+            startAutoPlay();
+        });
+
+        prev.addEventListener("click", () => {
+            updateCarousel(index - 1);
+            startAutoPlay();
+        });
+
+        dots.forEach((dot, i) => {
+            dot.addEventListener("click", () => {
+                if (index === i) return;
+                updateCarousel(i);
+                startAutoPlay();
+            });
+        });
+
+        // Swipe mobile
+        let touchStartX = 0;
+        wrapper.addEventListener("touchstart", e => touchStartX = e.touches[0].clientX, {passive: true});
+        wrapper.addEventListener("touchend", e => {
+            let touchEndX = e.changedTouches[0].clientX;
+            if (touchStartX - touchEndX > 50) next.click();
+            if (touchStartX - touchEndX < -50) prev.click();
+        }, {passive: true});
+
+        startAutoPlay();
+    }
 
 
+     */
+const track = document.getElementById("carousel-projetos");
+const prev = document.getElementById("prevProjetos");
+const next = document.getElementById("nextProjetos");
+
+let index = 0;
+
+function visibleCards(){
+    if(window.innerWidth < 600) return 1;
+    if(window.innerWidth < 900) return 2;
+    return 3;
+}
+
+function cardWidth(){
+    return track.querySelector(".projeto-card").offsetWidth + 20;
+}
+
+next.addEventListener("click", ()=>{
+
+    const total = track.children.length;
+    const visible = visibleCards();
+
+    if(index < total - visible){
+        index++;
+        track.style.transform = `translateX(-${index * cardWidth()}px)`;
+    }
+
+});
+
+prev.addEventListener("click", ()=>{
+
+    if(index > 0){
+        index--;
+        track.style.transform = `translateX(-${index * cardWidth()}px)`;
+    }
+
+});
     /* =========================
        AUTO SCROLL CATEGORIAS
     ========================= */
