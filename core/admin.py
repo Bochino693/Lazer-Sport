@@ -31,7 +31,7 @@ from django.utils.html import format_html
 from .models import ImagensSite
 from django import forms
 from django.core.exceptions import ValidationError
-from .models import EnderecoEntrega
+
 
 
 admin.site.site_header = "Painel Lazer Sport"
@@ -623,20 +623,6 @@ class ItemPedidoAdmin(admin.ModelAdmin):
     readonly_fields = ('nome_item', 'tipo_item', 'preco_unitario', 'quantidade', 'subtotal')
 
 
-class EnderecoEntregaForm(forms.ModelForm):
-    class Meta:
-        model = EnderecoEntrega
-        fields = [
-            'cep',
-            'rua',
-            'numero',
-            'complemento',
-            'bairro',
-            'cidade',
-            'estado',
-        ]
-
-
 @admin.register(EnderecoEmpresa)
 class EnderecoEmpresaAdmin(admin.ModelAdmin):
     list_display = (
@@ -684,42 +670,3 @@ class EnderecoEmpresaAdmin(admin.ModelAdmin):
     )
 
     ordering = ('nome',)
-
-
-from .models import EnderecoEntrega, Pedido
-
-@admin.register(EnderecoEntrega)
-class EnderecoEntregaAdmin(admin.ModelAdmin):
-    list_display = (
-        'pedido',
-        'cep',
-        'rua',
-        'numero',
-        'bairro',
-        'cidade',
-        'estado',
-        'telefone',
-        'latitude',
-        'longitude',
-    )
-    list_filter = ('cidade', 'estado')
-    search_fields = ('pedido__id', 'cep', 'rua', 'bairro', 'cidade', 'estado', 'telefone')
-    #readonly_fields = ('latitude', 'longitude')  # latitude e longitude não devem ser editáveis manualmente
-    fieldsets = (
-        (None, {
-            'fields': (
-                'pedido',
-                'telefone',
-                'cep',
-                'rua',
-                'numero',
-                'complemento',
-                'bairro',
-                'cidade',
-                'estado',
-            )
-        }),
-        ('Coordenadas (geocodificação)', {
-            'fields': ('latitude', 'longitude'),
-        }),
-    )

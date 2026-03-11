@@ -10,7 +10,7 @@ from django.views.generic.edit import FormView
 from django.contrib.auth.mixins import LoginRequiredMixin
 
 from .models import Brinquedos, CategoriasBrinquedos, Projetos, Eventos, ClientePerfil, Combos, Cupom, Promocoes, \
-    TagsBrinquedos, ImagensSite, BrinquedosProjeto, Estabelecimentos, Manutencao, ManutencaoImagem, EnderecoEntrega, \
+    TagsBrinquedos, ImagensSite, BrinquedosProjeto, Estabelecimentos, Manutencao, ManutencaoImagem, \
     BrinquedoClick, ComboClick, PromocaoClick, CategoriaClick, PecasReposicao, CategoriaPeca
 
 import os
@@ -2346,66 +2346,11 @@ def confirmar_cartao(request, carrinho_id):
 from django.contrib.contenttypes.models import ContentType
 from django.db import transaction
 
-from django.shortcuts import get_object_or_404, redirect
 from django.views import View
 from django.contrib.auth.mixins import LoginRequiredMixin
 
-from .models import Pedido, EnderecoEntrega, EnderecoEmpresa
 
 
-
-class PaymentFinallyView(LoginRequiredMixin, View):
-    template_name = 'payment_finally.html'
-
-    def get_pedido(self, pedido_id, user):
-        return get_object_or_404(
-            Pedido,
-            id=pedido_id,
-            cliente=user.perfil
-        )
-
-    def get(self, request, pedido_id):
-        pedido = self.get_pedido(pedido_id, request.user)
-        return render(request, self.template_name, {
-            "pedido": pedido,
-            "endereco": getattr(pedido, 'endereco', None),
-        })
-
-    def post(self, request, pedido_id):
-        pedido = self.get_pedido(pedido_id, request.user)
-
-        if pedido.status not in ['criado', 'aguardando_pagamento']:
-            return redirect('meus_pedidos')
-
-        with transaction.atomic():
-            # Cria ou atualiza o endereço de entrega
-            endereco, _ = EnderecoEntrega.objects.update_or_create(
-                pedido=pedido,
-                defaults={
-                    'cep': request.POST.get('cep'),
-                    'rua': request.POST.get('rua'),
-                    'numero': request.POST.get('numero'),
-                    'complemento': request.POST.get('complemento'),
-                    'bairro': request.POST.get('bairro'),
-                    'cidade': request.POST.get('cidade'),
-                    'estado': request.POST.get('estado'),
-                    'telefone': request.POST.get('telefone'),
-                }
-            )
-
-            # Geocodifica endereço do cliente
-            lat_entrega, lon_entrega = endereco.geocodificar()
-            if lat_entrega is not None and lon_entrega is not None:
-                endereco.latitude = round(lat_entrega, 6)
-                endereco.longitude = round(lon_entrega, 6)
-                endereco.save(update_fields=['latitude', 'longitude'])
-
-            # Atualiza status do pedido
-            if pedido.status != 'aguardando_pagamento':
-                pedido.status = 'aguardando_pagamento'
-                pedido.save(update_fields=['status'])
-
-        return redirect('meus_pedidos')
 
 
 #-23.453403648643707, -46.66151816239609  -23.472997309863196, -46.63041992925325

@@ -7,7 +7,7 @@ from .views import (HomeView, BrinquedoInfoView, CategoriasInfoView, BrinquedosV
                     EstabelecimentosListView, ManutencaoView, PromocaoAdminView, PromocaoDeleteView,
                     adicionar_ao_carrinho, CarrinhoView, aplicar_cupom, remover_item_carrinho, MarcarPedidoImpressoAPI,
                     limpar_carrinho, cancelar_manutencao, alterar_quantidade_item, gerar_pix, atualizar_tipo_envio,
-                    PaymentView, MeusPedidosView, criar_pedido_pix, PaymentFinallyView, processar_cartao,
+                    PaymentView, MeusPedidosView, criar_pedido_pix, processar_cartao,
                     EventoAdminView, BannerAdminView, BannerDeleteView, AdminLoginView, AcessoNegadoView,
                     DashboardAdminView, UserAdminView, ManutencaoAdminView, RelatorioVendasView, PedidoAdminView,
                     redirecionar_loja, redirecionar_categoria_brinquedos, redirecionar_categoria_aventura, redirecionar_lancamentos,
@@ -125,11 +125,7 @@ urlpatterns = [
     path('meus-pedidos/', MeusPedidosView.as_view(), name='meus_pedidos'),
 
     path('pedido/pix/criar/', criar_pedido_pix, name='criar_pedido_pix'),
-    path(
-        'pedido/<int:pedido_id>/endereco/',
-        PaymentFinallyView.as_view(),
-        name='payment_finally'
-    ),
+
 
     path("ajax/filtrar-pecas/", filtrar_pecas_ajax, name="filtrar_pecas_ajax"),
     path("api/webhook-mp/", webhook_mercadopago, name="webhook_mp"),
