@@ -2571,3 +2571,28 @@ class MarcarPedidoImpressoAPI(View):
         except Pedido.DoesNotExist:
             return JsonResponse({"erro": "Pedido não encontrado"}, status=404)
 
+
+
+# No Django (Produção)
+from django.http import JsonResponse
+from django.contrib.auth import authenticate
+from django.views.decorators.csrf import csrf_exempt
+
+@csrf_exempt # Isento para permitir o POST do seu Flask local
+def verify_auth_api(request):
+    u = request.POST.get('username')
+    p = request.POST.get('password')
+    key = request.POST.get('app_key')
+
+    # Proteção simples para garantir que só o seu Flask chame esta rota
+    if key != 'SUA_CHAVE_DE_SEGURANCA_ENTRE_APPS':
+        return JsonResponse({'valid': False}, status=403)
+
+    user = authenticate(username=u, password=p)
+    if user:
+        return JsonResponse({
+            'valid': True,
+            'is_staff': user.is_staff,
+            'is_superuser': user.is_superuser
+        })
+    return JsonResponse({'valid': False}, status=401)
