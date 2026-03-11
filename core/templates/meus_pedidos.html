@@ -706,25 +706,35 @@ body {
         </div>
 
         <div class="pedido-footer">
-            <div class="footer-item">
-                <small>Total bruto</small>
-                <strong class="money" data-valor="{{ pedido.total_bruto }}"></strong>
-            </div>
-            <div class="footer-item desconto">
-                <small>Desconto</small>
-                <strong class="money desconto" data-valor="{{ pedido.valor_desconto }}"></strong>
-            </div>
-            <div class="footer-item total">
-                <small>Total final</small>
-                <strong class="money total" data-valor="{{ pedido.total_liquido }}"></strong>
-            </div>
-            {% if pedido.cupom_codigo %}
-            <div class="footer-item cupom">
-                <small>Cupom</small>
-                <strong>🎟️ {{ pedido.cupom_codigo }}</strong>
-            </div>
-            {% endif %}
+
+        <div class="footer-item">
+            <small>Total bruto</small>
+            <strong class="money" data-valor="{{ pedido.total_bruto }}"></strong>
         </div>
+
+        <div class="footer-item desconto">
+            <small>Desconto</small>
+            <strong class="money desconto" data-valor="{{ pedido.valor_desconto }}"></strong>
+        </div>
+
+        <div class="footer-item">
+            <small>Frete</small>
+            <strong class="money" data-valor="{{ pedido.valor_frete }}"></strong>
+        </div>
+
+        <div class="footer-item total">
+            <small>Total final</small>
+            <strong class="money total" data-valor="{{ pedido.total_final }}"></strong>
+        </div>
+
+        {% if pedido.cupom_codigo %}
+        <div class="footer-item cupom">
+            <small>Cupom</small>
+            <strong>🎟️ {{ pedido.cupom_codigo }}</strong>
+        </div>
+        {% endif %}
+
+    </div>
 
         <!-- Itens do pedido -->
         <button class="toggle-itens" onclick="toggleItens({{ pedido.id }})">Ver detalhes do pedido</button>
