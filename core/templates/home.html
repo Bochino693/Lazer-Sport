@@ -3622,197 +3622,250 @@ async function carregarProdutos(params = {}) {
 /* ======================================================
    🚀 INIT GLOBAL
 ====================================================== */
+
 document.addEventListener("DOMContentLoaded", () => {
+
+    /* ================= INIT BASICO ================= */
+
     renderizarTodasEstrelas();
     renderizarMoedas();
     igualarAlturaCards('#grid-cards');
     igualarAlturaGridPecas();
 
-    // rotating messages (safe)
-    const msgs = document.querySelectorAll('.rotating-messages .message');
-    if (msgs.length) {
-        let i = 0;
-        msgs[0].classList.add('active');
+
+    /* ================= ROTATING MESSAGES ================= */
+
+    const messages = document.querySelectorAll('.rotating-messages .message');
+
+    if (messages.length) {
+
+        let currentIndex = 0;
+
+        messages[0].classList.add('active');
+
         setInterval(() => {
-            msgs[i].classList.remove('active');
-            i = (i + 1) % msgs.length;
-            msgs[i].classList.add('active');
+
+            messages[currentIndex].classList.remove('active');
+
+            currentIndex = (currentIndex + 1) % messages.length;
+
+            messages[currentIndex].classList.add('active');
+
         }, 5000);
+
     }
-});
 
-
-document.addEventListener("DOMContentLoaded", () => {
 
     /* ================= SCROLL PARA PRODUTOS ================= */
+
     const params = new URLSearchParams(window.location.search);
+
     if (params.has("scroll")) {
+
         const alvo = document.querySelector(".produto-container");
+
         if (alvo) {
+
             const posicao = alvo.offsetTop - window.innerHeight / 3;
-            window.scrollTo({ top: posicao, behavior: "smooth" });
+
+            window.scrollTo({
+                top: posicao,
+                behavior: "smooth"
+            });
+
         }
+
     }
 
+
     /* ================= ABRIR MODAL ================= */
+
     document.querySelectorAll("[data-modal]").forEach(card => {
+
         card.addEventListener("click", () => {
+
             const modalId = card.dataset.modal;
+
             const modal = document.getElementById(modalId);
+
             if (!modal) return;
 
             modal.style.display = "block";
+
             document.body.style.overflow = "hidden";
 
-            // Inicia todos os carrosséis internos desse modal
-            modal.querySelectorAll(".modal-carousel-track").forEach(track => initCarousel(track));
+            modal.querySelectorAll(".modal-carousel-track")
+                .forEach(track => initCarousel(track));
+
         });
+
     });
+
+
+    /* ================= PROJETO CARD CLICK ================= */
+
+    document.querySelectorAll(".projeto-card").forEach(item => {
+
+        item.addEventListener("click", () => {
+
+            const modal = document.getElementById(item.dataset.modal);
+
+            if (!modal) return;
+
+            modal.style.display = "block";
+
+            document.body.style.overflow = "hidden";
+
+            modal.querySelectorAll(".modal-carousel-track")
+                .forEach(track => initCarousel(track));
+
+        });
+
+    });
+
 
     /* ================= FECHAR MODAL ================= */
+
     document.querySelectorAll(".modal-close").forEach(btn => {
+
         btn.addEventListener("click", () => {
+
             const modal = btn.closest(".evento-modal, .projeto-modal");
+
             if (!modal) return;
+
             modal.style.display = "none";
+
             document.body.style.overflow = "auto";
+
         });
+
     });
 
-    // Fechar ao clicar fora do conteúdo
+
+    /* ================= FECHAR AO CLICAR FORA ================= */
+
     document.querySelectorAll(".evento-modal, .projeto-modal").forEach(modal => {
+
         modal.addEventListener("click", e => {
+
             if (e.target === modal) {
+
                 modal.style.display = "none";
+
                 document.body.style.overflow = "auto";
+
             }
+
         });
+
     });
 
-    /* ================= CARROSSEL BOTÕES ================= */
-    document.querySelectorAll(".carousel-btn[data-target]").forEach(btn => {
+
+    /* ================= BOTÕES CARROSSEL ================= */
+
+    document.querySelectorAll(".carousel-btn[data-target], .carousel-btn").forEach(btn => {
+
         btn.addEventListener("click", () => {
+
             const track = document.getElementById(btn.dataset.target);
+
             if (!track) return;
+
             const cardWidth = track.querySelector("img")?.offsetWidth + 12 || 300;
 
-            if (btn.classList.contains("left")) track.scrollLeft -= cardWidth;
-            else track.scrollLeft += cardWidth;
-        });
-    });
+            if (btn.classList.contains("left")) {
 
-});
+                track.scrollLeft -= cardWidth;
 
-/* ================= FUNÇÃO DE CARROSSEL AUTOMÁTICO ================= */
-function initCarousel(track) {
-    if (track.dataset.initiated) return; // evita iniciar 2x
-    track.dataset.initiated = "true";
+            } else {
 
-    const imgs = track.querySelectorAll("img");
-    if (!imgs.length) return;
+                track.scrollLeft += cardWidth;
 
-    const cardWidth = imgs[0].offsetWidth + 12;
-
-    setInterval(() => {
-        track.scrollLeft += cardWidth;
-        if (track.scrollLeft + track.offsetWidth >= track.scrollWidth - 10) {
-            track.scrollLeft = 0;
-        }
-    }, 3000);
-}
-
-
-document.addEventListener("DOMContentLoaded", () => {
-
-    // Abrir modal ao clicar no item do carrossel
-    document.querySelectorAll(".projeto-card").forEach(item => {
-        item.addEventListener("click", () => {
-            const modal = document.getElementById(item.dataset.modal);
-            modal.style.display = "block";
-            document.body.style.overflow = "hidden";
-
-            // Inicia carrossel interno
-            modal.querySelectorAll(".modal-carousel-track").forEach(track => initCarousel(track));
-        });
-    });
-
-    // Fechar modal
-    document.querySelectorAll(".modal-close").forEach(btn => {
-        btn.addEventListener("click", () => {
-            const modal = btn.closest(".projeto-modal");
-            modal.style.display = "none";
-            document.body.style.overflow = "auto";
-        });
-    });
-
-    // Fechar ao clicar fora
-    document.querySelectorAll(".projeto-modal").forEach(modal => {
-        modal.addEventListener("click", e => {
-            if (e.target === modal) {
-                modal.style.display = "none";
-                document.body.style.overflow = "auto";
             }
+
         });
+
     });
 
-    // Botões carrossel interno
-    document.querySelectorAll(".carousel-btn").forEach(btn => {
-        btn.addEventListener("click", () => {
-            const track = document.getElementById(btn.dataset.target);
-            const cardWidth = track.querySelector("img")?.offsetWidth + 12 || 300;
 
-            if (btn.classList.contains("left")) track.scrollLeft -= cardWidth;
-            else track.scrollLeft += cardWidth;
-        });
-    });
+    /* ================= SLIDER PEÇAS ================= */
+
+    const slider = document.getElementById("pecasSlider");
+
+    if (slider) {
+
+        const slides = slider.querySelectorAll(".peca-slide");
+
+        if (slides.length) {
+
+            let current = Math.floor(Math.random() * slides.length);
+
+            slides[current].classList.add("active");
+
+            setInterval(() => {
+
+                slides[current].classList.remove("active");
+
+                current = (current + 1) % slides.length;
+
+                slides[current].classList.add("active");
+
+            }, 3000);
+
+        }
+
+    }
+
 });
 
 
-const messages = document.querySelectorAll('.rotating-messages .message');
-let currentIndex = 0;
-
-// Inicializa a primeira mensagem ativa
-messages[0].classList.add('active');
-
-function rotateMessages() {
-    messages[currentIndex].classList.remove('active');
-    currentIndex = (currentIndex + 1) % messages.length;
-    messages[currentIndex].classList.add('active');
-}
-
-// Troca a cada 5 segundos
-setInterval(rotateMessages, 5000)
-
-
-
+/* ======================================================
+   📄 CLICK GLOBAL (PAGINAÇÃO + FILTROS)
+====================================================== */
 
 document.addEventListener('click', e => {
+
     const btn = e.target.closest('.page-btn');
+
     if (btn) {
+
         e.preventDefault();
 
         const page = btn.dataset.page;
+
         if (!page) {
-            // fallback seguro (produção)
+
             window.location.href = btn.href;
+
             return;
+
         }
 
         carregarProdutos({ page });
+
         return;
+
     }
 
+
     const filtro = e.target.closest('#filtros-bar .filtro-btn');
+
     if (filtro) {
+
         e.preventDefault();
 
         document.querySelectorAll('#filtros-bar .filtro-btn')
             .forEach(b => b.classList.remove('ativo'));
+
         filtro.classList.add('ativo');
 
         carregarProdutos({ ordenar: filtro.dataset.order });
+
     }
+
 });
+
 
 document.addEventListener("DOMContentLoaded", () => {
   const slider = document.getElementById("pecasSlider");
