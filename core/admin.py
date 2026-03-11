@@ -39,6 +39,27 @@ admin.site.site_title = "Lazer Sport Admin"
 admin.site.index_title = "Bem-vindo ao Painel"
 
 
+from django.contrib import admin
+from .models import ItemCarrinho
+from django.contrib.contenttypes.admin import GenericTabularInline
+
+# Inline para exibir itens dentro do carrinho
+class ItemCarrinhoInline(GenericTabularInline):
+    model = ItemCarrinho
+    extra = 0
+    readonly_fields = ('preco_unitario', 'subtotal')
+    fields = ('item', 'quantidade', 'preco_unitario', 'subtotal')
+    can_delete = True
+    show_change_link = True
+
+# Admin principal para ItemCarrinho (opcional se quiser editar fora do inline)
+@admin.register(ItemCarrinho)
+class ItemCarrinhoAdmin(admin.ModelAdmin):
+    list_display = ('id', 'carrinho', 'item', 'quantidade', 'preco_unitario', 'subtotal')
+    list_filter = ('carrinho',)
+    search_fields = ('carrinho__id', 'item__id')
+    readonly_fields = ('preco_unitario', 'subtotal')
+
 # ⭐ INLINE DAS IMAGENS
 class ImagemPecaInline(admin.TabularInline):
     model = ImagemPeca
