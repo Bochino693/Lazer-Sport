@@ -298,7 +298,8 @@ background-clip:initial;
 <th>ID</th>
 <th>Cliente</th>
 <th>Itens</th>
-<th>Bruto</th>
+<th>Bruto Itens</th>
+<th>Liquido Itens</th>
 <th>Desconto</th>
 <th>Frete</th>
 <th>Total</th>
@@ -324,6 +325,11 @@ background-clip:initial;
 <td class="valor">
 R$ {{ pedido.total_bruto|default:"0,00" }}
 </td>
+
+    <td class="valor">
+R$ {{ pedido.total_liquido|default:"0,00" }}
+</td>
+
 
 <td>
 <span style="color:#ff3b3b;font-weight:600;">
