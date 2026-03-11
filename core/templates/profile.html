@@ -67,16 +67,23 @@
                 </div>
 
                 <!-- Nome completo -->
-                <div class="form-group">
-                    <label for="id_nome_completo">Nome completo</label>
-                    {{ perfil_form.nome_completo }}
-                </div>
+            <div class="form-group">
+                <label for="id_nome_completo">Nome completo</label>
+                {{ perfil_form.nome_completo }}
+            </div>
 
-                <!-- Email -->
-                <div class="form-group">
-                    <label for="id_email">Email</label>
-                    {{ user_form.email }}
-                </div>
+            <!-- Telefone -->
+            <div class="form-group">
+                <label for="id_telefone">Telefone</label>
+                {{ perfil_form.telefone }}
+                <small>Formato: (11)91234-5678</small>
+            </div>
+
+            <!-- Email -->
+            <div class="form-group">
+                <label for="id_email">Email</label>
+                {{ user_form.email }}
+            </div>
 
                 <button type="submit" class="btn btn-primary">Salvar Alterações</button>
             </form>
@@ -84,6 +91,39 @@
     </div>
 
 </section>
+
+<script>
+document.addEventListener("DOMContentLoaded", function(){
+
+    const telefone = document.getElementById("id_telefone");
+
+    if(telefone){
+
+        telefone.addEventListener("input", function(e){
+
+            let v = e.target.value.replace(/\D/g,'');
+
+            if(v.length > 11) v = v.slice(0,11);
+
+            if(v.length > 10){
+                v = v.replace(/^(\d{2})(\d{5})(\d{4}).*/, "($1)$2-$3");
+            }else if(v.length > 6){
+                v = v.replace(/^(\d{2})(\d{4})(\d{0,4}).*/, "($1)$2-$3");
+            }else if(v.length > 2){
+                v = v.replace(/^(\d{2})(\d{0,5})/, "($1)$2");
+            }else{
+                v = v.replace(/^(\d*)/, "($1");
+            }
+
+            e.target.value = v;
+
+        });
+
+    }
+
+});
+</script>
+
 
 <style>
     /* ======== BREADCRUMB ======== */
