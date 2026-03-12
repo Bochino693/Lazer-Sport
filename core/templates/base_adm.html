@@ -401,17 +401,6 @@ table td {
     <div class="meta">Painel de controle</div>
   </div>
 
-<div class="sidebar-bottom">
-
-  <a href="/" class="link-site">
-    🌐 Voltar para o site
-  </a>
-
-  <a href="#" class="link-logout" onclick="abrirModalLogout(); return false;">
-    ⛔ Sair do sistema
-  </a>
-
-</div>
 
  <!-- <a href="{% url 'banner_adm' %}">Banners do Site</a> -->
   <a href="{% url 'dashboards' %}">Dashboard</a>
@@ -444,6 +433,18 @@ table td {
 
   <a href="{% url 'relatorio_vendas' %}">Relatório de Vendas</a>
   <a href="{% url 'clients' %}">Usuários</a>
+
+   <div class="sidebar-bottom">
+
+  <a href="/" class="link-site">
+    🌐 Voltar para o site
+  </a>
+
+  <a href="#" class="link-logout" onclick="abrirModalLogout(); return false;">
+    ⛔ Sair do sistema
+  </a>
+
+</div>
 
 
 <!-- <button id="close-sidebar-btn" class="close-btn" type="button">Fechar Menu</button> -->
