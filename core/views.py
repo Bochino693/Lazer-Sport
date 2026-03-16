@@ -7,6 +7,7 @@ from decimal import Decimal
 
 from .forms import UserForm, PerfilForm, ProjetoForm, ManutencaoForm, CupomForm
 from django.views.generic.edit import FormView
+from django.db.models import Count, F, FloatField, Value, Prefetch
 
 from django.contrib.auth.mixins import LoginRequiredMixin
 
@@ -17,7 +18,7 @@ from .models import Brinquedos, CategoriasBrinquedos, Projetos, Eventos, Cliente
 import os
 from django.http import FileResponse, Http404
 from django.conf import settings
-
+from random import shuffle
 
 def media_serve(request, path):
     file_path = os.path.join(settings.MEDIA_ROOT, path)
@@ -34,6 +35,7 @@ def erro_404(request, exception):
 
 def erro_500(request):
     return render(request, "500.html", status=500)
+
 
 class HomeView(View):
     def get(self, request):
@@ -447,9 +449,9 @@ class CategoriasInfoView(View):
 
 
 from django.core.paginator import Paginator
-from django.db.models import F, FloatField, ExpressionWrapper
+from django.db.models import F, FloatField, ExpressionWrapper, Prefetch
 from django.db.models import F, FloatField, ExpressionWrapper, DecimalField
-from django.db.models.functions import Cast, TruncDate
+from django.db.models.functions import Cast, TruncDate, Coalesce
 
 from django.views.generic import ListView
 from .models import Estabelecimentos
