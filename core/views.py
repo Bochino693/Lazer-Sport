@@ -35,37 +35,32 @@ def erro_404(request, exception):
 def erro_500(request):
     return render(request, "500.html", status=500)
 
-
 class HomeView(View):
-
-    def get(self, request):  # ---------------------------
-        # 1. Captura do filtro
-        # ---------------------------
-
+    def get(self, request):
         imagens_site = ImagensSite.objects.order_by('-id')[:5]
 
-        filtro = request.GET.get("ordenar", "az")  # padrão = A-Z
+        filtro = request.GET.get("ordenar", "az")
 
-        brinquedos = Brinquedos.objects.only(
-            "id",
-            "nome_brinquedo",
-            "imagem_brinquedo",
-            "descricao",
-            "avaliacao",
-            "valor_brinquedo",
-            "voltz",
-            "altura_m",
-            "largura_m",
-            "profundidade_m"
-        ).prefetch_related(
-            "categorias_brinquedos",
-            "tags",
-            "estabelecimentos"
+        brinquedos = (
+            Brinquedos.objects.only(
+                "id",
+                "nome_brinquedo",
+                "imagem_brinquedo",
+                "descricao",
+                "avaliacao",
+                "valor_brinquedo",
+                "voltz",
+                "altura_m",
+                "largura_m",
+                "profundidade_m"
+            )
+            .prefetch_related(
+                "categorias_brinquedos",
+                "tags",
+                "estabelecimentos"
+            )
         )
 
-        # ---------------------------
-        # 2. Lógica de ordenação
-        # ---------------------------
         if filtro == "az":
             brinquedos = brinquedos.order_by("nome_brinquedo")
 
@@ -73,21 +68,23 @@ class HomeView(View):
             brinquedos = brinquedos.order_by("-nome_brinquedo")
 
         elif filtro == "melhor-avaliados":
-            brinquedos = brinquedos.order_by("-avaliacao")
+            brinquedos = brinquedos.order_by("-avaliacao", "nome_brinquedo")
 
         elif filtro == "custo-beneficio":
-            # avaliação / preço (menor preço e maior nota)
             brinquedos = brinquedos.annotate(
+                preco_seguro=Coalesce("valor_brinquedo", Value(0.0)),
+                avaliacao_segura=Coalesce("avaliacao", Value(0.0)),
                 score=ExpressionWrapper(
-                    F("avaliacao") / (F("valor_brinquedo") + 0.01),
+                    F("avaliacao_segura") / (F("preco_seguro") + Value(0.01)),
                     output_field=FloatField()
                 )
-            ).order_by("-score")
+            ).order_by("-score", "nome_brinquedo")
 
-        # ---------------------------
-        # 3. Paginação
-        # ---------------------------
-        paginator = Paginator(brinquedos, 9)  # 9 por página
+        else:
+            brinquedos = brinquedos.order_by("nome_brinquedo")
+            filtro = "az"
+
+        paginator = Paginator(brinquedos, 9)
         page_number = request.GET.get("page")
         page_obj = paginator.get_page(page_number)
 
@@ -95,7 +92,7 @@ class HomeView(View):
             total_produtos=Count('brinquedos', distinct=True)
         )
 
-        combos = Combos.objects.all()
+        combos = Combos.objects.all().prefetch_related("brinquedos")
         promocoes = Promocoes.objects.all()
         eventos = Eventos.objects.all()
         projetos = Projetos.objects.all()
@@ -104,24 +101,18 @@ class HomeView(View):
             total_original = sum(
                 (b.valor_brinquedo or Decimal('0')) for b in combo.brinquedos.all()
             )
-
             valor_combo = combo.valor_combo or Decimal('0')
-
             economia = total_original - valor_combo
-
             porcentagem = (economia / total_original * 100) if total_original > 0 else 0
 
             combo.total_original = total_original
             combo.economia = economia
             combo.porcentagem = porcentagem
 
-
         categorias_peca = CategoriaPeca.objects.all()
-        from .models import ImagemPeca
-        from django.db.models import Prefetch
-        from random import shuffle
 
-        # pega peças que possuem pelo menos 1 imagem
+        from .models import ImagemPeca
+
         pecas_preview = list(
             PecasReposicao.objects
             .prefetch_related(
@@ -134,15 +125,9 @@ class HomeView(View):
             .distinct()
         )
 
-        # embaralha no Python (mais performático que order_by("?"))
         shuffle(pecas_preview)
-
-        # limita
         pecas_preview = pecas_preview[:12]
 
-        # ---------------------------
-        # peças (CORRETO)
-        # ---------------------------
         categoria_ativa = request.GET.get("categoria")
 
         pecas_lista = PecasReposicao.objects.filter(ativo=True).prefetch_related(
@@ -166,7 +151,7 @@ class HomeView(View):
             "eventos": eventos,
             "categorias_peca": categorias_peca,
             "categoria_ativa": categoria_ativa,
-            "pecas_reposicao": page_obj_pecas,  # ✅ AGORA PAGINADO
+            "pecas_reposicao": page_obj_pecas,
             "pecas_count": PecasReposicao.objects.count(),
             "pecas_preview": pecas_preview,
             "projetos": projetos,

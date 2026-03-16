@@ -2536,141 +2536,157 @@ body {
 <!-- ======= PRODUTOS ======= -->
 <section id="brinquedos" class="destaques">
   <h2 class="titulo-sec">Brinquedos em Destaque</h2>
-        <p class="section-subtitle">
-  Brinquedos que fazem a diferença e encantam qualquer festa.
-</p>
-    <a href="{% url 'brinquedos' %}#bread" class="btn-vertodos">Ver todos os brinquedos</a>
+  <p class="section-subtitle">
+    Brinquedos que fazem a diferença e encantam qualquer festa.
+  </p>
 
-  <!-- BARRA HORIZONTAL DE FILTROS -->
+  <a href="{% url 'brinquedos' %}#bread" class="btn-vertodos">Ver todos os brinquedos</a>
+
+  <!-- FILTROS -->
   <div class="filtros-horizontal" id="filtros-bar">
-      <a data-order="az"
-         class="filtro-btn {% if ordenar == 'az' or not ordenar %}ativo{% endif %}">
-         A → Z
-      </a>
+    <button
+      type="button"
+      data-order="az"
+      class="filtro-btn {% if ordenar == 'az' or not ordenar %}ativo{% endif %}"
+    >
+      A → Z
+    </button>
 
-      <a data-order="za"
-         class="filtro-btn {% if ordenar == 'za' %}ativo{% endif %}">
-         Z → A
-      </a>
+    <button
+      type="button"
+      data-order="za"
+      class="filtro-btn {% if ordenar == 'za' %}ativo{% endif %}"
+    >
+      Z → A
+    </button>
 
-      <a data-order="melhor-avaliados"
-         class="filtro-btn {% if ordenar == 'melhor-avaliados' %}ativo{% endif %}">
-         ⭐ Melhores avaliados
-      </a>
+    <button
+      type="button"
+      data-order="melhor-avaliados"
+      class="filtro-btn {% if ordenar == 'melhor-avaliados' %}ativo{% endif %}"
+    >
+      ⭐ Melhores avaliados
+    </button>
 
-      <a data-order="custo-beneficio"
-         class="filtro-btn {% if ordenar == 'custo-beneficio' %}ativo{% endif %}">
-         💰 Custo-benefício
-      </a>
+    <button
+      type="button"
+      data-order="custo-beneficio"
+      class="filtro-btn {% if ordenar == 'custo-beneficio' %}ativo{% endif %}"
+    >
+      💰 Custo-benefício
+    </button>
   </div>
 
-<!-- CONTAINER ATUALIZÁVEL -->
-<div id="produtos-container">
+  <!-- CONTAINER PRODUTOS -->
+  <div id="produtos-container">
 
-  <div class="grid-cards" id="grid-cards">
+    <div class="grid-cards" id="grid-cards">
+      {% for brinquedo in page_obj %}
+        <a href="{% url 'brinquedo_detalhe' brinquedo.id %}#bread" class="card-link">
+          <div class="card-produto">
 
-    {% for brinquedo in page_obj %}
-    <a href="{% url 'brinquedo_detalhe' brinquedo.id %}#bread" class="card-link">
+            <div class="img-area">
+              {% if brinquedo.imagem_brinquedo %}
+                <img
+                  src="{{ brinquedo.imagem_brinquedo.url }}"
+                  alt="{{ brinquedo.nome_brinquedo }}"
+                  loading="lazy"
+                  decoding="async"
+                >
+              {% else %}
+                <img
+                  src="{% static 'img/placeholder-produto.png' %}"
+                  alt="{{ brinquedo.nome_brinquedo }}"
+                >
+              {% endif %}
+            </div>
 
-      <div class="card-produto">
+            <div class="conteudo">
+              <h3>{{ brinquedo.nome_brinquedo }}</h3>
 
-        <div class="img-area">
-          {% if brinquedo.imagem_brinquedo %}
-              <img src="{{ brinquedo.imagem_brinquedo.url }}"
-                 alt="brinquedo.nome_brinquedo"
-                 loading="lazy"
-                 decoding="async">
-            {% else %}
-              <img src="{% static 'img/placeholder-produto.png' %}" alt="{{ brinquedo.nome_brinquedo }}">
-            {% endif %}
+              <div class="avaliacao" data-rating="{{ brinquedo.avaliacao }}">
+                <div class="stars"></div>
+                <span class="nota">({{ brinquedo.avaliacao|floatformat:1 }})</span>
+              </div>
 
-        </div>
+              <div class="categorias">
+                {% for cat in brinquedo.categorias_brinquedos.all %}
+                  <span class="categoria-pill">{{ cat.nome_categoria }}</span>
+                {% endfor %}
+              </div>
 
-        <div class="conteudo">
+              <p class="descricao">
+                {{ brinquedo.descricao|truncatewords:16 }}
+              </p>
 
-          <h3>{{ brinquedo.nome_brinquedo }}</h3>
+              <div class="voltagem">
+                🔌 Voltagem <strong>{{ brinquedo.voltz }}</strong>
+              </div>
 
-          <div class="avaliacao" data-rating="{{ brinquedo.avaliacao }}">
-            <div class="stars"></div>
-            <span class="nota">({{ brinquedo.avaliacao|floatformat:1 }})</span>
+              <div class="dimensoes">
+                📏 Dimensões: {{ brinquedo.dimensoes_m|default:"Não informadas" }}
+              </div>
+
+              <div class="volume">
+                📦 Volume: {{ brinquedo.volume_formatado|default:"Não informado" }}
+              </div>
+
+              <div class="tags">
+                {% for tag in brinquedo.tags.all %}
+                  <span class="tag">#{{ tag.nome_tags }}</span>
+                {% endfor %}
+              </div>
+
+              <div class="acoes-fixas">
+                <button
+                  type="button"
+                  class="btn-vermais btn-whatsapp"
+                  onclick="abrirWhatsApp(event, '{{ brinquedo.nome_brinquedo|escapejs }}')"
+                >
+                  <i class="fab fa-whatsapp"></i>
+                  <strong>Pedir orçamento no WhatsApp</strong>
+                </button>
+
+                <span class="btn-vermais">Ver mais</span>
+              </div>
+            </div>
+
           </div>
-
-          <div class="categorias">
-            {% for cat in brinquedo.categorias_brinquedos.all %}
-              <span class="categoria-pill">{{ cat.nome_categoria }}</span>
-            {% endfor %}
-          </div>
-
-          <p class="descricao">
-            {{ brinquedo.descricao|truncatewords:16 }}
-          </p>
-
-          <div class="voltagem">
-            🔌 Voltagem <strong>{{ brinquedo.voltz }}</strong>
-          </div>
-
-          <div class="dimensoes">
-            📏 Dimensões: {{ brinquedo.dimensoes_m|default:"Não informadas" }}
-          </div>
-
-          <div class="volume">
-            📦 Volume: {{ brinquedo.volume_formatado|default:"Não informado" }}
-          </div>
-            <!--
-          <div class="preco money" data-valor="{{ brinquedo.valor_brinquedo }}">
-            R$ 0,00
-          </div>
-            -->
-          <div class="tags">
-            {% for tag in brinquedo.tags.all %}
-              <span class="tag">#{{ tag.nome_tags }}</span>
-            {% endfor %}
-          </div>
-
-           <div class="acoes-fixas">
-                  <button
-                    class="btn-vermais btn-whatsapp"
-                    onclick="abrirWhatsApp(event, '{{ brinquedo.nome_brinquedo|escapejs }}')"
-                  >
-                    <i class="fab fa-whatsapp"></i> <strong>Pedir orçamento no WhatsApp</strong>
-                  </button>
-
-                  <span class="btn-vermais">Ver mais</span>
-                </div>
-
-
-        </div>
-      </div>
-
-    </a>
-    {% empty %}
-      <p class="nenhum-produto">Nenhum produto encontrado.</p>
-    {% endfor %}
-
-  </div>
-</div>
-
-<div id="paginacao-wrapper">
-     <div class="paginacao">
-                {% if page_obj.has_previous %}
-                    <a class="page-btn"
-           data-page="{{ page_obj.previous_page_number }}">
-           « Anterior
         </a>
+      {% empty %}
+        <p class="nenhum-produto">Nenhum produto encontrado.</p>
+      {% endfor %}
+    </div>
 
+    <div id="paginacao-wrapper">
+      <div class="paginacao">
+        {% if page_obj.has_previous %}
+          <button
+              type="button"
+              class="page-btn-produtos"
+              data-page="{{ page_obj.previous_page_number }}"
+            >
+              « Anterior
+          </button>
         {% endif %}
 
-        <span class="page-atual">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
+        <span class="page-atual">
+          Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
+        </span>
 
         {% if page_obj.has_next %}
-          <a href="?page={{ page_obj.next_page_number }}&ordenar={{ ordenar }}"
-               class="page-btn"
-               data-page="{{ page_obj.next_page_number }}">
-               Próxima »
-            </a>
+          <button
+              type="button"
+              class="page-btn-produtos"
+              data-page="{{ page_obj.next_page_number }}"
+            >
+              Próxima »
+          </button>
         {% endif %}
+      </div>
     </div>
-</div>
+
+  </div>
 </section>
 
 <div class="espacador"></div>
@@ -2798,7 +2814,7 @@ body {
   <div class="paginacao">
 
     {% if pecas_reposicao.has_previous %}
-      <a class="page-btn"
+      <a class="page-btn-pecas"
          href="#"
          data-page="{{ pecas_reposicao.previous_page_number }}">
          « Anterior
@@ -2810,12 +2826,13 @@ body {
     </span>
 
     {% if pecas_reposicao.has_next %}
-      <a class="page-btn"
+      <a class="page-btn-pecas"
          href="#"
          data-page="{{ pecas_reposicao.next_page_number }}">
          Próxima »
       </a>
     {% endif %}
+
 
         </div>
     </div>
@@ -3214,9 +3231,7 @@ body {
 
 </section>
 
-
 <script>
-
 function abrirWhatsApp(event, nome) {
     event.preventDefault();
     event.stopPropagation();
@@ -3230,7 +3245,6 @@ function abrirWhatsApp(event, nome) {
     const url = `https://wa.me/5511960563135?text=${encodeURIComponent(mensagem)}`;
     window.open(url, '_blank');
 }
-
 
 /* ======================================================
    💰 MOEDA
@@ -3251,9 +3265,10 @@ function renderizarMoedas(root = document) {
     });
 }
 
-
+/* ======================================================
+   📏 ALTURAS
+====================================================== */
 function igualarAlturaGridPecas() {
-
     const grid = document.getElementById('grid-pecas');
     if (!grid) return;
 
@@ -3262,166 +3277,350 @@ function igualarAlturaGridPecas() {
 
     let maiorAltura = 0;
 
-    // Resetar alturas
     cards.forEach(card => {
         card.style.height = 'auto';
     });
 
-    // Calcular maior altura
     cards.forEach(card => {
         maiorAltura = Math.max(maiorAltura, card.offsetHeight);
     });
 
-    // Aplicar altura igual
     cards.forEach(card => {
         card.style.height = maiorAltura + 'px';
     });
 }
 
-
-/* ======================================================
-   📏 ALTURA DOS CARDS (PRODUÇÃO SAFE)
-====================================================== */
 function igualarAlturaCards() {
     const cards = document.querySelectorAll('.card-produto');
     if (!cards.length) return;
 
-    let imagensPendentes = [];
+    const imagensPendentes = [];
+
     cards.forEach(card => {
+        card.style.height = 'auto';
         const img = card.querySelector('img');
         if (img && !img.complete) imagensPendentes.push(img);
     });
 
     function aplicar() {
-        let max = 0;
-        cards.forEach(c => c.style.height = 'auto');
-        cards.forEach(c => max = Math.max(max, c.offsetHeight));
-        cards.forEach(c => c.style.height = max + 'px');
+        let maior = 0;
+
+        cards.forEach(card => {
+            card.style.height = 'auto';
+        });
+
+        cards.forEach(card => {
+            maior = Math.max(maior, card.offsetHeight);
+        });
+
+        cards.forEach(card => {
+            card.style.height = maior + 'px';
+        });
     }
 
-    if (!imagensPendentes.length) aplicar();
-    else {
-        let carregadas = 0;
-        imagensPendentes.forEach(img => {
-            img.addEventListener('load', () => {
-                carregadas++;
-                if (carregadas === imagensPendentes.length) aplicar();
-            });
-        });
+    if (!imagensPendentes.length) {
+        aplicar();
+        return;
+    }
+
+    let carregadas = 0;
+
+    imagensPendentes.forEach(img => {
+        img.addEventListener('load', () => {
+            carregadas++;
+            if (carregadas === imagensPendentes.length) aplicar();
+        }, { once: true });
+
+        img.addEventListener('error', () => {
+            carregadas++;
+            if (carregadas === imagensPendentes.length) aplicar();
+        }, { once: true });
+    });
+}
+
+/* ======================================================
+   ⭐ ESTRELAS
+====================================================== */
+const fullStar = `
+<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+  <path d="M12 .587l3.668 7.431 8.2 1.192-5.934 5.789 1.402 8.176L12 18.896l-7.336 3.878 1.402-8.176L.132 9.21l8.2-1.192z"/>
+</svg>`;
+
+const emptyStar = `
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" xmlns="http://www.w3.org/2000/svg">
+  <path d="M12 .587l3.668 7.431 8.2 1.192-5.934 5.789 1.402 8.176L12 18.896l-7.336 3.878 1.402-8.176L.132 9.21l8.2-1.192z" stroke-width="1.2"/>
+</svg>`;
+
+function gerarHalfStar(id) {
+    return `
+    <svg width="18" height="18" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="halfGrad-${id}">
+          <stop offset="50%" stop-color="currentColor"/>
+          <stop offset="50%" stop-color="transparent"/>
+        </linearGradient>
+      </defs>
+      <path d="M12 .587l3.668 7.431 8.2 1.192-5.934 5.789 1.402 8.176L12 18.896 4.664 22.774 l1.402-8.176L.13 9.21l8.2-1.192z" fill="url(#halfGrad-${id})"/>
+    </svg>`;
+}
+
+function renderStars(container, rating) {
+    let starsWrap = container.querySelector('.stars');
+
+    if (!starsWrap) {
+        starsWrap = document.createElement('div');
+        starsWrap.className = 'stars';
+        container.appendChild(starsWrap);
+    }
+
+    starsWrap.innerHTML = '';
+
+    const r = parseFloat(String(rating).replace(',', '.')) || 0;
+
+    for (let i = 1; i <= 5; i++) {
+        if (r >= i) {
+            starsWrap.insertAdjacentHTML('beforeend', fullStar);
+        } else if (r >= i - 0.5) {
+            const uid = (window.crypto && crypto.randomUUID)
+                ? crypto.randomUUID()
+                : `half-${Date.now()}-${i}-${Math.random().toString(16).slice(2)}`;
+
+            starsWrap.insertAdjacentHTML('beforeend', gerarHalfStar(uid));
+        } else {
+            starsWrap.insertAdjacentHTML('beforeend', emptyStar);
+        }
     }
 }
 
+function renderizarTodasEstrelas(root = document) {
+    const elementos = root.querySelectorAll('.avaliacao');
+    elementos.forEach(el => {
+        renderStars(el, el.dataset.rating);
+    });
+}
+
+/* ======================================================
+   🔄 AJAX PRODUTOS
+====================================================== */
+function scrollParaProdutos() {
+    const secao = document.getElementById('brinquedos');
+    if (!secao) return;
+
+    window.scrollTo({
+        top: secao.getBoundingClientRect().top + window.scrollY - 80,
+        behavior: 'smooth'
+    });
+}
+
+let controllerProdutos = null;
+
+function getEstadoProdutosUrl() {
+    const url = new URL(window.location.href);
+
+    return {
+        page: parseInt(url.searchParams.get('page') || '1', 10),
+        ordenar: url.searchParams.get('ordenar') || 'az'
+    };
+}
+
+function setEstadoProdutosUrl(page, ordenar) {
+    const url = new URL(window.location.href);
+
+    url.searchParams.set('ordenar', ordenar || 'az');
+
+    if (page && Number(page) > 1) {
+        url.searchParams.set('page', page);
+    } else {
+        url.searchParams.delete('page');
+    }
+
+    history.replaceState({}, '', url);
+}
+
+async function carregarProdutos(params = {}) {
+    const estadoAtual = getEstadoProdutosUrl();
+
+    const page = params.page || estadoAtual.page || 1;
+    const ordenar = params.ordenar || estadoAtual.ordenar || 'az';
+
+    const url = new URL(window.location.href);
+    url.searchParams.set('ordenar', ordenar);
+
+    if (Number(page) > 1) {
+        url.searchParams.set('page', page);
+    } else {
+        url.searchParams.delete('page');
+    }
+
+    if (controllerProdutos) controllerProdutos.abort();
+    controllerProdutos = new AbortController();
+
+    try {
+        const response = await fetch(url.toString(), {
+            signal: controllerProdutos.signal,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            cache: 'no-store'
+        });
+
+        if (!response.ok) {
+            throw new Error(`Erro HTTP ${response.status}`);
+        }
+
+        const html = await response.text();
+
+        const temp = document.createElement('div');
+        temp.innerHTML = html;
+
+        const novoContainer = temp.querySelector('#produtos-container');
+        const containerAtual = document.querySelector('#produtos-container');
+
+        if (novoContainer && containerAtual) {
+            containerAtual.innerHTML = novoContainer.innerHTML;
+        }
+
+        setEstadoProdutosUrl(page, ordenar);
+
+        document.querySelectorAll('#filtros-bar .filtro-btn').forEach(btn => {
+            btn.classList.remove('ativo');
+            if (btn.dataset.order === ordenar) {
+                btn.classList.add('ativo');
+            }
+        });
+
+        requestAnimationFrame(() => {
+            renderizarTodasEstrelas();
+            renderizarMoedas();
+
+            setTimeout(() => {
+                igualarAlturaCards();
+            }, 30);
+
+            scrollParaProdutos();
+        });
+
+    } catch (e) {
+        if (e.name !== 'AbortError') {
+            console.error('Erro ao carregar produtos:', e);
+        }
+    }
+}
+
+/* ======================================================
+   🔄 AJAX PEÇAS
+====================================================== */
+async function carregarPecas(page = 1, categoria = "") {
+    const container = document.getElementById("pecas-container");
+    const paginacao = document.getElementById("paginacao-pecas");
+
+    if (!container || !paginacao) return;
+
+    try {
+        const response = await fetch(
+            `/ajax/filtrar-pecas/?categoria=${encodeURIComponent(categoria)}&page_pecas=${page}`,
+            { cache: "no-store" }
+        );
+
+        if (!response.ok) {
+            throw new Error(`Erro HTTP ${response.status}`);
+        }
+
+        const html = await response.text();
+
+        const temp = document.createElement("div");
+        temp.innerHTML = html;
+
+        const novoContainer = temp.querySelector("#pecas-container");
+        const novaPaginacao = temp.querySelector("#paginacao-pecas");
+
+        if (novoContainer) {
+            container.innerHTML = novoContainer.innerHTML;
+        }
+
+        if (novaPaginacao) {
+            paginacao.innerHTML = novaPaginacao.innerHTML;
+        }
+
+        requestAnimationFrame(() => {
+            renderizarMoedas(container);
+
+            setTimeout(() => {
+                igualarAlturaGridPecas();
+
+                if (typeof ajustarGridResponsivo === 'function') {
+                    ajustarGridResponsivo();
+                }
+            }, 30);
+        });
+
+    } catch (e) {
+        console.error("Erro ao filtrar peças:", e);
+    }
+}
+
+/* ======================================================
+   🚀 INIT GLOBAL
+====================================================== */
 document.addEventListener("DOMContentLoaded", () => {
+    renderizarTodasEstrelas();
+    renderizarMoedas();
 
-    /* =========================
-       CARROSSEL HERO
-    =========================
-    const wrapper = document.querySelector(".carousel-wrapper");
-    if (wrapper) {
-        const slides = Array.from(wrapper.querySelectorAll(".carousel-slide"));
-        const dots = Array.from(wrapper.querySelectorAll(".dot"));
-        const prev = wrapper.querySelector(".prev");
-        const next = wrapper.querySelector(".next");
+    igualarAlturaCards();
+    igualarAlturaGridPecas();
 
+    const track = document.getElementById("carousel-projetos");
+    const prev = document.getElementById("prevProjetos");
+    const next = document.getElementById("nextProjetos");
+
+    if (track && prev && next && track.querySelector(".projeto-card")) {
         let index = 0;
-        let autoPlayInterval;
 
-        function updateCarousel(newIndex) {
-            slides[index].classList.remove("active");
-            dots[index].classList.remove("active");
-
-            index = (newIndex + slides.length) % slides.length;
-
-            slides[index].classList.add("active");
-            dots[index].classList.add("active");
+        function visibleCards() {
+            if (window.innerWidth < 600) return 1;
+            if (window.innerWidth < 900) return 2;
+            return 3;
         }
 
-        function startAutoPlay() {
-            stopAutoPlay();
-            autoPlayInterval = setInterval(() => updateCarousel(index + 1), 4000);
-        }
-
-        function stopAutoPlay() {
-            clearInterval(autoPlayInterval);
+        function cardWidth() {
+            const card = track.querySelector(".projeto-card");
+            return card ? card.offsetWidth + 20 : 0;
         }
 
         next.addEventListener("click", () => {
-            updateCarousel(index + 1);
-            startAutoPlay();
+            const total = track.children.length;
+            const visible = visibleCards();
+            const width = cardWidth();
+
+            if (!width) return;
+
+            if (index < total - visible) {
+                index++;
+                track.style.transform = `translateX(-${index * width}px)`;
+            }
         });
 
         prev.addEventListener("click", () => {
-            updateCarousel(index - 1);
-            startAutoPlay();
+            const width = cardWidth();
+            if (!width) return;
+
+            if (index > 0) {
+                index--;
+                track.style.transform = `translateX(-${index * width}px)`;
+            }
         });
 
-        dots.forEach((dot, i) => {
-            dot.addEventListener("click", () => {
-                if (index === i) return;
-                updateCarousel(i);
-                startAutoPlay();
-            });
+        window.addEventListener("resize", () => {
+            const width = cardWidth();
+            track.style.transform = `translateX(-${index * width}px)`;
         });
-
-        // Swipe mobile
-        let touchStartX = 0;
-        wrapper.addEventListener("touchstart", e => touchStartX = e.touches[0].clientX, {passive: true});
-        wrapper.addEventListener("touchend", e => {
-            let touchEndX = e.changedTouches[0].clientX;
-            if (touchStartX - touchEndX > 50) next.click();
-            if (touchStartX - touchEndX < -50) prev.click();
-        }, {passive: true});
-
-        startAutoPlay();
     }
 
-
-     */
-const track = document.getElementById("carousel-projetos");
-const prev = document.getElementById("prevProjetos");
-const next = document.getElementById("nextProjetos");
-
-let index = 0;
-
-function visibleCards(){
-    if(window.innerWidth < 600) return 1;
-    if(window.innerWidth < 900) return 2;
-    return 3;
-}
-
-function cardWidth(){
-    return track.querySelector(".projeto-card").offsetWidth + 20;
-}
-
-next.addEventListener("click", ()=>{
-
-    const total = track.children.length;
-    const visible = visibleCards();
-
-    if(index < total - visible){
-        index++;
-        track.style.transform = `translateX(-${index * cardWidth()}px)`;
-    }
-
-});
-
-prev.addEventListener("click", ()=>{
-
-    if(index > 0){
-        index--;
-        track.style.transform = `translateX(-${index * cardWidth()}px)`;
-    }
-
-});
-    /* =========================
-       AUTO SCROLL CATEGORIAS
-    ========================= */
     const scrollContainer = document.getElementById("scroll-container");
     const leftBtn = document.getElementById("scroll-left");
     const rightBtn = document.getElementById("scroll-right");
 
-    if (scrollContainer) {
-
+    if (scrollContainer && leftBtn && rightBtn) {
         let autoScroll;
 
         function startScroll() {
@@ -3431,7 +3630,6 @@ prev.addEventListener("click", ()=>{
                     behavior: "smooth"
                 });
 
-                // volta pro início quando chega no fim
                 if (scrollContainer.scrollLeft + scrollContainer.clientWidth >= scrollContainer.scrollWidth - 5) {
                     scrollContainer.scrollTo({
                         left: 0,
@@ -3457,16 +3655,12 @@ prev.addEventListener("click", ()=>{
             startScroll();
         });
 
-        // Pausa ao passar mouse
         scrollContainer.addEventListener("mouseenter", stopScroll);
         scrollContainer.addEventListener("mouseleave", startScroll);
 
         startScroll();
     }
 
-    /* =========================
-       FADE IN DAS IMAGENS
-    ========================= */
     document.querySelectorAll(".carousel-slide").forEach(img => {
         if (img.complete) {
             img.classList.add("loaded");
@@ -3477,510 +3671,165 @@ prev.addEventListener("click", ()=>{
         }
     });
 
-});
-
-
-// ===============================
-// ⭐ FUNÇÃO GLOBAL – AGORA FUNCIONA EM TODO LUGAR
-// ===============================
-// ===============================
-// ⭐ SVG DAS ESTRELAS
-// ===============================
-// ===============================
-// ⭐ 1. SVG CONSTANTES
-// ===============================
-const fullStar = `
-<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-  <path d="M12 .587l3.668 7.431 8.2 1.192-5.934 5.789 1.402 8.176L12 18.896l-7.336 3.878 1.402-8.176L.132 9.21l8.2-1.192z"/>
-</svg>`;
-
-const emptyStar = `
-<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" xmlns="http://www.w3.org/2000/svg">
-  <path d="M12 .587l3.668 7.431 8.2 1.192-5.934 5.789 1.402 8.176L12 18.896l-7.336 3.878 1.402-8.176L.132 9.21l8.2-1.192z" stroke-width="1.2"/>
-</svg>`;
-
-// ===============================
-// ⭐ 2. GERADOR DE MEIA ESTRELA
-// ===============================
-function gerarHalfStar(id) {
-    return `
-    <svg width="18" height="18" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <linearGradient id="halfGrad-${id}">
-          <stop offset="50%" stop-color="currentColor"/>
-          <stop offset="50%" stop-color="transparent"/>
-        </linearGradient>
-      </defs>
-      <path d="M12 .587l3.668 7.431 8.2 1.192-5.934 5.789 1.402 8.176L12 18.896 4.664 22.774 l1.402-8.176L.13 9.21l8.2-1.192z" fill="url(#halfGrad-${id})"/>
-    </svg>`;
-}
-
-// ===============================
-// ⭐ 3. RENDERIZA UMA AVALIAÇÃO ESPECÍFICA
-// ===============================
-function renderStars(container, rating) {
-    let starsWrap = container.querySelector('.stars');
-
-    // Se não existir wrapper .stars, cria um
-    if (!starsWrap) {
-        starsWrap = document.createElement('div');
-        starsWrap.className = 'stars';
-        container.appendChild(starsWrap);
-    }
-
-    starsWrap.innerHTML = ''; // Limpa antes de renderizar para não duplicar
-
-    // Converte string "4,50" para float 4.5
-    const r = parseFloat(String(rating).replace(',', '.')) || 0;
-
-    for (let i = 1; i <= 5; i++) {
-        if (r >= i) {
-            starsWrap.insertAdjacentHTML('beforeend', fullStar);
-        } else if (r >= i - 0.5) {
-            const uid = crypto.randomUUID(); // ID único para o gradiente SVG
-            starsWrap.insertAdjacentHTML('beforeend', gerarHalfStar(uid));
-        } else {
-            starsWrap.insertAdjacentHTML('beforeend', emptyStar);
-        }
-    }
-}
-
-// ===============================
-// ⭐ 4. RENDERIZA TUDO (CHAMADA PRINCIPAL)
-// ===============================
-function renderizarTodasEstrelas(root = document) {
-    // Procura por elementos .avaliacao dentro do escopo (root)
-    const elementos = root.querySelectorAll('.avaliacao');
-    elementos.forEach(el => {
-        renderStars(el, el.dataset.rating);
-    });
-}
-
-/* ======================================================
-   🔄 AJAX PRODUTOS (OTIMIZADO)
-====================================================== */
-
-function scrollParaProdutos() {
-    const c = document.querySelector('#produtos-container');
-    if (!c) return;
-
-    window.scrollTo({
-        top: c.getBoundingClientRect().top + window.scrollY - 80,
-        behavior: 'smooth'
-    });
-}
-
-let controllerProdutos = null;
-
-async function carregarProdutos(params = {}) {
-
-    const url = new URL(window.location.href);
-
-    if (params.page) url.searchParams.set('page', params.page);
-
-    if (params.ordenar) {
-        url.searchParams.set('ordenar', params.ordenar);
-        url.searchParams.delete('page');
-    }
-
-    /* 🚀 cancela requisição anterior */
-    if (controllerProdutos) controllerProdutos.abort();
-    controllerProdutos = new AbortController();
-
-    try {
-
-        const r = await fetch(url, {
-            signal: controllerProdutos.signal,
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest'
-            },
-            cache: "no-store"
-        });
-
-        const html = await r.text();
-
-        /* 🚀 parse mais leve */
-        const temp = document.createElement("div");
-        temp.innerHTML = html;
-
-        const novoGrid = temp.querySelector('#grid-cards');
-        const novaPag = temp.querySelector('#paginacao-wrapper');
-
-        const gridAtual = document.querySelector('#grid-cards');
-        const pagAtual = document.querySelector('#paginacao-wrapper');
-
-        /* 🚀 substituição de nós mais rápida */
-        if (novoGrid && gridAtual) {
-            gridAtual.replaceChildren(...novoGrid.children);
-        }
-
-        if (novaPag && pagAtual) {
-            pagAtual.replaceChildren(...novaPag.children);
-        }
-
-        /* 🚀 roda depois do paint */
-        requestAnimationFrame(() => {
-
-            renderizarTodasEstrelas();
-            renderizarMoedas();
-
-            /* evita layout thrashing */
-            setTimeout(() => {
-                igualarAlturaCards();
-            }, 30);
-
-            scrollParaProdutos();
-
-        });
-
-    } catch (e) {
-
-        if (e.name !== 'AbortError') {
-            console.error('Erro ao carregar produtos:', e);
-        }
-
-    }
-
-}
-
-/* ======================================================
-   🚀 INIT GLOBAL
-====================================================== */
-
-document.addEventListener("DOMContentLoaded", () => {
-
-    /* ================= INIT BASICO ================= */
-
-    renderizarTodasEstrelas();
-    renderizarMoedas();
-    igualarAlturaCards('#grid-cards');
-    igualarAlturaGridPecas();
-
-
-    /* ================= ROTATING MESSAGES ================= */
-
     const messages = document.querySelectorAll('.rotating-messages .message');
-
     if (messages.length) {
-
         let currentIndex = 0;
-
         messages[0].classList.add('active');
 
         setInterval(() => {
-
             messages[currentIndex].classList.remove('active');
-
             currentIndex = (currentIndex + 1) % messages.length;
-
             messages[currentIndex].classList.add('active');
-
         }, 5000);
-
     }
 
-
-    /* ================= SCROLL PARA PRODUTOS ================= */
-
     const params = new URLSearchParams(window.location.search);
-
     if (params.has("scroll")) {
-
         const alvo = document.querySelector(".produto-container");
-
         if (alvo) {
-
             const posicao = alvo.offsetTop - window.innerHeight / 3;
-
             window.scrollTo({
                 top: posicao,
                 behavior: "smooth"
             });
-
         }
-
     }
 
-
-    /* ================= ABRIR MODAL ================= */
-
     document.querySelectorAll("[data-modal]").forEach(card => {
-
         card.addEventListener("click", () => {
-
             const modalId = card.dataset.modal;
-
             const modal = document.getElementById(modalId);
-
             if (!modal) return;
 
             modal.style.display = "block";
-
             document.body.style.overflow = "hidden";
 
-            modal.querySelectorAll(".modal-carousel-track")
-                .forEach(track => initCarousel(track));
-
+            if (typeof initCarousel === 'function') {
+                modal.querySelectorAll(".modal-carousel-track").forEach(track => initCarousel(track));
+            }
         });
-
     });
-
-
-    /* ================= PROJETO CARD CLICK ================= */
 
     document.querySelectorAll(".projeto-card").forEach(item => {
-
         item.addEventListener("click", () => {
-
             const modal = document.getElementById(item.dataset.modal);
-
             if (!modal) return;
 
             modal.style.display = "block";
-
             document.body.style.overflow = "hidden";
 
-            modal.querySelectorAll(".modal-carousel-track")
-                .forEach(track => initCarousel(track));
-
+            if (typeof initCarousel === 'function') {
+                modal.querySelectorAll(".modal-carousel-track").forEach(track => initCarousel(track));
+            }
         });
-
     });
 
-
-    /* ================= FECHAR MODAL ================= */
-
     document.querySelectorAll(".modal-close").forEach(btn => {
-
         btn.addEventListener("click", () => {
-
             const modal = btn.closest(".evento-modal, .projeto-modal");
-
             if (!modal) return;
 
             modal.style.display = "none";
-
             document.body.style.overflow = "auto";
-
         });
-
     });
-
-
-    /* ================= FECHAR AO CLICAR FORA ================= */
 
     document.querySelectorAll(".evento-modal, .projeto-modal").forEach(modal => {
-
         modal.addEventListener("click", e => {
-
             if (e.target === modal) {
-
                 modal.style.display = "none";
-
                 document.body.style.overflow = "auto";
-
             }
-
         });
-
     });
-
-
-    /* ================= BOTÕES CARROSSEL ================= */
 
     document.querySelectorAll(".carousel-btn[data-target], .carousel-btn").forEach(btn => {
-
         btn.addEventListener("click", () => {
+            const trackEl = document.getElementById(btn.dataset.target);
+            if (!trackEl) return;
 
-            const track = document.getElementById(btn.dataset.target);
-
-            if (!track) return;
-
-            const cardWidth = track.querySelector("img")?.offsetWidth + 12 || 300;
+            const img = trackEl.querySelector("img");
+            const cardWidth = (img ? img.offsetWidth : 288) + 12;
 
             if (btn.classList.contains("left")) {
-
-                track.scrollLeft -= cardWidth;
-
+                trackEl.scrollLeft -= cardWidth;
             } else {
-
-                track.scrollLeft += cardWidth;
-
+                trackEl.scrollLeft += cardWidth;
             }
-
         });
-
     });
 
-
-    /* ================= SLIDER PEÇAS ================= */
-
     const slider = document.getElementById("pecasSlider");
-
     if (slider) {
-
         const slides = slider.querySelectorAll(".peca-slide");
 
         if (slides.length) {
-
             let current = Math.floor(Math.random() * slides.length);
-
             slides[current].classList.add("active");
 
             setInterval(() => {
-
                 slides[current].classList.remove("active");
-
                 current = (current + 1) % slides.length;
-
                 slides[current].classList.add("active");
-
             }, 3000);
-
         }
-
     }
-
 });
-
 
 /* ======================================================
-   📄 CLICK GLOBAL (PAGINAÇÃO + FILTROS)
+   📄 CLICK GLOBAL
 ====================================================== */
-
-document.addEventListener('click', e => {
-
-    const btn = e.target.closest('.page-btn');
-
-    if (btn) {
-
+document.addEventListener('click', function (e) {
+    const filtroProduto = e.target.closest('#filtros-bar .filtro-btn');
+    if (filtroProduto) {
         e.preventDefault();
 
-        const page = btn.dataset.page;
+        document.querySelectorAll('#filtros-bar .filtro-btn').forEach(b => {
+            b.classList.remove('ativo');
+        });
+        filtroProduto.classList.add('ativo');
 
-        if (!page) {
-
-            window.location.href = btn.href;
-
-            return;
-
-        }
-
-        carregarProdutos({ page });
-
+        carregarProdutos({
+            page: 1,
+            ordenar: filtroProduto.dataset.order
+        });
         return;
-
     }
 
-
-    const filtro = e.target.closest('#filtros-bar .filtro-btn');
-
-    if (filtro) {
-
+    const btnProduto = e.target.closest('.page-btn-produtos');
+    if (btnProduto) {
         e.preventDefault();
 
-        document.querySelectorAll('#filtros-bar .filtro-btn')
-            .forEach(b => b.classList.remove('ativo'));
-
-        filtro.classList.add('ativo');
-
-        carregarProdutos({ ordenar: filtro.dataset.order });
-
+        const page = parseInt(btnProduto.dataset.page || '1', 10);
+        carregarProdutos({ page });
+        return;
     }
 
-});
+    const filtroPeca = e.target.closest('#filtros-peca .filtro-btn');
+    if (filtroPeca) {
+        e.preventDefault();
 
+        document.querySelectorAll('#filtros-peca .filtro-btn').forEach(b => {
+            b.classList.remove('ativo');
+        });
+        filtroPeca.classList.add('ativo');
 
-document.addEventListener("DOMContentLoaded", () => {
-  const slider = document.getElementById("pecasSlider");
-  if (!slider) return;
-
-  const slides = slider.querySelectorAll(".peca-slide");
-  if (!slides.length) return;
-
-  let current = Math.floor(Math.random() * slides.length);
-
-  // mostra primeira aleatória
-  slides[current].classList.add("active");
-
-  setInterval(() => {
-    slides[current].classList.remove("active");
-
-    current = (current + 1) % slides.length;
-
-    slides[current].classList.add("active");
-  }, 3000);
-});
-
-
-
-document.addEventListener("DOMContentLoaded", () => {
-
-  const filtros = document.querySelectorAll("#filtros-peca .filtro-btn");
-  const container = document.getElementById("pecas-container");
-  const paginacao = document.getElementById("paginacao-pecas");
-
-  let categoriaAtual = "";
-
-  async function carregarPecas(page = 1) {
-  try {
-    const response = await fetch(
-      `/ajax/filtrar-pecas/?categoria=${categoriaAtual}&page_pecas=${page}`
-    );
-
-    const html = await response.text();
-
-    const temp = document.createElement("div");
-    temp.innerHTML = html;
-
-    const novoContainer = temp.querySelector("#pecas-container");
-    const novaPaginacao = temp.querySelector("#paginacao-pecas");
-
-    if (novoContainer) {
-      container.innerHTML = novoContainer.innerHTML;
-
-      // ⭐ REAPLICAR FORMATAÇÃO
-      setTimeout(() => {
-        igualarAlturaGridPecas();
-        ajustarGridResponsivo();
-      }, 50);
+        const categoria = filtroPeca.dataset.categoria || "";
+        carregarPecas(1, categoria);
+        return;
     }
 
-    if (novaPaginacao) {
-      paginacao.innerHTML = novaPaginacao.innerHTML;
+    const btnPeca = e.target.closest('.page-btn-pecas');
+    if (btnPeca) {
+        e.preventDefault();
+
+        const page = parseInt(btnPeca.dataset.page || '1', 10);
+        const filtroAtivo = document.querySelector('#filtros-peca .filtro-btn.ativo');
+        const categoria = filtroAtivo ? (filtroAtivo.dataset.categoria || "") : "";
+
+        carregarPecas(page, categoria);
     }
-
-
-  } catch (e) {
-    console.error("Erro ao filtrar peças:", e);
-  }
-}
-
-  // ✅ clique nos filtros
-  filtros.forEach(btn => {
-    btn.addEventListener("click", () => {
-
-      filtros.forEach(b => b.classList.remove("ativo"));
-      btn.classList.add("ativo");
-
-      categoriaAtual = btn.dataset.categoria || "";
-      carregarPecas(1);
-    });
-  });
-
-  // ✅ paginação dinâmica
-  document.addEventListener("click", function(e) {
-    const pageBtn = e.target.closest(".page-btn");
-    if (!pageBtn) return;
-
-    e.preventDefault();
-    const page = pageBtn.dataset.page;
-    carregarPecas(page);
-  });
-
 });
-
 </script>
-
 
 {% endblock %}
