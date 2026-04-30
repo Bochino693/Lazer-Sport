@@ -37,6 +37,12 @@ body {
   background: #ffffff;
 }
 
+
+@keyframes popIn {
+  from { opacity: 0; transform: scale(0.92) translateY(12px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
 /* =========================================================
    TÍTULOS / SUBTÍTULOS
 ========================================================= */
@@ -1566,6 +1572,75 @@ body {
 <div class="espacador"></div>
 -->
 
+
+<!-- ======= POP-UP CELEBRASHOW 2026 ======= -->
+<div id="popup-overlay" style="
+  display: none;
+  position: fixed; inset: 0; z-index: 9999;
+  background: rgba(0,0,0,0.6);
+  align-items: center; justify-content: center;
+">
+  <div id="popup-box" style="
+    position: relative;
+    background: var(--color-bg, #fff);
+    border-radius: 12px;
+    max-width: 480px; width: 90%;
+    overflow: hidden;
+    animation: popIn 0.35s cubic-bezier(.4,0,.2,1);
+  ">
+
+    <!-- Botão X -->
+    <button onclick="fecharPopup()" style="
+      position: absolute; top: 12px; right: 12px; z-index: 10;
+      background: rgba(0,0,0,0.45); color: #fff;
+      border: none; border-radius: 50%;
+      width: 32px; height: 32px; font-size: 20px;
+      cursor: pointer; line-height: 1;
+    ">×</button>
+
+    <!-- CABEÇALHO ESCURO -->
+    <div style="background: #0f3460; padding: 2rem; text-align: center;">
+      <p style="font-size: 11px; letter-spacing: 3px; color: #ffd700; font-weight: 600; margin: 0 0 6px; text-transform: uppercase;">Estaremos presentes no</p>
+      <h2 style="font-size: 34px; font-weight: 700; color: #fff; margin: 0; line-height: 1.1;">CELEBRASHOW</h2>
+      <span style="font-size: 40px; font-weight: 800; color: #ffd700; display: block;">2026</span>
+      <p style="font-size: 13px; color: rgba(255,255,255,0.7); margin: 12px 0 0;">O maior evento de festas infantis</p>
+    </div>
+
+    <!-- IMAGEM DO EVENTO (troque o src) -->
+    <img
+      src="{% static 'images/celebrashow2026.jpg' %}"
+      alt="Celebrashow 2026"
+      style="width: 100%; display: block; max-height: 220px; object-fit: cover;"
+    >
+
+    <!-- CORPO -->
+    <div style="padding: 1.25rem 1.5rem;">
+      <p style="margin: 0 0 8px; font-size: 14px;">📅 <strong>Data:</strong> Em breve — fique de olho nas redes!</p>
+      <p style="margin: 0 0 8px; font-size: 14px;">📍 <strong>Local:</strong> São Paulo — SP</p>
+      <p style="margin: 0; font-size: 14px;">🎪 Brinquedos, promoções exclusivas e muito mais!</p>
+    </div>
+
+    <!-- BOTÕES -->
+    <div style="padding: 0 1.5rem 1.5rem; display: flex; flex-direction: column; gap: 8px;">
+      <a href="https://www.instagram.com/lazersportbrinquedos" target="_blank" style="
+        display: block; text-align: center;
+        background: #0f3460; color: #ffd700;
+        padding: 12px; border-radius: 8px;
+        font-size: 14px; font-weight: 600; text-decoration: none;
+      ">Acompanhe no Instagram</a>
+      <button onclick="fecharPopup()" style="
+        background: transparent; border: 1px solid #ccc;
+        color: #777; padding: 10px; border-radius: 8px;
+        font-size: 13px; cursor: pointer;
+      ">Fechar</button>
+    </div>
+
+  </div>
+</div>
+
+
+
+
 <!-- ======= CATEGORIAS ======= -->
 <section id="categorias-section" class="categorias-section">
   <h2 class="section-title">Categorias</h2>
@@ -2411,6 +2486,28 @@ body {
 </section>
 
 <script>
+
+
+function fecharPopup() {
+    document.getElementById('popup-overlay').style.display = 'none';
+    sessionStorage.setItem('popupVisto', '1');
+  }
+
+  // Fecha ao clicar fora do box
+  document.getElementById('popup-overlay').addEventListener('click', function(e) {
+    if (e.target === this) fecharPopup();
+  });
+
+  // Abre após 2 segundos, só uma vez por sessão
+  if (!sessionStorage.getItem('popupVisto')) {
+    setTimeout(function() {
+      document.getElementById('popup-overlay').style.display = 'flex';
+    }, 2000);
+  }
+
+
+
+
 function abrirWhatsApp(event, nome) {
     event.preventDefault();
     event.stopPropagation();
