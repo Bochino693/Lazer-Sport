@@ -43,6 +43,7 @@ body {
   to   { opacity: 1; transform: scale(1) translateY(0); }
 }
 
+
 /* =========================================================
    TÍTULOS / SUBTÍTULOS
 ========================================================= */
@@ -1572,42 +1573,47 @@ body {
 <div class="espacador"></div>
 -->
 
-
 <!-- ======= POP-UP CELEBRASHOW 2026 ======= -->
 <div id="popup-overlay" style="
   display: none;
   position: fixed; inset: 0; z-index: 9999;
-  background: rgba(0,0,0,0.65);
+  background: rgba(0,0,0,0.6);
   align-items: center; justify-content: center;
 ">
   <div id="popup-box" style="
     position: relative;
-    background: #0d0d1a;
-    border-radius: 16px;
-    max-width: 420px; width: 92%;
+    background: var(--color-bg, #fff);
+    border-radius: 12px;
+    max-width: 480px; width: 90%;
     overflow: hidden;
     animation: popIn 0.35s cubic-bezier(.4,0,.2,1);
-    border: 1px solid rgba(255,215,0,0.3);
   ">
 
     <!-- Botão X -->
     <button onclick="fecharPopup()" style="
-      position: absolute; top: 10px; right: 10px; z-index: 10;
-      background: rgba(0,0,0,0.5); color: #fff;
-      border: 1px solid rgba(255,255,255,0.2); border-radius: 50%;
-      width: 30px; height: 30px; font-size: 18px;
-      cursor: pointer; line-height: 1; display: flex;
-      align-items: center; justify-content: center;
+      position: absolute; top: 12px; right: 12px; z-index: 10;
+      background: rgba(0,0,0,0.45); color: #fff;
+      border: none; border-radius: 50%;
+      width: 32px; height: 32px; font-size: 20px;
+      cursor: pointer; line-height: 1;
     ">×</button>
 
-    <!-- IMAGEM DO FLYER (ocupa o topo inteiro) -->
+    <!-- CABEÇALHO ESCURO (original) -->
+    <div style="background: #0f3460; padding: 2rem; text-align: center;">
+      <p style="font-size: 11px; letter-spacing: 3px; color: #ffd700; font-weight: 600; margin: 0 0 6px; text-transform: uppercase;">Estaremos presentes no</p>
+      <h2 style="font-size: 34px; font-weight: 700; color: #fff; margin: 0; line-height: 1.1;">CELEBRASHOW</h2>
+      <span style="font-size: 40px; font-weight: 800; color: #ffd700; display: block;">2026</span>
+      <p style="font-size: 13px; color: rgba(255,255,255,0.7); margin: 12px 0 0;">O maior evento de festas infantis</p>
+    </div>
+
+    <!-- IMAGEM DO FLYER -->
     <img
       src="{% static 'images/image.png' %}"
       alt="Celebrashow 2026 - Lazer & Sport"
-      style="width: 100%; display: block; max-height: 340px; object-fit: cover; object-position: top;"
+      style="width: 100%; display: block; max-height: 280px; object-fit: cover; object-position: top;"
     >
 
-    <!-- INFORMAÇÕES -->
+    <!-- INFORMAÇÕES DO EVENTO -->
     <div style="padding: 1.25rem 1.5rem; background: #0d0d1a;">
 
       <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 1rem;">
@@ -1654,8 +1660,8 @@ body {
         ">💬 Falar pelo WhatsApp</a>
 
         <button onclick="fecharPopup()" style="
-          background: transparent; border: 1px solid rgba(255,255,255,0.2);
-          color: rgba(255,255,255,0.5); padding: 9px; border-radius: 8px;
+          background: transparent; border: 1px solid #ccc;
+          color: #777; padding: 10px; border-radius: 8px;
           font-size: 13px; cursor: pointer;
         ">Fechar</button>
       </div>
@@ -2513,6 +2519,8 @@ body {
 
 <script>
 
+
+
 function fecharPopup() {
     document.getElementById('popup-overlay').style.display = 'none';
     sessionStorage.setItem('popupCelebrashow2026', '1');
@@ -2524,12 +2532,9 @@ function fecharPopup() {
 
   if (!sessionStorage.getItem('popupCelebrashow2026')) {
     setTimeout(function() {
-      var overlay = document.getElementById('popup-overlay');
-      overlay.style.display = 'flex';
+      document.getElementById('popup-overlay').style.display = 'flex';
     }, 1500);
   }
-
-
 
 function abrirWhatsApp(event, nome) {
     event.preventDefault();
