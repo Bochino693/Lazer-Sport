@@ -77,6 +77,204 @@ body {
   line-height: 1.6;
 }
 
+.popup-overlay-celebra {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(0,0,0,0.62);
+  align-items: center;
+  justify-content: center;
+  padding: 14px;
+}
+
+.popup-box-celebra {
+  position: relative;
+  width: min(92vw, 390px);
+  max-height: calc(100vh - 28px);
+  background: #0f3460;
+  border-radius: 14px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  animation: popIn 0.35s cubic-bezier(.4,0,.2,1);
+  box-shadow: 0 18px 45px rgba(0,0,0,.35);
+}
+
+.popup-close-celebra {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 10;
+  background: rgba(0,0,0,0.55);
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  font-size: 20px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.popup-header-celebra {
+  background: #0f3460;
+  padding: 18px 18px 14px;
+  text-align: center;
+}
+
+.popup-header-celebra p {
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: #ffd700;
+  font-weight: 700;
+  margin: 0 0 4px;
+  text-transform: uppercase;
+}
+
+.popup-header-celebra h2 {
+  font-size: clamp(24px, 4vw, 30px);
+  font-weight: 800;
+  color: #fff;
+  margin: 0;
+  line-height: 1;
+}
+
+.popup-header-celebra span {
+  font-size: clamp(28px, 4vw, 34px);
+  font-weight: 900;
+  color: #ffd700;
+  display: block;
+  line-height: 1.05;
+}
+
+.popup-header-celebra small {
+  display: block;
+  font-size: 12px;
+  color: rgba(255,255,255,0.75);
+  margin-top: 6px;
+}
+
+.popup-img-celebra {
+  width: 100%;
+  display: block;
+  max-height: 190px;
+  object-fit: cover;
+  object-position: top;
+}
+
+.popup-info-celebra {
+  padding: 14px 18px 16px;
+  background: #0f3460;
+}
+
+.popup-dados-celebra {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.popup-linha-celebra {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255,255,255,0.10);
+}
+
+.popup-linha-celebra span {
+  font-size: 18px;
+  width: 24px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.popup-linha-celebra p {
+  margin: 0;
+  font-size: 10px;
+  color: #ffd700;
+  font-weight: 700;
+  letter-spacing: .8px;
+  text-transform: uppercase;
+}
+
+.popup-linha-celebra strong {
+  display: block;
+  margin: 0;
+  font-size: 13px;
+  color: #fff;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.popup-botoes-celebra {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.popup-botoes-celebra a,
+.popup-fechar-btn-celebra {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  width: 100%;
+  padding: 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 800;
+  text-decoration: none;
+  border: none;
+  cursor: pointer;
+}
+
+.popup-instagram-celebra {
+  background: linear-gradient(135deg, #833ab4, #fd1d1d, #f77737);
+  color: #fff;
+}
+
+.popup-whatsapp-celebra {
+  background: #25d366;
+  color: #fff;
+}
+
+.popup-fechar-btn-celebra {
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,215,0,0.4);
+  color: rgba(255,215,0,0.85);
+}
+
+@media (max-height: 720px) {
+  .popup-box-celebra {
+    width: min(92vw, 360px);
+  }
+
+  .popup-header-celebra {
+    padding: 14px 16px 10px;
+  }
+
+  .popup-img-celebra {
+    max-height: 145px;
+  }
+
+  .popup-info-celebra {
+    padding: 12px 16px;
+  }
+
+  .popup-linha-celebra strong {
+    font-size: 12px;
+  }
+
+  .popup-botoes-celebra a,
+  .popup-fechar-btn-celebra {
+    padding: 8px;
+    font-size: 12px;
+  }
+}
+
+
 /* =========================================================
    BOTÕES GERAIS
 ========================================================= */
@@ -1574,126 +1772,71 @@ body {
 -->
 
 <!-- ======= POP-UP CELEBRASHOW 2026 ======= -->
-<div id="popup-overlay" style="
-  display: none;
-  position: fixed; inset: 0; z-index: 9999;
-  background: rgba(0,0,0,0.6);
-  align-items: center; justify-content: center;
-">
-  <div id="popup-box" style="
-    position: relative;
-    background: var(--color-bg, #fff);
-    border-radius: 12px;
-    max-width: 480px; width: 90%;
-    overflow: hidden;
-    animation: popIn 0.35s cubic-bezier(.4,0,.2,1);
-  ">
+<!-- ======= POP-UP CELEBRASHOW 2026 ======= -->
+<div id="popup-overlay" class="popup-overlay-celebra">
+  <div id="popup-box" class="popup-box-celebra">
 
-    <!-- Botão X -->
-    <button onclick="fecharPopup()" style="
-      position: absolute; top: 12px; right: 12px; z-index: 10;
-      background: rgba(0,0,0,0.45); color: #fff;
-      border: none; border-radius: 50%;
-      width: 32px; height: 32px; font-size: 20px;
-      cursor: pointer; line-height: 1;
-    ">×</button>
+    <button onclick="fecharPopup()" class="popup-close-celebra">×</button>
 
-    <!-- CABEÇALHO ESCURO (original) -->
-    <div style="background: #0f3460; padding: 2rem; text-align: center;">
-      <p style="font-size: 11px; letter-spacing: 3px; color: #ffd700; font-weight: 600; margin: 0 0 6px; text-transform: uppercase;">Estaremos presentes no</p>
-      <h2 style="font-size: 34px; font-weight: 700; color: #fff; margin: 0; line-height: 1.1;">CELEBRASHOW</h2>
-      <span style="font-size: 40px; font-weight: 800; color: #ffd700; display: block;">2026</span>
-      <p style="font-size: 13px; color: rgba(255,255,255,0.7); margin: 12px 0 0;">O maior evento de festas infantis</p>
+    <div class="popup-header-celebra">
+      <p>Estaremos presentes no</p>
+      <h2>CELEBRASHOW</h2>
+      <span>2026</span>
+      <small>O maior evento de festas infantis</small>
     </div>
 
-    <!-- IMAGEM DO FLYER -->
     <img
       src="{% static 'images/image.png' %}"
       alt="Celebrashow 2026 - Lazer & Sport"
-      style="width: 100%; display: block; max-height: 280px; object-fit: cover; object-position: top;"
+      class="popup-img-celebra"
     >
 
-<!-- INFORMAÇÕES DO EVENTO -->
-<div style="padding: 1.25rem 1.5rem; background: #0f3460;">
+    <div class="popup-info-celebra">
 
-  <div style="display: flex; flex-direction: column; align-items: center; gap: 12px; margin-bottom: 1rem;">
+      <div class="popup-dados-celebra">
+        <div class="popup-linha-celebra">
+          <span>📅</span>
+          <div>
+            <p>Data</p>
+            <strong>31 de maio a 03 de junho</strong>
+          </div>
+        </div>
 
-    <div style="display: flex; align-items: center; gap: 12px; width: 100%; max-width: 280px;">
-      <span style="font-size: 20px; width: 28px; text-align: center;">📅</span>
-      <div>
-        <p style="margin: 0; font-size: 11px; color: #ffd700; font-weight: 600; letter-spacing: 1px; text-transform: uppercase;">Data</p>
-        <p style="margin: 0; font-size: 15px; color: #fff; font-weight: 500;">31 de maio a 03 de junho</p>
+        <div class="popup-linha-celebra">
+          <span>📍</span>
+          <div>
+            <p>Local</p>
+            <strong>Expo Center Norte — São Paulo/SP</strong>
+          </div>
+        </div>
+
+        <div class="popup-linha-celebra">
+          <span>🎯</span>
+          <div>
+            <p>Nosso Estande</p>
+            <strong>Rua 15 — Estande 15082</strong>
+          </div>
+        </div>
       </div>
-    </div>
 
-    <div style="width: 100%; max-width: 280px; height: 1px; background: rgba(255,255,255,0.1);"></div>
+      <div class="popup-botoes-celebra">
+        <a href="https://www.instagram.com/lazersportbrinquedos" target="_blank" rel="noopener" class="popup-instagram-celebra">
+          <i class="fa-brands fa-instagram"></i>
+          Instagram
+        </a>
 
-    <div style="display: flex; align-items: center; gap: 12px; width: 100%; max-width: 280px;">
-      <span style="font-size: 20px; width: 28px; text-align: center;">📍</span>
-      <div>
-        <p style="margin: 0; font-size: 11px; color: #ffd700; font-weight: 600; letter-spacing: 1px; text-transform: uppercase;">Local</p>
-        <p style="margin: 0; font-size: 15px; color: #fff; font-weight: 500;">Expo Center Norte — São Paulo/SP</p>
+        <a href="https://wa.me/5511960563135?text=Ol%C3%A1!%20Vi%20que%20voc%C3%AAs%20estar%C3%A3o%20na%20Celebrashow%202026!" target="_blank" rel="noopener" class="popup-whatsapp-celebra">
+          <i class="fa-brands fa-whatsapp"></i>
+          WhatsApp
+        </a>
+
+        <button onclick="fecharPopup()" class="popup-fechar-btn-celebra">
+          Fechar
+        </button>
       </div>
-    </div>
-
-    <div style="width: 100%; max-width: 280px; height: 1px; background: rgba(255,255,255,0.1);"></div>
-
-    <div style="display: flex; align-items: center; gap: 12px; width: 100%; max-width: 280px;">
-      <span style="font-size: 20px; width: 28px; text-align: center;">🎯</span>
-      <div>
-        <p style="margin: 0; font-size: 11px; color: #ffd700; font-weight: 600; letter-spacing: 1px; text-transform: uppercase;">Nosso Estande</p>
-        <p style="margin: 0; font-size: 15px; color: #fff; font-weight: 500;">Rua 15 — Estande 15082</p>
-      </div>
-    </div>
-
-  </div>
-
-
-      <!-- BOTÕES -->
-<div style="display: flex; flex-direction: column; gap: 8px;">
-
-  <a href="https://www.instagram.com/lazersportbrinquedos" target="_blank" rel="noopener" style="
-    display: flex; align-items: center; justify-content: center; gap: 10px;
-    background: linear-gradient(135deg, #833ab4, #fd1d1d, #f77737);
-    color: #fff; padding: 13px; border-radius: 8px;
-    font-size: 14px; font-weight: 700; text-decoration: none;
-    letter-spacing: 0.3px;
-  ">
-    <i class="fa-brands fa-instagram" style="font-size: 18px;"></i>
-    Acompanhe no Instagram
-  </a>
-
-  <a href="https://wa.me/5511960563135?text=Ol%C3%A1!%20Vi%20que%20voc%C3%AAs%20estar%C3%A3o%20na%20Celebrashow%202026!" target="_blank" rel="noopener" style="
-    display: flex; align-items: center; justify-content: center; gap: 10px;
-    background: #25d366; color: #fff; padding: 13px; border-radius: 8px;
-    font-size: 14px; font-weight: 700; text-decoration: none;
-    letter-spacing: 0.3px;
-  ">
-    <i class="fa-brands fa-whatsapp" style="font-size: 18px;"></i>
-    Falar pelo WhatsApp
-  </a>
-
-  <button onclick="fecharPopup()" style="
-    background: rgba(255,255,255,0.08);
-    border: 1px solid rgba(255,215,0,0.4);
-    color: rgba(255,215,0,0.8);
-    padding: 10px; border-radius: 8px;
-    font-size: 13px; cursor: pointer;
-    letter-spacing: 0.5px;
-    transition: background 0.2s;
-  "
-  onmouseover="this.style.background='rgba(255,215,0,0.12)'"
-  onmouseout="this.style.background='rgba(255,255,255,0.08)'"
-  >
-    Fechar
-  </button>
-
-</div>
 
     </div>
   </div>
-</div>
-
 
 
 
