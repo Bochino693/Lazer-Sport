@@ -388,92 +388,89 @@
 
 @media (max-width: 768px) {
 
-     .produto-img {
-    text-align: center;
-  }
+    /* CONTAINER → vira coluna única no mobile */
+    .produto-container {
+        grid-template-columns: 1fr;   /* ⚠️ ESSA É A LINHA QUE FALTAVA */
+        margin: 20px 12px;
+        padding: 18px;
+        border-radius: 18px;
+        gap: 20px;
+    }
 
-  .produto-img img {
-    max-width: 95%;
-  }
+    /* IMAGEM ocupa toda a largura */
+    .produto-img {
+        width: 100%;
+        text-align: center;
+    }
 
+    .produto-img img {
+        width: 100%;
+        max-width: 100%;
+        height: auto;
+        display: block;
+        margin: 0 auto;
+        border-radius: 16px;
+        box-shadow: 0 6px 18px rgba(0,0,0,0.15);
+    }
 
+    /* (mantém o resto que você já tinha) */
+    .combo-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
 
-  /* CONTAINER */
-  .produto-container {
-    margin: 20px 12px;
-    padding: 18px;
-    border-radius: 18px;
-  }
+    .combo-titulo,
+    .combo-descricao {
+        font-size: 1.6em;
+        margin-bottom: 25px;
+    }
 
-  /* GRID → COLUNA ÚNICA */
-  .combo-grid {
-    grid-template-columns: 1fr;
-    gap: 20px;
-  }
+    .combo-descricao {
+        line-height: 1.3;
+    }
 
-  /* IMAGEM */
-  .produto-img img {
-    border-radius: 16px;
-  }
+    .produto-info h3 {
+        font-size: 1.1rem;
+        margin-bottom: 10px;
+    }
 
-  /* TÍTULOS */
-  .combo-titulo,
-  .combo-descricao {
-    font-size: 1.6em;
-    margin-bottom: 25px;
-  }
+    .brinquedo-item {
+        font-size: 0.95rem;
+        padding: 10px;
+    }
 
-  /* DESCRIÇÃO */
-  .combo-descricao {
-    line-height: 1.3;
-  }
+    .combo-precos {
+        padding: 15px;
+        border-radius: 15px;
+    }
 
-  /* LISTA DE BRINQUEDOS */
-  .produto-info h3 {
-    font-size: 1.1rem;
-    margin-bottom: 10px;
-  }
+    .combo-precos p {
+        font-size: 1rem;
+        gap: 4px;
+    }
 
-  .brinquedo-item {
-    font-size: 0.95rem;
-    padding: 10px;
-  }
+    .preco-promo {
+        font-size: 1.6rem;
+    }
 
-  /* PREÇOS */
-  .combo-precos {
-    padding: 15px;
-    border-radius: 15px;
-  }
+    .combo-acoes {
+        flex-direction: column;
+        gap: 10px;
+    }
 
-  .combo-precos p {
-    font-size: 1rem;
-    gap: 4px;
-  }
+    .btn-combo {
+        width: 100%;
+        font-size: 1rem;
+        padding: 14px;
+        border-radius: 14px;
+    }
 
-  .preco-promo {
-    font-size: 1.6rem;
-  }
-
-  /* BOTÕES → COLUNA */
-  .combo-acoes {
-    flex-direction: column;
-    gap: 10px;
-  }
-
-  .btn-combo {
-    width: 100%;
-    font-size: 1rem;
-    padding: 14px;
-    border-radius: 14px;
-  }
-
-  /* TOAST */
-  .toast-carrinho {
-    bottom: 110px;
-    width: 90%;
-    text-align: center;
-    font-size: 0.95rem;
-  }
+    .toast-carrinho {
+        bottom: 110px;
+        width: 90%;
+        text-align: center;
+        font-size: 0.95rem;
+    }
 }
 
 
