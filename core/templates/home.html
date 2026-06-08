@@ -5,6 +5,7 @@
 {% block title %} Home | Lazer & Sports {% endblock %}
 
 {% block content %}
+
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600&display=swap');
 
@@ -588,7 +589,7 @@ body {
   max-width: 1200px;
   width: 100%;
   margin: 0 auto;
-  align-items: start;
+  align-items: stretch;
   min-height: 600px;
 }
 
@@ -1732,46 +1733,7 @@ body {
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
-<!--
-<section id="inicio" class="carousel-container">
-  <div class="carousel-wrapper">
 
-    {% for imagem in imagens_site %}
-      <img
-          src="{{ imagem.imagem.url }}"
-          srcset="
-            {{ imagem.imagem.url }} 1920w
-          "
-          sizes="100vw"
-          class="carousel-slide {% if forloop.first %}active{% endif %}"
-          {% if forloop.first %}
-            fetchpriority="high"
-            loading="eager"
-          {% else %}
-            loading="lazy"
-          {% endif %}
-          decoding="async"
-          alt="Imagem do site {{ forloop.counter }}"
-      >
-    {% endfor %}
-
-    <button class="carousel-btn prev" aria-label="Anterior">❮</button>
-    <button class="carousel-btn next" aria-label="Próximo">❯</button>
-
-    <div class="carousel-dots">
-      {% for imagem in imagens_site %}
-          <span class="dot {% if forloop.first %}active{% endif %}" data-index="{{ forloop.counter0 }}"></span>
-      {% endfor %}
-    </div>
-
-  </div>
-</section>
-
-
-<div class="espacador"></div>
--->
-
-<!-- ======= POP-UP CELEBRASHOW 2026 ======= -->
 <!-- ======= POP-UP CELEBRASHOW 2026 ======= -->
 <div id="popup-overlay" class="popup-overlay-celebra">
   <div id="popup-box" class="popup-box-celebra">
@@ -2885,44 +2847,53 @@ function scrollParaProdutos() {
 }
 
 let controllerProdutos = null;
+const cacheProdutos = new Map();   // chave: `${ordenar}|${page}`
 
-function getEstadoProdutosUrl() {
-    const url = new URL(window.location.href);
-
-    return {
-        page: parseInt(url.searchParams.get('page') || '1', 10),
-        ordenar: url.searchParams.get('ordenar') || 'az'
-    };
+function setLoadingProdutos(on) {
+    const c = document.getElementById('produtos-container');
+    if (!c) return;
+    c.style.transition = 'opacity .15s ease';
+    c.style.opacity = on ? '0.45' : '1';
+    c.style.pointerEvents = on ? 'none' : '';
 }
 
-function setEstadoProdutosUrl(page, ordenar) {
-    const url = new URL(window.location.href);
+function aplicarProdutos(htmlInterno, page, ordenar) {
+    const c = document.querySelector('#produtos-container');
+    if (!c) return;
 
-    url.searchParams.set('ordenar', ordenar || 'az');
+    c.innerHTML = htmlInterno;
+    setEstadoProdutosUrl(page, ordenar);
+    setLoadingProdutos(false);
 
-    if (page && Number(page) > 1) {
-        url.searchParams.set('page', page);
-    } else {
-        url.searchParams.delete('page');
-    }
-
-    history.replaceState({}, '', url);
+    // re-renderiza SÓ dentro do container novo (não a página toda)
+    renderizarTodasEstrelas(c);
+    renderizarMoedas(c);
+    scrollParaProdutos();
 }
 
 async function carregarProdutos(params = {}) {
     const estadoAtual = getEstadoProdutosUrl();
-
     const page = params.page || estadoAtual.page || 1;
     const ordenar = params.ordenar || estadoAtual.ordenar || 'az';
+    const chave = `${ordenar}|${page}`;
+
+    // marca o filtro ativo na hora (feedback instantâneo)
+    document.querySelectorAll('#filtros-bar .filtro-btn').forEach(btn => {
+        btn.classList.toggle('ativo', btn.dataset.order === ordenar);
+    });
+
+    // já buscou antes? aplica na hora, sem rede
+    if (cacheProdutos.has(chave)) {
+        aplicarProdutos(cacheProdutos.get(chave), page, ordenar);
+        return;
+    }
+
+    setLoadingProdutos(true);
 
     const url = new URL(window.location.href);
     url.searchParams.set('ordenar', ordenar);
-
-    if (Number(page) > 1) {
-        url.searchParams.set('page', page);
-    } else {
-        url.searchParams.delete('page');
-    }
+    if (Number(page) > 1) url.searchParams.set('page', page);
+    else url.searchParams.delete('page');
 
     if (controllerProdutos) controllerProdutos.abort();
     controllerProdutos = new AbortController();
@@ -2930,52 +2901,22 @@ async function carregarProdutos(params = {}) {
     try {
         const response = await fetch(url.toString(), {
             signal: controllerProdutos.signal,
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest'
-            },
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
             cache: 'no-store'
         });
-
-        if (!response.ok) {
-            throw new Error(`Erro HTTP ${response.status}`);
-        }
+        if (!response.ok) throw new Error('HTTP ' + response.status);
 
         const html = await response.text();
+        const doc = new DOMParser().parseFromString(html, 'text/html');
+        const novo = doc.querySelector('#produtos-container');
 
-        const temp = document.createElement('div');
-        temp.innerHTML = html;
-
-        const novoContainer = temp.querySelector('#produtos-container');
-        const containerAtual = document.querySelector('#produtos-container');
-
-        if (novoContainer && containerAtual) {
-            containerAtual.innerHTML = novoContainer.innerHTML;
+        if (novo) {
+            cacheProdutos.set(chave, novo.innerHTML);
+            aplicarProdutos(novo.innerHTML, page, ordenar);
         }
-
-        setEstadoProdutosUrl(page, ordenar);
-
-        document.querySelectorAll('#filtros-bar .filtro-btn').forEach(btn => {
-            btn.classList.remove('ativo');
-            if (btn.dataset.order === ordenar) {
-                btn.classList.add('ativo');
-            }
-        });
-
-        requestAnimationFrame(() => {
-            renderizarTodasEstrelas();
-            renderizarMoedas();
-
-            setTimeout(() => {
-                igualarAlturaCards();
-            }, 30);
-
-            scrollParaProdutos();
-        });
-
     } catch (e) {
-        if (e.name !== 'AbortError') {
-            console.error('Erro ao carregar produtos:', e);
-        }
+        if (e.name !== 'AbortError') console.error('Erro ao carregar produtos:', e);
+        setLoadingProdutos(false);
     }
 }
 
