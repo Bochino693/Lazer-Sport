@@ -5,6 +5,7 @@
 {% block title %} Home | Lazer & Sports {% endblock %}
 
 {% block content %}
+{% if not is_ajax %}
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600&display=swap');
 
@@ -1728,6 +1729,7 @@ body {
   }
 }
 </style>
+
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
@@ -2032,6 +2034,8 @@ body {
   </div>
 
   <!-- CONTAINER PRODUTOS -->
+    {% endif %}
+{% if not is_ajax or ajax_target == 'produtos' %}
   <div id="produtos-container">
 
     <div class="grid-cards" id="grid-cards">
@@ -2141,6 +2145,9 @@ body {
     </div>
 
   </div>
+
+    {% endif %}
+{% if not is_ajax %}
 </section>
 
 <div class="espacador"></div>
@@ -2200,6 +2207,8 @@ body {
 </div>
 
 <!-- CONTAINER ATUALIZÁVEL -->
+    {% endif %}
+{% if not is_ajax or ajax_target == 'pecas' %}
 <div id="pecas-container">
 
   <div class="pecas-grid" id="grid-pecas">
@@ -2290,6 +2299,8 @@ body {
 
         </div>
     </div>
+    {% endif %}
+{% if not is_ajax %}
 </section>
 
 
@@ -3303,5 +3314,6 @@ document.addEventListener('click', function (e) {
     }
 });
 </script>
+{% endif %}
 
 {% endblock %}

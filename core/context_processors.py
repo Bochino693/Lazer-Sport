@@ -1,7 +1,12 @@
 from .models import CategoriasBrinquedos, Estabelecimentos, Manutencao, Carrinho
 from django.db.models import Q
 
+def _is_ajax(request):
+    return request.headers.get("x-requested-with") == "XMLHttpRequest"
+
 def categorias_globais(request):
+    if _is_ajax(request):
+        return {}
     return {
         "categorias_header": CategoriasBrinquedos.objects.exclude(
             nome_categoria__icontains="competitivos"
@@ -17,12 +22,16 @@ def categorias_globais(request):
     }
 
 def estabelecimentos_globais(request):
+    if _is_ajax(request):
+        return {}
     return {
         "estabelecimentos_globais": Estabelecimentos.objects.all()
     }
 
 
 def manutencao_notificacao(request):
+    if _is_ajax(request):
+        return {}
     if not request.user.is_authenticated:
         return {}
 
@@ -54,6 +63,8 @@ from django.db.models import Sum
 
 
 def carrinho_context(request):
+    if _is_ajax(request):
+        return {}
     if not request.user.is_authenticated:
         return {
             'carrinho_total_itens': 0,
@@ -90,6 +101,8 @@ def carrinho_context(request):
 from .models import Pedido
 
 def pedidos_ativos_context(request):
+    if _is_ajax(request):
+        return {}
     if not request.user.is_authenticated:
         return {}
 
@@ -110,6 +123,8 @@ def pedidos_ativos_context(request):
 
 
 def admin_alertas_context(request):
+    if _is_ajax(request):
+        return {}
     if not request.user.is_authenticated:
         return {}
 
