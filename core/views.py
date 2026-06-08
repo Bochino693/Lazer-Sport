@@ -39,99 +39,131 @@ def erro_500(request):
 
 class HomeView(View):
     def get(self, request):
-        is_ajax = request.headers.get("x-requested-with") == "XMLHttpRequest"
+        imagens_site = ImagensSite.objects.order_by('-id')[:5]
+
         filtro = request.GET.get("ordenar", "az")
 
         brinquedos = (
             Brinquedos.objects.only(
-                "id", "nome_brinquedo", "imagem_brinquedo", "descricao",
-                "avaliacao", "valor_brinquedo", "voltz",
-                "altura_m", "largura_m", "profundidade_m",
-            ).prefetch_related("categorias_brinquedos", "tags")  # tirei "estabelecimentos": não é usado
+                "id",
+                "nome_brinquedo",
+                "imagem_brinquedo",
+                "descricao",
+                "avaliacao",
+                "valor_brinquedo",
+                "voltz",
+                "altura_m",
+                "largura_m",
+                "profundidade_m"
+            )
+            .prefetch_related(
+                "categorias_brinquedos",
+                "tags",
+                "estabelecimentos"
+            )
         )
 
-        if filtro == "custo-beneficio":
+        if filtro == "az":
+            brinquedos = brinquedos.order_by("nome_brinquedo")
+
+        elif filtro == "za":
+            brinquedos = brinquedos.order_by("-nome_brinquedo")
+
+        elif filtro == "melhor-avaliados":
+            brinquedos = brinquedos.order_by("-avaliacao", "nome_brinquedo")
+
+        elif filtro == "custo-beneficio":
             brinquedos = brinquedos.annotate(
                 preco_seguro=Coalesce("valor_brinquedo", Value(0.0)),
                 avaliacao_segura=Coalesce("avaliacao", Value(0.0)),
                 score=ExpressionWrapper(
                     F("avaliacao_segura") / (F("preco_seguro") + Value(0.01)),
-                    output_field=FloatField(),
-                ),
+                    output_field=FloatField()
+                )
             ).order_by("-score", "nome_brinquedo")
+
         else:
-            ordens = {
-                "az": ("nome_brinquedo",),
-                "za": ("-nome_brinquedo",),
-                "melhor-avaliados": ("-avaliacao", "nome_brinquedo"),
-            }
-            if filtro not in ordens:
-                filtro = "az"
-            brinquedos = brinquedos.order_by(*ordens[filtro])
+            brinquedos = brinquedos.order_by("nome_brinquedo")
+            filtro = "az"
 
-        page_obj = Paginator(brinquedos, 9).get_page(request.GET.get("page"))
+        paginator = Paginator(brinquedos, 9)
+        page_number = request.GET.get("page")
+        page_obj = paginator.get_page(page_number)
 
-        # >>> AJAX dos brinquedos: renderiza a MESMA home, mas só o grid sai (ver os {% if %})
-        if is_ajax:
-            return render(request, "home.html", {
-                "page_obj": page_obj,
-                "ordenar": filtro,
-                "is_ajax": True,
-                "ajax_target": "produtos",
-            })
+        categorias_brinquedos = CategoriasBrinquedos.objects.annotate(
+            total_produtos=Count('brinquedos', distinct=True)
+        )
 
-        # ===== só roda no carregamento completo =====
-        combos = Combos.objects.prefetch_related("brinquedos")
+        combos = Combos.objects.all().prefetch_related("brinquedos")
+        promocoes = Promocoes.objects.all()
+        eventos = Eventos.objects.all()
+        projetos = Projetos.objects.all()
+
         for combo in combos:
-            total_original = sum((b.valor_brinquedo or Decimal('0')) for b in combo.brinquedos.all())
+            total_original = sum(
+                (b.valor_brinquedo or Decimal('0')) for b in combo.brinquedos.all()
+            )
             valor_combo = combo.valor_combo or Decimal('0')
+            economia = total_original - valor_combo
+            porcentagem = (economia / total_original * 100) if total_original > 0 else 0
+
             combo.total_original = total_original
-            combo.economia = total_original - valor_combo
-            combo.porcentagem = (combo.economia / total_original * 100) if total_original > 0 else 0
+            combo.economia = economia
+            combo.porcentagem = porcentagem
 
-        eventos = Eventos.objects.prefetch_related("imagens_evento", "brinquedos")
-        projetos = (
-            Projetos.objects.select_related("brinquedo_projetado")
-            .prefetch_related("brinquedo_projetado__imagens_brinquedo_projeto")
-        )
+        categorias_peca = CategoriaPeca.objects.all()
 
-        import random
-        ids = list(
-            PecasReposicao.objects.filter(imagem_peca_reposicao__isnull=False)
-            .values_list("id", flat=True).distinct()
-        )
-        sample = random.sample(ids, min(12, len(ids)))
+        from .models import ImagemPeca
+
         pecas_preview = list(
-            PecasReposicao.objects.filter(id__in=sample)
-            .prefetch_related(Prefetch("imagem_peca_reposicao",
-                                       queryset=ImagemPeca.objects.order_by("id")))
+            PecasReposicao.objects
+            .prefetch_related(
+                Prefetch(
+                    "imagem_peca_reposicao",
+                    queryset=ImagemPeca.objects.order_by("id")
+                )
+            )
+            .filter(imagem_peca_reposicao__isnull=False)
+            .distinct()
         )
+
+        shuffle(pecas_preview)
+        pecas_preview = pecas_preview[:12]
 
         categoria_ativa = request.GET.get("categoria")
-        pecas_lista = PecasReposicao.objects.filter(ativo=True).prefetch_related(
-            "imagem_peca_reposicao", "categoria_peca",
-        )
-        if categoria_ativa:
-            pecas_lista = pecas_lista.filter(categoria_peca__id=categoria_ativa).distinct()
-        page_obj_pecas = Paginator(pecas_lista, 12).get_page(request.GET.get("page_pecas"))
 
-        return render(request, "home.html", {
-            "is_ajax": False,
-            "categorias_brinquedos": CategoriasBrinquedos.objects.annotate(
-                total_produtos=Count("brinquedos", distinct=True)),
+        pecas_lista = PecasReposicao.objects.filter(ativo=True).prefetch_related(
+            "imagem_peca_reposicao",
+            "categoria_peca",
+        )
+
+        if categoria_ativa:
+            pecas_lista = pecas_lista.filter(
+                categoria_peca__id=categoria_ativa
+            ).distinct()
+
+        paginator_pecas = Paginator(pecas_lista, 12)
+        page_number_pecas = request.GET.get("page_pecas")
+        page_obj_pecas = paginator_pecas.get_page(page_number_pecas)
+
+        context = {
+            "categorias_brinquedos": categorias_brinquedos,
             "page_obj": page_obj,
             "ordenar": filtro,
             "eventos": eventos,
-            "categorias_peca": CategoriaPeca.objects.all(),
+            "categorias_peca": categorias_peca,
             "categoria_ativa": categoria_ativa,
             "pecas_reposicao": page_obj_pecas,
             "pecas_count": PecasReposicao.objects.count(),
             "pecas_preview": pecas_preview,
             "projetos": projetos,
             "combos": combos,
-            "promocoes": Promocoes.objects.all(),
+            "promocoes": promocoes,
             "estabelecimentos": Estabelecimentos.objects.all(),
-        })
+            "imagens_site": imagens_site,
+        }
+
+        return render(request, "home.html", context)
 
 
 from django.template.loader import render_to_string
@@ -139,20 +171,31 @@ from django.template.loader import render_to_string
 
 def filtrar_pecas_ajax(request):
     categoria_ativa = request.GET.get("categoria")
-    pecas_lista = PecasReposicao.objects.filter(ativo=True).prefetch_related(
-        Prefetch("imagem_peca_reposicao", queryset=ImagemPeca.objects.order_by("id")),
+    page_number_pecas = request.GET.get("page_pecas")
+
+    pecas_lista = PecasReposicao.objects.prefetch_related(
+        "imagem_peca_reposicao",
         "categoria_peca",
     )
-    if categoria_ativa:
-        pecas_lista = pecas_lista.filter(categoria_peca__id=categoria_ativa).distinct()
-    page_obj_pecas = Paginator(pecas_lista, 12).get_page(request.GET.get("page_pecas"))
 
-    return render(request, "home.html", {
-        "pecas_reposicao": page_obj_pecas,
-        "categoria_ativa": categoria_ativa,
-        "is_ajax": True,
-        "ajax_target": "pecas",
-    })
+    if categoria_ativa:
+        pecas_lista = pecas_lista.filter(
+            categoria_peca__id=categoria_ativa
+        ).distinct()
+
+    paginator_pecas = Paginator(pecas_lista, 12)
+    page_obj_pecas = paginator_pecas.get_page(page_number_pecas)
+
+    html = render_to_string(
+        "home.html",
+        {
+            "pecas_reposicao": page_obj_pecas,
+            "categoria_ativa": categoria_ativa,
+        },
+        request=request,
+    )
+
+    return HttpResponse(html)
 
 
 from .models import PecasReposicao
