@@ -80,9 +80,9 @@ for origin in extra_origins.split(","):
 # CLOUDINARY
 # ============================================================
 CLOUDINARY_STORAGE = {
-    "CLOUD_NAME": os.getenv("CLOUD_NAME", "").strip(),
-    "API_KEY": os.getenv("CLOUD_API_KEY", "").strip(),
-    "API_SECRET": os.getenv("CLOUD_API_SECRET", "").strip(),
+    "CLOUD_NAME": (os.getenv("CLOUDINARY_CLOUD_NAME") or os.getenv("CLOUD_NAME") or "").strip(),
+    "API_KEY": (os.getenv("CLOUDINARY_API_KEY") or os.getenv("CLOUD_API_KEY") or "").strip(),
+    "API_SECRET": (os.getenv("CLOUDINARY_API_SECRET") or os.getenv("CLOUD_API_SECRET") or "").strip(),
 }
 
 if all(CLOUDINARY_STORAGE.values()):
