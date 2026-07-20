@@ -29,12 +29,30 @@ def media_serve(request, path):
     return FileResponse(open(file_path, 'rb'), content_type='image/jpeg')
 
 
+from django.http import HttpResponseNotFound, HttpResponseServerError
+from django.template.loader import render_to_string
+
+
 def erro_404(request, exception):
-    return render(request, "404.html", status=404)
+    try:
+        html = render_to_string("404.html", request=request)
+        return HttpResponseNotFound(html)
+    except Exception:
+        return HttpResponseNotFound(
+            "<h1>Página não encontrada (404)</h1>"
+            "<p>O conteúdo que você procura não existe ou foi movido.</p>"
+        )
 
 
 def erro_500(request):
-    return render(request, "500.html", status=500)
+    try:
+        html = render_to_string("500.html", request=request)
+        return HttpResponseServerError(html)
+    except Exception:
+        return HttpResponseServerError(
+            "<h1>Erro interno (500)</h1>"
+            "<p>Algo deu errado no nosso servidor. Já estamos verificando.</p>"
+        )
 
 
 class HomeView(View):
