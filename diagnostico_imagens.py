@@ -16,7 +16,7 @@ import requests
 DATABASE_URL = "postgresql://postgres.yjcponeqpyuhntwoiacs:633lazersport@aws-1-sa-east-1.pooler.supabase.com:5432/postgres"
 CLOUDINARY_CLOUD_NAME = "dgikjmki8"
 CLOUDINARY_API_KEY = "342516516215559"
-CLOUDINARY_API_SECRET = "G3Zg2Y31tiZ_6mzx8atuAFz8Xc"
+CLOUDINARY_API_SECRET = "6G3Zg2Y31tiZ_6mzx8atuAFz8Xc"
 # =====================================================================
 
 # Prefixo que o django-cloudinary-storage aplica automaticamente
