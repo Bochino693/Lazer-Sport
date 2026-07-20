@@ -270,6 +270,13 @@ STORAGES = {
     },
 }
 
+# Compatibilidade com django-cloudinary-storage 0.3.0.
+# O pacote ainda consulta estas configurações legadas durante collectstatic,
+# mesmo no Django 5.2. Os arquivos estáticos continuam sendo servidos pelo
+# WhiteNoise; apenas os uploads de mídia usam o Cloudinary em produção.
+STATICFILES_STORAGE = "whitenoise.storage.CompressedStaticFilesStorage"
+DEFAULT_FILE_STORAGE = STORAGES["default"]["BACKEND"]
+
 WHITENOISE_AUTOREFRESH = DEBUG
 WHITENOISE_USE_FINDERS = DEBUG
 
