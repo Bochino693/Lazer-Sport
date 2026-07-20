@@ -40,6 +40,7 @@ ALLOWED_HOSTS = [
     "www.lazersport.com.br",
     "interno.lazersport.com.br",
     ".vercel.app",
+    ".onrender.com",
     "localhost",
     "127.0.0.1",
     "0.0.0.0",
@@ -50,6 +51,8 @@ CSRF_TRUSTED_ORIGINS = [
     "https://lazersport.com.br",
     "https://www.lazersport.com.br",
     "https://interno.lazersport.com.br",
+    "https://*.vercel.app",
+    "https://*.onrender.com",
 ]
 
 VERCEL_URL = os.getenv("VERCEL_URL", "").strip()
@@ -100,8 +103,10 @@ INSTALLED_APPS = [
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
-    "cloudinary_storage",
     "django.contrib.staticfiles",
+    # Depois de staticfiles: o collectstatic nativo do Django/WhiteNoise prevalece
+    # sobre o comando legado incluído pelo django-cloudinary-storage 0.3.0.
+    "cloudinary_storage",
     "cloudinary",
     "django.contrib.humanize",
     "django.contrib.sites",
@@ -315,3 +320,37 @@ if COOKIE_DOMAIN:
 MP_ACCESS_TOKEN = os.getenv("MP_ACCESS_TOKEN", "").strip()
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+
+# ============================================================
+# LOGS DE ERRO NO RENDER E NA VERCEL
+# ============================================================
+# Garante que a exceção real de um HTTP 500 apareça nos logs da hospedagem.
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "verbose": {
+            "format": "{levelname} {asctime} {name} {message}",
+            "style": "{",
+        },
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "verbose",
+        },
+    },
+    "loggers": {
+        "django.request": {
+            "handlers": ["console"],
+            "level": "ERROR",
+            "propagate": False,
+        },
+        "django.db.backends": {
+            "handlers": ["console"],
+            "level": "ERROR",
+            "propagate": False,
+        },
+    },
+}
