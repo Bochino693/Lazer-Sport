@@ -175,42 +175,29 @@ WSGI_APPLICATION = "lazer.wsgi.application"
 
 
 # ============================================================
-# BANCO: LOCAL + RENDER + VERCEL/SUPABASE
+# BANCO ÚNICO: SUPABASE
 # ============================================================
-# Cada plataforma possui uma variável própria. DATABASE_URL permanece como fallback
-# para compatibilidade com o PostgreSQL criado automaticamente pelo Render.
-if IS_VERCEL:
-    DATABASE_URL = (
-        os.getenv("SUPABASE_DATABASE_URL", "").strip()
-        or os.getenv("DATABASE_URL", "").strip()
-    )
-elif IS_RENDER:
-    DATABASE_URL = (
-        os.getenv("RENDER_DATABASE_URL", "").strip()
-        or os.getenv("DATABASE_URL", "").strip()
-    )
-else:
-    DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
+# Render, Vercel e execução local usam exatamente a mesma variável e o mesmo banco.
+# Não existe fallback para Render ou SQLite: isso impede gravar dados no banco errado.
+SUPABASE_DATABASE_URL = os.getenv("SUPABASE_DATABASE_URL", "").strip()
 
-if DATABASE_URL:
-    DATABASES = {
-        "default": dj_database_url.parse(
-            DATABASE_URL,
-            conn_max_age=0 if IS_VERCEL else 600,
-            conn_health_checks=not IS_VERCEL,
-            ssl_require=True,
-        )
-    }
-    if IS_VERCEL:
-        # Necessário ao usar o Transaction Pooler do Supabase em funções serverless.
-        DATABASES["default"]["DISABLE_SERVER_SIDE_CURSORS"] = True
-else:
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.sqlite3",
-            "NAME": BASE_DIR / "db.sqlite3",
-        }
-    }
+if not SUPABASE_DATABASE_URL:
+    raise RuntimeError(
+        "SUPABASE_DATABASE_URL não configurada. "
+        "Cadastre a URI do Transaction Pooler do Supabase."
+    )
+
+DATABASES = {
+    "default": dj_database_url.parse(
+        SUPABASE_DATABASE_URL,
+        conn_max_age=0,
+        conn_health_checks=False,
+        ssl_require=True,
+    )
+}
+
+# O Transaction Pooler (porta 6543) não deve usar cursores mantidos no servidor.
+DATABASES["default"]["DISABLE_SERVER_SIDE_CURSORS"] = True
 
 
 # ============================================================
