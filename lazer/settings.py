@@ -83,6 +83,12 @@ CLOUDINARY_STORAGE = {
     "CLOUD_NAME": (os.getenv("CLOUDINARY_CLOUD_NAME") or os.getenv("CLOUD_NAME") or "").strip(),
     "API_KEY": (os.getenv("CLOUDINARY_API_KEY") or os.getenv("CLOUD_API_KEY") or "").strip(),
     "API_SECRET": (os.getenv("CLOUDINARY_API_SECRET") or os.getenv("CLOUD_API_SECRET") or "").strip(),
+    # Sem isso, a lib usa MEDIA_URL ("/media/") como prefixo automático ao
+    # montar a URL de leitura -- mas os public_id reais no Cloudinary NAO
+    # tem esse prefixo, o que gerava 404 em toda imagem. Ver storage.py
+    # (_prepend_prefix) e app_settings.py (PREFIX = ...MEDIA_URL) da lib
+    # django-cloudinary-storage.
+    "PREFIX": "",
 }
 
 if all(CLOUDINARY_STORAGE.values()):
