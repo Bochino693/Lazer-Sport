@@ -196,38 +196,52 @@
 
     .search-box {
       display: flex;
-      gap: 10px;
+      align-items: center;
+      gap: 8px;
       max-width: 700px;
       margin: 0 auto;
+      padding: 6px;
+      background: #ffffff;
+      border: 1px solid #e3e8f0;
+      border-radius: 999px;
+      box-shadow: 0 10px 30px rgba(0, 74, 173, 0.10);
+      transition: box-shadow 0.3s, border-color 0.3s;
+    }
+
+    .search-box:focus-within {
+      border-color: #007BFF;
+      box-shadow: 0 10px 30px rgba(0, 74, 173, 0.18);
     }
 
     .search-box input {
       flex: 1;
-      padding: 10px 15px;
-      border: 1px solid #ccc;
-      border-radius: 8px;
+      min-width: 0;
+      padding: 12px 16px;
+      border: none;
+      border-radius: 999px;
       font-size: 1em;
       outline: none;
-      transition: border-color 0.3s;
-    }
-
-    .search-box input:focus {
-      border-color: #007BFF;
+      background: transparent;
     }
 
     .search-box button {
-      background: #E63946;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+      background: linear-gradient(135deg, #E63946, #c9152d);
       border: none;
-      padding: 10px 20px;
+      padding: 12px 22px;
       color: white;
-      font-weight: 600;
-      border-radius: 8px;
+      font-weight: 700;
+      border-radius: 999px;
       cursor: pointer;
-      transition: background 0.3s;
+      transition: transform 0.2s, box-shadow 0.2s;
     }
 
     .search-box button:hover {
-      background: #c92a38;
+      transform: translateY(-1px);
+      box-shadow: 0 8px 20px rgba(201, 21, 45, 0.35);
     }
 
     /* ======= FILTROS ======= */
@@ -528,11 +542,13 @@ nav a.btn-login {
   /* ===== BUSCA ===== */
   .search-box {
     flex-direction: column;
+    border-radius: 20px;
   }
 
   .search-box input,
   .search-box button {
     width: 100%;
+    border-radius: 14px;
   }
 
   /* ===== TÍTULOS ===== */
@@ -778,9 +794,9 @@ nav a.btn-login {
   <div class="search-container">
     <h2 class="search-title">O que você está procurando hoje?</h2>
 
-    <!-- Campo de busca -->
+    <!-- Campo de busca (único do site) -->
     <form class="search-box" action="{% url 'search' %}" method="get">
-      <input type="text" name="q" placeholder="Digite o nome do brinquedo, categoria ou modelo..." required>
+      <input type="text" name="q" value="{{ request.GET.q }}" placeholder="Digite o nome do brinquedo, categoria ou modelo..." required>
       <button type="submit"><i class="fas fa-search"></i> Buscar</button>
     </form>
 
