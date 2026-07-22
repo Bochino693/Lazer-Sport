@@ -249,11 +249,25 @@ MEDIA_ROOT = BASE_DIR / "media"
 # STORAGES é a configuração atual compatível com Django 5.2.
 # CompressedStaticFilesStorage evita erro de manifesto quando templates antigos
 # apontam para algum arquivo estático que ainda não foi coletado.
+#
+# Antes, se faltasse qualquer variável do Cloudinary em produção, o Django
+# caía em silêncio pro FileSystemStorage -- que não persiste nada na Vercel
+# (sem disco) e não gerava nenhum erro, só imagem quebrada sem explicação.
+# Agora isso quebra o deploy com uma mensagem clara dizendo o que falta.
+_cloudinary_faltando = [nome for nome, valor in CLOUDINARY_STORAGE.items() if not valor]
+
+if ENVIRONMENT == "production" and _cloudinary_faltando:
+    raise RuntimeError(
+        "Cloudinary não configurado em produção. Faltando: "
+        f"{', '.join(_cloudinary_faltando)}. "
+        "Confira essas variáveis de ambiente na Vercel."
+    )
+
 STORAGES = {
     "default": {
         "BACKEND": (
             "cloudinary_storage.storage.MediaCloudinaryStorage"
-            if ENVIRONMENT == "production" and all(CLOUDINARY_STORAGE.values())
+            if ENVIRONMENT == "production"
             else "django.core.files.storage.FileSystemStorage"
         )
     },
