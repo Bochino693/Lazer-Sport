@@ -59,13 +59,13 @@ def erro_500(request):
 
 class HomeView(View):
     def get(self, request):
-        imagens_site = ImagensSite.objects.order_by('-id')[:5]
+        imagens_site = ImagensSite.objects.order_by("-id")[:5]
 
-        # A home e uma vitrine, nao o catalogo completo. Limitar a consulta
-        # aqui evita enviar dezenas de cards/imagens para o navegador para
-        # depois esconde-los com JavaScript.
+        # Somente 9 brinquedos ativos na Home
         brinquedos_todos = list(
-            Brinquedos.objects.filter(ativo=True).only(
+            Brinquedos.objects
+            .filter(ativo=True)
+            .only(
                 "id",
                 "nome_brinquedo",
                 "imagem_brinquedo",
@@ -75,35 +75,76 @@ class HomeView(View):
                 "voltz",
                 "altura_m",
                 "largura_m",
-                "profundidade_m"
+                "profundidade_m",
             )
             .prefetch_related(
                 "categorias_brinquedos",
                 "tags",
-                "estabelecimentos"
+                "estabelecimentos",
             )
-            .order_by("nome_brinquedo")
-            [:9]
+            .order_by("nome_brinquedo")[:9]
         )
 
-        categorias_brinquedos = CategoriasBrinquedos.objects.annotate(
-            total_produtos=Count('brinquedos', distinct=True)
+        categorias_brinquedos = (
+            CategoriasBrinquedos.objects
+            .annotate(
+                total_produtos=Count(
+                    "brinquedos",
+                    distinct=True,
+                )
+            )
         )
 
-        combos = Combos.objects.all().prefetch_related("brinquedos")
-        promocoes = Promocoes.objects.select_related("brinquedos")
-        eventos = Eventos.objects.all().prefetch_related("imagens_evento", "brinquedos").order_by("-id")
-        projetos = Projetos.objects.select_related("brinquedo_projetado").prefetch_related(
-            "brinquedo_projetado__imagens_brinquedo_projeto"
-        ).order_by("-id")
+        combos = (
+            Combos.objects
+            .all()
+            .prefetch_related("brinquedos")
+        )
+
+        promocoes = (
+            Promocoes.objects
+            .select_related("brinquedos")
+        )
+
+        eventos = (
+            Eventos.objects
+            .prefetch_related(
+                "imagens_evento",
+                "brinquedos",
+            )
+            .order_by("-id")
+        )
+
+        projetos = (
+            Projetos.objects
+            .select_related("brinquedo_projetado")
+            .prefetch_related(
+                "brinquedo_projetado__imagens_brinquedo_projeto"
+            )
+            .order_by("-id")
+        )
 
         for combo in combos:
             total_original = sum(
-                (b.valor_brinquedo or Decimal('0')) for b in combo.brinquedos.all()
+                (
+                    brinquedo.valor_brinquedo
+                    or Decimal("0")
+                )
+                for brinquedo in combo.brinquedos.all()
             )
-            valor_combo = combo.valor_combo or Decimal('0')
+
+            valor_combo = (
+                combo.valor_combo
+                or Decimal("0")
+            )
+
             economia = total_original - valor_combo
-            porcentagem = (economia / total_original * 100) if total_original > 0 else 0
+
+            porcentagem = (
+                economia / total_original * 100
+                if total_original > 0
+                else 0
+            )
 
             combo.total_original = total_original
             combo.economia = economia
@@ -113,55 +154,84 @@ class HomeView(View):
 
         from .models import ImagemPeca
 
-        # Antes isso buscava TODAS as peças com imagem (com prefetch
-        # completo de imagens) só pra sortear 12 e descartar o resto.
-        # Agora busca só os IDs primeiro (query leve), sorteia 12, e
-        # busca com prefetch só essas 12.
         ids_com_imagem = list(
             PecasReposicao.objects
-            .filter(imagem_peca_reposicao__isnull=False)
+            .filter(
+                ativo=True,
+                imagem_peca_reposicao__isnull=False,
+            )
             .values_list("id", flat=True)
             .distinct()
         )
 
-        ids_amostra = sample(ids_com_imagem, min(12, len(ids_com_imagem)))
+        # Também limita a vitrine rotativa a 9 peças
+        ids_amostra = sample(
+            ids_com_imagem,
+            min(9, len(ids_com_imagem)),
+        )
 
-        pecas_preview = list(
-            PecasReposicao.objects
-            .filter(id__in=ids_amostra)
-            .prefetch_related(
-                Prefetch(
-                    "imagem_peca_reposicao",
-                    queryset=ImagemPeca.objects.order_by("id")
+        pecas_preview = (
+            list(
+                PecasReposicao.objects
+                .filter(
+                    ativo=True,
+                    id__in=ids_amostra,
+                )
+                .prefetch_related(
+                    Prefetch(
+                        "imagem_peca_reposicao",
+                        queryset=ImagemPeca.objects.order_by(
+                            "id"
+                        ),
+                    )
                 )
             )
-        ) if ids_amostra else []
+            if ids_amostra
+            else []
+        )
 
-        # Assim como os brinquedos, as pecas da home sao apenas uma vitrine.
+        # Somente 9 peças ativas na Home
         pecas_todas = list(
-            PecasReposicao.objects.filter(ativo=True).prefetch_related(
+            PecasReposicao.objects
+            .filter(ativo=True)
+            .prefetch_related(
                 "imagem_peca_reposicao",
                 "categoria_peca",
-            ).order_by("nome")[:9]
+            )
+            .order_by("nome")[:9]
         )
 
         context = {
             "categorias_brinquedos": categorias_brinquedos,
             "brinquedos_todos": brinquedos_todos,
-            "brinquedos_count": Brinquedos.objects.filter(ativo=True).count(),
+            "brinquedos_count": (
+                Brinquedos.objects
+                .filter(ativo=True)
+                .count()
+            ),
             "eventos": eventos,
             "categorias_peca": categorias_peca,
             "pecas_todas": pecas_todas,
-            "pecas_count": PecasReposicao.objects.filter(ativo=True).count(),
+            "pecas_count": (
+                PecasReposicao.objects
+                .filter(ativo=True)
+                .count()
+            ),
             "pecas_preview": pecas_preview,
             "projetos": projetos,
             "combos": combos,
             "promocoes": promocoes,
-            "estabelecimentos": Estabelecimentos.objects.all(),
+            "estabelecimentos": (
+                Estabelecimentos.objects.all()
+            ),
             "imagens_site": imagens_site,
         }
 
-        return render(request, "home.html", context)
+        return render(
+            request,
+            "home.html",
+            context,
+        )
 
 
 from django.template.loader import render_to_string

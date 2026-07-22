@@ -1900,7 +1900,7 @@ body {
     <div class="ls-home-stats-inner">
 
         <div class="ls-home-stat">
-            <h3>{{ brinquedos_todos|length }}</h3>
+            <h3>{{ brinquedos_count }}</h3>
             <p>Brinquedos no catálogo</p>
         </div>
 
@@ -3074,20 +3074,25 @@ body {
 
 
 
+const popupOverlay = document.getElementById('popup-overlay');
+
 function fecharPopup() {
-    document.getElementById('popup-overlay').style.display = 'none';
+    if (!popupOverlay) return;
+    popupOverlay.style.display = 'none';
     sessionStorage.setItem('popupCelebrashow2026', '1');
-  }
+}
 
-  document.getElementById('popup-overlay').addEventListener('click', function(e) {
-    if (e.target === this) fecharPopup();
-  });
+if (popupOverlay) {
+    popupOverlay.addEventListener('click', function(e) {
+        if (e.target === this) fecharPopup();
+    });
 
-  if (!sessionStorage.getItem('popupCelebrashow2026')) {
-    setTimeout(function() {
-      document.getElementById('popup-overlay').style.display = 'flex';
-    }, 1500);
-  }
+    if (!sessionStorage.getItem('popupCelebrashow2026')) {
+        setTimeout(function() {
+            popupOverlay.style.display = 'flex';
+        }, 1500);
+    }
+}
 
 function abrirWhatsApp(event, nome) {
     event.preventDefault();
@@ -3394,7 +3399,7 @@ function inicializarPecasClientSide() {
     const cards = Array.from(grid.querySelectorAll('.pecas-card-link'));
     if (!cards.length) return;
 
-    const porPagina = 12;
+    const porPagina = 9;
     let pagina = 1;
     let categoriaAtiva = '';
 
