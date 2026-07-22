@@ -1,4 +1,6 @@
 from django.urls import path
+from django.contrib.sitemaps.views import sitemap
+from .sitemaps import PaginasEstaticasSitemap, BrinquedosSitemap, CategoriasSitemap
 from .views import (HomeView, BrinquedoInfoView, CategoriasInfoView, BrinquedosView, webhook_mercadopago,
                     RegistrarView, LoginUsuarioView, LogoutUsuarioView, EventosView, verificar_pagamento,
                     ProjetosView, ClientePerfilView, ComboInfoView, PromocaoInfoView, calcular_frete, salvar_cpf_carrinho,
@@ -10,11 +12,21 @@ from .views import (HomeView, BrinquedoInfoView, CategoriasInfoView, BrinquedosV
                     PaymentView, MeusPedidosView, criar_pedido_pix, processar_cartao, EventoAdminView, BannerAdminView, BannerDeleteView, AdminLoginView, AcessoNegadoView,
                     DashboardAdminView, UserAdminView, ManutencaoAdminView, RelatorioVendasView, PedidoAdminView,
                     redirecionar_loja, redirecionar_categoria_brinquedos, redirecionar_categoria_aventura, redirecionar_lancamentos,
-                    redirecionar_showroom, redirecionar_contato, EstatisticasGeraisView, ReposicaoView, ReposicaoDetalheView, filtrar_pecas_ajax
+                    redirecionar_showroom, redirecionar_contato, EstatisticasGeraisView, ReposicaoView, ReposicaoDetalheView, filtrar_pecas_ajax,
+                    robots_txt
                     )
+
+sitemaps = {
+    "estaticas": PaginasEstaticasSitemap,
+    "brinquedos": BrinquedosSitemap,
+    "categorias": CategoriasSitemap,
+}
 
 
 urlpatterns = [
+
+    path('robots.txt', robots_txt, name='robots_txt'),
+    path('sitemap.xml', sitemap, {'sitemaps': sitemaps}, name='sitemap'),
 
     path('', HomeView.as_view(), name='home'),
     path('loja/', redirecionar_loja),

@@ -2601,3 +2601,24 @@ def verify_auth_api(request):
             'is_superuser': user.is_superuser
         })
     return JsonResponse({'valid': False}, status=401)
+
+def robots_txt(request):
+    """robots.txt do site principal -- antes não existia rota nenhuma
+    pra esse caminho, e o Googlebot recebia 500 ao tentar acessá-lo."""
+    linhas = [
+        "User-agent: *",
+        "Allow: /",
+        "Disallow: /adm/",
+        "Disallow: /carrinho/",
+        "Disallow: /perfil/",
+        "Disallow: /meus-pedidos/",
+        "Disallow: /pagamento/",
+        "Disallow: /processar_cartao/",
+        "Disallow: /api/",
+        "Disallow: /login/",
+        "Disallow: /registrar/",
+        "Disallow: /acesso-negado/",
+        "",
+        "Sitemap: https://www.lazersport.com.br/sitemap.xml",
+    ]
+    return HttpResponse("\n".join(linhas), content_type="text/plain")

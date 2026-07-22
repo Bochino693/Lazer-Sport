@@ -116,6 +116,7 @@ INSTALLED_APPS = [
     "cloudinary",
     "django.contrib.humanize",
     "django.contrib.sites",
+    "django.contrib.sitemaps",
 
     # Aplicações internas
     "core",
