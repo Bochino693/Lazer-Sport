@@ -2773,3 +2773,200 @@ class ComboAdminView(AdminOnlyMixin, View):
             "Combo atualizado com sucesso." if combo_id else "Combo criado com sucesso.",
         )
         return redirect("combos_admin")
+
+
+
+import unicodedata
+from difflib import SequenceMatcher
+
+from django.shortcuts import render
+from django.urls import reverse
+from django.views import View
+
+
+def normalizar_texto_busca(valor):
+    valor = str(valor or "").strip().lower()
+    valor = unicodedata.normalize("NFKD", valor)
+    valor = "".join(
+        caractere
+        for caractere in valor
+        if not unicodedata.combining(caractere)
+    )
+    return " ".join(valor.split())
+
+
+def calcular_similaridade(termo, *campos):
+    termo = normalizar_texto_busca(termo)
+    melhor_resultado = 0.0
+
+    for campo in campos:
+        texto = normalizar_texto_busca(campo)
+        if not texto:
+            continue
+
+        if termo in texto or texto in termo:
+            melhor_resultado = max(melhor_resultado, 1.0)
+            continue
+
+        melhor_resultado = max(
+            melhor_resultado,
+            SequenceMatcher(None, termo, texto).ratio(),
+        )
+
+        for palavra in texto.split():
+            melhor_resultado = max(
+                melhor_resultado,
+                SequenceMatcher(None, termo, palavra).ratio(),
+            )
+
+    return melhor_resultado
+
+
+class SearchView(View):
+    template_name = "search.html"
+    similaridade_minima = 0.60
+    limite_resultados = 60
+
+    def get(self, request):
+        termo = request.GET.get("q", "").strip()[:100]
+        resultados = []
+
+        def adicionar_resultado(tipo, titulo, descricao, url, imagem=None, *campos):
+            similaridade = calcular_similaridade(
+                termo,
+                titulo,
+                descricao,
+                *campos,
+            )
+
+            if similaridade < self.similaridade_minima:
+                return
+
+            resultados.append({
+                "tipo": tipo,
+                "titulo": titulo,
+                "descricao": descricao,
+                "url": url,
+                "imagem": imagem,
+                "similaridade": round(similaridade * 100),
+            })
+
+        if len(normalizar_texto_busca(termo)) >= 2:
+            brinquedos = (
+                Brinquedos.objects
+                .filter(ativo=True)
+                .prefetch_related("categorias_brinquedos", "tags")
+            )
+
+            for brinquedo in brinquedos:
+                adicionar_resultado(
+                    "Brinquedo",
+                    brinquedo.nome_brinquedo,
+                    brinquedo.descricao,
+                    reverse("brinquedo_detalhe", args=[brinquedo.id]),
+                    brinquedo.imagem_brinquedo,
+                    *(categoria.nome_categoria for categoria in brinquedo.categorias_brinquedos.all()),
+                    *(tag.nome_tags for tag in brinquedo.tags.all()),
+                )
+
+            pecas = (
+                PecasReposicao.objects
+                .filter(ativo=True)
+                .prefetch_related("categoria_peca", "imagem_peca_reposicao")
+            )
+
+            for peca in pecas:
+                imagem_principal = peca.imagem_principal
+                adicionar_resultado(
+                    "Peça de reposição",
+                    peca.nome,
+                    peca.descricao_peca,
+                    reverse("reposicao_detalhe", args=[peca.id]),
+                    imagem_principal.imagem if imagem_principal else None,
+                    *(categoria.nome_categoria_peca for categoria in peca.categoria_peca.all()),
+                )
+
+            combos = Combos.objects.filter(ativo=True).prefetch_related("brinquedos")
+            for combo in combos:
+                adicionar_resultado(
+                    "Combo",
+                    combo.descricao,
+                    "Combo especial de brinquedos Lazer & Sport.",
+                    reverse("combo", args=[combo.id]),
+                    combo.imagem_combo,
+                    *(brinquedo.nome_brinquedo for brinquedo in combo.brinquedos.all()),
+                )
+
+            promocoes = Promocoes.objects.filter(ativo=True).select_related("brinquedos")
+            for promocao in promocoes:
+                adicionar_resultado(
+                    "Promoção",
+                    promocao.descricao,
+                    promocao.brinquedos.nome_brinquedo,
+                    reverse("promocao", args=[promocao.id]),
+                    promocao.imagem_promocao,
+                    promocao.brinquedos.descricao,
+                )
+
+            projetos = (
+                Projetos.objects
+                .select_related("brinquedo_projetado")
+                .prefetch_related("brinquedo_projetado__imagens_brinquedo_projeto")
+            )
+            for projeto in projetos:
+                brinquedo = projeto.brinquedo_projetado
+                imagem = brinquedo.imagens_brinquedo_projeto.first() if brinquedo else None
+                adicionar_resultado(
+                    "Projeto",
+                    projeto.titulo,
+                    projeto.descricao,
+                    reverse("projetos") + "#todos-projetos",
+                    imagem.imagem if imagem else None,
+                    brinquedo.nome_brinquedo_projeto if brinquedo else "",
+                    brinquedo.descricao if brinquedo else "",
+                )
+
+            eventos = Eventos.objects.prefetch_related("imagens_evento", "brinquedos")
+            for evento in eventos:
+                imagem = evento.imagens_evento.first()
+                adicionar_resultado(
+                    "Evento",
+                    evento.titulo,
+                    evento.descricao,
+                    reverse("eventos") + "#todos-eventos",
+                    imagem.imagem if imagem else None,
+                    *(brinquedo.nome_brinquedo for brinquedo in evento.brinquedos.all()),
+                )
+
+            for categoria in CategoriasBrinquedos.objects.filter(ativo=True):
+                adicionar_resultado(
+                    "Categoria",
+                    categoria.nome_categoria,
+                    "Categoria de brinquedos Lazer & Sport.",
+                    reverse("categoria_detalhe", args=[categoria.id]),
+                    categoria.imagem_categoria,
+                )
+
+            for estabelecimento in Estabelecimentos.objects.filter(ativo=True):
+                adicionar_resultado(
+                    "Estabelecimento",
+                    estabelecimento.nome_estabelecimento,
+                    "Brinquedos recomendados para este tipo de estabelecimento.",
+                    reverse("estabelecimento_brinquedo", args=[estabelecimento.id]),
+                    estabelecimento.imagem_estabelecimento,
+                )
+
+            resultados.sort(
+                key=lambda resultado: (
+                    -resultado["similaridade"],
+                    resultado["titulo"].lower(),
+                )
+            )
+            resultados = resultados[:self.limite_resultados]
+
+        return render(request, self.template_name, {
+            "termo": termo,
+            "resultados": resultados,
+            "total_resultados": len(resultados),
+            "busca_realizada": bool(termo),
+        })
