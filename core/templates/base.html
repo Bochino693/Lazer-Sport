@@ -779,10 +779,10 @@ nav a.btn-login {
     <h2 class="search-title">O que você está procurando hoje?</h2>
 
     <!-- Campo de busca -->
-    <div class="search-box">
-      <input type="text" placeholder="Digite o nome do brinquedo, categoria ou modelo...">
-      <button><i class="fas fa-search"></i> Buscar</button>
-    </div>
+    <form class="search-box" action="{% url 'search' %}" method="get">
+      <input type="text" name="q" placeholder="Digite o nome do brinquedo, categoria ou modelo..." required>
+      <button type="submit"><i class="fas fa-search"></i> Buscar</button>
+    </form>
 
             <!-- Sugestões de pesquisa -->
                     <div class="search-suggestions">

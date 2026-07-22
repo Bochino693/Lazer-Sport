@@ -1133,42 +1133,14 @@ body {
   background: #e64a19;
 }
 
-/* =========================================================
-   CONTATO
-========================================================= */
-#contato {
-  background: linear-gradient(135deg, #007BFF, #E63946);
-  color: white;
-  padding: 60px 20px;
-}
-
-#contato h2 {
-  font-size: 2em;
-  font-weight: 700;
-  margin-bottom: 25px;
-}
-
-#contato a {
-  color: #FFD166;
-  text-decoration: none;
-}
-
-#contato a:hover {
-  text-decoration: underline;
-}
-
-#contato .grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 40px;
-}
-
-#contato iframe {
-  width: 100%;
-  height: 300px;
-  border-radius: 12px;
-  border: 0;
-}
+/* Bloco antigo de #contato (ID) removido: ele tinha mais
+   especificidade que as classes .ls-loc-* usadas hoje na
+   seção de contato, e por isso vencia a briga de CSS,
+   travando a altura do mapa em 300px, forçando os links a
+   ficarem dourados (#FFD166) e trocando o fundo/padding da
+   seção pelo gradiente azul/vermelho antigo. Toda a
+   estilização atual dessa seção vem das classes .ls-loc-*
+   logo abaixo, no bloco "CONTATO" com o mapa. */
 
 .social-icons a {
   font-size: 24px;
@@ -1625,10 +1597,6 @@ body {
     font-size: 1.2rem;
     width: 40px;
     height: 40px;
-  }
-
-  #contato .grid {
-    grid-template-columns: 1fr;
   }
 
   .pecas-destaques,
@@ -2846,7 +2814,7 @@ body {
         display: grid;
         grid-template-columns: 1fr 1.2fr;
         gap: 40px;
-        align-items: center;
+        align-items: stretch;
     }
 
     .ls-loc-card {
