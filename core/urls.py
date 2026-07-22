@@ -39,6 +39,19 @@ urlpatterns = [
         redirecionar_categoria_aventura
     ),
 
+    # ------------------------------------------------------------------
+    # URLs antigas da loja WordPress/WooCommerce que o Google ainda tem
+    # indexadas (ex: /categoria-produto/area-baby/, /loja/brinquedos/la-bamba/).
+    # Não existe view nenhuma pra esses caminhos exatos -- sem essas rotas
+    # coringa, essas URLs voltam erro pro Googlebot, o que faz o Google
+    # manter o snapshot antigo (quebrado) no índice por mais tempo em vez
+    # de atualizar. Redireciona (301) pro catálogo atual, preservando o
+    # crawl budget e passando o valor de SEO acumulado pra página certa.
+    # Fica DEPOIS das rotas específicas de categoria-produto acima, senão
+    # essas específicas nunca seriam alcançadas.
+    path('categoria-produto/<path:resto>', redirecionar_loja),
+    path('loja/<path:resto>', redirecionar_loja),
+
     path('brinquedos/', BrinquedosView.as_view(), name='brinquedos'),
     path("brinquedo/<int:id>/", BrinquedoInfoView.as_view(), name="brinquedo_detalhe"),
     path("categoria/<int:pk>/", CategoriasInfoView.as_view(), name="categoria_detalhe"),

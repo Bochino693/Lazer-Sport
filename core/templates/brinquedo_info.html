@@ -1,6 +1,41 @@
 {% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ brinquedo.nome_brinquedo }} | Lazer & Sport Brinquedos{% endblock %}
+
+{% block meta_description %}{{ brinquedo.nome_brinquedo }}: {{ brinquedo.descricao|truncatechars:140 }}{% endblock %}
 
 {% block content %}
+
+<script type="application/ld+json">
+{
+    "@context": "https://schema.org/",
+    "@type": "Product",
+    "name": "{{ brinquedo.nome_brinquedo|escapejs }}",
+    "description": "{{ brinquedo.descricao|escapejs }}",
+    {% if brinquedo.imagem_brinquedo %}"image": "{{ brinquedo.imagem_brinquedo.url }}",{% endif %}
+    "brand": {
+        "@type": "Brand",
+        "name": "Lazer & Sport Brinquedos"
+    },
+    {% if brinquedo.avaliacao %}
+    "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "{{ brinquedo.avaliacao }}",
+        "bestRating": "5",
+        "ratingCount": "1"
+    },
+    {% endif %}
+    "offers": {
+        "@type": "Offer",
+        "url": "https://www.lazersport.com.br/brinquedo/{{ brinquedo.id }}/",
+        "priceCurrency": "BRL",
+        "price": "{{ brinquedo.valor_brinquedo|default:'0'|stringformat:'s' }}",
+        "availability": "https://schema.org/InStock",
+        "itemCondition": "https://schema.org/NewCondition"
+    }
+}
+</script>
 
 
 <style>

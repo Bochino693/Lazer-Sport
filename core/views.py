@@ -2379,7 +2379,7 @@ from django.shortcuts import redirect
 from django.urls import reverse
 
 
-def redirecionar_loja(request):
+def redirecionar_loja(request, *args, **kwargs):
     return redirect(reverse('brinquedos') + '#grid-cards')
 
 

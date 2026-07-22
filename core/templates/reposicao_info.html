@@ -1,7 +1,33 @@
 {% extends "base.html" %}
 {% load static %}
 
+{% block title %}{{ peca.nome }} | Peça de Reposição - Lazer & Sport{% endblock %}
+
+{% block meta_description %}{{ peca.nome }}: {{ peca.descricao_peca|truncatechars:140 }}{% endblock %}
+
 {% block content %}
+
+<script type="application/ld+json">
+{
+    "@context": "https://schema.org/",
+    "@type": "Product",
+    "name": "{{ peca.nome|escapejs }}",
+    "description": "{{ peca.descricao_peca|escapejs }}",
+    {% with img=peca.imagem_principal %}{% if img %}"image": "{{ img.imagem.url }}",{% endif %}{% endwith %}
+    "brand": {
+        "@type": "Brand",
+        "name": "Lazer & Sport Brinquedos"
+    },
+    "offers": {
+        "@type": "Offer",
+        "url": "https://www.lazersport.com.br/pecas/{{ peca.id }}/",
+        "priceCurrency": "BRL",
+        "price": "{{ peca.preco_venda|default:'0'|stringformat:'s' }}",
+        "availability": "https://schema.org/InStock",
+        "itemCondition": "https://schema.org/NewCondition"
+    }
+}
+</script>
 
 <style>
 

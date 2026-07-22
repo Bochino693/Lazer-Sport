@@ -1,7 +1,9 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Eventos Infantis | Lazer & Sport{% endblock %}
+{% block title %}Brinquedos para {{ estabelecimento.nome_estabelecimento }} | Lazer & Sport{% endblock %}
+
+{% block meta_description %}Brinquedos da Lazer & Sport recomendados para {{ estabelecimento.nome_estabelecimento }}: mecânicos, eletrônicos, esportivos, fliperama e simuladores.{% endblock %}
 
 
 {% block content %}
