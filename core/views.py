@@ -2596,3 +2596,71 @@ def robots_txt(request):
         "Sitemap: https://www.lazersport.com.br/sitemap.xml",
     ]
     return HttpResponse("\n".join(linhas), content_type="text/plain")
+
+
+from decimal import Decimal
+
+from django.contrib import messages
+from django.db import transaction
+from django.shortcuts import get_object_or_404, redirect, render
+from django.views import View
+
+from .models import Brinquedos, Combos
+
+
+class ComboAdminView(AdminOnlyMixin, View):
+    template_name = "gestao/combo_adm.html"
+
+    def get(self, request):
+        return render(request, self.template_name, {
+            "combos": Combos.objects.prefetch_related("brinquedos").order_by("-id"),
+            "brinquedos": Brinquedos.objects.filter(ativo=True).order_by("nome_brinquedo"),
+        })
+
+    @transaction.atomic
+    def post(self, request):
+        action = request.POST.get("action", "save")
+
+        if action == "delete":
+            combo = get_object_or_404(Combos, pk=request.POST.get("id"))
+            combo.delete()
+            messages.success(request, "Combo excluído com sucesso.")
+            return redirect("combos_admin")
+
+        descricao = request.POST.get("descricao", "").strip()
+        valor_texto = request.POST.get("valor_combo", "").strip()
+        brinquedos_ids = request.POST.getlist("brinquedos")
+
+        if not descricao or not valor_texto or not brinquedos_ids:
+            messages.error(request, "Preencha descrição, valor e brinquedos do combo.")
+            return redirect("combos_admin")
+
+        try:
+            valor_normalizado = (
+                valor_texto.replace(".", "").replace(",", ".")
+                if "," in valor_texto else valor_texto
+            )
+            valor_combo = Decimal(valor_normalizado)
+            if valor_combo <= 0:
+                raise ValueError
+        except (ValueError, ArithmeticError):
+            messages.error(request, "Informe um valor válido para o combo.")
+            return redirect("combos_admin")
+
+        combo_id = request.POST.get("id")
+        combo = get_object_or_404(Combos, pk=combo_id) if combo_id else Combos()
+        combo.descricao = descricao
+        combo.valor_combo = valor_combo
+
+        imagem = request.FILES.get("imagem_combo")
+        if imagem:
+            combo.imagem_combo = imagem
+
+        combo.save()
+        combo.brinquedos.set(brinquedos_ids)
+
+        messages.success(
+            request,
+            "Combo atualizado com sucesso." if combo_id else "Combo criado com sucesso.",
+        )
+        return redirect("combos_admin")

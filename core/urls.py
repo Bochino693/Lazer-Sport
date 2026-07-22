@@ -4,8 +4,7 @@ from .sitemaps import PaginasEstaticasSitemap, BrinquedosSitemap, CategoriasSite
 from .views import (HomeView, BrinquedoInfoView, CategoriasInfoView, BrinquedosView, webhook_mercadopago,
                     RegistrarView, LoginUsuarioView, LogoutUsuarioView, EventosView, verificar_pagamento,
                     ProjetosView, ClientePerfilView, ComboInfoView, PromocaoInfoView, calcular_frete, salvar_cpf_carrinho,
-                    BrinquedoAdmin, NovaCategoria, NovaTag, ComboListView, ComboCreateView, PedidosParaImpressaoAPI,
-                    ComboUpdateView, ComboDeleteView, CupomAdminView, ProjetoAdminView, EstabelecimentoInfoView,
+                    BrinquedoAdmin, NovaCategoria, NovaTag,  PedidosParaImpressaoAPI, CupomAdminView, ProjetoAdminView, EstabelecimentoInfoView,
                     EstabelecimentosListView, ManutencaoView, PromocaoAdminView, PromocaoDeleteView,
                     adicionar_ao_carrinho, CarrinhoView, aplicar_cupom, remover_item_carrinho, MarcarPedidoImpressoAPI,
                     limpar_carrinho, cancelar_manutencao, alterar_quantidade_item, gerar_pix, atualizar_tipo_envio,
@@ -113,11 +112,8 @@ urlpatterns = [
     path('categoria/admin/new/', NovaCategoria.as_view(), name='categoria_new'),
     path('tags/admin/new/', NovaTag.as_view(), name='tag_new'),
 
-    path('adm/combos/', ComboListView.as_view(), name='combos_admin'),
-    path('adm/combos/novo/', ComboCreateView.as_view(), name='combo_create'),
-    path('adm/combos/editar/<int:pk>/', ComboUpdateView.as_view(), name='combo_update'),
-    path('adm/combos/excluir/<int:pk>/', ComboDeleteView.as_view(), name='combo_delete'),
-
+    path("adm/combos/", ComboAdminView.as_view(), name="combos_admin"),
+    
     path('adm/estatisticas/', EstatisticasGeraisView.as_view(), name='estatisticas_gerais'),
 
 

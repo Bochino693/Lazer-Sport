@@ -1,0 +1,67 @@
+{% extends "gestao/base_adm.html" %}
+
+{% block content %}
+<style>
+.combos-container{max-width:1200px;margin:40px auto;padding:20px}.combos-header{display:flex;justify-content:space-between;align-items:center;gap:20px;margin-bottom:28px}.combos-header h1{margin:0;color:#172033}.btn-novo,.btn-salvar{border:0;border-radius:14px;padding:12px 20px;font-weight:800;cursor:pointer;background:linear-gradient(135deg,#0d6efd,#0a58ca);color:#fff}.combos-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:24px}.combo-card{background:#fff;border-radius:20px;box-shadow:0 8px 25px rgba(0,0,0,.1);overflow:hidden;display:flex;flex-direction:column}.combo-img{height:200px;background:#eef2f7}.combo-img img{width:100%;height:100%;object-fit:cover}.combo-body{padding:18px;display:flex;flex:1;flex-direction:column}.combo-body h3{margin:0 0 10px;color:#222}.combo-brinquedos{padding:0;margin:0 0 14px;color:#555;list-style:none;flex:1}.combo-preco{font-size:1.35rem;font-weight:800;color:#14932b;margin-bottom:15px}.combo-acoes{display:grid;grid-template-columns:1fr 1fr;gap:8px}.combo-acoes button,.combo-acoes a{text-align:center;border:0;border-radius:12px;padding:10px;font-weight:700;cursor:pointer;text-decoration:none}.btn-ver{grid-column:1/-1;background:#0d6efd;color:#fff}.btn-editar{background:#ffc107;color:#222}.btn-excluir{background:#dc3545;color:#fff}.modal-combo{display:none;position:fixed;inset:0;z-index:10000;background:rgba(15,23,42,.72);padding:24px;align-items:center;justify-content:center}.modal-combo.aberto{display:flex}.modal-box{width:min(760px,100%);max-height:92vh;overflow:auto;background:#fff;border-radius:22px;padding:26px;box-shadow:0 30px 80px rgba(0,0,0,.3)}.modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}.modal-header h2{margin:0}.modal-close{border:0;background:transparent;font-size:30px;cursor:pointer}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}.form-group{display:flex;flex-direction:column;gap:7px}.form-group.full{grid-column:1/-1}.form-group label{font-weight:700;color:#374151}.form-group input,.form-group select{width:100%;padding:12px;border:1px solid #d8dee8;border-radius:12px;background:#fff}.form-group select{min-height:180px}.field-errors{color:#b42318;font-size:.88rem}.modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:22px}.btn-cancelar{border:1px solid #d8dee8;border-radius:14px;padding:12px 18px;background:#fff;cursor:pointer}.delete-box{max-width:500px}.delete-box p{color:#596579}.messages{margin-bottom:20px}.message{padding:12px 16px;border-radius:12px;background:#e9f8ee;color:#176b35}@media(max-width:700px){.combos-header{align-items:flex-start;flex-direction:column}.form-grid{grid-template-columns:1fr}.form-group.full{grid-column:auto}.combo-acoes{grid-template-columns:1fr}}
+</style>
+
+<main class="combos-container">
+  <div class="combos-header">
+    <div><h1>🎁 Gestão de Combos</h1><p>Crie, edite e exclua combos sem sair desta tela.</p></div>
+    <button type="button" class="btn-novo" onclick="abrirNovoCombo()">➕ Novo combo</button>
+  </div>
+
+  {% if messages %}<div class="messages">{% for message in messages %}<div class="message">{{ message }}</div>{% endfor %}</div>{% endif %}
+
+  <div class="combos-grid">
+    {% for combo in combos %}
+      <article class="combo-card">
+        <div class="combo-img">
+          {% if combo.imagem_combo %}<img src="{{ combo.imagem_combo.url }}" alt="{{ combo.descricao }}">{% endif %}
+        </div>
+        <div class="combo-body">
+          <h3>{{ combo.descricao }}</h3>
+          <ul class="combo-brinquedos">{% for brinquedo in combo.brinquedos.all %}<li>🧸 {{ brinquedo.nome_brinquedo }}</li>{% endfor %}</ul>
+          <div class="combo-preco" data-money="{{ combo.valor_combo }}"></div>
+          <div class="combo-acoes">
+            <a href="{% url 'combo' combo.id %}" class="btn-ver">Ver combo</a>
+            <button type="button" class="btn-editar" data-id="{{ combo.id }}" data-descricao="{{ combo.descricao|escape }}" data-valor="{{ combo.valor_combo }}" data-brinquedos="{% for brinquedo in combo.brinquedos.all %}{{ brinquedo.id }}{% if not forloop.last %},{% endif %}{% endfor %}" onclick="abrirEdicaoCombo(this)">✏️ Editar</button>
+            <button type="button" class="btn-excluir" data-id="{{ combo.id }}" data-descricao="{{ combo.descricao|escape }}" onclick="abrirExclusaoCombo(this)">🗑️ Excluir</button>
+          </div>
+        </div>
+      </article>
+    {% empty %}<p>Nenhum combo cadastrado.</p>{% endfor %}
+  </div>
+</main>
+
+<div id="modalCombo" class="modal-combo">
+  <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="tituloModalCombo">
+    <div class="modal-header"><h2 id="tituloModalCombo">Novo combo</h2><button type="button" class="modal-close" onclick="fecharModal('modalCombo')" aria-label="Fechar">×</button></div>
+    <form method="post" enctype="multipart/form-data" id="formCombo">
+      {% csrf_token %}<input type="hidden" name="action" value="save"><input type="hidden" name="id" id="comboId">
+      <div class="form-grid">
+        <div class="form-group full"><label for="comboDescricao">Descrição</label><input id="comboDescricao" name="descricao" maxlength="90" required></div>
+        <div class="form-group"><label for="comboValor">Valor do combo</label><input id="comboValor" name="valor_combo" inputmode="decimal" required></div>
+        <div class="form-group"><label for="comboImagem">Imagem</label><input id="comboImagem" name="imagem_combo" type="file" accept="image/*"></div>
+        <div class="form-group full"><label for="comboBrinquedos">Brinquedos incluídos</label><select id="comboBrinquedos" name="brinquedos" multiple required>{% for brinquedo in brinquedos %}<option value="{{ brinquedo.id }}">{{ brinquedo.nome_brinquedo }}</option>{% endfor %}</select></div>
+      </div>
+      <div class="modal-actions"><button type="button" class="btn-cancelar" onclick="fecharModal('modalCombo')">Cancelar</button><button type="submit" class="btn-salvar">💾 Salvar combo</button></div>
+    </form>
+  </div>
+</div>
+
+<div id="modalExcluir" class="modal-combo">
+  <div class="modal-box delete-box" role="dialog" aria-modal="true"><div class="modal-header"><h2>Excluir combo</h2><button type="button" class="modal-close" onclick="fecharModal('modalExcluir')">×</button></div><p>Tem certeza de que deseja excluir <strong id="nomeComboExcluir"></strong>?</p><form method="post">{% csrf_token %}<input type="hidden" name="action" value="delete"><input type="hidden" name="id" id="comboExcluirId"><div class="modal-actions"><button type="button" class="btn-cancelar" onclick="fecharModal('modalExcluir')">Cancelar</button><button type="submit" class="btn-excluir">🗑️ Excluir definitivamente</button></div></form></div>
+</div>
+
+<script>
+function abrirModal(id){document.getElementById(id).classList.add('aberto');document.body.style.overflow='hidden'}
+function fecharModal(id){document.getElementById(id).classList.remove('aberto');document.body.style.overflow=''}
+function abrirNovoCombo(){document.getElementById('formCombo').reset();document.getElementById('comboId').value='';document.getElementById('tituloModalCombo').textContent='Novo combo';abrirModal('modalCombo')}
+function abrirEdicaoCombo(botao){document.getElementById('formCombo').reset();document.getElementById('comboId').value=botao.dataset.id;document.getElementById('comboDescricao').value=botao.dataset.descricao;document.getElementById('comboValor').value=botao.dataset.valor.replace(',', '.');const ids=new Set((botao.dataset.brinquedos||'').split(','));Array.from(document.getElementById('comboBrinquedos').options).forEach(opcao=>opcao.selected=ids.has(opcao.value));document.getElementById('tituloModalCombo').textContent='Editar combo';abrirModal('modalCombo')}
+function abrirExclusaoCombo(botao){document.getElementById('comboExcluirId').value=botao.dataset.id;document.getElementById('nomeComboExcluir').textContent=botao.dataset.descricao;abrirModal('modalExcluir')}
+document.querySelectorAll('[data-money]').forEach(el=>{const valor=Number(String(el.dataset.money).replace(',','.'))||0;el.textContent=valor.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})});
+document.querySelectorAll('.modal-combo').forEach(modal=>modal.addEventListener('click',event=>{if(event.target===modal)fecharModal(modal.id)}));
+document.addEventListener('keydown',event=>{if(event.key==='Escape')document.querySelectorAll('.modal-combo.aberto').forEach(modal=>fecharModal(modal.id))});
+</script>
+{% endblock %}
