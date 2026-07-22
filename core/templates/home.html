@@ -1143,14 +1143,43 @@ body {
    logo abaixo, no bloco "CONTATO" com o mapa. */
 
 .social-icons a {
-  font-size: 24px;
-  margin: 30px 12px 0;
-  display: inline-block;
-  transition: transform 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 50px;
+  height: 50px;
+  margin: 30px 10px 0;
+  border-radius: 50%;
+  font-size: 22px;
+  color: #fff;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .social-icons a:hover {
-  transform: scale(1.2);
+  transform: translateY(-4px) scale(1.08);
+  box-shadow: 0 12px 26px rgba(0, 0, 0, 0.35);
+}
+
+.social-icons a.instagram {
+  background: linear-gradient(135deg, #feda75 0%, #fa7e1e 22%, #d62976 48%, #962fbf 72%, #4f5bd5 100%);
+}
+
+.social-icons a.whatsapp {
+  background: #25D366;
+}
+
+.social-icons a.facebook {
+  background: #1877F2;
+}
+
+.social-icons a.linkedin {
+  background: #0A66C2;
+}
+
+.social-icons a.threads {
+  background: #000000;
+  border: 1px solid rgba(255, 255, 255, 0.25);
 }
 
 /* =========================================================
@@ -1660,6 +1689,13 @@ body {
     grid-template-columns: 1fr;
     justify-items: center;
     min-height: auto;
+  }
+
+  .social-icons a {
+    width: 42px;
+    height: 42px;
+    font-size: 18px;
+    margin: 24px 6px 0;
   }
 }
 </style>
