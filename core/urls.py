@@ -1,4 +1,4 @@
-from django.urls import path
+from django.urls import path, re_path
 from django.contrib.sitemaps.views import sitemap
 from .sitemaps import PaginasEstaticasSitemap, BrinquedosSitemap, CategoriasSitemap
 from .views import (HomeView, BrinquedoInfoView, CategoriasInfoView, BrinquedosView, webhook_mercadopago,
@@ -51,6 +51,7 @@ urlpatterns = [
     # essas específicas nunca seriam alcançadas.
     path('categoria-produto/<path:resto>', redirecionar_loja),
     path('loja/<path:resto>', redirecionar_loja),
+    path('fabricante-de-brinquedo/<path:resto>', redirecionar_loja),
 
     path('brinquedos/', BrinquedosView.as_view(), name='brinquedos'),
     path("brinquedo/<int:id>/", BrinquedoInfoView.as_view(), name="brinquedo_detalhe"),
@@ -182,6 +183,18 @@ urlpatterns = [
         MarcarPedidoImpressoAPI.as_view()
     ),
 
+    path('produto-tag/<path:resto>', redirecionar_loja),
 
+    # ------------------------------------------------------------------
+    # PEGA-TUDO — fica por ÚLTIMO de propósito (Django resolve rotas de
+    # cima pra baixo; tudo que já tem rota própria acima continua
+    # funcionando normal). Cobre qualquer URL da loja WooCommerce antiga
+    # que a gente ainda não mapeou (achamos /loja/, /categoria-produto/,
+    # /fabricante-de-brinquedo/ e /produto-tag/ até agora, mas o Search
+    # Console mostrou 635 URLs 404 -- provavelmente tem mais padrões
+    # escondidos aí). Em vez de ir caçando prefixo por prefixo toda vez
+    # que aparecer um novo no relatório, qualquer coisa sem rota vira
+    # redirect 301 pro catálogo, em vez de 404.
+    re_path(r'^.*$', redirecionar_loja),
 
 ]
