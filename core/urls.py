@@ -12,7 +12,7 @@ from .views import (HomeView, BrinquedoInfoView, CategoriasInfoView, BrinquedosV
                     DashboardAdminView, UserAdminView, ManutencaoAdminView, RelatorioVendasView, PedidoAdminView,
                     redirecionar_loja, redirecionar_categoria_brinquedos, redirecionar_categoria_aventura, redirecionar_lancamentos,
                     redirecionar_showroom, redirecionar_contato, EstatisticasGeraisView, ReposicaoView, ReposicaoDetalheView,
-                    robots_txt
+                    robots_txt, ComboAdminView
                     )
 
 sitemaps = {
@@ -113,7 +113,7 @@ urlpatterns = [
     path('tags/admin/new/', NovaTag.as_view(), name='tag_new'),
 
     path("adm/combos/", ComboAdminView.as_view(), name="combos_admin"),
-    
+
     path('adm/estatisticas/', EstatisticasGeraisView.as_view(), name='estatisticas_gerais'),
 
 
