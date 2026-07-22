@@ -260,7 +260,10 @@ MEDIA_ROOT = BASE_DIR / "media"
 # caía em silêncio pro FileSystemStorage -- que não persiste nada na Vercel
 # (sem disco) e não gerava nenhum erro, só imagem quebrada sem explicação.
 # Agora isso quebra o deploy com uma mensagem clara dizendo o que falta.
-_cloudinary_faltando = [nome for nome, valor in CLOUDINARY_STORAGE.items() if not valor]
+_cloudinary_faltando = [
+    nome for nome, valor in CLOUDINARY_STORAGE.items()
+    if nome != "PREFIX" and not valor
+]
 
 if ENVIRONMENT == "production" and _cloudinary_faltando:
     raise RuntimeError(
