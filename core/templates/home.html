@@ -2834,7 +2834,7 @@ body {
 
     .ls-loc-btn:hover { transform: translateY(-2px); }
     .ls-loc-btn-maps { background: #E63946; color: #fff; }
-    .ls-loc-btn-waze { background: #fff; color: #0d1b2e; }
+    .ls-loc-btn-waze { background: #004AAD; color: #fff; }
 
     .ls-loc-map {
         background: #ffffff;
@@ -3024,26 +3024,22 @@ function igualarAlturaGridPecas() {
     const grid = document.getElementById('grid-pecas');
     if (!grid) return;
 
-    const cards = grid.querySelectorAll('.pecas-card');
+    const cards = Array.from(grid.querySelectorAll('.pecas-card')).filter(
+        card => card.closest('.pecas-card-link').offsetParent !== null
+    );
     if (!cards.length) return;
 
     let maiorAltura = 0;
 
-    cards.forEach(card => {
-        card.style.height = 'auto';
-    });
-
-    cards.forEach(card => {
-        maiorAltura = Math.max(maiorAltura, card.offsetHeight);
-    });
-
-    cards.forEach(card => {
-        card.style.height = maiorAltura + 'px';
-    });
+    cards.forEach(card => { card.style.height = 'auto'; });
+    cards.forEach(card => { maiorAltura = Math.max(maiorAltura, card.offsetHeight); });
+    cards.forEach(card => { card.style.height = maiorAltura + 'px'; });
 }
 
 function igualarAlturaCards() {
-    const cards = document.querySelectorAll('.card-produto');
+    const cards = Array.from(document.querySelectorAll('.card-produto')).filter(
+        card => card.closest('.card-link').offsetParent !== null
+    );
     if (!cards.length) return;
 
     const imagensPendentes = [];
@@ -3089,6 +3085,18 @@ function igualarAlturaCards() {
         }, { once: true });
     });
 }
+
+// Recalcula sempre que a tela muda de tamanho (o grid muda de colunas
+// e a altura ideal dos cards muda junto)
+let _resizeTimer;
+window.addEventListener('resize', () => {
+    clearTimeout(_resizeTimer);
+    _resizeTimer = setTimeout(() => {
+        igualarAlturaCards();
+        igualarAlturaGridPecas();
+    }, 200);
+});
+
 
 /* ======================================================
    ⭐ ESTRELAS
@@ -3236,7 +3244,7 @@ function inicializarProdutosClientSide() {
 
         renderizarTodasEstrelas(grid);
         renderizarMoedas(grid);
-        igualarAlturaCards();
+        requestAnimationFrame(() => requestAnimationFrame(igualarAlturaCards));
     }
 
     document.querySelectorAll('#filtros-bar .filtro-btn').forEach(btn => {
@@ -3318,7 +3326,7 @@ function inicializarPecasClientSide() {
         document.getElementById('pecas-next').disabled = pagina >= totalPaginas;
 
         renderizarMoedas(grid);
-        igualarAlturaGridPecas();
+        requestAnimationFrame(() => requestAnimationFrame(igualarAlturaGridPecas));
     }
 
     document.querySelectorAll('#filtros-peca .filtro-btn').forEach(btn => {

@@ -18,7 +18,7 @@ from .models import Brinquedos, CategoriasBrinquedos, Projetos, Eventos, Cliente
 import os
 from django.http import FileResponse, Http404
 from django.conf import settings
-from random import shuffle
+from random import shuffle, sample
 
 def media_serve(request, path):
     file_path = os.path.join(settings.MEDIA_ROOT, path)
@@ -89,9 +89,11 @@ class HomeView(View):
         )
 
         combos = Combos.objects.all().prefetch_related("brinquedos")
-        promocoes = Promocoes.objects.all()
-        eventos = Eventos.objects.all()
-        projetos = Projetos.objects.all()
+        promocoes = Promocoes.objects.select_related("brinquedos")
+        eventos = Eventos.objects.all().prefetch_related("imagens_evento", "brinquedos")
+        projetos = Projetos.objects.select_related("brinquedo_projetado").prefetch_related(
+            "brinquedo_projetado__imagens_brinquedo_projeto"
+        )
 
         for combo in combos:
             total_original = sum(
@@ -109,20 +111,29 @@ class HomeView(View):
 
         from .models import ImagemPeca
 
+        # Antes isso buscava TODAS as peças com imagem (com prefetch
+        # completo de imagens) só pra sortear 12 e descartar o resto.
+        # Agora busca só os IDs primeiro (query leve), sorteia 12, e
+        # busca com prefetch só essas 12.
+        ids_com_imagem = list(
+            PecasReposicao.objects
+            .filter(imagem_peca_reposicao__isnull=False)
+            .values_list("id", flat=True)
+            .distinct()
+        )
+
+        ids_amostra = sample(ids_com_imagem, min(12, len(ids_com_imagem)))
+
         pecas_preview = list(
             PecasReposicao.objects
+            .filter(id__in=ids_amostra)
             .prefetch_related(
                 Prefetch(
                     "imagem_peca_reposicao",
                     queryset=ImagemPeca.objects.order_by("id")
                 )
             )
-            .filter(imagem_peca_reposicao__isnull=False)
-            .distinct()
-        )
-
-        shuffle(pecas_preview)
-        pecas_preview = pecas_preview[:12]
+        ) if ids_amostra else []
 
         # Peças: mesma lógica -- manda todas de uma vez, filtro por
         # categoria e paginação ficam no navegador (JS), sem AJAX.
@@ -130,7 +141,7 @@ class HomeView(View):
             PecasReposicao.objects.filter(ativo=True).prefetch_related(
                 "imagem_peca_reposicao",
                 "categoria_peca",
-            ).distinct()
+            )
         )
 
         context = {

@@ -319,14 +319,17 @@ class PecasReposicao(Prime):
     # ⭐ helper profissional (mantido)
     @property
     def imagem_principal(self):
-        img = self.imagem_peca_reposicao.filter(
-            posicao=ImagemPeca.PosicaoImagem.FRENTE
-        ).first()
+        # Usa .all() (respeita o cache do prefetch_related) em vez de
+        # .filter()/.first(), que ignoravam o prefetch e disparavam uma
+        # consulta nova ao banco pra CADA peça -- isso sozinho já
+        # explicava boa parte da lentidão em telas com várias peças.
+        imagens = list(self.imagem_peca_reposicao.all())
 
-        if img:
-            return img
+        for img in imagens:
+            if img.posicao == ImagemPeca.PosicaoImagem.FRENTE:
+                return img
 
-        return self.imagem_peca_reposicao.first()
+        return imagens[0] if imagens else None
 
     # 🚀 SAVE INTELIGENTE
     def save(self, *args, **kwargs):
