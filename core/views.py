@@ -90,10 +90,10 @@ class HomeView(View):
 
         combos = Combos.objects.all().prefetch_related("brinquedos")
         promocoes = Promocoes.objects.select_related("brinquedos")
-        eventos = Eventos.objects.all().prefetch_related("imagens_evento", "brinquedos")
+        eventos = Eventos.objects.all().prefetch_related("imagens_evento", "brinquedos").order_by("-id")
         projetos = Projetos.objects.select_related("brinquedo_projetado").prefetch_related(
             "brinquedo_projetado__imagens_brinquedo_projeto"
-        )
+        ).order_by("-id")
 
         for combo in combos:
             total_original = sum(

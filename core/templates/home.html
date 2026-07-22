@@ -857,7 +857,9 @@ body {
 }
 
 #paginacao-wrapper,
-#paginacao-pecas {
+#paginacao-pecas,
+#paginacao-eventos,
+#paginacao-projetos {
   width: 100%;
   display: flex;
   justify-content: center;
@@ -865,7 +867,9 @@ body {
 }
 
 #paginacao-wrapper .paginacao,
-#paginacao-pecas .paginacao {
+#paginacao-pecas .paginacao,
+#paginacao-eventos .paginacao,
+#paginacao-projetos .paginacao {
   margin: 0;
   width: 100%;
 }
@@ -1240,47 +1244,6 @@ body {
   box-shadow: 0 4px 14px rgba(0,0,0,0.08);
 }
 
-.carousel-container-projetos {
-  position: relative;
-  width: 100%;
-  max-width: 1200px;
-  margin: auto;
-  padding: 0 40px;
-}
-
-.carousel-wrapper-projetos {
-  overflow: hidden;
-  width: 100%;
-}
-
-.carousel-projetos-track,
-#carousel-projetos {
-  display: flex;
-  gap: 20px;
-  transition: transform .4s ease;
-  flex-wrap: nowrap;
-  overflow: hidden;
-  position: relative;
-}
-
-.projeto-card {
-  flex: 0 0 calc((100% - 40px)/3);
-  min-width: 300px;
-  flex-shrink: 0;
-  cursor: pointer;
-}
-
-.carousel-image img {
-  width: 100%;
-  height: 220px;
-  object-fit: cover;
-  border-radius: 10px;
-}
-
-#carousel-projetos .carousel-item {
-  display: block !important;
-}
-
 /* =========================================================
    CARROSSEIS / CONTROLES
 ========================================================= */
@@ -1653,12 +1616,6 @@ body {
   }
 }
 
-@media (max-width: 900px) {
-  .projeto-card {
-    flex: 0 0 calc((100% - 20px)/2);
-  }
-}
-
 @media (max-width: 768px) {
   .carousel-wrapper {
     height: 300px;
@@ -1723,12 +1680,6 @@ body {
   .card-produto .img-area img {
     object-fit: contain;
     transform: none;
-  }
-}
-
-@media (max-width: 600px) {
-  .projeto-card {
-    flex: 0 0 100%;
   }
 }
 
@@ -2546,6 +2497,7 @@ body {
         display: flex;
         flex-direction: column;
         height: 100%;
+        animation: fadeCard .5s ease forwards;
     }
 
     .evento-card:hover {
@@ -2629,66 +2581,6 @@ body {
         margin: 0;
     }
 
-    /* Cards de projeto (carrossel) */
-    .projeto-card {
-        background: #fff;
-        border-radius: 24px;
-        overflow: hidden;
-        box-shadow: 0 10px 30px rgba(13, 27, 46, 0.08);
-        transition: transform .3s ease, box-shadow .3s ease;
-    }
-
-    .projeto-card:hover {
-        transform: translateY(-8px);
-        box-shadow: 0 20px 45px rgba(13, 27, 46, 0.16);
-    }
-
-    .carousel-image {
-        position: relative;
-        overflow: hidden;
-        aspect-ratio: 4 / 3;
-    }
-
-    .carousel-image img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        border-radius: 0 !important;
-        display: block;
-        transition: transform .5s ease;
-    }
-
-    .projeto-card:hover .carousel-image img {
-        transform: scale(1.09);
-    }
-
-    .carousel-info {
-        padding: 20px 22px 24px;
-    }
-
-    .carousel-info h3 {
-        font-family: 'Poppins', sans-serif;
-        font-size: 1.1rem;
-        font-weight: 700;
-        color: #0d1b2e;
-        margin-bottom: 8px;
-    }
-
-    .carousel-info p {
-        color: #6c757d;
-        font-size: 0.9rem;
-        line-height: 1.6;
-        margin: 0;
-    }
-
-    .carousel-container-projetos .carousel-btn {
-        background: #0d1b2e;
-    }
-
-    .carousel-container-projetos .carousel-btn:hover {
-        background: #E63946;
-    }
-
     @media (max-width: 575px) {
         .eventos-header, .projetos-header {
             flex-direction: column;
@@ -2767,7 +2659,7 @@ body {
     </p>
 
 
-    <div class="eventos-grid">
+    <div class="eventos-grid" id="grid-eventos">
         {% for evento in eventos %}
         <div class="evento-card" data-modal="modal-evento-{{ evento.id }}">
 
@@ -2837,7 +2729,17 @@ body {
     </div>
 </div>
 
+        {% empty %}
+            <p class="nenhum-produto">Nenhum evento cadastrado.</p>
         {% endfor %}
+    </div>
+
+    <div id="paginacao-eventos">
+        <div class="paginacao">
+            <button type="button" class="page-btn-produtos" id="eventos-prev">« Anterior</button>
+            <span class="page-atual" id="eventos-page-info">Página 1</span>
+            <button type="button" class="page-btn-produtos" id="eventos-next">Próxima »</button>
+        </div>
     </div>
 </section>
 
@@ -2860,49 +2762,38 @@ body {
         Transformamos ideias em ambientes divertidos e seguros — veja alguns exemplos.
     </p>
 
-    {% if projetos %}
+    <div class="eventos-grid" id="grid-projetos">
+        {% for projeto in projetos %}
+        <div class="evento-card" data-modal="modal-projeto-{{ projeto.id }}">
 
-<div class="carousel-container-projetos">
-
-    <button class="carousel-btn prev" id="prevProjetos">❮</button>
-
-    <div class="carousel-wrapper-projetos">
-
-        <div class="carousel-projetos-track" id="carousel-projetos">
-
-            {% for projeto in projetos %}
-            <div class="projeto-card" data-modal="modal-projeto-{{ projeto.id }}">
-
-                <div class="carousel-image">
-                    {% if projeto.brinquedo_projetado and projeto.brinquedo_projetado.imagens_brinquedo_projeto.first %}
-                        <img src="{{ projeto.brinquedo_projetado.imagens_brinquedo_projeto.first.imagem.url }}">
-                    {% else %}
-                        <img src="{% static 'images/default.jpg' %}">
-                    {% endif %}
-                </div>
-
-                <div class="carousel-info">
-                    <h3>{{ projeto.titulo }}</h3>
-                    <p>{{ projeto.descricao|truncatewords:25 }}</p>
-                </div>
-
+            <div class="evento-thumb">
+                {% if projeto.brinquedo_projetado and projeto.brinquedo_projetado.imagens_brinquedo_projeto.first %}
+                    <img src="{{ projeto.brinquedo_projetado.imagens_brinquedo_projeto.first.imagem.url }}" alt="{{ projeto.titulo }}">
+                {% else %}
+                    <img src="{% static 'images/default.jpg' %}" alt="{{ projeto.titulo }}">
+                {% endif %}
+                <span class="evento-ver-mais">Ver galeria <i class="fa-solid fa-arrow-right"></i></span>
             </div>
-            {% endfor %}
+
+            <div class="evento-info">
+                <h3>{{ projeto.titulo }}</h3>
+                <p>{{ projeto.descricao|truncatewords:25 }}</p>
+            </div>
 
         </div>
+        {% empty %}
+            <p class="nenhum-produto">Não há projetos realizados.</p>
+        {% endfor %}
     </div>
 
-    <button class="carousel-btn next" id="nextProjetos">❯</button>
-
-</div>
-
-    {% else %}
-        <p style="margin-top:20px; font-weight:bold;">
-            Não há projetos realizados.
-        </p>
-    {% endif %}
+    <div id="paginacao-projetos">
+        <div class="paginacao">
+            <button type="button" class="page-btn-produtos" id="projetos-prev">« Anterior</button>
+            <span class="page-atual" id="projetos-page-info">Página 1</span>
+            <button type="button" class="page-btn-produtos" id="projetos-next">Próxima »</button>
+        </div>
+    </div>
 </section>
-
 
 
 {% for projeto in projetos %}
@@ -3566,6 +3457,80 @@ function inicializarPecasClientSide() {
 }
 
 /* ======================================================
+   🎛️ PAGINAÇÃO PADRÃO (eventos, projetos) — sem ordenação
+   nem filtro, só mostra N por página e esconde os controles
+   quando cabe tudo numa página só.
+====================================================== */
+function inicializarGridPaginado({ gridId, cardSelector, porPagina, prevId, nextId, infoId, paginacaoWrapperId, scrollTargetId }) {
+    const grid = document.getElementById(gridId);
+    const wrapper = document.getElementById(paginacaoWrapperId);
+    if (!grid) return;
+
+    const cards = Array.from(grid.querySelectorAll(cardSelector));
+
+    if (!cards.length) {
+        if (wrapper) wrapper.style.display = 'none';
+        return;
+    }
+
+    const totalPaginas = Math.max(1, Math.ceil(cards.length / porPagina));
+    let pagina = 1;
+
+    // Pedido explícito: se não tem o que paginar, a paginação nem aparece
+    if (wrapper) wrapper.style.display = totalPaginas <= 1 ? 'none' : '';
+
+    function scrollParaSecao() {
+        const alvo = document.getElementById(scrollTargetId);
+        if (!alvo) return;
+        window.scrollTo({
+            top: alvo.getBoundingClientRect().top + window.scrollY - 80,
+            behavior: 'smooth'
+        });
+    }
+
+    function renderizar() {
+        const inicio = (pagina - 1) * porPagina;
+        const fim = inicio + porPagina;
+
+        let atraso = 0;
+        cards.forEach((card, i) => {
+            if (i >= inicio && i < fim) {
+                card.style.display = '';
+                reanimarCard(card, atraso);
+                atraso += 0.035;
+            } else {
+                card.style.display = 'none';
+            }
+        });
+
+        const infoEl = document.getElementById(infoId);
+        if (infoEl) infoEl.textContent = `Página ${pagina} de ${totalPaginas}`;
+
+        const prevBtn = document.getElementById(prevId);
+        const nextBtn = document.getElementById(nextId);
+        if (prevBtn) prevBtn.disabled = pagina <= 1;
+        if (nextBtn) nextBtn.disabled = pagina >= totalPaginas;
+    }
+
+    const prevBtn = document.getElementById(prevId);
+    const nextBtn = document.getElementById(nextId);
+
+    if (prevBtn) {
+        prevBtn.addEventListener('click', () => {
+            if (pagina > 1) { pagina--; renderizar(); scrollParaSecao(); }
+        });
+    }
+
+    if (nextBtn) {
+        nextBtn.addEventListener('click', () => {
+            if (pagina < totalPaginas) { pagina++; renderizar(); scrollParaSecao(); }
+        });
+    }
+
+    renderizar();
+}
+
+/* ======================================================
    🚀 INIT GLOBAL
 ====================================================== */
 document.addEventListener("DOMContentLoaded", () => {
@@ -3577,53 +3542,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
     inicializarProdutosClientSide();
     inicializarPecasClientSide();
-
-    const track = document.getElementById("carousel-projetos");
-    const prev = document.getElementById("prevProjetos");
-    const next = document.getElementById("nextProjetos");
-
-    if (track && prev && next && track.querySelector(".projeto-card")) {
-        let index = 0;
-
-        function visibleCards() {
-            if (window.innerWidth < 600) return 1;
-            if (window.innerWidth < 900) return 2;
-            return 3;
-        }
-
-        function cardWidth() {
-            const card = track.querySelector(".projeto-card");
-            return card ? card.offsetWidth + 20 : 0;
-        }
-
-        next.addEventListener("click", () => {
-            const total = track.children.length;
-            const visible = visibleCards();
-            const width = cardWidth();
-
-            if (!width) return;
-
-            if (index < total - visible) {
-                index++;
-                track.style.transform = `translateX(-${index * width}px)`;
-            }
-        });
-
-        prev.addEventListener("click", () => {
-            const width = cardWidth();
-            if (!width) return;
-
-            if (index > 0) {
-                index--;
-                track.style.transform = `translateX(-${index * width}px)`;
-            }
-        });
-
-        window.addEventListener("resize", () => {
-            const width = cardWidth();
-            track.style.transform = `translateX(-${index * width}px)`;
-        });
-    }
+    inicializarGridPaginado({
+        gridId: 'grid-eventos', cardSelector: '.evento-card', porPagina: 9,
+        prevId: 'eventos-prev', nextId: 'eventos-next', infoId: 'eventos-page-info',
+        paginacaoWrapperId: 'paginacao-eventos', scrollTargetId: 'eventos'
+    });
+    inicializarGridPaginado({
+        gridId: 'grid-projetos', cardSelector: '.evento-card', porPagina: 9,
+        prevId: 'projetos-prev', nextId: 'projetos-next', infoId: 'projetos-page-info',
+        paginacaoWrapperId: 'paginacao-projetos', scrollTargetId: 'projetos'
+    });
 
     const scrollContainer = document.getElementById("scroll-container");
     const leftBtn = document.getElementById("scroll-left");
@@ -3708,20 +3636,6 @@ document.addEventListener("DOMContentLoaded", () => {
         card.addEventListener("click", () => {
             const modalId = card.dataset.modal;
             const modal = document.getElementById(modalId);
-            if (!modal) return;
-
-            modal.style.display = "block";
-            document.body.style.overflow = "hidden";
-
-            if (typeof initCarousel === 'function') {
-                modal.querySelectorAll(".modal-carousel-track").forEach(track => initCarousel(track));
-            }
-        });
-    });
-
-    document.querySelectorAll(".projeto-card").forEach(item => {
-        item.addEventListener("click", () => {
-            const modal = document.getElementById(item.dataset.modal);
             if (!modal) return;
 
             modal.style.display = "block";
