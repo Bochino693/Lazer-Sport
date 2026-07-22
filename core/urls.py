@@ -194,8 +194,5 @@ urlpatterns = [
     re_path(r'^.*$', redirecionar_loja),
 
 
-    path("adm/projetos/", ProjetoAdminView.as_view(), name="projetos_admin"),
-    path("adm/eventos/", EventoAdminView.as_view(), name="eventos_admin"),
-
 
 ]
