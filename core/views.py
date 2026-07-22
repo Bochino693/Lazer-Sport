@@ -5,15 +5,17 @@ from django.contrib import messages
 from django.contrib.auth import authenticate, login
 from decimal import Decimal
 
-from .forms import UserForm, PerfilForm, ProjetoForm, ManutencaoForm, CupomForm
+from .forms import UserForm, PerfilForm, ManutencaoForm, CupomForm, ComboForm
 from django.views.generic.edit import FormView
+from django.db import transaction
 from django.db.models import Count, F, FloatField, Value, Prefetch
 
 from django.contrib.auth.mixins import LoginRequiredMixin
 
 from .models import Brinquedos, CategoriasBrinquedos, Projetos, Eventos, ClientePerfil, Combos, Cupom, Promocoes, \
     TagsBrinquedos, ImagensSite, BrinquedosProjeto, Estabelecimentos, Manutencao, ManutencaoImagem, \
-    BrinquedoClick, ComboClick, PromocaoClick, CategoriaClick, PecasReposicao, CategoriaPeca
+    BrinquedoClick, ComboClick, PromocaoClick, CategoriaClick, PecasReposicao, CategoriaPeca, \
+    ImagemProjetoBrinquedo, ImagemEvento
 
 import os
 from django.http import FileResponse, Http404
@@ -59,12 +61,11 @@ class HomeView(View):
     def get(self, request):
         imagens_site = ImagensSite.objects.order_by('-id')[:5]
 
-        # Brinquedos: manda todos de uma vez (ordenados A-Z por padrão).
-        # Ordenação, paginação e filtro agora são feitos no navegador via
-        # JS, sem ida ao servidor -- por isso não precisa mais de
-        # `ordenar`/`page` na query string nem de Paginator aqui.
+        # A home e uma vitrine, nao o catalogo completo. Limitar a consulta
+        # aqui evita enviar dezenas de cards/imagens para o navegador para
+        # depois esconde-los com JavaScript.
         brinquedos_todos = list(
-            Brinquedos.objects.only(
+            Brinquedos.objects.filter(ativo=True).only(
                 "id",
                 "nome_brinquedo",
                 "imagem_brinquedo",
@@ -82,6 +83,7 @@ class HomeView(View):
                 "estabelecimentos"
             )
             .order_by("nome_brinquedo")
+            [:9]
         )
 
         categorias_brinquedos = CategoriasBrinquedos.objects.annotate(
@@ -135,22 +137,22 @@ class HomeView(View):
             )
         ) if ids_amostra else []
 
-        # Peças: mesma lógica -- manda todas de uma vez, filtro por
-        # categoria e paginação ficam no navegador (JS), sem AJAX.
+        # Assim como os brinquedos, as pecas da home sao apenas uma vitrine.
         pecas_todas = list(
             PecasReposicao.objects.filter(ativo=True).prefetch_related(
                 "imagem_peca_reposicao",
                 "categoria_peca",
-            )
+            ).order_by("nome")[:9]
         )
 
         context = {
             "categorias_brinquedos": categorias_brinquedos,
             "brinquedos_todos": brinquedos_todos,
+            "brinquedos_count": Brinquedos.objects.filter(ativo=True).count(),
             "eventos": eventos,
             "categorias_peca": categorias_peca,
             "pecas_todas": pecas_todas,
-            "pecas_count": PecasReposicao.objects.count(),
+            "pecas_count": PecasReposicao.objects.filter(ativo=True).count(),
             "pecas_preview": pecas_preview,
             "projetos": projetos,
             "combos": combos,
@@ -716,33 +718,46 @@ class AdminOnlyMixin(View):
         return super().dispatch(request, *args, **kwargs)
 
 
-class ComboListView(AdminOnlyMixin, ListView):
-    model = Combos
+class ComboAdminView(AdminOnlyMixin, View):
+    """CRUD de combos concentrado em uma unica view e uma unica tela."""
+
     template_name = 'combos_adm.html'
-    context_object_name = 'combos'
 
-    def get_queryset(self):
-        return Combos.objects.prefetch_related('brinquedos')
+    def get(self, request):
+        return render(request, self.template_name, {
+            'combos': Combos.objects.prefetch_related('brinquedos').order_by('-id'),
+            'brinquedos': Brinquedos.objects.filter(ativo=True).order_by('nome_brinquedo'),
+            'form': ComboForm(),
+        })
 
+    def post(self, request):
+        action = request.POST.get('action', 'save')
 
-class ComboCreateView(AdminOnlyMixin, CreateView):
-    model = Combos
-    fields = ['descricao', 'imagem_combo', 'brinquedos', 'valor_combo']
-    template_name = 'combo_form.html'
-    success_url = reverse_lazy('combos_admin')
+        if action == 'delete':
+            combo = get_object_or_404(Combos, pk=request.POST.get('id'))
+            combo.delete()
+            messages.success(request, 'Combo excluido com sucesso.')
+            return redirect('combos_admin')
 
+        combo_id = request.POST.get('id')
+        combo = get_object_or_404(Combos, pk=combo_id) if combo_id else None
+        form = ComboForm(request.POST, request.FILES, instance=combo)
 
-class ComboUpdateView(UpdateView):
-    model = Combos
-    fields = ['descricao', 'imagem_combo', 'brinquedos', 'valor_combo']
-    template_name = 'combo_form.html'
-    success_url = reverse_lazy('combos_admin')
+        if form.is_valid():
+            form.save()
+            messages.success(
+                request,
+                'Combo atualizado com sucesso.' if combo else 'Combo criado com sucesso.'
+            )
+            return redirect('combos_admin')
 
-
-class ComboDeleteView(AdminOnlyMixin, DeleteView):
-    model = Combos
-    template_name = 'combo_confirm_delete.html'
-    success_url = reverse_lazy('combos_admin')
+        return render(request, self.template_name, {
+            'combos': Combos.objects.prefetch_related('brinquedos').order_by('-id'),
+            'brinquedos': Brinquedos.objects.filter(ativo=True).order_by('nome_brinquedo'),
+            'form': form,
+            'combo_em_edicao': combo,
+            'abrir_formulario': True,
+        }, status=400)
 
 
 from django.contrib.auth import logout
@@ -864,125 +879,135 @@ class CupomAdminView(AdminOnlyMixin, View):
 
 
 class ProjetoAdminView(AdminOnlyMixin, View):
-    template_name = "projetos/projetos_adm.html"
+    template_name = "gestao/projetos_adm.html"
 
     def get(self, request):
-        context = {
-            "projetos": Projetos.objects.select_related('brinquedo_projetado').all(),
-            "brinquedos_disponiveis": BrinquedosProjeto.objects.all(),
-            "form": ProjetoForm()
-        }
-        return render(request, self.template_name, context)
+        projetos = Projetos.objects.select_related('brinquedo_projetado').prefetch_related(
+            'brinquedo_projetado__imagens_brinquedo_projeto'
+        ).order_by('-id')
+        return render(request, self.template_name, {"projetos": projetos})
 
+    @transaction.atomic
     def post(self, request):
         action = request.POST.get("action")
 
-        # 1. CRIAR APENAS O BRINQUEDO (Via Modal 2)
-        if action == "create_brinquedo":
-            nome = request.POST.get("nome_brinquedo")
-            desc = request.POST.get("desc_brinquedo")
-            if nome:
-                brinquedo = BrinquedosProjeto.objects.create(
-                    nome_brinquedo_projeto=nome,
-                    descricao=desc
-                )
-                return JsonResponse({
-                    "success": True,
-                    "id": brinquedo.id,
-                    "nome": brinquedo.nome_brinquedo_projeto
-                })
-
-        # 2. SALVAR PROJETO COMPLETO
-        if action == "save_projeto":
-            projeto_id = request.POST.get("id")
-            if projeto_id:  # Update
-                projeto = get_object_or_404(Projetos, id=projeto_id)
-                form = ProjetoForm(request.POST, instance=projeto)
-            else:  # Create
-                form = ProjetoForm(request.POST)
-
-            if form.is_valid():
-                projeto = form.save()
-                return JsonResponse({"success": True})
-
-            return JsonResponse({"success": False, "errors": form.errors})
-
-        # 3. EXCLUIR
         if action == "delete":
             projeto = get_object_or_404(Projetos, id=request.POST.get("id"))
+            brinquedo = projeto.brinquedo_projetado
             projeto.delete()
+            if brinquedo:
+                brinquedo.delete()
             return JsonResponse({"success": True})
 
-        return JsonResponse({"success": False})
+        if action != "save":
+            return JsonResponse({"success": False, "error": "Acao invalida."}, status=400)
 
+        titulo = request.POST.get("titulo", "").strip()
+        descricao = request.POST.get("descricao", "").strip()
+        nome_brinquedo = request.POST.get("nome_brinquedo", "").strip()
+        descricao_brinquedo = request.POST.get("descricao_brinquedo", "").strip()
+        if not titulo or not descricao or not nome_brinquedo:
+            return JsonResponse({
+                "success": False,
+                "error": "Preencha titulo, descricao e nome do brinquedo."
+            }, status=400)
 
-from django.forms import modelform_factory
+        projeto_id = request.POST.get("id")
+        if projeto_id:
+            projeto = get_object_or_404(
+                Projetos.objects.select_related('brinquedo_projetado'), pk=projeto_id
+            )
+            brinquedo = projeto.brinquedo_projetado
+            if brinquedo is None:
+                brinquedo = BrinquedosProjeto.objects.create(
+                    nome_brinquedo_projeto=nome_brinquedo,
+                    descricao=descricao_brinquedo
+                )
+                projeto.brinquedo_projetado = brinquedo
+        else:
+            brinquedo = BrinquedosProjeto.objects.create(
+                nome_brinquedo_projeto=nome_brinquedo,
+                descricao=descricao_brinquedo
+            )
+            projeto = Projetos(brinquedo_projetado=brinquedo)
 
-EventoForm = modelform_factory(
-    Eventos,
-    fields=["titulo", "descricao", "brinquedos"]
-)
+        brinquedo.nome_brinquedo_projeto = nome_brinquedo
+        brinquedo.descricao = descricao_brinquedo
+        brinquedo.save()
+        projeto.titulo = titulo
+        projeto.descricao = descricao
+        projeto.save()
+
+        ids_remover = request.POST.getlist("remover_imagens")
+        if ids_remover:
+            ImagemProjetoBrinquedo.objects.filter(
+                id__in=ids_remover, brinquedo=brinquedo
+            ).delete()
+
+        imagens = request.FILES.getlist("imagens")
+        total_atual = brinquedo.imagens_brinquedo_projeto.count()
+        if total_atual + len(imagens) > 5:
+            transaction.set_rollback(True)
+            return JsonResponse({
+                "success": False, "error": "Cada projeto pode ter no maximo 5 imagens."
+            }, status=400)
+        for imagem in imagens:
+            ImagemProjetoBrinquedo.objects.create(brinquedo=brinquedo, imagem=imagem)
+
+        return JsonResponse({"success": True})
 
 
 class EventoAdminView(AdminOnlyMixin, View):
-    template_name = "eventos/eventos_adm.html"
+    template_name = "gestao/eventos_adm.html"
 
     def get(self, request):
         # Use prefetch_related para otimizar a busca das imagens também
-        eventos = Eventos.objects.prefetch_related('brinquedos', 'imagens_evento')
-        form = EventoForm()
-        brinquedos = Brinquedos.objects.all()
-
-        eventos_data = []
-        for evento in eventos:
-            eventos_data.append({
-                "id": evento.id,
-                "titulo": evento.titulo,
-                "descricao": evento.descricao,
-                "brinquedos": list(evento.brinquedos.values_list('id', flat=True)),
-                # Adicione esta linha para extrair as URLs das imagens:
-                "imagens_list": [img.imagem.url for img in evento.imagens_evento.all()]
-            })
-
+        eventos = Eventos.objects.prefetch_related('brinquedos', 'imagens_evento').order_by('-id')
         return render(request, self.template_name, {
-            "eventos": eventos_data,
-            "form": form,
-            "brinquedos": brinquedos
+            "eventos": eventos,
+            "brinquedos": Brinquedos.objects.filter(ativo=True).order_by('nome_brinquedo')
         })
 
+    @transaction.atomic
     def post(self, request):
         action = request.POST.get("action")
 
-        # ===== CREATE =====
-        if action == "create":
-            form = EventoForm(request.POST)
-            if form.is_valid():
-                form.save()
-                return JsonResponse({"success": True})
-            return JsonResponse({
-                "success": False,
-                "errors": form.errors
-            })
-
-        # ===== UPDATE =====
-        if action == "update":
-            evento = get_object_or_404(Eventos, pk=request.POST.get("id"))
-            form = EventoForm(request.POST, instance=evento)
-            if form.is_valid():
-                form.save()
-                return JsonResponse({"success": True})
-            return JsonResponse({
-                "success": False,
-                "errors": form.errors
-            })
-
-        # ===== DELETE =====
         if action == "delete":
             evento = get_object_or_404(Eventos, pk=request.POST.get("id"))
             evento.delete()
             return JsonResponse({"success": True})
 
-        return JsonResponse({"success": False})
+        if action != "save":
+            return JsonResponse({"success": False, "error": "Acao invalida."}, status=400)
+
+        titulo = request.POST.get("titulo", "").strip()
+        descricao = request.POST.get("descricao", "").strip()
+        if not titulo or not descricao:
+            return JsonResponse({
+                "success": False, "error": "Preencha o titulo e a descricao."
+            }, status=400)
+
+        evento_id = request.POST.get("id")
+        evento = get_object_or_404(Eventos, pk=evento_id) if evento_id else Eventos()
+        evento.titulo = titulo
+        evento.descricao = descricao
+        evento.save()
+        evento.brinquedos.set(request.POST.getlist("brinquedos"))
+
+        ids_remover = request.POST.getlist("remover_imagens")
+        if ids_remover:
+            ImagemEvento.objects.filter(id__in=ids_remover, evento=evento).delete()
+
+        imagens = request.FILES.getlist("imagens")
+        if evento.imagens_evento.count() + len(imagens) > 5:
+            transaction.set_rollback(True)
+            return JsonResponse({
+                "success": False, "error": "Cada evento pode ter no maximo 5 imagens."
+            }, status=400)
+        for imagem in imagens:
+            ImagemEvento.objects.create(evento=evento, imagem=imagem)
+
+        return JsonResponse({"success": True})
 
 class PedidoAdminView(AdminOnlyMixin, View):
 
