@@ -1323,119 +1323,158 @@ class BannerDeleteView(LoginRequiredMixin, View):
         return redirect('banner_adm')
 
 
-from .models import ClientePerfil, Pedido  # ⚠️ muito importante
+from collections import defaultdict
 from datetime import timedelta
-from django.db.models.functions import TruncDay, TruncMonth
+from decimal import Decimal
+
+from django.db.models import Sum
+from django.db.models.functions import TruncDate
+from django.shortcuts import render
+from django.utils import timezone
+from django.views import View
 
 
-class DashboardAdminView(View):
+class DashboardAdminView(AdminOnlyMixin, View):
+    template_name = "gestao/dashboard.html"
+
     def get(self, request):
-        filtro = request.GET.get('filtro', 'geral')
+        filtro = request.GET.get("filtro", "geral")
         agora = timezone.now()
 
-        # Definir data inicial para filtro
-        if filtro == '7dias':
+        if filtro == "7dias":
             data_inicio = agora - timedelta(days=7)
-        elif filtro == '30dias':
+        elif filtro == "30dias":
             data_inicio = agora - timedelta(days=30)
-        elif filtro == 'ano':
-            data_inicio = agora.replace(month=1, day=1, hour=0, minute=0, second=0)
-        else:  # geral
+        elif filtro == "ano":
+            data_inicio = agora.replace(
+                month=1,
+                day=1,
+                hour=0,
+                minute=0,
+                second=0,
+                microsecond=0,
+            )
+        else:
+            filtro = "geral"
             data_inicio = None
 
-        # Filtrar clientes
-        # Filtrar clientes (somente usuários "clientes")
-        clientes_qs = ClientePerfil.objects.select_related('user').all()
-        if data_inicio:
-            clientes_qs = clientes_qs.filter(criado_em__gte=data_inicio)
+        clientes_qs = ClientePerfil.objects.select_related("user").filter(
+            user__is_staff=False,
+            user__is_superuser=False,
+        )
 
-        # Filtrar apenas usuários que não são staff nem superusers
-        clientes_qs = clientes_qs.filter(user__is_staff=False, user__is_superuser=False)
+        if data_inicio:
+            clientes_qs = clientes_qs.filter(
+                criado_em__gte=data_inicio
+            )
+
         total_clientes = clientes_qs.count()
 
-        # Filtrar pedidos
         pedidos_qs = Pedido.objects.all()
+
         if data_inicio:
-            pedidos_qs = pedidos_qs.filter(criacao__gte=data_inicio)
+            pedidos_qs = pedidos_qs.filter(
+                criacao__gte=data_inicio
+            )
 
         total_pedidos = pedidos_qs.count()
-        pedidos_finalizados = pedidos_qs.filter(status='finalizado').count()
-        taxa_conversao = (pedidos_finalizados / total_pedidos * 100) if total_pedidos else 0
 
-        # Total de vendas
-        vendas_total = pedidos_qs.filter(status='finalizado').aggregate(
-            total=Sum('total_liquido')
-        )['total'] or 0
-        vendas_total_formatado = f"R$ {vendas_total:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+        pedidos_finalizados_qs = pedidos_qs.filter(
+            status="finalizado"
+        )
 
-        # ---------------------------
-        # Preparar dados do gráfico
-        # ---------------------------
-        # ----------------------------
-        # Preparar dados do gráfico
-        # ----------------------------
+        pedidos_finalizados = pedidos_finalizados_qs.count()
+
+        taxa_conversao = (
+            pedidos_finalizados / total_pedidos * 100
+            if total_pedidos
+            else 0
+        )
+
+        vendas_total = (
+            pedidos_finalizados_qs.aggregate(
+                total=Sum("total_liquido")
+            ).get("total")
+            or Decimal("0.00")
+        )
+
+        vendas_total_formatado = (
+            f"R$ {vendas_total:,.2f}"
+            .replace(",", "X")
+            .replace(".", ",")
+            .replace("X", ".")
+        )
+
         labels = []
         vendas_data = []
 
-        if filtro == 'geral' or filtro == 'ano':
-            # Agrupar por mês usando TruncDate
-            vendas_qs = pedidos_qs.filter(status='finalizado').exclude(criacao__isnull=True)
-            vendas_agrupadas = vendas_qs.annotate(data=TruncDate('criacao')) \
-                .values('data') \
-                .annotate(total=Sum('total_liquido')) \
-                .order_by('data')
+        vendas_agrupadas = (
+            pedidos_finalizados_qs
+            .exclude(criacao__isnull=True)
+            .annotate(data=TruncDate("criacao"))
+            .values("data")
+            .annotate(total=Sum("total_liquido"))
+            .order_by("data")
+        )
 
-            # Criar dicionário para somar por mês
-            from collections import defaultdict
-            mes_dict = defaultdict(float)
+        if filtro in ("geral", "ano"):
+            vendas_por_mes = defaultdict(Decimal)
+
             for item in vendas_agrupadas:
-                mes_label = item['data'].strftime('%b/%Y')  # formato: Jan/2026
-                mes_dict[mes_label] += float(item['total'])
+                if not item["data"]:
+                    continue
 
-            labels = list(mes_dict.keys())
-            vendas_data = list(mes_dict.values())
+                mes = item["data"].strftime("%m/%Y")
+                total = item["total"] or Decimal("0.00")
+                vendas_por_mes[mes] += total
 
-        elif filtro == '7dias':
-            vendas_por_dia = pedidos_qs.filter(status='finalizado').annotate(
-                dia=TruncDate('criacao')
-            ).values('dia').annotate(total=Sum('total_liquido')).order_by('dia')
+            labels = list(vendas_por_mes.keys())
+            vendas_data = [
+                float(valor)
+                for valor in vendas_por_mes.values()
+            ]
 
-            for item in vendas_por_dia:
-                labels.append(item['dia'].strftime('%d/%m'))
-                vendas_data.append(float(item['total']))
+        else:
+            for item in vendas_agrupadas:
+                if not item["data"]:
+                    continue
 
-        elif filtro == '30dias':
-            # Dois blocos de 15 dias cada
-            vendas_por_15 = pedidos_qs.filter(status='finalizado').order_by('criacao')
-            first_half = vendas_por_15[:15]
-            second_half = vendas_por_15[15:30]
+                labels.append(
+                    item["data"].strftime("%d/%m")
+                )
 
-            labels = ['Dias 1-15', 'Dias 16-30']
-            total_first = sum(p.total_liquido for p in first_half)
-            total_second = sum(p.total_liquido for p in second_half)
-            vendas_data = [float(total_first), float(total_second)]
+                vendas_data.append(
+                    float(item["total"] or Decimal("0.00"))
+                )
 
-        top_brinquedos = BrinquedoClick.objects.order_by('-quantidade_click')[:3]
-        top_combos = ComboClick.objects.order_by('-quantidade_click')[:3]
-        top_promocoes = PromocaoClick.objects.order_by('-quantidade_click')[:3]
-        top_categorias = CategoriaClick.objects.order_by('-quantidade_click')[:3]
-
-        ctx = {
-            'filtro': filtro,
-            'total_clientes': total_clientes,
-            'total_pedidos': total_pedidos,
-            'pedidos_finalizados': pedidos_finalizados,
-            'taxa_conversao': f"{taxa_conversao:.1f}%",
-            'vendas_total': vendas_total_formatado,
-            'chart_labels': labels,
-            'chart_data': vendas_data,
-            'top_brinquedos': top_brinquedos,
-            'top_combos': top_combos,
-            'top_promocoes': top_promocoes,
-            'top_categorias': top_categorias,
+        context = {
+            "filtro": filtro,
+            "total_clientes": total_clientes,
+            "total_pedidos": total_pedidos,
+            "pedidos_finalizados": pedidos_finalizados,
+            "taxa_conversao": f"{taxa_conversao:.1f}%",
+            "vendas_total": vendas_total_formatado,
+            "chart_labels": labels,
+            "chart_data": vendas_data,
+            "top_brinquedos": BrinquedoClick.objects.order_by(
+                "-quantidade_click"
+            )[:3],
+            "top_combos": ComboClick.objects.order_by(
+                "-quantidade_click"
+            )[:3],
+            "top_promocoes": PromocaoClick.objects.order_by(
+                "-quantidade_click"
+            )[:3],
+            "top_categorias": CategoriaClick.objects.order_by(
+                "-quantidade_click"
+            )[:3],
         }
 
-        return render(request, 'gestao/dashboard.html', ctx)
+        return render(
+            request,
+            self.template_name,
+            context,
+        )
 
 
 from django.http import HttpResponseForbidden
