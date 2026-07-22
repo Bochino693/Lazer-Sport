@@ -61,7 +61,10 @@ class HomeView(View):
     def get(self, request):
         imagens_site = ImagensSite.objects.order_by("-id")[:5]
 
-        # Somente 9 brinquedos ativos na Home
+        # Todos os brinquedos ativos. A paginação de 9 por página já é
+        # feita no JS do template (inicializarProdutosClientSide), então
+        # aqui manda a lista completa -- se cortar em [:9] aqui, sobra
+        # só uma página inteira pro JS paginar.
         brinquedos_todos = list(
             Brinquedos.objects
             .filter(ativo=True)
@@ -82,7 +85,7 @@ class HomeView(View):
                 "tags",
                 "estabelecimentos",
             )
-            .order_by("nome_brinquedo")[:9]
+            .order_by("nome_brinquedo")
         )
 
         categorias_brinquedos = (
@@ -164,7 +167,10 @@ class HomeView(View):
             .distinct()
         )
 
-        # Também limita a vitrine rotativa a 9 peças
+        # A vitrine rotativa (o slider "Produtos em Geral" na categoria
+        # premium fixa) continua sendo só uma amostra de 9 peças -- isso
+        # aqui não tem relação com a paginação da grade principal, é só
+        # pra não sobrecarregar o carrossel giratório.
         ids_amostra = sample(
             ids_com_imagem,
             min(9, len(ids_com_imagem)),
@@ -190,7 +196,9 @@ class HomeView(View):
             else []
         )
 
-        # Somente 9 peças ativas na Home
+        # Todas as peças ativas. Mesma lógica do brinquedos_todos: a
+        # paginação de 9 por página já é feita no JS
+        # (inicializarPecasClientSide), então manda a lista completa.
         pecas_todas = list(
             PecasReposicao.objects
             .filter(ativo=True)
@@ -198,7 +206,7 @@ class HomeView(View):
                 "imagem_peca_reposicao",
                 "categoria_peca",
             )
-            .order_by("nome")[:9]
+            .order_by("nome")
         )
 
         context = {
