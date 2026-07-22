@@ -1,6 +1,14 @@
 from django import forms
 from django.contrib.auth.models import User
-from .models import ClientePerfil, Promocoes, Projetos, Manutencao
+from .models import (
+    ClientePerfil,
+    Promocoes,
+    Projetos,
+    Manutencao,
+    Cupom,
+    ImagensSite,
+    Combos,
+)
 
 from django import forms
 from django.contrib.auth.models import User
@@ -74,3 +82,36 @@ class ImagensSiteForm(forms.ModelForm):
     class Meta:
         model = ImagensSite
         fields = ['imagem']
+
+
+class ComboForm(forms.ModelForm):
+    class Meta:
+        model = Combos
+        fields = [
+            "descricao",
+            "imagem_combo",
+            "brinquedos",
+            "valor_combo",
+        ]
+
+        widgets = {
+            "descricao": forms.TextInput(attrs={
+                "class": "form-input",
+                "placeholder": "Descrição do combo",
+            }),
+            "imagem_combo": forms.ClearableFileInput(attrs={
+                "class": "form-input",
+                "accept": "image/*",
+            }),
+            "brinquedos": forms.SelectMultiple(attrs={
+                "class": "form-select",
+                "size": "10",
+            }),
+            "valor_combo": forms.NumberInput(attrs={
+                "class": "form-input",
+                "placeholder": "0,00",
+                "step": "0.01",
+                "min": "0.01",
+            }),
+        }
+        

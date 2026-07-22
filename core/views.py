@@ -5,7 +5,7 @@ from django.contrib import messages
 from django.contrib.auth import authenticate, login
 from decimal import Decimal
 
-from .forms import UserForm, PerfilForm
+from .forms import UserForm, PerfilForm, ComboForm
 from django.views.generic.edit import FormView
 from django.db import transaction
 from django.db.models import Count, F, FloatField, Value, Prefetch
@@ -1435,7 +1435,7 @@ class DashboardAdminView(View):
             'top_categorias': top_categorias,
         }
 
-        return render(request, 'dashboard.html', ctx)
+        return render(request, 'gestao/dashboard.html', ctx)
 
 
 from django.http import HttpResponseForbidden
