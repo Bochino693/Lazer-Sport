@@ -865,6 +865,186 @@ nav a.btn-login {
 
 </div>
 
+<!-- ======= RODAPÉ E CONTATO RÁPIDO (adicionado — não mexe no CSS/JS acima) ======= -->
+<style>
+    .ls-quick-dock {
+        position: fixed;
+        left: 22px;
+        bottom: 25px;
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .ls-quick-dock a {
+        width: 54px;
+        height: 54px;
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        text-decoration: none;
+        font-size: 1.4rem;
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.18);
+        transition: transform 0.2s ease;
+    }
+
+    .ls-quick-dock a:hover {
+        transform: translateY(-3px);
+    }
+
+    .ls-dock-whatsapp { background: #20c763; }
+    .ls-dock-instagram {
+        background: linear-gradient(135deg, #feda75 0%, #fa7e1e 22%, #d62976 48%, #962fbf 72%, #4f5bd5 100%);
+    }
+
+    .ls-footer {
+        background: #0d1b2e;
+        color: rgba(255, 255, 255, 0.82);
+        margin-top: 60px;
+        padding: 56px 24px 24px;
+    }
+
+    .ls-footer-grid {
+        max-width: 1180px;
+        margin: 0 auto;
+        display: grid;
+        grid-template-columns: 1.3fr 1fr 1fr;
+        gap: 36px;
+    }
+
+    .ls-footer h3 {
+        color: #fff;
+        font-weight: 800;
+        margin-bottom: 12px;
+        font-family: 'Poppins', sans-serif;
+    }
+
+    .ls-footer h5 {
+        color: #fff;
+        font-weight: 700;
+        margin-bottom: 14px;
+        font-family: 'Poppins', sans-serif;
+        font-size: 1.05rem;
+    }
+
+    .ls-footer p, .ls-footer a {
+        color: rgba(255, 255, 255, 0.68);
+        text-decoration: none;
+        line-height: 1.9;
+    }
+
+    .ls-footer a:hover { color: #E63946; }
+
+    .ls-footer-btn {
+        display: inline-block;
+        margin-top: 14px;
+        background: #E63946;
+        color: #fff !important;
+        font-weight: 700;
+        padding: 12px 24px;
+        border-radius: 999px;
+    }
+
+    .ls-footer-social {
+        display: flex;
+        gap: 12px;
+        margin-top: 16px;
+    }
+
+    .ls-footer-social a {
+        width: 42px;
+        height: 42px;
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.08);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.1rem;
+    }
+
+    .ls-footer-social a:hover { background: #E63946; color: #fff; }
+
+    .ls-footer-bottom {
+        max-width: 1180px;
+        margin: 36px auto 0;
+        padding-top: 20px;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        gap: 8px;
+        font-size: 0.88rem;
+        color: rgba(255, 255, 255, 0.5);
+    }
+
+    @media (max-width: 860px) {
+        .ls-footer-grid { grid-template-columns: 1fr; }
+        .ls-quick-dock { left: auto; right: 22px; bottom: 100px; }
+    }
+</style>
+
+<nav class="ls-quick-dock" aria-label="Contato rápido">
+    <a
+        href="https://wa.me/5511960563135?text=Ol%C3%A1!%20Vim%20pelo%20site%20da%20Lazer%20e%20Sport%20e%20gostaria%20de%20mais%20informa%C3%A7%C3%B5es."
+        target="_blank" rel="noopener" class="ls-dock-whatsapp" aria-label="WhatsApp">
+        <i class="fa-brands fa-whatsapp"></i>
+    </a>
+    <a href="https://www.instagram.com/lazersportbrinquedos" target="_blank" rel="noopener"
+       class="ls-dock-instagram" aria-label="Instagram">
+        <i class="fa-brands fa-instagram"></i>
+    </a>
+</nav>
+
+<footer class="ls-footer">
+
+    <div class="ls-footer-grid">
+
+        <div>
+            <h3>Lazer &amp; Sport Brinquedos</h3>
+            <p>
+                Fábrica e loja de brinquedos: mecânicos, eletrônicos, esportivos, fliperama
+                e simuladores para shoppings, quiosques e parques. Peças de reposição e
+                orçamento sob medida.
+            </p>
+            <a href="https://wa.me/5511960563135" target="_blank" rel="noopener" class="ls-footer-btn">
+                Solicitar orçamento
+            </a>
+        </div>
+
+        <div>
+            <h5>Atendimento</h5>
+            <p>Telefone: <a href="tel:+5511960563135">+55 11 96056-3135</a></p>
+            <p>WhatsApp: <a href="https://wa.me/5511960563135" target="_blank" rel="noopener">+55 11 96056-3135</a></p>
+            <p>E-mail: <a href="mailto:comercial@lazersport.com.br">comercial@lazersport.com.br</a></p>
+
+            <div class="ls-footer-social">
+                <a href="https://www.instagram.com/lazersportbrinquedos" target="_blank" rel="noopener" aria-label="Instagram"><i class="fa-brands fa-instagram"></i></a>
+                <a href="https://www.facebook.com/LazerSportBrinquedos1" target="_blank" rel="noopener" aria-label="Facebook"><i class="fa-brands fa-facebook"></i></a>
+                <a href="https://www.linkedin.com/company/brinquedos-lazer-sport" target="_blank" rel="noopener" aria-label="LinkedIn"><i class="fa-brands fa-linkedin"></i></a>
+            </div>
+        </div>
+
+        <div>
+            <h5>Endereço</h5>
+            <p>
+                Rua São Roque de Minas, 104<br>
+                Jardim Peri, São Paulo — SP<br>
+                CEP 02679-110
+            </p>
+        </div>
+
+    </div>
+
+    <div class="ls-footer-bottom">
+        <span>&copy; {% now "Y" %} Lazer &amp; Sport Brinquedos. Todos os direitos reservados.</span>
+        <span>Qualidade e diversão.</span>
+    </div>
+
+</footer>
+<!-- ======= FIM DO BLOCO ADICIONADO ======= -->
 
 <script>
   /* ==========================================

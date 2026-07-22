@@ -1735,6 +1735,224 @@ body {
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
+<!-- ======= HERO NOVO (inspirado no site da ArtSkala) — só adiciona, nada abaixo foi removido ======= -->
+<style>
+    .ls-home-hero {
+        position: relative;
+        overflow: hidden;
+        background:
+            radial-gradient(circle at 85% 15%, rgba(230, 57, 70, 0.16), transparent 32%),
+            radial-gradient(circle at 10% 90%, rgba(0, 74, 173, 0.14), transparent 30%),
+            #f6f8fc;
+        padding: 64px 24px;
+    }
+
+    .ls-home-hero-inner {
+        max-width: 1180px;
+        margin: 0 auto;
+        display: grid;
+        grid-template-columns: 1.15fr 0.85fr;
+        gap: 46px;
+        align-items: center;
+    }
+
+    .ls-home-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: #E63946;
+        color: #fff;
+        border-radius: 999px;
+        padding: 10px 18px;
+        font-weight: 800;
+        font-size: 0.82rem;
+        text-transform: uppercase;
+        letter-spacing: 0.6px;
+        margin-bottom: 26px;
+        font-family: 'Poppins', sans-serif;
+    }
+
+    .ls-home-title {
+        font-family: 'Poppins', sans-serif;
+        font-size: clamp(2.3rem, 4.6vw, 3.6rem);
+        font-weight: 800;
+        line-height: 1.08;
+        color: #0d1b2e;
+        margin-bottom: 22px;
+    }
+
+    .ls-home-title span { color: #004AAD; }
+
+    .ls-home-subtitle {
+        font-size: 1.08rem;
+        line-height: 1.7;
+        color: #4a4a4a;
+        max-width: 560px;
+        margin-bottom: 34px;
+    }
+
+    .ls-home-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+
+    .ls-home-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 14px 26px;
+        border-radius: 999px;
+        font-weight: 700;
+        text-decoration: none;
+        font-size: 0.96rem;
+        transition: transform 0.2s ease;
+    }
+
+    .ls-home-btn:hover { transform: translateY(-2px); }
+
+    .ls-home-btn-dark { background: #0d1b2e; color: #fff; }
+    .ls-home-btn-outline { background: #fff; color: #0d1b2e; border: 1px solid rgba(13, 27, 46, 0.18); }
+    .ls-home-btn-primary { background: #E63946; color: #fff; box-shadow: 0 14px 30px rgba(230, 57, 70, 0.28); }
+
+    .ls-home-hero-card {
+        background: #fff;
+        border-radius: 30px;
+        padding: 22px;
+        box-shadow: 0 24px 60px rgba(13, 27, 46, 0.12);
+    }
+
+    .ls-home-hero-img {
+        width: 100%;
+        height: 230px;
+        object-fit: cover;
+        border-radius: 20px;
+        display: block;
+        margin-bottom: 18px;
+    }
+
+    .ls-home-hero-minis {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+    }
+
+    .ls-home-mini {
+        background: #f6f8fc;
+        border-radius: 16px;
+        padding: 16px;
+    }
+
+    .ls-home-mini strong {
+        display: block;
+        font-family: 'Poppins', sans-serif;
+        color: #0d1b2e;
+        margin-bottom: 3px;
+        font-size: 0.95rem;
+    }
+
+    .ls-home-mini span { color: #6c757d; font-size: 0.82rem; }
+
+    .ls-home-stats {
+        background: #fff;
+        padding: 40px 24px;
+        border-bottom: 1px solid #eee;
+    }
+
+    .ls-home-stats-inner {
+        max-width: 1180px;
+        margin: 0 auto;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 20px;
+        text-align: center;
+    }
+
+    .ls-home-stat h3 {
+        font-family: 'Poppins', sans-serif;
+        font-weight: 800;
+        font-size: 2.4rem;
+        color: #E63946;
+        margin-bottom: 4px;
+    }
+
+    .ls-home-stat p { color: #6c757d; margin: 0; font-size: 0.95rem; }
+
+    @media (max-width: 900px) {
+        .ls-home-hero-inner { grid-template-columns: 1fr; }
+        .ls-home-stats-inner { grid-template-columns: 1fr; gap: 28px; }
+    }
+</style>
+
+<section class="ls-home-hero">
+    <div class="ls-home-hero-inner">
+
+        <div>
+            <span class="ls-home-badge">Fábrica de Brinquedos</span>
+
+            <h1 class="ls-home-title">
+                Diversão que sai da <span>fábrica</span> pro seu espaço.
+            </h1>
+
+            <p class="ls-home-subtitle">
+                Brinquedos mecânicos, eletrônicos, esportivos, fliperama e simuladores
+                para shoppings, quiosques e parques — com peças de reposição e
+                orçamento sob medida.
+            </p>
+
+            <div class="ls-home-actions">
+                <a href="#brinquedos" class="ls-home-btn ls-home-btn-dark">Ver Brinquedos</a>
+                <a href="#pecas-section" class="ls-home-btn ls-home-btn-outline">Peças de Reposição</a>
+                <a
+                    href="https://wa.me/5511960563135?text=Ol%C3%A1!%20Vim%20pelo%20site%20da%20Lazer%20e%20Sport%20e%20gostaria%20de%20um%20or%C3%A7amento."
+                    target="_blank" rel="noopener" class="ls-home-btn ls-home-btn-primary"
+                >
+                    <i class="fa-brands fa-whatsapp"></i> Orçamento pelo WhatsApp
+                </a>
+            </div>
+        </div>
+
+        <div class="ls-home-hero-card">
+
+            {% if imagens_site %}
+                <img src="{{ imagens_site.0.imagem.url }}" alt="Lazer e Sport Brinquedos" class="ls-home-hero-img">
+            {% endif %}
+
+            <div class="ls-home-hero-minis">
+                {% for categoria in categorias_brinquedos|slice:":4" %}
+                    <div class="ls-home-mini">
+                        <strong>{{ categoria.nome_categoria }}</strong>
+                        <span>{{ categoria.total_produtos }} produto{{ categoria.total_produtos|pluralize }}</span>
+                    </div>
+                {% endfor %}
+            </div>
+
+        </div>
+
+    </div>
+</section>
+
+<section class="ls-home-stats">
+    <div class="ls-home-stats-inner">
+
+        <div class="ls-home-stat">
+            <h3>{{ page_obj.paginator.count }}</h3>
+            <p>Brinquedos no catálogo</p>
+        </div>
+
+        <div class="ls-home-stat">
+            <h3>{{ pecas_count }}</h3>
+            <p>Peças de reposição disponíveis</p>
+        </div>
+
+        <div class="ls-home-stat">
+            <h3>{{ estabelecimentos|length }}</h3>
+            <p>Tipos de estabelecimento atendidos</p>
+        </div>
+
+    </div>
+</section>
+<!-- ======= FIM DO HERO NOVO ======= -->
 
 <!-- ======= POP-UP CELEBRASHOW 2026 ======= -->
 <div id="popup-overlay" class="popup-overlay-celebra">
