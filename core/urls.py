@@ -12,7 +12,7 @@ from .views import (HomeView, BrinquedoInfoView, CategoriasInfoView, BrinquedosV
                     PaymentView, MeusPedidosView, criar_pedido_pix, processar_cartao, EventoAdminView, BannerAdminView, BannerDeleteView, AdminLoginView, AcessoNegadoView,
                     DashboardAdminView, UserAdminView, ManutencaoAdminView, RelatorioVendasView, PedidoAdminView,
                     redirecionar_loja, redirecionar_categoria_brinquedos, redirecionar_categoria_aventura, redirecionar_lancamentos,
-                    redirecionar_showroom, redirecionar_contato, EstatisticasGeraisView, ReposicaoView, ReposicaoDetalheView, filtrar_pecas_ajax,
+                    redirecionar_showroom, redirecionar_contato, EstatisticasGeraisView, ReposicaoView, ReposicaoDetalheView,
                     robots_txt
                     )
 
@@ -138,7 +138,6 @@ urlpatterns = [
     path('pedido/pix/criar/', criar_pedido_pix, name='criar_pedido_pix'),
 
 
-    path("ajax/filtrar-pecas/", filtrar_pecas_ajax, name="filtrar_pecas_ajax"),
     path("api/webhook-mp/", webhook_mercadopago, name="webhook_mp"),
 
     path('processar_cartao/', processar_cartao, name='processar_cartao'),

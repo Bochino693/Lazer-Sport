@@ -59,9 +59,11 @@ class HomeView(View):
     def get(self, request):
         imagens_site = ImagensSite.objects.order_by('-id')[:5]
 
-        filtro = request.GET.get("ordenar", "az")
-
-        brinquedos = (
+        # Brinquedos: manda todos de uma vez (ordenados A-Z por padrão).
+        # Ordenação, paginação e filtro agora são feitos no navegador via
+        # JS, sem ida ao servidor -- por isso não precisa mais de
+        # `ordenar`/`page` na query string nem de Paginator aqui.
+        brinquedos_todos = list(
             Brinquedos.objects.only(
                 "id",
                 "nome_brinquedo",
@@ -79,34 +81,8 @@ class HomeView(View):
                 "tags",
                 "estabelecimentos"
             )
+            .order_by("nome_brinquedo")
         )
-
-        if filtro == "az":
-            brinquedos = brinquedos.order_by("nome_brinquedo")
-
-        elif filtro == "za":
-            brinquedos = brinquedos.order_by("-nome_brinquedo")
-
-        elif filtro == "melhor-avaliados":
-            brinquedos = brinquedos.order_by("-avaliacao", "nome_brinquedo")
-
-        elif filtro == "custo-beneficio":
-            brinquedos = brinquedos.annotate(
-                preco_seguro=Coalesce("valor_brinquedo", Value(0.0)),
-                avaliacao_segura=Coalesce("avaliacao", Value(0.0)),
-                score=ExpressionWrapper(
-                    F("avaliacao_segura") / (F("preco_seguro") + Value(0.01)),
-                    output_field=FloatField()
-                )
-            ).order_by("-score", "nome_brinquedo")
-
-        else:
-            brinquedos = brinquedos.order_by("nome_brinquedo")
-            filtro = "az"
-
-        paginator = Paginator(brinquedos, 9)
-        page_number = request.GET.get("page")
-        page_obj = paginator.get_page(page_number)
 
         categorias_brinquedos = CategoriasBrinquedos.objects.annotate(
             total_produtos=Count('brinquedos', distinct=True)
@@ -148,30 +124,21 @@ class HomeView(View):
         shuffle(pecas_preview)
         pecas_preview = pecas_preview[:12]
 
-        categoria_ativa = request.GET.get("categoria")
-
-        pecas_lista = PecasReposicao.objects.filter(ativo=True).prefetch_related(
-            "imagem_peca_reposicao",
-            "categoria_peca",
-        )
-
-        if categoria_ativa:
-            pecas_lista = pecas_lista.filter(
-                categoria_peca__id=categoria_ativa
+        # Peças: mesma lógica -- manda todas de uma vez, filtro por
+        # categoria e paginação ficam no navegador (JS), sem AJAX.
+        pecas_todas = list(
+            PecasReposicao.objects.filter(ativo=True).prefetch_related(
+                "imagem_peca_reposicao",
+                "categoria_peca",
             ).distinct()
-
-        paginator_pecas = Paginator(pecas_lista, 12)
-        page_number_pecas = request.GET.get("page_pecas")
-        page_obj_pecas = paginator_pecas.get_page(page_number_pecas)
+        )
 
         context = {
             "categorias_brinquedos": categorias_brinquedos,
-            "page_obj": page_obj,
-            "ordenar": filtro,
+            "brinquedos_todos": brinquedos_todos,
             "eventos": eventos,
             "categorias_peca": categorias_peca,
-            "categoria_ativa": categoria_ativa,
-            "pecas_reposicao": page_obj_pecas,
+            "pecas_todas": pecas_todas,
             "pecas_count": PecasReposicao.objects.count(),
             "pecas_preview": pecas_preview,
             "projetos": projetos,
@@ -185,35 +152,6 @@ class HomeView(View):
 
 
 from django.template.loader import render_to_string
-
-
-def filtrar_pecas_ajax(request):
-    categoria_ativa = request.GET.get("categoria")
-    page_number_pecas = request.GET.get("page_pecas")
-
-    pecas_lista = PecasReposicao.objects.prefetch_related(
-        "imagem_peca_reposicao",
-        "categoria_peca",
-    )
-
-    if categoria_ativa:
-        pecas_lista = pecas_lista.filter(
-            categoria_peca__id=categoria_ativa
-        ).distinct()
-
-    paginator_pecas = Paginator(pecas_lista, 12)
-    page_obj_pecas = paginator_pecas.get_page(page_number_pecas)
-
-    html = render_to_string(
-        "home.html",
-        {
-            "pecas_reposicao": page_obj_pecas,
-            "categoria_ativa": categoria_ativa,
-        },
-        request=request,
-    )
-
-    return HttpResponse(html)
 
 
 from .models import PecasReposicao

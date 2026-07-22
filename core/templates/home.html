@@ -884,6 +884,19 @@ body {
   cursor: pointer;
 }
 
+.page-btn-produtos:disabled,
+.page-btn-pecas:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.page-btn-produtos:disabled:hover,
+.page-btn-pecas:disabled:hover {
+  background: #ffffff;
+  color: #007BFF;
+}
+
 .page-btn-produtos:hover,
 .page-btn-pecas:hover {
   background: #007BFF;
@@ -1936,7 +1949,7 @@ body {
     <div class="ls-home-stats-inner">
 
         <div class="ls-home-stat">
-            <h3>{{ page_obj.paginator.count }}</h3>
+            <h3>{{ brinquedos_todos|length }}</h3>
             <p>Brinquedos no catálogo</p>
         </div>
 
@@ -2180,45 +2193,22 @@ body {
 
   <!-- FILTROS -->
   <div class="filtros-horizontal" id="filtros-bar">
-    <button
-      type="button"
-      data-order="az"
-      class="filtro-btn {% if ordenar == 'az' or not ordenar %}ativo{% endif %}"
-    >
-      A → Z
-    </button>
-
-    <button
-      type="button"
-      data-order="za"
-      class="filtro-btn {% if ordenar == 'za' %}ativo{% endif %}"
-    >
-      Z → A
-    </button>
-
-    <button
-      type="button"
-      data-order="melhor-avaliados"
-      class="filtro-btn {% if ordenar == 'melhor-avaliados' %}ativo{% endif %}"
-    >
-      ⭐ Melhores avaliados
-    </button>
-
-    <button
-      type="button"
-      data-order="custo-beneficio"
-      class="filtro-btn {% if ordenar == 'custo-beneficio' %}ativo{% endif %}"
-    >
-      💰 Custo-benefício
-    </button>
+    <button type="button" data-order="az" class="filtro-btn ativo">A → Z</button>
+    <button type="button" data-order="za" class="filtro-btn">Z → A</button>
+    <button type="button" data-order="melhor-avaliados" class="filtro-btn">⭐ Melhores avaliados</button>
+    <button type="button" data-order="custo-beneficio" class="filtro-btn">💰 Custo-benefício</button>
   </div>
 
   <!-- CONTAINER PRODUTOS -->
   <div id="produtos-container">
 
     <div class="grid-cards" id="grid-cards">
-      {% for brinquedo in page_obj %}
-        <a href="{% url 'brinquedo_detalhe' brinquedo.id %}#bread" class="card-link">
+      {% for brinquedo in brinquedos_todos %}
+        <a href="{% url 'brinquedo_detalhe' brinquedo.id %}#bread" class="card-link"
+           data-nome="{{ brinquedo.nome_brinquedo|lower }}"
+           data-avaliacao="{{ brinquedo.avaliacao|default:0 }}"
+           data-preco="{{ brinquedo.valor_brinquedo|default:0 }}"
+        >
           <div class="card-produto">
 
             <div class="img-area">
@@ -2296,34 +2286,15 @@ body {
 
     <div id="paginacao-wrapper">
       <div class="paginacao">
-        {% if page_obj.has_previous %}
-          <button
-              type="button"
-              class="page-btn-produtos"
-              data-page="{{ page_obj.previous_page_number }}"
-            >
-              « Anterior
-          </button>
-        {% endif %}
-
-        <span class="page-atual">
-          Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
-        </span>
-
-        {% if page_obj.has_next %}
-          <button
-              type="button"
-              class="page-btn-produtos"
-              data-page="{{ page_obj.next_page_number }}"
-            >
-              Próxima »
-          </button>
-        {% endif %}
+        <button type="button" class="page-btn-produtos" id="prod-prev">« Anterior</button>
+        <span class="page-atual" id="prod-page-info">Página 1</span>
+        <button type="button" class="page-btn-produtos" id="prod-next">Próxima »</button>
       </div>
     </div>
 
   </div>
 </section>
+
 
 <div class="espacador"></div>
 
@@ -2362,44 +2333,39 @@ body {
 <div class="filtros-horizontal" id="filtros-peca">
 
   <!-- Todos -->
-  <button
-      class="filtro-btn {% if not categoria_ativa %}ativo{% endif %}"
-      data-categoria=""
-  >
+  <button class="filtro-btn ativo" data-categoria="">
       Peças em Destaque
   </button>
 
   <!-- Categorias -->
   {% for cat in categorias_peca %}
-      <button
-          class="filtro-btn {% if categoria_ativa|stringformat:'s' == cat.id|stringformat:'s' %}ativo{% endif %}"
-          data-categoria="{{ cat.id }}"
-      >
+      <button class="filtro-btn" data-categoria="{{ cat.id }}">
           {{ cat.nome_categoria_peca }}
       </button>
   {% endfor %}
 
 </div>
 
-<!-- CONTAINER ATUALIZÁVEL -->
+<!-- CONTAINER -->
 <div id="pecas-container">
-
   <div class="pecas-grid" id="grid-pecas">
-        {% for peca in pecas_reposicao %}
-        <a href="{% url 'reposicao_detalhe' peca.id %}#breadcrumb" class="pecas-card-link">
+    {% for peca in pecas_todas %}
+    <a href="{% url 'reposicao_detalhe' peca.id %}#breadcrumb" class="pecas-card-link"
+       data-categorias="{% for cat in peca.categoria_peca.all %}{{ cat.id }}{% if not forloop.last %},{% endif %}{% endfor %}"
+    >
 
-          <div class="pecas-card pecas-card-produto">
+      <div class="pecas-card pecas-card-produto">
 
-  <div class="img-area">
-       {% if peca.imagem_principal and peca.imagem_principal.imagem %}
-       <img src="{{ peca.imagem_principal.imagem.url }}"
-           alt="{{ peca.nome }}"
-           loading="eager"
-           decoding="async">
-        {% else %}
-          <img src="{% static 'img/placeholder-produto.png' %}" alt="{{ peca.nome }}">
-        {% endif %}
-  </div>
+        <div class="img-area">
+          {% if peca.imagem_principal and peca.imagem_principal.imagem %}
+            <img src="{{ peca.imagem_principal.imagem.url }}"
+                alt="{{ peca.nome }}"
+                loading="lazy"
+                decoding="async">
+          {% else %}
+            <img src="{% static 'img/placeholder-produto.png' %}" alt="{{ peca.nome }}">
+          {% endif %}
+        </div>
 
         <div class="conteudo">
 
@@ -2442,36 +2408,17 @@ body {
     {% empty %}
       <p class="nenhum-produto">Nenhuma peça encontrada.</p>
     {% endfor %}
-
   </div>
 </div>
 
 <div id="paginacao-pecas">
   <div class="paginacao">
+    <button type="button" class="page-btn-pecas" id="pecas-prev">« Anterior</button>
+    <span class="page-atual" id="pecas-page-info">Página 1</span>
+    <button type="button" class="page-btn-pecas" id="pecas-next">Próxima »</button>
+  </div>
+</div>
 
-    {% if pecas_reposicao.has_previous %}
-      <a class="page-btn-pecas"
-         href="#"
-         data-page="{{ pecas_reposicao.previous_page_number }}">
-         « Anterior
-      </a>
-    {% endif %}
-
-    <span class="page-atual">
-      Página {{ pecas_reposicao.number }} de {{ pecas_reposicao.paginator.num_pages }}
-    </span>
-
-    {% if pecas_reposicao.has_next %}
-      <a class="page-btn-pecas"
-         href="#"
-         data-page="{{ pecas_reposicao.next_page_number }}">
-         Próxima »
-      </a>
-    {% endif %}
-
-
-        </div>
-    </div>
 </section>
 
 
@@ -2779,91 +2726,242 @@ body {
 
 
 <!-- ======= CONTATO ======= -->
-<section id="contato">
-  <div class="grid">
-    <div>
-      <h2>Contato</h2>
+<style>
+    .ls-loc-section {
+        background:
+            radial-gradient(circle at 10% 20%, rgba(230, 57, 70, 0.22), transparent 26%),
+            linear-gradient(135deg, #0d1b2e 0%, #16233a 100%);
+        color: #ffffff;
+        padding: 64px 24px;
+    }
 
-      <p><strong>Email:</strong>
-        <a href="mailto:comercial@lazersport.com.br">comercial@lazersport.com.br</a>
-      </p>
+    .ls-loc-inner {
+        max-width: 1180px;
+        margin: 0 auto;
+        display: grid;
+        grid-template-columns: 1fr 1.2fr;
+        gap: 40px;
+        align-items: center;
+    }
 
-      <p><strong>Telefone de Contato:</strong>
-        <a href="tel:+5511960563135">+55 11 96056-3135</a>
-        <!-- opcional: atalho para WhatsApp -->
-        <span style="margin-left:8px;">
-          • <a href="https://wa.me/5511960563135" target="_blank" rel="noopener"> WhatsApp | +55 11 96056-3135</a>
-        </span>
-      </p>
+    .ls-loc-card {
+        background: rgba(255, 255, 255, 0.07);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 30px;
+        padding: 38px;
+    }
 
-      <p><strong>Endereço:</strong>
-        Rua São Roque de Minas, 104 — Jardim Peri, São Paulo — SP | Cep 02679-110
-      </p>
+    .ls-loc-tag {
+        display: inline-block;
+        background: #E63946;
+        color: #fff;
+        border-radius: 999px;
+        padding: 8px 16px;
+        font-size: 0.78rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.6px;
+        margin-bottom: 18px;
+    }
+
+    .ls-loc-card h2 {
+        font-family: 'Poppins', sans-serif;
+        font-size: 2rem;
+        font-weight: 800;
+        margin-bottom: 16px;
+    }
+
+    .ls-loc-card > p {
+        color: rgba(255, 255, 255, 0.7);
+        line-height: 1.7;
+        margin-bottom: 26px;
+    }
+
+    .ls-loc-line {
+        display: flex;
+        gap: 14px;
+        padding: 16px 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .ls-loc-line:last-of-type { border-bottom: 0; }
+
+    .ls-loc-icon {
+        min-width: 42px;
+        height: 42px;
+        background: #E63946;
+        border-radius: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1rem;
+        flex-shrink: 0;
+    }
+
+    .ls-loc-line h5 {
+        font-family: 'Poppins', sans-serif;
+        font-weight: 700;
+        margin-bottom: 3px;
+        font-size: 0.98rem;
+    }
+
+    .ls-loc-line p, .ls-loc-line a {
+        color: rgba(255, 255, 255, 0.7);
+        text-decoration: none;
+        font-size: 0.92rem;
+    }
+
+    .ls-loc-line a:hover { color: #E63946; }
+
+    .ls-loc-routes {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 24px;
+    }
+
+    .ls-loc-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 13px 22px;
+        border-radius: 999px;
+        font-weight: 700;
+        text-decoration: none;
+        font-size: 0.92rem;
+        transition: transform 0.2s ease;
+    }
+
+    .ls-loc-btn:hover { transform: translateY(-2px); }
+    .ls-loc-btn-maps { background: #E63946; color: #fff; }
+    .ls-loc-btn-waze { background: #fff; color: #0d1b2e; }
+
+    .ls-loc-map {
+        background: #ffffff;
+        border-radius: 30px;
+        padding: 10px;
+        box-shadow: 0 30px 70px rgba(0, 0, 0, 0.35);
+        min-height: 420px;
+    }
+
+    .ls-loc-map iframe {
+        width: 100%;
+        height: 420px;
+        border: 0;
+        border-radius: 22px;
+        display: block;
+    }
+
+    .ls-loc-social {
+        max-width: 1180px;
+        margin: 40px auto 0;
+        text-align: center;
+    }
+
+    .ls-loc-social p {
+        color: rgba(255, 255, 255, 0.6);
+        margin-bottom: 16px;
+    }
+
+    @media (max-width: 900px) {
+        .ls-loc-inner { grid-template-columns: 1fr; }
+        .ls-loc-map, .ls-loc-map iframe { min-height: 320px; height: 320px; }
+    }
+</style>
+
+<section id="contato" class="ls-loc-section">
+
+    <div class="ls-loc-inner">
+
+        <div class="ls-loc-card">
+
+            <span class="ls-loc-tag">Localização</span>
+
+            <h2>Venha até a Lazer &amp; Sport.</h2>
+
+            <p>
+                Estamos em São Paulo, na zona norte, com rota pré-programada
+                pra facilitar sua visita, retirada ou atendimento presencial.
+            </p>
+
+            <div class="ls-loc-line">
+                <div class="ls-loc-icon"><i class="fa-solid fa-location-dot"></i></div>
+                <div>
+                    <h5>Endereço</h5>
+                    <p>Rua São Roque de Minas, 104 — Jardim Peri, São Paulo — SP, CEP 02679-110</p>
+                </div>
+            </div>
+
+            <div class="ls-loc-line">
+                <div class="ls-loc-icon"><i class="fa-solid fa-phone"></i></div>
+                <div>
+                    <h5>Telefone / WhatsApp</h5>
+                    <a href="https://wa.me/5511960563135" target="_blank" rel="noopener">+55 11 96056-3135</a>
+                </div>
+            </div>
+
+            <div class="ls-loc-line">
+                <div class="ls-loc-icon"><i class="fa-solid fa-envelope"></i></div>
+                <div>
+                    <h5>E-mail</h5>
+                    <a href="mailto:comercial@lazersport.com.br">comercial@lazersport.com.br</a>
+                </div>
+            </div>
+
+            <div class="ls-loc-routes">
+                <a
+                    href="https://www.google.com/maps/dir/?api=1&destination=Rua%20S%C3%A3o%20Roque%20de%20Minas%2C%20104%20-%20Jardim%20Peri%2C%20S%C3%A3o%20Paulo%20-%20SP%2C%2002679-110"
+                    target="_blank" rel="noopener" class="ls-loc-btn ls-loc-btn-maps"
+                >
+                    <i class="fa-solid fa-diamond-turn-right"></i> Rota no Google Maps
+                </a>
+
+                <a
+                    href="https://waze.com/ul?q=Rua%20S%C3%A3o%20Roque%20de%20Minas%2C%20104%20-%20Jardim%20Peri%2C%20S%C3%A3o%20Paulo%20-%20SP&navigate=yes"
+                    target="_blank" rel="noopener" class="ls-loc-btn ls-loc-btn-waze"
+                >
+                    <i class="fa-brands fa-waze"></i> Abrir no Waze
+                </a>
+            </div>
+
+        </div>
+
+        <div class="ls-loc-map">
+            <iframe
+                src="https://maps.google.com/maps?q=Rua%20S%C3%A3o%20Roque%20de%20Minas%2C%20104%20-%20Jardim%20Peri%20S%C3%A3o%20Paulo%20-%20SP%2002679-110&t=&z=15&ie=UTF8&iwloc=&output=embed"
+                loading="lazy"
+                referrerpolicy="no-referrer-when-downgrade"
+                allowfullscreen>
+            </iframe>
+        </div>
+
     </div>
 
-    <div>
-      <!-- iframe Google Maps apontando para o endereço real -->
-      <iframe
-        src="https://maps.google.com/maps?q=Rua%20S%C3%A3o%20Roque%20de%20Minas%2C%20104%20-%20Jardim%20Peri%20S%C3%A3o%20Paulo%20-%20SP%2002679-110&t=&z=15&ie=UTF8&iwloc=&output=embed"
-        width="100%"
-        height="350"
-        style="border:0; border-radius: 8px;"
-        allowfullscreen=""
-        loading="lazy"
-        referrerpolicy="no-referrer-when-downgrade">
-      </iframe>
+    <div class="ls-loc-social">
+        <p>Siga a Lazer &amp; Sport nas redes sociais</p>
+
+        <div class="social-icons">
+            <a href="https://www.instagram.com/lazersportbrinquedos" target="_blank" rel="noopener" aria-label="Instagram" class="instagram">
+                <i class="fa-brands fa-instagram"></i>
+            </a>
+
+            <a href="https://wa.me/5511960563135" target="_blank" rel="noopener" aria-label="WhatsApp" class="whatsapp">
+                <i class="fa-brands fa-whatsapp"></i>
+            </a>
+
+            <a href="https://www.facebook.com/LazerSportBrinquedos1" target="_blank" rel="noopener" aria-label="Facebook" class="facebook">
+                <i class="fa-brands fa-facebook"></i>
+            </a>
+
+            <a href="https://www.linkedin.com/company/brinquedos-lazer-sport" target="_blank" rel="noopener" aria-label="LinkedIn" class="linkedin">
+                <i class="fa-brands fa-linkedin"></i>
+            </a>
+
+            <a href="https://www.threads.net/@lazersportbrinquedos" target="_blank" rel="noopener" aria-label="Threads" class="threads">
+                <i class="fa-brands fa-threads"></i>
+            </a>
+        </div>
     </div>
-  </div>
-
-
-<!-- Redes sociais -->
-<div class="social-wrapper">
-  <p class="social-title">Siga a Lazer Sport nas redes sociais</p>
-
-  <div class="social-icons">
-    <a href="https://www.instagram.com/lazersportbrinquedos"
-       target="_blank"
-       rel="noopener"
-       aria-label="Instagram"
-       class="instagram">
-      <i class="fa-brands fa-instagram"></i>
-    </a>
-
-    <a href="https://wa.me/5511960563135"
-       target="_blank"
-       rel="noopener"
-       aria-label="WhatsApp"
-       class="whatsapp">
-      <i class="fa-brands fa-whatsapp"></i>
-    </a>
-
-    <a href="https://www.facebook.com/LazerSportBrinquedos1"
-       target="_blank"
-       rel="noopener"
-       aria-label="Facebook"
-       class="facebook">
-      <i class="fa-brands fa-facebook"></i>
-    </a>
-
-    <a href="https://www.linkedin.com/company/brinquedos-lazer-sport"
-       target="_blank"
-       rel="noopener"
-       aria-label="LinkedIn"
-       class="linkedin">
-      <i class="fa-brands fa-linkedin"></i>
-    </a>
-
-    <a href="https://www.threads.net/@lazersportbrinquedos"
-       target="_blank"
-       rel="noopener"
-       aria-label="Threads"
-       class="threads">
-      <i class="fa-brands fa-threads"></i>
-    </a>
-  </div>
-</div>
-
-
 
 </section>
 
@@ -3054,7 +3152,8 @@ function renderizarTodasEstrelas(root = document) {
 }
 
 /* ======================================================
-   🔄 AJAX PRODUTOS
+   🎛️ PRODUTOS — filtro/ordenação/paginação no navegador
+   (sem ida ao servidor: tudo já está no DOM, então é instantâneo)
 ====================================================== */
 function scrollParaProdutos() {
     const secao = document.getElementById('brinquedos');
@@ -3066,130 +3165,182 @@ function scrollParaProdutos() {
     });
 }
 
-let controllerProdutos = null;
-const cacheProdutos = new Map();   // chave: `${ordenar}|${page}`
-
-function setLoadingProdutos(on) {
-    const c = document.getElementById('produtos-container');
-    if (!c) return;
-    c.style.transition = 'opacity .15s ease';
-    c.style.opacity = on ? '0.45' : '1';
-    c.style.pointerEvents = on ? 'none' : '';
+function paraNumeroBR(valor) {
+    return Number((valor ?? '0').toString().replace(/\./g, '').replace(',', '.')) || 0;
 }
 
-function aplicarProdutos(htmlInterno, page, ordenar) {
-    const c = document.querySelector('#produtos-container');
-    if (!c) return;
-
-    c.innerHTML = htmlInterno;
-    setEstadoProdutosUrl(page, ordenar);
-    setLoadingProdutos(false);
-
-    // re-renderiza SÓ dentro do container novo (não a página toda)
-    renderizarTodasEstrelas(c);
-    renderizarMoedas(c);
-    scrollParaProdutos();
+function reanimarCard(card, atraso) {
+    const alvo = card.querySelector('.card-produto, .pecas-card') || card;
+    alvo.style.animation = 'none';
+    void alvo.offsetHeight; // força reflow pra poder reiniciar a animação
+    alvo.style.animationDelay = atraso + 's';
+    alvo.style.animation = '';
 }
 
-async function carregarProdutos(params = {}) {
-    const estadoAtual = getEstadoProdutosUrl();
-    const page = params.page || estadoAtual.page || 1;
-    const ordenar = params.ordenar || estadoAtual.ordenar || 'az';
-    const chave = `${ordenar}|${page}`;
+function inicializarProdutosClientSide() {
+    const grid = document.getElementById('grid-cards');
+    if (!grid) return;
 
-    // marca o filtro ativo na hora (feedback instantâneo)
+    const cards = Array.from(grid.querySelectorAll('.card-link'));
+    if (!cards.length) return;
+
+    const porPagina = 9;
+    let pagina = 1;
+    let ordem = 'az';
+
+    function ordenar() {
+        const copia = cards.slice();
+        copia.sort((a, b) => {
+            switch (ordem) {
+                case 'za':
+                    return b.dataset.nome.localeCompare(a.dataset.nome, 'pt-BR');
+                case 'melhor-avaliados':
+                    return paraNumeroBR(b.dataset.avaliacao) - paraNumeroBR(a.dataset.avaliacao)
+                        || a.dataset.nome.localeCompare(b.dataset.nome, 'pt-BR');
+                case 'custo-beneficio': {
+                    const scoreA = paraNumeroBR(a.dataset.avaliacao) / (paraNumeroBR(a.dataset.preco) + 0.01);
+                    const scoreB = paraNumeroBR(b.dataset.avaliacao) / (paraNumeroBR(b.dataset.preco) + 0.01);
+                    return scoreB - scoreA || a.dataset.nome.localeCompare(b.dataset.nome, 'pt-BR');
+                }
+                default:
+                    return a.dataset.nome.localeCompare(b.dataset.nome, 'pt-BR');
+            }
+        });
+        return copia;
+    }
+
+    function renderizar() {
+        const ordenados = ordenar();
+        const totalPaginas = Math.max(1, Math.ceil(ordenados.length / porPagina));
+        if (pagina > totalPaginas) pagina = totalPaginas;
+
+        const inicio = (pagina - 1) * porPagina;
+        const visiveis = new Set(ordenados.slice(inicio, inicio + porPagina));
+
+        let atraso = 0;
+        ordenados.forEach(card => {
+            if (visiveis.has(card)) {
+                card.style.display = '';
+                grid.appendChild(card);
+                reanimarCard(card, atraso);
+                atraso += 0.035;
+            } else {
+                card.style.display = 'none';
+            }
+        });
+
+        document.getElementById('prod-page-info').textContent =
+            `Página ${pagina} de ${totalPaginas}`;
+        document.getElementById('prod-prev').disabled = pagina <= 1;
+        document.getElementById('prod-next').disabled = pagina >= totalPaginas;
+
+        renderizarTodasEstrelas(grid);
+        renderizarMoedas(grid);
+        igualarAlturaCards();
+    }
+
     document.querySelectorAll('#filtros-bar .filtro-btn').forEach(btn => {
-        btn.classList.toggle('ativo', btn.dataset.order === ordenar);
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('#filtros-bar .filtro-btn').forEach(b => b.classList.remove('ativo'));
+            btn.classList.add('ativo');
+            ordem = btn.dataset.order;
+            pagina = 1;
+            renderizar();
+            scrollParaProdutos();
+        });
     });
 
-    // já buscou antes? aplica na hora, sem rede
-    if (cacheProdutos.has(chave)) {
-        aplicarProdutos(cacheProdutos.get(chave), page, ordenar);
-        return;
-    }
+    document.getElementById('prod-prev').addEventListener('click', () => {
+        if (pagina > 1) { pagina--; renderizar(); scrollParaProdutos(); }
+    });
 
-    setLoadingProdutos(true);
+    document.getElementById('prod-next').addEventListener('click', () => {
+        pagina++; renderizar(); scrollParaProdutos();
+    });
 
-    const url = new URL(window.location.href);
-    url.searchParams.set('ordenar', ordenar);
-    if (Number(page) > 1) url.searchParams.set('page', page);
-    else url.searchParams.delete('page');
-
-    if (controllerProdutos) controllerProdutos.abort();
-    controllerProdutos = new AbortController();
-
-    try {
-        const response = await fetch(url.toString(), {
-            signal: controllerProdutos.signal,
-            headers: { 'X-Requested-With': 'XMLHttpRequest' },
-            cache: 'no-store'
-        });
-        if (!response.ok) throw new Error('HTTP ' + response.status);
-
-        const html = await response.text();
-        const doc = new DOMParser().parseFromString(html, 'text/html');
-        const novo = doc.querySelector('#produtos-container');
-
-        if (novo) {
-            cacheProdutos.set(chave, novo.innerHTML);
-            aplicarProdutos(novo.innerHTML, page, ordenar);
-        }
-    } catch (e) {
-        if (e.name !== 'AbortError') console.error('Erro ao carregar produtos:', e);
-        setLoadingProdutos(false);
-    }
+    renderizar();
 }
 
 /* ======================================================
-   🔄 AJAX PEÇAS
+   🎛️ PEÇAS — filtro por categoria + paginação no navegador
 ====================================================== */
-async function carregarPecas(page = 1, categoria = "") {
-    const container = document.getElementById("pecas-container");
-    const paginacao = document.getElementById("paginacao-pecas");
+function scrollParaPecas() {
+    const secao = document.getElementById('pecas-section');
+    if (!secao) return;
 
-    if (!container || !paginacao) return;
+    window.scrollTo({
+        top: secao.getBoundingClientRect().top + window.scrollY - 80,
+        behavior: 'smooth'
+    });
+}
 
-    try {
-        const response = await fetch(
-            `/ajax/filtrar-pecas/?categoria=${encodeURIComponent(categoria)}&page_pecas=${page}`,
-            { cache: "no-store" }
+function inicializarPecasClientSide() {
+    const grid = document.getElementById('grid-pecas');
+    if (!grid) return;
+
+    const cards = Array.from(grid.querySelectorAll('.pecas-card-link'));
+    if (!cards.length) return;
+
+    const porPagina = 12;
+    let pagina = 1;
+    let categoriaAtiva = '';
+
+    function filtrados() {
+        if (!categoriaAtiva) return cards.slice();
+        return cards.filter(card =>
+            (card.dataset.categorias || '').split(',').includes(categoriaAtiva)
         );
+    }
 
-        if (!response.ok) {
-            throw new Error(`Erro HTTP ${response.status}`);
-        }
+    function renderizar() {
+        const lista = filtrados();
+        const totalPaginas = Math.max(1, Math.ceil(lista.length / porPagina));
+        if (pagina > totalPaginas) pagina = totalPaginas;
 
-        const html = await response.text();
+        const inicio = (pagina - 1) * porPagina;
+        const visiveis = new Set(lista.slice(inicio, inicio + porPagina));
 
-        const temp = document.createElement("div");
-        temp.innerHTML = html;
-
-        const novoContainer = temp.querySelector("#pecas-container");
-        const novaPaginacao = temp.querySelector("#paginacao-pecas");
-
-        if (novoContainer) {
-            container.innerHTML = novoContainer.innerHTML;
-        }
-
-        if (novaPaginacao) {
-            paginacao.innerHTML = novaPaginacao.innerHTML;
-        }
-
-        requestAnimationFrame(() => {
-            renderizarMoedas(container);
-
-            setTimeout(() => {
-                igualarAlturaGridPecas();
-
-                if (typeof ajustarGridResponsivo === 'function') {
-                    ajustarGridResponsivo();
-                }
-            }, 30);
+        let atraso = 0;
+        cards.forEach(card => {
+            if (visiveis.has(card)) {
+                card.style.display = '';
+                grid.appendChild(card);
+                reanimarCard(card, atraso);
+                atraso += 0.035;
+            } else {
+                card.style.display = 'none';
+            }
         });
 
-    } catch (e) {
-        console.error("Erro ao filtrar peças:", e);
+        document.getElementById('pecas-page-info').textContent =
+            `Página ${pagina} de ${totalPaginas}`;
+        document.getElementById('pecas-prev').disabled = pagina <= 1;
+        document.getElementById('pecas-next').disabled = pagina >= totalPaginas;
+
+        renderizarMoedas(grid);
+        igualarAlturaGridPecas();
     }
+
+    document.querySelectorAll('#filtros-peca .filtro-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('#filtros-peca .filtro-btn').forEach(b => b.classList.remove('ativo'));
+            btn.classList.add('ativo');
+            categoriaAtiva = btn.dataset.categoria || '';
+            pagina = 1;
+            renderizar();
+            scrollParaPecas();
+        });
+    });
+
+    document.getElementById('pecas-prev').addEventListener('click', () => {
+        if (pagina > 1) { pagina--; renderizar(); scrollParaPecas(); }
+    });
+
+    document.getElementById('pecas-next').addEventListener('click', () => {
+        pagina++; renderizar(); scrollParaPecas();
+    });
+
+    renderizar();
 }
 
 /* ======================================================
@@ -3201,6 +3352,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
     igualarAlturaCards();
     igualarAlturaGridPecas();
+
+    inicializarProdutosClientSide();
+    inicializarPecasClientSide();
 
     const track = document.getElementById("carousel-projetos");
     const prev = document.getElementById("prevProjetos");
@@ -3412,57 +3566,9 @@ document.addEventListener("DOMContentLoaded", () => {
 /* ======================================================
    📄 CLICK GLOBAL
 ====================================================== */
-document.addEventListener('click', function (e) {
-    const filtroProduto = e.target.closest('#filtros-bar .filtro-btn');
-    if (filtroProduto) {
-        e.preventDefault();
-
-        document.querySelectorAll('#filtros-bar .filtro-btn').forEach(b => {
-            b.classList.remove('ativo');
-        });
-        filtroProduto.classList.add('ativo');
-
-        carregarProdutos({
-            page: 1,
-            ordenar: filtroProduto.dataset.order
-        });
-        return;
-    }
-
-    const btnProduto = e.target.closest('.page-btn-produtos');
-    if (btnProduto) {
-        e.preventDefault();
-
-        const page = parseInt(btnProduto.dataset.page || '1', 10);
-        carregarProdutos({ page });
-        return;
-    }
-
-    const filtroPeca = e.target.closest('#filtros-peca .filtro-btn');
-    if (filtroPeca) {
-        e.preventDefault();
-
-        document.querySelectorAll('#filtros-peca .filtro-btn').forEach(b => {
-            b.classList.remove('ativo');
-        });
-        filtroPeca.classList.add('ativo');
-
-        const categoria = filtroPeca.dataset.categoria || "";
-        carregarPecas(1, categoria);
-        return;
-    }
-
-    const btnPeca = e.target.closest('.page-btn-pecas');
-    if (btnPeca) {
-        e.preventDefault();
-
-        const page = parseInt(btnPeca.dataset.page || '1', 10);
-        const filtroAtivo = document.querySelector('#filtros-peca .filtro-btn.ativo');
-        const categoria = filtroAtivo ? (filtroAtivo.dataset.categoria || "") : "";
-
-        carregarPecas(page, categoria);
-    }
-});
+// Filtros e paginação de brinquedos/peças agora são tratados direto em
+// inicializarProdutosClientSide() e inicializarPecasClientSide() --
+// cada botão já tem seu próprio listener, não precisa de delegação aqui.
 </script>
 
 {% endblock %}
