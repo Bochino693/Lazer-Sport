@@ -20,7 +20,7 @@ class BrinquedosSitemap(Sitemap):
     changefreq = "weekly"
 
     def items(self):
-        return Brinquedos.objects.all()
+        return Brinquedos.objects.only("id", "atualizado").order_by("id")
 
     def location(self, obj):
         return reverse("brinquedo_detalhe", args=[obj.id])
@@ -34,7 +34,7 @@ class CategoriasSitemap(Sitemap):
     changefreq = "weekly"
 
     def items(self):
-        return CategoriasBrinquedos.objects.all()
+        return CategoriasBrinquedos.objects.only("id", "atualizado").order_by("id")
 
     def location(self, obj):
         return reverse("categoria_detalhe", args=[obj.pk])
