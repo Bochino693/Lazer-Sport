@@ -134,14 +134,17 @@
 
 
     /* ======= MENU ======= */
-    nav {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: flex-end;
-      align-content: center;
-      gap: 4px 8px;
-      flex: 1 1 auto;
-      min-width: 0;
+    /* No desktop o menu vira dois grupos simétricos (mesma quantidade
+       de itens) nas laterais, com o login sempre centralizado entre
+       eles -- em vez de um bloco só que quebra de forma desigual. */
+    .nav-desktop {
+      display: none;
+    }
+
+    /* O #nav (painel off-canvas) só existe de verdade no mobile;
+       no desktop quem aparece são os dois grupos .nav-desktop. */
+    #nav {
+      display: none;
     }
 
     nav a {
@@ -231,15 +234,32 @@
       transition: all 0.3s ease;
     }
 
-    /* Com frases completas, o menu fica mais largo -- em telas menores
-       (mas ainda desktop) ele simplesmente quebra pra uma segunda linha
-       inteira, dentro do próprio cabeçalho. Nada fica cortado ou sai
-       da tela; o cabeçalho só cresce um pouco em altura. */
+    /* Desktop: login fixo e centralizado. Cada lado é uma grade FIXA
+       de 4 colunas -- assim os dois lados sempre formam exatamente
+       2 linhas (7 itens => 4+3, 6 itens => 4+2), simétricos entre si,
+       independente da largura da tela ou de quantos itens tem cada
+       lado. Nada de um lado ficar numa linha e o outro em duas. */
     @media (min-width: 769px) {
       header {
         padding: 10px 20px;
         flex-wrap: wrap;
+        justify-content: center;
         row-gap: 6px;
+      }
+
+      .nav-desktop {
+        display: grid;
+        grid-template-columns: repeat(4, 100px);
+        gap: 4px 8px;
+        flex-shrink: 0;
+      }
+
+      .nav-desktop-left {
+        justify-items: end;
+      }
+
+      .nav-desktop-right {
+        justify-items: start;
       }
     }
 
@@ -247,6 +267,7 @@
   .menu-toggle.active span:nth-child(1) {
     transform: rotate(45deg) translate(5px, 5px);
   }
+
 
   .menu-toggle.active span:nth-child(2) {
     opacity: 0;
@@ -455,6 +476,12 @@ nav a.btn-login {
     flex-shrink: 0;
     margin-left: 0;
     margin-right: 0;
+}
+
+@media (min-width: 769px) {
+  .user-area {
+    margin: 0 22px;
+  }
 }
 
 /* Container do dropdown */
@@ -1003,6 +1030,17 @@ nav a.btn-login {
 <header>
 
 
+  <!-- Menu (desktop) — metade dos itens à esquerda do login -->
+  <nav class="nav-desktop nav-desktop-left" aria-label="Menu principal">
+    <a href="{% url 'home' %}#">Home</a>
+    <a href="{% url 'home' %}#categorias-section">Categorias de Brinquedos</a>
+    <a href="{% url 'home' %}#promocoes-section">Promoções Especiais</a>
+    <a href="{% url 'home' %}#brinquedos">Brinquedos em Destaque</a>
+    <a href="{% url 'home' %}#manutencao">Solicitar Manutenção</a>
+    <a href="{% url 'home' %}#pecas">Catálogo de Produtos</a>
+    <a href="{% url 'home' %}#combos-section">Combos Promocionais</a>
+  </nav>
+
   <!-- Área do usuário -->
   <div class="user-area">
     {% if user.is_authenticated %}
@@ -1036,6 +1074,16 @@ nav a.btn-login {
     {% endif %}
   </div>
 
+  <!-- Menu (desktop) — metade dos itens à direita do login -->
+  <nav class="nav-desktop nav-desktop-right" aria-label="Menu principal (continuação)">
+    <a href="{% url 'eventos' %}#todos-eventos">Eventos Realizados</a>
+    <a href="{% url 'projetos' %}#todos-projetos">Projetos Sob Medida</a>
+    <a href="/loja/">Loja Online</a>
+    <a href="{% url 'estabelecimentos' %}#header">Nossos Parceiros</a>
+    <a href="{% url 'home' %}#contato">Nossa Localização</a>
+    <a href="{% url 'home' %}#clientes-section">Mapa de Clientes</a>
+  </nav>
+
   <!-- Menu toggle -->
   <div class="menu-toggle" id="menu-toggle" aria-label="Abrir menu">
     <span></span>
@@ -1043,7 +1091,7 @@ nav a.btn-login {
     <span></span>
   </div>
 
-  <!-- Navegação -->
+  <!-- Navegação (mobile — off-canvas, com TODOS os itens) -->
 <nav id="nav">
   <button type="button" class="nav-close" id="nav-close" aria-label="Fechar menu">
     <i class="fa-solid fa-xmark"></i>
@@ -1068,6 +1116,7 @@ nav a.btn-login {
 </header>
 
 <div class="nav-backdrop" id="nav-backdrop"></div>
+
 
 <div style="width: 100%; background: #f8fbff; border-bottom: 2px solid #004AAD; padding: 15px 0; display: flex; justify-content: center; align-items: center;">
     <div style="display: flex; align-items: center; gap: 20px; flex-wrap: wrap; justify-content: center;">
@@ -1498,7 +1547,7 @@ if (lsHeader) {
   // Controle de Link Ativo no Scroll
   document.addEventListener("DOMContentLoaded", () => {
       const sections = document.querySelectorAll("section[id]");
-      const menuLinks = document.querySelectorAll("#nav a");
+      const menuLinks = document.querySelectorAll("#nav a, .nav-desktop a");
 
       function updateActiveLink() {
         let scrollY = window.pageYOffset + 200;
@@ -1509,7 +1558,7 @@ if (lsHeader) {
 
           if (scrollY >= sectionTop && scrollY < sectionTop + sectionHeight) {
             menuLinks.forEach(link => link.classList.remove("active-link"));
-            const activeLink = document.querySelector(`#nav a[href$="#${sectionId}"]`);
+            const activeLink = document.querySelector(`#nav a[href$="#${sectionId}"], .nav-desktop a[href$="#${sectionId}"]`);
             if (activeLink) activeLink.classList.add("active-link");
           }
         });
