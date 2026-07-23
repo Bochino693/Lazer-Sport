@@ -224,6 +224,57 @@
     font-style: italic;
 }
 
+.loja-card-acoes {
+    margin-top: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.loja-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    padding: 10px 14px;
+    border: none;
+    border-radius: 10px;
+    font-family: 'Poppins', sans-serif;
+    font-size: 0.86rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, filter 0.2s ease;
+}
+
+.loja-btn:active {
+    transform: scale(0.97);
+}
+
+.loja-btn-carrinho {
+    background: linear-gradient(135deg, #004AAD, #007BFF);
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(0,74,173,0.25);
+}
+
+.loja-btn-carrinho:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 18px rgba(0,74,173,0.35);
+    filter: brightness(1.05);
+}
+
+.loja-btn-whatsapp {
+    background: #25D366;
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(37,211,102,0.3);
+}
+
+.loja-btn-whatsapp:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 18px rgba(37,211,102,0.4);
+    filter: brightness(1.05);
+}
+
 .loja-vazio {
     text-align: center;
     padding: 60px 20px;
@@ -239,11 +290,11 @@
 }
 </style>
 
-<nav class="loja-breadcrumb" aria-label="Breadcrumb">
+<div class="loja-breadcrumb" role="navigation" aria-label="Breadcrumb">
     <a href="{% url 'home' %}">Home</a>
     <span>›</span>
     <strong>Loja</strong>
-</nav>
+</div>
 
 <div class="loja-hero">
     <h1>Loja Lazer &amp; Sport</h1>
@@ -303,6 +354,24 @@
                     {% else %}
                         <span class="loja-card-sem-preco">Consulte o valor</span>
                     {% endif %}
+                </div>
+                <div class="loja-card-acoes">
+                    <button
+                        type="button"
+                        class="loja-btn loja-btn-carrinho"
+                        onclick="event.preventDefault(); event.stopPropagation(); adicionarAoCarrinho('{{ item.tipo }}', {{ item.id }});"
+                    >
+                        <i class="fa-solid fa-cart-plus" aria-hidden="true"></i>
+                        Adicionar ao carrinho
+                    </button>
+                    <button
+                        type="button"
+                        class="loja-btn loja-btn-whatsapp"
+                        onclick="abrirWhatsApp(event, '{{ item.titulo|escapejs }}')"
+                    >
+                        <i class="fa-brands fa-whatsapp" aria-hidden="true"></i>
+                        Falar com o vendedor
+                    </button>
                 </div>
             </div>
         </a>

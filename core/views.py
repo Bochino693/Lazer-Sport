@@ -656,6 +656,7 @@ class LojaView(View):
         for peca in pecas:
             imagem_obj = peca.imagem_principal
             itens.append({
+                'id': peca.id,
                 'tipo': 'peca',
                 'tipo_label': 'Peça de Reposição',
                 'titulo': peca.nome,
@@ -671,6 +672,7 @@ class LojaView(View):
         )
         for promo in promocoes:
             itens.append({
+                'id': promo.id,
                 'tipo': 'promocao',
                 'tipo_label': 'Promoção',
                 'titulo': promo.descricao,
@@ -686,6 +688,7 @@ class LojaView(View):
         combos = Combos.objects.filter(ativo=True).prefetch_related('brinquedos')
         for combo in combos:
             itens.append({
+                'id': combo.id,
                 'tipo': 'combo',
                 'tipo_label': 'Combo',
                 'titulo': combo.descricao,
@@ -700,6 +703,7 @@ class LojaView(View):
         )
         for brinquedo in brinquedos_na_loja:
             itens.append({
+                'id': brinquedo.id,
                 'tipo': 'brinquedo',
                 'tipo_label': 'Brinquedo',
                 'titulo': brinquedo.nome_brinquedo,

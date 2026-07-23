@@ -165,6 +165,8 @@
       justify-content: center;
       min-height: 40px;
       flex-shrink: 0;
+      user-select: none;
+      -webkit-user-drag: none;
       transition: color 0.25s var(--ease-out), transform 0.25s var(--ease-out);
     }
 
@@ -188,11 +190,11 @@
       content: '';
       position: absolute;
       bottom: -4px;
-      left: 50%;
+      left: 0;
       width: 0%;
       height: 2px;
       background: #E63946;
-      transition: width 0.3s var(--ease-out), left 0.3s var(--ease-out);
+      transition: width 0.3s var(--ease-out);
     }
 
     nav a:hover {
@@ -251,6 +253,7 @@
         flex: 1 1 auto;
         margin-left: 28px;
         min-width: 0;
+        user-select: none;
       }
     }
 
@@ -1635,6 +1638,26 @@ function mostrarToast(msg, erro = false, duracao = 3000) {
 
   toast.style.opacity = '1';
   setTimeout(() => toast.style.opacity = '0', duracao);
+}
+
+/* ================== WHATSAPP (global -- home.html também define a mesma
+   função no próprio bloco de conteúdo; deixando aqui também garante que
+   qualquer outra página, como a Loja, tenha o botão funcionando sem
+   precisar duplicar isso em cada template) ================== */
+if (typeof window.abrirWhatsApp !== 'function') {
+  window.abrirWhatsApp = function (event, nome) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const mensagem =
+      `Olá! 👋\n` +
+      `Gostaria de um orçamento para o item abaixo:\n\n` +
+      `🧸 Nome: ${nome}\n\n` +
+      `Fico no aguardo 😊`;
+
+    const url = `https://wa.me/5511960563135?text=${encodeURIComponent(mensagem)}`;
+    window.open(url, '_blank');
+  };
 }
 
 /* Detecta se a página foi carregada via botão "Voltar" (Cache) */
