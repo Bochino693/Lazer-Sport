@@ -289,11 +289,35 @@ class ImagensSiteAdmin(admin.ModelAdmin):
 # ========= MODELOS PRINCIPAIS =========
 @admin.register(Clientes)
 class ClientesAdmin(admin.ModelAdmin):
-    list_display = ('id', 'logo_cliente', 'ativo', 'criacao', 'atualizado')
-    list_filter = ('ativo',)
-    search_fields = ('id',)
+    list_display = (
+        'id', 'descricao_cliente', 'logo_cliente', 'cidade', 'estado',
+        'pais', 'exibir_no_mapa', 'ativo', 'criacao',
+    )
+    list_filter = ('ativo', 'exibir_no_mapa', 'pais', 'estado')
+    search_fields = ('id', 'descricao_cliente', 'cidade')
     readonly_fields = ('criacao', 'atualizado')
     ordering = ('-criacao',)
+    fieldsets = (
+        (None, {
+            'fields': ('descricao_cliente', 'logo_cliente', 'ativo')
+        }),
+        ('Localização no mapa', {
+            'fields': (
+                'cidade', 'estado', 'pais',
+                'latitude', 'longitude',
+                'site_cliente', 'exibir_no_mapa',
+            ),
+            'description': (
+                'Preencha latitude/longitude para o cliente aparecer no '
+                'mapa da seção "Clientes" do site. Dica: clique com o '
+                'botão direito no local certo no Google Maps e copie as '
+                'coordenadas exibidas.'
+            ),
+        }),
+        ('Datas', {
+            'fields': ('criacao', 'atualizado'),
+        }),
+    )
 
 
 @admin.register(CategoriasBrinquedos)

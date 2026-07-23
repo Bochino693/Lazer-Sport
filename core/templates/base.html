@@ -136,8 +136,9 @@
     /* ======= MENU ======= */
     nav {
       display: flex;
-      gap: 25px;
+      gap: clamp(8px, 1vw, 18px);
       align-items: center;
+      flex-wrap: nowrap;
     }
 
     nav a {
@@ -145,8 +146,14 @@
       text-decoration: none;
       font-weight: 500;
       position: relative;
-      padding: 8px 4px;
+      padding: 8px 3px;
+      font-size: clamp(0.8rem, 0.68rem + 0.4vw, 0.98rem);
+      white-space: nowrap;
       transition: color 0.25s var(--ease-out), transform 0.25s var(--ease-out);
+    }
+
+    nav a i.nav-icon {
+      display: none;
     }
 
     nav a::before {
@@ -210,51 +217,33 @@
       transition: all 0.3s ease;
     }
 
+    @media (max-width: 1240px) and (min-width: 769px) {
+      header { padding: 12px 16px; }
+
+      nav {
+        max-width: 54vw;
+        overflow-x: auto;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+        -webkit-mask-image: linear-gradient(to right, transparent 0, black 18px, black calc(100% - 18px), transparent 100%);
+        mask-image: linear-gradient(to right, transparent 0, black 18px, black calc(100% - 18px), transparent 100%);
+      }
+
+      nav::-webkit-scrollbar { display: none; }
+    }
+
 @media (max-width: 768px) {
-  nav {
-    position: absolute;
-    top: 70px;
-    right: 20px;
-    background: #111;
-    flex-direction: column;
-    gap: 16px;
-    padding: 20px;
-    border-radius: 12px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+  .menu-toggle.active span:nth-child(1) {
+    transform: rotate(45deg) translate(5px, 5px);
+  }
 
+  .menu-toggle.active span:nth-child(2) {
     opacity: 0;
-    visibility: hidden;
-    transform: translateY(-10px);
-    transition: all 0.3s ease;
   }
 
-  nav.active {
-    opacity: 1;
-    visibility: visible;
-    transform: translateY(0);
+  .menu-toggle.active span:nth-child(3) {
+    transform: rotate(-45deg) translate(6px, -6px);
   }
-
-  .menu-toggle span {
-  height: 3px;
-  width: 26px;
-  background: white;
-  margin: 4px 0;
-  border-radius: 5px;
-  transition: all 0.3s ease;
-}
-
-.menu-toggle.active span:nth-child(1) {
-  transform: rotate(45deg) translate(5px, 5px);
-}
-
-.menu-toggle.active span:nth-child(2) {
-  opacity: 0;
-}
-
-.menu-toggle.active span:nth-child(3) {
-  transform: rotate(-45deg) translate(6px, -6px);
-}
-
 }
 
     /* ======= PESQUISA ======= */
@@ -387,32 +376,6 @@
     }
 
     /* ======= RESPONSIVIDADE ======= */
-    @media (max-width: 768px) {
-      nav {
-        display: none;
-        flex-direction: column;
-        position: absolute;
-        background: #0056b3;
-        top: 65px;
-        left: 0;
-        width: 100%;
-        padding: 15px 0;
-        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
-      }
-
-      nav.active {
-        display: flex;
-      }
-
-      nav a {
-        padding: 12px 18px;
-        text-align: center;
-      }
-
-      .menu-toggle {
-        display: flex;
-      }
-    }
 
 /* ======= TÍTULOS CENTRALIZADOS ======= */
 .search-title {
@@ -471,43 +434,14 @@ nav a.btn-login {
 /* === ÁREA DO ÍCONE DO USUÁRIO === */
 .user-area {
     display: flex;
-    align-items: start;
-}
-
-/* Estilo compacto: ícone + texto em coluna */
-.user-icon {
-    display: flex;
-    flex-direction: column;
     align-items: center;
-    text-decoration: none;
-    color: white;
-    font-weight: 600;
-    gap: 4px;
-    margin-left: 15px;
 }
 
-/* Ícone */
-.user-icon i {
-    font-size: 28px;
-}
-
-/* Texto embaixo do ícone */
-.user-icon span {
-    font-size: 13px;
-    line-height: 1.1;
-    text-align: center;
-}
-
-/* Hover suave */
-.user-icon:hover {
-    color: #FFD700;
-}
-
-    /* Área do usuário alinhada à direita */
+/* Área do usuário alinhada à esquerda do header */
 .user-area {
     display: flex;
     align-items: center;
-    margin-left: 20px;   /* controla o quão à esquerda */
+    margin-left: 0;
     margin-right: 0;
 }
 
@@ -515,40 +449,76 @@ nav a.btn-login {
 .user-dropdown {
     position: relative;
     display: flex;
-    flex-direction: column;
     align-items: center;
 }
 
 .user-icon {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     align-items: center;
+    gap: 10px;
     text-decoration: none;
     color: white;
     font-weight: 600;
-    gap: 4px;
     cursor: pointer;
-    transition: color 0.25s var(--ease-out);
 }
 
-.user-icon i {
-    font-size: 26px;
+/* Selo/avatar circular — iniciais quando logado, ícone genérico quando não */
+.user-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 15px;
+    font-weight: 800;
     transition: transform 0.3s var(--ease-bounce);
 }
 
-.user-icon:hover {
+.user-avatar.autenticado {
+    background: linear-gradient(135deg, #FFD700, #ffb300);
+    color: #004AAD;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
+}
+
+.user-avatar.anonimo {
+    background: rgba(255, 255, 255, 0.14);
+    border: 1.5px solid rgba(255, 255, 255, 0.4);
+    color: #ffffff;
+    font-size: 16px;
+}
+
+.user-dropdown:hover .user-avatar {
+    transform: scale(1.08);
+}
+
+/* Texto ao lado do avatar — sempre em UMA linha, corta com reticências se for muito longo */
+.user-greeting {
+    font-size: 14px;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 130px;
+}
+
+.user-caret {
+    font-size: 10px;
+    opacity: 0.75;
+    transition: transform 0.25s var(--ease-out);
+}
+
+.user-dropdown:hover .user-caret {
+    transform: rotate(180deg);
+}
+
+.user-icon:hover .user-greeting {
     color: #FFD700;
 }
 
-.user-icon:hover i {
-    transform: scale(1.12) translateY(-1px);
-}
-
 /* === DROPDOWN MELHORADO === */
-.user-dropdown {
-    position: relative;
-}
-
 .dropdown-menu {
     position: absolute;
     top: 60px;
@@ -557,7 +527,7 @@ nav a.btn-login {
     color: #333;
     border-radius: 12px;
     box-shadow: 0 14px 32px rgba(0, 0, 0, 0.2);
-    width: 170px;
+    width: 210px;
     padding: 8px;
     overflow: hidden;
 
@@ -580,6 +550,33 @@ nav a.btn-login {
     opacity: 1;
     visibility: visible;
     transform: translateY(0) scale(1);
+}
+
+/* Cabeçalho de identificação dentro do dropdown (só aparece quando logado) */
+.dropdown-user-info {
+    padding: 10px 14px 12px;
+    margin-bottom: 6px;
+    border-bottom: 1px solid #eef2fa;
+}
+
+.dropdown-user-info strong {
+    display: block;
+    color: #0d1b2e;
+    font-size: 14px;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.dropdown-user-info span {
+    display: block;
+    color: #8a94a6;
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: 2px;
 }
 
 /* Links dentro do menu */
@@ -637,15 +634,6 @@ nav a.btn-login {
         font-size: 1.2rem;
     }
 
-  /* ===== MENU ===== */
-  nav {
-    gap: 0;
-  }
-
-  nav a {
-    font-size: 1rem;
-  }
-
   /* ===== BUSCA ===== */
   .search-box {
     flex-direction: column;
@@ -691,6 +679,125 @@ nav a.btn-login {
 
   .user-dropdown:hover .dropdown-menu {
     transform: translateY(0);
+  }
+
+  /* Deixa a saudação um pouco mais compacta no header mobile */
+  .user-greeting {
+    max-width: 92px;
+    font-size: 13px;
+  }
+}
+
+/* ======================================================
+   MENU MOBILE — PAINEL OFF-CANVAS
+   ====================================================== */
+.nav-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(3, 8, 20, 0.55);
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.35s var(--ease-out), visibility 0.35s;
+    z-index: 1998;
+}
+
+.nav-backdrop.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+.nav-close {
+    display: none;
+}
+
+@media (max-width: 768px) {
+  .menu-toggle {
+    display: flex;
+  }
+
+  nav#nav {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: min(80vw, 320px);
+    height: 100vh;
+    margin: 0;
+    background: linear-gradient(165deg, #0d1b2e, #142c4a);
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: 2px;
+    padding: 76px 18px 30px;
+    border-radius: 0;
+    box-shadow: -16px 0 40px rgba(0, 0, 0, 0.35);
+
+    transform: translateX(100%);
+    opacity: 1;
+    visibility: hidden;
+    transition: transform 0.4s var(--ease-out), visibility 0.4s;
+    z-index: 1999;
+    overflow-y: auto;
+  }
+
+  nav#nav.active {
+    transform: translateX(0);
+    visibility: visible;
+  }
+
+  nav#nav a {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 12px;
+    font-size: 0.98rem;
+    border-radius: 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+    white-space: normal;
+  }
+
+  nav#nav a::before,
+  nav#nav a::after {
+    display: none;
+  }
+
+  nav#nav a:hover,
+  nav#nav a:active {
+    background: rgba(255, 255, 255, 0.08);
+    transform: none;
+  }
+
+  nav#nav a i.nav-icon {
+    display: inline-flex;
+    width: 22px;
+    justify-content: center;
+    font-size: 1.02rem;
+    color: #FFD700;
+    flex-shrink: 0;
+  }
+
+  .nav-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    width: 40px;
+    height: 40px;
+    border: none;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+    font-size: 1.05rem;
+    cursor: pointer;
+    transition: background 0.25s var(--ease-out), transform 0.3s var(--ease-bounce);
+  }
+
+  .nav-close:hover {
+    background: #E63946;
+    transform: rotate(90deg);
   }
 }
 /* ===== FLOAT STACK (A PILHA) ===== */
@@ -883,10 +990,15 @@ nav a.btn-login {
     {% if user.is_authenticated %}
       <div class="user-dropdown">
         <a class="user-icon">
-          <i class="fa-solid fa-user"></i>
-          <span>Bem-vindo<br>{{ user.get_full_name }}</span>
+          <span class="user-avatar autenticado">{{ user.first_name|default:user.username|slice:":1"|upper }}</span>
+          <span class="user-greeting">Olá, {{ user.first_name|default:user.username }}</span>
+          <i class="fa-solid fa-chevron-down user-caret"></i>
         </a>
         <div class="dropdown-menu">
+          <div class="dropdown-user-info">
+            <strong>{{ user.get_full_name|default:user.username }}</strong>
+            <span>{{ user.email }}</span>
+          </div>
           <a href="{% url 'perfil' %}#perfil-box">🎯 Meu Perfil</a>
           <a href="{% url 'logout' %}#logout-box">🚪 Sair</a>
         </div>
@@ -894,8 +1006,9 @@ nav a.btn-login {
     {% else %}
       <div class="user-dropdown">
         <a class="user-icon">
-          <i class="fa-solid fa-user"></i>
-          <span>Entrar / Cadastro</span>
+          <span class="user-avatar anonimo"><i class="fa-solid fa-user"></i></span>
+          <span class="user-greeting">Entrar / Cadastro</span>
+          <i class="fa-solid fa-chevron-down user-caret"></i>
         </a>
         <div class="dropdown-menu">
          <a href="{% url 'login'  %}#login-box" >🔐 Fazer Login</a>
@@ -914,22 +1027,29 @@ nav a.btn-login {
 
   <!-- Navegação -->
 <nav id="nav">
-  <a href="{% url 'home' %}#">Home</a>
-  <a href="{% url 'home' %}#categorias-section">Categorias</a>
-  <a href="{% url 'home' %}#promocoes-section">Promoções</a>
-  <a href="{% url 'home' %}#brinquedos">Brinquedos</a>
-  <a href="{% url 'home' %}#manutencao">Manutenção</a>
-  <a href="{% url 'home' %}#pecas">Produtos</a>
-  <a href="{% url 'home' %}#combos-section">Combos</a>
-  <a href="{% url 'eventos' %}#todos-eventos">Eventos</a>
-  <a href="{% url 'projetos' %}#todos-projetos">Projetos</a>
-  <a href="/loja/">Loja</a>
-  <a href="{% url 'estabelecimentos' %}#header">Estabelecimento</a>
-  <a href="{% url 'home' %}#contato">Localização</a>
+  <button type="button" class="nav-close" id="nav-close" aria-label="Fechar menu">
+    <i class="fa-solid fa-xmark"></i>
+  </button>
+
+  <a href="{% url 'home' %}#"><i class="fa-solid fa-house nav-icon" aria-hidden="true"></i>Home</a>
+  <a href="{% url 'home' %}#categorias-section"><i class="fa-solid fa-shapes nav-icon" aria-hidden="true"></i>Categorias</a>
+  <a href="{% url 'home' %}#promocoes-section"><i class="fa-solid fa-tags nav-icon" aria-hidden="true"></i>Promoções</a>
+  <a href="{% url 'home' %}#brinquedos"><i class="fa-solid fa-gamepad nav-icon" aria-hidden="true"></i>Brinquedos</a>
+  <a href="{% url 'home' %}#manutencao"><i class="fa-solid fa-screwdriver-wrench nav-icon" aria-hidden="true"></i>Manutenção</a>
+  <a href="{% url 'home' %}#pecas"><i class="fa-solid fa-box-open nav-icon" aria-hidden="true"></i>Produtos</a>
+  <a href="{% url 'home' %}#combos-section"><i class="fa-solid fa-layer-group nav-icon" aria-hidden="true"></i>Combos</a>
+  <a href="{% url 'eventos' %}#todos-eventos"><i class="fa-solid fa-calendar-days nav-icon" aria-hidden="true"></i>Eventos</a>
+  <a href="{% url 'projetos' %}#todos-projetos"><i class="fa-solid fa-lightbulb nav-icon" aria-hidden="true"></i>Projetos</a>
+  <a href="/loja/"><i class="fa-solid fa-store nav-icon" aria-hidden="true"></i>Loja</a>
+  <a href="{% url 'estabelecimentos' %}#header"><i class="fa-solid fa-building nav-icon" aria-hidden="true"></i>Estabelecimento</a>
+  <a href="{% url 'home' %}#clientes-section"><i class="fa-solid fa-earth-americas nav-icon" aria-hidden="true"></i>Clientes</a>
+  <a href="{% url 'home' %}#contato"><i class="fa-solid fa-location-dot nav-icon" aria-hidden="true"></i>Localização</a>
 
 
   </nav>
 </header>
+
+<div class="nav-backdrop" id="nav-backdrop"></div>
 
 <div style="width: 100%; background: #f8fbff; border-bottom: 2px solid #004AAD; padding: 15px 0; display: flex; justify-content: center; align-items: center;">
     <div style="display: flex; align-items: center; gap: 20px; flex-wrap: wrap; justify-content: center;">
@@ -1300,13 +1420,50 @@ nav a.btn-login {
   });
 
   // Menu Hambúrguer
-/* ================== MENU ================== */
+/* ================== MENU OFF-CANVAS ================== */
 const menuToggle = document.getElementById('menu-toggle');
 const nav = document.getElementById('nav');
+const navBackdrop = document.getElementById('nav-backdrop');
+const navClose = document.getElementById('nav-close');
+
+function abrirMenuMobile() {
+  if (!nav) return;
+  nav.classList.add('active');
+  if (menuToggle) menuToggle.classList.add('active');
+  if (navBackdrop) navBackdrop.classList.add('active');
+  document.body.style.overflow = 'hidden';
+}
+
+function fecharMenuMobile() {
+  if (!nav) return;
+  nav.classList.remove('active');
+  if (menuToggle) menuToggle.classList.remove('active');
+  if (navBackdrop) navBackdrop.classList.remove('active');
+  document.body.style.overflow = '';
+}
 
 if (menuToggle && nav) {
   menuToggle.addEventListener('click', () => {
-    nav.classList.toggle('active');
+    nav.classList.contains('active') ? fecharMenuMobile() : abrirMenuMobile();
+  });
+}
+
+if (navClose) {
+  navClose.addEventListener('click', fecharMenuMobile);
+}
+
+if (navBackdrop) {
+  navBackdrop.addEventListener('click', fecharMenuMobile);
+}
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') fecharMenuMobile();
+});
+
+// Fecha o painel ao tocar em qualquer link do menu (mobile)
+if (nav) {
+  nav.querySelectorAll('a').forEach(link => {
+    link.addEventListener('click', fecharMenuMobile);
   });
 }
 

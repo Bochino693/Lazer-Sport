@@ -15,7 +15,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from .models import Brinquedos, CategoriasBrinquedos, Projetos, Eventos, ClientePerfil, Combos, Cupom, Promocoes, \
     TagsBrinquedos, ImagensSite, BrinquedosProjeto, Estabelecimentos, Manutencao, ManutencaoImagem, \
     BrinquedoClick, ComboClick, PromocaoClick, CategoriaClick, PecasReposicao, CategoriaPeca, \
-    ImagemProjetoBrinquedo, ImagemEvento
+    ImagemProjetoBrinquedo, ImagemEvento, Clientes
 
 import os
 from django.http import FileResponse, Http404
@@ -209,6 +209,31 @@ class HomeView(View):
             .order_by("nome")
         )
 
+        # Clientes com localização cadastrada, para o mapa da seção "Clientes"
+        clientes_com_mapa = (
+            Clientes.objects
+            .filter(
+                ativo=True,
+                exibir_no_mapa=True,
+                latitude__isnull=False,
+                longitude__isnull=False,
+            )
+        )
+
+        clientes_mapa = [
+            {
+                "nome": c.descricao_cliente or "Cliente Lazer & Sport",
+                "cidade": c.cidade or "",
+                "estado": c.estado or "",
+                "pais": c.pais or "Brasil",
+                "lat": float(c.latitude),
+                "lng": float(c.longitude),
+                "site": c.site_cliente or "",
+                "logo": c.logo_cliente.url if c.logo_cliente else "",
+            }
+            for c in clientes_com_mapa
+        ]
+
         context = {
             "categorias_brinquedos": categorias_brinquedos,
             "brinquedos_todos": brinquedos_todos,
@@ -233,6 +258,7 @@ class HomeView(View):
                 Estabelecimentos.objects.all()
             ),
             "imagens_site": imagens_site,
+            "clientes_mapa": clientes_mapa,
         }
 
         return render(
@@ -2978,3 +3004,4 @@ class SearchView(View):
             "total_resultados": len(resultados),
             "busca_realizada": bool(termo),
         })
+    

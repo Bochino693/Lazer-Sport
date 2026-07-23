@@ -131,12 +131,37 @@ class Clientes(Prime):
     descricao_cliente = models.CharField(max_length=120, null=True)
     logo_cliente = models.ImageField(upload_to='logo_clientes/', null=False, blank=False)
 
+    # --- Campos para exibição no mapa de clientes ---
+    cidade = models.CharField(max_length=100, blank=True, null=True)
+    estado = models.CharField(
+        max_length=2, blank=True, null=True,
+        help_text="Sigla da UF (ex: SP). Deixe em branco para clientes fora do Brasil."
+    )
+    pais = models.CharField(max_length=100, default="Brasil")
+    latitude = models.DecimalField(
+        max_digits=9, decimal_places=6, blank=True, null=True,
+        help_text="Ex: -23.550520. Clique com o botão direito no local no Google Maps para copiar."
+    )
+    longitude = models.DecimalField(
+        max_digits=9, decimal_places=6, blank=True, null=True,
+        help_text="Ex: -46.633308. Clique com o botão direito no local no Google Maps para copiar."
+    )
+    site_cliente = models.URLField(
+        blank=True, null=True,
+        help_text="Opcional: link do site/Instagram do cliente, exibido no popup do mapa."
+    )
+    exibir_no_mapa = models.BooleanField(
+        default=True,
+        help_text="Desmarque para manter o cliente cadastrado sem exibi-lo no mapa público."
+    )
+
     def __str__(self):
         return self.descricao_cliente
 
     class Meta:
         verbose_name = "Cliente"
         verbose_name_plural = "Clientes"
+        ordering = ['pais', 'estado', 'cidade', 'descricao_cliente']
 
 
 class CategoriasBrinquedos(Prime):
@@ -1071,3 +1096,4 @@ class CategoriaClick(Prime):
     class Meta:
         verbose_name = "Categoria Clicada"
         verbose_name_plural = "Categorias Clicadas"
+        

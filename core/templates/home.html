@@ -2983,6 +2983,317 @@ body {
     }
 </style>
 
+<!-- ======= CLIENTES (MAPA) ======= -->
+<style>
+    .clientes-section {
+        max-width: 1200px;
+        margin: 70px auto 0;
+        padding: 0 20px;
+    }
+
+    .clientes-header {
+        margin-bottom: 8px;
+    }
+
+    .clientes-subtitle {
+        color: #6c757d;
+        font-size: 0.95rem;
+        max-width: 640px;
+        margin-bottom: 24px;
+    }
+
+    .clientes-toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 18px;
+    }
+
+    .clientes-filtro {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        background: #fff;
+        border: 1px solid #e3e8f0;
+        border-radius: 999px;
+        padding: 8px 8px 8px 18px;
+        box-shadow: 0 6px 18px rgba(0, 74, 173, 0.08);
+        transition: box-shadow 0.3s var(--ease-out, ease);
+    }
+
+    .clientes-filtro:focus-within {
+        box-shadow: 0 8px 22px rgba(0, 74, 173, 0.18);
+    }
+
+    .clientes-filtro label {
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: #004AAD;
+        white-space: nowrap;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .clientes-filtro select {
+        border: none;
+        background: #f5f8ff;
+        border-radius: 999px;
+        padding: 8px 16px;
+        font-family: 'Poppins', sans-serif;
+        font-size: 0.88rem;
+        color: #2c3e50;
+        cursor: pointer;
+        outline: none;
+    }
+
+    .clientes-contador {
+        font-size: 0.85rem;
+        color: #6c757d;
+    }
+
+    .clientes-contador strong {
+        color: #004AAD;
+    }
+
+    .clientes-mapa-wrap {
+        position: relative;
+        border-radius: 24px;
+        overflow: hidden;
+        box-shadow: 0 20px 45px rgba(13, 27, 46, 0.14);
+        border: 1px solid #e3e8f0;
+    }
+
+    #mapa-clientes {
+        width: 100%;
+        height: 480px;
+        background: #eef3fb;
+    }
+
+    .clientes-vazio {
+        text-align: center;
+        color: #8a94a6;
+        padding: 40px 20px;
+        background: #fff;
+        border-radius: 24px;
+        border: 1px dashed #e3e8f0;
+    }
+
+    /* Pino customizado do mapa */
+    .cliente-marker {
+        background: transparent;
+        border: none;
+    }
+
+    .cliente-marker i {
+        font-size: 28px;
+        color: #E63946;
+        filter: drop-shadow(0 3px 5px rgba(0, 0, 0, 0.35));
+    }
+
+    /* Popup do Leaflet no estilo do site */
+    .leaflet-popup-content-wrapper {
+        border-radius: 14px;
+    }
+
+    .cliente-popup {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        min-width: 160px;
+    }
+
+    .cliente-popup img {
+        width: 40px;
+        height: 40px;
+        object-fit: contain;
+        border-radius: 8px;
+        flex-shrink: 0;
+        background: #f5f8ff;
+    }
+
+    .cliente-popup h4 {
+        font-size: 0.92rem;
+        color: #0d1b2e;
+        margin-bottom: 2px;
+    }
+
+    .cliente-popup span {
+        font-size: 0.78rem;
+        color: #6c757d;
+    }
+
+    .cliente-popup a {
+        display: inline-block;
+        margin-top: 4px;
+        font-size: 0.78rem;
+        color: #007BFF;
+        font-weight: 700;
+        text-decoration: none;
+    }
+
+    .cliente-popup a:hover {
+        text-decoration: underline;
+    }
+
+    @media (max-width: 575px) {
+        .clientes-toolbar { flex-direction: column; align-items: stretch; }
+        #mapa-clientes { height: 360px; }
+    }
+</style>
+
+<section id="clientes-section" class="clientes-section">
+
+    <div class="clientes-header">
+        <span class="ls-showcase-tag">Presença nacional e internacional</span><br>
+        <h2 class="titulo-eventos">Onde nossos clientes estão</h2>
+    </div>
+
+    <p class="clientes-subtitle">
+        Fábricas, quiosques, shoppings e parques que já confiam na Lazer &amp; Sport,
+        espalhados pelo Brasil e também fora dele. Use o filtro para explorar por cidade.
+    </p>
+
+    {% if clientes_mapa %}
+    <div class="clientes-toolbar">
+        <div class="clientes-filtro">
+            <label for="filtro-cidade-cliente"><i class="fa-solid fa-filter"></i> Cidade</label>
+            <select id="filtro-cidade-cliente">
+                <option value="todas">Todas as cidades</option>
+            </select>
+        </div>
+        <span class="clientes-contador" id="clientes-contador"></span>
+    </div>
+
+    <div class="clientes-mapa-wrap">
+        <div id="mapa-clientes"></div>
+    </div>
+    {% else %}
+    <p class="clientes-vazio">
+        Em breve, o mapa com todos os clientes atendidos pela Lazer &amp; Sport.
+    </p>
+    {% endif %}
+
+</section>
+
+{% if clientes_mapa %}
+{{ clientes_mapa|json_script:"dados-clientes-mapa" }}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+(function () {
+    const dados = JSON.parse(document.getElementById('dados-clientes-mapa').textContent);
+    if (!dados.length) return;
+
+    const mapa = L.map('mapa-clientes', { scrollWheelZoom: false });
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 18,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>'
+    }).addTo(mapa);
+
+    const iconeCliente = L.divIcon({
+        className: 'cliente-marker',
+        html: '<i class="fa-solid fa-location-dot"></i>',
+        iconSize: [30, 30],
+        iconAnchor: [15, 28],
+        popupAnchor: [0, -26],
+    });
+
+    let marcadores = [];
+
+    function escapeHTML(texto) {
+        const div = document.createElement('div');
+        div.textContent = texto || '';
+        return div.innerHTML;
+    }
+
+    function criarPopup(c) {
+        const nome = escapeHTML(c.nome);
+        const logo = c.logo
+            ? `<img src="${c.logo}" alt="${nome}">`
+            : `<div style="width:40px;height:40px;border-radius:8px;background:#E3F2FD;display:flex;align-items:center;justify-content:center;color:#007BFF;font-weight:800;">${nome.charAt(0).toUpperCase()}</div>`;
+
+        const local = escapeHTML([c.cidade, c.estado].filter(Boolean).join(' - ') || c.pais);
+        const link = c.site
+            ? `<a href="${escapeHTML(c.site)}" target="_blank" rel="noopener">Visitar site <i class="fa-solid fa-arrow-up-right-from-square"></i></a>`
+            : '';
+
+        return `
+            <div class="cliente-popup">
+                ${logo}
+                <div>
+                    <h4>${nome}</h4>
+                    <span>${local}</span><br>
+                    ${link}
+                </div>
+            </div>
+        `;
+    }
+
+    function renderizarMarcadores(lista) {
+        marcadores.forEach(m => mapa.removeLayer(m));
+        marcadores = [];
+
+        lista.forEach(c => {
+            const marcador = L.marker([c.lat, c.lng], { icon: iconeCliente })
+                .bindPopup(criarPopup(c));
+            marcador.addTo(mapa);
+            marcadores.push(marcador);
+        });
+
+        const contador = document.getElementById('clientes-contador');
+        if (contador) {
+            contador.innerHTML = `<strong>${lista.length}</strong> cliente${lista.length === 1 ? '' : 's'} no mapa`;
+        }
+
+        if (lista.length) {
+            const grupo = L.featureGroup(marcadores);
+            mapa.fitBounds(grupo.getBounds().pad(0.25));
+        } else {
+            mapa.setView([-14.235, -51.925], 4);
+        }
+    }
+
+    // Popula o filtro de cidades a partir dos dados reais (Brasil e exterior)
+    const selectCidade = document.getElementById('filtro-cidade-cliente');
+    if (selectCidade) {
+        const cidades = [...new Set(
+            dados.map(c => c.cidade).filter(Boolean)
+        )].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+
+        cidades.forEach(cidade => {
+            const opt = document.createElement('option');
+            opt.value = cidade;
+            opt.textContent = cidade;
+            selectCidade.appendChild(opt);
+        });
+
+        selectCidade.addEventListener('change', () => {
+            const valor = selectCidade.value;
+            const filtrados = valor === 'todas'
+                ? dados
+                : dados.filter(c => c.cidade === valor);
+            renderizarMarcadores(filtrados);
+        });
+    }
+
+    renderizarMarcadores(dados);
+
+    // Só ativa o zoom por scroll quando o usuário clica no mapa
+    // (evita "sequestrar" o scroll da página ao passar o mouse por cima)
+    mapa.on('click', () => mapa.scrollWheelZoom.enable());
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('#mapa-clientes')) {
+            mapa.scrollWheelZoom.disable();
+        }
+    });
+})();
+</script>
+{% endif %}
+
 <section id="contato" class="ls-loc-section">
 
     <div class="ls-loc-inner">
