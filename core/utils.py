@@ -228,3 +228,4 @@ def calcular_frete_por_cep(cep_cliente):
     print("FRETE:", valor_frete)
 
     return valor_frete, distancia
+
