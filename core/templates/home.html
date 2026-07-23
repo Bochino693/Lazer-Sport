@@ -3190,8 +3190,8 @@ body {
 
     .pino-gota {
         position: relative;
-        width: 34px;
-        height: 34px;
+        width: 46px;
+        height: 46px;
     }
 
     .pino-gota-corpo {
@@ -3215,9 +3215,14 @@ body {
     }
 
     .pino-gota-conteudo img {
-        width: 16px;
-        height: 16px;
+        width: 24px;
+        height: 24px;
         object-fit: contain;
+    }
+
+    .pino-gota-conteudo i {
+        font-size: 20px;
+        color: #fff;
     }
 
     .cliente-marker .pino-gota-corpo {
@@ -3225,20 +3230,19 @@ body {
     }
 
     .fabrica-marker .pino-gota-corpo {
-        width: 40px;
-        height: 40px;
+        width: 50px;
+        height: 50px;
         background: linear-gradient(135deg, #ff6b6b, #E63946);
         animation: pulso-fabrica-gota 2.4s ease-in-out infinite;
     }
 
     .fabrica-marker .pino-gota {
-        width: 40px;
-        height: 40px;
+        width: 50px;
+        height: 50px;
     }
 
-    .fabrica-marker .pino-gota-conteudo img {
-        width: 20px;
-        height: 20px;
+    .fabrica-marker .pino-gota-conteudo i {
+        font-size: 22px;
     }
 
     .cliente-marker:hover .pino-gota-corpo,
@@ -3490,6 +3494,10 @@ body {
     // diferentes, deixa o mapa visualmente uniforme).
     const LOGO_CLIENTE_PADRAO = "{% static 'images/logoo.png' %}";
 
+    // Categorias/produtos fixas, iguais pro popup de todo cliente --
+    // não vem do banco, é hard coded aqui mesmo.
+    const CATEGORIAS_PADRAO = ['Kid Play', 'Brinquedão', 'Trampolins', 'Eletrônicos'];
+
     function criarIconeCliente(c) {
         return L.divIcon({
             className: 'cliente-marker',
@@ -3499,9 +3507,9 @@ body {
                     <span class="pino-gota-conteudo"><img src="${LOGO_CLIENTE_PADRAO}" alt=""></span>
                 </span>
             `,
-            iconSize: [34, 34],
-            iconAnchor: [17, 34],
-            popupAnchor: [0, -30],
+            iconSize: [46, 46],
+            iconAnchor: [23, 46],
+            popupAnchor: [0, -42],
         });
     }
 
@@ -3510,12 +3518,12 @@ body {
         html: `
             <span class="pino-gota">
                 <span class="pino-gota-corpo"></span>
-                <span class="pino-gota-conteudo"><img src="${fabrica ? fabrica.logo : ''}" alt=""></span>
+                <span class="pino-gota-conteudo"><i class="fa-solid fa-industry" aria-hidden="true"></i></span>
             </span>
         `,
-        iconSize: [40, 40],
-        iconAnchor: [20, 40],
-        popupAnchor: [0, -36],
+        iconSize: [50, 50],
+        iconAnchor: [25, 50],
+        popupAnchor: [0, -46],
     });
 
     let marcadoresClientes = [];
@@ -3556,12 +3564,9 @@ body {
             ? `<a href="${escapeHTML(c.site)}" target="_blank" rel="noopener"><i class="fa-brands fa-instagram"></i> Visitar Instagram</a>`
             : '';
 
-        const tags = c.categorias
-            ? `<div class="cliente-popup-tags">${
-                c.categorias.split('-').map(t => t.trim()).filter(Boolean)
-                    .map(t => `<span>${escapeHTML(t)}</span>`).join('')
-              }</div>`
-            : '';
+        const tags = `<div class="cliente-popup-tags">${
+            CATEGORIAS_PADRAO.map(t => `<span>${escapeHTML(t)}</span>`).join('')
+          }</div>`;
 
         return `
             <div class="cliente-popup">
