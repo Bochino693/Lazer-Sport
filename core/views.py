@@ -1077,6 +1077,26 @@ class ClienteAdminView(AdminOnlyMixin, View):
             messages.success(request, f"Cliente '{nome}' excluído com sucesso.")
             return redirect("clientes_admin")
 
+        if action == "recalcular":
+            cliente = get_object_or_404(Clientes, pk=request.POST.get("id"))
+            cliente.latitude = None
+            cliente.longitude = None
+            cliente.save()
+
+            if cliente.latitude and cliente.longitude:
+                messages.success(
+                    request,
+                    f"'{cliente.descricao_cliente}': localização recalculada -- "
+                    f"{cliente.latitude}, {cliente.longitude}."
+                )
+            else:
+                messages.warning(
+                    request,
+                    f"'{cliente.descricao_cliente}': não foi possível localizar "
+                    f"automaticamente. Confira o CEP/cidade cadastrados."
+                )
+            return redirect("clientes_admin")
+
         cliente_id = request.POST.get("id")
         cliente = get_object_or_404(Clientes, pk=cliente_id) if cliente_id else Clientes()
 

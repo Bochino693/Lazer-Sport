@@ -340,6 +340,15 @@
                 </button>
             </div>
 
+            <form method="post" style="margin-top:8px;">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="recalcular">
+                <input type="hidden" name="id" value="{{ cliente.id }}">
+                <button type="submit" class="btn-editar-cliente" style="width:100%; background:#e7f1ff; color:#004AAD;">
+                    🔄 Recalcular localização
+                </button>
+            </form>
+
             <form method="post" style="margin-top:8px;" onsubmit="return confirm('Excluir este cliente? Isso não pode ser desfeito.');">
                 {% csrf_token %}
                 <input type="hidden" name="action" value="delete">
