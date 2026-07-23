@@ -1114,7 +1114,9 @@ class ClienteAdminView(AdminOnlyMixin, View):
             (getattr(cliente, campo) or "") != (endereco_antigo[campo] or "")
             for campo in campos_endereco
         )
-        if endereco_mudou:
+        forcar_geocode = request.POST.get("forcar_geocode") == "on"
+
+        if endereco_mudou or forcar_geocode:
             cliente.latitude = None
             cliente.longitude = None
 

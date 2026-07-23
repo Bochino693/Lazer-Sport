@@ -3190,8 +3190,8 @@ body {
 
     .pino-gota {
         position: relative;
-        width: 46px;
-        height: 46px;
+        width: 56px;
+        height: 56px;
     }
 
     .pino-gota-corpo {
@@ -3215,37 +3215,42 @@ body {
     }
 
     .pino-gota-conteudo img {
-        width: 24px;
-        height: 24px;
+        width: 30px;
+        height: 30px;
         object-fit: contain;
     }
 
     .pino-gota-conteudo i {
-        font-size: 20px;
+        font-size: 24px;
         color: #fff;
     }
 
     .cliente-marker .pino-gota-corpo {
         background: linear-gradient(135deg, #4aa3ff, #004AAD);
+        box-shadow: 0 6px 16px rgba(0, 74, 173, 0.55);
     }
 
     .fabrica-marker .pino-gota-corpo {
-        width: 50px;
-        height: 50px;
+        width: 62px;
+        height: 62px;
         background: linear-gradient(135deg, #ff6b6b, #E63946);
         animation: pulso-fabrica-gota 2.4s ease-in-out infinite;
     }
 
     .fabrica-marker .pino-gota {
-        width: 50px;
-        height: 50px;
+        width: 62px;
+        height: 62px;
     }
 
     .fabrica-marker .pino-gota-conteudo i {
-        font-size: 22px;
+        font-size: 28px;
     }
 
-    .cliente-marker:hover .pino-gota-corpo,
+    .cliente-marker:hover .pino-gota-corpo {
+        transform: rotate(-45deg) scale(1.18);
+        box-shadow: 0 10px 22px rgba(0, 74, 173, 0.65);
+    }
+
     .fabrica-marker:hover .pino-gota-corpo {
         transform: rotate(-45deg) scale(1.18);
         box-shadow: 0 10px 20px rgba(0, 0, 0, 0.45);
@@ -3507,9 +3512,9 @@ body {
                     <span class="pino-gota-conteudo"><img src="${LOGO_CLIENTE_PADRAO}" alt=""></span>
                 </span>
             `,
-            iconSize: [46, 46],
-            iconAnchor: [23, 46],
-            popupAnchor: [0, -42],
+            iconSize: [56, 56],
+            iconAnchor: [28, 56],
+            popupAnchor: [0, -52],
         });
     }
 
@@ -3521,9 +3526,9 @@ body {
                 <span class="pino-gota-conteudo"><i class="fa-solid fa-industry" aria-hidden="true"></i></span>
             </span>
         `,
-        iconSize: [50, 50],
-        iconAnchor: [25, 50],
-        popupAnchor: [0, -46],
+        iconSize: [62, 62],
+        iconAnchor: [31, 62],
+        popupAnchor: [0, -58],
     });
 
     let marcadoresClientes = [];
@@ -3661,18 +3666,15 @@ body {
 
     renderizarClientes(clientesDados);
 
-    // Só ativa o zoom por scroll quando o usuário clica no mapa
-    // (evita "sequestrar" o scroll da página ao passar o mouse por cima)
+    // Zoom por scroll fica sempre desligado -- nada de ativar/desativar
+    // ao clicar (isso causava comportamento inconsistente). Pra dar
+    // zoom: os botões +/- (padrão do Leaflet, sempre visíveis) ou
+    // duplo clique. Simples e sem susto nenhum de "sequestrar" o
+    // scroll da página.
     mapa.on('click', () => {
-        mapa.scrollWheelZoom.enable();
         if (marcadorPopupFixado) {
             marcadorPopupFixado.closePopup();
             marcadorPopupFixado = null;
-        }
-    });
-    document.addEventListener('click', (e) => {
-        if (!e.target.closest('#mapa-clientes')) {
-            mapa.scrollWheelZoom.disable();
         }
     });
 })();
