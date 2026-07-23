@@ -2,9 +2,9 @@
 {% load static %}
 {% load humanize %}
 
-{% block title %}Lazer & Sport Brinquedos | Fábrica de Brinquedos para Fliperama, Parques e Shoppings{% endblock %}
+{% block title %}Lazer e Sport Brinquedos | Fábrica de Brinquedos para Fliperama, Parques e Shoppings{% endblock %}
 
-{% block meta_description %}Lazer & Sport Brinquedos: fábrica e loja de brinquedos mecânicos, eletrônicos e simuladores para shoppings, quiosques e parques. Peças de reposição e orçamento sob medida.{% endblock %}
+{% block meta_description %}Lazer e Sport Brinquedos: fábrica e loja de brinquedos mecânicos, eletrônicos e simuladores para shoppings, quiosques e parques. Peças de reposição e orçamento sob medida.{% endblock %}
 
 {% block content %}
 
@@ -3178,16 +3178,56 @@ body {
         border: 1px dashed #e3e8f0;
     }
 
-    /* Pino customizado do mapa (clientes) */
+    /* Pino customizado do mapa (clientes) -- círculo com a LOGO real do
+       cliente + "rabinho" apontando pro local exato, como um pin de mapa
+       de verdade. Borda vermelha pra contrastar com o dourado da fábrica. */
     .cliente-marker {
         background: transparent;
         border: none;
     }
 
-    .cliente-marker i {
-        font-size: 28px;
+    .cliente-pino-wrap {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: #fff;
+        border: 3px solid #E63946;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35);
+        overflow: hidden;
+        position: relative;
+        transition: transform 0.2s ease;
+    }
+
+    .cliente-marker:hover .cliente-pino-wrap {
+        transform: scale(1.12);
+    }
+
+    .cliente-pino-wrap::after {
+        content: '';
+        position: absolute;
+        bottom: -7px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 0;
+        height: 0;
+        border-left: 6px solid transparent;
+        border-right: 6px solid transparent;
+        border-top: 8px solid #E63946;
+    }
+
+    .cliente-pino-wrap img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .cliente-pino-inicial {
+        font-weight: 800;
+        font-size: 15px;
         color: #E63946;
-        filter: drop-shadow(0 3px 5px rgba(0, 0, 0, 0.35));
     }
 
     /* Pino ESPECIAL da fábrica -- maior, dourado, com anel pulsando
@@ -3441,13 +3481,30 @@ body {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>'
     }).addTo(mapa);
 
-    const iconeCliente = L.divIcon({
-        className: 'cliente-marker',
-        html: '<i class="fa-solid fa-location-dot"></i>',
-        iconSize: [30, 30],
-        iconAnchor: [15, 28],
-        popupAnchor: [0, -26],
-    });
+    function escapeHTML(texto) {
+        const div = document.createElement('div');
+        div.textContent = texto || '';
+        return div.innerHTML;
+    }
+
+    // Cada cliente ganha o próprio pino, com a logo dele -- não é mais
+    // um ícone genérico igual pra todo mundo. Se por algum motivo o
+    // cliente não tiver logo, cai numa inicial (defensivo; na prática
+    // logo é obrigatória no cadastro).
+    function criarIconeCliente(c) {
+        const nome = escapeHTML(c.nome);
+        const conteudo = c.logo
+            ? `<img src="${c.logo}" alt="${nome}">`
+            : `<span class="cliente-pino-inicial">${nome.charAt(0).toUpperCase()}</span>`;
+
+        return L.divIcon({
+            className: 'cliente-marker',
+            html: `<span class="cliente-pino-wrap">${conteudo}</span>`,
+            iconSize: [36, 44],
+            iconAnchor: [18, 42],
+            popupAnchor: [0, -38],
+        });
+    }
 
     const iconeFabrica = L.divIcon({
         className: 'fabrica-marker',
@@ -3459,12 +3516,6 @@ body {
 
     let marcadoresClientes = [];
     let marcadorFabrica = null;
-
-    function escapeHTML(texto) {
-        const div = document.createElement('div');
-        div.textContent = texto || '';
-        return div.innerHTML;
-    }
 
     function criarPopupCliente(c) {
         const nome = escapeHTML(c.nome);
@@ -3511,7 +3562,7 @@ body {
         marcadoresClientes = [];
 
         lista.forEach(c => {
-            const marcador = L.marker([c.lat, c.lng], { icon: iconeCliente })
+            const marcador = L.marker([c.lat, c.lng], { icon: criarIconeCliente(c) })
                 .bindPopup(criarPopupCliente(c));
             marcador.addTo(mapa);
             marcadoresClientes.push(marcador);
