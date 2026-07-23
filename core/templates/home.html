@@ -3142,6 +3142,29 @@ body {
         .clientes-toolbar { flex-direction: column; align-items: stretch; }
         #mapa-clientes { height: 360px; }
     }
+
+    /* Lista de clientes em texto puro (chips), visível abaixo do mapa */
+    .clientes-seo-lista {
+        list-style: none;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin: 22px 0 0;
+        padding: 0;
+    }
+
+    .clientes-seo-lista li {
+        background: #f5f8ff;
+        border: 1px solid #e3e8f0;
+        border-radius: 999px;
+        padding: 8px 16px;
+        font-size: 0.82rem;
+        color: #4a4a4a;
+    }
+
+    .clientes-seo-lista strong {
+        color: #004AAD;
+    }
 </style>
 
 <section id="clientes-section" class="clientes-section">
@@ -3170,6 +3193,18 @@ body {
     <div class="clientes-mapa-wrap">
         <div id="mapa-clientes"></div>
     </div>
+
+    <!-- Lista em HTML puro (não depende de JS) -- reforça "Lazer & Sport"
+         associado a cada cidade/cliente pros mecanismos de busca, e serve
+         de referência pronta pra cadastrar as mesmas áreas de atendimento
+         no Google Business Profile. -->
+    <ul class="clientes-seo-lista">
+        {% for cliente in clientes_mapa %}
+        <li>
+            <strong>Lazer &amp; Sport</strong> em {{ cliente.cidade }}{% if cliente.estado %}/{{ cliente.estado }}{% endif %}{% if cliente.pais != "Brasil" %}, {{ cliente.pais }}{% endif %} — {{ cliente.nome }}
+        </li>
+        {% endfor %}
+    </ul>
     {% else %}
     <p class="clientes-vazio">
         Em breve, o mapa com todos os clientes atendidos pela Lazer &amp; Sport.
@@ -3179,8 +3214,22 @@ body {
 </section>
 
 {% if clientes_mapa %}
+<script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@type": "LocalBusiness",
+    "name": "Lazer & Sport Brinquedos",
+    "url": "https://www.lazersport.com.br{% url 'home' %}",
+    "areaServed": [
+        {% for cidade in cidades_atendidas %}
+        {"@type": "City", "name": "{{ cidade|escapejs }}"}{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ]
+}
+</script>
 {{ clientes_mapa|json_script:"dados-clientes-mapa" }}
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script>
 (function () {
@@ -3226,7 +3275,7 @@ body {
                 ${logo}
                 <div>
                     <h4>${nome}</h4>
-                    <span>${local}</span><br>
+                    <span class="cliente-popup-marca">Lazer &amp; Sport em ${local}</span><br>
                     ${link}
                 </div>
             </div>

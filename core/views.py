@@ -234,6 +234,15 @@ class HomeView(View):
             for c in clientes_com_mapa
         ]
 
+        # Lista única de cidades atendidas -- usada tanto no schema.org
+        # (areaServed) quanto na lista de chips visível, pra reforçar
+        # "Lazer & Sport" associado a cada cidade (bom pra SEO local e
+        # serve de referência pronta pra replicar nas áreas de
+        # atendimento do Google Business Profile).
+        cidades_atendidas = sorted({
+            c["cidade"] for c in clientes_mapa if c["cidade"]
+        })
+
         context = {
             "categorias_brinquedos": categorias_brinquedos,
             "brinquedos_todos": brinquedos_todos,
@@ -259,6 +268,7 @@ class HomeView(View):
             ),
             "imagens_site": imagens_site,
             "clientes_mapa": clientes_mapa,
+            "cidades_atendidas": cidades_atendidas,
         }
 
         return render(
@@ -3004,4 +3014,3 @@ class SearchView(View):
             "total_resultados": len(resultados),
             "busca_realizada": bool(termo),
         })
-    
