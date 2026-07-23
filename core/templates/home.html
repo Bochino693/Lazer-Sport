@@ -3577,7 +3577,10 @@ body {
 
         if (todosPinsVisiveis.length) {
             const grupo = L.featureGroup(todosPinsVisiveis);
-            mapa.fitBounds(grupo.getBounds().pad(0.25));
+            // maxZoom evita que o mapa "cole" demais quando só tem poucos
+            // pontos próximos -- mantém uma visão mais aberta, boa pra ir
+            // acomodando novos clientes sem precisar mexer em nada.
+            mapa.fitBounds(grupo.getBounds().pad(0.25), { maxZoom: 11 });
         } else {
             mapa.setView([-14.235, -51.925], 4);
         }

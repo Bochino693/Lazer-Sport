@@ -17,6 +17,7 @@ from .models import Brinquedos, CategoriasBrinquedos, Projetos, Eventos, Cliente
     BrinquedoClick, ComboClick, PromocaoClick, CategoriaClick, PecasReposicao, CategoriaPeca, \
     ImagemProjetoBrinquedo, ImagemEvento, Clientes, EnderecoEmpresa
 from django.templatetags.static import static
+from .utils import LAT_EMPRESA, LON_EMPRESA
 
 import os
 from django.http import FileResponse, Http404
@@ -236,37 +237,51 @@ class HomeView(View):
             for c in clientes_com_mapa
         ]
 
-        # Pino especial da fábrica -- usa o endereço já cadastrado em
-        # EnderecoEmpresa (o mesmo exibido na seção "Localização"), pra
-        # não duplicar dado em dois lugares. Se algum dia o endereço for
-        # atualizado no admin, o mapa acompanha automaticamente.
-        fabrica_mapa = None
+        # Pino especial da fábrica -- tenta usar o endereço cadastrado em
+        # EnderecoEmpresa (o mesmo exibido na seção "Localização"), mas
+        # SEMPRE cai num fallback com dados já conhecidos (as mesmas
+        # constantes usadas no cálculo de frete) se esse registro não
+        # existir ou estiver incompleto no banco. A fábrica nunca pode
+        # simplesmente sumir do mapa.
         endereco_fabrica = (
             EnderecoEmpresa.objects
             .filter(ativo=True, latitude__isnull=False, longitude__isnull=False)
             .first()
         )
+
         if endereco_fabrica:
-            fabrica_mapa = {
-                "tipo": "fabrica",
-                "nome": "Lazer & Sport Brinquedos",
-                "cidade": endereco_fabrica.cidade or "",
-                "estado": endereco_fabrica.estado or "",
-                "pais": "Brasil",
-                "lat": float(endereco_fabrica.latitude),
-                "lng": float(endereco_fabrica.longitude),
-                "site": "",
-                "logo": static("images/logoofi.png"),
-                "endereco": (
-                    f"{endereco_fabrica.rua}, {endereco_fabrica.numero}"
-                    f" — {endereco_fabrica.bairro or ''}"
-                ).strip(" —"),
-            }
+            fabrica_lat = float(endereco_fabrica.latitude)
+            fabrica_lng = float(endereco_fabrica.longitude)
+            fabrica_cidade = endereco_fabrica.cidade or "São Paulo"
+            fabrica_estado = endereco_fabrica.estado or "SP"
+            fabrica_endereco_texto = (
+                f"{endereco_fabrica.rua}, {endereco_fabrica.numero}"
+                f" — {endereco_fabrica.bairro or ''}"
+            ).strip(" —")
+        else:
+            fabrica_lat = LAT_EMPRESA
+            fabrica_lng = LON_EMPRESA
+            fabrica_cidade = "São Paulo"
+            fabrica_estado = "SP"
+            fabrica_endereco_texto = "Rua São Roque de Minas, 104 — Jardim Peri"
+
+        fabrica_mapa = {
+            "tipo": "fabrica",
+            "nome": "Lazer & Sport Brinquedos",
+            "cidade": fabrica_cidade,
+            "estado": fabrica_estado,
+            "pais": "Brasil",
+            "lat": fabrica_lat,
+            "lng": fabrica_lng,
+            "site": "",
+            "logo": static("images/logoofi.png"),
+            "endereco": fabrica_endereco_texto,
+        }
 
         # pontos_mapa = tudo que vai pro mapa (fábrica + clientes).
         # clientes_mapa continua existindo separado pra lista de SEO,
         # que é só sobre clientes mesmo.
-        pontos_mapa = ([fabrica_mapa] if fabrica_mapa else []) + clientes_mapa
+        pontos_mapa = [fabrica_mapa] + clientes_mapa
 
         # Lista única de cidades atendidas -- usada tanto no schema.org
         # (areaServed) quanto na lista de chips visível, pra reforçar

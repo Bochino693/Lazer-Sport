@@ -1,5 +1,6 @@
 import requests
 import math
+import re
 import logging
 
 logger = logging.getLogger(__name__)
@@ -12,9 +13,23 @@ LAT_EMPRESA = -23.459889
 LON_EMPRESA = -46.689654
 
 
+def cep_valido(cep):
+    """CEP brasileiro válido = exatamente 8 dígitos depois de tirar
+    traço/espaço. Usado pra recusar CEP incompleto/errado ANTES de
+    consultar ViaCEP/Nominatim -- evita geocodificação ambígua a partir
+    de um CEP que nem existe."""
+    if not cep:
+        return False
+    return bool(re.fullmatch(r"\d{8}", cep.replace("-", "").replace(" ", "")))
+
+
 def buscar_endereco(cep):
 
     try:
+
+        if not cep_valido(cep):
+            logger.warning(f"[FRETE] CEP inválido (precisa ter 8 dígitos): {cep}")
+            return None
 
         cep_limpo = cep.replace("-", "")
 
@@ -54,6 +69,10 @@ def buscar_dados_cep(cep):
     partir do CEP, sem precisar digitar cidade/estado na mão.
     """
     try:
+        if not cep_valido(cep):
+            logger.warning(f"[CLIENTES] CEP inválido (precisa ter 8 dígitos): {cep}")
+            return None
+
         cep_limpo = cep.replace("-", "")
         url = f"https://viacep.com.br/ws/{cep_limpo}/json/"
 
