@@ -46,6 +46,37 @@ def buscar_endereco(cep):
 
 
 @lru_cache(maxsize=2000)
+def buscar_dados_cep(cep):
+    """
+    Mesma fonte (ViaCEP) que o buscar_endereco(), mas devolve os campos
+    separados (rua/bairro/cidade/estado) em vez de uma string só --
+    usado pra preencher o endereço dos Clientes automaticamente a
+    partir do CEP, sem precisar digitar cidade/estado na mão.
+    """
+    try:
+        cep_limpo = cep.replace("-", "")
+        url = f"https://viacep.com.br/ws/{cep_limpo}/json/"
+
+        r = requests.get(url, timeout=5)
+        data = r.json()
+
+        if "erro" in data:
+            logger.error(f"[CLIENTES] CEP não encontrado no ViaCEP: {cep}")
+            return None
+
+        return {
+            "rua": data.get("logradouro") or "",
+            "bairro": data.get("bairro") or "",
+            "cidade": data.get("localidade") or "",
+            "estado": data.get("uf") or "",
+        }
+
+    except Exception as e:
+        logger.error(f"[CLIENTES] Erro ViaCEP {cep}: {e}")
+        return None
+
+
+@lru_cache(maxsize=2000)
 def buscar_coordenadas(cep):
 
     try:
@@ -98,6 +129,47 @@ def buscar_coordenadas(cep):
 
     except Exception as e:
         logger.error(f"[FRETE] erro geocode {cep}: {e}")
+        return None, None
+
+
+@lru_cache(maxsize=2000)
+def buscar_coordenadas_por_cidade(cidade, estado="", pais="Brasil"):
+    """
+    Geocodifica por cidade/estado/país (Nominatim), sem depender de CEP.
+    Usado pro mapa de Clientes -- cobre tanto clientes brasileiros sem
+    CEP exato quanto clientes de fora do Brasil (onde ViaCEP não serve).
+    """
+    try:
+        partes = [p.strip() for p in (cidade, estado, pais) if p and p.strip()]
+        if not partes:
+            return None, None
+
+        query = ", ".join(partes)
+
+        url = "https://nominatim.openstreetmap.org/search"
+
+        headers = {
+            "User-Agent": "lazersport-clientes"
+        }
+
+        params = {
+            "q": query,
+            "format": "json",
+            "limit": 1
+        }
+
+        r = requests.get(url, params=params, headers=headers, timeout=5)
+        data = r.json()
+
+        if data:
+            return float(data[0]["lat"]), float(data[0]["lon"])
+
+        logger.error(f"[CLIENTES] Não foi possível geocodificar: {query}")
+
+        return None, None
+
+    except Exception as e:
+        logger.error(f"[CLIENTES] erro geocode cidade '{cidade}': {e}")
         return None, None
 
 

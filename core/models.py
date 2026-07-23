@@ -5,7 +5,7 @@ from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 import requests
 from cloudinary_storage.storage import MediaCloudinaryStorage
-from .utils import calcular_frete_por_cep
+from .utils import calcular_frete_por_cep, buscar_coordenadas, buscar_coordenadas_por_cidade, buscar_dados_cep
 
 class Prime(models.Model):
     ativo = models.BooleanField(default=True)
@@ -39,10 +39,6 @@ class EnderecoEmpresa(Prime):
     longitude = models.DecimalField(
         max_digits=50, decimal_places=30, null=True, blank=True
     )
-
-    class Meta:
-        verbose_name = "Endereço da Fábrica Lazer & Sport"
-        verbose_name_plural = "Endereços das Fábricas Lazer & Sport"
 
     def __str__(self):
         return f"{self.nome} - {self.cidade}/{self.estado}"
@@ -136,7 +132,20 @@ class Clientes(Prime):
     logo_cliente = models.ImageField(upload_to='logo_clientes/', null=False, blank=False)
 
     # --- Campos para exibição no mapa de clientes ---
-    cidade = models.CharField(max_length=100, blank=True, null=True)
+    cep = models.CharField(
+        max_length=9, blank=True, null=True,
+        help_text="Só para clientes no Brasil. Preenchendo o CEP, cidade/estado e "
+                   "coordenadas são preenchidos automaticamente ao salvar (não precisa "
+                   "digitar latitude/longitude na mão)."
+    )
+    rua = models.CharField(max_length=180, blank=True, null=True)
+    numero = models.CharField(max_length=20, blank=True, null=True)
+    bairro = models.CharField(max_length=100, blank=True, null=True)
+    cidade = models.CharField(
+        max_length=100, blank=True, null=True,
+        help_text="Se não tiver CEP (ex: cliente fora do Brasil), preencha cidade/estado/país "
+                   "aqui -- as coordenadas também são calculadas automaticamente por eles."
+    )
     estado = models.CharField(
         max_length=2, blank=True, null=True,
         help_text="Sigla da UF (ex: SP). Deixe em branco para clientes fora do Brasil."
@@ -144,11 +153,13 @@ class Clientes(Prime):
     pais = models.CharField(max_length=100, default="Brasil")
     latitude = models.DecimalField(
         max_digits=9, decimal_places=6, blank=True, null=True,
-        help_text="Ex: -23.550520. Clique com o botão direito no local no Google Maps para copiar."
+        help_text="Preenchido automaticamente a partir do CEP ou da cidade/país ao salvar. "
+                   "Só edite na mão se quiser corrigir uma localização específica."
     )
     longitude = models.DecimalField(
         max_digits=9, decimal_places=6, blank=True, null=True,
-        help_text="Ex: -46.633308. Clique com o botão direito no local no Google Maps para copiar."
+        help_text="Preenchido automaticamente a partir do CEP ou da cidade/país ao salvar. "
+                   "Só edite na mão se quiser corrigir uma localização específica."
     )
     site_cliente = models.URLField(
         blank=True, null=True,
@@ -161,6 +172,38 @@ class Clientes(Prime):
 
     def __str__(self):
         return self.descricao_cliente
+
+    def save(self, *args, **kwargs):
+        # Se tem CEP mas ainda não tem cidade preenchida, busca o
+        # endereço completo no ViaCEP -- assim quem cadastra só precisa
+        # digitar o CEP, e rua/bairro/cidade/estado saem de graça.
+        if self.cep and not self.cidade:
+            dados = buscar_dados_cep(self.cep)
+            if dados:
+                self.rua = self.rua or dados["rua"]
+                self.bairro = self.bairro or dados["bairro"]
+                self.cidade = dados["cidade"]
+                self.estado = dados["estado"]
+
+        # Só tenta geocodificar se ainda não tiver coordenadas -- assim,
+        # se alguém digitou latitude/longitude na mão (pra ajustar um
+        # ponto específico), isso nunca é sobrescrito automaticamente.
+        if not self.latitude or not self.longitude:
+            lat, lon = None, None
+
+            if self.cep:
+                lat, lon = buscar_coordenadas(self.cep)
+
+            if (not lat or not lon) and self.cidade:
+                lat, lon = buscar_coordenadas_por_cidade(
+                    self.cidade, self.estado or "", self.pais or "Brasil"
+                )
+
+            if lat and lon:
+                self.latitude = lat
+                self.longitude = lon
+
+        super().save(*args, **kwargs)
 
     class Meta:
         verbose_name = "Cliente"
@@ -1105,3 +1148,5 @@ class CategoriaClick(Prime):
     class Meta:
         verbose_name = "Categoria Clicada"
         verbose_name_plural = "Categorias Clicadas"
+
+        

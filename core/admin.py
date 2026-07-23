@@ -290,16 +290,25 @@ class ImagensSiteAdmin(admin.ModelAdmin):
 @admin.register(Clientes)
 class ClientesAdmin(admin.ModelAdmin):
     list_display = (
-        'id', 'descricao_cliente', 'logo_cliente', 'cidade', 'estado',
-        'pais', 'exibir_no_mapa', 'ativo', 'criacao',
+        'id', 'descricao_cliente', 'cidade', 'estado', 'pais',
+        'exibir_no_mapa', 'ativo', 'criacao',
     )
     list_filter = ('ativo', 'exibir_no_mapa', 'pais', 'estado')
-    search_fields = ('id', 'descricao_cliente', 'cidade')
+    search_fields = ('id', 'descricao_cliente', 'cidade', 'cep')
     readonly_fields = ('criacao', 'atualizado')
     ordering = ('-criacao',)
     fieldsets = (
         (None, {
             'fields': ('descricao_cliente', 'logo_cliente', 'ativo')
+        }),
+        ('Endereço (Brasil)', {
+            'fields': ('cep', 'rua', 'numero', 'bairro'),
+            'description': (
+                'Preenchendo o CEP, cidade/estado e as coordenadas do mapa são '
+                'calculados automaticamente ao salvar -- não precisa digitar '
+                'latitude/longitude na mão. Deixe em branco para clientes fora '
+                'do Brasil.'
+            ),
         }),
         ('Localização no mapa', {
             'fields': (
@@ -308,10 +317,11 @@ class ClientesAdmin(admin.ModelAdmin):
                 'site_cliente', 'exibir_no_mapa',
             ),
             'description': (
-                'Preencha latitude/longitude para o cliente aparecer no '
-                'mapa da seção "Clientes" do site. Dica: clique com o '
-                'botão direito no local certo no Google Maps e copie as '
-                'coordenadas exibidas.'
+                'Cliente fora do Brasil (sem CEP)? Preencha cidade, estado '
+                '(se aplicável) e país aqui -- as coordenadas também são '
+                'calculadas automaticamente por eles ao salvar. Latitude/'
+                'longitude só precisam ser digitadas na mão se quiser '
+                'corrigir um ponto específico manualmente.'
             ),
         }),
         ('Datas', {
@@ -694,4 +704,4 @@ class EnderecoEmpresaAdmin(admin.ModelAdmin):
     )
 
     ordering = ('nome',)
-    
+
