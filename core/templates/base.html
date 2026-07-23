@@ -13,6 +13,19 @@
 
 
 <style>
+    /* ======= TOKENS DE DESIGN ======= */
+    :root {
+      --azul-escuro: #004AAD;
+      --azul-claro: #007BFF;
+      --vermelho: #E63946;
+      --vermelho-escuro: #c9152d;
+      --amarelo: #FFD700;
+      --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+      --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+      --sombra-suave: 0 8px 24px rgba(0, 74, 173, 0.14);
+      --sombra-forte: 0 14px 32px rgba(0, 74, 173, 0.22);
+    }
+
     /* ======= RESET ======= */
     * {
       margin: 0;
@@ -27,6 +40,25 @@
 
     }
 
+    /* Foco visível e consistente para navegação por teclado */
+    a:focus-visible,
+    button:focus-visible,
+    input:focus-visible {
+      outline: 3px solid var(--amarelo);
+      outline-offset: 3px;
+      border-radius: 6px;
+    }
+
+    /* Respeita preferência do usuário por menos animação */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.001ms !important;
+        scroll-behavior: auto !important;
+      }
+    }
+
     /* ======= CABEÇALHO ======= */
     header {
       display: flex;
@@ -39,6 +71,12 @@
       top: 0;
       z-index: 1000;
       box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+      transition: box-shadow 0.3s var(--ease-out), background 0.3s var(--ease-out);
+    }
+
+    header.ls-scrolled {
+      background: linear-gradient(90deg, #003b8a, #0069d9);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
     }
 
 /* ===== MOBILE POLISH ===== */
@@ -79,6 +117,11 @@
   padding: 0;                  /* Remove espaço interno */
   box-shadow: none;            /* Remove a sombra */
   object-fit: contain;         /* Garante proporção correta */
+  transition: transform 0.35s var(--ease-bounce);
+}
+
+.logo:hover img {
+  transform: scale(1.06) rotate(-2deg);
 }
 
 .logo span {
@@ -102,26 +145,46 @@
       text-decoration: none;
       font-weight: 500;
       position: relative;
-      transition: color 0.3s;
+      padding: 8px 4px;
+      transition: color 0.25s var(--ease-out), transform 0.25s var(--ease-out);
+    }
+
+    nav a::before {
+      content: '';
+      position: absolute;
+      inset: -4px -10px;
+      background: rgba(255, 255, 255, 0.12);
+      border-radius: 999px;
+      opacity: 0;
+      transform: scale(0.85);
+      transition: opacity 0.25s var(--ease-out), transform 0.25s var(--ease-out);
+      z-index: -1;
     }
 
     nav a::after {
       content: '';
       position: absolute;
       bottom: -4px;
-      left: 0;
+      left: 50%;
       width: 0%;
       height: 2px;
       background: #E63946;
-      transition: width 0.3s ease;
+      transition: width 0.3s var(--ease-out), left 0.3s var(--ease-out);
     }
 
     nav a:hover {
       color: #FFD700;
+      transform: translateY(-1px);
+    }
+
+    nav a:hover::before {
+      opacity: 1;
+      transform: scale(1);
     }
 
     nav a:hover::after {
       width: 100%;
+      left: 0;
     }
 
     /* ======= MENU HAMBÚRGUER ======= */
@@ -129,6 +192,13 @@
       display: none;
       flex-direction: column;
       cursor: pointer;
+      padding: 10px;
+      border-radius: 50%;
+      transition: background 0.25s var(--ease-out);
+    }
+
+    .menu-toggle:hover {
+      background: rgba(255, 255, 255, 0.15);
     }
 
     .menu-toggle span {
@@ -205,12 +275,18 @@
       border: 1px solid #e3e8f0;
       border-radius: 999px;
       box-shadow: 0 10px 30px rgba(0, 74, 173, 0.10);
-      transition: box-shadow 0.3s, border-color 0.3s;
+      transition: box-shadow 0.3s var(--ease-out), border-color 0.3s var(--ease-out), transform 0.3s var(--ease-out);
+    }
+
+    .search-box:hover {
+      box-shadow: var(--sombra-suave);
+      transform: translateY(-1px);
     }
 
     .search-box:focus-within {
       border-color: #007BFF;
-      box-shadow: 0 10px 30px rgba(0, 74, 173, 0.18);
+      box-shadow: var(--sombra-forte);
+      transform: translateY(-1px);
     }
 
     .search-box input {
@@ -236,12 +312,26 @@
       font-weight: 700;
       border-radius: 999px;
       cursor: pointer;
-      transition: transform 0.2s, box-shadow 0.2s;
+      transition: transform 0.2s var(--ease-out), box-shadow 0.2s var(--ease-out), filter 0.2s var(--ease-out);
+    }
+
+    .search-box button i {
+      transition: transform 0.3s var(--ease-bounce);
     }
 
     .search-box button:hover {
-      transform: translateY(-1px);
+      transform: translateY(-2px);
       box-shadow: 0 8px 20px rgba(201, 21, 45, 0.35);
+      filter: brightness(1.06);
+    }
+
+    .search-box button:hover i {
+      transform: scale(1.15) rotate(-8deg);
+    }
+
+    .search-box button:active {
+      transform: translateY(0) scale(0.97);
+      box-shadow: 0 4px 10px rgba(201, 21, 45, 0.3);
     }
 
     /* ======= FILTROS ======= */
@@ -262,7 +352,9 @@
   padding: 8px 15px;
   border-radius: 20px;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: background 0.3s var(--ease-out), color 0.3s var(--ease-out),
+              border-color 0.3s var(--ease-out), transform 0.25s var(--ease-out),
+              box-shadow 0.25s var(--ease-out);
   font-size: 0.9em;
   border: 1px solid transparent;
   text-decoration: none;       /* remove sublinhado */
@@ -276,7 +368,12 @@
   background: #007BFF;
   color: #ffffff;
   border-color: #E63946;
-  transform: translateY(-2px);
+  transform: translateY(-3px) scale(1.03);
+  box-shadow: 0 8px 18px rgba(0, 123, 255, 0.3);
+}
+
+.filter-suggestions .suggestion-tag:active {
+  transform: translateY(-1px) scale(0.98);
 }
 
 
@@ -431,14 +528,20 @@ nav a.btn-login {
     font-weight: 600;
     gap: 4px;
     cursor: pointer;
+    transition: color 0.25s var(--ease-out);
 }
 
 .user-icon i {
     font-size: 26px;
+    transition: transform 0.3s var(--ease-bounce);
 }
 
 .user-icon:hover {
     color: #FFD700;
+}
+
+.user-icon:hover i {
+    transform: scale(1.12) translateY(-1px);
 }
 
 /* === DROPDOWN MELHORADO === */
@@ -452,19 +555,21 @@ nav a.btn-login {
     left: 0;
     background: white;
     color: #333;
-    border-radius: 10px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
-    width: 160px;
-    padding: 10px 0;
+    border-radius: 12px;
+    box-shadow: 0 14px 32px rgba(0, 0, 0, 0.2);
+    width: 170px;
+    padding: 8px;
+    overflow: hidden;
 
     /* Estado inicial (escondido) */
     opacity: 0;
     visibility: hidden;
-    transform: translateY(10px);
+    transform: translateY(6px) scale(0.96);
+    transform-origin: top left;
 
     transition:
-        opacity 0.25s ease,
-        transform 0.25s ease,
+        opacity 0.25s var(--ease-out),
+        transform 0.25s var(--ease-out),
         visibility 0.25s;
 
     z-index: 9999;
@@ -474,22 +579,24 @@ nav a.btn-login {
 .user-dropdown:hover .dropdown-menu {
     opacity: 1;
     visibility: visible;
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
 }
 
 /* Links dentro do menu */
 .dropdown-menu a {
     display: block;
-    padding: 10px 16px;
+    padding: 10px 14px;
     text-decoration: none;
     color: #004AAD;
     font-weight: 600;
-    transition: background 0.2s, color 0.2s;
+    border-radius: 8px;
+    transition: background 0.2s var(--ease-out), color 0.2s var(--ease-out), transform 0.2s var(--ease-out);
 }
 
 .dropdown-menu a:hover {
     background: #E6F0FF;
     color: #003680;
+    transform: translateX(3px);
 }
 
 /* Animação */
@@ -614,8 +721,50 @@ nav a.btn-login {
     position: relative !important;
 }
 
+.float-btn i {
+    transition: transform 0.3s var(--ease-bounce);
+}
+
 .float-btn:hover {
     transform: scale(1.1) translateY(-5px) !important;
+}
+
+.float-btn:hover i {
+    transform: rotate(-8deg) scale(1.08);
+}
+
+.float-btn:active {
+    transform: scale(0.96) translateY(-2px) !important;
+}
+
+/* Tooltip que aparece ao lado dos botões flutuantes */
+.float-btn[data-tooltip]::before {
+    content: attr(data-tooltip);
+    position: absolute;
+    right: calc(100% + 12px);
+    top: 50%;
+    transform: translateY(-50%) translateX(6px);
+    background: #0d1b2e;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    padding: 6px 12px;
+    border-radius: 8px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s var(--ease-out), transform 0.2s var(--ease-out);
+}
+
+.float-btn[data-tooltip]:hover::before {
+    opacity: 1;
+    transform: translateY(-50%) translateX(0);
+}
+
+@media (max-width: 768px) {
+    .float-btn[data-tooltip]::before {
+        display: none;
+    }
 }
 
 /* Badges Estilo Admin */
@@ -708,6 +857,15 @@ nav a.btn-login {
 #carrinho-contador {
     display: inline-flex !important;
     transition: all 0.3s ease-in-out;
+}
+
+/* ======= LOGO DA FAIXA DE TÍTULO ======= */
+#image {
+    transition: transform 0.35s var(--ease-bounce);
+}
+
+#image:hover {
+    transform: scale(1.05) rotate(-1.5deg);
 }
 
 
@@ -847,13 +1005,14 @@ nav a.btn-login {
     <a href="{% url 'dashboards' %}"
        id="float-admin-panel"
        class="float-btn float-admin-panel"
-       title="Área administrativa">
+       title="Área administrativa"
+       data-tooltip="Área administrativa">
         <i class="fa-solid fa-crown"></i>
     </a>
     {% endif %}
 
     {% if user.is_authenticated %}
-    <a href="{% url 'meus_pedidos' %}#pedidos" class="float-btn float-pedidos" title="Meus pedidos">
+    <a href="{% url 'meus_pedidos' %}#pedidos" class="float-btn float-pedidos" title="Meus pedidos" data-tooltip="Meus pedidos">
         <i class="fa-solid fa-box"></i>
         <span class="badge">{{ total_pedidos_ativos }}</span>
     </a>
@@ -863,7 +1022,8 @@ nav a.btn-login {
     <a href="{% url 'carrinho' %}#carrinho"
        id="carrinho-float-btn"
        class="float-btn float-carrinho {% if carrinho_total_itens == 0 %}hidden{% endif %}"
-       title="Carrinho">
+       title="Carrinho"
+       data-tooltip="Carrinho">
         <i class="fa-solid fa-cart-shopping"></i>
         <span id="carrinho-contador" class="badge">
             {{ carrinho_total_itens|default:"0" }}
@@ -874,7 +1034,8 @@ nav a.btn-login {
     {% if user.is_authenticated and tem_manutencao %}
     <a href="{% url 'manutencoes' %}?tab=lista#cab"
        class="float-btn float-manutencao {% if manutencao_andamento > 0 %} andamento {% endif %}"
-        title="Manutenções">
+        title="Manutenções"
+        data-tooltip="Manutenções">
         <i class="fa-solid fa-screwdriver-wrench"></i>
         <span class="badge">{{ manutencao_abertas }}</span>
     </a>
@@ -905,11 +1066,47 @@ nav a.btn-login {
         text-decoration: none;
         font-size: 1.4rem;
         box-shadow: 0 12px 30px rgba(0, 0, 0, 0.18);
-        transition: transform 0.2s ease;
+        transition: transform 0.25s var(--ease-bounce), box-shadow 0.25s var(--ease-out), border-radius 0.25s var(--ease-out);
+        position: relative;
     }
 
     .ls-quick-dock a:hover {
-        transform: translateY(-3px);
+        transform: translateY(-4px) scale(1.06);
+        border-radius: 20px;
+        box-shadow: 0 16px 34px rgba(0, 0, 0, 0.26);
+    }
+
+    .ls-quick-dock a:active {
+        transform: translateY(-1px) scale(0.97);
+    }
+
+    .ls-quick-dock a[data-tooltip]::before {
+        content: attr(data-tooltip);
+        position: absolute;
+        left: calc(100% + 12px);
+        top: 50%;
+        transform: translateY(-50%) translateX(-6px);
+        background: #0d1b2e;
+        color: #fff;
+        font-size: 13px;
+        font-weight: 600;
+        white-space: nowrap;
+        padding: 6px 12px;
+        border-radius: 8px;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.2s var(--ease-out), transform 0.2s var(--ease-out);
+    }
+
+    .ls-quick-dock a[data-tooltip]:hover::before {
+        opacity: 1;
+        transform: translateY(-50%) translateX(0);
+    }
+
+    @media (max-width: 860px) {
+        .ls-quick-dock a[data-tooltip]::before {
+            display: none;
+        }
     }
 
     .ls-dock-whatsapp { background: #20c763; }
@@ -953,7 +1150,14 @@ nav a.btn-login {
         line-height: 1.9;
     }
 
-    .ls-footer a:hover { color: #E63946; }
+    .ls-footer a {
+        transition: color 0.25s var(--ease-out), padding-left 0.25s var(--ease-out);
+    }
+
+    .ls-footer a:hover {
+        color: #E63946;
+        padding-left: 4px;
+    }
 
     .ls-footer-btn {
         display: inline-block;
@@ -963,6 +1167,19 @@ nav a.btn-login {
         font-weight: 700;
         padding: 12px 24px;
         border-radius: 999px;
+        transition: transform 0.25s var(--ease-out), box-shadow 0.25s var(--ease-out), background 0.25s var(--ease-out);
+        box-shadow: 0 8px 20px rgba(230, 57, 70, 0.25);
+    }
+
+    .ls-footer-btn:hover {
+        background: #ff4655 !important;
+        transform: translateY(-3px);
+        box-shadow: 0 14px 28px rgba(230, 57, 70, 0.4);
+        padding-left: 24px !important;
+    }
+
+    .ls-footer-btn:active {
+        transform: translateY(-1px);
     }
 
     .ls-footer-social {
@@ -980,9 +1197,14 @@ nav a.btn-login {
         align-items: center;
         justify-content: center;
         font-size: 1.1rem;
+        transition: background 0.25s var(--ease-out), transform 0.3s var(--ease-bounce), color 0.25s var(--ease-out);
     }
 
-    .ls-footer-social a:hover { background: #E63946; color: #fff; }
+    .ls-footer-social a:hover {
+        background: #E63946;
+        color: #fff;
+        transform: translateY(-4px) rotate(6deg);
+    }
 
     .ls-footer-bottom {
         max-width: 1180px;
@@ -1006,11 +1228,11 @@ nav a.btn-login {
 <nav class="ls-quick-dock" aria-label="Contato rápido">
     <a
         href="https://wa.me/5511960563135?text=Ol%C3%A1!%20Vim%20pelo%20site%20da%20Lazer%20e%20Sport%20e%20gostaria%20de%20mais%20informa%C3%A7%C3%B5es."
-        target="_blank" rel="noopener" class="ls-dock-whatsapp" aria-label="WhatsApp">
+        target="_blank" rel="noopener" class="ls-dock-whatsapp" aria-label="WhatsApp" data-tooltip="Fale no WhatsApp">
         <i class="fa-brands fa-whatsapp"></i>
     </a>
     <a href="https://www.instagram.com/lazersportbrinquedos" target="_blank" rel="noopener"
-       class="ls-dock-instagram" aria-label="Instagram">
+       class="ls-dock-instagram" aria-label="Instagram" data-tooltip="Siga no Instagram">
         <i class="fa-brands fa-instagram"></i>
     </a>
 </nav>
@@ -1086,6 +1308,16 @@ if (menuToggle && nav) {
   menuToggle.addEventListener('click', () => {
     nav.classList.toggle('active');
   });
+}
+
+/* ================== HEADER AO ROLAR ================== */
+const lsHeader = document.querySelector('header');
+if (lsHeader) {
+  const atualizarHeaderScroll = () => {
+    lsHeader.classList.toggle('ls-scrolled', window.scrollY > 12);
+  };
+  window.addEventListener('scroll', atualizarHeaderScroll, { passive: true });
+  atualizarHeaderScroll();
 }
 
   // Controle de Link Ativo no Scroll
