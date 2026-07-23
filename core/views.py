@@ -17,7 +17,7 @@ from .models import Brinquedos, CategoriasBrinquedos, Projetos, Eventos, Cliente
     BrinquedoClick, ComboClick, PromocaoClick, CategoriaClick, PecasReposicao, CategoriaPeca, \
     ImagemProjetoBrinquedo, ImagemEvento, Clientes, EnderecoEmpresa
 from django.templatetags.static import static
-from .utils import LAT_EMPRESA, LON_EMPRESA
+from .utils import LAT_EMPRESA, LON_EMPRESA, CEP_EMPRESA, buscar_coordenadas
 
 import os
 from django.http import FileResponse, Http404
@@ -237,33 +237,41 @@ class HomeView(View):
             for c in clientes_com_mapa
         ]
 
-        # Pino especial da fábrica -- tenta usar o endereço cadastrado em
-        # EnderecoEmpresa (o mesmo exibido na seção "Localização"), mas
-        # SEMPRE cai num fallback com dados já conhecidos (as mesmas
-        # constantes usadas no cálculo de frete) se esse registro não
-        # existir ou estiver incompleto no banco. A fábrica nunca pode
-        # simplesmente sumir do mapa.
+        # Pino especial da fábrica. Ordem de prioridade:
+        # 1) EnderecoEmpresa cadastrado no banco, se completo (editável
+        #    pelo admin, o ideal).
+        # 2) Geocodificar o CEP_EMPRESA de verdade (o mesmo endereço já
+        #    mostrado na seção "Localização" do site) -- usa o mesmo
+        #    pipeline corrigido dos clientes, então é confiável.
+        # 3) Só em último caso (sem internet/erro na geocodificação),
+        #    cai nas coordenadas fixas de utils.py.
         endereco_fabrica = (
             EnderecoEmpresa.objects
             .filter(ativo=True, latitude__isnull=False, longitude__isnull=False)
             .first()
         )
 
+        fabrica_endereco_texto = "Rua São Roque de Minas, 104 — Jardim Peri"
+        fabrica_cidade = "São Paulo"
+        fabrica_estado = "SP"
+
         if endereco_fabrica:
             fabrica_lat = float(endereco_fabrica.latitude)
             fabrica_lng = float(endereco_fabrica.longitude)
-            fabrica_cidade = endereco_fabrica.cidade or "São Paulo"
-            fabrica_estado = endereco_fabrica.estado or "SP"
+            fabrica_cidade = endereco_fabrica.cidade or fabrica_cidade
+            fabrica_estado = endereco_fabrica.estado or fabrica_estado
             fabrica_endereco_texto = (
                 f"{endereco_fabrica.rua}, {endereco_fabrica.numero}"
                 f" — {endereco_fabrica.bairro or ''}"
             ).strip(" —")
         else:
-            fabrica_lat = LAT_EMPRESA
-            fabrica_lng = LON_EMPRESA
-            fabrica_cidade = "São Paulo"
-            fabrica_estado = "SP"
-            fabrica_endereco_texto = "Rua São Roque de Minas, 104 — Jardim Peri"
+            lat_geocodificada, lng_geocodificada = buscar_coordenadas(CEP_EMPRESA, "104")
+            if lat_geocodificada and lng_geocodificada:
+                fabrica_lat = lat_geocodificada
+                fabrica_lng = lng_geocodificada
+            else:
+                fabrica_lat = LAT_EMPRESA
+                fabrica_lng = LON_EMPRESA
 
         fabrica_mapa = {
             "tipo": "fabrica",
@@ -1015,6 +1023,120 @@ class ComboAdminView(AdminOnlyMixin, View):
             'combo_em_edicao': combo,
             'abrir_formulario': True,
         }, status=400)
+
+
+class ClienteAdminView(AdminOnlyMixin, View):
+    """
+    Tela de admin pra cadastrar/editar os Clientes que aparecem no mapa
+    da home. Criação e edição pelo mesmo modal. A geolocalização
+    (latitude/longitude) é sempre automática -- calculada a partir do
+    CEP (Brasil) ou cidade/país (fora do Brasil) no Clientes.save().
+
+    Diferença importante em relação a editar direto pelo /system/: aqui,
+    se o CEP/cidade/rua de um cliente que já existe for alterado, a
+    geolocalização é refeita automaticamente na hora (limpa lat/long
+    antes de salvar) -- não precisa lembrar de limpar os campos na mão
+    toda vez que o endereço mudar.
+    """
+    template_name = "gestao/clientes_adm.html"
+
+    def get(self, request):
+        clientes = Clientes.objects.all().order_by("-criacao")
+
+        # Dados pro modal de edição preencher os campos via JS -- vai
+        # via json_script (mais seguro que interpolar direto no HTML).
+        clientes_dados = [
+            {
+                "id": c.id,
+                "descricao_cliente": c.descricao_cliente or "",
+                "cep": c.cep or "",
+                "rua": c.rua or "",
+                "numero": c.numero or "",
+                "bairro": c.bairro or "",
+                "cidade": c.cidade or "",
+                "estado": c.estado or "",
+                "pais": c.pais or "Brasil",
+                "site_cliente": c.site_cliente or "",
+                "ativo": c.ativo,
+                "exibir_no_mapa": c.exibir_no_mapa,
+            }
+            for c in clientes
+        ]
+
+        return render(request, self.template_name, {
+            "clientes": clientes,
+            "clientes_dados": clientes_dados,
+        })
+
+    def post(self, request):
+        action = request.POST.get("action", "save")
+
+        if action == "delete":
+            cliente = get_object_or_404(Clientes, pk=request.POST.get("id"))
+            nome = cliente.descricao_cliente
+            cliente.delete()
+            messages.success(request, f"Cliente '{nome}' excluído com sucesso.")
+            return redirect("clientes_admin")
+
+        cliente_id = request.POST.get("id")
+        cliente = get_object_or_404(Clientes, pk=cliente_id) if cliente_id else Clientes()
+
+        descricao = request.POST.get("descricao_cliente", "").strip()
+        if not descricao:
+            messages.error(request, "Preencha o nome do cliente.")
+            return redirect("clientes_admin")
+
+        logo = request.FILES.get("logo_cliente")
+        if not logo and not cliente.pk:
+            messages.error(request, "A logo é obrigatória pra criar um cliente novo.")
+            return redirect("clientes_admin")
+
+        # Guarda o endereço ANTES de sobrescrever, pra comparar depois
+        # e saber se precisa geocodificar de novo.
+        campos_endereco = ["cep", "rua", "numero", "bairro", "cidade", "estado", "pais"]
+        endereco_antigo = {campo: getattr(cliente, campo) for campo in campos_endereco}
+
+        cliente.descricao_cliente = descricao
+        if logo:
+            cliente.logo_cliente = logo
+
+        cliente.cep = request.POST.get("cep", "").strip()
+        cliente.rua = request.POST.get("rua", "").strip()
+        cliente.numero = request.POST.get("numero", "").strip()
+        cliente.bairro = request.POST.get("bairro", "").strip()
+        cliente.cidade = request.POST.get("cidade", "").strip()
+        cliente.estado = request.POST.get("estado", "").strip().upper()
+        cliente.pais = request.POST.get("pais", "").strip() or "Brasil"
+        cliente.site_cliente = request.POST.get("site_cliente", "").strip()
+        cliente.exibir_no_mapa = request.POST.get("exibir_no_mapa") == "on"
+        cliente.ativo = request.POST.get("ativo") == "on"
+
+        endereco_mudou = any(
+            (getattr(cliente, campo) or "") != (endereco_antigo[campo] or "")
+            for campo in campos_endereco
+        )
+        if endereco_mudou:
+            cliente.latitude = None
+            cliente.longitude = None
+
+        cliente.save()
+
+        if cliente.latitude and cliente.longitude:
+            messages.success(
+                request,
+                f"'{cliente.descricao_cliente}' salvo! Localização encontrada: "
+                f"{cliente.latitude}, {cliente.longitude} -- já aparece no mapa."
+            )
+        else:
+            messages.warning(
+                request,
+                f"'{cliente.descricao_cliente}' foi salvo, mas NÃO foi possível "
+                f"localizar automaticamente pelo CEP/cidade informado. Confira se "
+                f"o CEP está certo, ou preencha latitude/longitude manualmente "
+                f"editando este cliente novamente."
+            )
+
+        return redirect("clientes_admin")
 
 
 from django.contrib.auth import logout
@@ -2103,7 +2225,7 @@ def calcular_frete(request):
         return JsonResponse({"status": "erro"})
 
     # calcula frete
-    valor_frete, distancia = calcular_frete_por_cep(cep)
+    valor_frete, distancia = calcular_frete_por_cep(cep, numero)
 
     valor_frete = Decimal(str(valor_frete))
     distancia = Decimal(str(distancia))

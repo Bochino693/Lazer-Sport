@@ -96,14 +96,26 @@ def buscar_dados_cep(cep):
 
 
 @lru_cache(maxsize=2000)
-def buscar_coordenadas(cep):
-
+def buscar_coordenadas(cep, numero=""):
+    """
+    Geocodifica um CEP, do jeito mais preciso possível. Se o número da
+    casa for informado, a PRIMEIRA tentativa é pelo endereço exato
+    (rua + número) -- é isso que faz o pino cair na casa certa, não só
+    "em algum lugar da rua". Se isso não for encontrado (nem toda rua
+    tem numeração indexada no Nominatim), degrada progressivamente:
+    rua sem número -> bairro -> cidade, sempre avisando no log quando
+    cai num nível menos preciso.
+    """
     try:
+        dados = buscar_dados_cep(cep)
 
-        endereco = buscar_endereco(cep)
-
-        if not endereco:
+        if not dados or not dados.get("cidade"):
             return None, None
+
+        rua = dados["rua"]
+        bairro = dados["bairro"]
+        cidade = dados["cidade"]
+        estado = dados["estado"]
 
         url = "https://nominatim.openstreetmap.org/search"
 
@@ -111,66 +123,51 @@ def buscar_coordenadas(cep):
             "User-Agent": "lazersport-frete"
         }
 
-        # tentativa 1 — endereço completo (rua + bairro + cidade + estado)
-        params = {
-            "q": endereco,
-            "format": "json",
-            "limit": 1
-        }
+        def tentar(query):
+            params = {"q": query, "format": "json", "limit": 1}
+            r = requests.get(url, params=params, headers=headers, timeout=5)
+            data = r.json()
+            if data:
+                return float(data[0]["lat"]), float(data[0]["lon"])
+            return None, None
 
-        r = requests.get(url, params=params, headers=headers, timeout=5)
-        data = r.json()
+        # tentativa 1 — endereço EXATO (rua + número). É a mais precisa
+        # de todas -- sem isso, o pino cai em qualquer ponto da rua, não
+        # necessariamente perto do número certo.
+        if rua and numero:
+            lat, lon = tentar(f"{rua}, {numero}, {bairro}, {cidade}, {estado}, Brazil")
+            if lat and lon:
+                return lat, lon
 
-        if data:
-            return float(data[0]["lat"]), float(data[0]["lon"])
+        # tentativa 2 — rua sem número (número não encontrado, ou não informado)
+        if rua:
+            lat, lon = tentar(f"{rua}, {bairro}, {cidade}, {estado}, Brazil")
+            if lat and lon:
+                return lat, lon
 
-        # A partir daqui a rua exata não foi encontrada -- os parts vêm
-        # de "logradouro, bairro, cidade, estado, Brazil".
-        parts = endereco.split(",")
-
-        bairro = parts[-4].strip() if len(parts) >= 4 else ""
-        cidade = parts[-3].strip()
-        estado = parts[-2].strip()
-
-        # tentativa 2 — bairro + cidade + estado. Isso é o que faltava:
-        # sem essa etapa intermediária, qualquer CEP cuja rua exata o
+        # tentativa 3 — bairro + cidade + estado. Isso é o que faltava
+        # antes: sem essa etapa intermediária, qualquer CEP cuja rua o
         # Nominatim não reconhecesse caía direto pro centro genérico da
         # cidade (ex: Praça da Sé em São Paulo) mesmo quando o bairro
         # certo (ex: Vila Prudente) era perfeitamente geocodificável.
         if bairro:
-            params = {
-                "q": f"{bairro}, {cidade}, {estado}, Brazil",
-                "format": "json",
-                "limit": 1
-            }
-
-            r = requests.get(url, params=params, headers=headers, timeout=5)
-            data = r.json()
-
-            if data:
+            lat, lon = tentar(f"{bairro}, {cidade}, {estado}, Brazil")
+            if lat and lon:
                 logger.warning(
-                    f"[FRETE] CEP {cep}: rua exata não encontrada, "
+                    f"[FRETE] CEP {cep}: rua/número não encontrados, "
                     f"geocodificado pelo bairro '{bairro}'"
                 )
-                return float(data[0]["lat"]), float(data[0]["lon"])
+                return lat, lon
 
-        # tentativa 3 — só cidade + estado (último recurso; impreciso,
+        # tentativa 4 — só cidade + estado (último recurso; impreciso,
         # pode cair no centro/marco-zero da cidade)
-        params = {
-            "q": f"{cidade}, {estado}, Brazil",
-            "format": "json",
-            "limit": 1
-        }
-
-        r = requests.get(url, params=params, headers=headers, timeout=5)
-        data = r.json()
-
-        if data:
+        lat, lon = tentar(f"{cidade}, {estado}, Brazil")
+        if lat and lon:
             logger.warning(
                 f"[FRETE] CEP {cep}: nem rua nem bairro encontrados, "
                 f"geocodificado só pela cidade -- pode ficar impreciso"
             )
-            return float(data[0]["lat"]), float(data[0]["lon"])
+            return lat, lon
 
         logger.error(f"[FRETE] Não foi possível geocodificar CEP: {cep}")
 
@@ -249,7 +246,7 @@ def distancia_km(lat1, lon1, lat2, lon2):
     return distancia
 
 
-def calcular_frete_por_cep(cep_cliente):
+def calcular_frete_por_cep(cep_cliente, numero_cliente=""):
     # Se o CEP for igual ao da empresa, frete simbólico
     cep_limpo_cliente = cep_cliente.replace("-", "")
     cep_limpo_empresa = CEP_EMPRESA.replace("-", "")
@@ -263,7 +260,7 @@ def calcular_frete_por_cep(cep_cliente):
     lat1 = LAT_EMPRESA
     lon1 = LON_EMPRESA
 
-    lat2, lon2 = buscar_coordenadas(cep_cliente)
+    lat2, lon2 = buscar_coordenadas(cep_cliente, numero_cliente or "")
 
     print("COORD EMPRESA:", lat1, lon1)
     print("COORD CLIENTE:", lat2, lon2)

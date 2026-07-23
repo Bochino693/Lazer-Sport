@@ -192,7 +192,7 @@ class Clientes(Prime):
             lat, lon = None, None
 
             if self.cep:
-                lat, lon = buscar_coordenadas(self.cep)
+                lat, lon = buscar_coordenadas(self.cep, self.numero or "")
 
             if (not lat or not lon) and self.cidade:
                 lat, lon = buscar_coordenadas_por_cidade(
@@ -1148,5 +1148,4 @@ class CategoriaClick(Prime):
     class Meta:
         verbose_name = "Categoria Clicada"
         verbose_name_plural = "Categorias Clicadas"
-
         
