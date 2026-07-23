@@ -239,6 +239,11 @@ class Brinquedos(Prime):
     valor_brinquedo = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     avaliacao = models.DecimalField(decimal_places=2, max_digits=6)
 
+    exibir_na_loja = models.BooleanField(
+        default=False,
+        help_text="Marque para este brinquedo aparecer também na Loja. Peças de reposição, promoções e combos entram na Loja automaticamente; brinquedos não -- só os marcados aqui."
+    )
+
     categorias_brinquedos = models.ManyToManyField(
         CategoriasBrinquedos,
         related_name='brinquedos'
@@ -1096,4 +1101,3 @@ class CategoriaClick(Prime):
     class Meta:
         verbose_name = "Categoria Clicada"
         verbose_name_plural = "Categorias Clicadas"
-        

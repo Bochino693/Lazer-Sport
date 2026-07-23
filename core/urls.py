@@ -12,7 +12,7 @@ from .views import (HomeView, BrinquedoInfoView, CategoriasInfoView, BrinquedosV
                     DashboardAdminView, UserAdminView, ManutencaoAdminView, RelatorioVendasView, PedidoAdminView,
                     redirecionar_loja, redirecionar_categoria_brinquedos, redirecionar_categoria_aventura, redirecionar_lancamentos,
                     redirecionar_showroom, redirecionar_contato, EstatisticasGeraisView, ReposicaoView, ReposicaoDetalheView,
-                    robots_txt, ComboAdminView, SearchView
+                    robots_txt, ComboAdminView, SearchView, LojaView
                     )
 
 sitemaps = {
@@ -28,7 +28,7 @@ urlpatterns = [
     path('sitemap.xml', sitemap, {'sitemaps': sitemaps}, name='sitemap'),
 
     path('', HomeView.as_view(), name='home'),
-    path('loja/', redirecionar_loja),
+    path('loja/', LojaView.as_view(), name='loja'),
     path('lancamentos/', redirecionar_lancamentos),
     path('nosso-showroom/', redirecionar_showroom),
     path('contato/', redirecionar_contato),

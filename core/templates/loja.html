@@ -1,0 +1,340 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Loja | Lazer e Sport Brinquedos{% endblock %}
+
+{% block meta_description %}Loja da Lazer e Sport: peças de reposição, promoções, combos especiais e brinquedos selecionados, tudo num catálogo só.{% endblock %}
+
+{% block content %}
+
+<style>
+.loja-breadcrumb {
+    max-width: 1200px;
+    margin: 25px auto 0;
+    padding: 0 20px;
+    font-size: 0.95rem;
+    color: #444;
+}
+
+.loja-breadcrumb a {
+    color: #007BFF;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.loja-breadcrumb a:hover {
+    text-decoration: underline;
+}
+
+.loja-breadcrumb span {
+    margin: 0 6px;
+    color: #888;
+}
+
+.loja-hero {
+    max-width: 1200px;
+    margin: 10px auto 0;
+    padding: 20px 20px 0;
+    text-align: center;
+}
+
+.loja-hero h1 {
+    font-family: 'Poppins', sans-serif;
+    font-size: 2.4rem;
+    font-weight: 800;
+    color: #004AAD;
+    margin-bottom: 10px;
+}
+
+.loja-hero p {
+    color: #6c757d;
+    font-size: 1.05rem;
+    max-width: 640px;
+    margin: 0 auto;
+    line-height: 1.6;
+}
+
+.loja-filtros {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    max-width: 1200px;
+    margin: 30px auto 10px;
+    padding: 0 20px;
+}
+
+.loja-filtro-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background: #ffffff;
+    color: #2c3e50;
+    border: 1px solid #e3e8f0;
+    border-radius: 999px;
+    font-weight: 600;
+    font-size: 0.92rem;
+    cursor: pointer;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.06);
+    transition: transform 0.25s ease, box-shadow 0.25s ease, background 0.25s ease, color 0.25s ease, border-color 0.25s ease;
+}
+
+.loja-filtro-btn .contagem {
+    background: #f0f4ff;
+    color: #004AAD;
+    border-radius: 999px;
+    padding: 1px 9px;
+    font-size: 0.78rem;
+    font-weight: 800;
+}
+
+.loja-filtro-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 18px rgba(0,74,173,0.14);
+    border-color: #007BFF;
+}
+
+.loja-filtro-btn.ativo {
+    background: linear-gradient(135deg, #004AAD, #007BFF);
+    color: #ffffff;
+    border-color: transparent;
+    box-shadow: 0 8px 20px rgba(0,74,173,0.35);
+}
+
+.loja-filtro-btn.ativo .contagem {
+    background: rgba(255,255,255,0.2);
+    color: #ffffff;
+}
+
+.loja-grid-wrap {
+    max-width: 1200px;
+    margin: 20px auto 60px;
+    padding: 0 20px;
+}
+
+.loja-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 26px;
+}
+
+.loja-card {
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+    text-decoration: none;
+    color: inherit;
+    transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.loja-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 16px 34px rgba(0,0,0,0.16);
+}
+
+.loja-card-img {
+    width: 100%;
+    height: 190px;
+    background: #f5f8ff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    position: relative;
+}
+
+.loja-card-img img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    padding: 10px;
+    transition: transform 0.4s ease;
+}
+
+.loja-card:hover .loja-card-img img {
+    transform: scale(1.06);
+}
+
+.loja-card-img .sem-imagem {
+    color: #b7c0d8;
+    font-size: 2.2rem;
+}
+
+.loja-card-tipo {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    background: rgba(13,27,46,0.78);
+    color: #fff;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    padding: 5px 11px;
+    border-radius: 999px;
+}
+
+.loja-card-tipo.peca { background: rgba(0,74,173,0.85); }
+.loja-card-tipo.promocao { background: rgba(230,57,70,0.88); }
+.loja-card-tipo.combo { background: rgba(255,152,0,0.9); }
+.loja-card-tipo.brinquedo { background: rgba(46,204,113,0.85); }
+
+.loja-card-corpo {
+    padding: 16px 18px 20px;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+
+.loja-card-corpo h3 {
+    font-size: 1.02rem;
+    font-weight: 700;
+    color: #1f2d3d;
+    margin-bottom: 10px;
+    line-height: 1.35;
+}
+
+.loja-card-precos {
+    margin-top: auto;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.loja-card-preco-original {
+    text-decoration: line-through;
+    color: #999;
+    font-size: 0.85rem;
+}
+
+.loja-card-preco {
+    color: #007BFF;
+    font-weight: 800;
+    font-size: 1.2rem;
+}
+
+.loja-card-sem-preco {
+    color: #8a94a6;
+    font-size: 0.85rem;
+    font-style: italic;
+}
+
+.loja-vazio {
+    text-align: center;
+    padding: 60px 20px;
+    color: #8a94a6;
+    background: #fff;
+    border-radius: 24px;
+    border: 1px dashed #e3e8f0;
+}
+
+@media (max-width: 575px) {
+    .loja-hero h1 { font-size: 1.7rem; }
+    .loja-filtro-btn { padding: 8px 14px; font-size: 0.85rem; }
+}
+</style>
+
+<nav class="loja-breadcrumb" aria-label="Breadcrumb">
+    <a href="{% url 'home' %}">Home</a>
+    <span>›</span>
+    <strong>Loja</strong>
+</nav>
+
+<div class="loja-hero">
+    <h1>Loja Lazer &amp; Sport</h1>
+    <p>
+        Peças de reposição, promoções e combos especiais num catálogo só --
+        além de alguns brinquedos selecionados.
+    </p>
+</div>
+
+{% if itens_loja %}
+<div class="loja-filtros" id="loja-filtros">
+    <button type="button" class="loja-filtro-btn ativo" data-tipo="todos">
+        Todos <span class="contagem">{{ total_itens }}</span>
+    </button>
+    {% if contagem_por_tipo.peca %}
+    <button type="button" class="loja-filtro-btn" data-tipo="peca">
+        Peças de Reposição <span class="contagem">{{ contagem_por_tipo.peca }}</span>
+    </button>
+    {% endif %}
+    {% if contagem_por_tipo.promocao %}
+    <button type="button" class="loja-filtro-btn" data-tipo="promocao">
+        Promoções <span class="contagem">{{ contagem_por_tipo.promocao }}</span>
+    </button>
+    {% endif %}
+    {% if contagem_por_tipo.combo %}
+    <button type="button" class="loja-filtro-btn" data-tipo="combo">
+        Combos <span class="contagem">{{ contagem_por_tipo.combo }}</span>
+    </button>
+    {% endif %}
+    {% if contagem_por_tipo.brinquedo %}
+    <button type="button" class="loja-filtro-btn" data-tipo="brinquedo">
+        Brinquedos <span class="contagem">{{ contagem_por_tipo.brinquedo }}</span>
+    </button>
+    {% endif %}
+</div>
+
+<div class="loja-grid-wrap">
+    <div class="loja-grid" id="loja-grid">
+        {% for item in itens_loja %}
+        <a href="{{ item.url }}" class="loja-card" data-tipo="{{ item.tipo }}">
+            <div class="loja-card-img">
+                <span class="loja-card-tipo {{ item.tipo }}">{{ item.tipo_label }}</span>
+                {% if item.imagem %}
+                    <img src="{{ item.imagem }}" alt="{{ item.titulo }}" loading="lazy">
+                {% else %}
+                    <i class="fa-solid fa-image sem-imagem" aria-hidden="true"></i>
+                {% endif %}
+            </div>
+            <div class="loja-card-corpo">
+                <h3>{{ item.titulo }}</h3>
+                <div class="loja-card-precos">
+                    {% if item.preco %}
+                        {% if item.preco_original %}
+                            <span class="loja-card-preco-original">R$ {{ item.preco_original }}</span>
+                        {% endif %}
+                        <span class="loja-card-preco">R$ {{ item.preco }}</span>
+                    {% else %}
+                        <span class="loja-card-sem-preco">Consulte o valor</span>
+                    {% endif %}
+                </div>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const botoes = document.querySelectorAll('#loja-filtros .loja-filtro-btn');
+    const cards = document.querySelectorAll('#loja-grid .loja-card');
+
+    botoes.forEach(botao => {
+        botao.addEventListener('click', () => {
+            botoes.forEach(b => b.classList.remove('ativo'));
+            botao.classList.add('ativo');
+
+            const tipo = botao.dataset.tipo;
+            cards.forEach(card => {
+                card.style.display = (tipo === 'todos' || card.dataset.tipo === tipo) ? '' : 'none';
+            });
+        });
+    });
+});
+</script>
+
+{% else %}
+<div class="loja-grid-wrap">
+    <div class="loja-vazio">
+        <p>Ainda não há itens na loja. Cadastre peças de reposição, promoções, combos ou marque brinquedos para aparecerem aqui.</p>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}

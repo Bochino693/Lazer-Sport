@@ -635,6 +635,95 @@ class BrinquedosView(View):
         return render(request, 'brinquedos.html', context)
 
 
+class LojaView(View):
+    """
+    Loja: reúne num catálogo só tudo que já está pronto pra vender --
+    todas as peças de reposição, todas as promoções e todos os combos
+    entram automaticamente. Brinquedos "normais" NÃO entram por padrão
+    (Brinquedos.exibir_na_loja é False por padrão) -- só aparecem aqui
+    os que foram marcados explicitamente no admin.
+    """
+    template_name = 'loja.html'
+
+    def get(self, request):
+        itens = []
+
+        pecas = (
+            PecasReposicao.objects
+            .filter(ativo=True)
+            .prefetch_related('imagem_peca_reposicao', 'categoria_peca')
+        )
+        for peca in pecas:
+            imagem_obj = peca.imagem_principal
+            itens.append({
+                'tipo': 'peca',
+                'tipo_label': 'Peça de Reposição',
+                'titulo': peca.nome,
+                'imagem': imagem_obj.imagem.url if imagem_obj and imagem_obj.imagem else None,
+                'preco': peca.preco_venda,
+                'url': reverse('reposicao_detalhe', args=[peca.id]),
+            })
+
+        promocoes = (
+            Promocoes.objects
+            .filter(ativo=True)
+            .select_related('brinquedos')
+        )
+        for promo in promocoes:
+            itens.append({
+                'tipo': 'promocao',
+                'tipo_label': 'Promoção',
+                'titulo': promo.descricao,
+                'imagem': (
+                    promo.brinquedos.imagem_brinquedo.url
+                    if promo.brinquedos and promo.brinquedos.imagem_brinquedo else None
+                ),
+                'preco': promo.preco_promocao,
+                'preco_original': promo.brinquedos.valor_brinquedo if promo.brinquedos else None,
+                'url': reverse('promocao', args=[promo.id]),
+            })
+
+        combos = Combos.objects.filter(ativo=True).prefetch_related('brinquedos')
+        for combo in combos:
+            itens.append({
+                'tipo': 'combo',
+                'tipo_label': 'Combo',
+                'titulo': combo.descricao,
+                'imagem': combo.imagem_combo.url if combo.imagem_combo else None,
+                'preco': combo.valor_combo,
+                'url': reverse('combo', args=[combo.id]),
+            })
+
+        brinquedos_na_loja = (
+            Brinquedos.objects
+            .filter(ativo=True, exibir_na_loja=True)
+        )
+        for brinquedo in brinquedos_na_loja:
+            itens.append({
+                'tipo': 'brinquedo',
+                'tipo_label': 'Brinquedo',
+                'titulo': brinquedo.nome_brinquedo,
+                'imagem': brinquedo.imagem_brinquedo.url if brinquedo.imagem_brinquedo else None,
+                'preco': brinquedo.valor_brinquedo,
+                'url': reverse('brinquedo_detalhe', args=[brinquedo.id]),
+            })
+
+        contagem_por_tipo = {
+            'peca': sum(1 for i in itens if i['tipo'] == 'peca'),
+            'promocao': sum(1 for i in itens if i['tipo'] == 'promocao'),
+            'combo': sum(1 for i in itens if i['tipo'] == 'combo'),
+            'brinquedo': sum(1 for i in itens if i['tipo'] == 'brinquedo'),
+        }
+
+        context = {
+            'itens_loja': itens,
+            'total_itens': len(itens),
+            'contagem_por_tipo': contagem_por_tipo,
+        }
+
+        return render(request, self.template_name, context)
+
+
 class ComboInfoView(View):
 
     def get(self, request, pk):
