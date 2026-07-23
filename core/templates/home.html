@@ -3178,104 +3178,82 @@ body {
         border: 1px dashed #e3e8f0;
     }
 
-    /* Pino customizado do mapa (clientes) -- círculo com a LOGO real do
-       cliente + "rabinho" apontando pro local exato, como um pin de mapa
-       de verdade. Borda vermelha pra contrastar com o dourado da fábrica. */
-    .cliente-marker {
-        background: transparent;
-        border: none;
-    }
-
-    .cliente-pino-wrap {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 36px;
-        height: 36px;
-        border-radius: 50%;
-        background: #fff;
-        border: 3px solid #E63946;
-        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35);
-        overflow: hidden;
-        position: relative;
-        transition: transform 0.2s ease;
-    }
-
-    .cliente-marker:hover .cliente-pino-wrap {
-        transform: scale(1.12);
-    }
-
-    .cliente-pino-wrap::after {
-        content: '';
-        position: absolute;
-        bottom: -7px;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 0;
-        height: 0;
-        border-left: 6px solid transparent;
-        border-right: 6px solid transparent;
-        border-top: 8px solid #E63946;
-    }
-
-    .cliente-pino-wrap img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-    }
-
-    .cliente-pino-inicial {
-        font-weight: 800;
-        font-size: 15px;
-        color: #E63946;
-    }
-
-    /* Pino ESPECIAL da fábrica -- maior, dourado, com anel pulsando
-       ao redor pra chamar atenção no meio dos pinos de cliente */
+    /* Pinos do mapa em formato de GOTA (alfinete de mapa de verdade,
+       tipo Google Maps) -- muito mais reconhecível que um círculo solto.
+       Clientes = azul, fábrica = vermelho. A "ponta" da gota aponta
+       exatamente pro local no mapa. */
+    .cliente-marker,
     .fabrica-marker {
         background: transparent;
         border: none;
-        display: flex;
-        align-items: center;
-        justify-content: center;
     }
 
-    .fabrica-marker .fabrica-pino-wrap {
+    .pino-gota {
         position: relative;
-        width: 44px;
-        height: 44px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
+        width: 34px;
+        height: 34px;
     }
 
-    .fabrica-marker .fabrica-anel {
+    .pino-gota-corpo {
         position: absolute;
         inset: 0;
-        border-radius: 50%;
-        background: rgba(255, 215, 0, 0.45);
-        animation: pulso-fabrica 2.2s ease-out infinite;
+        border-radius: 50% 50% 50% 0;
+        transform: rotate(-45deg);
+        border: 3px solid #fff;
+        box-shadow: 0 6px 14px rgba(0, 0, 0, 0.4);
+        transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
+                    box-shadow 0.25s ease;
     }
 
-    .fabrica-marker i {
-        position: relative;
-        font-size: 22px;
-        color: #0d1b2e;
-        background: linear-gradient(135deg, #FFD700, #ffb300);
-        width: 38px;
-        height: 38px;
-        border-radius: 50%;
+    .pino-gota-conteudo {
+        position: absolute;
+        inset: 0;
         display: flex;
         align-items: center;
         justify-content: center;
-        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
-        border: 3px solid #fff;
+        transform: rotate(45deg);
     }
 
-    @keyframes pulso-fabrica {
-        0% { transform: scale(0.7); opacity: 0.9; }
-        70% { transform: scale(2); opacity: 0; }
-        100% { transform: scale(2); opacity: 0; }
+    .pino-gota-conteudo img {
+        width: 16px;
+        height: 16px;
+        object-fit: contain;
+    }
+
+    .cliente-marker .pino-gota-corpo {
+        background: linear-gradient(135deg, #4aa3ff, #004AAD);
+    }
+
+    .fabrica-marker .pino-gota-corpo {
+        width: 40px;
+        height: 40px;
+        background: linear-gradient(135deg, #ff6b6b, #E63946);
+        animation: pulso-fabrica-gota 2.4s ease-in-out infinite;
+    }
+
+    .fabrica-marker .pino-gota {
+        width: 40px;
+        height: 40px;
+    }
+
+    .fabrica-marker .pino-gota-conteudo img {
+        width: 20px;
+        height: 20px;
+    }
+
+    .cliente-marker:hover .pino-gota-corpo,
+    .fabrica-marker:hover .pino-gota-corpo {
+        transform: rotate(-45deg) scale(1.18);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.45);
+    }
+
+    @keyframes pulso-fabrica-gota {
+        0%, 100% {
+            box-shadow: 0 6px 14px rgba(230, 57, 70, 0.4), 0 0 0 0 rgba(230, 57, 70, 0.55);
+        }
+        50% {
+            box-shadow: 0 6px 14px rgba(230, 57, 70, 0.4), 0 0 0 9px rgba(230, 57, 70, 0);
+        }
     }
 
     /* Legenda simples abaixo da barra de filtro */
@@ -3302,11 +3280,11 @@ body {
     }
 
     .clientes-legenda .ponto.fabrica {
-        background: linear-gradient(135deg, #FFD700, #ffb300);
+        background: linear-gradient(135deg, #ff6b6b, #E63946);
     }
 
     .clientes-legenda .ponto.cliente {
-        background: #E63946;
+        background: linear-gradient(135deg, #4aa3ff, #004AAD);
     }
 
     /* Popup do Leaflet no estilo do site */
@@ -3342,10 +3320,12 @@ body {
     }
 
     .cliente-popup a {
-        display: inline-block;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
         margin-top: 4px;
         font-size: 0.78rem;
-        color: #007BFF;
+        color: #E1306C;
         font-weight: 700;
         text-decoration: none;
     }
@@ -3354,10 +3334,28 @@ body {
         text-decoration: underline;
     }
 
+    .cliente-popup-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+        margin-top: 6px;
+        max-width: 190px;
+    }
+
+    .cliente-popup-tags span {
+        background: #f0f4ff;
+        color: #004AAD;
+        font-size: 0.68rem;
+        font-weight: 700;
+        padding: 2px 8px;
+        border-radius: 999px;
+        white-space: nowrap;
+    }
+
     .fabrica-popup-badge {
         display: inline-block;
-        background: linear-gradient(135deg, #FFD700, #ffb300);
-        color: #0d1b2e;
+        background: linear-gradient(135deg, #ff6b6b, #E63946);
+        color: #fff;
         font-weight: 800;
         font-size: 0.7rem;
         text-transform: uppercase;
@@ -3404,7 +3402,7 @@ body {
     </div>
 
     <p class="clientes-subtitle">
-        O pino dourado é a nossa fábrica, em São Paulo. Os demais são clientes que já
+        O pino vermelho é a nossa fábrica, em São Paulo. Os demais são clientes que já
         confiam na Lazer &amp; Sport, espalhados pelo Brasil e também fora dele.
         Use o filtro para explorar por cidade.
     </p>
@@ -3436,7 +3434,7 @@ body {
     <ul class="clientes-seo-lista">
         {% for cliente in clientes_mapa %}
         <li>
-            <strong>Fábrica de Brinquedos Lazer &amp; Sport</strong> em {{ cliente.cidade }}{% if cliente.estado %}/{{ cliente.estado }}{% endif %}{% if cliente.pais != "Brasil" %}, {{ cliente.pais }}{% endif %} — {{ cliente.nome }}
+            <strong>Lazer &amp; Sport</strong> em {{ cliente.cidade }}{% if cliente.estado %}/{{ cliente.estado }}{% endif %}{% if cliente.pais != "Brasil" %}, {{ cliente.pais }}{% endif %} — {{ cliente.nome }}
         </li>
         {% endfor %}
     </ul>
@@ -3487,45 +3485,82 @@ body {
         return div.innerHTML;
     }
 
-    // Cada cliente ganha o próprio pino, com a logo dele -- não é mais
-    // um ícone genérico igual pra todo mundo. Se por algum motivo o
-    // cliente não tiver logo, cai numa inicial (defensivo; na prática
-    // logo é obrigatória no cadastro).
-    function criarIconeCliente(c) {
-        const nome = escapeHTML(c.nome);
-        const conteudo = c.logo
-            ? `<img src="${c.logo}" alt="${nome}">`
-            : `<span class="cliente-pino-inicial">${nome.charAt(0).toUpperCase()}</span>`;
+    // Logo fixa pra TODOS os clientes -- não usa mais a logo individual
+    // de cada um (evita pinos com fotos de qualidade/proporção
+    // diferentes, deixa o mapa visualmente uniforme).
+    const LOGO_CLIENTE_PADRAO = "{% static 'images/logoo.png' %}";
 
+    function criarIconeCliente(c) {
         return L.divIcon({
             className: 'cliente-marker',
-            html: `<span class="cliente-pino-wrap">${conteudo}</span>`,
-            iconSize: [36, 44],
-            iconAnchor: [18, 42],
-            popupAnchor: [0, -38],
+            html: `
+                <span class="pino-gota">
+                    <span class="pino-gota-corpo"></span>
+                    <span class="pino-gota-conteudo"><img src="${LOGO_CLIENTE_PADRAO}" alt=""></span>
+                </span>
+            `,
+            iconSize: [34, 34],
+            iconAnchor: [17, 34],
+            popupAnchor: [0, -30],
         });
     }
 
     const iconeFabrica = L.divIcon({
         className: 'fabrica-marker',
-        html: '<span class="fabrica-pino-wrap"><span class="fabrica-anel"></span><i class="fa-solid fa-industry"></i></span>',
-        iconSize: [44, 44],
-        iconAnchor: [22, 38],
-        popupAnchor: [0, -34],
+        html: `
+            <span class="pino-gota">
+                <span class="pino-gota-corpo"></span>
+                <span class="pino-gota-conteudo"><img src="${fabrica ? fabrica.logo : ''}" alt=""></span>
+            </span>
+        `,
+        iconSize: [40, 40],
+        iconAnchor: [20, 40],
+        popupAnchor: [0, -36],
     });
 
     let marcadoresClientes = [];
     let marcadorFabrica = null;
+    let marcadorPopupFixado = null;
+
+    // Popup aparece ao passar o mouse (preview) e some ao tirar o mouse --
+    // só fica ABERTO de verdade (fixo) depois de um clique. Clicar de novo
+    // no mesmo pino, ou clicar em outro pino, ou clicar fora, desfixa.
+    function configurarInteracaoMarcador(marcador) {
+        marcador.on('mouseover', function () {
+            if (marcador !== marcadorPopupFixado) marcador.openPopup();
+        });
+
+        marcador.on('mouseout', function () {
+            if (marcador !== marcadorPopupFixado) marcador.closePopup();
+        });
+
+        marcador.on('click', function () {
+            if (marcadorPopupFixado === marcador) {
+                marcadorPopupFixado = null;
+                marcador.closePopup();
+                return;
+            }
+
+            if (marcadorPopupFixado) marcadorPopupFixado.closePopup();
+            marcadorPopupFixado = marcador;
+            marcador.openPopup();
+        });
+    }
 
     function criarPopupCliente(c) {
         const nome = escapeHTML(c.nome);
-        const logo = c.logo
-            ? `<img src="${c.logo}" alt="${nome}">`
-            : `<div style="width:40px;height:40px;border-radius:8px;background:#E3F2FD;display:flex;align-items:center;justify-content:center;color:#007BFF;font-weight:800;">${nome.charAt(0).toUpperCase()}</div>`;
+        const logo = `<img src="${LOGO_CLIENTE_PADRAO}" alt="${nome}">`;
 
         const local = escapeHTML([c.cidade, c.estado].filter(Boolean).join(' - ') || c.pais);
         const link = c.site
-            ? `<a href="${escapeHTML(c.site)}" target="_blank" rel="noopener">Visitar site <i class="fa-solid fa-arrow-up-right-from-square"></i></a>`
+            ? `<a href="${escapeHTML(c.site)}" target="_blank" rel="noopener"><i class="fa-brands fa-instagram"></i> Visitar Instagram</a>`
+            : '';
+
+        const tags = c.categorias
+            ? `<div class="cliente-popup-tags">${
+                c.categorias.split('-').map(t => t.trim()).filter(Boolean)
+                    .map(t => `<span>${escapeHTML(t)}</span>`).join('')
+              }</div>`
             : '';
 
         return `
@@ -3535,6 +3570,7 @@ body {
                     <h4>${nome}</h4>
                     <span class="cliente-popup-marca">Lazer &amp; Sport em ${local}</span><br>
                     ${link}
+                    ${tags}
                 </div>
             </div>
         `;
@@ -3565,6 +3601,7 @@ body {
             const marcador = L.marker([c.lat, c.lng], { icon: criarIconeCliente(c) })
                 .bindPopup(criarPopupCliente(c));
             marcador.addTo(mapa);
+            configurarInteracaoMarcador(marcador);
             marcadoresClientes.push(marcador);
         });
 
@@ -3591,6 +3628,7 @@ body {
         marcadorFabrica = L.marker([fabrica.lat, fabrica.lng], { icon: iconeFabrica, zIndexOffset: 1000 })
             .bindPopup(criarPopupFabrica(fabrica));
         marcadorFabrica.addTo(mapa);
+        configurarInteracaoMarcador(marcadorFabrica);
     }
 
     // Popula o filtro de cidades a partir dos clientes reais (Brasil e exterior)
@@ -3620,7 +3658,13 @@ body {
 
     // Só ativa o zoom por scroll quando o usuário clica no mapa
     // (evita "sequestrar" o scroll da página ao passar o mouse por cima)
-    mapa.on('click', () => mapa.scrollWheelZoom.enable());
+    mapa.on('click', () => {
+        mapa.scrollWheelZoom.enable();
+        if (marcadorPopupFixado) {
+            marcadorPopupFixado.closePopup();
+            marcadorPopupFixado = null;
+        }
+    });
     document.addEventListener('click', (e) => {
         if (!e.target.closest('#mapa-clientes')) {
             mapa.scrollWheelZoom.disable();

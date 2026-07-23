@@ -232,7 +232,7 @@ class HomeView(View):
                 "lat": float(c.latitude),
                 "lng": float(c.longitude),
                 "site": c.site_cliente or "",
-                "logo": c.logo_cliente.url if c.logo_cliente else "",
+                "categorias": c.categorias_cliente or "",
             }
             for c in clientes_com_mapa
         ]
@@ -1057,6 +1057,7 @@ class ClienteAdminView(AdminOnlyMixin, View):
                 "estado": c.estado or "",
                 "pais": c.pais or "Brasil",
                 "site_cliente": c.site_cliente or "",
+                "categorias_cliente": c.categorias_cliente or "",
                 "ativo": c.ativo,
                 "exibir_no_mapa": c.exibir_no_mapa,
             }
@@ -1108,6 +1109,7 @@ class ClienteAdminView(AdminOnlyMixin, View):
         cliente.estado = request.POST.get("estado", "").strip().upper()
         cliente.pais = request.POST.get("pais", "").strip() or "Brasil"
         cliente.site_cliente = request.POST.get("site_cliente", "").strip()
+        cliente.categorias_cliente = request.POST.get("categorias_cliente", "").strip()
         cliente.exibir_no_mapa = request.POST.get("exibir_no_mapa") == "on"
         cliente.ativo = request.POST.get("ativo") == "on"
 
