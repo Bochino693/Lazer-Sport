@@ -92,7 +92,7 @@ def buscar_coordenadas(cep):
             "User-Agent": "lazersport-frete"
         }
 
-        # tentativa 1 — endereço completo
+        # tentativa 1 — endereço completo (rua + bairro + cidade + estado)
         params = {
             "q": endereco,
             "format": "json",
@@ -105,12 +105,38 @@ def buscar_coordenadas(cep):
         if data:
             return float(data[0]["lat"]), float(data[0]["lon"])
 
-        # tentativa 2 — cidade + estado
+        # A partir daqui a rua exata não foi encontrada -- os parts vêm
+        # de "logradouro, bairro, cidade, estado, Brazil".
         parts = endereco.split(",")
 
+        bairro = parts[-4].strip() if len(parts) >= 4 else ""
         cidade = parts[-3].strip()
         estado = parts[-2].strip()
 
+        # tentativa 2 — bairro + cidade + estado. Isso é o que faltava:
+        # sem essa etapa intermediária, qualquer CEP cuja rua exata o
+        # Nominatim não reconhecesse caía direto pro centro genérico da
+        # cidade (ex: Praça da Sé em São Paulo) mesmo quando o bairro
+        # certo (ex: Vila Prudente) era perfeitamente geocodificável.
+        if bairro:
+            params = {
+                "q": f"{bairro}, {cidade}, {estado}, Brazil",
+                "format": "json",
+                "limit": 1
+            }
+
+            r = requests.get(url, params=params, headers=headers, timeout=5)
+            data = r.json()
+
+            if data:
+                logger.warning(
+                    f"[FRETE] CEP {cep}: rua exata não encontrada, "
+                    f"geocodificado pelo bairro '{bairro}'"
+                )
+                return float(data[0]["lat"]), float(data[0]["lon"])
+
+        # tentativa 3 — só cidade + estado (último recurso; impreciso,
+        # pode cair no centro/marco-zero da cidade)
         params = {
             "q": f"{cidade}, {estado}, Brazil",
             "format": "json",
@@ -121,6 +147,10 @@ def buscar_coordenadas(cep):
         data = r.json()
 
         if data:
+            logger.warning(
+                f"[FRETE] CEP {cep}: nem rua nem bairro encontrados, "
+                f"geocodificado só pela cidade -- pode ficar impreciso"
+            )
             return float(data[0]["lat"]), float(data[0]["lon"])
 
         logger.error(f"[FRETE] Não foi possível geocodificar CEP: {cep}")
@@ -228,4 +258,3 @@ def calcular_frete_por_cep(cep_cliente):
     print("FRETE:", valor_frete)
 
     return valor_frete, distancia
-
