@@ -136,9 +136,12 @@
     /* ======= MENU ======= */
     nav {
       display: flex;
-      gap: clamp(6px, 0.8vw, 14px);
-      align-items: stretch;
-      flex-wrap: nowrap;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      align-content: center;
+      gap: 4px 8px;
+      flex: 1 1 auto;
+      min-width: 0;
     }
 
     nav a {
@@ -157,8 +160,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      min-width: 76px;
-      max-width: 108px;
+      width: 100px;
       min-height: 40px;
       flex-shrink: 0;
       transition: color 0.25s var(--ease-out), transform 0.25s var(--ease-out);
@@ -229,23 +231,16 @@
       transition: all 0.3s ease;
     }
 
-    /* Com frases completas, o menu fica bem mais largo -- então a partir
-       do desktop já assume que pode não caber tudo numa linha só, e vira
-       uma faixa com rolagem horizontal suave (bordas esmaecidas) em vez
-       de espremer o texto ou estourar o layout. */
+    /* Com frases completas, o menu fica mais largo -- em telas menores
+       (mas ainda desktop) ele simplesmente quebra pra uma segunda linha
+       inteira, dentro do próprio cabeçalho. Nada fica cortado ou sai
+       da tela; o cabeçalho só cresce um pouco em altura. */
     @media (min-width: 769px) {
-      header { padding: 12px 16px; }
-
-      nav {
-        max-width: 62vw;
-        overflow-x: auto;
-        scrollbar-width: none;
-        -ms-overflow-style: none;
-        -webkit-mask-image: linear-gradient(to right, transparent 0, black 18px, black calc(100% - 18px), transparent 100%);
-        mask-image: linear-gradient(to right, transparent 0, black 18px, black calc(100% - 18px), transparent 100%);
+      header {
+        padding: 10px 20px;
+        flex-wrap: wrap;
+        row-gap: 6px;
       }
-
-      nav::-webkit-scrollbar { display: none; }
     }
 
 @media (max-width: 768px) {
@@ -457,6 +452,7 @@ nav a.btn-login {
 .user-area {
     display: flex;
     align-items: center;
+    flex-shrink: 0;
     margin-left: 0;
     margin-right: 0;
 }
