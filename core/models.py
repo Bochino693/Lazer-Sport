@@ -163,7 +163,7 @@ class Clientes(Prime):
     )
     site_cliente = models.URLField(
         blank=True, null=True,
-        help_text="Opcional: link do site/Instagram do cliente, exibido no popup do mapa."
+        help_text="Link do Instagram do cliente. Aparece como \"Visitar Instagram\" no popup do mapa."
     )
     exibir_no_mapa = models.BooleanField(
         default=True,
@@ -1148,4 +1148,3 @@ class CategoriaClick(Prime):
     class Meta:
         verbose_name = "Categoria Clicada"
         verbose_name_plural = "Categorias Clicadas"
-        
