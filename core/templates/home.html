@@ -2983,6 +2983,103 @@ body {
     }
 </style>
 
+
+<section id="contato" class="ls-loc-section">
+
+    <div class="ls-loc-inner">
+
+        <div class="ls-loc-card">
+
+            <span class="ls-loc-tag">Localização</span>
+
+            <h2>Venha até a Lazer &amp; Sport.</h2>
+
+            <p>
+                Estamos em São Paulo, na zona norte, com rota pré-programada
+                pra facilitar sua visita, retirada ou atendimento presencial.
+            </p>
+
+            <div class="ls-loc-line">
+                <div class="ls-loc-icon"><i class="fa-solid fa-location-dot"></i></div>
+                <div>
+                    <h5>Endereço</h5>
+                    <p>Rua São Roque de Minas, 104 — Jardim Peri, São Paulo — SP, CEP 02679-110</p>
+                </div>
+            </div>
+
+            <div class="ls-loc-line">
+                <div class="ls-loc-icon"><i class="fa-solid fa-phone"></i></div>
+                <div>
+                    <h5>Telefone / WhatsApp</h5>
+                    <a href="https://wa.me/5511960563135" target="_blank" rel="noopener">+55 11 96056-3135</a>
+                </div>
+            </div>
+
+            <div class="ls-loc-line">
+                <div class="ls-loc-icon"><i class="fa-solid fa-envelope"></i></div>
+                <div>
+                    <h5>E-mail</h5>
+                    <a href="mailto:comercial@lazersport.com.br">comercial@lazersport.com.br</a>
+                </div>
+            </div>
+
+            <div class="ls-loc-routes">
+                <a
+                    href="https://www.google.com/maps/dir/?api=1&destination=Rua%20S%C3%A3o%20Roque%20de%20Minas%2C%20104%20-%20Jardim%20Peri%2C%20S%C3%A3o%20Paulo%20-%20SP%2C%2002679-110"
+                    target="_blank" rel="noopener" class="ls-loc-btn ls-loc-btn-maps"
+                >
+                    <i class="fa-solid fa-diamond-turn-right"></i> Rota no Google Maps
+                </a>
+
+                <a
+                    href="https://waze.com/ul?q=Rua%20S%C3%A3o%20Roque%20de%20Minas%2C%20104%20-%20Jardim%20Peri%2C%20S%C3%A3o%20Paulo%20-%20SP&navigate=yes"
+                    target="_blank" rel="noopener" class="ls-loc-btn ls-loc-btn-waze"
+                >
+                    <i class="fa-brands fa-waze"></i> Abrir no Waze
+                </a>
+            </div>
+
+        </div>
+
+        <div class="ls-loc-map">
+            <iframe
+                src="https://maps.google.com/maps?q=Rua%20S%C3%A3o%20Roque%20de%20Minas%2C%20104%20-%20Jardim%20Peri%20S%C3%A3o%20Paulo%20-%20SP%2002679-110&t=&z=15&ie=UTF8&iwloc=&output=embed"
+                loading="lazy"
+                referrerpolicy="no-referrer-when-downgrade"
+                allowfullscreen>
+            </iframe>
+        </div>
+
+    </div>
+
+    <div class="ls-loc-social">
+        <p>Siga a Lazer &amp; Sport nas redes sociais</p>
+
+        <div class="social-icons">
+            <a href="https://www.instagram.com/lazersportbrinquedos" target="_blank" rel="noopener" aria-label="Instagram" class="instagram">
+                <i class="fa-brands fa-instagram"></i>
+            </a>
+
+            <a href="https://wa.me/5511960563135" target="_blank" rel="noopener" aria-label="WhatsApp" class="whatsapp">
+                <i class="fa-brands fa-whatsapp"></i>
+            </a>
+
+            <a href="https://www.facebook.com/LazerSportBrinquedos1" target="_blank" rel="noopener" aria-label="Facebook" class="facebook">
+                <i class="fa-brands fa-facebook"></i>
+            </a>
+
+            <a href="https://www.linkedin.com/company/brinquedos-lazer-sport" target="_blank" rel="noopener" aria-label="LinkedIn" class="linkedin">
+                <i class="fa-brands fa-linkedin"></i>
+            </a>
+
+            <a href="https://www.threads.net/@lazersportbrinquedos" target="_blank" rel="noopener" aria-label="Threads" class="threads">
+                <i class="fa-brands fa-threads"></i>
+            </a>
+        </div>
+    </div>
+
+</section>
+
 <!-- ======= CLIENTES (MAPA) ======= -->
 <style>
     .clientes-section {
@@ -3081,7 +3178,7 @@ body {
         border: 1px dashed #e3e8f0;
     }
 
-    /* Pino customizado do mapa */
+    /* Pino customizado do mapa (clientes) */
     .cliente-marker {
         background: transparent;
         border: none;
@@ -3091,6 +3188,85 @@ body {
         font-size: 28px;
         color: #E63946;
         filter: drop-shadow(0 3px 5px rgba(0, 0, 0, 0.35));
+    }
+
+    /* Pino ESPECIAL da fábrica -- maior, dourado, com anel pulsando
+       ao redor pra chamar atenção no meio dos pinos de cliente */
+    .fabrica-marker {
+        background: transparent;
+        border: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .fabrica-marker .fabrica-pino-wrap {
+        position: relative;
+        width: 44px;
+        height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .fabrica-marker .fabrica-anel {
+        position: absolute;
+        inset: 0;
+        border-radius: 50%;
+        background: rgba(255, 215, 0, 0.45);
+        animation: pulso-fabrica 2.2s ease-out infinite;
+    }
+
+    .fabrica-marker i {
+        position: relative;
+        font-size: 22px;
+        color: #0d1b2e;
+        background: linear-gradient(135deg, #FFD700, #ffb300);
+        width: 38px;
+        height: 38px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+        border: 3px solid #fff;
+    }
+
+    @keyframes pulso-fabrica {
+        0% { transform: scale(0.7); opacity: 0.9; }
+        70% { transform: scale(2); opacity: 0; }
+        100% { transform: scale(2); opacity: 0; }
+    }
+
+    /* Legenda simples abaixo da barra de filtro */
+    .clientes-legenda {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+        margin: -6px 0 16px;
+        font-size: 0.82rem;
+        color: #6c757d;
+    }
+
+    .clientes-legenda span {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .clientes-legenda .ponto {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        display: inline-block;
+    }
+
+    .clientes-legenda .ponto.fabrica {
+        background: linear-gradient(135deg, #FFD700, #ffb300);
+    }
+
+    .clientes-legenda .ponto.cliente {
+        background: #E63946;
     }
 
     /* Popup do Leaflet no estilo do site */
@@ -3138,6 +3314,19 @@ body {
         text-decoration: underline;
     }
 
+    .fabrica-popup-badge {
+        display: inline-block;
+        background: linear-gradient(135deg, #FFD700, #ffb300);
+        color: #0d1b2e;
+        font-weight: 800;
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+        padding: 3px 9px;
+        border-radius: 999px;
+        margin-bottom: 4px;
+    }
+
     @media (max-width: 575px) {
         .clientes-toolbar { flex-direction: column; align-items: stretch; }
         #mapa-clientes { height: 360px; }
@@ -3171,15 +3360,16 @@ body {
 
     <div class="clientes-header">
         <span class="ls-showcase-tag">Presença nacional e internacional</span><br>
-        <h2 class="titulo-eventos">Onde nossos clientes estão</h2>
+        <h2 class="titulo-eventos">Nossa fábrica e onde nossos clientes estão</h2>
     </div>
 
     <p class="clientes-subtitle">
-        Fábricas, quiosques, shoppings e parques que já confiam na Lazer &amp; Sport,
-        espalhados pelo Brasil e também fora dele. Use o filtro para explorar por cidade.
+        O pino dourado é a nossa fábrica, em São Paulo. Os demais são clientes que já
+        confiam na Lazer &amp; Sport, espalhados pelo Brasil e também fora dele.
+        Use o filtro para explorar por cidade.
     </p>
 
-    {% if clientes_mapa %}
+    {% if pontos_mapa %}
     <div class="clientes-toolbar">
         <div class="clientes-filtro">
             <label for="filtro-cidade-cliente"><i class="fa-solid fa-filter"></i> Cidade</label>
@@ -3188,6 +3378,11 @@ body {
             </select>
         </div>
         <span class="clientes-contador" id="clientes-contador"></span>
+    </div>
+
+    <div class="clientes-legenda">
+        <span><i class="ponto fabrica"></i> Nossa fábrica</span>
+        <span><i class="ponto cliente"></i> Clientes atendidos</span>
     </div>
 
     <div class="clientes-mapa-wrap">
@@ -3213,7 +3408,7 @@ body {
 
 </section>
 
-{% if clientes_mapa %}
+{% if pontos_mapa %}
 <script type="application/ld+json">
 {
     "@context": "https://schema.org",
@@ -3227,14 +3422,17 @@ body {
     ]
 }
 </script>
-{{ clientes_mapa|json_script:"dados-clientes-mapa" }}
+{{ pontos_mapa|json_script:"dados-clientes-mapa" }}
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script>
 (function () {
-    const dados = JSON.parse(document.getElementById('dados-clientes-mapa').textContent);
-    if (!dados.length) return;
+    const todosPontos = JSON.parse(document.getElementById('dados-clientes-mapa').textContent);
+    if (!todosPontos.length) return;
+
+    const fabrica = todosPontos.find(p => p.tipo === 'fabrica') || null;
+    const clientesDados = todosPontos.filter(p => p.tipo === 'cliente');
 
     const mapa = L.map('mapa-clientes', { scrollWheelZoom: false });
 
@@ -3251,7 +3449,16 @@ body {
         popupAnchor: [0, -26],
     });
 
-    let marcadores = [];
+    const iconeFabrica = L.divIcon({
+        className: 'fabrica-marker',
+        html: '<span class="fabrica-pino-wrap"><span class="fabrica-anel"></span><i class="fa-solid fa-industry"></i></span>',
+        iconSize: [44, 44],
+        iconAnchor: [22, 38],
+        popupAnchor: [0, -34],
+    });
+
+    let marcadoresClientes = [];
+    let marcadorFabrica = null;
 
     function escapeHTML(texto) {
         const div = document.createElement('div');
@@ -3259,7 +3466,7 @@ body {
         return div.innerHTML;
     }
 
-    function criarPopup(c) {
+    function criarPopupCliente(c) {
         const nome = escapeHTML(c.nome);
         const logo = c.logo
             ? `<img src="${c.logo}" alt="${nome}">`
@@ -3282,15 +3489,32 @@ body {
         `;
     }
 
-    function renderizarMarcadores(lista) {
-        marcadores.forEach(m => mapa.removeLayer(m));
-        marcadores = [];
+    function criarPopupFabrica(f) {
+        const nome = escapeHTML(f.nome);
+        const local = escapeHTML([f.cidade, f.estado].filter(Boolean).join(' - '));
+        const endereco = escapeHTML(f.endereco || '');
+
+        return `
+            <div class="cliente-popup">
+                <img src="${f.logo}" alt="${nome}">
+                <div>
+                    <span class="fabrica-popup-badge">Nossa fábrica</span><br>
+                    <h4>${nome}</h4>
+                    <span>${endereco}${endereco ? ' — ' : ''}${local}</span>
+                </div>
+            </div>
+        `;
+    }
+
+    function renderizarClientes(lista) {
+        marcadoresClientes.forEach(m => mapa.removeLayer(m));
+        marcadoresClientes = [];
 
         lista.forEach(c => {
             const marcador = L.marker([c.lat, c.lng], { icon: iconeCliente })
-                .bindPopup(criarPopup(c));
+                .bindPopup(criarPopupCliente(c));
             marcador.addTo(mapa);
-            marcadores.push(marcador);
+            marcadoresClientes.push(marcador);
         });
 
         const contador = document.getElementById('clientes-contador');
@@ -3298,19 +3522,28 @@ body {
             contador.innerHTML = `<strong>${lista.length}</strong> cliente${lista.length === 1 ? '' : 's'} no mapa`;
         }
 
-        if (lista.length) {
-            const grupo = L.featureGroup(marcadores);
+        const todosPinsVisiveis = marcadoresClientes.concat(marcadorFabrica ? [marcadorFabrica] : []);
+
+        if (todosPinsVisiveis.length) {
+            const grupo = L.featureGroup(todosPinsVisiveis);
             mapa.fitBounds(grupo.getBounds().pad(0.25));
         } else {
             mapa.setView([-14.235, -51.925], 4);
         }
     }
 
-    // Popula o filtro de cidades a partir dos dados reais (Brasil e exterior)
+    // Pino da fábrica: fica sempre no mapa, independente do filtro de cidade
+    if (fabrica) {
+        marcadorFabrica = L.marker([fabrica.lat, fabrica.lng], { icon: iconeFabrica, zIndexOffset: 1000 })
+            .bindPopup(criarPopupFabrica(fabrica));
+        marcadorFabrica.addTo(mapa);
+    }
+
+    // Popula o filtro de cidades a partir dos clientes reais (Brasil e exterior)
     const selectCidade = document.getElementById('filtro-cidade-cliente');
     if (selectCidade) {
         const cidades = [...new Set(
-            dados.map(c => c.cidade).filter(Boolean)
+            clientesDados.map(c => c.cidade).filter(Boolean)
         )].sort((a, b) => a.localeCompare(b, 'pt-BR'));
 
         cidades.forEach(cidade => {
@@ -3323,13 +3556,13 @@ body {
         selectCidade.addEventListener('change', () => {
             const valor = selectCidade.value;
             const filtrados = valor === 'todas'
-                ? dados
-                : dados.filter(c => c.cidade === valor);
-            renderizarMarcadores(filtrados);
+                ? clientesDados
+                : clientesDados.filter(c => c.cidade === valor);
+            renderizarClientes(filtrados);
         });
     }
 
-    renderizarMarcadores(dados);
+    renderizarClientes(clientesDados);
 
     // Só ativa o zoom por scroll quando o usuário clica no mapa
     // (evita "sequestrar" o scroll da página ao passar o mouse por cima)
@@ -3343,101 +3576,6 @@ body {
 </script>
 {% endif %}
 
-<section id="contato" class="ls-loc-section">
-
-    <div class="ls-loc-inner">
-
-        <div class="ls-loc-card">
-
-            <span class="ls-loc-tag">Localização</span>
-
-            <h2>Venha até a Lazer &amp; Sport.</h2>
-
-            <p>
-                Estamos em São Paulo, na zona norte, com rota pré-programada
-                pra facilitar sua visita, retirada ou atendimento presencial.
-            </p>
-
-            <div class="ls-loc-line">
-                <div class="ls-loc-icon"><i class="fa-solid fa-location-dot"></i></div>
-                <div>
-                    <h5>Endereço</h5>
-                    <p>Rua São Roque de Minas, 104 — Jardim Peri, São Paulo — SP, CEP 02679-110</p>
-                </div>
-            </div>
-
-            <div class="ls-loc-line">
-                <div class="ls-loc-icon"><i class="fa-solid fa-phone"></i></div>
-                <div>
-                    <h5>Telefone / WhatsApp</h5>
-                    <a href="https://wa.me/5511960563135" target="_blank" rel="noopener">+55 11 96056-3135</a>
-                </div>
-            </div>
-
-            <div class="ls-loc-line">
-                <div class="ls-loc-icon"><i class="fa-solid fa-envelope"></i></div>
-                <div>
-                    <h5>E-mail</h5>
-                    <a href="mailto:comercial@lazersport.com.br">comercial@lazersport.com.br</a>
-                </div>
-            </div>
-
-            <div class="ls-loc-routes">
-                <a
-                    href="https://www.google.com/maps/dir/?api=1&destination=Rua%20S%C3%A3o%20Roque%20de%20Minas%2C%20104%20-%20Jardim%20Peri%2C%20S%C3%A3o%20Paulo%20-%20SP%2C%2002679-110"
-                    target="_blank" rel="noopener" class="ls-loc-btn ls-loc-btn-maps"
-                >
-                    <i class="fa-solid fa-diamond-turn-right"></i> Rota no Google Maps
-                </a>
-
-                <a
-                    href="https://waze.com/ul?q=Rua%20S%C3%A3o%20Roque%20de%20Minas%2C%20104%20-%20Jardim%20Peri%2C%20S%C3%A3o%20Paulo%20-%20SP&navigate=yes"
-                    target="_blank" rel="noopener" class="ls-loc-btn ls-loc-btn-waze"
-                >
-                    <i class="fa-brands fa-waze"></i> Abrir no Waze
-                </a>
-            </div>
-
-        </div>
-
-        <div class="ls-loc-map">
-            <iframe
-                src="https://maps.google.com/maps?q=Rua%20S%C3%A3o%20Roque%20de%20Minas%2C%20104%20-%20Jardim%20Peri%20S%C3%A3o%20Paulo%20-%20SP%2002679-110&t=&z=15&ie=UTF8&iwloc=&output=embed"
-                loading="lazy"
-                referrerpolicy="no-referrer-when-downgrade"
-                allowfullscreen>
-            </iframe>
-        </div>
-
-    </div>
-
-    <div class="ls-loc-social">
-        <p>Siga a Lazer &amp; Sport nas redes sociais</p>
-
-        <div class="social-icons">
-            <a href="https://www.instagram.com/lazersportbrinquedos" target="_blank" rel="noopener" aria-label="Instagram" class="instagram">
-                <i class="fa-brands fa-instagram"></i>
-            </a>
-
-            <a href="https://wa.me/5511960563135" target="_blank" rel="noopener" aria-label="WhatsApp" class="whatsapp">
-                <i class="fa-brands fa-whatsapp"></i>
-            </a>
-
-            <a href="https://www.facebook.com/LazerSportBrinquedos1" target="_blank" rel="noopener" aria-label="Facebook" class="facebook">
-                <i class="fa-brands fa-facebook"></i>
-            </a>
-
-            <a href="https://www.linkedin.com/company/brinquedos-lazer-sport" target="_blank" rel="noopener" aria-label="LinkedIn" class="linkedin">
-                <i class="fa-brands fa-linkedin"></i>
-            </a>
-
-            <a href="https://www.threads.net/@lazersportbrinquedos" target="_blank" rel="noopener" aria-label="Threads" class="threads">
-                <i class="fa-brands fa-threads"></i>
-            </a>
-        </div>
-    </div>
-
-</section>
 
 <script>
 
