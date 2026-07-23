@@ -40,6 +40,10 @@ class EnderecoEmpresa(Prime):
         max_digits=50, decimal_places=30, null=True, blank=True
     )
 
+    class Meta:
+        verbose_name = "Endereço da Fábrica Lazer & Sport"
+        verbose_name_plural = "Endereços das Fábricas Lazer & Sport"
+
     def __str__(self):
         return f"{self.nome} - {self.cidade}/{self.estado}"
 
