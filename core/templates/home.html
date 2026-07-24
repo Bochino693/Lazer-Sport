@@ -3177,12 +3177,71 @@ body {
        Aqui só ficam efeitos que não afetam se o pino aparece ou não. */
     .cliente-marker,
     .fabrica-marker {
-        background: transparent;
-        border: none;
+        background: transparent !important;
+        border: 0 !important;
+        overflow: visible !important;
+    }
+
+    .cliente-marker .pino-gota,
+    .fabrica-marker .pino-gota {
+        isolation: isolate;
+        overflow: visible;
     }
 
     .pino-gota {
+        display: block;
+        position: relative;
         transition: transform 0.2s ease;
+        transform-origin: 50% 100%;
+        pointer-events: auto;
+    }
+
+    .pino-gota__corpo {
+        position: absolute;
+        inset: 0;
+        z-index: 1;
+        width: 100%;
+        height: 100%;
+        display: block;
+        overflow: visible;
+        pointer-events: none;
+        filter: drop-shadow(0 4px 5px rgba(13, 27, 46, 0.38));
+    }
+
+    .pino-gota__janela {
+        position: absolute;
+        left: 50%;
+        top: 35%;
+        z-index: 2;
+        transform: translate(-50%, -50%);
+        overflow: hidden;
+        border: 2px solid #fff;
+        border-radius: 50%;
+        background: #fff;
+        display: grid;
+        place-items: center;
+        pointer-events: none;
+        box-shadow: 0 2px 6px rgba(13, 27, 46, 0.22);
+    }
+
+    .pino-gota__janela img {
+        position: absolute;
+        inset: 0;
+        z-index: 0;
+        display: block;
+        width: 100% !important;
+        height: 100% !important;
+        max-width: none !important;
+        object-fit: cover;
+        object-position: center;
+        border: 0 !important;
+        border-radius: 50% !important;
+        background: #fff;
+    }
+
+    .pino-gota__janela i {
+        position: relative;
+        z-index: 1;
     }
 
     .pino-gota:hover {
@@ -3205,8 +3264,9 @@ body {
     /* Bolha de agrupamento -- aparece quando clientes ficam perto
        o bastante pra se tocarem visualmente na tela atual */
     .cluster-lazer {
-        background: transparent;
-        border: none;
+        background: transparent !important;
+        border: 0 !important;
+        overflow: visible !important;
     }
 
     .cluster-lazer span {
@@ -3263,6 +3323,12 @@ body {
     .leaflet-popup-content-wrapper {
         border-radius: 14px;
     }
+
+    #mapa-clientes .leaflet-tile-pane { z-index: 200; }
+    #mapa-clientes .leaflet-overlay-pane { z-index: 400; }
+    #mapa-clientes .leaflet-marker-pane { z-index: 600; }
+    #mapa-clientes .leaflet-tooltip-pane { z-index: 650; }
+    #mapa-clientes .leaflet-popup-pane { z-index: 700; }
 
     .cliente-popup {
         display: flex;
@@ -3432,7 +3498,13 @@ body {
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script>
 (function () {
-    const todosPontos = JSON.parse(document.getElementById('dados-clientes-mapa').textContent);
+    const todosPontosBrutos = JSON.parse(document.getElementById('dados-clientes-mapa').textContent);
+    const todosPontos = todosPontosBrutos.filter(p =>
+        Number.isFinite(Number(p.lat)) &&
+        Number.isFinite(Number(p.lng)) &&
+        Number(p.lat) >= -90 && Number(p.lat) <= 90 &&
+        Number(p.lng) >= -180 && Number(p.lng) <= 180
+    ).map(p => ({ ...p, lat: Number(p.lat), lng: Number(p.lng) }));
     if (!todosPontos.length) return;
 
     const fabrica = todosPontos.find(p => p.tipo === 'fabrica') || null;
@@ -3457,14 +3529,14 @@ body {
 
     const PINO_PATH_D = "M215.7 499.2C267 435 384 279.4 384 192C384 86 298 0 192 0S0 86 0 192c0 87.4 117 243 168.3 307.2c12.3 15.3 35.1 15.3 47.4 0z";
 
-    function criarPino({ largura, altura, corPino, janela, conteudoJanela, classeSvg }) {
+    function criarPino({ largura, altura, corPino, janela, conteudoJanela, classeSvg = '' }) {
         return `
-            <span class="pino-gota" style="display:inline-block;position:relative;width:${largura}px;height:${altura}px;">
-                <svg class="${classeSvg || ''}" viewBox="0 0 384 512" xmlns="http://www.w3.org/2000/svg"
-                     style="position:absolute;inset:0;width:100%;height:100%;display:block;filter:drop-shadow(0 3px 5px rgba(0,0,0,.45));">
+            <span class="pino-gota" style="width:${largura}px;height:${altura}px;">
+                <svg class="pino-gota__corpo ${classeSvg}" viewBox="0 0 384 512"
+                     xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                     <path d="${PINO_PATH_D}" fill="${corPino}"/>
                 </svg>
-                <span style="position:absolute;left:50%;top:36%;width:${janela}px;height:${janela}px;transform:translate(-50%,-50%);border-radius:50%;overflow:hidden;background:#eef3fb;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px #fff;">
+                <span class="pino-gota__janela" style="width:${janela}px;height:${janela}px;">
                     ${conteudoJanela}
                 </span>
             </span>
@@ -3476,15 +3548,16 @@ body {
     // maior que essa largura, então pinos que ficariam colados viram
     // bolha em vez de se sobreporem e esconderem a foto um do outro.
     function criarIconeCliente(c) {
+        const imagemCliente = escapeHTML(c.imagem || c.logo || c.foto || LOGO_CLIENTE_PADRAO);
         return L.divIcon({
             className: 'cliente-marker',
             html: criarPino({
-                largura: 34, altura: 46, corPino: '#004AAD', janela: 18,
-                conteudoJanela: `<img src="${LOGO_CLIENTE_PADRAO}" alt="" style="width:100%;height:100%;object-fit:cover;">`
+                largura: 38, altura: 51, corPino: '#004AAD', janela: 21,
+                conteudoJanela: `<img src="${imagemCliente}" alt="" onerror="this.onerror=null;this.src='${LOGO_CLIENTE_PADRAO}';">`
             }),
-            iconSize: [34, 46],
-            iconAnchor: [17, 46],
-            popupAnchor: [0, -42],
+            iconSize: [38, 51],
+            iconAnchor: [19, 51],
+            popupAnchor: [0, -47],
         });
     }
 
@@ -3501,7 +3574,8 @@ body {
 
     function criarPopupCliente(c) {
         const nome = escapeHTML(c.nome);
-        const logo = `<img src="${LOGO_CLIENTE_PADRAO}" alt="${nome}">`;
+        const imagemCliente = escapeHTML(c.imagem || c.logo || c.foto || LOGO_CLIENTE_PADRAO);
+        const logo = `<img src="${imagemCliente}" alt="${nome}" onerror="this.onerror=null;this.src='${LOGO_CLIENTE_PADRAO}';">`;
         const local = escapeHTML([c.cidade, c.estado].filter(Boolean).join(' - ') || c.pais);
         const link = c.site
             ? `<a href="${escapeHTML(c.site)}" target="_blank" rel="noopener"><i class="fa-brands fa-instagram"></i> Visitar Instagram</a>`
@@ -3570,7 +3644,7 @@ body {
     }
 
     // ---- Agrupamento por proximidade em pixels, sem plugin externo ----
-    const RAIO_CLUSTER_PX = 40;
+    const RAIO_CLUSTER_PX = 48;
     const camadaClientes = L.layerGroup().addTo(mapa);
     let clientesAtuais = clientesDados;
 
@@ -3608,6 +3682,7 @@ body {
     }
 
     function renderizarPinosNoMapa() {
+        marcadorPopupFixado = null;
         camadaClientes.clearLayers();
         atualizarContador(clientesAtuais.length);
         if (!clientesAtuais.length) return;
@@ -3615,7 +3690,13 @@ body {
         agruparPorPixel(clientesAtuais).forEach(grupo => {
             if (grupo.length === 1) {
                 const c = grupo[0].cliente;
-                const marcador = L.marker([c.lat, c.lng], { icon: criarIconeCliente(c) })
+                const marcador = L.marker([c.lat, c.lng], {
+                    icon: criarIconeCliente(c),
+                    riseOnHover: true,
+                    riseOffset: 1200,
+                    keyboard: true,
+                    title: c.nome || 'Cliente Lazer & Sport'
+                })
                     .bindPopup(criarPopupCliente(c));
                 configurarInteracaoMarcador(marcador, 0);
                 camadaClientes.addLayer(marcador);
