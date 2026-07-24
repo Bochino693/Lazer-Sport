@@ -3178,91 +3178,122 @@ body {
         border: 1px dashed #e3e8f0;
     }
 
-    /* Pinos do mapa em formato de GOTA (alfinete de mapa de verdade,
-       tipo Google Maps) -- muito mais reconhecível que um círculo solto.
-       Clientes = azul, fábrica = vermelho. A "ponta" da gota aponta
-       exatamente pro local no mapa. */
-    .cliente-marker,
-    .fabrica-marker {
-        background: transparent;
-        border: none;
-    }
+    /* Pinos do mapa: corpo = círculo fixo (não rotaciona), ponta =
+   losango pequeno atrás do círculo. Isso garante que a logo/ícone
+   fique sempre perfeitamente centralizado, sem desalinhar por
+   causa de rotação. Clientes = azul, fábrica = vermelho. */
+.cliente-marker,
+.fabrica-marker {
+    background: transparent;
+    border: none;
+}
 
-    .pino-gota {
-        position: relative;
-        width: 56px;
-        height: 56px;
-    }
+.pino-gota {
+    position: relative;
+    width: 48px;
+    height: 60px;
+    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
 
-    .pino-gota-corpo {
-        position: absolute;
-        inset: 0;
-        border-radius: 50% 50% 50% 0;
-        transform: rotate(-45deg);
-        border: 3px solid #fff;
-        box-shadow: 0 6px 14px rgba(0, 0, 0, 0.4);
-        transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
-                    box-shadow 0.25s ease;
-    }
+.pino-gota-ponta {
+    position: absolute;
+    left: 50%;
+    top: 32px;
+    width: 18px;
+    height: 18px;
+    transform: translateX(-50%) rotate(45deg);
+    border-radius: 0 0 5px 0;
+    z-index: 1;
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.35);
+}
 
-    .pino-gota-conteudo {
-        position: absolute;
-        inset: 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
+.pino-gota-corpo {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    border: 3px solid #fff;
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.4);
+    z-index: 2;
+}
 
-    .pino-gota-conteudo img {
-        width: 30px;
-        height: 30px;
-        object-fit: contain;
-    }
+.pino-gota-conteudo {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #fff;
+    z-index: 3;
+}
 
-    .pino-gota-conteudo i {
-        font-size: 24px;
-        color: #fff;
-    }
+.pino-gota-conteudo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
 
-    .cliente-marker .pino-gota-corpo {
-        background: linear-gradient(135deg, #4aa3ff, #004AAD);
-        box-shadow: 0 6px 16px rgba(0, 74, 173, 0.55);
-    }
+.pino-gota-conteudo i {
+    font-size: 22px;
+    color: #fff;
+}
 
-    .fabrica-marker .pino-gota-corpo {
-        width: 62px;
-        height: 62px;
-        background: linear-gradient(135deg, #ff6b6b, #E63946);
-        animation: pulso-fabrica-gota 2.4s ease-in-out infinite;
-    }
+/* CLIENTES — azul */
+.cliente-marker .pino-gota-ponta,
+.cliente-marker .pino-gota-corpo {
+    background: linear-gradient(135deg, #4aa3ff, #004AAD);
+}
 
-    .fabrica-marker .pino-gota {
-        width: 62px;
-        height: 62px;
-    }
+/* FÁBRICA — vermelho, um pouco maior */
+.fabrica-marker .pino-gota {
+    width: 56px;
+    height: 68px;
+}
 
-    .fabrica-marker .pino-gota-conteudo i {
-        font-size: 28px;
-    }
+.fabrica-marker .pino-gota-ponta {
+    top: 37px;
+    width: 20px;
+    height: 20px;
+}
 
-    .cliente-marker:hover .pino-gota-corpo {
-        transform: rotate(-45deg) scale(1.18);
-        box-shadow: 0 10px 22px rgba(0, 74, 173, 0.65);
-    }
+.fabrica-marker .pino-gota-corpo,
+.fabrica-marker .pino-gota-conteudo {
+    width: 56px;
+    height: 56px;
+}
 
-    .fabrica-marker:hover .pino-gota-corpo {
-        transform: rotate(-45deg) scale(1.18);
-        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.45);
-    }
+.fabrica-marker .pino-gota-ponta,
+.fabrica-marker .pino-gota-corpo {
+    background: linear-gradient(135deg, #ff6b6b, #E63946);
+}
 
-    @keyframes pulso-fabrica-gota {
-        0%, 100% {
-            box-shadow: 0 6px 14px rgba(230, 57, 70, 0.4), 0 0 0 0 rgba(230, 57, 70, 0.55);
-        }
-        50% {
-            box-shadow: 0 6px 14px rgba(230, 57, 70, 0.4), 0 0 0 9px rgba(230, 57, 70, 0);
-        }
+.fabrica-marker .pino-gota-conteudo {
+    background: transparent;
+}
+
+.fabrica-marker .pino-gota-corpo {
+    animation: pulso-fabrica-gota 2.4s ease-in-out infinite;
+}
+
+.pino-gota:hover {
+    transform: translateY(-4px) scale(1.1);
+}
+
+@keyframes pulso-fabrica-gota {
+    0%, 100% {
+        box-shadow: 0 6px 14px rgba(230, 57, 70, 0.4), 0 0 0 0 rgba(230, 57, 70, 0.55);
     }
+    50% {
+        box-shadow: 0 6px 14px rgba(230, 57, 70, 0.4), 0 0 0 9px rgba(230, 57, 70, 0);
+    }
+}
 
     /* Legenda simples abaixo da barra de filtro */
     .clientes-legenda {
@@ -3503,32 +3534,34 @@ body {
     const CATEGORIAS_PADRAO = ['Kid Play', 'Brinquedão', 'Trampolins', 'Eletrônicos'];
 
     function criarIconeCliente(c) {
-        return L.divIcon({
-            className: 'cliente-marker',
-            html: `
-                <span class="pino-gota">
-                    <span class="pino-gota-corpo"></span>
-                    <span class="pino-gota-conteudo"><img src="${LOGO_CLIENTE_PADRAO}" alt=""></span>
-                </span>
-            `,
-            iconSize: [56, 56],
-            iconAnchor: [28, 56],
-            popupAnchor: [0, -52],
-        });
-    }
-
-    const iconeFabrica = L.divIcon({
-        className: 'fabrica-marker',
+    return L.divIcon({
+        className: 'cliente-marker',
         html: `
             <span class="pino-gota">
+                <span class="pino-gota-ponta"></span>
                 <span class="pino-gota-corpo"></span>
-                <span class="pino-gota-conteudo"><i class="fa-solid fa-industry" aria-hidden="true"></i></span>
+                <span class="pino-gota-conteudo"><img src="${LOGO_CLIENTE_PADRAO}" alt=""></span>
             </span>
         `,
-        iconSize: [62, 62],
-        iconAnchor: [31, 62],
-        popupAnchor: [0, -58],
+        iconSize: [48, 60],
+        iconAnchor: [24, 60],
+        popupAnchor: [0, -54],
     });
+}
+
+const iconeFabrica = L.divIcon({
+    className: 'fabrica-marker',
+    html: `
+        <span class="pino-gota">
+            <span class="pino-gota-ponta"></span>
+            <span class="pino-gota-corpo"></span>
+            <span class="pino-gota-conteudo"><i class="fa-solid fa-industry" aria-hidden="true"></i></span>
+        </span>
+    `,
+    iconSize: [56, 68],
+    iconAnchor: [28, 68],
+    popupAnchor: [0, -60],
+});
 
     let marcadoresClientes = [];
     let marcadorFabrica = null;
