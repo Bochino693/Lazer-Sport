@@ -1,42 +1,1356 @@
 {% extends "gestao/base_adm.html" %}
 {% load static %}
+
+{% block title %}Projetos{% endblock %}
+
 {% block content %}
 <style>
-.adm-page{max-width:1200px;margin:38px auto;padding:20px}.adm-head{display:flex;justify-content:space-between;align-items:center;gap:18px;margin-bottom:28px}.adm-head h1{margin:0;color:#172033}.adm-head p{margin:6px 0 0;color:#667085}.primary,.danger,.ghost,.edit{border:0;border-radius:14px;padding:12px 18px;font-weight:800;cursor:pointer}.primary{color:#fff;background:linear-gradient(135deg,#0d6efd,#0a58ca)}.danger{color:#fff;background:#dc3545}.ghost{background:#eef2f7;color:#344054}.edit{background:#ffc107;color:#302600}.adm-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:24px}.adm-card{background:#fff;border-radius:22px;overflow:hidden;box-shadow:0 10px 28px rgba(15,23,42,.1);display:flex;flex-direction:column}.adm-card-img{height:210px;background:#e8edf4}.adm-card-img img{width:100%;height:100%;object-fit:cover}.adm-card-body{padding:20px;display:flex;flex:1;flex-direction:column}.adm-card h3{margin:0 0 8px;color:#172033}.adm-card p{color:#667085;line-height:1.55;flex:1}.adm-card small{color:#0d6efd;font-weight:700}.adm-actions{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:18px}.modal{display:none;position:fixed;inset:0;z-index:10000;background:rgba(15,23,42,.72);padding:20px;align-items:center;justify-content:center}.modal.open{display:flex}.modal-card{width:min(780px,100%);max-height:92vh;overflow:auto;background:#fff;border-radius:22px;padding:26px;box-shadow:0 30px 80px rgba(0,0,0,.3)}.modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:22px}.modal-head h2{margin:0}.close{border:0;background:transparent;font-size:30px;cursor:pointer}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}.field{display:flex;flex-direction:column;gap:7px}.field.full{grid-column:1/-1}.field label{font-weight:750;color:#344054}.field input,.field textarea{width:100%;padding:12px 14px;border:1px solid #d0d5dd;border-radius:12px}.field textarea{min-height:100px;resize:vertical}.upload{border:2px dashed #b9c3d2;border-radius:14px;padding:20px;text-align:center}.images{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:12px;margin-top:12px}.image-item{position:relative}.image-item img{width:100%;height:105px;object-fit:cover;border-radius:12px}.image-item button{position:absolute;right:5px;top:5px;border:0;border-radius:50%;width:27px;height:27px;background:#dc3545;color:#fff;cursor:pointer}.image-item.removed{opacity:.3}.modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:22px}.form-error{display:none;margin:0 0 15px;padding:11px 14px;border-radius:10px;background:#fee4e2;color:#b42318}.hidden-data{display:none}@media(max-width:700px){.adm-head{align-items:flex-start;flex-direction:column}.form-grid{grid-template-columns:1fr}.field.full{grid-column:auto}.adm-actions{grid-template-columns:1fr}}
+    :root {
+        --project-surface: rgba(15, 30, 52, .94);
+        --project-surface-2: #132943;
+        --project-border: rgba(148, 163, 184, .16);
+        --project-text: #f8fafc;
+        --project-muted: #94a3b8;
+        --project-primary: #7c3aed;
+        --project-primary-2: #4f46e5;
+        --project-success: #22c55e;
+        --project-danger: #ef4444;
+        --project-warning: #fbbf24;
+    }
+
+    .project-page,
+    .project-page * {
+        box-sizing: border-box;
+    }
+
+    .project-page {
+        width: min(1380px, 100%);
+        margin: 0 auto;
+        padding: 28px 24px 56px;
+        color: var(--project-text);
+    }
+
+    .project-hero {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 24px;
+        padding: 28px;
+        overflow: hidden;
+        border: 1px solid var(--project-border);
+        border-radius: 24px;
+        background:
+            radial-gradient(circle at 92% 15%, rgba(124, 58, 237, .25), transparent 34%),
+            linear-gradient(135deg, rgba(30, 41, 59, .98), rgba(8, 18, 34, .98));
+        box-shadow: 0 24px 60px rgba(0, 0, 0, .25);
+    }
+
+    .project-hero::after {
+        content: "";
+        position: absolute;
+        right: -80px;
+        bottom: -110px;
+        width: 280px;
+        height: 280px;
+        border: 45px solid rgba(255, 255, 255, .025);
+        border-radius: 50%;
+        pointer-events: none;
+    }
+
+    .project-eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 8px;
+        color: #c4b5fd;
+        font-size: .75rem;
+        font-weight: 800;
+        letter-spacing: .12em;
+        text-transform: uppercase;
+    }
+
+    .project-hero h1 {
+        margin: 0;
+        font-size: clamp(1.7rem, 3vw, 2.5rem);
+        line-height: 1.1;
+    }
+
+    .project-hero p {
+        max-width: 680px;
+        margin: 10px 0 0;
+        color: var(--project-muted);
+        line-height: 1.6;
+    }
+
+    .project-primary-btn,
+    .project-secondary-btn,
+    .project-danger-btn,
+    .project-icon-btn {
+        border: 0;
+        font: inherit;
+        cursor: pointer;
+        transition: transform .2s ease, filter .2s ease, border-color .2s ease;
+    }
+
+    .project-primary-btn {
+        position: relative;
+        z-index: 1;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 9px;
+        min-height: 46px;
+        padding: 0 20px;
+        border-radius: 14px;
+        color: #fff;
+        background: linear-gradient(
+            135deg,
+            var(--project-primary),
+            var(--project-primary-2)
+        );
+        box-shadow: 0 12px 28px rgba(79, 70, 229, .34);
+        font-weight: 800;
+        white-space: nowrap;
+    }
+
+    .project-primary-btn:hover,
+    .project-secondary-btn:hover,
+    .project-danger-btn:hover,
+    .project-icon-btn:hover {
+        transform: translateY(-2px);
+        filter: brightness(1.08);
+    }
+
+    .project-primary-btn:disabled,
+    .project-danger-btn:disabled {
+        cursor: not-allowed;
+        filter: grayscale(.35);
+        opacity: .55;
+        transform: none;
+    }
+
+    .project-kpis {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 16px;
+        margin: 20px 0;
+    }
+
+    .project-kpi {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 18px;
+        border: 1px solid var(--project-border);
+        border-radius: 18px;
+        background: var(--project-surface);
+        box-shadow: 0 12px 28px rgba(0, 0, 0, .16);
+    }
+
+    .project-kpi-icon {
+        display: grid;
+        width: 46px;
+        height: 46px;
+        flex: 0 0 46px;
+        place-items: center;
+        border-radius: 14px;
+        background: rgba(124, 58, 237, .16);
+        font-size: 1.25rem;
+    }
+
+    .project-kpi strong {
+        display: block;
+        font-size: 1.55rem;
+        line-height: 1;
+    }
+
+    .project-kpi span:last-child {
+        display: block;
+        margin-top: 6px;
+        color: var(--project-muted);
+        font-size: .78rem;
+        font-weight: 700;
+        letter-spacing: .04em;
+        text-transform: uppercase;
+    }
+
+    .project-toolbar {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 22px;
+        padding: 14px;
+        border: 1px solid var(--project-border);
+        border-radius: 18px;
+        background: var(--project-surface);
+    }
+
+    .project-search {
+        position: relative;
+        flex: 1;
+    }
+
+    .project-search > span {
+        position: absolute;
+        top: 50%;
+        left: 15px;
+        transform: translateY(-50%);
+        color: var(--project-muted);
+        pointer-events: none;
+    }
+
+    .project-search input,
+    .project-field input,
+    .project-field textarea {
+        width: 100%;
+        border: 1px solid var(--project-border);
+        border-radius: 13px;
+        outline: none;
+        color: var(--project-text);
+        background: rgba(7, 17, 31, .88);
+        font: inherit;
+        transition: border-color .2s ease, box-shadow .2s ease;
+    }
+
+    .project-search input,
+    .project-field input {
+        min-height: 46px;
+        padding: 0 14px;
+    }
+
+    .project-search input {
+        padding-left: 44px;
+    }
+
+    .project-field textarea {
+        min-height: 118px;
+        padding: 13px 14px;
+        resize: vertical;
+    }
+
+    .project-search input:focus,
+    .project-field input:focus,
+    .project-field textarea:focus {
+        border-color: #8b5cf6;
+        box-shadow: 0 0 0 4px rgba(124, 58, 237, .14);
+    }
+
+    .project-secondary-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 44px;
+        padding: 0 17px;
+        border: 1px solid var(--project-border);
+        border-radius: 13px;
+        color: var(--project-text);
+        background: #1e334d;
+        font-weight: 750;
+        text-decoration: none;
+    }
+
+    .project-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 20px;
+    }
+
+    .project-card {
+        position: relative;
+        overflow: hidden;
+        border: 1px solid var(--project-border);
+        border-radius: 21px;
+        background: var(--project-surface);
+        box-shadow: 0 18px 42px rgba(0, 0, 0, .22);
+        transition: transform .25s ease, border-color .25s ease, box-shadow .25s ease;
+    }
+
+    .project-card:hover {
+        transform: translateY(-5px);
+        border-color: rgba(139, 92, 246, .48);
+        box-shadow: 0 24px 52px rgba(0, 0, 0, .32);
+    }
+
+    .project-card-media {
+        position: relative;
+        height: 215px;
+        overflow: hidden;
+        background:
+            radial-gradient(circle at 50% 30%, rgba(124, 58, 237, .28), transparent 48%),
+            #0a1729;
+    }
+
+    .project-card-media img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform .35s ease;
+    }
+
+    .project-card:hover .project-card-media img {
+        transform: scale(1.035);
+    }
+
+    .project-placeholder {
+        display: grid;
+        width: 100%;
+        height: 100%;
+        place-items: center;
+        color: #a78bfa;
+        font-size: 3rem;
+    }
+
+    .project-image-count {
+        position: absolute;
+        top: 13px;
+        right: 13px;
+        padding: 7px 10px;
+        border: 1px solid rgba(255, 255, 255, .16);
+        border-radius: 999px;
+        color: #e2e8f0;
+        background: rgba(15, 23, 42, .82);
+        backdrop-filter: blur(8px);
+        font-size: .72rem;
+        font-weight: 850;
+    }
+
+    .project-card-body {
+        padding: 19px;
+    }
+
+    .project-card h3 {
+        margin: 0 0 9px;
+        color: var(--project-text);
+        font-size: 1.1rem;
+        line-height: 1.35;
+    }
+
+    .project-description {
+        min-height: 4.5em;
+        margin: 0 0 13px;
+        color: var(--project-muted);
+        font-size: .88rem;
+        line-height: 1.5;
+    }
+
+    .project-toy {
+        display: inline-flex;
+        max-width: 100%;
+        align-items: center;
+        gap: 7px;
+        padding: 7px 10px;
+        overflow: hidden;
+        border: 1px solid rgba(139, 92, 246, .18);
+        border-radius: 999px;
+        color: #c4b5fd;
+        background: rgba(124, 58, 237, .1);
+        font-size: .78rem;
+        font-weight: 750;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .project-actions {
+        display: grid;
+        grid-template-columns: 1fr 46px;
+        gap: 9px;
+        margin-top: 17px;
+    }
+
+    .project-icon-btn {
+        display: grid;
+        min-height: 44px;
+        place-items: center;
+        border: 1px solid rgba(239, 68, 68, .2);
+        border-radius: 13px;
+        color: #fecaca;
+        background: rgba(127, 29, 29, .38);
+    }
+
+    .project-empty {
+        grid-column: 1 / -1;
+        padding: 60px 24px;
+        border: 1px dashed rgba(148, 163, 184, .24);
+        border-radius: 22px;
+        text-align: center;
+        background: rgba(15, 30, 52, .55);
+    }
+
+    .project-empty > span {
+        display: block;
+        margin-bottom: 12px;
+        font-size: 3rem;
+    }
+
+    .project-empty h3 {
+        margin: 0 0 8px;
+    }
+
+    .project-empty p {
+        margin: 0;
+        color: var(--project-muted);
+    }
+
+    .project-notice {
+        display: none;
+        margin-bottom: 16px;
+        padding: 13px 16px;
+        border: 1px solid rgba(239, 68, 68, .3);
+        border-radius: 13px;
+        color: #fecaca;
+        background: rgba(127, 29, 29, .25);
+    }
+
+    .project-notice.is-visible {
+        display: block;
+    }
+
+    body.project-modal-open {
+        overflow: hidden;
+    }
+
+    .project-modal {
+        position: fixed;
+        inset: 0;
+        z-index: 12000;
+        display: grid;
+        padding: 22px;
+        place-items: center;
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+        transition: opacity .22s ease, visibility .22s ease;
+    }
+
+    .project-modal.is-open {
+        opacity: 1;
+        visibility: visible;
+        pointer-events: auto;
+    }
+
+    .project-modal-backdrop {
+        position: absolute;
+        inset: 0;
+        background: rgba(2, 6, 23, .84);
+        backdrop-filter: blur(7px);
+    }
+
+    .project-modal-dialog {
+        position: relative;
+        z-index: 1;
+        width: min(860px, 100%);
+        max-height: min(92vh, 930px);
+        overflow: auto;
+        border: 1px solid rgba(148, 163, 184, .2);
+        border-radius: 24px;
+        background: linear-gradient(160deg, #132943, #0a1729);
+        box-shadow: 0 36px 100px rgba(0, 0, 0, .55);
+        transform: translateY(14px) scale(.98);
+        transition: transform .24s ease;
+    }
+
+    .project-modal.is-open .project-modal-dialog {
+        transform: translateY(0) scale(1);
+    }
+
+    .project-modal-dialog.is-small {
+        width: min(470px, 100%);
+    }
+
+    .project-modal-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 18px;
+        padding: 22px 24px 17px;
+        border-bottom: 1px solid var(--project-border);
+    }
+
+    .project-modal-header h2 {
+        margin: 0;
+        font-size: 1.25rem;
+    }
+
+    .project-modal-header p {
+        margin: 6px 0 0;
+        color: var(--project-muted);
+        font-size: .87rem;
+    }
+
+    .project-close {
+        display: grid;
+        width: 38px;
+        height: 38px;
+        flex: 0 0 38px;
+        place-items: center;
+        border: 1px solid var(--project-border);
+        border-radius: 12px;
+        color: var(--project-text);
+        background: rgba(30, 51, 77, .85);
+        cursor: pointer;
+    }
+
+    .project-form-body {
+        padding: 22px 24px;
+    }
+
+    .project-form-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+    }
+
+    .project-field {
+        min-width: 0;
+    }
+
+    .project-field.is-full {
+        grid-column: 1 / -1;
+    }
+
+    .project-field label,
+    .project-field-label {
+        display: block;
+        margin: 0 0 7px;
+        color: #cbd5e1;
+        font-size: .78rem;
+        font-weight: 800;
+    }
+
+    .project-field small {
+        display: block;
+        margin-top: 6px;
+        color: var(--project-muted);
+        font-size: .75rem;
+    }
+
+    .project-upload {
+        padding: 16px;
+        border: 1px dashed rgba(139, 92, 246, .48);
+        border-radius: 17px;
+        background: rgba(124, 58, 237, .07);
+    }
+
+    .project-upload-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+    }
+
+    .project-upload input[type="file"] {
+        width: 100%;
+        color: var(--project-muted);
+        font-size: .8rem;
+    }
+
+    .project-images {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: 12px;
+        margin-top: 14px;
+    }
+
+    .project-image-item {
+        position: relative;
+        min-width: 0;
+        overflow: hidden;
+        border: 1px solid var(--project-border);
+        border-radius: 14px;
+        background: #07111f;
+        transition: opacity .2s ease, border-color .2s ease;
+    }
+
+    .project-image-item img {
+        display: block;
+        width: 100%;
+        height: 112px;
+        object-fit: cover;
+    }
+
+    .project-image-item button {
+        position: absolute;
+        top: 7px;
+        right: 7px;
+        display: grid;
+        width: 29px;
+        height: 29px;
+        place-items: center;
+        border: 1px solid rgba(255, 255, 255, .2);
+        border-radius: 9px;
+        color: #fff;
+        background: rgba(185, 28, 28, .9);
+        cursor: pointer;
+    }
+
+    .project-image-item.is-removed {
+        opacity: .28;
+        border-color: rgba(239, 68, 68, .7);
+    }
+
+    .project-image-item.is-removed::after {
+        content: "Será removida";
+        position: absolute;
+        inset: auto 5px 5px;
+        padding: 4px;
+        border-radius: 6px;
+        color: #fff;
+        background: rgba(127, 29, 29, .9);
+        text-align: center;
+        font-size: .65rem;
+        font-weight: 800;
+    }
+
+    .project-image-counter {
+        flex: 0 0 auto;
+        color: #c4b5fd;
+        font-size: .78rem;
+        font-weight: 800;
+    }
+
+    .project-modal-footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        padding: 17px 24px 22px;
+        border-top: 1px solid var(--project-border);
+    }
+
+    .project-danger-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 44px;
+        padding: 0 18px;
+        border-radius: 13px;
+        color: #fff;
+        background: linear-gradient(135deg, #ef4444, #b91c1c);
+        font-weight: 800;
+    }
+
+    .project-delete-copy {
+        padding: 24px;
+        color: #cbd5e1;
+        line-height: 1.6;
+    }
+
+    .project-delete-name {
+        display: block;
+        margin: 10px 0 18px;
+        color: #fff;
+        font-size: 1.05rem;
+    }
+
+    .project-feedback {
+        position: fixed;
+        top: 22px;
+        right: 22px;
+        z-index: 14000;
+        max-width: min(390px, calc(100vw - 44px));
+        padding: 14px 17px;
+        border: 1px solid rgba(34, 197, 94, .32);
+        border-radius: 14px;
+        color: #dcfce7;
+        background: rgba(20, 83, 45, .96);
+        box-shadow: 0 18px 45px rgba(0, 0, 0, .35);
+    }
+
+    @media (max-width: 760px) {
+        .project-page {
+            padding: 18px 14px 42px;
+        }
+
+        .project-hero,
+        .project-toolbar {
+            align-items: stretch;
+            flex-direction: column;
+        }
+
+        .project-kpis,
+        .project-form-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .project-field.is-full {
+            grid-column: auto;
+        }
+
+        .project-upload-row {
+            align-items: flex-start;
+            flex-direction: column;
+        }
+
+        .project-modal-footer {
+            flex-direction: column-reverse;
+        }
+
+        .project-modal-footer > * {
+            width: 100%;
+        }
+    }
 </style>
 
-<main class="adm-page">
-  <header class="adm-head"><div><h1>🧩 Gestão de Projetos</h1><p>Cadastre, edite e exclua projetos em uma única tela.</p></div><button class="primary" type="button" onclick="novoProjeto()">➕ Novo projeto</button></header>
-  <section class="adm-grid">
-    {% for projeto in projetos %}
-    <article class="adm-card" id="projeto-{{ projeto.id }}">
-      <div class="adm-card-img">{% with imagem=projeto.brinquedo_projetado.imagens_brinquedo_projeto.first %}{% if imagem %}<img src="{{ imagem.imagem.url }}" alt="{{ projeto.titulo }}">{% else %}<img src="{% static 'images/IMAG1.PNG' %}" alt="Sem imagem">{% endif %}{% endwith %}</div>
-      <div class="adm-card-body"><h3>{{ projeto.titulo }}</h3><p>{{ projeto.descricao|truncatechars:150 }}</p>{% if projeto.brinquedo_projetado %}<small>🎮 {{ projeto.brinquedo_projetado.nome_brinquedo_projeto }}</small>{% endif %}
-        <div class="hidden-data" data-titulo="{{ projeto.titulo|escape }}" data-descricao="{{ projeto.descricao|escape }}" data-nome="{{ projeto.brinquedo_projetado.nome_brinquedo_projeto|escape }}" data-descricao-brinquedo="{{ projeto.brinquedo_projetado.descricao|escape }}">{% for imagem in projeto.brinquedo_projetado.imagens_brinquedo_projeto.all %}<i data-image-id="{{ imagem.id }}" data-image-url="{{ imagem.imagem.url }}"></i>{% endfor %}</div>
-        <div class="adm-actions"><button class="edit" type="button" onclick="editarProjeto({{ projeto.id }})">✏️ Editar</button><button class="danger" type="button" onclick="confirmarExclusao({{ projeto.id }}, '{{ projeto.titulo|escapejs }}')">🗑️ Excluir</button></div>
-      </div>
-    </article>
-    {% empty %}<p>Nenhum projeto cadastrado.</p>{% endfor %}
-  </section>
+<main class="project-page">
+    <section class="project-hero">
+        <div>
+            <span class="project-eyebrow">◆ Portfólio e fabricação</span>
+            <h1>Projetos</h1>
+            <p>
+                Cadastre seus projetos personalizados, organize as imagens e
+                atualize o portfólio em uma única tela.
+            </p>
+        </div>
+        <button class="project-primary-btn" type="button" data-open-create>
+            <span>＋</span> Novo projeto
+        </button>
+    </section>
+
+    <section class="project-kpis" aria-label="Resumo dos projetos">
+        <article class="project-kpi">
+            <span class="project-kpi-icon">🧩</span>
+            <div>
+                <strong>{{ total_projetos }}</strong>
+                <span>Total de projetos</span>
+            </div>
+        </article>
+        <article class="project-kpi">
+            <span class="project-kpi-icon">🖼️</span>
+            <div>
+                <strong>{{ total_com_imagem }}</strong>
+                <span>Com imagens</span>
+            </div>
+        </article>
+        <article class="project-kpi">
+            <span class="project-kpi-icon">▦</span>
+            <div>
+                <strong>{{ total_imagens }}</strong>
+                <span>Imagens publicadas</span>
+            </div>
+        </article>
+    </section>
+
+    <form class="project-toolbar" method="get">
+        <div class="project-search">
+            <span>⌕</span>
+            <input
+                type="search"
+                name="q"
+                value="{{ busca }}"
+                placeholder="Buscar projeto ou brinquedo projetado..."
+                aria-label="Buscar projetos"
+            >
+        </div>
+        <button class="project-secondary-btn" type="submit">Buscar</button>
+        {% if busca %}
+            <a class="project-secondary-btn" href="{% url 'projetos_admin' %}">
+                Limpar
+            </a>
+        {% endif %}
+    </form>
+
+    <section class="project-grid">
+        {% for projeto in projetos %}
+            <article class="project-card" data-project-id="{{ projeto.id }}">
+                <div class="project-card-media">
+                    {% with imagem=projeto.brinquedo_projetado.imagens_brinquedo_projeto.first %}
+                        {% if imagem %}
+                            <img
+                                src="{{ imagem.imagem.url }}"
+                                alt="{{ projeto.titulo }}"
+                                loading="lazy"
+                            >
+                        {% else %}
+                            <div class="project-placeholder" aria-hidden="true">🧩</div>
+                        {% endif %}
+                    {% endwith %}
+                    <span class="project-image-count">
+                        {{ projeto.total_imagens }}
+                        imag{{ projeto.total_imagens|pluralize:"em,ens" }}
+                    </span>
+                </div>
+
+                <div class="project-card-body">
+                    <h3>{{ projeto.titulo }}</h3>
+                    <p class="project-description">
+                        {{ projeto.descricao|truncatechars:155 }}
+                    </p>
+                    {% if projeto.brinquedo_projetado %}
+                        <span class="project-toy">
+                            🎮 {{ projeto.brinquedo_projetado.nome_brinquedo_projeto }}
+                        </span>
+                    {% endif %}
+
+                    <div class="project-actions">
+                        <button
+                            class="project-secondary-btn"
+                            type="button"
+                            data-open-edit
+                        >
+                            Editar projeto
+                        </button>
+                        <button
+                            class="project-icon-btn"
+                            type="button"
+                            data-open-delete
+                            aria-label="Excluir {{ projeto.titulo }}"
+                            title="Excluir"
+                        >
+                            🗑️
+                        </button>
+                    </div>
+                </div>
+            </article>
+        {% empty %}
+            <div class="project-empty">
+                <span>🧩</span>
+                <h3>Nenhum projeto encontrado</h3>
+                <p>Altere sua busca ou cadastre o primeiro projeto.</p>
+            </div>
+        {% endfor %}
+    </section>
 </main>
 
-<div class="modal" id="formModal"><div class="modal-card"><div class="modal-head"><h2 id="formTitle">Novo projeto</h2><button class="close" type="button" onclick="closeModal('formModal')">×</button></div><p class="form-error" id="formError"></p>
-  <form id="projectForm" enctype="multipart/form-data">{% csrf_token %}<input type="hidden" name="action" value="save"><input type="hidden" name="id" id="projectId"><div id="removedImages"></div>
-    <div class="form-grid"><div class="field"><label for="titulo">Título</label><input id="titulo" name="titulo" maxlength="200" required></div><div class="field"><label for="nomeBrinquedo">Nome do brinquedo projetado</label><input id="nomeBrinquedo" name="nome_brinquedo" maxlength="150" required></div><div class="field full"><label for="descricao">Descrição do projeto</label><textarea id="descricao" name="descricao" required></textarea></div><div class="field full"><label for="descricaoBrinquedo">Descrição do brinquedo</label><textarea id="descricaoBrinquedo" name="descricao_brinquedo"></textarea></div><div class="field full"><label>Imagens (máximo de 5)</label><div class="upload"><input type="file" id="imagens" name="imagens" accept="image/*" multiple><div class="images" id="imagePreview"></div></div></div></div>
-    <div class="modal-actions"><button class="ghost" type="button" onclick="closeModal('formModal')">Cancelar</button><button class="primary" type="submit">💾 Salvar projeto</button></div>
-  </form></div></div>
+{{ projetos_json|json_script:"projectsData" }}
 
-<div class="modal" id="deleteModal"><div class="modal-card" style="max-width:500px"><div class="modal-head"><h2>Excluir projeto</h2><button class="close" type="button" onclick="closeModal('deleteModal')">×</button></div><p>Tem certeza de que deseja excluir <strong id="deleteName"></strong>?</p><form id="deleteForm">{% csrf_token %}<input type="hidden" name="action" value="delete"><input type="hidden" name="id" id="deleteId"><div class="modal-actions"><button class="ghost" type="button" onclick="closeModal('deleteModal')">Cancelar</button><button class="danger" type="submit">Excluir definitivamente</button></div></form></div></div>
+<div class="project-modal" id="projectModal" aria-hidden="true">
+    <div class="project-modal-backdrop" data-close-project></div>
+    <div
+        class="project-modal-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="projectModalTitle"
+    >
+        <form
+            id="projectForm"
+            method="post"
+            enctype="multipart/form-data"
+            action="{% url 'projetos_admin' %}"
+        >
+            {% csrf_token %}
+            <input type="hidden" name="acao" id="projectFormAction" value="criar">
+            <input type="hidden" name="projeto_id" id="projectId">
+            <div id="removedProjectImages"></div>
+
+            <header class="project-modal-header">
+                <div>
+                    <h2 id="projectModalTitle">Novo projeto</h2>
+                    <p id="projectModalSubtitle">
+                        Apresente o projeto e adicione até {{ maximo_imagens }} imagens.
+                    </p>
+                </div>
+                <button
+                    class="project-close"
+                    type="button"
+                    data-close-project
+                    aria-label="Fechar"
+                >
+                    ✕
+                </button>
+            </header>
+
+            <div class="project-form-body">
+                <div class="project-notice" id="projectFormError" role="alert"></div>
+
+                <div class="project-form-grid">
+                    <div class="project-field">
+                        <label for="projectTitle">Título do projeto</label>
+                        <input
+                            id="projectTitle"
+                            name="titulo"
+                            type="text"
+                            maxlength="200"
+                            placeholder="Ex.: Espaço kids personalizado"
+                            required
+                        >
+                    </div>
+
+                    <div class="project-field">
+                        <label for="projectToyName">
+                            Nome do brinquedo projetado
+                        </label>
+                        <input
+                            id="projectToyName"
+                            name="nome_brinquedo"
+                            type="text"
+                            maxlength="150"
+                            placeholder="Ex.: Labirinto espacial"
+                            required
+                        >
+                    </div>
+
+                    <div class="project-field is-full">
+                        <label for="projectDescription">Descrição do projeto</label>
+                        <textarea
+                            id="projectDescription"
+                            name="descricao"
+                            placeholder="Descreva o conceito, objetivo e diferenciais do projeto..."
+                            required
+                        ></textarea>
+                    </div>
+
+                    <div class="project-field is-full">
+                        <label for="projectToyDescription">
+                            Descrição do brinquedo
+                        </label>
+                        <textarea
+                            id="projectToyDescription"
+                            name="descricao_brinquedo"
+                            placeholder="Detalhe a experiência e as características do brinquedo..."
+                        ></textarea>
+                    </div>
+
+                    <div class="project-field is-full">
+                        <span class="project-field-label">Galeria do projeto</span>
+                        <div class="project-upload">
+                            <div class="project-upload-row">
+                                <input
+                                    id="projectImages"
+                                    name="imagens"
+                                    type="file"
+                                    accept="image/png,image/jpeg,image/webp"
+                                    multiple
+                                >
+                                <span
+                                    class="project-image-counter"
+                                    id="projectImageCounter"
+                                >
+                                    0 de {{ maximo_imagens }} imagens
+                                </span>
+                            </div>
+                            <small>
+                                JPG, PNG ou WEBP, até 8 MB cada. Clique no × para
+                                marcar uma imagem existente para remoção.
+                            </small>
+                            <div class="project-images" id="projectImagePreview"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <footer class="project-modal-footer">
+                <button
+                    class="project-secondary-btn"
+                    type="button"
+                    data-close-project
+                >
+                    Cancelar
+                </button>
+                <button
+                    class="project-primary-btn"
+                    type="submit"
+                    id="saveProjectButton"
+                >
+                    Salvar projeto
+                </button>
+            </footer>
+        </form>
+    </div>
+</div>
+
+<div class="project-modal" id="deleteProjectModal" aria-hidden="true">
+    <div class="project-modal-backdrop" data-close-delete></div>
+    <div
+        class="project-modal-dialog is-small"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="deleteProjectTitle"
+    >
+        <form
+            id="deleteProjectForm"
+            method="post"
+            action="{% url 'projetos_admin' %}"
+        >
+            {% csrf_token %}
+            <input type="hidden" name="acao" value="excluir">
+            <input type="hidden" name="projeto_id" id="deleteProjectId">
+
+            <header class="project-modal-header">
+                <div>
+                    <h2 id="deleteProjectTitle">Excluir projeto?</h2>
+                    <p>Esta ação não poderá ser desfeita.</p>
+                </div>
+                <button
+                    class="project-close"
+                    type="button"
+                    data-close-delete
+                    aria-label="Fechar"
+                >
+                    ✕
+                </button>
+            </header>
+
+            <div class="project-delete-copy">
+                Você está excluindo:
+                <strong class="project-delete-name" id="deleteProjectName"></strong>
+
+                <div class="project-field">
+                    <label for="deleteProjectConfirmation">
+                        Digite EXCLUIR para confirmar
+                    </label>
+                    <input
+                        id="deleteProjectConfirmation"
+                        name="confirmacao"
+                        type="text"
+                        autocomplete="off"
+                        placeholder="EXCLUIR"
+                        required
+                    >
+                </div>
+                <div
+                    class="project-notice"
+                    id="deleteProjectError"
+                    role="alert"
+                ></div>
+            </div>
+
+            <footer class="project-modal-footer">
+                <button
+                    class="project-secondary-btn"
+                    type="button"
+                    data-close-delete
+                >
+                    Cancelar
+                </button>
+                <button
+                    class="project-danger-btn"
+                    type="submit"
+                    id="deleteProjectButton"
+                    disabled
+                >
+                    Excluir definitivamente
+                </button>
+            </footer>
+        </form>
+    </div>
+</div>
 
 <script>
-const endpoint="{% url 'projetos_admin' %}";const modal=id=>document.getElementById(id);function openModal(id){modal(id).classList.add('open');document.body.style.overflow='hidden'}function closeModal(id){modal(id).classList.remove('open');document.body.style.overflow=''}
-function resetForm(){modal('projectForm').reset();modal('projectId').value='';modal('removedImages').innerHTML='';modal('imagePreview').innerHTML='';modal('formError').style.display='none'}
-function novoProjeto(){resetForm();modal('formTitle').textContent='Novo projeto';openModal('formModal')}
-function addExistingImage(id,url){const item=document.createElement('div');item.className='image-item';item.innerHTML=`<img src="${url}" alt="Imagem"><button type="button" aria-label="Remover">×</button>`;item.querySelector('button').onclick=()=>{item.classList.toggle('removed');const old=document.getElementById(`remove-project-image-${id}`);if(old){old.remove()}else{const input=document.createElement('input');input.type='hidden';input.name='remover_imagens';input.value=id;input.id=`remove-project-image-${id}`;modal('removedImages').appendChild(input)}};modal('imagePreview').appendChild(item)}
-function editarProjeto(id){resetForm();const data=document.querySelector(`#projeto-${id} .hidden-data`);modal('projectId').value=id;modal('titulo').value=data.dataset.titulo;modal('descricao').value=data.dataset.descricao;modal('nomeBrinquedo').value=data.dataset.nome;modal('descricaoBrinquedo').value=data.dataset.descricaoBrinquedo;data.querySelectorAll('[data-image-id]').forEach(img=>addExistingImage(img.dataset.imageId,img.dataset.imageUrl));modal('formTitle').textContent='Editar projeto';openModal('formModal')}
-function confirmarExclusao(id,nome){modal('deleteId').value=id;modal('deleteName').textContent=nome;openModal('deleteModal')}
-modal('imagens').addEventListener('change',event=>{modal('imagePreview').querySelectorAll('.new-image').forEach(el=>el.remove());Array.from(event.target.files).forEach(file=>{const item=document.createElement('div');item.className='image-item new-image';const img=document.createElement('img');img.src=URL.createObjectURL(file);item.appendChild(img);modal('imagePreview').appendChild(item)})});
-async function submitAjax(form){const response=await fetch(endpoint,{method:'POST',body:new FormData(form),headers:{'X-Requested-With':'XMLHttpRequest'}});const data=await response.json();if(!response.ok||!data.success)throw new Error(data.error||'Não foi possível concluir a operação.');location.reload()}
-modal('projectForm').addEventListener('submit',async event=>{event.preventDefault();try{await submitAjax(event.currentTarget)}catch(error){modal('formError').textContent=error.message;modal('formError').style.display='block'}});modal('deleteForm').addEventListener('submit',async event=>{event.preventDefault();try{await submitAjax(event.currentTarget)}catch(error){alert(error.message)}});document.querySelectorAll('.modal').forEach(el=>el.addEventListener('click',event=>{if(event.target===el)closeModal(el.id)}));
+(() => {
+    const endpoint = "{% url 'projetos_admin' %}";
+    const maximumImages = Number("{{ maximo_imagens }}") || 5;
+    const projects = JSON.parse(
+        document.getElementById("projectsData").textContent
+    );
+    const projectMap = new Map(
+        projects.map(project => [String(project.id), project])
+    );
+
+    const projectModal = document.getElementById("projectModal");
+    const deleteModal = document.getElementById("deleteProjectModal");
+    const projectForm = document.getElementById("projectForm");
+    const formAction = document.getElementById("projectFormAction");
+    const projectId = document.getElementById("projectId");
+    const projectTitle = document.getElementById("projectTitle");
+    const projectDescription = document.getElementById("projectDescription");
+    const projectToyName = document.getElementById("projectToyName");
+    const projectToyDescription = document.getElementById(
+        "projectToyDescription"
+    );
+    const projectImages = document.getElementById("projectImages");
+    const imagePreview = document.getElementById("projectImagePreview");
+    const imageCounter = document.getElementById("projectImageCounter");
+    const removedImages = document.getElementById("removedProjectImages");
+    const formError = document.getElementById("projectFormError");
+    const modalTitle = document.getElementById("projectModalTitle");
+    const modalSubtitle = document.getElementById("projectModalSubtitle");
+    const saveButton = document.getElementById("saveProjectButton");
+    const deleteForm = document.getElementById("deleteProjectForm");
+    const deleteProjectId = document.getElementById("deleteProjectId");
+    const deleteProjectName = document.getElementById("deleteProjectName");
+    const deleteConfirmation = document.getElementById(
+        "deleteProjectConfirmation"
+    );
+    const deleteButton = document.getElementById("deleteProjectButton");
+    const deleteError = document.getElementById("deleteProjectError");
+
+    let existingImages = [];
+    let removedImageIds = new Set();
+    let previewUrls = [];
+
+    const setPageLock = () => {
+        const anyOpen = document.querySelector(".project-modal.is-open");
+        document.body.classList.toggle("project-modal-open", Boolean(anyOpen));
+    };
+
+    const openModal = modal => {
+        modal.classList.add("is-open");
+        modal.setAttribute("aria-hidden", "false");
+        setPageLock();
+    };
+
+    const closeModal = modal => {
+        modal.classList.remove("is-open");
+        modal.setAttribute("aria-hidden", "true");
+        setPageLock();
+    };
+
+    const showError = (element, message) => {
+        element.textContent = message;
+        element.classList.add("is-visible");
+    };
+
+    const hideError = element => {
+        element.textContent = "";
+        element.classList.remove("is-visible");
+    };
+
+    const activeExistingCount = () => existingImages.filter(
+        image => !removedImageIds.has(String(image.id))
+    ).length;
+
+    const updateCounter = () => {
+        const total = activeExistingCount() + projectImages.files.length;
+        imageCounter.textContent = `${total} de ${maximumImages} imagens`;
+        imageCounter.style.color = total > maximumImages ? "#fca5a5" : "";
+        return total;
+    };
+
+    const syncRemovedInputs = () => {
+        removedImages.replaceChildren();
+        removedImageIds.forEach(id => {
+            const input = document.createElement("input");
+            input.type = "hidden";
+            input.name = "remover_imagens";
+            input.value = id;
+            removedImages.appendChild(input);
+        });
+    };
+
+    const addExistingImage = image => {
+        const item = document.createElement("div");
+        item.className = "project-image-item";
+        item.dataset.existingImageId = image.id;
+
+        const preview = document.createElement("img");
+        preview.src = image.url;
+        preview.alt = "Imagem existente do projeto";
+
+        const removeButton = document.createElement("button");
+        removeButton.type = "button";
+        removeButton.textContent = "×";
+        removeButton.setAttribute("aria-label", "Remover imagem");
+        removeButton.addEventListener("click", () => {
+            const id = String(image.id);
+            if (removedImageIds.has(id)) {
+                removedImageIds.delete(id);
+                item.classList.remove("is-removed");
+            } else {
+                removedImageIds.add(id);
+                item.classList.add("is-removed");
+            }
+            syncRemovedInputs();
+            updateCounter();
+        });
+
+        item.append(preview, removeButton);
+        imagePreview.appendChild(item);
+    };
+
+    const renderNewImages = () => {
+        imagePreview.querySelectorAll("[data-new-image]").forEach(item => {
+            item.remove();
+        });
+        previewUrls.forEach(url => URL.revokeObjectURL(url));
+        previewUrls = [];
+
+        Array.from(projectImages.files).forEach(file => {
+            const item = document.createElement("div");
+            item.className = "project-image-item";
+            item.dataset.newImage = "true";
+
+            const image = document.createElement("img");
+            const url = URL.createObjectURL(file);
+            previewUrls.push(url);
+            image.src = url;
+            image.alt = file.name;
+
+            item.appendChild(image);
+            imagePreview.appendChild(item);
+        });
+
+        updateCounter();
+    };
+
+    const resetForm = () => {
+        projectForm.reset();
+        formAction.value = "criar";
+        projectId.value = "";
+        existingImages = [];
+        removedImageIds = new Set();
+        previewUrls.forEach(url => URL.revokeObjectURL(url));
+        previewUrls = [];
+        imagePreview.replaceChildren();
+        removedImages.replaceChildren();
+        hideError(formError);
+        updateCounter();
+    };
+
+    document.querySelector("[data-open-create]").addEventListener("click", () => {
+        resetForm();
+        modalTitle.textContent = "Novo projeto";
+        modalSubtitle.textContent =
+            `Apresente o projeto e adicione até ${maximumImages} imagens.`;
+        saveButton.textContent = "Criar projeto";
+        openModal(projectModal);
+        window.setTimeout(() => projectTitle.focus(), 120);
+    });
+
+    document.querySelectorAll("[data-open-edit]").forEach(button => {
+        button.addEventListener("click", () => {
+            const card = button.closest(".project-card");
+            const project = projectMap.get(card.dataset.projectId);
+            if (!project) return;
+
+            resetForm();
+            formAction.value = "editar";
+            projectId.value = project.id;
+            projectTitle.value = project.titulo;
+            projectDescription.value = project.descricao;
+            projectToyName.value = project.nome_brinquedo;
+            projectToyDescription.value = project.descricao_brinquedo;
+            existingImages = project.imagens || [];
+            existingImages.forEach(addExistingImage);
+            updateCounter();
+
+            modalTitle.textContent = "Editar projeto";
+            modalSubtitle.textContent =
+                "Atualize os textos e organize a galeria do projeto.";
+            saveButton.textContent = "Salvar alterações";
+            openModal(projectModal);
+            window.setTimeout(() => projectTitle.focus(), 120);
+        });
+    });
+
+    document.querySelectorAll("[data-open-delete]").forEach(button => {
+        button.addEventListener("click", () => {
+            const card = button.closest(".project-card");
+            const project = projectMap.get(card.dataset.projectId);
+            if (!project) return;
+
+            deleteProjectId.value = project.id;
+            deleteProjectName.textContent = project.titulo;
+            deleteConfirmation.value = "";
+            deleteButton.disabled = true;
+            hideError(deleteError);
+            openModal(deleteModal);
+            window.setTimeout(() => deleteConfirmation.focus(), 120);
+        });
+    });
+
+    document.querySelectorAll("[data-close-project]").forEach(button => {
+        button.addEventListener("click", () => closeModal(projectModal));
+    });
+
+    document.querySelectorAll("[data-close-delete]").forEach(button => {
+        button.addEventListener("click", () => closeModal(deleteModal));
+    });
+
+    projectImages.addEventListener("change", () => {
+        renderNewImages();
+        if (updateCounter() > maximumImages) {
+            showError(
+                formError,
+                `O projeto pode possuir no máximo ${maximumImages} imagens.`
+            );
+        } else {
+            hideError(formError);
+        }
+    });
+
+    deleteConfirmation.addEventListener("input", event => {
+        deleteButton.disabled =
+            event.target.value.trim().toUpperCase() !== "EXCLUIR";
+    });
+
+    const submitAjax = async form => {
+        const response = await fetch(endpoint, {
+            method: "POST",
+            body: new FormData(form),
+            headers: {
+                "X-Requested-With": "XMLHttpRequest"
+            }
+        });
+
+        let data;
+        try {
+            data = await response.json();
+        } catch {
+            throw new Error("O servidor retornou uma resposta inválida.");
+        }
+
+        if (!response.ok || !data.success) {
+            throw new Error(
+                data.error || "Não foi possível concluir a operação."
+            );
+        }
+
+        return data;
+    };
+
+    projectForm.addEventListener("submit", async event => {
+        event.preventDefault();
+        hideError(formError);
+
+        if (updateCounter() > maximumImages) {
+            showError(
+                formError,
+                `O projeto pode possuir no máximo ${maximumImages} imagens.`
+            );
+            return;
+        }
+
+        saveButton.disabled = true;
+        const previousLabel = saveButton.textContent;
+        saveButton.textContent = "Salvando...";
+
+        try {
+            const data = await submitAjax(projectForm);
+            sessionStorage.setItem("projectFeedback", data.message);
+            window.location.reload();
+        } catch (error) {
+            showError(formError, error.message);
+            saveButton.disabled = false;
+            saveButton.textContent = previousLabel;
+        }
+    });
+
+    deleteForm.addEventListener("submit", async event => {
+        event.preventDefault();
+        hideError(deleteError);
+        deleteButton.disabled = true;
+        const previousLabel = deleteButton.textContent;
+        deleteButton.textContent = "Excluindo...";
+
+        try {
+            const data = await submitAjax(deleteForm);
+            sessionStorage.setItem("projectFeedback", data.message);
+            window.location.reload();
+        } catch (error) {
+            showError(deleteError, error.message);
+            deleteButton.disabled = false;
+            deleteButton.textContent = previousLabel;
+        }
+    });
+
+    document.addEventListener("keydown", event => {
+        if (event.key !== "Escape") return;
+        if (deleteModal.classList.contains("is-open")) {
+            closeModal(deleteModal);
+        } else if (projectModal.classList.contains("is-open")) {
+            closeModal(projectModal);
+        }
+    });
+
+    const feedback = sessionStorage.getItem("projectFeedback");
+    if (feedback) {
+        sessionStorage.removeItem("projectFeedback");
+        const toast = document.createElement("div");
+        toast.className = "project-feedback";
+        toast.textContent = feedback;
+        document.body.appendChild(toast);
+        window.setTimeout(() => toast.remove(), 4200);
+    }
+})();
 </script>
 {% endblock %}

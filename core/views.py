@@ -1386,83 +1386,287 @@ class CupomAdminView(AdminOnlyMixin, View):
         """
 
 
-class ProjetoAdminView(AdminOnlyMixin, View):
-    template_name = "gestao/projetos_adm.html"
+from django.db import transaction
+from django.db.models import Count, Q
+from django.db.models.deletion import ProtectedError
+from django.http import JsonResponse
+from django.shortcuts import get_object_or_404, render
+from django.views import View
 
-    def get(self, request):
-        projetos = Projetos.objects.select_related('brinquedo_projetado').prefetch_related(
-            'brinquedo_projetado__imagens_brinquedo_projeto'
-        ).order_by('-id')
-        return render(request, self.template_name, {"projetos": projetos})
+from .models import BrinquedosProjeto, ImagemProjetoBrinquedo, Projetos
+
+
+class ProjetoAdminView(AdminOnlyMixin, View):
+    """
+    Única view administrativa dos projetos.
+
+    GET:
+        Exibe e pesquisa os projetos.
+
+    POST:
+        Cria, edita ou exclui conforme o campo "acao".
+    """
+
+    template_name = "gestao/projetos_adm.html"
+    maximo_imagens = 5
+    tamanho_maximo_imagem = 8 * 1024 * 1024
+    tipos_imagem_permitidos = {
+        "image/jpeg",
+        "image/png",
+        "image/webp",
+    }
+
+    def get_queryset(self):
+        queryset = (
+            Projetos.objects
+            .select_related("brinquedo_projetado")
+            .annotate(
+                total_imagens=Count(
+                    "brinquedo_projetado__imagens_brinquedo_projeto",
+                    distinct=True,
+                )
+            )
+            .prefetch_related(
+                "brinquedo_projetado__imagens_brinquedo_projeto"
+            )
+            .order_by("-id")
+        )
+
+        busca = self.request.GET.get("q", "").strip()
+        if busca:
+            queryset = queryset.filter(
+                Q(titulo__icontains=busca)
+                | Q(descricao__icontains=busca)
+                | Q(
+                    brinquedo_projetado__nome_brinquedo_projeto__icontains=busca
+                )
+            ).distinct()
+
+        return queryset
+
+    def get(self, request, *args, **kwargs):
+        projetos = list(self.get_queryset())
+        todos = Projetos.objects.all()
+
+        projetos_com_imagem = (
+            todos
+            .filter(
+                brinquedo_projetado__imagens_brinquedo_projeto__isnull=False
+            )
+            .distinct()
+            .count()
+        )
+
+        projetos_json = []
+        for projeto in projetos:
+            brinquedo = projeto.brinquedo_projetado
+            imagens = (
+                list(brinquedo.imagens_brinquedo_projeto.all())
+                if brinquedo
+                else []
+            )
+
+            projetos_json.append({
+                "id": projeto.id,
+                "titulo": projeto.titulo or "",
+                "descricao": projeto.descricao or "",
+                "nome_brinquedo": (
+                    brinquedo.nome_brinquedo_projeto or ""
+                    if brinquedo
+                    else ""
+                ),
+                "descricao_brinquedo": (
+                    brinquedo.descricao or ""
+                    if brinquedo
+                    else ""
+                ),
+                "imagens": [
+                    {
+                        "id": imagem.id,
+                        "url": imagem.imagem.url,
+                    }
+                    for imagem in imagens
+                    if imagem.imagem
+                ],
+            })
+
+        context = {
+            "projetos": projetos,
+            "projetos_json": projetos_json,
+            "busca": request.GET.get("q", "").strip(),
+            "total_projetos": todos.count(),
+            "total_com_imagem": projetos_com_imagem,
+            "total_imagens": ImagemProjetoBrinquedo.objects.count(),
+            "maximo_imagens": self.maximo_imagens,
+        }
+        return render(request, self.template_name, context)
+
+    def post(self, request, *args, **kwargs):
+        acao = request.POST.get("acao", "").strip().lower()
+
+        if acao == "excluir":
+            return self._excluir(request)
+
+        if acao not in {"criar", "editar"}:
+            return self._erro("Ação inválida.")
+
+        return self._salvar(request, acao)
+
+    @staticmethod
+    def _erro(mensagem, status=400):
+        return JsonResponse(
+            {"success": False, "error": mensagem},
+            status=status,
+        )
+
+    def _validar_imagens(self, imagens):
+        for imagem in imagens:
+            if imagem.size > self.tamanho_maximo_imagem:
+                return (
+                    f'A imagem "{imagem.name}" excede o limite de 8 MB.'
+                )
+
+            if imagem.content_type not in self.tipos_imagem_permitidos:
+                return (
+                    f'O arquivo "{imagem.name}" não é uma imagem '
+                    "JPG, PNG ou WEBP válida."
+                )
+
+        return None
 
     @transaction.atomic
-    def post(self, request):
-        action = request.POST.get("action")
-
-        if action == "delete":
-            projeto = get_object_or_404(Projetos, id=request.POST.get("id"))
-            brinquedo = projeto.brinquedo_projetado
-            projeto.delete()
-            if brinquedo:
-                brinquedo.delete()
-            return JsonResponse({"success": True})
-
-        if action != "save":
-            return JsonResponse({"success": False, "error": "Acao invalida."}, status=400)
-
+    def _salvar(self, request, acao):
+        projeto_id = request.POST.get("projeto_id")
         titulo = request.POST.get("titulo", "").strip()
         descricao = request.POST.get("descricao", "").strip()
         nome_brinquedo = request.POST.get("nome_brinquedo", "").strip()
-        descricao_brinquedo = request.POST.get("descricao_brinquedo", "").strip()
-        if not titulo or not descricao or not nome_brinquedo:
-            return JsonResponse({
-                "success": False,
-                "error": "Preencha titulo, descricao e nome do brinquedo."
-            }, status=400)
+        descricao_brinquedo = request.POST.get(
+            "descricao_brinquedo",
+            "",
+        ).strip()
+        novas_imagens = request.FILES.getlist("imagens")
 
-        projeto_id = request.POST.get("id")
-        if projeto_id:
+        if not titulo:
+            return self._erro("Informe o título do projeto.")
+
+        if not descricao:
+            return self._erro("Informe a descrição do projeto.")
+
+        if not nome_brinquedo:
+            return self._erro("Informe o nome do brinquedo projetado.")
+
+        erro_imagem = self._validar_imagens(novas_imagens)
+        if erro_imagem:
+            return self._erro(erro_imagem)
+
+        if acao == "editar":
             projeto = get_object_or_404(
-                Projetos.objects.select_related('brinquedo_projetado'), pk=projeto_id
+                Projetos.objects.select_related("brinquedo_projetado"),
+                pk=projeto_id,
             )
             brinquedo = projeto.brinquedo_projetado
-            if brinquedo is None:
-                brinquedo = BrinquedosProjeto.objects.create(
-                    nome_brinquedo_projeto=nome_brinquedo,
-                    descricao=descricao_brinquedo
-                )
-                projeto.brinquedo_projetado = brinquedo
         else:
+            projeto = Projetos()
+            brinquedo = None
+
+        ids_remover = request.POST.getlist("remover_imagens")
+        try:
+            ids_remover = list({
+                int(item)
+                for item in ids_remover
+            })
+        except (TypeError, ValueError):
+            return self._erro("A lista de imagens removidas é inválida.")
+
+        imagens_existentes = (
+            brinquedo.imagens_brinquedo_projeto.all()
+            if brinquedo
+            else ImagemProjetoBrinquedo.objects.none()
+        )
+        total_removido = (
+            imagens_existentes.filter(pk__in=ids_remover).count()
+            if brinquedo
+            else 0
+        )
+        total_final = (
+            imagens_existentes.count()
+            - total_removido
+            + len(novas_imagens)
+        )
+
+        if total_final > self.maximo_imagens:
+            return self._erro(
+                f"Cada projeto pode possuir no máximo "
+                f"{self.maximo_imagens} imagens."
+            )
+
+        if brinquedo is None:
             brinquedo = BrinquedosProjeto.objects.create(
                 nome_brinquedo_projeto=nome_brinquedo,
-                descricao=descricao_brinquedo
+                descricao=descricao_brinquedo,
             )
-            projeto = Projetos(brinquedo_projetado=brinquedo)
+            projeto.brinquedo_projetado = brinquedo
 
         brinquedo.nome_brinquedo_projeto = nome_brinquedo
         brinquedo.descricao = descricao_brinquedo
         brinquedo.save()
+
         projeto.titulo = titulo
         projeto.descricao = descricao
+        projeto.brinquedo_projetado = brinquedo
         projeto.save()
 
-        ids_remover = request.POST.getlist("remover_imagens")
         if ids_remover:
-            ImagemProjetoBrinquedo.objects.filter(
-                id__in=ids_remover, brinquedo=brinquedo
-            ).delete()
+            imagens_existentes.filter(pk__in=ids_remover).delete()
 
-        imagens = request.FILES.getlist("imagens")
-        total_atual = brinquedo.imagens_brinquedo_projeto.count()
-        if total_atual + len(imagens) > 5:
-            transaction.set_rollback(True)
-            return JsonResponse({
-                "success": False, "error": "Cada projeto pode ter no maximo 5 imagens."
-            }, status=400)
-        for imagem in imagens:
-            ImagemProjetoBrinquedo.objects.create(brinquedo=brinquedo, imagem=imagem)
+        for imagem in novas_imagens:
+            ImagemProjetoBrinquedo.objects.create(
+                brinquedo=brinquedo,
+                imagem=imagem,
+            )
 
-        return JsonResponse({"success": True})
+        return JsonResponse({
+            "success": True,
+            "message": (
+                "Projeto criado com sucesso."
+                if acao == "criar"
+                else "Projeto atualizado com sucesso."
+            ),
+        })
+
+    @transaction.atomic
+    def _excluir(self, request):
+        projeto_id = request.POST.get("projeto_id")
+        projeto = get_object_or_404(
+            Projetos.objects.select_related("brinquedo_projetado"),
+            pk=projeto_id,
+        )
+
+        if request.POST.get("confirmacao", "").strip().upper() != "EXCLUIR":
+            return self._erro("Digite EXCLUIR para confirmar.")
+
+        brinquedo = projeto.brinquedo_projetado
+
+        try:
+            projeto.delete()
+
+            if (
+                brinquedo
+                and not Projetos.objects.filter(
+                    brinquedo_projetado=brinquedo
+                ).exists()
+            ):
+                brinquedo.delete()
+        except ProtectedError:
+            return self._erro(
+                "Este projeto possui registros vinculados e não pode "
+                "ser excluído."
+            )
+
+        return JsonResponse({
+            "success": True,
+            "message": "Projeto excluído com sucesso.",
+        })
 
 
 class EventoAdminView(AdminOnlyMixin, View):
