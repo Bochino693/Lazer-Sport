@@ -3199,7 +3199,7 @@ body {
     .pino-gota__corpo {
         position: absolute;
         inset: 0;
-        z-index: 1;
+        z-index: 2;
         width: 100%;
         height: 100%;
         display: block;
@@ -3212,16 +3212,16 @@ body {
         position: absolute;
         left: 50%;
         top: 35%;
-        z-index: 2;
+        z-index: 1;
         transform: translate(-50%, -50%);
         overflow: hidden;
-        border: 2px solid #fff;
+        border: 0;
         border-radius: 50%;
         background: #fff;
         display: grid;
         place-items: center;
         pointer-events: none;
-        box-shadow: 0 2px 6px rgba(13, 27, 46, 0.22);
+        box-shadow: none;
     }
 
     .pino-gota__janela img {
@@ -3242,6 +3242,24 @@ body {
     .pino-gota__janela i {
         position: relative;
         z-index: 1;
+    }
+
+    .pino-gota__aro {
+        position: absolute;
+        inset: 0;
+        z-index: 3;
+        width: 100%;
+        height: 100%;
+        display: block;
+        overflow: visible;
+        pointer-events: none;
+    }
+
+    .pino-fabrica-icone {
+        width: 72%;
+        height: 72%;
+        display: block;
+        fill: #101318;
     }
 
     .pino-gota:hover {
@@ -3529,16 +3547,33 @@ body {
 
     const PINO_PATH_D = "M215.7 499.2C267 435 384 279.4 384 192C384 86 298 0 192 0S0 86 0 192c0 87.4 117 243 168.3 307.2c12.3 15.3 35.1 15.3 47.4 0z";
 
+    let sequenciaPino = 0;
+
     function criarPino({ largura, altura, corPino, janela, conteudoJanela, classeSvg = '' }) {
+        const idMascara = `mascara-pino-${++sequenciaPino}`;
+        const centroY = 179;
+        const raioFuro = Math.round((janela / largura) * 192);
+
         return `
             <span class="pino-gota" style="width:${largura}px;height:${altura}px;">
-                <svg class="pino-gota__corpo ${classeSvg}" viewBox="0 0 384 512"
-                     xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                    <path d="${PINO_PATH_D}" fill="${corPino}"/>
-                </svg>
                 <span class="pino-gota__janela" style="width:${janela}px;height:${janela}px;">
                     ${conteudoJanela}
                 </span>
+                <svg class="pino-gota__corpo ${classeSvg}" viewBox="0 0 384 512"
+                     xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    <defs>
+                        <mask id="${idMascara}">
+                            <rect width="384" height="512" fill="#fff"/>
+                            <circle cx="192" cy="${centroY}" r="${raioFuro}" fill="#000"/>
+                        </mask>
+                    </defs>
+                    <path d="${PINO_PATH_D}" fill="${corPino}" mask="url(#${idMascara})"/>
+                </svg>
+                <svg class="pino-gota__aro" viewBox="0 0 384 512"
+                     xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    <circle cx="192" cy="${centroY}" r="${raioFuro}"
+                            fill="none" stroke="#fff" stroke-width="18"/>
+                </svg>
             </span>
         `;
     }
@@ -3564,12 +3599,16 @@ body {
     const iconeFabrica = L.divIcon({
         className: 'fabrica-marker',
         html: criarPino({
-            largura: 44, altura: 59, corPino: '#E63946', janela: 23, classeSvg: 'pino-pulse',
-            conteudoJanela: `<i class="fa-solid fa-industry" aria-hidden="true" style="font-size:17px;color:#E63946;"></i>`
+            largura: 46, altura: 62, corPino: '#E63946', janela: 25, classeSvg: 'pino-pulse',
+            conteudoJanela: `
+                <svg class="pino-fabrica-icone" viewBox="0 0 64 64"
+                     xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    <path d="M6 56V26l15 8V24l15 9V18h9v20l13 7v11H6zm8-8h7v-7h-7v7zm14 0h7v-7h-7v7zm14 0h7v-7h-7v7zM38 14V7h7v7h-7z"/>
+                </svg>`
         }),
-        iconSize: [44, 59],
-        iconAnchor: [22, 59],
-        popupAnchor: [0, -54],
+        iconSize: [46, 62],
+        iconAnchor: [23, 62],
+        popupAnchor: [0, -57],
     });
 
     function criarPopupCliente(c) {
