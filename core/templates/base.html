@@ -1609,7 +1609,7 @@ nav a.btn-login {
 
     </div>
 
-    {% if clientes_destaque %}
+    {% if clientes_rodape %}
       <section class="ls-clientes-strip" aria-labelledby="ls-clientes-title">
           <div class="ls-clientes-heading">
               <h5 id="ls-clientes-title">Empresas que escolheram a Lazer &amp; Sport</h5>
@@ -1617,7 +1617,7 @@ nav a.btn-login {
           </div>
 
           <div class="ls-clientes-logos">
-              {% for cliente in clientes_destaque %}
+              {% for cliente in clientes_rodape %}
                 <div class="ls-cliente-logo" title="{{ cliente.descricao_cliente }}">
                     <img src="{{ cliente.logo_cliente.url }}"
                          alt="Logo {{ cliente.descricao_cliente }}"

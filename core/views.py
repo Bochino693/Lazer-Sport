@@ -299,14 +299,6 @@ class HomeView(View):
             c["cidade"] for c in clientes_mapa if c["cidade"]
         })
 
-        clientes_destaque = (
-            Clientes.objects
-            .filter(ativo=True)
-            .exclude(logo_cliente__isnull=True)
-            .exclude(logo_cliente="")
-            .order_by("-criacao", "-id")[:6]
-        )
-
         context = {
             "categorias_brinquedos": categorias_brinquedos,
             "brinquedos_todos": brinquedos_todos,
@@ -332,7 +324,6 @@ class HomeView(View):
             ),
             "imagens_site": imagens_site,
             "clientes_mapa": clientes_mapa,
-            "clientes_destaque": clientes_destaque,
             "pontos_mapa": pontos_mapa,
             "cidades_atendidas": cidades_atendidas,
         }

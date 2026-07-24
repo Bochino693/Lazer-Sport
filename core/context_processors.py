@@ -1,20 +1,28 @@
-from .models import CategoriasBrinquedos, Estabelecimentos, Manutencao, Carrinho
-from django.db.models import Q
+from django.db.models import Sum
+
+from .models import (
+    Carrinho,
+    CategoriasBrinquedos,
+    Clientes,
+    Estabelecimentos,
+    Manutencao,
+    Pedido,
+)
+
 
 def categorias_globais(request):
     return {
-        "categorias_header": CategoriasBrinquedos.objects.exclude(
-            nome_categoria__icontains="competitivos"
-        ).exclude(
-            nome_categoria__icontains="kids"
-        ).exclude(
-            nome_categoria__icontains="famosos"
-        ).exclude(
-            nome_categoria__icontains="espaço esportivo kids"
-        ).exclude(
-            nome_categoria__icontains="espaço kids play"
-        ).order_by("nome_categoria")
+        "categorias_header": (
+            CategoriasBrinquedos.objects
+            .exclude(nome_categoria__icontains="competitivos")
+            .exclude(nome_categoria__icontains="kids")
+            .exclude(nome_categoria__icontains="famosos")
+            .exclude(nome_categoria__icontains="espaço esportivo kids")
+            .exclude(nome_categoria__icontains="espaço kids play")
+            .order_by("nome_categoria")
+        )
     }
+
 
 def estabelecimentos_globais(request):
     return {
@@ -22,90 +30,106 @@ def estabelecimentos_globais(request):
     }
 
 
+def clientes_rodape(request):
+    """
+    Disponibiliza os seis primeiros clientes ativos com logo para
+    o base.html e para todos os templates que herdam dele.
+    """
+    return {
+        "clientes_rodape": (
+            Clientes.objects
+            .filter(ativo=True)
+            .exclude(logo_cliente__isnull=True)
+            .exclude(logo_cliente="")
+            .only(
+                "id",
+                "descricao_cliente",
+                "logo_cliente",
+                "criacao",
+            )
+            .order_by("-criacao", "-id")[:6]
+        )
+    }
+
+
 def manutencao_notificacao(request):
     if not request.user.is_authenticated:
         return {}
 
-    # Usa getattr para evitar erro caso o Perfil não tenha sido criado ainda
-    perfil = getattr(request.user, 'perfil', None)
+    perfil = getattr(request.user, "perfil", None)
 
     if not perfil:
         return {
-            'manutencao_pendente': 0,
-            'manutencao_andamento': 0,
-            'manutencao_abertas': 0,
-            'tem_manutencao': False
+            "manutencao_pendente": 0,
+            "manutencao_andamento": 0,
+            "manutencao_abertas": 0,
+            "tem_manutencao": False,
         }
 
     manutencoes = Manutencao.objects.filter(usuario=perfil)
 
-    pendentes = manutencoes.filter(status='P').count()
-    em_andamento = manutencoes.filter(status='A').count()
+    pendentes = manutencoes.filter(status="P").count()
+    em_andamento = manutencoes.filter(status="A").count()
     total_abertas = pendentes + em_andamento
 
     return {
-        'manutencao_pendente': pendentes,
-        'manutencao_andamento': em_andamento,
-        'manutencao_abertas': total_abertas,
-        'tem_manutencao': total_abertas > 0
+        "manutencao_pendente": pendentes,
+        "manutencao_andamento": em_andamento,
+        "manutencao_abertas": total_abertas,
+        "tem_manutencao": total_abertas > 0,
     }
-
-from django.db.models import Sum
 
 
 def carrinho_context(request):
     if not request.user.is_authenticated:
         return {
-            'carrinho_total_itens': 0,
-            'mostrar_float_carrinho': False
+            "carrinho_total_itens": 0,
+            "mostrar_float_carrinho": False,
         }
 
-    # Usuário logado mas sem perfil ainda
-    if not hasattr(request.user, 'perfil'):
+    if not hasattr(request.user, "perfil"):
         return {
-            'carrinho_total_itens': 0,
-            'mostrar_float_carrinho': False
+            "carrinho_total_itens": 0,
+            "mostrar_float_carrinho": False,
         }
 
     cliente = request.user.perfil
-
     carrinho = Carrinho.objects.filter(cliente=cliente).first()
 
     if not carrinho:
         return {
-            'carrinho_total_itens': 0,
-            'mostrar_float_carrinho': False
+            "carrinho_total_itens": 0,
+            "mostrar_float_carrinho": False,
         }
 
-    total_itens = carrinho.itens.aggregate(
-        total=Sum('quantidade')
-    )['total'] or 0
+    total_itens = (
+        carrinho.itens.aggregate(total=Sum("quantidade"))["total"]
+        or 0
+    )
 
     return {
-        'carrinho_total_itens': total_itens,
-        'mostrar_float_carrinho': total_itens > 0
+        "carrinho_total_itens": total_itens,
+        "mostrar_float_carrinho": total_itens > 0,
     }
 
-
-from .models import Pedido
 
 def pedidos_ativos_context(request):
     if not request.user.is_authenticated:
         return {}
 
-    perfil = getattr(request.user, 'perfil', None)
+    perfil = getattr(request.user, "perfil", None)
     if not perfil:
         return {}
 
-    pedidos_ativos = Pedido.objects.filter(
-        cliente=perfil
-    ).exclude(
-        status__in=['cancelado', 'finalizado']
+    pedidos_ativos = (
+        Pedido.objects
+        .filter(cliente=perfil)
+        .exclude(status__in=["cancelado", "finalizado"])
     )
 
     return {
-        'tem_pedidos_ativos': pedidos_ativos.exists(),
-        'total_pedidos_ativos': pedidos_ativos.count()
+        "tem_pedidos_ativos": pedidos_ativos.exists(),
+        "total_pedidos_ativos": pedidos_ativos.count(),
     }
 
 
@@ -116,25 +140,22 @@ def admin_alertas_context(request):
     if not request.user.is_staff:
         return {}
 
-    # PEDIDOS que precisam de ação
     pedidos_alerta = Pedido.objects.filter(
         status__in=[
-            'criado',
-            'aguardando_pagamento',
-            'pago',
-            'em_preparacao'
+            "criado",
+            "aguardando_pagamento",
+            "pago",
+            "em_preparacao",
         ]
     ).count()
 
-    # MANUTENÇÕES abertas
     manutencoes_alerta = Manutencao.objects.filter(
-        status__in=['P', 'A']
+        status__in=["P", "A"]
     ).count()
 
     return {
-        'pedidos_alerta': pedidos_alerta,
-        'tem_pedidos_alerta': pedidos_alerta > 0,
-
-        'manutencoes_alerta': manutencoes_alerta,
-        'tem_manutencoes_alerta': manutencoes_alerta > 0,
+        "pedidos_alerta": pedidos_alerta,
+        "tem_pedidos_alerta": pedidos_alerta > 0,
+        "manutencoes_alerta": manutencoes_alerta,
+        "tem_manutencoes_alerta": manutencoes_alerta > 0,
     }
