@@ -5,8 +5,7 @@ from .views import (HomeView, BrinquedoInfoView, CategoriasInfoView, BrinquedosV
                     RegistrarView, LoginUsuarioView, LogoutUsuarioView, EventosView, verificar_pagamento,
                     ProjetosView, ClientePerfilView, ComboInfoView, PromocaoInfoView, calcular_frete, salvar_cpf_carrinho,
                     BrinquedoAdmin, NovaCategoria, NovaTag,  PedidosParaImpressaoAPI, CupomAdminView, ProjetoAdminView, EstabelecimentoInfoView,
-                    EstabelecimentosListView, ManutencaoView, PromocaoAdminView, PromocaoDeleteView,
-                    adicionar_ao_carrinho, CarrinhoView, aplicar_cupom, remover_item_carrinho, MarcarPedidoImpressoAPI,
+                    EstabelecimentosListView, ManutencaoView, PromocaoAdminView, adicionar_ao_carrinho, CarrinhoView, aplicar_cupom, remover_item_carrinho, MarcarPedidoImpressoAPI,
                     limpar_carrinho, cancelar_manutencao, alterar_quantidade_item, gerar_pix, atualizar_tipo_envio,
                     PaymentView, MeusPedidosView, criar_pedido_pix, processar_cartao, EventoAdminView, BannerAdminView, BannerDeleteView, AdminLoginView, AcessoNegadoView,
                     DashboardAdminView, UserAdminView, ManutencaoAdminView, RelatorioVendasView, PedidoAdminView,
@@ -121,8 +120,12 @@ urlpatterns = [
     path('adm/banners/excluir/<int:pk>/', BannerDeleteView.as_view(), name='banner_delete'),
     path('adm/pedidos/', PedidoAdminView.as_view(), name='pedidos_adm'),
 
-    path("adm/promocoes/", PromocaoAdminView.as_view(), name="promocoes_admin"),
-    path("adm/promocoes/<int:pk>/delete/", PromocaoDeleteView.as_view(), name='promocao_delete'),
+    path(
+        "adm/promocoes/",
+        PromocaoAdminView.as_view(),
+        name="promocoes_admin",
+    ),
+
 
     path("adm/dashboards/", DashboardAdminView.as_view(), name='dashboards'),
     path("adm/clients/", UserAdminView.as_view(), name='clients'),
