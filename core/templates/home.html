@@ -3502,35 +3502,39 @@ body {
     // não vem do banco, é hard coded aqui mesmo.
     const CATEGORIAS_PADRAO = ['Kid Play', 'Brinquedão', 'Trampolins', 'Eletrônicos'];
 
+   const PINO_PATH_D = "M215.7 499.2C267 435 384 279.4 384 192C384 86 298 0 192 0S0 86 0 192c0 87.4 117 243 168.3 307.2c12.3 15.3 35.1 15.3 47.4 0z";
+
     function criarIconeCliente(c) {
-    return L.divIcon({
-        className: 'cliente-marker',
+        return L.divIcon({
+            className: 'cliente-marker',
+            html: `
+                <span class="pino-gota">
+                    <svg class="pino-gota-svg" viewBox="0 0 384 512" xmlns="http://www.w3.org/2000/svg">
+                        <path d="${PINO_PATH_D}"/>
+                    </svg>
+                    <span class="pino-gota-janela"><img src="${LOGO_CLIENTE_PADRAO}" alt=""></span>
+                </span>
+            `,
+            iconSize: [42, 56],
+            iconAnchor: [21, 56],
+            popupAnchor: [0, -50],
+        });
+    }
+
+    const iconeFabrica = L.divIcon({
+        className: 'fabrica-marker',
         html: `
             <span class="pino-gota">
-                <span class="pino-gota-ponta"></span>
-                <span class="pino-gota-corpo"></span>
-                <span class="pino-gota-conteudo"><img src="${LOGO_CLIENTE_PADRAO}" alt=""></span>
+                <svg class="pino-gota-svg" viewBox="0 0 384 512" xmlns="http://www.w3.org/2000/svg">
+                    <path d="${PINO_PATH_D}"/>
+                </svg>
+                <span class="pino-gota-janela"><i class="fa-solid fa-industry" aria-hidden="true"></i></span>
             </span>
         `,
-        iconSize: [48, 60],
-        iconAnchor: [24, 60],
-        popupAnchor: [0, -54],
+        iconSize: [50, 67],
+        iconAnchor: [25, 67],
+        popupAnchor: [0, -60],
     });
-}
-
-const iconeFabrica = L.divIcon({
-    className: 'fabrica-marker',
-    html: `
-        <span class="pino-gota">
-            <span class="pino-gota-ponta"></span>
-            <span class="pino-gota-corpo"></span>
-            <span class="pino-gota-conteudo"><i class="fa-solid fa-industry" aria-hidden="true"></i></span>
-        </span>
-    `,
-    iconSize: [56, 68],
-    iconAnchor: [28, 68],
-    popupAnchor: [0, -60],
-});
 
     let marcadoresClientes = [];
     let marcadorFabrica = null;
