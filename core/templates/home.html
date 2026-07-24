@@ -3178,115 +3178,55 @@ body {
         border: 1px dashed #e3e8f0;
     }
 
-   .cliente-marker,
+    /* Pinos: tamanho, posição e cor vêm inline no HTML gerado pelo JS
+       (ver script mais abaixo) -- aqui só ficam os toques decorativos,
+       que não afetam se o pino aparece ou não. */
+    .cliente-marker,
     .fabrica-marker {
         background: transparent;
         border: none;
     }
 
     .pino-gota {
-        position: relative;
-        width: 42px;
-        height: 56px;
-        filter: drop-shadow(0 4px 8px rgba(0, 0, 0, .35));
-        transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+        transition: transform 0.2s ease;
     }
 
     .pino-gota:hover {
-        transform: translateY(-4px) scale(1.12);
+        transform: translateY(-4px) scale(1.08);
     }
 
-    .pino-gota-svg {
-        position: absolute;
-        inset: 0;
-        width: 100%;
-        height: 100%;
-        display: block;
-    }
-
-    .cliente-marker,
-.fabrica-marker {
-    background: transparent;
-    border: none;
-}
-
-.pino-gota {
-    display: inline-block;
-    position: relative;
-    width: 60px;
-    height: 80px;
-    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, .35));
-    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-.pino-gota:hover {
-    transform: translateY(-4px) scale(1.12);
-}
-
-.pino-gota-svg {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    display: block;
-}
-
-    .cliente-marker .pino-gota-svg path { fill: #004AAD; }
-    .fabrica-marker .pino-gota-svg path { fill: #E63946; }
-
-    .pino-gota-janela {
-        position: absolute;
-        left: 50%;
-        top: 36%;
-        width: 26px;
-        height: 26px;
-        transform: translate(-50%, -50%);
-        border-radius: 50%;
-        overflow: hidden;
-        background: #fff;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 2;
-        box-shadow: 0 0 0 3px rgba(255, 255, 255, .9);
-    }
-
-    .pino-gota-janela img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-    }
-
-    .pino-gota-janela i {
-        font-size: 20px;
-        color: #E63946;
-    }
-
-    .fabrica-marker .pino-gota {
-        width: 72px;
-        height: 96px;
-    }
-
-    .fabrica-marker .pino-gota-janela {
-        width: 32px;
-        height: 32px;
-    }
-
-    .fabrica-marker .pino-gota-janela i {
-        font-size: 26px;
-    }
-
-    .fabrica-marker .pino-gota-svg {
+    .pino-pulse {
         animation: pulso-fabrica-gota 2.4s ease-in-out infinite;
     }
 
     @keyframes pulso-fabrica-gota {
         0%, 100% {
-            filter: drop-shadow(0 4px 8px rgba(0,0,0,.35)) drop-shadow(0 0 0 rgba(230,57,70,.6));
+            filter: drop-shadow(0 4px 6px rgba(0,0,0,.45)) drop-shadow(0 0 0 rgba(230,57,70,.6));
         }
         50% {
-            filter: drop-shadow(0 4px 8px rgba(0,0,0,.35)) drop-shadow(0 0 9px rgba(230,57,70,0));
+            filter: drop-shadow(0 4px 6px rgba(0,0,0,.45)) drop-shadow(0 0 9px rgba(230,57,70,0));
         }
+    }
+
+    /* Bolha de agrupamento (quando vários clientes ficam perto) */
+    .cluster-lazer {
+        background: transparent;
+        border: none;
+    }
+
+    .cluster-lazer span {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 42px;
+        height: 42px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #4aa3ff, #004AAD);
+        color: #fff;
+        font-weight: 800;
+        font-family: 'Poppins', sans-serif;
+        font-size: 14px;
+        box-shadow: 0 6px 16px rgba(0,74,173,.45), 0 0 0 4px rgba(255,255,255,.9);
     }
 
     /* Legenda simples abaixo da barra de filtro */
@@ -3403,7 +3343,6 @@ body {
         #mapa-clientes { height: 360px; }
     }
 
-    /* Lista de clientes em texto puro (chips), visível abaixo do mapa */
     .clientes-seo-lista {
         list-style: none;
         display: flex;
@@ -3518,68 +3457,95 @@ body {
         return div.innerHTML;
     }
 
-    // Logo fixa pra TODOS os clientes -- não usa mais a logo individual
-    // de cada um (evita pinos com fotos de qualidade/proporção
-    // diferentes, deixa o mapa visualmente uniforme).
     const LOGO_CLIENTE_PADRAO = "{% static 'images/logoo.png' %}";
-
-    // Categorias/produtos fixas, iguais pro popup de todo cliente --
-    // não vem do banco, é hard coded aqui mesmo.
     const CATEGORIAS_PADRAO = ['Kid Play', 'Brinquedão', 'Trampolins', 'Eletrônicos'];
 
-  const PINO_PATH_D = "M215.7 499.2C267 435 384 279.4 384 192C384 86 298 0 192 0S0 86 0 192c0 87.4 117 243 168.3 307.2c12.3 15.3 35.1 15.3 47.4 0z";
+    // Contorno do alfinete (cabeça redonda + ponta lisa embaixo, igual à
+    // referência). Tamanho/cor vão inline no HTML -- nada de CSS externo
+    // pode quebrar isso.
+    const PINO_PATH_D = "M215.7 499.2C267 435 384 279.4 384 192C384 86 298 0 192 0S0 86 0 192c0 87.4 117 243 168.3 307.2c12.3 15.3 35.1 15.3 47.4 0z";
+
+    function criarPino({ largura, altura, corPino, janela, conteudoJanela, classeSvg }) {
+        return `
+            <span class="pino-gota" style="display:inline-block;position:relative;width:${largura}px;height:${altura}px;">
+                <svg class="${classeSvg || ''}" viewBox="0 0 384 512" xmlns="http://www.w3.org/2000/svg"
+                     style="position:absolute;inset:0;width:100%;height:100%;display:block;filter:drop-shadow(0 4px 6px rgba(0,0,0,.45));">
+                    <path d="${PINO_PATH_D}" fill="${corPino}"/>
+                </svg>
+                <span style="position:absolute;left:50%;top:36%;width:${janela}px;height:${janela}px;transform:translate(-50%,-50%);border-radius:50%;overflow:hidden;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 3px #fff;">
+                    ${conteudoJanela}
+                </span>
+            </span>
+        `;
+    }
 
     function criarIconeCliente(c) {
         return L.divIcon({
             className: 'cliente-marker',
-            html: `
-                <span class="pino-gota">
-                    <svg class="pino-gota-svg" viewBox="0 0 384 512" xmlns="http://www.w3.org/2000/svg">
-                        <path d="${PINO_PATH_D}"/>
-                    </svg>
-                    <span class="pino-gota-janela"><img src="${LOGO_CLIENTE_PADRAO}" alt=""></span>
-                </span>
-            `,
+            html: criarPino({
+                largura: 60, altura: 80, corPino: '#004AAD', janela: 28,
+                conteudoJanela: `<img src="${LOGO_CLIENTE_PADRAO}" alt="" style="width:100%;height:100%;object-fit:cover;">`
+            }),
             iconSize: [60, 80],
             iconAnchor: [30, 80],
-            popupAnchor: [0, -72],
+            popupAnchor: [0, -74],
         });
     }
 
     const iconeFabrica = L.divIcon({
         className: 'fabrica-marker',
-        html: `
-            <span class="pino-gota">
-                <svg class="pino-gota-svg" viewBox="0 0 384 512" xmlns="http://www.w3.org/2000/svg">
-                    <path d="${PINO_PATH_D}"/>
-                </svg>
-                <span class="pino-gota-janela"><i class="fa-solid fa-industry" aria-hidden="true"></i></span>
-            </span>
-        `,
+        html: criarPino({
+            largura: 72, altura: 96, corPino: '#E63946', janela: 34, classeSvg: 'pino-pulse',
+            conteudoJanela: `<i class="fa-solid fa-industry" aria-hidden="true" style="font-size:26px;color:#E63946;"></i>`
+        }),
         iconSize: [72, 96],
         iconAnchor: [36, 96],
-        popupAnchor: [0, -86],
+        popupAnchor: [0, -88],
     });
+
+    // Agrupador: clientes muito próximos viram uma bolha com o número
+    // deles. Clicar/zoom "espalha" (spiderfy) os pinos até cada um ficar
+    // acessível ao mouse individualmente, com popup na posição certa.
+    const clusterClientes = L.markerClusterGroup({
+        maxClusterRadius: 50,
+        spiderfyOnMaxZoom: true,
+        showCoverageOnHover: false,
+        zoomToBoundsOnClick: true,
+        iconCreateFunction: function (cluster) {
+            return L.divIcon({
+                className: 'cluster-lazer',
+                html: `<span>${cluster.getChildCount()}</span>`,
+                iconSize: [42, 42],
+            });
+        }
+    });
+    clusterClientes.addTo(mapa);
 
     let marcadoresClientes = [];
     let marcadorFabrica = null;
     let marcadorPopupFixado = null;
 
-    // Popup aparece ao passar o mouse (preview) e some ao tirar o mouse --
-    // só fica ABERTO de verdade (fixo) depois de um clique. Clicar de novo
-    // no mesmo pino, ou clicar em outro pino, ou clicar fora, desfixa.
-    function configurarInteracaoMarcador(marcador) {
+    // Popup aparece ao passar o mouse e some ao tirar -- só fica fixo
+    // depois de um clique. No hover, o pino sobe na frente dos vizinhos
+    // (zIndexOffset), pra facilitar acertar o certo quando tem vários
+    // bem próximos mas ainda não agrupados.
+    function configurarInteracaoMarcador(marcador, zIndexBase) {
         marcador.on('mouseover', function () {
+            marcador.setZIndexOffset((zIndexBase || 0) + 1000);
             if (marcador !== marcadorPopupFixado) marcador.openPopup();
         });
 
         marcador.on('mouseout', function () {
-            if (marcador !== marcadorPopupFixado) marcador.closePopup();
+            if (marcador !== marcadorPopupFixado) {
+                marcador.setZIndexOffset(zIndexBase || 0);
+                marcador.closePopup();
+            }
         });
 
         marcador.on('click', function () {
             if (marcadorPopupFixado === marcador) {
                 marcadorPopupFixado = null;
+                marcador.setZIndexOffset(zIndexBase || 0);
                 marcador.closePopup();
                 return;
             }
@@ -3634,14 +3600,14 @@ body {
     }
 
     function renderizarClientes(lista) {
-        marcadoresClientes.forEach(m => mapa.removeLayer(m));
+        clusterClientes.clearLayers();
         marcadoresClientes = [];
 
         lista.forEach(c => {
             const marcador = L.marker([c.lat, c.lng], { icon: criarIconeCliente(c) })
                 .bindPopup(criarPopupCliente(c));
-            marcador.addTo(mapa);
-            configurarInteracaoMarcador(marcador);
+            configurarInteracaoMarcador(marcador, 0);
+            clusterClientes.addLayer(marcador);
             marcadoresClientes.push(marcador);
         });
 
@@ -3654,24 +3620,21 @@ body {
 
         if (todosPinsVisiveis.length) {
             const grupo = L.featureGroup(todosPinsVisiveis);
-            // maxZoom evita que o mapa "cole" demais quando só tem poucos
-            // pontos próximos -- mantém uma visão mais aberta, boa pra ir
-            // acomodando novos clientes sem precisar mexer em nada.
             mapa.fitBounds(grupo.getBounds().pad(0.25), { maxZoom: 11 });
         } else {
             mapa.setView([-14.235, -51.925], 4);
         }
     }
 
-    // Pino da fábrica: fica sempre no mapa, independente do filtro de cidade
+    // Pino da fábrica: fica sempre no mapa, direto (fora do agrupador),
+    // independente do filtro de cidade.
     if (fabrica) {
-        marcadorFabrica = L.marker([fabrica.lat, fabrica.lng], { icon: iconeFabrica, zIndexOffset: 1000 })
+        marcadorFabrica = L.marker([fabrica.lat, fabrica.lng], { icon: iconeFabrica, zIndexOffset: 2000 })
             .bindPopup(criarPopupFabrica(fabrica));
         marcadorFabrica.addTo(mapa);
-        configurarInteracaoMarcador(marcadorFabrica);
+        configurarInteracaoMarcador(marcadorFabrica, 2000);
     }
 
-    // Popula o filtro de cidades a partir dos clientes reais (Brasil e exterior)
     const selectCidade = document.getElementById('filtro-cidade-cliente');
     if (selectCidade) {
         const cidades = [...new Set(
@@ -3696,11 +3659,6 @@ body {
 
     renderizarClientes(clientesDados);
 
-    // Zoom por scroll fica sempre desligado -- nada de ativar/desativar
-    // ao clicar (isso causava comportamento inconsistente). Pra dar
-    // zoom: os botões +/- (padrão do Leaflet, sempre visíveis) ou
-    // duplo clique. Simples e sem susto nenhum de "sequestrar" o
-    // scroll da página.
     mapa.on('click', () => {
         if (marcadorPopupFixado) {
             marcadorPopupFixado.closePopup();
