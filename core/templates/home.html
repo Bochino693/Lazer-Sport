@@ -3173,9 +3173,8 @@ body {
         border: 1px dashed #e3e8f0;
     }
 
-    /* Tamanho, posição e cor do pino vão inline no HTML gerado pelo JS
-       (proposital: nada de CSS externo pode quebrar isso). Aqui só
-       ficam efeitos que não afetam se o pino aparece ou não. */
+    /* Tamanho, posição e cor do pino vão inline no HTML gerado pelo JS.
+       Aqui só ficam efeitos que não afetam se o pino aparece ou não. */
     .cliente-marker,
     .fabrica-marker {
         background: transparent;
@@ -3187,7 +3186,7 @@ body {
     }
 
     .pino-gota:hover {
-        transform: translateY(-4px) scale(1.08);
+        transform: translateY(-3px) scale(1.1);
     }
 
     .pino-pulse {
@@ -3196,15 +3195,15 @@ body {
 
     @keyframes pulso-fabrica-gota {
         0%, 100% {
-            filter: drop-shadow(0 4px 6px rgba(0,0,0,.45)) drop-shadow(0 0 0 rgba(230,57,70,.6));
+            filter: drop-shadow(0 3px 5px rgba(0,0,0,.45)) drop-shadow(0 0 0 rgba(230,57,70,.6));
         }
         50% {
-            filter: drop-shadow(0 4px 6px rgba(0,0,0,.45)) drop-shadow(0 0 9px rgba(230,57,70,0));
+            filter: drop-shadow(0 3px 5px rgba(0,0,0,.45)) drop-shadow(0 0 8px rgba(230,57,70,0));
         }
     }
 
-    /* Bolha de agrupamento -- aparece quando dois ou mais clientes
-       ficam a menos de ~46px um do outro na tela atual */
+    /* Bolha de agrupamento -- aparece quando clientes ficam perto
+       o bastante pra se tocarem visualmente na tela atual */
     .cluster-lazer {
         background: transparent;
         border: none;
@@ -3214,15 +3213,15 @@ body {
         display: flex;
         align-items: center;
         justify-content: center;
-        width: 42px;
-        height: 42px;
+        width: 36px;
+        height: 36px;
         border-radius: 50%;
         background: linear-gradient(135deg, #4aa3ff, #004AAD);
         color: #fff;
         font-weight: 800;
         font-family: 'Poppins', sans-serif;
-        font-size: 14px;
-        box-shadow: 0 6px 16px rgba(0,74,173,.45), 0 0 0 4px rgba(255,255,255,.9);
+        font-size: 13px;
+        box-shadow: 0 6px 14px rgba(0,74,173,.45), 0 0 0 3px rgba(255,255,255,.9);
         transition: transform 0.2s ease;
         cursor: pointer;
     }
@@ -3440,9 +3439,6 @@ body {
     const clientesDados = todosPontos.filter(p => p.tipo === 'cliente');
 
     const mapa = L.map('mapa-clientes', { scrollWheelZoom: false });
-    // Vista provisória: garante que o mapa já nasça com centro/zoom
-    // definidos, antes de qualquer fitBounds -- sem isso o Leaflet
-    // pode ficar em branco.
     mapa.setView([-14.235, -51.925], 4);
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -3459,45 +3455,48 @@ body {
     const LOGO_CLIENTE_PADRAO = "{% static 'images/logoo.png' %}";
     const CATEGORIAS_PADRAO = ['Kid Play', 'Brinquedão', 'Trampolins', 'Eletrônicos'];
 
-    // Contorno do alfinete (cabeça redonda + ponta lisa embaixo).
     const PINO_PATH_D = "M215.7 499.2C267 435 384 279.4 384 192C384 86 298 0 192 0S0 86 0 192c0 87.4 117 243 168.3 307.2c12.3 15.3 35.1 15.3 47.4 0z";
 
     function criarPino({ largura, altura, corPino, janela, conteudoJanela, classeSvg }) {
         return `
             <span class="pino-gota" style="display:inline-block;position:relative;width:${largura}px;height:${altura}px;">
                 <svg class="${classeSvg || ''}" viewBox="0 0 384 512" xmlns="http://www.w3.org/2000/svg"
-                     style="position:absolute;inset:0;width:100%;height:100%;display:block;filter:drop-shadow(0 4px 6px rgba(0,0,0,.45));">
+                     style="position:absolute;inset:0;width:100%;height:100%;display:block;filter:drop-shadow(0 3px 5px rgba(0,0,0,.45));">
                     <path d="${PINO_PATH_D}" fill="${corPino}"/>
                 </svg>
-                <span style="position:absolute;left:50%;top:36%;width:${janela}px;height:${janela}px;transform:translate(-50%,-50%);border-radius:50%;overflow:hidden;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 3px #fff;">
+                <span style="position:absolute;left:50%;top:36%;width:${janela}px;height:${janela}px;transform:translate(-50%,-50%);border-radius:50%;overflow:hidden;background:#eef3fb;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px #fff;">
                     ${conteudoJanela}
                 </span>
             </span>
         `;
     }
 
+    // Pinos menores agora (34x46 cliente, 44x59 fábrica) -- o raio de
+    // agrupamento (RAIO_CLUSTER_PX, mais abaixo) foi ajustado pra ser
+    // maior que essa largura, então pinos que ficariam colados viram
+    // bolha em vez de se sobreporem e esconderem a foto um do outro.
     function criarIconeCliente(c) {
         return L.divIcon({
             className: 'cliente-marker',
             html: criarPino({
-                largura: 60, altura: 80, corPino: '#004AAD', janela: 28,
+                largura: 34, altura: 46, corPino: '#004AAD', janela: 18,
                 conteudoJanela: `<img src="${LOGO_CLIENTE_PADRAO}" alt="" style="width:100%;height:100%;object-fit:cover;">`
             }),
-            iconSize: [60, 80],
-            iconAnchor: [30, 80],
-            popupAnchor: [0, -74],
+            iconSize: [34, 46],
+            iconAnchor: [17, 46],
+            popupAnchor: [0, -42],
         });
     }
 
     const iconeFabrica = L.divIcon({
         className: 'fabrica-marker',
         html: criarPino({
-            largura: 72, altura: 96, corPino: '#E63946', janela: 34, classeSvg: 'pino-pulse',
-            conteudoJanela: `<i class="fa-solid fa-industry" aria-hidden="true" style="font-size:26px;color:#E63946;"></i>`
+            largura: 44, altura: 59, corPino: '#E63946', janela: 23, classeSvg: 'pino-pulse',
+            conteudoJanela: `<i class="fa-solid fa-industry" aria-hidden="true" style="font-size:17px;color:#E63946;"></i>`
         }),
-        iconSize: [72, 96],
-        iconAnchor: [36, 96],
-        popupAnchor: [0, -88],
+        iconSize: [44, 59],
+        iconAnchor: [22, 59],
+        popupAnchor: [0, -54],
     });
 
     function criarPopupCliente(c) {
@@ -3571,11 +3570,7 @@ body {
     }
 
     // ---- Agrupamento por proximidade em pixels, sem plugin externo ----
-    // A cada zoom/arraste, reagrupamos os pontos que estão a menos de
-    // RAIO_CLUSTER_PX pixels um do outro NA TELA ATUAL. Só vira bolha
-    // quando realmente colidem visualmente; ao dar zoom, cada um volta
-    // a ser um pino individual, com hover e popup próprios.
-    const RAIO_CLUSTER_PX = 46;
+    const RAIO_CLUSTER_PX = 40;
     const camadaClientes = L.layerGroup().addTo(mapa);
     let clientesAtuais = clientesDados;
 
@@ -3634,7 +3629,7 @@ body {
                 icon: L.divIcon({
                     className: 'cluster-lazer',
                     html: `<span>${grupo.length}</span>`,
-                    iconSize: [42, 42],
+                    iconSize: [36, 36],
                 }),
                 zIndexOffset: 500,
             }).bindTooltip(`${grupo.length} clientes aqui — clique para ver cada um`, { direction: 'top' });
