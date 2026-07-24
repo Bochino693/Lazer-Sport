@@ -1056,6 +1056,7 @@ class ClienteAdminView(AdminOnlyMixin, View):
                 "estado": c.estado or "",
                 "pais": c.pais or "Brasil",
                 "site_cliente": c.site_cliente or "",
+                "logo_url": c.logo_cliente.url if c.logo_cliente else "",
                 "ativo": c.ativo,
                 "exibir_no_mapa": c.exibir_no_mapa,
             }
@@ -1072,7 +1073,18 @@ class ClienteAdminView(AdminOnlyMixin, View):
 
         if action == "delete":
             cliente = get_object_or_404(Clientes, pk=request.POST.get("id"))
-            nome = cliente.descricao_cliente
+            nome = cliente.descricao_cliente or "Cliente"
+            frase_esperada = f"CONFIRMAR EXCLUSÃO {nome}"
+            frase_informada = request.POST.get("confirmacao_exclusao", "").strip()
+
+            if frase_informada != frase_esperada:
+                messages.error(
+                    request,
+                    "Exclusão cancelada: o texto de confirmação não corresponde "
+                    "ao nome do cliente."
+                )
+                return redirect("clientes_admin")
+
             cliente.delete()
             messages.success(request, f"Cliente '{nome}' excluído com sucesso.")
             return redirect("clientes_admin")
