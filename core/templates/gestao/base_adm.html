@@ -732,7 +732,9 @@
             <span class="adm-nav-text">Manutenções</span>
             {% if count_manutencao > 0 %}<span class="adm-badge">{{ count_manutencao }}</span>{% endif %}
           </a>
-          <a href="{% url 'clientes_adm' %}" class="adm-nav-link {% if rota == 'clientes_adm' %}is-active{% endif %}" {% if rota == 'clientes_adm' %}aria-current="page"{% endif %}>
+          <a href="{% url 'clientes_admin' %}"
+               class="adm-nav-link {% if rota == 'clientes_admin' %}is-active{% endif %}"
+               {% if rota == 'clientes_admin' %}aria-current="page"{% endif %}>
             <span class="adm-nav-icon"><svg><use href="#i-map-pin"/></svg></span>
             <span class="adm-nav-text">Clientes</span>
           </a>
