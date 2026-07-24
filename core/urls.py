@@ -169,10 +169,6 @@ urlpatterns = [
 
     path('carrinho/<int:carrinho_id>/tipo-envio/', atualizar_tipo_envio, name='atualizar_tipo_envio'),
 
-# Rota de Login que você já tem
-    path('adm/login/', AdminLoginView.as_view(), name='admin_login'),
-
-
 
     #API V1
 

@@ -5,7 +5,7 @@ from django.contrib import messages
 from django.contrib.auth import authenticate, login
 from decimal import Decimal
 
-from .forms import UserForm, PerfilForm, ComboForm
+from .forms import UserForm, PerfilForm
 from django.views.generic.edit import FormView
 from django.db import transaction
 from django.db.models import Count, F, FloatField, Value, Prefetch
@@ -982,48 +982,6 @@ class AdminOnlyMixin(View):
         return super().dispatch(request, *args, **kwargs)
 
 
-class ComboAdminView(AdminOnlyMixin, View):
-    """CRUD de combos concentrado em uma unica view e uma unica tela."""
-
-    template_name = 'combos_adm.html'
-
-    def get(self, request):
-        return render(request, self.template_name, {
-            'combos': Combos.objects.prefetch_related('brinquedos').order_by('-id'),
-            'brinquedos': Brinquedos.objects.filter(ativo=True).order_by('nome_brinquedo'),
-            'form': ComboForm(),
-        })
-
-    def post(self, request):
-        action = request.POST.get('action', 'save')
-
-        if action == 'delete':
-            combo = get_object_or_404(Combos, pk=request.POST.get('id'))
-            combo.delete()
-            messages.success(request, 'Combo excluido com sucesso.')
-            return redirect('combos_admin')
-
-        combo_id = request.POST.get('id')
-        combo = get_object_or_404(Combos, pk=combo_id) if combo_id else None
-        form = ComboForm(request.POST, request.FILES, instance=combo)
-
-        if form.is_valid():
-            form.save()
-            messages.success(
-                request,
-                'Combo atualizado com sucesso.' if combo else 'Combo criado com sucesso.'
-            )
-            return redirect('combos_admin')
-
-        return render(request, self.template_name, {
-            'combos': Combos.objects.prefetch_related('brinquedos').order_by('-id'),
-            'brinquedos': Brinquedos.objects.filter(ativo=True).order_by('nome_brinquedo'),
-            'form': form,
-            'combo_em_edicao': combo,
-            'abrir_formulario': True,
-        }, status=400)
-
-
 class ClienteAdminView(AdminOnlyMixin, View):
     """
     Tela de admin pra cadastrar/editar os Clientes que aparecem no mapa
@@ -1194,7 +1152,7 @@ from .models import Promocoes, Brinquedos  # Certifique-se dos nomes dos modelos
 
 
 class PromocaoAdminView(AdminOnlyMixin, View):
-    template_name = "promocoes_adm.html"
+    template_name = "gestao/promocoes_adm.html"
 
     def get(self, request, *args, **kwargs):
         # Dados para preencher a página e o modal
@@ -1241,10 +1199,11 @@ class PromocaoDeleteView(AdminOnlyMixin, View):
 
 
 class CupomAdminView(AdminOnlyMixin, View):
+    template_name = "gestao/cupons_adm.html"
 
     def get(self, request):
         cupons = Cupom.objects.all()
-        return render(request, "cupons_adm.html", {
+        return render(request, self.template_name, {
             "cupons": cupons
         })
 
@@ -1422,6 +1381,7 @@ class EventoAdminView(AdminOnlyMixin, View):
         return JsonResponse({"success": True})
 
 class PedidoAdminView(AdminOnlyMixin, View):
+    template_name = "gestao/pedidos_adm.html"
 
     def get(self, request):
 
@@ -1457,7 +1417,7 @@ class PedidoAdminView(AdminOnlyMixin, View):
             "pedidos": pedidos,
         }
 
-        return render(request, "pedidos_adm.html", ctx)
+        return render(request, self.template_name, ctx)
 
 
 # core/views.py
@@ -1778,6 +1738,7 @@ MAX_BANNERS = 5
 
 
 class BannerAdminView(LoginRequiredMixin, View):
+    template_name = "gestao/banner_adm.html"
 
     def get(self, request):
         imagens_site = ImagensSite.objects.all()
@@ -1793,7 +1754,7 @@ class BannerAdminView(LoginRequiredMixin, View):
 
         form = ImagensSiteForm()
 
-        return render(request, 'banner_adm.html', {
+        return render(request, self.template_name, {
             'imagens_site': imagens_site,
             'form': form,
             'limite_restante': limite_restante,
@@ -2016,7 +1977,9 @@ from django.http import HttpResponseForbidden
 from django.db.models.functions import TruncDate
 
 
-class EstatisticasGeraisView(View):
+class EstatisticasGeraisView(AdminOnlyMixin, View):
+    template_name = "gestao/estatisticas_gerais.html"
+
     def get(self, request):
         filtro = request.GET.get('filtro', 'geral')
         agora = timezone.now()
@@ -2131,10 +2094,11 @@ class EstatisticasGeraisView(View):
             'total_geral': total_geral,
         }
 
-        return render(request, 'estatisticas_gerais.html', ctx)
+        return render(request, self.template_name, ctx)
 
 
 class ManutencaoAdminView(LoginRequiredMixin, View):
+    template_name = "gestao/manutencao_adm.html"
 
     def get(self, request):
         manutencoes = Manutencao.objects.all()
@@ -2142,11 +2106,12 @@ class ManutencaoAdminView(LoginRequiredMixin, View):
         ctx = {
             'manutencoes': manutencoes,
         }
-        return render(request, 'manutencao_adm.html', ctx)
+        return render(request, self.template_name, ctx)
 
 
 class UserAdminView(LoginRequiredMixin, View):
     login_url = '/adm/login/'  # redireciona se não estiver logado
+    template_name = "gestao/users_adm.html"
 
     def get(self, request):
         # Pegamos todos os perfis de clientes
@@ -2161,7 +2126,7 @@ class UserAdminView(LoginRequiredMixin, View):
         context = {
             'perfis_clientes': perfis_clientes
         }
-        return render(request, 'users_adm.html', context)
+        return render(request, self.template_name, context)
 
 
 from django.views.generic import TemplateView
@@ -2173,7 +2138,7 @@ from .models import Venda
 
 
 class RelatorioVendasView(LoginRequiredMixin, TemplateView):
-    template_name = 'relatoriov_adm.html'
+    template_name = "gestao/relatoriov_adm.html"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -3435,4 +3400,3 @@ class SearchView(View):
             "total_resultados": len(resultados),
             "busca_realizada": bool(termo),
         })
-    
