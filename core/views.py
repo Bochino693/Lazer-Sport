@@ -1826,6 +1826,7 @@ from decimal import Decimal
 from django.db.models import Sum
 from django.db.models.functions import TruncDate
 from django.shortcuts import render
+from django.urls import reverse
 from django.utils import timezone
 from django.views import View
 
@@ -1943,6 +1944,97 @@ class DashboardAdminView(AdminOnlyMixin, View):
                     float(item["total"] or Decimal("0.00"))
                 )
 
+        # ------------------------------------------------------------
+        # ESTATÍSTICAS DE ACESSOS
+        # Agora fazem parte do dashboard e respeitam o mesmo filtro.
+        # ------------------------------------------------------------
+        brinquedos_clicks = BrinquedoClick.objects.all()
+        combos_clicks = ComboClick.objects.all()
+        promocoes_clicks = PromocaoClick.objects.all()
+        categorias_clicks = CategoriaClick.objects.all()
+
+        if data_inicio:
+            brinquedos_clicks = brinquedos_clicks.filter(criacao__gte=data_inicio)
+            combos_clicks = combos_clicks.filter(criacao__gte=data_inicio)
+            promocoes_clicks = promocoes_clicks.filter(criacao__gte=data_inicio)
+            categorias_clicks = categorias_clicks.filter(criacao__gte=data_inicio)
+
+        top_brinquedos = (
+            brinquedos_clicks
+            .values("brinquedo_clicado__nome_brinquedo")
+            .annotate(total=Sum("quantidade_click"))
+            .order_by("-total")[:20]
+        )
+        top_combos = (
+            combos_clicks
+            .values("descricao_combo")
+            .annotate(total=Sum("quantidade_click"))
+            .order_by("-total")[:20]
+        )
+        top_promocoes = (
+            promocoes_clicks
+            .values("descricao_promocao")
+            .annotate(total=Sum("quantidade_click"))
+            .order_by("-total")[:20]
+        )
+        top_categorias = (
+            categorias_clicks
+            .values("nome_categoria")
+            .annotate(total=Sum("quantidade_click"))
+            .order_by("-total")[:20]
+        )
+
+        total_brinquedo_clicks = (
+            brinquedos_clicks.aggregate(total=Sum("quantidade_click"))["total"]
+            or 0
+        )
+        total_combo_clicks = (
+            combos_clicks.aggregate(total=Sum("quantidade_click"))["total"]
+            or 0
+        )
+        total_promocao_clicks = (
+            promocoes_clicks.aggregate(total=Sum("quantidade_click"))["total"]
+            or 0
+        )
+        total_categoria_clicks = (
+            categorias_clicks.aggregate(total=Sum("quantidade_click"))["total"]
+            or 0
+        )
+        total_geral = (
+            total_brinquedo_clicks
+            + total_combo_clicks
+            + total_promocao_clicks
+            + total_categoria_clicks
+        )
+
+        crescimento_por_dia = defaultdict(int)
+        for queryset in (
+            brinquedos_clicks,
+            combos_clicks,
+            promocoes_clicks,
+            categorias_clicks,
+        ):
+            dados_diarios = (
+                queryset
+                .exclude(criacao__isnull=True)
+                .annotate(dia=TruncDate("criacao"))
+                .values("dia")
+                .annotate(total=Sum("quantidade_click"))
+                .order_by("dia")
+            )
+            for item in dados_diarios:
+                if item["dia"]:
+                    crescimento_por_dia[item["dia"]] += item["total"] or 0
+
+        crescimento_diario = [
+            {"dia": dia, "total": total}
+            for dia, total in sorted(
+                crescimento_por_dia.items(),
+                key=lambda item: item[0],
+                reverse=True,
+            )[:15]
+        ]
+
         context = {
             "filtro": filtro,
             "total_clientes": total_clientes,
@@ -1952,18 +2044,16 @@ class DashboardAdminView(AdminOnlyMixin, View):
             "vendas_total": vendas_total_formatado,
             "chart_labels": labels,
             "chart_data": vendas_data,
-            "top_brinquedos": BrinquedoClick.objects.order_by(
-                "-quantidade_click"
-            )[:3],
-            "top_combos": ComboClick.objects.order_by(
-                "-quantidade_click"
-            )[:3],
-            "top_promocoes": PromocaoClick.objects.order_by(
-                "-quantidade_click"
-            )[:3],
-            "top_categorias": CategoriaClick.objects.order_by(
-                "-quantidade_click"
-            )[:3],
+            "top_brinquedos": top_brinquedos,
+            "top_combos": top_combos,
+            "top_promocoes": top_promocoes,
+            "top_categorias": top_categorias,
+            "total_brinquedo_clicks": total_brinquedo_clicks,
+            "total_combo_clicks": total_combo_clicks,
+            "total_promocao_clicks": total_promocao_clicks,
+            "total_categoria_clicks": total_categoria_clicks,
+            "total_geral": total_geral,
+            "crescimento_diario": crescimento_diario,
         }
 
         return render(
@@ -1978,123 +2068,9 @@ from django.db.models.functions import TruncDate
 
 
 class EstatisticasGeraisView(AdminOnlyMixin, View):
-    template_name = "gestao/estatisticas_gerais.html"
-
     def get(self, request):
-        filtro = request.GET.get('filtro', 'geral')
-        agora = timezone.now()
-
-        if filtro == '7dias':
-            data_inicio = agora - timedelta(days=7)
-        elif filtro == '30dias':
-            data_inicio = agora - timedelta(days=30)
-        elif filtro == 'ano':
-            data_inicio = agora.replace(month=1, day=1, hour=0, minute=0, second=0)
-        else:
-            data_inicio = None
-
-        # -----------------------------
-        # BRINQUEDOS
-        # -----------------------------
-        brinquedos = BrinquedoClick.objects.all()
-        if data_inicio:
-            brinquedos = brinquedos.filter(criacao__gte=data_inicio)
-
-        top_brinquedos = (
-            brinquedos
-            .values('brinquedo_clicado__nome_brinquedo')
-            .annotate(total=Sum('quantidade_click'))
-            .order_by('-total')[:20]
-        )
-
-        # -----------------------------
-        # COMBOS
-        # -----------------------------
-        combos = ComboClick.objects.all()
-        if data_inicio:
-            combos = combos.filter(criacao__gte=data_inicio)
-
-        top_combos = (
-            combos
-            .values('descricao_combo')
-            .annotate(total=Sum('quantidade_click'))
-            .order_by('-total')[:20]
-        )
-
-        # -----------------------------
-        # PROMOÇÕES
-        # -----------------------------
-        promocoes = PromocaoClick.objects.all()
-        if data_inicio:
-            promocoes = promocoes.filter(criacao__gte=data_inicio)
-
-        top_promocoes = (
-            promocoes
-            .values('descricao_promocao')
-            .annotate(total=Sum('quantidade_click'))
-            .order_by('-total')[:20]
-        )
-
-        # -----------------------------
-        # CATEGORIAS
-        # -----------------------------
-        categorias = CategoriaClick.objects.all()
-        if data_inicio:
-            categorias = categorias.filter(criacao__gte=data_inicio)
-
-        top_categorias = (
-            categorias
-            .values('nome_categoria')
-            .annotate(total=Sum('quantidade_click'))
-            .order_by('-total')[:20]
-        )
-
-        total_brinquedo_clicks = brinquedos.aggregate(
-            total=Sum('quantidade_click')
-        )['total'] or 0
-
-        total_combo_clicks = combos.aggregate(
-            total=Sum('quantidade_click')
-        )['total'] or 0
-
-        total_promocao_clicks = promocoes.aggregate(
-            total=Sum('quantidade_click')
-        )['total'] or 0
-
-        total_categoria_clicks = categorias.aggregate(
-            total=Sum('quantidade_click')
-        )['total'] or 0
-
-        total_geral = (
-                total_brinquedo_clicks +
-                total_combo_clicks +
-                total_promocao_clicks +
-                total_categoria_clicks
-        )
-
-        crescimento_diario = (
-            BrinquedoClick.objects
-            .values(dia=TruncDate('criacao'))
-            .annotate(total=Sum('quantidade_click'))
-            .order_by('-dia')[:15]
-        )
-
-        ctx = {
-            'crescimento_diario': crescimento_diario,
-            'filtro': filtro,
-            'top_brinquedos': top_brinquedos,
-            'top_combos': top_combos,
-            'top_promocoes': top_promocoes,
-            'top_categorias': top_categorias,
-
-            'total_brinquedo_clicks': total_brinquedo_clicks,
-            'total_combo_clicks': total_combo_clicks,
-            'total_promocao_clicks': total_promocao_clicks,
-            'total_categoria_clicks': total_categoria_clicks,
-            'total_geral': total_geral,
-        }
-
-        return render(request, self.template_name, ctx)
+        filtro = request.GET.get("filtro", "geral")
+        return redirect(f"{reverse('dashboards')}?filtro={filtro}#estatisticas-acessos")
 
 
 class ManutencaoAdminView(LoginRequiredMixin, View):

@@ -452,6 +452,196 @@
     height: 15px;
   }
 
+  .dashboard-access-section {
+    margin-top: 18px;
+    scroll-margin-top: 92px;
+  }
+
+  .dashboard-section-heading {
+    margin-bottom: 14px;
+    padding: 22px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    border: 1px solid rgba(139, 92, 246, .16);
+    border-radius: 19px;
+    background:
+      radial-gradient(circle at 88% 20%, rgba(139, 92, 246, .15), transparent 15rem),
+      rgba(17, 27, 46, .88);
+  }
+
+  .dashboard-section-heading h3 {
+    margin: 0;
+    color: #f1f5f9;
+    font-size: 1.08rem;
+  }
+
+  .dashboard-section-heading p {
+    max-width: 700px;
+    margin: 5px 0 0;
+    color: #718096;
+    font-size: .72rem;
+    line-height: 1.5;
+  }
+
+  .dashboard-access-total {
+    flex: 0 0 auto;
+    text-align: right;
+  }
+
+  .dashboard-access-total strong,
+  .dashboard-access-total span {
+    display: block;
+  }
+
+  .dashboard-access-total strong {
+    color: #c4b5fd;
+    font-size: 1.75rem;
+    line-height: 1;
+  }
+
+  .dashboard-access-total span {
+    margin-top: 5px;
+    color: #64748b;
+    font-size: .64rem;
+    font-weight: 700;
+  }
+
+  .dashboard-click-kpis {
+    margin-bottom: 16px;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .dashboard-click-kpi {
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border: 1px solid rgba(148, 163, 184, .11);
+    border-radius: 15px;
+    background: rgba(17, 27, 46, .86);
+  }
+
+  .dashboard-click-kpi .dashboard-panel-icon {
+    flex: 0 0 36px;
+  }
+
+  .dashboard-click-kpi strong,
+  .dashboard-click-kpi span {
+    display: block;
+  }
+
+  .dashboard-click-kpi strong {
+    color: #e5edf8;
+    font-size: 1.15rem;
+  }
+
+  .dashboard-click-kpi span {
+    margin-top: 3px;
+    color: #718096;
+    font-size: .65rem;
+  }
+
+  .dashboard-detail-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+  }
+
+  .dashboard-detail-card {
+    overflow: hidden;
+    border: 1px solid rgba(148, 163, 184, .12);
+    border-radius: 18px;
+    background: rgba(17, 27, 46, .91);
+    box-shadow: 0 16px 34px rgba(0, 0, 0, .12);
+  }
+
+  .dashboard-detail-card.is-wide {
+    grid-column: 1 / -1;
+  }
+
+  .dashboard-detail-header {
+    padding: 16px 17px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 1px solid rgba(148, 163, 184, .09);
+  }
+
+  .dashboard-detail-header strong {
+    color: #dbe5f3;
+    font-size: .8rem;
+  }
+
+  .dashboard-detail-table-wrap {
+    max-height: 390px;
+    overflow: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #3b4b64 #0d1727;
+  }
+
+  .dashboard-detail-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .dashboard-detail-table th,
+  .dashboard-detail-table td {
+    padding: 11px 15px;
+    border-bottom: 1px solid rgba(148, 163, 184, .07);
+    font-size: .69rem;
+    text-align: left;
+  }
+
+  .dashboard-detail-table th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: #111b2e;
+    color: #64748b;
+    font-size: .62rem;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+  }
+
+  .dashboard-detail-table tbody tr {
+    transition: background .16s ease;
+  }
+
+  .dashboard-detail-table tbody tr:hover {
+    background: rgba(59, 130, 246, .045);
+  }
+
+  .dashboard-detail-table td:first-child {
+    width: 48px;
+    color: #fcd34d;
+    font-weight: 850;
+  }
+
+  .dashboard-detail-table td:nth-child(2) {
+    color: #cbd5e1;
+    font-weight: 650;
+  }
+
+  .dashboard-detail-table th:last-child,
+  .dashboard-detail-table td:last-child {
+    text-align: right;
+  }
+
+  .dashboard-detail-table td:last-child {
+    color: #93c5fd;
+    font-weight: 800;
+  }
+
+  .dashboard-no-data {
+    padding: 28px 15px !important;
+    color: #64748b !important;
+    text-align: center !important;
+  }
+
   @media (max-width: 1100px) {
     .dashboard-kpis {
       grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -459,6 +649,10 @@
 
     .dashboard-grid {
       grid-template-columns: 1fr;
+    }
+
+    .dashboard-click-kpis {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
   }
 
@@ -486,6 +680,23 @@
       flex: 1 1 auto;
       justify-content: center;
     }
+
+    .dashboard-section-heading {
+      align-items: flex-start;
+      flex-direction: column;
+    }
+
+    .dashboard-access-total {
+      text-align: left;
+    }
+
+    .dashboard-detail-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .dashboard-detail-card.is-wide {
+      grid-column: auto;
+    }
   }
 
   @media (max-width: 520px) {
@@ -495,6 +706,10 @@
 
     .dashboard-kpi {
       min-height: 105px;
+    }
+
+    .dashboard-click-kpis {
+      grid-template-columns: 1fr;
     }
 
     .dashboard-panel-header {
@@ -536,9 +751,9 @@
         Acompanhe vendas, clientes, pedidos e os conteúdos que mais despertam interesse no site da Lazer &amp; Sport.
       </p>
     </div>
-    <a href="{% url 'estatisticas_gerais' %}" class="dashboard-hero-action">
+    <a href="#estatisticas-acessos" class="dashboard-hero-action">
       <svg><use href="#dash-i-chart"/></svg>
-      Abrir estatísticas completas
+      Ver estatísticas de acessos
     </a>
   </section>
 
@@ -639,8 +854,8 @@
           {% for item in top_brinquedos %}
             <div class="dashboard-ranking-item">
               <span class="dashboard-ranking-position">{{ forloop.counter }}</span>
-              <strong class="dashboard-ranking-name">{{ item.brinquedo_clicado.nome_brinquedo }}</strong>
-              <span class="dashboard-ranking-value">{{ item.quantidade_click }} cliques</span>
+              <strong class="dashboard-ranking-name">{{ item.brinquedo_clicado__nome_brinquedo }}</strong>
+              <span class="dashboard-ranking-value">{{ item.total }} cliques</span>
             </div>
           {% empty %}
             <div class="dashboard-ranking-empty">Nenhum acesso registrado ainda.</div>
@@ -652,7 +867,7 @@
             <div class="dashboard-ranking-item">
               <span class="dashboard-ranking-position">{{ forloop.counter }}</span>
               <strong class="dashboard-ranking-name">{{ item.descricao_combo }}</strong>
-              <span class="dashboard-ranking-value">{{ item.quantidade_click }} cliques</span>
+              <span class="dashboard-ranking-value">{{ item.total }} cliques</span>
             </div>
           {% empty %}
             <div class="dashboard-ranking-empty">Nenhum acesso registrado ainda.</div>
@@ -664,7 +879,7 @@
             <div class="dashboard-ranking-item">
               <span class="dashboard-ranking-position">{{ forloop.counter }}</span>
               <strong class="dashboard-ranking-name">{{ item.descricao_promocao }}</strong>
-              <span class="dashboard-ranking-value">{{ item.quantidade_click }} cliques</span>
+              <span class="dashboard-ranking-value">{{ item.total }} cliques</span>
             </div>
           {% empty %}
             <div class="dashboard-ranking-empty">Nenhum acesso registrado ainda.</div>
@@ -676,7 +891,7 @@
             <div class="dashboard-ranking-item">
               <span class="dashboard-ranking-position">{{ forloop.counter }}</span>
               <strong class="dashboard-ranking-name">{{ item.nome_categoria }}</strong>
-              <span class="dashboard-ranking-value">{{ item.quantidade_click }} cliques</span>
+              <span class="dashboard-ranking-value">{{ item.total }} cliques</span>
             </div>
           {% empty %}
             <div class="dashboard-ranking-empty">Nenhum acesso registrado ainda.</div>
@@ -685,12 +900,163 @@
       </div>
 
       <footer class="dashboard-panel-footer">
-        <a href="{% url 'estatisticas_gerais' %}" class="dashboard-panel-link">
-          Ver relatório detalhado
+        <a href="#estatisticas-acessos" class="dashboard-panel-link">
+          Ver todos os detalhes
           <svg><use href="#dash-i-arrow"/></svg>
         </a>
       </footer>
     </article>
+  </section>
+
+  <section id="estatisticas-acessos" class="dashboard-access-section">
+    <header class="dashboard-section-heading">
+      <div>
+        <h3>Estatísticas de acessos</h3>
+        <p>
+          Ranking completo dos conteúdos mais acessados e evolução dos cliques no mesmo período selecionado acima.
+        </p>
+      </div>
+      <span class="dashboard-access-total">
+        <strong>{{ total_geral }}</strong>
+        <span>Cliques totais no período</span>
+      </span>
+    </header>
+
+    <div class="dashboard-click-kpis">
+      <article class="dashboard-click-kpi">
+        <span class="dashboard-panel-icon"><svg><use href="#dash-i-ranking"/></svg></span>
+        <span><strong>{{ total_brinquedo_clicks }}</strong><span>Cliques em brinquedos</span></span>
+      </article>
+      <article class="dashboard-click-kpi">
+        <span class="dashboard-panel-icon"><svg><use href="#dash-i-box"/></svg></span>
+        <span><strong>{{ total_combo_clicks }}</strong><span>Cliques em combos</span></span>
+      </article>
+      <article class="dashboard-click-kpi">
+        <span class="dashboard-panel-icon"><svg><use href="#dash-i-percent"/></svg></span>
+        <span><strong>{{ total_promocao_clicks }}</strong><span>Cliques em promoções</span></span>
+      </article>
+      <article class="dashboard-click-kpi">
+        <span class="dashboard-panel-icon"><svg><use href="#dash-i-chart"/></svg></span>
+        <span><strong>{{ total_categoria_clicks }}</strong><span>Cliques em categorias</span></span>
+      </article>
+    </div>
+
+    <div class="dashboard-detail-grid">
+      <article class="dashboard-detail-card">
+        <header class="dashboard-detail-header">
+          <span class="dashboard-panel-icon"><svg><use href="#dash-i-ranking"/></svg></span>
+          <strong>Brinquedos mais clicados</strong>
+        </header>
+        <div class="dashboard-detail-table-wrap">
+          <table class="dashboard-detail-table">
+            <thead><tr><th>Pos.</th><th>Brinquedo</th><th>Cliques</th></tr></thead>
+            <tbody>
+              {% for item in top_brinquedos %}
+                <tr>
+                  <td>#{{ forloop.counter }}</td>
+                  <td>{{ item.brinquedo_clicado__nome_brinquedo }}</td>
+                  <td>{{ item.total }}</td>
+                </tr>
+              {% empty %}
+                <tr><td colspan="3" class="dashboard-no-data">Nenhum acesso registrado.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </article>
+
+      <article class="dashboard-detail-card">
+        <header class="dashboard-detail-header">
+          <span class="dashboard-panel-icon"><svg><use href="#dash-i-box"/></svg></span>
+          <strong>Combos mais clicados</strong>
+        </header>
+        <div class="dashboard-detail-table-wrap">
+          <table class="dashboard-detail-table">
+            <thead><tr><th>Pos.</th><th>Combo</th><th>Cliques</th></tr></thead>
+            <tbody>
+              {% for item in top_combos %}
+                <tr>
+                  <td>#{{ forloop.counter }}</td>
+                  <td>{{ item.descricao_combo }}</td>
+                  <td>{{ item.total }}</td>
+                </tr>
+              {% empty %}
+                <tr><td colspan="3" class="dashboard-no-data">Nenhum acesso registrado.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </article>
+
+      <article class="dashboard-detail-card">
+        <header class="dashboard-detail-header">
+          <span class="dashboard-panel-icon"><svg><use href="#dash-i-percent"/></svg></span>
+          <strong>Promoções mais clicadas</strong>
+        </header>
+        <div class="dashboard-detail-table-wrap">
+          <table class="dashboard-detail-table">
+            <thead><tr><th>Pos.</th><th>Promoção</th><th>Cliques</th></tr></thead>
+            <tbody>
+              {% for item in top_promocoes %}
+                <tr>
+                  <td>#{{ forloop.counter }}</td>
+                  <td>{{ item.descricao_promocao }}</td>
+                  <td>{{ item.total }}</td>
+                </tr>
+              {% empty %}
+                <tr><td colspan="3" class="dashboard-no-data">Nenhum acesso registrado.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </article>
+
+      <article class="dashboard-detail-card">
+        <header class="dashboard-detail-header">
+          <span class="dashboard-panel-icon"><svg><use href="#dash-i-chart"/></svg></span>
+          <strong>Categorias mais clicadas</strong>
+        </header>
+        <div class="dashboard-detail-table-wrap">
+          <table class="dashboard-detail-table">
+            <thead><tr><th>Pos.</th><th>Categoria</th><th>Cliques</th></tr></thead>
+            <tbody>
+              {% for item in top_categorias %}
+                <tr>
+                  <td>#{{ forloop.counter }}</td>
+                  <td>{{ item.nome_categoria }}</td>
+                  <td>{{ item.total }}</td>
+                </tr>
+              {% empty %}
+                <tr><td colspan="3" class="dashboard-no-data">Nenhum acesso registrado.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </article>
+
+      <article class="dashboard-detail-card is-wide">
+        <header class="dashboard-detail-header">
+          <span class="dashboard-panel-icon"><svg><use href="#dash-i-activity"/></svg></span>
+          <strong>Crescimento diário de cliques</strong>
+        </header>
+        <div class="dashboard-detail-table-wrap">
+          <table class="dashboard-detail-table">
+            <thead><tr><th>Pos.</th><th>Data</th><th>Total de cliques</th></tr></thead>
+            <tbody>
+              {% for dia in crescimento_diario %}
+                <tr>
+                  <td>#{{ forloop.counter }}</td>
+                  <td>{{ dia.dia|date:"d/m/Y" }}</td>
+                  <td>{{ dia.total }}</td>
+                </tr>
+              {% empty %}
+                <tr><td colspan="3" class="dashboard-no-data">Nenhum acesso registrado.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </article>
+    </div>
   </section>
 </div>
 

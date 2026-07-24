@@ -710,10 +710,6 @@
             <span class="adm-nav-icon"><svg><use href="#i-grid"/></svg></span>
             <span class="adm-nav-text">Dashboard</span>
           </a>
-          <a href="{% url 'estatisticas_gerais' %}" class="adm-nav-link {% if rota == 'estatisticas_gerais' %}is-active{% endif %}" {% if rota == 'estatisticas_gerais' %}aria-current="page"{% endif %}>
-            <span class="adm-nav-icon"><svg><use href="#i-chart"/></svg></span>
-            <span class="adm-nav-text">Estatísticas gerais</span>
-          </a>
           <a href="{% url 'relatorio_vendas' %}" class="adm-nav-link {% if rota == 'relatorio_vendas' %}is-active{% endif %}" {% if rota == 'relatorio_vendas' %}aria-current="page"{% endif %}>
             <span class="adm-nav-icon"><svg><use href="#i-chart"/></svg></span>
             <span class="adm-nav-text">Relatório de vendas</span>
