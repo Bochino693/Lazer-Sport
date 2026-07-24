@@ -1152,51 +1152,187 @@ from django.http import JsonResponse
 from .models import Promocoes, Brinquedos  # Certifique-se dos nomes dos modelos
 
 
+from decimal import Decimal, InvalidOperation
+
+from django.contrib import messages
+from django.db import transaction
+from django.db.models import Q
+from django.db.models.deletion import ProtectedError
+from django.shortcuts import get_object_or_404, redirect, render
+from django.views import View
+
+from .models import Brinquedos, Promocoes
+
+
 class PromocaoAdminView(AdminOnlyMixin, View):
+    """
+    Única view da administração de promoções.
+
+    GET:
+        Exibe, pesquisa e filtra as promoções.
+
+    POST:
+        Cria, edita ou exclui conforme o campo "acao" enviado pelo
+        formulário da própria página.
+    """
+
     template_name = "gestao/promocoes_adm.html"
 
+    def get_queryset(self):
+        queryset = (
+            Promocoes.objects
+            .select_related("brinquedos")
+            .order_by("-id")
+        )
+
+        busca = self.request.GET.get("q", "").strip()
+        status = self.request.GET.get("status", "todos").strip().lower()
+
+        if busca:
+            queryset = queryset.filter(
+                Q(descricao__icontains=busca)
+                | Q(brinquedos__nome_brinquedo__icontains=busca)
+            )
+
+        if status == "ativas":
+            queryset = queryset.filter(ativo=True)
+        elif status == "inativas":
+            queryset = queryset.filter(ativo=False)
+
+        return queryset
+
     def get(self, request, *args, **kwargs):
-        # Dados para preencher a página e o modal
+        todas = Promocoes.objects.all()
+
         context = {
-            "promocoes": Promocoes.objects.all().order_by('-id'),
-            "brinquedos": Brinquedos.objects.all().order_by('nome_brinquedo'),
+            "promocoes": self.get_queryset(),
+            "brinquedos": (
+                Brinquedos.objects
+                .all()
+                .order_by("nome_brinquedo")
+            ),
+            "busca": request.GET.get("q", "").strip(),
+            "status_atual": request.GET.get("status", "todos"),
+            "total_promocoes": todas.count(),
+            "total_ativas": todas.filter(ativo=True).count(),
+            "total_inativas": todas.filter(ativo=False).count(),
         }
         return render(request, self.template_name, context)
 
-    def post(self, request, *args, **kwargs):
-        # Captura os dados do formulário do modal
-        promo_id = request.POST.get('promo_id')  # Para o caso de edição
-        descricao = request.POST.get('descricao')
-        preco = request.POST.get('preco_promocao')
-        brinquedo_id = request.POST.get('brinquedos')
-        imagem = request.FILES.get('imagem_promocao')
+    @staticmethod
+    def _converter_preco(valor):
+        """
+        Aceita 10990.00, 10990,00 e 10.990,00.
+        O retorno é Decimal, adequado para DecimalField.
+        """
+        valor = (valor or "").strip().replace("R$", "").replace(" ", "")
 
-        # Busca a instância para editar ou cria uma nova
-        if promo_id:
-            promocao = get_object_or_404(Promocoes, id=promo_id)
+        if not valor:
+            raise InvalidOperation
+
+        if "," in valor:
+            valor = valor.replace(".", "").replace(",", ".")
+        elif valor.count(".") > 1:
+            partes = valor.split(".")
+            valor = "".join(partes[:-1]) + "." + partes[-1]
+
+        preco = Decimal(valor)
+        if preco < 0:
+            raise InvalidOperation
+
+        return preco.quantize(Decimal("0.01"))
+
+    def post(self, request, *args, **kwargs):
+        acao = request.POST.get("acao", "").strip().lower()
+
+        if acao == "excluir":
+            return self._excluir(request)
+
+        if acao not in {"criar", "editar"}:
+            messages.error(request, "Ação inválida.")
+            return redirect("promocoes_admin")
+
+        return self._salvar(request, acao)
+
+    @transaction.atomic
+    def _salvar(self, request, acao):
+        promocao_id = request.POST.get("promocao_id")
+        descricao = request.POST.get("descricao", "").strip()
+        brinquedo_id = request.POST.get("brinquedos", "").strip()
+        imagem = request.FILES.get("imagem_promocao")
+        ativo = request.POST.get("ativo") == "on"
+
+        if acao == "editar":
+            promocao = get_object_or_404(Promocoes, pk=promocao_id)
         else:
             promocao = Promocoes()
 
-        # Atualiza os campos
+        if not descricao:
+            messages.error(request, "Informe o título da promoção.")
+            return redirect("promocoes_admin")
+
+        if not brinquedo_id:
+            messages.error(request, "Selecione o brinquedo da promoção.")
+            return redirect("promocoes_admin")
+
+        brinquedo = get_object_or_404(Brinquedos, pk=brinquedo_id)
+
+        try:
+            preco = self._converter_preco(
+                request.POST.get("preco_promocao")
+            )
+        except (InvalidOperation, TypeError, ValueError):
+            messages.error(
+                request,
+                "Informe um preço válido, por exemplo: 10.990,00.",
+            )
+            return redirect("promocoes_admin")
+
         promocao.descricao = descricao
         promocao.preco_promocao = preco
-        promocao.brinquedos_id = brinquedo_id  # Django usa _id para chaves estrangeiras via ID direto
+        promocao.brinquedos = brinquedo
+        promocao.ativo = ativo
 
         if imagem:
             promocao.imagem_promocao = imagem
+        elif (
+            acao == "editar"
+            and request.POST.get("remover_imagem") == "on"
+            and promocao.imagem_promocao
+        ):
+            promocao.imagem_promocao.delete(save=False)
+            promocao.imagem_promocao = ""
 
         promocao.save()
-        return redirect('promocoes_admin')  # Nome da sua URL de listagem
 
+        if acao == "criar":
+            messages.success(request, "Promoção criada com sucesso.")
+        else:
+            messages.success(request, "Promoção atualizada com sucesso.")
 
-class PromocaoDeleteView(AdminOnlyMixin, View):
-    def post(self, request, pk, *args, **kwargs):
-        promocao = get_object_or_404(Promocoes, pk=pk)
+        return redirect("promocoes_admin")
+
+    @transaction.atomic
+    def _excluir(self, request):
+        promocao_id = request.POST.get("promocao_id")
+        promocao = get_object_or_404(Promocoes, pk=promocao_id)
+
+        if request.POST.get("confirmacao", "").strip().upper() != "EXCLUIR":
+            messages.error(request, "Digite EXCLUIR para confirmar.")
+            return redirect("promocoes_admin")
+
         try:
             promocao.delete()
-            return JsonResponse({'success': True})
-        except Exception as e:
-            return JsonResponse({'success': False, 'error': str(e)}, status=400)
+        except ProtectedError:
+            messages.error(
+                request,
+                "Esta promoção possui registros vinculados e não pode "
+                "ser excluída.",
+            )
+        else:
+            messages.success(request, "Promoção excluída com sucesso.")
+
+        return redirect("promocoes_admin")
 
 
 class CupomAdminView(AdminOnlyMixin, View):
