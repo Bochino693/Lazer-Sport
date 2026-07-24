@@ -3117,11 +3117,6 @@ body {
         border-radius: 999px;
         padding: 8px 8px 8px 18px;
         box-shadow: 0 6px 18px rgba(0, 74, 173, 0.08);
-        transition: box-shadow 0.3s var(--ease-out, ease);
-    }
-
-    .clientes-filtro:focus-within {
-        box-shadow: 0 8px 22px rgba(0, 74, 173, 0.18);
     }
 
     .clientes-filtro label {
@@ -3178,9 +3173,9 @@ body {
         border: 1px dashed #e3e8f0;
     }
 
-    /* Pinos: tamanho, posição e cor vêm inline no HTML gerado pelo JS
-       (ver script mais abaixo) -- aqui só ficam os toques decorativos,
-       que não afetam se o pino aparece ou não. */
+    /* Tamanho, posição e cor do pino vão inline no HTML gerado pelo JS
+       (proposital: nada de CSS externo pode quebrar isso). Aqui só
+       ficam efeitos que não afetam se o pino aparece ou não. */
     .cliente-marker,
     .fabrica-marker {
         background: transparent;
@@ -3208,7 +3203,8 @@ body {
         }
     }
 
-    /* Bolha de agrupamento (quando vários clientes ficam perto) */
+    /* Bolha de agrupamento -- aparece quando dois ou mais clientes
+       ficam a menos de ~46px um do outro na tela atual */
     .cluster-lazer {
         background: transparent;
         border: none;
@@ -3227,9 +3223,14 @@ body {
         font-family: 'Poppins', sans-serif;
         font-size: 14px;
         box-shadow: 0 6px 16px rgba(0,74,173,.45), 0 0 0 4px rgba(255,255,255,.9);
+        transition: transform 0.2s ease;
+        cursor: pointer;
     }
 
-    /* Legenda simples abaixo da barra de filtro */
+    .cluster-lazer:hover span {
+        transform: scale(1.1);
+    }
+
     .clientes-legenda {
         display: flex;
         flex-wrap: wrap;
@@ -3260,7 +3261,6 @@ body {
         background: linear-gradient(135deg, #4aa3ff, #004AAD);
     }
 
-    /* Popup do Leaflet no estilo do site */
     .leaflet-popup-content-wrapper {
         border-radius: 14px;
     }
@@ -3399,10 +3399,6 @@ body {
         <div id="mapa-clientes"></div>
     </div>
 
-    <!-- Lista em HTML puro (não depende de JS) -- reforça "Lazer & Sport"
-         associado a cada cidade/cliente pros mecanismos de busca, e serve
-         de referência pronta pra cadastrar as mesmas áreas de atendimento
-         no Google Business Profile. -->
     <ul class="clientes-seo-lista">
         {% for cliente in clientes_mapa %}
         <li>
@@ -3434,7 +3430,6 @@ body {
 </script>
 {{ pontos_mapa|json_script:"dados-clientes-mapa" }}
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script>
 (function () {
@@ -3445,6 +3440,10 @@ body {
     const clientesDados = todosPontos.filter(p => p.tipo === 'cliente');
 
     const mapa = L.map('mapa-clientes', { scrollWheelZoom: false });
+    // Vista provisória: garante que o mapa já nasça com centro/zoom
+    // definidos, antes de qualquer fitBounds -- sem isso o Leaflet
+    // pode ficar em branco.
+    mapa.setView([-14.235, -51.925], 4);
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 18,
@@ -3460,9 +3459,7 @@ body {
     const LOGO_CLIENTE_PADRAO = "{% static 'images/logoo.png' %}";
     const CATEGORIAS_PADRAO = ['Kid Play', 'Brinquedão', 'Trampolins', 'Eletrônicos'];
 
-    // Contorno do alfinete (cabeça redonda + ponta lisa embaixo, igual à
-    // referência). Tamanho/cor vão inline no HTML -- nada de CSS externo
-    // pode quebrar isso.
+    // Contorno do alfinete (cabeça redonda + ponta lisa embaixo).
     const PINO_PATH_D = "M215.7 499.2C267 435 384 279.4 384 192C384 86 298 0 192 0S0 86 0 192c0 87.4 117 243 168.3 307.2c12.3 15.3 35.1 15.3 47.4 0z";
 
     function criarPino({ largura, altura, corPino, janela, conteudoJanela, classeSvg }) {
@@ -3503,68 +3500,13 @@ body {
         popupAnchor: [0, -88],
     });
 
-    // Agrupador: clientes muito próximos viram uma bolha com o número
-    // deles. Clicar/zoom "espalha" (spiderfy) os pinos até cada um ficar
-    // acessível ao mouse individualmente, com popup na posição certa.
-    const clusterClientes = L.markerClusterGroup({
-        maxClusterRadius: 50,
-        spiderfyOnMaxZoom: true,
-        showCoverageOnHover: false,
-        zoomToBoundsOnClick: true,
-        iconCreateFunction: function (cluster) {
-            return L.divIcon({
-                className: 'cluster-lazer',
-                html: `<span>${cluster.getChildCount()}</span>`,
-                iconSize: [42, 42],
-            });
-        }
-    });
-    clusterClientes.addTo(mapa);
-
-    let marcadoresClientes = [];
-    let marcadorFabrica = null;
-    let marcadorPopupFixado = null;
-
-    // Popup aparece ao passar o mouse e some ao tirar -- só fica fixo
-    // depois de um clique. No hover, o pino sobe na frente dos vizinhos
-    // (zIndexOffset), pra facilitar acertar o certo quando tem vários
-    // bem próximos mas ainda não agrupados.
-    function configurarInteracaoMarcador(marcador, zIndexBase) {
-        marcador.on('mouseover', function () {
-            marcador.setZIndexOffset((zIndexBase || 0) + 1000);
-            if (marcador !== marcadorPopupFixado) marcador.openPopup();
-        });
-
-        marcador.on('mouseout', function () {
-            if (marcador !== marcadorPopupFixado) {
-                marcador.setZIndexOffset(zIndexBase || 0);
-                marcador.closePopup();
-            }
-        });
-
-        marcador.on('click', function () {
-            if (marcadorPopupFixado === marcador) {
-                marcadorPopupFixado = null;
-                marcador.setZIndexOffset(zIndexBase || 0);
-                marcador.closePopup();
-                return;
-            }
-
-            if (marcadorPopupFixado) marcadorPopupFixado.closePopup();
-            marcadorPopupFixado = marcador;
-            marcador.openPopup();
-        });
-    }
-
     function criarPopupCliente(c) {
         const nome = escapeHTML(c.nome);
         const logo = `<img src="${LOGO_CLIENTE_PADRAO}" alt="${nome}">`;
-
         const local = escapeHTML([c.cidade, c.estado].filter(Boolean).join(' - ') || c.pais);
         const link = c.site
             ? `<a href="${escapeHTML(c.site)}" target="_blank" rel="noopener"><i class="fa-brands fa-instagram"></i> Visitar Instagram</a>`
             : '';
-
         const tags = `<div class="cliente-popup-tags">${
             CATEGORIAS_PADRAO.map(t => `<span>${escapeHTML(t)}</span>`).join('')
           }</div>`;
@@ -3599,35 +3541,115 @@ body {
         `;
     }
 
-    function renderizarClientes(lista) {
-        clusterClientes.clearLayers();
-        marcadoresClientes = [];
+    let marcadorPopupFixado = null;
 
-        lista.forEach(c => {
-            const marcador = L.marker([c.lat, c.lng], { icon: criarIconeCliente(c) })
-                .bindPopup(criarPopupCliente(c));
-            configurarInteracaoMarcador(marcador, 0);
-            clusterClientes.addLayer(marcador);
-            marcadoresClientes.push(marcador);
+    function configurarInteracaoMarcador(marcador, zIndexBase) {
+        marcador.on('mouseover', function () {
+            marcador.setZIndexOffset((zIndexBase || 0) + 1000);
+            if (marcador !== marcadorPopupFixado) marcador.openPopup();
         });
 
-        const contador = document.getElementById('clientes-contador');
-        if (contador) {
-            contador.innerHTML = `<strong>${lista.length}</strong> cliente${lista.length === 1 ? '' : 's'} no mapa`;
+        marcador.on('mouseout', function () {
+            if (marcador !== marcadorPopupFixado) {
+                marcador.setZIndexOffset(zIndexBase || 0);
+                marcador.closePopup();
+            }
+        });
+
+        marcador.on('click', function (e) {
+            L.DomEvent.stopPropagation(e);
+            if (marcadorPopupFixado === marcador) {
+                marcadorPopupFixado = null;
+                marcador.setZIndexOffset(zIndexBase || 0);
+                marcador.closePopup();
+                return;
+            }
+            if (marcadorPopupFixado) marcadorPopupFixado.closePopup();
+            marcadorPopupFixado = marcador;
+            marcador.openPopup();
+        });
+    }
+
+    // ---- Agrupamento por proximidade em pixels, sem plugin externo ----
+    // A cada zoom/arraste, reagrupamos os pontos que estão a menos de
+    // RAIO_CLUSTER_PX pixels um do outro NA TELA ATUAL. Só vira bolha
+    // quando realmente colidem visualmente; ao dar zoom, cada um volta
+    // a ser um pino individual, com hover e popup próprios.
+    const RAIO_CLUSTER_PX = 46;
+    const camadaClientes = L.layerGroup().addTo(mapa);
+    let clientesAtuais = clientesDados;
+
+    function agruparPorPixel(lista) {
+        const restantes = lista.map(c => ({
+            cliente: c,
+            pt: mapa.latLngToContainerPoint([c.lat, c.lng])
+        }));
+        const grupos = [];
+
+        while (restantes.length) {
+            const base = restantes.shift();
+            const grupo = [base];
+
+            for (let i = restantes.length - 1; i >= 0; i--) {
+                const dx = restantes[i].pt.x - base.pt.x;
+                const dy = restantes[i].pt.y - base.pt.y;
+                if (Math.sqrt(dx * dx + dy * dy) <= RAIO_CLUSTER_PX) {
+                    grupo.push(restantes[i]);
+                    restantes.splice(i, 1);
+                }
+            }
+
+            grupos.push(grupo);
         }
 
-        const todosPinsVisiveis = marcadoresClientes.concat(marcadorFabrica ? [marcadorFabrica] : []);
+        return grupos;
+    }
 
-        if (todosPinsVisiveis.length) {
-            const grupo = L.featureGroup(todosPinsVisiveis);
-            mapa.fitBounds(grupo.getBounds().pad(0.25), { maxZoom: 11 });
-        } else {
-            mapa.setView([-14.235, -51.925], 4);
+    function atualizarContador(n) {
+        const contador = document.getElementById('clientes-contador');
+        if (contador) {
+            contador.innerHTML = `<strong>${n}</strong> cliente${n === 1 ? '' : 's'} no mapa`;
         }
     }
 
-    // Pino da fábrica: fica sempre no mapa, direto (fora do agrupador),
-    // independente do filtro de cidade.
+    function renderizarPinosNoMapa() {
+        camadaClientes.clearLayers();
+        atualizarContador(clientesAtuais.length);
+        if (!clientesAtuais.length) return;
+
+        agruparPorPixel(clientesAtuais).forEach(grupo => {
+            if (grupo.length === 1) {
+                const c = grupo[0].cliente;
+                const marcador = L.marker([c.lat, c.lng], { icon: criarIconeCliente(c) })
+                    .bindPopup(criarPopupCliente(c));
+                configurarInteracaoMarcador(marcador, 0);
+                camadaClientes.addLayer(marcador);
+                return;
+            }
+
+            const latMedia = grupo.reduce((s, g) => s + g.cliente.lat, 0) / grupo.length;
+            const lngMedia = grupo.reduce((s, g) => s + g.cliente.lng, 0) / grupo.length;
+
+            const marcadorCluster = L.marker([latMedia, lngMedia], {
+                icon: L.divIcon({
+                    className: 'cluster-lazer',
+                    html: `<span>${grupo.length}</span>`,
+                    iconSize: [42, 42],
+                }),
+                zIndexOffset: 500,
+            }).bindTooltip(`${grupo.length} clientes aqui — clique para ver cada um`, { direction: 'top' });
+
+            marcadorCluster.on('click', function () {
+                mapa.setView([latMedia, lngMedia], Math.min(mapa.getZoom() + 3, 18));
+            });
+
+            camadaClientes.addLayer(marcadorCluster);
+        });
+    }
+
+    mapa.on('zoomend moveend', renderizarPinosNoMapa);
+
+    let marcadorFabrica = null;
     if (fabrica) {
         marcadorFabrica = L.marker([fabrica.lat, fabrica.lng], { icon: iconeFabrica, zIndexOffset: 2000 })
             .bindPopup(criarPopupFabrica(fabrica));
@@ -3635,11 +3657,21 @@ body {
         configurarInteracaoMarcador(marcadorFabrica, 2000);
     }
 
+    function ajustarEnquadramento() {
+        const pontosBounds = clientesAtuais.map(c => [c.lat, c.lng]);
+        if (fabrica) pontosBounds.push([fabrica.lat, fabrica.lng]);
+
+        if (pontosBounds.length) {
+            mapa.fitBounds(L.latLngBounds(pontosBounds).pad(0.25), { maxZoom: 11 });
+        } else {
+            mapa.setView([-14.235, -51.925], 4);
+        }
+    }
+
     const selectCidade = document.getElementById('filtro-cidade-cliente');
     if (selectCidade) {
-        const cidades = [...new Set(
-            clientesDados.map(c => c.cidade).filter(Boolean)
-        )].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+        const cidades = [...new Set(clientesDados.map(c => c.cidade).filter(Boolean))]
+            .sort((a, b) => a.localeCompare(b, 'pt-BR'));
 
         cidades.forEach(cidade => {
             const opt = document.createElement('option');
@@ -3650,14 +3682,16 @@ body {
 
         selectCidade.addEventListener('change', () => {
             const valor = selectCidade.value;
-            const filtrados = valor === 'todas'
+            clientesAtuais = valor === 'todas'
                 ? clientesDados
                 : clientesDados.filter(c => c.cidade === valor);
-            renderizarClientes(filtrados);
+            ajustarEnquadramento();
+            renderizarPinosNoMapa();
         });
     }
 
-    renderizarClientes(clientesDados);
+    ajustarEnquadramento();
+    renderizarPinosNoMapa();
 
     mapa.on('click', () => {
         if (marcadorPopupFixado) {
@@ -3669,10 +3703,7 @@ body {
 </script>
 {% endif %}
 
-
 <script>
-
-
 
 const popupOverlay = document.getElementById('popup-overlay');
 
