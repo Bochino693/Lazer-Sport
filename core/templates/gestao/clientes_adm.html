@@ -780,6 +780,113 @@
     box-shadow: 0 0 0 3px rgba(59, 130, 246, .11);
   }
 
+  .client-address-panel {
+    margin-bottom: 16px;
+    padding: 14px;
+    display: grid;
+    gap: 12px;
+    border: 1px solid rgba(96, 165, 250, .17);
+    border-radius: 15px;
+    background: linear-gradient(135deg, rgba(59, 130, 246, .08), rgba(15, 25, 42, .44));
+  }
+
+  .client-cep-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px;
+    align-items: end;
+  }
+
+  .client-cep-search {
+    min-height: 43px;
+    padding: 0 15px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border: 1px solid rgba(96, 165, 250, .28);
+    border-radius: 11px;
+    background: rgba(37, 99, 235, .18);
+    color: #bfdbfe;
+    font-size: .72rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: background .18s ease, border-color .18s ease, opacity .18s ease;
+  }
+
+  .client-cep-search:hover {
+    border-color: rgba(96, 165, 250, .48);
+    background: rgba(37, 99, 235, .28);
+  }
+
+  .client-cep-search:disabled {
+    opacity: .52;
+    cursor: wait;
+  }
+
+  .client-cep-search svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .client-address-mode {
+    min-height: 48px;
+    padding: 10px 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border: 1px solid rgba(148, 163, 184, .13);
+    border-radius: 12px;
+    background: rgba(13, 23, 39, .74);
+    cursor: pointer;
+  }
+
+  .client-address-mode input {
+    width: 17px;
+    height: 17px;
+    accent-color: #3b82f6;
+  }
+
+  .client-address-mode-copy strong,
+  .client-address-mode-copy span {
+    display: block;
+  }
+
+  .client-address-mode-copy strong {
+    color: #cbd5e1;
+    font-size: .72rem;
+  }
+
+  .client-address-mode-copy span {
+    margin-top: 2px;
+    color: #718096;
+    font-size: .64rem;
+    line-height: 1.35;
+  }
+
+  .client-cep-status {
+    min-height: 18px;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    color: #718096;
+    font-size: .67rem;
+    line-height: 1.4;
+  }
+
+  .client-cep-status.is-loading { color: #93c5fd; }
+  .client-cep-status.is-success { color: #6ee7b7; }
+  .client-cep-status.is-error { color: #fca5a5; }
+
+  .client-field input.is-autofilled {
+    border-color: rgba(16, 185, 129, .34);
+    background: rgba(6, 78, 59, .14);
+  }
+
+  .client-address-panel.is-manual .client-cep-row {
+    opacity: .55;
+  }
+
   .client-logo-upload {
     min-height: 92px;
     padding: 12px;
@@ -1294,6 +1401,14 @@
       display: none;
     }
 
+    .client-cep-row {
+      grid-template-columns: 1fr;
+    }
+
+    .client-cep-search {
+      width: 100%;
+    }
+
     .client-secondary-button,
     .client-save-button {
       flex: 1;
@@ -1571,38 +1686,59 @@
             <svg><use href="#i-map-pin"/></svg>
             <div>
               <strong>Endereço e localização</strong>
-              <span>O CEP é usado para calcular automaticamente a posição do cliente no mapa.</span>
+              <span>Informe o CEP para preencher o endereço automaticamente. Digite apenas o número do imóvel.</span>
             </div>
+          </div>
+
+          <div id="clientAddressPanel" class="client-address-panel">
+            <div class="client-cep-row">
+              <div class="client-field is-full">
+                <label for="clientCep">CEP <small>Preenchimento automático</small></label>
+                <input id="clientCep" name="cep" type="text" inputmode="numeric" autocomplete="postal-code" placeholder="00000-000" maxlength="9">
+              </div>
+              <button id="searchClientCep" class="client-cep-search" type="button">
+                <svg><use href="#client-i-search"/></svg>
+                Buscar CEP
+              </button>
+            </div>
+
+            <div id="clientCepStatus" class="client-cep-status" aria-live="polite">
+              Digite os 8 números do CEP para localizar o endereço.
+            </div>
+
+            <label class="client-address-mode">
+              <input id="clientManualAddress" type="checkbox">
+              <span class="client-address-mode-copy">
+                <strong>Este endereço não possui CEP</strong>
+                <span>Ative para preencher rua, bairro, cidade, estado e país manualmente.</span>
+              </span>
+            </label>
           </div>
 
           <div class="client-form-grid">
             <div class="client-field is-third">
-              <label for="clientCep">CEP</label>
-              <input id="clientCep" name="cep" type="text" inputmode="numeric" placeholder="00000-000" maxlength="9">
+              <label for="clientNumber">Número <small>Preencha manualmente</small></label>
+              <input id="clientNumber" name="numero" type="text" autocomplete="address-line2" placeholder="Ex.: 104 ou S/N" maxlength="20">
             </div>
-            <div class="client-field is-third">
-              <label for="clientNumber">Número</label>
-              <input id="clientNumber" name="numero" type="text" placeholder="104" maxlength="20">
-            </div>
-            <div class="client-field is-third">
+            <div class="client-field" style="grid-column: span 8;">
               <label for="clientCountry">País</label>
-              <input id="clientCountry" name="pais" type="text" value="Brasil" placeholder="Brasil">
+              <input id="clientCountry" name="pais" type="text" autocomplete="country-name" value="Brasil" placeholder="Brasil">
             </div>
-            <div class="client-field">
+            <div class="client-field is-full">
               <label for="clientStreet">Rua</label>
-              <input id="clientStreet" name="rua" type="text" placeholder="Nome da rua">
+              <input id="clientStreet" name="rua" type="text" autocomplete="address-line1" placeholder="Será preenchida pelo CEP">
             </div>
             <div class="client-field">
               <label for="clientDistrict">Bairro</label>
-              <input id="clientDistrict" name="bairro" type="text" placeholder="Nome do bairro">
+              <input id="clientDistrict" name="bairro" type="text" placeholder="Será preenchido pelo CEP">
             </div>
             <div class="client-field">
               <label for="clientCity">Cidade</label>
-              <input id="clientCity" name="cidade" type="text" placeholder="São Paulo">
+              <input id="clientCity" name="cidade" type="text" autocomplete="address-level2" placeholder="Será preenchida pelo CEP">
             </div>
             <div class="client-field">
               <label for="clientState">Estado/UF</label>
-              <input id="clientState" name="estado" type="text" placeholder="SP" maxlength="2">
+              <input id="clientState" name="estado" type="text" autocomplete="address-level1" placeholder="UF" maxlength="2">
             </div>
           </div>
         </section>
@@ -1724,6 +1860,18 @@
   const logoPreview = document.getElementById('clientLogoPreview');
   const logoPreviewImage = document.getElementById('clientLogoPreviewImage');
   const logoFileName = document.getElementById('clientLogoFileName');
+  const cepInput = document.getElementById('clientCep');
+  const cepSearchButton = document.getElementById('searchClientCep');
+  const cepStatus = document.getElementById('clientCepStatus');
+  const manualAddressInput = document.getElementById('clientManualAddress');
+  const addressPanel = document.getElementById('clientAddressPanel');
+  const addressFields = [
+    document.getElementById('clientStreet'),
+    document.getElementById('clientDistrict'),
+    document.getElementById('clientCity'),
+    document.getElementById('clientState'),
+    document.getElementById('clientCountry')
+  ];
   const deleteConfirmationInput = document.getElementById('deleteClientConfirmation');
   const deleteConfirmationHidden = document.getElementById('deleteClientConfirmationHidden');
   const deleteRequiredPhrase = document.getElementById('deleteRequiredPhrase');
@@ -1732,6 +1880,8 @@
   let expectedDeletePhrase = '';
   let currentFilter = 'all';
   let lastTrigger = null;
+  let cepLookupTimer = null;
+  let cepRequestSequence = 0;
 
   function normalizeText(value) {
     return String(value || '')
@@ -1800,6 +1950,101 @@
     if (field) field.value = value || '';
   }
 
+  function setCepStatus(message, state) {
+    cepStatus.textContent = message;
+    cepStatus.classList.remove('is-loading', 'is-success', 'is-error');
+    if (state) cepStatus.classList.add(`is-${state}`);
+  }
+
+  function clearAddressHighlight() {
+    addressFields.forEach(field => field.classList.remove('is-autofilled'));
+  }
+
+  function setManualAddressMode(manual, clearCep) {
+    manualAddressInput.checked = Boolean(manual);
+    addressPanel.classList.toggle('is-manual', Boolean(manual));
+    cepInput.disabled = Boolean(manual);
+    cepSearchButton.disabled = Boolean(manual);
+
+    if (manual) {
+      if (clearCep) cepInput.value = '';
+      clearAddressHighlight();
+      setCepStatus(
+        'Modo manual ativado. Preencha todos os dados disponíveis do endereço.',
+        'success'
+      );
+      document.getElementById('clientStreet').placeholder = 'Digite o nome da rua';
+      document.getElementById('clientDistrict').placeholder = 'Digite o bairro';
+      document.getElementById('clientCity').placeholder = 'Digite a cidade';
+    } else {
+      setCepStatus(
+        'Digite os 8 números do CEP para localizar o endereço.',
+        ''
+      );
+      document.getElementById('clientStreet').placeholder = 'Será preenchida pelo CEP';
+      document.getElementById('clientDistrict').placeholder = 'Será preenchido pelo CEP';
+      document.getElementById('clientCity').placeholder = 'Será preenchida pelo CEP';
+    }
+  }
+
+  async function lookupClientCep() {
+    if (manualAddressInput.checked) return;
+
+    const cep = cepInput.value.replace(/\D/g, '');
+    if (cep.length !== 8) {
+      setCepStatus('Informe um CEP válido com 8 números.', 'error');
+      cepInput.focus();
+      return;
+    }
+
+    const requestId = ++cepRequestSequence;
+    cepSearchButton.disabled = true;
+    cepSearchButton.textContent = 'Buscando…';
+    setCepStatus('Consultando o CEP e preenchendo o endereço…', 'loading');
+
+    try {
+      const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`, {
+        headers: { 'Accept': 'application/json' }
+      });
+
+      if (!response.ok) throw new Error('Falha na consulta');
+      const data = await response.json();
+      if (requestId !== cepRequestSequence) return;
+      if (data.erro) throw new Error('CEP não encontrado');
+
+      setValue('clientStreet', data.logradouro);
+      setValue('clientDistrict', data.bairro);
+      setValue('clientCity', data.localidade);
+      setValue('clientState', data.uf);
+      setValue('clientCountry', 'Brasil');
+
+      clearAddressHighlight();
+      addressFields.forEach(field => {
+        if (field.value) field.classList.add('is-autofilled');
+      });
+
+      const location = [data.localidade, data.uf].filter(Boolean).join('/');
+      setCepStatus(
+        `Endereço localizado${location ? ` em ${location}` : ''}. Agora informe o número.`,
+        'success'
+      );
+      document.getElementById('clientNumber').focus();
+    } catch (error) {
+      if (requestId !== cepRequestSequence) return;
+      clearAddressHighlight();
+      setCepStatus(
+        'CEP não encontrado. Confira os números ou marque “Este endereço não possui CEP”.',
+        'error'
+      );
+    } finally {
+      if (requestId === cepRequestSequence) {
+        cepSearchButton.disabled = false;
+        cepSearchButton.innerHTML =
+          '<svg><use href="#client-i-search"></use></svg>Buscar CEP';
+      }
+    }
+  }
+
   function resetLogoPreview() {
     logoPreview.classList.remove('has-image');
     logoPreviewImage.removeAttribute('src');
@@ -1843,10 +2088,12 @@
         logoPreviewImage.src = client.logo_url;
         logoPreview.classList.add('has-image');
       }
+      setManualAddressMode(!client.cep, false);
     } else {
       setValue('clientCountry', 'Brasil');
       document.getElementById('clientActive').checked = true;
       document.getElementById('clientPublished').checked = true;
+      setManualAddressMode(false, false);
     }
 
     document.getElementById('clientForceGeocode').checked = false;
@@ -1963,11 +2210,46 @@
     reader.readAsDataURL(file);
   });
 
-  document.getElementById('clientCep').addEventListener('input', function (event) {
+  cepInput.addEventListener('input', function (event) {
     const digits = event.target.value.replace(/\D/g, '').slice(0, 8);
     event.target.value = digits.length > 5
       ? `${digits.slice(0, 5)}-${digits.slice(5)}`
       : digits;
+
+    window.clearTimeout(cepLookupTimer);
+    clearAddressHighlight();
+
+    if (digits.length === 8) {
+      setCepStatus('CEP completo. Buscando endereço…', 'loading');
+      cepLookupTimer = window.setTimeout(lookupClientCep, 350);
+    } else {
+      setCepStatus(
+        digits.length
+          ? `Digite mais ${8 - digits.length} número(s) para completar o CEP.`
+          : 'Digite os 8 números do CEP para localizar o endereço.',
+        ''
+      );
+    }
+  });
+
+  cepInput.addEventListener('blur', function () {
+    if (cepInput.value.replace(/\D/g, '').length === 8 && !manualAddressInput.checked) {
+      window.clearTimeout(cepLookupTimer);
+      lookupClientCep();
+    }
+  });
+
+  cepSearchButton.addEventListener('click', lookupClientCep);
+
+  manualAddressInput.addEventListener('change', function () {
+    cepRequestSequence += 1;
+    window.clearTimeout(cepLookupTimer);
+    setManualAddressMode(manualAddressInput.checked, manualAddressInput.checked);
+    if (manualAddressInput.checked) {
+      document.getElementById('clientStreet').focus();
+    } else {
+      cepInput.focus();
+    }
   });
 
   document.getElementById('clientState').addEventListener('input', function (event) {
