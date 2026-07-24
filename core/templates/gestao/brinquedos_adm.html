@@ -709,6 +709,42 @@
     box-shadow: 0 0 0 3px rgba(59, 130, 246, .11);
   }
 
+  .toy-input-wrap {
+    position: relative;
+  }
+
+  .toy-input-wrap input {
+    padding-left: 42px !important;
+    padding-right: 38px !important;
+  }
+
+  .toy-input-prefix,
+  .toy-input-suffix {
+    position: absolute;
+    top: 50%;
+    z-index: 1;
+    color: #718096;
+    font-size: .7rem;
+    font-weight: 800;
+    pointer-events: none;
+    transform: translateY(-50%);
+  }
+
+  .toy-input-prefix { left: 12px; }
+  .toy-input-suffix { right: 12px; }
+
+  .toy-field-hint {
+    margin: 6px 0 0;
+    color: #64748b;
+    font-size: .62rem;
+    line-height: 1.4;
+  }
+
+  .toy-field input.is-invalid {
+    border-color: rgba(248, 113, 113, .62);
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, .1);
+  }
+
   .toy-upload {
     min-height: 92px;
     padding: 12px;
@@ -1314,11 +1350,19 @@
           <div class="toy-form-grid">
             <div class="toy-field is-third">
               <label for="toyPrice">Valor</label>
-              <input id="toyPrice" type="text" name="valor_brinquedo" inputmode="decimal" placeholder="0,00">
+              <div class="toy-input-wrap">
+                <span class="toy-input-prefix">R$</span>
+                <input id="toyPrice" type="text" name="valor_brinquedo" inputmode="numeric" autocomplete="off" placeholder="10.990,00" maxlength="14">
+              </div>
+              <p class="toy-field-hint">Exemplo: R$ 10.990,00</p>
             </div>
             <div class="toy-field is-third">
               <label for="toyRating">Avaliação</label>
-              <input id="toyRating" type="text" name="avaliacao" inputmode="decimal" placeholder="0,00" required>
+              <div class="toy-input-wrap">
+                <input id="toyRating" type="text" name="avaliacao" inputmode="decimal" autocomplete="off" placeholder="4,7" maxlength="3" required>
+                <span class="toy-input-suffix">/ 5</span>
+              </div>
+              <p class="toy-field-hint">Nota entre 0 e 5. Ex.: 4,7</p>
             </div>
             <div class="toy-field is-third">
               <label for="toyVoltage">Voltagem</label>
@@ -1332,15 +1376,27 @@
             </div>
             <div class="toy-field is-third">
               <label for="toyHeight">Altura (m)</label>
-              <input id="toyHeight" type="text" name="altura_m" inputmode="decimal" placeholder="0,00">
+              <div class="toy-input-wrap">
+                <input id="toyHeight" type="text" name="altura_m" inputmode="decimal" autocomplete="off" placeholder="1,85" maxlength="7">
+                <span class="toy-input-suffix">m</span>
+              </div>
+              <p class="toy-field-hint">Em metros. Ex.: 1,85</p>
             </div>
             <div class="toy-field is-third">
               <label for="toyWidth">Largura (m)</label>
-              <input id="toyWidth" type="text" name="largura_m" inputmode="decimal" placeholder="0,00">
+              <div class="toy-input-wrap">
+                <input id="toyWidth" type="text" name="largura_m" inputmode="decimal" autocomplete="off" placeholder="0,80" maxlength="7">
+                <span class="toy-input-suffix">m</span>
+              </div>
+              <p class="toy-field-hint">Em metros. Ex.: 0,80</p>
             </div>
             <div class="toy-field is-third">
               <label for="toyDepth">Profundidade (m)</label>
-              <input id="toyDepth" type="text" name="profundidade_m" inputmode="decimal" placeholder="0,00">
+              <div class="toy-input-wrap">
+                <input id="toyDepth" type="text" name="profundidade_m" inputmode="decimal" autocomplete="off" placeholder="2,20" maxlength="7">
+                <span class="toy-input-suffix">m</span>
+              </div>
+              <p class="toy-field-hint">Em metros. Ex.: 2,20</p>
             </div>
             <div class="toy-field is-full">
               <label class="toy-toggle">
@@ -1435,11 +1491,56 @@
   const toyImagePreview = document.getElementById('toyImagePreview');
   const toyImagePreviewImg = document.getElementById('toyImagePreviewImg');
   const toyImageFileName = document.getElementById('toyImageFileName');
+  const toyPrice = document.getElementById('toyPrice');
+  const toyRating = document.getElementById('toyRating');
+  const dimensionInputs = [
+    document.getElementById('toyHeight'),
+    document.getElementById('toyWidth'),
+    document.getElementById('toyDepth')
+  ];
   const deleteInput = document.getElementById('deleteToyConfirmation');
   const deleteHidden = document.getElementById('deleteToyConfirmationHidden');
   const deleteButton = document.getElementById('confirmDeleteToy');
   let expectedDeletePhrase = '';
   let lastTrigger = null;
+
+  function maskCurrency(value) {
+    const digits = String(value || '').replace(/\D/g, '').slice(0, 10);
+    if (!digits) return '';
+    return (Number(digits) / 100).toLocaleString('pt-BR', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+  }
+
+  function maskDecimal(value, integerDigits, decimalDigits) {
+    const sanitized = String(value || '')
+      .replace(/\./g, ',')
+      .replace(/[^\d,]/g, '');
+    const parts = sanitized.split(',');
+    const integer = (parts.shift() || '').slice(0, integerDigits);
+    const decimal = parts.join('').slice(0, decimalDigits);
+    return decimal || sanitized.includes(',')
+      ? `${integer || '0'},${decimal}`
+      : integer;
+  }
+
+  function decimalNumber(value) {
+    const normalized = String(value || '')
+      .replace(/\./g, '')
+      .replace(',', '.');
+    return normalized ? Number(normalized) : null;
+  }
+
+  function formatDecimalOnBlur(input, decimalDigits) {
+    const value = decimalNumber(input.value);
+    if (value == null || Number.isNaN(value)) return;
+    input.value = value.toLocaleString('pt-BR', {
+      minimumFractionDigits: decimalDigits,
+      maximumFractionDigits: decimalDigits,
+      useGrouping: false
+    });
+  }
 
   function setModal(modal, open, trigger) {
     if (open) {
@@ -1561,6 +1662,21 @@
   toyImage.addEventListener('change', function () {
     const file = toyImage.files && toyImage.files[0];
     if (!file) return resetImagePreview();
+
+    if (!file.type.startsWith('image/')) {
+      toyImage.value = '';
+      resetImagePreview();
+      window.alert('Selecione um arquivo de imagem válido.');
+      return;
+    }
+
+    if (file.size > 15 * 1024 * 1024) {
+      toyImage.value = '';
+      resetImagePreview();
+      window.alert('A imagem deve ter no máximo 15 MB.');
+      return;
+    }
+
     toyImageFileName.textContent = file.name;
     const reader = new FileReader();
     reader.addEventListener('load', function () {
@@ -1570,10 +1686,48 @@
     reader.readAsDataURL(file);
   });
 
-  document.querySelectorAll('#toyPrice, #toyRating, #toyHeight, #toyWidth, #toyDepth').forEach(input => {
+  toyPrice.addEventListener('input', function () {
+    toyPrice.value = maskCurrency(toyPrice.value);
+  });
+
+  toyRating.addEventListener('input', function () {
+    toyRating.value = maskDecimal(toyRating.value, 1, 1);
+    const value = decimalNumber(toyRating.value);
+    const invalid = value != null && value > 5;
+    toyRating.classList.toggle('is-invalid', invalid);
+    toyRating.setCustomValidity(
+      invalid ? 'A avaliação deve estar entre 0 e 5.' : ''
+    );
+  });
+
+  toyRating.addEventListener('blur', function () {
+    formatDecimalOnBlur(toyRating, 1);
+  });
+
+  dimensionInputs.forEach(input => {
     input.addEventListener('input', function () {
-      input.value = input.value.replace(/[^\d,.]/g, '');
+      input.value = maskDecimal(input.value, 4, 2);
     });
+    input.addEventListener('blur', function () {
+      formatDecimalOnBlur(input, 2);
+    });
+  });
+
+  toyForm.addEventListener('submit', function (event) {
+    const ratingValue = decimalNumber(toyRating.value);
+    if (ratingValue == null || ratingValue < 0 || ratingValue > 5) {
+      event.preventDefault();
+      toyRating.classList.add('is-invalid');
+      toyRating.setCustomValidity('Informe uma avaliação entre 0 e 5.');
+      toyRating.reportValidity();
+      toyRating.focus();
+      return;
+    }
+
+    const submitButton = toyForm.querySelector('button[type="submit"]');
+    submitButton.disabled = true;
+    submitButton.innerHTML =
+      '<svg><use href="#toy-i-save"></use></svg>Salvando…';
   });
 
   document.getElementById('openCategoryModal').addEventListener('click', event => setModal(categoryModal, true, event.currentTarget));

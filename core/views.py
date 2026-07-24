@@ -3,7 +3,8 @@ from django.views.generic import View
 from django.contrib.auth.models import User
 from django.contrib import messages
 from django.contrib.auth import authenticate, login
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
+import logging
 
 from .forms import UserForm, PerfilForm
 from django.views.generic.edit import FormView
@@ -1483,30 +1484,53 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
         categorias = CategoriasBrinquedos.objects.order_by("nome_categoria", "id")
         tags = TagsBrinquedos.objects.order_by("nome_tags", "id")
 
+        def formatar_decimal_br(valor, casas=2, milhares=False):
+            if valor is None:
+                return ""
+            numero = Decimal(valor).quantize(
+                Decimal("1." + ("0" * casas)),
+                rounding=ROUND_HALF_UP,
+            )
+            texto = (
+                f"{numero:,.{casas}f}"
+                if milhares else
+                f"{numero:.{casas}f}"
+            )
+            return (
+                texto
+                .replace(",", "X")
+                .replace(".", ",")
+                .replace("X", ".")
+            )
+
         brinquedos_dados = [
             {
                 "id": brinquedo.id,
                 "nome_brinquedo": brinquedo.nome_brinquedo or "",
                 "descricao": brinquedo.descricao or "",
                 "valor_brinquedo": (
-                    str(brinquedo.valor_brinquedo).replace(".", ",")
+                    formatar_decimal_br(
+                        brinquedo.valor_brinquedo,
+                        casas=2,
+                        milhares=True,
+                    )
                     if brinquedo.valor_brinquedo is not None else ""
                 ),
                 "avaliacao": (
-                    str(brinquedo.avaliacao).replace(".", ",")
+                    formatar_decimal_br(brinquedo.avaliacao, casas=1)
                     if brinquedo.avaliacao is not None else ""
                 ),
                 "voltz": brinquedo.voltz or "",
                 "altura_m": (
-                    str(brinquedo.altura_m).replace(".", ",")
+                    formatar_decimal_br(brinquedo.altura_m, casas=2)
                     if brinquedo.altura_m is not None else ""
                 ),
                 "largura_m": (
-                    str(brinquedo.largura_m).replace(".", ",")
+                    formatar_decimal_br(brinquedo.largura_m, casas=2)
                     if brinquedo.largura_m is not None else ""
                 ),
                 "profundidade_m": (
-                    str(brinquedo.profundidade_m).replace(".", ",")
+                    formatar_decimal_br(brinquedo.profundidade_m, casas=2)
                     if brinquedo.profundidade_m is not None else ""
                 ),
                 "exibir_na_loja": brinquedo.exibir_na_loja,
@@ -1608,19 +1632,74 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
                 )
                 return redirect("brinquedos_admin")
 
-            def parse_decimal(v):
-                if not v:
+            def parse_decimal(v, nome_campo, limite=None):
+                if v is None or not str(v).strip():
                     return None
-                normalizado = v.strip().replace(" ", "")
-                if "," in normalizado:
-                    normalizado = normalizado.replace(".", "").replace(",", ".")
-                return Decimal(normalizado)
+                normalizado = (
+                    str(v)
+                    .strip()
+                    .replace("R$", "")
+                    .replace("m", "")
+                    .replace(" ", "")
+                )
 
-            preco = parse_decimal(preco)
-            avaliacao = parse_decimal(avaliacao)
-            altura = parse_decimal(altura)
-            largura = parse_decimal(largura)
-            profundidade = parse_decimal(profundidade)
+                # Formato brasileiro: 10.990,00 -> 10990.00.
+                # Também aceita o formato técnico 10990.00.
+                if "," in normalizado:
+                    normalizado = (
+                        normalizado
+                        .replace(".", "")
+                        .replace(",", ".")
+                    )
+                elif normalizado.count(".") > 1:
+                    normalizado = normalizado.replace(".", "")
+
+                try:
+                    numero = Decimal(normalizado)
+                except (InvalidOperation, ValueError):
+                    raise ValueError(
+                        f"{nome_campo}: informe um número válido."
+                    )
+
+                if numero < 0:
+                    raise ValueError(
+                        f"{nome_campo}: o valor não pode ser negativo."
+                    )
+                if limite is not None and numero > limite:
+                    raise ValueError(
+                        f"{nome_campo}: o máximo permitido é "
+                        f"{str(limite).replace('.', ',')}."
+                    )
+                return numero.quantize(
+                    Decimal("0.01"),
+                    rounding=ROUND_HALF_UP,
+                )
+
+            preco = parse_decimal(
+                preco,
+                "Valor",
+                Decimal("99999999.99"),
+            )
+            avaliacao = parse_decimal(
+                avaliacao,
+                "Avaliação",
+                Decimal("5"),
+            )
+            altura = parse_decimal(
+                altura,
+                "Altura",
+                Decimal("9999.99"),
+            )
+            largura = parse_decimal(
+                largura,
+                "Largura",
+                Decimal("9999.99"),
+            )
+            profundidade = parse_decimal(
+                profundidade,
+                "Profundidade",
+                Decimal("9999.99"),
+            )
 
             if avaliacao is None:
                 avaliacao = Decimal("0")
@@ -1659,17 +1738,20 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
             )
             return redirect("brinquedos_admin")
 
-        except (ArithmeticError, ValueError) as exc:
+        except (ArithmeticError, InvalidOperation, ValueError) as exc:
             messages.error(
                 request,
-                f"Revise os valores numéricos informados: {exc}"
+                str(exc)
             )
             return redirect("brinquedos_admin")
-        except Exception:
+        except Exception as exc:
+            logging.getLogger(__name__).exception(
+                "Erro ao salvar brinquedo no painel administrativo"
+            )
             messages.error(
                 request,
-                "Não foi possível salvar o brinquedo. Revise os dados e "
-                "tente novamente."
+                "Não foi possível salvar o brinquedo. "
+                f"Erro: {type(exc).__name__}. Confira a imagem e os campos."
             )
             return redirect("brinquedos_admin")
 
