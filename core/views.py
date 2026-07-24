@@ -11,7 +11,7 @@ from django.db import transaction
 from django.db.models import Count, F, FloatField, Value, Prefetch
 
 from django.contrib.auth.mixins import LoginRequiredMixin
-
+from django.db.models import Count, F, FloatField, Value, Prefetch, Avg
 from .models import Brinquedos, CategoriasBrinquedos, Projetos, Eventos, ClientePerfil, Combos, Cupom, Promocoes, \
     TagsBrinquedos, ImagensSite, BrinquedosProjeto, Estabelecimentos, Manutencao, ManutencaoImagem, \
     BrinquedoClick, ComboClick, PromocaoClick, CategoriaClick, PecasReposicao, CategoriaPeca, \
@@ -1498,64 +1498,163 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
 
     def get(self, request):
         categoria = request.GET.get("categoria", "todas")
+        busca = request.GET.get("q", "").strip()
 
-        # FILTRAGEM
-        if categoria == "todas":
-            brinquedos = Brinquedos.objects.all()
-        else:
-            brinquedos = Brinquedos.objects.filter(
-                categorias_brinquedos__nome_categoria=categoria
+        brinquedos = (
+            Brinquedos.objects
+            .prefetch_related("categorias_brinquedos", "tags")
+            .order_by("nome_brinquedo", "id")
+        )
+
+        if categoria != "todas":
+            brinquedos = brinquedos.filter(
+                categorias_brinquedos__id=categoria
             ).distinct()
 
-        # PAGINAÇÃO
+        if busca:
+            brinquedos = brinquedos.filter(
+                nome_brinquedo__icontains=busca
+            )
+
         paginator = Paginator(brinquedos, 50)
         page = request.GET.get("page")
         brinquedos_page = paginator.get_page(page)
 
-        # LISTA DE CATEGORIAS
-        categorias = CategoriasBrinquedos.objects.all()
-        tags = TagsBrinquedos.objects.all()
+        categorias = CategoriasBrinquedos.objects.order_by("nome_categoria", "id")
+        tags = TagsBrinquedos.objects.order_by("nome_tags", "id")
+
+        brinquedos_dados = [
+            {
+                "id": brinquedo.id,
+                "nome_brinquedo": brinquedo.nome_brinquedo or "",
+                "descricao": brinquedo.descricao or "",
+                "valor_brinquedo": (
+                    str(brinquedo.valor_brinquedo).replace(".", ",")
+                    if brinquedo.valor_brinquedo is not None else ""
+                ),
+                "avaliacao": (
+                    str(brinquedo.avaliacao).replace(".", ",")
+                    if brinquedo.avaliacao is not None else ""
+                ),
+                "voltz": brinquedo.voltz or "",
+                "altura_m": (
+                    str(brinquedo.altura_m).replace(".", ",")
+                    if brinquedo.altura_m is not None else ""
+                ),
+                "largura_m": (
+                    str(brinquedo.largura_m).replace(".", ",")
+                    if brinquedo.largura_m is not None else ""
+                ),
+                "profundidade_m": (
+                    str(brinquedo.profundidade_m).replace(".", ",")
+                    if brinquedo.profundidade_m is not None else ""
+                ),
+                "exibir_na_loja": brinquedo.exibir_na_loja,
+                "imagem_url": (
+                    brinquedo.imagem_brinquedo.url
+                    if brinquedo.imagem_brinquedo else ""
+                ),
+                "categorias_ids": list(
+                    brinquedo.categorias_brinquedos.values_list("id", flat=True)
+                ),
+                "tags_ids": list(
+                    brinquedo.tags.values_list("id", flat=True)
+                ),
+            }
+            for brinquedo in brinquedos_page
+        ]
+
+        todos = Brinquedos.objects.all()
 
         context = {
             "brinquedos": brinquedos_page,
             "categorias": categorias,
             "tags": tags,
             "categoria_ativa": categoria,
+            "busca": busca,
             "page_obj": brinquedos_page,
+            "brinquedos_dados": brinquedos_dados,
+            "total_brinquedos": todos.count(),
+            "total_loja": todos.filter(exibir_na_loja=True).count(),
+            "total_com_imagem": todos.exclude(
+                imagem_brinquedo__isnull=True
+            ).exclude(imagem_brinquedo="").count(),
+            "total_categorias": categorias.count(),
         }
 
-        return render(request, "brinquedos_adm.html", context)
+        return render(request, "gestao/brinquedos_adm.html", context)
 
+    @transaction.atomic
     def post(self, request):
         try:
-            acao = request.POST.get("acao")  # <-- identifica qual botão apertou
+            action = request.POST.get("action", "save")
 
-            nome = request.POST.get("nome_brinquedo")
+            if action == "delete":
+                brinquedo = get_object_or_404(
+                    Brinquedos,
+                    pk=request.POST.get("id")
+                )
+                nome = brinquedo.nome_brinquedo or "Brinquedo"
+                frase_esperada = f"CONFIRMAR EXCLUSÃO {nome}"
+                frase_informada = request.POST.get(
+                    "confirmacao_exclusao", ""
+                ).strip()
+
+                if frase_informada != frase_esperada:
+                    messages.error(
+                        request,
+                        "Exclusão cancelada: o texto de confirmação não "
+                        "corresponde ao nome do brinquedo."
+                    )
+                    return redirect("brinquedos_admin")
+
+                brinquedo.delete()
+                messages.success(
+                    request,
+                    f"Brinquedo '{nome}' excluído com sucesso."
+                )
+                return redirect("brinquedos_admin")
+
+            if action != "save":
+                messages.error(request, "Ação inválida.")
+                return redirect("brinquedos_admin")
+
+            brinquedo_id = request.POST.get("id")
+            brinquedo = (
+                get_object_or_404(Brinquedos, pk=brinquedo_id)
+                if brinquedo_id else Brinquedos()
+            )
+
+            nome = request.POST.get("nome_brinquedo", "").strip()
             imagem = request.FILES.get("imagem_brinquedo")
-            descricao = request.POST.get("descricao")
+            descricao = request.POST.get("descricao", "").strip()
             preco = request.POST.get("valor_brinquedo")
             avaliacao = request.POST.get("avaliacao")
             voltz = request.POST.get("voltz")
-
             categorias_ids = request.POST.getlist("categorias_brinquedos")
             tags_ids = request.POST.getlist("tags")
-
             altura = request.POST.get("altura_m")
             largura = request.POST.get("largura_m")
             profundidade = request.POST.get("profundidade_m")
 
-            # VALIDAÇÃO
             if not nome or not descricao:
                 messages.error(request, "Preencha todos os campos obrigatórios.")
-                return redirect("/adm/brinquedos/?modal_aberto=1")
+                return redirect("brinquedos_admin")
 
-            if acao == "salvar" and not imagem:
-                messages.error(request, "Selecione uma imagem!")
-                return redirect("/adm/brinquedos/?modal_aberto=1")
+            if not brinquedo.pk and not imagem:
+                messages.error(
+                    request,
+                    "Selecione uma imagem para o novo brinquedo."
+                )
+                return redirect("brinquedos_admin")
 
-            # Parse valores
             def parse_decimal(v):
-                return v.replace(",", ".") if v else None
+                if not v:
+                    return None
+                normalizado = v.strip().replace(" ", "")
+                if "," in normalizado:
+                    normalizado = normalizado.replace(".", "").replace(",", ".")
+                return Decimal(normalizado)
 
             preco = parse_decimal(preco)
             avaliacao = parse_decimal(avaliacao)
@@ -1563,39 +1662,56 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
             largura = parse_decimal(largura)
             profundidade = parse_decimal(profundidade)
 
-            # CRIA O BRINQUEDO
-            novo = Brinquedos.objects.create(
-                nome_brinquedo=nome,
-                imagem_brinquedo=imagem,
-                descricao=descricao,
-                valor_brinquedo=preco,
-                avaliacao=avaliacao,
-                voltz=voltz,
-                altura_m=altura,
-                largura_m=largura,
-                profundidade_m=profundidade
+            if avaliacao is None:
+                avaliacao = Decimal("0")
+            if avaliacao < 0 or avaliacao > 5:
+                messages.error(request, "A avaliação deve estar entre 0 e 5.")
+                return redirect("brinquedos_admin")
+
+            brinquedo.nome_brinquedo = nome
+            brinquedo.descricao = descricao
+            brinquedo.valor_brinquedo = preco
+            brinquedo.avaliacao = avaliacao
+            brinquedo.voltz = voltz or ""
+            brinquedo.altura_m = altura
+            brinquedo.largura_m = largura
+            brinquedo.profundidade_m = profundidade
+            brinquedo.exibir_na_loja = (
+                request.POST.get("exibir_na_loja") == "on"
             )
+            if imagem:
+                brinquedo.imagem_brinquedo = imagem
 
-            # 🔥 ADICIONA CATEGORIAS
-            if categorias_ids:
-                novo.categorias_brinquedos.set(categorias_ids)
+            criando = not brinquedo.pk
+            brinquedo.save()
+            brinquedo.categorias_brinquedos.set(categorias_ids)
+            brinquedo.tags.set(tags_ids)
 
-            # 🔥 ADICIONA TAGS
-            if tags_ids:
-                novo.tags.set(tags_ids)
+            messages.success(
+                request,
+                (
+                    f"Brinquedo '{brinquedo.nome_brinquedo}' cadastrado "
+                    "com sucesso."
+                    if criando else
+                    f"Brinquedo '{brinquedo.nome_brinquedo}' atualizado "
+                    "com sucesso."
+                )
+            )
+            return redirect("brinquedos_admin")
 
-            messages.success(request, f"Brinquedo '{novo.nome_brinquedo}' salvo com sucesso!")
-
-            # Se for "Salvar e adicionar outro"
-            if acao == "salvar_adicionar":
-                return redirect("/brinquedos/admin/?modal_aberto=1&limpar=1")
-
-            # Caso seja salvar normal → fecha modal
-            return redirect("/brinquedos/admin/")
-
-        except Exception as e:
-            messages.error(request, f"Erro ao salvar: {str(e)}")
-            return redirect("/brinquedos/admin/?modal_aberto=1")
+        except (ArithmeticError, ValueError) as exc:
+            messages.error(
+                request,
+                f"Revise os valores numéricos informados: {exc}"
+            )
+            return redirect("brinquedos_admin")
+        except Exception:
+            messages.error(
+                request,
+                "Não foi possível salvar o brinquedo. Revise os dados e "
+                "tente novamente."
+            )
+            return redirect("brinquedos_admin")
 
 
 from django.http import JsonResponse
@@ -1637,13 +1753,20 @@ class NovaCategoria(AdminOnlyMixin, View):
 
 class NovaTag(AdminOnlyMixin, View):
     def post(self, request):
-        nome = request.POST.get("nome_tag")
+        nome = request.POST.get("nome_tag", "").strip()
+        if not nome:
+            return JsonResponse({
+                "status": "erro",
+                "msg": "Informe o nome da tag."
+            }, status=400)
 
-        TagsBrinquedos.objects.create(nome_tag=nome)
-
-        messages.success(request, "Tag criada com sucesso!")
-
-        return redirect("/brinquedos/admin/?modal_aberto=1")
+        nova = TagsBrinquedos.objects.create(nome_tags=nome)
+        return JsonResponse({
+            "status": "sucesso",
+            "msg": "Tag criada com sucesso.",
+            "id": nova.id,
+            "nome": nova.nome_tags,
+        })
 
 
 from django.utils.timesince import timesince
@@ -3312,3 +3435,4 @@ class SearchView(View):
             "total_resultados": len(resultados),
             "busca_realizada": bool(termo),
         })
+    

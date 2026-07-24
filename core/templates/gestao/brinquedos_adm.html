@@ -1,1326 +1,1648 @@
-{% extends "base_adm.html" %}
+{% extends "gestao/base_adm.html" %}
 
-{% block title %}Gerenciar Brinquedos{% endblock %}
+{% block title %}Brinquedos{% endblock %}
+{% block page_heading %}Gestão de Brinquedos{% endblock %}
 
 {% block content %}
-
-<h1 class="titulo-pagina">Gerenciar Brinquedos</h1>
-<p class="subtitulo-pagina">Visualize, edite e gerencie todos os brinquedos cadastrados no sistema.</p>
-
-<!-- BOTÃO ADICIONAR E FILTROS -->
-<div class="top-bar">
-
-    <!-- FILTROS -->
-    <div class="filtros">
-        <a href="?categoria=todas" class="filtro-btn {% if categoria_ativa == 'todas' %}ativo{% endif %}">
-            Todos os Brinquedos
-        </a>
-
-        {% for cat in categorias %}
-        <a href="?categoria={{ cat }}" class="filtro-btn {% if categoria_ativa == cat %}ativo{% endif %}">
-            {{ cat }}
-        </a>
-        {% endfor %}
-    </div>
-
-    <!-- BOTÃO ADICIONAR -->
-    <button class="btn-add" onclick="abrirModalNovo()">+ Adicionar Brinquedo</button>
-</div>
-
-
-<!-- MODAL NOVO BRINQUEDO -->
-<div class="modal-bg" id="modal-novo">
-    <div class="modal-box modal-novo-box">
-
-        <!-- Botão fechar -->
-        <span class="modal-x" onclick="fecharModalNovo()">&times;</span>
-
-        <h2 class="modal-titulo">Adicionar Novo Brinquedo</h2>
-        <p class="modal-subtitulo">Preencha corretamente os dados abaixo</p>
-
-        <!-- ÁREA DE MENSAGENS -->
-        <div id="modal-mensagem"></div>
-
-        <form method="POST" enctype="multipart/form-data" action="{% url 'brinquedos_admin' %}">
-            {% csrf_token %}
-
-            <div class="grid-dupla">
-                <div>
-                    <label>Nome do Brinquedo:</label>
-                    <input type="text" name="nome_brinquedo" class="input-modal" required>
-                </div>
-
-                <div>
-                    <label>Imagem:</label>
-                    <input type="file" name="imagem_brinquedo" class="input-modal" required>
-                </div>
-            </div>
-
-            <!-- Categorias -->
-            <label style="font-weight:700; margin-top:10px;">Categorias:</label>
-            <div class="dual-select">
-
-                <div class="dual-box">
-                    <label>Disponíveis</label>
-                    <select id="categorias-disponiveis" multiple>
-                        {% for c in categorias %}
-                            <option value="{{ c.id }}">{{ c.nome_categoria }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-
-                <div class="dual-controls">
-                    <button type="button" onclick="adicionarCategoria()">→</button>
-                    <button type="button" onclick="removerCategoria()">←</button>
-                    <button type="button" class="btn-add-categoria" onclick="abrirModalCategoria()">+</button>
-                </div>
-
-                <div class="dual-box">
-                    <label>Selecionadas</label>
-                    <select id="categorias-selecionadas" name="categorias_brinquedos" multiple required></select>
-                </div>
-
-            </div>
-
-            <small>Use CTRL para selecionar várias, depois clique →</small>
-
-            <!-- TAGS -->
-            <label style="margin-top:12px; font-weight:700;">Tags:</label>
-            <div class="dual-select">
-
-                <div class="dual-box">
-                    <label>Disponíveis</label>
-                    <select id="tags-disponiveis" multiple>
-                        {% for t in tags %}
-                            <option value="{{ t.id }}">{{ t.nome_tags }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-
-                <div class="dual-controls">
-                    <button type="button" onclick="adicionarTag()">→</button>
-                    <button type="button" onclick="removerTag()">←</button>
-                    <button type="button" class="btn-add-categoria" onclick="abrirModalTag()">+</button>
-                </div>
-
-                <div class="dual-box">
-                    <label>Selecionadas</label>
-                    <select id="tags-selecionadas" name="tags" multiple></select>
-                </div>
-
-            </div>
-
-            <label>Descrição:</label>
-            <textarea name="descricao" class="input-modal" rows="3" required></textarea>
-
-            <div class="grid-dupla">
-                <div>
-                    <label>Preço (R$):</label>
-                    <input type="text" name="valor_brinquedo" class="input-modal decimal" placeholder="0,00">
-                </div>
-
-                <div>
-                    <label>Avaliação (0-5):</label>
-                    <input type="text" name="avaliacao" class="input-modal decimal-avaliacao" placeholder="0,00">
-                </div>
-
-            </div>
-
-            <div class="grid-dupla">
-                <div>
-                    <label>Voltagem:</label>
-                    <select name="voltz" class="input-modal" required>
-                        <option value="110V">110V</option>
-                        <option value="220V">220V</option>
-                        <option value="Bivolt">Bivolt</option>
-                    </select>
-                </div>
-
-                <div>
-                    <label>Altura (m):</label>
-                    <input type="text" name="altura_m" class="input-modal decimal" placeholder="0,00">
-                </div>
-            </div>
-
-            <div class="grid-dupla">
-                <div>
-                    <label>Largura (m):</label>
-                    <input type="text" name="largura_m" class="input-modal decimal" placeholder="0,00">
-                </div>
-
-                <div>
-                    <label>Profundidade (m):</label>
-                    <input type="text" name="profundidade_m" class="input-modal decimal" placeholder="0,00">
-                </div>
-            </div>
-
-            <button type="submit" class="btn-ver btn-salvar" name="acao" value="salvar">
-                Salvar Brinquedo
-            </button>
-
-            <button type="submit" class="btn-ver btn-salvar" name="acao" value="salvar_adicionar">
-                Salvar e adicionar outro
-            </button>
-
-            <button type="button" class="btn-excluir btn-fechar" onclick="fecharModalNovo()">Fechar</button>
-
-        </form>
-    </div>
-</div>
-
-
 <style>
+  .toys-page {
+    --toy-blue: #3b82f6;
+    --toy-green: #10b981;
+    --toy-amber: #f59e0b;
+    --toy-red: #ef4444;
+    width: min(100%, 1440px);
+    margin: 0 auto;
+  }
 
-    /* Subtítulo da página */
-.subtitulo-pagina {
-    all: unset;                 /* remove todas as heranças de estilo */
-    display: block;             /* garante que seja bloco */
-    font-family: 'Segoe UI', sans-serif;
-    font-size: 1.1rem;          /* tamanho intermediário */
-    font-weight: 500;           /* semi-negrito */
-    color: #fbbf24;             /* amarelo-dourado */
-    line-height: 1.5;
-    margin-bottom: 20px;
-    text-shadow: 1px 1px 2px rgba(0,0,0,0.3); /* leve sombra */
-}
+  .toys-page svg,
+  .toy-modal svg {
+    width: 20px;
+    height: 20px;
+    display: block;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
 
-#mensagem-categoria.success {
-    text-align: center;
-    color: #0f5132;
-}
-
-#mensagem-categoria.error {
-    text-align: center;
-    color: #842029;
-}
-
-
-#modal-categoria.modal-bg {
-    display: none;
-    opacity: 0;
-    transition: 0.25s ease;
-}
-
-#modal-categoria.show {
+  .toys-hero {
+    position: relative;
+    min-height: 168px;
+    padding: clamp(22px, 4vw, 34px);
     display: flex;
-    opacity: 1;
-}
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 24px;
+    overflow: hidden;
+    border: 1px solid rgba(96, 165, 250, .18);
+    border-radius: 24px;
+    background:
+      radial-gradient(circle at 84% 10%, rgba(59, 130, 246, .28), transparent 16rem),
+      linear-gradient(135deg, #17243a, #101a2d 58%, #111f37);
+    box-shadow: 0 22px 50px rgba(0, 0, 0, .18);
+  }
 
+  .toys-hero::after {
+    content: "";
+    position: absolute;
+    right: -40px;
+    bottom: -92px;
+    width: 260px;
+    height: 260px;
+    border: 42px solid rgba(96, 165, 250, .055);
+    border-radius: 50%;
+  }
 
-    .dual-select {
+  .toys-hero-copy,
+  .toys-primary-button {
+    position: relative;
+    z-index: 1;
+  }
+
+  .toys-eyebrow {
+    margin: 0 0 9px;
     display: flex;
     align-items: center;
-    gap: 15px;
-    margin-bottom: 10px;
-}
-
-.dual-box {
-    display: flex;
-    flex-direction: column;
-}
-
-.dual-box select {
-    width: 180px;
-    height: 140px;
-    padding: 5px;
-    font-size: 14px;
-    border: 1px solid #bbb;
-    border-radius: 6px;
-}
-
-.dual-controls {
-    display: flex;
-    flex-direction: column;
     gap: 8px;
-}
-
-.dual-controls button {
-    padding: 6px 12px;
-    font-size: 16px;
-    cursor: pointer;
-    border-radius: 6px;
-    border: none;
-    background: #3498db;
-    color: #fff;
-    transition: 0.2s;
-}
-
-.dual-controls button:hover {
-    background: #1d6fa5;
-}
-
-.btn-add-categoria {
-    background: #2ecc71 !important;
-    display: flex;               /* CENTRALIZA */
-    align-items: center;         /* VERTICAL */
-    justify-content: center;
-    cursor: pointer;
-    transition: 0.2s ease;
-}
-
-.btn-add-categoria:hover {
-    background: #25a85b !important;
-
-}
-
-
-    #select-categorias {
-    height: 120px;
-    padding: 6px;
-    font-size: 15px;
-    color: #222;
-    background: #ffffff;
-    border: 1px solid #bbb;
-    border-radius: 8px;
-    outline: none;
-    text-align: center;
-}
-
-#select-categorias option {
-    padding: 6px;
-    margin-bottom: 3px;
-    border-radius: 6px;
-    background: #f0f4ff;
-    color: #0d3b80;
-    font-weight: 600;
-    cursor: pointer;
-}
-
-#select-categorias option:hover {
-    background: #d9e6ff;
-}
-
-    /* ===== TÍTULOS ===== */
-    .titulo-pagina {
-        text-align: center;
-        font-size: 32px;
-        margin-bottom: 5px;
-        font-weight: 800;
-        color: #0d6efd;
-        text-shadow: 0 2px 6px rgba(13,110,253,0.2);
-    }
-
-    .subtitulo-pagina {
-        text-align: center;
-        font-size: 17px;
-        color: #555;
-        margin-bottom: 25px;
-    }
-
-
-    /* --- TOP BAR --- */
-    .top-bar {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 25px;
-        flex-wrap: wrap;
-        gap: 10px; /* espaço entre filtros e botão */
-    }
-
-    /* FILTROS */
-    .filtros {
-        display: flex;
-        gap: 10px;
-        flex-wrap: wrap;
-    }
-
-    .filtro-btn {
-        padding: 8px 14px;
-        background: #e9f1ff;
-        color: #0d6efd;
-        border-radius: 20px;
-        font-weight: 600;
-        text-decoration: none;
-        transition: 0.25s;
-        border: 2px solid transparent;
-    }
-
-    .filtro-btn:hover {
-        background: #d6e8ff;
-    }
-
-    .filtro-btn.ativo {
-        background: #0d6efd;
-        color: #fff;
-        border-color: #0b5ed7;
-        box-shadow: 0 3px 10px rgba(13,110,253,0.35);
-    }
-
-    /* BOTÃO ADICIONAR */
-   /* Faz o botão “Adicionar” sempre ficar à direita */
-.btn-add {
-    margin-left: auto; /* força alinhamento à direita */
-    background: #198754;
-    color: white;
-    padding: 10px 18px;
-    border-radius: 10px;
-    font-weight: 700;
-    box-shadow: 0 3px 10px rgba(25,135,84,0.35);
-    transition: 0.25s;
-    white-space: nowrap;
-}
-
-    .btn-add:hover {
-        background: #157347;
-        transform: translateY(-2px);
-    }
-
-
-    /* ===== TABELA ===== */
-    table.brinquedos-table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-top: 20px;
-        background: #ffffff;
-        border-radius: 12px;
-        overflow: hidden;
-        box-shadow: 0 6px 18px rgba(0,0,0,0.1);
-    }
-
-    table.brinquedos-table th {
-        background: linear-gradient(90deg, #0a58ca, #0d6efd);
-        color: white;
-        padding: 14px;
-        text-align: center;
-        font-size: 15px;
-        letter-spacing: 0.5px;
-    }
-
-    table.brinquedos-table td {
-        padding: 14px;
-        border-bottom: 1px solid #e7e7e7;
-        text-align: center;
-    }
-
-    table.brinquedos-table tr:hover {
-        background: rgba(13, 110, 253, 0.08);
-        transition: 0.25s;
-    }
-
-    /* ===== BOTÃO AÇÕES ===== */
-    .btn-acoes {
-        background: #0d6efd;
-        color: #fff;
-        padding: 7px 14px;
-        border-radius: 8px;
-        cursor: pointer;
-        border: none;
-        font-weight: 600;
-        box-shadow: 0 3px 10px rgba(13,110,253,0.35);
-        transition: 0.2s;
-    }
-
-    .btn-acoes:hover {
-        background: #0b5ed7;
-        transform: translateY(-2px);
-    }
-
-
-    /* ===== MODAL ===== */
-    .modal-bg {
-        position: fixed;
-        inset: 0;
-        background: rgba(0,0,0,0.55);
-        display: none;
-        justify-content: center;
-        align-items: center;
-        backdrop-filter: blur(3px);
-        animation: fadeIn 0.3s ease;
-    }
-
-    @keyframes fadeIn {
-        from { opacity: 0; }
-        to { opacity: 1; }
-    }
-
-    .modal-box {
-        background: #ffffff;
-        padding: 28px;
-        width: 450px;
-        border-radius: 16px;
-        box-shadow: 0 14px 40px rgba(0,0,0,0.25);
-        animation: popUp 0.33s ease;
-        text-align: center;
-    }
-
-    @keyframes popUp {
-        from { transform: scale(0.85); opacity: 0; }
-        to { transform: scale(1); opacity: 1; }
-    }
-
-    .modal-close {
-        float: right;
-        font-size: 26px;
-        cursor: pointer;
-        color: #dc3545;
-        font-weight: bold;
-    }
-
-    .modal-box h2 {
-        font-size: 25px;
-        font-weight: 700;
-        color: #0d6efd;
-        margin-bottom: 8px;
-    }
-
-    .modal-box p {
-        color: #444;
-        margin-bottom: 12px;
-    }
-
-    .modal-box h4 {
-        font-size: 20px;
-        font-weight: 600;
-        margin-bottom: 15px;
-        color: #0b5ed7;
-    }
-
-    .modal-botoes a {
-        display: block;
-        margin-top: 12px;
-        padding: 12px;
-        border-radius: 10px;
-        font-weight: 600;
-        text-align: center;
-        text-decoration: none;
-        transition: 0.2s;
-    }
-
-    /* Botões do modal */
-    .btn-editar {
-        background: #ffc107;
-        color: #3d3d00;
-    }
-    .btn-editar:hover {
-        background: #e0ac06;
-    }
-
-    .btn-ver {
-        background: #0d6efd;
-        color: white;
-    }
-    .btn-ver:hover {
-        background: #0b5ed7;
-    }
-
-    .btn-excluir {
-        background: #dc3545;
-        color: white;
-    }
-    .btn-excluir:hover {
-        background: #b02a37;
-    }
-
-    /* PAGINAÇÃO */
-    .paginacao {
-        margin: 30px auto 10px auto;
-        text-align: center;
-    }
-
-    .paginacao a, .paginacao span {
-        display: inline-block;
-        margin: 0 4px;
-        padding: 8px 14px;
-        border-radius: 8px;
-        text-decoration: none;
-        font-weight: 600;
-        color: #0d6efd;
-        background: #eef4ff;
-        transition: 0.25s;
-    }
-
-    .paginacao a:hover {
-        background: #dce9ff;
-    }
-
-    .paginacao .ativo {
-        background: #0d6efd;
-        color: #fff;
-        box-shadow: 0 3px 10px rgba(13,110,253,0.4);
-    }
-
- /* ===========================================
-   🔵 ESTILO MODERNO DOS INPUTS
-   =========================================== */
-.input-modal, textarea.input-modal, select.input-modal {
-    width: 100%;
-    padding: 12px 14px;
-    border-radius: 14px;
-    border: 2px solid #d6e8ff;
-    background: #ffffff;
-    font-size: 15px;
-    outline: none;
-    transition: 0.25s;
-    box-shadow: 0 1px 6px rgba(13,110,253,0.08);
-}
-
-.input-modal:hover {
-    border-color: #0d6efd;
-}
-
-.input-modal:focus {
-    border-color: #0d6efd;
-    box-shadow: 0 0 12px rgba(13,110,253,0.35);
-    background: #f8fbff;
-}
-
-
-/* ===========================================
-   🟢 BOTÃO ADICIONAR (NOVO ESTILO)
-   =========================================== */
-.btn-add {
-    background: linear-gradient(135deg, #20c997, #0aa26b);
-    color: white !important;
-    padding: 12px 22px;
-    border-radius: 14px;
-    font-size: 16px;
-    font-weight: 700;
-    box-shadow: 0 6px 14px rgba(32,201,151,0.35);
-    border: none;
-    cursor: pointer;
-    transition: all 0.25s ease;
-}
-
-.btn-add:hover {
-    transform: translateY(-3px) scale(1.03);
-    box-shadow: 0 8px 20px rgba(32,201,151,0.45);
-}
-
-/* ===========================
-   🔵 MODAL NOVO BRINQUEDO
-   =========================== */
-.modal-novo-box {
-    width: 900px !important;          /* 🔥 AUMENTA HORIZONTAL */
-    max-height: 85vh;                 /* 🔥 CONTROLA ALTURA */
-    overflow-y: auto;                 /* 🔥 SCROLL INTERNO */
-
-    background: linear-gradient(180deg, #ffffff, #f4f8ff);
-    padding: 35px;
-    border-radius: 22px;
-    border: none;
-    box-shadow: 0 15px 45px rgba(0, 0, 0, 0.20);
-    position: relative;
-}
-
-/* Título moderno */
-.modal-titulo {
-    font-size: 28px;
-    text-align: center;
+    color: #93c5fd;
+    font-size: .7rem;
     font-weight: 800;
-    background: linear-gradient(90deg, #0a58ca, #0d6efd);
-    -webkit-background-clip: text;
-    color: transparent;
-    margin-bottom: 5px;
-}
+    letter-spacing: .14em;
+    text-transform: uppercase;
+  }
 
+  .toys-hero h2 {
+    margin: 0;
+    color: #fff;
+    font-size: clamp(1.5rem, 3vw, 2.15rem);
+    line-height: 1.12;
+  }
 
-/* Scroll suave */
-.modal-novo-box::-webkit-scrollbar {
-    width: 10px;
-}
+  .toys-hero-description {
+    max-width: 680px;
+    margin: 10px 0 0;
+    color: #aebdd0;
+    font-size: .9rem;
+    line-height: 1.6;
+  }
 
-.modal-novo-box::-webkit-scrollbar-track {
-    background: #e9e9e9;
-    border-radius: 10px;
-}
+  .toys-primary-button,
+  .toy-save-button,
+  .toy-secondary-button,
+  .toy-danger-button {
+    min-height: 44px;
+    padding: 0 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border-radius: 12px;
+    font-size: .76rem;
+    font-weight: 800;
+    cursor: pointer;
+  }
 
-.modal-novo-box::-webkit-scrollbar-thumb {
-    background: #0d6efd;
-    border-radius: 10px;
-}
+  .toys-primary-button,
+  .toy-save-button {
+    border: 1px solid rgba(147, 197, 253, .22);
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    color: #fff;
+    box-shadow: 0 12px 28px rgba(37, 99, 235, .3);
+  }
 
-/* Para modais muito largos em telas pequenas */
-@media (max-width: 950px) {
-    .modal-novo-box {
-        width: 96% !important;
-    }
-}
+  .toys-primary-button {
+    min-height: 48px;
+  }
 
+  .toys-primary-button:hover,
+  .toy-save-button:hover {
+    transform: translateY(-1px);
+  }
 
-/* Subtítulo suave */
-.modal-subtitulo {
-    text-align: center;
-    color: #6b6b6b;
-    font-size: 15px;
-    margin-bottom: 22px;
-}
+  .toy-secondary-button {
+    border: 1px solid rgba(148, 163, 184, .15);
+    background: #1e2d46;
+    color: #b8c4d6;
+  }
 
-/* ===========================
-   🔵 GRID dos campos
-   =========================== */
-.grid-dupla {
+  .toy-danger-button {
+    border: 1px solid rgba(248, 113, 113, .22);
+    background: #dc2626;
+    color: #fff;
+  }
+
+  .toy-danger-button:disabled {
+    border-color: rgba(148, 163, 184, .1);
+    background: #334155;
+    color: #718096;
+    cursor: not-allowed;
+    opacity: .72;
+  }
+
+  .toys-kpis {
+    margin: 20px 0;
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 18px;
-    margin-bottom: 18px;
-}
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+  }
 
-/* RESPONSIVO */
-@media (max-width: 750px) {
-    .grid-dupla {
-        grid-template-columns: 1fr;
-    }
-}
+  .toys-kpi {
+    min-height: 108px;
+    padding: 18px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    border: 1px solid var(--adm-border, rgba(148, 163, 184, .14));
+    border-radius: 17px;
+    background: linear-gradient(145deg, rgba(23, 36, 58, .96), rgba(17, 27, 46, .96));
+    box-shadow: 0 12px 28px rgba(0, 0, 0, .12);
+  }
 
-/* Labels mais bonitas */
-.modal-box label {
-    font-weight: 600;
-    font-size: 14px;
-    color: #0d47a1;
-    margin-bottom: 5px;
+  .toys-kpi-icon {
+    width: 44px;
+    height: 44px;
+    flex: 0 0 44px;
+    display: grid;
+    place-items: center;
+    border-radius: 13px;
+  }
+
+  .toys-kpi:nth-child(1) .toys-kpi-icon { color: #93c5fd; background: rgba(59, 130, 246, .12); }
+  .toys-kpi:nth-child(2) .toys-kpi-icon { color: #6ee7b7; background: rgba(16, 185, 129, .12); }
+  .toys-kpi:nth-child(3) .toys-kpi-icon { color: #c4b5fd; background: rgba(139, 92, 246, .12); }
+  .toys-kpi:nth-child(4) .toys-kpi-icon { color: #fcd34d; background: rgba(245, 158, 11, .12); }
+
+  .toys-kpi-value {
     display: block;
-}
+    color: #f8fafc;
+    font-size: 1.65rem;
+    font-weight: 800;
+    line-height: 1;
+  }
 
-/* Botão salvar moderno */
-.btn-salvar {
-    background: linear-gradient(135deg, #0d6efd, #0b5ed7);
-    border: none;
-    padding: 13px;
-    color: white;
-    border-radius: 14px;
-    font-size: 17px;
-    font-weight: 700;
+  .toys-kpi-label {
+    display: block;
+    margin-top: 6px;
+    color: #94a3b8;
+    font-size: .76rem;
+    font-weight: 650;
+  }
+
+  .toys-panel {
+    overflow: hidden;
+    border: 1px solid var(--adm-border, rgba(148, 163, 184, .14));
+    border-radius: 20px;
+    background: rgba(17, 27, 46, .92);
+    box-shadow: 0 18px 38px rgba(0, 0, 0, .14);
+  }
+
+  .toys-toolbar {
+    padding: 17px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    border-bottom: 1px solid var(--adm-border, rgba(148, 163, 184, .14));
+  }
+
+  .toys-filter-form {
+    width: 100%;
+    display: grid;
+    grid-template-columns: minmax(240px, 1fr) minmax(180px, 260px) auto;
+    gap: 10px;
+  }
+
+  .toys-search {
+    position: relative;
+  }
+
+  .toys-search svg {
+    position: absolute;
+    top: 50%;
+    left: 14px;
+    width: 17px;
+    height: 17px;
+    color: #64748b;
+    transform: translateY(-50%);
+    pointer-events: none;
+  }
+
+  .toys-search input,
+  .toys-filter-form select {
+    width: 100%;
+    height: 44px;
+    border: 1px solid rgba(148, 163, 184, .16);
+    border-radius: 12px;
+    outline: 0;
+    background: #0f192a;
+    color: #e5edf8;
+    font-size: .78rem;
+  }
+
+  .toys-search input {
+    padding: 0 14px 0 42px;
+  }
+
+  .toys-filter-form select {
+    padding: 0 12px;
+  }
+
+  .toys-search input:focus,
+  .toys-filter-form select:focus {
+    border-color: rgba(96, 165, 250, .58);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, .11);
+  }
+
+  .toys-filter-submit {
+    min-height: 44px;
+    padding: 0 18px;
+    border: 1px solid rgba(96, 165, 250, .24);
+    border-radius: 12px;
+    background: rgba(37, 99, 235, .18);
+    color: #bfdbfe;
+    font-size: .75rem;
+    font-weight: 800;
     cursor: pointer;
-    margin-top: 15px;
-    box-shadow: 0 6px 16px rgba(13,110,253,0.35);
-    transition: 0.25s;
-}
+  }
 
-.btn-salvar:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 8px 22px rgba(13,110,253,0.45);
-}
+  .toys-results-line {
+    padding: 12px 18px;
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    border-bottom: 1px solid rgba(148, 163, 184, .09);
+    color: #718096;
+    font-size: .74rem;
+  }
 
-/* Botão fechar */
-.btn-fechar {
-    background: #ff4d67;
-    border: none;
-    padding: 12px;
-    color: white;
-    border-radius: 14px;
-    font-size: 16px;
-    font-weight: 700;
-    cursor: pointer;
-    margin-top: 10px;
-    transition: 0.25s;
-    box-shadow: 0 6px 16px rgba(255,77,103,0.35);
-}
+  .toys-results-line strong {
+    color: #b8c4d6;
+  }
 
-.btn-fechar:hover {
-    background: #d93a53;
-    transform: translateY(-3px);
-}
+  .toys-table-wrap {
+    overflow-x: auto;
+  }
 
+  .toys-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
 
-/* ===========================================
-   🔘 Melhor efeito no fundo modal
-   =========================================== */
-.modal-bg {
-    backdrop-filter: blur(6px);
-    background: rgba(0,0,0,0.45) !important;
-}
+  .toys-table th {
+    padding: 13px 16px;
+    color: #718096;
+    background: rgba(11, 18, 32, .46);
+    font-size: .67rem;
+    font-weight: 800;
+    letter-spacing: .09em;
+    text-align: left;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
 
-    .modal-bg {
-    position: fixed;
-    top: 0;
-    left: 0;
+  .toys-table td {
+    padding: 15px 16px;
+    border-top: 1px solid rgba(148, 163, 184, .085);
+    color: #cbd5e1;
+    font-size: .8rem;
+    vertical-align: middle;
+  }
+
+  .toys-table tbody tr:hover {
+    background: rgba(59, 130, 246, .035);
+  }
+
+  .toy-identity {
+    min-width: 260px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .toy-image {
+    width: 58px;
+    height: 48px;
+    flex: 0 0 58px;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    border: 1px solid rgba(148, 163, 184, .14);
+    border-radius: 11px;
+    background: #f8fafc;
+    color: #64748b;
+  }
+
+  .toy-image img {
     width: 100%;
     height: 100%;
-    background: rgba(0,0,0,0.55);
-    display: none;
-    justify-content: center;
+    object-fit: cover;
+  }
+
+  .toy-name {
+    display: block;
+    max-width: 280px;
+    overflow: hidden;
+    color: #edf4fc;
+    font-size: .85rem;
+    font-weight: 750;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .toy-id {
+    display: block;
+    margin-top: 4px;
+    color: #64748b;
+    font-size: .68rem;
+  }
+
+  .toy-price {
+    min-width: 120px;
+    color: #93c5fd;
+    font-weight: 800;
+    white-space: nowrap;
+  }
+
+  .toy-categories {
+    min-width: 180px;
+    max-width: 300px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+
+  .toy-chip,
+  .toy-status {
+    min-height: 24px;
+    padding: 0 8px;
+    display: inline-flex;
     align-items: center;
-    z-index: 2000;
-}
+    gap: 5px;
+    border-radius: 999px;
+    font-size: .64rem;
+    font-weight: 750;
+    white-space: nowrap;
+  }
 
-.modal-box {
-    background: #fff;
-    padding: 25px;
-    border-radius: 12px;
-    width: 450px;
-    box-shadow: 0 5px 25px rgba(0,0,0,0.25);
-    position: relative;
-}
+  .toy-chip {
+    color: #a5b4fc;
+    background: rgba(99, 102, 241, .11);
+  }
 
-.modal-close-btn {
-    display:block;
-    width:100%;
-    padding:10px;
-    margin-bottom:15px;
-    background:#dc3545;
-    color:white;
-    border:none;
-    border-radius:8px;
-    font-size:16px;
-    cursor:pointer;
-}
+  .toy-status.is-store { color: #6ee7b7; background: rgba(16, 185, 129, .12); }
+  .toy-status.is-catalog { color: #94a3b8; background: rgba(148, 163, 184, .09); }
 
-/* ===========================
-   ❌ ÍCONE X FECHAR
-   =========================== */
-.modal-x {
-    position: absolute;
-    top: 15px;
-    right: 18px;
-    font-size: 30px;
-    font-weight: bold;
-    color: #444;
+  .toy-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 6px;
+  }
+
+  .toy-action {
+    width: 36px;
+    height: 36px;
+    display: inline-grid;
+    place-items: center;
+    border: 1px solid rgba(148, 163, 184, .14);
+    border-radius: 10px;
+    background: rgba(30, 45, 70, .62);
+    color: #9eacc0;
     cursor: pointer;
-    transition: .2s;
-    z-index: 9999;
-}
+  }
 
-.modal-x:hover {
-    color: #000;
-    transform: scale(1.15);
-}
+  .toy-action:hover {
+    color: #fff;
+    border-color: rgba(96, 165, 250, .28);
+    background: rgba(59, 130, 246, .14);
+  }
 
-/* ===========================
-   🟦 DUAL SELECT (Categorias e Tags)
-   =========================== */
-.dual-select {
+  .toy-action.is-danger:hover {
+    color: #fecaca;
+    border-color: rgba(239, 68, 68, .3);
+    background: rgba(239, 68, 68, .12);
+  }
+
+  .toy-action svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .toys-empty {
+    padding: 58px 24px;
+    display: grid;
+    justify-items: center;
+    color: #718096;
+    text-align: center;
+  }
+
+  .toys-empty-icon {
+    width: 58px;
+    height: 58px;
+    margin-bottom: 14px;
+    display: grid;
+    place-items: center;
+    border-radius: 18px;
+    background: rgba(59, 130, 246, .1);
+    color: #60a5fa;
+  }
+
+  .toys-empty h3 {
+    margin: 0;
+    color: #cbd5e1;
+    font-size: 1rem;
+  }
+
+  .toys-empty p {
+    max-width: 420px;
+    margin: 7px 0 0;
+    font-size: .8rem;
+    line-height: 1.55;
+  }
+
+  .toys-pagination {
+    padding: 16px;
     display: flex;
     align-items: center;
-    gap: 20px;
-    margin-bottom: 18px;
-    width: 100%;
-}
+    justify-content: center;
+    gap: 6px;
+    border-top: 1px solid rgba(148, 163, 184, .09);
+  }
 
-.dual-select .dual-box {
-    flex: 1;
-}
+  .toys-pagination a,
+  .toys-pagination span {
+    min-width: 36px;
+    height: 36px;
+    padding: 0 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(148, 163, 184, .13);
+    border-radius: 9px;
+    color: #94a3b8;
+    font-size: .72rem;
+    font-weight: 750;
+    text-decoration: none;
+  }
 
-.dual-select select {
-    width: 100%;
-    height: 180px;
-    padding: 8px;
-    font-size: 14px;
-    border: 2px solid #d6e8ff;
-    border-radius: 10px;
-    background: #fff;
-    box-shadow: 0 1px 6px rgba(0,0,0,0.05);
-}
+  .toys-pagination span {
+    border-color: rgba(96, 165, 250, .32);
+    background: rgba(37, 99, 235, .18);
+    color: #bfdbfe;
+  }
 
-.dual-select select option {
-    background: #eef4ff;
-    margin: 4px 0;
-    padding: 6px;
-    border-radius: 6px;
-    color: #0a58ca;
-    font-weight: 600;
-    cursor: pointer;
-}
+  .toy-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 3300;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(2, 6, 23, .8);
+    backdrop-filter: blur(6px);
+  }
 
-.dual-select select option:hover {
-    background: #d7e6ff;
-}
+  .toy-modal.is-open {
+    display: flex;
+  }
 
-/* Controles (setas e +) */
-.dual-controls {
+  .toy-modal-card {
+    width: min(100%, 880px);
+    height: min(92dvh, 860px);
     display: flex;
     flex-direction: column;
-    gap: 10px;
-}
+    overflow: hidden;
+    border: 1px solid rgba(148, 163, 184, .17);
+    border-radius: 22px;
+    background: #111b2e;
+    box-shadow: 0 30px 80px rgba(0, 0, 0, .46);
+  }
 
-.dual-controls button {
-    padding: 10px 15px;
-    border-radius: 8px;
-    font-size: 18px;
-    border: none;
-    cursor: pointer;
-    background: #0d6efd;
-    color: white;
-    transition: 0.2s;
-}
+  .toy-modal-card.is-small {
+    width: min(100%, 460px);
+    height: auto;
+    max-height: 92dvh;
+  }
 
-.dual-controls button:hover {
-    background: #0b5ed7;
-}
-
-.btn-add-categoria {
-    background: #10c26f !important;
-}
-.btn-add-categoria:hover {
-    background: #0e9b59 !important;
-}
-
-/* ===========================
-   🔵 INPUTS
-   =========================== */
-.input-modal, textarea.input-modal, select.input-modal {
+  .toy-modal-card > form {
     width: 100%;
-    padding: 12px 14px;
-    border-radius: 14px;
-    border: 2px solid #d6e8ff;
-    background: #ffffff;
-    font-size: 15px;
-    outline: none;
-    transition: 0.25s;
-    box-shadow: 0 1px 6px rgba(13,110,253,0.08);
-}
+    height: 100%;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
 
-.input-modal:focus {
-    border-color: #0d6efd;
-    box-shadow: 0 0 12px rgba(13,110,253,0.35);
-    background: #f8fbff;
-}
-#modal-mensagem {
-    margin-bottom: 12px;
-}
+  .toy-modal-header {
+    position: relative;
+    z-index: 3;
+    flex: 0 0 auto;
+    padding: 18px 22px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    border-bottom: 1px solid rgba(148, 163, 184, .12);
+    background: #0f192a;
+  }
 
-.alerta-modal {
-    padding: 10px 16px;
-    border-radius: 8px;
+  .toy-modal-heading {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .toy-modal-heading h2 {
+    margin: 0;
+    color: #f1f5f9;
+    font-size: 1.1rem;
+  }
+
+  .toy-modal-heading p {
+    margin: 4px 0 0;
+    color: #718096;
+    font-size: .72rem;
+  }
+
+  .toy-modal-close {
+    min-width: 88px;
+    height: 38px;
+    padding: 0 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    border: 1px solid rgba(148, 163, 184, .14);
+    border-radius: 11px;
+    background: #1e2d46;
+    color: #94a3b8;
+    font-size: .7rem;
+    font-weight: 750;
+    cursor: pointer;
+  }
+
+  .toy-modal-close:hover {
+    color: #fff;
+    border-color: rgba(248, 113, 113, .24);
+    background: rgba(239, 68, 68, .1);
+  }
+
+  .toy-modal-close svg {
+    width: 17px;
+    height: 17px;
+  }
+
+  .toy-modal-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    padding: 22px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+    scrollbar-width: thin;
+    scrollbar-color: #3b4b64 #0d1727;
+  }
+
+  .toy-modal-body::-webkit-scrollbar { width: 9px; }
+  .toy-modal-body::-webkit-scrollbar-track { background: #0d1727; }
+  .toy-modal-body::-webkit-scrollbar-thumb {
+    border: 2px solid #0d1727;
+    border-radius: 999px;
+    background: #3b4b64;
+  }
+
+  .toy-form-section + .toy-form-section {
+    margin-top: 24px;
+    padding-top: 22px;
+    border-top: 1px solid rgba(148, 163, 184, .1);
+  }
+
+  .toy-form-title {
+    margin-bottom: 14px;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .toy-form-title svg {
+    width: 18px;
+    height: 18px;
+    margin-top: 1px;
+    color: #60a5fa;
+  }
+
+  .toy-form-title strong,
+  .toy-form-title span {
+    display: block;
+  }
+
+  .toy-form-title strong {
+    color: #dbe5f3;
+    font-size: .85rem;
+  }
+
+  .toy-form-title span {
+    margin-top: 3px;
+    color: #718096;
+    font-size: .69rem;
+  }
+
+  .toy-form-grid {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: 14px;
+  }
+
+  .toy-field { grid-column: span 6; }
+  .toy-field.is-full { grid-column: 1 / -1; }
+  .toy-field.is-third { grid-column: span 4; }
+
+  .toy-field label,
+  .toy-group-label {
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    color: #aebdd0;
+    font-size: .72rem;
+    font-weight: 750;
+  }
+
+  .toy-field label small {
+    color: #5f6d82;
+    font-size: .63rem;
     font-weight: 600;
-    animation: fadeIn 0.3s ease;
-    text-align: left;
-}
+  }
 
-.alerta-modal.success {
-    background: #d1e7dd;
-    color: #0f5132;
-    border-left: 5px solid #0f5132;
-}
+  .toy-field input[type="text"],
+  .toy-field select,
+  .toy-field textarea,
+  .quick-create-form input[type="text"] {
+    width: 100%;
+    border: 1px solid rgba(148, 163, 184, .16);
+    border-radius: 11px;
+    outline: 0;
+    background: #0d1727;
+    color: #e5edf8;
+    font-size: .78rem;
+  }
 
-.alerta-modal.error {
-    background: #f8d7da;
-    color: #842029;
-    border-left: 5px solid #842029;
-}
+  .toy-field input[type="text"],
+  .toy-field select,
+  .quick-create-form input[type="text"] {
+    height: 43px;
+    padding: 0 12px;
+  }
 
-.categoria-box {
+  .toy-field textarea {
+    min-height: 100px;
+    padding: 11px 12px;
+    resize: vertical;
+  }
+
+  .toy-field input:focus,
+  .toy-field select:focus,
+  .toy-field textarea:focus,
+  .quick-create-form input:focus {
+    border-color: rgba(96, 165, 250, .58);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, .11);
+  }
+
+  .toy-upload {
+    min-height: 92px;
+    padding: 12px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    border: 1px dashed rgba(96, 165, 250, .3);
+    border-radius: 14px;
+    background: rgba(59, 130, 246, .045);
+  }
+
+  .toy-upload-preview {
+    width: 92px;
+    height: 68px;
+    flex: 0 0 92px;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    border-radius: 12px;
+    background: #f8fafc;
+    color: #64748b;
+  }
+
+  .toy-upload-preview img {
+    width: 100%;
+    height: 100%;
+    display: none;
+    object-fit: cover;
+  }
+
+  .toy-upload-preview.has-image img { display: block; }
+  .toy-upload-preview.has-image svg { display: none; }
+
+  .toy-upload-copy strong,
+  .toy-upload-copy span {
+    display: block;
+  }
+
+  .toy-upload-copy strong {
+    color: #cbd5e1;
+    font-size: .77rem;
+  }
+
+  .toy-upload-copy span {
+    margin-top: 4px;
+    color: #718096;
+    font-size: .67rem;
+  }
+
+  .toy-file-button {
+    position: relative;
+    margin-top: 8px;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    color: #93c5fd;
+    font-size: .69rem;
+    font-weight: 800;
+    cursor: pointer;
+  }
+
+  .toy-file-button input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+  }
+
+  .toy-options-header {
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .toy-options-header .toy-group-label {
+    margin: 0;
+  }
+
+  .toy-inline-add {
+    padding: 5px 9px;
+    border: 1px solid rgba(96, 165, 250, .2);
+    border-radius: 8px;
+    background: rgba(59, 130, 246, .09);
+    color: #93c5fd;
+    font-size: .64rem;
+    font-weight: 800;
+    cursor: pointer;
+  }
+
+  .toy-check-grid {
+    max-height: 174px;
+    padding: 8px;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 7px;
+    overflow-y: auto;
+    border: 1px solid rgba(148, 163, 184, .12);
+    border-radius: 12px;
+    background: #0d1727;
+  }
+
+  .toy-check {
+    min-height: 38px;
+    padding: 8px 9px;
     display: flex;
     align-items: center;
     gap: 8px;
-}
-
-.btn-add-categoria {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    background: #0d6efd;
-    color: white;
-    border: none;
-    font-size: 20px;
+    border: 1px solid rgba(148, 163, 184, .1);
+    border-radius: 9px;
+    background: rgba(30, 45, 70, .42);
+    color: #9eacc0;
+    font-size: .69rem;
     cursor: pointer;
-    transition: .2s;
-}
+  }
 
-.btn-add-categoria:hover {
-    background: #084298;
-    transform: scale(1.1);
-}
+  .toy-check:has(input:checked) {
+    border-color: rgba(96, 165, 250, .3);
+    background: rgba(37, 99, 235, .14);
+    color: #dbeafe;
+  }
 
+  .toy-check input {
+    accent-color: #3b82f6;
+  }
 
+  .toy-toggle {
+    min-height: 64px;
+    padding: 11px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border: 1px solid rgba(148, 163, 184, .13);
+    border-radius: 12px;
+    background: #0e1829;
+    cursor: pointer;
+  }
 
+  .toy-toggle input {
+    width: 17px;
+    height: 17px;
+    accent-color: #3b82f6;
+  }
+
+  .toy-toggle strong,
+  .toy-toggle span {
+    display: block;
+  }
+
+  .toy-toggle strong {
+    color: #cbd5e1;
+    font-size: .72rem;
+  }
+
+  .toy-toggle span {
+    margin-top: 3px;
+    color: #64748b;
+    font-size: .62rem;
+  }
+
+  .toy-modal-footer {
+    position: relative;
+    z-index: 3;
+    flex: 0 0 auto;
+    min-height: 72px;
+    padding: 14px 22px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 9px;
+    border-top: 1px solid rgba(148, 163, 184, .12);
+    background: #0f192a;
+    box-shadow: 0 -12px 30px rgba(2, 6, 23, .22);
+  }
+
+  .toy-scroll-note {
+    margin-right: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    color: #64748b;
+    font-size: .65rem;
+    font-weight: 650;
+  }
+
+  .toy-scroll-note svg {
+    width: 15px;
+    height: 15px;
+  }
+
+  .toy-confirm-content {
+    padding: 26px 24px 8px;
+    text-align: center;
+  }
+
+  .toy-confirm-icon {
+    width: 56px;
+    height: 56px;
+    margin: 0 auto 15px;
+    display: grid;
+    place-items: center;
+    border-radius: 17px;
+    background: rgba(239, 68, 68, .12);
+    color: #fca5a5;
+  }
+
+  .toy-confirm-content h2 {
+    margin: 0;
+    color: #f1f5f9;
+    font-size: 1.1rem;
+  }
+
+  .toy-confirm-content p {
+    margin: 8px 0 0;
+    color: #7f8da3;
+    font-size: .76rem;
+    line-height: 1.55;
+  }
+
+  .toy-confirm-content strong {
+    color: #cbd5e1;
+  }
+
+  .toy-confirm-box {
+    margin-top: 17px;
+    padding: 13px;
+    border: 1px solid rgba(248, 113, 113, .2);
+    border-radius: 12px;
+    background: rgba(239, 68, 68, .07);
+    text-align: left;
+  }
+
+  .toy-confirm-box label {
+    display: block;
+    margin-bottom: 7px;
+    color: #aebdd0;
+    font-size: .69rem;
+    font-weight: 750;
+  }
+
+  .toy-confirm-box code {
+    display: block;
+    margin-bottom: 10px;
+    padding: 9px 10px;
+    overflow-wrap: anywhere;
+    border-radius: 9px;
+    background: rgba(2, 6, 23, .38);
+    color: #fecaca;
+    font-size: .7rem;
+    line-height: 1.5;
+    user-select: all;
+  }
+
+  .toy-confirm-box input {
+    width: 100%;
+    height: 42px;
+    padding: 0 11px;
+    border: 1px solid rgba(148, 163, 184, .18);
+    border-radius: 10px;
+    outline: 0;
+    background: #0d1727;
+    color: #f1f5f9;
+  }
+
+  .quick-create-form {
+    padding: 22px;
+    display: grid;
+    gap: 13px;
+  }
+
+  .quick-create-form label {
+    color: #aebdd0;
+    font-size: .72rem;
+    font-weight: 750;
+  }
+
+  .quick-create-message {
+    min-height: 20px;
+    color: #fca5a5;
+    font-size: .7rem;
+  }
+
+  body.toy-modal-open {
+    overflow: hidden;
+  }
+
+  @media (max-width: 1050px) {
+    .toys-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+
+  @media (max-width: 760px) {
+    .toys-hero { align-items: stretch; flex-direction: column; }
+    .toys-primary-button { width: 100%; }
+    .toys-filter-form { grid-template-columns: 1fr; }
+    .toys-table thead { display: none; }
+    .toys-table, .toys-table tbody { display: block; }
+    .toys-table-wrap { padding: 10px; overflow: visible; }
+    .toys-table tbody { display: grid; gap: 10px; }
+    .toys-table tbody tr {
+      padding: 14px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      border: 1px solid rgba(148, 163, 184, .12);
+      border-radius: 15px;
+      background: #0f192a;
+    }
+    .toys-table td { padding: 0; display: block; border: 0; }
+    .toys-table td:nth-child(1) { grid-column: 1 / -1; }
+    .toys-table td:nth-child(4) { grid-column: 2; grid-row: 2 / span 3; align-self: center; }
+    .toy-actions { flex-direction: column; }
+  }
+
+  @media (max-width: 600px) {
+    .toys-kpis { grid-template-columns: 1fr 1fr; gap: 9px; }
+    .toys-kpi { min-height: 94px; padding: 12px; gap: 9px; }
+    .toys-kpi-icon { width: 36px; height: 36px; flex-basis: 36px; }
+    .toys-kpi-value { font-size: 1.3rem; }
+    .toy-modal { padding: 8px 0 0; align-items: flex-end; }
+    .toy-modal-card,
+    .toy-modal-card.is-small {
+      width: 100%;
+      height: calc(100dvh - 8px);
+      max-height: calc(100dvh - 8px);
+      border-radius: 22px 22px 0 0;
+    }
+    .toy-modal-card.is-small { height: auto; }
+    .toy-modal-header { padding: 15px; }
+    .toy-modal-close { min-width: 42px; width: 42px; padding: 0; }
+    .toy-modal-close span { display: none; }
+    .toy-modal-body { padding: 18px 15px; }
+    .toy-field, .toy-field.is-third { grid-column: 1 / -1; }
+    .toy-check-grid { grid-template-columns: 1fr 1fr; }
+    .toy-modal-footer { min-height: 68px; padding: 12px 15px; }
+    .toy-scroll-note { display: none; }
+    .toy-secondary-button, .toy-save-button { flex: 1; }
+  }
 </style>
 
-<table class="brinquedos-table">
-    <tr>
-        <th>ID</th>
-        <th>Imagem</th>
-        <th>Nome</th>
-        <th>Preço</th>
-        <th>Ações</th>
-    </tr>
+<div class="toys-page">
+  <svg width="0" height="0" aria-hidden="true" style="position:absolute">
+    <symbol id="toy-i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="toy-i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></symbol>
+    <symbol id="toy-i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
+    <symbol id="toy-i-edit" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4L16.5 3.5Z"/></symbol>
+    <symbol id="toy-i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14M10 11v6M14 11v6"/></symbol>
+    <symbol id="toy-i-upload" viewBox="0 0 24 24"><path d="M12 16V4M7 9l5-5 5 5M5 20h14"/></symbol>
+    <symbol id="toy-i-image" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 15-5-5L5 20"/></symbol>
+    <symbol id="toy-i-save" viewBox="0 0 24 24"><path d="M5 4h12l2 2v14H5V4Z"/><path d="M8 4v6h8V4M8 20v-6h8v6"/></symbol>
+    <symbol id="toy-i-scroll" viewBox="0 0 24 24"><path d="M12 3v17M6 14l6 6 6-6"/></symbol>
+    <symbol id="toy-i-game" viewBox="0 0 24 24"><path d="M8.5 8h7a5 5 0 0 1 4.7 6.7l-.8 2.2a2.4 2.4 0 0 1-4.1.7L14 16h-4l-1.3 1.6a2.4 2.4 0 0 1-4.1-.7l-.8-2.2A5 5 0 0 1 8.5 8Z"/><path d="M8 11v4M6 13h4M16.5 12.5h.01M18.5 14.5h.01"/></symbol>
+  </svg>
 
-    {% for b in brinquedos %}
-    <tr>
-        <td>#{{ b.id }}</td>
-
-        <td>
-            <img src="{{ b.imagem_brinquedo.url }}" width="60"
-                 style="border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.15);">
-        </td>
-
-        <td><strong>{{ b.nome_brinquedo }}</strong></td>
-
-        <td>
-            <span style="color:#0d6efd; font-weight:700;">
-                R$ {{ b.valor_brinquedo }}
-            </span>
-        </td>
-
-        <td>
-            <button class="btn-acoes" onclick="abrirModal({{ b.id }})">Gerenciar</button>
-        </td>
-    </tr>
-
-    <!-- MODAL DE GERENCIAR BRINQUEDO -->
-    <div class="modal-bg" id="modal-{{ b.id }}">
-        <div class="modal-box">
-
-            <!-- FECHAR -->
-            <span class="modal-x" onclick="fecharModal({{ b.id }})">&times;</span>
-
-
-            <h2>{{ b.nome_brinquedo }}</h2>
-            <p>{{ b.descricao }}</p>
-            <h4>Preço: R$ {{ b.valor_brinquedo }}</h4>
-
-            <hr style="margin: 15px 0;">
-
-            <div class="modal-botoes">
-                <a href="#" class="btn-editar">✏ Editar Brinquedo</a>
-                <a href="#" class="btn-ver">👁 Ver Detalhes</a>
-                <a href="#" class="btn-excluir">🗑 Excluir Brinquedo</a>
-            </div>
-
-        </div>
+  <section class="toys-hero">
+    <div class="toys-hero-copy">
+      <p class="toys-eyebrow"><svg><use href="#toy-i-game"/></svg>Catálogo de produtos</p>
+      <h2>Brinquedos</h2>
+      <p class="toys-hero-description">
+        Cadastre e organize os brinquedos da Lazer &amp; Sport, suas especificações, categorias, tags e disponibilidade na loja.
+      </p>
     </div>
-    {% endfor %}
-</table>
+    <button id="newToyButton" type="button" class="toys-primary-button">
+      <svg><use href="#toy-i-plus"/></svg>
+      Cadastrar brinquedo
+    </button>
+  </section>
 
-{% if page_obj.paginator.num_pages > 1 %}
-<div class="paginacao">
-    {% if page_obj.has_previous %}
-        <a href="?page={{ page_obj.previous_page_number }}&categoria={{ categoria_ativa }}">Anterior</a>
+  <section class="toys-kpis" aria-label="Resumo dos brinquedos">
+    <article class="toys-kpi">
+      <span class="toys-kpi-icon"><svg><use href="#toy-i-game"/></svg></span>
+      <span><strong class="toys-kpi-value">{{ total_brinquedos }}</strong><span class="toys-kpi-label">Brinquedos cadastrados</span></span>
+    </article>
+    <article class="toys-kpi">
+      <span class="toys-kpi-icon"><svg><use href="#i-globe"/></svg></span>
+      <span><strong class="toys-kpi-value">{{ total_loja }}</strong><span class="toys-kpi-label">Disponíveis na loja</span></span>
+    </article>
+    <article class="toys-kpi">
+      <span class="toys-kpi-icon"><svg><use href="#toy-i-image"/></svg></span>
+      <span><strong class="toys-kpi-value">{{ total_com_imagem }}</strong><span class="toys-kpi-label">Com imagem cadastrada</span></span>
+    </article>
+    <article class="toys-kpi">
+      <span class="toys-kpi-icon"><svg><use href="#i-tag"/></svg></span>
+      <span><strong class="toys-kpi-value">{{ total_categorias }}</strong><span class="toys-kpi-label">Categorias disponíveis</span></span>
+    </article>
+  </section>
+
+  <section class="toys-panel">
+    <div class="toys-toolbar">
+      <form method="get" class="toys-filter-form">
+        <label class="toys-search">
+          <svg><use href="#toy-i-search"/></svg>
+          <input name="q" type="search" value="{{ busca }}" placeholder="Buscar brinquedo pelo nome…">
+        </label>
+        <select name="categoria" aria-label="Filtrar por categoria">
+          <option value="todas">Todas as categorias</option>
+          {% for categoria in categorias %}
+            <option value="{{ categoria.id }}" {% if categoria_ativa == categoria.id|stringformat:"s" %}selected{% endif %}>
+              {{ categoria.nome_categoria }}
+            </option>
+          {% endfor %}
+        </select>
+        <button type="submit" class="toys-filter-submit">Aplicar filtros</button>
+      </form>
+    </div>
+
+    <div class="toys-results-line">
+      <span><strong>{{ page_obj.paginator.count }}</strong> resultado(s)</span>
+      <span>Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
+    </div>
+
+    {% if brinquedos %}
+      <div class="toys-table-wrap">
+        <table class="toys-table">
+          <thead>
+            <tr>
+              <th>Brinquedo</th>
+              <th>Preço</th>
+              <th>Categorias</th>
+              <th style="text-align:right">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for brinquedo in brinquedos %}
+              <tr>
+                <td>
+                  <div class="toy-identity">
+                    <span class="toy-image">
+                      {% if brinquedo.imagem_brinquedo %}
+                        <img src="{{ brinquedo.imagem_brinquedo.url }}" alt="{{ brinquedo.nome_brinquedo }}">
+                      {% else %}
+                        <svg><use href="#toy-i-image"/></svg>
+                      {% endif %}
+                    </span>
+                    <span>
+                      <strong class="toy-name">{{ brinquedo.nome_brinquedo }}</strong>
+                      <span class="toy-id">#{{ brinquedo.id }} · {{ brinquedo.voltz|default:"Sem voltagem" }}</span>
+                    </span>
+                  </div>
+                </td>
+                <td>
+                  <span class="toy-price">
+                    {% if brinquedo.valor_brinquedo != None %}
+                      R$ {{ brinquedo.valor_brinquedo }}
+                    {% else %}
+                      Sob consulta
+                    {% endif %}
+                  </span>
+                  <div style="margin-top:6px">
+                    {% if brinquedo.exibir_na_loja %}
+                      <span class="toy-status is-store">Na loja</span>
+                    {% else %}
+                      <span class="toy-status is-catalog">Somente catálogo</span>
+                    {% endif %}
+                  </div>
+                </td>
+                <td>
+                  <div class="toy-categories">
+                    {% for categoria in brinquedo.categorias_brinquedos.all %}
+                      <span class="toy-chip">{{ categoria.nome_categoria }}</span>
+                    {% empty %}
+                      <span class="toy-chip">Sem categoria</span>
+                    {% endfor %}
+                  </div>
+                </td>
+                <td>
+                  <div class="toy-actions">
+                    <button type="button" class="toy-action" data-edit-toy="{{ brinquedo.id }}" aria-label="Editar {{ brinquedo.nome_brinquedo }}" title="Editar brinquedo">
+                      <svg><use href="#toy-i-edit"/></svg>
+                    </button>
+                    <button type="button" class="toy-action is-danger" data-delete-toy="{{ brinquedo.id }}" data-delete-name="{{ brinquedo.nome_brinquedo }}" aria-label="Excluir {{ brinquedo.nome_brinquedo }}" title="Excluir brinquedo">
+                      <svg><use href="#toy-i-trash"/></svg>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="toys-empty">
+        <span class="toys-empty-icon"><svg><use href="#toy-i-search"/></svg></span>
+        <h3>Nenhum brinquedo encontrado</h3>
+        <p>Altere os filtros ou cadastre um novo brinquedo para começar.</p>
+      </div>
     {% endif %}
 
-    {% for num in page_obj.paginator.page_range %}
-        {% if num == page_obj.number %}
-            <span class="ativo">{{ num }}</span>
-        {% elif num > page_obj.number|add:-3 and num < page_obj.number|add:3 %}
-            <a href="?page={{ num }}&categoria={{ categoria_ativa }}">{{ num }}</a>
+    {% if page_obj.paginator.num_pages > 1 %}
+      <nav class="toys-pagination" aria-label="Paginação">
+        {% if page_obj.has_previous %}
+          <a href="?page={{ page_obj.previous_page_number }}&categoria={{ categoria_ativa }}&q={{ busca|urlencode }}">‹</a>
         {% endif %}
-    {% endfor %}
-
-    {% if page_obj.has_next %}
-        <a href="?page={{ page_obj.next_page_number }}&categoria={{ categoria_ativa }}">Próxima</a>
+        {% for num in page_obj.paginator.page_range %}
+          {% if num == page_obj.number %}
+            <span>{{ num }}</span>
+          {% elif num > page_obj.number|add:-3 and num < page_obj.number|add:3 %}
+            <a href="?page={{ num }}&categoria={{ categoria_ativa }}&q={{ busca|urlencode }}">{{ num }}</a>
+          {% endif %}
+        {% endfor %}
+        {% if page_obj.has_next %}
+          <a href="?page={{ page_obj.next_page_number }}&categoria={{ categoria_ativa }}&q={{ busca|urlencode }}">›</a>
+        {% endif %}
+      </nav>
     {% endif %}
-</div>
-{% endif %}
-
-
-<!-- MODAL NOVA CATEGORIA -->
-<div class="modal-bg" id="modal-categoria">
-    <div class="modal-box modal-novo-box">
-
-        <span class="modal-x" onclick="fecharModalCategoria()">&times;</span>
-
-        <h2 class="modal-titulo">Nova Categoria</h2>
-        <p class="modal-subtitulo">Preencha os dados da nova categoria</p>
-
-        <div id="mensagem-categoria"></div>
-
-        <form id="form-categoria" enctype="multipart/form-data">
-            {% csrf_token %}
-            <label>Imagem da Categoria:</label>
-            <input type="file" name="imagem_categoria" class="input-modal" required>
-
-            <label>Nome da Categoria:</label>
-            <input type="text" name="nome_categoria" class="input-modal" required>
-
-            <button type="submit" class="btn-ver btn-salvar">Salvar Categoria</button>
-            <button type="button" class="btn-excluir btn-fechar" onclick="fecharModalCategoria()">Fechar</button>
-        </form>
-
-
-    </div>
+  </section>
 </div>
 
+<div id="toyFormModal" class="toy-modal" role="dialog" aria-modal="true" aria-labelledby="toyModalTitle" aria-hidden="true">
+  <div class="toy-modal-card">
+    <form id="toyForm" method="post" enctype="multipart/form-data" action="{% url 'brinquedos_admin' %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="save">
+      <input id="toyId" type="hidden" name="id" value="">
 
-<!-- MODAL NOVA TAG -->
-<div class="modal-bg" id="modal-tag">
-    <div class="modal-box modal-novo-box">
+      <header class="toy-modal-header">
+        <div class="toy-modal-heading">
+          <h2 id="toyModalTitle">Cadastrar brinquedo</h2>
+          <p id="toyModalSubtitle">Adicione um produto ao catálogo Lazer &amp; Sport.</p>
+        </div>
+        <button id="closeToyModal" class="toy-modal-close" type="button">
+          <svg><use href="#toy-i-close"/></svg><span>Fechar</span>
+        </button>
+      </header>
 
-        <span class="modal-x" onclick="fecharModalTag()">&times;</span>
+      <div class="toy-modal-body">
+        <section class="toy-form-section">
+          <div class="toy-form-title">
+            <svg><use href="#toy-i-game"/></svg>
+            <span><strong>Identificação</strong><span>Nome, descrição e imagem principal do produto.</span></span>
+          </div>
+          <div class="toy-form-grid">
+            <div class="toy-field is-full">
+              <label for="toyName">Nome do brinquedo <small>Obrigatório</small></label>
+              <input id="toyName" type="text" name="nome_brinquedo" required maxlength="150">
+            </div>
+            <div class="toy-field is-full">
+              <label>Imagem principal <small id="toyImageRequirement">Obrigatória no cadastro</small></label>
+              <div class="toy-upload">
+                <span id="toyImagePreview" class="toy-upload-preview">
+                  <svg><use href="#toy-i-image"/></svg>
+                  <img id="toyImagePreviewImg" alt="Pré-visualização">
+                </span>
+                <span class="toy-upload-copy">
+                  <strong id="toyImageFileName">Escolha uma imagem</strong>
+                  <span>Use uma foto horizontal em PNG, JPG ou WEBP.</span>
+                  <label class="toy-file-button">
+                    <svg><use href="#toy-i-upload"/></svg>Selecionar arquivo
+                    <input id="toyImage" type="file" name="imagem_brinquedo" accept="image/png,image/jpeg,image/webp">
+                  </label>
+                </span>
+              </div>
+            </div>
+            <div class="toy-field is-full">
+              <label for="toyDescription">Descrição <small>Obrigatória</small></label>
+              <textarea id="toyDescription" name="descricao" required maxlength="999"></textarea>
+            </div>
+          </div>
+        </section>
 
-        <h2 class="modal-titulo">Nova Tag</h2>
-        <p class="modal-subtitulo">Adicionar uma nova tag</p>
+        <section class="toy-form-section">
+          <div class="toy-form-title">
+            <svg><use href="#i-tag"/></svg>
+            <span><strong>Organização</strong><span>Classifique o produto usando categorias e tags.</span></span>
+          </div>
+          <div class="toy-form-grid">
+            <div class="toy-field is-full">
+              <div class="toy-options-header">
+                <p class="toy-group-label">Categorias</p>
+                <button id="openCategoryModal" type="button" class="toy-inline-add">+ Nova categoria</button>
+              </div>
+              <div id="toyCategoryGrid" class="toy-check-grid">
+                {% for categoria in categorias %}
+                  <label class="toy-check">
+                    <input type="checkbox" name="categorias_brinquedos" value="{{ categoria.id }}">
+                    <span>{{ categoria.nome_categoria }}</span>
+                  </label>
+                {% endfor %}
+              </div>
+            </div>
+            <div class="toy-field is-full">
+              <div class="toy-options-header">
+                <p class="toy-group-label">Tags</p>
+                <button id="openTagModal" type="button" class="toy-inline-add">+ Nova tag</button>
+              </div>
+              <div id="toyTagGrid" class="toy-check-grid">
+                {% for tag in tags %}
+                  <label class="toy-check">
+                    <input type="checkbox" name="tags" value="{{ tag.id }}">
+                    <span>{{ tag.nome_tags }}</span>
+                  </label>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+        </section>
 
-        <div id="mensagem-tag"></div>
+        <section class="toy-form-section">
+          <div class="toy-form-title">
+            <svg><use href="#i-chart"/></svg>
+            <span><strong>Comercial e especificações</strong><span>Preço, avaliação, alimentação elétrica e dimensões.</span></span>
+          </div>
+          <div class="toy-form-grid">
+            <div class="toy-field is-third">
+              <label for="toyPrice">Valor</label>
+              <input id="toyPrice" type="text" name="valor_brinquedo" inputmode="decimal" placeholder="0,00">
+            </div>
+            <div class="toy-field is-third">
+              <label for="toyRating">Avaliação</label>
+              <input id="toyRating" type="text" name="avaliacao" inputmode="decimal" placeholder="0,00" required>
+            </div>
+            <div class="toy-field is-third">
+              <label for="toyVoltage">Voltagem</label>
+              <select id="toyVoltage" name="voltz" required>
+                <option value="">Selecione</option>
+                <option value="110V">110V</option>
+                <option value="220V">220V</option>
+                <option value="Bivolt">Bivolt</option>
+                <option value="Não se aplica">Não se aplica</option>
+              </select>
+            </div>
+            <div class="toy-field is-third">
+              <label for="toyHeight">Altura (m)</label>
+              <input id="toyHeight" type="text" name="altura_m" inputmode="decimal" placeholder="0,00">
+            </div>
+            <div class="toy-field is-third">
+              <label for="toyWidth">Largura (m)</label>
+              <input id="toyWidth" type="text" name="largura_m" inputmode="decimal" placeholder="0,00">
+            </div>
+            <div class="toy-field is-third">
+              <label for="toyDepth">Profundidade (m)</label>
+              <input id="toyDepth" type="text" name="profundidade_m" inputmode="decimal" placeholder="0,00">
+            </div>
+            <div class="toy-field is-full">
+              <label class="toy-toggle">
+                <input id="toyStore" type="checkbox" name="exibir_na_loja">
+                <span><strong>Disponível na loja</strong><span>Exibe este brinquedo também na área de compras do site.</span></span>
+              </label>
+            </div>
+          </div>
+        </section>
+      </div>
 
-        <form method="POST" action="{% url 'tag_new' %}">
-            {% csrf_token %}
-
-            <label>Nome da Tag:</label>
-            <input type="text" name="nome_tag" class="input-modal" required>
-
-            <button type="submit" class="btn-ver btn-salvar">Salvar Tag</button>
-
-            <button type="button" class="btn-excluir btn-fechar" onclick="fecharModalTag()">Fechar</button>
-        </form>
-
-    </div>
+      <footer class="toy-modal-footer">
+        <span class="toy-scroll-note"><svg><use href="#toy-i-scroll"/></svg>Role para revisar todos os campos</span>
+        <button id="cancelToyModal" type="button" class="toy-secondary-button">Cancelar</button>
+        <button type="submit" class="toy-save-button"><svg><use href="#toy-i-save"/></svg>Salvar brinquedo</button>
+      </footer>
+    </form>
+  </div>
 </div>
 
+<div id="deleteToyModal" class="toy-modal" role="dialog" aria-modal="true" aria-labelledby="deleteToyTitle" aria-hidden="true">
+  <div class="toy-modal-card is-small">
+    <form method="post" action="{% url 'brinquedos_admin' %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="delete">
+      <input id="deleteToyId" type="hidden" name="id">
+      <input id="deleteToyConfirmationHidden" type="hidden" name="confirmacao_exclusao">
+      <div class="toy-confirm-content">
+        <span class="toy-confirm-icon"><svg><use href="#toy-i-trash"/></svg></span>
+        <h2 id="deleteToyTitle">Excluir brinquedo?</h2>
+        <p>O produto <strong id="deleteToyName"></strong> será removido definitivamente.</p>
+        <div class="toy-confirm-box">
+          <label for="deleteToyConfirmation">Digite exatamente:</label>
+          <code id="deleteToyRequiredPhrase"></code>
+          <input id="deleteToyConfirmation" type="text" autocomplete="off" spellcheck="false">
+        </div>
+      </div>
+      <footer class="toy-modal-footer">
+        <button id="cancelDeleteToy" type="button" class="toy-secondary-button">Cancelar</button>
+        <button id="confirmDeleteToy" type="submit" class="toy-danger-button" disabled>Excluir definitivamente</button>
+      </footer>
+    </form>
+  </div>
+</div>
 
+<div id="categoryModal" class="toy-modal" role="dialog" aria-modal="true" aria-hidden="true">
+  <div class="toy-modal-card is-small">
+    <form id="categoryForm" class="quick-create-form" enctype="multipart/form-data">
+      {% csrf_token %}
+      <div class="toy-modal-heading"><h2>Nova categoria</h2><p>Crie uma opção sem sair do brinquedo.</p></div>
+      <label>Nome</label>
+      <input type="text" name="nome_categoria" required>
+      <label>Imagem da categoria</label>
+      <input type="file" name="imagem_categoria" accept="image/*" required>
+      <div id="categoryMessage" class="quick-create-message"></div>
+      <div style="display:flex;justify-content:flex-end;gap:8px">
+        <button id="cancelCategoryModal" type="button" class="toy-secondary-button">Cancelar</button>
+        <button type="submit" class="toy-save-button">Criar categoria</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div id="tagModal" class="toy-modal" role="dialog" aria-modal="true" aria-hidden="true">
+  <div class="toy-modal-card is-small">
+    <form id="tagForm" class="quick-create-form">
+      {% csrf_token %}
+      <div class="toy-modal-heading"><h2>Nova tag</h2><p>Crie uma identificação para os brinquedos.</p></div>
+      <label>Nome</label>
+      <input type="text" name="nome_tag" required>
+      <div id="tagMessage" class="quick-create-message"></div>
+      <div style="display:flex;justify-content:flex-end;gap:8px">
+        <button id="cancelTagModal" type="button" class="toy-secondary-button">Cancelar</button>
+        <button type="submit" class="toy-save-button">Criar tag</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{{ brinquedos_dados|json_script:"toysAdminData" }}
 
 <script>
+(function () {
+  const toysDataNode = document.getElementById('toysAdminData');
+  const toysData = toysDataNode ? JSON.parse(toysDataNode.textContent) : [];
+  const toyModal = document.getElementById('toyFormModal');
+  const toyForm = document.getElementById('toyForm');
+  const deleteModal = document.getElementById('deleteToyModal');
+  const categoryModal = document.getElementById('categoryModal');
+  const tagModal = document.getElementById('tagModal');
+  const toyImage = document.getElementById('toyImage');
+  const toyImagePreview = document.getElementById('toyImagePreview');
+  const toyImagePreviewImg = document.getElementById('toyImagePreviewImg');
+  const toyImageFileName = document.getElementById('toyImageFileName');
+  const deleteInput = document.getElementById('deleteToyConfirmation');
+  const deleteHidden = document.getElementById('deleteToyConfirmationHidden');
+  const deleteButton = document.getElementById('confirmDeleteToy');
+  let expectedDeletePhrase = '';
+  let lastTrigger = null;
 
-/* --------------------------------------------------
-   MODAL "NOVO BRINQUEDO"
--------------------------------------------------- */
-function abrirModalNovo() {
-    document.getElementById("modal-novo").style.display = "flex";
-}
-
-function fecharModalNovo() {
-    document.getElementById("modal-novo").style.display = "none";
-}
-
-/* Fechar ao clicar fora */
-document.addEventListener("click", function(e) {
-    const modalNovo = document.getElementById("modal-novo");
-    if (modalNovo && e.target === modalNovo) {
-        modalNovo.style.display = "none";
+  function setModal(modal, open, trigger) {
+    if (open) {
+      lastTrigger = trigger || document.activeElement;
+      modal.classList.add('is-open');
+      modal.setAttribute('aria-hidden', 'false');
+      document.body.classList.add('toy-modal-open');
+    } else {
+      modal.classList.remove('is-open');
+      modal.setAttribute('aria-hidden', 'true');
+      if (!document.querySelector('.toy-modal.is-open')) {
+        document.body.classList.remove('toy-modal-open');
+      }
+      if (lastTrigger && lastTrigger.focus) lastTrigger.focus();
     }
-});
+  }
 
+  function setValue(id, value) {
+    const field = document.getElementById(id);
+    if (field) field.value = value == null ? '' : value;
+  }
 
-/* --------------------------------------------------
-   MODAIS DE GERENCIAR (DINÂMICOS POR ID)
--------------------------------------------------- */
-function abrirModal(id) {
-    document.getElementById("modal-" + id).style.display = "flex";
-}
+  function resetImagePreview() {
+    toyImagePreview.classList.remove('has-image');
+    toyImagePreviewImg.removeAttribute('src');
+    toyImageFileName.textContent = 'Escolha uma imagem';
+  }
 
-function fecharModal(id) {
-    document.getElementById("modal-" + id).style.display = "none";
-}
-
-/* Fechar ao clicar fora para QUALQUER modal gerenciar */
-document.addEventListener("click", function(e) {
-
-    document.querySelectorAll(".modal-bg").forEach(modal => {
-        if (e.target === modal && modal.id !== "modal-novo") {
-            modal.style.display = "none";
-        }
+  function markChecks(name, ids) {
+    const selected = new Set((ids || []).map(Number));
+    document.querySelectorAll(`input[name="${name}"]`).forEach(input => {
+      input.checked = selected.has(Number(input.value));
     });
+  }
 
-});
+  function openToyForm(id, trigger) {
+    toyForm.reset();
+    resetImagePreview();
+    const numericId = id ? Number(id) : null;
+    const toy = numericId ? toysData.find(item => Number(item.id) === numericId) : null;
 
-/* Formatação dos campos decimais (0,00) */
-document.querySelectorAll(".decimal").forEach(input => {
-    input.addEventListener("input", function() {
+    setValue('toyId', toy ? toy.id : '');
+    document.getElementById('toyModalTitle').textContent = toy ? 'Editar brinquedo' : 'Cadastrar brinquedo';
+    document.getElementById('toyModalSubtitle').textContent = toy
+      ? 'Atualize o catálogo e as especificações deste produto.'
+      : 'Adicione um produto ao catálogo Lazer & Sport.';
+    document.getElementById('toyImageRequirement').textContent = toy
+      ? 'Opcional ao editar'
+      : 'Obrigatória no cadastro';
+    toyImage.required = !toy;
 
-        let val = this.value.replace(/\D/g, "");
-
-        if (val === "") {
-            this.value = "";
-            return;
-        }
-
-        val = (parseInt(val) / 100).toFixed(2);
-
-        this.value = val.replace(".", ",");
-    });
-});
-
-/* 🔥 Reabrir modal se houver ?modal_aberto=1 */
-document.addEventListener("DOMContentLoaded", function () {
-    const params = new URLSearchParams(window.location.search);
-
-    if (params.get("modal_aberto") == "1") {
-        abrirModalNovo();
-
-        {% if messages %}
-            let msgHTML = "";
-            {% for m in messages %}
-                msgHTML += `<div class="alerta-modal {{ m.tags }}">{{ m }}</div>`;
-            {% endfor %}
-            document.getElementById("modal-mensagem").innerHTML = msgHTML;
-
-            setTimeout(() => {
-                document.getElementById("modal-mensagem").innerHTML = "";
-            }, 3000);
-        {% endif %}
-
-        /* 🔥 limpar os campos se for salvar e adicionar outro */
-        if (params.get("limpar") == "1") {
-            document.querySelector("input[name='nome_brinquedo']").value = "";
-            document.querySelector("textarea[name='descricao']").value = "";
-            document.querySelector("input[name='valor_brinquedo']").value = "";
-            document.querySelector("input[name='avaliacao']").value = "";
-            document.querySelector("input[name='altura_m']").value = "";
-            document.querySelector("input[name='largura_m']").value = "";
-            document.querySelector("input[name='profundidade_m']").value = "";
-
-            let img = document.querySelector("input[name='imagem_brinquedo']");
-            img.value = "";
-
-            setTimeout(() => { img.value = ""; }, 1000);
-        }
+    if (toy) {
+      setValue('toyName', toy.nome_brinquedo);
+      setValue('toyDescription', toy.descricao);
+      setValue('toyPrice', toy.valor_brinquedo);
+      setValue('toyRating', toy.avaliacao);
+      setValue('toyVoltage', toy.voltz);
+      setValue('toyHeight', toy.altura_m);
+      setValue('toyWidth', toy.largura_m);
+      setValue('toyDepth', toy.profundidade_m);
+      document.getElementById('toyStore').checked = Boolean(toy.exibir_na_loja);
+      markChecks('categorias_brinquedos', toy.categorias_ids);
+      markChecks('tags', toy.tags_ids);
+      if (toy.imagem_url) {
+        toyImagePreviewImg.src = toy.imagem_url;
+        toyImagePreview.classList.add('has-image');
+        toyImageFileName.textContent = 'Manter imagem atual ou selecionar outra';
+      }
+    } else {
+      markChecks('categorias_brinquedos', []);
+      markChecks('tags', []);
+      document.getElementById('toyStore').checked = false;
     }
-});
 
-// FUNÇÕES PARA ABRIR / FECHAR MODAL
-function abrirModalCategoria() {
-    const modal = document.getElementById("modal-categoria");
-    modal.classList.add("show");
-}
+    document.querySelector('#toyFormModal .toy-modal-body').scrollTop = 0;
+    setModal(toyModal, true, trigger);
+    setTimeout(() => document.getElementById('toyName').focus(), 70);
+  }
 
-function fecharModalCategoria() {
-    const modal = document.getElementById("modal-categoria");
-    modal.classList.remove("show");
-}
+  function closeToyForm() {
+    setModal(toyModal, false);
+  }
 
-// FECHAR AO CLICAR FORA
-(function() {
-    const modal = document.getElementById("modal-categoria");
-    modal.addEventListener("click", function(e) {
-        // Se o clique foi exatamente no fundo, fecha
-        if (e.target === modal) {
-            fecharModalCategoria();
-        }
+  function openDelete(id, name, trigger) {
+    const safeName = String(name || 'Brinquedo').trim();
+    expectedDeletePhrase = `CONFIRMAR EXCLUSÃO ${safeName}`;
+    document.getElementById('deleteToyId').value = id;
+    document.getElementById('deleteToyName').textContent = safeName;
+    document.getElementById('deleteToyRequiredPhrase').textContent = expectedDeletePhrase;
+    deleteInput.value = '';
+    deleteHidden.value = '';
+    deleteButton.disabled = true;
+    setModal(deleteModal, true, trigger);
+    setTimeout(() => deleteInput.focus(), 70);
+  }
+
+  function closeDelete() {
+    expectedDeletePhrase = '';
+    setModal(deleteModal, false);
+  }
+
+  document.getElementById('newToyButton').addEventListener('click', event => openToyForm(null, event.currentTarget));
+  document.querySelectorAll('[data-edit-toy]').forEach(button => {
+    button.addEventListener('click', () => openToyForm(button.dataset.editToy, button));
+  });
+  document.querySelectorAll('[data-delete-toy]').forEach(button => {
+    button.addEventListener('click', () => openDelete(button.dataset.deleteToy, button.dataset.deleteName, button));
+  });
+  document.getElementById('closeToyModal').addEventListener('click', closeToyForm);
+  document.getElementById('cancelToyModal').addEventListener('click', closeToyForm);
+  document.getElementById('cancelDeleteToy').addEventListener('click', closeDelete);
+
+  deleteInput.addEventListener('input', function () {
+    const valid = deleteInput.value === expectedDeletePhrase;
+    deleteButton.disabled = !valid;
+    deleteHidden.value = valid ? expectedDeletePhrase : '';
+  });
+
+  toyImage.addEventListener('change', function () {
+    const file = toyImage.files && toyImage.files[0];
+    if (!file) return resetImagePreview();
+    toyImageFileName.textContent = file.name;
+    const reader = new FileReader();
+    reader.addEventListener('load', function () {
+      toyImagePreviewImg.src = reader.result;
+      toyImagePreview.classList.add('has-image');
     });
+    reader.readAsDataURL(file);
+  });
+
+  document.querySelectorAll('#toyPrice, #toyRating, #toyHeight, #toyWidth, #toyDepth').forEach(input => {
+    input.addEventListener('input', function () {
+      input.value = input.value.replace(/[^\d,.]/g, '');
+    });
+  });
+
+  document.getElementById('openCategoryModal').addEventListener('click', event => setModal(categoryModal, true, event.currentTarget));
+  document.getElementById('cancelCategoryModal').addEventListener('click', () => setModal(categoryModal, false));
+  document.getElementById('openTagModal').addEventListener('click', event => setModal(tagModal, true, event.currentTarget));
+  document.getElementById('cancelTagModal').addEventListener('click', () => setModal(tagModal, false));
+
+  function appendCheck(gridId, name, id, label) {
+    const wrapper = document.createElement('label');
+    wrapper.className = 'toy-check';
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.name = name;
+    input.value = id;
+    input.checked = true;
+    const text = document.createElement('span');
+    text.textContent = label;
+    wrapper.append(input, text);
+    document.getElementById(gridId).appendChild(wrapper);
+  }
+
+  async function submitQuickForm(form, endpoint, messageId, onSuccess) {
+    const message = document.getElementById(messageId);
+    message.textContent = '';
+    try {
+      const response = await fetch(endpoint, { method: 'POST', body: new FormData(form) });
+      const data = await response.json();
+      if (!response.ok || data.status !== 'sucesso') throw new Error(data.msg || 'Não foi possível salvar.');
+      onSuccess(data);
+      form.reset();
+    } catch (error) {
+      message.textContent = error.message;
+    }
+  }
+
+  document.getElementById('categoryForm').addEventListener('submit', function (event) {
+    event.preventDefault();
+    submitQuickForm(event.currentTarget, "{% url 'categoria_new' %}", 'categoryMessage', data => {
+      appendCheck('toyCategoryGrid', 'categorias_brinquedos', data.id, data.nome);
+      setModal(categoryModal, false);
+    });
+  });
+
+  document.getElementById('tagForm').addEventListener('submit', function (event) {
+    event.preventDefault();
+    submitQuickForm(event.currentTarget, "{% url 'tag_new' %}", 'tagMessage', data => {
+      appendCheck('toyTagGrid', 'tags', data.id, data.nome);
+      setModal(tagModal, false);
+    });
+  });
+
+  [toyModal, deleteModal, categoryModal, tagModal].forEach(modal => {
+    modal.addEventListener('click', event => {
+      if (event.target !== modal) return;
+      if (modal === toyModal) closeToyForm();
+      else if (modal === deleteModal) closeDelete();
+      else setModal(modal, false);
+    });
+  });
+
+  document.addEventListener('keydown', event => {
+    if (event.key !== 'Escape') return;
+    const openModals = Array.from(document.querySelectorAll('.toy-modal.is-open'));
+    const modal = openModals.at(-1);
+    if (!modal) return;
+    if (modal === toyModal) closeToyForm();
+    else if (modal === deleteModal) closeDelete();
+    else setModal(modal, false);
+  });
 })();
-
-/* Salvar categoria (AJAX) */
-function salvarCategoria() {
-    let form = document.getElementById("form-categoria");
-    let formData = new FormData(form);
-
-    fetch("categoria", {
-        method: "POST",
-        body: formData
-    })
-    .then(res => res.json())
-    .then(data => {
-        let msg = document.getElementById("msg-categoria");
-
-        if (data.status === "sucesso") {
-            msg.innerHTML = `<div class='alerta sucesso'>${data.msg}</div>`;
-
-            // adiciona ao select de categorias
-            const select = document.getElementById("select-categorias");
-            let opt = document.createElement("option");
-            opt.value = data.id;
-            opt.textContent = data.nome;
-            opt.selected = true;
-            select.appendChild(opt);
-
-            // limpa inputs
-            form.reset();
-
-            // limpa mensagem depois de 2s
-            setTimeout(() => { msg.innerHTML = ""; }, 2000);
-
-        } else {
-            msg.innerHTML = `<div class='alerta erro'>${data.msg}</div>`;
-        }
-    });
-}
-
-
-
-function moverSelecionados(origemId, destinoId) {
-    let origem = document.getElementById(origemId);
-    let destino = document.getElementById(destinoId);
-
-    Array.from(origem.selectedOptions).forEach(opt => {
-        destino.appendChild(opt);
-    });
-}
-
-function adicionarCategoria() {
-    moverSelecionados("categorias-disponiveis", "categorias-selecionadas");
-}
-
-function removerCategoria() {
-    moverSelecionados("categorias-selecionadas", "categorias-disponiveis");
-}
-
-function adicionarTag() {
-    moverSelecionados("tags-disponiveis", "tags-selecionadas");
-}
-
-function removerTag() {
-    moverSelecionados("tags-selecionadas", "tags-disponiveis");
-}
-
-function abrirModalTag() {
-    document.getElementById("modal-tag").classList.add("show");
-}
-
-function fecharModalTag() {
-    document.getElementById("modal-tag").classList.remove("show");
-}
-
-// Fechar clicando fora
-document.addEventListener("click", function (e) {
-    const modal = document.getElementById("modal-tag");
-    if (modal.classList.contains("show")) {
-        const box = modal.querySelector(".modal-box");
-        if (!box.contains(e.target) && e.target.id !== 'modal-tag') {
-            fecharModalTag();
-        }
-    }
-});
-
-    /* Formatação e limite para AVALIAÇÃO */
-const avaliacaoInput = document.querySelector(".decimal-avaliacao");
-
-if (avaliacaoInput) {
-    avaliacaoInput.addEventListener("input", function() {
-
-        // remove tudo que não for número
-        let val = this.value.replace(/\D/g, "");
-
-        if (val === "") {
-            this.value = "";
-            return;
-        }
-
-        // formata como 0,00
-        val = (parseInt(val) / 100);
-
-        // impede ultrapassar 5
-        if (val > 5) val = 5;
-
-        // formata
-        this.value = val.toFixed(2).replace(".", ",");
-    });
-}
-document.getElementById("form-categoria").addEventListener("submit", function(e) {
-    e.preventDefault(); // evita o submit padrão
-
-    const formData = new FormData(this);
-
-    fetch("{% url 'categoria_new' %}", {
-        method: "POST",
-        headers: {
-            "X-CSRFToken": formData.get("csrfmiddlewaretoken")
-        },
-        body: formData
-    })
-    .then(res => res.json())
-    .then(data => {
-        const msgDiv = document.getElementById("mensagem-categoria");
-        msgDiv.innerHTML = ""; // limpa mensagens anteriores
-
-        if(data.status === "sucesso") {
-            msgDiv.innerHTML = `<div class="alerta-modal success">${data.msg}</div>`;
-
-            setTimeout(() => {
-                fecharModalCategoria();
-
-                // Adiciona a nova categoria no select do modal de brinquedos
-                const select = document.getElementById("categorias-disponiveis");
-                const option = document.createElement("option");
-                option.value = data.id;
-                option.text = data.nome;
-                select.appendChild(option);
-
-                // Adiciona a nova categoria também nos filtros do topo
-                const filtrosDiv = document.querySelector(".filtros");
-                const link = document.createElement("a");
-                link.href = `?categoria=${data.nome}`;
-                link.className = "filtro-btn";
-                link.textContent = data.nome;
-                filtrosDiv.appendChild(link);
-
-            }, 800);
-        } else {
-            msgDiv.innerHTML = `<div class="alerta-modal error">${data.msg}</div>`;
-        }
-    })
-    .catch(err => console.error(err));
-});
-
-
 </script>
-
 {% endblock %}
