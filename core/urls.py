@@ -12,7 +12,7 @@ from .views import (HomeView, BrinquedoInfoView, CategoriasInfoView, BrinquedosV
                     DashboardAdminView, UserAdminView, ManutencaoAdminView, RelatorioVendasView, PedidoAdminView,
                     redirecionar_loja, redirecionar_categoria_brinquedos, redirecionar_categoria_aventura, redirecionar_lancamentos,
                     redirecionar_showroom, redirecionar_contato, EstatisticasGeraisView, ReposicaoView, ReposicaoDetalheView,
-                    robots_txt, ComboAdminView, SearchView, LojaView
+                    robots_txt, ComboAdminView, SearchView, LojaView, ClienteAdminView
                     )
 
 sitemaps = {
@@ -128,6 +128,12 @@ urlpatterns = [
     path("adm/clients/", UserAdminView.as_view(), name='clients'),
     path("adm/manutencoes/", ManutencaoAdminView.as_view(), name='manutencoes_adm'),
     path('adm/relatorios-vendas/', RelatorioVendasView.as_view(), name='relatorio_vendas'),
+
+    path(
+            "adm/clientes/",
+            ClienteAdminView.as_view(),
+            name="clientes_admin",
+        ),
 
     path("adm/eventos/", EventoAdminView.as_view(), name="eventos_admin"),
     path("adm/cupons/", CupomAdminView.as_view(), name="cupons_admin"),
