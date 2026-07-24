@@ -1,509 +1,1739 @@
 {% extends "gestao/base_adm.html" %}
 
+{% block title %}Clientes Lazer & Sport{% endblock %}
+{% block page_heading %}Clientes Lazer &amp; Sport{% endblock %}
+
 {% block content %}
-
 <style>
-.clientes-adm-header {
+  .clients-page {
+    --client-blue: #3b82f6;
+    --client-blue-soft: rgba(59, 130, 246, .12);
+    --client-green: #10b981;
+    --client-green-soft: rgba(16, 185, 129, .12);
+    --client-amber: #f59e0b;
+    --client-amber-soft: rgba(245, 158, 11, .12);
+    --client-red: #ef4444;
+    --client-red-soft: rgba(239, 68, 68, .12);
+    width: min(100%, 1440px);
+    margin: 0 auto;
+  }
+
+  .clients-page svg {
+    width: 20px;
+    height: 20px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .clients-hero {
+    position: relative;
+    min-height: 168px;
+    padding: clamp(22px, 4vw, 34px);
     display: flex;
+    align-items: flex-end;
     justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 16px;
-    margin-bottom: 28px;
-}
+    gap: 24px;
+    overflow: hidden;
+    border: 1px solid rgba(96, 165, 250, .18);
+    border-radius: 24px;
+    background:
+      radial-gradient(circle at 82% 18%, rgba(59, 130, 246, .30), transparent 15rem),
+      linear-gradient(135deg, #17243a, #101a2d 58%, #111f37);
+    box-shadow: 0 22px 50px rgba(0, 0, 0, .18);
+  }
 
-.clientes-adm-header h1 {
-    margin: 0;
-}
+  .clients-hero::after {
+    content: "";
+    position: absolute;
+    right: -35px;
+    bottom: -72px;
+    width: 230px;
+    height: 230px;
+    border: 38px solid rgba(96, 165, 250, .06);
+    border-radius: 50%;
+    pointer-events: none;
+  }
 
-.btn-novo-cliente {
+  .clients-hero-copy {
+    position: relative;
+    z-index: 1;
+    max-width: 720px;
+  }
+
+  .clients-eyebrow {
+    margin: 0 0 9px;
     display: flex;
     align-items: center;
     gap: 8px;
-    background: linear-gradient(135deg, #0d6efd, #0a58ca);
-    color: #fff;
-    padding: 14px 26px;
-    border-radius: 18px;
+    color: #93c5fd;
+    font-size: .7rem;
     font-weight: 800;
-    font-size: 0.95rem;
-    border: none;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+  }
+
+  .clients-hero h2 {
+    margin: 0;
+    color: #fff;
+    font-size: clamp(1.5rem, 3vw, 2.15rem);
+    line-height: 1.12;
+  }
+
+  .clients-hero-description {
+    max-width: 650px;
+    margin: 10px 0 0;
+    color: #aebdd0;
+    font-size: .9rem;
+    line-height: 1.6;
+  }
+
+  .clients-primary-button {
+    position: relative;
+    z-index: 1;
+    min-height: 48px;
+    padding: 0 20px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    flex: 0 0 auto;
+    border: 1px solid rgba(147, 197, 253, .24);
+    border-radius: 13px;
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    color: #fff;
+    font-weight: 800;
     cursor: pointer;
-    transition: 0.25s ease;
-    box-shadow: 0 10px 30px rgba(13, 110, 253, 0.35);
-}
+    box-shadow: 0 12px 28px rgba(37, 99, 235, .32);
+    transition: transform .18s ease, box-shadow .18s ease;
+  }
 
-.btn-novo-cliente:hover {
+  .clients-primary-button:hover {
     transform: translateY(-2px);
-    box-shadow: 0 16px 40px rgba(13, 110, 253, 0.45);
-}
+    box-shadow: 0 16px 34px rgba(37, 99, 235, .42);
+  }
 
-.messages {
-    margin-bottom: 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.alert {
-    padding: 14px 18px;
-    border-radius: 12px;
-    font-weight: 600;
-    font-size: 0.92rem;
-}
-
-.alert-success { background: rgba(34, 197, 94, 0.15); color: #4ade80; border: 1px solid rgba(74, 222, 128, 0.3); }
-.alert-error { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(248, 113, 113, 0.3); }
-.alert-warning { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(251, 191, 36, 0.3); }
-
-.clientes-grid {
+  .clients-kpis {
+    margin: 20px 0;
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 22px;
-}
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+  }
 
-.cliente-card {
-    background: #fff;
-    border-radius: 20px;
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-    overflow: hidden;
-    transition: transform 0.25s ease;
-}
-
-.cliente-card:hover {
-    transform: translateY(-4px);
-}
-
-.cliente-card-topo {
+  .clients-kpi {
+    min-height: 112px;
+    padding: 18px;
     display: flex;
     align-items: center;
     gap: 14px;
-    padding: 18px;
-    border-bottom: 1px solid #eef2f8;
-}
+    border: 1px solid var(--adm-border, rgba(148, 163, 184, .14));
+    border-radius: 17px;
+    background: linear-gradient(145deg, rgba(23, 36, 58, .96), rgba(17, 27, 46, .96));
+    box-shadow: 0 12px 28px rgba(0, 0, 0, .12);
+  }
 
-.cliente-card-logo {
-    width: 56px;
-    height: 56px;
-    border-radius: 14px;
-    background: #f5f8ff;
+  .clients-kpi-icon {
+    width: 44px;
+    height: 44px;
+    flex: 0 0 44px;
+    display: grid;
+    place-items: center;
+    border-radius: 13px;
+  }
+
+  .clients-kpi:nth-child(1) .clients-kpi-icon { color: #93c5fd; background: var(--client-blue-soft); }
+  .clients-kpi:nth-child(2) .clients-kpi-icon { color: #6ee7b7; background: var(--client-green-soft); }
+  .clients-kpi:nth-child(3) .clients-kpi-icon { color: #c4b5fd; background: rgba(139, 92, 246, .12); }
+  .clients-kpi:nth-child(4) .clients-kpi-icon { color: #fcd34d; background: var(--client-amber-soft); }
+
+  .clients-kpi-copy {
+    min-width: 0;
+  }
+
+  .clients-kpi-value {
+    display: block;
+    color: #f8fafc;
+    font-size: 1.65rem;
+    font-weight: 800;
+    line-height: 1;
+  }
+
+  .clients-kpi-label {
+    display: block;
+    margin-top: 6px;
+    color: #94a3b8;
+    font-size: .77rem;
+    font-weight: 650;
+  }
+
+  .clients-panel {
+    overflow: hidden;
+    border: 1px solid var(--adm-border, rgba(148, 163, 184, .14));
+    border-radius: 20px;
+    background: rgba(17, 27, 46, .92);
+    box-shadow: 0 18px 38px rgba(0, 0, 0, .14);
+  }
+
+  .clients-toolbar {
+    padding: 17px;
     display: flex;
     align-items: center;
-    justify-content: center;
-    overflow: hidden;
-    flex-shrink: 0;
-}
+    justify-content: space-between;
+    gap: 14px;
+    border-bottom: 1px solid var(--adm-border, rgba(148, 163, 184, .14));
+  }
 
-.cliente-card-logo img {
+  .clients-search {
+    position: relative;
+    width: min(100%, 430px);
+  }
+
+  .clients-search svg {
+    position: absolute;
+    top: 50%;
+    left: 14px;
+    width: 17px;
+    height: 17px;
+    color: #64748b;
+    transform: translateY(-50%);
+    pointer-events: none;
+  }
+
+  .clients-search input {
+    width: 100%;
+    height: 44px;
+    padding: 0 42px 0 42px;
+    border: 1px solid rgba(148, 163, 184, .16);
+    border-radius: 12px;
+    outline: 0;
+    background: #0f192a;
+    color: #e5edf8;
+    transition: border-color .18s ease, box-shadow .18s ease;
+  }
+
+  .clients-search input::placeholder {
+    color: #64748b;
+  }
+
+  .clients-search input:focus {
+    border-color: rgba(96, 165, 250, .58);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, .12);
+  }
+
+  .clients-search-clear {
+    position: absolute;
+    top: 50%;
+    right: 8px;
+    width: 30px;
+    height: 30px;
+    display: none;
+    place-items: center;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: #94a3b8;
+    cursor: pointer;
+    transform: translateY(-50%);
+  }
+
+  .clients-search-clear.is-visible {
+    display: grid;
+  }
+
+  .clients-search-clear svg {
+    position: static;
+    width: 16px;
+    height: 16px;
+    transform: none;
+  }
+
+  .clients-filters {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    flex-wrap: wrap;
+  }
+
+  .clients-filter {
+    min-height: 38px;
+    padding: 0 13px;
+    border: 1px solid rgba(148, 163, 184, .15);
+    border-radius: 10px;
+    background: rgba(30, 45, 70, .65);
+    color: #aebdd0;
+    font-size: .76rem;
+    font-weight: 750;
+    cursor: pointer;
+    transition: color .18s ease, background .18s ease, border-color .18s ease;
+  }
+
+  .clients-filter:hover {
+    color: #fff;
+    border-color: rgba(96, 165, 250, .25);
+  }
+
+  .clients-filter.is-active {
+    color: #dbeafe;
+    border-color: rgba(96, 165, 250, .38);
+    background: rgba(37, 99, 235, .22);
+  }
+
+  .clients-results-line {
+    padding: 12px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    border-bottom: 1px solid rgba(148, 163, 184, .09);
+    color: #738198;
+    font-size: .75rem;
+  }
+
+  .clients-results-line strong {
+    color: #b8c4d6;
+  }
+
+  .clients-table-wrap {
+    overflow-x: auto;
+  }
+
+  .clients-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: auto;
+  }
+
+  .clients-table th {
+    padding: 13px 16px;
+    color: #718096;
+    background: rgba(11, 18, 32, .46);
+    font-size: .67rem;
+    font-weight: 800;
+    letter-spacing: .09em;
+    text-align: left;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .clients-table td {
+    padding: 15px 16px;
+    border-top: 1px solid rgba(148, 163, 184, .085);
+    color: #cbd5e1;
+    font-size: .82rem;
+    vertical-align: middle;
+  }
+
+  .clients-table tbody tr {
+    transition: background .18s ease;
+  }
+
+  .clients-table tbody tr:hover {
+    background: rgba(59, 130, 246, .035);
+  }
+
+  .clients-table tbody tr[hidden] {
+    display: none;
+  }
+
+  .client-identity {
+    min-width: 240px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .client-logo {
+    position: relative;
+    width: 44px;
+    height: 44px;
+    flex: 0 0 44px;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    border: 1px solid rgba(148, 163, 184, .14);
+    border-radius: 12px;
+    background: #f8fafc;
+    color: #64748b;
+    font-weight: 800;
+  }
+
+  .client-logo img {
     width: 100%;
     height: 100%;
+    display: block;
     object-fit: contain;
-}
+  }
 
-.cliente-card-nome {
-    font-size: 1.05rem;
-    font-weight: 700;
-    color: #1f2937;
-    margin: 0 0 3px;
-}
+  .client-name {
+    display: block;
+    max-width: 280px;
+    overflow: hidden;
+    color: #edf4fc;
+    font-size: .86rem;
+    font-weight: 750;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 
-.cliente-card-local {
-    font-size: 0.85rem;
-    color: #6b7280;
-    margin: 0;
-}
+  .client-site {
+    display: block;
+    max-width: 230px;
+    margin-top: 3px;
+    overflow: hidden;
+    color: #718096;
+    font-size: .7rem;
+    text-decoration: none;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 
-.cliente-card-corpo {
-    padding: 16px 18px;
-}
+  .client-site:hover {
+    color: #93c5fd;
+  }
 
-.cliente-badges {
+  .client-location {
+    min-width: 155px;
+  }
+
+  .client-location strong,
+  .client-location span {
+    display: block;
+  }
+
+  .client-location strong {
+    color: #cbd5e1;
+    font-size: .8rem;
+    font-weight: 650;
+  }
+
+  .client-location span {
+    margin-top: 3px;
+    color: #718096;
+    font-size: .7rem;
+  }
+
+  .client-status-stack {
+    min-width: 138px;
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
-    margin-bottom: 14px;
-}
+  }
 
-.badge {
-    font-size: 0.72rem;
-    font-weight: 800;
-    padding: 4px 10px;
+  .client-status {
+    min-height: 25px;
+    padding: 0 8px;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
     border-radius: 999px;
-    text-transform: uppercase;
-    letter-spacing: 0.3px;
-}
+    font-size: .66rem;
+    font-weight: 800;
+    white-space: nowrap;
+  }
 
-.badge-ok { background: rgba(34, 197, 94, 0.12); color: #16a34a; }
-.badge-erro { background: rgba(239, 68, 68, 0.12); color: #dc2626; }
-.badge-neutro { background: #f3f4f6; color: #6b7280; }
+  .client-status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 14%, transparent);
+  }
 
-.cliente-card-acoes {
+  .client-status.is-success { color: #6ee7b7; background: var(--client-green-soft); }
+  .client-status.is-warning { color: #fcd34d; background: var(--client-amber-soft); }
+  .client-status.is-danger { color: #fca5a5; background: var(--client-red-soft); }
+  .client-status.is-neutral { color: #94a3b8; background: rgba(148, 163, 184, .09); }
+  .client-status.is-info { color: #93c5fd; background: var(--client-blue-soft); }
+
+  .client-actions {
     display: flex;
-    gap: 8px;
-}
+    justify-content: flex-end;
+    gap: 6px;
+  }
 
-.cliente-card-acoes button {
-    flex: 1;
-    padding: 10px;
-    border-radius: 12px;
-    border: none;
-    font-weight: 700;
-    font-size: 0.85rem;
+  .client-action-form {
+    margin: 0;
+  }
+
+  .client-action {
+    width: 36px;
+    height: 36px;
+    display: inline-grid;
+    place-items: center;
+    border: 1px solid rgba(148, 163, 184, .14);
+    border-radius: 10px;
+    background: rgba(30, 45, 70, .62);
+    color: #9eacc0;
     cursor: pointer;
-    transition: 0.2s ease;
-}
+    transition: color .18s ease, background .18s ease, border-color .18s ease, transform .18s ease;
+  }
 
-.btn-editar-cliente { background: #ffc107; color: #222; }
-.btn-editar-cliente:hover { background: #e0a800; }
+  .client-action:hover {
+    color: #fff;
+    border-color: rgba(96, 165, 250, .28);
+    background: rgba(59, 130, 246, .14);
+    transform: translateY(-1px);
+  }
 
-.btn-excluir-cliente { background: #dc3545; color: #fff; width: 100%; }
-.btn-excluir-cliente:hover { background: #b02a37; }
+  .client-action.is-danger:hover {
+    color: #fecaca;
+    border-color: rgba(239, 68, 68, .3);
+    background: rgba(239, 68, 68, .12);
+  }
 
-.clientes-vazio-adm {
-    background: #fff;
-    border-radius: 20px;
-    padding: 50px 20px;
+  .client-action svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .clients-empty {
+    padding: 58px 24px;
+    display: grid;
+    justify-items: center;
+    color: #718096;
     text-align: center;
-    color: #6b7280;
-    grid-column: 1 / -1;
-}
+  }
 
-/* MODAL */
-.cliente-modal-bg {
+  .clients-empty[hidden] {
+    display: none;
+  }
+
+  .clients-empty-icon {
+    width: 58px;
+    height: 58px;
+    margin-bottom: 14px;
+    display: grid;
+    place-items: center;
+    border-radius: 18px;
+    background: rgba(59, 130, 246, .1);
+    color: #60a5fa;
+  }
+
+  .clients-empty-icon svg {
+    width: 25px;
+    height: 25px;
+  }
+
+  .clients-empty h3 {
+    margin: 0;
+    color: #cbd5e1;
+    font-size: 1rem;
+  }
+
+  .clients-empty p {
+    max-width: 420px;
+    margin: 7px 0 0;
+    font-size: .8rem;
+    line-height: 1.55;
+  }
+
+  .client-modal {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.6);
+    z-index: 3200;
     display: none;
     align-items: center;
     justify-content: center;
-    z-index: 99999;
     padding: 20px;
-}
+    background: rgba(2, 6, 23, .78);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+  }
 
-.cliente-modal-bg.show { display: flex; }
-
-.cliente-modal-box {
-    background: #fff;
-    color: #1f2937;
-    border-radius: 22px;
-    width: 100%;
-    max-width: 560px;
-    max-height: 90vh;
-    overflow-y: auto;
-    padding: 30px;
-    box-shadow: 0 30px 70px rgba(0, 0, 0, 0.4);
-}
-
-.cliente-modal-box h2 {
-    margin-top: 0;
-    color: #1f2937;
-}
-
-.cliente-form-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 14px;
-}
-
-.cliente-form-grid .full { grid-column: 1 / -1; }
-
-.cliente-form-grid label {
-    display: block;
-    font-size: 0.82rem;
-    font-weight: 700;
-    color: #374151;
-    margin-bottom: 5px;
-}
-
-.cliente-form-grid input[type="text"],
-.cliente-form-grid input[type="url"],
-.cliente-form-grid input[type="file"] {
-    width: 100%;
-    padding: 10px 12px;
-    border-radius: 10px;
-    border: 1px solid #d1d5db;
-    font-size: 0.9rem;
-    font-family: inherit;
-    color: #1f2937;
-}
-
-.cliente-form-checkboxes {
+  .client-modal.is-open {
     display: flex;
-    gap: 20px;
-    margin-top: 6px;
-}
+  }
 
-.cliente-form-checkboxes label {
+  .client-modal-card {
+    width: min(100%, 820px);
+    max-height: min(92vh, 920px);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid rgba(148, 163, 184, .17);
+    border-radius: 22px;
+    background: #111b2e;
+    box-shadow: 0 30px 80px rgba(0, 0, 0, .46);
+    animation: clientModalIn .2s ease-out;
+  }
+
+  .client-modal-card.is-small {
+    width: min(100%, 440px);
+  }
+
+  @keyframes clientModalIn {
+    from { opacity: 0; transform: translateY(10px) scale(.985); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  .client-modal-header {
+    padding: 20px 22px;
     display: flex;
     align-items: center;
-    gap: 8px;
-    font-weight: 600;
-    font-size: 0.88rem;
-    color: #374151;
-}
+    gap: 14px;
+    border-bottom: 1px solid rgba(148, 163, 184, .12);
+    background: rgba(15, 25, 42, .76);
+  }
 
-.cliente-form-aviso {
-    background: #f0f4ff;
-    border: 1px solid #dbe7ff;
-    border-radius: 12px;
-    padding: 12px 14px;
-    font-size: 0.82rem;
-    color: #1d4ed8;
-    margin: 4px 0 2px;
-    line-height: 1.5;
-}
+  .client-modal-heading {
+    min-width: 0;
+    flex: 1;
+  }
 
-.cliente-modal-acoes {
-    display: flex;
-    justify-content: flex-end;
-    gap: 10px;
-    margin-top: 22px;
-}
+  .client-modal-heading h2 {
+    margin: 0;
+    color: #f1f5f9;
+    font-size: 1.12rem;
+  }
 
-.btn-cancelar-modal {
-    background: #e5e7eb;
-    border: none;
-    padding: 12px 20px;
-    border-radius: 12px;
+  .client-modal-heading p {
+    margin: 4px 0 0;
+    color: #718096;
+    font-size: .74rem;
+  }
+
+  .client-modal-close {
+    width: 38px;
+    height: 38px;
+    display: grid;
+    place-items: center;
+    border: 1px solid rgba(148, 163, 184, .14);
+    border-radius: 11px;
+    background: rgba(30, 45, 70, .55);
+    color: #94a3b8;
     cursor: pointer;
-    font-weight: 700;
-}
+  }
 
-.btn-salvar-modal {
-    background: linear-gradient(135deg, #0d6efd, #0a58ca);
+  .client-modal-close:hover {
     color: #fff;
-    border: none;
-    padding: 12px 24px;
-    border-radius: 12px;
-    cursor: pointer;
+  }
+
+  .client-modal-close svg {
+    width: 17px;
+    height: 17px;
+  }
+
+  .client-modal-body {
+    padding: 22px;
+    overflow-y: auto;
+  }
+
+  .client-form-section + .client-form-section {
+    margin-top: 24px;
+    padding-top: 22px;
+    border-top: 1px solid rgba(148, 163, 184, .1);
+  }
+
+  .client-form-section-title {
+    margin-bottom: 14px;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .client-form-section-title svg {
+    width: 18px;
+    height: 18px;
+    margin-top: 1px;
+    color: #60a5fa;
+  }
+
+  .client-form-section-title strong,
+  .client-form-section-title span {
+    display: block;
+  }
+
+  .client-form-section-title strong {
+    color: #dbe5f3;
+    font-size: .86rem;
+  }
+
+  .client-form-section-title span {
+    margin-top: 3px;
+    color: #718096;
+    font-size: .7rem;
+    line-height: 1.45;
+  }
+
+  .client-form-grid {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: 14px;
+  }
+
+  .client-field {
+    grid-column: span 6;
+  }
+
+  .client-field.is-full {
+    grid-column: 1 / -1;
+  }
+
+  .client-field.is-third {
+    grid-column: span 4;
+  }
+
+  .client-field label {
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    color: #aebdd0;
+    font-size: .72rem;
+    font-weight: 750;
+  }
+
+  .client-field label small {
+    color: #5f6d82;
+    font-size: .64rem;
+    font-weight: 600;
+  }
+
+  .client-field input[type="text"],
+  .client-field input[type="url"] {
+    width: 100%;
+    height: 43px;
+    padding: 0 12px;
+    border: 1px solid rgba(148, 163, 184, .16);
+    border-radius: 11px;
+    outline: 0;
+    background: #0d1727;
+    color: #e5edf8;
+    font-size: .8rem;
+    transition: border-color .18s ease, box-shadow .18s ease;
+  }
+
+  .client-field input::placeholder {
+    color: #536176;
+  }
+
+  .client-field input:focus {
+    border-color: rgba(96, 165, 250, .58);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, .11);
+  }
+
+  .client-logo-upload {
+    min-height: 92px;
+    padding: 12px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    border: 1px dashed rgba(96, 165, 250, .3);
+    border-radius: 14px;
+    background: rgba(59, 130, 246, .045);
+  }
+
+  .client-logo-preview {
+    width: 62px;
+    height: 62px;
+    flex: 0 0 62px;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    border: 1px solid rgba(148, 163, 184, .17);
+    border-radius: 14px;
+    background: #f8fafc;
+    color: #64748b;
+  }
+
+  .client-logo-preview img {
+    width: 100%;
+    height: 100%;
+    display: none;
+    object-fit: contain;
+  }
+
+  .client-logo-preview.has-image img {
+    display: block;
+  }
+
+  .client-logo-preview.has-image svg {
+    display: none;
+  }
+
+  .client-logo-upload-copy {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .client-logo-upload-copy strong,
+  .client-logo-upload-copy span {
+    display: block;
+  }
+
+  .client-logo-upload-copy strong {
+    color: #cbd5e1;
+    font-size: .78rem;
+  }
+
+  .client-logo-upload-copy span {
+    margin-top: 4px;
+    color: #718096;
+    font-size: .68rem;
+    line-height: 1.45;
+  }
+
+  .client-file-button {
+    position: relative;
+    margin-top: 9px;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    color: #93c5fd;
+    font-size: .7rem;
     font-weight: 800;
-}
+    cursor: pointer;
+  }
 
-@media (max-width: 560px) {
-    .cliente-form-grid { grid-template-columns: 1fr; }
-}
-</style>
+  .client-file-button input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    opacity: 0;
+  }
 
-<div class="clientes-adm-header">
-    <h1>🗺️ Clientes (Mapa)</h1>
-    <button type="button" class="btn-novo-cliente" onclick="abrirModalCliente()">
-        <span>➕</span> Novo Cliente
-    </button>
-</div>
+  .client-toggle-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+  }
 
-{% if messages %}
-<div class="messages">
-    {% for message in messages %}
-        <div class="alert alert-{{ message.tags }}">{{ message }}</div>
-    {% endfor %}
-</div>
-{% endif %}
+  .client-toggle {
+    min-height: 68px;
+    padding: 11px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border: 1px solid rgba(148, 163, 184, .13);
+    border-radius: 12px;
+    background: #0e1829;
+    cursor: pointer;
+  }
 
-<div class="clientes-grid">
-    {% for cliente in clientes %}
-    <div class="cliente-card">
-        <div class="cliente-card-topo">
-            <div class="cliente-card-logo">
-                {% if cliente.logo_cliente %}
-                    <img src="{{ cliente.logo_cliente.url }}" alt="{{ cliente.descricao_cliente }}">
-                {% endif %}
-            </div>
-            <div>
-                <p class="cliente-card-nome">{{ cliente.descricao_cliente }}</p>
-                <p class="cliente-card-local">
-                    {% if cliente.cidade %}{{ cliente.cidade }}{% if cliente.estado %}/{{ cliente.estado }}{% endif %}{% else %}Sem cidade definida{% endif %}
-                </p>
-            </div>
-        </div>
+  .client-toggle input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+  }
 
-        <div class="cliente-card-corpo">
-            <div class="cliente-badges">
-                {% if cliente.latitude and cliente.longitude %}
-                    <span class="badge badge-ok">✔ No mapa</span>
-                {% else %}
-                    <span class="badge badge-erro">✖ Sem localização</span>
-                {% endif %}
+  .client-toggle-control {
+    position: relative;
+    width: 36px;
+    height: 20px;
+    flex: 0 0 36px;
+    border-radius: 999px;
+    background: #334155;
+    transition: background .18s ease;
+  }
 
-                {% if cliente.ativo %}
-                    <span class="badge badge-neutro">Ativo</span>
-                {% else %}
-                    <span class="badge badge-neutro">Inativo</span>
-                {% endif %}
+  .client-toggle-control::after {
+    content: "";
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #cbd5e1;
+    transition: transform .18s ease, background .18s ease;
+  }
 
-                {% if not cliente.exibir_no_mapa %}
-                    <span class="badge badge-neutro">Oculto no mapa</span>
-                {% endif %}
-            </div>
+  .client-toggle input:checked + .client-toggle-control {
+    background: #2563eb;
+  }
 
-            <div class="cliente-card-acoes">
-                <button type="button" class="btn-editar-cliente" onclick="abrirModalCliente({{ cliente.id }})">
-                    ✏️ Editar
-                </button>
-            </div>
+  .client-toggle input:checked + .client-toggle-control::after {
+    background: #fff;
+    transform: translateX(16px);
+  }
 
-            <form method="post" style="margin-top:8px;">
-                {% csrf_token %}
-                <input type="hidden" name="action" value="recalcular">
-                <input type="hidden" name="id" value="{{ cliente.id }}">
-                <button type="submit" class="btn-editar-cliente" style="width:100%; background:#e7f1ff; color:#004AAD;">
-                    🔄 Recalcular localização
-                </button>
-            </form>
+  .client-toggle-copy strong,
+  .client-toggle-copy span {
+    display: block;
+  }
 
-            <form method="post" style="margin-top:8px;" onsubmit="return confirm('Excluir este cliente? Isso não pode ser desfeito.');">
-                {% csrf_token %}
-                <input type="hidden" name="action" value="delete">
-                <input type="hidden" name="id" value="{{ cliente.id }}">
-                <button type="submit" class="btn-excluir-cliente">🗑️ Excluir</button>
-            </form>
-        </div>
-    </div>
-    {% empty %}
-    <div class="clientes-vazio-adm">
-        Nenhum cliente cadastrado ainda. Clique em "Novo Cliente" pra adicionar o primeiro.
-    </div>
-    {% endfor %}
-</div>
+  .client-toggle-copy strong {
+    color: #cbd5e1;
+    font-size: .72rem;
+  }
 
-<!-- MODAL -->
-<div id="cliente-modal" class="cliente-modal-bg">
-    <div class="cliente-modal-box">
-        <h2 id="cliente-modal-titulo">Novo Cliente</h2>
+  .client-toggle-copy span {
+    margin-top: 3px;
+    color: #64748b;
+    font-size: .62rem;
+    line-height: 1.35;
+  }
 
-        <form id="form-cliente" method="post" enctype="multipart/form-data">
-            {% csrf_token %}
-            <input type="hidden" name="action" value="save">
-            <input type="hidden" name="id" id="campo-id" value="">
+  .client-modal-footer {
+    padding: 15px 22px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 9px;
+    border-top: 1px solid rgba(148, 163, 184, .12);
+    background: rgba(15, 25, 42, .84);
+  }
 
-            <div class="cliente-form-grid">
-                <div class="full">
-                    <label for="campo-descricao">Nome do cliente *</label>
-                    <input type="text" id="campo-descricao" name="descricao_cliente" required>
-                </div>
+  .client-secondary-button,
+  .client-save-button,
+  .client-delete-button {
+    min-height: 42px;
+    padding: 0 17px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border-radius: 11px;
+    font-size: .76rem;
+    font-weight: 800;
+    cursor: pointer;
+  }
 
-                <div class="full">
-                    <label for="campo-logo">Logo *</label>
-                    <input type="file" id="campo-logo" name="logo_cliente" accept="image/*">
-                    <p id="aviso-logo-editar" style="display:none; font-size:0.78rem; color:#6b7280; margin-top:4px;">
-                        Deixe em branco pra manter a logo atual.
-                    </p>
-                </div>
+  .client-secondary-button {
+    border: 1px solid rgba(148, 163, 184, .15);
+    background: #1e2d46;
+    color: #b8c4d6;
+  }
 
-                <div class="full cliente-form-aviso">
-                    💡 Preencha o <strong>CEP</strong> pra clientes no Brasil -- cidade, estado e a posição no mapa
-                    são calculados automaticamente ao salvar. Sem CEP? Preencha pelo menos <strong>cidade</strong>
-                    e <strong>país</strong>.
-                </div>
+  .client-save-button {
+    border: 1px solid rgba(96, 165, 250, .25);
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    color: #fff;
+  }
 
-                <div>
-                    <label for="campo-cep">CEP</label>
-                    <input type="text" id="campo-cep" name="cep" placeholder="00000-000">
-                </div>
+  .client-delete-button {
+    border: 1px solid rgba(248, 113, 113, .22);
+    background: #dc2626;
+    color: #fff;
+  }
 
-                <div>
-                    <label for="campo-numero">Número</label>
-                    <input type="text" id="campo-numero" name="numero">
-                </div>
+  .client-confirm-content {
+    padding: 28px 24px 8px;
+    text-align: center;
+  }
 
-                <div class="full">
-                    <label for="campo-rua">Rua</label>
-                    <input type="text" id="campo-rua" name="rua">
-                </div>
+  .client-confirm-icon {
+    width: 56px;
+    height: 56px;
+    margin: 0 auto 15px;
+    display: grid;
+    place-items: center;
+    border-radius: 17px;
+    background: var(--client-red-soft);
+    color: #fca5a5;
+  }
 
-                <div>
-                    <label for="campo-bairro">Bairro</label>
-                    <input type="text" id="campo-bairro" name="bairro">
-                </div>
+  .client-confirm-icon svg {
+    width: 24px;
+    height: 24px;
+  }
 
-                <div>
-                    <label for="campo-cidade">Cidade</label>
-                    <input type="text" id="campo-cidade" name="cidade">
-                </div>
+  .client-confirm-content h2 {
+    margin: 0;
+    color: #f1f5f9;
+    font-size: 1.12rem;
+  }
 
-                <div>
-                    <label for="campo-estado">Estado (UF)</label>
-                    <input type="text" id="campo-estado" name="estado" maxlength="2" placeholder="SP">
-                </div>
+  .client-confirm-content p {
+    margin: 8px auto 0;
+    color: #7f8da3;
+    font-size: .78rem;
+    line-height: 1.55;
+  }
 
-                <div>
-                    <label for="campo-pais">País</label>
-                    <input type="text" id="campo-pais" name="pais" value="Brasil">
-                </div>
+  .client-confirm-content strong {
+    color: #cbd5e1;
+  }
 
-                <div class="full">
-                    <label for="campo-site">Instagram (opcional)</label>
-                    <input type="url" id="campo-site" name="site_cliente" placeholder="https://instagram.com/...">
-                </div>
+  body.client-modal-open {
+    overflow: hidden;
+  }
 
-                <div class="full cliente-form-aviso" style="background:#fff4e5; border-color:#ffdca8; color:#a15c00;">
-                    📍 Se o pino desse cliente está no lugar errado no mapa, marque a opção
-                    abaixo e salve -- ela força um novo cálculo da localização, mesmo sem
-                    mudar nenhum campo de endereço.
-                </div>
-
-                <div class="full cliente-form-checkboxes">
-                    <label><input type="checkbox" id="campo-ativo" name="ativo" checked> Ativo</label>
-                    <label><input type="checkbox" id="campo-exibir" name="exibir_no_mapa" checked> Exibir no mapa</label>
-                    <label><input type="checkbox" id="campo-forcar" name="forcar_geocode"> 🔄 Recalcular localização agora</label>
-                </div>
-            </div>
-
-            <div class="cliente-modal-acoes">
-                <button type="button" class="btn-cancelar-modal" onclick="fecharModalCliente()">Cancelar</button>
-                <button type="submit" class="btn-salvar-modal">💾 Salvar</button>
-            </div>
-        </form>
-    </div>
-</div>
-
-{{ clientes_dados|json_script:"dados-clientes-adm" }}
-
-<script>
-const dadosClientesAdm = JSON.parse(document.getElementById('dados-clientes-adm').textContent);
-
-function abrirModalCliente(id) {
-    const form = document.getElementById('form-cliente');
-    form.reset();
-
-    document.getElementById('cliente-modal-titulo').textContent = id ? 'Editar Cliente' : 'Novo Cliente';
-    document.getElementById('campo-id').value = id || '';
-    document.getElementById('campo-logo').required = !id;
-    document.getElementById('aviso-logo-editar').style.display = id ? 'block' : 'none';
-
-    if (id) {
-        const c = dadosClientesAdm.find(item => item.id === id);
-        if (c) {
-            document.getElementById('campo-descricao').value = c.descricao_cliente;
-            document.getElementById('campo-cep').value = c.cep;
-            document.getElementById('campo-rua').value = c.rua;
-            document.getElementById('campo-numero').value = c.numero;
-            document.getElementById('campo-bairro').value = c.bairro;
-            document.getElementById('campo-cidade').value = c.cidade;
-            document.getElementById('campo-estado').value = c.estado;
-            document.getElementById('campo-pais').value = c.pais;
-            document.getElementById('campo-site').value = c.site_cliente;
-            document.getElementById('campo-ativo').checked = c.ativo;
-            document.getElementById('campo-exibir').checked = c.exibir_no_mapa;
-        }
-    } else {
-        document.getElementById('campo-pais').value = 'Brasil';
-        document.getElementById('campo-ativo').checked = true;
-        document.getElementById('campo-exibir').checked = true;
+  @media (max-width: 1080px) {
+    .clients-kpis {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
-    document.getElementById('cliente-modal').classList.add('show');
-}
+    .clients-toolbar {
+      align-items: stretch;
+      flex-direction: column;
+    }
 
-function fecharModalCliente() {
-    document.getElementById('cliente-modal').classList.remove('show');
-}
+    .clients-search {
+      width: 100%;
+    }
+  }
 
-document.getElementById('cliente-modal').addEventListener('click', function (e) {
-    if (e.target === this) fecharModalCliente();
-});
+  @media (max-width: 760px) {
+    .clients-hero {
+      align-items: stretch;
+      flex-direction: column;
+    }
 
-document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape') fecharModalCliente();
-});
+    .clients-primary-button {
+      width: 100%;
+    }
+
+    .clients-table thead {
+      display: none;
+    }
+
+    .clients-table,
+    .clients-table tbody {
+      display: block;
+    }
+
+    .clients-table-wrap {
+      padding: 10px;
+      overflow: visible;
+    }
+
+    .clients-table tbody {
+      display: grid;
+      gap: 10px;
+    }
+
+    .clients-table tbody tr {
+      padding: 14px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 13px;
+      border: 1px solid rgba(148, 163, 184, .12);
+      border-radius: 15px;
+      background: rgba(15, 25, 42, .65);
+    }
+
+    .clients-table td {
+      padding: 0;
+      display: block;
+      border: 0;
+    }
+
+    .clients-table td:nth-child(1) {
+      grid-column: 1 / -1;
+    }
+
+    .clients-table td:nth-child(2) {
+      grid-column: 1;
+    }
+
+    .clients-table td:nth-child(3) {
+      grid-column: 1;
+    }
+
+    .clients-table td:nth-child(4) {
+      grid-column: 2;
+      grid-row: 2 / span 2;
+      align-self: center;
+    }
+
+    .client-identity,
+    .client-location,
+    .client-status-stack {
+      min-width: 0;
+    }
+
+    .client-actions {
+      flex-direction: column;
+    }
+
+    .client-toggle-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 600px) {
+    .clients-kpis {
+      grid-template-columns: 1fr 1fr;
+      gap: 9px;
+    }
+
+    .clients-kpi {
+      min-height: 96px;
+      padding: 13px;
+      gap: 10px;
+    }
+
+    .clients-kpi-icon {
+      width: 36px;
+      height: 36px;
+      flex-basis: 36px;
+    }
+
+    .clients-kpi-icon svg {
+      width: 17px;
+      height: 17px;
+    }
+
+    .clients-kpi-value {
+      font-size: 1.3rem;
+    }
+
+    .clients-filters {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .clients-filter {
+      padding-inline: 8px;
+    }
+
+    .client-modal {
+      padding: 0;
+      align-items: flex-end;
+    }
+
+    .client-modal-card,
+    .client-modal-card.is-small {
+      width: 100%;
+      max-height: 94vh;
+      border-radius: 22px 22px 0 0;
+    }
+
+    .client-modal-body {
+      padding: 18px 15px;
+    }
+
+    .client-field,
+    .client-field.is-third {
+      grid-column: 1 / -1;
+    }
+
+    .client-logo-upload {
+      align-items: flex-start;
+    }
+
+    .client-modal-footer {
+      padding: 13px 15px;
+    }
+  }
+</style>
+
+<div class="clients-page">
+  <svg width="0" height="0" aria-hidden="true" focusable="false" style="position:absolute">
+    <symbol id="client-i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="client-i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></symbol>
+    <symbol id="client-i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
+    <symbol id="client-i-edit" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4L16.5 3.5Z"/></symbol>
+    <symbol id="client-i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14M10 11v6M14 11v6"/></symbol>
+    <symbol id="client-i-refresh" viewBox="0 0 24 24"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M6.1 9a7 7 0 0 1 11.7-2L20 12M4 12l2.2 5a7 7 0 0 0 11.7-2"/></symbol>
+    <symbol id="client-i-upload" viewBox="0 0 24 24"><path d="M12 16V4M7 9l5-5 5 5M5 20h14"/></symbol>
+    <symbol id="client-i-image" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 15-5-5L5 20"/></symbol>
+    <symbol id="client-i-save" viewBox="0 0 24 24"><path d="M5 4h12l2 2v14H5V4Z"/><path d="M8 4v6h8V4M8 20v-6h8v6"/></symbol>
+    <symbol id="client-i-building" viewBox="0 0 24 24"><path d="M4 21V7l8-4 8 4v14M8 10h.01M12 10h.01M16 10h.01M8 14h.01M12 14h.01M16 14h.01M9 21v-3h6v3"/></symbol>
+  </svg>
+
+  <section class="clients-hero">
+    <div class="clients-hero-copy">
+      <p class="clients-eyebrow">
+        <svg><use href="#i-map-pin"/></svg>
+        Presença da marca
+      </p>
+      <h2>Rede de clientes</h2>
+      <p class="clients-hero-description">
+        Gerencie os estabelecimentos atendidos pela Lazer &amp; Sport e controle quais clientes aparecem no mapa público do site.
+      </p>
+    </div>
+    <button id="newClientButton" type="button" class="clients-primary-button">
+      <svg><use href="#client-i-plus"/></svg>
+      Cadastrar cliente
+    </button>
+  </section>
+
+  <section class="clients-kpis" aria-label="Resumo dos clientes">
+    <article class="clients-kpi">
+      <span class="clients-kpi-icon"><svg><use href="#i-users"/></svg></span>
+      <span class="clients-kpi-copy">
+        <strong id="kpiTotal" class="clients-kpi-value">{{ clientes|length }}</strong>
+        <span class="clients-kpi-label">Clientes cadastrados</span>
+      </span>
+    </article>
+    <article class="clients-kpi">
+      <span class="clients-kpi-icon"><svg><use href="#client-i-building"/></svg></span>
+      <span class="clients-kpi-copy">
+        <strong id="kpiActive" class="clients-kpi-value">0</strong>
+        <span class="clients-kpi-label">Cadastros ativos</span>
+      </span>
+    </article>
+    <article class="clients-kpi">
+      <span class="clients-kpi-icon"><svg><use href="#i-map-pin"/></svg></span>
+      <span class="clients-kpi-copy">
+        <strong id="kpiPublished" class="clients-kpi-value">0</strong>
+        <span class="clients-kpi-label">Visíveis no mapa</span>
+      </span>
+    </article>
+    <article class="clients-kpi">
+      <span class="clients-kpi-icon"><svg><use href="#i-globe"/></svg></span>
+      <span class="clients-kpi-copy">
+        <strong id="kpiLocated" class="clients-kpi-value">0</strong>
+        <span class="clients-kpi-label">Com localização</span>
+      </span>
+    </article>
+  </section>
+
+  <section class="clients-panel">
+    <div class="clients-toolbar">
+      <label class="clients-search" for="clientSearch">
+        <svg><use href="#client-i-search"/></svg>
+        <input id="clientSearch" type="search" placeholder="Buscar por nome, cidade, estado ou país…" autocomplete="off">
+        <button id="clearClientSearch" class="clients-search-clear" type="button" aria-label="Limpar busca">
+          <svg><use href="#client-i-close"/></svg>
+        </button>
+      </label>
+
+      <div class="clients-filters" role="group" aria-label="Filtrar clientes">
+        <button type="button" class="clients-filter is-active" data-filter="all">Todos</button>
+        <button type="button" class="clients-filter" data-filter="published">No mapa</button>
+        <button type="button" class="clients-filter" data-filter="unlocated">Sem localização</button>
+        <button type="button" class="clients-filter" data-filter="inactive">Inativos</button>
+      </div>
+    </div>
+
+    <div class="clients-results-line">
+      <span><strong id="visibleClientCount">{{ clientes|length }}</strong> cliente(s) exibido(s)</span>
+      <span>Atualização instantânea dos filtros</span>
+    </div>
+
+    {% if clientes %}
+      <div class="clients-table-wrap">
+        <table class="clients-table">
+          <thead>
+            <tr>
+              <th>Cliente</th>
+              <th>Localização</th>
+              <th>Situação</th>
+              <th style="text-align:right">Ações</th>
+            </tr>
+          </thead>
+          <tbody id="clientsTableBody">
+            {% for cliente in clientes %}
+              <tr
+                data-client-id="{{ cliente.id }}"
+                data-client-name="{{ cliente.descricao_cliente|default:''|lower }}"
+                data-client-location="{{ cliente.cidade|default:''|lower }} {{ cliente.estado|default:''|lower }} {{ cliente.pais|default:'Brasil'|lower }}"
+                data-active="{% if cliente.ativo %}true{% else %}false{% endif %}"
+                data-published="{% if cliente.ativo and cliente.exibir_no_mapa and cliente.latitude and cliente.longitude %}true{% else %}false{% endif %}"
+                data-located="{% if cliente.latitude and cliente.longitude %}true{% else %}false{% endif %}">
+                <td>
+                  <div class="client-identity">
+                    <div class="client-logo">
+                      {% if cliente.logo_cliente %}
+                        <img src="{{ cliente.logo_cliente.url }}" alt="Logo de {{ cliente.descricao_cliente }}">
+                      {% else %}
+                        {{ cliente.descricao_cliente|default:"C"|slice:":1"|upper }}
+                      {% endif %}
+                    </div>
+                    <div>
+                      <strong class="client-name">{{ cliente.descricao_cliente }}</strong>
+                      {% if cliente.site_cliente %}
+                        <a class="client-site" href="{{ cliente.site_cliente }}" target="_blank" rel="noopener">
+                          {{ cliente.site_cliente }}
+                        </a>
+                      {% else %}
+                        <span class="client-site">Sem rede social informada</span>
+                      {% endif %}
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  <div class="client-location">
+                    <strong>
+                      {% if cliente.cidade %}
+                        {{ cliente.cidade }}{% if cliente.estado %}/{{ cliente.estado }}{% endif %}
+                      {% else %}
+                        Cidade não informada
+                      {% endif %}
+                    </strong>
+                    <span>{{ cliente.pais|default:"Brasil" }}{% if cliente.cep %} · CEP {{ cliente.cep }}{% endif %}</span>
+                  </div>
+                </td>
+                <td>
+                  <div class="client-status-stack">
+                    {% if cliente.ativo %}
+                      <span class="client-status is-success"><i class="client-status-dot"></i>Ativo</span>
+                    {% else %}
+                      <span class="client-status is-neutral"><i class="client-status-dot"></i>Inativo</span>
+                    {% endif %}
+
+                    {% if cliente.latitude and cliente.longitude %}
+                      {% if cliente.exibir_no_mapa and cliente.ativo %}
+                        <span class="client-status is-info"><i class="client-status-dot"></i>No mapa</span>
+                      {% else %}
+                        <span class="client-status is-warning"><i class="client-status-dot"></i>Oculto</span>
+                      {% endif %}
+                    {% else %}
+                      <span class="client-status is-danger"><i class="client-status-dot"></i>Sem localização</span>
+                    {% endif %}
+                  </div>
+                </td>
+                <td>
+                  <div class="client-actions">
+                    <button type="button" class="client-action" data-edit-client="{{ cliente.id }}" title="Editar cliente" aria-label="Editar {{ cliente.descricao_cliente }}">
+                      <svg><use href="#client-i-edit"/></svg>
+                    </button>
+
+                    <form method="post" class="client-action-form">
+                      {% csrf_token %}
+                      <input type="hidden" name="action" value="recalcular">
+                      <input type="hidden" name="id" value="{{ cliente.id }}">
+                      <button type="submit" class="client-action" title="Recalcular localização" aria-label="Recalcular localização de {{ cliente.descricao_cliente }}">
+                        <svg><use href="#client-i-refresh"/></svg>
+                      </button>
+                    </form>
+
+                    <button
+                      type="button"
+                      class="client-action is-danger"
+                      data-delete-client="{{ cliente.id }}"
+                      data-delete-name="{{ cliente.descricao_cliente }}"
+                      title="Excluir cliente"
+                      aria-label="Excluir {{ cliente.descricao_cliente }}">
+                      <svg><use href="#client-i-trash"/></svg>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <div id="filteredEmptyState" class="clients-empty" hidden>
+        <span class="clients-empty-icon"><svg><use href="#client-i-search"/></svg></span>
+        <h3>Nenhum cliente encontrado</h3>
+        <p>Tente outro termo de busca ou selecione um filtro diferente.</p>
+      </div>
+    {% else %}
+      <div class="clients-empty">
+        <span class="clients-empty-icon"><svg><use href="#i-map-pin"/></svg></span>
+        <h3>Comece sua rede de clientes</h3>
+        <p>Cadastre o primeiro estabelecimento para começar a construir a presença da Lazer &amp; Sport no mapa.</p>
+      </div>
+    {% endif %}
+  </section>
+</div>
+
+<div id="clientFormModal" class="client-modal" role="dialog" aria-modal="true" aria-labelledby="clientModalTitle" aria-hidden="true">
+  <div class="client-modal-card">
+    <form id="clientForm" method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="save">
+      <input type="hidden" name="id" id="clientId" value="">
+
+      <header class="client-modal-header">
+        <div class="client-modal-heading">
+          <h2 id="clientModalTitle">Cadastrar cliente</h2>
+          <p id="clientModalSubtitle">Adicione um novo estabelecimento à rede Lazer &amp; Sport.</p>
+        </div>
+        <button id="closeClientModal" class="client-modal-close" type="button" aria-label="Fechar formulário">
+          <svg><use href="#client-i-close"/></svg>
+        </button>
+      </header>
+
+      <div class="client-modal-body">
+        <section class="client-form-section">
+          <div class="client-form-section-title">
+            <svg><use href="#client-i-building"/></svg>
+            <div>
+              <strong>Identificação</strong>
+              <span>Informações que identificam o cliente no painel e no mapa.</span>
+            </div>
+          </div>
+
+          <div class="client-form-grid">
+            <div class="client-field is-full">
+              <label for="clientName">Nome do cliente <small>Obrigatório</small></label>
+              <input id="clientName" name="descricao_cliente" type="text" placeholder="Ex.: Buffet Alegria" required maxlength="160">
+            </div>
+
+            <div class="client-field is-full">
+              <label>Logo do cliente <small id="clientLogoRequirement">Obrigatória no cadastro</small></label>
+              <div class="client-logo-upload">
+                <span id="clientLogoPreview" class="client-logo-preview">
+                  <svg><use href="#client-i-image"/></svg>
+                  <img id="clientLogoPreviewImage" src="" alt="Pré-visualização da logo">
+                </span>
+                <span class="client-logo-upload-copy">
+                  <strong id="clientLogoFileName">Escolha uma imagem</strong>
+                  <span>Use PNG, JPG ou WEBP, preferencialmente com fundo transparente.</span>
+                  <label class="client-file-button">
+                    <svg><use href="#client-i-upload"/></svg>
+                    Selecionar arquivo
+                    <input id="clientLogo" name="logo_cliente" type="file" accept="image/png,image/jpeg,image/webp">
+                  </label>
+                </span>
+              </div>
+            </div>
+
+            <div class="client-field is-full">
+              <label for="clientSite">Instagram ou site <small>Opcional</small></label>
+              <input id="clientSite" name="site_cliente" type="url" placeholder="https://instagram.com/cliente">
+            </div>
+          </div>
+        </section>
+
+        <section class="client-form-section">
+          <div class="client-form-section-title">
+            <svg><use href="#i-map-pin"/></svg>
+            <div>
+              <strong>Endereço e localização</strong>
+              <span>O CEP é usado para calcular automaticamente a posição do cliente no mapa.</span>
+            </div>
+          </div>
+
+          <div class="client-form-grid">
+            <div class="client-field is-third">
+              <label for="clientCep">CEP</label>
+              <input id="clientCep" name="cep" type="text" inputmode="numeric" placeholder="00000-000" maxlength="9">
+            </div>
+            <div class="client-field is-third">
+              <label for="clientNumber">Número</label>
+              <input id="clientNumber" name="numero" type="text" placeholder="104" maxlength="20">
+            </div>
+            <div class="client-field is-third">
+              <label for="clientCountry">País</label>
+              <input id="clientCountry" name="pais" type="text" value="Brasil" placeholder="Brasil">
+            </div>
+            <div class="client-field">
+              <label for="clientStreet">Rua</label>
+              <input id="clientStreet" name="rua" type="text" placeholder="Nome da rua">
+            </div>
+            <div class="client-field">
+              <label for="clientDistrict">Bairro</label>
+              <input id="clientDistrict" name="bairro" type="text" placeholder="Nome do bairro">
+            </div>
+            <div class="client-field">
+              <label for="clientCity">Cidade</label>
+              <input id="clientCity" name="cidade" type="text" placeholder="São Paulo">
+            </div>
+            <div class="client-field">
+              <label for="clientState">Estado/UF</label>
+              <input id="clientState" name="estado" type="text" placeholder="SP" maxlength="2">
+            </div>
+          </div>
+        </section>
+
+        <section class="client-form-section">
+          <div class="client-form-section-title">
+            <svg><use href="#i-globe"/></svg>
+            <div>
+              <strong>Publicação</strong>
+              <span>Defina a disponibilidade e o comportamento deste cliente no mapa público.</span>
+            </div>
+          </div>
+
+          <div class="client-toggle-grid">
+            <label class="client-toggle">
+              <input id="clientActive" name="ativo" type="checkbox" checked>
+              <span class="client-toggle-control"></span>
+              <span class="client-toggle-copy">
+                <strong>Cliente ativo</strong>
+                <span>Mantém o cadastro disponível.</span>
+              </span>
+            </label>
+
+            <label class="client-toggle">
+              <input id="clientPublished" name="exibir_no_mapa" type="checkbox" checked>
+              <span class="client-toggle-control"></span>
+              <span class="client-toggle-copy">
+                <strong>Exibir no mapa</strong>
+                <span>Publica o cliente no site.</span>
+              </span>
+            </label>
+
+            <label class="client-toggle">
+              <input id="clientForceGeocode" name="forcar_geocode" type="checkbox">
+              <span class="client-toggle-control"></span>
+              <span class="client-toggle-copy">
+                <strong>Recalcular posição</strong>
+                <span>Refaz a geolocalização ao salvar.</span>
+              </span>
+            </label>
+          </div>
+        </section>
+      </div>
+
+      <footer class="client-modal-footer">
+        <button id="cancelClientModal" type="button" class="client-secondary-button">Cancelar</button>
+        <button type="submit" class="client-save-button">
+          <svg><use href="#client-i-save"/></svg>
+          Salvar cliente
+        </button>
+      </footer>
+    </form>
+  </div>
+</div>
+
+<div id="deleteClientModal" class="client-modal" role="dialog" aria-modal="true" aria-labelledby="deleteClientTitle" aria-hidden="true">
+  <div class="client-modal-card is-small">
+    <div class="client-confirm-content">
+      <span class="client-confirm-icon"><svg><use href="#client-i-trash"/></svg></span>
+      <h2 id="deleteClientTitle">Excluir cliente?</h2>
+      <p>
+        O cadastro de <strong id="deleteClientName"></strong> será removido definitivamente e deixará de aparecer no mapa.
+      </p>
+    </div>
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="delete">
+      <input id="deleteClientId" type="hidden" name="id" value="">
+      <footer class="client-modal-footer">
+        <button id="cancelDeleteClient" type="button" class="client-secondary-button">Cancelar</button>
+        <button type="submit" class="client-delete-button">Excluir definitivamente</button>
+      </footer>
+    </form>
+  </div>
+</div>
+
+{{ clientes_dados|json_script:"clientsAdminData" }}
+
+<script>
+(function () {
+  const clientsDataNode = document.getElementById('clientsAdminData');
+  const clientsData = clientsDataNode ? JSON.parse(clientsDataNode.textContent) : [];
+  const rows = Array.from(document.querySelectorAll('[data-client-id]'));
+  const searchInput = document.getElementById('clientSearch');
+  const clearSearchButton = document.getElementById('clearClientSearch');
+  const filterButtons = Array.from(document.querySelectorAll('[data-filter]'));
+  const visibleCount = document.getElementById('visibleClientCount');
+  const filteredEmptyState = document.getElementById('filteredEmptyState');
+
+  const formModal = document.getElementById('clientFormModal');
+  const clientForm = document.getElementById('clientForm');
+  const deleteModal = document.getElementById('deleteClientModal');
+  const newClientButton = document.getElementById('newClientButton');
+  const clientLogo = document.getElementById('clientLogo');
+  const logoPreview = document.getElementById('clientLogoPreview');
+  const logoPreviewImage = document.getElementById('clientLogoPreviewImage');
+  const logoFileName = document.getElementById('clientLogoFileName');
+  let currentFilter = 'all';
+  let lastTrigger = null;
+
+  function normalizeText(value) {
+    return String(value || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim();
+  }
+
+  function updateKpis() {
+    document.getElementById('kpiTotal').textContent = rows.length;
+    document.getElementById('kpiActive').textContent =
+      rows.filter(row => row.dataset.active === 'true').length;
+    document.getElementById('kpiPublished').textContent =
+      rows.filter(row => row.dataset.published === 'true').length;
+    document.getElementById('kpiLocated').textContent =
+      rows.filter(row => row.dataset.located === 'true').length;
+  }
+
+  function rowMatchesFilter(row) {
+    if (currentFilter === 'published') return row.dataset.published === 'true';
+    if (currentFilter === 'unlocated') return row.dataset.located !== 'true';
+    if (currentFilter === 'inactive') return row.dataset.active !== 'true';
+    return true;
+  }
+
+  function applyClientFilters() {
+    const term = normalizeText(searchInput ? searchInput.value : '');
+    let count = 0;
+
+    rows.forEach(row => {
+      const searchable = normalizeText(
+        `${row.dataset.clientName || ''} ${row.dataset.clientLocation || ''}`
+      );
+      const visible = searchable.includes(term) && rowMatchesFilter(row);
+      row.hidden = !visible;
+      if (visible) count += 1;
+    });
+
+    if (visibleCount) visibleCount.textContent = count;
+    if (filteredEmptyState) filteredEmptyState.hidden = count !== 0;
+    if (clearSearchButton) {
+      clearSearchButton.classList.toggle('is-visible', Boolean(searchInput.value));
+    }
+  }
+
+  function setModalOpen(modal, open, trigger) {
+    if (!modal) return;
+    if (open) {
+      lastTrigger = trigger || document.activeElement;
+      modal.classList.add('is-open');
+      modal.setAttribute('aria-hidden', 'false');
+      document.body.classList.add('client-modal-open');
+    } else {
+      modal.classList.remove('is-open');
+      modal.setAttribute('aria-hidden', 'true');
+      if (!document.querySelector('.client-modal.is-open')) {
+        document.body.classList.remove('client-modal-open');
+      }
+      if (lastTrigger && typeof lastTrigger.focus === 'function') lastTrigger.focus();
+    }
+  }
+
+  function setValue(id, value) {
+    const field = document.getElementById(id);
+    if (field) field.value = value || '';
+  }
+
+  function resetLogoPreview() {
+    logoPreview.classList.remove('has-image');
+    logoPreviewImage.removeAttribute('src');
+    logoFileName.textContent = 'Escolha uma imagem';
+  }
+
+  function openClientForm(id, trigger) {
+    clientForm.reset();
+    resetLogoPreview();
+
+    const numericId = id ? Number(id) : null;
+    const client = numericId
+      ? clientsData.find(item => Number(item.id) === numericId)
+      : null;
+
+    document.getElementById('clientId').value = client ? client.id : '';
+    document.getElementById('clientModalTitle').textContent =
+      client ? 'Editar cliente' : 'Cadastrar cliente';
+    document.getElementById('clientModalSubtitle').textContent = client
+      ? 'Atualize os dados e a publicação deste estabelecimento.'
+      : 'Adicione um novo estabelecimento à rede Lazer & Sport.';
+    document.getElementById('clientLogoRequirement').textContent = client
+      ? 'Opcional ao editar'
+      : 'Obrigatória no cadastro';
+    clientLogo.required = !client;
+
+    if (client) {
+      setValue('clientName', client.descricao_cliente);
+      setValue('clientSite', client.site_cliente);
+      setValue('clientCep', client.cep);
+      setValue('clientNumber', client.numero);
+      setValue('clientCountry', client.pais || 'Brasil');
+      setValue('clientStreet', client.rua);
+      setValue('clientDistrict', client.bairro);
+      setValue('clientCity', client.cidade);
+      setValue('clientState', client.estado);
+      document.getElementById('clientActive').checked = Boolean(client.ativo);
+      document.getElementById('clientPublished').checked = Boolean(client.exibir_no_mapa);
+      logoFileName.textContent = 'Manter logo atual ou selecionar outra';
+    } else {
+      setValue('clientCountry', 'Brasil');
+      document.getElementById('clientActive').checked = true;
+      document.getElementById('clientPublished').checked = true;
+    }
+
+    document.getElementById('clientForceGeocode').checked = false;
+    setModalOpen(formModal, true, trigger);
+    window.setTimeout(() => document.getElementById('clientName').focus(), 80);
+  }
+
+  function closeClientForm() {
+    setModalOpen(formModal, false);
+  }
+
+  function openDeleteConfirmation(id, name, trigger) {
+    document.getElementById('deleteClientId').value = id;
+    document.getElementById('deleteClientName').textContent = name || 'este cliente';
+    setModalOpen(deleteModal, true, trigger);
+    window.setTimeout(() => document.getElementById('cancelDeleteClient').focus(), 80);
+  }
+
+  function closeDeleteConfirmation() {
+    setModalOpen(deleteModal, false);
+  }
+
+  updateKpis();
+  applyClientFilters();
+
+  if (searchInput) searchInput.addEventListener('input', applyClientFilters);
+  if (clearSearchButton) {
+    clearSearchButton.addEventListener('click', function () {
+      searchInput.value = '';
+      searchInput.focus();
+      applyClientFilters();
+    });
+  }
+
+  filterButtons.forEach(button => {
+    button.addEventListener('click', function () {
+      currentFilter = button.dataset.filter;
+      filterButtons.forEach(item => item.classList.toggle('is-active', item === button));
+      applyClientFilters();
+    });
+  });
+
+  if (newClientButton) {
+    newClientButton.addEventListener('click', function () {
+      openClientForm(null, newClientButton);
+    });
+  }
+
+  document.querySelectorAll('[data-edit-client]').forEach(button => {
+    button.addEventListener('click', function () {
+      openClientForm(button.dataset.editClient, button);
+    });
+  });
+
+  document.querySelectorAll('[data-delete-client]').forEach(button => {
+    button.addEventListener('click', function () {
+      openDeleteConfirmation(
+        button.dataset.deleteClient,
+        button.dataset.deleteName,
+        button
+      );
+    });
+  });
+
+  document.getElementById('closeClientModal').addEventListener('click', closeClientForm);
+  document.getElementById('cancelClientModal').addEventListener('click', closeClientForm);
+  document.getElementById('cancelDeleteClient').addEventListener('click', closeDeleteConfirmation);
+
+  formModal.addEventListener('click', function (event) {
+    if (event.target === formModal) closeClientForm();
+  });
+
+  deleteModal.addEventListener('click', function (event) {
+    if (event.target === deleteModal) closeDeleteConfirmation();
+  });
+
+  clientLogo.addEventListener('change', function () {
+    const file = clientLogo.files && clientLogo.files[0];
+    if (!file) {
+      resetLogoPreview();
+      return;
+    }
+
+    logoFileName.textContent = file.name;
+    const reader = new FileReader();
+    reader.addEventListener('load', function () {
+      logoPreviewImage.src = reader.result;
+      logoPreview.classList.add('has-image');
+    });
+    reader.readAsDataURL(file);
+  });
+
+  document.getElementById('clientCep').addEventListener('input', function (event) {
+    const digits = event.target.value.replace(/\D/g, '').slice(0, 8);
+    event.target.value = digits.length > 5
+      ? `${digits.slice(0, 5)}-${digits.slice(5)}`
+      : digits;
+  });
+
+  document.getElementById('clientState').addEventListener('input', function (event) {
+    event.target.value = event.target.value.replace(/[^a-zA-Z]/g, '').toUpperCase().slice(0, 2);
+  });
+
+  document.addEventListener('keydown', function (event) {
+    if (event.key !== 'Escape') return;
+    if (deleteModal.classList.contains('is-open')) {
+      closeDeleteConfirmation();
+    } else if (formModal.classList.contains('is-open')) {
+      closeClientForm();
+    }
+  });
+})();
 </script>
-
 {% endblock %}
