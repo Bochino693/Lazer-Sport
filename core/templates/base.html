@@ -8,8 +8,11 @@
   <meta name="description" content="{% block meta_description %}Lazer e Sport Brinquedos: fábrica e loja de brinquedos, fliperama, mecânicos e simuladores para shoppings, quiosques e parques. Compra e reposição de peças.{% endblock %}">
   <link rel="canonical" href="https://www.lazersport.com.br{% block canonical_path %}{{ request.path }}{% endblock %}">
   <link rel="icon" type="image/x-icon" href="{% static 'images/logoofi.png' %}">
-    <link rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
 
 <style>
@@ -31,7 +34,7 @@
       margin: 0;
       padding: 0;
       box-sizing: border-box;
-      font-family: "Poppins", sans-serif;
+      font-family: "Manrope", "Segoe UI", sans-serif;
     }
 
     body {
@@ -150,7 +153,8 @@
     nav a {
       color: white;
       text-decoration: none;
-      font-weight: 500;
+      font-weight: 700;
+      letter-spacing: -0.01em;
       position: relative;
       padding: 8px 6px;
       font-size: clamp(0.74rem, 0.64rem + 0.35vw, 0.9rem);
@@ -242,18 +246,57 @@
        de quanto cabe: a divisão é sempre a mesma. */
     @media (min-width: 769px) {
       header {
-        padding: 10px 20px;
+        padding: 12px 20px;
         justify-content: flex-start;
       }
 
       .nav-desktop {
         display: grid;
         grid-template-columns: repeat(7, minmax(90px, 1fr));
-        gap: 4px 8px;
+        gap: 8px;
         flex: 1 1 auto;
-        margin-left: 28px;
+        margin-left: 24px;
         min-width: 0;
         user-select: none;
+      }
+
+      .nav-desktop a {
+        min-height: 46px;
+        padding: 9px 10px;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.10);
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.10),
+          0 5px 14px rgba(0, 34, 91, 0.12);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        transition:
+          color 0.25s var(--ease-out),
+          background 0.25s var(--ease-out),
+          border-color 0.25s var(--ease-out),
+          box-shadow 0.25s var(--ease-out),
+          transform 0.25s var(--ease-out);
+      }
+
+      .nav-desktop a::before,
+      .nav-desktop a::after {
+        display: none;
+      }
+
+      .nav-desktop a:hover,
+      .nav-desktop a.active-link {
+        color: #ffffff !important;
+        background: linear-gradient(135deg, #E63946, #c9152d);
+        border-color: rgba(255, 255, 255, 0.42);
+        box-shadow:
+          0 9px 20px rgba(116, 8, 24, 0.28),
+          inset 0 1px 0 rgba(255, 255, 255, 0.20);
+        transform: translateY(-2px);
+      }
+
+      .nav-desktop a:active {
+        transform: translateY(0) scale(0.98);
       }
     }
 
@@ -640,6 +683,9 @@ nav a.btn-login {
   /* ===== HEADER ===== */
   header {
     padding: 8px 12px;
+    min-height: 64px;
+    justify-content: space-between;
+    gap: 10px;
   }
 
   .logo img {
@@ -710,8 +756,12 @@ nav a.btn-login {
 
   /* Deixa a saudação um pouco mais compacta no header mobile */
   .user-greeting {
-    max-width: 92px;
+    max-width: 104px;
     font-size: 13px;
+  }
+
+  .user-caret {
+    display: none;
   }
 }
 
@@ -742,6 +792,14 @@ nav a.btn-login {
 @media (max-width: 768px) {
   .menu-toggle {
     display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 46px;
+    height: 46px;
+    flex-shrink: 0;
+    border: 1px solid rgba(255, 255, 255, 0.24);
+    background: rgba(255, 255, 255, 0.12);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
   }
 
   nav#nav {
@@ -756,7 +814,7 @@ nav a.btn-login {
     align-items: stretch;
     justify-content: flex-start;
     gap: 2px;
-    padding: 76px 18px 30px;
+    padding: 82px 16px 32px;
     border-radius: 0;
     box-shadow: -16px 0 40px rgba(0, 0, 0, 0.35);
 
@@ -779,10 +837,12 @@ nav a.btn-login {
     justify-content: flex-start;
     gap: 14px;
     padding: 14px 12px;
-    font-size: 0.98rem;
+    font-size: 0.94rem;
+    font-weight: 700;
     line-height: 1.3;
     border-radius: 12px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.045);
     white-space: normal;
     text-align: left;
     min-width: 0;
@@ -796,8 +856,11 @@ nav a.btn-login {
   }
 
   nav#nav a:hover,
-  nav#nav a:active {
-    background: rgba(255, 255, 255, 0.08);
+  nav#nav a:active,
+  nav#nav a.active-link {
+    color: #ffffff !important;
+    background: linear-gradient(135deg, rgba(230, 57, 70, 0.96), rgba(201, 21, 45, 0.96));
+    border-color: rgba(255, 255, 255, 0.24);
     transform: none;
   }
 
@@ -1069,14 +1132,15 @@ nav a.btn-login {
   </nav>
 
   <!-- Menu toggle -->
-  <div class="menu-toggle" id="menu-toggle" aria-label="Abrir menu">
+  <button type="button" class="menu-toggle" id="menu-toggle"
+          aria-label="Abrir menu" aria-controls="nav" aria-expanded="false">
     <span></span>
     <span></span>
     <span></span>
-  </div>
+  </button>
 
   <!-- Navegação (mobile — off-canvas, com TODOS os itens) -->
-<nav id="nav">
+<nav id="nav" aria-label="Menu principal no celular" aria-hidden="true">
   <button type="button" class="nav-close" id="nav-close" aria-label="Fechar menu">
     <i class="fa-solid fa-xmark"></i>
   </button>
@@ -1390,9 +1454,106 @@ nav a.btn-login {
         color: rgba(255, 255, 255, 0.5);
     }
 
+    .ls-clientes-strip {
+        max-width: 1180px;
+        margin: 42px auto 0;
+        padding: 26px 0 4px;
+        border-top: 1px solid rgba(255, 255, 255, 0.10);
+    }
+
+    .ls-clientes-heading {
+        display: flex;
+        align-items: end;
+        justify-content: space-between;
+        gap: 20px;
+        margin-bottom: 18px;
+    }
+
+    .ls-clientes-heading h5,
+    .ls-clientes-heading p {
+        margin: 0;
+    }
+
+    .ls-clientes-heading p {
+        color: rgba(255, 255, 255, 0.48);
+        font-size: 0.84rem;
+        line-height: 1.5;
+    }
+
+    .ls-clientes-logos {
+        display: grid;
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+        gap: 12px;
+    }
+
+    .ls-cliente-logo {
+        min-height: 92px;
+        padding: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(255, 255, 255, 0.055);
+        border: 1px solid rgba(255, 255, 255, 0.09);
+        border-radius: 16px;
+        overflow: hidden;
+        transition:
+          background 0.25s var(--ease-out),
+          border-color 0.25s var(--ease-out),
+          transform 0.25s var(--ease-out);
+    }
+
+    .ls-cliente-logo:hover {
+        background: rgba(255, 255, 255, 0.10);
+        border-color: rgba(255, 255, 255, 0.20);
+        transform: translateY(-3px);
+    }
+
+    .ls-cliente-logo img {
+        width: 100%;
+        height: 58px;
+        object-fit: contain;
+        filter: grayscale(1) brightness(1.65) contrast(0.72);
+        opacity: 0.72;
+        transition: filter 0.3s var(--ease-out), opacity 0.3s var(--ease-out), transform 0.3s var(--ease-out);
+    }
+
+    .ls-cliente-logo:hover img {
+        filter: grayscale(1) brightness(1.9) contrast(0.78);
+        opacity: 0.95;
+        transform: scale(1.04);
+    }
+
     @media (max-width: 860px) {
         .ls-footer-grid { grid-template-columns: 1fr; }
         .ls-quick-dock { left: auto; right: 22px; bottom: 100px; }
+        .ls-clientes-logos { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    }
+
+    @media (max-width: 520px) {
+        .ls-footer {
+            padding: 46px 18px 22px;
+        }
+
+        .ls-clientes-heading {
+            align-items: flex-start;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .ls-clientes-logos {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .ls-cliente-logo {
+            min-height: 78px;
+            padding: 12px;
+            border-radius: 13px;
+        }
+
+        .ls-cliente-logo img {
+            height: 48px;
+        }
     }
 </style>
 
@@ -1448,6 +1609,29 @@ nav a.btn-login {
 
     </div>
 
+    {% with clientes_rodape=clientes_globais|default:clientes_destaque %}
+      {% if clientes_rodape %}
+        <section class="ls-clientes-strip" aria-labelledby="ls-clientes-title">
+            <div class="ls-clientes-heading">
+                <h5 id="ls-clientes-title">Empresas que escolheram a Lazer &amp; Sport</h5>
+                <p>Alguns clientes que levam diversão aos seus espaços.</p>
+            </div>
+
+            <div class="ls-clientes-logos">
+                {% for cliente in clientes_rodape|slice:":6" %}
+                  {% if cliente.logo_cliente %}
+                    <div class="ls-cliente-logo" title="{{ cliente.descricao_cliente }}">
+                        <img src="{{ cliente.logo_cliente.url }}"
+                             alt="Logo {{ cliente.descricao_cliente }}"
+                             loading="lazy" decoding="async">
+                    </div>
+                  {% endif %}
+                {% endfor %}
+            </div>
+        </section>
+      {% endif %}
+    {% endwith %}
+
     <div class="ls-footer-bottom">
         <span>&copy; {% now "Y" %} Lazer &amp; Sport Brinquedos. Todos os direitos reservados.</span>
         <span>Qualidade e diversão.</span>
@@ -1480,15 +1664,26 @@ const navClose = document.getElementById('nav-close');
 function abrirMenuMobile() {
   if (!nav) return;
   nav.classList.add('active');
-  if (menuToggle) menuToggle.classList.add('active');
+  nav.setAttribute('aria-hidden', 'false');
+  if (menuToggle) {
+    menuToggle.classList.add('active');
+    menuToggle.setAttribute('aria-expanded', 'true');
+    menuToggle.setAttribute('aria-label', 'Fechar menu');
+  }
   if (navBackdrop) navBackdrop.classList.add('active');
   document.body.style.overflow = 'hidden';
+  if (navClose) navClose.focus();
 }
 
 function fecharMenuMobile() {
   if (!nav) return;
   nav.classList.remove('active');
-  if (menuToggle) menuToggle.classList.remove('active');
+  nav.setAttribute('aria-hidden', 'true');
+  if (menuToggle) {
+    menuToggle.classList.remove('active');
+    menuToggle.setAttribute('aria-expanded', 'false');
+    menuToggle.setAttribute('aria-label', 'Abrir menu');
+  }
   if (navBackdrop) navBackdrop.classList.remove('active');
   document.body.style.overflow = '';
 }
