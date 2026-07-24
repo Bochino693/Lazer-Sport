@@ -3341,61 +3341,202 @@ from django.views import View
 from .models import Brinquedos, Combos
 
 
+from decimal import Decimal, InvalidOperation
+
+from django.contrib import messages
+from django.db import transaction
+from django.db.models import Q
+from django.db.models.deletion import ProtectedError
+from django.shortcuts import get_object_or_404, redirect, render
+from django.views import View
+
+from .models import Brinquedos, Combos
+
+
 class ComboAdminView(AdminOnlyMixin, View):
-    template_name = "gestao/combo_adm.html"
+    """
+    Única view da administração de combos.
 
-    def get(self, request):
-        return render(request, self.template_name, {
-            "combos": Combos.objects.prefetch_related("brinquedos").order_by("-id"),
-            "brinquedos": Brinquedos.objects.filter(ativo=True).order_by("nome_brinquedo"),
-        })
+    GET:
+        Lista, pesquisa e filtra os combos.
 
-    @transaction.atomic
-    def post(self, request):
-        action = request.POST.get("action", "save")
+    POST:
+        Cria, edita ou exclui conforme o campo "acao" enviado pelo
+        formulário da própria página.
+    """
 
-        if action == "delete":
-            combo = get_object_or_404(Combos, pk=request.POST.get("id"))
-            combo.delete()
-            messages.success(request, "Combo excluído com sucesso.")
+    template_name = "gestao/combos_adm.html"
+
+    def get_queryset(self):
+        queryset = (
+            Combos.objects
+            .prefetch_related("brinquedos")
+            .order_by("-id")
+        )
+
+        busca = self.request.GET.get("q", "").strip()
+        status = self.request.GET.get("status", "todos").strip().lower()
+
+        if busca:
+            queryset = queryset.filter(
+                Q(descricao__icontains=busca)
+                | Q(brinquedos__nome_brinquedo__icontains=busca)
+            ).distinct()
+
+        if status == "ativos":
+            queryset = queryset.filter(ativo=True)
+        elif status == "inativos":
+            queryset = queryset.filter(ativo=False)
+
+        return queryset
+
+    def get(self, request, *args, **kwargs):
+        todos = Combos.objects.all()
+
+        context = {
+            "combos": self.get_queryset(),
+            "brinquedos": (
+                Brinquedos.objects
+                .filter(ativo=True)
+                .order_by("nome_brinquedo")
+            ),
+            "busca": request.GET.get("q", "").strip(),
+            "status_atual": request.GET.get("status", "todos"),
+            "total_combos": todos.count(),
+            "total_ativos": todos.filter(ativo=True).count(),
+            "total_inativos": todos.filter(ativo=False).count(),
+        }
+        return render(request, self.template_name, context)
+
+    @staticmethod
+    def _converter_valor(valor):
+        """
+        Aceita 10990.00, 10990,00 e 10.990,00.
+        """
+        valor = (valor or "").strip().replace("R$", "").replace(" ", "")
+
+        if not valor:
+            raise InvalidOperation
+
+        if "," in valor:
+            valor = valor.replace(".", "").replace(",", ".")
+        elif valor.count(".") > 1:
+            partes = valor.split(".")
+            valor = "".join(partes[:-1]) + "." + partes[-1]
+
+        valor_decimal = Decimal(valor)
+        if valor_decimal <= 0:
+            raise InvalidOperation
+
+        return valor_decimal.quantize(Decimal("0.01"))
+
+    def post(self, request, *args, **kwargs):
+        acao = request.POST.get("acao", "").strip().lower()
+
+        if acao == "excluir":
+            return self._excluir(request)
+
+        if acao not in {"criar", "editar"}:
+            messages.error(request, "Ação inválida.")
             return redirect("combos_admin")
 
-        descricao = request.POST.get("descricao", "").strip()
-        valor_texto = request.POST.get("valor_combo", "").strip()
-        brinquedos_ids = request.POST.getlist("brinquedos")
+        return self._salvar(request, acao)
 
-        if not descricao or not valor_texto or not brinquedos_ids:
-            messages.error(request, "Preencha descrição, valor e brinquedos do combo.")
+    @transaction.atomic
+    def _salvar(self, request, acao):
+        combo_id = request.POST.get("combo_id")
+        descricao = request.POST.get("descricao", "").strip()
+        try:
+            brinquedos_ids = list(
+                dict.fromkeys(
+                    int(item)
+                    for item in request.POST.getlist("brinquedos")
+                )
+            )
+        except (TypeError, ValueError):
+            brinquedos_ids = []
+        imagem = request.FILES.get("imagem_combo")
+        ativo = request.POST.get("ativo") == "on"
+
+        if acao == "editar":
+            combo = get_object_or_404(Combos, pk=combo_id)
+        else:
+            combo = Combos()
+
+        if not descricao:
+            messages.error(request, "Informe a descrição do combo.")
+            return redirect("combos_admin")
+
+        if not brinquedos_ids:
+            messages.error(
+                request,
+                "Selecione pelo menos um brinquedo para o combo.",
+            )
+            return redirect("combos_admin")
+
+        brinquedos = Brinquedos.objects.filter(pk__in=brinquedos_ids)
+        if brinquedos.count() != len(brinquedos_ids):
+            messages.error(
+                request,
+                "Um dos brinquedos selecionados não foi encontrado.",
+            )
             return redirect("combos_admin")
 
         try:
-            valor_normalizado = (
-                valor_texto.replace(".", "").replace(",", ".")
-                if "," in valor_texto else valor_texto
+            valor_combo = self._converter_valor(
+                request.POST.get("valor_combo")
             )
-            valor_combo = Decimal(valor_normalizado)
-            if valor_combo <= 0:
-                raise ValueError
-        except (ValueError, ArithmeticError):
-            messages.error(request, "Informe um valor válido para o combo.")
+        except (InvalidOperation, TypeError, ValueError):
+            messages.error(
+                request,
+                "Informe um valor válido, por exemplo: 10.990,00.",
+            )
             return redirect("combos_admin")
 
-        combo_id = request.POST.get("id")
-        combo = get_object_or_404(Combos, pk=combo_id) if combo_id else Combos()
         combo.descricao = descricao
         combo.valor_combo = valor_combo
+        combo.ativo = ativo
 
-        imagem = request.FILES.get("imagem_combo")
         if imagem:
             combo.imagem_combo = imagem
+        elif (
+            acao == "editar"
+            and request.POST.get("remover_imagem") == "on"
+            and combo.imagem_combo
+        ):
+            combo.imagem_combo.delete(save=False)
+            combo.imagem_combo = ""
 
         combo.save()
-        combo.brinquedos.set(brinquedos_ids)
+        combo.brinquedos.set(brinquedos)
 
-        messages.success(
-            request,
-            "Combo atualizado com sucesso." if combo_id else "Combo criado com sucesso.",
-        )
+        if acao == "criar":
+            messages.success(request, "Combo criado com sucesso.")
+        else:
+            messages.success(request, "Combo atualizado com sucesso.")
+
+        return redirect("combos_admin")
+
+    @transaction.atomic
+    def _excluir(self, request):
+        combo_id = request.POST.get("combo_id")
+        combo = get_object_or_404(Combos, pk=combo_id)
+
+        if request.POST.get("confirmacao", "").strip().upper() != "EXCLUIR":
+            messages.error(request, "Digite EXCLUIR para confirmar.")
+            return redirect("combos_admin")
+
+        try:
+            combo.delete()
+        except ProtectedError:
+            messages.error(
+                request,
+                "Este combo possui registros vinculados e não pode "
+                "ser excluído.",
+            )
+        else:
+            messages.success(request, "Combo excluído com sucesso.")
+
         return redirect("combos_admin")
 
 

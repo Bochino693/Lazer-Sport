@@ -111,7 +111,11 @@ urlpatterns = [
     path('categoria/admin/new/', NovaCategoria.as_view(), name='categoria_new'),
     path('tags/admin/new/', NovaTag.as_view(), name='tag_new'),
 
-    path("adm/combos/", ComboAdminView.as_view(), name="combos_admin"),
+    path(
+        "adm/combos/",
+        ComboAdminView.as_view(),
+        name="combos_admin",
+    ),
 
     path('adm/estatisticas/', EstatisticasGeraisView.as_view(), name='estatisticas_gerais'),
 
