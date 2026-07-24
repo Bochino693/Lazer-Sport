@@ -3204,17 +3204,42 @@ body {
         display: block;
     }
 
+    .cliente-marker,
+.fabrica-marker {
+    background: transparent;
+    border: none;
+}
+
+.pino-gota {
+    display: inline-block;
+    position: relative;
+    width: 60px;
+    height: 80px;
+    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, .35));
+    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.pino-gota:hover {
+    transform: translateY(-4px) scale(1.12);
+}
+
+.pino-gota-svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
     .cliente-marker .pino-gota-svg path { fill: #004AAD; }
     .fabrica-marker .pino-gota-svg path { fill: #E63946; }
 
-    /* a "janela" redonda: é ela que corta a imagem em círculo,
-       pegando só a parte central e ignorando as quinas quadradas */
     .pino-gota-janela {
         position: absolute;
         left: 50%;
         top: 36%;
-        width: 18px;
-        height: 18px;
+        width: 26px;
+        height: 26px;
         transform: translate(-50%, -50%);
         border-radius: 50%;
         overflow: hidden;
@@ -3223,7 +3248,7 @@ body {
         align-items: center;
         justify-content: center;
         z-index: 2;
-        box-shadow: 0 0 0 2px rgba(255, 255, 255, .9);
+        box-shadow: 0 0 0 3px rgba(255, 255, 255, .9);
     }
 
     .pino-gota-janela img {
@@ -3233,22 +3258,22 @@ body {
     }
 
     .pino-gota-janela i {
-        font-size: 14px;
+        font-size: 20px;
         color: #E63946;
     }
 
     .fabrica-marker .pino-gota {
-        width: 50px;
-        height: 67px;
+        width: 72px;
+        height: 96px;
     }
 
     .fabrica-marker .pino-gota-janela {
-        width: 22px;
-        height: 22px;
+        width: 32px;
+        height: 32px;
     }
 
     .fabrica-marker .pino-gota-janela i {
-        font-size: 18px;
+        font-size: 26px;
     }
 
     .fabrica-marker .pino-gota-svg {
@@ -3502,7 +3527,7 @@ body {
     // não vem do banco, é hard coded aqui mesmo.
     const CATEGORIAS_PADRAO = ['Kid Play', 'Brinquedão', 'Trampolins', 'Eletrônicos'];
 
-   const PINO_PATH_D = "M215.7 499.2C267 435 384 279.4 384 192C384 86 298 0 192 0S0 86 0 192c0 87.4 117 243 168.3 307.2c12.3 15.3 35.1 15.3 47.4 0z";
+  const PINO_PATH_D = "M215.7 499.2C267 435 384 279.4 384 192C384 86 298 0 192 0S0 86 0 192c0 87.4 117 243 168.3 307.2c12.3 15.3 35.1 15.3 47.4 0z";
 
     function criarIconeCliente(c) {
         return L.divIcon({
@@ -3515,9 +3540,9 @@ body {
                     <span class="pino-gota-janela"><img src="${LOGO_CLIENTE_PADRAO}" alt=""></span>
                 </span>
             `,
-            iconSize: [42, 56],
-            iconAnchor: [21, 56],
-            popupAnchor: [0, -50],
+            iconSize: [60, 80],
+            iconAnchor: [30, 80],
+            popupAnchor: [0, -72],
         });
     }
 
@@ -3531,9 +3556,9 @@ body {
                 <span class="pino-gota-janela"><i class="fa-solid fa-industry" aria-hidden="true"></i></span>
             </span>
         `,
-        iconSize: [50, 67],
-        iconAnchor: [25, 67],
-        popupAnchor: [0, -60],
+        iconSize: [72, 96],
+        iconAnchor: [36, 96],
+        popupAnchor: [0, -86],
     });
 
     let marcadoresClientes = [];
