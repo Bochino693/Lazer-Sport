@@ -1609,28 +1609,24 @@ nav a.btn-login {
 
     </div>
 
-    {% with clientes_rodape=clientes_globais|default:clientes_destaque %}
-      {% if clientes_rodape %}
-        <section class="ls-clientes-strip" aria-labelledby="ls-clientes-title">
-            <div class="ls-clientes-heading">
-                <h5 id="ls-clientes-title">Empresas que escolheram a Lazer &amp; Sport</h5>
-                <p>Alguns clientes que levam diversão aos seus espaços.</p>
-            </div>
+    {% if clientes_destaque %}
+      <section class="ls-clientes-strip" aria-labelledby="ls-clientes-title">
+          <div class="ls-clientes-heading">
+              <h5 id="ls-clientes-title">Empresas que escolheram a Lazer &amp; Sport</h5>
+              <p>Alguns clientes que levam diversão aos seus espaços.</p>
+          </div>
 
-            <div class="ls-clientes-logos">
-                {% for cliente in clientes_rodape|slice:":6" %}
-                  {% if cliente.logo_cliente %}
-                    <div class="ls-cliente-logo" title="{{ cliente.descricao_cliente }}">
-                        <img src="{{ cliente.logo_cliente.url }}"
-                             alt="Logo {{ cliente.descricao_cliente }}"
-                             loading="lazy" decoding="async">
-                    </div>
-                  {% endif %}
-                {% endfor %}
-            </div>
-        </section>
-      {% endif %}
-    {% endwith %}
+          <div class="ls-clientes-logos">
+              {% for cliente in clientes_destaque %}
+                <div class="ls-cliente-logo" title="{{ cliente.descricao_cliente }}">
+                    <img src="{{ cliente.logo_cliente.url }}"
+                         alt="Logo {{ cliente.descricao_cliente }}"
+                         loading="lazy" decoding="async">
+                </div>
+              {% endfor %}
+          </div>
+      </section>
+    {% endif %}
 
     <div class="ls-footer-bottom">
         <span>&copy; {% now "Y" %} Lazer &amp; Sport Brinquedos. Todos os direitos reservados.</span>
