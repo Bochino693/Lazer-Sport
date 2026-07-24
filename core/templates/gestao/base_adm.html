@@ -1,583 +1,951 @@
 {% load static %}
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>{% block title %}Painel Administrativo{% endblock %}</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0b1220">
+  <title>{% block title %}Painel Administrativo{% endblock %} | Lazer &amp; Sport</title>
   <link rel="icon" type="image/png" href="{% static 'img/favi_inner.png' %}">
 
+  <style>
+    :root {
+      --adm-bg: #0b1220;
+      --adm-surface: #111b2e;
+      --adm-surface-2: #17243a;
+      --adm-surface-3: #1e2d46;
+      --adm-border: rgba(148, 163, 184, .14);
+      --adm-text: #f1f5f9;
+      --adm-muted: #94a3b8;
+      --adm-primary: #3b82f6;
+      --adm-primary-strong: #2563eb;
+      --adm-danger: #ef4444;
+      --adm-warning: #f59e0b;
+      --adm-success: #10b981;
+      --adm-sidebar: 280px;
+      --adm-sidebar-compact: 88px;
+      --adm-topbar: 72px;
+      --adm-radius: 18px;
+      --adm-shadow: 0 20px 45px rgba(0, 0, 0, .22);
+    }
 
-<style>
-  * { box-sizing: border-box; }
+    * {
+      box-sizing: border-box;
+    }
 
-:root {
-    --bg: #0f172a;          /* fundo geral da página */
-    --wrapper-bg: #1e293b;  /* fundo dos cards/conteúdo */
-    --text-light: #f1f5f9;  /* cor do texto */
-    --primary: #3b82f6;     /* azul principal */
-    --accent: #2563eb;      /* azul secundário */
-  }
+    html {
+      min-height: 100%;
+      background: var(--adm-bg);
+    }
 
-  body {
-    margin: 0;
-    font-family: Arial, sans-serif;
-    background-color: var(--bg);  /* usa a variável */
-    color: var(--text-light);
-  }
+    body {
+      min-height: 100vh;
+      margin: 0;
+      background:
+        radial-gradient(circle at 15% -10%, rgba(59, 130, 246, .13), transparent 30rem),
+        var(--adm-bg);
+      color: var(--adm-text);
+      font-family: Inter, "Segoe UI", Roboto, Arial, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
 
- /* Conteúdo principal */
-main.content {
-    background-color: var(--wrapper-bg);
-    padding: 70px 25px 100px 25px;
-    transition: margin-left 0.28s ease;
-    min-height: 100vh;
-    border-radius: 16px;
-    color: var(--text-light); /* mantém textos normais claros */
-}
+    button,
+    input,
+    select,
+    textarea {
+      font: inherit;
+    }
 
-  /* Sobrescreve apenas os títulos para ficarem escuros */
-main.content h1,
-main.content h2,
-main.content h3,
-main.content h4,
-main.content h5,
-main.content h6 {
-    color: #ecf0f1;
-}
+    button,
+    a {
+      -webkit-tap-highlight-color: transparent;
+    }
 
-table th,
-table td {
-    color: #0d6efd;       /* preto */
-    font-weight: 200;     /* negrito */
-}
+    a {
+      color: inherit;
+    }
 
-  /* BOTÃO HAMBÚRGUER — destacado, SEM transformar em X */
-  .hamburger {
-    position: fixed;
-    top: 16px;
-    left: 16px;
-    width: 46px;
-    height: 36px;
-    cursor: pointer;
-    z-index: 2100;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: #ffffff;
-    border-radius: 8px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.12);
-    padding: 6px;
-  }
+    .adm-shell {
+      min-height: 100vh;
+    }
 
-  .hamburger div {
-    width: 26px;
-    height: 3.5px;
-    background: #0d6efd;
-    margin: 4px 0;
-    border-radius: 3px;
-    transition: opacity 0.2s ease, transform 0.2s ease;
-  }
+    .adm-sidebar {
+      position: fixed;
+      inset: 0 auto 0 0;
+      z-index: 1200;
+      width: var(--adm-sidebar);
+      display: flex;
+      flex-direction: column;
+      background: rgba(12, 21, 36, .98);
+      border-right: 1px solid var(--adm-border);
+      box-shadow: 16px 0 40px rgba(0, 0, 0, .18);
+      transition: width .25s ease, transform .25s ease;
+    }
 
-  .hamburger.hidden {
-    opacity: 0;
-    pointer-events: none;
-}
+    .adm-brand {
+      min-height: var(--adm-topbar);
+      padding: 15px 18px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border-bottom: 1px solid var(--adm-border);
+      overflow: hidden;
+    }
 
+    .adm-brand-mark {
+      width: 42px;
+      height: 42px;
+      flex: 0 0 42px;
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+      border-radius: 13px;
+      background: linear-gradient(145deg, #fff, #dbeafe);
+      box-shadow: 0 8px 22px rgba(59, 130, 246, .22);
+    }
 
-  /* overlay para fechar ao clicar fora */
-  .overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.45);
-    display: none;
-    z-index: 1600;
-    backdrop-filter: blur(2px);
-  }
-  .overlay.show { display: block; }
+    .adm-brand-mark img {
+      width: 34px;
+      height: 34px;
+      object-fit: contain;
+    }
 
-  /* SIDEBAR */
-  .sidebar {
-    width: 300px;                     /* um pouco maior para botões */
-    background: #0d6efd;
-    color: #fff;
-    padding: 28px 18px 90px 18px;     /* espaço inferior para botão "Fechar" */
-    position: fixed;
-    top: 0;
-    left: -320px;
-    height: 100vh;
-    transition: left 0.28s ease;
-    z-index: 1700;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-    text-align: center; /* centraliza títulos e textos */
-  }
+    .adm-brand-copy {
+      min-width: 0;
+      white-space: nowrap;
+      transition: opacity .18s ease, width .25s ease;
+    }
 
-  .sidebar.open { left: 0; }
+    .adm-brand-copy strong {
+      display: block;
+      font-size: .96rem;
+      letter-spacing: .01em;
+    }
 
-  /* Evitar sobreposição do botão (hamburger) com o título */
-  .sidebar .header-wrap {
-    padding-top: 20px;  /* mantém distância do topo (hamburger) */
-  }
+    .adm-brand-copy span {
+      display: block;
+      margin-top: 2px;
+      color: var(--adm-muted);
+      font-size: .72rem;
+      text-transform: uppercase;
+      letter-spacing: .12em;
+    }
 
-  .sidebar h2 {
-    margin: 0 0 6px 0;
-    font-size: 20px;
-    font-weight: 700;
-    color: #fff;
-  }
+    .adm-nav {
+      flex: 1;
+      padding: 18px 12px 26px;
+      overflow-x: hidden;
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: #334155 transparent;
+    }
 
-  .sidebar a {
-    color: #fff;
-    text-decoration: none;
-    text-align: center; /* centraliza títulos e textos */
-    padding: 10px 12px;
-    background: rgba(255,255,255,0.08);
-    border-radius: 6px;
-    transition: background 0.18s ease;
-    display: block;
-  }
-  .sidebar a:hover { background: rgba(255,255,255,0.18); }
+    .adm-nav-section + .adm-nav-section {
+      margin-top: 22px;
+    }
 
-  /* Botão FECHAR dentro do painel — fixo abaixo dos links */
-  .sidebar .close-btn {
-    margin-top: auto; /* empurra para baixo */
-    display: block;
-    width: calc(100% - 36px);
-    align-self: center;
-    background: #ffffff;
-    color: #0d6efd;
-    border: none;
-    padding: 12px 14px;
-    font-weight: 700;
-    border-radius: 10px;
-    cursor: pointer;
-    text-align: center;
-    box-shadow: 0 6px 18px rgba(13,110,253,0.12);
-  }
-  .sidebar .close-btn:hover {
-    transform: translateY(-2px);
-  }
+    .adm-nav-label {
+      margin: 0 10px 8px;
+      color: #64748b;
+      font-size: .67rem;
+      font-weight: 800;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      white-space: nowrap;
+      transition: opacity .18s ease;
+    }
 
-  /* CONTEÚDO PRINCIPAL */
-  .content {
-    padding: 70px 25px 100px 25px;
-    transition: margin-left 0.28s ease;
-    min-height: 100vh;
-  }
+    .adm-nav-link {
+      position: relative;
+      min-height: 46px;
+      margin: 3px 0;
+      padding: 10px 12px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      overflow: hidden;
+      border: 1px solid transparent;
+      border-radius: 12px;
+      color: #b8c4d6;
+      text-decoration: none;
+      white-space: nowrap;
+      transition: color .18s ease, background .18s ease, border-color .18s ease, transform .18s ease;
+    }
 
-  @media (min-width: 1000px) {
-    /* conteúdo empurra quando painel está aberto em desktop */
-    .content.with-sidebar { margin-left: 300px; }
-  }
+    .adm-nav-link:hover {
+      color: #fff;
+      background: rgba(59, 130, 246, .09);
+      border-color: rgba(59, 130, 246, .12);
+      transform: translateX(2px);
+    }
 
-  footer {
-    background: #0d6efd;
-    color: #fff;
-    text-align: center;
-    padding: 12px;
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    z-index: 5;
-  }
+    .adm-nav-link.is-active {
+      color: #fff;
+      background: linear-gradient(100deg, rgba(37, 99, 235, .32), rgba(59, 130, 246, .12));
+      border-color: rgba(96, 165, 250, .25);
+      box-shadow: inset 3px 0 0 #60a5fa, 0 8px 20px rgba(2, 6, 23, .15);
+    }
 
-  /* pequenos ajustes para legibilidade */
-  .sidebar .meta { font-size: 0.9rem; opacity: 0.95; }
+    .adm-nav-link.is-active .adm-nav-icon {
+      color: #93c5fd;
+      background: rgba(59, 130, 246, .18);
+    }
 
+    .adm-nav-link.is-alert {
+      color: #fecaca;
+    }
 
+    .adm-nav-icon {
+      width: 30px;
+      height: 30px;
+      flex: 0 0 30px;
+      display: grid;
+      place-items: center;
+      border-radius: 9px;
+      color: #94a3b8;
+      background: rgba(148, 163, 184, .08);
+      transition: color .18s ease, background .18s ease;
+    }
 
+    .adm-nav-icon svg,
+    .adm-button-icon svg,
+    .adm-profile-icon svg {
+      width: 18px;
+      height: 18px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
 
-/* BOTÕES FLUTUANTES (FLOAT BUTTONS) */
-.float-btn {
-    position: fixed;
-    right: 25px;
-    width: 65px; /* Ligeiramente maior para melhor toque */
-    height: 65px;
-    border-radius: 50%;
-    background: #1e293b; /* Um cinza azulado escuro mais moderno que o preto puro */
-    color: white;
-    font-size: 28px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    text-decoration: none;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-    z-index: 9999;
-    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); /* Efeito elástico */
-    border: 1px solid rgba(255, 255, 255, 0.1); /* Borda sutil de destaque */
-}
+    .adm-nav-text {
+      min-width: 0;
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-size: .88rem;
+      font-weight: 600;
+      transition: opacity .18s ease;
+    }
 
-.float-btn:hover {
-    transform: translateY(-5px) scale(1.1);
-    color: #fff;
-    box-shadow: 0 15px 30px rgba(0,0,0,0.4);
-}
+    .adm-badge {
+      min-width: 22px;
+      height: 22px;
+      padding: 0 6px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 2px solid #111b2e;
+      border-radius: 999px;
+      background: var(--adm-danger);
+      color: #fff;
+      font-size: .67rem;
+      font-weight: 800;
+      box-shadow: 0 4px 12px rgba(239, 68, 68, .34);
+    }
 
-.float-pedidos {
-    bottom: 105px;
-    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-    border-left: 3px solid #3b82f6; /* Detalhe lateral azul para pedidos */
-}
+    .adm-sidebar-footer {
+      padding: 14px 12px;
+      border-top: 1px solid var(--adm-border);
+      background: rgba(2, 6, 23, .18);
+    }
 
-.float-manut {
-    bottom: 25px;
-    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-    border-left: 3px solid #f59e0b; /* Detalhe lateral laranja para manutenção */
-}
+    .adm-layout {
+      min-height: 100vh;
+      margin-left: var(--adm-sidebar);
+      display: flex;
+      flex-direction: column;
+      transition: margin-left .25s ease;
+    }
 
-/* BADGE DE NOTIFICAÇÃO ESTILIZADO */
-.float-badge {
-    position: absolute;
-    top: -2px;
-    right: -2px;
-    background: #ef4444; /* Vermelho vibrante */
-    color: white;
-    font-size: 11px;
-    min-width: 22px;
-    height: 22px;
-    padding: 2px;
-    border-radius: 50px; /* Estilo pílula se o número crescer */
-    font-weight: 800;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: 2px solid #1e293b; /* Borda da cor do botão para "vazar" o fundo */
-    box-shadow: 0 4px 10px rgba(239, 68, 68, 0.5);
-    animation: pulseBadge 2s infinite;
-}
+    .adm-topbar {
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      min-height: var(--adm-topbar);
+      padding: 12px clamp(18px, 3vw, 36px);
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      border-bottom: 1px solid var(--adm-border);
+      background: rgba(11, 18, 32, .84);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+    }
 
-/* BADGE DENTRO DO MENU LATERAL */
-.badge-alert {
-    background: #ef4444; /* Mesmo vermelho dos FABs */
-    color: white;
-    font-size: 10px;
-    font-weight: 800;
+    .adm-icon-button {
+      width: 42px;
+      height: 42px;
+      flex: 0 0 42px;
+      display: inline-grid;
+      place-items: center;
+      border: 1px solid var(--adm-border);
+      border-radius: 12px;
+      background: var(--adm-surface);
+      color: #cbd5e1;
+      cursor: pointer;
+      transition: color .18s ease, background .18s ease, transform .18s ease;
+    }
 
-    /* Forma redonda/pílula */
-    min-width: 20px;
-    height: 20px;
-    padding: 0 5px;
-    border-radius: 10px;
+    .adm-icon-button:hover {
+      color: #fff;
+      background: var(--adm-surface-2);
+      transform: translateY(-1px);
+    }
 
-    /* Centralização */
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    .adm-button-icon {
+      display: grid;
+      place-items: center;
+    }
 
-    /* Efeito visual */
-    box-shadow: 0 2px 5px rgba(239, 68, 68, 0.4);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    margin-left: auto; /* Empurra para a direita no flexbox */
-}
+    .adm-topbar-heading {
+      min-width: 0;
+      flex: 1;
+    }
 
-/* Ajuste na classe menu-alert que você já tem */
-.menu-alert {
-    background: rgba(239, 68, 68, 0.1) !important; /* Fundo sutil para o item do menu */
-    color: #ef4444 !important;
-    border-right: 4px solid #ef4444; /* Barra lateral de atenção */
-    transition: all 0.3s ease;
-}
+    .adm-topbar-heading p {
+      margin: 0 0 2px;
+      color: var(--adm-muted);
+      font-size: .72rem;
+      font-weight: 700;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+    }
 
-.menu-alert:hover {
-    background: rgba(239, 68, 68, 0.2) !important;
-}
+    .adm-topbar-heading h1 {
+      margin: 0;
+      overflow: hidden;
+      color: var(--adm-text);
+      font-size: clamp(1rem, 2vw, 1.25rem);
+      font-weight: 700;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
 
+    .adm-user {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 6px 10px 6px 6px;
+      border: 1px solid var(--adm-border);
+      border-radius: 999px;
+      background: rgba(17, 27, 46, .7);
+    }
 
-/* Animação de pulso apenas no badge para não distrair tanto quanto o botão inteiro */
-@keyframes pulseBadge {
-    0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
-    70% { transform: scale(1.1); box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
-    100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
-}
+    .adm-profile-icon {
+      width: 34px;
+      height: 34px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      color: #dbeafe;
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    }
 
-  .sidebar-bottom {
-    margin-top: 30px;
-    padding-top: 20px;
-    border-top: 1px solid rgba(255,255,255,0.1);
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
+    .adm-user-copy {
+      max-width: 145px;
+      line-height: 1.15;
+    }
 
-/* voltar para o site */
-.link-site {
-    background: rgba(255,255,255,0.08);
-    padding: 10px;
-    border-radius: 8px;
-    font-weight: 600;
-}
+    .adm-user-copy strong,
+    .adm-user-copy span {
+      display: block;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
 
-/* logout mais chamativo */
-.link-logout {
-    background: rgba(239,68,68,0.15);
-    color: #ff4d4d !important;
-    padding: 10px;
-    border-radius: 8px;
-    font-weight: 700;
-    text-align: center;
-}
+    .adm-user-copy strong {
+      font-size: .78rem;
+    }
 
-.link-logout:hover {
-    background: rgba(239,68,68,0.25);
-}
+    .adm-user-copy span {
+      margin-top: 3px;
+      color: var(--adm-muted);
+      font-size: .68rem;
+    }
 
-  .logout-modal-bg {
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.65);
-    display: none;
-    align-items: center;
-    justify-content: center;
-    z-index: 99999;
-}
+    main.content {
+      width: 100%;
+      min-height: calc(100vh - var(--adm-topbar));
+      flex: 1;
+      padding: clamp(18px, 3vw, 36px);
+      color: var(--adm-text);
+    }
 
-.logout-modal-box {
-    background: white;
-    padding: 25px;
-    border-radius: 14px;
-    width: 320px;
-    text-align: center;
-    box-shadow: 0 20px 50px rgba(0,0,0,0.3);
-}
+    main.content > :first-child {
+      margin-top: 0;
+    }
 
-.logout-modal-box h3 {
-    margin-bottom: 10px;
-    color: #111;
-}
+    main.content h1,
+    main.content h2,
+    main.content h3,
+    main.content h4,
+    main.content h5,
+    main.content h6 {
+      color: var(--adm-text);
+    }
 
-.logout-modal-box p {
-    color: #444;
-    margin-bottom: 20px;
-}
+    .adm-messages {
+      width: min(100%, 1200px);
+      margin: 0 auto 18px;
+      display: grid;
+      gap: 10px;
+    }
 
-.logout-actions {
-    display: flex;
-    gap: 10px;
-    justify-content: center;
-}
+    .adm-alert {
+      padding: 13px 16px;
+      border: 1px solid var(--adm-border);
+      border-radius: 12px;
+      background: var(--adm-surface);
+      color: #dbe5f3;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, .12);
+    }
 
-.btn-cancelar {
-    background: #e5e7eb;
-    border: none;
-    padding: 8px 14px;
-    border-radius: 8px;
-    cursor: pointer;
-}
+    .adm-alert.success {
+      border-color: rgba(16, 185, 129, .35);
+      background: rgba(16, 185, 129, .11);
+    }
 
-.btn-confirmar {
-    background: #ef4444;
-    color: white !important;
-    padding: 8px 14px;
-    border-radius: 8px;
-    text-decoration: none;
-    font-weight: 700;
-}
+    .adm-alert.error,
+    .adm-alert.danger {
+      border-color: rgba(239, 68, 68, .35);
+      background: rgba(239, 68, 68, .11);
+    }
 
+    .adm-alert.warning {
+      border-color: rgba(245, 158, 11, .35);
+      background: rgba(245, 158, 11, .11);
+    }
 
-</style>
+    .adm-footer {
+      padding: 14px 24px 20px;
+      color: #64748b;
+      font-size: .75rem;
+      text-align: center;
+    }
 
+    .adm-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 1100;
+      display: none;
+      background: rgba(2, 6, 23, .72);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+    }
+
+    .adm-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 3000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: rgba(2, 6, 23, .78);
+      backdrop-filter: blur(5px);
+    }
+
+    .adm-modal.is-open {
+      display: flex;
+    }
+
+    .adm-modal-card {
+      width: min(100%, 390px);
+      padding: 28px;
+      border: 1px solid var(--adm-border);
+      border-radius: 20px;
+      background: linear-gradient(145deg, #17243a, #111b2e);
+      box-shadow: var(--adm-shadow);
+      text-align: center;
+    }
+
+    .adm-modal-card h2 {
+      margin: 0 0 8px;
+      font-size: 1.2rem;
+    }
+
+    .adm-modal-card p {
+      margin: 0 0 22px;
+      color: var(--adm-muted);
+      line-height: 1.55;
+    }
+
+    .adm-modal-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .adm-modal-actions button,
+    .adm-modal-actions a {
+      min-height: 42px;
+      padding: 10px 14px;
+      border: 0;
+      border-radius: 11px;
+      cursor: pointer;
+      font-weight: 750;
+      text-decoration: none;
+    }
+
+    .adm-modal-cancel {
+      background: #26354d;
+      color: #dbe5f3;
+    }
+
+    .adm-modal-confirm {
+      display: grid;
+      place-items: center;
+      background: var(--adm-danger);
+      color: #fff;
+    }
+
+    .adm-quick-actions {
+      position: fixed;
+      right: 22px;
+      bottom: 22px;
+      z-index: 1050;
+      display: grid;
+      gap: 10px;
+    }
+
+    .adm-quick-action {
+      position: relative;
+      width: 48px;
+      height: 48px;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(148, 163, 184, .18);
+      border-radius: 15px;
+      background: var(--adm-surface-2);
+      color: #dbeafe;
+      text-decoration: none;
+      box-shadow: 0 12px 28px rgba(0, 0, 0, .28);
+      transition: transform .18s ease, background .18s ease;
+    }
+
+    .adm-quick-action:hover {
+      transform: translateY(-3px);
+      background: var(--adm-surface-3);
+    }
+
+    .adm-quick-action svg {
+      width: 20px;
+      height: 20px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .adm-quick-action .adm-badge {
+      position: absolute;
+      top: -8px;
+      right: -8px;
+    }
+
+    body.sidebar-compact .adm-sidebar {
+      width: var(--adm-sidebar-compact);
+    }
+
+    body.sidebar-compact .adm-layout {
+      margin-left: var(--adm-sidebar-compact);
+    }
+
+    body.sidebar-compact .adm-brand {
+      padding-inline: 22px;
+    }
+
+    body.sidebar-compact .adm-brand-copy,
+    body.sidebar-compact .adm-nav-label,
+    body.sidebar-compact .adm-nav-text,
+    body.sidebar-compact .adm-nav-link > .adm-badge {
+      width: 0;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    body.sidebar-compact .adm-nav-link {
+      justify-content: center;
+      padding-inline: 8px;
+    }
+
+    body.sidebar-compact .adm-nav-link:hover {
+      transform: none;
+    }
+
+    @media (max-width: 899px) {
+      .adm-sidebar {
+        width: min(86vw, 300px);
+        transform: translateX(-105%);
+      }
+
+      .adm-layout,
+      body.sidebar-compact .adm-layout {
+        margin-left: 0;
+      }
+
+      body.sidebar-compact .adm-sidebar {
+        width: min(86vw, 300px);
+      }
+
+      body.sidebar-compact .adm-brand-copy,
+      body.sidebar-compact .adm-nav-label,
+      body.sidebar-compact .adm-nav-text,
+      body.sidebar-compact .adm-nav-link > .adm-badge {
+        width: auto;
+        opacity: 1;
+        pointer-events: auto;
+      }
+
+      body.sidebar-compact .adm-brand {
+        padding: 15px 18px;
+      }
+
+      body.sidebar-compact .adm-nav-link {
+        justify-content: flex-start;
+        padding: 10px 12px;
+      }
+
+      body.mobile-nav-open {
+        overflow: hidden;
+      }
+
+      body.mobile-nav-open .adm-sidebar {
+        transform: translateX(0);
+      }
+
+      body.mobile-nav-open .adm-overlay {
+        display: block;
+      }
+
+      .adm-user-copy {
+        display: none;
+      }
+
+      .adm-user {
+        padding: 4px;
+        border: 0;
+        background: transparent;
+      }
+    }
+
+    @media (max-width: 520px) {
+      .adm-topbar {
+        min-height: 64px;
+        padding: 10px 14px;
+      }
+
+      .adm-topbar-heading p {
+        display: none;
+      }
+
+      main.content {
+        padding: 16px 12px 86px;
+      }
+
+      .adm-quick-actions {
+        right: 14px;
+        bottom: 14px;
+      }
+
+      .adm-modal-actions {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        scroll-behavior: auto !important;
+        transition-duration: .01ms !important;
+        animation-duration: .01ms !important;
+        animation-iteration-count: 1 !important;
+      }
+    }
+  </style>
+  {% block extra_css %}{% endblock %}
 </head>
+
 <body>
+  <svg width="0" height="0" aria-hidden="true" focusable="false" style="position:absolute">
+    <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
+    <symbol id="i-grid" viewBox="0 0 24 24"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/></symbol>
+    <symbol id="i-game" viewBox="0 0 24 24"><path d="M8.5 8h7a5 5 0 0 1 4.7 6.7l-.8 2.2a2.4 2.4 0 0 1-4.1.7L14 16h-4l-1.3 1.6a2.4 2.4 0 0 1-4.1-.7l-.8-2.2A5 5 0 0 1 8.5 8Z"/><path d="M8 11v4M6 13h4M16.5 12.5h.01M18.5 14.5h.01"/></symbol>
+    <symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/></symbol>
+    <symbol id="i-box" viewBox="0 0 24 24"><path d="m4 8 8-4 8 4-8 4-8-4Z"/><path d="M4 8v8l8 4 8-4V8M12 12v8"/></symbol>
+    <symbol id="i-tag" viewBox="0 0 24 24"><path d="M20 13 13 20 4 11V4h7l9 9Z"/><path d="M8.5 8.5h.01"/></symbol>
+    <symbol id="i-tool" viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 0 0-5-5l2.1 2.1-2.4 2.4-2.1-2.1a4 4 0 0 0 5 5L20 16.4a2.5 2.5 0 1 1-3.6 3.6l-7.7-7.7"/></symbol>
+    <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></symbol>
+    <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/></symbol>
+    <symbol id="i-ticket" viewBox="0 0 24 24"><path d="M3 8a2 2 0 0 0 0 4v4h18v-4a2 2 0 0 0 0-4V4H3v4Z"/><path d="M13 7h.01M13 13h.01"/></symbol>
+    <symbol id="i-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+    <symbol id="i-map-pin" viewBox="0 0 24 24"><path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></symbol>
+    <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></symbol>
+    <symbol id="i-logout" viewBox="0 0 24 24"><path d="M10 17l5-5-5-5M15 12H3M15 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
+  </svg>
 
-<!-- overlay -->
-<div id="overlay" class="overlay" aria-hidden="true"></div>
+  <div class="adm-shell">
+    <aside id="admSidebar" class="adm-sidebar" aria-label="Menu administrativo">
+      <div class="adm-brand">
+        <span class="adm-brand-mark">
+          <img src="{% static 'img/favi_inner.png' %}" alt="">
+        </span>
+        <span class="adm-brand-copy">
+          <strong>Lazer &amp; Sport</strong>
+          <span>Administração</span>
+        </span>
+      </div>
 
-<!-- hambúrguer (não vira X) -->
-<button id="hamburger" class="hamburger" aria-label="Abrir menu">
-  <div></div>
-  <div></div>
-  <div></div>
-</button>
+      {% with rota=request.resolver_match.url_name %}
+      <nav class="adm-nav">
+        <section class="adm-nav-section" aria-labelledby="nav-visao">
+          <h2 id="nav-visao" class="adm-nav-label">Visão geral</h2>
+          <a href="{% url 'dashboards' %}" class="adm-nav-link {% if rota == 'dashboards' %}is-active{% endif %}" {% if rota == 'dashboards' %}aria-current="page"{% endif %}>
+            <span class="adm-nav-icon"><svg><use href="#i-grid"/></svg></span>
+            <span class="adm-nav-text">Dashboard</span>
+          </a>
+          <a href="{% url 'estatisticas_gerais' %}" class="adm-nav-link {% if rota == 'estatisticas_gerais' %}is-active{% endif %}" {% if rota == 'estatisticas_gerais' %}aria-current="page"{% endif %}>
+            <span class="adm-nav-icon"><svg><use href="#i-chart"/></svg></span>
+            <span class="adm-nav-text">Estatísticas gerais</span>
+          </a>
+          <a href="{% url 'relatorio_vendas' %}" class="adm-nav-link {% if rota == 'relatorio_vendas' %}is-active{% endif %}" {% if rota == 'relatorio_vendas' %}aria-current="page"{% endif %}>
+            <span class="adm-nav-icon"><svg><use href="#i-chart"/></svg></span>
+            <span class="adm-nav-text">Relatório de vendas</span>
+          </a>
+        </section>
 
-<!-- SIDEBAR -->
-<aside id="sidebar" class="sidebar" role="navigation" aria-label="Menu administrativo">
-  <div class="header-wrap">
-    <h2>Administração</h2>
-    <div class="meta">Painel de controle</div>
-  </div>
+        <section class="adm-nav-section" aria-labelledby="nav-operacao">
+          <h2 id="nav-operacao" class="adm-nav-label">Operação</h2>
+          <a href="{% url 'pedidos_adm' %}" class="adm-nav-link {% if rota == 'pedidos_adm' %}is-active{% endif %} {% if tem_pedidos_alerta %}is-alert{% endif %}" {% if rota == 'pedidos_adm' %}aria-current="page"{% endif %}>
+            <span class="adm-nav-icon"><svg><use href="#i-box"/></svg></span>
+            <span class="adm-nav-text">Pedidos</span>
+            {% if tem_pedidos_alerta %}<span class="adm-badge">{{ pedidos_alerta }}</span>{% endif %}
+          </a>
+          <a href="{% url 'manutencoes_adm' %}" class="adm-nav-link {% if rota == 'manutencoes_adm' %}is-active{% endif %} {% if count_manutencao > 0 %}is-alert{% endif %}" {% if rota == 'manutencoes_adm' %}aria-current="page"{% endif %}>
+            <span class="adm-nav-icon"><svg><use href="#i-tool"/></svg></span>
+            <span class="adm-nav-text">Manutenções</span>
+            {% if count_manutencao > 0 %}<span class="adm-badge">{{ count_manutencao }}</span>{% endif %}
+          </a>
+          <a href="{% url 'clientes_adm' %}" class="adm-nav-link {% if rota == 'clientes_adm' %}is-active{% endif %}" {% if rota == 'clientes_adm' %}aria-current="page"{% endif %}>
+            <span class="adm-nav-icon"><svg><use href="#i-map-pin"/></svg></span>
+            <span class="adm-nav-text">Clientes</span>
+          </a>
+          <a href="{% url 'clients' %}" class="adm-nav-link {% if rota == 'clients' %}is-active{% endif %}" {% if rota == 'clients' %}aria-current="page"{% endif %}>
+            <span class="adm-nav-icon"><svg><use href="#i-users"/></svg></span>
+            <span class="adm-nav-text">Usuários</span>
+          </a>
+        </section>
 
+        <section class="adm-nav-section" aria-labelledby="nav-catalogo">
+          <h2 id="nav-catalogo" class="adm-nav-label">Catálogo e site</h2>
+          <a href="{% url 'brinquedos_admin' %}" class="adm-nav-link {% if rota == 'brinquedos_admin' %}is-active{% endif %}" {% if rota == 'brinquedos_admin' %}aria-current="page"{% endif %}>
+            <span class="adm-nav-icon"><svg><use href="#i-game"/></svg></span>
+            <span class="adm-nav-text">Brinquedos</span>
+          </a>
+          <a href="{% url 'combos_admin' %}" class="adm-nav-link {% if rota == 'combos_admin' %}is-active{% endif %}" {% if rota == 'combos_admin' %}aria-current="page"{% endif %}>
+            <span class="adm-nav-icon"><svg><use href="#i-box"/></svg></span>
+            <span class="adm-nav-text">Combos</span>
+          </a>
+          <a href="{% url 'promocoes_admin' %}" class="adm-nav-link {% if rota == 'promocoes_admin' %}is-active{% endif %}" {% if rota == 'promocoes_admin' %}aria-current="page"{% endif %}>
+            <span class="adm-nav-icon"><svg><use href="#i-tag"/></svg></span>
+            <span class="adm-nav-text">Promoções</span>
+          </a>
+          <a href="{% url 'eventos_admin' %}" class="adm-nav-link {% if rota == 'eventos_admin' %}is-active{% endif %}" {% if rota == 'eventos_admin' %}aria-current="page"{% endif %}>
+            <span class="adm-nav-icon"><svg><use href="#i-calendar"/></svg></span>
+            <span class="adm-nav-text">Eventos</span>
+          </a>
+          <a href="{% url 'projetos_admin' %}" class="adm-nav-link {% if rota == 'projetos_admin' %}is-active{% endif %}" {% if rota == 'projetos_admin' %}aria-current="page"{% endif %}>
+            <span class="adm-nav-icon"><svg><use href="#i-folder"/></svg></span>
+            <span class="adm-nav-text">Projetos</span>
+          </a>
+          <a href="{% url 'cupons_admin' %}" class="adm-nav-link {% if rota == 'cupons_admin' %}is-active{% endif %}" {% if rota == 'cupons_admin' %}aria-current="page"{% endif %}>
+            <span class="adm-nav-icon"><svg><use href="#i-ticket"/></svg></span>
+            <span class="adm-nav-text">Cupons</span>
+          </a>
+        </section>
+      </nav>
+      {% endwith %}
 
- <!-- <a href="{% url 'banner_adm' %}">Banners do Site</a> -->
-  <a href="{% url 'dashboards' %}">Dashboard</a>
-  <a href="{% url 'brinquedos_admin' %}">Brinquedos</a>
-  <a href="{% url 'estatisticas_gerais' %}">Estatisticas Gerais</a>
+      <div class="adm-sidebar-footer">
+        <a href="{% url 'home' %}" class="adm-nav-link">
+          <span class="adm-nav-icon"><svg><use href="#i-globe"/></svg></span>
+          <span class="adm-nav-text">Voltar para o site</span>
+        </a>
+        <a href="#" id="openLogoutModal" class="adm-nav-link is-alert">
+          <span class="adm-nav-icon"><svg><use href="#i-logout"/></svg></span>
+          <span class="adm-nav-text">Sair do sistema</span>
+        </a>
+      </div>
+    </aside>
 
-  <a href="{% url 'combos_admin' %}">Combos</a>
-  <a href="{% url 'promocoes_admin' %}">Promoções</a>
+    <div id="admOverlay" class="adm-overlay" aria-hidden="true"></div>
 
-<a href="{% url 'manutencoes_adm' %}"
-   class="nav-link d-flex justify-content-between align-items-center {% if count_manutencao > 0 %}menu-alert{% endif %}">
-  <span>🛠 Manutenções</span>
+    <div class="adm-layout">
+      <header class="adm-topbar">
+        <button id="admMenuButton" class="adm-icon-button" type="button" aria-label="Abrir ou recolher menu" aria-controls="admSidebar" aria-expanded="true">
+          <span class="adm-button-icon"><svg><use href="#i-menu"/></svg></span>
+        </button>
 
-  {% if count_manutencao > 0 %}
-    <span class="badge-alert">{{ count_manutencao }}</span>
-  {% endif %}
-</a>
+        <div class="adm-topbar-heading">
+          <p>Painel administrativo</p>
+          <h1>{% block page_heading %}Gestão Lazer &amp; Sport{% endblock %}</h1>
+        </div>
 
-<a href="{% url 'pedidos_adm' %}"
-   class="{% if tem_pedidos_alerta %}menu-alert{% endif %}">
-  Pedidos
-  {% if tem_pedidos_alerta %}
-    <span class="badge-alert">{{ pedidos_alerta }}</span>
-  {% endif %}
-</a>
+        <div class="adm-user" title="{{ request.user.get_full_name|default:request.user.username }}">
+          <span class="adm-profile-icon"><svg><use href="#i-user"/></svg></span>
+          <span class="adm-user-copy">
+            <strong>{{ request.user.get_full_name|default:request.user.username }}</strong>
+            <span>Administrador</span>
+          </span>
+        </div>
+      </header>
 
-  <a href="{% url 'eventos_admin' %}">Eventos</a>
-  <a href="{% url 'projetos_admin' %}">Projetos</a>
-  <a href="{% url 'cupons_admin' %}">Cupons</a>
+      <main id="admContent" class="content" role="main">
+        {% if messages %}
+          <div class="adm-messages" aria-live="polite">
+            {% for message in messages %}
+              <div class="adm-alert {{ message.tags }}">{{ message }}</div>
+            {% endfor %}
+          </div>
+        {% endif %}
 
-  <a href="{% url 'relatorio_vendas' %}">Relatório de Vendas</a>
-  <a href="{% url 'clients' %}">Usuários</a>
+        {% block content %}
+          <section>
+            <h2>Bem-vindo ao painel administrativo</h2>
+          </section>
+        {% endblock %}
+      </main>
 
-   <div class="sidebar-bottom">
-
-  <a href="/core/static" class="link-site">
-    🌐 Voltar para o site
-  </a>
-
-  <a href="#" class="link-logout" onclick="abrirModalLogout(); return false;">
-    ⛔ Sair do sistema
-  </a>
-
-</div>
-
-
-<!-- <button id="close-sidebar-btn" class="close-btn" type="button">Fechar Menu</button> -->
-
-</aside>
-
-<div id="logoutModal" class="logout-modal-bg">
-  <div class="logout-modal-box">
-    <h3>Confirmar saída</h3>
-    <p>Tem certeza que deseja sair do painel?</p>
-
-    <div class="logout-actions">
-      <button onclick="fecharModalLogout()" class="btn-cancelar">
-        Cancelar
-      </button>
-
-      <a href="{% url 'logout' %}" class="btn-confirmar">
-        Sim, sair
-      </a>
+      <footer class="adm-footer">
+        Lazer &amp; Sport Brinquedos · Painel administrativo · © {% now "Y" %}
+      </footer>
     </div>
   </div>
-</div>
 
-<!-- CONTEÚDO PRINCIPAL -->
-<main id="content" class="content" role="main">
-  {% block content %}
-  <h1>Bem-vindo ao painel administrativo</h1>
-  {% if messages %}
-<div class="messages">
-    {% for message in messages %}
-        <div class="alert alert-{{ message.tags }}">
-            {{ message }}
-        </div>
-    {% endfor %}
-</div>
-{% endif %}
+  <div id="logoutModal" class="adm-modal" role="dialog" aria-modal="true" aria-labelledby="logoutTitle" aria-hidden="true">
+    <div class="adm-modal-card">
+      <h2 id="logoutTitle">Sair do painel?</h2>
+      <p>Sua sessão administrativa será encerrada neste dispositivo.</p>
+      <div class="adm-modal-actions">
+        <button id="cancelLogout" type="button" class="adm-modal-cancel">Continuar no painel</button>
+        <a href="{% url 'logout' %}" class="adm-modal-confirm">Sim, sair</a>
+      </div>
+    </div>
+  </div>
 
-
-  {% endblock %}
-</main>
-
-<footer>
-  Painel Administrativo — Desenvolvido por Sua Empresa © {{ now|date:"Y" }}
-</footer>
-
-<script>
-  const hamburger = document.getElementById('hamburger');
-  const sidebar = document.getElementById('sidebar');
-  const overlay = document.getElementById('overlay');
-  const content = document.getElementById('content');
-  const closeBtn = document.getElementById('close-sidebar-btn');
-
-  function abrirSidebar() {
-    sidebar.classList.add('open');
-    overlay.classList.add('show');
-    hamburger.classList.add('hidden'); // ← esconder hambúrguer
-    if (window.innerWidth >= 1000) content.classList.add('with-sidebar');
-
-    const primeiroLink = sidebar.querySelector('a');
-    if (primeiroLink) primeiroLink.focus();
-}
-
-function fecharSidebar() {
-    sidebar.classList.remove('open');
-    overlay.classList.remove('show');
-    content.classList.remove('with-sidebar');
-    hamburger.classList.remove('hidden'); // ← mostrar hambúrguer novamente
-    hamburger.focus();
-}
-
-
-  hamburger.addEventListener('click', () => {
-    if (sidebar.classList.contains('open')) fecharSidebar();
-    else abrirSidebar();
-  });
-
-  // fechar ao clicar no overlay (fora do painel)
-  overlay.addEventListener('click', fecharSidebar);
-
-  // fechar através do botão interno "Fechar"
-  closeBtn.addEventListener('click', fecharSidebar);
-
-  // teclado: fechar com ESC
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && sidebar.classList.contains('open')) {
-      fecharSidebar();
-    }
-  });
-
-  // fechar ao redimensionar para evitar estado inconsistente
-  window.addEventListener('resize', () => {
-    if (window.innerWidth < 1000) {
-      // não empurre conteúdo em telas pequenas
-      content.classList.remove('with-sidebar');
-    }
-  });
-
-
-  function abrirModalLogout() {
-  document.getElementById('logoutModal').style.display = 'flex';
-}
-
-function fecharModalLogout() {
-  document.getElementById('logoutModal').style.display = 'none';
-}
-
-/* fechar clicando fora */
-document.getElementById('logoutModal').addEventListener('click', function(e){
-  if (e.target === this) {
-    fecharModalLogout();
-  }
-});
-</script>
-
-
-
-{% if request.user.is_staff %}
-
-<a href="{% url 'pedidos_adm' %}" class="float-btn float-pedidos" title="Pedidos Ativos">
-  📦
-  {% if count_pedidos > 0 %}
-    <span class="float-badge">{{ count_pedidos }}</span>
+  {% if request.user.is_staff %}
+    <div class="adm-quick-actions" aria-label="Atalhos">
+      <a href="{% url 'pedidos_adm' %}" class="adm-quick-action" title="Pedidos ativos" aria-label="Pedidos ativos">
+        <svg><use href="#i-box"/></svg>
+        {% if count_pedidos > 0 %}<span class="adm-badge">{{ count_pedidos }}</span>{% endif %}
+      </a>
+      <a href="{% url 'manutencoes_adm' %}" class="adm-quick-action" title="Manutenções pendentes" aria-label="Manutenções pendentes">
+        <svg><use href="#i-tool"/></svg>
+        {% if count_manutencao > 0 %}<span class="adm-badge">{{ count_manutencao }}</span>{% endif %}
+      </a>
+    </div>
   {% endif %}
-</a>
 
-<a href="{% url 'manutencoes_adm' %}" class="float-btn float-manut" title="Manutenções Pendentes">
-  🔧
-  {% if count_manutencao > 0 %}
-    <span class="float-badge">{{ count_manutencao }}</span>
-  {% endif %}
-</a>
+  <script>
+    (function () {
+      const body = document.body;
+      const sidebar = document.getElementById('admSidebar');
+      const menuButton = document.getElementById('admMenuButton');
+      const overlay = document.getElementById('admOverlay');
+      const logoutModal = document.getElementById('logoutModal');
+      const openLogout = document.getElementById('openLogoutModal');
+      const cancelLogout = document.getElementById('cancelLogout');
+      const desktopBreakpoint = 900;
+      const storageKey = 'lazersport-admin-sidebar-compact';
 
-{% endif %}
+      function isMobile() {
+        return window.innerWidth < desktopBreakpoint;
+      }
 
+      function updateMenuAccessibility() {
+        const expanded = isMobile()
+          ? body.classList.contains('mobile-nav-open')
+          : !body.classList.contains('sidebar-compact');
+        menuButton.setAttribute('aria-expanded', String(expanded));
+        overlay.setAttribute('aria-hidden', String(!body.classList.contains('mobile-nav-open')));
+      }
+
+      function closeMobileMenu(returnFocus) {
+        body.classList.remove('mobile-nav-open');
+        updateMenuAccessibility();
+        if (returnFocus) menuButton.focus();
+      }
+
+      function toggleMenu() {
+        if (isMobile()) {
+          body.classList.toggle('mobile-nav-open');
+        } else {
+          body.classList.toggle('sidebar-compact');
+          try {
+            localStorage.setItem(storageKey, body.classList.contains('sidebar-compact') ? '1' : '0');
+          } catch (error) {}
+        }
+        updateMenuAccessibility();
+      }
+
+      function openLogoutModal(event) {
+        if (event) event.preventDefault();
+        closeMobileMenu(false);
+        logoutModal.classList.add('is-open');
+        logoutModal.setAttribute('aria-hidden', 'false');
+        cancelLogout.focus();
+      }
+
+      function closeLogoutModal() {
+        logoutModal.classList.remove('is-open');
+        logoutModal.setAttribute('aria-hidden', 'true');
+        openLogout.focus();
+      }
+
+      try {
+        if (!isMobile() && localStorage.getItem(storageKey) === '1') {
+          body.classList.add('sidebar-compact');
+        }
+      } catch (error) {}
+
+      menuButton.addEventListener('click', toggleMenu);
+      overlay.addEventListener('click', function () { closeMobileMenu(true); });
+      openLogout.addEventListener('click', openLogoutModal);
+      cancelLogout.addEventListener('click', closeLogoutModal);
+
+      logoutModal.addEventListener('click', function (event) {
+        if (event.target === logoutModal) closeLogoutModal();
+      });
+
+      sidebar.addEventListener('click', function (event) {
+        if (isMobile() && event.target.closest('a') && !event.target.closest('#openLogoutModal')) {
+          closeMobileMenu(false);
+        }
+      });
+
+      document.addEventListener('keydown', function (event) {
+        if (event.key !== 'Escape') return;
+        if (logoutModal.classList.contains('is-open')) {
+          closeLogoutModal();
+        } else if (body.classList.contains('mobile-nav-open')) {
+          closeMobileMenu(true);
+        }
+      });
+
+      window.addEventListener('resize', function () {
+        if (!isMobile()) body.classList.remove('mobile-nav-open');
+        updateMenuAccessibility();
+      });
+
+      updateMenuAccessibility();
+    })();
+  </script>
+  {% block extra_js %}{% endblock %}
 </body>
 </html>
