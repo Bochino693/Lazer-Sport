@@ -546,9 +546,21 @@
     display: flex;
   }
 
+  .client-modal svg {
+    width: 20px;
+    height: 20px;
+    display: block;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
   .client-modal-card {
     width: min(100%, 820px);
     max-height: min(92vh, 920px);
+    max-height: min(92dvh, 920px);
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -557,6 +569,20 @@
     background: #111b2e;
     box-shadow: 0 30px 80px rgba(0, 0, 0, .46);
     animation: clientModalIn .2s ease-out;
+  }
+
+  .client-modal-card:not(.is-small) {
+    height: min(92vh, 860px);
+    height: min(92dvh, 860px);
+  }
+
+  .client-modal-card:not(.is-small) > form {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
   }
 
   .client-modal-card.is-small {
@@ -569,6 +595,9 @@
   }
 
   .client-modal-header {
+    position: relative;
+    z-index: 3;
+    flex: 0 0 auto;
     padding: 20px 22px;
     display: flex;
     align-items: center;
@@ -595,19 +624,29 @@
   }
 
   .client-modal-close {
-    width: 38px;
+    width: auto;
+    min-width: 88px;
     height: 38px;
-    display: grid;
+    padding: 0 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
     place-items: center;
     border: 1px solid rgba(148, 163, 184, .14);
     border-radius: 11px;
     background: rgba(30, 45, 70, .55);
     color: #94a3b8;
+    font-size: .7rem;
+    font-weight: 750;
     cursor: pointer;
+    transition: color .18s ease, background .18s ease, border-color .18s ease;
   }
 
   .client-modal-close:hover {
     color: #fff;
+    border-color: rgba(248, 113, 113, .24);
+    background: rgba(239, 68, 68, .1);
   }
 
   .client-modal-close svg {
@@ -616,8 +655,34 @@
   }
 
   .client-modal-body {
+    position: relative;
+    flex: 1 1 auto;
+    min-height: 0;
     padding: 22px;
     overflow-y: auto;
+    overflow-x: hidden;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+    scrollbar-width: thin;
+    scrollbar-color: #3b4b64 #0d1727;
+  }
+
+  .client-modal-body::-webkit-scrollbar {
+    width: 9px;
+  }
+
+  .client-modal-body::-webkit-scrollbar-track {
+    background: #0d1727;
+  }
+
+  .client-modal-body::-webkit-scrollbar-thumb {
+    border: 2px solid #0d1727;
+    border-radius: 999px;
+    background: #3b4b64;
+  }
+
+  .client-modal-body::-webkit-scrollbar-thumb:hover {
+    background: #52647f;
   }
 
   .client-form-section + .client-form-section {
@@ -869,13 +934,33 @@
   }
 
   .client-modal-footer {
+    position: relative;
+    z-index: 3;
+    flex: 0 0 auto;
+    min-height: 72px;
     padding: 15px 22px;
     display: flex;
     align-items: center;
     justify-content: flex-end;
     gap: 9px;
     border-top: 1px solid rgba(148, 163, 184, .12);
-    background: rgba(15, 25, 42, .84);
+    background: #0f192a;
+    box-shadow: 0 -12px 30px rgba(2, 6, 23, .22);
+  }
+
+  .client-modal-scroll-note {
+    margin-right: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    color: #64748b;
+    font-size: .66rem;
+    font-weight: 650;
+  }
+
+  .client-modal-scroll-note svg {
+    width: 15px;
+    height: 15px;
   }
 
   .client-secondary-button,
@@ -1152,15 +1237,39 @@
     }
 
     .client-modal {
-      padding: 0;
+      padding: 8px 0 0;
       align-items: flex-end;
     }
 
     .client-modal-card,
     .client-modal-card.is-small {
       width: 100%;
-      max-height: 94vh;
+      max-height: calc(100vh - 8px);
+      max-height: calc(100dvh - 8px);
       border-radius: 22px 22px 0 0;
+    }
+
+    .client-modal-card:not(.is-small) {
+      height: calc(100vh - 8px);
+      height: calc(100dvh - 8px);
+    }
+
+    .client-modal-header {
+      padding: 15px;
+    }
+
+    .client-modal-heading p {
+      max-width: 230px;
+    }
+
+    .client-modal-close {
+      min-width: 42px;
+      width: 42px;
+      padding: 0;
+    }
+
+    .client-modal-close span {
+      display: none;
     }
 
     .client-modal-body {
@@ -1177,7 +1286,17 @@
     }
 
     .client-modal-footer {
+      min-height: 68px;
       padding: 13px 15px;
+    }
+
+    .client-modal-scroll-note {
+      display: none;
+    }
+
+    .client-secondary-button,
+    .client-save-button {
+      flex: 1;
     }
   }
 </style>
@@ -1194,6 +1313,7 @@
     <symbol id="client-i-image" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 15-5-5L5 20"/></symbol>
     <symbol id="client-i-save" viewBox="0 0 24 24"><path d="M5 4h12l2 2v14H5V4Z"/><path d="M8 4v6h8V4M8 20v-6h8v6"/></symbol>
     <symbol id="client-i-building" viewBox="0 0 24 24"><path d="M4 21V7l8-4 8 4v14M8 10h.01M12 10h.01M16 10h.01M8 14h.01M12 14h.01M16 14h.01M9 21v-3h6v3"/></symbol>
+    <symbol id="client-i-scroll" viewBox="0 0 24 24"><path d="M12 3v17M6 14l6 6 6-6"/></symbol>
   </svg>
 
   <section class="clients-hero">
@@ -1400,6 +1520,7 @@
         </div>
         <button id="closeClientModal" class="client-modal-close" type="button" aria-label="Fechar formulário">
           <svg><use href="#client-i-close"/></svg>
+          <span>Fechar</span>
         </button>
       </header>
 
@@ -1527,6 +1648,10 @@
       </div>
 
       <footer class="client-modal-footer">
+        <span class="client-modal-scroll-note">
+          <svg><use href="#client-i-scroll"/></svg>
+          Role o formulário para revisar todos os campos
+        </span>
         <button id="cancelClientModal" type="button" class="client-secondary-button">Cancelar</button>
         <button type="submit" class="client-save-button">
           <svg><use href="#client-i-save"/></svg>
@@ -1725,6 +1850,7 @@
     }
 
     document.getElementById('clientForceGeocode').checked = false;
+    document.querySelector('#clientFormModal .client-modal-body').scrollTop = 0;
     setModalOpen(formModal, true, trigger);
     window.setTimeout(() => document.getElementById('clientName').focus(), 80);
   }
