@@ -24,7 +24,6 @@ from django.http import FileResponse, Http404
 from django.conf import settings
 from random import shuffle, sample
 
-
 def media_serve(request, path):
     file_path = os.path.join(settings.MEDIA_ROOT, path)
 
@@ -133,15 +132,15 @@ class HomeView(View):
         for combo in combos:
             total_original = sum(
                 (
-                        brinquedo.valor_brinquedo
-                        or Decimal("0")
+                    brinquedo.valor_brinquedo
+                    or Decimal("0")
                 )
                 for brinquedo in combo.brinquedos.all()
             )
 
             valor_combo = (
-                    combo.valor_combo
-                    or Decimal("0")
+                combo.valor_combo
+                or Decimal("0")
             )
 
             economia = total_original - valor_combo
@@ -338,13 +337,14 @@ class HomeView(View):
 
 from django.template.loader import render_to_string
 
-from .models import PecasReposicao
 
+from .models import PecasReposicao
 
 class ReposicaoView(View):
 
     def get(self, request):
         categorias_peca = CategoriaPeca.objects.all()
+
 
         ctx = {
             'categorias_peca': categorias_peca,
@@ -1380,7 +1380,6 @@ class EventoAdminView(AdminOnlyMixin, View):
 
         return JsonResponse({"success": True})
 
-
 class PedidoAdminView(AdminOnlyMixin, View):
     template_name = "gestao/pedidos_adm.html"
 
@@ -1391,7 +1390,7 @@ class PedidoAdminView(AdminOnlyMixin, View):
             .select_related("cliente", "cliente__user")
             .prefetch_related("itens")
         )
-        # dnadocrime
+#dnadocrime
         filtros = {}
 
         impresso = request.GET.get("impresso")
@@ -1428,7 +1427,6 @@ from django.contrib import messages
 from django.contrib.auth import login, authenticate
 from django.contrib.auth.models import User
 from .forms import UserForm
-
 
 class RegistrarView(View):
     template_name = "register.html"
@@ -1639,7 +1637,7 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
             brinquedo.largura_m = largura
             brinquedo.profundidade_m = profundidade
             brinquedo.exibir_na_loja = (
-                    request.POST.get("exibir_na_loja") == "on"
+                request.POST.get("exibir_na_loja") == "on"
             )
             if imagem:
                 brinquedo.imagem_brinquedo = imagem
@@ -1890,10 +1888,10 @@ class DashboardAdminView(AdminOnlyMixin, View):
         )
 
         vendas_total = (
-                pedidos_finalizados_qs.aggregate(
-                    total=Sum("total_liquido")
-                ).get("total")
-                or Decimal("0.00")
+            pedidos_finalizados_qs.aggregate(
+                total=Sum("total_liquido")
+            ).get("total")
+            or Decimal("0.00")
         )
 
         vendas_total_formatado = (
@@ -2189,7 +2187,6 @@ from .models import Manutencao
 from django.contrib.auth.decorators import login_required
 from .models import ItemCarrinho, Carrinho
 
-
 @require_POST
 def adicionar_ao_carrinho(request, tipo, object_id):
     if not request.user.is_authenticated:
@@ -2272,6 +2269,7 @@ def limpar_carrinho(request):
     return JsonResponse({'status': 'success'})
 
 
+
 class CarrinhoView(LoginRequiredMixin, View):
 
     def get(self, request):
@@ -2323,6 +2321,7 @@ from .utils import calcular_frete_por_cep
 
 @csrf_exempt
 def calcular_frete(request):
+
     if request.method != "POST":
         return JsonResponse({"status": "erro"})
 
@@ -2379,7 +2378,6 @@ def calcular_frete(request):
 
 from django.views.decorators.http import require_POST
 
-
 @require_POST
 @login_required
 def alterar_quantidade_item(request):
@@ -2403,6 +2401,7 @@ def alterar_quantidade_item(request):
 
 from django.views.decorators.http import require_POST
 from django.contrib.auth.decorators import login_required
+
 
 
 @login_required
@@ -2471,7 +2470,9 @@ def aplicar_cupom(request):
     })
 
 
+
 def salvar_cpf_carrinho(request):
+
     if request.method != "POST":
         return JsonResponse({"status": "erro"})
 
@@ -2551,10 +2552,12 @@ class PaymentView(LoginRequiredMixin, View):
         return render(request, 'payment.html', context)
 
 
+
 from decimal import Decimal
 
 
 def gerar_pix(request):
+
     carrinho_id = request.GET.get("carrinho_id")
     carrinho = Carrinho.objects.get(id=carrinho_id)
 
@@ -2603,9 +2606,9 @@ from django.db import transaction
 
 from .models import Carrinho, Pedido, ItemPedido
 
-
 @csrf_exempt
 def webhook_mercadopago(request):
+
     if request.method != "POST":
         return HttpResponse(status=200)
 
@@ -2678,6 +2681,7 @@ import mercadopago
 
 
 def verificar_pagamento(request):
+
     carrinho_id = request.GET.get("carrinho_id")
     if not carrinho_id:
         return JsonResponse({"pago": False})
@@ -2757,6 +2761,7 @@ def verificar_pagamento(request):
         "pago": True,
         "redirect_url": "/meus-pedidos/#pedidos"
     })
+
 
 
 @csrf_exempt
@@ -2909,7 +2914,10 @@ from django.views import View
 from django.contrib.auth.mixins import LoginRequiredMixin
 
 
-# -23.453403648643707, -46.66151816239609  -23.472997309863196, -46.63041992925325
+
+
+
+#-23.453403648643707, -46.66151816239609  -23.472997309863196, -46.63041992925325
 class MeusPedidosView(LoginRequiredMixin, View):
     login_url = 'login'
 
@@ -2930,7 +2938,6 @@ class MeusPedidosView(LoginRequiredMixin, View):
         return render(request, 'meus_pedidos.html', {
             'pedidos': pedidos,
         })
-
 
 from django.shortcuts import redirect
 from django.urls import reverse
@@ -2966,7 +2973,6 @@ from django.views.decorators.csrf import csrf_exempt
 from django.shortcuts import get_object_or_404
 import json
 
-
 @csrf_exempt
 def atualizar_tipo_envio(request, carrinho_id):
     if request.method == "POST":
@@ -2982,6 +2988,7 @@ def atualizar_tipo_envio(request, carrinho_id):
                 carrinho.frete.delete()
             return JsonResponse({"status": "ok"})
         return JsonResponse({"status": "erro", "message": "Tipo inválido"})
+
 
 
 class PedidosParaImpressaoAPI(View):
@@ -3064,10 +3071,7 @@ class PedidosParaImpressaoAPI(View):
 
         return JsonResponse({"pedidos": data})
 
-
 from django.views.decorators.csrf import csrf_exempt
-
-
 @method_decorator(csrf_exempt, name='dispatch')
 class MarcarPedidoImpressoAPI(View):
 
@@ -3086,13 +3090,13 @@ class MarcarPedidoImpressoAPI(View):
             return JsonResponse({"erro": "Pedido não encontrado"}, status=404)
 
 
+
 # No Django (Produção)
 from django.http import JsonResponse
 from django.contrib.auth import authenticate
 from django.views.decorators.csrf import csrf_exempt
 
-
-@csrf_exempt  # Isento para permitir o POST do seu Flask local
+@csrf_exempt # Isento para permitir o POST do seu Flask local
 def verify_auth_api(request):
     u = request.POST.get('username')
     p = request.POST.get('password')
@@ -3110,7 +3114,6 @@ def verify_auth_api(request):
             'is_superuser': user.is_superuser
         })
     return JsonResponse({'valid': False}, status=401)
-
 
 def robots_txt(request):
     """robots.txt do site principal -- antes não existia rota nenhuma
@@ -3200,6 +3203,7 @@ class ComboAdminView(AdminOnlyMixin, View):
             "Combo atualizado com sucesso." if combo_id else "Combo criado com sucesso.",
         )
         return redirect("combos_admin")
+
 
 
 import unicodedata
