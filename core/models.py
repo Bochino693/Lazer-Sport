@@ -777,6 +777,15 @@ class Frete(Prime):
     estado = models.CharField(max_length=90, null=True, blank=True)
     numero = models.CharField(max_length=20, null=True, blank=True)
 
+    latitude = models.DecimalField(
+        max_digits=9, decimal_places=6, null=True, blank=True,
+        help_text="Geocodificado automaticamente a partir do CEP quando o frete é calculado."
+    )
+    longitude = models.DecimalField(
+        max_digits=9, decimal_places=6, null=True, blank=True,
+        help_text="Geocodificado automaticamente a partir do CEP quando o frete é calculado."
+    )
+
     valor = models.DecimalField(max_digits=10, decimal_places=2, default=0)
 
     distancia_km = models.DecimalField(
@@ -804,6 +813,8 @@ class Pedido(Prime):
         ('finalizado', 'Finalizado'),
         ('cancelado', 'Cancelado'),
     )
+
+    TIPO_ENVIO = Carrinho.TIPO_ENVIO
 
     carrinho_origem = models.ForeignKey(
         Carrinho,
@@ -859,11 +870,33 @@ class Pedido(Prime):
         default='aguardando_pagamento'
     )
 
+    # Modo de envio NO MOMENTO em que o pedido foi criado. Precisa ser
+    # gravado aqui (e não só lido de carrinho_origem.tipo_envio) porque
+    # o Carrinho é reaproveitado pelo cliente entre compras -- se ele
+    # mudar de "retirada" para "frete" (ou vice-versa) num pedido novo,
+    # os pedidos antigos não podem mudar de tipo junto.
+    tipo_envio = models.CharField(
+        max_length=30,
+        choices=TIPO_ENVIO,
+        default='frete'
+    )
+
     rua = models.CharField(max_length=180, null=True, blank=True)
     numero = models.CharField(max_length=20, null=True, blank=True)
     bairro = models.CharField(max_length=90, null=True, blank=True)
     cidade = models.CharField(max_length=90, null=True, blank=True)
+    estado = models.CharField(max_length=2, null=True, blank=True)
     cep = models.CharField(max_length=9, null=True, blank=True)
+
+    # Coordenadas do endereço de entrega e métricas de frete, também
+    # congeladas no momento da criação do pedido -- pela mesma razão
+    # acima: o Frete pertence ao Carrinho reaproveitável, então sem
+    # esse snapshot um pedido antigo passaria a "herdar" a distância e
+    # o tempo estimado da encomenda mais recente do cliente.
+    latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    distancia_km = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
+    tempo_estimado_min = models.PositiveIntegerField(null=True, blank=True)
 
     valor_frete = models.DecimalField(max_digits=10, decimal_places=2, null=True, default=0)
     # 🔒 snapshot financeiro
@@ -929,6 +962,8 @@ class Pedido(Prime):
             carrinho_origem=carrinho,
             cliente=carrinho.cliente,
 
+            tipo_envio=carrinho.tipo_envio,
+
             total_bruto=carrinho.total_bruto,
             valor_desconto=carrinho.valor_desconto,
             total_liquido=carrinho.total_liquido,
@@ -940,6 +975,11 @@ class Pedido(Prime):
             numero=frete.numero if frete else None,
             bairro=frete.bairro if frete else None,
             cidade=frete.cidade if frete else None,
+            estado=frete.estado if frete else None,
+            latitude=frete.latitude if frete else None,
+            longitude=frete.longitude if frete else None,
+            distancia_km=frete.distancia_km if frete else None,
+            tempo_estimado_min=frete.tempo_estimado_min if frete else None,
 
             cupom_codigo=carrinho.cupom.codigo if carrinho.cupom else None,
             cupom_percentual=carrinho.cupom.desconto_percentual if carrinho.cupom else None,
@@ -1167,4 +1207,3 @@ class CategoriaClick(Prime):
     class Meta:
         verbose_name = "Categoria Clicada"
         verbose_name_plural = "Categorias Clicadas"
-        

@@ -89,33 +89,6 @@ body {
     text-transform: uppercase;
 }
 
-.status-aguardando_pagamento {
-    background: #fff3cd;
-    color: #856404;
-    box-shadow: 0 0 0 3px rgba(255,193,7,.15);
-}
-
-.status-pago {
-    background: #d4edda;
-    color: #155724;
-    box-shadow: 0 0 0 3px rgba(40,167,69,.15);
-}
-
-.status-em_preparacao {
-    background: #e7f1ff;
-    color: #0d6efd;
-}
-
-.status-finalizado {
-    background: #e6f4ea;
-    color: #137333;
-}
-
-.status-cancelado {
-    background: #fde2e4;
-    color: #9b1c1c;
-}
-
 /* 📊 Infos */
 .pedido-info {
     display: grid;
@@ -167,18 +140,6 @@ body {
     color: #0d6efd;
     font-weight: 800;
     cursor: pointer;
-}
-
-.btn-finalizar {
-    margin-top: 18px;
-    display: inline-block;
-    padding: 10px 20px;
-    border-radius: 30px;
-    background: linear-gradient(135deg, #198754, #28a745);
-    color: #fff;
-    font-weight: 800;
-    text-decoration: none;
-    box-shadow: 0 10px 25px rgba(40,167,69,.3);
 }
 
 /* 🧾 Item */
@@ -267,47 +228,6 @@ body {
     background: linear-gradient(135deg, #fff3cd, #ffe69c);
 }
 
-/* 📍 Endereço de entrega */
-.endereco-card {
-    margin-top: 20px;
-    border-radius: 18px;
-    background: linear-gradient(135deg, #f8f9fc, #eef2ff);
-    box-shadow: 0 10px 30px rgba(13,110,253,.08);
-    overflow: hidden;
-    text-align: center;
-}
-
-.endereco-header {
-    padding: 12px 18px;
-    font-weight: 900;
-    font-size: 0.9rem;
-    color: #0d6efd;
-    background: rgba(13,110,253,.08);
-    text-align: center;
-}
-
-.endereco-body {
-    padding: 16px 18px;
-    font-size: 0.9rem;
-    color: #343a40;
-}
-
-.endereco-body p {
-    margin: 0 0 6px;
-    line-height: 1.4;
-}
-
-.endereco-body strong {
-    font-weight: 900;
-}
-
-.endereco-body .telefone {
-    margin-top: 8px;
-    font-weight: 800;
-    color: #198754;
-}
-
-
 /* badge base */
 .pedido-status {
     position: absolute;
@@ -323,167 +243,14 @@ body {
     box-shadow: 0 4px 10px rgba(0,0,0,0.15);
 }
 
-/* cores por status */
-.status-criado {
-    background: #9ca3af; /* cinza */
-}
-
-.status-aguardando_pagamento {
-    background: #f59e0b; /* amarelo */
-}
-
-.status-pago {
-    background: #22c55e; /* verde */
-}
-
-.status-em_preparacao {
-    background: #3b82f6; /* azul */
-}
-
-.status-saiu_entrega {
-    background: #f97316; /* laranja vivo */
-}
-
-.status-finalizado {
-    background: #16a34a; /* verde escuro */
-}
-
-.status-cancelado {
-    background: #ef4444; /* vermelho */
-}
-
-
-.entrega-box {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 16px;
-    margin-top: 12px;
-    padding: 16px;
-    border-radius: 14px;
-    background: #f8f9fa;
-    border: 1px solid #e9ecef;
-}
-
-.endereco-col h4 {
-    margin: 0 0 6px;
-    font-size: 0.85rem;
-    font-weight: 700;
-    color: #495057;
-}
-
-.endereco-col p {
-    margin: 0;
-    font-size: 0.8rem;
-    color: #6c757d;
-    line-height: 1.4;
-}
-
-.entrega-metricas {
-    grid-column: span 2;
-    margin-top: 12px;
-    padding-top: 10px;
-    border-top: 1px dashed #dee2e6;
-    font-size: 0.85rem;
-    font-weight: 700;
-    color: #212529;
-    text-align: center;
-}
-
-/* Card moderno de endereço */
-.endereco-card.modern-card {
-    background: linear-gradient(145deg, #ffffff, #f1f5f9);
-    border-radius: 18px;
-    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.08);
-    padding: 20px;
-    margin-top: 20px;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.endereco-card.modern-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 20px 45px rgba(0, 0, 0, 0.12);
-}
-
-/* Cabeçalho */
-.endereco-header.modern-header {
-    font-size: 1.1rem;
-    font-weight: 900;
-    color: #0d6efd;
-    background: rgba(13, 110, 253, 0.08);
-    text-align: center;
-    padding: 14px;
-    border-radius: 14px;
-    margin-bottom: 18px;
-    box-shadow: inset 0 -2px 4px rgba(13, 110, 253, 0.1);
-}
-
-/* Body */
-.endereco-body.modern-body {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 20px;
-}
-
-/* Colunas */
-.endereco-col.modern-col {
-    background: #ffffff;
-    border-radius: 14px;
-    padding: 14px 16px;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.endereco-col.modern-col:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.08);
-}
-
-.endereco-col h4 {
-    font-size: 0.9rem;
-    font-weight: 700;
-    color: #495057;
-    margin-bottom: 8px;
-}
-
-.endereco-col p {
-    font-size: 0.85rem;
-    color: #6c757d;
-    line-height: 1.4;
-    margin: 0;
-}
-
-/* Métricas de entrega */
-.entrega-metricas.modern-metrics {
-    grid-column: span 2;
-    display: flex;
-    justify-content: space-around;
-    align-items: center;
-    padding: 14px 0;
-    margin-top: 10px;
-    border-radius: 12px;
-    background: linear-gradient(135deg, #e7f1ff, #f0f8ff);
-    font-weight: 700;
-    color: #0d6efd;
-    box-shadow: 0 6px 15px rgba(13, 110, 253, 0.1);
-    font-size: 0.95rem;
-}
-
-.entrega-metricas.modern-metrics div {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-}
-
 /* 📱 Responsividade Mobile */
 @media (max-width: 768px) {
 
-    /* Ajusta container principal */
     .pedidos-container {
         padding: 16px;
         margin: 10px auto 40px;
     }
 
-    /* Header do pedido */
     .pedidos-header {
         padding: 20px;
         border-radius: 16px;
@@ -497,13 +264,11 @@ body {
         font-size: 0.85rem;
     }
 
-    /* Cards do pedido */
     .pedido-card {
         padding: 16px;
         border-radius: 16px;
     }
 
-    /* Pedido info grid */
     .pedido-info {
         grid-template-columns: 1fr 1fr;
         gap: 12px;
@@ -518,7 +283,6 @@ body {
         font-size: 1.15rem;
     }
 
-    /* Footer do pedido */
     .pedido-footer {
         grid-template-columns: 1fr 1fr;
         gap: 10px;
@@ -537,7 +301,6 @@ body {
         font-size: 1rem;
     }
 
-    /* Itens */
     .item-detalhe {
         grid-template-columns: 50px 1fr auto;
         gap: 10px;
@@ -557,17 +320,10 @@ body {
         font-size: 0.85rem;
     }
 
-    /* Botões */
     .toggle-itens {
         font-size: 0.85rem;
     }
 
-    .btn-finalizar {
-        padding: 8px 16px;
-        font-size: 0.85rem;
-    }
-
-    /* Endereço de entrega */
     .endereco-card.modern-card {
         padding: 16px;
     }
@@ -578,10 +334,10 @@ body {
     }
 
     .endereco-body.modern-body {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr); /* desktop: lado a lado */
-    gap: 20px;
-}
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 14px;
+    }
 
     .endereco-col.modern-col {
         padding: 12px 14px;
@@ -604,33 +360,15 @@ body {
     .entrega-metricas.modern-metrics div {
         margin-bottom: 6px;
     }
+
+    .mini-mapa-wrap iframe {
+        height: 170px;
+    }
+
+    .retirada-body {
+        padding: 14px;
+    }
 }
-
-.endereco-card.modern-card {
-    padding: 16px;
-    border-radius: 16px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-    background-color: #fff;
-}
-
-.endereco-col.modern-col {
-    padding: 12px 14px;
-    border: 1px solid #e0e0e0;
-    border-radius: 12px;
-    background-color: #f9f9f9;
-}
-
-.endereco-col h4 {
-    font-size: 0.9rem;
-    margin-bottom: 6px;
-}
-
-.endereco-col p {
-    font-size: 0.85rem;
-    line-height: 1.4;
-}
-
-
 
 /* 📱 Extra small (celulares pequenos) */
 @media (max-width: 480px) {
@@ -985,7 +723,9 @@ body {
     background: linear-gradient(135deg, #fff7d9, #ffefb8);
 }
 
+/* 📍 Endereço de entrega */
 .endereco-card.modern-card {
+    margin-top: 20px;
     overflow: hidden;
     padding: 0;
     border: 1px solid rgba(23, 99, 187, .13);
@@ -994,22 +734,19 @@ body {
     box-shadow: 0 12px 32px rgba(24, 61, 101, .08);
 }
 
-.endereco-card.modern-card:hover {
-    transform: none;
-    box-shadow: 0 16px 38px rgba(24, 61, 101, .11);
-}
-
 .endereco-header.modern-header {
     margin: 0;
     padding: 14px 18px;
     border-radius: 0;
     color: #fff;
     background: linear-gradient(135deg, #183b63, #075ccb);
-    box-shadow: none;
     text-align: left;
+    font-weight: 900;
 }
 
 .endereco-body.modern-body {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
     padding: 17px;
     gap: 13px;
 }
@@ -1017,15 +754,13 @@ body {
 .endereco-col.modern-col {
     padding: 14px 15px;
     border: 1px solid var(--orders-line);
+    border-radius: 14px;
     background: rgba(255, 255, 255, .86);
     box-shadow: 0 7px 18px rgba(26, 57, 91, .05);
 }
 
-.endereco-col.modern-col:hover {
-    transform: none;
-}
-
 .endereco-col h4 {
+    margin-bottom: 8px;
     color: var(--orders-blue-dark);
     font-size: .72rem;
     font-weight: 850;
@@ -1034,18 +769,149 @@ body {
 }
 
 .endereco-col p {
+    margin: 0;
+    font-size: .85rem;
+    line-height: 1.4;
     color: #526b85;
 }
 
 .entrega-metricas.modern-metrics {
+    grid-column: 1 / -1;
+    display: flex;
     justify-content: space-evenly;
+    align-items: center;
     gap: 12px;
-    margin: 0;
     padding: 14px;
     border: 1px solid rgba(17, 105, 209, .12);
+    border-radius: 12px;
     color: var(--orders-blue-dark);
     background: linear-gradient(135deg, rgba(7, 92, 203, .08), rgba(255, 255, 255, .75));
-    box-shadow: none;
+    font-weight: 700;
+    font-size: .95rem;
+}
+
+.entrega-metricas.modern-metrics div {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* 🗺️ Mini mapa (fábrica ↔ entrega, ou fábrica pra retirada) */
+.mini-mapa-wrap {
+    margin: 0 17px 14px;
+    border-radius: 14px;
+    overflow: hidden;
+    border: 1px solid var(--orders-line);
+    box-shadow: 0 8px 20px rgba(24, 61, 101, .08);
+}
+
+.mini-mapa-wrap iframe {
+    display: block;
+    width: 100%;
+    height: 220px;
+    border: 0;
+}
+
+.mini-mapa-legenda {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin: -8px 17px 17px;
+    font-size: .74rem;
+    font-weight: 800;
+    color: var(--orders-muted);
+}
+
+.mini-mapa-legenda span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.legenda-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.legenda-dot.origem { background: var(--orders-blue); }
+.legenda-dot.destino { background: var(--orders-red); }
+
+/* 🏪 Card de retirada na loja */
+.retirada-card {
+    margin-top: 20px;
+    overflow: hidden;
+    border: 1px solid rgba(23, 99, 187, .13);
+    border-radius: var(--orders-radius-lg);
+    background: rgba(247, 250, 254, .9);
+    box-shadow: 0 12px 32px rgba(24, 61, 101, .08);
+}
+
+.retirada-header {
+    padding: 14px 18px;
+    color: #fff;
+    font-weight: 900;
+    background: linear-gradient(135deg, #183b63, #075ccb);
+}
+
+.retirada-body {
+    padding: 17px;
+}
+
+.retirada-body .mini-mapa-wrap {
+    margin: 0 0 16px;
+}
+
+.retirada-endereco {
+    margin-bottom: 14px;
+    font-size: .88rem;
+    line-height: 1.55;
+    color: #526b85;
+}
+
+.retirada-endereco strong {
+    display: block;
+    margin-bottom: 4px;
+    color: #193653;
+    font-size: .95rem;
+}
+
+.btn-confirmar-retirada {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    padding: 12px 20px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #20c763, #128c4a);
+    color: #fff !important;
+    font-weight: 800;
+    text-decoration: none !important;
+    box-shadow: 0 10px 24px rgba(18, 140, 74, .3);
+    transition: transform .2s ease, box-shadow .2s ease;
+}
+
+.btn-confirmar-retirada:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 14px 30px rgba(18, 140, 74, .4);
+}
+
+/* ⚪ Endereço indisponível (pedidos antigos, anteriores ao snapshot) */
+.endereco-indisponivel {
+    margin-top: 18px;
+    padding: 16px 18px;
+    border: 1px dashed rgba(27, 92, 166, .3);
+    border-radius: 16px;
+    background: rgba(255, 255, 255, .6);
+    color: var(--orders-muted);
+    font-size: .85rem;
+    text-align: center;
+}
+
+.endereco-indisponivel a {
+    color: var(--orders-blue);
+    font-weight: 800;
+    text-decoration: none;
 }
 
 .toggle-itens {
@@ -1197,6 +1063,14 @@ body {
         flex-direction: row;
         flex-wrap: wrap;
     }
+
+    .mini-mapa-wrap {
+        margin: 0 14px 12px;
+    }
+
+    .mini-mapa-legenda {
+        margin: -6px 14px 14px;
+    }
 }
 
 @media (max-width: 480px) {
@@ -1238,7 +1112,6 @@ body {
     }
 }
 
-
 </style>
 
 <!-- 📍 Breadcrumb -->
@@ -1252,21 +1125,8 @@ body {
 
     <div class="pedidos-header">
         <h1>📦 Meus Pedidos</h1>
-        <p>Acompanhe pagamentos, status e itens comprados</p>
+        <p>Acompanhe pagamentos, status, endereço de entrega e itens comprados</p>
     </div>
-
-    {% if pedido.carrinho_origem %}
-<div class="info-box">
-    <small>Tipo de envio</small><br>
-    <strong>
-        {% if pedido.carrinho_origem.tipo_envio == "frete" %}
-            🚚 Entrega
-        {% else %}
-            🏪 Retirada no local
-        {% endif %}
-    </strong>
-</div>
-{% endif %}
 
 {% if pedidos %}
     {% for pedido in pedidos %}
@@ -1332,60 +1192,116 @@ body {
 
     </div>
 
-        {% if pedido.carrinho_origem and pedido.carrinho_origem.tipo_envio == "frete" and pedido.carrinho_origem.frete %}
-<div class="endereco-card modern-card">
+        <!-- ======= ENTREGA / RETIRADA =======
+             Os dados abaixo vêm sempre de campos gravados no próprio
+             Pedido (pedido.rua, pedido.tipo_envio, etc.) -- é um
+             retrato congelado no momento da compra, não o carrinho
+             atual do cliente (que é reaproveitado entre pedidos e por
+             isso não pode ser usado como fonte pra pedidos antigos). -->
 
-    <div class="endereco-header modern-header">
-        📍 Endereço de Entrega
-    </div>
+        {% if pedido.tipo_envio == "retirada" %}
+        <div class="retirada-card">
+            <div class="retirada-header">🏪 Retirada na Loja</div>
+            <div class="retirada-body">
+                <div class="retirada-endereco">
+                    <strong>Lazer &amp; Sport Brinquedos</strong>
+                    {{ fabrica.endereco }}<br>
+                    {{ fabrica.cidade }} - {{ fabrica.estado }}
+                </div>
 
-    <div class="endereco-body modern-body">
+                {% if fabrica.lat and fabrica.lng %}
+                <div class="mini-mapa-wrap">
+                    <iframe loading="lazy" referrerpolicy="no-referrer-when-downgrade"
+                            title="Mapa da fábrica Lazer & Sport"
+                            src="https://maps.google.com/maps?q={{ fabrica.lat }},{{ fabrica.lng }}&z=15&output=embed"></iframe>
+                </div>
+                {% endif %}
 
-        <div class="endereco-col modern-col">
-            <h4>Endereço</h4>
-            <p>
-                {{ pedido.carrinho_origem.frete.rua }},
-                {{ pedido.carrinho_origem.frete.numero }} <br>
-                {{ pedido.carrinho_origem.frete.bairro }}
-            </p>
+                <a class="btn-confirmar-retirada" target="_blank" rel="noopener"
+                   href="https://wa.me/{{ whatsapp_numero }}?text=Ol%C3%A1!%20Gostaria%20de%20combinar%20o%20hor%C3%A1rio%20de%20retirada%20do%20meu%20pedido%20%23{{ pedido.id }}.">
+                    <i class="fa-brands fa-whatsapp" aria-hidden="true"></i>
+                    Combinar horário de retirada
+                </a>
+            </div>
         </div>
 
-        <div class="endereco-col modern-col">
-            <h4>Cidade</h4>
-            <p>
-                {{ pedido.carrinho_origem.frete.cidade }} -
-                {{ pedido.carrinho_origem.frete.estado }} <br>
-                CEP: {{ pedido.carrinho_origem.frete.cep }}
-            </p>
-        </div>
+        {% elif pedido.tipo_envio == "frete" and pedido.rua %}
+        <div class="endereco-card modern-card">
 
-        <div class="entrega-metricas modern-metrics">
+            <div class="endereco-header modern-header">
+                📍 Endereço de Entrega
+            </div>
 
-            {% if pedido.carrinho_origem.frete.distancia_km %}
-            <div>
-                📏 Distância
-                <strong>{{ pedido.carrinho_origem.frete.distancia_km }} km</strong>
+            <div class="endereco-body modern-body">
+
+                <div class="endereco-col modern-col">
+                    <h4>Endereço</h4>
+                    <p>
+                        {{ pedido.rua }}{% if pedido.numero %}, {{ pedido.numero }}{% endif %}<br>
+                        {{ pedido.bairro }}
+                    </p>
+                </div>
+
+                <div class="endereco-col modern-col">
+                    <h4>Cidade</h4>
+                    <p>
+                        {{ pedido.cidade }}{% if pedido.estado %} - {{ pedido.estado }}{% endif %}<br>
+                        {% if pedido.cep %}CEP: {{ pedido.cep }}{% endif %}
+                    </p>
+                </div>
+
+                <div class="entrega-metricas modern-metrics">
+
+                    {% if pedido.distancia_km %}
+                    <div>
+                        📏 Distância
+                        <strong>{{ pedido.distancia_km }} km</strong>
+                    </div>
+                    {% endif %}
+
+                    {% if pedido.tempo_estimado_min %}
+                    <div>
+                        ⏱ Tempo estimado
+                        <strong>~{{ pedido.tempo_estimado_min }} min</strong>
+                    </div>
+                    {% endif %}
+
+                    <div>
+                        🚚 Frete
+                        <strong class="money" data-valor="{{ pedido.valor_frete }}"></strong>
+                    </div>
+
+                </div>
+
+            </div>
+
+            {% if pedido.latitude and pedido.longitude and fabrica.lat and fabrica.lng %}
+            <div class="mini-mapa-wrap">
+                <iframe loading="lazy" referrerpolicy="no-referrer-when-downgrade"
+                        title="Mapa da rota até o endereço de entrega"
+                        src="https://maps.google.com/maps?saddr={{ fabrica.lat }},{{ fabrica.lng }}&daddr={{ pedido.latitude }},{{ pedido.longitude }}&output=embed"></iframe>
+            </div>
+            <div class="mini-mapa-legenda">
+                <span><span class="legenda-dot origem"></span> Fábrica Lazer &amp; Sport</span>
+                <span><span class="legenda-dot destino"></span> Endereço de entrega</span>
+            </div>
+            {% else %}
+            <div class="mini-mapa-wrap">
+                <iframe loading="lazy" referrerpolicy="no-referrer-when-downgrade"
+                        title="Mapa do endereço de entrega"
+                        src="https://maps.google.com/maps?q={{ pedido.rua|urlencode }}+{{ pedido.numero|urlencode }}+{{ pedido.bairro|urlencode }}+{{ pedido.cidade|urlencode }}+{{ pedido.estado|urlencode }}&output=embed"></iframe>
             </div>
             {% endif %}
-
-            {% if pedido.carrinho_origem.frete.tempo_estimado_min %}
-            <div>
-                ⏱ Tempo estimado
-                <strong>{{ pedido.carrinho_origem.frete.tempo_estimado_min }} min</strong>
-            </div>
-            {% endif %}
-
-            <div>
-                🚚 Frete
-                <strong class="money" data-valor="{{ pedido.valor_frete }}"></strong>
-            </div>
-
         </div>
 
-    </div>
-
-</div>
-{% endif %}
+        {% elif pedido.tipo_envio == "frete" %}
+        <div class="endereco-indisponivel">
+            📍 O endereço deste pedido não ficou registrado (pedido anterior à atualização do sistema).
+            <a href="https://wa.me/{{ whatsapp_numero }}?text=Ol%C3%A1!%20Preciso%20confirmar%20o%20endere%C3%A7o%20de%20entrega%20do%20meu%20pedido%20%23{{ pedido.id }}.">
+                Confirmar endereço pelo WhatsApp
+            </a>
+        </div>
+        {% endif %}
 
         <!-- Itens do pedido -->
         <button class="toggle-itens" onclick="toggleItens({{ pedido.id }})">Ver detalhes do pedido</button>

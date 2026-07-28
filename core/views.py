@@ -60,6 +60,60 @@ def erro_500(request):
         )
 
 
+def obter_endereco_fabrica():
+    """
+    Endereço + coordenadas da fábrica, com a mesma ordem de prioridade
+    usada na home (mapa de clientes) -- centralizado aqui pra não
+    duplicar essa lógica em toda view que precisar mostrar/plotar o
+    endereço da empresa (home, meus pedidos, etc):
+
+    1) EnderecoEmpresa cadastrado no banco, se completo (editável
+       pelo admin, o ideal).
+    2) Geocodificar o CEP_EMPRESA de verdade (o mesmo endereço mostrado
+       na seção "Localização" do site).
+    3) Só em último caso (sem internet/erro na geocodificação), cai
+       nas coordenadas fixas de utils.py.
+
+    Retorna um dict com lat/lng (float), endereco (texto pronto pra
+    exibir), cidade e estado.
+    """
+    endereco_fabrica = (
+        EnderecoEmpresa.objects
+        .filter(ativo=True, latitude__isnull=False, longitude__isnull=False)
+        .first()
+    )
+
+    fabrica_endereco_texto = "Rua São Roque de Minas, 104 — Jardim Peri"
+    fabrica_cidade = "São Paulo"
+    fabrica_estado = "SP"
+
+    if endereco_fabrica:
+        fabrica_lat = float(endereco_fabrica.latitude)
+        fabrica_lng = float(endereco_fabrica.longitude)
+        fabrica_cidade = endereco_fabrica.cidade or fabrica_cidade
+        fabrica_estado = endereco_fabrica.estado or fabrica_estado
+        fabrica_endereco_texto = (
+            f"{endereco_fabrica.rua}, {endereco_fabrica.numero}"
+            f" — {endereco_fabrica.bairro or ''}"
+        ).strip(" —")
+    else:
+        lat_geocodificada, lng_geocodificada = buscar_coordenadas(CEP_EMPRESA, "104")
+        if lat_geocodificada and lng_geocodificada:
+            fabrica_lat = lat_geocodificada
+            fabrica_lng = lng_geocodificada
+        else:
+            fabrica_lat = LAT_EMPRESA
+            fabrica_lng = LON_EMPRESA
+
+    return {
+        "lat": fabrica_lat,
+        "lng": fabrica_lng,
+        "endereco": fabrica_endereco_texto,
+        "cidade": fabrica_cidade,
+        "estado": fabrica_estado,
+    }
+
+
 class HomeView(View):
     def get(self, request):
         imagens_site = ImagensSite.objects.order_by("-id")[:5]
@@ -237,53 +291,20 @@ class HomeView(View):
             for c in clientes_com_mapa
         ]
 
-        # Pino especial da fábrica. Ordem de prioridade:
-        # 1) EnderecoEmpresa cadastrado no banco, se completo (editável
-        #    pelo admin, o ideal).
-        # 2) Geocodificar o CEP_EMPRESA de verdade (o mesmo endereço já
-        #    mostrado na seção "Localização" do site) -- usa o mesmo
-        #    pipeline corrigido dos clientes, então é confiável.
-        # 3) Só em último caso (sem internet/erro na geocodificação),
-        #    cai nas coordenadas fixas de utils.py.
-        endereco_fabrica = (
-            EnderecoEmpresa.objects
-            .filter(ativo=True, latitude__isnull=False, longitude__isnull=False)
-            .first()
-        )
-
-        fabrica_endereco_texto = "Rua São Roque de Minas, 104 — Jardim Peri"
-        fabrica_cidade = "São Paulo"
-        fabrica_estado = "SP"
-
-        if endereco_fabrica:
-            fabrica_lat = float(endereco_fabrica.latitude)
-            fabrica_lng = float(endereco_fabrica.longitude)
-            fabrica_cidade = endereco_fabrica.cidade or fabrica_cidade
-            fabrica_estado = endereco_fabrica.estado or fabrica_estado
-            fabrica_endereco_texto = (
-                f"{endereco_fabrica.rua}, {endereco_fabrica.numero}"
-                f" — {endereco_fabrica.bairro or ''}"
-            ).strip(" —")
-        else:
-            lat_geocodificada, lng_geocodificada = buscar_coordenadas(CEP_EMPRESA, "104")
-            if lat_geocodificada and lng_geocodificada:
-                fabrica_lat = lat_geocodificada
-                fabrica_lng = lng_geocodificada
-            else:
-                fabrica_lat = LAT_EMPRESA
-                fabrica_lng = LON_EMPRESA
+        # Pino especial da fábrica.
+        endereco_fabrica = obter_endereco_fabrica()
 
         fabrica_mapa = {
             "tipo": "fabrica",
             "nome": "Lazer & Sport Brinquedos",
-            "cidade": fabrica_cidade,
-            "estado": fabrica_estado,
+            "cidade": endereco_fabrica["cidade"],
+            "estado": endereco_fabrica["estado"],
             "pais": "Brasil",
-            "lat": fabrica_lat,
-            "lng": fabrica_lng,
+            "lat": endereco_fabrica["lat"],
+            "lng": endereco_fabrica["lng"],
             "site": "",
             "logo": static("images/logoofi.png"),
-            "endereco": fabrica_endereco_texto,
+            "endereco": endereco_fabrica["endereco"],
         }
 
         # pontos_mapa = tudo que vai pro mapa (fábrica + clientes).
@@ -2790,6 +2811,22 @@ def calcular_frete(request):
     valor_frete = Decimal(str(valor_frete))
     distancia = Decimal(str(distancia))
 
+    # Geocodifica o endereço de entrega -- mesma função já usada pra
+    # clientes/fábrica -- pra poder plotar o pino de entrega no mini
+    # mapa de "Meus Pedidos" com precisão (em vez de só o texto do CEP).
+    lat_entrega, lng_entrega = buscar_coordenadas(cep, numero or "")
+
+    # Tempo estimado: não temos um serviço de rotas contratado, então
+    # aproximamos por uma velocidade média urbana razoável (25 km/h,
+    # considerando trânsito/paradas). É só uma estimativa exibida como
+    # tal na tela -- nunca um compromisso de prazo.
+    tempo_estimado = None
+    if distancia is not None:
+        try:
+            tempo_estimado = max(10, round(float(distancia) / 25 * 60))
+        except (TypeError, ValueError):
+            tempo_estimado = None
+
     # cria ou pega o frete do carrinho
     frete, _ = Frete.objects.get_or_create(carrinho=carrinho)
 
@@ -2801,9 +2838,15 @@ def calcular_frete(request):
     frete.estado = estado
     frete.numero = numero
 
+    # salva coordenadas (quando a geocodificação funcionar)
+    if lat_entrega and lng_entrega:
+        frete.latitude = lat_entrega
+        frete.longitude = lng_entrega
+
     # salva valores do frete
     frete.valor = valor_frete
     frete.distancia_km = distancia
+    frete.tempo_estimado_min = tempo_estimado
 
     frete.save()
     _invalidar_pagamento_pendente(carrinho)
@@ -2812,6 +2855,7 @@ def calcular_frete(request):
         "status": "ok",
         "frete": float(valor_frete),
         "distancia": float(distancia),
+        "tempo_estimado_min": tempo_estimado,
         "total_final": float(carrinho.total_final)
     })
 
@@ -3347,6 +3391,9 @@ def _finalizar_pagamento_aprovado(carrinho, payment):
             carrinho_origem=carrinho_bloqueado,
             status="pago",
             forma_pagamento=_forma_pagamento_mp(payment),
+
+            tipo_envio=carrinho_bloqueado.tipo_envio,
+
             total_bruto=carrinho_bloqueado.total_bruto,
             valor_desconto=carrinho_bloqueado.valor_desconto,
             total_liquido=carrinho_bloqueado.total_liquido,
@@ -3357,6 +3404,11 @@ def _finalizar_pagamento_aprovado(carrinho, payment):
             bairro=frete.bairro if frete else None,
             cidade=frete.cidade if frete else None,
             numero=frete.numero if frete else None,
+            estado=frete.estado if frete else None,
+            latitude=frete.latitude if frete else None,
+            longitude=frete.longitude if frete else None,
+            distancia_km=frete.distancia_km if frete else None,
+            tempo_estimado_min=frete.tempo_estimado_min if frete else None,
             cupom_codigo=cupom.codigo if cupom else None,
             cupom_percentual=(
                 cupom.desconto_percentual if cupom else None
@@ -4267,8 +4319,17 @@ class MeusPedidosView(LoginRequiredMixin, View):
             .order_by('-criacao')
         )
 
+        # Endereço/coordenadas da fábrica -- usado no mini mapa tanto
+        # para o ponto de partida da entrega quanto para o pino de
+        # retirada (quando o pedido é tipo_envio="retirada").
+        fabrica = obter_endereco_fabrica()
+
+        numero_whatsapp = "5511960563135"
+
         return render(request, 'meus_pedidos.html', {
             'pedidos': pedidos,
+            'fabrica': fabrica,
+            'whatsapp_numero': numero_whatsapp,
         })
 
 from django.shortcuts import redirect
@@ -4893,3 +4954,4 @@ class SearchView(View):
             "total_resultados": len(resultados),
             "busca_realizada": bool(termo),
         })
+    
