@@ -5,7 +5,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %} Lazer & Sports {% endblock %}</title>
-  <meta name="description" content="{% block meta_description %}Lazer e Sport Brinquedos: fábrica e loja de brinquedos, fliperama, mecânicos e simuladores para shoppings, quiosques e parques. Compra e reposição de peças.{% endblock %}">
+  <meta name="description" content="{% block meta_description %}Lazer & Sport Brinquedos: fábrica e loja de brinquedos, fliperama, mecânicos e simuladores para shoppings, quiosques e parques. Compra e reposição de peças.{% endblock %}">
   <link rel="canonical" href="https://www.lazersport.com.br{% block canonical_path %}{{ request.path }}{% endblock %}">
   <link rel="icon" type="image/x-icon" href="{% static 'images/logoofi.png' %}">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -58,6 +58,7 @@
         animation-duration: 0.001ms !important;
         animation-iteration-count: 1 !important;
         transition-duration: 0.001ms !important;
+        transition-delay: 0s !important;
         scroll-behavior: auto !important;
       }
     }
@@ -145,10 +146,9 @@
     }
 
     /* O #nav (painel off-canvas) só existe de verdade no mobile;
-       no desktop quem aparece são os dois grupos .nav-desktop. */
-    #nav {
-      display: none;
-    }
+       no desktop quem aparece são os dois grupos .nav-desktop.
+       (a regra que esconde #nav no desktop fica dentro do media
+       query de 769px+, logo abaixo — ver .nav-desktop) */
 
     nav a {
       color: white;
@@ -248,6 +248,12 @@
       header {
         padding: 12px 20px;
         justify-content: flex-start;
+      }
+
+      /* No desktop quem representa o menu são os dois grupos
+         .nav-desktop -- o painel off-canvas fica fora de cena. */
+      #nav {
+        display: none;
       }
 
       .nav-desktop {
@@ -803,11 +809,13 @@ nav a.btn-login {
   }
 
   nav#nav {
+    display: flex;
     position: fixed;
     top: 0;
     right: 0;
     width: min(80vw, 320px);
     height: 100vh;
+    height: 100dvh;
     margin: 0;
     background: linear-gradient(165deg, #0d1b2e, #142c4a);
     flex-direction: column;
@@ -816,6 +824,7 @@ nav a.btn-login {
     gap: 2px;
     padding: 82px 16px 32px;
     border-radius: 0;
+    border-left: 1px solid rgba(255, 255, 255, 0.08);
     box-shadow: -16px 0 40px rgba(0, 0, 0, 0.35);
 
     transform: translateX(100%);
@@ -826,9 +835,33 @@ nav a.btn-login {
     overflow-y: auto;
   }
 
+  /* fina barra dourada na borda esquerda do painel, acabamento premium */
+  nav#nav::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 3px;
+    height: 100%;
+    background: linear-gradient(180deg, #FFD700, #E63946);
+    opacity: 0.85;
+  }
+
   nav#nav.active {
     transform: translateX(0);
     visibility: visible;
+  }
+
+  .nav-panel-title {
+    display: block;
+    color: rgba(255, 255, 255, 0.42);
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    padding: 0 12px 12px;
+    margin-bottom: 4px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   }
 
   nav#nav a {
@@ -848,7 +881,36 @@ nav a.btn-login {
     min-width: 0;
     max-width: none;
     min-height: 0;
+
+    opacity: 0;
+    transform: translateX(18px);
+    transition:
+      color 0.25s var(--ease-out),
+      background 0.25s var(--ease-out),
+      border-color 0.25s var(--ease-out),
+      opacity 0.35s var(--ease-out),
+      transform 0.35s var(--ease-out);
   }
+
+  nav#nav.active a {
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  /* entrada escalonada -- cada link some alguns ms depois do anterior */
+  nav#nav.active a:nth-of-type(1)  { transition-delay: 0.04s; }
+  nav#nav.active a:nth-of-type(2)  { transition-delay: 0.07s; }
+  nav#nav.active a:nth-of-type(3)  { transition-delay: 0.10s; }
+  nav#nav.active a:nth-of-type(4)  { transition-delay: 0.13s; }
+  nav#nav.active a:nth-of-type(5)  { transition-delay: 0.16s; }
+  nav#nav.active a:nth-of-type(6)  { transition-delay: 0.19s; }
+  nav#nav.active a:nth-of-type(7)  { transition-delay: 0.22s; }
+  nav#nav.active a:nth-of-type(8)  { transition-delay: 0.25s; }
+  nav#nav.active a:nth-of-type(9)  { transition-delay: 0.28s; }
+  nav#nav.active a:nth-of-type(10) { transition-delay: 0.31s; }
+  nav#nav.active a:nth-of-type(11) { transition-delay: 0.34s; }
+  nav#nav.active a:nth-of-type(12) { transition-delay: 0.37s; }
+  nav#nav.active a:nth-of-type(13) { transition-delay: 0.40s; }
 
   nav#nav a::before,
   nav#nav a::after {
@@ -1144,6 +1206,8 @@ nav a.btn-login {
   <button type="button" class="nav-close" id="nav-close" aria-label="Fechar menu">
     <i class="fa-solid fa-xmark"></i>
   </button>
+
+  <span class="nav-panel-title">Menu</span>
 
   <a href="{% url 'home' %}#"><i class="fa-solid fa-house nav-icon" aria-hidden="true"></i>Home</a>
   <a href="{% url 'home' %}#categorias-section"><i class="fa-solid fa-shapes nav-icon" aria-hidden="true"></i>Categorias de Brinquedos</a>
