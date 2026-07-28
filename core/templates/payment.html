@@ -47,28 +47,185 @@ body {
 }
 
 .checkout-head {
-    margin-bottom: 24px;
+    position: relative;
+    isolation: isolate;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 28px;
+    min-height: 210px;
+    margin-bottom: 26px;
+    padding: 34px 38px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, .18);
+    border-radius: 28px;
+    color: #fff;
+    background:
+        radial-gradient(circle at 82% 18%, rgba(54, 164, 255, .42), transparent 27%),
+        radial-gradient(circle at 7% 110%, rgba(230, 57, 70, .32), transparent 32%),
+        linear-gradient(125deg, #061a38 0%, #003f91 56%, #007bff 100%);
+    box-shadow:
+        0 22px 55px rgba(0, 52, 123, .25),
+        inset 0 1px 0 rgba(255, 255, 255, .14);
 }
 
-.checkout-head span {
-    color: #007bff;
-    font-size: .7rem;
-    font-weight: 850;
-    letter-spacing: .13em;
+.checkout-head::before,
+.checkout-head::after {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    border: 1px solid rgba(255, 255, 255, .10);
+    border-radius: 50%;
+}
+
+.checkout-head::before {
+    width: 330px;
+    height: 330px;
+    right: -95px;
+    top: -180px;
+    box-shadow:
+        0 0 0 32px rgba(255, 255, 255, .035),
+        0 0 0 66px rgba(255, 255, 255, .025);
+}
+
+.checkout-head::after {
+    width: 150px;
+    height: 150px;
+    left: 48%;
+    bottom: -125px;
+    box-shadow: 0 0 0 28px rgba(255, 255, 255, .025);
+}
+
+.checkout-head-copy {
+    min-width: 0;
+}
+
+.checkout-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 13px;
+    padding: 8px 12px;
+    border: 1px solid rgba(255, 255, 255, .17);
+    border-radius: 999px;
+    color: #fff;
+    background: rgba(255, 255, 255, .11);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08);
+    font-size: .68rem;
+    font-weight: 900;
+    letter-spacing: .12em;
     text-transform: uppercase;
+    backdrop-filter: blur(8px);
+}
+
+.checkout-eyebrow i {
+    color: #6de7a5;
+    font-size: .75rem;
 }
 
 .checkout-head h1 {
-    margin: 5px 0 7px;
-    color: #10233f;
-    font-size: clamp(2rem, 4vw, 3rem);
-    line-height: 1.05;
+    max-width: 650px;
+    margin: 0 0 11px;
+    color: #fff;
+    font-size: clamp(2.15rem, 4.7vw, 3.65rem);
+    line-height: .98;
     letter-spacing: -.05em;
+    text-wrap: balance;
+    text-shadow: 0 5px 22px rgba(0, 20, 55, .24);
 }
 
 .checkout-head p {
     margin: 0;
-    color: #64748b;
+    max-width: 560px;
+    color: rgba(255, 255, 255, .78);
+    font-size: .96rem;
+    line-height: 1.55;
+}
+
+.checkout-head-seal {
+    position: relative;
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+    width: 138px;
+    aspect-ratio: 1;
+    border: 1px solid rgba(255, 255, 255, .22);
+    border-radius: 32px;
+    color: #fff;
+    background: rgba(255, 255, 255, .10);
+    box-shadow:
+        0 16px 35px rgba(1, 29, 70, .24),
+        inset 0 1px 0 rgba(255, 255, 255, .15);
+    backdrop-filter: blur(12px);
+    transform: rotate(3deg);
+}
+
+.checkout-head-seal::after {
+    content: "";
+    position: absolute;
+    inset: 9px;
+    border: 1px dashed rgba(255, 255, 255, .20);
+    border-radius: 24px;
+}
+
+.checkout-head-seal i {
+    position: relative;
+    z-index: 1;
+    font-size: 3.45rem;
+    filter: drop-shadow(0 8px 13px rgba(0, 20, 50, .28));
+}
+
+.checkout-progress {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin-top: 21px;
+}
+
+.checkout-step {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    color: rgba(255, 255, 255, .66);
+    font-size: .72rem;
+    font-weight: 800;
+}
+
+.checkout-step-number {
+    display: grid;
+    place-items: center;
+    width: 25px;
+    height: 25px;
+    border: 1px solid rgba(255, 255, 255, .20);
+    border-radius: 50%;
+    background: rgba(255, 255, 255, .08);
+}
+
+.checkout-step.done {
+    color: #baf3d1;
+}
+
+.checkout-step.done .checkout-step-number {
+    color: #062b1b;
+    border-color: #6de7a5;
+    background: #6de7a5;
+}
+
+.checkout-step.active {
+    color: #fff;
+}
+
+.checkout-step.active .checkout-step-number {
+    color: #004aad;
+    border-color: #fff;
+    background: #fff;
+    box-shadow: 0 0 0 5px rgba(255, 255, 255, .10);
+}
+
+.checkout-step-line {
+    width: 32px;
+    height: 1px;
+    background: rgba(255, 255, 255, .24);
 }
 
 .checkout-grid {
@@ -381,6 +538,21 @@ body {
 }
 
 @media (max-width: 880px) {
+    .checkout-head {
+        grid-template-columns: minmax(0, 1fr) 105px;
+        min-height: 190px;
+        padding: 28px;
+    }
+
+    .checkout-head-seal {
+        width: 105px;
+        border-radius: 26px;
+    }
+
+    .checkout-head-seal i {
+        font-size: 2.8rem;
+    }
+
     .checkout-grid {
         grid-template-columns: 1fr;
     }
@@ -403,6 +575,57 @@ body {
         border-radius: 19px;
     }
 
+    .checkout-breadcrumb {
+        margin-bottom: 14px;
+    }
+
+    .checkout-head {
+        grid-template-columns: 1fr;
+        min-height: 0;
+        padding: 25px 21px;
+        border-radius: 23px;
+    }
+
+    .checkout-head h1 {
+        font-size: clamp(2rem, 11vw, 2.65rem);
+    }
+
+    .checkout-head p {
+        font-size: .86rem;
+    }
+
+    .checkout-head-seal {
+        position: absolute;
+        right: -25px;
+        bottom: -29px;
+        width: 105px;
+        opacity: .17;
+        pointer-events: none;
+    }
+
+    .checkout-head-seal i {
+        font-size: 2.6rem;
+    }
+
+    .checkout-progress {
+        gap: 6px;
+        margin-top: 19px;
+    }
+
+    .checkout-step {
+        gap: 5px;
+        font-size: .65rem;
+    }
+
+    .checkout-step-number {
+        width: 23px;
+        height: 23px;
+    }
+
+    .checkout-step-line {
+        width: 14px;
+    }
+
     .payment-panel {
         padding: 15px;
     }
@@ -423,9 +646,40 @@ body {
     </nav>
 
     <header class="checkout-head">
-        <span>Checkout seguro</span>
-        <h1>Concluir pagamento</h1>
-        <p>Escolha Pix, cartão de crédito ou cartão de débito.</p>
+        <div class="checkout-head-copy">
+            <span class="checkout-eyebrow">
+                <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
+                Checkout protegido
+            </span>
+            <h1>Finalize sua compra com segurança</h1>
+            <p>
+                Escolha a melhor forma de pagamento. Seus dados são protegidos
+                e a confirmação do pedido é automática.
+            </p>
+
+            <div class="checkout-progress" aria-label="Etapas da compra">
+                <span class="checkout-step done">
+                    <span class="checkout-step-number">
+                        <i class="fa-solid fa-check" aria-hidden="true"></i>
+                    </span>
+                    Carrinho
+                </span>
+                <span class="checkout-step-line" aria-hidden="true"></span>
+                <span class="checkout-step active" aria-current="step">
+                    <span class="checkout-step-number">2</span>
+                    Pagamento
+                </span>
+                <span class="checkout-step-line" aria-hidden="true"></span>
+                <span class="checkout-step">
+                    <span class="checkout-step-number">3</span>
+                    Confirmação
+                </span>
+            </div>
+        </div>
+
+        <div class="checkout-head-seal" aria-hidden="true">
+            <i class="fa-solid fa-lock"></i>
+        </div>
     </header>
 
     <div class="checkout-grid">
