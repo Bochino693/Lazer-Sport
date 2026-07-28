@@ -1845,6 +1845,97 @@ nav a.btn-login {
             height: 48px;
         }
     }
+
+    /* ================================================================
+       AJUSTE FINAL — TAMANHO ÚNICO PARA TODAS AS AÇÕES FLUTUANTES
+       Esta regra fica no fim do CSS para não ser anulada pelas regras
+       antigas dos botões de carrinho, pedidos, admin ou redes sociais.
+       ================================================================ */
+    .float-stack .float-btn,
+    .ls-quick-dock > a {
+        width: 56px !important;
+        min-width: 56px !important;
+        height: 56px !important;
+        min-height: 56px !important;
+        flex: 0 0 56px !important;
+        padding: 0 !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        font-size: 22px !important;
+        line-height: 1 !important;
+        box-sizing: border-box !important;
+    }
+
+    .float-stack {
+        right: 20px;
+        bottom: 20px;
+        gap: 10px;
+    }
+
+    .ls-quick-dock {
+        left: 20px;
+        bottom: 20px;
+        gap: 10px;
+    }
+
+    /* As logos devem usar os pixels originais dos arquivos enviados.
+       Os !important também vencem filtros antigos ou herdados. */
+    .ls-footer .ls-clientes-logos .ls-cliente-logo {
+        background: #ffffff !important;
+        border-color: rgba(255, 255, 255, 0.96) !important;
+    }
+
+    .ls-footer .ls-clientes-logos .ls-cliente-logo img,
+    .ls-footer .ls-clientes-logos .ls-cliente-logo:hover img {
+        filter: none !important;
+        -webkit-filter: none !important;
+        opacity: 1 !important;
+        mix-blend-mode: normal !important;
+        transform-origin: center !important;
+    }
+
+    @media (max-width: 768px) {
+        .float-stack .float-btn,
+        .ls-quick-dock > a {
+            width: 40px !important;
+            min-width: 40px !important;
+            height: 40px !important;
+            min-height: 40px !important;
+            flex: 0 0 40px !important;
+            font-size: 16px !important;
+            border-width: 1px !important;
+            box-shadow:
+                0 7px 17px rgba(6, 24, 47, 0.22),
+                inset 0 1px 0 rgba(255, 255, 255, 0.18) !important;
+        }
+
+        .float-stack {
+            right: 9px;
+            bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+            gap: 7px;
+        }
+
+        .ls-quick-dock {
+            left: 9px;
+            bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+            gap: 7px;
+        }
+
+        .float-stack .float-btn .badge {
+            top: -3px !important;
+            right: -3px !important;
+            min-width: 17px !important;
+            height: 17px !important;
+            padding: 0 4px !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            font-size: 9px !important;
+            line-height: 1 !important;
+            border-width: 1px !important;
+        }
+    }
 </style>
 
 <nav class="ls-quick-dock" aria-label="Contato rápido">
