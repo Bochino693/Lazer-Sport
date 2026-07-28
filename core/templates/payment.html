@@ -1,986 +1,721 @@
 {% extends "base.html" %}
-{% block content %}
 {% load static %}
 
+{% block title %}Pagamento seguro | Lazer & Sport{% endblock %}
+
+{% block content %}
+<script src="https://sdk.mercadopago.com/js/v2"></script>
 
 <style>
-.payment-resumo-box {
-    background: #fff;
-    padding: 30px;
-    border-radius: 18px;
-    box-shadow: 0 10px 30px rgba(0,0,0,.08);
+body {
+    background:
+        radial-gradient(circle at 8% 15%, rgba(0, 123, 255, .08), transparent 28%),
+        radial-gradient(circle at 92% 68%, rgba(230, 57, 70, .06), transparent 26%),
+        #edf3fa;
+}
+
+.checkout-shell {
+    max-width: 1160px;
+    margin: 34px auto 80px;
+    padding: 0 20px;
+    color: #10233f;
+}
+
+.checkout-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    width: fit-content;
+    margin-bottom: 20px;
+    padding: 10px 14px;
+    border: 1px solid rgba(0, 74, 173, .10);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .65);
+    box-shadow: 0 8px 22px rgba(31, 64, 104, .07);
+    font-size: .8rem;
+    font-weight: 750;
+}
+
+.checkout-breadcrumb a {
+    color: #004aad;
+    text-decoration: none;
+}
+
+.checkout-breadcrumb i {
+    color: #8293a8;
+    font-size: .6rem;
+}
+
+.checkout-head {
+    margin-bottom: 24px;
+}
+
+.checkout-head span {
+    color: #007bff;
+    font-size: .7rem;
+    font-weight: 850;
+    letter-spacing: .13em;
+    text-transform: uppercase;
+}
+
+.checkout-head h1 {
+    margin: 5px 0 7px;
+    color: #10233f;
+    font-size: clamp(2rem, 4vw, 3rem);
+    line-height: 1.05;
+    letter-spacing: -.05em;
+}
+
+.checkout-head p {
+    margin: 0;
+    color: #64748b;
+}
+
+.checkout-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.08fr) minmax(350px, .72fr);
+    align-items: start;
+    gap: 22px;
+}
+
+.checkout-payment,
+.checkout-summary {
+    border: 1px solid rgba(0, 74, 173, .11);
+    border-radius: 25px;
+    background: rgba(247, 251, 255, .88);
+    box-shadow: 0 19px 48px rgba(30, 61, 99, .12);
+    backdrop-filter: blur(14px);
+}
+
+.checkout-payment {
+    padding: 24px;
+}
+
+.checkout-summary {
+    position: sticky;
+    top: 125px;
+    padding: 22px;
+}
+
+.method-tabs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 18px;
+    padding: 5px;
+    border-radius: 16px;
+    background: #e1ebf6;
+}
+
+.method-tab {
+    min-height: 52px;
+    padding: 11px;
+    border: 0;
+    border-radius: 12px;
+    color: #49647f;
+    background: transparent;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: .85rem;
+    font-weight: 850;
+    transition: .22s ease;
+}
+
+.method-tab.active {
+    color: #fff;
+    background: linear-gradient(135deg, #004aad, #007bff);
+    box-shadow: 0 8px 19px rgba(0, 74, 173, .23);
+}
+
+.payment-panel {
+    display: none;
+    padding: 22px;
+    border: 1px solid #dce7f3;
+    border-radius: 19px;
+    background: #edf4fb;
+}
+
+.payment-panel.active {
+    display: block;
+}
+
+.panel-title {
+    margin: 0 0 5px;
+    color: #183452;
+    font-size: 1.08rem;
+    font-weight: 850;
+}
+
+.panel-subtitle {
+    margin: 0 0 18px;
+    color: #6b7c91;
+    font-size: .8rem;
+    line-height: 1.5;
+}
+
+.pix-loading,
+.payment-error {
+    padding: 12px 14px;
+    border-radius: 12px;
+    font-size: .8rem;
+    font-weight: 750;
+}
+
+.pix-loading {
+    color: #315274;
+    background: #e0ebf6;
+}
+
+.payment-error {
+    display: none;
+    margin-bottom: 14px;
+    color: #9f1f2c;
+    background: #feecee;
+    border: 1px solid #f6c8cd;
+}
+
+.pix-content {
+    display: none;
     text-align: center;
 }
 
-.valor-total {
-    font-size: 2.6rem;
-    font-weight: 800;
-    color: #1e40af; /* azul do site */
-    margin: 0;
+.pix-value {
+    margin-bottom: 16px;
+    color: #079447;
+    font-size: 1.8rem;
+    font-weight: 900;
+    letter-spacing: -.04em;
 }
 
-.valor-legenda {
-    color: #64748b;
-    margin-bottom: 25px;
+.pix-qr-wrap {
+    display: inline-flex;
+    padding: 12px;
+    border: 1px solid #d7e4f1;
+    border-radius: 18px;
+    background: #fff;
+    box-shadow: 0 12px 28px rgba(26, 59, 96, .12);
 }
 
-.resumo-itens {
-    text-align: left;
-    margin-top: 20px;
+.pix-qr-wrap img {
+    width: min(240px, 66vw);
+    height: auto;
+    display: block;
 }
 
-.resumo-item {
+.pix-copy {
     display: grid;
-    grid-template-columns: 1fr auto auto;
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+    margin-top: 17px;
+}
+
+.pix-copy input {
+    min-width: 0;
+    padding: 12px;
+    border: 1px solid #cbdbea;
+    border-radius: 11px;
+    color: #40566f;
+    background: #f8fbff;
+    font-size: .78rem;
+}
+
+.pix-copy button {
+    padding: 11px 15px;
+    border: 0;
+    border-radius: 11px;
+    color: #fff;
+    background: linear-gradient(135deg, #0ead55, #07883f);
+    cursor: pointer;
+    font-family: inherit;
+    font-weight: 850;
+}
+
+.card-limit {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 15px;
+    padding: 10px 12px;
+    border-radius: 11px;
+    color: #315274;
+    background: #e2edf8;
+    font-size: .76rem;
+    font-weight: 750;
+}
+
+#paymentBrick_container {
+    min-height: 180px;
+}
+
+.summary-total-card {
+    margin-bottom: 19px;
+    padding: 18px;
+    border: 1px solid rgba(0, 74, 173, .14);
+    border-radius: 18px;
+    background:
+        radial-gradient(circle at 94% 10%, rgba(0, 123, 255, .12), transparent 34%),
+        linear-gradient(145deg, #e8f2fc, #dbeaf8);
+}
+
+.summary-total-card small {
+    color: #60748b;
+    font-size: .72rem;
+    font-weight: 750;
+}
+
+.summary-total-card strong {
+    display: block;
+    margin-top: 4px;
+    color: #079447;
+    font-size: 2rem;
+    line-height: 1;
+    font-weight: 900;
+    letter-spacing: -.045em;
+}
+
+.summary-title {
+    margin: 0 0 12px;
+    color: #1c3858;
+    font-size: .78rem;
+    font-weight: 850;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+}
+
+.summary-items {
+    max-height: 290px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.summary-item {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
     gap: 10px;
-    padding: 10px 0;
-    border-bottom: 1px dashed #e5e7eb;
+    padding: 11px 0;
+    border-bottom: 1px dashed #cbd9e8;
+    color: #536a83;
+    font-size: .77rem;
 }
 
-.resumo-totais {
-    margin-top: 20px;
-    font-weight: 700;
+.summary-item span:first-child {
+    color: #263f5d;
+    font-weight: 750;
 }
 
-.resumo-totais div {
+.summary-item strong {
+    color: #173250;
+}
+
+.summary-lines {
+    margin-top: 15px;
+}
+
+.summary-line {
     display: flex;
     justify-content: space-between;
-}
-
-.resumo-totais .desconto {
-    color: #16a34a;
-}
-
-
-/* ===== BREADCRUMB STRONG ===== */
-.breadcrumb-strong {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    padding: 14px 18px;
-    margin-bottom: 30px;
-
-    background: linear-gradient(135deg, #f8fafc, #eef2ff);
-    border-radius: 14px;
-
-    font-size: 1.05rem;
+    gap: 12px;
+    margin: 8px 0;
+    color: #60738a;
+    font-size: .8rem;
     font-weight: 700;
-    letter-spacing: .3px;
-
-    box-shadow: 0 8px 20px rgba(0,0,0,.08);
 }
 
-/* Links */
-.breadcrumb-strong a {
+.summary-line.discount {
+    color: #08783d;
+}
+
+.secure-note {
     display: flex;
-    align-items: center;
-    gap: 8px;
-    color: #1e3a8a;
-    text-decoration: none;
-    transition: all .2s ease;
+    gap: 9px;
+    margin-top: 17px;
+    padding: 11px;
+    border-radius: 11px;
+    color: #49647f;
+    background: #e6eef7;
+    font-size: .72rem;
+    line-height: 1.45;
+    font-weight: 700;
 }
 
-.breadcrumb-strong a:hover {
-    transform: translateY(-1px);
-    color: #0d6efd;
-}
-
-/* Separador */
-.breadcrumb-strong .sep {
-    font-size: .85rem;
-    color: #94a3b8;
-}
-
-/* Página atual */
-.breadcrumb-strong strong {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    color: #111827;
-}
-
-/* Ícones */
-.breadcrumb-strong i {
-    font-size: 1rem;
-}
-
-/* ===== MOBILE ===== */
-@media (max-width: 768px) {
-    .breadcrumb-strong {
-        font-size: .95rem;
-        padding: 12px 14px;
-        gap: 10px;
-    }
-
-    .breadcrumb-strong span {
-        display: none; /* só ícones no mobile */
-    }
-}
-
-
-    .payment-container {
-    max-width: 700px;
-    margin: 40px auto;
-    padding: 20px;
-}
-
-.payment-header h1 {
-    margin-bottom: 5px;
-}
-
-.payment-options {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 16px;
-    margin: 30px 0;
-}
-
-.payment-card {
-    border: 2px solid #e5e7eb;
-    padding: 18px;
-    border-radius: 16px;
-    cursor: pointer;
-    display: flex;
+.checkout-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 10050;
+    display: none;
     align-items: center;
     justify-content: center;
-    font-weight: 800;
-    font-size: 1.05rem;
-    transition: .25s ease;
-    background: #fff;
-}
-
-.payment-card:hover {
-    border-color: #4f46e5;
-    transform: translateY(-2px);
-}
-
-.payment-card input {
-    display: none;
-}
-
-.payment-card.active {
-    border-color: #4f46e5;
-    background: #eef2ff;
-}
-
-.payment-details {
-    grid-column: 1 / -1; /* ocupa largura toda */
-    margin-top: 10px;
-}
-
-.texto-destaque {
-    text-align: center;           /* centraliza o texto */
-    font-size: 1.5rem;            /* tamanho grande */
-    font-weight: 700;             /* negrito */
-    color: #1e40af;               /* azul destacado */
-    margin: 30px auto;            /* espaçamento acima e abaixo, centralizado */
-    padding: 15px 20px;           /* um pouco de espaço interno */
-    background: #f0f4ff;          /* leve fundo para destacar */
-    border-radius: 12px;          /* cantos arredondados */
-    box-shadow: 0 5px 15px rgba(0,0,0,0.1); /* sombra suave */
-}
-
-
-.payment-alert {
-    background: #fff7ed;
-    border: 1px solid #fed7aa;
-    padding: 12px;
-    border-radius: 10px;
-
-    text-align: center;
-    margin: 20px auto;
-    font-size: 1.1rem;
-    font-weight: 600;
-}
-
-.btn-confirmar {
-    width: 100%;
-    padding: 14px;
-    border-radius: 12px;
-    background: #4f46e5;
-    color: white;
-    border: none;
-    font-size: 1rem;
-}
-
-/* ===== CARTÃO BOX MODERNO ===== */
-.card-box {
-    margin-top: 20px;
-    padding: 24px;
-    border-radius: 18px;
-    background: #ffffff;
-    box-shadow: 0 20px 40px rgba(0,0,0,.08);
-    animation: slideDown .35s ease;
-}
-
-/* animação */
-@keyframes slideDown {
-    from {
-        opacity: 0;
-        transform: translateY(-8px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-/* inputs */
-.input-group {
-    margin-bottom: 16px;
-}
-
-.input-group label {
-    display: block;
-    font-size: .85rem;
-    font-weight: 600;
-    color: #475569;
-    margin-bottom: 6px;
-}
-
-.input-group input {
-    width: 100%;
-    padding: 14px 14px;
-    border-radius: 12px;
-    border: 1.8px solid #e5e7eb;
-    font-size: .95rem;
-    transition: .2s;
-}
-
-.input-group input:focus {
-    outline: none;
-    border-color: #4f46e5;
-    box-shadow: 0 0 0 3px rgba(79,70,229,.15);
-}
-
-/* ícone bandeira */
-.input-icon {
-    position: relative;
-}
-
-.bandeira {
-    position: absolute;
-    right: 14px;
-    top: 50%;
-    transform: translateY(-50%);
-    height: 24px;
-    display: none;
-}
-
-/* grid validade + cvv */
-.grid-2 {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-}
-
-/* tipo cartão */
-#tipo-cartao {
-    display: block;
-    margin-top: 6px;
-    font-size: .8rem;
-    color: #64748b;
-}
-
-/* botão */
-.btn-cartao {
-    margin-top: 20px;
-    width: 100%;
-    padding: 15px;
-    border-radius: 14px;
-    font-size: 1rem;
-    font-weight: 700;
-    background: linear-gradient(135deg, #1e40af, #3b82f6); /* gradiente azul do site */
-    transition: transform .2s, box-shadow .2s;
-}
-
-.btn-cartao:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 10px 25px rgba(79,70,229,.35);
-}
-
-    /* ===== CARTÃO VISUAL ===== */
-.cartao-visual {
-    position: relative;
-    width: 100%;
-    height: 180px;
-    border-radius: 18px;
-    background: linear-gradient(135deg, #1e40af, #3b82f6); /* gradiente azul do site */
-    color: #fff;
     padding: 20px;
-    margin-bottom: 20px;
-    box-shadow: 0 15px 35px rgba(0,0,0,.2);
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-}
-
-.cartao-bandeira img {
-    height: 32px;
-    position: absolute;
-    top: 20px;
-    right: 20px;
-}
-
-.cartao-numero {
-    font-size: 1.3rem;
-    letter-spacing: 2px;
-    font-weight: 600;
-}
-
-.cartao-info {
-    display: flex;
-    justify-content: space-between;
-    font-size: 0.9rem;
-    font-weight: 500;
-}
-
-.btn-pix-copiar {
-    width: 100%;
-    max-width: 320px;
-    padding: 15px 0;
-    margin: 0 auto;
-    display: block;
-
-    background: linear-gradient(135deg, #2563eb, #1e40af);
-    color: #fff;
-
-    border: none;
-    border-radius: 14px;
-
-    font-size: 1.05rem;
-    font-weight: 700;
-
-    cursor: pointer;
-    transition: all .25s ease;
-}
-
-.btn-pix-copiar:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 12px 30px rgba(37,99,235,.35);
-}
-
-.btn-pix-confirmar {
-    width: 100%;
-    max-width: 320px;
-    padding: 16px 0;
-    margin: 18px auto 0;
-    display: block;
-
-    background: linear-gradient(135deg, #16a34a, #22c55e);
-    color: #fff;
-
-    border: none;
-    border-radius: 14px;
-
-    font-size: 1.1rem;
-    font-weight: 800;
-
-    cursor: pointer;
-    transition: all .25s ease;
-
-    animation: aparecer .35s ease;
-}
-
-.btn-pix-confirmar:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 12px 30px rgba(22,163,74,.35);
-}
-
-@keyframes aparecer {
-    from {
-        opacity: 0;
-        transform: translateY(10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-
-.mp-modal{
-    display:none;
-    position:fixed;
-    inset:0;
-    background:rgba(15,23,42,.65);
+    background: rgba(6, 18, 35, .68);
     backdrop-filter: blur(6px);
-    z-index:9999;
-    justify-content:center;
-    align-items:center;
-    animation: fadeIn .25s ease;
 }
 
-.mp-card{
-    width:320px;
-    background:#fff;
-    border-radius:22px;
-    padding:32px 26px;
-    text-align:center;
-    box-shadow:0 30px 80px rgba(0,0,0,.25);
-    animation: scaleIn .25s ease;
+.checkout-modal.show {
+    display: flex;
 }
 
-.estado{
-    display:none;
+.checkout-modal-card {
+    width: min(92vw, 390px);
+    padding: 28px;
+    border-radius: 22px;
+    background: #edf4fb;
+    box-shadow: 0 25px 70px rgba(0, 0, 0, .28);
+    text-align: center;
 }
 
-.estado.ativo{
-    display:block;
+.checkout-modal-card i {
+    color: #079447;
+    font-size: 2.5rem;
 }
 
-/* 🔄 spinner */
-.spinner{
-    width:64px;
-    height:64px;
-    margin:0 auto 18px;
-    border:5px solid #e2e8f0;
-    border-top:5px solid #0d6efd;
-    border-radius:50%;
-    animation: spin 1s linear infinite;
+.checkout-modal-card button {
+    width: 100%;
+    margin-top: 15px;
+    padding: 12px;
+    border: 0;
+    border-radius: 12px;
+    color: #fff;
+    background: #004aad;
+    cursor: pointer;
+    font-weight: 850;
 }
 
-/* ✅ check animado */
-.checkmark{
-    width:64px;
-    height:64px;
-    margin:0 auto 18px;
-    border-radius:50%;
-    background:linear-gradient(135deg,#22c55e,#16a34a);
-    color:#fff;
-    font-size:32px;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    animation: pop .35s ease;
+@media (max-width: 880px) {
+    .checkout-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .checkout-summary {
+        position: static;
+        grid-row: 1;
+    }
 }
 
-/* botão */
-.btn-ok{
-    margin-top:18px;
-    width:100%;
-    padding:12px;
-    border:none;
-    border-radius:12px;
-    font-weight:800;
-    background:linear-gradient(135deg,#0d6efd,#3b82f6);
-    color:#fff;
-    cursor:pointer;
-    transition:.2s;
-}
+@media (max-width: 560px) {
+    .checkout-shell {
+        margin-top: 20px;
+        padding: 0 12px;
+    }
 
-.btn-ok:hover{
-    transform:translateY(-1px);
-    box-shadow:0 10px 25px rgba(13,110,253,.35);
-}
+    .checkout-payment,
+    .checkout-summary {
+        padding: 14px;
+        border-radius: 19px;
+    }
 
-/* animações */
-@keyframes spin{
-    to{ transform:rotate(360deg); }
-}
+    .payment-panel {
+        padding: 15px;
+    }
 
-@keyframes fadeIn{
-    from{ opacity:0 }
-    to{ opacity:1 }
-}
-
-@keyframes scaleIn{
-    from{ transform:scale(.9); opacity:.5 }
-    to{ transform:scale(1); opacity:1 }
-}
-
-@keyframes pop{
-    from{ transform:scale(.5); opacity:0 }
-    to{ transform:scale(1); opacity:1 }
+    .pix-copy {
+        grid-template-columns: 1fr;
+    }
 }
 </style>
 
+<main class="checkout-shell" id="content">
+    <nav class="checkout-breadcrumb" aria-label="Navegação">
+        <a href="{% url 'home' %}">Início</a>
+        <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+        <a href="{% url 'carrinho' %}">Carrinho</a>
+        <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+        <span>Pagamento</span>
+    </nav>
 
-<!-- ===== BREADCRUMB FORTE ===== -->
-<nav class="breadcrumb-strong" id="bread">
-    <a href="{% url 'home' %}">
-        <i class="fa-solid fa-house"></i>
-        <span>Home</span>
-    </a>
-
-    <i class="fa-solid fa-chevron-right sep"></i>
-
-    <a href="{% url 'carrinho' %}">
-        <i class="fa-solid fa-cart-shopping"></i>
-        <span>Carrinho</span>
-    </a>
-
-    <i class="fa-solid fa-chevron-right sep"></i>
-
-    <strong>
-        <i class="fa-solid fa-credit-card"></i>
-        Pagamento
-    </strong>
-</nav>
-
-<section class="payment-container" id="content">
-
-    <header class="payment-header">
-        <h1>Pagamento</h1>
-        <p>Escolha a forma de pagamento para concluir</p>
+    <header class="checkout-head">
+        <span>Checkout seguro</span>
+        <h1>Concluir pagamento</h1>
+        <p>Escolha Pix, cartão de crédito ou cartão de débito.</p>
     </header>
 
-    <div class="payment-resumo-box" id="roll">
-        <h2 class="valor-total">
-            R$ {{ total_final|floatformat:2 }}
-        </h2>
+    <div class="checkout-grid">
+        <section class="checkout-payment" aria-label="Forma de pagamento">
+            <div class="method-tabs" role="tablist">
+                <button type="button" class="method-tab active" data-method="pix">
+                    <i class="fa-brands fa-pix"></i> Pix
+                </button>
+                <button type="button" class="method-tab" data-method="card">
+                    <i class="fa-regular fa-credit-card"></i> Crédito ou débito
+                </button>
+            </div>
 
-        <p class="valor-legenda">Total a pagar</p>
+            <div id="payment-error" class="payment-error" role="alert"></div>
 
-        <div class="resumo-itens">
-            {% for item in itens %}
-                <div class="resumo-item">
-                    <span>{{ item.item }}</span>
-                    <span>{{ item.quantidade }} ×</span>
-                    <strong class="money">
-                        R$ {{ item.subtotal|floatformat:2 }}
-                    </strong>
+            <section id="pix-panel" class="payment-panel active">
+                <h2 class="panel-title">Pagamento instantâneo</h2>
+                <p class="panel-subtitle">
+                    Escaneie o QR Code ou copie o código Pix. A confirmação é automática.
+                </p>
+
+                <div id="pix-loading" class="pix-loading">
+                    <i class="fa-solid fa-circle-notch fa-spin"></i>
+                    Gerando seu Pix com segurança...
                 </div>
-            {% endfor %}
-        </div>
 
-        <div class="resumo-totais">
-            {% if frete > 0 %}
-            <div>
-                <span>Frete</span>
-                <span>R$ {{ frete|floatformat:2 }}</span>
-            </div>
-            {% endif %}
+                <div id="pix-content" class="pix-content">
+                    <div id="pix-value" class="pix-value"></div>
+                    <div class="pix-qr-wrap">
+                        <img id="pix-qrcode" src="" alt="QR Code Pix">
+                    </div>
+                    <div class="pix-copy">
+                        <input id="pix-code" type="text" readonly aria-label="Pix copia e cola">
+                        <button type="button" id="copy-pix">
+                            <i class="fa-regular fa-copy"></i> Copiar Pix
+                        </button>
+                    </div>
+                </div>
+            </section>
 
-            {% if valor_desconto > 0 %}
-            <div class="desconto">
-                <span>Desconto</span>
-                <span>- R$ {{ valor_desconto|floatformat:2 }}</span>
-            </div>
-            {% endif %}
+            <section id="card-panel" class="payment-panel">
+                <h2 class="panel-title">Cartão de crédito ou débito</h2>
+                <p class="panel-subtitle">
+                    Os dados são protegidos e tokenizados diretamente pelo Mercado Pago.
+                </p>
+                <div class="card-limit">
+                    <i class="fa-solid fa-layer-group"></i>
+                    Crédito em até {{ max_parcelas }}x para este pedido. Débito à vista.
+                </div>
+                <div id="paymentBrick_container"></div>
+            </section>
+        </section>
 
-            <div>
-                <span>Subtotal</span>
-                <span>R$ {{ total_bruto|floatformat:2 }}</span>
-            </div>
-
-            <div style="margin-top:10px; font-size:1.1rem;">
-                <span>Total</span>
+        <aside class="checkout-summary" aria-label="Resumo do pedido">
+            <div class="summary-total-card">
+                <small>Total a pagar</small>
                 <strong>R$ {{ total_final|floatformat:2 }}</strong>
             </div>
-        </div>
 
-        {% if carrinho_vazio %}
-            <div class="texto-destaque">
-                🧾 Seu carrinho está vazio.
-                Pagamentos disponíveis apenas via <strong>PIX</strong>.
-            </div>
-        {% else %}
-            <div class="texto-destaque">
-                <strong>{{ total_itens }}</strong> item(ns) no carrinho
-            </div>
-        {% endif %}
-    </div> <form method="post" class="payment-form">
-        {% csrf_token %}
-
-        <div class="payment-options">
-            <label class="payment-card active" data-target="pix-box">
-                <input type="radio" name="metodo" value="pix" checked>
-                ⚡ PIX
-            </label>
-
-            <label class="payment-card {% if somente_pix %}disabled{% endif %}" data-target="cartao-box">
-                <input type="radio" name="metodo" value="cartao" {% if somente_pix %}disabled{% endif %}>
-                💳 Cartão
-            </label>
-        </div> <div id="pix-box" class="payment-details" style="text-align:center; padding:30px; border-radius:18px; background:#f8f9ff; box-shadow:0 10px 30px rgba(0,0,0,.08);">
-            <div style="margin-bottom:20px;">
-                <h3 style="font-size:1.4rem; font-weight:700; margin-bottom:5px;">Valor do Pagamento</h3>
-                <div id="pix-valor" style="font-size:2rem; font-weight:800; color:#0d6efd;">Carregando...</div>
-            </div>
-
-            <div style="margin-bottom:25px; display:flex; justify-content:center;">
-                <img id="pix-qrcode" src="" alt="QR Code PIX" width="220" style="border-radius:12px; box-shadow:0 5px 15px rgba(0,0,0,.1); display:none;">
-            </div>
-
-            <div style="margin-bottom:20px">
-                <label style="font-weight:700; font-size:1.2rem; display:block; margin-bottom:8px;">PIX Copia e Cola</label>
-                <input id="pix-code" type="text" readonly value="Gerando código..." style="width:100%; padding:16px; font-size:1.05rem; border-radius:12px; border:2px solid #cbd5e1; text-align:center; font-weight:600; background:#fff;">
-            </div>
-
-            <button type="button" class="btn-pix-copiar" onclick="copiarPix()">📋 Copiar PIX</button>
-        </div> <div id="cartao-box" class="payment-details card-box" style="display:none">
-            <div class="cartao-visual">
-                <div class="cartao-bandeira">
-                    <img id="bandeira-cartao" src="" alt="" style="display:none">
+            <h2 class="summary-title">Resumo do pedido</h2>
+            <div class="summary-items">
+                {% for item in itens %}
+                <div class="summary-item">
+                    <span>{{ item.quantidade }}× {{ item.item }}</span>
+                    <strong>R$ {{ item.subtotal|floatformat:2 }}</strong>
                 </div>
-                <div class="cartao-numero" id="cartao-numero-display">•••• •••• •••• ••••</div>
-                <div class="cartao-info">
-                    <span id="cartao-nome-display">NOME DO TITULAR</span>
-                    <span id="cartao-validade-display">MM/AA</span>
+                {% endfor %}
+            </div>
+
+            <div class="summary-lines">
+                <div class="summary-line">
+                    <span>Produtos</span>
+                    <span>R$ {{ total_bruto|floatformat:2 }}</span>
+                </div>
+                {% if valor_desconto > 0 %}
+                <div class="summary-line discount">
+                    <span>Desconto</span>
+                    <span>− R$ {{ valor_desconto|floatformat:2 }}</span>
+                </div>
+                {% endif %}
+                <div class="summary-line">
+                    <span>Frete</span>
+                    <span>R$ {{ frete|floatformat:2 }}</span>
                 </div>
             </div>
 
-            <div class="input-group">
-                <label>Número do cartão</label>
-                <input type="text" id="numero-cartao" placeholder="0000 0000 0000 0000" maxlength="19">
-                <small id="tipo-cartao"></small>
+            <div class="secure-note">
+                <i class="fa-solid fa-shield-halved"></i>
+                <span>
+                    A Lazer &amp; Sport não recebe nem armazena número ou código
+                    de segurança do cartão.
+                </span>
             </div>
+        </aside>
+    </div>
+</main>
 
-            <div class="grid-2">
-                <div class="input-group">
-                    <label>Validade</label>
-                    <input type="text" id="validade-cartao" placeholder="MM/AA" maxlength="5">
-                </div>
-                <div class="input-group">
-                    <label>CVV</label>
-                    <input type="text" id="cvv-cartao" placeholder="•••" maxlength="3">
-                </div>
-            </div>
-
-            <div class="input-group">
-                <label>Nome no cartão</label>
-                <input type="text" id="nome-cartao" placeholder="Nome completo">
-            </div>
-
-            <div class="input-group">
-                <label>CPF do titular</label>
-                <input type="text" id="cpf-cartao" placeholder="000.000.000-00" maxlength="14">
-            </div>
-
-            <button type="button" class="btn-confirmar btn-cartao" onclick="processarPagamento()">💳 Pagar com cartão</button>
-        </div> </form>
-</section>
-
-<div id="modal-aguarde" class="mp-modal">
-    <div class="mp-card">
-        <div id="estado-verificando" class="estado ativo">
-            <div class="spinner"></div>
-            <h3>Verificando pagamento</h3>
-            <p>Estamos confirmando sua transação...</p>
-        </div>
-
-        <div id="estado-sucesso" class="estado">
-            <div class="checkmark">✔</div>
-            <h3>Pagamento aprovado!</h3>
-            <p>Seu pedido foi confirmado com sucesso.</p>
-            <button id="btn-ok-pagamento" class="btn-ok">OK, ver meus pedidos</button>
-        </div>
-    </div> </div> ```
+<div id="success-modal" class="checkout-modal" role="dialog" aria-modal="true">
+    <div class="checkout-modal-card">
+        <i class="fa-solid fa-circle-check"></i>
+        <h2>Pagamento aprovado!</h2>
+        <p>Seu pedido foi confirmado com sucesso.</p>
+        <button type="button" onclick="window.location.href='{% url 'meus_pedidos' %}#pedidos'">
+            Ver meus pedidos
+        </button>
+    </div>
+</div>
 
 <script>
+document.addEventListener("DOMContentLoaded", () => {
+    const carrinhoId = "{{ carrinho.id }}";
+    const total = Number("{{ total_final|stringformat:'f' }}");
+    const maxParcelas = Number("{{ max_parcelas }}");
+    const publicKey = "{{ mp_public_key|escapejs }}";
+    const csrfToken = "{{ csrf_token }}";
 
+    const errorBox = document.getElementById("payment-error");
+    const pixLoading = document.getElementById("pix-loading");
+    const pixContent = document.getElementById("pix-content");
+    let brickController = null;
+    let pollingTimer = null;
 
-document.addEventListener('DOMContentLoaded', () => {
-
-    // ===== ELEMENTOS =====
-    const pixBox = document.getElementById('pix-box');
-    const cartaoBox = document.getElementById('cartao-box');
-    const cards = document.querySelectorAll('.payment-card');
-
-    const numeroInput = document.getElementById('numero-cartao');
-    const validadeInput = document.getElementById('validade-cartao');
-    const nomeInput = document.getElementById('nome-cartao');
-
-    const numeroDisplay = document.getElementById('cartao-numero-display');
-    const validadeDisplay = document.getElementById('cartao-validade-display');
-    const nomeDisplay = document.getElementById('cartao-nome-display');
-    const bandeiraImg = document.getElementById('bandeira-cartao');
-    const tipoCartao = document.getElementById('tipo-cartao');
-
-    // ===== FUNÇÃO PARA MOSTRAR BOX CORRETO =====
-    function mostrarMetodo(metodo) {
-        pixBox.style.display = metodo === 'pix' ? 'block' : 'none';
-        cartaoBox.style.display = metodo === 'cartao' ? 'block' : 'none';
+    function showError(message) {
+        errorBox.textContent = message || "Não foi possível processar o pagamento.";
+        errorBox.style.display = "block";
     }
 
-    // ===== FORMATA NÚMERO PARA BR =====
-    function formatarNumeroBR(valor) {
-        return Number(valor).toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    function clearError() {
+        errorBox.textContent = "";
+        errorBox.style.display = "none";
     }
 
-    // ===== FORMATA TODOS OS VALORES DO RESUMO =====
-    function formatarResumo() {
-        const box = document.querySelector('.payment-resumo-box');
-        if (!box) return;
-
-        // Total
-        const totalEl = box.querySelector('.valor-total');
-        if (totalEl) {
-            let numero = parseFloat(totalEl.textContent.replace(/\./g, '').replace(',', '.').replace(/[^\d.-]/g, ''));
-            if (!isNaN(numero)) totalEl.textContent = 'R$ ' + formatarNumeroBR(numero);
-        }
-
-        // Subtotal e desconto
-        const totaisEl = box.querySelectorAll('.resumo-totais div span:last-child');
-        totaisEl.forEach(el => {
-            let texto = el.textContent.replace(/\./g, '').replace(',', '.').replace(/[^\d.-]/g, '');
-            let numero = parseFloat(texto);
-            if (!isNaN(numero)) el.textContent = (numero < 0 ? '-' : '') + 'R$ ' + formatarNumeroBR(Math.abs(numero));
-        });
-
-        // Preço unitário e subtotal dos itens
-        const itensEl = box.querySelectorAll('.resumo-item strong');
-        itensEl.forEach(el => {
-            let texto = el.textContent.replace(/\./g, '').replace(',', '.').replace(/[^\d.-]/g, '');
-            let numero = parseFloat(texto);
-            if (!isNaN(numero)) el.textContent = 'R$ ' + formatarNumeroBR(numero);
+    function formatBRL(value) {
+        return Number(value).toLocaleString("pt-BR", {
+            style: "currency",
+            currency: "BRL"
         });
     }
 
-    // ===== FORMATA VALOR TOTAL PERSONALIZADO =====
-    function formatarValorTotal() {
-        const el = document.getElementById('valor-total-box');
-        if (!el) return;
-
-        let texto = el.textContent.replace(/\./g, '').replace(',', '.').replace(/[^\d.-]/g, '');
-        let numero = parseFloat(texto);
-        if (!isNaN(numero)) {
-            el.innerHTML = `Valor: <span style="color:#2563eb;">R$ ${formatarNumeroBR(numero)}</span>`;
+    async function readJson(response) {
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            throw new Error(data.detalhe || data.erro || data.mensagem || "Erro no pagamento.");
         }
+        return data;
     }
 
-    formatarValorTotal();
-    formatarResumo(); // chama imediatamente
-
-    // ===== CLIQUE NOS CARDS =====
-    cards.forEach(card => {
-        card.addEventListener('click', () => {
-            if (card.classList.contains('disabled')) return;
-
-            cards.forEach(c => c.classList.remove('active'));
-            card.classList.add('active');
-
-            const radio = card.querySelector('input[type="radio"]');
-            radio.checked = true;
-
-            mostrarMetodo(radio.value);
-        });
-    });
-
-    mostrarMetodo('pix'); // abre PIX por padrão
-
-    // ===== CARTÃO: MÁSCARA + ATUALIZAÇÃO VISUAL =====
-    function detectarTipo(numero) {
-        if (!numero) return '';
-        if (/^4/.test(numero)) return 'Visa • Crédito';
-        if (/^5[1-5]/.test(numero)) return 'Mastercard • Crédito';
-        if (/^6/.test(numero)) return 'Débito';
-        return 'Cartão';
+    function startPolling() {
+        if (pollingTimer) return;
+        pollingTimer = window.setInterval(async () => {
+            try {
+                const response = await fetch(
+                    `{% url 'verificar_pagamento' %}?carrinho_id=${carrinhoId}`,
+                    {headers: {"X-Requested-With": "XMLHttpRequest"}}
+                );
+                const data = await readJson(response);
+                if (data.pago) {
+                    clearInterval(pollingTimer);
+                    pollingTimer = null;
+                    document.getElementById("success-modal").classList.add("show");
+                }
+            } catch (error) {
+                console.error("Falha ao consultar pagamento:", error);
+            }
+        }, 4000);
     }
 
-    function mascaraNumeroCartao(valor) {
-        valor = valor.replace(/\D/g, '').substring(0, 16);
-        return valor.replace(/(.{4})/g, '$1 ').trim();
-    }
-
-    function mascaraValidade(valor) {
-        valor = valor.replace(/\D/g, '').substring(0, 4);
-        if (valor.length > 2) valor = valor.substring(0, 2) + '/' + valor.substring(2);
-        return valor;
-    }
-
-    function atualizarCartao() {
-        let numero = numeroInput.value.replace(/\D/g, '').padEnd(16, '•');
-        numero = numero.match(/.{1,4}/g)?.join(' ') || numero;
-        numeroDisplay.textContent = numero;
-
-        if (/^4/.test(numero)) {
-            bandeiraImg.src = "{% static 'images/visa.png' %}";
-            bandeiraImg.style.display = 'block';
-        } else if (/^5[1-5]/.test(numero)) {
-            bandeiraImg.src = "{% static 'images/mastercard.png' %}";
-            bandeiraImg.style.display = 'block';
-        } else if (/^6/.test(numero)) {
-            bandeiraImg.src = "{% static 'images/elo.png' %}";
-            bandeiraImg.style.display = 'block';
-        } else {
-            bandeiraImg.style.display = 'none';
-        }
-
-        tipoCartao.textContent = detectarTipo(numero.replace(/\s/g, ''));
-        validadeDisplay.textContent = validadeInput.value || 'MM/AA';
-        nomeDisplay.textContent = nomeInput.value || 'NOME DO TITULAR';
-    }
-
-    numeroInput.addEventListener('input', () => {
-        numeroInput.value = mascaraNumeroCartao(numeroInput.value);
-        atualizarCartao();
-    });
-    validadeInput.addEventListener('input', () => {
-        validadeInput.value = mascaraValidade(validadeInput.value);
-        atualizarCartao();
-    });
-    nomeInput.addEventListener('input', atualizarCartao);
-
-
-
- /* ==============================
-       GERAR PIX AUTOMATICAMENTE
-    ===============================*/
-    async function iniciarPix() {
-
+    async function loadPix() {
+        clearError();
         try {
+            const response = await fetch(
+                `{% url 'gerar_pix' %}?carrinho_id=${carrinhoId}`,
+                {headers: {"X-Requested-With": "XMLHttpRequest"}}
+            );
+            const data = await readJson(response);
 
-            const res = await fetch(`/api/gerar-pix/?carrinho_id={{ carrinho.id }}`);
-            const data = await res.json();
-
-            if (data.erro) {
-                console.error(data.erro);
-                return;
+            if (!data.qr_code || !data.pix_copia_cola) {
+                throw new Error("O Mercado Pago não retornou um QR Code válido.");
             }
 
-            // 🔵 Atualiza valor (se você adicionou #pix-valor no HTML)
-            if (data.valor) {
-                const valorEl = document.getElementById("pix-valor");
-                if (valorEl) {
-                    valorEl.innerText =
-                        "R$ " + parseFloat(data.valor)
-                            .toFixed(2)
-                            .replace(".", ",");
-                }
-            }
-
-            // 🟢 Atualiza QR Code
-            const img = document.getElementById("pix-qrcode");
-            if (img) {
-                img.src = "data:image/png;base64," + data.qr_code;
-                img.style.display = "block";
-            }
-
-            // 🟡 Atualiza Copia e Cola
-            const pixInput = document.getElementById("pix-code");
-            if (pixInput) {
-                pixInput.value = data.pix_copia_cola;
-            }
-
-            iniciarVerificacao({{ carrinho.id }});
-
-        } catch (e) {
-            console.error("Erro ao iniciar PIX:", e);
+            document.getElementById("pix-value").textContent = formatBRL(data.valor);
+            document.getElementById("pix-qrcode").src =
+                `data:image/png;base64,${data.qr_code}`;
+            document.getElementById("pix-code").value = data.pix_copia_cola;
+            pixLoading.style.display = "none";
+            pixContent.style.display = "block";
+            startPolling();
+        } catch (error) {
+            pixLoading.style.display = "none";
+            showError(error.message);
         }
     }
 
-function iniciarVerificacao(carrinhoId) {
+    async function createCardBrick() {
+        if (brickController) return;
+        clearError();
 
-    let pagamentoDetectado = false;
+        if (!publicKey) {
+            showError("MP_PUBLIC_KEY não está configurada no ambiente.");
+            return;
+        }
 
-    const intervalo = setInterval(function () {
+        const mp = new MercadoPago(publicKey, {locale: "pt-BR"});
+        const bricksBuilder = mp.bricks();
 
-        fetch(`/verificar-pagamento/?carrinho_id=${carrinhoId}`)
-            .then(response => response.json())
-            .then(data => {
-
-                if (data.pago && !pagamentoDetectado) {
-
-                    pagamentoDetectado = true;
-                    clearInterval(intervalo);
-
-                    const modal = document.getElementById("modal-aguarde");
-                    modal.style.display = "flex";
-
-                    // garante estado inicial correto
-                    document.getElementById("estado-verificando").classList.add("ativo");
-                    document.getElementById("estado-sucesso").classList.remove("ativo");
-
-                    // efeito de transição
-                    setTimeout(() => {
-                        document.getElementById("estado-verificando").classList.remove("ativo");
-                        document.getElementById("estado-sucesso").classList.add("ativo");
-                    }, 1400);
-
+        brickController = await bricksBuilder.create(
+            "payment",
+            "paymentBrick_container",
+            {
+                initialization: {
+                    amount: total,
+                    payer: {
+                        email: "{{ request.user.email|escapejs }}"
+                    }
+                },
+                customization: {
+                    paymentMethods: {
+                        creditCard: "all",
+                        debitCard: "all",
+                        minInstallments: 1,
+                        maxInstallments: maxParcelas
+                    },
+                    visual: {
+                        style: {theme: "default"}
+                    }
+                },
+                callbacks: {
+                    onReady: () => clearError(),
+                    onError: error => {
+                        console.error(error);
+                        showError("Não foi possível carregar o formulário de cartão.");
+                    },
+                    onSubmit: async formData => {
+                        clearError();
+                        try {
+                            const response = await fetch("{% url 'processar_cartao' %}", {
+                                method: "POST",
+                                headers: {
+                                    "Content-Type": "application/json",
+                                    "X-CSRFToken": csrfToken,
+                                    "X-Requested-With": "XMLHttpRequest"
+                                },
+                                body: JSON.stringify({
+                                    ...formData,
+                                    carrinho_id: carrinhoId
+                                })
+                            });
+                            const data = await readJson(response);
+                            startPolling();
+                            if (data.aprovado) {
+                                document.getElementById("success-modal").classList.add("show");
+                            } else {
+                                showError(data.mensagem || "Pagamento em análise.");
+                            }
+                            return data;
+                        } catch (error) {
+                            showError(error.message);
+                            throw error;
+                        }
+                    }
                 }
-            })
-            .catch(err => {
-                console.error("Erro ao verificar pagamento:", err);
+            }
+        );
+    }
+
+    document.querySelectorAll(".method-tab").forEach(button => {
+        button.addEventListener("click", async () => {
+            document.querySelectorAll(".method-tab").forEach(tab => {
+                tab.classList.toggle("active", tab === button);
             });
-
-    }, 3000);
-}
-
-    /* ==============================
-       COPIAR PIX
-    ===============================*/
-    window.copiarPix = function() {
-
-        const pixInput = document.getElementById("pix-code");
-
-        if (!pixInput.value) return;
-
-        navigator.clipboard.writeText(pixInput.value).then(() => {
-            mostrarToast("PIX copiado com sucesso ✅");
+            const cardSelected = button.dataset.method === "card";
+            document.getElementById("pix-panel").classList.toggle("active", !cardSelected);
+            document.getElementById("card-panel").classList.toggle("active", cardSelected);
+            if (cardSelected) await createCardBrick();
         });
+    });
 
-    }
-
-
-    /* ==============================
-       TOAST
-    ===============================*/
-    function mostrarToast(texto) {
-
-        const toast = document.createElement("div");
-        toast.innerText = texto;
-
-        Object.assign(toast.style, {
-            position: "fixed",
-            bottom: "30px",
-            left: "50%",
-            transform: "translateX(-50%)",
-            background: "#16a34a",
-            color: "#fff",
-            padding: "14px 22px",
-            borderRadius: "12px",
-            fontWeight: "700",
-            boxShadow: "0 10px 25px rgba(0,0,0,.25)",
-            zIndex: 99999
-        });
-
-        document.body.appendChild(toast);
-        setTimeout(() => toast.remove(), 2500);
-    }
-
-
-    /* ==============================
-       SCROLL HASH
-    ===============================*/
-    if (window.location.hash) {
-        const el = document.querySelector(window.location.hash);
-        if (el) {
-            setTimeout(() => {
-                el.scrollIntoView({behavior: "smooth", block: "start"});
-            }, 100);
+    document.getElementById("copy-pix").addEventListener("click", async () => {
+        const code = document.getElementById("pix-code").value;
+        try {
+            await navigator.clipboard.writeText(code);
+            document.getElementById("copy-pix").innerHTML =
+                '<i class="fa-solid fa-check"></i> Copiado';
+        } catch {
+            document.getElementById("pix-code").select();
+            document.execCommand("copy");
         }
-    }
+    });
 
-
-    /* ==============================
-       INICIA AUTOMATICAMENTE
-    ===============================*/
-    iniciarPix();
-
+    loadPix();
 });
-
-
-document.addEventListener("DOMContentLoaded", function () {
-    const btnOk = document.getElementById("btn-ok-pagamento");
-
-    if (btnOk) {
-        btnOk.addEventListener("click", function () {
-
-            // 🔥 bloqueia múltiplos cliques
-            btnOk.disabled = true;
-            btnOk.innerText = "Redirecionando...";
-
-            // 🔥 pequeno delay elegante
-            setTimeout(() => {
-                window.location.href = "/meus-pedidos/#pedidos";
-            }, 400);
-        });
-    }
-});
-
 </script>
-
-
 {% endblock %}

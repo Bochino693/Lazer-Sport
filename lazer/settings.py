@@ -330,6 +330,7 @@ if COOKIE_DOMAIN:
 # MERCADO PAGO / DEMAIS CONFIGURAÇÕES
 # ============================================================
 MP_ACCESS_TOKEN = os.getenv("MP_ACCESS_TOKEN", "").strip()
+MP_PUBLIC_KEY = os.getenv("MP_PUBLIC_KEY", "").strip()
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 

@@ -2945,6 +2945,8 @@ class PaymentView(LoginRequiredMixin, View):
 
             'total_itens': itens.count(),
             'somente_pix': somente_pix,
+            'mp_public_key': settings.MP_PUBLIC_KEY,
+            'max_parcelas': 18 if carrinho.total_final > Decimal("20000.00") else 12,
         }
 
         return render(request, 'payment.html', context)
@@ -2952,40 +2954,175 @@ class PaymentView(LoginRequiredMixin, View):
 
 
 from decimal import Decimal
+import uuid
+from django.views.decorators.http import require_GET
 
 
-def gerar_pix(request):
+payment_logger = logging.getLogger("core.payment")
 
-    carrinho_id = request.GET.get("carrinho_id")
-    carrinho = Carrinho.objects.get(id=carrinho_id)
 
-    sdk = mercadopago.SDK(settings.MP_ACCESS_TOKEN)
+def _carrinho_pagamento_do_usuario(request, carrinho_id):
+    """Retorna somente um carrinho pertencente ao usuário autenticado."""
+    return (
+        Carrinho.objects
+        .select_related("cliente__user", "frete")
+        .prefetch_related("itens")
+        .filter(id=carrinho_id, cliente__user=request.user)
+        .first()
+    )
 
-    total_final = carrinho.total_liquido + (carrinho.valor_frete or 0)
 
-    payment_data = {
-        "transaction_amount": float(total_final),  # 🔥 com frete
-        "description": f"Pagamento Carrinho #{carrinho.id}",
-        "payment_method_id": "pix",
-        "external_reference": str(carrinho.id),
+def _mp_request_options(chave):
+    options = mercadopago.config.RequestOptions()
+    options.custom_headers = {"x-idempotency-key": str(chave)}
+    return options
 
-        "notification_url": "https://lazersport.com.br/api/webhook-mp/",
 
-        "payer": {
-            "email": request.user.email if request.user.is_authenticated else "cliente@email.com"
-        }
+def _mp_error_message(payment):
+    causa = (payment.get("cause") or [{}])[0]
+    return (
+        causa.get("description")
+        or causa.get("code")
+        or payment.get("message")
+        or payment.get("error")
+        or "Mercado Pago recusou a solicitação."
+    )
+
+
+def _dados_pix(payment):
+    transaction_data = (
+        payment.get("point_of_interaction", {})
+        .get("transaction_data", {})
+    )
+    return {
+        "qr_code": transaction_data.get("qr_code_base64"),
+        "pix_copia_cola": transaction_data.get("qr_code"),
+        "ticket_url": transaction_data.get("ticket_url"),
     }
 
-    response = sdk.payment().create(payment_data)
-    payment = response["response"]
 
-    carrinho.mp_payment_id = payment["id"]
-    carrinho.save()
+def _forma_pagamento_mp(payment):
+    payment_type = payment.get("payment_type_id")
+    if payment_type == "credit_card":
+        return "credito"
+    if payment_type == "debit_card":
+        return "debito"
+    return "pix"
+
+
+@login_required
+@require_GET
+def gerar_pix(request):
+    carrinho_id = request.GET.get("carrinho_id")
+    carrinho = _carrinho_pagamento_do_usuario(request, carrinho_id)
+
+    if not carrinho or not carrinho.itens.exists():
+        return JsonResponse(
+            {"erro": "Carrinho inválido, vazio ou sem permissão."},
+            status=404,
+        )
+
+    if not settings.MP_ACCESS_TOKEN:
+        payment_logger.error("MP_ACCESS_TOKEN não configurado")
+        return JsonResponse(
+            {"erro": "Pagamento indisponível. Credencial não configurada."},
+            status=503,
+        )
+
+    payer_email = (request.user.email or "").strip()
+    if not payer_email:
+        return JsonResponse(
+            {"erro": "Cadastre um e-mail válido no seu perfil para pagar."},
+            status=400,
+        )
+
+    sdk = mercadopago.SDK(settings.MP_ACCESS_TOKEN)
+    total_final = carrinho.total_final
+
+    # Reutiliza um Pix ainda pendente para não criar cobranças duplicadas
+    # quando a página é atualizada.
+    if carrinho.mp_payment_id:
+        try:
+            consulta = sdk.payment().get(carrinho.mp_payment_id)
+            existente = consulta.get("response") or {}
+            pix_existente = _dados_pix(existente)
+            if (
+                existente.get("status") in {"pending", "in_process"}
+                and pix_existente["qr_code"]
+                and pix_existente["pix_copia_cola"]
+            ):
+                return JsonResponse({
+                    **pix_existente,
+                    "payment_id": existente.get("id"),
+                    "status": existente.get("status"),
+                    "valor": f"{total_final:.2f}",
+                })
+        except Exception:
+            payment_logger.exception(
+                "Falha ao consultar Pix anterior do carrinho %s",
+                carrinho.id,
+            )
+
+    payment_data = {
+        "transaction_amount": float(total_final),
+        "description": f"Lazer & Sport - Carrinho #{carrinho.id}",
+        "payment_method_id": "pix",
+        "external_reference": str(carrinho.id),
+        "notification_url": request.build_absolute_uri(reverse("webhook_mp")),
+        "payer": {"email": payer_email},
+    }
+    idempotency_key = uuid.uuid5(
+        uuid.NAMESPACE_URL,
+        f"lazersport:pix:{carrinho.id}:{total_final}:{payer_email}",
+    )
+
+    try:
+        response = sdk.payment().create(
+            payment_data,
+            _mp_request_options(idempotency_key),
+        )
+    except Exception:
+        payment_logger.exception(
+            "Erro de comunicação ao criar Pix do carrinho %s",
+            carrinho.id,
+        )
+        return JsonResponse(
+            {"erro": "Não foi possível comunicar com o Mercado Pago."},
+            status=502,
+        )
+
+    payment = response.get("response") or {}
+    status_code = int(response.get("status") or 500)
+    pix = _dados_pix(payment)
+
+    if (
+        status_code not in {200, 201}
+        or not payment.get("id")
+        or not pix["qr_code"]
+        or not pix["pix_copia_cola"]
+    ):
+        payment_logger.error(
+            "Mercado Pago recusou Pix carrinho=%s http=%s resposta=%r",
+            carrinho.id,
+            status_code,
+            payment,
+        )
+        return JsonResponse(
+            {
+                "erro": "Não foi possível gerar o Pix.",
+                "detalhe": _mp_error_message(payment),
+            },
+            status=400 if status_code < 500 else 502,
+        )
+
+    carrinho.mp_payment_id = str(payment["id"])
+    carrinho.save(update_fields=["mp_payment_id"])
 
     return JsonResponse({
-        "qr_code": payment["point_of_interaction"]["transaction_data"]["qr_code_base64"],
-        "pix_copia_cola": payment["point_of_interaction"]["transaction_data"]["qr_code"],
-        "valor": f"{total_final:.2f}"  # 🔥 valor final
+        **pix,
+        "payment_id": payment["id"],
+        "status": payment.get("status"),
+        "valor": f"{total_final:.2f}",
     })
 
 
@@ -3041,15 +3178,24 @@ def webhook_mercadopago(request):
         return HttpResponse(status=200)
 
     with transaction.atomic():
+        frete = getattr(carrinho, "frete", None)
+        valor_frete = carrinho.valor_frete or Decimal("0.00")
 
         pedido = Pedido.objects.create(
             cliente=carrinho.cliente,
             carrinho_origem=carrinho,  # ⭐ ESSENCIAL
             status="pago",
-            forma_pagamento="pix",
+            forma_pagamento=_forma_pagamento_mp(payment),
             total_bruto=carrinho.total_bruto,
             valor_desconto=carrinho.valor_desconto,
             total_liquido=carrinho.total_liquido,
+            valor_frete=valor_frete,
+            total_final=carrinho.total_final,
+            cep=frete.cep if frete else None,
+            rua=frete.rua if frete else None,
+            bairro=frete.bairro if frete else None,
+            cidade=frete.cidade if frete else None,
+            numero=frete.numero if frete else None,
             mp_payment_id=payment_id,
             mp_status="approved",
         )
@@ -3115,7 +3261,7 @@ def verificar_pagamento(request):
                 "carrinho_origem": carrinho,
 
                 "status": "pago",
-                "forma_pagamento": "pix",
+                "forma_pagamento": _forma_pagamento_mp(payment),
 
                 "total_bruto": carrinho.total_bruto,
                 "valor_desconto": carrinho.valor_desconto,
@@ -3162,39 +3308,152 @@ def verificar_pagamento(request):
 
 
 
-@csrf_exempt
+@login_required
+@require_POST
 def processar_cartao(request):
-    if request.method != "POST":
-        return JsonResponse({"sucesso": False, "mensagem": "Método inválido."})
+    """Processa apenas o token gerado pelo MercadoPago.js/Payment Brick."""
+    try:
+        dados = json.loads(request.body.decode("utf-8"))
+    except (TypeError, ValueError, json.JSONDecodeError):
+        return JsonResponse(
+            {"sucesso": False, "mensagem": "Dados de pagamento inválidos."},
+            status=400,
+        )
 
-    dados = json.loads(request.body)
-    numero = dados.get("numero")
-    validade = dados.get("validade")
-    cvv = dados.get("cvv")
-    nome = dados.get("nome")
-    cpf = dados.get("cpf")
+    carrinho = _carrinho_pagamento_do_usuario(
+        request,
+        dados.get("carrinho_id"),
+    )
+    if not carrinho or not carrinho.itens.exists():
+        return JsonResponse(
+            {"sucesso": False, "mensagem": "Carrinho inválido ou vazio."},
+            status=404,
+        )
 
-    # Simulação: aqui você chamaria a API de pagamento do seu gateway
-    saldo_disponivel = Decimal("1000.00")  # Exemplo
-    valor_compra = Decimal("123.45")  # Pegar do carrinho/pedido atual
+    if not settings.MP_ACCESS_TOKEN:
+        return JsonResponse(
+            {"sucesso": False, "mensagem": "Credencial de pagamento ausente."},
+            status=503,
+        )
 
-    if saldo_disponivel < valor_compra:
-        return JsonResponse({"sucesso": False, "mensagem": "Saldo insuficiente."})
+    token = dados.get("token")
+    payment_method_id = dados.get("payment_method_id")
+    payer = dados.get("payer") or {}
+    payer_email = (payer.get("email") or request.user.email or "").strip()
 
-    # Se passou, cria o pedido
-    from .models import Pedido
+    try:
+        parcelas = int(dados.get("installments") or 1)
+    except (TypeError, ValueError):
+        parcelas = 0
 
-    pedido = Pedido.objects.create(
-        cliente=request.user.clienteperfil,
-        status="pago",
-        total_bruto=valor_compra,
-        total_liquido=valor_compra,
-        forma_pagamento="credito",
-        observacoes=f"CPF: {cpf}"
+    max_parcelas = 18 if carrinho.total_final > Decimal("20000.00") else 12
+    if parcelas < 1 or parcelas > max_parcelas:
+        return JsonResponse(
+            {
+                "sucesso": False,
+                "mensagem": f"Escolha entre 1 e {max_parcelas} parcelas.",
+            },
+            status=400,
+        )
+
+    if not token or not payment_method_id or not payer_email:
+        return JsonResponse(
+            {
+                "sucesso": False,
+                "mensagem": "Preencha e valide todos os dados do cartão.",
+            },
+            status=400,
+        )
+
+    identification = payer.get("identification") or {}
+    payment_data = {
+        "transaction_amount": float(carrinho.total_final),
+        "token": token,
+        "description": f"Lazer & Sport - Carrinho #{carrinho.id}",
+        "installments": parcelas,
+        "payment_method_id": payment_method_id,
+        "external_reference": str(carrinho.id),
+        "notification_url": request.build_absolute_uri(reverse("webhook_mp")),
+        "payer": {
+            "email": payer_email,
+            "identification": {
+                "type": identification.get("type") or "CPF",
+                "number": identification.get("number") or "",
+            },
+        },
+    }
+    if dados.get("issuer_id"):
+        payment_data["issuer_id"] = dados["issuer_id"]
+
+    token_fingerprint = hashlib.sha256(token.encode("utf-8")).hexdigest()
+    idempotency_key = uuid.uuid5(
+        uuid.NAMESPACE_URL,
+        f"lazersport:card:{carrinho.id}:{token_fingerprint}",
     )
 
-    # Aqui você pode registrar venda, itens, etc.
-    return JsonResponse({"sucesso": True, "pedido_id": pedido.id})
+    try:
+        sdk = mercadopago.SDK(settings.MP_ACCESS_TOKEN)
+        response = sdk.payment().create(
+            payment_data,
+            _mp_request_options(idempotency_key),
+        )
+    except Exception:
+        payment_logger.exception(
+            "Erro de comunicação ao pagar carrinho %s com cartão",
+            carrinho.id,
+        )
+        return JsonResponse(
+            {
+                "sucesso": False,
+                "mensagem": "Não foi possível comunicar com o Mercado Pago.",
+            },
+            status=502,
+        )
+
+    payment = response.get("response") or {}
+    status_code = int(response.get("status") or 500)
+    payment_id = payment.get("id")
+
+    if status_code not in {200, 201} or not payment_id:
+        payment_logger.error(
+            "Mercado Pago recusou cartão carrinho=%s http=%s resposta=%r",
+            carrinho.id,
+            status_code,
+            payment,
+        )
+        return JsonResponse(
+            {
+                "sucesso": False,
+                "mensagem": _mp_error_message(payment),
+            },
+            status=400 if status_code < 500 else 502,
+        )
+
+    carrinho.mp_payment_id = str(payment_id)
+    carrinho.save(update_fields=["mp_payment_id"])
+
+    status_pagamento = payment.get("status")
+    aprovado = status_pagamento == "approved"
+    pendente = status_pagamento in {"pending", "in_process", "authorized"}
+
+    return JsonResponse(
+        {
+            "sucesso": aprovado or pendente,
+            "aprovado": aprovado,
+            "pendente": pendente,
+            "payment_id": payment_id,
+            "status": status_pagamento,
+            "status_detail": payment.get("status_detail"),
+            "mensagem": (
+                "Pagamento aprovado."
+                if aprovado
+                else "Pagamento em análise."
+                if pendente
+                else "Pagamento recusado."
+            ),
+        },
+        status=200 if aprovado or pendente else 402,
+    )
 
 
 @login_required

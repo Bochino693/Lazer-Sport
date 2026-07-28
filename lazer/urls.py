@@ -12,6 +12,7 @@ urlpatterns = [
     #path('media/<path:path>/', media_serve),
 
     path('accounts/', include('allauth.urls')),
+    path('', include('core.urls')),
 
 ]
 if settings.DEBUG:
