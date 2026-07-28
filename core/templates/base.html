@@ -219,25 +219,44 @@
     /* ======= MENU HAMBÚRGUER ======= */
     .ls-hamburger {
       display: none;
-      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
       cursor: pointer;
       padding: 10px;
-      border-radius: 50%;
-      transition: background 0.25s var(--ease-out);
+      color: #ffffff;
+      font: inherit;
+      transition: background 0.25s var(--ease-out), transform 0.25s var(--ease-out);
     }
 
     .ls-hamburger:hover {
       background: rgba(255, 255, 255, 0.15);
     }
 
-    .ls-hamburger span {
+    .ls-hamburger-lines {
+      width: 25px;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      flex-shrink: 0;
+    }
+
+    .ls-hamburger-line {
       display: block;
       height: 3px;
-      width: 26px;
+      width: 25px;
       background: white;
-      margin: 4px 0;
       border-radius: 5px;
       transition: all 0.3s ease;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.22);
+    }
+
+    .ls-hamburger-label {
+      color: #ffffff;
+      font-size: 0.69rem;
+      line-height: 1;
+      font-weight: 800;
+      letter-spacing: 0.09em;
     }
 
     /* Desktop: login fixo na ponta esquerda, menu em grade de 7
@@ -308,16 +327,16 @@
     }
 
 @media (max-width: 768px) {
-  .ls-hamburger.active span:nth-child(1) {
+  .ls-hamburger.active .ls-hamburger-line:nth-child(1) {
     transform: rotate(45deg) translate(5px, 5px);
   }
 
 
-  .ls-hamburger.active span:nth-child(2) {
+  .ls-hamburger.active .ls-hamburger-line:nth-child(2) {
     opacity: 0;
   }
 
-  .ls-hamburger.active span:nth-child(3) {
+  .ls-hamburger.active .ls-hamburger-line:nth-child(3) {
     transform: rotate(-45deg) translate(6px, -6px);
   }
 }
@@ -784,7 +803,8 @@ nav a.btn-login {
     opacity: 0;
     visibility: hidden;
     transition: opacity 0.35s var(--ease-out), visibility 0.35s;
-    z-index: 1998;
+    /* Acima da página, mas abaixo do header e do painel mobile. */
+    z-index: 999;
 }
 
 .ls-mobile-backdrop.active {
@@ -799,14 +819,29 @@ nav a.btn-login {
 @media (max-width: 768px) {
   .ls-hamburger {
     display: flex !important;
-    align-items: center;
-    justify-content: center;
-    width: 46px;
+    width: auto;
+    min-width: 82px;
     height: 46px;
     flex-shrink: 0;
     border: 1px solid rgba(255, 255, 255, 0.24);
-    background: rgba(255, 255, 255, 0.12);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    border-radius: 14px;
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.20), rgba(255, 255, 255, 0.08));
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.22),
+      0 7px 18px rgba(0, 35, 90, 0.24);
+  }
+
+  .ls-hamburger:active {
+    transform: scale(0.96);
+  }
+
+  .ls-hamburger.active .ls-hamburger-label {
+    font-size: 0;
+  }
+
+  .ls-hamburger.active .ls-hamburger-label::after {
+    content: 'FECHAR';
+    font-size: 0.69rem;
   }
 
   #ls-mobile-nav {
@@ -829,7 +864,7 @@ nav a.btn-login {
     opacity: 1;
     visibility: hidden;
     transition: transform 0.4s var(--ease-out), visibility 0.4s;
-    z-index: 1999;
+    z-index: 2;
     overflow: hidden;
   }
 
@@ -848,6 +883,13 @@ nav a.btn-login {
   #ls-mobile-nav.active {
     transform: translateX(0) !important;
     visibility: visible !important;
+  }
+
+  body.ls-menu-open .ls-quick-dock,
+  body.ls-menu-open .float-stack {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
   }
 
   /* ---- cabeçalho do painel ---- */
@@ -1310,9 +1352,12 @@ nav a.btn-login {
   <!-- Menu toggle -->
   <button type="button" class="ls-hamburger" id="ls-hamburger-btn"
           aria-label="Abrir menu" aria-controls="ls-mobile-nav" aria-expanded="false">
-    <span></span>
-    <span></span>
-    <span></span>
+    <span class="ls-hamburger-lines" aria-hidden="true">
+      <span class="ls-hamburger-line"></span>
+      <span class="ls-hamburger-line"></span>
+      <span class="ls-hamburger-line"></span>
+    </span>
+    <span class="ls-hamburger-label">MENU</span>
   </button>
 
   <!-- Navegação (mobile — off-canvas, com TODOS os itens) -->
@@ -1482,6 +1527,7 @@ nav a.btn-login {
         flex-direction: column;
         gap: 12px;
         overflow: visible;
+        transition: opacity 0.2s var(--ease-out), visibility 0.2s;
     }
 
     .ls-quick-dock a {
@@ -1498,6 +1544,10 @@ nav a.btn-login {
         transition: transform 0.25s var(--ease-bounce), box-shadow 0.25s var(--ease-out), border-radius 0.25s var(--ease-out);
         position: relative;
         overflow: visible;
+    }
+
+    .ls-quick-dock-label {
+        display: none;
     }
 
     .ls-quick-dock a:hover {
@@ -1543,6 +1593,35 @@ nav a.btn-login {
     @media (max-width: 860px) {
         .ls-quick-dock a[data-tooltip]::before {
             display: none;
+        }
+
+        .ls-quick-dock {
+            left: 14px;
+            right: auto;
+            bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+            gap: 9px;
+        }
+
+        .ls-quick-dock a {
+            width: auto;
+            min-width: 188px;
+            height: 48px;
+            padding: 0 17px;
+            justify-content: flex-start;
+            gap: 11px;
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.28);
+            box-shadow: 0 10px 26px rgba(0, 0, 0, 0.24);
+            font-size: 1.25rem;
+        }
+
+        .ls-quick-dock-label {
+            display: inline;
+            color: #ffffff;
+            font-size: 0.79rem;
+            line-height: 1.15;
+            font-weight: 800;
+            white-space: nowrap;
         }
     }
 
@@ -1727,7 +1806,6 @@ nav a.btn-login {
 
     @media (max-width: 860px) {
         .ls-footer-grid { grid-template-columns: 1fr; }
-        .ls-quick-dock { left: auto; right: 22px; bottom: 100px; }
         .ls-clientes-logos { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     }
 
@@ -1764,10 +1842,12 @@ nav a.btn-login {
         href="https://wa.me/5511960563135?text=Ol%C3%A1!%20Vim%20pelo%20site%20da%20Lazer%20e%20Sport%20e%20gostaria%20de%20mais%20informa%C3%A7%C3%B5es."
         target="_blank" rel="noopener" class="ls-dock-whatsapp" aria-label="WhatsApp" data-tooltip="Fale no WhatsApp">
         <i class="fa-brands fa-whatsapp"></i>
+        <span class="ls-quick-dock-label">Fale conosco no WhatsApp</span>
     </a>
     <a href="https://www.instagram.com/lazersportbrinquedos" target="_blank" rel="noopener"
        class="ls-dock-instagram" aria-label="Instagram" data-tooltip="Siga no Instagram">
         <i class="fa-brands fa-instagram"></i>
+        <span class="ls-quick-dock-label">Siga-nos no Instagram</span>
     </a>
 </nav>
 
@@ -1869,6 +1949,7 @@ function abrirMenuMobile() {
     menuToggle.setAttribute('aria-label', 'Fechar menu');
   }
   if (navBackdrop) navBackdrop.classList.add('active');
+  document.body.classList.add('ls-menu-open');
   document.body.style.overflow = 'hidden';
   if (navClose) navClose.focus();
 }
@@ -1883,6 +1964,7 @@ function fecharMenuMobile() {
     menuToggle.setAttribute('aria-label', 'Abrir menu');
   }
   if (navBackdrop) navBackdrop.classList.remove('active');
+  document.body.classList.remove('ls-menu-open');
   document.body.style.overflow = '';
 }
 
