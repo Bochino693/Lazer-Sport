@@ -918,8 +918,8 @@ body {
 
 .pecas-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 30px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px;
   max-width: 1200px;
   margin: 0 auto;
   align-items: stretch;
@@ -927,57 +927,306 @@ body {
 
 .pecas-card-link {
   display: flex;
-  text-decoration: none;
   color: inherit;
+  min-width: 0;
 }
 
 .pecas-card {
-  background: white;
-  border-radius: 18px;
+  isolation: isolate;
+  width: 100%;
   overflow: hidden;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.08);
-  text-align: center;
-  padding-bottom: 20px;
-  cursor: pointer;
   position: relative;
-  transition: transform .2s ease, box-shadow .2s ease;
-  animation: fadeCardPeca .6s ease forwards;
   display: flex;
   flex-direction: column;
-  width: 100%;
+  border: 1px solid rgba(12, 73, 145, .12);
+  border-radius: 24px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .98), rgba(247, 250, 254, .98));
+  box-shadow: 0 16px 40px rgba(22, 56, 94, .11);
+  animation: fadeCardPeca .6s ease forwards;
+  transition:
+    transform .3s cubic-bezier(.22, 1, .36, 1),
+    box-shadow .3s ease,
+    border-color .3s ease;
 }
 
 .pecas-card-link:hover .pecas-card {
-  transform: translateY(-4px);
-  box-shadow: 0 10px 20px rgba(0,0,0,0.12);
+  border-color: rgba(0, 123, 255, .27);
+  transform: translateY(-7px);
+  box-shadow: 0 24px 56px rgba(19, 58, 102, .17);
+}
+
+.pecas-media-link {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+}
+
+.pecas-card .img-area {
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1.24 / 1;
+  overflow: hidden;
+  padding: 18px;
+  border-radius: 23px 23px 18px 18px;
+  background:
+    radial-gradient(circle at 18% 18%, rgba(0, 123, 255, .18), transparent 28%),
+    radial-gradient(circle at 88% 86%, rgba(230, 57, 70, .12), transparent 25%),
+    linear-gradient(145deg, #eaf3fd 0%, #f8fbff 47%, #e9eff7 100%);
+}
+
+.pecas-card .img-area::before,
+.pecas-card .img-area::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  border: 1px solid rgba(0, 74, 173, .1);
+  border-radius: 50%;
+}
+
+.pecas-card .img-area::before {
+  width: 152px;
+  height: 152px;
+  top: -88px;
+  right: -55px;
+  box-shadow:
+    0 0 0 18px rgba(0, 123, 255, .035),
+    0 0 0 38px rgba(0, 123, 255, .025);
+}
+
+.pecas-card .img-area::after {
+  width: 90px;
+  height: 90px;
+  left: -42px;
+  bottom: -45px;
+  box-shadow: 0 0 0 16px rgba(230, 57, 70, .03);
+}
+
+.pecas-card .img-area img {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: contain;
+  object-position: center;
+  filter: drop-shadow(0 13px 15px rgba(23, 51, 82, .16));
+  transition: transform .38s cubic-bezier(.22, 1, .36, 1);
+}
+
+.pecas-card-link:hover .img-area img {
+  transform: scale(1.055) translateY(-2px);
+}
+
+.pecas-original-badge {
+  position: absolute;
+  z-index: 3;
+  top: 13px;
+  left: 13px;
+  min-height: 28px;
+  padding: 6px 9px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid rgba(255, 255, 255, .65);
+  border-radius: 999px;
+  color: #fff;
+  background: linear-gradient(135deg, #004aad, #007bff);
+  box-shadow: 0 7px 16px rgba(0, 74, 173, .22);
+  font-size: .66rem;
+  font-weight: 800;
+  letter-spacing: .035em;
+  text-transform: uppercase;
+}
+
+.pecas-original-badge i {
+  font-size: .65rem;
 }
 
 .pecas-card .conteudo {
   display: flex;
   flex-direction: column;
   flex: 1;
-  text-align: center;
-  justify-content: center;
-  padding: 18px 16px;
+  padding: 17px 18px 18px;
+  text-align: left;
 }
 
 .pecas-card h3 {
-  margin-top: 15px;
-  font-size: 1.3em;
-  font-weight: 600;
-  color: #1f2d3d;
+  min-height: 2.6em;
+  margin: 4px 0 8px;
+  display: -webkit-box;
+  overflow: hidden;
+  color: #132d4a;
+  font-size: 1.08rem;
+  font-weight: 800;
+  line-height: 1.3;
+  letter-spacing: -.018em;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
-.pecas-card p {
-  padding: 0 15px;
-  color: #4a4a4a;
-  font-size: 0.95em;
-  margin: 8px 0 15px 0;
-  min-height: 45px;
+.pecas-title-link {
+  color: inherit;
+  text-decoration: none;
 }
 
-.pecas-card:hover .img-area img {
-  transform: scale(1.03);
+.pecas-card .categorias {
+  min-height: 27px;
+  margin: 0 0 8px;
+  justify-content: flex-start;
+  overflow: hidden;
+  flex-wrap: nowrap;
+}
+
+.pecas-card .categoria-pill {
+  flex: 0 1 auto;
+  overflow: hidden;
+  padding: 5px 9px;
+  border: 1px solid rgba(0, 105, 218, .11);
+  color: #0757ae;
+  background: #eaf4ff;
+  font-size: .67rem;
+  font-weight: 750;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pecas-card p.descricao {
+  min-height: 3.95em;
+  margin: 0 0 13px;
+  padding: 0;
+  display: -webkit-box;
+  overflow: hidden;
+  color: #61758b;
+  font-size: .79rem;
+  line-height: 1.52;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.pecas-price-row {
+  margin-top: auto;
+  padding-top: 12px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 10px;
+  border-top: 1px solid rgba(23, 71, 117, .1);
+}
+
+.pecas-price-copy small {
+  display: block;
+  margin-bottom: 2px;
+  color: #7a8da0;
+  font-size: .62rem;
+  font-weight: 750;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.pecas-card .preco {
+  margin: 0;
+  color: #075ccb;
+  font-size: 1.42rem;
+  font-weight: 900;
+  line-height: 1.1;
+  letter-spacing: -.035em;
+  text-align: left;
+}
+
+.pecas-price-consulta {
+  color: #516a83;
+  font-size: .9rem;
+  font-weight: 800;
+}
+
+.pecas-actions {
+  margin-top: 13px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 44px;
+  gap: 8px;
+}
+
+.pecas-cart-button,
+.pecas-details-button,
+.pecas-whatsapp-button {
+  position: relative;
+  z-index: 2;
+  min-height: 44px;
+  border: 0;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #fff;
+  font-family: inherit;
+  font-size: .76rem;
+  font-weight: 850;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    transform .22s ease,
+    box-shadow .22s ease,
+    filter .22s ease;
+}
+
+.pecas-cart-button {
+  padding: 10px 13px;
+  background: linear-gradient(135deg, #004aad, #087dff);
+  box-shadow: 0 9px 20px rgba(0, 92, 203, .24);
+}
+
+.pecas-cart-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px rgba(0, 92, 203, .31);
+}
+
+.pecas-cart-button.is-loading {
+  opacity: .74;
+  cursor: wait;
+  pointer-events: none;
+}
+
+.pecas-cart-button.is-added {
+  background: linear-gradient(135deg, #079452, #12bb69);
+  box-shadow: 0 9px 20px rgba(7, 148, 82, .24);
+}
+
+.pecas-details-button {
+  width: 44px;
+  color: #075ccb;
+  border: 1px solid rgba(0, 92, 203, .16);
+  background: #edf5ff;
+}
+
+.pecas-details-button:hover {
+  color: #fff;
+  background: #075ccb;
+  transform: translateY(-2px);
+}
+
+.pecas-whatsapp-button {
+  padding: 10px 13px;
+  background: linear-gradient(135deg, #128c4a, #20c763);
+  box-shadow: 0 9px 20px rgba(18, 140, 74, .22);
+}
+
+.pecas-whatsapp-button:hover {
+  color: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px rgba(18, 140, 74, .29);
+}
+
+.pecas-cart-button:focus-visible,
+.pecas-details-button:focus-visible,
+.pecas-whatsapp-button:focus-visible,
+.pecas-media-link:focus-visible,
+.pecas-title-link:focus-visible {
+  outline: 3px solid rgba(0, 123, 255, .3);
+  outline-offset: 3px;
 }
 
 /* =========================================================
@@ -1977,8 +2226,8 @@ body {
 ========================================================= */
 @media (max-width: 1024px) {
   .pecas-grid {
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 25px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px;
   }
 
   .img-area {
@@ -2009,30 +2258,42 @@ body {
 
   .pecas-grid {
     grid-template-columns: 1fr;
-    gap: 20px;
+    gap: 17px;
   }
 
-  .img-area {
-    height: 190px;
-    padding: 12px;
+  .pecas-card .img-area {
+    max-height: 330px;
+    padding: 16px;
   }
 
   .pecas-card {
-    border-radius: 16px;
+    max-width: 430px;
+    margin: 0 auto;
+    border-radius: 20px;
   }
 
   .pecas-card h3 {
-    font-size: 1.05em;
-  }
-
-  .pecas-card p {
-    font-size: 0.9em;
     min-height: auto;
+    font-size: 1.02rem;
   }
 
-  .pecas-btn-pequeno {
-    padding: 9px 18px;
-    font-size: 0.9em;
+  .pecas-card p.descricao {
+    min-height: auto;
+    font-size: .77rem;
+  }
+
+  .pecas-card .conteudo {
+    padding: 15px;
+  }
+
+  .pecas-card .preco {
+    font-size: 1.3rem;
+  }
+
+  .pecas-cart-button,
+  .pecas-details-button,
+  .pecas-whatsapp-button {
+    min-height: 43px;
   }
 
   .categoria-card {
@@ -2705,61 +2966,94 @@ body {
 <div id="pecas-container">
   <div class="pecas-grid" id="grid-pecas">
     {% for peca in pecas_todas %}
-    <a href="{% url 'reposicao_detalhe' peca.id %}#breadcrumb" class="pecas-card-link"
-       data-categorias="{% for cat in peca.categoria_peca.all %}{{ cat.id }}{% if not forloop.last %},{% endif %}{% endfor %}"
-    >
-
+    <article class="pecas-card-link"
+             data-categorias="{% for cat in peca.categoria_peca.all %}{{ cat.id }}{% if not forloop.last %},{% endif %}{% endfor %}">
       <div class="pecas-card pecas-card-produto">
 
-        <div class="img-area">
-          {% if peca.imagem_principal and peca.imagem_principal.imagem %}
-            <img src="{{ peca.imagem_principal.imagem.url }}"
-                alt="{{ peca.nome }}"
-                loading="lazy"
-                decoding="async">
-          {% else %}
-            <img src="{% static 'img/placeholder-produto.png' %}" alt="{{ peca.nome }}">
-          {% endif %}
-        </div>
+        <a href="{% url 'reposicao_detalhe' peca.id %}#breadcrumb"
+           class="pecas-media-link"
+           aria-label="Ver detalhes de {{ peca.nome }}">
+          <div class="img-area">
+            <span class="pecas-original-badge">
+              <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
+              Peça original
+            </span>
+            {% if peca.imagem_principal and peca.imagem_principal.imagem %}
+              <img src="{{ peca.imagem_principal.imagem.url }}"
+                   alt="{{ peca.nome }}"
+                   loading="lazy"
+                   decoding="async">
+            {% else %}
+              <img src="{% static 'img/placeholder-produto.png' %}"
+                   alt="{{ peca.nome }}"
+                   loading="lazy"
+                   decoding="async">
+            {% endif %}
+          </div>
+        </a>
 
         <div class="conteudo">
-
-          <h3>{{ peca.nome }}</h3>
-
           <div class="categorias">
-             {% for cat in peca.categoria_peca.all %}
-               <span class="categoria-pill">
-                  {{ cat.nome_categoria_peca }}
-               </span>
-             {% endfor %}
-           </div>
+            {% for cat in peca.categoria_peca.all %}
+              <span class="categoria-pill">{{ cat.nome_categoria_peca }}</span>
+            {% empty %}
+              <span class="categoria-pill">Peça de reposição</span>
+            {% endfor %}
+          </div>
+
+          <h3>
+            <a href="{% url 'reposicao_detalhe' peca.id %}#breadcrumb"
+               class="pecas-title-link">
+              {{ peca.nome }}
+            </a>
+          </h3>
 
           <p class="descricao">
             {{ peca.descricao_peca|truncatewords:16 }}
           </p>
 
-          {% if peca.preco_venda %}
-          <div class="preco money" data-valor="{{ peca.preco_venda }}">
-            R$ {{ peca.preco_venda }}
+          <div class="pecas-price-row">
+            <div class="pecas-price-copy">
+              <small>Preço da peça</small>
+              {% if peca.preco_venda %}
+                <div class="preco money" data-valor="{{ peca.preco_venda }}">
+                  R$ {{ peca.preco_venda }}
+                </div>
+              {% else %}
+                <div class="pecas-price-consulta">Consulte a equipe</div>
+              {% endif %}
+            </div>
           </div>
-          {% endif %}
 
-          <div class="acoes-fixas">
-            <button
-              class="btn-vermais btn-whatsapp"
-              onclick="abrirWhatsApp(event, '{{ peca.nome|escapejs }}')"
-            >
-              <i class="fab fa-whatsapp"></i>
-              <strong>Falar diretamente com o vendedor</strong>
-            </button>
+          <div class="pecas-actions">
+            {% if peca.preco_venda %}
+              <button type="button"
+                      class="pecas-cart-button"
+                      onclick="adicionarPecaAoCarrinho(event, {{ peca.id }}, this)"
+                      aria-label="Adicionar {{ peca.nome }} ao carrinho">
+                <i class="fa-solid fa-cart-plus" aria-hidden="true"></i>
+                <span>Adicionar ao carrinho</span>
+              </button>
+            {% else %}
+              <button type="button"
+                      class="pecas-whatsapp-button"
+                      onclick="abrirWhatsApp(event, '{{ peca.nome|escapejs }}')">
+                <i class="fa-brands fa-whatsapp" aria-hidden="true"></i>
+                Consultar disponibilidade
+              </button>
+            {% endif %}
 
-            <span class="btn-vermais">Ver mais</span>
+            <a href="{% url 'reposicao_detalhe' peca.id %}#breadcrumb"
+               class="pecas-details-button"
+               title="Ver detalhes"
+               aria-label="Ver detalhes de {{ peca.nome }}">
+              <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i>
+            </a>
           </div>
 
         </div>
       </div>
-
-    </a>
+    </article>
     {% empty %}
       <p class="nenhum-produto">Nenhuma peça encontrada.</p>
     {% endfor %}
@@ -4282,15 +4576,83 @@ function abrirWhatsApp(event, nome) {
     window.open(url, '_blank');
 }
 
+function adicionarPecaAoCarrinho(event, pecaId, botao) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (!botao || botao.dataset.loading === 'true') return;
+
+    if (typeof window.adicionarAoCarrinho !== 'function') {
+        if (typeof window.mostrarToast === 'function') {
+            window.mostrarToast('Não foi possível abrir o carrinho agora.', true);
+        }
+        return;
+    }
+
+    const conteudoOriginal = botao.innerHTML;
+    botao.dataset.loading = 'true';
+    botao.disabled = true;
+    botao.classList.add('is-loading');
+    botao.innerHTML =
+        '<i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i>' +
+        '<span>Adicionando...</span>';
+
+    Promise.resolve(window.adicionarAoCarrinho('peca', pecaId))
+        .then((resultado) => {
+            if (!resultado || !resultado.sucesso) return;
+
+            botao.classList.remove('is-loading');
+            botao.classList.add('is-added');
+            botao.innerHTML =
+                '<i class="fa-solid fa-check" aria-hidden="true"></i>' +
+                '<span>Adicionado</span>';
+        })
+        .finally(() => {
+            window.setTimeout(() => {
+                botao.disabled = false;
+                botao.dataset.loading = 'false';
+                botao.classList.remove('is-loading', 'is-added');
+                botao.innerHTML = conteudoOriginal;
+            }, 1200);
+        });
+}
+
 /* ======================================================
    💰 MOEDA
 ====================================================== */
+function normalizarNumeroMoeda(valor) {
+    if (valor === null || valor === undefined || valor === '') return 0;
+
+    let texto = String(valor)
+        .trim()
+        .replace(/\s|\u00a0/g, '')
+        .replace(/R\$/gi, '')
+        .replace(/[^\d,.-]/g, '');
+
+    const ultimaVirgula = texto.lastIndexOf(',');
+    const ultimoPonto = texto.lastIndexOf('.');
+
+    if (ultimaVirgula > -1 && ultimoPonto > -1) {
+        texto = ultimaVirgula > ultimoPonto
+            ? texto.replace(/\./g, '').replace(',', '.')
+            : texto.replace(/,/g, '');
+    } else if (ultimaVirgula > -1) {
+        texto = texto.replace(/\./g, '').replace(',', '.');
+    } else if ((texto.match(/\./g) || []).length > 1) {
+        const partes = texto.split('.');
+        const decimal = partes.pop();
+        texto = partes.join('') + '.' + decimal;
+    }
+
+    const numero = Number(texto);
+    return Number.isFinite(numero) ? numero : 0;
+}
+
 function formatarMoedaBR(valor) {
-    if (valor === null || valor === undefined) return '0,00';
-    const normalizado = valor.toString().replace(/\./g, '').replace(',', '.');
-    const numero = Number(normalizado);
-    if (isNaN(numero)) return '0,00';
-    return numero.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+    return normalizarNumeroMoeda(valor).toLocaleString('pt-BR', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    });
 }
 
 function renderizarMoedas(root = document) {
@@ -4458,7 +4820,7 @@ function scrollParaProdutos() {
 }
 
 function paraNumeroBR(valor) {
-    return Number((valor ?? '0').toString().replace(/\./g, '').replace(',', '.')) || 0;
+    return normalizarNumeroMoeda(valor);
 }
 
 function reanimarCard(card, atraso) {
