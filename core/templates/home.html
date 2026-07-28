@@ -983,6 +983,220 @@ body {
 /* =========================================================
    PROMOÇÕES / COMBOS
 ========================================================= */
+.oferta-card-link {
+  display: block;
+  flex: 0 0 310px;
+  min-width: 310px;
+  height: auto;
+  color: inherit;
+  text-decoration: none !important;
+  border-radius: 24px;
+  outline: none;
+}
+
+.oferta-card {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 500px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+  border: 1px solid rgba(0, 74, 173, 0.10);
+  border-radius: 24px;
+  box-shadow: 0 12px 34px rgba(20, 48, 88, 0.11);
+  isolation: isolate;
+  transition:
+    transform .32s cubic-bezier(.22, 1, .36, 1),
+    box-shadow .32s ease,
+    border-color .32s ease;
+}
+
+.oferta-card-link:hover .oferta-card,
+.oferta-card-link:focus-visible .oferta-card {
+  transform: translateY(-8px);
+  border-color: rgba(0, 123, 255, 0.28);
+  box-shadow: 0 22px 46px rgba(0, 74, 173, 0.18);
+}
+
+.oferta-card-media {
+  position: relative;
+  width: 100%;
+  height: 238px;
+  flex-shrink: 0;
+  overflow: hidden;
+  background: linear-gradient(145deg, #edf5ff, #dceaff);
+}
+
+.oferta-card-media::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0;
+  height: 42%;
+  pointer-events: none;
+  background: linear-gradient(to top, rgba(8, 25, 50, .34), transparent);
+}
+
+.oferta-card-media img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  object-fit: cover;
+  object-position: center;
+  border-radius: 0;
+  transition: transform .55s cubic-bezier(.22, 1, .36, 1), filter .35s ease;
+}
+
+.oferta-card-link:hover .oferta-card-media img {
+  transform: scale(1.055);
+  filter: saturate(1.06) contrast(1.02);
+}
+
+.oferta-card-selo {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 12px;
+  border: 1px solid rgba(255, 255, 255, .42);
+  border-radius: 999px;
+  color: #ffffff;
+  background: linear-gradient(135deg, #e63946, #c9152d);
+  box-shadow: 0 8px 18px rgba(114, 13, 27, .28);
+  font-size: .72rem;
+  line-height: 1;
+  font-weight: 800;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+}
+
+.oferta-card-selo.combo {
+  background: linear-gradient(135deg, #004aad, #007bff);
+  box-shadow: 0 8px 18px rgba(0, 74, 173, .30);
+}
+
+.oferta-card-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  padding: 22px;
+  text-align: left;
+}
+
+.oferta-card-info h3 {
+  min-height: 2.65em;
+  margin: 0 0 7px;
+  color: #10233f;
+  font-size: 1.18rem;
+  line-height: 1.32;
+  font-weight: 800;
+  letter-spacing: -.025em;
+}
+
+.oferta-card-info .nome-brinquedo {
+  min-height: 2.5em;
+  margin: 0 0 15px;
+  color: #64748b;
+  font-size: .88rem;
+  line-height: 1.45;
+  font-weight: 600;
+}
+
+.oferta-precos {
+  margin-top: auto;
+  padding: 14px 15px;
+  border: 1px solid #e5edf7;
+  border-radius: 16px;
+  background: #f7faff;
+}
+
+.oferta-precos p {
+  margin: 0;
+  line-height: 1.45;
+}
+
+.oferta-precos .preco-original,
+.oferta-precos .combo-total {
+  color: #718096;
+  font-size: .81rem;
+  font-weight: 600;
+}
+
+.oferta-precos .preco-promocao,
+.oferta-precos .combo-preco {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 4px;
+  color: #334155;
+  font-size: .82rem;
+  font-weight: 700;
+}
+
+.oferta-precos .preco-promocao strong,
+.oferta-precos .preco-promo {
+  color: #0aa44f;
+  font-size: 1.28rem;
+  line-height: 1.15;
+  font-weight: 800;
+  letter-spacing: -.035em;
+  text-shadow: none;
+}
+
+.oferta-card .combo-economia {
+  margin: 10px 0 0;
+  padding: 9px 11px;
+  border-radius: 11px;
+  color: #08783d;
+  background: #eafaf1;
+  font-size: .79rem;
+  line-height: 1.35;
+  font-weight: 700;
+}
+
+.oferta-card .combo-economia strong {
+  color: #08783d;
+}
+
+.oferta-card-cta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  margin-top: 16px;
+  padding: 12px 15px;
+  border-radius: 13px;
+  color: #ffffff;
+  background: linear-gradient(135deg, #004aad, #007bff);
+  box-shadow: 0 9px 20px rgba(0, 74, 173, .22);
+  font-size: .88rem;
+  line-height: 1;
+  font-weight: 800;
+  transition: background .25s ease, box-shadow .25s ease;
+}
+
+.oferta-card-link:hover .oferta-card-cta {
+  background: linear-gradient(135deg, #e63946, #c9152d);
+  box-shadow: 0 10px 22px rgba(201, 21, 45, .24);
+}
+
+.oferta-card-cta i {
+  font-size: .78rem;
+  transition: transform .25s ease;
+}
+
+.oferta-card-link:hover .oferta-card-cta i {
+  transform: translateX(4px);
+}
+
 .nome-brinquedo {
   margin-bottom: 6px;
   color: #555;
@@ -1019,6 +1233,36 @@ body {
 .combo-economia {
   margin-top: 8px;
   font-size: 1.1em;
+}
+
+@media (max-width: 768px) {
+  .oferta-card-link {
+    flex-basis: min(82vw, 300px);
+    min-width: min(82vw, 300px);
+  }
+
+  .oferta-card {
+    min-height: 472px;
+    height: auto;
+    border-radius: 21px;
+  }
+
+  .oferta-card-media {
+    height: 210px;
+  }
+
+  .oferta-card-info {
+    padding: 18px;
+  }
+
+  .oferta-card-info h3 {
+    min-height: auto;
+    font-size: 1.08rem;
+  }
+
+  .oferta-card-info .nome-brinquedo {
+    min-height: auto;
+  }
 }
 
 /* =========================================================
@@ -2079,22 +2323,27 @@ body {
 
     <div class="scroll-container" id="scroll-container-promocoes">
       {% for promo in promocoes %}
-      <a href="{% url 'promocao' promo.id %}#promocao-pagina" class="categoria-link">
-        <div class="categoria-card">
+      <a href="{% url 'promocao' promo.id %}#promocao-pagina"
+         class="oferta-card-link"
+         aria-label="Ver promoção {{ promo.descricao }}">
+        <article class="oferta-card">
 
           <!-- IMAGEM -->
-          {% if promo.brinquedos.imagem_brinquedo %}
-            <a href="{% url 'promocao' promo.id %}#promocao-pagina">
+          <div class="oferta-card-media">
+            <span class="oferta-card-selo">
+              <i class="fa-solid fa-bolt" aria-hidden="true"></i> Oferta
+            </span>
+            {% if promo.brinquedos.imagem_brinquedo %}
                 <img src="{{ promo.brinquedos.imagem_brinquedo.url }}" alt="{{ promo.descricao }}"
-                loading="eager"
-                  decoding="async">
-            </a>
-          {% else %}
-            <img src="{% static 'images/default_promocao.jpg' %}" alt="Promoção sem imagem">
-          {% endif %}
+                     loading="lazy" decoding="async">
+            {% else %}
+              <img src="{% static 'images/default_promocao.jpg' %}" alt="Promoção sem imagem"
+                   loading="lazy" decoding="async">
+            {% endif %}
+          </div>
 
           <!-- INFORMACOES -->
-          <div class="categoria-info">
+          <div class="oferta-card-info">
             <h3>{{ promo.descricao }}</h3>
 
             <p class="nome-brinquedo">
@@ -2102,7 +2351,7 @@ body {
             </p>
 
              <!-- PREÇOS PROMO -->
-            <div class="preco-box">
+            <div class="preco-box oferta-precos">
                 <p class="preco-original">
                     De:
                     <span class="money"
@@ -2118,12 +2367,12 @@ body {
                 </p>
             </div>
 
-
-            <!-- BOTÃO -->
-            <a href="{% url 'promocao' promo.id %}#promocao-pagina" class="btn-vermais">Ver mais</a>
-
+            <span class="oferta-card-cta">
+              Ver detalhes
+              <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+            </span>
           </div>
-        </div>
+        </article>
       </a>
       {% empty %}
         <div class="empty-message">Nenhuma promoção disponível.</div>
@@ -2393,48 +2642,55 @@ body {
 
     <div class="scroll-container" id="scroll-container-combos">
       {% for combo in combos %}
-      <a href="{% url 'combo' combo.id %}#combo-pagina" class="categoria-link">
-        <div class="categoria-card">
+      <a href="{% url 'combo' combo.id %}#combo-pagina"
+         class="oferta-card-link"
+         aria-label="Ver combo {{ combo.descricao }}">
+        <article class="oferta-card">
 
           <!-- IMAGEM -->
-          {% if combo.imagem_combo %}
-            <img src="{{ combo.imagem_combo.url }}" alt="{{ combo.descricao }}"
-            loading="eager"
-            decoding="async">
-          {% else %}
-            <img src="{% static 'images/default_combo.jpg' %}" alt="Combo sem imagem">
-          {% endif %}
+          <div class="oferta-card-media">
+            <span class="oferta-card-selo combo">
+              <i class="fa-solid fa-layer-group" aria-hidden="true"></i> Combo
+            </span>
+            {% if combo.imagem_combo %}
+              <img src="{{ combo.imagem_combo.url }}" alt="{{ combo.descricao }}"
+                   loading="lazy" decoding="async">
+            {% else %}
+              <img src="{% static 'images/default_combo.jpg' %}" alt="Combo sem imagem"
+                   loading="lazy" decoding="async">
+            {% endif %}
+          </div>
 
-          <div class="categoria-info">
+          <div class="oferta-card-info">
             <h3>{{ combo.descricao }}</h3>
 
-           <!-- VALOR TOTAL ORIGINAL -->
-            <p class="combo-total">
-              Valor dos brinquedos:
-              <span class="total-riscado money"
-      data-valor="{{ combo.total_original }}"></span>
-            </p>
+            <div class="oferta-precos">
+              <p class="combo-total">
+                Valor dos brinquedos:
+                <span class="total-riscado money"
+                      data-valor="{{ combo.total_original }}"></span>
+              </p>
 
-            <!-- PREÇO DO COMBO -->
-            <p class="combo-preco">
-              Preço do combo:
-              <strong class="preco-promo money"
-        data-valor="{{ combo.valor_combo }}"></strong>
+              <p class="combo-preco">
+                Preço do combo:
+                <strong class="preco-promo money"
+                        data-valor="{{ combo.valor_combo }}"></strong>
+              </p>
 
-            </p>
+              <p class="combo-economia">
+                Economia de
+                <strong class="economia-verde money"
+                        data-valor="{{ combo.economia }}"></strong>
+                · {{ combo.porcentagem|floatformat:0 }}% OFF
+              </p>
+            </div>
 
-            <p class="combo-economia">
-              💰 Economia:
-              <strong class="economia-verde money"
-        data-valor="{{ combo.economia }}"></strong>
-              ({{ combo.porcentagem|floatformat:0 }}% OFF)
-
-
-            <!-- BOTÃO VER MAIS -->
-            <a href="{% url 'combo' combo.id %}#combo-pagina" class="btn-vermais">Ver mais</a>
-
+            <span class="oferta-card-cta">
+              Ver detalhes
+              <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+            </span>
           </div>
-        </div>
+        </article>
       </a>
       {% empty %}
         <div class="empty-message">Nenhum combo disponível.</div>
