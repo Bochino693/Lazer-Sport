@@ -3034,6 +3034,19 @@ class PaymentView(LoginRequiredMixin, View):
 
         itens = carrinho.itens.select_related('content_type').all()
         if not itens.exists():
+            pedido_recuperado = (
+                Pedido.objects
+                .filter(
+                    carrinho_origem=carrinho,
+                    cliente__user=request.user,
+                    status__in={"pago", "finalizado"},
+                    mp_payment_id__isnull=False,
+                )
+                .order_by("-id")
+                .first()
+            )
+            if pedido_recuperado:
+                return redirect(destino_pedidos)
             return redirect('carrinho')
 
         # ==========================
@@ -3173,12 +3186,17 @@ def _pagamento_confere_com_carrinho(payment, carrinho, assinatura=None):
         )
         return False
 
+    assinatura_valida = (
+        not assinatura_mp
+        or assinatura_mp == assinatura_atual
+    )
+
     return (
         valor_pago is not None
         and valor_esperado is not None
         and valor_pago == valor_esperado
         and referencia == str(carrinho.id)
-        and assinatura_mp == assinatura_atual
+        and assinatura_valida
     )
 
 
@@ -3720,11 +3738,55 @@ def verificar_pagamento(request):
 
     carrinho_id = request.GET.get("carrinho_id")
     if not carrinho_id:
-        return JsonResponse({"pago": False})
+        return JsonResponse({
+            "pago": False,
+            "consulta_ok": False,
+            "status": "invalid_request",
+            "mensagem": "Carrinho não informado.",
+        }, status=400)
 
     carrinho = _carrinho_pagamento_do_usuario(request, carrinho_id)
-    if not carrinho or not carrinho.mp_payment_id:
-        return JsonResponse({"pago": False})
+    if not carrinho:
+        return JsonResponse({
+            "pago": False,
+            "consulta_ok": False,
+            "status": "not_found",
+            "mensagem": "Carrinho não encontrado.",
+        }, status=404)
+
+    # Compatibilidade com confirmações anteriores que limpavam o
+    # mp_payment_id do carrinho: se o carrinho já foi consumido e existe um
+    # pedido pago originado dele, redireciona normalmente.
+    if not carrinho.mp_payment_id:
+        pedido_recuperado = None
+        if not carrinho.itens.exists():
+            pedido_recuperado = (
+                Pedido.objects
+                .filter(
+                    carrinho_origem=carrinho,
+                    cliente__user=request.user,
+                    status__in={"pago", "finalizado"},
+                    mp_payment_id__isnull=False,
+                )
+                .order_by("-id")
+                .first()
+            )
+
+        if pedido_recuperado:
+            return JsonResponse({
+                "pago": True,
+                "consulta_ok": True,
+                "status": "approved",
+                "pedido_id": pedido_recuperado.id,
+                "redirect_url": _url_meus_pedidos(),
+            })
+
+        return JsonResponse({
+            "pago": False,
+            "consulta_ok": True,
+            "status": "waiting_payment",
+            "mensagem": "Aguardando a criação da cobrança.",
+        })
 
     pedido_existente = Pedido.objects.filter(
         mp_payment_id=str(carrinho.mp_payment_id),
@@ -3733,24 +3795,50 @@ def verificar_pagamento(request):
     if pedido_existente:
         return JsonResponse({
             "pago": True,
+            "consulta_ok": True,
+            "status": "approved",
             "pedido_id": pedido_existente.id,
             "redirect_url": _url_meus_pedidos(),
         })
 
     try:
+        if not settings.MP_ACCESS_TOKEN:
+            raise RuntimeError("MP_ACCESS_TOKEN não configurado.")
+
         sdk = mercadopago.SDK(settings.MP_ACCESS_TOKEN)
         payment_info = sdk.payment().get(carrinho.mp_payment_id)
-        payment = payment_info["response"]
+        payment = payment_info.get("response") or {}
 
-    except Exception as e:
-        print(f"Erro ao consultar MP: {e}")
-        return JsonResponse({"pago": False})
+    except Exception:
+        payment_logger.exception(
+            "Falha ao consultar status carrinho=%s payment=%s",
+            carrinho.id,
+            carrinho.mp_payment_id,
+        )
+        return JsonResponse({
+            "pago": False,
+            "consulta_ok": False,
+            "status": "temporarily_unavailable",
+            "mensagem": (
+                "Não foi possível consultar o pagamento agora. "
+                "A verificação continuará automaticamente."
+            ),
+        })
 
     status_pagamento = payment.get("status")
     if status_pagamento != "approved":
         return JsonResponse({
             "pago": False,
-            "status": status_pagamento,
+            "consulta_ok": True,
+            "status": status_pagamento or "unknown",
+            "status_detail": payment.get("status_detail"),
+            "mensagem": (
+                "Pagamento recebido e em processamento."
+                if status_pagamento in {"in_process", "authorized"}
+                else "Aguardando o pagamento do Pix."
+                if status_pagamento == "pending"
+                else "Consultando o status do pagamento."
+            ),
         })
 
     try:
@@ -3771,6 +3859,8 @@ def verificar_pagamento(request):
 
     return JsonResponse({
         "pago": True,
+        "consulta_ok": True,
+        "status": "approved",
         "pedido_id": pedido.id,
         "redirect_url": _url_meus_pedidos(),
     })

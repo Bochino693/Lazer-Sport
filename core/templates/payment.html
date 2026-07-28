@@ -331,6 +331,90 @@ body {
     border: 1px solid #f6c8cd;
 }
 
+.payment-live-status {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    margin-bottom: 15px;
+    padding: 12px 14px;
+    border: 1px solid #cbdced;
+    border-radius: 14px;
+    color: #315274;
+    background: linear-gradient(145deg, #e7f0fa, #f3f8fd);
+    text-align: left;
+    transition: border-color .25s ease, background .25s ease;
+}
+
+.payment-live-dot {
+    position: relative;
+    flex: 0 0 auto;
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    background: #f0a500;
+    box-shadow: 0 0 0 5px rgba(240, 165, 0, .12);
+}
+
+.payment-live-dot::after {
+    content: "";
+    position: absolute;
+    inset: -5px;
+    border: 1px solid currentColor;
+    border-radius: 50%;
+    animation: livePulse 1.7s ease-out infinite;
+}
+
+@keyframes livePulse {
+    from { opacity: .65; transform: scale(.55); }
+    to { opacity: 0; transform: scale(1.25); }
+}
+
+.payment-live-copy {
+    min-width: 0;
+}
+
+.payment-live-copy strong,
+.payment-live-copy small {
+    display: block;
+}
+
+.payment-live-copy strong {
+    color: #1e3b5b;
+    font-size: .78rem;
+    font-weight: 900;
+}
+
+.payment-live-copy small {
+    margin-top: 2px;
+    color: #6a7e93;
+    font-size: .67rem;
+    line-height: 1.35;
+}
+
+.payment-live-status.checking .payment-live-dot {
+    background: #007bff;
+    box-shadow: 0 0 0 5px rgba(0, 123, 255, .12);
+}
+
+.payment-live-status.approved {
+    border-color: #a8dfbe;
+    background: linear-gradient(145deg, #dff7e8, #edf9f2);
+}
+
+.payment-live-status.approved .payment-live-dot {
+    background: #079447;
+    box-shadow: 0 0 0 5px rgba(7, 148, 71, .12);
+}
+
+.payment-live-status.warning {
+    border-color: #efd29a;
+    background: linear-gradient(145deg, #fff4dc, #fffaf0);
+}
+
+.payment-live-status.warning .payment-live-dot {
+    background: #d98b00;
+}
+
 .pix-content {
     display: none;
     text-align: center;
@@ -701,6 +785,19 @@ body {
                     Escaneie o QR Code ou copie o código Pix. A confirmação é automática.
                 </p>
 
+                <div id="payment-live-status"
+                     class="payment-live-status checking"
+                     role="status"
+                     aria-live="polite">
+                    <span class="payment-live-dot" aria-hidden="true"></span>
+                    <span class="payment-live-copy">
+                        <strong id="payment-live-title">Conectando ao pagamento</strong>
+                        <small id="payment-live-detail">
+                            A confirmação será atualizada automaticamente nesta tela.
+                        </small>
+                    </span>
+                </div>
+
                 <div id="pix-loading" class="pix-loading">
                     <i class="fa-solid fa-circle-notch fa-spin"></i>
                     Gerando seu Pix com segurança...
@@ -811,8 +908,12 @@ document.addEventListener("DOMContentLoaded", () => {
     const errorBox = document.getElementById("payment-error");
     const pixLoading = document.getElementById("pix-loading");
     const pixContent = document.getElementById("pix-content");
+    const liveStatus = document.getElementById("payment-live-status");
+    const liveTitle = document.getElementById("payment-live-title");
+    const liveDetail = document.getElementById("payment-live-detail");
     let brickController = null;
     let pollingTimer = null;
+    let pollingActive = false;
     let checkingPayment = false;
     let leavingCheckout = false;
 
@@ -824,6 +925,19 @@ document.addEventListener("DOMContentLoaded", () => {
     function clearError() {
         errorBox.textContent = "";
         errorBox.style.display = "none";
+    }
+
+    function updateLiveStatus(state, title, detail) {
+        if (!liveStatus || !liveTitle || !liveDetail) return;
+        liveStatus.classList.remove(
+            "checking",
+            "waiting",
+            "approved",
+            "warning"
+        );
+        liveStatus.classList.add(state);
+        liveTitle.textContent = title;
+        liveDetail.textContent = detail;
     }
 
     function parseBackendNumber(value) {
@@ -864,9 +978,16 @@ document.addEventListener("DOMContentLoaded", () => {
         leavingCheckout = true;
 
         if (pollingTimer) {
-            clearInterval(pollingTimer);
+            clearTimeout(pollingTimer);
             pollingTimer = null;
         }
+        pollingActive = false;
+
+        updateLiveStatus(
+            "approved",
+            "Pagamento aprovado!",
+            "Seu pedido foi criado. Redirecionando para suas compras..."
+        );
 
         document.querySelectorAll("button, a").forEach(element => {
             element.style.pointerEvents = "none";
@@ -884,13 +1005,29 @@ document.addEventListener("DOMContentLoaded", () => {
     async function checkPaymentStatus({silent = true} = {}) {
         if (checkingPayment || leavingCheckout) return false;
         checkingPayment = true;
+        const controller = new AbortController();
+        const timeout = window.setTimeout(() => controller.abort(), 9000);
 
         try {
+            updateLiveStatus(
+                "checking",
+                "Verificando seu pagamento",
+                "Consultando a confirmação diretamente no Mercado Pago..."
+            );
+
             const response = await fetch(
-                `{% url 'verificar_pagamento' %}?carrinho_id=${carrinhoId}`,
+                (
+                    `{% url 'verificar_pagamento' %}?carrinho_id=${carrinhoId}` +
+                    `&_=${Date.now()}`
+                ),
                 {
                     cache: "no-store",
-                    headers: {"X-Requested-With": "XMLHttpRequest"}
+                    credentials: "same-origin",
+                    signal: controller.signal,
+                    headers: {
+                        "X-Requested-With": "XMLHttpRequest",
+                        "Cache-Control": "no-cache"
+                    }
                 }
             );
             const data = await readJson(response);
@@ -899,22 +1036,63 @@ document.addEventListener("DOMContentLoaded", () => {
                 finishCheckout(data);
                 return true;
             }
+
+            if (data.consulta_ok === false) {
+                updateLiveStatus(
+                    "warning",
+                    "Reconectando à confirmação",
+                    data.mensagem || (
+                        "A consulta falhou momentaneamente. " +
+                        "Uma nova tentativa será feita automaticamente."
+                    )
+                );
+            } else if (["in_process", "authorized"].includes(data.status)) {
+                updateLiveStatus(
+                    "checking",
+                    "Pagamento em processamento",
+                    "O Mercado Pago recebeu a operação e está validando."
+                );
+            } else {
+                updateLiveStatus(
+                    "waiting",
+                    "Aguardando seu pagamento",
+                    data.mensagem || (
+                        "Após pagar no celular, esta tela será atualizada " +
+                        "automaticamente."
+                    )
+                );
+            }
             return false;
         } catch (error) {
             if (!silent) showError(error.message);
+            updateLiveStatus(
+                "warning",
+                "Tentando reconectar",
+                (
+                    "Não recebemos a confirmação nesta tentativa. " +
+                    "Continuaremos verificando automaticamente."
+                )
+            );
             console.error("Falha ao consultar pagamento:", error);
             return false;
         } finally {
+            clearTimeout(timeout);
             checkingPayment = false;
         }
     }
 
     function startPolling() {
-        if (pollingTimer) return;
-        pollingTimer = window.setInterval(
-            () => checkPaymentStatus({silent: true}),
-            3000
-        );
+        if (pollingActive || leavingCheckout) return;
+        pollingActive = true;
+
+        const poll = async () => {
+            if (!pollingActive || leavingCheckout) return;
+            await checkPaymentStatus({silent: true});
+            if (!pollingActive || leavingCheckout) return;
+            pollingTimer = window.setTimeout(poll, 2500);
+        };
+
+        pollingTimer = window.setTimeout(poll, 1200);
     }
 
     async function loadPix() {
@@ -956,10 +1134,21 @@ document.addEventListener("DOMContentLoaded", () => {
             document.getElementById("pix-code").value = data.pix_copia_cola;
             pixLoading.style.display = "none";
             pixContent.style.display = "block";
+            updateLiveStatus(
+                "waiting",
+                "Aguardando seu pagamento",
+                "Pode pagar pelo celular. A confirmação aparecerá aqui automaticamente."
+            );
             startPolling();
         } catch (error) {
             pixLoading.style.display = "none";
             showError(error.message);
+            updateLiveStatus(
+                "warning",
+                "Não foi possível gerar o Pix",
+                "Confira a mensagem acima e tente novamente."
+            );
+            startPolling();
         }
     }
 
@@ -1070,7 +1259,8 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     window.addEventListener("pagehide", () => {
-        if (pollingTimer) clearInterval(pollingTimer);
+        pollingActive = false;
+        if (pollingTimer) clearTimeout(pollingTimer);
     });
 
     (async () => {
