@@ -1,10 +1,12 @@
-import requests
+import logging
 import math
 import re
-import logging
+from functools import lru_cache
+
+import requests
+
 
 logger = logging.getLogger(__name__)
-from functools import lru_cache
 
 CEP_EMPRESA = "02679-110"
 VALOR_KM = 3.50
@@ -12,265 +14,379 @@ VALOR_KM = 3.50
 LAT_EMPRESA = -23.459889
 LON_EMPRESA = -46.689654
 
+HTTP_TIMEOUT = (3.05, 9)
+USER_AGENT = (
+    "LazerSportBrinquedos/1.0 "
+    "(https://www.lazersport.com.br; contato@lazersport.com.br)"
+)
+
+
+class FreteCalculoError(ValueError):
+    """Erro seguro e esperado durante o cálculo de frete."""
+
+
+def _somente_digitos(valor):
+    return "".join(char for char in str(valor or "") if char.isdigit())
+
+
+def _request_json(url, *, params=None, headers=None):
+    resposta = requests.get(
+        url,
+        params=params,
+        headers=headers or {"User-Agent": USER_AGENT},
+        timeout=HTTP_TIMEOUT,
+    )
+    resposta.raise_for_status()
+    return resposta.json()
+
 
 def cep_valido(cep):
-    """CEP brasileiro válido = exatamente 8 dígitos depois de tirar
-    traço/espaço. Usado pra recusar CEP incompleto/errado ANTES de
-    consultar ViaCEP/Nominatim -- evita geocodificação ambígua a partir
-    de um CEP que nem existe."""
-    if not cep:
-        return False
-    return bool(re.fullmatch(r"\d{8}", cep.replace("-", "").replace(" ", "")))
-
-
-def buscar_endereco(cep):
-
-    try:
-
-        if not cep_valido(cep):
-            logger.warning(f"[FRETE] CEP inválido (precisa ter 8 dígitos): {cep}")
-            return None
-
-        cep_limpo = cep.replace("-", "")
-
-        url = f"https://viacep.com.br/ws/{cep_limpo}/json/"
-
-        r = requests.get(url, timeout=5)
-        data = r.json()
-
-        if "erro" in data:
-            logger.error(f"[FRETE] CEP não encontrado no ViaCEP: {cep}")
-            return None
-
-        logradouro = data.get("logradouro") or ""
-        bairro = data.get("bairro") or ""
-        cidade = data.get("localidade") or ""
-        estado = data.get("uf") or ""
-
-        endereco = f"{logradouro}, {bairro}, {cidade}, {estado}, Brazil"
-
-        logger.info(f"[FRETE] Endereço encontrado: {endereco}")
-
-        return endereco
-
-    except Exception as e:
-
-        logger.error(f"[FRETE] Erro ViaCEP {cep}: {e}")
-
-        return None
+    """Retorna True somente para um CEP brasileiro com oito dígitos."""
+    return bool(re.fullmatch(r"\d{8}", _somente_digitos(cep)))
 
 
 @lru_cache(maxsize=2000)
 def buscar_dados_cep(cep):
-    """
-    Mesma fonte (ViaCEP) que o buscar_endereco(), mas devolve os campos
-    separados (rua/bairro/cidade/estado) em vez de uma string só --
-    usado pra preencher o endereço dos Clientes automaticamente a
-    partir do CEP, sem precisar digitar cidade/estado na mão.
-    """
-    try:
-        if not cep_valido(cep):
-            logger.warning(f"[CLIENTES] CEP inválido (precisa ter 8 dígitos): {cep}")
-            return None
-
-        cep_limpo = cep.replace("-", "")
-        url = f"https://viacep.com.br/ws/{cep_limpo}/json/"
-
-        r = requests.get(url, timeout=5)
-        data = r.json()
-
-        if "erro" in data:
-            logger.error(f"[CLIENTES] CEP não encontrado no ViaCEP: {cep}")
-            return None
-
-        return {
-            "rua": data.get("logradouro") or "",
-            "bairro": data.get("bairro") or "",
-            "cidade": data.get("localidade") or "",
-            "estado": data.get("uf") or "",
-        }
-
-    except Exception as e:
-        logger.error(f"[CLIENTES] Erro ViaCEP {cep}: {e}")
+    """Consulta o ViaCEP e devolve os campos normalizados do endereço."""
+    cep_limpo = _somente_digitos(cep)
+    if not cep_valido(cep_limpo):
+        logger.warning("[FRETE] CEP inválido: %s", cep)
         return None
+
+    try:
+        data = _request_json(
+            f"https://viacep.com.br/ws/{cep_limpo}/json/"
+        )
+    except (requests.RequestException, ValueError) as exc:
+        logger.error("[FRETE] Falha no ViaCEP para %s: %s", cep_limpo, exc)
+        return None
+
+    if data.get("erro"):
+        logger.warning("[FRETE] CEP não encontrado: %s", cep_limpo)
+        return None
+
+    return {
+        "cep": cep_limpo,
+        "rua": (data.get("logradouro") or "").strip(),
+        "bairro": (data.get("bairro") or "").strip(),
+        "cidade": (data.get("localidade") or "").strip(),
+        "estado": (data.get("uf") or "").strip(),
+    }
+
+
+def buscar_endereco(cep):
+    dados = buscar_dados_cep(cep)
+    if not dados:
+        return None
+
+    return ", ".join(
+        parte
+        for parte in (
+            dados["rua"],
+            dados["bairro"],
+            dados["cidade"],
+            dados["estado"],
+            "Brasil",
+        )
+        if parte
+    )
 
 
 @lru_cache(maxsize=2000)
 def buscar_coordenadas(cep, numero=""):
     """
-    Geocodifica um CEP, do jeito mais preciso possível. Se o número da
-    casa for informado, a PRIMEIRA tentativa é pelo endereço exato
-    (rua + número) -- é isso que faz o pino cair na casa certa, não só
-    "em algum lugar da rua". Se isso não for encontrado (nem toda rua
-    tem numeração indexada no Nominatim), degrada progressivamente:
-    rua sem número -> bairro -> cidade, sempre avisando no log quando
-    cai num nível menos preciso.
+    Geocodifica o destino por níveis de precisão.
+
+    Tenta endereço com número, rua, bairro e somente então cidade. As
+    consultas usam um User-Agent identificável e ficam armazenadas em cache.
     """
-    try:
-        dados = buscar_dados_cep(cep)
+    dados = buscar_dados_cep(cep)
+    if not dados or not dados.get("cidade"):
+        return None, None
 
-        if not dados or not dados.get("cidade"):
-            return None, None
+    rua = dados["rua"]
+    bairro = dados["bairro"]
+    cidade = dados["cidade"]
+    estado = dados["estado"]
+    numero = str(numero or "").strip()
 
-        rua = dados["rua"]
-        bairro = dados["bairro"]
-        cidade = dados["cidade"]
-        estado = dados["estado"]
+    consultas = []
+    if rua and numero:
+        consultas.append((
+            "endereco",
+            f"{rua}, {numero}, {bairro}, {cidade}, {estado}, Brasil",
+        ))
+    if rua:
+        consultas.append((
+            "rua",
+            f"{rua}, {bairro}, {cidade}, {estado}, Brasil",
+        ))
+    if bairro:
+        consultas.append((
+            "bairro",
+            f"{bairro}, {cidade}, {estado}, Brasil",
+        ))
+    consultas.append(("cidade", f"{cidade}, {estado}, Brasil"))
 
-        url = "https://nominatim.openstreetmap.org/search"
-
-        headers = {
-            "User-Agent": "lazersport-frete"
-        }
-
-        def tentar(query):
-            params = {"q": query, "format": "json", "limit": 1}
-            r = requests.get(url, params=params, headers=headers, timeout=5)
-            data = r.json()
-            if data:
-                return float(data[0]["lat"]), float(data[0]["lon"])
-            return None, None
-
-        # tentativa 1 — endereço EXATO (rua + número). É a mais precisa
-        # de todas -- sem isso, o pino cai em qualquer ponto da rua, não
-        # necessariamente perto do número certo.
-        if rua and numero:
-            lat, lon = tentar(f"{rua}, {numero}, {bairro}, {cidade}, {estado}, Brazil")
-            if lat and lon:
-                return lat, lon
-
-        # tentativa 2 — rua sem número (número não encontrado, ou não informado)
-        if rua:
-            lat, lon = tentar(f"{rua}, {bairro}, {cidade}, {estado}, Brazil")
-            if lat and lon:
-                return lat, lon
-
-        # tentativa 3 — bairro + cidade + estado. Isso é o que faltava
-        # antes: sem essa etapa intermediária, qualquer CEP cuja rua o
-        # Nominatim não reconhecesse caía direto pro centro genérico da
-        # cidade (ex: Praça da Sé em São Paulo) mesmo quando o bairro
-        # certo (ex: Vila Prudente) era perfeitamente geocodificável.
-        if bairro:
-            lat, lon = tentar(f"{bairro}, {cidade}, {estado}, Brazil")
-            if lat and lon:
-                logger.warning(
-                    f"[FRETE] CEP {cep}: rua/número não encontrados, "
-                    f"geocodificado pelo bairro '{bairro}'"
-                )
-                return lat, lon
-
-        # tentativa 4 — só cidade + estado (último recurso; impreciso,
-        # pode cair no centro/marco-zero da cidade)
-        lat, lon = tentar(f"{cidade}, {estado}, Brazil")
-        if lat and lon:
-            logger.warning(
-                f"[FRETE] CEP {cep}: nem rua nem bairro encontrados, "
-                f"geocodificado só pela cidade -- pode ficar impreciso"
+    for nivel, consulta in consultas:
+        try:
+            resultados = _request_json(
+                "https://nominatim.openstreetmap.org/search",
+                params={
+                    "q": consulta,
+                    "format": "jsonv2",
+                    "limit": 1,
+                    "countrycodes": "br",
+                    "addressdetails": 1,
+                },
+                headers={
+                    "User-Agent": USER_AGENT,
+                    "Accept-Language": "pt-BR,pt;q=0.9",
+                },
             )
-            return lat, lon
+        except (requests.RequestException, ValueError) as exc:
+            logger.warning(
+                "[FRETE] Nominatim indisponível para %s: %s",
+                consulta,
+                exc,
+            )
+            continue
 
-        logger.error(f"[FRETE] Não foi possível geocodificar CEP: {cep}")
+        if not resultados:
+            continue
 
-        return None, None
+        try:
+            latitude = float(resultados[0]["lat"])
+            longitude = float(resultados[0]["lon"])
+        except (KeyError, TypeError, ValueError):
+            continue
 
-    except Exception as e:
-        logger.error(f"[FRETE] erro geocode {cep}: {e}")
-        return None, None
+        if nivel != "endereco":
+            logger.warning(
+                "[FRETE] CEP %s geocodificado no nível %s.",
+                cep,
+                nivel,
+            )
+
+        return latitude, longitude
+
+    logger.error("[FRETE] Não foi possível geocodificar o CEP %s.", cep)
+    return None, None
 
 
 @lru_cache(maxsize=2000)
 def buscar_coordenadas_por_cidade(cidade, estado="", pais="Brasil"):
-    """
-    Geocodifica por cidade/estado/país (Nominatim), sem depender de CEP.
-    Usado pro mapa de Clientes -- cobre tanto clientes brasileiros sem
-    CEP exato quanto clientes de fora do Brasil (onde ViaCEP não serve).
-    """
-    try:
-        partes = [p.strip() for p in (cidade, estado, pais) if p and p.strip()]
-        if not partes:
-            return None, None
-
-        query = ", ".join(partes)
-
-        url = "https://nominatim.openstreetmap.org/search"
-
-        headers = {
-            "User-Agent": "lazersport-clientes"
-        }
-
-        params = {
-            "q": query,
-            "format": "json",
-            "limit": 1
-        }
-
-        r = requests.get(url, params=params, headers=headers, timeout=5)
-        data = r.json()
-
-        if data:
-            return float(data[0]["lat"]), float(data[0]["lon"])
-
-        logger.error(f"[CLIENTES] Não foi possível geocodificar: {query}")
-
+    partes = [
+        str(parte).strip()
+        for parte in (cidade, estado, pais)
+        if parte and str(parte).strip()
+    ]
+    if not partes:
         return None, None
 
-    except Exception as e:
-        logger.error(f"[CLIENTES] erro geocode cidade '{cidade}': {e}")
+    try:
+        resultados = _request_json(
+            "https://nominatim.openstreetmap.org/search",
+            params={
+                "q": ", ".join(partes),
+                "format": "jsonv2",
+                "limit": 1,
+                "addressdetails": 1,
+            },
+            headers={
+                "User-Agent": USER_AGENT,
+                "Accept-Language": "pt-BR,pt;q=0.9",
+            },
+        )
+    except (requests.RequestException, ValueError) as exc:
+        logger.warning("[CLIENTES] Falha ao geocodificar cidade: %s", exc)
+        return None, None
+
+    if not resultados:
+        return None, None
+
+    try:
+        return (
+            float(resultados[0]["lat"]),
+            float(resultados[0]["lon"]),
+        )
+    except (KeyError, TypeError, ValueError):
         return None, None
 
 
 def distancia_km(lat1, lon1, lat2, lon2):
-
+    """Distância geodésica em linha reta; usada somente como fallback."""
     if None in (lat1, lon1, lat2, lon2):
-        logger.warning("[FRETE] Coordenadas inválidas")
-        return 0
+        raise FreteCalculoError(
+            "Não foi possível localizar o endereço informado."
+        )
 
-    R = 6371
-
-    dlat = math.radians(lat2 - lat1)
-    dlon = math.radians(lon2 - lon1)
+    raio_terra_km = 6371.0088
+    dlat = math.radians(float(lat2) - float(lat1))
+    dlon = math.radians(float(lon2) - float(lon1))
+    lat1_rad = math.radians(float(lat1))
+    lat2_rad = math.radians(float(lat2))
 
     a = (
         math.sin(dlat / 2) ** 2
-        + math.cos(math.radians(lat1))
-        * math.cos(math.radians(lat2))
+        + math.cos(lat1_rad)
+        * math.cos(lat2_rad)
         * math.sin(dlon / 2) ** 2
     )
+    return raio_terra_km * 2 * math.atan2(
+        math.sqrt(a),
+        math.sqrt(1 - a),
+    )
 
-    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
-    distancia = R * c
+@lru_cache(maxsize=2000)
+def buscar_rota_rodoviaria(lat1, lon1, lat2, lon2):
+    """
+    Consulta uma rota de automóvel e devolve distância, duração e traçado.
 
-    logger.info(f"[FRETE] Distância calculada: {distancia:.2f} km")
+    As coordenadas do GeoJSON permanecem no padrão [longitude, latitude],
+    que é convertido para Leaflet apenas no navegador.
+    """
+    coordenadas = (
+        f"{float(lon1):.6f},{float(lat1):.6f};"
+        f"{float(lon2):.6f},{float(lat2):.6f}"
+    )
 
-    return distancia
+    try:
+        data = _request_json(
+            f"https://router.project-osrm.org/route/v1/driving/{coordenadas}",
+            params={
+                "overview": "simplified",
+                "geometries": "geojson",
+                "steps": "false",
+                "alternatives": "false",
+            },
+        )
+    except (requests.RequestException, ValueError) as exc:
+        logger.warning("[FRETE] Serviço de rotas indisponível: %s", exc)
+        return None
+
+    rotas = data.get("routes") or []
+    if data.get("code") != "Ok" or not rotas:
+        logger.warning("[FRETE] Nenhuma rota rodoviária encontrada.")
+        return None
+
+    rota = rotas[0]
+    try:
+        distancia = float(rota["distance"]) / 1000
+        duracao = max(1, math.ceil(float(rota["duration"]) / 60))
+        geometria = rota["geometry"]["coordinates"]
+    except (KeyError, TypeError, ValueError, ZeroDivisionError):
+        return None
+
+    return {
+        "distancia_km": round(distancia, 2),
+        "tempo_estimado_min": duracao,
+        "geometria": geometria,
+        "fonte": "rota_rodoviaria",
+        "estimado": False,
+    }
+
+
+def calcular_frete_detalhado(
+    cep_cliente,
+    numero_cliente="",
+    lat_origem=LAT_EMPRESA,
+    lon_origem=LON_EMPRESA,
+):
+    """
+    Calcula o frete com rota rodoviária e fornece todos os dados do mapa.
+
+    Quando a API de rotas estiver temporariamente indisponível, usa distância
+    geográfica identificada explicitamente como estimativa. Nunca transforma
+    falha de endereço em frete zero.
+    """
+    cep_limpo_cliente = _somente_digitos(cep_cliente)
+    cep_limpo_empresa = _somente_digitos(CEP_EMPRESA)
+
+    if not cep_valido(cep_limpo_cliente):
+        raise FreteCalculoError("Informe um CEP válido com oito dígitos.")
+
+    lat_destino, lon_destino = buscar_coordenadas(
+        cep_limpo_cliente,
+        str(numero_cliente or "").strip(),
+    )
+    if lat_destino is None or lon_destino is None:
+        raise FreteCalculoError(
+            "Não foi possível localizar esse endereço. "
+            "Confira o CEP e o número."
+        )
+
+    origem = {
+        "lat": float(lat_origem),
+        "lng": float(lon_origem),
+    }
+    destino = {
+        "lat": float(lat_destino),
+        "lng": float(lon_destino),
+    }
+
+    if cep_limpo_cliente == cep_limpo_empresa:
+        rota = {
+            "distancia_km": 0.0,
+            "tempo_estimado_min": 0,
+            "geometria": [
+                [origem["lng"], origem["lat"]],
+                [destino["lng"], destino["lat"]],
+            ],
+            "fonte": "mesmo_cep",
+            "estimado": False,
+        }
+        valor_frete = 0.01
+    else:
+        rota = buscar_rota_rodoviaria(
+            origem["lat"],
+            origem["lng"],
+            destino["lat"],
+            destino["lng"],
+        )
+
+        if rota is None:
+            distancia_reta = distancia_km(
+                origem["lat"],
+                origem["lng"],
+                destino["lat"],
+                destino["lng"],
+            )
+            rota = {
+                "distancia_km": round(distancia_reta, 2),
+                "tempo_estimado_min": None,
+                "geometria": [
+                    [origem["lng"], origem["lat"]],
+                    [destino["lng"], destino["lat"]],
+                ],
+                "fonte": "linha_reta",
+                "estimado": True,
+            }
+
+        valor_frete = round(rota["distancia_km"] * VALOR_KM, 2)
+
+    return {
+        "valor_frete": valor_frete,
+        "distancia_km": rota["distancia_km"],
+        "tempo_estimado_min": rota["tempo_estimado_min"],
+        "origem": origem,
+        "destino": destino,
+        "geometria": rota["geometria"],
+        "fonte": rota["fonte"],
+        "estimado": rota["estimado"],
+    }
 
 
 def calcular_frete_por_cep(cep_cliente, numero_cliente=""):
-    # Se o CEP for igual ao da empresa, frete simbólico
-    cep_limpo_cliente = cep_cliente.replace("-", "")
-    cep_limpo_empresa = CEP_EMPRESA.replace("-", "")
+    """
+    Compatibilidade com o restante do projeto.
 
-    if cep_limpo_cliente == cep_limpo_empresa:
-        print("CEP do cliente é igual ao da empresa. Frete simbólico.")
-        return 0.01, 0.0  # frete mínimo e distância 0 km
-
-    print("CEP CLIENTE:", cep_cliente)
-
-    lat1 = LAT_EMPRESA
-    lon1 = LON_EMPRESA
-
-    lat2, lon2 = buscar_coordenadas(cep_cliente, numero_cliente or "")
-
-    print("COORD EMPRESA:", lat1, lon1)
-    print("COORD CLIENTE:", lat2, lon2)
-
-    distancia = distancia_km(lat1, lon1, lat2, lon2)
-
-    print("DISTANCIA:", distancia)
-
-    valor_frete = round(distancia * VALOR_KM, 2)
-
-    print("FRETE:", valor_frete)
-
-    return valor_frete, distancia
+    Novos pontos devem preferir calcular_frete_detalhado(), mas este retorno
+    em tupla mantém funcionando todo código que espera (valor, distância).
+    """
+    resultado = calcular_frete_detalhado(
+        cep_cliente,
+        numero_cliente,
+    )
+    return resultado["valor_frete"], resultado["distancia_km"]
