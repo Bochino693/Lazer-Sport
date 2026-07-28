@@ -802,6 +802,177 @@ body {
     letter-spacing: -.045em;
 }
 
+.cart-hero {
+    position: relative;
+    isolation: isolate;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 28px;
+    min-height: 210px;
+    margin-bottom: 26px;
+    padding: 34px 38px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, .18);
+    border-radius: 28px;
+    color: #fff;
+    background:
+        radial-gradient(circle at 82% 18%, rgba(54, 164, 255, .42), transparent 27%),
+        radial-gradient(circle at 7% 110%, rgba(230, 57, 70, .32), transparent 32%),
+        linear-gradient(125deg, #061a38 0%, #003f91 56%, #007bff 100%);
+    box-shadow:
+        0 22px 55px rgba(0, 52, 123, .25),
+        inset 0 1px 0 rgba(255, 255, 255, .14);
+}
+
+.cart-hero::before,
+.cart-hero::after {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    border: 1px solid rgba(255, 255, 255, .10);
+    border-radius: 50%;
+}
+
+.cart-hero::before {
+    width: 330px;
+    height: 330px;
+    right: -95px;
+    top: -180px;
+    box-shadow:
+        0 0 0 32px rgba(255, 255, 255, .035),
+        0 0 0 66px rgba(255, 255, 255, .025);
+}
+
+.cart-hero::after {
+    width: 150px;
+    height: 150px;
+    left: 48%;
+    bottom: -125px;
+    box-shadow: 0 0 0 28px rgba(255, 255, 255, .025);
+}
+
+.cart-hero-copy {
+    min-width: 0;
+}
+
+.cart-hero-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 13px;
+    padding: 8px 12px;
+    border: 1px solid rgba(255, 255, 255, .17);
+    border-radius: 999px;
+    color: #fff;
+    background: rgba(255, 255, 255, .11);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08);
+    font-size: .68rem;
+    font-weight: 900;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    backdrop-filter: blur(8px);
+}
+
+.cart-hero-eyebrow i {
+    color: #ffd76d;
+    font-size: .78rem;
+}
+
+.cart-hero h1 {
+    max-width: 650px;
+    margin: 0 0 11px;
+    color: #fff;
+    font-size: clamp(2.15rem, 4.7vw, 3.65rem);
+    line-height: .98;
+    letter-spacing: -.05em;
+    text-wrap: balance;
+    text-shadow: 0 5px 22px rgba(0, 20, 55, .24);
+}
+
+.cart-hero p {
+    max-width: 590px;
+    margin: 0;
+    color: rgba(255, 255, 255, .78);
+    font-size: .96rem;
+    line-height: 1.55;
+}
+
+.cart-hero-seal {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 138px;
+    aspect-ratio: 1;
+    border: 1px solid rgba(255, 255, 255, .22);
+    border-radius: 32px;
+    color: #fff;
+    background: rgba(255, 255, 255, .10);
+    box-shadow:
+        0 16px 35px rgba(1, 29, 70, .24),
+        inset 0 1px 0 rgba(255, 255, 255, .15);
+    backdrop-filter: blur(12px);
+    transform: rotate(3deg);
+}
+
+.cart-hero-seal::after {
+    content: "";
+    position: absolute;
+    inset: 9px;
+    border: 1px dashed rgba(255, 255, 255, .20);
+    border-radius: 24px;
+}
+
+.cart-hero-seal i {
+    position: relative;
+    z-index: 1;
+    font-size: 3.45rem;
+    filter: drop-shadow(0 8px 13px rgba(0, 20, 50, .28));
+}
+
+.cart-progress {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin-top: 21px;
+}
+
+.cart-progress-step {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    color: rgba(255, 255, 255, .66);
+    font-size: .72rem;
+    font-weight: 800;
+}
+
+.cart-progress-number {
+    display: grid;
+    place-items: center;
+    width: 25px;
+    height: 25px;
+    border: 1px solid rgba(255, 255, 255, .20);
+    border-radius: 50%;
+    background: rgba(255, 255, 255, .08);
+}
+
+.cart-progress-step.active {
+    color: #fff;
+}
+
+.cart-progress-step.active .cart-progress-number {
+    color: #004aad;
+    border-color: #fff;
+    background: #fff;
+    box-shadow: 0 0 0 5px rgba(255, 255, 255, .10);
+}
+
+.cart-progress-line {
+    width: 32px;
+    height: 1px;
+    background: rgba(255, 255, 255, .24);
+}
+
 .cart-layout {
     display: grid;
     grid-template-columns: minmax(0, 1.15fr) minmax(360px, .85fr);
@@ -1146,6 +1317,21 @@ body {
 }
 
 @media (max-width: 900px) {
+    .cart-hero {
+        grid-template-columns: minmax(0, 1fr) 105px;
+        min-height: 190px;
+        padding: 28px;
+    }
+
+    .cart-hero-seal {
+        width: 105px;
+        border-radius: 26px;
+    }
+
+    .cart-hero-seal i {
+        font-size: 2.8rem;
+    }
+
     .cart-layout {
         grid-template-columns: 1fr;
     }
@@ -1164,6 +1350,58 @@ body {
     .carrinho-titulo {
         font-size: 1.85rem;
         margin-bottom: 20px;
+    }
+
+    .breadcrumb-strong {
+        margin-bottom: 14px;
+    }
+
+    .cart-hero {
+        grid-template-columns: 1fr;
+        min-height: 0;
+        padding: 25px 21px;
+        border-radius: 23px;
+    }
+
+    .cart-hero h1 {
+        font-size: clamp(2rem, 11vw, 2.65rem);
+    }
+
+    .cart-hero p {
+        max-width: 88%;
+        font-size: .86rem;
+    }
+
+    .cart-hero-seal {
+        position: absolute;
+        right: -25px;
+        bottom: -29px;
+        width: 105px;
+        opacity: .17;
+        pointer-events: none;
+    }
+
+    .cart-hero-seal i {
+        font-size: 2.6rem;
+    }
+
+    .cart-progress {
+        gap: 6px;
+        margin-top: 19px;
+    }
+
+    .cart-progress-step {
+        gap: 5px;
+        font-size: .65rem;
+    }
+
+    .cart-progress-number {
+        width: 23px;
+        height: 23px;
+    }
+
+    .cart-progress-line {
+        width: 14px;
     }
 
     .cart-main,
@@ -1212,7 +1450,40 @@ body {
         </strong>
     </nav>
 
-    <h1 class="carrinho-titulo" id="carrinho">🛒 Meu Carrinho</h1>
+    <header class="cart-hero" id="carrinho">
+        <div class="cart-hero-copy">
+            <span class="cart-hero-eyebrow">
+                <i class="fa-solid fa-bag-shopping" aria-hidden="true"></i>
+                Seu pedido
+            </span>
+            <h1>Revise seu carrinho</h1>
+            <p>
+                Confira os produtos, ajuste as quantidades e escolha a entrega
+                antes de seguir para o pagamento seguro.
+            </p>
+
+            <div class="cart-progress" aria-label="Etapas da compra">
+                <span class="cart-progress-step active" aria-current="step">
+                    <span class="cart-progress-number">1</span>
+                    Carrinho
+                </span>
+                <span class="cart-progress-line" aria-hidden="true"></span>
+                <span class="cart-progress-step">
+                    <span class="cart-progress-number">2</span>
+                    Pagamento
+                </span>
+                <span class="cart-progress-line" aria-hidden="true"></span>
+                <span class="cart-progress-step">
+                    <span class="cart-progress-number">3</span>
+                    Confirmação
+                </span>
+            </div>
+        </div>
+
+        <div class="cart-hero-seal" aria-hidden="true">
+            <i class="fa-solid fa-cart-shopping"></i>
+        </div>
+    </header>
 
     {% if itens %}
 
@@ -1945,5 +2216,3 @@ document.querySelectorAll('.frete-tab').forEach(tab => {
 
 </script>
 {% endblock %}
-
-
