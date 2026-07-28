@@ -1175,6 +1175,36 @@ body {
         #f7f2e4;
 }
 
+.cupom-bloqueado {
+    display: flex;
+    align-items: flex-start;
+    gap: 11px;
+    margin: 0 0 13px;
+    padding: 15px 16px;
+    border: 1px solid #d8e3ef;
+    border-radius: 17px;
+    color: #526980;
+    background:
+        radial-gradient(circle at 95% 8%, rgba(0, 123, 255, .08), transparent 34%),
+        #e8f0f8;
+    font-size: .78rem;
+    line-height: 1.5;
+    font-weight: 700;
+}
+
+.cupom-bloqueado i {
+    margin-top: 2px;
+    color: #004aad;
+    font-size: 1rem;
+}
+
+.cupom-bloqueado strong {
+    display: block;
+    margin-bottom: 2px;
+    color: #1d3a59;
+    font-size: .84rem;
+}
+
 .cupom-spaced,
 .cupom-top {
     margin-top: 0;
@@ -1539,7 +1569,8 @@ body {
 
           <aside class="cart-checkout" aria-label="Dados e resumo do pedido">
 
-        <!-- CUPOM -->
+        <!-- CUPOM: liberado somente com brinquedo ou peça de reposição -->
+        {% if cupom_permitido %}
         <div class="cupom-box {% if itens|length != 1 %}cupom-spaced{% endif %}">
 
             <strong>🎟️ Cupom de desconto</strong>
@@ -1560,6 +1591,16 @@ body {
             {% endif %}
 
         </div><!-- cupom-box -->
+        {% else %}
+        <div class="cupom-bloqueado" role="status">
+            <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+            <div>
+                <strong>Cupom não disponível para estes itens</strong>
+                Combos e promoções já possuem preço especial. Adicione um
+                brinquedo ou uma peça de reposição para liberar o campo de cupom.
+            </div>
+        </div>
+        {% endif %}
 
 
       <!-- CPF ou CNPJ do comprador -->

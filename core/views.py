@@ -2585,6 +2585,30 @@ from .models import Manutencao
 from django.contrib.auth.decorators import login_required
 from .models import ItemCarrinho, Carrinho
 
+
+# Cupons só podem ser usados quando o carrinho contém pelo menos um
+# brinquedo avulso ou uma peça de reposição. Combos e promoções, sozinhos,
+# não liberam o campo nem a aplicação do desconto.
+CUPOM_MODELOS_PERMITIDOS = frozenset({
+    "brinquedos",
+    "pecasreposicao",
+})
+
+
+def _carrinho_permite_cupom(carrinho):
+    return carrinho.itens.filter(
+        content_type__model__in=CUPOM_MODELOS_PERMITIDOS
+    ).exists()
+
+
+def _remover_cupom_se_nao_permitido(carrinho):
+    if carrinho.cupom_id and not _carrinho_permite_cupom(carrinho):
+        carrinho.cupom = None
+        carrinho.save(update_fields=["cupom"])
+        return True
+    return False
+
+
 @require_POST
 def adicionar_ao_carrinho(request, tipo, object_id):
     if not request.user.is_authenticated:
@@ -2650,7 +2674,9 @@ def remover_item_carrinho(request):
             id=item_id,
             carrinho__cliente=request.user.perfil
         )
+        carrinho = item.carrinho
         item.delete()
+        _remover_cupom_se_nao_permitido(carrinho)
         return JsonResponse({'status': 'success'})
     except ItemCarrinho.DoesNotExist:
         return JsonResponse({'status': 'error', 'message': 'Item não encontrado'}, status=404)
@@ -2690,15 +2716,13 @@ class CarrinhoView(LoginRequiredMixin, View):
         # garante objeto frete
         Frete.objects.get_or_create(carrinho=carrinho)
 
-        cupom_permitido = False
+        cupom_permitido = _carrinho_permite_cupom(carrinho)
 
-        for item in itens:
-
-            model = item.content_type.model
-
-            if model in ['brinquedos', 'pecasreposicao']:
-                cupom_permitido = True
-                break
+        # Evita manter um desconto antigo caso o cliente tenha removido o
+        # último produto elegível e deixado somente combos/promoções.
+        if not cupom_permitido and carrinho.cupom_id:
+            carrinho.cupom = None
+            carrinho.save(update_fields=["cupom"])
 
         context = {
             'carrinho': carrinho,
@@ -2779,20 +2803,38 @@ from django.views.decorators.http import require_POST
 @require_POST
 @login_required
 def alterar_quantidade_item(request):
-    data = json.loads(request.body)
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse(
+            {"status": "error", "message": "Dados inválidos."},
+            status=400,
+        )
 
     item_id = data.get("item_id")
-    delta = int(data.get("delta", 0))
+    try:
+        delta = int(data.get("delta", 0))
+    except (TypeError, ValueError):
+        return JsonResponse(
+            {"status": "error", "message": "Quantidade inválida."},
+            status=400,
+        )
 
-    item = ItemCarrinho.objects.get(id=item_id)
+    item = get_object_or_404(
+        ItemCarrinho,
+        id=item_id,
+        carrinho__cliente=request.user.perfil,
+    )
+    carrinho = item.carrinho
 
     nova_qtd = item.quantidade + delta
 
     if nova_qtd <= 0:
         item.delete()
+        _remover_cupom_se_nao_permitido(carrinho)
     else:
         item.quantidade = nova_qtd
-        item.save()
+        item.save(update_fields=["quantidade"])
 
     return JsonResponse({"status": "ok"})
 
@@ -2838,6 +2880,30 @@ def aplicar_cupom(request):
             'title': 'Carrinho vazio',
             'message': 'Crie um carrinho antes de aplicar o cupom'
         })
+
+    if not carrinho.itens.exists():
+        if carrinho.cupom_id:
+            carrinho.cupom = None
+            carrinho.save(update_fields=['cupom'])
+        return JsonResponse({
+            'status': 'warning',
+            'title': 'Carrinho vazio',
+            'message': 'Adicione um produto antes de usar um cupom.'
+        })
+
+    if not _carrinho_permite_cupom(carrinho):
+        if carrinho.cupom_id:
+            carrinho.cupom = None
+            carrinho.save(update_fields=['cupom'])
+        return JsonResponse({
+            'status': 'warning',
+            'title': 'Cupom não disponível',
+            'message': (
+                'Combos e promoções já possuem preço especial. '
+                'Adicione um brinquedo ou uma peça de reposição '
+                'para liberar o uso de cupom.'
+            )
+        }, status=400)
 
     try:
         cupom = Cupom.objects.get(codigo__iexact=codigo)
