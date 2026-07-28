@@ -1,307 +1,621 @@
 {% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ promocao.descricao }} | Promoção Lazer & Sport{% endblock %}
 
 {% block content %}
 
 <style>
-/* ======= CONTAINER ======= */
-.combo-container {
-    max-width: 1200px;
-    margin: 40px auto;
-    padding: 35px;
-    background: #fff;
-    border-radius: 22px;
-    box-shadow: 0 10px 35px rgba(0,0,0,0.10);
-    animation: fadeCombo .4s ease;
+:root {
+    --promo-blue: #004aad;
+    --promo-blue-light: #007bff;
+    --promo-red: #e63946;
+    --promo-green: #079447;
+    --promo-ink: #10233f;
+    --promo-muted: #64748b;
 }
 
-@keyframes fadeCombo {
-    from { opacity: 0; transform: translateY(20px); }
-    to   { opacity: 1; transform: translateY(0); }
+#promocao-pagina {
+    max-width: 1220px;
+    margin: 34px auto 76px;
+    padding: 0 20px;
+    color: var(--promo-ink);
 }
 
-/* ======= GRID ======= */
-.combo-grid {
+.promo-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin-bottom: 18px;
+    color: #6b7a90;
+    font-size: .82rem;
+    font-weight: 700;
+}
+
+.promo-breadcrumb a {
+    color: var(--promo-blue);
+    text-decoration: none;
+}
+
+.promo-breadcrumb i {
+    font-size: .62rem;
+    opacity: .6;
+}
+
+.promo-grid {
+    position: relative;
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 35px;
+    grid-template-columns: minmax(0, 1.04fr) minmax(390px, .96fr);
+    overflow: hidden;
+    border: 1px solid rgba(0, 74, 173, .12);
+    border-radius: 30px;
+    background: #fff;
+    box-shadow: 0 24px 65px rgba(18, 48, 88, .15);
+    animation: promoEntrada .5s cubic-bezier(.22, 1, .36, 1);
 }
 
-/* ======= IMAGEM ======= */
-.combo-img img {
+.promo-grid::before {
+    content: "";
+    position: absolute;
+    right: -85px;
+    bottom: -90px;
+    width: 240px;
+    height: 240px;
+    border: 34px solid rgba(230, 57, 70, .045);
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+@keyframes promoEntrada {
+    from { opacity: 0; transform: translateY(18px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.promo-gallery {
+    position: relative;
+    min-height: 650px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 42px;
+    background: linear-gradient(145deg, #dcecff, #f8fbff 48%, #d8eaff);
+    isolation: isolate;
+}
+
+.promo-gallery::after {
+    content: "";
+    position: absolute;
+    inset: auto 0 0;
+    z-index: -1;
+    height: 35%;
+    background:
+        radial-gradient(circle at 20% 55%, rgba(230, 57, 70, .14) 0 4px, transparent 5px) 0 0 / 24px 24px,
+        linear-gradient(to top, rgba(0, 74, 173, .13), transparent);
+}
+
+.promo-gallery-bg {
+    position: absolute;
+    inset: -24px;
+    z-index: -2;
+    width: calc(100% + 48px);
+    height: calc(100% + 48px);
+    object-fit: cover;
+    filter: blur(24px) saturate(1.1);
+    opacity: .24;
+    transform: scale(1.08);
+}
+
+.promo-gallery-product {
     width: 100%;
+    max-height: 540px;
+    object-fit: contain;
     border-radius: 22px;
-    box-shadow: 0 8px 20px rgba(0,0,0,0.15);
-    transition: transform .3s ease;
-}
-.combo-img img:hover {
-    transform: scale(1.02);
+    filter: drop-shadow(0 25px 26px rgba(9, 34, 72, .28));
+    transition: transform .55s cubic-bezier(.22, 1, .36, 1);
 }
 
-/* ======= TÍTULO (descrição da promoção) ======= */
-.combo-descricao {
-    text-align: center;
-    font-size: 2.4em;
+.promo-gallery:hover .promo-gallery-product {
+    transform: scale(1.025) translateY(-4px);
+}
+
+.promo-badge {
+    position: absolute;
+    top: 24px;
+    left: 24px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    border: 1px solid rgba(255, 255, 255, .58);
+    border-radius: 999px;
+    color: #fff;
+    background: linear-gradient(135deg, var(--promo-red), #c9152d);
+    box-shadow: 0 10px 24px rgba(149, 13, 32, .30);
+    font-size: .75rem;
     font-weight: 800;
-    color: #007BFF;
-    margin-bottom: 30px;
-    letter-spacing: .5px;
+    letter-spacing: .07em;
+    text-transform: uppercase;
 }
 
-/* ======= DADOS DO BRINQUEDO ======= */
+.promo-info {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 42px 40px 38px;
+}
+
+.promo-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    width: fit-content;
+    margin-bottom: 12px;
+    color: var(--promo-red);
+    font-size: .73rem;
+    font-weight: 800;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+}
+
+.promo-titulo {
+    margin: 0 0 12px;
+    color: var(--promo-ink);
+    font-size: clamp(1.75rem, 3vw, 2.55rem);
+    line-height: 1.12;
+    font-weight: 800;
+    letter-spacing: -.045em;
+}
+
+.promo-intro {
+    margin: 0 0 20px;
+    color: var(--promo-muted);
+    font-size: .94rem;
+    line-height: 1.65;
+}
+
+.promo-trust {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 22px;
+}
+
+.promo-trust span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 10px;
+    border: 1px solid #dce9f8;
+    border-radius: 999px;
+    color: #315274;
+    background: #f2f7fd;
+    font-size: .7rem;
+    font-weight: 800;
+}
+
+.promo-trust i {
+    color: var(--promo-green);
+}
+
 .brinquedo-info {
-    margin: 20px 0;
-    padding: 18px;
-    background: #f8f8f8;
-    border-radius: 15px;
+    padding: 17px;
+    border: 1px solid #e3ecf6;
+    border-radius: 17px;
+    background: rgba(248, 251, 255, .94);
+}
+
+.brinquedo-info h2 {
+    margin: 0 0 10px;
+    color: #243b5a;
+    font-size: .82rem;
+    font-weight: 800;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+}
+
+.brinquedo-info h3 {
+    margin: 0 0 7px;
+    color: var(--promo-ink);
+    font-size: 1.05rem;
+    line-height: 1.35;
+    font-weight: 800;
 }
 
 .brinquedo-info p {
-    margin: 6px 0;
-    font-size: 1.1rem;
+    display: -webkit-box;
+    overflow: hidden;
+    margin: 0;
+    color: var(--promo-muted);
+    font-size: .82rem;
+    line-height: 1.55;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 4;
 }
 
-/* ======= PREÇO DA PROMOÇÃO ======= */
-.combo-precos {
-    margin-top: 25px;
-    padding: 20px;
-    border-radius: 18px;
-    background: #f7faff;
+.promo-precos {
+    margin-top: 18px;
+    padding: 18px;
+    border: 1px solid #dce8f5;
+    border-radius: 19px;
+    background: linear-gradient(145deg, #f7faff, #edf5ff);
+}
+
+.promo-price-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    color: var(--promo-muted);
+    font-size: .78rem;
+    font-weight: 700;
+}
+
+.promo-price-row + .promo-price-row {
+    margin-top: 8px;
+}
+
+.preco-normal {
+    color: #7b8798;
+    text-decoration: line-through;
 }
 
 .preco-promo {
-    font-size: 2rem;
-    color: #0cb52d;
+    color: var(--promo-green);
+    font-size: 1.72rem;
+    line-height: 1;
+    font-weight: 800;
+    letter-spacing: -.045em;
+}
+
+.promo-economia {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin-top: 12px;
+    padding: 9px 11px;
+    border-radius: 11px;
+    color: #08783d;
+    background: #e6f8ee;
+    font-size: .75rem;
     font-weight: 800;
 }
 
-/* ======= BOTÕES ======= */
-.combo-acoes {
-    display: flex;
-    gap: 12px;
-    margin-top: 35px;
+.promo-acoes {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: 10px;
+    margin-top: 18px;
 }
 
-.btn-combo {
-    flex: 1;
-    text-align: center;
-    padding: 15px 8px;
-    font-size: 1rem;
-    font-weight: 700;
-    border-radius: 15px;
+.btn-promo {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 50px;
+    padding: 13px 14px;
+    border: 0;
+    border-radius: 14px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: .83rem;
+    line-height: 1.15;
+    font-weight: 800;
     text-decoration: none;
-    transition: .25s ease;
-     display: flex;
-    justify-content: center;   /* Centraliza horizontal */
-    align-items: center;       /* Centraliza vertical */
-
+    transition: transform .25s ease, filter .25s ease, box-shadow .25s ease;
 }
 
-/* Azul */
-.carrinho {
-    background: #0d6efd;
+.btn-promo:hover {
+    transform: translateY(-3px);
+    filter: brightness(1.045);
+}
+
+.btn-carrinho {
     color: #fff;
-}
-.carrinho:hover {
-    background: #0056d6;
-    transform: translateY(-2px);
+    background: linear-gradient(135deg, var(--promo-blue), var(--promo-blue-light));
+    box-shadow: 0 10px 23px rgba(0, 74, 173, .25);
 }
 
-/* Verde */
-.comprar {
-    background: #14a61a;
+.btn-comprar {
     color: #fff;
-}
-.comprar:hover {
-    background: #0e7f14;
-    transform: translateY(-2px);
+    background: linear-gradient(135deg, #0ead55, #07883f);
+    box-shadow: 0 10px 23px rgba(7, 136, 63, .24);
 }
 
-/* Voltar */
-.voltar {
-    background: #f1f1f1;
-    color: #333;
-    border: 1px solid #ddd;
-}
-.voltar:hover {
-    background: #e4e4e4;
-    transform: translateY(-2px);
+.btn-voltar {
+    grid-column: 1 / -1;
+    min-height: 42px;
+    color: #52657c;
+    background: transparent;
+    border: 1px solid #dce5ef;
 }
 
-
-
-/* ======= TOAST MODERNO ======= */
-/* ======= TOAST MODERNO (SURGE DE BAIXO) ======= */
 .toast-carrinho {
     position: fixed;
     bottom: 30px;
     left: 50%;
-    transform: translateX(-50%) translateY(20px) scale(0.95);
-
-    background: linear-gradient(135deg, #14a61a, #0e7f14);
-    color: #fff;
-
-    padding: 14px 26px;
+    z-index: 99999;
+    max-width: calc(100vw - 28px);
+    padding: 14px 24px;
     border-radius: 16px;
-
-    font-weight: 700;
-    font-size: 0.95rem;
-
-    box-shadow: 0 12px 35px rgba(0,0,0,0.28);
-
+    color: #fff;
+    background: linear-gradient(135deg, #14a61a, #0e7f14);
+    box-shadow: 0 12px 35px rgba(0, 0, 0, .28);
     opacity: 0;
     pointer-events: none;
-
-    transition: all 0.35s cubic-bezier(.4,0,.2,1);
-    z-index: 99999;
+    transform: translateX(-50%) translateY(20px) scale(.95);
+    transition: all .35s cubic-bezier(.4, 0, .2, 1);
+    font-size: .9rem;
+    font-weight: 800;
+    text-align: center;
 }
 
-/* Estado visível */
 .toast-carrinho.show {
     opacity: 1;
     transform: translateX(-50%) translateY(0) scale(1);
 }
 
+@media (max-width: 900px) {
+    .promo-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .promo-gallery {
+        min-height: 460px;
+    }
+}
+
+@media (max-width: 560px) {
+    #promocao-pagina {
+        margin: 20px auto 54px;
+        padding: 0 12px;
+    }
+
+    .promo-grid {
+        border-radius: 22px;
+    }
+
+    .promo-gallery {
+        min-height: 330px;
+        padding: 30px 18px 22px;
+    }
+
+    .promo-gallery-product {
+        max-height: 285px;
+    }
+
+    .promo-badge {
+        top: 15px;
+        left: 15px;
+        padding: 8px 10px;
+        font-size: .65rem;
+    }
+
+    .promo-info {
+        padding: 26px 20px 22px;
+    }
+
+    .promo-titulo {
+        font-size: 1.65rem;
+    }
+
+    .promo-acoes {
+        grid-template-columns: 1fr;
+    }
+
+    .btn-voltar {
+        grid-column: auto;
+    }
+}
 </style>
 
+<div id="promocao-pagina">
+    <nav class="promo-breadcrumb" aria-label="Navegação">
+        <a href="{% url 'home' %}">Início</a>
+        <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+        <a href="{% url 'home' %}#promocoes-section">Promoções</a>
+        <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+        <span>{{ promocao.descricao|truncatechars:42 }}</span>
+    </nav>
 
+    <section class="promo-grid">
+        <div class="promo-gallery">
+            <span class="promo-badge">
+                <i class="fa-solid fa-bolt" aria-hidden="true"></i>
+                Oferta especial
+            </span>
 
-<div class="combo-container">
-
-    <div class="combo-grid" id="promocao-pagina">
-
-        <!-- IMAGEM -->
-        <div class="combo-img">
-            <img src="{{ promocao.brinquedos.imagem_brinquedo.url }}" alt="{{ promocao.descricao }}">
+            {% if promocao.brinquedos.imagem_brinquedo %}
+                <img class="promo-gallery-bg"
+                     src="{{ promocao.brinquedos.imagem_brinquedo.url }}"
+                     alt="" aria-hidden="true">
+                <img class="promo-gallery-product"
+                     src="{{ promocao.brinquedos.imagem_brinquedo.url }}"
+                     alt="{{ promocao.brinquedos.nome_brinquedo }}"
+                     decoding="async">
+            {% else %}
+                <img class="promo-gallery-bg"
+                     src="{% static 'images/default_promocao.jpg' %}"
+                     alt="" aria-hidden="true">
+                <img class="promo-gallery-product"
+                     src="{% static 'images/default_promocao.jpg' %}"
+                     alt="Imagem ilustrativa da promoção"
+                     decoding="async">
+            {% endif %}
         </div>
 
-        <!-- INFO -->
-        <div class="combo-info">
+        <div class="promo-info">
+            <span class="promo-eyebrow">
+                <i class="fa-solid fa-tags" aria-hidden="true"></i>
+                Promoção Lazer &amp; Sport
+            </span>
 
-            <!-- TÍTULO -->
-            <p class="combo-descricao">{{ promocao.descricao }}</p>
+            <h1 class="promo-titulo">{{ promocao.descricao }}</h1>
 
-            <!-- Info do brinquedo da promoção -->
+            <p class="promo-intro">
+                Uma condição especial para você investir em diversão, valorizar seu
+                espaço e aproveitar um brinquedo profissional direto da fábrica.
+            </p>
+
+            <div class="promo-trust" aria-label="Diferenciais">
+                <span><i class="fa-solid fa-shield-halved" aria-hidden="true"></i> Compra segura</span>
+                <span><i class="fa-solid fa-headset" aria-hidden="true"></i> Suporte especializado</span>
+                <span><i class="fa-solid fa-industry" aria-hidden="true"></i> Direto da fábrica</span>
+            </div>
+
             <div class="brinquedo-info">
-                <p><strong>Brinquedo:</strong> {{ promocao.brinquedos.nome_brinquedo }}</p>
-                <p><strong>Descrição:</strong> {{ promocao.brinquedos.descricao }}</p>
-                <p><strong>Preço normal:</strong> R$ {{ promocao.brinquedos.valor_brinquedo }}</p>
+                <h2>Produto da promoção</h2>
+                <h3>{{ promocao.brinquedos.nome_brinquedo }}</h3>
+                <p>{{ promocao.brinquedos.descricao }}</p>
             </div>
 
-            <!-- PREÇO PROMOCIONAL -->
-            <div class="combo-precos">
-                <p>Preço da Promoção:</p>
-                <span class="preco-promo money">R$ {{ promocao.preco_promocao }}</span>
+            <div class="promo-precos">
+                <div class="promo-price-row">
+                    <span>Preço normal</span>
+                    <span class="preco-normal money">R$ {{ promocao.brinquedos.valor_brinquedo }}</span>
+                </div>
+
+                <div class="promo-price-row">
+                    <span>Preço promocional</span>
+                    <strong class="preco-promo money">R$ {{ promocao.preco_promocao }}</strong>
+                </div>
+
+                <div class="promo-economia">
+                    <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+                    Condição especial por tempo limitado
+                </div>
             </div>
 
-            <!-- BOTÕES -->
-            <div class="combo-acoes">
-                <button
-                    type="button"
-                    class="btn-combo carrinho"
-                    onclick="adicionarAoCarrinho('promocao', {{ promocao.id }})">
-                    🛒 Adicionar ao Carrinho
+            <div class="promo-acoes">
+                <button type="button"
+                        class="btn-promo btn-carrinho"
+                        onclick="adicionarAoCarrinho('promocao', {{ promocao.id }})">
+                    <i class="fa-solid fa-cart-plus" aria-hidden="true"></i>
+                    Adicionar ao carrinho
                 </button>
-                <a href="#" class="btn-combo comprar">🔥 Comprar Agora</a>
-                <a href="{% url 'home' %}#promocoes-section" class="btn-combo voltar">← Voltar</a>
-            </div>
 
+                <button type="button"
+                        class="btn-promo btn-comprar"
+                        onclick="comprarAgora('promocao', {{ promocao.id }})">
+                    <i class="fa-solid fa-bolt" aria-hidden="true"></i>
+                    Comprar agora
+                </button>
+
+                <a href="{% url 'home' %}#promocoes-section"
+                   class="btn-promo btn-voltar">
+                    <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
+                    Voltar para as promoções
+                </a>
+            </div>
         </div>
-    </div>
+    </section>
 </div>
 
-<div id="toast-carrinho" class="toast-carrinho">
+<div id="toast-carrinho" class="toast-carrinho" role="status" aria-live="polite">
     <span id="toast-msg"></span>
 </div>
 
-
-
-<!-- FORMATADOR DE MOEDAS -->
 <script>
-function formatBR(num) {
-    if (!num) return "";
-    num = num.replace(/[^\d.,]/g, "").replace(",", ".");
-    let n = parseFloat(num);
-    if (isNaN(n)) return num;
+function formatBR(valor) {
+    if (!valor) return "";
+    let limpo = valor.replace(/[^\d.,-]/g, "");
+    if (limpo.includes(",")) {
+        limpo = limpo.replace(/\./g, "").replace(",", ".");
+    } else {
+        const partes = limpo.split(".");
+        if (partes.length > 2) {
+            const decimal = partes.pop();
+            limpo = partes.join("") + "." + decimal;
+        }
+    }
+    const numero = parseFloat(limpo);
+    if (Number.isNaN(numero)) return valor;
 
-    return n.toLocaleString("pt-BR", {
+    return numero.toLocaleString("pt-BR", {
+        style: "currency",
+        currency: "BRL",
         minimumFractionDigits: 2,
         maximumFractionDigits: 2
     });
 }
+
 document.addEventListener("DOMContentLoaded", () => {
-    document.querySelectorAll(".money").forEach(el => {
-        el.textContent = formatBR(el.textContent);
+    document.querySelectorAll(".money").forEach(elemento => {
+        elemento.textContent = formatBR(elemento.textContent);
     });
 });
 
-
-function adicionarAoCarrinho(tipo, id) {
+function adicionarAoCarrinho(tipo, id, irParaCarrinho = false) {
     fetch(`/carrinho/adicionar/${tipo}/${id}/`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-            'X-CSRFToken': '{{ csrf_token }}',
-            'X-Requested-With': 'XMLHttpRequest'
+            "X-CSRFToken": "{{ csrf_token }}",
+            "X-Requested-With": "XMLHttpRequest"
         }
     })
-    .then(res => {
-        if (!res.ok) throw new Error();
-        return res.json();
+    .then(resposta => {
+        if (!resposta.ok) throw new Error("Erro na requisição");
+        return resposta.json();
     })
     .then(data => {
-        if (data.sucesso) {
-            mostrarToast('🛒 Promoção adicionada ao carrinho!');
-            atualizarBadgeCarrinho(data.total_itens);
-        } else {
-            mostrarToast(data.erro || 'Erro ao adicionar', true);
+        if (!data.sucesso) {
+            mostrarToast(data.erro || "Erro ao adicionar", true);
+            return;
+        }
+
+        mostrarToast(
+            irParaCarrinho
+                ? "Promoção adicionada. Abrindo o carrinho..."
+                : "Promoção adicionada ao carrinho!"
+        );
+        atualizarBadgeCarrinho(data.total_itens);
+
+        if (irParaCarrinho) {
+            setTimeout(() => {
+                window.location.href = "{% url 'carrinho' %}#carrinho";
+            }, 650);
         }
     })
-    .catch(() => {
-        mostrarToast('Erro de conexão', true);
-    });
+    .catch(() => mostrarToast("Erro de conexão", true));
 }
 
+function comprarAgora(tipo, id) {
+    adicionarAoCarrinho(tipo, id, true);
+}
 
 function atualizarBadgeCarrinho(total) {
-    let carrinho = document.getElementById('float-carrinho');
-    let badge = document.getElementById('badge-carrinho');
+    const badge =
+        document.getElementById("carrinho-contador") ||
+        document.getElementById("badge-carrinho");
+    const carrinho =
+        document.getElementById("carrinho-float-btn") ||
+        document.getElementById("float-carrinho");
 
-    // Se não existir, cria
-    if (!carrinho) {
-        carrinho = document.createElement('a');
-        carrinho.id = 'float-carrinho';
-        carrinho.href = '{% url "carrinho" %}';
-        carrinho.className = 'float-carrinho';
-        carrinho.innerHTML = `<i class="fa-solid fa-cart-shopping"></i><span id="badge-carrinho" class="badge">${total}</span>`;
-        document.body.appendChild(carrinho);
-        badge = document.getElementById('badge-carrinho');
-    }
+    if (!badge || !carrinho) return;
 
-    // Atualiza badge
-    badge.innerText = total;
-
-    // Animação de pulse
-    badge.classList.remove('pulse');
+    badge.textContent = total;
+    badge.classList.remove("pulse");
     void badge.offsetWidth;
-    badge.classList.add('pulse');
-
-    carrinho.style.display = 'flex';
+    badge.classList.add("pulse");
+    carrinho.style.display = "flex";
 }
 
-function mostrarToast(msg, erro = false) {
-    const toast = document.getElementById('toast-carrinho');
-    const texto = document.getElementById('toast-msg');
-
+function mostrarToast(mensagem, erro = false) {
+    const toast = document.getElementById("toast-carrinho");
+    const texto = document.getElementById("toast-msg");
     if (!toast || !texto) return;
 
-    texto.innerText = msg;
+    texto.textContent = mensagem;
     toast.style.background = erro
-        ? 'linear-gradient(135deg, #dc3545, #a71d2a)'
-        : 'linear-gradient(135deg, #14a61a, #0e7f14)';
+        ? "linear-gradient(135deg, #dc3545, #a71d2a)"
+        : "linear-gradient(135deg, #14a61a, #0e7f14)";
+    toast.classList.add("show");
 
-    toast.classList.add('show');
-
-    setTimeout(() => {
-        toast.classList.remove('show');
+    clearTimeout(window.promoToastTimer);
+    window.promoToastTimer = setTimeout(() => {
+        toast.classList.remove("show");
     }, 3000);
 }
 </script>
