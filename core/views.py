@@ -2988,20 +2988,25 @@ class PaymentView(LoginRequiredMixin, View):
         )
 
         destino_pedidos = reverse("meus_pedidos") + "#pedidos"
+        itens = carrinho.itens.select_related('content_type').all()
 
-        # Se este pagamento já virou pedido, nunca renderiza o checkout
-        # novamente. Isso também cobre o usuário que saiu e voltou depois.
+        # Um payment_id já consumido só representa este checkout quando o
+        # carrinho também já foi esvaziado. Se há itens, trata-se de uma nova
+        # solicitação e ela precisa receber uma cobrança própria.
         if carrinho.mp_payment_id:
             pedido_existente = Pedido.objects.filter(
                 mp_payment_id=str(carrinho.mp_payment_id),
                 cliente__user=request.user,
             ).first()
-            if pedido_existente:
+            if pedido_existente and not itens.exists():
                 return redirect(destino_pedidos)
+            if pedido_existente:
+                carrinho.mp_payment_id = None
+                carrinho.save(update_fields=["mp_payment_id"])
 
             # O webhook pode demorar ou falhar temporariamente. Ao voltar para
             # a página, consultamos o Mercado Pago e finalizamos localmente.
-            if settings.MP_ACCESS_TOKEN:
+            elif settings.MP_ACCESS_TOKEN:
                 try:
                     sdk = mercadopago.SDK(settings.MP_ACCESS_TOKEN)
                     consulta = sdk.payment().get(carrinho.mp_payment_id)
@@ -3032,21 +3037,7 @@ class PaymentView(LoginRequiredMixin, View):
                         carrinho.id,
                     )
 
-        itens = carrinho.itens.select_related('content_type').all()
         if not itens.exists():
-            pedido_recuperado = (
-                Pedido.objects
-                .filter(
-                    carrinho_origem=carrinho,
-                    cliente__user=request.user,
-                    status__in={"pago", "finalizado"},
-                    mp_payment_id__isnull=False,
-                )
-                .order_by("-id")
-                .first()
-            )
-            if pedido_recuperado:
-                return redirect(destino_pedidos)
             return redirect('carrinho')
 
         # ==========================
@@ -3172,6 +3163,8 @@ def _assinatura_carrinho(carrinho):
 
 
 def _pagamento_confere_com_carrinho(payment, carrinho, assinatura=None):
+    payment_id = str(payment.get("id") or "")
+    payment_id_atual = str(carrinho.mp_payment_id or "")
     valor_pago = _valor_monetario(payment.get("transaction_amount"))
     valor_esperado = _valor_monetario(carrinho.total_final)
     referencia = str(payment.get("external_reference") or "")
@@ -3186,17 +3179,15 @@ def _pagamento_confere_com_carrinho(payment, carrinho, assinatura=None):
         )
         return False
 
-    assinatura_valida = (
-        not assinatura_mp
-        or assinatura_mp == assinatura_atual
-    )
-
     return (
-        valor_pago is not None
+        bool(payment_id)
+        and (not payment_id_atual or payment_id == payment_id_atual)
+        and valor_pago is not None
         and valor_esperado is not None
         and valor_pago == valor_esperado
         and referencia == str(carrinho.id)
-        and assinatura_valida
+        and bool(assinatura_mp)
+        and assinatura_mp == assinatura_atual
     )
 
 
@@ -3308,6 +3299,15 @@ def _finalizar_pagamento_aprovado(carrinho, payment):
             .get(pk=carrinho.pk)
         )
 
+        # A confirmação precisa pertencer exatamente à cobrança atualmente
+        # vinculada ao carrinho. Nunca aceita um pagamento antigo do mesmo
+        # usuário, carrinho ou valor.
+        payment_id_atual = str(carrinho_bloqueado.mp_payment_id or "")
+        if not payment_id_atual or payment_id != payment_id_atual:
+            raise PagamentoDivergenteError(
+                "O pagamento não pertence à solicitação atual."
+            )
+
         # Idempotência local: o mesmo payment_id nunca cria outro pedido.
         pedido_existente = (
             Pedido.objects
@@ -3416,12 +3416,15 @@ def gerar_pix(request):
             mp_payment_id=str(carrinho.mp_payment_id),
             cliente__user=request.user,
         ).first()
-        if pedido_existente:
+        if pedido_existente and not carrinho.itens.exists():
             return JsonResponse({
                 "pago": True,
                 "pedido_id": pedido_existente.id,
                 "redirect_url": _url_meus_pedidos(),
             })
+        if pedido_existente:
+            carrinho.mp_payment_id = None
+            carrinho.save(update_fields=["mp_payment_id"])
 
     if not carrinho.itens.exists():
         return JsonResponse(
@@ -3754,33 +3757,7 @@ def verificar_pagamento(request):
             "mensagem": "Carrinho não encontrado.",
         }, status=404)
 
-    # Compatibilidade com confirmações anteriores que limpavam o
-    # mp_payment_id do carrinho: se o carrinho já foi consumido e existe um
-    # pedido pago originado dele, redireciona normalmente.
     if not carrinho.mp_payment_id:
-        pedido_recuperado = None
-        if not carrinho.itens.exists():
-            pedido_recuperado = (
-                Pedido.objects
-                .filter(
-                    carrinho_origem=carrinho,
-                    cliente__user=request.user,
-                    status__in={"pago", "finalizado"},
-                    mp_payment_id__isnull=False,
-                )
-                .order_by("-id")
-                .first()
-            )
-
-        if pedido_recuperado:
-            return JsonResponse({
-                "pago": True,
-                "consulta_ok": True,
-                "status": "approved",
-                "pedido_id": pedido_recuperado.id,
-                "redirect_url": _url_meus_pedidos(),
-            })
-
         return JsonResponse({
             "pago": False,
             "consulta_ok": True,
@@ -3792,13 +3769,22 @@ def verificar_pagamento(request):
         mp_payment_id=str(carrinho.mp_payment_id),
         cliente__user=request.user,
     ).first()
-    if pedido_existente:
+    if pedido_existente and not carrinho.itens.exists():
         return JsonResponse({
             "pago": True,
             "consulta_ok": True,
             "status": "approved",
             "pedido_id": pedido_existente.id,
             "redirect_url": _url_meus_pedidos(),
+        })
+    if pedido_existente:
+        carrinho.mp_payment_id = None
+        carrinho.save(update_fields=["mp_payment_id"])
+        return JsonResponse({
+            "pago": False,
+            "consulta_ok": True,
+            "status": "stale_payment",
+            "mensagem": "Nova solicitação detectada. Gerando uma cobrança exclusiva.",
         })
 
     try:
