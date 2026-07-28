@@ -750,6 +750,449 @@
     outline: none;
 }
 
+/* =========================================================
+   CARRINHO 2026 — VISUAL UNIFORME COM O NOVO WEBSERVICE
+========================================================= */
+body {
+    background:
+        radial-gradient(circle at 8% 18%, rgba(0, 123, 255, .09), transparent 30%),
+        radial-gradient(circle at 92% 62%, rgba(230, 57, 70, .065), transparent 28%),
+        #edf3fa;
+}
+
+.carrinho-container {
+    position: relative;
+    max-width: 1180px;
+    margin: 30px auto 155px;
+    padding: 0 20px;
+}
+
+.carrinho-container::before {
+    content: "";
+    position: absolute;
+    top: 110px;
+    right: -45px;
+    z-index: -1;
+    width: 170px;
+    height: 170px;
+    border: 28px solid rgba(0, 74, 173, .045);
+    border-radius: 50%;
+}
+
+.breadcrumb-strong {
+    width: fit-content;
+    margin: 0 0 22px;
+    padding: 10px 14px;
+    gap: 10px;
+    border: 1px solid rgba(0, 74, 173, .10);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .62);
+    box-shadow: 0 8px 24px rgba(31, 64, 104, .08);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    font-size: .82rem;
+}
+
+.carrinho-titulo {
+    margin: 0 0 28px;
+    color: #10233f;
+    font-size: clamp(1.8rem, 4vw, 2.75rem);
+    line-height: 1.1;
+    text-align: left;
+    letter-spacing: -.045em;
+}
+
+.cart-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(360px, .85fr);
+    align-items: start;
+    gap: 22px;
+}
+
+.cart-main,
+.cart-checkout {
+    border: 1px solid rgba(0, 74, 173, .11);
+    border-radius: 25px;
+    background: rgba(246, 250, 255, .82);
+    box-shadow: 0 18px 45px rgba(30, 61, 99, .12);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+}
+
+.cart-main {
+    padding: 22px;
+}
+
+.cart-checkout {
+    position: sticky;
+    top: 125px;
+    padding: 20px;
+}
+
+.cart-section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    margin-bottom: 17px;
+}
+
+.cart-section-head h2 {
+    margin: 3px 0 0;
+    color: #163252;
+    font-size: 1.18rem;
+    font-weight: 800;
+    letter-spacing: -.02em;
+}
+
+.cart-kicker {
+    color: #007bff;
+    font-size: .68rem;
+    font-weight: 800;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+}
+
+.btn-limpar {
+    width: auto;
+    margin: 0;
+    padding: 9px 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    border: 1px solid #f3c8cc;
+    border-radius: 11px;
+    color: #b42331;
+    background: #fff1f2;
+    font-size: .76rem;
+    font-weight: 800;
+    transition: .22s ease;
+}
+
+.btn-limpar:hover {
+    color: #fff;
+    background: #d92d3b;
+    border-color: #d92d3b;
+    transform: translateY(-2px);
+}
+
+.itens-scroll,
+.itens-scroll.sem-scroll {
+    max-height: 630px;
+    overflow-y: auto;
+    padding: 2px 7px 2px 2px;
+    scrollbar-width: thin;
+    scrollbar-color: #9dbce1 transparent;
+}
+
+.item-card {
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 12px;
+    padding: 17px;
+    border: 1px solid #dce8f5;
+    border-radius: 17px;
+    background:
+        radial-gradient(circle at 94% 15%, rgba(0, 123, 255, .10), transparent 26%),
+        linear-gradient(145deg, #f9fcff, #eaf3fd);
+    box-shadow: 0 8px 20px rgba(31, 65, 108, .08);
+    transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease;
+}
+
+.item-card::after {
+    content: "";
+    position: absolute;
+    right: -25px;
+    bottom: -30px;
+    width: 84px;
+    height: 84px;
+    border: 14px solid rgba(230, 57, 70, .045);
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+.item-card:hover {
+    border-color: rgba(0, 123, 255, .26);
+    box-shadow: 0 13px 28px rgba(25, 70, 126, .13);
+    transform: translateY(-3px);
+}
+
+.item-nome {
+    position: relative;
+    z-index: 1;
+    margin-bottom: 13px;
+    padding-right: 35px;
+    color: #10233f;
+    font-size: 1.02rem;
+    line-height: 1.35;
+    font-weight: 800;
+}
+
+.item-linha {
+    position: relative;
+    z-index: 1;
+    align-items: center;
+    margin: 8px 0;
+    color: #63748a;
+    font-size: .82rem;
+    font-weight: 650;
+}
+
+.item-linha > span:last-child {
+    color: #263f5d;
+    font-weight: 800;
+}
+
+.item-subtotal {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid #dce7f3;
+}
+
+.item-subtotal > span:last-child {
+    color: #079447;
+    font-size: 1.02rem;
+}
+
+.qtd-box {
+    gap: 7px;
+    padding: 4px;
+    border: 1px solid #d7e4f3;
+    border-radius: 12px;
+    background: #e7f0fa;
+}
+
+.qtd-box button {
+    width: 31px;
+    height: 31px;
+    border: 1px solid rgba(0, 74, 173, .10);
+    border-radius: 9px;
+    color: #004aad;
+    background: #f8fbff;
+    box-shadow: 0 3px 8px rgba(0, 45, 105, .09);
+}
+
+.btn-remover {
+    position: relative;
+    z-index: 1;
+    margin-top: 10px;
+    padding: 8px 10px;
+    border-color: transparent;
+    border-radius: 9px;
+    color: #b42331;
+    background: rgba(255, 241, 242, .78);
+    font-size: .74rem;
+}
+
+.cupom-box,
+.cpf-box,
+.frete-box,
+.resumo-box {
+    margin: 0 0 13px;
+    padding: 16px;
+    border: 1px solid #dce7f3;
+    border-radius: 17px;
+    background: #edf4fb;
+    box-shadow: none;
+}
+
+.cupom-box {
+    border-style: dashed;
+    border-color: #d8b04a;
+    background:
+        radial-gradient(circle at 95% 10%, rgba(255, 193, 7, .13), transparent 32%),
+        #f7f2e4;
+}
+
+.cupom-spaced,
+.cupom-top {
+    margin-top: 0;
+}
+
+.cupom-input input,
+.cpf-box input,
+.frete-content input,
+#endereco-detalhes input {
+    border: 1px solid #cddceb;
+    color: #17324f;
+    background: #f8fbff;
+    box-shadow: inset 0 1px 2px rgba(25, 52, 83, .035);
+}
+
+.cupom-input button {
+    color: #fff;
+    background: linear-gradient(135deg, #d99c00, #f1b800);
+    box-shadow: 0 8px 17px rgba(204, 145, 0, .20);
+}
+
+.cpf-box label,
+.frete-box > strong,
+.cupom-box > strong {
+    color: #213d5e;
+    font-size: .88rem;
+}
+
+.frete-tabs {
+    padding: 4px;
+    gap: 5px;
+    border-radius: 14px;
+    background: #dfeaf5;
+}
+
+.frete-tab {
+    padding: 10px 8px;
+    border: 0;
+    color: #49647f;
+    background: transparent;
+    font-size: .79rem;
+}
+
+.frete-tab.active {
+    color: #fff;
+    background: linear-gradient(135deg, #004aad, #007bff);
+    box-shadow: 0 7px 17px rgba(0, 74, 173, .22);
+}
+
+.resumo-box {
+    margin-bottom: 0;
+    border-color: rgba(0, 74, 173, .17);
+    background:
+        radial-gradient(circle at 92% 12%, rgba(0, 123, 255, .11), transparent 30%),
+        linear-gradient(145deg, #e7f1fc, #dceaf8);
+}
+
+.resumo-linha {
+    color: #536b84;
+    font-size: .84rem;
+    font-weight: 700;
+}
+
+.resumo-linha span:last-child {
+    color: #263f5d;
+    font-weight: 800;
+}
+
+.resumo-total {
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid #c8daec;
+    color: #10233f;
+}
+
+.resumo-total span:last-child {
+    color: #079447;
+    font-size: 1.25rem;
+}
+
+.subtotal-fixo {
+    bottom: 73px;
+    border-top: 1px solid rgba(0, 74, 173, .12);
+    background: rgba(228, 238, 249, .94);
+    box-shadow: 0 -8px 25px rgba(26, 53, 86, .10);
+    backdrop-filter: blur(14px);
+}
+
+.subtotal-fixo-inner {
+    max-width: 1120px;
+    color: #173250;
+}
+
+.subtotal-fixo-inner strong {
+    color: #079447;
+    font-size: 1.18rem;
+}
+
+.finalizar-box {
+    z-index: 1000;
+    border-top: 1px solid rgba(0, 74, 173, .10);
+    background: rgba(237, 244, 251, .97);
+    box-shadow: 0 -8px 26px rgba(26, 53, 86, .12);
+    backdrop-filter: blur(14px);
+}
+
+.btn-finalizar {
+    width: min(100%, 430px);
+    min-width: 0;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #0ead55, #07883f);
+    box-shadow: 0 11px 25px rgba(7, 136, 63, .28);
+}
+
+.btn-finalizar:hover {
+    background: linear-gradient(135deg, #12bd60, #087d3c);
+    transform: translateY(-2px);
+}
+
+.modal-overlay {
+    background: rgba(6, 18, 35, .66);
+    backdrop-filter: blur(5px);
+}
+
+.modal-box {
+    border: 1px solid rgba(255, 255, 255, .45);
+    background: #edf4fb;
+}
+
+.carrinho-vazio-box {
+    max-width: 660px;
+    margin: 30px auto;
+    padding: 55px 28px;
+    border: 1px solid rgba(0, 74, 173, .12);
+    border-radius: 26px;
+    background:
+        radial-gradient(circle at 85% 15%, rgba(0, 123, 255, .11), transparent 32%),
+        #e7f0fa;
+    box-shadow: 0 18px 45px rgba(30, 61, 99, .12);
+}
+
+@media (max-width: 900px) {
+    .cart-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .cart-checkout {
+        position: static;
+    }
+}
+
+@media (max-width: 560px) {
+    .carrinho-container {
+        margin-top: 18px;
+        padding: 0 12px;
+    }
+
+    .carrinho-titulo {
+        font-size: 1.85rem;
+        margin-bottom: 20px;
+    }
+
+    .cart-main,
+    .cart-checkout {
+        padding: 14px;
+        border-radius: 19px;
+    }
+
+    .cart-section-head h2 {
+        font-size: 1rem;
+    }
+
+    .item-card {
+        padding: 14px;
+    }
+
+    .cupom-input {
+        flex-direction: column;
+    }
+
+    .cupom-input button {
+        width: 100%;
+    }
+
+    .subtotal-fixo-inner {
+        font-size: .9rem;
+    }
+}
+
 
 </style>
 
@@ -773,9 +1216,18 @@
 
     {% if itens %}
 
-        <button class="btn-limpar" onclick="limparCarrinho()">
-            🗑️ Limpar carrinho
-        </button>
+        <div class="cart-layout">
+          <section class="cart-main" aria-label="Produtos do carrinho">
+            <div class="cart-section-head">
+                <div>
+                    <span class="cart-kicker">Seu pedido</span>
+                    <h2>Produtos selecionados</h2>
+                </div>
+                <button class="btn-limpar" onclick="limparCarrinho()">
+                    <i class="fa-regular fa-trash-can"></i>
+                    Limpar
+                </button>
+            </div>
 
         <div class="itens-scroll {% if itens|length <= 1 %}sem-scroll{% endif %}">
 
@@ -812,6 +1264,9 @@
             {% endfor %}
 
         </div><!-- itens-scroll -->
+          </section>
+
+          <aside class="cart-checkout" aria-label="Dados e resumo do pedido">
 
         <!-- CUPOM -->
         <div class="cupom-box {% if itens|length != 1 %}cupom-spaced{% endif %}">
@@ -922,6 +1377,11 @@
             </span>
         </div>
 
+        </div><!-- resumo-box -->
+
+          </aside>
+        </div><!-- cart-layout -->
+
 
     {% else %}
 
@@ -944,7 +1404,6 @@
 
 
 </div><!-- carrinho-container -->
-</div>
 
 
 {% if itens %}
@@ -1137,6 +1596,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const freteTabs = document.querySelectorAll('.frete-tab');
     const freteContent = document.querySelectorAll('.frete-content');
+
+    // Carrinho vazio: não existem campos de checkout para inicializar.
+    if (!cpfInput || !btnFinalizar || !cepInput || !numeroInput) return;
 
     // ===== Formatação CPF/CNPJ =====
     function formatarCPFouCNPJ(valor) {
