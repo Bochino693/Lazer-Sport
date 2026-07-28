@@ -692,6 +692,8 @@ class Carrinho(Prime):
 
     @property
     def valor_frete(self):
+        if self.tipo_envio != "frete":
+            return Decimal("0.00")
         try:
             return self.frete.valor or Decimal("0.00")
         except Frete.DoesNotExist:
@@ -910,7 +912,18 @@ class Pedido(Prime):
     @classmethod
     def criar_do_carrinho(cls, carrinho):
 
-        valor_frete = carrinho.valor_frete or Decimal("0.00")
+        frete = None
+        if carrinho.tipo_envio == "frete":
+            try:
+                frete = carrinho.frete
+            except Frete.DoesNotExist:
+                frete = None
+
+        valor_frete = (
+            carrinho.valor_frete
+            if frete
+            else Decimal("0.00")
+        )
 
         pedido = cls.objects.create(
             carrinho_origem=carrinho,
@@ -921,6 +934,12 @@ class Pedido(Prime):
             total_liquido=carrinho.total_liquido,
             valor_frete=valor_frete,
             total_final=carrinho.total_final,
+
+            cep=frete.cep if frete else None,
+            rua=frete.rua if frete else None,
+            numero=frete.numero if frete else None,
+            bairro=frete.bairro if frete else None,
+            cidade=frete.cidade if frete else None,
 
             cupom_codigo=carrinho.cupom.codigo if carrinho.cupom else None,
             cupom_percentual=carrinho.cupom.desconto_percentual if carrinho.cupom else None,
@@ -1148,3 +1167,4 @@ class CategoriaClick(Prime):
     class Meta:
         verbose_name = "Categoria Clicada"
         verbose_name_plural = "Categorias Clicadas"
+        
