@@ -217,7 +217,7 @@
     }
 
     /* ======= MENU HAMBÚRGUER ======= */
-    .menu-toggle {
+    .ls-hamburger {
       display: none;
       flex-direction: column;
       cursor: pointer;
@@ -226,11 +226,12 @@
       transition: background 0.25s var(--ease-out);
     }
 
-    .menu-toggle:hover {
+    .ls-hamburger:hover {
       background: rgba(255, 255, 255, 0.15);
     }
 
-    .menu-toggle span {
+    .ls-hamburger span {
+      display: block;
       height: 3px;
       width: 26px;
       background: white;
@@ -252,7 +253,7 @@
 
       /* No desktop quem representa o menu são os dois grupos
          .nav-desktop -- o painel off-canvas fica fora de cena. */
-      #nav {
+      #ls-mobile-nav {
         display: none;
       }
 
@@ -307,16 +308,16 @@
     }
 
 @media (max-width: 768px) {
-  .menu-toggle.active span:nth-child(1) {
+  .ls-hamburger.active span:nth-child(1) {
     transform: rotate(45deg) translate(5px, 5px);
   }
 
 
-  .menu-toggle.active span:nth-child(2) {
+  .ls-hamburger.active span:nth-child(2) {
     opacity: 0;
   }
 
-  .menu-toggle.active span:nth-child(3) {
+  .ls-hamburger.active span:nth-child(3) {
     transform: rotate(-45deg) translate(6px, -6px);
   }
 }
@@ -772,32 +773,32 @@ nav a.btn-login {
 }
 
 /* ======================================================
-   MENU MOBILE — PAINEL OFF-CANVAS
+   MENU MOBILE — PAINEL OFF-CANVAS ESTILO APP
    ====================================================== */
-.nav-backdrop {
+.ls-mobile-backdrop {
     position: fixed;
     inset: 0;
-    background: rgba(3, 8, 20, 0.55);
-    backdrop-filter: blur(3px);
-    -webkit-backdrop-filter: blur(3px);
+    background: rgba(3, 8, 20, 0.6);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
     opacity: 0;
     visibility: hidden;
     transition: opacity 0.35s var(--ease-out), visibility 0.35s;
     z-index: 1998;
 }
 
-.nav-backdrop.active {
-    opacity: 1;
-    visibility: visible;
+.ls-mobile-backdrop.active {
+    opacity: 1 !important;
+    visibility: visible !important;
 }
 
-.nav-close {
+.ls-mobile-nav-close {
     display: none;
 }
 
 @media (max-width: 768px) {
-  .menu-toggle {
-    display: flex;
+  .ls-hamburger {
+    display: flex !important;
     align-items: center;
     justify-content: center;
     width: 46px;
@@ -808,21 +809,18 @@ nav a.btn-login {
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
   }
 
-  nav#nav {
-    display: flex;
+  #ls-mobile-nav {
+    display: flex !important;
+    flex-direction: column;
     position: fixed;
     top: 0;
     right: 0;
-    width: min(80vw, 320px);
+    width: min(85vw, 340px);
     height: 100vh;
     height: 100dvh;
     margin: 0;
     background: linear-gradient(165deg, #0d1b2e, #142c4a);
-    flex-direction: column;
-    align-items: stretch;
-    justify-content: flex-start;
-    gap: 2px;
-    padding: 82px 16px 32px;
+    padding: 0;
     border-radius: 0;
     border-left: 1px solid rgba(255, 255, 255, 0.08);
     box-shadow: -16px 0 40px rgba(0, 0, 0, 0.35);
@@ -832,11 +830,11 @@ nav a.btn-login {
     visibility: hidden;
     transition: transform 0.4s var(--ease-out), visibility 0.4s;
     z-index: 1999;
-    overflow-y: auto;
+    overflow: hidden;
   }
 
   /* fina barra dourada na borda esquerda do painel, acabamento premium */
-  nav#nav::before {
+  #ls-mobile-nav::before {
     content: '';
     position: absolute;
     top: 0;
@@ -847,30 +845,109 @@ nav a.btn-login {
     opacity: 0.85;
   }
 
-  nav#nav.active {
-    transform: translateX(0);
-    visibility: visible;
+  #ls-mobile-nav.active {
+    transform: translateX(0) !important;
+    visibility: visible !important;
   }
 
-  .nav-panel-title {
-    display: block;
-    color: rgba(255, 255, 255, 0.42);
-    font-size: 0.72rem;
-    font-weight: 800;
-    letter-spacing: 3px;
-    text-transform: uppercase;
-    padding: 0 12px 12px;
-    margin-bottom: 4px;
+  /* ---- cabeçalho do painel ---- */
+  .ls-mobile-nav-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-shrink: 0;
+    padding: 20px 16px 16px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   }
 
-  nav#nav a {
+  .ls-mobile-nav-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+  }
+
+  .ls-mobile-nav-badge {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #FFD700, #ffb300);
+    color: #0d1b2e;
+    font-weight: 800;
+    font-size: 0.92rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-shadow: 0 6px 14px rgba(255, 183, 0, 0.35);
+  }
+
+  .ls-mobile-nav-heading {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .ls-mobile-nav-heading strong {
+    color: #fff;
+    font-size: 0.96rem;
+    font-weight: 800;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .ls-mobile-nav-heading em {
+    font-style: normal;
+    color: rgba(255, 255, 255, 0.45);
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-top: 2px;
+  }
+
+  .ls-mobile-nav-close {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    flex-shrink: 0;
+    border: none;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background 0.25s var(--ease-out), transform 0.3s var(--ease-bounce);
+  }
+
+  .ls-mobile-nav-close:hover {
+    background: #E63946;
+    transform: rotate(90deg);
+  }
+
+  /* ---- lista de navegação (rolável) ---- */
+  .ls-mobile-nav-list {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 14px 12px 10px;
+  }
+
+  .ls-mobile-nav-list a {
     display: flex;
     align-items: center;
     justify-content: flex-start;
     gap: 14px;
-    padding: 14px 12px;
-    font-size: 0.94rem;
+    padding: 13px 12px;
+    font-size: 0.92rem;
     font-weight: 700;
     line-height: 1.3;
     border-radius: 12px;
@@ -881,6 +958,7 @@ nav a.btn-login {
     min-width: 0;
     max-width: none;
     min-height: 0;
+    flex-shrink: 0;
 
     opacity: 0;
     transform: translateX(18px);
@@ -892,41 +970,57 @@ nav a.btn-login {
       transform 0.35s var(--ease-out);
   }
 
-  nav#nav.active a {
+  #ls-mobile-nav.active .ls-mobile-nav-list a {
     opacity: 1;
     transform: translateX(0);
   }
 
-  /* entrada escalonada -- cada link some alguns ms depois do anterior */
-  nav#nav.active a:nth-of-type(1)  { transition-delay: 0.04s; }
-  nav#nav.active a:nth-of-type(2)  { transition-delay: 0.07s; }
-  nav#nav.active a:nth-of-type(3)  { transition-delay: 0.10s; }
-  nav#nav.active a:nth-of-type(4)  { transition-delay: 0.13s; }
-  nav#nav.active a:nth-of-type(5)  { transition-delay: 0.16s; }
-  nav#nav.active a:nth-of-type(6)  { transition-delay: 0.19s; }
-  nav#nav.active a:nth-of-type(7)  { transition-delay: 0.22s; }
-  nav#nav.active a:nth-of-type(8)  { transition-delay: 0.25s; }
-  nav#nav.active a:nth-of-type(9)  { transition-delay: 0.28s; }
-  nav#nav.active a:nth-of-type(10) { transition-delay: 0.31s; }
-  nav#nav.active a:nth-of-type(11) { transition-delay: 0.34s; }
-  nav#nav.active a:nth-of-type(12) { transition-delay: 0.37s; }
-  nav#nav.active a:nth-of-type(13) { transition-delay: 0.40s; }
+  /* entrada escalonada -- cada link aparece alguns ms depois do anterior */
+  #ls-mobile-nav.active .ls-mobile-nav-list a:nth-of-type(1)  { transition-delay: 0.04s; }
+  #ls-mobile-nav.active .ls-mobile-nav-list a:nth-of-type(2)  { transition-delay: 0.07s; }
+  #ls-mobile-nav.active .ls-mobile-nav-list a:nth-of-type(3)  { transition-delay: 0.10s; }
+  #ls-mobile-nav.active .ls-mobile-nav-list a:nth-of-type(4)  { transition-delay: 0.13s; }
+  #ls-mobile-nav.active .ls-mobile-nav-list a:nth-of-type(5)  { transition-delay: 0.16s; }
+  #ls-mobile-nav.active .ls-mobile-nav-list a:nth-of-type(6)  { transition-delay: 0.19s; }
+  #ls-mobile-nav.active .ls-mobile-nav-list a:nth-of-type(7)  { transition-delay: 0.22s; }
+  #ls-mobile-nav.active .ls-mobile-nav-list a:nth-of-type(8)  { transition-delay: 0.25s; }
+  #ls-mobile-nav.active .ls-mobile-nav-list a:nth-of-type(9)  { transition-delay: 0.28s; }
+  #ls-mobile-nav.active .ls-mobile-nav-list a:nth-of-type(10) { transition-delay: 0.31s; }
+  #ls-mobile-nav.active .ls-mobile-nav-list a:nth-of-type(11) { transition-delay: 0.34s; }
+  #ls-mobile-nav.active .ls-mobile-nav-list a:nth-of-type(12) { transition-delay: 0.37s; }
+  #ls-mobile-nav.active .ls-mobile-nav-list a:nth-of-type(13) { transition-delay: 0.40s; }
 
-  nav#nav a::before,
-  nav#nav a::after {
+  .ls-mobile-nav-list a::before {
     display: none;
   }
 
-  nav#nav a:hover,
-  nav#nav a:active,
-  nav#nav a.active-link {
+  .ls-mobile-nav-list a::after {
+    content: '';
+    width: 7px;
+    height: 7px;
+    flex-shrink: 0;
+    margin-left: auto;
+    border-top: 2px solid rgba(255, 255, 255, 0.32);
+    border-right: 2px solid rgba(255, 255, 255, 0.32);
+    transform: rotate(45deg);
+    transition: border-color 0.25s var(--ease-out);
+  }
+
+  .ls-mobile-nav-list a:hover,
+  .ls-mobile-nav-list a:active,
+  .ls-mobile-nav-list a.active-link {
     color: #ffffff !important;
     background: linear-gradient(135deg, rgba(230, 57, 70, 0.96), rgba(201, 21, 45, 0.96));
     border-color: rgba(255, 255, 255, 0.24);
     transform: none;
   }
 
-  nav#nav a i.nav-icon {
+  .ls-mobile-nav-list a:hover::after,
+  .ls-mobile-nav-list a.active-link::after {
+    border-color: rgba(255, 255, 255, 0.9);
+  }
+
+  .ls-mobile-nav-list a i.nav-icon {
     display: inline-flex;
     width: 22px;
     justify-content: center;
@@ -935,27 +1029,40 @@ nav a.btn-login {
     flex-shrink: 0;
   }
 
-  .nav-close {
-    display: flex;
+  /* ---- rodapé fixo do painel: atalho de WhatsApp ---- */
+  .ls-mobile-nav-cta {
+    display: flex !important;
     align-items: center;
     justify-content: center;
-    position: absolute;
-    top: 16px;
-    right: 16px;
-    width: 40px;
-    height: 40px;
-    border: none;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.08);
-    color: #fff;
-    font-size: 1.05rem;
-    cursor: pointer;
-    transition: background 0.25s var(--ease-out), transform 0.3s var(--ease-bounce);
+    gap: 10px;
+    flex-shrink: 0;
+    margin: 10px 16px calc(16px + env(safe-area-inset-bottom, 0px));
+    padding: 13px 16px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #25d366, #128c4a) !important;
+    color: #ffffff !important;
+    font-weight: 800 !important;
+    font-size: 0.92rem;
+    text-decoration: none !important;
+    min-height: 0 !important;
+    border: none !important;
+    box-shadow: 0 10px 22px rgba(18, 140, 74, 0.35);
+    transition: transform 0.25s var(--ease-out), box-shadow 0.25s var(--ease-out);
   }
 
-  .nav-close:hover {
-    background: #E63946;
-    transform: rotate(90deg);
+  .ls-mobile-nav-cta::before,
+  .ls-mobile-nav-cta::after {
+    display: none !important;
+  }
+
+  .ls-mobile-nav-cta:hover {
+    color: #ffffff !important;
+    transform: translateY(-2px);
+    box-shadow: 0 14px 28px rgba(18, 140, 74, 0.45);
+  }
+
+  .ls-mobile-nav-cta i {
+    font-size: 1.1rem;
   }
 }
 /* ===== FLOAT STACK (A PILHA) ===== */
@@ -1005,6 +1112,7 @@ nav a.btn-login {
 /* Tooltip que aparece ao lado dos botões flutuantes */
 .float-btn[data-tooltip]::before {
     content: attr(data-tooltip);
+    display: block;
     position: absolute;
     right: calc(100% + 12px);
     top: 50%;
@@ -1012,11 +1120,17 @@ nav a.btn-login {
     background: #0d1b2e;
     color: #fff;
     font-size: 13px;
+    line-height: 1.3;
     font-weight: 600;
     white-space: nowrap;
-    padding: 6px 12px;
+    width: max-content;
+    max-width: 220px;
+    padding: 8px 14px;
     border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
     opacity: 0;
+    z-index: 10;
     pointer-events: none;
     transition: opacity 0.2s var(--ease-out), transform 0.2s var(--ease-out);
 }
@@ -1194,40 +1308,55 @@ nav a.btn-login {
   </nav>
 
   <!-- Menu toggle -->
-  <button type="button" class="menu-toggle" id="menu-toggle"
-          aria-label="Abrir menu" aria-controls="nav" aria-expanded="false">
+  <button type="button" class="ls-hamburger" id="ls-hamburger-btn"
+          aria-label="Abrir menu" aria-controls="ls-mobile-nav" aria-expanded="false">
     <span></span>
     <span></span>
     <span></span>
   </button>
 
   <!-- Navegação (mobile — off-canvas, com TODOS os itens) -->
-<nav id="nav" aria-label="Menu principal no celular" aria-hidden="true">
-  <button type="button" class="nav-close" id="nav-close" aria-label="Fechar menu">
-    <i class="fa-solid fa-xmark"></i>
-  </button>
+<nav id="ls-mobile-nav" aria-label="Menu principal no celular" aria-hidden="true">
 
-  <span class="nav-panel-title">Menu</span>
+  <div class="ls-mobile-nav-header">
+    <div class="ls-mobile-nav-brand">
+      <span class="ls-mobile-nav-badge">LS</span>
+      <div class="ls-mobile-nav-heading">
+        <strong>Lazer &amp; Sport</strong>
+        <em>Menu</em>
+      </div>
+    </div>
+    <button type="button" class="ls-mobile-nav-close" id="ls-mobile-nav-close" aria-label="Fechar menu">
+      <i class="fa-solid fa-xmark"></i>
+    </button>
+  </div>
 
-  <a href="{% url 'home' %}#"><i class="fa-solid fa-house nav-icon" aria-hidden="true"></i>Home</a>
-  <a href="{% url 'home' %}#categorias-section"><i class="fa-solid fa-shapes nav-icon" aria-hidden="true"></i>Categorias de Brinquedos</a>
-  <a href="{% url 'home' %}#promocoes-section"><i class="fa-solid fa-tags nav-icon" aria-hidden="true"></i>Promoções Especiais</a>
-  <a href="{% url 'home' %}#brinquedos"><i class="fa-solid fa-gamepad nav-icon" aria-hidden="true"></i>Brinquedos em Destaque</a>
-  <a href="{% url 'home' %}#manutencao"><i class="fa-solid fa-screwdriver-wrench nav-icon" aria-hidden="true"></i>Solicitar Manutenção</a>
-  <a href="{% url 'home' %}#pecas"><i class="fa-solid fa-box-open nav-icon" aria-hidden="true"></i>Catálogo de Produtos</a>
-  <a href="{% url 'home' %}#combos-section"><i class="fa-solid fa-layer-group nav-icon" aria-hidden="true"></i>Combos Promocionais</a>
-  <a href="{% url 'eventos' %}#todos-eventos"><i class="fa-solid fa-calendar-days nav-icon" aria-hidden="true"></i>Eventos Realizados</a>
-  <a href="{% url 'projetos' %}#todos-projetos"><i class="fa-solid fa-lightbulb nav-icon" aria-hidden="true"></i>Projetos Sob Medida</a>
-  <a href="/loja/"><i class="fa-solid fa-store nav-icon" aria-hidden="true"></i>Loja Online</a>
-  <a href="{% url 'estabelecimentos' %}#header"><i class="fa-solid fa-building nav-icon" aria-hidden="true"></i>Nossos Parceiros</a>
-  <a href="{% url 'home' %}#contato"><i class="fa-solid fa-location-dot nav-icon" aria-hidden="true"></i>Nossa Localização</a>
-  <a href="{% url 'home' %}#clientes-section"><i class="fa-solid fa-earth-americas nav-icon" aria-hidden="true"></i>Mapa de Clientes</a>
+  <div class="ls-mobile-nav-list">
+    <a href="{% url 'home' %}#"><i class="fa-solid fa-house nav-icon" aria-hidden="true"></i>Home</a>
+    <a href="{% url 'home' %}#categorias-section"><i class="fa-solid fa-shapes nav-icon" aria-hidden="true"></i>Categorias de Brinquedos</a>
+    <a href="{% url 'home' %}#promocoes-section"><i class="fa-solid fa-tags nav-icon" aria-hidden="true"></i>Promoções Especiais</a>
+    <a href="{% url 'home' %}#brinquedos"><i class="fa-solid fa-gamepad nav-icon" aria-hidden="true"></i>Brinquedos em Destaque</a>
+    <a href="{% url 'home' %}#manutencao"><i class="fa-solid fa-screwdriver-wrench nav-icon" aria-hidden="true"></i>Solicitar Manutenção</a>
+    <a href="{% url 'home' %}#pecas"><i class="fa-solid fa-box-open nav-icon" aria-hidden="true"></i>Catálogo de Produtos</a>
+    <a href="{% url 'home' %}#combos-section"><i class="fa-solid fa-layer-group nav-icon" aria-hidden="true"></i>Combos Promocionais</a>
+    <a href="{% url 'eventos' %}#todos-eventos"><i class="fa-solid fa-calendar-days nav-icon" aria-hidden="true"></i>Eventos Realizados</a>
+    <a href="{% url 'projetos' %}#todos-projetos"><i class="fa-solid fa-lightbulb nav-icon" aria-hidden="true"></i>Projetos Sob Medida</a>
+    <a href="/loja/"><i class="fa-solid fa-store nav-icon" aria-hidden="true"></i>Loja Online</a>
+    <a href="{% url 'estabelecimentos' %}#header"><i class="fa-solid fa-building nav-icon" aria-hidden="true"></i>Nossos Parceiros</a>
+    <a href="{% url 'home' %}#contato"><i class="fa-solid fa-location-dot nav-icon" aria-hidden="true"></i>Nossa Localização</a>
+    <a href="{% url 'home' %}#clientes-section"><i class="fa-solid fa-earth-americas nav-icon" aria-hidden="true"></i>Mapa de Clientes</a>
+  </div>
 
+  <a href="https://wa.me/5511960563135?text=Ol%C3%A1!%20Vim%20pelo%20site%20da%20Lazer%20e%20Sport%20e%20gostaria%20de%20mais%20informa%C3%A7%C3%B5es."
+     target="_blank" rel="noopener" class="ls-mobile-nav-cta">
+    <i class="fa-brands fa-whatsapp" aria-hidden="true"></i> Falar no WhatsApp
+  </a>
 
   </nav>
 </header>
 
-<div class="nav-backdrop" id="nav-backdrop"></div>
+<div class="ls-mobile-backdrop" id="ls-mobile-backdrop"></div>
+
 
 
 <div style="width: 100%; background: #f8fbff; border-bottom: 2px solid #004AAD; padding: 15px 0; display: flex; justify-content: center; align-items: center;">
@@ -1352,6 +1481,7 @@ nav a.btn-login {
         display: flex;
         flex-direction: column;
         gap: 12px;
+        overflow: visible;
     }
 
     .ls-quick-dock a {
@@ -1367,6 +1497,7 @@ nav a.btn-login {
         box-shadow: 0 12px 30px rgba(0, 0, 0, 0.18);
         transition: transform 0.25s var(--ease-bounce), box-shadow 0.25s var(--ease-out), border-radius 0.25s var(--ease-out);
         position: relative;
+        overflow: visible;
     }
 
     .ls-quick-dock a:hover {
@@ -1381,6 +1512,7 @@ nav a.btn-login {
 
     .ls-quick-dock a[data-tooltip]::before {
         content: attr(data-tooltip);
+        display: block;
         position: absolute;
         left: calc(100% + 12px);
         top: 50%;
@@ -1388,11 +1520,17 @@ nav a.btn-login {
         background: #0d1b2e;
         color: #fff;
         font-size: 13px;
+        line-height: 1.3;
         font-weight: 600;
         white-space: nowrap;
-        padding: 6px 12px;
+        width: max-content;
+        max-width: 220px;
+        padding: 8px 14px;
         border-radius: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
         opacity: 0;
+        z-index: 10;
         pointer-events: none;
         transition: opacity 0.2s var(--ease-out), transform 0.2s var(--ease-out);
     }
@@ -1716,15 +1854,15 @@ nav a.btn-login {
 
   // Menu Hambúrguer
 /* ================== MENU OFF-CANVAS ================== */
-const menuToggle = document.getElementById('menu-toggle');
-const nav = document.getElementById('nav');
-const navBackdrop = document.getElementById('nav-backdrop');
-const navClose = document.getElementById('nav-close');
+const menuToggle = document.getElementById('ls-hamburger-btn');
+const mobileNav = document.getElementById('ls-mobile-nav');
+const navBackdrop = document.getElementById('ls-mobile-backdrop');
+const navClose = document.getElementById('ls-mobile-nav-close');
 
 function abrirMenuMobile() {
-  if (!nav) return;
-  nav.classList.add('active');
-  nav.setAttribute('aria-hidden', 'false');
+  if (!mobileNav) return;
+  mobileNav.classList.add('active');
+  mobileNav.setAttribute('aria-hidden', 'false');
   if (menuToggle) {
     menuToggle.classList.add('active');
     menuToggle.setAttribute('aria-expanded', 'true');
@@ -1736,9 +1874,9 @@ function abrirMenuMobile() {
 }
 
 function fecharMenuMobile() {
-  if (!nav) return;
-  nav.classList.remove('active');
-  nav.setAttribute('aria-hidden', 'true');
+  if (!mobileNav) return;
+  mobileNav.classList.remove('active');
+  mobileNav.setAttribute('aria-hidden', 'true');
   if (menuToggle) {
     menuToggle.classList.remove('active');
     menuToggle.setAttribute('aria-expanded', 'false');
@@ -1748,9 +1886,9 @@ function fecharMenuMobile() {
   document.body.style.overflow = '';
 }
 
-if (menuToggle && nav) {
+if (menuToggle && mobileNav) {
   menuToggle.addEventListener('click', () => {
-    nav.classList.contains('active') ? fecharMenuMobile() : abrirMenuMobile();
+    mobileNav.classList.contains('active') ? fecharMenuMobile() : abrirMenuMobile();
   });
 }
 
@@ -1767,11 +1905,19 @@ document.addEventListener('keydown', (e) => {
 });
 
 // Fecha o painel ao tocar em qualquer link do menu (mobile)
-if (nav) {
-  nav.querySelectorAll('a').forEach(link => {
+if (mobileNav) {
+  mobileNav.querySelectorAll('a').forEach(link => {
     link.addEventListener('click', fecharMenuMobile);
   });
 }
+
+// Se a tela crescer para o layout desktop com o painel aberto, fecha
+// o painel mobile (evita ficar "preso" em modo aberto ao girar/redimensionar)
+window.addEventListener('resize', () => {
+  if (window.innerWidth > 768 && mobileNav && mobileNav.classList.contains('active')) {
+    fecharMenuMobile();
+  }
+});
 
 /* ================== HEADER AO ROLAR ================== */
 const lsHeader = document.querySelector('header');
@@ -1786,7 +1932,7 @@ if (lsHeader) {
   // Controle de Link Ativo no Scroll
   document.addEventListener("DOMContentLoaded", () => {
       const sections = document.querySelectorAll("section[id]");
-      const menuLinks = document.querySelectorAll("#nav a, .nav-desktop a");
+      const menuLinks = document.querySelectorAll("#ls-mobile-nav a, .nav-desktop a");
 
       function updateActiveLink() {
         let scrollY = window.pageYOffset + 200;
@@ -1797,7 +1943,7 @@ if (lsHeader) {
 
           if (scrollY >= sectionTop && scrollY < sectionTop + sectionHeight) {
             menuLinks.forEach(link => link.classList.remove("active-link"));
-            const activeLink = document.querySelector(`#nav a[href$="#${sectionId}"], .nav-desktop a[href$="#${sectionId}"]`);
+            const activeLink = document.querySelector(`#ls-mobile-nav a[href$="#${sectionId}"], .nav-desktop a[href$="#${sectionId}"]`);
             if (activeLink) activeLink.classList.add("active-link");
           }
         });
