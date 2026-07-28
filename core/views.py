@@ -3294,10 +3294,15 @@ def _finalizar_pagamento_aprovado(carrinho, payment):
         carrinho_bloqueado = (
             Carrinho.objects
             .select_for_update()
-            .select_related("cliente__user", "cupom", "frete")
-            .prefetch_related("itens__content_type")
             .get(pk=carrinho.pk)
         )
+
+        # IMPORTANTE:
+        # Não combine select_for_update() com select_related("frete").
+        # Frete é uma relação opcional e gera LEFT OUTER JOIN; no PostgreSQL,
+        # a parte anulável desse JOIN não pode receber FOR UPDATE. O carrinho
+        # é bloqueado sozinho e as relações são carregadas dentro da mesma
+        # transação, sob o bloqueio do objeto principal.
 
         # A confirmação precisa pertencer exatamente à cobrança atualmente
         # vinculada ao carrinho. Nunca aceita um pagamento antigo do mesmo
@@ -3840,8 +3845,30 @@ def verificar_pagamento(request):
         )
         return JsonResponse({
             "pago": False,
+            "consulta_ok": True,
+            "status": "payment_mismatch",
             "erro": str(exc),
         }, status=409)
+    except Exception:
+        # Uma indisponibilidade transitória do banco não deve matar o polling
+        # nem deixar o cliente preso com uma tela de erro. O pagamento segue
+        # aprovado no provedor e a próxima consulta tenta criar o pedido de
+        # forma idempotente novamente.
+        payment_logger.exception(
+            "Falha transitória ao finalizar pagamento: "
+            "carrinho=%s payment=%s",
+            carrinho.id,
+            carrinho.mp_payment_id,
+        )
+        return JsonResponse({
+            "pago": False,
+            "consulta_ok": False,
+            "status": "finalization_retry",
+            "mensagem": (
+                "Pagamento identificado. Estamos concluindo seu pedido "
+                "e tentaremos novamente automaticamente."
+            ),
+        })
 
     return JsonResponse({
         "pago": True,
