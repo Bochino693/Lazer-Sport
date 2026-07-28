@@ -1,6 +1,12 @@
 {% extends "base.html" %}
 {% block content %}
 
+<!-- Leaflet: mini mapa com pinos próprios (fábrica + entrega), sem precisar de chave de API -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
 <style>
 /*  Background geral */
 body {
@@ -361,7 +367,7 @@ body {
         margin-bottom: 6px;
     }
 
-    .mini-mapa-wrap iframe {
+    .leaflet-mini-mapa {
         height: 170px;
     }
 
@@ -805,11 +811,53 @@ body {
     box-shadow: 0 8px 20px rgba(24, 61, 101, .08);
 }
 
-.mini-mapa-wrap iframe {
-    display: block;
+.leaflet-mini-mapa {
     width: 100%;
     height: 220px;
-    border: 0;
+    background: #e9f0f8; /* aparece enquanto os tiles carregam */
+    font-family: Inter, "Segoe UI", Roboto, Arial, sans-serif;
+}
+
+/* Pino em formato de gota -- azul (fábrica/origem) e vermelho (entrega/destino) */
+.pedido-mapa-pin {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50% 50% 50% 0;
+    transform: rotate(-45deg);
+    border: 2px solid #fff;
+    color: #fff;
+    font-size: 14px;
+    box-shadow: 0 6px 14px rgba(18, 42, 70, .35);
+}
+
+.pedido-mapa-pin i {
+    transform: rotate(45deg);
+}
+
+.pin-origem { background: var(--orders-blue); }
+.pin-destino { background: var(--orders-red); }
+
+.leaflet-popup-content-wrapper {
+    border-radius: 12px;
+    box-shadow: 0 12px 28px rgba(18, 42, 70, .22);
+}
+
+.leaflet-popup-content {
+    margin: 10px 13px;
+    font-size: .8rem;
+    font-weight: 700;
+    color: #193653;
+    line-height: 1.4;
+}
+
+.leaflet-popup-content small {
+    display: block;
+    margin-top: 2px;
+    font-weight: 600;
+    color: var(--orders-muted);
 }
 
 .mini-mapa-legenda {
@@ -875,6 +923,13 @@ body {
     margin-bottom: 4px;
     color: #193653;
     font-size: .95rem;
+}
+
+.retirada-aviso {
+    margin-bottom: 12px;
+    font-size: .82rem;
+    line-height: 1.5;
+    color: var(--orders-muted);
 }
 
 .btn-confirmar-retirada {
@@ -1211,16 +1266,23 @@ body {
 
                 {% if fabrica.lat and fabrica.lng %}
                 <div class="mini-mapa-wrap">
-                    <iframe loading="lazy" referrerpolicy="no-referrer-when-downgrade"
-                            title="Mapa da fábrica Lazer & Sport"
-                            src="https://maps.google.com/maps?q={{ fabrica.lat }},{{ fabrica.lng }}&z=15&output=embed"></iframe>
+                    <div class="leaflet-mini-mapa"
+                         data-origem-lat="{{ fabrica.lat }}"
+                         data-origem-lng="{{ fabrica.lng }}"
+                         data-origem-label="Lazer &amp; Sport Brinquedos"
+                         data-single="true"></div>
                 </div>
                 {% endif %}
 
+                <p class="retirada-aviso">
+                    💬 Precisa de mais informações sobre o produto ou quer saber qual o
+                    melhor dia pra retirar? Fale com a gente pelo WhatsApp.
+                </p>
+
                 <a class="btn-confirmar-retirada" target="_blank" rel="noopener"
-                   href="https://wa.me/{{ whatsapp_numero }}?text=Ol%C3%A1!%20Gostaria%20de%20combinar%20o%20hor%C3%A1rio%20de%20retirada%20do%20meu%20pedido%20%23{{ pedido.id }}.">
+                   href="https://wa.me/{{ whatsapp_numero }}?text=Ol%C3%A1!%20Sobre%20o%20meu%20pedido%20%23{{ pedido.id }}%2C%20gostaria%20de%20mais%20informa%C3%A7%C3%B5es%20sobre%20o%20produto%20e%20saber%20qual%20o%20melhor%20dia%20pra%20retirar.">
                     <i class="fa-brands fa-whatsapp" aria-hidden="true"></i>
-                    Combinar horário de retirada
+                    Falar sobre o produto / combinar retirada
                 </a>
             </div>
         </div>
@@ -1277,19 +1339,18 @@ body {
 
             {% if pedido.latitude and pedido.longitude and fabrica.lat and fabrica.lng %}
             <div class="mini-mapa-wrap">
-                <iframe loading="lazy" referrerpolicy="no-referrer-when-downgrade"
-                        title="Mapa da rota até o endereço de entrega"
-                        src="https://maps.google.com/maps?saddr={{ fabrica.lat }},{{ fabrica.lng }}&daddr={{ pedido.latitude }},{{ pedido.longitude }}&output=embed"></iframe>
+                <div class="leaflet-mini-mapa"
+                     data-origem-lat="{{ fabrica.lat }}"
+                     data-origem-lng="{{ fabrica.lng }}"
+                     data-origem-label="Lazer &amp; Sport Brinquedos"
+                     data-destino-lat="{{ pedido.latitude }}"
+                     data-destino-lng="{{ pedido.longitude }}"
+                     data-destino-label="Endereço de entrega"
+                     data-destino-endereco="{{ pedido.rua }}{% if pedido.numero %}, {{ pedido.numero }}{% endif %} - {{ pedido.bairro }}, {{ pedido.cidade }}"></div>
             </div>
             <div class="mini-mapa-legenda">
                 <span><span class="legenda-dot origem"></span> Fábrica Lazer &amp; Sport</span>
                 <span><span class="legenda-dot destino"></span> Endereço de entrega</span>
-            </div>
-            {% else %}
-            <div class="mini-mapa-wrap">
-                <iframe loading="lazy" referrerpolicy="no-referrer-when-downgrade"
-                        title="Mapa do endereço de entrega"
-                        src="https://maps.google.com/maps?q={{ pedido.rua|urlencode }}+{{ pedido.numero|urlencode }}+{{ pedido.bairro|urlencode }}+{{ pedido.cidade|urlencode }}+{{ pedido.estado|urlencode }}&output=embed"></iframe>
             </div>
             {% endif %}
         </div>
@@ -1386,6 +1447,98 @@ document.addEventListener("DOMContentLoaded", function() {
     document.querySelectorAll('.toggle-itens').forEach(button => {
         button.setAttribute('aria-expanded', 'false');
     });
+});
+
+/* ================== MINI MAPAS (fábrica + entrega/retirada) ==================
+   Um pino azul (gota) sempre marca a fábrica; um pino vermelho marca o
+   endereço de entrega quando o pedido é por frete, ligados por uma linha
+   tracejada. Pra retirada, mostra só o pino da fábrica. Os mapas só são
+   inicializados quando o card entra na tela (IntersectionObserver), pra
+   não carregar dezenas de mapas de uma vez se o cliente tiver muitos
+   pedidos. */
+document.addEventListener("DOMContentLoaded", function () {
+    if (typeof L === "undefined") return; // CDN do Leaflet falhou -- não quebra o resto da página
+
+    const iconeFabrica = L.divIcon({
+        className: "",
+        html: '<span class="pedido-mapa-pin pin-origem"><i class="fa-solid fa-industry" aria-hidden="true"></i></span>',
+        iconSize: [32, 32],
+        iconAnchor: [16, 32],
+        popupAnchor: [0, -30],
+    });
+
+    const iconeDestino = L.divIcon({
+        className: "",
+        html: '<span class="pedido-mapa-pin pin-destino"><i class="fa-solid fa-location-dot" aria-hidden="true"></i></span>',
+        iconSize: [32, 32],
+        iconAnchor: [16, 32],
+        popupAnchor: [0, -30],
+    });
+
+    function iniciarMiniMapa(el) {
+        const origemLat = parseFloat(el.dataset.origemLat);
+        const origemLng = parseFloat(el.dataset.origemLng);
+        if (Number.isNaN(origemLat) || Number.isNaN(origemLng)) return;
+
+        const mapa = L.map(el, {
+            zoomControl: false,
+            scrollWheelZoom: false,
+        });
+
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+            maxZoom: 19,
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>',
+        }).addTo(mapa);
+
+        L.control.zoom({ position: "bottomright" }).addTo(mapa);
+
+        L.marker([origemLat, origemLng], { icon: iconeFabrica })
+            .addTo(mapa)
+            .bindPopup(el.dataset.origemLabel || "Lazer & Sport Brinquedos");
+
+        const destinoLat = parseFloat(el.dataset.destinoLat);
+        const destinoLng = parseFloat(el.dataset.destinoLng);
+        const somenteOrigem = el.dataset.single === "true" || Number.isNaN(destinoLat) || Number.isNaN(destinoLng);
+
+        if (somenteOrigem) {
+            mapa.setView([origemLat, origemLng], 15);
+            return;
+        }
+
+        const popupDestino = (el.dataset.destinoLabel || "Endereço de entrega") +
+            (el.dataset.destinoEndereco ? "<br><small>" + el.dataset.destinoEndereco + "</small>" : "");
+
+        L.marker([destinoLat, destinoLng], { icon: iconeDestino })
+            .addTo(mapa)
+            .bindPopup(popupDestino);
+
+        L.polyline(
+            [[origemLat, origemLng], [destinoLat, destinoLng]],
+            { color: "#075ccb", weight: 3, opacity: 0.6, dashArray: "6 8" }
+        ).addTo(mapa);
+
+        mapa.fitBounds(
+            L.latLngBounds([[origemLat, origemLng], [destinoLat, destinoLng]]),
+            { padding: [30, 30] }
+        );
+    }
+
+    const mapas = document.querySelectorAll(".leaflet-mini-mapa");
+
+    if ("IntersectionObserver" in window) {
+        const observer = new IntersectionObserver((entradas) => {
+            entradas.forEach((entrada) => {
+                if (entrada.isIntersecting) {
+                    iniciarMiniMapa(entrada.target);
+                    observer.unobserve(entrada.target);
+                }
+            });
+        }, { rootMargin: "200px" });
+
+        mapas.forEach((el) => observer.observe(el));
+    } else {
+        mapas.forEach(iniciarMiniMapa);
+    }
 });
 </script>
 
