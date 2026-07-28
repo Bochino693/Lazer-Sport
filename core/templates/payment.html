@@ -813,6 +813,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const pixContent = document.getElementById("pix-content");
     let brickController = null;
     let pollingTimer = null;
+    let checkingPayment = false;
+    let leavingCheckout = false;
 
     function showError(message) {
         errorBox.textContent = message || "Não foi possível processar o pagamento.";
@@ -857,27 +859,62 @@ document.addEventListener("DOMContentLoaded", () => {
         return data;
     }
 
-    function startPolling() {
-        if (pollingTimer) return;
-        pollingTimer = window.setInterval(async () => {
-            try {
+    function finishCheckout(data = {}) {
+        if (leavingCheckout) return;
+        leavingCheckout = true;
+
+        if (pollingTimer) {
+            clearInterval(pollingTimer);
+            pollingTimer = null;
+        }
+
+        document.querySelectorAll("button, a").forEach(element => {
+            element.style.pointerEvents = "none";
+        });
+
+        document.getElementById("success-modal").classList.add("show");
+
+        window.setTimeout(() => {
+            window.location.replace(
+                data.redirect_url || "{% url 'meus_pedidos' %}#pedidos"
+            );
+        }, 850);
+    }
+
+    async function checkPaymentStatus({silent = true} = {}) {
+        if (checkingPayment || leavingCheckout) return false;
+        checkingPayment = true;
+
+        try {
             const response = await fetch(
                 `{% url 'verificar_pagamento' %}?carrinho_id=${carrinhoId}`,
-                    {
-                        cache: "no-store",
-                        headers: {"X-Requested-With": "XMLHttpRequest"}
-                    }
-                );
-                const data = await readJson(response);
-                if (data.pago) {
-                    clearInterval(pollingTimer);
-                    pollingTimer = null;
-                    document.getElementById("success-modal").classList.add("show");
+                {
+                    cache: "no-store",
+                    headers: {"X-Requested-With": "XMLHttpRequest"}
                 }
-            } catch (error) {
-                console.error("Falha ao consultar pagamento:", error);
+            );
+            const data = await readJson(response);
+
+            if (data.pago) {
+                finishCheckout(data);
+                return true;
             }
-        }, 4000);
+            return false;
+        } catch (error) {
+            if (!silent) showError(error.message);
+            console.error("Falha ao consultar pagamento:", error);
+            return false;
+        } finally {
+            checkingPayment = false;
+        }
+    }
+
+    function startPolling() {
+        if (pollingTimer) return;
+        pollingTimer = window.setInterval(
+            () => checkPaymentStatus({silent: true}),
+            3000
+        );
     }
 
     async function loadPix() {
@@ -892,11 +929,28 @@ document.addEventListener("DOMContentLoaded", () => {
             );
             const data = await readJson(response);
 
+            if (data.pago) {
+                finishCheckout(data);
+                return;
+            }
+
             if (!data.qr_code || !data.pix_copia_cola) {
                 throw new Error("O Mercado Pago não retornou um QR Code válido.");
             }
 
-            document.getElementById("pix-value").textContent = formatBRL(data.valor);
+            const chargedAmount = parseBackendNumber(data.valor);
+            const expectedCents = Math.round(total * 100);
+            const chargedCents = Math.round(chargedAmount * 100);
+
+            if (chargedCents !== expectedCents) {
+                throw new Error(
+                    `Cobrança bloqueada: o Pix retornou ${formatBRL(chargedAmount)}, ` +
+                    `mas o pedido atual vale ${formatBRL(total)}.`
+                );
+            }
+
+            document.getElementById("pix-value").textContent =
+                formatBRL(chargedAmount);
             document.getElementById("pix-qrcode").src =
                 `data:image/png;base64,${data.qr_code}`;
             document.getElementById("pix-code").value = data.pix_copia_cola;
@@ -964,11 +1018,11 @@ document.addEventListener("DOMContentLoaded", () => {
                                 })
                             });
                             const data = await readJson(response);
-                            startPolling();
                             if (data.aprovado) {
-                                document.getElementById("success-modal").classList.add("show");
+                                finishCheckout(data);
                             } else {
                                 showError(data.mensagem || "Pagamento em análise.");
+                                startPolling();
                             }
                             return data;
                         } catch (error) {
@@ -1005,7 +1059,26 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    loadPix();
+    document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "visible") {
+            checkPaymentStatus({silent: true});
+        }
+    });
+
+    window.addEventListener("focus", () => {
+        checkPaymentStatus({silent: true});
+    });
+
+    window.addEventListener("pagehide", () => {
+        if (pollingTimer) clearInterval(pollingTimer);
+    });
+
+    (async () => {
+        const alreadyPaid = await checkPaymentStatus({silent: true});
+        if (!alreadyPaid && !leavingCheckout) {
+            await loadPix();
+        }
+    })();
 });
 </script>
 {% endblock %}
