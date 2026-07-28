@@ -1285,43 +1285,148 @@ body {
     font-size: 1.25rem;
 }
 
-.subtotal-fixo {
-    bottom: 73px;
-    border-top: 1px solid rgba(0, 74, 173, .12);
-    background: rgba(228, 238, 249, .94);
-    box-shadow: 0 -8px 25px rgba(26, 53, 86, .10);
-    backdrop-filter: blur(14px);
-}
-
-.subtotal-fixo-inner {
-    max-width: 1120px;
-    color: #173250;
-}
-
-.subtotal-fixo-inner strong {
-    color: #079447;
-    font-size: 1.18rem;
-}
-
-.finalizar-box {
+.checkout-dock {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
     z-index: 1000;
-    border-top: 1px solid rgba(0, 74, 173, .10);
-    background: rgba(237, 244, 251, .97);
-    box-shadow: 0 -8px 26px rgba(26, 53, 86, .12);
-    backdrop-filter: blur(14px);
+    padding: 12px 18px calc(12px + env(safe-area-inset-bottom));
+    background: linear-gradient(
+        180deg,
+        rgba(237, 244, 251, 0),
+        rgba(237, 244, 251, .90) 30%
+    );
+    pointer-events: none;
+}
+
+.checkout-dock-inner {
+    display: grid;
+    grid-template-columns: minmax(220px, 1fr) minmax(290px, 410px);
+    align-items: center;
+    gap: 22px;
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 13px 14px 13px 21px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, .72);
+    border-radius: 22px;
+    background:
+        radial-gradient(circle at 95% 0, rgba(0, 123, 255, .10), transparent 28%),
+        rgba(244, 249, 254, .94);
+    box-shadow:
+        0 18px 55px rgba(10, 42, 82, .20),
+        inset 0 1px 0 rgba(255, 255, 255, .85);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    pointer-events: auto;
+}
+
+.checkout-dock-total {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    column-gap: 12px;
+}
+
+.checkout-dock-icon {
+    grid-row: 1 / span 2;
+    display: grid;
+    place-items: center;
+    width: 43px;
+    height: 43px;
+    border-radius: 14px;
+    color: #004aad;
+    background: linear-gradient(145deg, #e1edfa, #f8fbff);
+    box-shadow: inset 0 0 0 1px rgba(0, 74, 173, .10);
+}
+
+.checkout-dock-label {
+    color: #65798f;
+    font-size: .7rem;
+    font-weight: 850;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
+
+.checkout-dock-total strong {
+    display: block;
+    margin-top: 2px;
+    color: #079447;
+    font-size: clamp(1.3rem, 2.8vw, 1.75rem);
+    line-height: 1;
+    font-weight: 900;
+    letter-spacing: -.04em;
 }
 
 .btn-finalizar {
-    width: min(100%, 430px);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    width: 100%;
     min-width: 0;
-    border-radius: 14px;
-    background: linear-gradient(135deg, #0ead55, #07883f);
-    box-shadow: 0 11px 25px rgba(7, 136, 63, .28);
+    min-height: 58px;
+    padding: 11px 14px 11px 19px;
+    border: 1px solid rgba(255, 255, 255, .18);
+    border-radius: 16px;
+    color: #fff;
+    background:
+        radial-gradient(circle at 88% 10%, rgba(255, 255, 255, .15), transparent 24%),
+        linear-gradient(135deg, #10ad57, #06783a);
+    box-shadow:
+        0 12px 26px rgba(7, 128, 61, .28),
+        inset 0 1px 0 rgba(255, 255, 255, .17);
+    text-decoration: none;
+}
+
+.btn-finalizar-copy {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    text-align: left;
+}
+
+.btn-finalizar-copy strong {
+    font-size: .95rem;
+    font-weight: 900;
+}
+
+.btn-finalizar-copy small {
+    margin-top: 2px;
+    color: rgba(255, 255, 255, .74);
+    font-size: .66rem;
+    font-weight: 700;
+}
+
+.btn-finalizar-arrow {
+    display: grid;
+    flex: 0 0 auto;
+    place-items: center;
+    width: 35px;
+    height: 35px;
+    border-radius: 11px;
+    color: #08713a;
+    background: #fff;
+    transition: transform .22s ease;
 }
 
 .btn-finalizar:hover {
-    background: linear-gradient(135deg, #12bd60, #087d3c);
+    color: #fff;
+    background:
+        radial-gradient(circle at 88% 10%, rgba(255, 255, 255, .18), transparent 24%),
+        linear-gradient(135deg, #16bd62, #08763b);
+    box-shadow: 0 16px 32px rgba(7, 128, 61, .34);
     transform: translateY(-2px);
+}
+
+.btn-finalizar:hover .btn-finalizar-arrow {
+    transform: translateX(3px);
+}
+
+.btn-finalizar[aria-disabled="true"] {
+    filter: grayscale(.18);
+    cursor: not-allowed;
 }
 
 .modal-overlay {
@@ -1456,8 +1561,33 @@ body {
         width: 100%;
     }
 
-    .subtotal-fixo-inner {
-        font-size: .9rem;
+    .checkout-dock {
+        padding: 8px 9px calc(8px + env(safe-area-inset-bottom));
+    }
+
+    .checkout-dock-inner {
+        grid-template-columns: 1fr;
+        gap: 10px;
+        padding: 11px;
+        border-radius: 19px;
+    }
+
+    .checkout-dock-total {
+        padding: 0 4px;
+    }
+
+    .checkout-dock-icon {
+        width: 38px;
+        height: 38px;
+        border-radius: 12px;
+    }
+
+    .checkout-dock-total strong {
+        font-size: 1.35rem;
+    }
+
+    .btn-finalizar {
+        min-height: 54px;
     }
 }
 
@@ -1539,7 +1669,9 @@ body {
 
                 <div class="item-linha">
                     <span>Preço</span>
-                    <span class="money">R$ {{ item.preco_unitario|floatformat:2 }}</span>
+                    <span class="money" data-value="{{ item.preco_unitario|stringformat:'f' }}">
+                        R$ {{ item.preco_unitario|floatformat:2 }}
+                    </span>
                 </div>
 
                 <div class="item-linha">
@@ -1554,7 +1686,9 @@ body {
 
                 <div class="item-linha item-subtotal">
                     <span>Subtotal</span>
-                    <span class="money">R$ {{ item.subtotal|floatformat:2 }}</span>
+                    <span class="money" data-value="{{ item.subtotal|stringformat:'f' }}">
+                        R$ {{ item.subtotal|floatformat:2 }}
+                    </span>
                 </div>
 
                 <button class="btn-remover" onclick="removerItem({{ item.id }})">
@@ -1671,7 +1805,8 @@ body {
 
         <div class="resumo-linha">
                 <span>Produtos</span>
-                <span class="money" id="valor-produtos">
+                <span class="money" id="valor-produtos"
+                      data-value="{{ carrinho.total_liquido|stringformat:'f' }}">
                     R$ {{ carrinho.total_liquido|floatformat:2 }}
                 </span>
         </div>
@@ -1684,7 +1819,8 @@ body {
 
        <div class="resumo-linha resumo-total">
             <span>Total do pedido</span>
-            <span id="totalPedido">
+            <span class="money" id="totalPedido"
+                  data-value="{{ carrinho.total_liquido|stringformat:'f' }}">
                 R$ {{ carrinho.total_liquido|floatformat:2 }}
             </span>
         </div>
@@ -1719,17 +1855,33 @@ body {
 
 
 {% if itens %}
-<div class="subtotal-fixo">
-    <div class="subtotal-fixo-inner">
-        <span>Total do pedido</span>
-        <strong class="money" id="subtotalFixo">R$ {{ carrinho.total_liquido|floatformat:2 }}</strong>
-    </div>
-</div>
+<div class="checkout-dock" aria-label="Finalização do pedido">
+    <div class="checkout-dock-inner">
+        <div class="checkout-dock-total">
+            <span class="checkout-dock-icon" aria-hidden="true">
+                <i class="fa-solid fa-bag-shopping"></i>
+            </span>
+            <span class="checkout-dock-label">Total do pedido</span>
+            <strong class="money" id="subtotalFixo"
+                    data-value="{{ carrinho.total_liquido|stringformat:'f' }}">
+                R$ {{ carrinho.total_liquido|floatformat:2 }}
+            </strong>
+        </div>
 
-<div class="finalizar-box">
-    <a href="{% url 'pagamento' carrinho.id %}#content" class="btn-finalizar" id="btnFinalizar" style="pointer-events: none; opacity: 0.6;">
-        Finalizar pedido
-    </a>
+        <a href="{% url 'pagamento' carrinho.id %}#content"
+           class="btn-finalizar"
+           id="btnFinalizar"
+           aria-disabled="true"
+           style="pointer-events: none; opacity: 0.6;">
+            <span class="btn-finalizar-copy">
+                <strong>Continuar para pagamento</strong>
+                <small>Ambiente seguro e dados protegidos</small>
+            </span>
+            <span class="btn-finalizar-arrow" aria-hidden="true">
+                <i class="fa-solid fa-arrow-right"></i>
+            </span>
+        </a>
+    </div>
 </div>
 {% endif %}
 
@@ -1762,49 +1914,35 @@ body {
     <script>
 document.addEventListener('DOMContentLoaded', () => {
 
-    function formatarCarrinho() {
-        const carrinho = document.querySelector('.carrinho-container');
-        if (!carrinho) return;
+    function numeroMonetario(valor) {
+        if (typeof valor === 'number') return valor;
 
-        // 👉 SOMENTE valores monetários
-        const valoresMoney = carrinho.querySelectorAll('.money');
+        let texto = String(valor ?? '')
+            .replace(/R\$/gi, '')
+            .replace(/\s/g, '')
+            .replace(/[^\d,.-]/g, '');
 
-        valoresMoney.forEach(el => {
-            let texto = el.textContent
-                .replace(/\./g, '')
-                .replace(',', '.')
-                .replace(/[^\d.-]/g, '');
+        if (texto.includes(',')) {
+            texto = texto.replace(/\./g, '').replace(',', '.');
+        }
 
-            let numero = parseFloat(texto);
+        const numero = Number(texto);
+        return Number.isFinite(numero) ? numero : 0;
+    }
 
-            if (!isNaN(numero)) {
-                el.textContent = 'R$ ' + numero.toLocaleString('pt-BR', {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2
-                });
-            }
+    function moedaBRL(valor) {
+        return numeroMonetario(valor).toLocaleString('pt-BR', {
+            style: 'currency',
+            currency: 'BRL',
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
         });
+    }
 
-        // 👉 RESUMO
-        const resumoValores = carrinho.querySelectorAll('.resumo-linha span:last-child');
-
-        resumoValores.forEach(el => {
-            let texto = el.textContent
-                .replace(/\./g, '')
-                .replace(',', '.')
-                .replace(/[^\d.-]/g, '');
-
-            let numero = parseFloat(texto);
-
-            if (!isNaN(numero)) {
-                el.textContent =
-                    (numero < 0 ? '- ' : '') +
-                    'R$ ' +
-                    Math.abs(numero).toLocaleString('pt-BR', {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2
-                    });
-            }
+    function formatarCarrinho() {
+        document.querySelectorAll('.money').forEach(el => {
+            const valor = el.dataset.value || el.textContent;
+            el.textContent = moedaBRL(valor);
         });
     }
 
@@ -2056,12 +2194,14 @@ function calcularFrete() {
 
         const totalFormatado =
             "R$ " + total.toLocaleString("pt-BR", {
-                minimumFractionDigits: 2
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
             });
 
         valorFreteSpan.innerText =
             "R$ " + frete.toLocaleString("pt-BR", {
-                minimumFractionDigits: 2
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
             });
 
         totalPedido.innerText = totalFormatado;
@@ -2180,6 +2320,7 @@ numeroInput.addEventListener('input', () => {
 
         btnFinalizar.style.pointerEvents = habilitar ? 'auto' : 'none';
         btnFinalizar.style.opacity = habilitar ? 1 : 0.6;
+        btnFinalizar.setAttribute('aria-disabled', habilitar ? 'false' : 'true');
 
         if (cpfValor.length === 11 || cpfValor.length === 14) {
             cpfMsg.innerText = cpfValido ? `✅ Válido (${cpfValor.length === 11 ? 'CPF' : 'CNPJ'})` : '❌ Inválido';
@@ -2221,7 +2362,10 @@ document.querySelectorAll('.frete-tab').forEach(tab => {
             linhaFrete.style.display = 'none';
             valorFrete.innerText = 'R$ 0,00';
             const totalFormatado =
-                "R$ " + valorProdutos.toLocaleString("pt-BR", { minimumFractionDigits: 2 });
+                "R$ " + valorProdutos.toLocaleString("pt-BR", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                });
             totalPedido.innerText = totalFormatado;
             if (subtotalFixo) subtotalFixo.innerText = totalFormatado;
 
