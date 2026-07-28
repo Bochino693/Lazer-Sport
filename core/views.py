@@ -2601,10 +2601,22 @@ def _carrinho_permite_cupom(carrinho):
     ).exists()
 
 
+def _invalidar_pagamento_pendente(carrinho):
+    """
+    Um QR Code/token de pagamento representa uma composição e um valor
+    específicos. Qualquer mudança comercial no carrinho invalida a cobrança
+    anterior para impedir que ela seja reutilizada com outro total.
+    """
+    if carrinho.mp_payment_id:
+        carrinho.mp_payment_id = None
+        carrinho.save(update_fields=["mp_payment_id"])
+
+
 def _remover_cupom_se_nao_permitido(carrinho):
     if carrinho.cupom_id and not _carrinho_permite_cupom(carrinho):
         carrinho.cupom = None
-        carrinho.save(update_fields=["cupom"])
+        carrinho.mp_payment_id = None
+        carrinho.save(update_fields=["cupom", "mp_payment_id"])
         return True
     return False
 
@@ -2651,7 +2663,9 @@ def adicionar_ao_carrinho(request, tipo, object_id):
 
     if not created:
         item.quantidade += quantidade
-        item.save()
+        item.save(update_fields=["quantidade"])
+
+    _invalidar_pagamento_pendente(carrinho)
 
     total_itens = carrinho.itens.aggregate(total=Sum('quantidade'))['total'] or 0
 
@@ -2677,6 +2691,7 @@ def remover_item_carrinho(request):
         carrinho = item.carrinho
         item.delete()
         _remover_cupom_se_nao_permitido(carrinho)
+        _invalidar_pagamento_pendente(carrinho)
         return JsonResponse({'status': 'success'})
     except ItemCarrinho.DoesNotExist:
         return JsonResponse({'status': 'error', 'message': 'Item não encontrado'}, status=404)
@@ -2688,7 +2703,8 @@ def limpar_carrinho(request):
     carrinho = Carrinho.objects.get(cliente=request.user.perfil)
     carrinho.itens.all().delete()
     carrinho.cupom = None
-    carrinho.save()
+    carrinho.mp_payment_id = None
+    carrinho.save(update_fields=["cupom", "mp_payment_id"])
 
     return JsonResponse({'status': 'success'})
 
@@ -2722,7 +2738,8 @@ class CarrinhoView(LoginRequiredMixin, View):
         # último produto elegível e deixado somente combos/promoções.
         if not cupom_permitido and carrinho.cupom_id:
             carrinho.cupom = None
-            carrinho.save(update_fields=["cupom"])
+            carrinho.mp_payment_id = None
+            carrinho.save(update_fields=["cupom", "mp_payment_id"])
 
         context = {
             'carrinho': carrinho,
@@ -2789,6 +2806,7 @@ def calcular_frete(request):
     frete.distancia_km = distancia
 
     frete.save()
+    _invalidar_pagamento_pendente(carrinho)
 
     return JsonResponse({
         "status": "ok",
@@ -2835,6 +2853,8 @@ def alterar_quantidade_item(request):
     else:
         item.quantidade = nova_qtd
         item.save(update_fields=["quantidade"])
+
+    _invalidar_pagamento_pendente(carrinho)
 
     return JsonResponse({"status": "ok"})
 
@@ -2925,7 +2945,8 @@ def aplicar_cupom(request):
             })
 
     carrinho.cupom = cupom
-    carrinho.save(update_fields=['cupom'])
+    carrinho.mp_payment_id = None
+    carrinho.save(update_fields=['cupom', 'mp_payment_id'])
 
     return JsonResponse({
         'status': 'success',
@@ -3022,9 +3043,98 @@ class PaymentView(LoginRequiredMixin, View):
 from decimal import Decimal
 import uuid
 from django.views.decorators.http import require_GET
+from django.views.decorators.cache import never_cache
 
 
 payment_logger = logging.getLogger("core.payment")
+
+
+def _valor_monetario(valor):
+    """Converte e fixa qualquer valor financeiro em duas casas decimais."""
+    try:
+        return Decimal(str(valor)).quantize(
+            Decimal("0.01"),
+            rounding=ROUND_HALF_UP,
+        )
+    except (InvalidOperation, TypeError, ValueError):
+        return None
+
+
+def _assinatura_carrinho(carrinho):
+    """
+    Assinatura imutável do estado cobrado.
+
+    Dois carrinhos com o mesmo total, mas itens diferentes, não podem
+    compartilhar a mesma cobrança nem a mesma chave de idempotência.
+    """
+    itens = []
+    queryset = (
+        carrinho.itens
+        .select_related("content_type")
+        .order_by("content_type_id", "object_id", "id")
+    )
+
+    for item in queryset:
+        preco_unitario = _valor_monetario(item.preco_unitario)
+        subtotal = _valor_monetario(item.subtotal)
+        if preco_unitario is None or subtotal is None:
+            raise ValueError(
+                f"Item {item.id} possui valor financeiro inválido."
+            )
+
+        itens.append({
+            "content_type_id": item.content_type_id,
+            "object_id": item.object_id,
+            "quantidade": item.quantidade,
+            "preco_unitario": f"{preco_unitario:.2f}",
+            "subtotal": f"{subtotal:.2f}",
+        })
+
+    valor_frete = _valor_monetario(carrinho.valor_frete)
+    total_final = _valor_monetario(carrinho.total_final)
+    if valor_frete is None or total_final is None:
+        raise ValueError("O carrinho possui total financeiro inválido.")
+
+    dados = {
+        "carrinho_id": carrinho.id,
+        "itens": itens,
+        "cupom_id": carrinho.cupom_id,
+        "tipo_envio": carrinho.tipo_envio,
+        "frete": f"{valor_frete:.2f}",
+        "total_final": f"{total_final:.2f}",
+    }
+
+    serializado = json.dumps(
+        dados,
+        sort_keys=True,
+        ensure_ascii=True,
+        separators=(",", ":"),
+    )
+    return hashlib.sha256(serializado.encode("utf-8")).hexdigest()
+
+
+def _pagamento_confere_com_carrinho(payment, carrinho, assinatura=None):
+    valor_pago = _valor_monetario(payment.get("transaction_amount"))
+    valor_esperado = _valor_monetario(carrinho.total_final)
+    referencia = str(payment.get("external_reference") or "")
+    metadata = payment.get("metadata") or {}
+    assinatura_mp = metadata.get("cart_fingerprint")
+    try:
+        assinatura_atual = assinatura or _assinatura_carrinho(carrinho)
+    except ValueError:
+        payment_logger.exception(
+            "Não foi possível assinar o carrinho %s.",
+            carrinho.id,
+        )
+        return False
+
+    return (
+        valor_pago is not None
+        and valor_esperado is not None
+        and valor_pago == valor_esperado
+        and referencia == str(carrinho.id)
+        and assinatura_mp == assinatura_atual
+    )
 
 
 def _carrinho_pagamento_do_usuario(request, carrinho_id):
@@ -3078,6 +3188,7 @@ def _forma_pagamento_mp(payment):
 
 @login_required
 @require_GET
+@never_cache
 def gerar_pix(request):
     carrinho_id = request.GET.get("carrinho_id")
     carrinho = _carrinho_pagamento_do_usuario(request, carrinho_id)
@@ -3103,10 +3214,26 @@ def gerar_pix(request):
         )
 
     sdk = mercadopago.SDK(settings.MP_ACCESS_TOKEN)
-    total_final = carrinho.total_final
+    total_final = _valor_monetario(carrinho.total_final)
+    if total_final is None or total_final <= Decimal("0.00"):
+        return JsonResponse(
+            {"erro": "O total do carrinho é inválido para pagamento."},
+            status=400,
+        )
+
+    try:
+        assinatura = _assinatura_carrinho(carrinho)
+    except ValueError as exc:
+        payment_logger.exception(
+            "Carrinho %s contém valor inválido.",
+            carrinho.id,
+        )
+        return JsonResponse({"erro": str(exc)}, status=400)
+    pagamento_anterior_id = carrinho.mp_payment_id
 
     # Reutiliza um Pix ainda pendente para não criar cobranças duplicadas
-    # quando a página é atualizada.
+    # quando a página é atualizada, mas somente se valor, referência e todos
+    # os itens forem exatamente os mesmos.
     if carrinho.mp_payment_id:
         try:
             consulta = sdk.payment().get(carrinho.mp_payment_id)
@@ -3114,6 +3241,11 @@ def gerar_pix(request):
             pix_existente = _dados_pix(existente)
             if (
                 existente.get("status") in {"pending", "in_process"}
+                and _pagamento_confere_com_carrinho(
+                    existente,
+                    carrinho,
+                    assinatura,
+                )
                 and pix_existente["qr_code"]
                 and pix_existente["pix_copia_cola"]
             ):
@@ -3123,11 +3255,23 @@ def gerar_pix(request):
                     "status": existente.get("status"),
                     "valor": f"{total_final:.2f}",
                 })
+
+            payment_logger.warning(
+                "Pix antigo descartado carrinho=%s payment=%s "
+                "valor_mp=%s valor_atual=%s",
+                carrinho.id,
+                existente.get("id"),
+                existente.get("transaction_amount"),
+                total_final,
+            )
         except Exception:
             payment_logger.exception(
                 "Falha ao consultar Pix anterior do carrinho %s",
                 carrinho.id,
             )
+
+        carrinho.mp_payment_id = None
+        carrinho.save(update_fields=["mp_payment_id"])
 
     payment_data = {
         "transaction_amount": float(total_final),
@@ -3136,10 +3280,17 @@ def gerar_pix(request):
         "external_reference": str(carrinho.id),
         "notification_url": request.build_absolute_uri(reverse("webhook_mp")),
         "payer": {"email": payer_email},
+        "metadata": {
+            "cart_fingerprint": assinatura,
+            "cart_total": f"{total_final:.2f}",
+        },
     }
     idempotency_key = uuid.uuid5(
         uuid.NAMESPACE_URL,
-        f"lazersport:pix:{carrinho.id}:{total_final}:{payer_email}",
+        (
+            f"lazersport:pix:{carrinho.id}:{assinatura}:"
+            f"{payer_email}:{pagamento_anterior_id or 'novo'}"
+        ),
     )
 
     try:
@@ -3164,6 +3315,11 @@ def gerar_pix(request):
     if (
         status_code not in {200, 201}
         or not payment.get("id")
+        or not _pagamento_confere_com_carrinho(
+            payment,
+            carrinho,
+            assinatura,
+        )
         or not pix["qr_code"]
         or not pix["pix_copia_cola"]
     ):
@@ -3239,6 +3395,17 @@ def webhook_mercadopago(request):
     if not carrinho:
         return HttpResponse(status=200)
 
+    if not _pagamento_confere_com_carrinho(payment, carrinho):
+        payment_logger.critical(
+            "Webhook ignorado por divergência de cobrança: "
+            "carrinho=%s payment=%s valor_mp=%s valor_atual=%s",
+            carrinho.id,
+            payment_id,
+            payment.get("transaction_amount"),
+            carrinho.total_final,
+        )
+        return HttpResponse(status=200)
+
     # 🔒 evita duplicação
     if Pedido.objects.filter(mp_payment_id=payment_id).exists():
         return HttpResponse(status=200)
@@ -3290,13 +3457,16 @@ from django.db import transaction
 import mercadopago
 
 
+@login_required
+@require_GET
+@never_cache
 def verificar_pagamento(request):
 
     carrinho_id = request.GET.get("carrinho_id")
     if not carrinho_id:
         return JsonResponse({"pago": False})
 
-    carrinho = Carrinho.objects.filter(id=carrinho_id).first()
+    carrinho = _carrinho_pagamento_do_usuario(request, carrinho_id)
     if not carrinho or not carrinho.mp_payment_id:
         return JsonResponse({"pago": False})
 
@@ -3311,6 +3481,25 @@ def verificar_pagamento(request):
 
     if payment.get("status") != "approved":
         return JsonResponse({"pago": False})
+
+    if not _pagamento_confere_com_carrinho(payment, carrinho):
+        payment_logger.critical(
+            "Pagamento aprovado com dados divergentes: "
+            "carrinho=%s payment=%s valor_mp=%s valor_atual=%s",
+            carrinho.id,
+            carrinho.mp_payment_id,
+            payment.get("transaction_amount"),
+            carrinho.total_final,
+        )
+        carrinho.mp_payment_id = None
+        carrinho.save(update_fields=["mp_payment_id"])
+        return JsonResponse({
+            "pago": False,
+            "erro": (
+                "O valor confirmado não corresponde ao carrinho atual. "
+                "Gere uma nova cobrança."
+            ),
+        }, status=409)
 
     with transaction.atomic():
 
@@ -3432,8 +3621,29 @@ def processar_cartao(request):
         )
 
     identification = payer.get("identification") or {}
+    total_final = _valor_monetario(carrinho.total_final)
+    if total_final is None or total_final <= Decimal("0.00"):
+        return JsonResponse(
+            {
+                "sucesso": False,
+                "mensagem": "O total do carrinho é inválido.",
+            },
+            status=400,
+        )
+
+    try:
+        assinatura = _assinatura_carrinho(carrinho)
+    except ValueError as exc:
+        payment_logger.exception(
+            "Carrinho %s contém valor inválido.",
+            carrinho.id,
+        )
+        return JsonResponse(
+            {"sucesso": False, "mensagem": str(exc)},
+            status=400,
+        )
     payment_data = {
-        "transaction_amount": float(carrinho.total_final),
+        "transaction_amount": float(total_final),
         "token": token,
         "description": f"Lazer & Sport - Carrinho #{carrinho.id}",
         "installments": parcelas,
@@ -3447,6 +3657,10 @@ def processar_cartao(request):
                 "number": identification.get("number") or "",
             },
         },
+        "metadata": {
+            "cart_fingerprint": assinatura,
+            "cart_total": f"{total_final:.2f}",
+        },
     }
     if dados.get("issuer_id"):
         payment_data["issuer_id"] = dados["issuer_id"]
@@ -3454,7 +3668,10 @@ def processar_cartao(request):
     token_fingerprint = hashlib.sha256(token.encode("utf-8")).hexdigest()
     idempotency_key = uuid.uuid5(
         uuid.NAMESPACE_URL,
-        f"lazersport:card:{carrinho.id}:{token_fingerprint}",
+        (
+            f"lazersport:card:{carrinho.id}:{assinatura}:"
+            f"{total_final}:{token_fingerprint}"
+        ),
     )
 
     try:
@@ -3480,7 +3697,15 @@ def processar_cartao(request):
     status_code = int(response.get("status") or 500)
     payment_id = payment.get("id")
 
-    if status_code not in {200, 201} or not payment_id:
+    if (
+        status_code not in {200, 201}
+        or not payment_id
+        or not _pagamento_confere_com_carrinho(
+            payment,
+            carrinho,
+            assinatura,
+        )
+    ):
         payment_logger.error(
             "Mercado Pago recusou cartão carrinho=%s http=%s resposta=%r",
             carrinho.id,
@@ -3692,25 +3917,45 @@ def redirecionar_categoria_aventura(request):
 
 # views.py
 from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
 from django.shortcuts import get_object_or_404
 import json
 
-@csrf_exempt
+@login_required
+@require_POST
 def atualizar_tipo_envio(request, carrinho_id):
-    if request.method == "POST":
-        carrinho = get_object_or_404(Carrinho, id=carrinho_id)
-        data = json.loads(request.body)
-        tipo = data.get("tipo_envio")
+    carrinho = get_object_or_404(
+        Carrinho,
+        id=carrinho_id,
+        cliente__user=request.user,
+    )
 
-        if tipo in dict(Carrinho.TIPO_ENVIO):
-            carrinho.tipo_envio = tipo
-            carrinho.save(update_fields=["tipo_envio"])
-            # Se for retirada, remove frete existente
-            if tipo == "retirada" and hasattr(carrinho, "frete"):
-                carrinho.frete.delete()
-            return JsonResponse({"status": "ok"})
-        return JsonResponse({"status": "erro", "message": "Tipo inválido"})
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse(
+            {"status": "erro", "message": "Dados inválidos."},
+            status=400,
+        )
+
+    tipo = data.get("tipo_envio")
+    if tipo not in dict(Carrinho.TIPO_ENVIO):
+        return JsonResponse(
+            {"status": "erro", "message": "Tipo inválido."},
+            status=400,
+        )
+
+    carrinho.tipo_envio = tipo
+    carrinho.mp_payment_id = None
+    carrinho.save(update_fields=["tipo_envio", "mp_payment_id"])
+
+    # Se for retirada, remove frete existente.
+    if tipo == "retirada":
+        Frete.objects.filter(carrinho=carrinho).delete()
+
+    return JsonResponse({
+        "status": "ok",
+        "total_final": float(carrinho.total_final),
+    })
 
 
 

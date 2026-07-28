@@ -861,9 +861,12 @@ document.addEventListener("DOMContentLoaded", () => {
         if (pollingTimer) return;
         pollingTimer = window.setInterval(async () => {
             try {
-                const response = await fetch(
-                    `{% url 'verificar_pagamento' %}?carrinho_id=${carrinhoId}`,
-                    {headers: {"X-Requested-With": "XMLHttpRequest"}}
+            const response = await fetch(
+                `{% url 'verificar_pagamento' %}?carrinho_id=${carrinhoId}`,
+                    {
+                        cache: "no-store",
+                        headers: {"X-Requested-With": "XMLHttpRequest"}
+                    }
                 );
                 const data = await readJson(response);
                 if (data.pago) {
@@ -882,7 +885,10 @@ document.addEventListener("DOMContentLoaded", () => {
         try {
             const response = await fetch(
                 `{% url 'gerar_pix' %}?carrinho_id=${carrinhoId}`,
-                {headers: {"X-Requested-With": "XMLHttpRequest"}}
+                {
+                    cache: "no-store",
+                    headers: {"X-Requested-With": "XMLHttpRequest"}
+                }
             );
             const data = await readJson(response);
 
