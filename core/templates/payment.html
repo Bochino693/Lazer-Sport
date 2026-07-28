@@ -482,7 +482,9 @@ body {
         <aside class="checkout-summary" aria-label="Resumo do pedido">
             <div class="summary-total-card">
                 <small>Total a pagar</small>
-                <strong>R$ {{ total_final|floatformat:2 }}</strong>
+                <strong class="money-brl" data-value="{{ total_final|stringformat:'f' }}">
+                    R$ {{ total_final|floatformat:2 }}
+                </strong>
             </div>
 
             <h2 class="summary-title">Resumo do pedido</h2>
@@ -490,7 +492,9 @@ body {
                 {% for item in itens %}
                 <div class="summary-item">
                     <span>{{ item.quantidade }}× {{ item.item }}</span>
-                    <strong>R$ {{ item.subtotal|floatformat:2 }}</strong>
+                    <strong class="money-brl" data-value="{{ item.subtotal|stringformat:'f' }}">
+                        R$ {{ item.subtotal|floatformat:2 }}
+                    </strong>
                 </div>
                 {% endfor %}
             </div>
@@ -498,17 +502,25 @@ body {
             <div class="summary-lines">
                 <div class="summary-line">
                     <span>Produtos</span>
-                    <span>R$ {{ total_bruto|floatformat:2 }}</span>
+                    <span class="money-brl" data-value="{{ total_bruto|stringformat:'f' }}">
+                        R$ {{ total_bruto|floatformat:2 }}
+                    </span>
                 </div>
                 {% if valor_desconto > 0 %}
                 <div class="summary-line discount">
                     <span>Desconto</span>
-                    <span>− R$ {{ valor_desconto|floatformat:2 }}</span>
+                    <span>
+                        − <span class="money-brl" data-value="{{ valor_desconto|stringformat:'f' }}">
+                            R$ {{ valor_desconto|floatformat:2 }}
+                        </span>
+                    </span>
                 </div>
                 {% endif %}
                 <div class="summary-line">
                     <span>Frete</span>
-                    <span>R$ {{ frete|floatformat:2 }}</span>
+                    <span class="money-brl" data-value="{{ frete|stringformat:'f' }}">
+                        R$ {{ frete|floatformat:2 }}
+                    </span>
                 </div>
             </div>
 
@@ -558,12 +570,30 @@ document.addEventListener("DOMContentLoaded", () => {
         errorBox.style.display = "none";
     }
 
+    function parseBackendNumber(value) {
+        if (typeof value === "number") return value;
+
+        const normalized = String(value ?? "")
+            .trim()
+            .replace(/\s/g, "")
+            .replace(",", ".");
+
+        const parsed = Number(normalized);
+        return Number.isFinite(parsed) ? parsed : 0;
+    }
+
     function formatBRL(value) {
-        return Number(value).toLocaleString("pt-BR", {
+        return parseBackendNumber(value).toLocaleString("pt-BR", {
             style: "currency",
-            currency: "BRL"
+            currency: "BRL",
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
         });
     }
+
+    document.querySelectorAll(".money-brl").forEach(element => {
+        element.textContent = formatBRL(element.dataset.value);
+    });
 
     async function readJson(response) {
         const data = await response.json().catch(() => ({}));
