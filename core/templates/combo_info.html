@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}Combo de brinquedos | Aproveite os melhores preços {% endblock %}
 
@@ -309,54 +310,488 @@
   }
 }
 
+/* =========================================================
+   COMBO DETAIL 2026 — VITRINE COMERCIAL
+========================================================= */
+#combo-pagina {
+    max-width: 1220px;
+    margin: 34px auto 76px;
+    padding: 0 20px;
+    color: #14233a;
+}
+
+.combo-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin: 0 0 18px;
+    color: #6b7a90;
+    font-size: .82rem;
+    font-weight: 700;
+}
+
+.combo-breadcrumb a {
+    color: #004aad;
+    text-decoration: none;
+}
+
+.combo-breadcrumb i {
+    font-size: .62rem;
+    opacity: .6;
+}
+
+#combo-pagina .combo-grid {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1.04fr) minmax(390px, .96fr);
+    gap: 0;
+    overflow: hidden;
+    border: 1px solid rgba(0, 74, 173, .12);
+    border-radius: 30px;
+    background: #ffffff;
+    box-shadow: 0 24px 65px rgba(18, 48, 88, .15);
+    animation: fadeCombo .5s cubic-bezier(.22, 1, .36, 1);
+}
+
+#combo-pagina .combo-grid::before {
+    content: "";
+    position: absolute;
+    right: -85px;
+    bottom: -90px;
+    width: 240px;
+    height: 240px;
+    border: 34px solid rgba(0, 123, 255, .045);
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+.combo-gallery {
+    position: relative;
+    min-height: 650px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 42px;
+    background: linear-gradient(145deg, #dcecff, #f5f9ff 48%, #d8eaff);
+    isolation: isolate;
+}
+
+.combo-gallery::after {
+    content: "";
+    position: absolute;
+    inset: auto 0 0;
+    height: 34%;
+    z-index: -1;
+    background:
+        radial-gradient(circle at 20% 55%, rgba(230, 57, 70, .13) 0 4px, transparent 5px) 0 0 / 24px 24px,
+        linear-gradient(to top, rgba(0, 74, 173, .12), transparent);
+}
+
+.combo-gallery-bg {
+    position: absolute;
+    inset: -24px;
+    z-index: -2;
+    width: calc(100% + 48px);
+    height: calc(100% + 48px);
+    object-fit: cover;
+    filter: blur(24px) saturate(1.08);
+    opacity: .23;
+    transform: scale(1.08);
+}
+
+.combo-gallery-product {
+    width: 100%;
+    max-height: 540px;
+    object-fit: contain;
+    border-radius: 22px;
+    filter: drop-shadow(0 25px 26px rgba(9, 34, 72, .28));
+    transition: transform .55s cubic-bezier(.22, 1, .36, 1);
+}
+
+.combo-gallery:hover .combo-gallery-product {
+    transform: scale(1.025) translateY(-4px);
+}
+
+.combo-gallery-badge {
+    position: absolute;
+    top: 24px;
+    left: 24px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    border: 1px solid rgba(255, 255, 255, .58);
+    border-radius: 999px;
+    color: #ffffff;
+    background: linear-gradient(135deg, #e63946, #c9152d);
+    box-shadow: 0 10px 24px rgba(149, 13, 32, .30);
+    font-size: .75rem;
+    line-height: 1;
+    font-weight: 800;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+}
+
+#combo-pagina .combo-info {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 42px 40px 38px;
+}
+
+.combo-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    width: fit-content;
+    margin-bottom: 12px;
+    color: #007bff;
+    font-size: .73rem;
+    font-weight: 800;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+}
+
+#combo-pagina .combo-descricao {
+    margin: 0 0 12px;
+    color: #10233f;
+    font-size: clamp(1.75rem, 3vw, 2.55rem);
+    line-height: 1.12;
+    font-weight: 800;
+    text-align: left;
+    letter-spacing: -.045em;
+}
+
+.combo-intro {
+    margin: 0 0 22px;
+    color: #64748b;
+    font-size: .94rem;
+    line-height: 1.65;
+}
+
+.combo-trust {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 24px;
+}
+
+.combo-trust span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 10px;
+    border: 1px solid #dce9f8;
+    border-radius: 999px;
+    color: #315274;
+    background: #f2f7fd;
+    font-size: .7rem;
+    font-weight: 800;
+}
+
+.combo-trust i {
+    color: #0aa44f;
+}
+
+#combo-pagina .brinquedos-lista {
+    margin: 0;
+}
+
+#combo-pagina .brinquedos-lista h3 {
+    margin: 0 0 11px;
+    color: #243b5a;
+    font-size: .84rem;
+    font-weight: 800;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+}
+
+.combo-items-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+#combo-pagina .brinquedo-item {
+    min-width: 0;
+    margin: 0;
+    padding: 10px 11px;
+    border: 1px solid #e4edf7;
+    border-radius: 12px;
+    color: #334155;
+    background: rgba(248, 251, 255, .94);
+    font-size: .78rem;
+    line-height: 1.3;
+    font-weight: 700;
+}
+
+#combo-pagina .brinquedo-item i {
+    width: 18px;
+    color: #007bff;
+    text-align: center;
+}
+
+#combo-pagina .combo-precos {
+    margin: 24px 0 0;
+    padding: 18px;
+    border: 1px solid #dce8f5;
+    border-radius: 19px;
+    background: linear-gradient(145deg, #f7faff, #edf5ff);
+}
+
+#combo-pagina .combo-precos p {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    color: #64748b;
+    font-size: .78rem;
+    line-height: 1.45;
+    font-weight: 700;
+}
+
+#combo-pagina .combo-precos p:hover {
+    transform: none;
+}
+
+#combo-pagina .combo-precos .combo-price-main {
+    margin-top: 7px;
+    color: #243b5a;
+}
+
+#combo-pagina .preco-promo {
+    color: #079447;
+    font-size: 1.72rem;
+    line-height: 1;
+    font-weight: 800;
+    letter-spacing: -.045em;
+}
+
+.combo-saving {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin-top: 12px;
+    padding: 9px 11px;
+    border-radius: 11px;
+    color: #08783d;
+    background: #e6f8ee;
+    font-size: .75rem;
+    font-weight: 800;
+}
+
+.combo-off {
+    margin-left: auto;
+    padding: 5px 8px;
+    border-radius: 999px;
+    color: #ffffff;
+    background: #e63946;
+    font-size: .68rem;
+}
+
+#combo-pagina .combo-acoes {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: 10px;
+    margin-top: 18px;
+}
+
+#combo-pagina .btn-combo {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 50px;
+    padding: 13px 14px;
+    border: 0;
+    border-radius: 14px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: .83rem;
+    line-height: 1.15;
+    font-weight: 800;
+}
+
+#combo-pagina .carrinho {
+    color: #ffffff;
+    background: linear-gradient(135deg, #004aad, #007bff);
+    box-shadow: 0 10px 23px rgba(0, 74, 173, .25);
+}
+
+#combo-pagina .comprar {
+    color: #ffffff;
+    background: linear-gradient(135deg, #0ead55, #07883f);
+    box-shadow: 0 10px 23px rgba(7, 136, 63, .24);
+}
+
+#combo-pagina .btn-combo:hover {
+    transform: translateY(-3px);
+    filter: brightness(1.045);
+}
+
+#combo-pagina .voltar {
+    grid-column: 1 / -1;
+    min-height: 42px;
+    color: #52657c;
+    background: transparent;
+    border: 1px solid #dce5ef;
+    box-shadow: none;
+}
+
+@media (max-width: 900px) {
+    #combo-pagina .combo-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .combo-gallery {
+        min-height: 460px;
+    }
+}
+
+@media (max-width: 560px) {
+    #combo-pagina {
+        margin: 20px auto 54px;
+        padding: 0 12px;
+    }
+
+    #combo-pagina .combo-grid {
+        border-radius: 22px;
+    }
+
+    .combo-gallery {
+        min-height: 330px;
+        padding: 30px 18px 22px;
+    }
+
+    .combo-gallery-product {
+        max-height: 285px;
+    }
+
+    .combo-gallery-badge {
+        top: 15px;
+        left: 15px;
+        padding: 8px 10px;
+        font-size: .65rem;
+    }
+
+    #combo-pagina .combo-info {
+        padding: 26px 20px 22px;
+    }
+
+    #combo-pagina .combo-descricao {
+        font-size: 1.65rem;
+    }
+
+    .combo-items-grid {
+        grid-template-columns: 1fr;
+    }
+
+    #combo-pagina .combo-acoes {
+        grid-template-columns: 1fr;
+    }
+
+    #combo-pagina .voltar {
+        grid-column: auto;
+    }
+}
 
 </style>
 
 
 <div id="combo-pagina">
 
-
+    <nav class="combo-breadcrumb" aria-label="Navegação">
+        <a href="{% url 'home' %}">Início</a>
+        <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+        <a href="{% url 'home' %}#combos-section">Combos</a>
+        <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+        <span>{{ combo.descricao|truncatechars:42 }}</span>
+    </nav>
 
     <div class="combo-grid">
 
         <!-- IMAGEM DO COMBO -->
-        <div class="combo-img">
-            <img src="{{ combo.imagem_combo.url }}" alt="{{ combo.nome_combo }}">
+        <div class="combo-gallery">
+            <span class="combo-gallery-badge">
+                <i class="fa-solid fa-bolt" aria-hidden="true"></i>
+                {{ combo.porcentagem|floatformat:0 }}% de economia
+            </span>
+
+            {% if combo.imagem_combo %}
+                <img class="combo-gallery-bg"
+                     src="{{ combo.imagem_combo.url }}" alt="" aria-hidden="true">
+                <img class="combo-gallery-product"
+                     src="{{ combo.imagem_combo.url }}"
+                     alt="{{ combo.descricao }}"
+                     decoding="async">
+            {% else %}
+                <img class="combo-gallery-bg"
+                     src="{% static 'images/default_combo.jpg' %}" alt="" aria-hidden="true">
+                <img class="combo-gallery-product"
+                     src="{% static 'images/default_combo.jpg' %}"
+                     alt="Imagem ilustrativa do combo"
+                     decoding="async">
+            {% endif %}
         </div>
 
         <!-- INFO -->
         <div class="combo-info">
-        <p class="combo-descricao">{{ combo.descricao }}</p>
+            <span class="combo-eyebrow">
+                <i class="fa-solid fa-layer-group" aria-hidden="true"></i>
+                Combo especial Lazer &amp; Sport
+            </span>
+
+            <h1 class="combo-descricao">{{ combo.descricao }}</h1>
+
+            <p class="combo-intro">
+                Uma seleção pronta para transformar seu espaço, aumentar a diversão
+                e garantir uma condição comercial mais vantajosa.
+            </p>
+
+            <div class="combo-trust" aria-label="Diferenciais">
+                <span><i class="fa-solid fa-shield-halved" aria-hidden="true"></i> Compra segura</span>
+                <span><i class="fa-solid fa-headset" aria-hidden="true"></i> Suporte especializado</span>
+                <span><i class="fa-solid fa-industry" aria-hidden="true"></i> Direto da fábrica</span>
+            </div>
 
 
             <!-- LISTA DOS BRINQUEDOS -->
             <div class="brinquedos-lista">
-                <h3>Brinquedos incluídos:</h3>
+                <h3>O que está incluído</h3>
 
-                {% for b in combo.brinquedos.all %}
+                <div class="combo-items-grid">
+                  {% for b in combo.brinquedos.all %}
                     <div class="brinquedo-item">
-                        🎈 <strong>{{ b.nome_brinquedo }}</strong>
+                        <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+                        <strong>{{ b.nome_brinquedo }}</strong>
                     </div>
-                {% endfor %}
+                  {% endfor %}
+                </div>
             </div>
 
             <!-- PREÇOS -->
             <div class="combo-precos">
                 <p>
-                    Valor somado dos brinquedos:
+                    Valor individual dos brinquedos
                     <span class="total-riscado money">R$ {{ combo.total_original }}</span>
                 </p>
 
-                <p>
-                    Preço do Combo:
+                <p class="combo-price-main">
+                    Preço especial do combo
                     <span class="preco-promo money">R$ {{ combo.valor_combo }}</span>
                 </p>
 
-                <p>
-                    💰 Economia:
+                <div class="combo-saving">
+                    <i class="fa-solid fa-piggy-bank" aria-hidden="true"></i>
+                    Você economiza
                     <span class="economia-verde money">R$ {{ combo.economia }}</span>
-                    ({{ combo.porcentagem|floatformat:0 }}% OFF)
-                </p>
+                    <span class="combo-off">{{ combo.porcentagem|floatformat:0 }}% OFF</span>
+                </div>
             </div>
 
             <!-- BOTÕES -->
@@ -365,12 +800,21 @@
                     type="button"
                     class="btn-combo carrinho"
                     onclick="adicionarAoCarrinho('combo', {{ combo.id }})">
-                    🛒 Adicionar ao Carrinho
+                    <i class="fa-solid fa-cart-plus" aria-hidden="true"></i>
+                    Adicionar ao carrinho
                 </button>
 
+                <button type="button"
+                        class="btn-combo comprar"
+                        onclick="comprarAgora('combo', {{ combo.id }})">
+                    <i class="fa-solid fa-bolt" aria-hidden="true"></i>
+                    Comprar agora
+                </button>
 
-                <a href="#" class="btn-combo comprar">⚡ Comprar Agora</a>
-                <a href="{% url 'home' %}#combos-section" class="btn-combo voltar">← Voltar</a>
+                <a href="{% url 'home' %}#combos-section" class="btn-combo voltar">
+                    <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
+                    Voltar para todos os combos
+                </a>
             </div>
 
         </div>
@@ -403,7 +847,7 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 
-function adicionarAoCarrinho(tipo, id) {
+function adicionarAoCarrinho(tipo, id, irParaCarrinho = false) {
     fetch(`/carrinho/adicionar/${tipo}/${id}/`, {
         method: 'POST',
         headers: {
@@ -417,8 +861,17 @@ function adicionarAoCarrinho(tipo, id) {
     })
     .then(data => {
         if (data.sucesso) {
-            mostrarToast('🛒 Produto adicionado ao carrinho!');
+            mostrarToast(
+                irParaCarrinho
+                    ? 'Compra adicionada. Abrindo o carrinho...'
+                    : 'Combo adicionado ao carrinho!'
+            );
             atualizarBadgeCarrinho(data.total_itens);
+            if (irParaCarrinho) {
+                setTimeout(() => {
+                    window.location.href = "{% url 'carrinho' %}#carrinho";
+                }, 650);
+            }
         } else {
             mostrarToast(data.erro || 'Erro ao adicionar', true);
         }
@@ -427,9 +880,18 @@ function adicionarAoCarrinho(tipo, id) {
         mostrarToast('Erro de conexão', true);
     });
 }
+
+function comprarAgora(tipo, id) {
+    adicionarAoCarrinho(tipo, id, true);
+}
+
 function atualizarBadgeCarrinho(total) {
-    const badge = document.getElementById('badge-carrinho');
-    const carrinho = document.getElementById('float-carrinho');
+    const badge =
+        document.getElementById('carrinho-contador') ||
+        document.getElementById('badge-carrinho');
+    const carrinho =
+        document.getElementById('carrinho-float-btn') ||
+        document.getElementById('float-carrinho');
 
     if (!badge || !carrinho) return;
 
