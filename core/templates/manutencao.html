@@ -6,216 +6,903 @@
 {% block content %}
 
 <style>
-/* ======= CONTAINER GERAL ======= */
-.manutencao-header,
-.manutencao-tabs,
-.tab-content,
-.breadcrumb {
-    max-width: 900px;
+.maintenance-page {
+    --mt-blue: #004aad;
+    --mt-blue-bright: #0878f9;
+    --mt-blue-dark: #091f3d;
+    --mt-red: #e63946;
+    --mt-red-dark: #c91f31;
+    --mt-text: #14243c;
+    --mt-muted: #65758b;
+    --mt-line: #e2e9f3;
+    min-height: 70vh;
+    padding: 22px 20px 72px;
+    background:
+        radial-gradient(circle at 7% 6%, rgba(0, 74, 173, .1), transparent 24%),
+        radial-gradient(circle at 95% 11%, rgba(230, 57, 70, .07), transparent 22%),
+        linear-gradient(180deg, #f8fbff 0%, #f2f6fb 100%);
+    color: var(--mt-text);
+}
+
+.maintenance-shell {
+    width: 100%;
+    max-width: 1180px;
     margin: 0 auto;
 }
-/* Breadcrumb global */
+
 .breadcrumb {
-    display: flex;
-    flex-wrap: wrap;          /* permite quebrar linhas */
+    display: inline-flex;
     align-items: center;
-    gap: 6px;                 /* espaço entre itens */
-    font-size: 0.9rem;
-    margin: 20px auto;
-    padding: 0 10px;          /* evita sobreposição nas bordas da tela */
-    background: transparent;   /* remove qualquer cor de fundo azul do navegador */
-    color: #555;               /* cor padrão do breadcrumb */
+    flex-wrap: wrap;
+    gap: 9px;
+    min-height: 41px;
+    margin: 0 0 18px;
+    padding: 8px 13px;
+    border: 1px solid rgba(0, 74, 173, .11);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .88);
+    box-shadow: 0 8px 25px rgba(15, 38, 76, .06);
+    color: #6c7c91;
+    font-size: .78rem;
+    backdrop-filter: blur(10px);
 }
 
-/* Links */
+.breadcrumb a,
+.breadcrumb-current {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+}
+
 .breadcrumb a {
-    color: #004AAD !important; /* força azul escuro consistente */
-    text-decoration: none !important; /* remove sublinhado */
-    font-weight: 600;
-    line-height: 1.2;
+    color: var(--mt-blue);
+    font-weight: 850;
+    text-decoration: none;
+    transition: color .2s ease;
 }
 
-/* Span (seta) */
-.breadcrumb span {
-    color: #888;
-    position: relative;
+.breadcrumb a:hover {
+    color: var(--mt-red);
 }
 
-/* Seta entre itens */
-.breadcrumb span:not(:last-child)::after {
-    content: "›";
-    margin: 0 6px;
-    color: #bbb;
-    font-size: 0.85rem;
+.breadcrumb-separator {
+    color: #a6b0be;
+    font-size: .67rem;
 }
 
-/* MOBILE FIX: evita que textos longos sobreponham */
-@media (max-width: 600px) {
-    .breadcrumb {
-        font-size: 0.8rem;
-        display: none !important;
-        gap: 4px;
-        justify-content: flex-start;  /* força alinhamento à esquerda */
-    }
-
-    .breadcrumb a,
-    .breadcrumb span {
-        white-space: nowrap;          /* evita quebra de palavra */
-        overflow: hidden;             /* esconde excesso */
-        text-overflow: ellipsis;      /* mostra "..." se precisar */
-        max-width: 45%;               /* evita que dois itens grandes se sobreponham */
-    }
+.breadcrumb-current {
+    color: var(--mt-text);
+    font-weight: 850;
 }
 
-
-
-/* ======= CABEÇALHO ======= */
 .manutencao-header {
-    text-align: center;
-    margin-bottom: 20px;
     position: relative;
+    min-height: 300px;
+    margin-bottom: 22px;
+    padding: clamp(34px, 6vw, 62px);
+    overflow: hidden;
+    border: 1px solid rgba(0, 74, 173, .12);
+    border-radius: 34px;
+    background:
+        radial-gradient(circle at 85% 18%, rgba(230, 57, 70, .25), transparent 28%),
+        radial-gradient(circle at 74% 105%, rgba(8, 120, 249, .36), transparent 36%),
+        linear-gradient(125deg, #071a34 0%, #004aad 64%, #076cdc 100%);
+    box-shadow: 0 25px 65px rgba(10, 31, 59, .18);
+    color: #fff;
+}
+
+.manutencao-header::before,
+.manutencao-header::after {
+    content: "";
+    position: absolute;
+    border: 1px solid rgba(255, 255, 255, .12);
+    border-radius: 50%;
+}
+
+.manutencao-header::before {
+    width: 310px;
+    height: 310px;
+    top: -155px;
+    right: -60px;
+}
+
+.manutencao-header::after {
+    width: 200px;
+    height: 200px;
+    right: 155px;
+    bottom: -135px;
+}
+
+.maintenance-hero-content {
+    position: relative;
+    z-index: 2;
+    max-width: 760px;
+}
+
+.maintenance-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 16px;
+    padding: 8px 13px;
+    border: 1px solid rgba(255, 255, 255, .22);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .1);
+    color: #fff;
+    font-size: .71rem;
+    font-weight: 850;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    backdrop-filter: blur(8px);
 }
 
 .manutencao-header h1 {
-    font-size: 32px;
-    font-weight: 600;
-    margin-bottom: 8px;
+    max-width: 720px;
+    margin: 0 0 14px;
+    color: #fff;
+    font-size: clamp(2rem, 5vw, 3.55rem);
+    font-weight: 950;
+    line-height: 1.04;
+    letter-spacing: -.055em;
 }
 
 .manutencao-header p {
-    font-size: 18px;           /* maior e mais legível */
-    font-weight: 600;           /* mais destaque */
-    color: #fff;            /* azul escuro mais visível */
-    line-height: 1.6;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.1); /* leve sombra para destacar sobre o fundo */
+    max-width: 690px;
+    margin: 0;
+    color: rgba(255, 255, 255, .84);
+    font-size: clamp(.92rem, 1.7vw, 1.08rem);
+    line-height: 1.7;
 }
 
-/* ======= ABAS ======= */
-/* ======= ABAS ======= */
-.manutencao-tabs {
+.maintenance-metrics {
     display: flex;
-    justify-content: center;
-    gap: 15px;               /* aumenta o espaçamento entre os botões */
-    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 25px;
+}
+
+.maintenance-metric {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    min-height: 45px;
+    padding: 9px 12px;
+    border: 1px solid rgba(255, 255, 255, .18);
+    border-radius: 13px;
+    background: rgba(3, 18, 41, .23);
+    color: #fff;
+    backdrop-filter: blur(7px);
+}
+
+.maintenance-metric i {
+    font-size: .9rem;
+}
+
+.maintenance-metric strong {
+    font-size: 1.02rem;
+    font-weight: 900;
+    line-height: 1;
+}
+
+.maintenance-metric span {
+    color: rgba(255, 255, 255, .78);
+    font-size: .69rem;
+    font-weight: 720;
+}
+
+.manutencao-tabs {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    max-width: 650px;
+    margin: 0 auto 24px;
+    padding: 7px;
+    border: 1px solid rgba(0, 74, 173, .11);
+    border-radius: 18px;
+    background: rgba(255, 255, 255, .88);
+    box-shadow: 0 12px 35px rgba(15, 38, 76, .08);
+    backdrop-filter: blur(10px);
 }
 
 .tab-btn {
-    padding: 14px 28px;      /* botões maiores */
-    border: none;
-    background: #f0f4ff;     /* leve tom azul de fundo */
-    color: #004AAD;          /* cor mais forte */
-    border-radius: 35px;     /* ainda arredondados */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    min-height: 48px;
+    padding: 11px 14px;
+    border: 1px solid transparent;
+    border-radius: 13px;
+    background: transparent;
+    color: #53647b;
+    font-family: inherit;
+    font-size: .82rem;
+    font-weight: 850;
     cursor: pointer;
-    font-size: 16px;         /* fonte maior */
-    font-weight: 600;        /* mais enfático */
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.08); /* sombra sutil */
+    transition: transform .2s ease, color .2s ease, background .2s ease, box-shadow .2s ease;
 }
 
 .tab-btn:hover {
-    background: #dce4ff;     /* destaca ao passar o mouse */
-    transform: translateY(-2px); /* leve "elevada" ao hover */
-    box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+    color: var(--mt-blue);
+    background: #edf4ff;
 }
 
 .tab-btn.active {
-    background: #0d6efd;     /* azul principal */
+    background: linear-gradient(135deg, var(--mt-blue), var(--mt-blue-bright));
     color: #fff;
-    box-shadow: 0 6px 20px rgba(13, 110, 253, 0.35); /* sombra mais intensa */
-    transform: translateY(-2px); /* sutil elevação */
+    box-shadow: 0 9px 22px rgba(0, 74, 173, .24);
 }
 
+.tab-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 25px;
+    height: 23px;
+    padding: 0 7px;
+    border-radius: 999px;
+    background: #edf4ff;
+    color: var(--mt-blue);
+    font-size: .68rem;
+    font-weight: 900;
+}
 
-/* ======= CONTEÚDO DAS ABAS ======= */
+.tab-btn.active .tab-count {
+    background: rgba(255, 255, 255, .18);
+    color: #fff;
+}
+
 .tab-content {
-    display: none; /* escondemos todas por padrão */
-    margin-top: 10px;
+    display: none;
+    animation: maintenanceFade .26s ease;
 }
 
 .tab-content.active {
-    display: block; /* exibimos somente a ativa */
+    display: block;
 }
 
-/* ======= FORMULÁRIO ======= */
-.manutencao-form {
-    background: #ffffff;
-    padding: 35px;
-    border-radius: 16px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.08);
-    max-width: 900px;
-    margin: 0 auto 30px;
+@keyframes maintenanceFade {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.maintenance-workspace {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: minmax(0, 1fr) 290px;
+    align-items: start;
+    gap: 20px;
+}
+
+.manutencao-form,
+.tabela-wrapper,
+.quick-guide {
+    border: 1px solid rgba(0, 74, 173, .11);
+    background: rgba(255, 255, 255, .94);
+    box-shadow: 0 20px 50px rgba(15, 38, 76, .09);
+}
+
+.manutencao-form {
+    min-width: 0;
+    overflow: hidden;
+    border-radius: 27px;
+}
+
+.form-topbar {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 25px 27px;
+    border-bottom: 1px solid var(--mt-line);
+    background:
+        radial-gradient(circle at 92% 0, rgba(230, 57, 70, .08), transparent 28%),
+        linear-gradient(135deg, #f5f9ff, #fff);
+}
+
+.form-topbar h2 {
+    margin: 0 0 5px;
+    color: var(--mt-text);
+    font-size: clamp(1.25rem, 2.3vw, 1.65rem);
+    font-weight: 920;
+    letter-spacing: -.035em;
+}
+
+.form-topbar p {
+    margin: 0;
+    color: var(--mt-muted);
+    font-size: .8rem;
+    line-height: 1.5;
+}
+
+.form-time {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 7px;
+    padding: 8px 11px;
+    border: 1px solid rgba(0, 74, 173, .11);
+    border-radius: 999px;
+    background: #fff;
+    color: var(--mt-blue);
+    font-size: .68rem;
+    font-weight: 850;
+}
+
+.form-errors {
+    margin: 20px 27px 0;
+}
+
+.errorlist {
+    margin: 6px 0 0;
+    padding: 10px 12px;
+    border: 1px solid rgba(230, 57, 70, .2);
+    border-radius: 11px;
+    background: #fff3f5;
+    color: var(--mt-red-dark);
+    font-size: .74rem;
+    font-weight: 700;
+    list-style: none;
+}
+
+.form-section {
+    padding: 25px 27px;
+    border-bottom: 1px solid var(--mt-line);
+}
+
+.form-section-head {
+    display: flex;
+    align-items: flex-start;
     gap: 12px;
-    min-height: 90px;
+    margin-bottom: 19px;
+}
+
+.step-index {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 11px;
+    background: linear-gradient(135deg, var(--mt-blue), var(--mt-blue-bright));
+    color: #fff;
+    box-shadow: 0 7px 17px rgba(0, 74, 173, .19);
+    font-size: .78rem;
+    font-weight: 900;
+}
+
+.form-section-head h3 {
+    margin: 0 0 3px;
+    color: var(--mt-text);
+    font-size: 1rem;
+    font-weight: 900;
+}
+
+.form-section-head p {
+    margin: 0;
+    color: var(--mt-muted);
+    font-size: .74rem;
+    line-height: 1.45;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.span-full {
+    grid-column: 1 / -1;
+}
+
+.form-group {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+}
+
+.form-group label {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin-bottom: 7px;
+    color: #30435d;
+    font-size: .78rem;
+    font-weight: 850;
+}
+
+.required-mark {
+    color: var(--mt-red);
+}
+
+.form-group input,
+.form-group textarea,
+.form-group select {
+    width: 100%;
+    min-height: 48px;
+    padding: 11px 13px;
+    border: 1px solid #d8e1ed;
+    border-radius: 12px;
+    outline: none;
+    background: #fbfcfe;
+    color: var(--mt-text);
+    font-family: inherit;
+    font-size: .82rem;
+    line-height: 1.45;
+    transition: border-color .2s ease, background .2s ease, box-shadow .2s ease;
+}
+
+.form-group textarea {
+    min-height: 125px;
     resize: vertical;
 }
 
-.manutencao-form .form-group {
+.form-group input::placeholder,
+.form-group textarea::placeholder {
+    color: #9aa7b8;
+}
+
+.form-group input:focus,
+.form-group textarea:focus,
+.form-group select:focus {
+    border-color: var(--mt-blue-bright);
+    background: #fff;
+    box-shadow: 0 0 0 4px rgba(8, 120, 249, .1);
+}
+
+.field-help {
     display: flex;
-    flex-direction: column;
-    margin-bottom: 18px;
+    align-items: flex-start;
+    gap: 6px;
+    margin-top: 6px;
+    color: #7c899c;
+    font-size: .67rem;
+    line-height: 1.4;
 }
 
-.manutencao-form .form-group label {
-    font-size: 19.9px;      /* aumenta o tamanho */
-    font-weight: 600;       /* deixa mais forte */
-    color: #0d3b99;         /* azul elegante */
-    margin-bottom: 6px;
-}
-
-/* Foco no campo destaca o label */
-.manutencao-form .form-group:focus-within label {
-    color: #0d6efd;
-}
-
-.manutencao-form input,
-.manutencao-form textarea,
-.manutencao-form select {
-    padding: 10px 12px;
-    font-size: 14px;
-}
-
-
-.manutencao-form .form-group input:focus,
-.manutencao-form .form-group textarea:focus,
-.manutencao-form .form-group select:focus {
-    outline: none;
-    border-color: #0d6efd;
-}
-
-/* ======= BOTÃO ======= */
-.btn-enviar {
-    margin-top: 10px;
-    border: none;
-    border-radius: 30px;
-    background: #0d6efd;
-    color: #fff;
-    font-size: 16px;
-    font-weight: 500;
+.btn-selecionar-brinquedo {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 15px;
+    width: 100%;
+    min-height: 78px;
+    padding: 16px 18px;
+    border: 1.5px dashed rgba(0, 74, 173, .35);
+    border-radius: 16px;
+    background:
+        radial-gradient(circle at 92% 15%, rgba(230, 57, 70, .07), transparent 24%),
+        #f3f8ff;
+    color: var(--mt-blue);
+    font-family: inherit;
+    text-align: left;
     cursor: pointer;
-    transition: all 0.3s ease;
-    grid-column: span 2;      /* ocupa as 2 colunas */
-    justify-self: center;     /* centraliza horizontalmente */
-    margin-top: 30px;         /* espaço acima */
-    padding: 16px 50px;       /* botão mais “premium” */
-    width: auto;
+    transition: transform .2s ease, border-color .2s ease, background .2s ease, box-shadow .2s ease;
+}
+
+.btn-selecionar-brinquedo:hover {
+    transform: translateY(-2px);
+    border-color: var(--mt-blue);
+    background: #eaf3ff;
+    box-shadow: 0 10px 22px rgba(0, 74, 173, .11);
+}
+
+.select-toy-main {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+}
+
+.select-toy-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    border-radius: 13px;
+    background: var(--mt-blue);
+    color: #fff;
+}
+
+.select-toy-copy strong {
+    display: block;
+    margin-bottom: 2px;
+    color: var(--mt-text);
+    font-size: .84rem;
+}
+
+.select-toy-copy span {
+    color: var(--mt-muted);
+    font-size: .7rem;
+}
+
+.brinquedo-card {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    width: 100%;
+    min-height: 90px;
+    padding: 11px 48px 11px 11px;
+    border: 1px solid rgba(0, 74, 173, .18);
+    border-radius: 16px;
+    background: #f3f8ff;
+    animation: maintenanceFade .24s ease;
+}
+
+.brinquedo-card img {
+    flex: 0 0 auto;
+    width: 68px;
+    height: 68px;
+    border-radius: 12px;
+    object-fit: contain;
+    background: #fff;
+    box-shadow: 0 7px 17px rgba(15, 38, 76, .1);
+}
+
+.brinquedo-card span {
+    color: var(--mt-text);
+    font-size: .84rem;
+    font-weight: 900;
+}
+
+.remove-brinquedo {
+    position: absolute;
+    top: 50%;
+    right: 13px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: #fff0f2;
+    color: var(--mt-red);
+    font-size: 1rem;
+    cursor: pointer;
+    transform: translateY(-50%);
+    transition: background .2s ease, color .2s ease, transform .2s ease;
+}
+
+.remove-brinquedo:hover {
+    background: var(--mt-red);
+    color: #fff;
+    transform: translateY(-50%) scale(1.05);
+}
+
+.address-notice {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 15px;
+    padding: 11px 13px;
+    border: 1px solid rgba(0, 74, 173, .12);
+    border-radius: 12px;
+    background: #f3f8ff;
+    color: #53647a;
+    font-size: .7rem;
+    line-height: 1.45;
+}
+
+.address-notice i {
+    margin-top: 2px;
+    color: var(--mt-blue);
+}
+
+.cep-feedback {
+    min-height: 17px;
+    margin-top: 5px;
+    font-size: .68rem;
+    font-weight: 750;
+}
+
+.cep-loading { color: var(--mt-blue); }
+.cep-error { color: var(--mt-red-dark); }
+.cep-success { color: var(--mt-blue); }
+
+.campo-erro {
+    border-color: var(--mt-red) !important;
+    background: #fff5f6 !important;
+}
+
+.campo-loading {
+    border-color: var(--mt-blue-bright) !important;
+    background: #f3f8ff !important;
+}
+
+.campo-bloqueado {
+    background: #f0f3f7 !important;
+    color: #7f8b9a !important;
+    cursor: not-allowed;
+}
+
+.upload-card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    width: 100%;
+    min-height: 92px;
+    padding: 17px;
+    border: 1.5px dashed rgba(0, 74, 173, .35);
+    border-radius: 16px;
+    background:
+        radial-gradient(circle at 94% 12%, rgba(230, 57, 70, .07), transparent 23%),
+        #f4f8ff;
+    cursor: pointer;
+    transition: transform .2s ease, border-color .2s ease, background .2s ease, box-shadow .2s ease;
+}
+
+.upload-card:hover {
+    transform: translateY(-2px);
+    border-color: var(--mt-blue);
+    background: #eaf3ff;
+    box-shadow: 0 10px 22px rgba(0, 74, 173, .1);
+}
+
+.upload-icon {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    background: var(--mt-blue);
+    color: #fff;
+    font-size: 1rem;
+}
+
+.upload-copy strong {
+    display: block;
+    margin-bottom: 3px;
+    color: var(--mt-text);
+    font-size: .82rem;
+}
+
+.upload-copy span {
+    color: var(--mt-muted);
+    font-size: .69rem;
+}
+
+.upload-preview {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 12px;
+}
+
+.preview-item {
+    position: relative;
+    min-width: 0;
+    aspect-ratio: 1;
+}
+
+.preview-item img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border: 1px solid #e2e8f1;
+    border-radius: 12px;
+    object-fit: cover;
+    box-shadow: 0 7px 16px rgba(15, 38, 76, .1);
+}
+
+.preview-item button {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 23px;
+    height: 23px;
+    padding: 0;
+    border: 2px solid #fff;
+    border-radius: 50%;
+    background: var(--mt-red);
+    color: #fff;
+    font-size: .75rem;
+    cursor: pointer;
+}
+
+.form-submit-panel {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    padding: 22px 27px;
+    background: #f8faff;
+}
+
+.submit-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    max-width: 420px;
+    color: #65758b;
+    font-size: .69rem;
+    line-height: 1.45;
+}
+
+.submit-note i {
+    margin-top: 2px;
+    color: var(--mt-blue);
+}
+
+.btn-enviar {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    min-height: 48px;
+    padding: 12px 20px;
+    border: 0;
+    border-radius: 13px;
+    background: linear-gradient(135deg, var(--mt-blue), var(--mt-blue-bright));
+    color: #fff;
+    box-shadow: 0 10px 22px rgba(0, 74, 173, .24);
+    font-family: inherit;
+    font-size: .78rem;
+    font-weight: 900;
+    cursor: pointer;
+    transition: transform .2s ease, box-shadow .2s ease, filter .2s ease;
 }
 
 .btn-enviar:hover {
-    background: #084fc7;
     transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(13, 110, 253, 0.35);
+    box-shadow: 0 13px 27px rgba(0, 74, 173, .32);
+    filter: brightness(1.04);
 }
 
-/* ======= TABELA ======= */
-.tabela-wrapper {
+.btn-enviar:disabled {
+    cursor: wait;
+    opacity: .85;
+}
+
+.quick-guide {
+    position: sticky;
+    top: 20px;
+    overflow: hidden;
+    border-radius: 22px;
+}
+
+.quick-guide-head {
+    padding: 19px 19px 17px;
+    background: linear-gradient(135deg, var(--mt-blue-dark), var(--mt-blue));
+    color: #fff;
+}
+
+.quick-guide-head i {
+    margin-bottom: 12px;
+    font-size: 1.2rem;
+}
+
+.quick-guide-head h3 {
+    margin: 0 0 5px;
+    font-size: 1rem;
+    font-weight: 900;
+}
+
+.quick-guide-head p {
+    margin: 0;
+    color: rgba(255, 255, 255, .75);
+    font-size: .68rem;
+    line-height: 1.45;
+}
+
+.quick-guide-list {
+    display: grid;
+    gap: 0;
+    padding: 8px 18px;
+}
+
+.quick-guide-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 13px 0;
+    border-bottom: 1px solid #e9edf4;
+}
+
+.quick-guide-item:last-child {
+    border-bottom: 0;
+}
+
+.quick-guide-item span:first-child {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 8px;
+    background: #edf4ff;
+    color: var(--mt-blue);
+    font-size: .68rem;
+    font-weight: 900;
+}
+
+.quick-guide-item strong {
+    display: block;
+    margin-bottom: 2px;
+    color: var(--mt-text);
+    font-size: .72rem;
+}
+
+.quick-guide-item p {
+    margin: 0;
+    color: var(--mt-muted);
+    font-size: .64rem;
+    line-height: 1.4;
+}
+
+.quick-guide-footer {
+    margin: 0 18px 18px;
+    padding: 12px;
+    border: 1px solid rgba(230, 57, 70, .13);
+    border-radius: 12px;
+    background: #fff5f6;
+    color: #7b3b45;
+    font-size: .65rem;
+    line-height: 1.45;
+}
+
+.historico-panel {
+    overflow: hidden;
+    border: 1px solid rgba(0, 74, 173, .11);
+    border-radius: 27px;
+    background: rgba(255, 255, 255, .94);
+    box-shadow: 0 20px 50px rgba(15, 38, 76, .09);
+}
+
+.historico-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 18px;
+    padding: 25px 27px;
+    border-bottom: 1px solid var(--mt-line);
+    background:
+        radial-gradient(circle at 92% 0, rgba(230, 57, 70, .08), transparent 28%),
+        linear-gradient(135deg, #f5f9ff, #fff);
+}
+
+.historico-header h2 {
+    margin: 0 0 5px;
+    color: var(--mt-text);
+    font-size: clamp(1.25rem, 2.3vw, 1.65rem);
+    font-weight: 920;
+    letter-spacing: -.035em;
+}
+
+.historico-header p {
+    margin: 0;
+    color: var(--mt-muted);
+    font-size: .78rem;
+}
+
+.historico-summary {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 11px;
+    border: 1px solid rgba(0, 74, 173, .11);
+    border-radius: 999px;
     background: #fff;
-    border-radius: 16px;
-    padding: 20px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.08);
-    max-width: 900px;
-    margin: 0 auto 30px;
+    color: var(--mt-blue);
+    font-size: .68rem;
+    font-weight: 850;
+}
+
+.tabela-wrapper {
+    overflow-x: auto;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
 }
 
 .tabela-manutencoes {
@@ -224,1635 +911,2318 @@
 }
 
 .tabela-manutencoes thead {
-    background: #f5f7ff;
+    background: #f7f9fc;
 }
 
 .tabela-manutencoes th {
+    padding: 13px 18px;
+    color: #6a788d;
+    font-size: .66rem;
+    font-weight: 850;
+    letter-spacing: .045em;
     text-align: left;
-    padding: 14px;
-    font-size: 14px;
-    color: #004AAD;
-    font-weight: 600;
+    text-transform: uppercase;
 }
 
 .tabela-manutencoes td {
-    padding: 14px;
-    border-top: 1px solid #eee;
-    font-size: 14px;
+    padding: 16px 18px;
+    border-top: 1px solid #e9edf3;
+    color: #40536d;
+    font-size: .76rem;
+    vertical-align: middle;
 }
 
-.tabela-manutencoes tr:hover {
-    background: #f9fbff;
+.tabela-manutencoes tbody tr {
+    transition: background .2s ease;
 }
 
-.sem-registros {
-    text-align: center;
-    padding: 30px;
-    color: #777;
+.tabela-manutencoes tbody tr:hover {
+    background: #f8fbff;
 }
 
-/* ===== BOTÃO VER (APP STYLE) ===== */
+.solicitacao-cell {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+}
+
+.solicitacao-icon {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 11px;
+    background: #edf4ff;
+    color: var(--mt-blue);
+}
+
+.solicitacao-cell strong {
+    display: block;
+    margin-bottom: 2px;
+    color: var(--mt-text);
+    font-size: .78rem;
+}
+
+.solicitacao-cell small {
+    color: #8190a3;
+    font-size: .65rem;
+}
+
+.status,
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 29px;
+    padding: 6px 10px;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    font-size: .65rem;
+    font-weight: 900;
+    white-space: nowrap;
+}
+
+.status-P {
+    border-color: rgba(230, 57, 70, .18);
+    background: #fff1f3;
+    color: #bd2635;
+}
+
+.status-A {
+    border-color: rgba(0, 74, 173, .17);
+    background: #eaf3ff;
+    color: var(--mt-blue);
+}
+
+.status-C {
+    border-color: rgba(9, 31, 61, .15);
+    background: #edf1f6;
+    color: var(--mt-blue-dark);
+}
+
+.status-X {
+    border-color: #e1e5eb;
+    background: #f3f4f6;
+    color: #747f8e;
+}
+
 .btn-detalhe {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    padding: 8px 14px;
-    border-radius: 20px;
-    background: linear-gradient(135deg, #0d6efd, #004AAD);
-    color: #fff;
-    font-weight: 600;
-    font-size: 13px;
-    border: none;
+    justify-content: center;
+    gap: 7px;
+    min-height: 37px;
+    padding: 8px 12px;
+    border: 1px solid rgba(0, 74, 173, .17);
+    border-radius: 10px;
+    background: #edf4ff;
+    color: var(--mt-blue);
+    font-family: inherit;
+    font-size: .68rem;
+    font-weight: 850;
     cursor: pointer;
-    transition: all 0.25s ease;
-    box-shadow: 0 4px 12px rgba(13,110,253,0.35);
-}
-
-.btn-detalhe::before {
-    content: "👁️";
-    font-size: 14px;
+    transition: transform .2s ease, background .2s ease, box-shadow .2s ease;
 }
 
 .btn-detalhe:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 18px rgba(13,110,253,0.45);
+    background: #e0edff;
+    box-shadow: 0 8px 17px rgba(0, 74, 173, .12);
 }
 
-.btn-selecionar-brinquedo {
-    padding: 16px 24px;
-    border-radius: 12px;
-    border: 2px dashed #0d6efd;
-    background: #f0f8ff;
-    color: #0d6efd;
-    font-weight: 600;
-    cursor: pointer;
-    width: 100%;
+.sem-registros {
+    padding: 60px 20px !important;
     text-align: center;
-    transition: all 0.2s ease;
 }
 
-.btn-selecionar-brinquedo:hover {
-    background: #dcecff;
-    transform: translateY(-2px);
+.empty-maintenance {
+    display: grid;
+    justify-items: center;
+    gap: 8px;
+    color: var(--mt-muted);
+}
+
+.empty-maintenance i {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 52px;
+    height: 52px;
+    border-radius: 16px;
+    background: #edf4ff;
+    color: var(--mt-blue);
+    font-size: 1.1rem;
+}
+
+.empty-maintenance strong {
+    color: var(--mt-text);
+    font-size: .83rem;
+}
+
+.empty-maintenance span {
+    font-size: .7rem;
 }
 
 .modal-brinquedos {
-    display: none;
     position: fixed;
+    inset: 0;
     z-index: 9999;
-    left: 0; top: 0;
-    width: 100%; height: 100%;
-    background: rgba(0,0,0,0.6);
+    display: none;
+    padding: 24px;
     overflow-y: auto;
-    animation: fadeIn 0.3s ease;
+    background: rgba(5, 16, 33, .72);
+    backdrop-filter: blur(7px);
+    animation: modalFade .22s ease;
 }
 
-@keyframes fadeIn { from {opacity: 0;} to {opacity:1;} }
-
+@keyframes modalFade {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
 
 .modal-content {
+    width: min(900px, 100%);
+    margin: 28px auto;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, .16);
+    border-radius: 25px;
     background: #fff;
-    margin: 50px auto;
-    border-radius: 16px;
-    max-width: 900px;
-    padding: 20px 30px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    box-shadow: 0 30px 80px rgba(0, 0, 0, .28);
+    animation: modalRise .26s ease;
+}
+
+@keyframes modalRise {
+    from { opacity: 0; transform: translateY(10px) scale(.985); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.modal-content.modal-small {
+    max-width: 430px;
+}
+
+.modal-content.modal-detail {
+    max-width: 680px;
 }
 
 .modal-header {
     display: flex;
+    align-items: flex-start;
     justify-content: space-between;
+    gap: 20px;
+    padding: 21px 23px;
+    border-bottom: 1px solid var(--mt-line);
+    background:
+        radial-gradient(circle at 92% 0, rgba(230, 57, 70, .08), transparent 30%),
+        linear-gradient(135deg, #f4f8ff, #fff);
+}
+
+.modal-title-wrap {
+    display: flex;
     align-items: center;
-    margin-bottom: 15px;
+    gap: 11px;
 }
 
-.modal-header h2 {
-    margin: 0;
-    font-size: 24px;
-    color: #0d3b99;
-
-
- }
-.close-modal {
-    background: none;
-    border: none;
-    font-size: 28px;
-    cursor: pointer;
-    color: #888;
-    transition: 0.2s;
-}
-
-.modal-ordenacao {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 15px;
-}
-
-
-.close-modal:hover {
-    color: #0d3b99;
-}
-
-.modal-filtros {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 15px;
-}
-
-.modal-filtros input, .modal-filtros select {
-    padding: 8px 12px;
-    font-size: 14px;
-    border-radius: 8px;
-    border: 1px solid #ccc;
-}
-
-.btn-ordenar {
-    flex: 1;
-    padding: 10px 0;
+.modal-title-icon {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
     border-radius: 12px;
-    border: 2px solid #0d6efd;
-    background: #f0f8ff;
-    color: #0d6efd;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.btn-ordenar.active, .btn-ordenar:hover {
-    background: #0d6efd;
+    background: var(--mt-blue);
     color: #fff;
 }
 
-/* Pesquisa */
+.modal-header h2 {
+    margin: 0 0 3px;
+    color: var(--mt-text);
+    font-size: 1.05rem;
+    font-weight: 920;
+}
+
+.modal-header p {
+    margin: 0;
+    color: var(--mt-muted);
+    font-size: .68rem;
+}
+
+.close-modal {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    border: 1px solid #e1e7ef;
+    border-radius: 10px;
+    background: #fff;
+    color: #6f7e91;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: color .2s ease, background .2s ease, border-color .2s ease;
+}
+
+.close-modal:hover {
+    border-color: rgba(230, 57, 70, .2);
+    background: #fff0f2;
+    color: var(--mt-red);
+}
+
+.modal-toolbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 180px;
+    gap: 12px;
+    padding: 17px 23px;
+    border-bottom: 1px solid var(--mt-line);
+}
+
 .modal-pesquisa {
-    margin-bottom: 15px;
+    position: relative;
+}
+
+.modal-pesquisa i {
+    position: absolute;
+    top: 50%;
+    left: 13px;
+    color: #8190a3;
+    font-size: .75rem;
+    transform: translateY(-50%);
 }
 
 .modal-pesquisa input {
     width: 100%;
-    padding: 10px 14px;
-    font-size: 14px;
-    border-radius: 10px;
-    border: 1px solid #ccc;
+    min-height: 43px;
+    padding: 10px 12px 10px 36px;
+    border: 1px solid #dce4ef;
+    border-radius: 11px;
+    outline: none;
+    color: var(--mt-text);
+    font-family: inherit;
+    font-size: .76rem;
 }
 
-/* Lista de brinquedos */
+.modal-pesquisa input:focus {
+    border-color: var(--mt-blue-bright);
+    box-shadow: 0 0 0 4px rgba(8, 120, 249, .09);
+}
+
+.modal-ordenacao {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+}
+
+.btn-ordenar {
+    min-height: 43px;
+    padding: 8px 10px;
+    border: 1px solid rgba(0, 74, 173, .15);
+    border-radius: 11px;
+    background: #fff;
+    color: var(--mt-blue);
+    font-family: inherit;
+    font-size: .69rem;
+    font-weight: 850;
+    cursor: pointer;
+}
+
+.btn-ordenar.active,
+.btn-ordenar:hover {
+    background: var(--mt-blue);
+    color: #fff;
+}
+
 .lista-brinquedos {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    gap: 15px;
-}
-
-.item-brinquedo {
-    background: #f9f9f9;
-    border-radius: 12px;
-    padding: 10px;
-    cursor: pointer;
-    text-align: center;
-    transition: all 0.2s;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-}
-
-.item-brinquedo img, .placeholder-img {
-    width: 100px;
-    height: 100px;
-    object-fit: cover;
-    border-radius: 8px;
-    margin-bottom: 10px;
-}
-
-.item-brinquedo strong {
-    font-size: 14px;
-    color: #0d3b99;
-}
-
-.item-brinquedo:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-}
-
-
-/* Botão de selecionar brinquedo */
-.btn-selecionar-brinquedo {
-    width: 100%;
-    padding: 14px;
-    border-radius: 30px;
-    background: #0d6efd;
-    color: #fff;
-    font-size: 16px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s;
-    border: none;
-}
-.btn-selecionar-brinquedo:hover {
-    background: #084fc7;
-}
-
-/* Modal */
-.modal-brinquedos {
-    display: none;
-    position: fixed;
-    z-index: 9999;
-    left:0; top:0;
-    width: 100%; height: 100%;
-    background: rgba(0,0,0,0.6);
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+    max-height: 56vh;
+    padding: 20px 23px 24px;
     overflow-y: auto;
 }
 
-.modal-content {
-    background: #fff;
-    margin: 50px auto;
-    border-radius: 16px;
-    max-width: 900px;
-    padding: 20px 30px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-}
-
-.modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 15px;
-}
-
-.modal-header h2 {
-    margin: 0;
-    font-size: 24px;
-    color: #0d3b99;
-}
-
-.close-modal {
-    background: none;
-    border: none;
-    font-size: 28px;
-    cursor: pointer;
-    color: #888;
-}
-.close-modal:hover {
-    color: #0d3b99;
-}
-
-/* Ordenação */
-.modal-ordenacao {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 15px;
-}
-.btn-ordenar {
-    flex: 1;
-    padding: 10px 0;
-    border-radius: 12px;
-    border: 2px solid #0d6efd;
-    background: #f0f8ff;
-    color: #0d6efd;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-.btn-ordenar.active, .btn-ordenar:hover {
-    background: #0d6efd;
-    color: #fff;
-}
-
-/* Pesquisa */
-.modal-pesquisa input {
-    width: 100%;
-    padding: 10px 14px;
-    border-radius: 10px;
-    border: 1px solid #ccc;
-    margin-bottom: 15px;
-}
-
-/* Lista de brinquedos */
-.lista-brinquedos {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-    gap: 15px;
-}
 .item-brinquedo {
-    background: #f9f9f9;
-    border-radius: 12px;
-    padding: 10px;
-    cursor: pointer;
-    text-align: center;
-    transition: all 0.2s;
     display: flex;
+    min-width: 0;
     flex-direction: column;
     align-items: center;
-}
-.item-brinquedo img, .placeholder-img {
-    width: 100px;
-    height: 100px;
-    border-radius: 8px;
-    object-fit: cover;
-    margin-bottom: 10px;
-}
-.item-brinquedo strong {
-    font-size: 14px;
-    color: #0d3b99;
-}
-.item-brinquedo:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    gap: 9px;
+    padding: 10px;
+    border: 1px solid #e2e8f1;
+    border-radius: 14px;
+    background: #f8faff;
+    text-align: center;
+    cursor: pointer;
+    transition: transform .2s ease, border-color .2s ease, background .2s ease, box-shadow .2s ease;
 }
 
-.manutencao-guest {
+.item-brinquedo:hover {
+    transform: translateY(-3px);
+    border-color: rgba(0, 74, 173, .27);
+    background: #f0f6ff;
+    box-shadow: 0 11px 22px rgba(15, 38, 76, .1);
+}
+
+.item-brinquedo img,
+.placeholder-img {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 112px;
+    margin: 0;
+    border-radius: 11px;
+    background: #fff;
+    object-fit: contain;
+}
+
+.placeholder-img {
+    color: #91a1b7;
+    font-size: 1.2rem;
+}
+
+.item-brinquedo strong {
+    display: -webkit-box;
+    overflow: hidden;
+    color: var(--mt-text);
+    font-size: .72rem;
+    line-height: 1.35;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+}
+
+.modal-message {
+    padding: 24px;
+    color: #475a72;
+    font-size: .82rem;
+    line-height: 1.55;
+    text-align: center;
+}
+
+.modal-actions {
     display: flex;
     justify-content: center;
-    margin: 40px 0;
+    padding: 0 24px 24px;
 }
 
-.guest-card {
-    max-width: 420px;
-    width: 100%;
-    background: #ffffff;
-    border-radius: 16px;
-    padding: 32px 26px;
-    text-align: center;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
-}
-
-.guest-icon {
-    font-size: 42px;
-    margin-bottom: 10px;
-}
-
-.guest-card h2 {
-    font-size: 1.4rem;
-    margin-bottom: 10px;
-    color: #222;
-}
-
-.guest-text {
-    font-size: 0.95rem;
-    color: #555;
-    margin-bottom: 20px;
-    line-height: 1.5;
-}
-
-.guest-beneficios {
-    list-style: none;
-    padding: 0;
-    margin: 0 0 24px;
-    text-align: left;
-}
-
-.guest-beneficios li {
-    font-size: 0.85rem;
-    color: #333;
-    margin-bottom: 8px;
-}
-
-.guest-actions {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-/* Botões */
-.btn-primario {
-    background: linear-gradient(135deg, #004AAD, #0066ff);
-    color: #fff;
-    padding: 12px;
-    border-radius: 30px;
-    font-weight: 600;
+.btn-primario,
+.btn-secundario,
+.btn-whatsapp {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 45px;
+    padding: 11px 16px;
+    border-radius: 12px;
+    font-family: inherit;
+    font-size: .74rem;
+    font-weight: 880;
     text-decoration: none;
-    transition: transform .2s ease, box-shadow .2s ease;
+    cursor: pointer;
+    transition: transform .2s ease, box-shadow .2s ease, background .2s ease;
+}
+
+.btn-primario {
+    border: 0;
+    background: linear-gradient(135deg, var(--mt-blue), var(--mt-blue-bright));
+    color: #fff;
+    box-shadow: 0 9px 20px rgba(0, 74, 173, .22);
 }
 
 .btn-primario:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(0, 74, 173, 0.35);
+    box-shadow: 0 12px 24px rgba(0, 74, 173, .3);
 }
 
 .btn-secundario {
-    background: transparent;
-    border: 2px solid #004AAD;
-    color: #004AAD;
-    padding: 10px;
-    border-radius: 30px;
-    font-weight: 600;
-    text-decoration: none;
-    transition: background .2s ease, color .2s ease;
+    width: 100%;
+    border: 1px solid rgba(230, 57, 70, .22);
+    background: #fff3f5;
+    color: var(--mt-red-dark);
 }
 
 .btn-secundario:hover {
-    background: #004AAD;
-    color: #fff;
-}
-
-
-/* ===== UPLOAD DE FOTOS MODERNO ===== */
-.fotos-group {
-    align-items: center;
-}
-
-.upload-card {
-    width: 100%;
-    max-width: 360px;
-    margin: 10px auto 0;
-    padding: 24px;
-    border-radius: 16px;
-    border: 2px dashed #0d6efd;
-    background: #f0f8ff;
-    text-align: center;
-    cursor: pointer;
-    transition: all 0.25s ease;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-}
-
-.upload-card:hover {
-    background: #e3efff;
     transform: translateY(-2px);
+    background: #ffe8ec;
 }
 
-.upload-icon {
-    font-size: 36px;
+.modal-detail-body {
+    padding: 21px 23px 24px;
 }
 
-.upload-card strong {
-    font-size: 15px;
-    color: #0d3b99;
-}
-
-.upload-card span {
-    font-size: 13px;
-    color: #555;
-}
-
-/* Preview */
-.upload-preview {
+.detail-summary {
     display: flex;
-    justify-content: center;
-    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 15px;
+    margin-bottom: 14px;
+    padding: 16px;
+    border: 1px solid rgba(0, 74, 173, .12);
+    border-radius: 15px;
+    background: #f2f7ff;
+}
+
+.detail-summary-label {
+    display: block;
+    margin-bottom: 4px;
+    color: #75849a;
+    font-size: .63rem;
+    font-weight: 850;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+}
+
+.detail-summary strong {
+    color: var(--mt-text);
+    font-size: .92rem;
+}
+
+.modal-detail-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
     gap: 12px;
-    margin-top: 14px;
-}
-
-.preview-item {
-    position: relative;
-    width: 90px;
-    height: 90px;
-}
-
-.preview-item img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    border-radius: 12px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
-}
-
-/* Botão remover */
-.preview-item button {
-    position: absolute;
-    top: -6px;
-    right: -6px;
-    width: 22px;
-    height: 22px;
-    border-radius: 50%;
-    border: none;
-    background: #E63946;
-    color: #fff;
-    font-size: 13px;
-    cursor: pointer;
-}
-
-.brinquedo-card {
-    position: relative;
-    max-width: 200px;
-    background: #fff;
-    border-radius: 14px;
-    box-shadow: 0 6px 18px rgba(0,0,0,0.12);
-    padding: 12px;
-    text-align: center;
-    margin-top: 10px;
-    animation: fadeIn 0.25s ease;
-}
-
-.brinquedo-card img {
-    width: 100%;
-    height: 140px;
-    object-fit: cover;
-    border-radius: 10px;
-    margin-bottom: 8px;
-}
-
-.brinquedo-card span {
-    font-size: 14px;
-    font-weight: 600;
-    color: #0d3b99;
-}
-
-.remove-brinquedo {
-    position: absolute;
-    top: 6px;
-    right: 6px;
-    width: 26px;
-    height: 26px;
-    border-radius: 50%;
-    border: none;
-    background: #e63946;
-    color: #fff;
-    font-size: 18px;
-    cursor: pointer;
-    line-height: 1;
-    transition: transform 0.2s;
-}
-
-.remove-brinquedo:hover {
-    transform: scale(1.1);
-}
-
-    .campo-erro {
-    border: 2px solid #e63946 !important;
-    background: #fff5f5;
-}
-
-.cep-feedback {
-    font-size: 12px;
-    margin-top: 4px;
-    min-height: 14px;
-}
-
-.cep-loading {
-    color: #555;
-}
-
-.cep-error {
-    color: #e63946;
-}
-
-.cep-success {
-    color: #2a9d8f;
-}
-
-.campo-loading {
-    border-color: #0d6efd !important;
-    background: #f0f8ff;
-}
-
-.campo-bloqueado {
-    background: #f3f5f8;
-    color: #777;
-    cursor: not-allowed;
-}
-
-.campo-bloqueado::placeholder {
-    color: #aaa;
-}
-
-/* ===== MODAL DETALHE MANUTENÇÃO ===== */
-.modal-detalhe-body {
-    display: flex;
-    flex-direction: column;
-    gap: 18px;
 }
 
 .detalhe-card {
-    background: #f9fbff;
+    min-width: 0;
+    padding: 15px;
+    border: 1px solid #e4eaf2;
     border-radius: 14px;
-    padding: 16px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    background: #fbfcfe;
+}
+
+.detalhe-card.span-full {
+    grid-column: 1 / -1;
 }
 
 .detalhe-card h4 {
-    margin: 0 0 10px;
-    font-size: 14px;
-    color: #0d3b99;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin: 0 0 8px;
+    color: var(--mt-blue);
+    font-size: .68rem;
+    font-weight: 900;
+    letter-spacing: .025em;
+    text-transform: uppercase;
 }
 
 .detalhe-info {
-    font-size: 14px;
-    color: #333;
-    line-height: 1.6;
+    margin: 0;
+    color: #42556e;
+    font-size: .75rem;
+    line-height: 1.55;
+    overflow-wrap: anywhere;
 }
 
-.status-badge {
-    display: inline-block;
-    padding: 6px 12px;
-    border-radius: 20px;
-    font-size: 12px;
-    font-weight: 700;
-}
-
-.status-P { background:#fff3cd; color:#856404; }
-.status-A { background:#cce5ff; color:#004085; }
-.status-C { background:#d4edda; color:#155724; }
-.status-X { background:#f8d7da; color:#721c24; }
-
-/* ===== FOTOS ===== */
 .detalhe-fotos {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.detalhe-fotos a {
+    display: block;
+    min-width: 0;
+    aspect-ratio: 1;
 }
 
 .detalhe-fotos img {
-    width: 90px;
-    height: 90px;
+    display: block;
+    width: 100%;
+    height: 100%;
+    border: 1px solid #e1e7ef;
+    border-radius: 10px;
     object-fit: cover;
-    border-radius: 12px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
 }
 
-/* ===== WHATSAPP ===== */
-.btn-whatsapp {
-    display: flex;
-    align-items: center;
-    justify-content: center;
+.detail-actions {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
     gap: 10px;
-    padding: 14px;
-    border-radius: 30px;
-    background: linear-gradient(135deg, #25D366, #128C7E);
+    margin-top: 14px;
+}
+
+.btn-whatsapp {
+    width: 100%;
+    border: 0;
+    background: linear-gradient(135deg, var(--mt-blue), var(--mt-blue-bright));
     color: #fff;
-    font-weight: 700;
-    text-decoration: none;
-    font-size: 15px;
-    transition: all 0.25s ease;
-    margin-top: 10px;
+    box-shadow: 0 9px 20px rgba(0, 74, 173, .2);
 }
 
 .btn-whatsapp:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 18px rgba(37,211,102,0.45);
+    box-shadow: 0 12px 24px rgba(0, 74, 173, .28);
 }
 
-/* ===== RESPONSIVIDADE ===== */
-@media (max-width: 1024px) {
-    .manutencao-form {
-        grid-template-columns: 1fr; /* uma coluna só */
-        gap: 10px;
-        padding: 25px;
+.manutencao-guest {
+    display: grid;
+    grid-template-columns: minmax(0, 1.1fr) minmax(360px, .9fr);
+    min-height: 490px;
+    overflow: hidden;
+    border: 1px solid rgba(0, 74, 173, .12);
+    border-radius: 32px;
+    background: #fff;
+    box-shadow: 0 25px 65px rgba(10, 31, 59, .14);
+}
+
+.guest-visual {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 44px;
+    overflow: hidden;
+    background:
+        radial-gradient(circle at 78% 15%, rgba(230, 57, 70, .25), transparent 29%),
+        radial-gradient(circle at 20% 95%, rgba(8, 120, 249, .38), transparent 37%),
+        linear-gradient(135deg, #071a34, #004aad);
+    color: #fff;
+}
+
+.guest-visual::before {
+    content: "\f7d9";
+    position: absolute;
+    top: 48px;
+    right: 48px;
+    color: rgba(255, 255, 255, .11);
+    font-family: "Font Awesome 6 Free";
+    font-size: 10rem;
+    font-weight: 900;
+    transform: rotate(-12deg);
+}
+
+.guest-visual-content {
+    position: relative;
+    z-index: 1;
+    max-width: 530px;
+}
+
+.guest-visual h1 {
+    margin: 0 0 13px;
+    color: #fff;
+    font-size: clamp(2rem, 4.5vw, 3.2rem);
+    font-weight: 940;
+    line-height: 1.06;
+    letter-spacing: -.05em;
+}
+
+.guest-visual p {
+    margin: 0;
+    color: rgba(255, 255, 255, .8);
+    font-size: .9rem;
+    line-height: 1.65;
+}
+
+.guest-card {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: clamp(30px, 5vw, 52px);
+}
+
+.guest-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 54px;
+    height: 54px;
+    margin-bottom: 18px;
+    border-radius: 16px;
+    background: #edf4ff;
+    color: var(--mt-blue);
+    font-size: 1.2rem;
+}
+
+.guest-card h2 {
+    margin: 0 0 9px;
+    color: var(--mt-text);
+    font-size: 1.4rem;
+    font-weight: 920;
+    letter-spacing: -.035em;
+}
+
+.guest-text {
+    margin: 0 0 20px;
+    color: var(--mt-muted);
+    font-size: .8rem;
+    line-height: 1.55;
+}
+
+.guest-beneficios {
+    display: grid;
+    gap: 9px;
+    margin: 0 0 24px;
+    padding: 0;
+    list-style: none;
+}
+
+.guest-beneficios li {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    color: #40536c;
+    font-size: .76rem;
+    font-weight: 720;
+}
+
+.guest-beneficios i {
+    color: var(--mt-blue);
+}
+
+.guest-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 9px;
+}
+
+.guest-actions .btn-secundario {
+    border-color: rgba(0, 74, 173, .2);
+    background: #fff;
+    color: var(--mt-blue);
+}
+
+.breadcrumb a:focus-visible,
+.tab-btn:focus-visible,
+.btn-selecionar-brinquedo:focus-visible,
+.form-group input:focus-visible,
+.form-group textarea:focus-visible,
+.form-group select:focus-visible,
+.upload-card:focus-visible,
+.btn-enviar:focus-visible,
+.btn-detalhe:focus-visible,
+.close-modal:focus-visible,
+.btn-ordenar:focus-visible,
+.item-brinquedo:focus-visible,
+.btn-primario:focus-visible,
+.btn-secundario:focus-visible,
+.btn-whatsapp:focus-visible {
+    outline: 3px solid rgba(8, 120, 249, .3);
+    outline-offset: 3px;
+}
+
+@media (max-width: 980px) {
+    .maintenance-workspace {
+        grid-template-columns: 1fr;
     }
 
-    .btn-enviar {
-        width: 100%;
-        padding: 14px 0;
+    .quick-guide {
+        position: static;
     }
 
-    .tabela-wrapper {
-        padding: 15px;
-        overflow-x: auto; /* permite scroll horizontal em tabelas grandes */
+    .quick-guide-list {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+        padding: 16px 18px;
     }
 
-    .tabela-manutencoes th,
-    .tabela-manutencoes td {
-        font-size: 13px;
-        padding: 10px;
+    .quick-guide-item {
+        border-bottom: 0;
+        padding: 0;
     }
 
-    .manutencao-tabs {
-        flex-wrap: wrap;
-        gap: 10px;
+    .manutencao-guest {
+        grid-template-columns: 1fr;
     }
 
-    .tab-btn {
-        flex: 1 1 calc(50% - 10px);
-        padding: 12px 10px;
-        font-size: 14px;
+    .guest-visual {
+        min-height: 320px;
+    }
+}
+
+@media (max-width: 760px) {
+    .maintenance-page {
+        padding: 16px 12px 48px;
     }
 
     .breadcrumb {
-        font-size: 0.85rem;
-        gap: 6px;
+        display: inline-flex;
+        min-height: 38px;
+        margin-bottom: 14px;
+        font-size: .72rem;
     }
-}
 
-@media (max-width: 600px) {
-    .manutencao-form {
-        padding: 20px;
+    .manutencao-header {
+        min-height: 0;
+        padding: 34px 23px;
+        border-radius: 25px;
     }
 
     .manutencao-header h1 {
-        font-size: 26px;
+        font-size: clamp(2rem, 11vw, 2.65rem);
     }
 
-    .manutencao-header p {
-        font-size: 16px;
+    .maintenance-metrics {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .manutencao-tabs {
+        position: sticky;
+        top: 8px;
+        z-index: 20;
+        max-width: 100%;
+        margin-top: -2px;
     }
 
     .tab-btn {
-        flex: 1 1 100%;
-        padding: 10px 8px;
-        font-size: 13px;
+        min-height: 45px;
+        padding: 9px;
+        font-size: .7rem;
     }
 
-    .tabela-manutencoes th,
-    .tabela-manutencoes td {
-        font-size: 12px;
-        padding: 8px;
+    .tab-btn > span:not(.tab-count) {
+        display: none;
     }
 
-    .guest-card {
-        padding: 24px 20px;
+    .form-topbar,
+    .historico-header {
+        align-items: flex-start;
+        flex-direction: column;
+        padding: 21px 18px;
     }
 
-    .btn-selecionar-brinquedo,
+    .form-time,
+    .historico-summary {
+        align-self: flex-start;
+    }
+
+    .form-section {
+        padding: 22px 18px;
+    }
+
+    .form-grid {
+        grid-template-columns: 1fr;
+        gap: 14px;
+    }
+
+    .span-full {
+        grid-column: auto;
+    }
+
+    .form-group input,
+    .form-group textarea,
+    .form-group select {
+        min-height: 49px;
+        font-size: 16px;
+    }
+
+    .form-group textarea {
+        min-height: 125px;
+    }
+
+    .form-submit-panel {
+        align-items: stretch;
+        flex-direction: column;
+        padding: 19px 18px;
+    }
+
     .btn-enviar {
         width: 100%;
-        padding: 12px 0;
-        font-size: 15px;
     }
 
-    .upload-card {
-        max-width: 100%;
-        padding: 20px;
+    .quick-guide-list {
+        grid-template-columns: 1fr 1fr;
     }
 
-    .lista-brinquedos {
-        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    .upload-preview {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 
-    .brinquedo-card img {
-        height: 120px;
+    .tabela-wrapper {
+        padding: 14px;
+        overflow: visible;
     }
 
-    .detalhe-fotos img {
-        width: 70px;
-        height: 70px;
-    }
-}
-
-/* ======== MOBILE RESPONSIVO VERDADEIRO ======== */
-@media (max-width: 768px) {
-    /* Formulário vertical */
-    .manutencao-form {
-        display: flex;
-        flex-direction: column;
-        gap: 15px;
-        padding: 20px;
+    .tabela-manutencoes,
+    .tabela-manutencoes tbody,
+    .tabela-manutencoes tr,
+    .tabela-manutencoes td {
+        display: block;
         width: 100%;
-        box-sizing: border-box;
     }
 
-    /* Cada form-group ocupa 100% */
-    .manutencao-form .form-group {
-        width: 100%;
-        margin-bottom: 15px;
+    .tabela-manutencoes thead {
+        display: none;
     }
 
-    /* Labels menores e legíveis */
-    .manutencao-form .form-group label {
-        font-size: 16px;
-        margin-bottom: 6px;
-    }
-
-    /* Inputs ocupam 100% */
-    .manutencao-form input,
-    .manutencao-form textarea,
-    .manutencao-form select {
-        width: 100%;
-        font-size: 14px;
-        padding: 10px 12px;
-    }
-
-    /* Botão enviar e selecionar brinquedo */
-    .btn-enviar,
-    .btn-selecionar-brinquedo {
-        width: 100%;
-        font-size: 15px;
-        padding: 14px 0;
-    }
-
-    /* Card do brinquedo selecionado */
-    .brinquedo-card {
-        display: flex;
-        flex-direction: row;
-        align-items: center;
+    .tabela-manutencoes tbody {
+        display: grid;
         gap: 12px;
-        width: 100%;
-        max-width: 100%;
+    }
+
+    .tabela-manutencoes tr {
+        padding: 14px;
+        border: 1px solid #e2e8f1;
+        border-radius: 16px;
+        background: #fff;
+        box-shadow: 0 8px 20px rgba(15, 38, 76, .06);
+    }
+
+    .tabela-manutencoes td {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+        padding: 10px 0;
+        border: 0;
+        border-bottom: 1px solid #edf0f5;
+        text-align: right;
+    }
+
+    .tabela-manutencoes td:last-child {
+        padding-bottom: 0;
+        border-bottom: 0;
+    }
+
+    .tabela-manutencoes td::before {
+        content: attr(data-label);
+        flex: 0 0 auto;
+        color: #78869a;
+        font-size: .64rem;
+        font-weight: 850;
+        letter-spacing: .035em;
+        text-transform: uppercase;
+    }
+
+    .tabela-manutencoes td:first-child {
+        align-items: flex-start;
+        flex-direction: column;
+        text-align: left;
+    }
+
+    .tabela-manutencoes td:first-child::before {
+        margin-bottom: 3px;
+    }
+
+    .btn-detalhe {
+        min-width: 105px;
+    }
+
+    .sem-registros {
+        display: block !important;
+    }
+
+    .sem-registros::before {
+        content: none !important;
+    }
+
+    .modal-brinquedos {
         padding: 10px;
     }
 
-    .brinquedo-card img {
-        width: 70px;
-        height: 70px;
-        object-fit: cover;
-        border-radius: 8px;
+    .modal-content {
+        margin: 12px auto;
+        border-radius: 20px;
     }
 
-    .brinquedo-card span {
-        font-size: 14px;
-        flex: 1;
-    }
-
-    .remove-brinquedo {
-        width: 24px;
-        height: 24px;
-        font-size: 14px;
-    }
-
-    /* Upload de fotos */
-    .fotos-group {
-        width: 100%;
-    }
-
-    .upload-card {
-        width: 100%;
-        max-width: 100%;
+    .modal-header {
         padding: 18px;
-        flex-direction: column;
-        text-align: center;
     }
 
-    .upload-icon {
-        font-size: 28px;
+    .modal-toolbar {
+        grid-template-columns: 1fr;
+        padding: 14px 18px;
     }
 
-    .upload-card strong {
-        font-size: 14px;
+    .lista-brinquedos {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 9px;
+        padding: 16px 18px 20px;
     }
 
-    .upload-card span {
-        font-size: 12px;
+    .modal-detail-body {
+        padding: 17px 18px 20px;
     }
 
-    /* Preview das fotos */
-    .upload-preview {
-        justify-content: flex-start;
-        gap: 10px;
+    .modal-detail-grid {
+        grid-template-columns: 1fr;
     }
 
-    .preview-item {
-        width: 60px;
-        height: 60px;
+    .detalhe-card.span-full {
+        grid-column: auto;
     }
 
-    .preview-item button {
-        width: 20px;
-        height: 20px;
-        font-size: 12px;
+    .detalhe-fotos {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 
-    /* Ajuste do header */
-    .manutencao-header h1 {
-        font-size: 24px;
+    .detail-actions {
+        grid-template-columns: 1fr;
     }
 
-    .manutencao-header p {
-        font-size: 15px;
+    .guest-visual {
+        min-height: 290px;
+        padding: 28px 23px;
     }
 
-    /* Ajuste das tabs */
-    .manutencao-tabs {
-        flex-direction: column;
-        gap: 10px;
+    .guest-card {
+        padding: 30px 23px;
+    }
+}
+
+@media (max-width: 420px) {
+    .maintenance-metrics,
+    .quick-guide-list,
+    .guest-actions {
+        grid-template-columns: 1fr;
     }
 
-    .tab-btn {
+    .maintenance-metric {
         width: 100%;
-        font-size: 14px;
-        padding: 12px 0;
     }
 
+    .manutencao-tabs {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .btn-selecionar-brinquedo {
+        padding: 13px;
+    }
+
+    .select-toy-copy span {
+        display: none;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .maintenance-page *,
+    .maintenance-page *::before,
+    .maintenance-page *::after,
+    .modal-brinquedos *,
+    .modal-brinquedos *::before,
+    .modal-brinquedos *::after {
+        scroll-behavior: auto !important;
+        animation-duration: .01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important;
+    }
+}
 
 </style>
 
-{% if not user.is_authenticated %}
-<!-- ======= BREADCRUMB ======= -->
-<nav class="breadcrumb" id="bread">
-    <a href="{% url 'home' %}">Home</a>
-    <span></span>
-    <span>Manutenções</span>
-</nav>
-
-
-<div class="manutencao-guest">
-
-    <div class="guest-card">
-        <div class="guest-icon">🔧</div>
-
-        <h2>Área exclusiva para clientes</h2>
-
-        <p class="guest-text">
-            Para solicitar manutenções, acompanhar pedidos e receber atualizações,
-            você precisa estar logado.
-        </p>
-
-        <ul class="guest-beneficios">
-            <li>✔ Solicitar manutenção online</li>
-            <li>✔ Acompanhar status do pedido</li>
-            <li>✔ Histórico de manutenções</li>
-        </ul>
-
-        <div class="guest-actions">
-            <a href="{% url 'registrar' %}#register-box" class="btn-primario">
-                Criar conta gratuita
+<div class="maintenance-page">
+    <div class="maintenance-shell">
+        <nav class="breadcrumb" id="bread" aria-label="Navegação estrutural">
+            <a href="{% url 'home' %}">
+                <i class="fa-solid fa-house" aria-hidden="true"></i>
+                <span>Início</span>
             </a>
+            <i class="fa-solid fa-chevron-right breadcrumb-separator" aria-hidden="true"></i>
+            <span class="breadcrumb-current" aria-current="page">
+                <i class="fa-solid fa-screwdriver-wrench" aria-hidden="true"></i>
+                Manutenções
+            </span>
+        </nav>
 
-            <a href="{% url 'login' %}#login-box" class="btn-secundario">
-                Já tenho conta
-            </a>
-        </div>
-    </div>
-
-</div>
-{% endif %}
-
-
-{% if user.is_authenticated %}
-<!-- ======= CABEÇALHO ======= -->
-<header class="manutencao-header" id="cab">
-    <h1>Manutenções</h1>
-    <p>Solicite uma nova manutenção ou acompanhe suas solicitações</p>
-</header>
-
-<!-- ======= ABAS ======= -->
-
-<div class="manutencao-tabs" id="tab">
-    <button class="tab-btn {% if tab_ativa == 'nova' %}active{% endif %}" data-tab="nova">
-        Solicitar manutenção
-    </button>
-    <button class="tab-btn {% if tab_ativa == 'lista' %}active{% endif %}" data-tab="lista">
-        Manutenções solicitadas
-    </button>
-</div>
-{% endif %}
-
-<!-- ======= ABA: NOVA MANUTENÇÃO ======= -->
-{% if user.is_authenticated %}
-<section class="tab-content {% if tab_ativa == 'nova' %}active{% endif %}" id="nova">
-            <form method="post" enctype="multipart/form-data" class="manutencao-form">
-
-                {% csrf_token %}
-                {{ form.non_field_errors }}
-
-            <div class="form-group" style="grid-column: span 2;">
-    <label>Brinquedo</label>
-
-    <!-- Botão selecionar -->
-    <button type="button"
-            id="selecionar-brinquedo-btn"
-            class="btn-selecionar-brinquedo">
-        Clique para selecionar um brinquedo
-    </button>
-
-    <!-- Card do brinquedo selecionado -->
-    <div id="brinquedo-card" class="brinquedo-card" style="display:none;">
-        <button type="button" class="remove-brinquedo">&times;</button>
-        <img id="brinquedo-img" src="" alt="">
-        <span id="brinquedo-nome"></span>
-    </div>
-
-    <input type="hidden" name="brinquedo" id="brinquedo-input">
-</div>
-
-        <div class="form-group">{{ form.descricao.label_tag }}{{ form.descricao }}</div>
-
-       <div class="form-group">
-            {{ form.telefone_contato.label_tag }}
-            {% render_field form.telefone_contato class="mask-telefone" %}
-        </div>
-
-        <div class="form-group">
-    {{ form.cep.label_tag }}
-    {% render_field form.cep class="mask-cep" id="id_cep" %}
-    <small class="cep-feedback" id="cepFeedback"></small>
-</div>
-
-        <div class="form-group">{{ form.endereco.label_tag }}{{ form.endereco }}</div>
-        <div class="form-group">{{ form.numero.label_tag }}{{ form.numero }}</div>
-        <div class="form-group">{{ form.complemento.label_tag }}{{ form.complemento }}</div>
-        <div class="form-group">{{ form.bairro.label_tag }}{{ form.bairro }}</div>
-        <div class="form-group">{{ form.cidade.label_tag }}{{ form.cidade }}</div>
-        <div class="form-group">{{ form.estado.label_tag }}{{ form.estado }}</div>
-
-        <div class="form-group fotos-group" style="grid-column: span 2;">
-            <label>Fotos do problema</label>
-
-            <input type="file" name="imagens" id="imagens" multiple accept="image/*" hidden>
-
-            <div class="upload-card" id="uploadCard">
-                <div class="upload-icon">📷</div>
-                <strong>Clique para adicionar fotos</strong>
-                <span id="uploadInfo">Até 5 imagens</span>
+        {% if not user.is_authenticated %}
+        <section class="manutencao-guest" aria-labelledby="titulo-area-cliente">
+            <div class="guest-visual">
+                <div class="guest-visual-content">
+                    <span class="maintenance-eyebrow">
+                        <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
+                        Assistência Lazer &amp; Sport
+                    </span>
+                    <h1>Suporte técnico organizado e fácil de acompanhar</h1>
+                    <p>
+                        Registre o problema do seu equipamento, envie fotos e
+                        acompanhe cada atualização em uma área exclusiva.
+                    </p>
+                </div>
             </div>
 
-            <div class="upload-preview" id="preview"></div>
+            <div class="guest-card">
+                <span class="guest-icon" aria-hidden="true">
+                    <i class="fa-solid fa-user-lock"></i>
+                </span>
+                <h2 id="titulo-area-cliente">Área exclusiva para clientes</h2>
+                <p class="guest-text">
+                    Entre na sua conta para solicitar uma manutenção e consultar
+                    o histórico dos atendimentos.
+                </p>
+
+                <ul class="guest-beneficios">
+                    <li>
+                        <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+                        Solicitação online em poucos minutos
+                    </li>
+                    <li>
+                        <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+                        Envio de até cinco fotos do problema
+                    </li>
+                    <li>
+                        <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+                        Acompanhamento de status e histórico
+                    </li>
+                </ul>
+
+                <div class="guest-actions">
+                    <a href="{% url 'registrar' %}#register-box" class="btn-primario">
+                        <i class="fa-solid fa-user-plus" aria-hidden="true"></i>
+                        Criar conta
+                    </a>
+                    <a href="{% url 'login' %}#login-box" class="btn-secundario">
+                        <i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i>
+                        Entrar
+                    </a>
+                </div>
+            </div>
+        </section>
+        {% endif %}
+
+        {% if user.is_authenticated %}
+        <header class="manutencao-header" id="cab">
+            <div class="maintenance-hero-content">
+                <span class="maintenance-eyebrow">
+                    <i class="fa-solid fa-screwdriver-wrench" aria-hidden="true"></i>
+                    Central de assistência técnica
+                </span>
+                <h1>Manutenção simples de solicitar e acompanhar</h1>
+                <p>
+                    Selecione o equipamento, descreva o problema e envie fotos.
+                    Nossa equipe receberá as informações organizadas para agilizar o atendimento.
+                </p>
+
+                <div class="maintenance-metrics" aria-label="Resumo das manutenções">
+                    <span class="maintenance-metric">
+                        <i class="fa-solid fa-inbox" aria-hidden="true"></i>
+                        <strong>{{ manutencao_abertas|default:0 }}</strong>
+                        <span>chamados abertos</span>
+                    </span>
+                    <span class="maintenance-metric">
+                        <i class="fa-solid fa-clock" aria-hidden="true"></i>
+                        <strong>{{ manutencao_pendente|default:0 }}</strong>
+                        <span>aguardando análise</span>
+                    </span>
+                    <span class="maintenance-metric">
+                        <i class="fa-solid fa-gears" aria-hidden="true"></i>
+                        <strong>{{ manutencao_andamento|default:0 }}</strong>
+                        <span>em andamento</span>
+                    </span>
+                </div>
+            </div>
+        </header>
+
+        <div class="manutencao-tabs" id="tab" role="tablist" aria-label="Áreas de manutenção">
+            <button type="button"
+                    class="tab-btn {% if tab_ativa == 'nova' %}active{% endif %}"
+                    data-tab="nova"
+                    role="tab"
+                    aria-controls="nova"
+                    aria-selected="{% if tab_ativa == 'nova' %}true{% else %}false{% endif %}">
+                <i class="fa-solid fa-plus" aria-hidden="true"></i>
+                <span>Nova solicitação</span>
+            </button>
+            <button type="button"
+                    class="tab-btn {% if tab_ativa == 'lista' %}active{% endif %}"
+                    data-tab="lista"
+                    role="tab"
+                    aria-controls="lista"
+                    aria-selected="{% if tab_ativa == 'lista' %}true{% else %}false{% endif %}">
+                <i class="fa-solid fa-clipboard-list" aria-hidden="true"></i>
+                <span>Minhas solicitações</span>
+                <span class="tab-count">{{ manutencoes|length|default:0 }}</span>
+            </button>
         </div>
 
-        <button type="submit" class="btn-enviar">Enviar solicitação</button>
-    </form>
-</section>
+        <section class="tab-content {% if tab_ativa == 'nova' %}active{% endif %}"
+                 id="nova"
+                 role="tabpanel">
+            <div class="maintenance-workspace">
+                <form method="post"
+                      enctype="multipart/form-data"
+                      class="manutencao-form"
+                      novalidate>
+                    <div class="form-topbar">
+                        <div>
+                            <h2>Conte o que aconteceu</h2>
+                            <p>Preencha as informações abaixo para abrir sua solicitação.</p>
+                        </div>
+                        <span class="form-time">
+                            <i class="fa-regular fa-clock" aria-hidden="true"></i>
+                            Cerca de 3 minutos
+                        </span>
+                    </div>
 
+                    {% csrf_token %}
 
-<!-- ======= ABA: LISTA ======= -->
+                    {% if form.non_field_errors %}
+                    <div class="form-errors">
+                        {{ form.non_field_errors }}
+                    </div>
+                    {% endif %}
 
-<section class="tab-content {% if tab_ativa == 'lista' %}active{% endif %}" id="lista">
-    <div class="tabela-wrapper">
-        <table class="tabela-manutencoes">
-            <thead>
-                <tr>
-                    <th>Brinquedo</th>
-                    <th>Status</th>
-                    <th>Data</th>
-                    <th>Ações</th>
-                </tr>
-            </thead>
-            <tbody>
-            {% if manutencoes %}
-                {% for manutencao in manutencoes %}
-                    <tr>
-                        <td>{{ manutencao.brinquedo }}</td>
-                        <td><span class="status status-{{ manutencao.status }}">{{ manutencao.get_status_display }}</span></td>
-                        <td>{{ manutencao.criado_em|date:"d/m/Y H:i" }}</td>
-                        <td>
-                            <button
-                                class="btn-detalhe"
-                                data-id="{{ manutencao.id }}"
-                                data-brinquedo="{{ manutencao.brinquedo }}"
-                                data-status="{{ manutencao.get_status_display }}"
-                                data-descricao="{{ manutencao.descricao }}"
-                                data-data="{{ manutencao.criado_em|date:'d/m/Y H:i' }}"
-                                data-telefone="{{ manutencao.telefone_contato }}"
-                                data-cep="{{ manutencao.cep }}"
-                                data-endereco="{{ manutencao.endereco }}"
-                                data-bairro="{{ manutencao.bairro }}"
-                                data-cidade="{{ manutencao.cidade }}"
-                                data-estado="{{ manutencao.estado }}"
-                                data-imagens='[
-                                   {% for img in manutencao.imagens.all %}
-                                       "{{ img.imagem.url }}"{% if not forloop.last %},{% endif %}
-                                   {% endfor %}
-                               ]'>
-                                Ver
-                            </button>
-                        </td>
-                    </tr>
-                {% endfor %}
-            {% else %}
-                <tr><td colspan="4" class="sem-registros">Nenhuma manutenção solicitada.</td></tr>
-            {% endif %}
+                    <section class="form-section" aria-labelledby="etapa-equipamento">
+                        <div class="form-section-head">
+                            <span class="step-index">1</span>
+                            <div>
+                                <h3 id="etapa-equipamento">Equipamento e problema</h3>
+                                <p>Escolha o brinquedo e descreva o defeito com clareza.</p>
+                            </div>
+                        </div>
 
-            </tbody>
-        </table>
-    </div>
-</section>
-{% endif %}
+                        <div class="form-grid">
+                            <div class="form-group span-full">
+                                <label for="selecionar-brinquedo-btn">
+                                    Brinquedo
+                                    <span class="required-mark" aria-label="obrigatório">*</span>
+                                </label>
 
-{% if messages %}
-<div id="modal-sucesso" class="modal-brinquedos" style="display:none;">
-    <div class="modal-content" style="max-width:420px;text-align:center;">
-        <div class="modal-header">
-            <h2>Sucesso 🎉</h2>
-            <button class="close-modal">&times;</button>
-        </div>
+                                <button type="button"
+                                        id="selecionar-brinquedo-btn"
+                                        class="btn-selecionar-brinquedo">
+                                    <span class="select-toy-main">
+                                        <span class="select-toy-icon" aria-hidden="true">
+                                            <i class="fa-solid fa-gamepad"></i>
+                                        </span>
+                                        <span class="select-toy-copy">
+                                            <strong>Selecionar equipamento</strong>
+                                            <span>Pesquise pelo nome e escolha na lista</span>
+                                        </span>
+                                    </span>
+                                    <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+                                </button>
 
-        {% for message in messages %}
-            <p style="font-size:1rem;color:#333;margin:20px 0;">
-                {{ message }}
-            </p>
-        {% endfor %}
+                                <div id="brinquedo-card"
+                                     class="brinquedo-card"
+                                     style="display:none;">
+                                    <button type="button"
+                                            class="remove-brinquedo"
+                                            aria-label="Remover brinquedo selecionado">
+                                        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                                    </button>
+                                    <img id="brinquedo-img" src="" alt="">
+                                    <span id="brinquedo-nome"></span>
+                                </div>
 
-        <a href="{% url 'manutencoes' %}?tab=lista#cab"
-           class="btn-primario btn-ver-solicitacoes">
-            Ver minhas solicitações
-        </a>
+                                <input type="hidden" name="brinquedo" id="brinquedo-input">
+                            </div>
+
+                            <div class="form-group span-full">
+                                {{ form.descricao.label_tag }}
+                                {% render_field form.descricao placeholder="Ex.: o equipamento liga, mas o placar não acende. O problema começou após..." rows="5" %}
+                                <small class="field-help">
+                                    <i class="fa-solid fa-lightbulb" aria-hidden="true"></i>
+                                    Informe quando começou, o que acontece e se aparece algum ruído ou mensagem.
+                                </small>
+                                {{ form.descricao.errors }}
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="form-section" aria-labelledby="etapa-contato">
+                        <div class="form-section-head">
+                            <span class="step-index">2</span>
+                            <div>
+                                <h3 id="etapa-contato">Contato</h3>
+                                <p>Informe o número para nossa equipe falar com você.</p>
+                            </div>
+                        </div>
+
+                        <div class="form-grid">
+                            <div class="form-group span-full">
+                                {{ form.telefone_contato.label_tag }}
+                                {% render_field form.telefone_contato class="mask-telefone" placeholder="(11) 99999-9999" inputmode="tel" autocomplete="tel" %}
+                                {{ form.telefone_contato.errors }}
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="form-section" aria-labelledby="etapa-local">
+                        <div class="form-section-head">
+                            <span class="step-index">3</span>
+                            <div>
+                                <h3 id="etapa-local">Local do equipamento</h3>
+                                <p>Digite o CEP para preencher o endereço automaticamente.</p>
+                            </div>
+                        </div>
+
+                        <div class="address-notice">
+                            <i class="fa-solid fa-location-dot" aria-hidden="true"></i>
+                            <span>
+                                O endereço ajuda nossa equipe a organizar a análise e o atendimento técnico.
+                            </span>
+                        </div>
+
+                        <div class="form-grid">
+                            <div class="form-group">
+                                {{ form.cep.label_tag }}
+                                {% render_field form.cep class="mask-cep" id="id_cep" placeholder="00000-000" inputmode="numeric" autocomplete="postal-code" %}
+                                <small class="cep-feedback" id="cepFeedback" aria-live="polite"></small>
+                                {{ form.cep.errors }}
+                            </div>
+
+                            <div class="form-group">
+                                {{ form.numero.label_tag }}
+                                {% render_field form.numero placeholder="Número" inputmode="numeric" autocomplete="address-line2" %}
+                                {{ form.numero.errors }}
+                            </div>
+
+                            <div class="form-group span-full">
+                                {{ form.endereco.label_tag }}
+                                {% render_field form.endereco placeholder="Rua ou avenida" autocomplete="address-line1" %}
+                                {{ form.endereco.errors }}
+                            </div>
+
+                            <div class="form-group">
+                                {{ form.bairro.label_tag }}
+                                {% render_field form.bairro placeholder="Bairro" autocomplete="address-level3" %}
+                                {{ form.bairro.errors }}
+                            </div>
+
+                            <div class="form-group">
+                                {{ form.complemento.label_tag }}
+                                {% render_field form.complemento placeholder="Sala, bloco ou referência" autocomplete="address-line3" %}
+                                {{ form.complemento.errors }}
+                            </div>
+
+                            <div class="form-group">
+                                {{ form.cidade.label_tag }}
+                                {% render_field form.cidade placeholder="Cidade" autocomplete="address-level2" %}
+                                {{ form.cidade.errors }}
+                            </div>
+
+                            <div class="form-group">
+                                {{ form.estado.label_tag }}
+                                {% render_field form.estado placeholder="UF" maxlength="2" autocomplete="address-level1" %}
+                                {{ form.estado.errors }}
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="form-section" aria-labelledby="etapa-fotos">
+                        <div class="form-section-head">
+                            <span class="step-index">4</span>
+                            <div>
+                                <h3 id="etapa-fotos">Fotos do problema</h3>
+                                <p>Imagens nítidas ajudam a equipe a entender o defeito mais rápido.</p>
+                            </div>
+                        </div>
+
+                        <div class="form-group fotos-group">
+                            <input type="file"
+                                   name="imagens"
+                                   id="imagens"
+                                   multiple
+                                   accept="image/*"
+                                   hidden>
+
+                            <div class="upload-card"
+                                 id="uploadCard"
+                                 role="button"
+                                 tabindex="0"
+                                 aria-controls="imagens">
+                                <span class="upload-icon" aria-hidden="true">
+                                    <i class="fa-solid fa-camera"></i>
+                                </span>
+                                <span class="upload-copy">
+                                    <strong>Adicionar fotos</strong>
+                                    <span id="uploadInfo">Até 5 imagens — toque ou clique para selecionar</span>
+                                </span>
+                            </div>
+
+                            <div class="upload-preview"
+                                 id="preview"
+                                 aria-live="polite"></div>
+                        </div>
+                    </section>
+
+                    <div class="form-submit-panel">
+                        <span class="submit-note">
+                            <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
+                            Seus dados serão usados somente para organizar esta solicitação de manutenção.
+                        </span>
+                        <button type="submit" class="btn-enviar" id="btn-enviar-manutencao">
+                            <i class="fa-solid fa-paper-plane" aria-hidden="true"></i>
+                            <span>Enviar solicitação</span>
+                        </button>
+                    </div>
+                </form>
+
+                <aside class="quick-guide" aria-label="Guia para abrir manutenção">
+                    <div class="quick-guide-head">
+                        <i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i>
+                        <h3>Para agilizar a análise</h3>
+                        <p>Quatro informações fazem toda a diferença.</p>
+                    </div>
+                    <div class="quick-guide-list">
+                        <div class="quick-guide-item">
+                            <span>1</span>
+                            <div>
+                                <strong>Equipamento correto</strong>
+                                <p>Selecione o brinquedo exato que apresentou o problema.</p>
+                            </div>
+                        </div>
+                        <div class="quick-guide-item">
+                            <span>2</span>
+                            <div>
+                                <strong>Descrição objetiva</strong>
+                                <p>Conte o que acontece e quando o defeito começou.</p>
+                            </div>
+                        </div>
+                        <div class="quick-guide-item">
+                            <span>3</span>
+                            <div>
+                                <strong>Endereço completo</strong>
+                                <p>Use o CEP para preencher os dados rapidamente.</p>
+                            </div>
+                        </div>
+                        <div class="quick-guide-item">
+                            <span>4</span>
+                            <div>
+                                <strong>Fotos nítidas</strong>
+                                <p>Mostre o equipamento inteiro e detalhes da área afetada.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="quick-guide-footer">
+                        <strong>Dica:</strong> antes de enviar, confira se o telefone está correto.
+                    </div>
+                </aside>
+            </div>
+        </section>
+
+        <section class="tab-content {% if tab_ativa == 'lista' %}active{% endif %}"
+                 id="lista"
+                 role="tabpanel">
+            <div class="historico-panel">
+                <div class="historico-header">
+                    <div>
+                        <h2>Minhas solicitações</h2>
+                        <p>Consulte status, informações enviadas e fotos de cada atendimento.</p>
+                    </div>
+                    <span class="historico-summary">
+                        <i class="fa-solid fa-list-check" aria-hidden="true"></i>
+                        {{ manutencoes|length|default:0 }} registros
+                    </span>
+                </div>
+
+                <div class="tabela-wrapper">
+                    <table class="tabela-manutencoes">
+                        <thead>
+                            <tr>
+                                <th>Solicitação</th>
+                                <th>Status</th>
+                                <th>Data de abertura</th>
+                                <th>Ação</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        {% if manutencoes %}
+                            {% for manutencao in manutencoes %}
+                            <tr>
+                                <td data-label="Solicitação">
+                                    <div class="solicitacao-cell">
+                                        <span class="solicitacao-icon" aria-hidden="true">
+                                            <i class="fa-solid fa-screwdriver-wrench"></i>
+                                        </span>
+                                        <span>
+                                            <strong>{{ manutencao.brinquedo }}</strong>
+                                            <small>Protocolo #{{ manutencao.id|stringformat:"04d" }}</small>
+                                        </span>
+                                    </div>
+                                </td>
+                                <td data-label="Status">
+                                    <span class="status status-{{ manutencao.status }}">
+                                        {% if manutencao.status == 'P' %}
+                                            <i class="fa-regular fa-clock" aria-hidden="true"></i>
+                                        {% elif manutencao.status == 'A' %}
+                                            <i class="fa-solid fa-gears" aria-hidden="true"></i>
+                                        {% elif manutencao.status == 'C' %}
+                                            <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+                                        {% else %}
+                                            <i class="fa-solid fa-ban" aria-hidden="true"></i>
+                                        {% endif %}
+                                        {{ manutencao.get_status_display }}
+                                    </span>
+                                </td>
+                                <td data-label="Data">
+                                    {{ manutencao.criado_em|date:"d/m/Y" }}
+                                    <small>{{ manutencao.criado_em|date:"H:i" }}</small>
+                                </td>
+                                <td data-label="Ação">
+                                    <button type="button"
+                                            class="btn-detalhe"
+                                            data-id="{{ manutencao.id }}"
+                                            data-brinquedo="{{ manutencao.brinquedo }}"
+                                            data-status="{{ manutencao.get_status_display }}"
+                                            data-status-code="{{ manutencao.status }}"
+                                            data-descricao="{{ manutencao.descricao }}"
+                                            data-data="{{ manutencao.criado_em|date:'d/m/Y H:i' }}"
+                                            data-telefone="{{ manutencao.telefone_contato }}"
+                                            data-cep="{{ manutencao.cep }}"
+                                            data-endereco="{{ manutencao.endereco }}"
+                                            data-numero="{{ manutencao.numero }}"
+                                            data-complemento="{{ manutencao.complemento }}"
+                                            data-bairro="{{ manutencao.bairro }}"
+                                            data-cidade="{{ manutencao.cidade }}"
+                                            data-estado="{{ manutencao.estado }}"
+                                            data-imagens='[
+                                                {% for img in manutencao.imagens.all %}
+                                                    "{{ img.imagem.url }}"{% if not forloop.last %},{% endif %}
+                                                {% endfor %}
+                                            ]'>
+                                        <i class="fa-regular fa-eye" aria-hidden="true"></i>
+                                        Ver detalhes
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="4" class="sem-registros">
+                                    <div class="empty-maintenance">
+                                        <i class="fa-solid fa-clipboard-check" aria-hidden="true"></i>
+                                        <strong>Nenhuma manutenção solicitada</strong>
+                                        <span>Quando você abrir um chamado, ele aparecerá aqui.</span>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+        {% endif %}
     </div>
 </div>
-{% endif %}
 
-
-<!-- Modal de seleção de brinquedos -->
-<div id="modal-brinquedos" class="modal-brinquedos">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h2>Selecione um Brinquedo</h2>
-            <button class="close-modal">&times;</button>
-        </div>
-
-        <!-- Botões de ordenação -->
-        <div class="modal-ordenacao">
-            <button class="btn-ordenar active" data-ordem="a-z">A-Z</button>
-            <button class="btn-ordenar" data-ordem="z-a">Z-A</button>
-        </div>
-
-        <!-- Pesquisa -->
-        <div class="modal-pesquisa">
-            <input type="text" id="pesquisa-brinquedo" placeholder="Digite para pesquisar...">
-        </div>
-
-        <!-- Lista de brinquedos -->
-        <div class="lista-brinquedos">
-            {% for brinquedo in brinquedos %}
-                <div class="item-brinquedo" data-id="{{ brinquedo.id }}" data-nome="{{ brinquedo.nome_brinquedo }}">
-                    {% if brinquedo.imagem_brinquedo %}
-                        <img src="{{ brinquedo.imagem_brinquedo.url }}" alt="{{ brinquedo.nome_brinquedo }}">
-                    {% else %}
-                        <div class="placeholder-img">📦</div>
-                    {% endif %}
-                    <strong>{{ brinquedo.nome_brinquedo }}</strong>
+{% if user.is_authenticated %}
+    {% if messages %}
+    <div id="modal-sucesso"
+         class="modal-brinquedos"
+         style="display:none;"
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="titulo-modal-sucesso">
+        <div class="modal-content modal-small">
+            <div class="modal-header">
+                <div class="modal-title-wrap">
+                    <span class="modal-title-icon" aria-hidden="true">
+                        <i class="fa-solid fa-circle-check"></i>
+                    </span>
+                    <div>
+                        <h2 id="titulo-modal-sucesso">Solicitação enviada</h2>
+                        <p>Seu chamado foi registrado com sucesso.</p>
+                    </div>
                 </div>
-            {% empty %}
-                <p>Nenhum brinquedo cadastrado.</p>
+                <button type="button" class="close-modal" aria-label="Fechar">
+                    <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                </button>
+            </div>
+
+            {% for message in messages %}
+            <div class="modal-message">{{ message }}</div>
             {% endfor %}
 
+            <div class="modal-actions">
+                <a href="{% url 'manutencoes' %}?tab=lista#cab"
+                   class="btn-primario btn-ver-solicitacoes">
+                    <i class="fa-solid fa-clipboard-list" aria-hidden="true"></i>
+                    Ver minhas solicitações
+                </a>
+            </div>
         </div>
     </div>
-</div>
+    {% endif %}
 
-<div id="modal-detalhe" class="modal-brinquedos" style="display:none;">
-    <div class="modal-content" style="max-width:650px;">
-        <div class="modal-header">
-            <h2>🔧 Detalhes da Manutenção</h2>
-            <button class="close-modal">&times;</button>
-        </div>
-
-        <div class="modal-detalhe-body">
-
-            <!-- Brinquedo e status -->
-            <div class="detalhe-card">
-                <h4>Brinquedo</h4>
-                <p class="detalhe-info" id="det-brinquedo"></p>
-                <span id="det-status" class="status-badge"></span>
-            </div>
-
-            <!-- Descrição -->
-            <div class="detalhe-card">
-                <h4>Descrição do problema</h4>
-                <p class="detalhe-info" id="det-descricao"></p>
-            </div>
-
-            <!-- Endereço -->
-            <div class="detalhe-card">
-                <h4>Endereço</h4>
-                <p class="detalhe-info">
-                    <span id="det-endereco"></span>,
-                    <span id="det-bairro"></span><br>
-                    <span id="det-cidade"></span>/<span id="det-estado"></span>
-                </p>
-            </div>
-
-            <!-- Fotos -->
-            <div class="detalhe-card">
-                <h4>Fotos enviadas</h4>
-                <div class="detalhe-fotos" id="det-fotos"></div>
-            </div>
-
-            <!-- WhatsApp -->
-            <a href="#" target="_blank" id="btn-whatsapp" class="btn-whatsapp">
-                💬 Falar pelo WhatsApp
-            </a>
-
-            <!-- Cancelar -->
-            <form method="post" action="{% url 'cancelar_manutencao' %}">
-                {% csrf_token %}
-                <input type="hidden" name="manutencao_id" id="cancelar-id">
-                <button type="submit" class="btn-secundario">
-                    Cancelar manutenção
+    <div id="modal-brinquedos"
+         class="modal-brinquedos"
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="titulo-modal-brinquedo">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title-wrap">
+                    <span class="modal-title-icon" aria-hidden="true">
+                        <i class="fa-solid fa-gamepad"></i>
+                    </span>
+                    <div>
+                        <h2 id="titulo-modal-brinquedo">Selecione o brinquedo</h2>
+                        <p>Pesquise pelo nome do equipamento.</p>
+                    </div>
+                </div>
+                <button type="button" class="close-modal" aria-label="Fechar">
+                    <i class="fa-solid fa-xmark" aria-hidden="true"></i>
                 </button>
-            </form>
+            </div>
 
+            <div class="modal-toolbar">
+                <div class="modal-pesquisa">
+                    <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+                    <input type="search"
+                           id="pesquisa-brinquedo"
+                           placeholder="Digite o nome do brinquedo"
+                           autocomplete="off">
+                </div>
+                <div class="modal-ordenacao" aria-label="Ordenar brinquedos">
+                    <button type="button" class="btn-ordenar active" data-ordem="a-z">A–Z</button>
+                    <button type="button" class="btn-ordenar" data-ordem="z-a">Z–A</button>
+                </div>
+            </div>
+
+            <div class="lista-brinquedos">
+                {% for brinquedo in brinquedos %}
+                <button type="button"
+                        class="item-brinquedo"
+                        data-id="{{ brinquedo.id }}"
+                        data-nome="{{ brinquedo.nome_brinquedo }}">
+                    {% if brinquedo.imagem_brinquedo %}
+                        <img src="{{ brinquedo.imagem_brinquedo.url }}"
+                             alt="{{ brinquedo.nome_brinquedo }}"
+                             loading="lazy"
+                             decoding="async">
+                    {% else %}
+                        <span class="placeholder-img" aria-hidden="true">
+                            <i class="fa-solid fa-box"></i>
+                        </span>
+                    {% endif %}
+                    <strong>{{ brinquedo.nome_brinquedo }}</strong>
+                </button>
+                {% empty %}
+                    <p>Nenhum brinquedo cadastrado.</p>
+                {% endfor %}
+            </div>
         </div>
     </div>
-</div>
+
+    <div id="modal-detalhe"
+         class="modal-brinquedos"
+         style="display:none;"
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="titulo-modal-detalhe">
+        <div class="modal-content modal-detail">
+            <div class="modal-header">
+                <div class="modal-title-wrap">
+                    <span class="modal-title-icon" aria-hidden="true">
+                        <i class="fa-solid fa-screwdriver-wrench"></i>
+                    </span>
+                    <div>
+                        <h2 id="titulo-modal-detalhe">Detalhes da manutenção</h2>
+                        <p id="det-data"></p>
+                    </div>
+                </div>
+                <button type="button" class="close-modal" aria-label="Fechar">
+                    <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                </button>
+            </div>
+
+            <div class="modal-detail-body">
+                <div class="detail-summary">
+                    <div>
+                        <span class="detail-summary-label">Equipamento</span>
+                        <strong id="det-brinquedo"></strong>
+                    </div>
+                    <span id="det-status" class="status-badge"></span>
+                </div>
+
+                <div class="modal-detail-grid">
+                    <div class="detalhe-card span-full">
+                        <h4>
+                            <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+                            Descrição do problema
+                        </h4>
+                        <p class="detalhe-info" id="det-descricao"></p>
+                    </div>
+
+                    <div class="detalhe-card">
+                        <h4>
+                            <i class="fa-solid fa-phone" aria-hidden="true"></i>
+                            Contato informado
+                        </h4>
+                        <p class="detalhe-info" id="det-telefone"></p>
+                    </div>
+
+                    <div class="detalhe-card">
+                        <h4>
+                            <i class="fa-solid fa-location-dot" aria-hidden="true"></i>
+                            Endereço
+                        </h4>
+                        <p class="detalhe-info">
+                            <span id="det-endereco"></span>,
+                            <span id="det-numero"></span>
+                            <span id="det-complemento"></span><br>
+                            <span id="det-bairro"></span> —
+                            <span id="det-cidade"></span>/<span id="det-estado"></span><br>
+                            CEP <span id="det-cep"></span>
+                        </p>
+                    </div>
+
+                    <div class="detalhe-card span-full">
+                        <h4>
+                            <i class="fa-solid fa-images" aria-hidden="true"></i>
+                            Fotos enviadas
+                        </h4>
+                        <div class="detalhe-fotos" id="det-fotos"></div>
+                    </div>
+                </div>
+
+                <div class="detail-actions">
+                    <a href="#"
+                       target="_blank"
+                       rel="noopener"
+                       id="btn-whatsapp"
+                       class="btn-whatsapp">
+                        <i class="fa-brands fa-whatsapp" aria-hidden="true"></i>
+                        Falar com a Lazer &amp; Sport
+                    </a>
+
+                    <form method="post"
+                          action="{% url 'cancelar_manutencao' %}"
+                          id="form-cancelar-manutencao"
+                          onsubmit="return confirm('Deseja realmente cancelar esta solicitação de manutenção?');">
+                        {% csrf_token %}
+                        <input type="hidden" name="manutencao_id" id="cancelar-id">
+                        <button type="submit" class="btn-secundario">
+                            <i class="fa-solid fa-ban" aria-hidden="true"></i>
+                            Cancelar solicitação
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endif %}
 
 <script>
-
 document.addEventListener("DOMContentLoaded", () => {
+    inicializarAbasManutencao();
+    inicializarFormularioManutencao();
+    inicializarModalSucesso();
+    inicializarDetalhesManutencao();
+    inicializarFechamentoDeModais();
+});
 
-   /* ===============================
-       VARIÁVEIS GERAIS
-    =============================== */
-    const form = document.querySelector(".manutencao-form");
+function abrirModalManutencao(modal) {
+    if (!modal) return;
+    modal.style.display = "block";
+    document.body.style.overflow = "hidden";
 
-    /* ===============================
-       ABAS
-    =============================== */
-    const tabs = document.querySelectorAll(".tab-btn");
-    const contents = document.querySelectorAll(".tab-content");
+    const focoInicial = modal.querySelector(
+        "input:not([type='hidden']), button, a[href]"
+    );
+    window.setTimeout(() => focoInicial?.focus(), 40);
+}
+
+function fecharModalManutencao(modal) {
+    if (!modal) return;
+    modal.style.display = "none";
+
+    const existeOutroAberto = Array.from(
+        document.querySelectorAll(".modal-brinquedos")
+    ).some(item => item.style.display === "block");
+
+    if (!existeOutroAberto) {
+        document.body.style.overflow = "";
+    }
+}
+
+function inicializarFechamentoDeModais() {
+    const modais = Array.from(
+        document.querySelectorAll(".modal-brinquedos")
+    );
+
+    modais.forEach(modal => {
+        modal.addEventListener("click", event => {
+            if (event.target === modal) {
+                fecharModalManutencao(modal);
+            }
+        });
+    });
+
+    document.addEventListener("keydown", event => {
+        if (event.key !== "Escape") return;
+
+        const abertos = modais.filter(
+            modal => modal.style.display === "block"
+        );
+
+        if (abertos.length) {
+            fecharModalManutencao(abertos[abertos.length - 1]);
+        }
+    });
+}
+
+function inicializarAbasManutencao() {
+    const tabs = Array.from(document.querySelectorAll(".tab-btn"));
+    const contents = Array.from(document.querySelectorAll(".tab-content"));
+
+    if (!tabs.length || !contents.length) return;
 
     tabs.forEach(tab => {
         tab.addEventListener("click", () => {
-            tabs.forEach(t => t.classList.remove("active"));
-            contents.forEach(c => c.classList.remove("active"));
+            const target = document.getElementById(tab.dataset.tab);
+            if (!target) return;
+
+            tabs.forEach(item => {
+                item.classList.remove("active");
+                item.setAttribute("aria-selected", "false");
+            });
+            contents.forEach(content => content.classList.remove("active"));
 
             tab.classList.add("active");
-            document.getElementById(tab.dataset.tab).classList.add("active");
+            tab.setAttribute("aria-selected", "true");
+            target.classList.add("active");
+
+            const url = new URL(window.location.href);
+            url.searchParams.set("tab", tab.dataset.tab);
+            window.history.replaceState({}, "", url);
         });
     });
+}
 
+function inicializarFormularioManutencao() {
+    const form = document.querySelector(".manutencao-form");
+    if (!form) return;
 
-    /* ===============================
-       MODAL BRINQUEDOS
-    =============================== */
+    inicializarSeletorBrinquedo(form);
+    inicializarTelefone();
+    inicializarCep();
+    inicializarUploadFotos();
+
+    form.addEventListener("submit", event => {
+        const brinquedoInput = document.getElementById("brinquedo-input");
+        const botaoSelecionar = document.getElementById(
+            "selecionar-brinquedo-btn"
+        );
+
+        if (!brinquedoInput?.value) {
+            event.preventDefault();
+            window.alert("Selecione o brinquedo antes de enviar.");
+            botaoSelecionar?.focus();
+            return;
+        }
+
+        const enderecoBloqueado = form.querySelector("#id_endereco:disabled");
+        if (enderecoBloqueado) {
+            event.preventDefault();
+            window.alert(
+                "Digite um CEP completo e aguarde o preenchimento do endereço."
+            );
+            document.getElementById("id_cep")?.focus();
+            return;
+        }
+
+        if (!form.checkValidity()) {
+            event.preventDefault();
+            form.reportValidity();
+            return;
+        }
+
+        const botaoEnviar = document.getElementById(
+            "btn-enviar-manutencao"
+        );
+
+        if (botaoEnviar) {
+            botaoEnviar.disabled = true;
+            botaoEnviar.innerHTML =
+                '<i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i>' +
+                "<span>Enviando...</span>";
+        }
+    });
+}
+
+function inicializarSeletorBrinquedo(form) {
     const modal = document.getElementById("modal-brinquedos");
-    const btnSelecionar = document.getElementById("selecionar-brinquedo-btn");
-    const closeModal = modal.querySelector(".close-modal");
+    const botaoSelecionar = document.getElementById(
+        "selecionar-brinquedo-btn"
+    );
     const inputHidden = document.getElementById("brinquedo-input");
-    const itens = Array.from(modal.querySelectorAll(".item-brinquedo"));
-    const pesquisa = document.getElementById("pesquisa-brinquedo");
-    const btnOrdenar = Array.from(modal.querySelectorAll(".btn-ordenar"));
-
-    // Card
     const card = document.getElementById("brinquedo-card");
-    const img = document.getElementById("brinquedo-img");
-    const nome = document.getElementById("brinquedo-nome");
-    const btnRemover = card.querySelector(".remove-brinquedo");
 
-    bloquearEndereco();
+    if (!modal || !botaoSelecionar || !inputHidden || !card) return;
 
-// Abrir modal
- btnSelecionar.addEventListener("click", () => {
-        modal.style.display = "block";
+    const fechar = modal.querySelector(".close-modal");
+    const itens = Array.from(modal.querySelectorAll(".item-brinquedo"));
+    const pesquisa = modal.querySelector("#pesquisa-brinquedo");
+    const botoesOrdenar = Array.from(
+        modal.querySelectorAll(".btn-ordenar")
+    );
+    const lista = modal.querySelector(".lista-brinquedos");
+    const imagemSelecionada = document.getElementById("brinquedo-img");
+    const nomeSelecionado = document.getElementById("brinquedo-nome");
+    const remover = card.querySelector(".remove-brinquedo");
+
+    botaoSelecionar.addEventListener("click", () => {
+        abrirModalManutencao(modal);
     });
 
-// Fechar modal
-
-closeModal.addEventListener("click", () => modal.style.display = "none")
-
-window.addEventListener("click", e => {
-        if (e.target === modal) modal.style.display = "none";
+    fechar?.addEventListener("click", () => {
+        fecharModalManutencao(modal);
+        botaoSelecionar.focus();
     });
 
-// Selecionar brinquedo
-itens.forEach(item => {
+    itens.forEach(item => {
         item.addEventListener("click", () => {
-            inputHidden.value = item.dataset.id;
-            nome.textContent = item.dataset.nome;
-            img.src = item.querySelector("img")?.src || "";
+            inputHidden.value = item.dataset.id || "";
 
-            btnSelecionar.style.display = "none";
+            if (nomeSelecionado) {
+                nomeSelecionado.textContent =
+                    item.dataset.nome || "Brinquedo selecionado";
+            }
+
+            const imagemItem = item.querySelector("img");
+            if (imagemSelecionada) {
+                if (imagemItem?.src) {
+                    imagemSelecionada.src = imagemItem.src;
+                    imagemSelecionada.alt = item.dataset.nome || "";
+                    imagemSelecionada.style.display = "";
+                } else {
+                    imagemSelecionada.removeAttribute("src");
+                    imagemSelecionada.alt = "";
+                    imagemSelecionada.style.display = "none";
+                }
+            }
+
+            botaoSelecionar.style.display = "none";
             card.style.display = "flex";
-            modal.style.display = "none";
+            fecharModalManutencao(modal);
+            card.scrollIntoView({ behavior: "smooth", block: "nearest" });
         });
     });
 
-
-// Remover brinquedo
- btnRemover.addEventListener("click", () => {
+    remover?.addEventListener("click", () => {
         inputHidden.value = "";
         card.style.display = "none";
-        btnSelecionar.style.display = "inline-flex";
+        botaoSelecionar.style.display = "flex";
+        botaoSelecionar.focus();
     });
 
-    // Pesquisa em tempo real
-    pesquisa.addEventListener("input", () => {
-        const valor = pesquisa.value.toLowerCase();
+    pesquisa?.addEventListener("input", () => {
+        const termo = pesquisa.value.trim().toLocaleLowerCase("pt-BR");
+
         itens.forEach(item => {
-            item.style.display = item.dataset.nome.toLowerCase().includes(valor)
-                ? "flex"
-                : "none";
+            const nome = (item.dataset.nome || "")
+                .toLocaleLowerCase("pt-BR");
+            item.style.display = nome.includes(termo) ? "flex" : "none";
         });
     });
 
-    // Ordenação A-Z / Z-A
-     btnOrdenar.forEach(btn => {
-        btn.addEventListener("click", () => {
-            btnOrdenar.forEach(b => b.classList.remove("active"));
-            btn.classList.add("active");
+    botoesOrdenar.forEach(botao => {
+        botao.addEventListener("click", () => {
+            botoesOrdenar.forEach(item => {
+                item.classList.remove("active");
+            });
+            botao.classList.add("active");
 
-            const ordem = btn.dataset.ordem;
-            const container = modal.querySelector(".lista-brinquedos");
-
+            const ordem = botao.dataset.ordem;
             itens
-                .sort((a, b) =>
-                    ordem === "a-z"
-                        ? a.dataset.nome.localeCompare(b.dataset.nome)
-                        : b.dataset.nome.localeCompare(a.dataset.nome)
-                )
-                .forEach(i => container.appendChild(i));
+                .sort((a, b) => {
+                    const comparacao = (a.dataset.nome || "").localeCompare(
+                        b.dataset.nome || "",
+                        "pt-BR",
+                        { sensitivity: "base" }
+                    );
+                    return ordem === "z-a" ? -comparacao : comparacao;
+                })
+                .forEach(item => lista?.appendChild(item));
         });
     });
-
-
- /* ===============================
-       VALIDAÇÃO DO FORM
-    =============================== */
-    form.addEventListener("submit", e => {
-        if (!inputHidden.value) {
-            e.preventDefault();
-            alert("Selecione um brinquedo antes de enviar.");
-        }
-    });
-
- /* ===============================
-       MODAL SUCESSO
-    =============================== */
-    const modalSucesso = document.getElementById("modal-sucesso");
-    if (modalSucesso) {
-        modalSucesso.style.display = "block";
-
-        modalSucesso.querySelector(".close-modal")
-            .addEventListener("click", () => {
-                modalSucesso.style.display = "none";
-            });
-
-        window.addEventListener("click", e => {
-            if (e.target === modalSucesso) {
-                modalSucesso.style.display = "none";
-            }
-        });
-    }
-
-});
-
-const modalDetalhe = document.getElementById("modal-detalhe");
-const closeDetalhe = modalDetalhe.querySelector(".close-modal");
-
-document.querySelectorAll(".btn-detalhe").forEach(btn => {
-    btn.addEventListener("click", () => {
-
-        // ===== IMAGENS =====
-        const fotosDiv = document.getElementById("det-fotos");
-        fotosDiv.innerHTML = "";
-
-        let imagens = [];
-
-        try {
-            imagens = JSON.parse(btn.dataset.imagens);
-        } catch (e) {
-            imagens = [];
-        }
-
-        if (imagens.length === 0) {
-            fotosDiv.innerHTML = "<span style='color:#777'>Nenhuma foto enviada</span>";
-        } else {
-            imagens.forEach(url => {
-                const img = document.createElement("img");
-                img.src = url;
-                img.alt = "Foto da manutenção";
-                fotosDiv.appendChild(img);
-            });
-        }
-
-        // ===== DADOS =====
-        document.getElementById("det-brinquedo").textContent = btn.dataset.brinquedo;
-        document.getElementById("det-descricao").textContent = btn.dataset.descricao;
-
-        const statusSpan = document.getElementById("det-status");
-        statusSpan.textContent = btn.dataset.status;
-        statusSpan.className = "status-badge status-" + btn.dataset.status.charAt(0);
-
-        document.getElementById("det-endereco").textContent = btn.dataset.endereco;
-        document.getElementById("det-bairro").textContent = btn.dataset.bairro;
-        document.getElementById("det-cidade").textContent = btn.dataset.cidade;
-        document.getElementById("det-estado").textContent = btn.dataset.estado;
-
-        document.getElementById("cancelar-id").value = btn.dataset.id;
-
-        // ===== WHATSAPP =====
-        if (btn.dataset.telefone) {
-            const telefone = btn.dataset.telefone.replace(/\D/g, "");
-            const msg = encodeURIComponent("Olá! Gostaria de falar sobre minha manutenção.");
-            document.getElementById("btn-whatsapp").href =
-                `https://wa.me/55${telefone}?text=${msg}`;
-        }
-
-        modalDetalhe.style.display = "block";
-    });
-});
-
-// Fechar modal
-closeDetalhe.addEventListener("click", () => {
-    modalDetalhe.style.display = "none";
-});
-
-window.addEventListener("click", e => {
-    if (e.target === modalDetalhe) {
-        modalDetalhe.style.display = "none";
-    }
-});
-
-
-
-document.addEventListener("DOMContentLoaded", () => {
-    const telefoneInput = document.querySelector(".mask-telefone");
-    if (!telefoneInput) return;
-
-    telefoneInput.addEventListener("input", () => {
-        telefoneInput.value = maskTelefoneBR(telefoneInput.value);
-    });
-});
+}
 
 function maskTelefoneBR(value) {
-    value = value.replace(/\D/g, "");
+    const numeros = String(value || "")
+        .replace(/\D/g, "")
+        .slice(0, 11);
 
-    if (value.length > 11) {
-        value = value.slice(0, 11);
-    }
-
-    if (value.length <= 10) {
-        // Telefone fixo: (00) 0000-0000
-        return value
+    if (numeros.length <= 10) {
+        return numeros
             .replace(/^(\d{2})(\d)/, "($1) $2")
             .replace(/(\d{4})(\d)/, "$1-$2");
     }
 
-    // Celular: (00) 00000-0000
-    return value
+    return numeros
         .replace(/^(\d{2})(\d)/, "($1) $2")
         .replace(/(\d{5})(\d)/, "$1-$2");
 }
 
+function inicializarTelefone() {
+    const telefone = document.querySelector(".mask-telefone");
+    if (!telefone) return;
 
-
-
-function mask(input, pattern) {
-    if (!input) return;
-
-    input.addEventListener("input", () => {
-        let i = 0;
-        const value = input.value.replace(/\D/g, "");
-        input.value = pattern.replace(/#/g, () => value[i++] || "");
+    telefone.value = maskTelefoneBR(telefone.value);
+    telefone.addEventListener("input", () => {
+        telefone.value = maskTelefoneBR(telefone.value);
     });
 }
 
+function formatarCep(value) {
+    const numeros = String(value || "")
+        .replace(/\D/g, "")
+        .slice(0, 8);
 
-document.addEventListener("DOMContentLoaded", () => {
-    const cepInput = document.querySelector(".mask-cep");
+    return numeros.replace(/^(\d{5})(\d)/, "$1-$2");
+}
+
+function inicializarCep() {
+    const cepInput = document.getElementById("id_cep");
     const feedback = document.getElementById("cepFeedback");
 
-    if (!cepInput) return;
+    if (!cepInput || !feedback) return;
 
-    mask(cepInput, "#####-###");
+    const camposEndereco = [
+        "#id_endereco",
+        "#id_bairro",
+        "#id_cidade",
+        "#id_estado"
+    ];
+    let controller = null;
+    let debounceCep = null;
 
-    let buscandoCep = false;
+    function alternarEnderecoBloqueado(bloqueado, limpar = false) {
+        camposEndereco.forEach(selector => {
+            const campo = document.querySelector(selector);
+            if (!campo) return;
 
-    cepInput.addEventListener("input", () => {
-        const cep = cepInput.value.replace(/\D/g, "");
-
-       if (cep.length < 8) {
-        buscandoCep = false;
-        bloquearEndereco();
-
-        cepInput.classList.remove("campo-erro", "campo-loading");
-        feedback.textContent = "";
-        feedback.className = "cep-feedback";
-
-        return;
+            if (limpar) campo.value = "";
+            campo.disabled = bloqueado;
+            campo.classList.toggle("campo-bloqueado", bloqueado);
+        });
     }
 
-        if (buscandoCep) return;
+    function exibirFeedback(texto, classe = "") {
+        feedback.textContent = texto;
+        feedback.className = `cep-feedback ${classe}`.trim();
+    }
 
-    buscandoCep = true;
+    function preencherEndereco(data) {
+        const mapeamento = {
+            "#id_endereco": data.logradouro || "",
+            "#id_bairro": data.bairro || "",
+            "#id_cidade": data.localidade || "",
+            "#id_estado": data.uf || ""
+        };
 
-        // Estado: carregando
+        Object.entries(mapeamento).forEach(([selector, valor]) => {
+            const campo = document.querySelector(selector);
+            if (campo) campo.value = valor;
+        });
+    }
+
+    async function buscarCep() {
+        const cep = cepInput.value.replace(/\D/g, "");
+        if (cep.length !== 8) return;
+
+        controller?.abort();
+        controller = new AbortController();
+
         cepInput.classList.remove("campo-erro");
         cepInput.classList.add("campo-loading");
-        feedback.textContent = "Buscando CEP…";
-        feedback.className = "cep-feedback cep-loading";
+        exibirFeedback("Buscando endereço…", "cep-loading");
 
-        fetch(`https://viacep.com.br/ws/${cep}/json/`)
-            .then(res => res.json())
-            .then(data => {
-                buscandoCep = false;
-                cepInput.classList.remove("campo-loading");
+        try {
+            const resposta = await fetch(
+                `https://viacep.com.br/ws/${cep}/json/`,
+                { signal: controller.signal }
+            );
 
-                if (data.erro) {
-                    marcarErroCep("CEP não encontrado");
-                    return;
-                }
+            if (!resposta.ok) {
+                throw new Error("Falha na consulta do CEP");
+            }
 
-                preencherEndereco(data);
-                liberarEndereco();
-                feedback.textContent = "Endereço encontrado ✔";
-                feedback.className = "cep-feedback cep-success";
-            })
-            .catch(() => {
-                buscandoCep = false;
-                cepInput.classList.remove("campo-loading");
-                marcarErroCep("Erro ao consultar CEP");
-            });
-    });
+            const data = await resposta.json();
+            cepInput.classList.remove("campo-loading");
 
-    function marcarErroCep(msg) {
-        bloquearEndereco();
-        cepInput.classList.add("campo-erro");
-        feedback.textContent = msg;
-        feedback.className = "cep-feedback cep-error";
+            if (data.erro) {
+                cepInput.classList.add("campo-erro");
+                alternarEnderecoBloqueado(false);
+                exibirFeedback(
+                    "CEP não encontrado. Preencha o endereço manualmente.",
+                    "cep-error"
+                );
+                return;
+            }
+
+            preencherEndereco(data);
+            alternarEnderecoBloqueado(false);
+            exibirFeedback("Endereço encontrado e preenchido.", "cep-success");
+            document.getElementById("id_numero")?.focus();
+        } catch (error) {
+            if (error.name === "AbortError") return;
+
+            cepInput.classList.remove("campo-loading");
+            cepInput.classList.add("campo-erro");
+            alternarEnderecoBloqueado(false);
+            exibirFeedback(
+                "Não foi possível consultar agora. Preencha o endereço manualmente.",
+                "cep-error"
+            );
+        }
     }
-});
 
-function preencherEndereco(data) {
-    document.querySelector("#id_endereco").value = data.logradouro || "";
-    document.querySelector("#id_bairro").value = data.bairro || "";
-    document.querySelector("#id_cidade").value = data.localidade || "";
-    document.querySelector("#id_estado").value = data.uf || "";
+    cepInput.value = formatarCep(cepInput.value);
 
-    limparErroCep();
-}
+    cepInput.addEventListener("input", () => {
+        cepInput.value = formatarCep(cepInput.value);
+        cepInput.classList.remove("campo-erro", "campo-loading");
 
-function limparErroCep() {
-    const cepInput = document.querySelector(".mask-cep");
-    cepInput.classList.remove("campo-erro");
-}
+        window.clearTimeout(debounceCep);
+        const cep = cepInput.value.replace(/\D/g, "");
 
+        if (cep.length < 8) {
+            controller?.abort();
+            alternarEnderecoBloqueado(true, true);
+            exibirFeedback("");
+            return;
+        }
 
-
-document.getElementById("imagens").addEventListener("change", function() {
-    const preview = document.getElementById("preview");
-    preview.innerHTML = "";
-
-    Array.from(this.files).forEach(file => {
-        const img = document.createElement("img");
-        img.src = URL.createObjectURL(file);
-        img.style.width = "80px";
-        img.style.height = "80px";
-        img.style.objectFit = "cover";
-        img.style.borderRadius = "8px";
-        preview.appendChild(img);
+        debounceCep = window.setTimeout(buscarCep, 220);
     });
-});
 
+    if (cepInput.value.replace(/\D/g, "").length === 8) {
+        alternarEnderecoBloqueado(false);
+        buscarCep();
+    } else {
+        alternarEnderecoBloqueado(true);
+    }
+}
 
-const inputFotos = document.getElementById("imagens");
-const uploadCard = document.getElementById("uploadCard");
-const preview = document.getElementById("preview");
-const uploadInfo = document.getElementById("uploadInfo");
+function inicializarUploadFotos() {
+    const input = document.getElementById("imagens");
+    const card = document.getElementById("uploadCard");
+    const preview = document.getElementById("preview");
+    const info = document.getElementById("uploadInfo");
 
-let filesArray = [];
-const MAX_FILES = 5;
+    if (!input || !card || !preview || !info) return;
 
-uploadCard.addEventListener("click", () => inputFotos.click());
+    const MAX_FILES = 5;
+    let arquivos = [];
 
-inputFotos.addEventListener("change", () => {
-    const novosArquivos = Array.from(inputFotos.files);
+    function atualizarInput() {
+        const transferencia = new DataTransfer();
+        arquivos.forEach(file => transferencia.items.add(file));
+        input.files = transferencia.files;
+    }
 
-    novosArquivos.forEach(file => {
-        if (filesArray.length < MAX_FILES) {
-            filesArray.push(file);
+    function renderizarPreview() {
+        preview.innerHTML = "";
+
+        if (!arquivos.length) {
+            info.textContent =
+                "Até 5 imagens — toque ou clique para selecionar";
+        } else {
+            info.textContent =
+                `${arquivos.length} de ${MAX_FILES} fotos selecionadas`;
+        }
+        info.style.color = "";
+
+        arquivos.forEach((file, index) => {
+            const item = document.createElement("div");
+            item.className = "preview-item";
+
+            const imagem = document.createElement("img");
+            const urlTemporaria = URL.createObjectURL(file);
+            imagem.src = urlTemporaria;
+            imagem.alt = `Foto selecionada ${index + 1}`;
+            imagem.addEventListener(
+                "load",
+                () => URL.revokeObjectURL(urlTemporaria),
+                { once: true }
+            );
+
+            const remover = document.createElement("button");
+            remover.type = "button";
+            remover.setAttribute(
+                "aria-label",
+                `Remover foto ${index + 1}`
+            );
+            remover.innerHTML =
+                '<i class="fa-solid fa-xmark" aria-hidden="true"></i>';
+            remover.addEventListener("click", () => {
+                arquivos.splice(index, 1);
+                atualizarInput();
+                renderizarPreview();
+            });
+
+            item.appendChild(imagem);
+            item.appendChild(remover);
+            preview.appendChild(item);
+        });
+
+        atualizarInput();
+    }
+
+    function adicionarArquivos(novosArquivos) {
+        let ignorados = 0;
+
+        novosArquivos.forEach(file => {
+            const ehImagem = file.type.startsWith("image/");
+            const chave = `${file.name}-${file.size}-${file.lastModified}`;
+            const duplicado = arquivos.some(item =>
+                `${item.name}-${item.size}-${item.lastModified}` === chave
+            );
+
+            if (!ehImagem || duplicado || arquivos.length >= MAX_FILES) {
+                ignorados += 1;
+                return;
+            }
+
+            arquivos.push(file);
+        });
+
+        renderizarPreview();
+
+        if (ignorados) {
+            info.textContent =
+                "Algumas fotos foram ignoradas. Use até 5 imagens válidas.";
+            info.style.color = "#c91f31";
+        }
+    }
+
+    card.addEventListener("click", () => input.click());
+    card.addEventListener("keydown", event => {
+        if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            input.click();
         }
     });
 
-    if (filesArray.length > MAX_FILES) {
-        filesArray = filesArray.slice(0, MAX_FILES);
-        alert("Você pode enviar no máximo 5 fotos.");
+    input.addEventListener("change", () => {
+        adicionarArquivos(Array.from(input.files));
+    });
+}
+
+function inicializarModalSucesso() {
+    const modal = document.getElementById("modal-sucesso");
+    if (!modal) return;
+
+    modal.querySelector(".close-modal")?.addEventListener("click", () => {
+        fecharModalManutencao(modal);
+    });
+
+    abrirModalManutencao(modal);
+}
+
+function inicializarDetalhesManutencao() {
+    const modal = document.getElementById("modal-detalhe");
+    if (!modal) return;
+
+    const fechar = modal.querySelector(".close-modal");
+    const cancelarForm = document.getElementById(
+        "form-cancelar-manutencao"
+    );
+
+    fechar?.addEventListener("click", () => {
+        fecharModalManutencao(modal);
+    });
+
+    document.querySelectorAll(".btn-detalhe").forEach(botao => {
+        botao.addEventListener("click", () => {
+            preencherTexto("det-brinquedo", botao.dataset.brinquedo);
+            preencherTexto("det-descricao", botao.dataset.descricao);
+            preencherTexto(
+                "det-data",
+                `Aberta em ${botao.dataset.data || "data não informada"}`
+            );
+            preencherTexto("det-telefone", botao.dataset.telefone);
+            preencherTexto("det-cep", botao.dataset.cep);
+            preencherTexto("det-endereco", botao.dataset.endereco);
+            preencherTexto("det-numero", botao.dataset.numero);
+            preencherTexto(
+                "det-complemento",
+                botao.dataset.complemento
+                    ? ` (${botao.dataset.complemento})`
+                    : ""
+            );
+            preencherTexto("det-bairro", botao.dataset.bairro);
+            preencherTexto("det-cidade", botao.dataset.cidade);
+            preencherTexto("det-estado", botao.dataset.estado);
+            preencherTexto("cancelar-id", botao.dataset.id, true);
+
+            const codigoStatus = botao.dataset.statusCode || "P";
+            const status = document.getElementById("det-status");
+            if (status) {
+                status.textContent = botao.dataset.status || "";
+                status.className =
+                    `status-badge status-${codigoStatus}`;
+            }
+
+            preencherFotosDetalhe(botao.dataset.imagens);
+
+            const whatsapp = document.getElementById("btn-whatsapp");
+            if (whatsapp) {
+                const protocolo = String(botao.dataset.id || "").padStart(
+                    4,
+                    "0"
+                );
+                const mensagem = encodeURIComponent(
+                    `Olá! Gostaria de falar sobre a manutenção #${protocolo} ` +
+                    `do brinquedo ${botao.dataset.brinquedo || ""}.`
+                );
+                whatsapp.href =
+                    `https://wa.me/5511960563135?text=${mensagem}`;
+            }
+
+            if (cancelarForm) {
+                cancelarForm.style.display =
+                    ["C", "X"].includes(codigoStatus) ? "none" : "block";
+            }
+
+            abrirModalManutencao(modal);
+        });
+    });
+}
+
+function preencherTexto(id, valor, campoDeFormulario = false) {
+    const elemento = document.getElementById(id);
+    if (!elemento) return;
+
+    const texto = valor || "";
+    if (campoDeFormulario) {
+        elemento.value = texto;
+    } else {
+        elemento.textContent = texto;
+    }
+}
+
+function preencherFotosDetalhe(jsonImagens) {
+    const container = document.getElementById("det-fotos");
+    if (!container) return;
+
+    container.innerHTML = "";
+    let imagens = [];
+
+    try {
+        imagens = JSON.parse(jsonImagens || "[]");
+    } catch (error) {
+        imagens = [];
     }
 
-    renderPreview();
-});
+    if (!imagens.length) {
+        const vazio = document.createElement("span");
+        vazio.className = "detalhe-info";
+        vazio.textContent = "Nenhuma foto foi enviada.";
+        container.appendChild(vazio);
+        return;
+    }
 
-function renderPreview() {
-    preview.innerHTML = "";
+    imagens.forEach((url, index) => {
+        const link = document.createElement("a");
+        link.href = url;
+        link.target = "_blank";
+        link.rel = "noopener";
+        link.setAttribute(
+            "aria-label",
+            `Abrir foto ${index + 1} em tamanho maior`
+        );
 
-    uploadInfo.textContent = `${filesArray.length} de ${MAX_FILES} fotos selecionadas`;
+        const imagem = document.createElement("img");
+        imagem.src = url;
+        imagem.alt = `Foto da manutenção ${index + 1}`;
+        imagem.loading = "lazy";
 
-    filesArray.forEach((file, index) => {
-        const div = document.createElement("div");
-        div.className = "preview-item";
-
-        const img = document.createElement("img");
-        img.src = URL.createObjectURL(file);
-
-        const btn = document.createElement("button");
-        btn.innerHTML = "×";
-        btn.onclick = () => removerImagem(index);
-
-        div.appendChild(img);
-        div.appendChild(btn);
-        preview.appendChild(div);
-    });
-
-    atualizarInput();
-}
-
-function removerImagem(index) {
-    filesArray.splice(index, 1);
-    renderPreview();
-}
-
-function atualizarInput() {
-    const dt = new DataTransfer();
-    filesArray.forEach(file => dt.items.add(file));
-    inputFotos.files = dt.files;
-}
-
-const camposEndereco = [
-    "#id_endereco",
-    "#id_bairro",
-    "#id_cidade",
-    "#id_estado"
-];
-
-function bloquearEndereco() {
-    camposEndereco.forEach(selector => {
-        const campo = document.querySelector(selector);
-        if (!campo) return;
-
-        campo.value = "";
-        campo.disabled = true;
-        campo.classList.add("campo-bloqueado");
+        link.appendChild(imagem);
+        container.appendChild(link);
     });
 }
-
-function liberarEndereco() {
-    camposEndereco.forEach(selector => {
-        const campo = document.querySelector(selector);
-        if (!campo) return;
-
-        campo.disabled = false;
-        campo.classList.remove("campo-bloqueado");
-    });
-}
-
 
 </script>
 
