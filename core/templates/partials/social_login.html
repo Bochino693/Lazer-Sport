@@ -2,9 +2,10 @@
 core/templates/partials/social_login.html
 
 Inclua com:
-    {% include "partials/social_login.html" with titulo="Ou continue com" %}
+    {% include "partials/social_login.html" %}
 
-Por que formulário POST e não <a href>: a partir do allauth 0.55 a
+Por que formulário POST e não um link comum: a partir do allauth
+0.55 a
 opção SOCIALACCOUNT_LOGIN_ON_GET vem desligada por padrão. Um link GET
 para /accounts/google/login/ agora só mostra uma página intermediária
 de confirmação. O POST com csrf_token vai direto para o provedor -- é o
@@ -13,55 +14,61 @@ que dá a sensação de um clique só.
 A lista vem de get_providers, então o botão só aparece se as chaves do
 provedor estiverem configuradas. Enquanto a Apple não estiver liberada,
 o botão dela simplesmente não é renderizado.
+
+O logo do Google vai inline em SVG, e não como imagem hospedada em
+developers.google.com: dependência externa numa tela de login é ponto
+de falha (bloqueio de rede, adblock, offline) e ainda atrasa a
+renderização do botão mais importante da página.
+
+O estilo vem das classes .ls-social / .ls-social-btn, definidas nas
+telas que incluem este arquivo.
 {% endcomment %}
 
 {% load socialaccount %}
 {% get_providers as lista_provedores %}
 
 {% if lista_provedores %}
-<div class="social-login">
+<div class="ls-social">
+    {% for provedor in lista_provedores %}
 
-    <div class="social-divider">{{ titulo|default:"Ou continue com" }}</div>
+        {% if provedor.id == "google" %}
+            <form method="post" action="{% provider_login_url provedor.id process='login' %}">
+                {% csrf_token %}
+                {% if redirect_para %}
+                    <input type="hidden" name="next" value="{{ redirect_para }}">
+                {% endif %}
+                <button type="submit" class="ls-social-btn google">
+                    <svg viewBox="0 0 533.5 544.3" aria-hidden="true" focusable="false">
+                        <path fill="#4285F4" d="M533.5 278.4c0-17.4-1.6-34.1-4.6-50.4H272v95.5h146.9c-6.4 34.7-25.5 64.1-54.5 83.9v69.7h88.2c51.6-47.5 81.9-117.7 81.9-198.7z"/>
+                        <path fill="#34A853" d="M272 544.3c73.4 0 134.9-24.3 179.8-66.2l-88.2-69.7c-24.5 16.4-56 26-91.6 26-70.6 0-130.5-47.6-151.9-111.3H29.1v69.9C73.8 485.8 167.1 544.3 272 544.3z"/>
+                        <path fill="#FBBC05" d="M120.1 326.8c-10.5-31.7-10.5-65.9 0-97.6v-69.9H29.1c-41.6 83.6-41.6 183.4 0 267.1l91-69.6z"/>
+                        <path fill="#EA4335" d="M272 107.3c37.5-.6 73.3 13.7 100.8 39.9l75.3-75.3C406.7 24.6 345.2.3 272 0 167.1 0 73.8 58.5 29.1 146.9l91 69.9c21.4-63.7 81.3-111.3 151.9-109.5z"/>
+                    </svg>
+                    <span>Continuar com Google</span>
+                </button>
+            </form>
 
-    <div class="social-buttons">
-        {% for provedor in lista_provedores %}
+        {% elif provedor.id == "apple" %}
+            <form method="post" action="{% provider_login_url provedor.id process='login' %}">
+                {% csrf_token %}
+                {% if redirect_para %}
+                    <input type="hidden" name="next" value="{{ redirect_para }}">
+                {% endif %}
+                <button type="submit" class="ls-social-btn apple">
+                    <i class="fa-brands fa-apple" aria-hidden="true"></i>
+                    <span>Continuar com Apple</span>
+                </button>
+            </form>
 
-            {% if provedor.id == "google" %}
-                <form method="post" action="{% provider_login_url provedor.id process='login' %}">
-                    {% csrf_token %}
-                    {% if redirect_para %}
-                        <input type="hidden" name="next" value="{{ redirect_para }}">
-                    {% endif %}
-                    <button type="submit" class="social-btn google">
-                        <img src="https://developers.google.com/identity/images/g-logo.png"
-                             alt="" aria-hidden="true">
-                        Continuar com Google
-                    </button>
-                </form>
+        {% else %}
+            <form method="post" action="{% provider_login_url provedor.id process='login' %}">
+                {% csrf_token %}
+                <button type="submit" class="ls-social-btn generico">
+                    <span>Continuar com {{ provedor.name }}</span>
+                </button>
+            </form>
+        {% endif %}
 
-            {% elif provedor.id == "apple" %}
-                <form method="post" action="{% provider_login_url provedor.id process='login' %}">
-                    {% csrf_token %}
-                    {% if redirect_para %}
-                        <input type="hidden" name="next" value="{{ redirect_para }}">
-                    {% endif %}
-                    <button type="submit" class="social-btn apple">
-                        <i class="fa-brands fa-apple" aria-hidden="true"></i>
-                        Continuar com Apple
-                    </button>
-                </form>
-
-            {% else %}
-                <form method="post" action="{% provider_login_url provedor.id process='login' %}">
-                    {% csrf_token %}
-                    <button type="submit" class="social-btn generico">
-                        Continuar com {{ provedor.name }}
-                    </button>
-                </form>
-            {% endif %}
-
-        {% endfor %}
-    </div>
-
+    {% endfor %}
 </div>
 {% endif %}

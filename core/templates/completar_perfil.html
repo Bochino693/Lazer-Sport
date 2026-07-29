@@ -1,401 +1,199 @@
 {% extends "base.html" %}
-{% load static %}
 
-{% block title %}Criar Conta — Lazer & Sports{% endblock %}
+{% block title %}Falta só o telefone — Lazer & Sport{% endblock %}
 
 {% block content %}
+{% include "partials/auth_estilo.html" %}
+
 <style>
-
-/* ===== CONTAINER ===== */
-.register-container {
-    max-width: 480px;
-    margin: 50px auto;
-    background: #ffffff;
-    padding: 35px;
-    border-radius: 20px;
-    box-shadow: 0 6px 22px rgba(0,0,0,0.15);
-    animation: fadeSlide 0.4s ease-out;
-}
-
-/* TÍTULO */
-.register-container h2 {
-    text-align: center;
-    margin-bottom: 8px;
-    color: #004AAD;
-    font-weight: 700;
-    font-size: 1.9em;
-}
-
-.register-sub {
-    text-align: center;
-    color: #6b7a90;
-    font-size: 0.95em;
-    margin-bottom: 22px;
-}
-
-/* === LABELS === */
-.register-container label {
-    font-weight: 600;
-    color: #004AAD;
-    margin-top: 12px;
-    display: block;
-}
-
-/* === CAMPOS === */
-.register-container input {
-    width: 100%;
-    padding: 12px 14px;
-    margin-top: 6px;
-    border-radius: 10px;
-    border: 1px solid #b5c9ff;
-    background: #f9fbff;
-    outline: none;
-    transition: 0.25s;
-    font-size: 1.2em;
-}
-
-.register-container input:focus {
-    border-color: #004AAD;
-    box-shadow: 0 0 6px rgba(0, 74, 173, 0.3);
-}
-
-.register-container input.erro {
-    border-color: #e63946;
-    background: #fff7f7;
-}
-
-.campo-erro {
-    color: #b30000;
-    font-size: 0.85em;
-    font-weight: 600;
-    margin-top: 5px;
-}
-
-/* ===== BOTÃO ===== */
-.register-btn {
-    width: 100%;
-    padding: 12px;
-    margin-top: 20px;
-    background: #E63946;
+/* Cabeçalho compacto exclusivo desta tela: aqui o painel de marca
+   inteiro seria exagero -- a pessoa já está autenticada, só falta um
+   campo. */
+.ls-conta-topo {
+    padding: 34px 34px 26px;
     color: #fff;
-    border: none;
-    border-radius: 12px;
-    font-size: 1.1em;
-    font-weight: 700;
-    cursor: pointer;
-    transition: 0.3s;
-}
-
-.register-btn:hover {
-    background: #c92a38;
-}
-
-/* ===== MENSAGENS ===== */
-.alert {
-    padding: 12px;
-    background: #ffe6e6;
-    color: #b30000;
-    border-left: 4px solid #ff4d4d;
-    border-radius: 6px;
-    margin-bottom: 15px;
-    font-weight: 600;
-    animation: fadeSlide 0.3s ease-out;
-}
-
-.alert.success {
-    background: #e6ffed;
-    color: #006622;
-    border-left: 4px solid #00cc44;
-}
-
-@keyframes fadeSlide {
-    from { opacity: 0; transform: translateY(-10px); }
-    to   { opacity: 1; transform: translateY(0); }
-}
-
-/* Wrapper do campo de senha */
-.password-wrapper {
+    background: linear-gradient(150deg, #0d1b2e 0%, #073b7d 60%, #004AAD 100%);
     position: relative;
-    width: 100%;
+    overflow: hidden;
 }
 
-.password-wrapper input {
-    width: 100%;
-    padding-right: 45px !important;
-}
-
-.toggle-password {
-    position: absolute;
-    right: 12px;
-    top: 50%;
-    transform: translateY(-50%);
-    font-size: 20px;
-    color: #666;
-    cursor: pointer;
-    transition: 0.2s;
-}
-
-.toggle-password:hover {
-    color: #004AAD;
-    transform: translateY(-50%) scale(1.1);
-}
-
-@media (max-width: 600px) {
-    .toggle-password {
-        font-size: 22px;
-        right: 10px;
-    }
-}
-
-/* ===== LOGIN SOCIAL ===== */
-.social-login {
-    margin-bottom: 26px;
-}
-
-.social-divider {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 18px;
-    color: #777;
-    font-weight: 600;
-    font-size: 0.95em;
-}
-
-.social-divider::before,
-.social-divider::after {
+.ls-conta-topo::before {
     content: "";
-    flex: 1;
-    height: 1px;
-    background: #ddd;
+    position: absolute;
+    width: 260px;
+    height: 260px;
+    top: -120px;
+    right: -90px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(230, 57, 70, 0.5), transparent 68%);
+    filter: blur(8px);
 }
 
-.social-buttons {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
+.ls-conta-topo > * {
+    position: relative;
+    z-index: 1;
 }
 
-.social-buttons form {
+.ls-conta-topo h1 {
+    font-family: "Poppins", "Manrope", sans-serif;
+    font-size: 1.55rem;
+    font-weight: 800;
+    line-height: 1.15;
+    margin: 16px 0 8px;
+    color: #fff;
+}
+
+.ls-conta-topo p {
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: rgba(255, 255, 255, 0.82);
     margin: 0;
 }
 
-.social-btn {
-    width: 100%;
+.ls-conta-identidade {
     display: flex;
     align-items: center;
-    justify-content: center;
     gap: 12px;
-    padding: 13px;
+    background: #f6f8fc;
+    border: 1px solid rgba(13, 27, 46, 0.1);
+    border-radius: 16px;
+    padding: 14px 16px;
+    margin-bottom: 22px;
+}
+
+.ls-conta-avatar {
+    width: 42px;
+    height: 42px;
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
     border-radius: 12px;
-    font-weight: 600;
-    font-size: 1em;
-    font-family: inherit;
-    text-decoration: none;
-    cursor: pointer;
-    border: none;
-    transition: all 0.25s ease;
+    background: linear-gradient(140deg, #004AAD, #007BFF);
+    color: #fff;
+    font-family: "Poppins", "Manrope", sans-serif;
+    font-weight: 700;
+    font-size: 0.95rem;
 }
 
-/* Google */
-.social-btn.google {
-    background: #ffffff;
-    color: #333;
-    border: 1px solid #ddd;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.06);
+.ls-conta-identidade strong {
+    display: block;
+    color: #0d1b2e;
+    font-size: 0.95rem;
+    line-height: 1.3;
 }
 
-.social-btn.google:hover {
-    background: #f7f9ff;
-    transform: translateY(-2px);
-    box-shadow: 0 6px 14px rgba(0,0,0,0.1);
+.ls-conta-identidade span {
+    color: #6c757d;
+    font-size: 0.84rem;
+    word-break: break-all;
 }
 
-/* Apple */
-.social-btn.apple {
-    background: #000000;
-    color: #ffffff;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+.ls-conta-acoes {
+    display: flex;
+    gap: 12px;
+    margin-top: 8px;
 }
 
-.social-btn.apple:hover {
-    background: #1c1c1e;
-    transform: translateY(-2px);
-    box-shadow: 0 6px 18px rgba(0,0,0,0.35);
+.ls-conta-acoes .ls-btn-principal {
+    margin-top: 0;
+    flex: 1;
 }
 
-.social-btn.generico {
-    background: #f1f4fb;
-    color: #004AAD;
-    border: 1px solid #d5e0f5;
-}
-
-.social-btn i {
-    font-size: 19px;
-}
-
-.social-btn img {
-    width: 20px;
-    height: 20px;
-}
-
-@media (max-width: 480px) {
-    .social-btn {
-        font-size: 0.95em;
-        padding: 12px;
+@media (max-width: 560px) {
+    .ls-conta-topo {
+        padding: 26px 22px 22px;
+    }
+    .ls-conta-acoes {
+        flex-direction: column-reverse;
     }
 }
-
 </style>
 
+<section class="ls-auth">
+    <div class="ls-auth-shell solo">
 
-<div class="register-container" id="register-box">
-
-    <h2>Criar sua Conta</h2>
-    <p class="register-sub">
-        Com Google ou Apple você entra em um clique — a gente já preenche
-        seu nome e e-mail.
-    </p>
-
-    {% if messages %}
-        {% for m in messages %}
-            <div class="alert {% if m.tags %}{{ m.tags }}{% endif %}">{{ m }}</div>
-        {% endfor %}
-    {% endif %}
-
-    {# Botões sociais vêm PRIMEIRO: é o caminho que não exige digitação #}
-    {% include "partials/social_login.html" with titulo="Entre em um clique" %}
-
-    <div class="social-divider">Ou preencha seus dados</div>
-
-    <form method="POST" id="formCadastro" novalidate>
-        {% csrf_token %}
-
-        {% if form.non_field_errors %}
-            {% for erro in form.non_field_errors %}
-                <div class="alert">{{ erro }}</div>
-            {% endfor %}
-        {% endif %}
-
-        <label for="id_first_name">Nome</label>
-        <input type="text" name="first_name" id="id_first_name"
-               value="{{ form.first_name.value|default_if_none:'' }}"
-               class="{% if form.first_name.errors %}erro{% endif %}"
-               autocomplete="given-name" required>
-        {% for erro in form.first_name.errors %}
-            <div class="campo-erro">{{ erro }}</div>
-        {% endfor %}
-
-        <label for="id_last_name">Sobrenome</label>
-        <input type="text" name="last_name" id="id_last_name"
-               value="{{ form.last_name.value|default_if_none:'' }}"
-               class="{% if form.last_name.errors %}erro{% endif %}"
-               autocomplete="family-name" required>
-        {% for erro in form.last_name.errors %}
-            <div class="campo-erro">{{ erro }}</div>
-        {% endfor %}
-
-        <label for="id_username">Nome de Usuário</label>
-        <input type="text" name="username" id="id_username"
-               value="{{ form.username.value|default_if_none:'' }}"
-               class="{% if form.username.errors %}erro{% endif %}"
-               autocomplete="username" required>
-        {% for erro in form.username.errors %}
-            <div class="campo-erro">{{ erro }}</div>
-        {% endfor %}
-
-        <label for="id_email">E-mail</label>
-        <input type="email" name="email" id="id_email"
-               value="{{ form.email.value|default_if_none:'' }}"
-               class="{% if form.email.errors %}erro{% endif %}"
-               autocomplete="email" required>
-        {% for erro in form.email.errors %}
-            <div class="campo-erro">{{ erro }}</div>
-        {% endfor %}
-
-        <label for="telefone">Telefone</label>
-        <input type="tel" name="telefone" id="telefone"
-               value="{{ form.telefone.value|default_if_none:'' }}"
-               class="{% if form.telefone.errors %}erro{% endif %}"
-               placeholder="(00)90000-0000"
-               inputmode="numeric"
-               autocomplete="tel"
-               required>
-        {% for erro in form.telefone.errors %}
-            <div class="campo-erro">{{ erro }}</div>
-        {% endfor %}
-
-        <label for="password">Senha</label>
-        <div class="password-wrapper">
-            <input type="password" name="password" id="password"
-                   class="{% if form.password.errors %}erro{% endif %}"
-                   autocomplete="new-password" required>
-            <i class="fa-solid fa-eye toggle-password" data-target="password"></i>
+        <div class="ls-conta-topo">
+            <span class="ls-auth-badge">
+                <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+                Quase lá
+            </span>
+            <h1>Falta só o telefone</h1>
+            <p>
+                Seu nome e e-mail já vieram prontos da sua conta. O telefone
+                precisa ser pedido porque nenhum login social entrega esse
+                dado — e é por ele que avisamos sobre entrega, montagem e
+                manutenção.
+            </p>
         </div>
-        {% for erro in form.password.errors %}
-            <div class="campo-erro">{{ erro }}</div>
-        {% endfor %}
 
-        <label for="password2">Confirmar Senha</label>
-        <div class="password-wrapper">
-            <input type="password" name="password2" id="password2"
-                   class="{% if form.password2.errors %}erro{% endif %}"
-                   autocomplete="new-password" required>
-            <i class="fa-solid fa-eye toggle-password" data-target="password2"></i>
+        <div class="ls-auth-main">
+
+            {% if messages %}
+                {% for m in messages %}
+                    <div class="ls-msg {% if m.tags %}{{ m.tags }}{% endif %}">
+                        <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+                        <span>{{ m }}</span>
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            <div class="ls-conta-identidade">
+                <div class="ls-conta-avatar">
+                    {{ user.first_name.0|default:user.username.0|upper }}{{ user.last_name.0|upper }}
+                </div>
+                <div>
+                    <strong>{{ user.get_full_name|default:user.username }}</strong>
+                    {% if user.email %}<span>{{ user.email }}</span>{% endif %}
+                </div>
+            </div>
+
+            <form method="post" class="ls-form" novalidate>
+                {% csrf_token %}
+
+                <div class="ls-campo">
+                    <label for="telefone">Telefone com DDD</label>
+                    <div class="ls-entrada {% if form.telefone.errors %}erro{% endif %}">
+                        <i class="fa-solid fa-phone" aria-hidden="true"></i>
+                        {{ form.telefone }}
+                    </div>
+                    {% for erro in form.telefone.errors %}
+                        <p class="ls-erro-campo">
+                            <i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i>{{ erro }}
+                        </p>
+                    {% endfor %}
+                    <p class="ls-dica">Celular ou fixo. Pode digitar só os números.</p>
+                </div>
+
+                <div class="ls-conta-acoes">
+                    <button type="submit" name="pular" value="1" class="ls-btn-secundario">
+                        Agora não
+                    </button>
+                    <button type="submit" class="ls-btn-principal">Salvar telefone</button>
+                </div>
+            </form>
+
         </div>
-        {% for erro in form.password2.errors %}
-            <div class="campo-erro">{{ erro }}</div>
-        {% endfor %}
-
-        <button type="submit" class="register-btn">Criar Conta</button>
-    </form>
-
-</div>
-
+    </div>
+</section>
 
 <script>
-document.querySelectorAll(".toggle-password").forEach(icon => {
-    icon.addEventListener("click", function() {
-        const inputId = this.getAttribute("data-target");
-        const input = document.getElementById(inputId);
+const campoTelefone = document.getElementById("telefone");
 
-        if (input.type === "password") {
-            input.type = "text";
-            this.classList.remove("fa-eye");
-            this.classList.add("fa-eye-slash");
-        } else {
-            input.type = "password";
-            this.classList.remove("fa-eye-slash");
-            this.classList.add("fa-eye");
-        }
-    });
-});
-
-
-/* ===== Máscara Telefone ===== */
-const telefoneInput = document.getElementById("telefone");
-
-if (telefoneInput) {
-    telefoneInput.addEventListener("input", function(e) {
-        let v = e.target.value.replace(/\D/g, "");
-
-        if (v.length > 11) v = v.slice(0, 11);
+if (campoTelefone) {
+    campoTelefone.addEventListener("input", function (evento) {
+        let v = evento.target.value.replace(/\D/g, "").slice(0, 11);
 
         if (v.length > 6) {
-            if (v.length === 11) {
-                // celular: (XX)9XXXX-XXXX
-                v = v.replace(/^(\d{2})(\d{5})(\d{0,4}).*/, "($1)$2-$3");
-            } else {
-                // fixo: (XX)XXXX-XXXX
-                v = v.replace(/^(\d{2})(\d{4})(\d{0,4}).*/, "($1)$2-$3");
-            }
+            v = v.length === 11
+                ? v.replace(/^(\d{2})(\d{5})(\d{0,4}).*/, "($1)$2-$3")
+                : v.replace(/^(\d{2})(\d{4})(\d{0,4}).*/, "($1)$2-$3");
         } else if (v.length > 2) {
             v = v.replace(/^(\d{2})(\d+)/, "($1)$2");
         } else if (v.length > 0) {
             v = v.replace(/^(\d*)/, "($1");
         }
 
-        e.target.value = v;
+        evento.target.value = v;
     });
 }
 </script>
