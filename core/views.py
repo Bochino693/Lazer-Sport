@@ -2696,20 +2696,453 @@ class EstatisticasGeraisView(AdminOnlyMixin, View):
         return redirect(f"{reverse('dashboards')}?filtro={filtro}#estatisticas-acessos")
 
 
-class ManutencaoAdminView(LoginRequiredMixin, View):
-    template_name = "gestao/manutencao_adm.html"
+class ManutencaoAdminView(AdminOnlyMixin, View):
+    """
+    Central de atendimento das solicitações de manutenção.
 
-    def get(self, request):
-        manutencoes = (
-            Manutencao.objects
-            .select_related('brinquedo', 'usuario')
-            .order_by('-criado_em')
+    A tela:
+    - pesquisa por protocolo, cliente, equipamento, contato, cidade e problema;
+    - filtra por status e período;
+    - valida o formato do telefone antes de montar links de ligação/WhatsApp;
+    - usa o telefone informado na solicitação e, como reserva, o telefone do perfil;
+    - permite atualizar o status pela própria tela;
+    - evita N+1 com select_related/prefetch_related.
+    """
+
+    template_name = "gestao/manutencao_adm.html"
+    ITENS_POR_PAGINA = 12
+    STATUS_VALIDOS = dict(Manutencao.STATUS_CHOICES)
+
+    @staticmethod
+    def _nome_cliente(manutencao):
+        perfil = manutencao.usuario
+        user = perfil.user
+
+        candidatos = [
+            perfil.nome_completo,
+            user.get_full_name(),
+            user.username,
+        ]
+        return next(
+            (str(valor).strip() for valor in candidatos if valor and str(valor).strip()),
+            f"Cliente #{perfil.pk}",
         )
 
-        ctx = {
-            'manutencoes': manutencoes,
+    @staticmethod
+    def _iniciais(nome):
+        partes = [parte for parte in (nome or "").split() if parte]
+        if not partes:
+            return "CL"
+        if len(partes) == 1:
+            return partes[0][:2].upper()
+        return f"{partes[0][0]}{partes[-1][0]}".upper()
+
+    @staticmethod
+    def _normalizar_telefone(valor):
+        """
+        Aceita telefone nacional com DDD ou telefone com código do Brasil.
+
+        Isto valida o FORMATO necessário para links tel: e wa.me. Não existe
+        verificação pública confiável, sem API oficial, para confirmar se o
+        número realmente possui uma conta ativa no WhatsApp.
+        """
+        import re
+
+        original = (valor or "").strip()
+        digitos = re.sub(r"\D", "", original)
+
+        if digitos.startswith("00"):
+            digitos = digitos[2:]
+
+        if digitos.startswith("55") and len(digitos) in (12, 13):
+            nacional = digitos[2:]
+        elif len(digitos) in (10, 11):
+            nacional = digitos
+            digitos = f"55{digitos}"
+        else:
+            return {
+                "original": original,
+                "valido": False,
+                "internacional": "",
+                "formatado": original or "Não informado",
+                "motivo": "Informe DDD + número, com 10 ou 11 dígitos.",
+            }
+
+        ddd = nacional[:2]
+        numero = nacional[2:]
+
+        # Impede DDD iniciado em zero e números locais incompletos.
+        if not ddd.isdigit() or ddd.startswith("0") or len(numero) not in (8, 9):
+            return {
+                "original": original,
+                "valido": False,
+                "internacional": "",
+                "formatado": original or "Não informado",
+                "motivo": "DDD ou quantidade de dígitos inválida.",
+            }
+
+        if len(numero) == 9:
+            formatado = f"({ddd}) {numero[:5]}-{numero[5:]}"
+        else:
+            formatado = f"({ddd}) {numero[:4]}-{numero[4:]}"
+
+        return {
+            "original": original,
+            "valido": True,
+            "internacional": digitos,
+            "formatado": formatado,
+            "motivo": "Formato válido para ligação e abertura do WhatsApp.",
         }
-        return render(request, self.template_name, ctx)
+
+    @staticmethod
+    def _email_valido(email):
+        from django.core.exceptions import ValidationError
+        from django.core.validators import validate_email
+
+        email = (email or "").strip()
+        if not email:
+            return False
+
+        try:
+            validate_email(email)
+        except ValidationError:
+            return False
+        return True
+
+    @staticmethod
+    def _endereco_completo(manutencao):
+        linha_principal = ", ".join(
+            parte for parte in [
+                (manutencao.endereco or "").strip(),
+                (manutencao.numero or "").strip(),
+            ]
+            if parte
+        )
+
+        if manutencao.complemento:
+            linha_principal = ", ".join(
+                parte for parte in [
+                    linha_principal,
+                    manutencao.complemento.strip(),
+                ]
+                if parte
+            )
+
+        linha_local = " - ".join(
+            parte for parte in [
+                (manutencao.bairro or "").strip(),
+                "/".join(
+                    parte for parte in [
+                        (manutencao.cidade or "").strip(),
+                        (manutencao.estado or "").strip(),
+                    ]
+                    if parte
+                ),
+            ]
+            if parte
+        )
+
+        endereco = ", ".join(
+            parte for parte in [linha_principal, linha_local] if parte
+        )
+
+        if manutencao.cep:
+            endereco = f"{endereco} • CEP {manutencao.cep}" if endereco else f"CEP {manutencao.cep}"
+
+        return endereco or "Endereço não informado"
+
+    def _preparar_manutencao(self, manutencao):
+        from django.utils import timezone
+        from urllib.parse import quote, urlencode
+
+        manutencao.cliente_nome = self._nome_cliente(manutencao)
+        manutencao.cliente_iniciais = self._iniciais(manutencao.cliente_nome)
+        manutencao.cliente_username = manutencao.usuario.user.username
+        manutencao.cliente_email = (manutencao.usuario.user.email or "").strip()
+        manutencao.email_valido = self._email_valido(manutencao.cliente_email)
+
+        telefone_solicitacao = (manutencao.telefone_contato or "").strip()
+        telefone_perfil = (manutencao.usuario.telefone or "").strip()
+        telefone_escolhido = telefone_solicitacao or telefone_perfil
+
+        telefone = self._normalizar_telefone(telefone_escolhido)
+        manutencao.telefone_exibicao = telefone["formatado"]
+        manutencao.telefone_valido = telefone["valido"]
+        manutencao.telefone_motivo = telefone["motivo"]
+        manutencao.telefone_origem = (
+            "Informado nesta solicitação"
+            if telefone_solicitacao
+            else "Telefone salvo no perfil"
+            if telefone_perfil
+            else "Não informado"
+        )
+
+        equipamento = manutencao.nome_equipamento
+        protocolo = f"MAN-{manutencao.pk:05d}"
+
+        mensagem_whatsapp = (
+            f"Olá, {manutencao.cliente_nome}. "
+            f"Aqui é da Lazer & Sport Brinquedos. "
+            f"Estamos entrando em contato sobre a solicitação {protocolo}, "
+            f"referente ao equipamento {equipamento}."
+        )
+
+        if telefone["valido"]:
+            manutencao.telefone_url = f"tel:+{telefone['internacional']}"
+            manutencao.whatsapp_url = (
+                f"https://wa.me/{telefone['internacional']}"
+                f"?text={quote(mensagem_whatsapp)}"
+            )
+        else:
+            manutencao.telefone_url = ""
+            manutencao.whatsapp_url = ""
+
+        if manutencao.email_valido:
+            assunto = f"Lazer & Sport | Manutenção {protocolo}"
+            corpo = (
+                f"Olá, {manutencao.cliente_nome}.\n\n"
+                f"Estamos entrando em contato sobre a solicitação {protocolo}, "
+                f"referente ao equipamento {equipamento}.\n\n"
+                "Atenciosamente,\nLazer & Sport Brinquedos"
+            )
+            manutencao.email_url = (
+                f"mailto:{manutencao.cliente_email}?"
+                f"{urlencode({'subject': assunto, 'body': corpo})}"
+            )
+        else:
+            manutencao.email_url = ""
+
+        manutencao.endereco_completo = self._endereco_completo(manutencao)
+        manutencao.mapa_url = (
+            "https://www.google.com/maps/search/?api=1&query="
+            f"{quote(manutencao.endereco_completo)}"
+            if manutencao.endereco_completo != "Endereço não informado"
+            else ""
+        )
+
+        agora = timezone.now()
+        idade = agora - manutencao.criado_em
+        horas = max(0, int(idade.total_seconds() // 3600))
+        dias = horas // 24
+
+        if horas < 1:
+            manutencao.tempo_aberto = "Aberta há poucos minutos"
+        elif horas < 24:
+            manutencao.tempo_aberto = f"Aberta há {horas}h"
+        elif dias == 1:
+            manutencao.tempo_aberto = "Aberta há 1 dia"
+        else:
+            manutencao.tempo_aberto = f"Aberta há {dias} dias"
+
+        manutencao.precisa_atencao = (
+            manutencao.status in {"P", "A"} and horas >= 72
+        )
+        manutencao.atencao_moderada = (
+            manutencao.status in {"P", "A"} and 24 <= horas < 72
+        )
+
+        if manutencao.precisa_atencao:
+            manutencao.prioridade_texto = "Atenção: mais de 3 dias"
+        elif manutencao.atencao_moderada:
+            manutencao.prioridade_texto = "Aguardando há mais de 24h"
+        else:
+            manutencao.prioridade_texto = ""
+
+        manutencao.protocolo = protocolo
+        manutencao.imagens_cache = list(manutencao.imagens.all())
+        manutencao.total_imagens = len(manutencao.imagens_cache)
+
+        return manutencao
+
+    def _queryset_filtrado(self, request):
+        from datetime import timedelta
+        from django.db.models import Case, IntegerField, Q, Value, When
+        from django.utils import timezone
+
+        qs = (
+            Manutencao.objects
+            .select_related("brinquedo", "usuario__user")
+            .prefetch_related("imagens")
+        )
+
+        busca = (request.GET.get("q") or "").strip()
+        status = (request.GET.get("status") or "").strip().upper()
+        periodo = (request.GET.get("periodo") or "").strip()
+        ordem = (request.GET.get("ordem") or "recentes").strip()
+
+        if busca:
+            filtro = (
+                Q(usuario__nome_completo__icontains=busca)
+                | Q(usuario__user__username__icontains=busca)
+                | Q(usuario__user__first_name__icontains=busca)
+                | Q(usuario__user__last_name__icontains=busca)
+                | Q(usuario__user__email__icontains=busca)
+                | Q(usuario__telefone__icontains=busca)
+                | Q(telefone_contato__icontains=busca)
+                | Q(brinquedo__nome_brinquedo__icontains=busca)
+                | Q(brinquedo_descricao_livre__icontains=busca)
+                | Q(descricao__icontains=busca)
+                | Q(cidade__icontains=busca)
+                | Q(estado__icontains=busca)
+                | Q(cep__icontains=busca)
+            )
+            busca_protocolo = busca.upper().replace("MAN-", "").lstrip("0")
+            if busca_protocolo.isdigit():
+                filtro |= Q(pk=int(busca_protocolo))
+            qs = qs.filter(filtro)
+
+        if status in self.STATUS_VALIDOS:
+            qs = qs.filter(status=status)
+        else:
+            status = ""
+
+        periodos = {
+            "hoje": timedelta(days=1),
+            "7d": timedelta(days=7),
+            "30d": timedelta(days=30),
+            "90d": timedelta(days=90),
+        }
+        if periodo in periodos:
+            qs = qs.filter(criado_em__gte=timezone.now() - periodos[periodo])
+        else:
+            periodo = ""
+
+        if ordem == "antigas":
+            qs = qs.order_by("criado_em")
+        elif ordem == "atualizadas":
+            qs = qs.order_by("-atualizada_em", "-criado_em")
+        elif ordem == "prioridade":
+            qs = (
+                qs.annotate(
+                    _ordem_status=Case(
+                        When(status="P", then=Value(0)),
+                        When(status="A", then=Value(1)),
+                        When(status="C", then=Value(2)),
+                        default=Value(3),
+                        output_field=IntegerField(),
+                    )
+                )
+                .order_by("_ordem_status", "criado_em")
+            )
+        else:
+            ordem = "recentes"
+            qs = qs.order_by("-criado_em")
+
+        filtros = {
+            "q": busca,
+            "status": status,
+            "periodo": periodo,
+            "ordem": ordem,
+        }
+        return qs, filtros
+
+    def get(self, request):
+        from datetime import timedelta
+        from django.core.paginator import Paginator
+        from django.db.models import Count, Q
+        from django.utils import timezone
+
+        base = Manutencao.objects.all()
+        limite_atencao = timezone.now() - timedelta(days=3)
+
+        metricas = base.aggregate(
+            total=Count("id"),
+            pendentes=Count("id", filter=Q(status="P")),
+            andamento=Count("id", filter=Q(status="A")),
+            concluidas=Count("id", filter=Q(status="C")),
+            canceladas=Count("id", filter=Q(status="X")),
+            atencao=Count(
+                "id",
+                filter=Q(
+                    status__in=["P", "A"],
+                    criado_em__lte=limite_atencao,
+                ),
+            ),
+        )
+
+        qs, filtros = self._queryset_filtrado(request)
+        paginator = Paginator(qs, self.ITENS_POR_PAGINA)
+        page_obj = paginator.get_page(request.GET.get("page"))
+
+        manutencoes_preparadas = [
+            self._preparar_manutencao(item)
+            for item in page_obj.object_list
+        ]
+        page_obj.object_list = manutencoes_preparadas
+
+        query_sem_pagina = request.GET.copy()
+        query_sem_pagina.pop("page", None)
+
+        contexto = {
+            "manutencoes": page_obj,
+            "page_obj": page_obj,
+            "metricas": metricas,
+            "filtros": filtros,
+            "status_choices": Manutencao.STATUS_CHOICES,
+            "querystring_sem_pagina": query_sem_pagina.urlencode(),
+            "total_filtrado": paginator.count,
+        }
+        return render(request, self.template_name, contexto)
+
+    def post(self, request):
+        from django.db import transaction
+        from django.utils.http import url_has_allowed_host_and_scheme
+
+        manutencao_id = request.POST.get("manutencao_id")
+        novo_status = (request.POST.get("status") or "").strip().upper()
+
+        if novo_status not in self.STATUS_VALIDOS:
+            messages.error(request, "Selecione um status válido.")
+            return redirect(request.path)
+
+        try:
+            with transaction.atomic():
+                manutencao = (
+                    Manutencao.objects
+                    .select_for_update()
+                    .select_related("brinquedo", "usuario__user")
+                    .get(pk=manutencao_id)
+                )
+
+                status_anterior = manutencao.status
+                if status_anterior == novo_status:
+                    messages.info(
+                        request,
+                        f"{manutencao.nome_equipamento} já está com esse status.",
+                    )
+                else:
+                    manutencao.status = novo_status
+                    manutencao.save(
+                        update_fields=["status", "atualizada_em"]
+                    )
+                    messages.success(
+                        request,
+                        (
+                            f"Manutenção MAN-{manutencao.pk:05d} atualizada: "
+                            f"{self.STATUS_VALIDOS[status_anterior]} → "
+                            f"{self.STATUS_VALIDOS[novo_status]}."
+                        ),
+                    )
+
+        except (TypeError, ValueError, Manutencao.DoesNotExist):
+            messages.error(request, "A manutenção informada não foi encontrada.")
+
+        proxima_url = request.POST.get("next") or request.path
+        if not url_has_allowed_host_and_scheme(
+            proxima_url,
+            allowed_hosts={request.get_host()},
+            require_https=request.is_secure(),
+        ):
+            proxima_url = request.path
+
+        separador = "&" if "?" in proxima_url else "?"
+        proxima_url = (
+            f"{proxima_url}{separador}foco={manutencao_id}"
+            if manutencao_id
+            else proxima_url
+        )
+        return redirect(proxima_url)
+
 
 
 class UserAdminView(LoginRequiredMixin, View):
