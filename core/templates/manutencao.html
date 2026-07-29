@@ -2,6 +2,7 @@
 
 {% load widget_tweaks %}
 
+{% block title %}Lazer & Sport Manutenções{% endblock %}
 
 {% block content %}
 
@@ -285,6 +286,7 @@
     min-width: 0;
     overflow: hidden;
     border-radius: 27px;
+    background: #f3f7fc;
 }
 
 .form-topbar {
@@ -345,8 +347,18 @@
 }
 
 .form-section {
+    position: relative;
     padding: 25px 27px;
     border-bottom: 1px solid var(--mt-line);
+    background:
+        radial-gradient(circle at 97% 2%, rgba(8, 120, 249, .055), transparent 25%),
+        linear-gradient(145deg, #f8fbff 0%, #f2f7fd 100%);
+}
+
+.manutencao-form > .form-section:nth-of-type(even) {
+    background:
+        radial-gradient(circle at 2% 100%, rgba(230, 57, 70, .045), transparent 28%),
+        linear-gradient(145deg, #f4f8fd 0%, #eef4fb 100%);
 }
 
 .form-section-head {
@@ -389,6 +401,17 @@
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 16px;
+}
+
+.form-section > .form-grid {
+    padding: 18px;
+    border: 1px solid rgba(0, 74, 173, .1);
+    border-radius: 19px;
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, .86), rgba(240, 247, 255, .92));
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, .92),
+        0 12px 28px rgba(15, 38, 76, .055);
 }
 
 .span-full {
@@ -570,6 +593,106 @@
     background: var(--mt-red);
     color: #fff;
     transform: translateY(-50%) scale(1.05);
+}
+
+.brinquedo-manual-card {
+    position: relative;
+    display: none;
+    overflow: hidden;
+    padding: 18px;
+    border: 1px solid rgba(8, 120, 249, .35);
+    border-radius: 18px;
+    background:
+        radial-gradient(circle at 96% 0, rgba(230, 57, 70, .2), transparent 31%),
+        linear-gradient(135deg, #071a34 0%, #0b2b55 100%);
+    box-shadow: 0 15px 32px rgba(7, 26, 52, .18);
+    color: #fff;
+    animation: maintenanceFade .24s ease;
+}
+
+.brinquedo-manual-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 15px;
+    padding-right: 38px;
+}
+
+.brinquedo-manual-icon {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    border-radius: 13px;
+    background: linear-gradient(135deg, var(--mt-blue-bright), var(--mt-blue));
+    box-shadow: 0 9px 20px rgba(0, 74, 173, .3);
+    color: #fff;
+}
+
+.brinquedo-manual-copy strong {
+    display: block;
+    margin-bottom: 3px;
+    color: #fff;
+    font-size: .86rem;
+    font-weight: 900;
+}
+
+.brinquedo-manual-copy span {
+    display: block;
+    color: #b9cce5;
+    font-size: .69rem;
+    line-height: 1.45;
+}
+
+.brinquedo-manual-card label {
+    margin-bottom: 7px;
+    color: #edf5ff;
+}
+
+.brinquedo-manual-card input {
+    border-color: rgba(255, 255, 255, .18);
+    background: rgba(255, 255, 255, .1);
+    color: #fff;
+}
+
+.brinquedo-manual-card input::placeholder {
+    color: #9fb4cf;
+}
+
+.brinquedo-manual-card input:focus {
+    border-color: #55a5ff;
+    background: rgba(255, 255, 255, .14);
+    box-shadow: 0 0 0 4px rgba(85, 165, 255, .14);
+}
+
+.brinquedo-manual-card .field-help {
+    color: #aec3de;
+}
+
+.remove-brinquedo-manual {
+    position: absolute;
+    top: 17px;
+    right: 17px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: 1px solid rgba(255, 255, 255, .17);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, .08);
+    color: #fff;
+    cursor: pointer;
+    transition: background .2s ease, border-color .2s ease, transform .2s ease;
+}
+
+.remove-brinquedo-manual:hover {
+    border-color: rgba(230, 57, 70, .55);
+    background: var(--mt-red);
+    transform: translateY(-1px);
 }
 
 .address-flow {
@@ -1561,6 +1684,223 @@
     -webkit-line-clamp: 2;
 }
 
+#modal-brinquedos .modal-content {
+    border-color: rgba(102, 169, 255, .25);
+    background: #081a33;
+    box-shadow:
+        0 35px 90px rgba(0, 0, 0, .46),
+        0 0 0 1px rgba(255, 255, 255, .035);
+    color: #fff;
+}
+
+#modal-brinquedos .modal-header {
+    border-bottom-color: rgba(255, 255, 255, .09);
+    background:
+        radial-gradient(circle at 88% 0, rgba(230, 57, 70, .24), transparent 31%),
+        radial-gradient(circle at 8% 100%, rgba(8, 120, 249, .24), transparent 33%),
+        linear-gradient(135deg, #07172d, #0b2b55);
+}
+
+#modal-brinquedos .modal-title-icon {
+    background: linear-gradient(135deg, var(--mt-blue-bright), var(--mt-blue));
+    box-shadow: 0 9px 22px rgba(0, 74, 173, .34);
+}
+
+#modal-brinquedos .modal-header h2 {
+    color: #fff;
+}
+
+#modal-brinquedos .modal-header p {
+    color: #b9cce4;
+}
+
+#modal-brinquedos .close-modal {
+    border-color: rgba(255, 255, 255, .16);
+    background: rgba(255, 255, 255, .08);
+    color: #fff;
+}
+
+#modal-brinquedos .close-modal:hover {
+    border-color: rgba(230, 57, 70, .6);
+    background: var(--mt-red);
+    color: #fff;
+}
+
+#modal-brinquedos .modal-toolbar {
+    border-bottom-color: rgba(255, 255, 255, .08);
+    background: #0a1e3a;
+}
+
+#modal-brinquedos .modal-pesquisa i {
+    color: #8eaccf;
+}
+
+#modal-brinquedos .modal-pesquisa input {
+    border-color: rgba(255, 255, 255, .13);
+    background: rgba(255, 255, 255, .075);
+    color: #fff;
+}
+
+#modal-brinquedos .modal-pesquisa input::placeholder {
+    color: #90a7c4;
+}
+
+#modal-brinquedos .modal-pesquisa input:focus {
+    border-color: #55a5ff;
+    background: rgba(255, 255, 255, .11);
+    box-shadow: 0 0 0 4px rgba(85, 165, 255, .13);
+}
+
+#modal-brinquedos .btn-ordenar {
+    border-color: rgba(255, 255, 255, .13);
+    background: rgba(255, 255, 255, .07);
+    color: #c9dcf5;
+}
+
+#modal-brinquedos .btn-ordenar.active,
+#modal-brinquedos .btn-ordenar:hover {
+    border-color: var(--mt-blue-bright);
+    background: linear-gradient(135deg, var(--mt-blue), var(--mt-blue-bright));
+    color: #fff;
+}
+
+.produto-nao-listado-wrap {
+    padding: 16px 23px 0;
+    background: #081a33;
+}
+
+.produto-nao-listado {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    width: 100%;
+    padding: 15px 16px;
+    border: 1px solid rgba(85, 165, 255, .27);
+    border-radius: 16px;
+    background:
+        radial-gradient(circle at 93% 20%, rgba(230, 57, 70, .17), transparent 25%),
+        linear-gradient(135deg, rgba(8, 120, 249, .15), rgba(255, 255, 255, .045));
+    color: #fff;
+    font-family: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: transform .2s ease, border-color .2s ease, background .2s ease, box-shadow .2s ease;
+}
+
+.produto-nao-listado:hover {
+    transform: translateY(-2px);
+    border-color: #55a5ff;
+    background:
+        radial-gradient(circle at 93% 20%, rgba(230, 57, 70, .23), transparent 28%),
+        linear-gradient(135deg, rgba(8, 120, 249, .23), rgba(255, 255, 255, .07));
+    box-shadow: 0 12px 26px rgba(0, 0, 0, .2);
+}
+
+.produto-nao-listado-main {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 12px;
+}
+
+.produto-nao-listado-icon {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    border-radius: 13px;
+    background: rgba(8, 120, 249, .2);
+    color: #72b6ff;
+}
+
+.produto-nao-listado-copy strong {
+    display: block;
+    margin-bottom: 3px;
+    color: #fff;
+    font-size: .79rem;
+    font-weight: 900;
+}
+
+.produto-nao-listado-copy span {
+    display: block;
+    color: #adc4df;
+    font-size: .66rem;
+    line-height: 1.4;
+}
+
+.produto-nao-listado-action {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 7px;
+    color: #79bbff;
+    font-size: .67rem;
+    font-weight: 900;
+}
+
+#modal-brinquedos .lista-brinquedos {
+    background:
+        radial-gradient(circle at 4% 100%, rgba(8, 120, 249, .09), transparent 28%),
+        #081a33;
+    scrollbar-color: #315d8c #0a213f;
+}
+
+#modal-brinquedos .item-brinquedo {
+    border-color: rgba(255, 255, 255, .1);
+    background: linear-gradient(145deg, #102947, #0b213d);
+    box-shadow: 0 9px 22px rgba(0, 0, 0, .12);
+}
+
+#modal-brinquedos .item-brinquedo:hover {
+    border-color: rgba(85, 165, 255, .62);
+    background: linear-gradient(145deg, #14365d, #0c294b);
+    box-shadow: 0 14px 30px rgba(0, 0, 0, .24);
+}
+
+#modal-brinquedos .item-brinquedo img,
+#modal-brinquedos .placeholder-img {
+    border: 1px solid rgba(255, 255, 255, .07);
+    background:
+        radial-gradient(circle at 50% 35%, rgba(255, 255, 255, .11), transparent 55%),
+        #0c2442;
+}
+
+#modal-brinquedos .placeholder-img {
+    color: #6f94bb;
+}
+
+#modal-brinquedos .item-brinquedo strong {
+    color: #f5f9ff;
+}
+
+.sem-resultado-brinquedo {
+    grid-column: 1 / -1;
+    margin: 4px 0;
+    padding: 24px 18px;
+    border: 1px dashed rgba(85, 165, 255, .28);
+    border-radius: 15px;
+    background: rgba(255, 255, 255, .035);
+    color: #b8cce4;
+    font-size: .73rem;
+    line-height: 1.5;
+    text-align: center;
+}
+
+.sem-resultado-brinquedo strong {
+    display: block;
+    margin-bottom: 4px;
+    color: #fff;
+    font-size: .8rem;
+}
+
+.item-brinquedo[hidden],
+.sem-resultado-brinquedo[hidden] {
+    display: none !important;
+}
+
 .modal-message {
     padding: 24px;
     color: #475a72;
@@ -1866,6 +2206,8 @@
 .close-modal:focus-visible,
 .btn-ordenar:focus-visible,
 .item-brinquedo:focus-visible,
+.produto-nao-listado:focus-visible,
+.remove-brinquedo-manual:focus-visible,
 .btn-primario:focus-visible,
 .btn-secundario:focus-visible,
 .btn-whatsapp:focus-visible {
@@ -1966,6 +2308,11 @@
     .form-grid {
         grid-template-columns: 1fr;
         gap: 14px;
+    }
+
+    .form-section > .form-grid {
+        padding: 14px;
+        border-radius: 16px;
     }
 
     .span-full {
@@ -2119,6 +2466,15 @@
         padding: 14px 18px;
     }
 
+    .produto-nao-listado-wrap {
+        padding: 14px 18px 0;
+    }
+
+    .produto-nao-listado {
+        align-items: flex-start;
+        padding: 14px;
+    }
+
     .lista-brinquedos {
         grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 9px;
@@ -2174,7 +2530,24 @@
         padding: 13px;
     }
 
+    .brinquedo-manual-card {
+        padding: 15px;
+    }
+
+    .brinquedo-manual-head {
+        padding-right: 34px;
+    }
+
+    .remove-brinquedo-manual {
+        top: 14px;
+        right: 14px;
+    }
+
     .select-toy-copy span {
+        display: none;
+    }
+
+    .produto-nao-listado-action span {
         display: none;
     }
 
@@ -2359,7 +2732,7 @@
                             <span class="step-index">1</span>
                             <div>
                                 <h3 id="etapa-equipamento">Equipamento e problema</h3>
-                                <p>Escolha o brinquedo e descreva o defeito com clareza.</p>
+                                <p>Selecione o equipamento ou identifique-o manualmente e descreva o defeito.</p>
                             </div>
                         </div>
 
@@ -2372,7 +2745,9 @@
 
                                 <button type="button"
                                         id="selecionar-brinquedo-btn"
-                                        class="btn-selecionar-brinquedo">
+                                        class="btn-selecionar-brinquedo"
+                                        aria-haspopup="dialog"
+                                        aria-controls="modal-brinquedos">
                                     <span class="select-toy-main">
                                         <span class="select-toy-icon" aria-hidden="true">
                                             <i class="fa-solid fa-gamepad"></i>
@@ -2397,7 +2772,47 @@
                                     <span id="brinquedo-nome"></span>
                                 </div>
 
+                                <div id="brinquedo-manual-card"
+                                     class="brinquedo-manual-card"
+                                     aria-live="polite">
+                                    <button type="button"
+                                            class="remove-brinquedo-manual"
+                                            aria-label="Remover identificação manual do equipamento">
+                                        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                                    </button>
+
+                                    <div class="brinquedo-manual-head">
+                                        <span class="brinquedo-manual-icon" aria-hidden="true">
+                                            <i class="fa-solid fa-pen-to-square"></i>
+                                        </span>
+                                        <span class="brinquedo-manual-copy">
+                                            <strong>Equipamento não listado</strong>
+                                            <span>Use esta opção se o modelo não aparecer ou se o adesivo e o acabamento forem diferentes.</span>
+                                        </span>
+                                    </div>
+
+                                    <label for="brinquedo-descricao-livre">
+                                        Como podemos identificar o equipamento?
+                                        <span class="required-mark" aria-label="obrigatório">*</span>
+                                    </label>
+                                    <input type="text"
+                                           name="brinquedo_descricao_livre"
+                                           id="brinquedo-descricao-livre"
+                                           maxlength="180"
+                                           aria-describedby="brinquedo-manual-help"
+                                           value="{{ request.POST.brinquedo_descricao_livre|default:'' }}"
+                                           placeholder="Ex.: basquete azul, adesivo antigo, sem etiqueta">
+                                    <small class="field-help" id="brinquedo-manual-help">
+                                        <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+                                        Informe nome aproximado, cor, tamanho ou detalhes do adesivo. As fotos também ajudam.
+                                    </small>
+                                </div>
+
                                 <input type="hidden" name="brinquedo" id="brinquedo-input">
+                                <input type="hidden"
+                                       name="brinquedo_nao_listado"
+                                       id="brinquedo-nao-listado"
+                                       value="{% if request.POST.brinquedo_nao_listado == '1' %}1{% else %}0{% endif %}">
                             </div>
 
                             <div class="form-group span-full">
@@ -2612,7 +3027,7 @@
                             <span>1</span>
                             <div>
                                 <strong>Equipamento correto</strong>
-                                <p>Selecione o brinquedo exato que apresentou o problema.</p>
+                                <p>Selecione o brinquedo ou descreva modelo, cor e adesivo para identificá-lo.</p>
                             </div>
                         </div>
                         <div class="quick-guide-item">
@@ -2802,7 +3217,7 @@
                     </span>
                     <div>
                         <h2 id="titulo-modal-brinquedo">Selecione o brinquedo</h2>
-                        <p>Pesquise pelo nome do equipamento.</p>
+                        <p>Pesquise na lista ou identifique manualmente.</p>
                     </div>
                 </div>
                 <button type="button" class="close-modal" aria-label="Fechar">
@@ -2824,6 +3239,26 @@
                 </div>
             </div>
 
+            <div class="produto-nao-listado-wrap">
+                <button type="button"
+                        id="produto-nao-listado"
+                        class="produto-nao-listado">
+                    <span class="produto-nao-listado-main">
+                        <span class="produto-nao-listado-icon" aria-hidden="true">
+                            <i class="fa-solid fa-pen-ruler"></i>
+                        </span>
+                        <span class="produto-nao-listado-copy">
+                            <strong>Não encontrei meu equipamento</strong>
+                            <span>Use se o produto não estiver na lista ou se o adesivo e o acabamento forem diferentes.</span>
+                        </span>
+                    </span>
+                    <span class="produto-nao-listado-action">
+                        <span>Descrever</span>
+                        <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+                    </span>
+                </button>
+            </div>
+
             <div class="lista-brinquedos">
                 {% for brinquedo in brinquedos %}
                 <button type="button"
@@ -2843,8 +3278,17 @@
                     <strong>{{ brinquedo.nome_brinquedo }}</strong>
                 </button>
                 {% empty %}
-                    <p>Nenhum brinquedo cadastrado.</p>
+                    <p class="sem-resultado-brinquedo">
+                        <strong>Nenhum equipamento cadastrado</strong>
+                        Use a opção de identificação manual acima para continuar.
+                    </p>
                 {% endfor %}
+                <p id="sem-resultado-brinquedo"
+                   class="sem-resultado-brinquedo"
+                   hidden>
+                    <strong>Nenhum resultado para esta busca</strong>
+                    Você pode identificar o equipamento manualmente pela opção acima.
+                </p>
             </div>
         </div>
     </div>
@@ -3046,14 +3490,36 @@ function inicializarFormularioManutencao() {
 
     form.addEventListener("submit", event => {
         const brinquedoInput = document.getElementById("brinquedo-input");
+        const brinquedoNaoListado = document.getElementById(
+            "brinquedo-nao-listado"
+        );
+        const descricaoLivre = document.getElementById(
+            "brinquedo-descricao-livre"
+        );
         const botaoSelecionar = document.getElementById(
             "selecionar-brinquedo-btn"
         );
+        const modoEquipamentoManual =
+            brinquedoNaoListado?.value === "1";
 
-        if (!brinquedoInput?.value) {
+        if (!brinquedoInput?.value && !modoEquipamentoManual) {
             event.preventDefault();
-            window.alert("Selecione o brinquedo antes de enviar.");
+            window.alert(
+                "Selecione um equipamento ou escolha a opção “Não encontrei meu equipamento”."
+            );
             botaoSelecionar?.focus();
+            return;
+        }
+
+        if (
+            modoEquipamentoManual &&
+            !descricaoLivre?.value.trim()
+        ) {
+            event.preventDefault();
+            window.alert(
+                "Descreva o equipamento para que nossa equipe consiga identificá-lo."
+            );
+            descricaoLivre?.focus();
             return;
         }
 
@@ -3097,12 +3563,33 @@ function inicializarSeletorBrinquedo(form) {
     );
     const inputHidden = document.getElementById("brinquedo-input");
     const card = document.getElementById("brinquedo-card");
+    const cardManual = document.getElementById(
+        "brinquedo-manual-card"
+    );
+    const inputManual = document.getElementById(
+        "brinquedo-descricao-livre"
+    );
+    const flagManual = document.getElementById(
+        "brinquedo-nao-listado"
+    );
 
-    if (!modal || !botaoSelecionar || !inputHidden || !card) return;
+    if (
+        !modal ||
+        !botaoSelecionar ||
+        !inputHidden ||
+        !card ||
+        !cardManual ||
+        !inputManual ||
+        !flagManual
+    ) return;
 
     const fechar = modal.querySelector(".close-modal");
     const itens = Array.from(modal.querySelectorAll(".item-brinquedo"));
     const pesquisa = modal.querySelector("#pesquisa-brinquedo");
+    const opcaoManual = modal.querySelector("#produto-nao-listado");
+    const semResultado = modal.querySelector(
+        "#sem-resultado-brinquedo"
+    );
     const botoesOrdenar = Array.from(
         modal.querySelectorAll(".btn-ordenar")
     );
@@ -3110,6 +3597,35 @@ function inicializarSeletorBrinquedo(form) {
     const imagemSelecionada = document.getElementById("brinquedo-img");
     const nomeSelecionado = document.getElementById("brinquedo-nome");
     const remover = card.querySelector(".remove-brinquedo");
+    const removerManual = cardManual.querySelector(
+        ".remove-brinquedo-manual"
+    );
+
+    const exibirEstadoInicial = () => {
+        const estaNoModoManual = flagManual.value === "1";
+
+        botaoSelecionar.style.display =
+            estaNoModoManual ? "none" : "flex";
+        card.style.display = "none";
+        cardManual.style.display =
+            estaNoModoManual ? "block" : "none";
+        inputManual.required = estaNoModoManual;
+    };
+
+    const selecionarManual = () => {
+        inputHidden.value = "";
+        flagManual.value = "1";
+        inputManual.required = true;
+        card.style.display = "none";
+        botaoSelecionar.style.display = "none";
+        cardManual.style.display = "block";
+        fecharModalManutencao(modal);
+        cardManual.scrollIntoView({
+            behavior: "smooth",
+            block: "nearest"
+        });
+        window.setTimeout(() => inputManual.focus(), 80);
+    };
 
     botaoSelecionar.addEventListener("click", () => {
         abrirModalManutencao(modal);
@@ -3120,9 +3636,14 @@ function inicializarSeletorBrinquedo(form) {
         botaoSelecionar.focus();
     });
 
+    opcaoManual?.addEventListener("click", selecionarManual);
+
     itens.forEach(item => {
         item.addEventListener("click", () => {
             inputHidden.value = item.dataset.id || "";
+            flagManual.value = "0";
+            inputManual.value = "";
+            inputManual.required = false;
 
             if (nomeSelecionado) {
                 nomeSelecionado.textContent =
@@ -3143,6 +3664,7 @@ function inicializarSeletorBrinquedo(form) {
             }
 
             botaoSelecionar.style.display = "none";
+            cardManual.style.display = "none";
             card.style.display = "flex";
             fecharModalManutencao(modal);
             card.scrollIntoView({ behavior: "smooth", block: "nearest" });
@@ -3156,14 +3678,31 @@ function inicializarSeletorBrinquedo(form) {
         botaoSelecionar.focus();
     });
 
+    removerManual?.addEventListener("click", () => {
+        flagManual.value = "0";
+        inputManual.value = "";
+        inputManual.required = false;
+        cardManual.style.display = "none";
+        botaoSelecionar.style.display = "flex";
+        botaoSelecionar.focus();
+    });
+
     pesquisa?.addEventListener("input", () => {
         const termo = pesquisa.value.trim().toLocaleLowerCase("pt-BR");
+        let quantidadeVisivel = 0;
 
         itens.forEach(item => {
             const nome = (item.dataset.nome || "")
                 .toLocaleLowerCase("pt-BR");
-            item.style.display = nome.includes(termo) ? "flex" : "none";
+            const corresponde = nome.includes(termo);
+            item.hidden = !corresponde;
+            if (corresponde) quantidadeVisivel += 1;
         });
+
+        if (semResultado) {
+            semResultado.hidden =
+                itens.length === 0 || quantidadeVisivel > 0;
+        }
     });
 
     botoesOrdenar.forEach(botao => {
@@ -3186,6 +3725,8 @@ function inicializarSeletorBrinquedo(form) {
                 .forEach(item => lista?.appendChild(item));
         });
     });
+
+    exibirEstadoInicial();
 }
 
 function maskTelefoneBR(value) {
