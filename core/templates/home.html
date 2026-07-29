@@ -4398,7 +4398,6 @@ body {
 
     #mapa-clientes .leaflet-popup {
         margin-bottom: 12px;
-        animation: clientePopupRise .22s cubic-bezier(.2, .8, .2, 1) both;
     }
 
     #mapa-clientes .leaflet-popup-content-wrapper {
@@ -4409,6 +4408,8 @@ body {
         background: rgba(255, 255, 255, .98);
         box-shadow: 0 18px 45px rgba(8, 27, 54, .23);
         backdrop-filter: blur(14px);
+        transform-origin: 50% 100%;
+        animation: clientePopupRise .22s cubic-bezier(.2, .8, .2, 1) both;
     }
 
     #mapa-clientes .leaflet-popup-content {
@@ -4555,6 +4556,17 @@ body {
         line-height: 1.45;
     }
 
+    .cliente-popup__actions {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 7px;
+        margin-top: 11px;
+    }
+
+    .cliente-popup__actions--single {
+        grid-template-columns: 1fr;
+    }
+
     .cliente-popup__action {
         display: inline-flex;
         align-items: center;
@@ -4562,7 +4574,6 @@ body {
         gap: 5px;
         width: 100%;
         min-height: 38px;
-        margin-top: 11px;
         border-radius: 11px;
         background: linear-gradient(135deg, #0878f9, #004AAD);
         color: #fff;
@@ -4580,6 +4591,20 @@ body {
         box-shadow: 0 11px 22px rgba(0, 74, 173, .24);
     }
 
+    .cliente-popup__action--route {
+        border: 1px solid #dce5f1;
+        background: #fff;
+        color: #30445f;
+        box-shadow: 0 7px 16px rgba(13, 27, 46, .08);
+    }
+
+    .cliente-popup__action--route:hover {
+        border-color: #004AAD;
+        background: #f2f7ff;
+        color: #004AAD;
+        box-shadow: 0 9px 18px rgba(0, 74, 173, .12);
+    }
+
     .cliente-popup-tags {
         display: flex;
         flex-wrap: wrap;
@@ -4595,6 +4620,63 @@ body {
         padding: 4px 8px;
         border-radius: 999px;
         white-space: nowrap;
+    }
+
+    #mapa-clientes .cliente-hover-tooltip {
+        padding: 0;
+        border: 0;
+        border-radius: 13px;
+        background: transparent;
+        box-shadow: 0 12px 30px rgba(8, 27, 54, .18);
+    }
+
+    #mapa-clientes .cliente-hover-tooltip::before {
+        border-top-color: #0a2548;
+    }
+
+    .cliente-hover-card {
+        min-width: 178px;
+        max-width: 240px;
+        padding: 10px 12px;
+        border: 1px solid rgba(255, 255, 255, .18);
+        border-radius: 13px;
+        background: linear-gradient(135deg, #071a34, #0b376f);
+        color: #fff;
+    }
+
+    .cliente-hover-card--fabrica {
+        background: linear-gradient(135deg, #8f1522, #E63946);
+    }
+
+    .cliente-hover-card strong,
+    .cliente-hover-card span,
+    .cliente-hover-card small {
+        display: block;
+    }
+
+    .cliente-hover-card strong {
+        overflow: hidden;
+        font-size: .76rem;
+        font-weight: 900;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .cliente-hover-card span {
+        margin-top: 2px;
+        color: rgba(255, 255, 255, .78);
+        font-size: .64rem;
+    }
+
+    .cliente-hover-card small {
+        margin-top: 6px;
+        color: #9dc9ff;
+        font-size: .59rem;
+        font-weight: 750;
+    }
+
+    .cliente-hover-card--fabrica small {
+        color: #ffd2d6;
     }
 
     @keyframes clientePopupRise {
@@ -4644,6 +4726,10 @@ body {
 
         .cliente-popup-tags span:nth-child(n + 4) {
             display: none;
+        }
+
+        .cliente-popup__actions {
+            grid-template-columns: 1fr;
         }
     }
 
@@ -4869,15 +4955,29 @@ body {
             'Espaço atendido com equipamentos e soluções da Lazer & Sport Brinquedos.'
         );
         const urlCliente = normalizarUrlExterna(c.site || c.instagram);
+        const linkInstagram = urlCliente.includes('instagram.com');
         const link = urlCliente
             ? `<a class="cliente-popup__action"
                   href="${escapeHTML(urlCliente)}"
                   target="_blank"
                   rel="noopener">
-                   <i class="fa-solid fa-arrow-up-right-from-square"></i>
-                   Conhecer o espaço
+                   <i class="${linkInstagram ? 'fa-brands fa-instagram' : 'fa-solid fa-globe'}"></i>
+                   ${linkInstagram ? 'Instagram' : 'Visitar site'}
                </a>`
             : '';
+        const rota = `
+            <a class="cliente-popup__action cliente-popup__action--route"
+               href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${c.lat},${c.lng}`)}"
+               target="_blank"
+               rel="noopener">
+                <i class="fa-solid fa-route"></i>
+                Como chegar
+            </a>`;
+        const acoes = `
+            <div class="cliente-popup__actions ${link ? '' : 'cliente-popup__actions--single'}">
+                ${link}
+                ${rota}
+            </div>`;
         const categoriasRecebidas = Array.isArray(c.brinquedos)
             ? c.brinquedos
             : (Array.isArray(c.categorias) ? c.categorias : CATEGORIAS_PADRAO);
@@ -4907,7 +5007,7 @@ body {
                 </div>
                 <p class="cliente-popup__description">${descricao}</p>
                 ${tags}
-                ${link}
+                ${acoes}
             </div>
         `;
     }
@@ -4918,6 +5018,16 @@ body {
         const endereco = escapeHTML(f.endereco || '');
         const logoFabrica = escapeHTML(f.logo || LOGO_CLIENTE_PADRAO);
         const localCompleto = [endereco, local].filter(Boolean).join(' — ');
+        const rotaFabrica = `
+            <div class="cliente-popup__actions cliente-popup__actions--single">
+                <a class="cliente-popup__action cliente-popup__action--route"
+                   href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${f.lat},${f.lng}`)}"
+                   target="_blank"
+                   rel="noopener">
+                    <i class="fa-solid fa-route"></i>
+                    Como chegar
+                </a>
+            </div>`;
 
         return `
             <div class="cliente-popup cliente-popup--fabrica">
@@ -4940,6 +5050,29 @@ body {
                 <p class="cliente-popup__description">
                     Tecnologia, fabricação própria e diversão para projetos em todo o Brasil.
                 </p>
+                ${rotaFabrica}
+            </div>
+        `;
+    }
+
+    function criarTooltipMarcador(ponto, fabrica = false) {
+        const nome = escapeHTML(ponto.nome || 'Lazer & Sport');
+        const local = escapeHTML(
+            [ponto.cidade, ponto.estado]
+                .filter(Boolean)
+                .join(' - ') ||
+            ponto.pais ||
+            ''
+        );
+
+        return `
+            <div class="cliente-hover-card ${fabrica ? 'cliente-hover-card--fabrica' : ''}">
+                <strong>${nome}</strong>
+                ${local ? `<span>${local}</span>` : ''}
+                <small>
+                    <i class="fa-solid fa-computer-mouse"></i>
+                    Clique para manter as informações abertas
+                </small>
             </div>
         `;
     }
@@ -4948,8 +5081,6 @@ body {
         '(hover: hover) and (pointer: fine)'
     ).matches;
     let marcadorPopupFixado = null;
-    let marcadorPopupTemporario = null;
-    let temporizadorHover = null;
 
     function alternarElevacaoMarcador(marcador, ativo, zIndexBase = 0) {
         const elemento = marcador.getElement();
@@ -4966,28 +5097,8 @@ body {
     }
 
     function fecharPopupsDoMapa() {
-        window.clearTimeout(temporizadorHover);
-
-        if (marcadorPopupFixado) {
-            alternarElevacaoMarcador(
-                marcadorPopupFixado,
-                false,
-                marcadorPopupFixado._zIndexBaseLazerSport || 0
-            );
-        }
-        if (
-            marcadorPopupTemporario &&
-            marcadorPopupTemporario !== marcadorPopupFixado
-        ) {
-            alternarElevacaoMarcador(
-                marcadorPopupTemporario,
-                false,
-                marcadorPopupTemporario._zIndexBaseLazerSport || 0
-            );
-        }
-
+        marcadorPopupFixado?.closeTooltip();
         marcadorPopupFixado = null;
-        marcadorPopupTemporario = null;
         mapa.closePopup();
     }
 
@@ -4995,6 +5106,7 @@ body {
         marcador,
         zIndexBase,
         conteudoPopup,
+        conteudoTooltip,
         deslocamentoY
     ) {
         marcador._zIndexBaseLazerSport = zIndexBase || 0;
@@ -5012,97 +5124,101 @@ body {
         }).setContent(conteudoPopup);
 
         if (dispositivoComHover) {
+            marcador.bindTooltip(conteudoTooltip, {
+                className: 'cliente-hover-tooltip',
+                direction: 'top',
+                offset: L.point(0, deslocamentoY + 5),
+                opacity: 1
+            });
+
             marcador.on('mouseover', function () {
-                window.clearTimeout(temporizadorHover);
-
-                if (
-                    marcadorPopupFixado &&
-                    marcadorPopupFixado !== marcador
-                ) return;
-
-                if (
-                    marcadorPopupTemporario &&
-                    marcadorPopupTemporario !== marcador
-                ) {
-                    alternarElevacaoMarcador(
-                        marcadorPopupTemporario,
-                        false,
-                        marcadorPopupTemporario._zIndexBaseLazerSport || 0
-                    );
-                }
-
-                marcadorPopupTemporario = marcador;
                 alternarElevacaoMarcador(marcador, true, zIndexBase || 0);
-                abrirPopupDoMarcador(marcador);
+
+                // O popup fixo já contém as informações completas. Evita
+                // sobrepor o tooltip de hover no mesmo marcador.
+                if (marcador === marcadorPopupFixado) {
+                    marcador.closeTooltip();
+                }
             });
 
             marcador.on('mouseout', function () {
-                if (marcador === marcadorPopupFixado) return;
-
-                temporizadorHover = window.setTimeout(() => {
-                    if (
-                        marcador === marcadorPopupTemporario &&
-                        marcador !== marcadorPopupFixado
-                    ) {
-                        alternarElevacaoMarcador(
-                            marcador,
-                            false,
-                            zIndexBase || 0
-                        );
-                        marcadorPopupTemporario = null;
-                        mapa.closePopup(marcador._popupLazerSport);
-                    }
-                }, 130);
+                // A elevação representa somente o hover. O popup clicado
+                // continua fixo, mas a gota volta à posição normal e pode
+                // subir novamente no próximo hover.
+                alternarElevacaoMarcador(marcador, false, zIndexBase || 0);
             });
         }
 
         marcador.on('click', function (e) {
-            window.clearTimeout(temporizadorHover);
-
             if (e.originalEvent) {
                 L.DomEvent.stopPropagation(e.originalEvent);
                 L.DomEvent.preventDefault(e.originalEvent);
             }
 
-            if (
-                marcadorPopupFixado &&
-                marcadorPopupFixado !== marcador
-            ) {
-                alternarElevacaoMarcador(
-                    marcadorPopupFixado,
-                    false,
-                    marcadorPopupFixado._zIndexBaseLazerSport || 0
-                );
-            }
-
+            marcador.closeTooltip();
             marcadorPopupFixado = marcador;
-            marcadorPopupTemporario = null;
-            alternarElevacaoMarcador(marcador, true, zIndexBase || 0);
+            abrirPopupDoMarcador(marcador);
+        });
+
+        function prepararElementoMarcador() {
+            const elemento = marcador.getElement();
+            if (!elemento) return;
+
+            elemento.setAttribute('role', 'button');
+            elemento.setAttribute(
+                'aria-label',
+                `Ver informações de ${marcador.options.title || 'cliente Lazer & Sport'}`
+            );
+            elemento.setAttribute('aria-haspopup', 'dialog');
+            elemento.setAttribute('aria-expanded', 'false');
+            elemento.style.touchAction = 'manipulation';
+        }
+
+        marcador.on('add', prepararElementoMarcador);
+        prepararElementoMarcador();
+
+        marcador._popupLazerSport.on('add', function () {
+            marcador.getElement()?.setAttribute('aria-expanded', 'true');
+
+            const elementoPopup = marcador._popupLazerSport.getElement?.();
+            if (elementoPopup) {
+                elementoPopup.setAttribute('role', 'dialog');
+                elementoPopup.setAttribute(
+                    'aria-label',
+                    `Informações de ${marcador.options.title || 'cliente Lazer & Sport'}`
+                );
+                elementoPopup
+                    .querySelector('.leaflet-popup-close-button')
+                    ?.setAttribute('aria-label', 'Fechar informações');
+            }
+        });
+
+        marcador._popupLazerSport.on('remove', function () {
+            marcador.getElement()?.setAttribute('aria-expanded', 'false');
+            if (marcadorPopupFixado === marcador) {
+                marcadorPopupFixado = null;
+            }
+        });
+
+        marcador.on('keypress', function (e) {
+            if (e.originalEvent?.key !== 'Enter' && e.originalEvent?.key !== ' ') {
+                return;
+            }
+            e.originalEvent.preventDefault();
+            marcador.closeTooltip();
+            marcadorPopupFixado = marcador;
             abrirPopupDoMarcador(marcador);
         });
     }
 
-    mapa.on('popupclose', function (e) {
-        if (
-            marcadorPopupFixado?._popupLazerSport === e.popup
-        ) {
-            alternarElevacaoMarcador(
-                marcadorPopupFixado,
-                false,
-                marcadorPopupFixado._zIndexBaseLazerSport || 0
-            );
-            marcadorPopupFixado = null;
-        }
+    mapa.on('popupopen', function (e) {
+        const popupAberto = e.popup;
 
         if (
-            marcadorPopupTemporario?._popupLazerSport === e.popup
+            marcadorPopupFixado &&
+            marcadorPopupFixado._popupLazerSport !== popupAberto
         ) {
-            alternarElevacaoMarcador(
-                marcadorPopupTemporario,
-                false,
-                marcadorPopupTemporario._zIndexBaseLazerSport || 0
-            );
-            marcadorPopupTemporario = null;
+            marcadorPopupFixado = null;
         }
     });
 
@@ -5165,6 +5281,7 @@ body {
                     marcador,
                     0,
                     criarPopupCliente(c),
+                    criarTooltipMarcador(c),
                     -47
                 );
                 camadaClientes.addLayer(marcador);
@@ -5210,6 +5327,7 @@ body {
             marcadorFabrica,
             2000,
             criarPopupFabrica(fabrica),
+            criarTooltipMarcador(fabrica, true),
             -57
         );
     }
