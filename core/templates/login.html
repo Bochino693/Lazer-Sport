@@ -74,6 +74,7 @@
 
             <form method="POST" id="formLogin" class="ls-form">
                 {% csrf_token %}
+                <input type="hidden" name="next" value="{{ next|default:'/' }}">
 
                 <div class="ls-campo">
                     <label for="id_username">Usuário ou e-mail</label>

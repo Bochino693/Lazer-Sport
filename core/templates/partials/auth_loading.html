@@ -216,13 +216,6 @@ O script identifica automaticamente qual formulário foi enviado.
         }
 
         if (formulario.id === "formCompletarPerfil") {
-            if (botao && botao.name === "pular") {
-                return [
-                    "Preparando sua área...",
-                    "Você poderá informar o telefone mais tarde no seu perfil."
-                ];
-            }
-
             return [
                 "Salvando seu telefone...",
                 "Estamos concluindo seu cadastro e liberando todos os recursos."
@@ -255,9 +248,7 @@ O script identifica automaticamente qual formulário foi enviado.
     document.querySelectorAll(".ls-auth form").forEach(function (formulario) {
         formulario.addEventListener("submit", function (evento) {
             const botao = evento.submitter || null;
-            const estaPulando = botao && botao.name === "pular";
-
-            if (!estaPulando && !formulario.checkValidity()) {
+            if (!formulario.checkValidity()) {
                 return;
             }
 
