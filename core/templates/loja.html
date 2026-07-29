@@ -8,405 +8,1072 @@
 {% block content %}
 
 <style>
+.loja-page {
+    --loja-azul: #004aad;
+    --loja-azul-vivo: #0878f9;
+    --loja-azul-escuro: #0b1f3a;
+    --loja-vermelho: #e63946;
+    --loja-texto: #14243c;
+    --loja-muted: #65758b;
+    padding: 24px 20px 72px;
+    background:
+        radial-gradient(circle at 8% 8%, rgba(0, 74, 173, .09), transparent 25%),
+        radial-gradient(circle at 94% 16%, rgba(230, 57, 70, .07), transparent 22%),
+        linear-gradient(180deg, #f8fbff 0%, #f3f6fb 100%);
+}
+
+.loja-shell {
+    width: 100%;
+    max-width: 1240px;
+    margin: 0 auto;
+}
+
 .loja-breadcrumb {
-    max-width: 1200px;
-    margin: 25px auto 0;
-    padding: 0 20px;
-    font-size: 0.95rem;
-    color: #444;
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 9px;
+    min-height: 42px;
+    margin: 0;
+    padding: 8px 13px;
+    border: 1px solid rgba(0, 74, 173, .11);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .88);
+    color: #6b7b91;
+    box-shadow: 0 8px 25px rgba(15, 38, 76, .06);
+    font-size: .79rem;
+    backdrop-filter: blur(10px);
 }
 
 .loja-breadcrumb a {
-    color: #007BFF;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    color: var(--loja-azul);
     text-decoration: none;
-    font-weight: 600;
+    font-weight: 800;
+    transition: color .2s ease;
 }
 
 .loja-breadcrumb a:hover {
-    text-decoration: underline;
+    color: var(--loja-vermelho);
 }
 
-.loja-breadcrumb span {
-    margin: 0 6px;
-    color: #888;
+.loja-breadcrumb a:focus-visible,
+.loja-filtro-btn:focus-visible,
+.loja-card-media-link:focus-visible,
+.loja-card-title-link:focus-visible,
+.loja-btn:focus-visible {
+    outline: 3px solid rgba(8, 120, 249, .32);
+    outline-offset: 3px;
+}
+
+.loja-breadcrumb .loja-breadcrumb-separador {
+    color: #a5afbd;
+    font-size: .68rem;
+}
+
+.loja-breadcrumb .loja-breadcrumb-atual {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    color: var(--loja-texto);
+    font-weight: 800;
 }
 
 .loja-hero {
-    max-width: 1200px;
-    margin: 10px auto 0;
-    padding: 20px 20px 0;
-    text-align: center;
+    position: relative;
+    min-height: 310px;
+    margin-top: 18px;
+    padding: clamp(34px, 6vw, 68px);
+    overflow: hidden;
+    border: 1px solid rgba(0, 74, 173, .13);
+    border-radius: 34px;
+    background:
+        radial-gradient(circle at 84% 20%, rgba(230, 57, 70, .23), transparent 27%),
+        radial-gradient(circle at 71% 96%, rgba(8, 120, 249, .33), transparent 34%),
+        linear-gradient(125deg, #071a34 0%, #004aad 64%, #076cdc 100%);
+    box-shadow: 0 24px 65px rgba(10, 31, 59, .18);
+    color: #fff;
+}
+
+.loja-hero::before,
+.loja-hero::after {
+    content: "";
+    position: absolute;
+    border: 1px solid rgba(255, 255, 255, .12);
+    border-radius: 50%;
+}
+
+.loja-hero::before {
+    width: 310px;
+    height: 310px;
+    top: -145px;
+    right: -65px;
+}
+
+.loja-hero::after {
+    width: 210px;
+    height: 210px;
+    right: 150px;
+    bottom: -145px;
+}
+
+.loja-hero-conteudo {
+    position: relative;
+    z-index: 2;
+    max-width: 740px;
+}
+
+.loja-hero-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 17px;
+    padding: 8px 13px;
+    border: 1px solid rgba(255, 255, 255, .22);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .1);
+    color: #fff;
+    font-size: .72rem;
+    font-weight: 850;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    backdrop-filter: blur(8px);
 }
 
 .loja-hero h1 {
+    max-width: 680px;
+    margin: 0 0 14px;
+    color: #fff;
     font-family: 'Poppins', sans-serif;
-    font-size: 2.4rem;
-    font-weight: 800;
-    color: #004AAD;
-    margin-bottom: 10px;
+    font-size: clamp(2rem, 5vw, 3.65rem);
+    font-weight: 900;
+    line-height: 1.04;
+    letter-spacing: -.055em;
 }
 
 .loja-hero p {
-    color: #6c757d;
-    font-size: 1.05rem;
-    max-width: 640px;
-    margin: 0 auto;
-    line-height: 1.6;
+    max-width: 660px;
+    margin: 0;
+    color: rgba(255, 255, 255, .83);
+    font-size: clamp(.92rem, 1.7vw, 1.08rem);
+    line-height: 1.7;
+}
+
+.loja-hero-beneficios {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 25px;
+}
+
+.loja-hero-beneficios span {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 12px;
+    border: 1px solid rgba(255, 255, 255, .18);
+    border-radius: 12px;
+    background: rgba(3, 18, 41, .2);
+    color: #fff;
+    font-size: .76rem;
+    font-weight: 750;
+    backdrop-filter: blur(7px);
+}
+
+.loja-hero-beneficios i {
+    color: #fff;
+}
+
+.loja-catalogo {
+    position: relative;
+    margin-top: 30px;
+    padding: clamp(22px, 4vw, 38px);
+    overflow: hidden;
+    border: 1px solid rgba(0, 74, 173, .12);
+    border-radius: 32px;
+    background:
+        radial-gradient(circle at 0 0, rgba(0, 74, 173, .12), transparent 25%),
+        radial-gradient(circle at 100% 10%, rgba(230, 57, 70, .09), transparent 24%),
+        linear-gradient(145deg, #eaf2ff 0%, #f8fbff 48%, #eef4fd 100%);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, .8),
+        0 22px 55px rgba(15, 38, 76, .09);
+}
+
+.loja-catalogo-topo {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 20px;
+    margin-bottom: 22px;
+}
+
+.loja-catalogo-topo h2 {
+    margin: 0 0 5px;
+    color: var(--loja-texto);
+    font-size: clamp(1.4rem, 2.6vw, 2rem);
+    font-weight: 900;
+    letter-spacing: -.035em;
+}
+
+.loja-catalogo-topo p {
+    margin: 0;
+    color: var(--loja-muted);
+    font-size: .88rem;
+}
+
+.loja-resultado {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 12px;
+    border: 1px solid rgba(0, 74, 173, .12);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .82);
+    color: var(--loja-azul);
+    font-size: .75rem;
+    font-weight: 850;
 }
 
 .loja-filtros {
     display: flex;
-    justify-content: center;
     flex-wrap: wrap;
-    gap: 12px;
-    max-width: 1200px;
-    margin: 30px auto 10px;
-    padding: 0 20px;
+    gap: 9px;
+    margin: 0 0 27px;
+    padding: 0 0 22px;
+    border-bottom: 1px solid rgba(0, 74, 173, .1);
 }
 
 .loja-filtro-btn {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    padding: 10px 20px;
-    background: #ffffff;
-    color: #2c3e50;
-    border: 1px solid #e3e8f0;
+    min-height: 42px;
+    padding: 9px 14px;
+    background: rgba(255, 255, 255, .84);
+    color: #3a4c65;
+    border: 1px solid rgba(0, 74, 173, .12);
     border-radius: 999px;
-    font-weight: 600;
-    font-size: 0.92rem;
+    font-family: inherit;
+    font-weight: 780;
+    font-size: .78rem;
     cursor: pointer;
-    box-shadow: 0 3px 10px rgba(0,0,0,0.06);
-    transition: transform 0.25s ease, box-shadow 0.25s ease, background 0.25s ease, color 0.25s ease, border-color 0.25s ease;
+    box-shadow: 0 5px 14px rgba(15, 38, 76, .05);
+    transition: transform .22s ease, box-shadow .22s ease, background .22s ease, color .22s ease, border-color .22s ease;
 }
 
 .loja-filtro-btn .contagem {
-    background: #f0f4ff;
-    color: #004AAD;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 25px;
+    height: 23px;
+    background: #edf4ff;
+    color: var(--loja-azul);
     border-radius: 999px;
-    padding: 1px 9px;
-    font-size: 0.78rem;
-    font-weight: 800;
+    padding: 0 7px;
+    font-size: .68rem;
+    font-weight: 900;
 }
 
 .loja-filtro-btn:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 18px rgba(0,74,173,0.14);
-    border-color: #007BFF;
+    box-shadow: 0 10px 20px rgba(0, 74, 173, .13);
+    border-color: rgba(0, 74, 173, .34);
 }
 
 .loja-filtro-btn.ativo {
-    background: linear-gradient(135deg, #004AAD, #007BFF);
-    color: #ffffff;
+    background: linear-gradient(135deg, var(--loja-azul), var(--loja-azul-vivo));
+    color: #fff;
     border-color: transparent;
-    box-shadow: 0 8px 20px rgba(0,74,173,0.35);
+    box-shadow: 0 9px 22px rgba(0, 74, 173, .28);
 }
 
 .loja-filtro-btn.ativo .contagem {
-    background: rgba(255,255,255,0.2);
-    color: #ffffff;
+    background: rgba(255, 255, 255, .18);
+    color: #fff;
 }
 
 .loja-grid-wrap {
-    max-width: 1200px;
-    margin: 20px auto 60px;
-    padding: 0 20px;
+    margin: 0;
+    padding: 0;
 }
 
 .loja-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-    gap: 26px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 22px;
 }
 
 .loja-card {
+    position: relative;
     display: flex;
     flex-direction: column;
-    background: #fff;
-    border-radius: 20px;
+    min-width: 0;
+    height: 100%;
+    background:
+        linear-gradient(180deg, rgba(247, 250, 255, .96), #fff 43%);
+    border: 1px solid rgba(0, 74, 173, .12);
+    border-radius: 24px;
     overflow: hidden;
-    box-shadow: 0 6px 20px rgba(0,0,0,0.08);
-    text-decoration: none;
     color: inherit;
-    transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+    box-shadow:
+        0 14px 35px rgba(15, 38, 76, .09),
+        0 3px 9px rgba(15, 38, 76, .04);
+    isolation: isolate;
+    transition:
+        transform .32s cubic-bezier(.22, 1, .36, 1),
+        box-shadow .32s ease,
+        border-color .32s ease;
 }
 
-.loja-card:hover {
+.loja-card::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto;
+    z-index: 5;
+    height: 4px;
+    background: linear-gradient(90deg, var(--loja-azul) 0 72%, var(--loja-vermelho) 72%);
+}
+
+.loja-card:hover,
+.loja-card:focus-within {
     transform: translateY(-8px);
-    box-shadow: 0 16px 34px rgba(0,0,0,0.16);
+    border-color: rgba(0, 74, 173, .28);
+    box-shadow:
+        0 25px 52px rgba(15, 38, 76, .16),
+        0 8px 18px rgba(0, 74, 173, .08);
+}
+
+.loja-card-media-link,
+.loja-card-title-link {
+    color: inherit;
+    text-decoration: none;
+}
+
+.loja-card-media-link {
+    display: block;
 }
 
 .loja-card-img {
-    width: 100%;
-    height: 190px;
-    background: #f5f8ff;
+    position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
+    width: 100%;
+    height: 235px;
     overflow: hidden;
-    position: relative;
+    padding: 24px 20px 11px;
+    border-bottom: 1px solid rgba(0, 74, 173, .09);
+    background:
+        radial-gradient(circle at 78% 20%, rgba(230, 57, 70, .11), transparent 28%),
+        radial-gradient(circle at 18% 82%, rgba(0, 74, 173, .15), transparent 34%),
+        linear-gradient(145deg, #f7faff, #edf4ff);
+}
+
+.loja-card-img::after {
+    content: "";
+    position: absolute;
+    inset: auto 13% 10px;
+    z-index: 0;
+    height: 17px;
+    border-radius: 50%;
+    background: rgba(9, 31, 62, .16);
+    filter: blur(12px);
 }
 
 .loja-card-img img {
+    position: relative;
+    z-index: 1;
+    display: block;
     width: 100%;
     height: 100%;
     object-fit: contain;
-    padding: 10px;
-    position: relative;
-    z-index: 1;
-    transition: transform 0.4s ease;
+    filter: drop-shadow(0 15px 14px rgba(9, 31, 62, .2));
+    transition: transform .48s cubic-bezier(.22, 1, .36, 1), filter .35s ease;
 }
 
-.loja-card:hover .loja-card-img img {
-    transform: scale(1.06);
+.loja-card:hover .loja-card-img img,
+.loja-card:focus-within .loja-card-img img {
+    transform: scale(1.055) translateY(-3px);
+    filter: drop-shadow(0 19px 17px rgba(9, 31, 62, .26));
 }
 
 .loja-card-img .sem-imagem {
-    color: #b7c0d8;
-    font-size: 2.2rem;
+    position: relative;
+    z-index: 1;
+    color: #9aabc4;
+    font-size: 2.5rem;
 }
 
 .loja-card-tipo {
     position: absolute;
-    top: 12px;
-    left: 12px;
-    z-index: 2;
-    background: rgba(13,27,46,0.78);
-    color: #fff;
-    font-size: 0.72rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.4px;
-    padding: 5px 11px;
+    top: 16px;
+    left: 16px;
+    z-index: 3;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    min-height: 31px;
+    max-width: calc(100% - 32px);
+    padding: 7px 11px;
+    border: 1px solid rgba(255, 255, 255, .2);
     border-radius: 999px;
+    background: rgba(11, 31, 58, .9);
+    color: #fff;
+    box-shadow: 0 8px 20px rgba(15, 38, 76, .13);
+    font-size: .67rem;
+    font-weight: 850;
+    text-transform: uppercase;
+    letter-spacing: .045em;
+    backdrop-filter: blur(8px);
 }
 
-.loja-card-tipo.peca { background: rgba(0,74,173,0.85); }
-.loja-card-tipo.promocao { background: rgba(230,57,70,0.88); }
-.loja-card-tipo.combo { background: rgba(255,152,0,0.9); }
-.loja-card-tipo.brinquedo { background: rgba(46,204,113,0.85); }
+.loja-card-tipo.peca { background: rgba(0, 74, 173, .94); }
+.loja-card-tipo.promocao { background: rgba(230, 57, 70, .94); }
+.loja-card-tipo.combo { background: rgba(11, 31, 58, .94); }
+.loja-card-tipo.brinquedo {
+    background: linear-gradient(135deg, rgba(0, 74, 173, .96), rgba(8, 120, 249, .96));
+}
 
 .loja-card-corpo {
-    padding: 16px 18px 20px;
     display: flex;
     flex-direction: column;
     flex: 1;
+    padding: 20px 20px 19px;
+}
+
+.loja-card-kicker {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin-bottom: 8px;
+    color: var(--loja-azul);
+    font-size: .68rem;
+    font-weight: 850;
+    letter-spacing: .055em;
+    text-transform: uppercase;
 }
 
 .loja-card-corpo h3 {
-    font-size: 1.02rem;
-    font-weight: 700;
-    color: #1f2d3d;
-    margin-bottom: 10px;
-    line-height: 1.35;
+    min-height: 48px;
+    margin: 0;
+    color: var(--loja-texto);
+    font-size: 1.08rem;
+    font-weight: 900;
+    line-height: 1.3;
+    letter-spacing: -.025em;
+    transition: color .2s ease;
+}
+
+.loja-card-title-link:hover h3 {
+    color: var(--loja-azul);
+}
+
+.loja-card-descricao {
+    display: -webkit-box;
+    min-height: 57px;
+    margin: 10px 0 13px;
+    overflow: hidden;
+    color: var(--loja-muted);
+    font-size: .8rem;
+    line-height: 1.5;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+}
+
+.loja-card-vantagens {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 7px;
+    margin-bottom: 15px;
+}
+
+.loja-card-vantagens span {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    padding: 7px 8px;
+    border: 1px solid #e6ebf3;
+    border-radius: 10px;
+    background: #f7f9fc;
+    color: #506077;
+    font-size: .66rem;
+    font-weight: 750;
+    line-height: 1.25;
+}
+
+.loja-card-vantagens i {
+    flex: 0 0 auto;
+    color: var(--loja-azul);
 }
 
 .loja-card-precos {
     margin-top: auto;
     display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 3px;
+    padding-top: 14px;
+    border-top: 1px solid #e8edf5;
+}
+
+.loja-card-preco-linha {
+    display: flex;
     align-items: baseline;
-    gap: 8px;
+    gap: 9px;
     flex-wrap: wrap;
 }
 
 .loja-card-preco-original {
     text-decoration: line-through;
-    color: #999;
-    font-size: 0.85rem;
+    color: #8995a6;
+    font-size: .77rem;
+    font-weight: 700;
 }
 
 .loja-card-preco {
-    color: #007BFF;
+    color: var(--loja-azul);
+    font-weight: 950;
+    font-size: clamp(1.3rem, 2.3vw, 1.62rem);
+    line-height: 1.08;
+    letter-spacing: -.04em;
+}
+
+.loja-card-preco-label {
+    color: #748298;
+    font-size: .65rem;
     font-weight: 800;
-    font-size: 1.2rem;
+    letter-spacing: .045em;
+    text-transform: uppercase;
+}
+
+.loja-card-condicao {
+    color: #65758b;
+    font-size: .67rem;
+    font-weight: 650;
 }
 
 .loja-card-sem-preco {
-    color: #8a94a6;
-    font-size: 0.85rem;
-    font-style: italic;
+    color: var(--loja-texto);
+    font-size: .88rem;
+    font-weight: 850;
 }
 
 .loja-card-acoes {
-    margin-top: 14px;
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: 1.25fr 1fr;
     gap: 8px;
+    margin-top: 14px;
 }
 
 .loja-btn {
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
     width: 100%;
-    padding: 10px 14px;
-    border: none;
-    border-radius: 10px;
+    min-height: 46px;
+    padding: 10px 11px;
+    border: 1px solid transparent;
+    border-radius: 12px;
     font-family: 'Poppins', sans-serif;
-    font-size: 0.86rem;
-    font-weight: 700;
+    font-size: .73rem;
+    font-weight: 850;
+    line-height: 1.15;
+    text-decoration: none;
     cursor: pointer;
-    transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, filter 0.2s ease;
+    transition: transform .2s ease, box-shadow .2s ease, background .2s ease, filter .2s ease;
 }
 
 .loja-btn:active {
-    transform: scale(0.97);
+    transform: scale(.97);
 }
 
 .loja-btn-carrinho {
-    background: linear-gradient(135deg, #004AAD, #007BFF);
+    background: linear-gradient(135deg, var(--loja-azul), var(--loja-azul-vivo));
     color: #fff;
-    box-shadow: 0 4px 12px rgba(0,74,173,0.25);
+    box-shadow: 0 8px 18px rgba(0, 74, 173, .22);
 }
 
 .loja-btn-carrinho:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 18px rgba(0,74,173,0.35);
+    box-shadow: 0 11px 23px rgba(0, 74, 173, .31);
     filter: brightness(1.05);
 }
 
+.loja-btn-carrinho.is-added {
+    background: linear-gradient(135deg, #0b6d37, #15944a);
+}
+
+.loja-btn-carrinho:disabled {
+    cursor: wait;
+    opacity: .84;
+}
+
+.loja-btn-detalhes {
+    border-color: rgba(0, 74, 173, .19);
+    background: #fff;
+    color: var(--loja-azul);
+}
+
+.loja-btn-detalhes:hover {
+    transform: translateY(-2px);
+    border-color: rgba(0, 74, 173, .34);
+    background: #edf4ff;
+}
+
 .loja-btn-whatsapp {
-    background: #25D366;
-    color: #fff;
-    box-shadow: 0 4px 12px rgba(37,211,102,0.3);
+    grid-column: 1 / -1;
+    min-height: 40px;
+    border-color: rgba(230, 57, 70, .17);
+    background: #fff5f6;
+    color: #c91f31;
 }
 
 .loja-btn-whatsapp:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 18px rgba(37,211,102,0.4);
-    filter: brightness(1.05);
+    border-color: rgba(230, 57, 70, .31);
+    background: #ffecef;
 }
 
 .loja-vazio {
     text-align: center;
-    padding: 60px 20px;
-    color: #8a94a6;
-    background: #fff;
+    padding: 65px 24px;
+    color: var(--loja-muted);
+    background: rgba(255, 255, 255, .85);
     border-radius: 24px;
-    border: 1px dashed #e3e8f0;
+    border: 1px dashed rgba(0, 74, 173, .22);
 }
 
-@media (max-width: 575px) {
-    .loja-hero h1 { font-size: 1.7rem; }
-    .loja-filtro-btn { padding: 8px 14px; font-size: 0.85rem; }
+.loja-vazio i {
+    display: block;
+    margin-bottom: 15px;
+    color: var(--loja-azul);
+    font-size: 2rem;
+}
+
+@media (max-width: 1020px) {
+    .loja-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 680px) {
+    .loja-page {
+        padding: 17px 12px 48px;
+    }
+
+    .loja-breadcrumb {
+        min-height: 38px;
+        font-size: .73rem;
+    }
+
+    .loja-hero {
+        min-height: 0;
+        padding: 34px 24px;
+        border-radius: 25px;
+    }
+
+    .loja-hero h1 {
+        font-size: clamp(2rem, 11vw, 2.65rem);
+    }
+
+    .loja-hero-beneficios {
+        display: grid;
+        grid-template-columns: 1fr;
+    }
+
+    .loja-catalogo {
+        padding: 18px 13px;
+        border-radius: 25px;
+    }
+
+    .loja-catalogo-topo {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .loja-filtros {
+        flex-wrap: nowrap;
+        margin-right: -13px;
+        margin-left: -13px;
+        padding-right: 13px;
+        padding-left: 13px;
+        overflow-x: auto;
+        scrollbar-width: none;
+    }
+
+    .loja-filtros::-webkit-scrollbar {
+        display: none;
+    }
+
+    .loja-filtro-btn {
+        flex: 0 0 auto;
+        white-space: nowrap;
+    }
+
+    .loja-grid {
+        grid-template-columns: 1fr;
+        gap: 17px;
+    }
+
+    .loja-card {
+        max-width: 440px;
+        margin: 0 auto;
+        border-radius: 21px;
+    }
+
+    .loja-card-img {
+        height: 218px;
+    }
+
+    .loja-card-corpo {
+        padding: 18px;
+    }
+}
+
+@media (max-width: 370px) {
+    .loja-card-vantagens,
+    .loja-card-acoes {
+        grid-template-columns: 1fr;
+    }
+
+    .loja-btn-whatsapp {
+        grid-column: auto;
+    }
 }
 </style>
 
-<div class="loja-breadcrumb" role="navigation" aria-label="Breadcrumb">
-    <a href="{% url 'home' %}">Home</a>
-    <span>›</span>
-    <strong>Loja</strong>
-</div>
+<div class="loja-page">
+    <div class="loja-shell">
+        <nav class="loja-breadcrumb" aria-label="Navegação estrutural">
+            <a href="{% url 'home' %}">
+                <i class="fa-solid fa-house" aria-hidden="true"></i>
+                <span>Início</span>
+            </a>
+            <i class="fa-solid fa-chevron-right loja-breadcrumb-separador" aria-hidden="true"></i>
+            <span class="loja-breadcrumb-atual" aria-current="page">
+                <i class="fa-solid fa-store" aria-hidden="true"></i>
+                Loja
+            </span>
+        </nav>
 
-<div class="loja-hero">
-    <h1>Loja Lazer &amp; Sport</h1>
-    <p>
-        Peças de reposição, promoções e combos especiais num catálogo só --
-        além de alguns brinquedos selecionados.
-    </p>
-</div>
+        <header class="loja-hero">
+            <div class="loja-hero-conteudo">
+                <span class="loja-hero-tag">
+                    <i class="fa-solid fa-bag-shopping" aria-hidden="true"></i>
+                    Catálogo oficial
+                </span>
+                <h1>Equipamentos e peças direto da fábrica</h1>
+                <p>
+                    Encontre brinquedos selecionados, peças de reposição,
+                    promoções e combos especiais da Lazer &amp; Sport em um só lugar.
+                </p>
+                <div class="loja-hero-beneficios" aria-label="Benefícios da loja">
+                    <span>
+                        <i class="fa-solid fa-industry" aria-hidden="true"></i>
+                        Venda direta da fábrica
+                    </span>
+                    <span>
+                        <i class="fa-solid fa-headset" aria-hidden="true"></i>
+                        Atendimento especializado
+                    </span>
+                    <span>
+                        <i class="fa-solid fa-cart-shopping" aria-hidden="true"></i>
+                        Compra online
+                    </span>
+                </div>
+            </div>
+        </header>
 
-{% if itens_loja %}
-<div class="loja-filtros" id="loja-filtros">
-    <button type="button" class="loja-filtro-btn ativo" data-tipo="todos">
-        Todos <span class="contagem">{{ total_itens }}</span>
-    </button>
-    {% if contagem_por_tipo.peca %}
-    <button type="button" class="loja-filtro-btn" data-tipo="peca">
-        Peças de Reposição <span class="contagem">{{ contagem_por_tipo.peca }}</span>
-    </button>
-    {% endif %}
-    {% if contagem_por_tipo.promocao %}
-    <button type="button" class="loja-filtro-btn" data-tipo="promocao">
-        Promoções <span class="contagem">{{ contagem_por_tipo.promocao }}</span>
-    </button>
-    {% endif %}
-    {% if contagem_por_tipo.combo %}
-    <button type="button" class="loja-filtro-btn" data-tipo="combo">
-        Combos <span class="contagem">{{ contagem_por_tipo.combo }}</span>
-    </button>
-    {% endif %}
-    {% if contagem_por_tipo.brinquedo %}
-    <button type="button" class="loja-filtro-btn" data-tipo="brinquedo">
-        Brinquedos <span class="contagem">{{ contagem_por_tipo.brinquedo }}</span>
-    </button>
-    {% endif %}
-</div>
+        {% if itens_loja %}
+        <section class="loja-catalogo" aria-labelledby="titulo-catalogo">
+            <div class="loja-catalogo-topo">
+                <div>
+                    <h2 id="titulo-catalogo">Explore nosso catálogo</h2>
+                    <p>Use os filtros para encontrar exatamente o que precisa.</p>
+                </div>
+                <span class="loja-resultado" aria-live="polite">
+                    <i class="fa-solid fa-boxes-stacked" aria-hidden="true"></i>
+                    <span id="loja-contagem-visivel">{{ total_itens }}</span>
+                    <span id="loja-contagem-rotulo">itens encontrados</span>
+                </span>
+            </div>
 
-<div class="loja-grid-wrap">
-    <div class="loja-grid" id="loja-grid">
-        {% for item in itens_loja %}
-        <a href="{{ item.url }}" class="loja-card" data-tipo="{{ item.tipo }}">
-            <div class="loja-card-img">
-                <span class="loja-card-tipo {{ item.tipo }}">{{ item.tipo_label }}</span>
-                {% if item.imagem %}
-                    <img src="{{ item.imagem }}" alt="{{ item.titulo }}" loading="lazy">
-                {% else %}
-                    <i class="fa-solid fa-image sem-imagem" aria-hidden="true"></i>
+            <div class="loja-filtros" id="loja-filtros" aria-label="Filtrar produtos">
+                <button type="button" class="loja-filtro-btn ativo" data-tipo="todos">
+                    <i class="fa-solid fa-border-all" aria-hidden="true"></i>
+                    Todos
+                    <span class="contagem">{{ total_itens }}</span>
+                </button>
+                {% if contagem_por_tipo.peca %}
+                <button type="button" class="loja-filtro-btn" data-tipo="peca">
+                    <i class="fa-solid fa-gears" aria-hidden="true"></i>
+                    Peças de reposição
+                    <span class="contagem">{{ contagem_por_tipo.peca }}</span>
+                </button>
+                {% endif %}
+                {% if contagem_por_tipo.promocao %}
+                <button type="button" class="loja-filtro-btn" data-tipo="promocao">
+                    <i class="fa-solid fa-tag" aria-hidden="true"></i>
+                    Promoções
+                    <span class="contagem">{{ contagem_por_tipo.promocao }}</span>
+                </button>
+                {% endif %}
+                {% if contagem_por_tipo.combo %}
+                <button type="button" class="loja-filtro-btn" data-tipo="combo">
+                    <i class="fa-solid fa-layer-group" aria-hidden="true"></i>
+                    Combos
+                    <span class="contagem">{{ contagem_por_tipo.combo }}</span>
+                </button>
+                {% endif %}
+                {% if contagem_por_tipo.brinquedo %}
+                <button type="button" class="loja-filtro-btn" data-tipo="brinquedo">
+                    <i class="fa-solid fa-gamepad" aria-hidden="true"></i>
+                    Brinquedos
+                    <span class="contagem">{{ contagem_por_tipo.brinquedo }}</span>
+                </button>
                 {% endif %}
             </div>
-            <div class="loja-card-corpo">
-                <h3>{{ item.titulo }}</h3>
-                <div class="loja-card-precos">
-                    {% if item.preco %}
-                        {% if item.preco_original %}
-                            <span class="loja-card-preco-original">R$ {{ item.preco_original }}</span>
-                        {% endif %}
-                        <span class="loja-card-preco">R$ {{ item.preco }}</span>
-                    {% else %}
-                        <span class="loja-card-sem-preco">Consulte o valor</span>
-                    {% endif %}
-                </div>
-                <div class="loja-card-acoes">
-                    <button
-                        type="button"
-                        class="loja-btn loja-btn-carrinho"
-                        onclick="event.preventDefault(); event.stopPropagation(); adicionarAoCarrinho('{{ item.tipo }}', {{ item.id }});"
-                    >
-                        <i class="fa-solid fa-cart-plus" aria-hidden="true"></i>
-                        Adicionar ao carrinho
-                    </button>
-                    <button
-                        type="button"
-                        class="loja-btn loja-btn-whatsapp"
-                        onclick="abrirWhatsApp(event, '{{ item.titulo|escapejs }}')"
-                    >
-                        <i class="fa-brands fa-whatsapp" aria-hidden="true"></i>
-                        Falar com o vendedor
-                    </button>
+
+            <div class="loja-grid-wrap">
+                <div class="loja-grid" id="loja-grid">
+                    {% for item in itens_loja %}
+                    <article class="loja-card" data-tipo="{{ item.tipo }}">
+                        <a href="{{ item.url }}"
+                           class="loja-card-media-link"
+                           aria-label="Ver detalhes de {{ item.titulo }}">
+                            <div class="loja-card-img">
+                                <span class="loja-card-tipo {{ item.tipo }}">
+                                    {% if item.tipo == 'peca' %}
+                                        <i class="fa-solid fa-gears" aria-hidden="true"></i>
+                                    {% elif item.tipo == 'promocao' %}
+                                        <i class="fa-solid fa-tag" aria-hidden="true"></i>
+                                    {% elif item.tipo == 'combo' %}
+                                        <i class="fa-solid fa-layer-group" aria-hidden="true"></i>
+                                    {% else %}
+                                        <i class="fa-solid fa-gamepad" aria-hidden="true"></i>
+                                    {% endif %}
+                                    {{ item.tipo_label }}
+                                </span>
+                                {% if item.imagem %}
+                                    <img src="{{ item.imagem }}"
+                                         alt="{{ item.titulo }}"
+                                         loading="lazy"
+                                         decoding="async">
+                                {% else %}
+                                    <i class="fa-solid fa-image sem-imagem" aria-hidden="true"></i>
+                                {% endif %}
+                            </div>
+                        </a>
+
+                        <div class="loja-card-corpo">
+                            <span class="loja-card-kicker">
+                                {% if item.tipo == 'peca' %}
+                                    <i class="fa-solid fa-screwdriver-wrench" aria-hidden="true"></i>
+                                    Reposição original
+                                {% elif item.tipo == 'promocao' %}
+                                    <i class="fa-solid fa-bolt" aria-hidden="true"></i>
+                                    Condição especial
+                                {% elif item.tipo == 'combo' %}
+                                    <i class="fa-solid fa-boxes-packing" aria-hidden="true"></i>
+                                    Seleção econômica
+                                {% else %}
+                                    <i class="fa-solid fa-store" aria-hidden="true"></i>
+                                    Disponível na loja
+                                {% endif %}
+                            </span>
+
+                            <a href="{{ item.url }}" class="loja-card-title-link">
+                                <h3>{{ item.titulo }}</h3>
+                            </a>
+
+                            <p class="loja-card-descricao">
+                                {% if item.tipo == 'peca' %}
+                                    Peça de reposição para manter seu equipamento funcionando
+                                    com o suporte especializado da Lazer &amp; Sport.
+                                {% elif item.tipo == 'promocao' %}
+                                    Equipamento selecionado com condição comercial especial
+                                    para tornar sua compra ainda mais vantajosa.
+                                {% elif item.tipo == 'combo' %}
+                                    Conjunto de equipamentos reunidos em uma condição
+                                    diferenciada para o seu projeto.
+                                {% else %}
+                                    Brinquedo selecionado para compra online, direto da
+                                    fábrica da Lazer &amp; Sport.
+                                {% endif %}
+                            </p>
+
+                            <div class="loja-card-vantagens" aria-label="Informações comerciais">
+                                <span>
+                                    <i class="fa-solid fa-industry" aria-hidden="true"></i>
+                                    Direto da fábrica
+                                </span>
+                                <span>
+                                    <i class="fa-solid fa-headset" aria-hidden="true"></i>
+                                    Suporte comercial
+                                </span>
+                            </div>
+
+                            <div class="loja-card-precos">
+                                {% if item.preco %}
+                                    <span class="loja-card-preco-label">
+                                        {% if item.preco_original %}Preço promocional{% else %}Preço do produto{% endif %}
+                                    </span>
+                                    <div class="loja-card-preco-linha">
+                                        {% if item.preco_original %}
+                                            <span class="loja-card-preco-original">
+                                                R$ {{ item.preco_original|floatformat:"2g" }}
+                                            </span>
+                                        {% endif %}
+                                        <strong class="loja-card-preco">
+                                            R$ {{ item.preco|floatformat:"2g" }}
+                                        </strong>
+                                    </div>
+                                    <span class="loja-card-condicao">
+                                        Consulte condições de pagamento e entrega
+                                    </span>
+                                {% else %}
+                                    <span class="loja-card-preco-label">Valor do produto</span>
+                                    <strong class="loja-card-sem-preco">
+                                        Consulte nossa equipe comercial
+                                    </strong>
+                                {% endif %}
+                            </div>
+
+                            <div class="loja-card-acoes">
+                                <button
+                                    type="button"
+                                    class="loja-btn loja-btn-carrinho"
+                                    onclick="adicionarItemLoja(event, '{{ item.tipo }}', {{ item.id }}, this)"
+                                    aria-label="Adicionar {{ item.titulo }} ao carrinho"
+                                >
+                                    <i class="fa-solid fa-cart-plus" aria-hidden="true"></i>
+                                    <span>Adicionar</span>
+                                </button>
+
+                                <a href="{{ item.url }}"
+                                   class="loja-btn loja-btn-detalhes"
+                                   aria-label="Ver detalhes de {{ item.titulo }}">
+                                    <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i>
+                                    <span>Detalhes</span>
+                                </a>
+
+                                <button
+                                    type="button"
+                                    class="loja-btn loja-btn-whatsapp"
+                                    onclick="abrirWhatsApp(event, '{{ item.titulo|escapejs }}')"
+                                    aria-label="Falar sobre {{ item.titulo }} pelo WhatsApp"
+                                >
+                                    <i class="fa-brands fa-whatsapp" aria-hidden="true"></i>
+                                    <span>Falar com um vendedor</span>
+                                </button>
+                            </div>
+                        </div>
+                    </article>
+                    {% endfor %}
                 </div>
             </div>
-        </a>
-        {% endfor %}
-    </div>
-</div>
+        </section>
 
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-    const botoes = document.querySelectorAll('#loja-filtros .loja-filtro-btn');
-    const cards = document.querySelectorAll('#loja-grid .loja-card');
+        <script>
+        function adicionarItemLoja(event, tipo, itemId, botao) {
+            event.preventDefault();
+            event.stopPropagation();
 
-    botoes.forEach(botao => {
-        botao.addEventListener('click', () => {
-            botoes.forEach(b => b.classList.remove('ativo'));
-            botao.classList.add('ativo');
+            if (!botao || botao.dataset.loading === 'true') return;
 
-            const tipo = botao.dataset.tipo;
-            cards.forEach(card => {
-                card.style.display = (tipo === 'todos' || card.dataset.tipo === tipo) ? '' : 'none';
+            if (typeof window.adicionarAoCarrinho !== 'function') {
+                if (typeof window.mostrarToast === 'function') {
+                    window.mostrarToast('Não foi possível abrir o carrinho agora.', true);
+                }
+                return;
+            }
+
+            const conteudoOriginal = botao.innerHTML;
+            botao.dataset.loading = 'true';
+            botao.disabled = true;
+            botao.innerHTML =
+                '<i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i>' +
+                '<span>Adicionando...</span>';
+
+            Promise.resolve(window.adicionarAoCarrinho(tipo, itemId))
+                .then(resultado => {
+                    if (!resultado || !resultado.sucesso) return;
+                    botao.classList.add('is-added');
+                    botao.innerHTML =
+                        '<i class="fa-solid fa-check" aria-hidden="true"></i>' +
+                        '<span>Adicionado</span>';
+                })
+                .finally(() => {
+                    window.setTimeout(() => {
+                        botao.disabled = false;
+                        botao.dataset.loading = 'false';
+                        botao.classList.remove('is-added');
+                        botao.innerHTML = conteudoOriginal;
+                    }, 1200);
+                });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const botoes = Array.from(
+                document.querySelectorAll('#loja-filtros .loja-filtro-btn')
+            );
+            const cards = Array.from(
+                document.querySelectorAll('#loja-grid .loja-card')
+            );
+            const contador = document.getElementById('loja-contagem-visivel');
+            const rotulo = document.getElementById('loja-contagem-rotulo');
+
+            botoes.forEach(botao => {
+                botao.addEventListener('click', () => {
+                    botoes.forEach(item => item.classList.remove('ativo'));
+                    botao.classList.add('ativo');
+
+                    const tipo = botao.dataset.tipo;
+                    let visiveis = 0;
+
+                    cards.forEach(card => {
+                        const mostrar =
+                            tipo === 'todos' || card.dataset.tipo === tipo;
+                        card.style.display = mostrar ? '' : 'none';
+                        if (mostrar) visiveis += 1;
+                    });
+
+                    if (contador) contador.textContent = visiveis;
+                    if (rotulo) {
+                        rotulo.textContent =
+                            visiveis === 1 ? 'item encontrado' : 'itens encontrados';
+                    }
+                });
             });
         });
-    });
-});
-</script>
+        </script>
 
-{% else %}
-<div class="loja-grid-wrap">
-    <div class="loja-vazio">
-        <p>Ainda não há itens na loja. Cadastre peças de reposição, promoções, combos ou marque brinquedos para aparecerem aqui.</p>
+        {% else %}
+        <section class="loja-catalogo" aria-labelledby="titulo-catalogo-vazio">
+            <div class="loja-catalogo-topo">
+                <div>
+                    <h2 id="titulo-catalogo-vazio">Nosso catálogo</h2>
+                    <p>Novos produtos serão adicionados em breve.</p>
+                </div>
+            </div>
+            <div class="loja-vazio">
+                <i class="fa-solid fa-store" aria-hidden="true"></i>
+                <p>
+                    Ainda não há itens na loja. Cadastre peças de reposição,
+                    promoções, combos ou marque brinquedos para aparecerem aqui.
+                </p>
+            </div>
+        </section>
+        {% endif %}
     </div>
 </div>
-{% endif %}
 
 {% endblock %}
