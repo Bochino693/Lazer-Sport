@@ -1929,6 +1929,314 @@
     padding: 0 24px 24px;
 }
 
+#modal-sucesso {
+    background:
+        radial-gradient(circle at 50% 20%, rgba(8, 120, 249, .17), transparent 34%),
+        rgba(3, 12, 27, .84);
+    backdrop-filter: blur(10px);
+}
+
+#modal-sucesso .maintenance-success-dialog {
+    position: relative;
+    width: min(500px, 100%);
+    max-width: 500px;
+    margin: 28px auto;
+    overflow: hidden;
+    border: 1px solid rgba(92, 166, 255, .28);
+    border-radius: 25px;
+    background:
+        radial-gradient(circle at 90% 4%, rgba(230, 57, 70, .13), transparent 28%),
+        linear-gradient(155deg, #0a203e 0%, #06162c 100%) !important;
+    box-shadow:
+        0 38px 95px rgba(0, 0, 0, .48),
+        0 0 0 1px rgba(255, 255, 255, .035);
+    color: #fff;
+    animation: modalRise .26s ease;
+}
+
+#modal-sucesso .maintenance-success-dialog::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 22%;
+    left: 22%;
+    height: 3px;
+    border-radius: 0 0 999px 999px;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        var(--mt-blue-bright),
+        var(--mt-red),
+        transparent
+    );
+    box-shadow: 0 0 22px rgba(8, 120, 249, .48);
+}
+
+#modal-sucesso .maintenance-success-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    padding: 21px 23px 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, .075);
+    background: transparent !important;
+}
+
+#modal-sucesso .maintenance-success-title {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 11px;
+}
+
+#modal-sucesso .maintenance-success-brand-icon {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    border: 1px solid rgba(95, 174, 255, .3);
+    border-radius: 12px;
+    background: linear-gradient(135deg, var(--mt-blue), var(--mt-blue-bright));
+    box-shadow: 0 10px 24px rgba(0, 74, 173, .34);
+    color: #fff;
+}
+
+#modal-sucesso .maintenance-success-head h2 {
+    margin: 0 0 3px;
+    color: #fff;
+    font-size: 1.08rem;
+    font-weight: 920;
+}
+
+#modal-sucesso .maintenance-success-head p {
+    margin: 0;
+    color: #9fb6d3;
+    font-size: .69rem;
+}
+
+#modal-sucesso .maintenance-success-close {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border-color: rgba(255, 255, 255, .14);
+    border-style: solid;
+    border-width: 1px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, .075);
+    color: #eaf3ff;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: transform .2s ease, border-color .2s ease, background .2s ease;
+}
+
+#modal-sucesso .maintenance-success-close:hover {
+    transform: translateY(-1px);
+    border-color: rgba(230, 57, 70, .58);
+    background: var(--mt-red);
+    color: #fff;
+}
+
+.success-modal-body {
+    padding: 24px 23px 20px;
+}
+
+.success-confirmation {
+    display: grid;
+    justify-items: center;
+    margin-bottom: 18px;
+    text-align: center;
+}
+
+.success-check-ring {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 76px;
+    height: 76px;
+    margin-bottom: 16px;
+    border: 1px solid rgba(91, 171, 255, .34);
+    border-radius: 24px;
+    background:
+        radial-gradient(circle, rgba(8, 120, 249, .24), rgba(8, 120, 249, .08));
+    box-shadow:
+        0 16px 34px rgba(0, 74, 173, .22),
+        inset 0 1px 0 rgba(255, 255, 255, .12);
+    color: #72b8ff;
+    font-size: 1.85rem;
+}
+
+.success-check-ring::after {
+    content: "";
+    position: absolute;
+    right: 8px;
+    bottom: 8px;
+    width: 12px;
+    height: 12px;
+    border: 3px solid #0a203e;
+    border-radius: 50%;
+    background: #35d07f;
+    box-shadow: 0 0 13px rgba(53, 208, 127, .6);
+}
+
+.success-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 7px;
+    color: #6fb5ff;
+    font-size: .62rem;
+    font-weight: 900;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
+
+.success-confirmation h3 {
+    margin: 0 0 8px;
+    color: #fff;
+    font-size: clamp(1.18rem, 4vw, 1.48rem);
+    font-weight: 920;
+    letter-spacing: -.035em;
+}
+
+.success-confirmation p {
+    max-width: 38ch;
+    margin: 0;
+    color: #a9bdd6;
+    font-size: .76rem;
+    line-height: 1.58;
+}
+
+.success-message-list {
+    display: grid;
+    gap: 8px;
+    margin-bottom: 13px;
+}
+
+#modal-sucesso .maintenance-success-message {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 13px 14px;
+    border: 1px solid rgba(85, 165, 255, .18);
+    border-radius: 14px;
+    background:
+        linear-gradient(135deg, rgba(8, 120, 249, .12), rgba(255, 255, 255, .035));
+    color: #eaf4ff;
+    font-size: .73rem;
+    line-height: 1.5;
+    text-align: left;
+}
+
+#modal-sucesso .maintenance-success-message i {
+    flex: 0 0 auto;
+    margin-top: 2px;
+    color: #63adff;
+}
+
+.success-next-step {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    padding: 13px 14px;
+    border: 1px solid rgba(255, 255, 255, .09);
+    border-radius: 14px;
+    background: rgba(255, 255, 255, .045);
+}
+
+.success-next-step > i {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    background: rgba(230, 57, 70, .12);
+    color: #ff7a86;
+}
+
+.success-next-step strong,
+.success-next-step span {
+    display: block;
+}
+
+.success-next-step strong {
+    margin-bottom: 2px;
+    color: #fff;
+    font-size: .7rem;
+}
+
+.success-next-step span {
+    color: #98aec9;
+    font-size: .63rem;
+    line-height: 1.4;
+}
+
+#modal-sucesso .maintenance-success-actions {
+    display: grid;
+    grid-template-columns: 1.2fr .8fr;
+    gap: 9px;
+    padding: 0 23px 23px;
+}
+
+#modal-sucesso .maintenance-success-primary,
+#modal-sucesso .maintenance-success-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    min-height: 48px;
+    padding: 11px 16px;
+    border-radius: 13px;
+    font-family: inherit;
+    font-size: .72rem;
+    font-weight: 880;
+    text-decoration: none;
+    cursor: pointer;
+    transition: transform .2s ease, border-color .2s ease, background .2s ease, box-shadow .2s ease;
+}
+
+#modal-sucesso .maintenance-success-primary {
+    border: 1px solid rgba(85, 165, 255, .34);
+    background: linear-gradient(135deg, var(--mt-blue), var(--mt-blue-bright));
+    color: #fff;
+    box-shadow: 0 12px 26px rgba(0, 74, 173, .3);
+}
+
+#modal-sucesso .maintenance-success-primary:hover {
+    transform: translateY(-2px);
+    background: linear-gradient(135deg, #003f93, #0a83ff);
+    box-shadow: 0 15px 30px rgba(0, 74, 173, .38);
+}
+
+#modal-sucesso .maintenance-success-secondary {
+    border: 1px solid rgba(255, 255, 255, .14);
+    background: rgba(255, 255, 255, .065) !important;
+    color: #dbeaff;
+}
+
+#modal-sucesso .maintenance-success-secondary:hover {
+    transform: translateY(-2px);
+    border-color: rgba(85, 165, 255, .38);
+    background: rgba(85, 165, 255, .12) !important;
+    color: #fff;
+}
+
+#modal-sucesso .maintenance-success-close:focus-visible,
+#modal-sucesso .maintenance-success-primary:focus-visible,
+#modal-sucesso .maintenance-success-secondary:focus-visible {
+    outline: 3px solid rgba(114, 184, 255, .52);
+    outline-offset: 3px;
+}
+
 .btn-primario,
 .btn-secundario,
 .btn-whatsapp {
@@ -1971,49 +2279,203 @@
     background: #ffe8ec;
 }
 
+#modal-detalhe {
+    background:
+        radial-gradient(circle at 50% 12%, rgba(8, 120, 249, .16), transparent 34%),
+        rgba(3, 12, 27, .86);
+    backdrop-filter: blur(10px);
+}
+
+#modal-detalhe .modal-detail {
+    position: relative;
+    display: flex;
+    width: min(780px, 100%);
+    max-width: 780px;
+    max-height: calc(100vh - 48px);
+    max-height: calc(100dvh - 48px);
+    flex-direction: column;
+    border-color: rgba(92, 166, 255, .25);
+    background:
+        radial-gradient(circle at 94% 2%, rgba(230, 57, 70, .12), transparent 27%),
+        linear-gradient(155deg, #0a203e 0%, #06162c 100%);
+    box-shadow:
+        0 38px 95px rgba(0, 0, 0, .5),
+        0 0 0 1px rgba(255, 255, 255, .03);
+    color: #fff;
+}
+
+#modal-detalhe .modal-detail::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 24%;
+    left: 24%;
+    height: 3px;
+    border-radius: 0 0 999px 999px;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        var(--mt-blue-bright),
+        var(--mt-red),
+        transparent
+    );
+    box-shadow: 0 0 22px rgba(8, 120, 249, .45);
+}
+
+#modal-detalhe .modal-header {
+    flex: 0 0 auto;
+    align-items: center;
+    padding: 20px 22px;
+    border-bottom-color: rgba(255, 255, 255, .08);
+    background:
+        radial-gradient(circle at 90% 0, rgba(230, 57, 70, .11), transparent 32%),
+        rgba(8, 26, 51, .78);
+}
+
+#modal-detalhe .modal-title-icon {
+    width: 43px;
+    height: 43px;
+    border: 1px solid rgba(95, 174, 255, .3);
+    background: linear-gradient(135deg, var(--mt-blue), var(--mt-blue-bright));
+    box-shadow: 0 10px 24px rgba(0, 74, 173, .34);
+}
+
+#modal-detalhe .modal-header h2 {
+    color: #fff;
+    font-size: 1.08rem;
+}
+
+#modal-detalhe .modal-header p {
+    margin-top: 3px;
+    color: #9fb6d3;
+    font-size: .67rem;
+}
+
+#modal-detalhe .close-modal {
+    border-color: rgba(255, 255, 255, .14);
+    background: rgba(255, 255, 255, .075);
+    color: #eaf3ff;
+}
+
+#modal-detalhe .close-modal:hover {
+    border-color: rgba(230, 57, 70, .58);
+    background: var(--mt-red);
+    color: #fff;
+}
+
 .modal-detail-body {
-    padding: 21px 23px 24px;
+    display: flex;
+    min-height: 0;
+    flex: 1 1 auto;
+    flex-direction: column;
+    padding: 0;
+}
+
+.modal-detail-scroll {
+    min-height: 0;
+    padding: 20px 22px;
+    overflow-y: auto;
+    scrollbar-color: #315d8c #081a33;
 }
 
 .detail-summary {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: space-between;
     gap: 15px;
-    margin-bottom: 14px;
+    margin-bottom: 13px;
     padding: 16px;
-    border: 1px solid rgba(0, 74, 173, .12);
-    border-radius: 15px;
-    background: #f2f7ff;
+    border: 1px solid rgba(85, 165, 255, .2);
+    border-radius: 17px;
+    background:
+        radial-gradient(circle at 94% 5%, rgba(8, 120, 249, .13), transparent 32%),
+        linear-gradient(135deg, rgba(8, 120, 249, .1), rgba(255, 255, 255, .035));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .04);
+}
+
+.detail-equipment {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 12px;
+}
+
+.detail-equipment-icon {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    border-radius: 13px;
+    background: rgba(8, 120, 249, .16);
+    color: #69b1ff;
 }
 
 .detail-summary-label {
     display: block;
     margin-bottom: 4px;
-    color: #75849a;
-    font-size: .63rem;
+    color: #86a3c4;
+    font-size: .6rem;
     font-weight: 850;
-    letter-spacing: .05em;
+    letter-spacing: .07em;
     text-transform: uppercase;
 }
 
 .detail-summary strong {
-    color: var(--mt-text);
-    font-size: .92rem;
+    display: block;
+    overflow: hidden;
+    color: #fff;
+    font-size: .9rem;
+    font-weight: 900;
+    line-height: 1.35;
+    text-overflow: ellipsis;
+}
+
+#modal-detalhe .status-badge {
+    flex: 0 0 auto;
+    border-color: rgba(255, 255, 255, .13);
+    color: #fff;
+}
+
+#modal-detalhe .status-P {
+    border-color: rgba(255, 108, 122, .25);
+    background: rgba(230, 57, 70, .16);
+    color: #ff98a2;
+}
+
+#modal-detalhe .status-A {
+    border-color: rgba(93, 172, 255, .27);
+    background: rgba(8, 120, 249, .16);
+    color: #8dc6ff;
+}
+
+#modal-detalhe .status-C {
+    border-color: rgba(53, 208, 127, .25);
+    background: rgba(53, 208, 127, .12);
+    color: #78e5aa;
+}
+
+#modal-detalhe .status-X {
+    border-color: rgba(181, 196, 215, .18);
+    background: rgba(181, 196, 215, .08);
+    color: #b7c7da;
 }
 
 .modal-detail-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 12px;
+    gap: 11px;
 }
 
 .detalhe-card {
     min-width: 0;
     padding: 15px;
-    border: 1px solid #e4eaf2;
-    border-radius: 14px;
-    background: #fbfcfe;
+    border: 1px solid rgba(255, 255, 255, .085);
+    border-radius: 15px;
+    background:
+        linear-gradient(145deg, rgba(255, 255, 255, .055), rgba(255, 255, 255, .025));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .035);
 }
 
 .detalhe-card.span-full {
@@ -2023,20 +2485,31 @@
 .detalhe-card h4 {
     display: flex;
     align-items: center;
-    gap: 7px;
-    margin: 0 0 8px;
-    color: var(--mt-blue);
-    font-size: .68rem;
+    gap: 8px;
+    margin: 0 0 10px;
+    color: #8bc5ff;
+    font-size: .65rem;
     font-weight: 900;
-    letter-spacing: .025em;
+    letter-spacing: .045em;
     text-transform: uppercase;
+}
+
+.detalhe-card h4 i {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 27px;
+    height: 27px;
+    border-radius: 8px;
+    background: rgba(8, 120, 249, .12);
+    color: #69b1ff;
 }
 
 .detalhe-info {
     margin: 0;
-    color: #42556e;
-    font-size: .75rem;
-    line-height: 1.55;
+    color: #c0d0e3;
+    font-size: .73rem;
+    line-height: 1.62;
     overflow-wrap: anywhere;
 }
 
@@ -2050,35 +2523,193 @@
     display: block;
     min-width: 0;
     aspect-ratio: 1;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, .1);
+    border-radius: 11px;
+    background: #081b34;
+    transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease;
+}
+
+.detalhe-fotos a:hover {
+    transform: translateY(-2px);
+    border-color: rgba(85, 165, 255, .5);
+    box-shadow: 0 10px 22px rgba(0, 0, 0, .24);
 }
 
 .detalhe-fotos img {
     display: block;
     width: 100%;
     height: 100%;
-    border: 1px solid #e1e7ef;
-    border-radius: 10px;
     object-fit: cover;
+    transition: transform .25s ease;
+}
+
+.detalhe-fotos a:hover img {
+    transform: scale(1.045);
+}
+
+#det-fotos > .detalhe-info {
+    grid-column: 1 / -1;
+    padding: 8px 0;
+    color: #8fa8c4;
+}
+
+.detail-support-callout {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    margin-top: 12px;
+    padding: 14px 15px;
+    border: 1px solid rgba(37, 211, 102, .18);
+    border-radius: 15px;
+    background:
+        radial-gradient(circle at 94% 12%, rgba(37, 211, 102, .11), transparent 29%),
+        rgba(37, 211, 102, .045);
+}
+
+.detail-support-main {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 11px;
+}
+
+.detail-support-icon {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    background: rgba(37, 211, 102, .12);
+    color: #59df8b;
+    font-size: 1rem;
+}
+
+.detail-support-copy strong,
+.detail-support-copy span {
+    display: block;
+}
+
+.detail-support-copy strong {
+    margin-bottom: 2px;
+    color: #fff;
+    font-size: .72rem;
+}
+
+.detail-support-copy span {
+    color: #99b2ce;
+    font-size: .63rem;
+    line-height: 1.4;
+}
+
+.detail-online {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 6px;
+    color: #71dfa0;
+    font-size: .6rem;
+    font-weight: 850;
+    white-space: nowrap;
+}
+
+.detail-online::before {
+    content: "";
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #35d07f;
+    box-shadow: 0 0 11px rgba(53, 208, 127, .72);
 }
 
 .detail-actions {
     display: grid;
-    grid-template-columns: 1.2fr 1fr;
-    gap: 10px;
-    margin-top: 14px;
+    flex: 0 0 auto;
+    grid-template-columns: 1.25fr .75fr;
+    gap: 9px;
+    margin: 0;
+    padding: 15px 22px 18px;
+    border-top: 1px solid rgba(255, 255, 255, .08);
+    background: rgba(5, 19, 38, .96);
+    box-shadow: 0 -14px 30px rgba(0, 0, 0, .16);
+}
+
+.detail-actions.somente-whatsapp {
+    grid-template-columns: 1fr;
+}
+
+.detail-actions form {
+    min-width: 0;
+}
+
+.btn-whatsapp,
+#modal-detalhe .btn-cancelar-detalhe {
+    width: 100%;
+    min-height: 52px;
+    border-radius: 14px;
 }
 
 .btn-whatsapp {
-    width: 100%;
-    border: 0;
-    background: linear-gradient(135deg, var(--mt-blue), var(--mt-blue-bright));
+    justify-content: space-between;
+    border: 1px solid rgba(91, 232, 142, .25);
+    background: linear-gradient(135deg, #129548, #25d366);
     color: #fff;
-    box-shadow: 0 9px 20px rgba(0, 74, 173, .2);
+    box-shadow: 0 11px 24px rgba(18, 149, 72, .23);
 }
 
 .btn-whatsapp:hover {
     transform: translateY(-2px);
-    box-shadow: 0 12px 24px rgba(0, 74, 173, .28);
+    background: linear-gradient(135deg, #0f873f, #20c45c);
+    box-shadow: 0 14px 28px rgba(18, 149, 72, .31);
+}
+
+.whatsapp-button-main {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 10px;
+    text-align: left;
+}
+
+.whatsapp-button-main > i {
+    font-size: 1.14rem;
+}
+
+.whatsapp-button-copy strong,
+.whatsapp-button-copy small {
+    display: block;
+}
+
+.whatsapp-button-copy strong {
+    margin-bottom: 1px;
+    color: #fff;
+    font-size: .72rem;
+}
+
+.whatsapp-button-copy small {
+    color: rgba(255, 255, 255, .78);
+    font-size: .59rem;
+    font-weight: 700;
+}
+
+.btn-whatsapp > .fa-arrow-up-right-from-square {
+    flex: 0 0 auto;
+    font-size: .68rem;
+}
+
+#modal-detalhe .btn-cancelar-detalhe {
+    border-color: rgba(255, 103, 117, .22);
+    background: rgba(230, 57, 70, .1);
+    color: #ff98a2;
+}
+
+#modal-detalhe .btn-cancelar-detalhe:hover {
+    border-color: rgba(255, 103, 117, .42);
+    background: rgba(230, 57, 70, .18);
+    color: #fff;
 }
 
 .manutencao-guest {
@@ -2495,8 +3126,22 @@
         padding: 16px 18px 20px;
     }
 
+    #modal-detalhe .modal-detail {
+        max-height: calc(100vh - 20px);
+        max-height: calc(100dvh - 20px);
+        margin: 0 auto;
+    }
+
+    #modal-detalhe .modal-header {
+        padding: 17px 18px;
+    }
+
     .modal-detail-body {
-        padding: 17px 18px 20px;
+        padding: 0;
+    }
+
+    .modal-detail-scroll {
+        padding: 16px 18px;
     }
 
     .modal-detail-grid {
@@ -2513,6 +3158,16 @@
 
     .detail-actions {
         grid-template-columns: 1fr;
+        padding: 13px 18px 16px;
+    }
+
+    .detail-support-callout {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .detail-online {
+        margin-left: 49px;
     }
 
     .guest-visual {
@@ -2563,6 +3218,101 @@
 
     .produto-nao-listado-action span {
         display: none;
+    }
+
+    #modal-sucesso {
+        padding: 9px;
+    }
+
+    #modal-sucesso .maintenance-success-dialog {
+        margin: 8px auto;
+        border-radius: 19px;
+    }
+
+    #modal-sucesso .maintenance-success-head {
+        padding: 17px 16px 14px;
+    }
+
+    #modal-sucesso .maintenance-success-brand-icon {
+        width: 38px;
+        height: 38px;
+    }
+
+    .success-modal-body {
+        padding: 20px 16px 16px;
+    }
+
+    .success-check-ring {
+        width: 66px;
+        height: 66px;
+        margin-bottom: 13px;
+        border-radius: 21px;
+        font-size: 1.55rem;
+    }
+
+    #modal-sucesso .maintenance-success-actions {
+        grid-template-columns: 1fr;
+        padding: 0 16px 17px;
+    }
+
+    #modal-sucesso .maintenance-success-primary,
+    #modal-sucesso .maintenance-success-secondary {
+        min-height: 49px;
+        font-size: .76rem;
+    }
+
+    #modal-detalhe {
+        padding: 8px;
+    }
+
+    #modal-detalhe .modal-detail {
+        max-height: calc(100vh - 16px);
+        max-height: calc(100dvh - 16px);
+        border-radius: 18px;
+    }
+
+    #modal-detalhe .modal-header {
+        padding: 15px;
+    }
+
+    #modal-detalhe .modal-title-icon {
+        width: 38px;
+        height: 38px;
+    }
+
+    .modal-detail-scroll {
+        padding: 14px;
+    }
+
+    .detail-summary {
+        align-items: flex-start;
+        flex-direction: column;
+        padding: 14px;
+    }
+
+    .detail-summary .status-badge {
+        margin-left: 54px;
+    }
+
+    .detalhe-fotos {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .detail-support-callout {
+        padding: 13px;
+    }
+
+    .detail-online {
+        margin-left: 0;
+    }
+
+    .detail-actions {
+        padding: 11px 14px 14px;
+    }
+
+    .btn-whatsapp,
+    #modal-detalhe .btn-cancelar-detalhe {
+        min-height: 50px;
     }
 
     .address-entry-head {
@@ -3196,10 +3946,10 @@
          role="dialog"
          aria-modal="true"
          aria-labelledby="titulo-modal-sucesso">
-        <div class="modal-content modal-small">
-            <div class="modal-header">
-                <div class="modal-title-wrap">
-                    <span class="modal-title-icon" aria-hidden="true">
+        <div class="maintenance-success-dialog">
+            <div class="maintenance-success-head">
+                <div class="maintenance-success-title">
+                    <span class="maintenance-success-brand-icon" aria-hidden="true">
                         <i class="fa-solid fa-circle-check"></i>
                     </span>
                     <div>
@@ -3207,21 +3957,58 @@
                         <p>Seu chamado foi registrado com sucesso.</p>
                     </div>
                 </div>
-                <button type="button" class="close-modal" aria-label="Fechar">
+                <button type="button"
+                        class="maintenance-success-close"
+                        aria-label="Fechar confirmação">
                     <i class="fa-solid fa-xmark" aria-hidden="true"></i>
                 </button>
             </div>
 
-            {% for message in messages %}
-            <div class="modal-message">{{ message }}</div>
-            {% endfor %}
+            <div class="success-modal-body">
+                <div class="success-confirmation">
+                    <span class="success-check-ring" aria-hidden="true">
+                        <i class="fa-solid fa-check"></i>
+                    </span>
+                    <span class="success-eyebrow">
+                        <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
+                        Registro concluído
+                    </span>
+                    <h3>Recebemos sua solicitação</h3>
+                    <p>
+                        As informações foram enviadas para nossa equipe técnica
+                        e já podem ser acompanhadas pelo seu histórico.
+                    </p>
+                </div>
 
-            <div class="modal-actions">
+                <div class="success-message-list" aria-live="polite">
+                    {% for message in messages %}
+                    <div class="maintenance-success-message message-{{ message.tags }}"
+                         role="status">
+                        <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+                        <span>{{ message }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <div class="success-next-step">
+                    <i class="fa-solid fa-list-check" aria-hidden="true"></i>
+                    <span>
+                        <strong>Próximo passo</strong>
+                        <span>Acompanhe o status e consulte todas as informações enviadas.</span>
+                    </span>
+                </div>
+            </div>
+
+            <div class="maintenance-success-actions">
                 <a href="{% url 'manutencoes' %}?tab=lista#cab"
-                   class="btn-primario btn-ver-solicitacoes">
+                   class="maintenance-success-primary btn-ver-solicitacoes">
                     <i class="fa-solid fa-clipboard-list" aria-hidden="true"></i>
-                    Ver minhas solicitações
+                    Acompanhar solicitação
                 </a>
+                <button type="button"
+                        class="maintenance-success-secondary btn-fechar-sucesso">
+                    Continuar aqui
+                </button>
             </div>
         </div>
     </div>
@@ -3339,52 +4126,72 @@
             </div>
 
             <div class="modal-detail-body">
-                <div class="detail-summary">
-                    <div>
-                        <span class="detail-summary-label">Equipamento</span>
-                        <strong id="det-brinquedo"></strong>
-                    </div>
-                    <span id="det-status" class="status-badge"></span>
-                </div>
-
-                <div class="modal-detail-grid">
-                    <div class="detalhe-card span-full">
-                        <h4>
-                            <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
-                            Descrição do problema
-                        </h4>
-                        <p class="detalhe-info" id="det-descricao"></p>
+                <div class="modal-detail-scroll">
+                    <div class="detail-summary">
+                        <div class="detail-equipment">
+                            <span class="detail-equipment-icon" aria-hidden="true">
+                                <i class="fa-solid fa-gamepad"></i>
+                            </span>
+                            <div>
+                                <span class="detail-summary-label">Equipamento</span>
+                                <strong id="det-brinquedo"></strong>
+                            </div>
+                        </div>
+                        <span id="det-status" class="status-badge"></span>
                     </div>
 
-                    <div class="detalhe-card">
-                        <h4>
-                            <i class="fa-solid fa-phone" aria-hidden="true"></i>
-                            Contato informado
-                        </h4>
-                        <p class="detalhe-info" id="det-telefone"></p>
+                    <div class="modal-detail-grid">
+                        <div class="detalhe-card span-full">
+                            <h4>
+                                <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+                                Descrição do problema
+                            </h4>
+                            <p class="detalhe-info" id="det-descricao"></p>
+                        </div>
+
+                        <div class="detalhe-card">
+                            <h4>
+                                <i class="fa-solid fa-phone" aria-hidden="true"></i>
+                                Contato informado
+                            </h4>
+                            <p class="detalhe-info" id="det-telefone"></p>
+                        </div>
+
+                        <div class="detalhe-card">
+                            <h4>
+                                <i class="fa-solid fa-location-dot" aria-hidden="true"></i>
+                                Endereço
+                            </h4>
+                            <p class="detalhe-info">
+                                <span id="det-endereco"></span>,
+                                <span id="det-numero"></span>
+                                <span id="det-complemento"></span><br>
+                                <span id="det-bairro"></span> —
+                                <span id="det-cidade"></span>/<span id="det-estado"></span><br>
+                                CEP <span id="det-cep"></span>
+                            </p>
+                        </div>
+
+                        <div class="detalhe-card span-full">
+                            <h4>
+                                <i class="fa-solid fa-images" aria-hidden="true"></i>
+                                Fotos enviadas
+                            </h4>
+                            <div class="detalhe-fotos" id="det-fotos"></div>
+                        </div>
                     </div>
 
-                    <div class="detalhe-card">
-                        <h4>
-                            <i class="fa-solid fa-location-dot" aria-hidden="true"></i>
-                            Endereço
-                        </h4>
-                        <p class="detalhe-info">
-                            <span id="det-endereco"></span>,
-                            <span id="det-numero"></span>
-                            <span id="det-complemento"></span><br>
-                            <span id="det-bairro"></span> —
-                            <span id="det-cidade"></span>/<span id="det-estado"></span><br>
-                            CEP <span id="det-cep"></span>
-                        </p>
-                    </div>
-
-                    <div class="detalhe-card span-full">
-                        <h4>
-                            <i class="fa-solid fa-images" aria-hidden="true"></i>
-                            Fotos enviadas
-                        </h4>
-                        <div class="detalhe-fotos" id="det-fotos"></div>
+                    <div class="detail-support-callout">
+                        <div class="detail-support-main">
+                            <span class="detail-support-icon" aria-hidden="true">
+                                <i class="fa-brands fa-whatsapp"></i>
+                            </span>
+                            <span class="detail-support-copy">
+                                <strong>Precisa falar sobre este chamado?</strong>
+                                <span>O WhatsApp permanece disponível em qualquer etapa da manutenção.</span>
+                            </span>
+                        </div>
+                        <span class="detail-online">Canal disponível</span>
                     </div>
                 </div>
 
@@ -3394,8 +4201,14 @@
                        rel="noopener"
                        id="btn-whatsapp"
                        class="btn-whatsapp">
-                        <i class="fa-brands fa-whatsapp" aria-hidden="true"></i>
-                        Falar com a Lazer &amp; Sport
+                        <span class="whatsapp-button-main">
+                            <i class="fa-brands fa-whatsapp" aria-hidden="true"></i>
+                            <span class="whatsapp-button-copy">
+                                <strong>Falar no WhatsApp</strong>
+                                <small>Atendimento Lazer &amp; Sport</small>
+                            </span>
+                        </span>
+                        <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i>
                     </a>
 
                     <form method="post"
@@ -3404,7 +4217,7 @@
                           onsubmit="return confirm('Deseja realmente cancelar esta solicitação de manutenção?');">
                         {% csrf_token %}
                         <input type="hidden" name="manutencao_id" id="cancelar-id">
-                        <button type="submit" class="btn-secundario">
+                        <button type="submit" class="btn-secundario btn-cancelar-detalhe">
                             <i class="fa-solid fa-ban" aria-hidden="true"></i>
                             Cancelar solicitação
                         </button>
@@ -4175,11 +4988,21 @@ function inicializarModalSucesso() {
     const modal = document.getElementById("modal-sucesso");
     if (!modal) return;
 
-    modal.querySelector(".close-modal")?.addEventListener("click", () => {
-        fecharModalManutencao(modal);
+    const botoesFechar = modal.querySelectorAll(
+        ".maintenance-success-close, .btn-fechar-sucesso"
+    );
+
+    botoesFechar.forEach(botao => {
+        botao.addEventListener("click", () => {
+            fecharModalManutencao(modal);
+        });
     });
 
     abrirModalManutencao(modal);
+
+    window.setTimeout(() => {
+        modal.querySelector(".btn-ver-solicitacoes")?.focus();
+    }, 90);
 }
 
 function inicializarDetalhesManutencao() {
@@ -4190,6 +5013,7 @@ function inicializarDetalhesManutencao() {
     const cancelarForm = document.getElementById(
         "form-cancelar-manutencao"
     );
+    const acoesDetalhe = modal.querySelector(".detail-actions");
 
     fechar?.addEventListener("click", () => {
         fecharModalManutencao(modal);
@@ -4236,16 +5060,26 @@ function inicializarDetalhesManutencao() {
                 );
                 const mensagem = encodeURIComponent(
                     `Olá! Gostaria de falar sobre a manutenção #${protocolo} ` +
-                    `do brinquedo ${botao.dataset.brinquedo || ""}.`
+                    `do equipamento ${botao.dataset.brinquedo || ""}. ` +
+                    `Status atual: ${botao.dataset.status || "não informado"}.`
                 );
                 whatsapp.href =
                     `https://wa.me/5511960563135?text=${mensagem}`;
+                whatsapp.style.display = "flex";
+                whatsapp.setAttribute(
+                    "aria-label",
+                    `Falar com a Lazer & Sport sobre a manutenção ${protocolo}`
+                );
             }
 
+            const podeCancelar = !["C", "X"].includes(codigoStatus);
             if (cancelarForm) {
-                cancelarForm.style.display =
-                    ["C", "X"].includes(codigoStatus) ? "none" : "block";
+                cancelarForm.style.display = podeCancelar ? "block" : "none";
             }
+            acoesDetalhe?.classList.toggle(
+                "somente-whatsapp",
+                !podeCancelar
+            );
 
             abrirModalManutencao(modal);
         });
