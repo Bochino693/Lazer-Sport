@@ -3469,8 +3469,11 @@
                  role="tabpanel">
             <div class="maintenance-workspace">
                 <form method="post"
+                      action="{% url 'manutencoes' %}"
                       enctype="multipart/form-data"
                       class="manutencao-form"
+                      data-upload-processando="0"
+                      data-envio-em-andamento="0"
                       novalidate>
                     <div class="form-topbar">
                         <div>
@@ -3484,6 +3487,16 @@
                     </div>
 
                     {% csrf_token %}
+
+                    {% if messages and not mostrar_modal_sucesso %}
+                    <div class="form-errors" aria-live="polite">
+                        {% for message in messages %}
+                        <ul class="errorlist message-{{ message.tags }}">
+                            <li>{{ message }}</li>
+                        </ul>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
 
                     {% if form.non_field_errors %}
                     <div class="form-errors">
@@ -3748,7 +3761,7 @@
                                    name="imagens"
                                    id="imagens"
                                    multiple
-                                   accept="image/*"
+                                   accept="image/jpeg,image/png,image/webp"
                                    hidden>
 
                             <div class="upload-card"
@@ -3761,7 +3774,7 @@
                                 </span>
                                 <span class="upload-copy">
                                     <strong>Adicionar fotos</strong>
-                                    <span id="uploadInfo">Até 5 imagens — toque ou clique para selecionar</span>
+                                    <span id="uploadInfo">Até 5 fotos — serão otimizadas automaticamente</span>
                                 </span>
                             </div>
 
@@ -3939,7 +3952,7 @@
 </div>
 
 {% if user.is_authenticated %}
-    {% if messages %}
+    {% if mostrar_modal_sucesso %}
     <div id="modal-sucesso"
          class="modal-brinquedos"
          style="display:none;"
@@ -4322,9 +4335,22 @@ function inicializarFormularioManutencao() {
     inicializarSeletorBrinquedo(form);
     inicializarTelefone();
     inicializarCep();
-    inicializarUploadFotos();
+    inicializarUploadFotos(form);
 
     form.addEventListener("submit", event => {
+        if (form.dataset.uploadProcessando === "1") {
+            event.preventDefault();
+            window.alert(
+                "Aguarde a otimização das fotos terminar antes de enviar."
+            );
+            return;
+        }
+
+        if (form.dataset.envioEmAndamento === "1") {
+            event.preventDefault();
+            return;
+        }
+
         const brinquedoInput = document.getElementById("brinquedo-input");
         const brinquedoNaoListado = document.getElementById(
             "brinquedo-nao-listado"
@@ -4378,6 +4404,8 @@ function inicializarFormularioManutencao() {
             form.reportValidity();
             return;
         }
+
+        form.dataset.envioEmAndamento = "1";
 
         const botaoEnviar = document.getElementById(
             "btn-enviar-manutencao"
@@ -4879,41 +4907,187 @@ function inicializarCep() {
     }
 }
 
-function inicializarUploadFotos() {
+function inicializarUploadFotos(form) {
     const input = document.getElementById("imagens");
     const card = document.getElementById("uploadCard");
     const preview = document.getElementById("preview");
     const info = document.getElementById("uploadInfo");
 
-    if (!input || !card || !preview || !info) return;
+    if (!input || !card || !preview || !info || !form) return;
 
     const MAX_FILES = 5;
+    const MAX_FILE_BYTES = 700 * 1024;
+    const MAX_TOTAL_BYTES = 3_600_000;
+    const MAX_DIMENSION = 1600;
+    const TIPOS_ACEITOS = new Set([
+        "image/jpeg",
+        "image/png",
+        "image/webp"
+    ]);
+
     let arquivos = [];
+
+    function totalBytes() {
+        return arquivos.reduce(
+            (total, item) => total + item.file.size,
+            0
+        );
+    }
 
     function atualizarInput() {
         const transferencia = new DataTransfer();
-        arquivos.forEach(file => transferencia.items.add(file));
+        arquivos.forEach(item => transferencia.items.add(item.file));
         input.files = transferencia.files;
+    }
+
+    function formatarTamanho(bytes) {
+        return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
+    }
+
+    function definirInfo(texto, erro = false) {
+        info.textContent = texto;
+        info.style.color = erro ? "#c91f31" : "";
+    }
+
+    function carregarImagem(file) {
+        return new Promise((resolve, reject) => {
+            const imagem = new Image();
+            const url = URL.createObjectURL(file);
+
+            imagem.onload = () => {
+                URL.revokeObjectURL(url);
+                resolve(imagem);
+            };
+            imagem.onerror = () => {
+                URL.revokeObjectURL(url);
+                reject(new Error("Imagem incompatível"));
+            };
+            imagem.src = url;
+        });
+    }
+
+    function canvasParaBlob(canvas, qualidade) {
+        return new Promise((resolve, reject) => {
+            canvas.toBlob(
+                blob => {
+                    if (blob) resolve(blob);
+                    else reject(new Error("Falha ao otimizar a imagem"));
+                },
+                "image/jpeg",
+                qualidade
+            );
+        });
+    }
+
+    async function otimizarImagem(file) {
+        if (!TIPOS_ACEITOS.has(file.type)) {
+            throw new Error("Use somente fotos JPG, PNG ou WEBP.");
+        }
+
+        if (
+            file.size <= MAX_FILE_BYTES &&
+            file.type !== "image/png"
+        ) {
+            return file;
+        }
+
+        const imagem = await carregarImagem(file);
+        const maiorLadoOriginal = Math.max(
+            imagem.naturalWidth,
+            imagem.naturalHeight
+        );
+
+        let limiteDimensao = Math.min(
+            MAX_DIMENSION,
+            maiorLadoOriginal
+        );
+        let qualidade = 0.82;
+        let ultimoBlob = null;
+
+        for (let tentativa = 0; tentativa < 10; tentativa += 1) {
+            const escala = Math.min(
+                1,
+                limiteDimensao / maiorLadoOriginal
+            );
+            const largura = Math.max(
+                1,
+                Math.round(imagem.naturalWidth * escala)
+            );
+            const altura = Math.max(
+                1,
+                Math.round(imagem.naturalHeight * escala)
+            );
+
+            const canvas = document.createElement("canvas");
+            canvas.width = largura;
+            canvas.height = altura;
+
+            const contexto = canvas.getContext("2d", {
+                alpha: false
+            });
+            if (!contexto) {
+                throw new Error("Seu navegador não conseguiu otimizar a foto.");
+            }
+
+            contexto.fillStyle = "#ffffff";
+            contexto.fillRect(0, 0, largura, altura);
+            contexto.drawImage(imagem, 0, 0, largura, altura);
+
+            ultimoBlob = await canvasParaBlob(canvas, qualidade);
+
+            if (ultimoBlob.size <= MAX_FILE_BYTES) {
+                const nomeBase = file.name.replace(
+                    /\.[^/.]+$/,
+                    ""
+                );
+                return new File(
+                    [ultimoBlob],
+                    `${nomeBase}.jpg`,
+                    {
+                        type: "image/jpeg",
+                        lastModified: file.lastModified
+                    }
+                );
+            }
+
+            if (qualidade > 0.58) {
+                qualidade -= 0.08;
+            } else {
+                limiteDimensao = Math.max(
+                    900,
+                    Math.floor(limiteDimensao * 0.82)
+                );
+                qualidade = 0.72;
+            }
+        }
+
+        throw new Error(
+            "Uma das fotos continua muito pesada após a otimização."
+        );
     }
 
     function renderizarPreview() {
         preview.innerHTML = "";
 
         if (!arquivos.length) {
-            info.textContent =
-                "Até 5 imagens — toque ou clique para selecionar";
+            definirInfo(
+                "Até 5 fotos — serão otimizadas automaticamente"
+            );
         } else {
-            info.textContent =
-                `${arquivos.length} de ${MAX_FILES} fotos selecionadas`;
+            definirInfo(
+                `${arquivos.length} de ${MAX_FILES} fotos — ` +
+                `${formatarTamanho(totalBytes())} no total`
+            );
         }
-        info.style.color = "";
 
-        arquivos.forEach((file, index) => {
+        arquivos.forEach((itemArquivo, index) => {
             const item = document.createElement("div");
             item.className = "preview-item";
 
             const imagem = document.createElement("img");
-            const urlTemporaria = URL.createObjectURL(file);
+            const urlTemporaria = URL.createObjectURL(
+                itemArquivo.file
+            );
             imagem.src = urlTemporaria;
             imagem.alt = `Foto selecionada ${index + 1}`;
             imagem.addEventListener(
@@ -4944,43 +5118,94 @@ function inicializarUploadFotos() {
         atualizarInput();
     }
 
-    function adicionarArquivos(novosArquivos) {
+    async function adicionarArquivos(novosArquivos) {
+        if (form.dataset.uploadProcessando === "1") return;
+
+        form.dataset.uploadProcessando = "1";
+        card.setAttribute("aria-busy", "true");
+        definirInfo("Otimizando fotos para envio...");
+
         let ignorados = 0;
+        let mensagemErro = "";
 
-        novosArquivos.forEach(file => {
-            const ehImagem = file.type.startsWith("image/");
-            const chave = `${file.name}-${file.size}-${file.lastModified}`;
-            const duplicado = arquivos.some(item =>
-                `${item.name}-${item.size}-${item.lastModified}` === chave
-            );
+        try {
+            for (const original of novosArquivos) {
+                if (arquivos.length >= MAX_FILES) {
+                    ignorados += 1;
+                    continue;
+                }
 
-            if (!ehImagem || duplicado || arquivos.length >= MAX_FILES) {
-                ignorados += 1;
-                return;
+                const chave = (
+                    `${original.name}-${original.size}-` +
+                    `${original.lastModified}`
+                );
+                const duplicado = arquivos.some(
+                    item => item.chave === chave
+                );
+
+                if (duplicado) {
+                    ignorados += 1;
+                    continue;
+                }
+
+                try {
+                    const otimizado = await otimizarImagem(original);
+                    const futuroTotal =
+                        totalBytes() + otimizado.size;
+
+                    if (futuroTotal > MAX_TOTAL_BYTES) {
+                        ignorados += 1;
+                        mensagemErro =
+                            "O total das fotos ultrapassaria o limite. " +
+                            "Remova uma foto ou escolha outra menor.";
+                        continue;
+                    }
+
+                    arquivos.push({
+                        file: otimizado,
+                        chave
+                    });
+                } catch (error) {
+                    ignorados += 1;
+                    mensagemErro =
+                        error.message ||
+                        "Não foi possível preparar uma das fotos.";
+                }
             }
 
-            arquivos.push(file);
-        });
+            renderizarPreview();
 
-        renderizarPreview();
-
-        if (ignorados) {
-            info.textContent =
-                "Algumas fotos foram ignoradas. Use até 5 imagens válidas.";
-            info.style.color = "#c91f31";
+            if (ignorados) {
+                definirInfo(
+                    mensagemErro ||
+                    "Algumas fotos foram ignoradas. Use até 5 imagens válidas.",
+                    true
+                );
+            }
+        } finally {
+            form.dataset.uploadProcessando = "0";
+            card.removeAttribute("aria-busy");
         }
     }
 
-    card.addEventListener("click", () => input.click());
+    card.addEventListener("click", () => {
+        if (form.dataset.uploadProcessando !== "1") {
+            input.click();
+        }
+    });
     card.addEventListener("keydown", event => {
-        if (event.key === "Enter" || event.key === " ") {
+        if (
+            (event.key === "Enter" || event.key === " ") &&
+            form.dataset.uploadProcessando !== "1"
+        ) {
             event.preventDefault();
             input.click();
         }
     });
 
-    input.addEventListener("change", () => {
-        adicionarArquivos(Array.from(input.files));
+    input.addEventListener("change", async () => {
+        const selecionados = Array.from(input.files);
+        await adicionarArquivos(selecionados);
     });
 }
 

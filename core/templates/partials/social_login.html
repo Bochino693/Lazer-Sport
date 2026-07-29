@@ -1,0 +1,67 @@
+{% comment %}
+core/templates/partials/social_login.html
+
+Inclua com:
+    {% include "partials/social_login.html" with titulo="Ou continue com" %}
+
+Por que formulário POST e não <a href>: a partir do allauth 0.55 a
+opção SOCIALACCOUNT_LOGIN_ON_GET vem desligada por padrão. Um link GET
+para /accounts/google/login/ agora só mostra uma página intermediária
+de confirmação. O POST com csrf_token vai direto para o provedor -- é o
+que dá a sensação de um clique só.
+
+A lista vem de get_providers, então o botão só aparece se as chaves do
+provedor estiverem configuradas. Enquanto a Apple não estiver liberada,
+o botão dela simplesmente não é renderizado.
+{% endcomment %}
+
+{% load socialaccount %}
+{% get_providers as lista_provedores %}
+
+{% if lista_provedores %}
+<div class="social-login">
+
+    <div class="social-divider">{{ titulo|default:"Ou continue com" }}</div>
+
+    <div class="social-buttons">
+        {% for provedor in lista_provedores %}
+
+            {% if provedor.id == "google" %}
+                <form method="post" action="{% provider_login_url provedor.id process='login' %}">
+                    {% csrf_token %}
+                    {% if redirect_para %}
+                        <input type="hidden" name="next" value="{{ redirect_para }}">
+                    {% endif %}
+                    <button type="submit" class="social-btn google">
+                        <img src="https://developers.google.com/identity/images/g-logo.png"
+                             alt="" aria-hidden="true">
+                        Continuar com Google
+                    </button>
+                </form>
+
+            {% elif provedor.id == "apple" %}
+                <form method="post" action="{% provider_login_url provedor.id process='login' %}">
+                    {% csrf_token %}
+                    {% if redirect_para %}
+                        <input type="hidden" name="next" value="{{ redirect_para }}">
+                    {% endif %}
+                    <button type="submit" class="social-btn apple">
+                        <i class="fa-brands fa-apple" aria-hidden="true"></i>
+                        Continuar com Apple
+                    </button>
+                </form>
+
+            {% else %}
+                <form method="post" action="{% provider_login_url provedor.id process='login' %}">
+                    {% csrf_token %}
+                    <button type="submit" class="social-btn generico">
+                        Continuar com {{ provedor.name }}
+                    </button>
+                </form>
+            {% endif %}
+
+        {% endfor %}
+    </div>
+
+</div>
+{% endif %}

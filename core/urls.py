@@ -2,7 +2,7 @@ from django.urls import path, re_path
 from django.contrib.sitemaps.views import sitemap
 from .sitemaps import PaginasEstaticasSitemap, BrinquedosSitemap, CategoriasSitemap
 from .views import (HomeView, BrinquedoInfoView, CategoriasInfoView, BrinquedosView, webhook_mercadopago,
-                    RegistrarView, LoginUsuarioView, LogoutUsuarioView, EventosView, verificar_pagamento,
+                     LoginUsuarioView, LogoutUsuarioView, EventosView, verificar_pagamento,
                     ProjetosView, ClientePerfilView, ComboInfoView, PromocaoInfoView, calcular_frete, salvar_cpf_carrinho,
                     BrinquedoAdmin, NovaCategoria, NovaTag,  PedidosParaImpressaoAPI, CupomAdminView, ProjetoAdminView, EstabelecimentoInfoView,
                     EstabelecimentosListView, ManutencaoView, PromocaoAdminView, adicionar_ao_carrinho, CarrinhoView, aplicar_cupom, remover_item_carrinho, MarcarPedidoImpressoAPI,
@@ -11,7 +11,7 @@ from .views import (HomeView, BrinquedoInfoView, CategoriasInfoView, BrinquedosV
                     DashboardAdminView, UserAdminView, ManutencaoAdminView, RelatorioVendasView, PedidoAdminView,
                     redirecionar_loja, redirecionar_categoria_brinquedos, redirecionar_categoria_aventura, redirecionar_lancamentos,
                     redirecionar_showroom, redirecionar_contato, EstatisticasGeraisView, ReposicaoView, ReposicaoDetalheView,
-                    robots_txt, ComboAdminView, SearchView, LojaView, ClienteAdminView
+                    robots_txt, ComboAdminView, SearchView, LojaView, ClienteAdminView, RegistrarView, CompletarPerfilView
                     )
 
 sitemaps = {
@@ -171,6 +171,7 @@ urlpatterns = [
     path("login/", LoginUsuarioView.as_view(), name="login"),
     path("logout/", LogoutUsuarioView.as_view(), name="logout"),
     path("registrar/", RegistrarView.as_view(), name="registrar"),
+    path("completar-perfil/", CompletarPerfilView.as_view(), name="completar_perfil"),
 
     path('acesso-negado/', AcessoNegadoView.as_view(), name='acesso_negado'),
 

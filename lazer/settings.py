@@ -132,7 +132,7 @@ INSTALLED_APPS = [
     "allauth.account",
     "allauth.socialaccount",
     "allauth.socialaccount.providers.google",
-    "allauth.socialaccount.providers.facebook",
+    "allauth.socialaccount.providers.apple",
 ]
 
 SITE_ID = 1
@@ -216,13 +216,70 @@ AUTHENTICATION_BACKENDS = [
     "allauth.account.auth_backends.AuthenticationBackend",
 ]
 
-ACCOUNT_EMAIL_REQUIRED = True
-ACCOUNT_USERNAME_REQUIRED = True
-ACCOUNT_AUTHENTICATION_METHOD = "username_email"
+ACCOUNT_ADAPTER = "core.adapters.AccountAdapter"
+SOCIALACCOUNT_ADAPTER = "core.adapters.SocialAccountAdapter"
+
+# Sintaxe do allauth 65 (substitui ACCOUNT_EMAIL_REQUIRED,
+# ACCOUNT_USERNAME_REQUIRED e ACCOUNT_AUTHENTICATION_METHOD).
+ACCOUNT_LOGIN_METHODS = {"username", "email"}
+ACCOUNT_SIGNUP_FIELDS = ["email*", "username*", "password1*", "password2*"]
+ACCOUNT_EMAIL_VERIFICATION = "none"
 ACCOUNT_LOGOUT_ON_GET = True
+ACCOUNT_UNIQUE_EMAIL = True
+
+# O coração do "poupar o usuário de digitar": com AUTO_SIGNUP ligado, o
+# allauth cria a conta direto com o que o Google/Apple mandou, sem passar
+# pela tela de signup intermediária.
+SOCIALACCOUNT_AUTO_SIGNUP = True
+SOCIALACCOUNT_EMAIL_VERIFICATION = "none"
+SOCIALACCOUNT_STORE_TOKENS = False
+SOCIALACCOUNT_LOGIN_ON_GET = False  # exige POST no botão -- ver observação
 
 LOGIN_REDIRECT_URL = "/"
 LOGOUT_REDIRECT_URL = "/"
+
+# ---------- Provedores ----------
+# As credenciais vêm de variável de ambiente, não do admin. Assim o
+# deploy na Vercel/Render não depende de cadastrar SocialApp no banco.
+# IMPORTANTE: se você configurar aqui, NÃO crie também um SocialApp em
+# /system/ -- o allauth levanta MultipleObjectsReturned se achar os dois.
+SOCIALACCOUNT_PROVIDERS = {}
+
+_GOOGLE_ID = os.getenv("GOOGLE_CLIENT_ID", "").strip()
+_GOOGLE_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", "").strip()
+
+if _GOOGLE_ID and _GOOGLE_SECRET:
+    SOCIALACCOUNT_PROVIDERS["google"] = {
+        "APPS": [{
+            "client_id": _GOOGLE_ID,
+            "secret": _GOOGLE_SECRET,
+            "key": "",
+        }],
+        "SCOPE": ["profile", "email"],
+        "AUTH_PARAMS": {"access_type": "online"},
+        "OAUTH_PKCE_ENABLED": True,
+        "EMAIL_AUTHENTICATION": True,
+    }
+
+_APPLE_CLIENT_ID = os.getenv("APPLE_CLIENT_ID", "").strip()   # Services ID
+_APPLE_KEY_ID = os.getenv("APPLE_KEY_ID", "").strip()         # Key ID
+_APPLE_TEAM_ID = os.getenv("APPLE_TEAM_ID", "").strip()       # Team ID
+_APPLE_PRIVATE_KEY = os.getenv("APPLE_PRIVATE_KEY", "").strip()
+
+if _APPLE_CLIENT_ID and _APPLE_KEY_ID and _APPLE_TEAM_ID and _APPLE_PRIVATE_KEY:
+    SOCIALACCOUNT_PROVIDERS["apple"] = {
+        "APPS": [{
+            "client_id": _APPLE_CLIENT_ID,
+            "secret": _APPLE_KEY_ID,
+            "key": _APPLE_TEAM_ID,
+            "settings": {
+                # A .p8 é multilinha. Em painel de env var, cole com \n
+                # literal; esta linha desfaz o escape.
+                "certificate_key": _APPLE_PRIVATE_KEY.replace("\\n", "\n"),
+            },
+        }],
+        "EMAIL_AUTHENTICATION": True,
+    }
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},

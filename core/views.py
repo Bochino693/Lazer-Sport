@@ -372,39 +372,134 @@ from django.views import View
 class ManutencaoView(View):
     template_name = 'manutencao.html'
 
+    # A Vercel rejeita o request inteiro antes de chegar ao Django quando o
+    # multipart ultrapassa 4,5 MB. Mantemos margem para campos e cabeçalhos.
+    LIMITE_IMAGENS = 5
+    TAMANHO_MAXIMO_IMAGEM = 3 * 1024 * 1024
+    TAMANHO_MAXIMO_TOTAL = 3_800_000
+    TIPOS_IMAGEM_PERMITIDOS = {
+        'image/jpeg': '.jpg',
+        'image/png': '.png',
+        'image/webp': '.webp',
+    }
+
     def get_usuario(self, request):
         if not request.user.is_authenticated:
             return None
         perfil, _ = ClientePerfil.objects.get_or_create(user=request.user)
         return perfil
 
-    def get(self, request):
+    def get_contexto(self, request, form=None, tab_ativa=None):
         usuario = self.get_usuario(request)
-        tab_ativa = request.GET.get('tab', 'nova')
+        tab_ativa = tab_ativa or request.GET.get('tab', 'nova')
 
         if not usuario:
-            return render(request, self.template_name, {
+            return {
                 'form': None,
                 'manutencoes': [],
                 'brinquedos': [],
                 'tab_ativa': tab_ativa,
-            })
+                'mostrar_modal_sucesso': False,
+            }
 
-        form = ManutencaoForm()
-        manutencoes = (
-            Manutencao.objects
-            .filter(usuario=usuario)
-            .select_related('brinquedo')
-            .order_by('-criado_em')
-        )
-        brinquedos = Brinquedos.objects.all().order_by('nome_brinquedo')
-
-        return render(request, self.template_name, {
-            'form': form,
-            'manutencoes': manutencoes,
-            'brinquedos': brinquedos,
+        return {
+            'form': form if form is not None else ManutencaoForm(),
+            'manutencoes': (
+                Manutencao.objects
+                .filter(usuario=usuario)
+                .select_related('brinquedo')
+                .order_by('-criado_em')
+            ),
+            'brinquedos': Brinquedos.objects.all().order_by('nome_brinquedo'),
             'tab_ativa': tab_ativa,
-        })
+            'mostrar_modal_sucesso': (
+                request.GET.get('sucesso') == '1'
+            ),
+        }
+
+    def get(self, request):
+        return render(
+            request,
+            self.template_name,
+            self.get_contexto(request),
+        )
+
+    def validar_imagens(self, imagens):
+        if len(imagens) > self.LIMITE_IMAGENS:
+            return (
+                f"Você pode enviar no máximo "
+                f"{self.LIMITE_IMAGENS} imagens."
+            )
+
+        tamanho_total = sum(
+            int(getattr(imagem, 'size', 0) or 0)
+            for imagem in imagens
+        )
+
+        if tamanho_total > self.TAMANHO_MAXIMO_TOTAL:
+            return (
+                "O conjunto das fotos ficou muito pesado. "
+                "Remova uma foto ou selecione imagens menores."
+            )
+
+        for imagem in imagens:
+            content_type = (
+                getattr(imagem, 'content_type', '') or ''
+            ).lower()
+
+            if content_type not in self.TIPOS_IMAGEM_PERMITIDOS:
+                return (
+                    "Envie somente imagens JPG, PNG ou WEBP."
+                )
+
+            if not imagem.size:
+                return "Uma das imagens enviadas está vazia."
+
+            if imagem.size > self.TAMANHO_MAXIMO_IMAGEM:
+                return (
+                    "Cada imagem deve ter no máximo 3 MB "
+                    "antes da otimização."
+                )
+
+        return None
+
+    def salvar_imagem(self, manutencao, arquivo):
+        """Salva o arquivo com nome único e devolve storage + nome."""
+        content_type = (
+            getattr(arquivo, 'content_type', '') or ''
+        ).lower()
+        extensao = self.TIPOS_IMAGEM_PERMITIDOS[content_type]
+
+        registro = ManutencaoImagem(manutencao=manutencao)
+        campo = registro._meta.get_field('imagem')
+        storage = campo.storage
+
+        nome_gerado = campo.generate_filename(
+            registro,
+            f"{uuid.uuid4().hex}{extensao}",
+        )
+        nome_salvo = storage.save(
+            nome_gerado,
+            arquivo,
+            max_length=campo.max_length,
+        )
+
+        try:
+            registro.imagem.name = nome_salvo
+            registro.imagem._committed = True
+            registro.save(force_insert=True)
+        except Exception:
+            # O arquivo não pertence ao banco se a linha não foi criada.
+            try:
+                storage.delete(nome_salvo)
+            except Exception:
+                logging.getLogger(__name__).exception(
+                    "Falha ao remover imagem órfã de manutenção: %s",
+                    nome_salvo,
+                )
+            raise
+
+        return storage, nome_salvo
 
     def post(self, request):
         usuario = self.get_usuario(request)
@@ -415,63 +510,71 @@ class ManutencaoView(View):
         form = ManutencaoForm(request.POST, request.FILES)
 
         if not form.is_valid():
+            messages.error(
+                request,
+                "Confira os campos destacados antes de enviar.",
+            )
             return self.render_form(request, form)
 
         imagens = request.FILES.getlist('imagens')
+        erro_imagens = self.validar_imagens(imagens)
 
-        # 🔒 Regras de negócio
-        LIMITE_IMAGENS = 5
-        TAMANHO_MAXIMO = 5 * 1024 * 1024  # 5MB
+        if erro_imagens:
+            messages.error(request, erro_imagens)
+            return self.render_form(request, form)
 
-        if len(imagens) > LIMITE_IMAGENS:
+        arquivos_gravados = []
+
+        try:
+            # Tudo no banco é confirmado junto ou totalmente desfeito.
+            with transaction.atomic():
+                manutencao = form.save(commit=False)
+                manutencao.usuario = usuario
+                manutencao.save()
+
+                for imagem in imagens:
+                    arquivos_gravados.append(
+                        self.salvar_imagem(manutencao, imagem)
+                    )
+
+        except Exception:
+            # FileField pode usar armazenamento externo, que não participa da
+            # transação SQL. Removemos os arquivos já enviados manualmente.
+            for storage, nome in reversed(arquivos_gravados):
+                try:
+                    storage.delete(nome)
+                except Exception:
+                    logging.getLogger(__name__).exception(
+                        "Falha ao limpar imagem após rollback: %s",
+                        nome,
+                    )
+
+            logging.getLogger(__name__).exception(
+                "Falha atômica ao criar solicitação de manutenção."
+            )
             messages.error(
                 request,
-                f"Você pode enviar no máximo {LIMITE_IMAGENS} imagens."
+                "Não foi possível registrar a manutenção. "
+                "Nenhum dado foi gravado. Tente novamente.",
             )
             return self.render_form(request, form)
 
-        for img in imagens:
-            if not img.content_type.startswith('image/'):
-                messages.error(request, "Apenas arquivos de imagem são permitidos.")
-                return self.render_form(request, form)
+        messages.success(
+            request,
+            "Manutenção solicitada com sucesso!",
+        )
+        return redirect(
+            f"{request.path}?tab=lista&sucesso=1"
+        )
 
-            if img.size > TAMANHO_MAXIMO:
-                messages.error(
-                    request,
-                    "Cada imagem deve ter no máximo 5MB."
-                )
-                return self.render_form(request, form)
-
-        # ✅ Salvar manutenção
-        manutencao = form.save(commit=False)
-        manutencao.usuario = usuario
-        manutencao.save()
-
-        # 🖼️ Salvar imagens
-        for img in imagens:
-            ManutencaoImagem.objects.create(
-                manutencao=manutencao,
-                imagem=img
-            )
-
-        messages.success(request, "Manutenção solicitada com sucesso!")
-        return redirect('manutencoes')
-
-    # 🔁 Centraliza renderização do formulário
     def render_form(self, request, form):
-        usuario = self.get_usuario(request)
-
-        return render(request, self.template_name, {
-            'form': form,
-            'manutencoes': (
-                Manutencao.objects
-                .filter(usuario=usuario)
-                .select_related('brinquedo')
-                .order_by('-criado_em')
-            ),
-            'brinquedos': Brinquedos.objects.all().order_by('nome_brinquedo'),
-            'tab_ativa': 'nova',
-        })
+        contexto = self.get_contexto(
+            request,
+            form=form,
+            tab_ativa='nova',
+        )
+        contexto['mostrar_modal_sucesso'] = False
+        return render(request, self.template_name, contexto)
 
 
 from django.views.decorators.http import require_POST
@@ -1771,38 +1874,234 @@ class PedidoAdminView(AdminOnlyMixin, View):
 
 
 # core/views.py
-from django.shortcuts import render, redirect
-from django.views import View
-from django.contrib import messages
-from django.contrib.auth import login, authenticate
-from django.contrib.auth.models import User
-from .forms import UserForm
+"""
+Telas de conta do cliente.
 
+Contém duas coisas:
+
+1. CadastroForm + RegistrarView -- substituem a RegistrarView antiga de
+   core/views.py, que estava quebrada: o UserForm só tinha
+   first_name/last_name/email, então `form.cleaned_data['password']`
+   levantava KeyError, o username nunca era gravado e o telefone
+   digitado no formulário era descartado silenciosamente.
+
+2. CompletarPerfilView -- a única tela que quem entra por Google/Apple
+   ainda vê, porque nenhum provedor OAuth devolve telefone. Pede um
+   campo só.
+"""
+
+import re
+
+from django import forms
+from django.contrib import messages
+from django.contrib.auth import authenticate, login
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.models import User
+from django.db import transaction
+from django.shortcuts import redirect, render
+from django.views import View
+
+from .models import ClientePerfil, validar_telefone
+
+
+# ============================================================
+# FORMULÁRIO DE CADASTRO MANUAL
+# ============================================================
+
+class CadastroForm(forms.Form):
+    first_name = forms.CharField(max_length=150, label="Nome")
+    last_name = forms.CharField(max_length=150, label="Sobrenome")
+    username = forms.CharField(max_length=150, label="Nome de usuário")
+    email = forms.EmailField(label="E-mail")
+    telefone = forms.CharField(
+        max_length=15,
+        label="Telefone",
+        validators=[validar_telefone],
+    )
+    password = forms.CharField(widget=forms.PasswordInput, label="Senha")
+    password2 = forms.CharField(
+        widget=forms.PasswordInput, label="Confirmar senha"
+    )
+
+    def clean_username(self):
+        username = self.cleaned_data["username"].strip()
+
+        if User.objects.filter(username__iexact=username).exists():
+            raise forms.ValidationError("Esse nome de usuário já está em uso.")
+
+        return username
+
+    def clean_email(self):
+        email = self.cleaned_data["email"].strip().lower()
+
+        if User.objects.filter(email__iexact=email).exists():
+            raise forms.ValidationError(
+                "Já existe uma conta com esse e-mail. "
+                "Faça login ou entre com Google."
+            )
+
+        return email
+
+    def clean_telefone(self):
+        telefone = (self.cleaned_data["telefone"] or "").strip()
+        # A máscara do formulário às vezes deixa espaço depois do DDD
+        return re.sub(r"\s+", "", telefone)
+
+    def clean(self):
+        dados = super().clean()
+
+        senha = dados.get("password")
+        senha2 = dados.get("password2")
+
+        if senha and senha2 and senha != senha2:
+            self.add_error("password2", "As senhas não conferem.")
+
+        if senha and len(senha) < 8:
+            self.add_error("password", "Use pelo menos 8 caracteres.")
+
+        return dados
+
+    @transaction.atomic
+    def salvar(self):
+        dados = self.cleaned_data
+
+        user = User(
+            username=dados["username"],
+            email=dados["email"],
+            first_name=dados["first_name"].strip(),
+            last_name=dados["last_name"].strip(),
+        )
+        user.set_password(dados["password"])
+        user.save()  # o signal post_save cria o ClientePerfil
+
+        perfil, _ = ClientePerfil.objects.get_or_create(user=user)
+        perfil.telefone = dados["telefone"]
+        perfil.nome_completo = f"{user.first_name} {user.last_name}".strip()
+        perfil.save(update_fields=["telefone", "nome_completo"])
+
+        # Registra o e-mail na tabela do allauth. Sem isso, quem se
+        # cadastra aqui e depois clica em "Entrar com Google" viraria
+        # um segundo usuário com o mesmo e-mail (o Django não impõe
+        # unicidade em User.email).
+        try:
+            from allauth.account.models import EmailAddress
+
+            EmailAddress.objects.get_or_create(
+                user=user,
+                email=user.email,
+                defaults={"verified": False, "primary": True},
+            )
+        except Exception:
+            # allauth ausente ou tabela não migrada: o cadastro não
+            # pode quebrar por causa disso.
+            pass
+
+        return user
+
+
+# ============================================================
+# CADASTRO MANUAL
+# ============================================================
 
 class RegistrarView(View):
     template_name = "register.html"
 
     def get(self, request):
-        form = UserForm()
-        return render(request, self.template_name, {'form': form})
+        if request.user.is_authenticated:
+            return redirect("home")
+
+        return render(request, self.template_name, {"form": CadastroForm()})
 
     def post(self, request):
-        form = UserForm(request.POST)
+        form = CadastroForm(request.POST)
+
+        if not form.is_valid():
+            messages.error(request, "Confira os campos destacados e tente de novo.")
+            return render(request, self.template_name, {"form": form})
+
+        user = form.salvar()
+
+        user = authenticate(
+            request,
+            username=user.username,
+            password=form.cleaned_data["password"],
+        )
+
+        if user:
+            login(request, user)
+
+        messages.success(
+            request,
+            f"Conta criada. Bem-vindo(a), {form.cleaned_data['first_name']}!",
+        )
+        return redirect("home")
+
+
+# ============================================================
+# COMPLETAR PERFIL (só telefone)
+# ============================================================
+
+class CompletarPerfilForm(forms.ModelForm):
+    class Meta:
+        model = ClientePerfil
+        fields = ["telefone"]
+        widgets = {
+            "telefone": forms.TextInput(
+                attrs={
+                    "id": "telefone",
+                    "placeholder": "(11)90000-0000",
+                    "inputmode": "numeric",
+                    "autocomplete": "tel",
+                }
+            )
+        }
+
+    def clean_telefone(self):
+        return re.sub(r"\s+", "", (self.cleaned_data.get("telefone") or "").strip())
+
+
+class CompletarPerfilView(LoginRequiredMixin, View):
+    """
+    Aparece uma vez para quem entrou por Google/Apple. Google e Apple
+    entregam nome e e-mail, mas nenhum dos dois entrega telefone -- e o
+    telefone é obrigatório para fechar pedido e agendar manutenção.
+    """
+    template_name = "completar_perfil.html"
+
+    def get_perfil(self, user):
+        perfil, _ = ClientePerfil.objects.get_or_create(user=user)
+        return perfil
+
+    def get(self, request):
+        perfil = self.get_perfil(request.user)
+
+        if (perfil.telefone or "").strip():
+            return redirect("perfil")
+
+        return render(request, self.template_name, {
+            "form": CompletarPerfilForm(instance=perfil),
+            "perfil": perfil,
+        })
+
+    def post(self, request):
+        perfil = self.get_perfil(request.user)
+
+        if request.POST.get("pular"):
+            # Não insiste de novo na mesma sessão.
+            request.session["pulou_completar_perfil"] = True
+            return redirect("home")
+
+        form = CompletarPerfilForm(request.POST, instance=perfil)
+
         if form.is_valid():
-            user = form.save(commit=False)
-            user.set_password(form.cleaned_data['password'])
-            user.save()  # signal vai criar ClientePerfil automaticamente
+            form.save()
+            messages.success(request, "Telefone salvo. Cadastro completo!")
+            return redirect("home")
 
-            # autentica e faz login
-            user = authenticate(username=user.username, password=form.cleaned_data['password'])
-            if user:
-                login(request, user)
-
-            messages.success(request, f"Conta criada com sucesso! Bem-vindo(a), {user.first_name}.")
-            return redirect("login")
-        else:
-            messages.error(request, "Verifique os campos e tente novamente.")
-        return render(request, self.template_name, {'form': form})
+        return render(request, self.template_name, {
+            "form": form,
+            "perfil": perfil,
+        })
 
 
 class BrinquedoAdmin(AdminOnlyMixin, View):
