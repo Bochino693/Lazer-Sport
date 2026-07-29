@@ -271,11 +271,20 @@
         animation-duration: 2.5s !important;
     }
 }
+
+
+#conta-criada {
+    scroll-margin-top: 120px;
+}
+
+html {
+    scroll-behavior: smooth;
+}
 </style>
 
 <section class="ls-transicao"
          style="--tempo-transicao: {{ tempo_redirecionamento|default:3200 }}ms;">
-    <div class="ls-transicao-card">
+    <div class="ls-transicao-card" id="conta-criada">
 
         <div class="ls-transicao-selo">
             {% if modo == "cadastro" %}

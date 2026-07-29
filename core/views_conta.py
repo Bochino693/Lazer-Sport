@@ -258,7 +258,10 @@ class RegistrarView(View):
         )
 
         _guardar_fluxo(request, tipo="cadastro")
-        return redirect("conta_transicao")
+
+        return redirect(
+            f"{reverse('conta_transicao')}#conta-criada"
+        )
 
 
 class CompletarPerfilView(LoginRequiredMixin, View):
@@ -277,7 +280,9 @@ class CompletarPerfilView(LoginRequiredMixin, View):
         perfil = _perfil_do_usuario(request.user)
 
         if (perfil.telefone or "").strip():
-            return redirect("conta_transicao")
+            return redirect(
+                f"{reverse('conta_transicao')}#conta-criada"
+            )
 
         request.session.setdefault("conta_fluxo_tipo", "cadastro")
 
@@ -306,7 +311,9 @@ class CompletarPerfilView(LoginRequiredMixin, View):
                     "O telefone é obrigatório para concluir seu cadastro.",
                 )
             else:
-                return redirect("conta_transicao")
+                return redirect(
+                    f"{reverse('conta_transicao')}#conta-criada"
+                )
 
         return render(
             request,
