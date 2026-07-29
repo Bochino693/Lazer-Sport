@@ -574,6 +574,8 @@ body {
   text-decoration: none;
   color: inherit;
   display: block;
+  min-width: 0;
+  height: 100%;
 }
 
 #produtos-container {
@@ -581,13 +583,13 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 20px 0;
+  padding: 24px 0 10px;
 }
 
 .grid-cards {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 30px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 26px;
   max-width: 1200px;
   width: 100%;
   margin: 0 auto;
@@ -596,199 +598,421 @@ body {
 }
 
 .card-produto {
+  position: relative;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  width: 320px;
-  max-width: 100%;
-  background: white;
-  border-radius: 20px;
-  box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+  width: 100%;
+  min-width: 0;
+  background:
+    linear-gradient(180deg, rgba(244,248,255,.92) 0, #fff 43%),
+    #fff;
+  border: 1px solid rgba(0,74,173,.13);
+  border-radius: 26px;
+  box-shadow:
+    0 18px 45px rgba(15,38,76,.09),
+    0 3px 10px rgba(15,38,76,.04);
   overflow: hidden;
-  transition: transform .32s ease, box-shadow .32s ease;
+  transition:
+    transform .32s cubic-bezier(.22,1,.36,1),
+    box-shadow .32s ease,
+    border-color .32s ease;
   margin: 0 auto;
   height: 100%;
   animation: fadeCard .5s ease forwards;
-  cursor: pointer;
+  isolation: isolate;
 }
 
-.card-link:hover .card-produto {
-  transform: translateY(-6px);
-  box-shadow: 0 12px 28px rgba(0,0,0,0.15);
+.card-produto::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 4px;
+  background: linear-gradient(90deg, #004aad 0 72%, #e63946 72%);
+  z-index: 6;
+}
+
+.card-produto.is-sale::before {
+  background: linear-gradient(90deg, #004aad 0 48%, #e63946 48% 100%);
+}
+
+.card-link:hover .card-produto,
+.card-link:focus-within .card-produto {
+  transform: translateY(-8px);
+  border-color: rgba(0,74,173,.3);
+  box-shadow:
+    0 26px 56px rgba(15,38,76,.16),
+    0 8px 18px rgba(0,74,173,.08);
+}
+
+.produto-media-link,
+.produto-title-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.produto-media-link {
+  display: block;
 }
 
 .card-produto .img-area {
-  height: 200px;
-  padding: 6px;
+  position: relative;
+  height: 238px;
+  padding: 24px 22px 12px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 76% 20%, rgba(230,57,70,.12), transparent 29%),
+    radial-gradient(circle at 18% 82%, rgba(0,74,173,.14), transparent 34%),
+    linear-gradient(145deg, #f7faff, #edf4ff);
+  border-bottom: 1px solid rgba(0,74,173,.09);
+}
+
+.card-produto .img-area::after {
+  content: "";
+  position: absolute;
+  inset: auto 12% 8px;
+  height: 18px;
+  border-radius: 50%;
+  background: rgba(9,31,62,.16);
+  filter: blur(12px);
+  z-index: 0;
 }
 
 .card-produto .img-area img {
+  position: relative;
+  z-index: 1;
+  display: block;
   width: 100%;
   height: 100%;
   object-fit: contain;
-  transition: transform .4s ease;
+  filter: drop-shadow(0 16px 14px rgba(9,31,62,.19));
+  transition: transform .48s cubic-bezier(.22,1,.36,1), filter .35s ease;
 }
 
-.card-produto:hover .img-area img {
-  transform: scale(1.05);
+.card-link:hover .card-produto .img-area img,
+.card-link:focus-within .card-produto .img-area img {
+  transform: scale(1.055) translateY(-3px);
+  filter: drop-shadow(0 20px 18px rgba(9,31,62,.25));
+}
+
+.produto-status {
+  position: absolute;
+  z-index: 3;
+  top: 16px;
+  left: 16px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  max-width: calc(100% - 32px);
+  min-height: 32px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.94);
+  color: #004aad;
+  border: 1px solid rgba(0,74,173,.14);
+  box-shadow: 0 8px 22px rgba(15,38,76,.12);
+  font-size: .72rem;
+  font-weight: 850;
+  letter-spacing: .035em;
+  text-transform: uppercase;
+  backdrop-filter: blur(8px);
+}
+
+.produto-status.is-sale {
+  background: linear-gradient(135deg, #004aad, #0069e8);
+  color: #fff;
+  border-color: transparent;
+}
+
+.produto-status.is-sale i {
+  color: #fff;
 }
 
 .card-produto .conteudo {
   flex: 1;
   display: flex;
   flex-direction: column;
-  text-align: center;
-  padding: 18px 16px;
+  text-align: left;
+  padding: 21px 21px 20px;
+}
+
+.card-produto .categorias {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  gap: 6px;
+  margin: 0 0 12px;
+}
+
+.card-produto .categoria-pill {
+  padding: 5px 9px;
+  border: 1px solid rgba(0,74,173,.11);
+  border-radius: 999px;
+  background: #edf4ff;
+  color: #004aad;
+  font-size: .68rem;
+  font-weight: 800;
+  line-height: 1.2;
 }
 
 .card-produto h3 {
-  font-size: 1.15rem;
-  margin: 0 0 8px 0;
-  color: #1f2d3d;
-  font-weight: 700;
-  text-align: center;
+  margin: 0;
+  color: #10233f;
+  font-size: clamp(1.08rem, 1.5vw, 1.28rem);
+  font-weight: 850;
+  line-height: 1.22;
+  letter-spacing: -.025em;
+  text-align: left;
+  transition: color .2s ease;
 }
 
-.avaliacao {
+.produto-title-link:hover h3 {
+  color: #004aad;
+}
+
+.card-produto .avaliacao {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 10px;
-  justify-content: center;
+  justify-content: flex-start;
+  gap: 7px;
+  margin: 9px 0 0;
 }
 
-.stars {
+.card-produto .stars {
   display: inline-flex;
-  gap: 6px;
-  color: #FFD700;
+  gap: 4px;
+  color: #e63946;
   line-height: 0;
 }
 
-.avaliacao .nota {
-  color: #333;
-  font-size: 0.9rem;
+.card-produto .avaliacao .nota {
+  color: #65758b;
+  font-size: .78rem;
+  font-weight: 700;
 }
 
 .card-produto .descricao {
-  color: #555;
-  font-size: 0.95rem;
-  margin: 8px 0 12px;
-  min-height: 48px;
+  display: -webkit-box;
+  min-height: 58px;
+  margin: 13px 0 15px;
+  overflow: hidden;
+  color: #526176;
+  font-size: .86rem;
+  line-height: 1.55;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
 }
 
-.categorias {
-  margin-top: 10px;
-  margin-bottom: 10px;
+.produto-specs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+  margin-bottom: 13px;
+}
+
+.produto-spec {
+  display: flex;
+  min-width: 0;
+  min-height: 58px;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  padding: 8px 7px;
+  border: 1px solid #e5ebf4;
+  border-radius: 13px;
+  background: #f7f9fc;
+  color: #516076;
+  text-align: center;
+}
+
+.produto-spec i {
+  color: #004aad;
+  font-size: .84rem;
+}
+
+.produto-spec span {
+  overflow: hidden;
+  font-size: .66rem;
+  font-weight: 750;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+}
+
+.card-produto .tags {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  justify-content: center;
+  min-height: 24px;
+  margin: 0 0 15px;
 }
 
-.categoria-pill {
-  background: #f0f7ff;
-  color: #007BFF;
-  padding: 4px 10px;
-  font-size: 0.8rem;
-  border-radius: 12px;
-  font-weight: 600;
-  text-align: center;
-}
-
-.voltagem,
-.dimensoes,
-.dimensoes-metros {
-  margin: 6px 0 12px 0;
-  color: #1f2d3d;
-  font-size: 0.92rem;
-  font-weight: 500;
-}
-
-.dimensoes-metros {
-  font-size: .9rem;
-  opacity: .9;
-}
-
-.volume {
-  margin: 6px 0 14px 0;
-  color: #1f2d3d;
-  font-size: 0.95rem;
+.card-produto .tag {
+  display: inline-flex;
+  align-items: center;
+  margin: 0;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #f2f5f9;
+  color: #617088;
+  font-size: .67rem;
   font-weight: 700;
-  background: #F3F8FF;
-  padding: 6px 10px;
-  border-radius: 10px;
-  display: inline-block;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-  align-self: center;
 }
 
-.tags {
-  margin-bottom: 12px;
+.produto-comercial {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: auto;
+  padding-top: 15px;
+  border-top: 1px solid #e8edf5;
 }
 
-.tag {
-  display: inline-block;
-  background: #E3F2FD;
-  color: #007BFF;
-  padding: 5px 8px;
-  border-radius: 10px;
-  font-size: 0.82rem;
-  margin-right: 6px;
+.produto-preco-wrap {
+  min-width: 0;
 }
 
-.preco {
-  color: #007BFF;
-  font-weight: 700;
-  font-size: 1.5rem;
-  margin-bottom: 12px;
-  text-align: center;
+.produto-preco-label {
+  display: block;
+  margin-bottom: 3px;
+  color: #6d7c91;
+  font-size: .68rem;
+  font-weight: 750;
+  letter-spacing: .035em;
+  text-transform: uppercase;
+}
+
+.card-produto .produto-preco {
+  display: block;
+  color: #004aad;
+  font-size: clamp(1.24rem, 2vw, 1.58rem);
+  font-weight: 900;
+  line-height: 1.05;
+  letter-spacing: -.035em;
+}
+
+.produto-consulta {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #10233f;
+  font-size: .92rem;
+  font-weight: 850;
 }
 
 .acoes-fixas {
-  margin-top: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+  display: grid;
+  grid-template-columns: 1.35fr 1fr;
+  gap: 9px;
+  margin-top: 14px;
 }
 
-.btn-vermais {
-  display: inline-block;
+.produto-acao {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   width: 100%;
-  text-align: center;
-  background: #007BFF;
-  color: white;
-  padding: 11px 14px;
-  border-radius: 10px;
-  font-weight: 700;
-  text-decoration: none;
-  transition: background .25s, transform .2s;
-  margin-top: auto;
-  border: none;
-  cursor: pointer;
-}
-
-.btn-vermais:hover {
-  background: #E63946;
-  transform: translateY(-3px);
-}
-
-.btn-whatsapp {
-  background: #25D366;
+  min-height: 47px;
+  padding: 11px 12px;
+  border: 1px solid transparent;
+  border-radius: 13px;
   font-family: inherit;
-  font-weight: 700;
-  font-size: inherit;
-  letter-spacing: normal;
-  text-transform: none;
+  font-size: .78rem;
+  font-weight: 850;
+  line-height: 1.1;
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform .2s ease, box-shadow .2s ease, background .2s ease;
 }
 
-.btn-whatsapp:hover {
-  background: #1ebe5d;
+.produto-acao:hover {
+  transform: translateY(-2px);
 }
 
-.btn-whatsapp i {
-  font-size: 1em;
-  margin-right: 6px;
-  vertical-align: middle;
+.btn-cart-brinquedo {
+  background: linear-gradient(135deg, #004aad, #006ee6);
+  color: #fff;
+  box-shadow: 0 9px 20px rgba(0,74,173,.22);
+}
+
+.btn-cart-brinquedo:hover {
+  background: linear-gradient(135deg, #003f93, #005ec6);
+  box-shadow: 0 12px 24px rgba(0,74,173,.3);
+}
+
+.btn-cart-brinquedo.is-added {
+  background: linear-gradient(135deg, #128442, #19a455);
+}
+
+.btn-cart-brinquedo:disabled {
+  cursor: wait;
+  opacity: .84;
+}
+
+.btn-detalhes-brinquedo {
+  background: #fff;
+  color: #004aad;
+  border-color: rgba(0,74,173,.22);
+}
+
+.btn-detalhes-brinquedo:hover {
+  background: #edf4ff;
+  border-color: rgba(0,74,173,.36);
+}
+
+.btn-orcamento-brinquedo {
+  background: linear-gradient(135deg, #e63946, #c91f31);
+  color: #fff;
+  box-shadow: 0 9px 20px rgba(230,57,70,.2);
+}
+
+.btn-orcamento-brinquedo:hover {
+  background: linear-gradient(135deg, #ce2d3a, #ad1828);
+  box-shadow: 0 12px 24px rgba(230,57,70,.27);
+}
+
+@media (max-width: 1020px) {
+  .grid-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 680px) {
+  .grid-cards {
+    grid-template-columns: 1fr;
+    gap: 18px;
+    min-height: auto;
+  }
+
+  .card-produto {
+    max-width: 430px;
+    border-radius: 22px;
+  }
+
+  .card-produto .img-area {
+    height: 218px;
+  }
+
+  .card-produto .conteudo {
+    padding: 18px;
+  }
+}
+
+@media (max-width: 390px) {
+  .produto-specs {
+    grid-template-columns: 1fr;
+  }
+
+  .produto-spec {
+    min-height: 44px;
+    flex-direction: row;
+    align-items: center;
+    text-align: left;
+  }
+
+  .acoes-fixas {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* =========================================================
@@ -2820,81 +3044,145 @@ body {
 
     <div class="grid-cards" id="grid-cards">
       {% for brinquedo in brinquedos_todos %}
-        <a href="{% url 'brinquedo_detalhe' brinquedo.id %}#bread" class="card-link"
-           data-nome="{{ brinquedo.nome_brinquedo|lower }}"
-           data-avaliacao="{{ brinquedo.avaliacao|default:0 }}"
-           data-preco="{{ brinquedo.valor_brinquedo|default:0 }}"
-        >
-          <div class="card-produto">
+        <article class="card-link"
+                 data-nome="{{ brinquedo.nome_brinquedo|lower }}"
+                 data-avaliacao="{{ brinquedo.avaliacao|default:0 }}"
+                 data-preco="{{ brinquedo.valor_brinquedo|default:0 }}">
+          <div class="card-produto{% if brinquedo.exibir_na_loja %} is-sale{% endif %}">
 
-            <div class="img-area">
-              {% if brinquedo.imagem_brinquedo %}
-                <img
-                  src="{{ brinquedo.imagem_brinquedo.url }}"
-                  alt="{{ brinquedo.nome_brinquedo }}"
-                  loading="lazy"
-                  decoding="async"
-                >
-              {% else %}
-                <img
-                  src="{% static 'img/placeholder-produto.png' %}"
-                  alt="{{ brinquedo.nome_brinquedo }}"
-                >
-              {% endif %}
-            </div>
+            <a href="{% url 'brinquedo_detalhe' brinquedo.id %}#bread"
+               class="produto-media-link"
+               aria-label="Ver detalhes de {{ brinquedo.nome_brinquedo }}">
+              <div class="img-area">
+                {% if brinquedo.exibir_na_loja %}
+                  <span class="produto-status is-sale">
+                    <i class="fa-solid fa-cart-shopping" aria-hidden="true"></i>
+                    Disponível para compra
+                  </span>
+                {% else %}
+                  <span class="produto-status">
+                    <i class="fa-solid fa-compass-drafting" aria-hidden="true"></i>
+                    Projeto sob consulta
+                  </span>
+                {% endif %}
+
+                {% if brinquedo.imagem_brinquedo %}
+                  <img
+                    src="{{ brinquedo.imagem_brinquedo.url }}"
+                    alt="{{ brinquedo.nome_brinquedo }}"
+                    loading="lazy"
+                    decoding="async"
+                  >
+                {% else %}
+                  <img
+                    src="{% static 'img/placeholder-produto.png' %}"
+                    alt="{{ brinquedo.nome_brinquedo }}"
+                    loading="lazy"
+                    decoding="async"
+                  >
+                {% endif %}
+              </div>
+            </a>
 
             <div class="conteudo">
-              <h3>{{ brinquedo.nome_brinquedo }}</h3>
-
-              <div class="avaliacao" data-rating="{{ brinquedo.avaliacao }}">
-                <div class="stars"></div>
-                <span class="nota">({{ brinquedo.avaliacao|floatformat:1 }})</span>
-              </div>
-
               <div class="categorias">
-                {% for cat in brinquedo.categorias_brinquedos.all %}
+                {% for cat in brinquedo.categorias_brinquedos.all|slice:":3" %}
                   <span class="categoria-pill">{{ cat.nome_categoria }}</span>
+                {% empty %}
+                  <span class="categoria-pill">Lazer &amp; Sport</span>
                 {% endfor %}
               </div>
 
+              <a href="{% url 'brinquedo_detalhe' brinquedo.id %}#bread"
+                 class="produto-title-link">
+                <h3>{{ brinquedo.nome_brinquedo }}</h3>
+              </a>
+
+              <div class="avaliacao" data-rating="{{ brinquedo.avaliacao }}">
+                <div class="stars" aria-hidden="true"></div>
+                <span class="nota">
+                  {{ brinquedo.avaliacao|floatformat:1 }} de 5
+                </span>
+              </div>
+
               <p class="descricao">
-                {{ brinquedo.descricao|truncatewords:16 }}
+                {{ brinquedo.descricao|truncatewords:20 }}
               </p>
 
-              <div class="voltagem">
-                🔌 Voltagem <strong>{{ brinquedo.voltz }}</strong>
-              </div>
+              <div class="produto-specs" aria-label="Especificações do brinquedo">
+                <div class="produto-spec" title="Voltagem: {{ brinquedo.voltz|default:'Não informada' }}">
+                  <i class="fa-solid fa-plug-circle-bolt" aria-hidden="true"></i>
+                  <span>{{ brinquedo.voltz|default:"Voltagem não informada" }}</span>
+                </div>
 
-              <div class="dimensoes">
-                📏 Dimensões: {{ brinquedo.dimensoes_m|default:"Não informadas" }}
-              </div>
+                <div class="produto-spec" title="Dimensões: {{ brinquedo.dimensoes_m|default:'Não informadas' }}">
+                  <i class="fa-solid fa-ruler-combined" aria-hidden="true"></i>
+                  <span>{{ brinquedo.dimensoes_m|default:"Dimensões não informadas" }}</span>
+                </div>
 
-              <div class="volume">
-                📦 Volume: {{ brinquedo.volume_formatado|default:"Não informado" }}
+                <div class="produto-spec" title="Volume: {{ brinquedo.volume_formatado|default:'Não informado' }}">
+                  <i class="fa-solid fa-box-open" aria-hidden="true"></i>
+                  <span>{{ brinquedo.volume_formatado|default:"Volume não informado" }}</span>
+                </div>
               </div>
 
               <div class="tags">
-                {% for tag in brinquedo.tags.all %}
+                {% for tag in brinquedo.tags.all|slice:":3" %}
                   <span class="tag">#{{ tag.nome_tags }}</span>
                 {% endfor %}
               </div>
 
-              <div class="acoes-fixas">
-                <button
-                  type="button"
-                  class="btn-vermais btn-whatsapp"
-                  onclick="abrirWhatsApp(event, '{{ brinquedo.nome_brinquedo|escapejs }}')"
-                >
-                  <i class="fab fa-whatsapp"></i>
-                  <strong>Pedir orçamento no WhatsApp</strong>
-                </button>
+              <div class="produto-comercial">
+                <div class="produto-preco-wrap">
+                  {% if brinquedo.exibir_na_loja %}
+                    <span class="produto-preco-label">Preço para compra</span>
+                    <strong class="produto-preco">
+                      R$ {{ brinquedo.valor_brinquedo|floatformat:"2g" }}
+                    </strong>
+                  {% else %}
+                    <span class="produto-preco-label">Projeto personalizado</span>
+                    <strong class="produto-consulta">
+                      <i class="fa-solid fa-comments" aria-hidden="true"></i>
+                      Solicite um orçamento
+                    </strong>
+                  {% endif %}
+                </div>
+              </div>
 
-                <span class="btn-vermais">Ver mais</span>
+              <div class="acoes-fixas">
+                {% if brinquedo.exibir_na_loja %}
+                  <button
+                    type="button"
+                    class="produto-acao btn-cart-brinquedo"
+                    onclick="adicionarBrinquedoAoCarrinho(event, {{ brinquedo.id }}, this)"
+                    aria-label="Adicionar {{ brinquedo.nome_brinquedo }} ao carrinho"
+                  >
+                    <i class="fa-solid fa-cart-plus" aria-hidden="true"></i>
+                    <span>Adicionar ao carrinho</span>
+                  </button>
+                {% else %}
+                  <button
+                    type="button"
+                    class="produto-acao btn-orcamento-brinquedo"
+                    onclick="abrirWhatsApp(event, '{{ brinquedo.nome_brinquedo|escapejs }}')"
+                    aria-label="Pedir orçamento de {{ brinquedo.nome_brinquedo }} pelo WhatsApp"
+                  >
+                    <i class="fa-brands fa-whatsapp" aria-hidden="true"></i>
+                    <span>Pedir orçamento</span>
+                  </button>
+                {% endif %}
+
+                <a href="{% url 'brinquedo_detalhe' brinquedo.id %}#bread"
+                   class="produto-acao btn-detalhes-brinquedo"
+                   aria-label="Ver detalhes de {{ brinquedo.nome_brinquedo }}">
+                  <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i>
+                  <span>Ver detalhes</span>
+                </a>
               </div>
             </div>
 
           </div>
-        </a>
+        </article>
       {% empty %}
         <p class="nenhum-produto">Nenhum produto encontrado.</p>
       {% endfor %}
@@ -4576,7 +4864,7 @@ function abrirWhatsApp(event, nome) {
     window.open(url, '_blank');
 }
 
-function adicionarPecaAoCarrinho(event, pecaId, botao) {
+function adicionarProdutoCardAoCarrinho(event, tipo, produtoId, botao) {
     event.preventDefault();
     event.stopPropagation();
 
@@ -4597,7 +4885,7 @@ function adicionarPecaAoCarrinho(event, pecaId, botao) {
         '<i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i>' +
         '<span>Adicionando...</span>';
 
-    Promise.resolve(window.adicionarAoCarrinho('peca', pecaId))
+    Promise.resolve(window.adicionarAoCarrinho(tipo, produtoId))
         .then((resultado) => {
             if (!resultado || !resultado.sucesso) return;
 
@@ -4615,6 +4903,24 @@ function adicionarPecaAoCarrinho(event, pecaId, botao) {
                 botao.innerHTML = conteudoOriginal;
             }, 1200);
         });
+}
+
+function adicionarBrinquedoAoCarrinho(event, brinquedoId, botao) {
+    return adicionarProdutoCardAoCarrinho(
+        event,
+        'brinquedo',
+        brinquedoId,
+        botao
+    );
+}
+
+function adicionarPecaAoCarrinho(event, pecaId, botao) {
+    return adicionarProdutoCardAoCarrinho(
+        event,
+        'peca',
+        pecaId,
+        botao
+    );
 }
 
 /* ======================================================

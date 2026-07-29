@@ -25,6 +25,7 @@ from django.http import FileResponse, Http404
 from django.conf import settings
 from random import shuffle, sample
 
+
 def media_serve(request, path):
     file_path = os.path.join(settings.MEDIA_ROOT, path)
 
@@ -82,6 +83,7 @@ class HomeView(View):
                 "altura_m",
                 "largura_m",
                 "profundidade_m",
+                "exibir_na_loja",
             )
             .prefetch_related(
                 "categorias_brinquedos",
@@ -133,15 +135,15 @@ class HomeView(View):
         for combo in combos:
             total_original = sum(
                 (
-                    brinquedo.valor_brinquedo
-                    or Decimal("0")
+                        brinquedo.valor_brinquedo
+                        or Decimal("0")
                 )
                 for brinquedo in combo.brinquedos.all()
             )
 
             valor_combo = (
-                combo.valor_combo
-                or Decimal("0")
+                    combo.valor_combo
+                    or Decimal("0")
             )
 
             economia = total_original - valor_combo
@@ -338,14 +340,13 @@ class HomeView(View):
 
 from django.template.loader import render_to_string
 
-
 from .models import PecasReposicao
+
 
 class ReposicaoView(View):
 
     def get(self, request):
         categorias_peca = CategoriaPeca.objects.all()
-
 
         ctx = {
             'categorias_peca': categorias_peca,
@@ -1151,7 +1152,6 @@ from django.views import View
 from django.http import JsonResponse
 from .models import Promocoes, Brinquedos  # Certifique-se dos nomes dos modelos
 
-
 from decimal import Decimal, InvalidOperation
 
 from django.contrib import messages
@@ -1296,9 +1296,9 @@ class PromocaoAdminView(AdminOnlyMixin, View):
         if imagem:
             promocao.imagem_promocao = imagem
         elif (
-            acao == "editar"
-            and request.POST.get("remover_imagem") == "on"
-            and promocao.imagem_promocao
+                acao == "editar"
+                and request.POST.get("remover_imagem") == "on"
+                and promocao.imagem_promocao
         ):
             promocao.imagem_promocao.delete(save=False)
             promocao.imagem_promocao = ""
@@ -1589,9 +1589,9 @@ class ProjetoAdminView(AdminOnlyMixin, View):
             else 0
         )
         total_final = (
-            imagens_existentes.count()
-            - total_removido
-            + len(novas_imagens)
+                imagens_existentes.count()
+                - total_removido
+                + len(novas_imagens)
         )
 
         if total_final > self.maximo_imagens:
@@ -1651,10 +1651,10 @@ class ProjetoAdminView(AdminOnlyMixin, View):
             projeto.delete()
 
             if (
-                brinquedo
-                and not Projetos.objects.filter(
-                    brinquedo_projetado=brinquedo
-                ).exists()
+                    brinquedo
+                    and not Projetos.objects.filter(
+                brinquedo_projetado=brinquedo
+            ).exists()
             ):
                 brinquedo.delete()
         except ProtectedError:
@@ -1721,6 +1721,7 @@ class EventoAdminView(AdminOnlyMixin, View):
 
         return JsonResponse({"success": True})
 
+
 class PedidoAdminView(AdminOnlyMixin, View):
     template_name = "gestao/pedidos_adm.html"
 
@@ -1731,7 +1732,7 @@ class PedidoAdminView(AdminOnlyMixin, View):
             .select_related("cliente", "cliente__user")
             .prefetch_related("itens")
         )
-#dnadocrime
+        # dnadocrime
         filtros = {}
 
         impresso = request.GET.get("impresso")
@@ -1768,6 +1769,7 @@ from django.contrib import messages
 from django.contrib.auth import login, authenticate
 from django.contrib.auth.models import User
 from .forms import UserForm
+
 
 class RegistrarView(View):
     template_name = "register.html"
@@ -2056,7 +2058,7 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
             brinquedo.largura_m = largura
             brinquedo.profundidade_m = profundidade
             brinquedo.exibir_na_loja = (
-                request.POST.get("exibir_na_loja") == "on"
+                    request.POST.get("exibir_na_loja") == "on"
             )
             if imagem:
                 brinquedo.imagem_brinquedo = imagem
@@ -2311,10 +2313,10 @@ class DashboardAdminView(AdminOnlyMixin, View):
         )
 
         vendas_total = (
-            pedidos_finalizados_qs.aggregate(
-                total=Sum("total_liquido")
-            ).get("total")
-            or Decimal("0.00")
+                pedidos_finalizados_qs.aggregate(
+                    total=Sum("total_liquido")
+                ).get("total")
+                or Decimal("0.00")
         )
 
         vendas_total_formatado = (
@@ -2407,34 +2409,34 @@ class DashboardAdminView(AdminOnlyMixin, View):
         )
 
         total_brinquedo_clicks = (
-            brinquedos_clicks.aggregate(total=Sum("quantidade_click"))["total"]
-            or 0
+                brinquedos_clicks.aggregate(total=Sum("quantidade_click"))["total"]
+                or 0
         )
         total_combo_clicks = (
-            combos_clicks.aggregate(total=Sum("quantidade_click"))["total"]
-            or 0
+                combos_clicks.aggregate(total=Sum("quantidade_click"))["total"]
+                or 0
         )
         total_promocao_clicks = (
-            promocoes_clicks.aggregate(total=Sum("quantidade_click"))["total"]
-            or 0
+                promocoes_clicks.aggregate(total=Sum("quantidade_click"))["total"]
+                or 0
         )
         total_categoria_clicks = (
-            categorias_clicks.aggregate(total=Sum("quantidade_click"))["total"]
-            or 0
+                categorias_clicks.aggregate(total=Sum("quantidade_click"))["total"]
+                or 0
         )
         total_geral = (
-            total_brinquedo_clicks
-            + total_combo_clicks
-            + total_promocao_clicks
-            + total_categoria_clicks
+                total_brinquedo_clicks
+                + total_combo_clicks
+                + total_promocao_clicks
+                + total_categoria_clicks
         )
 
         crescimento_por_dia = defaultdict(int)
         for queryset in (
-            brinquedos_clicks,
-            combos_clicks,
-            promocoes_clicks,
-            categorias_clicks,
+                brinquedos_clicks,
+                combos_clicks,
+                promocoes_clicks,
+                categorias_clicks,
         ):
             dados_diarios = (
                 queryset
@@ -2585,7 +2587,6 @@ from .models import Manutencao
 from django.contrib.auth.decorators import login_required
 from .models import ItemCarrinho, Carrinho
 
-
 # Cupons só podem ser usados quando o carrinho contém pelo menos um
 # brinquedo avulso ou uma peça de reposição. Combos e promoções, sozinhos,
 # não liberam o campo nem a aplicação do desconto.
@@ -2651,7 +2652,18 @@ def adicionar_ao_carrinho(request, tipo, object_id):
     if not model:
         return JsonResponse({'erro': 'Tipo inválido'}, status=400)
 
-    objeto = get_object_or_404(model, id=object_id)
+    # O botão só é exibido para brinquedos marcados para venda, mas a
+    # validação também precisa existir no servidor para impedir que uma
+    # requisição manual adicione ao carrinho um item apenas para orçamento.
+    if tipo == 'brinquedo':
+        objeto = get_object_or_404(
+            Brinquedos,
+            id=object_id,
+            ativo=True,
+            exibir_na_loja=True,
+        )
+    else:
+        objeto = get_object_or_404(model, id=object_id)
     content_type = ContentType.objects.get_for_model(objeto)
 
     item, created = ItemCarrinho.objects.get_or_create(
@@ -2709,7 +2721,6 @@ def limpar_carrinho(request):
     return JsonResponse({'status': 'success'})
 
 
-
 class CarrinhoView(LoginRequiredMixin, View):
 
     def get(self, request):
@@ -2760,7 +2771,6 @@ from .utils import calcular_frete_por_cep
 
 @csrf_exempt
 def calcular_frete(request):
-
     if request.method != "POST":
         return JsonResponse({"status": "erro"})
 
@@ -2818,6 +2828,7 @@ def calcular_frete(request):
 
 from django.views.decorators.http import require_POST
 
+
 @require_POST
 @login_required
 def alterar_quantidade_item(request):
@@ -2861,7 +2872,6 @@ def alterar_quantidade_item(request):
 
 from django.views.decorators.http import require_POST
 from django.contrib.auth.decorators import login_required
-
 
 
 @login_required
@@ -2955,9 +2965,7 @@ def aplicar_cupom(request):
     })
 
 
-
 def salvar_cpf_carrinho(request):
-
     if request.method != "POST":
         return JsonResponse({"status": "erro"})
 
@@ -3088,12 +3096,10 @@ class PaymentView(LoginRequiredMixin, View):
         return render(request, 'payment.html', context)
 
 
-
 from decimal import Decimal
 import uuid
 from django.views.decorators.http import require_GET
 from django.views.decorators.cache import never_cache
-
 
 payment_logger = logging.getLogger("core.payment")
 
@@ -3180,14 +3186,14 @@ def _pagamento_confere_com_carrinho(payment, carrinho, assinatura=None):
         return False
 
     return (
-        bool(payment_id)
-        and (not payment_id_atual or payment_id == payment_id_atual)
-        and valor_pago is not None
-        and valor_esperado is not None
-        and valor_pago == valor_esperado
-        and referencia == str(carrinho.id)
-        and bool(assinatura_mp)
-        and assinatura_mp == assinatura_atual
+            bool(payment_id)
+            and (not payment_id_atual or payment_id == payment_id_atual)
+            and valor_pago is not None
+            and valor_esperado is not None
+            and valor_pago == valor_esperado
+            and referencia == str(carrinho.id)
+            and bool(assinatura_mp)
+            and assinatura_mp == assinatura_atual
     )
 
 
@@ -3239,11 +3245,11 @@ def _cancelar_pagamento_pendente_mp(sdk, payment_id):
 def _mp_error_message(payment):
     causa = (payment.get("cause") or [{}])[0]
     return (
-        causa.get("description")
-        or causa.get("code")
-        or payment.get("message")
-        or payment.get("error")
-        or "Mercado Pago recusou a solicitação."
+            causa.get("description")
+            or causa.get("code")
+            or payment.get("message")
+            or payment.get("error")
+            or "Mercado Pago recusou a solicitação."
     )
 
 
@@ -3329,8 +3335,8 @@ def _finalizar_pagamento_aprovado(carrinho, payment):
             )
 
         if not _pagamento_confere_com_carrinho(
-            payment,
-            carrinho_bloqueado,
+                payment,
+                carrinho_bloqueado,
         ):
             raise PagamentoDivergenteError(
                 "O valor ou os itens pagos não correspondem ao carrinho."
@@ -3379,13 +3385,13 @@ def _finalizar_pagamento_aprovado(carrinho, payment):
                     ),
                     tipo_item=item.content_type.model,
                     preco_unitario=(
-                        _valor_monetario(item.preco_unitario)
-                        or Decimal("0.00")
+                            _valor_monetario(item.preco_unitario)
+                            or Decimal("0.00")
                     ),
                     quantidade=item.quantidade,
                     subtotal=(
-                        _valor_monetario(item.subtotal)
-                        or Decimal("0.00")
+                            _valor_monetario(item.subtotal)
+                            or Decimal("0.00")
                     ),
                 )
             )
@@ -3490,17 +3496,17 @@ def gerar_pix(request):
                 })
 
             if (
-                existente.get("status")
-                in {"pending", "in_process", "authorized"}
-                and _pagamento_confere_com_carrinho(
-                    existente,
-                    carrinho,
-                    assinatura,
-                )
-                and not (
+                    existente.get("status")
+                    in {"pending", "in_process", "authorized"}
+                    and _pagamento_confere_com_carrinho(
+                existente,
+                carrinho,
+                assinatura,
+            )
+                    and not (
                     pix_existente["qr_code"]
                     and pix_existente["pix_copia_cola"]
-                )
+            )
             ):
                 return JsonResponse(
                     {
@@ -3514,14 +3520,14 @@ def gerar_pix(request):
                 )
 
             if (
-                existente.get("status") in {"pending", "in_process"}
-                and _pagamento_confere_com_carrinho(
-                    existente,
-                    carrinho,
-                    assinatura,
-                )
-                and pix_existente["qr_code"]
-                and pix_existente["pix_copia_cola"]
+                    existente.get("status") in {"pending", "in_process"}
+                    and _pagamento_confere_com_carrinho(
+                existente,
+                carrinho,
+                assinatura,
+            )
+                    and pix_existente["qr_code"]
+                    and pix_existente["pix_copia_cola"]
             ):
                 return JsonResponse({
                     **pix_existente,
@@ -3601,18 +3607,18 @@ def gerar_pix(request):
     status_code = int(response.get("status") or 500)
     pix = _dados_pix(payment)
     pagamento_confere = (
-        bool(payment.get("id"))
-        and _pagamento_confere_com_carrinho(
-            payment,
-            carrinho,
-            assinatura,
-        )
+            bool(payment.get("id"))
+            and _pagamento_confere_com_carrinho(
+        payment,
+        carrinho,
+        assinatura,
+    )
     )
 
     if (
-        status_code in {200, 201}
-        and payment.get("id")
-        and not pagamento_confere
+            status_code in {200, 201}
+            and payment.get("id")
+            and not pagamento_confere
     ):
         valor_retornado = _valor_monetario(
             payment.get("transaction_amount")
@@ -3638,11 +3644,11 @@ def gerar_pix(request):
         )
 
     if (
-        status_code not in {200, 201}
-        or not payment.get("id")
-        or not pagamento_confere
-        or not pix["qr_code"]
-        or not pix["pix_copia_cola"]
+            status_code not in {200, 201}
+            or not payment.get("id")
+            or not pagamento_confere
+            or not pix["qr_code"]
+            or not pix["pix_copia_cola"]
     ):
         payment_logger.error(
             "Mercado Pago recusou Pix carrinho=%s http=%s resposta=%r",
@@ -3686,9 +3692,9 @@ from django.db import transaction
 
 from .models import Carrinho, Pedido, ItemPedido
 
+
 @csrf_exempt
 def webhook_mercadopago(request):
-
     if request.method != "POST":
         return HttpResponse(status=200)
 
@@ -3743,7 +3749,6 @@ import mercadopago
 @require_GET
 @never_cache
 def verificar_pagamento(request):
-
     carrinho_id = request.GET.get("carrinho_id")
     if not carrinho_id:
         return JsonResponse({
@@ -3877,7 +3882,6 @@ def verificar_pagamento(request):
         "pedido_id": pedido.id,
         "redirect_url": _url_meus_pedidos(),
     })
-
 
 
 @login_required
@@ -4080,18 +4084,18 @@ def processar_cartao(request):
     status_code = int(response.get("status") or 500)
     payment_id = payment.get("id")
     pagamento_confere = (
-        bool(payment_id)
-        and _pagamento_confere_com_carrinho(
-            payment,
-            carrinho,
-            assinatura,
-        )
+            bool(payment_id)
+            and _pagamento_confere_com_carrinho(
+        payment,
+        carrinho,
+        assinatura,
+    )
     )
 
     if (
-        status_code in {200, 201}
-        and payment_id
-        and not pagamento_confere
+            status_code in {200, 201}
+            and payment_id
+            and not pagamento_confere
     ):
         valor_retornado = _valor_monetario(
             payment.get("transaction_amount")
@@ -4116,9 +4120,9 @@ def processar_cartao(request):
         )
 
     if (
-        status_code not in {200, 201}
-        or not payment_id
-        or not pagamento_confere
+            status_code not in {200, 201}
+            or not payment_id
+            or not pagamento_confere
     ):
         payment_logger.error(
             "Mercado Pago recusou cartão carrinho=%s http=%s resposta=%r",
@@ -4246,10 +4250,7 @@ from django.views import View
 from django.contrib.auth.mixins import LoginRequiredMixin
 
 
-
-
-
-#-23.453403648643707, -46.66151816239609  -23.472997309863196, -46.63041992925325
+# -23.453403648643707, -46.66151816239609  -23.472997309863196, -46.63041992925325
 class MeusPedidosView(LoginRequiredMixin, View):
     login_url = 'login'
 
@@ -4270,6 +4271,7 @@ class MeusPedidosView(LoginRequiredMixin, View):
         return render(request, 'meus_pedidos.html', {
             'pedidos': pedidos,
         })
+
 
 from django.shortcuts import redirect
 from django.urls import reverse
@@ -4303,6 +4305,7 @@ def redirecionar_categoria_aventura(request):
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 import json
+
 
 @login_required
 @require_POST
@@ -4340,7 +4343,6 @@ def atualizar_tipo_envio(request, carrinho_id):
         "status": "ok",
         "total_final": float(carrinho.total_final),
     })
-
 
 
 class PedidosParaImpressaoAPI(View):
@@ -4423,7 +4425,10 @@ class PedidosParaImpressaoAPI(View):
 
         return JsonResponse({"pedidos": data})
 
+
 from django.views.decorators.csrf import csrf_exempt
+
+
 @method_decorator(csrf_exempt, name='dispatch')
 class MarcarPedidoImpressoAPI(View):
 
@@ -4442,13 +4447,13 @@ class MarcarPedidoImpressoAPI(View):
             return JsonResponse({"erro": "Pedido não encontrado"}, status=404)
 
 
-
 # No Django (Produção)
 from django.http import JsonResponse
 from django.contrib.auth import authenticate
 from django.views.decorators.csrf import csrf_exempt
 
-@csrf_exempt # Isento para permitir o POST do seu Flask local
+
+@csrf_exempt  # Isento para permitir o POST do seu Flask local
 def verify_auth_api(request):
     u = request.POST.get('username')
     p = request.POST.get('password')
@@ -4466,6 +4471,7 @@ def verify_auth_api(request):
             'is_superuser': user.is_superuser
         })
     return JsonResponse({'valid': False}, status=401)
+
 
 def robots_txt(request):
     """robots.txt do site principal -- antes não existia rota nenhuma
@@ -4497,7 +4503,6 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views import View
 
 from .models import Brinquedos, Combos
-
 
 from decimal import Decimal, InvalidOperation
 
@@ -4658,9 +4663,9 @@ class ComboAdminView(AdminOnlyMixin, View):
         if imagem:
             combo.imagem_combo = imagem
         elif (
-            acao == "editar"
-            and request.POST.get("remover_imagem") == "on"
-            and combo.imagem_combo
+                acao == "editar"
+                and request.POST.get("remover_imagem") == "on"
+                and combo.imagem_combo
         ):
             combo.imagem_combo.delete(save=False)
             combo.imagem_combo = ""
@@ -4696,7 +4701,6 @@ class ComboAdminView(AdminOnlyMixin, View):
             messages.success(request, "Combo excluído com sucesso.")
 
         return redirect("combos_admin")
-
 
 
 import unicodedata
@@ -4893,4 +4897,3 @@ class SearchView(View):
             "total_resultados": len(resultados),
             "busca_realizada": bool(termo),
         })
-    
