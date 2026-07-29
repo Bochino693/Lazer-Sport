@@ -1063,8 +1063,23 @@ class Manutencao(models.Model):
 
     brinquedo = models.ForeignKey(
         Brinquedos,
-        on_delete=models.CASCADE,
-        related_name='brinquedo_manutencoes'
+        on_delete=models.SET_NULL,
+        related_name='brinquedo_manutencoes',
+        null=True,
+        blank=True
+    )
+    brinquedo_nao_listado = models.BooleanField(
+        default=False,
+        help_text="Marque quando o equipamento não estiver no catálogo."
+    )
+    brinquedo_descricao_livre = models.CharField(
+        max_length=180,
+        blank=True,
+        default="",
+        help_text=(
+            "Identificação manual para equipamentos não catalogados, "
+            "não registrados ou antigos."
+        )
     )
     descricao = models.TextField(max_length=999)
 
@@ -1104,8 +1119,19 @@ class Manutencao(models.Model):
     criado_em = models.DateTimeField(auto_now_add=True)
     atualizada_em = models.DateTimeField(auto_now=True, null=True)
 
+    @property
+    def nome_equipamento(self):
+        if self.brinquedo_id:
+            return str(self.brinquedo)
+
+        descricao_livre = (self.brinquedo_descricao_livre or "").strip()
+        if descricao_livre:
+            return descricao_livre
+
+        return "Equipamento antigo ou não catalogado"
+
     def __str__(self):
-        return f"{self.brinquedo} - {self.get_status_display()}"
+        return f"{self.nome_equipamento} - {self.get_status_display()}"
 
 
 class ManutencaoImagem(models.Model):
@@ -1207,3 +1233,4 @@ class CategoriaClick(Prime):
     class Meta:
         verbose_name = "Categoria Clicada"
         verbose_name_plural = "Categorias Clicadas"
+        

@@ -391,7 +391,12 @@ class ManutencaoView(View):
             })
 
         form = ManutencaoForm()
-        manutencoes = Manutencao.objects.filter(usuario=usuario).order_by('-criado_em')
+        manutencoes = (
+            Manutencao.objects
+            .filter(usuario=usuario)
+            .select_related('brinquedo')
+            .order_by('-criado_em')
+        )
         brinquedos = Brinquedos.objects.all().order_by('nome_brinquedo')
 
         return render(request, self.template_name, {
@@ -458,9 +463,12 @@ class ManutencaoView(View):
 
         return render(request, self.template_name, {
             'form': form,
-            'manutencoes': Manutencao.objects.filter(
-                usuario=usuario
-            ).order_by('-criado_em'),
+            'manutencoes': (
+                Manutencao.objects
+                .filter(usuario=usuario)
+                .select_related('brinquedo')
+                .order_by('-criado_em')
+            ),
             'brinquedos': Brinquedos.objects.all().order_by('nome_brinquedo'),
             'tab_ativa': 'nova',
         })
@@ -2501,7 +2509,11 @@ class ManutencaoAdminView(LoginRequiredMixin, View):
     template_name = "gestao/manutencao_adm.html"
 
     def get(self, request):
-        manutencoes = Manutencao.objects.all()
+        manutencoes = (
+            Manutencao.objects
+            .select_related('brinquedo', 'usuario')
+            .order_by('-criado_em')
+        )
 
         ctx = {
             'manutencoes': manutencoes,

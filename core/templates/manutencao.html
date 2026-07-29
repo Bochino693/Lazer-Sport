@@ -1359,6 +1359,20 @@
     font-size: .65rem;
 }
 
+.solicitacao-cell .equipamento-manual-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: 5px;
+    padding: 4px 7px;
+    border: 1px solid rgba(0, 74, 173, .14);
+    border-radius: 999px;
+    background: #edf5ff;
+    color: var(--mt-blue);
+    font-size: .58rem;
+    font-weight: 850;
+}
+
 .status,
 .status-badge {
     display: inline-flex;
@@ -2813,6 +2827,9 @@
                                        name="brinquedo_nao_listado"
                                        id="brinquedo-nao-listado"
                                        value="{% if request.POST.brinquedo_nao_listado == '1' %}1{% else %}0{% endif %}">
+                                {{ form.brinquedo.errors }}
+                                {{ form.brinquedo_nao_listado.errors }}
+                                {{ form.brinquedo_descricao_livre.errors }}
                             </div>
 
                             <div class="form-group span-full">
@@ -3094,8 +3111,14 @@
                                             <i class="fa-solid fa-screwdriver-wrench"></i>
                                         </span>
                                         <span>
-                                            <strong>{{ manutencao.brinquedo }}</strong>
+                                            <strong>{{ manutencao.nome_equipamento }}</strong>
                                             <small>Protocolo #{{ manutencao.id|stringformat:"04d" }}</small>
+                                            {% if manutencao.brinquedo_nao_listado or not manutencao.brinquedo %}
+                                            <small class="equipamento-manual-label">
+                                                <i class="fa-solid fa-pen-to-square" aria-hidden="true"></i>
+                                                Identificação manual
+                                            </small>
+                                            {% endif %}
                                         </span>
                                     </div>
                                 </td>
@@ -3121,7 +3144,7 @@
                                     <button type="button"
                                             class="btn-detalhe"
                                             data-id="{{ manutencao.id }}"
-                                            data-brinquedo="{{ manutencao.brinquedo }}"
+                                            data-brinquedo="{{ manutencao.nome_equipamento }}"
                                             data-status="{{ manutencao.get_status_display }}"
                                             data-status-code="{{ manutencao.status }}"
                                             data-descricao="{{ manutencao.descricao }}"
