@@ -1875,152 +1875,46 @@ class PedidoAdminView(AdminOnlyMixin, View):
 
 # core/views.py
 # ============================================================
-# BLOCO DE CONTA DO CLIENTE -- versão corrigida
+# BLOCO DE CONTA DO CLIENTE -- só as views
 #
-# Substitui, dentro de core/views.py, tudo que vai de
-# "class CadastroForm(forms.Form):" até o fim de
-# "class CompletarPerfilView(LoginRequiredMixin, View):".
+# Em core/views.py, substitua TUDO que vai da linha
 #
-# Os imports do bloco (re, forms, User, transaction, etc.) já estão logo
-# acima dele no seu arquivo -- não precisa mexer neles.
+#     # core/views.py
+#     """
+#     Telas de conta do cliente.
+#     ...
 #
-# O que mudou em relação à versão anterior:
+# até o fim do CompletarPerfilView, por este bloco.
 #
-# 1. O telefone agora é normalizado ANTES de ser validado. Antes, o
-#    validators=[validar_telefone] do campo rodava no valor cru: se o
-#    JS da máscara não tivesse rodado (celular antigo, colar do
-#    WhatsApp, autofill), "11912345678" era recusado mesmo sendo um
-#    número perfeitamente válido. Agora só os dígitos importam e o
-#    formato é montado no servidor.
+# Isso apaga junto os imports `import re`, `from django import forms` e
+# `from .models import ClientePerfil, validar_telefone` que vieram
+# grudados naquele trecho -- os três só existiam por causa dos
+# formulários, e nada mais no views.py usa nenhum deles (conferi).
 #
-# 2. Mesma normalização na tela de completar perfil, pelo mesmo motivo.
+# ATENÇÃO -- uma edição a mais, na LINHA 9 do views.py:
+#
+#     de:  from .forms import UserForm, PerfilForm
+#
+#     para: from .forms import (
+#               UserForm,
+#               PerfilForm,
+#               CadastroForm,
+#               CompletarPerfilForm,
+#           )
+#
+# O ClientePerfil continua disponível: já vem no import grandão do
+# topo do arquivo (linha 15).
 # ============================================================
 
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.db import transaction
 
-# O validar_telefone do models.py levanta a ValidationError do Django
-# (django.core.exceptions), que é uma classe diferente da
-# forms.ValidationError. Sem este import o except abaixo não pegaria
-# nada e o erro subiria como 500.
-from django.core.exceptions import ValidationError as DjangoValidationError
-
-
-def normalizar_telefone(valor):
-    """
-    Aceita qualquer coisa que o cliente digitar e devolve no formato que
-    o validar_telefone do models.py exige: (11)91234-5678 ou
-    (11)1234-5678. Se não der para reconhecer, devolve o valor original
-    para o validador reclamar com a mensagem certa.
-    """
-    digitos = re.sub(r"\D", "", valor or "")
-
-    if len(digitos) == 11:
-        return f"({digitos[:2]}){digitos[2:7]}-{digitos[7:]}"
-
-    if len(digitos) == 10:
-        return f"({digitos[:2]}){digitos[2:6]}-{digitos[6:]}"
-
-    return (valor or "").strip()
-
-
-class CadastroForm(forms.Form):
-    first_name = forms.CharField(max_length=150, label="Nome")
-    last_name = forms.CharField(max_length=150, label="Sobrenome")
-    username = forms.CharField(max_length=150, label="Nome de usuário")
-    email = forms.EmailField(label="E-mail")
-    # Sem validators aqui de propósito: o validador roda depois da
-    # normalização, dentro de clean_telefone.
-    telefone = forms.CharField(max_length=20, label="Telefone")
-    password = forms.CharField(widget=forms.PasswordInput, label="Senha")
-    password2 = forms.CharField(
-        widget=forms.PasswordInput, label="Confirmar senha"
-    )
-
-    def clean_username(self):
-        username = self.cleaned_data["username"].strip()
-
-        if User.objects.filter(username__iexact=username).exists():
-            raise forms.ValidationError("Esse nome de usuário já está em uso.")
-
-        return username
-
-    def clean_email(self):
-        email = self.cleaned_data["email"].strip().lower()
-
-        if User.objects.filter(email__iexact=email).exists():
-            raise forms.ValidationError(
-                "Já existe uma conta com esse e-mail. "
-                "Faça login ou entre com Google."
-            )
-
-        return email
-
-    def clean_telefone(self):
-        telefone = normalizar_telefone(self.cleaned_data.get("telefone"))
-
-        try:
-            validar_telefone(telefone)
-        except DjangoValidationError as erro:
-            raise forms.ValidationError(erro.messages)
-
-        return telefone
-
-    def clean(self):
-        dados = super().clean()
-
-        senha = dados.get("password")
-        senha2 = dados.get("password2")
-
-        if senha and senha2 and senha != senha2:
-            self.add_error("password2", "As senhas não conferem.")
-
-        if senha and len(senha) < 8:
-            self.add_error("password", "Use pelo menos 8 caracteres.")
-
-        return dados
-
-    @transaction.atomic
-    def salvar(self):
-        dados = self.cleaned_data
-
-        user = User(
-            username=dados["username"],
-            email=dados["email"],
-            first_name=dados["first_name"].strip(),
-            last_name=dados["last_name"].strip(),
-        )
-        user.set_password(dados["password"])
-        user.save()  # o signal post_save cria o ClientePerfil
-
-        perfil, _ = ClientePerfil.objects.get_or_create(user=user)
-        perfil.telefone = dados["telefone"]
-        perfil.nome_completo = f"{user.first_name} {user.last_name}".strip()
-        perfil.save(update_fields=["telefone", "nome_completo"])
-
-        # Registra o e-mail na tabela do allauth. Sem isso, quem se
-        # cadastra aqui e depois clica em "Entrar com Google" viraria
-        # um segundo usuário com o mesmo e-mail (o Django não impõe
-        # unicidade em User.email).
-        try:
-            from allauth.account.models import EmailAddress
-
-            EmailAddress.objects.get_or_create(
-                user=user,
-                email=user.email,
-                defaults={"verified": False, "primary": True},
-            )
-        except Exception:
-            # allauth ausente ou tabela não migrada: o cadastro não
-            # pode quebrar por causa disso.
-            pass
-
-        return user
-
-
-# ============================================================
-# CADASTRO MANUAL
-# ============================================================
 
 class RegistrarView(View):
+    """
+    Cadastro manual. A validação e a gravação moram no CadastroForm --
+    aqui fica só o fluxo da requisição.
+    """
     template_name = "register.html"
 
     def get(self, request):
@@ -2036,7 +1930,11 @@ class RegistrarView(View):
             messages.error(request, "Confira os campos destacados e tente de novo.")
             return render(request, self.template_name, {"form": form})
 
-        user = form.salvar()
+        # O salvar() grava User e ClientePerfil. Se o segundo falhar, o
+        # primeiro não pode ficar órfão -- daí a transação aqui, e não
+        # dentro do formulário.
+        with transaction.atomic():
+            user = form.salvar()
 
         user = authenticate(
             request,
@@ -2054,40 +1952,11 @@ class RegistrarView(View):
         return redirect("home")
 
 
-# ============================================================
-# COMPLETAR PERFIL (só telefone)
-# ============================================================
-
-class CompletarPerfilForm(forms.ModelForm):
-    class Meta:
-        model = ClientePerfil
-        fields = ["telefone"]
-        widgets = {
-            "telefone": forms.TextInput(
-                attrs={
-                    "id": "telefone",
-                    "placeholder": "(11)90000-0000",
-                    "inputmode": "numeric",
-                    "autocomplete": "tel",
-                }
-            )
-        }
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fields["telefone"].required = True
-
-    def clean_telefone(self):
-        # Roda ANTES do full_clean do modelo, então o validador do
-        # ClientePerfil já recebe o número no formato certo.
-        return normalizar_telefone(self.cleaned_data.get("telefone"))
-
-
 class CompletarPerfilView(LoginRequiredMixin, View):
     """
-    Aparece uma vez para quem entrou por Google/Apple. Google e Apple
-    entregam nome e e-mail, mas nenhum dos dois entrega telefone -- e o
-    telefone é obrigatório para fechar pedido e agendar manutenção.
+    Aparece uma vez para quem entrou por Google/Apple. Os dois entregam
+    nome e e-mail, mas nenhum entrega telefone -- e o telefone é o que
+    usamos para avisar sobre entrega, montagem e manutenção.
     """
     template_name = "completar_perfil.html"
 
@@ -2125,7 +1994,6 @@ class CompletarPerfilView(LoginRequiredMixin, View):
             "form": form,
             "perfil": perfil,
         })
-
 
 
 class BrinquedoAdmin(AdminOnlyMixin, View):
