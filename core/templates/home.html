@@ -4591,6 +4591,34 @@ body {
         box-shadow: 0 11px 22px rgba(0, 74, 173, .24);
     }
 
+    .cliente-popup__action--instagram {
+        background:
+            linear-gradient(
+                135deg,
+                #833AB4 0%,
+                #C13584 32%,
+                #E1306C 57%,
+                #F56040 78%,
+                #FCAF45 100%
+            );
+        color: #fff;
+        font-weight: 900;
+        letter-spacing: .01em;
+        text-shadow: 0 1px 2px rgba(72, 12, 78, .22);
+        box-shadow: 0 8px 18px rgba(225, 48, 108, .24);
+        -webkit-font-smoothing: antialiased;
+    }
+
+    .cliente-popup__action--instagram:hover {
+        color: #fff;
+        box-shadow: 0 11px 23px rgba(225, 48, 108, .32);
+    }
+
+    .cliente-popup__action i {
+        flex: 0 0 auto;
+        font-size: 1.04em;
+    }
+
     .cliente-popup__action--route {
         border: 1px solid #dce5f1;
         background: #fff;
@@ -4710,26 +4738,92 @@ body {
         }
 
         .cliente-popup {
-            width: min(258px, calc(100vw - 82px));
-            padding: 14px;
+            width: min(238px, calc(100vw - 48px));
+            padding: 11px;
+        }
+
+        #mapa-clientes .leaflet-popup-content-wrapper {
+            border-radius: 16px;
+        }
+
+        #mapa-clientes .leaflet-popup-close-button {
+            top: 7px;
+            right: 7px;
+            width: 25px;
+            height: 25px;
+            font-size: 17px;
+        }
+
+        .cliente-popup__top {
+            gap: 8px;
+            padding-right: 22px;
         }
 
         .cliente-popup__media {
-            width: 50px;
-            height: 50px;
-            border-radius: 14px;
+            width: 42px;
+            height: 42px;
+            border-width: 2px;
+            border-radius: 12px;
+        }
+
+        .cliente-popup__kicker {
+            gap: 3px;
+            margin-bottom: 1px;
+            font-size: .52rem;
+            letter-spacing: .035em;
         }
 
         .cliente-popup h4 {
-            font-size: .87rem;
+            font-size: .79rem;
+            line-height: 1.2;
         }
 
-        .cliente-popup-tags span:nth-child(n + 4) {
+        .cliente-popup__location {
+            gap: 4px;
+            margin-top: 6px;
+            padding: 6px 7px;
+            border-radius: 9px;
+            font-size: .62rem;
+            line-height: 1.3;
+        }
+
+        .cliente-popup__description {
+            margin-top: 6px;
+            font-size: .6rem;
+            line-height: 1.35;
+        }
+
+        .cliente-popup-tags {
+            gap: 3px;
+            margin-top: 6px;
+        }
+
+        .cliente-popup-tags span {
+            padding: 2px 5px;
+            font-size: .52rem;
+        }
+
+        .cliente-popup-tags span:nth-child(n + 3) {
             display: none;
         }
 
         .cliente-popup__actions {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 5px;
+            margin-top: 7px;
+        }
+
+        .cliente-popup__actions--single {
             grid-template-columns: 1fr;
+        }
+
+        .cliente-popup__action {
+            min-height: 32px;
+            gap: 4px;
+            padding: 4px 6px;
+            border-radius: 9px;
+            font-size: .59rem;
+            line-height: 1.15;
         }
     }
 
@@ -4957,10 +5051,11 @@ body {
         const urlCliente = normalizarUrlExterna(c.site || c.instagram);
         const linkInstagram = urlCliente.includes('instagram.com');
         const link = urlCliente
-            ? `<a class="cliente-popup__action"
+            ? `<a class="cliente-popup__action ${linkInstagram ? 'cliente-popup__action--instagram' : ''}"
                   href="${escapeHTML(urlCliente)}"
                   target="_blank"
-                  rel="noopener">
+                  rel="noopener"
+                  aria-label="${linkInstagram ? `Abrir Instagram de ${nome}` : `Visitar site de ${nome}`}">
                    <i class="${linkInstagram ? 'fa-brands fa-instagram' : 'fa-solid fa-globe'}"></i>
                    ${linkInstagram ? 'Instagram' : 'Visitar site'}
                </a>`
@@ -5080,7 +5175,11 @@ body {
     const dispositivoComHover = window.matchMedia(
         '(hover: hover) and (pointer: fine)'
     ).matches;
+    const dispositivoCompacto = window.matchMedia(
+        '(max-width: 575px), (hover: none)'
+    ).matches;
     let marcadorPopupFixado = null;
+    let sequenciaCentralizacaoPopup = 0;
 
     function alternarElevacaoMarcador(marcador, ativo, zIndexBase = 0) {
         const elemento = marcador.getElement();
@@ -5091,12 +5190,66 @@ body {
     function abrirPopupDoMarcador(marcador) {
         if (!marcador._popupLazerSport) return;
 
-        marcador._popupLazerSport
-            .setLatLng(marcador.getLatLng())
-            .openOn(mapa);
+        const abrir = () => {
+            marcador._popupLazerSport
+                .setLatLng(marcador.getLatLng())
+                .openOn(mapa);
+        };
+
+        if (!dispositivoCompacto) {
+            abrir();
+            return;
+        }
+
+        const tokenCentralizacao = ++sequenciaCentralizacaoPopup;
+        mapa.stop();
+
+        const tamanhoMapa = mapa.getSize();
+        const pontoAtual = mapa.latLngToContainerPoint(
+            marcador.getLatLng()
+        );
+        const pontoSeguro = L.point(
+            tamanhoMapa.x / 2,
+            tamanhoMapa.y * .68
+        );
+        const deslocamento = pontoAtual.subtract(pontoSeguro);
+
+        if (
+            Math.abs(deslocamento.x) < 5 &&
+            Math.abs(deslocamento.y) < 5
+        ) {
+            abrir();
+            return;
+        }
+
+        let finalizado = false;
+        let fallbackCentralizacao = null;
+
+        const concluirCentralizacao = () => {
+            if (finalizado) return;
+            finalizado = true;
+            mapa.off('moveend', concluirCentralizacao);
+            window.clearTimeout(fallbackCentralizacao);
+
+            if (tokenCentralizacao === sequenciaCentralizacaoPopup) {
+                abrir();
+            }
+        };
+
+        mapa.once('moveend', concluirCentralizacao);
+        fallbackCentralizacao = window.setTimeout(
+            concluirCentralizacao,
+            240
+        );
+        mapa.panBy(deslocamento, {
+            animate: true,
+            duration: .18,
+            easeLinearity: .25
+        });
     }
 
     function fecharPopupsDoMapa() {
+        sequenciaCentralizacaoPopup += 1;
         marcadorPopupFixado?.closeTooltip();
         marcadorPopupFixado = null;
         mapa.closePopup();
@@ -5109,16 +5262,27 @@ body {
         conteudoTooltip,
         deslocamentoY
     ) {
+        const paddingSuperior = dispositivoCompacto ? 56 : 86;
+        const paddingLateral = dispositivoCompacto ? 12 : 24;
+        const paddingInferior = dispositivoCompacto ? 14 : 34;
+
         marcador._zIndexBaseLazerSport = zIndexBase || 0;
         marcador._popupLazerSport = L.popup({
             autoClose: true,
             autoPan: true,
-            autoPanPaddingTopLeft: L.point(24, 86),
-            autoPanPaddingBottomRight: L.point(24, 34),
+            autoPanPaddingTopLeft: L.point(
+                paddingLateral,
+                paddingSuperior
+            ),
+            autoPanPaddingBottomRight: L.point(
+                paddingLateral,
+                paddingInferior
+            ),
             closeButton: true,
             closeOnClick: false,
             className: 'popup-cliente-lazer-sport',
-            maxWidth: 320,
+            keepInView: true,
+            maxWidth: dispositivoCompacto ? 252 : 320,
             minWidth: 0,
             offset: L.point(0, deslocamentoY)
         }).setContent(conteudoPopup);
