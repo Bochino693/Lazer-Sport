@@ -1,0 +1,281 @@
+{% comment %}
+Carregamento compartilhado das telas de login, cadastro e completar perfil.
+O script identifica automaticamente qual formulário foi enviado.
+{% endcomment %}
+
+<style>
+.ls-auth-loading {
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+    display: grid;
+    place-items: center;
+    padding: 22px;
+    background:
+        radial-gradient(circle at 50% 38%, rgba(0, 123, 255, 0.22), transparent 30%),
+        rgba(4, 12, 27, 0.88);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.24s ease, visibility 0.24s ease;
+}
+
+.ls-auth-loading.ativo {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+}
+
+.ls-auth-loading-card {
+    width: min(420px, 100%);
+    padding: 34px 28px 28px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 28px;
+    color: #fff;
+    text-align: center;
+    background:
+        linear-gradient(155deg, rgba(13, 27, 46, 0.98), rgba(0, 74, 173, 0.94));
+    box-shadow:
+        0 30px 80px rgba(0, 0, 0, 0.42),
+        inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+.ls-auth-loading-orbita {
+    position: relative;
+    width: 88px;
+    height: 88px;
+    margin: 0 auto 24px;
+}
+
+.ls-auth-loading-orbita::before,
+.ls-auth-loading-orbita::after,
+.ls-auth-loading-nucleo {
+    content: "";
+    position: absolute;
+    border-radius: 50%;
+}
+
+.ls-auth-loading-orbita::before {
+    inset: 0;
+    border: 4px solid rgba(255, 255, 255, 0.12);
+    border-top-color: #fff;
+    animation: lsGirar 1s linear infinite;
+}
+
+.ls-auth-loading-orbita::after {
+    inset: 12px;
+    border: 4px solid rgba(255, 255, 255, 0.10);
+    border-right-color: #E63946;
+    animation: lsGirarReverso 0.78s linear infinite;
+}
+
+.ls-auth-loading-nucleo {
+    inset: 29px;
+    display: grid;
+    place-items: center;
+    background: #fff;
+    color: #004AAD;
+    box-shadow: 0 0 28px rgba(255, 255, 255, 0.45);
+    animation: lsPulso 1.35s ease-in-out infinite;
+}
+
+.ls-auth-loading-nucleo i {
+    font-size: 0.95rem;
+}
+
+.ls-auth-loading-card strong {
+    display: block;
+    font-family: "Poppins", "Manrope", sans-serif;
+    font-size: 1.24rem;
+    line-height: 1.25;
+    margin-bottom: 9px;
+}
+
+.ls-auth-loading-card p {
+    margin: 0;
+    color: rgba(255, 255, 255, 0.72);
+    font-size: 0.91rem;
+    line-height: 1.55;
+}
+
+.ls-auth-loading-etapas {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 23px;
+}
+
+.ls-auth-loading-etapas span {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.25);
+    animation: lsEtapa 1.2s ease-in-out infinite;
+}
+
+.ls-auth-loading-etapas span:nth-child(2) {
+    animation-delay: 0.16s;
+}
+
+.ls-auth-loading-etapas span:nth-child(3) {
+    animation-delay: 0.32s;
+}
+
+@keyframes lsGirar {
+    to { transform: rotate(360deg); }
+}
+
+@keyframes lsGirarReverso {
+    to { transform: rotate(-360deg); }
+}
+
+@keyframes lsPulso {
+    50% { transform: scale(0.82); opacity: 0.76; }
+}
+
+@keyframes lsEtapa {
+    50% {
+        transform: translateY(-5px);
+        background: #fff;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ls-auth-loading-orbita::before,
+    .ls-auth-loading-orbita::after,
+    .ls-auth-loading-nucleo,
+    .ls-auth-loading-etapas span {
+        animation-duration: 2.4s !important;
+    }
+}
+</style>
+
+<div class="ls-auth-loading"
+     id="lsAuthLoading"
+     aria-hidden="true"
+     aria-live="polite">
+    <div class="ls-auth-loading-card" role="status">
+        <div class="ls-auth-loading-orbita" aria-hidden="true">
+            <span class="ls-auth-loading-nucleo">
+                <i class="fa-solid fa-bolt"></i>
+            </span>
+        </div>
+
+        <strong id="lsAuthLoadingTitulo">Preparando...</strong>
+        <p id="lsAuthLoadingTexto">
+            Estamos organizando seu acesso com segurança.
+        </p>
+
+        <div class="ls-auth-loading-etapas" aria-hidden="true">
+            <span></span><span></span><span></span>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    "use strict";
+
+    const overlay = document.getElementById("lsAuthLoading");
+    const titulo = document.getElementById("lsAuthLoadingTitulo");
+    const texto = document.getElementById("lsAuthLoadingTexto");
+
+    if (!overlay || !titulo || !texto) return;
+
+    function conteudoDoCarregamento(formulario, botao) {
+        const action = (formulario.getAttribute("action") || "").toLowerCase();
+
+        if (action.includes("/accounts/google/")) {
+            return [
+                "Abrindo o Google...",
+                "Você será direcionado para confirmar sua conta com segurança."
+            ];
+        }
+
+        if (action.includes("/accounts/apple/")) {
+            return [
+                "Abrindo a Apple...",
+                "Você será direcionado para continuar com seu Apple ID."
+            ];
+        }
+
+        if (formulario.id === "formCadastro") {
+            return [
+                "Criando sua conta...",
+                "Estamos salvando seus dados e preparando sua área do cliente."
+            ];
+        }
+
+        if (formulario.id === "formLogin") {
+            return [
+                "Validando seu acesso...",
+                "Estamos conferindo seus dados e carregando sua área."
+            ];
+        }
+
+        if (formulario.id === "formCompletarPerfil") {
+            if (botao && botao.name === "pular") {
+                return [
+                    "Preparando sua área...",
+                    "Você poderá informar o telefone mais tarde no seu perfil."
+                ];
+            }
+
+            return [
+                "Salvando seu telefone...",
+                "Estamos concluindo seu cadastro e liberando todos os recursos."
+            ];
+        }
+
+        return [
+            "Processando...",
+            "Só um instante enquanto concluímos esta etapa."
+        ];
+    }
+
+    function mostrar(formulario, botao) {
+        const conteudo = conteudoDoCarregamento(formulario, botao);
+        titulo.textContent = conteudo[0];
+        texto.textContent = conteudo[1];
+
+        overlay.classList.add("ativo");
+        overlay.setAttribute("aria-hidden", "false");
+        document.documentElement.style.overflow = "hidden";
+
+        window.setTimeout(function () {
+            formulario.querySelectorAll('button[type="submit"]').forEach(function (item) {
+                item.disabled = true;
+                item.setAttribute("aria-disabled", "true");
+            });
+        }, 0);
+    }
+
+    document.querySelectorAll(".ls-auth form").forEach(function (formulario) {
+        formulario.addEventListener("submit", function (evento) {
+            const botao = evento.submitter || null;
+            const estaPulando = botao && botao.name === "pular";
+
+            if (!estaPulando && !formulario.checkValidity()) {
+                return;
+            }
+
+            mostrar(formulario, botao);
+        });
+    });
+
+    window.addEventListener("pageshow", function (evento) {
+        if (!evento.persisted) return;
+
+        overlay.classList.remove("ativo");
+        overlay.setAttribute("aria-hidden", "true");
+        document.documentElement.style.overflow = "";
+
+        document.querySelectorAll('.ls-auth button[type="submit"]').forEach(function (item) {
+            item.disabled = false;
+            item.removeAttribute("aria-disabled");
+        });
+    });
+})();
+</script>

@@ -958,33 +958,152 @@ class SobreView(View):
         }
         return render(request, 'home_inner.html', context)
 
+"""
+Fluxo unificado de autenticação da Lazer & Sport.
+
+Este módulo substitui, nas URLs públicas, as views antigas de login,
+cadastro, completar perfil e logout que continuam em core/views.py.
+Mantê-lo separado evita aumentar ainda mais o views.py principal.
+"""
+
+from django.contrib import messages
+from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.models import User
+from django.contrib.messages import get_messages
+from django.db import transaction
+from django.shortcuts import redirect, render
+from django.urls import reverse
+from django.utils.http import url_has_allowed_host_and_scheme
+from django.views import View
+
+from .forms import CadastroForm, CompletarPerfilForm
+from .models import ClientePerfil
+
+
+def _nome_exibicao(user) -> str:
+    nome = (user.get_full_name() or "").strip()
+    if nome:
+        return nome
+
+    email = (getattr(user, "email", "") or "").strip()
+    if email:
+        return email.split("@", 1)[0]
+
+    return (getattr(user, "username", "") or "Cliente").strip()
+
+
+def _consumir_mensagens(request) -> None:
+    """
+    Remove mensagens automáticas antigas que já estavam na sessão.
+
+    Erros de formulário não passam por esta função: login.html e
+    register.html continuam exibindo os erros normalmente.
+    """
+    for _ in get_messages(request):
+        pass
+
+
+def _perfil_do_usuario(user) -> ClientePerfil:
+    perfil, _ = ClientePerfil.objects.get_or_create(user=user)
+    return perfil
+
+
+def _redirect_completar_perfil():
+    return redirect(f"{reverse('completar_perfil')}#telefone-box")
+
+
+class ContaTransicaoView(LoginRequiredMixin, View):
+    """
+    Tela única após cadastro manual, login normal ou login Google/Apple.
+    """
+
+    template_name = "conta_transicao.html"
+    login_url = "login"
+
+    def get(self, request):
+        _consumir_mensagens(request)
+
+        modo = request.session.pop("conta_fluxo_tipo", "login")
+        if modo not in {"cadastro", "login"}:
+            modo = "login"
+
+        destino = request.session.pop("conta_fluxo_destino", reverse("home"))
+
+        if not url_has_allowed_host_and_scheme(
+            url=destino,
+            allowed_hosts={request.get_host()},
+            require_https=request.is_secure(),
+        ):
+            destino = reverse("home")
+
+        return render(
+            request,
+            self.template_name,
+            {
+                "modo": modo,
+                "nome_exibicao": _nome_exibicao(request.user),
+                "destino_url": destino,
+                "tempo_redirecionamento": 3200,
+            },
+        )
+
+
 
 class LoginUsuarioView(View):
+    template_name = "login.html"
+
     def get(self, request):
-        return render(request, "login.html")
+        if request.user.is_authenticated:
+            return redirect("home")
+
+        return render(request, self.template_name)
 
     def post(self, request):
-        login_input = request.POST.get("username")  # pode ser username ou email
-        password = request.POST.get("password")
+        login_digitado = (request.POST.get("username") or "").strip()
+        senha = request.POST.get("password") or ""
 
-        # Se for email, busca o username
-        if "@" in login_input:
-            try:
-                user_obj = User.objects.get(email=login_input)
-                username = user_obj.username
-            except User.DoesNotExist:
-                username = None
-        else:
-            username = login_input
+        username = login_digitado
 
-        user = authenticate(request, username=username, password=password)
+        if "@" in login_digitado:
+            usuario_email = (
+                User.objects
+                .filter(email__iexact=login_digitado)
+                .order_by("id")
+                .first()
+            )
+            username = usuario_email.username if usuario_email else ""
 
-        if user is None:
-            messages.error(request, "Usuário/E-mail ou senha incorretos.")
-            return render(request, "login.html")
+        usuario = authenticate(
+            request,
+            username=username,
+            password=senha,
+        )
 
-        login(request, user)
-        return render(request, "login_sucesso.html", {"user": user})
+        if usuario is None:
+            messages.error(
+                request,
+                "Usuário, e-mail ou senha incorretos.",
+            )
+            return render(
+                request,
+                self.template_name,
+                {"login_digitado": login_digitado},
+            )
+
+        login(request, usuario)
+        request.session["conta_fluxo_tipo"] = "login"
+
+        perfil = _perfil_do_usuario(usuario)
+
+        if (
+            not (perfil.telefone or "").strip()
+            and not request.session.get("pulou_completar_perfil")
+        ):
+            return _redirect_completar_perfil()
+
+        return redirect("conta_transicao")
+
 
 
 class EventosView(View):
@@ -1250,25 +1369,35 @@ from django.contrib.auth import logout
 
 
 class LogoutUsuarioView(View):
+    """
+    Usa a mesma tela de transição do login/cadastro, porém já deslogado.
+    """
+
+    template_name = "conta_transicao.html"
 
     def get(self, request):
-        # Desloga primeiro
+        nome = (
+            _nome_exibicao(request.user)
+            if request.user.is_authenticated
+            else ""
+        )
+
         logout(request)
+        _consumir_mensagens(request)
 
-        # Mostra página bonita com delay
-        return render(request, "logout_sucesso.html")
+        return render(
+            request,
+            self.template_name,
+            {
+                "modo": "logout",
+                "nome_exibicao": nome,
+                "destino_url": reverse("login"),
+                "tempo_redirecionamento": 2600,
+            },
+        )
 
 
-from .models import Promocoes
-
-from django.shortcuts import render, redirect, get_object_or_404
-from django.views import View
-from django.http import JsonResponse
-from .models import Promocoes, Brinquedos  # Certifique-se dos nomes dos modelos
-
-from decimal import Decimal, InvalidOperation
-
-from django.contrib import messages
+    
 from django.db import transaction
 from django.db.models import Q
 from django.db.models.deletion import ProtectedError
@@ -1914,89 +2043,96 @@ from django.db import transaction
 
 
 class RegistrarView(View):
-    """
-    Cadastro manual. A validação e a gravação moram no CadastroForm --
-    aqui fica só o fluxo da requisição.
-    """
     template_name = "register.html"
 
     def get(self, request):
         if request.user.is_authenticated:
             return redirect("home")
 
-        return render(request, self.template_name, {"form": CadastroForm()})
+        return render(
+            request,
+            self.template_name,
+            {"form": CadastroForm()},
+        )
 
     def post(self, request):
         form = CadastroForm(request.POST)
 
         if not form.is_valid():
-            messages.error(request, "Confira os campos destacados e tente de novo.")
-            return render(request, self.template_name, {"form": form})
+            messages.error(
+                request,
+                "Confira os campos destacados e tente novamente.",
+            )
+            return render(
+                request,
+                self.template_name,
+                {"form": form},
+            )
 
-        # O salvar() grava User e ClientePerfil. Se o segundo falhar, o
-        # primeiro não pode ficar órfão -- daí a transação aqui, e não
-        # dentro do formulário.
         with transaction.atomic():
-            user = form.salvar()
+            usuario = form.salvar()
 
-        user = authenticate(
+        # O usuário acabou de ser criado e sua senha já foi validada pelo
+        # formulário. Informar o backend evita ambiguidade porque o projeto
+        # possui também o backend do django-allauth.
+        login(
             request,
-            username=user.username,
-            password=form.cleaned_data["password"],
+            usuario,
+            backend="django.contrib.auth.backends.ModelBackend",
         )
 
-        if user:
-            login(request, user)
+        request.session["conta_fluxo_tipo"] = "cadastro"
+        request.session.pop("pulou_completar_perfil", None)
 
-        messages.success(
-            request,
-            f"Conta criada. Bem-vindo(a), {form.cleaned_data['first_name']}!",
-        )
-        return redirect("home")
+        return redirect("conta_transicao")
 
 
 class CompletarPerfilView(LoginRequiredMixin, View):
-    """
-    Aparece uma vez para quem entrou por Google/Apple. Os dois entregam
-    nome e e-mail, mas nenhum entrega telefone -- e o telefone é o que
-    usamos para avisar sobre entrega, montagem e manutenção.
-    """
     template_name = "completar_perfil.html"
-
-    def get_perfil(self, user):
-        perfil, _ = ClientePerfil.objects.get_or_create(user=user)
-        return perfil
+    login_url = "login"
 
     def get(self, request):
-        perfil = self.get_perfil(request.user)
+        # Remove a mensagem automática que uma sessão iniciada antes da
+        # publicação desta correção ainda possa carregar.
+        _consumir_mensagens(request)
+
+        perfil = _perfil_do_usuario(request.user)
 
         if (perfil.telefone or "").strip():
-            return redirect("perfil")
+            return redirect("conta_transicao")
 
-        return render(request, self.template_name, {
-            "form": CompletarPerfilForm(instance=perfil),
-            "perfil": perfil,
-        })
+        return render(
+            request,
+            self.template_name,
+            {
+                "form": CompletarPerfilForm(instance=perfil),
+                "perfil": perfil,
+            },
+        )
 
     def post(self, request):
-        perfil = self.get_perfil(request.user)
+        perfil = _perfil_do_usuario(request.user)
 
         if request.POST.get("pular"):
-            # Não insiste de novo na mesma sessão.
             request.session["pulou_completar_perfil"] = True
-            return redirect("home")
+            return redirect("conta_transicao")
 
         form = CompletarPerfilForm(request.POST, instance=perfil)
 
         if form.is_valid():
             form.save()
-            messages.success(request, "Telefone salvo. Cadastro completo!")
-            return redirect("home")
+            request.session.pop("pulou_completar_perfil", None)
+            return redirect("conta_transicao")
 
-        return render(request, self.template_name, {
-            "form": form,
-            "perfil": perfil,
-        })
+        return render(
+            request,
+            self.template_name,
+            {
+                "form": form,
+                "perfil": perfil,
+            },
+        )
+
 
 
 class BrinquedoAdmin(AdminOnlyMixin, View):

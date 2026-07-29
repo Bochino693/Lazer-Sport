@@ -6,9 +6,6 @@
 {% include "partials/auth_estilo.html" %}
 
 <style>
-/* Cabeçalho compacto exclusivo desta tela: aqui o painel de marca
-   inteiro seria exagero -- a pessoa já está autenticada, só falta um
-   campo. */
 .ls-conta-topo {
     padding: 34px 34px 26px;
     color: #fff;
@@ -99,12 +96,22 @@
     flex: 1;
 }
 
+/* O fragmento #telefone-box para abaixo do cabeçalho fixo. */
+#telefone-box {
+    scroll-margin-top: 125px;
+}
+
 @media (max-width: 560px) {
     .ls-conta-topo {
         padding: 26px 22px 22px;
     }
+
     .ls-conta-acoes {
         flex-direction: column-reverse;
+    }
+
+    #telefone-box {
+        scroll-margin-top: 95px;
     }
 }
 </style>
@@ -147,28 +154,42 @@
                 </div>
             </div>
 
-            <form method="post" class="ls-form" novalidate>
+            <form method="post"
+                  id="formCompletarPerfil"
+                  class="ls-form"
+                  novalidate>
                 {% csrf_token %}
 
-                <div class="ls-campo">
+                <div class="ls-campo" id="telefone-box">
                     <label for="telefone">Telefone com DDD</label>
                     <div class="ls-entrada {% if form.telefone.errors %}erro{% endif %}">
                         <i class="fa-solid fa-phone" aria-hidden="true"></i>
                         {{ form.telefone }}
                     </div>
+
                     {% for erro in form.telefone.errors %}
                         <p class="ls-erro-campo">
-                            <i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i>{{ erro }}
+                            <i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i>
+                            {{ erro }}
                         </p>
                     {% endfor %}
-                    <p class="ls-dica">Celular ou fixo. Pode digitar só os números.</p>
+
+                    <p class="ls-dica">
+                        Celular ou fixo. Pode digitar somente os números.
+                    </p>
                 </div>
 
                 <div class="ls-conta-acoes">
-                    <button type="submit" name="pular" value="1" class="ls-btn-secundario">
+                    <button type="submit"
+                            name="pular"
+                            value="1"
+                            class="ls-btn-secundario">
                         Agora não
                     </button>
-                    <button type="submit" class="ls-btn-principal">Salvar telefone</button>
+
+                    <button type="submit" class="ls-btn-principal">
+                        Salvar telefone
+                    </button>
                 </div>
             </form>
 
@@ -176,26 +197,58 @@
     </div>
 </section>
 
+{% include "partials/auth_loading.html" %}
+
 <script>
-const campoTelefone = document.getElementById("telefone");
+(function () {
+    "use strict";
 
-if (campoTelefone) {
-    campoTelefone.addEventListener("input", function (evento) {
-        let v = evento.target.value.replace(/\D/g, "").slice(0, 11);
+    const campoTelefone = document.getElementById("telefone");
+    const telefoneBox = document.getElementById("telefone-box");
 
-        if (v.length > 6) {
-            v = v.length === 11
-                ? v.replace(/^(\d{2})(\d{5})(\d{0,4}).*/, "($1)$2-$3")
-                : v.replace(/^(\d{2})(\d{4})(\d{0,4}).*/, "($1)$2-$3");
-        } else if (v.length > 2) {
-            v = v.replace(/^(\d{2})(\d+)/, "($1)$2");
-        } else if (v.length > 0) {
-            v = v.replace(/^(\d*)/, "($1");
-        }
+    if (campoTelefone) {
+        campoTelefone.addEventListener("input", function (evento) {
+            let v = evento.target.value.replace(/\D/g, "").slice(0, 11);
 
-        evento.target.value = v;
+            if (v.length > 6) {
+                v = v.length === 11
+                    ? v.replace(/^(\d{2})(\d{5})(\d{0,4}).*/, "($1)$2-$3")
+                    : v.replace(/^(\d{2})(\d{4})(\d{0,4}).*/, "($1)$2-$3");
+            } else if (v.length > 2) {
+                v = v.replace(/^(\d{2})(\d+)/, "($1)$2");
+            } else if (v.length > 0) {
+                v = v.replace(/^(\d*)/, "($1");
+            }
+
+            evento.target.value = v;
+        });
+    }
+
+    window.addEventListener("load", function () {
+        if (!telefoneBox || !campoTelefone) return;
+
+        window.setTimeout(function () {
+            telefoneBox.scrollIntoView({
+                behavior: "smooth",
+                block: "center"
+            });
+
+            try {
+                campoTelefone.focus({ preventScroll: true });
+            } catch (erro) {
+                campoTelefone.focus();
+            }
+
+            if (window.location.hash !== "#telefone-box") {
+                history.replaceState(
+                    null,
+                    "",
+                    window.location.pathname + window.location.search + "#telefone-box"
+                );
+            }
+        }, 220);
     });
-}
+})();
 </script>
 
 {% endblock %}

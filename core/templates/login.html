@@ -10,7 +10,6 @@
 <section class="ls-auth">
     <div class="ls-auth-shell" id="login-box">
 
-        <!-- ============ PAINEL DE MARCA ============ -->
         <aside class="ls-auth-aside">
             <div>
                 <span class="ls-auth-badge">
@@ -47,7 +46,6 @@
             </div>
         </aside>
 
-        <!-- ============ FORMULÁRIO ============ -->
         <div class="ls-auth-main">
 
             <h1>Entrar na sua conta</h1>
@@ -62,7 +60,7 @@
 
             {% if messages %}
                 {% for m in messages %}
-                    <div class="ls-msg {% if m.tags != 'error' %}success{% endif %}">
+                    <div class="ls-msg {% if m.tags %}{{ m.tags }}{% endif %}">
                         <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
                         <span>{{ m }}</span>
                     </div>
@@ -74,16 +72,21 @@
                 <div class="ls-divisor">ou use sua senha</div>
             {% endif %}
 
-            <form method="POST" class="ls-form">
+            <form method="POST" id="formLogin" class="ls-form">
                 {% csrf_token %}
 
                 <div class="ls-campo">
                     <label for="id_username">Usuário ou e-mail</label>
                     <div class="ls-entrada">
                         <i class="fa-solid fa-user" aria-hidden="true"></i>
-                        <input type="text" id="id_username" name="username"
+                        <input type="text"
+                               id="id_username"
+                               name="username"
+                               value="{{ login_digitado|default:'' }}"
                                placeholder="maria.souza ou maria@empresa.com.br"
-                               autocomplete="username" required>
+                               autocomplete="username"
+                               required
+                               autofocus>
                     </div>
                 </div>
 
@@ -91,10 +94,15 @@
                     <label for="id_password">Senha</label>
                     <div class="ls-entrada com-olho">
                         <i class="fa-solid fa-lock" aria-hidden="true"></i>
-                        <input type="password" id="id_password" name="password"
+                        <input type="password"
+                               id="id_password"
+                               name="password"
                                placeholder="Sua senha"
-                               autocomplete="current-password" required>
-                        <button type="button" class="ls-olho" data-alvo="id_password"
+                               autocomplete="current-password"
+                               required>
+                        <button type="button"
+                                class="ls-olho"
+                                data-alvo="id_password"
                                 aria-label="Mostrar senha">
                             <i class="fa-solid fa-eye" aria-hidden="true"></i>
                         </button>
@@ -112,6 +120,8 @@
         </div>
     </div>
 </section>
+
+{% include "partials/auth_loading.html" %}
 
 <script>
 document.querySelectorAll(".ls-olho").forEach(botao => {

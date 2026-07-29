@@ -1,0 +1,382 @@
+{% extends "base.html" %}
+
+{% block title %}
+    {% if modo == "cadastro" %}
+        Conta criada — Lazer & Sport
+    {% elif modo == "logout" %}
+        Saindo — Lazer & Sport
+    {% else %}
+        Acesso confirmado — Lazer & Sport
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+<style>
+.ls-transicao {
+    --tinta: #0d1b2e;
+    --azul: #004AAD;
+    --azul-vivo: #007BFF;
+    --vermelho: #E63946;
+    min-height: calc(100vh - 110px);
+    padding: 46px 18px 68px;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    position: relative;
+    background:
+        radial-gradient(circle at 82% 10%, rgba(230, 57, 70, 0.19), transparent 29%),
+        radial-gradient(circle at 12% 86%, rgba(0, 123, 255, 0.23), transparent 31%),
+        linear-gradient(145deg, #07111f 0%, #0d1b2e 42%, #053a79 100%);
+}
+
+.ls-transicao::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    opacity: 0.32;
+    background-image:
+        linear-gradient(rgba(255, 255, 255, 0.045) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.045) 1px, transparent 1px);
+    background-size: 34px 34px;
+    pointer-events: none;
+}
+
+.ls-transicao-card {
+    width: min(560px, 100%);
+    position: relative;
+    z-index: 1;
+    overflow: hidden;
+    padding: clamp(30px, 6vw, 52px);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 34px;
+    color: #fff;
+    text-align: center;
+    background:
+        radial-gradient(circle at 100% 0%, rgba(230, 57, 70, 0.13), transparent 32%),
+        rgba(7, 22, 43, 0.88);
+    box-shadow:
+        0 38px 100px rgba(0, 0, 0, 0.42),
+        inset 0 1px 0 rgba(255, 255, 255, 0.11);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+}
+
+.ls-transicao-selo {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    margin-bottom: 24px;
+    border: 1px solid rgba(255, 255, 255, 0.13);
+    border-radius: 999px;
+    color: rgba(255, 255, 255, 0.82);
+    background: rgba(255, 255, 255, 0.06);
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.ls-transicao-icone {
+    width: 104px;
+    height: 104px;
+    margin: 0 auto 26px;
+    position: relative;
+    display: grid;
+    place-items: center;
+}
+
+.ls-transicao-icone::before,
+.ls-transicao-icone::after {
+    content: "";
+    position: absolute;
+    border-radius: 50%;
+}
+
+.ls-transicao-icone::before {
+    inset: 0;
+    border: 4px solid rgba(255, 255, 255, 0.12);
+    border-top-color: #fff;
+    animation: lsTransicaoGirar 1.15s linear infinite;
+}
+
+.ls-transicao-icone::after {
+    inset: 12px;
+    border: 4px solid rgba(255, 255, 255, 0.09);
+    border-right-color: var(--vermelho);
+    animation: lsTransicaoGirarReverso 0.88s linear infinite;
+}
+
+.ls-transicao-icone span {
+    width: 54px;
+    height: 54px;
+    z-index: 1;
+    display: grid;
+    place-items: center;
+    border-radius: 18px;
+    color: var(--azul);
+    background: #fff;
+    font-size: 1.3rem;
+    box-shadow: 0 0 34px rgba(255, 255, 255, 0.36);
+    animation: lsTransicaoPulso 1.5s ease-in-out infinite;
+}
+
+.ls-transicao-card h1 {
+    margin: 0 0 12px;
+    color: #fff;
+    font-family: "Poppins", "Manrope", sans-serif;
+    font-size: clamp(1.8rem, 5vw, 2.55rem);
+    font-weight: 800;
+    line-height: 1.08;
+    letter-spacing: -0.04em;
+}
+
+.ls-transicao-card h1 em {
+    color: #72b8ff;
+    font-style: normal;
+}
+
+.ls-transicao-card > p {
+    max-width: 450px;
+    margin: 0 auto;
+    color: rgba(255, 255, 255, 0.72);
+    font-size: 0.98rem;
+    line-height: 1.65;
+}
+
+.ls-transicao-passos {
+    margin: 30px 0 24px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 9px;
+}
+
+.ls-transicao-passo {
+    min-width: 0;
+    padding: 13px 8px;
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    border-radius: 15px;
+    color: rgba(255, 255, 255, 0.52);
+    background: rgba(255, 255, 255, 0.035);
+    font-size: 0.7rem;
+    font-weight: 700;
+}
+
+.ls-transicao-passo i {
+    display: block;
+    margin-bottom: 7px;
+    font-size: 0.95rem;
+}
+
+.ls-transicao-passo.ativo {
+    color: #fff;
+    border-color: rgba(114, 184, 255, 0.32);
+    background: rgba(0, 123, 255, 0.13);
+    animation: lsPassoAtivo 1.2s ease-in-out infinite;
+}
+
+.ls-transicao-progresso {
+    height: 7px;
+    overflow: hidden;
+    margin-bottom: 15px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.10);
+}
+
+.ls-transicao-progresso span {
+    display: block;
+    width: 0;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, var(--azul-vivo), #72b8ff, var(--vermelho));
+    animation: lsCarregar var(--tempo-transicao, 3.2s) linear forwards;
+}
+
+.ls-transicao-contador {
+    color: rgba(255, 255, 255, 0.55);
+    font-size: 0.78rem;
+}
+
+.ls-transicao-botao {
+    width: 100%;
+    min-height: 49px;
+    margin-top: 21px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    border: 0;
+    border-radius: 999px;
+    color: #fff;
+    background: linear-gradient(135deg, var(--vermelho), #c9152d);
+    font-family: "Poppins", "Manrope", sans-serif;
+    font-weight: 700;
+    text-decoration: none;
+    box-shadow: 0 15px 32px rgba(230, 57, 70, 0.27);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.ls-transicao-botao:hover {
+    color: #fff;
+    transform: translateY(-2px);
+    box-shadow: 0 19px 38px rgba(230, 57, 70, 0.37);
+}
+
+@keyframes lsTransicaoGirar {
+    to { transform: rotate(360deg); }
+}
+
+@keyframes lsTransicaoGirarReverso {
+    to { transform: rotate(-360deg); }
+}
+
+@keyframes lsTransicaoPulso {
+    50% { transform: scale(0.86); opacity: 0.78; }
+}
+
+@keyframes lsPassoAtivo {
+    50% { transform: translateY(-2px); }
+}
+
+@keyframes lsCarregar {
+    to { width: 100%; }
+}
+
+@media (max-width: 560px) {
+    .ls-transicao {
+        min-height: calc(100vh - 85px);
+        padding: 24px 10px 44px;
+    }
+
+    .ls-transicao-card {
+        padding: 30px 17px;
+        border-radius: 25px;
+    }
+
+    .ls-transicao-passos {
+        gap: 6px;
+    }
+
+    .ls-transicao-passo {
+        padding-inline: 5px;
+        font-size: 0.62rem;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ls-transicao-icone::before,
+    .ls-transicao-icone::after,
+    .ls-transicao-icone span,
+    .ls-transicao-passo.ativo {
+        animation-duration: 2.5s !important;
+    }
+}
+</style>
+
+<section class="ls-transicao"
+         style="--tempo-transicao: {{ tempo_redirecionamento|default:3200 }}ms;">
+    <div class="ls-transicao-card">
+
+        <div class="ls-transicao-selo">
+            {% if modo == "cadastro" %}
+                <i class="fa-solid fa-user-check"></i>
+                Cadastro finalizado
+            {% elif modo == "logout" %}
+                <i class="fa-solid fa-shield-halved"></i>
+                Sessão encerrada
+            {% else %}
+                <i class="fa-solid fa-lock-open"></i>
+                Acesso seguro
+            {% endif %}
+        </div>
+
+        <div class="ls-transicao-icone" aria-hidden="true">
+            <span>
+                {% if modo == "cadastro" %}
+                    <i class="fa-solid fa-check"></i>
+                {% elif modo == "logout" %}
+                    <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                {% else %}
+                    <i class="fa-solid fa-fingerprint"></i>
+                {% endif %}
+            </span>
+        </div>
+
+        {% if modo == "cadastro" %}
+            <h1>Conta criada, <em>{{ nome_exibicao }}</em>!</h1>
+            <p>
+                Seu cadastro foi concluído. Estamos preparando sua área,
+                seus pedidos e os recursos de atendimento.
+            </p>
+        {% elif modo == "logout" %}
+            <h1>Até logo{% if nome_exibicao %}, <em>{{ nome_exibicao }}</em>{% endif %}!</h1>
+            <p>
+                Sua sessão foi encerrada com segurança. Você será levado
+                novamente para a tela de entrada.
+            </p>
+        {% else %}
+            <h1>Bem-vindo, <em>{{ nome_exibicao }}</em>!</h1>
+            <p>
+                Seu acesso foi confirmado. Estamos carregando seus pedidos,
+                seu carrinho e seus chamados de manutenção.
+            </p>
+        {% endif %}
+
+        <div class="ls-transicao-passos" aria-hidden="true">
+            <div class="ls-transicao-passo">
+                <i class="fa-solid fa-shield-halved"></i>
+                Segurança
+            </div>
+            <div class="ls-transicao-passo ativo">
+                <i class="fa-solid fa-gears"></i>
+                Preparando
+            </div>
+            <div class="ls-transicao-passo">
+                <i class="fa-solid fa-house"></i>
+                Área do cliente
+            </div>
+        </div>
+
+        <div class="ls-transicao-progresso" aria-hidden="true">
+            <span></span>
+        </div>
+
+        <div class="ls-transicao-contador">
+            Redirecionando em <strong id="lsContador">3</strong> segundos
+        </div>
+
+        <a class="ls-transicao-botao" href="{{ destino_url }}">
+            Continuar agora
+            <i class="fa-solid fa-arrow-right"></i>
+        </a>
+    </div>
+</section>
+
+<script>
+(function () {
+    "use strict";
+
+    const destino = "{{ destino_url|escapejs }}";
+    const duracao = Number("{{ tempo_redirecionamento|default:3200 }}");
+    const contador = document.getElementById("lsContador");
+    const inicio = Date.now();
+
+    function atualizarContador() {
+        const restante = Math.max(0, duracao - (Date.now() - inicio));
+        if (contador) {
+            contador.textContent = String(Math.max(1, Math.ceil(restante / 1000)));
+        }
+
+        if (restante > 0) {
+            window.requestAnimationFrame(atualizarContador);
+        }
+    }
+
+    atualizarContador();
+
+    window.setTimeout(function () {
+        window.location.replace(destino);
+    }, duracao);
+})();
+</script>
+{% endblock %}
