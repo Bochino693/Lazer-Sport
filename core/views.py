@@ -1874,50 +1874,62 @@ class PedidoAdminView(AdminOnlyMixin, View):
 
 
 # core/views.py
-"""
-Telas de conta do cliente.
-
-Contém duas coisas:
-
-1. CadastroForm + RegistrarView -- substituem a RegistrarView antiga de
-   core/views.py, que estava quebrada: o UserForm só tinha
-   first_name/last_name/email, então `form.cleaned_data['password']`
-   levantava KeyError, o username nunca era gravado e o telefone
-   digitado no formulário era descartado silenciosamente.
-
-2. CompletarPerfilView -- a única tela que quem entra por Google/Apple
-   ainda vê, porque nenhum provedor OAuth devolve telefone. Pede um
-   campo só.
-"""
-
-import re
-
-from django import forms
-from django.contrib import messages
-from django.contrib.auth import authenticate, login
-from django.contrib.auth.mixins import LoginRequiredMixin
-from django.contrib.auth.models import User
-from django.db import transaction
-from django.shortcuts import redirect, render
-from django.views import View
-
-from .models import ClientePerfil, validar_telefone
-
-
 # ============================================================
-# FORMULÁRIO DE CADASTRO MANUAL
+# BLOCO DE CONTA DO CLIENTE -- versão corrigida
+#
+# Substitui, dentro de core/views.py, tudo que vai de
+# "class CadastroForm(forms.Form):" até o fim de
+# "class CompletarPerfilView(LoginRequiredMixin, View):".
+#
+# Os imports do bloco (re, forms, User, transaction, etc.) já estão logo
+# acima dele no seu arquivo -- não precisa mexer neles.
+#
+# O que mudou em relação à versão anterior:
+#
+# 1. O telefone agora é normalizado ANTES de ser validado. Antes, o
+#    validators=[validar_telefone] do campo rodava no valor cru: se o
+#    JS da máscara não tivesse rodado (celular antigo, colar do
+#    WhatsApp, autofill), "11912345678" era recusado mesmo sendo um
+#    número perfeitamente válido. Agora só os dígitos importam e o
+#    formato é montado no servidor.
+#
+# 2. Mesma normalização na tela de completar perfil, pelo mesmo motivo.
 # ============================================================
+
+
+# O validar_telefone do models.py levanta a ValidationError do Django
+# (django.core.exceptions), que é uma classe diferente da
+# forms.ValidationError. Sem este import o except abaixo não pegaria
+# nada e o erro subiria como 500.
+from django.core.exceptions import ValidationError as DjangoValidationError
+
+
+def normalizar_telefone(valor):
+    """
+    Aceita qualquer coisa que o cliente digitar e devolve no formato que
+    o validar_telefone do models.py exige: (11)91234-5678 ou
+    (11)1234-5678. Se não der para reconhecer, devolve o valor original
+    para o validador reclamar com a mensagem certa.
+    """
+    digitos = re.sub(r"\D", "", valor or "")
+
+    if len(digitos) == 11:
+        return f"({digitos[:2]}){digitos[2:7]}-{digitos[7:]}"
+
+    if len(digitos) == 10:
+        return f"({digitos[:2]}){digitos[2:6]}-{digitos[6:]}"
+
+    return (valor or "").strip()
+
 
 class CadastroForm(forms.Form):
     first_name = forms.CharField(max_length=150, label="Nome")
     last_name = forms.CharField(max_length=150, label="Sobrenome")
     username = forms.CharField(max_length=150, label="Nome de usuário")
     email = forms.EmailField(label="E-mail")
-    telefone = forms.CharField(
-        max_length=15,
-        label="Telefone",
-        validators=[validar_telefone],
-    )
+    # Sem validators aqui de propósito: o validador roda depois da
+    # normalização, dentro de clean_telefone.
+    telefone = forms.CharField(max_length=20, label="Telefone")
     password = forms.CharField(widget=forms.PasswordInput, label="Senha")
     password2 = forms.CharField(
         widget=forms.PasswordInput, label="Confirmar senha"
@@ -1943,9 +1955,14 @@ class CadastroForm(forms.Form):
         return email
 
     def clean_telefone(self):
-        telefone = (self.cleaned_data["telefone"] or "").strip()
-        # A máscara do formulário às vezes deixa espaço depois do DDD
-        return re.sub(r"\s+", "", telefone)
+        telefone = normalizar_telefone(self.cleaned_data.get("telefone"))
+
+        try:
+            validar_telefone(telefone)
+        except DjangoValidationError as erro:
+            raise forms.ValidationError(erro.messages)
+
+        return telefone
 
     def clean(self):
         dados = super().clean()
@@ -2056,8 +2073,14 @@ class CompletarPerfilForm(forms.ModelForm):
             )
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["telefone"].required = True
+
     def clean_telefone(self):
-        return re.sub(r"\s+", "", (self.cleaned_data.get("telefone") or "").strip())
+        # Roda ANTES do full_clean do modelo, então o validador do
+        # ClientePerfil já recebe o número no formato certo.
+        return normalizar_telefone(self.cleaned_data.get("telefone"))
 
 
 class CompletarPerfilView(LoginRequiredMixin, View):
@@ -2102,6 +2125,7 @@ class CompletarPerfilView(LoginRequiredMixin, View):
             "form": form,
             "perfil": perfil,
         })
+
 
 
 class BrinquedoAdmin(AdminOnlyMixin, View):
