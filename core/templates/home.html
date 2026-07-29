@@ -4201,9 +4201,11 @@ body {
     .pino-gota {
         display: block;
         position: relative;
-        transition: transform 0.2s ease;
+        transition: transform 0.24s cubic-bezier(.2, .8, .2, 1), filter 0.24s ease;
         transform-origin: 50% 100%;
         pointer-events: auto;
+        cursor: pointer;
+        will-change: transform;
     }
 
     .pino-gota__corpo {
@@ -4272,8 +4274,16 @@ body {
         fill: #101318;
     }
 
-    .pino-gota:hover {
-        transform: translateY(-3px) scale(1.1);
+    @media (hover: hover) and (pointer: fine) {
+        .pino-gota:hover {
+            transform: translateY(-6px) scale(1.1);
+        }
+    }
+
+    .cliente-marker.marcador-elevado .pino-gota,
+    .fabrica-marker.marcador-elevado .pino-gota {
+        transform: translateY(-8px) scale(1.12);
+        filter: drop-shadow(0 10px 10px rgba(13, 27, 46, .24));
     }
 
     .pino-pulse {
@@ -4348,92 +4358,293 @@ body {
         background: linear-gradient(135deg, #4aa3ff, #004AAD);
     }
 
-    .leaflet-popup-content-wrapper {
-        border-radius: 14px;
-    }
-
     #mapa-clientes .leaflet-tile-pane { z-index: 200; }
     #mapa-clientes .leaflet-overlay-pane { z-index: 400; }
     #mapa-clientes .leaflet-marker-pane { z-index: 600; }
     #mapa-clientes .leaflet-tooltip-pane { z-index: 650; }
     #mapa-clientes .leaflet-popup-pane { z-index: 700; }
 
+    .clientes-map-hint {
+        position: absolute;
+        top: 14px;
+        left: 50%;
+        z-index: 640;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        max-width: calc(100% - 90px);
+        padding: 9px 14px;
+        border: 1px solid rgba(255, 255, 255, .72);
+        border-radius: 999px;
+        background: rgba(8, 27, 54, .86);
+        color: #fff;
+        box-shadow: 0 10px 25px rgba(13, 27, 46, .2);
+        font-size: .72rem;
+        font-weight: 750;
+        line-height: 1.25;
+        text-align: center;
+        transform: translateX(-50%);
+        backdrop-filter: blur(12px);
+        pointer-events: none;
+    }
+
+    .clientes-map-hint i {
+        color: #7db8ff;
+    }
+
+    .clientes-map-hint .hint-mobile {
+        display: none;
+    }
+
+    #mapa-clientes .leaflet-popup {
+        margin-bottom: 12px;
+        animation: clientePopupRise .22s cubic-bezier(.2, .8, .2, 1) both;
+    }
+
+    #mapa-clientes .leaflet-popup-content-wrapper {
+        overflow: hidden;
+        padding: 0;
+        border: 1px solid rgba(0, 74, 173, .14);
+        border-radius: 20px;
+        background: rgba(255, 255, 255, .98);
+        box-shadow: 0 18px 45px rgba(8, 27, 54, .23);
+        backdrop-filter: blur(14px);
+    }
+
+    #mapa-clientes .leaflet-popup-content {
+        width: auto !important;
+        margin: 0;
+        line-height: 1.45;
+    }
+
+    #mapa-clientes .leaflet-popup-tip {
+        background: #fff;
+        box-shadow: 4px 4px 10px rgba(8, 27, 54, .08);
+    }
+
+    #mapa-clientes .leaflet-popup-close-button {
+        top: 10px;
+        right: 10px;
+        z-index: 5;
+        display: grid;
+        place-items: center;
+        width: 29px;
+        height: 29px;
+        padding: 0;
+        border: 1px solid #e4eaf3;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, .94);
+        color: #43546b;
+        box-shadow: 0 5px 14px rgba(13, 27, 46, .1);
+        font-size: 20px;
+        line-height: 1;
+        transition: color .2s ease, background .2s ease, transform .2s ease;
+    }
+
+    #mapa-clientes .leaflet-popup-close-button:hover {
+        background: #004AAD;
+        color: #fff;
+        transform: scale(1.05);
+    }
+
     .cliente-popup {
+        width: 286px;
+        max-width: calc(100vw - 76px);
+        padding: 16px;
+        background:
+            radial-gradient(circle at 100% 0, rgba(0, 74, 173, .09), transparent 34%),
+            linear-gradient(145deg, #fff 0%, #f8fbff 100%);
+    }
+
+    .cliente-popup--fabrica {
+        background:
+            radial-gradient(circle at 100% 0, rgba(230, 57, 70, .11), transparent 36%),
+            linear-gradient(145deg, #fff 0%, #fff8f8 100%);
+    }
+
+    .cliente-popup__top {
         display: flex;
-        align-items: flex-start;
-        gap: 10px;
-        min-width: 160px;
+        align-items: center;
+        gap: 12px;
+        padding-right: 28px;
     }
 
-    .cliente-popup img {
-        width: 40px;
-        height: 40px;
+    .cliente-popup__media {
+        display: grid;
+        flex: 0 0 auto;
+        place-items: center;
+        width: 58px;
+        height: 58px;
+        overflow: hidden;
+        border: 3px solid #fff;
+        border-radius: 17px;
+        background: #eef4ff;
+        box-shadow: 0 8px 20px rgba(0, 74, 173, .14);
+    }
+
+    .cliente-popup__media img {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        background: #fff;
+    }
+
+    .cliente-popup--fabrica .cliente-popup__media img {
         object-fit: contain;
-        border-radius: 8px;
-        flex-shrink: 0;
-        background: #f5f8ff;
+        padding: 4px;
     }
 
-    .cliente-popup h4 {
-        font-size: 0.92rem;
-        color: #0d1b2e;
-        margin-bottom: 2px;
+    .cliente-popup__copy {
+        min-width: 0;
     }
 
-    .cliente-popup span {
-        font-size: 0.78rem;
-        color: #6c757d;
-    }
-
-    .cliente-popup a {
+    .cliente-popup__kicker {
         display: inline-flex;
         align-items: center;
         gap: 5px;
-        margin-top: 4px;
-        font-size: 0.78rem;
-        color: #E1306C;
-        font-weight: 700;
-        text-decoration: none;
+        margin-bottom: 3px;
+        color: #004AAD;
+        font-size: .62rem;
+        font-weight: 900;
+        letter-spacing: .055em;
+        text-transform: uppercase;
     }
 
-    .cliente-popup a:hover {
-        text-decoration: underline;
+    .cliente-popup--fabrica .cliente-popup__kicker {
+        color: #cf2636;
+    }
+
+    .cliente-popup h4 {
+        overflow: hidden;
+        margin: 0;
+        color: #0d1b2e;
+        font-size: .95rem;
+        font-weight: 900;
+        line-height: 1.25;
+        text-overflow: ellipsis;
+    }
+
+    .cliente-popup__location {
+        display: flex;
+        align-items: flex-start;
+        gap: 6px;
+        margin-top: 10px;
+        padding: 9px 10px;
+        border: 1px solid #e5ebf4;
+        border-radius: 11px;
+        background: rgba(255, 255, 255, .82);
+        color: #57677c;
+        font-size: .72rem;
+        line-height: 1.4;
+    }
+
+    .cliente-popup__location i {
+        margin-top: 2px;
+        color: #004AAD;
+    }
+
+    .cliente-popup--fabrica .cliente-popup__location i {
+        color: #E63946;
+    }
+
+    .cliente-popup__description {
+        margin: 9px 0 0;
+        color: #6a788b;
+        font-size: .71rem;
+        line-height: 1.45;
+    }
+
+    .cliente-popup__action {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 5px;
+        width: 100%;
+        min-height: 38px;
+        margin-top: 11px;
+        border-radius: 11px;
+        background: linear-gradient(135deg, #0878f9, #004AAD);
+        color: #fff;
+        font-size: .72rem;
+        font-weight: 850;
+        text-decoration: none;
+        box-shadow: 0 8px 18px rgba(0, 74, 173, .18);
+        transition: transform .2s ease, box-shadow .2s ease;
+    }
+
+    .cliente-popup__action:hover {
+        color: #fff;
+        text-decoration: none;
+        transform: translateY(-1px);
+        box-shadow: 0 11px 22px rgba(0, 74, 173, .24);
     }
 
     .cliente-popup-tags {
         display: flex;
         flex-wrap: wrap;
-        gap: 4px;
-        margin-top: 6px;
-        max-width: 190px;
+        gap: 5px;
+        margin-top: 10px;
     }
 
     .cliente-popup-tags span {
         background: #f0f4ff;
         color: #004AAD;
-        font-size: 0.68rem;
-        font-weight: 700;
-        padding: 2px 8px;
+        font-size: .62rem;
+        font-weight: 800;
+        padding: 4px 8px;
         border-radius: 999px;
         white-space: nowrap;
     }
 
-    .fabrica-popup-badge {
-        display: inline-block;
-        background: linear-gradient(135deg, #ff6b6b, #E63946);
-        color: #fff;
-        font-weight: 800;
-        font-size: 0.7rem;
-        text-transform: uppercase;
-        letter-spacing: 0.4px;
-        padding: 3px 9px;
-        border-radius: 999px;
-        margin-bottom: 4px;
+    @keyframes clientePopupRise {
+        from {
+            opacity: 0;
+            transform: translateY(10px) scale(.97);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
     }
 
     @media (max-width: 575px) {
         .clientes-toolbar { flex-direction: column; align-items: stretch; }
         #mapa-clientes { height: 360px; }
+
+        .clientes-map-hint {
+            top: 10px;
+            max-width: calc(100% - 100px);
+            padding: 8px 12px;
+            font-size: .66rem;
+        }
+
+        .clientes-map-hint .hint-desktop {
+            display: none;
+        }
+
+        .clientes-map-hint .hint-mobile {
+            display: inline;
+        }
+
+        .cliente-popup {
+            width: min(258px, calc(100vw - 82px));
+            padding: 14px;
+        }
+
+        .cliente-popup__media {
+            width: 50px;
+            height: 50px;
+            border-radius: 14px;
+        }
+
+        .cliente-popup h4 {
+            font-size: .87rem;
+        }
+
+        .cliente-popup-tags span:nth-child(n + 4) {
+            display: none;
+        }
     }
 
     .clientes-seo-lista {
@@ -4489,6 +4700,11 @@ body {
     </div>
 
     <div class="clientes-mapa-wrap">
+        <div class="clientes-map-hint" aria-hidden="true">
+            <i class="fa-solid fa-location-dot"></i>
+            <span class="hint-desktop">Passe o mouse para visualizar · clique para manter aberto</span>
+            <span class="hint-mobile">Toque em um pino para ver o cliente</span>
+        </div>
         <div id="mapa-clientes"></div>
     </div>
 
@@ -4550,6 +4766,20 @@ body {
         const div = document.createElement('div');
         div.textContent = texto || '';
         return div.innerHTML;
+    }
+
+    function normalizarUrlExterna(valor) {
+        const url = String(valor || '').trim();
+        if (!/^https?:\/\//i.test(url)) return '';
+
+        try {
+            const destino = new URL(url);
+            return ['http:', 'https:'].includes(destino.protocol)
+                ? destino.href
+                : '';
+        } catch (erro) {
+            return '';
+        }
     }
 
     const LOGO_CLIENTE_PADRAO = "{% static 'images/logoo.png' %}";
@@ -4624,24 +4854,60 @@ body {
     function criarPopupCliente(c) {
         const nome = escapeHTML(c.nome);
         const imagemCliente = escapeHTML(c.imagem || c.logo || c.foto || LOGO_CLIENTE_PADRAO);
-        const logo = `<img src="${imagemCliente}" alt="${nome}" onerror="this.onerror=null;this.src='${LOGO_CLIENTE_PADRAO}';">`;
-        const local = escapeHTML([c.cidade, c.estado].filter(Boolean).join(' - ') || c.pais);
-        const link = c.site
-            ? `<a href="${escapeHTML(c.site)}" target="_blank" rel="noopener"><i class="fa-brands fa-instagram"></i> Visitar Instagram</a>`
+        const logo = `
+            <img src="${imagemCliente}"
+                 alt="${nome}"
+                 onerror="this.onerror=null;this.src='${LOGO_CLIENTE_PADRAO}';">`;
+        const cidadeEstado = [c.cidade, c.estado].filter(Boolean).join(' - ');
+        const localCompleto = [
+            cidadeEstado,
+            c.pais && c.pais !== 'Brasil' ? c.pais : ''
+        ].filter(Boolean).join(', ') || c.pais || 'Localização disponível no mapa';
+        const local = escapeHTML(localCompleto);
+        const descricao = escapeHTML(
+            c.descricao ||
+            'Espaço atendido com equipamentos e soluções da Lazer & Sport Brinquedos.'
+        );
+        const urlCliente = normalizarUrlExterna(c.site || c.instagram);
+        const link = urlCliente
+            ? `<a class="cliente-popup__action"
+                  href="${escapeHTML(urlCliente)}"
+                  target="_blank"
+                  rel="noopener">
+                   <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                   Conhecer o espaço
+               </a>`
             : '';
+        const categoriasRecebidas = Array.isArray(c.brinquedos)
+            ? c.brinquedos
+            : (Array.isArray(c.categorias) ? c.categorias : CATEGORIAS_PADRAO);
+        const categorias = categoriasRecebidas
+            .map(item => typeof item === 'string' ? item : (item.nome || item.nome_brinquedo || ''))
+            .filter(Boolean)
+            .slice(0, 4);
         const tags = `<div class="cliente-popup-tags">${
-            CATEGORIAS_PADRAO.map(t => `<span>${escapeHTML(t)}</span>`).join('')
+            categorias.map(t => `<span>${escapeHTML(t)}</span>`).join('')
           }</div>`;
 
         return `
-            <div class="cliente-popup">
-                ${logo}
-                <div>
-                    <h4>${nome}</h4>
-                    <span class="cliente-popup-marca">Lazer &amp; Sport em ${local}</span><br>
-                    ${link}
-                    ${tags}
+            <div class="cliente-popup cliente-popup--cliente">
+                <div class="cliente-popup__top">
+                    <div class="cliente-popup__media">${logo}</div>
+                    <div class="cliente-popup__copy">
+                        <span class="cliente-popup__kicker">
+                            <i class="fa-solid fa-circle-check"></i>
+                            Cliente Lazer &amp; Sport
+                        </span>
+                        <h4>${nome}</h4>
+                    </div>
                 </div>
+                <div class="cliente-popup__location">
+                    <i class="fa-solid fa-location-dot"></i>
+                    <span>${local}</span>
+                </div>
+                <p class="cliente-popup__description">${descricao}</p>
+                ${tags}
+                ${link}
             </div>
         `;
     }
@@ -4650,47 +4916,195 @@ body {
         const nome = escapeHTML(f.nome);
         const local = escapeHTML([f.cidade, f.estado].filter(Boolean).join(' - '));
         const endereco = escapeHTML(f.endereco || '');
+        const logoFabrica = escapeHTML(f.logo || LOGO_CLIENTE_PADRAO);
+        const localCompleto = [endereco, local].filter(Boolean).join(' — ');
 
         return `
-            <div class="cliente-popup">
-                <img src="${f.logo}" alt="${nome}">
-                <div>
-                    <span class="fabrica-popup-badge">Nossa fábrica</span><br>
-                    <h4>${nome}</h4>
-                    <span>${endereco}${endereco ? ' — ' : ''}${local}</span>
+            <div class="cliente-popup cliente-popup--fabrica">
+                <div class="cliente-popup__top">
+                    <div class="cliente-popup__media">
+                        <img src="${logoFabrica}" alt="${nome}">
+                    </div>
+                    <div class="cliente-popup__copy">
+                        <span class="cliente-popup__kicker">
+                            <i class="fa-solid fa-industry"></i>
+                            Nossa fábrica
+                        </span>
+                        <h4>${nome}</h4>
+                    </div>
                 </div>
+                <div class="cliente-popup__location">
+                    <i class="fa-solid fa-location-dot"></i>
+                    <span>${localCompleto}</span>
+                </div>
+                <p class="cliente-popup__description">
+                    Tecnologia, fabricação própria e diversão para projetos em todo o Brasil.
+                </p>
             </div>
         `;
     }
 
+    const dispositivoComHover = window.matchMedia(
+        '(hover: hover) and (pointer: fine)'
+    ).matches;
     let marcadorPopupFixado = null;
+    let marcadorPopupTemporario = null;
+    let temporizadorHover = null;
 
-    function configurarInteracaoMarcador(marcador, zIndexBase) {
-        marcador.on('mouseover', function () {
-            marcador.setZIndexOffset((zIndexBase || 0) + 1000);
-            if (marcador !== marcadorPopupFixado) marcador.openPopup();
-        });
+    function alternarElevacaoMarcador(marcador, ativo, zIndexBase = 0) {
+        const elemento = marcador.getElement();
+        elemento?.classList.toggle('marcador-elevado', ativo);
+        marcador.setZIndexOffset(ativo ? zIndexBase + 1400 : zIndexBase);
+    }
 
-        marcador.on('mouseout', function () {
-            if (marcador !== marcadorPopupFixado) {
-                marcador.setZIndexOffset(zIndexBase || 0);
-                marcador.closePopup();
-            }
-        });
+    function abrirPopupDoMarcador(marcador) {
+        if (!marcador._popupLazerSport) return;
+
+        marcador._popupLazerSport
+            .setLatLng(marcador.getLatLng())
+            .openOn(mapa);
+    }
+
+    function fecharPopupsDoMapa() {
+        window.clearTimeout(temporizadorHover);
+
+        if (marcadorPopupFixado) {
+            alternarElevacaoMarcador(
+                marcadorPopupFixado,
+                false,
+                marcadorPopupFixado._zIndexBaseLazerSport || 0
+            );
+        }
+        if (
+            marcadorPopupTemporario &&
+            marcadorPopupTemporario !== marcadorPopupFixado
+        ) {
+            alternarElevacaoMarcador(
+                marcadorPopupTemporario,
+                false,
+                marcadorPopupTemporario._zIndexBaseLazerSport || 0
+            );
+        }
+
+        marcadorPopupFixado = null;
+        marcadorPopupTemporario = null;
+        mapa.closePopup();
+    }
+
+    function configurarInteracaoMarcador(
+        marcador,
+        zIndexBase,
+        conteudoPopup,
+        deslocamentoY
+    ) {
+        marcador._zIndexBaseLazerSport = zIndexBase || 0;
+        marcador._popupLazerSport = L.popup({
+            autoClose: true,
+            autoPan: true,
+            autoPanPaddingTopLeft: L.point(24, 86),
+            autoPanPaddingBottomRight: L.point(24, 34),
+            closeButton: true,
+            closeOnClick: false,
+            className: 'popup-cliente-lazer-sport',
+            maxWidth: 320,
+            minWidth: 0,
+            offset: L.point(0, deslocamentoY)
+        }).setContent(conteudoPopup);
+
+        if (dispositivoComHover) {
+            marcador.on('mouseover', function () {
+                window.clearTimeout(temporizadorHover);
+
+                if (
+                    marcadorPopupFixado &&
+                    marcadorPopupFixado !== marcador
+                ) return;
+
+                if (
+                    marcadorPopupTemporario &&
+                    marcadorPopupTemporario !== marcador
+                ) {
+                    alternarElevacaoMarcador(
+                        marcadorPopupTemporario,
+                        false,
+                        marcadorPopupTemporario._zIndexBaseLazerSport || 0
+                    );
+                }
+
+                marcadorPopupTemporario = marcador;
+                alternarElevacaoMarcador(marcador, true, zIndexBase || 0);
+                abrirPopupDoMarcador(marcador);
+            });
+
+            marcador.on('mouseout', function () {
+                if (marcador === marcadorPopupFixado) return;
+
+                temporizadorHover = window.setTimeout(() => {
+                    if (
+                        marcador === marcadorPopupTemporario &&
+                        marcador !== marcadorPopupFixado
+                    ) {
+                        alternarElevacaoMarcador(
+                            marcador,
+                            false,
+                            zIndexBase || 0
+                        );
+                        marcadorPopupTemporario = null;
+                        mapa.closePopup(marcador._popupLazerSport);
+                    }
+                }, 130);
+            });
+        }
 
         marcador.on('click', function (e) {
-            L.DomEvent.stopPropagation(e);
-            if (marcadorPopupFixado === marcador) {
-                marcadorPopupFixado = null;
-                marcador.setZIndexOffset(zIndexBase || 0);
-                marcador.closePopup();
-                return;
+            window.clearTimeout(temporizadorHover);
+
+            if (e.originalEvent) {
+                L.DomEvent.stopPropagation(e.originalEvent);
+                L.DomEvent.preventDefault(e.originalEvent);
             }
-            if (marcadorPopupFixado) marcadorPopupFixado.closePopup();
+
+            if (
+                marcadorPopupFixado &&
+                marcadorPopupFixado !== marcador
+            ) {
+                alternarElevacaoMarcador(
+                    marcadorPopupFixado,
+                    false,
+                    marcadorPopupFixado._zIndexBaseLazerSport || 0
+                );
+            }
+
             marcadorPopupFixado = marcador;
-            marcador.openPopup();
+            marcadorPopupTemporario = null;
+            alternarElevacaoMarcador(marcador, true, zIndexBase || 0);
+            abrirPopupDoMarcador(marcador);
         });
     }
+
+    mapa.on('popupclose', function (e) {
+        if (
+            marcadorPopupFixado?._popupLazerSport === e.popup
+        ) {
+            alternarElevacaoMarcador(
+                marcadorPopupFixado,
+                false,
+                marcadorPopupFixado._zIndexBaseLazerSport || 0
+            );
+            marcadorPopupFixado = null;
+        }
+
+        if (
+            marcadorPopupTemporario?._popupLazerSport === e.popup
+        ) {
+            alternarElevacaoMarcador(
+                marcadorPopupTemporario,
+                false,
+                marcadorPopupTemporario._zIndexBaseLazerSport || 0
+            );
+            marcadorPopupTemporario = null;
+        }
+    });
 
     // ---- Agrupamento por proximidade em pixels, sem plugin externo ----
     const RAIO_CLUSTER_PX = 48;
@@ -4731,7 +5145,7 @@ body {
     }
 
     function renderizarPinosNoMapa() {
-        marcadorPopupFixado = null;
+        fecharPopupsDoMapa();
         camadaClientes.clearLayers();
         atualizarContador(clientesAtuais.length);
         if (!clientesAtuais.length) return;
@@ -4744,10 +5158,15 @@ body {
                     riseOnHover: true,
                     riseOffset: 1200,
                     keyboard: true,
+                    bubblingMouseEvents: false,
                     title: c.nome || 'Cliente Lazer & Sport'
-                })
-                    .bindPopup(criarPopupCliente(c));
-                configurarInteracaoMarcador(marcador, 0);
+                });
+                configurarInteracaoMarcador(
+                    marcador,
+                    0,
+                    criarPopupCliente(c),
+                    -47
+                );
                 camadaClientes.addLayer(marcador);
                 return;
             }
@@ -4762,6 +5181,7 @@ body {
                     iconSize: [36, 36],
                 }),
                 zIndexOffset: 500,
+                bubblingMouseEvents: false,
             }).bindTooltip(`${grupo.length} clientes aqui — clique para ver cada um`, { direction: 'top' });
 
             marcadorCluster.on('click', function () {
@@ -4772,14 +5192,26 @@ body {
         });
     }
 
-    mapa.on('zoomend moveend', renderizarPinosNoMapa);
+    // A distância visual entre os pinos só muda com o zoom. Recriar os
+    // marcadores em "moveend" fechava o popup logo após o autoPan no celular.
+    mapa.on('zoomend', renderizarPinosNoMapa);
 
     let marcadorFabrica = null;
     if (fabrica) {
-        marcadorFabrica = L.marker([fabrica.lat, fabrica.lng], { icon: iconeFabrica, zIndexOffset: 2000 })
-            .bindPopup(criarPopupFabrica(fabrica));
+        marcadorFabrica = L.marker([fabrica.lat, fabrica.lng], {
+            icon: iconeFabrica,
+            zIndexOffset: 2000,
+            keyboard: true,
+            bubblingMouseEvents: false,
+            title: fabrica.nome || 'Lazer & Sport Brinquedos'
+        });
         marcadorFabrica.addTo(mapa);
-        configurarInteracaoMarcador(marcadorFabrica, 2000);
+        configurarInteracaoMarcador(
+            marcadorFabrica,
+            2000,
+            criarPopupFabrica(fabrica),
+            -57
+        );
     }
 
     function ajustarEnquadramento() {
@@ -4819,10 +5251,7 @@ body {
     renderizarPinosNoMapa();
 
     mapa.on('click', () => {
-        if (marcadorPopupFixado) {
-            marcadorPopupFixado.closePopup();
-            marcadorPopupFixado = null;
-        }
+        fecharPopupsDoMapa();
     });
 })();
 </script>
