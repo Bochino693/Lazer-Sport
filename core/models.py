@@ -104,16 +104,6 @@ class ClientePerfil(models.Model):
         verbose_name = "Perfil de Cliente"
         verbose_name_plural = "Perfis de Clientes"
 
-# --- AQUI embaixo vem o signal ---
-
-from django.db.models.signals import post_save
-from django.dispatch import receiver
-
-
-@receiver(post_save, sender=User)
-def criar_perfil_cliente(sender, instance, created, **kwargs):
-    if created:
-        ClientePerfil.objects.create(user=instance)
 
 
 class ImagensSite(Prime):
@@ -1233,4 +1223,3 @@ class CategoriaClick(Prime):
     class Meta:
         verbose_name = "Categoria Clicada"
         verbose_name_plural = "Categorias Clicadas"
-        
