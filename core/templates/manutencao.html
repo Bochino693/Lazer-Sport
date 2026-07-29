@@ -572,23 +572,163 @@
     transform: translateY(-50%) scale(1.05);
 }
 
-.address-notice {
+.address-flow {
+    display: grid;
+    gap: 15px;
+}
+
+.address-entry-card {
+    position: relative;
+    overflow: hidden;
+    padding: 20px;
+    border: 1px solid rgba(0, 74, 173, .14);
+    border-radius: 19px;
+    background:
+        radial-gradient(circle at 95% 8%, rgba(8, 120, 249, .12), transparent 31%),
+        radial-gradient(circle at 5% 100%, rgba(230, 57, 70, .07), transparent 34%),
+        linear-gradient(145deg, #f8fbff 0%, #eef5ff 100%);
+    box-shadow: 0 12px 30px rgba(15, 38, 76, .07);
+}
+
+.address-entry-head {
     display: flex;
-    align-items: flex-start;
-    gap: 10px;
-    margin-bottom: 15px;
-    padding: 11px 13px;
-    border: 1px solid rgba(0, 74, 173, .12);
-    border-radius: 12px;
-    background: #f3f8ff;
-    color: #53647a;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 17px;
+}
+
+.address-entry-icon {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    border-radius: 13px;
+    background: linear-gradient(135deg, var(--mt-blue), var(--mt-blue-bright));
+    color: #fff;
+    box-shadow: 0 8px 18px rgba(0, 74, 173, .2);
+}
+
+.address-entry-copy strong {
+    display: block;
+    margin-bottom: 2px;
+    color: var(--mt-text);
+    font-size: .86rem;
+    font-weight: 900;
+}
+
+.address-entry-copy span {
+    display: block;
+    color: var(--mt-muted);
     font-size: .7rem;
     line-height: 1.45;
 }
 
-.address-notice i {
-    margin-top: 2px;
-    color: var(--mt-blue);
+.address-choice-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(220px, .72fr);
+    align-items: stretch;
+    gap: 13px;
+}
+
+.address-cep-wrap {
+    justify-content: center;
+    padding: 14px;
+    border: 1px solid rgba(0, 74, 173, .14);
+    border-radius: 15px;
+    background: rgba(255, 255, 255, .88);
+    transition: opacity .2s ease, filter .2s ease;
+}
+
+.address-cep-wrap.is-manual {
+    opacity: .58;
+    filter: grayscale(.25);
+}
+
+.address-cep-wrap label {
+    color: var(--mt-blue-dark);
+}
+
+.no-cep-option {
+    position: relative;
+    display: block;
+    min-width: 0;
+    cursor: pointer;
+}
+
+.no-cep-option > input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.no-cep-option-surface {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    height: 100%;
+    min-height: 92px;
+    padding: 14px;
+    border: 1px solid #d8e1ed;
+    border-radius: 15px;
+    background: rgba(255, 255, 255, .84);
+    transition: border-color .2s ease, background .2s ease, box-shadow .2s ease, transform .2s ease;
+}
+
+.no-cep-option:hover .no-cep-option-surface {
+    transform: translateY(-1px);
+    border-color: rgba(0, 74, 173, .35);
+    box-shadow: 0 8px 20px rgba(15, 38, 76, .08);
+}
+
+.no-cep-option > input:focus-visible + .no-cep-option-surface {
+    outline: 3px solid rgba(8, 120, 249, .3);
+    outline-offset: 3px;
+}
+
+.no-cep-option > input:checked + .no-cep-option-surface {
+    border-color: var(--mt-blue);
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(8, 120, 249, .1);
+}
+
+.no-cep-check {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border: 2px solid #b7c4d4;
+    border-radius: 9px;
+    background: #fff;
+    color: transparent;
+    transition: border-color .2s ease, background .2s ease, color .2s ease;
+}
+
+.no-cep-option > input:checked + .no-cep-option-surface .no-cep-check {
+    border-color: var(--mt-blue);
+    background: var(--mt-blue);
+    color: #fff;
+}
+
+.no-cep-copy strong {
+    display: block;
+    margin-bottom: 3px;
+    color: var(--mt-text);
+    font-size: .78rem;
+    font-weight: 900;
+}
+
+.no-cep-copy small {
+    display: block;
+    color: var(--mt-muted);
+    font-size: .67rem;
+    line-height: 1.4;
 }
 
 .cep-feedback {
@@ -596,11 +736,137 @@
     margin-top: 5px;
     font-size: .68rem;
     font-weight: 750;
+    line-height: 1.4;
 }
 
 .cep-loading { color: var(--mt-blue); }
 .cep-error { color: var(--mt-red-dark); }
 .cep-success { color: var(--mt-blue); }
+
+.address-status {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    padding: 12px 14px;
+    border: 1px solid rgba(0, 74, 173, .15);
+    border-radius: 14px;
+    background: #f4f8ff;
+    color: var(--mt-blue-dark);
+    animation: maintenanceFade .22s ease;
+}
+
+.address-status[hidden],
+.address-fields-panel[hidden] {
+    display: none !important;
+}
+
+.address-status-icon {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 11px;
+    background: rgba(0, 74, 173, .1);
+    color: var(--mt-blue);
+}
+
+.address-status > span:last-child > strong,
+.address-status > span:last-child > span {
+    display: block;
+}
+
+.address-status > span:last-child > strong {
+    margin-bottom: 1px;
+    color: inherit;
+    font-size: .75rem;
+    font-weight: 900;
+}
+
+.address-status > span:last-child > span {
+    color: #64748a;
+    font-size: .67rem;
+    line-height: 1.4;
+}
+
+.address-status.is-error {
+    border-color: rgba(230, 57, 70, .2);
+    background: #fff4f5;
+    color: var(--mt-red-dark);
+}
+
+.address-status.is-error .address-status-icon {
+    background: rgba(230, 57, 70, .1);
+    color: var(--mt-red);
+}
+
+.address-status.is-manual {
+    border-color: rgba(0, 74, 173, .19);
+    background: #eef5ff;
+}
+
+.address-fields-panel {
+    padding: 18px;
+    border: 1px solid rgba(0, 74, 173, .14);
+    border-radius: 18px;
+    background:
+        linear-gradient(135deg, rgba(0, 74, 173, .035), transparent 48%),
+        #fff;
+    box-shadow: 0 12px 28px rgba(15, 38, 76, .06);
+    animation: addressReveal .28s ease both;
+}
+
+.address-fields-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+    margin-bottom: 15px;
+    padding-bottom: 13px;
+    border-bottom: 1px solid #e5ebf3;
+}
+
+.address-fields-head strong {
+    display: block;
+    margin-bottom: 2px;
+    color: var(--mt-text);
+    font-size: .82rem;
+    font-weight: 900;
+}
+
+.address-fields-head span {
+    display: block;
+    color: var(--mt-muted);
+    font-size: .68rem;
+    line-height: 1.4;
+}
+
+.address-mode-badge {
+    display: inline-flex !important;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 9px;
+    border-radius: 999px;
+    background: #eef5ff;
+    color: var(--mt-blue) !important;
+    font-size: .61rem !important;
+    font-weight: 900;
+    letter-spacing: .035em;
+    text-transform: uppercase;
+}
+
+@keyframes addressReveal {
+    from {
+        opacity: 0;
+        transform: translateY(-7px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
 
 .campo-erro {
     border-color: var(--mt-red) !important;
@@ -1717,6 +1983,28 @@
         min-height: 125px;
     }
 
+    .address-entry-card {
+        padding: 16px;
+        border-radius: 17px;
+    }
+
+    .address-choice-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .no-cep-option-surface {
+        min-height: 76px;
+    }
+
+    .address-fields-panel {
+        padding: 15px;
+    }
+
+    .address-fields-head {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
     .form-submit-panel {
         align-items: stretch;
         flex-direction: column;
@@ -1888,6 +2176,14 @@
 
     .select-toy-copy span {
         display: none;
+    }
+
+    .address-entry-head {
+        align-items: flex-start;
+    }
+
+    .address-entry-copy span {
+        max-width: 29ch;
     }
 }
 
@@ -2139,59 +2435,119 @@
                             <span class="step-index">3</span>
                             <div>
                                 <h3 id="etapa-local">Local do equipamento</h3>
-                                <p>Digite o CEP para preencher o endereço automaticamente.</p>
+                                <p>Comece pelo CEP ou escolha preencher o endereço manualmente.</p>
                             </div>
                         </div>
 
-                        <div class="address-notice">
-                            <i class="fa-solid fa-location-dot" aria-hidden="true"></i>
-                            <span>
-                                O endereço ajuda nossa equipe a organizar a análise e o atendimento técnico.
-                            </span>
-                        </div>
+                        <div class="address-flow">
+                            <div class="address-entry-card">
+                                <div class="address-entry-head">
+                                    <span class="address-entry-icon" aria-hidden="true">
+                                        <i class="fa-solid fa-location-crosshairs"></i>
+                                    </span>
+                                    <span class="address-entry-copy">
+                                        <strong>Encontre o endereço rapidamente</strong>
+                                        <span>Ao localizar o CEP, liberamos os demais campos já preenchidos.</span>
+                                    </span>
+                                </div>
 
-                        <div class="form-grid">
-                            <div class="form-group">
-                                {{ form.cep.label_tag }}
-                                {% render_field form.cep class="mask-cep" id="id_cep" placeholder="00000-000" inputmode="numeric" autocomplete="postal-code" %}
-                                <small class="cep-feedback" id="cepFeedback" aria-live="polite"></small>
-                                {{ form.cep.errors }}
+                                <div class="address-choice-grid">
+                                    <div class="form-group address-cep-wrap"
+                                         id="cepInputGroup">
+                                        {{ form.cep.label_tag }}
+                                        {% render_field form.cep class="mask-cep" id="id_cep" placeholder="00000-000" inputmode="numeric" autocomplete="postal-code" aria-describedby="cepFeedback" %}
+                                        <small class="cep-feedback"
+                                               id="cepFeedback"
+                                               aria-live="polite"></small>
+                                        {{ form.cep.errors }}
+                                    </div>
+
+                                    <label class="no-cep-option" for="sem-cep">
+                                        <input type="checkbox"
+                                               id="sem-cep"
+                                               name="sem_cep"
+                                               value="1"
+                                               aria-controls="campos-endereco"
+                                               aria-expanded="false">
+                                        <span class="no-cep-option-surface">
+                                            <span class="no-cep-check" aria-hidden="true">
+                                                <i class="fa-solid fa-check"></i>
+                                            </span>
+                                            <span class="no-cep-copy">
+                                                <strong>Não tenho CEP</strong>
+                                                <small>Quero preencher todo o endereço manualmente</small>
+                                            </span>
+                                        </span>
+                                    </label>
+                                </div>
                             </div>
 
-                            <div class="form-group">
-                                {{ form.numero.label_tag }}
-                                {% render_field form.numero placeholder="Número" inputmode="numeric" autocomplete="address-line2" %}
-                                {{ form.numero.errors }}
+                            <div class="address-status"
+                                 id="addressStatus"
+                                 role="status"
+                                 aria-live="polite"
+                                 hidden>
+                                <span class="address-status-icon" aria-hidden="true">
+                                    <i class="fa-solid fa-spinner fa-spin"></i>
+                                </span>
+                                <span>
+                                    <strong id="addressStatusTitle">Consultando CEP</strong>
+                                    <span id="addressStatusText">Só um instante enquanto localizamos o endereço.</span>
+                                </span>
                             </div>
 
-                            <div class="form-group span-full">
-                                {{ form.endereco.label_tag }}
-                                {% render_field form.endereco placeholder="Rua ou avenida" autocomplete="address-line1" %}
-                                {{ form.endereco.errors }}
-                            </div>
+                            <div class="address-fields-panel"
+                                 id="campos-endereco"
+                                 aria-hidden="true"
+                                 hidden>
+                                <div class="address-fields-head">
+                                    <span>
+                                        <strong>Complete o local do equipamento</strong>
+                                        <span>Confira os dados e informe o número do endereço.</span>
+                                    </span>
+                                    <span class="address-mode-badge" id="addressModeBadge">
+                                        <i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i>
+                                        Automático
+                                    </span>
+                                </div>
 
-                            <div class="form-group">
-                                {{ form.bairro.label_tag }}
-                                {% render_field form.bairro placeholder="Bairro" autocomplete="address-level3" %}
-                                {{ form.bairro.errors }}
-                            </div>
+                                <div class="form-grid">
+                                    <div class="form-group span-full">
+                                        {{ form.endereco.label_tag }}
+                                        {% render_field form.endereco id="id_endereco" placeholder="Rua ou avenida" autocomplete="address-line1" %}
+                                        {{ form.endereco.errors }}
+                                    </div>
 
-                            <div class="form-group">
-                                {{ form.complemento.label_tag }}
-                                {% render_field form.complemento placeholder="Sala, bloco ou referência" autocomplete="address-line3" %}
-                                {{ form.complemento.errors }}
-                            </div>
+                                    <div class="form-group">
+                                        {{ form.numero.label_tag }}
+                                        {% render_field form.numero id="id_numero" placeholder="Número" inputmode="numeric" autocomplete="address-line2" %}
+                                        {{ form.numero.errors }}
+                                    </div>
 
-                            <div class="form-group">
-                                {{ form.cidade.label_tag }}
-                                {% render_field form.cidade placeholder="Cidade" autocomplete="address-level2" %}
-                                {{ form.cidade.errors }}
-                            </div>
+                                    <div class="form-group">
+                                        {{ form.complemento.label_tag }}
+                                        {% render_field form.complemento id="id_complemento" placeholder="Sala, bloco ou referência" autocomplete="address-line3" %}
+                                        {{ form.complemento.errors }}
+                                    </div>
 
-                            <div class="form-group">
-                                {{ form.estado.label_tag }}
-                                {% render_field form.estado placeholder="UF" maxlength="2" autocomplete="address-level1" %}
-                                {{ form.estado.errors }}
+                                    <div class="form-group">
+                                        {{ form.bairro.label_tag }}
+                                        {% render_field form.bairro id="id_bairro" placeholder="Bairro" autocomplete="address-level3" %}
+                                        {{ form.bairro.errors }}
+                                    </div>
+
+                                    <div class="form-group">
+                                        {{ form.cidade.label_tag }}
+                                        {% render_field form.cidade id="id_cidade" placeholder="Cidade" autocomplete="address-level2" %}
+                                        {{ form.cidade.errors }}
+                                    </div>
+
+                                    <div class="form-group">
+                                        {{ form.estado.label_tag }}
+                                        {% render_field form.estado id="id_estado" placeholder="UF" maxlength="2" autocomplete="address-level1" %}
+                                        {{ form.estado.errors }}
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </section>
@@ -2270,7 +2626,7 @@
                             <span>3</span>
                             <div>
                                 <strong>Endereço completo</strong>
-                                <p>Use o CEP para preencher os dados rapidamente.</p>
+                                <p>Localize pelo CEP ou preencha tudo manualmente.</p>
                             </div>
                         </div>
                         <div class="quick-guide-item">
@@ -2701,13 +3057,17 @@ function inicializarFormularioManutencao() {
             return;
         }
 
-        const enderecoBloqueado = form.querySelector("#id_endereco:disabled");
-        if (enderecoBloqueado) {
+        const painelEndereco = document.getElementById("campos-endereco");
+        const modoManual = document.getElementById("sem-cep");
+
+        if (painelEndereco?.hidden) {
             event.preventDefault();
             window.alert(
-                "Digite um CEP completo e aguarde o preenchimento do endereço."
+                "Digite um CEP válido e aguarde a localização ou marque “Não tenho CEP” para preencher manualmente."
             );
-            document.getElementById("id_cep")?.focus();
+            if (modoManual && !modoManual.checked) {
+                document.getElementById("id_cep")?.focus();
+            }
             return;
         }
 
@@ -2865,32 +3225,102 @@ function formatarCep(value) {
 function inicializarCep() {
     const cepInput = document.getElementById("id_cep");
     const feedback = document.getElementById("cepFeedback");
+    const semCepInput = document.getElementById("sem-cep");
+    const cepInputGroup = document.getElementById("cepInputGroup");
+    const painelEndereco = document.getElementById("campos-endereco");
+    const status = document.getElementById("addressStatus");
+    const statusTitulo = document.getElementById("addressStatusTitle");
+    const statusTexto = document.getElementById("addressStatusText");
+    const statusIcone = status?.querySelector(".address-status-icon");
+    const modoBadge = document.getElementById("addressModeBadge");
 
-    if (!cepInput || !feedback) return;
+    if (
+        !cepInput ||
+        !feedback ||
+        !semCepInput ||
+        !painelEndereco ||
+        !status ||
+        !statusTitulo ||
+        !statusTexto ||
+        !statusIcone ||
+        !modoBadge
+    ) return;
 
-    const camposEndereco = [
+    const seletoresEndereco = [
         "#id_endereco",
+        "#id_numero",
+        "#id_complemento",
         "#id_bairro",
         "#id_cidade",
         "#id_estado"
     ];
+    const camposEndereco = seletoresEndereco
+        .map(selector => document.querySelector(selector))
+        .filter(Boolean);
+    const cepEraObrigatorio = cepInput.required;
     let controller = null;
     let debounceCep = null;
 
-    function alternarEnderecoBloqueado(bloqueado, limpar = false) {
-        camposEndereco.forEach(selector => {
-            const campo = document.querySelector(selector);
-            if (!campo) return;
-
-            if (limpar) campo.value = "";
-            campo.disabled = bloqueado;
-            campo.classList.toggle("campo-bloqueado", bloqueado);
+    function habilitarCamposEndereco(habilitar, limpar = false) {
+        camposEndereco.forEach(campo => {
+            if (limpar) {
+                campo.value = "";
+            }
+            campo.disabled = !habilitar;
+            campo.classList.toggle("campo-bloqueado", !habilitar);
         });
     }
 
     function exibirFeedback(texto, classe = "") {
         feedback.textContent = texto;
         feedback.className = `cep-feedback ${classe}`.trim();
+    }
+
+    function exibirStatus(tipo, titulo, texto) {
+        const icones = {
+            loading: "fa-solid fa-spinner fa-spin",
+            success: "fa-solid fa-circle-check",
+            error: "fa-solid fa-triangle-exclamation",
+            manual: "fa-solid fa-pen-to-square"
+        };
+
+        status.hidden = false;
+        status.className = `address-status is-${tipo}`;
+        statusTitulo.textContent = titulo;
+        statusTexto.textContent = texto;
+        statusIcone.innerHTML =
+            `<i class="${icones[tipo] || icones.loading}" aria-hidden="true"></i>`;
+    }
+
+    function ocultarStatus() {
+        status.hidden = true;
+        status.className = "address-status";
+    }
+
+    function mostrarCamposEndereco(modo, focar = false) {
+        habilitarCamposEndereco(true);
+        painelEndereco.hidden = false;
+        painelEndereco.setAttribute("aria-hidden", "false");
+        semCepInput.setAttribute("aria-expanded", "true");
+
+        const manual = modo === "manual";
+        modoBadge.innerHTML = manual
+            ? '<i class="fa-solid fa-pen" aria-hidden="true"></i> Manual'
+            : '<i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i> Automático';
+
+        if (focar) {
+            const destino = manual
+                ? document.getElementById("id_endereco")
+                : document.getElementById("id_numero");
+            window.setTimeout(() => destino?.focus(), 80);
+        }
+    }
+
+    function ocultarCamposEndereco(limpar = false) {
+        habilitarCamposEndereco(false, limpar);
+        painelEndereco.hidden = true;
+        painelEndereco.setAttribute("aria-hidden", "true");
+        semCepInput.setAttribute("aria-expanded", "false");
     }
 
     function preencherEndereco(data) {
@@ -2907,7 +3337,46 @@ function inicializarCep() {
         });
     }
 
-    async function buscarCep() {
+    function ativarModoManual({
+        preservarValores = false,
+        focar = true
+    } = {}) {
+        controller?.abort();
+        window.clearTimeout(debounceCep);
+
+        semCepInput.checked = true;
+        cepInput.value = "";
+        cepInput.disabled = true;
+        cepInput.required = false;
+        cepInput.classList.remove("campo-erro", "campo-loading");
+        cepInputGroup.classList.add("is-manual");
+        exibirFeedback("CEP dispensado: preencha o endereço abaixo.", "cep-success");
+
+        if (!preservarValores) {
+            habilitarCamposEndereco(true, true);
+        }
+
+        mostrarCamposEndereco("manual", focar);
+        exibirStatus(
+            "manual",
+            "Preenchimento manual ativado",
+            "Informe rua, número, bairro, cidade e estado para continuar."
+        );
+    }
+
+    function desativarModoManual() {
+        semCepInput.checked = false;
+        cepInput.disabled = false;
+        cepInput.required = cepEraObrigatorio;
+        cepInputGroup.classList.remove("is-manual");
+        cepInput.classList.remove("campo-erro", "campo-loading");
+        exibirFeedback("");
+        ocultarStatus();
+        ocultarCamposEndereco(true);
+        window.setTimeout(() => cepInput.focus(), 60);
+    }
+
+    async function buscarCep({ focar = true } = {}) {
         const cep = cepInput.value.replace(/\D/g, "");
         if (cep.length !== 8) return;
 
@@ -2917,6 +3386,12 @@ function inicializarCep() {
         cepInput.classList.remove("campo-erro");
         cepInput.classList.add("campo-loading");
         exibirFeedback("Buscando endereço…", "cep-loading");
+        ocultarCamposEndereco(true);
+        exibirStatus(
+            "loading",
+            "Consultando CEP",
+            "Só um instante enquanto localizamos o endereço."
+        );
 
         try {
             const resposta = await fetch(
@@ -2933,32 +3408,54 @@ function inicializarCep() {
 
             if (data.erro) {
                 cepInput.classList.add("campo-erro");
-                alternarEnderecoBloqueado(false);
+                ocultarCamposEndereco(true);
                 exibirFeedback(
-                    "CEP não encontrado. Preencha o endereço manualmente.",
+                    "CEP não encontrado. Confira o número ou use “Não tenho CEP”.",
                     "cep-error"
+                );
+                exibirStatus(
+                    "error",
+                    "Não localizamos esse CEP",
+                    "Revise os números ou marque “Não tenho CEP” para preencher manualmente."
                 );
                 return;
             }
 
             preencherEndereco(data);
-            alternarEnderecoBloqueado(false);
+            mostrarCamposEndereco("automatico", focar);
             exibirFeedback("Endereço encontrado e preenchido.", "cep-success");
-            document.getElementById("id_numero")?.focus();
+            exibirStatus(
+                "success",
+                "Endereço localizado",
+                "Confira os dados encontrados e complete o número."
+            );
         } catch (error) {
             if (error.name === "AbortError") return;
 
             cepInput.classList.remove("campo-loading");
             cepInput.classList.add("campo-erro");
-            alternarEnderecoBloqueado(false);
+            ocultarCamposEndereco(true);
             exibirFeedback(
-                "Não foi possível consultar agora. Preencha o endereço manualmente.",
+                "Consulta indisponível. Use “Não tenho CEP” para continuar.",
                 "cep-error"
+            );
+            exibirStatus(
+                "error",
+                "Não foi possível consultar agora",
+                "Você pode tentar novamente ou ativar o preenchimento manual."
             );
         }
     }
 
     cepInput.value = formatarCep(cepInput.value);
+
+    semCepInput.addEventListener("change", () => {
+        if (semCepInput.checked) {
+            ativarModoManual();
+        } else {
+            desativarModoManual();
+        }
+    });
 
     cepInput.addEventListener("input", () => {
         cepInput.value = formatarCep(cepInput.value);
@@ -2969,19 +3466,39 @@ function inicializarCep() {
 
         if (cep.length < 8) {
             controller?.abort();
-            alternarEnderecoBloqueado(true, true);
+            ocultarCamposEndereco(true);
+            ocultarStatus();
             exibirFeedback("");
             return;
         }
 
-        debounceCep = window.setTimeout(buscarCep, 220);
+        debounceCep = window.setTimeout(() => buscarCep(), 220);
     });
 
-    if (cepInput.value.replace(/\D/g, "").length === 8) {
-        alternarEnderecoBloqueado(false);
-        buscarCep();
+    const enderecoJaPreenchido = camposEndereco.some(
+        campo => campo.value.trim()
+    );
+    const cepCompleto =
+        cepInput.value.replace(/\D/g, "").length === 8;
+
+    if (!cepCompleto && enderecoJaPreenchido) {
+        ativarModoManual({
+            preservarValores: true,
+            focar: false
+        });
+    } else if (cepCompleto && enderecoJaPreenchido) {
+        mostrarCamposEndereco("automatico");
+        exibirFeedback("Confira o endereço antes de enviar.", "cep-success");
+        exibirStatus(
+            "success",
+            "Endereço pronto para conferência",
+            "Revise os dados e complete o que estiver faltando."
+        );
+    } else if (cepCompleto) {
+        buscarCep({ focar: false });
     } else {
-        alternarEnderecoBloqueado(true);
+        ocultarCamposEndereco();
+        ocultarStatus();
     }
 }
 
