@@ -1,18 +1,21 @@
 from django.utils.decorators import method_decorator
 from django.views.generic import View
 from django.contrib.auth.models import User
-from django.contrib import messages
+
 from django.contrib.auth import authenticate, login
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 import logging
 
-from .forms import UserForm, PerfilForm
-from django.views.generic.edit import FormView
-from django.db import transaction
-from django.db.models import Count, F, FloatField, Value, Prefetch
+from .forms import (
+    UserForm,
+    PerfilForm,
+    CadastroForm,
+    CompletarPerfilForm,
+)
+
 
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.db.models import Count, F, FloatField, Value, Prefetch, Avg
+
 from .models import Brinquedos, CategoriasBrinquedos, Projetos, Eventos, ClientePerfil, Combos, Cupom, Promocoes, \
     TagsBrinquedos, ImagensSite, BrinquedosProjeto, Estabelecimentos, Manutencao, ManutencaoImagem, \
     BrinquedoClick, ComboClick, PromocaoClick, CategoriaClick, PecasReposicao, CategoriaPeca, \
