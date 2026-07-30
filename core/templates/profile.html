@@ -5,38 +5,552 @@
 
 {% block content %}
 
-<!-- ======= BREADCRUMB ======= -->
-<div class="breadcrumb">
-    <a href="{% url 'home' %}">Home</a>
-    <span>›</span>
-    <strong>Meu Perfil</strong>
-</div>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Montserrat:wght@300;400;500;600&display=swap');
 
-<!-- ======= PERFIL ======= -->
-<section class="perfil-wrapper" id="perfil-box">
+/* =========================================================
+   BASE (mesmo vocabulário visual do restante do site)
+========================================================= */
+#perfil-page * { box-sizing: border-box; }
 
-    <!-- CARD DE INFORMAÇÕES -->
-    <div class="perfil-card">
-        <div class="perfil-header">
-            <!-- Avatar
-            <div class="avatar">
+#perfil-page {
+    font-family: "Poppins", sans-serif;
+    background: #f8f9fc;
+    color: #2c3e50;
+}
+
+/* ======== BREADCRUMB ======== */
+#perfil-page .breadcrumb {
+    max-width: 1000px;
+    margin: 24px auto 0;
+    padding: 0 20px;
+    font-size: .92rem;
+    color: #6c757d;
+}
+
+#perfil-page .breadcrumb a {
+    color: #004AAD;
+    text-decoration: none;
+    font-weight: 700;
+}
+
+#perfil-page .breadcrumb a:hover { color: #E63946; }
+
+#perfil-page .breadcrumb span {
+    margin: 0 8px;
+    color: #b7c0cd;
+}
+
+#perfil-page .breadcrumb strong { color: #0d1b2e; }
+
+/* =========================================================
+   HERO DO PERFIL (mesma linguagem da seção "Localização")
+========================================================= */
+.perfil-hero {
+    position: relative;
+    overflow: hidden;
+    margin-top: 18px;
+    background:
+        radial-gradient(circle at 12% 15%, rgba(0, 123, 255, 0.22), transparent 30%),
+        radial-gradient(circle at 88% 85%, rgba(230, 57, 70, 0.20), transparent 32%),
+        linear-gradient(135deg, #0d1b2e 0%, #16233a 100%);
+    color: #fff;
+    padding: 54px 24px 96px;
+}
+
+.perfil-hero-inner {
+    position: relative;
+    z-index: 1;
+    max-width: 1000px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 30px;
+    flex-wrap: wrap;
+}
+
+.perfil-avatar-wrap {
+    position: relative;
+    width: 128px;
+    height: 128px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 4px solid rgba(255,255,255,0.16);
+    background: linear-gradient(135deg, #004AAD, #0069e8);
+    box-shadow: 0 18px 40px rgba(0,0,0,0.35);
+}
+
+.perfil-avatar-wrap img,
+.perfil-avatar-fallback {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.4rem;
+    font-weight: 800;
+    color: #fff;
+}
+
+.perfil-avatar-edit {
+    position: absolute;
+    right: -2px;
+    bottom: -2px;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: #E63946;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: .95rem;
+    cursor: pointer;
+    border: 3px solid #16233a;
+    box-shadow: 0 6px 16px rgba(230,57,70,0.45);
+    transition: transform .2s ease, background .2s ease;
+}
+
+.perfil-avatar-edit:hover {
+    transform: scale(1.08);
+    background: #c9152d;
+}
+
+.perfil-avatar-input {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    width: 100%;
+    height: 100%;
+    cursor: pointer;
+}
+
+.perfil-hero-copy { min-width: 0; }
+
+.perfil-hero-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    background: #E63946;
+    color: #fff;
+    border-radius: 999px;
+    padding: 7px 15px;
+    font-size: .72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .6px;
+    margin-bottom: 14px;
+}
+
+.perfil-hero-copy h1 {
+    font-family: 'Poppins', sans-serif;
+    font-size: clamp(1.5rem, 3vw, 2rem);
+    font-weight: 800;
+    margin: 0 0 6px;
+    line-height: 1.2;
+}
+
+.perfil-hero-copy p {
+    margin: 0;
+    color: rgba(255,255,255,0.72);
+    font-size: .95rem;
+}
+
+.perfil-hero-copy p i { color: #7db8ff; margin-right: 6px; }
+
+/* =========================================================
+   CONTAINER PRINCIPAL (cards flutuando sobre o hero)
+========================================================= */
+.perfil-wrapper {
+    max-width: 1000px;
+    margin: -58px auto 70px;
+    padding: 0 20px;
+    position: relative;
+    z-index: 2;
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 26px;
+    align-items: start;
+}
+
+/* ======== CARD LATERAL ======== */
+.perfil-side-card {
+    background: #fff;
+    border-radius: 26px;
+    padding: 26px 24px;
+    box-shadow: 0 20px 50px rgba(13,27,46,0.12);
+    border: 1px solid #eef1f6;
+}
+
+.perfil-side-card h3 {
+    font-family: 'Poppins', sans-serif;
+    font-size: 1rem;
+    font-weight: 800;
+    color: #0d1b2e;
+    margin: 0 0 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.perfil-side-card h3 i { color: #004AAD; }
+
+.perfil-info-line {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid #f1f3f7;
+}
+
+.perfil-info-line:last-child { border-bottom: 0; padding-bottom: 0; }
+.perfil-info-line:first-of-type { padding-top: 0; }
+
+.perfil-info-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 12px;
+    background: #edf4ff;
+    color: #004AAD;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: .85rem;
+    flex-shrink: 0;
+}
+
+.perfil-info-line div { min-width: 0; }
+
+.perfil-info-line small {
+    display: block;
+    color: #8a94a6;
+    font-size: .68rem;
+    font-weight: 750;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    margin-bottom: 2px;
+}
+
+.perfil-info-line strong {
+    display: block;
+    color: #0d1b2e;
+    font-size: .88rem;
+    font-weight: 700;
+    overflow-wrap: anywhere;
+}
+
+.perfil-badge-conta {
+    margin-top: 18px;
+    padding: 14px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #edf4ff, #f4f8ff);
+    border: 1px solid #dbe7fb;
+    text-align: center;
+}
+
+.perfil-badge-conta i {
+    color: #004AAD;
+    font-size: 1.3rem;
+    margin-bottom: 6px;
+    display: block;
+}
+
+.perfil-badge-conta span {
+    font-size: .78rem;
+    color: #45536b;
+    font-weight: 650;
+    line-height: 1.5;
+}
+
+/* ======== CARD DO FORMULÁRIO ======== */
+.perfil-form-card {
+    background: #fff;
+    border-radius: 26px;
+    padding: 30px 30px 26px;
+    box-shadow: 0 20px 50px rgba(13,27,46,0.12);
+    border: 1px solid #eef1f6;
+}
+
+.perfil-form-card .form-section-title {
+    font-family: 'Poppins', sans-serif;
+    font-size: 1.02rem;
+    font-weight: 800;
+    color: #0d1b2e;
+    margin: 0 0 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.perfil-form-card .form-section-title i {
+    color: #E63946;
+    font-size: .9rem;
+}
+
+.perfil-form-card .form-section-sub {
+    margin: 0 0 20px;
+    color: #8a94a6;
+    font-size: .84rem;
+}
+
+.perfil-section + .perfil-section {
+    margin-top: 30px;
+    padding-top: 26px;
+    border-top: 1px solid #f1f3f7;
+}
+
+/* ======== MENSAGENS ======== */
+#perfil-page .messages {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+#perfil-page .messages li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 13px 16px;
+    border-radius: 14px;
+    font-size: .88rem;
+    font-weight: 650;
+}
+
+#perfil-page .messages li::before {
+    font-family: "Font Awesome 6 Free";
+    font-weight: 900;
+    font-size: 1rem;
+}
+
+#perfil-page .messages li.success {
+    background: #eafaf1;
+    color: #08783d;
+    border: 1px solid #cdf0dd;
+}
+
+#perfil-page .messages li.success::before { content: "\f058"; }
+
+#perfil-page .messages li.error {
+    background: #fdecee;
+    color: #c9152d;
+    border: 1px solid #f7cfd4;
+}
+
+#perfil-page .messages li.error::before { content: "\f06a"; }
+
+/* ======== CAMPOS ======== */
+.perfil-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 18px;
+}
+
+.form-group:last-child { margin-bottom: 0; }
+
+.form-group label {
+    font-weight: 700;
+    font-size: .82rem;
+    color: #33415a;
+    margin-bottom: 7px;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.form-group label i {
+    color: #004AAD;
+    font-size: .78rem;
+    width: 16px;
+    text-align: center;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    padding: 12px 14px;
+    border-radius: 12px;
+    border: 1.5px solid #e3e8f0;
+    font-size: .92rem;
+    font-family: 'Poppins', sans-serif;
+    color: #0d1b2e;
+    background: #fbfcfe;
+    transition: all .22s ease;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #004AAD;
+    background: #fff;
+    box-shadow: 0 0 0 4px rgba(0, 74, 173, 0.12);
+}
+
+.form-group input[type="file"] { display: none; }
+
+.form-help {
+    font-size: .74rem;
+    color: #9aa5b5;
+    margin-top: 6px;
+}
+
+/* ======== AÇÕES ======== */
+.perfil-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 28px;
+    padding-top: 22px;
+    border-top: 1px solid #f1f3f7;
+}
+
+.btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    padding: 13px 26px;
+    border-radius: 999px;
+    border: none;
+    cursor: pointer;
+    font-family: 'Poppins', sans-serif;
+    font-weight: 750;
+    font-size: .9rem;
+    color: #fff;
+    background: linear-gradient(135deg, #004AAD, #007bff);
+    box-shadow: 0 12px 26px rgba(0, 74, 173, 0.28);
+    transition: transform .2s ease, box-shadow .2s ease, background .2s ease;
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, #E63946, #c9152d);
+    box-shadow: 0 14px 30px rgba(230, 57, 70, 0.3);
+    transform: translateY(-2px);
+}
+
+/* =========================================================
+   RESPONSIVO
+========================================================= */
+@media (max-width: 860px) {
+    .perfil-wrapper {
+        grid-template-columns: 1fr;
+        margin-top: -46px;
+    }
+}
+
+@media (max-width: 560px) {
+    .perfil-hero { padding: 44px 18px 84px; }
+    .perfil-hero-inner { gap: 20px; }
+    .perfil-avatar-wrap { width: 100px; height: 100px; }
+    .perfil-form-card, .perfil-side-card { padding: 22px 18px; border-radius: 22px; }
+    .perfil-grid-2 { grid-template-columns: 1fr; gap: 0; }
+    .perfil-actions { justify-content: stretch; }
+    .perfil-actions .btn-primary { width: 100%; justify-content: center; }
+}
+</style>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+<div id="perfil-page">
+
+    <!-- ======= BREADCRUMB ======= -->
+    <div class="breadcrumb">
+        <a href="{% url 'home' %}">Home</a>
+        <span>›</span>
+        <strong>Meu Perfil</strong>
+    </div>
+
+    <!-- ======= HERO ======= -->
+    <section class="perfil-hero">
+        <div class="perfil-hero-inner">
+
+            <div class="perfil-avatar-wrap">
                 {% if user.perfil.avatar %}
-                    <img src="{{ user.perfil.avatar.url }}" alt="Avatar">
+                    <img src="{{ user.perfil.avatar.url }}" alt="Avatar" id="perfil-avatar-preview">
                 {% else %}
-                    <img src="{% static 'images/default_avatar.png' %}" alt="Avatar">
+                    <div class="perfil-avatar-fallback" id="perfil-avatar-fallback">
+                        {{ user.first_name|first|default:user.username|first|upper }}
+                    </div>
+                    <img src="" alt="Avatar" id="perfil-avatar-preview" style="display:none;">
                 {% endif %}
-            </div> -->
-            <div class="user-info">
-                <h2>{{ user.first_name }} {{ user.last_name }}</h2>
-                <p>{{ user.email }}</p>
-                {% if user.perfil.nome_completo %}
-                    <small>Nome completo: {{ user.perfil.nome_completo }}</small>
-                {% endif %}
-            </div>
-        </div>
 
-        <!-- FORMULÁRIO DE EDIÇÃO -->
-        <div class="perfil-form">
+                <label for="id_avatar" class="perfil-avatar-edit" title="Alterar foto">
+                    <i class="fa-solid fa-camera"></i>
+                </label>
+            </div>
+
+            <div class="perfil-hero-copy">
+                <span class="perfil-hero-tag">
+                    <i class="fa-solid fa-circle-check"></i> Cliente Lazer &amp; Sport
+                </span>
+                <h1>{{ user.first_name }} {{ user.last_name }}{% if not user.first_name %}{{ user.username }}{% endif %}</h1>
+                <p><i class="fa-solid fa-envelope"></i>{{ user.email|default:"E-mail não cadastrado" }}</p>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- ======= CONTEÚDO ======= -->
+    <div class="perfil-wrapper" id="perfil-box">
+
+        <!-- CARD LATERAL -->
+        <aside class="perfil-side-card">
+            <h3><i class="fa-solid fa-id-card"></i> Resumo da conta</h3>
+
+            <div class="perfil-info-line">
+                <div class="perfil-info-icon"><i class="fa-solid fa-user"></i></div>
+                <div>
+                    <small>Usuário</small>
+                    <strong>{{ user.username }}</strong>
+                </div>
+            </div>
+
+            <div class="perfil-info-line">
+                <div class="perfil-info-icon"><i class="fa-solid fa-envelope"></i></div>
+                <div>
+                    <small>E-mail</small>
+                    <strong>{{ user.email|default:"Não informado" }}</strong>
+                </div>
+            </div>
+
+            <div class="perfil-info-line">
+                <div class="perfil-info-icon"><i class="fa-solid fa-phone"></i></div>
+                <div>
+                    <small>Telefone</small>
+                    <strong>{{ user.perfil.telefone|default:"Não informado" }}</strong>
+                </div>
+            </div>
+
+            {% if user.perfil.nome_completo %}
+            <div class="perfil-info-line">
+                <div class="perfil-info-icon"><i class="fa-solid fa-signature"></i></div>
+                <div>
+                    <small>Nome completo</small>
+                    <strong>{{ user.perfil.nome_completo }}</strong>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="perfil-badge-conta">
+                <i class="fa-solid fa-shield-halved"></i>
+                <span>Seus dados são usados apenas para contato sobre pedidos e manutenções.</span>
+            </div>
+        </aside>
+
+        <!-- CARD DO FORMULÁRIO -->
+        <section class="perfil-form-card">
+
             {% if messages %}
                 <ul class="messages">
                     {% for message in messages %}
@@ -45,234 +559,104 @@
                 </ul>
             {% endif %}
 
-            <form method="POST" enctype="multipart/form-data">
+            <form method="POST" enctype="multipart/form-data" id="form-perfil">
                 {% csrf_token %}
 
-                <!-- Avatar -->
-                <div class="form-group">
-                    <label for="id_avatar">Avatar</label>
-                    {{ perfil_form.avatar }}
+                <!-- input de avatar fica escondido; o clique vem do label no hero -->
+                {{ perfil_form.avatar }}
+
+                <div class="perfil-section">
+                    <p class="form-section-title"><i class="fa-solid fa-user-pen"></i> Dados pessoais</p>
+                    <p class="form-section-sub">Como devemos te chamar e te identificar.</p>
+
+                    <div class="perfil-grid-2">
+                        <div class="form-group">
+                            <label for="id_first_name"><i class="fa-solid fa-user"></i> Nome</label>
+                            {{ user_form.first_name }}
+                        </div>
+
+                        <div class="form-group">
+                            <label for="id_last_name"><i class="fa-solid fa-user"></i> Sobrenome</label>
+                            {{ user_form.last_name }}
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="id_nome_completo"><i class="fa-solid fa-signature"></i> Nome completo</label>
+                        {{ perfil_form.nome_completo }}
+                    </div>
                 </div>
 
-                <!-- Nome -->
-                <div class="form-group">
-                    <label for="id_first_name">Nome</label>
-                    {{ user_form.first_name }}
+                <div class="perfil-section">
+                    <p class="form-section-title"><i class="fa-solid fa-address-book"></i> Contato</p>
+                    <p class="form-section-sub">Usado para confirmar pedidos e falar sobre manutenções.</p>
+
+                    <div class="form-group">
+                        <label for="id_telefone"><i class="fa-solid fa-phone"></i> Telefone</label>
+                        {{ perfil_form.telefone }}
+                        <small class="form-help">Ex: (11)91234-5678</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="id_email"><i class="fa-solid fa-envelope"></i> Email</label>
+                        {{ user_form.email }}
+                    </div>
                 </div>
 
-                <!-- Sobrenome -->
-                <div class="form-group">
-                    <label for="id_last_name">Sobrenome</label>
-                    {{ user_form.last_name }}
+                <div class="perfil-actions">
+                    <button type="submit" class="btn-primary">
+                        <i class="fa-solid fa-floppy-disk"></i> Salvar alterações
+                    </button>
                 </div>
-
-                <!-- Nome completo -->
-            <div class="form-group">
-                <label for="id_nome_completo">Nome completo</label>
-                {{ perfil_form.nome_completo }}
-            </div>
-
-            <!-- Telefone -->
-            <div class="form-group">
-                <label for="id_telefone">Telefone</label>
-                {{ perfil_form.telefone }}
-                <small class="form-help">
-                    Ex: (11)91234-5678
-                </small>
-            </div>
-
-            <!-- Email -->
-            <div class="form-group">
-                <label for="id_email">Email</label>
-                {{ user_form.email }}
-            </div>
-
-                <button type="submit" class="btn btn-primary">Salvar Alterações</button>
             </form>
-        </div>
-    </div>
+        </section>
 
-</section>
+    </div>
+</div>
 
 <script>
-document.addEventListener("DOMContentLoaded", function(){
+document.addEventListener("DOMContentLoaded", function () {
 
+    /* Máscara de telefone */
     const telefone = document.getElementById("id_telefone");
 
-    if(telefone){
+    if (telefone) {
+        telefone.addEventListener("input", function (e) {
+            let v = e.target.value.replace(/\D/g, '');
 
-        telefone.addEventListener("input", function(e){
+            if (v.length > 11) v = v.slice(0, 11);
 
-            let v = e.target.value.replace(/\D/g,'');
-
-            if(v.length > 11) v = v.slice(0,11);
-
-            if(v.length > 10){
+            if (v.length > 10) {
                 v = v.replace(/^(\d{2})(\d{5})(\d{4}).*/, "($1)$2-$3");
-            }else if(v.length > 6){
+            } else if (v.length > 6) {
                 v = v.replace(/^(\d{2})(\d{4})(\d{0,4}).*/, "($1)$2-$3");
-            }else if(v.length > 2){
+            } else if (v.length > 2) {
                 v = v.replace(/^(\d{2})(\d{0,5})/, "($1)$2");
-            }else{
+            } else {
                 v = v.replace(/^(\d*)/, "($1");
             }
 
             e.target.value = v;
-
         });
-
     }
 
+    /* Preview instantâneo do avatar ao escolher um arquivo */
+    const avatarInput = document.getElementById("id_avatar");
+    const avatarPreview = document.getElementById("perfil-avatar-preview");
+    const avatarFallback = document.getElementById("perfil-avatar-fallback");
+
+    if (avatarInput && avatarPreview) {
+        avatarInput.addEventListener("change", function () {
+            const arquivo = this.files && this.files[0];
+            if (!arquivo) return;
+
+            const url = URL.createObjectURL(arquivo);
+            avatarPreview.src = url;
+            avatarPreview.style.display = "block";
+            if (avatarFallback) avatarFallback.style.display = "none";
+        });
+    }
 });
 </script>
 
-
-<style>
-
-    .form-help{
-    font-size:0.85rem;
-    color:#888;
-    margin-top:4px;
-}
-
-
-    /* ======== BREADCRUMB ======== */
-.breadcrumb {
-    max-width: 1200px;
-    margin: 25px auto;
-    font-size: 1rem;
-    color: #444;
-}
-
-.breadcrumb a {
-    color: #007BFF;
-    text-decoration: none;
-    font-weight: 600;
-}
-
-.breadcrumb span {
-    margin: 0 6px;
-    color: #888;
-}
-
-.breadcrumb strong {
-    color: #1f2d3d;
-}
-/* ======= PERFIL ======= */
-.perfil-wrapper {
-    max-width: 800px;
-    margin: 20px auto;
-    padding: 0 15px;
-}
-
-.perfil-card {
-    background: #fff;
-    border-radius: 12px;
-    padding: 25px;
-    box-shadow: 0 5px 20px rgba(0,0,0,0.08);
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-}
-
-.perfil-header {
-    display: flex;
-    align-items: center;
-    gap: 20px;
-}
-
-.avatar img {
-    width: 100px;
-    height: 100px;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 2px solid #007BFF;
-}
-
-.user-info h2 {
-    margin: 0;
-    font-size: 1.6rem;
-    color: #1f2d3d;
-}
-
-.user-info p {
-    margin: 3px 0;
-    color: #555;
-}
-
-.user-info small {
-    color: #888;
-}
-
-/* ======= FORMULÁRIO ======= */
-.perfil-form {
-    margin-top: 20px;
-}
-
-.form-group {
-    display: flex;
-    flex-direction: column;
-    margin-bottom: 15px;
-}
-
-.form-group label {
-    font-weight: 600;
-    margin-bottom: 5px;
-}
-
-.form-group input,
-.form-group select,
-.form-group textarea {
-    padding: 10px 12px;
-    border-radius: 8px;
-    border: 1px solid #ccc;
-    font-size: 1rem;
-    transition: all .3s ease;
-}
-
-.form-group input:focus,
-.form-group select:focus,
-.form-group textarea:focus {
-    outline: none;
-    border-color: #007BFF;
-    box-shadow: 0 0 5px rgba(0,123,255,0.3);
-}
-
-.btn-primary {
-    padding: 12px 20px;
-    background-color: #007BFF;
-    color: #fff;
-    font-weight: 600;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: all .3s ease;
-}
-
-.btn-primary:hover {
-    background-color: #0056C9;
-}
-
-.messages {
-    list-style: none;
-    padding: 0;
-    margin-bottom: 15px;
-}
-
-.messages li {
-    padding: 10px 12px;
-    border-radius: 6px;
-    margin-bottom: 8px;
-}
-
-.messages li.success {
-    background: #d4edda;
-    color: #155724;
-}
-
-.messages li.error {
-    background: #f8d7da;
-    color: #721c24;
-}
-</style>
 {% endblock %}
