@@ -4091,10 +4091,18 @@ main.content-section {
 
  ======= COMBOS ======= -->
 <section id="combos-section" class="combos-section">
-<h2 class="section-title">Combos</h2>
-  <p class="section-subtitle">
-    Selecionamos os melhores brinquedos em pacotes especiais para você economizar mais e garantir a diversão da festa.
-  </p>
+  <div class="ls-section-intro">
+    <div class="ls-section-intro-copy">
+      <span class="ls-section-kicker">
+        <i class="fa-solid fa-layer-group" aria-hidden="true"></i>
+        Pacotes especiais
+      </span>
+      <h2 class="section-title">Combos</h2>
+      <p class="section-subtitle">
+        Selecionamos os melhores brinquedos em pacotes especiais para você economizar mais e garantir a diversão da festa.
+      </p>
+    </div>
+  </div>
 
   <div class="scroll-wrapper">
     <button class="scroll-btn left" id="scroll-left-combos">&#10094;</button>
@@ -4334,8 +4342,14 @@ main.content-section {
 
     <div class="eventos-header">
         <div>
-            <span class="ls-showcase-tag">Parceiros</span><br>
+            <span class="ls-showcase-tag">
+              <i class="fa-solid fa-handshake" aria-hidden="true"></i>
+              Parceiros
+            </span>
             <h2 class="titulo-eventos">Nossos Estabelecimentos</h2>
+            <p class="section-subtitle">
+              Conheça os parceiros responsáveis por levar diversão e qualidade aos eventos.
+            </p>
         </div>
 
         <!-- BOTÃO VER TODOS -->
@@ -4343,10 +4357,6 @@ main.content-section {
             Ver todos os estabelecimentos →
         </a>
     </div>
-
-    <p class="section-subtitle">
-        Conheça os parceiros responsáveis por levar diversão e qualidade aos eventos.
-    </p>
 
     <div class="eventos-grid">
         {% for est in estabelecimentos|slice:":6" %}
@@ -4578,6 +4588,8 @@ main.content-section {
   #promocoes-section,
   #brinquedos,
   #pecas-section,
+  #combos-section,
+  #estabelecimentos,
   #eventos,
   #projetos {
     --ls-section-blue: #0878f9;
@@ -4588,38 +4600,41 @@ main.content-section {
     overflow: hidden;
     margin: 0;
     padding: 68px 28px 72px;
-    border: 1px solid rgba(120,165,224,.16);
+    border: 1px solid rgba(0,74,173,.11);
     border-radius: 30px;
-    color: #f4f8ff;
+    color: #10233f;
     background:
-      radial-gradient(circle at 7% 7%, rgba(8,120,249,.20), transparent 24rem),
-      radial-gradient(circle at 94% 88%, rgba(230,57,70,.13), transparent 24rem),
-      linear-gradient(150deg, #0a1728 0%, #050b14 62%, #07111f 100%);
+      radial-gradient(circle at 7% 7%, rgba(8,120,249,.13), transparent 24rem),
+      radial-gradient(circle at 94% 88%, rgba(230,57,70,.07), transparent 24rem),
+      linear-gradient(150deg, #eef5fd 0%, #e7eff9 58%, #f7faff 100%);
     box-shadow:
-      0 24px 58px rgba(3,10,21,.18),
-      inset 0 1px 0 rgba(255,255,255,.035);
+      0 20px 48px rgba(19,53,92,.10),
+      inset 0 1px 0 rgba(255,255,255,.75);
     scroll-margin-top: 84px;
   }
 
   #promocoes-section::before,
   #brinquedos::before,
   #pecas-section::before,
+  #combos-section::before,
+  #estabelecimentos::before,
   #eventos::before,
   #projetos::before {
     content: "";
     position: absolute;
     z-index: -1;
     inset: 0;
-    opacity: .14;
+    opacity: .62;
     pointer-events: none;
     background-image:
-      linear-gradient(rgba(255,255,255,.045) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255,255,255,.045) 1px, transparent 1px);
+      linear-gradient(rgba(0,74,173,.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,74,173,.035) 1px, transparent 1px);
     background-size: 42px 42px;
     mask-image: linear-gradient(to bottom, #000, transparent 88%);
   }
 
   .ls-section-intro,
+  #estabelecimentos .eventos-header,
   #eventos .eventos-header,
   #projetos .projetos-header {
     width: 100%;
@@ -4633,12 +4648,14 @@ main.content-section {
   }
 
   .ls-section-intro-copy,
+  #estabelecimentos .eventos-header > div,
   #eventos .eventos-header > div,
   #projetos .projetos-header > div {
     max-width: 770px;
   }
 
   .ls-section-kicker,
+  #estabelecimentos .ls-showcase-tag,
   #eventos .ls-showcase-tag,
   #projetos .ls-showcase-tag {
     display: inline-flex;
@@ -4660,10 +4677,12 @@ main.content-section {
   #promocoes-section .ls-section-intro .section-title,
   #brinquedos .ls-section-intro .titulo-sec,
   #pecas-section .ls-section-intro .titulo-sec,
+  #combos-section .ls-section-intro .section-title,
+  #estabelecimentos .titulo-eventos,
   #eventos .titulo-eventos,
   #projetos .titulo-eventos {
     margin: 0;
-    color: #fff;
+    color: #102b4c;
     font-family: "Poppins", sans-serif;
     font-size: clamp(2rem, 4vw, 3.15rem) !important;
     font-weight: 850;
@@ -4675,11 +4694,13 @@ main.content-section {
   #promocoes-section .ls-section-intro .section-subtitle,
   #brinquedos .ls-section-intro .section-subtitle,
   #pecas-section .ls-section-intro .section-subtitle,
+  #combos-section .ls-section-intro .section-subtitle,
+  #estabelecimentos .eventos-header .section-subtitle,
   #eventos .eventos-header .section-subtitle,
   #projetos .projetos-header .section-subtitle {
     max-width: 740px;
     margin: 13px 0 0;
-    color: #a8b8cc;
+    color: #60758f;
     font-family: "Poppins", sans-serif;
     font-size: .9rem;
     font-weight: 500;
@@ -4689,6 +4710,7 @@ main.content-section {
 
   #brinquedos .btn-vertodos,
   #pecas-section .btn-vertodos,
+  #estabelecimentos .ver-todos-eventos,
   #eventos .ver-todos-eventos,
   #projetos .ver-todos-eventos {
     flex: 0 0 auto;
@@ -4710,6 +4732,7 @@ main.content-section {
 
   #brinquedos .btn-vertodos:hover,
   #pecas-section .btn-vertodos:hover,
+  #estabelecimentos .ver-todos-eventos:hover,
   #eventos .ver-todos-eventos:hover,
   #projetos .ver-todos-eventos:hover {
     color: #fff;
@@ -4718,8 +4741,9 @@ main.content-section {
     transform: translateY(-2px);
   }
 
-  /* Promoções: carrossel com o mesmo acabamento premium. */
-  #promocoes-section .scroll-wrapper {
+  /* Promoções e combos: carrosséis com o mesmo acabamento premium. */
+  #promocoes-section .scroll-wrapper,
+  #combos-section .scroll-wrapper {
     width: 100%;
     max-width: none;
     margin: 0 auto;
@@ -4727,7 +4751,8 @@ main.content-section {
     overflow: visible;
   }
 
-  #promocoes-section .scroll-container {
+  #promocoes-section .scroll-container,
+  #combos-section .scroll-container {
     gap: 18px;
     padding: 12px 3px 25px;
     overflow-x: auto;
@@ -4736,15 +4761,18 @@ main.content-section {
     scrollbar-width: none;
   }
 
-  #promocoes-section .scroll-container::-webkit-scrollbar {
+  #promocoes-section .scroll-container::-webkit-scrollbar,
+  #combos-section .scroll-container::-webkit-scrollbar {
     display: none;
   }
 
-  #promocoes-section .oferta-card-link {
+  #promocoes-section .oferta-card-link,
+  #combos-section .oferta-card-link {
     scroll-snap-align: start;
   }
 
-  #promocoes-section .scroll-btn {
+  #promocoes-section .scroll-btn,
+  #combos-section .scroll-btn {
     top: 50%;
     width: 42px;
     height: 42px;
@@ -4756,43 +4784,49 @@ main.content-section {
     font-size: 16px;
   }
 
-  #promocoes-section .scroll-btn:hover {
+  #promocoes-section .scroll-btn:hover,
+  #combos-section .scroll-btn:hover {
     background: linear-gradient(145deg, var(--ls-section-red), #b91e30);
     transform: translateY(-50%) scale(1.04);
   }
 
   #promocoes-section .oferta-card,
+  #combos-section .oferta-card,
   #brinquedos .card-produto,
   #pecas-section .pecas-card,
+  #estabelecimentos .evento-card,
   #eventos .evento-card,
   #projetos .evento-card {
-    border-color: rgba(118,164,221,.24);
+    border-color: rgba(0,74,173,.15);
+    background: linear-gradient(160deg, #f9fbff, #f0f5fc 76%);
     box-shadow:
-      0 20px 46px rgba(0,4,13,.38),
-      0 0 0 1px rgba(255,255,255,.02);
+      0 18px 40px rgba(20,55,96,.12),
+      inset 0 1px 0 rgba(255,255,255,.92);
   }
 
   #promocoes-section .oferta-card:hover,
+  #combos-section .oferta-card:hover,
   #brinquedos .card-link:hover .card-produto,
   #pecas-section .pecas-card-link:hover .pecas-card,
+  #estabelecimentos .evento-card:hover,
   #eventos .evento-card:hover,
   #projetos .evento-card:hover {
-    border-color: rgba(77,151,246,.48);
-    box-shadow: 0 28px 58px rgba(0,4,14,.52);
+    border-color: rgba(0,105,218,.31);
+    box-shadow: 0 25px 52px rgba(20,55,96,.19);
   }
 
-  /* Filtros em vidro escuro. */
+  /* Filtros claros com contraste azul. */
   #brinquedos .filtros-horizontal,
   #pecas-section .filtros-horizontal {
     width: 100%;
     margin: 0 auto 31px;
     padding: 10px;
     gap: 9px;
-    border: 1px solid rgba(132,170,218,.14);
+    border: 1px solid rgba(0,74,173,.11);
     border-radius: 19px;
     justify-content: flex-start;
-    background: rgba(255,255,255,.045);
-    box-shadow: inset 0 1px 0 rgba(255,255,255,.025);
+    background: rgba(255,255,255,.62);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.88);
   }
 
   #brinquedos .filtro-btn,
@@ -4801,10 +4835,10 @@ main.content-section {
     min-width: 154px;
     min-height: 43px;
     padding: 0 15px;
-    border: 1px solid rgba(139,177,225,.15);
+    border: 1px solid rgba(0,74,173,.12);
     border-radius: 13px;
-    color: #afbed1;
-    background: rgba(6,17,31,.72);
+    color: #355270;
+    background: #f7faff;
     box-shadow: none;
     font-size: .72rem;
     font-weight: 850;
@@ -4812,9 +4846,9 @@ main.content-section {
 
   #brinquedos .filtro-btn:hover,
   #pecas-section .filtro-btn:hover {
-    color: #fff;
+    color: #004aad;
     border-color: rgba(99,166,255,.35);
-    background: rgba(8,120,249,.16);
+    background: #e8f2ff;
     box-shadow: none;
   }
 
@@ -4831,7 +4865,8 @@ main.content-section {
     padding-top: 0;
   }
 
-  /* Eventos e projetos seguem os mesmos cards claros das vitrines. */
+  /* Parceiros, eventos e projetos seguem os mesmos cards claros. */
+  #estabelecimentos .eventos-grid,
   #eventos .eventos-grid,
   #projetos .eventos-grid {
     width: 100%;
@@ -4842,24 +4877,28 @@ main.content-section {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
+  #estabelecimentos .evento-card,
   #eventos .evento-card,
   #projetos .evento-card {
     border: 1px solid rgba(118,164,221,.24);
     border-radius: 24px;
-    background: linear-gradient(180deg, #fff, #f7faff);
+    background: linear-gradient(180deg, #f9fbff, #edf4fc);
   }
 
+  #estabelecimentos .evento-thumb,
   #eventos .evento-thumb,
   #projetos .evento-thumb {
     aspect-ratio: 16 / 10;
     background: linear-gradient(145deg, #eaf3fd, #f8fbff);
   }
 
+  #estabelecimentos .evento-info,
   #eventos .evento-info,
   #projetos .evento-info {
     padding: 20px 21px 23px;
   }
 
+  #estabelecimentos .evento-info h3,
   #eventos .evento-info h3,
   #projetos .evento-info h3 {
     color: #10233f;
@@ -4867,6 +4906,7 @@ main.content-section {
     font-weight: 850;
   }
 
+  #estabelecimentos .evento-info p,
   #eventos .evento-info p,
   #projetos .evento-info p {
     color: #617187;
@@ -4874,7 +4914,7 @@ main.content-section {
     line-height: 1.55;
   }
 
-  /* Paginação consistente com o fundo escuro. */
+  /* Paginação consistente com o fundo azul-gelo. */
   #paginacao-wrapper,
   #paginacao-pecas,
   #paginacao-eventos,
@@ -4890,18 +4930,18 @@ main.content-section {
     max-width: 100%;
     padding: 8px;
     gap: 8px;
-    border: 1px solid rgba(132,170,218,.14);
+    border: 1px solid rgba(0,74,173,.11);
     border-radius: 16px;
-    background: rgba(255,255,255,.045);
+    background: rgba(255,255,255,.68);
   }
 
   #brinquedos .page-atual,
   #pecas-section .page-atual,
   #eventos .page-atual,
   #projetos .page-atual {
-    color: #d7e4f5;
-    border-color: rgba(139,177,225,.13);
-    background: rgba(6,17,31,.70);
+    color: #173858;
+    border-color: rgba(0,74,173,.12);
+    background: #edf5ff;
     box-shadow: none;
     font-size: .72rem;
   }
@@ -4912,8 +4952,8 @@ main.content-section {
   #projetos .page-btn-produtos {
     min-height: 40px;
     border: 1px solid rgba(99,166,255,.23);
-    color: #fff;
-    background: linear-gradient(145deg, #132a47, #0a1728);
+    color: #004aad;
+    background: #f7faff;
     box-shadow: none;
     font-size: .7rem;
     font-weight: 850;
@@ -4931,22 +4971,24 @@ main.content-section {
   #pecas-section .page-btn-pecas:disabled,
   #eventos .page-btn-produtos:disabled,
   #projetos .page-btn-produtos:disabled {
-    color: #718096;
-    border-color: rgba(139,177,225,.10);
-    background: rgba(6,17,31,.44);
+    color: #8493a5;
+    border-color: rgba(0,74,173,.08);
+    background: #edf2f8;
   }
 
   #promocoes-section .empty-message,
+  #combos-section .empty-message,
   #brinquedos .nenhum-produto,
   #pecas-section .nenhum-produto,
+  #estabelecimentos .nenhum-produto,
   #eventos .nenhum-produto,
   #projetos .nenhum-produto {
     margin: 18px auto;
     padding: 24px;
     border: 1px dashed rgba(139,177,225,.22);
     border-radius: 18px;
-    color: #aebed2;
-    background: rgba(255,255,255,.04);
+    color: #60758f;
+    background: rgba(255,255,255,.62);
   }
 
   /* Respirações entre as vitrines sem faixas brancas. */
@@ -4979,6 +5021,7 @@ main.content-section {
   }
 
   @media (max-width: 920px) {
+    #estabelecimentos .eventos-grid,
     #eventos .eventos-grid,
     #projetos .eventos-grid {
       grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -4989,6 +5032,8 @@ main.content-section {
     #promocoes-section,
     #brinquedos,
     #pecas-section,
+    #combos-section,
+    #estabelecimentos,
     #eventos,
     #projetos {
       padding: 52px 13px 58px;
@@ -4998,6 +5043,7 @@ main.content-section {
     }
 
     .ls-section-intro,
+    #estabelecimentos .eventos-header,
     #eventos .eventos-header,
     #projetos .projetos-header {
       margin-bottom: 24px;
@@ -5009,6 +5055,8 @@ main.content-section {
     #promocoes-section .ls-section-intro .section-title,
     #brinquedos .ls-section-intro .titulo-sec,
     #pecas-section .ls-section-intro .titulo-sec,
+    #combos-section .ls-section-intro .section-title,
+    #estabelecimentos .titulo-eventos,
     #eventos .titulo-eventos,
     #projetos .titulo-eventos {
       font-size: 2rem !important;
@@ -5016,22 +5064,26 @@ main.content-section {
 
     #brinquedos .btn-vertodos,
     #pecas-section .btn-vertodos,
+    #estabelecimentos .ver-todos-eventos,
     #eventos .ver-todos-eventos,
     #projetos .ver-todos-eventos {
       width: 100%;
       white-space: normal;
     }
 
-    #promocoes-section .scroll-wrapper {
+    #promocoes-section .scroll-wrapper,
+    #combos-section .scroll-wrapper {
       padding: 0;
     }
 
-    #promocoes-section .scroll-container {
+    #promocoes-section .scroll-container,
+    #combos-section .scroll-container {
       gap: 13px;
       padding: 8px 0 20px;
     }
 
-    #promocoes-section .scroll-btn {
+    #promocoes-section .scroll-btn,
+    #combos-section .scroll-btn {
       display: none;
     }
 
@@ -5056,6 +5108,7 @@ main.content-section {
       padding: 0 14px;
     }
 
+    #estabelecimentos .eventos-grid,
     #eventos .eventos-grid,
     #projetos .eventos-grid,
     #pecas-section .pecas-grid {
@@ -5063,6 +5116,7 @@ main.content-section {
       gap: 17px;
     }
 
+    #estabelecimentos .evento-card,
     #eventos .evento-card,
     #projetos .evento-card {
       border-radius: 20px;
@@ -6125,33 +6179,293 @@ main.content-section {
     }
 </style>
 
+<!-- Tema claro premium do mapa e dos controles de clientes. -->
+<style id="ls-clientes-section-theme">
+    #clientes-section {
+        --clientes-blue: #0878f9;
+        --clientes-blue-deep: #004aad;
+        --clientes-red: #e63946;
+        position: relative;
+        isolation: isolate;
+        overflow: hidden;
+        width: 100%;
+        max-width: none;
+        margin: 0;
+        padding: 68px 28px 72px;
+        border: 1px solid rgba(0, 74, 173, .11);
+        border-radius: 30px;
+        color: #10233f;
+        background:
+            radial-gradient(circle at 7% 7%, rgba(8, 120, 249, .13), transparent 24rem),
+            radial-gradient(circle at 94% 88%, rgba(230, 57, 70, .07), transparent 24rem),
+            linear-gradient(150deg, #eef5fd 0%, #e7eff9 58%, #f7faff 100%);
+        box-shadow:
+            0 20px 48px rgba(19, 53, 92, .10),
+            inset 0 1px 0 rgba(255, 255, 255, .75);
+        scroll-margin-top: 84px;
+    }
+
+    #clientes-section::before {
+        content: "";
+        position: absolute;
+        z-index: -1;
+        inset: 0;
+        opacity: .62;
+        pointer-events: none;
+        background-image:
+            linear-gradient(rgba(0, 74, 173, .035) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(0, 74, 173, .035) 1px, transparent 1px);
+        background-size: 42px 42px;
+        mask-image: linear-gradient(to bottom, #000, transparent 88%);
+    }
+
+    #clientes-section .clientes-header {
+        width: 100%;
+        margin: 0 0 29px;
+        padding: 0;
+    }
+
+    #clientes-section .clientes-header > div {
+        max-width: 830px;
+    }
+
+    #clientes-section .ls-showcase-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin: 0 0 12px;
+        padding: 8px 12px;
+        border: 1px solid rgba(0, 105, 218, .18);
+        border-radius: 999px;
+        color: #0757ae;
+        background: rgba(8, 120, 249, .08);
+        font-size: .68rem;
+        font-weight: 900;
+        line-height: 1;
+        letter-spacing: .09em;
+        text-transform: uppercase;
+    }
+
+    #clientes-section .titulo-eventos {
+        margin: 0;
+        color: #102b4c;
+        font-family: "Poppins", sans-serif;
+        font-size: clamp(2rem, 4vw, 3.15rem) !important;
+        font-weight: 850;
+        line-height: 1.04;
+        letter-spacing: -.05em;
+        text-align: left;
+    }
+
+    #clientes-section .clientes-subtitle {
+        max-width: 790px;
+        margin: 13px 0 0;
+        color: #60758f;
+        font-size: .9rem;
+        line-height: 1.65;
+    }
+
+    #clientes-section .clientes-controls-panel {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 18px;
+        margin: 0 0 16px;
+        padding: 13px;
+        border: 1px solid rgba(0, 74, 173, .11);
+        border-radius: 18px;
+        background: rgba(238, 245, 253, .88);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, .78);
+    }
+
+    #clientes-section .clientes-toolbar {
+        flex: 1 1 auto;
+        margin: 0;
+    }
+
+    #clientes-section .clientes-filtro {
+        padding: 7px 7px 7px 15px;
+        border-color: rgba(0, 74, 173, .13);
+        background: #e5effb;
+        box-shadow: none;
+    }
+
+    #clientes-section .clientes-filtro label {
+        color: #0757ae;
+    }
+
+    #clientes-section .clientes-filtro select {
+        border: 1px solid rgba(0, 74, 173, .10);
+        color: #173858;
+        background: #d9e8f8;
+    }
+
+    #clientes-section .clientes-contador {
+        color: #60758f;
+        font-weight: 700;
+    }
+
+    #clientes-section .clientes-contador strong {
+        color: #004aad;
+    }
+
+    #clientes-section .clientes-legenda {
+        flex: 0 0 auto;
+        margin: 0;
+        padding: 8px 11px;
+        border: 1px solid rgba(0, 74, 173, .10);
+        border-radius: 13px;
+        color: #45617e;
+        background: #e2edf9;
+    }
+
+    #clientes-section .clientes-mapa-wrap {
+        padding: 7px;
+        border: 1px solid rgba(0, 74, 173, .16);
+        border-radius: 25px;
+        background: linear-gradient(145deg, #d8e7f7, #cbddef);
+        box-shadow: 0 22px 48px rgba(20, 55, 96, .16);
+    }
+
+    #clientes-section #mapa-clientes {
+        height: 500px;
+        overflow: hidden;
+        border-radius: 18px;
+        background: #dce8f5;
+    }
+
+    #mapa-clientes .leaflet-control-zoom a {
+        border-color: rgba(0, 74, 173, .12);
+        color: #0757ae;
+        background: #e9f2fc;
+    }
+
+    #mapa-clientes .leaflet-control-zoom a:hover {
+        color: #fff;
+        background: #0878f9;
+    }
+
+    #clientes-section .clientes-seo-lista {
+        gap: 8px;
+        margin-top: 18px;
+    }
+
+    #clientes-section .clientes-seo-lista li {
+        padding: 8px 13px;
+        border: 1px solid rgba(0, 74, 173, .11);
+        color: #45617e;
+        background: #e1ecf8;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, .62);
+    }
+
+    #clientes-section .clientes-seo-lista strong {
+        color: #004aad;
+    }
+
+    #clientes-section .clientes-vazio {
+        color: #60758f;
+        border-color: rgba(0, 74, 173, .17);
+        background: #e5effa;
+    }
+
+    @media (max-width: 920px) {
+        #clientes-section .clientes-controls-panel {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        #clientes-section .clientes-legenda {
+            justify-content: center;
+        }
+    }
+
+    @media (max-width: 768px) {
+        #clientes-section {
+            padding: 52px 13px 58px;
+            border-right: 0;
+            border-left: 0;
+            border-radius: 0;
+        }
+
+        #clientes-section .titulo-eventos {
+            font-size: 2rem !important;
+        }
+
+        #clientes-section .clientes-controls-panel {
+            padding: 9px;
+            border-radius: 15px;
+        }
+
+        #clientes-section .clientes-toolbar {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        #clientes-section .clientes-filtro {
+            border-radius: 15px;
+        }
+
+        #clientes-section .clientes-filtro select {
+            flex: 1;
+            min-width: 0;
+        }
+
+        #clientes-section .clientes-legenda {
+            gap: 10px;
+            font-size: .72rem;
+        }
+
+        #clientes-section .clientes-mapa-wrap {
+            padding: 5px;
+            border-radius: 19px;
+        }
+
+        #clientes-section #mapa-clientes {
+            height: 370px;
+            border-radius: 14px;
+        }
+
+        #clientes-section .clientes-seo-lista li {
+            width: 100%;
+            border-radius: 13px;
+            line-height: 1.4;
+        }
+    }
+</style>
+
 <section id="clientes-section" class="clientes-section">
 
     <div class="clientes-header">
-        <span class="ls-showcase-tag">Presença nacional e internacional</span><br>
-        <h2 class="titulo-eventos">Nossa fábrica e onde nossos clientes estão</h2>
+        <div>
+          <span class="ls-showcase-tag">
+            <i class="fa-solid fa-earth-americas" aria-hidden="true"></i>
+            Presença nacional e internacional
+          </span>
+          <h2 class="titulo-eventos">Nossa fábrica e onde nossos clientes estão</h2>
+          <p class="clientes-subtitle">
+              O pino vermelho é a nossa fábrica, em São Paulo. Os demais são clientes que já
+              confiam na Lazer &amp; Sport, espalhados pelo Brasil e também fora dele.
+              Use o filtro para explorar por cidade.
+          </p>
+        </div>
     </div>
-
-    <p class="clientes-subtitle">
-        O pino vermelho é a nossa fábrica, em São Paulo. Os demais são clientes que já
-        confiam na Lazer &amp; Sport, espalhados pelo Brasil e também fora dele.
-        Use o filtro para explorar por cidade.
-    </p>
 
     {% if pontos_mapa %}
-    <div class="clientes-toolbar">
-        <div class="clientes-filtro">
-            <label for="filtro-cidade-cliente"><i class="fa-solid fa-filter"></i> Cidade</label>
-            <select id="filtro-cidade-cliente">
-                <option value="todas">Todas as cidades</option>
-            </select>
+    <div class="clientes-controls-panel">
+        <div class="clientes-toolbar">
+            <div class="clientes-filtro">
+                <label for="filtro-cidade-cliente"><i class="fa-solid fa-filter"></i> Cidade</label>
+                <select id="filtro-cidade-cliente">
+                    <option value="todas">Todas as cidades</option>
+                </select>
+            </div>
+            <span class="clientes-contador" id="clientes-contador"></span>
         </div>
-        <span class="clientes-contador" id="clientes-contador"></span>
-    </div>
 
-    <div class="clientes-legenda">
-        <span><i class="ponto fabrica"></i> Nossa fábrica</span>
-        <span><i class="ponto cliente"></i> Clientes atendidos</span>
+        <div class="clientes-legenda">
+            <span><i class="ponto fabrica"></i> Nossa fábrica</span>
+            <span><i class="ponto cliente"></i> Clientes atendidos</span>
+        </div>
     </div>
 
     <div class="clientes-mapa-wrap">
