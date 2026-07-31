@@ -25,14 +25,23 @@ body {
   color: #2c3e50;
 }
 
-/* A home usa seções de ponta a ponta; remove a moldura herdada do base.html. */
+/* Mantém o respiro lateral do base.html no computador. */
 main.content-section {
   width: 100%;
-  max-width: none;
-  margin: 0;
-  padding: 0;
-  overflow-x: hidden;
-  overflow-x: clip;
+  max-width: 1200px;
+  margin: 28px auto 0;
+  padding: 0 20px;
+  overflow: visible;
+}
+
+@media (max-width: 768px) {
+  main.content-section {
+    max-width: none;
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+    overflow-x: clip;
+  }
 }
 
 .nenhum-produto,
@@ -3614,10 +3623,18 @@ main.content-section {
 
 <!-- ======= PROMOÇÕES ======= -->
 <section id="promocoes-section" class="promocoes-section">
-  <h2 class="section-title">Promoções</h2>
-    <p class="section-subtitle">
-  Ofertas exclusivas com descontos imperdíveis em brinquedos selecionados. Aproveite antes que acabe!
-</p>
+  <div class="ls-section-intro">
+    <div class="ls-section-intro-copy">
+      <span class="ls-section-kicker">
+        <i class="fa-solid fa-bolt" aria-hidden="true"></i>
+        Ofertas especiais
+      </span>
+      <h2 class="section-title">Promoções</h2>
+      <p class="section-subtitle">
+        Ofertas exclusivas com descontos imperdíveis em brinquedos selecionados. Aproveite antes que acabe!
+      </p>
+    </div>
+  </div>
 
   <div class="scroll-wrapper">
     <button class="scroll-btn left" id="scroll-left-promocoes">&#10094;</button>
@@ -3710,12 +3727,23 @@ main.content-section {
 
 <!-- ======= PRODUTOS ======= -->
 <section id="brinquedos" class="destaques">
-  <h2 class="titulo-sec">Brinquedos em Destaque</h2>
-  <p class="section-subtitle">
-    Brinquedos que fazem a diferença e encantam qualquer festa.
-  </p>
+  <div class="ls-section-intro">
+    <div class="ls-section-intro-copy">
+      <span class="ls-section-kicker">
+        <i class="fa-solid fa-gamepad" aria-hidden="true"></i>
+        Catálogo profissional
+      </span>
+      <h2 class="titulo-sec">Brinquedos em Destaque</h2>
+      <p class="section-subtitle">
+        Brinquedos que fazem a diferença e encantam qualquer festa.
+      </p>
+    </div>
 
-  <a href="{% url 'brinquedos' %}#bread" class="btn-vertodos">Ver todos os brinquedos</a>
+    <a href="{% url 'brinquedos' %}#bread" class="btn-vertodos">
+      Ver todos os brinquedos
+      <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+    </a>
+  </div>
 
   <!-- FILTROS -->
   <div class="filtros-horizontal" id="filtros-bar">
@@ -3913,11 +3941,23 @@ main.content-section {
 
 
 <section id="pecas-section" class="destaques">
-    <h2 class="titulo-sec" id="pecas">Peças de Reposição</h2>
-    <p class="section-subtitle">
-      Peças de reposição originais para manter seus brinquedos sempre seguros, funcionando como novos e prontos para a diversão. Ideais para manutenção preventiva, consertos rápidos ou até para uso individual em seus próprios projetos — qualidade profissional que prolonga a vida útil do seu investimento.
-    </p>
-    <a href="{% url 'pecas_reposicao' %}#breadcrumb" class="btn-vertodos">Ver todas as peças</a>
+    <div class="ls-section-intro">
+      <div class="ls-section-intro-copy">
+        <span class="ls-section-kicker">
+          <i class="fa-solid fa-screwdriver-wrench" aria-hidden="true"></i>
+          Suporte e reposição
+        </span>
+        <h2 class="titulo-sec" id="pecas">Peças de Reposição</h2>
+        <p class="section-subtitle">
+          Peças de reposição originais para manter seus brinquedos sempre seguros, funcionando como novos e prontos para a diversão. Ideais para manutenção preventiva, consertos rápidos ou até para uso individual em seus próprios projetos — qualidade profissional que prolonga a vida útil do seu investimento.
+        </p>
+      </div>
+
+      <a href="{% url 'pecas_reposicao' %}#breadcrumb" class="btn-vertodos">
+        Ver todas as peças
+        <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+      </a>
+    </div>
 
     <!-- BARRA HORIZONTAL DE FILTROS -->
 <div class="filtros-horizontal" id="filtros-peca">
@@ -4346,18 +4386,19 @@ main.content-section {
 <section id="eventos" class="eventos-section">
     <div class="eventos-header">
         <div>
-            <span class="ls-showcase-tag">Portfólio</span><br>
+            <span class="ls-showcase-tag">
+              <i class="fa-solid fa-calendar-days" aria-hidden="true"></i>
+              Portfólio
+            </span>
             <h2 class="titulo-eventos">Eventos Realizados</h2>
+            <p class="section-subtitle">
+              Confira alguns dos eventos que transformamos em experiências inesquecíveis.
+            </p>
         </div>
 
         <!-- BOTÃO VER TODOS -->
         <a href="{% url 'eventos' %}#todos-eventos" class="ver-todos-eventos">Ver todos os eventos →</a>
     </div>
-
-    <p class="section-subtitle">
-      Confira alguns dos eventos que transformamos em experiências inesquecíveis.
-    </p>
-
 
     <div class="eventos-grid" id="grid-eventos">
         {% for evento in eventos %}
@@ -4452,15 +4493,17 @@ main.content-section {
 
     <div class="projetos-header">
         <div>
-            <span class="ls-showcase-tag">Realizações</span><br>
+            <span class="ls-showcase-tag">
+              <i class="fa-solid fa-compass-drafting" aria-hidden="true"></i>
+              Realizações
+            </span>
             <h2 class="titulo-eventos">Projetos Realizados</h2>
+            <p class="section-subtitle">
+              Transformamos ideias em ambientes divertidos e seguros — veja alguns exemplos.
+            </p>
         </div>
         <a href="{% url 'projetos' %}" class="ver-todos-eventos">Ver todos os projetos →</a>
     </div>
-
-    <p class="section-subtitle">
-        Transformamos ideias em ambientes divertidos e seguros — veja alguns exemplos.
-    </p>
 
     <div class="eventos-grid" id="grid-projetos">
         {% for projeto in projetos %}
@@ -4528,6 +4571,530 @@ main.content-section {
 
 <!-- Div invisível para espaçamento -->
 <div class="espacador"></div>
+
+
+<!-- ======= IDENTIDADE VISUAL UNIFICADA DAS VITRINES ======= -->
+<style id="ls-home-sections-theme">
+  #promocoes-section,
+  #brinquedos,
+  #pecas-section,
+  #eventos,
+  #projetos {
+    --ls-section-blue: #0878f9;
+    --ls-section-blue-deep: #004aad;
+    --ls-section-red: #e63946;
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    margin: 0;
+    padding: 68px 28px 72px;
+    border: 1px solid rgba(120,165,224,.16);
+    border-radius: 30px;
+    color: #f4f8ff;
+    background:
+      radial-gradient(circle at 7% 7%, rgba(8,120,249,.20), transparent 24rem),
+      radial-gradient(circle at 94% 88%, rgba(230,57,70,.13), transparent 24rem),
+      linear-gradient(150deg, #0a1728 0%, #050b14 62%, #07111f 100%);
+    box-shadow:
+      0 24px 58px rgba(3,10,21,.18),
+      inset 0 1px 0 rgba(255,255,255,.035);
+    scroll-margin-top: 84px;
+  }
+
+  #promocoes-section::before,
+  #brinquedos::before,
+  #pecas-section::before,
+  #eventos::before,
+  #projetos::before {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    inset: 0;
+    opacity: .14;
+    pointer-events: none;
+    background-image:
+      linear-gradient(rgba(255,255,255,.045) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,.045) 1px, transparent 1px);
+    background-size: 42px 42px;
+    mask-image: linear-gradient(to bottom, #000, transparent 88%);
+  }
+
+  .ls-section-intro,
+  #eventos .eventos-header,
+  #projetos .projetos-header {
+    width: 100%;
+    max-width: 1320px;
+    margin: 0 auto 31px;
+    padding: 0;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 28px;
+  }
+
+  .ls-section-intro-copy,
+  #eventos .eventos-header > div,
+  #projetos .projetos-header > div {
+    max-width: 770px;
+  }
+
+  .ls-section-kicker,
+  #eventos .ls-showcase-tag,
+  #projetos .ls-showcase-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 12px;
+    padding: 8px 12px;
+    border: 1px solid rgba(99,166,255,.24);
+    border-radius: 999px;
+    color: #91c2ff;
+    background: rgba(8,120,249,.10);
+    font-size: .68rem;
+    font-weight: 900;
+    line-height: 1;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+  }
+
+  #promocoes-section .ls-section-intro .section-title,
+  #brinquedos .ls-section-intro .titulo-sec,
+  #pecas-section .ls-section-intro .titulo-sec,
+  #eventos .titulo-eventos,
+  #projetos .titulo-eventos {
+    margin: 0;
+    color: #fff;
+    font-family: "Poppins", sans-serif;
+    font-size: clamp(2rem, 4vw, 3.15rem) !important;
+    font-weight: 850;
+    line-height: 1.04;
+    letter-spacing: -.05em;
+    text-align: left;
+  }
+
+  #promocoes-section .ls-section-intro .section-subtitle,
+  #brinquedos .ls-section-intro .section-subtitle,
+  #pecas-section .ls-section-intro .section-subtitle,
+  #eventos .eventos-header .section-subtitle,
+  #projetos .projetos-header .section-subtitle {
+    max-width: 740px;
+    margin: 13px 0 0;
+    color: #a8b8cc;
+    font-family: "Poppins", sans-serif;
+    font-size: .9rem;
+    font-weight: 500;
+    line-height: 1.65;
+    text-align: left;
+  }
+
+  #brinquedos .btn-vertodos,
+  #pecas-section .btn-vertodos,
+  #eventos .ver-todos-eventos,
+  #projetos .ver-todos-eventos {
+    flex: 0 0 auto;
+    min-height: 46px;
+    padding: 0 17px !important;
+    border: 1px solid rgba(99,166,255,.25);
+    border-radius: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    color: #fff;
+    background: linear-gradient(135deg, var(--ls-section-blue-deep), var(--ls-section-blue));
+    box-shadow: 0 11px 26px rgba(0,74,173,.28);
+    font-size: .76rem !important;
+    font-weight: 900;
+    white-space: nowrap;
+  }
+
+  #brinquedos .btn-vertodos:hover,
+  #pecas-section .btn-vertodos:hover,
+  #eventos .ver-todos-eventos:hover,
+  #projetos .ver-todos-eventos:hover {
+    color: #fff;
+    background: linear-gradient(135deg, var(--ls-section-red), #b91e30);
+    box-shadow: 0 14px 30px rgba(185,30,48,.28);
+    transform: translateY(-2px);
+  }
+
+  /* Promoções: carrossel com o mesmo acabamento premium. */
+  #promocoes-section .scroll-wrapper {
+    width: 100%;
+    max-width: none;
+    margin: 0 auto;
+    padding: 0 49px;
+    overflow: visible;
+  }
+
+  #promocoes-section .scroll-container {
+    gap: 18px;
+    padding: 12px 3px 25px;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+  }
+
+  #promocoes-section .scroll-container::-webkit-scrollbar {
+    display: none;
+  }
+
+  #promocoes-section .oferta-card-link {
+    scroll-snap-align: start;
+  }
+
+  #promocoes-section .scroll-btn {
+    top: 50%;
+    width: 42px;
+    height: 42px;
+    border: 1px solid rgba(136,178,230,.24);
+    border-radius: 14px;
+    color: #fff;
+    background: linear-gradient(145deg, #132a47, #0a1728);
+    box-shadow: 0 13px 28px rgba(0,3,11,.42);
+    font-size: 16px;
+  }
+
+  #promocoes-section .scroll-btn:hover {
+    background: linear-gradient(145deg, var(--ls-section-red), #b91e30);
+    transform: translateY(-50%) scale(1.04);
+  }
+
+  #promocoes-section .oferta-card,
+  #brinquedos .card-produto,
+  #pecas-section .pecas-card,
+  #eventos .evento-card,
+  #projetos .evento-card {
+    border-color: rgba(118,164,221,.24);
+    box-shadow:
+      0 20px 46px rgba(0,4,13,.38),
+      0 0 0 1px rgba(255,255,255,.02);
+  }
+
+  #promocoes-section .oferta-card:hover,
+  #brinquedos .card-link:hover .card-produto,
+  #pecas-section .pecas-card-link:hover .pecas-card,
+  #eventos .evento-card:hover,
+  #projetos .evento-card:hover {
+    border-color: rgba(77,151,246,.48);
+    box-shadow: 0 28px 58px rgba(0,4,14,.52);
+  }
+
+  /* Filtros em vidro escuro. */
+  #brinquedos .filtros-horizontal,
+  #pecas-section .filtros-horizontal {
+    width: 100%;
+    margin: 0 auto 31px;
+    padding: 10px;
+    gap: 9px;
+    border: 1px solid rgba(132,170,218,.14);
+    border-radius: 19px;
+    justify-content: flex-start;
+    background: rgba(255,255,255,.045);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.025);
+  }
+
+  #brinquedos .filtro-btn,
+  #pecas-section .filtro-btn {
+    width: auto;
+    min-width: 154px;
+    min-height: 43px;
+    padding: 0 15px;
+    border: 1px solid rgba(139,177,225,.15);
+    border-radius: 13px;
+    color: #afbed1;
+    background: rgba(6,17,31,.72);
+    box-shadow: none;
+    font-size: .72rem;
+    font-weight: 850;
+  }
+
+  #brinquedos .filtro-btn:hover,
+  #pecas-section .filtro-btn:hover {
+    color: #fff;
+    border-color: rgba(99,166,255,.35);
+    background: rgba(8,120,249,.16);
+    box-shadow: none;
+  }
+
+  #brinquedos .filtro-btn.ativo,
+  #pecas-section .filtro-btn.ativo {
+    color: #fff;
+    border-color: transparent;
+    background: linear-gradient(135deg, var(--ls-section-blue-deep), var(--ls-section-blue));
+    box-shadow: 0 9px 20px rgba(0,74,173,.28);
+  }
+
+  #brinquedos #produtos-container,
+  #pecas-section #pecas-container {
+    padding-top: 0;
+  }
+
+  /* Eventos e projetos seguem os mesmos cards claros das vitrines. */
+  #eventos .eventos-grid,
+  #projetos .eventos-grid {
+    width: 100%;
+    max-width: none;
+    margin: 0 auto;
+    padding: 0;
+    gap: 22px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  #eventos .evento-card,
+  #projetos .evento-card {
+    border: 1px solid rgba(118,164,221,.24);
+    border-radius: 24px;
+    background: linear-gradient(180deg, #fff, #f7faff);
+  }
+
+  #eventos .evento-thumb,
+  #projetos .evento-thumb {
+    aspect-ratio: 16 / 10;
+    background: linear-gradient(145deg, #eaf3fd, #f8fbff);
+  }
+
+  #eventos .evento-info,
+  #projetos .evento-info {
+    padding: 20px 21px 23px;
+  }
+
+  #eventos .evento-info h3,
+  #projetos .evento-info h3 {
+    color: #10233f;
+    font-size: 1.08rem;
+    font-weight: 850;
+  }
+
+  #eventos .evento-info p,
+  #projetos .evento-info p {
+    color: #617187;
+    font-size: .82rem;
+    line-height: 1.55;
+  }
+
+  /* Paginação consistente com o fundo escuro. */
+  #paginacao-wrapper,
+  #paginacao-pecas,
+  #paginacao-eventos,
+  #paginacao-projetos {
+    margin-top: 32px;
+  }
+
+  #paginacao-wrapper .paginacao,
+  #paginacao-pecas .paginacao,
+  #paginacao-eventos .paginacao,
+  #paginacao-projetos .paginacao {
+    width: auto;
+    max-width: 100%;
+    padding: 8px;
+    gap: 8px;
+    border: 1px solid rgba(132,170,218,.14);
+    border-radius: 16px;
+    background: rgba(255,255,255,.045);
+  }
+
+  #brinquedos .page-atual,
+  #pecas-section .page-atual,
+  #eventos .page-atual,
+  #projetos .page-atual {
+    color: #d7e4f5;
+    border-color: rgba(139,177,225,.13);
+    background: rgba(6,17,31,.70);
+    box-shadow: none;
+    font-size: .72rem;
+  }
+
+  #brinquedos .page-btn-produtos,
+  #pecas-section .page-btn-pecas,
+  #eventos .page-btn-produtos,
+  #projetos .page-btn-produtos {
+    min-height: 40px;
+    border: 1px solid rgba(99,166,255,.23);
+    color: #fff;
+    background: linear-gradient(145deg, #132a47, #0a1728);
+    box-shadow: none;
+    font-size: .7rem;
+    font-weight: 850;
+  }
+
+  #brinquedos .page-btn-produtos:hover,
+  #pecas-section .page-btn-pecas:hover,
+  #eventos .page-btn-produtos:hover,
+  #projetos .page-btn-produtos:hover {
+    color: #fff;
+    background: linear-gradient(135deg, var(--ls-section-blue-deep), var(--ls-section-blue));
+  }
+
+  #brinquedos .page-btn-produtos:disabled,
+  #pecas-section .page-btn-pecas:disabled,
+  #eventos .page-btn-produtos:disabled,
+  #projetos .page-btn-produtos:disabled {
+    color: #718096;
+    border-color: rgba(139,177,225,.10);
+    background: rgba(6,17,31,.44);
+  }
+
+  #promocoes-section .empty-message,
+  #brinquedos .nenhum-produto,
+  #pecas-section .nenhum-produto,
+  #eventos .nenhum-produto,
+  #projetos .nenhum-produto {
+    margin: 18px auto;
+    padding: 24px;
+    border: 1px dashed rgba(139,177,225,.22);
+    border-radius: 18px;
+    color: #aebed2;
+    background: rgba(255,255,255,.04);
+  }
+
+  /* Respirações entre as vitrines sem faixas brancas. */
+  .espacador {
+    width: 100%;
+    height: 24px;
+    background: transparent;
+  }
+
+  .section-divider {
+    margin: 24px 0;
+    padding: 20px 24px;
+    border: 1px solid rgba(99,166,255,.22);
+    border-radius: 22px;
+    color: #fff;
+    background:
+      radial-gradient(circle at 90% 0, rgba(230,57,70,.24), transparent 16rem),
+      linear-gradient(135deg, #004aad, #0878f9);
+    box-shadow: 0 14px 32px rgba(0,74,173,.22);
+  }
+
+  @media (min-width: 769px) {
+    .ls-home-hero {
+      border-radius: 30px 30px 0 0;
+    }
+
+    .categorias-section {
+      border-radius: 0 0 30px 30px;
+    }
+  }
+
+  @media (max-width: 920px) {
+    #eventos .eventos-grid,
+    #projetos .eventos-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 768px) {
+    #promocoes-section,
+    #brinquedos,
+    #pecas-section,
+    #eventos,
+    #projetos {
+      padding: 52px 13px 58px;
+      border-right: 0;
+      border-left: 0;
+      border-radius: 0;
+    }
+
+    .ls-section-intro,
+    #eventos .eventos-header,
+    #projetos .projetos-header {
+      margin-bottom: 24px;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 18px;
+    }
+
+    #promocoes-section .ls-section-intro .section-title,
+    #brinquedos .ls-section-intro .titulo-sec,
+    #pecas-section .ls-section-intro .titulo-sec,
+    #eventos .titulo-eventos,
+    #projetos .titulo-eventos {
+      font-size: 2rem !important;
+    }
+
+    #brinquedos .btn-vertodos,
+    #pecas-section .btn-vertodos,
+    #eventos .ver-todos-eventos,
+    #projetos .ver-todos-eventos {
+      width: 100%;
+      white-space: normal;
+    }
+
+    #promocoes-section .scroll-wrapper {
+      padding: 0;
+    }
+
+    #promocoes-section .scroll-container {
+      gap: 13px;
+      padding: 8px 0 20px;
+    }
+
+    #promocoes-section .scroll-btn {
+      display: none;
+    }
+
+    #brinquedos .filtros-horizontal,
+    #pecas-section .filtros-horizontal {
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      justify-content: flex-start;
+      padding: 8px;
+      scrollbar-width: none;
+    }
+
+    #brinquedos .filtros-horizontal::-webkit-scrollbar,
+    #pecas-section .filtros-horizontal::-webkit-scrollbar {
+      display: none;
+    }
+
+    #brinquedos .filtro-btn,
+    #pecas-section .filtro-btn {
+      flex: 0 0 auto;
+      min-width: max-content;
+      padding: 0 14px;
+    }
+
+    #eventos .eventos-grid,
+    #projetos .eventos-grid,
+    #pecas-section .pecas-grid {
+      grid-template-columns: 1fr;
+      gap: 17px;
+    }
+
+    #eventos .evento-card,
+    #projetos .evento-card {
+      border-radius: 20px;
+    }
+
+    #paginacao-wrapper .paginacao,
+    #paginacao-pecas .paginacao,
+    #paginacao-eventos .paginacao,
+    #paginacao-projetos .paginacao {
+      gap: 6px;
+      padding: 6px;
+    }
+
+    #brinquedos .page-btn-produtos,
+    #pecas-section .page-btn-pecas,
+    #eventos .page-btn-produtos,
+    #projetos .page-btn-produtos {
+      padding: 9px 10px;
+    }
+
+    .espacador {
+      height: 13px;
+    }
+
+    .section-divider {
+      margin: 13px 0;
+      border-right: 0;
+      border-left: 0;
+      border-radius: 0;
+    }
+  }
+</style>
 
 
 <!-- ======= CONTATO ======= -->
