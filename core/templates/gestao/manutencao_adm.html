@@ -1,406 +1,495 @@
 {% extends "gestao/base_adm.html" %}
-{% block title %}Lazer & Sport | Central de Manutenções{% endblock %}
-{% block content %}
+
+{% block title %}Central de Manutenções{% endblock %}
+{% block page_heading %}Central de Manutenções{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
 <style>
-:root{
-    --mnt-blue:#004aad;
-    --mnt-blue-2:#0878f9;
-    --mnt-red:#e63946;
-    --mnt-ink:#14243c;
-    --mnt-muted:#66758a;
-    --mnt-line:#dfe7f2;
-    --mnt-bg:#f4f7fb;
-    --mnt-white:#fff;
-    --mnt-green:#159447;
-    --mnt-yellow:#b77900;
-    --mnt-purple:#6d45c8;
+/* =========================================================================
+   CENTRAL DE MANUTENÇÕES — tema alinhado aos tokens do base_adm.html
+   ========================================================================= */
+.mnt{
+    --mnt-max:1560px;
+    --mnt-surface:#111b2e;
+    --mnt-surface-2:#17243a;
+    --mnt-surface-3:#1e2d46;
+    --mnt-line:rgba(148,163,184,.14);
+    --mnt-line-strong:rgba(148,163,184,.26);
+    --mnt-text:#f1f5f9;
+    --mnt-muted:#94a3b8;
+    --mnt-dim:#64748b;
+    --mnt-primary:#3b82f6;
+    --mnt-primary-strong:#2563eb;
+    --mnt-danger:#ef4444;
+    --mnt-warning:#f59e0b;
+    --mnt-success:#10b981;
+    --mnt-r:18px;
+    --mnt-r-sm:12px;
+
+    width:100%;
+    max-width:var(--mnt-max);
+    margin-inline:auto;
+    color:var(--mnt-text);
 }
 
-*{box-sizing:border-box}
+.mnt *{box-sizing:border-box}
+.mnt h1,.mnt h2,.mnt h3{margin:0;letter-spacing:-.02em}
 
-.mnt-page{
-    max-width:1520px;
-    margin:0 auto;
-    padding:30px 24px 70px;
-    color:var(--mnt-ink);
-}
-
+/* =========================================================================
+   HERO
+   ========================================================================= */
 .mnt-hero{
     position:relative;
     overflow:hidden;
-    display:flex;
-    align-items:flex-end;
-    justify-content:space-between;
-    gap:24px;
-    min-height:225px;
-    padding:34px;
-    border-radius:30px;
+    display:grid;
+    grid-template-columns:minmax(0,1fr) auto;
+    align-items:center;
+    gap:26px;
+    padding:30px 32px;
+    margin-bottom:16px;
+    border:1px solid rgba(59,130,246,.24);
+    border-radius:var(--mnt-r);
     background:
-        radial-gradient(circle at 88% 14%, rgba(230,57,70,.28), transparent 25%),
-        radial-gradient(circle at 76% 110%, rgba(8,120,249,.5), transparent 37%),
-        linear-gradient(125deg,#071a34 0%,#004aad 64%,#0878f9 100%);
-    box-shadow:0 24px 58px rgba(12,36,72,.2);
-    color:#fff;
+        radial-gradient(circle at 92% 8%,rgba(239,68,68,.22),transparent 34%),
+        radial-gradient(circle at 68% 130%,rgba(59,130,246,.38),transparent 42%),
+        linear-gradient(125deg,#0c1728 0%,#13294c 58%,#12468f 100%);
+    box-shadow:0 22px 50px rgba(2,8,20,.4),inset 0 1px 0 rgba(255,255,255,.07);
 }
-.mnt-hero:before,.mnt-hero:after{
+.mnt-hero::after{
     content:"";
     position:absolute;
-    border:1px solid rgba(255,255,255,.14);
+    right:-70px;top:-120px;
+    width:280px;height:280px;
+    border:1px solid rgba(255,255,255,.13);
     border-radius:50%;
+    pointer-events:none;
 }
-.mnt-hero:before{width:290px;height:290px;right:-90px;top:-155px}
-.mnt-hero:after{width:190px;height:190px;right:225px;bottom:-125px}
-.mnt-hero-copy,.mnt-hero-side{position:relative;z-index:2}
+.mnt-hero-copy{position:relative;z-index:1;min-width:0}
 .mnt-eyebrow{
     display:inline-flex;
     align-items:center;
     gap:8px;
-    margin-bottom:13px;
-    padding:8px 12px;
+    margin-bottom:12px;
+    padding:7px 13px;
     border:1px solid rgba(255,255,255,.2);
     border-radius:999px;
-    background:rgba(255,255,255,.1);
-    font-size:.72rem;
-    font-weight:900;
+    background:rgba(255,255,255,.09);
+    font-size:.7rem;
+    font-weight:800;
     letter-spacing:.08em;
     text-transform:uppercase;
 }
 .mnt-hero h1{
-    margin:0 0 10px;
-    max-width:780px;
-    font-size:clamp(2rem,4.8vw,3.45rem);
-    line-height:1.02;
-    letter-spacing:-.055em;
-    color:#fff;
+    font-size:clamp(1.6rem,3vw,2.4rem);
+    line-height:1.1;
+    margin-bottom:8px;
 }
 .mnt-hero p{
-    max-width:730px;
+    max-width:660px;
     margin:0;
-    color:rgba(255,255,255,.82);
-    font-size:.96rem;
-    line-height:1.65;
+    color:rgba(226,236,250,.78);
+    font-size:.9rem;
+    line-height:1.6;
 }
 .mnt-hero-side{
+    position:relative;
+    z-index:1;
     display:grid;
-    gap:9px;
-    min-width:240px;
+    gap:8px;
+    min-width:230px;
 }
-.mnt-live{
+.mnt-pill{
     display:flex;
     align-items:center;
     gap:9px;
-    padding:11px 13px;
-    border:1px solid rgba(255,255,255,.17);
-    border-radius:14px;
-    background:rgba(4,20,45,.25);
-    font-size:.75rem;
-    font-weight:800;
+    padding:10px 13px;
+    border:1px solid rgba(255,255,255,.16);
+    border-radius:var(--mnt-r-sm);
+    background:rgba(3,10,22,.42);
+    font-size:.73rem;
+    font-weight:700;
 }
-.mnt-live-dot{
-    width:9px;height:9px;border-radius:50%;
-    background:#4ee58a;
-    box-shadow:0 0 0 6px rgba(78,229,138,.12);
+.mnt-pill i{color:#93c5fd;width:14px;text-align:center}
+.mnt-dot{
+    width:8px;height:8px;
+    border-radius:50%;
+    background:var(--mnt-success);
+    box-shadow:0 0 0 5px rgba(16,185,129,.16);
 }
 
+/* =========================================================================
+   MÉTRICAS (também funcionam como filtro rápido)
+   ========================================================================= */
 .mnt-stats{
     display:grid;
     grid-template-columns:repeat(6,minmax(0,1fr));
-    gap:14px;
-    margin:20px 0;
+    gap:12px;
+    margin-bottom:16px;
 }
 .mnt-stat{
     position:relative;
     overflow:hidden;
-    min-height:120px;
-    padding:18px;
-    border:1px solid rgba(0,74,173,.1);
-    border-radius:21px;
-    background:#fff;
-    box-shadow:0 12px 30px rgba(15,38,76,.07);
+    display:grid;
+    grid-template-rows:auto 1fr auto;
+    gap:9px;
+    min-height:118px;
+    padding:16px;
+    border:1px solid var(--mnt-line);
+    border-radius:var(--mnt-r);
+    background:linear-gradient(150deg,var(--mnt-surface-2),var(--mnt-surface));
+    box-shadow:0 12px 30px rgba(2,8,20,.28);
+    color:inherit;
+    text-decoration:none;
+    transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease;
 }
-.mnt-stat:after{
-    content:"";
-    position:absolute;
-    width:72px;height:72px;
-    right:-24px;bottom:-28px;
-    border-radius:50%;
-    background:rgba(8,120,249,.08);
+.mnt-stat:hover{
+    transform:translateY(-2px);
+    border-color:var(--mnt-line-strong);
+    box-shadow:0 18px 40px rgba(2,8,20,.42);
 }
-.mnt-stat-icon{
+.mnt-stat.is-active{
+    border-color:rgba(59,130,246,.55);
+    box-shadow:0 0 0 1px rgba(59,130,246,.28),0 18px 40px rgba(2,8,20,.42);
+}
+.mnt-stat-ico{
     display:flex;
     align-items:center;
     justify-content:center;
-    width:36px;height:36px;
-    margin-bottom:12px;
-    border-radius:11px;
-    background:#edf4ff;
-    color:var(--mnt-blue);
+    width:34px;height:34px;
+    border-radius:10px;
+    background:rgba(59,130,246,.16);
+    color:#7fb2ff;
+    font-size:.85rem;
 }
 .mnt-stat strong{
-    display:block;
-    font-size:1.65rem;
+    font-size:1.7rem;
     line-height:1;
     letter-spacing:-.04em;
+    font-variant-numeric:tabular-nums;
 }
 .mnt-stat span{
-    display:block;
-    margin-top:6px;
     color:var(--mnt-muted);
-    font-size:.72rem;
+    font-size:.7rem;
     font-weight:800;
+    letter-spacing:.03em;
+    text-transform:uppercase;
 }
-.mnt-stat.pending .mnt-stat-icon{background:#fff6df;color:#a96e00}
-.mnt-stat.progress .mnt-stat-icon{background:#eaf3ff;color:#0568d8}
-.mnt-stat.done .mnt-stat-icon{background:#e8f8ee;color:#158144}
-.mnt-stat.cancel .mnt-stat-icon{background:#fff0f2;color:#c72f3d}
-.mnt-stat.alert .mnt-stat-icon{background:#fff0f2;color:#d62738}
-.mnt-stat.alert{border-color:rgba(230,57,70,.22)}
+.mnt-stat.s-P .mnt-stat-ico{background:rgba(245,158,11,.15);color:#fbbf24}
+.mnt-stat.s-A .mnt-stat-ico{background:rgba(59,130,246,.18);color:#7fb2ff}
+.mnt-stat.s-C .mnt-stat-ico{background:rgba(16,185,129,.16);color:#34d399}
+.mnt-stat.s-X .mnt-stat-ico{background:rgba(239,68,68,.15);color:#f87171}
+.mnt-stat.s-alert{border-color:rgba(239,68,68,.3)}
+.mnt-stat.s-alert .mnt-stat-ico{background:rgba(239,68,68,.15);color:#f87171}
 
+/* =========================================================================
+   BARRA DE FILTROS
+   ========================================================================= */
 .mnt-toolbar{
     display:grid;
-    grid-template-columns:minmax(260px,1.6fr) repeat(3,minmax(150px,.55fr)) auto;
+    grid-template-columns:minmax(280px,1.8fr) repeat(3,minmax(150px,.6fr)) auto;
     gap:12px;
     align-items:end;
-    padding:18px;
+    padding:16px;
     margin-bottom:18px;
-    border:1px solid rgba(0,74,173,.1);
-    border-radius:22px;
-    background:#fff;
-    box-shadow:0 12px 32px rgba(15,38,76,.07);
+    border:1px solid var(--mnt-line);
+    border-radius:var(--mnt-r);
+    background:linear-gradient(150deg,var(--mnt-surface-2),var(--mnt-surface));
+    box-shadow:0 12px 30px rgba(2,8,20,.28);
 }
-.mnt-field{display:grid;gap:7px}
+.mnt-field{display:grid;gap:7px;min-width:0}
 .mnt-field label{
-    color:#41536d;
-    font-size:.68rem;
+    color:#a8b8cd;
+    font-size:.66rem;
     font-weight:900;
-    letter-spacing:.045em;
+    letter-spacing:.06em;
     text-transform:uppercase;
 }
 .mnt-control{
     width:100%;
-    min-height:47px;
-    padding:11px 13px;
-    border:1px solid #d8e1ed;
-    border-radius:12px;
+    height:46px;
+    padding:0 13px;
+    border:1px solid rgba(148,163,184,.22);
+    border-radius:var(--mnt-r-sm);
     outline:none;
-    background:#fbfcfe;
-    color:var(--mnt-ink);
+    background:#0c1524;
+    color:var(--mnt-text);
+    color-scheme:dark;
     font:inherit;
-    font-size:.82rem;
+    font-size:.83rem;
+    transition:border-color .18s ease,box-shadow .18s ease,background .18s ease;
 }
+select.mnt-control{
+    appearance:none;
+    padding-right:34px;
+    background-image:linear-gradient(45deg,transparent 50%,#7f92ab 50%),
+                     linear-gradient(135deg,#7f92ab 50%,transparent 50%);
+    background-position:calc(100% - 18px) 21px,calc(100% - 13px) 21px;
+    background-size:5px 5px,5px 5px;
+    background-repeat:no-repeat;
+}
+.mnt-control::placeholder{color:#647589}
+.mnt-control:hover{border-color:rgba(125,171,255,.4)}
 .mnt-control:focus{
-    border-color:var(--mnt-blue-2);
-    background:#fff;
-    box-shadow:0 0 0 4px rgba(8,120,249,.1);
+    border-color:var(--mnt-primary);
+    background:#0e1a2c;
+    box-shadow:0 0 0 4px rgba(59,130,246,.16);
 }
-.mnt-search-wrap{position:relative}
-.mnt-search-wrap i{
+.mnt-search{position:relative}
+.mnt-search > i{
     position:absolute;
     left:14px;top:50%;
     transform:translateY(-50%);
-    color:#8997a9;
+    color:#7f92ab;
+    font-size:.82rem;
+    pointer-events:none;
 }
-.mnt-search-wrap .mnt-control{padding-left:39px}
-.mnt-filter-actions{
-    display:flex;
-    gap:8px;
-}
+.mnt-search .mnt-control{padding-left:38px}
+.mnt-actions{display:flex;gap:8px}
+
+/* ---------- BOTÕES ---------- */
 .mnt-btn{
+    position:relative;
     display:inline-flex;
     align-items:center;
     justify-content:center;
     gap:8px;
-    min-height:47px;
-    padding:11px 15px;
-    border:0;
-    border-radius:12px;
+    height:46px;
+    padding:0 16px;
+    border:1px solid transparent;
+    border-radius:var(--mnt-r-sm);
     font:inherit;
-    font-size:.78rem;
-    font-weight:900;
+    font-size:.79rem;
+    font-weight:800;
+    line-height:1;
     text-decoration:none;
+    white-space:nowrap;
     cursor:pointer;
-    transition:transform .18s ease,box-shadow .18s ease,opacity .18s ease;
+    transition:transform .16s ease,filter .16s ease,box-shadow .16s ease,opacity .16s ease;
 }
-.mnt-btn:hover{transform:translateY(-1px)}
+.mnt-btn:hover{transform:translateY(-1px);filter:brightness(1.08)}
+.mnt-btn:active{transform:translateY(0)}
+.mnt-btn-sm{height:38px;padding:0 12px;font-size:.72rem}
+.mnt-btn-block{width:100%}
 .mnt-btn-primary{
-    background:linear-gradient(135deg,var(--mnt-blue),var(--mnt-blue-2));
+    background:linear-gradient(135deg,var(--mnt-primary),var(--mnt-primary-strong));
     color:#fff;
-    box-shadow:0 10px 22px rgba(0,74,173,.22);
+    box-shadow:0 10px 24px rgba(37,99,235,.3);
 }
-.mnt-btn-soft{background:#edf4ff;color:var(--mnt-blue)}
-.mnt-btn-dark{background:#10243f;color:#fff}
-.mnt-btn-whatsapp{background:#e7f8ed;color:#0b7e3a}
-.mnt-btn-email{background:#eef3ff;color:#365ec8}
-.mnt-btn-phone{background:#eef8ff;color:#076aab}
-.mnt-btn-map{background:#fff2ef;color:#c44a35}
-.mnt-btn-disabled{
-    background:#f1f3f6;
-    color:#98a2b1;
+.mnt-btn-ghost{
+    border-color:var(--mnt-line-strong);
+    background:rgba(148,163,184,.08);
+    color:#c3d1e3;
+}
+.mnt-btn-soft{background:rgba(59,130,246,.14);color:#8fc0ff}
+.mnt-btn-wa{background:linear-gradient(135deg,#22a35a,#15803d);color:#fff}
+.mnt-btn-tel{background:linear-gradient(135deg,#0891b2,#0e7490);color:#fff}
+.mnt-btn-mail{background:linear-gradient(135deg,#4f6ee8,#3b52bb);color:#fff}
+.mnt-btn-map{background:linear-gradient(135deg,#e35d45,#bf4030);color:#fff}
+.mnt-btn-success{background:linear-gradient(135deg,#10b981,#059669);color:#fff}
+.mnt-btn-warning{background:linear-gradient(135deg,#f59e0b,#d97706);color:#231400}
+.mnt-btn-off{
+    border-color:rgba(148,163,184,.12);
+    background:rgba(100,116,139,.1);
+    color:#5f7086;
     cursor:not-allowed;
-    box-shadow:none;
 }
-.mnt-btn-disabled:hover{transform:none}
+.mnt-btn-off:hover{transform:none;filter:none}
 
-.mnt-results-head{
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap:15px;
-    margin:19px 2px 13px;
-}
-.mnt-results-head h2{
-    margin:0;
-    font-size:1.05rem;
-    letter-spacing:-.02em;
-}
-.mnt-results-head span{
-    color:var(--mnt-muted);
-    font-size:.75rem;
-    font-weight:800;
-}
-
-.mnt-messages{display:grid;gap:10px;margin:18px 0}
-.mnt-message{
-    display:flex;
-    align-items:center;
-    gap:10px;
-    padding:13px 15px;
-    border-radius:14px;
-    font-size:.8rem;
-    font-weight:800;
-}
-.mnt-message.success{background:#e9f8ee;color:#14763c}
-.mnt-message.error{background:#fff0f2;color:#b72f3b}
-.mnt-message.info{background:#edf4ff;color:#185da8}
-
-.mnt-grid{
-    display:grid;
-    grid-template-columns:repeat(3,minmax(0,1fr));
-    gap:17px;
-}
-.mnt-card{
-    position:relative;
-    min-width:0;
-    overflow:hidden;
-    display:flex;
-    flex-direction:column;
-    border:1px solid rgba(0,74,173,.1);
-    border-radius:23px;
-    background:#fff;
-    box-shadow:0 15px 38px rgba(15,38,76,.08);
-    transition:transform .2s ease,box-shadow .2s ease,border-color .2s ease;
-}
-.mnt-card:hover{
-    transform:translateY(-3px);
-    border-color:rgba(0,74,173,.22);
-    box-shadow:0 21px 48px rgba(15,38,76,.13);
-}
-.mnt-card:before{
+/* estado de carregamento do botão — impede clique duplo */
+.mnt-btn.is-loading{pointer-events:none;opacity:.75}
+.mnt-btn.is-loading .mnt-btn-label{visibility:hidden}
+.mnt-btn.is-loading::after{
     content:"";
     position:absolute;
-    inset:0 auto 0 0;
-    width:5px;
-    background:#a7b1bf;
+    width:16px;height:16px;
+    border:2px solid rgba(255,255,255,.35);
+    border-top-color:#fff;
+    border-radius:50%;
+    animation:mntSpin .7s linear infinite;
 }
-.mnt-card.status-P:before{background:#e6a600}
-.mnt-card.status-A:before{background:#0878f9}
-.mnt-card.status-C:before{background:#23a25c}
-.mnt-card.status-X:before{background:#dc3545}
-.mnt-card.needs-attention{
-    border-color:rgba(230,57,70,.28);
-    box-shadow:0 15px 38px rgba(190,45,61,.11);
-}
-.mnt-card-main{padding:19px 19px 15px 22px}
-.mnt-card-top{
-    display:flex;
-    align-items:flex-start;
-    justify-content:space-between;
-    gap:13px;
-}
-.mnt-protocol{
-    display:block;
-    margin-bottom:5px;
-    color:var(--mnt-blue);
-    font-size:.68rem;
-    font-weight:950;
-    letter-spacing:.08em;
-}
-.mnt-equipment{
-    margin:0;
-    color:var(--mnt-ink);
-    font-size:1.03rem;
-    font-weight:950;
-    line-height:1.25;
-    letter-spacing:-.02em;
-}
-.mnt-status{
-    flex:0 0 auto;
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-    gap:6px;
-    padding:7px 10px;
-    border-radius:999px;
-    font-size:.62rem;
-    font-weight:950;
-    letter-spacing:.04em;
-    text-transform:uppercase;
-}
-.mnt-status-P{background:#fff5d9;color:#956400}
-.mnt-status-A{background:#e8f3ff;color:#075fae}
-.mnt-status-C{background:#e7f7ed;color:#147b3f}
-.mnt-status-X{background:#fff0f2;color:#b82e3b}
-.mnt-age{
+.mnt-btn-warning.is-loading::after{border-color:rgba(0,0,0,.25);border-top-color:#231400}
+@keyframes mntSpin{to{transform:rotate(360deg)}}
+
+/* =========================================================================
+   CABEÇALHO DOS RESULTADOS
+   ========================================================================= */
+.mnt-results{
     display:flex;
     flex-wrap:wrap;
     align-items:center;
-    gap:7px;
-    margin-top:11px;
-    color:#7d8a9b;
-    font-size:.68rem;
-    font-weight:760;
+    justify-content:space-between;
+    gap:12px;
+    margin-bottom:14px;
 }
-.mnt-alert-pill{
+.mnt-results h2{font-size:1.02rem}
+.mnt-results-meta{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    color:var(--mnt-muted);
+    font-size:.74rem;
+    font-weight:800;
+}
+.mnt-chip{
     display:inline-flex;
     align-items:center;
     gap:6px;
-    padding:5px 8px;
+    padding:6px 11px;
+    border:1px solid var(--mnt-line);
     border-radius:999px;
-    background:#fff0f2;
-    color:#c32f3e;
+    background:rgba(148,163,184,.08);
+    font-size:.68rem;
+    font-weight:800;
+}
+
+/* =========================================================================
+   GRID DE CARDS — linhas alinhadas
+   ========================================================================= */
+.mnt-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(345px,1fr));
+    gap:16px;
+    align-items:stretch;
+}
+.mnt-card{
+    position:relative;
+    overflow:hidden;
+    display:grid;
+    grid-template-rows:auto 1fr auto auto;
+    min-width:0;
+    border:1px solid var(--mnt-line);
+    border-radius:var(--mnt-r);
+    background:
+        radial-gradient(circle at 100% 0,rgba(59,130,246,.1),transparent 38%),
+        linear-gradient(160deg,var(--mnt-surface-2) 0%,var(--mnt-surface) 70%);
+    box-shadow:0 16px 40px rgba(2,8,20,.32);
+    transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease;
+}
+.mnt-card:hover{
+    transform:translateY(-3px);
+    border-color:var(--mnt-line-strong);
+    box-shadow:0 24px 54px rgba(2,8,20,.46);
+}
+.mnt-card::before{
+    content:"";
+    position:absolute;
+    inset:0 auto 0 0;
+    width:4px;
+    background:#64748b;
+}
+.mnt-card.st-P::before{background:var(--mnt-warning)}
+.mnt-card.st-A::before{background:var(--mnt-primary)}
+.mnt-card.st-C::before{background:var(--mnt-success)}
+.mnt-card.st-X::before{background:var(--mnt-danger)}
+.mnt-card.is-late{border-color:rgba(239,68,68,.35)}
+.mnt-card.is-focus{
+    border-color:rgba(59,130,246,.7);
+    box-shadow:0 0 0 3px rgba(59,130,246,.25),0 24px 54px rgba(2,8,20,.46);
+}
+
+.mnt-card-head{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:12px;
+    padding:18px 18px 0 21px;
+}
+.mnt-proto{
+    display:block;
+    margin-bottom:5px;
+    color:#7fb2ff;
+    font-size:.66rem;
+    font-weight:900;
+    letter-spacing:.09em;
+}
+.mnt-equip{
+    display:-webkit-box;
+    overflow:hidden;
+    font-size:1rem;
+    font-weight:800;
+    line-height:1.28;
+    -webkit-line-clamp:2;
+    -webkit-box-orient:vertical;
+    min-height:2.56em;
+}
+.mnt-badge{
+    flex:0 0 auto;
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    padding:6px 11px;
+    border:1px solid transparent;
+    border-radius:999px;
     font-size:.62rem;
-    font-weight:950;
+    font-weight:900;
+    letter-spacing:.05em;
+    text-transform:uppercase;
+    white-space:nowrap;
+}
+.mnt-badge.st-P{background:rgba(245,158,11,.15);border-color:rgba(245,158,11,.28);color:#fbbf24}
+.mnt-badge.st-A{background:rgba(59,130,246,.16);border-color:rgba(59,130,246,.3);color:#8fc0ff}
+.mnt-badge.st-C{background:rgba(16,185,129,.15);border-color:rgba(16,185,129,.28);color:#34d399}
+.mnt-badge.st-X{background:rgba(239,68,68,.14);border-color:rgba(239,68,68,.26);color:#fca5a5}
+
+.mnt-card-body{padding:14px 18px 16px 21px;min-width:0}
+
+.mnt-time{
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    gap:8px;
+    margin-bottom:13px;
+    color:#8fa1b8;
+    font-size:.68rem;
+    font-weight:700;
+}
+.mnt-flag{
+    display:inline-flex;
+    align-items:center;
+    gap:5px;
+    padding:4px 9px;
+    border-radius:999px;
+    background:rgba(239,68,68,.13);
+    border:1px solid rgba(239,68,68,.2);
+    color:#fca5a5;
+    font-size:.61rem;
+    font-weight:900;
+}
+.mnt-flag.warn{
+    background:rgba(245,158,11,.13);
+    border-color:rgba(245,158,11,.22);
+    color:#fbbf24;
 }
 
 .mnt-client{
     display:flex;
     align-items:center;
     gap:11px;
-    margin-top:15px;
-    padding:12px;
-    border:1px solid #e5ebf3;
-    border-radius:16px;
-    background:#f8fafd;
+    padding:11px 12px;
+    border:1px solid var(--mnt-line);
+    border-radius:14px;
+    background:rgba(6,14,26,.5);
 }
 .mnt-avatar{
     flex:0 0 auto;
     display:flex;
     align-items:center;
     justify-content:center;
-    width:42px;height:42px;
-    border-radius:13px;
-    background:linear-gradient(135deg,#0b2b55,#0878f9);
+    width:40px;height:40px;
+    border-radius:12px;
+    background:linear-gradient(135deg,#1d4ed8,#3b82f6);
     color:#fff;
-    font-size:.75rem;
-    font-weight:950;
+    font-size:.74rem;
+    font-weight:900;
 }
-.mnt-client-copy{min-width:0}
+.mnt-client-copy{min-width:0;flex:1}
 .mnt-client-copy strong{
     display:block;
     overflow:hidden;
-    color:#243650;
-    font-size:.78rem;
+    font-size:.79rem;
     text-overflow:ellipsis;
     white-space:nowrap;
 }
@@ -408,735 +497,681 @@
     display:block;
     overflow:hidden;
     margin-top:3px;
-    color:#77869a;
-    font-size:.66rem;
+    color:#8fa1b8;
+    font-size:.67rem;
     text-overflow:ellipsis;
     white-space:nowrap;
 }
 
-.mnt-problem{
-    margin-top:14px;
-}
 .mnt-label{
     display:block;
-    margin-bottom:6px;
-    color:#7b899b;
-    font-size:.62rem;
-    font-weight:950;
-    letter-spacing:.07em;
+    margin:14px 0 6px;
+    color:#7fa0cc;
+    font-size:.6rem;
+    font-weight:900;
+    letter-spacing:.08em;
     text-transform:uppercase;
 }
-.mnt-problem p{
+.mnt-problem{
     display:-webkit-box;
     overflow:hidden;
-    min-height:54px;
+    min-height:3.9em;
     margin:0;
-    color:#405169;
-    font-size:.75rem;
+    color:#c2cfe0;
+    font-size:.76rem;
     line-height:1.55;
     -webkit-line-clamp:3;
     -webkit-box-orient:vertical;
 }
 
-.mnt-thumbs{
-    display:grid;
-    grid-template-columns:repeat(3,1fr);
-    gap:7px;
-    margin-top:14px;
-}
-.mnt-thumb{
-    position:relative;
-    overflow:hidden;
-    min-height:74px;
-    border-radius:12px;
-    background:#edf2f8;
-}
-.mnt-thumb img{
-    width:100%;
-    height:78px;
-    object-fit:cover;
-    display:block;
-}
-.mnt-more{
-    position:absolute;
-    inset:0;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    background:rgba(7,26,52,.65);
-    color:#fff;
-    font-size:.8rem;
-    font-weight:950;
-}
-.mnt-no-photo{
-    display:flex;
-    align-items:center;
-    gap:8px;
-    margin-top:14px;
-    padding:10px 12px;
-    border-radius:12px;
-    background:#f4f6f9;
-    color:#8591a1;
-    font-size:.68rem;
-    font-weight:800;
-}
-
-.mnt-contact-bar{
-    display:grid;
-    grid-template-columns:repeat(4,minmax(0,1fr));
-    gap:7px;
-    padding:0 19px 15px 22px;
-}
-.mnt-contact-bar .mnt-btn{
-    min-height:40px;
-    padding:9px 7px;
-    font-size:.68rem;
-}
-.mnt-card-footer{
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap:10px;
-    margin-top:auto;
-    padding:14px 19px 14px 22px;
-    border-top:1px solid #e8edf4;
-    background:#fbfcfe;
-}
-.mnt-card-footer small{
-    color:#7e8b9d;
-    font-size:.63rem;
-    font-weight:760;
-}
-.mnt-open{
-    min-height:40px;
-    padding:9px 12px;
-}
-
-.mnt-empty{
-    grid-column:1/-1;
-    padding:70px 25px;
-    border:1px dashed #cfd9e6;
-    border-radius:24px;
-    background:#fff;
-    text-align:center;
-}
-.mnt-empty-icon{
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    width:64px;height:64px;
-    margin:0 auto 15px;
-    border-radius:20px;
-    background:#edf4ff;
-    color:var(--mnt-blue);
-    font-size:1.4rem;
-}
-.mnt-empty h3{margin:0 0 6px;font-size:1.1rem}
-.mnt-empty p{margin:0;color:var(--mnt-muted);font-size:.8rem}
-
-.mnt-pagination{
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    gap:8px;
-    margin-top:24px;
-}
-.mnt-page-link{
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-    min-width:40px;
-    height:40px;
-    padding:0 12px;
-    border:1px solid #dce4ef;
-    border-radius:11px;
-    background:#fff;
-    color:#43546d;
-    font-size:.75rem;
-    font-weight:900;
-    text-decoration:none;
-}
-.mnt-page-link.current{
-    border-color:var(--mnt-blue);
-    background:var(--mnt-blue);
-    color:#fff;
-}
-
-.mnt-dialog{
-    width:min(1120px,calc(100vw - 30px));
-    max-height:92vh;
-    padding:0;
-    overflow:hidden;
-    border:0;
-    border-radius:26px;
-    background:#f5f8fc;
-    color:var(--mnt-ink);
-    box-shadow:0 35px 90px rgba(4,18,41,.35);
-}
-.mnt-dialog::backdrop{
-    background:rgba(4,18,41,.72);
-    backdrop-filter:blur(5px);
-}
-.mnt-dialog-head{
-    position:sticky;
-    top:0;
-    z-index:5;
-    display:flex;
-    align-items:flex-start;
-    justify-content:space-between;
-    gap:18px;
-    padding:21px 23px;
-    border-bottom:1px solid #dfe6ef;
-    background:#fff;
-}
-.mnt-dialog-title-wrap{min-width:0}
-.mnt-dialog-title-wrap small{
-    display:block;
-    margin-bottom:5px;
-    color:var(--mnt-blue);
-    font-size:.68rem;
-    font-weight:950;
-    letter-spacing:.08em;
-}
-.mnt-dialog-title-wrap h2{
-    margin:0;
-    color:var(--mnt-ink);
-    font-size:1.35rem;
-    letter-spacing:-.035em;
-}
-.mnt-dialog-head-actions{
-    display:flex;
-    align-items:center;
-    gap:10px;
-}
-.mnt-icon-btn{
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-    width:40px;height:40px;
-    border:0;
-    border-radius:12px;
-    background:#eef2f7;
-    color:#4b5d75;
-    cursor:pointer;
-}
-.mnt-dialog-scroll{
-    max-height:calc(92vh - 84px);
-    overflow:auto;
-    padding:20px;
-}
-.mnt-dialog-grid{
-    display:grid;
-    grid-template-columns:minmax(0,1.45fr) minmax(300px,.75fr);
-    gap:17px;
-}
-.mnt-panel{
-    padding:18px;
-    border:1px solid #e0e7f0;
-    border-radius:19px;
-    background:#fff;
-    box-shadow:0 10px 28px rgba(15,38,76,.055);
-}
-.mnt-panel + .mnt-panel{margin-top:14px}
-.mnt-panel h3{
-    display:flex;
-    align-items:center;
-    gap:8px;
-    margin:0 0 13px;
-    color:#243650;
-    font-size:.9rem;
-}
-.mnt-description-full{
-    margin:0;
-    color:#405169;
-    font-size:.82rem;
-    line-height:1.7;
-    white-space:pre-wrap;
-}
-.mnt-detail-grid{
-    display:grid;
-    grid-template-columns:repeat(2,minmax(0,1fr));
-    gap:10px;
-}
-.mnt-detail-item{
-    min-width:0;
-    padding:11px;
-    border-radius:13px;
-    background:#f5f8fc;
-}
-.mnt-detail-item small{
-    display:block;
-    margin-bottom:4px;
-    color:#7c899a;
-    font-size:.61rem;
-    font-weight:900;
-    letter-spacing:.055em;
-    text-transform:uppercase;
-}
-.mnt-detail-item strong{
-    display:block;
-    color:#2a3d57;
-    font-size:.74rem;
-    line-height:1.4;
-    word-break:break-word;
-}
-.mnt-gallery{
-    display:grid;
-    grid-template-columns:repeat(3,minmax(0,1fr));
-    gap:9px;
-}
-.mnt-gallery button{
-    overflow:hidden;
-    padding:0;
-    border:0;
-    border-radius:13px;
-    background:#eef2f7;
-    cursor:zoom-in;
-}
-.mnt-gallery img{
-    display:block;
-    width:100%;
-    height:145px;
-    object-fit:cover;
-    transition:transform .2s ease;
-}
-.mnt-gallery button:hover img{transform:scale(1.035)}
-.mnt-contact-stack{display:grid;gap:8px}
-.mnt-contact-stack .mnt-btn{width:100%}
-.mnt-contact-status{
-    display:flex;
-    align-items:flex-start;
-    gap:8px;
-    margin-top:11px;
-    padding:10px;
-    border-radius:12px;
-    background:#f5f8fc;
-    color:#66758a;
-    font-size:.68rem;
-    line-height:1.45;
-}
-.mnt-contact-status.ok{background:#eaf8ef;color:#13753b}
-.mnt-contact-status.bad{background:#fff0f2;color:#b6323e}
-.mnt-address{
-    margin:0 0 12px;
-    color:#405169;
-    font-size:.78rem;
-    line-height:1.6;
-}
-.mnt-status-form{display:grid;gap:10px}
-.mnt-status-form label{
-    color:#516179;
-    font-size:.68rem;
-    font-weight:900;
-}
-.mnt-status-form .mnt-btn{width:100%}
-.mnt-timeline{
-    display:grid;
-    gap:11px;
-}
-.mnt-timeline-item{
-    position:relative;
-    padding-left:25px;
-}
-.mnt-timeline-item:before{
-    content:"";
-    position:absolute;
-    left:4px;top:4px;
-    width:9px;height:9px;
-    border-radius:50%;
-    background:var(--mnt-blue-2);
-    box-shadow:0 0 0 5px rgba(8,120,249,.1);
-}
-.mnt-timeline-item:not(:last-child):after{
-    content:"";
-    position:absolute;
-    left:8px;top:17px;
-    width:1px;height:calc(100% + 4px);
-    background:#d8e2ee;
-}
-.mnt-timeline-item strong{
-    display:block;
-    color:#30445f;
-    font-size:.72rem;
-}
-.mnt-timeline-item span{
-    display:block;
-    margin-top:3px;
-    color:#7b899a;
-    font-size:.65rem;
-}
-
-.mnt-lightbox{
-    width:min(1100px,calc(100vw - 26px));
-    max-height:94vh;
-    padding:0;
-    overflow:hidden;
-    border:0;
-    border-radius:22px;
-    background:#071326;
-    box-shadow:0 38px 100px rgba(0,0,0,.55);
-}
-.mnt-lightbox::backdrop{background:rgba(0,0,0,.88)}
-.mnt-lightbox-bar{
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap:12px;
-    padding:12px 14px;
-    color:#fff;
-}
-.mnt-lightbox-bar span{font-size:.75rem;font-weight:800}
-.mnt-lightbox img{
-    display:block;
-    width:100%;
-    max-height:82vh;
-    object-fit:contain;
-    background:#02060d;
-}
-.mnt-lightbox .mnt-icon-btn{background:rgba(255,255,255,.1);color:#fff}
-
-body.mnt-modal-open{overflow:hidden}
-
-@media(max-width:1250px){
-    .mnt-stats{grid-template-columns:repeat(3,1fr)}
-    .mnt-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
-    .mnt-toolbar{grid-template-columns:minmax(250px,1.4fr) repeat(2,minmax(150px,.7fr))}
-    .mnt-toolbar .mnt-field:nth-child(4){grid-column:1/2}
-    .mnt-filter-actions{grid-column:2/4}
-}
-@media(max-width:850px){
-    .mnt-page{padding:18px 13px 55px}
-    .mnt-hero{align-items:flex-start;flex-direction:column;padding:25px;min-height:auto;border-radius:23px}
-    .mnt-hero-side{width:100%;min-width:0}
-    .mnt-stats{grid-template-columns:repeat(2,1fr)}
-    .mnt-toolbar{grid-template-columns:1fr 1fr}
-    .mnt-toolbar .mnt-field:first-child{grid-column:1/-1}
-    .mnt-toolbar .mnt-field:nth-child(4){grid-column:auto}
-    .mnt-filter-actions{grid-column:1/-1}
-    .mnt-filter-actions .mnt-btn{flex:1}
-    .mnt-grid{grid-template-columns:1fr}
-    .mnt-dialog-grid{grid-template-columns:1fr}
-    .mnt-gallery{grid-template-columns:repeat(2,minmax(0,1fr))}
-}
-@media(max-width:520px){
-    .mnt-stats{gap:9px}
-    .mnt-stat{padding:14px;min-height:108px}
-    .mnt-stat strong{font-size:1.4rem}
-    .mnt-toolbar{grid-template-columns:1fr}
-    .mnt-toolbar .mnt-field,.mnt-toolbar .mnt-field:nth-child(4),.mnt-filter-actions{grid-column:1}
-    .mnt-contact-bar{grid-template-columns:repeat(2,1fr)}
-    .mnt-card-top{align-items:flex-start;flex-direction:column}
-    .mnt-dialog{width:100vw;max-height:100vh;border-radius:0}
-    .mnt-dialog-scroll{max-height:calc(100vh - 84px);padding:12px}
-    .mnt-dialog-grid{gap:12px}
-    .mnt-detail-grid{grid-template-columns:1fr}
-    .mnt-gallery img{height:120px}
-}
-
-/* ==========================================================
-   TEMA OPERACIONAL LAZER & SPORT
-   Mantém a tela uniforme com os cards escuros da área admin.
-   ========================================================== */
-.mnt-page{
-    --ops-bg:#050b14;
-    --ops-surface:#091423;
-    --ops-surface-2:#0d1b2d;
-    --ops-surface-3:#12233a;
-    --ops-line:rgba(151,178,214,.16);
-    --ops-text:#f3f7ff;
-    --ops-muted:#9caec5;
-    position:relative;
-    isolation:isolate;
-    max-width:none;
-    min-height:calc(100vh - 90px);
-    border:1px solid rgba(132,169,218,.12);
-    border-radius:30px;
-    background:
-        radial-gradient(circle at 8% 2%,rgba(8,120,249,.17),transparent 26rem),
-        radial-gradient(circle at 94% 18%,rgba(230,57,70,.12),transparent 23rem),
-        linear-gradient(155deg,#07101d 0%,#040911 58%,#07111e 100%);
-    color:var(--ops-text);
-    box-shadow:0 28px 80px rgba(1,7,17,.32);
-}
-.mnt-page:before{
-    content:"";
-    position:absolute;
-    z-index:-1;
-    inset:0;
-    border-radius:inherit;
-    opacity:.16;
-    pointer-events:none;
-    background-image:
-        linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),
-        linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px);
-    background-size:42px 42px;
-    mask-image:linear-gradient(to bottom,#000,transparent 75%);
-}
-.mnt-hero{
-    border:1px solid rgba(111,167,239,.25);
-    background:
-        radial-gradient(circle at 88% 14%,rgba(230,57,70,.34),transparent 24%),
-        radial-gradient(circle at 70% 120%,rgba(8,120,249,.5),transparent 38%),
-        linear-gradient(125deg,#07111f 0%,#07326b 60%,#005ed1 100%);
-    box-shadow:0 26px 68px rgba(0,3,10,.42),inset 0 1px 0 rgba(255,255,255,.08);
-}
-.mnt-live{background:rgba(2,10,22,.48);border-color:rgba(255,255,255,.15)}
-
-.mnt-stat,
-.mnt-toolbar,
-.mnt-empty{
-    border-color:var(--ops-line);
-    background:linear-gradient(145deg,rgba(16,31,51,.98),rgba(8,18,31,.98));
-    box-shadow:0 16px 42px rgba(0,4,12,.3),inset 0 1px 0 rgba(255,255,255,.035);
-}
-.mnt-stat:after{background:rgba(40,125,238,.1)}
-.mnt-stat strong,
-.mnt-results-head h2,
-.mnt-empty h3{color:var(--ops-text)}
-.mnt-stat span,
-.mnt-results-head span,
-.mnt-empty p{color:var(--ops-muted)}
-.mnt-stat-icon{background:rgba(8,120,249,.16);color:#66acff}
-.mnt-stat.pending .mnt-stat-icon{background:rgba(255,181,42,.14);color:#ffc65b}
-.mnt-stat.progress .mnt-stat-icon{background:rgba(8,120,249,.18);color:#6db2ff}
-.mnt-stat.done .mnt-stat-icon{background:rgba(35,162,92,.16);color:#5fdb93}
-.mnt-stat.cancel .mnt-stat-icon,
-.mnt-stat.alert .mnt-stat-icon{background:rgba(230,57,70,.15);color:#ff7581}
-
-.mnt-field label{color:#aebdd1}
-.mnt-control{
-    border-color:rgba(151,178,214,.2);
-    background:#07111f;
-    color:#eef5ff;
-    color-scheme:dark;
-}
-.mnt-control::placeholder{color:#708299}
-.mnt-control:hover{border-color:rgba(111,172,255,.4)}
-.mnt-control:focus{
-    border-color:#278bff;
-    background:#091727;
-    box-shadow:0 0 0 4px rgba(39,139,255,.14);
-}
-.mnt-btn-soft{background:rgba(32,121,240,.14);color:#86bdff}
-.mnt-btn-dark{
-    border:1px solid rgba(106,168,255,.28);
-    background:linear-gradient(135deg,#0066df,#0050b2);
-    color:#fff;
-    box-shadow:0 10px 24px rgba(0,87,191,.22);
-}
-.mnt-btn-whatsapp{background:linear-gradient(135deg,#1fa855,#138140);color:#fff}
-.mnt-btn-email{background:linear-gradient(135deg,#466fe7,#3153ba);color:#fff}
-.mnt-btn-phone{background:linear-gradient(135deg,#0789c5,#076999);color:#fff}
-.mnt-btn-map{background:linear-gradient(135deg,#e85f48,#bb3e32);color:#fff}
-.mnt-btn-disabled{
-    border:1px solid rgba(151,178,214,.1);
-    background:rgba(113,132,158,.1);
-    color:#667991;
-}
-
-.mnt-card{
-    border-color:var(--ops-line);
-    background:
-        radial-gradient(circle at 100% 0,rgba(8,120,249,.11),transparent 34%),
-        linear-gradient(155deg,#111f33 0%,#0a1524 67%,#08111e 100%);
-    box-shadow:0 18px 45px rgba(0,4,12,.38),inset 0 1px 0 rgba(255,255,255,.035);
-}
-.mnt-card:hover{
-    border-color:rgba(79,151,246,.42);
-    box-shadow:0 23px 58px rgba(0,5,16,.48),0 0 0 1px rgba(41,127,241,.08);
-}
-.mnt-card.needs-attention{
-    border-color:rgba(255,89,104,.42);
-    box-shadow:0 19px 48px rgba(109,14,28,.2),inset 0 1px 0 rgba(255,255,255,.035);
-}
-.mnt-card-main{position:relative}
-.mnt-protocol{color:#6db2ff}
-.mnt-equipment{color:#fff}
-.mnt-status-P{background:rgba(255,181,42,.15);color:#ffcc67;border:1px solid rgba(255,181,42,.18)}
-.mnt-status-A{background:rgba(8,120,249,.18);color:#82bdff;border:1px solid rgba(8,120,249,.22)}
-.mnt-status-C{background:rgba(35,162,92,.17);color:#74dfa0;border:1px solid rgba(35,162,92,.2)}
-.mnt-status-X{background:rgba(230,57,70,.16);color:#ff8a94;border:1px solid rgba(230,57,70,.2)}
-.mnt-age{color:#93a5bb}
-.mnt-alert-pill{background:rgba(230,57,70,.14);color:#ff838e;border:1px solid rgba(230,57,70,.18)}
-.mnt-client{
-    border-color:rgba(142,174,215,.14);
-    background:rgba(5,13,24,.52);
-}
-.mnt-client-copy strong{color:#eff5ff}
-.mnt-client-copy span{color:#8fa2ba}
-.mnt-label{color:#7fa8d9}
-.mnt-problem p{color:#c4d0df}
-.mnt-no-photo{
-    border:1px dashed rgba(145,174,211,.17);
-    background:rgba(103,125,154,.08);
-    color:#8294aa;
-}
-.mnt-thumb{border:1px solid rgba(143,174,212,.14);background:#06101d}
-.mnt-contact-bar{padding-top:2px}
-.mnt-card-footer{
-    border-color:rgba(151,178,214,.13);
-    background:rgba(3,10,19,.42);
-}
-.mnt-card-footer small{color:#8b9db3}
-
-.mnt-card-facts{
+.mnt-facts{
     display:grid;
     grid-template-columns:repeat(3,minmax(0,1fr));
     gap:7px;
-    margin-top:14px;
+    margin-top:13px;
 }
-.mnt-card-fact{
+.mnt-fact{
     min-width:0;
     padding:9px 10px;
-    border:1px solid rgba(141,173,212,.12);
+    border:1px solid var(--mnt-line);
     border-radius:11px;
-    background:rgba(2,10,20,.35);
+    background:rgba(6,14,26,.42);
 }
-.mnt-card-fact small{
+.mnt-fact small{
     display:flex;
     align-items:center;
     gap:5px;
     margin-bottom:4px;
-    color:#749bc9;
-    font-size:.56rem;
-    font-weight:950;
-    letter-spacing:.045em;
+    color:#7fa0cc;
+    font-size:.55rem;
+    font-weight:900;
+    letter-spacing:.05em;
     text-transform:uppercase;
 }
-.mnt-card-fact strong{
+.mnt-fact strong{
     display:block;
     overflow:hidden;
-    color:#dce8f7;
-    font-size:.67rem;
-    line-height:1.35;
+    color:#dbe6f5;
+    font-size:.68rem;
     text-overflow:ellipsis;
     white-space:nowrap;
 }
 
-.mnt-page-link{
-    border-color:var(--ops-line);
-    background:#0c192a;
-    color:#aebed2;
+/* miniaturas — altura fixa mantém todos os cards no mesmo eixo */
+.mnt-thumbs{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:7px;
+    margin-top:13px;
 }
-.mnt-page-link.current{border-color:#0878f9;background:#0878f9;color:#fff}
+.mnt-thumb{
+    position:relative;
+    overflow:hidden;
+    height:76px;
+    border:1px solid var(--mnt-line);
+    border-radius:11px;
+    background:#0a1220;
+    padding:0;
+    cursor:zoom-in;
+}
+.mnt-thumb img{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    display:block;
+    transition:transform .25s ease;
+}
+.mnt-thumb:hover img{transform:scale(1.06)}
+.mnt-thumb-more{
+    position:absolute;
+    inset:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:rgba(6,14,26,.68);
+    color:#fff;
+    font-size:.8rem;
+    font-weight:900;
+}
+.mnt-nophoto{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:9px;
+    height:76px;
+    margin-top:13px;
+    border:1px dashed rgba(148,163,184,.2);
+    border-radius:11px;
+    background:rgba(100,116,139,.07);
+    color:#65788f;
+    font-size:.7rem;
+    font-weight:800;
+}
 
-.mnt-dialog{
+/* ---------- CONTATOS ---------- */
+.mnt-contacts{
+    display:grid;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:7px;
+    padding:0 18px 14px 21px;
+}
+.mnt-contacts .mnt-btn{height:38px;padding:0 6px;font-size:.66rem;gap:6px}
+.mnt-contacts .mnt-btn i{font-size:.8rem}
+
+/* ---------- RODAPÉ DO CARD (ações rápidas) ---------- */
+.mnt-card-foot{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    padding:13px 18px 13px 21px;
+    border-top:1px solid var(--mnt-line);
+    background:rgba(4,11,22,.45);
+}
+.mnt-quick{display:flex;gap:7px;flex-wrap:wrap}
+.mnt-quick .mnt-btn{height:36px;padding:0 12px;font-size:.7rem}
+.mnt-card-foot small{
+    color:#7c8ea5;
+    font-size:.62rem;
+    font-weight:700;
+    text-align:right;
+}
+
+/* =========================================================================
+   VAZIO / PAGINAÇÃO
+   ========================================================================= */
+.mnt-empty{
+    grid-column:1/-1;
+    padding:64px 24px;
+    border:1px dashed rgba(148,163,184,.24);
+    border-radius:var(--mnt-r);
+    background:linear-gradient(150deg,var(--mnt-surface-2),var(--mnt-surface));
+    text-align:center;
+}
+.mnt-empty-ico{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    width:62px;height:62px;
+    margin:0 auto 14px;
+    border-radius:19px;
+    background:rgba(59,130,246,.14);
+    color:#7fb2ff;
+    font-size:1.35rem;
+}
+.mnt-empty h3{margin-bottom:6px;font-size:1.06rem}
+.mnt-empty p{margin:0 0 18px;color:var(--mnt-muted);font-size:.8rem}
+
+.mnt-pager{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:7px;
+    margin-top:24px;
+}
+.mnt-page{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-width:42px;
+    height:42px;
+    padding:0 13px;
+    border:1px solid var(--mnt-line);
+    border-radius:var(--mnt-r-sm);
+    background:var(--mnt-surface-2);
+    color:#b6c5d8;
+    font-size:.76rem;
+    font-weight:900;
+    text-decoration:none;
+    transition:border-color .16s ease,transform .16s ease;
+}
+.mnt-page:hover{transform:translateY(-1px);border-color:var(--mnt-line-strong)}
+.mnt-page.is-current{
+    border-color:var(--mnt-primary);
+    background:linear-gradient(135deg,var(--mnt-primary),var(--mnt-primary-strong));
+    color:#fff;
+}
+.mnt-page-gap{color:#5c6e85;padding:0 4px;font-weight:900}
+
+/* =========================================================================
+   MODAL DE ATENDIMENTO
+   ========================================================================= */
+.mnt-modal{
+    width:min(1140px,calc(100vw - 28px));
+    max-height:min(94vh,940px);
+    padding:0;
+    overflow:hidden;
     border:1px solid rgba(125,165,216,.2);
-    background:#060e19;
-    color:var(--ops-text);
-    box-shadow:0 38px 110px rgba(0,0,0,.72);
+    border-radius:22px;
+    background:#0a1220;
+    color:var(--mnt-text);
+    box-shadow:0 40px 110px rgba(0,0,0,.7);
 }
-.mnt-dialog-head{
-    border-color:rgba(151,178,214,.14);
-    background:linear-gradient(135deg,#0d1e33,#081421);
+.mnt-modal::backdrop{
+    background:rgba(3,8,18,.78);
+    backdrop-filter:blur(6px);
+    animation:mntFade .22s ease;
 }
-.mnt-dialog-title-wrap small{color:#72b4ff}
-.mnt-dialog-title-wrap h2{color:#fff}
-.mnt-icon-btn{background:rgba(146,170,202,.12);color:#c8d6e8}
-.mnt-dialog-scroll{
-    background:
-        radial-gradient(circle at 88% 5%,rgba(8,120,249,.09),transparent 24rem),
-        #060e19;
-}
-.mnt-panel{
-    border-color:rgba(151,178,214,.14);
-    background:linear-gradient(145deg,#0d1a2b,#091421);
-    box-shadow:0 14px 34px rgba(0,3,10,.28),inset 0 1px 0 rgba(255,255,255,.025);
-}
-.mnt-panel h3{color:#eff5ff}
-.mnt-panel h3 i{color:#67adff}
-.mnt-description-full{color:#c6d2e1}
-.mnt-detail-item{
-    border:1px solid rgba(147,176,214,.1);
-    background:rgba(3,10,19,.42);
-}
-.mnt-detail-item small{color:#7899bf}
-.mnt-detail-item strong{color:#e0eaf7}
-.mnt-address{color:#c6d2e1}
-.mnt-status-form label{color:#aabbd0}
-.mnt-contact-status{background:rgba(103,125,154,.09);color:#94a7bd}
-.mnt-contact-status.ok{background:rgba(35,162,92,.14);color:#74d99a}
-.mnt-contact-status.bad{background:rgba(230,57,70,.13);color:#ff858f}
-.mnt-timeline-item strong{color:#dce8f7}
-.mnt-timeline-item span{color:#8295ad}
-.mnt-timeline-item:not(:last-child):after{background:rgba(137,169,208,.2)}
+.mnt-modal[open]{animation:mntPop .24s cubic-bezier(.2,.9,.3,1)}
+@keyframes mntFade{from{opacity:0}to{opacity:1}}
+@keyframes mntPop{from{opacity:0;transform:translateY(14px) scale(.985)}to{opacity:1;transform:none}}
 
-.mnt-modal-summary{
+.mnt-modal-shell{
+    display:grid;
+    grid-template-rows:auto minmax(0,1fr) auto;
+    max-height:min(94vh,940px);
+}
+
+/* ---------- CABEÇALHO ---------- */
+.mnt-modal-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:16px;
+    padding:18px 20px;
+    border-bottom:1px solid var(--mnt-line);
+    background:linear-gradient(135deg,#122748,#0c1728);
+}
+.mnt-modal-title{min-width:0}
+.mnt-modal-title small{
+    display:block;
+    margin-bottom:4px;
+    color:#7fb2ff;
+    font-size:.66rem;
+    font-weight:900;
+    letter-spacing:.09em;
+}
+.mnt-modal-title h2{
+    overflow:hidden;
+    font-size:1.24rem;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+}
+.mnt-modal-head-actions{display:flex;align-items:center;gap:9px;flex:0 0 auto}
+.mnt-ico-btn{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    width:40px;height:40px;
+    border:1px solid var(--mnt-line);
+    border-radius:12px;
+    background:rgba(148,163,184,.1);
+    color:#c8d6e8;
+    cursor:pointer;
+    transition:background .16s ease,transform .16s ease;
+}
+.mnt-ico-btn:hover{background:rgba(148,163,184,.2);transform:translateY(-1px)}
+
+/* ---------- CORPO ---------- */
+.mnt-modal-body{
+    overflow:auto;
+    padding:18px 20px;
+    background:
+        radial-gradient(circle at 90% 0,rgba(59,130,246,.08),transparent 26rem),
+        #0a1220;
+    scrollbar-width:thin;
+    scrollbar-color:rgba(148,163,184,.3) transparent;
+}
+.mnt-modal-body::-webkit-scrollbar{width:9px}
+.mnt-modal-body::-webkit-scrollbar-thumb{
+    background:rgba(148,163,184,.26);
+    border-radius:999px;
+    border:2px solid transparent;
+    background-clip:content-box;
+}
+
+.mnt-summary{
     display:grid;
     grid-template-columns:repeat(4,minmax(0,1fr));
     gap:10px;
-    margin-bottom:17px;
+    margin-bottom:16px;
 }
 .mnt-summary-item{
     min-width:0;
     padding:13px;
-    border:1px solid rgba(113,164,229,.16);
+    border:1px solid var(--mnt-line);
     border-radius:15px;
-    background:linear-gradient(145deg,rgba(15,35,59,.95),rgba(8,20,34,.95));
+    background:linear-gradient(150deg,var(--mnt-surface-3),var(--mnt-surface));
 }
 .mnt-summary-item span{
     display:flex;
     align-items:center;
     gap:6px;
     margin-bottom:5px;
-    color:#77a9e3;
-    font-size:.61rem;
-    font-weight:950;
+    color:#7fa0cc;
+    font-size:.6rem;
+    font-weight:900;
     letter-spacing:.05em;
     text-transform:uppercase;
 }
 .mnt-summary-item strong{
     display:block;
     overflow:hidden;
-    color:#f0f6ff;
-    font-size:.75rem;
+    font-size:.77rem;
     text-overflow:ellipsis;
     white-space:nowrap;
 }
-.mnt-contact-note{
+
+.mnt-cols{
+    display:grid;
+    grid-template-columns:minmax(0,1.5fr) minmax(300px,.85fr);
+    gap:14px;
+    align-items:start;
+}
+.mnt-col{display:grid;gap:13px;align-content:start;min-width:0}
+
+.mnt-panel{
+    padding:17px;
+    border:1px solid var(--mnt-line);
+    border-radius:17px;
+    background:linear-gradient(150deg,var(--mnt-surface-2),var(--mnt-surface));
+    box-shadow:0 12px 30px rgba(2,8,20,.24);
+    min-width:0;
+}
+.mnt-panel h3{
+    display:flex;
+    align-items:center;
+    gap:9px;
+    margin-bottom:13px;
+    font-size:.88rem;
+}
+.mnt-panel h3 i{color:#7fb2ff;font-size:.86rem}
+.mnt-desc-full{
+    margin:0;
+    color:#c6d3e4;
+    font-size:.82rem;
+    line-height:1.72;
+    white-space:pre-wrap;
+    word-break:break-word;
+}
+
+.mnt-dl{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:9px;
+}
+.mnt-dl-item{
+    min-width:0;
+    padding:11px;
+    border:1px solid var(--mnt-line);
+    border-radius:13px;
+    background:rgba(6,14,26,.42);
+}
+.mnt-dl-item.wide{grid-column:1/-1}
+.mnt-dl-item small{
+    display:block;
+    margin-bottom:4px;
+    color:#7fa0cc;
+    font-size:.59rem;
+    font-weight:900;
+    letter-spacing:.05em;
+    text-transform:uppercase;
+}
+.mnt-dl-item strong{
+    display:block;
+    font-size:.75rem;
+    line-height:1.42;
+    word-break:break-word;
+}
+
+.mnt-gallery{
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(150px,1fr));
+    gap:9px;
+}
+.mnt-gallery button{
+    position:relative;
+    overflow:hidden;
+    height:142px;
+    padding:0;
+    border:1px solid var(--mnt-line);
+    border-radius:13px;
+    background:#0a1220;
+    cursor:zoom-in;
+}
+.mnt-gallery img{
+    display:block;
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    transition:transform .25s ease;
+}
+.mnt-gallery button:hover img{transform:scale(1.05)}
+
+.mnt-stack{display:grid;gap:8px}
+.mnt-note{
     display:flex;
     align-items:flex-start;
     gap:9px;
-    margin:12px 0;
+    margin-top:11px;
     padding:11px 12px;
-    border:1px solid rgba(49,140,255,.16);
+    border:1px solid rgba(59,130,246,.18);
     border-radius:12px;
-    background:rgba(8,120,249,.09);
+    background:rgba(59,130,246,.09);
     color:#a9c9ee;
-    font-size:.68rem;
-    line-height:1.5;
+    font-size:.69rem;
+    line-height:1.55;
 }
-.mnt-checklist{display:grid;gap:7px;margin-top:12px}
+.mnt-note i{margin-top:2px;color:#7fb2ff}
+.mnt-note.ok{border-color:rgba(16,185,129,.2);background:rgba(16,185,129,.1);color:#86e2b4}
+.mnt-note.ok i{color:#34d399}
+.mnt-note.bad{border-color:rgba(239,68,68,.2);background:rgba(239,68,68,.09);color:#fca5a5}
+.mnt-note.bad i{color:#f87171}
+
 .mnt-check{
     display:flex;
     align-items:center;
-    gap:8px;
-    padding:8px 10px;
+    gap:9px;
+    padding:9px 11px;
+    border-radius:11px;
+    background:rgba(6,14,26,.42);
+    color:#a0b1c6;
+    font-size:.7rem;
+    font-weight:700;
+}
+.mnt-check i{width:14px;text-align:center}
+.mnt-check.ok i{color:#34d399}
+.mnt-check.no i{color:#f87171}
+
+.mnt-address{
+    margin:0 0 12px;
+    color:#c6d3e4;
+    font-size:.79rem;
+    line-height:1.65;
+}
+
+.mnt-timeline{display:grid;gap:12px}
+.mnt-tl{position:relative;padding-left:25px}
+.mnt-tl::before{
+    content:"";
+    position:absolute;
+    left:3px;top:4px;
+    width:9px;height:9px;
+    border-radius:50%;
+    background:var(--mnt-primary);
+    box-shadow:0 0 0 5px rgba(59,130,246,.14);
+}
+.mnt-tl:not(:last-child)::after{
+    content:"";
+    position:absolute;
+    left:7px;top:18px;
+    width:1px;height:calc(100% + 6px);
+    background:rgba(148,163,184,.2);
+}
+.mnt-tl strong{display:block;font-size:.73rem}
+.mnt-tl span{display:block;margin-top:3px;color:#8296ad;font-size:.65rem}
+
+/* ---------- RODAPÉ DO MODAL: ATUALIZAÇÃO DE STATUS ---------- */
+.mnt-modal-foot{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) auto;
+    align-items:center;
+    gap:16px;
+    padding:15px 20px;
+    border-top:1px solid var(--mnt-line);
+    background:linear-gradient(135deg,#0e1c31,#0a1220);
+}
+.mnt-foot-copy{min-width:0}
+.mnt-foot-copy span{
+    display:block;
+    margin-bottom:8px;
+    color:#7fa0cc;
+    font-size:.6rem;
+    font-weight:900;
+    letter-spacing:.07em;
+    text-transform:uppercase;
+}
+
+/* segmented control de status */
+.mnt-seg{
+    display:inline-grid;
+    grid-auto-flow:column;
+    gap:5px;
+    padding:5px;
+    border:1px solid var(--mnt-line);
+    border-radius:14px;
+    background:rgba(6,14,26,.62);
+}
+.mnt-seg-opt{position:relative;cursor:pointer}
+.mnt-seg-opt input{
+    position:absolute;
+    inset:0;
+    opacity:0;
+    margin:0;
+    cursor:pointer;
+}
+.mnt-seg-opt span{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:7px;
+    height:38px;
+    padding:0 14px;
+    border:1px solid transparent;
     border-radius:10px;
-    background:rgba(3,10,19,.38);
-    color:#9fb0c5;
-    font-size:.67rem;
+    color:#93a6bd;
+    font-size:.72rem;
+    font-weight:800;
+    white-space:nowrap;
+    transition:background .16s ease,color .16s ease,border-color .16s ease;
+}
+.mnt-seg-opt:hover span{background:rgba(148,163,184,.09);color:#d5e2f2}
+.mnt-seg-opt input:focus-visible + span{outline:2px solid var(--mnt-primary);outline-offset:2px}
+.mnt-seg-opt input:checked + span{
+    background:rgba(59,130,246,.18);
+    border-color:rgba(59,130,246,.34);
+    color:#a9cdff;
+}
+.mnt-seg-opt.o-P input:checked + span{background:rgba(245,158,11,.17);border-color:rgba(245,158,11,.32);color:#fbbf24}
+.mnt-seg-opt.o-C input:checked + span{background:rgba(16,185,129,.16);border-color:rgba(16,185,129,.3);color:#34d399}
+.mnt-seg-opt.o-X input:checked + span{background:rgba(239,68,68,.15);border-color:rgba(239,68,68,.28);color:#fca5a5}
+
+.mnt-foot-actions{display:flex;align-items:center;gap:10px}
+.mnt-dirty{
+    display:none;
+    align-items:center;
+    gap:6px;
+    color:#fbbf24;
+    font-size:.68rem;
     font-weight:800;
 }
-.mnt-check.ok i{color:#53d487}
-.mnt-check.missing i{color:#ff7884}
+.mnt-status-form.is-dirty .mnt-dirty{display:inline-flex}
+.mnt-status-form:not(.is-dirty) .mnt-save{opacity:.45;pointer-events:none}
 
-@media(max-width:850px){
-    .mnt-page{border-radius:22px}
-    .mnt-modal-summary{grid-template-columns:repeat(2,minmax(0,1fr))}
+/* trava o modal inteiro enquanto o POST acontece */
+.mnt-modal.is-busy .mnt-modal-body,
+.mnt-modal.is-busy .mnt-modal-head,
+.mnt-modal.is-busy .mnt-seg{
+    opacity:.55;
+    pointer-events:none;
+    filter:saturate(.6);
 }
-@media(max-width:520px){
-    .mnt-page{border-radius:18px;padding:13px 10px 50px}
-    .mnt-card-facts{grid-template-columns:1fr 1fr}
-    .mnt-card-fact:first-child{grid-column:1/-1}
-    .mnt-modal-summary{grid-template-columns:1fr 1fr}
-    .mnt-summary-item{padding:11px}
-    .mnt-card-footer{align-items:stretch;flex-direction:column}
-    .mnt-card-footer .mnt-open{width:100%}
+
+/* =========================================================================
+   LIGHTBOX
+   ========================================================================= */
+.mnt-lightbox{
+    width:min(1180px,calc(100vw - 24px));
+    max-height:96vh;
+    padding:0;
+    overflow:hidden;
+    border:0;
+    border-radius:20px;
+    background:#05090f;
+    box-shadow:0 40px 110px rgba(0,0,0,.8);
+}
+.mnt-lightbox::backdrop{background:rgba(0,0,0,.92)}
+.mnt-lb-bar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    padding:11px 13px;
+    color:#e6eef9;
+}
+.mnt-lb-bar strong{font-size:.78rem;font-weight:800}
+.mnt-lb-bar .mnt-ico-btn{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.12);color:#fff}
+.mnt-lb-nav{display:flex;gap:8px;align-items:center}
+.mnt-lb-count{color:#8aa0ba;font-size:.72rem;font-weight:800;min-width:52px;text-align:center}
+.mnt-lb-stage{
+    position:relative;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:#02050a;
+    min-height:280px;
+}
+.mnt-lb-stage img{
+    display:block;
+    width:100%;
+    max-height:80vh;
+    object-fit:contain;
+}
+
+/* =========================================================================
+   OVERLAY GLOBAL DE CARREGAMENTO
+   ========================================================================= */
+.mnt-loading{
+    position:fixed;
+    inset:0;
+    z-index:9999;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex-direction:column;
+    gap:16px;
+    background:rgba(5,10,20,.72);
+    backdrop-filter:blur(4px);
+    opacity:0;
+    visibility:hidden;
+    transition:opacity .18s ease,visibility .18s ease;
+}
+.mnt-loading.is-on{opacity:1;visibility:visible}
+.mnt-loading-ring{
+    width:46px;height:46px;
+    border:3px solid rgba(148,163,184,.25);
+    border-top-color:var(--mnt-primary,#3b82f6);
+    border-radius:50%;
+    animation:mntSpin .75s linear infinite;
+}
+.mnt-loading p{
+    margin:0;
+    color:#cfe0f5;
+    font-size:.82rem;
+    font-weight:800;
+    letter-spacing:.02em;
+}
+body.mnt-locked{overflow:hidden}
+
+/* skeleton usado enquanto a lista é recarregada */
+.mnt-grid.is-reloading{opacity:.4;pointer-events:none;transition:opacity .2s ease}
+
+/* =========================================================================
+   RESPONSIVO
+   ========================================================================= */
+@media(max-width:1400px){
+    .mnt-stats{grid-template-columns:repeat(3,1fr)}
+}
+@media(max-width:1150px){
+    .mnt-toolbar{grid-template-columns:1fr 1fr 1fr}
+    .mnt-toolbar .mnt-field:first-child{grid-column:1/-1}
+    .mnt-actions{grid-column:1/-1}
+    .mnt-actions .mnt-btn{flex:1}
+    .mnt-cols{grid-template-columns:1fr}
+    .mnt-summary{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:820px){
+    .mnt-hero{grid-template-columns:1fr;padding:24px}
+    .mnt-hero-side{min-width:0}
+    .mnt-stats{grid-template-columns:repeat(2,1fr)}
+    .mnt-grid{grid-template-columns:1fr}
+    .mnt-modal{width:100vw;max-width:100vw;max-height:100vh;border-radius:0}
+    .mnt-modal-shell{max-height:100vh}
+    .mnt-modal-foot{grid-template-columns:1fr;gap:12px}
+    .mnt-foot-actions .mnt-btn{flex:1}
+    .mnt-seg{grid-auto-flow:row;grid-template-columns:1fr 1fr}
+}
+@media(max-width:560px){
+    .mnt-toolbar{grid-template-columns:1fr}
+    .mnt-stats{grid-template-columns:1fr 1fr}
+    .mnt-contacts{grid-template-columns:1fr 1fr}
+    .mnt-facts{grid-template-columns:1fr 1fr}
+    .mnt-fact:first-child{grid-column:1/-1}
+    .mnt-card-foot{flex-direction:column;align-items:stretch}
+    .mnt-card-foot small{text-align:left}
+    .mnt-quick .mnt-btn{flex:1}
+    .mnt-summary{grid-template-columns:1fr}
+    .mnt-dl{grid-template-columns:1fr}
+    .mnt-seg{grid-template-columns:1fr}
 }
 </style>
+{% endblock %}
 
-<div class="mnt-page">
+
+{% block content %}
+<div class="mnt" id="mntRoot">
+
+    <!-- =================== HERO =================== -->
     <section class="mnt-hero">
         <div class="mnt-hero-copy">
             <span class="mnt-eyebrow">
@@ -1145,97 +1180,107 @@ body.mnt-modal-open{overflow:hidden}
             </span>
             <h1>Manutenções e atendimento ao cliente</h1>
             <p>
-                Consulte cada solicitação, veja fotos e endereço, entre em contato
-                pelo canal correto e mantenha o andamento sempre atualizado.
+                Consulte cada solicitação, veja fotos e endereço, fale pelo canal
+                certo e mantenha o andamento sempre atualizado.
             </p>
         </div>
+
         <div class="mnt-hero-side">
-            <div class="mnt-live">
-                <span class="mnt-live-dot"></span>
+            <div class="mnt-pill">
+                <span class="mnt-dot"></span>
                 Painel operacional ativo
             </div>
-            <div class="mnt-live">
+            <div class="mnt-pill">
                 <i class="fa-solid fa-shield-halved"></i>
                 Acesso restrito à administração
             </div>
+            <div class="mnt-pill">
+                <i class="fa-solid fa-arrows-rotate"></i>
+                Atualizado agora há pouco
+            </div>
         </div>
     </section>
 
-    {% if messages %}
-    <div class="mnt-messages">
-        {% for message in messages %}
-        <div class="mnt-message {{ message.tags|default:'info' }}">
-            <i class="fa-solid {% if message.tags == 'success' %}fa-circle-check{% elif message.tags == 'error' %}fa-circle-exclamation{% else %}fa-circle-info{% endif %}"></i>
-            {{ message }}
-        </div>
-        {% endfor %}
-    </div>
-    {% endif %}
-
+    <!-- =================== MÉTRICAS (clicáveis = filtro) =================== -->
     <section class="mnt-stats" aria-label="Resumo das manutenções">
-        <article class="mnt-stat">
-            <div class="mnt-stat-icon"><i class="fa-solid fa-layer-group"></i></div>
+        <a class="mnt-stat {% if not filtros.status %}is-active{% endif %}"
+           href="?{% if filtros.q %}q={{ filtros.q|urlencode }}&amp;{% endif %}{% if filtros.periodo %}periodo={{ filtros.periodo }}&amp;{% endif %}ordem={{ filtros.ordem }}"
+           data-nav>
+            <span class="mnt-stat-ico"><i class="fa-solid fa-layer-group"></i></span>
             <strong>{{ metricas.total }}</strong>
             <span>Total de solicitações</span>
-        </article>
-        <article class="mnt-stat pending">
-            <div class="mnt-stat-icon"><i class="fa-regular fa-clock"></i></div>
+        </a>
+
+        <a class="mnt-stat s-P {% if filtros.status == 'P' %}is-active{% endif %}"
+           href="?status=P{% if filtros.q %}&amp;q={{ filtros.q|urlencode }}{% endif %}{% if filtros.periodo %}&amp;periodo={{ filtros.periodo }}{% endif %}&amp;ordem={{ filtros.ordem }}"
+           data-nav>
+            <span class="mnt-stat-ico"><i class="fa-regular fa-clock"></i></span>
             <strong>{{ metricas.pendentes }}</strong>
             <span>Pendentes</span>
-        </article>
-        <article class="mnt-stat progress">
-            <div class="mnt-stat-icon"><i class="fa-solid fa-gears"></i></div>
+        </a>
+
+        <a class="mnt-stat s-A {% if filtros.status == 'A' %}is-active{% endif %}"
+           href="?status=A{% if filtros.q %}&amp;q={{ filtros.q|urlencode }}{% endif %}{% if filtros.periodo %}&amp;periodo={{ filtros.periodo }}{% endif %}&amp;ordem={{ filtros.ordem }}"
+           data-nav>
+            <span class="mnt-stat-ico"><i class="fa-solid fa-gears"></i></span>
             <strong>{{ metricas.andamento }}</strong>
             <span>Em andamento</span>
-        </article>
-        <article class="mnt-stat done">
-            <div class="mnt-stat-icon"><i class="fa-solid fa-circle-check"></i></div>
+        </a>
+
+        <a class="mnt-stat s-C {% if filtros.status == 'C' %}is-active{% endif %}"
+           href="?status=C{% if filtros.q %}&amp;q={{ filtros.q|urlencode }}{% endif %}{% if filtros.periodo %}&amp;periodo={{ filtros.periodo }}{% endif %}&amp;ordem={{ filtros.ordem }}"
+           data-nav>
+            <span class="mnt-stat-ico"><i class="fa-solid fa-circle-check"></i></span>
             <strong>{{ metricas.concluidas }}</strong>
             <span>Concluídas</span>
-        </article>
-        <article class="mnt-stat cancel">
-            <div class="mnt-stat-icon"><i class="fa-solid fa-ban"></i></div>
+        </a>
+
+        <a class="mnt-stat s-X {% if filtros.status == 'X' %}is-active{% endif %}"
+           href="?status=X{% if filtros.q %}&amp;q={{ filtros.q|urlencode }}{% endif %}{% if filtros.periodo %}&amp;periodo={{ filtros.periodo }}{% endif %}&amp;ordem={{ filtros.ordem }}"
+           data-nav>
+            <span class="mnt-stat-ico"><i class="fa-solid fa-ban"></i></span>
             <strong>{{ metricas.canceladas }}</strong>
             <span>Canceladas</span>
-        </article>
-        <article class="mnt-stat alert">
-            <div class="mnt-stat-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+        </a>
+
+        <a class="mnt-stat s-alert {% if filtros.ordem == 'prioridade' %}is-active{% endif %}"
+           href="?ordem=prioridade{% if filtros.q %}&amp;q={{ filtros.q|urlencode }}{% endif %}{% if filtros.status %}&amp;status={{ filtros.status }}{% endif %}{% if filtros.periodo %}&amp;periodo={{ filtros.periodo }}{% endif %}"
+           data-nav>
+            <span class="mnt-stat-ico"><i class="fa-solid fa-triangle-exclamation"></i></span>
             <strong>{{ metricas.atencao }}</strong>
             <span>Há mais de 3 dias</span>
-        </article>
+        </a>
     </section>
 
-    <form method="get" class="mnt-toolbar" id="filtros-manutencao">
+    <!-- =================== FILTROS =================== -->
+    <form method="get" class="mnt-toolbar" id="mntFiltros" data-loading-form>
         <div class="mnt-field">
             <label for="busca">Buscar atendimento</label>
-            <div class="mnt-search-wrap">
+            <div class="mnt-search">
                 <i class="fa-solid fa-magnifying-glass"></i>
-                <input
-                    id="busca"
-                    class="mnt-control"
-                    type="search"
-                    name="q"
-                    value="{{ filtros.q }}"
-                    placeholder="Protocolo, cliente, telefone, e-mail, equipamento..."
-                >
+                <input id="busca"
+                       class="mnt-control"
+                       type="search"
+                       name="q"
+                       value="{{ filtros.q }}"
+                       autocomplete="off"
+                       placeholder="Protocolo, cliente, telefone, e-mail, equipamento, cidade...">
             </div>
         </div>
 
         <div class="mnt-field">
             <label for="status">Status</label>
-            <select id="status" class="mnt-control" name="status">
+            <select id="status" class="mnt-control" name="status" data-auto-submit>
                 <option value="">Todos os status</option>
                 {% for valor, rotulo in status_choices %}
-                <option value="{{ valor }}" {% if filtros.status == valor %}selected{% endif %}>
-                    {{ rotulo }}
-                </option>
+                <option value="{{ valor }}" {% if filtros.status == valor %}selected{% endif %}>{{ rotulo }}</option>
                 {% endfor %}
             </select>
         </div>
 
         <div class="mnt-field">
             <label for="periodo">Período</label>
-            <select id="periodo" class="mnt-control" name="periodo">
+            <select id="periodo" class="mnt-control" name="periodo" data-auto-submit>
                 <option value="">Todo o período</option>
                 <option value="hoje" {% if filtros.periodo == 'hoje' %}selected{% endif %}>Últimas 24 horas</option>
                 <option value="7d" {% if filtros.periodo == '7d' %}selected{% endif %}>Últimos 7 dias</option>
@@ -1246,7 +1291,7 @@ body.mnt-modal-open{overflow:hidden}
 
         <div class="mnt-field">
             <label for="ordem">Ordenação</label>
-            <select id="ordem" class="mnt-control" name="ordem">
+            <select id="ordem" class="mnt-control" name="ordem" data-auto-submit>
                 <option value="recentes" {% if filtros.ordem == 'recentes' %}selected{% endif %}>Mais recentes</option>
                 <option value="antigas" {% if filtros.ordem == 'antigas' %}selected{% endif %}>Mais antigas</option>
                 <option value="atualizadas" {% if filtros.ordem == 'atualizadas' %}selected{% endif %}>Atualizadas recentemente</option>
@@ -1254,45 +1299,51 @@ body.mnt-modal-open{overflow:hidden}
             </select>
         </div>
 
-        <div class="mnt-filter-actions">
+        <div class="mnt-actions">
             <button class="mnt-btn mnt-btn-primary" type="submit">
-                <i class="fa-solid fa-filter"></i>
-                Aplicar
+                <span class="mnt-btn-label"><i class="fa-solid fa-filter"></i> Aplicar</span>
             </button>
-            <a class="mnt-btn mnt-btn-soft" href="{{ request.path }}">
-                <i class="fa-solid fa-rotate-left"></i>
-                Limpar
+            <a class="mnt-btn mnt-btn-ghost" href="{{ request.path }}" data-nav>
+                <span class="mnt-btn-label"><i class="fa-solid fa-rotate-left"></i> Limpar</span>
             </a>
         </div>
     </form>
 
-    <div class="mnt-results-head">
+    <!-- =================== RESULTADOS =================== -->
+    <div class="mnt-results">
         <h2>Solicitações encontradas</h2>
-        <span>{{ total_filtrado }} atendimento{{ total_filtrado|pluralize }}</span>
+        <div class="mnt-results-meta">
+            <span class="mnt-chip">
+                <i class="fa-solid fa-list-ul"></i>
+                {{ total_filtrado }} atendimento{{ total_filtrado|pluralize }}
+            </span>
+            {% if page_obj.paginator.num_pages > 1 %}
+            <span class="mnt-chip">
+                <i class="fa-regular fa-file-lines"></i>
+                Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
+            </span>
+            {% endif %}
+        </div>
     </div>
 
-    <section class="mnt-grid">
+    <section class="mnt-grid" id="mntGrid">
         {% for m in manutencoes %}
-        <article
-            id="manutencao-{{ m.id }}"
-            class="mnt-card status-{{ m.status }} {% if m.precisa_atencao %}needs-attention{% endif %}"
-            data-maintenance-id="{{ m.id }}"
-        >
-            <div class="mnt-card-main">
-                <div class="mnt-card-top">
-                    <div>
-                        <span class="mnt-protocol">{{ m.protocolo }}</span>
-                        <h3 class="mnt-equipment">{{ m.nome_equipamento }}</h3>
-                    </div>
-                    <span class="mnt-status mnt-status-{{ m.status }}">
-                        {{ m.get_status_display }}
-                    </span>
-                </div>
+        <article id="manutencao-{{ m.id }}"
+                 class="mnt-card st-{{ m.status }} {% if m.precisa_atencao %}is-late{% endif %}">
 
-                <div class="mnt-age">
+            <header class="mnt-card-head">
+                <div style="min-width:0">
+                    <span class="mnt-proto">{{ m.protocolo }}</span>
+                    <h3 class="mnt-equip">{{ m.nome_equipamento }}</h3>
+                </div>
+                <span class="mnt-badge st-{{ m.status }}">{{ m.get_status_display }}</span>
+            </header>
+
+            <div class="mnt-card-body">
+                <div class="mnt-time">
                     <span><i class="fa-regular fa-clock"></i> {{ m.tempo_aberto }}</span>
                     {% if m.prioridade_texto %}
-                    <span class="mnt-alert-pill">
+                    <span class="mnt-flag {% if m.atencao_moderada %}warn{% endif %}">
                         <i class="fa-solid fa-triangle-exclamation"></i>
                         {{ m.prioridade_texto }}
                     </span>
@@ -1303,151 +1354,218 @@ body.mnt-modal-open{overflow:hidden}
                     <span class="mnt-avatar">{{ m.cliente_iniciais }}</span>
                     <div class="mnt-client-copy">
                         <strong>{{ m.cliente_nome }}</strong>
-                        <span>
-                            {% if m.cliente_email %}
-                                {{ m.cliente_email }}
-                            {% else %}
-                                Usuário: {{ m.cliente_username }}
-                            {% endif %}
-                        </span>
+                        <span>{% if m.cliente_email %}{{ m.cliente_email }}{% else %}Usuário: {{ m.cliente_username }}{% endif %}</span>
                     </div>
                 </div>
 
-                <div class="mnt-problem">
-                    <span class="mnt-label">Problema relatado</span>
-                    <p>{{ m.descricao }}</p>
-                </div>
+                <span class="mnt-label">Problema relatado</span>
+                <p class="mnt-problem">{{ m.descricao }}</p>
 
-                <div class="mnt-card-facts" aria-label="Resumo rápido da solicitação">
-                    <div class="mnt-card-fact">
+                <div class="mnt-facts">
+                    <div class="mnt-fact">
                         <small><i class="fa-solid fa-phone"></i> Contato</small>
                         <strong>{{ m.telefone_exibicao }}</strong>
                     </div>
-                    <div class="mnt-card-fact">
+                    <div class="mnt-fact">
                         <small><i class="fa-solid fa-location-dot"></i> Local</small>
-                        <strong>
-                            {% if m.cidade %}
-                                {{ m.cidade }}{% if m.estado %}/{{ m.estado }}{% endif %}
-                            {% else %}
-                                Não informado
-                            {% endif %}
-                        </strong>
+                        <strong>{% if m.cidade %}{{ m.cidade }}{% if m.estado %}/{{ m.estado }}{% endif %}{% else %}Não informado{% endif %}</strong>
                     </div>
-                    <div class="mnt-card-fact">
-                        <small><i class="fa-regular fa-images"></i> Evidências</small>
+                    <div class="mnt-fact">
+                        <small><i class="fa-regular fa-images"></i> Fotos</small>
                         <strong>{{ m.total_imagens }} foto{{ m.total_imagens|pluralize }}</strong>
                     </div>
                 </div>
 
                 {% if m.imagens_cache %}
-                <div class="mnt-thumbs" aria-label="Prévia das imagens">
+                <div class="mnt-thumbs">
                     {% for img in m.imagens_cache|slice:":3" %}
-                    <div class="mnt-thumb">
-                        <img src="{{ img.imagem.url }}" alt="Foto da manutenção {{ m.protocolo }}">
+                    <button type="button"
+                            class="mnt-thumb"
+                            data-lightbox
+                            data-src="{{ img.imagem.url }}"
+                            data-caption="{{ m.protocolo }} — foto {{ forloop.counter }}"
+                            aria-label="Ampliar foto {{ forloop.counter }}">
+                        <img src="{{ img.imagem.url }}" alt="Foto da manutenção {{ m.protocolo }}" loading="lazy">
                         {% if forloop.last and m.total_imagens > 3 %}
-                        <span class="mnt-more">+{{ m.total_imagens|add:"-3" }}</span>
+                        <span class="mnt-thumb-more">+{{ m.total_imagens|add:"-3" }}</span>
                         {% endif %}
-                    </div>
+                    </button>
                     {% endfor %}
                 </div>
                 {% else %}
-                <div class="mnt-no-photo">
+                <div class="mnt-nophoto">
                     <i class="fa-regular fa-image"></i>
                     Cliente não anexou fotos
                 </div>
                 {% endif %}
             </div>
 
-            <div class="mnt-contact-bar">
+            <div class="mnt-contacts">
                 {% if m.whatsapp_url %}
-                <a class="mnt-btn mnt-btn-whatsapp" href="{{ m.whatsapp_url }}" target="_blank" rel="noopener" title="Abrir conversa no WhatsApp">
-                    <i class="fa-brands fa-whatsapp"></i>
-                    WhatsApp
+                <a class="mnt-btn mnt-btn-wa" href="{{ m.whatsapp_url }}" target="_blank" rel="noopener" title="Abrir conversa no WhatsApp">
+                    <i class="fa-brands fa-whatsapp"></i> WhatsApp
                 </a>
                 {% else %}
-                <span class="mnt-btn mnt-btn-disabled" title="{{ m.telefone_motivo }}">
-                    <i class="fa-brands fa-whatsapp"></i>
-                    Inválido
+                <span class="mnt-btn mnt-btn-off" title="{{ m.telefone_motivo }}">
+                    <i class="fa-brands fa-whatsapp"></i> Inválido
                 </span>
                 {% endif %}
 
                 {% if m.telefone_url %}
-                <a class="mnt-btn mnt-btn-phone" href="{{ m.telefone_url }}" title="Ligar para {{ m.telefone_exibicao }}">
-                    <i class="fa-solid fa-phone"></i>
-                    Ligar
+                <a class="mnt-btn mnt-btn-tel" href="{{ m.telefone_url }}" title="Ligar para {{ m.telefone_exibicao }}">
+                    <i class="fa-solid fa-phone"></i> Ligar
                 </a>
                 {% else %}
-                <span class="mnt-btn mnt-btn-disabled" title="{{ m.telefone_motivo }}">
-                    <i class="fa-solid fa-phone-slash"></i>
-                    Sem número
+                <span class="mnt-btn mnt-btn-off" title="{{ m.telefone_motivo }}">
+                    <i class="fa-solid fa-phone-slash"></i> Sem nº
                 </span>
                 {% endif %}
 
                 {% if m.email_url %}
-                <a class="mnt-btn mnt-btn-email" href="{{ m.email_url }}" title="Enviar e-mail para {{ m.cliente_email }}">
-                    <i class="fa-solid fa-envelope"></i>
-                    E-mail
+                <a class="mnt-btn mnt-btn-mail" href="{{ m.email_url }}" title="Enviar e-mail para {{ m.cliente_email }}">
+                    <i class="fa-solid fa-envelope"></i> E-mail
                 </a>
                 {% else %}
-                <span class="mnt-btn mnt-btn-disabled" title="Cliente sem e-mail válido">
-                    <i class="fa-solid fa-envelope-circle-xmark"></i>
-                    Sem e-mail
+                <span class="mnt-btn mnt-btn-off" title="Cliente sem e-mail válido">
+                    <i class="fa-solid fa-envelope-circle-xmark"></i> Sem e-mail
                 </span>
                 {% endif %}
 
                 {% if m.mapa_url %}
                 <a class="mnt-btn mnt-btn-map" href="{{ m.mapa_url }}" target="_blank" rel="noopener" title="Abrir endereço no mapa">
-                    <i class="fa-solid fa-location-dot"></i>
-                    Mapa
+                    <i class="fa-solid fa-location-dot"></i> Mapa
                 </a>
                 {% else %}
-                <span class="mnt-btn mnt-btn-disabled" title="Endereço não informado">
-                    <i class="fa-solid fa-location-crosshairs"></i>
-                    Sem mapa
+                <span class="mnt-btn mnt-btn-off" title="Endereço não informado">
+                    <i class="fa-solid fa-location-crosshairs"></i> Sem mapa
                 </span>
                 {% endif %}
             </div>
 
-            <footer class="mnt-card-footer">
-                <small>
-                    Criada em {{ m.criado_em|date:"d/m/Y \à\s H:i" }}
-                </small>
-                <button
-                    type="button"
-                    class="mnt-btn mnt-btn-dark mnt-open"
-                    onclick="abrirAtendimento('detalhe-{{ m.id }}')"
-                >
-                    <i class="fa-solid fa-arrow-up-right-from-square"></i>
-                    Abrir atendimento
-                </button>
+            <footer class="mnt-card-foot">
+                <form method="post" class="mnt-quick" data-loading-form data-confirm-status>
+                    {% csrf_token %}
+                    <input type="hidden" name="manutencao_id" value="{{ m.id }}">
+                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+
+                    <button type="button" class="mnt-btn mnt-btn-primary" data-open="modal-{{ m.id }}">
+                        <span class="mnt-btn-label"><i class="fa-solid fa-arrow-up-right-from-square"></i> Abrir</span>
+                    </button>
+
+                    {% if m.status == 'P' %}
+                    <button type="submit" name="status" value="A" class="mnt-btn mnt-btn-soft" data-label="Em andamento">
+                        <span class="mnt-btn-label"><i class="fa-solid fa-play"></i> Iniciar</span>
+                    </button>
+                    {% endif %}
+
+                    {% if m.status == 'P' or m.status == 'A' %}
+                    <button type="submit" name="status" value="C" class="mnt-btn mnt-btn-success" data-label="Concluída">
+                        <span class="mnt-btn-label"><i class="fa-solid fa-check"></i> Concluir</span>
+                    </button>
+                    {% endif %}
+
+                    {% if m.status == 'C' or m.status == 'X' %}
+                    <button type="submit" name="status" value="A" class="mnt-btn mnt-btn-ghost" data-label="Em andamento">
+                        <span class="mnt-btn-label"><i class="fa-solid fa-rotate-left"></i> Reabrir</span>
+                    </button>
+                    {% endif %}
+                </form>
+
+                <small>{{ m.criado_em|date:"d/m/Y H:i" }}</small>
             </footer>
         </article>
 
-        <dialog class="mnt-dialog" id="detalhe-{{ m.id }}">
-            <header class="mnt-dialog-head">
-                <div class="mnt-dialog-title-wrap">
+        {% empty %}
+        <div class="mnt-empty">
+            <div class="mnt-empty-ico"><i class="fa-solid fa-magnifying-glass"></i></div>
+            <h3>Nenhuma manutenção encontrada</h3>
+            <p>Altere os filtros ou limpe a busca para visualizar outras solicitações.</p>
+            <a class="mnt-btn mnt-btn-primary" href="{{ request.path }}" data-nav>
+                <span class="mnt-btn-label"><i class="fa-solid fa-rotate-left"></i> Limpar filtros</span>
+            </a>
+        </div>
+        {% endfor %}
+    </section>
+
+    <!-- =================== PAGINAÇÃO =================== -->
+    {% if page_obj.paginator.num_pages > 1 %}
+    <nav class="mnt-pager" aria-label="Paginação">
+        {% if page_obj.has_previous %}
+        <a class="mnt-page" data-nav aria-label="Página anterior"
+           href="?{% if querystring_sem_pagina %}{{ querystring_sem_pagina }}&amp;{% endif %}page={{ page_obj.previous_page_number }}">
+            <i class="fa-solid fa-chevron-left"></i>
+        </a>
+        {% endif %}
+
+        {% if page_obj.number > 2 %}
+        <a class="mnt-page" data-nav
+           href="?{% if querystring_sem_pagina %}{{ querystring_sem_pagina }}&amp;{% endif %}page=1">1</a>
+        {% if page_obj.number > 3 %}<span class="mnt-page-gap">…</span>{% endif %}
+        {% endif %}
+
+        {% if page_obj.has_previous %}
+        <a class="mnt-page" data-nav
+           href="?{% if querystring_sem_pagina %}{{ querystring_sem_pagina }}&amp;{% endif %}page={{ page_obj.previous_page_number }}">
+            {{ page_obj.previous_page_number }}
+        </a>
+        {% endif %}
+
+        <span class="mnt-page is-current" aria-current="page">{{ page_obj.number }}</span>
+
+        {% if page_obj.has_next %}
+        <a class="mnt-page" data-nav
+           href="?{% if querystring_sem_pagina %}{{ querystring_sem_pagina }}&amp;{% endif %}page={{ page_obj.next_page_number }}">
+            {{ page_obj.next_page_number }}
+        </a>
+        {% endif %}
+
+        {% if page_obj.number < page_obj.paginator.num_pages|add:"-1" %}
+        {% if page_obj.number < page_obj.paginator.num_pages|add:"-2" %}<span class="mnt-page-gap">…</span>{% endif %}
+        <a class="mnt-page" data-nav
+           href="?{% if querystring_sem_pagina %}{{ querystring_sem_pagina }}&amp;{% endif %}page={{ page_obj.paginator.num_pages }}">
+            {{ page_obj.paginator.num_pages }}
+        </a>
+        {% endif %}
+
+        {% if page_obj.has_next %}
+        <a class="mnt-page" data-nav aria-label="Próxima página"
+           href="?{% if querystring_sem_pagina %}{{ querystring_sem_pagina }}&amp;{% endif %}page={{ page_obj.next_page_number }}">
+            <i class="fa-solid fa-chevron-right"></i>
+        </a>
+        {% endif %}
+    </nav>
+    {% endif %}
+
+
+    <!-- =================================================================
+         MODAIS — fora da grade para não interferir no alinhamento
+         ================================================================= -->
+    {% for m in manutencoes %}
+    <dialog class="mnt-modal" id="modal-{{ m.id }}" aria-labelledby="modal-title-{{ m.id }}">
+        <div class="mnt-modal-shell">
+
+            <header class="mnt-modal-head">
+                <div class="mnt-modal-title">
                     <small>{{ m.protocolo }}</small>
-                    <h2>{{ m.nome_equipamento }}</h2>
+                    <h2 id="modal-title-{{ m.id }}">{{ m.nome_equipamento }}</h2>
                 </div>
-                <div class="mnt-dialog-head-actions">
-                    <button
-                        type="button"
-                        class="mnt-icon-btn"
-                        onclick="copiarTexto('{{ m.protocolo|escapejs }}', this, 'Protocolo copiado')"
-                        aria-label="Copiar protocolo {{ m.protocolo }}"
-                        title="Copiar protocolo"
-                    >
+                <div class="mnt-modal-head-actions">
+                    <button type="button" class="mnt-ico-btn"
+                            data-copy="{{ m.protocolo }}"
+                            title="Copiar protocolo"
+                            aria-label="Copiar protocolo {{ m.protocolo }}">
                         <i class="fa-regular fa-copy"></i>
                     </button>
-                    <span class="mnt-status mnt-status-{{ m.status }}">{{ m.get_status_display }}</span>
-                    <button type="button" class="mnt-icon-btn" onclick="fecharAtendimento('detalhe-{{ m.id }}')" aria-label="Fechar">
+                    <span class="mnt-badge st-{{ m.status }}">{{ m.get_status_display }}</span>
+                    <button type="button" class="mnt-ico-btn" data-close aria-label="Fechar atendimento">
                         <i class="fa-solid fa-xmark"></i>
                     </button>
                 </div>
             </header>
 
-            <div class="mnt-dialog-scroll">
-                <section class="mnt-modal-summary" aria-label="Resumo operacional do chamado">
+            <div class="mnt-modal-body">
+
+                <section class="mnt-summary" aria-label="Resumo operacional">
                     <div class="mnt-summary-item">
                         <span><i class="fa-solid fa-user"></i> Cliente</span>
                         <strong>{{ m.cliente_nome }}</strong>
@@ -1458,13 +1576,7 @@ body.mnt-modal-open{overflow:hidden}
                     </div>
                     <div class="mnt-summary-item">
                         <span><i class="fa-solid fa-location-dot"></i> Atendimento</span>
-                        <strong>
-                            {% if m.cidade %}
-                                {{ m.cidade }}{% if m.estado %}/{{ m.estado }}{% endif %}
-                            {% else %}
-                                Local não informado
-                            {% endif %}
-                        </strong>
+                        <strong>{% if m.cidade %}{{ m.cidade }}{% if m.estado %}/{{ m.estado }}{% endif %}{% else %}Local não informado{% endif %}</strong>
                     </div>
                     <div class="mnt-summary-item">
                         <span><i class="fa-regular fa-images"></i> Evidências</span>
@@ -1472,35 +1584,30 @@ body.mnt-modal-open{overflow:hidden}
                     </div>
                 </section>
 
-                <div class="mnt-dialog-grid">
-                    <div>
+                <div class="mnt-cols">
+                    <div class="mnt-col">
+
                         <section class="mnt-panel">
                             <h3><i class="fa-solid fa-screwdriver-wrench"></i> Descrição completa</h3>
-                            <p class="mnt-description-full">{{ m.descricao }}</p>
+                            <p class="mnt-desc-full">{{ m.descricao }}</p>
                         </section>
 
                         <section class="mnt-panel">
                             <h3><i class="fa-solid fa-circle-info"></i> Dados da solicitação</h3>
-                            <div class="mnt-detail-grid">
-                                <div class="mnt-detail-item">
+                            <div class="mnt-dl">
+                                <div class="mnt-dl-item">
                                     <small>Equipamento</small>
                                     <strong>{{ m.nome_equipamento }}</strong>
                                 </div>
-                                <div class="mnt-detail-item">
+                                <div class="mnt-dl-item">
                                     <small>Cadastro</small>
-                                    <strong>
-                                        {% if m.brinquedo_nao_listado %}
-                                            Equipamento não catalogado
-                                        {% else %}
-                                            Produto cadastrado
-                                        {% endif %}
-                                    </strong>
+                                    <strong>{% if m.brinquedo_nao_listado %}Não catalogado{% else %}Produto cadastrado{% endif %}</strong>
                                 </div>
-                                <div class="mnt-detail-item">
+                                <div class="mnt-dl-item">
                                     <small>Solicitada em</small>
                                     <strong>{{ m.criado_em|date:"d/m/Y H:i" }}</strong>
                                 </div>
-                                <div class="mnt-detail-item">
+                                <div class="mnt-dl-item">
                                     <small>Última atualização</small>
                                     <strong>{{ m.atualizada_em|date:"d/m/Y H:i" }}</strong>
                                 </div>
@@ -1510,26 +1617,45 @@ body.mnt-modal-open{overflow:hidden}
                         <section class="mnt-panel">
                             <h3><i class="fa-regular fa-images"></i> Fotos enviadas ({{ m.total_imagens }})</h3>
                             {% if m.imagens_cache %}
-                            <div class="mnt-gallery">
+                            <div class="mnt-gallery" data-gallery>
                                 {% for img in m.imagens_cache %}
-                                <button type="button" onclick="abrirImagem('{{ img.imagem.url|escapejs }}', '{{ m.protocolo }} — foto {{ forloop.counter }}')">
-                                    <img src="{{ img.imagem.url }}" alt="{{ m.protocolo }} — foto {{ forloop.counter }}">
+                                <button type="button"
+                                        data-lightbox
+                                        data-src="{{ img.imagem.url }}"
+                                        data-caption="{{ m.protocolo }} — foto {{ forloop.counter }} de {{ m.total_imagens }}">
+                                    <img src="{{ img.imagem.url }}" alt="{{ m.protocolo }} — foto {{ forloop.counter }}" loading="lazy">
                                 </button>
                                 {% endfor %}
                             </div>
                             {% else %}
-                            <div class="mnt-no-photo">
+                            <div class="mnt-nophoto" style="margin-top:0">
                                 <i class="fa-regular fa-image"></i>
                                 Nenhuma imagem foi anexada nesta solicitação.
                             </div>
                             {% endif %}
                         </section>
+
+                        <section class="mnt-panel">
+                            <h3><i class="fa-solid fa-timeline"></i> Linha do tempo</h3>
+                            <div class="mnt-timeline">
+                                <div class="mnt-tl">
+                                    <strong>Solicitação criada</strong>
+                                    <span>{{ m.criado_em|date:"d/m/Y H:i" }}</span>
+                                </div>
+                                <div class="mnt-tl">
+                                    <strong>Status atual: {{ m.get_status_display }}</strong>
+                                    <span>Atualizado em {{ m.atualizada_em|date:"d/m/Y H:i" }}</span>
+                                </div>
+                            </div>
+                        </section>
                     </div>
 
-                    <aside>
+                    <aside class="mnt-col">
+
                         <section class="mnt-panel">
                             <h3><i class="fa-solid fa-user"></i> Cliente</h3>
-                            <div class="mnt-client" style="margin-top:0">
+
+                            <div class="mnt-client">
                                 <span class="mnt-avatar">{{ m.cliente_iniciais }}</span>
                                 <div class="mnt-client-copy">
                                     <strong>{{ m.cliente_nome }}</strong>
@@ -1537,75 +1663,72 @@ body.mnt-modal-open{overflow:hidden}
                                 </div>
                             </div>
 
-                            <div class="mnt-detail-grid" style="margin-top:11px">
-                                <div class="mnt-detail-item">
+                            <div class="mnt-dl" style="margin-top:11px">
+                                <div class="mnt-dl-item">
                                     <small>Telefone</small>
                                     <strong>{{ m.telefone_exibicao }}</strong>
                                 </div>
-                                <div class="mnt-detail-item">
+                                <div class="mnt-dl-item">
                                     <small>Origem</small>
                                     <strong>{{ m.telefone_origem }}</strong>
                                 </div>
-                                <div class="mnt-detail-item" style="grid-column:1/-1">
+                                <div class="mnt-dl-item wide">
                                     <small>E-mail</small>
                                     <strong>{{ m.cliente_email|default:"Não informado" }}</strong>
                                 </div>
                             </div>
 
-                            <div class="mnt-contact-stack" style="margin-top:12px">
+                            <div class="mnt-stack" style="margin-top:12px">
                                 {% if m.whatsapp_url %}
-                                <a class="mnt-btn mnt-btn-whatsapp" href="{{ m.whatsapp_url }}" target="_blank" rel="noopener">
-                                    <i class="fa-brands fa-whatsapp"></i>
-                                    Abrir WhatsApp com mensagem pronta
+                                <a class="mnt-btn mnt-btn-wa mnt-btn-block" href="{{ m.whatsapp_url }}" target="_blank" rel="noopener">
+                                    <i class="fa-brands fa-whatsapp"></i> WhatsApp com mensagem pronta
                                 </a>
                                 {% endif %}
                                 {% if m.telefone_url %}
-                                <a class="mnt-btn mnt-btn-phone" href="{{ m.telefone_url }}">
-                                    <i class="fa-solid fa-phone"></i>
-                                    Ligar para {{ m.telefone_exibicao }}
+                                <a class="mnt-btn mnt-btn-tel mnt-btn-block" href="{{ m.telefone_url }}">
+                                    <i class="fa-solid fa-phone"></i> Ligar para {{ m.telefone_exibicao }}
                                 </a>
                                 {% endif %}
                                 {% if m.email_url %}
-                                <a class="mnt-btn mnt-btn-email" href="{{ m.email_url }}">
-                                    <i class="fa-solid fa-envelope"></i>
-                                    Escrever e-mail
+                                <a class="mnt-btn mnt-btn-mail mnt-btn-block" href="{{ m.email_url }}">
+                                    <i class="fa-solid fa-envelope"></i> Escrever e-mail
                                 </a>
                                 {% endif %}
-                                <button class="mnt-btn mnt-btn-soft" type="button" onclick="copiarContato('{{ m.telefone_exibicao|escapejs }}', this)">
-                                    <i class="fa-regular fa-copy"></i>
-                                    Copiar telefone
+                                <button type="button" class="mnt-btn mnt-btn-ghost mnt-btn-block"
+                                        data-copy="{{ m.telefone_exibicao }}" data-copy-label="Telefone copiado">
+                                    <i class="fa-regular fa-copy"></i> Copiar telefone
                                 </button>
                             </div>
 
-                            <div class="mnt-contact-note">
+                            <div class="mnt-note">
                                 <i class="fa-solid fa-wand-magic-sparkles"></i>
                                 <span>
-                                    WhatsApp e e-mail já abrem com protocolo, equipamento,
-                                    resumo do problema e solicitação do melhor horário para contato.
+                                    WhatsApp e e-mail já abrem com protocolo, equipamento, resumo do
+                                    problema e pedido do melhor horário para contato.
                                 </span>
                             </div>
 
-                            <div class="mnt-contact-status {% if m.telefone_valido %}ok{% else %}bad{% endif %}">
+                            <div class="mnt-note {% if m.telefone_valido %}ok{% else %}bad{% endif %}">
                                 <i class="fa-solid {% if m.telefone_valido %}fa-circle-check{% else %}fa-circle-exclamation{% endif %}"></i>
                                 <span>{{ m.telefone_motivo }}</span>
                             </div>
 
-                            <div class="mnt-checklist" aria-label="Checklist dos dados recebidos">
-                                <div class="mnt-check {% if m.telefone_valido %}ok{% else %}missing{% endif %}">
+                            <div class="mnt-stack" style="margin-top:11px">
+                                <div class="mnt-check {% if m.telefone_valido %}ok{% else %}no{% endif %}">
                                     <i class="fa-solid {% if m.telefone_valido %}fa-circle-check{% else %}fa-circle-xmark{% endif %}"></i>
                                     Telefone {% if m.telefone_valido %}pronto para contato{% else %}ausente ou inválido{% endif %}
                                 </div>
-                                <div class="mnt-check {% if m.email_valido %}ok{% else %}missing{% endif %}">
+                                <div class="mnt-check {% if m.email_valido %}ok{% else %}no{% endif %}">
                                     <i class="fa-solid {% if m.email_valido %}fa-circle-check{% else %}fa-circle-xmark{% endif %}"></i>
                                     E-mail {% if m.email_valido %}disponível{% else %}não informado{% endif %}
                                 </div>
-                                <div class="mnt-check {% if m.mapa_url %}ok{% else %}missing{% endif %}">
+                                <div class="mnt-check {% if m.mapa_url %}ok{% else %}no{% endif %}">
                                     <i class="fa-solid {% if m.mapa_url %}fa-circle-check{% else %}fa-circle-xmark{% endif %}"></i>
                                     Endereço {% if m.mapa_url %}pronto para rota{% else %}não informado{% endif %}
                                 </div>
-                                <div class="mnt-check {% if m.imagens_cache %}ok{% else %}missing{% endif %}">
+                                <div class="mnt-check {% if m.imagens_cache %}ok{% else %}no{% endif %}">
                                     <i class="fa-solid {% if m.imagens_cache %}fa-circle-check{% else %}fa-circle-xmark{% endif %}"></i>
-                                    Fotos {% if m.imagens_cache %}recebidas{% else %}não enviadas pelo cliente{% endif %}
+                                    Fotos {% if m.imagens_cache %}recebidas{% else %}não enviadas{% endif %}
                                 </div>
                             </div>
                         </section>
@@ -1614,212 +1737,379 @@ body.mnt-modal-open{overflow:hidden}
                             <h3><i class="fa-solid fa-location-dot"></i> Endereço de atendimento</h3>
                             <p class="mnt-address">{{ m.endereco_completo }}</p>
                             {% if m.mapa_url %}
-                            <a class="mnt-btn mnt-btn-map" href="{{ m.mapa_url }}" target="_blank" rel="noopener" style="width:100%">
-                                <i class="fa-solid fa-map-location-dot"></i>
-                                Abrir rota no Google Maps
+                            <a class="mnt-btn mnt-btn-map mnt-btn-block" href="{{ m.mapa_url }}" target="_blank" rel="noopener">
+                                <i class="fa-solid fa-map-location-dot"></i> Abrir rota no Google Maps
                             </a>
                             {% endif %}
-                        </section>
-
-                        <section class="mnt-panel">
-                            <h3><i class="fa-solid fa-list-check"></i> Atualizar andamento</h3>
-                            <form method="post" class="mnt-status-form" onsubmit="return confirmarStatus(this)">
-                                {% csrf_token %}
-                                <input type="hidden" name="manutencao_id" value="{{ m.id }}">
-                                <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                                <label for="status-{{ m.id }}">Novo status</label>
-                                <select id="status-{{ m.id }}" name="status" class="mnt-control" data-status-atual="{{ m.status }}">
-                                    {% for valor, rotulo in status_choices %}
-                                    <option value="{{ valor }}" {% if m.status == valor %}selected{% endif %}>{{ rotulo }}</option>
-                                    {% endfor %}
-                                </select>
-                                <button class="mnt-btn mnt-btn-primary" type="submit">
-                                    <i class="fa-solid fa-floppy-disk"></i>
-                                    Salvar novo status
-                                </button>
-                            </form>
-                        </section>
-
-                        <section class="mnt-panel">
-                            <h3><i class="fa-solid fa-timeline"></i> Linha do tempo</h3>
-                            <div class="mnt-timeline">
-                                <div class="mnt-timeline-item">
-                                    <strong>Solicitação criada</strong>
-                                    <span>{{ m.criado_em|date:"d/m/Y H:i" }}</span>
-                                </div>
-                                <div class="mnt-timeline-item">
-                                    <strong>Status atual: {{ m.get_status_display }}</strong>
-                                    <span>Atualizado em {{ m.atualizada_em|date:"d/m/Y H:i" }}</span>
-                                </div>
-                            </div>
                         </section>
                     </aside>
                 </div>
             </div>
-        </dialog>
-        {% empty %}
-        <div class="mnt-empty">
-            <div class="mnt-empty-icon"><i class="fa-solid fa-magnifying-glass"></i></div>
-            <h3>Nenhuma manutenção encontrada</h3>
-            <p>Altere os filtros ou limpe a busca para visualizar outras solicitações.</p>
+
+            <!-- ---------- RODAPÉ: ATUALIZAÇÃO DE STATUS ---------- -->
+            <form method="post"
+                  class="mnt-modal-foot mnt-status-form"
+                  data-loading-form
+                  data-status-form
+                  data-atual="{{ m.status }}">
+                {% csrf_token %}
+                <input type="hidden" name="manutencao_id" value="{{ m.id }}">
+                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+
+                <div class="mnt-foot-copy">
+                    <span>Andamento do atendimento</span>
+                    <div class="mnt-seg" role="radiogroup" aria-label="Novo status">
+                        {% for valor, rotulo in status_choices %}
+                        <label class="mnt-seg-opt o-{{ valor }}">
+                            <input type="radio" name="status" value="{{ valor }}"
+                                   {% if m.status == valor %}checked{% endif %}>
+                            <span>
+                                {% if valor == 'P' %}<i class="fa-regular fa-clock"></i>
+                                {% elif valor == 'A' %}<i class="fa-solid fa-gears"></i>
+                                {% elif valor == 'C' %}<i class="fa-solid fa-circle-check"></i>
+                                {% else %}<i class="fa-solid fa-ban"></i>{% endif %}
+                                {{ rotulo }}
+                            </span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="mnt-foot-actions">
+                    <span class="mnt-dirty">
+                        <i class="fa-solid fa-circle-exclamation"></i> Alteração não salva
+                    </span>
+                    <button type="button" class="mnt-btn mnt-btn-ghost" data-close>
+                        <span class="mnt-btn-label">Fechar</span>
+                    </button>
+                    <button type="submit" class="mnt-btn mnt-btn-primary mnt-save">
+                        <span class="mnt-btn-label"><i class="fa-solid fa-floppy-disk"></i> Salvar status</span>
+                    </button>
+                </div>
+            </form>
+
         </div>
-        {% endfor %}
-    </section>
+    </dialog>
+    {% endfor %}
 
-    {% if page_obj.paginator.num_pages > 1 %}
-    <nav class="mnt-pagination" aria-label="Paginação">
-        {% if page_obj.has_previous %}
-        <a class="mnt-page-link" href="?{% if querystring_sem_pagina %}{{ querystring_sem_pagina }}&{% endif %}page={{ page_obj.previous_page_number }}">
-            <i class="fa-solid fa-chevron-left"></i>
-        </a>
-        {% endif %}
-
-        {% if page_obj.number > 2 %}
-        <a class="mnt-page-link" href="?{% if querystring_sem_pagina %}{{ querystring_sem_pagina }}&{% endif %}page=1">1</a>
-        {% endif %}
-
-        {% if page_obj.has_previous %}
-        <a class="mnt-page-link" href="?{% if querystring_sem_pagina %}{{ querystring_sem_pagina }}&{% endif %}page={{ page_obj.previous_page_number }}">
-            {{ page_obj.previous_page_number }}
-        </a>
-        {% endif %}
-
-        <span class="mnt-page-link current">{{ page_obj.number }}</span>
-
-        {% if page_obj.has_next %}
-        <a class="mnt-page-link" href="?{% if querystring_sem_pagina %}{{ querystring_sem_pagina }}&{% endif %}page={{ page_obj.next_page_number }}">
-            {{ page_obj.next_page_number }}
-        </a>
-        {% endif %}
-
-        {% if page_obj.number < page_obj.paginator.num_pages|add:"-1" %}
-        <a class="mnt-page-link" href="?{% if querystring_sem_pagina %}{{ querystring_sem_pagina }}&{% endif %}page={{ page_obj.paginator.num_pages }}">
-            {{ page_obj.paginator.num_pages }}
-        </a>
-        {% endif %}
-
-        {% if page_obj.has_next %}
-        <a class="mnt-page-link" href="?{% if querystring_sem_pagina %}{{ querystring_sem_pagina }}&{% endif %}page={{ page_obj.next_page_number }}">
-            <i class="fa-solid fa-chevron-right"></i>
-        </a>
-        {% endif %}
-    </nav>
-    {% endif %}
 </div>
 
-<dialog id="mnt-lightbox" class="mnt-lightbox">
-    <div class="mnt-lightbox-bar">
-        <span id="mnt-lightbox-title">Imagem da manutenção</span>
-        <button class="mnt-icon-btn" type="button" onclick="fecharImagem()" aria-label="Fechar imagem">
-            <i class="fa-solid fa-xmark"></i>
-        </button>
+<!-- =================== LIGHTBOX =================== -->
+<dialog id="mntLightbox" class="mnt-lightbox">
+    <div class="mnt-lb-bar">
+        <strong id="mntLbTitle">Imagem da manutenção</strong>
+        <div class="mnt-lb-nav">
+            <button type="button" class="mnt-ico-btn" id="mntLbPrev" aria-label="Foto anterior">
+                <i class="fa-solid fa-chevron-left"></i>
+            </button>
+            <span class="mnt-lb-count" id="mntLbCount">1 / 1</span>
+            <button type="button" class="mnt-ico-btn" id="mntLbNext" aria-label="Próxima foto">
+                <i class="fa-solid fa-chevron-right"></i>
+            </button>
+            <button type="button" class="mnt-ico-btn" id="mntLbClose" aria-label="Fechar imagem">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
     </div>
-    <img id="mnt-lightbox-image" src="" alt="">
+    <div class="mnt-lb-stage">
+        <img id="mntLbImage" src="" alt="">
+    </div>
 </dialog>
 
+<!-- =================== OVERLAY DE CARREGAMENTO =================== -->
+<div class="mnt-loading" id="mntLoading" role="status" aria-live="polite" aria-hidden="true">
+    <div class="mnt-loading-ring"></div>
+    <p id="mntLoadingText">Carregando...</p>
+</div>
+{% endblock %}
+
+
+{% block extra_js %}
 <script>
-(function(){
-    const foco = new URLSearchParams(window.location.search).get("foco");
-    if (foco) {
-        const card = document.getElementById(`manutencao-${foco}`);
-        if (card) {
-            setTimeout(() => {
-                card.scrollIntoView({behavior:"smooth", block:"center"});
-                card.style.boxShadow = "0 0 0 4px rgba(8,120,249,.22), 0 21px 48px rgba(15,38,76,.13)";
-                setTimeout(() => card.style.boxShadow = "", 2300);
-            }, 150);
+(function () {
+    "use strict";
+
+    var root      = document.getElementById("mntRoot");
+    var overlay   = document.getElementById("mntLoading");
+    var overlayTx = document.getElementById("mntLoadingText");
+    var grid      = document.getElementById("mntGrid");
+    if (!root) return;
+
+    var travado = false;
+
+    /* ==========================================================
+       OVERLAY / TRAVA CONTRA CLIQUE DUPLO
+       ========================================================== */
+    function abrirLoading(texto) {
+        if (overlayTx) overlayTx.textContent = texto || "Carregando...";
+        if (overlay) {
+            overlay.classList.add("is-on");
+            overlay.setAttribute("aria-hidden", "false");
         }
+        document.body.classList.add("mnt-locked");
+        if (grid) grid.classList.add("is-reloading");
+        travado = true;
     }
 
-    document.querySelectorAll(".mnt-dialog").forEach(dialog => {
-        dialog.addEventListener("click", event => {
-            const rect = dialog.getBoundingClientRect();
-            const fora =
-                event.clientX < rect.left ||
-                event.clientX > rect.right ||
-                event.clientY < rect.top ||
-                event.clientY > rect.bottom;
-            if (fora) fecharAtendimento(dialog.id);
+    function fecharLoading() {
+        if (overlay) {
+            overlay.classList.remove("is-on");
+            overlay.setAttribute("aria-hidden", "true");
+        }
+        document.body.classList.remove("mnt-locked");
+        if (grid) grid.classList.remove("is-reloading");
+        travado = false;
+        document.querySelectorAll(".mnt-btn.is-loading")
+            .forEach(function (b) { b.classList.remove("is-loading"); });
+        document.querySelectorAll(".mnt-modal.is-busy")
+            .forEach(function (d) { d.classList.remove("is-busy"); });
+        document.querySelectorAll("form[data-busy]")
+            .forEach(function (f) { f.removeAttribute("data-busy"); });
+    }
+
+    /* Voltar pelo histórico (bfcache) não pode deixar a tela travada. */
+    window.addEventListener("pageshow", fecharLoading);
+
+    /* ==========================================================
+       ENVIO DE FORMULÁRIOS — um clique só
+       ========================================================== */
+    document.querySelectorAll("form[data-loading-form]").forEach(function (form) {
+        form.addEventListener("submit", function (evento) {
+            if (form.getAttribute("data-busy")) {
+                evento.preventDefault();
+                return;
+            }
+
+            var botao = evento.submitter;
+
+            if (form.hasAttribute("data-status-form")) {
+                var escolhido = form.querySelector('input[name="status"]:checked');
+                var atual = form.getAttribute("data-atual");
+                if (!escolhido) {
+                    evento.preventDefault();
+                    return;
+                }
+                if (escolhido.value === atual) {
+                    evento.preventDefault();
+                    return;
+                }
+                var modal = form.closest(".mnt-modal");
+                if (modal) modal.classList.add("is-busy");
+            }
+
+            form.setAttribute("data-busy", "1");
+            if (botao && botao.classList.contains("mnt-btn")) {
+                botao.classList.add("is-loading");
+            }
+
+            var texto = "Aplicando filtros...";
+            if (form.hasAttribute("data-status-form") || form.hasAttribute("data-confirm-status")) {
+                texto = "Atualizando o andamento...";
+            }
+            abrirLoading(texto);
         });
     });
 
-    document.addEventListener("keydown", event => {
-        if (event.key === "Escape") {
-            const lightbox = document.getElementById("mnt-lightbox");
-            if (lightbox && lightbox.open) fecharImagem();
-        }
+    /* Selects da barra de filtros aplicam sozinhos. */
+    document.querySelectorAll("[data-auto-submit]").forEach(function (campo) {
+        campo.addEventListener("change", function () {
+            var form = campo.form;
+            if (form && !form.getAttribute("data-busy")) {
+                if (typeof form.requestSubmit === "function") {
+                    form.requestSubmit();
+                } else {
+                    form.submit();
+                    abrirLoading("Aplicando filtros...");
+                }
+            }
+        });
     });
+
+    /* Links de navegação (paginação, cards de métrica, limpar). */
+    document.querySelectorAll("a[data-nav]").forEach(function (link) {
+        link.addEventListener("click", function (evento) {
+            if (travado) { evento.preventDefault(); return; }
+            if (evento.metaKey || evento.ctrlKey || evento.shiftKey || evento.button !== 0) return;
+            abrirLoading("Carregando solicitações...");
+        });
+    });
+
+    /* ==========================================================
+       MODAIS
+       ========================================================== */
+    function abrirModal(id) {
+        var modal = document.getElementById(id);
+        if (!modal || modal.open) return;
+        modal.showModal();
+        document.body.classList.add("mnt-locked");
+    }
+
+    function fecharModal(modal) {
+        if (!modal || !modal.open) return;
+        modal.close();
+        if (!document.querySelector("dialog[open]")) {
+            document.body.classList.remove("mnt-locked");
+        }
+    }
+
+    document.querySelectorAll("[data-open]").forEach(function (botao) {
+        botao.addEventListener("click", function () {
+            abrirModal(botao.getAttribute("data-open"));
+        });
+    });
+
+    document.querySelectorAll(".mnt-modal").forEach(function (modal) {
+        modal.querySelectorAll("[data-close]").forEach(function (botao) {
+            botao.addEventListener("click", function () { fecharModal(modal); });
+        });
+
+        /* Clique fora do conteúdo fecha — a menos que esteja salvando. */
+        modal.addEventListener("click", function (evento) {
+            if (modal.classList.contains("is-busy")) return;
+            if (evento.target !== modal) return;
+            var caixa = modal.getBoundingClientRect();
+            var fora =
+                evento.clientX < caixa.left || evento.clientX > caixa.right ||
+                evento.clientY < caixa.top  || evento.clientY > caixa.bottom;
+            if (fora) fecharModal(modal);
+        });
+
+        modal.addEventListener("cancel", function (evento) {
+            if (modal.classList.contains("is-busy")) evento.preventDefault();
+        });
+
+        modal.addEventListener("close", function () {
+            if (!document.querySelector("dialog[open]")) {
+                document.body.classList.remove("mnt-locked");
+            }
+        });
+    });
+
+    /* Marca visualmente que existe alteração de status pendente. */
+    document.querySelectorAll("[data-status-form]").forEach(function (form) {
+        var atual = form.getAttribute("data-atual");
+        form.querySelectorAll('input[name="status"]').forEach(function (radio) {
+            radio.addEventListener("change", function () {
+                form.classList.toggle("is-dirty", radio.value !== atual);
+            });
+        });
+    });
+
+    /* ==========================================================
+       LIGHTBOX COM NAVEGAÇÃO
+       ========================================================== */
+    var lb       = document.getElementById("mntLightbox");
+    var lbImg    = document.getElementById("mntLbImage");
+    var lbTitle  = document.getElementById("mntLbTitle");
+    var lbCount  = document.getElementById("mntLbCount");
+    var lbPrev   = document.getElementById("mntLbPrev");
+    var lbNext   = document.getElementById("mntLbNext");
+    var lbClose  = document.getElementById("mntLbClose");
+    var lbLista  = [];
+    var lbIndice = 0;
+
+    function pintarLightbox() {
+        var item = lbLista[lbIndice];
+        if (!item) return;
+        lbImg.src = item.src;
+        lbImg.alt = item.caption;
+        lbTitle.textContent = item.caption;
+        lbCount.textContent = (lbIndice + 1) + " / " + lbLista.length;
+        var unica = lbLista.length < 2;
+        lbPrev.style.visibility = unica ? "hidden" : "visible";
+        lbNext.style.visibility = unica ? "hidden" : "visible";
+    }
+
+    function andarLightbox(passo) {
+        if (!lbLista.length) return;
+        lbIndice = (lbIndice + passo + lbLista.length) % lbLista.length;
+        pintarLightbox();
+    }
+
+    document.querySelectorAll("[data-lightbox]").forEach(function (botao) {
+        botao.addEventListener("click", function () {
+            var galeria = botao.closest("[data-gallery]");
+            var itens = galeria
+                ? Array.prototype.slice.call(galeria.querySelectorAll("[data-lightbox]"))
+                : [botao];
+
+            lbLista = itens.map(function (el) {
+                return {
+                    src: el.getAttribute("data-src"),
+                    caption: el.getAttribute("data-caption") || "Imagem da manutenção"
+                };
+            });
+            lbIndice = Math.max(0, itens.indexOf(botao));
+            pintarLightbox();
+
+            if (!lb.open) lb.showModal();
+            document.body.classList.add("mnt-locked");
+        });
+    });
+
+    if (lbPrev)  lbPrev.addEventListener("click", function () { andarLightbox(-1); });
+    if (lbNext)  lbNext.addEventListener("click", function () { andarLightbox(1); });
+    if (lbClose) lbClose.addEventListener("click", function () { lb.close(); });
+
+    if (lb) {
+        lb.addEventListener("close", function () {
+            lbImg.src = "";
+            if (!document.querySelector("dialog[open]")) {
+                document.body.classList.remove("mnt-locked");
+            }
+        });
+        lb.addEventListener("click", function (evento) {
+            if (evento.target === lb) lb.close();
+        });
+    }
+
+    document.addEventListener("keydown", function (evento) {
+        if (!lb || !lb.open) return;
+        if (evento.key === "ArrowRight") andarLightbox(1);
+        if (evento.key === "ArrowLeft")  andarLightbox(-1);
+    });
+
+    /* ==========================================================
+       COPIAR PARA A ÁREA DE TRANSFERÊNCIA
+       ========================================================== */
+    document.querySelectorAll("[data-copy]").forEach(function (botao) {
+        botao.addEventListener("click", function () {
+            var texto = botao.getAttribute("data-copy") || "";
+            var rotulo = botao.getAttribute("data-copy-label") || "Copiado";
+            var original = botao.innerHTML;
+
+            function confirmar() {
+                var soIcone = botao.classList.contains("mnt-ico-btn");
+                botao.innerHTML = soIcone
+                    ? '<i class="fa-solid fa-check"></i>'
+                    : '<i class="fa-solid fa-check"></i> ' + rotulo;
+                setTimeout(function () { botao.innerHTML = original; }, 1700);
+            }
+
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(texto).then(confirmar).catch(function () {
+                    window.prompt("Copie o conteúdo:", texto);
+                });
+            } else {
+                window.prompt("Copie o conteúdo:", texto);
+            }
+        });
+    });
+
+    /* ==========================================================
+       DESTAQUE APÓS SALVAR (?foco=<id>)
+       ========================================================== */
+    var foco = new URLSearchParams(window.location.search).get("foco");
+    if (foco) {
+        var card = document.getElementById("manutencao-" + foco);
+        if (card) {
+            setTimeout(function () {
+                card.scrollIntoView({ behavior: "smooth", block: "center" });
+                card.classList.add("is-focus");
+                setTimeout(function () { card.classList.remove("is-focus"); }, 2600);
+            }, 160);
+        }
+    }
 })();
-
-function abrirAtendimento(id){
-    const dialog = document.getElementById(id);
-    if (!dialog) return;
-    dialog.showModal();
-    document.body.classList.add("mnt-modal-open");
-}
-
-function fecharAtendimento(id){
-    const dialog = document.getElementById(id);
-    if (!dialog) return;
-    dialog.close();
-    if (!document.querySelector(".mnt-dialog[open]")) {
-        document.body.classList.remove("mnt-modal-open");
-    }
-}
-
-function abrirImagem(src, titulo){
-    const dialog = document.getElementById("mnt-lightbox");
-    const imagem = document.getElementById("mnt-lightbox-image");
-    const tituloEl = document.getElementById("mnt-lightbox-title");
-
-    imagem.src = src;
-    imagem.alt = titulo || "Imagem da manutenção";
-    tituloEl.textContent = titulo || "Imagem da manutenção";
-    dialog.showModal();
-    document.body.classList.add("mnt-modal-open");
-}
-
-function fecharImagem(){
-    const dialog = document.getElementById("mnt-lightbox");
-    const imagem = document.getElementById("mnt-lightbox-image");
-    if (dialog.open) dialog.close();
-    imagem.src = "";
-    if (!document.querySelector(".mnt-dialog[open]")) {
-        document.body.classList.remove("mnt-modal-open");
-    }
-}
-
-async function copiarTexto(texto, botao, mensagemSucesso){
-    try{
-        await navigator.clipboard.writeText(texto);
-        const original = botao.innerHTML;
-        const somenteIcone = botao.classList.contains("mnt-icon-btn");
-        botao.innerHTML = somenteIcone
-            ? '<i class="fa-solid fa-check"></i>'
-            : `<i class="fa-solid fa-check"></i> ${mensagemSucesso || "Copiado"}`;
-        botao.setAttribute("title", mensagemSucesso || "Copiado");
-        setTimeout(() => botao.innerHTML = original, 1800);
-    }catch(e){
-        window.prompt("Copie o conteúdo:", texto);
-    }
-}
-
-function copiarContato(texto, botao){
-    return copiarTexto(texto, botao, "Telefone copiado");
-}
-
-function confirmarStatus(form){
-    const select = form.querySelector('select[name="status"]');
-    const atual = select.dataset.statusAtual;
-    const novo = select.value;
-
-    if (atual === novo) {
-        return confirm("O status selecionado já é o status atual. Deseja continuar?");
-    }
-
-    const nome = select.options[select.selectedIndex].text;
-    return confirm(`Confirmar alteração do status para "${nome}"?`);
-}
 </script>
-
 {% endblock %}
