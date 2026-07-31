@@ -710,7 +710,17 @@ class CategoriasInfoView(View):
 
 from django.core.paginator import Paginator
 from django.db.models import F, FloatField, ExpressionWrapper, Prefetch
-from django.db.models import F, FloatField, ExpressionWrapper, DecimalField
+from django.db.models import (
+    F,
+    Q,
+    Count,
+    Case,
+    When,
+    Value,
+    FloatField,
+    DecimalField,
+    ExpressionWrapper,
+)
 from django.db.models.functions import Cast, TruncDate, Coalesce
 
 from django.views.generic import ListView
@@ -737,44 +747,160 @@ class EstabelecimentosListView(ListView):
 
 class BrinquedosView(View):
     def get(self, request):
-        ordenar = request.GET.get('ordenar', 'az')
-        # Iniciamos o queryset
-        brinquedos_list = Brinquedos.objects.all()
+        busca = request.GET.get("q", "").strip()[:120]
+        categoria = request.GET.get("categoria", "").strip()
+        voltagem = request.GET.get("voltagem", "").strip()[:20]
+        disponibilidade = request.GET.get("disponibilidade", "todos").strip()
+        ordenar = request.GET.get("ordenar", "novidades").strip()
 
-        # ORDENAÇÃO
-        if ordenar == 'az':
-            brinquedos_list = brinquedos_list.order_by('nome_brinquedo')
-        elif ordenar == 'za':
-            brinquedos_list = brinquedos_list.order_by('-nome_brinquedo')
-        elif ordenar == 'melhor-avaliados':
-            brinquedos_list = brinquedos_list.order_by('-avaliacao')
-        elif ordenar == 'custo-beneficio':
-            # Garantimos que o valor seja tratado como Float para o cálculo
-            # E adicionamos um valor mínimo para evitar divisão por zero absoluta
-            brinquedos_list = brinquedos_list.annotate(
-                score=ExpressionWrapper(
-                    Cast(F('avaliacao'), FloatField()) / (Cast(F('valor_brinquedo'), FloatField()) + 0.1),
-                    output_field=FloatField()
+        ordens_validas = {
+            "novidades",
+            "az",
+            "za",
+            "melhor-avaliados",
+            "menor-preco",
+            "custo-beneficio",
+        }
+        if ordenar not in ordens_validas:
+            ordenar = "novidades"
+
+        disponibilidades_validas = {"todos", "loja", "orcamento"}
+        if disponibilidade not in disponibilidades_validas:
+            disponibilidade = "todos"
+
+        catalogo_ativo = Brinquedos.objects.filter(ativo=True)
+
+        categorias = (
+            CategoriasBrinquedos.objects
+            .filter(ativo=True)
+            .annotate(
+                total_brinquedos=Count(
+                    "brinquedos",
+                    filter=Q(brinquedos__ativo=True),
+                    distinct=True,
                 )
-            ).order_by('-score')
+            )
+            .filter(total_brinquedos__gt=0)
+            .order_by("nome_categoria")
+        )
 
-        # PAGINAÇÃO
+        voltagens = list(
+            catalogo_ativo
+            .exclude(voltz__isnull=True)
+            .exclude(voltz="")
+            .values_list("voltz", flat=True)
+            .distinct()
+            .order_by("voltz")
+        )
+
+        brinquedos_list = (
+            catalogo_ativo
+            .prefetch_related("categorias_brinquedos", "tags")
+        )
+
+        if busca:
+            brinquedos_list = brinquedos_list.filter(
+                Q(nome_brinquedo__icontains=busca)
+                | Q(descricao__icontains=busca)
+                | Q(categorias_brinquedos__nome_categoria__icontains=busca)
+            ).distinct()
+
+        if categoria.isdigit():
+            brinquedos_list = brinquedos_list.filter(
+                categorias_brinquedos__id=int(categoria)
+            ).distinct()
+        else:
+            categoria = ""
+
+        if voltagem:
+            brinquedos_list = brinquedos_list.filter(voltz__iexact=voltagem)
+
+        if disponibilidade == "loja":
+            brinquedos_list = brinquedos_list.filter(
+                exibir_na_loja=True,
+                valor_brinquedo__isnull=False,
+                valor_brinquedo__gt=0,
+            )
+        elif disponibilidade == "orcamento":
+            brinquedos_list = brinquedos_list.filter(
+                Q(exibir_na_loja=False)
+                | Q(valor_brinquedo__isnull=True)
+                | Q(valor_brinquedo__lte=0)
+            )
+
+        if ordenar == "az":
+            brinquedos_list = brinquedos_list.order_by("nome_brinquedo", "id")
+        elif ordenar == "za":
+            brinquedos_list = brinquedos_list.order_by("-nome_brinquedo", "-id")
+        elif ordenar == "melhor-avaliados":
+            brinquedos_list = brinquedos_list.order_by(
+                "-avaliacao",
+                "nome_brinquedo",
+            )
+        elif ordenar == "menor-preco":
+            brinquedos_list = brinquedos_list.annotate(
+                preco_disponivel=Case(
+                    When(
+                        exibir_na_loja=True,
+                        valor_brinquedo__gt=0,
+                        then=F("valor_brinquedo"),
+                    ),
+                    default=Value(None),
+                    output_field=DecimalField(max_digits=10, decimal_places=2),
+                )
+            ).order_by(
+                F("preco_disponivel").asc(nulls_last=True),
+                "nome_brinquedo",
+            )
+        elif ordenar == "custo-beneficio":
+            score_valido = ExpressionWrapper(
+                Cast(F("avaliacao"), FloatField())
+                / Cast(F("valor_brinquedo"), FloatField()),
+                output_field=FloatField(),
+            )
+            brinquedos_list = brinquedos_list.annotate(
+                score=Case(
+                    When(
+                        exibir_na_loja=True,
+                        valor_brinquedo__gt=0,
+                        then=score_valido,
+                    ),
+                    default=Value(-1.0),
+                    output_field=FloatField(),
+                )
+            ).order_by("-score", "nome_brinquedo")
+        else:
+            brinquedos_list = brinquedos_list.order_by("-criacao", "-id")
+
+        total_encontrados = brinquedos_list.count()
+
         paginator = Paginator(brinquedos_list, 12)
-        page_number = request.GET.get('page')
+        page_obj = paginator.get_page(request.GET.get("page"))
 
-        try:
-            page_obj = paginator.get_page(page_number)
-        except Exception:
-            # Caso o número da página seja inválido, volta para a 1
-            page_obj = paginator.get_page(1)
+        query_params = request.GET.copy()
+        query_params.pop("page", None)
 
         context = {
-            'brinquedos': page_obj,
-            'page_obj': page_obj,
-            'ordenar': ordenar,
+            "brinquedos": page_obj,
+            "page_obj": page_obj,
+            "ordenar": ordenar,
+            "busca": busca,
+            "categorias": categorias,
+            "categoria_ativa": categoria,
+            "voltagens": voltagens,
+            "voltagem_ativa": voltagem,
+            "disponibilidade": disponibilidade,
+            "total_encontrados": total_encontrados,
+            "total_catalogo": catalogo_ativo.count(),
+            "total_loja": catalogo_ativo.filter(
+                exibir_na_loja=True,
+                valor_brinquedo__gt=0,
+            ).count(),
+            "total_categorias": categorias.count(),
+            "querystring": query_params.urlencode(),
         }
 
-        return render(request, 'brinquedos.html', context)
+        return render(request, "brinquedos.html", context)
 
 
 class LojaView(View):
@@ -3250,6 +3376,8 @@ def adicionar_ao_carrinho(request, tipo, object_id):
             id=object_id,
             ativo=True,
             exibir_na_loja=True,
+            valor_brinquedo__isnull=False,
+            valor_brinquedo__gt=0,
         )
     else:
         objeto = get_object_or_404(model, id=object_id)
