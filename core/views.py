@@ -96,11 +96,17 @@ class HomeView(View):
 
         categorias_brinquedos = (
             CategoriasBrinquedos.objects
+            .filter(ativo=True)
             .annotate(
                 total_produtos=Count(
                     "brinquedos",
                     distinct=True,
                 )
+            )
+            .order_by(
+                "-total_produtos",
+                "nome_categoria",
+                "id",
             )
         )
 

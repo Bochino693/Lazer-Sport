@@ -376,9 +376,36 @@ body {
    CATEGORIAS / SCROLL CARDS
 ========================================================= */
 .categorias-section {
-  margin-top: -60px;
-  padding: 60px 20px;
-  background: #ffffff;
+  --cat-blue: #0878f9;
+  --cat-blue-deep: #004aad;
+  --cat-red: #e63946;
+  --cat-bg: #06101d;
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  margin-top: -38px;
+  padding: 82px 24px 88px;
+  color: #f4f8ff;
+  background:
+    radial-gradient(circle at 6% 8%, rgba(8,120,249,.20), transparent 25rem),
+    radial-gradient(circle at 95% 82%, rgba(230,57,70,.14), transparent 24rem),
+    linear-gradient(150deg, #0a1728 0%, #050b14 62%, #07111f 100%);
+  border-top: 1px solid rgba(120,165,224,.16);
+  border-bottom: 1px solid rgba(120,165,224,.13);
+}
+
+.categorias-section::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  opacity: .15;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(255,255,255,.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.04) 1px, transparent 1px);
+  background-size: 42px 42px;
+  mask-image: linear-gradient(to bottom, #000, transparent 88%);
 }
 
 .categorias-section a,
@@ -387,6 +414,98 @@ body {
   color: inherit;
 }
 
+.categorias-head {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 28px;
+  width: min(1460px, 100%);
+  margin: 0 auto 22px;
+}
+
+.categorias-head-copy {
+  max-width: 750px;
+}
+
+.categorias-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  border: 1px solid rgba(99,166,255,.24);
+  border-radius: 999px;
+  color: #91c2ff;
+  background: rgba(8,120,249,.10);
+  font-size: .68rem;
+  font-weight: 900;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.categorias-section .section-title {
+  margin: 0;
+  color: #fff;
+  font-size: clamp(2rem, 4vw, 3.35rem);
+  line-height: 1;
+  letter-spacing: -.055em;
+  text-align: left;
+}
+
+.categorias-section .section-subtitle {
+  max-width: 690px;
+  margin: 13px 0 0;
+  color: #a8b8cc;
+  font-size: .93rem;
+  line-height: 1.65;
+  text-align: left;
+}
+
+.categorias-head-actions {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.categorias-counter {
+  display: inline-flex;
+  align-items: center;
+  min-height: 43px;
+  padding: 0 13px;
+  border: 1px solid rgba(140,176,220,.16);
+  border-radius: 13px;
+  color: #9db0c8;
+  background: rgba(255,255,255,.045);
+  font-size: .68rem;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+.categorias-all-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 43px;
+  padding: 0 15px;
+  border: 1px solid rgba(99,166,255,.22);
+  border-radius: 13px;
+  color: #fff !important;
+  background: linear-gradient(135deg, var(--cat-blue-deep), var(--cat-blue));
+  box-shadow: 0 10px 24px rgba(0,74,173,.24);
+  font-size: .72rem;
+  font-weight: 900;
+  transition: transform .22s ease, filter .22s ease, box-shadow .22s ease;
+}
+
+.categorias-all-link:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.08);
+  box-shadow: 0 14px 30px rgba(0,74,173,.34);
+}
+
+/* Estrutura compartilhada pelos carrosséis antigos de promoções/combos. */
 .scroll-wrapper {
   position: relative;
   max-width: 1200px;
@@ -407,100 +526,267 @@ body {
 }
 
 .scroll-container::-webkit-scrollbar-thumb {
-  background: #007BFF;
   border-radius: 4px;
+  background: #007bff;
 }
 
 .scroll-btn {
   position: absolute;
   top: 50%;
-  transform: translateY(-50%);
-  background: rgba(0, 123, 255, 0.9);
-  color: white;
-  border: none;
-  font-size: 24px;
+  z-index: 10;
   width: 45px;
   height: 45px;
+  border: 0;
   border-radius: 50%;
+  color: #fff;
+  background: rgba(0,123,255,.9);
+  box-shadow: 0 4px 10px rgba(0,0,0,.2);
+  font-size: 24px;
   cursor: pointer;
-  transition: all 0.3s;
-  z-index: 10;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-}
-
-.scroll-btn:hover {
-  background: #E63946;
-  transform: translateY(-50%) scale(1.1);
+  transform: translateY(-50%);
 }
 
 .scroll-btn.left { left: 0; }
 .scroll-btn.right { right: 0; }
 
-.categoria-card {
-  background: #fff;
-  border-radius: 20px;
-  min-width: 240px;
-  box-shadow: 0 6px 20px rgba(0,0,0,0.08);
-  transition: transform .32s ease, box-shadow .32s ease;
+.scroll-btn:hover {
+  background: #e63946;
+}
+
+/* O carrossel de categorias recebe o novo padrão visual. */
+.categorias-section .scroll-wrapper {
+  position: relative;
+  width: min(1460px, 100%);
+  max-width: none;
+  margin: 0 auto;
+  padding: 0 54px;
+  overflow: visible;
+}
+
+.categorias-section .scroll-container {
+  display: flex;
+  gap: 14px;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  scrollbar-width: none;
+  padding: 16px 3px 26px;
+}
+
+.categorias-section .scroll-container::-webkit-scrollbar {
+  display: none;
+}
+
+.categorias-section .scroll-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 43px;
+  height: 43px;
+  border: 1px solid rgba(136,178,230,.24);
+  border-radius: 14px;
+  color: #fff;
+  background: linear-gradient(145deg, #132a47, #0a1728);
+  box-shadow: 0 13px 28px rgba(0,3,11,.42), inset 0 1px 0 rgba(255,255,255,.07);
+  font-size: 15px;
   cursor: pointer;
+  transition: transform .22s ease, border-color .22s ease, background .22s ease, opacity .22s ease;
+  z-index: 10;
+}
+
+.categorias-section .scroll-btn:hover {
+  border-color: rgba(255,255,255,.30);
+  background: linear-gradient(145deg, var(--cat-red), #b91e30);
+  transform: translateY(-50%) scale(1.04);
+}
+
+.categorias-section .scroll-btn:disabled {
+  opacity: .28;
+  cursor: default;
+  transform: translateY(-50%);
+}
+
+.categorias-section .scroll-btn.left { left: 0; }
+.categorias-section .scroll-btn.right { right: 0; }
+
+.categoria-link {
+  flex: 0 0 calc((100% - 70px) / 6);
+  min-width: 0;
+  scroll-snap-align: start;
+}
+
+.categoria-card {
+  position: relative;
+  isolation: isolate;
+  min-width: 0;
+  height: 284px;
   overflow: hidden;
-  text-align: center;
+  border: 1px solid rgba(132,170,218,.16);
+  border-radius: 21px;
+  background:
+    radial-gradient(circle at 100% 0, rgba(8,120,249,.12), transparent 42%),
+    linear-gradient(155deg, #12233a, #0a1524 72%);
+  box-shadow: 0 18px 38px rgba(0,4,13,.34), inset 0 1px 0 rgba(255,255,255,.035);
+  transition: transform .3s ease, box-shadow .3s ease, border-color .3s ease;
+  cursor: pointer;
   display: flex;
   flex-direction: column;
-  height: 100%;
-  animation: fadeCard .6s ease forwards;
+  text-align: left;
 }
 
 .categoria-card:hover {
-  transform: translateY(-10px) scale(1.02);
-  box-shadow: 0 12px 28px rgba(0,0,0,0.15);
+  transform: translateY(-7px);
+  border-color: rgba(78,151,246,.48);
+  box-shadow: 0 26px 55px rgba(0,4,14,.52), 0 0 0 1px rgba(8,120,249,.08);
 }
 
-.categoria-card img {
+.categoria-media {
+  position: relative;
+  display: grid;
+  place-items: center;
   width: 100%;
-  height: 160px;
-  object-fit: contain;
-  transition: transform .4s ease;
+  height: 166px;
+  min-height: 166px;
+  overflow: hidden;
+  border-bottom: 1px solid rgba(143,176,218,.12);
+  background:
+    radial-gradient(circle at 50% 40%, rgba(255,255,255,.98), rgba(228,237,249,.92) 76%);
 }
 
-.categoria-card:hover img {
-  transform: scale(1.04);
+.categoria-media::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0;
+  height: 46px;
+  pointer-events: none;
+  background: linear-gradient(to top, rgba(8,19,33,.30), transparent);
+}
+
+.categoria-media > img,
+.categoria-media .pecas-slider img {
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+  padding: 13px;
+  object-fit: contain;
+  transition: transform .45s ease, opacity .6s ease;
+}
+
+.categoria-media-fallback {
+  display: grid;
+  place-items: center;
+  width: 70px;
+  height: 70px;
+  border-radius: 22px;
+  color: #fff;
+  background: linear-gradient(145deg, var(--cat-blue), var(--cat-blue-deep));
+  box-shadow: 0 14px 30px rgba(0,74,173,.25);
+  font-size: 1.7rem;
+}
+
+.categoria-card:hover .categoria-media > img,
+.categoria-card:hover .categoria-media .pecas-slider img.active {
+  transform: scale(1.07);
+}
+
+.categoria-card-tag {
+  position: absolute;
+  z-index: 3;
+  top: 11px;
+  left: 11px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 8px;
+  border: 1px solid rgba(255,255,255,.32);
+  border-radius: 999px;
+  color: #fff;
+  background: rgba(5,17,33,.74);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  font-size: .55rem;
+  font-weight: 900;
+  letter-spacing: .055em;
+  text-transform: uppercase;
 }
 
 .categoria-info {
-  padding: 16px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 14px 14px 13px;
 }
 
 .categoria-info h3 {
-  color: #1f2d3d;
-  font-size: 1.2rem;
-  font-weight: 700;
-  margin-bottom: 4px;
+  display: -webkit-box;
+  overflow: hidden;
+  min-height: 40px;
+  margin: 0;
+  color: #f4f8ff;
+  font-size: .9rem;
+  font-weight: 850;
+  line-height: 1.28;
+  letter-spacing: -.025em;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.categoria-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 10px;
 }
 
 .categoria-info p {
-  color: #007BFF;
-  font-weight: 600;
-  font-size: 1rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin: 0;
+  color: #80b9ff;
+  font-size: .62rem;
+  font-weight: 850;
+}
+
+.categoria-arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 29px;
+  height: 29px;
+  flex: 0 0 29px;
+  border-radius: 10px;
+  color: #fff;
+  background: linear-gradient(135deg, var(--cat-blue-deep), var(--cat-blue));
+  font-size: .68rem;
+  transition: transform .24s ease, background .24s ease;
+}
+
+.categoria-card:hover .categoria-arrow {
+  transform: translateX(3px);
+  background: linear-gradient(135deg, var(--cat-red), #b91e30);
 }
 
 /* slider de peças na categoria */
 .pecas-slider {
   width: 100%;
-  min-height: 190px;
+  min-height: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f6f7f8;
-  padding: 12px;
+  background: transparent;
+  padding: 0;
   overflow: hidden;
 }
 
 .pecas-slider img {
-  width: auto;
-  height: auto;
-  max-width: 100%;
-  max-height: 170px;
   object-fit: contain;
   opacity: 0;
   transition: opacity .6s ease;
@@ -517,18 +803,16 @@ body {
 .pecas-slider.premium {
   position: relative;
   width: 100%;
-  height: 170px;
+  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #fff;
+  background: transparent;
   overflow: hidden;
 }
 
 .pecas-slider.premium img {
   position: absolute;
-  max-width: 90%;
-  max-height: 150px;
   object-fit: contain;
   opacity: 0;
   transition: opacity .6s ease;
@@ -536,6 +820,129 @@ body {
 
 .pecas-slider.premium img.active {
   opacity: 1;
+}
+
+@media (max-width: 1180px) {
+  .categoria-link {
+    flex-basis: calc((100% - 56px) / 5);
+  }
+}
+
+@media (max-width: 920px) {
+  .categorias-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .categoria-link {
+    flex-basis: calc((100% - 28px) / 3);
+  }
+}
+
+@media (max-width: 768px) {
+  .categorias-section {
+    margin-top: -24px;
+    padding: 58px 13px 62px;
+  }
+
+  .categorias-head {
+    gap: 17px;
+    margin-bottom: 18px;
+  }
+
+  .categorias-section .section-title {
+    font-size: 2rem;
+  }
+
+  .categorias-section .section-subtitle {
+    font-size: .78rem;
+  }
+
+  .categorias-head-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+    width: 100%;
+  }
+
+  .categorias-counter {
+    display: none;
+  }
+
+  .categorias-all-link {
+    width: 100%;
+  }
+
+  .categorias-section .scroll-wrapper {
+    width: 100%;
+    padding: 0;
+  }
+
+  .categorias-section .scroll-container {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 11px;
+    overflow: visible;
+    padding: 4px 0 0;
+  }
+
+  .categoria-link {
+    min-width: 0;
+  }
+
+  .categoria-link:nth-child(n + 5) {
+    display: none;
+  }
+
+  .categoria-card {
+    height: 230px;
+    border-radius: 17px;
+  }
+
+  .categoria-media {
+    height: 128px;
+    min-height: 128px;
+  }
+
+  .categoria-media > img,
+  .categoria-media .pecas-slider img {
+    padding: 9px;
+  }
+
+  .categoria-card-tag {
+    top: 8px;
+    left: 8px;
+    padding: 5px 7px;
+    font-size: .48rem;
+  }
+
+  .categoria-info {
+    padding: 11px;
+  }
+
+  .categoria-info h3 {
+    min-height: 34px;
+    font-size: .75rem;
+  }
+
+  .categoria-meta {
+    padding-top: 7px;
+  }
+
+  .categoria-info p {
+    font-size: .55rem;
+  }
+
+  .categoria-arrow {
+    width: 25px;
+    height: 25px;
+    flex-basis: 25px;
+    border-radius: 8px;
+    font-size: .58rem;
+  }
+
+  .categorias-section .scroll-btn {
+    display: none;
+  }
 }
 
 /* =========================================================
@@ -2520,15 +2927,6 @@ body {
     min-height: 43px;
   }
 
-  .categoria-card {
-    min-width: 200px;
-    height: 240px;
-  }
-
-  .categoria-card img {
-    height: 140px;
-  }
-
   .scroll-btn {
     display: none;
   }
@@ -2852,64 +3250,130 @@ body {
 
 <!-- ======= CATEGORIAS ======= -->
 <section id="categorias-section" class="categorias-section">
-  <h2 class="section-title">Categorias</h2>
-  <p class="section-subtitle">
-    Encontre o brinquedo ideal para transformar seu espaço em diversão garantida.
-  </p>
+  <div class="categorias-head">
+    <div class="categorias-head-copy">
+      <span class="categorias-eyebrow">
+        <i class="fa-solid fa-shapes" aria-hidden="true"></i>
+        Explore nosso catálogo
+      </span>
+      <h2 class="section-title">Encontre pela categoria</h2>
+      <p class="section-subtitle">
+        Descubra brinquedos e produtos profissionais para transformar seu espaço
+        em uma experiência completa de diversão.
+      </p>
+    </div>
+
+    <div class="categorias-head-actions">
+      <span class="categorias-counter" id="categorias-counter" aria-live="polite">
+        {{ categorias_brinquedos|length|add:"1" }} opções disponíveis
+      </span>
+      <a href="{% url 'brinquedos' %}" class="categorias-all-link">
+        Ver catálogo completo
+        <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+      </a>
+    </div>
+  </div>
 
   <div class="scroll-wrapper">
-    <button class="scroll-btn left" id="scroll-left">&#10094;</button>
+    <button type="button"
+            class="scroll-btn left"
+            id="scroll-left"
+            aria-label="Ver categorias anteriores"
+            aria-controls="scroll-container">
+      <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
+    </button>
 
     <div class="scroll-container" id="scroll-container">
 
-          <!-- ⭐ CATEGORIA FIXA PREMIUM -->
-    <a href="{% url 'pecas_reposicao' %}#breadcrumb" class="categoria-link">
-      <div class="categoria-card">
+      <!-- Categoria fixa: peças e produtos em geral. -->
+      <a href="{% url 'pecas_reposicao' %}#breadcrumb"
+         class="categoria-link categoria-link-featured">
+        <div class="categoria-card">
+          <div class="categoria-media">
+            <span class="categoria-card-tag">
+              <i class="fa-solid fa-screwdriver-wrench" aria-hidden="true"></i>
+              Peças e acessórios
+            </span>
 
-        <div class="pecas-slider premium" id="pecasSlider">
-          {% for peca in pecas_preview %}
-            {% if peca.imagem_principal %}
-              <img
-                class="peca-slide"
-                src="{{ peca.imagem_principal.imagem.url }}"
-                alt="{{ peca.nome }}"
-                loading="lazy">
-            {% endif %}
-          {% endfor %}
+            <div class="pecas-slider premium" id="pecasSlider">
+              {% for peca in pecas_preview %}
+                {% if peca.imagem_principal %}
+                  <img class="peca-slide"
+                       src="{{ peca.imagem_principal.imagem.url }}"
+                       alt="{{ peca.nome }}"
+                       loading="lazy"
+                       decoding="async">
+                {% endif %}
+              {% empty %}
+                <span class="categoria-media-fallback">
+                  <i class="fa-solid fa-gears" aria-hidden="true"></i>
+                </span>
+              {% endfor %}
+            </div>
+          </div>
+
+          <div class="categoria-info">
+            <h3>Produtos em Geral</h3>
+            <div class="categoria-meta">
+              <p>
+                <i class="fa-solid fa-box-open" aria-hidden="true"></i>
+                {{ pecas_count }} ite{{ pecas_count|pluralize:"m,ns" }}
+              </p>
+              <span class="categoria-arrow" aria-hidden="true">
+                <i class="fa-solid fa-arrow-right"></i>
+              </span>
+            </div>
+          </div>
         </div>
-        <div class="categoria-info">
-          <h3>Produtos em Geral</h3>
-          <p>{{ pecas_count }} itens</p>
-        </div>
+      </a>
 
-      </div>
-    </a>
-
-      <!-- ✅ CATEGORIAS NORMAIS -->
+      <!-- Categorias de brinquedos. -->
       {% for categoria in categorias_brinquedos %}
         <a href="{% url 'categoria_detalhe' categoria.id %}#list" class="categoria-link">
           <div class="categoria-card">
+            <div class="categoria-media">
+              <span class="categoria-card-tag">
+                <i class="fa-solid fa-gamepad" aria-hidden="true"></i>
+                Categoria
+              </span>
 
-            {% if categoria.imagem_categoria %}
-              <img src="{{ categoria.imagem_categoria.url }}"
-                   alt="{{ categoria.nome_categoria }}"
-                   loading="lazy">
-            {% else %}
-              <img src="{% static 'images/default_categoria.jpg' %}">
-            {% endif %}
+              {% if categoria.imagem_categoria %}
+                <img src="{{ categoria.imagem_categoria.url }}"
+                     alt="{{ categoria.nome_categoria }}"
+                     loading="lazy"
+                     decoding="async">
+              {% else %}
+                <img src="{% static 'images/default_categoria.jpg' %}"
+                     alt="{{ categoria.nome_categoria }}"
+                     loading="lazy"
+                     decoding="async">
+              {% endif %}
+            </div>
 
             <div class="categoria-info">
               <h3>{{ categoria.nome_categoria }}</h3>
-              <p>{{ categoria.total_produtos }} brinquedos</p>
+              <div class="categoria-meta">
+                <p>
+                  <i class="fa-solid fa-cubes" aria-hidden="true"></i>
+                  {{ categoria.total_produtos }} brinquedo{{ categoria.total_produtos|pluralize }}
+                </p>
+                <span class="categoria-arrow" aria-hidden="true">
+                  <i class="fa-solid fa-arrow-right"></i>
+                </span>
+              </div>
             </div>
-
           </div>
         </a>
       {% endfor %}
-
     </div>
 
-    <button class="scroll-btn right" id="scroll-right">&#10095;</button>
+    <button type="button"
+            class="scroll-btn right"
+            id="scroll-right"
+            aria-label="Ver próximas categorias"
+            aria-controls="scroll-container">
+      <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+    </button>
   </div>
 </section>
 
@@ -6138,46 +6602,168 @@ document.addEventListener("DOMContentLoaded", () => {
     const scrollContainer = document.getElementById("scroll-container");
     const leftBtn = document.getElementById("scroll-left");
     const rightBtn = document.getElementById("scroll-right");
+    const categoriasCounter = document.getElementById("categorias-counter");
 
     if (scrollContainer && leftBtn && rightBtn) {
-        let autoScroll;
+        const mediaMobile = window.matchMedia("(max-width: 768px)");
+        const movimentoReduzido = window.matchMedia(
+            "(prefers-reduced-motion: reduce)"
+        );
+        let autoScroll = null;
+        let scrollFrame = null;
 
-        function startScroll() {
-            autoScroll = setInterval(() => {
-                scrollContainer.scrollBy({
-                    left: 220,
-                    behavior: "smooth"
-                });
+        function cardsVisiveis() {
+            return Array.from(
+                scrollContainer.querySelectorAll(".categoria-link")
+            ).filter(card => window.getComputedStyle(card).display !== "none");
+        }
 
-                if (scrollContainer.scrollLeft + scrollContainer.clientWidth >= scrollContainer.scrollWidth - 5) {
+        function medidas() {
+            const cards = cardsVisiveis();
+            const primeiro = cards[0];
+            const estilos = window.getComputedStyle(scrollContainer);
+            const gap = Number.parseFloat(estilos.columnGap || estilos.gap) || 14;
+            const larguraCard = primeiro?.getBoundingClientRect().width || 190;
+            const passo = larguraCard + gap;
+            const porPagina = Math.max(
+                1,
+                Math.floor((scrollContainer.clientWidth + gap) / passo)
+            );
+
+            return { cards, passo, porPagina };
+        }
+
+        function atualizarCarrossel() {
+            const { cards, passo, porPagina } = medidas();
+            const total = cards.length;
+
+            if (mediaMobile.matches) {
+                leftBtn.disabled = true;
+                rightBtn.disabled = true;
+                if (categoriasCounter) {
+                    categoriasCounter.textContent = `${total} opções em destaque`;
+                }
+                return;
+            }
+
+            const maximo = Math.max(
+                0,
+                scrollContainer.scrollWidth - scrollContainer.clientWidth
+            );
+            const noInicio = scrollContainer.scrollLeft <= 3;
+            const noFim = scrollContainer.scrollLeft >= maximo - 3;
+            const inicio = Math.min(
+                total,
+                Math.max(1, Math.round(scrollContainer.scrollLeft / passo) + 1)
+            );
+            const fim = Math.min(total, inicio + porPagina - 1);
+
+            leftBtn.disabled = noInicio;
+            rightBtn.disabled = noFim || maximo === 0;
+
+            if (categoriasCounter) {
+                categoriasCounter.textContent = total
+                    ? `${inicio}–${fim} de ${total} categorias`
+                    : "Nenhuma categoria disponível";
+            }
+        }
+
+        function solicitarAtualizacao() {
+            if (scrollFrame) return;
+            scrollFrame = window.requestAnimationFrame(() => {
+                scrollFrame = null;
+                atualizarCarrossel();
+            });
+        }
+
+        function rolar(direcao, umaCategoria = false) {
+            if (mediaMobile.matches) return;
+
+            const { passo, porPagina } = medidas();
+            const distancia = passo * (umaCategoria ? 1 : porPagina);
+            scrollContainer.scrollBy({
+                left: direcao === "proximo" ? distancia : -distancia,
+                behavior: movimentoReduzido.matches ? "auto" : "smooth"
+            });
+        }
+
+        function pararAutoScroll() {
+            window.clearInterval(autoScroll);
+            autoScroll = null;
+        }
+
+        function iniciarAutoScroll() {
+            pararAutoScroll();
+            if (
+                mediaMobile.matches ||
+                movimentoReduzido.matches ||
+                document.hidden ||
+                scrollContainer.scrollWidth <= scrollContainer.clientWidth + 3
+            ) return;
+
+            autoScroll = window.setInterval(() => {
+                const maximo = Math.max(
+                    0,
+                    scrollContainer.scrollWidth - scrollContainer.clientWidth
+                );
+
+                if (scrollContainer.scrollLeft >= maximo - 3) {
                     scrollContainer.scrollTo({
                         left: 0,
                         behavior: "smooth"
                     });
+                } else {
+                    rolar("proximo", true);
                 }
-            }, 5000);
+            }, 5600);
         }
 
-        function stopScroll() {
-            clearInterval(autoScroll);
+        function reiniciarAutoScroll() {
+            pararAutoScroll();
+            iniciarAutoScroll();
         }
 
         rightBtn.addEventListener("click", () => {
-            scrollContainer.scrollBy({ left: 220, behavior: "smooth" });
-            stopScroll();
-            startScroll();
+            rolar("proximo");
+            reiniciarAutoScroll();
         });
 
         leftBtn.addEventListener("click", () => {
-            scrollContainer.scrollBy({ left: -220, behavior: "smooth" });
-            stopScroll();
-            startScroll();
+            rolar("anterior");
+            reiniciarAutoScroll();
         });
 
-        scrollContainer.addEventListener("mouseenter", stopScroll);
-        scrollContainer.addEventListener("mouseleave", startScroll);
+        scrollContainer.addEventListener("scroll", solicitarAtualizacao, {
+            passive: true
+        });
+        scrollContainer.addEventListener("mouseenter", pararAutoScroll);
+        scrollContainer.addEventListener("mouseleave", iniciarAutoScroll);
+        scrollContainer.addEventListener("touchstart", pararAutoScroll, {
+            passive: true
+        });
+        scrollContainer.addEventListener("touchend", iniciarAutoScroll, {
+            passive: true
+        });
+        scrollContainer.addEventListener("focusin", pararAutoScroll);
+        scrollContainer.addEventListener("focusout", iniciarAutoScroll);
 
-        startScroll();
+        document.addEventListener("visibilitychange", () => {
+            if (document.hidden) pararAutoScroll();
+            else iniciarAutoScroll();
+        });
+
+        window.addEventListener("resize", () => {
+            if (mediaMobile.matches) scrollContainer.scrollLeft = 0;
+            solicitarAtualizacao();
+            reiniciarAutoScroll();
+        });
+
+        if (typeof ResizeObserver !== "undefined") {
+            new ResizeObserver(solicitarAtualizacao).observe(scrollContainer);
+        }
+
+        atualizarCarrossel();
+        iniciarAutoScroll();
     }
 
     document.querySelectorAll(".carousel-slide").forEach(img => {
