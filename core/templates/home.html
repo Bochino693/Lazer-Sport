@@ -6433,6 +6433,278 @@ main.content-section {
     }
 </style>
 
+<!-- Padronização clara do topo e destaque especial dos projetos. -->
+<style id="ls-top-light-theme">
+    .ls-home-hero {
+        color: #10233f;
+        border: 1px solid rgba(0, 74, 173, .11);
+        border-bottom-color: rgba(0, 74, 173, .08);
+        background:
+            radial-gradient(circle at 88% 12%, rgba(230, 57, 70, .10), transparent 27rem),
+            radial-gradient(circle at 8% 94%, rgba(8, 120, 249, .16), transparent 31rem),
+            linear-gradient(140deg, #f7faff 0%, #eaf2fb 58%, #dceafa 100%);
+        box-shadow:
+            0 20px 48px rgba(19, 53, 92, .10),
+            inset 0 1px 0 rgba(255, 255, 255, .86);
+    }
+
+    .ls-home-hero::before {
+        opacity: .68;
+        background-image:
+            linear-gradient(rgba(0, 74, 173, .035) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(0, 74, 173, .035) 1px, transparent 1px);
+    }
+
+    .ls-home-title {
+        color: #102b4c;
+        text-shadow: 0 1px 0 rgba(255, 255, 255, .72);
+    }
+
+    .ls-home-title span {
+        color: #0878f9;
+    }
+
+    .ls-home-subtitle {
+        color: #5e738d;
+        font-weight: 500;
+    }
+
+    .ls-home-btn-outline {
+        color: #004aad;
+        border-color: rgba(0, 74, 173, .18);
+        background: rgba(244, 248, 253, .82);
+        box-shadow: 0 10px 22px rgba(19, 53, 92, .08);
+    }
+
+    .ls-home-btn-outline:hover {
+        color: #fff;
+        border-color: transparent;
+        background: linear-gradient(135deg, #e63946, #bf2033);
+    }
+
+    .ls-home-hero-card {
+        border-color: rgba(0, 74, 173, .13);
+        background: linear-gradient(145deg, rgba(249, 252, 255, .94), rgba(226, 237, 249, .88));
+        box-shadow:
+            0 24px 54px rgba(19, 53, 92, .16),
+            inset 0 1px 0 rgba(255, 255, 255, .95);
+    }
+
+    .ls-home-mini-head strong {
+        color: #173858;
+    }
+
+    .ls-home-mini-head a {
+        color: #075ccb;
+    }
+
+    .ls-home-mini {
+        border-color: rgba(0, 74, 173, .11);
+        color: #173858;
+        background: linear-gradient(145deg, #edf5fd, #dfeaf7);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, .74);
+    }
+
+    .ls-home-mini:hover {
+        border-color: rgba(0, 105, 218, .27);
+        background: linear-gradient(145deg, #e3f0ff, #d4e6f8);
+        box-shadow: 0 10px 22px rgba(19, 53, 92, .11);
+    }
+
+    .ls-home-mini strong {
+        color: #173858;
+    }
+
+    .ls-home-mini span {
+        color: #075ccb;
+    }
+
+    .ls-home-mini i {
+        color: #0878f9;
+    }
+
+    .ls-home-stats {
+        border-right: 1px solid rgba(0, 74, 173, .11);
+        border-left: 1px solid rgba(0, 74, 173, .11);
+        border-bottom-color: rgba(0, 74, 173, .09);
+        background: linear-gradient(180deg, #e7f0fa, #dfeaf6);
+    }
+
+    .ls-home-stat {
+        border-color: rgba(0, 74, 173, .11);
+        background: linear-gradient(145deg, #f7faff, #eaf2fb);
+        box-shadow:
+            0 12px 28px rgba(19, 53, 92, .09),
+            inset 0 1px 0 rgba(255, 255, 255, .88);
+    }
+
+    .ls-home-stat h3 {
+        color: #102b4c;
+    }
+
+    .ls-home-stat p {
+        color: #60758f;
+        font-weight: 600;
+    }
+
+    .categorias-section {
+        color: #10233f;
+        border-color: rgba(0, 74, 173, .11);
+        background:
+            radial-gradient(circle at 6% 8%, rgba(8, 120, 249, .13), transparent 25rem),
+            radial-gradient(circle at 95% 82%, rgba(230, 57, 70, .07), transparent 24rem),
+            linear-gradient(150deg, #eef5fd 0%, #e6eff9 62%, #f7faff 100%);
+        box-shadow:
+            0 20px 48px rgba(19, 53, 92, .10),
+            inset 0 1px 0 rgba(255, 255, 255, .78);
+    }
+
+    .categorias-section::before {
+        opacity: .62;
+        background-image:
+            linear-gradient(rgba(0, 74, 173, .035) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(0, 74, 173, .035) 1px, transparent 1px);
+    }
+
+    .categorias-eyebrow {
+        color: #0757ae;
+        border-color: rgba(0, 105, 218, .18);
+        background: rgba(8, 120, 249, .08);
+    }
+
+    .categorias-section .section-title {
+        color: #102b4c;
+    }
+
+    .categorias-section .section-subtitle {
+        color: #60758f;
+    }
+
+    .categorias-counter {
+        color: #526b87;
+        border-color: rgba(0, 74, 173, .11);
+        background: rgba(231, 240, 250, .88);
+    }
+
+    .categorias-section .scroll-btn {
+        color: #075ccb;
+        border-color: rgba(0, 74, 173, .14);
+        background: linear-gradient(145deg, #f7faff, #e3edf8);
+        box-shadow: 0 12px 26px rgba(19, 53, 92, .14);
+    }
+
+    .categorias-section .scroll-btn:hover {
+        color: #fff;
+        border-color: transparent;
+        background: linear-gradient(145deg, #e63946, #b91e30);
+    }
+
+    .categoria-card {
+        border-color: rgba(0, 74, 173, .14);
+        background:
+            radial-gradient(circle at 100% 0, rgba(8, 120, 249, .09), transparent 42%),
+            linear-gradient(155deg, #f8fbff, #e9f2fb 72%);
+        box-shadow:
+            0 17px 38px rgba(19, 53, 92, .13),
+            inset 0 1px 0 rgba(255, 255, 255, .90);
+    }
+
+    .categoria-card:hover {
+        border-color: rgba(0, 105, 218, .32);
+        box-shadow: 0 25px 52px rgba(19, 53, 92, .20);
+    }
+
+    .categoria-info h3 {
+        color: #173858;
+    }
+
+    .categoria-info p {
+        color: #075ccb;
+    }
+
+    /* Projetos ganha um cabeçalho mais forte que as demais vitrines. */
+    #projetos .projetos-header {
+        position: relative;
+        isolation: isolate;
+        overflow: hidden;
+        align-items: center;
+        margin-bottom: 30px;
+        padding: 25px 26px;
+        border: 1px solid rgba(0, 74, 173, .15);
+        border-radius: 24px;
+        background:
+            radial-gradient(circle at 92% 0, rgba(230, 57, 70, .13), transparent 17rem),
+            radial-gradient(circle at 5% 100%, rgba(8, 120, 249, .18), transparent 19rem),
+            linear-gradient(135deg, #dceafa, #f8fbff 72%);
+        box-shadow:
+            0 18px 38px rgba(19, 53, 92, .13),
+            inset 0 1px 0 rgba(255, 255, 255, .90);
+    }
+
+    #projetos .projetos-header::before {
+        content: "";
+        position: absolute;
+        inset: 0 auto 0 0;
+        width: 5px;
+        background: linear-gradient(180deg, #0878f9, #004aad 58%, #e63946);
+    }
+
+    #projetos .projetos-header::after {
+        content: "";
+        position: absolute;
+        z-index: -1;
+        right: -64px;
+        bottom: -82px;
+        width: 190px;
+        height: 190px;
+        border: 30px solid rgba(0, 74, 173, .045);
+        border-radius: 50%;
+    }
+
+    #projetos .projetos-header > div,
+    #projetos .projetos-header > a {
+        position: relative;
+        z-index: 1;
+    }
+
+    #projetos .ls-showcase-tag {
+        color: #fff;
+        border-color: transparent;
+        background: linear-gradient(135deg, #e63946, #bd2033);
+        box-shadow: 0 9px 20px rgba(189, 32, 51, .20);
+    }
+
+    #projetos .titulo-eventos {
+        color: #082c55;
+        font-size: clamp(2.25rem, 4.2vw, 3.35rem) !important;
+        letter-spacing: -.055em;
+    }
+
+    #projetos .projetos-header .section-subtitle {
+        max-width: 700px;
+        color: #405f7e;
+        font-size: .96rem;
+        font-weight: 650;
+        line-height: 1.6;
+    }
+
+    @media (max-width: 768px) {
+        #projetos .projetos-header {
+            align-items: stretch;
+            padding: 21px 18px;
+            border-radius: 20px;
+        }
+
+        #projetos .titulo-eventos {
+            font-size: 2.15rem !important;
+        }
+
+        #projetos .projetos-header .section-subtitle {
+            font-size: .82rem;
+        }
+    }
+</style>
+
 <section id="clientes-section" class="clientes-section">
 
     <div class="clientes-header">
