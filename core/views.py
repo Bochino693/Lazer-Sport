@@ -3011,18 +3011,19 @@ class ManutencaoAdminView(AdminOnlyMixin, View):
             cliente_para_notificar = None
 
             with transaction.atomic():
-                # IMPORTANTE: "brinquedo" é FK opcional (on_delete=SET_NULL,
-                # null=True) -- select_related nele vira LEFT OUTER JOIN, e o
-                # Postgres proíbe "FOR UPDATE" no lado anulável de um outer
-                # join (é o mesmo cuidado já tomado com "frete" no checkout).
-                # Por isso o lock aqui só traz "usuario__user" (FK obrigatória,
-                # inner join, seguro). O brinquedo é lido separadamente por
-                # "manutencao.nome_equipamento" quando precisar -- 1 query
-                # extra pequena, sem custo real numa ação de clique único.
+                # IMPORTANTE: o Postgres proíbe "FOR UPDATE" no lado anulável
+                # de um LEFT OUTER JOIN. Pra não depender de saber de cor
+                # quais FKs são opcionais (e não ser pego de surpresa de
+                # novo se o schema mudar), o lock aqui NÃO usa nenhum
+                # select_related -- trava só a linha da Manutencao, sem
+                # join nenhum. Os dados de usuario/user/brinquedo usados
+                # logo abaixo (nome_equipamento, notificação por e-mail)
+                # são buscados em consultas lazy separadas, já fora do
+                # risco de outer join -- 1 ou 2 queries extras pequenas,
+                # sem custo real numa ação de clique único.
                 manutencao = (
                     Manutencao.objects
                     .select_for_update()
-                    .select_related("usuario__user")
                     .get(pk=manutencao_id)
                 )
 
