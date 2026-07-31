@@ -188,16 +188,20 @@
    BARRA DE FILTROS
    ========================================================================= */
 .mnt-toolbar{
+    position:sticky;
+    top:calc(var(--adm-topbar, 72px) + 12px);
+    z-index:30;
     display:grid;
     grid-template-columns:minmax(280px,1.8fr) repeat(3,minmax(150px,.6fr)) auto;
     gap:12px;
     align-items:end;
     padding:16px;
-    margin-bottom:18px;
+    margin-bottom:14px;
     border:1px solid var(--mnt-line);
     border-radius:var(--mnt-r);
     background:linear-gradient(150deg,var(--mnt-surface-2),var(--mnt-surface));
     box-shadow:0 12px 30px rgba(2,8,20,.28);
+    backdrop-filter:blur(10px);
 }
 .mnt-field{display:grid;gap:7px;min-width:0}
 .mnt-field label{
@@ -238,7 +242,7 @@ select.mnt-control{
     box-shadow:0 0 0 4px rgba(59,130,246,.16);
 }
 .mnt-search{position:relative}
-.mnt-search > i{
+.mnt-search > i.fa-magnifying-glass{
     position:absolute;
     left:14px;top:50%;
     transform:translateY(-50%);
@@ -246,8 +250,98 @@ select.mnt-control{
     font-size:.82rem;
     pointer-events:none;
 }
-.mnt-search .mnt-control{padding-left:38px}
+.mnt-search .mnt-control{padding-left:38px;padding-right:36px}
+.mnt-search-clear{
+    position:absolute;
+    right:8px;top:50%;
+    transform:translateY(-50%);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    width:28px;height:28px;
+    border:0;
+    border-radius:8px;
+    background:transparent;
+    color:#7f92ab;
+    cursor:pointer;
+    font-size:.76rem;
+}
+.mnt-search-clear:hover{background:rgba(148,163,184,.14);color:#dbe6f5}
+.mnt-search-kbd{
+    position:absolute;
+    right:10px;top:50%;
+    transform:translateY(-50%);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    min-width:20px;
+    height:20px;
+    padding:0 5px;
+    border:1px solid rgba(148,163,184,.28);
+    border-radius:6px;
+    background:rgba(148,163,184,.1);
+    color:#8fa1b8;
+    font-size:.65rem;
+    font-weight:800;
+    font-family:inherit;
+    pointer-events:none;
+}
+.mnt-search input:placeholder-shown ~ .mnt-search-kbd{display:flex}
+.mnt-search input:focus ~ .mnt-search-kbd{display:none}
 .mnt-actions{display:flex;gap:8px}
+
+/* ---------- CHIPS DE FILTROS ATIVOS ---------- */
+.mnt-active-filters{
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    gap:8px;
+    margin:-8px 0 16px;
+    padding:12px 14px;
+    border:1px solid var(--mnt-line);
+    border-radius:14px;
+    background:rgba(59,130,246,.06);
+}
+.mnt-active-filters-label{
+    color:#8fa1b8;
+    font-size:.68rem;
+    font-weight:900;
+    letter-spacing:.05em;
+    text-transform:uppercase;
+    margin-right:2px;
+}
+.mnt-fchip{
+    display:inline-flex;
+    align-items:center;
+    gap:7px;
+    padding:6px 8px 6px 12px;
+    border:1px solid rgba(59,130,246,.3);
+    border-radius:999px;
+    background:rgba(59,130,246,.14);
+    color:#bcd7ff;
+    font-size:.72rem;
+    font-weight:700;
+    text-decoration:none;
+    transition:background .16s ease,border-color .16s ease;
+}
+.mnt-fchip:hover{background:rgba(59,130,246,.22);border-color:rgba(59,130,246,.45)}
+.mnt-fchip i.fa-xmark{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    width:16px;height:16px;
+    border-radius:50%;
+    background:rgba(255,255,255,.12);
+    font-size:.6rem;
+}
+.mnt-fchip-clear{
+    color:#fca5a5;
+    font-size:.72rem;
+    font-weight:800;
+    text-decoration:underline;
+    text-underline-offset:2px;
+    margin-left:2px;
+}
 
 /* ---------- BOTÕES ---------- */
 .mnt-btn{
@@ -290,6 +384,11 @@ select.mnt-control{
 .mnt-btn-map{background:linear-gradient(135deg,#e35d45,#bf4030);color:#fff}
 .mnt-btn-success{background:linear-gradient(135deg,#10b981,#059669);color:#fff}
 .mnt-btn-warning{background:linear-gradient(135deg,#f59e0b,#d97706);color:#231400}
+.mnt-btn-danger-ghost{
+    border-color:rgba(239,68,68,.32);
+    background:rgba(239,68,68,.08);
+    color:#fca5a5;
+}
 .mnt-btn-off{
     border-color:rgba(148,163,184,.12);
     background:rgba(100,116,139,.1);
@@ -1126,6 +1225,25 @@ body.mnt-locked{overflow:hidden}
 /* skeleton usado enquanto a lista é recarregada */
 .mnt-grid.is-reloading{opacity:.4;pointer-events:none;transition:opacity .2s ease}
 
+/* ---------- BOTÃO DE FECHAR NAS MENSAGENS DO PAINEL ---------- */
+.mnt-msg-close{
+    position:absolute;
+    right:10px;top:50%;
+    transform:translateY(-50%);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    width:24px;height:24px;
+    border:0;
+    border-radius:8px;
+    background:rgba(0,0,0,.08);
+    color:inherit;
+    opacity:.7;
+    cursor:pointer;
+    font-size:.7rem;
+}
+.mnt-msg-close:hover{opacity:1;background:rgba(0,0,0,.14)}
+
 /* =========================================================================
    RESPONSIVO
    ========================================================================= */
@@ -1141,6 +1259,7 @@ body.mnt-locked{overflow:hidden}
     .mnt-summary{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 @media(max-width:820px){
+    .mnt-toolbar{position:static;backdrop-filter:none}
     .mnt-hero{grid-template-columns:1fr;padding:24px}
     .mnt-hero-side{min-width:0}
     .mnt-stats{grid-template-columns:repeat(2,1fr)}
@@ -1264,7 +1383,13 @@ body.mnt-locked{overflow:hidden}
                        name="q"
                        value="{{ filtros.q }}"
                        autocomplete="off"
+                       data-debounce-submit
                        placeholder="Protocolo, cliente, telefone, e-mail, equipamento, cidade...">
+                <button type="button" class="mnt-search-clear" id="mntSearchClear"
+                        aria-label="Limpar busca" {% if not filtros.q %}hidden{% endif %}>
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+                <kbd class="mnt-search-kbd">/</kbd>
             </div>
         </div>
 
@@ -1309,10 +1434,61 @@ body.mnt-locked{overflow:hidden}
         </div>
     </form>
 
+    <!-- =================== CHIPS DE FILTROS ATIVOS =================== -->
+    {% if filtros.q or filtros.status or filtros.periodo or filtros.ordem != 'recentes' %}
+    <div class="mnt-active-filters" aria-label="Filtros ativos">
+        <span class="mnt-active-filters-label">Filtrando por:</span>
+
+        {% if filtros.q %}
+        <a class="mnt-fchip" data-nav
+           href="?{% if filtros.status %}status={{ filtros.status }}&amp;{% endif %}{% if filtros.periodo %}periodo={{ filtros.periodo }}&amp;{% endif %}ordem={{ filtros.ordem }}">
+            <i class="fa-solid fa-magnifying-glass"></i> "{{ filtros.q }}"
+            <i class="fa-solid fa-xmark"></i>
+        </a>
+        {% endif %}
+
+        {% if filtros.status %}
+        <a class="mnt-fchip" data-nav
+           href="?{% if filtros.q %}q={{ filtros.q|urlencode }}&amp;{% endif %}{% if filtros.periodo %}periodo={{ filtros.periodo }}&amp;{% endif %}ordem={{ filtros.ordem }}">
+            <i class="fa-regular fa-flag"></i>
+            {% for valor, rotulo in status_choices %}{% if valor == filtros.status %}{{ rotulo }}{% endif %}{% endfor %}
+            <i class="fa-solid fa-xmark"></i>
+        </a>
+        {% endif %}
+
+        {% if filtros.periodo %}
+        <a class="mnt-fchip" data-nav
+           href="?{% if filtros.q %}q={{ filtros.q|urlencode }}&amp;{% endif %}{% if filtros.status %}status={{ filtros.status }}&amp;{% endif %}ordem={{ filtros.ordem }}">
+            <i class="fa-regular fa-calendar"></i>
+            {% if filtros.periodo == 'hoje' %}Últimas 24h
+            {% elif filtros.periodo == '7d' %}Últimos 7 dias
+            {% elif filtros.periodo == '30d' %}Últimos 30 dias
+            {% elif filtros.periodo == '90d' %}Últimos 90 dias
+            {% endif %}
+            <i class="fa-solid fa-xmark"></i>
+        </a>
+        {% endif %}
+
+        {% if filtros.ordem != 'recentes' %}
+        <a class="mnt-fchip" data-nav
+           href="?{% if filtros.q %}q={{ filtros.q|urlencode }}&amp;{% endif %}{% if filtros.status %}status={{ filtros.status }}&amp;{% endif %}{% if filtros.periodo %}periodo={{ filtros.periodo }}&amp;{% endif %}ordem=recentes">
+            <i class="fa-solid fa-arrow-down-wide-short"></i>
+            {% if filtros.ordem == 'antigas' %}Mais antigas
+            {% elif filtros.ordem == 'atualizadas' %}Atualizadas recentemente
+            {% elif filtros.ordem == 'prioridade' %}Prioridade operacional
+            {% endif %}
+            <i class="fa-solid fa-xmark"></i>
+        </a>
+        {% endif %}
+
+        <a class="mnt-fchip-clear" href="{{ request.path }}" data-nav>Limpar tudo</a>
+    </div>
+    {% endif %}
+
     <!-- =================== RESULTADOS =================== -->
     <div class="mnt-results">
         <h2>Solicitações encontradas</h2>
-        <div class="mnt-results-meta">
+        <div class="mnt-results-meta" aria-live="polite">
             <span class="mnt-chip">
                 <i class="fa-solid fa-list-ul"></i>
                 {{ total_filtrado }} atendimento{{ total_filtrado|pluralize }}
@@ -1453,19 +1629,27 @@ body.mnt-locked{overflow:hidden}
                     </button>
 
                     {% if m.status == 'P' %}
-                    <button type="submit" name="status" value="A" class="mnt-btn mnt-btn-soft" data-label="Em andamento">
-                        <span class="mnt-btn-label"><i class="fa-solid fa-play"></i> Iniciar</span>
+                    <button type="submit" name="status" value="A" class="mnt-btn mnt-btn-soft"
+                            title="Coloca o atendimento em andamento">
+                        <span class="mnt-btn-label"><i class="fa-solid fa-user-check"></i> Assumir atendimento</span>
                     </button>
                     {% endif %}
 
                     {% if m.status == 'P' or m.status == 'A' %}
-                    <button type="submit" name="status" value="C" class="mnt-btn mnt-btn-success" data-label="Concluída">
+                    <button type="submit" name="status" value="C" class="mnt-btn mnt-btn-success"
+                            title="Marca como concluída">
                         <span class="mnt-btn-label"><i class="fa-solid fa-check"></i> Concluir</span>
+                    </button>
+                    <button type="submit" name="status" value="X" class="mnt-btn mnt-btn-danger-ghost"
+                            title="Cancela esta solicitação"
+                            data-confirm="Cancelar a manutenção {{ m.protocolo }}?">
+                        <span class="mnt-btn-label"><i class="fa-solid fa-ban"></i> Cancelar</span>
                     </button>
                     {% endif %}
 
                     {% if m.status == 'C' or m.status == 'X' %}
-                    <button type="submit" name="status" value="A" class="mnt-btn mnt-btn-ghost" data-label="Em andamento">
+                    <button type="submit" name="status" value="A" class="mnt-btn mnt-btn-ghost"
+                            title="Reabre e coloca em andamento">
                         <span class="mnt-btn-label"><i class="fa-solid fa-rotate-left"></i> Reabrir</span>
                     </button>
                     {% endif %}
@@ -1882,6 +2066,15 @@ body.mnt-locked{overflow:hidden}
 
             var botao = evento.submitter;
 
+            /* Ações destrutivas (ex.: cancelar) pedem confirmação antes. */
+            if (botao && botao.hasAttribute("data-confirm")) {
+                var pergunta = botao.getAttribute("data-confirm");
+                if (!window.confirm(pergunta)) {
+                    evento.preventDefault();
+                    return;
+                }
+            }
+
             if (form.hasAttribute("data-status-form")) {
                 var escolhido = form.querySelector('input[name="status"]:checked');
                 var atual = form.getAttribute("data-atual");
@@ -1932,6 +2125,87 @@ body.mnt-locked{overflow:hidden}
             if (evento.metaKey || evento.ctrlKey || evento.shiftKey || evento.button !== 0) return;
             abrirLoading("Carregando solicitações...");
         });
+    });
+
+    /* ==========================================================
+       BUSCA — atalho "/", limpar com um clique e auto-aplicar
+       ========================================================== */
+    var campoBusca   = document.getElementById("busca");
+    var botaoLimpar  = document.getElementById("mntSearchClear");
+
+    if (campoBusca) {
+        var valorInicialBusca = campoBusca.value;
+        var temporizadorBusca = null;
+
+        campoBusca.addEventListener("input", function () {
+            if (botaoLimpar) botaoLimpar.hidden = campoBusca.value.length === 0;
+
+            window.clearTimeout(temporizadorBusca);
+            temporizadorBusca = window.setTimeout(function () {
+                if (campoBusca.value === valorInicialBusca) return;
+                var form = campoBusca.form;
+                if (form && !form.getAttribute("data-busy")) {
+                    if (typeof form.requestSubmit === "function") {
+                        form.requestSubmit();
+                    } else {
+                        form.submit();
+                        abrirLoading("Aplicando filtros...");
+                    }
+                }
+            }, 600);
+        });
+
+        document.addEventListener("keydown", function (evento) {
+            if (evento.key !== "/") return;
+            var alvo = evento.target;
+            var digitando =
+                alvo && (alvo.tagName === "INPUT" || alvo.tagName === "TEXTAREA" || alvo.isContentEditable);
+            if (digitando || travado) return;
+            evento.preventDefault();
+            campoBusca.focus();
+        });
+    }
+
+    if (botaoLimpar && campoBusca) {
+        botaoLimpar.addEventListener("click", function () {
+            campoBusca.value = "";
+            botaoLimpar.hidden = true;
+            var form = campoBusca.form;
+            if (form && !form.getAttribute("data-busy")) {
+                if (typeof form.requestSubmit === "function") {
+                    form.requestSubmit();
+                } else {
+                    form.submit();
+                    abrirLoading("Aplicando filtros...");
+                }
+            }
+        });
+    }
+
+    /* ==========================================================
+       MENSAGENS — some sozinhas e podem ser fechadas na hora
+       ========================================================== */
+    document.querySelectorAll(".adm-messages .adm-alert").forEach(function (aviso) {
+        if (aviso.querySelector(".mnt-msg-close")) return;
+
+        var fechar = document.createElement("button");
+        fechar.type = "button";
+        fechar.className = "mnt-msg-close";
+        fechar.setAttribute("aria-label", "Dispensar aviso");
+        fechar.innerHTML = '<i class="fa-solid fa-xmark"></i>';
+        aviso.style.position = "relative";
+        aviso.style.paddingRight = "38px";
+        aviso.appendChild(fechar);
+
+        var sumir = function () {
+            aviso.style.transition = "opacity .25s ease, transform .25s ease";
+            aviso.style.opacity = "0";
+            aviso.style.transform = "translateY(-4px)";
+            window.setTimeout(function () { aviso.remove(); }, 260);
+        };
+
+        fechar.addEventListener("click", sumir);
+        window.setTimeout(sumir, 7000);
     });
 
     /* ==========================================================
