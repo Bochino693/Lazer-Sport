@@ -36,6 +36,7 @@
 }
 
 .mnt *{box-sizing:border-box}
+i.fa-solid,i.fa-regular,i.fa-brands{vertical-align:-1px}
 .mnt h1,.mnt h2,.mnt h3{margin:0;letter-spacing:-.02em}
 
 /* =========================================================================
@@ -230,7 +231,7 @@ select.mnt-control{
     padding-right:34px;
     background-image:linear-gradient(45deg,transparent 50%,#7f92ab 50%),
                      linear-gradient(135deg,#7f92ab 50%,transparent 50%);
-    background-position:calc(100% - 18px) 21px,calc(100% - 13px) 21px;
+    background-position:right 18px center,right 13px center;
     background-size:5px 5px,5px 5px;
     background-repeat:no-repeat;
 }
@@ -365,6 +366,13 @@ select.mnt-control{
 }
 .mnt-btn:hover{transform:translateY(-1px);filter:brightness(1.08)}
 .mnt-btn:active{transform:translateY(0)}
+.mnt-btn-label{
+    display:inline-flex;
+    align-items:center;
+    gap:7px;
+    line-height:1;
+}
+.mnt-btn-label i{line-height:1}
 .mnt-btn-sm{height:38px;padding:0 12px;font-size:.72rem}
 .mnt-btn-block{width:100%}
 .mnt-btn-primary{
@@ -707,15 +715,86 @@ select.mnt-control{
     font-weight:800;
 }
 
-/* ---------- CONTATOS ---------- */
-.mnt-contacts{
-    display:grid;
-    grid-template-columns:repeat(4,minmax(0,1fr));
+/* ---------- CONTATO INTELIGENTE ---------- */
+.mnt-contact-smart{
+    position:relative;
+    display:flex;
     gap:7px;
     padding:0 18px 14px 21px;
 }
-.mnt-contacts .mnt-btn{height:38px;padding:0 6px;font-size:.66rem;gap:6px}
-.mnt-contacts .mnt-btn i{font-size:.8rem}
+.mnt-contact-primary{
+    flex:1;
+    min-width:0;
+    height:40px;
+    padding:0 12px;
+    font-size:.74rem;
+}
+.mnt-contact-primary .mnt-btn-label{
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+}
+.mnt-contact-more{position:relative;flex:0 0 auto}
+.mnt-contact-more summary{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    width:40px;height:40px;
+    border:1px solid var(--mnt-line-strong);
+    border-radius:var(--mnt-r-sm);
+    background:rgba(148,163,184,.1);
+    color:#c3d1e3;
+    cursor:pointer;
+    list-style:none;
+    transition:background .16s ease,transform .16s ease;
+}
+.mnt-contact-more summary::-webkit-details-marker{display:none}
+.mnt-contact-more summary:hover{background:rgba(148,163,184,.2)}
+.mnt-contact-more[open] summary{
+    background:rgba(59,130,246,.18);
+    color:#a9cdff;
+    border-color:rgba(59,130,246,.4);
+}
+.mnt-contact-more-panel{
+    position:absolute;
+    right:0;
+    bottom:calc(100% + 8px);
+    z-index:12;
+    display:grid;
+    gap:4px;
+    min-width:200px;
+    padding:8px;
+    border:1px solid var(--mnt-line-strong);
+    border-radius:14px;
+    background:linear-gradient(160deg,var(--mnt-surface-3),var(--mnt-surface-2));
+    box-shadow:0 18px 40px rgba(0,4,12,.5);
+}
+.mnt-contact-more-panel a{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:9px 10px;
+    border-radius:10px;
+    color:#dbe6f5;
+    font-size:.78rem;
+    font-weight:700;
+    text-decoration:none;
+}
+.mnt-contact-more-panel a:hover{background:rgba(148,163,184,.12)}
+.mnt-contact-more-panel a i{width:16px;text-align:center;color:#7fb2ff}
+.mnt-contact-none{
+    flex:1;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    height:40px;
+    border-radius:var(--mnt-r-sm);
+    background:rgba(100,116,139,.1);
+    color:#65788f;
+    font-size:.72rem;
+    font-weight:800;
+}
 
 /* ---------- RODAPÉ DO CARD (ações rápidas) ---------- */
 .mnt-card-foot{
@@ -1273,7 +1352,7 @@ body.mnt-locked{overflow:hidden}
 @media(max-width:560px){
     .mnt-toolbar{grid-template-columns:1fr}
     .mnt-stats{grid-template-columns:1fr 1fr}
-    .mnt-contacts{grid-template-columns:1fr 1fr}
+    .mnt-contact-primary{font-size:.7rem}
     .mnt-facts{grid-template-columns:1fr 1fr}
     .mnt-fact:first-child{grid-column:1/-1}
     .mnt-card-foot{flex-direction:column;align-items:stretch}
@@ -1576,45 +1655,56 @@ body.mnt-locked{overflow:hidden}
                 {% endif %}
             </div>
 
-            <div class="mnt-contacts">
+            <div class="mnt-contact-smart">
                 {% if m.whatsapp_url %}
-                <a class="mnt-btn mnt-btn-wa" href="{{ m.whatsapp_url }}" target="_blank" rel="noopener" title="Abrir conversa no WhatsApp">
-                    <i class="fa-brands fa-whatsapp"></i> WhatsApp
+                <a class="mnt-btn mnt-btn-wa mnt-contact-primary" href="{{ m.whatsapp_url }}"
+                   target="_blank" rel="noopener" title="Abrir conversa no WhatsApp">
+                    <span class="mnt-btn-label"><i class="fa-brands fa-whatsapp"></i> Contatar via WhatsApp</span>
+                </a>
+                {% elif m.telefone_url %}
+                <a class="mnt-btn mnt-btn-tel mnt-contact-primary" href="{{ m.telefone_url }}"
+                   title="Ligar para {{ m.telefone_exibicao }}">
+                    <span class="mnt-btn-label"><i class="fa-solid fa-phone"></i> Ligar para o cliente</span>
+                </a>
+                {% elif m.email_url %}
+                <a class="mnt-btn mnt-btn-mail mnt-contact-primary" href="{{ m.email_url }}"
+                   title="Enviar e-mail para {{ m.cliente_email }}">
+                    <span class="mnt-btn-label"><i class="fa-solid fa-envelope"></i> Enviar e-mail</span>
                 </a>
                 {% else %}
-                <span class="mnt-btn mnt-btn-off" title="{{ m.telefone_motivo }}">
-                    <i class="fa-brands fa-whatsapp"></i> Inválido
+                <span class="mnt-contact-none" title="{{ m.telefone_motivo }}">
+                    <i class="fa-solid fa-user-slash"></i> Sem contato disponível
                 </span>
                 {% endif %}
 
-                {% if m.telefone_url %}
-                <a class="mnt-btn mnt-btn-tel" href="{{ m.telefone_url }}" title="Ligar para {{ m.telefone_exibicao }}">
-                    <i class="fa-solid fa-phone"></i> Ligar
-                </a>
-                {% else %}
-                <span class="mnt-btn mnt-btn-off" title="{{ m.telefone_motivo }}">
-                    <i class="fa-solid fa-phone-slash"></i> Sem nº
-                </span>
-                {% endif %}
-
-                {% if m.email_url %}
-                <a class="mnt-btn mnt-btn-mail" href="{{ m.email_url }}" title="Enviar e-mail para {{ m.cliente_email }}">
-                    <i class="fa-solid fa-envelope"></i> E-mail
-                </a>
-                {% else %}
-                <span class="mnt-btn mnt-btn-off" title="Cliente sem e-mail válido">
-                    <i class="fa-solid fa-envelope-circle-xmark"></i> Sem e-mail
-                </span>
-                {% endif %}
-
-                {% if m.mapa_url %}
-                <a class="mnt-btn mnt-btn-map" href="{{ m.mapa_url }}" target="_blank" rel="noopener" title="Abrir endereço no mapa">
-                    <i class="fa-solid fa-location-dot"></i> Mapa
-                </a>
-                {% else %}
-                <span class="mnt-btn mnt-btn-off" title="Endereço não informado">
-                    <i class="fa-solid fa-location-crosshairs"></i> Sem mapa
-                </span>
+                {% if m.whatsapp_url or m.telefone_url or m.email_url or m.mapa_url %}
+                <details class="mnt-contact-more">
+                    <summary aria-label="Mais formas de contato" title="Mais opções">
+                        <i class="fa-solid fa-ellipsis"></i>
+                    </summary>
+                    <div class="mnt-contact-more-panel">
+                        {% if m.whatsapp_url %}
+                        <a href="{{ m.whatsapp_url }}" target="_blank" rel="noopener">
+                            <i class="fa-brands fa-whatsapp"></i> WhatsApp
+                        </a>
+                        {% endif %}
+                        {% if m.telefone_url %}
+                        <a href="{{ m.telefone_url }}">
+                            <i class="fa-solid fa-phone"></i> Ligar · {{ m.telefone_exibicao }}
+                        </a>
+                        {% endif %}
+                        {% if m.email_url %}
+                        <a href="{{ m.email_url }}">
+                            <i class="fa-solid fa-envelope"></i> E-mail
+                        </a>
+                        {% endif %}
+                        {% if m.mapa_url %}
+                        <a href="{{ m.mapa_url }}" target="_blank" rel="noopener">
+                            <i class="fa-solid fa-location-dot"></i> Ver no mapa
+                        </a>
+                        {% endif %}
+                    </div>
+                </details>
                 {% endif %}
             </div>
 
@@ -2206,6 +2296,30 @@ body.mnt-locked{overflow:hidden}
 
         fechar.addEventListener("click", sumir);
         window.setTimeout(sumir, 7000);
+    });
+
+    /* ==========================================================
+       CONTATO INTELIGENTE — só um menu "mais opções" aberto por vez
+       ========================================================== */
+    var menusContato = document.querySelectorAll(".mnt-contact-more");
+    menusContato.forEach(function (menu) {
+        menu.addEventListener("toggle", function () {
+            if (!menu.open) return;
+            menusContato.forEach(function (outro) {
+                if (outro !== menu) outro.open = false;
+            });
+        });
+    });
+
+    document.addEventListener("click", function (evento) {
+        menusContato.forEach(function (menu) {
+            if (menu.open && !menu.contains(evento.target)) menu.open = false;
+        });
+    });
+
+    document.addEventListener("keydown", function (evento) {
+        if (evento.key !== "Escape") return;
+        menusContato.forEach(function (menu) { menu.open = false; });
     });
 
     /* ==========================================================

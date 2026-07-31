@@ -2539,6 +2539,14 @@ class ManutencaoAdminView(AdminOnlyMixin, View):
     ITENS_POR_PAGINA = 12
     STATUS_VALIDOS = dict(Manutencao.STATUS_CHOICES)
 
+    # Texto usado no e-mail de aviso enviado ao cliente quando o status muda.
+    STATUS_MENSAGEM_CLIENTE = {
+        "P": "sua solicitação voltou para a fila de pendentes",
+        "A": "nossa equipe técnica já está com o atendimento em andamento",
+        "C": "seu atendimento foi concluído",
+        "X": "sua solicitação foi cancelada",
+    }
+
     @staticmethod
     def _nome_cliente(manutencao):
         perfil = manutencao.usuario
@@ -2706,17 +2714,11 @@ class ManutencaoAdminView(AdminOnlyMixin, View):
         equipamento = manutencao.nome_equipamento
         protocolo = f"MAN-{manutencao.pk:05d}"
 
-        relato_resumido = " ".join((manutencao.descricao or "").split())
-        if len(relato_resumido) > 220:
-            relato_resumido = f"{relato_resumido[:217].rstrip()}..."
-
         mensagem_whatsapp = (
             f"Olá, {manutencao.cliente_nome}. "
-            f"Aqui é da equipe técnica da Lazer & Sport Brinquedos. "
-            f"Recebemos a solicitação {protocolo}, referente ao equipamento "
-            f"{equipamento}. Relato informado: {relato_resumido}. "
-            "Para darmos andamento ao atendimento, poderia confirmar se o "
-            "problema ainda está ocorrendo e qual é o melhor horário para contato?"
+            f"Aqui é da Lazer & Sport Brinquedos. "
+            f"Estamos entrando em contato sobre a solicitação {protocolo}, "
+            f"referente ao equipamento {equipamento}."
         )
 
         if telefone["valido"]:
@@ -2733,14 +2735,9 @@ class ManutencaoAdminView(AdminOnlyMixin, View):
             assunto = f"Lazer & Sport | Manutenção {protocolo}"
             corpo = (
                 f"Olá, {manutencao.cliente_nome}.\n\n"
-                "Aqui é da equipe técnica da Lazer & Sport Brinquedos. "
-                f"Recebemos a solicitação {protocolo}, referente ao equipamento "
-                f"{equipamento}.\n\n"
-                f"Relato informado: {relato_resumido}\n\n"
-                "Para darmos andamento ao atendimento, poderia confirmar se o "
-                "problema ainda está ocorrendo e qual é o melhor horário para "
-                "contato?\n\n"
-                "Atenciosamente,\nEquipe técnica Lazer & Sport Brinquedos"
+                f"Estamos entrando em contato sobre a solicitação {protocolo}, "
+                f"referente ao equipamento {equipamento}.\n\n"
+                "Atenciosamente,\nLazer & Sport Brinquedos"
             )
             manutencao.email_url = (
                 f"mailto:{manutencao.cliente_email}?"
@@ -2921,23 +2918,111 @@ class ManutencaoAdminView(AdminOnlyMixin, View):
         }
         return render(request, self.template_name, contexto)
 
+    def _notificar_mudanca_status(self, manutencao, novo_status):
+        """
+        Avisa o cliente por e-mail que o status do atendimento mudou.
+
+        Nunca deve derrubar a requisição que atualizou o status: qualquer
+        problema (SMTP fora do ar, credencial ausente, e-mail inválido)
+        só é registrado no log e ignorado silenciosamente.
+        """
+        from django.core.mail import send_mail
+        from django.conf import settings
+
+        try:
+            email = (manutencao.usuario.user.email or "").strip()
+            if not email or not self._email_valido(email):
+                return
+
+            protocolo = f"MAN-{manutencao.pk:05d}"
+            rotulo_status = self.STATUS_VALIDOS.get(novo_status, novo_status)
+            explicacao = self.STATUS_MENSAGEM_CLIENTE.get(
+                novo_status, f"o status mudou para {rotulo_status}",
+            )
+            nome_cliente = self._nome_cliente(manutencao)
+
+            assunto = f"Lazer & Sport | Atualização da manutenção {protocolo}"
+            corpo = (
+                f"Olá, {nome_cliente}.\n\n"
+                f"Sua solicitação de manutenção {protocolo} "
+                f"({manutencao.nome_equipamento}) foi atualizada: {explicacao}.\n\n"
+                f"Novo status: {rotulo_status}\n\n"
+                "Se tiver dúvidas, é só responder este e-mail ou chamar a "
+                "gente no WhatsApp.\n\n"
+                "Atenciosamente,\nEquipe técnica Lazer & Sport Brinquedos"
+            )
+
+            send_mail(
+                assunto,
+                corpo,
+                getattr(settings, "DEFAULT_FROM_EMAIL", None),
+                [email],
+                fail_silently=False,
+            )
+        except Exception:
+            logging.getLogger(__name__).exception(
+                "Falha ao enviar e-mail de atualização de status "
+                "(manutenção %s, novo status %s)",
+                getattr(manutencao, "pk", None), novo_status,
+            )
+
     def post(self, request):
+        """
+        Atualiza o status de uma manutenção a partir das ações rápidas do
+        card ou do seletor dentro do modal.
+
+        Qualquer falha inesperada (id inválido, corrida entre duas
+        atualizações simultâneas, etc.) é capturada e vira uma mensagem
+        amigável -- nunca deve estourar como erro 500 pro administrador.
+        """
         from django.db import transaction
         from django.utils.http import url_has_allowed_host_and_scheme
 
-        manutencao_id = request.POST.get("manutencao_id")
+        def montar_proxima_url(manutencao_id=None):
+            destino = request.POST.get("next") or request.path
+
+            if not url_has_allowed_host_and_scheme(
+                destino,
+                allowed_hosts={request.get_host()},
+                require_https=request.is_secure(),
+            ):
+                destino = request.path
+
+            if manutencao_id:
+                separador = "&" if "?" in destino else "?"
+                destino = f"{destino}{separador}foco={manutencao_id}"
+
+            return destino
+
+        manutencao_id_bruto = request.POST.get("manutencao_id")
         novo_status = (request.POST.get("status") or "").strip().upper()
+
+        try:
+            manutencao_id = int(manutencao_id_bruto)
+        except (TypeError, ValueError):
+            messages.error(request, "Solicitação de manutenção inválida.")
+            return redirect(montar_proxima_url())
 
         if novo_status not in self.STATUS_VALIDOS:
             messages.error(request, "Selecione um status válido.")
-            return redirect(request.path)
+            return redirect(montar_proxima_url(manutencao_id))
 
         try:
+            cliente_para_notificar = None
+
             with transaction.atomic():
+                # IMPORTANTE: "brinquedo" é FK opcional (on_delete=SET_NULL,
+                # null=True) -- select_related nele vira LEFT OUTER JOIN, e o
+                # Postgres proíbe "FOR UPDATE" no lado anulável de um outer
+                # join (é o mesmo cuidado já tomado com "frete" no checkout).
+                # Por isso o lock aqui só traz "usuario__user" (FK obrigatória,
+                # inner join, seguro). O brinquedo é lido separadamente por
+                # "manutencao.nome_equipamento" quando precisar -- 1 query
+                # extra pequena, sem custo real numa ação de clique único.
                 manutencao = (
                     Manutencao.objects
                     .select_for_update()
-                    .select_related("brinquedo", "usuario__user")
+                    .select_related("usuario__user")
                     .get(pk=manutencao_id)
                 )
 
@@ -2960,25 +3045,31 @@ class ManutencaoAdminView(AdminOnlyMixin, View):
                             f"{self.STATUS_VALIDOS[novo_status]}."
                         ),
                     )
+                    # Guardamos a instância pra avisar o cliente só depois
+                    # do commit -- o e-mail é I/O externo e não deve
+                    # segurar o lock da linha nem desfazer a atualização
+                    # se o envio falhar.
+                    cliente_para_notificar = manutencao
 
-        except (TypeError, ValueError, Manutencao.DoesNotExist):
+            if cliente_para_notificar is not None:
+                self._notificar_mudanca_status(cliente_para_notificar, novo_status)
+
+        except Manutencao.DoesNotExist:
             messages.error(request, "A manutenção informada não foi encontrada.")
 
-        proxima_url = request.POST.get("next") or request.path
-        if not url_has_allowed_host_and_scheme(
-            proxima_url,
-            allowed_hosts={request.get_host()},
-            require_https=request.is_secure(),
-        ):
-            proxima_url = request.path
+        except Exception:
+            # Rede instável, corrida com outra aba, etc. -- nunca deixa
+            # vazar como erro 500; o administrador só tenta de novo.
+            logging.getLogger(__name__).exception(
+                "Falha ao atualizar status da manutenção %s", manutencao_id,
+            )
+            messages.error(
+                request,
+                "Não foi possível atualizar o status agora. Tente novamente "
+                "em instantes.",
+            )
 
-        separador = "&" if "?" in proxima_url else "?"
-        proxima_url = (
-            f"{proxima_url}{separador}foco={manutencao_id}"
-            if manutencao_id
-            else proxima_url
-        )
-        return redirect(proxima_url)
+        return redirect(montar_proxima_url(manutencao_id))
 
 
 
