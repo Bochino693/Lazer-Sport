@@ -390,6 +390,36 @@ if COOKIE_DOMAIN:
 MP_ACCESS_TOKEN = os.getenv("MP_ACCESS_TOKEN", "").strip()
 MP_PUBLIC_KEY = os.getenv("MP_PUBLIC_KEY", "").strip()
 
+# ============================================================
+# E-MAIL (SMTP) -- usado pra avisar o cliente quando o status de
+# uma manutenção muda. Sem essas variáveis configuradas no ambiente
+# (Vercel/Render), o envio falha silenciosamente -- a tela mostra um
+# aviso "não foi possível avisar o cliente", mas o status é
+# atualizado normalmente mesmo assim.
+#
+# Exemplo pra Gmail: EMAIL_HOST_USER é o e-mail completo
+# (algo@gmail.com) e EMAIL_HOST_PASSWORD é uma "senha de app" gerada
+# em myaccount.google.com/apppasswords -- NÃO é a senha normal da
+# conta, e só existe depois de ativar a verificação em duas etapas.
+# Qualquer outro provedor SMTP (Brevo, Mailgun, Resend, Zoho, etc.)
+# funciona trocando EMAIL_HOST/EMAIL_PORT e as credenciais.
+# ============================================================
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = os.getenv("EMAIL_HOST", "smtp.gmail.com").strip()
+EMAIL_PORT = int(os.getenv("EMAIL_PORT", "587").strip() or "587")
+EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "true").strip().lower() == "true"
+EMAIL_USE_SSL = os.getenv("EMAIL_USE_SSL", "false").strip().lower() == "true"
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "").strip()
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "").strip()
+DEFAULT_FROM_EMAIL = os.getenv(
+    "DEFAULT_FROM_EMAIL",
+    EMAIL_HOST_USER or "nao-responda@lazersport.com.br",
+).strip()
+# Timeout curto: numa função serverless, é melhor a notificação falhar
+# rápido (e cair no aviso "não foi possível avisar") do que travar a
+# resposta inteira esperando um SMTP fora do ar.
+EMAIL_TIMEOUT = int(os.getenv("EMAIL_TIMEOUT", "10").strip() or "10")
+
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 

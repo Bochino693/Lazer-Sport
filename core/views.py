@@ -2922,18 +2922,23 @@ class ManutencaoAdminView(AdminOnlyMixin, View):
         """
         Avisa o cliente por e-mail que o status do atendimento mudou.
 
-        Nunca deve derrubar a requisição que atualizou o status: qualquer
-        problema (SMTP fora do ar, credencial ausente, e-mail inválido)
-        só é registrado no log e ignorado silenciosamente.
+        Nunca deve derrubar a requisição que atualizou o status -- qualquer
+        problema de envio só é registrado no log e devolvido pro chamador
+        decidir se avisa o administrador. Retorna:
+        - True: e-mail enviado.
+        - False: havia e-mail válido, mas o envio falhou (SMTP fora do
+          ar, credencial ausente/errada, etc.) -- vale avisar o admin.
+        - None: cliente não tem e-mail válido cadastrado -- não é uma
+          falha, só não tinha pra quem mandar.
         """
         from django.core.mail import send_mail
         from django.conf import settings
 
-        try:
-            email = (manutencao.usuario.user.email or "").strip()
-            if not email or not self._email_valido(email):
-                return
+        email = (manutencao.usuario.user.email or "").strip()
+        if not email or not self._email_valido(email):
+            return None
 
+        try:
             protocolo = f"MAN-{manutencao.pk:05d}"
             rotulo_status = self.STATUS_VALIDOS.get(novo_status, novo_status)
             explicacao = self.STATUS_MENSAGEM_CLIENTE.get(
@@ -2952,19 +2957,23 @@ class ManutencaoAdminView(AdminOnlyMixin, View):
                 "Atenciosamente,\nEquipe técnica Lazer & Sport Brinquedos"
             )
 
-            send_mail(
+            enviados = send_mail(
                 assunto,
                 corpo,
                 getattr(settings, "DEFAULT_FROM_EMAIL", None),
                 [email],
                 fail_silently=False,
             )
+            # send_mail devolve quantas mensagens foram entregues ao
+            # backend -- 0 também conta como falha, mesmo sem exceção.
+            return bool(enviados)
         except Exception:
             logging.getLogger(__name__).exception(
                 "Falha ao enviar e-mail de atualização de status "
                 "(manutenção %s, novo status %s)",
                 getattr(manutencao, "pk", None), novo_status,
             )
+            return False
 
     def post(self, request):
         """
@@ -3053,7 +3062,16 @@ class ManutencaoAdminView(AdminOnlyMixin, View):
                     cliente_para_notificar = manutencao
 
             if cliente_para_notificar is not None:
-                self._notificar_mudanca_status(cliente_para_notificar, novo_status)
+                enviado = self._notificar_mudanca_status(
+                    cliente_para_notificar, novo_status,
+                )
+                if enviado is False:
+                    messages.warning(
+                        request,
+                        "Status atualizado, mas não foi possível avisar o "
+                        "cliente por e-mail agora. Confira as configurações "
+                        "de e-mail do servidor.",
+                    )
 
         except Manutencao.DoesNotExist:
             messages.error(request, "A manutenção informada não foi encontrada.")
