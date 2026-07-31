@@ -3746,11 +3746,27 @@ main.content-section {
   </div>
 
   <!-- FILTROS -->
-  <div class="filtros-horizontal" id="filtros-bar">
-    <button type="button" data-order="az" class="filtro-btn ativo">A → Z</button>
-    <button type="button" data-order="za" class="filtro-btn">Z → A</button>
-    <button type="button" data-order="melhor-avaliados" class="filtro-btn">⭐ Melhores avaliados</button>
-    <button type="button" data-order="custo-beneficio" class="filtro-btn">💰 Custo-benefício</button>
+  <div class="filtros-horizontal" id="filtros-bar" role="group" aria-label="Ordenar brinquedos">
+    <button type="button" data-order="az" class="filtro-btn ativo" aria-pressed="true">
+      <i class="fa-solid fa-arrow-down-a-z" aria-hidden="true"></i>
+      <span>A → Z</span>
+    </button>
+    <button type="button" data-order="za" class="filtro-btn" aria-pressed="false">
+      <i class="fa-solid fa-arrow-up-z-a" aria-hidden="true"></i>
+      <span>Z → A</span>
+    </button>
+    <button type="button" data-order="melhor-avaliados" class="filtro-btn" aria-pressed="false">
+      <i class="fa-solid fa-star" aria-hidden="true"></i>
+      <span>Melhores avaliados</span>
+    </button>
+    <button type="button" data-order="custo-beneficio" class="filtro-btn" aria-pressed="false">
+      <i class="fa-solid fa-scale-balanced" aria-hidden="true"></i>
+      <span>Custo-benefício</span>
+    </button>
+    <button type="button" data-order="novidades" class="filtro-btn" aria-pressed="false">
+      <i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i>
+      <span>Novidades</span>
+    </button>
   </div>
 
   <!-- CONTAINER PRODUTOS -->
@@ -3759,6 +3775,7 @@ main.content-section {
     <div class="grid-cards" id="grid-cards">
       {% for brinquedo in brinquedos_todos %}
         <article class="card-link"
+                 data-id="{{ brinquedo.id }}"
                  data-nome="{{ brinquedo.nome_brinquedo|lower }}"
                  data-avaliacao="{{ brinquedo.avaliacao|default:0 }}"
                  data-preco="{{ brinquedo.valor_brinquedo|default:0 }}">
@@ -6978,20 +6995,115 @@ main.content-section {
         opacity: 1;
     }
 
-    /* Card de combo com altura e hierarquia suficientes para todo o conteúdo. */
+    /* Filtros maiores, funcionais e bem distribuídos em desktop e mobile. */
+    #brinquedos #filtros-bar {
+        width: 100%;
+        max-width: 1200px;
+        margin: 25px auto 36px;
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 12px;
+    }
+
+    #brinquedos #filtros-bar .filtro-btn {
+        appearance: none;
+        width: 100%;
+        min-width: 0;
+        min-height: 60px;
+        padding: 12px 14px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        border: 1px solid rgba(0, 74, 173, .15);
+        border-radius: 16px;
+        color: #274768;
+        background: linear-gradient(145deg, #ffffff, #edf4fc);
+        box-shadow:
+            0 9px 22px rgba(20, 54, 92, .09),
+            inset 0 1px 0 rgba(255, 255, 255, .85);
+        font-family: "Poppins", sans-serif;
+        font-size: .92rem;
+        font-weight: 800;
+        line-height: 1.2;
+        text-align: center;
+        transition: transform .22s ease, border-color .22s ease, box-shadow .22s ease, color .22s ease, background .22s ease;
+    }
+
+    #brinquedos #filtros-bar .filtro-btn i {
+        display: inline-grid;
+        place-items: center;
+        flex: 0 0 29px;
+        width: 29px;
+        height: 29px;
+        border-radius: 9px;
+        color: #0878f9;
+        background: #dceafa;
+        font-size: .82rem;
+        transition: color .22s ease, background .22s ease, transform .22s ease;
+    }
+
+    #brinquedos #filtros-bar .filtro-btn:hover {
+        transform: translateY(-3px);
+        border-color: rgba(8, 120, 249, .34);
+        color: #004aad;
+        background: #ffffff;
+        box-shadow: 0 14px 28px rgba(0, 74, 173, .14);
+    }
+
+    #brinquedos #filtros-bar .filtro-btn:hover i {
+        transform: scale(1.06);
+    }
+
+    #brinquedos #filtros-bar .filtro-btn.ativo {
+        border-color: transparent;
+        color: #ffffff;
+        background: linear-gradient(135deg, #004aad 0%, #0878f9 100%);
+        box-shadow: 0 13px 28px rgba(0, 74, 173, .28);
+    }
+
+    #brinquedos #filtros-bar .filtro-btn.ativo i {
+        color: #ffffff;
+        background: linear-gradient(135deg, #ef4352, #c91f31);
+        box-shadow: 0 5px 12px rgba(166, 17, 35, .28);
+    }
+
+    #brinquedos #filtros-bar .filtro-btn:focus-visible {
+        outline: 3px solid rgba(8, 120, 249, .30);
+        outline-offset: 3px;
+    }
+
+    /* Combos com largura confortável, altura natural e nenhum texto cortado. */
+    #combos-section .scroll-wrapper {
+        width: min(1320px, 100%);
+        max-width: 1320px;
+        padding: 0 54px;
+        overflow: visible;
+        box-sizing: border-box;
+    }
+
     #combos-section .scroll-container {
         align-items: stretch;
+        gap: 22px;
+        padding: 22px 4px 30px;
+        scroll-snap-type: x mandatory;
+        overscroll-behavior-inline: contain;
+        scrollbar-width: thin;
+        scrollbar-color: #0878f9 rgba(0, 74, 173, .08);
     }
 
     #combos-section .oferta-card-link {
         display: flex;
+        flex: 0 0 clamp(365px, 31vw, 392px);
+        min-width: clamp(365px, 31vw, 392px);
         height: auto;
         align-self: stretch;
+        scroll-snap-align: start;
     }
 
     #combos-section .oferta-card {
         height: 100%;
-        min-height: 635px;
+        min-height: 0;
         border-top: 4px solid #0878f9;
         background:
             radial-gradient(circle at 100% 100%, rgba(8, 120, 249, .08), transparent 38%),
@@ -6999,7 +7111,7 @@ main.content-section {
     }
 
     #combos-section .oferta-card-media {
-        height: 232px;
+        height: 244px;
         border-bottom: 1px solid rgba(0, 74, 173, .10);
         background:
             radial-gradient(circle at 18% 20%, rgba(8, 120, 249, .18), transparent 32%),
@@ -7009,19 +7121,19 @@ main.content-section {
 
     #combos-section .oferta-card-info {
         min-height: 0;
-        padding: 21px;
+        padding: 23px;
     }
 
     #combos-section .oferta-card-info h3 {
-        display: -webkit-box;
-        min-height: 2.6em;
+        display: block;
+        min-height: 0;
         margin: 0 0 13px;
-        overflow: hidden;
+        overflow: visible;
         color: #102b4c;
-        font-size: 1.18rem;
+        font-size: 1.24rem;
         line-height: 1.3;
-        -webkit-box-orient: vertical;
-        -webkit-line-clamp: 2;
+        overflow-wrap: anywhere;
+        -webkit-line-clamp: unset;
     }
 
     #combos-section .oferta-card-benefits {
@@ -7072,17 +7184,26 @@ main.content-section {
     }
 
     #combos-section .oferta-card-acoes {
-        grid-template-columns: minmax(0, 1.25fr) minmax(0, .85fr);
+        grid-template-columns: minmax(0, 1.15fr) minmax(0, .85fr);
         align-items: stretch;
-        margin-top: 14px;
+        gap: 10px;
+        margin-top: 16px;
     }
 
     #combos-section .oferta-card-acoes .oferta-card-cta {
         min-width: 0;
-        min-height: 46px;
-        padding: 10px 11px;
+        min-height: 50px;
+        padding: 11px 12px;
         white-space: normal;
         text-align: center;
+    }
+
+    #combos-section .scroll-btn.left {
+        left: 5px;
+    }
+
+    #combos-section .scroll-btn.right {
+        right: 5px;
     }
 
     #combos-section .oferta-card-details {
@@ -7150,9 +7271,49 @@ main.content-section {
             line-height: 1.65;
         }
 
+        #brinquedos #filtros-bar {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 9px;
+            margin: 21px auto 29px;
+        }
+
+        #brinquedos #filtros-bar .filtro-btn {
+            min-height: 56px;
+            padding: 9px 8px;
+            gap: 7px;
+            border-radius: 14px;
+            font-size: .82rem;
+        }
+
+        #brinquedos #filtros-bar .filtro-btn i {
+            flex-basis: 27px;
+            width: 27px;
+            height: 27px;
+            font-size: .75rem;
+        }
+
+        #brinquedos #filtros-bar .filtro-btn:last-child:nth-child(odd) {
+            grid-column: 1 / -1;
+        }
+
+        #combos-section .scroll-wrapper {
+            width: 100%;
+            padding: 0 14px;
+            overflow: hidden;
+        }
+
+        #combos-section .scroll-container {
+            gap: 14px;
+            padding: 16px 2px 25px;
+        }
+
+        #combos-section .scroll-btn {
+            display: none;
+        }
+
         #combos-section .oferta-card-link {
-            flex-basis: min(86vw, 330px);
-            min-width: min(86vw, 330px);
+            flex-basis: min(370px, calc(100vw - 32px));
+            min-width: min(370px, calc(100vw - 32px));
         }
 
         #combos-section .oferta-card {
@@ -7161,15 +7322,26 @@ main.content-section {
         }
 
         #combos-section .oferta-card-media {
-            height: 214px;
+            height: 218px;
         }
 
         #combos-section .oferta-card-info {
-            padding: 18px;
+            padding: 19px;
+        }
+
+        #combos-section .oferta-card-info h3 {
+            font-size: 1.12rem;
+            line-height: 1.35;
         }
 
         #combos-section .oferta-card-acoes {
             grid-template-columns: 1fr;
+        }
+    }
+
+    @media (min-width: 769px) and (max-width: 1050px) {
+        #brinquedos #filtros-bar {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
         }
     }
 </style>
@@ -8201,10 +8373,15 @@ function inicializarProdutosClientSide() {
                     return paraNumeroBR(b.dataset.avaliacao) - paraNumeroBR(a.dataset.avaliacao)
                         || a.dataset.nome.localeCompare(b.dataset.nome, 'pt-BR');
                 case 'custo-beneficio': {
-                    const scoreA = paraNumeroBR(a.dataset.avaliacao) / (paraNumeroBR(a.dataset.preco) + 0.01);
-                    const scoreB = paraNumeroBR(b.dataset.avaliacao) / (paraNumeroBR(b.dataset.preco) + 0.01);
+                    const precoA = paraNumeroBR(a.dataset.preco);
+                    const precoB = paraNumeroBR(b.dataset.preco);
+                    const scoreA = precoA > 0 ? paraNumeroBR(a.dataset.avaliacao) / precoA : -1;
+                    const scoreB = precoB > 0 ? paraNumeroBR(b.dataset.avaliacao) / precoB : -1;
                     return scoreB - scoreA || a.dataset.nome.localeCompare(b.dataset.nome, 'pt-BR');
                 }
+                case 'novidades':
+                    return paraNumeroBR(b.dataset.id) - paraNumeroBR(a.dataset.id)
+                        || a.dataset.nome.localeCompare(b.dataset.nome, 'pt-BR');
                 default:
                     return a.dataset.nome.localeCompare(b.dataset.nome, 'pt-BR');
             }
@@ -8244,8 +8421,12 @@ function inicializarProdutosClientSide() {
 
     document.querySelectorAll('#filtros-bar .filtro-btn').forEach(btn => {
         btn.addEventListener('click', () => {
-            document.querySelectorAll('#filtros-bar .filtro-btn').forEach(b => b.classList.remove('ativo'));
+            document.querySelectorAll('#filtros-bar .filtro-btn').forEach(b => {
+                b.classList.remove('ativo');
+                b.setAttribute('aria-pressed', 'false');
+            });
             btn.classList.add('ativo');
+            btn.setAttribute('aria-pressed', 'true');
             ordem = btn.dataset.order;
             pagina = 1;
             renderizar();
