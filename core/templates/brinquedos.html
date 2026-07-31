@@ -249,7 +249,7 @@
 
     .catalogo-filter-grid {
         display: grid;
-        grid-template-columns: minmax(250px, 1.7fr) repeat(3, minmax(150px, 1fr)) auto;
+        grid-template-columns: minmax(260px, 2fr) repeat(4, minmax(150px, 1fr));
         align-items: end;
         gap: 12px;
     }
@@ -274,14 +274,18 @@
         color: var(--catalog-blue);
     }
 
-    .catalogo-input-wrap {
+    .catalogo-input-wrap,
+    .catalogo-select-wrap,
+    .catalogo-price-input-wrap {
         position: relative;
     }
 
-    .catalogo-input-wrap > i {
+    .catalogo-input-wrap > i,
+    .catalogo-select-wrap > i:first-child {
         position: absolute;
         top: 50%;
         left: 15px;
+        z-index: 2;
         color: #7590ac;
         transform: translateY(-50%);
         pointer-events: none;
@@ -290,7 +294,7 @@
     .catalogo-field input,
     .catalogo-field select {
         width: 100%;
-        height: 50px;
+        height: 54px;
         padding: 0 14px;
         border: 1px solid rgba(0, 74, 173, .15);
         border-radius: 14px;
@@ -307,6 +311,30 @@
         padding-left: 42px;
     }
 
+    .catalogo-field select {
+        appearance: none;
+        padding-right: 42px;
+        padding-left: 42px;
+        cursor: pointer;
+    }
+
+    .catalogo-select-chevron {
+        position: absolute;
+        top: 50%;
+        right: 15px;
+        z-index: 2;
+        color: #63809d;
+        font-size: .7rem;
+        transform: translateY(-50%);
+        pointer-events: none;
+        transition: transform .2s ease, color .2s ease;
+    }
+
+    .catalogo-select-wrap:focus-within .catalogo-select-chevron {
+        color: var(--catalog-blue);
+        transform: translateY(-50%) rotate(180deg);
+    }
+
     .catalogo-field input:focus,
     .catalogo-field select:focus {
         border-color: rgba(8, 120, 249, .70);
@@ -315,8 +343,8 @@
     }
 
     .catalogo-filter-submit {
-        min-width: 126px;
-        height: 50px;
+        min-width: 145px;
+        height: 54px;
         padding: 0 17px;
         border: 0;
         border-radius: 14px;
@@ -337,6 +365,136 @@
     .catalogo-filter-submit:hover {
         transform: translateY(-2px);
         box-shadow: 0 14px 28px rgba(0, 74, 173, .31);
+    }
+
+    .catalogo-price-panel {
+        grid-column: 1 / -1;
+        margin-top: 5px;
+        padding: 16px;
+        border: 1px solid rgba(0, 74, 173, .12);
+        border-radius: 18px;
+        display: grid;
+        grid-template-columns: minmax(210px, 1fr) minmax(290px, .9fr) minmax(210px, .7fr) auto;
+        align-items: center;
+        gap: 14px;
+        background:
+            radial-gradient(circle at 0 100%, rgba(8, 120, 249, .10), transparent 16rem),
+            rgba(225, 238, 251, .76);
+    }
+
+    .catalogo-price-title {
+        display: flex;
+        align-items: center;
+        gap: 11px;
+    }
+
+    .catalogo-price-title > i {
+        flex: 0 0 40px;
+        width: 40px;
+        height: 40px;
+        border-radius: 12px;
+        display: grid;
+        place-items: center;
+        color: #ffffff;
+        background: linear-gradient(135deg, #07914a, #056b38);
+        box-shadow: 0 8px 17px rgba(5, 107, 56, .22);
+    }
+
+    .catalogo-price-title strong,
+    .catalogo-price-title span {
+        display: block;
+    }
+
+    .catalogo-price-title strong {
+        color: #173a58;
+        font-size: .83rem;
+        font-weight: 900;
+    }
+
+    .catalogo-price-title span {
+        margin-top: 2px;
+        color: #607b96;
+        font-size: .63rem;
+        font-weight: 650;
+        line-height: 1.4;
+    }
+
+    .catalogo-price-controls {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 9px;
+    }
+
+    .catalogo-price-field label {
+        margin: 0 0 6px 2px;
+        display: block;
+        color: #45627e;
+        font-size: .62rem;
+        font-weight: 900;
+        letter-spacing: .04em;
+        text-transform: uppercase;
+    }
+
+    .catalogo-price-input-wrap span {
+        position: absolute;
+        top: 50%;
+        left: 12px;
+        z-index: 2;
+        color: #08743e;
+        font-size: .72rem;
+        font-weight: 900;
+        transform: translateY(-50%);
+        pointer-events: none;
+    }
+
+    .catalogo-price-input-wrap input {
+        width: 100%;
+        height: 48px;
+        padding: 0 11px 0 35px;
+        border: 1px solid rgba(7, 145, 74, .18);
+        border-radius: 12px;
+        color: #173a58;
+        background: rgba(255, 255, 255, .95);
+        font: inherit;
+        font-size: .78rem;
+        font-weight: 800;
+        outline: none;
+        transition: border-color .2s ease, box-shadow .2s ease;
+    }
+
+    .catalogo-price-input-wrap input:focus {
+        border-color: rgba(7, 145, 74, .72);
+        box-shadow: 0 0 0 4px rgba(7, 145, 74, .10);
+    }
+
+    .catalogo-price-rule {
+        min-height: 48px;
+        padding: 9px 11px;
+        border: 1px solid rgba(0, 74, 173, .10);
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: #526f8b;
+        background: rgba(255, 255, 255, .60);
+        font-size: .64rem;
+        font-weight: 750;
+        line-height: 1.45;
+    }
+
+    .catalogo-price-rule i {
+        flex: 0 0 auto;
+        color: var(--catalog-blue);
+    }
+
+    .catalogo-price-rule.is-active {
+        color: #086b3b;
+        border-color: rgba(7, 145, 74, .18);
+        background: #e4f5ec;
+    }
+
+    .catalogo-price-rule.is-active i {
+        color: #07914a;
     }
 
     .catalogo-filter-footer {
@@ -434,6 +592,28 @@
         color: #607995;
         font-size: .77rem;
         font-weight: 750;
+    }
+
+    .catalogo-results-meta {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .catalogo-value-only {
+        min-height: 35px;
+        padding: 7px 10px;
+        border: 1px solid rgba(7, 145, 74, .16);
+        border-radius: 11px;
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        color: #08703d;
+        background: #e2f4ea;
+        font-size: .66rem;
+        font-weight: 900;
     }
 
     .catalogo-grid {
@@ -931,6 +1111,14 @@
             grid-template-columns: repeat(2, minmax(0, 1fr));
         }
 
+        .catalogo-field-search {
+            grid-column: 1 / -1;
+        }
+
+        .catalogo-price-panel {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
         .catalogo-filter-submit {
             width: 100%;
         }
@@ -992,14 +1180,54 @@
             flex-direction: column;
         }
 
+        .catalogo-results-meta {
+            width: 100%;
+            justify-content: flex-start;
+        }
+
         .catalogo-filter-grid {
             grid-template-columns: 1fr;
+        }
+
+        .catalogo-field-search {
+            grid-column: auto;
         }
 
         .catalogo-field input,
         .catalogo-field select,
         .catalogo-filter-submit {
-            height: 54px;
+            height: 57px;
+        }
+
+        .catalogo-field label {
+            margin-bottom: 8px;
+            font-size: .67rem;
+        }
+
+        .catalogo-field input,
+        .catalogo-field select {
+            border-radius: 15px;
+            font-size: .86rem;
+        }
+
+        .catalogo-price-panel {
+            padding: 14px;
+            grid-template-columns: 1fr;
+            gap: 13px;
+        }
+
+        .catalogo-price-controls {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .catalogo-price-input-wrap input {
+            height: 53px;
+            font-size: .84rem;
+        }
+
+        .catalogo-price-rule {
+            min-height: 50px;
+            font-size: .68rem;
         }
 
         .catalogo-availability {
@@ -1065,6 +1293,16 @@
             bottom: 16px;
         }
     }
+
+    @media (max-width: 390px) {
+        .catalogo-price-controls {
+            grid-template-columns: 1fr;
+        }
+
+        .catalogo-filtros {
+            padding: 15px;
+        }
+    }
 </style>
 
 <main class="catalogo-page" id="catalogo-brinquedos">
@@ -1121,7 +1359,7 @@
             <div class="catalogo-filtros-head">
                 <div>
                     <h2 id="titulo-filtros">Encontre com precisão</h2>
-                    <p>Pesquise e combine categoria, voltagem, disponibilidade e ordenação.</p>
+                    <p>Combine busca, categoria, disponibilidade, voltagem e faixa de preço.</p>
                 </div>
                 <span class="catalogo-resultado-badge">
                     {{ total_encontrados }} resultado{{ total_encontrados|pluralize }}
@@ -1129,9 +1367,7 @@
             </div>
 
             <form method="get" action="{% url 'brinquedos' %}#resultados" class="catalogo-filter-grid">
-                <input type="hidden" name="disponibilidade" value="{{ disponibilidade }}">
-
-                <div class="catalogo-field">
+                <div class="catalogo-field catalogo-field-search">
                     <label for="catalogo-q">
                         <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
                         Buscar
@@ -1155,14 +1391,34 @@
                         <i class="fa-solid fa-shapes" aria-hidden="true"></i>
                         Categoria
                     </label>
-                    <select id="catalogo-categoria" name="categoria">
-                        <option value="">Todas</option>
-                        {% for cat in categorias %}
-                            <option value="{{ cat.id }}" {% if categoria_ativa == cat.id|stringformat:"s" %}selected{% endif %}>
-                                {{ cat.nome_categoria }} ({{ cat.total_brinquedos }})
-                            </option>
-                        {% endfor %}
-                    </select>
+                    <div class="catalogo-select-wrap">
+                        <i class="fa-solid fa-shapes" aria-hidden="true"></i>
+                        <select id="catalogo-categoria" name="categoria">
+                            <option value="">Todas as categorias</option>
+                            {% for cat in categorias %}
+                                <option value="{{ cat.id }}" {% if categoria_ativa == cat.id|stringformat:"s" %}selected{% endif %}>
+                                    {{ cat.nome_categoria }} ({{ cat.total_brinquedos }})
+                                </option>
+                            {% endfor %}
+                        </select>
+                        <i class="fa-solid fa-chevron-down catalogo-select-chevron" aria-hidden="true"></i>
+                    </div>
+                </div>
+
+                <div class="catalogo-field">
+                    <label for="catalogo-disponibilidade">
+                        <i class="fa-solid fa-store" aria-hidden="true"></i>
+                        Disponibilidade
+                    </label>
+                    <div class="catalogo-select-wrap">
+                        <i class="fa-solid fa-store" aria-hidden="true"></i>
+                        <select id="catalogo-disponibilidade" name="disponibilidade">
+                            <option value="todos" {% if disponibilidade == "todos" %}selected{% endif %}>Todos os brinquedos</option>
+                            <option value="loja" {% if disponibilidade == "loja" %}selected{% endif %}>Disponíveis na loja</option>
+                            <option value="orcamento" {% if disponibilidade == "orcamento" %}selected{% endif %}>Projetos sob consulta</option>
+                        </select>
+                        <i class="fa-solid fa-chevron-down catalogo-select-chevron" aria-hidden="true"></i>
+                    </div>
                 </div>
 
                 <div class="catalogo-field">
@@ -1170,14 +1426,18 @@
                         <i class="fa-solid fa-bolt" aria-hidden="true"></i>
                         Voltagem
                     </label>
-                    <select id="catalogo-voltagem" name="voltagem">
-                        <option value="">Todas</option>
-                        {% for item_voltagem in voltagens %}
-                            <option value="{{ item_voltagem }}" {% if voltagem_ativa == item_voltagem %}selected{% endif %}>
-                                {{ item_voltagem }}
-                            </option>
-                        {% endfor %}
-                    </select>
+                    <div class="catalogo-select-wrap">
+                        <i class="fa-solid fa-bolt" aria-hidden="true"></i>
+                        <select id="catalogo-voltagem" name="voltagem">
+                            <option value="">Todas as voltagens</option>
+                            {% for item_voltagem in voltagens %}
+                                <option value="{{ item_voltagem }}" {% if voltagem_ativa == item_voltagem %}selected{% endif %}>
+                                    {{ item_voltagem }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                        <i class="fa-solid fa-chevron-down catalogo-select-chevron" aria-hidden="true"></i>
+                    </div>
                 </div>
 
                 <div class="catalogo-field">
@@ -1185,42 +1445,101 @@
                         <i class="fa-solid fa-arrow-down-wide-short" aria-hidden="true"></i>
                         Ordenar
                     </label>
-                    <select id="catalogo-ordenar" name="ordenar">
-                        <option value="novidades" {% if ordenar == "novidades" %}selected{% endif %}>Novidades</option>
-                        <option value="az" {% if ordenar == "az" %}selected{% endif %}>A → Z</option>
-                        <option value="za" {% if ordenar == "za" %}selected{% endif %}>Z → A</option>
-                        <option value="melhor-avaliados" {% if ordenar == "melhor-avaliados" %}selected{% endif %}>Melhores avaliados</option>
-                        <option value="menor-preco" {% if ordenar == "menor-preco" %}selected{% endif %}>Menor preço</option>
-                        <option value="custo-beneficio" {% if ordenar == "custo-beneficio" %}selected{% endif %}>Custo-benefício</option>
-                    </select>
+                    <div class="catalogo-select-wrap">
+                        <i class="fa-solid fa-arrow-down-wide-short" aria-hidden="true"></i>
+                        <select id="catalogo-ordenar" name="ordenar">
+                            <option value="novidades" {% if ordenar == "novidades" %}selected{% endif %}>Novidades</option>
+                            <option value="az" {% if ordenar == "az" %}selected{% endif %}>A → Z</option>
+                            <option value="za" {% if ordenar == "za" %}selected{% endif %}>Z → A</option>
+                            <option value="melhor-avaliados" {% if ordenar == "melhor-avaliados" %}selected{% endif %}>Melhores avaliados</option>
+                            <option value="menor-preco" {% if ordenar == "menor-preco" %}selected{% endif %}>Menor preço · Loja</option>
+                            <option value="maior-preco" {% if ordenar == "maior-preco" %}selected{% endif %}>Maior preço · Loja</option>
+                            <option value="custo-beneficio" {% if ordenar == "custo-beneficio" %}selected{% endif %}>Custo-benefício · Loja</option>
+                        </select>
+                        <i class="fa-solid fa-chevron-down catalogo-select-chevron" aria-hidden="true"></i>
+                    </div>
                 </div>
 
-                <button type="submit" class="catalogo-filter-submit">
-                    <i class="fa-solid fa-sliders" aria-hidden="true"></i>
-                    Aplicar
-                </button>
+                <div class="catalogo-price-panel">
+                    <div class="catalogo-price-title">
+                        <i class="fa-solid fa-tags" aria-hidden="true"></i>
+                        <div>
+                            <strong>Faixa de preço</strong>
+                            <span>Exclusiva para produtos disponíveis na loja</span>
+                        </div>
+                    </div>
+
+                    <div class="catalogo-price-controls">
+                        <div class="catalogo-price-field">
+                            <label for="catalogo-preco-min">Preço mínimo</label>
+                            <div class="catalogo-price-input-wrap">
+                                <span>R$</span>
+                                <input
+                                    id="catalogo-preco-min"
+                                    type="text"
+                                    name="preco_min"
+                                    value="{{ preco_min }}"
+                                    inputmode="decimal"
+                                    maxlength="24"
+                                    placeholder="0,00"
+                                >
+                            </div>
+                        </div>
+                        <div class="catalogo-price-field">
+                            <label for="catalogo-preco-max">Preço máximo</label>
+                            <div class="catalogo-price-input-wrap">
+                                <span>R$</span>
+                                <input
+                                    id="catalogo-preco-max"
+                                    type="text"
+                                    name="preco_max"
+                                    value="{{ preco_max }}"
+                                    inputmode="decimal"
+                                    maxlength="24"
+                                    placeholder="Sem limite"
+                                >
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="catalogo-price-rule {% if filtro_valor_ativo %}is-active{% endif %}" id="catalogo-price-rule">
+                        <i class="fa-solid {% if filtro_valor_ativo %}fa-circle-check{% else %}fa-circle-info{% endif %}" aria-hidden="true"></i>
+                        <span>
+                            {% if filtro_valor_ativo %}
+                                Filtro de loja aplicado automaticamente.
+                            {% else %}
+                                Ao usar valores, exibiremos somente itens com preço.
+                            {% endif %}
+                        </span>
+                    </div>
+
+                    <button type="submit" class="catalogo-filter-submit">
+                        <i class="fa-solid fa-sliders" aria-hidden="true"></i>
+                        Aplicar filtros
+                    </button>
+                </div>
             </form>
 
             <div class="catalogo-filter-footer">
                 <nav class="catalogo-availability" aria-label="Filtrar por disponibilidade">
                     <a class="{% if disponibilidade == 'todos' %}ativo{% endif %}"
-                       href="?q={{ busca|urlencode }}&categoria={{ categoria_ativa|urlencode }}&voltagem={{ voltagem_ativa|urlencode }}&ordenar={{ ordenar|urlencode }}&disponibilidade=todos#resultados">
+                       href="?q={{ busca|urlencode }}&categoria={{ categoria_ativa|urlencode }}&voltagem={{ voltagem_ativa|urlencode }}&ordenar=novidades&disponibilidade=todos#resultados">
                         <i class="fa-solid fa-border-all" aria-hidden="true"></i>
                         Todos
                     </a>
                     <a class="{% if disponibilidade == 'loja' %}ativo{% endif %}"
-                       href="?q={{ busca|urlencode }}&categoria={{ categoria_ativa|urlencode }}&voltagem={{ voltagem_ativa|urlencode }}&ordenar={{ ordenar|urlencode }}&disponibilidade=loja#resultados">
+                       href="?q={{ busca|urlencode }}&categoria={{ categoria_ativa|urlencode }}&voltagem={{ voltagem_ativa|urlencode }}&ordenar={{ ordenar|urlencode }}&disponibilidade=loja&preco_min={{ preco_min|urlencode }}&preco_max={{ preco_max|urlencode }}#resultados">
                         <i class="fa-solid fa-cart-shopping" aria-hidden="true"></i>
                         Disponíveis para compra
                     </a>
                     <a class="{% if disponibilidade == 'orcamento' %}ativo{% endif %}"
-                       href="?q={{ busca|urlencode }}&categoria={{ categoria_ativa|urlencode }}&voltagem={{ voltagem_ativa|urlencode }}&ordenar={{ ordenar|urlencode }}&disponibilidade=orcamento#resultados">
+                       href="?q={{ busca|urlencode }}&categoria={{ categoria_ativa|urlencode }}&voltagem={{ voltagem_ativa|urlencode }}&ordenar=novidades&disponibilidade=orcamento#resultados">
                         <i class="fa-solid fa-compass-drafting" aria-hidden="true"></i>
                         Projetos sob consulta
                     </a>
                 </nav>
 
-                {% if busca or categoria_ativa or voltagem_ativa or disponibilidade != "todos" or ordenar != "novidades" %}
+                {% if busca or categoria_ativa or voltagem_ativa or preco_min or preco_max or disponibilidade != "todos" or ordenar != "novidades" %}
                     <a href="{% url 'brinquedos' %}#resultados" class="catalogo-clear">
                         <i class="fa-solid fa-rotate-left" aria-hidden="true"></i>
                         Limpar filtros
@@ -1235,11 +1554,19 @@
                     <span>Seleção Lazer &amp; Sport</span>
                     <h2 id="titulo-resultados">Brinquedos encontrados</h2>
                 </div>
-                {% if total_encontrados %}
-                    <div class="catalogo-page-range">
-                        Exibindo {{ page_obj.start_index }}–{{ page_obj.end_index }} de {{ total_encontrados }}
-                    </div>
-                {% endif %}
+                <div class="catalogo-results-meta">
+                    {% if disponibilidade == "loja" %}
+                        <span class="catalogo-value-only">
+                            <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+                            Somente produtos disponíveis com preço
+                        </span>
+                    {% endif %}
+                    {% if total_encontrados %}
+                        <div class="catalogo-page-range">
+                            Exibindo {{ page_obj.start_index }}–{{ page_obj.end_index }} de {{ total_encontrados }}
+                        </div>
+                    {% endif %}
+                </div>
             </div>
 
             <div class="catalogo-grid">
@@ -1562,8 +1889,66 @@
 
         const form = document.querySelector('.catalogo-filter-grid');
         const submit = form ? form.querySelector('.catalogo-filter-submit') : null;
+        const disponibilidade = document.getElementById('catalogo-disponibilidade');
+        const ordenar = document.getElementById('catalogo-ordenar');
+        const precoMin = document.getElementById('catalogo-preco-min');
+        const precoMax = document.getElementById('catalogo-preco-max');
+        const regraPreco = document.getElementById('catalogo-price-rule');
+        const ordensPorValor = new Set(['menor-preco', 'maior-preco', 'custo-beneficio']);
+
+        function possuiValor(input) {
+            return Boolean(input && input.value.trim());
+        }
+
+        function atualizarRegraDeValor() {
+            const valorAtivo = Boolean(
+                (ordenar && ordensPorValor.has(ordenar.value))
+                || possuiValor(precoMin)
+                || possuiValor(precoMax)
+            );
+
+            if (valorAtivo && disponibilidade) {
+                disponibilidade.value = 'loja';
+            }
+
+            if (regraPreco) {
+                regraPreco.classList.toggle('is-active', valorAtivo);
+                regraPreco.innerHTML = valorAtivo
+                    ? '<i class="fa-solid fa-circle-check" aria-hidden="true"></i><span>Disponíveis na loja aplicado automaticamente.</span>'
+                    : '<i class="fa-solid fa-circle-info" aria-hidden="true"></i><span>Ao usar valores, exibiremos somente itens com preço.</span>';
+            }
+        }
+
+        [precoMin, precoMax].forEach(input => {
+            if (!input) return;
+            input.addEventListener('input', () => {
+                input.value = input.value.replace(/[^0-9.,]/g, '');
+                atualizarRegraDeValor();
+            });
+        });
+
+        if (ordenar) {
+            ordenar.addEventListener('change', atualizarRegraDeValor);
+        }
+
+        if (disponibilidade) {
+            disponibilidade.addEventListener('change', () => {
+                if (disponibilidade.value !== 'loja') {
+                    if (precoMin) precoMin.value = '';
+                    if (precoMax) precoMax.value = '';
+                    if (ordenar && ordensPorValor.has(ordenar.value)) {
+                        ordenar.value = 'novidades';
+                    }
+                }
+                atualizarRegraDeValor();
+            });
+        }
+
+        atualizarRegraDeValor();
+
         if (form && submit) {
             form.addEventListener('submit', () => {
+                atualizarRegraDeValor();
                 submit.disabled = true;
                 submit.innerHTML = '<i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i> Filtrando...';
             });

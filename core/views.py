@@ -752,6 +752,42 @@ class BrinquedosView(View):
         voltagem = request.GET.get("voltagem", "").strip()[:20]
         disponibilidade = request.GET.get("disponibilidade", "todos").strip()
         ordenar = request.GET.get("ordenar", "novidades").strip()
+        preco_min_input = request.GET.get("preco_min", "").strip()[:24]
+        preco_max_input = request.GET.get("preco_max", "").strip()[:24]
+
+        def converter_preco_filtro(valor):
+            if not valor:
+                return None
+
+            texto = valor.replace("R$", "").replace(" ", "")
+            if "," in texto:
+                texto = texto.replace(".", "").replace(",", ".")
+
+            try:
+                numero = Decimal(texto)
+                if (
+                    not numero.is_finite()
+                    or numero < 0
+                    or numero > Decimal("99999999.99")
+                ):
+                    return None
+            except (InvalidOperation, ValueError, TypeError):
+                return None
+
+            return numero
+
+        preco_min = converter_preco_filtro(preco_min_input)
+        preco_max = converter_preco_filtro(preco_max_input)
+
+        if preco_min is None:
+            preco_min_input = ""
+        if preco_max is None:
+            preco_max_input = ""
+
+        if preco_min is not None and preco_max is not None and preco_min > preco_max:
+            preco_min, preco_max = preco_max, preco_min
+            preco_min_input = str(preco_min).replace(".", ",")
+            preco_max_input = str(preco_max).replace(".", ",")
 
         ordens_validas = {
             "novidades",
@@ -759,6 +795,7 @@ class BrinquedosView(View):
             "za",
             "melhor-avaliados",
             "menor-preco",
+            "maior-preco",
             "custo-beneficio",
         }
         if ordenar not in ordens_validas:
@@ -815,7 +852,24 @@ class BrinquedosView(View):
         if voltagem:
             brinquedos_list = brinquedos_list.filter(voltz__iexact=voltagem)
 
-        if disponibilidade == "loja":
+        ordens_por_valor = {"menor-preco", "maior-preco", "custo-beneficio"}
+        filtro_por_valor = (
+            preco_min is not None
+            or preco_max is not None
+            or ordenar in ordens_por_valor
+        )
+
+        # Preço e custo-benefício só existem para produtos realmente vendáveis.
+        # Se o usuário usa qualquer filtro monetário, a disponibilidade de loja
+        # é aplicada automaticamente e refletida de volta na interface.
+        if filtro_por_valor:
+            disponibilidade = "loja"
+            brinquedos_list = brinquedos_list.filter(
+                exibir_na_loja=True,
+                valor_brinquedo__isnull=False,
+                valor_brinquedo__gt=0,
+            )
+        elif disponibilidade == "loja":
             brinquedos_list = brinquedos_list.filter(
                 exibir_na_loja=True,
                 valor_brinquedo__isnull=False,
@@ -828,6 +882,16 @@ class BrinquedosView(View):
                 | Q(valor_brinquedo__lte=0)
             )
 
+        if preco_min is not None:
+            brinquedos_list = brinquedos_list.filter(
+                valor_brinquedo__gte=preco_min
+            )
+
+        if preco_max is not None:
+            brinquedos_list = brinquedos_list.filter(
+                valor_brinquedo__lte=preco_max
+            )
+
         if ordenar == "az":
             brinquedos_list = brinquedos_list.order_by("nome_brinquedo", "id")
         elif ordenar == "za":
@@ -838,18 +902,13 @@ class BrinquedosView(View):
                 "nome_brinquedo",
             )
         elif ordenar == "menor-preco":
-            brinquedos_list = brinquedos_list.annotate(
-                preco_disponivel=Case(
-                    When(
-                        exibir_na_loja=True,
-                        valor_brinquedo__gt=0,
-                        then=F("valor_brinquedo"),
-                    ),
-                    default=Value(None),
-                    output_field=DecimalField(max_digits=10, decimal_places=2),
-                )
-            ).order_by(
-                F("preco_disponivel").asc(nulls_last=True),
+            brinquedos_list = brinquedos_list.order_by(
+                "valor_brinquedo",
+                "nome_brinquedo",
+            )
+        elif ordenar == "maior-preco":
+            brinquedos_list = brinquedos_list.order_by(
+                "-valor_brinquedo",
                 "nome_brinquedo",
             )
         elif ordenar == "custo-beneficio":
@@ -890,6 +949,9 @@ class BrinquedosView(View):
             "voltagens": voltagens,
             "voltagem_ativa": voltagem,
             "disponibilidade": disponibilidade,
+            "preco_min": preco_min_input,
+            "preco_max": preco_max_input,
+            "filtro_valor_ativo": filtro_por_valor,
             "total_encontrados": total_encontrados,
             "total_catalogo": catalogo_ativo.count(),
             "total_loja": catalogo_ativo.filter(
