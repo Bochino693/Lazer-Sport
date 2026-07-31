@@ -2706,11 +2706,17 @@ class ManutencaoAdminView(AdminOnlyMixin, View):
         equipamento = manutencao.nome_equipamento
         protocolo = f"MAN-{manutencao.pk:05d}"
 
+        relato_resumido = " ".join((manutencao.descricao or "").split())
+        if len(relato_resumido) > 220:
+            relato_resumido = f"{relato_resumido[:217].rstrip()}..."
+
         mensagem_whatsapp = (
             f"Olá, {manutencao.cliente_nome}. "
-            f"Aqui é da Lazer & Sport Brinquedos. "
-            f"Estamos entrando em contato sobre a solicitação {protocolo}, "
-            f"referente ao equipamento {equipamento}."
+            f"Aqui é da equipe técnica da Lazer & Sport Brinquedos. "
+            f"Recebemos a solicitação {protocolo}, referente ao equipamento "
+            f"{equipamento}. Relato informado: {relato_resumido}. "
+            "Para darmos andamento ao atendimento, poderia confirmar se o "
+            "problema ainda está ocorrendo e qual é o melhor horário para contato?"
         )
 
         if telefone["valido"]:
@@ -2727,9 +2733,14 @@ class ManutencaoAdminView(AdminOnlyMixin, View):
             assunto = f"Lazer & Sport | Manutenção {protocolo}"
             corpo = (
                 f"Olá, {manutencao.cliente_nome}.\n\n"
-                f"Estamos entrando em contato sobre a solicitação {protocolo}, "
-                f"referente ao equipamento {equipamento}.\n\n"
-                "Atenciosamente,\nLazer & Sport Brinquedos"
+                "Aqui é da equipe técnica da Lazer & Sport Brinquedos. "
+                f"Recebemos a solicitação {protocolo}, referente ao equipamento "
+                f"{equipamento}.\n\n"
+                f"Relato informado: {relato_resumido}\n\n"
+                "Para darmos andamento ao atendimento, poderia confirmar se o "
+                "problema ainda está ocorrendo e qual é o melhor horário para "
+                "contato?\n\n"
+                "Atenciosamente,\nEquipe técnica Lazer & Sport Brinquedos"
             )
             manutencao.email_url = (
                 f"mailto:{manutencao.cliente_email}?"

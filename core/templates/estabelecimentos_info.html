@@ -1,287 +1,611 @@
 {% extends 'base.html' %}
 {% load static %}
 
+{% block title %}Nossos Parceiros | Lazer e Sport{% endblock %}
+
+{% block meta_description %}Conheça os estabelecimentos parceiros da Lazer e Sport e veja os brinquedos, fliperamas e simuladores disponíveis em cada um deles.{% endblock %}
+
 {% block content %}
 
 <style>
-/* ================= TEXTO VAZIO ================= */
-.texto-vazio {
-    width: 100%;
-    text-align: center;
-    margin: 40px auto;
-    font-size: 1.1rem;
-    color: #666;
+/* =========================================================
+   TOKENS LOCAIS (herdam a paleta do base.html)
+========================================================= */
+.est-page {
+    --est-azul: #004AAD;
+    --est-azul-claro: #007BFF;
+    --est-vermelho: #E63946;
+    --est-amarelo: #FFD700;
+    --est-navy: #0b2a5b;
+    --est-radius: 22px;
 }
 
-/* ================= BREADCRUMB ================= */
-.breadcrumb {
-    max-width: 1200px;
-    margin: 25px auto;
-    font-size: 1rem;
-    color: #444;
-}
-
-.breadcrumb a {
-    color: #007BFF;
-    text-decoration: none;
-    font-weight: 600;
-}
-
-.breadcrumb span {
-    margin: 0 6px;
-    color: #888;
-}
-
-.breadcrumb strong {
-    color: #1f2d3d;
-}
-
-/* ================= HEADER ================= */
-.categoria-header {
-    text-align: center;
-    margin-bottom: 40px;
-}
-
-.categoria-banner {
-    width: 100%;
-    max-height: 320px;
-    object-fit: cover;
-    border-radius: 18px;
-}
-
-.categoria-titulo {
-    font-size: 2.4rem;
-    color: #004AAD;
-    font-weight: 700;
-    margin-top: 20px;
-}
-
-.categoria-sub {
-    font-size: 1.1rem;
-    color: #5a5a5a;
-    margin-top: 8px;
-}
-
-/* ================= GRID / CARDS ================= */
-.grid-cards {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-    gap: 28px;
-}
-
-.card-produto {
-    background: linear-gradient(180deg, #ffffff 0%, #f5f8ff 100%);
-    border-radius: 14px;
-    padding: 15px;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
-    transition: all 0.25s ease;
-    display: flex;
-    flex-direction: column;
-    cursor: pointer;
-    border: 1px solid #e7e7e7;
-}
-
-.card-produto:hover {
-    transform: translateY(-6px);
-    box-shadow: 0 10px 22px rgba(0, 0, 0, 0.15);
-}
-
-/* ================= CARD TODOS ================= */
-.card-todos {
-    border: 2px dashed #004AAD;
-    background: linear-gradient(180deg, #f1f6ff, #ffffff);
-}
-
-.card-todos:hover {
-    background: linear-gradient(180deg, #004AAD, #0066D6);
-}
-
-.card-todos:hover h3,
-.card-todos:hover p {
-    color: #fff;
-}
-
-/* ================= IMAGEM ================= */
-.img-area {
-    width: 100%;
-    height: 190px;
-    border-radius: 12px;
-    overflow: hidden;
-    background: #f3f5fd;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-
-.img-area img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-.img-todos {
-    font-size: 3.2rem;
-    background: linear-gradient(135deg, #eef3ff, #f9fbff);
-}
-
-/* ================= CONTEÚDO ================= */
-.conteudo {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    height: 100%;
-}
-
-.card-produto h3 {
-    margin-top: 15px;
-    font-size: 1.2rem;
-    color: #004AAD;
-    font-weight: 700;
-}
-
-.descricao {
-    font-size: .95rem;
-    color: #555;
-    flex-grow: 1;
-}
-
-/* ================= BOTÃO ================= */
-.btn-vermais {
-    margin-top: 18px;
-    padding: 12px 0;
-    font-size: 1rem;
-    border-radius: 30px;
-    background: linear-gradient(135deg, #004AAD, #0066D6);
-    color: #fff;
-    font-weight: 600;
-    text-align: center;
-    text-decoration: none;
-    transition: all .25s ease;
-}
-
-.btn-vermais:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 8px 18px rgba(0, 74, 173, 0.35);
-}
-
-/* ================= CARROSSEL ================= */
-.carrossel {
+/* =========================================================
+   HERO / HEADER UNIFORME
+========================================================= */
+.est-hero {
     position: relative;
+    overflow: hidden;
+    padding: 56px 20px 74px;
+    background:
+        radial-gradient(circle at 88% 12%, rgba(230, 57, 70, 0.35), transparent 40%),
+        radial-gradient(circle at 8% 88%, rgba(0, 123, 255, 0.40), transparent 42%),
+        linear-gradient(135deg, #041a3d 0%, #004AAD 55%, #0069d9 100%);
+    color: #fff;
 }
 
-.carrossel-img {
+/* textura sutil de pontos por cima do gradiente */
+.est-hero::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(rgba(255, 255, 255, 0.16) 1px, transparent 1px);
+    background-size: 22px 22px;
+    opacity: .35;
+    pointer-events: none;
+}
+
+.est-hero-inner {
+    position: relative;
+    z-index: 1;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+/* ---------- BREADCRUMB DENTRO DO HERO ---------- */
+.est-breadcrumb {
+    font-size: .95rem;
+    color: rgba(255, 255, 255, 0.75);
+    margin-bottom: 26px;
+}
+
+.est-breadcrumb a {
+    color: #fff;
+    text-decoration: none;
+    font-weight: 600;
+    opacity: .9;
+    transition: opacity .2s ease;
+}
+
+.est-breadcrumb a:hover { opacity: 1; text-decoration: underline; }
+
+.est-breadcrumb span { margin: 0 8px; opacity: .55; }
+
+.est-breadcrumb strong { color: var(--est-amarelo); font-weight: 700; }
+
+/* ---------- BADGE ---------- */
+.est-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--est-vermelho);
+    color: #fff;
+    border-radius: 999px;
+    padding: 10px 18px;
+    font-size: .78rem;
+    font-weight: 800;
+    letter-spacing: .7px;
+    text-transform: uppercase;
+    box-shadow: 0 12px 26px rgba(230, 57, 70, 0.35);
+    margin-bottom: 20px;
+}
+
+/* ---------- TÍTULO ---------- */
+.est-hero-title {
+    font-size: clamp(2.1rem, 4.6vw, 3.4rem);
+    font-weight: 800;
+    line-height: 1.08;
+    margin-bottom: 16px;
+    text-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
+}
+
+.est-hero-title span { color: var(--est-amarelo); }
+
+.est-hero-sub {
+    font-size: 1.08rem;
+    line-height: 1.7;
+    color: rgba(255, 255, 255, 0.86);
+    max-width: 640px;
+    margin-bottom: 30px;
+}
+
+/* ---------- STATS ---------- */
+.est-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.est-stat {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 20px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    backdrop-filter: blur(6px);
+    font-size: .95rem;
+    font-weight: 600;
+}
+
+.est-stat i { color: var(--est-amarelo); }
+
+.est-stat b { font-weight: 800; }
+
+/* ---------- ONDA DE TRANSIÇÃO ---------- */
+.est-wave {
+    display: block;
+    width: 100%;
+    height: 60px;
+    margin-top: -60px;
+    position: relative;
+    z-index: 2;
+}
+
+/* =========================================================
+   SEÇÃO DOS CARDS
+========================================================= */
+.est-section {
+    padding: 20px 20px 80px;
+    background:
+        radial-gradient(circle at 12% 0%, rgba(0, 74, 173, 0.10), transparent 45%),
+        radial-gradient(circle at 92% 30%, rgba(230, 57, 70, 0.08), transparent 40%),
+        linear-gradient(180deg, #eaf2ff 0%, #dde9fb 100%);
+}
+
+.est-grid {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(265px, 1fr));
+    gap: 26px;
+    align-items: stretch;
+}
+
+/* =========================================================
+   CARD
+========================================================= */
+.est-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    padding: 16px;
+    border-radius: var(--est-radius);
+    background: linear-gradient(160deg, #0b2a5b 0%, #113670 55%, #08214d 100%);
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    box-shadow: 0 16px 34px rgba(4, 26, 61, 0.28);
+    overflow: hidden;
+    transition: transform .28s var(--ease-out, ease), box-shadow .28s ease;
+}
+
+/* faixa de destaque no topo */
+.est-card::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--est-azul-claro), var(--est-vermelho));
+    opacity: .9;
+}
+
+.est-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 26px 52px rgba(4, 26, 61, 0.42);
+}
+
+/* ---------- CARD DESTAQUE (TODOS OS BRINQUEDOS) ---------- */
+.est-card--todos {
+    background: linear-gradient(160deg, #6d0f1c 0%, #b81e30 50%, #7d1220 100%);
+    border-color: rgba(255, 215, 0, 0.35);
+    box-shadow: 0 16px 34px rgba(140, 20, 35, 0.35);
+}
+
+.est-card--todos::before {
+    background: linear-gradient(90deg, var(--est-amarelo), #ff9d3c);
+}
+
+.est-card--todos:hover {
+    box-shadow: 0 26px 52px rgba(140, 20, 35, 0.48);
+}
+
+.est-card--todos .est-btn {
+    background: linear-gradient(135deg, var(--est-amarelo), #ffb300);
+    color: #3a2a00;
+    box-shadow: 0 12px 26px rgba(255, 179, 0, 0.35);
+}
+
+/* ---------- TAG NO CANTO ---------- */
+.est-tag {
+    position: absolute;
+    top: 26px;
+    right: 26px;
+    z-index: 3;
+    padding: 6px 13px;
+    border-radius: 999px;
+    font-size: .68rem;
+    font-weight: 800;
+    letter-spacing: .6px;
+    text-transform: uppercase;
+    background: rgba(0, 0, 0, 0.55);
+    color: #fff;
+    backdrop-filter: blur(4px);
+}
+
+/* =========================================================
+   ÁREA DE MÍDIA — IMAGEM SEMPRE INTEIRA (SEM ZOOM/CORTE)
+========================================================= */
+.est-media {
+    position: relative;
+    width: 100%;
+    height: 200px;
+    border-radius: 16px;
+    overflow: hidden;
+    background: #f2f6ff;
+    isolation: isolate;
+}
+
+/* fundo desfocado só para preencher as sobras — a foto real fica inteira em cima */
+.est-media-bg {
     position: absolute;
     inset: 0;
     width: 100%;
     height: 100%;
     object-fit: cover;
-    opacity: 0;
-    transition: opacity .8s ease-in-out;
+    filter: blur(22px) saturate(1.35);
+    transform: scale(1.25);
+    opacity: .55;
+    z-index: 0;
 }
 
-.carrossel-img.ativo {
-    opacity: 1;
+/* AQUI está a correção principal: contain = imagem completa, sem zoom */
+.est-media-fg {
     position: relative;
+    z-index: 1;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    object-position: center;
+    padding: 12px;
+    display: block;
+    filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.22));
+    transition: transform .35s var(--ease-out, ease);
 }
 
-    /* ================= CARD ATIVO ================= */
-.card-produto.ativo {
-    border: 2px solid #004AAD;
-    box-shadow: 0 12px 26px rgba(0, 74, 173, 0.35);
-    transform: translateY(-6px);
+.est-card:hover .est-media-fg { transform: scale(1.05); }
+
+/* =========================================================
+   CARROSSEL
+========================================================= */
+.est-slide {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    transition: opacity .9s ease-in-out;
+    pointer-events: none;
 }
 
-.card-produto.ativo h3 {
-    color: #004AAD;
+.est-slide.ativo { opacity: 1; }
+
+.est-slide-legenda {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 2;
+    padding: 22px 12px 8px;
+    font-size: .8rem;
+    font-weight: 700;
+    color: #fff;
+    text-align: center;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.65), transparent);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
+/* pontinhos do carrossel */
+.est-dots {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 10px;
+}
+
+.est-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.35);
+    transition: all .3s ease;
+}
+
+.est-dot.ativo {
+    width: 18px;
+    border-radius: 999px;
+    background: var(--est-amarelo);
+}
+
+/* =========================================================
+   CONTEÚDO DO CARD
+========================================================= */
+.est-conteudo {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    gap: 8px;
+    padding: 16px 6px 4px;
+}
+
+.est-nome {
+    font-size: 1.18rem;
+    font-weight: 800;
+    color: #fff;
+    line-height: 1.3;
+}
+
+.est-desc {
+    font-size: .92rem;
+    line-height: 1.55;
+    color: rgba(255, 255, 255, 0.72);
+    flex-grow: 1;
+}
+
+.est-meta {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-size: .82rem;
+    font-weight: 700;
+    color: var(--est-amarelo);
+    margin-top: 2px;
+}
+
+/* ---------- BOTÃO ---------- */
+.est-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 16px;
+    padding: 13px 0;
+    border-radius: 999px;
+    font-size: .98rem;
+    font-weight: 700;
+    text-decoration: none;
+    color: #fff;
+    background: linear-gradient(135deg, var(--est-vermelho), #ff5c6a);
+    box-shadow: 0 12px 26px rgba(230, 57, 70, 0.30);
+    transition: transform .22s ease, box-shadow .22s ease, filter .22s ease;
+}
+
+.est-btn:hover {
+    transform: translateY(-2px);
+    filter: brightness(1.06);
+    box-shadow: 0 16px 32px rgba(230, 57, 70, 0.42);
+}
+
+.est-btn i { transition: transform .22s ease; }
+.est-btn:hover i { transform: translateX(3px); }
+
+/* =========================================================
+   ESTADO VAZIO
+========================================================= */
+.est-vazio {
+    max-width: 620px;
+    margin: 40px auto;
+    padding: 46px 30px;
+    text-align: center;
+    border-radius: var(--est-radius);
+    background: linear-gradient(160deg, #0b2a5b, #113670);
+    color: rgba(255, 255, 255, 0.85);
+    box-shadow: 0 16px 34px rgba(4, 26, 61, 0.28);
+}
+
+.est-vazio i {
+    font-size: 2.6rem;
+    color: var(--est-amarelo);
+    margin-bottom: 14px;
+    display: block;
+}
+
+/* =========================================================
+   ENTRADA SUAVE
+========================================================= */
+@keyframes estSobe {
+    from { opacity: 0; transform: translateY(22px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.est-card {
+    animation: estSobe .5s var(--ease-out, ease) backwards;
+}
+
+.est-card:nth-child(1) { animation-delay: .00s; }
+.est-card:nth-child(2) { animation-delay: .06s; }
+.est-card:nth-child(3) { animation-delay: .12s; }
+.est-card:nth-child(4) { animation-delay: .18s; }
+.est-card:nth-child(5) { animation-delay: .24s; }
+.est-card:nth-child(6) { animation-delay: .30s; }
+.est-card:nth-child(n+7) { animation-delay: .36s; }
+
+/* =========================================================
+   RESPONSIVO
+========================================================= */
+@media (max-width: 768px) {
+    .est-hero { padding: 38px 18px 64px; }
+    .est-hero-sub { font-size: 1rem; }
+    .est-section { padding: 16px 16px 60px; }
+    .est-grid { grid-template-columns: 1fr; gap: 20px; }
+    .est-media { height: 220px; }
+    .est-stat { font-size: .88rem; padding: 10px 16px; }
+}
 </style>
 
-<!-- 🔵 BREADCRUMB -->
-<nav class="breadcrumb">
-    <a href="{% url 'home' %}#estabelecimentos">Home</a>
-    <span>›</span>
-    <strong>Estabelecimentos</strong>
-</nav>
+<div class="est-page">
 
-<!-- 🔵 HEADER -->
-<div class="categoria-header" id="header">
-    <img src="{% static 'images/default_categoria.jpg' %}" class="categoria-banner">
-    <h1 class="categoria-titulo">Estabelecimentos</h1>
-    <p class="categoria-sub">
-        {{ estabelecimentos|length }} estabelecimento(s) cadastrados
-    </p>
-</div>
+<!-- ================= HERO / HEADER ================= -->
+<section class="est-hero" id="header">
+    <div class="est-hero-inner">
 
-<!-- 🔵 LISTAGEM -->
-<div class="produtos-wrapper" >
+        <nav class="est-breadcrumb">
+            <a href="{% url 'home' %}">Home</a>
+            <span>›</span>
+            <strong>Nossos Parceiros</strong>
+        </nav>
 
-{% if estabelecimentos %}
-<div class="grid-cards">
+        <span class="est-badge">
+            <i class="fa-solid fa-handshake-angle"></i> Nossos Parceiros
+        </span>
 
-    <!-- 🔵 CARD ESTÁTICO - TODOS -->
-<div class="card-produto card-todos">
+        <h1 class="est-hero-title">
+            Onde a diversão da <span>Lazer &amp; Sport</span> já está
+        </h1>
 
-    <div class="img-area carrossel">
-        {% for brinquedo in brinquedos_carrossel %}
-            <img src="{{ brinquedo.imagem_brinquedo.url }}"
-                 class="carrossel-img {% if forloop.first %}ativo{% endif %}">
-        {% endfor %}
-    </div>
-
-    <div class="conteudo">
-        <h3>Todos os brinquedos</h3>
-
-        <p class="descricao">
-            Veja todos os brinquedos disponíveis de todos os estabelecimentos.
+        <p class="est-hero-sub">
+            Shoppings, quiosques e parques que trabalham com os nossos brinquedos.
+            Escolha um estabelecimento para ver o que está disponível por lá — ou
+            explore o catálogo completo de uma vez.
         </p>
 
-        <a href="{% url 'brinquedos' %}#grid-cards" class="btn-vermais">
-            Ver todos
-        </a>
-    </div>
-</div>
+        <div class="est-stats">
+            <div class="est-stat">
+                <i class="fa-solid fa-building"></i>
+                <span><b>{{ estabelecimentos|length }}</b> estabelecimento{{ estabelecimentos|length|pluralize }}</span>
+            </div>
+            <div class="est-stat">
+                <i class="fa-solid fa-gamepad"></i>
+                <span>Brinquedos, fliperamas e simuladores</span>
+            </div>
+            <div class="est-stat">
+                <i class="fa-solid fa-star"></i>
+                <span>Avaliações reais de quem jogou</span>
+            </div>
+        </div>
 
-    <!-- 🔵 ESTABELECIMENTOS -->
+    </div>
+</section>
+
+<!-- onda de transição para a seção clara -->
+<svg class="est-wave" viewBox="0 0 1440 60" preserveAspectRatio="none" aria-hidden="true">
+    <path fill="#eaf2ff" d="M0,32 C240,64 480,0 720,16 C960,32 1200,64 1440,40 L1440,60 L0,60 Z"></path>
+</svg>
+
+<!-- ================= LISTAGEM ================= -->
+<section class="est-section">
+
+{% if estabelecimentos %}
+<div class="est-grid" id="grid-estabelecimentos">
+
+    <!-- ---------- CARD DESTAQUE: TODOS OS BRINQUEDOS ---------- -->
+    <article class="est-card est-card--todos">
+
+        <span class="est-tag">Catálogo completo</span>
+
+        <div class="est-media est-carrossel">
+            {% for brinquedo in brinquedos_carrossel %}
+                <figure class="est-slide {% if forloop.first %}ativo{% endif %}">
+                    <img src="{{ brinquedo.imagem_brinquedo.url }}" class="est-media-bg" alt="" aria-hidden="true">
+                    <img src="{{ brinquedo.imagem_brinquedo.url }}" class="est-media-fg"
+                         alt="{{ brinquedo.nome_brinquedo }}" loading="lazy">
+                    <figcaption class="est-slide-legenda">{{ brinquedo.nome_brinquedo }}</figcaption>
+                </figure>
+            {% empty %}
+                <img src="{% static 'images/default_categoria.jpg' %}" class="est-media-fg" alt="Brinquedos Lazer e Sport">
+            {% endfor %}
+        </div>
+
+        {% if brinquedos_carrossel|length > 1 %}
+        <div class="est-dots">
+            {% for brinquedo in brinquedos_carrossel %}
+                <span class="est-dot {% if forloop.first %}ativo{% endif %}"></span>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <div class="est-conteudo">
+            <h2 class="est-nome">Todos os brinquedos</h2>
+            <p class="est-desc">
+                Veja o catálogo inteiro, de todos os estabelecimentos, em um só lugar.
+            </p>
+            <span class="est-meta">
+                <i class="fa-solid fa-layer-group"></i> Catálogo geral
+            </span>
+            <a href="{% url 'brinquedos' %}#grid-cards" class="est-btn">
+                Ver todos <i class="fa-solid fa-arrow-right"></i>
+            </a>
+        </div>
+    </article>
+
+    <!-- ---------- ESTABELECIMENTOS ---------- -->
     {% for est in estabelecimentos %}
-    <div class="card-produto" id="estabelecimentos">
-        <div class="img-area">
+    <article class="est-card">
+
+        <div class="est-media">
             {% if est.imagem_estabelecimento %}
-                <img src="{{ est.imagem_estabelecimento.url }}" alt="{{ est.nome_estabelecimento }}">
+                <img src="{{ est.imagem_estabelecimento.url }}" class="est-media-bg" alt="" aria-hidden="true">
+                <img src="{{ est.imagem_estabelecimento.url }}" class="est-media-fg"
+                     alt="{{ est.nome_estabelecimento }}" loading="lazy">
             {% else %}
-                <img src="{% static 'images/default_estabelecimento.jpg' %}">
+                <img src="{% static 'images/default_estabelecimento.jpg' %}" class="est-media-fg"
+                     alt="{{ est.nome_estabelecimento }}" loading="lazy">
             {% endif %}
         </div>
 
-        <div class="conteudo">
-            <h3>{{ est.nome_estabelecimento }}</h3>
-            <p class="descricao">
-                Veja os brinquedos e avaliações deste estabelecimento.
+        <div class="est-conteudo">
+            <h2 class="est-nome">{{ est.nome_estabelecimento }}</h2>
+            <p class="est-desc">
+                Confira os brinquedos e as avaliações disponíveis neste parceiro.
             </p>
-            <a href="{% url 'estabelecimento_brinquedo' est.id %}#filter" class="btn-vermais">Ver brinquedos</a>
+            <span class="est-meta">
+                <i class="fa-solid fa-gamepad"></i>
+                {{ est.brinquedos.count }} brinquedo{{ est.brinquedos.count|pluralize }}
+            </span>
+            <a href="{% url 'estabelecimento_brinquedo' est.id %}#filter" class="est-btn">
+                Ver brinquedos <i class="fa-solid fa-arrow-right"></i>
+            </a>
         </div>
-    </div>
+    </article>
     {% endfor %}
 
 </div>
 {% else %}
-    <p class="texto-vazio">Nenhum estabelecimento foi encontrado.</p>
+    <div class="est-vazio">
+        <i class="fa-solid fa-store-slash"></i>
+        <h2 class="est-nome">Nenhum estabelecimento por aqui ainda</h2>
+        <p class="est-desc">
+            Estamos fechando novas parcerias. Enquanto isso, dá uma olhada no
+            catálogo completo de brinquedos.
+        </p>
+        <a href="{% url 'brinquedos' %}#grid-cards" class="est-btn" style="max-width:260px;margin:22px auto 0;">
+            Ver brinquedos <i class="fa-solid fa-arrow-right"></i>
+        </a>
+    </div>
 {% endif %}
 
+</section>
 </div>
 
 <script>
 document.addEventListener("DOMContentLoaded", () => {
-    const imagens = document.querySelectorAll(".carrossel-img");
+    const carrossel = document.querySelector(".est-carrossel");
+    if (!carrossel) return;
+
+    const slides = carrossel.querySelectorAll(".est-slide");
+    const dots = document.querySelectorAll(".est-dot");
+    if (slides.length < 2) return;
+
     let index = 0;
 
-    if (imagens.length > 1) {
-        setInterval(() => {
-            imagens[index].classList.remove("ativo");
-            index = (index + 1) % imagens.length;
-            imagens[index].classList.add("ativo");
-        }, 3000); // troca a cada 3s
-    }
+    setInterval(() => {
+        slides[index].classList.remove("ativo");
+        if (dots[index]) dots[index].classList.remove("ativo");
+
+        index = (index + 1) % slides.length;
+
+        slides[index].classList.add("ativo");
+        if (dots[index]) dots[index].classList.add("ativo");
+    }, 3500);
 });
 </script>
 

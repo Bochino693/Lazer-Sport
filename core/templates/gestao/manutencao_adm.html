@@ -1,4 +1,5 @@
 {% extends "gestao/base_adm.html" %}
+{% block title %}Lazer & Sport | Central de Manutenções{% endblock %}
 {% block content %}
 
 <style>
@@ -831,6 +832,308 @@ body.mnt-modal-open{overflow:hidden}
     .mnt-detail-grid{grid-template-columns:1fr}
     .mnt-gallery img{height:120px}
 }
+
+/* ==========================================================
+   TEMA OPERACIONAL LAZER & SPORT
+   Mantém a tela uniforme com os cards escuros da área admin.
+   ========================================================== */
+.mnt-page{
+    --ops-bg:#050b14;
+    --ops-surface:#091423;
+    --ops-surface-2:#0d1b2d;
+    --ops-surface-3:#12233a;
+    --ops-line:rgba(151,178,214,.16);
+    --ops-text:#f3f7ff;
+    --ops-muted:#9caec5;
+    position:relative;
+    isolation:isolate;
+    max-width:none;
+    min-height:calc(100vh - 90px);
+    border:1px solid rgba(132,169,218,.12);
+    border-radius:30px;
+    background:
+        radial-gradient(circle at 8% 2%,rgba(8,120,249,.17),transparent 26rem),
+        radial-gradient(circle at 94% 18%,rgba(230,57,70,.12),transparent 23rem),
+        linear-gradient(155deg,#07101d 0%,#040911 58%,#07111e 100%);
+    color:var(--ops-text);
+    box-shadow:0 28px 80px rgba(1,7,17,.32);
+}
+.mnt-page:before{
+    content:"";
+    position:absolute;
+    z-index:-1;
+    inset:0;
+    border-radius:inherit;
+    opacity:.16;
+    pointer-events:none;
+    background-image:
+        linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),
+        linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px);
+    background-size:42px 42px;
+    mask-image:linear-gradient(to bottom,#000,transparent 75%);
+}
+.mnt-hero{
+    border:1px solid rgba(111,167,239,.25);
+    background:
+        radial-gradient(circle at 88% 14%,rgba(230,57,70,.34),transparent 24%),
+        radial-gradient(circle at 70% 120%,rgba(8,120,249,.5),transparent 38%),
+        linear-gradient(125deg,#07111f 0%,#07326b 60%,#005ed1 100%);
+    box-shadow:0 26px 68px rgba(0,3,10,.42),inset 0 1px 0 rgba(255,255,255,.08);
+}
+.mnt-live{background:rgba(2,10,22,.48);border-color:rgba(255,255,255,.15)}
+
+.mnt-stat,
+.mnt-toolbar,
+.mnt-empty{
+    border-color:var(--ops-line);
+    background:linear-gradient(145deg,rgba(16,31,51,.98),rgba(8,18,31,.98));
+    box-shadow:0 16px 42px rgba(0,4,12,.3),inset 0 1px 0 rgba(255,255,255,.035);
+}
+.mnt-stat:after{background:rgba(40,125,238,.1)}
+.mnt-stat strong,
+.mnt-results-head h2,
+.mnt-empty h3{color:var(--ops-text)}
+.mnt-stat span,
+.mnt-results-head span,
+.mnt-empty p{color:var(--ops-muted)}
+.mnt-stat-icon{background:rgba(8,120,249,.16);color:#66acff}
+.mnt-stat.pending .mnt-stat-icon{background:rgba(255,181,42,.14);color:#ffc65b}
+.mnt-stat.progress .mnt-stat-icon{background:rgba(8,120,249,.18);color:#6db2ff}
+.mnt-stat.done .mnt-stat-icon{background:rgba(35,162,92,.16);color:#5fdb93}
+.mnt-stat.cancel .mnt-stat-icon,
+.mnt-stat.alert .mnt-stat-icon{background:rgba(230,57,70,.15);color:#ff7581}
+
+.mnt-field label{color:#aebdd1}
+.mnt-control{
+    border-color:rgba(151,178,214,.2);
+    background:#07111f;
+    color:#eef5ff;
+    color-scheme:dark;
+}
+.mnt-control::placeholder{color:#708299}
+.mnt-control:hover{border-color:rgba(111,172,255,.4)}
+.mnt-control:focus{
+    border-color:#278bff;
+    background:#091727;
+    box-shadow:0 0 0 4px rgba(39,139,255,.14);
+}
+.mnt-btn-soft{background:rgba(32,121,240,.14);color:#86bdff}
+.mnt-btn-dark{
+    border:1px solid rgba(106,168,255,.28);
+    background:linear-gradient(135deg,#0066df,#0050b2);
+    color:#fff;
+    box-shadow:0 10px 24px rgba(0,87,191,.22);
+}
+.mnt-btn-whatsapp{background:linear-gradient(135deg,#1fa855,#138140);color:#fff}
+.mnt-btn-email{background:linear-gradient(135deg,#466fe7,#3153ba);color:#fff}
+.mnt-btn-phone{background:linear-gradient(135deg,#0789c5,#076999);color:#fff}
+.mnt-btn-map{background:linear-gradient(135deg,#e85f48,#bb3e32);color:#fff}
+.mnt-btn-disabled{
+    border:1px solid rgba(151,178,214,.1);
+    background:rgba(113,132,158,.1);
+    color:#667991;
+}
+
+.mnt-card{
+    border-color:var(--ops-line);
+    background:
+        radial-gradient(circle at 100% 0,rgba(8,120,249,.11),transparent 34%),
+        linear-gradient(155deg,#111f33 0%,#0a1524 67%,#08111e 100%);
+    box-shadow:0 18px 45px rgba(0,4,12,.38),inset 0 1px 0 rgba(255,255,255,.035);
+}
+.mnt-card:hover{
+    border-color:rgba(79,151,246,.42);
+    box-shadow:0 23px 58px rgba(0,5,16,.48),0 0 0 1px rgba(41,127,241,.08);
+}
+.mnt-card.needs-attention{
+    border-color:rgba(255,89,104,.42);
+    box-shadow:0 19px 48px rgba(109,14,28,.2),inset 0 1px 0 rgba(255,255,255,.035);
+}
+.mnt-card-main{position:relative}
+.mnt-protocol{color:#6db2ff}
+.mnt-equipment{color:#fff}
+.mnt-status-P{background:rgba(255,181,42,.15);color:#ffcc67;border:1px solid rgba(255,181,42,.18)}
+.mnt-status-A{background:rgba(8,120,249,.18);color:#82bdff;border:1px solid rgba(8,120,249,.22)}
+.mnt-status-C{background:rgba(35,162,92,.17);color:#74dfa0;border:1px solid rgba(35,162,92,.2)}
+.mnt-status-X{background:rgba(230,57,70,.16);color:#ff8a94;border:1px solid rgba(230,57,70,.2)}
+.mnt-age{color:#93a5bb}
+.mnt-alert-pill{background:rgba(230,57,70,.14);color:#ff838e;border:1px solid rgba(230,57,70,.18)}
+.mnt-client{
+    border-color:rgba(142,174,215,.14);
+    background:rgba(5,13,24,.52);
+}
+.mnt-client-copy strong{color:#eff5ff}
+.mnt-client-copy span{color:#8fa2ba}
+.mnt-label{color:#7fa8d9}
+.mnt-problem p{color:#c4d0df}
+.mnt-no-photo{
+    border:1px dashed rgba(145,174,211,.17);
+    background:rgba(103,125,154,.08);
+    color:#8294aa;
+}
+.mnt-thumb{border:1px solid rgba(143,174,212,.14);background:#06101d}
+.mnt-contact-bar{padding-top:2px}
+.mnt-card-footer{
+    border-color:rgba(151,178,214,.13);
+    background:rgba(3,10,19,.42);
+}
+.mnt-card-footer small{color:#8b9db3}
+
+.mnt-card-facts{
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:7px;
+    margin-top:14px;
+}
+.mnt-card-fact{
+    min-width:0;
+    padding:9px 10px;
+    border:1px solid rgba(141,173,212,.12);
+    border-radius:11px;
+    background:rgba(2,10,20,.35);
+}
+.mnt-card-fact small{
+    display:flex;
+    align-items:center;
+    gap:5px;
+    margin-bottom:4px;
+    color:#749bc9;
+    font-size:.56rem;
+    font-weight:950;
+    letter-spacing:.045em;
+    text-transform:uppercase;
+}
+.mnt-card-fact strong{
+    display:block;
+    overflow:hidden;
+    color:#dce8f7;
+    font-size:.67rem;
+    line-height:1.35;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+}
+
+.mnt-page-link{
+    border-color:var(--ops-line);
+    background:#0c192a;
+    color:#aebed2;
+}
+.mnt-page-link.current{border-color:#0878f9;background:#0878f9;color:#fff}
+
+.mnt-dialog{
+    border:1px solid rgba(125,165,216,.2);
+    background:#060e19;
+    color:var(--ops-text);
+    box-shadow:0 38px 110px rgba(0,0,0,.72);
+}
+.mnt-dialog-head{
+    border-color:rgba(151,178,214,.14);
+    background:linear-gradient(135deg,#0d1e33,#081421);
+}
+.mnt-dialog-title-wrap small{color:#72b4ff}
+.mnt-dialog-title-wrap h2{color:#fff}
+.mnt-icon-btn{background:rgba(146,170,202,.12);color:#c8d6e8}
+.mnt-dialog-scroll{
+    background:
+        radial-gradient(circle at 88% 5%,rgba(8,120,249,.09),transparent 24rem),
+        #060e19;
+}
+.mnt-panel{
+    border-color:rgba(151,178,214,.14);
+    background:linear-gradient(145deg,#0d1a2b,#091421);
+    box-shadow:0 14px 34px rgba(0,3,10,.28),inset 0 1px 0 rgba(255,255,255,.025);
+}
+.mnt-panel h3{color:#eff5ff}
+.mnt-panel h3 i{color:#67adff}
+.mnt-description-full{color:#c6d2e1}
+.mnt-detail-item{
+    border:1px solid rgba(147,176,214,.1);
+    background:rgba(3,10,19,.42);
+}
+.mnt-detail-item small{color:#7899bf}
+.mnt-detail-item strong{color:#e0eaf7}
+.mnt-address{color:#c6d2e1}
+.mnt-status-form label{color:#aabbd0}
+.mnt-contact-status{background:rgba(103,125,154,.09);color:#94a7bd}
+.mnt-contact-status.ok{background:rgba(35,162,92,.14);color:#74d99a}
+.mnt-contact-status.bad{background:rgba(230,57,70,.13);color:#ff858f}
+.mnt-timeline-item strong{color:#dce8f7}
+.mnt-timeline-item span{color:#8295ad}
+.mnt-timeline-item:not(:last-child):after{background:rgba(137,169,208,.2)}
+
+.mnt-modal-summary{
+    display:grid;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:10px;
+    margin-bottom:17px;
+}
+.mnt-summary-item{
+    min-width:0;
+    padding:13px;
+    border:1px solid rgba(113,164,229,.16);
+    border-radius:15px;
+    background:linear-gradient(145deg,rgba(15,35,59,.95),rgba(8,20,34,.95));
+}
+.mnt-summary-item span{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    margin-bottom:5px;
+    color:#77a9e3;
+    font-size:.61rem;
+    font-weight:950;
+    letter-spacing:.05em;
+    text-transform:uppercase;
+}
+.mnt-summary-item strong{
+    display:block;
+    overflow:hidden;
+    color:#f0f6ff;
+    font-size:.75rem;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+}
+.mnt-contact-note{
+    display:flex;
+    align-items:flex-start;
+    gap:9px;
+    margin:12px 0;
+    padding:11px 12px;
+    border:1px solid rgba(49,140,255,.16);
+    border-radius:12px;
+    background:rgba(8,120,249,.09);
+    color:#a9c9ee;
+    font-size:.68rem;
+    line-height:1.5;
+}
+.mnt-checklist{display:grid;gap:7px;margin-top:12px}
+.mnt-check{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    padding:8px 10px;
+    border-radius:10px;
+    background:rgba(3,10,19,.38);
+    color:#9fb0c5;
+    font-size:.67rem;
+    font-weight:800;
+}
+.mnt-check.ok i{color:#53d487}
+.mnt-check.missing i{color:#ff7884}
+
+@media(max-width:850px){
+    .mnt-page{border-radius:22px}
+    .mnt-modal-summary{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:520px){
+    .mnt-page{border-radius:18px;padding:13px 10px 50px}
+    .mnt-card-facts{grid-template-columns:1fr 1fr}
+    .mnt-card-fact:first-child{grid-column:1/-1}
+    .mnt-modal-summary{grid-template-columns:1fr 1fr}
+    .mnt-summary-item{padding:11px}
+    .mnt-card-footer{align-items:stretch;flex-direction:column}
+    .mnt-card-footer .mnt-open{width:100%}
+}
 </style>
 
 <div class="mnt-page">
@@ -1015,6 +1318,27 @@ body.mnt-modal-open{overflow:hidden}
                     <p>{{ m.descricao }}</p>
                 </div>
 
+                <div class="mnt-card-facts" aria-label="Resumo rápido da solicitação">
+                    <div class="mnt-card-fact">
+                        <small><i class="fa-solid fa-phone"></i> Contato</small>
+                        <strong>{{ m.telefone_exibicao }}</strong>
+                    </div>
+                    <div class="mnt-card-fact">
+                        <small><i class="fa-solid fa-location-dot"></i> Local</small>
+                        <strong>
+                            {% if m.cidade %}
+                                {{ m.cidade }}{% if m.estado %}/{{ m.estado }}{% endif %}
+                            {% else %}
+                                Não informado
+                            {% endif %}
+                        </strong>
+                    </div>
+                    <div class="mnt-card-fact">
+                        <small><i class="fa-regular fa-images"></i> Evidências</small>
+                        <strong>{{ m.total_imagens }} foto{{ m.total_imagens|pluralize }}</strong>
+                    </div>
+                </div>
+
                 {% if m.imagens_cache %}
                 <div class="mnt-thumbs" aria-label="Prévia das imagens">
                     {% for img in m.imagens_cache|slice:":3" %}
@@ -1106,6 +1430,15 @@ body.mnt-modal-open{overflow:hidden}
                     <h2>{{ m.nome_equipamento }}</h2>
                 </div>
                 <div class="mnt-dialog-head-actions">
+                    <button
+                        type="button"
+                        class="mnt-icon-btn"
+                        onclick="copiarTexto('{{ m.protocolo|escapejs }}', this, 'Protocolo copiado')"
+                        aria-label="Copiar protocolo {{ m.protocolo }}"
+                        title="Copiar protocolo"
+                    >
+                        <i class="fa-regular fa-copy"></i>
+                    </button>
                     <span class="mnt-status mnt-status-{{ m.status }}">{{ m.get_status_display }}</span>
                     <button type="button" class="mnt-icon-btn" onclick="fecharAtendimento('detalhe-{{ m.id }}')" aria-label="Fechar">
                         <i class="fa-solid fa-xmark"></i>
@@ -1114,6 +1447,31 @@ body.mnt-modal-open{overflow:hidden}
             </header>
 
             <div class="mnt-dialog-scroll">
+                <section class="mnt-modal-summary" aria-label="Resumo operacional do chamado">
+                    <div class="mnt-summary-item">
+                        <span><i class="fa-solid fa-user"></i> Cliente</span>
+                        <strong>{{ m.cliente_nome }}</strong>
+                    </div>
+                    <div class="mnt-summary-item">
+                        <span><i class="fa-regular fa-clock"></i> Tempo</span>
+                        <strong>{{ m.tempo_aberto }}</strong>
+                    </div>
+                    <div class="mnt-summary-item">
+                        <span><i class="fa-solid fa-location-dot"></i> Atendimento</span>
+                        <strong>
+                            {% if m.cidade %}
+                                {{ m.cidade }}{% if m.estado %}/{{ m.estado }}{% endif %}
+                            {% else %}
+                                Local não informado
+                            {% endif %}
+                        </strong>
+                    </div>
+                    <div class="mnt-summary-item">
+                        <span><i class="fa-regular fa-images"></i> Evidências</span>
+                        <strong>{{ m.total_imagens }} foto{{ m.total_imagens|pluralize }}</strong>
+                    </div>
+                </section>
+
                 <div class="mnt-dialog-grid">
                     <div>
                         <section class="mnt-panel">
@@ -1219,9 +1577,36 @@ body.mnt-modal-open{overflow:hidden}
                                 </button>
                             </div>
 
+                            <div class="mnt-contact-note">
+                                <i class="fa-solid fa-wand-magic-sparkles"></i>
+                                <span>
+                                    WhatsApp e e-mail já abrem com protocolo, equipamento,
+                                    resumo do problema e solicitação do melhor horário para contato.
+                                </span>
+                            </div>
+
                             <div class="mnt-contact-status {% if m.telefone_valido %}ok{% else %}bad{% endif %}">
                                 <i class="fa-solid {% if m.telefone_valido %}fa-circle-check{% else %}fa-circle-exclamation{% endif %}"></i>
                                 <span>{{ m.telefone_motivo }}</span>
+                            </div>
+
+                            <div class="mnt-checklist" aria-label="Checklist dos dados recebidos">
+                                <div class="mnt-check {% if m.telefone_valido %}ok{% else %}missing{% endif %}">
+                                    <i class="fa-solid {% if m.telefone_valido %}fa-circle-check{% else %}fa-circle-xmark{% endif %}"></i>
+                                    Telefone {% if m.telefone_valido %}pronto para contato{% else %}ausente ou inválido{% endif %}
+                                </div>
+                                <div class="mnt-check {% if m.email_valido %}ok{% else %}missing{% endif %}">
+                                    <i class="fa-solid {% if m.email_valido %}fa-circle-check{% else %}fa-circle-xmark{% endif %}"></i>
+                                    E-mail {% if m.email_valido %}disponível{% else %}não informado{% endif %}
+                                </div>
+                                <div class="mnt-check {% if m.mapa_url %}ok{% else %}missing{% endif %}">
+                                    <i class="fa-solid {% if m.mapa_url %}fa-circle-check{% else %}fa-circle-xmark{% endif %}"></i>
+                                    Endereço {% if m.mapa_url %}pronto para rota{% else %}não informado{% endif %}
+                                </div>
+                                <div class="mnt-check {% if m.imagens_cache %}ok{% else %}missing{% endif %}">
+                                    <i class="fa-solid {% if m.imagens_cache %}fa-circle-check{% else %}fa-circle-xmark{% endif %}"></i>
+                                    Fotos {% if m.imagens_cache %}recebidas{% else %}não enviadas pelo cliente{% endif %}
+                                </div>
                             </div>
                         </section>
 
@@ -1404,15 +1789,23 @@ function fecharImagem(){
     }
 }
 
-async function copiarContato(texto, botao){
+async function copiarTexto(texto, botao, mensagemSucesso){
     try{
         await navigator.clipboard.writeText(texto);
         const original = botao.innerHTML;
-        botao.innerHTML = '<i class="fa-solid fa-check"></i> Telefone copiado';
+        const somenteIcone = botao.classList.contains("mnt-icon-btn");
+        botao.innerHTML = somenteIcone
+            ? '<i class="fa-solid fa-check"></i>'
+            : `<i class="fa-solid fa-check"></i> ${mensagemSucesso || "Copiado"}`;
+        botao.setAttribute("title", mensagemSucesso || "Copiado");
         setTimeout(() => botao.innerHTML = original, 1800);
     }catch(e){
-        window.prompt("Copie o telefone:", texto);
+        window.prompt("Copie o conteúdo:", texto);
     }
+}
+
+function copiarContato(texto, botao){
+    return copiarTexto(texto, botao, "Telefone copiado");
 }
 
 function confirmarStatus(form){
