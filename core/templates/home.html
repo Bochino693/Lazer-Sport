@@ -7346,6 +7346,88 @@ main.content-section {
     }
 </style>
 
+<!-- Correções finais: faixa do hero integrada e combos sempre inteiros. -->
+<style id="ls-home-layout-final-fixes">
+    /* A faixa dos indicadores agora continua o mesmo fundo do hero. */
+    .ls-home-hero {
+        border-bottom: 0;
+    }
+
+    .ls-home-stats {
+        margin-top: -1px;
+        border-top: 0;
+        background:
+            radial-gradient(circle at 88% -150%, rgba(230, 57, 70, .25), transparent 27rem),
+            radial-gradient(circle at 8% 180%, rgba(8, 120, 249, .35), transparent 31rem),
+            linear-gradient(140deg, #071426 0%, #0a2447 58%, #063d83 100%);
+    }
+
+    /* Os combos passam a ocupar a seção em uma grade, sem sobras cortadas. */
+    #combos-section .scroll-wrapper {
+        width: min(1320px, 100%);
+        max-width: 1320px;
+        padding: 0;
+        overflow: visible;
+    }
+
+    #combos-section .scroll-container {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        align-items: stretch;
+        gap: 22px;
+        width: 100%;
+        padding: 22px 0 30px;
+        overflow: visible;
+        scroll-snap-type: none;
+    }
+
+    #combos-section .oferta-card-link {
+        display: flex;
+        width: 100%;
+        min-width: 0;
+        max-width: none;
+        height: auto;
+        flex: none;
+    }
+
+    #combos-section .oferta-card {
+        width: 100%;
+        height: 100%;
+    }
+
+    #combos-section .scroll-btn {
+        display: none !important;
+    }
+
+    @media (min-width: 769px) and (max-width: 1120px) {
+        #combos-section .scroll-container {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+
+    @media (max-width: 768px) {
+        #combos-section .scroll-wrapper {
+            width: 100%;
+            padding: 0;
+            overflow: visible;
+        }
+
+        #combos-section .scroll-container {
+            grid-template-columns: minmax(0, 1fr);
+            gap: 18px;
+            padding: 16px 0 25px;
+            overflow: visible;
+        }
+
+        #combos-section .oferta-card-link {
+            width: 100%;
+            min-width: 0;
+            max-width: 100%;
+            flex-basis: auto;
+        }
+    }
+</style>
+
 <section id="clientes-section" class="clientes-section">
 
     <div class="clientes-header">
