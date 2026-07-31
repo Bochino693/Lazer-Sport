@@ -7346,7 +7346,7 @@ main.content-section {
     }
 </style>
 
-<!-- Correções finais: faixa do hero integrada e combos sempre inteiros. -->
+<!-- Correções finais: faixa do hero integrada e carrossel de combos completo. -->
 <style id="ls-home-layout-final-fixes">
     /* A faixa dos indicadores agora continua o mesmo fundo do hero. */
     .ls-home-hero {
@@ -7362,32 +7362,52 @@ main.content-section {
             linear-gradient(140deg, #071426 0%, #0a2447 58%, #063d83 100%);
     }
 
-    /* Os combos passam a ocupar a seção em uma grade, sem sobras cortadas. */
+    /* Três combos inteiros no desktop, mantendo setas e arraste lateral. */
     #combos-section .scroll-wrapper {
         width: min(1320px, 100%);
         max-width: 1320px;
-        padding: 0;
+        padding: 0 54px;
         overflow: visible;
+        box-sizing: border-box;
     }
 
     #combos-section .scroll-container {
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+        display: flex;
         align-items: stretch;
         gap: 22px;
         width: 100%;
-        padding: 22px 0 30px;
-        overflow: visible;
+        padding: 22px 2px 30px;
+        overflow-x: auto;
+        overflow-y: visible;
+        scroll-behavior: smooth;
+        scroll-snap-type: x mandatory;
+        scroll-padding-inline: 2px;
+        overscroll-behavior-inline: contain;
+        scrollbar-width: none;
+        cursor: grab;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    #combos-section .scroll-container::-webkit-scrollbar {
+        display: none;
+    }
+
+    #combos-section .scroll-container.is-dragging {
+        cursor: grabbing;
+        scroll-behavior: auto;
         scroll-snap-type: none;
+        user-select: none;
     }
 
     #combos-section .oferta-card-link {
         display: flex;
-        width: 100%;
+        width: auto;
         min-width: 0;
         max-width: none;
         height: auto;
-        flex: none;
+        flex: 0 0 calc((100% - 44px) / 3);
+        scroll-snap-align: start;
+        scroll-snap-stop: always;
     }
 
     #combos-section .oferta-card {
@@ -7396,12 +7416,22 @@ main.content-section {
     }
 
     #combos-section .scroll-btn {
-        display: none !important;
+        display: inline-flex !important;
+        align-items: center;
+        justify-content: center;
     }
 
-    @media (min-width: 769px) and (max-width: 1120px) {
-        #combos-section .scroll-container {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
+    #combos-section .scroll-btn.left {
+        left: 4px;
+    }
+
+    #combos-section .scroll-btn.right {
+        right: 4px;
+    }
+
+    @media (min-width: 769px) and (max-width: 1050px) {
+        #combos-section .oferta-card-link {
+            flex-basis: calc((100% - 22px) / 2);
         }
     }
 
@@ -7413,17 +7443,21 @@ main.content-section {
         }
 
         #combos-section .scroll-container {
-            grid-template-columns: minmax(0, 1fr);
             gap: 18px;
-            padding: 16px 0 25px;
-            overflow: visible;
+            padding: 16px 2px 25px;
+            overflow-x: auto;
+            overflow-y: visible;
         }
 
         #combos-section .oferta-card-link {
-            width: 100%;
+            width: auto;
             min-width: 0;
-            max-width: 100%;
-            flex-basis: auto;
+            max-width: none;
+            flex: 0 0 100%;
+        }
+
+        #combos-section .scroll-btn {
+            display: none !important;
         }
     }
 </style>
@@ -8684,6 +8718,105 @@ function inicializarGridPaginado({ gridId, cardSelector, porPagina, prevId, next
 }
 
 /* ======================================================
+   COMBOS — 3 cards inteiros, setas e arraste horizontal
+====================================================== */
+function inicializarCarrosselCombos() {
+    const trilho = document.getElementById('scroll-container-combos');
+    const anterior = document.getElementById('scroll-left-combos');
+    const proximo = document.getElementById('scroll-right-combos');
+
+    if (!trilho || !anterior || !proximo) return;
+
+    const movimentoReduzido = window.matchMedia('(prefers-reduced-motion: reduce)');
+    let frameAtualizacao = null;
+    let arrastando = false;
+    let arrastou = false;
+    let inicioX = 0;
+    let scrollInicial = 0;
+    let bloquearClique = false;
+
+    function medidas() {
+        const card = trilho.querySelector('.oferta-card-link');
+        const estilos = window.getComputedStyle(trilho);
+        const gap = Number.parseFloat(estilos.columnGap || estilos.gap) || 22;
+        const largura = card ? card.getBoundingClientRect().width : trilho.clientWidth;
+        const passo = largura + gap;
+        const visiveis = Math.max(1, Math.round((trilho.clientWidth + gap) / passo));
+        return { passo, visiveis };
+    }
+
+    function atualizarBotoes() {
+        const maximo = Math.max(0, trilho.scrollWidth - trilho.clientWidth);
+        anterior.disabled = trilho.scrollLeft <= 3;
+        proximo.disabled = maximo <= 3 || trilho.scrollLeft >= maximo - 3;
+    }
+
+    function solicitarAtualizacao() {
+        if (frameAtualizacao) return;
+        frameAtualizacao = window.requestAnimationFrame(() => {
+            frameAtualizacao = null;
+            atualizarBotoes();
+        });
+    }
+
+    function rolar(direcao) {
+        const { passo, visiveis } = medidas();
+        trilho.scrollBy({
+            left: passo * visiveis * direcao,
+            behavior: movimentoReduzido.matches ? 'auto' : 'smooth'
+        });
+    }
+
+    anterior.addEventListener('click', () => rolar(-1));
+    proximo.addEventListener('click', () => rolar(1));
+    trilho.addEventListener('scroll', solicitarAtualizacao, { passive: true });
+
+    /* Arraste com mouse no computador; toque continua nativo no celular. */
+    trilho.addEventListener('pointerdown', event => {
+        if (event.pointerType !== 'mouse' || event.button !== 0) return;
+        arrastando = true;
+        arrastou = false;
+        inicioX = event.clientX;
+        scrollInicial = trilho.scrollLeft;
+        trilho.classList.add('is-dragging');
+        trilho.setPointerCapture(event.pointerId);
+    });
+
+    trilho.addEventListener('pointermove', event => {
+        if (!arrastando) return;
+        const deslocamento = inicioX - event.clientX;
+        if (Math.abs(deslocamento) > 6) arrastou = true;
+        if (!arrastou) return;
+        event.preventDefault();
+        trilho.scrollLeft = scrollInicial + deslocamento;
+    });
+
+    function encerrarArraste(event) {
+        if (!arrastando) return;
+        arrastando = false;
+        bloquearClique = arrastou;
+        trilho.classList.remove('is-dragging');
+        if (trilho.hasPointerCapture(event.pointerId)) {
+            trilho.releasePointerCapture(event.pointerId);
+        }
+        solicitarAtualizacao();
+    }
+
+    trilho.addEventListener('pointerup', encerrarArraste);
+    trilho.addEventListener('pointercancel', encerrarArraste);
+
+    trilho.addEventListener('click', event => {
+        if (!bloquearClique) return;
+        event.preventDefault();
+        event.stopPropagation();
+        bloquearClique = false;
+    }, true);
+
+    window.addEventListener('resize', solicitarAtualizacao);
+    atualizarBotoes();
+}
+
+/* ======================================================
    🚀 INIT GLOBAL
 ====================================================== */
 document.addEventListener("DOMContentLoaded", () => {
@@ -8692,6 +8825,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     igualarAlturaCards();
     igualarAlturaGridPecas();
+    inicializarCarrosselCombos();
 
     inicializarProdutosClientSide();
     inicializarPecasClientSide();
