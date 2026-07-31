@@ -4099,7 +4099,7 @@ main.content-section {
       </span>
       <h2 class="section-title">Combos</h2>
       <p class="section-subtitle">
-        Selecionamos os melhores brinquedos em pacotes especiais para você economizar mais e garantir a diversão da festa.
+        Pacotes prontos para facilitar seu projeto, reunir brinquedos que combinam entre si e aproveitar condições especiais quando disponíveis.
       </p>
     </div>
   </div>
@@ -4140,7 +4140,11 @@ main.content-section {
 
             <div class="oferta-card-benefits" aria-label="Benefícios">
               <span><i class="fa-solid fa-circle-check" aria-hidden="true"></i> Pacote completo</span>
-              <span><i class="fa-solid fa-tag" aria-hidden="true"></i> Melhor custo-benefício</span>
+              {% if combo.economia > 0 %}
+                <span><i class="fa-solid fa-tag" aria-hidden="true"></i> Melhor custo-benefício</span>
+              {% else %}
+                <span><i class="fa-solid fa-box-open" aria-hidden="true"></i> Seleção especial</span>
+              {% endif %}
             </div>
 
             <div class="oferta-precos">
@@ -4156,12 +4160,19 @@ main.content-section {
                         data-valor="{{ combo.valor_combo }}"></strong>
               </p>
 
-              <p class="combo-economia">
-                Economia de
-                <strong class="economia-verde money"
-                        data-valor="{{ combo.economia }}"></strong>
-                · {{ combo.porcentagem|floatformat:0 }}% OFF
-              </p>
+              {% if combo.economia > 0 %}
+                <p class="combo-economia">
+                  Economia de
+                  <strong class="economia-verde money"
+                          data-valor="{{ combo.economia }}"></strong>
+                  · {{ combo.porcentagem|floatformat:0 }}% OFF
+                </p>
+              {% else %}
+                <p class="combo-economia combo-economia-neutra">
+                  <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+                  Confira os itens e as condições deste pacote
+                </p>
+              {% endif %}
             </div>
 
             <div class="oferta-card-acoes">
@@ -4343,12 +4354,12 @@ main.content-section {
     <div class="eventos-header">
         <div>
             <span class="ls-showcase-tag">
-              <i class="fa-solid fa-handshake" aria-hidden="true"></i>
-              Parceiros
+              <i class="fa-solid fa-location-dot" aria-hidden="true"></i>
+              Locais ideais
             </span>
-            <h2 class="titulo-eventos">Nossos Estabelecimentos</h2>
+            <h2 class="titulo-eventos">Onde nossos brinquedos fazem a diferença</h2>
             <p class="section-subtitle">
-              Conheça os parceiros responsáveis por levar diversão e qualidade aos eventos.
+              Descubra os tipos de espaços ideais para instalar nossos brinquedos, atrair mais famílias e transformar cada visita em uma experiência completa de diversão.
             </p>
         </div>
 
@@ -6885,6 +6896,57 @@ main.content-section {
         color: #8ac2ff;
     }
 
+    /* Selos de contexto nítidos e consistentes com a identidade da marca. */
+    .categorias-eyebrow,
+    #promocoes-section .ls-section-kicker,
+    #brinquedos .ls-section-kicker,
+    #pecas-section .ls-section-kicker,
+    #combos-section .ls-section-kicker,
+    #estabelecimentos .ls-showcase-tag,
+    #eventos .ls-showcase-tag,
+    #projetos .ls-showcase-tag,
+    #clientes-section .ls-showcase-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 9px;
+        min-height: 39px;
+        margin-bottom: 13px;
+        padding: 7px 14px 7px 8px;
+        border: 1px solid rgba(8, 120, 249, .85);
+        border-radius: 12px;
+        color: #ffffff !important;
+        background: linear-gradient(135deg, #004aad 0%, #0878f9 100%);
+        box-shadow:
+            0 9px 20px rgba(0, 74, 173, .22),
+            inset 0 1px 0 rgba(255, 255, 255, .20);
+        font-size: .72rem;
+        font-weight: 900;
+        line-height: 1.15;
+        letter-spacing: .075em;
+        text-shadow: 0 1px 1px rgba(0, 30, 75, .28);
+        opacity: 1;
+    }
+
+    .categorias-eyebrow > i,
+    #promocoes-section .ls-section-kicker > i,
+    #brinquedos .ls-section-kicker > i,
+    #pecas-section .ls-section-kicker > i,
+    #combos-section .ls-section-kicker > i,
+    #estabelecimentos .ls-showcase-tag > i,
+    #eventos .ls-showcase-tag > i,
+    #projetos .ls-showcase-tag > i,
+    #clientes-section .ls-showcase-tag > i {
+        display: inline-grid;
+        place-items: center;
+        flex: 0 0 24px;
+        width: 24px;
+        height: 24px;
+        border-radius: 8px;
+        color: #ffffff;
+        background: linear-gradient(135deg, #ef4352, #c91f31);
+        box-shadow: 0 4px 10px rgba(166, 17, 35, .30);
+    }
+
     /* Subtítulos mais nítidos desde Categorias até o mapa de clientes. */
     .categorias-section .section-subtitle {
         max-width: 720px;
@@ -7034,6 +7096,20 @@ main.content-section {
         background: linear-gradient(135deg, #004aad, #0878f9);
     }
 
+    #combos-section .combo-economia-neutra {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: #34506f;
+        border-color: rgba(0, 74, 173, .14);
+        background: #e5effb;
+    }
+
+    #combos-section .combo-economia-neutra i {
+        flex: 0 0 auto;
+        color: #0878f9;
+    }
+
     /* Mantém o destaque solicitado para Projetos, agora dentro da paleta uniforme. */
     #projetos .projetos-header {
         border-color: rgba(0, 74, 173, .17);
@@ -7044,6 +7120,22 @@ main.content-section {
     }
 
     @media (max-width: 768px) {
+        .categorias-eyebrow,
+        #promocoes-section .ls-section-kicker,
+        #brinquedos .ls-section-kicker,
+        #pecas-section .ls-section-kicker,
+        #combos-section .ls-section-kicker,
+        #estabelecimentos .ls-showcase-tag,
+        #eventos .ls-showcase-tag,
+        #projetos .ls-showcase-tag,
+        #clientes-section .ls-showcase-tag {
+            max-width: 100%;
+            min-height: 36px;
+            padding: 6px 11px 6px 7px;
+            font-size: .65rem;
+            letter-spacing: .06em;
+        }
+
         .categorias-section .section-subtitle,
         #promocoes-section .ls-section-intro .section-subtitle,
         #brinquedos .ls-section-intro .section-subtitle,
