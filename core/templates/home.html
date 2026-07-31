@@ -6705,6 +6705,383 @@ main.content-section {
     }
 </style>
 
+<!-- Ajuste final: contraste original no topo, subtítulos nítidos e combos completos. -->
+<style id="ls-final-uniform-theme">
+    /* Retorna hero, indicadores e categorias ao azul-marinho anterior. */
+    .ls-home-hero {
+        color: #fff;
+        border-color: rgba(255, 255, 255, .12);
+        border-bottom-color: rgba(255, 255, 255, .12);
+        background:
+            radial-gradient(circle at 88% 12%, rgba(230, 57, 70, .25), transparent 27rem),
+            radial-gradient(circle at 8% 94%, rgba(8, 120, 249, .35), transparent 31rem),
+            linear-gradient(140deg, #071426 0%, #0a2447 58%, #063d83 100%);
+        box-shadow: none;
+    }
+
+    .ls-home-hero::before {
+        opacity: .14;
+        background-image:
+            linear-gradient(rgba(255, 255, 255, .06) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255, 255, 255, .06) 1px, transparent 1px);
+    }
+
+    .ls-home-title {
+        color: #fff;
+        text-shadow: none;
+    }
+
+    .ls-home-title span {
+        color: #72b6ff;
+    }
+
+    .ls-home-subtitle {
+        color: #c8d6e8;
+        font-weight: 520;
+    }
+
+    .ls-home-btn-outline {
+        color: #fff;
+        border-color: rgba(255, 255, 255, .22);
+        background: rgba(255, 255, 255, .08);
+        box-shadow: none;
+    }
+
+    .ls-home-btn-outline:hover {
+        color: #fff;
+        border-color: rgba(255, 255, 255, .28);
+        background: rgba(255, 255, 255, .14);
+    }
+
+    .ls-home-hero-card {
+        border-color: rgba(255, 255, 255, .16);
+        background: linear-gradient(145deg, rgba(255, 255, 255, .12), rgba(255, 255, 255, .055));
+        box-shadow:
+            0 28px 70px rgba(0, 5, 16, .36),
+            inset 0 1px 0 rgba(255, 255, 255, .10);
+    }
+
+    .ls-home-mini-head strong {
+        color: #fff;
+    }
+
+    .ls-home-mini-head a {
+        color: #9dccff;
+    }
+
+    .ls-home-mini {
+        border-color: rgba(255, 255, 255, .12);
+        color: #fff;
+        background: rgba(3, 13, 27, .34);
+        box-shadow: none;
+    }
+
+    .ls-home-mini:hover {
+        border-color: rgba(113, 180, 255, .38);
+        background: rgba(8, 120, 249, .15);
+        box-shadow: none;
+    }
+
+    .ls-home-mini strong {
+        color: #f4f8ff;
+    }
+
+    .ls-home-mini span {
+        color: #91c4ff;
+    }
+
+    .ls-home-mini i {
+        color: #72b6ff;
+    }
+
+    .ls-home-stats {
+        border-color: rgba(126, 163, 210, .13);
+        background: #050c16;
+    }
+
+    .ls-home-stat {
+        border-color: rgba(132, 170, 218, .13);
+        background: linear-gradient(145deg, #0e1b2d, #091421);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, .025);
+    }
+
+    .ls-home-stat h3 {
+        color: #fff;
+    }
+
+    .ls-home-stat p {
+        color: #a9bbd1;
+        font-weight: 600;
+    }
+
+    .categorias-section {
+        color: #f4f8ff;
+        border-color: rgba(120, 165, 224, .15);
+        background:
+            radial-gradient(circle at 6% 8%, rgba(8, 120, 249, .20), transparent 25rem),
+            radial-gradient(circle at 95% 82%, rgba(230, 57, 70, .14), transparent 24rem),
+            linear-gradient(150deg, #0a1728 0%, #050b14 62%, #07111f 100%);
+        box-shadow: none;
+    }
+
+    .categorias-section::before {
+        opacity: .15;
+        background-image:
+            linear-gradient(rgba(255, 255, 255, .04) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255, 255, 255, .04) 1px, transparent 1px);
+    }
+
+    .categorias-eyebrow {
+        color: #9bc9ff;
+        border-color: rgba(99, 166, 255, .24);
+        background: rgba(8, 120, 249, .10);
+    }
+
+    .categorias-section .section-title {
+        color: #fff;
+    }
+
+    .categorias-counter {
+        color: #b7c8dc;
+        border-color: rgba(140, 176, 220, .16);
+        background: rgba(255, 255, 255, .045);
+    }
+
+    .categorias-section .scroll-btn {
+        color: #fff;
+        border-color: rgba(136, 178, 230, .24);
+        background: linear-gradient(145deg, #132a47, #0a1728);
+        box-shadow: 0 13px 28px rgba(0, 3, 11, .42);
+    }
+
+    .categorias-section .scroll-btn:hover {
+        color: #fff;
+        border-color: rgba(255, 255, 255, .30);
+        background: linear-gradient(145deg, #e63946, #b91e30);
+    }
+
+    .categoria-card {
+        border-color: rgba(132, 170, 218, .16);
+        background:
+            radial-gradient(circle at 100% 0, rgba(8, 120, 249, .12), transparent 42%),
+            linear-gradient(155deg, #12233a, #0a1524 72%);
+        box-shadow:
+            0 18px 38px rgba(0, 4, 13, .34),
+            inset 0 1px 0 rgba(255, 255, 255, .035);
+    }
+
+    .categoria-card:hover {
+        border-color: rgba(78, 151, 246, .48);
+        box-shadow:
+            0 26px 55px rgba(0, 4, 14, .52),
+            0 0 0 1px rgba(8, 120, 249, .08);
+    }
+
+    .categoria-info h3 {
+        color: #f4f8ff;
+    }
+
+    .categoria-info p {
+        color: #8ac2ff;
+    }
+
+    /* Subtítulos mais nítidos desde Categorias até o mapa de clientes. */
+    .categorias-section .section-subtitle {
+        max-width: 720px;
+        padding-left: 15px;
+        border-left: 3px solid #0878f9;
+        color: #e2ecf8;
+        font-size: .98rem;
+        font-weight: 650;
+        line-height: 1.7;
+        opacity: 1;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, .20);
+    }
+
+    #promocoes-section .ls-section-intro .section-subtitle,
+    #brinquedos .ls-section-intro .section-subtitle,
+    #pecas-section .ls-section-intro .section-subtitle,
+    #combos-section .ls-section-intro .section-subtitle,
+    #estabelecimentos .eventos-header .section-subtitle,
+    #eventos .eventos-header .section-subtitle,
+    #projetos .projetos-header .section-subtitle,
+    #clientes-section .clientes-subtitle {
+        max-width: 760px;
+        padding-left: 15px;
+        border-left: 3px solid rgba(0, 105, 218, .55);
+        color: #334f70;
+        font-size: .97rem;
+        font-weight: 650;
+        line-height: 1.7;
+        opacity: 1;
+    }
+
+    /* Card de combo com altura e hierarquia suficientes para todo o conteúdo. */
+    #combos-section .scroll-container {
+        align-items: stretch;
+    }
+
+    #combos-section .oferta-card-link {
+        display: flex;
+        height: auto;
+        align-self: stretch;
+    }
+
+    #combos-section .oferta-card {
+        height: 100%;
+        min-height: 635px;
+        border-top: 4px solid #0878f9;
+        background:
+            radial-gradient(circle at 100% 100%, rgba(8, 120, 249, .08), transparent 38%),
+            linear-gradient(160deg, #f9fbff, #edf4fc 78%);
+    }
+
+    #combos-section .oferta-card-media {
+        height: 232px;
+        border-bottom: 1px solid rgba(0, 74, 173, .10);
+        background:
+            radial-gradient(circle at 18% 20%, rgba(8, 120, 249, .18), transparent 32%),
+            radial-gradient(circle at 88% 86%, rgba(230, 57, 70, .10), transparent 28%),
+            linear-gradient(145deg, #e7f1fc, #d8e8f8);
+    }
+
+    #combos-section .oferta-card-info {
+        min-height: 0;
+        padding: 21px;
+    }
+
+    #combos-section .oferta-card-info h3 {
+        display: -webkit-box;
+        min-height: 2.6em;
+        margin: 0 0 13px;
+        overflow: hidden;
+        color: #102b4c;
+        font-size: 1.18rem;
+        line-height: 1.3;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+    }
+
+    #combos-section .oferta-card-benefits {
+        margin-bottom: 12px;
+    }
+
+    #combos-section .oferta-card-benefits span {
+        color: #315274;
+        border-color: rgba(0, 74, 173, .11);
+        background: #e6f0fb;
+    }
+
+    #combos-section .oferta-precos {
+        display: grid;
+        gap: 10px;
+        margin-top: auto;
+        padding: 15px;
+        border-color: rgba(0, 74, 173, .12);
+        background: linear-gradient(145deg, #eaf3fd, #dfeafa);
+    }
+
+    #combos-section .oferta-precos .combo-total,
+    #combos-section .oferta-precos .combo-preco {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 4px;
+        margin: 0;
+        color: #526b87;
+        line-height: 1.4;
+    }
+
+    #combos-section .oferta-precos .combo-preco strong {
+        display: block;
+        color: #087f45;
+        font-size: 1.42rem;
+        line-height: 1.15;
+        overflow-wrap: anywhere;
+    }
+
+    #combos-section .oferta-card .combo-economia {
+        margin: 0;
+        padding: 10px 11px;
+        border: 1px solid rgba(8, 127, 69, .12);
+        color: #08733f;
+        background: #dff5e9;
+        font-size: .76rem;
+        line-height: 1.4;
+    }
+
+    #combos-section .oferta-card-acoes {
+        grid-template-columns: minmax(0, 1.25fr) minmax(0, .85fr);
+        align-items: stretch;
+        margin-top: 14px;
+    }
+
+    #combos-section .oferta-card-acoes .oferta-card-cta {
+        min-width: 0;
+        min-height: 46px;
+        padding: 10px 11px;
+        white-space: normal;
+        text-align: center;
+    }
+
+    #combos-section .oferta-card-details {
+        color: #004aad;
+        border: 1px solid rgba(0, 74, 173, .15);
+        background: #e5effb;
+    }
+
+    #combos-section .oferta-card-details:hover {
+        color: #fff;
+        background: linear-gradient(135deg, #004aad, #0878f9);
+    }
+
+    /* Mantém o destaque solicitado para Projetos, agora dentro da paleta uniforme. */
+    #projetos .projetos-header {
+        border-color: rgba(0, 74, 173, .17);
+        background:
+            radial-gradient(circle at 92% 0, rgba(230, 57, 70, .12), transparent 17rem),
+            radial-gradient(circle at 5% 100%, rgba(8, 120, 249, .16), transparent 19rem),
+            linear-gradient(135deg, #dceafa, #f8fbff 72%);
+    }
+
+    @media (max-width: 768px) {
+        .categorias-section .section-subtitle,
+        #promocoes-section .ls-section-intro .section-subtitle,
+        #brinquedos .ls-section-intro .section-subtitle,
+        #pecas-section .ls-section-intro .section-subtitle,
+        #combos-section .ls-section-intro .section-subtitle,
+        #estabelecimentos .eventos-header .section-subtitle,
+        #eventos .eventos-header .section-subtitle,
+        #projetos .projetos-header .section-subtitle,
+        #clientes-section .clientes-subtitle {
+            padding-left: 12px;
+            font-size: .84rem;
+            line-height: 1.65;
+        }
+
+        #combos-section .oferta-card-link {
+            flex-basis: min(86vw, 330px);
+            min-width: min(86vw, 330px);
+        }
+
+        #combos-section .oferta-card {
+            height: auto;
+            min-height: 0;
+        }
+
+        #combos-section .oferta-card-media {
+            height: 214px;
+        }
+
+        #combos-section .oferta-card-info {
+            padding: 18px;
+        }
+
+        #combos-section .oferta-card-acoes {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
 <section id="clientes-section" class="clientes-section">
 
     <div class="clientes-header">
