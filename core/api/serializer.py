@@ -73,33 +73,20 @@ class CategoriaSerializer(serializers.ModelSerializer):
 
 
 class BrinquedoListaSerializer(serializers.ModelSerializer):
-    """Versão enxuta -- usada na grade do catálogo.
-
-    Não traz descrição nem dimensões de propósito: numa lista de 200
-    itens isso é payload jogado fora. O app busca o resto no detalhe.
-    """
-
     nome = serializers.CharField(source="nome_brinquedo")
-    valor = serializers.DecimalField(
-        source="valor_brinquedo",
-        max_digits=10,
-        decimal_places=2,
-    )
+    valor = serializers.CharField(source="valor_brinquedo")
     imagem = serializers.SerializerMethodField()
 
     class Meta:
         model = Brinquedos
-        fields = [
-            "id",
-            "nome",
-            "valor",
-            "avaliacao",
-            "imagem",
-            "exibir_na_loja",
-        ]
+        fields = ("id", "nome", "valor", "avaliacao", "imagem", "exibir_na_loja")
 
     def get_imagem(self, obj):
-        return _url_cloudinary(obj.imagem_brinquedo, THUMB)
+        if not obj.imagem_brinquedo:
+            return None
+        url = obj.imagem_brinquedo.url
+        pedido = self.context.get("request")
+        return pedido.build_absolute_uri(url) if pedido else url
 
 
 class BrinquedoDetalheSerializer(serializers.ModelSerializer):
