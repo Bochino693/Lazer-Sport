@@ -655,19 +655,19 @@
             <!-- WhatsApp -->
                 <a
                     href="https://wa.me/5511960563135?text=
-            Olá! 👋%0A
-            Gostaria de um orçamento para o brinquedo abaixo:%0A%0A
-            🧸 Nome: {{ brinquedo.nome_brinquedo|urlencode }}%0A
-            ⭐ Avaliação: {{ brinquedo.avaliacao|floatformat:2 }}/5%0A
-            ⚡ Voltagem: {{ brinquedo.voltz|urlencode }}%0A%0A
-            📐 Dimensões:%0A
-            ↕️ Altura: {{ brinquedo.altura_m }} m%0A
-            ↔️ Largura: {{ brinquedo.largura_m }} m%0A
-            ↗️ Profundidade: {{ brinquedo.profundidade_m }} m%0A
-            📦 Volume: {{ brinquedo.volume_formatado|urlencode }}%0A%0A
-            🔗 Página do produto:%0A
-            {{ request.build_absolute_uri|urlencode }}%0A%0A
-            Fico no aguardo 😊"
+                    Olá! 👋%0A
+                    Gostaria de um orçamento para o brinquedo abaixo:%0A%0A
+                    🧸 Nome: {{ brinquedo.nome_brinquedo|urlencode }}%0A
+                    ⭐ Avaliação: {{ brinquedo.avaliacao|floatformat:2 }}/5%0A
+                    ⚡ Voltagem: {{ brinquedo.voltz|urlencode }}%0A%0A
+                    📐 Dimensões:%0A
+                    ↕️ Altura: {{ brinquedo.altura_m }} m%0A
+                    ↔️ Largura: {{ brinquedo.largura_m }} m%0A
+                    ↗️ Profundidade: {{ brinquedo.profundidade_m }} m%0A
+                    📦 Volume: {{ brinquedo.volume_formatado|urlencode }}%0A%0A
+                    🔗 Página do produto:%0A
+                    {{ request.build_absolute_uri|urlencode }}%0A%0A
+                    Fico no aguardo 😊"
                     target="_blank"
                     class="btn-acao whatsapp"
                 >
@@ -731,18 +731,17 @@
         </div>
 
         <div class="modal-footer">
-    <button class="btn-cancelar" onclick="fecharModal()">Cancelar</button>
+            <button class="btn-cancelar" onclick="fecharModal()">Cancelar</button>
 
-    <form method="post"
-          action="{% url 'adicionar_ao_carrinho' 'brinquedo' brinquedo.id %}"
-          style="display:inline;">
-        {% csrf_token %}
-        <button type="submit" class="btn-produto btn-carrinho">
-            🛒 Adicionar ao Carrinho
-        </button>
-    </form>
-</div>
-
+            <form method="post"
+                  action="{% url 'adicionar_ao_carrinho' 'brinquedo' brinquedo.id %}"
+                  style="display:inline;">
+                {% csrf_token %}
+                <button type="submit" class="btn-produto btn-carrinho">
+                    🛒 Adicionar ao Carrinho
+                </button>
+            </form>
+        </div>
     </div>
 </div>
 

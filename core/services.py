@@ -1,5 +1,3 @@
-from decimal import Decimal
-from django.contrib.contenttypes.models import ContentType
 from .models import Pedido, ItemPedido, Carrinho
 
 

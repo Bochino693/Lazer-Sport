@@ -1,4 +1,34 @@
-from django.db.models import Sum
+# core/context_processors.py
+#
+# Refatoração de performance
+# ==========================
+# Problema original: os processors globais (categorias_globais,
+# estabelecimentos_globais, clientes_rodape) rodavam em TODA request,
+# inclusive de visitante anônimo e de bot. Como o base.html usa os três,
+# cada pageview do site batia no Supabase 3x só pra montar header e rodapé.
+#
+# Duas mudanças aqui:
+#
+# 1) CACHE. Esses três dados mudam raramente (categoria, estabelecimento,
+#    logo de cliente). Ficam em cache por 10 min. Um bot varrendo 5.000
+#    URLs passa a gerar ~3 queries no total em vez de ~15.000.
+#
+# 2) LAZY. Os processors de usuário logado (carrinho, pedidos, manutenção,
+#    alertas de admin) agora devolvem SimpleLazyObject: a query só dispara
+#    se o template realmente imprimir a variável. Antes, .count() e
+#    .exists() executavam sempre, mesmo em página que não mostra o badge.
+#
+# Também juntei queries duplicadas:
+#   - manutencao_notificacao fazia 2 counts -> agora 1 query com aggregate
+#   - pedidos_ativos_context fazia .exists() + .count() -> agora 1 count
+#
+# IMPORTANTE: pra invalidar o cache depois de mexer em categoria/
+# estabelecimento/cliente no admin, chame limpar_cache_global() no save()
+# do model (ou espere os 10 min).
+
+from django.core.cache import cache
+from django.db.models import Count, Q, Sum
+from django.utils.functional import SimpleLazyObject
 
 from .models import (
     Carrinho,
@@ -9,75 +39,131 @@ from .models import (
     Pedido,
 )
 
+# 10 minutos. Aumente à vontade se o conteúdo do header/rodapé é estável.
+TTL_GLOBAL = 60 * 10
+
+CHAVE_CATEGORIAS = "ctx:categorias_header:v1"
+CHAVE_ESTABELECIMENTOS = "ctx:estabelecimentos_globais:v1"
+CHAVE_CLIENTES_RODAPE = "ctx:clientes_rodape:v1"
+
+_CATEGORIAS_OCULTAS = (
+    "competitivos",
+    "kids",
+    "famosos",
+    "espaço esportivo kids",
+    "espaço kids play",
+)
+
+
+def limpar_cache_global():
+    """Chame isto no save()/delete() de CategoriasBrinquedos,
+    Estabelecimentos e Clientes pra o header/rodapé atualizar na hora."""
+    cache.delete_many([
+        CHAVE_CATEGORIAS,
+        CHAVE_ESTABELECIMENTOS,
+        CHAVE_CLIENTES_RODAPE,
+    ])
+
+
+# ============================================================
+# GLOBAIS (todo visitante) -- servidos do cache
+# ============================================================
 
 def categorias_globais(request):
-    return {
-        "categorias_header": (
-            CategoriasBrinquedos.objects
-            .exclude(nome_categoria__icontains="competitivos")
-            .exclude(nome_categoria__icontains="kids")
-            .exclude(nome_categoria__icontains="famosos")
-            .exclude(nome_categoria__icontains="espaço esportivo kids")
-            .exclude(nome_categoria__icontains="espaço kids play")
-            .order_by("nome_categoria")
-        )
-    }
+    def _buscar():
+        dados = cache.get(CHAVE_CATEGORIAS)
+        if dados is None:
+            filtro = Q()
+            for termo in _CATEGORIAS_OCULTAS:
+                filtro |= Q(nome_categoria__icontains=termo)
+
+            # list() força a avaliação: o cache precisa guardar os
+            # objetos, não o QuerySet preguiçoso.
+            dados = list(
+                CategoriasBrinquedos.objects
+                .exclude(filtro)
+                .only("id", "nome_categoria", "imagem_categoria")
+                .order_by("nome_categoria")
+            )
+            cache.set(CHAVE_CATEGORIAS, dados, TTL_GLOBAL)
+        return dados
+
+    return {"categorias_header": SimpleLazyObject(_buscar)}
 
 
 def estabelecimentos_globais(request):
-    return {
-        "estabelecimentos_globais": Estabelecimentos.objects.all()
-    }
+    def _buscar():
+        dados = cache.get(CHAVE_ESTABELECIMENTOS)
+        if dados is None:
+            dados = list(Estabelecimentos.objects.all())
+            cache.set(CHAVE_ESTABELECIMENTOS, dados, TTL_GLOBAL)
+        return dados
+
+    return {"estabelecimentos_globais": SimpleLazyObject(_buscar)}
 
 
 def clientes_rodape(request):
-    """
-    Disponibiliza os seis primeiros clientes ativos com logo para
-    o base.html e para todos os templates que herdam dele.
-    """
-    return {
-        "clientes_rodape": (
-            Clientes.objects
-            .filter(ativo=True)
-            .exclude(logo_cliente__isnull=True)
-            .exclude(logo_cliente="")
-            .only(
-                "id",
-                "descricao_cliente",
-                "logo_cliente",
-                "criacao",
+    """Seis primeiros clientes ativos com logo, para o base.html."""
+    def _buscar():
+        dados = cache.get(CHAVE_CLIENTES_RODAPE)
+        if dados is None:
+            dados = list(
+                Clientes.objects
+                .filter(ativo=True)
+                .exclude(logo_cliente__isnull=True)
+                .exclude(logo_cliente="")
+                .only(
+                    "id",
+                    "descricao_cliente",
+                    "logo_cliente",
+                    "criacao",
+                )
+                .order_by("-criacao", "-id")[:6]
             )
-            .order_by("-criacao", "-id")[:6]
-        )
-    }
+            cache.set(CHAVE_CLIENTES_RODAPE, dados, TTL_GLOBAL)
+        return dados
 
+    return {"clientes_rodape": SimpleLazyObject(_buscar)}
+
+
+# ============================================================
+# POR USUÁRIO -- lazy, só consulta se o template usar
+# ============================================================
 
 def manutencao_notificacao(request):
     if not request.user.is_authenticated:
         return {}
 
-    perfil = getattr(request.user, "perfil", None)
+    vazio = {
+        "manutencao_pendente": 0,
+        "manutencao_andamento": 0,
+        "manutencao_abertas": 0,
+        "tem_manutencao": False,
+    }
 
-    if not perfil:
+    def _contar():
+        perfil = getattr(request.user, "perfil", None)
+        if not perfil:
+            return vazio
+
+        # Uma query só, em vez de dois .count() separados.
+        agg = Manutencao.objects.filter(usuario=perfil).aggregate(
+            pendentes=Count("id", filter=Q(status="P")),
+            andamento=Count("id", filter=Q(status="A")),
+        )
+        pendentes = agg["pendentes"] or 0
+        andamento = agg["andamento"] or 0
+        total = pendentes + andamento
+
         return {
-            "manutencao_pendente": 0,
-            "manutencao_andamento": 0,
-            "manutencao_abertas": 0,
-            "tem_manutencao": False,
+            "manutencao_pendente": pendentes,
+            "manutencao_andamento": andamento,
+            "manutencao_abertas": total,
+            "tem_manutencao": total > 0,
         }
 
-    manutencoes = Manutencao.objects.filter(usuario=perfil)
-
-    pendentes = manutencoes.filter(status="P").count()
-    em_andamento = manutencoes.filter(status="A").count()
-    total_abertas = pendentes + em_andamento
-
-    return {
-        "manutencao_pendente": pendentes,
-        "manutencao_andamento": em_andamento,
-        "manutencao_abertas": total_abertas,
-        "tem_manutencao": total_abertas > 0,
-    }
+    dados = SimpleLazyObject(_contar)
+    return {chave: SimpleLazyObject(lambda c=chave: dados[c]) for chave in vazio}
 
 
 def carrinho_context(request):
@@ -87,29 +173,29 @@ def carrinho_context(request):
             "mostrar_float_carrinho": False,
         }
 
-    if not hasattr(request.user, "perfil"):
-        return {
-            "carrinho_total_itens": 0,
-            "mostrar_float_carrinho": False,
-        }
+    def _total():
+        perfil = getattr(request.user, "perfil", None)
+        if not perfil:
+            return 0
 
-    cliente = request.user.perfil
-    carrinho = Carrinho.objects.filter(cliente=cliente).first()
+        carrinho = (
+            Carrinho.objects
+            .filter(cliente=perfil)
+            .only("id")
+            .first()
+        )
+        if not carrinho:
+            return 0
 
-    if not carrinho:
-        return {
-            "carrinho_total_itens": 0,
-            "mostrar_float_carrinho": False,
-        }
+        return carrinho.itens.aggregate(
+            total=Sum("quantidade")
+        )["total"] or 0
 
-    total_itens = (
-        carrinho.itens.aggregate(total=Sum("quantidade"))["total"]
-        or 0
-    )
+    total = SimpleLazyObject(_total)
 
     return {
-        "carrinho_total_itens": total_itens,
-        "mostrar_float_carrinho": total_itens > 0,
+        "carrinho_total_itens": total,
+        "mostrar_float_carrinho": SimpleLazyObject(lambda: total > 0),
     }
 
 
@@ -117,45 +203,50 @@ def pedidos_ativos_context(request):
     if not request.user.is_authenticated:
         return {}
 
-    perfil = getattr(request.user, "perfil", None)
-    if not perfil:
-        return {}
+    def _contar():
+        perfil = getattr(request.user, "perfil", None)
+        if not perfil:
+            return 0
 
-    pedidos_ativos = (
-        Pedido.objects
-        .filter(cliente=perfil)
-        .exclude(status__in=["cancelado", "finalizado"])
-    )
+        # Antes: .exists() + .count() = 2 queries. Agora 1.
+        return (
+            Pedido.objects
+            .filter(cliente=perfil)
+            .exclude(status__in=["cancelado", "finalizado"])
+            .count()
+        )
+
+    total = SimpleLazyObject(_contar)
 
     return {
-        "tem_pedidos_ativos": pedidos_ativos.exists(),
-        "total_pedidos_ativos": pedidos_ativos.count(),
+        "tem_pedidos_ativos": SimpleLazyObject(lambda: total > 0),
+        "total_pedidos_ativos": total,
     }
 
 
 def admin_alertas_context(request):
-    if not request.user.is_authenticated:
+    if not request.user.is_authenticated or not request.user.is_staff:
         return {}
 
-    if not request.user.is_staff:
-        return {}
+    def _pedidos():
+        return Pedido.objects.filter(
+            status__in=[
+                "criado",
+                "aguardando_pagamento",
+                "pago",
+                "em_preparacao",
+            ]
+        ).count()
 
-    pedidos_alerta = Pedido.objects.filter(
-        status__in=[
-            "criado",
-            "aguardando_pagamento",
-            "pago",
-            "em_preparacao",
-        ]
-    ).count()
+    def _manutencoes():
+        return Manutencao.objects.filter(status__in=["P", "A"]).count()
 
-    manutencoes_alerta = Manutencao.objects.filter(
-        status__in=["P", "A"]
-    ).count()
+    pedidos = SimpleLazyObject(_pedidos)
+    manutencoes = SimpleLazyObject(_manutencoes)
 
     return {
-        "pedidos_alerta": pedidos_alerta,
-        "tem_pedidos_alerta": pedidos_alerta > 0,
-        "manutencoes_alerta": manutencoes_alerta,
-        "tem_manutencoes_alerta": manutencoes_alerta > 0,
+        "pedidos_alerta": pedidos,
+        "tem_pedidos_alerta": SimpleLazyObject(lambda: pedidos > 0),
+        "manutencoes_alerta": manutencoes,
+        "tem_manutencoes_alerta": SimpleLazyObject(lambda: manutencoes > 0),
     }
