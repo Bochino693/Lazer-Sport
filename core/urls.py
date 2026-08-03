@@ -77,6 +77,15 @@ from .views_conta import (
     CompletarPerfilView,
 )
 
+from .api.views import (
+    BrinquedoDetalheAPI,
+    BrinquedoListAPI,
+    CategoriaListAPI,
+    PecaDetalheAPI,
+    PecaListAPI,
+
+)
+
 
 sitemaps = {
     "estaticas": PaginasEstaticasSitemap,
@@ -262,8 +271,27 @@ urlpatterns = [
         MarcarPedidoImpressoAPI.as_view(),
     ),
 
+
+    #Rotas da Api do app V1
+# ---- API v1 (app Android) — SEMPRE antes do catch-all ----
+    path("api/v1/categorias/", CategoriaListAPI.as_view(), name="api_categorias"),
+    path("api/v1/brinquedos/", BrinquedoListAPI.as_view(), name="api_brinquedos"),
+    path("api/v1/brinquedos/<int:pk>/", BrinquedoDetalheAPI.as_view(), name="api_brinquedo"),
+    path("api/v1/pecas/", PecaListAPI.as_view(), name="api_pecas"),
+    path("api/v1/pecas/<int:pk>/", PecaDetalheAPI.as_view(), name="api_peca"),
+
+
+
     path("produto-tag/<path:resto>", redirecionar_loja),
 
     # Deve permanecer por último.
     re_path(r"^.*$", redirecionar_loja),
+
+
+
+
+
+
+
+
 ]

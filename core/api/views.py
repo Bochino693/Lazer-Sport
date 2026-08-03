@@ -28,7 +28,7 @@ from rest_framework.permissions import AllowAny
 
 from core.models import Brinquedos, CategoriasBrinquedos, PecasReposicao
 
-from .serializers import (
+from core.api.serializer import (
     BrinquedoDetalheSerializer,
     BrinquedoListaSerializer,
     CategoriaSerializer,
