@@ -3,12 +3,20 @@ import os
 
 import cloudinary
 import dj_database_url
+from dotenv import load_dotenv
 
 
 # ============================================================
 # BASE / AMBIENTE
 # ============================================================
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Carrega o .env em desenvolvimento local. Em producao (Render/Vercel) as
+# variaveis vem da plataforma e este arquivo nao existe -- load_dotenv
+# simplesmente nao faz nada, sem erro.
+# override=False: variavel ja definida no ambiente real tem prioridade
+# sobre o .env, entao o deploy nunca e sobrescrito por um arquivo local.
+load_dotenv(BASE_DIR / ".env", override=False)
 
 IS_RENDER = os.getenv("RENDER", "").strip().lower() == "true"
 IS_VERCEL = os.getenv("VERCEL", "").strip() == "1"
@@ -193,7 +201,9 @@ SUPABASE_DATABASE_URL = os.getenv("SUPABASE_DATABASE_URL", "").strip()
 if not SUPABASE_DATABASE_URL:
     raise RuntimeError(
         "SUPABASE_DATABASE_URL não configurada. "
-        "Cadastre a URI do Transaction Pooler do Supabase."
+        "Cadastre a URI do Transaction Pooler do Supabase (porta 6543). "
+        "Em desenvolvimento, crie um arquivo .env na raiz do projeto "
+        "(ao lado do manage.py) com SUPABASE_DATABASE_URL=postgresql://..."
     )
 
 DATABASES = {
