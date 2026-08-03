@@ -11,7 +11,6 @@ from .forms import (
     PerfilForm,
 )
 
-
 from django.contrib.auth.mixins import LoginRequiredMixin
 
 from .models import Brinquedos, CategoriasBrinquedos, Projetos, Eventos, ClientePerfil, Combos, Cupom, Promocoes, \
@@ -420,7 +419,7 @@ class ManutencaoView(View):
             'brinquedos': Brinquedos.objects.all().order_by('nome_brinquedo'),
             'tab_ativa': tab_ativa,
             'mostrar_modal_sucesso': (
-                request.GET.get('sucesso') == '1'
+                    request.GET.get('sucesso') == '1'
             ),
         }
 
@@ -451,7 +450,7 @@ class ManutencaoView(View):
 
         for imagem in imagens:
             content_type = (
-                getattr(imagem, 'content_type', '') or ''
+                    getattr(imagem, 'content_type', '') or ''
             ).lower()
 
             if content_type not in self.TIPOS_IMAGEM_PERMITIDOS:
@@ -473,7 +472,7 @@ class ManutencaoView(View):
     def salvar_imagem(self, manutencao, arquivo):
         """Salva o arquivo com nome único e devolve storage + nome."""
         content_type = (
-            getattr(arquivo, 'content_type', '') or ''
+                getattr(arquivo, 'content_type', '') or ''
         ).lower()
         extensao = self.TIPOS_IMAGEM_PERMITIDOS[content_type]
 
@@ -647,7 +646,17 @@ class ClientePerfilView(LoginRequiredMixin, View):
 class BrinquedoInfoView(View):
 
     def get(self, request, id):
-        brinquedo = get_object_or_404(Brinquedos, id=id)
+        from urllib.parse import quote
+        from unicodedata import normalize
+
+        brinquedo = get_object_or_404(
+            Brinquedos.objects.prefetch_related(
+                "categorias_brinquedos",
+                "tags",
+            ),
+            id=id,
+            ativo=True,
+        )
 
         obj, created = BrinquedoClick.objects.get_or_create(
             brinquedo_clicado=brinquedo,
@@ -659,7 +668,99 @@ class BrinquedoInfoView(View):
                 quantidade_click=F('quantidade_click') + 1
             )
 
-        return render(request, "brinquedo_info.html", {"brinquedo": brinquedo})
+        valor = brinquedo.valor_brinquedo
+        disponivel_loja = bool(
+            brinquedo.exibir_na_loja
+            and valor is not None
+            and valor > 0
+        )
+
+        preco_formatado = ""
+        preco_schema = ""
+        if disponivel_loja:
+            valor_decimal = Decimal(valor).quantize(
+                Decimal("0.01"),
+                rounding=ROUND_HALF_UP,
+            )
+            preco_formatado = (
+                f"R$ {valor_decimal:,.2f}"
+                .replace(",", "X")
+                .replace(".", ",")
+                .replace("X", ".")
+            )
+            preco_schema = f"{valor_decimal:.2f}"
+
+        produto_url = request.build_absolute_uri()
+
+        def formatar_medida(valor_medida):
+            if valor_medida is None:
+                return ""
+            return (
+                f"{Decimal(valor_medida):.2f}"
+                .replace(".", ",")
+            )
+
+        mensagem = [
+            "Olá! Gostaria de solicitar um orçamento.",
+            "",
+            f"Brinquedo: {brinquedo.nome_brinquedo}",
+        ]
+        if brinquedo.voltz:
+            mensagem.append(f"Voltagem: {brinquedo.voltz}")
+
+        medidas = [
+            ("Altura", brinquedo.altura_m),
+            ("Largura", brinquedo.largura_m),
+            ("Profundidade", brinquedo.profundidade_m),
+        ]
+        medidas_validas = [
+            f"{rotulo}: {formatar_medida(medida)} m"
+            for rotulo, medida in medidas
+            if medida is not None
+        ]
+        if medidas_validas:
+            mensagem.extend(["", "Medidas:", *medidas_validas])
+
+        mensagem.extend(["", f"Página do produto: {produto_url}"])
+        whatsapp_url = (
+            "https://wa.me/5511960563135?text="
+            f"{quote(chr(10).join(mensagem))}"
+        )
+
+        categorias = list(brinquedo.categorias_brinquedos.all())
+
+        def normalizar_texto(texto):
+            return "".join(
+                caractere
+                for caractere in normalize("NFD", texto.lower())
+                if ord(caractere) < 128
+            )
+
+        permite_sob_medida = any(
+            "brinquedao" in normalizar_texto(categoria.nome_categoria)
+            or "trampolim" in normalizar_texto(categoria.nome_categoria)
+            for categoria in categorias
+        )
+
+        imagem_url = ""
+        if brinquedo.imagem_brinquedo:
+            imagem_url = request.build_absolute_uri(
+                brinquedo.imagem_brinquedo.url
+            )
+
+        context = {
+            "brinquedo": brinquedo,
+            "categorias_produto": categorias,
+            "disponivel_loja": disponivel_loja,
+            "preco_formatado": preco_formatado,
+            "preco_schema": preco_schema,
+            "produto_url": produto_url,
+            "imagem_url": imagem_url,
+            "whatsapp_url": whatsapp_url,
+            "permite_sob_medida": permite_sob_medida,
+        }
+
+        return render(request, "brinquedo_info.html", context)
 
 
 class CategoriasInfoView(View):
@@ -766,9 +867,9 @@ class BrinquedosView(View):
             try:
                 numero = Decimal(texto)
                 if (
-                    not numero.is_finite()
-                    or numero < 0
-                    or numero > Decimal("99999999.99")
+                        not numero.is_finite()
+                        or numero < 0
+                        or numero > Decimal("99999999.99")
                 ):
                     return None
             except (InvalidOperation, ValueError, TypeError):
@@ -854,9 +955,9 @@ class BrinquedosView(View):
 
         ordens_por_valor = {"menor-preco", "maior-preco", "custo-beneficio"}
         filtro_por_valor = (
-            preco_min is not None
-            or preco_max is not None
-            or ordenar in ordens_por_valor
+                preco_min is not None
+                or preco_max is not None
+                or ordenar in ordens_por_valor
         )
 
         # Preço e custo-benefício só existem para produtos realmente vendáveis.
@@ -1150,6 +1251,7 @@ class SobreView(View):
         }
         return render(request, 'home_inner.html', context)
 
+
 class EventosView(View):
 
     def get(self, request):
@@ -1407,7 +1509,6 @@ class ClienteAdminView(AdminOnlyMixin, View):
             )
 
         return redirect("clientes_admin")
-
 
 
 from django.db import transaction
@@ -2015,6 +2116,7 @@ class PedidoAdminView(AdminOnlyMixin, View):
         }
 
         return render(request, self.template_name, ctx)
+
 
 class BrinquedoAdmin(AdminOnlyMixin, View):
 
@@ -2963,10 +3065,10 @@ class ManutencaoAdminView(AdminOnlyMixin, View):
             manutencao.tempo_aberto = f"Aberta há {dias} dias"
 
         manutencao.precisa_atencao = (
-            manutencao.status in {"P", "A"} and horas >= 72
+                manutencao.status in {"P", "A"} and horas >= 72
         )
         manutencao.atencao_moderada = (
-            manutencao.status in {"P", "A"} and 24 <= horas < 72
+                manutencao.status in {"P", "A"} and 24 <= horas < 72
         )
 
         if manutencao.precisa_atencao:
@@ -3000,19 +3102,19 @@ class ManutencaoAdminView(AdminOnlyMixin, View):
 
         if busca:
             filtro = (
-                Q(usuario__nome_completo__icontains=busca)
-                | Q(usuario__user__username__icontains=busca)
-                | Q(usuario__user__first_name__icontains=busca)
-                | Q(usuario__user__last_name__icontains=busca)
-                | Q(usuario__user__email__icontains=busca)
-                | Q(usuario__telefone__icontains=busca)
-                | Q(telefone_contato__icontains=busca)
-                | Q(brinquedo__nome_brinquedo__icontains=busca)
-                | Q(brinquedo_descricao_livre__icontains=busca)
-                | Q(descricao__icontains=busca)
-                | Q(cidade__icontains=busca)
-                | Q(estado__icontains=busca)
-                | Q(cep__icontains=busca)
+                    Q(usuario__nome_completo__icontains=busca)
+                    | Q(usuario__user__username__icontains=busca)
+                    | Q(usuario__user__first_name__icontains=busca)
+                    | Q(usuario__user__last_name__icontains=busca)
+                    | Q(usuario__user__email__icontains=busca)
+                    | Q(usuario__telefone__icontains=busca)
+                    | Q(telefone_contato__icontains=busca)
+                    | Q(brinquedo__nome_brinquedo__icontains=busca)
+                    | Q(brinquedo_descricao_livre__icontains=busca)
+                    | Q(descricao__icontains=busca)
+                    | Q(cidade__icontains=busca)
+                    | Q(estado__icontains=busca)
+                    | Q(cep__icontains=busca)
             )
             busca_protocolo = busca.upper().replace("MAN-", "").lstrip("0")
             if busca_protocolo.isdigit():
@@ -3185,9 +3287,9 @@ class ManutencaoAdminView(AdminOnlyMixin, View):
             destino = request.POST.get("next") or request.path
 
             if not url_has_allowed_host_and_scheme(
-                destino,
-                allowed_hosts={request.get_host()},
-                require_https=request.is_secure(),
+                    destino,
+                    allowed_hosts={request.get_host()},
+                    require_https=request.is_secure(),
             ):
                 destino = request.path
 
@@ -3283,7 +3385,6 @@ class ManutencaoAdminView(AdminOnlyMixin, View):
             )
 
         return redirect(montar_proxima_url(manutencao_id))
-
 
 
 class UserAdminView(LoginRequiredMixin, View):

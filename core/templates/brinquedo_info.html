@@ -3,7 +3,7 @@
 
 {% block title %}{{ brinquedo.nome_brinquedo }} | Lazer & Sport Brinquedos{% endblock %}
 
-{% block meta_description %}{{ brinquedo.nome_brinquedo }}: {{ brinquedo.descricao|truncatechars:140 }}{% endblock %}
+{% block meta_description %}{{ brinquedo.nome_brinquedo }}: {{ brinquedo.descricao|striptags|truncatechars:140 }}{% endblock %}
 
 {% block content %}
 
@@ -12,958 +12,1205 @@
     "@context": "https://schema.org/",
     "@type": "Product",
     "name": "{{ brinquedo.nome_brinquedo|escapejs }}",
-    "description": "{{ brinquedo.descricao|escapejs }}",
-    {% if brinquedo.imagem_brinquedo %}"image": "{{ brinquedo.imagem_brinquedo.url }}",{% endif %}
+    "description": "{{ brinquedo.descricao|striptags|escapejs }}",
+    "url": "{{ produto_url|escapejs }}",
+    {% if imagem_url %}"image": "{{ imagem_url|escapejs }}",{% endif %}
     "brand": {
         "@type": "Brand",
         "name": "Lazer & Sport Brinquedos"
-    },
-    {% if brinquedo.avaliacao %}
+    }{% if brinquedo.avaliacao %},
     "aggregateRating": {
         "@type": "AggregateRating",
-        "ratingValue": "{{ brinquedo.avaliacao }}",
+        "ratingValue": "{{ brinquedo.avaliacao|stringformat:'s' }}",
         "bestRating": "5",
         "ratingCount": "1"
-    },
-    {% endif %}
+    }{% endif %}{% if disponivel_loja %},
     "offers": {
         "@type": "Offer",
-        "url": "https://www.lazersport.com.br/brinquedo/{{ brinquedo.id }}/",
+        "url": "{{ produto_url|escapejs }}",
         "priceCurrency": "BRL",
-        "price": "{{ brinquedo.valor_brinquedo|default:'0'|stringformat:'s' }}",
+        "price": "{{ preco_schema }}",
         "availability": "https://schema.org/InStock",
         "itemCondition": "https://schema.org/NewCondition"
-    }
+    }{% endif %}
 }
 </script>
 
-
 <style>
-
-/* ======== BREADCRUMB ======== */
-.breadcrumb {
-    max-width: 1200px;
-    margin: 25px auto;
-    font-size: 1rem;
-    color: #444;
+.produto-detalhe-page {
+    --ls-azul: #0758c9;
+    --ls-azul-escuro: #082a5e;
+    --ls-azul-claro: #e8f1ff;
+    --ls-vermelho: #e5262b;
+    --ls-verde: #169b55;
+    --ls-texto: #172033;
+    --ls-cinza: #667085;
+    --ls-borda: #dfe7f2;
+    background:
+        radial-gradient(circle at 8% 3%, rgba(7, 88, 201, .12), transparent 28rem),
+        radial-gradient(circle at 94% 16%, rgba(229, 38, 43, .08), transparent 24rem),
+        #f4f7fb;
+    color: var(--ls-texto);
+    min-height: 70vh;
+    padding: 24px 18px 72px;
 }
 
-.breadcrumb a {
-    color: #007BFF;
+.produto-detalhe-page,
+.produto-detalhe-page * {
+    box-sizing: border-box;
+}
+
+.produto-limite {
+    margin: 0 auto;
+    max-width: 1220px;
+}
+
+.produto-breadcrumb {
+    align-items: center;
+    color: #697586;
+    display: flex;
+    flex-wrap: wrap;
+    font-size: .88rem;
+    gap: 9px;
+    margin: 0 0 20px;
+}
+
+.produto-breadcrumb a {
+    color: var(--ls-azul);
+    font-weight: 750;
     text-decoration: none;
-    font-weight: 600;
 }
 
-.breadcrumb span {
-    margin: 0 6px;
-    color: #888;
+.produto-breadcrumb a:hover {
+    color: var(--ls-azul-escuro);
+    text-decoration: underline;
 }
 
-.breadcrumb strong {
-    color: #1f2d3d;
+.produto-breadcrumb .separador {
+    color: #a5afbd;
 }
 
-/* ======== CORREÇÃO DO HOVER ======== */
-.breadcrumb a:hover {
-    color: #0056C9 !important;
-    text-decoration: underline !important;
-    transition: .25s ease !important;
-}
-
-/* ====== CONTAINER GERAL ====== */
-.produto-container {
-    max-width: 1100px;
-    margin: 40px auto;
-    padding: 30px;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 40px;
-    background: #ffffff;
-    border-radius: 22px;
-    box-shadow: 0 10px 35px rgba(0,0,0,0.1);
-    animation: fade .4s ease-in-out;
-}
-
-/* Fade de entrada */
-@keyframes fade {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-/* ====== IMAGEM ====== */
-.produto-img img {
-    width: 100%;
-    border-radius: 22px;
-    box-shadow: 0 8px 20px rgba(0,0,0,0.15);
-    transition: transform .3s ease;
-}
-.produto-img img:hover {
-    transform: scale(1.02);
-}
-
-/* ====== TÍTULO ====== */
-.produto-info h1 {
-    font-size: 2.2rem;
+.produto-breadcrumb strong {
+    color: #344054;
     font-weight: 700;
-    color: #222;
-    margin-bottom: 12px;
+    max-width: min(52vw, 440px);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
-/* ====== ESTRELAS ====== */
-.avaliacao {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin: 12px 0 20px 0;
-}
-
-.stars {
-    display: flex;
-    gap: 3px;
-}
-
-.star {
-    font-size: 1.4rem;
-    color: #ffd200;
-    animation: pop .3s ease;
-}
-@keyframes pop {
-    from { transform: scale(0.5); opacity: 0; }
-    to { transform: scale(1); opacity: 1; }
-}
-
-.nota-texto {
-    font-size: 1rem;
-    opacity: 0.8;
-}
-
-/* ====== PREÇO ====== */
-.preco {
-    font-size: 2rem;
-    font-weight: bold;
-    color: #0cb52d;
-    margin-bottom: 20px;
-}
-
-/* ====== TÍTULOS INTERNOS ====== */
-.sec-titulo {
-    font-size: 1.2rem;
-    font-weight: 600;
-    margin-top: 20px;
-    margin-bottom: 6px;
-    color: #333;
-}
-
-/* ====== TEXTO DESCRIÇÃO ====== */
-.descricao-produto {
-    font-size: 1.02rem;
-    line-height: 1.7;
-    color: #444;
-    text-align: justify;
-}
-
-/* ====== BADGES ====== */
-.categoria,
-.tag {
-    padding: 6px 12px;
-    border-radius: 12px;
-    display: inline-block;
-    font-size: .85rem;
-    margin: 4px;
-    font-weight: 500;
-}
-
-.categoria {
-    background: #dff0ff;
-    color: #005e9c;
-}
-
-.tag {
-    background: #f1f1f1;
-    color: #555;
-}
-
-/* ===== BOTÕES DO PRODUTO ===== */
-.acoes-produto {
-    margin-top: 20px;
-    display: flex;
-    justify-content: flex-end; /* empurra os botões para a direita */
-    gap: 12px;
-    flex-wrap: wrap; /* caso quebre linha em telas pequenas */
-}
-
-.btn-produto {
-    flex: 1; /* todos ocupam o mesmo espaço */
-    text-align: center;
-    padding: 14px 6px;  /* gordinho mas não largo */
-    font-size: 0.95rem;
-    font-weight: 700;
-    border-radius: 14px;
-    text-decoration: none;
-    transition: .25s ease;
-    white-space: nowrap;  /* impede quebrar linha */
-}
-
-/* Botão azul – Carrinho */
-.btn-carrinho {
-    background: #0d6efd;
-    color: white;
-    box-shadow: 0 4px 16px rgba(13,110,253,0.4);
-}
-.btn-carrinho:hover {
-    background: #0056d6;
-    transform: translateY(-2px);
-}
-
-/* Botão verde – Comprar */
-.btn-comprar {
-    background: #14a61a;
-    color: white;
-    box-shadow: 0 4px 16px rgba(20,166,26,0.4);
-}
-.btn-comprar:hover {
-    background: #0e7f14;
-    transform: translateY(-2px);
-}
-
-/* Botão cinza – Voltar */
-.btn-voltar {
-    background: #f1f1f1;
-    color: #333;
-    border: 1px solid #ddd;
-}
-.btn-voltar:hover {
-    background: #e4e4e4;
-    transform: translateY(-2px);
-}
-
-
-/* ===================== AÇÕES DE ORÇAMENTO ===================== */
-
-.acoes-orcamento {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    margin-top: 12px;
-}
-
-/* Base dos botões */
-.btn-acao {
-    display: block;
-    width: 100%;
-    padding: 10px 0;
-    border-radius: 22px;
-    font-size: 0.95rem;
-    font-weight: 600;
-    text-align: center;
-    text-decoration: none;
-    transition: all .25s ease;
-}
-
-/* WhatsApp */
-.btn-acao.whatsapp {
-    background: linear-gradient(135deg, #25D366, #1ebe5d);
-    color: #fff;
-}
-
-.btn-acao.whatsapp:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 14px rgba(37, 211, 102, 0.35);
-}
-
-/* Sob medida */
-.btn-acao.sob-medida {
-    background: linear-gradient(135deg, #FF9800, #FFB74D);
-    color: #fff;
-}
-
-.btn-acao.sob-medida:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 14px rgba(255, 152, 0, 0.35);
-}
-
-
-.modal-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.55);
-    display: none;
-    justify-content: center;
-    align-items: center;
-    z-index: 9999;
-}
-
-.modal-box {
-    background: #ffffff;
-    width: 100%;
-    max-width: 460px;
-    border-radius: 18px;
-    box-shadow: 0 15px 40px rgba(0,0,0,0.25);
-    animation: fadeIn .3s ease;
-}
-
-@keyframes fadeIn {
-    from { transform: translateY(20px); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
-}
-
-.modal-header {
-    padding: 18px;
-    border-bottom: 1px solid #eee;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    color: #004AAD;
-}
-
-.modal-close {
-    font-size: 1.6rem;
-    cursor: pointer;
-}
-
-.modal-body {
-    padding: 20px;
-}
-
-.produto-nome {
-    font-weight: 600;
-    margin-bottom: 15px;
-}
-
-.medidas-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
-}
-
-.medidas-grid label {
-    font-size: 0.85rem;
-    color: #555;
-}
-
-.medidas-grid input {
-    width: 100%;
-    padding: 8px;
-    border-radius: 10px;
-    border: 1px solid #ccc;
-}
-
-.resultado {
-    margin-top: 20px;
-    padding: 15px;
-    background: #f1f6ff;
-    border-radius: 14px;
-    text-align: center;
-}
-
-.resultado strong {
-    font-size: 1.5rem;
-    color: #00913f;
-}
-
-.modal-footer {
-    padding: 18px;
-    display: flex;
-    gap: 10px;
-}
-
-.btn-cancelar {
-    flex: 1;
-    background: #e0e0e0;
-    border-radius: 25px;
-    border: none;
-    padding: 10px;
-    cursor: pointer;
-}
-
-.btn-confirmar {
-    flex: 1;
-    background: linear-gradient(135deg, #004AAD, #0066D6);
-    color: white;
-    border-radius: 25px;
-    border: none;
-    padding: 10px;
-    cursor: pointer;
-}
-
-.toast-carrinho {
-    position: fixed;
-    bottom: 30px;
-    left: 50%;
-    transform: translateX(-50%) translateY(20px);
-    background: linear-gradient(135deg, #14a61a, #0e7f14);
-    color: white;
-    padding: 14px 24px;
+.produto-shell {
+    background: rgba(255, 255, 255, .97);
+    border: 1px solid rgba(213, 224, 239, .95);
     border-radius: 30px;
-    font-weight: 600;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.25);
-    opacity: 0;
-    pointer-events: none;
-    transition: all .35s ease;
-    z-index: 99999;
+    box-shadow: 0 24px 70px rgba(16, 43, 77, .14);
+    display: grid;
+    gap: 0;
+    grid-template-columns: minmax(0, .95fr) minmax(420px, 1.05fr);
+    overflow: hidden;
 }
 
-.toast-carrinho.show {
-    opacity: 1;
-    transform: translateX(-50%) translateY(0);
+.produto-visual {
+    background:
+        linear-gradient(145deg, rgba(255,255,255,.94), rgba(232,241,255,.86)),
+        repeating-linear-gradient(135deg, transparent 0 22px, rgba(7,88,201,.025) 22px 44px);
+    border-right: 1px solid var(--ls-borda);
+    min-width: 0;
+    padding: 30px;
+    position: relative;
 }
 
-    .aviso-preco {
-    font-family: 'Poppins', 'Segoe UI', sans-serif;
-    font-size: 16px;
-    font-weight: 500;
-    color: #d97706; /* dourado elegante */
-    background: #fff7ed;
-    border-left: 4px solid #f59e0b;
-    padding: 10px 14px;
-    border-radius: 6px;
-    margin-top: 8px;
-}
-
-
-@media (max-width: 768px) {
-
-    /* CONTAINER → vira coluna única no mobile */
-    .produto-container {
-        grid-template-columns: 1fr;   /* ⚠️ ESSA É A LINHA QUE FALTAVA */
-        margin: 20px 12px;
-        padding: 18px;
-        border-radius: 18px;
-        gap: 20px;
-    }
-
-    /* IMAGEM ocupa toda a largura */
-    .produto-img {
-        width: 100%;
-        text-align: center;
-    }
-
-    .produto-img img {
-        width: 100%;
-        max-width: 100%;
-        height: auto;
-        display: block;
-        margin: 0 auto;
-        border-radius: 16px;
-        box-shadow: 0 6px 18px rgba(0,0,0,0.15);
-    }
-
-    /* (mantém o resto que você já tinha) */
-    .combo-grid {
-        grid-template-columns: 1fr;
-        gap: 20px;
-    }
-
-    .combo-titulo,
-    .combo-descricao {
-        font-size: 1.6em;
-        margin-bottom: 25px;
-    }
-
-    .combo-descricao {
-        line-height: 1.3;
-    }
-
-    .produto-info h3 {
-        font-size: 1.1rem;
-        margin-bottom: 10px;
-    }
-
-    .brinquedo-item {
-        font-size: 0.95rem;
-        padding: 10px;
-    }
-
-    .combo-precos {
-        padding: 15px;
-        border-radius: 15px;
-    }
-
-    .combo-precos p {
-        font-size: 1rem;
-        gap: 4px;
-    }
-
-    .preco-promo {
-        font-size: 1.6rem;
-    }
-
-    .combo-acoes {
-        flex-direction: column;
-        gap: 10px;
-    }
-
-    .btn-combo {
-        width: 100%;
-        font-size: 1rem;
-        padding: 14px;
-        border-radius: 14px;
-    }
-
-    .toast-carrinho {
-        bottom: 110px;
-        width: 90%;
-        text-align: center;
-        font-size: 0.95rem;
-    }
-}
-
-
-.quantidade-box {
-    display: flex;
+.produto-selo {
     align-items: center;
-    justify-content: center;
+    backdrop-filter: blur(8px);
+    border-radius: 999px;
+    display: inline-flex;
+    font-size: .78rem;
+    font-weight: 850;
     gap: 8px;
+    left: 44px;
+    letter-spacing: .02em;
+    padding: 9px 13px;
+    position: absolute;
+    text-transform: uppercase;
+    top: 44px;
+    z-index: 2;
+}
+
+.produto-selo::before {
+    border-radius: 50%;
+    content: "";
+    height: 8px;
+    width: 8px;
+}
+
+.produto-selo.disponivel {
+    background: rgba(236, 253, 245, .94);
+    border: 1px solid #a6e8c8;
+    color: #087443;
+}
+
+.produto-selo.disponivel::before {
+    background: #18a760;
+    box-shadow: 0 0 0 4px rgba(24, 167, 96, .14);
+}
+
+.produto-selo.consulta {
+    background: rgba(255, 247, 237, .96);
+    border: 1px solid #fed7aa;
+    color: #a44b08;
+}
+
+.produto-selo.consulta::before {
+    background: #f59e0b;
+    box-shadow: 0 0 0 4px rgba(245, 158, 11, .15);
+}
+
+.produto-imagem-box {
+    align-items: center;
+    aspect-ratio: 1 / 1;
+    background: #fff;
+    border: 1px solid #e1e9f4;
+    border-radius: 24px;
+    display: flex;
+    justify-content: center;
+    overflow: hidden;
+    padding: 18px;
+}
+
+.produto-imagem-box img {
+    display: block;
+    height: 100%;
+    object-fit: contain;
+    transition: transform .35s ease;
+    width: 100%;
+}
+
+.produto-imagem-box:hover img {
+    transform: scale(1.025);
+}
+
+.produto-sem-imagem {
+    color: #98a2b3;
+    font-weight: 700;
+    text-align: center;
+}
+
+.produto-sem-imagem i {
+    display: block;
+    font-size: 3rem;
     margin-bottom: 10px;
 }
 
-.qtd-input {
-    width: 70px;
-    text-align: center;
-    font-size: 1rem;
+.produto-garantias {
+    display: grid;
+    gap: 10px;
+    grid-template-columns: repeat(3, 1fr);
+    margin-top: 18px;
+}
+
+.produto-garantia {
+    align-items: center;
+    background: rgba(255, 255, 255, .82);
+    border: 1px solid #dce6f2;
+    border-radius: 14px;
+    color: #42526a;
+    display: flex;
+    font-size: .76rem;
+    font-weight: 750;
+    gap: 7px;
+    justify-content: center;
+    min-height: 48px;
     padding: 8px;
-    border-radius: 10px;
-    border: 1px solid #ddd;
+    text-align: center;
+}
+
+.produto-garantia i {
+    color: var(--ls-azul);
+    font-size: .95rem;
+}
+
+.produto-conteudo {
+    min-width: 0;
+    padding: 42px 44px 40px;
+}
+
+.produto-marca {
+    color: var(--ls-azul);
+    font-size: .77rem;
+    font-weight: 900;
+    letter-spacing: .12em;
+    margin: 0 0 9px;
+    text-transform: uppercase;
+}
+
+.produto-conteudo h1 {
+    color: #101828;
+    font-size: clamp(1.85rem, 3vw, 2.65rem);
+    letter-spacing: -.035em;
+    line-height: 1.08;
+    margin: 0;
+}
+
+.produto-avaliacao {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 14px;
+}
+
+.produto-estrelas {
+    color: #d0d5dd;
+    display: inline-flex;
+    font-size: 1.08rem;
+    gap: 2px;
+    letter-spacing: 1px;
+}
+
+.produto-estrelas .ativa {
+    color: #f5b301;
+    filter: drop-shadow(0 2px 3px rgba(245, 179, 1, .2));
+}
+
+.produto-nota {
+    color: #667085;
+    font-size: .88rem;
     font-weight: 700;
 }
 
-.qtd-btn {
-    width: 36px;
-    height: 36px;
-    border-radius: 10px;
-    border: none;
-    background: #0d6efd;
-    color: white;
-    font-size: 18px;
-    font-weight: 700;
+.produto-compra {
+    background: linear-gradient(145deg, #f8fbff, #edf4ff);
+    border: 1px solid #cfddf2;
+    border-radius: 20px;
+    margin-top: 24px;
+    padding: 20px;
+}
+
+.produto-compra.consulta {
+    background: linear-gradient(145deg, #fffaf2, #fff4e4);
+    border-color: #fed7aa;
+}
+
+.produto-preco-legenda,
+.produto-consulta-titulo {
+    color: #546178;
+    display: block;
+    font-size: .78rem;
+    font-weight: 800;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+}
+
+.produto-preco {
+    color: var(--ls-azul-escuro);
+    display: block;
+    font-size: clamp(2rem, 4vw, 2.7rem);
+    font-weight: 900;
+    letter-spacing: -.04em;
+    line-height: 1.05;
+    margin-top: 4px;
+}
+
+.produto-preco-nota,
+.produto-consulta-texto {
+    color: #697586;
+    display: block;
+    font-size: .84rem;
+    line-height: 1.5;
+    margin-top: 8px;
+}
+
+.produto-consulta-titulo {
+    color: #a44b08;
+    font-size: .9rem;
+}
+
+.produto-secao {
+    border-top: 1px solid #e7edf5;
+    margin-top: 24px;
+    padding-top: 22px;
+}
+
+.produto-secao h2 {
+    color: #26354b;
+    font-size: .9rem;
+    font-weight: 850;
+    letter-spacing: .04em;
+    margin: 0 0 10px;
+    text-transform: uppercase;
+}
+
+.produto-descricao {
+    color: #526074;
+    font-size: .98rem;
+    line-height: 1.72;
+    margin: 0;
+}
+
+.produto-especificacoes {
+    display: grid;
+    gap: 10px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.produto-especificacao {
+    background: #f7f9fc;
+    border: 1px solid #e4eaf2;
+    border-radius: 13px;
+    min-width: 0;
+    padding: 11px 12px;
+}
+
+.produto-especificacao span {
+    color: #7a8699;
+    display: block;
+    font-size: .7rem;
+    font-weight: 800;
+    letter-spacing: .04em;
+    margin-bottom: 3px;
+    text-transform: uppercase;
+}
+
+.produto-especificacao strong {
+    color: #25324a;
+    display: block;
+    font-size: .91rem;
+    overflow-wrap: anywhere;
+}
+
+.produto-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+}
+
+.produto-chip {
+    background: var(--ls-azul-claro);
+    border: 1px solid #c8dcfa;
+    border-radius: 999px;
+    color: #164f9b;
+    font-size: .76rem;
+    font-weight: 750;
+    padding: 7px 10px;
+}
+
+.produto-chip.tag {
+    background: #f4f5f7;
+    border-color: #e1e5ea;
+    color: #596579;
+}
+
+.produto-form {
+    margin-top: 24px;
+}
+
+.produto-quantidade-linha {
+    align-items: center;
+    display: flex;
+    gap: 12px;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+
+.produto-quantidade-linha label {
+    color: #475467;
+    font-size: .85rem;
+    font-weight: 800;
+}
+
+.produto-quantidade {
+    align-items: center;
+    background: #fff;
+    border: 1px solid #d7e0eb;
+    border-radius: 13px;
+    display: inline-flex;
+    overflow: hidden;
+}
+
+.produto-quantidade button {
+    background: transparent;
+    border: 0;
+    color: var(--ls-azul-escuro);
     cursor: pointer;
-    transition: .2s;
+    font-size: 1.25rem;
+    font-weight: 850;
+    height: 40px;
+    width: 40px;
 }
 
-.qtd-btn:hover {
-    background: #0b5ed7;
+.produto-quantidade button:hover {
+    background: var(--ls-azul-claro);
 }
 
+.produto-quantidade input {
+    appearance: textfield;
+    border: 0;
+    color: #172033;
+    font-size: .95rem;
+    font-weight: 850;
+    height: 40px;
+    outline: 0;
+    text-align: center;
+    width: 44px;
+}
 
+.produto-quantidade input::-webkit-inner-spin-button,
+.produto-quantidade input::-webkit-outer-spin-button {
+    appearance: none;
+    margin: 0;
+}
+
+.produto-acoes {
+    display: grid;
+    gap: 10px;
+    grid-template-columns: 1fr 1fr;
+}
+
+.produto-btn {
+    align-items: center;
+    border: 0;
+    border-radius: 14px;
+    cursor: pointer;
+    display: inline-flex;
+    font-family: inherit;
+    font-size: .91rem;
+    font-weight: 850;
+    gap: 8px;
+    justify-content: center;
+    min-height: 50px;
+    padding: 13px 16px;
+    text-align: center;
+    text-decoration: none;
+    transition: transform .2s ease, box-shadow .2s ease, background .2s ease;
+}
+
+.produto-btn:hover {
+    transform: translateY(-2px);
+}
+
+.produto-btn:focus-visible {
+    outline: 3px solid rgba(7, 88, 201, .28);
+    outline-offset: 2px;
+}
+
+.produto-btn:disabled {
+    cursor: wait;
+    opacity: .7;
+    transform: none;
+}
+
+.produto-btn.carrinho {
+    background: linear-gradient(135deg, var(--ls-azul), #06449c);
+    box-shadow: 0 10px 23px rgba(7, 88, 201, .24);
+    color: #fff;
+}
+
+.produto-btn.comprar {
+    background: linear-gradient(135deg, var(--ls-vermelho), #bd171d);
+    box-shadow: 0 10px 23px rgba(229, 38, 43, .2);
+    color: #fff;
+}
+
+.produto-btn.whatsapp {
+    background: linear-gradient(135deg, #20b966, #118b4a);
+    box-shadow: 0 10px 23px rgba(22, 155, 85, .22);
+    color: #fff;
+    grid-column: 1 / -1;
+}
+
+.produto-btn.sob-medida {
+    background: linear-gradient(135deg, var(--ls-azul), #063d8c);
+    color: #fff;
+    grid-column: 1 / -1;
+}
+
+.produto-btn.secundario {
+    background: #fff;
+    border: 1px solid #d2dce9;
+    color: #344054;
+    grid-column: 1 / -1;
+}
+
+.produto-ajuda {
+    color: #667085;
+    display: block;
+    font-size: .79rem;
+    line-height: 1.45;
+    margin-top: 11px;
+    text-align: center;
+}
+
+.produto-ajuda a {
+    color: var(--ls-azul);
+    font-weight: 800;
+}
+
+.produto-toast {
+    align-items: center;
+    background: #123d2a;
+    border-radius: 999px;
+    bottom: 28px;
+    box-shadow: 0 15px 40px rgba(0, 0, 0, .24);
+    color: #fff;
+    display: flex;
+    font-size: .9rem;
+    font-weight: 750;
+    gap: 9px;
+    left: 50%;
+    max-width: calc(100vw - 32px);
+    opacity: 0;
+    padding: 13px 20px;
+    pointer-events: none;
+    position: fixed;
+    transform: translate(-50%, 20px);
+    transition: .3s ease;
+    width: max-content;
+    z-index: 100000;
+}
+
+.produto-toast.erro {
+    background: #9e1c24;
+}
+
+.produto-toast.visivel {
+    opacity: 1;
+    transform: translate(-50%, 0);
+}
+
+.produto-modal {
+    align-items: center;
+    background: rgba(6, 21, 43, .72);
+    display: none;
+    inset: 0;
+    justify-content: center;
+    padding: 18px;
+    position: fixed;
+    z-index: 99999;
+}
+
+.produto-modal.aberto {
+    display: flex;
+}
+
+.produto-modal-card {
+    background: #fff;
+    border: 1px solid #dce5f0;
+    border-radius: 24px;
+    box-shadow: 0 28px 90px rgba(0, 0, 0, .28);
+    max-height: calc(100vh - 36px);
+    max-width: 520px;
+    overflow: auto;
+    width: 100%;
+}
+
+.produto-modal-topo {
+    align-items: flex-start;
+    background: linear-gradient(135deg, var(--ls-azul-escuro), var(--ls-azul));
+    color: #fff;
+    display: flex;
+    gap: 16px;
+    justify-content: space-between;
+    padding: 22px 24px;
+}
+
+.produto-modal-topo h2 {
+    font-size: 1.25rem;
+    margin: 0 0 4px;
+}
+
+.produto-modal-topo p {
+    color: rgba(255,255,255,.78);
+    font-size: .84rem;
+    margin: 0;
+}
+
+.produto-modal-fechar {
+    background: rgba(255,255,255,.14);
+    border: 0;
+    border-radius: 10px;
+    color: #fff;
+    cursor: pointer;
+    flex: 0 0 auto;
+    font-size: 1.35rem;
+    height: 38px;
+    width: 38px;
+}
+
+.produto-modal-corpo {
+    padding: 24px;
+}
+
+.produto-modal-aviso {
+    background: #eef5ff;
+    border: 1px solid #d1e2fa;
+    border-radius: 13px;
+    color: #405574;
+    font-size: .85rem;
+    line-height: 1.5;
+    margin: 0 0 18px;
+    padding: 12px 13px;
+}
+
+.produto-medidas {
+    display: grid;
+    gap: 11px;
+    grid-template-columns: repeat(3, 1fr);
+}
+
+.produto-medida label {
+    color: #475467;
+    display: block;
+    font-size: .75rem;
+    font-weight: 800;
+    margin-bottom: 6px;
+}
+
+.produto-medida input {
+    border: 1px solid #cfd9e6;
+    border-radius: 11px;
+    font: inherit;
+    font-size: .9rem;
+    outline: 0;
+    padding: 11px 10px;
+    width: 100%;
+}
+
+.produto-medida input:focus {
+    border-color: var(--ls-azul);
+    box-shadow: 0 0 0 3px rgba(7, 88, 201, .12);
+}
+
+.produto-modal-acoes {
+    display: grid;
+    gap: 10px;
+    grid-template-columns: .75fr 1.25fr;
+    margin-top: 20px;
+}
+
+@media (max-width: 960px) {
+    .produto-shell {
+        grid-template-columns: 1fr;
+    }
+
+    .produto-visual {
+        border-bottom: 1px solid var(--ls-borda);
+        border-right: 0;
+    }
+
+    .produto-imagem-box {
+        aspect-ratio: 4 / 3;
+    }
+}
+
+@media (max-width: 640px) {
+    .produto-detalhe-page {
+        padding: 16px 10px 54px;
+    }
+
+    .produto-breadcrumb {
+        font-size: .78rem;
+        margin-left: 4px;
+        margin-right: 4px;
+    }
+
+    .produto-breadcrumb strong {
+        max-width: 42vw;
+    }
+
+    .produto-shell {
+        border-radius: 21px;
+    }
+
+    .produto-visual {
+        padding: 14px;
+    }
+
+    .produto-imagem-box {
+        aspect-ratio: 1 / 1;
+        border-radius: 17px;
+        padding: 10px;
+    }
+
+    .produto-selo {
+        font-size: .65rem;
+        left: 24px;
+        padding: 7px 10px;
+        top: 24px;
+    }
+
+    .produto-garantias {
+        gap: 6px;
+        margin-top: 10px;
+    }
+
+    .produto-garantia {
+        flex-direction: column;
+        font-size: .63rem;
+        gap: 3px;
+        min-height: 55px;
+        padding: 6px 3px;
+    }
+
+    .produto-conteudo {
+        padding: 25px 18px 24px;
+    }
+
+    .produto-compra {
+        padding: 16px;
+    }
+
+    .produto-especificacoes {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .produto-acoes,
+    .produto-modal-acoes {
+        grid-template-columns: 1fr;
+    }
+
+    .produto-btn,
+    .produto-btn.whatsapp,
+    .produto-btn.sob-medida,
+    .produto-btn.secundario {
+        grid-column: 1;
+        min-height: 48px;
+    }
+
+    .produto-medidas {
+        grid-template-columns: 1fr;
+    }
+
+    .produto-modal-topo,
+    .produto-modal-corpo {
+        padding: 19px;
+    }
+
+    .produto-toast {
+        border-radius: 16px;
+        bottom: 88px;
+        justify-content: center;
+        text-align: center;
+        width: calc(100vw - 28px);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .produto-imagem-box img,
+    .produto-btn,
+    .produto-toast {
+        transition: none;
+    }
+}
 </style>
 
+<main class="produto-detalhe-page">
+    <div class="produto-limite">
+        <nav class="produto-breadcrumb" aria-label="Navegação estrutural">
+            <a href="/">Início</a>
+            <span class="separador" aria-hidden="true">›</span>
+            <a href="{% url 'brinquedos' %}">Brinquedos</a>
+            <span class="separador" aria-hidden="true">›</span>
+            <strong title="{{ brinquedo.nome_brinquedo }}">{{ brinquedo.nome_brinquedo }}</strong>
+        </nav>
 
-<div class="breadcrumb" id="bread">
-    <a href="/#brinquedos">Home</a>
-    <span>›</span>
-    <a href="{% url 'brinquedos' %}#bread">Todos os Brinquedos</a>
-    <span>›</span>
-    <strong>{{ brinquedo.nome_brinquedo }}</strong>
-</div>
+        <article class="produto-shell">
+            <section class="produto-visual" aria-label="Imagem do produto">
+                {% if disponivel_loja %}
+                    <span class="produto-selo disponivel">Disponível em loja</span>
+                {% else %}
+                    <span class="produto-selo consulta">Produto sob consulta</span>
+                {% endif %}
 
-
-
-<div id="toast-carrinho" class="toast-carrinho">
-    <span id="toast-msg"></span>
-</div>
-
-
-    <!-- ====== CONTEÚDO ====== -->
-    <div class="produto-container" id="produto-box">
-
-            <!-- IMAGEM -->
-            <div class="produto-img">
-            {% if brinquedo.imagem_brinquedo %}
-                <img src="{{ brinquedo.imagem_brinquedo.url }}" alt="{{ brinquedo.nome_brinquedo }}">
-            {% endif %}
-        </div>
-    <!-- INFORMAÇÕES -->
-    <div class="produto-info">
-
-    <!-- TÍTULO -->
-    <h1>{{ brinquedo.nome_brinquedo }}</h1>
-
-
-
-    <!-- PREÇO
-    <p class="preco js-preco"
-       data-valor="{{ brinquedo.valor_brinquedo }}">
-       R$ 0,00
-    </p>
-        -->
-
-    <p class="preco aviso-preco">
-        Confira o preço com o fornecedor
-    </p>
-
-
-    <!-- DESCRIÇÃO -->
-    <p class="sec-titulo">Descrição do Produto</p>
-    <p class="descricao-produto">
-        {{ brinquedo.descricao }}
-    </p>
-
-       <!-- AVALIAÇÃO COM ESTRELAS -->
-    <div class="avaliacao" data-rating="{{ brinquedo.avaliacao }}">
-        <div class="stars" id="estrelinhas"></div>
-        <span class="nota-texto">{{ brinquedo.avaliacao|floatformat:2 }}/5</span>
-    </div>
-
-
-    <!-- VOLTAGEM -->
-    <p class="sec-titulo">Voltagem</p>
-    <p>{{ brinquedo.voltz }}</p>
-
-    <!-- CATEGORIAS -->
-    <p class="sec-titulo">Categorias</p>
-    {% for cat in brinquedo.categorias_brinquedos.all %}
-        <span class="categoria">{{ cat.nome_categoria }}</span>
-    {% endfor %}
-
-    <!-- TAGS -->
-    <p class="sec-titulo">Tags</p>
-    {% for tag in brinquedo.tags.all %}
-        <span class="tag">#{{ tag.nome_tags }}</span>
-    {% endfor %}
-
-        <!-- ===== QUANTIDADE =====
-
-<div class="quantidade-box">
-                <button type="button" class="qtd-btn" onclick="alterarQtd(-1)">−</button>
-
-                <input type="number"
-                       id="quantidade-input"
-                       value="1"
-                       min="1"
-                       class="qtd-input">
-
-                <button type="button" class="qtd-btn" onclick="alterarQtd(1)">+</button>
-            </div>
-
-
- -->
-    <!-- BOTÕES DE AÇÃO -->
-    <div class="acoes-produto">
-   <!--
-
-
-            <button type="button"
-                    class="btn-produto btn-carrinho"
-                    onclick="adicionarAoCarrinho('brinquedo', {{ brinquedo.id }})">
-                🛒 Adicionar ao Carrinho
-            </button>
-
-
-        <a href="#" class="btn-produto btn-comprar">⚡ Comprar Agora</a>
-
--->
-            <!-- WhatsApp -->
-                <a
-                    href="https://wa.me/5511960563135?text=
-                    Olá! 👋%0A
-                    Gostaria de um orçamento para o brinquedo abaixo:%0A%0A
-                    🧸 Nome: {{ brinquedo.nome_brinquedo|urlencode }}%0A
-                    ⭐ Avaliação: {{ brinquedo.avaliacao|floatformat:2 }}/5%0A
-                    ⚡ Voltagem: {{ brinquedo.voltz|urlencode }}%0A%0A
-                    📐 Dimensões:%0A
-                    ↕️ Altura: {{ brinquedo.altura_m }} m%0A
-                    ↔️ Largura: {{ brinquedo.largura_m }} m%0A
-                    ↗️ Profundidade: {{ brinquedo.profundidade_m }} m%0A
-                    📦 Volume: {{ brinquedo.volume_formatado|urlencode }}%0A%0A
-                    🔗 Página do produto:%0A
-                    {{ request.build_absolute_uri|urlencode }}%0A%0A
-                    Fico no aguardo 😊"
-                    target="_blank"
-                    class="btn-acao whatsapp"
-                >
-                    <i class="fab fa-whatsapp"></i> Orçamento via WhatsApp
-                </a>
-
-        {% if brinquedo.nome_categoria == "brinquedao" or brinquedo.nome_categoria == "trampolins" or brinquedo.nome_categoria == "trampolim" %}
-            <button class="btn-acao sob-medida"
-                onclick="abrirModalSobMedida(this)"
-                data-id="{{ brinquedo.id }}"
-                data-nome="{{ brinquedo.nome_brinquedo }}"
-                data-valor="{{ brinquedo.valor_brinquedo }}"
-                data-altura="{{ brinquedo.altura_m }}"
-                data-largura="{{ brinquedo.largura_m }}"
-                data-profundidade="{{ brinquedo.profundidade_m }}">
-            📐 Orçamento sob medida
-        </button>
-        {% endif %}
-
-
-        <a href="/#brinquedos" class="btn-produto btn-voltar">← Voltar</a>
-    </div>
-
-</div>
-
-</div>  <!--fecha produto-container -->
-
-
-<div id="modalSobMedida" class="modal-overlay">
-    <div class="modal-box">
-
-        <div class="modal-header">
-            <h2>📐 Orçamento sob medida</h2>
-            <span class="modal-close" onclick="fecharModal()">×</span>
-        </div>
-
-        <div class="modal-body">
-            <p class="produto-nome"></p>
-
-            <div class="medidas-grid">
-                <div>
-                    <label>Altura (m)</label>
-                    <input type="text" step="0.1" id="alturaInput">
+                <div class="produto-imagem-box">
+                    {% if brinquedo.imagem_brinquedo %}
+                        <img
+                            src="{{ brinquedo.imagem_brinquedo.url }}"
+                            alt="{{ brinquedo.nome_brinquedo }} - Lazer & Sport Brinquedos"
+                            width="760"
+                            height="760"
+                            fetchpriority="high"
+                        >
+                    {% else %}
+                        <div class="produto-sem-imagem">
+                            <i class="fas fa-image" aria-hidden="true"></i>
+                            Imagem em atualização
+                        </div>
+                    {% endif %}
                 </div>
 
-                <div>
-                    <label>Largura (m)</label>
-                    <input type="text" step="0.1" id="larguraInput">
+                <div class="produto-garantias" aria-label="Diferenciais Lazer & Sport">
+                    <div class="produto-garantia">
+                        <i class="fas fa-industry" aria-hidden="true"></i>
+                        Fabricação própria
+                    </div>
+                    <div class="produto-garantia">
+                        <i class="fas fa-map-marked-alt" aria-hidden="true"></i>
+                        Atendimento nacional
+                    </div>
+                    <div class="produto-garantia">
+                        <i class="fas fa-award" aria-hidden="true"></i>
+                        Desde 1996
+                    </div>
                 </div>
+            </section>
 
-                <div>
-                    <label>Profundidade (m)</label>
-                    <input type="text" step="0.1" id="profundidadeInput">
-                </div>
-            </div>
+            <section class="produto-conteudo">
+                <p class="produto-marca">Lazer &amp; Sport Brinquedos</p>
+                <h1>{{ brinquedo.nome_brinquedo }}</h1>
 
-            <div class="resultado">
-                <span>Novo valor estimado</span>
-                <strong id="valorCalculado">R$ 0,00</strong>
-            </div>
-        </div>
+                {% if brinquedo.avaliacao %}
+                    <div class="produto-avaliacao">
+                        <span
+                            class="produto-estrelas"
+                            id="produto-estrelas"
+                            data-avaliacao="{{ brinquedo.avaliacao }}"
+                            aria-label="Avaliação {{ brinquedo.avaliacao|floatformat:1 }} de 5"
+                        ></span>
+                        <span class="produto-nota">{{ brinquedo.avaliacao|floatformat:1 }} de 5</span>
+                    </div>
+                {% endif %}
 
-        <div class="modal-footer">
-            <button class="btn-cancelar" onclick="fecharModal()">Cancelar</button>
+                {% if disponivel_loja %}
+                    <div class="produto-compra">
+                        <span class="produto-preco-legenda">Preço do produto</span>
+                        <strong class="produto-preco">{{ preco_formatado }}</strong>
+                        <span class="produto-preco-nota">
+                            Valor unitário. Frete e forma de entrega são definidos no carrinho.
+                        </span>
+                    </div>
+                {% else %}
+                    <div class="produto-compra consulta">
+                        <strong class="produto-consulta-titulo">Valor sob consulta</strong>
+                        <span class="produto-consulta-texto">
+                            Este modelo faz parte do nosso catálogo, mas não é vendido diretamente pelo site.
+                            Solicite uma proposta personalizada pelo WhatsApp.
+                        </span>
+                    </div>
+                {% endif %}
 
-            <form method="post"
-                  action="{% url 'adicionar_ao_carrinho' 'brinquedo' brinquedo.id %}"
-                  style="display:inline;">
-                {% csrf_token %}
-                <button type="submit" class="btn-produto btn-carrinho">
-                    🛒 Adicionar ao Carrinho
-                </button>
-            </form>
-        </div>
+                <section class="produto-secao">
+                    <h2>Descrição</h2>
+                    <p class="produto-descricao">{{ brinquedo.descricao|linebreaksbr }}</p>
+                </section>
+
+                {% if brinquedo.voltz or brinquedo.altura_m or brinquedo.largura_m or brinquedo.profundidade_m %}
+                    <section class="produto-secao">
+                        <h2>Informações técnicas</h2>
+                        <div class="produto-especificacoes">
+                            {% if brinquedo.voltz %}
+                                <div class="produto-especificacao">
+                                    <span>Voltagem</span>
+                                    <strong>{{ brinquedo.voltz }}</strong>
+                                </div>
+                            {% endif %}
+                            {% if brinquedo.altura_m %}
+                                <div class="produto-especificacao">
+                                    <span>Altura</span>
+                                    <strong>{{ brinquedo.altura_m|floatformat:2 }} m</strong>
+                                </div>
+                            {% endif %}
+                            {% if brinquedo.largura_m %}
+                                <div class="produto-especificacao">
+                                    <span>Largura</span>
+                                    <strong>{{ brinquedo.largura_m|floatformat:2 }} m</strong>
+                                </div>
+                            {% endif %}
+                            {% if brinquedo.profundidade_m %}
+                                <div class="produto-especificacao">
+                                    <span>Comprimento</span>
+                                    <strong>{{ brinquedo.profundidade_m|floatformat:2 }} m</strong>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </section>
+                {% endif %}
+
+                {% if categorias_produto or brinquedo.tags.all %}
+                    <section class="produto-secao">
+                        <h2>Categorias e características</h2>
+                        <div class="produto-chips">
+                            {% for categoria in categorias_produto %}
+                                <span class="produto-chip">{{ categoria.nome_categoria }}</span>
+                            {% endfor %}
+                            {% for tag in brinquedo.tags.all %}
+                                <span class="produto-chip tag">#{{ tag.nome_tags }}</span>
+                            {% endfor %}
+                        </div>
+                    </section>
+                {% endif %}
+
+                {% if disponivel_loja %}
+                    <form
+                        class="produto-form"
+                        id="form-adicionar-carrinho"
+                        action="{% url 'adicionar_ao_carrinho' 'brinquedo' brinquedo.id %}"
+                        method="post"
+                        data-url-carrinho="{% url 'carrinho' %}"
+                    >
+                        {% csrf_token %}
+                        <div class="produto-quantidade-linha">
+                            <label for="quantidade-produto">Quantidade</label>
+                            <div class="produto-quantidade">
+                                <button type="button" data-alterar-qtd="-1" aria-label="Diminuir quantidade">−</button>
+                                <input
+                                    id="quantidade-produto"
+                                    name="quantidade"
+                                    type="number"
+                                    value="1"
+                                    min="1"
+                                    max="99"
+                                    inputmode="numeric"
+                                >
+                                <button type="button" data-alterar-qtd="1" aria-label="Aumentar quantidade">+</button>
+                            </div>
+                        </div>
+
+                        <div class="produto-acoes">
+                            <button class="produto-btn carrinho" type="submit" name="destino" value="continuar">
+                                <i class="fas fa-cart-plus" aria-hidden="true"></i>
+                                Adicionar ao carrinho
+                            </button>
+                            <button class="produto-btn comprar" type="submit" name="destino" value="carrinho">
+                                <i class="fas fa-bolt" aria-hidden="true"></i>
+                                Comprar agora
+                            </button>
+                        </div>
+
+                        <span class="produto-ajuda">
+                            Precisa tirar uma dúvida antes da compra?
+                            <a href="{{ whatsapp_url }}" target="_blank" rel="noopener noreferrer">Fale com um especialista</a>.
+                        </span>
+                    </form>
+                {% else %}
+                    <div class="produto-form produto-acoes">
+                        <a
+                            class="produto-btn whatsapp"
+                            href="{{ whatsapp_url }}"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                        >
+                            <i class="fab fa-whatsapp" aria-hidden="true"></i>
+                            Solicitar orçamento no WhatsApp
+                        </a>
+
+                        {% if permite_sob_medida %}
+                            <button class="produto-btn sob-medida" type="button" id="abrir-sob-medida">
+                                <i class="fas fa-ruler-combined" aria-hidden="true"></i>
+                                Solicitar projeto sob medida
+                            </button>
+                        {% endif %}
+
+                        <a class="produto-btn secundario" href="{% url 'brinquedos' %}">
+                            <i class="fas fa-arrow-left" aria-hidden="true"></i>
+                            Continuar vendo o catálogo
+                        </a>
+                    </div>
+                {% endif %}
+            </section>
+        </article>
     </div>
+</main>
+
+<div class="produto-toast" id="produto-toast" role="status" aria-live="polite">
+    <i class="fas fa-check-circle" aria-hidden="true"></i>
+    <span id="produto-toast-texto"></span>
 </div>
 
+{% if permite_sob_medida and not disponivel_loja %}
+    <div class="produto-modal" id="modal-sob-medida" role="dialog" aria-modal="true" aria-labelledby="titulo-sob-medida">
+        <div class="produto-modal-card">
+            <header class="produto-modal-topo">
+                <div>
+                    <h2 id="titulo-sob-medida">Projeto sob medida</h2>
+                    <p>{{ brinquedo.nome_brinquedo }}</p>
+                </div>
+                <button class="produto-modal-fechar" type="button" data-fechar-modal aria-label="Fechar">×</button>
+            </header>
 
-<!-- ====== JS DAS ESTRELAS ====== -->
+            <div class="produto-modal-corpo">
+                <p class="produto-modal-aviso">
+                    Informe as medidas desejadas. Elas serão enviadas à equipe comercial para a elaboração do orçamento — nenhum valor será adicionado ao carrinho.
+                </p>
+
+                <div class="produto-medidas">
+                    <div class="produto-medida">
+                        <label for="medida-altura">Altura (m)</label>
+                        <input id="medida-altura" type="text" inputmode="decimal" value="{{ brinquedo.altura_m|default_if_none:''|floatformat:2 }}" placeholder="Ex.: 2,30">
+                    </div>
+                    <div class="produto-medida">
+                        <label for="medida-largura">Largura (m)</label>
+                        <input id="medida-largura" type="text" inputmode="decimal" value="{{ brinquedo.largura_m|default_if_none:''|floatformat:2 }}" placeholder="Ex.: 3,00">
+                    </div>
+                    <div class="produto-medida">
+                        <label for="medida-profundidade">Comprimento (m)</label>
+                        <input id="medida-profundidade" type="text" inputmode="decimal" value="{{ brinquedo.profundidade_m|default_if_none:''|floatformat:2 }}" placeholder="Ex.: 4,00">
+                    </div>
+                </div>
+
+                <div class="produto-modal-acoes">
+                    <button class="produto-btn secundario" type="button" data-fechar-modal>Cancelar</button>
+                    <button class="produto-btn whatsapp" type="button" id="enviar-sob-medida">
+                        <i class="fab fa-whatsapp" aria-hidden="true"></i>
+                        Enviar medidas
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endif %}
+
 <script>
-document.addEventListener("DOMContentLoaded", () => {
-    const rating = parseFloat("{{ brinquedo.avaliacao }}");
-    const container = document.getElementById("estrelinhas");
+(function () {
+    'use strict';
 
-    let stars = "";
-
-    for (let i = 1; i <= 5; i++) {
-        if (rating >= i) {
-            stars += `<span class="star">⭐</span>`;
-        } else if (rating >= i - 0.5) {
-            stars += `<span class="star">✨</span>`;
-        } else {
-            stars += `<span class="star" style="opacity:0.25">⭐</span>`;
-        }
+    const estrelas = document.getElementById('produto-estrelas');
+    if (estrelas) {
+        const nota = Number(String(estrelas.dataset.avaliacao || '0').replace(',', '.')) || 0;
+        const preenchidas = Math.round(Math.max(0, Math.min(5, nota)));
+        estrelas.innerHTML = Array.from({ length: 5 }, (_, indice) =>
+            `<span class="${indice < preenchidas ? 'ativa' : ''}" aria-hidden="true">★</span>`
+        ).join('');
     }
 
-    container.innerHTML = stars;
-});
+    const toast = document.getElementById('produto-toast');
+    const toastTexto = document.getElementById('produto-toast-texto');
+    let toastTimer;
 
-
-let produtoAtual = {};
-
-function normalizarNumero(valor, fallback = 1) {
-    const n = parseFloat(valor);
-    return isNaN(n) || n <= 0 ? fallback : n;
-}
-
-function abrirModalSobMedida(btn) {
-    produtoAtual = {
-        id: btn.dataset.id,
-        nome: btn.dataset.nome,
-        valor: normalizarNumero(btn.dataset.valor, 0),
-        altura: normalizarNumero(btn.dataset.altura),
-        largura: normalizarNumero(btn.dataset.largura),
-        profundidade: normalizarNumero(btn.dataset.profundidade)
-    };
-
-    document.querySelector('.produto-nome').innerText = produtoAtual.nome;
-
-    alturaInput.value = produtoAtual.altura.toFixed(2).replace('.', ',');
-    larguraInput.value = produtoAtual.largura.toFixed(2).replace('.', ',');
-    profundidadeInput.value = produtoAtual.profundidade.toFixed(2).replace('.', ',');
-
-    calcularValor();
-    document.getElementById('modalSobMedida').style.display = 'flex';
-}
-
-function fecharModal() {
-    document.getElementById('modalSobMedida').style.display = 'none';
-}
-
-['alturaInput','larguraInput','profundidadeInput'].forEach(id => {
-    document.getElementById(id).addEventListener('input', calcularValor);
-});
-
-function calcularValor() {
-    const a = parseDecimalBR(alturaInput.value);
-    const l = parseDecimalBR(larguraInput.value);
-    const p = parseDecimalBR(profundidadeInput.value);
-
-    if (a <= 0 || l <= 0 || p <= 0 || produtoAtual.valor <= 0) {
-        valorCalculado.innerText = 'R$ 0,00';
-        return;
+    function mostrarToast(mensagem, erro = false) {
+        if (!toast || !toastTexto) return;
+        clearTimeout(toastTimer);
+        toastTexto.textContent = mensagem;
+        toast.classList.toggle('erro', erro);
+        toast.classList.add('visivel');
+        toastTimer = setTimeout(() => toast.classList.remove('visivel'), 3200);
     }
 
-    const volumePadrao =
-        produtoAtual.altura *
-        produtoAtual.largura *
-        produtoAtual.profundidade;
-
-    if (volumePadrao <= 0) {
-        valorCalculado.innerText = 'R$ 0,00';
-        return;
+    function atualizarBadgeCarrinho(total) {
+        const badge = document.getElementById('badge-carrinho');
+        const botaoCarrinho = document.getElementById('float-carrinho');
+        if (badge) badge.textContent = total;
+        if (botaoCarrinho) botaoCarrinho.style.display = 'flex';
     }
 
-    const volumeNovo = a * l * p;
-    const precoPorM3 = produtoAtual.valor / volumePadrao;
-    const novoValor = volumeNovo * precoPorM3;
+    const formCarrinho = document.getElementById('form-adicionar-carrinho');
+    if (formCarrinho) {
+        const quantidade = document.getElementById('quantidade-produto');
 
-    valorCalculado.innerText =
-        'R$ ' + novoValor.toLocaleString('pt-BR', {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2
+        document.querySelectorAll('[data-alterar-qtd]').forEach((botao) => {
+            botao.addEventListener('click', () => {
+                const atual = Number.parseInt(quantidade.value, 10) || 1;
+                const proximo = Math.max(1, Math.min(99, atual + Number(botao.dataset.alterarQtd)));
+                quantidade.value = proximo;
+            });
         });
-}
 
-function adicionarSobMedida() {
-    // Aqui você envia via fetch para criar ItemCarrinho customizado
-    alert('Produto sob medida adicionado (implementar backend)');
-    fecharModal();
-}
+        quantidade.addEventListener('change', () => {
+            const valor = Number.parseInt(quantidade.value, 10) || 1;
+            quantidade.value = Math.max(1, Math.min(99, valor));
+        });
 
-function formatarDecimalBR(valor) {
-    // Remove tudo que não for número
-    valor = valor.replace(/\D/g, '');
+        formCarrinho.addEventListener('submit', async (evento) => {
+            evento.preventDefault();
+            const botao = evento.submitter;
+            const irParaCarrinho = botao && botao.value === 'carrinho';
+            const botoes = formCarrinho.querySelectorAll('button[type="submit"]');
+            botoes.forEach((item) => { item.disabled = true; });
 
-    if (!valor) return '0,00';
+            try {
+                const resposta = await fetch(formCarrinho.action, {
+                    method: 'POST',
+                    body: new FormData(formCarrinho),
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    credentials: 'same-origin'
+                });
 
-    // Garante pelo menos 2 casas decimais
-    while (valor.length < 3) {
-        valor = '0' + valor;
+                const dados = await resposta.json().catch(() => ({}));
+                if (!resposta.ok || !dados.sucesso) {
+                    const mensagem = dados.erro || 'Não foi possível adicionar o produto.';
+                    mostrarToast(mensagem, true);
+
+                    if (resposta.status === 403 && mensagem.toLowerCase().includes('login')) {
+                        setTimeout(() => {
+                            window.location.href = "{% url 'login' %}?next={{ request.path|urlencode }}";
+                        }, 900);
+                    }
+                    return;
+                }
+
+                atualizarBadgeCarrinho(dados.total_itens || 0);
+                if (irParaCarrinho) {
+                    window.location.href = formCarrinho.dataset.urlCarrinho;
+                    return;
+                }
+
+                mostrarToast('Produto adicionado ao carrinho.');
+            } catch (erro) {
+                mostrarToast('Falha de conexão. Tente novamente.', true);
+            } finally {
+                botoes.forEach((item) => { item.disabled = false; });
+            }
+        });
     }
 
-    const inteiro = valor.slice(0, -2);
-    const decimal = valor.slice(-2);
+    const modal = document.getElementById('modal-sob-medida');
+    const abrirModal = document.getElementById('abrir-sob-medida');
+    if (modal && abrirModal) {
+        const fecharModal = () => {
+            modal.classList.remove('aberto');
+            document.body.style.overflow = '';
+            abrirModal.focus();
+        };
 
-    return inteiro.replace(/^0+/, '') + ',' + decimal;
-}
+        abrirModal.addEventListener('click', () => {
+            modal.classList.add('aberto');
+            document.body.style.overflow = 'hidden';
+            const primeiroCampo = modal.querySelector('input');
+            if (primeiroCampo) primeiroCampo.focus();
+        });
 
-function parseDecimalBR(valor) {
-    if (!valor) return 0;
-    return parseFloat(valor.replace('.', '').replace(',', '.')) || 0;
-}
+        modal.querySelectorAll('[data-fechar-modal]').forEach((botao) => {
+            botao.addEventListener('click', fecharModal);
+        });
 
+        modal.addEventListener('click', (evento) => {
+            if (evento.target === modal) fecharModal();
+        });
 
-['alturaInput', 'larguraInput', 'profundidadeInput'].forEach(id => {
-    const input = document.getElementById(id);
+        document.addEventListener('keydown', (evento) => {
+            if (evento.key === 'Escape' && modal.classList.contains('aberto')) fecharModal();
+        });
 
-    input.addEventListener('input', () => {
-        const pos = input.selectionStart;
-        input.value = formatarDecimalBR(input.value);
-        input.setSelectionRange(pos, pos);
-        calcularValor();
-    });
-});
+        document.getElementById('enviar-sob-medida').addEventListener('click', () => {
+            const altura = document.getElementById('medida-altura').value.trim();
+            const largura = document.getElementById('medida-largura').value.trim();
+            const profundidade = document.getElementById('medida-profundidade').value.trim();
+            const medidas = [
+                altura && `Altura: ${altura} m`,
+                largura && `Largura: ${largura} m`,
+                profundidade && `Comprimento: ${profundidade} m`
+            ].filter(Boolean);
 
-function formatarMoedaBR(valor) {
-    if (!valor || isNaN(valor)) return '0,00';
-
-    return Number(valor).toLocaleString('pt-BR', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-    });
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-    document.querySelectorAll('.js-preco').forEach(el => {
-        const valor = parseFloat(el.dataset.valor);
-        el.innerText = 'R$ ' + formatarMoedaBR(valor);
-    });
-});
-
-
-function adicionarAoCarrinho(tipo, id) {
-    fetch(`/carrinho/adicionar/${tipo}/${id}/`, {
-        method: 'POST',
-        headers: {
-            'X-CSRFToken': '{{ csrf_token }}',
-            'X-Requested-With': 'XMLHttpRequest'
-        }
-    })
-    .then(res => {
-        if (!res.ok) throw new Error('HTTP error');
-        return res.json();
-    })
-    .then(data => {
-        if (data.sucesso) {
-            mostrarToast('🛒 Produto adicionado ao carrinho!');
-
-            // Atualiza o número do carrinho usando o total do backend
-            if (data.total_itens !== undefined) {
-                atualizarBadgeCarrinho(data.total_itens);
+            if (!medidas.length) {
+                mostrarToast('Informe pelo menos uma medida.', true);
+                return;
             }
-        } else {
-            mostrarToast(data.erro || 'Erro ao adicionar', true);
-        }
-    })
-    .catch(() => {
-        mostrarToast('Erro ao adicionar ao carrinho', true);
-    });
-}
 
+            const mensagem = [
+                'Olá! Gostaria de um orçamento sob medida.',
+                '',
+                'Brinquedo: {{ brinquedo.nome_brinquedo|escapejs }}',
+                '',
+                'Medidas desejadas:',
+                ...medidas,
+                '',
+                'Página do produto: {{ produto_url|escapejs }}'
+            ].join('\n');
 
-function mostrarToast(msg, erro = false) {
-    const toast = document.getElementById('toast-carrinho');
-    const texto = document.getElementById('toast-msg');
-
-    texto.innerText = msg;
-    toast.style.background = erro
-        ? 'linear-gradient(135deg, #dc3545, #a71d2a)'
-        : 'linear-gradient(135deg, #14a61a, #0e7f14)';
-
-    toast.classList.add('show');
-
-    setTimeout(() => {
-        toast.classList.remove('show');
-    }, 3000);
-}
-
-
-function atualizarBadgeCarrinho(total) {
-    const badge = document.getElementById('badge-carrinho');
-    const carrinho = document.getElementById('float-carrinho');
-
-    if (!badge || !carrinho) return;
-
-    badge.innerText = total;
-
-    // efeito pulse
-    badge.classList.remove('pulse');
-    void badge.offsetWidth;
-    badge.classList.add('pulse');
-
-    carrinho.style.display = 'flex';
-}
-
-function alterarQtd(delta) {
-    const input = document.getElementById('quantidade-input');
-    let valor = parseInt(input.value) || 1;
-
-    valor += delta;
-    if (valor < 1) valor = 1;
-
-    input.value = valor;
-}
-
+            window.open(`https://wa.me/5511960563135?text=${encodeURIComponent(mensagem)}`, '_blank', 'noopener');
+        });
+    }
+})();
 </script>
 
 {% endblock %}
