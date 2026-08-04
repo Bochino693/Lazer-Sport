@@ -63,6 +63,7 @@ from .views import (
     EstatisticasGeraisView,
     ReposicaoView,
     ReposicaoDetalheView,
+    healthz,
     robots_txt,
     ComboAdminView,
     SearchView,
@@ -95,6 +96,7 @@ sitemaps = {
 
 
 urlpatterns = [
+    path("healthz/", healthz, name="healthz"),
     path("robots.txt", robots_txt, name="robots_txt"),
     path("sitemap.xml", sitemap, {"sitemaps": sitemaps}, name="sitemap"),
 

@@ -18,10 +18,10 @@ from .models import Brinquedos, CategoriasBrinquedos, Projetos, Eventos, Cliente
     BrinquedoClick, ComboClick, PromocaoClick, CategoriaClick, PecasReposicao, CategoriaPeca, \
     ImagemProjetoBrinquedo, ImagemEvento, Clientes, EnderecoEmpresa
 from django.templatetags.static import static
-from .utils import LAT_EMPRESA, LON_EMPRESA, CEP_EMPRESA, buscar_coordenadas
+from .utils import LAT_EMPRESA, LON_EMPRESA
 
 import os
-from django.http import FileResponse, Http404
+from django.http import FileResponse, Http404, HttpResponse
 from django.conf import settings
 from random import shuffle, sample
 
@@ -61,7 +61,17 @@ def erro_500(request):
         )
 
 
+def healthz(request):
+    """Health check barato para o Render, sem consultas ao banco ou APIs."""
+    return HttpResponse("ok", content_type="text/plain")
+
+
 class HomeView(View):
+    def head(self, request):
+        # O Render verifica a raiz com HEAD. Não monte toda a vitrine nem
+        # consulte o banco para uma resposta cujo corpo será descartado.
+        return HttpResponse(status=200)
+
     def get(self, request):
         imagens_site = ImagensSite.objects.order_by("-id")[:5]
 
@@ -245,14 +255,9 @@ class HomeView(View):
             for c in clientes_com_mapa
         ]
 
-        # Pino especial da fábrica. Ordem de prioridade:
-        # 1) EnderecoEmpresa cadastrado no banco, se completo (editável
-        #    pelo admin, o ideal).
-        # 2) Geocodificar o CEP_EMPRESA de verdade (o mesmo endereço já
-        #    mostrado na seção "Localização" do site) -- usa o mesmo
-        #    pipeline corrigido dos clientes, então é confiável.
-        # 3) Só em último caso (sem internet/erro na geocodificação),
-        #    cai nas coordenadas fixas de utils.py.
+        # Pino especial da fábrica. EnderecoEmpresa continua editável pelo
+        # admin. Se não houver cadastro, a home usa as coordenadas fixas já
+        # validadas; geocodificação externa nunca deve bloquear a vitrine.
         endereco_fabrica = (
             EnderecoEmpresa.objects
             .filter(ativo=True, latitude__isnull=False, longitude__isnull=False)
@@ -273,13 +278,8 @@ class HomeView(View):
                 f" — {endereco_fabrica.bairro or ''}"
             ).strip(" —")
         else:
-            lat_geocodificada, lng_geocodificada = buscar_coordenadas(CEP_EMPRESA, "104")
-            if lat_geocodificada and lng_geocodificada:
-                fabrica_lat = lat_geocodificada
-                fabrica_lng = lng_geocodificada
-            else:
-                fabrica_lat = LAT_EMPRESA
-                fabrica_lng = LON_EMPRESA
+            fabrica_lat = LAT_EMPRESA
+            fabrica_lng = LON_EMPRESA
 
         fabrica_mapa = {
             "tipo": "fabrica",
@@ -4566,7 +4566,6 @@ import os
 import mercadopago
 
 from django.conf import settings
-from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.db import transaction
 
@@ -5369,6 +5368,13 @@ def robots_txt(request):
         "Disallow: /login/",
         "Disallow: /registrar/",
         "Disallow: /acesso-negado/",
+        "Disallow: /*?filter_cat=",
+        "Disallow: /*&filter_cat=",
+        "Disallow: /*?shop_view=",
+        "Disallow: /*&shop_view=",
+        "Disallow: /*?column=",
+        "Disallow: /*&column=",
+        "Crawl-delay: 10",
         "",
         "Sitemap: https://www.lazersport.com.br/sitemap.xml",
     ]

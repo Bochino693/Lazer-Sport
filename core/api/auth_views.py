@@ -69,10 +69,14 @@ class RegistroSerializer(serializers.Serializer):
         user.first_name = primeiro[:30]
         user.save(update_fields=["first_name"])
 
-        ClientePerfil.objects.create(
+        # O signal de User já cria um ClientePerfil vazio. Atualize esse
+        # registro em vez de tentar criar outro e violar o OneToOne.
+        ClientePerfil.objects.update_or_create(
             user=user,
-            nome_completo=dados["nome_completo"],
-            telefone=dados["telefone"],
+            defaults={
+                "nome_completo": dados["nome_completo"],
+                "telefone": dados["telefone"],
+            },
         )
         return user
 

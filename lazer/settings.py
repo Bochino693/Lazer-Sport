@@ -152,6 +152,7 @@ SITE_ID = 1
 # ============================================================
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "django.middleware.gzip.GZipMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -202,21 +203,32 @@ SUPABASE_DATABASE_URL = os.getenv("SUPABASE_DATABASE_URL", "").strip()
 if not SUPABASE_DATABASE_URL:
     raise RuntimeError(
         "SUPABASE_DATABASE_URL não configurada. "
-        "Cadastre a URI do Transaction Pooler do Supabase (porta 6543). "
+        "No Render, cadastre a URI do Session Pooler do Supabase (porta 5432). "
         "Em desenvolvimento, crie um arquivo .env na raiz do projeto "
         "(ao lado do manage.py) com SUPABASE_DATABASE_URL=postgresql://..."
     )
 
+# O processo persistente do Render pode reaproveitar conexões. Isso evita um
+# novo handshake TLS com o Supabase em cada consulta sem manter conexões por
+# tempo demais. O valor ainda pode ser ajustado pela variável de ambiente.
+try:
+    DB_CONN_MAX_AGE = max(
+        0,
+        int(os.getenv("DB_CONN_MAX_AGE", "60" if IS_RENDER else "0")),
+    )
+except ValueError:
+    DB_CONN_MAX_AGE = 60 if IS_RENDER else 0
+
 DATABASES = {
     "default": dj_database_url.parse(
         SUPABASE_DATABASE_URL,
-        conn_max_age=0,
-        conn_health_checks=False,
+        conn_max_age=DB_CONN_MAX_AGE,
+        conn_health_checks=DB_CONN_MAX_AGE > 0,
         ssl_require=True,
     )
 }
 
-# O Transaction Pooler (porta 6543) não deve usar cursores mantidos no servidor.
+# Compatível com os poolers do Supabase e evita estado de cursor entre conexões.
 DATABASES["default"]["DISABLE_SERVER_SIDE_CURSORS"] = True
 
 

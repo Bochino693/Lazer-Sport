@@ -6,6 +6,7 @@
 # tentar. Sem ele o app fica adivinhando por 404 e mostra seção vazia
 # sem explicação.
 
+from django.conf import settings
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
 from rest_framework import generics, status
@@ -47,7 +48,6 @@ VERSAO_API = "1.2"
 
 RECURSOS_DISPONIVEIS = [
     "auth",
-    "auth_google",
     "categorias",
     "brinquedos",
     "pecas",
@@ -83,10 +83,14 @@ class StatusAPI(APIView):
     authentication_classes = []
 
     def get(self, request):
+        recursos = list(RECURSOS_DISPONIVEIS)
+        if "google" in settings.SOCIALACCOUNT_PROVIDERS:
+            recursos.insert(1, "auth_google")
+
         return Response({
             "ok": True,
             "versao": VERSAO_API,
-            "recursos": RECURSOS_DISPONIVEIS,
+            "recursos": recursos,
             "minimo_app": "1.0",
         })
 

@@ -12,9 +12,11 @@ urlpatterns = [
     #path('media/<path:path>/', media_serve),
 
     path('accounts/', include('allauth.urls')),
-    path('', include('core.urls')),
-
+    # A API precisa vir antes das rotas gerais. core.urls termina com um
+    # catch-all que, se vier primeiro, transforma /api/v1/status/ e login
+    # em redirecionamentos para a loja.
     path("api/v1/", include("core.api.urls")),
+    path('', include('core.urls')),
 
 ]
 if settings.DEBUG:

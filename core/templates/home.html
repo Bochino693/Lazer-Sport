@@ -3350,7 +3350,7 @@ main.content-section {
         <div class="ls-home-hero-card">
 
             {% if imagens_site %}
-                <img src="{{ imagens_site.0.imagem.url }}" alt="Lazer e Sport Brinquedos" class="ls-home-hero-img">
+                <img src="{{ imagens_site.0.imagem.url }}" alt="Lazer e Sport Brinquedos" class="ls-home-hero-img" fetchpriority="high" decoding="async">
             {% endif %}
 
             <div class="ls-home-mini-head">
@@ -3651,13 +3651,15 @@ main.content-section {
             </span>
             {% if promo.brinquedos.imagem_brinquedo %}
               <img class="oferta-card-media-bg"
-                   src="{{ promo.brinquedos.imagem_brinquedo.url }}" alt="" aria-hidden="true">
+                   src="{{ promo.brinquedos.imagem_brinquedo.url }}" alt="" aria-hidden="true"
+                   loading="lazy" decoding="async">
               <img class="oferta-card-produto"
                    src="{{ promo.brinquedos.imagem_brinquedo.url }}" alt="{{ promo.descricao }}"
                    loading="lazy" decoding="async">
             {% else %}
               <img class="oferta-card-media-bg"
-                   src="{% static 'images/default_promocao.jpg' %}" alt="" aria-hidden="true">
+                   src="{% static 'images/default_promocao.jpg' %}" alt="" aria-hidden="true"
+                   loading="lazy" decoding="async">
               <img class="oferta-card-produto"
                    src="{% static 'images/default_promocao.jpg' %}" alt="Promoção sem imagem"
                    loading="lazy" decoding="async">
@@ -4136,13 +4138,15 @@ main.content-section {
             </span>
             {% if combo.imagem_combo %}
               <img class="oferta-card-media-bg"
-                   src="{{ combo.imagem_combo.url }}" alt="" aria-hidden="true">
+                   src="{{ combo.imagem_combo.url }}" alt="" aria-hidden="true"
+                   loading="lazy" decoding="async">
               <img class="oferta-card-produto"
                    src="{{ combo.imagem_combo.url }}" alt="{{ combo.descricao }}"
                    loading="lazy" decoding="async">
             {% else %}
               <img class="oferta-card-media-bg"
-                   src="{% static 'images/default_combo.jpg' %}" alt="" aria-hidden="true">
+                   src="{% static 'images/default_combo.jpg' %}" alt="" aria-hidden="true"
+                   loading="lazy" decoding="async">
               <img class="oferta-card-produto"
                    src="{% static 'images/default_combo.jpg' %}" alt="Combo sem imagem"
                    loading="lazy" decoding="async">
@@ -4395,10 +4399,10 @@ main.content-section {
             <div class="evento-thumb">
                 {% if est.imagem_estabelecimento %}
                     <img src="{{ est.imagem_estabelecimento.url }}"
-                         alt="{{ est.nome_estabelecimento }}">
+                         alt="{{ est.nome_estabelecimento }}" loading="lazy" decoding="async">
                 {% else %}
                     <img src="{% static 'images/default_estabelecimento.jpg' %}"
-                         alt="Sem imagem">
+                         alt="Sem imagem" loading="lazy" decoding="async">
                 {% endif %}
                 <span class="evento-ver-mais">Ver detalhes <i class="fa-solid fa-arrow-right"></i></span>
             </div>
@@ -4444,9 +4448,9 @@ main.content-section {
 
         <div class="evento-thumb">
             {% if evento.imagens_evento.first %}
-                <img src="{{ evento.imagens_evento.first.imagem.url }}" alt="{{ evento.titulo }}">
+                <img src="{{ evento.imagens_evento.first.imagem.url }}" alt="{{ evento.titulo }}" loading="lazy" decoding="async">
             {% else %}
-                <img src="{% static 'images/default.jpg' %}" alt="Sem imagem">
+                <img src="{% static 'images/default.jpg' %}" alt="Sem imagem" loading="lazy" decoding="async">
             {% endif %}
             <span class="evento-ver-mais">Ver galeria <i class="fa-solid fa-arrow-right"></i></span>
         </div>
@@ -4477,7 +4481,7 @@ main.content-section {
 
             <div id="carousel-{{ evento.id }}" class="modal-carousel-track">
                 {% for img in evento.imagens_evento.all %}
-                <img src="{{ img.imagem.url }}" alt="{{ img.legenda }}">
+                <img src="{{ img.imagem.url }}" alt="{{ img.legenda }}" loading="lazy" decoding="async">
                 {% empty %}
                 <p>Sem imagens adicionais.</p>
                 {% endfor %}
@@ -4493,7 +4497,7 @@ main.content-section {
         <div class="modal-brinquedos">
             {% for b in evento.brinquedos.all %}
             <div class="brinquedo-card">
-                <img src="{{ b.imagem_brinquedo.url }}">
+                <img src="{{ b.imagem_brinquedo.url }}" alt="{{ b.nome_brinquedo }}" loading="lazy" decoding="async">
                 <h4>{{ b.nome_brinquedo }}</h4>
                 <p>{{ b.descricao|truncatechars:120 }}</p>
                 {% if b.valor_brinquedo %}
@@ -4549,9 +4553,9 @@ main.content-section {
 
             <div class="evento-thumb">
                 {% if projeto.brinquedo_projetado and projeto.brinquedo_projetado.imagens_brinquedo_projeto.first %}
-                    <img src="{{ projeto.brinquedo_projetado.imagens_brinquedo_projeto.first.imagem.url }}" alt="{{ projeto.titulo }}">
+                    <img src="{{ projeto.brinquedo_projetado.imagens_brinquedo_projeto.first.imagem.url }}" alt="{{ projeto.titulo }}" loading="lazy" decoding="async">
                 {% else %}
-                    <img src="{% static 'images/default.jpg' %}" alt="{{ projeto.titulo }}">
+                    <img src="{% static 'images/default.jpg' %}" alt="{{ projeto.titulo }}" loading="lazy" decoding="async">
                 {% endif %}
                 <span class="evento-ver-mais">Ver galeria <i class="fa-solid fa-arrow-right"></i></span>
             </div>
@@ -4596,7 +4600,7 @@ main.content-section {
 
                 {% if projeto.brinquedo_projetado %}
                     {% for img in projeto.brinquedo_projetado.imagens_brinquedo_projeto.all %}
-                        <img src="{{ img.imagem.url }}">
+                        <img src="{{ img.imagem.url }}" alt="{{ projeto.titulo }}" loading="lazy" decoding="async">
                     {% endfor %}
                 {% endif %}
 
