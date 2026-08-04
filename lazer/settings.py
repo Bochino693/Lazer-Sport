@@ -133,6 +133,7 @@ INSTALLED_APPS = [
 
     # Terceiros
     "rest_framework",
+    "rest_framework.authtoken",
     "django_filters",
     "mercadopago",
     "widget_tweaks",
@@ -370,14 +371,33 @@ WHITENOISE_USE_FINDERS = DEBUG
 # DJANGO REST FRAMEWORK
 # ============================================================
 REST_FRAMEWORK = {
+    # A ordem importa: TokenAuthentication PRIMEIRO. Sem ela declarada,
+    # o DRF usa Session+Basic e ignora o header "Authorization: Token".
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework.authentication.TokenAuthentication",
+        "rest_framework.authentication.SessionAuthentication",
+    ],
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.AllowAny",
     ],
     "DEFAULT_FILTER_BACKENDS": [
         "django_filters.rest_framework.DjangoFilterBackend",
     ],
+    # Em produção o app é o único cliente: a API navegável em HTML só
+    # serve pra gastar CPU e vazar formulário. Fica só JSON.
+    "DEFAULT_RENDERER_CLASSES": (
+        ["rest_framework.renderers.JSONRenderer"]
+        if not DEBUG
+        else [
+            "rest_framework.renderers.JSONRenderer",
+            "rest_framework.renderers.BrowsableAPIRenderer",
+        ]
+    ),
+    "UNAUTHENTICATED_USER": None,
 }
 
+# Deep link que devolve o token pro app depois do login social.
+APP_DEEP_LINK = os.getenv("APP_DEEP_LINK", "lazersport://auth").strip()
 
 # ============================================================
 # SEGURANÇA / COOKIES / PROXY HTTPS

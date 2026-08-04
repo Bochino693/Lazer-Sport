@@ -1,41 +1,63 @@
 # core/api/views.py
 #
-# Fatia 1 -- Catálogo (somente leitura).
+# Catálogo público + institucional + área logada.
 #
-# Duas decisões de performance embutidas aqui, aprendidas com o
-# episódio da Vercel:
-#
-# 1) PAGINAÇÃO DE VERDADE. O site manda o catálogo inteiro e pagina no
-#    JavaScript. No app isso seria pior ainda -- o cliente no 4G
-#    baixaria tudo pra ver 9 itens. Aqui são 20 por página, servidos
-#    sob demanda.
-#
-# 2) CACHE. O catálogo muda pouco. 10 minutos de cache por página
-#    significa que 500 aberturas do app viram poucas queries no
-#    Supabase, não 500.
-#
-# PERMISSÕES: o settings.py tem DEFAULT_PERMISSION_CLASSES = AllowAny
-# global. Isso é aceitável pra catálogo (é público mesmo), mas quando
-# chegarmos na fatia 2 (login) cada view de usuário PRECISA declarar
-# permission_classes = [IsAuthenticated] explicitamente. Não confie no
-# default -- ele está aberto.
+# O endpoint /status/ existe pro app saber o que já está no ar antes de
+# tentar. Sem ele o app fica adivinhando por 404 e mostra seção vazia
+# sem explicação.
 
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
-from rest_framework import generics
+from rest_framework import generics, status
 from rest_framework.pagination import PageNumberPagination
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
-from core.models import Brinquedos, CategoriasBrinquedos, PecasReposicao
+from core.models import (
+    Brinquedos,
+    CategoriasBrinquedos,
+    ClientePerfil,
+    Combos,
+    Estabelecimentos,
+    Eventos,
+    Manutencao,
+    PecasReposicao,
+    Pedido,
+    Promocoes,
+)
 
 from core.api.serializer import (
     BrinquedoDetalheSerializer,
     BrinquedoListaSerializer,
     CategoriaSerializer,
+    ComboSerializer,
+    EstabelecimentoSerializer,
+    EventoSerializer,
+    ManutencaoEscritaSerializer,
+    ManutencaoLeituraSerializer,
     PecaSerializer,
+    PedidoSerializer,
+    PromocaoSerializer,
 )
 
-CACHE_CATALOGO = 60 * 10  # 10 minutos
+CACHE_CATALOGO = 60 * 10
+
+VERSAO_API = "1.2"
+
+RECURSOS_DISPONIVEIS = [
+    "auth",
+    "auth_google",
+    "categorias",
+    "brinquedos",
+    "pecas",
+    "estabelecimentos",
+    "eventos",
+    "combos",
+    "promocoes",
+    "manutencoes",
+    "pedidos",
+]
 
 
 class PaginacaoPadrao(PageNumberPagination):
@@ -44,10 +66,39 @@ class PaginacaoPadrao(PageNumberPagination):
     max_page_size = 60
 
 
+# ============================================================
+# STATUS -- o app chama isto primeiro, na tela de abertura
+# ============================================================
+
+class StatusAPI(APIView):
+    """GET /api/v1/status/
+
+    Barato de propósito: sem query no banco. Serve pra:
+      - o app saber se a API respondeu (splash e validações)
+      - o app saber QUAIS seções já existem, em vez de tentar e
+        receber 404 silencioso
+    """
+
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+    def get(self, request):
+        return Response({
+            "ok": True,
+            "versao": VERSAO_API,
+            "recursos": RECURSOS_DISPONIVEIS,
+            "minimo_app": "1.0",
+        })
+
+
+# ============================================================
+# CATÁLOGO
+# ============================================================
+
 class CategoriaListAPI(generics.ListAPIView):
     serializer_class = CategoriaSerializer
     permission_classes = [AllowAny]
-    pagination_class = None  # são poucas, manda todas
+    pagination_class = None
 
     def get_queryset(self):
         return (
@@ -85,14 +136,13 @@ class BrinquedoListAPI(generics.ListAPIView):
         )
 
         categoria = self.request.query_params.get("categoria")
-        if categoria:
-            qs = qs.filter(categorias_brinquedos__id=categoria)
+        if categoria and str(categoria).isdigit():
+            qs = qs.filter(categorias_brinquedos__id=int(categoria))
 
-        busca = self.request.query_params.get("busca")
+        busca = (self.request.query_params.get("busca") or "").strip()
         if busca:
             qs = qs.filter(nome_brinquedo__icontains=busca)
 
-        # distinct() porque o filtro por categoria é M2M e pode duplicar
         return qs.distinct()
 
     @method_decorator(cache_page(CACHE_CATALOGO))
@@ -101,8 +151,6 @@ class BrinquedoListAPI(generics.ListAPIView):
 
 
 class BrinquedoDetalheAPI(generics.RetrieveAPIView):
-    """GET /api/v1/brinquedos/42/"""
-
     serializer_class = BrinquedoDetalheSerializer
     permission_classes = [AllowAny]
 
@@ -131,7 +179,7 @@ class PecaListAPI(generics.ListAPIView):
             .order_by("nome")
         )
 
-        busca = self.request.query_params.get("busca")
+        busca = (self.request.query_params.get("busca") or "").strip()
         if busca:
             qs = qs.filter(nome__icontains=busca)
 
@@ -152,4 +200,134 @@ class PecaDetalheAPI(generics.RetrieveAPIView):
             .filter(ativo=True)
             .prefetch_related("imagem_peca_reposicao")
         )
-    
+
+
+# ============================================================
+# INSTITUCIONAL
+# ============================================================
+
+class EstabelecimentoListAPI(generics.ListAPIView):
+    serializer_class = EstabelecimentoSerializer
+    permission_classes = [AllowAny]
+    pagination_class = PaginacaoPadrao
+
+    def get_queryset(self):
+        return (
+            Estabelecimentos.objects
+            .filter(ativo=True)
+            .only("id", "nome_estabelecimento", "imagem_estabelecimento")
+            .order_by("nome_estabelecimento")
+        )
+
+    @method_decorator(cache_page(CACHE_CATALOGO))
+    def dispatch(self, *args, **kwargs):
+        return super().dispatch(*args, **kwargs)
+
+
+class EventoListAPI(generics.ListAPIView):
+    """Eventos não herdam de Prime -- não existe campo `ativo` aqui."""
+
+    serializer_class = EventoSerializer
+    permission_classes = [AllowAny]
+    pagination_class = PaginacaoPadrao
+
+    def get_queryset(self):
+        return (
+            Eventos.objects
+            .prefetch_related("imagens_evento")
+            .order_by("-id")
+        )
+
+    @method_decorator(cache_page(CACHE_CATALOGO))
+    def dispatch(self, *args, **kwargs):
+        return super().dispatch(*args, **kwargs)
+
+
+class ComboListAPI(generics.ListAPIView):
+    serializer_class = ComboSerializer
+    permission_classes = [AllowAny]
+    pagination_class = PaginacaoPadrao
+
+    def get_queryset(self):
+        return Combos.objects.filter(ativo=True).order_by("descricao")
+
+    @method_decorator(cache_page(CACHE_CATALOGO))
+    def dispatch(self, *args, **kwargs):
+        return super().dispatch(*args, **kwargs)
+
+
+class PromocaoListAPI(generics.ListAPIView):
+    serializer_class = PromocaoSerializer
+    permission_classes = [AllowAny]
+    pagination_class = PaginacaoPadrao
+
+    def get_queryset(self):
+        return (
+            Promocoes.objects
+            .filter(ativo=True)
+            .select_related("brinquedos")
+            .order_by("-id")
+        )
+
+    @method_decorator(cache_page(CACHE_CATALOGO))
+    def dispatch(self, *args, **kwargs):
+        return super().dispatch(*args, **kwargs)
+
+
+# ============================================================
+# ÁREA LOGADA
+# ============================================================
+
+def _perfil_do(request):
+    perfil, _ = ClientePerfil.objects.get_or_create(
+        user=request.user,
+        defaults={
+            "nome_completo": request.user.get_full_name() or "",
+            "telefone": "",
+        },
+    )
+    return perfil
+
+
+class ManutencaoListCreateAPI(generics.ListCreateAPIView):
+    """GET lista os chamados do cliente. POST abre um novo."""
+
+    permission_classes = [IsAuthenticated]
+    pagination_class = PaginacaoPadrao
+
+    def get_serializer_class(self):
+        if self.request.method == "POST":
+            return ManutencaoEscritaSerializer
+        return ManutencaoLeituraSerializer
+
+    def get_queryset(self):
+        return (
+            Manutencao.objects
+            .filter(usuario__user=self.request.user)
+            .select_related("brinquedo")
+            .order_by("-criado_em")
+        )
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        chamado = serializer.save(usuario=_perfil_do(request))
+
+        return Response(
+            ManutencaoLeituraSerializer(chamado).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class PedidoListAPI(generics.ListAPIView):
+    serializer_class = PedidoSerializer
+    permission_classes = [IsAuthenticated]
+    pagination_class = PaginacaoPadrao
+
+    def get_queryset(self):
+        return (
+            Pedido.objects
+            .filter(cliente__user=self.request.user)
+            .prefetch_related("itens")
+            .order_by("-criacao")
+        )
