@@ -8,6 +8,57 @@
 
 {% block content %}
 
+
+<style id="ls-home-performance">
+/* Performance sem alterar a estrutura visual da Home. */
+@supports (content-visibility: auto) {
+  #promocoes-section,
+  #brinquedos,
+  #manutencao,
+  #pecas-section,
+  #combos-section,
+  #estabelecimentos,
+  #eventos,
+  #projetos,
+  #clientes-section {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 900px;
+  }
+}
+
+#grid-cards[aria-busy="true"],
+#grid-pecas[aria-busy="true"] {
+  opacity: .72;
+  pointer-events: none;
+}
+
+#paginacao-wrapper .paginacao,
+#paginacao-pecas .paginacao {
+  min-height: 48px;
+}
+
+.ls-home-loading-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ls-home-loading-label::before {
+  content: "";
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(0, 74, 173, .25);
+  border-top-color: #004AAD;
+  border-radius: 50%;
+  animation: lsHomeSpin .7s linear infinite;
+}
+
+@keyframes lsHomeSpin {
+  to { transform: rotate(360deg); }
+}
+</style>
+
+
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600&display=swap');
 
@@ -3350,7 +3401,7 @@ main.content-section {
         <div class="ls-home-hero-card">
 
             {% if imagens_site %}
-                <img src="{{ imagens_site.0.imagem.url }}" alt="Lazer e Sport Brinquedos" class="ls-home-hero-img" fetchpriority="high" decoding="async">
+                <img src="{{ imagens_site.0.home_url }}" alt="Lazer e Sport Brinquedos" class="ls-home-hero-img" fetchpriority="high" decoding="async">
             {% endif %}
 
             <div class="ls-home-mini-head">
@@ -3530,7 +3581,7 @@ main.content-section {
               {% for peca in pecas_preview %}
                 {% if peca.imagem_principal %}
                   <img class="peca-slide"
-                       src="{{ peca.imagem_principal.imagem.url }}"
+                       src="{{ peca.imagem_home_url }}"
                        alt="{{ peca.nome }}"
                        loading="lazy"
                        decoding="async">
@@ -3774,7 +3825,7 @@ main.content-section {
   <!-- CONTAINER PRODUTOS -->
   <div id="produtos-container">
 
-    <div class="grid-cards" id="grid-cards">
+    <div class="grid-cards" id="grid-cards" data-total="{{ brinquedos_count }}" aria-live="polite">
       {% for brinquedo in brinquedos_todos %}
         <article class="card-link"
                  data-id="{{ brinquedo.id }}"
@@ -3801,7 +3852,7 @@ main.content-section {
 
                 {% if brinquedo.imagem_brinquedo %}
                   <img
-                    src="{{ brinquedo.imagem_brinquedo.url }}"
+                    src="{{ brinquedo.imagem_home_url }}"
                     alt="{{ brinquedo.nome_brinquedo }}"
                     loading="lazy"
                     decoding="async"
@@ -3997,7 +4048,7 @@ main.content-section {
 
 <!-- CONTAINER -->
 <div id="pecas-container">
-  <div class="pecas-grid" id="grid-pecas">
+  <div class="pecas-grid" id="grid-pecas" data-total="{{ pecas_count }}" aria-live="polite">
     {% for peca in pecas_todas %}
     <article class="pecas-card-link"
              data-categorias="{% for cat in peca.categoria_peca.all %}{{ cat.id }}{% if not forloop.last %},{% endif %}{% endfor %}">
@@ -4012,7 +4063,7 @@ main.content-section {
               Peça original
             </span>
             {% if peca.imagem_principal and peca.imagem_principal.imagem %}
-              <img src="{{ peca.imagem_principal.imagem.url }}"
+              <img src="{{ peca.imagem_home_url }}"
                    alt="{{ peca.nome }}"
                    loading="lazy"
                    decoding="async">
@@ -7540,625 +7591,700 @@ main.content-section {
 }
 </script>
 {{ pontos_mapa|json_script:"dados-clientes-mapa" }}
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script>
 (function () {
-    const todosPontosBrutos = JSON.parse(document.getElementById('dados-clientes-mapa').textContent);
-    const todosPontos = todosPontosBrutos.filter(p =>
-        Number.isFinite(Number(p.lat)) &&
-        Number.isFinite(Number(p.lng)) &&
-        Number(p.lat) >= -90 && Number(p.lat) <= 90 &&
-        Number(p.lng) >= -180 && Number(p.lng) <= 180
-    ).map(p => ({ ...p, lat: Number(p.lat), lng: Number(p.lng) }));
-    if (!todosPontos.length) return;
+    const mapaAlvo = document.getElementById('mapa-clientes');
+    if (!mapaAlvo) return;
 
-    const fabrica = todosPontos.find(p => p.tipo === 'fabrica') || null;
-    const clientesDados = todosPontos.filter(p => p.tipo === 'cliente');
+    let iniciou = false;
+    let leafletPromise = null;
 
-    const mapa = L.map('mapa-clientes', { scrollWheelZoom: false });
-    mapa.setView([-14.235, -51.925], 4);
-
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 18,
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>'
-    }).addTo(mapa);
-
-    function escapeHTML(texto) {
-        const div = document.createElement('div');
-        div.textContent = texto || '';
-        return div.innerHTML;
-    }
-
-    function normalizarUrlExterna(valor) {
-        const url = String(valor || '').trim();
-        if (!/^https?:\/\//i.test(url)) return '';
-
-        try {
-            const destino = new URL(url);
-            return ['http:', 'https:'].includes(destino.protocol)
-                ? destino.href
-                : '';
-        } catch (erro) {
-            return '';
-        }
-    }
-
-    const LOGO_CLIENTE_PADRAO = "{% static 'images/logoo.png' %}";
-    const CATEGORIAS_PADRAO = ['Kid Play', 'Brinquedão', 'Trampolins', 'Eletrônicos'];
-
-    const PINO_PATH_D = "M215.7 499.2C267 435 384 279.4 384 192C384 86 298 0 192 0S0 86 0 192c0 87.4 117 243 168.3 307.2c12.3 15.3 35.1 15.3 47.4 0z";
-
-    let sequenciaPino = 0;
-
-    function criarPino({ largura, altura, corPino, janela, conteudoJanela, classeSvg = '' }) {
-        const idMascara = `mascara-pino-${++sequenciaPino}`;
-        const centroY = 179;
-        const raioFuro = Math.round((janela / largura) * 192);
-
-        return `
-            <span class="pino-gota" style="width:${largura}px;height:${altura}px;">
-                <span class="pino-gota__janela" style="width:${janela}px;height:${janela}px;">
-                    ${conteudoJanela}
-                </span>
-                <svg class="pino-gota__corpo ${classeSvg}" viewBox="0 0 384 512"
-                     xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                    <defs>
-                        <mask id="${idMascara}">
-                            <rect width="384" height="512" fill="#fff"/>
-                            <circle cx="192" cy="${centroY}" r="${raioFuro}" fill="#000"/>
-                        </mask>
-                    </defs>
-                    <path d="${PINO_PATH_D}" fill="${corPino}" mask="url(#${idMascara})"/>
-                </svg>
-                <svg class="pino-gota__aro" viewBox="0 0 384 512"
-                     xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                    <circle cx="192" cy="${centroY}" r="${raioFuro}"
-                            fill="none" stroke="#fff" stroke-width="18"/>
-                </svg>
-            </span>
-        `;
-    }
-
-    // Pinos menores agora (34x46 cliente, 44x59 fábrica) -- o raio de
-    // agrupamento (RAIO_CLUSTER_PX, mais abaixo) foi ajustado pra ser
-    // maior que essa largura, então pinos que ficariam colados viram
-    // bolha em vez de se sobreporem e esconderem a foto um do outro.
-    function criarIconeCliente(c) {
-        const imagemCliente = escapeHTML(c.imagem || c.logo || c.foto || LOGO_CLIENTE_PADRAO);
-        return L.divIcon({
-            className: 'cliente-marker',
-            html: criarPino({
-                largura: 38, altura: 51, corPino: '#004AAD', janela: 21,
-                conteudoJanela: `<img src="${imagemCliente}" alt="" onerror="this.onerror=null;this.src='${LOGO_CLIENTE_PADRAO}';">`
-            }),
-            iconSize: [38, 51],
-            iconAnchor: [19, 51],
-            popupAnchor: [0, -47],
-        });
-    }
-
-    const iconeFabrica = L.divIcon({
-        className: 'fabrica-marker',
-        html: criarPino({
-            largura: 46, altura: 62, corPino: '#E63946', janela: 25, classeSvg: 'pino-pulse',
-            conteudoJanela: `
-                <svg class="pino-fabrica-icone" viewBox="0 0 64 64"
-                     xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                    <path d="M6 56V26l15 8V24l15 9V18h9v20l13 7v11H6zm8-8h7v-7h-7v7zm14 0h7v-7h-7v7zm14 0h7v-7h-7v7zM38 14V7h7v7h-7z"/>
-                </svg>`
-        }),
-        iconSize: [46, 62],
-        iconAnchor: [23, 62],
-        popupAnchor: [0, -57],
-    });
-
-    function criarPopupCliente(c) {
-        const nome = escapeHTML(c.nome);
-        const imagemCliente = escapeHTML(c.imagem || c.logo || c.foto || LOGO_CLIENTE_PADRAO);
-        const logo = `
-            <img src="${imagemCliente}"
-                 alt="${nome}"
-                 onerror="this.onerror=null;this.src='${LOGO_CLIENTE_PADRAO}';">`;
-        const cidadeEstado = [c.cidade, c.estado].filter(Boolean).join(' - ');
-        const localCompleto = [
-            cidadeEstado,
-            c.pais && c.pais !== 'Brasil' ? c.pais : ''
-        ].filter(Boolean).join(', ') || c.pais || 'Localização disponível no mapa';
-        const local = escapeHTML(localCompleto);
-        const descricao = escapeHTML(
-            c.descricao ||
-            'Espaço atendido com equipamentos e soluções da Lazer & Sport Brinquedos.'
-        );
-        const urlCliente = normalizarUrlExterna(c.site || c.instagram);
-        const linkInstagram = urlCliente.includes('instagram.com');
-        const link = urlCliente
-            ? `<a class="cliente-popup__action ${linkInstagram ? 'cliente-popup__action--instagram' : ''}"
-                  href="${escapeHTML(urlCliente)}"
-                  target="_blank"
-                  rel="noopener"
-                  aria-label="${linkInstagram ? `Abrir Instagram de ${nome}` : `Visitar site de ${nome}`}">
-                   <i class="${linkInstagram ? 'fa-brands fa-instagram' : 'fa-solid fa-globe'}"></i>
-                   ${linkInstagram
-                       ? '<span class="cliente-popup__instagram-text">Instagram</span>'
-                       : 'Visitar site'}
-               </a>`
-            : '';
-        const rota = `
-            <a class="cliente-popup__action cliente-popup__action--route"
-               href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${c.lat},${c.lng}`)}"
-               target="_blank"
-               rel="noopener">
-                <i class="fa-solid fa-route"></i>
-                Como chegar
-            </a>`;
-        const acoes = `
-            <div class="cliente-popup__actions ${link ? '' : 'cliente-popup__actions--single'}">
-                ${link}
-                ${rota}
-            </div>`;
-        const categoriasRecebidas = Array.isArray(c.brinquedos)
-            ? c.brinquedos
-            : (Array.isArray(c.categorias) ? c.categorias : CATEGORIAS_PADRAO);
-        const categorias = categoriasRecebidas
-            .map(item => typeof item === 'string' ? item : (item.nome || item.nome_brinquedo || ''))
-            .filter(Boolean)
-            .slice(0, 4);
-        const tags = `<div class="cliente-popup-tags">${
-            categorias.map(t => `<span>${escapeHTML(t)}</span>`).join('')
-          }</div>`;
-
-        return `
-            <div class="cliente-popup cliente-popup--cliente">
-                <div class="cliente-popup__top">
-                    <div class="cliente-popup__media">${logo}</div>
-                    <div class="cliente-popup__copy">
-                        <span class="cliente-popup__kicker">
-                            <i class="fa-solid fa-circle-check"></i>
-                            Cliente Lazer &amp; Sport
-                        </span>
-                        <h4>${nome}</h4>
-                    </div>
-                </div>
-                <div class="cliente-popup__location">
-                    <i class="fa-solid fa-location-dot"></i>
-                    <span>${local}</span>
-                </div>
-                <p class="cliente-popup__description">${descricao}</p>
-                ${tags}
-                ${acoes}
-            </div>
-        `;
-    }
-
-    function criarPopupFabrica(f) {
-        const nome = escapeHTML(f.nome);
-        const local = escapeHTML([f.cidade, f.estado].filter(Boolean).join(' - '));
-        const endereco = escapeHTML(f.endereco || '');
-        const logoFabrica = escapeHTML(f.logo || LOGO_CLIENTE_PADRAO);
-        const localCompleto = [endereco, local].filter(Boolean).join(' — ');
-        const rotaFabrica = `
-            <div class="cliente-popup__actions cliente-popup__actions--single">
-                <a class="cliente-popup__action cliente-popup__action--route"
-                   href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${f.lat},${f.lng}`)}"
-                   target="_blank"
-                   rel="noopener">
-                    <i class="fa-solid fa-route"></i>
-                    Como chegar
-                </a>
-            </div>`;
-
-        return `
-            <div class="cliente-popup cliente-popup--fabrica">
-                <div class="cliente-popup__top">
-                    <div class="cliente-popup__media">
-                        <img src="${logoFabrica}" alt="${nome}">
-                    </div>
-                    <div class="cliente-popup__copy">
-                        <span class="cliente-popup__kicker">
-                            <i class="fa-solid fa-industry"></i>
-                            Nossa fábrica
-                        </span>
-                        <h4>${nome}</h4>
-                    </div>
-                </div>
-                <div class="cliente-popup__location">
-                    <i class="fa-solid fa-location-dot"></i>
-                    <span>${localCompleto}</span>
-                </div>
-                <p class="cliente-popup__description">
-                    Tecnologia, fabricação própria e diversão para projetos em todo o Brasil.
-                </p>
-                ${rotaFabrica}
-            </div>
-        `;
-    }
-
-    function criarTooltipMarcador(ponto, fabrica = false) {
-        const nome = escapeHTML(ponto.nome || 'Lazer & Sport');
-        const local = escapeHTML(
-            [ponto.cidade, ponto.estado]
-                .filter(Boolean)
-                .join(' - ') ||
-            ponto.pais ||
-            ''
-        );
-
-        return `
-            <div class="cliente-hover-card ${fabrica ? 'cliente-hover-card--fabrica' : ''}">
-                <strong>${nome}</strong>
-                ${local ? `<span>${local}</span>` : ''}
-                <small>
-                    <i class="fa-solid fa-computer-mouse"></i>
-                    Clique para manter as informações abertas
-                </small>
-            </div>
-        `;
-    }
-
-    const dispositivoComHover = window.matchMedia(
-        '(hover: hover) and (pointer: fine)'
-    ).matches;
-    const dispositivoCompacto = window.matchMedia(
-        '(max-width: 575px), (hover: none)'
-    ).matches;
-    let marcadorPopupFixado = null;
-    let sequenciaCentralizacaoPopup = 0;
-
-    function alternarElevacaoMarcador(marcador, ativo, zIndexBase = 0) {
-        const elemento = marcador.getElement();
-        elemento?.classList.toggle('marcador-elevado', ativo);
-        marcador.setZIndexOffset(ativo ? zIndexBase + 1400 : zIndexBase);
-    }
-
-    function abrirPopupDoMarcador(marcador) {
-        if (!marcador._popupLazerSport) return;
-
-        const abrir = () => {
-            marcador._popupLazerSport
-                .setLatLng(marcador.getLatLng())
-                .openOn(mapa);
-        };
-
-        if (!dispositivoCompacto) {
-            abrir();
-            return;
+    function carregarLeaflet() {
+        if (window.L) {
+            return Promise.resolve(window.L);
         }
 
-        const tokenCentralizacao = ++sequenciaCentralizacaoPopup;
-        mapa.stop();
-
-        const tamanhoMapa = mapa.getSize();
-        const pontoAtual = mapa.latLngToContainerPoint(
-            marcador.getLatLng()
-        );
-        const pontoSeguro = L.point(
-            tamanhoMapa.x / 2,
-            tamanhoMapa.y * .68
-        );
-        const deslocamento = pontoAtual.subtract(pontoSeguro);
-
-        if (
-            Math.abs(deslocamento.x) < 5 &&
-            Math.abs(deslocamento.y) < 5
-        ) {
-            abrir();
-            return;
+        if (leafletPromise) {
+            return leafletPromise;
         }
 
-        let finalizado = false;
-        let fallbackCentralizacao = null;
-
-        const concluirCentralizacao = () => {
-            if (finalizado) return;
-            finalizado = true;
-            mapa.off('moveend', concluirCentralizacao);
-            window.clearTimeout(fallbackCentralizacao);
-
-            if (tokenCentralizacao === sequenciaCentralizacaoPopup) {
-                abrir();
+        leafletPromise = new Promise((resolve, reject) => {
+            if (!document.querySelector('link[data-ls-leaflet]')) {
+                const css = document.createElement('link');
+                css.rel = 'stylesheet';
+                css.href = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css';
+                css.dataset.lsLeaflet = '1';
+                document.head.appendChild(css);
             }
-        };
 
-        mapa.once('moveend', concluirCentralizacao);
-        fallbackCentralizacao = window.setTimeout(
-            concluirCentralizacao,
-            240
-        );
-        mapa.panBy(deslocamento, {
-            animate: true,
-            duration: .18,
-            easeLinearity: .25
-        });
-    }
+            const existente = document.querySelector('script[data-ls-leaflet]');
 
-    function fecharPopupsDoMapa() {
-        sequenciaCentralizacaoPopup += 1;
-        marcadorPopupFixado?.closeTooltip();
-        marcadorPopupFixado = null;
-        mapa.closePopup();
-    }
-
-    function configurarInteracaoMarcador(
-        marcador,
-        zIndexBase,
-        conteudoPopup,
-        conteudoTooltip,
-        deslocamentoY
-    ) {
-        const paddingSuperior = dispositivoCompacto ? 56 : 86;
-        const paddingLateral = dispositivoCompacto ? 12 : 24;
-        const paddingInferior = dispositivoCompacto ? 14 : 34;
-
-        marcador._zIndexBaseLazerSport = zIndexBase || 0;
-        marcador._popupLazerSport = L.popup({
-            autoClose: true,
-            autoPan: true,
-            autoPanPaddingTopLeft: L.point(
-                paddingLateral,
-                paddingSuperior
-            ),
-            autoPanPaddingBottomRight: L.point(
-                paddingLateral,
-                paddingInferior
-            ),
-            closeButton: true,
-            closeOnClick: false,
-            className: 'popup-cliente-lazer-sport',
-            keepInView: true,
-            maxWidth: dispositivoCompacto ? 252 : 320,
-            minWidth: 0,
-            offset: L.point(0, deslocamentoY)
-        }).setContent(conteudoPopup);
-
-        if (dispositivoComHover) {
-            marcador.bindTooltip(conteudoTooltip, {
-                className: 'cliente-hover-tooltip',
-                direction: 'top',
-                offset: L.point(0, deslocamentoY + 5),
-                opacity: 1
-            });
-
-            marcador.on('mouseover', function () {
-                alternarElevacaoMarcador(marcador, true, zIndexBase || 0);
-
-                // O popup fixo já contém as informações completas. Evita
-                // sobrepor o tooltip de hover no mesmo marcador.
-                if (marcador === marcadorPopupFixado) {
-                    marcador.closeTooltip();
+            if (existente) {
+                if (window.L) {
+                    resolve(window.L);
+                    return;
                 }
-            });
 
-            marcador.on('mouseout', function () {
-                // A elevação representa somente o hover. O popup clicado
-                // continua fixo, mas a gota volta à posição normal e pode
-                // subir novamente no próximo hover.
-                alternarElevacaoMarcador(marcador, false, zIndexBase || 0);
-            });
-        }
-
-        marcador.on('click', function (e) {
-            if (e.originalEvent) {
-                L.DomEvent.stopPropagation(e.originalEvent);
-                L.DomEvent.preventDefault(e.originalEvent);
-            }
-
-            marcador.closeTooltip();
-            marcadorPopupFixado = marcador;
-            abrirPopupDoMarcador(marcador);
-        });
-
-        function prepararElementoMarcador() {
-            const elemento = marcador.getElement();
-            if (!elemento) return;
-
-            elemento.setAttribute('role', 'button');
-            elemento.setAttribute(
-                'aria-label',
-                `Ver informações de ${marcador.options.title || 'cliente Lazer & Sport'}`
-            );
-            elemento.setAttribute('aria-haspopup', 'dialog');
-            elemento.setAttribute('aria-expanded', 'false');
-            elemento.style.touchAction = 'manipulation';
-        }
-
-        marcador.on('add', prepararElementoMarcador);
-        prepararElementoMarcador();
-
-        marcador._popupLazerSport.on('add', function () {
-            marcador.getElement()?.setAttribute('aria-expanded', 'true');
-
-            const elementoPopup = marcador._popupLazerSport.getElement?.();
-            if (elementoPopup) {
-                elementoPopup.setAttribute('role', 'dialog');
-                elementoPopup.setAttribute(
-                    'aria-label',
-                    `Informações de ${marcador.options.title || 'cliente Lazer & Sport'}`
-                );
-                elementoPopup
-                    .querySelector('.leaflet-popup-close-button')
-                    ?.setAttribute('aria-label', 'Fechar informações');
-            }
-        });
-
-        marcador._popupLazerSport.on('remove', function () {
-            marcador.getElement()?.setAttribute('aria-expanded', 'false');
-            if (marcadorPopupFixado === marcador) {
-                marcadorPopupFixado = null;
-            }
-        });
-
-        marcador.on('keypress', function (e) {
-            if (e.originalEvent?.key !== 'Enter' && e.originalEvent?.key !== ' ') {
-                return;
-            }
-            e.originalEvent.preventDefault();
-            marcador.closeTooltip();
-            marcadorPopupFixado = marcador;
-            abrirPopupDoMarcador(marcador);
-        });
-    }
-
-    mapa.on('popupopen', function (e) {
-        const popupAberto = e.popup;
-
-        if (
-            marcadorPopupFixado &&
-            marcadorPopupFixado._popupLazerSport !== popupAberto
-        ) {
-            marcadorPopupFixado = null;
-        }
-    });
-
-    // ---- Agrupamento por proximidade em pixels, sem plugin externo ----
-    const RAIO_CLUSTER_PX = 48;
-    const camadaClientes = L.layerGroup().addTo(mapa);
-    let clientesAtuais = clientesDados;
-
-    function agruparPorPixel(lista) {
-        const restantes = lista.map(c => ({
-            cliente: c,
-            pt: mapa.latLngToContainerPoint([c.lat, c.lng])
-        }));
-        const grupos = [];
-
-        while (restantes.length) {
-            const base = restantes.shift();
-            const grupo = [base];
-
-            for (let i = restantes.length - 1; i >= 0; i--) {
-                const dx = restantes[i].pt.x - base.pt.x;
-                const dy = restantes[i].pt.y - base.pt.y;
-                if (Math.sqrt(dx * dx + dy * dy) <= RAIO_CLUSTER_PX) {
-                    grupo.push(restantes[i]);
-                    restantes.splice(i, 1);
-                }
-            }
-
-            grupos.push(grupo);
-        }
-
-        return grupos;
-    }
-
-    function atualizarContador(n) {
-        const contador = document.getElementById('clientes-contador');
-        if (contador) {
-            contador.innerHTML = `<strong>${n}</strong> cliente${n === 1 ? '' : 's'} no mapa`;
-        }
-    }
-
-    function renderizarPinosNoMapa() {
-        fecharPopupsDoMapa();
-        camadaClientes.clearLayers();
-        atualizarContador(clientesAtuais.length);
-        if (!clientesAtuais.length) return;
-
-        agruparPorPixel(clientesAtuais).forEach(grupo => {
-            if (grupo.length === 1) {
-                const c = grupo[0].cliente;
-                const marcador = L.marker([c.lat, c.lng], {
-                    icon: criarIconeCliente(c),
-                    riseOnHover: true,
-                    riseOffset: 1200,
-                    keyboard: true,
-                    bubblingMouseEvents: false,
-                    title: c.nome || 'Cliente Lazer & Sport'
-                });
-                configurarInteracaoMarcador(
-                    marcador,
-                    0,
-                    criarPopupCliente(c),
-                    criarTooltipMarcador(c),
-                    -47
-                );
-                camadaClientes.addLayer(marcador);
+                existente.addEventListener('load', () => resolve(window.L), { once: true });
+                existente.addEventListener('error', reject, { once: true });
                 return;
             }
 
-            const latMedia = grupo.reduce((s, g) => s + g.cliente.lat, 0) / grupo.length;
-            const lngMedia = grupo.reduce((s, g) => s + g.cliente.lng, 0) / grupo.length;
+            const script = document.createElement('script');
+            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js';
+            script.async = true;
+            script.dataset.lsLeaflet = '1';
+            script.onload = () => resolve(window.L);
+            script.onerror = reject;
+            document.head.appendChild(script);
+        });
 
-            const marcadorCluster = L.marker([latMedia, lngMedia], {
-                icon: L.divIcon({
-                    className: 'cluster-lazer',
-                    html: `<span>${grupo.length}</span>`,
-                    iconSize: [36, 36],
-                }),
-                zIndexOffset: 500,
-                bubblingMouseEvents: false,
-            }).bindTooltip(`${grupo.length} clientes aqui — clique para ver cada um`, { direction: 'top' });
+        return leafletPromise;
+    }
 
-            marcadorCluster.on('click', function () {
-                mapa.setView([latMedia, lngMedia], Math.min(mapa.getZoom() + 3, 18));
+    function iniciarMapaClientes() {
+        if (iniciou) return;
+        iniciou = true;
+
+        carregarLeaflet()
+            .then(() => {
+                    const todosPontosBrutos = JSON.parse(document.getElementById('dados-clientes-mapa').textContent);
+                    const todosPontos = todosPontosBrutos.filter(p =>
+                        Number.isFinite(Number(p.lat)) &&
+                        Number.isFinite(Number(p.lng)) &&
+                        Number(p.lat) >= -90 && Number(p.lat) <= 90 &&
+                        Number(p.lng) >= -180 && Number(p.lng) <= 180
+                    ).map(p => ({ ...p, lat: Number(p.lat), lng: Number(p.lng) }));
+                    if (!todosPontos.length) return;
+
+                    const fabrica = todosPontos.find(p => p.tipo === 'fabrica') || null;
+                    const clientesDados = todosPontos.filter(p => p.tipo === 'cliente');
+
+                    const mapa = L.map('mapa-clientes', { scrollWheelZoom: false });
+                    mapa.setView([-14.235, -51.925], 4);
+
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        maxZoom: 18,
+                        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>'
+                    }).addTo(mapa);
+
+                    function escapeHTML(texto) {
+                        const div = document.createElement('div');
+                        div.textContent = texto || '';
+                        return div.innerHTML;
+                    }
+
+                    function normalizarUrlExterna(valor) {
+                        const url = String(valor || '').trim();
+                        if (!/^https?:\/\//i.test(url)) return '';
+
+                        try {
+                            const destino = new URL(url);
+                            return ['http:', 'https:'].includes(destino.protocol)
+                                ? destino.href
+                                : '';
+                        } catch (erro) {
+                            return '';
+                        }
+                    }
+
+                    const LOGO_CLIENTE_PADRAO = "{% static 'images/logoo.png' %}";
+                    const CATEGORIAS_PADRAO = ['Kid Play', 'Brinquedão', 'Trampolins', 'Eletrônicos'];
+
+                    const PINO_PATH_D = "M215.7 499.2C267 435 384 279.4 384 192C384 86 298 0 192 0S0 86 0 192c0 87.4 117 243 168.3 307.2c12.3 15.3 35.1 15.3 47.4 0z";
+
+                    let sequenciaPino = 0;
+
+                    function criarPino({ largura, altura, corPino, janela, conteudoJanela, classeSvg = '' }) {
+                        const idMascara = `mascara-pino-${++sequenciaPino}`;
+                        const centroY = 179;
+                        const raioFuro = Math.round((janela / largura) * 192);
+
+                        return `
+                            <span class="pino-gota" style="width:${largura}px;height:${altura}px;">
+                                <span class="pino-gota__janela" style="width:${janela}px;height:${janela}px;">
+                                    ${conteudoJanela}
+                                </span>
+                                <svg class="pino-gota__corpo ${classeSvg}" viewBox="0 0 384 512"
+                                     xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                                    <defs>
+                                        <mask id="${idMascara}">
+                                            <rect width="384" height="512" fill="#fff"/>
+                                            <circle cx="192" cy="${centroY}" r="${raioFuro}" fill="#000"/>
+                                        </mask>
+                                    </defs>
+                                    <path d="${PINO_PATH_D}" fill="${corPino}" mask="url(#${idMascara})"/>
+                                </svg>
+                                <svg class="pino-gota__aro" viewBox="0 0 384 512"
+                                     xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                                    <circle cx="192" cy="${centroY}" r="${raioFuro}"
+                                            fill="none" stroke="#fff" stroke-width="18"/>
+                                </svg>
+                            </span>
+                        `;
+                    }
+
+                    // Pinos menores agora (34x46 cliente, 44x59 fábrica) -- o raio de
+                    // agrupamento (RAIO_CLUSTER_PX, mais abaixo) foi ajustado pra ser
+                    // maior que essa largura, então pinos que ficariam colados viram
+                    // bolha em vez de se sobreporem e esconderem a foto um do outro.
+                    function criarIconeCliente(c) {
+                        const imagemCliente = escapeHTML(c.imagem || c.logo || c.foto || LOGO_CLIENTE_PADRAO);
+                        return L.divIcon({
+                            className: 'cliente-marker',
+                            html: criarPino({
+                                largura: 38, altura: 51, corPino: '#004AAD', janela: 21,
+                                conteudoJanela: `<img src="${imagemCliente}" alt="" onerror="this.onerror=null;this.src='${LOGO_CLIENTE_PADRAO}';">`
+                            }),
+                            iconSize: [38, 51],
+                            iconAnchor: [19, 51],
+                            popupAnchor: [0, -47],
+                        });
+                    }
+
+                    const iconeFabrica = L.divIcon({
+                        className: 'fabrica-marker',
+                        html: criarPino({
+                            largura: 46, altura: 62, corPino: '#E63946', janela: 25, classeSvg: 'pino-pulse',
+                            conteudoJanela: `
+                                <svg class="pino-fabrica-icone" viewBox="0 0 64 64"
+                                     xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                                    <path d="M6 56V26l15 8V24l15 9V18h9v20l13 7v11H6zm8-8h7v-7h-7v7zm14 0h7v-7h-7v7zm14 0h7v-7h-7v7zM38 14V7h7v7h-7z"/>
+                                </svg>`
+                        }),
+                        iconSize: [46, 62],
+                        iconAnchor: [23, 62],
+                        popupAnchor: [0, -57],
+                    });
+
+                    function criarPopupCliente(c) {
+                        const nome = escapeHTML(c.nome);
+                        const imagemCliente = escapeHTML(c.imagem || c.logo || c.foto || LOGO_CLIENTE_PADRAO);
+                        const logo = `
+                            <img src="${imagemCliente}"
+                                 alt="${nome}"
+                                 onerror="this.onerror=null;this.src='${LOGO_CLIENTE_PADRAO}';">`;
+                        const cidadeEstado = [c.cidade, c.estado].filter(Boolean).join(' - ');
+                        const localCompleto = [
+                            cidadeEstado,
+                            c.pais && c.pais !== 'Brasil' ? c.pais : ''
+                        ].filter(Boolean).join(', ') || c.pais || 'Localização disponível no mapa';
+                        const local = escapeHTML(localCompleto);
+                        const descricao = escapeHTML(
+                            c.descricao ||
+                            'Espaço atendido com equipamentos e soluções da Lazer & Sport Brinquedos.'
+                        );
+                        const urlCliente = normalizarUrlExterna(c.site || c.instagram);
+                        const linkInstagram = urlCliente.includes('instagram.com');
+                        const link = urlCliente
+                            ? `<a class="cliente-popup__action ${linkInstagram ? 'cliente-popup__action--instagram' : ''}"
+                                  href="${escapeHTML(urlCliente)}"
+                                  target="_blank"
+                                  rel="noopener"
+                                  aria-label="${linkInstagram ? `Abrir Instagram de ${nome}` : `Visitar site de ${nome}`}">
+                                   <i class="${linkInstagram ? 'fa-brands fa-instagram' : 'fa-solid fa-globe'}"></i>
+                                   ${linkInstagram
+                                       ? '<span class="cliente-popup__instagram-text">Instagram</span>'
+                                       : 'Visitar site'}
+                               </a>`
+                            : '';
+                        const rota = `
+                            <a class="cliente-popup__action cliente-popup__action--route"
+                               href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${c.lat},${c.lng}`)}"
+                               target="_blank"
+                               rel="noopener">
+                                <i class="fa-solid fa-route"></i>
+                                Como chegar
+                            </a>`;
+                        const acoes = `
+                            <div class="cliente-popup__actions ${link ? '' : 'cliente-popup__actions--single'}">
+                                ${link}
+                                ${rota}
+                            </div>`;
+                        const categoriasRecebidas = Array.isArray(c.brinquedos)
+                            ? c.brinquedos
+                            : (Array.isArray(c.categorias) ? c.categorias : CATEGORIAS_PADRAO);
+                        const categorias = categoriasRecebidas
+                            .map(item => typeof item === 'string' ? item : (item.nome || item.nome_brinquedo || ''))
+                            .filter(Boolean)
+                            .slice(0, 4);
+                        const tags = `<div class="cliente-popup-tags">${
+                            categorias.map(t => `<span>${escapeHTML(t)}</span>`).join('')
+                          }</div>`;
+
+                        return `
+                            <div class="cliente-popup cliente-popup--cliente">
+                                <div class="cliente-popup__top">
+                                    <div class="cliente-popup__media">${logo}</div>
+                                    <div class="cliente-popup__copy">
+                                        <span class="cliente-popup__kicker">
+                                            <i class="fa-solid fa-circle-check"></i>
+                                            Cliente Lazer &amp; Sport
+                                        </span>
+                                        <h4>${nome}</h4>
+                                    </div>
+                                </div>
+                                <div class="cliente-popup__location">
+                                    <i class="fa-solid fa-location-dot"></i>
+                                    <span>${local}</span>
+                                </div>
+                                <p class="cliente-popup__description">${descricao}</p>
+                                ${tags}
+                                ${acoes}
+                            </div>
+                        `;
+                    }
+
+                    function criarPopupFabrica(f) {
+                        const nome = escapeHTML(f.nome);
+                        const local = escapeHTML([f.cidade, f.estado].filter(Boolean).join(' - '));
+                        const endereco = escapeHTML(f.endereco || '');
+                        const logoFabrica = escapeHTML(f.logo || LOGO_CLIENTE_PADRAO);
+                        const localCompleto = [endereco, local].filter(Boolean).join(' — ');
+                        const rotaFabrica = `
+                            <div class="cliente-popup__actions cliente-popup__actions--single">
+                                <a class="cliente-popup__action cliente-popup__action--route"
+                                   href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${f.lat},${f.lng}`)}"
+                                   target="_blank"
+                                   rel="noopener">
+                                    <i class="fa-solid fa-route"></i>
+                                    Como chegar
+                                </a>
+                            </div>`;
+
+                        return `
+                            <div class="cliente-popup cliente-popup--fabrica">
+                                <div class="cliente-popup__top">
+                                    <div class="cliente-popup__media">
+                                        <img src="${logoFabrica}" alt="${nome}">
+                                    </div>
+                                    <div class="cliente-popup__copy">
+                                        <span class="cliente-popup__kicker">
+                                            <i class="fa-solid fa-industry"></i>
+                                            Nossa fábrica
+                                        </span>
+                                        <h4>${nome}</h4>
+                                    </div>
+                                </div>
+                                <div class="cliente-popup__location">
+                                    <i class="fa-solid fa-location-dot"></i>
+                                    <span>${localCompleto}</span>
+                                </div>
+                                <p class="cliente-popup__description">
+                                    Tecnologia, fabricação própria e diversão para projetos em todo o Brasil.
+                                </p>
+                                ${rotaFabrica}
+                            </div>
+                        `;
+                    }
+
+                    function criarTooltipMarcador(ponto, fabrica = false) {
+                        const nome = escapeHTML(ponto.nome || 'Lazer & Sport');
+                        const local = escapeHTML(
+                            [ponto.cidade, ponto.estado]
+                                .filter(Boolean)
+                                .join(' - ') ||
+                            ponto.pais ||
+                            ''
+                        );
+
+                        return `
+                            <div class="cliente-hover-card ${fabrica ? 'cliente-hover-card--fabrica' : ''}">
+                                <strong>${nome}</strong>
+                                ${local ? `<span>${local}</span>` : ''}
+                                <small>
+                                    <i class="fa-solid fa-computer-mouse"></i>
+                                    Clique para manter as informações abertas
+                                </small>
+                            </div>
+                        `;
+                    }
+
+                    const dispositivoComHover = window.matchMedia(
+                        '(hover: hover) and (pointer: fine)'
+                    ).matches;
+                    const dispositivoCompacto = window.matchMedia(
+                        '(max-width: 575px), (hover: none)'
+                    ).matches;
+                    let marcadorPopupFixado = null;
+                    let sequenciaCentralizacaoPopup = 0;
+
+                    function alternarElevacaoMarcador(marcador, ativo, zIndexBase = 0) {
+                        const elemento = marcador.getElement();
+                        elemento?.classList.toggle('marcador-elevado', ativo);
+                        marcador.setZIndexOffset(ativo ? zIndexBase + 1400 : zIndexBase);
+                    }
+
+                    function abrirPopupDoMarcador(marcador) {
+                        if (!marcador._popupLazerSport) return;
+
+                        const abrir = () => {
+                            marcador._popupLazerSport
+                                .setLatLng(marcador.getLatLng())
+                                .openOn(mapa);
+                        };
+
+                        if (!dispositivoCompacto) {
+                            abrir();
+                            return;
+                        }
+
+                        const tokenCentralizacao = ++sequenciaCentralizacaoPopup;
+                        mapa.stop();
+
+                        const tamanhoMapa = mapa.getSize();
+                        const pontoAtual = mapa.latLngToContainerPoint(
+                            marcador.getLatLng()
+                        );
+                        const pontoSeguro = L.point(
+                            tamanhoMapa.x / 2,
+                            tamanhoMapa.y * .68
+                        );
+                        const deslocamento = pontoAtual.subtract(pontoSeguro);
+
+                        if (
+                            Math.abs(deslocamento.x) < 5 &&
+                            Math.abs(deslocamento.y) < 5
+                        ) {
+                            abrir();
+                            return;
+                        }
+
+                        let finalizado = false;
+                        let fallbackCentralizacao = null;
+
+                        const concluirCentralizacao = () => {
+                            if (finalizado) return;
+                            finalizado = true;
+                            mapa.off('moveend', concluirCentralizacao);
+                            window.clearTimeout(fallbackCentralizacao);
+
+                            if (tokenCentralizacao === sequenciaCentralizacaoPopup) {
+                                abrir();
+                            }
+                        };
+
+                        mapa.once('moveend', concluirCentralizacao);
+                        fallbackCentralizacao = window.setTimeout(
+                            concluirCentralizacao,
+                            240
+                        );
+                        mapa.panBy(deslocamento, {
+                            animate: true,
+                            duration: .18,
+                            easeLinearity: .25
+                        });
+                    }
+
+                    function fecharPopupsDoMapa() {
+                        sequenciaCentralizacaoPopup += 1;
+                        marcadorPopupFixado?.closeTooltip();
+                        marcadorPopupFixado = null;
+                        mapa.closePopup();
+                    }
+
+                    function configurarInteracaoMarcador(
+                        marcador,
+                        zIndexBase,
+                        conteudoPopup,
+                        conteudoTooltip,
+                        deslocamentoY
+                    ) {
+                        const paddingSuperior = dispositivoCompacto ? 56 : 86;
+                        const paddingLateral = dispositivoCompacto ? 12 : 24;
+                        const paddingInferior = dispositivoCompacto ? 14 : 34;
+
+                        marcador._zIndexBaseLazerSport = zIndexBase || 0;
+                        marcador._popupLazerSport = L.popup({
+                            autoClose: true,
+                            autoPan: true,
+                            autoPanPaddingTopLeft: L.point(
+                                paddingLateral,
+                                paddingSuperior
+                            ),
+                            autoPanPaddingBottomRight: L.point(
+                                paddingLateral,
+                                paddingInferior
+                            ),
+                            closeButton: true,
+                            closeOnClick: false,
+                            className: 'popup-cliente-lazer-sport',
+                            keepInView: true,
+                            maxWidth: dispositivoCompacto ? 252 : 320,
+                            minWidth: 0,
+                            offset: L.point(0, deslocamentoY)
+                        }).setContent(conteudoPopup);
+
+                        if (dispositivoComHover) {
+                            marcador.bindTooltip(conteudoTooltip, {
+                                className: 'cliente-hover-tooltip',
+                                direction: 'top',
+                                offset: L.point(0, deslocamentoY + 5),
+                                opacity: 1
+                            });
+
+                            marcador.on('mouseover', function () {
+                                alternarElevacaoMarcador(marcador, true, zIndexBase || 0);
+
+                                // O popup fixo já contém as informações completas. Evita
+                                // sobrepor o tooltip de hover no mesmo marcador.
+                                if (marcador === marcadorPopupFixado) {
+                                    marcador.closeTooltip();
+                                }
+                            });
+
+                            marcador.on('mouseout', function () {
+                                // A elevação representa somente o hover. O popup clicado
+                                // continua fixo, mas a gota volta à posição normal e pode
+                                // subir novamente no próximo hover.
+                                alternarElevacaoMarcador(marcador, false, zIndexBase || 0);
+                            });
+                        }
+
+                        marcador.on('click', function (e) {
+                            if (e.originalEvent) {
+                                L.DomEvent.stopPropagation(e.originalEvent);
+                                L.DomEvent.preventDefault(e.originalEvent);
+                            }
+
+                            marcador.closeTooltip();
+                            marcadorPopupFixado = marcador;
+                            abrirPopupDoMarcador(marcador);
+                        });
+
+                        function prepararElementoMarcador() {
+                            const elemento = marcador.getElement();
+                            if (!elemento) return;
+
+                            elemento.setAttribute('role', 'button');
+                            elemento.setAttribute(
+                                'aria-label',
+                                `Ver informações de ${marcador.options.title || 'cliente Lazer & Sport'}`
+                            );
+                            elemento.setAttribute('aria-haspopup', 'dialog');
+                            elemento.setAttribute('aria-expanded', 'false');
+                            elemento.style.touchAction = 'manipulation';
+                        }
+
+                        marcador.on('add', prepararElementoMarcador);
+                        prepararElementoMarcador();
+
+                        marcador._popupLazerSport.on('add', function () {
+                            marcador.getElement()?.setAttribute('aria-expanded', 'true');
+
+                            const elementoPopup = marcador._popupLazerSport.getElement?.();
+                            if (elementoPopup) {
+                                elementoPopup.setAttribute('role', 'dialog');
+                                elementoPopup.setAttribute(
+                                    'aria-label',
+                                    `Informações de ${marcador.options.title || 'cliente Lazer & Sport'}`
+                                );
+                                elementoPopup
+                                    .querySelector('.leaflet-popup-close-button')
+                                    ?.setAttribute('aria-label', 'Fechar informações');
+                            }
+                        });
+
+                        marcador._popupLazerSport.on('remove', function () {
+                            marcador.getElement()?.setAttribute('aria-expanded', 'false');
+                            if (marcadorPopupFixado === marcador) {
+                                marcadorPopupFixado = null;
+                            }
+                        });
+
+                        marcador.on('keypress', function (e) {
+                            if (e.originalEvent?.key !== 'Enter' && e.originalEvent?.key !== ' ') {
+                                return;
+                            }
+                            e.originalEvent.preventDefault();
+                            marcador.closeTooltip();
+                            marcadorPopupFixado = marcador;
+                            abrirPopupDoMarcador(marcador);
+                        });
+                    }
+
+                    mapa.on('popupopen', function (e) {
+                        const popupAberto = e.popup;
+
+                        if (
+                            marcadorPopupFixado &&
+                            marcadorPopupFixado._popupLazerSport !== popupAberto
+                        ) {
+                            marcadorPopupFixado = null;
+                        }
+                    });
+
+                    // ---- Agrupamento por proximidade em pixels, sem plugin externo ----
+                    const RAIO_CLUSTER_PX = 48;
+                    const camadaClientes = L.layerGroup().addTo(mapa);
+                    let clientesAtuais = clientesDados;
+
+                    function agruparPorPixel(lista) {
+                        const restantes = lista.map(c => ({
+                            cliente: c,
+                            pt: mapa.latLngToContainerPoint([c.lat, c.lng])
+                        }));
+                        const grupos = [];
+
+                        while (restantes.length) {
+                            const base = restantes.shift();
+                            const grupo = [base];
+
+                            for (let i = restantes.length - 1; i >= 0; i--) {
+                                const dx = restantes[i].pt.x - base.pt.x;
+                                const dy = restantes[i].pt.y - base.pt.y;
+                                if (Math.sqrt(dx * dx + dy * dy) <= RAIO_CLUSTER_PX) {
+                                    grupo.push(restantes[i]);
+                                    restantes.splice(i, 1);
+                                }
+                            }
+
+                            grupos.push(grupo);
+                        }
+
+                        return grupos;
+                    }
+
+                    function atualizarContador(n) {
+                        const contador = document.getElementById('clientes-contador');
+                        if (contador) {
+                            contador.innerHTML = `<strong>${n}</strong> cliente${n === 1 ? '' : 's'} no mapa`;
+                        }
+                    }
+
+                    function renderizarPinosNoMapa() {
+                        fecharPopupsDoMapa();
+                        camadaClientes.clearLayers();
+                        atualizarContador(clientesAtuais.length);
+                        if (!clientesAtuais.length) return;
+
+                        agruparPorPixel(clientesAtuais).forEach(grupo => {
+                            if (grupo.length === 1) {
+                                const c = grupo[0].cliente;
+                                const marcador = L.marker([c.lat, c.lng], {
+                                    icon: criarIconeCliente(c),
+                                    riseOnHover: true,
+                                    riseOffset: 1200,
+                                    keyboard: true,
+                                    bubblingMouseEvents: false,
+                                    title: c.nome || 'Cliente Lazer & Sport'
+                                });
+                                configurarInteracaoMarcador(
+                                    marcador,
+                                    0,
+                                    criarPopupCliente(c),
+                                    criarTooltipMarcador(c),
+                                    -47
+                                );
+                                camadaClientes.addLayer(marcador);
+                                return;
+                            }
+
+                            const latMedia = grupo.reduce((s, g) => s + g.cliente.lat, 0) / grupo.length;
+                            const lngMedia = grupo.reduce((s, g) => s + g.cliente.lng, 0) / grupo.length;
+
+                            const marcadorCluster = L.marker([latMedia, lngMedia], {
+                                icon: L.divIcon({
+                                    className: 'cluster-lazer',
+                                    html: `<span>${grupo.length}</span>`,
+                                    iconSize: [36, 36],
+                                }),
+                                zIndexOffset: 500,
+                                bubblingMouseEvents: false,
+                            }).bindTooltip(`${grupo.length} clientes aqui — clique para ver cada um`, { direction: 'top' });
+
+                            marcadorCluster.on('click', function () {
+                                mapa.setView([latMedia, lngMedia], Math.min(mapa.getZoom() + 3, 18));
+                            });
+
+                            camadaClientes.addLayer(marcadorCluster);
+                        });
+                    }
+
+                    // A distância visual entre os pinos só muda com o zoom. Recriar os
+                    // marcadores em "moveend" fechava o popup logo após o autoPan no celular.
+                    mapa.on('zoomend', renderizarPinosNoMapa);
+
+                    let marcadorFabrica = null;
+                    if (fabrica) {
+                        marcadorFabrica = L.marker([fabrica.lat, fabrica.lng], {
+                            icon: iconeFabrica,
+                            zIndexOffset: 2000,
+                            keyboard: true,
+                            bubblingMouseEvents: false,
+                            title: fabrica.nome || 'Lazer & Sport Brinquedos'
+                        });
+                        marcadorFabrica.addTo(mapa);
+                        configurarInteracaoMarcador(
+                            marcadorFabrica,
+                            2000,
+                            criarPopupFabrica(fabrica),
+                            criarTooltipMarcador(fabrica, true),
+                            -57
+                        );
+                    }
+
+                    function ajustarEnquadramento() {
+                        const pontosBounds = clientesAtuais.map(c => [c.lat, c.lng]);
+                        if (fabrica) pontosBounds.push([fabrica.lat, fabrica.lng]);
+
+                        if (pontosBounds.length) {
+                            mapa.fitBounds(L.latLngBounds(pontosBounds).pad(0.25), { maxZoom: 11 });
+                        } else {
+                            mapa.setView([-14.235, -51.925], 4);
+                        }
+                    }
+
+                    const selectCidade = document.getElementById('filtro-cidade-cliente');
+                    if (selectCidade) {
+                        const cidades = [...new Set(clientesDados.map(c => c.cidade).filter(Boolean))]
+                            .sort((a, b) => a.localeCompare(b, 'pt-BR'));
+
+                        cidades.forEach(cidade => {
+                            const opt = document.createElement('option');
+                            opt.value = cidade;
+                            opt.textContent = cidade;
+                            selectCidade.appendChild(opt);
+                        });
+
+                        selectCidade.addEventListener('change', () => {
+                            const valor = selectCidade.value;
+                            clientesAtuais = valor === 'todas'
+                                ? clientesDados
+                                : clientesDados.filter(c => c.cidade === valor);
+                            ajustarEnquadramento();
+                            renderizarPinosNoMapa();
+                        });
+                    }
+
+                    ajustarEnquadramento();
+                    renderizarPinosNoMapa();
+
+                    mapa.on('click', () => {
+                        fecharPopupsDoMapa();
+                    });
+
+            })
+            .catch(erro => {
+                iniciou = false;
+                console.error('Não foi possível carregar o mapa:', erro);
             });
-
-            camadaClientes.addLayer(marcadorCluster);
-        });
     }
 
-    // A distância visual entre os pinos só muda com o zoom. Recriar os
-    // marcadores em "moveend" fechava o popup logo após o autoPan no celular.
-    mapa.on('zoomend', renderizarPinosNoMapa);
-
-    let marcadorFabrica = null;
-    if (fabrica) {
-        marcadorFabrica = L.marker([fabrica.lat, fabrica.lng], {
-            icon: iconeFabrica,
-            zIndexOffset: 2000,
-            keyboard: true,
-            bubblingMouseEvents: false,
-            title: fabrica.nome || 'Lazer & Sport Brinquedos'
-        });
-        marcadorFabrica.addTo(mapa);
-        configurarInteracaoMarcador(
-            marcadorFabrica,
-            2000,
-            criarPopupFabrica(fabrica),
-            criarTooltipMarcador(fabrica, true),
-            -57
-        );
-    }
-
-    function ajustarEnquadramento() {
-        const pontosBounds = clientesAtuais.map(c => [c.lat, c.lng]);
-        if (fabrica) pontosBounds.push([fabrica.lat, fabrica.lng]);
-
-        if (pontosBounds.length) {
-            mapa.fitBounds(L.latLngBounds(pontosBounds).pad(0.25), { maxZoom: 11 });
-        } else {
-            mapa.setView([-14.235, -51.925], 4);
-        }
-    }
-
-    const selectCidade = document.getElementById('filtro-cidade-cliente');
-    if (selectCidade) {
-        const cidades = [...new Set(clientesDados.map(c => c.cidade).filter(Boolean))]
-            .sort((a, b) => a.localeCompare(b, 'pt-BR'));
-
-        cidades.forEach(cidade => {
-            const opt = document.createElement('option');
-            opt.value = cidade;
-            opt.textContent = cidade;
-            selectCidade.appendChild(opt);
+    if ('IntersectionObserver' in window) {
+        const observer = new IntersectionObserver(entries => {
+            if (!entries[0]?.isIntersecting) return;
+            observer.disconnect();
+            iniciarMapaClientes();
+        }, {
+            rootMargin: '1000px 0px',
+            threshold: 0.01
         });
 
-        selectCidade.addEventListener('change', () => {
-            const valor = selectCidade.value;
-            clientesAtuais = valor === 'todas'
-                ? clientesDados
-                : clientesDados.filter(c => c.cidade === valor);
-            ajustarEnquadramento();
-            renderizarPinosNoMapa();
-        });
+        observer.observe(mapaAlvo);
+    } else {
+        window.setTimeout(iniciarMapaClientes, 600);
     }
-
-    ajustarEnquadramento();
-    renderizarPinosNoMapa();
-
-    mapa.on('click', () => {
-        fecharPopupsDoMapa();
-    });
 })();
 </script>
 {% endif %}
@@ -8472,101 +8598,496 @@ function reanimarCard(card, atraso) {
     alvo.style.animation = '';
 }
 
-function inicializarProdutosClientSide() {
-    const grid = document.getElementById('grid-cards');
-    if (!grid) return;
 
-    const cards = Array.from(grid.querySelectorAll('.card-link'));
-    if (!cards.length) return;
+function escapeHTMLSeguro(valor) {
+    return String(valor ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
 
-    const porPagina = 9;
-    let pagina = 1;
-    let ordem = 'az';
+const HOME_AJAX_ENDPOINT = "{% url 'home' %}";
+const HOME_PLACEHOLDER_PRODUTO = "{% static 'img/placeholder-produto.png' %}";
 
-    function ordenar() {
-        const copia = cards.slice();
-        copia.sort((a, b) => {
-            switch (ordem) {
-                case 'za':
-                    return b.dataset.nome.localeCompare(a.dataset.nome, 'pt-BR');
-                case 'melhor-avaliados':
-                    return paraNumeroBR(b.dataset.avaliacao) - paraNumeroBR(a.dataset.avaliacao)
-                        || a.dataset.nome.localeCompare(b.dataset.nome, 'pt-BR');
-                case 'custo-beneficio': {
-                    const precoA = paraNumeroBR(a.dataset.preco);
-                    const precoB = paraNumeroBR(b.dataset.preco);
-                    const scoreA = precoA > 0 ? paraNumeroBR(a.dataset.avaliacao) / precoA : -1;
-                    const scoreB = precoB > 0 ? paraNumeroBR(b.dataset.avaliacao) / precoB : -1;
-                    return scoreB - scoreA || a.dataset.nome.localeCompare(b.dataset.nome, 'pt-BR');
-                }
-                case 'novidades':
-                    return paraNumeroBR(b.dataset.id) - paraNumeroBR(a.dataset.id)
-                        || a.dataset.nome.localeCompare(b.dataset.nome, 'pt-BR');
-                default:
-                    return a.dataset.nome.localeCompare(b.dataset.nome, 'pt-BR');
-            }
-        });
-        return copia;
+function montarUrlAjaxHome(tipo, parametros = {}) {
+    const url = new URL(HOME_AJAX_ENDPOINT, window.location.origin);
+    url.searchParams.set('ajax', tipo);
+
+    Object.entries(parametros).forEach(([chave, valor]) => {
+        if (valor !== undefined && valor !== null && String(valor) !== '') {
+            url.searchParams.set(chave, String(valor));
+        }
+    });
+
+    return url;
+}
+
+async function buscarJsonHome(tipo, parametros = {}, signal = undefined) {
+    const resposta = await fetch(
+        montarUrlAjaxHome(tipo, parametros),
+        {
+            method: 'GET',
+            credentials: 'same-origin',
+            headers: {
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            signal
+        }
+    );
+
+    if (!resposta.ok) {
+        throw new Error(`Falha HTTP ${resposta.status}`);
     }
 
-    function renderizar() {
-        const ordenados = ordenar();
-        const totalPaginas = Math.max(1, Math.ceil(ordenados.length / porPagina));
-        if (pagina > totalPaginas) pagina = totalPaginas;
+    return resposta.json();
+}
 
-        const inicio = (pagina - 1) * porPagina;
-        const visiveis = new Set(ordenados.slice(inicio, inicio + porPagina));
+function executarQuandoOcioso(callback) {
+    if ('requestIdleCallback' in window) {
+        window.requestIdleCallback(callback, { timeout: 1200 });
+    } else {
+        window.setTimeout(callback, 250);
+    }
+}
 
-        let atraso = 0;
-        ordenados.forEach(card => {
-            if (visiveis.has(card)) {
-                card.style.display = '';
-                grid.appendChild(card);
-                reanimarCard(card, atraso);
-                atraso += 0.035;
-            } else {
-                card.style.display = 'none';
-            }
-        });
+function criarCardBrinquedoHTML(item) {
+    const nome = escapeHTMLSeguro(item.nome);
+    const descricao = escapeHTMLSeguro(item.descricao);
+    const url = escapeHTMLSeguro(item.url);
+    const imagem = escapeHTMLSeguro(item.imagem || HOME_PLACEHOLDER_PRODUTO);
+    const avaliacao = escapeHTMLSeguro(item.avaliacao || '0');
+    const preco = escapeHTMLSeguro(item.preco || '');
+    const voltz = escapeHTMLSeguro(item.voltz || 'Voltagem não informada');
+    const dimensoes = escapeHTMLSeguro(item.dimensoes || 'Dimensões não informadas');
+    const volume = escapeHTMLSeguro(item.volume || 'Volume não informado');
 
-        document.getElementById('prod-page-info').textContent =
-            `Página ${pagina} de ${totalPaginas}`;
-        document.getElementById('prod-prev').disabled = pagina <= 1;
-        document.getElementById('prod-next').disabled = pagina >= totalPaginas;
+    const categorias = Array.isArray(item.categorias) && item.categorias.length
+        ? item.categorias
+            .slice(0, 3)
+            .map(cat => `<span class="categoria-pill">${escapeHTMLSeguro(cat)}</span>`)
+            .join('')
+        : '<span class="categoria-pill">Lazer &amp; Sport</span>';
 
+    const tags = Array.isArray(item.tags)
+        ? item.tags
+            .slice(0, 3)
+            .map(tag => `<span class="tag">#${escapeHTMLSeguro(tag)}</span>`)
+            .join('')
+        : '';
+
+    const status = item.exibir_na_loja
+        ? `
+          <span class="produto-status is-sale">
+            <i class="fa-solid fa-cart-shopping" aria-hidden="true"></i>
+            Disponível para compra
+          </span>`
+        : `
+          <span class="produto-status">
+            <i class="fa-solid fa-compass-drafting" aria-hidden="true"></i>
+            Projeto sob consulta
+          </span>`;
+
+    const comercial = item.exibir_na_loja
+        ? `
+          <span class="produto-preco-label">Preço para compra</span>
+          <strong class="produto-preco">R$ ${formatarMoedaBR(item.preco)}</strong>`
+        : `
+          <span class="produto-preco-label">Projeto personalizado</span>
+          <strong class="produto-consulta">
+            <i class="fa-solid fa-comments" aria-hidden="true"></i>
+            Solicite um orçamento
+          </strong>`;
+
+    const acaoPrincipal = item.exibir_na_loja
+        ? `
+          <button
+            type="button"
+            class="produto-acao btn-cart-brinquedo"
+            onclick="adicionarBrinquedoAoCarrinho(event, ${Number(item.id)}, this)"
+            aria-label="Adicionar ${nome} ao carrinho"
+          >
+            <i class="fa-solid fa-cart-plus" aria-hidden="true"></i>
+            <span>Adicionar ao carrinho</span>
+          </button>`
+        : `
+          <button
+            type="button"
+            class="produto-acao btn-orcamento-brinquedo js-home-whatsapp"
+            data-nome="${nome}"
+            aria-label="Pedir orçamento de ${nome} pelo WhatsApp"
+          >
+            <i class="fa-brands fa-whatsapp" aria-hidden="true"></i>
+            <span>Pedir orçamento</span>
+          </button>`;
+
+    return `
+      <article class="card-link"
+               data-id="${Number(item.id)}"
+               data-nome="${nome.toLocaleLowerCase('pt-BR')}"
+               data-avaliacao="${avaliacao}"
+               data-preco="${preco}">
+        <div class="card-produto${item.exibir_na_loja ? ' is-sale' : ''}">
+          <a href="${url}"
+             class="produto-media-link"
+             aria-label="Ver detalhes de ${nome}">
+            <div class="img-area">
+              ${status}
+              <img
+                src="${imagem}"
+                alt="${nome}"
+                loading="lazy"
+                decoding="async"
+              >
+            </div>
+          </a>
+
+          <div class="conteudo">
+            <div class="categorias">${categorias}</div>
+
+            <a href="${url}" class="produto-title-link">
+              <h3>${nome}</h3>
+            </a>
+
+            <div class="avaliacao" data-rating="${avaliacao}">
+              <div class="stars" aria-hidden="true"></div>
+              <span class="nota">${Number(item.avaliacao || 0).toLocaleString('pt-BR', {
+                  minimumFractionDigits: 1,
+                  maximumFractionDigits: 1
+              })} de 5</span>
+            </div>
+
+            <p class="descricao">${descricao}</p>
+
+            <div class="produto-specs" aria-label="Especificações do brinquedo">
+              <div class="produto-spec" title="Voltagem: ${voltz}">
+                <i class="fa-solid fa-plug-circle-bolt" aria-hidden="true"></i>
+                <span>${voltz}</span>
+              </div>
+
+              <div class="produto-spec" title="Dimensões: ${dimensoes}">
+                <i class="fa-solid fa-ruler-combined" aria-hidden="true"></i>
+                <span>${dimensoes}</span>
+              </div>
+
+              <div class="produto-spec" title="Volume: ${volume}">
+                <i class="fa-solid fa-box-open" aria-hidden="true"></i>
+                <span>${volume}</span>
+              </div>
+            </div>
+
+            <div class="tags">${tags}</div>
+
+            <div class="produto-comercial">
+              <div class="produto-preco-wrap">${comercial}</div>
+            </div>
+
+            <div class="acoes-fixas">
+              ${acaoPrincipal}
+
+              <a href="${url}"
+                 class="produto-acao btn-detalhes-brinquedo"
+                 aria-label="Ver detalhes de ${nome}">
+                <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i>
+                <span>Ver detalhes</span>
+              </a>
+            </div>
+          </div>
+        </div>
+      </article>`;
+}
+
+function criarCardPecaHTML(item) {
+    const nome = escapeHTMLSeguro(item.nome);
+    const descricao = escapeHTMLSeguro(item.descricao);
+    const url = escapeHTMLSeguro(item.url);
+    const imagem = escapeHTMLSeguro(item.imagem || HOME_PLACEHOLDER_PRODUTO);
+    const preco = escapeHTMLSeguro(item.preco || '');
+
+    const categorias = Array.isArray(item.categorias) && item.categorias.length
+        ? item.categorias.map(cat =>
+            `<span class="categoria-pill">${escapeHTMLSeguro(cat.nome)}</span>`
+          ).join('')
+        : '<span class="categoria-pill">Peça de reposição</span>';
+
+    const idsCategorias = Array.isArray(item.categorias)
+        ? item.categorias.map(cat => Number(cat.id)).filter(Number.isFinite).join(',')
+        : '';
+
+    const blocoPreco = preco
+        ? `
+          <div class="preco money" data-valor="${preco}">
+            R$ ${formatarMoedaBR(preco)}
+          </div>`
+        : '<div class="pecas-price-consulta">Consulte a equipe</div>';
+
+    const acaoPrincipal = preco
+        ? `
+          <button type="button"
+                  class="pecas-cart-button"
+                  onclick="adicionarPecaAoCarrinho(event, ${Number(item.id)}, this)"
+                  aria-label="Adicionar ${nome} ao carrinho">
+            <i class="fa-solid fa-cart-plus" aria-hidden="true"></i>
+            <span>Adicionar ao carrinho</span>
+          </button>`
+        : `
+          <button type="button"
+                  class="pecas-whatsapp-button js-home-whatsapp"
+                  data-nome="${nome}">
+            <i class="fa-brands fa-whatsapp" aria-hidden="true"></i>
+            Consultar disponibilidade
+          </button>`;
+
+    return `
+      <article class="pecas-card-link" data-categorias="${idsCategorias}">
+        <div class="pecas-card pecas-card-produto">
+          <a href="${url}"
+             class="pecas-media-link"
+             aria-label="Ver detalhes de ${nome}">
+            <div class="img-area">
+              <span class="pecas-original-badge">
+                <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
+                Peça original
+              </span>
+              <img
+                src="${imagem}"
+                alt="${nome}"
+                loading="lazy"
+                decoding="async"
+              >
+            </div>
+          </a>
+
+          <div class="conteudo">
+            <div class="categorias">${categorias}</div>
+
+            <h3>
+              <a href="${url}" class="pecas-title-link">${nome}</a>
+            </h3>
+
+            <p class="descricao">${descricao}</p>
+
+            <div class="pecas-price-row">
+              <div class="pecas-price-copy">
+                <small>Preço da peça</small>
+                ${blocoPreco}
+              </div>
+            </div>
+
+            <div class="pecas-actions">
+              ${acaoPrincipal}
+
+              <a href="${url}"
+                 class="pecas-details-button"
+                 title="Ver detalhes"
+                 aria-label="Ver detalhes de ${nome}">
+                <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i>
+              </a>
+            </div>
+          </div>
+        </div>
+      </article>`;
+}
+
+/* ======================================================
+   🚀 BRINQUEDOS — primeira página SSR + lotes AJAX
+====================================================== */
+function inicializarProdutosProgressivo() {
+    const grid = document.getElementById('grid-cards');
+    const wrapper = document.getElementById('paginacao-wrapper');
+    const prev = document.getElementById('prod-prev');
+    const next = document.getElementById('prod-next');
+    const info = document.getElementById('prod-page-info');
+
+    if (!grid || !wrapper || !next || !info) return;
+
+    if (prev) prev.style.display = 'none';
+    next.textContent = 'Carregar mais';
+
+    let ordem = 'az';
+    let paginaAtual = 1;
+    let total = Number(grid.dataset.total || grid.querySelectorAll('.card-link').length);
+    let temProxima = total > grid.querySelectorAll('.card-link').length;
+    let carregando = false;
+    let controller = null;
+
+    const cache = new Map();
+
+    function chave(page, order = ordem) {
+        return `${order}|${page}`;
+    }
+
+    function atualizarControles() {
+        const exibidos = grid.querySelectorAll('.card-link').length;
+        info.textContent = total
+            ? `${Math.min(exibidos, total)} de ${total} brinquedos`
+            : 'Nenhum brinquedo';
+
+        next.disabled = carregando || !temProxima;
+        next.style.display = temProxima ? '' : 'none';
+        wrapper.style.display = total > 9 || temProxima ? '' : 'none';
+
+        if (carregando) {
+            info.innerHTML = '<span class="ls-home-loading-label">Carregando</span>';
+        }
+    }
+
+    async function obterPagina(page, order = ordem, signal = undefined) {
+        const key = chave(page, order);
+
+        if (cache.has(key)) {
+            return cache.get(key);
+        }
+
+        const data = await buscarJsonHome(
+            'brinquedos',
+            {
+                page,
+                ordem: order
+            },
+            signal
+        );
+
+        cache.set(key, data);
+        return data;
+    }
+
+    function posProcessarCards() {
         renderizarTodasEstrelas(grid);
         renderizarMoedas(grid);
-        requestAnimationFrame(() => requestAnimationFrame(igualarAlturaCards));
+
+        const cards = Array.from(grid.querySelectorAll('.card-link')).slice(-9);
+        cards.forEach((card, index) => reanimarCard(card, index * .025));
+
+        requestAnimationFrame(() =>
+            requestAnimationFrame(igualarAlturaCards)
+        );
+    }
+
+    async function carregarPagina(page, { substituir = false, rolar = false } = {}) {
+        if (carregando) {
+            if (!substituir) return;
+            if (controller) controller.abort();
+            carregando = false;
+        }
+
+        carregando = true;
+        grid.setAttribute('aria-busy', 'true');
+        atualizarControles();
+
+        if (controller) controller.abort();
+        controller = new AbortController();
+
+        try {
+            const data = await obterPagina(
+                page,
+                ordem,
+                controller.signal
+            );
+
+            const html = data.items
+                .map(criarCardBrinquedoHTML)
+                .join('');
+
+            if (substituir) {
+                grid.innerHTML = html || '<p class="nenhum-produto">Nenhum produto encontrado.</p>';
+            } else if (html) {
+                grid.insertAdjacentHTML('beforeend', html);
+            }
+
+            paginaAtual = Number(data.page || page);
+            total = Number(data.total || 0);
+            temProxima = Boolean(data.has_next);
+            grid.dataset.total = String(total);
+
+            posProcessarCards();
+
+            if (rolar) {
+                scrollParaProdutos();
+            }
+
+            if (temProxima) {
+                executarQuandoOcioso(() => {
+                    obterPagina(paginaAtual + 1, ordem).catch(() => {});
+                });
+            }
+        } catch (erro) {
+            if (erro.name !== 'AbortError') {
+                console.error('Falha ao carregar brinquedos:', erro);
+            }
+        } finally {
+            carregando = false;
+            grid.removeAttribute('aria-busy');
+            atualizarControles();
+        }
     }
 
     document.querySelectorAll('#filtros-bar .filtro-btn').forEach(btn => {
         btn.addEventListener('click', () => {
+            const novaOrdem = btn.dataset.order || 'az';
+
             document.querySelectorAll('#filtros-bar .filtro-btn').forEach(b => {
                 b.classList.remove('ativo');
                 b.setAttribute('aria-pressed', 'false');
             });
+
             btn.classList.add('ativo');
             btn.setAttribute('aria-pressed', 'true');
-            ordem = btn.dataset.order;
-            pagina = 1;
-            renderizar();
-            scrollParaProdutos();
+
+            ordem = novaOrdem;
+            paginaAtual = 0;
+            temProxima = true;
+
+            carregarPagina(1, {
+                substituir: true,
+                rolar: true
+            });
         });
     });
 
-    document.getElementById('prod-prev').addEventListener('click', () => {
-        if (pagina > 1) { pagina--; renderizar(); scrollParaProdutos(); }
+    next.addEventListener('click', () => {
+        if (temProxima) {
+            carregarPagina(paginaAtual + 1);
+        }
     });
 
-    document.getElementById('prod-next').addEventListener('click', () => {
-        pagina++; renderizar(); scrollParaProdutos();
+    grid.addEventListener('click', event => {
+        const btn = event.target.closest('.js-home-whatsapp');
+        if (!btn) return;
+        abrirWhatsApp(event, btn.dataset.nome || '');
     });
 
-    renderizar();
+    atualizarControles();
+
+    if (temProxima) {
+        executarQuandoOcioso(() => {
+            obterPagina(2, ordem).catch(() => {});
+        });
+    }
+
+    if ('IntersectionObserver' in window) {
+        const observer = new IntersectionObserver(entries => {
+            const entry = entries[0];
+            if (
+                entry?.isIntersecting &&
+                temProxima &&
+                !carregando
+            ) {
+                carregarPagina(paginaAtual + 1);
+            }
+        }, {
+            rootMargin: '650px 0px',
+            threshold: 0.01
+        });
+
+        observer.observe(wrapper);
+    }
 }
 
 /* ======================================================
-   🎛️ PEÇAS — filtro por categoria + paginação no navegador
+   🎛️ PEÇAS — primeira página SSR + lotes AJAX
 ====================================================== */
 function scrollParaPecas() {
     const secao = document.getElementById('pecas-section');
@@ -8578,74 +9099,192 @@ function scrollParaPecas() {
     });
 }
 
-function inicializarPecasClientSide() {
+function inicializarPecasProgressivo() {
     const grid = document.getElementById('grid-pecas');
-    if (!grid) return;
+    const wrapper = document.getElementById('paginacao-pecas');
+    const prev = document.getElementById('pecas-prev');
+    const next = document.getElementById('pecas-next');
+    const info = document.getElementById('pecas-page-info');
 
-    const cards = Array.from(grid.querySelectorAll('.pecas-card-link'));
-    if (!cards.length) return;
+    if (!grid || !wrapper || !next || !info) return;
 
-    const porPagina = 9;
-    let pagina = 1;
-    let categoriaAtiva = '';
+    if (prev) prev.style.display = 'none';
+    next.textContent = 'Carregar mais';
 
-    function filtrados() {
-        if (!categoriaAtiva) return cards.slice();
-        return cards.filter(card =>
-            (card.dataset.categorias || '').split(',').includes(categoriaAtiva)
+    let categoria = '';
+    let paginaAtual = 1;
+    let total = Number(grid.dataset.total || grid.querySelectorAll('.pecas-card-link').length);
+    let temProxima = total > grid.querySelectorAll('.pecas-card-link').length;
+    let carregando = false;
+    let controller = null;
+
+    const cache = new Map();
+
+    function chave(page, category = categoria) {
+        return `${category || 'todas'}|${page}`;
+    }
+
+    function atualizarControles() {
+        const exibidos = grid.querySelectorAll('.pecas-card-link').length;
+        info.textContent = total
+            ? `${Math.min(exibidos, total)} de ${total} peças`
+            : 'Nenhuma peça';
+
+        next.disabled = carregando || !temProxima;
+        next.style.display = temProxima ? '' : 'none';
+        wrapper.style.display = total > 9 || temProxima ? '' : 'none';
+
+        if (carregando) {
+            info.innerHTML = '<span class="ls-home-loading-label">Carregando</span>';
+        }
+    }
+
+    async function obterPagina(page, category = categoria, signal = undefined) {
+        const key = chave(page, category);
+
+        if (cache.has(key)) {
+            return cache.get(key);
+        }
+
+        const data = await buscarJsonHome(
+            'pecas',
+            {
+                page,
+                categoria: category
+            },
+            signal
+        );
+
+        cache.set(key, data);
+        return data;
+    }
+
+    function posProcessarCards() {
+        renderizarMoedas(grid);
+
+        const cards = Array.from(grid.querySelectorAll('.pecas-card-link')).slice(-9);
+        cards.forEach((card, index) => reanimarCard(card, index * .025));
+
+        requestAnimationFrame(() =>
+            requestAnimationFrame(igualarAlturaGridPecas)
         );
     }
 
-    function renderizar() {
-        const lista = filtrados();
-        const totalPaginas = Math.max(1, Math.ceil(lista.length / porPagina));
-        if (pagina > totalPaginas) pagina = totalPaginas;
+    async function carregarPagina(page, { substituir = false, rolar = false } = {}) {
+        if (carregando) {
+            if (!substituir) return;
+            if (controller) controller.abort();
+            carregando = false;
+        }
 
-        const inicio = (pagina - 1) * porPagina;
-        const visiveis = new Set(lista.slice(inicio, inicio + porPagina));
+        carregando = true;
+        grid.setAttribute('aria-busy', 'true');
+        atualizarControles();
 
-        let atraso = 0;
-        cards.forEach(card => {
-            if (visiveis.has(card)) {
-                card.style.display = '';
-                grid.appendChild(card);
-                reanimarCard(card, atraso);
-                atraso += 0.035;
-            } else {
-                card.style.display = 'none';
+        if (controller) controller.abort();
+        controller = new AbortController();
+
+        try {
+            const data = await obterPagina(
+                page,
+                categoria,
+                controller.signal
+            );
+
+            const html = data.items
+                .map(criarCardPecaHTML)
+                .join('');
+
+            if (substituir) {
+                grid.innerHTML = html || '<p class="nenhum-produto">Nenhuma peça encontrada.</p>';
+            } else if (html) {
+                grid.insertAdjacentHTML('beforeend', html);
             }
-        });
 
-        document.getElementById('pecas-page-info').textContent =
-            `Página ${pagina} de ${totalPaginas}`;
-        document.getElementById('pecas-prev').disabled = pagina <= 1;
-        document.getElementById('pecas-next').disabled = pagina >= totalPaginas;
+            paginaAtual = Number(data.page || page);
+            total = Number(data.total || 0);
+            temProxima = Boolean(data.has_next);
+            grid.dataset.total = String(total);
 
-        renderizarMoedas(grid);
-        requestAnimationFrame(() => requestAnimationFrame(igualarAlturaGridPecas));
+            posProcessarCards();
+
+            if (rolar) {
+                scrollParaPecas();
+            }
+
+            if (temProxima) {
+                executarQuandoOcioso(() => {
+                    obterPagina(paginaAtual + 1, categoria).catch(() => {});
+                });
+            }
+        } catch (erro) {
+            if (erro.name !== 'AbortError') {
+                console.error('Falha ao carregar peças:', erro);
+            }
+        } finally {
+            carregando = false;
+            grid.removeAttribute('aria-busy');
+            atualizarControles();
+        }
     }
 
     document.querySelectorAll('#filtros-peca .filtro-btn').forEach(btn => {
         btn.addEventListener('click', () => {
-            document.querySelectorAll('#filtros-peca .filtro-btn').forEach(b => b.classList.remove('ativo'));
+            document.querySelectorAll('#filtros-peca .filtro-btn').forEach(b => {
+                b.classList.remove('ativo');
+            });
+
             btn.classList.add('ativo');
-            categoriaAtiva = btn.dataset.categoria || '';
-            pagina = 1;
-            renderizar();
-            scrollParaPecas();
+            categoria = btn.dataset.categoria || '';
+            paginaAtual = 0;
+            temProxima = true;
+
+            carregarPagina(1, {
+                substituir: true,
+                rolar: true
+            });
         });
     });
 
-    document.getElementById('pecas-prev').addEventListener('click', () => {
-        if (pagina > 1) { pagina--; renderizar(); scrollParaPecas(); }
+    next.addEventListener('click', () => {
+        if (temProxima) {
+            carregarPagina(paginaAtual + 1);
+        }
     });
 
-    document.getElementById('pecas-next').addEventListener('click', () => {
-        pagina++; renderizar(); scrollParaPecas();
+    grid.addEventListener('click', event => {
+        const btn = event.target.closest('.js-home-whatsapp');
+        if (!btn) return;
+        abrirWhatsApp(event, btn.dataset.nome || '');
     });
 
-    renderizar();
+    atualizarControles();
+
+    if (temProxima) {
+        executarQuandoOcioso(() => {
+            obterPagina(2, categoria).catch(() => {});
+        });
+    }
+
+    if ('IntersectionObserver' in window) {
+        const observer = new IntersectionObserver(entries => {
+            const entry = entries[0];
+            if (
+                entry?.isIntersecting &&
+                temProxima &&
+                !carregando
+            ) {
+                carregarPagina(paginaAtual + 1);
+            }
+        }, {
+            rootMargin: '650px 0px',
+            threshold: 0.01
+        });
+
+        observer.observe(wrapper);
+    }
 }
+
 
 /* ======================================================
    🎛️ PAGINAÇÃO PADRÃO (eventos, projetos) — sem ordenação
@@ -8831,8 +9470,8 @@ document.addEventListener("DOMContentLoaded", () => {
     igualarAlturaGridPecas();
     inicializarCarrosselCombos();
 
-    inicializarProdutosClientSide();
-    inicializarPecasClientSide();
+    inicializarProdutosProgressivo();
+    inicializarPecasProgressivo();
     inicializarGridPaginado({
         gridId: 'grid-eventos', cardSelector: '.evento-card', porPagina: 9,
         prevId: 'eventos-prev', nextId: 'eventos-next', infoId: 'eventos-page-info',
@@ -9115,9 +9754,8 @@ document.addEventListener("DOMContentLoaded", () => {
 /* ======================================================
    📄 CLICK GLOBAL
 ====================================================== */
-// Filtros e paginação de brinquedos/peças agora são tratados direto em
-// inicializarProdutosClientSide() e inicializarPecasClientSide() --
-// cada botão já tem seu próprio listener, não precisa de delegação aqui.
+// Brinquedos e peças usam primeira página renderizada no servidor e
+// carregamento progressivo pela própria Home, sem partials ou novas rotas.
 </script>
 
 {% endblock %}

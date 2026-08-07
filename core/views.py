@@ -67,19 +67,53 @@ def healthz(request):
 
 
 class HomeView(View):
+    """
+    Home otimizada sem alterar a estrutura do projeto.
+
+    - A primeira resposta HTML traz somente 9 brinquedos e 9 peças.
+    - A própria rota "/" também responde pequenos lotes JSON quando recebe:
+        ?ajax=brinquedos&page=2&ordem=az
+        ?ajax=pecas&page=2&categoria=3
+    - Não depende de partials, novas URLs ou novos template tags.
+    """
+
+    PAGE_SIZE = 9
+
     def head(self, request):
         # O Render verifica a raiz com HEAD. Não monte toda a vitrine nem
         # consulte o banco para uma resposta cujo corpo será descartado.
         return HttpResponse(status=200)
 
-    def get(self, request):
-        imagens_site = ImagensSite.objects.order_by("-id")[:5]
+    @staticmethod
+    def _cloudinary_otimizada(url, largura=720):
+        """
+        Aplica transformação somente quando a URL é realmente Cloudinary.
+        URLs locais ou de outros storages são devolvidas intactas.
+        """
+        url = str(url or "")
+        if (
+            "res.cloudinary.com" in url
+            and "/upload/" in url
+            and "/upload/f_auto," not in url
+        ):
+            return url.replace(
+                "/upload/",
+                f"/upload/f_auto,q_auto,c_limit,w_{int(largura)}/",
+                1,
+            )
+        return url
 
-        # Todos os brinquedos ativos. A paginação de 9 por página já é
-        # feita no JS do template (inicializarProdutosClientSide), então
-        # aqui manda a lista completa -- se cortar em [:9] aqui, sobra
-        # só uma página inteira pro JS paginar.
-        brinquedos_todos = list(
+    def _brinquedos_queryset(self, ordem="az"):
+        from django.db.models import (
+            Case,
+            DecimalField,
+            ExpressionWrapper,
+            F,
+            Value,
+            When,
+        )
+
+        qs = (
             Brinquedos.objects
             .filter(ativo=True)
             .only(
@@ -98,10 +132,336 @@ class HomeView(View):
             .prefetch_related(
                 "categorias_brinquedos",
                 "tags",
-                "estabelecimentos",
             )
-            .order_by("nome_brinquedo")
         )
+
+        if ordem == "za":
+            return qs.order_by(
+                "-nome_brinquedo",
+                "-id",
+            )
+
+        if ordem == "melhor-avaliados":
+            return qs.order_by(
+                "-avaliacao",
+                "nome_brinquedo",
+                "id",
+            )
+
+        if ordem == "custo-beneficio":
+            score = Case(
+                When(
+                    valor_brinquedo__gt=0,
+                    then=ExpressionWrapper(
+                        F("avaliacao") / F("valor_brinquedo"),
+                        output_field=DecimalField(
+                            max_digits=24,
+                            decimal_places=12,
+                        ),
+                    ),
+                ),
+                default=Value(-1),
+                output_field=DecimalField(
+                    max_digits=24,
+                    decimal_places=12,
+                ),
+            )
+            return (
+                qs.annotate(
+                    custo_beneficio_score=score
+                )
+                .order_by(
+                    "-custo_beneficio_score",
+                    "-avaliacao",
+                    "nome_brinquedo",
+                    "id",
+                )
+            )
+
+        if ordem == "novidades":
+            return qs.order_by(
+                "-id",
+                "nome_brinquedo",
+            )
+
+        return qs.order_by(
+            "nome_brinquedo",
+            "id",
+        )
+
+    def _pecas_queryset(self, categoria=""):
+        qs = (
+            PecasReposicao.objects
+            .filter(ativo=True)
+            .prefetch_related(
+                "imagem_peca_reposicao",
+                "categoria_peca",
+            )
+            .order_by(
+                "nome",
+                "id",
+            )
+        )
+
+        if categoria:
+            try:
+                categoria_id = int(categoria)
+            except (TypeError, ValueError):
+                categoria_id = None
+
+            if categoria_id and categoria_id > 0:
+                qs = (
+                    qs.filter(
+                        categoria_peca__id=categoria_id
+                    )
+                    .distinct()
+                    .order_by(
+                        "nome",
+                        "id",
+                    )
+                )
+
+        return qs
+
+    def _serializar_brinquedo(self, brinquedo):
+        from django.urls import reverse
+        from django.utils.text import Truncator
+
+        imagem_url = ""
+        if brinquedo.imagem_brinquedo:
+            try:
+                imagem_url = self._cloudinary_otimizada(
+                    brinquedo.imagem_brinquedo.url,
+                    720,
+                )
+            except Exception:
+                imagem_url = ""
+
+        categorias = [
+            categoria.nome_categoria
+            for categoria in list(
+                brinquedo.categorias_brinquedos.all()
+            )[:3]
+        ]
+
+        tags = [
+            tag.nome_tags
+            for tag in list(
+                brinquedo.tags.all()
+            )[:3]
+        ]
+
+        valor = brinquedo.valor_brinquedo
+
+        return {
+            "id": brinquedo.id,
+            "nome": brinquedo.nome_brinquedo or "",
+            "descricao": Truncator(
+                brinquedo.descricao or ""
+            ).words(20),
+            "avaliacao": str(
+                brinquedo.avaliacao or 0
+            ),
+            "preco": (
+                str(valor)
+                if valor is not None
+                else ""
+            ),
+            "voltz": brinquedo.voltz or "",
+            "dimensoes": brinquedo.dimensoes_m or "",
+            "volume": brinquedo.volume_formatado or "",
+            "exibir_na_loja": bool(
+                brinquedo.exibir_na_loja
+            ),
+            "imagem": imagem_url,
+            "categorias": categorias,
+            "tags": tags,
+            "url": (
+                reverse(
+                    "brinquedo_detalhe",
+                    args=[brinquedo.id],
+                )
+                + "#bread"
+            ),
+        }
+
+    def _serializar_peca(self, peca):
+        from django.urls import reverse
+        from django.utils.text import Truncator
+
+        imagem_url = ""
+        imagem_principal = peca.imagem_principal
+
+        if (
+            imagem_principal
+            and imagem_principal.imagem
+        ):
+            try:
+                imagem_url = self._cloudinary_otimizada(
+                    imagem_principal.imagem.url,
+                    720,
+                )
+            except Exception:
+                imagem_url = ""
+
+        return {
+            "id": peca.id,
+            "nome": peca.nome or "",
+            "descricao": Truncator(
+                peca.descricao_peca or ""
+            ).words(16),
+            "preco": (
+                str(peca.preco_venda)
+                if peca.preco_venda is not None
+                else ""
+            ),
+            "imagem": imagem_url,
+            "categorias": [
+                {
+                    "id": categoria.id,
+                    "nome": categoria.nome_categoria_peca,
+                }
+                for categoria in peca.categoria_peca.all()
+            ],
+            "url": (
+                reverse(
+                    "reposicao_detalhe",
+                    args=[peca.id],
+                )
+                + "#breadcrumb"
+            ),
+        }
+
+    def _ajax_brinquedos(self, request):
+        from django.core.paginator import Paginator
+        from django.http import JsonResponse
+
+        ordens_validas = {
+            "az",
+            "za",
+            "melhor-avaliados",
+            "custo-beneficio",
+            "novidades",
+        }
+        ordem = (
+            request.GET.get("ordem", "az")
+            .strip()
+        )
+        if ordem not in ordens_validas:
+            ordem = "az"
+
+        paginator = Paginator(
+            self._brinquedos_queryset(ordem),
+            self.PAGE_SIZE,
+        )
+        page_obj = paginator.get_page(
+            request.GET.get("page", 1)
+        )
+
+        response = JsonResponse(
+            {
+                "tipo": "brinquedos",
+                "ordem": ordem,
+                "page": page_obj.number,
+                "pages": paginator.num_pages,
+                "total": paginator.count,
+                "has_next": page_obj.has_next(),
+                "has_previous": page_obj.has_previous(),
+                "items": [
+                    self._serializar_brinquedo(obj)
+                    for obj in page_obj.object_list
+                ],
+            },
+            json_dumps_params={
+                "ensure_ascii": False,
+            },
+        )
+        response["Cache-Control"] = (
+            "private, max-age=30"
+        )
+        return response
+
+    def _ajax_pecas(self, request):
+        from django.core.paginator import Paginator
+        from django.http import JsonResponse
+
+        categoria = (
+            request.GET.get("categoria", "")
+            .strip()
+        )
+
+        paginator = Paginator(
+            self._pecas_queryset(categoria),
+            self.PAGE_SIZE,
+        )
+        page_obj = paginator.get_page(
+            request.GET.get("page", 1)
+        )
+
+        response = JsonResponse(
+            {
+                "tipo": "pecas",
+                "categoria": categoria,
+                "page": page_obj.number,
+                "pages": paginator.num_pages,
+                "total": paginator.count,
+                "has_next": page_obj.has_next(),
+                "has_previous": page_obj.has_previous(),
+                "items": [
+                    self._serializar_peca(obj)
+                    for obj in page_obj.object_list
+                ],
+            },
+            json_dumps_params={
+                "ensure_ascii": False,
+            },
+        )
+        response["Cache-Control"] = (
+            "private, max-age=30"
+        )
+        return response
+
+    def get(self, request):
+        ajax = (
+            request.GET.get("ajax", "")
+            .strip()
+            .lower()
+        )
+
+        if ajax == "brinquedos":
+            return self._ajax_brinquedos(request)
+
+        if ajax == "pecas":
+            return self._ajax_pecas(request)
+
+        imagens_site = list(
+            ImagensSite.objects.order_by("-id")[:5]
+        )
+        for imagem_site in imagens_site:
+            try:
+                imagem_site.home_url = self._cloudinary_otimizada(
+                    imagem_site.imagem.url,
+                    1280,
+                )
+            except Exception:
+                imagem_site.home_url = ""
+
+        # Primeira pintura: somente 9 brinquedos.
+        brinquedos_base = self._brinquedos_queryset(
+            "az"
+        )
+        brinquedos_count = brinquedos_base.count()
+        brinquedos_todos = list(
+            brinquedos_base[:self.PAGE_SIZE]
+        )
+        for brinquedo in brinquedos_todos:
+            try:
+                brinquedo.imagem_home_url = self._cloudinary_otimizada(
+                    brinquedo.imagem_brinquedo.url,
+                    720,
+                ) if brinquedo.imagem_brinquedo else ""
+            except Exception:
+                brinquedo.imagem_home_url = ""
 
         categorias_brinquedos = (
             CategoriasBrinquedos.objects
@@ -119,6 +479,7 @@ class HomeView(View):
             )
         )
 
+        # Mantém a estrutura atual da Home.
         combos = (
             Combos.objects
             .all()
@@ -151,15 +512,15 @@ class HomeView(View):
         for combo in combos:
             total_original = sum(
                 (
-                        brinquedo.valor_brinquedo
-                        or Decimal("0")
+                    brinquedo.valor_brinquedo
+                    or Decimal("0")
                 )
                 for brinquedo in combo.brinquedos.all()
             )
 
             valor_combo = (
-                    combo.valor_combo
-                    or Decimal("0")
+                combo.valor_combo
+                or Decimal("0")
             )
 
             economia = total_original - valor_combo
@@ -174,7 +535,11 @@ class HomeView(View):
             combo.economia = economia
             combo.porcentagem = porcentagem
 
-        categorias_peca = CategoriaPeca.objects.all()
+        categorias_peca = (
+            CategoriaPeca.objects
+            .all()
+            .order_by("nome_categoria_peca", "id")
+        )
 
         from .models import ImagemPeca
 
@@ -188,10 +553,6 @@ class HomeView(View):
             .distinct()
         )
 
-        # A vitrine rotativa (o slider "Produtos em Geral" na categoria
-        # premium fixa) continua sendo só uma amostra de 9 peças -- isso
-        # aqui não tem relação com a paginação da grade principal, é só
-        # pra não sobrecarregar o carrossel giratório.
         ids_amostra = sample(
             ids_com_imagem,
             min(9, len(ids_com_imagem)),
@@ -217,20 +578,26 @@ class HomeView(View):
             else []
         )
 
-        # Todas as peças ativas. Mesma lógica do brinquedos_todos: a
-        # paginação de 9 por página já é feita no JS
-        # (inicializarPecasClientSide), então manda a lista completa.
+        # Primeira pintura: somente 9 peças.
+        pecas_base = self._pecas_queryset("")
+        pecas_count = pecas_base.count()
         pecas_todas = list(
-            PecasReposicao.objects
-            .filter(ativo=True)
-            .prefetch_related(
-                "imagem_peca_reposicao",
-                "categoria_peca",
-            )
-            .order_by("nome")
+            pecas_base[:self.PAGE_SIZE]
         )
+        for peca in pecas_todas:
+            try:
+                principal = peca.imagem_principal
+                peca.imagem_home_url = (
+                    self._cloudinary_otimizada(
+                        principal.imagem.url,
+                        720,
+                    )
+                    if principal and principal.imagem
+                    else ""
+                )
+            except Exception:
+                peca.imagem_home_url = ""
 
-        # Clientes com localização cadastrada, para o mapa da seção "Clientes"
         clientes_com_mapa = (
             Clientes.objects
             .filter(
@@ -244,7 +611,10 @@ class HomeView(View):
         clientes_mapa = [
             {
                 "tipo": "cliente",
-                "nome": c.descricao_cliente or "Cliente Lazer & Sport",
+                "nome": (
+                    c.descricao_cliente
+                    or "Cliente Lazer & Sport"
+                ),
                 "cidade": c.cidade or "",
                 "estado": c.estado or "",
                 "pais": c.pais or "Brasil",
@@ -255,26 +625,40 @@ class HomeView(View):
             for c in clientes_com_mapa
         ]
 
-        # Pino especial da fábrica. EnderecoEmpresa continua editável pelo
-        # admin. Se não houver cadastro, a home usa as coordenadas fixas já
-        # validadas; geocodificação externa nunca deve bloquear a vitrine.
         endereco_fabrica = (
             EnderecoEmpresa.objects
-            .filter(ativo=True, latitude__isnull=False, longitude__isnull=False)
+            .filter(
+                ativo=True,
+                latitude__isnull=False,
+                longitude__isnull=False,
+            )
             .first()
         )
 
-        fabrica_endereco_texto = "Rua São Roque de Minas, 104 — Jardim Peri"
+        fabrica_endereco_texto = (
+            "Rua São Roque de Minas, 104 — Jardim Peri"
+        )
         fabrica_cidade = "São Paulo"
         fabrica_estado = "SP"
 
         if endereco_fabrica:
-            fabrica_lat = float(endereco_fabrica.latitude)
-            fabrica_lng = float(endereco_fabrica.longitude)
-            fabrica_cidade = endereco_fabrica.cidade or fabrica_cidade
-            fabrica_estado = endereco_fabrica.estado or fabrica_estado
+            fabrica_lat = float(
+                endereco_fabrica.latitude
+            )
+            fabrica_lng = float(
+                endereco_fabrica.longitude
+            )
+            fabrica_cidade = (
+                endereco_fabrica.cidade
+                or fabrica_cidade
+            )
+            fabrica_estado = (
+                endereco_fabrica.estado
+                or fabrica_estado
+            )
             fabrica_endereco_texto = (
-                f"{endereco_fabrica.rua}, {endereco_fabrica.numero}"
+                f"{endereco_fabrica.rua}, "
+                f"{endereco_fabrica.numero}"
                 f" — {endereco_fabrica.bairro or ''}"
             ).strip(" —")
         else:
@@ -294,36 +678,27 @@ class HomeView(View):
             "endereco": fabrica_endereco_texto,
         }
 
-        # pontos_mapa = tudo que vai pro mapa (fábrica + clientes).
-        # clientes_mapa continua existindo separado pra lista de SEO,
-        # que é só sobre clientes mesmo.
-        pontos_mapa = [fabrica_mapa] + clientes_mapa
+        pontos_mapa = [
+            fabrica_mapa,
+            *clientes_mapa,
+        ]
 
-        # Lista única de cidades atendidas -- usada tanto no schema.org
-        # (areaServed) quanto na lista de chips visível, pra reforçar
-        # "Lazer & Sport" associado a cada cidade (bom pra SEO local e
-        # serve de referência pronta pra replicar nas áreas de
-        # atendimento do Google Business Profile).
-        cidades_atendidas = sorted({
-            c["cidade"] for c in clientes_mapa if c["cidade"]
-        })
+        cidades_atendidas = sorted(
+            {
+                c["cidade"]
+                for c in clientes_mapa
+                if c["cidade"]
+            }
+        )
 
         context = {
             "categorias_brinquedos": categorias_brinquedos,
             "brinquedos_todos": brinquedos_todos,
-            "brinquedos_count": (
-                Brinquedos.objects
-                .filter(ativo=True)
-                .count()
-            ),
+            "brinquedos_count": brinquedos_count,
             "eventos": eventos,
             "categorias_peca": categorias_peca,
             "pecas_todas": pecas_todas,
-            "pecas_count": (
-                PecasReposicao.objects
-                .filter(ativo=True)
-                .count()
-            ),
+            "pecas_count": pecas_count,
             "pecas_preview": pecas_preview,
             "projetos": projetos,
             "combos": combos,
@@ -342,7 +717,6 @@ class HomeView(View):
             "home.html",
             context,
         )
-
 
 from django.template.loader import render_to_string
 
