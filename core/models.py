@@ -7,6 +7,7 @@ import requests
 from cloudinary_storage.storage import MediaCloudinaryStorage
 from .utils import calcular_frete_por_cep, buscar_coordenadas, buscar_coordenadas_por_cidade, buscar_dados_cep
 
+
 class Prime(models.Model):
     ativo = models.BooleanField(default=True)
     criacao = models.DateTimeField(auto_now_add=True, null=True)
@@ -50,6 +51,7 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.db.models import UniqueConstraint
 
+
 def validar_telefone(value):
     padrao = r'^\(\d{2}\)\d{4,5}-\d{4}$'
     if not re.match(padrao, value):
@@ -57,8 +59,8 @@ def validar_telefone(value):
             "Telefone deve estar no formato (11)91234-5678 ou (11)1234-5678"
         )
 
-class ClientePerfil(models.Model):
 
+class ClientePerfil(models.Model):
     user = models.OneToOneField(
         User,
         on_delete=models.CASCADE,
@@ -93,8 +95,8 @@ class ClientePerfil(models.Model):
             return
 
         if ClientePerfil.objects.filter(
-            user__username=self.user.username,
-            user__email=self.user.email
+                user__username=self.user.username,
+                user__email=self.user.email
         ).exclude(pk=self.pk).exists():
             raise ValidationError(
                 "Já existe um perfil com esse usuário e email."
@@ -103,7 +105,6 @@ class ClientePerfil(models.Model):
     class Meta:
         verbose_name = "Perfil de Cliente"
         verbose_name_plural = "Perfis de Clientes"
-
 
 
 class ImagensSite(Prime):
@@ -125,8 +126,8 @@ class Clientes(Prime):
     cep = models.CharField(
         max_length=9, blank=True, null=True,
         help_text="Só para clientes no Brasil. Preenchendo o CEP, cidade/estado e "
-                   "coordenadas são preenchidos automaticamente ao salvar (não precisa "
-                   "digitar latitude/longitude na mão)."
+                  "coordenadas são preenchidos automaticamente ao salvar (não precisa "
+                  "digitar latitude/longitude na mão)."
     )
     rua = models.CharField(max_length=180, blank=True, null=True)
     numero = models.CharField(max_length=20, blank=True, null=True)
@@ -134,7 +135,7 @@ class Clientes(Prime):
     cidade = models.CharField(
         max_length=100, blank=True, null=True,
         help_text="Se não tiver CEP (ex: cliente fora do Brasil), preencha cidade/estado/país "
-                   "aqui -- as coordenadas também são calculadas automaticamente por eles."
+                  "aqui -- as coordenadas também são calculadas automaticamente por eles."
     )
     estado = models.CharField(
         max_length=2, blank=True, null=True,
@@ -144,12 +145,12 @@ class Clientes(Prime):
     latitude = models.DecimalField(
         max_digits=9, decimal_places=6, blank=True, null=True,
         help_text="Preenchido automaticamente a partir do CEP ou da cidade/país ao salvar. "
-                   "Só edite na mão se quiser corrigir uma localização específica."
+                  "Só edite na mão se quiser corrigir uma localização específica."
     )
     longitude = models.DecimalField(
         max_digits=9, decimal_places=6, blank=True, null=True,
         help_text="Preenchido automaticamente a partir do CEP ou da cidade/país ao salvar. "
-                   "Só edite na mão se quiser corrigir uma localização específica."
+                  "Só edite na mão se quiser corrigir uma localização específica."
     )
     site_cliente = models.URLField(
         blank=True, null=True,
@@ -637,9 +638,7 @@ class BrinquedoSobMedida(models.Model):
         verbose_name_plural = "Brinquedos Sob Medida"
 
 
-
 class Carrinho(Prime):
-
     cliente = models.ForeignKey(
         ClientePerfil,
         on_delete=models.CASCADE,
@@ -716,7 +715,6 @@ class Carrinho(Prime):
 
 
 class ItemCarrinho(Prime):
-
     carrinho = models.ForeignKey(
         Carrinho,
         on_delete=models.CASCADE,
@@ -767,7 +765,6 @@ from django.db import transaction
 
 
 class Frete(Prime):
-
     carrinho = models.OneToOneField(
         Carrinho,
         on_delete=models.CASCADE,
@@ -856,7 +853,6 @@ class Pedido(Prime):
 
             return venda
 
-
     FORMA_PAGAMENTO_CHOICES = (
         ('pix', 'PIX'),
         ('credito', 'Cartão de Crédito'),
@@ -910,7 +906,6 @@ class Pedido(Prime):
     valor_desconto = models.DecimalField(max_digits=10, decimal_places=2, default=0, null=True, blank=True)
     total_liquido = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     total_final = models.DecimalField(max_digits=10, decimal_places=2, default=0, null=True)
-
 
     forma_pagamento = models.CharField(
         max_length=20,
@@ -1028,8 +1023,6 @@ class ItemPedido(Prime):
 
     def __str__(self):
         return f"{self.nome_item} (x{self.quantidade})"
-
-
 
 
 class Venda(Prime):
