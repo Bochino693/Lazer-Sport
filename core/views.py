@@ -1695,51 +1695,67 @@ class CupomAdminView(AdminOnlyMixin, View):
     template_name = "gestao/cupons_adm.html"
 
     def get(self, request):
-        cupons = Cupom.objects.all()
+        busca = request.GET.get("q", "").strip()
+        cupons = (
+            Cupom.objects
+            .select_related("brinquedo", "categoria")
+            .prefetch_related("cliente__user")
+            .order_by("-ativo", "codigo")
+        )
+        if busca:
+            cupons = cupons.filter(codigo__icontains=busca)
+
         return render(request, self.template_name, {
-            "cupons": cupons
+            "cupons": cupons,
+            "busca": busca,
+            "brinquedos": Brinquedos.objects.filter(ativo=True).order_by("nome_brinquedo"),
+            "categorias": CategoriasBrinquedos.objects.filter(ativo=True).order_by("nome_categoria"),
+            "clientes": ClientePerfil.objects.select_related("user").order_by("user__username"),
         })
 
+    @transaction.atomic
     def post(self, request):
-        codigo = request.POST.get("codigo")
-        desconto = request.POST.get("desconto_percentual")
+        acao = request.POST.get("acao", "salvar")
+        cupom_id = request.POST.get("cupom_id")
 
-        if not codigo or not desconto:
-            return JsonResponse({
-                "success": False,
-                "html": self.render_form(error="Preencha todos os campos")
-            })
+        if acao == "excluir":
+            cupom = get_object_or_404(Cupom, pk=cupom_id)
+            cupom.delete()
+            messages.success(request, "Cupom excluído com sucesso.")
+            return redirect("cupons_admin")
 
-        Cupom.objects.create(
-            codigo=codigo,
-            desconto_percentual=desconto
-        )
+        cupom = get_object_or_404(Cupom, pk=cupom_id) if cupom_id else Cupom()
+        codigo = request.POST.get("codigo", "").strip().upper()
+        try:
+            desconto = Decimal(request.POST.get("desconto_percentual", ""))
+            quantidade = int(request.POST.get("quantidade_uso", "1"))
+        except (InvalidOperation, TypeError, ValueError):
+            messages.error(request, "Informe desconto e quantidade válidos.")
+            return redirect("cupons_admin")
 
-        return JsonResponse({"success": True})
+        if not codigo or len(codigo) > 12:
+            messages.error(request, "O código deve ter entre 1 e 12 caracteres.")
+            return redirect("cupons_admin")
+        if not Decimal("0") < desconto <= Decimal("100"):
+            messages.error(request, "O desconto deve ser maior que 0 e no máximo 100%.")
+            return redirect("cupons_admin")
+        if quantidade < 1:
+            messages.error(request, "A quantidade de usos deve ser pelo menos 1.")
+            return redirect("cupons_admin")
+        if Cupom.objects.filter(codigo__iexact=codigo).exclude(pk=cupom.pk).exists():
+            messages.error(request, "Já existe um cupom com esse código.")
+            return redirect("cupons_admin")
 
-    def delete(self, request, cupom_id):
-        cupom = get_object_or_404(Cupom, id=cupom_id)
-        cupom.delete()
-        return JsonResponse({"success": True})
-
-    def render_form(self, error=None):
-        return f"""
-        <form id="formCupom" method="post" action="/adm/cupons/">
-            <input type="hidden" name="csrfmiddlewaretoken" value="{{{{ csrf_token }}}}">
-
-            <label>Código</label>
-            <input type="text" name="codigo" required>
-
-            <label>Desconto (%)</label>
-            <input type="number" step="0.01" name="desconto_percentual" required>
-
-            {"<p style='color:red'>" + error + "</p>" if error else ""}
-
-            <button type="submit" class="btn-novo-cupom">
-                💾 Salvar
-            </button>
-        </form>
-        """
+        cupom.codigo = codigo
+        cupom.desconto_percentual = desconto
+        cupom.quantidade_uso = quantidade
+        cupom.ativo = request.POST.get("ativo") == "on"
+        cupom.brinquedo_id = request.POST.get("brinquedo") or None
+        cupom.categoria_id = request.POST.get("categoria") or None
+        cupom.save()
+        cupom.cliente.set(request.POST.getlist("clientes"))
+        messages.success(request, "Cupom atualizado." if cupom_id else "Cupom criado com sucesso.")
+        return redirect("cupons_admin")
 
 
 from django.db import transaction
@@ -3387,24 +3403,96 @@ class ManutencaoAdminView(AdminOnlyMixin, View):
         return redirect(montar_proxima_url(manutencao_id))
 
 
-class UserAdminView(LoginRequiredMixin, View):
-    login_url = '/adm/login/'  # redireciona se não estiver logado
+class UserAdminView(AdminOnlyMixin, View):
     template_name = "gestao/users_adm.html"
 
     def get(self, request):
-        # Pegamos todos os perfis de clientes
-        perfis_clientes = ClientePerfil.objects.select_related('user').all().order_by('user__id')
+        busca = request.GET.get("q", "").strip()
+        tipo = request.GET.get("tipo", "todos")
+        usuarios = User.objects.select_related("perfil").order_by("-date_joined")
+        if busca:
+            usuarios = usuarios.filter(
+                Q(username__icontains=busca)
+                | Q(email__icontains=busca)
+                | Q(first_name__icontains=busca)
+                | Q(last_name__icontains=busca)
+                | Q(perfil__nome_completo__icontains=busca)
+            )
+        if tipo == "admins":
+            usuarios = usuarios.filter(is_staff=True)
+        elif tipo == "clientes":
+            usuarios = usuarios.filter(is_staff=False)
+        elif tipo == "inativos":
+            usuarios = usuarios.filter(is_active=False)
+        return render(request, self.template_name, {
+            "usuarios": usuarios,
+            "busca": busca,
+            "tipo": tipo,
+        })
 
-        # Alternativamente, se quiser todos os usuários (admins, staff e clientes):
-        # perfis_clientes = ClientePerfil.objects.select_related('user').all()
-        # Para usuários sem perfil (apenas User):
-        # usuarios_sem_perfil = User.objects.exclude(perfil__isnull=False)
-        # aí você poderia combinar no template ou na view
+    @transaction.atomic
+    def post(self, request):
+        acao = request.POST.get("acao", "salvar")
+        usuario_id = request.POST.get("usuario_id")
+        usuario = get_object_or_404(User, pk=usuario_id) if usuario_id else None
 
-        context = {
-            'perfis_clientes': perfis_clientes
-        }
-        return render(request, self.template_name, context)
+        if acao in {"alternar", "excluir"}:
+            if not usuario or usuario.is_superuser or usuario == request.user:
+                messages.error(request, "Esse usuário é protegido e não pode ser alterado.")
+                return redirect("clients")
+            if acao == "alternar":
+                usuario.is_active = not usuario.is_active
+                usuario.save(update_fields=["is_active"])
+                messages.success(request, "Status do usuário atualizado.")
+            else:
+                usuario.delete()
+                messages.success(request, "Usuário excluído com sucesso.")
+            return redirect("clients")
+
+        username = request.POST.get("username", "").strip()
+        email = request.POST.get("email", "").strip().lower()
+        nome = request.POST.get("nome_completo", "").strip()
+        telefone = request.POST.get("telefone", "").strip()
+        senha = request.POST.get("password", "")
+        is_staff = request.POST.get("is_staff") == "on"
+
+        if not username:
+            messages.error(request, "Informe o nome de usuário.")
+            return redirect("clients")
+        if User.objects.filter(username__iexact=username).exclude(pk=getattr(usuario, "pk", None)).exists():
+            messages.error(request, "Esse nome de usuário já está em uso.")
+            return redirect("clients")
+        if email and User.objects.filter(email__iexact=email).exclude(pk=getattr(usuario, "pk", None)).exists():
+            messages.error(request, "Esse e-mail já está em uso.")
+            return redirect("clients")
+        if not usuario and not senha:
+            messages.error(request, "Informe uma senha para o novo usuário.")
+            return redirect("clients")
+        if usuario and usuario.is_superuser and not is_staff:
+            messages.error(request, "Não é possível remover a permissão do superusuário.")
+            return redirect("clients")
+
+        if not usuario:
+            usuario = User(username=username)
+        usuario.username = username
+        usuario.email = email
+        usuario.is_staff = is_staff or usuario.is_superuser
+        usuario.is_active = request.POST.get("is_active") == "on"
+        if senha:
+            usuario.set_password(senha)
+        usuario.save()
+        perfil, _ = ClientePerfil.objects.get_or_create(user=usuario)
+        perfil.nome_completo = nome or None
+        perfil.telefone = telefone or None
+        try:
+            perfil.full_clean()
+        except Exception as exc:
+            transaction.set_rollback(True)
+            messages.error(request, "Não foi possível salvar o perfil: " + "; ".join(getattr(exc, "messages", [str(exc)])))
+            return redirect("clients")
+        perfil.save()
+        messages.success(request, "Usuário atualizado." if usuario_id else "Usuário criado com sucesso.")
+        return redirect("clients")
 
 
 from django.views.generic import TemplateView
@@ -3822,6 +3910,41 @@ def aplicar_cupom(request):
             'status': 'error',
             'title': 'Cupom inválido',
             'message': 'Este cupom não existe ou é inválido'
+        })
+
+    if not cupom.ativo or (cupom.quantidade_uso is not None and cupom.quantidade_uso < 1):
+        return JsonResponse({
+            'status': 'warning',
+            'title': 'Cupom indisponível',
+            'message': 'Este cupom está inativo ou esgotado.'
+        })
+
+    clientes_permitidos = cupom.cliente.all()
+    if clientes_permitidos.exists() and not clientes_permitidos.filter(pk=request.user.perfil.pk).exists():
+        return JsonResponse({
+            'status': 'warning',
+            'title': 'Cupom exclusivo',
+            'message': 'Este cupom não está disponível para a sua conta.'
+        })
+
+    itens_brinquedo = [
+        item.item for item in carrinho.itens.all()
+        if isinstance(item.item, Brinquedos)
+    ]
+    if cupom.brinquedo_id and not any(item.pk == cupom.brinquedo_id for item in itens_brinquedo):
+        return JsonResponse({
+            'status': 'warning',
+            'title': 'Produto não elegível',
+            'message': 'Adicione o produto vinculado a este cupom ao carrinho.'
+        })
+    if cupom.categoria_id and not any(
+        item.categorias_brinquedos.filter(pk=cupom.categoria_id).exists()
+        for item in itens_brinquedo
+    ):
+        return JsonResponse({
+            'status': 'warning',
+            'title': 'Categoria não elegível',
+            'message': 'Este cupom não se aplica aos produtos do carrinho.'
         })
 
     # 🔮 FUTURA REGRA: cupom primeira compra
