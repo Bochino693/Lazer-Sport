@@ -515,6 +515,22 @@ class Cupom(Prime):
     categoria = models.ForeignKey(CategoriasBrinquedos, on_delete=models.CASCADE, related_name='categoria', null=True)
     cliente = models.ManyToManyField(ClientePerfil, related_name='cupons')
     quantidade_uso = models.IntegerField(default=1, null=True)
+    todos_usuarios = models.BooleanField(
+        default=True,
+        help_text=(
+            "Quando ativo, qualquer cliente pode usar o cupom. "
+            "Quando desativado, somente os clientes selecionados podem usar."
+        ),
+    )
+    reutilizavel = models.BooleanField(
+        default=False,
+        help_text="Permite que o mesmo cliente use este cupom em mais de um pedido.",
+    )
+    data_expiracao = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Data e horário após os quais o cupom deixa de ser aceito.",
+    )
 
     def __str__(self):
         return self.codigo
