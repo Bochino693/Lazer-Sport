@@ -485,15 +485,19 @@
       min-height: 42px;
       margin: 0 0 18px;
       padding: 8px 13px;
-      border: 1px solid rgba(0, 74, 173, .12);
+      border: 1px solid rgba(113, 202, 255, .42);
       border-radius: 999px;
       display: inline-flex;
       align-items: center;
       gap: 9px;
       overflow: hidden;
-      color: #6b7b91;
-      background: rgba(255, 255, 255, .9);
-      box-shadow: 0 8px 25px rgba(15, 38, 76, .07);
+      color: #ffffff;
+      background:
+        radial-gradient(circle at 100% 0, rgba(230, 57, 70, .34), transparent 9rem),
+        linear-gradient(135deg, #06172c 0%, #004aad 64%, #0878f9 100%);
+      box-shadow:
+        0 10px 28px rgba(0, 50, 120, .25),
+        inset 0 1px 0 rgba(255, 255, 255, .14);
       font-size: .79rem;
       line-height: 1.2;
       scroll-margin-top: 92px;
@@ -507,7 +511,7 @@
       display: inline-flex;
       align-items: center;
       gap: 7px;
-      color: #004aad;
+      color: #ffffff;
       font-weight: 850;
       text-decoration: none;
       white-space: nowrap;
@@ -518,7 +522,7 @@
     }
 
     main.content-section .ls-breadcrumb a:hover {
-      color: #e63946;
+      color: #ffe36b;
       text-decoration: none;
       transform: translateY(-1px);
     }
@@ -526,7 +530,7 @@
     main.content-section .ls-breadcrumb-current {
       max-width: min(42vw, 420px);
       overflow: hidden;
-      color: #14243c;
+      color: #ffe36b;
       text-overflow: ellipsis;
     }
 
@@ -537,7 +541,7 @@
 
     main.content-section .ls-breadcrumb-separator {
       flex: 0 0 auto;
-      color: #a5afbd;
+      color: #75d3ff;
       font-size: .67rem;
     }
 

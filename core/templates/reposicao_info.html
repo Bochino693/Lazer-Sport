@@ -509,8 +509,35 @@
 }
 .peca-detalhe span { color: #a8bdd4; }
 .peca-detalhe strong { color: #fff; }
-.peca-quantidade-linha label { color: #dce8f4; }
-.peca-quantidade { border-color: rgba(112,180,255,.48); background: #eaf4ff; }
+.peca-quantidade-linha label { color: #79d4ff; }
+.peca-quantidade {
+    border-color: rgba(117,211,255,.78);
+    background: linear-gradient(135deg, #004aad, #0878f9);
+    box-shadow: 0 10px 24px rgba(0,74,173,.30), inset 0 1px 0 rgba(255,255,255,.18);
+}
+.peca-quantidade button {
+    color: #fff;
+    background: linear-gradient(145deg, #0878f9, #004aad);
+}
+.peca-quantidade button:last-child {
+    background: linear-gradient(145deg, #ef4352, #b91e30);
+}
+.peca-quantidade button:hover {
+    color: #071426;
+    background: linear-gradient(145deg, #ffe36b, #ffb703);
+}
+.peca-quantidade input {
+    border-right: 1px solid rgba(255,255,255,.34);
+    border-left: 1px solid rgba(255,255,255,.34);
+    color: #071426;
+    background: linear-gradient(180deg, #ffe36b, #ffc928);
+    box-shadow: inset 0 2px 5px rgba(111,70,0,.12);
+    outline: 0;
+}
+.peca-quantidade input:focus {
+    background: #fff29a;
+    box-shadow: inset 0 0 0 3px rgba(0,74,173,.22);
+}
 .peca-btn.carrinho { box-shadow: 0 12px 26px rgba(22,135,255,.24); }
 .peca-btn.whatsapp { box-shadow: 0 12px 26px rgba(37,211,102,.19); }
 .peca-btn.voltar { border-color: rgba(152,190,234,.27); color: #e8f2fc; background: rgba(255,255,255,.07); }
