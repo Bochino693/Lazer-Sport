@@ -147,23 +147,6 @@
 .breadcrumb {
     max-width: 1200px;
     margin: 25px auto;
-    font-size: 1rem;
-    color: #444;
-}
-
-.breadcrumb a {
-    color: #007BFF;
-    text-decoration: none;
-    font-weight: 600;
-}
-
-.breadcrumb span {
-    margin: 0 6px;
-    color: #888;
-}
-
-.breadcrumb strong {
-    color: #1f2d3d;
 }
 
 .btn-whatsapp i {
@@ -179,11 +162,17 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
 <!-- BREADCRUMB -->
-<div class="breadcrumb" id="breadcrumb">
-    <a href="{% url 'home' %}">Home</a>
-    <span>›</span>
-    <strong>Peças de Reposição</strong>
-</div>
+<nav class="breadcrumb ls-breadcrumb" id="breadcrumb" aria-label="Navegação estrutural">
+    <a href="{% url 'home' %}">
+        <i class="fa-solid fa-house" aria-hidden="true"></i>
+        <span>Início</span>
+    </a>
+    <i class="fa-solid fa-chevron-right ls-breadcrumb-separator" aria-hidden="true"></i>
+    <span class="ls-breadcrumb-current" aria-current="page">
+        <i class="fa-solid fa-gears" aria-hidden="true"></i>
+        <span>Peças de reposição</span>
+    </span>
+</nav>
 
 <section class="destaques">
     <h2 style="text-align:center; font-size:2rem; margin-bottom:40px; color:#0d6efd;">
@@ -194,7 +183,7 @@
     <div class="grid-cards">
 
         {% for peca in pecas %}
-        <div class="card-produto">
+        <div class="card-produto" data-scroll-reveal>
 
             <a href="{% url 'reposicao_detalhe' peca.pk %}#container" class="card-link">
 

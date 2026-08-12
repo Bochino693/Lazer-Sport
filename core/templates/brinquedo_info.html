@@ -318,6 +318,7 @@
 .produto-conteudo {
     min-width: 0;
     padding: 42px 44px 40px;
+    scroll-margin-top: 92px;
 }
 
 .produto-marca {
@@ -1102,12 +1103,21 @@
 
 <div class="produto-detalhe-page">
     <div class="produto-limite">
-        <nav class="produto-breadcrumb" aria-label="Navegação estrutural">
-            <a href="/">Início</a>
-            <span class="separador" aria-hidden="true">›</span>
-            <a href="{% url 'brinquedos' %}">Brinquedos</a>
-            <span class="separador" aria-hidden="true">›</span>
-            <strong title="{{ brinquedo.nome_brinquedo }}">{{ brinquedo.nome_brinquedo }}</strong>
+        <nav class="produto-breadcrumb ls-breadcrumb" aria-label="Navegação estrutural">
+            <a href="{% url 'home' %}">
+                <i class="fa-solid fa-house" aria-hidden="true"></i>
+                <span>Início</span>
+            </a>
+            <i class="fa-solid fa-chevron-right ls-breadcrumb-separator" aria-hidden="true"></i>
+            <a href="{% url 'brinquedos' %}">
+                <i class="fa-solid fa-gamepad" aria-hidden="true"></i>
+                <span>Brinquedos</span>
+            </a>
+            <i class="fa-solid fa-chevron-right ls-breadcrumb-separator" aria-hidden="true"></i>
+            <span class="ls-breadcrumb-current" aria-current="page" title="{{ brinquedo.nome_brinquedo }}">
+                <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+                <span>{{ brinquedo.nome_brinquedo }}</span>
+            </span>
         </nav>
 
         <article class="produto-shell">
@@ -1186,9 +1196,14 @@
                         <span><strong>Desde 1996</strong><small>Experiência profissional</small></span>
                     </div>
                 </div>
+
+                <a class="ls-scroll-cue" href="#produto-informacoes">
+                    <span>Ver informações, preço e opções</span>
+                    <i class="fa-solid fa-angles-down" aria-hidden="true"></i>
+                </a>
             </section>
 
-            <section class="produto-conteudo">
+            <section class="produto-conteudo" id="produto-informacoes">
                 <p class="produto-marca">Lazer &amp; Sport Brinquedos</p>
                 <h1>{{ brinquedo.nome_brinquedo }}</h1>
 
@@ -1222,13 +1237,13 @@
                     </div>
                 {% endif %}
 
-                <section class="produto-secao">
+                <section class="produto-secao" data-scroll-reveal>
                     <h2><i class="fas fa-align-left" aria-hidden="true"></i>Descrição</h2>
                     <p class="produto-descricao">{{ brinquedo.descricao|linebreaksbr }}</p>
                 </section>
 
                 {% if brinquedo.voltz or brinquedo.altura_m or brinquedo.largura_m or brinquedo.profundidade_m %}
-                    <section class="produto-secao">
+                    <section class="produto-secao" data-scroll-reveal>
                         <h2><i class="fas fa-ruler-combined" aria-hidden="true"></i>Informações técnicas</h2>
                         <div class="produto-especificacoes">
                             {% if brinquedo.voltz %}

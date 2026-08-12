@@ -217,7 +217,7 @@
     text-align: center;
 }
 .peca-beneficio i { color: var(--ls-blue); }
-.peca-info { min-width: 0; padding: 42px 44px 40px; }
+.peca-info { min-width: 0; padding: 42px 44px 40px; scroll-margin-top: 92px; }
 .peca-eyebrow {
     color: var(--ls-blue);
     font-size: .77rem;
@@ -536,10 +536,21 @@
 
 <div class="peca-page">
     <div class="peca-wrap">
-        <nav class="peca-breadcrumb" aria-label="Navegação estrutural">
-            <a href="/">Início</a><span aria-hidden="true">›</span>
-            <a href="{% url 'pecas_reposicao' %}">Peças de reposição</a><span aria-hidden="true">›</span>
-            <strong title="{{ peca.nome }}">{{ peca.nome }}</strong>
+        <nav class="peca-breadcrumb ls-breadcrumb" aria-label="Navegação estrutural">
+            <a href="{% url 'home' %}">
+                <i class="fa-solid fa-house" aria-hidden="true"></i>
+                <span>Início</span>
+            </a>
+            <i class="fa-solid fa-chevron-right ls-breadcrumb-separator" aria-hidden="true"></i>
+            <a href="{% url 'pecas_reposicao' %}">
+                <i class="fa-solid fa-gears" aria-hidden="true"></i>
+                <span>Peças de reposição</span>
+            </a>
+            <i class="fa-solid fa-chevron-right ls-breadcrumb-separator" aria-hidden="true"></i>
+            <span class="ls-breadcrumb-current" aria-current="page" title="{{ peca.nome }}">
+                <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+                <span>{{ peca.nome }}</span>
+            </span>
         </nav>
 
         <article class="peca-shell">
@@ -577,9 +588,14 @@
                     <div class="peca-beneficio"><i class="fas fa-truck" aria-hidden="true"></i><span><strong>Envio nacional</strong><small>Atendimento em todo o Brasil</small></span></div>
                     <div class="peca-beneficio"><i class="fas fa-industry" aria-hidden="true"></i><span><strong>Direto da fábrica</strong><small>Procedência Lazer &amp; Sport</small></span></div>
                 </div>
+
+                <a class="ls-scroll-cue" href="#peca-informacoes">
+                    <span>Ver informações, preço e opções</span>
+                    <i class="fa-solid fa-angles-down" aria-hidden="true"></i>
+                </a>
             </section>
 
-            <section class="peca-info">
+            <section class="peca-info" id="peca-informacoes">
                 <p class="peca-eyebrow">Peça de reposição Lazer &amp; Sport</p>
                 <h1>{{ peca.nome }}</h1>
                 <div class="peca-meta">
@@ -593,12 +609,12 @@
                     <span class="peca-preco-nota">Frete e prazo são calculados conforme o endereço de entrega.</span>
                 </div>
 
-                <section class="peca-secao">
+                <section class="peca-secao" data-scroll-reveal>
                     <h2><i class="fas fa-align-left" aria-hidden="true"></i>Sobre esta peça</h2>
                     <p class="peca-descricao">{{ peca.descricao_peca|linebreaksbr }}</p>
                 </section>
 
-                <section class="peca-secao">
+                <section class="peca-secao" data-scroll-reveal>
                     <h2><i class="fas fa-circle-info" aria-hidden="true"></i>Detalhes do produto</h2>
                     <div class="peca-detalhes">
                         <div class="peca-detalhe"><i class="fas fa-box" aria-hidden="true"></i><div><span>Condição</span><strong>Produto novo</strong></div></div>

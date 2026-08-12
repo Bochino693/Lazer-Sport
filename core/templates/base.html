@@ -478,6 +478,139 @@
       padding: 0;
     }
 
+    /* Navegação estrutural compartilhada pelos catálogos e detalhes. */
+    main.content-section .ls-breadcrumb {
+      width: fit-content;
+      max-width: 100%;
+      min-height: 42px;
+      margin: 0 0 18px;
+      padding: 8px 13px;
+      border: 1px solid rgba(0, 74, 173, .12);
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      overflow: hidden;
+      color: #6b7b91;
+      background: rgba(255, 255, 255, .9);
+      box-shadow: 0 8px 25px rgba(15, 38, 76, .07);
+      font-size: .79rem;
+      line-height: 1.2;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+
+    main.content-section .ls-breadcrumb a,
+    main.content-section .ls-breadcrumb-current {
+      min-width: 0;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      color: #004aad;
+      font-weight: 850;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+
+    main.content-section .ls-breadcrumb a {
+      transition: color .2s ease, transform .2s ease;
+    }
+
+    main.content-section .ls-breadcrumb a:hover {
+      color: #e63946;
+      text-decoration: none;
+      transform: translateY(-1px);
+    }
+
+    main.content-section .ls-breadcrumb-current {
+      max-width: min(42vw, 420px);
+      overflow: hidden;
+      color: #14243c;
+      text-overflow: ellipsis;
+    }
+
+    main.content-section .ls-breadcrumb-current span {
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    main.content-section .ls-breadcrumb-separator {
+      flex: 0 0 auto;
+      color: #a5afbd;
+      font-size: .67rem;
+    }
+
+    /* Indica no mobile que preço e informações continuam abaixo da galeria. */
+    main.content-section .ls-scroll-cue {
+      display: none;
+    }
+
+    @keyframes ls-scroll-cue-bounce {
+      0%, 100% { transform: translateY(-2px); }
+      50% { transform: translateY(4px); }
+    }
+
+    /* A classe só é aplicada via JS: sem JS o conteúdo nunca fica oculto. */
+    [data-scroll-reveal].ls-reveal-pending {
+      opacity: 0;
+      transform: translateY(24px);
+    }
+
+    [data-scroll-reveal] {
+      transition: opacity .55s ease, transform .55s cubic-bezier(.2, .8, .2, 1);
+    }
+
+    [data-scroll-reveal].ls-reveal-visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    @media (max-width: 960px) {
+      main.content-section .ls-scroll-cue {
+        width: 100%;
+        min-height: 54px;
+        margin-top: 14px;
+        padding: 10px 15px;
+        border: 1px solid rgba(116, 199, 255, .28);
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        color: #ffffff;
+        background: linear-gradient(135deg, rgba(8, 120, 249, .88), rgba(0, 74, 173, .94));
+        box-shadow: 0 12px 26px rgba(0, 74, 173, .22);
+        font-size: .8rem;
+        font-weight: 900;
+        text-align: center;
+        text-decoration: none;
+        -webkit-tap-highlight-color: transparent;
+        touch-action: manipulation;
+      }
+
+      main.content-section .ls-scroll-cue i {
+        animation: ls-scroll-cue-bounce 1.25s ease-in-out infinite;
+      }
+    }
+
+    @media (max-width: 640px) {
+      main.content-section .ls-breadcrumb {
+        min-height: 40px;
+        margin-bottom: 13px;
+        padding: 7px 11px;
+        gap: 7px;
+        font-size: .72rem;
+      }
+
+      main.content-section .ls-breadcrumb-current {
+        max-width: 34vw;
+      }
+
+      main.content-section .ls-breadcrumb a span:not(.ls-breadcrumb-keep) {
+        display: none;
+      }
+    }
+
     /* ======= RESPONSIVIDADE ======= */
 
 /* ======= TÍTULOS CENTRALIZADOS ======= */
@@ -2838,6 +2971,27 @@ window.addEventListener("pageshow", function (event) {
         window.location.reload();
     }
 });
+
+/* Revelação progressiva leve para cards e blocos longos. O conteúdo permanece
+   visível quando IntersectionObserver não existe ou o usuário reduz movimento. */
+(function iniciarRevelacaoNaRolagem() {
+  const elementos = Array.from(document.querySelectorAll('[data-scroll-reveal]'));
+  const reduzirMovimento = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (!elementos.length || reduzirMovimento || !('IntersectionObserver' in window)) return;
+
+  elementos.forEach((elemento) => elemento.classList.add('ls-reveal-pending'));
+
+  const observador = new IntersectionObserver((entradas) => {
+    entradas.forEach((entrada) => {
+      if (!entrada.isIntersecting) return;
+      entrada.target.classList.remove('ls-reveal-pending');
+      entrada.target.classList.add('ls-reveal-visible');
+      observador.unobserve(entrada.target);
+    });
+  }, { rootMargin: '0px 0px -7% 0px', threshold: .08 });
+
+  elementos.forEach((elemento) => observador.observe(elemento));
+})();
 
 
 

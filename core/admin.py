@@ -64,12 +64,25 @@ class ItemCarrinhoAdmin(admin.ModelAdmin):
 # ⭐ INLINE DAS IMAGENS
 class ImagemPecaInline(admin.TabularInline):
     model = ImagemPeca
-    extra = 1
+    extra = 0
     max_num = 8
     min_num = 0
-    fields = ("ordem", "posicao", "imagem")
+    fields = ("ordem", "posicao", "imagem", "miniatura")
+    readonly_fields = ("miniatura",)
+    ordering = ("ordem", "id")
+    show_change_link = True
     verbose_name = "Imagem da peça"
     verbose_name_plural = "Imagens da peça"
+
+    @admin.display(description="Prévia")
+    def miniatura(self, obj):
+        if not obj or not obj.pk or not obj.imagem:
+            return "Nova foto"
+        return format_html(
+            '<img src="{}" alt="" style="width:72px;height:54px;'
+            'object-fit:contain;border-radius:8px;background:#eef4fb;" />',
+            obj.imagem.url,
+        )
 
     # 🔒 segurança extra no admin
     def clean(self):
@@ -80,6 +93,79 @@ class ImagemPecaInline(admin.TabularInline):
         ])
         if total > 8:
             raise ValidationError("Máximo de 8 imagens por peça.")
+
+
+class GaleriaAdminBase(admin.ModelAdmin):
+    """Editor individual que protege a posição já ocupada pela foto."""
+
+    list_per_page = 40
+    readonly_fields = ("preview_grande", "criacao", "atualizado")
+
+    def get_readonly_fields(self, request, obj=None):
+        campos = list(super().get_readonly_fields(request, obj))
+        # Trocar o arquivo não deve mover acidentalmente a foto 1, 2, 3 etc.
+        # A reordenação continua disponível no inline da galeria completa.
+        if obj and obj.pk:
+            campos.append("ordem")
+        return tuple(campos)
+
+    @admin.display(description="Foto")
+    def miniatura(self, obj):
+        if not obj or not obj.imagem:
+            return "Sem imagem"
+        return format_html(
+            '<img src="{}" alt="" style="width:86px;height:64px;'
+            'object-fit:contain;border-radius:10px;background:#eef4fb;" />',
+            obj.imagem.url,
+        )
+
+    @admin.display(description="Pré-visualização")
+    def preview_grande(self, obj):
+        if not obj or not obj.pk or not obj.imagem:
+            return "A prévia aparecerá depois que a imagem for salva."
+        return format_html(
+            '<img src="{}" alt="" style="max-width:420px;max-height:300px;'
+            'object-fit:contain;border-radius:14px;background:#eef4fb;'
+            'padding:10px;" />',
+            obj.imagem.url,
+        )
+
+
+@admin.register(ImagemPeca)
+class ImagemPecaAdmin(GaleriaAdminBase):
+    list_display = (
+        "miniatura",
+        "peca_reposicao",
+        "ordem",
+        "posicao",
+        "ativo",
+        "atualizado",
+    )
+    list_display_links = ("miniatura", "peca_reposicao")
+    list_filter = ("ativo", "posicao")
+    search_fields = ("peca_reposicao__nome",)
+    ordering = ("peca_reposicao__nome", "ordem", "id")
+    list_select_related = ("peca_reposicao",)
+    fields = (
+        "peca_reposicao",
+        "ordem",
+        "posicao",
+        "imagem",
+        "preview_grande",
+        "ativo",
+        "criacao",
+        "atualizado",
+    )
+
+    def get_form(self, request, obj=None, **kwargs):
+        form = super().get_form(request, obj, **kwargs)
+        if "ordem" in form.base_fields:
+            form.base_fields["ordem"].help_text = (
+                "Defina o espaço da nova foto. Depois de salvar, a posição "
+                "fica protegida neste editor individual. Para reorganizar a "
+                "galeria, abra a peça e use a lista completa de imagens."
+            )
+        return form
 
 
 
@@ -361,11 +447,75 @@ class EstabelecimentosAdmin(admin.ModelAdmin):
 
 class ImagemBrinquedoInline(admin.TabularInline):
     model = ImagemBrinquedo
-    extra = 1
+    extra = 0
     max_num = 8
-    fields = ("ordem", "imagem", "texto_alternativo")
+    fields = ("ordem", "imagem", "texto_alternativo", "miniatura")
+    readonly_fields = ("miniatura",)
+    ordering = ("ordem", "id")
+    show_change_link = True
     verbose_name = "Foto do brinquedo"
     verbose_name_plural = "Galeria do brinquedo"
+
+    @admin.display(description="Prévia")
+    def miniatura(self, obj):
+        if not obj or not obj.pk or not obj.imagem:
+            return "Nova foto"
+        return format_html(
+            '<img src="{}" alt="" style="width:72px;height:54px;'
+            'object-fit:contain;border-radius:8px;background:#eef4fb;" />',
+            obj.imagem.url,
+        )
+
+
+@admin.register(ImagemBrinquedo)
+class ImagemBrinquedoAdmin(GaleriaAdminBase):
+    list_display = (
+        "miniatura",
+        "brinquedo",
+        "ordem",
+        "descricao_curta",
+        "ativo",
+        "atualizado",
+    )
+    list_display_links = ("miniatura", "brinquedo")
+    list_filter = ("ativo",)
+    search_fields = ("brinquedo__nome_brinquedo", "texto_alternativo")
+    ordering = ("brinquedo__nome_brinquedo", "ordem", "id")
+    list_select_related = ("brinquedo",)
+    fields = (
+        "brinquedo",
+        "ordem",
+        "imagem",
+        "preview_grande",
+        "texto_alternativo",
+        "ativo",
+        "criacao",
+        "atualizado",
+    )
+
+    @admin.display(description="Descrição")
+    def descricao_curta(self, obj):
+        texto = (obj.texto_alternativo or "Sem descrição").strip()
+        return texto if len(texto) <= 55 else f"{texto[:52]}..."
+
+    def get_form(self, request, obj=None, **kwargs):
+        form = super().get_form(request, obj, **kwargs)
+        if "ordem" in form.base_fields:
+            form.base_fields["ordem"].help_text = (
+                "Defina o espaço da nova foto. Depois de salvar, a posição "
+                "fica protegida neste editor individual. Para reorganizar a "
+                "galeria, abra o brinquedo e use a lista completa de fotos."
+            )
+        return form
+
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        # A posição 1 também alimenta telas antigas. Alterar as posições 2 a 8
+        # nunca substitui a foto principal do brinquedo.
+        if obj.ordem == 1 and obj.imagem:
+            Brinquedos.objects.filter(pk=obj.brinquedo_id).update(
+                imagem_brinquedo=obj.imagem.name
+            )
 
 
 @admin.register(Brinquedos)

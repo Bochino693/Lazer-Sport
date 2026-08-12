@@ -1853,13 +1853,16 @@
 
 <main class="catalogo-page" id="catalogo-brinquedos">
     <div class="catalogo-shell">
-        <nav class="catalogo-breadcrumb" id="bread" aria-label="Navegação estrutural">
+        <nav class="catalogo-breadcrumb ls-breadcrumb" id="bread" aria-label="Navegação estrutural">
             <a href="{% url 'home' %}#brinquedos">
                 <i class="fa-solid fa-house" aria-hidden="true"></i>
-                Home
+                <span>Início</span>
             </a>
-            <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
-            <span>Brinquedos</span>
+            <i class="fa-solid fa-chevron-right ls-breadcrumb-separator" aria-hidden="true"></i>
+            <span class="ls-breadcrumb-current" aria-current="page">
+                <i class="fa-solid fa-gamepad" aria-hidden="true"></i>
+                <span>Brinquedos</span>
+            </span>
         </nav>
 
         <header class="catalogo-hero">
@@ -2260,7 +2263,7 @@
 
             <div class="catalogo-grid">
                 {% for brinquedo in brinquedos %}
-                    <article class="catalogo-card {% if brinquedo.exibir_na_loja and brinquedo.valor_brinquedo > 0 %}is-store{% else %}is-quote{% endif %}">
+                    <article class="catalogo-card {% if brinquedo.exibir_na_loja and brinquedo.valor_brinquedo > 0 %}is-store{% else %}is-quote{% endif %}" data-scroll-reveal>
                         <a href="{% url 'brinquedo_detalhe' brinquedo.id %}#bread"
                            class="catalogo-card-media"
                            aria-label="Ver detalhes de {{ brinquedo.nome_brinquedo }}">

@@ -3,6 +3,7 @@ from decimal import Decimal
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
+from django.contrib import admin
 from django.core.cache import cache
 from django.core.cache.utils import make_template_fragment_key
 from django.test import (
@@ -266,6 +267,8 @@ class CatalogImageMigrationTests(TestCase):
         self.assertEqual(resposta_brinquedo.status_code, 200)
         self.assertContains(resposta_brinquedo, 'data-galeria-indice="1"')
         self.assertContains(resposta_brinquedo, "1 / 2")
+        self.assertContains(resposta_brinquedo, "produto-breadcrumb ls-breadcrumb")
+        self.assertContains(resposta_brinquedo, 'href="#produto-informacoes"')
         self.assertContains(
             resposta_brinquedo,
             '<main class="content-section content-section--full">',
@@ -293,10 +296,40 @@ class CatalogImageMigrationTests(TestCase):
         self.assertEqual(resposta_peca.status_code, 200)
         self.assertContains(resposta_peca, 'data-foto-indice="1"')
         self.assertContains(resposta_peca, "Código LS-P")
+        self.assertContains(resposta_peca, "peca-breadcrumb ls-breadcrumb")
+        self.assertContains(resposta_peca, 'href="#peca-informacoes"')
         self.assertContains(
             resposta_peca,
             '<main class="content-section content-section--full">',
         )
+
+        resposta_catalogo_pecas = self.client.get(reverse("pecas_reposicao"))
+        self.assertEqual(resposta_catalogo_pecas.status_code, 200)
+        self.assertContains(resposta_catalogo_pecas, "breadcrumb ls-breadcrumb")
+        self.assertContains(resposta_catalogo_pecas, "data-scroll-reveal")
+
+
+class CatalogGalleryAdminTests(SimpleTestCase):
+    def test_novos_modelos_de_imagem_aparecem_no_admin(self):
+        self.assertIn(ImagemBrinquedo, admin.site._registry)
+        self.assertIn(ImagemPeca, admin.site._registry)
+
+    def test_editor_individual_protege_a_posicao_ja_salva(self):
+        admin_brinquedo = admin.site._registry[ImagemBrinquedo]
+        admin_peca = admin.site._registry[ImagemPeca]
+        foto_brinquedo = ImagemBrinquedo(pk=10, ordem=2)
+        foto_peca = ImagemPeca(pk=20, ordem=3)
+
+        self.assertIn(
+            "ordem",
+            admin_brinquedo.get_readonly_fields(None, foto_brinquedo),
+        )
+        self.assertIn(
+            "ordem",
+            admin_peca.get_readonly_fields(None, foto_peca),
+        )
+        self.assertNotIn("ordem", admin_brinquedo.get_readonly_fields(None))
+        self.assertNotIn("ordem", admin_peca.get_readonly_fields(None))
 
 
 @override_settings(HOME_CACHE_TTL=600)
@@ -420,6 +453,7 @@ class CatalogFilterUXTests(TestCase):
         self.assertContains(resposta, 'type="radio" name="disponibilidade"')
         self.assertContains(resposta, 'type="radio" name="voltagem"')
         self.assertContains(resposta, 'type="radio" name="ordenar"')
+        self.assertContains(resposta, "catalogo-breadcrumb ls-breadcrumb")
 
     def test_filtros_continuam_enviando_parametros_ao_backend(self):
         categoria = CategoriasBrinquedos.objects.create(
