@@ -268,6 +268,7 @@ class CatalogImageMigrationTests(TestCase):
         self.assertContains(resposta_brinquedo, 'data-galeria-indice="1"')
         self.assertContains(resposta_brinquedo, "1 / 2")
         self.assertContains(resposta_brinquedo, "produto-breadcrumb ls-breadcrumb")
+        self.assertContains(resposta_brinquedo, 'id="bread"')
         self.assertContains(resposta_brinquedo, 'href="#produto-informacoes"')
         self.assertContains(
             resposta_brinquedo,
@@ -297,6 +298,7 @@ class CatalogImageMigrationTests(TestCase):
         self.assertContains(resposta_peca, 'data-foto-indice="1"')
         self.assertContains(resposta_peca, "Código LS-P")
         self.assertContains(resposta_peca, "peca-breadcrumb ls-breadcrumb")
+        self.assertContains(resposta_peca, 'id="breadcrumb"')
         self.assertContains(resposta_peca, 'href="#peca-informacoes"')
         self.assertContains(
             resposta_peca,
