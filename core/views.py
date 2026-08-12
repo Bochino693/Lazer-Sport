@@ -19,6 +19,7 @@ from .models import Brinquedos, ImagemBrinquedo, CategoriasBrinquedos, Projetos,
     ImagemProjetoBrinquedo, ImagemEvento, Clientes, EnderecoEmpresa
 from django.templatetags.static import static
 from .utils import LAT_EMPRESA, LON_EMPRESA
+from .home_cache import get_cached_home_context, home_cache_timeout
 
 import os
 from django.http import FileResponse, Http404, HttpResponse
@@ -73,7 +74,18 @@ class HomeView(View):
         return HttpResponse(status=200)
 
     def get(self, request):
-        imagens_site = ImagensSite.objects.order_by("-id")[:5]
+        context = get_cached_home_context(self._build_public_context)
+        context["home_cache_ttl"] = home_cache_timeout()
+
+        return render(
+            request,
+            "home.html",
+            context,
+        )
+
+    def _build_public_context(self):
+        """Monta apenas a vitrine pública, segura para compartilhar em cache."""
+        imagens_site = list(ImagensSite.objects.order_by("-id")[:5])
 
         # Todos os brinquedos ativos. A paginação de 9 por página já é
         # feita no JS do template (inicializarProdutosClientSide), então
@@ -103,7 +115,7 @@ class HomeView(View):
             .order_by("nome_brinquedo")
         )
 
-        categorias_brinquedos = (
+        categorias_brinquedos = list(
             CategoriasBrinquedos.objects
             .filter(ativo=True)
             .annotate(
@@ -119,18 +131,18 @@ class HomeView(View):
             )
         )
 
-        combos = (
+        combos = list(
             Combos.objects
             .all()
             .prefetch_related("brinquedos")
         )
 
-        promocoes = (
+        promocoes = list(
             Promocoes.objects
             .select_related("brinquedos")
         )
 
-        eventos = (
+        eventos = list(
             Eventos.objects
             .prefetch_related(
                 "imagens_evento",
@@ -139,7 +151,7 @@ class HomeView(View):
             .order_by("-id")
         )
 
-        projetos = (
+        projetos = list(
             Projetos.objects
             .select_related("brinquedo_projetado")
             .prefetch_related(
@@ -174,7 +186,7 @@ class HomeView(View):
             combo.economia = economia
             combo.porcentagem = porcentagem
 
-        categorias_peca = CategoriaPeca.objects.all()
+        categorias_peca = list(CategoriaPeca.objects.all())
 
         from .models import ImagemPeca
 
@@ -208,7 +220,8 @@ class HomeView(View):
                     Prefetch(
                         "imagem_peca_reposicao",
                         queryset=ImagemPeca.objects.order_by(
-                            "id"
+                            "ordem",
+                            "id",
                         ),
                     )
                 )
@@ -231,13 +244,22 @@ class HomeView(View):
         )
 
         # Clientes com localização cadastrada, para o mapa da seção "Clientes"
-        clientes_com_mapa = (
+        clientes_com_mapa = list(
             Clientes.objects
             .filter(
                 ativo=True,
                 exibir_no_mapa=True,
                 latitude__isnull=False,
                 longitude__isnull=False,
+            )
+            .only(
+                "descricao_cliente",
+                "cidade",
+                "estado",
+                "pais",
+                "latitude",
+                "longitude",
+                "site_cliente",
             )
         )
 
@@ -311,37 +333,23 @@ class HomeView(View):
         context = {
             "categorias_brinquedos": categorias_brinquedos,
             "brinquedos_todos": brinquedos_todos,
-            "brinquedos_count": (
-                Brinquedos.objects
-                .filter(ativo=True)
-                .count()
-            ),
+            "brinquedos_count": len(brinquedos_todos),
             "eventos": eventos,
             "categorias_peca": categorias_peca,
             "pecas_todas": pecas_todas,
-            "pecas_count": (
-                PecasReposicao.objects
-                .filter(ativo=True)
-                .count()
-            ),
+            "pecas_count": len(pecas_todas),
             "pecas_preview": pecas_preview,
             "projetos": projetos,
             "combos": combos,
             "promocoes": promocoes,
-            "estabelecimentos": (
-                Estabelecimentos.objects.all()
-            ),
+            "estabelecimentos": list(Estabelecimentos.objects.all()),
             "imagens_site": imagens_site,
             "clientes_mapa": clientes_mapa,
             "pontos_mapa": pontos_mapa,
             "cidades_atendidas": cidades_atendidas,
         }
 
-        return render(
-            request,
-            "home.html",
-            context,
-        )
+        return context
 
 
 from django.template.loader import render_to_string

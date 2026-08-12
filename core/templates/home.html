@@ -1,12 +1,14 @@
 {% extends 'base.html' %}
 {% load static %}
 {% load humanize %}
+{% load cache %}
 
 {% block title %}Lazer & Sport Brinquedos | Fábrica de Brinquedos para Fliperama, Parques e Shoppings{% endblock %}
 
 {% block meta_description %}Lazer & Sport Brinquedos: fábrica e loja de brinquedos mecânicos, eletrônicos e simuladores para shoppings, quiosques e parques. Peças de reposição e orçamento sob medida.{% endblock %}
 
 {% block content %}
+{% cache home_cache_ttl home_public_v2 %}
 
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600&display=swap');
@@ -4447,11 +4449,13 @@ main.content-section {
         <div class="evento-card" data-modal="modal-evento-{{ evento.id }}">
 
         <div class="evento-thumb">
-            {% if evento.imagens_evento.first %}
-                <img src="{{ evento.imagens_evento.first.imagem.url }}" alt="{{ evento.titulo }}" loading="lazy" decoding="async">
-            {% else %}
-                <img src="{% static 'images/default.jpg' %}" alt="Sem imagem" loading="lazy" decoding="async">
-            {% endif %}
+            {% with imagem_evento=evento.imagens_evento.all.0 %}
+                {% if imagem_evento %}
+                    <img src="{{ imagem_evento.imagem.url }}" alt="{{ evento.titulo }}" loading="lazy" decoding="async">
+                {% else %}
+                    <img src="{% static 'images/default.jpg' %}" alt="Sem imagem" loading="lazy" decoding="async">
+                {% endif %}
+            {% endwith %}
             <span class="evento-ver-mais">Ver galeria <i class="fa-solid fa-arrow-right"></i></span>
         </div>
 
@@ -4552,8 +4556,14 @@ main.content-section {
         <div class="evento-card" data-modal="modal-projeto-{{ projeto.id }}">
 
             <div class="evento-thumb">
-                {% if projeto.brinquedo_projetado and projeto.brinquedo_projetado.imagens_brinquedo_projeto.first %}
-                    <img src="{{ projeto.brinquedo_projetado.imagens_brinquedo_projeto.first.imagem.url }}" alt="{{ projeto.titulo }}" loading="lazy" decoding="async">
+                {% if projeto.brinquedo_projetado %}
+                    {% with imagem_projeto=projeto.brinquedo_projetado.imagens_brinquedo_projeto.all.0 %}
+                        {% if imagem_projeto %}
+                            <img src="{{ imagem_projeto.imagem.url }}" alt="{{ projeto.titulo }}" loading="lazy" decoding="async">
+                        {% else %}
+                            <img src="{% static 'images/default.jpg' %}" alt="{{ projeto.titulo }}" loading="lazy" decoding="async">
+                        {% endif %}
+                    {% endwith %}
                 {% else %}
                     <img src="{% static 'images/default.jpg' %}" alt="{{ projeto.titulo }}" loading="lazy" decoding="async">
                 {% endif %}
@@ -9120,4 +9130,5 @@ document.addEventListener("DOMContentLoaded", () => {
 // cada botão já tem seu próprio listener, não precisa de delegação aqui.
 </script>
 
+{% endcache %}
 {% endblock %}

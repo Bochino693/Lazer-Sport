@@ -878,6 +878,161 @@
     }
 }
 
+/* Identidade Lazer & Sport: base escura com azul e vermelho vivos. */
+.produto-detalhe-page {
+    --ls-azul: #1687ff;
+    --ls-azul-escuro: #064fbd;
+    --ls-azul-claro: rgba(22, 135, 255, .15);
+    --ls-vermelho: #f23b4a;
+    --ls-texto: #f7fbff;
+    --ls-cinza: #b5c5d9;
+    --ls-borda: rgba(139, 186, 240, .18);
+    background:
+        radial-gradient(circle at 7% 5%, rgba(22, 135, 255, .32), transparent 27rem),
+        radial-gradient(circle at 96% 13%, rgba(242, 59, 74, .22), transparent 25rem),
+        linear-gradient(145deg, #07182c 0%, #040b15 56%, #09162a 100%);
+    isolation: isolate;
+    overflow: hidden;
+    position: relative;
+}
+
+.produto-detalhe-page::before {
+    background-image:
+        linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px);
+    background-size: 38px 38px;
+    content: "";
+    inset: 0;
+    mask-image: linear-gradient(to bottom, #000 0%, transparent 88%);
+    opacity: .7;
+    pointer-events: none;
+    position: absolute;
+    z-index: 0;
+}
+
+.produto-limite {
+    position: relative;
+    z-index: 1;
+}
+
+.produto-breadcrumb { color: #9fb3cb; }
+.produto-breadcrumb a { color: #7fc1ff; }
+.produto-breadcrumb a:hover { color: #fff; }
+.produto-breadcrumb .separador { color: #637a96; }
+.produto-breadcrumb strong { color: #f7fbff; }
+
+.produto-shell {
+    background: linear-gradient(145deg, rgba(12, 35, 65, .98), rgba(5, 17, 33, .99));
+    border-color: rgba(112, 174, 247, .25);
+    box-shadow:
+        0 30px 85px rgba(0, 3, 12, .56),
+        0 0 0 1px rgba(255,255,255,.025),
+        0 0 70px rgba(22, 135, 255, .10);
+    position: relative;
+}
+
+.produto-shell::before {
+    background: linear-gradient(90deg, #1687ff 0%, #55c9ff 45%, #f23b4a 100%);
+    content: "";
+    height: 4px;
+    inset: 0 0 auto;
+    position: absolute;
+    z-index: 5;
+}
+
+.produto-visual {
+    background:
+        radial-gradient(circle at 50% 35%, rgba(30, 143, 255, .22), transparent 48%),
+        linear-gradient(rgba(115,172,238,.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(115,172,238,.05) 1px, transparent 1px),
+        linear-gradient(145deg, #0b2342, #071425 72%);
+    background-size: auto, 32px 32px, 32px 32px, auto;
+    border-right-color: rgba(133, 184, 241, .16);
+}
+
+.produto-imagem-box {
+    border-color: rgba(122, 188, 255, .5);
+    box-shadow: 0 22px 55px rgba(0, 5, 18, .38), 0 0 0 7px rgba(22, 135, 255, .055);
+}
+
+.produto-galeria-seta {
+    background: linear-gradient(145deg, #1687ff, #06449c);
+    border-color: rgba(255,255,255,.48);
+    color: #fff;
+}
+
+.produto-galeria-seta:hover { background: linear-gradient(145deg, #f23b4a, #b91628); }
+.produto-galeria-contador { background: rgba(5, 20, 39, .9); border: 1px solid rgba(255,255,255,.18); }
+.produto-miniatura { background: #f7fbff; border-color: rgba(255,255,255,.08); }
+.produto-miniatura:hover,
+.produto-miniatura.ativa { border-color: #46b8ff; box-shadow: 0 0 0 2px rgba(22,135,255,.18), 0 9px 24px rgba(0,0,0,.35); }
+
+.produto-garantia {
+    background: rgba(255,255,255,.055);
+    border-color: rgba(137, 186, 241, .19);
+    color: #dce9f7;
+}
+.produto-garantia i { color: #4bbcff; }
+.produto-garantia:nth-child(2) i { color: #ffcb45; }
+.produto-garantia:nth-child(3) i { color: #ff6876; }
+
+.produto-marca { color: #69c1ff; }
+.produto-conteudo h1 { color: #fff; text-shadow: 0 8px 32px rgba(22,135,255,.18); }
+.produto-nota { color: #afc0d4; }
+
+.produto-compra {
+    background:
+        radial-gradient(circle at 100% 0, rgba(87, 199, 255, .22), transparent 44%),
+        linear-gradient(135deg, #0758c9, #0b356b);
+    border-color: rgba(109, 186, 255, .42);
+    box-shadow: 0 15px 36px rgba(0, 67, 158, .24), inset 0 1px 0 rgba(255,255,255,.1);
+}
+
+.produto-compra.consulta {
+    background:
+        radial-gradient(circle at 100% 0, rgba(255, 192, 80, .18), transparent 42%),
+        linear-gradient(135deg, #7c2d24, #3d1b28);
+    border-color: rgba(255, 131, 90, .48);
+}
+
+.produto-preco-legenda,
+.produto-preco-nota,
+.produto-consulta-texto { color: #c6dcf3; }
+.produto-preco,
+.produto-consulta-titulo { color: #fff; }
+
+.produto-secao { border-top-color: rgba(145, 185, 232, .16); }
+.produto-secao h2 { color: #65c2ff; }
+.produto-descricao { color: #c5d3e5; }
+
+.produto-especificacao {
+    background: rgba(255,255,255,.055);
+    border-color: rgba(140, 182, 231, .16);
+}
+.produto-especificacao span { color: #8fa9c5; }
+.produto-especificacao strong { color: #f2f7fd; }
+
+.produto-chip {
+    background: rgba(22, 135, 255, .14);
+    border-color: rgba(74, 164, 255, .34);
+    color: #a9d8ff;
+}
+.produto-chip.tag {
+    background: rgba(242, 59, 74, .10);
+    border-color: rgba(242, 89, 102, .28);
+    color: #ffc0c6;
+}
+
+.produto-quantidade-linha label { color: #d7e4f2; }
+.produto-quantidade { background: #f7fbff; border-color: rgba(112, 180, 255, .55); }
+.produto-btn.secundario { background: rgba(255,255,255,.07); border-color: rgba(152,190,234,.26); color: #e8f2fc; }
+.produto-ajuda { color: #9eb0c5; }
+.produto-ajuda a { color: #6ec5ff; }
+
+@media (max-width: 960px) {
+    .produto-visual { border-bottom-color: rgba(133, 184, 241, .16); }
+}
+
 @media (prefers-reduced-motion: reduce) {
     .produto-imagem-box img,
     .produto-btn,

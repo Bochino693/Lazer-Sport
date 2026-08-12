@@ -3,14 +3,33 @@ from decimal import Decimal
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
-from django.test import RequestFactory, SimpleTestCase, TestCase, override_settings
+from django.core.cache import cache
+from django.core.cache.utils import make_template_fragment_key
+from django.test import (
+    RequestFactory,
+    SimpleTestCase,
+    TestCase,
+    TransactionTestCase,
+    override_settings,
+)
 from django.urls import reverse
 
 from .catalog_images import (
     adicionar_imagens_atuais_como_primeira,
     numerar_imagens_existentes_das_pecas,
 )
-from .models import Brinquedos, ImagemBrinquedo, ImagemPeca, PecasReposicao
+from .home_cache import (
+    HOME_CONTEXT_CACHE_KEY,
+    HOME_FRAGMENT_NAME,
+    get_cached_home_context,
+)
+from .models import (
+    Brinquedos,
+    CategoriasBrinquedos,
+    ImagemBrinquedo,
+    ImagemPeca,
+    PecasReposicao,
+)
 from .views import gerar_pix, processar_cartao
 
 
@@ -268,3 +287,85 @@ class CatalogImageMigrationTests(TestCase):
         self.assertEqual(resposta_peca.status_code, 200)
         self.assertContains(resposta_peca, 'data-foto-indice="1"')
         self.assertContains(resposta_peca, "Código LS-P")
+
+
+@override_settings(HOME_CACHE_TTL=600)
+class HomePublicCacheTests(SimpleTestCase):
+    def setUp(self):
+        cache.clear()
+
+    def tearDown(self):
+        cache.clear()
+
+    def test_builder_roda_uma_vez_enquanto_cache_estiver_valido(self):
+        builder = MagicMock(return_value={"brinquedos_count": 7})
+
+        primeiro = get_cached_home_context(builder)
+        segundo = get_cached_home_context(builder)
+
+        self.assertEqual(primeiro, segundo)
+        self.assertEqual(builder.call_count, 1)
+
+        # Quem recebe o contexto pode acrescentar dados sem sujar o cache.
+        primeiro["temporario"] = True
+        self.assertNotIn("temporario", get_cached_home_context(builder))
+
+
+@override_settings(HOME_CACHE_TTL=600)
+class HomeCacheInvalidationTests(TransactionTestCase):
+    def setUp(self):
+        cache.clear()
+
+    def tearDown(self):
+        cache.clear()
+
+    def _preencher_cache(self):
+        cache.set(HOME_CONTEXT_CACHE_KEY, {"antigo": True}, 600)
+        cache.set(
+            make_template_fragment_key(HOME_FRAGMENT_NAME),
+            "html antigo",
+            600,
+        )
+
+    def test_save_no_catalogo_invalida_dados_e_html_da_home(self):
+        self._preencher_cache()
+
+        Brinquedos.objects.create(
+            nome_brinquedo="Novo brinquedo",
+            descricao="Descrição",
+            avaliacao=Decimal("5.00"),
+            voltz="220V",
+        )
+
+        self.assertIsNone(cache.get(HOME_CONTEXT_CACHE_KEY))
+        self.assertIsNone(
+            cache.get(make_template_fragment_key(HOME_FRAGMENT_NAME))
+        )
+
+    def test_alteracao_many_to_many_tambem_invalida_home(self):
+        brinquedo = Brinquedos.objects.create(
+            nome_brinquedo="Brinquedo categorizado",
+            descricao="Descrição",
+            avaliacao=Decimal("4.50"),
+            voltz="220V",
+        )
+        categoria = CategoriasBrinquedos.objects.create(
+            nome_categoria="Interativos",
+        )
+        self._preencher_cache()
+
+        brinquedo.categorias_brinquedos.add(categoria)
+
+        self.assertIsNone(cache.get(HOME_CONTEXT_CACHE_KEY))
+        self.assertIsNone(
+            cache.get(make_template_fragment_key(HOME_FRAGMENT_NAME))
+        )
+
+    def test_segunda_visita_anonima_nao_repete_consultas_da_home(self):
+        primeira = self.client.get(reverse("home"))
+        self.assertEqual(primeira.status_code, 200)
+
+        with self.assertNumQueries(0):
+            segunda = self.client.get(reverse("home"))
+
+        self.assertEqual(segunda.status_code, 200)

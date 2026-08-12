@@ -504,3 +504,11 @@ CACHES = {
         "LOCATION": "lazersport",
     }
 }
+
+# A Home usa somente dados públicos nesse cache. Carrinho, usuário e mensagens
+# continuam fora dele. Como saves no catálogo invalidam a chave na hora, um TTL
+# maior reduz consultas e tráfego no Supabase sem atrasar atualizações do admin.
+try:
+    HOME_CACHE_TTL = max(60, int(os.getenv("HOME_CACHE_TTL", "1800")))
+except ValueError:
+    HOME_CACHE_TTL = 1800
