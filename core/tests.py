@@ -3,8 +3,14 @@ from decimal import Decimal
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
-from django.test import RequestFactory, SimpleTestCase, override_settings
+from django.test import RequestFactory, SimpleTestCase, TestCase, override_settings
+from django.urls import reverse
 
+from .catalog_images import (
+    adicionar_imagens_atuais_como_primeira,
+    numerar_imagens_existentes_das_pecas,
+)
+from .models import Brinquedos, ImagemBrinquedo, ImagemPeca, PecasReposicao
 from .views import gerar_pix, processar_cartao
 
 
@@ -169,3 +175,96 @@ class MercadoPagoCardTests(SimpleTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTrue(body["aprovado"])
         self.assertEqual(carrinho.mp_payment_id, "987654")
+
+
+class CatalogImageMigrationTests(TestCase):
+    def test_imagem_antiga_vira_foto_um_sem_duplicar(self):
+        brinquedo = Brinquedos.objects.create(
+            nome_brinquedo="Brinquedo de teste",
+            imagem_brinquedo="imagens_brinquedos/original.jpg",
+            descricao="Descrição",
+            avaliacao=Decimal("5.00"),
+            voltz="220V",
+        )
+
+        self.assertEqual(adicionar_imagens_atuais_como_primeira(), 1)
+        self.assertEqual(adicionar_imagens_atuais_como_primeira(), 0)
+
+        imagem = ImagemBrinquedo.objects.get(brinquedo=brinquedo)
+        self.assertEqual(imagem.ordem, 1)
+        self.assertEqual(
+            imagem.imagem.name,
+            "imagens_brinquedos/original.jpg",
+        )
+        self.assertEqual(brinquedo.imagem_catalogo.name, imagem.imagem.name)
+
+    def test_peca_prioriza_frente_e_numera_as_demais(self):
+        peca = PecasReposicao.objects.create(
+            nome="Peça de teste",
+            descricao_peca="Descrição",
+        )
+        detalhe = ImagemPeca.objects.create(
+            peca_reposicao=peca,
+            imagem="pecas_reposicao/detalhe.jpg",
+            posicao=ImagemPeca.PosicaoImagem.DETALHE,
+            ordem=1,
+        )
+        frente = ImagemPeca.objects.create(
+            peca_reposicao=peca,
+            imagem="pecas_reposicao/frente.jpg",
+            posicao=ImagemPeca.PosicaoImagem.FRENTE,
+            ordem=2,
+        )
+
+        self.assertEqual(numerar_imagens_existentes_das_pecas(), 2)
+
+        detalhe.refresh_from_db()
+        frente.refresh_from_db()
+        self.assertEqual(frente.ordem, 1)
+        self.assertEqual(detalhe.ordem, 2)
+        self.assertEqual(peca.imagem_principal.pk, frente.pk)
+
+    def test_telas_de_detalhe_exibem_galerias(self):
+        brinquedo = Brinquedos.objects.create(
+            nome_brinquedo="Brinquedo galeria",
+            imagem_brinquedo="imagens_brinquedos/principal.jpg",
+            descricao="Descrição completa do brinquedo",
+            avaliacao=Decimal("4.50"),
+            voltz="220V",
+        )
+        for ordem in (1, 2):
+            ImagemBrinquedo.objects.create(
+                brinquedo=brinquedo,
+                imagem=f"imagens_brinquedos/foto-{ordem}.jpg",
+                ordem=ordem,
+            )
+
+        resposta_brinquedo = self.client.get(
+            reverse("brinquedo_detalhe", args=[brinquedo.id])
+        )
+        self.assertEqual(resposta_brinquedo.status_code, 200)
+        self.assertContains(resposta_brinquedo, 'data-galeria-indice="1"')
+        self.assertContains(resposta_brinquedo, "1 / 2")
+
+        peca = PecasReposicao.objects.create(
+            nome="Peça galeria",
+            descricao_peca="Descrição completa da peça",
+            preco_venda=Decimal("129.90"),
+        )
+        for ordem, posicao in (
+            (1, ImagemPeca.PosicaoImagem.FRENTE),
+            (2, ImagemPeca.PosicaoImagem.DETALHE),
+        ):
+            ImagemPeca.objects.create(
+                peca_reposicao=peca,
+                imagem=f"pecas_reposicao/foto-{ordem}.jpg",
+                ordem=ordem,
+                posicao=posicao,
+            )
+
+        resposta_peca = self.client.get(
+            reverse("reposicao_detalhe", args=[peca.id])
+        )
+        self.assertEqual(resposta_peca.status_code, 200)
+        self.assertContains(resposta_peca, 'data-foto-indice="1"')
+        self.assertContains(resposta_peca, "Código LS-P")

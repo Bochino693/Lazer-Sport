@@ -13,7 +13,7 @@ from .forms import (
 
 from django.contrib.auth.mixins import LoginRequiredMixin
 
-from .models import Brinquedos, CategoriasBrinquedos, Projetos, Eventos, ClientePerfil, Combos, Cupom, Promocoes, \
+from .models import Brinquedos, ImagemBrinquedo, CategoriasBrinquedos, Projetos, Eventos, ClientePerfil, Combos, Cupom, Promocoes, \
     TagsBrinquedos, ImagensSite, BrinquedosProjeto, Estabelecimentos, Manutencao, ManutencaoImagem, \
     BrinquedoClick, ComboClick, PromocaoClick, CategoriaClick, PecasReposicao, CategoriaPeca, \
     ImagemProjetoBrinquedo, ImagemEvento, Clientes, EnderecoEmpresa
@@ -365,10 +365,20 @@ class ReposicaoView(View):
 
 class ReposicaoDetalheView(View):
     def get(self, request, pk):
-        peca = get_object_or_404(PecasReposicao, pk=pk)
+        peca = get_object_or_404(
+            PecasReposicao.objects.prefetch_related(
+                "imagem_peca_reposicao",
+                "categoria_peca",
+            ),
+            pk=pk,
+            ativo=True,
+        )
+        imagens = list(peca.imagens_ordenadas)
 
         return render(request, 'reposicao_info.html', {
-            'peca': peca
+            'peca': peca,
+            'imagens_peca': imagens,
+            'categorias_peca': list(peca.categoria_peca.all()),
         })
 
 
@@ -653,6 +663,7 @@ class BrinquedoInfoView(View):
             Brinquedos.objects.prefetch_related(
                 "categorias_brinquedos",
                 "tags",
+                "imagens_brinquedo",
             ),
             id=id,
             ativo=True,
@@ -742,10 +753,12 @@ class BrinquedoInfoView(View):
             for categoria in categorias
         )
 
+        imagens_brinquedo = list(brinquedo.imagens_ordenadas)
+        imagem_catalogo = brinquedo.imagem_catalogo
         imagem_url = ""
-        if brinquedo.imagem_brinquedo:
+        if imagem_catalogo:
             imagem_url = request.build_absolute_uri(
-                brinquedo.imagem_brinquedo.url
+                imagem_catalogo.url
             )
 
         context = {
@@ -756,6 +769,7 @@ class BrinquedoInfoView(View):
             "preco_schema": preco_schema,
             "produto_url": produto_url,
             "imagem_url": imagem_url,
+            "imagens_brinquedo": imagens_brinquedo,
             "whatsapp_url": whatsapp_url,
             "permite_sob_medida": permite_sob_medida,
         }
@@ -2289,7 +2303,11 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
             )
 
             nome = request.POST.get("nome_brinquedo", "").strip()
-            imagem = request.FILES.get("imagem_brinquedo")
+            imagens = request.FILES.getlist("imagens_brinquedo")
+            if not imagens:
+                imagem_legada = request.FILES.get("imagem_brinquedo")
+                imagens = [imagem_legada] if imagem_legada else []
+            imagem = imagens[0] if imagens else None
             descricao = request.POST.get("descricao", "").strip()
             preco = request.POST.get("valor_brinquedo")
             avaliacao = request.POST.get("avaliacao")
@@ -2310,6 +2328,27 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
                     "Selecione uma imagem para o novo brinquedo."
                 )
                 return redirect("brinquedos_admin")
+
+            if len(imagens) > 8:
+                messages.error(
+                    request,
+                    "Selecione no máximo 8 imagens por brinquedo."
+                )
+                return redirect("brinquedos_admin")
+
+            for arquivo in imagens:
+                if arquivo.size > 15 * 1024 * 1024:
+                    messages.error(
+                        request,
+                        f"A imagem '{arquivo.name}' ultrapassa o limite de 15 MB."
+                    )
+                    return redirect("brinquedos_admin")
+                if not (arquivo.content_type or "").startswith("image/"):
+                    messages.error(
+                        request,
+                        f"O arquivo '{arquivo.name}' não é uma imagem válida."
+                    )
+                    return redirect("brinquedos_admin")
 
             def parse_decimal(v, nome_campo, limite=None):
                 if v is None or not str(v).strip():
@@ -2402,6 +2441,18 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
 
             criando = not brinquedo.pk
             brinquedo.save()
+            if imagens:
+                brinquedo.imagens_brinquedo.all().delete()
+                brinquedo.sincronizar_imagem_legada_com_galeria()
+                for ordem, arquivo in enumerate(imagens[1:], start=2):
+                    ImagemBrinquedo.objects.create(
+                        brinquedo=brinquedo,
+                        imagem=arquivo,
+                        ordem=ordem,
+                        texto_alternativo=(
+                            f"{brinquedo.nome_brinquedo} — foto {ordem}"
+                        ),
+                    )
             brinquedo.categorias_brinquedos.set(categorias_ids)
             brinquedo.tags.set(tags_ids)
 

@@ -1274,7 +1274,7 @@
         <section class="toy-form-section">
           <div class="toy-form-title">
             <svg><use href="#toy-i-game"/></svg>
-            <span><strong>Identificação</strong><span>Nome, descrição e imagem principal do produto.</span></span>
+            <span><strong>Identificação</strong><span>Nome, descrição e galeria do produto.</span></span>
           </div>
           <div class="toy-form-grid">
             <div class="toy-field is-full">
@@ -1282,18 +1282,18 @@
               <input id="toyName" type="text" name="nome_brinquedo" required maxlength="150">
             </div>
             <div class="toy-field is-full">
-              <label>Imagem principal <small id="toyImageRequirement">Obrigatória no cadastro</small></label>
+              <label>Galeria de imagens <small id="toyImageRequirement">Obrigatória no cadastro</small></label>
               <div class="toy-upload">
                 <span id="toyImagePreview" class="toy-upload-preview">
                   <svg><use href="#toy-i-image"/></svg>
                   <img id="toyImagePreviewImg" alt="Pré-visualização">
                 </span>
                 <span class="toy-upload-copy">
-                  <strong id="toyImageFileName">Escolha uma imagem</strong>
-                  <span>Use uma foto horizontal em PNG, JPG ou WEBP.</span>
+                  <strong id="toyImageFileName">Escolha de 1 a 8 imagens</strong>
+                  <span>A primeira será a foto principal. Uma nova seleção substitui a galeria atual.</span>
                   <label class="toy-file-button">
-                    <svg><use href="#toy-i-upload"/></svg>Selecionar arquivo
-                    <input id="toyImage" type="file" name="imagem_brinquedo" accept="image/png,image/jpeg,image/webp">
+                    <svg><use href="#toy-i-upload"/></svg>Selecionar imagens
+                    <input id="toyImage" type="file" name="imagens_brinquedo" accept="image/png,image/jpeg,image/webp" multiple>
                   </label>
                 </span>
               </div>
@@ -1566,7 +1566,7 @@
   function resetImagePreview() {
     toyImagePreview.classList.remove('has-image');
     toyImagePreviewImg.removeAttribute('src');
-    toyImageFileName.textContent = 'Escolha uma imagem';
+    toyImageFileName.textContent = 'Escolha de 1 a 8 imagens';
   }
 
   function markChecks(name, ids) {
@@ -1607,7 +1607,7 @@
       if (toy.imagem_url) {
         toyImagePreviewImg.src = toy.imagem_url;
         toyImagePreview.classList.add('has-image');
-        toyImageFileName.textContent = 'Manter imagem atual ou selecionar outra';
+        toyImageFileName.textContent = 'Galeria atual mantida — selecione para substituir';
       }
     } else {
       markChecks('categorias_brinquedos', []);
@@ -1660,24 +1660,34 @@
   });
 
   toyImage.addEventListener('change', function () {
-    const file = toyImage.files && toyImage.files[0];
+    const files = Array.from(toyImage.files || []);
+    const file = files[0];
     if (!file) return resetImagePreview();
 
-    if (!file.type.startsWith('image/')) {
+    if (files.length > 8) {
       toyImage.value = '';
       resetImagePreview();
-      window.alert('Selecione um arquivo de imagem válido.');
+      window.alert('Selecione no máximo 8 imagens.');
       return;
     }
 
-    if (file.size > 15 * 1024 * 1024) {
+    if (files.some(item => !item.type.startsWith('image/'))) {
       toyImage.value = '';
       resetImagePreview();
-      window.alert('A imagem deve ter no máximo 15 MB.');
+      window.alert('Todos os arquivos selecionados devem ser imagens.');
       return;
     }
 
-    toyImageFileName.textContent = file.name;
+    if (files.some(item => item.size > 15 * 1024 * 1024)) {
+      toyImage.value = '';
+      resetImagePreview();
+      window.alert('Cada imagem deve ter no máximo 15 MB.');
+      return;
+    }
+
+    toyImageFileName.textContent = files.length === 1
+      ? file.name
+      : `${files.length} imagens selecionadas — ${file.name} será a principal`;
     const reader = new FileReader();
     reader.addEventListener('load', function () {
       toyImagePreviewImg.src = reader.result;

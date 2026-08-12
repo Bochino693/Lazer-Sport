@@ -14,7 +14,7 @@
     "name": "{{ brinquedo.nome_brinquedo|escapejs }}",
     "description": "{{ brinquedo.descricao|striptags|escapejs }}",
     "url": "{{ produto_url|escapejs }}",
-    {% if imagem_url %}"image": "{{ imagem_url|escapejs }}",{% endif %}
+    {% if imagens_brinquedo %}"image": [{% for foto in imagens_brinquedo %}"{{ foto.imagem.url|escapejs }}"{% if not forloop.last %},{% endif %}{% endfor %}],{% elif imagem_url %}"image": "{{ imagem_url|escapejs }}",{% endif %}
     "brand": {
         "@type": "Brand",
         "name": "Lazer & Sport Brinquedos"
@@ -176,6 +176,7 @@
     justify-content: center;
     overflow: hidden;
     padding: 18px;
+    position: relative;
 }
 
 .produto-imagem-box img {
@@ -188,6 +189,88 @@
 
 .produto-imagem-box:hover img {
     transform: scale(1.025);
+}
+
+.produto-galeria-controles {
+    align-items: center;
+    display: flex;
+    inset: 50% 12px auto;
+    justify-content: space-between;
+    pointer-events: none;
+    position: absolute;
+    transform: translateY(-50%);
+    z-index: 3;
+}
+
+.produto-galeria-seta {
+    align-items: center;
+    backdrop-filter: blur(8px);
+    background: rgba(255, 255, 255, .9);
+    border: 1px solid #d8e2ef;
+    border-radius: 50%;
+    box-shadow: 0 8px 20px rgba(16, 43, 77, .14);
+    color: var(--ls-azul-escuro);
+    cursor: pointer;
+    display: inline-flex;
+    font-size: 1.15rem;
+    height: 42px;
+    justify-content: center;
+    pointer-events: auto;
+    transition: transform .2s ease, background .2s ease;
+    width: 42px;
+}
+
+.produto-galeria-seta:hover {
+    background: #fff;
+    transform: scale(1.06);
+}
+
+.produto-galeria-contador {
+    background: rgba(8, 42, 94, .84);
+    border-radius: 999px;
+    bottom: 14px;
+    color: #fff;
+    font-size: .76rem;
+    font-weight: 800;
+    padding: 6px 10px;
+    position: absolute;
+    right: 14px;
+    z-index: 3;
+}
+
+.produto-miniaturas {
+    display: grid;
+    gap: 10px;
+    grid-auto-columns: 78px;
+    grid-auto-flow: column;
+    margin-top: 12px;
+    overflow-x: auto;
+    padding: 2px 2px 7px;
+    scrollbar-width: thin;
+}
+
+.produto-miniatura {
+    aspect-ratio: 1;
+    background: #fff;
+    border: 2px solid transparent;
+    border-radius: 14px;
+    cursor: pointer;
+    overflow: hidden;
+    padding: 4px;
+    transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease;
+}
+
+.produto-miniatura:hover,
+.produto-miniatura.ativa {
+    border-color: var(--ls-azul);
+    box-shadow: 0 5px 15px rgba(7, 88, 201, .16);
+    transform: translateY(-1px);
+}
+
+.produto-miniatura img {
+    height: 100%;
+    object-fit: cover;
+    width: 100%;
 }
 
 .produto-sem-imagem {
@@ -823,8 +906,27 @@
                 {% endif %}
 
                 <div class="produto-imagem-box">
-                    {% if brinquedo.imagem_brinquedo %}
+                    {% if imagens_brinquedo %}
+                        {% with principal=imagens_brinquedo.0 %}
+                            <img
+                                id="produto-imagem-principal"
+                                src="{{ principal.imagem.url }}"
+                                alt="{% if principal.texto_alternativo %}{{ principal.texto_alternativo }}{% else %}{{ brinquedo.nome_brinquedo }} - foto 1{% endif %}"
+                                width="760"
+                                height="760"
+                                fetchpriority="high"
+                            >
+                        {% endwith %}
+                        {% if imagens_brinquedo|length > 1 %}
+                            <div class="produto-galeria-controles" aria-label="Navegar pelas fotos">
+                                <button class="produto-galeria-seta" type="button" data-galeria-anterior aria-label="Foto anterior">‹</button>
+                                <button class="produto-galeria-seta" type="button" data-galeria-proxima aria-label="Próxima foto">›</button>
+                            </div>
+                            <span class="produto-galeria-contador" id="produto-galeria-contador">1 / {{ imagens_brinquedo|length }}</span>
+                        {% endif %}
+                    {% elif brinquedo.imagem_brinquedo %}
                         <img
+                            id="produto-imagem-principal"
                             src="{{ brinquedo.imagem_brinquedo.url }}"
                             alt="{{ brinquedo.nome_brinquedo }} - Lazer & Sport Brinquedos"
                             width="760"
@@ -838,6 +940,24 @@
                         </div>
                     {% endif %}
                 </div>
+
+                {% if imagens_brinquedo|length > 1 %}
+                    <div class="produto-miniaturas" aria-label="Fotos de {{ brinquedo.nome_brinquedo }}">
+                        {% for foto in imagens_brinquedo %}
+                            <button
+                                class="produto-miniatura{% if forloop.first %} ativa{% endif %}"
+                                type="button"
+                                data-galeria-indice="{{ forloop.counter0 }}"
+                                data-galeria-src="{{ foto.imagem.url }}"
+                                data-galeria-alt="{% if foto.texto_alternativo %}{{ foto.texto_alternativo }}{% else %}{{ brinquedo.nome_brinquedo }} - foto {{ forloop.counter }}{% endif %}"
+                                aria-label="Exibir foto {{ forloop.counter }} de {{ imagens_brinquedo|length }}"
+                                aria-current="{% if forloop.first %}true{% else %}false{% endif %}"
+                            >
+                                <img src="{{ foto.imagem.url }}" alt="" loading="lazy" width="78" height="78">
+                            </button>
+                        {% endfor %}
+                    </div>
+                {% endif %}
 
                 <div class="produto-garantias" aria-label="Diferenciais Lazer & Sport">
                     <div class="produto-garantia">
@@ -1063,6 +1183,40 @@
 <script>
 (function () {
     'use strict';
+
+    const imagemPrincipal = document.getElementById('produto-imagem-principal');
+    const miniaturas = Array.from(document.querySelectorAll('[data-galeria-indice]'));
+    const contadorGaleria = document.getElementById('produto-galeria-contador');
+    let indiceGaleria = 0;
+
+    function exibirFoto(indice) {
+        if (!imagemPrincipal || !miniaturas.length) return;
+        indiceGaleria = (indice + miniaturas.length) % miniaturas.length;
+        const miniatura = miniaturas[indiceGaleria];
+        imagemPrincipal.src = miniatura.dataset.galeriaSrc;
+        imagemPrincipal.alt = miniatura.dataset.galeriaAlt;
+        miniaturas.forEach((item, posicao) => {
+            const ativa = posicao === indiceGaleria;
+            item.classList.toggle('ativa', ativa);
+            item.setAttribute('aria-current', String(ativa));
+        });
+        miniatura.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+        if (contadorGaleria) {
+            contadorGaleria.textContent = `${indiceGaleria + 1} / ${miniaturas.length}`;
+        }
+    }
+
+    miniaturas.forEach((miniatura, indice) => {
+        miniatura.addEventListener('click', () => exibirFoto(indice));
+    });
+    document.querySelector('[data-galeria-anterior]')?.addEventListener(
+        'click',
+        () => exibirFoto(indiceGaleria - 1)
+    );
+    document.querySelector('[data-galeria-proxima]')?.addEventListener(
+        'click',
+        () => exibirFoto(indiceGaleria + 1)
+    );
 
     const estrelas = document.getElementById('produto-estrelas');
     if (estrelas) {

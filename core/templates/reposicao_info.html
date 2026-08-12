@@ -2,25 +2,21 @@
 {% load static %}
 
 {% block title %}{{ peca.nome }} | Peça de Reposição - Lazer & Sport{% endblock %}
-
 {% block meta_description %}{{ peca.nome }}: {{ peca.descricao_peca|truncatechars:140 }}{% endblock %}
 
 {% block content %}
-
 <script type="application/ld+json">
 {
     "@context": "https://schema.org/",
     "@type": "Product",
     "name": "{{ peca.nome|escapejs }}",
     "description": "{{ peca.descricao_peca|escapejs }}",
-    {% with img=peca.imagem_principal %}{% if img %}"image": "{{ img.imagem.url }}",{% endif %}{% endwith %}
-    "brand": {
-        "@type": "Brand",
-        "name": "Lazer & Sport Brinquedos"
-    },
+    "sku": "LS-P{{ peca.id|stringformat:'05d' }}",
+    {% if imagens_peca %}"image": [{% for foto in imagens_peca %}"{{ foto.imagem.url|escapejs }}"{% if not forloop.last %},{% endif %}{% endfor %}],{% endif %}
+    "brand": {"@type": "Brand", "name": "Lazer & Sport Brinquedos"},
     "offers": {
         "@type": "Offer",
-        "url": "https://www.lazersport.com.br/pecas/{{ peca.id }}/",
+        "url": "{{ request.build_absolute_uri|escapejs }}",
         "priceCurrency": "BRL",
         "price": "{{ peca.preco_venda|default:'0'|stringformat:'s' }}",
         "availability": "https://schema.org/InStock",
@@ -30,426 +26,480 @@
 </script>
 
 <style>
-
-
-/* ===== override breadcrumb (template mãe) ===== */
-.breadcrumb {
-    font-weight: 600; /* bold normal */
+.peca-page {
+    --ls-blue: #0758c9;
+    --ls-navy: #082a5e;
+    --ls-green: #14804a;
+    --ls-text: #172033;
+    --ls-muted: #667085;
+    --ls-line: #dfe7f2;
+    background:
+        radial-gradient(circle at 8% 2%, rgba(7, 88, 201, .12), transparent 30rem),
+        radial-gradient(circle at 94% 17%, rgba(229, 38, 43, .08), transparent 25rem),
+        #f4f7fb;
+    color: var(--ls-text);
+    min-height: 72vh;
+    padding: 24px 18px 72px;
 }
 
-.breadcrumb a,
-.breadcrumb span,
-.breadcrumb strong {
-    color: #444 !important; /* ajuste se quiser */
-    font-weight: 600;
-}
-
-/* hover suave */
-.breadcrumb a:hover {
-    color: #0d6efd !important;
-}
-
-
-/* ===== CONTAINER ===== */
-.produto-container {
-    max-width: 1100px;
-    margin: 40px auto;
-    padding: 30px;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 40px;
-    background: #ffffff;
-    border-radius: 22px;
-    box-shadow: 0 10px 35px rgba(0,0,0,0.08);
-    align-items: start;
-}
-
-/* ===== IMAGEM WRAPPER ===== */
-.produto-img {
-    position: relative;
-    overflow: hidden;
-    border-radius: 22px;
-    background: linear-gradient(180deg,#f8f9fa,#eef1f4);
-}
-
-/* ===== IMAGEM ===== */
-.produto-img img {
-    width: 100%;
-    height: auto;
-    display: block;
-    border-radius: 22px;
-    transition: transform .5s ease, filter .4s ease;
-}
-
-/* efeito premium hover */
-.produto-img:hover img {
-    transform: scale(1.06);
-    filter: brightness(1.03);
-}
-
-/* ===== INFO ===== */
-.produto-info {
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-start;
-}
-
-.produto-info h1 {
-    font-size: 2rem;
-    font-weight: 700;
-    color: #222;
-    margin-bottom: 10px;
-    line-height: 1.2;
-}
-
-/* ===== PREÇO ===== */
-.preco {
-    font-size: 2.1rem;
-    font-weight: 800;
-    color: #0d6efd;
-    margin-bottom: 18px;
-    letter-spacing: -0.5px;
-}
-
-/* ===== DESCRIÇÃO ===== */
-.sec-titulo {
-    font-size: 1.05rem;
-    font-weight: 700;
-    margin-top: 20px;
-    margin-bottom: 6px;
-    color: #2c2c2c;
-}
-
-.descricao-produto {
-    font-size: 1rem;
-    line-height: 1.75;
-    color: #495057;
-    background: #f8f9fa;
-    padding: 14px 16px;
-    border-radius: 12px;
-    border: 1px solid #eef1f4;
-}
-
-/* ===== PREÇO PRINCIPAL ===== */
-/* ===== PREÇO PRINCIPAL ===== */
-.preco {
-    font-size: 2.2rem;
-    font-weight: 800;
-    color: #0d6efd;
-    margin: 12px 0 22px;
-    letter-spacing: -0.5px;
-    text-align: left;
-}
-
-/* preço fornecedor */
-.preco-fornecedor {
-    font-size: 1.05rem;
-    color: #6c757d;
-    font-weight: 600;
-}
-
-.produto-info {
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-start;
-    gap: 6px;
-}
-
-
-/* ===== BOTÕES ===== */
-.acoes-produto {
-    margin-top: 26px;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
-.btn-acao {
-    display: block;
-    width: 100%;
-    padding: 13px 0;
-    border-radius: 14px;
-    font-weight: 700;
-    text-align: center;
-    text-decoration: none;
-    transition: .25s ease;
-    font-size: .95rem;
-}
-
-/* WhatsApp */
-.btn-whatsapp {
-    background: linear-gradient(135deg, #25D366, #1ebe5d);
-    color: white;
-}
-
-.btn-whatsapp:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 18px rgba(37,211,102,.35);
-}
-
-/* Carrinho */
-.btn-carrinho {
-    background: #0d6efd;
-    color: white;
-}
-
-.btn-carrinho:hover {
-    background: #0b5ed7;
-    transform: translateY(-2px);
-}
-
-/* Voltar */
-.btn-voltar {
-    background: #f1f1f1;
-    color: #333;
-    border: 1px solid #ddd;
-}
-
-.btn-voltar:hover {
-    background: #e7e7e7;
-}
-
-/* ===== TABLET ===== */
-@media (max-width: 992px) {
-    .produto-container {
-        gap: 28px;
-        padding: 24px;
-    }
-
-    .produto-info h1 {
-        font-size: 1.7rem;
-    }
-}
-
-/* ===== MOBILE ===== */
-@media (max-width: 768px) {
-    .produto-container {
-        grid-template-columns: 1fr;
-        padding: 16px;
-        gap: 22px;
-    }
-
-    /* ⭐ imagem vem primeiro */
-    .produto-img {
-        order: 1;
-    }
-
-    .produto-info {
-        order: 2;
-    }
-
-    .produto-info h1 {
-        font-size: 1.45rem;
-    }
-
-    .preco {
-        font-size: 1.7rem;
-    }
-
-    .btn-acao {
-        padding: 14px 0;
-        font-size: 1rem;
-    }
-}
-
-/* ===== MOBILE PEQUENO ===== */
-@media (max-width: 420px) {
-    .produto-container {
-        margin: 20px 10px;
-        border-radius: 18px;
-    }
-
-    .produto-img img {
-        border-radius: 18px;
-    }
-}
-
-
-.quantidade-box {
-    display: flex;
+.peca-page, .peca-page * { box-sizing: border-box; }
+.peca-wrap { margin: 0 auto; max-width: 1220px; }
+.peca-breadcrumb {
     align-items: center;
-    justify-content: center;
+    color: #697586;
+    display: flex;
+    flex-wrap: wrap;
+    font-size: .88rem;
+    gap: 9px;
+    margin-bottom: 20px;
+}
+.peca-breadcrumb a { color: var(--ls-blue); font-weight: 750; text-decoration: none; }
+.peca-breadcrumb a:hover { text-decoration: underline; }
+.peca-breadcrumb span { color: #a5afbd; }
+.peca-breadcrumb strong {
+    color: #344054;
+    max-width: min(52vw, 440px);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.peca-shell {
+    background: rgba(255, 255, 255, .98);
+    border: 1px solid rgba(213, 224, 239, .95);
+    border-radius: 30px;
+    box-shadow: 0 24px 70px rgba(16, 43, 77, .14);
+    display: grid;
+    grid-template-columns: minmax(0, .96fr) minmax(420px, 1.04fr);
+    overflow: hidden;
+}
+.peca-visual {
+    background:
+        linear-gradient(145deg, rgba(255,255,255,.95), rgba(232,241,255,.86)),
+        repeating-linear-gradient(135deg, transparent 0 22px, rgba(7,88,201,.025) 22px 44px);
+    border-right: 1px solid var(--ls-line);
+    min-width: 0;
+    padding: 30px;
+    position: relative;
+}
+.peca-selo {
+    align-items: center;
+    backdrop-filter: blur(8px);
+    background: rgba(236, 253, 245, .94);
+    border: 1px solid #a6e8c8;
+    border-radius: 999px;
+    color: #087443;
+    display: inline-flex;
+    font-size: .76rem;
+    font-weight: 850;
     gap: 8px;
-    margin-bottom: 10px;
+    left: 44px;
+    letter-spacing: .03em;
+    padding: 9px 13px;
+    position: absolute;
+    text-transform: uppercase;
+    top: 44px;
+    z-index: 4;
 }
-
-.qtd-input {
-    width: 70px;
-    text-align: center;
-    font-size: 1rem;
-    padding: 8px;
-    border-radius: 10px;
-    border: 1px solid #ddd;
-    font-weight: 700;
+.peca-selo::before {
+    background: #18a760;
+    border-radius: 50%;
+    box-shadow: 0 0 0 4px rgba(24, 167, 96, .14);
+    content: "";
+    height: 8px;
+    width: 8px;
 }
-
-.qtd-btn {
-    width: 36px;
-    height: 36px;
-    border-radius: 10px;
-    border: none;
-    background: #0d6efd;
-    color: white;
-    font-size: 18px;
-    font-weight: 700;
+.peca-imagem {
+    align-items: center;
+    aspect-ratio: 1;
+    background: #fff;
+    border: 1px solid #e1e9f4;
+    border-radius: 24px;
+    display: flex;
+    justify-content: center;
+    overflow: hidden;
+    padding: 18px;
+    position: relative;
+}
+.peca-imagem > img {
+    display: block;
+    height: 100%;
+    object-fit: contain;
+    transition: transform .35s ease;
+    width: 100%;
+}
+.peca-imagem:hover > img { transform: scale(1.025); }
+.peca-sem-imagem { color: #98a2b3; font-weight: 700; text-align: center; }
+.peca-sem-imagem i { display: block; font-size: 3rem; margin-bottom: 10px; }
+.peca-galeria-nav {
+    display: flex;
+    inset: 50% 12px auto;
+    justify-content: space-between;
+    pointer-events: none;
+    position: absolute;
+    transform: translateY(-50%);
+    z-index: 3;
+}
+.peca-galeria-nav button {
+    align-items: center;
+    backdrop-filter: blur(8px);
+    background: rgba(255, 255, 255, .9);
+    border: 1px solid #d8e2ef;
+    border-radius: 50%;
+    box-shadow: 0 8px 20px rgba(16, 43, 77, .14);
+    color: var(--ls-navy);
     cursor: pointer;
-    transition: .2s;
+    display: inline-flex;
+    font-size: 1.15rem;
+    height: 42px;
+    justify-content: center;
+    pointer-events: auto;
+    width: 42px;
 }
-
-.qtd-btn:hover {
-    background: #0b5ed7;
+.peca-contador {
+    background: rgba(8, 42, 94, .84);
+    border-radius: 999px;
+    bottom: 14px;
+    color: #fff;
+    font-size: .76rem;
+    font-weight: 800;
+    padding: 6px 10px;
+    position: absolute;
+    right: 14px;
+    z-index: 3;
 }
+.peca-miniaturas {
+    display: grid;
+    gap: 10px;
+    grid-auto-columns: 78px;
+    grid-auto-flow: column;
+    margin-top: 12px;
+    overflow-x: auto;
+    padding: 2px 2px 7px;
+    scrollbar-width: thin;
+}
+.peca-miniatura {
+    aspect-ratio: 1;
+    background: #fff;
+    border: 2px solid transparent;
+    border-radius: 14px;
+    cursor: pointer;
+    overflow: hidden;
+    padding: 4px;
+    transition: border-color .2s, box-shadow .2s, transform .2s;
+}
+.peca-miniatura:hover, .peca-miniatura.ativa {
+    border-color: var(--ls-blue);
+    box-shadow: 0 5px 15px rgba(7, 88, 201, .16);
+    transform: translateY(-1px);
+}
+.peca-miniatura img { height: 100%; object-fit: cover; width: 100%; }
+.peca-beneficios {
+    display: grid;
+    gap: 10px;
+    grid-template-columns: repeat(3, 1fr);
+    margin-top: 18px;
+}
+.peca-beneficio {
+    align-items: center;
+    background: rgba(255,255,255,.82);
+    border: 1px solid #dce6f2;
+    border-radius: 14px;
+    color: #42526a;
+    display: flex;
+    font-size: .75rem;
+    font-weight: 750;
+    gap: 7px;
+    justify-content: center;
+    min-height: 50px;
+    padding: 8px;
+    text-align: center;
+}
+.peca-beneficio i { color: var(--ls-blue); }
+.peca-info { min-width: 0; padding: 42px 44px 40px; }
+.peca-eyebrow {
+    color: var(--ls-blue);
+    font-size: .77rem;
+    font-weight: 900;
+    letter-spacing: .12em;
+    margin: 0 0 9px;
+    text-transform: uppercase;
+}
+.peca-info h1 {
+    color: #101828;
+    font-size: clamp(1.85rem, 3vw, 2.65rem);
+    letter-spacing: -.035em;
+    line-height: 1.08;
+    margin: 0;
+}
+.peca-meta { align-items: center; display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.peca-chip {
+    background: #f0f5fb;
+    border: 1px solid #d8e3f0;
+    border-radius: 999px;
+    color: #46566d;
+    font-size: .77rem;
+    font-weight: 750;
+    padding: 7px 10px;
+}
+.peca-preco-box {
+    background: linear-gradient(145deg, #f8fbff, #edf4ff);
+    border: 1px solid #cfddf2;
+    border-radius: 20px;
+    margin-top: 24px;
+    padding: 20px;
+}
+.peca-preco-label {
+    color: #546178;
+    display: block;
+    font-size: .78rem;
+    font-weight: 800;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+}
+.peca-preco {
+    color: var(--ls-navy);
+    display: block;
+    font-size: clamp(2rem, 4vw, 2.7rem);
+    font-weight: 900;
+    letter-spacing: -.04em;
+    line-height: 1.05;
+    margin-top: 4px;
+}
+.peca-preco-nota { color: #697586; display: block; font-size: .84rem; margin-top: 8px; }
+.peca-secao { border-top: 1px solid #e7edf5; margin-top: 24px; padding-top: 22px; }
+.peca-secao h2 {
+    color: #26354b;
+    font-size: .9rem;
+    font-weight: 850;
+    letter-spacing: .04em;
+    margin: 0 0 10px;
+    text-transform: uppercase;
+}
+.peca-descricao { color: #526074; font-size: .98rem; line-height: 1.72; margin: 0; }
+.peca-detalhes { display: grid; gap: 10px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.peca-detalhe {
+    background: #f7f9fc;
+    border: 1px solid #e4eaf2;
+    border-radius: 13px;
+    padding: 13px 14px;
+}
+.peca-detalhe span { color: #7a8699; display: block; font-size: .73rem; font-weight: 750; }
+.peca-detalhe strong { color: #24354d; display: block; font-size: .9rem; margin-top: 3px; }
+.peca-compra { border-top: 1px solid #e7edf5; margin-top: 24px; padding-top: 22px; }
+.peca-quantidade-linha { align-items: center; display: flex; justify-content: space-between; margin-bottom: 14px; }
+.peca-quantidade-linha label { color: #344054; font-size: .86rem; font-weight: 800; }
+.peca-quantidade { align-items: center; border: 1px solid #d5dfec; border-radius: 12px; display: inline-flex; overflow: hidden; }
+.peca-quantidade button {
+    background: #f7f9fc;
+    border: 0;
+    color: var(--ls-navy);
+    cursor: pointer;
+    font-size: 1.2rem;
+    height: 42px;
+    width: 42px;
+}
+.peca-quantidade input { border: 0; font-weight: 800; height: 42px; text-align: center; width: 56px; }
+.peca-acoes { display: grid; gap: 10px; grid-template-columns: 1fr 1fr; }
+.peca-btn {
+    align-items: center;
+    border: 0;
+    border-radius: 14px;
+    cursor: pointer;
+    display: inline-flex;
+    font-size: .9rem;
+    font-weight: 800;
+    gap: 9px;
+    justify-content: center;
+    min-height: 50px;
+    padding: 12px 16px;
+    text-decoration: none;
+    transition: transform .2s, box-shadow .2s;
+}
+.peca-btn:hover { transform: translateY(-2px); }
+.peca-btn.carrinho { background: linear-gradient(135deg, #0758c9, #06459d); color: #fff; }
+.peca-btn.whatsapp { background: linear-gradient(135deg, #25d366, #159e48); color: #fff; }
+.peca-btn.voltar { background: #f4f6f9; border: 1px solid #dce3ec; color: #405067; grid-column: 1 / -1; }
 
+@media (max-width: 920px) {
+    .peca-shell { grid-template-columns: 1fr; }
+    .peca-visual { border-bottom: 1px solid var(--ls-line); border-right: 0; }
+}
+@media (max-width: 600px) {
+    .peca-page { padding: 16px 10px 52px; }
+    .peca-shell { border-radius: 22px; }
+    .peca-visual, .peca-info { padding: 20px; }
+    .peca-selo { left: 32px; top: 32px; }
+    .peca-beneficios { grid-template-columns: 1fr; }
+    .peca-beneficio { justify-content: flex-start; padding-inline: 14px; }
+    .peca-detalhes, .peca-acoes { grid-template-columns: 1fr; }
+    .peca-btn.voltar { grid-column: auto; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .peca-imagem > img, .peca-miniatura, .peca-btn { transition: none; }
+}
 </style>
 
+<main class="peca-page">
+    <div class="peca-wrap">
+        <nav class="peca-breadcrumb" aria-label="Navegação estrutural">
+            <a href="/">Início</a><span aria-hidden="true">›</span>
+            <a href="{% url 'pecas_reposicao' %}">Peças de reposição</a><span aria-hidden="true">›</span>
+            <strong title="{{ peca.nome }}">{{ peca.nome }}</strong>
+        </nav>
 
-{% block breadcrumb %}
-<nav class="breadcrumb" id="breadcrumb">
-    <a href="/">Home</a>
-    <span>›</span>
-    <a href="{% url 'pecas_reposicao' %}#breadcrumb">Peças de Reposição</a>
-    <span>›</span>
-    <strong>{{ peca.nome }}</strong>
-</nav>
-{% endblock %}
+        <article class="peca-shell">
+            <section class="peca-visual" aria-label="Galeria da peça">
+                <span class="peca-selo">Disponível</span>
+                <div class="peca-imagem">
+                    {% if imagens_peca %}
+                        {% with principal=imagens_peca.0 %}
+                            <img id="peca-imagem-principal" src="{{ principal.imagem.url }}" alt="{{ peca.nome }} - {{ principal.get_posicao_display }}" width="760" height="760" fetchpriority="high">
+                        {% endwith %}
+                        {% if imagens_peca|length > 1 %}
+                            <div class="peca-galeria-nav" aria-label="Navegar pelas fotos">
+                                <button type="button" data-foto-anterior aria-label="Foto anterior">‹</button>
+                                <button type="button" data-foto-proxima aria-label="Próxima foto">›</button>
+                            </div>
+                            <span class="peca-contador" id="peca-contador">1 / {{ imagens_peca|length }}</span>
+                        {% endif %}
+                    {% else %}
+                        <div class="peca-sem-imagem"><i class="fas fa-image" aria-hidden="true"></i>Imagem em atualização</div>
+                    {% endif %}
+                </div>
 
-<!-- ===== CONTAINER ===== -->
-<div class="produto-container" id="container">
+                {% if imagens_peca|length > 1 %}
+                    <div class="peca-miniaturas" aria-label="Fotos de {{ peca.nome }}">
+                        {% for foto in imagens_peca %}
+                            <button class="peca-miniatura{% if forloop.first %} ativa{% endif %}" type="button" data-foto-indice="{{ forloop.counter0 }}" data-foto-src="{{ foto.imagem.url }}" data-foto-alt="{{ peca.nome }} - {{ foto.get_posicao_display }}" aria-label="Exibir {{ foto.get_posicao_display|lower }}, foto {{ forloop.counter }} de {{ imagens_peca|length }}" aria-current="{% if forloop.first %}true{% else %}false{% endif %}">
+                                <img src="{{ foto.imagem.url }}" alt="" loading="lazy" width="78" height="78">
+                            </button>
+                        {% endfor %}
+                    </div>
+                {% endif %}
 
-    <!-- IMAGEM -->
-   <div class="produto-img">
-    {% with img=peca.imagem_principal %}
-        {% if img and img.imagem %}
-            <img src="{{ img.imagem.url }}" alt="{{ peca.nome }}" loading="lazy">
-        {% else %}
-            <img src="{% static 'img/placeholder.png' %}" alt="Sem imagem" loading="lazy">
-        {% endif %}
-    {% endwith %}
-</div>
+                <div class="peca-beneficios" aria-label="Diferenciais">
+                    <div class="peca-beneficio"><i class="fas fa-tools" aria-hidden="true"></i>Suporte especializado</div>
+                    <div class="peca-beneficio"><i class="fas fa-truck" aria-hidden="true"></i>Envio nacional</div>
+                    <div class="peca-beneficio"><i class="fas fa-industry" aria-hidden="true"></i>Direto da fábrica</div>
+                </div>
+            </section>
 
-    <!-- INFO -->
-    <div class="produto-info">
+            <section class="peca-info">
+                <p class="peca-eyebrow">Peça de reposição Lazer &amp; Sport</p>
+                <h1>{{ peca.nome }}</h1>
+                <div class="peca-meta">
+                    <span class="peca-chip">Código LS-P{{ peca.id|stringformat:'05d' }}</span>
+                    {% for categoria in categorias_peca %}<span class="peca-chip">{{ categoria.nome_categoria_peca }}</span>{% endfor %}
+                </div>
 
-        <h1>{{ peca.nome }}</h1>
+                <div class="peca-preco-box">
+                    <span class="peca-preco-label">Preço unitário</span>
+                    <strong class="peca-preco js-preco" data-valor="{{ peca.preco_venda|default:'0'|floatformat:2 }}">R$ 0,00</strong>
+                    <span class="peca-preco-nota">Frete e prazo são calculados conforme o endereço de entrega.</span>
+                </div>
 
-        <p class="preco js-preco"
-           data-valor="{{ peca.preco_venda|floatformat:2 }}">
-           R$ 0,00
-        </p>
+                <section class="peca-secao">
+                    <h2>Sobre esta peça</h2>
+                    <p class="peca-descricao">{{ peca.descricao_peca|linebreaksbr }}</p>
+                </section>
 
-        <p class="sec-titulo">Descrição</p>
-        <p class="descricao-produto">
-            {{ peca.descricao_peca }}
-        </p>
+                <section class="peca-secao">
+                    <h2>Detalhes do produto</h2>
+                    <div class="peca-detalhes">
+                        <div class="peca-detalhe"><span>Condição</span><strong>Produto novo</strong></div>
+                        <div class="peca-detalhe"><span>Disponibilidade</span><strong>Pronta para pedido</strong></div>
+                        <div class="peca-detalhe"><span>Referência</span><strong>LS-P{{ peca.id|stringformat:'05d' }}</strong></div>
+                        <div class="peca-detalhe"><span>Galeria</span><strong>{{ imagens_peca|length }} foto{{ imagens_peca|length|pluralize }}</strong></div>
+                    </div>
+                </section>
 
-
-        <!-- ===== AÇÕES ===== -->
-        <div class="acoes-produto">
-
-            <!-- WhatsApp -->
-            <a href="https://wa.me/5511960563135?text=
-            Olá! 👋%0A
-            Tenho interesse na peça:%0A
-            🔧 {{ peca.nome|urlencode }}%0A
-            💰 Preço: R$ {{ peca.preco_venda|floatformat:2 }}%0A%0A
-            🔗 {{ request.build_absolute_uri|urlencode }}"
-               target="_blank"
-               class="btn-acao btn-whatsapp">
-               <i class="fab fa-whatsapp"></i>
-               Falar com um vendedor
-            </a>
-
-            <div class="quantidade-box">
-                <button type="button" class="qtd-btn" onclick="alterarQtd(-1)">−</button>
-
-                <input type="number"
-                       id="quantidade-input"
-                       value="1"
-                       min="1"
-                       class="qtd-input">
-
-                <button type="button" class="qtd-btn" onclick="alterarQtd(1)">+</button>
-            </div>
-
-            <!-- Carrinho -->
-            <button type="button"
-                    class="btn-acao btn-carrinho"
-                    onclick="adicionarAoCarrinho('peca', {{ peca.id }})">
-                🛒 Adicionar ao Carrinho
-            </button>
-
-            <!-- Voltar -->
-            <a href="{% url 'pecas_reposicao' %}" class="btn-acao btn-voltar">
-                ← Voltar
-            </a>
-
-        </div>
-
+                <div class="peca-compra">
+                    <div class="peca-quantidade-linha">
+                        <label for="quantidade-input">Quantidade</label>
+                        <div class="peca-quantidade">
+                            <button type="button" data-qtd="-1" aria-label="Diminuir quantidade">−</button>
+                            <input id="quantidade-input" type="number" value="1" min="1" max="99" inputmode="numeric">
+                            <button type="button" data-qtd="1" aria-label="Aumentar quantidade">+</button>
+                        </div>
+                    </div>
+                    <div class="peca-acoes">
+                        <button type="button" class="peca-btn carrinho" id="adicionar-peca"><i class="fas fa-cart-plus" aria-hidden="true"></i>Adicionar ao carrinho</button>
+                        <a class="peca-btn whatsapp" href="https://wa.me/5511960563135?text={{ 'Olá! Tenho interesse nesta peça: '|urlencode }}{{ peca.nome|urlencode }}%0A{{ request.build_absolute_uri|urlencode }}" target="_blank" rel="noopener noreferrer"><i class="fab fa-whatsapp" aria-hidden="true"></i>Falar com especialista</a>
+                        <a class="peca-btn voltar" href="{% url 'pecas_reposicao' %}"><i class="fas fa-arrow-left" aria-hidden="true"></i>Continuar no catálogo</a>
+                    </div>
+                </div>
+            </section>
+        </article>
     </div>
-</div>
-
+</main>
 
 <script>
-function formatarMoedaBR(valor) {
-    const numero = Number(valor);
+(function () {
+    'use strict';
+    const principal = document.getElementById('peca-imagem-principal');
+    const miniaturas = Array.from(document.querySelectorAll('[data-foto-indice]'));
+    const contador = document.getElementById('peca-contador');
+    let indiceAtual = 0;
 
-    if (Number.isNaN(numero)) return '0,00';
+    function exibirFoto(indice) {
+        if (!principal || !miniaturas.length) return;
+        indiceAtual = (indice + miniaturas.length) % miniaturas.length;
+        const miniatura = miniaturas[indiceAtual];
+        principal.src = miniatura.dataset.fotoSrc;
+        principal.alt = miniatura.dataset.fotoAlt;
+        miniaturas.forEach((item, posicao) => {
+            const ativa = posicao === indiceAtual;
+            item.classList.toggle('ativa', ativa);
+            item.setAttribute('aria-current', String(ativa));
+        });
+        miniatura.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+        if (contador) contador.textContent = `${indiceAtual + 1} / ${miniaturas.length}`;
+    }
 
-    return numero.toLocaleString('pt-BR', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
+    miniaturas.forEach((item, indice) => item.addEventListener('click', () => exibirFoto(indice)));
+    document.querySelector('[data-foto-anterior]')?.addEventListener('click', () => exibirFoto(indiceAtual - 1));
+    document.querySelector('[data-foto-proxima]')?.addEventListener('click', () => exibirFoto(indiceAtual + 1));
+
+    document.querySelectorAll('.js-preco').forEach((elemento) => {
+        const valor = Number(String(elemento.dataset.valor || '0').replace(',', '.')) || 0;
+        elemento.textContent = valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     });
-}
 
-document.addEventListener('DOMContentLoaded', () => {
-    document.querySelectorAll('.js-preco').forEach(el => {
-        const valor = el.dataset.valor?.replace(',', '.');
-        el.innerText = 'R$ ' + formatarMoedaBR(valor);
+    const quantidade = document.getElementById('quantidade-input');
+    document.querySelectorAll('[data-qtd]').forEach((botao) => {
+        botao.addEventListener('click', () => {
+            const atual = Number.parseInt(quantidade.value, 10) || 1;
+            quantidade.value = Math.max(1, Math.min(99, atual + Number(botao.dataset.qtd)));
+        });
     });
-});
 
-function alterarQtd(delta) {
-    const input = document.getElementById('quantidade-input');
-    let valor = parseInt(input.value) || 1;
-
-    valor += delta;
-    if (valor < 1) valor = 1;
-
-    input.value = valor;
-}
-
-
-function adicionarAoCarrinho(tipo, id) {
-    const input = document.getElementById('quantidade-input');
-    let qtd = parseInt(input?.value);
-
-    if (!qtd || qtd < 1) qtd = 1;
-
-    const body = new URLSearchParams();
-    body.append('quantidade', qtd);
-
-    fetch(`/carrinho/adicionar/${tipo}/${id}/`, {
-        method: 'POST',
-        credentials: 'same-origin', // ⭐ MUITO IMPORTANTE
-        headers: {
-            'X-CSRFToken': '{{ csrf_token }}',
-            'X-Requested-With': 'XMLHttpRequest',
-            'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
-        },
-        body: body.toString()
-    })
-    .then(res => res.json())
-    .then(data => {
-        console.log('Quantidade enviada:', qtd);
-        console.log('Resposta:', data);
-        alert('Produto adicionado ao carrinho!');
-    })
-    .catch(err => {
-        console.error(err);
-        alert('Erro ao adicionar.');
+    document.getElementById('adicionar-peca')?.addEventListener('click', async (evento) => {
+        const botao = evento.currentTarget;
+        const body = new URLSearchParams({ quantidade: quantidade.value || '1' });
+        botao.disabled = true;
+        try {
+            const resposta = await fetch("{% url 'adicionar_ao_carrinho' 'peca' peca.id %}", {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
+                },
+                body: body.toString()
+            });
+            const dados = await resposta.json().catch(() => ({}));
+            if (!resposta.ok || !dados.sucesso) throw new Error(dados.erro || 'Não foi possível adicionar.');
+            const badge = document.getElementById('badge-carrinho');
+            if (badge) badge.textContent = dados.total_itens || 0;
+            window.alert('Peça adicionada ao carrinho.');
+        } catch (erro) {
+            window.alert(erro.message || 'Não foi possível adicionar a peça.');
+        } finally {
+            botao.disabled = false;
+        }
     });
-}
-
+})();
 </script>
-
 {% endblock %}

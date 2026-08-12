@@ -5,6 +5,7 @@ from .models import (
     TagsBrinquedos,
     Estabelecimentos,
     Brinquedos,
+    ImagemBrinquedo,
     Projetos,
     ImagemEvento,
     Eventos,
@@ -64,9 +65,9 @@ class ItemCarrinhoAdmin(admin.ModelAdmin):
 class ImagemPecaInline(admin.TabularInline):
     model = ImagemPeca
     extra = 1
-    max_num = 3
+    max_num = 8
     min_num = 0
-    fields = ("posicao", "imagem")
+    fields = ("ordem", "posicao", "imagem")
     verbose_name = "Imagem da peça"
     verbose_name_plural = "Imagens da peça"
 
@@ -77,8 +78,8 @@ class ImagemPecaInline(admin.TabularInline):
             form for form in self.forms
             if form.cleaned_data and not form.cleaned_data.get("DELETE", False)
         ])
-        if total > 3:
-            raise ValidationError("Máximo de 3 imagens por peça.")
+        if total > 8:
+            raise ValidationError("Máximo de 8 imagens por peça.")
 
 
 
@@ -358,6 +359,15 @@ class EstabelecimentosAdmin(admin.ModelAdmin):
     total_brinquedos.short_description = "Brinquedos"
 
 
+class ImagemBrinquedoInline(admin.TabularInline):
+    model = ImagemBrinquedo
+    extra = 1
+    max_num = 8
+    fields = ("ordem", "imagem", "texto_alternativo")
+    verbose_name = "Foto do brinquedo"
+    verbose_name_plural = "Galeria do brinquedo"
+
+
 @admin.register(Brinquedos)
 class BrinquedosAdmin(admin.ModelAdmin):
     list_display = ('nome_brinquedo', 'avaliacao', 'voltz', 'exibir_na_loja', 'ativo', 'criacao')
@@ -366,6 +376,24 @@ class BrinquedosAdmin(admin.ModelAdmin):
     readonly_fields = ('criacao', 'atualizado')
     filter_horizontal = ('categorias_brinquedos', 'tags', 'estabelecimentos')
     ordering = ('-criacao',)
+    inlines = [ImagemBrinquedoInline]
+
+    def save_related(self, request, form, formsets, change):
+        super().save_related(request, form, formsets, change)
+        brinquedo = form.instance
+        if "imagem_brinquedo" in form.changed_data:
+            brinquedo.sincronizar_imagem_legada_com_galeria()
+            return
+
+        principal = brinquedo.imagens_brinquedo.first()
+        if (
+            principal
+            and principal.imagem
+            and brinquedo.imagem_brinquedo.name != principal.imagem.name
+        ):
+            Brinquedos.objects.filter(pk=brinquedo.pk).update(
+                imagem_brinquedo=principal.imagem.name
+            )
 
 
 # ============================================
@@ -704,4 +732,3 @@ class EnderecoEmpresaAdmin(admin.ModelAdmin):
     )
 
     ordering = ('nome',)
-

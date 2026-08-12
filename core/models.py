@@ -337,12 +337,99 @@ class Brinquedos(Prime):
 
         return f"{valor_formatado} m³"
 
+    @property
+    def imagens_ordenadas(self):
+        """Galeria pronta para consumo, sempre na ordem definida no admin."""
+        return self.imagens_brinquedo.all()
+
+    @property
+    def imagem_catalogo(self):
+        """Imagem principal com fallback para o campo legado.
+
+        O fallback permite migrar as telas aos poucos sem quebrar cards,
+        integrações ou registros antigos que ainda usem ``imagem_brinquedo``.
+        """
+        principal = self.imagens_brinquedo.first()
+        if principal and principal.imagem:
+            return principal.imagem
+        return self.imagem_brinquedo
+
+    def sincronizar_imagem_legada_com_galeria(self):
+        """Coloca a imagem antiga na posição 1 da galeria.
+
+        O método é idempotente: pode ser executado mais de uma vez sem criar
+        fotos duplicadas. Ele será removível quando todas as telas e rotinas de
+        cadastro já trabalharem exclusivamente com a galeria.
+        """
+        if not self.pk or not self.imagem_brinquedo:
+            return None
+
+        principal = self.imagens_brinquedo.filter(ordem=1).first()
+        if principal is None:
+            return ImagemBrinquedo.objects.create(
+                brinquedo=self,
+                imagem=self.imagem_brinquedo.name,
+                ordem=1,
+                texto_alternativo=f"Foto principal de {self.nome_brinquedo}",
+            )
+
+        if principal.imagem.name != self.imagem_brinquedo.name:
+            principal.imagem = self.imagem_brinquedo.name
+            principal.texto_alternativo = (
+                principal.texto_alternativo
+                or f"Foto principal de {self.nome_brinquedo}"
+            )
+            principal.save(
+                update_fields=["imagem", "texto_alternativo", "atualizado"]
+            )
+        return principal
+
     def __str__(self):
         return self.nome_brinquedo
 
     class Meta:
         verbose_name = "Brinquedo"
         verbose_name_plural = "Brinquedos"
+
+
+class ImagemBrinquedo(Prime):
+    brinquedo = models.ForeignKey(
+        Brinquedos,
+        on_delete=models.CASCADE,
+        related_name="imagens_brinquedo",
+        verbose_name="Brinquedo",
+    )
+    imagem = models.ImageField(
+        upload_to="imagens_brinquedos/galeria/",
+        storage=MediaCloudinaryStorage(),
+        verbose_name="Imagem",
+    )
+    ordem = models.PositiveSmallIntegerField(
+        default=1,
+        verbose_name="Posição na galeria",
+        help_text="Use 1 para a foto principal, 2 para a segunda e assim por diante.",
+        db_index=True,
+    )
+    texto_alternativo = models.CharField(
+        max_length=180,
+        blank=True,
+        verbose_name="Descrição da imagem",
+        help_text="Descreva o que aparece na foto para acessibilidade e busca.",
+    )
+
+    def __str__(self):
+        return f"{self.brinquedo} — foto {self.ordem}"
+
+    class Meta:
+        verbose_name = "Imagem de Brinquedo"
+        verbose_name_plural = "Imagens de Brinquedos"
+        ordering = ["ordem", "id"]
+        indexes = [
+            models.Index(
+                fields=["brinquedo", "ordem"],
+                name="img_brinquedo_ordem_idx",
+            )
+        ]
 
 
 class CategoriaPeca(Prime):
@@ -387,17 +474,14 @@ class PecasReposicao(Prime):
     # ⭐ helper profissional (mantido)
     @property
     def imagem_principal(self):
-        # Usa .all() (respeita o cache do prefetch_related) em vez de
-        # .filter()/.first(), que ignoravam o prefetch e disparavam uma
-        # consulta nova ao banco pra CADA peça -- isso sozinho já
-        # explicava boa parte da lentidão em telas com várias peças.
+        # Meta.ordering deixa a posição 1 na frente e .all() respeita o cache
+        # de prefetch_related, sem criar uma consulta extra para cada peça.
         imagens = list(self.imagem_peca_reposicao.all())
-
-        for img in imagens:
-            if img.posicao == ImagemPeca.PosicaoImagem.FRENTE:
-                return img
-
         return imagens[0] if imagens else None
+
+    @property
+    def imagens_ordenadas(self):
+        return self.imagem_peca_reposicao.all()
 
     # 🚀 SAVE INTELIGENTE
     def save(self, *args, **kwargs):
@@ -435,6 +519,13 @@ class ImagemPeca(Prime):
         db_index=True,
     )
 
+    ordem = models.PositiveSmallIntegerField(
+        default=1,
+        verbose_name="Posição na galeria",
+        help_text="Use 1 para a foto principal, 2 para a segunda e assim por diante.",
+        db_index=True,
+    )
+
     imagem = models.ImageField(
         upload_to="pecas_reposicao/",
         verbose_name="Imagem",
@@ -452,15 +543,19 @@ class ImagemPeca(Prime):
     class Meta:
         verbose_name = "Imagem de Peça de Reposição"
         verbose_name_plural = "Imagens de Peças de Reposição"
-        ordering = ["id"]
+        ordering = ["ordem", "id"]
         indexes = [
+            models.Index(
+                fields=["peca_reposicao", "ordem"],
+                name="img_peca_ordem_idx",
+            ),
             models.Index(fields=["peca_reposicao"]),
         ]
 
     def __str__(self):
         return f" ({self.get_posicao_display()})"
 
-    # 🚨 VALIDAÇÃO: máximo 3 imagens por peça
+    # 🚨 VALIDAÇÃO: máximo 8 imagens por peça
     def clean(self):
         if self.peca_reposicao_id:
             qs = ImagemPeca.objects.filter(
@@ -471,9 +566,9 @@ class ImagemPeca(Prime):
             if self.pk:
                 qs = qs.exclude(pk=self.pk)
 
-            if qs.count() >= 3:
+            if qs.count() >= 8:
                 raise ValidationError(
-                    "Cada peça pode ter no máximo 3 imagens."
+                    "Cada peça pode ter no máximo 8 imagens."
                 )
 
 
