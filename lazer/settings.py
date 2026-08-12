@@ -377,6 +377,10 @@ DEFAULT_FILE_STORAGE = STORAGES["default"]["BACKEND"]
 
 WHITENOISE_AUTOREFRESH = DEBUG
 WHITENOISE_USE_FINDERS = DEBUG
+try:
+    WHITENOISE_MAX_AGE = max(60, int(os.getenv("STATIC_CACHE_MAX_AGE", "86400")))
+except ValueError:
+    WHITENOISE_MAX_AGE = 86400
 
 
 # ============================================================
@@ -512,3 +516,8 @@ try:
     HOME_CACHE_TTL = max(60, int(os.getenv("HOME_CACHE_TTL", "1800")))
 except ValueError:
     HOME_CACHE_TTL = 1800
+
+try:
+    CATALOG_CACHE_TTL = max(60, int(os.getenv("CATALOG_CACHE_TTL", "1800")))
+except ValueError:
+    CATALOG_CACHE_TTL = 1800

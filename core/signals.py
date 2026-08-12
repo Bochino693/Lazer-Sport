@@ -5,7 +5,7 @@ from django.dispatch import receiver
 from django.contrib.auth.models import User
 
 from .context_processors import limpar_cache_global
-from .home_cache import invalidate_home_cache
+from .home_cache import invalidate_public_catalog_caches
 from .models import (
     Brinquedos,
     BrinquedosProjeto,
@@ -36,12 +36,12 @@ def criar_perfil_cliente(sender, instance, created, **kwargs):
 
 
 def _invalidar_home(sender, **kwargs):
-    transaction.on_commit(invalidate_home_cache)
+    transaction.on_commit(invalidate_public_catalog_caches)
 
 
 def _invalidar_home_m2m(sender, action, **kwargs):
     if action in {"post_add", "post_remove", "post_clear"}:
-        transaction.on_commit(invalidate_home_cache)
+        transaction.on_commit(invalidate_public_catalog_caches)
 
 
 _MODELOS_DA_HOME = (

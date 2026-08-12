@@ -3,6 +3,7 @@
 
 {% block title %}{{ peca.nome }} | Peça de Reposição - Lazer & Sport{% endblock %}
 {% block meta_description %}{{ peca.nome }}: {{ peca.descricao_peca|truncatechars:140 }}{% endblock %}
+{% block main_class %} content-section--full{% endblock %}
 
 {% block content %}
 <script type="application/ld+json">
@@ -43,7 +44,7 @@
 }
 
 .peca-page, .peca-page * { box-sizing: border-box; }
-.peca-wrap { margin: 0 auto; max-width: 1220px; }
+.peca-wrap { margin: 0 auto; max-width: none; width: 100%; }
 .peca-breadcrumb {
     align-items: center;
     color: #697586;
@@ -336,139 +337,204 @@
     .peca-btn.voltar { grid-column: auto; }
 }
 
-/* Identidade Lazer & Sport: contraste escuro e acentos vivos. */
+/* Sistema visual do catálogo: fundo claro e painéis informativos coloridos. */
 .peca-page {
-    --ls-blue: #1687ff;
-    --ls-navy: #064fbd;
-    --ls-red: #f23b4a;
-    --ls-text: #f7fbff;
-    --ls-muted: #b5c5d9;
-    --ls-line: rgba(139, 186, 240, .18);
+    --ls-blue: #0878f9;
+    --ls-navy: #004aad;
+    --ls-red: #e63946;
+    --ls-text: #102b4c;
+    --ls-muted: #647d98;
+    --ls-line: rgba(0, 74, 173, .14);
     background:
-        radial-gradient(circle at 7% 5%, rgba(22, 135, 255, .32), transparent 27rem),
-        radial-gradient(circle at 96% 13%, rgba(242, 59, 74, .22), transparent 25rem),
-        linear-gradient(145deg, #07182c 0%, #040b15 56%, #09162a 100%);
+        radial-gradient(circle at 7% 5%, rgba(8, 120, 249, .10), transparent 25rem),
+        radial-gradient(circle at 96% 16%, rgba(230, 57, 70, .07), transparent 23rem),
+        linear-gradient(180deg, #fbfdff, #f2f7fc);
     isolation: isolate;
     overflow: hidden;
     position: relative;
 }
 .peca-page::before {
     background-image:
-        linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px);
-    background-size: 38px 38px;
+        linear-gradient(rgba(0,74,173,.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,74,173,.025) 1px, transparent 1px);
+    background-size: 42px 42px;
     content: "";
     inset: 0;
-    mask-image: linear-gradient(to bottom, #000 0%, transparent 88%);
-    opacity: .7;
+    mask-image: linear-gradient(to bottom, #000, transparent 72%);
     pointer-events: none;
     position: absolute;
     z-index: 0;
 }
 .peca-wrap { position: relative; z-index: 1; }
-.peca-breadcrumb { color: #9fb3cb; }
-.peca-breadcrumb a { color: #7fc1ff; }
-.peca-breadcrumb a:hover { color: #fff; }
-.peca-breadcrumb span { color: #637a96; }
-.peca-breadcrumb strong { color: #f7fbff; }
+.peca-breadcrumb { color: #67809a; }
+.peca-breadcrumb a { color: var(--ls-navy); }
+.peca-breadcrumb a:hover { color: var(--ls-red); }
+.peca-breadcrumb span { color: #9bacc0; }
+.peca-breadcrumb strong { color: #173653; }
 
 .peca-shell {
-    background: linear-gradient(145deg, rgba(12, 35, 65, .98), rgba(5, 17, 33, .99));
-    border-color: rgba(112, 174, 247, .25);
-    box-shadow:
-        0 30px 85px rgba(0, 3, 12, .56),
-        0 0 0 1px rgba(255,255,255,.025),
-        0 0 70px rgba(22, 135, 255, .10);
-    position: relative;
+    gap: 20px;
+    overflow: visible;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
 }
-.peca-shell::before {
-    background: linear-gradient(90deg, #1687ff 0%, #55c9ff 45%, #f23b4a 100%);
-    content: "";
-    height: 4px;
-    inset: 0 0 auto;
-    position: absolute;
-    z-index: 5;
+.peca-shell::before { display: none; }
+.peca-visual,
+.peca-info {
+    border: 1px solid rgba(100, 166, 239, .20);
+    border-radius: 28px;
+    color: #fff;
+    box-shadow: 0 24px 55px rgba(9, 35, 68, .20);
 }
 .peca-visual {
+    padding: 28px;
     background:
-        radial-gradient(circle at 50% 35%, rgba(30, 143, 255, .22), transparent 48%),
-        linear-gradient(rgba(115,172,238,.05) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(115,172,238,.05) 1px, transparent 1px),
-        linear-gradient(145deg, #0b2342, #071425 72%);
-    background-size: auto, 32px 32px, 32px 32px, auto;
-    border-right-color: rgba(133, 184, 241, .16);
+        radial-gradient(circle at 16% 8%, rgba(61,170,255,.34), transparent 20rem),
+        radial-gradient(circle at 95% 92%, rgba(230,57,70,.22), transparent 17rem),
+        linear-gradient(rgba(255,255,255,.045) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.045) 1px, transparent 1px),
+        linear-gradient(145deg, #0b2d5a, #06172c 74%);
+    background-size: auto, auto, 32px 32px, 32px 32px, auto;
+}
+.peca-info {
+    padding: 38px 40px;
+    background:
+        radial-gradient(circle at 100% 0, rgba(8,120,249,.28), transparent 21rem),
+        radial-gradient(circle at 0 100%, rgba(230,57,70,.14), transparent 20rem),
+        linear-gradient(145deg, #0b2342, #071426 75%);
 }
 .peca-imagem {
-    border-color: rgba(122, 188, 255, .5);
-    box-shadow: 0 22px 55px rgba(0, 5, 18, .38), 0 0 0 7px rgba(22, 135, 255, .055);
+    border-color: rgba(126, 190, 255, .52);
+    background: radial-gradient(circle at 50% 38%, #fbfdff 0%, #eaf4ff 58%, #d9e9fa 100%);
+    box-shadow: 0 20px 45px rgba(0, 8, 24, .34), 0 0 0 6px rgba(85, 177, 255, .08);
 }
-.peca-galeria-nav button {
-    background: linear-gradient(145deg, #1687ff, #06449c);
-    border-color: rgba(255,255,255,.48);
-    color: #fff;
-}
-.peca-galeria-nav button:hover { background: linear-gradient(145deg, #f23b4a, #b91628); }
-.peca-contador { background: rgba(5, 20, 39, .9); border: 1px solid rgba(255,255,255,.18); }
-.peca-miniatura { background: #f7fbff; border-color: rgba(255,255,255,.08); }
+.peca-galeria-nav button { border-color: rgba(255,255,255,.54); color: #fff; background: linear-gradient(145deg, #0878f9, #004aad); }
+.peca-galeria-nav button:hover { background: linear-gradient(145deg, #ef4352, #b91e30); }
+.peca-contador { border: 1px solid rgba(255,255,255,.18); background: rgba(5,20,39,.90); }
+.peca-miniatura { border-color: rgba(119,184,255,.25); background: #eaf4ff; }
 .peca-miniatura:hover,
-.peca-miniatura.ativa { border-color: #46b8ff; box-shadow: 0 0 0 2px rgba(22,135,255,.18), 0 9px 24px rgba(0,0,0,.35); }
+.peca-miniatura.ativa { border-color: #4eb5ff; box-shadow: 0 0 0 2px rgba(22,135,255,.18), 0 9px 24px rgba(0,0,0,.32); }
 
 .peca-beneficio {
-    background: rgba(255,255,255,.055);
-    border-color: rgba(137, 186, 241, .19);
-    color: #dce9f7;
+    min-height: 64px;
+    padding: 9px 10px;
+    justify-content: flex-start;
+    text-align: left;
+    border-color: rgba(139,194,251,.20);
+    color: #eaf4ff;
+    background: rgba(255,255,255,.075);
 }
-.peca-beneficio i { color: #4bbcff; }
-.peca-beneficio:nth-child(2) i { color: #ffcb45; }
-.peca-beneficio:nth-child(3) i { color: #ff6876; }
+.peca-beneficio i {
+    flex: 0 0 34px;
+    width: 34px;
+    height: 34px;
+    border-radius: 11px;
+    display: grid;
+    place-items: center;
+    color: #fff;
+    background: linear-gradient(135deg, #0878f9, #0058c7);
+}
+.peca-beneficio:nth-child(2) i { background: linear-gradient(135deg, #e63946, #b91e30); }
+.peca-beneficio:nth-child(3) i { background: linear-gradient(135deg, #f2ad19, #d77b00); }
+.peca-beneficio span,
+.peca-beneficio strong,
+.peca-beneficio small { display: block; }
+.peca-beneficio strong { font-size: .7rem; line-height: 1.2; }
+.peca-beneficio small { margin-top: 3px; color: #9fb5cc; font-size: .57rem; line-height: 1.3; }
 
-.peca-eyebrow { color: #69c1ff; }
-.peca-info h1 { color: #fff; text-shadow: 0 8px 32px rgba(22,135,255,.18); }
-.peca-chip {
-    background: rgba(22, 135, 255, .14);
-    border-color: rgba(74, 164, 255, .34);
-    color: #a9d8ff;
-}
-.peca-chip:nth-child(even) {
-    background: rgba(242, 59, 74, .10);
-    border-color: rgba(242, 89, 102, .28);
-    color: #ffc0c6;
-}
+.peca-eyebrow { color: #73c1ff; }
+.peca-info h1 { color: #fff; text-shadow: 0 9px 30px rgba(8,120,249,.18); }
+.peca-chip { border-color: rgba(80,166,255,.34); color: #b7ddff; background: rgba(8,120,249,.16); }
+.peca-chip:nth-child(even) { border-color: rgba(239,86,100,.28); color: #ffc4ca; background: rgba(230,57,70,.11); }
 .peca-preco-box {
+    border-color: rgba(109,186,255,.42);
+    color: #fff;
     background:
-        radial-gradient(circle at 100% 0, rgba(87, 199, 255, .22), transparent 44%),
+        radial-gradient(circle at 100% 0, rgba(87,199,255,.24), transparent 44%),
         linear-gradient(135deg, #0758c9, #0b356b);
-    border-color: rgba(109, 186, 255, .42);
-    box-shadow: 0 15px 36px rgba(0, 67, 158, .24), inset 0 1px 0 rgba(255,255,255,.1);
+    box-shadow: 0 15px 34px rgba(0,67,158,.23), inset 0 1px 0 rgba(255,255,255,.10);
 }
 .peca-preco-label,
-.peca-preco-nota { color: #c6dcf3; }
+.peca-preco-nota { color: #c9def3; }
 .peca-preco { color: #fff; }
 .peca-secao,
-.peca-compra { border-top-color: rgba(145, 185, 232, .16); }
-.peca-secao h2 { color: #65c2ff; }
-.peca-descricao { color: #c5d3e5; }
-.peca-detalhe {
+.peca-compra {
+    margin-top: 14px;
+    padding: 17px;
+    border: 1px solid rgba(139,187,239,.16);
+    border-radius: 17px;
     background: rgba(255,255,255,.055);
-    border-color: rgba(140, 182, 231, .16);
 }
-.peca-detalhe span { color: #8fa9c5; }
-.peca-detalhe strong { color: #f2f7fd; }
-.peca-quantidade-linha label { color: #d7e4f2; }
-.peca-quantidade { background: #f7fbff; border-color: rgba(112, 180, 255, .55); }
+.peca-secao h2 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #75c6ff;
+}
+.peca-secao h2 > i {
+    width: 26px;
+    height: 26px;
+    border-radius: 8px;
+    display: grid;
+    place-items: center;
+    color: #fff;
+    background: linear-gradient(135deg, #0878f9, #0054bb);
+    font-size: .7rem;
+}
+.peca-secao:nth-of-type(even) h2 > i { background: linear-gradient(135deg, #e63946, #b91e30); }
+.peca-descricao { color: #d0ddec; }
+.peca-detalhe {
+    min-height: 76px;
+    padding: 12px;
+    border-color: rgba(103,179,255,.30);
+    display: grid;
+    grid-template-columns: 36px minmax(0, 1fr);
+    align-items: center;
+    gap: 10px;
+    background: linear-gradient(145deg, rgba(8,120,249,.24), rgba(8,120,249,.10));
+}
+.peca-detalhe:nth-child(2) { border-color: rgba(238,85,100,.28); background: linear-gradient(145deg, rgba(230,57,70,.22), rgba(230,57,70,.08)); }
+.peca-detalhe:nth-child(3) { border-color: rgba(32,190,154,.28); background: linear-gradient(145deg, rgba(13,151,120,.22), rgba(13,151,120,.08)); }
+.peca-detalhe:nth-child(4) { border-color: rgba(242,173,25,.28); background: linear-gradient(145deg, rgba(242,173,25,.20), rgba(242,173,25,.07)); }
+.peca-detalhe > i {
+    width: 36px;
+    height: 36px;
+    border-radius: 11px;
+    display: grid;
+    place-items: center;
+    color: #fff;
+    background: rgba(255,255,255,.10);
+}
+.peca-detalhe span { color: #a8bdd4; }
+.peca-detalhe strong { color: #fff; }
+.peca-quantidade-linha label { color: #dce8f4; }
+.peca-quantidade { border-color: rgba(112,180,255,.48); background: #eaf4ff; }
 .peca-btn.carrinho { box-shadow: 0 12px 26px rgba(22,135,255,.24); }
 .peca-btn.whatsapp { box-shadow: 0 12px 26px rgba(37,211,102,.19); }
-.peca-btn.voltar { background: rgba(255,255,255,.07); border-color: rgba(152,190,234,.26); color: #e8f2fc; }
+.peca-btn.voltar { border-color: rgba(152,190,234,.27); color: #e8f2fc; background: rgba(255,255,255,.07); }
 
 @media (max-width: 920px) {
-    .peca-visual { border-bottom-color: rgba(133, 184, 241, .16); }
+    .peca-shell { gap: 15px; }
+    .peca-visual { border-bottom: 1px solid rgba(100,166,239,.20); }
+}
+@media (max-width: 600px) {
+    .peca-visual,
+    .peca-info { border-radius: 21px; }
+    .peca-info { padding: 25px 18px 22px; }
+    .peca-beneficio { min-height: 58px; }
+    .peca-beneficio i { flex-basis: 31px; width: 31px; height: 31px; }
+    .peca-beneficio small { display: none; }
+    .peca-secao,
+    .peca-compra { padding: 15px; }
 }
 @media (prefers-reduced-motion: reduce) {
     .peca-imagem > img, .peca-miniatura, .peca-btn { transition: none; }
 }
 </style>
 
-<main class="peca-page">
+<div class="peca-page">
     <div class="peca-wrap">
         <nav class="peca-breadcrumb" aria-label="Navegação estrutural">
             <a href="/">Início</a><span aria-hidden="true">›</span>
@@ -507,9 +573,9 @@
                 {% endif %}
 
                 <div class="peca-beneficios" aria-label="Diferenciais">
-                    <div class="peca-beneficio"><i class="fas fa-tools" aria-hidden="true"></i>Suporte especializado</div>
-                    <div class="peca-beneficio"><i class="fas fa-truck" aria-hidden="true"></i>Envio nacional</div>
-                    <div class="peca-beneficio"><i class="fas fa-industry" aria-hidden="true"></i>Direto da fábrica</div>
+                    <div class="peca-beneficio"><i class="fas fa-tools" aria-hidden="true"></i><span><strong>Suporte especializado</strong><small>Ajuda para identificar a peça</small></span></div>
+                    <div class="peca-beneficio"><i class="fas fa-truck" aria-hidden="true"></i><span><strong>Envio nacional</strong><small>Atendimento em todo o Brasil</small></span></div>
+                    <div class="peca-beneficio"><i class="fas fa-industry" aria-hidden="true"></i><span><strong>Direto da fábrica</strong><small>Procedência Lazer &amp; Sport</small></span></div>
                 </div>
             </section>
 
@@ -528,17 +594,17 @@
                 </div>
 
                 <section class="peca-secao">
-                    <h2>Sobre esta peça</h2>
+                    <h2><i class="fas fa-align-left" aria-hidden="true"></i>Sobre esta peça</h2>
                     <p class="peca-descricao">{{ peca.descricao_peca|linebreaksbr }}</p>
                 </section>
 
                 <section class="peca-secao">
-                    <h2>Detalhes do produto</h2>
+                    <h2><i class="fas fa-circle-info" aria-hidden="true"></i>Detalhes do produto</h2>
                     <div class="peca-detalhes">
-                        <div class="peca-detalhe"><span>Condição</span><strong>Produto novo</strong></div>
-                        <div class="peca-detalhe"><span>Disponibilidade</span><strong>Pronta para pedido</strong></div>
-                        <div class="peca-detalhe"><span>Referência</span><strong>LS-P{{ peca.id|stringformat:'05d' }}</strong></div>
-                        <div class="peca-detalhe"><span>Galeria</span><strong>{{ imagens_peca|length }} foto{{ imagens_peca|length|pluralize }}</strong></div>
+                        <div class="peca-detalhe"><i class="fas fa-box" aria-hidden="true"></i><div><span>Condição</span><strong>Produto novo</strong></div></div>
+                        <div class="peca-detalhe"><i class="fas fa-circle-check" aria-hidden="true"></i><div><span>Disponibilidade</span><strong>Pronta para pedido</strong></div></div>
+                        <div class="peca-detalhe"><i class="fas fa-barcode" aria-hidden="true"></i><div><span>Referência</span><strong>LS-P{{ peca.id|stringformat:'05d' }}</strong></div></div>
+                        <div class="peca-detalhe"><i class="fas fa-images" aria-hidden="true"></i><div><span>Galeria</span><strong>{{ imagens_peca|length }} foto{{ imagens_peca|length|pluralize }}</strong></div></div>
                     </div>
                 </section>
 
@@ -560,7 +626,7 @@
             </section>
         </article>
     </div>
-</main>
+</div>
 
 <script>
 (function () {

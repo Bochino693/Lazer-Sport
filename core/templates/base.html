@@ -470,6 +470,14 @@
       min-height: 60vh;
     }
 
+    /* Páginas que já possuem seu próprio layout podem ocupar a viewport toda. */
+    main.content-section.content-section--full {
+      width: 100%;
+      max-width: none;
+      margin: 0;
+      padding: 0;
+    }
+
     /* ======= RESPONSIVIDADE ======= */
 
 /* ======= TÍTULOS CENTRALIZADOS ======= */
@@ -1496,7 +1504,7 @@ nav a.btn-login {
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
 <!-- ======= CONTEÚDO DINÂMICO ======= -->
-<main class="content-section">
+<main class="content-section{% block main_class %}{% endblock %}">
   {% block content %}
   {% endblock %}
 </main>

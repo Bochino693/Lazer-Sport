@@ -34,6 +34,11 @@
         box-sizing: border-box;
     }
 
+    body.catalogo-filter-lock {
+        overflow: hidden;
+        overscroll-behavior: none;
+    }
+
     .catalogo-shell {
         width: min(1200px, calc(100% - 40px));
         margin: 0 auto;
@@ -259,7 +264,8 @@
         min-width: 0;
     }
 
-    .catalogo-field label {
+    .catalogo-field label,
+    .catalogo-field-label {
         margin: 0 0 7px 3px;
         display: flex;
         align-items: center;
@@ -271,7 +277,8 @@
         text-transform: uppercase;
     }
 
-    .catalogo-field label i {
+    .catalogo-field label i,
+    .catalogo-field-label i {
         color: var(--catalog-blue);
     }
 
@@ -341,6 +348,238 @@
         border-color: rgba(8, 120, 249, .70);
         background: #ffffff;
         box-shadow: 0 0 0 4px rgba(8, 120, 249, .11);
+    }
+
+    .catalogo-mobile-filter-toggle {
+        display: none;
+    }
+
+    .catalogo-choice {
+        position: relative;
+        min-width: 0;
+    }
+
+    .catalogo-choice > summary {
+        width: 100%;
+        min-height: 54px;
+        padding: 8px 13px;
+        border: 1px solid rgba(0, 74, 173, .15);
+        border-radius: 14px;
+        display: grid;
+        grid-template-columns: 35px minmax(0, 1fr) 24px;
+        align-items: center;
+        gap: 9px;
+        color: #173653;
+        background: rgba(255, 255, 255, .94);
+        cursor: pointer;
+        list-style: none;
+        outline: none;
+        -webkit-tap-highlight-color: transparent;
+        touch-action: manipulation;
+        transition: border-color .22s ease, box-shadow .22s ease, transform .22s ease;
+    }
+
+    .catalogo-choice > summary::-webkit-details-marker {
+        display: none;
+    }
+
+    .catalogo-choice > summary::marker {
+        content: "";
+    }
+
+    .catalogo-choice > summary:hover,
+    .catalogo-choice[open] > summary {
+        border-color: rgba(8, 120, 249, .62);
+        box-shadow: 0 0 0 4px rgba(8, 120, 249, .10);
+    }
+
+    .catalogo-choice-trigger-icon {
+        width: 35px;
+        height: 35px;
+        border-radius: 11px;
+        display: grid;
+        place-items: center;
+        color: #ffffff;
+        background: linear-gradient(135deg, var(--catalog-blue-deep), var(--catalog-blue));
+        box-shadow: 0 7px 15px rgba(0, 74, 173, .20);
+    }
+
+    .catalogo-choice-trigger-copy {
+        min-width: 0;
+    }
+
+    .catalogo-choice-trigger-copy small,
+    .catalogo-choice-trigger-copy strong {
+        display: block;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .catalogo-choice-trigger-copy small {
+        color: #7189a2;
+        font-size: .57rem;
+        font-weight: 850;
+        letter-spacing: .055em;
+        line-height: 1.2;
+        text-transform: uppercase;
+    }
+
+    .catalogo-choice-trigger-copy strong {
+        margin-top: 3px;
+        color: #173653;
+        font-size: .75rem;
+        font-weight: 850;
+        line-height: 1.25;
+    }
+
+    .catalogo-choice-chevron {
+        color: #607d99;
+        font-size: .72rem;
+        text-align: center;
+        transition: transform .2s ease, color .2s ease;
+    }
+
+    .catalogo-choice[open] .catalogo-choice-chevron {
+        color: var(--catalog-blue);
+        transform: rotate(180deg);
+    }
+
+    .catalogo-choice-backdrop {
+        display: none;
+    }
+
+    .catalogo-choice-menu {
+        position: absolute;
+        top: calc(100% + 10px);
+        left: 0;
+        z-index: 30;
+        width: max(100%, 330px);
+        max-height: 390px;
+        padding: 10px;
+        border: 1px solid rgba(97, 160, 229, .24);
+        border-radius: 18px;
+        overflow-y: auto;
+        color: #ffffff;
+        background:
+            radial-gradient(circle at 100% 0, rgba(8,120,249,.24), transparent 15rem),
+            linear-gradient(145deg, #0b2342, #071426);
+        box-shadow: 0 24px 55px rgba(1, 12, 29, .35);
+        scrollbar-width: thin;
+        overscroll-behavior: contain;
+    }
+
+    .catalogo-choice[data-menu-align="end"] .catalogo-choice-menu {
+        right: 0;
+        left: auto;
+    }
+
+    .catalogo-choice-menu-head {
+        display: none;
+    }
+
+    .catalogo-choice-options {
+        display: grid;
+        gap: 6px;
+    }
+
+    .catalogo-choice-option {
+        display: block;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+        touch-action: manipulation;
+    }
+
+    .catalogo-choice-input {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    .catalogo-choice-card {
+        min-height: 54px;
+        padding: 9px 10px;
+        border: 1px solid transparent;
+        border-radius: 13px;
+        display: grid;
+        grid-template-columns: 34px minmax(0, 1fr) 22px;
+        align-items: center;
+        gap: 10px;
+        color: #dce9f8;
+        background: rgba(255,255,255,.045);
+        transition: border-color .18s ease, background .18s ease, transform .18s ease;
+    }
+
+    .catalogo-choice-option:hover .catalogo-choice-card {
+        border-color: rgba(111, 181, 255, .26);
+        background: rgba(8,120,249,.13);
+        transform: translateX(2px);
+    }
+
+    .catalogo-choice-input:focus-visible + .catalogo-choice-card {
+        outline: 3px solid rgba(90, 174, 255, .46);
+        outline-offset: 2px;
+    }
+
+    .catalogo-choice-input:checked + .catalogo-choice-card {
+        border-color: rgba(87, 169, 255, .56);
+        color: #ffffff;
+        background: linear-gradient(135deg, rgba(0,74,173,.72), rgba(8,120,249,.42));
+        box-shadow: inset 0 1px 0 rgba(255,255,255,.08);
+    }
+
+    .catalogo-choice-option-icon {
+        width: 34px;
+        height: 34px;
+        border-radius: 10px;
+        display: grid;
+        place-items: center;
+        color: #88c4ff;
+        background: rgba(8,120,249,.13);
+    }
+
+    .catalogo-choice-input:checked + .catalogo-choice-card .catalogo-choice-option-icon {
+        color: #ffffff;
+        background: rgba(255,255,255,.13);
+    }
+
+    .catalogo-choice-option-copy {
+        min-width: 0;
+    }
+
+    .catalogo-choice-option-copy strong,
+    .catalogo-choice-option-copy small {
+        display: block;
+    }
+
+    .catalogo-choice-option-copy strong {
+        font-size: .75rem;
+        font-weight: 850;
+        line-height: 1.25;
+    }
+
+    .catalogo-choice-option-copy small {
+        margin-top: 2px;
+        color: #8fa7c1;
+        font-size: .59rem;
+        font-weight: 650;
+        line-height: 1.3;
+    }
+
+    .catalogo-choice-input:checked + .catalogo-choice-card small {
+        color: #c8e2ff;
+    }
+
+    .catalogo-choice-check {
+        color: transparent;
+        font-size: .85rem;
+        text-align: center;
+    }
+
+    .catalogo-choice-input:checked + .catalogo-choice-card .catalogo-choice-check {
+        color: #ffffff;
     }
 
     .catalogo-filter-submit {
@@ -420,10 +659,125 @@
         line-height: 1.4;
     }
 
+    .catalogo-market-bounds {
+        margin-top: 9px;
+        display: flex;
+        align-items: stretch;
+        gap: 7px;
+    }
+
+    .catalogo-market-bound {
+        min-width: 0;
+        padding: 8px 10px;
+        border: 1px solid rgba(7, 145, 74, .16);
+        border-radius: 11px;
+        color: #086b3b;
+        background: rgba(228, 245, 236, .88);
+    }
+
+    .catalogo-market-bound small,
+    .catalogo-market-bound strong {
+        display: block;
+    }
+
+    .catalogo-market-bound small {
+        color: #45705c;
+        font-size: .54rem;
+        font-weight: 800;
+        letter-spacing: .03em;
+        text-transform: uppercase;
+    }
+
+    .catalogo-market-bound strong {
+        margin-top: 2px;
+        font-size: .72rem;
+        font-weight: 950;
+        white-space: nowrap;
+    }
+
     .catalogo-price-controls {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 9px;
+    }
+
+    .catalogo-range-controls {
+        grid-column: 1 / -1;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+    }
+
+    .catalogo-range-field {
+        min-width: 0;
+        padding: 8px 10px 6px;
+        border: 1px solid rgba(0, 74, 173, .10);
+        border-radius: 12px;
+        background: rgba(255, 255, 255, .68);
+    }
+
+    .catalogo-range-head {
+        margin-bottom: 5px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 7px;
+        color: #526f8b;
+        font-size: .56rem;
+        font-weight: 800;
+    }
+
+    .catalogo-range-head output {
+        color: #08743e;
+        font-size: .61rem;
+        font-weight: 950;
+        white-space: nowrap;
+    }
+
+    .catalogo-range-field input[type="range"] {
+        width: 100%;
+        height: 22px;
+        margin: 0;
+        padding: 0;
+        border: 0;
+        accent-color: #07914a;
+        background: transparent;
+        cursor: pointer;
+        touch-action: pan-y;
+        -webkit-tap-highlight-color: transparent;
+        -webkit-appearance: none;
+    }
+
+    .catalogo-range-field input[type="range"]::-webkit-slider-runnable-track {
+        height: 6px;
+        border-radius: 999px;
+        background: linear-gradient(90deg, #07914a, #0878f9);
+    }
+
+    .catalogo-range-field input[type="range"]::-webkit-slider-thumb {
+        width: 22px;
+        height: 22px;
+        margin-top: -8px;
+        border: 3px solid #ffffff;
+        border-radius: 50%;
+        background: #0758c9;
+        box-shadow: 0 3px 9px rgba(0, 42, 100, .28);
+        -webkit-appearance: none;
+    }
+
+    .catalogo-range-field input[type="range"]::-moz-range-track {
+        height: 6px;
+        border-radius: 999px;
+        background: linear-gradient(90deg, #07914a, #0878f9);
+    }
+
+    .catalogo-range-field input[type="range"]::-moz-range-thumb {
+        width: 17px;
+        height: 17px;
+        border: 3px solid #ffffff;
+        border-radius: 50%;
+        background: #0758c9;
+        box-shadow: 0 3px 9px rgba(0, 42, 100, .28);
     }
 
     .catalogo-price-field label {
@@ -1194,13 +1548,84 @@
             grid-column: auto;
         }
 
+        .catalogo-mobile-filter-toggle {
+            width: 100%;
+            min-height: 58px;
+            padding: 10px 13px;
+            border: 1px solid rgba(8, 120, 249, .22);
+            border-radius: 16px;
+            display: grid;
+            grid-template-columns: 40px minmax(0, 1fr) auto;
+            align-items: center;
+            gap: 11px;
+            color: #ffffff;
+            background:
+                radial-gradient(circle at 100% 0, rgba(80,185,255,.24), transparent 11rem),
+                linear-gradient(135deg, #0a2447, #064da7);
+            box-shadow: 0 12px 25px rgba(0, 56, 125, .20);
+            font: inherit;
+            text-align: left;
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+        }
+
+        .catalogo-mobile-filter-toggle > i:first-child {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            display: grid;
+            place-items: center;
+            background: linear-gradient(135deg, var(--catalog-red), #b91f31);
+            box-shadow: 0 7px 16px rgba(179, 24, 44, .25);
+        }
+
+        .catalogo-mobile-filter-toggle-copy strong,
+        .catalogo-mobile-filter-toggle-copy small {
+            display: block;
+        }
+
+        .catalogo-mobile-filter-toggle-copy strong {
+            font-size: .86rem;
+            font-weight: 900;
+        }
+
+        .catalogo-mobile-filter-toggle-copy small {
+            margin-top: 2px;
+            color: #b9d3ee;
+            font-size: .65rem;
+            font-weight: 650;
+        }
+
+        .catalogo-mobile-filter-toggle > .fa-chevron-down {
+            margin-right: 4px;
+            transition: transform .2s ease;
+        }
+
+        .catalogo-filter-grid.is-expanded .catalogo-mobile-filter-toggle > .fa-chevron-down {
+            transform: rotate(180deg);
+        }
+
+        .catalogo-advanced-filter {
+            display: none;
+        }
+
+        .catalogo-filter-grid.is-expanded .catalogo-advanced-filter {
+            display: block;
+        }
+
+        .catalogo-filter-grid.is-expanded .catalogo-price-panel.catalogo-advanced-filter {
+            display: grid;
+        }
+
         .catalogo-field input,
         .catalogo-field select,
         .catalogo-filter-submit {
             height: 57px;
         }
 
-        .catalogo-field label {
+        .catalogo-field label,
+        .catalogo-field-label {
             margin-bottom: 8px;
             font-size: .67rem;
         }
@@ -1208,7 +1633,110 @@
         .catalogo-field input,
         .catalogo-field select {
             border-radius: 15px;
-            font-size: .86rem;
+            font-size: 16px;
+        }
+
+        .catalogo-choice > summary {
+            min-height: 58px;
+            border-radius: 16px;
+            grid-template-columns: 39px minmax(0, 1fr) 28px;
+        }
+
+        .catalogo-choice-trigger-icon {
+            width: 39px;
+            height: 39px;
+            border-radius: 12px;
+        }
+
+        .catalogo-choice-trigger-copy strong {
+            font-size: .85rem;
+        }
+
+        .catalogo-choice-backdrop {
+            position: fixed;
+            inset: 0;
+            z-index: 9997;
+            width: 100%;
+            height: 100%;
+            padding: 0;
+            border: 0;
+            display: block;
+            background: rgba(2, 12, 27, .64);
+            backdrop-filter: blur(3px);
+            cursor: default;
+        }
+
+        .catalogo-choice-menu,
+        .catalogo-choice[data-menu-align="end"] .catalogo-choice-menu {
+            position: fixed;
+            inset: auto 0 0;
+            z-index: 9998;
+            width: 100%;
+            max-height: min(72vh, 620px);
+            max-height: min(72dvh, 620px);
+            padding: 12px 12px calc(14px + env(safe-area-inset-bottom));
+            border: 1px solid rgba(108, 175, 249, .30);
+            border-bottom: 0;
+            border-radius: 25px 25px 0 0;
+            overflow-y: auto;
+            box-shadow: 0 -20px 60px rgba(0, 7, 20, .38);
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .catalogo-choice-menu-head {
+            position: sticky;
+            top: -12px;
+            z-index: 2;
+            margin: -2px -2px 9px;
+            padding: 10px 8px 12px;
+            border-bottom: 1px solid rgba(137, 187, 242, .14);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 14px;
+            background: rgba(7, 20, 38, .96);
+            backdrop-filter: blur(12px);
+        }
+
+        .catalogo-choice-menu-head strong {
+            color: #ffffff;
+            font-size: 1rem;
+            font-weight: 900;
+        }
+
+        .catalogo-choice-menu-close {
+            flex: 0 0 42px;
+            width: 42px;
+            height: 42px;
+            border: 1px solid rgba(255,255,255,.14);
+            border-radius: 13px;
+            color: #ffffff;
+            background: rgba(255,255,255,.08);
+            font-size: 1rem;
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+        }
+
+        .catalogo-choice-card {
+            min-height: 60px;
+            padding: 10px 12px;
+            border-radius: 15px;
+            grid-template-columns: 39px minmax(0, 1fr) 26px;
+        }
+
+        .catalogo-choice-option-icon {
+            width: 39px;
+            height: 39px;
+            border-radius: 12px;
+        }
+
+        .catalogo-choice-option-copy strong {
+            font-size: .9rem;
+        }
+
+        .catalogo-choice-option-copy small {
+            font-size: .69rem;
         }
 
         .catalogo-price-panel {
@@ -1223,7 +1751,7 @@
 
         .catalogo-price-input-wrap input {
             height: 53px;
-            font-size: .84rem;
+            font-size: 16px;
         }
 
         .catalogo-price-rule {
@@ -1233,14 +1761,26 @@
 
         .catalogo-availability {
             width: 100%;
-            display: grid;
-            grid-template-columns: 1fr;
+            display: flex;
+            flex-wrap: nowrap;
+            gap: 8px;
+            overflow-x: auto;
+            padding: 2px 2px 7px;
+            scroll-snap-type: x proximity;
+            scrollbar-width: none;
+            -webkit-overflow-scrolling: touch;
         }
 
+        .catalogo-availability::-webkit-scrollbar { display: none; }
+
         .catalogo-availability a {
-            width: 100%;
-            min-height: 45px;
+            flex: 0 0 auto;
+            width: auto;
+            min-height: 48px;
+            padding-inline: 15px;
             justify-content: center;
+            scroll-snap-align: start;
+            touch-action: manipulation;
         }
 
         .catalogo-results {
@@ -1296,8 +1836,13 @@
     }
 
     @media (max-width: 390px) {
-        .catalogo-price-controls {
+        .catalogo-price-controls,
+        .catalogo-range-controls {
             grid-template-columns: 1fr;
+        }
+
+        .catalogo-market-bounds {
+            flex-direction: column;
         }
 
         .catalogo-filtros {
@@ -1387,86 +1932,195 @@
                     </div>
                 </div>
 
-                <div class="catalogo-field">
-                    <label for="catalogo-categoria">
+                <button
+                    type="button"
+                    class="catalogo-mobile-filter-toggle"
+                    aria-expanded="false"
+                    data-mobile-filter-toggle
+                >
+                    <i class="fa-solid fa-sliders" aria-hidden="true"></i>
+                    <span class="catalogo-mobile-filter-toggle-copy">
+                        <strong>Filtros e ordenação</strong>
+                        <small>
+                            {% if categoria_ativa or voltagem_ativa or preco_min or preco_max or disponibilidade != "todos" or ordenar != "novidades" %}
+                                Existem filtros ativos
+                            {% else %}
+                                Toque para ajustar o catálogo
+                            {% endif %}
+                        </small>
+                    </span>
+                    <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+                </button>
+
+                <div class="catalogo-field catalogo-advanced-filter">
+                    <div class="catalogo-field-label" id="catalogo-categoria-label">
                         <i class="fa-solid fa-shapes" aria-hidden="true"></i>
                         Categoria
-                    </label>
-                    <div class="catalogo-select-wrap">
-                        <i class="fa-solid fa-shapes" aria-hidden="true"></i>
-                        <select id="catalogo-categoria" name="categoria">
-                            <option value="">Todas as categorias</option>
-                            {% for cat in categorias %}
-                                <option value="{{ cat.id }}" {% if categoria_ativa == cat.id|stringformat:"s" %}selected{% endif %}>
-                                    {{ cat.nome_categoria }} ({{ cat.total_brinquedos }})
-                                </option>
-                            {% endfor %}
-                        </select>
-                        <i class="fa-solid fa-chevron-down catalogo-select-chevron" aria-hidden="true"></i>
                     </div>
+                    <details class="catalogo-choice" data-choice>
+                        <summary aria-labelledby="catalogo-categoria-label">
+                            <span class="catalogo-choice-trigger-icon"><i class="fa-solid fa-shapes" aria-hidden="true"></i></span>
+                            <span class="catalogo-choice-trigger-copy">
+                                <small>Categoria</small>
+                                <strong data-choice-output>{% if categoria_ativa %}Categoria selecionada{% else %}Todas as categorias{% endif %}</strong>
+                            </span>
+                            <i class="fa-solid fa-chevron-down catalogo-choice-chevron" aria-hidden="true"></i>
+                        </summary>
+                        <button type="button" class="catalogo-choice-backdrop" data-choice-close tabindex="-1" aria-label="Fechar opções"></button>
+                        <div class="catalogo-choice-menu">
+                            <div class="catalogo-choice-menu-head">
+                                <strong>Escolha uma categoria</strong>
+                                <button type="button" class="catalogo-choice-menu-close" data-choice-close aria-label="Fechar"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+                            </div>
+                            <div class="catalogo-choice-options">
+                                <label class="catalogo-choice-option" data-choice-label="Todas as categorias">
+                                    <input class="catalogo-choice-input" type="radio" name="categoria" value="" {% if not categoria_ativa %}checked{% endif %}>
+                                    <span class="catalogo-choice-card">
+                                        <span class="catalogo-choice-option-icon"><i class="fa-solid fa-border-all" aria-hidden="true"></i></span>
+                                        <span class="catalogo-choice-option-copy"><strong>Todas as categorias</strong><small>Exibir o catálogo completo</small></span>
+                                        <i class="fa-solid fa-check catalogo-choice-check" aria-hidden="true"></i>
+                                    </span>
+                                </label>
+                            {% for cat in categorias %}
+                                <label class="catalogo-choice-option" data-choice-label="{{ cat.nome_categoria }}">
+                                    <input class="catalogo-choice-input" type="radio" name="categoria" value="{{ cat.id }}" {% if categoria_ativa == cat.id|stringformat:"s" %}checked{% endif %}>
+                                    <span class="catalogo-choice-card">
+                                        <span class="catalogo-choice-option-icon"><i class="fa-solid fa-gamepad" aria-hidden="true"></i></span>
+                                        <span class="catalogo-choice-option-copy"><strong>{{ cat.nome_categoria }}</strong><small>{{ cat.total_brinquedos }} brinquedo{{ cat.total_brinquedos|pluralize }}</small></span>
+                                        <i class="fa-solid fa-check catalogo-choice-check" aria-hidden="true"></i>
+                                    </span>
+                                </label>
+                            {% endfor %}
+                            </div>
+                        </div>
+                    </details>
                 </div>
 
-                <div class="catalogo-field">
-                    <label for="catalogo-disponibilidade">
+                <div class="catalogo-field catalogo-advanced-filter">
+                    <div class="catalogo-field-label" id="catalogo-disponibilidade-label">
                         <i class="fa-solid fa-store" aria-hidden="true"></i>
                         Disponibilidade
-                    </label>
-                    <div class="catalogo-select-wrap">
-                        <i class="fa-solid fa-store" aria-hidden="true"></i>
-                        <select id="catalogo-disponibilidade" name="disponibilidade">
-                            <option value="todos" {% if disponibilidade == "todos" %}selected{% endif %}>Todos os brinquedos</option>
-                            <option value="loja" {% if disponibilidade == "loja" %}selected{% endif %}>Disponíveis na loja</option>
-                            <option value="orcamento" {% if disponibilidade == "orcamento" %}selected{% endif %}>Projetos sob consulta</option>
-                        </select>
-                        <i class="fa-solid fa-chevron-down catalogo-select-chevron" aria-hidden="true"></i>
                     </div>
+                    <details class="catalogo-choice" data-choice>
+                        <summary aria-labelledby="catalogo-disponibilidade-label">
+                            <span class="catalogo-choice-trigger-icon"><i class="fa-solid fa-store" aria-hidden="true"></i></span>
+                            <span class="catalogo-choice-trigger-copy">
+                                <small>Disponibilidade</small>
+                                <strong data-choice-output>{% if disponibilidade == "loja" %}Disponíveis na loja{% elif disponibilidade == "orcamento" %}Projetos sob consulta{% else %}Todos os brinquedos{% endif %}</strong>
+                            </span>
+                            <i class="fa-solid fa-chevron-down catalogo-choice-chevron" aria-hidden="true"></i>
+                        </summary>
+                        <button type="button" class="catalogo-choice-backdrop" data-choice-close tabindex="-1" aria-label="Fechar opções"></button>
+                        <div class="catalogo-choice-menu">
+                            <div class="catalogo-choice-menu-head">
+                                <strong>Disponibilidade</strong>
+                                <button type="button" class="catalogo-choice-menu-close" data-choice-close aria-label="Fechar"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+                            </div>
+                            <div class="catalogo-choice-options">
+                                <label class="catalogo-choice-option" data-choice-label="Todos os brinquedos">
+                                    <input class="catalogo-choice-input" type="radio" name="disponibilidade" value="todos" {% if disponibilidade == "todos" %}checked{% endif %}>
+                                    <span class="catalogo-choice-card"><span class="catalogo-choice-option-icon"><i class="fa-solid fa-border-all" aria-hidden="true"></i></span><span class="catalogo-choice-option-copy"><strong>Todos os brinquedos</strong><small>Compra e orçamento juntos</small></span><i class="fa-solid fa-check catalogo-choice-check" aria-hidden="true"></i></span>
+                                </label>
+                                <label class="catalogo-choice-option" data-choice-label="Disponíveis na loja">
+                                    <input class="catalogo-choice-input" type="radio" name="disponibilidade" value="loja" {% if disponibilidade == "loja" %}checked{% endif %}>
+                                    <span class="catalogo-choice-card"><span class="catalogo-choice-option-icon"><i class="fa-solid fa-cart-shopping" aria-hidden="true"></i></span><span class="catalogo-choice-option-copy"><strong>Disponíveis na loja</strong><small>Produtos com preço para compra</small></span><i class="fa-solid fa-check catalogo-choice-check" aria-hidden="true"></i></span>
+                                </label>
+                                <label class="catalogo-choice-option" data-choice-label="Projetos sob consulta">
+                                    <input class="catalogo-choice-input" type="radio" name="disponibilidade" value="orcamento" {% if disponibilidade == "orcamento" %}checked{% endif %}>
+                                    <span class="catalogo-choice-card"><span class="catalogo-choice-option-icon"><i class="fa-solid fa-compass-drafting" aria-hidden="true"></i></span><span class="catalogo-choice-option-copy"><strong>Projetos sob consulta</strong><small>Atendimento e orçamento personalizado</small></span><i class="fa-solid fa-check catalogo-choice-check" aria-hidden="true"></i></span>
+                                </label>
+                            </div>
+                        </div>
+                    </details>
                 </div>
 
-                <div class="catalogo-field">
-                    <label for="catalogo-voltagem">
+                <div class="catalogo-field catalogo-advanced-filter">
+                    <div class="catalogo-field-label" id="catalogo-voltagem-label">
                         <i class="fa-solid fa-bolt" aria-hidden="true"></i>
                         Voltagem
-                    </label>
-                    <div class="catalogo-select-wrap">
-                        <i class="fa-solid fa-bolt" aria-hidden="true"></i>
-                        <select id="catalogo-voltagem" name="voltagem">
-                            <option value="">Todas as voltagens</option>
-                            {% for item_voltagem in voltagens %}
-                                <option value="{{ item_voltagem }}" {% if voltagem_ativa == item_voltagem %}selected{% endif %}>
-                                    {{ item_voltagem }}
-                                </option>
-                            {% endfor %}
-                        </select>
-                        <i class="fa-solid fa-chevron-down catalogo-select-chevron" aria-hidden="true"></i>
                     </div>
+                    <details class="catalogo-choice" data-choice>
+                        <summary aria-labelledby="catalogo-voltagem-label">
+                            <span class="catalogo-choice-trigger-icon"><i class="fa-solid fa-bolt" aria-hidden="true"></i></span>
+                            <span class="catalogo-choice-trigger-copy">
+                                <small>Voltagem</small>
+                                <strong data-choice-output>{{ voltagem_ativa|default:"Todas as voltagens" }}</strong>
+                            </span>
+                            <i class="fa-solid fa-chevron-down catalogo-choice-chevron" aria-hidden="true"></i>
+                        </summary>
+                        <button type="button" class="catalogo-choice-backdrop" data-choice-close tabindex="-1" aria-label="Fechar opções"></button>
+                        <div class="catalogo-choice-menu">
+                            <div class="catalogo-choice-menu-head">
+                                <strong>Escolha a voltagem</strong>
+                                <button type="button" class="catalogo-choice-menu-close" data-choice-close aria-label="Fechar"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+                            </div>
+                            <div class="catalogo-choice-options">
+                                <label class="catalogo-choice-option" data-choice-label="Todas as voltagens">
+                                    <input class="catalogo-choice-input" type="radio" name="voltagem" value="" {% if not voltagem_ativa %}checked{% endif %}>
+                                    <span class="catalogo-choice-card"><span class="catalogo-choice-option-icon"><i class="fa-solid fa-plug-circle-check" aria-hidden="true"></i></span><span class="catalogo-choice-option-copy"><strong>Todas as voltagens</strong><small>Não limitar pela alimentação elétrica</small></span><i class="fa-solid fa-check catalogo-choice-check" aria-hidden="true"></i></span>
+                                </label>
+                            {% for item_voltagem in voltagens %}
+                                <label class="catalogo-choice-option" data-choice-label="{{ item_voltagem }}">
+                                    <input class="catalogo-choice-input" type="radio" name="voltagem" value="{{ item_voltagem }}" {% if voltagem_ativa == item_voltagem %}checked{% endif %}>
+                                    <span class="catalogo-choice-card"><span class="catalogo-choice-option-icon"><i class="fa-solid fa-bolt" aria-hidden="true"></i></span><span class="catalogo-choice-option-copy"><strong>{{ item_voltagem }}</strong><small>Exibir modelos compatíveis</small></span><i class="fa-solid fa-check catalogo-choice-check" aria-hidden="true"></i></span>
+                                </label>
+                            {% endfor %}
+                            </div>
+                        </div>
+                    </details>
                 </div>
 
-                <div class="catalogo-field">
-                    <label for="catalogo-ordenar">
+                <div class="catalogo-field catalogo-advanced-filter">
+                    <div class="catalogo-field-label" id="catalogo-ordenar-label">
                         <i class="fa-solid fa-arrow-down-wide-short" aria-hidden="true"></i>
                         Ordenar
-                    </label>
-                    <div class="catalogo-select-wrap">
-                        <i class="fa-solid fa-arrow-down-wide-short" aria-hidden="true"></i>
-                        <select id="catalogo-ordenar" name="ordenar">
-                            <option value="novidades" {% if ordenar == "novidades" %}selected{% endif %}>Novidades</option>
-                            <option value="az" {% if ordenar == "az" %}selected{% endif %}>A → Z</option>
-                            <option value="za" {% if ordenar == "za" %}selected{% endif %}>Z → A</option>
-                            <option value="melhor-avaliados" {% if ordenar == "melhor-avaliados" %}selected{% endif %}>Melhores avaliados</option>
-                            <option value="menor-preco" {% if ordenar == "menor-preco" %}selected{% endif %}>Menor preço · Loja</option>
-                            <option value="maior-preco" {% if ordenar == "maior-preco" %}selected{% endif %}>Maior preço · Loja</option>
-                            <option value="custo-beneficio" {% if ordenar == "custo-beneficio" %}selected{% endif %}>Custo-benefício · Loja</option>
-                        </select>
-                        <i class="fa-solid fa-chevron-down catalogo-select-chevron" aria-hidden="true"></i>
                     </div>
+                    <details class="catalogo-choice" data-choice data-menu-align="end">
+                        <summary aria-labelledby="catalogo-ordenar-label">
+                            <span class="catalogo-choice-trigger-icon"><i class="fa-solid fa-arrow-down-wide-short" aria-hidden="true"></i></span>
+                            <span class="catalogo-choice-trigger-copy">
+                                <small>Ordenar</small>
+                                <strong data-choice-output>{% if ordenar == "az" %}A → Z{% elif ordenar == "za" %}Z → A{% elif ordenar == "melhor-avaliados" %}Melhores avaliados{% elif ordenar == "menor-preco" %}Menor preço · Loja{% elif ordenar == "maior-preco" %}Maior preço · Loja{% elif ordenar == "custo-beneficio" %}Custo-benefício · Loja{% else %}Novidades{% endif %}</strong>
+                            </span>
+                            <i class="fa-solid fa-chevron-down catalogo-choice-chevron" aria-hidden="true"></i>
+                        </summary>
+                        <button type="button" class="catalogo-choice-backdrop" data-choice-close tabindex="-1" aria-label="Fechar opções"></button>
+                        <div class="catalogo-choice-menu">
+                            <div class="catalogo-choice-menu-head">
+                                <strong>Ordenar resultados</strong>
+                                <button type="button" class="catalogo-choice-menu-close" data-choice-close aria-label="Fechar"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+                            </div>
+                            <div class="catalogo-choice-options">
+                                <label class="catalogo-choice-option" data-choice-label="Novidades"><input class="catalogo-choice-input" type="radio" name="ordenar" value="novidades" {% if ordenar == "novidades" %}checked{% endif %}><span class="catalogo-choice-card"><span class="catalogo-choice-option-icon"><i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i></span><span class="catalogo-choice-option-copy"><strong>Novidades</strong><small>Cadastros mais recentes primeiro</small></span><i class="fa-solid fa-check catalogo-choice-check" aria-hidden="true"></i></span></label>
+                                <label class="catalogo-choice-option" data-choice-label="A → Z"><input class="catalogo-choice-input" type="radio" name="ordenar" value="az" {% if ordenar == "az" %}checked{% endif %}><span class="catalogo-choice-card"><span class="catalogo-choice-option-icon"><i class="fa-solid fa-arrow-down-a-z" aria-hidden="true"></i></span><span class="catalogo-choice-option-copy"><strong>A → Z</strong><small>Ordem alfabética crescente</small></span><i class="fa-solid fa-check catalogo-choice-check" aria-hidden="true"></i></span></label>
+                                <label class="catalogo-choice-option" data-choice-label="Z → A"><input class="catalogo-choice-input" type="radio" name="ordenar" value="za" {% if ordenar == "za" %}checked{% endif %}><span class="catalogo-choice-card"><span class="catalogo-choice-option-icon"><i class="fa-solid fa-arrow-up-z-a" aria-hidden="true"></i></span><span class="catalogo-choice-option-copy"><strong>Z → A</strong><small>Ordem alfabética decrescente</small></span><i class="fa-solid fa-check catalogo-choice-check" aria-hidden="true"></i></span></label>
+                                <label class="catalogo-choice-option" data-choice-label="Melhores avaliados"><input class="catalogo-choice-input" type="radio" name="ordenar" value="melhor-avaliados" {% if ordenar == "melhor-avaliados" %}checked{% endif %}><span class="catalogo-choice-card"><span class="catalogo-choice-option-icon"><i class="fa-solid fa-star" aria-hidden="true"></i></span><span class="catalogo-choice-option-copy"><strong>Melhores avaliados</strong><small>Maior nota primeiro</small></span><i class="fa-solid fa-check catalogo-choice-check" aria-hidden="true"></i></span></label>
+                                <label class="catalogo-choice-option" data-choice-label="Menor preço · Loja"><input class="catalogo-choice-input" type="radio" name="ordenar" value="menor-preco" {% if ordenar == "menor-preco" %}checked{% endif %}><span class="catalogo-choice-card"><span class="catalogo-choice-option-icon"><i class="fa-solid fa-arrow-down-1-9" aria-hidden="true"></i></span><span class="catalogo-choice-option-copy"><strong>Menor preço</strong><small>Somente itens disponíveis na loja</small></span><i class="fa-solid fa-check catalogo-choice-check" aria-hidden="true"></i></span></label>
+                                <label class="catalogo-choice-option" data-choice-label="Maior preço · Loja"><input class="catalogo-choice-input" type="radio" name="ordenar" value="maior-preco" {% if ordenar == "maior-preco" %}checked{% endif %}><span class="catalogo-choice-card"><span class="catalogo-choice-option-icon"><i class="fa-solid fa-arrow-up-9-1" aria-hidden="true"></i></span><span class="catalogo-choice-option-copy"><strong>Maior preço</strong><small>Somente itens disponíveis na loja</small></span><i class="fa-solid fa-check catalogo-choice-check" aria-hidden="true"></i></span></label>
+                                <label class="catalogo-choice-option" data-choice-label="Custo-benefício · Loja"><input class="catalogo-choice-input" type="radio" name="ordenar" value="custo-beneficio" {% if ordenar == "custo-beneficio" %}checked{% endif %}><span class="catalogo-choice-card"><span class="catalogo-choice-option-icon"><i class="fa-solid fa-scale-balanced" aria-hidden="true"></i></span><span class="catalogo-choice-option-copy"><strong>Custo-benefício</strong><small>Equilíbrio entre nota e preço</small></span><i class="fa-solid fa-check catalogo-choice-check" aria-hidden="true"></i></span></label>
+                            </div>
+                        </div>
+                    </details>
                 </div>
 
-                <div class="catalogo-price-panel">
+                <div class="catalogo-price-panel catalogo-advanced-filter">
                     <div class="catalogo-price-title">
                         <i class="fa-solid fa-tags" aria-hidden="true"></i>
                         <div>
                             <strong>Faixa de preço</strong>
-                            <span>Exclusiva para produtos disponíveis na loja</span>
+                            <span>Valores reais dos brinquedos disponíveis na loja</span>
+                            {% if faixa_preco_disponivel %}
+                            <div class="catalogo-market-bounds" aria-label="Limites de preço encontrados na loja">
+                                <span class="catalogo-market-bound">
+                                    <small>Menor encontrado</small>
+                                    <strong>R$ {{ menor_preco_loja_br }}</strong>
+                                </span>
+                                <span class="catalogo-market-bound">
+                                    <small>Maior encontrado</small>
+                                    <strong>R$ {{ maior_preco_loja_br }}</strong>
+                                </span>
+                            </div>
+                            {% endif %}
                         </div>
                     </div>
 
@@ -1482,7 +2136,8 @@
                                     value="{{ preco_min }}"
                                     inputmode="decimal"
                                     maxlength="24"
-                                    placeholder="0,00"
+                                    placeholder="{{ menor_preco_loja_br|default:'0,00' }}"
+                                    autocomplete="off"
                                 >
                             </div>
                         </div>
@@ -1497,10 +2152,43 @@
                                     value="{{ preco_max }}"
                                     inputmode="decimal"
                                     maxlength="24"
-                                    placeholder="Sem limite"
+                                    placeholder="{{ maior_preco_loja_br|default:'Sem limite' }}"
+                                    autocomplete="off"
                                 >
                             </div>
                         </div>
+                        {% if faixa_preco_disponivel %}
+                        <div class="catalogo-range-controls" aria-label="Ajuste rápido da faixa de preço">
+                            <label class="catalogo-range-field" for="catalogo-range-min">
+                                <span class="catalogo-range-head">
+                                    <span>Mínimo rápido</span>
+                                    <output id="catalogo-range-min-output">R$ {{ preco_min_range_br }}</output>
+                                </span>
+                                <input
+                                    id="catalogo-range-min"
+                                    type="range"
+                                    min="{{ menor_preco_loja }}"
+                                    max="{{ maior_preco_loja }}"
+                                    value="{{ preco_min_range }}"
+                                    step="0.01"
+                                >
+                            </label>
+                            <label class="catalogo-range-field" for="catalogo-range-max">
+                                <span class="catalogo-range-head">
+                                    <span>Máximo rápido</span>
+                                    <output id="catalogo-range-max-output">R$ {{ preco_max_range_br }}</output>
+                                </span>
+                                <input
+                                    id="catalogo-range-max"
+                                    type="range"
+                                    min="{{ menor_preco_loja }}"
+                                    max="{{ maior_preco_loja }}"
+                                    value="{{ preco_max_range }}"
+                                    step="0.01"
+                                >
+                            </label>
+                        </div>
+                        {% endif %}
                     </div>
 
                     <div class="catalogo-price-rule {% if filtro_valor_ativo %}is-active{% endif %}" id="catalogo-price-rule">
@@ -1783,6 +2471,26 @@
         return Number(texto.replace(',', '.')) || 0;
     }
 
+    const formatadorNumeroBR = new Intl.NumberFormat('pt-BR', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    });
+
+    const formatadorMoedaBR = new Intl.NumberFormat('pt-BR', {
+        style: 'currency',
+        currency: 'BRL',
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    });
+
+    function textoDecimalBR(valor) {
+        return formatadorNumeroBR.format(Number(valor) || 0);
+    }
+
+    function textoMoedaBR(valor) {
+        return formatadorMoedaBR.format(Number(valor) || 0);
+    }
+
     function formatarMoedas() {
         document.querySelectorAll('.catalogo-money[data-value]').forEach(elemento => {
             const valor = paraNumero(elemento.dataset.value);
@@ -1890,27 +2598,140 @@
 
         const form = document.querySelector('.catalogo-filter-grid');
         const submit = form ? form.querySelector('.catalogo-filter-submit') : null;
-        const disponibilidade = document.getElementById('catalogo-disponibilidade');
-        const ordenar = document.getElementById('catalogo-ordenar');
         const precoMin = document.getElementById('catalogo-preco-min');
         const precoMax = document.getElementById('catalogo-preco-max');
+        const rangeMin = document.getElementById('catalogo-range-min');
+        const rangeMax = document.getElementById('catalogo-range-max');
+        const rangeMinOutput = document.getElementById('catalogo-range-min-output');
+        const rangeMaxOutput = document.getElementById('catalogo-range-max-output');
         const regraPreco = document.getElementById('catalogo-price-rule');
+        const escolhas = Array.from(document.querySelectorAll('[data-choice]'));
+        const mobileToggle = document.querySelector('[data-mobile-filter-toggle]');
         const ordensPorValor = new Set(['menor-preco', 'maior-preco', 'custo-beneficio']);
+
+        function radioSelecionado(nome) {
+            return form ? form.querySelector(`input[name="${nome}"]:checked`) : null;
+        }
+
+        function valorSelecionado(nome) {
+            const radio = radioSelecionado(nome);
+            return radio ? radio.value : '';
+        }
+
+        function atualizarResumoDaEscolha(input) {
+            if (!input) return;
+            const escolha = input.closest('[data-choice]');
+            const opcao = input.closest('[data-choice-label]');
+            const output = escolha ? escolha.querySelector('[data-choice-output]') : null;
+            if (output && opcao) output.textContent = opcao.dataset.choiceLabel || '';
+        }
+
+        function selecionarValor(nome, valor) {
+            if (!form) return;
+            const input = Array.from(form.querySelectorAll(`input[name="${nome}"]`))
+                .find(item => item.value === valor);
+            if (!input) return;
+            input.checked = true;
+            atualizarResumoDaEscolha(input);
+        }
+
+        function atualizarBloqueioDeRolagem() {
+            const escolhaAberta = escolhas.some(escolha => escolha.open);
+            document.body.classList.toggle(
+                'catalogo-filter-lock',
+                escolhaAberta && window.matchMedia('(max-width: 680px)').matches
+            );
+        }
+
+        function fecharEscolha(escolha) {
+            if (escolha) escolha.removeAttribute('open');
+            atualizarBloqueioDeRolagem();
+        }
+
+        escolhas.forEach(escolha => {
+            escolha.querySelectorAll('.catalogo-choice-input').forEach(input => {
+                if (input.checked) atualizarResumoDaEscolha(input);
+                input.addEventListener('change', () => {
+                    atualizarResumoDaEscolha(input);
+                    fecharEscolha(escolha);
+                });
+            });
+
+            escolha.querySelectorAll('[data-choice-close]').forEach(botao => {
+                botao.addEventListener('click', evento => {
+                    evento.preventDefault();
+                    fecharEscolha(escolha);
+                });
+            });
+
+            escolha.addEventListener('toggle', () => {
+                if (escolha.open) {
+                    escolhas.forEach(outra => {
+                        if (outra !== escolha) outra.removeAttribute('open');
+                    });
+                }
+                atualizarBloqueioDeRolagem();
+            });
+        });
+
+        document.addEventListener('click', evento => {
+            if (window.matchMedia('(max-width: 680px)').matches) return;
+            escolhas.forEach(escolha => {
+                if (escolha.open && !escolha.contains(evento.target)) fecharEscolha(escolha);
+            });
+        });
+
+        document.addEventListener('keydown', evento => {
+            if (evento.key !== 'Escape') return;
+            escolhas.forEach(fecharEscolha);
+        });
+
+        window.addEventListener('resize', atualizarBloqueioDeRolagem, { passive: true });
+
+        if (mobileToggle && form) {
+            mobileToggle.addEventListener('click', () => {
+                const aberto = form.classList.toggle('is-expanded');
+                mobileToggle.setAttribute('aria-expanded', String(aberto));
+            });
+        }
 
         function possuiValor(input) {
             return Boolean(input && input.value.trim());
         }
 
+        function atualizarSaidasDaFaixa() {
+            if (rangeMinOutput && rangeMin) {
+                rangeMinOutput.textContent = textoMoedaBR(rangeMin.value);
+            }
+            if (rangeMaxOutput && rangeMax) {
+                rangeMaxOutput.textContent = textoMoedaBR(rangeMax.value);
+            }
+        }
+
+        function restaurarFaixaVisual() {
+            if (rangeMin) rangeMin.value = rangeMin.min;
+            if (rangeMax) rangeMax.value = rangeMax.max;
+            atualizarSaidasDaFaixa();
+        }
+
+        function sincronizarCampoComFaixa(input, range) {
+            if (!input || !range || !input.value.trim()) return;
+            const numero = paraNumero(input.value);
+            if (!Number.isFinite(numero)) return;
+            const minimo = Number(range.min);
+            const maximo = Number(range.max);
+            range.value = String(Math.min(maximo, Math.max(minimo, numero)));
+            atualizarSaidasDaFaixa();
+        }
+
         function atualizarRegraDeValor() {
             const valorAtivo = Boolean(
-                (ordenar && ordensPorValor.has(ordenar.value))
+                ordensPorValor.has(valorSelecionado('ordenar'))
                 || possuiValor(precoMin)
                 || possuiValor(precoMax)
             );
 
-            if (valorAtivo && disponibilidade) {
-                disponibilidade.value = 'loja';
-            }
+            if (valorAtivo) selecionarValor('disponibilidade', 'loja');
 
             if (regraPreco) {
                 regraPreco.classList.toggle('is-active', valorAtivo);
@@ -1926,25 +2747,55 @@
                 input.value = input.value.replace(/[^0-9.,]/g, '');
                 atualizarRegraDeValor();
             });
+            input.addEventListener('blur', () => {
+                if (!input.value.trim()) return;
+                input.value = textoDecimalBR(paraNumero(input.value));
+                sincronizarCampoComFaixa(
+                    input,
+                    input === precoMin ? rangeMin : rangeMax
+                );
+            });
         });
 
-        if (ordenar) {
-            ordenar.addEventListener('change', atualizarRegraDeValor);
-        }
+        rangeMin?.addEventListener('input', () => {
+            if (rangeMax && Number(rangeMin.value) > Number(rangeMax.value)) {
+                rangeMax.value = rangeMin.value;
+                if (precoMax) precoMax.value = textoDecimalBR(rangeMax.value);
+            }
+            if (precoMin) precoMin.value = textoDecimalBR(rangeMin.value);
+            atualizarSaidasDaFaixa();
+            atualizarRegraDeValor();
+        });
 
-        if (disponibilidade) {
-            disponibilidade.addEventListener('change', () => {
-                if (disponibilidade.value !== 'loja') {
+        rangeMax?.addEventListener('input', () => {
+            if (rangeMin && Number(rangeMax.value) < Number(rangeMin.value)) {
+                rangeMin.value = rangeMax.value;
+                if (precoMin) precoMin.value = textoDecimalBR(rangeMin.value);
+            }
+            if (precoMax) precoMax.value = textoDecimalBR(rangeMax.value);
+            atualizarSaidasDaFaixa();
+            atualizarRegraDeValor();
+        });
+
+        form?.querySelectorAll('input[name="ordenar"]').forEach(input => {
+            input.addEventListener('change', atualizarRegraDeValor);
+        });
+
+        form?.querySelectorAll('input[name="disponibilidade"]').forEach(input => {
+            input.addEventListener('change', () => {
+                if (input.checked && input.value !== 'loja') {
                     if (precoMin) precoMin.value = '';
                     if (precoMax) precoMax.value = '';
-                    if (ordenar && ordensPorValor.has(ordenar.value)) {
-                        ordenar.value = 'novidades';
-                    }
+                    restaurarFaixaVisual();
+                    if (ordensPorValor.has(valorSelecionado('ordenar'))) selecionarValor('ordenar', 'novidades');
                 }
                 atualizarRegraDeValor();
             });
-        }
+        });
 
+        sincronizarCampoComFaixa(precoMin, rangeMin);
+        sincronizarCampoComFaixa(precoMax, rangeMax);
+        atualizarSaidasDaFaixa();
         atualizarRegraDeValor();
 
         if (form && submit) {

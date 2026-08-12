@@ -19,21 +19,50 @@ from .models import Brinquedos, ImagemBrinquedo, CategoriasBrinquedos, Projetos,
     ImagemProjetoBrinquedo, ImagemEvento, Clientes, EnderecoEmpresa
 from django.templatetags.static import static
 from .utils import LAT_EMPRESA, LON_EMPRESA
-from .home_cache import get_cached_home_context, home_cache_timeout
+from .home_cache import (
+    get_cached_catalog_metadata,
+    get_cached_home_context,
+    home_cache_timeout,
+)
 
-import os
+import mimetypes
+from pathlib import Path
 from django.http import FileResponse, Http404, HttpResponse
 from django.conf import settings
+from django.utils.http import http_date
 from random import shuffle, sample
 
 
 def media_serve(request, path):
-    file_path = os.path.join(settings.MEDIA_ROOT, path)
+    media_root = Path(settings.MEDIA_ROOT).resolve()
+    file_path = (media_root / path).resolve()
 
-    if not os.path.isfile(file_path):
+    if (
+        file_path == media_root
+        or media_root not in file_path.parents
+        or not file_path.is_file()
+    ):
         raise Http404("Arquivo não encontrado")
 
-    return FileResponse(open(file_path, 'rb'), content_type='image/jpeg')
+    stat = file_path.stat()
+    etag = f'"{stat.st_mtime_ns:x}-{stat.st_size:x}"'
+    cache_control = "public, max-age=86400, stale-while-revalidate=604800"
+
+    if request.headers.get("If-None-Match") == etag:
+        response = HttpResponse(status=304)
+    else:
+        content_type, encoding = mimetypes.guess_type(str(file_path))
+        response = FileResponse(
+            file_path.open("rb"),
+            content_type=content_type or "application/octet-stream",
+        )
+        if encoding:
+            response["Content-Encoding"] = encoding
+
+    response["Cache-Control"] = cache_control
+    response["ETag"] = etag
+    response["Last-Modified"] = http_date(stat.st_mtime)
+    return response
 
 
 from django.http import HttpResponseNotFound, HttpResponseServerError
@@ -843,6 +872,8 @@ from django.db.models import (
     FloatField,
     DecimalField,
     ExpressionWrapper,
+    Min,
+    Max,
 )
 from django.db.models.functions import Cast, TruncDate, Coalesce
 
@@ -869,6 +900,66 @@ class EstabelecimentosListView(ListView):
 
 
 class BrinquedosView(View):
+    @staticmethod
+    def _formatar_decimal_br(valor):
+        """Formata Decimal no padrão 1.234,56, sem depender do locale do SO."""
+        if valor is None:
+            return ""
+        numero = Decimal(valor).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        return f"{numero:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+    @staticmethod
+    def _decimal_html(valor):
+        """Valor decimal estável para atributos numéricos do HTML."""
+        if valor is None:
+            return "0.00"
+        return f"{Decimal(valor).quantize(Decimal('0.01')):.2f}"
+
+    @staticmethod
+    def _build_catalog_metadata():
+        catalogo_ativo = Brinquedos.objects.filter(ativo=True)
+        loja_valida = Q(
+            exibir_na_loja=True,
+            valor_brinquedo__isnull=False,
+            valor_brinquedo__gt=0,
+        )
+
+        categorias = list(
+            CategoriasBrinquedos.objects
+            .filter(ativo=True)
+            .values("id", "nome_categoria")
+            .annotate(
+                total_brinquedos=Count(
+                    "brinquedos",
+                    filter=Q(brinquedos__ativo=True),
+                    distinct=True,
+                )
+            )
+            .filter(total_brinquedos__gt=0)
+            .order_by("nome_categoria")
+        )
+        voltagens = list(
+            catalogo_ativo
+            .exclude(voltz__isnull=True)
+            .exclude(voltz="")
+            .values_list("voltz", flat=True)
+            .distinct()
+            .order_by("voltz")
+        )
+        totais = catalogo_ativo.aggregate(
+            total_catalogo=Count("id"),
+            total_loja=Count("id", filter=loja_valida),
+            menor_preco_loja=Min("valor_brinquedo", filter=loja_valida),
+            maior_preco_loja=Max("valor_brinquedo", filter=loja_valida),
+        )
+
+        return {
+            "categorias": categorias,
+            "voltagens": voltagens,
+            "total_categorias": len(categorias),
+            **totais,
+        }
+
     def get(self, request):
         busca = request.GET.get("q", "").strip()[:120]
         categoria = request.GET.get("categoria", "").strip()
@@ -904,13 +995,17 @@ class BrinquedosView(View):
 
         if preco_min is None:
             preco_min_input = ""
+        else:
+            preco_min_input = self._formatar_decimal_br(preco_min)
         if preco_max is None:
             preco_max_input = ""
+        else:
+            preco_max_input = self._formatar_decimal_br(preco_max)
 
         if preco_min is not None and preco_max is not None and preco_min > preco_max:
             preco_min, preco_max = preco_max, preco_min
-            preco_min_input = str(preco_min).replace(".", ",")
-            preco_max_input = str(preco_max).replace(".", ",")
+            preco_min_input = self._formatar_decimal_br(preco_min)
+            preco_max_input = self._formatar_decimal_br(preco_max)
 
         ordens_validas = {
             "novidades",
@@ -929,29 +1024,9 @@ class BrinquedosView(View):
             disponibilidade = "todos"
 
         catalogo_ativo = Brinquedos.objects.filter(ativo=True)
-
-        categorias = (
-            CategoriasBrinquedos.objects
-            .filter(ativo=True)
-            .annotate(
-                total_brinquedos=Count(
-                    "brinquedos",
-                    filter=Q(brinquedos__ativo=True),
-                    distinct=True,
-                )
-            )
-            .filter(total_brinquedos__gt=0)
-            .order_by("nome_categoria")
-        )
-
-        voltagens = list(
-            catalogo_ativo
-            .exclude(voltz__isnull=True)
-            .exclude(voltz="")
-            .values_list("voltz", flat=True)
-            .distinct()
-            .order_by("voltz")
-        )
+        metadata = get_cached_catalog_metadata(self._build_catalog_metadata)
+        categorias = metadata["categorias"]
+        voltagens = metadata["voltagens"]
 
         brinquedos_list = (
             catalogo_ativo
@@ -1062,6 +1137,14 @@ class BrinquedosView(View):
         query_params = request.GET.copy()
         query_params.pop("page", None)
 
+        menor_preco_loja = metadata.get("menor_preco_loja")
+        maior_preco_loja = metadata.get("maior_preco_loja")
+        faixa_preco_disponivel = (
+            menor_preco_loja is not None and maior_preco_loja is not None
+        )
+        preco_min_range = preco_min if preco_min is not None else menor_preco_loja
+        preco_max_range = preco_max if preco_max is not None else maior_preco_loja
+
         context = {
             "brinquedos": page_obj,
             "page_obj": page_obj,
@@ -1074,14 +1157,20 @@ class BrinquedosView(View):
             "disponibilidade": disponibilidade,
             "preco_min": preco_min_input,
             "preco_max": preco_max_input,
+            "faixa_preco_disponivel": faixa_preco_disponivel,
+            "menor_preco_loja": self._decimal_html(menor_preco_loja),
+            "maior_preco_loja": self._decimal_html(maior_preco_loja),
+            "menor_preco_loja_br": self._formatar_decimal_br(menor_preco_loja),
+            "maior_preco_loja_br": self._formatar_decimal_br(maior_preco_loja),
+            "preco_min_range": self._decimal_html(preco_min_range),
+            "preco_max_range": self._decimal_html(preco_max_range),
+            "preco_min_range_br": self._formatar_decimal_br(preco_min_range),
+            "preco_max_range_br": self._formatar_decimal_br(preco_max_range),
             "filtro_valor_ativo": filtro_por_valor,
             "total_encontrados": total_encontrados,
-            "total_catalogo": catalogo_ativo.count(),
-            "total_loja": catalogo_ativo.filter(
-                exibir_na_loja=True,
-                valor_brinquedo__gt=0,
-            ).count(),
-            "total_categorias": categorias.count(),
+            "total_catalogo": metadata["total_catalogo"],
+            "total_loja": metadata["total_loja"],
+            "total_categorias": metadata["total_categorias"],
             "querystring": query_params.urlencode(),
         }
 

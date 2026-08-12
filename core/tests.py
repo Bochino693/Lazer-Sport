@@ -19,8 +19,10 @@ from .catalog_images import (
     numerar_imagens_existentes_das_pecas,
 )
 from .home_cache import (
+    CATALOG_METADATA_CACHE_KEY,
     HOME_CONTEXT_CACHE_KEY,
     HOME_FRAGMENT_NAME,
+    get_cached_catalog_metadata,
     get_cached_home_context,
 )
 from .models import (
@@ -264,6 +266,10 @@ class CatalogImageMigrationTests(TestCase):
         self.assertEqual(resposta_brinquedo.status_code, 200)
         self.assertContains(resposta_brinquedo, 'data-galeria-indice="1"')
         self.assertContains(resposta_brinquedo, "1 / 2")
+        self.assertContains(
+            resposta_brinquedo,
+            '<main class="content-section content-section--full">',
+        )
 
         peca = PecasReposicao.objects.create(
             nome="Peça galeria",
@@ -287,6 +293,10 @@ class CatalogImageMigrationTests(TestCase):
         self.assertEqual(resposta_peca.status_code, 200)
         self.assertContains(resposta_peca, 'data-foto-indice="1"')
         self.assertContains(resposta_peca, "Código LS-P")
+        self.assertContains(
+            resposta_peca,
+            '<main class="content-section content-section--full">',
+        )
 
 
 @override_settings(HOME_CACHE_TTL=600)
@@ -311,6 +321,24 @@ class HomePublicCacheTests(SimpleTestCase):
         self.assertNotIn("temporario", get_cached_home_context(builder))
 
 
+@override_settings(CATALOG_CACHE_TTL=600)
+class CatalogMetadataCacheTests(SimpleTestCase):
+    def setUp(self):
+        cache.clear()
+
+    def tearDown(self):
+        cache.clear()
+
+    def test_metadados_publicos_sao_montados_uma_vez(self):
+        builder = MagicMock(return_value={"total_catalogo": 12})
+
+        primeiro = get_cached_catalog_metadata(builder)
+        segundo = get_cached_catalog_metadata(builder)
+
+        self.assertEqual(primeiro, segundo)
+        self.assertEqual(builder.call_count, 1)
+
+
 @override_settings(HOME_CACHE_TTL=600)
 class HomeCacheInvalidationTests(TransactionTestCase):
     def setUp(self):
@@ -326,6 +354,7 @@ class HomeCacheInvalidationTests(TransactionTestCase):
             "html antigo",
             600,
         )
+        cache.set(CATALOG_METADATA_CACHE_KEY, {"antigo": True}, 600)
 
     def test_save_no_catalogo_invalida_dados_e_html_da_home(self):
         self._preencher_cache()
@@ -341,6 +370,7 @@ class HomeCacheInvalidationTests(TransactionTestCase):
         self.assertIsNone(
             cache.get(make_template_fragment_key(HOME_FRAGMENT_NAME))
         )
+        self.assertIsNone(cache.get(CATALOG_METADATA_CACHE_KEY))
 
     def test_alteracao_many_to_many_tambem_invalida_home(self):
         brinquedo = Brinquedos.objects.create(
@@ -369,3 +399,106 @@ class HomeCacheInvalidationTests(TransactionTestCase):
             segunda = self.client.get(reverse("home"))
 
         self.assertEqual(segunda.status_code, 200)
+
+
+class CatalogFilterUXTests(TestCase):
+    def setUp(self):
+        cache.clear()
+
+    def tearDown(self):
+        cache.clear()
+
+    def test_catalogo_usa_seletores_modernos_sem_dropdown_nativo(self):
+        resposta = self.client.get(reverse("brinquedos"))
+
+        self.assertEqual(resposta.status_code, 200)
+        self.assertNotContains(resposta, '<select id="catalogo-categoria"')
+        self.assertNotContains(resposta, '<select id="catalogo-ordenar"')
+        self.assertContains(resposta, 'data-mobile-filter-toggle')
+        self.assertContains(resposta, 'class="catalogo-choice"', count=4)
+        self.assertContains(resposta, 'type="radio" name="categoria"')
+        self.assertContains(resposta, 'type="radio" name="disponibilidade"')
+        self.assertContains(resposta, 'type="radio" name="voltagem"')
+        self.assertContains(resposta, 'type="radio" name="ordenar"')
+
+    def test_filtros_continuam_enviando_parametros_ao_backend(self):
+        categoria = CategoriasBrinquedos.objects.create(
+            nome_categoria="Interativos",
+        )
+        brinquedo = Brinquedos.objects.create(
+            nome_brinquedo="Jogo interativo",
+            descricao="Brinquedo para teste dos filtros",
+            avaliacao=Decimal("4.80"),
+            voltz="220V",
+        )
+        brinquedo.categorias_brinquedos.add(categoria)
+
+        resposta = self.client.get(
+            reverse("brinquedos"),
+            {
+                "categoria": categoria.id,
+                "voltagem": "220V",
+                "disponibilidade": "todos",
+                "ordenar": "az",
+            },
+        )
+
+        self.assertEqual(resposta.status_code, 200)
+        self.assertContains(resposta, "Jogo interativo")
+        self.assertContains(
+            resposta,
+            f'name="categoria" value="{categoria.id}" checked',
+        )
+
+    def test_faixa_comeca_no_menor_preco_real_disponivel_na_loja(self):
+        Brinquedos.objects.create(
+            nome_brinquedo="Somente orçamento barato",
+            descricao="Não deve definir o limite da loja",
+            valor_brinquedo=Decimal("10.00"),
+            avaliacao=Decimal("4.00"),
+            exibir_na_loja=False,
+            voltz="220V",
+        )
+        Brinquedos.objects.create(
+            nome_brinquedo="Primeiro preço válido",
+            descricao="Menor preço disponível",
+            valor_brinquedo=Decimal("1234.50"),
+            avaliacao=Decimal("4.50"),
+            exibir_na_loja=True,
+            voltz="220V",
+        )
+        Brinquedos.objects.create(
+            nome_brinquedo="Maior preço válido",
+            descricao="Maior preço disponível",
+            valor_brinquedo=Decimal("9876.54"),
+            avaliacao=Decimal("4.80"),
+            exibir_na_loja=True,
+            voltz="220V",
+        )
+
+        resposta = self.client.get(reverse("brinquedos"))
+
+        self.assertEqual(resposta.status_code, 200)
+        self.assertContains(resposta, "Menor encontrado")
+        self.assertContains(resposta, "R$ 1.234,50")
+        self.assertContains(resposta, "R$ 9.876,54")
+        self.assertContains(resposta, 'min="1234.50"')
+        self.assertContains(resposta, 'max="9876.54"')
+
+    def test_preco_digitado_volta_formatado_no_padrao_brasileiro(self):
+        Brinquedos.objects.create(
+            nome_brinquedo="Brinquedo disponível",
+            descricao="Produto vendido na loja",
+            valor_brinquedo=Decimal("1999.90"),
+            avaliacao=Decimal("4.70"),
+            exibir_na_loja=True,
+            voltz="220V",
+        )
+
+        resposta = self.client.get(
+            reverse("brinquedos"),
+            {"preco_min": "R$ 1.234,50"},
+        )
+
+        self.assertEqual(resposta.status_code, 200)
+        self.assertContains(resposta, 'value="1.234,50"')
