@@ -2221,43 +2221,58 @@ class PedidoAdminView(AdminOnlyMixin, View):
     template_name = "gestao/pedidos_adm.html"
 
     def get(self, request):
+        impresso = (request.GET.get("impresso") or "").strip()
+        pagamento = (request.GET.get("pagamento") or "").strip()
+        status = (request.GET.get("status") or "").strip()
 
         pedidos = (
             Pedido.objects
             .select_related("cliente", "cliente__user")
             .prefetch_related("itens")
         )
-        # dnadocrime
-        filtros = {}
-
-        impresso = request.GET.get("impresso")
-        pagamento = request.GET.get("pagamento")
-        status = request.GET.get("status")
 
         if impresso == "true":
-            filtros["impresso"] = True
+            pedidos = pedidos.filter(impresso=True)
         elif impresso == "false":
-            filtros["impresso"] = False
+            pedidos = pedidos.filter(impresso=False)
 
         if pagamento:
-            filtros["forma_pagamento"] = pagamento
+            pedidos = pedidos.filter(forma_pagamento=pagamento)
 
         if status:
-            filtros["status"] = status
-
-        if filtros:
-            pedidos = pedidos.filter(**filtros)
+            pedidos = pedidos.filter(status=status)
 
         pedidos = pedidos.order_by("-id")
 
-        ctx = {
+        todos = Pedido.objects.all()
+
+        context = {
             "pedidos": pedidos,
+            "impresso_atual": impresso,
+            "pagamento_atual": pagamento,
+            "status_atual": status,
+            "total_pedidos": todos.count(),
+            "total_aguardando": todos.filter(
+                status="aguardando_pagamento"
+            ).count(),
+            "total_pagos": todos.filter(status="pago").count(),
+            "total_nao_impressos": todos.filter(impresso=False).count(),
         }
 
-        return render(request, self.template_name, ctx)
+        return render(request, self.template_name, context)
+
 
 
 class BrinquedoAdmin(AdminOnlyMixin, View):
+
+    TIPOS_IMAGEM = (
+        ("perfil", "Perfil / Frente", 1),
+        ("verso", "Verso / Costas", 2),
+        ("lado_direito", "Lado direito", 3),
+        ("lado_esquerdo", "Lado esquerdo", 4),
+    )
+    MAX_IMAGENS = 3
+    MAX_TAMANHO_IMAGEM = 15 * 1024 * 1024
 
     def get(self, request):
         categoria = request.GET.get("categoria", "todas")
@@ -2287,7 +2302,10 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
         page = request.GET.get("page")
         brinquedos_page = paginator.get_page(page)
 
-        categorias = CategoriasBrinquedos.objects.order_by("nome_categoria", "id")
+        categorias = CategoriasBrinquedos.objects.order_by(
+            "nome_categoria",
+            "id",
+        )
         tags = TagsBrinquedos.objects.order_by("nome_tags", "id")
 
         def formatar_decimal_br(valor, casas=2, milhares=False):
@@ -2309,8 +2327,21 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
                 .replace("X", ".")
             )
 
-        brinquedos_dados = [
-            {
+        brinquedos_dados = []
+        for brinquedo in brinquedos_page:
+            capa = brinquedo.imagem_catalogo
+            fotos = [
+                {
+                    "id": foto.id,
+                    "tipo": foto.tipo,
+                    "tipo_label": foto.get_tipo_display(),
+                    "url": foto.imagem.url,
+                }
+                for foto in brinquedo.imagens_brinquedo.all()
+                if foto.tipo and foto.imagem
+            ][:3]
+
+            brinquedos_dados.append({
                 "id": brinquedo.id,
                 "nome_brinquedo": brinquedo.nome_brinquedo or "",
                 "descricao": brinquedo.descricao or "",
@@ -2336,23 +2367,25 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
                     if brinquedo.largura_m is not None else ""
                 ),
                 "profundidade_m": (
-                    formatar_decimal_br(brinquedo.profundidade_m, casas=2)
+                    formatar_decimal_br(
+                        brinquedo.profundidade_m,
+                        casas=2,
+                    )
                     if brinquedo.profundidade_m is not None else ""
                 ),
                 "exibir_na_loja": brinquedo.exibir_na_loja,
-                "imagem_url": (
-                    brinquedo.imagem_brinquedo.url
-                    if brinquedo.imagem_brinquedo else ""
-                ),
+                "imagem_url": capa.url if capa else "",
+                "imagens": fotos,
                 "categorias_ids": list(
-                    brinquedo.categorias_brinquedos.values_list("id", flat=True)
+                    brinquedo.categorias_brinquedos.values_list(
+                        "id",
+                        flat=True,
+                    )
                 ),
                 "tags_ids": list(
                     brinquedo.tags.values_list("id", flat=True)
                 ),
-            }
-            for brinquedo in brinquedos_page
-        ]
+            })
 
         todos = Brinquedos.objects.all()
 
@@ -2372,7 +2405,11 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
             "total_categorias": categorias.count(),
         }
 
-        return render(request, "gestao/brinquedos_adm.html", context)
+        return render(
+            request,
+            "gestao/brinquedos_adm.html",
+            context,
+        )
 
     @transaction.atomic
     def post(self, request):
@@ -2382,26 +2419,27 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
             if action == "delete":
                 brinquedo = get_object_or_404(
                     Brinquedos,
-                    pk=request.POST.get("id")
+                    pk=request.POST.get("id"),
                 )
                 nome = brinquedo.nome_brinquedo or "Brinquedo"
                 frase_esperada = f"CONFIRMAR EXCLUSÃO {nome}"
                 frase_informada = request.POST.get(
-                    "confirmacao_exclusao", ""
+                    "confirmacao_exclusao",
+                    "",
                 ).strip()
 
                 if frase_informada != frase_esperada:
                     messages.error(
                         request,
                         "Exclusão cancelada: o texto de confirmação não "
-                        "corresponde ao nome do brinquedo."
+                        "corresponde ao nome do brinquedo.",
                     )
                     return redirect("brinquedos_admin")
 
                 brinquedo.delete()
                 messages.success(
                     request,
-                    f"Brinquedo '{nome}' excluído com sucesso."
+                    f"Brinquedo '{nome}' excluído com sucesso.",
                 )
                 return redirect("brinquedos_admin")
 
@@ -2416,56 +2454,94 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
             )
 
             nome = request.POST.get("nome_brinquedo", "").strip()
-            imagens = request.FILES.getlist("imagens_brinquedo")
-            if not imagens:
-                imagem_legada = request.FILES.get("imagem_brinquedo")
-                imagens = [imagem_legada] if imagem_legada else []
-            imagem = imagens[0] if imagens else None
             descricao = request.POST.get("descricao", "").strip()
             preco = request.POST.get("valor_brinquedo")
             avaliacao = request.POST.get("avaliacao")
             voltz = request.POST.get("voltz")
-            categorias_ids = request.POST.getlist("categorias_brinquedos")
+            categorias_ids = request.POST.getlist(
+                "categorias_brinquedos"
+            )
             tags_ids = request.POST.getlist("tags")
             altura = request.POST.get("altura_m")
             largura = request.POST.get("largura_m")
             profundidade = request.POST.get("profundidade_m")
 
+            arquivos = {
+                tipo: request.FILES.get(f"imagem_{tipo}")
+                for tipo, _rotulo, _ordem in self.TIPOS_IMAGEM
+            }
+            remover = {
+                tipo
+                for tipo, _rotulo, _ordem in self.TIPOS_IMAGEM
+                if request.POST.get(f"remover_imagem_{tipo}") == "on"
+            }
+
+            existentes = {}
+            if brinquedo.pk:
+                existentes = {
+                    foto.tipo: foto
+                    for foto in brinquedo.imagens_brinquedo.all()
+                    if foto.tipo
+                }
+
+            tipos_finais = set(existentes)
+            if (
+                brinquedo.pk
+                and "perfil" not in tipos_finais
+                and brinquedo.imagem_brinquedo
+            ):
+                tipos_finais.add("perfil")
+
+            tipos_finais.difference_update(remover)
+            tipos_finais.update(
+                tipo
+                for tipo, arquivo in arquivos.items()
+                if arquivo
+            )
+
             if not nome or not descricao:
-                messages.error(request, "Preencha todos os campos obrigatórios.")
-                return redirect("brinquedos_admin")
-
-            if not brinquedo.pk and not imagem:
                 messages.error(
                     request,
-                    "Selecione uma imagem para o novo brinquedo."
+                    "Preencha todos os campos obrigatórios.",
                 )
                 return redirect("brinquedos_admin")
 
-            if len(imagens) > 8:
+            if "perfil" not in tipos_finais:
                 messages.error(
                     request,
-                    "Selecione no máximo 8 imagens por brinquedo."
+                    "A imagem PERFIL / FRENTE é obrigatória. "
+                    "Ela será usada como capa.",
                 )
                 return redirect("brinquedos_admin")
 
-            for arquivo in imagens:
-                if arquivo.size > 15 * 1024 * 1024:
+            if len(tipos_finais) > self.MAX_IMAGENS:
+                messages.error(
+                    request,
+                    "Cada brinquedo aceita no máximo 3 imagens: "
+                    "PERFIL e até duas vistas complementares.",
+                )
+                return redirect("brinquedos_admin")
+
+            for arquivo in arquivos.values():
+                if not arquivo:
+                    continue
+                if arquivo.size > self.MAX_TAMANHO_IMAGEM:
                     messages.error(
                         request,
-                        f"A imagem '{arquivo.name}' ultrapassa o limite de 15 MB."
+                        f"A imagem '{arquivo.name}' ultrapassa 15 MB.",
                     )
                     return redirect("brinquedos_admin")
                 if not (arquivo.content_type or "").startswith("image/"):
                     messages.error(
                         request,
-                        f"O arquivo '{arquivo.name}' não é uma imagem válida."
+                        f"O arquivo '{arquivo.name}' não é uma imagem válida.",
                     )
                     return redirect("brinquedos_admin")
 
             def parse_decimal(v, nome_campo, limite=None):
                 if v is None or not str(v).strip():
                     return None
+
                 normalizado = (
                     str(v)
                     .strip()
@@ -2474,8 +2550,6 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
                     .replace(" ", "")
                 )
 
-                # Formato brasileiro: 10.990,00 -> 10990.00.
-                # Também aceita o formato técnico 10990.00.
                 if "," in normalizado:
                     normalizado = (
                         normalizado
@@ -2496,11 +2570,13 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
                     raise ValueError(
                         f"{nome_campo}: o valor não pode ser negativo."
                     )
+
                 if limite is not None and numero > limite:
                     raise ValueError(
                         f"{nome_campo}: o máximo permitido é "
                         f"{str(limite).replace('.', ',')}."
                     )
+
                 return numero.quantize(
                     Decimal("0.01"),
                     rounding=ROUND_HALF_UP,
@@ -2534,9 +2610,6 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
 
             if avaliacao is None:
                 avaliacao = Decimal("0")
-            if avaliacao < 0 or avaliacao > 5:
-                messages.error(request, "A avaliação deve estar entre 0 e 5.")
-                return redirect("brinquedos_admin")
 
             brinquedo.nome_brinquedo = nome
             brinquedo.descricao = descricao
@@ -2547,25 +2620,63 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
             brinquedo.largura_m = largura
             brinquedo.profundidade_m = profundidade
             brinquedo.exibir_na_loja = (
-                    request.POST.get("exibir_na_loja") == "on"
+                request.POST.get("exibir_na_loja") == "on"
             )
-            if imagem:
-                brinquedo.imagem_brinquedo = imagem
+
+            perfil_novo = arquivos.get("perfil")
+            if perfil_novo:
+                brinquedo.imagem_brinquedo = perfil_novo
 
             criando = not brinquedo.pk
             brinquedo.save()
-            if imagens:
-                brinquedo.imagens_brinquedo.all().delete()
+
+            for tipo in remover:
+                if arquivos.get(tipo):
+                    continue
+                brinquedo.imagens_brinquedo.filter(tipo=tipo).delete()
+
+            if perfil_novo:
                 brinquedo.sincronizar_imagem_legada_com_galeria()
-                for ordem, arquivo in enumerate(imagens[1:], start=2):
-                    ImagemBrinquedo.objects.create(
-                        brinquedo=brinquedo,
-                        imagem=arquivo,
-                        ordem=ordem,
-                        texto_alternativo=(
-                            f"{brinquedo.nome_brinquedo} — foto {ordem}"
+            elif not brinquedo.imagens_brinquedo.filter(
+                tipo="perfil"
+            ).exists():
+                brinquedo.sincronizar_imagem_legada_com_galeria()
+
+            for tipo, rotulo, ordem in self.TIPOS_IMAGEM:
+                arquivo = arquivos.get(tipo)
+                if not arquivo or tipo == "perfil":
+                    continue
+
+                ImagemBrinquedo.objects.update_or_create(
+                    brinquedo=brinquedo,
+                    tipo=tipo,
+                    defaults={
+                        "imagem": arquivo,
+                        "ordem": ordem,
+                        "texto_alternativo": (
+                            f"{rotulo} de {brinquedo.nome_brinquedo}"
                         ),
+                    },
+                )
+
+            ordem_por_tipo = {
+                tipo: ordem
+                for tipo, _rotulo, ordem in self.TIPOS_IMAGEM
+            }
+
+            for foto in brinquedo.imagens_brinquedo.filter(
+                tipo__in=tipos_finais
+            ):
+                ordem_correta = ordem_por_tipo.get(
+                    foto.tipo,
+                    foto.ordem,
+                )
+                if foto.ordem != ordem_correta:
+                    foto.ordem = ordem_correta
+                    foto.save(
+                        update_fields=["ordem", "atualizado"]
                     )
+
             brinquedo.categorias_brinquedos.set(categorias_ids)
             brinquedo.tags.set(tags_ids)
 
@@ -2577,16 +2688,14 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
                     if criando else
                     f"Brinquedo '{brinquedo.nome_brinquedo}' atualizado "
                     "com sucesso."
-                )
+                ),
             )
             return redirect("brinquedos_admin")
 
         except (ArithmeticError, InvalidOperation, ValueError) as exc:
-            messages.error(
-                request,
-                str(exc)
-            )
+            messages.error(request, str(exc))
             return redirect("brinquedos_admin")
+
         except Exception as exc:
             logging.getLogger(__name__).exception(
                 "Erro ao salvar brinquedo no painel administrativo"
@@ -2594,7 +2703,7 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
             messages.error(
                 request,
                 "Não foi possível salvar o brinquedo. "
-                f"Erro: {type(exc).__name__}. Confira a imagem e os campos."
+                f"Erro: {type(exc).__name__}.",
             )
             return redirect("brinquedos_admin")
 

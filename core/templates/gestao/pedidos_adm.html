@@ -1,503 +1,152 @@
-{% extends "base_adm.html" %}
+{% extends "gestao/base_adm.html" %}
+
+{% block title %}Pedidos{% endblock %}
+{% block page_heading %}Gestão de Pedidos{% endblock %}
+
 {% block content %}
-
 <style>
-
-    .modal-title{
-all: unset;
-font-size:22px;
-font-weight:700;
-color:#000;
-display:block;
-}
-
-.page-container{padding:20px 30px;}
-.content-area{max-width:1400px;margin:0 auto;}
-.valor{font-weight:700;font-size:15px;}
-
-.pedidos-wrapper{
-background:linear-gradient(180deg,#ffffff 0%,#f7faff 100%);
-padding:30px;
-border-radius:16px;
-box-shadow:0 10px 30px rgba(0,0,0,0.08);
-margin:20px 0;
-}
-
-.pedidos-wrapper h1{
-margin:0;
-font-size:28px;
-font-weight:700;
-color:#000;
-}
-
-.topbar{
-display:flex;
-justify-content:space-between;
-align-items:center;
-margin-bottom:20px;
-}
-
-.modern-table{
-width:100%;
-border-collapse:collapse;
-font-size:14px;
-background:white;
-border-radius:12px;
-overflow:hidden;
-}
-
-.modern-table thead th{
-color:#fff;
-background:linear-gradient(90deg,#2563eb,#1e40af);
-padding:16px;
-text-transform:uppercase;
-font-size:12px;
-letter-spacing:.6px;
-text-align:center;
-}
-
-.modern-table td{
-padding:16px;
-text-align:center;
-}
-
-.modern-table tbody tr{
-border-bottom:1px solid #eef2ff;
-transition:.2s ease;
-}
-
-.modern-table tbody tr:hover{
-background:#f0f4ff;
-}
-
-.id{font-weight:700;color:#4f46e5;}
-.valor{font-weight:700;color:#059669;}
-
-.badge{
-padding:6px 12px;
-border-radius:999px;
-font-size:12px;
-font-weight:700;
-}
-
-.btn-view{
-background:linear-gradient(90deg,#2563eb,#7c3aed);
-color:white;
-padding:8px 14px;
-border-radius:8px;
-text-decoration:none;
-font-weight:600;
-font-size:13px;
-border:none;
-cursor:pointer;
-}
-
-.modal-bg{
-position:fixed;
-inset:0;
-background:rgba(0,0,0,.85) !important;
-display:none;
-align-items:center;
-justify-content:center;
-z-index:9999;
-}
-
-.modal-box{
-width:900px;
-max-width:95%;
-background:#ffffff !important;
-border-radius:16px;
-padding:25px;
-box-shadow:0 20px 60px rgba(0,0,0,.35);
-color:#111 !important;
-}
-
-.modal-header{
-display:flex;
-justify-content:space-between;
-align-items:center;
-margin-bottom:20px;
-border-bottom:1px solid #e5e7eb;
-padding-bottom:10px;
-}
-
-.modal-header h2{
-all:unset;
-font-size:22px;
-font-weight:700;
-color:#000 !important;
-display:block;
-}
-
-.close{
-font-size:26px;
-cursor:pointer;
-font-weight:700;
-color:#000;
-}
-
-.modal-grid{
-display:grid;
-grid-template-columns:repeat(3,1fr);
-gap:14px;
-margin-bottom:10px;
-}
-
-.info-box{
-background:#f3f4f6 !important;
-padding:12px;
-border-radius:10px;
-color:#111 !important;
-border:1px solid #e5e7eb;
-}
-
-.info-box h3{
-margin:0 0 6px 0;
-font-size:14px;
-color:#374151;
-}
-
-.info-box p{
-margin:0;
-font-size:14px;
-color:#111;
-}
-
-/* tabela itens */
-
-.modal-table{
-width:100%;
-margin-top:10px;
-border-collapse:collapse;
-background:white;
-}
-
-.modal-table th{
-background:#111827 !important;
-color:#fff !important;
-padding:10px;
-font-size:13px;
-}
-
-.modal-table td{
-padding:10px;
-border-bottom:1px solid #e5e7eb;
-text-align:center;
-color:#111;
-}
-
-/* botão imprimir */
-
-.btn-print{
-background:linear-gradient(90deg,#16a34a,#15803d);
-color:white;
-border:none;
-padding:10px 16px;
-border-radius:8px;
-font-weight:600;
-cursor:pointer;
-margin-top:15px;
-}
-
-.btn-print:hover{
-opacity:.9;
-}
-
-
-
-.modal-box h3{
-color:#000 !important;
-font-size:15px;
-font-weight:700;
-margin-bottom:6px;
-}
-
-.modal-grid h3{
-color:#000 !important;
-}
-
-.info-box h3{
-color:#000 !important;
-}
-
-/* FILTROS */
-
-.filtros{
-display:flex;
-gap:10px;
-margin-bottom:20px;
-flex-wrap:wrap;
-}
-
-.filtros select{
-padding:8px 10px;
-border-radius:8px;
-border:1px solid #d1d5db;
-font-size:13px;
-background:white;
-}
-
+.orders-page{--b:#3b82f6;--g:#10b981;--y:#f59e0b;--r:#ef4444;--p:#8b5cf6;--panel:#111b2e;--panel2:#0d1727;--line:rgba(148,163,184,.14);color:#dce7f5}
+.orders-hero{padding:28px;border:1px solid rgba(96,165,250,.18);border-radius:24px;display:flex;justify-content:space-between;gap:24px;background:radial-gradient(circle at 86% 5%,rgba(59,130,246,.28),transparent 17rem),linear-gradient(135deg,#17243a,#101a2d 60%,#111f37);box-shadow:0 20px 46px rgba(0,0,0,.16)}
+.orders-hero small{display:block;margin-bottom:8px;color:#93c5fd;font-weight:900;letter-spacing:.12em;text-transform:uppercase}.orders-hero h2{margin:0;color:#fff;font-size:clamp(1.55rem,3vw,2.2rem)}.orders-hero p{max-width:760px;margin:9px 0 0;color:#aebdd0;font-size:.83rem;line-height:1.6}
+.live{align-self:center;min-width:190px;padding:13px 15px;border:1px solid rgba(52,211,153,.2);border-radius:14px;color:#d1fae5;background:rgba(16,185,129,.1);font-size:.72rem;font-weight:800}.live:before{content:"";width:9px;height:9px;margin-right:9px;border-radius:50%;display:inline-block;background:#34d399;box-shadow:0 0 0 5px rgba(52,211,153,.1)}
+.order-kpis{margin:18px 0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.okpi{padding:16px;border:1px solid var(--line);border-radius:16px;background:linear-gradient(145deg,#17243a,#111b2e)}.okpi strong,.okpi span{display:block}.okpi strong{color:#fff;font-size:1.5rem}.okpi span{margin-top:5px;color:#899bb0;font-size:.68rem}
+.order-panel{overflow:hidden;border:1px solid var(--line);border-radius:20px;background:#111b2e;box-shadow:0 16px 36px rgba(0,0,0,.13)}.order-filter{padding:16px;border-bottom:1px solid var(--line);display:grid;grid-template-columns:repeat(3,minmax(170px,1fr)) auto;gap:9px}.order-filter select{height:43px;padding:0 11px;border:1px solid var(--line);border-radius:10px;color:#dce7f5;background:#0d1727}.order-filter button{padding:0 16px;border:0;border-radius:10px;color:#fff;background:linear-gradient(135deg,#3b82f6,#2563eb);font-weight:850;cursor:pointer}
+.order-note{padding:10px 16px;border-bottom:1px solid rgba(148,163,184,.08);color:#75879c;font-size:.67rem}.order-table-wrap{overflow-x:auto}.order-table{width:100%;border-collapse:collapse}.order-table th{padding:12px 13px;color:#718096;background:rgba(11,18,32,.45);font-size:.61rem;text-transform:uppercase;text-align:left}.order-table td{padding:14px 13px;border-top:1px solid rgba(148,163,184,.08);color:#cbd5e1;font-size:.72rem}.order-table tbody tr:hover{background:rgba(59,130,246,.035)}.order-id{color:#93c5fd;font-weight:900}.money{white-space:nowrap;font-weight:800}.money.total{color:#6ee7b7}.badge{padding:5px 8px;border-radius:999px;display:inline-flex;font-size:.58rem;font-weight:850}.waiting{color:#fcd34d;background:rgba(245,158,11,.12)}.paid,.done{color:#6ee7b7;background:rgba(16,185,129,.12)}.moving{color:#93c5fd;background:rgba(59,130,246,.12)}.cancelled{color:#fca5a5;background:rgba(239,68,68,.12)}.neutral{color:#c4b5fd;background:rgba(139,92,246,.12)}
+.view-order{min-height:36px;padding:0 10px;border:1px solid rgba(96,165,250,.2);border-radius:9px;color:#bfdbfe;background:rgba(37,99,235,.12);font-weight:850;cursor:pointer}.orders-empty{padding:55px 20px;color:#718096;text-align:center}
+.order-modal{position:fixed;inset:0;z-index:3500;padding:18px;display:none;align-items:center;justify-content:center;background:rgba(2,6,23,.84);backdrop-filter:blur(7px)}.order-modal.open{display:flex}.order-card{width:min(940px,100%);max-height:92dvh;overflow:hidden;border:1px solid var(--line);border-radius:21px;display:flex;flex-direction:column;background:#111b2e;box-shadow:0 30px 80px rgba(0,0,0,.48)}.order-card-head{padding:17px 20px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px;background:#0f192a}.order-card-head strong{flex:1;color:#fff}.modal-close{width:38px;height:38px;border:1px solid var(--line);border-radius:10px;color:#94a3b8;background:#1e2d46;font-size:1.15rem;cursor:pointer}.order-card-body{padding:20px;overflow:auto}.detail-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}.detail{min-height:78px;padding:11px;border:1px solid rgba(148,163,184,.1);border-radius:12px;background:#0d1727}.detail span,.detail strong{display:block}.detail span{color:#64748b;font-size:.57rem;text-transform:uppercase}.detail strong{margin-top:6px;color:#dbe5f3;font-size:.7rem;overflow-wrap:anywhere}.address{margin-top:10px;padding:12px;border:1px solid rgba(148,163,184,.1);border-radius:12px;color:#9fb0c5;background:#0d1727;font-size:.68rem;line-height:1.55}.items{margin-top:17px;overflow-x:auto;border:1px solid rgba(148,163,184,.1);border-radius:12px}.items table{width:100%;border-collapse:collapse}.items th,.items td{padding:10px;font-size:.64rem;text-align:left}.items th{color:#718096;background:#0b1220}.items td{border-top:1px solid rgba(148,163,184,.08);color:#bdc9d9}.summary{width:min(350px,100%);margin:12px 0 0 auto;display:grid;gap:6px}.sumrow{padding:7px 9px;border:1px solid rgba(148,163,184,.09);border-radius:8px;display:flex;justify-content:space-between;color:#8293a8;background:rgba(13,23,39,.6);font-size:.64rem}.sumrow strong{color:#dbe5f3}.sumrow.final{border-color:rgba(16,185,129,.18);color:#9ed7c1;background:rgba(16,185,129,.08)}.sumrow.final strong{color:#6ee7b7}
+@media(max-width:950px){.order-kpis{grid-template-columns:repeat(2,1fr)}.detail-grid{grid-template-columns:repeat(2,1fr)}}@media(max-width:720px){.orders-hero{flex-direction:column}.live{align-self:stretch}.order-filter{grid-template-columns:1fr}.order-table thead{display:none}.order-table,.order-table tbody{display:block}.order-table-wrap{padding:9px;overflow:visible}.order-table tbody{display:grid;gap:9px}.order-table tr{padding:13px;border:1px solid var(--line);border-radius:13px;display:grid;grid-template-columns:1fr 1fr;gap:9px;background:#0f192a}.order-table td{padding:0;border:0}.order-table td:first-child,.order-table td:nth-child(2),.order-table td:last-child{grid-column:1/-1}}@media(max-width:500px){.order-kpis{grid-template-columns:1fr 1fr}.detail-grid{grid-template-columns:1fr}.order-modal{padding:7px 0 0;align-items:flex-end}.order-card{max-height:calc(100dvh - 7px);border-radius:20px 20px 0 0}}
 </style>
 
-<div class="page-container">
-<div class="content-area">
-<div class="pedidos-wrapper">
+<div class="orders-page">
+  <section class="orders-hero">
+    <div>
+      <small>Operação comercial</small>
+      <h2>Pedidos</h2>
+      <p>Consulte os dados congelados no momento da compra. Frete, endereço, itens e totais vêm do próprio pedido e não do carrinho reutilizável do cliente.</p>
+    </div>
+    <div class="live">Painel operacional</div>
+  </section>
 
-<div class="topbar">
-<h1 class="modal-title"
-style="
-all:unset;
-display:block;
-font-size:22px;
-font-weight:700;
-color:#000;
-background:none;
-background-image:none;
--webkit-background-clip:initial;
-background-clip:initial;
--webkit-text-fill-color:#000;
-">
-📦 Painel de Pedidos
-</h1>
+  <section class="order-kpis">
+    <div class="okpi"><strong>{{ total_pedidos }}</strong><span>Pedidos cadastrados</span></div>
+    <div class="okpi"><strong>{{ total_aguardando }}</strong><span>Aguardando pagamento</span></div>
+    <div class="okpi"><strong>{{ total_pagos }}</strong><span>Pagos</span></div>
+    <div class="okpi"><strong>{{ total_nao_impressos }}</strong><span>Não impressos</span></div>
+  </section>
+
+  <section class="order-panel">
+    <form method="get" class="order-filter">
+      <select name="impresso">
+        <option value="">Todos: impressão</option>
+        <option value="true" {% if impresso_atual == "true" %}selected{% endif %}>Impressos</option>
+        <option value="false" {% if impresso_atual == "false" %}selected{% endif %}>Não impressos</option>
+      </select>
+      <select name="pagamento">
+        <option value="">Todas as formas de pagamento</option>
+        <option value="pix" {% if pagamento_atual == "pix" %}selected{% endif %}>PIX</option>
+        <option value="credito" {% if pagamento_atual == "credito" %}selected{% endif %}>Cartão de crédito</option>
+        <option value="debito" {% if pagamento_atual == "debito" %}selected{% endif %}>Cartão de débito</option>
+      </select>
+      <select name="status">
+        <option value="">Todos os status</option>
+        <option value="aguardando_pagamento" {% if status_atual == "aguardando_pagamento" %}selected{% endif %}>Aguardando pagamento</option>
+        <option value="pago" {% if status_atual == "pago" %}selected{% endif %}>Pago</option>
+        <option value="em_preparacao" {% if status_atual == "em_preparacao" %}selected{% endif %}>Em preparação</option>
+        <option value="saiu_entrega" {% if status_atual == "saiu_entrega" %}selected{% endif %}>Saiu para entrega</option>
+        <option value="finalizado" {% if status_atual == "finalizado" %}selected{% endif %}>Finalizado</option>
+        <option value="cancelado" {% if status_atual == "cancelado" %}selected{% endif %}>Cancelado</option>
+      </select>
+      <button type="submit">Aplicar filtros</button>
+    </form>
+    <div class="order-note">O frete exibido abaixo usa <strong>Pedido.valor_frete</strong>, preservando o histórico da compra.</div>
+
+    {% if pedidos %}
+      <div class="order-table-wrap">
+        <table class="order-table">
+          <thead><tr><th>Pedido</th><th>Cliente</th><th>Itens</th><th>Frete</th><th>Total</th><th>Pagamento</th><th>Status</th><th>Impressão</th><th>Ação</th></tr></thead>
+          <tbody>
+          {% for pedido in pedidos %}
+            <tr>
+              <td class="order-id">#{{ pedido.id }}</td>
+              <td>
+                {% if pedido.cliente %}
+                  <strong>{{ pedido.cliente.nome_completo|default:pedido.cliente.user.username }}</strong>
+                {% else %}Cliente removido{% endif %}
+              </td>
+              <td>{{ pedido.itens.count }} item(ns)</td>
+              <td class="money">R$ {{ pedido.valor_frete|default:"0.00"|floatformat:2 }}</td>
+              <td class="money total">R$ {{ pedido.total_final|default:"0.00"|floatformat:2 }}</td>
+              <td>{{ pedido.get_forma_pagamento_display|default:"—" }}</td>
+              <td>
+                <span class="badge {% if pedido.status == 'aguardando_pagamento' %}waiting{% elif pedido.status == 'pago' or pedido.status == 'finalizado' %}paid{% elif pedido.status == 'em_preparacao' or pedido.status == 'saiu_entrega' %}moving{% elif pedido.status == 'cancelado' %}cancelled{% else %}neutral{% endif %}">
+                  {{ pedido.get_status_display }}
+                </span>
+              </td>
+              <td>{% if pedido.impresso %}<span class="badge paid">Impresso</span>{% else %}<span class="badge waiting">Pendente</span>{% endif %}</td>
+              <td><button type="button" class="view-order" data-order="{{ pedido.id }}">Ver pedido</button></td>
+            </tr>
+
+            <template id="order-{{ pedido.id }}">
+              <div class="detail-grid">
+                <div class="detail"><span>Pedido</span><strong>#{{ pedido.id }}</strong></div>
+                <div class="detail"><span>Cliente</span><strong>{% if pedido.cliente %}{{ pedido.cliente.nome_completo|default:pedido.cliente.user.username }}{% else %}Cliente removido{% endif %}</strong></div>
+                <div class="detail"><span>Status</span><strong>{{ pedido.get_status_display }}</strong></div>
+                <div class="detail"><span>Pagamento</span><strong>{{ pedido.get_forma_pagamento_display|default:"—" }}</strong></div>
+                <div class="detail"><span>Envio</span><strong>{{ pedido.get_tipo_envio_display|default:pedido.tipo_envio|default:"—" }}</strong></div>
+                <div class="detail"><span>Cupom</span><strong>{{ pedido.cupom_codigo|default:"Sem cupom" }}</strong></div>
+                <div class="detail"><span>Pagamento externo</span><strong>{{ pedido.mp_payment_id|default:"—" }}</strong></div>
+                <div class="detail"><span>Criado em</span><strong>{{ pedido.criacao|date:"d/m/Y H:i" }}</strong></div>
+              </div>
+              {% if pedido.tipo_envio == "frete" %}
+                <div class="address"><strong>Endereço do pedido</strong><br>{{ pedido.rua|default:"" }}{% if pedido.numero %}, {{ pedido.numero }}{% endif %}{% if pedido.bairro %} — {{ pedido.bairro }}{% endif %}<br>{{ pedido.cidade|default:"" }}{% if pedido.estado %}/{{ pedido.estado }}{% endif %}{% if pedido.cep %} · CEP {{ pedido.cep }}{% endif %}</div>
+              {% endif %}
+              {% if pedido.observacoes %}<div class="address"><strong>Observações</strong><br>{{ pedido.observacoes }}</div>{% endif %}
+              <div class="items">
+                <table><thead><tr><th>Item</th><th>Tipo</th><th>Qtd.</th><th>Unitário</th><th>Subtotal</th></tr></thead>
+                <tbody>
+                {% for item in pedido.itens.all %}
+                  <tr><td>{{ item.nome_item }}</td><td>{{ item.get_tipo_item_display }}</td><td>{{ item.quantidade }}</td><td>R$ {{ item.preco_unitario|floatformat:2 }}</td><td><strong>R$ {{ item.subtotal|floatformat:2 }}</strong></td></tr>
+                {% empty %}<tr><td colspan="5">Nenhum item registrado.</td></tr>{% endfor %}
+                </tbody></table>
+              </div>
+              <div class="summary">
+                <div class="sumrow"><span>Bruto</span><strong>R$ {{ pedido.total_bruto|default:"0.00"|floatformat:2 }}</strong></div>
+                <div class="sumrow"><span>Desconto</span><strong>- R$ {{ pedido.valor_desconto|default:"0.00"|floatformat:2 }}</strong></div>
+                <div class="sumrow"><span>Líquido</span><strong>R$ {{ pedido.total_liquido|default:"0.00"|floatformat:2 }}</strong></div>
+                <div class="sumrow"><span>Frete</span><strong>R$ {{ pedido.valor_frete|default:"0.00"|floatformat:2 }}</strong></div>
+                <div class="sumrow final"><span>Total final</span><strong>R$ {{ pedido.total_final|default:"0.00"|floatformat:2 }}</strong></div>
+              </div>
+            </template>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="orders-empty">Nenhum pedido encontrado com os filtros aplicados.</div>
+    {% endif %}
+  </section>
 </div>
 
-<form method="get" class="filtros">
-
-<select name="impresso">
-<option value="">Todos</option>
-<option value="true" {% if request.GET.impresso == "true" %}selected{% endif %}>Impresso</option>
-<option value="false" {% if request.GET.impresso == "false" %}selected{% endif %}>Não impresso</option>
-</select>
-
-<select name="pagamento">
-<option value="">Pagamento</option>
-<option value="pix" {% if request.GET.pagamento == "pix" %}selected{% endif %}>PIX</option>
-<option value="credito" {% if request.GET.pagamento == "credito" %}selected{% endif %}>Cartão Crédito</option>
-<option value="debito" {% if request.GET.pagamento == "debito" %}selected{% endif %}>Cartão Débito</option>
-</select>
-
-<select name="status">
-<option value="">Status</option>
-<option value="aguardando_pagamento">Aguardando pagamento</option>
-<option value="pago">Pago</option>
-<option value="em_preparacao">Em preparação</option>
-<option value="saiu_entrega">Saiu para entrega</option>
-<option value="finalizado">Finalizado</option>
-<option value="cancelado">Cancelado</option>
-</select>
-
-<button type="submit" class="btn-view">Filtrar</button>
-
-</form>
-
-{% if pedidos.exists %}
-<table class="modern-table">
-
-<thead>
-<tr>
-<th>ID</th>
-<th>Cliente</th>
-<th>Itens</th>
-<th>Bruto Itens</th>
-<th>Liquido Itens</th>
-<th>Desconto</th>
-<th>Frete</th>
-<th>Total</th>
-<th>Pagamento</th>
-<th>Status</th>
-<th>Ações</th>
-</tr>
-</thead>
-
-<tbody>
-
-{% for pedido in pedidos %}
-<tr {% if not pedido.impresso %}style="background:#fff7ed"{% endif %}>
-
-<td class="id">#{{ pedido.id }}</td>
-
-<td>
-{{ pedido.cliente.user.username|default:"Cliente removido" }}
-</td>
-
-<td>{{ pedido.itens.count }} itens</td>
-
-<td class="valor">
-R$ {{ pedido.total_bruto|default:"0,00" }}
-</td>
-
-<td class="valor">
-R$ {{ pedido.total_liquido|default:"0,00" }}
-</td>
-
-<td>
-<span style="color:#ff3b3b;font-weight:600;">
-- R$ {{ pedido.valor_desconto|default:"0,00" }}
-</span>
-</td>
-
-<td class="valor">
-R$ {{ pedido.carrinho_origem.valor_frete|default:"0,00" }}
-</td>
-
-<td class="valor">
-R$ {{ pedido.total_final|default:"0,00" }}
-</td>
-
-<td>
-{{ pedido.get_forma_pagamento_display|default:"—" }}
-</td>
-
-<td>
-<span class="badge">
-{{ pedido.get_status_display }}
-</span>
-</td>
-
-<td>
-<a href="#" class="btn-view"
-onclick="abrirModalPedido({{ pedido.id }}); return false;">
-Ver Pedido
-</a>
-</td>
-
-</tr>
-{% endfor %}
-
-</tbody>
-</table>
-
-{% else %}
-
-<div style="
-padding:40px;
-text-align:center;
-color:#6b7280;
-font-size:16px;
-">
-
-📦 Nenhum pedido encontrado com os filtros aplicados.
-
-</div>
-
-{% endif %}
-
-<div id="modalPedido" class="modal-bg">
-<div class="modal-box">
-
-<div class="modal-header">
-<h2>📦 Detalhes do Pedido</h2>
-<span class="close" onclick="fecharModal()">×</span>
-</div>
-
-<div id="conteudoPedido"></div>
-
-</div>
-</div>
-
-{% for pedido in pedidos %}
-<div id="pedido-data-{{ pedido.id }}" style="display:none">
-
-<div class="modal-grid">
-
-<div class="info-box">
-<h3>Cliente</h3>
-<p>{{ pedido.cliente|default:"Cliente removido" }}</p>
-</div>
-
-<div class="info-box">
-<h3>Status</h3>
-<p>{{ pedido.get_status_display }}</p>
-</div>
-
-<div class="info-box">
-<h3>Pagamento</h3>
-<p>{{ pedido.get_forma_pagamento_display|default:"—" }}</p>
-</div>
-
-<div class="info-box">
-<h3>Totais</h3>
-<p>Bruto: R$ {{ pedido.total_bruto|default:"0,00" }}</p>
-<p>Desconto: R$ {{ pedido.valor_desconto|default:"0,00" }}</p>
-<p><strong>Líquido: R$ {{ pedido.total_liquido|default:"0,00" }}</strong></p>
-</div>
-
-<div class="info-box">
-<h3>Cupom</h3>
-<p>{{ pedido.cupom_codigo|default:"—" }}</p>
-<p>{{ pedido.cupom_percentual|default:"0" }}%</p>
-</div>
-
-</div>
-
-{% if pedido.observacoes %}
-<div class="info-box" style="margin-top:15px;">
-<h3>Observações</h3>
-<p>{{ pedido.observacoes }}</p>
-</div>
-{% endif %}
-
-<h3 style="margin-top:20px;">Itens do Pedido</h3>
-
-<table class="modal-table">
-
-<tr>
-<th>Item</th>
-<th>Tipo</th>
-<th>Qtd</th>
-<th>Valor Unit</th>
-<th>Subtotal</th>
-</tr>
-
-{% for item in pedido.itens.all %}
-<tr>
-
-<td>{{ item.nome_item }}</td>
-<td>{{ item.get_tipo_item_display|upper }}</td>
-<td>{{ item.quantidade }}</td>
-<td>R$ {{ item.preco_unitario }}</td>
-<td><strong>R$ {{ item.subtotal }}</strong></td>
-
-</tr>
-{% endfor %}
-
-</table>
-
-
-</div>
-{% endfor %}
-
-</div>
-</div>
+<div id="orderModal" class="order-modal" aria-hidden="true">
+  <div class="order-card">
+    <header class="order-card-head"><strong id="orderTitle">Detalhes do pedido</strong><button id="closeOrder" class="modal-close" type="button">×</button></header>
+    <div id="orderBody" class="order-card-body"></div>
+  </div>
 </div>
 
 <script>
-
-function abrirModalPedido(id){
-const modal=document.getElementById('modalPedido');
-const conteudo=document.getElementById('conteudoPedido');
-const dados=document.getElementById('pedido-data-'+id);
-
-if(!dados) return;
-
-conteudo.innerHTML=dados.innerHTML;
-modal.style.display='flex';
-}
-
-function fecharModal(){
-document.getElementById('modalPedido').style.display='none';
-}
-
-window.onclick=function(event){
-const modal=document.getElementById('modalPedido');
-if(event.target===modal){
-fecharModal();
-}
-}
-
-
-
-
+(function(){
+  const modal=document.getElementById('orderModal');
+  const body=document.getElementById('orderBody');
+  const title=document.getElementById('orderTitle');
+  function close(){modal.classList.remove('open');modal.setAttribute('aria-hidden','true');body.replaceChildren();}
+  document.querySelectorAll('[data-order]').forEach(btn=>btn.addEventListener('click',()=>{
+    const id=btn.dataset.order, tpl=document.getElementById(`order-${id}`);
+    if(!tpl)return; body.replaceChildren(tpl.content.cloneNode(true)); title.textContent=`Detalhes do pedido #${id}`; modal.classList.add('open'); modal.setAttribute('aria-hidden','false');
+  }));
+  document.getElementById('closeOrder').addEventListener('click',close);
+  modal.addEventListener('click',e=>{if(e.target===modal)close();});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape')close();});
+})();
 </script>
-
 {% endblock %}

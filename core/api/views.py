@@ -128,6 +128,7 @@ class BrinquedoListAPI(generics.ListAPIView):
         qs = (
             Brinquedos.objects
             .filter(ativo=True)
+            .prefetch_related("imagens_brinquedo")
             .only(
                 "id",
                 "nome_brinquedo",
@@ -139,15 +140,15 @@ class BrinquedoListAPI(generics.ListAPIView):
             .order_by("nome_brinquedo")
         )
 
-        categoria = self.request.query_params.get("categoria")
-        if categoria and str(categoria).isdigit():
-            qs = qs.filter(categorias_brinquedos__id=int(categoria))
-
-        busca = (self.request.query_params.get("busca") or "").strip()
-        if busca:
-            qs = qs.filter(nome_brinquedo__icontains=busca)
-
-        return qs.distinct()
+        # BrinquedoDetalheAPI.get_queryset()
+        return (
+            Brinquedos.objects
+            .filter(ativo=True)
+            .prefetch_related(
+                "categorias_brinquedos",
+                "imagens_brinquedo",
+            )
+        )
 
     @method_decorator(cache_page(CACHE_CATALOGO))
     def dispatch(self, *args, **kwargs):
@@ -162,7 +163,7 @@ class BrinquedoDetalheAPI(generics.RetrieveAPIView):
         return (
             Brinquedos.objects
             .filter(ativo=True)
-            .prefetch_related("categorias_brinquedos")
+            .prefetch_related("categorias_brinquedos", "imagens_brinquedo")
         )
 
     @method_decorator(cache_page(CACHE_CATALOGO))

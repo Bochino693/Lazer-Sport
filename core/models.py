@@ -269,49 +269,83 @@ def parse_metro(value):
     raise ValueError("Tipo de valor inesperado para parse_metro")
 
 
+# Substitua as classes Brinquedos e ImagemBrinquedo em core/models.py
+
 class Brinquedos(Prime):
     nome_brinquedo = models.CharField(max_length=150)
-    imagem_brinquedo = models.ImageField(upload_to='imagens_brinquedos',
-                                         blank=True, null=True, storage=MediaCloudinaryStorage())
+    imagem_brinquedo = models.ImageField(
+        upload_to="imagens_brinquedos",
+        blank=True,
+        null=True,
+        storage=MediaCloudinaryStorage(),
+    )
     descricao = models.CharField(max_length=999)
-    valor_brinquedo = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    avaliacao = models.DecimalField(decimal_places=2, max_digits=6)
+    valor_brinquedo = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+    )
+    avaliacao = models.DecimalField(
+        decimal_places=2,
+        max_digits=6,
+    )
 
     exibir_na_loja = models.BooleanField(
         default=False,
-        help_text="Marque para este brinquedo aparecer também na Loja. Peças de reposição, promoções e combos entram na Loja automaticamente; brinquedos não -- só os marcados aqui."
+        help_text=(
+            "Marque para este brinquedo aparecer também na Loja. "
+            "Peças de reposição, promoções e combos entram na Loja "
+            "automaticamente; brinquedos não -- só os marcados aqui."
+        ),
     )
 
     categorias_brinquedos = models.ManyToManyField(
         CategoriasBrinquedos,
-        related_name='brinquedos'
+        related_name="brinquedos",
     )
     tags = models.ManyToManyField(
         TagsBrinquedos,
-        related_name='brinquedos_tags'
+        related_name="brinquedos_tags",
     )
 
     estabelecimentos = models.ManyToManyField(
         Estabelecimentos,
-        related_name='brinquedos',
-        blank=True
+        related_name="brinquedos",
+        blank=True,
     )
 
     voltz = models.CharField(max_length=10)
 
-    # Agora considerando valores EM METROS
-    altura_m = models.DecimalField(max_digits=6, decimal_places=2, blank=True, null=True)
-    largura_m = models.DecimalField(max_digits=6, decimal_places=2, blank=True, null=True)
-    profundidade_m = models.DecimalField(max_digits=6, decimal_places=2, blank=True, null=True)
+    altura_m = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        blank=True,
+        null=True,
+    )
+    largura_m = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        blank=True,
+        null=True,
+    )
+    profundidade_m = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        blank=True,
+        null=True,
+    )
 
-    # Dimensões em metros
     @property
     def dimensoes_m(self):
         if self.altura_m and self.largura_m and self.profundidade_m:
-            return f"Altura {self.altura_m}m x Largura {self.largura_m}m x Profundidade {self.profundidade_m}m"
+            return (
+                f"Altura {self.altura_m}m x "
+                f"Largura {self.largura_m}m x "
+                f"Profundidade {self.profundidade_m}m"
+            )
         return None
 
-    # Volume em metros cúbicos
     @property
     def metros_cubicos(self):
         if self.altura_m and self.largura_m and self.profundidade_m:
@@ -327,11 +361,13 @@ class Brinquedos(Prime):
             return None
 
         valor = self.metros_cubicos
+        valor_formatado = (
+            f"{valor:,.2f}"
+            .replace(",", "X")
+            .replace(".", ",")
+            .replace("X", ".")
+        )
 
-        # Formatação humana: sem zeros inúteis, com milhar e vírgula decimal
-        valor_formatado = f"{valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-
-        # Remove ",00" quando for número inteiro
         if valor_formatado.endswith(",00"):
             valor_formatado = valor_formatado[:-3]
 
@@ -339,49 +375,119 @@ class Brinquedos(Prime):
 
     @property
     def imagens_ordenadas(self):
-        """Galeria pronta para consumo, sempre na ordem definida no admin."""
-        return self.imagens_brinquedo.all()
+        """Galeria pública tipada, limitada a três imagens."""
+        return (
+            self.imagens_brinquedo
+            .filter(tipo__isnull=False)
+            .exclude(tipo="")
+            .order_by("ordem", "id")[:3]
+        )
+
+    @property
+    def imagem_perfil(self):
+        """Imagem PERFIL / FRENTE, usada como capa em todo o sistema."""
+        cache = getattr(self, "_prefetched_objects_cache", {})
+        fotos_cache = cache.get("imagens_brinquedo")
+
+        if fotos_cache is not None:
+            perfil = next(
+                (
+                    foto
+                    for foto in fotos_cache
+                    if getattr(foto, "tipo", None) == "perfil"
+                    and getattr(foto, "imagem", None)
+                ),
+                None,
+            )
+        else:
+            perfil = (
+                self.imagens_brinquedo
+                .filter(tipo="perfil")
+                .order_by("ordem", "id")
+                .first()
+            )
+
+        if perfil and perfil.imagem:
+            return perfil.imagem
+
+        # Compatibilidade temporária com registros antigos.
+        if self.imagem_brinquedo:
+            return self.imagem_brinquedo
+
+        if fotos_cache is not None:
+            primeira = next(
+                (
+                    foto
+                    for foto in sorted(
+                        fotos_cache,
+                        key=lambda item: (item.ordem, item.id),
+                    )
+                    if getattr(foto, "imagem", None)
+                ),
+                None,
+            )
+        else:
+            primeira = self.imagens_brinquedo.order_by("ordem", "id").first()
+
+        if primeira and primeira.imagem:
+            return primeira.imagem
+        return None
 
     @property
     def imagem_catalogo(self):
-        """Imagem principal com fallback para o campo legado.
-
-        O fallback permite migrar as telas aos poucos sem quebrar cards,
-        integrações ou registros antigos que ainda usem ``imagem_brinquedo``.
-        """
-        principal = self.imagens_brinquedo.first()
-        if principal and principal.imagem:
-            return principal.imagem
-        return self.imagem_brinquedo
+        """Capa oficial do brinquedo: PERFIL / FRENTE."""
+        return self.imagem_perfil
 
     def sincronizar_imagem_legada_com_galeria(self):
-        """Coloca a imagem antiga na posição 1 da galeria.
-
-        O método é idempotente: pode ser executado mais de uma vez sem criar
-        fotos duplicadas. Ele será removível quando todas as telas e rotinas de
-        cadastro já trabalharem exclusivamente com a galeria.
-        """
+        """Mantém o campo legado sincronizado com a imagem PERFIL."""
         if not self.pk or not self.imagem_brinquedo:
             return None
 
-        principal = self.imagens_brinquedo.filter(ordem=1).first()
+        principal = (
+            self.imagens_brinquedo
+            .filter(tipo="perfil")
+            .order_by("ordem", "id")
+            .first()
+        )
+
+        if principal is None:
+            principal = self.imagens_brinquedo.filter(ordem=1).first()
+
         if principal is None:
             return ImagemBrinquedo.objects.create(
                 brinquedo=self,
                 imagem=self.imagem_brinquedo.name,
+                tipo="perfil",
                 ordem=1,
-                texto_alternativo=f"Foto principal de {self.nome_brinquedo}",
+                texto_alternativo=(
+                    f"Perfil / frente de {self.nome_brinquedo}"
+                ),
             )
+
+        campos = []
+
+        if principal.tipo != "perfil":
+            principal.tipo = "perfil"
+            campos.append("tipo")
+
+        if principal.ordem != 1:
+            principal.ordem = 1
+            campos.append("ordem")
 
         if principal.imagem.name != self.imagem_brinquedo.name:
             principal.imagem = self.imagem_brinquedo.name
+            campos.append("imagem")
+
+        if not principal.texto_alternativo:
             principal.texto_alternativo = (
-                principal.texto_alternativo
-                or f"Foto principal de {self.nome_brinquedo}"
+                f"Perfil / frente de {self.nome_brinquedo}"
             )
-            principal.save(
-                update_fields=["imagem", "texto_alternativo", "atualizado"]
-            )
+            campos.append("texto_alternativo")
+
+        if campos:
+            campos.append("atualizado")
+            principal.save(update_fields=campos)
+
         return principal
 
     def __str__(self):
@@ -393,6 +499,18 @@ class Brinquedos(Prime):
 
 
 class ImagemBrinquedo(Prime):
+    TIPO_PERFIL = "perfil"
+    TIPO_VERSO = "verso"
+    TIPO_LADO_DIREITO = "lado_direito"
+    TIPO_LADO_ESQUERDO = "lado_esquerdo"
+
+    TIPO_CHOICES = (
+        (TIPO_PERFIL, "Perfil / Frente"),
+        (TIPO_VERSO, "Verso / Costas"),
+        (TIPO_LADO_DIREITO, "Lado direito"),
+        (TIPO_LADO_ESQUERDO, "Lado esquerdo"),
+    )
+
     brinquedo = models.ForeignKey(
         Brinquedos,
         on_delete=models.CASCADE,
@@ -404,10 +522,18 @@ class ImagemBrinquedo(Prime):
         storage=MediaCloudinaryStorage(),
         verbose_name="Imagem",
     )
+    tipo = models.CharField(
+        max_length=20,
+        choices=TIPO_CHOICES,
+        null=True,
+        blank=True,
+        db_index=True,
+        verbose_name="Tipo da imagem",
+    )
     ordem = models.PositiveSmallIntegerField(
         default=1,
         verbose_name="Posição na galeria",
-        help_text="Use 1 para a foto principal, 2 para a segunda e assim por diante.",
+        help_text="A ordem visual é definida pelo tipo da imagem.",
         db_index=True,
     )
     texto_alternativo = models.CharField(
@@ -418,7 +544,8 @@ class ImagemBrinquedo(Prime):
     )
 
     def __str__(self):
-        return f"{self.brinquedo} — foto {self.ordem}"
+        tipo = self.get_tipo_display() if self.tipo else f"Foto {self.ordem}"
+        return f"{self.brinquedo} — {tipo}"
 
     class Meta:
         verbose_name = "Imagem de Brinquedo"
@@ -430,6 +557,14 @@ class ImagemBrinquedo(Prime):
                 name="img_brinquedo_ordem_idx",
             )
         ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["brinquedo", "tipo"],
+                name="uniq_imagem_brinquedo_tipo",
+            )
+        ]
+
+
 
 
 class CategoriaPeca(Prime):

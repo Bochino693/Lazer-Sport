@@ -1,0 +1,1038 @@
+{% extends "gestao/base_adm.html" %}
+
+{% block title %}Pedidos{% endblock %}
+{% block page_heading %}Gestão de Pedidos{% endblock %}
+
+{% block content %}
+<style>
+  .orders-admin {
+    --oa-blue: #3b82f6;
+    --oa-blue-2: #2563eb;
+    --oa-green: #10b981;
+    --oa-amber: #f59e0b;
+    --oa-red: #ef4444;
+    --oa-violet: #8b5cf6;
+    --oa-panel: #111b2e;
+    --oa-panel-2: #0f192a;
+    --oa-line: rgba(148, 163, 184, .14);
+    --oa-text: #e5edf8;
+    --oa-muted: #8090a7;
+    width: min(100%, 1460px);
+    margin: 0 auto;
+  }
+
+  .orders-admin *,
+  .orders-admin *::before,
+  .orders-admin *::after,
+  .order-dialog *,
+  .order-dialog *::before,
+  .order-dialog *::after {
+    box-sizing: border-box;
+  }
+
+  .oa-hero {
+    position: relative;
+    min-height: 170px;
+    padding: clamp(24px, 4vw, 36px);
+    overflow: hidden;
+    border: 1px solid rgba(96, 165, 250, .18);
+    border-radius: 25px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 26px;
+    color: #fff;
+    background:
+      radial-gradient(circle at 84% 8%, rgba(59,130,246,.28), transparent 17rem),
+      linear-gradient(135deg, #17243a, #101a2d 58%, #111f37);
+    box-shadow: 0 22px 50px rgba(0,0,0,.18);
+  }
+
+  .oa-hero::after {
+    content: "";
+    position: absolute;
+    right: -45px;
+    bottom: -120px;
+    width: 300px;
+    height: 300px;
+    border: 46px solid rgba(96,165,250,.055);
+    border-radius: 50%;
+  }
+
+  .oa-hero-copy,
+  .oa-hero-state {
+    position: relative;
+    z-index: 1;
+  }
+
+  .oa-eyebrow {
+    margin: 0 0 9px;
+    color: #93c5fd;
+    font-size: .7rem;
+    font-weight: 850;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+  }
+
+  .oa-hero h2 {
+    margin: 0;
+    font-size: clamp(1.55rem, 3vw, 2.2rem);
+    line-height: 1.1;
+  }
+
+  .oa-hero p:last-child {
+    max-width: 760px;
+    margin: 10px 0 0;
+    color: #aebdd0;
+    font-size: .86rem;
+    line-height: 1.62;
+  }
+
+  .oa-hero-state {
+    min-width: 190px;
+    min-height: 70px;
+    padding: 13px 15px;
+    border: 1px solid rgba(110,231,183,.20);
+    border-radius: 15px;
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    color: #d1fae5;
+    background: rgba(16,185,129,.10);
+  }
+
+  .oa-live-dot {
+    width: 11px;
+    height: 11px;
+    flex: 0 0 11px;
+    border-radius: 50%;
+    background: #34d399;
+    box-shadow: 0 0 0 6px rgba(52,211,153,.10);
+  }
+
+  .oa-hero-state strong,
+  .oa-hero-state span {
+    display: block;
+  }
+
+  .oa-hero-state strong {
+    font-size: .76rem;
+  }
+
+  .oa-hero-state span {
+    margin-top: 3px;
+    color: #84a69a;
+    font-size: .62rem;
+  }
+
+  .oa-kpis {
+    margin: 20px 0;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+  }
+
+  .oa-kpi {
+    min-height: 102px;
+    padding: 17px;
+    border: 1px solid var(--oa-line);
+    border-radius: 17px;
+    display: flex;
+    align-items: center;
+    gap: 13px;
+    background: linear-gradient(145deg, rgba(23,36,58,.96), rgba(17,27,46,.96));
+    box-shadow: 0 12px 28px rgba(0,0,0,.12);
+  }
+
+  .oa-kpi-icon {
+    width: 43px;
+    height: 43px;
+    flex: 0 0 43px;
+    border-radius: 13px;
+    display: grid;
+    place-items: center;
+    color: #93c5fd;
+    background: rgba(59,130,246,.12);
+    font-size: 1rem;
+    font-weight: 900;
+  }
+
+  .oa-kpi:nth-child(2) .oa-kpi-icon {
+    color: #fcd34d;
+    background: rgba(245,158,11,.12);
+  }
+
+  .oa-kpi:nth-child(3) .oa-kpi-icon {
+    color: #6ee7b7;
+    background: rgba(16,185,129,.12);
+  }
+
+  .oa-kpi:nth-child(4) .oa-kpi-icon {
+    color: #c4b5fd;
+    background: rgba(139,92,246,.12);
+  }
+
+  .oa-kpi strong,
+  .oa-kpi span {
+    display: block;
+  }
+
+  .oa-kpi strong {
+    color: #f8fafc;
+    font-size: 1.55rem;
+    font-weight: 850;
+    line-height: 1;
+  }
+
+  .oa-kpi span {
+    margin-top: 6px;
+    color: #94a3b8;
+    font-size: .72rem;
+    font-weight: 650;
+  }
+
+  .oa-panel {
+    overflow: hidden;
+    border: 1px solid var(--oa-line);
+    border-radius: 20px;
+    background: rgba(17,27,46,.94);
+    box-shadow: 0 18px 38px rgba(0,0,0,.14);
+  }
+
+  .oa-toolbar {
+    padding: 17px;
+    border-bottom: 1px solid var(--oa-line);
+  }
+
+  .oa-filter {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(180px, 1fr)) auto;
+    gap: 10px;
+  }
+
+  .oa-filter select {
+    width: 100%;
+    height: 44px;
+    padding: 0 12px;
+    border: 1px solid rgba(148,163,184,.16);
+    border-radius: 11px;
+    outline: 0;
+    color: var(--oa-text);
+    background: #0d1727;
+    font: inherit;
+    font-size: .75rem;
+    font-weight: 700;
+  }
+
+  .oa-filter button,
+  .oa-btn {
+    min-height: 44px;
+    padding: 0 16px;
+    border-radius: 11px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font: inherit;
+    font-size: .72rem;
+    font-weight: 850;
+    cursor: pointer;
+  }
+
+  .oa-filter button,
+  .oa-btn.is-primary {
+    border: 1px solid rgba(96,165,250,.24);
+    color: #fff;
+    background: linear-gradient(135deg, var(--oa-blue), var(--oa-blue-2));
+  }
+
+  .oa-btn.is-secondary {
+    border: 1px solid var(--oa-line);
+    color: #aebdd0;
+    background: #1e2d46;
+  }
+
+  .oa-result-line {
+    padding: 11px 17px;
+    border-bottom: 1px solid rgba(148,163,184,.09);
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    color: #718096;
+    font-size: .71rem;
+  }
+
+  .oa-result-line strong {
+    color: #c1ccdc;
+  }
+
+  .oa-table-wrap {
+    overflow-x: auto;
+  }
+
+  .oa-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .oa-table th {
+    padding: 13px 14px;
+    color: #718096;
+    background: rgba(11,18,32,.46);
+    font-size: .63rem;
+    font-weight: 850;
+    letter-spacing: .07em;
+    text-align: left;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .oa-table td {
+    padding: 15px 14px;
+    border-top: 1px solid rgba(148,163,184,.085);
+    color: #cbd5e1;
+    font-size: .75rem;
+    vertical-align: middle;
+  }
+
+  .oa-table tr.is-unprinted {
+    box-shadow: inset 3px 0 0 var(--oa-amber);
+  }
+
+  .oa-table tbody tr:hover {
+    background: rgba(59,130,246,.035);
+  }
+
+  .oa-order-id {
+    color: #93c5fd;
+    font-weight: 900;
+    white-space: nowrap;
+  }
+
+  .oa-client strong,
+  .oa-client span {
+    display: block;
+  }
+
+  .oa-client strong {
+    max-width: 210px;
+    overflow: hidden;
+    color: #edf4fc;
+    font-size: .78rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .oa-client span {
+    margin-top: 3px;
+    color: #64748b;
+    font-size: .62rem;
+  }
+
+  .oa-money {
+    color: #dbeafe;
+    font-weight: 800;
+    white-space: nowrap;
+  }
+
+  .oa-money.is-total {
+    color: #6ee7b7;
+    font-size: .8rem;
+  }
+
+  .oa-badge {
+    min-height: 25px;
+    padding: 0 8px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    font-size: .59rem;
+    font-weight: 850;
+    white-space: nowrap;
+  }
+
+  .oa-badge.waiting {
+    color: #fcd34d;
+    background: rgba(245,158,11,.12);
+  }
+
+  .oa-badge.paid,
+  .oa-badge.done {
+    color: #6ee7b7;
+    background: rgba(16,185,129,.12);
+  }
+
+  .oa-badge.preparing,
+  .oa-badge.shipping {
+    color: #93c5fd;
+    background: rgba(59,130,246,.12);
+  }
+
+  .oa-badge.cancelled {
+    color: #fca5a5;
+    background: rgba(239,68,68,.12);
+  }
+
+  .oa-badge.neutral {
+    color: #c4b5fd;
+    background: rgba(139,92,246,.12);
+  }
+
+  .oa-open-order {
+    min-height: 37px;
+    padding: 0 11px;
+    border: 1px solid rgba(96,165,250,.22);
+    border-radius: 10px;
+    color: #bfdbfe;
+    background: rgba(37,99,235,.13);
+    font: inherit;
+    font-size: .65rem;
+    font-weight: 850;
+    cursor: pointer;
+  }
+
+  .oa-empty {
+    padding: 60px 25px;
+    color: #718096;
+    text-align: center;
+  }
+
+  .oa-empty strong {
+    display: block;
+    color: #cbd5e1;
+    font-size: 1rem;
+  }
+
+  .oa-empty span {
+    display: block;
+    margin-top: 7px;
+    font-size: .76rem;
+  }
+
+  .order-dialog {
+    position: fixed;
+    inset: 0;
+    z-index: 3400;
+    padding: 20px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(2,6,23,.82);
+    backdrop-filter: blur(7px);
+  }
+
+  .order-dialog.is-open {
+    display: flex;
+  }
+
+  .oa-dialog-card {
+    width: min(100%, 960px);
+    max-height: 92dvh;
+    overflow: hidden;
+    border: 1px solid rgba(148,163,184,.17);
+    border-radius: 22px;
+    display: flex;
+    flex-direction: column;
+    background: #111b2e;
+    box-shadow: 0 30px 80px rgba(0,0,0,.46);
+  }
+
+  .oa-dialog-head {
+    flex: 0 0 auto;
+    padding: 18px 21px;
+    border-bottom: 1px solid rgba(148,163,184,.12);
+    display: flex;
+    align-items: center;
+    gap: 13px;
+    background: #0f192a;
+  }
+
+  .oa-dialog-title {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .oa-dialog-title strong,
+  .oa-dialog-title span {
+    display: block;
+  }
+
+  .oa-dialog-title strong {
+    color: #f1f5f9;
+    font-size: 1.04rem;
+  }
+
+  .oa-dialog-title span {
+    margin-top: 3px;
+    color: #718096;
+    font-size: .67rem;
+  }
+
+  .oa-close {
+    width: 39px;
+    height: 39px;
+    border: 1px solid var(--oa-line);
+    border-radius: 11px;
+    display: grid;
+    place-items: center;
+    color: #94a3b8;
+    background: #1e2d46;
+    font-size: 1.2rem;
+    cursor: pointer;
+  }
+
+  .oa-dialog-body {
+    min-height: 0;
+    padding: 21px;
+    overflow-y: auto;
+  }
+
+  .oa-detail-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .oa-detail {
+    min-height: 86px;
+    padding: 12px;
+    border: 1px solid rgba(148,163,184,.11);
+    border-radius: 13px;
+    background: #0d1727;
+  }
+
+  .oa-detail span,
+  .oa-detail strong {
+    display: block;
+  }
+
+  .oa-detail span {
+    color: #64748b;
+    font-size: .60rem;
+    font-weight: 800;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+  }
+
+  .oa-detail strong {
+    margin-top: 7px;
+    overflow-wrap: anywhere;
+    color: #dbe5f3;
+    font-size: .74rem;
+    line-height: 1.42;
+  }
+
+  .oa-address {
+    margin-top: 11px;
+    padding: 13px;
+    border: 1px solid rgba(148,163,184,.11);
+    border-radius: 13px;
+    color: #aebdd0;
+    background: #0d1727;
+    font-size: .70rem;
+    line-height: 1.55;
+  }
+
+  .oa-address strong {
+    color: #dbe5f3;
+  }
+
+  .oa-items-title {
+    margin: 22px 0 10px;
+    color: #dbe5f3;
+    font-size: .82rem;
+    font-weight: 850;
+  }
+
+  .oa-items {
+    overflow-x: auto;
+    border: 1px solid rgba(148,163,184,.10);
+    border-radius: 13px;
+  }
+
+  .oa-items table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .oa-items th {
+    padding: 10px 11px;
+    color: #718096;
+    background: rgba(11,18,32,.56);
+    font-size: .60rem;
+    text-align: left;
+    text-transform: uppercase;
+  }
+
+  .oa-items td {
+    padding: 11px;
+    border-top: 1px solid rgba(148,163,184,.08);
+    color: #bdc9d9;
+    font-size: .69rem;
+  }
+
+  .oa-summary {
+    margin-top: 14px;
+    margin-left: auto;
+    width: min(100%, 360px);
+    display: grid;
+    gap: 7px;
+  }
+
+  .oa-summary-row {
+    min-height: 35px;
+    padding: 7px 10px;
+    border: 1px solid rgba(148,163,184,.09);
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    color: #8797ab;
+    background: rgba(13,23,39,.60);
+    font-size: .67rem;
+  }
+
+  .oa-summary-row strong {
+    color: #dbe5f3;
+  }
+
+  .oa-summary-row.is-total {
+    border-color: rgba(16,185,129,.18);
+    color: #9ed7c1;
+    background: rgba(16,185,129,.08);
+  }
+
+  .oa-summary-row.is-total strong {
+    color: #6ee7b7;
+    font-size: .8rem;
+  }
+
+  .oa-dialog-foot {
+    flex: 0 0 auto;
+    padding: 13px 21px;
+    border-top: 1px solid rgba(148,163,184,.12);
+    display: flex;
+    justify-content: flex-end;
+    gap: 9px;
+    background: #0f192a;
+  }
+
+  body.oa-modal-open {
+    overflow: hidden;
+  }
+
+  @media (max-width: 980px) {
+    .oa-kpis {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .oa-detail-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 760px) {
+    .oa-hero {
+      align-items: stretch;
+      flex-direction: column;
+    }
+    .oa-hero-state {
+      width: 100%;
+    }
+    .oa-filter {
+      grid-template-columns: 1fr;
+    }
+    .oa-table thead {
+      display: none;
+    }
+    .oa-table,
+    .oa-table tbody {
+      display: block;
+    }
+    .oa-table-wrap {
+      padding: 10px;
+      overflow: visible;
+    }
+    .oa-table tbody {
+      display: grid;
+      gap: 10px;
+    }
+    .oa-table tbody tr {
+      padding: 14px;
+      border: 1px solid var(--oa-line);
+      border-radius: 15px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 11px;
+      background: #0f192a;
+    }
+    .oa-table td {
+      padding: 0;
+      border: 0;
+      display: block;
+    }
+    .oa-table td:first-child,
+    .oa-table td:nth-child(2),
+    .oa-table td:last-child {
+      grid-column: 1 / -1;
+    }
+  }
+
+  @media (max-width: 520px) {
+    .oa-kpis {
+      grid-template-columns: 1fr 1fr;
+      gap: 9px;
+    }
+    .oa-kpi {
+      min-height: 92px;
+      padding: 12px;
+      gap: 9px;
+    }
+    .oa-kpi-icon {
+      width: 36px;
+      height: 36px;
+      flex-basis: 36px;
+    }
+    .oa-kpi strong {
+      font-size: 1.25rem;
+    }
+    .oa-detail-grid {
+      grid-template-columns: 1fr;
+    }
+    .order-dialog {
+      padding: 8px 0 0;
+      align-items: flex-end;
+    }
+    .oa-dialog-card {
+      width: 100%;
+      max-height: calc(100dvh - 8px);
+      border-radius: 22px 22px 0 0;
+    }
+  }
+</style>
+
+<div class="orders-admin">
+  <section class="oa-hero">
+    <div class="oa-hero-copy">
+      <p class="oa-eyebrow">Operação comercial</p>
+      <h2>Pedidos</h2>
+      <p>
+        Consulte pedidos, valores congelados no momento da compra, forma de
+        pagamento, envio e itens sem depender do carrinho que o cliente reutiliza.
+      </p>
+    </div>
+    <div class="oa-hero-state">
+      <span class="oa-live-dot"></span>
+      <span>
+        <strong>Painel operacional</strong>
+        <span>Dados vindos do snapshot do pedido</span>
+      </span>
+    </div>
+  </section>
+
+  <section class="oa-kpis" aria-label="Resumo dos pedidos">
+    <article class="oa-kpi">
+      <span class="oa-kpi-icon">#</span>
+      <span><strong>{{ total_pedidos }}</strong><span>Pedidos cadastrados</span></span>
+    </article>
+    <article class="oa-kpi">
+      <span class="oa-kpi-icon">…</span>
+      <span><strong>{{ total_aguardando }}</strong><span>Aguardando pagamento</span></span>
+    </article>
+    <article class="oa-kpi">
+      <span class="oa-kpi-icon">✓</span>
+      <span><strong>{{ total_pagos }}</strong><span>Pagos</span></span>
+    </article>
+    <article class="oa-kpi">
+      <span class="oa-kpi-icon">P</span>
+      <span><strong>{{ total_nao_impressos }}</strong><span>Ainda não impressos</span></span>
+    </article>
+  </section>
+
+  <section class="oa-panel">
+    <div class="oa-toolbar">
+      <form method="get" class="oa-filter">
+        <select name="impresso" aria-label="Filtrar impressão">
+          <option value="">Todos: impressão</option>
+          <option value="true" {% if impresso_atual == "true" %}selected{% endif %}>Impressos</option>
+          <option value="false" {% if impresso_atual == "false" %}selected{% endif %}>Não impressos</option>
+        </select>
+
+        <select name="pagamento" aria-label="Filtrar pagamento">
+          <option value="">Todas as formas de pagamento</option>
+          <option value="pix" {% if pagamento_atual == "pix" %}selected{% endif %}>PIX</option>
+          <option value="credito" {% if pagamento_atual == "credito" %}selected{% endif %}>Cartão de crédito</option>
+          <option value="debito" {% if pagamento_atual == "debito" %}selected{% endif %}>Cartão de débito</option>
+        </select>
+
+        <select name="status" aria-label="Filtrar status">
+          <option value="">Todos os status</option>
+          <option value="aguardando_pagamento" {% if status_atual == "aguardando_pagamento" %}selected{% endif %}>Aguardando pagamento</option>
+          <option value="pago" {% if status_atual == "pago" %}selected{% endif %}>Pago</option>
+          <option value="em_preparacao" {% if status_atual == "em_preparacao" %}selected{% endif %}>Em preparação</option>
+          <option value="saiu_entrega" {% if status_atual == "saiu_entrega" %}selected{% endif %}>Saiu para entrega</option>
+          <option value="finalizado" {% if status_atual == "finalizado" %}selected{% endif %}>Finalizado</option>
+          <option value="cancelado" {% if status_atual == "cancelado" %}selected{% endif %}>Cancelado</option>
+        </select>
+
+        <button type="submit">Aplicar filtros</button>
+      </form>
+    </div>
+
+    <div class="oa-result-line">
+      <span><strong>{{ pedidos|length }}</strong> pedido(s) nesta consulta</span>
+      <span>Frete exibido pelo snapshot do pedido</span>
+    </div>
+
+    {% if pedidos %}
+      <div class="oa-table-wrap">
+        <table class="oa-table">
+          <thead>
+            <tr>
+              <th>Pedido</th>
+              <th>Cliente</th>
+              <th>Itens</th>
+              <th>Frete</th>
+              <th>Total</th>
+              <th>Pagamento</th>
+              <th>Status</th>
+              <th>Impressão</th>
+              <th>Ação</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for pedido in pedidos %}
+              <tr class="{% if not pedido.impresso %}is-unprinted{% endif %}">
+                <td class="oa-order-id">#{{ pedido.id }}</td>
+                <td>
+                  <span class="oa-client">
+                    {% if pedido.cliente and pedido.cliente.user %}
+                      <strong>{{ pedido.cliente.nome_completo|default:pedido.cliente.user.username }}</strong>
+                      <span>{{ pedido.cliente.user.email|default:"Sem e-mail" }}</span>
+                    {% else %}
+                      <strong>Cliente removido</strong>
+                      <span>Cadastro não disponível</span>
+                    {% endif %}
+                  </span>
+                </td>
+                <td>{{ pedido.itens.count }} item(ns)</td>
+                <td class="oa-money">R$ {{ pedido.valor_frete|default:"0.00"|floatformat:2 }}</td>
+                <td class="oa-money is-total">R$ {{ pedido.total_final|default:"0.00"|floatformat:2 }}</td>
+                <td>{{ pedido.get_forma_pagamento_display|default:"—" }}</td>
+                <td>
+                  <span class="oa-badge
+                    {% if pedido.status == 'aguardando_pagamento' %}waiting
+                    {% elif pedido.status == 'pago' %}paid
+                    {% elif pedido.status == 'em_preparacao' %}preparing
+                    {% elif pedido.status == 'saiu_entrega' %}shipping
+                    {% elif pedido.status == 'finalizado' %}done
+                    {% elif pedido.status == 'cancelado' %}cancelled
+                    {% else %}neutral{% endif %}">
+                    {{ pedido.get_status_display }}
+                  </span>
+                </td>
+                <td>
+                  {% if pedido.impresso %}
+                    <span class="oa-badge paid">Impresso</span>
+                  {% else %}
+                    <span class="oa-badge waiting">Pendente</span>
+                  {% endif %}
+                </td>
+                <td>
+                  <button
+                    type="button"
+                    class="oa-open-order"
+                    data-open-order="{{ pedido.id }}"
+                  >
+                    Ver pedido
+                  </button>
+                </td>
+              </tr>
+
+              <template id="orderDetail-{{ pedido.id }}">
+                <div class="oa-detail-grid">
+                  <div class="oa-detail">
+                    <span>Pedido</span>
+                    <strong>#{{ pedido.id }}</strong>
+                  </div>
+                  <div class="oa-detail">
+                    <span>Cliente</span>
+                    <strong>
+                      {% if pedido.cliente and pedido.cliente.user %}
+                        {{ pedido.cliente.nome_completo|default:pedido.cliente.user.username }}
+                      {% else %}
+                        Cliente removido
+                      {% endif %}
+                    </strong>
+                  </div>
+                  <div class="oa-detail">
+                    <span>Status</span>
+                    <strong>{{ pedido.get_status_display }}</strong>
+                  </div>
+                  <div class="oa-detail">
+                    <span>Pagamento</span>
+                    <strong>{{ pedido.get_forma_pagamento_display|default:"—" }}</strong>
+                  </div>
+                  <div class="oa-detail">
+                    <span>Envio</span>
+                    <strong>{{ pedido.get_tipo_envio_display|default:pedido.tipo_envio|default:"—" }}</strong>
+                  </div>
+                  <div class="oa-detail">
+                    <span>Cupom</span>
+                    <strong>{{ pedido.cupom_codigo|default:"Sem cupom" }}</strong>
+                  </div>
+                  <div class="oa-detail">
+                    <span>Pagamento externo</span>
+                    <strong>{{ pedido.mp_payment_id|default:"—" }}</strong>
+                  </div>
+                  <div class="oa-detail">
+                    <span>Criado em</span>
+                    <strong>{{ pedido.criacao|date:"d/m/Y H:i" }}</strong>
+                  </div>
+                </div>
+
+                {% if pedido.tipo_envio == "frete" %}
+                  <div class="oa-address">
+                    <strong>Endereço congelado no pedido</strong><br>
+                    {{ pedido.rua|default:"" }}
+                    {% if pedido.numero %}, {{ pedido.numero }}{% endif %}
+                    {% if pedido.bairro %} — {{ pedido.bairro }}{% endif %}<br>
+                    {% if pedido.cidade %}{{ pedido.cidade }}{% endif %}
+                    {% if pedido.estado %}/{{ pedido.estado }}{% endif %}
+                    {% if pedido.cep %} · CEP {{ pedido.cep }}{% endif %}
+                  </div>
+                {% endif %}
+
+                {% if pedido.observacoes %}
+                  <div class="oa-address">
+                    <strong>Observações</strong><br>
+                    {{ pedido.observacoes }}
+                  </div>
+                {% endif %}
+
+                <div class="oa-items-title">Itens do pedido</div>
+                <div class="oa-items">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Item</th>
+                        <th>Tipo</th>
+                        <th>Qtd.</th>
+                        <th>Valor unit.</th>
+                        <th>Subtotal</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {% for item in pedido.itens.all %}
+                        <tr>
+                          <td>{{ item.nome_item }}</td>
+                          <td>{{ item.get_tipo_item_display }}</td>
+                          <td>{{ item.quantidade }}</td>
+                          <td>R$ {{ item.preco_unitario|floatformat:2 }}</td>
+                          <td><strong>R$ {{ item.subtotal|floatformat:2 }}</strong></td>
+                        </tr>
+                      {% empty %}
+                        <tr>
+                          <td colspan="5">Nenhum item registrado.</td>
+                        </tr>
+                      {% endfor %}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div class="oa-summary">
+                  <div class="oa-summary-row">
+                    <span>Bruto</span>
+                    <strong>R$ {{ pedido.total_bruto|default:"0.00"|floatformat:2 }}</strong>
+                  </div>
+                  <div class="oa-summary-row">
+                    <span>Desconto</span>
+                    <strong>- R$ {{ pedido.valor_desconto|default:"0.00"|floatformat:2 }}</strong>
+                  </div>
+                  <div class="oa-summary-row">
+                    <span>Líquido dos itens</span>
+                    <strong>R$ {{ pedido.total_liquido|default:"0.00"|floatformat:2 }}</strong>
+                  </div>
+                  <div class="oa-summary-row">
+                    <span>Frete</span>
+                    <strong>R$ {{ pedido.valor_frete|default:"0.00"|floatformat:2 }}</strong>
+                  </div>
+                  <div class="oa-summary-row is-total">
+                    <span>Total final</span>
+                    <strong>R$ {{ pedido.total_final|default:"0.00"|floatformat:2 }}</strong>
+                  </div>
+                </div>
+              </template>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="oa-empty">
+        <strong>Nenhum pedido encontrado</strong>
+        <span>Ajuste os filtros e tente novamente.</span>
+      </div>
+    {% endif %}
+  </section>
+</div>
+
+<div id="orderDialog" class="order-dialog" role="dialog" aria-modal="true" aria-hidden="true">
+  <div class="oa-dialog-card">
+    <header class="oa-dialog-head">
+      <div class="oa-dialog-title">
+        <strong id="orderDialogTitle">Detalhes do pedido</strong>
+        <span>Informações históricas salvas no momento da compra</span>
+      </div>
+      <button id="closeOrderDialog" type="button" class="oa-close" aria-label="Fechar">×</button>
+    </header>
+    <div id="orderDialogBody" class="oa-dialog-body"></div>
+    <footer class="oa-dialog-foot">
+      <button id="closeOrderDialogFooter" type="button" class="oa-btn is-secondary">Fechar</button>
+    </footer>
+  </div>
+</div>
+
+<script>
+(function () {
+  const dialog = document.getElementById('orderDialog');
+  const body = document.getElementById('orderDialogBody');
+  const title = document.getElementById('orderDialogTitle');
+
+  function openOrder(id) {
+    const template = document.getElementById(`orderDetail-${id}`);
+    if (!template) return;
+
+    body.replaceChildren(template.content.cloneNode(true));
+    title.textContent = `Detalhes do pedido #${id}`;
+    dialog.classList.add('is-open');
+    dialog.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('oa-modal-open');
+    document.getElementById('closeOrderDialog').focus();
+  }
+
+  function closeOrder() {
+    dialog.classList.remove('is-open');
+    dialog.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('oa-modal-open');
+    body.replaceChildren();
+  }
+
+  document.querySelectorAll('[data-open-order]').forEach(button => {
+    button.addEventListener('click', () => openOrder(button.dataset.openOrder));
+  });
+
+  document.getElementById('closeOrderDialog').addEventListener('click', closeOrder);
+  document.getElementById('closeOrderDialogFooter').addEventListener('click', closeOrder);
+
+  dialog.addEventListener('click', event => {
+    if (event.target === dialog) closeOrder();
+  });
+
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && dialog.classList.contains('is-open')) {
+      closeOrder();
+    }
+  });
+})();
+</script>
+{% endblock %}

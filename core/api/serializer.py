@@ -97,9 +97,9 @@ class BrinquedoListaSerializer(serializers.ModelSerializer):
     def get_avaliacao(self, obj):
         return _texto(obj.avaliacao)
 
+    # BrinquedoListaSerializer.get_imagem
     def get_imagem(self, obj):
-        # ERA build_absolute_uri (imagem crua). Virou thumb: ~40 KB.
-        return _url_cloudinary(obj.imagem_brinquedo, THUMB)
+        return _url_cloudinary(obj.imagem_catalogo, THUMB)
 
 
 class BrinquedoDetalheSerializer(serializers.ModelSerializer):
@@ -135,8 +135,9 @@ class BrinquedoDetalheSerializer(serializers.ModelSerializer):
     def get_avaliacao(self, obj):
         return _texto(obj.avaliacao)
 
+    # BrinquedoDetalheSerializer.get_imagem
     def get_imagem(self, obj):
-        return _url_cloudinary(obj.imagem_brinquedo, DETALHE)
+        return _url_cloudinary(obj.imagem_catalogo, DETALHE)
 
     def get_dimensoes(self, obj):
         """AQUI ESTAVA O BUG: devolvia Decimal, virava número no JSON."""
@@ -245,11 +246,14 @@ class PromocaoSerializer(serializers.ModelSerializer):
     def get_preco(self, obj):
         return _texto(obj.preco_promocao)
 
+    # PromocaoSerializer.get_imagem
     def get_imagem(self, obj):
-        # Promoção sem foto própria herda a do brinquedo.
         return (
-            _url_cloudinary(obj.imagem_promocao, THUMB)
-            or _url_cloudinary(getattr(obj.brinquedos, "imagem_brinquedo", None), THUMB)
+                _url_cloudinary(obj.imagem_promocao, THUMB)
+                or _url_cloudinary(
+            getattr(obj.brinquedos, "imagem_catalogo", None),
+            THUMB,
+        )
         )
 
 

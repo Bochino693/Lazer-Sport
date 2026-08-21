@@ -1,0 +1,2444 @@
+{% extends "gestao/base_adm.html" %}
+
+{% block title %}Brinquedos{% endblock %}
+{% block page_heading %}Gestão de Brinquedos{% endblock %}
+
+{% block content %}
+<style>
+  .toy-admin {
+    --ta-blue: #3b82f6;
+    --ta-blue-2: #2563eb;
+    --ta-green: #10b981;
+    --ta-red: #ef4444;
+    --ta-amber: #f59e0b;
+    --ta-bg: #0b1322;
+    --ta-panel: #111b2e;
+    --ta-panel-2: #0f192a;
+    --ta-line: rgba(148, 163, 184, .14);
+    --ta-text: #e5edf8;
+    --ta-muted: #8090a7;
+    width: min(100%, 1440px);
+    margin: 0 auto;
+  }
+
+  .toy-admin *,
+  .toy-admin *::before,
+  .toy-admin *::after,
+  .toy-dialog *,
+  .toy-dialog *::before,
+  .toy-dialog *::after {
+    box-sizing: border-box;
+  }
+
+  .toy-admin svg,
+  .toy-dialog svg {
+    width: 20px;
+    height: 20px;
+    display: block;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .ta-hero {
+    position: relative;
+    min-height: 175px;
+    padding: clamp(24px, 4vw, 36px);
+    overflow: hidden;
+    border: 1px solid rgba(96, 165, 250, .18);
+    border-radius: 25px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 26px;
+    background:
+      radial-gradient(circle at 84% 10%, rgba(59,130,246,.29), transparent 16rem),
+      linear-gradient(135deg, #17243a, #101a2d 58%, #111f37);
+    box-shadow: 0 22px 50px rgba(0,0,0,.18);
+  }
+
+  .ta-hero::after {
+    content: "";
+    position: absolute;
+    right: -50px;
+    bottom: -100px;
+    width: 280px;
+    height: 280px;
+    border: 44px solid rgba(96,165,250,.055);
+    border-radius: 50%;
+  }
+
+  .ta-hero-copy,
+  .ta-primary {
+    position: relative;
+    z-index: 1;
+  }
+
+  .ta-eyebrow {
+    margin: 0 0 9px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #93c5fd;
+    font-size: .7rem;
+    font-weight: 850;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+  }
+
+  .ta-hero h2 {
+    margin: 0;
+    color: #fff;
+    font-size: clamp(1.55rem, 3vw, 2.2rem);
+    line-height: 1.1;
+  }
+
+  .ta-hero p:last-child {
+    max-width: 760px;
+    margin: 10px 0 0;
+    color: #aebdd0;
+    font-size: .88rem;
+    line-height: 1.62;
+  }
+
+  .ta-primary,
+  .ta-btn {
+    min-height: 44px;
+    padding: 0 17px;
+    border-radius: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font: inherit;
+    font-size: .74rem;
+    font-weight: 850;
+    cursor: pointer;
+  }
+
+  .ta-primary,
+  .ta-btn.is-primary {
+    border: 1px solid rgba(147,197,253,.22);
+    color: #fff;
+    background: linear-gradient(135deg, var(--ta-blue), var(--ta-blue-2));
+    box-shadow: 0 12px 28px rgba(37,99,235,.30);
+  }
+
+  .ta-primary {
+    min-height: 49px;
+    padding-inline: 20px;
+  }
+
+  .ta-btn.is-secondary {
+    border: 1px solid var(--ta-line);
+    color: #aebdd0;
+    background: #1e2d46;
+  }
+
+  .ta-btn.is-danger {
+    border: 1px solid rgba(248,113,113,.23);
+    color: #fff;
+    background: #dc2626;
+  }
+
+  .ta-btn:disabled {
+    opacity: .45;
+    cursor: not-allowed;
+  }
+
+  .ta-kpis {
+    margin: 20px 0;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+  }
+
+  .ta-kpi {
+    min-height: 105px;
+    padding: 17px;
+    border: 1px solid var(--ta-line);
+    border-radius: 17px;
+    display: flex;
+    align-items: center;
+    gap: 13px;
+    background: linear-gradient(145deg, rgba(23,36,58,.96), rgba(17,27,46,.96));
+    box-shadow: 0 12px 28px rgba(0,0,0,.12);
+  }
+
+  .ta-kpi-icon {
+    width: 44px;
+    height: 44px;
+    flex: 0 0 44px;
+    border-radius: 13px;
+    display: grid;
+    place-items: center;
+    color: #93c5fd;
+    background: rgba(59,130,246,.12);
+  }
+
+  .ta-kpi:nth-child(2) .ta-kpi-icon {
+    color: #6ee7b7;
+    background: rgba(16,185,129,.12);
+  }
+
+  .ta-kpi:nth-child(3) .ta-kpi-icon {
+    color: #c4b5fd;
+    background: rgba(139,92,246,.12);
+  }
+
+  .ta-kpi:nth-child(4) .ta-kpi-icon {
+    color: #fcd34d;
+    background: rgba(245,158,11,.12);
+  }
+
+  .ta-kpi strong,
+  .ta-kpi span {
+    display: block;
+  }
+
+  .ta-kpi strong {
+    color: #f8fafc;
+    font-size: 1.6rem;
+    font-weight: 850;
+    line-height: 1;
+  }
+
+  .ta-kpi span {
+    margin-top: 6px;
+    color: #94a3b8;
+    font-size: .73rem;
+    font-weight: 650;
+  }
+
+  .ta-panel {
+    overflow: hidden;
+    border: 1px solid var(--ta-line);
+    border-radius: 20px;
+    background: rgba(17,27,46,.94);
+    box-shadow: 0 18px 38px rgba(0,0,0,.14);
+  }
+
+  .ta-toolbar {
+    padding: 17px;
+    border-bottom: 1px solid var(--ta-line);
+  }
+
+  .ta-filter {
+    display: grid;
+    grid-template-columns: minmax(240px, 1fr) minmax(190px, 270px) auto;
+    gap: 10px;
+  }
+
+  .ta-search {
+    position: relative;
+  }
+
+  .ta-search svg {
+    position: absolute;
+    top: 50%;
+    left: 14px;
+    width: 17px;
+    height: 17px;
+    color: #64748b;
+    transform: translateY(-50%);
+    pointer-events: none;
+  }
+
+  .ta-search input,
+  .ta-filter select,
+  .ta-field input[type="text"],
+  .ta-field input[type="search"],
+  .ta-field select,
+  .ta-field textarea,
+  .ta-quick-form input[type="text"] {
+    width: 100%;
+    border: 1px solid rgba(148,163,184,.16);
+    border-radius: 11px;
+    outline: 0;
+    color: var(--ta-text);
+    background: #0d1727;
+    font: inherit;
+    font-size: .77rem;
+  }
+
+  .ta-search input,
+  .ta-filter select,
+  .ta-field input[type="text"],
+  .ta-field input[type="search"],
+  .ta-field select,
+  .ta-quick-form input[type="text"] {
+    height: 44px;
+    padding: 0 12px;
+  }
+
+  .ta-search input {
+    padding-left: 42px;
+  }
+
+  .ta-field textarea {
+    min-height: 104px;
+    padding: 11px 12px;
+    resize: vertical;
+  }
+
+  .ta-filter button {
+    min-height: 44px;
+    padding: 0 18px;
+    border: 1px solid rgba(96,165,250,.24);
+    border-radius: 12px;
+    color: #bfdbfe;
+    background: rgba(37,99,235,.18);
+    font: inherit;
+    font-size: .73rem;
+    font-weight: 850;
+    cursor: pointer;
+  }
+
+  .ta-result-line {
+    padding: 11px 17px;
+    border-bottom: 1px solid rgba(148,163,184,.09);
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    color: #718096;
+    font-size: .72rem;
+  }
+
+  .ta-result-line strong {
+    color: #c1ccdc;
+  }
+
+  .ta-table-wrap {
+    overflow-x: auto;
+  }
+
+  .ta-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .ta-table th {
+    padding: 13px 16px;
+    color: #718096;
+    background: rgba(11,18,32,.46);
+    font-size: .66rem;
+    font-weight: 850;
+    letter-spacing: .08em;
+    text-align: left;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .ta-table td {
+    padding: 15px 16px;
+    border-top: 1px solid rgba(148,163,184,.085);
+    color: #cbd5e1;
+    font-size: .78rem;
+    vertical-align: middle;
+  }
+
+  .ta-table tbody tr:hover {
+    background: rgba(59,130,246,.035);
+  }
+
+  .ta-product {
+    min-width: 265px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .ta-product-image {
+    width: 64px;
+    height: 52px;
+    flex: 0 0 64px;
+    padding: 4px;
+    border: 1px solid var(--ta-line);
+    border-radius: 11px;
+    overflow: hidden;
+    display: grid;
+    place-items: center;
+    color: #64748b;
+    background: #f8fafc;
+  }
+
+  .ta-product-image img {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: contain;
+  }
+
+  .ta-product-name {
+    display: block;
+    max-width: 300px;
+    overflow: hidden;
+    color: #edf4fc;
+    font-size: .84rem;
+    font-weight: 780;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .ta-product-sub {
+    display: block;
+    margin-top: 4px;
+    color: #64748b;
+    font-size: .66rem;
+  }
+
+  .ta-price {
+    min-width: 120px;
+    color: #93c5fd;
+    font-weight: 850;
+  }
+
+  .ta-chips {
+    min-width: 190px;
+    max-width: 330px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+
+  .ta-chip,
+  .ta-status {
+    min-height: 24px;
+    padding: 0 8px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    font-size: .62rem;
+    font-weight: 800;
+    white-space: nowrap;
+  }
+
+  .ta-chip {
+    color: #a5b4fc;
+    background: rgba(99,102,241,.11);
+  }
+
+  .ta-status.is-store {
+    color: #6ee7b7;
+    background: rgba(16,185,129,.12);
+  }
+
+  .ta-status.is-catalog {
+    color: #94a3b8;
+    background: rgba(148,163,184,.09);
+  }
+
+  .ta-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 6px;
+  }
+
+  .ta-action {
+    width: 36px;
+    height: 36px;
+    border: 1px solid var(--ta-line);
+    border-radius: 10px;
+    display: inline-grid;
+    place-items: center;
+    color: #9eacc0;
+    background: rgba(30,45,70,.62);
+    cursor: pointer;
+  }
+
+  .ta-action:hover {
+    color: #fff;
+    border-color: rgba(96,165,250,.28);
+    background: rgba(59,130,246,.14);
+  }
+
+  .ta-action.is-danger:hover {
+    color: #fecaca;
+    border-color: rgba(239,68,68,.30);
+    background: rgba(239,68,68,.12);
+  }
+
+  .ta-action svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .ta-empty {
+    padding: 58px 24px;
+    color: #718096;
+    text-align: center;
+  }
+
+  .ta-empty strong {
+    display: block;
+    color: #cbd5e1;
+    font-size: 1rem;
+  }
+
+  .ta-empty span {
+    display: block;
+    max-width: 430px;
+    margin: 7px auto 0;
+    font-size: .78rem;
+  }
+
+  .ta-pagination {
+    padding: 16px;
+    border-top: 1px solid rgba(148,163,184,.09);
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .ta-pagination a,
+  .ta-pagination span {
+    min-width: 36px;
+    height: 36px;
+    padding: 0 10px;
+    border: 1px solid rgba(148,163,184,.13);
+    border-radius: 9px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #94a3b8;
+    font-size: .7rem;
+    font-weight: 800;
+    text-decoration: none;
+  }
+
+  .ta-pagination span {
+    border-color: rgba(96,165,250,.32);
+    color: #bfdbfe;
+    background: rgba(37,99,235,.18);
+  }
+
+  /* ---------- modal ---------- */
+  .toy-dialog {
+    position: fixed;
+    inset: 0;
+    z-index: 3300;
+    padding: 20px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(2,6,23,.82);
+    backdrop-filter: blur(7px);
+  }
+
+  .toy-dialog.is-open {
+    display: flex;
+  }
+
+  .toy-dialog-card {
+    width: min(100%, 940px);
+    max-height: 92dvh;
+    overflow: hidden;
+    border: 1px solid rgba(148,163,184,.17);
+    border-radius: 22px;
+    display: flex;
+    flex-direction: column;
+    background: #111b2e;
+    box-shadow: 0 30px 80px rgba(0,0,0,.46);
+  }
+
+  .toy-dialog-card.is-small {
+    width: min(100%, 470px);
+  }
+
+  .toy-dialog-card > form {
+    min-height: 0;
+    max-height: 92dvh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .ta-modal-header {
+    flex: 0 0 auto;
+    padding: 18px 22px;
+    border-bottom: 1px solid rgba(148,163,184,.12);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: #0f192a;
+  }
+
+  .ta-modal-heading {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .ta-modal-heading h2 {
+    margin: 0;
+    color: #f1f5f9;
+    font-size: 1.08rem;
+  }
+
+  .ta-modal-heading p {
+    margin: 4px 0 0;
+    color: #718096;
+    font-size: .7rem;
+  }
+
+  .ta-close {
+    width: 39px;
+    height: 39px;
+    border: 1px solid var(--ta-line);
+    border-radius: 11px;
+    display: grid;
+    place-items: center;
+    color: #94a3b8;
+    background: #1e2d46;
+    cursor: pointer;
+  }
+
+  .ta-modal-body {
+    min-height: 0;
+    padding: 22px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+  }
+
+  .ta-section + .ta-section {
+    margin-top: 24px;
+    padding-top: 22px;
+    border-top: 1px solid rgba(148,163,184,.10);
+  }
+
+  .ta-section-title {
+    margin-bottom: 14px;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .ta-section-title svg {
+    width: 18px;
+    height: 18px;
+    margin-top: 1px;
+    color: #60a5fa;
+  }
+
+  .ta-section-title strong,
+  .ta-section-title span {
+    display: block;
+  }
+
+  .ta-section-title strong {
+    color: #dbe5f3;
+    font-size: .83rem;
+  }
+
+  .ta-section-title span {
+    margin-top: 3px;
+    color: #718096;
+    font-size: .67rem;
+  }
+
+  .ta-form-grid {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: 14px;
+  }
+
+  .ta-field {
+    grid-column: span 6;
+  }
+
+  .ta-field.is-full {
+    grid-column: 1 / -1;
+  }
+
+  .ta-field.is-third {
+    grid-column: span 4;
+  }
+
+  .ta-field label,
+  .ta-label {
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    color: #aebdd0;
+    font-size: .7rem;
+    font-weight: 780;
+  }
+
+  .ta-field label small,
+  .ta-label small {
+    color: #5f6d82;
+    font-size: .61rem;
+    font-weight: 650;
+  }
+
+  .ta-field input:focus,
+  .ta-field select:focus,
+  .ta-field textarea:focus,
+  .ta-quick-form input:focus {
+    border-color: rgba(96,165,250,.58);
+    box-shadow: 0 0 0 3px rgba(59,130,246,.11);
+  }
+
+  .ta-input-wrap {
+    position: relative;
+  }
+
+  .ta-input-wrap input {
+    padding-left: 40px !important;
+    padding-right: 36px !important;
+  }
+
+  .ta-prefix,
+  .ta-suffix {
+    position: absolute;
+    top: 50%;
+    z-index: 1;
+    color: #718096;
+    font-size: .68rem;
+    font-weight: 850;
+    transform: translateY(-50%);
+    pointer-events: none;
+  }
+
+  .ta-prefix { left: 12px; }
+  .ta-suffix { right: 12px; }
+
+  .ta-help {
+    margin: 6px 0 0;
+    color: #64748b;
+    font-size: .61rem;
+    line-height: 1.45;
+  }
+
+  /* ---------- galeria ---------- */
+  .ta-gallery-box {
+    padding: 15px;
+    border: 1px dashed rgba(96,165,250,.30);
+    border-radius: 16px;
+    background:
+      radial-gradient(circle at 100% 0, rgba(59,130,246,.08), transparent 16rem),
+      rgba(59,130,246,.035);
+  }
+
+  .ta-gallery-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+  }
+
+  .ta-gallery-head strong,
+  .ta-gallery-head span {
+    display: block;
+  }
+
+  .ta-gallery-head strong {
+    color: #dbe5f3;
+    font-size: .77rem;
+  }
+
+  .ta-gallery-head span {
+    margin-top: 4px;
+    color: #718096;
+    font-size: .65rem;
+    line-height: 1.45;
+  }
+
+  .ta-file-button {
+    position: relative;
+    flex: 0 0 auto;
+    min-height: 38px;
+    padding: 0 12px;
+    border: 1px solid rgba(96,165,250,.21);
+    border-radius: 10px;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    color: #bfdbfe;
+    background: rgba(37,99,235,.13);
+    font-size: .66rem;
+    font-weight: 850;
+    cursor: pointer;
+  }
+
+  .ta-file-button input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .ta-gallery-status {
+    margin-top: 12px;
+    padding: 9px 11px;
+    border: 1px solid rgba(148,163,184,.10);
+    border-radius: 11px;
+    color: #8392a8;
+    background: rgba(13,23,39,.65);
+    font-size: .64rem;
+    line-height: 1.45;
+  }
+
+  .ta-gallery-status.is-new {
+    color: #bfdbfe;
+    border-color: rgba(96,165,250,.22);
+    background: rgba(37,99,235,.10);
+  }
+
+  .ta-gallery-grid {
+    min-height: 112px;
+    margin-top: 12px;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 9px;
+  }
+
+  .ta-gallery-empty {
+    grid-column: 1 / -1;
+    min-height: 105px;
+    border: 1px dashed rgba(148,163,184,.15);
+    border-radius: 12px;
+    display: grid;
+    place-items: center;
+    color: #64748b;
+    background: rgba(13,23,39,.45);
+    font-size: .68rem;
+    font-weight: 750;
+    text-align: center;
+  }
+
+  .ta-gallery-item {
+    position: relative;
+    min-width: 0;
+    aspect-ratio: 4 / 3;
+    padding: 5px;
+    overflow: hidden;
+    border: 1px solid rgba(148,163,184,.13);
+    border-radius: 12px;
+    background: #edf4fb;
+  }
+
+  .ta-gallery-item img {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: contain;
+    border-radius: 8px;
+  }
+
+  .ta-gallery-badge {
+    position: absolute;
+    top: 7px;
+    left: 7px;
+    min-height: 23px;
+    padding: 0 7px;
+    border: 1px solid rgba(255,255,255,.34);
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    color: #fff;
+    background: rgba(7,20,38,.78);
+    font-size: .56rem;
+    font-weight: 900;
+    backdrop-filter: blur(5px);
+  }
+
+  .ta-gallery-badge.is-main {
+    background: linear-gradient(135deg, #0878f9, #004aad);
+  }
+
+  .ta-gallery-number {
+    position: absolute;
+    right: 7px;
+    bottom: 7px;
+    width: 24px;
+    height: 24px;
+    border-radius: 8px;
+    display: grid;
+    place-items: center;
+    color: #fff;
+    background: rgba(7,20,38,.76);
+    font-size: .58rem;
+    font-weight: 900;
+  }
+
+  .ta-gallery-rule {
+    margin-top: 11px;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 7px;
+  }
+
+  .ta-gallery-rule span {
+    min-height: 39px;
+    padding: 7px 9px;
+    border: 1px solid rgba(148,163,184,.10);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    color: #718096;
+    background: rgba(13,23,39,.5);
+    font-size: .6rem;
+    line-height: 1.35;
+  }
+
+  .ta-options-head {
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .ta-options-head .ta-label {
+    margin: 0;
+  }
+
+  .ta-inline-add {
+    padding: 5px 9px;
+    border: 1px solid rgba(96,165,250,.2);
+    border-radius: 8px;
+    color: #93c5fd;
+    background: rgba(59,130,246,.09);
+    font: inherit;
+    font-size: .62rem;
+    font-weight: 850;
+    cursor: pointer;
+  }
+
+  .ta-check-grid {
+    max-height: 174px;
+    padding: 8px;
+    border: 1px solid rgba(148,163,184,.12);
+    border-radius: 12px;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 7px;
+    overflow-y: auto;
+    background: #0d1727;
+  }
+
+  .ta-check {
+    min-height: 38px;
+    padding: 8px 9px;
+    border: 1px solid rgba(148,163,184,.10);
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #9eacc0;
+    background: rgba(30,45,70,.42);
+    font-size: .67rem;
+    cursor: pointer;
+  }
+
+  .ta-check:has(input:checked) {
+    color: #dbeafe;
+    border-color: rgba(96,165,250,.30);
+    background: rgba(37,99,235,.14);
+  }
+
+  .ta-check input {
+    accent-color: #3b82f6;
+  }
+
+  .ta-toggle {
+    min-height: 64px;
+    padding: 11px;
+    border: 1px solid rgba(148,163,184,.13);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #0e1829;
+    cursor: pointer;
+  }
+
+  .ta-toggle input {
+    width: 17px;
+    height: 17px;
+    accent-color: #3b82f6;
+  }
+
+  .ta-toggle strong,
+  .ta-toggle span {
+    display: block;
+  }
+
+  .ta-toggle strong {
+    color: #cbd5e1;
+    font-size: .71rem;
+  }
+
+  .ta-toggle span {
+    margin-top: 3px;
+    color: #64748b;
+    font-size: .61rem;
+  }
+
+  .ta-modal-footer {
+    flex: 0 0 auto;
+    min-height: 70px;
+    padding: 13px 22px;
+    border-top: 1px solid rgba(148,163,184,.12);
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 9px;
+    background: #0f192a;
+  }
+
+  .ta-footer-note {
+    margin-right: auto;
+    color: #64748b;
+    font-size: .63rem;
+  }
+
+  .ta-confirm {
+    padding: 25px 23px 7px;
+    color: #8d9bb0;
+    text-align: center;
+  }
+
+  .ta-confirm h2 {
+    margin: 0;
+    color: #f1f5f9;
+    font-size: 1.08rem;
+  }
+
+  .ta-confirm p {
+    margin: 8px 0 0;
+    font-size: .74rem;
+    line-height: 1.55;
+  }
+
+  .ta-confirm code {
+    display: block;
+    margin: 15px 0 10px;
+    padding: 10px;
+    overflow-wrap: anywhere;
+    border-radius: 9px;
+    color: #fecaca;
+    background: rgba(2,6,23,.38);
+    font-size: .68rem;
+    user-select: all;
+  }
+
+  .ta-confirm input {
+    width: 100%;
+    height: 42px;
+    padding: 0 11px;
+    border: 1px solid rgba(148,163,184,.18);
+    border-radius: 10px;
+    outline: 0;
+    color: #f1f5f9;
+    background: #0d1727;
+  }
+
+  .ta-quick-form {
+    padding: 22px;
+    display: grid;
+    gap: 12px;
+  }
+
+  .ta-quick-form h2 {
+    margin: 0;
+    color: #f1f5f9;
+    font-size: 1.05rem;
+  }
+
+  .ta-quick-form p {
+    margin: -5px 0 4px;
+    color: #718096;
+    font-size: .68rem;
+  }
+
+  .ta-quick-form label {
+    color: #aebdd0;
+    font-size: .7rem;
+    font-weight: 780;
+  }
+
+  .ta-quick-form input[type="file"] {
+    color: #94a3b8;
+    font-size: .7rem;
+  }
+
+  .ta-quick-message {
+    min-height: 18px;
+    color: #fca5a5;
+    font-size: .67rem;
+  }
+
+  body.ta-modal-open {
+    overflow: hidden;
+  }
+
+  @media (max-width: 1050px) {
+    .ta-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .ta-gallery-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  }
+
+  @media (max-width: 760px) {
+    .ta-hero {
+      align-items: stretch;
+      flex-direction: column;
+    }
+    .ta-primary { width: 100%; }
+    .ta-filter { grid-template-columns: 1fr; }
+    .ta-table thead { display: none; }
+    .ta-table, .ta-table tbody { display: block; }
+    .ta-table-wrap { padding: 10px; overflow: visible; }
+    .ta-table tbody { display: grid; gap: 10px; }
+    .ta-table tbody tr {
+      padding: 14px;
+      border: 1px solid var(--ta-line);
+      border-radius: 15px;
+      display: grid;
+      gap: 11px;
+      background: #0f192a;
+    }
+    .ta-table td {
+      padding: 0;
+      border: 0;
+      display: block;
+    }
+    .ta-actions { justify-content: flex-start; }
+    .ta-field,
+    .ta-field.is-third { grid-column: 1 / -1; }
+    .ta-gallery-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .ta-gallery-rule { grid-template-columns: 1fr; }
+  }
+
+  @media (max-width: 560px) {
+    .ta-kpis { grid-template-columns: 1fr 1fr; gap: 9px; }
+    .ta-kpi { min-height: 92px; padding: 12px; gap: 9px; }
+    .ta-kpi-icon { width: 36px; height: 36px; flex-basis: 36px; }
+    .ta-kpi strong { font-size: 1.28rem; }
+
+    .toy-dialog {
+      padding: 8px 0 0;
+      align-items: flex-end;
+    }
+    .toy-dialog-card,
+    .toy-dialog-card.is-small {
+      width: 100%;
+      max-height: calc(100dvh - 8px);
+      border-radius: 22px 22px 0 0;
+    }
+    .ta-modal-header,
+    .ta-modal-body,
+    .ta-modal-footer { padding-inline: 15px; }
+    .ta-gallery-head { flex-direction: column; }
+    .ta-file-button { width: 100%; justify-content: center; }
+    .ta-check-grid { grid-template-columns: 1fr 1fr; }
+    .ta-footer-note { display: none; }
+    .ta-modal-footer .ta-btn { flex: 1; }
+  }
+
+  /* ---------- imagens tipadas do brinquedo ---------- */
+  .ta-image-policy {
+    margin-bottom: 12px;
+    padding: 11px 13px;
+    border: 1px solid rgba(96,165,250,.18);
+    border-radius: 12px;
+    color: #9fb4cb;
+    background: rgba(37,99,235,.08);
+    font-size: .65rem;
+    line-height: 1.55;
+  }
+
+  .ta-image-policy strong {
+    color: #bfdbfe;
+  }
+
+  .ta-image-type-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 11px;
+  }
+
+  .ta-image-slot {
+    min-width: 0;
+    padding: 12px;
+    border: 1px solid rgba(148,163,184,.13);
+    border-radius: 15px;
+    background: rgba(13,23,39,.58);
+    transition: border-color .2s ease, background .2s ease, opacity .2s ease;
+  }
+
+  .ta-image-slot.is-active {
+    border-color: rgba(96,165,250,.33);
+    background: rgba(37,99,235,.075);
+  }
+
+  .ta-image-slot.is-removed {
+    opacity: .52;
+    border-style: dashed;
+  }
+
+  .ta-image-slot.is-limit-blocked:not(.is-active) {
+    opacity: .58;
+  }
+
+  .ta-image-slot-head {
+    min-height: 42px;
+    margin-bottom: 9px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 9px;
+  }
+
+  .ta-image-slot-title strong,
+  .ta-image-slot-title span {
+    display: block;
+  }
+
+  .ta-image-slot-title strong {
+    color: #dbe5f3;
+    font-size: .75rem;
+  }
+
+  .ta-image-slot-title span {
+    margin-top: 3px;
+    color: #718096;
+    font-size: .60rem;
+    line-height: 1.35;
+  }
+
+  .ta-image-kind {
+    min-height: 24px;
+    padding: 0 7px;
+    border: 1px solid rgba(148,163,184,.13);
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    color: #9eacc0;
+    background: rgba(30,45,70,.55);
+    font-size: .54rem;
+    font-weight: 900;
+    white-space: nowrap;
+  }
+
+  .ta-image-kind.is-cover {
+    color: #bfdbfe;
+    border-color: rgba(96,165,250,.23);
+    background: rgba(37,99,235,.15);
+  }
+
+  .ta-image-preview {
+    position: relative;
+    aspect-ratio: 16 / 10;
+    overflow: hidden;
+    border: 1px solid rgba(148,163,184,.12);
+    border-radius: 11px;
+    display: grid;
+    place-items: center;
+    color: #64748b;
+    background:
+      radial-gradient(circle at 20% 15%, rgba(59,130,246,.09), transparent 45%),
+      #eef4fa;
+  }
+
+  .ta-image-preview img {
+    width: 100%;
+    height: 100%;
+    padding: 5px;
+    display: none;
+    object-fit: contain;
+  }
+
+  .ta-image-slot.is-active .ta-image-preview img {
+    display: block;
+  }
+
+  .ta-image-slot.is-active .ta-image-placeholder {
+    display: none;
+  }
+
+  .ta-image-placeholder {
+    padding: 12px;
+    color: #7890aa;
+    font-size: .62rem;
+    font-weight: 800;
+    line-height: 1.4;
+    text-align: center;
+  }
+
+  .ta-image-slot-actions {
+    margin-top: 9px;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
+
+  .ta-image-pick {
+    position: relative;
+    min-height: 37px;
+    padding: 0 10px;
+    border: 1px solid rgba(96,165,250,.21);
+    border-radius: 9px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    color: #bfdbfe;
+    background: rgba(37,99,235,.12);
+    font-size: .61rem;
+    font-weight: 850;
+    cursor: pointer;
+  }
+
+  .ta-image-pick input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .ta-image-remove {
+    min-height: 37px;
+    padding: 0 9px;
+    border: 1px solid rgba(239,68,68,.18);
+    border-radius: 9px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #fca5a5;
+    background: rgba(239,68,68,.07);
+    font-size: .59rem;
+    font-weight: 800;
+    cursor: pointer;
+  }
+
+  .ta-image-remove input {
+    accent-color: #ef4444;
+  }
+
+  .ta-image-remove.is-hidden {
+    display: none;
+  }
+
+  .ta-image-counter {
+    margin-top: 11px;
+    padding: 9px 11px;
+    border: 1px solid rgba(148,163,184,.10);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    color: #8392a8;
+    background: rgba(13,23,39,.62);
+    font-size: .62rem;
+    line-height: 1.4;
+  }
+
+  .ta-image-counter strong {
+    color: #dbeafe;
+  }
+
+  .ta-image-counter.is-error {
+    color: #fca5a5;
+    border-color: rgba(239,68,68,.20);
+    background: rgba(239,68,68,.07);
+  }
+
+  @media (max-width: 760px) {
+    .ta-image-type-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+</style>
+
+<div class="toy-admin">
+  <svg width="0" height="0" aria-hidden="true" style="position:absolute">
+    <symbol id="ta-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="ta-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></symbol>
+    <symbol id="ta-edit" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4L16.5 3.5Z"/></symbol>
+    <symbol id="ta-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14M10 11v6M14 11v6"/></symbol>
+    <symbol id="ta-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
+    <symbol id="ta-upload" viewBox="0 0 24 24"><path d="M12 16V4M7 9l5-5 5 5M5 20h14"/></symbol>
+    <symbol id="ta-image" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 15-5-5L5 20"/></symbol>
+    <symbol id="ta-game" viewBox="0 0 24 24"><path d="M8.5 8h7a5 5 0 0 1 4.7 6.7l-.8 2.2a2.4 2.4 0 0 1-4.1.7L14 16h-4l-1.3 1.6a2.4 2.4 0 0 1-4.1-.7l-.8-2.2A5 5 0 0 1 8.5 8Z"/><path d="M8 11v4M6 13h4M16.5 12.5h.01M18.5 14.5h.01"/></symbol>
+    <symbol id="ta-save" viewBox="0 0 24 24"><path d="M5 4h12l2 2v14H5V4Z"/><path d="M8 4v6h8V4M8 20v-6h8v6"/></symbol>
+  </svg>
+
+  <section class="ta-hero">
+    <div class="ta-hero-copy">
+      <p class="ta-eyebrow"><svg><use href="#ta-game"/></svg> Catálogo de produtos</p>
+      <h2>Brinquedos</h2>
+      <p>
+        Cadastre produtos, organize categorias e mantenha até 3 vistas por
+        brinquedo. PERFIL / FRENTE é sempre a imagem de capa.
+      </p>
+    </div>
+    <button id="newToyButton" class="ta-primary" type="button">
+      <svg><use href="#ta-plus"/></svg>
+      Cadastrar brinquedo
+    </button>
+  </section>
+
+  <section class="ta-kpis" aria-label="Resumo dos brinquedos">
+    <article class="ta-kpi">
+      <span class="ta-kpi-icon"><svg><use href="#ta-game"/></svg></span>
+      <span><strong>{{ total_brinquedos }}</strong><span>Brinquedos cadastrados</span></span>
+    </article>
+    <article class="ta-kpi">
+      <span class="ta-kpi-icon">✓</span>
+      <span><strong>{{ total_loja }}</strong><span>Disponíveis na loja</span></span>
+    </article>
+    <article class="ta-kpi">
+      <span class="ta-kpi-icon"><svg><use href="#ta-image"/></svg></span>
+      <span><strong>{{ total_com_imagem }}</strong><span>Com imagem principal</span></span>
+    </article>
+    <article class="ta-kpi">
+      <span class="ta-kpi-icon">#</span>
+      <span><strong>{{ total_categorias }}</strong><span>Categorias disponíveis</span></span>
+    </article>
+  </section>
+
+  <section class="ta-panel">
+    <div class="ta-toolbar">
+      <form method="get" class="ta-filter">
+        <label class="ta-search">
+          <svg><use href="#ta-search"/></svg>
+          <input name="q" type="search" value="{{ busca }}" placeholder="Buscar brinquedo pelo nome…">
+        </label>
+        <select name="categoria" aria-label="Filtrar por categoria">
+          <option value="todas">Todas as categorias</option>
+          {% for categoria in categorias %}
+            <option value="{{ categoria.id }}" {% if categoria_ativa == categoria.id|stringformat:"s" %}selected{% endif %}>
+              {{ categoria.nome_categoria }}
+            </option>
+          {% endfor %}
+        </select>
+        <button type="submit">Aplicar filtros</button>
+      </form>
+    </div>
+
+    <div class="ta-result-line">
+      <span><strong>{{ page_obj.paginator.count }}</strong> resultado(s)</span>
+      <span>Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
+    </div>
+
+    {% if brinquedos.object_list %}
+      <div class="ta-table-wrap">
+        <table class="ta-table">
+          <thead>
+            <tr>
+              <th>Brinquedo</th>
+              <th>Preço / status</th>
+              <th>Categorias</th>
+              <th style="text-align:right">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for brinquedo in brinquedos %}
+              <tr>
+                <td>
+                  <div class="ta-product">
+                    <span class="ta-product-image">
+                      {% with capa=brinquedo.imagem_catalogo %}
+                        {% if capa %}
+                          <img src="{{ capa.url }}" alt="{{ brinquedo.nome_brinquedo }}">
+                        {% else %}
+                          <svg><use href="#ta-image"/></svg>
+                        {% endif %}
+                      {% endwith %}
+                    </span>
+                    <span>
+                      <strong class="ta-product-name">{{ brinquedo.nome_brinquedo }}</strong>
+                      <span class="ta-product-sub">#{{ brinquedo.id }} · {{ brinquedo.voltz|default:"Sem voltagem" }}</span>
+                    </span>
+                  </div>
+                </td>
+                <td>
+                  <span class="ta-price">
+                    {% if brinquedo.valor_brinquedo != None %}
+                      R$ {{ brinquedo.valor_brinquedo }}
+                    {% else %}
+                      Sob consulta
+                    {% endif %}
+                  </span>
+                  <div style="margin-top:6px">
+                    {% if brinquedo.exibir_na_loja %}
+                      <span class="ta-status is-store">Na loja</span>
+                    {% else %}
+                      <span class="ta-status is-catalog">Somente catálogo</span>
+                    {% endif %}
+                  </div>
+                </td>
+                <td>
+                  <div class="ta-chips">
+                    {% for categoria in brinquedo.categorias_brinquedos.all %}
+                      <span class="ta-chip">{{ categoria.nome_categoria }}</span>
+                    {% empty %}
+                      <span class="ta-chip">Sem categoria</span>
+                    {% endfor %}
+                  </div>
+                </td>
+                <td>
+                  <div class="ta-actions">
+                    <button type="button" class="ta-action" data-edit-toy="{{ brinquedo.id }}" title="Editar brinquedo">
+                      <svg><use href="#ta-edit"/></svg>
+                    </button>
+                    <button type="button" class="ta-action is-danger" data-delete-toy="{{ brinquedo.id }}" data-delete-name="{{ brinquedo.nome_brinquedo }}" title="Excluir brinquedo">
+                      <svg><use href="#ta-trash"/></svg>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="ta-empty">
+        <strong>Nenhum brinquedo encontrado</strong>
+        <span>Ajuste os filtros ou cadastre um novo produto.</span>
+      </div>
+    {% endif %}
+
+    {% if page_obj.paginator.num_pages > 1 %}
+      <nav class="ta-pagination" aria-label="Paginação">
+        {% if page_obj.has_previous %}
+          <a href="?q={{ busca|urlencode }}&categoria={{ categoria_ativa }}&page={{ page_obj.previous_page_number }}">Anterior</a>
+        {% endif %}
+        {% for numero in page_obj.paginator.page_range %}
+          {% if numero == page_obj.number %}
+            <span>{{ numero }}</span>
+          {% elif numero >= page_obj.number|add:"-2" and numero <= page_obj.number|add:"2" %}
+            <a href="?q={{ busca|urlencode }}&categoria={{ categoria_ativa }}&page={{ numero }}">{{ numero }}</a>
+          {% endif %}
+        {% endfor %}
+        {% if page_obj.has_next %}
+          <a href="?q={{ busca|urlencode }}&categoria={{ categoria_ativa }}&page={{ page_obj.next_page_number }}">Próxima</a>
+        {% endif %}
+      </nav>
+    {% endif %}
+  </section>
+</div>
+
+<!-- Cadastro / edição -->
+<div id="toyFormModal" class="toy-dialog" role="dialog" aria-modal="true" aria-hidden="true">
+  <div class="toy-dialog-card">
+    <form id="toyForm" method="post" enctype="multipart/form-data" action="{% url 'brinquedos_admin' %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="save">
+      <input id="toyId" type="hidden" name="id">
+
+      <header class="ta-modal-header">
+        <div class="ta-modal-heading">
+          <h2 id="toyModalTitle">Cadastrar brinquedo</h2>
+          <p id="toyModalSubtitle">Dados comerciais, classificação e galeria.</p>
+        </div>
+        <button id="closeToyModal" class="ta-close" type="button" aria-label="Fechar">
+          <svg><use href="#ta-close"/></svg>
+        </button>
+      </header>
+
+      <div class="ta-modal-body">
+        <section class="ta-section">
+          <div class="ta-section-title">
+            <svg><use href="#ta-game"/></svg>
+            <span><strong>Identificação</strong><span>Nome e descrição pública do brinquedo.</span></span>
+          </div>
+          <div class="ta-form-grid">
+            <div class="ta-field is-full">
+              <label for="toyName">Nome do brinquedo <small>Obrigatório</small></label>
+              <input id="toyName" type="text" name="nome_brinquedo" maxlength="150" required>
+            </div>
+            <div class="ta-field is-full">
+              <label for="toyDescription">Descrição <small>Obrigatória</small></label>
+              <textarea id="toyDescription" name="descricao" maxlength="999" required></textarea>
+            </div>
+          </div>
+        </section>
+
+                <section class="ta-section">
+          <div class="ta-section-title">
+            <svg><use href="#ta-image"/></svg>
+            <span>
+              <strong>Imagens do brinquedo</strong>
+              <span>Máximo de 3 imagens. Cada foto possui uma função definida.</span>
+            </span>
+          </div>
+
+          <div class="ta-gallery-box">
+            <div class="ta-image-policy">
+              <strong>Regra de capa:</strong> PERFIL / FRENTE é obrigatória e
+              sempre será usada como imagem de capa nas vitrines e requisições.
+              Escolha no máximo mais 2 fotos entre verso, lado direito e lado esquerdo.
+            </div>
+
+            <div class="ta-image-type-grid">
+              <article class="ta-image-slot" data-image-slot="perfil">
+                <div class="ta-image-slot-head">
+                  <span class="ta-image-slot-title">
+                    <strong>Perfil / Frente</strong>
+                    <span>Foto frontal do brinquedo.</span>
+                  </span>
+                  <span class="ta-image-kind is-cover">CAPA · OBRIGATÓRIA</span>
+                </div>
+                <div class="ta-image-preview">
+                  <img id="preview-perfil" alt="Prévia da imagem de perfil">
+                  <span class="ta-image-placeholder">A capa do produto aparecerá aqui.</span>
+                </div>
+                <div class="ta-image-slot-actions">
+                  <label class="ta-image-pick">
+                    <svg><use href="#ta-upload"/></svg>
+                    Escolher foto
+                    <input id="image-perfil" type="file" name="imagem_perfil" accept="image/png,image/jpeg,image/webp">
+                  </label>
+                  <label id="remove-wrap-perfil" class="ta-image-remove is-hidden">
+                    <input id="remove-perfil" type="checkbox" name="remover_imagem_perfil">
+                    Remover
+                  </label>
+                </div>
+              </article>
+
+              <article class="ta-image-slot" data-image-slot="verso">
+                <div class="ta-image-slot-head">
+                  <span class="ta-image-slot-title">
+                    <strong>Verso / Costas</strong>
+                    <span>Vista traseira do brinquedo.</span>
+                  </span>
+                  <span class="ta-image-kind">OPCIONAL</span>
+                </div>
+                <div class="ta-image-preview">
+                  <img id="preview-verso" alt="Prévia da imagem do verso">
+                  <span class="ta-image-placeholder">Vista traseira.</span>
+                </div>
+                <div class="ta-image-slot-actions">
+                  <label class="ta-image-pick">
+                    <svg><use href="#ta-upload"/></svg>
+                    Escolher foto
+                    <input id="image-verso" type="file" name="imagem_verso" accept="image/png,image/jpeg,image/webp">
+                  </label>
+                  <label id="remove-wrap-verso" class="ta-image-remove is-hidden">
+                    <input id="remove-verso" type="checkbox" name="remover_imagem_verso">
+                    Remover
+                  </label>
+                </div>
+              </article>
+
+              <article class="ta-image-slot" data-image-slot="lado_direito">
+                <div class="ta-image-slot-head">
+                  <span class="ta-image-slot-title">
+                    <strong>Lado direito</strong>
+                    <span>Vista lateral pelo lado direito.</span>
+                  </span>
+                  <span class="ta-image-kind">OPCIONAL</span>
+                </div>
+                <div class="ta-image-preview">
+                  <img id="preview-lado_direito" alt="Prévia do lado direito">
+                  <span class="ta-image-placeholder">Vista lateral direita.</span>
+                </div>
+                <div class="ta-image-slot-actions">
+                  <label class="ta-image-pick">
+                    <svg><use href="#ta-upload"/></svg>
+                    Escolher foto
+                    <input id="image-lado_direito" type="file" name="imagem_lado_direito" accept="image/png,image/jpeg,image/webp">
+                  </label>
+                  <label id="remove-wrap-lado_direito" class="ta-image-remove is-hidden">
+                    <input id="remove-lado_direito" type="checkbox" name="remover_imagem_lado_direito">
+                    Remover
+                  </label>
+                </div>
+              </article>
+
+              <article class="ta-image-slot" data-image-slot="lado_esquerdo">
+                <div class="ta-image-slot-head">
+                  <span class="ta-image-slot-title">
+                    <strong>Lado esquerdo</strong>
+                    <span>Vista lateral pelo lado esquerdo.</span>
+                  </span>
+                  <span class="ta-image-kind">OPCIONAL</span>
+                </div>
+                <div class="ta-image-preview">
+                  <img id="preview-lado_esquerdo" alt="Prévia do lado esquerdo">
+                  <span class="ta-image-placeholder">Vista lateral esquerda.</span>
+                </div>
+                <div class="ta-image-slot-actions">
+                  <label class="ta-image-pick">
+                    <svg><use href="#ta-upload"/></svg>
+                    Escolher foto
+                    <input id="image-lado_esquerdo" type="file" name="imagem_lado_esquerdo" accept="image/png,image/jpeg,image/webp">
+                  </label>
+                  <label id="remove-wrap-lado_esquerdo" class="ta-image-remove is-hidden">
+                    <input id="remove-lado_esquerdo" type="checkbox" name="remover_imagem_lado_esquerdo">
+                    Remover
+                  </label>
+                </div>
+              </article>
+            </div>
+
+            <div id="toyImageCounter" class="ta-image-counter">
+              <span>PERFIL é a capa obrigatória.</span>
+              <strong><span id="toyImageCount">0</span>/3 imagens</strong>
+            </div>
+          </div>
+        </section>
+
+<section class="ta-section">
+          <div class="ta-section-title">
+            <span>#</span>
+            <span><strong>Organização</strong><span>Categorias e tags usadas no catálogo.</span></span>
+          </div>
+          <div class="ta-form-grid">
+            <div class="ta-field is-full">
+              <div class="ta-options-head">
+                <p class="ta-label">Categorias</p>
+                <button id="openCategoryModal" type="button" class="ta-inline-add">+ Nova categoria</button>
+              </div>
+              <div id="toyCategoryGrid" class="ta-check-grid">
+                {% for categoria in categorias %}
+                  <label class="ta-check">
+                    <input type="checkbox" name="categorias_brinquedos" value="{{ categoria.id }}">
+                    <span>{{ categoria.nome_categoria }}</span>
+                  </label>
+                {% endfor %}
+              </div>
+            </div>
+
+            <div class="ta-field is-full">
+              <div class="ta-options-head">
+                <p class="ta-label">Tags</p>
+                <button id="openTagModal" type="button" class="ta-inline-add">+ Nova tag</button>
+              </div>
+              <div id="toyTagGrid" class="ta-check-grid">
+                {% for tag in tags %}
+                  <label class="ta-check">
+                    <input type="checkbox" name="tags" value="{{ tag.id }}">
+                    <span>{{ tag.nome_tags }}</span>
+                  </label>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="ta-section">
+          <div class="ta-section-title">
+            <span>R$</span>
+            <span><strong>Comercial e especificações</strong><span>Preço, avaliação, alimentação e dimensões.</span></span>
+          </div>
+          <div class="ta-form-grid">
+            <div class="ta-field is-third">
+              <label for="toyPrice">Valor</label>
+              <div class="ta-input-wrap">
+                <span class="ta-prefix">R$</span>
+                <input id="toyPrice" type="text" name="valor_brinquedo" inputmode="numeric" placeholder="10.990,00" maxlength="14">
+              </div>
+            </div>
+
+            <div class="ta-field is-third">
+              <label for="toyRating">Avaliação</label>
+              <div class="ta-input-wrap">
+                <input id="toyRating" type="text" name="avaliacao" inputmode="decimal" placeholder="4,7" maxlength="3" required>
+                <span class="ta-suffix">/ 5</span>
+              </div>
+            </div>
+
+            <div class="ta-field is-third">
+              <label for="toyVoltage">Voltagem</label>
+              <select id="toyVoltage" name="voltz" required>
+                <option value="">Selecione</option>
+                <option value="110V">110V</option>
+                <option value="220V">220V</option>
+                <option value="Bivolt">Bivolt</option>
+                <option value="Não se aplica">Não se aplica</option>
+              </select>
+            </div>
+
+            <div class="ta-field is-third">
+              <label for="toyHeight">Altura</label>
+              <div class="ta-input-wrap">
+                <input id="toyHeight" type="text" name="altura_m" inputmode="decimal" placeholder="1,85" maxlength="7">
+                <span class="ta-suffix">m</span>
+              </div>
+            </div>
+
+            <div class="ta-field is-third">
+              <label for="toyWidth">Largura</label>
+              <div class="ta-input-wrap">
+                <input id="toyWidth" type="text" name="largura_m" inputmode="decimal" placeholder="0,80" maxlength="7">
+                <span class="ta-suffix">m</span>
+              </div>
+            </div>
+
+            <div class="ta-field is-third">
+              <label for="toyDepth">Profundidade</label>
+              <div class="ta-input-wrap">
+                <input id="toyDepth" type="text" name="profundidade_m" inputmode="decimal" placeholder="2,20" maxlength="7">
+                <span class="ta-suffix">m</span>
+              </div>
+            </div>
+
+            <div class="ta-field is-full">
+              <label class="ta-toggle">
+                <input id="toyStore" type="checkbox" name="exibir_na_loja">
+                <span>
+                  <strong>Disponível na loja</strong>
+                  <span>Mostra este brinquedo também na área de compra do site.</span>
+                </span>
+              </label>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <footer class="ta-modal-footer">
+        <span class="ta-footer-note">Revise a galeria antes de salvar.</span>
+        <button id="cancelToyModal" class="ta-btn is-secondary" type="button">Cancelar</button>
+        <button class="ta-btn is-primary" type="submit">
+          <svg><use href="#ta-save"/></svg>
+          Salvar brinquedo
+        </button>
+      </footer>
+    </form>
+  </div>
+</div>
+
+<!-- Exclusão -->
+<div id="deleteToyModal" class="toy-dialog" role="dialog" aria-modal="true" aria-hidden="true">
+  <div class="toy-dialog-card is-small">
+    <form method="post" action="{% url 'brinquedos_admin' %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="delete">
+      <input id="deleteToyId" type="hidden" name="id">
+      <input id="deleteToyConfirmationHidden" type="hidden" name="confirmacao_exclusao">
+
+      <div class="ta-confirm">
+        <h2>Excluir brinquedo?</h2>
+        <p>
+          O produto <strong id="deleteToyName"></strong> e sua galeria serão removidos.
+          Para confirmar, digite exatamente:
+        </p>
+        <code id="deleteToyRequiredPhrase"></code>
+        <input id="deleteToyConfirmation" type="text" autocomplete="off" spellcheck="false">
+      </div>
+
+      <footer class="ta-modal-footer">
+        <button id="cancelDeleteToy" class="ta-btn is-secondary" type="button">Cancelar</button>
+        <button id="confirmDeleteToy" class="ta-btn is-danger" type="submit" disabled>Excluir definitivamente</button>
+      </footer>
+    </form>
+  </div>
+</div>
+
+<!-- Categoria rápida -->
+<div id="categoryModal" class="toy-dialog" role="dialog" aria-modal="true" aria-hidden="true">
+  <div class="toy-dialog-card is-small">
+    <form id="categoryForm" class="ta-quick-form" enctype="multipart/form-data">
+      {% csrf_token %}
+      <h2>Nova categoria</h2>
+      <p>Crie uma categoria sem perder o formulário do brinquedo.</p>
+      <label>Nome</label>
+      <input type="text" name="nome_categoria" required>
+      <label>Imagem da categoria</label>
+      <input type="file" name="imagem_categoria" accept="image/*" required>
+      <div id="categoryMessage" class="ta-quick-message"></div>
+      <div style="display:flex;justify-content:flex-end;gap:8px">
+        <button id="cancelCategoryModal" class="ta-btn is-secondary" type="button">Cancelar</button>
+        <button class="ta-btn is-primary" type="submit">Criar categoria</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Tag rápida -->
+<div id="tagModal" class="toy-dialog" role="dialog" aria-modal="true" aria-hidden="true">
+  <div class="toy-dialog-card is-small">
+    <form id="tagForm" class="ta-quick-form">
+      {% csrf_token %}
+      <h2>Nova tag</h2>
+      <p>Crie uma tag e já selecione no brinquedo.</p>
+      <label>Nome</label>
+      <input type="text" name="nome_tag" required>
+      <div id="tagMessage" class="ta-quick-message"></div>
+      <div style="display:flex;justify-content:flex-end;gap:8px">
+        <button id="cancelTagModal" class="ta-btn is-secondary" type="button">Cancelar</button>
+        <button class="ta-btn is-primary" type="submit">Criar tag</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{{ brinquedos_dados|json_script:"toysAdminData" }}
+
+<script>
+(function () {
+  const IMAGE_TYPES = [
+    { key: 'perfil', label: 'Perfil / Frente' },
+    { key: 'verso', label: 'Verso / Costas' },
+    { key: 'lado_direito', label: 'Lado direito' },
+    { key: 'lado_esquerdo', label: 'Lado esquerdo' }
+  ];
+  const MAX_IMAGES = 3;
+  const MAX_FILE_SIZE = 15 * 1024 * 1024;
+
+  const dataNode = document.getElementById('toysAdminData');
+  const toysData = dataNode ? JSON.parse(dataNode.textContent) : [];
+
+  const toyModal = document.getElementById('toyFormModal');
+  const deleteModal = document.getElementById('deleteToyModal');
+  const categoryModal = document.getElementById('categoryModal');
+  const tagModal = document.getElementById('tagModal');
+  const toyForm = document.getElementById('toyForm');
+
+  const deleteInput = document.getElementById('deleteToyConfirmation');
+  const deleteHidden = document.getElementById('deleteToyConfirmationHidden');
+  const deleteButton = document.getElementById('confirmDeleteToy');
+
+  const imageCounter = document.getElementById('toyImageCounter');
+  const imageCount = document.getElementById('toyImageCount');
+
+  let expectedDeletePhrase = '';
+  let lastTrigger = null;
+  let currentToy = null;
+  let existingImages = {};
+  let previewUrls = {};
+
+  function setModal(modal, open, trigger) {
+    if (open) {
+      lastTrigger = trigger || document.activeElement;
+      modal.classList.add('is-open');
+      modal.setAttribute('aria-hidden', 'false');
+      document.body.classList.add('ta-modal-open');
+    } else {
+      modal.classList.remove('is-open');
+      modal.setAttribute('aria-hidden', 'true');
+      if (!document.querySelector('.toy-dialog.is-open')) {
+        document.body.classList.remove('ta-modal-open');
+      }
+      if (lastTrigger && lastTrigger.focus) lastTrigger.focus();
+    }
+  }
+
+  function setValue(id, value) {
+    const field = document.getElementById(id);
+    if (field) field.value = value == null ? '' : value;
+  }
+
+  function markChecks(name, ids) {
+    const selected = new Set((ids || []).map(Number));
+    document.querySelectorAll(`input[name="${name}"]`).forEach(input => {
+      input.checked = selected.has(Number(input.value));
+    });
+  }
+
+  function imageInput(type) {
+    return document.getElementById(`image-${type}`);
+  }
+
+  function removeInput(type) {
+    return document.getElementById(`remove-${type}`);
+  }
+
+  function slotNode(type) {
+    return document.querySelector(`[data-image-slot="${type}"]`);
+  }
+
+  function previewNode(type) {
+    return document.getElementById(`preview-${type}`);
+  }
+
+  function removeWrap(type) {
+    return document.getElementById(`remove-wrap-${type}`);
+  }
+
+  function revokePreview(type) {
+    if (previewUrls[type]) {
+      URL.revokeObjectURL(previewUrls[type]);
+      delete previewUrls[type];
+    }
+  }
+
+  function revokeAllPreviews() {
+    Object.keys(previewUrls).forEach(revokePreview);
+  }
+
+  function selectedFile(type) {
+    const input = imageInput(type);
+    return input && input.files && input.files[0]
+      ? input.files[0]
+      : null;
+  }
+
+  function typeIsActive(type) {
+    if (selectedFile(type)) return true;
+    if (removeInput(type).checked) return false;
+    return Boolean(existingImages[type]);
+  }
+
+  function effectiveTypes() {
+    return IMAGE_TYPES
+      .map(item => item.key)
+      .filter(typeIsActive);
+  }
+
+  function currentImageSource(type) {
+    const file = selectedFile(type);
+    if (file) {
+      if (!previewUrls[type]) {
+        previewUrls[type] = URL.createObjectURL(file);
+      }
+      return previewUrls[type];
+    }
+
+    if (removeInput(type).checked) return '';
+    return existingImages[type] ? existingImages[type].url : '';
+  }
+
+  function renderImageSlot(type) {
+    const slot = slotNode(type);
+    const preview = previewNode(type);
+    const remove = removeInput(type);
+    const removeLabel = removeWrap(type);
+    const src = currentImageSource(type);
+    const hasExisting = Boolean(existingImages[type]);
+    const active = Boolean(src);
+
+    slot.classList.toggle('is-active', active);
+    slot.classList.toggle('is-removed', hasExisting && remove.checked && !selectedFile(type));
+
+    if (src) {
+      preview.src = src;
+    } else {
+      preview.removeAttribute('src');
+    }
+
+    removeLabel.classList.toggle('is-hidden', !hasExisting);
+
+    const count = effectiveTypes().length;
+    slot.classList.toggle(
+      'is-limit-blocked',
+      !active && count >= MAX_IMAGES
+    );
+  }
+
+  function renderImageState() {
+    IMAGE_TYPES.forEach(item => renderImageSlot(item.key));
+
+    const active = effectiveTypes();
+    const hasProfile = active.includes('perfil');
+    imageCount.textContent = active.length;
+
+    imageCounter.classList.toggle(
+      'is-error',
+      active.length > MAX_IMAGES || !hasProfile
+    );
+
+    const message = imageCounter.querySelector('span');
+    if (!hasProfile) {
+      message.textContent = 'PERFIL / FRENTE é obrigatória e será a capa.';
+    } else if (active.length >= MAX_IMAGES) {
+      message.textContent = 'Limite atingido: 3 imagens. Remova uma para escolher outro ângulo.';
+    } else {
+      message.textContent = 'PERFIL será usada como capa. Você pode adicionar até 2 complementares.';
+    }
+  }
+
+  function resetImageEditor(toy) {
+    revokeAllPreviews();
+    existingImages = {};
+
+    IMAGE_TYPES.forEach(({ key }) => {
+      imageInput(key).value = '';
+      removeInput(key).checked = false;
+    });
+
+    if (toy && Array.isArray(toy.imagens)) {
+      toy.imagens.forEach(image => {
+        if (image && image.tipo && image.url) {
+          existingImages[image.tipo] = image;
+        }
+      });
+    }
+
+    if (
+      toy &&
+      !existingImages.perfil &&
+      toy.imagem_url
+    ) {
+      existingImages.perfil = {
+        tipo: 'perfil',
+        tipo_label: 'Perfil / Frente',
+        url: toy.imagem_url
+      };
+    }
+
+    renderImageState();
+  }
+
+  function validateChosenFile(type) {
+    const input = imageInput(type);
+    const file = selectedFile(type);
+    if (!file) return true;
+
+    if (!file.type.startsWith('image/')) {
+      input.value = '';
+      window.alert('O arquivo selecionado deve ser uma imagem.');
+      return false;
+    }
+
+    if (file.size > MAX_FILE_SIZE) {
+      input.value = '';
+      window.alert('Cada imagem deve ter no máximo 15 MB.');
+      return false;
+    }
+
+    return true;
+  }
+
+  function onImageChanged(type) {
+    revokePreview(type);
+    removeInput(type).checked = false;
+
+    if (!validateChosenFile(type)) {
+      renderImageState();
+      return;
+    }
+
+    if (effectiveTypes().length > MAX_IMAGES) {
+      imageInput(type).value = '';
+      revokePreview(type);
+      window.alert(
+        'Este brinquedo aceita no máximo 3 imagens. ' +
+        'Mantenha PERFIL e escolha apenas mais dois ângulos.'
+      );
+    }
+
+    renderImageState();
+  }
+
+  function onRemoveChanged(type) {
+    if (removeInput(type).checked) {
+      imageInput(type).value = '';
+      revokePreview(type);
+    }
+    renderImageState();
+  }
+
+  function openToyForm(id, trigger) {
+    toyForm.reset();
+    const numericId = id ? Number(id) : null;
+    const toy = numericId
+      ? toysData.find(item => Number(item.id) === numericId)
+      : null;
+
+    currentToy = toy || null;
+
+    setValue('toyId', toy ? toy.id : '');
+    document.getElementById('toyModalTitle').textContent =
+      toy ? 'Editar brinquedo' : 'Cadastrar brinquedo';
+    document.getElementById('toyModalSubtitle').textContent =
+      toy
+        ? 'Atualize os dados e as vistas do produto.'
+        : 'Cadastre o produto com PERFIL e até duas vistas complementares.';
+
+    if (toy) {
+      setValue('toyName', toy.nome_brinquedo);
+      setValue('toyDescription', toy.descricao);
+      setValue('toyPrice', toy.valor_brinquedo);
+      setValue('toyRating', toy.avaliacao);
+      setValue('toyVoltage', toy.voltz);
+      setValue('toyHeight', toy.altura_m);
+      setValue('toyWidth', toy.largura_m);
+      setValue('toyDepth', toy.profundidade_m);
+      document.getElementById('toyStore').checked = Boolean(toy.exibir_na_loja);
+      markChecks('categorias_brinquedos', toy.categorias_ids);
+      markChecks('tags', toy.tags_ids);
+    } else {
+      markChecks('categorias_brinquedos', []);
+      markChecks('tags', []);
+      document.getElementById('toyStore').checked = false;
+    }
+
+    resetImageEditor(toy);
+    setModal(toyModal, true, trigger);
+
+    setTimeout(() => {
+      const body = toyModal.querySelector('.ta-modal-body');
+      if (body) body.scrollTop = 0;
+      document.getElementById('toyName').focus();
+    }, 60);
+  }
+
+  function closeToyForm() {
+    revokeAllPreviews();
+    currentToy = null;
+    setModal(toyModal, false);
+  }
+
+  function openDelete(id, name, trigger) {
+    const safeName = String(name || 'Brinquedo').trim();
+    expectedDeletePhrase = `CONFIRMAR EXCLUSÃO ${safeName}`;
+
+    document.getElementById('deleteToyId').value = id;
+    document.getElementById('deleteToyName').textContent = safeName;
+    document.getElementById('deleteToyRequiredPhrase').textContent = expectedDeletePhrase;
+
+    deleteInput.value = '';
+    deleteHidden.value = '';
+    deleteButton.disabled = true;
+
+    setModal(deleteModal, true, trigger);
+    setTimeout(() => deleteInput.focus(), 60);
+  }
+
+  function closeDelete() {
+    expectedDeletePhrase = '';
+    setModal(deleteModal, false);
+  }
+
+  function maskCurrency(value) {
+    const digits = String(value || '').replace(/\D/g, '').slice(0, 10);
+    if (!digits) return '';
+    return (Number(digits) / 100).toLocaleString('pt-BR', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+  }
+
+  function maskDecimal(value, integerDigits, decimalDigits) {
+    const sanitized = String(value || '')
+      .replace(/\./g, ',')
+      .replace(/[^\d,]/g, '');
+
+    const parts = sanitized.split(',');
+    const integer = (parts.shift() || '').slice(0, integerDigits);
+    const decimal = parts.join('').slice(0, decimalDigits);
+
+    return decimal || sanitized.includes(',')
+      ? `${integer || '0'},${decimal}`
+      : integer;
+  }
+
+  function decimalNumber(value) {
+    const normalized = String(value || '')
+      .replace(/\./g, '')
+      .replace(',', '.');
+    return normalized ? Number(normalized) : null;
+  }
+
+  document.getElementById('newToyButton').addEventListener('click', event => {
+    openToyForm(null, event.currentTarget);
+  });
+
+  document.querySelectorAll('[data-edit-toy]').forEach(button => {
+    button.addEventListener('click', () => {
+      openToyForm(button.dataset.editToy, button);
+    });
+  });
+
+  document.querySelectorAll('[data-delete-toy]').forEach(button => {
+    button.addEventListener('click', () => {
+      openDelete(
+        button.dataset.deleteToy,
+        button.dataset.deleteName,
+        button
+      );
+    });
+  });
+
+  IMAGE_TYPES.forEach(({ key }) => {
+    imageInput(key).addEventListener('change', () => onImageChanged(key));
+    removeInput(key).addEventListener('change', () => onRemoveChanged(key));
+  });
+
+  document.getElementById('closeToyModal').addEventListener('click', closeToyForm);
+  document.getElementById('cancelToyModal').addEventListener('click', closeToyForm);
+  document.getElementById('cancelDeleteToy').addEventListener('click', closeDelete);
+
+  deleteInput.addEventListener('input', function () {
+    const valid = deleteInput.value === expectedDeletePhrase;
+    deleteButton.disabled = !valid;
+    deleteHidden.value = valid ? expectedDeletePhrase : '';
+  });
+
+  const toyPrice = document.getElementById('toyPrice');
+  const toyRating = document.getElementById('toyRating');
+  const dimensions = [
+    document.getElementById('toyHeight'),
+    document.getElementById('toyWidth'),
+    document.getElementById('toyDepth')
+  ];
+
+  toyPrice.addEventListener('input', function () {
+    toyPrice.value = maskCurrency(toyPrice.value);
+  });
+
+  toyRating.addEventListener('input', function () {
+    toyRating.value = maskDecimal(toyRating.value, 1, 1);
+    const value = decimalNumber(toyRating.value);
+    toyRating.setCustomValidity(
+      value != null && value > 5
+        ? 'A avaliação deve estar entre 0 e 5.'
+        : ''
+    );
+  });
+
+  dimensions.forEach(input => {
+    input.addEventListener('input', function () {
+      input.value = maskDecimal(input.value, 4, 2);
+    });
+  });
+
+  toyForm.addEventListener('submit', function (event) {
+    const rating = decimalNumber(toyRating.value);
+    const activeImages = effectiveTypes();
+
+    if (rating == null || rating < 0 || rating > 5) {
+      event.preventDefault();
+      toyRating.setCustomValidity('Informe uma avaliação entre 0 e 5.');
+      toyRating.reportValidity();
+      toyRating.focus();
+      return;
+    }
+
+    if (!activeImages.includes('perfil')) {
+      event.preventDefault();
+      window.alert(
+        'Adicione a imagem PERFIL / FRENTE. ' +
+        'Ela é obrigatória e será a capa do brinquedo.'
+      );
+      imageInput('perfil').focus();
+      return;
+    }
+
+    if (activeImages.length > MAX_IMAGES) {
+      event.preventDefault();
+      window.alert('O brinquedo aceita no máximo 3 imagens.');
+      return;
+    }
+
+    const submit = toyForm.querySelector('button[type="submit"]');
+    submit.disabled = true;
+    submit.textContent = 'Salvando…';
+  });
+
+  document.getElementById('openCategoryModal').addEventListener('click', event => {
+    setModal(categoryModal, true, event.currentTarget);
+  });
+
+  document.getElementById('cancelCategoryModal').addEventListener('click', () => {
+    setModal(categoryModal, false);
+  });
+
+  document.getElementById('openTagModal').addEventListener('click', event => {
+    setModal(tagModal, true, event.currentTarget);
+  });
+
+  document.getElementById('cancelTagModal').addEventListener('click', () => {
+    setModal(tagModal, false);
+  });
+
+  function appendCheck(gridId, name, id, label) {
+    const wrapper = document.createElement('label');
+    wrapper.className = 'ta-check';
+
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.name = name;
+    input.value = id;
+    input.checked = true;
+
+    const text = document.createElement('span');
+    text.textContent = label;
+
+    wrapper.append(input, text);
+    document.getElementById(gridId).appendChild(wrapper);
+  }
+
+  async function submitQuickForm(form, endpoint, messageId, onSuccess) {
+    const message = document.getElementById(messageId);
+    message.textContent = '';
+
+    try {
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        body: new FormData(form)
+      });
+      const data = await response.json();
+
+      if (!response.ok || data.status !== 'sucesso') {
+        throw new Error(data.msg || 'Não foi possível salvar.');
+      }
+
+      onSuccess(data);
+      form.reset();
+    } catch (error) {
+      message.textContent = error.message;
+    }
+  }
+
+  document.getElementById('categoryForm').addEventListener('submit', function (event) {
+    event.preventDefault();
+    submitQuickForm(
+      event.currentTarget,
+      "{% url 'categoria_new' %}",
+      'categoryMessage',
+      data => {
+        appendCheck(
+          'toyCategoryGrid',
+          'categorias_brinquedos',
+          data.id,
+          data.nome
+        );
+        setModal(categoryModal, false);
+      }
+    );
+  });
+
+  document.getElementById('tagForm').addEventListener('submit', function (event) {
+    event.preventDefault();
+    submitQuickForm(
+      event.currentTarget,
+      "{% url 'tag_new' %}",
+      'tagMessage',
+      data => {
+        appendCheck('toyTagGrid', 'tags', data.id, data.nome);
+        setModal(tagModal, false);
+      }
+    );
+  });
+
+  [toyModal, deleteModal, categoryModal, tagModal].forEach(modal => {
+    modal.addEventListener('click', event => {
+      if (event.target !== modal) return;
+
+      if (modal === toyModal) closeToyForm();
+      else if (modal === deleteModal) closeDelete();
+      else setModal(modal, false);
+    });
+  });
+
+  document.addEventListener('keydown', event => {
+    if (event.key !== 'Escape') return;
+
+    const openModals = Array.from(
+      document.querySelectorAll('.toy-dialog.is-open')
+    );
+    const modal = openModals.at(-1);
+    if (!modal) return;
+
+    if (modal === toyModal) closeToyForm();
+    else if (modal === deleteModal) closeDelete();
+    else setModal(modal, false);
+  });
+})();
+</script>
+
+{% endblock %}
