@@ -627,7 +627,12 @@ button[disabled],.primary[disabled]{opacity:.6;cursor:progress}
   }
 
   async function enviar(formulario) {
-    var resposta = await fetch(formulario.action, {
+    // getAttribute, nao formulario.action: o form tem um
+    // <input name="action">, e o acesso por propriedade devolve esse
+    // input em vez da URL.
+    var destino = formulario.getAttribute("action");
+
+    var resposta = await fetch(destino, {
       method: "POST",
       body: new FormData(formulario),
       headers: { "X-Requested-With": "XMLHttpRequest" },

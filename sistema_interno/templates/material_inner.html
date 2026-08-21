@@ -1,10 +1,466 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-</head>
-<body>
+{% extends "base_inner.html" %}
+{% load interno_extras %}
 
-</body>
-</html>
+{% block title %}Materiais e Fornecedores | Lazer & Sport{% endblock %}
+
+{% block extra_css %}
+<style>
+  .cadastro-kpi { border: 0; border-radius: 16px; box-shadow: 0 6px 18px rgba(15, 23, 42, .08); }
+  .cadastro-kpi .valor { font-size: 1.6rem; font-weight: 700; }
+  .cadastro-kpi .rotulo { font-size: .75rem; text-transform: uppercase; letter-spacing: .06em; color: #6c757d; }
+  .tabela-cadastro { font-size: .88rem; }
+  .tabela-cadastro th { font-size: .74rem; text-transform: uppercase; letter-spacing: .04em; white-space: nowrap; }
+  .tabela-cadastro td { vertical-align: middle; }
+  .linha-inativa { opacity: .55; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+
+  <div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4">
+    <div>
+      <h1 class="h3 mb-1">🧰 Materiais, tipos e fornecedores</h1>
+      <p class="text-muted mb-0">O cadastro que alimenta o estoque.</p>
+    </div>
+    <div class="d-flex gap-2">
+      <a href="{% url 'stock' %}" class="btn btn-outline-secondary">Ir para o estoque</a>
+      <button type="button" class="btn btn-success" id="novoMaterial">+ Novo material</button>
+    </div>
+  </div>
+
+  <div class="row g-3 mb-4">
+    <div class="col-4">
+      <div class="card cadastro-kpi h-100"><div class="card-body">
+        <div class="valor">{{ total_materiais }}</div><div class="rotulo">Materiais</div>
+      </div></div>
+    </div>
+    <div class="col-4">
+      <div class="card cadastro-kpi h-100"><div class="card-body">
+        <div class="valor">{{ total_tipos }}</div><div class="rotulo">Tipos</div>
+      </div></div>
+    </div>
+    <div class="col-4">
+      <div class="card cadastro-kpi h-100"><div class="card-body">
+        <div class="valor">{{ total_fornecedores }}</div><div class="rotulo">Fornecedores ativos</div>
+      </div></div>
+    </div>
+  </div>
+
+  <ul class="nav nav-tabs mb-3" role="tablist">
+    <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#abaMateriais" type="button">Materiais</button></li>
+    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#abaTipos" type="button">Tipos</button></li>
+    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#abaFornecedores" type="button">Fornecedores</button></li>
+  </ul>
+
+  <div class="tab-content">
+
+    <!-- ---------------- materiais ---------------- -->
+    <div class="tab-pane fade show active" id="abaMateriais">
+      <form method="get" class="row g-2 mb-3">
+        <div class="col-12 col-md-6">
+          <input name="q" value="{{ busca }}" class="form-control"
+                 placeholder="Buscar por nome, código ou descrição">
+        </div>
+        <div class="col-6 col-md-2 d-grid"><button class="btn btn-dark" type="submit">Buscar</button></div>
+      </form>
+
+      <div class="card border-0 shadow-sm"><div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle tabela-cadastro mb-0">
+            <thead class="table-dark">
+              <tr>
+                <th>Material</th><th>Tipo</th><th>Unidade</th>
+                <th class="text-end">Em estoque</th><th class="text-end">Total investido</th>
+                <th class="text-end">Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for m in materiais %}
+                <tr class="{% if not m.ativo %}linha-inativa{% endif %}">
+                  <td>
+                    <strong>{{ m.nome_material }}</strong>
+                    {% if not m.ativo %}<span class="badge bg-secondary ms-1">Inativo</span>{% endif %}
+                    <span class="d-block text-muted small">
+                      {% if m.codigo_interno %}{{ m.codigo_interno }} · {% endif %}{{ m.descricao|default:"Sem descrição" }}
+                    </span>
+                  </td>
+                  <td>{{ m.tipo_material|default:"—" }}</td>
+                  <td>{{ m.get_unidade_display }}</td>
+                  <td class="text-end fw-semibold">{{ m.quantidade_total }}</td>
+                  <td class="text-end">R$ {{ m.valor_total|moeda }}</td>
+                  <td class="text-end">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-editar-material="{{ m.id }}">Editar</button>
+                    <button type="button" class="btn btn-sm btn-outline-danger"
+                            data-excluir-material="{{ m.id }}" data-nome="{{ m.nome_material }}">Excluir</button>
+                  </td>
+                </tr>
+              {% empty %}
+                <tr><td colspan="6" class="text-center text-muted py-5">Nenhum material cadastrado.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div></div>
+    </div>
+
+    <!-- ---------------- tipos ---------------- -->
+    <div class="tab-pane fade" id="abaTipos">
+      <div class="d-flex justify-content-end mb-3">
+        <button type="button" class="btn btn-success" id="novoTipo">+ Novo tipo</button>
+      </div>
+      <div class="card border-0 shadow-sm"><div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle tabela-cadastro mb-0">
+            <thead class="table-dark"><tr><th>Tipo</th><th class="text-end">Materiais</th><th class="text-end">Ações</th></tr></thead>
+            <tbody>
+              {% for t in tipos %}
+                <tr>
+                  <td>{{ t.descricao }}</td>
+                  <td class="text-end">{{ t.material.count }}</td>
+                  <td class="text-end">
+                    <button type="button" class="btn btn-sm btn-outline-secondary"
+                            data-editar-tipo="{{ t.id }}" data-descricao="{{ t.descricao }}">Editar</button>
+                  </td>
+                </tr>
+              {% empty %}
+                <tr><td colspan="3" class="text-center text-muted py-5">Nenhum tipo cadastrado.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div></div>
+    </div>
+
+    <!-- ---------------- fornecedores ---------------- -->
+    <div class="tab-pane fade" id="abaFornecedores">
+      <div class="d-flex justify-content-end mb-3">
+        <button type="button" class="btn btn-success" id="novoFornecedor">+ Novo fornecedor</button>
+      </div>
+      <div class="card border-0 shadow-sm"><div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle tabela-cadastro mb-0">
+            <thead class="table-dark">
+              <tr><th>Fornecedor</th><th>Contato</th><th>CNPJ / CPF</th><th class="text-end">Itens</th><th class="text-end">Ações</th></tr>
+            </thead>
+            <tbody>
+              {% for f in fornecedores %}
+                <tr class="{% if not f.ativo %}linha-inativa{% endif %}">
+                  <td>
+                    <strong>{{ f.nome }}</strong>
+                    {% if not f.ativo %}<span class="badge bg-secondary ms-1">Inativo</span>{% endif %}
+                  </td>
+                  <td>
+                    {{ f.telefone|default:"—" }}
+                    {% if f.email %}<span class="d-block text-muted small">{{ f.email }}</span>{% endif %}
+                  </td>
+                  <td>{{ f.cnpj|default:"—" }}</td>
+                  <td class="text-end">{{ f.estoques.count }}</td>
+                  <td class="text-end">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-editar-fornecedor="{{ f.id }}">Editar</button>
+                    <button type="button" class="btn btn-sm btn-outline-danger"
+                            data-excluir-fornecedor="{{ f.id }}" data-nome="{{ f.nome }}">Excluir</button>
+                  </td>
+                </tr>
+              {% empty %}
+                <tr><td colspan="5" class="text-center text-muted py-5">Nenhum fornecedor cadastrado.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= modal material ================= -->
+<div class="modal fade" id="modalMaterial" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <form class="modal-content" id="formMaterial" method="post" action="{% url 'materiais_inner' %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="save_material">
+      <input type="hidden" name="id" id="materialId">
+      <div class="modal-header">
+        <h5 class="modal-title" id="materialTitulo">Novo material</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body">
+        <div id="materialErro" class="alert alert-danger d-none" role="alert"></div>
+        <div class="row g-3">
+          <div class="col-12 col-md-8">
+            <label class="form-label" for="materialNome">Nome *</label>
+            <input class="form-control" id="materialNome" name="nome_material"
+                   data-rotulo="nome" maxlength="90" required>
+          </div>
+          <div class="col-12 col-md-4">
+            <label class="form-label" for="materialCodigo">Código interno</label>
+            <input class="form-control" id="materialCodigo" name="codigo_interno" maxlength="30">
+          </div>
+          <div class="col-12">
+            <label class="form-label" for="materialDescricao">Descrição</label>
+            <input class="form-control" id="materialDescricao" name="descricao" maxlength="150">
+          </div>
+          <div class="col-6">
+            <label class="form-label" for="materialTipo">Tipo</label>
+            <select class="form-select" id="materialTipo" name="tipo_material">
+              <option value="">Sem tipo</option>
+              {% for t in tipos %}<option value="{{ t.id }}">{{ t.descricao }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="col-6">
+            <label class="form-label" for="materialUnidade">Unidade de medida</label>
+            <select class="form-select" id="materialUnidade" name="unidade">
+              {% for valor, rotulo in unidades %}<option value="{{ valor }}">{{ rotulo }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="col-12">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="materialAtivo" name="ativo" checked>
+              <label class="form-check-label" for="materialAtivo">Material em uso</label>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-success">Salvar material</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ================= modal tipo ================= -->
+<div class="modal fade" id="modalTipo" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-sm">
+    <form class="modal-content" id="formTipo" method="post" action="{% url 'materiais_inner' %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="save_tipo">
+      <input type="hidden" name="id" id="tipoId">
+      <div class="modal-header">
+        <h5 class="modal-title" id="tipoTitulo">Novo tipo</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body">
+        <div id="tipoErro" class="alert alert-danger d-none" role="alert"></div>
+        <label class="form-label" for="tipoDescricao">Nome do tipo *</label>
+        <input class="form-control" id="tipoDescricao" name="descricao"
+               data-rotulo="nome do tipo" maxlength="120" required placeholder="Lona, motor, elétrica...">
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-success">Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ================= modal fornecedor ================= -->
+<div class="modal fade" id="modalFornecedor" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <form class="modal-content" id="formFornecedor" method="post" action="{% url 'materiais_inner' %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="save_fornecedor">
+      <input type="hidden" name="id" id="fornecedorId">
+      <div class="modal-header">
+        <h5 class="modal-title" id="fornecedorTitulo">Novo fornecedor</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body">
+        <div id="fornecedorErro" class="alert alert-danger d-none" role="alert"></div>
+        <div class="row g-3">
+          <div class="col-12 col-md-6">
+            <label class="form-label" for="fornecedorNome">Nome *</label>
+            <input class="form-control" id="fornecedorNome" name="nome"
+                   data-rotulo="nome" maxlength="120" required>
+          </div>
+          <div class="col-6 col-md-3">
+            <label class="form-label" for="fornecedorTelefone">Telefone</label>
+            <input class="form-control" id="fornecedorTelefone" name="telefone" maxlength="20">
+          </div>
+          <div class="col-6 col-md-3">
+            <label class="form-label" for="fornecedorCnpj">CNPJ / CPF</label>
+            <input class="form-control" id="fornecedorCnpj" name="cnpj" maxlength="20">
+          </div>
+          <div class="col-12 col-md-6">
+            <label class="form-label" for="fornecedorEmail">E-mail</label>
+            <input type="email" class="form-control" id="fornecedorEmail" name="email"
+                   data-rotulo="e-mail" maxlength="150">
+          </div>
+          <div class="col-12 col-md-6">
+            <label class="form-label" for="fornecedorSite">Site</label>
+            <input class="form-control" id="fornecedorSite" name="site" maxlength="200">
+          </div>
+          <div class="col-12">
+            <label class="form-label" for="fornecedorObs">Observações</label>
+            <textarea class="form-control" id="fornecedorObs" name="observacoes" rows="2"></textarea>
+          </div>
+          <div class="col-12">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="fornecedorAtivo" name="ativo" checked>
+              <label class="form-check-label" for="fornecedorAtivo">Fornecedor ativo</label>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-success">Salvar fornecedor</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ================= modal exclusão ================= -->
+<div class="modal fade" id="modalExcluir" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-sm">
+    <form class="modal-content" id="formExcluir" method="post" action="{% url 'materiais_inner' %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" id="excluirAcao">
+      <input type="hidden" name="id" id="excluirId">
+      <div class="modal-header">
+        <h5 class="modal-title">Confirmar exclusão</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body">
+        <div id="excluirErro" class="alert alert-danger d-none" role="alert"></div>
+        <p class="mb-0">Excluir <strong id="excluirNome"></strong>?</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-danger">Excluir</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{{ materiais_dados|json_script:"materiaisDados" }}
+{{ fornecedores_dados|json_script:"fornecedoresDados" }}
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  "use strict";
+
+  var materiais = JSON.parse(document.getElementById("materiaisDados").textContent || "[]");
+  var fornecedores = JSON.parse(document.getElementById("fornecedoresDados").textContent || "[]");
+
+  function achar(lista, id) {
+    return lista.filter(function (x) {
+      return Number(x.id) === Number(id);
+    })[0];
+  }
+
+  // ---------------- material ----------------
+  function abrirMaterial(id) {
+    var form = document.getElementById("formMaterial");
+    var m = id ? achar(materiais, id) : null;
+
+    form.reset();
+    Painel.erro("materialErro", "");
+    Painel.valor("materialId", m ? m.id : "");
+    document.getElementById("materialTitulo").textContent = m ? "Editar material" : "Novo material";
+
+    if (m) {
+      Painel.valor("materialNome", m.nome_material);
+      Painel.valor("materialCodigo", m.codigo_interno);
+      Painel.valor("materialDescricao", m.descricao);
+      Painel.valor("materialTipo", m.tipo_material);
+      Painel.valor("materialUnidade", m.unidade);
+      document.getElementById("materialAtivo").checked = !!m.ativo;
+    } else {
+      document.getElementById("materialAtivo").checked = true;
+    }
+
+    Painel.abrir("modalMaterial");
+  }
+
+  document.getElementById("novoMaterial").addEventListener("click", function () {
+    abrirMaterial(null);
+  });
+  document.querySelectorAll("[data-editar-material]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      abrirMaterial(b.dataset.editarMaterial);
+    });
+  });
+  Painel.ligar({ form: "formMaterial", erro: "materialErro" });
+
+  // ---------------- tipo ----------------
+  function abrirTipo(id, descricao) {
+    var form = document.getElementById("formTipo");
+    form.reset();
+    Painel.erro("tipoErro", "");
+    Painel.valor("tipoId", id || "");
+    Painel.valor("tipoDescricao", descricao || "");
+    document.getElementById("tipoTitulo").textContent = id ? "Editar tipo" : "Novo tipo";
+    Painel.abrir("modalTipo");
+  }
+
+  document.getElementById("novoTipo").addEventListener("click", function () {
+    abrirTipo(null, "");
+  });
+  document.querySelectorAll("[data-editar-tipo]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      abrirTipo(b.dataset.editarTipo, b.dataset.descricao);
+    });
+  });
+  Painel.ligar({ form: "formTipo", erro: "tipoErro" });
+
+  // ---------------- fornecedor ----------------
+  function abrirFornecedor(id) {
+    var form = document.getElementById("formFornecedor");
+    var f = id ? achar(fornecedores, id) : null;
+
+    form.reset();
+    Painel.erro("fornecedorErro", "");
+    Painel.valor("fornecedorId", f ? f.id : "");
+    document.getElementById("fornecedorTitulo").textContent = f ? "Editar fornecedor" : "Novo fornecedor";
+
+    if (f) {
+      Painel.valor("fornecedorNome", f.nome);
+      Painel.valor("fornecedorTelefone", f.telefone);
+      Painel.valor("fornecedorCnpj", f.cnpj);
+      Painel.valor("fornecedorEmail", f.email);
+      Painel.valor("fornecedorSite", f.site);
+      Painel.valor("fornecedorObs", f.observacoes);
+      document.getElementById("fornecedorAtivo").checked = !!f.ativo;
+    } else {
+      document.getElementById("fornecedorAtivo").checked = true;
+    }
+
+    Painel.abrir("modalFornecedor");
+  }
+
+  document.getElementById("novoFornecedor").addEventListener("click", function () {
+    abrirFornecedor(null);
+  });
+  document.querySelectorAll("[data-editar-fornecedor]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      abrirFornecedor(b.dataset.editarFornecedor);
+    });
+  });
+  Painel.ligar({ form: "formFornecedor", erro: "fornecedorErro" });
+
+  // ---------------- exclusão ----------------
+  function pedirExclusao(acao, id, nome) {
+    Painel.erro("excluirErro", "");
+    Painel.valor("excluirAcao", acao);
+    Painel.valor("excluirId", id);
+    document.getElementById("excluirNome").textContent = nome;
+    Painel.abrir("modalExcluir");
+  }
+
+  document.querySelectorAll("[data-excluir-material]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      pedirExclusao("delete_material", b.dataset.excluirMaterial, b.dataset.nome);
+    });
+  });
+  document.querySelectorAll("[data-excluir-fornecedor]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      pedirExclusao("delete_fornecedor", b.dataset.excluirFornecedor, b.dataset.nome);
+    });
+  });
+  Painel.ligar({ form: "formExcluir", erro: "excluirErro" });
+});
+</script>
+{% endblock %}

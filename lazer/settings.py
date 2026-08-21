@@ -47,9 +47,17 @@ ALLOWED_HOSTS = [
     "lazersport.com.br",
     "www.lazersport.com.br",
     "interno.lazersport.com.br",
+    # Domínio .com: o painel interno atende em interno.lazersport.com.
+    "lazersport.com",
+    "www.lazersport.com",
+    "interno.lazersport.com",
     ".vercel.app",
     ".onrender.com",
     "localhost",
+    # Em desenvolvimento, http://interno.localhost:8000 cai no
+    # SubdomainURLMiddleware e abre o painel interno sem precisar de
+    # DNS nem de arquivo hosts -- navegador resolve *.localhost sozinho.
+    ".localhost",
     "127.0.0.1",
     "0.0.0.0",
 ]
@@ -59,8 +67,12 @@ CSRF_TRUSTED_ORIGINS = [
     "https://lazersport.com.br",
     "https://www.lazersport.com.br",
     "https://interno.lazersport.com.br",
+    "https://lazersport.com",
+    "https://www.lazersport.com",
+    "https://interno.lazersport.com",
     "https://*.vercel.app",
     "https://*.onrender.com",
+    "http://interno.localhost:8000",
 ]
 
 VERCEL_URL = os.getenv("VERCEL_URL", "").strip()

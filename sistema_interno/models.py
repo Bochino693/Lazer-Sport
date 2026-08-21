@@ -1,5 +1,9 @@
-from django.db import models
+from decimal import Decimal
+
 from django.conf import settings
+from django.db import models, transaction
+from django.utils import timezone
+
 from core.models import Brinquedos, Pedido, Venda, ItemPedido
 
 
@@ -67,6 +71,27 @@ class EnderecoCliente(Prime):
         verbose_name_plural = "Endereços dos Clientes"
 
 
+class Fornecedor(Prime):
+    """Quem vende o material. O preço pago fica no estoque, não aqui:
+    o mesmo fornecedor muda de preço a cada compra."""
+
+    nome = models.CharField(max_length=120, unique=True)
+    telefone = models.CharField(max_length=20, blank=True)
+    email = models.EmailField(max_length=150, blank=True)
+    cnpj = models.CharField("CNPJ / CPF", max_length=20, blank=True)
+    site = models.CharField(max_length=200, blank=True)
+    observacoes = models.TextField(blank=True)
+    ativo = models.BooleanField(default=True)
+
+    def __str__(self):
+        return self.nome
+
+    class Meta:
+        verbose_name = "Fornecedor"
+        verbose_name_plural = "Fornecedores"
+        ordering = ("nome",)
+
+
 class TipoMaterial(Prime):
     descricao = models.CharField(max_length=120)
 
@@ -79,10 +104,46 @@ class TipoMaterial(Prime):
 
 
 class Material(Prime):
+    class Unidade(models.TextChoices):
+        UNIDADE = "un", "Unidade"
+        PECA = "pc", "Peça"
+        METRO = "m", "Metro"
+        METRO_QUADRADO = "m2", "Metro quadrado"
+        QUILO = "kg", "Quilo"
+        LITRO = "l", "Litro"
+        CAIXA = "cx", "Caixa"
+        ROLO = "rl", "Rolo"
+        PAR = "par", "Par"
+
     nome_material = models.CharField(max_length=90)
-    descricao = models.CharField(max_length=150, null=True)
-    tipo_material = models.ForeignKey(TipoMaterial, on_delete=models.SET_NULL, related_name='material', null=True)
-    brinquedos_associados = models.ManyToManyField(Brinquedos, related_name='materiais')
+    descricao = models.CharField(max_length=150, null=True, blank=True)
+    codigo_interno = models.CharField(
+        "Código interno",
+        max_length=30,
+        blank=True,
+        help_text="Código usado na prateleira, na nota ou no catálogo do fornecedor.",
+    )
+    unidade = models.CharField(
+        max_length=5,
+        choices=Unidade.choices,
+        default=Unidade.UNIDADE,
+    )
+    tipo_material = models.ForeignKey(TipoMaterial, on_delete=models.SET_NULL, related_name='material', null=True, blank=True)
+    brinquedos_associados = models.ManyToManyField(Brinquedos, related_name='materiais', blank=True)
+    ativo = models.BooleanField(default=True)
+
+    @property
+    def quantidade_total(self):
+        """Soma o que existe em todos os locais de guarda."""
+        return sum(local.quantidade for local in self.estoque.all())
+
+    @property
+    def valor_total(self):
+        """Quanto foi pago pelo que ainda está guardado."""
+        return sum(
+            (local.valor_total for local in self.estoque.all()),
+            Decimal("0.00"),
+        )
 
     def __str__(self):
         return self.nome_material
@@ -90,6 +151,7 @@ class Material(Prime):
     class Meta:
         verbose_name = "Material"
         verbose_name_plural = "materiais"
+        ordering = ("nome_material",)
 
 
 class Montadores(Prime):
@@ -115,18 +177,177 @@ class Setores(Prime):
 
 
 class EstoqueMaterial(Prime):
-    descricao_local = models.CharField(max_length=90)
+    """Um material guardado num local. É aqui que fica o valor pago."""
+
+    ESTAVEL = "estavel"
+    ATENCAO = "atencao"
+    CRITICO = "critico"
+
+    descricao_local = models.CharField("Local de guarda", max_length=90)
     material = models.ForeignKey(Material, on_delete=models.CASCADE, related_name='estoque')
     quantidade = models.IntegerField(default=1)
-    preco_fornecedor = models.DecimalField(decimal_places=2, max_digits=6)
+    # max_digits=6 travava o cadastro em R$ 9.999,99, o que não cobre
+    # lona, motor, inflável nem compra fechada de fornecedor.
+    preco_fornecedor = models.DecimalField(
+        "Valor pago por unidade",
+        decimal_places=2,
+        max_digits=12,
+    )
+    fornecedor = models.ForeignKey(
+        Fornecedor,
+        on_delete=models.SET_NULL,
+        related_name="estoques",
+        null=True,
+        blank=True,
+    )
+    estoque_minimo = models.PositiveIntegerField(
+        "Quantidade mínima",
+        default=0,
+        help_text="Abaixo disso o item entra na lista de reposição.",
+    )
+    nota_fiscal = models.CharField(max_length=60, blank=True)
+    comprado_em = models.DateField("Data da compra", null=True, blank=True)
+    observacoes = models.TextField(blank=True)
+
+    @property
+    def valor_total(self):
+        preco = self.preco_fornecedor or Decimal("0.00")
+        return (preco * max(self.quantidade, 0)).quantize(Decimal("0.01"))
+
+    @property
+    def situacao(self):
+        minimo = self.estoque_minimo or 0
+        if self.quantidade <= minimo:
+            return self.CRITICO
+        if minimo and self.quantidade <= minimo * 2:
+            return self.ATENCAO
+        if not minimo and self.quantidade <= 5:
+            return self.ATENCAO
+        return self.ESTAVEL
+
+    @property
+    def situacao_label(self):
+        return {
+            self.CRITICO: "Repor agora",
+            self.ATENCAO: "Atenção",
+            self.ESTAVEL: "Estável",
+        }[self.situacao]
 
     def __str__(self):
-        return self.descricao_local
+        return f"{self.material} - {self.descricao_local}"
 
     class Meta:
         verbose_name = "Estoque de Material"
         verbose_name_plural = "Estoque de Materiais"
         unique_together = ('material', 'descricao_local')
+        ordering = ("material__nome_material", "descricao_local")
+
+
+class MovimentoEstoque(Prime):
+    """Histórico de entrada, saída e acerto de contagem.
+
+    A quantidade do estoque só muda por aqui: sem isso, um número
+    corrigido na mão não deixa rastro de quem mexeu nem de quanto
+    foi pago.
+    """
+
+    class Tipo(models.TextChoices):
+        ENTRADA = "entrada", "Entrada (compra)"
+        SAIDA = "saida", "Saída (uso / montagem)"
+        AJUSTE = "ajuste", "Ajuste de contagem"
+
+    estoque = models.ForeignKey(
+        EstoqueMaterial,
+        on_delete=models.CASCADE,
+        related_name="movimentos",
+    )
+    tipo = models.CharField(max_length=10, choices=Tipo.choices, db_index=True)
+    quantidade = models.PositiveIntegerField()
+    quantidade_resultante = models.IntegerField(default=0)
+    valor_unitario = models.DecimalField(
+        "Valor pago por unidade",
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+    )
+    documento = models.CharField(
+        "Nota / pedido",
+        max_length=60,
+        blank=True,
+    )
+    motivo = models.CharField(max_length=150, blank=True)
+    responsavel = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name="movimentos_estoque",
+        null=True,
+        blank=True,
+    )
+    ocorrido_em = models.DateTimeField(default=timezone.now, db_index=True)
+
+    @property
+    def valor_total(self):
+        if self.valor_unitario is None:
+            return None
+        return (self.valor_unitario * self.quantidade).quantize(Decimal("0.01"))
+
+    @classmethod
+    @transaction.atomic
+    def registrar(cls, estoque, tipo, quantidade, **extras):
+        """Aplica o movimento e devolve o registro já salvo.
+
+        select_for_update evita que duas baixas simultâneas leiam a
+        mesma quantidade e gravem o mesmo resultado.
+        """
+        quantidade = int(quantidade)
+        if quantidade <= 0:
+            raise ValueError("Informe uma quantidade maior que zero.")
+
+        travado = (
+            EstoqueMaterial.objects
+            .select_for_update()
+            .get(pk=estoque.pk)
+        )
+
+        if tipo == cls.Tipo.ENTRADA:
+            resultante = travado.quantidade + quantidade
+        elif tipo == cls.Tipo.SAIDA:
+            if quantidade > travado.quantidade:
+                raise ValueError(
+                    f"Saída de {quantidade} maior que o saldo atual "
+                    f"({travado.quantidade})."
+                )
+            resultante = travado.quantidade - quantidade
+        else:
+            resultante = quantidade
+
+        travado.quantidade = resultante
+
+        campos = ["quantidade", "atualizado"]
+        valor_unitario = extras.get("valor_unitario")
+        if tipo == cls.Tipo.ENTRADA and valor_unitario:
+            # A compra mais recente passa a ser o valor de referência.
+            travado.preco_fornecedor = valor_unitario
+            campos.append("preco_fornecedor")
+
+        travado.save(update_fields=campos)
+
+        return cls.objects.create(
+            estoque=travado,
+            tipo=tipo,
+            quantidade=quantidade,
+            quantidade_resultante=resultante,
+            **extras,
+        )
+
+    def __str__(self):
+        return f"{self.get_tipo_display()} - {self.estoque}"
+
+    class Meta:
+        verbose_name = "Movimento de Estoque"
+        verbose_name_plural = "Movimentos de Estoque"
+        ordering = ("-ocorrido_em", "-id")
 
 class CentralPedidos(Prime):
 
@@ -167,7 +388,7 @@ class CentralVendas(Venda):
 
 class ComprasMensais(Prime):
     descricao_compra = models.CharField(max_length=120)
-    valor = models.DecimalField(decimal_places=2, max_digits=6)
+    valor = models.DecimalField(decimal_places=2, max_digits=12)
 
     def __str__(self):
         return self.descricao_compra
@@ -181,10 +402,10 @@ class ItensCompra(Prime):
     compra = models.ForeignKey(ComprasMensais, related_name='itens', on_delete=models.CASCADE, null=True)
     material = models.ForeignKey(Material, on_delete=models.CASCADE, null=True)
     quantidade = models.PositiveIntegerField()
-    subtotal = models.DecimalField(max_digits=6, decimal_places=2)
+    subtotal = models.DecimalField(max_digits=12, decimal_places=2)
 
     def __str__(self):
-        return self.materiais.nome_material
+        return self.material.nome_material if self.material else "Item"
 
 
 class CategoriaDespesa(Prime):
@@ -200,7 +421,7 @@ class CategoriaDespesa(Prime):
 
 class DespesasMensais(Prime):
     descricao_despesa = models.CharField(max_length=90)
-    valor_despesa = models.DecimalField(decimal_places=2, max_digits=6)
+    valor_despesa = models.DecimalField(decimal_places=2, max_digits=12)
     categoria_despesa = models.ForeignKey(CategoriaDespesa, on_delete=models.SET_NULL, related_name='despesas',
                                           null=True)
 
@@ -216,8 +437,8 @@ class FinanceiroMensal(Prime):
     descricao = models.CharField(max_length=90)
     despesas_mensais = models.ManyToManyField(DespesasMensais, related_name='financeiros')
     mes = models.DateField(null=True)
-    valor_liquido = models.DecimalField(max_digits=6, decimal_places=2)
-    valor_bruto = models.DecimalField(max_digits=6, decimal_places=2)
+    valor_liquido = models.DecimalField(max_digits=12, decimal_places=2)
+    valor_bruto = models.DecimalField(max_digits=12, decimal_places=2)
     lucro = models.DecimalField(max_digits=10, decimal_places=2)
 
     def __str__(self):

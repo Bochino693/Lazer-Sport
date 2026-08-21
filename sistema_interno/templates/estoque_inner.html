@@ -1,143 +1,502 @@
 {% extends "base_inner.html" %}
+{% load interno_extras %}
+
+{% block title %}Estoque de Materiais | Lazer & Sport{% endblock %}
+
+{% block extra_css %}
+<style>
+  .estoque-kpi { border: 0; border-radius: 16px; box-shadow: 0 6px 18px rgba(15, 23, 42, .08); }
+  .estoque-kpi .valor { font-size: 1.6rem; font-weight: 700; line-height: 1.1; }
+  .estoque-kpi .rotulo { font-size: .75rem; text-transform: uppercase; letter-spacing: .06em; color: #6c757d; }
+  .tabela-estoque { font-size: .88rem; }
+  .tabela-estoque th { white-space: nowrap; font-size: .74rem; text-transform: uppercase; letter-spacing: .04em; }
+  .tabela-estoque td { vertical-align: middle; }
+  .material-nome { font-weight: 600; color: #1e272e; }
+  .material-sub { font-size: .74rem; color: #6c757d; }
+  .valor-total { font-variant-numeric: tabular-nums; font-weight: 600; }
+  .acoes-linha { white-space: nowrap; }
+  .filtro-card { border: 0; border-radius: 16px; box-shadow: 0 4px 14px rgba(15, 23, 42, .06); }
+  @media (max-width: 768px) {
+    .tabela-estoque thead { display: none; }
+    .tabela-estoque, .tabela-estoque tbody, .tabela-estoque tr, .tabela-estoque td { display: block; width: 100%; }
+    .tabela-estoque tr { margin-bottom: .9rem; border: 1px solid #dee2e6; border-radius: 12px; padding: .6rem; background: #fff; }
+    .tabela-estoque td { border: 0; padding: .3rem .2rem; }
+    .tabela-estoque td::before { content: attr(data-rotulo) ": "; font-weight: 600; color: #6c757d; font-size: .74rem; }
+    .tabela-estoque td.sem-rotulo::before { content: ""; }
+  }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="container-fluid">
+<div class="container-fluid px-0">
 
-        <style>
-        body {
-            font-family: Arial, sans-serif;
-            background: #f4f6f9;
-            margin: 0;
-            padding: 20px;
-        }
-
-        h1 {
-            text-align: center;
-            color: #2c3e50;
-            margin-bottom: 30px;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            background: #fff;
-            border-radius: 8px;
-            overflow: hidden;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-        }
-
-        thead {
-            background: #2c3e50;
-            color: #fff;
-        }
-
-        th, td {
-            padding: 12px 14px;
-            text-align: left;
-        }
-
-        th {
-            font-size: 14px;
-            text-transform: uppercase;
-        }
-
-        tr:nth-child(even) {
-            background: #f2f2f2;
-        }
-
-        .qtd-ok {
-            color: #27ae60;
-            font-weight: bold;
-        }
-
-        .qtd-baixa {
-            color: #e74c3c;
-            font-weight: bold;
-        }
-
-        .badge {
-            padding: 4px 8px;
-            border-radius: 12px;
-            font-size: 12px;
-            color: #fff;
-        }
-
-        .badge-ok {
-            background: #2ecc71;
-        }
-
-        .badge-alerta {
-            background: #e67e22;
-        }
-
-        .badge-critico {
-            background: #e74c3c;
-        }
-    </style>
-
-    <h1 class="mb-4">📦 Estoque de Materiais</h1>
-
-    <div class="card shadow-sm">
-        <div class="card-body">
-
-            <table class="table table-hover table-bordered align-middle">
-                <thead class="table-dark">
-                    <tr>
-                        <th>Material</th>
-                        <th>Tipo</th>
-                        <th>Local</th>
-                        <th>Quantidade</th>
-                        <th>Preço Fornecedor</th>
-                        <th>Status</th>
-                    </tr>
-                </thead>
-
-                <tbody>
-                    {% for estoque in estoques %}
-                    <tr>
-                        <td>{{ estoque.material.nome_material }}</td>
-                        <td>{{ estoque.material.tipo_material }}</td>
-                        <td>{{ estoque.descricao_local }}</td>
-
-                        <td>
-                            {% if estoque.quantidade > 5 %}
-                                <span class="text-success fw-bold">
-                                    {{ estoque.quantidade }}
-                                </span>
-                            {% else %}
-                                <span class="text-danger fw-bold">
-                                    {{ estoque.quantidade }}
-                                </span>
-                            {% endif %}
-                        </td>
-
-                        <td>
-                            R$ {{ estoque.preco_fornecedor }}
-                        </td>
-
-                        <td>
-                            {% if estoque.quantidade > 10 %}
-                                <span class="badge bg-success">Estável</span>
-                            {% elif estoque.quantidade > 5 %}
-                                <span class="badge bg-warning text-dark">Atenção</span>
-                            {% else %}
-                                <span class="badge bg-danger">Crítico</span>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="6" class="text-center text-muted">
-                            Nenhum material cadastrado em estoque.
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-
-            </table>
-
-        </div>
+  <div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4">
+    <div>
+      <h1 class="h3 mb-1">📦 Estoque de Materiais</h1>
+      <p class="text-muted mb-0">
+        O que existe, onde está guardado, quanto foi pago e quem mexeu.
+      </p>
     </div>
+    <div class="d-flex gap-2">
+      <a href="{% url 'materiais_inner' %}" class="btn btn-outline-secondary">Materiais</a>
+      <a href="{% url 'movimentacoes_inner' %}" class="btn btn-outline-secondary">Histórico</a>
+      <button type="button" class="btn btn-success" id="novoItem">+ Novo item</button>
+    </div>
+  </div>
 
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-lg-3">
+      <div class="card estoque-kpi h-100"><div class="card-body">
+        <div class="valor">{{ total_locais }}</div>
+        <div class="rotulo">Itens em estoque</div>
+      </div></div>
+    </div>
+    <div class="col-6 col-lg-3">
+      <div class="card estoque-kpi h-100"><div class="card-body">
+        <div class="valor">{{ total_pecas|numero }}</div>
+        <div class="rotulo">Unidades guardadas</div>
+      </div></div>
+    </div>
+    <div class="col-6 col-lg-3">
+      <div class="card estoque-kpi h-100"><div class="card-body">
+        <div class="valor text-success">R$ {{ valor_investido|moeda }}</div>
+        <div class="rotulo">Total pago no que está guardado</div>
+      </div></div>
+    </div>
+    <div class="col-6 col-lg-3">
+      <div class="card estoque-kpi h-100"><div class="card-body">
+        <div class="valor {% if total_criticos %}text-danger{% else %}text-muted{% endif %}">{{ total_criticos }}</div>
+        <div class="rotulo">Precisam de reposição</div>
+      </div></div>
+    </div>
+  </div>
+
+  <div class="card filtro-card mb-3">
+    <div class="card-body">
+      <form method="get" class="row g-2 align-items-end">
+        <div class="col-12 col-md-4">
+          <label class="form-label small text-muted mb-1" for="filtroBusca">Buscar</label>
+          <input id="filtroBusca" name="q" value="{{ busca }}" class="form-control"
+                 placeholder="Material, código, local, nota ou fornecedor">
+        </div>
+        <div class="col-6 col-md-2">
+          <label class="form-label small text-muted mb-1" for="filtroTipo">Tipo</label>
+          <select id="filtroTipo" name="tipo" class="form-select">
+            <option value="">Todos</option>
+            {% for tipo in tipos %}
+              <option value="{{ tipo.id }}" {% if tipo_ativo == tipo.id|stringformat:"s" %}selected{% endif %}>{{ tipo.descricao }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-6 col-md-2">
+          <label class="form-label small text-muted mb-1" for="filtroFornecedor">Fornecedor</label>
+          <select id="filtroFornecedor" name="fornecedor" class="form-select">
+            <option value="">Todos</option>
+            {% for f in fornecedores %}
+              <option value="{{ f.id }}" {% if fornecedor_ativo == f.id|stringformat:"s" %}selected{% endif %}>{{ f.nome }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-6 col-md-2">
+          <label class="form-label small text-muted mb-1" for="filtroSituacao">Situação</label>
+          <select id="filtroSituacao" name="situacao" class="form-select">
+            <option value="">Todas</option>
+            <option value="critico" {% if situacao_ativa == "critico" %}selected{% endif %}>Repor agora</option>
+            <option value="atencao" {% if situacao_ativa == "atencao" %}selected{% endif %}>Atenção</option>
+            <option value="estavel" {% if situacao_ativa == "estavel" %}selected{% endif %}>Estável</option>
+          </select>
+        </div>
+        <div class="col-6 col-md-2 d-grid">
+          <button type="submit" class="btn btn-dark">Filtrar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="card border-0 shadow-sm">
+    <div class="card-body">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle tabela-estoque mb-0">
+          <thead class="table-dark">
+            <tr>
+              <th>Material</th>
+              <th>Local</th>
+              <th>Fornecedor</th>
+              <th class="text-end">Qtd.</th>
+              <th class="text-end">Mín.</th>
+              <th class="text-end">Valor pago (un.)</th>
+              <th class="text-end">Total investido</th>
+              <th>Situação</th>
+              <th class="text-end">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for estoque in estoques %}
+              <tr>
+                <td data-rotulo="Material">
+                  <span class="material-nome">{{ estoque.material.nome_material }}</span>
+                  <span class="material-sub d-block">
+                    {{ estoque.material.tipo_material|default:"Sem tipo" }}
+                    {% if estoque.material.codigo_interno %} · {{ estoque.material.codigo_interno }}{% endif %}
+                    · {{ estoque.material.get_unidade_display }}
+                  </span>
+                </td>
+                <td data-rotulo="Local">
+                  {{ estoque.descricao_local }}
+                  {% if estoque.nota_fiscal %}<span class="material-sub d-block">NF {{ estoque.nota_fiscal }}</span>{% endif %}
+                </td>
+                <td data-rotulo="Fornecedor">
+                  {{ estoque.fornecedor.nome|default:"—" }}
+                  {% if estoque.comprado_em %}<span class="material-sub d-block">{{ estoque.comprado_em|date:"d/m/Y" }}</span>{% endif %}
+                </td>
+                <td data-rotulo="Quantidade" class="text-end fw-semibold">{{ estoque.quantidade }}</td>
+                <td data-rotulo="Mínimo" class="text-end text-muted">{{ estoque.estoque_minimo }}</td>
+                <td data-rotulo="Valor pago" class="text-end">R$ {{ estoque.preco_fornecedor|moeda }}</td>
+                <td data-rotulo="Total" class="text-end valor-total">R$ {{ estoque.valor_total|moeda }}</td>
+                <td data-rotulo="Situação">
+                  {% if estoque.situacao == "critico" %}
+                    <span class="badge bg-danger">{{ estoque.situacao_label }}</span>
+                  {% elif estoque.situacao == "atencao" %}
+                    <span class="badge bg-warning text-dark">{{ estoque.situacao_label }}</span>
+                  {% else %}
+                    <span class="badge bg-success">{{ estoque.situacao_label }}</span>
+                  {% endif %}
+                </td>
+                <td data-rotulo="Ações" class="text-end acoes-linha">
+                  <button type="button" class="btn btn-sm btn-primary"
+                          data-movimentar="{{ estoque.id }}"
+                          data-nome="{{ estoque.material.nome_material }} — {{ estoque.descricao_local }}"
+                          data-saldo="{{ estoque.quantidade }}">Movimentar</button>
+                  <button type="button" class="btn btn-sm btn-outline-secondary" data-editar="{{ estoque.id }}">Editar</button>
+                  <button type="button" class="btn btn-sm btn-outline-danger"
+                          data-excluir="{{ estoque.id }}"
+                          data-nome="{{ estoque.material.nome_material }} — {{ estoque.descricao_local }}">Excluir</button>
+                </td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="9" class="text-center text-muted py-5 sem-rotulo">
+                  Nenhum material encontrado com esses filtros.
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
 </div>
+
+<!-- ================= modal do item ================= -->
+<div class="modal fade" id="modalItem" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <form class="modal-content" id="formItem" method="post" action="{% url 'stock' %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="save">
+      <input type="hidden" name="id" id="itemId">
+      <div class="modal-header">
+        <h5 class="modal-title" id="itemTitulo">Novo item no estoque</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body">
+        <div id="itemErro" class="alert alert-danger d-none" role="alert"></div>
+
+        <div class="row g-3">
+          <div class="col-12 col-md-6">
+            <label class="form-label" for="itemMaterial">Material *</label>
+            <select class="form-select" id="itemMaterial" name="material" data-rotulo="material" required>
+              <option value="">Selecione</option>
+              {% for m in materiais %}
+                <option value="{{ m.id }}">{{ m.nome_material }}</option>
+              {% endfor %}
+            </select>
+            <div class="form-text">
+              Material novo? Cadastre em <a href="{% url 'materiais_inner' %}">Materiais</a>.
+            </div>
+          </div>
+
+          <div class="col-12 col-md-6">
+            <label class="form-label" for="itemLocal">Local de guarda *</label>
+            <input class="form-control" id="itemLocal" name="descricao_local"
+                   data-rotulo="local de guarda" maxlength="90" required
+                   placeholder="Galpão A, prateleira 3">
+          </div>
+
+          <div class="col-6 col-md-4">
+            <label class="form-label" for="itemQuantidade">Quantidade inicial</label>
+            <input class="form-control" id="itemQuantidade" name="quantidade"
+                   inputmode="numeric" placeholder="0">
+            <div class="form-text" id="itemQuantidadeAviso">
+              Depois do cadastro, a quantidade só muda por entrada ou saída.
+            </div>
+          </div>
+
+          <div class="col-6 col-md-4">
+            <label class="form-label" for="itemPreco">Valor pago por unidade *</label>
+            <div class="input-group">
+              <span class="input-group-text">R$</span>
+              <input class="form-control" id="itemPreco" name="preco_fornecedor"
+                     data-rotulo="valor pago" inputmode="decimal" placeholder="1.250,00" required>
+            </div>
+          </div>
+
+          <div class="col-6 col-md-4">
+            <label class="form-label" for="itemMinimo">Quantidade mínima</label>
+            <input class="form-control" id="itemMinimo" name="estoque_minimo"
+                   inputmode="numeric" placeholder="0">
+            <div class="form-text">Abaixo disso o item entra na lista de reposição.</div>
+          </div>
+
+          <div class="col-12 col-md-6">
+            <label class="form-label" for="itemFornecedor">Fornecedor</label>
+            <select class="form-select" id="itemFornecedor" name="fornecedor">
+              <option value="">Não informado</option>
+              {% for f in fornecedores %}
+                <option value="{{ f.id }}">{{ f.nome }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="col-6 col-md-3">
+            <label class="form-label" for="itemNota">Nota / pedido</label>
+            <input class="form-control" id="itemNota" name="nota_fiscal" maxlength="60">
+          </div>
+
+          <div class="col-6 col-md-3">
+            <label class="form-label" for="itemData">Data da compra</label>
+            <input type="date" class="form-control" id="itemData" name="comprado_em">
+          </div>
+
+          <div class="col-12">
+            <label class="form-label" for="itemObs">Observações</label>
+            <textarea class="form-control" id="itemObs" name="observacoes" rows="2"></textarea>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-success">Salvar item</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ================= modal de movimento ================= -->
+<div class="modal fade" id="modalMovimento" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <form class="modal-content" id="formMovimento" method="post" action="{% url 'stock' %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="movimento">
+      <input type="hidden" name="id" id="movimentoId">
+      <div class="modal-header">
+        <h5 class="modal-title">Movimentar estoque</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body">
+        <div id="movimentoErro" class="alert alert-danger d-none" role="alert"></div>
+
+        <p class="mb-3">
+          <strong id="movimentoNome"></strong><br>
+          <span class="text-muted small">Saldo atual: <span id="movimentoSaldo"></span></span>
+        </p>
+
+        <div class="row g-3">
+          <div class="col-12">
+            <label class="form-label" for="movimentoTipo">Tipo *</label>
+            <select class="form-select" id="movimentoTipo" name="tipo" data-rotulo="tipo" required>
+              {% for valor, rotulo in tipos_movimento %}
+                <option value="{{ valor }}">{{ rotulo }}</option>
+              {% endfor %}
+            </select>
+            <div class="form-text" id="movimentoAjuda">
+              Entrada soma ao saldo. Saída desconta. Ajuste grava a contagem real.
+            </div>
+          </div>
+
+          <div class="col-6">
+            <label class="form-label" for="movimentoQuantidade">Quantidade *</label>
+            <input class="form-control" id="movimentoQuantidade" name="quantidade"
+                   data-rotulo="quantidade" inputmode="numeric" required>
+          </div>
+
+          <div class="col-6">
+            <label class="form-label" for="movimentoValor">Valor pago (un.)</label>
+            <div class="input-group">
+              <span class="input-group-text">R$</span>
+              <input class="form-control" id="movimentoValor" name="valor_unitario" inputmode="decimal">
+            </div>
+            <div class="form-text">Numa entrada, vira o novo valor de referência.</div>
+          </div>
+
+          <div class="col-12 col-md-6">
+            <label class="form-label" for="movimentoDocumento">Nota / pedido</label>
+            <input class="form-control" id="movimentoDocumento" name="documento" maxlength="60">
+          </div>
+
+          <div class="col-12 col-md-6">
+            <label class="form-label" for="movimentoMotivo">Motivo</label>
+            <input class="form-control" id="movimentoMotivo" name="motivo" maxlength="150"
+                   placeholder="Montagem do castelo, compra mensal...">
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-primary">Registrar movimento</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ================= modal de exclusão ================= -->
+<div class="modal fade" id="modalExcluir" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-sm">
+    <form class="modal-content" id="formExcluir" method="post" action="{% url 'stock' %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="delete">
+      <input type="hidden" name="id" id="excluirId">
+      <div class="modal-header">
+        <h5 class="modal-title">Excluir item?</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body">
+        <div id="excluirErro" class="alert alert-danger d-none" role="alert"></div>
+        <p class="mb-0">
+          <strong id="excluirNome"></strong> sai do estoque junto com todo o
+          histórico de entradas e saídas dele. Não dá para desfazer.
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-danger">Excluir</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{{ estoques_dados|json_script:"estoquesDados" }}
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  "use strict";
+
+  var itens = JSON.parse(
+    document.getElementById("estoquesDados").textContent || "[]"
+  );
+
+  function achar(id) {
+    return itens.filter(function (x) {
+      return Number(x.id) === Number(id);
+    })[0];
+  }
+
+  // ---------------- item ----------------
+  function abrirItem(id) {
+    var form = document.getElementById("formItem");
+    var item = id ? achar(id) : null;
+
+    form.reset();
+    Painel.erro("itemErro", "");
+    Painel.valor("itemId", item ? item.id : "");
+
+    document.getElementById("itemTitulo").textContent = item
+      ? "Editar item do estoque"
+      : "Novo item no estoque";
+
+    // Editar nao mexe na quantidade: mudar o numero direto apagaria o
+    // rastro de quem tirou ou colocou material.
+    var campoQtd = document.getElementById("itemQuantidade");
+    campoQtd.disabled = !!item;
+    document.getElementById("itemQuantidadeAviso").textContent = item
+      ? "Use o botão Movimentar para alterar o saldo e manter o histórico."
+      : "Depois do cadastro, a quantidade só muda por entrada ou saída.";
+
+    if (item) {
+      Painel.valor("itemMaterial", item.material_id);
+      Painel.valor("itemLocal", item.descricao_local);
+      Painel.valor("itemQuantidade", item.quantidade);
+      Painel.valor("itemPreco", item.preco_fornecedor);
+      Painel.valor("itemMinimo", item.estoque_minimo);
+      Painel.valor("itemFornecedor", item.fornecedor_id);
+      Painel.valor("itemNota", item.nota_fiscal);
+      Painel.valor("itemData", item.comprado_em);
+      Painel.valor("itemObs", item.observacoes);
+    }
+
+    Painel.abrir("modalItem");
+  }
+
+  document.getElementById("novoItem").addEventListener("click", function () {
+    abrirItem(null);
+  });
+
+  document.querySelectorAll("[data-editar]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      abrirItem(b.dataset.editar);
+    });
+  });
+
+  Painel.ligar({ form: "formItem", erro: "itemErro" });
+
+  // ---------------- movimento ----------------
+  document.querySelectorAll("[data-movimentar]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var form = document.getElementById("formMovimento");
+      form.reset();
+      Painel.erro("movimentoErro", "");
+      Painel.valor("movimentoId", b.dataset.movimentar);
+      document.getElementById("movimentoNome").textContent = b.dataset.nome;
+      document.getElementById("movimentoSaldo").textContent = b.dataset.saldo;
+      document.getElementById("movimentoQuantidade").dataset.saldo = b.dataset.saldo;
+      Painel.abrir("modalMovimento");
+    });
+  });
+
+  document.getElementById("movimentoTipo").addEventListener("change", function (e) {
+    document.getElementById("movimentoAjuda").textContent =
+      e.target.value === "ajuste"
+        ? "A quantidade informada passa a ser o saldo, sem somar nem descontar."
+        : e.target.value === "saida"
+          ? "A quantidade é descontada do saldo atual."
+          : "A quantidade é somada ao saldo atual.";
+  });
+
+  Painel.ligar({
+    form: "formMovimento",
+    erro: "movimentoErro",
+    antes: function (form) {
+      var tipo = form.querySelector('[name="tipo"]').value;
+      var campo = document.getElementById("movimentoQuantidade");
+      var quantidade = Number(campo.value.replace(/\D/g, ""));
+      var saldo = Number(campo.dataset.saldo || 0);
+
+      if (!campo.value.trim()) {
+        return "Informe a quantidade.";
+      }
+      if (tipo !== "ajuste" && quantidade <= 0) {
+        return "A quantidade precisa ser maior que zero.";
+      }
+      // O servidor recusa de novo; aqui e so pra nao gastar a ida.
+      if (tipo === "saida" && quantidade > saldo) {
+        return "Saída de " + quantidade + " maior que o saldo atual (" + saldo + ").";
+      }
+      return null;
+    }
+  });
+
+  // ---------------- exclusão ----------------
+  document.querySelectorAll("[data-excluir]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      Painel.erro("excluirErro", "");
+      Painel.valor("excluirId", b.dataset.excluir);
+      document.getElementById("excluirNome").textContent = b.dataset.nome;
+      Painel.abrir("modalExcluir");
+    });
+  });
+
+  Painel.ligar({ form: "formExcluir", erro: "excluirErro" });
+});
+</script>
 {% endblock %}
