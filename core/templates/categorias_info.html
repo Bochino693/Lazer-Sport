@@ -1,980 +1,1309 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}{{ categoria.nome_categoria }} | Brinquedos Lazer &amp; Sport{% endblock %}
-{% block meta_description %}Conheça os brinquedos da categoria {{ categoria.nome_categoria }} da Lazer & Sport, com especificações, imagens, opções para compra e orçamento.{% endblock %}
+{% block title %}{{ categoria.nome_categoria }} | Lazer &amp; Sport{% endblock %}
+{% block meta_description %}Explore os brinquedos da categoria {{ categoria.nome_categoria }} da Lazer & Sport, com características técnicas, disponibilidade e acesso aos detalhes de cada produto.{% endblock %}
 
 {% block content %}
 <style>
-  .categoria-page {
-    --cat-blue: #0878f9;
-    --cat-blue-deep: #004aad;
-    --cat-navy: #071426;
-    --cat-red: #e63946;
-    --cat-green: #07914a;
-    --cat-ink: #102b4c;
-    --cat-muted: #5c738d;
-    --cat-line: rgba(0, 74, 173, .13);
+/* ==========================================================
+   ARENA DE CATEGORIA
+   Estrutura própria: breadcrumb do site + hero com quadro
+   visual + cards horizontais, sem imagem da categoria no topo.
+   ========================================================== */
+.arena-categoria {
+    --arena-blue: #0878f9;
+    --arena-blue-deep: #004aad;
+    --arena-navy: #071426;
+    --arena-navy-soft: #0b2444;
+    --arena-red: #e63946;
+    --arena-green: #07914a;
+    --arena-text: #102b4c;
+    --arena-muted: #607995;
+    --arena-border: rgba(0, 74, 173, .13);
+
     min-height: 100vh;
-    padding: 22px 0 72px;
-    color: var(--cat-ink);
+    padding: 18px 0 72px;
+    color: var(--arena-text);
     background:
-      radial-gradient(circle at 8% 10%, rgba(8, 120, 249, .10), transparent 24rem),
-      radial-gradient(circle at 96% 36%, rgba(230, 57, 70, .07), transparent 22rem),
-      linear-gradient(180deg, #f8fbff 0%, #edf4fb 100%);
+        radial-gradient(circle at 8% 9%, rgba(8, 120, 249, .08), transparent 26rem),
+        radial-gradient(circle at 96% 42%, rgba(230, 57, 70, .055), transparent 23rem),
+        linear-gradient(180deg, #f8fbff 0%, #edf4fb 100%);
     font-family: "Poppins", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  }
+}
 
-  .categoria-page *,
-  .categoria-page *::before,
-  .categoria-page *::after {
+.arena-categoria *,
+.arena-categoria *::before,
+.arena-categoria *::after {
     box-sizing: border-box;
-  }
+}
 
-  .categoria-shell {
-    width: min(1200px, calc(100% - 40px));
+.arena-container {
+    width: min(1240px, calc(100% - 40px));
     margin: 0 auto;
-  }
+}
 
-  .categoria-breadcrumb {
-    min-height: 42px;
-    margin-bottom: 16px;
+/* ==========================================================
+   BREADCRUMB — segue a linguagem das outras páginas modernas
+   ========================================================== */
+.arena-breadcrumb {
+    min-height: 44px;
+    margin: 0 0 15px;
+    padding: 0 2px;
     display: flex;
     align-items: center;
     flex-wrap: wrap;
-    gap: 8px;
-    color: #68809a;
-    font-size: .82rem;
-    font-weight: 750;
-  }
+    gap: 9px;
+    color: #6f8398;
+    font-size: .80rem;
+    font-weight: 700;
+}
 
-  .categoria-breadcrumb a {
-    color: var(--cat-blue-deep);
+.arena-breadcrumb a,
+.arena-breadcrumb-current {
+    min-height: 32px;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.arena-breadcrumb a {
+    color: var(--arena-blue-deep);
     text-decoration: none;
-    transition: color .2s ease;
-  }
+}
 
-  .categoria-breadcrumb a:hover {
-    color: var(--cat-red);
-  }
+.arena-breadcrumb a:hover {
+    color: var(--arena-red);
+}
 
-  .categoria-breadcrumb-sep {
-    color: #9baec0;
-  }
+.arena-breadcrumb-separator {
+    color: #9badbf;
+    font-size: .62rem;
+}
 
-  .categoria-breadcrumb-current {
-    max-width: min(52vw, 480px);
+.arena-breadcrumb-current {
+    max-width: min(54vw, 520px);
     overflow: hidden;
-    color: #334e69;
+    color: #344e68;
+    font-weight: 850;
     text-overflow: ellipsis;
     white-space: nowrap;
-  }
+}
 
-  .categoria-hero {
+/* ==========================================================
+   HERO
+   ========================================================== */
+.arena-hero {
     position: relative;
+    min-height: 330px;
+    padding: clamp(28px, 5vw, 56px);
     overflow: hidden;
-    min-height: 320px;
-    padding: clamp(28px, 5vw, 54px);
-    border: 1px solid rgba(255, 255, 255, .10);
-    border-radius: 30px;
+    border: 1px solid rgba(255,255,255,.11);
+    border-radius: 31px;
     display: grid;
-    grid-template-columns: minmax(0, 1.25fr) minmax(260px, .75fr);
+    grid-template-columns: minmax(0, 1.30fr) minmax(310px, .70fr);
     align-items: center;
-    gap: clamp(28px, 5vw, 62px);
+    gap: clamp(30px, 5vw, 66px);
     color: #fff;
     background:
-      radial-gradient(circle at 86% 18%, rgba(8, 120, 249, .42), transparent 18rem),
-      radial-gradient(circle at 8% 110%, rgba(230, 57, 70, .23), transparent 23rem),
-      linear-gradient(135deg, #071426 0%, #0a2447 58%, #063d83 100%);
-    box-shadow: 0 24px 55px rgba(4, 20, 44, .25);
+        radial-gradient(circle at 82% 16%, rgba(8,120,249,.43), transparent 21rem),
+        radial-gradient(circle at 4% 118%, rgba(230,57,70,.20), transparent 25rem),
+        linear-gradient(135deg, #061222 0%, #0a2447 58%, #063d83 100%);
+    box-shadow: 0 25px 58px rgba(4,20,44,.24);
     isolation: isolate;
-  }
+}
 
-  .categoria-hero::before {
+.arena-hero::before {
     content: "";
     position: absolute;
     inset: 0;
-    z-index: -1;
-    opacity: .32;
+    z-index: -2;
+    opacity: .30;
     background-image:
-      linear-gradient(rgba(255, 255, 255, .055) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255, 255, 255, .055) 1px, transparent 1px);
+        linear-gradient(rgba(255,255,255,.055) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.055) 1px, transparent 1px);
     background-size: 34px 34px;
-    mask-image: linear-gradient(to right, #000, transparent 88%);
-  }
+    mask-image: linear-gradient(to right, #000 35%, transparent 96%);
+}
 
-  .categoria-kicker {
+.arena-hero::after {
+    content: "";
+    position: absolute;
+    right: -90px;
+    bottom: -170px;
+    width: 390px;
+    height: 390px;
+    z-index: -1;
+    border: 60px solid rgba(255,255,255,.035);
+    border-radius: 50%;
+}
+
+.arena-kicker {
     width: fit-content;
-    margin-bottom: 15px;
-    padding: 8px 12px;
-    border: 1px solid rgba(111, 180, 255, .35);
+    margin-bottom: 16px;
+    padding: 8px 12px 8px 8px;
+    border: 1px solid rgba(111,180,255,.34);
+    border-radius: 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    color: #fff;
+    background: rgba(8,120,249,.17);
+    font-size: .68rem;
+    font-weight: 900;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+}
+
+.arena-kicker-icon {
+    width: 27px;
+    height: 27px;
+    border-radius: 8px;
+    display: grid;
+    place-items: center;
+    background: linear-gradient(135deg, #ef4352, #c91f31);
+    box-shadow: 0 6px 15px rgba(166,17,35,.28);
+}
+
+.arena-hero h1 {
+    max-width: 750px;
+    margin: 0;
+    color: #fff;
+    font-size: clamp(2.3rem, 5.8vw, 4.7rem);
+    font-weight: 950;
+    line-height: .98;
+    letter-spacing: -.062em;
+}
+
+.arena-hero-copy > p {
+    max-width: 710px;
+    margin: 20px 0 0;
+    padding-left: 16px;
+    border-left: 3px solid var(--arena-blue);
+    color: #d2deed;
+    font-size: .96rem;
+    font-weight: 520;
+    line-height: 1.72;
+}
+
+.arena-hero-actions {
+    margin-top: 22px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.arena-hero-link {
+    min-height: 44px;
+    padding: 0 15px;
+    border: 1px solid rgba(255,255,255,.14);
     border-radius: 12px;
     display: inline-flex;
     align-items: center;
     gap: 8px;
     color: #fff;
-    background: rgba(8, 120, 249, .18);
-    font-size: .68rem;
-    font-weight: 900;
-    letter-spacing: .08em;
-    text-transform: uppercase;
-  }
-
-  .categoria-kicker-dot {
-    width: 25px;
-    height: 25px;
-    border-radius: 8px;
-    display: inline-grid;
-    place-items: center;
-    background: linear-gradient(135deg, #ef4352, #c91f31);
-    box-shadow: 0 5px 12px rgba(166, 17, 35, .30);
-  }
-
-  .categoria-hero h1 {
-    max-width: 760px;
-    margin: 0;
-    color: #fff;
-    font-size: clamp(2.25rem, 5.4vw, 4.3rem);
-    font-weight: 900;
-    line-height: .99;
-    letter-spacing: -.058em;
-  }
-
-  .categoria-hero-copy > p {
-    max-width: 700px;
-    margin: 19px 0 0;
-    padding-left: 15px;
-    border-left: 3px solid var(--cat-blue);
-    color: #d2deed;
-    font-size: .95rem;
-    font-weight: 550;
-    line-height: 1.7;
-  }
-
-  .categoria-hero-stats {
-    margin-top: 21px;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 9px;
-  }
-
-  .categoria-hero-stat {
-    min-height: 56px;
-    padding: 10px 13px;
-    border: 1px solid rgba(255,255,255,.12);
-    border-radius: 14px;
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
     background: rgba(4,20,42,.48);
-    backdrop-filter: blur(10px);
-  }
-
-  .categoria-hero-stat strong,
-  .categoria-hero-stat span {
-    display: block;
-  }
-
-  .categoria-hero-stat strong {
-    color: #fff;
-    font-size: 1.1rem;
-    font-weight: 900;
-    line-height: 1;
-  }
-
-  .categoria-hero-stat span {
-    margin-top: 3px;
-    color: #aebfd4;
-    font-size: .62rem;
-    font-weight: 750;
-  }
-
-  .categoria-visual {
-    min-width: 0;
-    display: grid;
-    place-items: center;
-  }
-
-  .categoria-visual-card {
-    position: relative;
-    width: min(100%, 350px);
-    aspect-ratio: 1.22 / 1;
-    padding: 18px;
-    overflow: hidden;
-    border: 1px solid rgba(255,255,255,.15);
-    border-radius: 24px;
-    background:
-      radial-gradient(circle at 50% 40%, rgba(255,255,255,.18), transparent 52%),
-      rgba(255,255,255,.07);
-    box-shadow: inset 0 1px 0 rgba(255,255,255,.09), 0 22px 40px rgba(0,0,0,.18);
-    backdrop-filter: blur(10px);
-  }
-
-  .categoria-visual-card img {
-    width: 100%;
-    height: 100%;
-    display: block;
-    object-fit: contain;
-    filter: drop-shadow(0 16px 15px rgba(0,0,0,.22));
-  }
-
-  .categoria-visual-placeholder {
-    width: 100%;
-    height: 100%;
-    display: grid;
-    place-items: center;
-    color: #a9c8eb;
-    font-size: .85rem;
+    font-size: .72rem;
     font-weight: 850;
-    text-align: center;
-  }
+    text-decoration: none;
+    backdrop-filter: blur(8px);
+}
 
-  .categoria-toolbar {
-    margin-top: 25px;
-    padding: 19px;
-    border: 1px solid var(--cat-line);
-    border-radius: 22px;
+.arena-hero-link:hover {
+    color: #fff;
+    border-color: rgba(114,182,255,.48);
+    background: rgba(8,120,249,.20);
+}
+
+/* ==========================================================
+   QUADRO VISUAL — substitui COMPLETAMENTE a imagem da categoria
+   ========================================================== */
+.arena-visual-board {
+    position: relative;
+    padding: 16px;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,.14);
+    border-radius: 23px;
+    background:
+        linear-gradient(145deg, rgba(255,255,255,.105), rgba(255,255,255,.045));
+    box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.09),
+        0 20px 45px rgba(0,0,0,.17);
+    backdrop-filter: blur(12px);
+}
+
+.arena-board-head {
+    padding: 3px 3px 13px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 18px;
-    background:
-      radial-gradient(circle at 100% 0, rgba(8,120,249,.09), transparent 17rem),
-      linear-gradient(145deg, #fff, #edf5fd);
-    box-shadow: 0 17px 38px rgba(15,47,83,.10);
-  }
+    gap: 12px;
+}
 
-  .categoria-toolbar-copy strong,
-  .categoria-toolbar-copy span {
-    display: block;
-  }
-
-  .categoria-toolbar-copy strong {
-    color: #173a58;
-    font-size: .95rem;
+.arena-board-head strong {
+    color: #fff;
+    font-size: .82rem;
     font-weight: 900;
-  }
+}
 
-  .categoria-toolbar-copy span {
-    margin-top: 3px;
-    color: #677f98;
-    font-size: .68rem;
-    font-weight: 650;
-  }
+.arena-board-live {
+    min-height: 25px;
+    padding: 0 8px;
+    border: 1px solid rgba(110,231,183,.25);
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #b8f7d8;
+    background: rgba(7,145,74,.15);
+    font-size: .57rem;
+    font-weight: 900;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+}
 
-  .categoria-sort-form {
-    min-width: min(100%, 330px);
+.arena-board-live::before {
+    content: "";
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #43dc91;
+    box-shadow: 0 0 0 4px rgba(67,220,145,.12);
+}
+
+.arena-board-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 9px;
+}
+
+.arena-board-card {
+    min-height: 101px;
+    padding: 13px;
+    border: 1px solid rgba(255,255,255,.11);
+    border-radius: 15px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    background: rgba(4,20,42,.43);
+}
+
+.arena-board-icon {
+    width: 33px;
+    height: 33px;
+    border-radius: 10px;
+    display: grid;
+    place-items: center;
+    color: #fff;
+    background: linear-gradient(135deg, #0758c9, #0878f9);
+}
+
+.arena-board-card:nth-child(2) .arena-board-icon {
+    background: linear-gradient(135deg, #ca2434, #ef4352);
+}
+
+.arena-board-card:nth-child(3) .arena-board-icon {
+    background: linear-gradient(135deg, #087443, #12ab63);
+}
+
+.arena-board-card:nth-child(4) .arena-board-icon {
+    background: linear-gradient(135deg, #7755c7, #9b78ee);
+}
+
+.arena-board-card strong,
+.arena-board-card span {
+    display: block;
+}
+
+.arena-board-card strong {
+    margin-top: 10px;
+    color: #fff;
+    font-size: 1.18rem;
+    font-weight: 950;
+    line-height: 1;
+}
+
+.arena-board-card span {
+    margin-top: 4px;
+    color: #aebfd4;
+    font-size: .60rem;
+    font-weight: 700;
+    line-height: 1.35;
+}
+
+.arena-board-footer {
+    margin-top: 9px;
+    padding: 11px 12px;
+    border: 1px solid rgba(255,255,255,.10);
+    border-radius: 13px;
     display: flex;
     align-items: center;
-    gap: 8px;
-  }
+    gap: 9px;
+    color: #c5d3e3;
+    background: rgba(4,20,42,.38);
+    font-size: .63rem;
+    font-weight: 700;
+    line-height: 1.45;
+}
 
-  .categoria-sort-wrap {
-    position: relative;
-    flex: 1;
-  }
+.arena-board-footer i {
+    color: #72b6ff;
+}
 
-  .categoria-sort-form select {
-    width: 100%;
-    height: 46px;
-    padding: 0 38px 0 13px;
-    border: 1px solid rgba(0,74,173,.16);
-    border-radius: 12px;
-    appearance: none;
-    color: #214667;
-    background: #fff;
-    font: inherit;
-    font-size: .75rem;
-    font-weight: 800;
-    outline: none;
-    cursor: pointer;
-  }
+/* ==========================================================
+   BARRA DA ARENA
+   ========================================================== */
+.arena-command {
+    margin-top: 25px;
+    padding: 18px 20px;
+    border: 1px solid var(--arena-border);
+    border-radius: 21px;
+    display: grid;
+    grid-template-columns: minmax(210px, .8fr) minmax(0, 1.2fr);
+    align-items: center;
+    gap: 20px;
+    background:
+        radial-gradient(circle at 100% 0, rgba(8,120,249,.08), transparent 16rem),
+        linear-gradient(145deg, #fff, #eef5fc);
+    box-shadow: 0 16px 38px rgba(15,47,83,.10);
+}
 
-  .categoria-sort-chevron {
-    position: absolute;
-    top: 50%;
-    right: 13px;
-    color: #63809d;
-    transform: translateY(-50%);
-    pointer-events: none;
-  }
+.arena-command-copy strong,
+.arena-command-copy span {
+    display: block;
+}
 
-  .categoria-sort-submit {
-    height: 46px;
-    padding: 0 15px;
-    border: 0;
-    border-radius: 12px;
-    color: #fff;
-    background: linear-gradient(135deg, var(--cat-blue-deep), var(--cat-blue));
-    box-shadow: 0 9px 20px rgba(0,74,173,.21);
-    font: inherit;
-    font-size: .72rem;
+.arena-command-copy strong {
+    color: #173a58;
+    font-size: .93rem;
     font-weight: 900;
-    cursor: pointer;
-  }
+}
 
-  .categoria-results {
+.arena-command-copy span {
+    margin-top: 4px;
+    color: #6a8198;
+    font-size: .68rem;
+    font-weight: 650;
+}
+
+.arena-order {
+    display: flex;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 7px;
+}
+
+.arena-order a {
+    min-height: 40px;
+    padding: 0 12px;
+    border: 1px solid rgba(0,74,173,.12);
+    border-radius: 11px;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    color: #4d6985;
+    background: rgba(255,255,255,.88);
+    font-size: .66rem;
+    font-weight: 850;
+    text-decoration: none;
+    transition: .2s ease;
+}
+
+.arena-order a:hover {
+    transform: translateY(-1px);
+    color: var(--arena-blue-deep);
+    border-color: rgba(8,120,249,.30);
+}
+
+.arena-order a.is-active {
+    color: #fff;
+    border-color: transparent;
+    background: linear-gradient(135deg, var(--arena-blue-deep), var(--arena-blue));
+    box-shadow: 0 8px 18px rgba(0,74,173,.19);
+}
+
+/* ==========================================================
+   RESULTADOS
+   ========================================================== */
+.arena-results {
     padding-top: 39px;
-  }
+    scroll-margin-top: 90px;
+}
 
-  .categoria-results-head {
+.arena-results-head {
     margin-bottom: 20px;
     display: flex;
     align-items: flex-end;
     justify-content: space-between;
     gap: 18px;
-  }
+}
 
-  .categoria-results-head small {
+.arena-results-head small {
     display: block;
-    color: var(--cat-blue-deep);
-    font-size: .67rem;
+    color: var(--arena-blue-deep);
+    font-size: .66rem;
     font-weight: 900;
-    letter-spacing: .08em;
+    letter-spacing: .09em;
     text-transform: uppercase;
-  }
+}
 
-  .categoria-results-head h2 {
-    margin: 5px 0 0;
-    color: var(--cat-ink);
-    font-size: clamp(1.55rem, 3.5vw, 2.35rem);
-    font-weight: 900;
-    letter-spacing: -.043em;
-  }
+.arena-results-head h2 {
+    margin: 4px 0 0;
+    color: var(--arena-text);
+    font-size: clamp(1.55rem, 3.4vw, 2.35rem);
+    font-weight: 950;
+    letter-spacing: -.044em;
+}
 
-  .categoria-page-meta {
+.arena-results-meta {
     color: #607995;
-    font-size: .74rem;
+    font-size: .72rem;
     font-weight: 750;
-  }
+}
 
-  .categoria-grid {
+/* ==========================================================
+   CARDS NOVOS
+   Diferentes dos cards 3-colunas do catálogo geral.
+   ========================================================== */
+.arena-products {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 23px;
-    align-items: stretch;
-  }
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px;
+}
 
-  .categoria-card {
+.arena-product {
     min-width: 0;
     overflow: hidden;
     border: 1px solid rgba(0,74,173,.13);
-    border-radius: 25px;
-    display: flex;
-    flex-direction: column;
-    background:
-      radial-gradient(circle at 100% 100%, rgba(8,120,249,.055), transparent 18rem),
-      linear-gradient(155deg, #fff, #f3f8fd);
-    box-shadow: 0 14px 34px rgba(21,51,87,.11);
-    transition: transform .3s cubic-bezier(.22,1,.36,1), border-color .3s ease, box-shadow .3s ease;
-  }
+    border-radius: 24px;
+    display: grid;
+    grid-template-columns: minmax(175px, .42fr) minmax(0, .58fr);
+    background: #fff;
+    box-shadow: 0 14px 35px rgba(14,48,85,.10);
+    transition:
+        transform .28s cubic-bezier(.22,1,.36,1),
+        border-color .28s ease,
+        box-shadow .28s ease;
+}
 
-  .categoria-card.is-store { border-top: 4px solid var(--cat-green); }
-  .categoria-card.is-quote { border-top: 4px solid var(--cat-blue); }
-
-  .categoria-card:hover {
-    transform: translateY(-7px);
+.arena-product:hover {
+    transform: translateY(-5px);
     border-color: rgba(8,120,249,.30);
-    box-shadow: 0 23px 48px rgba(10,45,84,.17);
-  }
+    box-shadow: 0 22px 46px rgba(10,45,84,.15);
+}
 
-  .categoria-card-media {
+.arena-product-visual {
     position: relative;
-    height: 255px;
-    flex: 0 0 255px;
+    min-height: 100%;
+    padding: 16px;
     overflow: hidden;
-    display: block;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     background:
-      radial-gradient(circle at 20% 16%, rgba(8,120,249,.18), transparent 34%),
-      radial-gradient(circle at 90% 92%, rgba(230,57,70,.10), transparent 30%),
-      linear-gradient(145deg, #e8f2fc, #dbe9f8);
-  }
+        radial-gradient(circle at 25% 18%, rgba(8,120,249,.17), transparent 38%),
+        radial-gradient(circle at 92% 90%, rgba(230,57,70,.08), transparent 32%),
+        linear-gradient(145deg, #eaf3fc, #dceaf8);
+    text-decoration: none;
+}
 
-  .categoria-card-media::after {
+.arena-product-visual::after {
     content: "";
     position: absolute;
-    inset: auto 10% 10px;
-    height: 19px;
+    inset: auto 13% 16px;
+    height: 18px;
     border-radius: 50%;
-    background: rgba(10,42,78,.15);
-    filter: blur(12px);
-  }
+    background: rgba(8,38,73,.14);
+    filter: blur(11px);
+}
 
-  .categoria-card-media img {
+.arena-product-visual img {
     position: relative;
     z-index: 1;
     width: 100%;
-    height: 100%;
-    padding: 15px;
+    height: 210px;
     display: block;
     object-fit: contain;
-    object-position: center;
-    filter: drop-shadow(0 15px 15px rgba(9,31,62,.20));
-    transition: transform .45s cubic-bezier(.22,1,.36,1);
-  }
+    filter: drop-shadow(0 13px 13px rgba(9,31,62,.19));
+    transition: transform .38s cubic-bezier(.22,1,.36,1);
+}
 
-  .categoria-card:hover .categoria-card-media img {
-    transform: scale(1.045) translateY(-3px);
-  }
+.arena-product:hover .arena-product-visual img {
+    transform: scale(1.045) translateY(-2px);
+}
 
-  .categoria-card-placeholder {
+.arena-product-index {
+    position: absolute;
+    top: 13px;
+    left: 13px;
+    z-index: 3;
+    min-width: 36px;
+    height: 30px;
+    padding: 0 8px;
+    border: 1px solid rgba(255,255,255,.65);
+    border-radius: 9px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    background: rgba(7,20,38,.76);
+    font-size: .61rem;
+    font-weight: 900;
+    backdrop-filter: blur(7px);
+}
+
+.arena-product-status {
+    position: absolute;
+    right: 13px;
+    bottom: 13px;
+    z-index: 3;
+    min-height: 30px;
+    padding: 0 9px;
+    border: 1px solid rgba(255,255,255,.56);
+    border-radius: 9px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #fff;
+    font-size: .57rem;
+    font-weight: 900;
+    letter-spacing: .035em;
+    text-transform: uppercase;
+    backdrop-filter: blur(7px);
+}
+
+.arena-product-status.store {
+    background: rgba(7,145,74,.90);
+}
+
+.arena-product-status.quote {
+    background: rgba(0,74,173,.90);
+}
+
+.arena-product-no-image {
     position: relative;
     z-index: 1;
-    height: 100%;
-    display: grid;
-    place-items: center;
     color: #6886a5;
-    font-size: .78rem;
+    font-size: .72rem;
     font-weight: 850;
-  }
+    text-align: center;
+}
 
-  .categoria-status {
-    position: absolute;
-    top: 14px;
-    left: 14px;
-    z-index: 3;
-    padding: 7px 10px;
-    border: 1px solid rgba(255,255,255,.52);
+.arena-product-content {
+    min-width: 0;
+    padding: 20px 20px 17px;
+    display: flex;
+    flex-direction: column;
+}
+
+.arena-product-eyebrow {
+    margin-bottom: 7px;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    color: var(--arena-blue-deep);
+    font-size: .58rem;
+    font-weight: 900;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+}
+
+.arena-product-eyebrow::before {
+    content: "";
+    width: 17px;
+    height: 3px;
+    border-radius: 999px;
+    background: var(--arena-red);
+}
+
+.arena-product-title {
+    color: inherit;
+    text-decoration: none;
+}
+
+.arena-product-title h3 {
+    margin: 0;
+    color: #112d4d;
+    font-size: 1.13rem;
+    font-weight: 950;
+    line-height: 1.22;
+    letter-spacing: -.028em;
+}
+
+.arena-product-title:hover h3 {
+    color: var(--arena-blue-deep);
+}
+
+.arena-product-description {
+    min-height: 3.9em;
+    margin: 9px 0 0;
+    overflow: hidden;
+    display: -webkit-box;
+    color: #60758d;
+    font-size: .72rem;
+    font-weight: 520;
+    line-height: 1.52;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+}
+
+.arena-product-tags {
+    margin-top: 11px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+.arena-product-tag {
+    max-width: 100%;
+    min-height: 24px;
+    padding: 0 8px;
+    border: 1px solid rgba(0,74,173,.10);
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    overflow: hidden;
+    color: #356ba2;
+    background: #edf5fd;
+    font-size: .56rem;
+    font-weight: 800;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.arena-product-tech {
+    margin-top: 13px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(0,74,173,.09);
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+}
+
+.arena-tech {
+    min-height: 36px;
+    padding: 7px 8px;
+    border: 1px solid rgba(0,74,173,.08);
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    color: #526d88;
+    background: #f6f9fc;
+    font-size: .59rem;
+    font-weight: 750;
+    line-height: 1.35;
+}
+
+.arena-tech i {
+    width: 15px;
+    flex: 0 0 15px;
+    color: var(--arena-blue);
+    text-align: center;
+}
+
+.arena-product-rating {
+    margin-top: 12px;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.arena-stars {
+    color: #f5b301;
+    font-size: .88rem;
+    letter-spacing: 1px;
+    white-space: nowrap;
+}
+
+.arena-rating-value {
+    color: #647b93;
+    font-size: .62rem;
+    font-weight: 850;
+}
+
+.arena-product-footer {
+    grid-column: 1 / -1;
+    padding: 13px 16px;
+    border-top: 1px solid rgba(0,74,173,.09);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    background: linear-gradient(180deg, #fbfdff, #f2f7fc);
+}
+
+.arena-product-price small,
+.arena-product-price strong {
+    display: block;
+}
+
+.arena-product-price small {
+    color: #70859b;
+    font-size: .56rem;
+    font-weight: 850;
+    letter-spacing: .035em;
+    text-transform: uppercase;
+}
+
+.arena-product-price strong {
+    margin-top: 2px;
+    color: #08743e;
+    font-size: 1.02rem;
+    font-weight: 950;
+}
+
+.arena-product-price.is-quote strong {
+    color: var(--arena-blue-deep);
+    font-size: .79rem;
+}
+
+.arena-product-cta {
+    min-height: 40px;
+    padding: 0 13px;
     border-radius: 11px;
     display: inline-flex;
     align-items: center;
-    gap: 7px;
+    gap: 8px;
     color: #fff;
-    font-size: .61rem;
-    font-weight: 900;
-    letter-spacing: .04em;
-    text-transform: uppercase;
-    backdrop-filter: blur(8px);
-  }
-
-  .categoria-status.store {
-    background: linear-gradient(135deg, #0aa654, #067d3d);
-    box-shadow: 0 8px 18px rgba(6,125,61,.26);
-  }
-
-  .categoria-status.quote {
-    background: linear-gradient(135deg, var(--cat-blue-deep), var(--cat-blue));
-    box-shadow: 0 8px 18px rgba(0,74,173,.26);
-  }
-
-  .categoria-card-body {
-    flex: 1;
-    padding: 21px 21px 16px;
-    display: flex;
-    flex-direction: column;
-  }
-
-  .categoria-card-chips {
-    min-height: 27px;
-    margin-bottom: 11px;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-  }
-
-  .categoria-chip {
-    max-width: 100%;
-    padding: 5px 8px;
-    overflow: hidden;
-    border: 1px solid rgba(0,74,173,.11);
-    border-radius: 999px;
-    color: #2462a2;
-    background: #e6f0fb;
-    font-size: .59rem;
-    font-weight: 850;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .categoria-card-title {
-    color: inherit;
-    text-decoration: none;
-  }
-
-  .categoria-card-title h3 {
-    min-height: 2.55em;
-    margin: 0;
-    color: #112d4d;
-    font-size: 1.16rem;
-    font-weight: 900;
-    line-height: 1.28;
-    letter-spacing: -.027em;
-  }
-
-  .categoria-rating {
-    min-height: 26px;
-    margin-top: 10px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .categoria-stars {
-    color: #f5b301;
-    font-size: .95rem;
-    letter-spacing: 1px;
-  }
-
-  .categoria-rating-value {
-    color: #516b87;
-    font-size: .7rem;
-    font-weight: 850;
-  }
-
-  .categoria-description {
-    min-height: 4.65em;
-    margin: 11px 0 0;
-    overflow: hidden;
-    display: -webkit-box;
-    color: #5b7088;
-    font-size: .78rem;
-    font-weight: 520;
-    line-height: 1.55;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 3;
-  }
-
-  .categoria-specs {
-    margin-top: 14px;
-    display: grid;
-    gap: 7px;
-  }
-
-  .categoria-spec {
-    min-height: 34px;
-    padding: 7px 9px;
-    border: 1px solid rgba(0,74,173,.09);
-    border-radius: 10px;
-    display: flex;
-    align-items: flex-start;
-    gap: 8px;
-    color: #47627e;
-    background: rgba(232,241,251,.70);
+    background: linear-gradient(135deg, #082a5e, var(--arena-blue));
+    box-shadow: 0 8px 18px rgba(0,74,173,.18);
     font-size: .66rem;
-    font-weight: 700;
-    line-height: 1.4;
-  }
-
-  .categoria-spec-icon {
-    flex: 0 0 18px;
-    color: var(--cat-blue);
-    font-weight: 900;
-    text-align: center;
-  }
-
-  .categoria-card-footer {
-    padding: 0 21px 21px;
-  }
-
-  .categoria-price,
-  .categoria-quote {
-    min-height: 77px;
-    margin-bottom: 12px;
-    padding: 12px 14px;
-    border-radius: 15px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-  }
-
-  .categoria-price {
-    border: 1px solid rgba(7,145,74,.15);
-    background: linear-gradient(145deg, #e8f8ef, #dcf3e7);
-  }
-
-  .categoria-quote {
-    border: 1px solid rgba(8,120,249,.14);
-    background: linear-gradient(145deg, #e9f3ff, #deecfb);
-  }
-
-  .categoria-price span,
-  .categoria-quote span {
-    color: #54708a;
-    font-size: .63rem;
-    font-weight: 850;
-    text-transform: uppercase;
-  }
-
-  .categoria-price strong {
-    margin-top: 3px;
-    color: #08743e;
-    font-size: 1.22rem;
-    font-weight: 950;
-  }
-
-  .categoria-quote strong {
-    margin-top: 3px;
-    color: var(--cat-blue-deep);
-    font-size: .95rem;
-    font-weight: 900;
-  }
-
-  .categoria-card-cta {
-    width: 100%;
-    min-height: 45px;
-    padding: 0 14px;
-    border-radius: 13px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    color: #fff;
-    background: linear-gradient(135deg, #082a5e, var(--cat-blue));
-    box-shadow: 0 10px 21px rgba(0,74,173,.22);
-    font-size: .73rem;
     font-weight: 900;
     text-decoration: none;
-  }
+}
 
-  .categoria-card-cta:hover {
+.arena-product-cta:hover {
     color: #fff;
     transform: translateY(-1px);
-  }
+}
 
-  .categoria-empty {
-    padding: 62px 24px;
-    border: 1px dashed rgba(0,74,173,.20);
+/* ==========================================================
+   VAZIO / PAGINAÇÃO
+   ========================================================== */
+.arena-empty {
+    padding: 65px 25px;
+    border: 1px dashed rgba(0,74,173,.22);
     border-radius: 24px;
     color: #607995;
     background: rgba(255,255,255,.72);
     text-align: center;
-  }
+}
 
-  .categoria-empty h3 {
+.arena-empty-icon {
+    width: 54px;
+    height: 54px;
+    margin: 0 auto 13px;
+    border-radius: 16px;
+    display: grid;
+    place-items: center;
+    color: #fff;
+    background: linear-gradient(135deg, var(--arena-blue-deep), var(--arena-blue));
+}
+
+.arena-empty h3 {
     margin: 0;
     color: #173a58;
-    font-size: 1.2rem;
+    font-size: 1.15rem;
     font-weight: 900;
-  }
+}
 
-  .categoria-empty p {
-    max-width: 540px;
-    margin: 9px auto 0;
-    font-size: .8rem;
+.arena-empty p {
+    max-width: 520px;
+    margin: 8px auto 0;
+    font-size: .76rem;
     line-height: 1.6;
-  }
+}
 
-  .categoria-empty a {
-    margin-top: 18px;
-    padding: 10px 14px;
+.arena-empty a {
+    margin-top: 17px;
+    min-height: 41px;
+    padding: 0 13px;
     border-radius: 11px;
     display: inline-flex;
+    align-items: center;
     color: #fff;
-    background: var(--cat-blue-deep);
-    font-size: .75rem;
+    background: var(--arena-blue-deep);
+    font-size: .68rem;
     font-weight: 850;
     text-decoration: none;
-  }
+}
 
-  .categoria-pagination {
-    margin-top: 34px;
+.arena-pagination {
+    margin-top: 32px;
     display: flex;
     align-items: center;
     justify-content: center;
     flex-wrap: wrap;
-    gap: 7px;
-  }
+    gap: 6px;
+}
 
-  .categoria-pagination a,
-  .categoria-pagination span {
-    min-width: 40px;
-    height: 40px;
-    padding: 0 11px;
-    border: 1px solid rgba(0,74,173,.14);
-    border-radius: 11px;
+.arena-pagination a,
+.arena-pagination span {
+    min-width: 39px;
+    height: 39px;
+    padding: 0 10px;
+    border: 1px solid rgba(0,74,173,.13);
+    border-radius: 10px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    color: #496784;
+    color: #516d89;
     background: #fff;
-    font-size: .72rem;
+    font-size: .68rem;
     font-weight: 850;
     text-decoration: none;
-  }
+}
 
-  .categoria-pagination .is-current {
+.arena-pagination .current {
     color: #fff;
     border-color: transparent;
-    background: linear-gradient(135deg, var(--cat-blue-deep), var(--cat-blue));
-    box-shadow: 0 8px 18px rgba(0,74,173,.20);
-  }
+    background: linear-gradient(135deg, var(--arena-blue-deep), var(--arena-blue));
+    box-shadow: 0 8px 18px rgba(0,74,173,.18);
+}
 
-  @media (max-width: 950px) {
-    .categoria-hero {
-      grid-template-columns: 1fr;
+/* ==========================================================
+   RESPONSIVO
+   ========================================================== */
+@media (max-width: 1050px) {
+    .arena-hero {
+        grid-template-columns: minmax(0, 1fr) minmax(280px, .82fr);
     }
-    .categoria-visual {
-      justify-items: start;
-    }
-    .categoria-visual-card {
-      width: min(100%, 440px);
-      aspect-ratio: 1.65 / 1;
-    }
-    .categoria-grid {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-  }
 
-  @media (max-width: 720px) {
-    .categoria-shell {
-      width: min(100% - 24px, 1200px);
+    .arena-products {
+        grid-template-columns: 1fr;
     }
-    .categoria-page {
-      padding-top: 12px;
-    }
-    .categoria-hero {
-      min-height: 0;
-      padding: 26px 22px;
-      border-radius: 23px;
-    }
-    .categoria-hero h1 {
-      font-size: clamp(2rem, 11vw, 3.2rem);
-    }
-    .categoria-toolbar {
-      align-items: stretch;
-      flex-direction: column;
-    }
-    .categoria-sort-form {
-      min-width: 0;
-      width: 100%;
-    }
-    .categoria-results-head {
-      align-items: flex-start;
-      flex-direction: column;
-    }
-    .categoria-grid {
-      grid-template-columns: 1fr;
-    }
-    .categoria-card-media {
-      height: 290px;
-      flex-basis: 290px;
-    }
-  }
 
-  @media (max-width: 420px) {
-    .categoria-sort-form {
-      align-items: stretch;
-      flex-direction: column;
+    .arena-product {
+        grid-template-columns: minmax(210px, .34fr) minmax(0, .66fr);
     }
-    .categoria-sort-submit {
-      width: 100%;
+}
+
+@media (max-width: 820px) {
+    .arena-hero {
+        grid-template-columns: 1fr;
     }
-    .categoria-card-media {
-      height: 245px;
-      flex-basis: 245px;
+
+    .arena-visual-board {
+        max-width: 620px;
     }
-  }
+
+    .arena-command {
+        grid-template-columns: 1fr;
+    }
+
+    .arena-order {
+        justify-content: flex-start;
+    }
+}
+
+@media (max-width: 650px) {
+    .arena-categoria {
+        padding-top: 10px;
+    }
+
+    .arena-container {
+        width: min(100% - 24px, 1240px);
+    }
+
+    .arena-hero {
+        min-height: 0;
+        padding: 27px 21px;
+        border-radius: 23px;
+    }
+
+    .arena-hero h1 {
+        font-size: clamp(2.05rem, 11vw, 3.25rem);
+    }
+
+    .arena-board-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .arena-results-head {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .arena-product {
+        grid-template-columns: 1fr;
+    }
+
+    .arena-product-visual {
+        min-height: 245px;
+    }
+
+    .arena-product-visual img {
+        height: 220px;
+    }
+
+    .arena-product-footer {
+        grid-column: auto;
+    }
+}
+
+@media (max-width: 430px) {
+    .arena-board-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .arena-order {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .arena-order a {
+        justify-content: center;
+        text-align: center;
+    }
+
+    .arena-product-tech {
+        grid-template-columns: 1fr;
+    }
+
+    .arena-product-footer {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .arena-product-cta {
+        justify-content: center;
+    }
+}
 </style>
 
-<main class="categoria-page">
-  <div class="categoria-shell">
-    <nav class="categoria-breadcrumb" aria-label="Navegação estrutural">
-      <a href="{% url 'home' %}">Início</a>
-      <span class="categoria-breadcrumb-sep">›</span>
-      <a href="{% url 'brinquedos' %}">Brinquedos</a>
-      <span class="categoria-breadcrumb-sep">›</span>
-      <strong class="categoria-breadcrumb-current" aria-current="page">{{ categoria.nome_categoria }}</strong>
-    </nav>
+<main class="arena-categoria">
+    <div class="arena-container">
 
-    <section class="categoria-hero">
-      <div class="categoria-hero-copy">
-        <span class="categoria-kicker">
-          <span class="categoria-kicker-dot" aria-hidden="true">◆</span>
-          Arena de categoria
-        </span>
-        <h1>{{ categoria.nome_categoria }}</h1>
-        <p>
-          Explore os brinquedos desta categoria com especificações técnicas,
-          disponibilidade, avaliação e acesso direto aos detalhes de cada produto.
-        </p>
-        <div class="categoria-hero-stats">
-          <span class="categoria-hero-stat">
-            <span aria-hidden="true">▦</span>
-            <span>
-              <strong>{{ page_obj.paginator.count }}</strong>
-              <span>produto(s) nesta categoria</span>
+        <!-- Breadcrumb no padrão visual das páginas modernas -->
+        <nav class="arena-breadcrumb ls-breadcrumb" aria-label="Navegação estrutural">
+            <a href="{% url 'home' %}">
+                <i class="fa-solid fa-house" aria-hidden="true"></i>
+                <span>Início</span>
+            </a>
+
+            <i class="fa-solid fa-chevron-right arena-breadcrumb-separator" aria-hidden="true"></i>
+
+            <a href="{% url 'brinquedos' %}">
+                <i class="fa-solid fa-gamepad" aria-hidden="true"></i>
+                <span>Catálogo de brinquedos</span>
+            </a>
+
+            <i class="fa-solid fa-chevron-right arena-breadcrumb-separator" aria-hidden="true"></i>
+
+            <span class="arena-breadcrumb-current" aria-current="page">
+                <i class="fa-solid fa-layer-group" aria-hidden="true"></i>
+                {{ categoria.nome_categoria }}
             </span>
-          </span>
-          <span class="categoria-hero-stat">
-            <span aria-hidden="true">✓</span>
-            <span>
-              <strong>Lazer &amp; Sport</strong>
-              <span>catálogo profissional</span>
-            </span>
-          </span>
-        </div>
-      </div>
+        </nav>
 
-      <div class="categoria-visual" aria-hidden="true">
-        <div class="categoria-visual-card">
-          {% if categoria.imagem_categoria %}
-            <img src="{{ categoria.imagem_categoria.url }}" alt="">
-          {% else %}
-            <div class="categoria-visual-placeholder">
-              {{ categoria.nome_categoria }}
-            </div>
-          {% endif %}
-        </div>
-      </div>
-    </section>
+        <!-- Hero sem imagem de categoria -->
+        <section class="arena-hero">
+            <div class="arena-hero-copy">
+                <span class="arena-kicker">
+                    <span class="arena-kicker-icon">
+                        <i class="fa-solid fa-layer-group" aria-hidden="true"></i>
+                    </span>
+                    Categoria de brinquedos
+                </span>
 
-    <section class="categoria-toolbar" aria-label="Ordenação dos produtos">
-      <div class="categoria-toolbar-copy">
-        <strong>Organize a vitrine</strong>
-        <span>Escolha a ordem que facilita sua comparação.</span>
-      </div>
+                <h1>{{ categoria.nome_categoria }}</h1>
 
-      <form method="get" class="categoria-sort-form">
-        <div class="categoria-sort-wrap">
-          <select name="ordenar" aria-label="Ordenar brinquedos">
-            <option value="az" {% if ordenar == 'az' %}selected{% endif %}>Nome: A → Z</option>
-            <option value="za" {% if ordenar == 'za' %}selected{% endif %}>Nome: Z → A</option>
-            <option value="melhor-avaliados" {% if ordenar == 'melhor-avaliados' %}selected{% endif %}>Melhor avaliados</option>
-            <option value="custo-beneficio" {% if ordenar == 'custo-beneficio' %}selected{% endif %}>Custo-benefício</option>
-          </select>
-          <span class="categoria-sort-chevron" aria-hidden="true">⌄</span>
-        </div>
-        <button class="categoria-sort-submit" type="submit">Aplicar</button>
-      </form>
-    </section>
-
-    <section class="categoria-results" id="produtos">
-      <div class="categoria-results-head">
-        <div>
-          <small>Catálogo da categoria</small>
-          <h2>Brinquedos encontrados</h2>
-        </div>
-        <span class="categoria-page-meta">
-          Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
-        </span>
-      </div>
-
-      {% if page_obj.object_list %}
-        <div class="categoria-grid">
-          {% for item in page_obj %}
-            <article class="categoria-card {% if item.exibir_na_loja and item.valor_brinquedo %}is-store{% else %}is-quote{% endif %}">
-              <a class="categoria-card-media" href="{% url 'brinquedo_detalhe' item.id %}#produto-box" aria-label="Ver {{ item.nome_brinquedo }}">
-                {% if item.exibir_na_loja and item.valor_brinquedo %}
-                  <span class="categoria-status store">Disponível na loja</span>
-                {% else %}
-                  <span class="categoria-status quote">Projeto / orçamento</span>
-                {% endif %}
-
-                {% with imagem=item.imagem_catalogo %}
-                  {% if imagem %}
-                    <img src="{{ imagem.url }}" alt="{{ item.nome_brinquedo }}" loading="lazy">
-                  {% elif item.imagem_brinquedo %}
-                    <img src="{{ item.imagem_brinquedo.url }}" alt="{{ item.nome_brinquedo }}" loading="lazy">
-                  {% else %}
-                    <span class="categoria-card-placeholder">Imagem em atualização</span>
-                  {% endif %}
-                {% endwith %}
-              </a>
-
-              <div class="categoria-card-body">
-                <div class="categoria-card-chips">
-                  {% for cat in item.categorias_brinquedos.all|slice:":3" %}
-                    <span class="categoria-chip">{{ cat.nome_categoria }}</span>
-                  {% empty %}
-                    <span class="categoria-chip">Brinquedo Lazer &amp; Sport</span>
-                  {% endfor %}
-                </div>
-
-                <a class="categoria-card-title" href="{% url 'brinquedo_detalhe' item.id %}#produto-box">
-                  <h3>{{ item.nome_brinquedo }}</h3>
-                </a>
-
-                <div class="categoria-rating" aria-label="Avaliação {{ item.avaliacao }} de 5">
-                  <span class="categoria-stars" aria-hidden="true">
-                    {% for i in "12345" %}
-                      {% if forloop.counter <= item.avaliacao %}★{% else %}☆{% endif %}
-                    {% endfor %}
-                  </span>
-                  <span class="categoria-rating-value">{{ item.avaliacao }}/5</span>
-                </div>
-
-                <p class="categoria-description">
-                  {{ item.descricao|default:"Conheça os detalhes e especificações deste brinquedo."|truncatechars:170 }}
+                <p>
+                    Uma seleção organizada de equipamentos Lazer &amp; Sport.
+                    Compare características, veja a disponibilidade comercial
+                    e abra o produto para acessar fotos, medidas e informações completas.
                 </p>
 
-                <div class="categoria-specs">
-                  {% if item.voltz %}
-                    <div class="categoria-spec">
-                      <span class="categoria-spec-icon">⚡</span>
-                      <span>Alimentação: {{ item.voltz }}</span>
-                    </div>
-                  {% endif %}
-
-                  {% if item.dimensoes_m %}
-                    <div class="categoria-spec">
-                      <span class="categoria-spec-icon">↔</span>
-                      <span>{{ item.dimensoes_m }}</span>
-                    </div>
-                  {% endif %}
-
-                  {% if item.volume_formatado %}
-                    <div class="categoria-spec">
-                      <span class="categoria-spec-icon">◫</span>
-                      <span>Volume aproximado: {{ item.volume_formatado }}</span>
-                    </div>
-                  {% endif %}
+                <div class="arena-hero-actions">
+                    <a class="arena-hero-link" href="#produtos">
+                        <i class="fa-solid fa-arrow-down" aria-hidden="true"></i>
+                        Ver produtos desta categoria
+                    </a>
+                    <a class="arena-hero-link" href="{% url 'brinquedos' %}">
+                        <i class="fa-solid fa-border-all" aria-hidden="true"></i>
+                        Catálogo completo
+                    </a>
                 </div>
-              </div>
+            </div>
 
-              <footer class="categoria-card-footer">
-                {% if item.exibir_na_loja and item.valor_brinquedo %}
-                  <div class="categoria-price">
-                    <span>Valor do produto</span>
-                    <strong>R$ {{ item.valor_brinquedo|floatformat:2 }}</strong>
-                  </div>
-                {% else %}
-                  <div class="categoria-quote">
-                    <span>Atendimento comercial</span>
-                    <strong>Solicite um orçamento personalizado</strong>
-                  </div>
-                {% endif %}
+            <!-- QUADRO VISUAL: não renderiza categoria.imagem_categoria -->
+            <aside class="arena-visual-board" aria-label="Resumo da categoria">
+                <div class="arena-board-head">
+                    <strong>Quadro da arena</strong>
+                    <span class="arena-board-live">Catálogo ativo</span>
+                </div>
 
-                <a class="categoria-card-cta" href="{% url 'brinquedo_detalhe' item.id %}#produto-box">
-                  <span>Ver detalhes</span>
-                  <span aria-hidden="true">→</span>
+                <div class="arena-board-grid">
+                    <div class="arena-board-card">
+                        <span class="arena-board-icon">
+                            <i class="fa-solid fa-gamepad" aria-hidden="true"></i>
+                        </span>
+                        <span>
+                            <strong>{{ page_obj.paginator.count }}</strong>
+                            <span>produto(s) ativo(s)</span>
+                        </span>
+                    </div>
+
+                    <div class="arena-board-card">
+                        <span class="arena-board-icon">
+                            <i class="fa-solid fa-table-cells-large" aria-hidden="true"></i>
+                        </span>
+                        <span>
+                            <strong>12</strong>
+                            <span>itens por página</span>
+                        </span>
+                    </div>
+
+                    <div class="arena-board-card">
+                        <span class="arena-board-icon">
+                            <i class="fa-solid fa-cart-shopping" aria-hidden="true"></i>
+                        </span>
+                        <span>
+                            <strong>Loja</strong>
+                            <span>quando disponível</span>
+                        </span>
+                    </div>
+
+                    <div class="arena-board-card">
+                        <span class="arena-board-icon">
+                            <i class="fa-solid fa-compass-drafting" aria-hidden="true"></i>
+                        </span>
+                        <span>
+                            <strong>Projeto</strong>
+                            <span>opções sob orçamento</span>
+                        </span>
+                    </div>
+                </div>
+
+                <div class="arena-board-footer">
+                    <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+                    <span>
+                        Cada produto possui uma página própria com galeria,
+                        especificações e atendimento comercial.
+                    </span>
+                </div>
+            </aside>
+        </section>
+
+        <!-- Ordenação em botões, sem select genérico -->
+        <section class="arena-command" aria-label="Organização da categoria">
+            <div class="arena-command-copy">
+                <strong>Organizar esta arena</strong>
+                <span>Troque a ordem dos produtos sem sair da categoria.</span>
+            </div>
+
+            <nav class="arena-order" aria-label="Ordenação dos brinquedos">
+                <a href="?ordenar=az#produtos" class="{% if ordenar == 'az' %}is-active{% endif %}">
+                    <i class="fa-solid fa-arrow-down-a-z" aria-hidden="true"></i>
+                    A → Z
                 </a>
-              </footer>
-            </article>
-          {% endfor %}
-        </div>
-      {% else %}
-        <div class="categoria-empty">
-          <h3>Nenhum brinquedo nesta categoria</h3>
-          <p>
-            Esta arena ainda não possui produtos ativos para exibição.
-            Você pode continuar navegando pelo catálogo completo.
-          </p>
-          <a href="{% url 'brinquedos' %}">Ver todos os brinquedos</a>
-        </div>
-      {% endif %}
+                <a href="?ordenar=za#produtos" class="{% if ordenar == 'za' %}is-active{% endif %}">
+                    <i class="fa-solid fa-arrow-down-z-a" aria-hidden="true"></i>
+                    Z → A
+                </a>
+                <a href="?ordenar=melhor-avaliados#produtos" class="{% if ordenar == 'melhor-avaliados' %}is-active{% endif %}">
+                    <i class="fa-solid fa-star" aria-hidden="true"></i>
+                    Melhor avaliados
+                </a>
+                <a href="?ordenar=custo-beneficio#produtos" class="{% if ordenar == 'custo-beneficio' %}is-active{% endif %}">
+                    <i class="fa-solid fa-scale-balanced" aria-hidden="true"></i>
+                    Custo-benefício
+                </a>
+            </nav>
+        </section>
 
-      {% if page_obj.paginator.num_pages > 1 %}
-        <nav class="categoria-pagination" aria-label="Paginação">
-          {% if page_obj.has_previous %}
-            <a href="?ordenar={{ ordenar }}&page=1#produtos" aria-label="Primeira página">«</a>
-            <a href="?ordenar={{ ordenar }}&page={{ page_obj.previous_page_number }}#produtos">Anterior</a>
-          {% endif %}
+        <section class="arena-results" id="produtos">
+            <div class="arena-results-head">
+                <div>
+                    <small>{{ categoria.nome_categoria }}</small>
+                    <h2>Produtos desta categoria</h2>
+                </div>
 
-          {% for numero in page_obj.paginator.page_range %}
-            {% if numero == page_obj.number %}
-              <span class="is-current" aria-current="page">{{ numero }}</span>
-            {% elif numero >= page_obj.number|add:"-2" and numero <= page_obj.number|add:"2" %}
-              <a href="?ordenar={{ ordenar }}&page={{ numero }}#produtos">{{ numero }}</a>
+                <span class="arena-results-meta">
+                    {{ page_obj.paginator.count }} produto(s)
+                    · página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
+                </span>
+            </div>
+
+            {% if page_obj.object_list %}
+                <div class="arena-products">
+                    {% for item in page_obj %}
+                        <article class="arena-product">
+
+                            <a class="arena-product-visual"
+                               href="{% url 'brinquedo_detalhe' item.id %}#produto-box"
+                               aria-label="Abrir {{ item.nome_brinquedo }}">
+
+                                <span class="arena-product-index">
+                                    #{{ forloop.counter|stringformat:"02d" }}
+                                </span>
+
+                                {% with imagem=item.imagem_catalogo %}
+                                    {% if imagem %}
+                                        <img src="{{ imagem.url }}"
+                                             alt="{{ item.nome_brinquedo }}"
+                                             loading="lazy">
+                                    {% elif item.imagem_brinquedo %}
+                                        <img src="{{ item.imagem_brinquedo.url }}"
+                                             alt="{{ item.nome_brinquedo }}"
+                                             loading="lazy">
+                                    {% else %}
+                                        <span class="arena-product-no-image">
+                                            <i class="fa-regular fa-image" aria-hidden="true"></i><br>
+                                            Imagem em atualização
+                                        </span>
+                                    {% endif %}
+                                {% endwith %}
+
+                                {% if item.exibir_na_loja and item.valor_brinquedo %}
+                                    <span class="arena-product-status store">
+                                        <i class="fa-solid fa-bag-shopping" aria-hidden="true"></i>
+                                        Loja
+                                    </span>
+                                {% else %}
+                                    <span class="arena-product-status quote">
+                                        <i class="fa-solid fa-comments" aria-hidden="true"></i>
+                                        Orçamento
+                                    </span>
+                                {% endif %}
+                            </a>
+
+                            <div class="arena-product-content">
+                                <span class="arena-product-eyebrow">
+                                    Lazer &amp; Sport
+                                </span>
+
+                                <a class="arena-product-title"
+                                   href="{% url 'brinquedo_detalhe' item.id %}#produto-box">
+                                    <h3>{{ item.nome_brinquedo }}</h3>
+                                </a>
+
+                                <p class="arena-product-description">
+                                    {{ item.descricao|default:"Consulte as características e especificações deste brinquedo."|truncatechars:150 }}
+                                </p>
+
+                                <div class="arena-product-tags">
+                                    {% for cat in item.categorias_brinquedos.all|slice:":3" %}
+                                        <span class="arena-product-tag">
+                                            {{ cat.nome_categoria }}
+                                        </span>
+                                    {% empty %}
+                                        <span class="arena-product-tag">
+                                            Brinquedo Lazer &amp; Sport
+                                        </span>
+                                    {% endfor %}
+                                </div>
+
+                                <div class="arena-product-rating"
+                                     aria-label="Avaliação {{ item.avaliacao }} de 5">
+                                    <span class="arena-stars" aria-hidden="true">
+                                        {% for i in "12345" %}
+                                            {% if forloop.counter <= item.avaliacao %}★{% else %}☆{% endif %}
+                                        {% endfor %}
+                                    </span>
+                                    <span class="arena-rating-value">
+                                        {{ item.avaliacao }}/5
+                                    </span>
+                                </div>
+
+                                <div class="arena-product-tech">
+                                    {% if item.voltz %}
+                                        <span class="arena-tech">
+                                            <i class="fa-solid fa-bolt" aria-hidden="true"></i>
+                                            {{ item.voltz }}
+                                        </span>
+                                    {% endif %}
+
+                                    {% if item.dimensoes_m %}
+                                        <span class="arena-tech">
+                                            <i class="fa-solid fa-ruler-combined" aria-hidden="true"></i>
+                                            {{ item.dimensoes_m }}
+                                        </span>
+                                    {% endif %}
+
+                                    {% if item.volume_formatado %}
+                                        <span class="arena-tech">
+                                            <i class="fa-solid fa-cube" aria-hidden="true"></i>
+                                            {{ item.volume_formatado }}
+                                        </span>
+                                    {% endif %}
+
+                                    <span class="arena-tech">
+                                        <i class="fa-solid fa-images" aria-hidden="true"></i>
+                                        Galeria no detalhe
+                                    </span>
+                                </div>
+                            </div>
+
+                            <footer class="arena-product-footer">
+                                {% if item.exibir_na_loja and item.valor_brinquedo %}
+                                    <span class="arena-product-price">
+                                        <small>Disponível na loja</small>
+                                        <strong>R$ {{ item.valor_brinquedo|floatformat:2 }}</strong>
+                                    </span>
+                                {% else %}
+                                    <span class="arena-product-price is-quote">
+                                        <small>Atendimento comercial</small>
+                                        <strong>Preço sob consulta</strong>
+                                    </span>
+                                {% endif %}
+
+                                <a class="arena-product-cta"
+                                   href="{% url 'brinquedo_detalhe' item.id %}#produto-box">
+                                    Ver produto
+                                    <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+                                </a>
+                            </footer>
+
+                        </article>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="arena-empty">
+                    <span class="arena-empty-icon">
+                        <i class="fa-solid fa-box-open" aria-hidden="true"></i>
+                    </span>
+                    <h3>Nenhum produto ativo nesta categoria</h3>
+                    <p>
+                        Esta categoria ainda não possui brinquedos disponíveis
+                        para exibição. Você pode continuar pelo catálogo completo.
+                    </p>
+                    <a href="{% url 'brinquedos' %}">
+                        Ver catálogo de brinquedos
+                    </a>
+                </div>
             {% endif %}
-          {% endfor %}
 
-          {% if page_obj.has_next %}
-            <a href="?ordenar={{ ordenar }}&page={{ page_obj.next_page_number }}#produtos">Próxima</a>
-            <a href="?ordenar={{ ordenar }}&page={{ page_obj.paginator.num_pages }}#produtos" aria-label="Última página">»</a>
-          {% endif %}
-        </nav>
-      {% endif %}
-    </section>
-  </div>
+            {% if page_obj.paginator.num_pages > 1 %}
+                <nav class="arena-pagination" aria-label="Paginação da categoria">
+                    {% if page_obj.has_previous %}
+                        <a href="?ordenar={{ ordenar }}&page=1#produtos" aria-label="Primeira página">«</a>
+                        <a href="?ordenar={{ ordenar }}&page={{ page_obj.previous_page_number }}#produtos">
+                            Anterior
+                        </a>
+                    {% endif %}
+
+                    {% for numero in page_obj.paginator.page_range %}
+                        {% if numero == page_obj.number %}
+                            <span class="current" aria-current="page">{{ numero }}</span>
+                        {% elif numero >= page_obj.number|add:"-2" and numero <= page_obj.number|add:"2" %}
+                            <a href="?ordenar={{ ordenar }}&page={{ numero }}#produtos">
+                                {{ numero }}
+                            </a>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if page_obj.has_next %}
+                        <a href="?ordenar={{ ordenar }}&page={{ page_obj.next_page_number }}#produtos">
+                            Próxima
+                        </a>
+                        <a href="?ordenar={{ ordenar }}&page={{ page_obj.paginator.num_pages }}#produtos"
+                           aria-label="Última página">»</a>
+                    {% endif %}
+                </nav>
+            {% endif %}
+        </section>
+    </div>
 </main>
 {% endblock %}
