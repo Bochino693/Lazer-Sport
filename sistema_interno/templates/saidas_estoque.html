@@ -2,94 +2,90 @@
 {% load interno_extras %}
 
 {% block title %}Entradas e Saídas | Lazer & Sport{% endblock %}
-
-{% block extra_css %}
-<style>
-  .mov-kpi { border: 0; border-radius: 16px; box-shadow: 0 6px 18px rgba(15, 23, 42, .08); }
-  .mov-kpi .valor { font-size: 1.5rem; font-weight: 700; }
-  .mov-kpi .rotulo { font-size: .75rem; text-transform: uppercase; letter-spacing: .06em; color: #6c757d; }
-  .tabela-mov { font-size: .86rem; }
-  .tabela-mov th { font-size: .73rem; text-transform: uppercase; letter-spacing: .04em; white-space: nowrap; }
-  .tabela-mov td { vertical-align: middle; }
-  .saldo-final { font-variant-numeric: tabular-nums; font-weight: 700; }
-</style>
-{% endblock %}
+{% block top_title %}Movimentações do estoque{% endblock %}
 
 {% block content %}
-<div class="container-fluid px-0">
+<section class="ls-page-hero">
+  <div class="ls-page-hero-copy">
+    <span class="ls-page-kicker">Rastro operacional</span>
+    <h1>Entradas e saídas</h1>
+    <p>Acompanhe toda movimentação de material, com quantidade, saldo resultante, valor, documento, motivo e responsável.</p>
+  </div>
+  <div class="ls-page-hero-actions">
+    <a href="{% url 'stock' %}" class="btn btn-outline-secondary">
+      <i class="bi bi-arrow-left me-1"></i> Voltar ao estoque
+    </a>
+  </div>
+</section>
 
-  <div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4">
+<section class="ls-metrics">
+  <article class="ls-metric-card blue">
+    <div class="ls-metric-head"><span class="ls-metric-label">Movimentos listados</span><span class="ls-metric-icon"><i class="bi bi-arrow-left-right"></i></span></div>
+    <strong class="ls-metric-value">{{ total_movimentos }}</strong>
+    <span class="ls-metric-note">Registros conforme os filtros atuais</span>
+  </article>
+  <article class="ls-metric-card green">
+    <div class="ls-metric-head"><span class="ls-metric-label">Entradas</span><span class="ls-metric-icon"><i class="bi bi-arrow-down-circle"></i></span></div>
+    <strong class="ls-metric-value">{{ total_entradas }}</strong>
+    <span class="ls-metric-note">Movimentos que aumentaram saldo</span>
+  </article>
+  <article class="ls-metric-card red">
+    <div class="ls-metric-head"><span class="ls-metric-label">Saídas</span><span class="ls-metric-icon"><i class="bi bi-arrow-up-circle"></i></span></div>
+    <strong class="ls-metric-value">{{ total_saidas }}</strong>
+    <span class="ls-metric-note">Movimentos que reduziram saldo</span>
+  </article>
+  <article class="ls-metric-card yellow">
+    <div class="ls-metric-head"><span class="ls-metric-label">Valor das entradas</span><span class="ls-metric-icon"><i class="bi bi-cash-coin"></i></span></div>
+    <strong class="ls-metric-value">R$ {{ valor_comprado|moeda }}</strong>
+    <span class="ls-metric-note">Pago nas entradas listadas</span>
+  </article>
+</section>
+
+<section class="ls-filter-panel">
+  <form method="get" class="row g-3 align-items-end">
+    <div class="col-12 col-lg-4">
+      <label class="form-label" for="movBusca">Buscar movimentação</label>
+      <input id="movBusca" name="q" value="{{ busca }}" class="form-control"
+             placeholder="Material, local, nota ou motivo">
+    </div>
+    <div class="col-6 col-lg-2">
+      <label class="form-label" for="movTipo">Tipo</label>
+      <select id="movTipo" name="tipo" class="form-select">
+        <option value="">Todos</option>
+        {% for valor, rotulo in tipos %}
+          <option value="{{ valor }}" {% if tipo_ativo == valor %}selected{% endif %}>{{ rotulo }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-6 col-lg-2">
+      <label class="form-label" for="movDesde">De</label>
+      <input type="date" id="movDesde" name="desde" value="{{ desde }}" class="form-control">
+    </div>
+    <div class="col-6 col-lg-2">
+      <label class="form-label" for="movAte">Até</label>
+      <input type="date" id="movAte" name="ate" value="{{ ate }}" class="form-control">
+    </div>
+    <div class="col-6 col-lg-2 d-grid">
+      <button type="submit" class="btn btn-primary"><i class="bi bi-funnel me-1"></i> Aplicar</button>
+    </div>
+  </form>
+</section>
+
+<section class="ls-data-panel">
+  <div class="ls-data-header">
     <div>
-      <h1 class="h3 mb-1">🔄 Entradas e saídas</h1>
-      <p class="text-muted mb-0">
-        Todo movimento de material, com valor pago, documento e responsável.
-      </p>
-    </div>
-    <a href="{% url 'stock' %}" class="btn btn-outline-secondary">Voltar ao estoque</a>
-  </div>
-
-  <div class="row g-3 mb-4">
-    <div class="col-6 col-lg-3">
-      <div class="card mov-kpi h-100"><div class="card-body">
-        <div class="valor">{{ total_movimentos }}</div><div class="rotulo">Movimentos listados</div>
-      </div></div>
-    </div>
-    <div class="col-6 col-lg-3">
-      <div class="card mov-kpi h-100"><div class="card-body">
-        <div class="valor text-success">{{ total_entradas }}</div><div class="rotulo">Entradas</div>
-      </div></div>
-    </div>
-    <div class="col-6 col-lg-3">
-      <div class="card mov-kpi h-100"><div class="card-body">
-        <div class="valor text-danger">{{ total_saidas }}</div><div class="rotulo">Saídas</div>
-      </div></div>
-    </div>
-    <div class="col-6 col-lg-3">
-      <div class="card mov-kpi h-100"><div class="card-body">
-        <div class="valor">R$ {{ valor_comprado|moeda }}</div>
-        <div class="rotulo">Pago nas entradas listadas</div>
-      </div></div>
+      <h2>Histórico de movimentações</h2>
+      <p>Registro completo das alterações de saldo.</p>
     </div>
   </div>
-
-  <div class="card border-0 shadow-sm mb-3"><div class="card-body">
-    <form method="get" class="row g-2 align-items-end">
-      <div class="col-12 col-md-4">
-        <label class="form-label small text-muted mb-1" for="movBusca">Buscar</label>
-        <input id="movBusca" name="q" value="{{ busca }}" class="form-control"
-               placeholder="Material, local, nota ou motivo">
-      </div>
-      <div class="col-6 col-md-2">
-        <label class="form-label small text-muted mb-1" for="movTipo">Tipo</label>
-        <select id="movTipo" name="tipo" class="form-select">
-          <option value="">Todos</option>
-          {% for valor, rotulo in tipos %}
-            <option value="{{ valor }}" {% if tipo_ativo == valor %}selected{% endif %}>{{ rotulo }}</option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="col-6 col-md-2">
-        <label class="form-label small text-muted mb-1" for="movDesde">De</label>
-        <input type="date" id="movDesde" name="desde" value="{{ desde }}" class="form-control">
-      </div>
-      <div class="col-6 col-md-2">
-        <label class="form-label small text-muted mb-1" for="movAte">Até</label>
-        <input type="date" id="movAte" name="ate" value="{{ ate }}" class="form-control">
-      </div>
-      <div class="col-6 col-md-2 d-grid">
-        <button type="submit" class="btn btn-dark">Filtrar</button>
-      </div>
-    </form>
-  </div></div>
-
-  <div class="card border-0 shadow-sm"><div class="card-body">
+  <div class="ls-data-body">
     <div class="table-responsive">
-      <table class="table table-hover align-middle tabela-mov mb-0">
-        <thead class="table-dark">
+      <table class="ls-table">
+        <thead>
           <tr>
             <th>Quando</th><th>Material</th><th>Tipo</th>
             <th class="text-end">Qtd.</th><th class="text-end">Saldo depois</th>
-            <th class="text-end">Valor pago</th><th>Documento / motivo</th><th>Responsável</th>
+            <th class="text-end">Valor</th><th>Documento / motivo</th><th>Responsável</th>
           </tr>
         </thead>
         <tbody>
@@ -98,47 +94,46 @@
               <td class="text-nowrap">{{ m.ocorrido_em|date:"d/m/Y H:i" }}</td>
               <td>
                 <strong>{{ m.estoque.material.nome_material }}</strong>
-                <span class="d-block text-muted small">{{ m.estoque.descricao_local }}</span>
+                <span class="d-block ls-subtext">{{ m.estoque.descricao_local }}</span>
               </td>
               <td>
                 {% if m.tipo == "entrada" %}
-                  <span class="badge bg-success">Entrada</span>
+                  <span class="ls-status success">Entrada</span>
                 {% elif m.tipo == "saida" %}
-                  <span class="badge bg-danger">Saída</span>
+                  <span class="ls-status danger">Saída</span>
                 {% else %}
-                  <span class="badge bg-secondary">Ajuste</span>
+                  <span class="ls-status neutral">Ajuste</span>
                 {% endif %}
               </td>
-              <td class="text-end">
+              <td class="text-end ls-number">
                 {% if m.tipo == "entrada" %}+{% elif m.tipo == "saida" %}−{% endif %}{{ m.quantidade }}
               </td>
-              <td class="text-end saldo-final">{{ m.quantidade_resultante }}</td>
+              <td class="text-end ls-number">{{ m.quantidade_resultante }}</td>
               <td class="text-end">
                 {% if m.valor_total != None %}
-                  R$ {{ m.valor_total|moeda }}
-                  <span class="d-block text-muted small">R$ {{ m.valor_unitario|moeda }} / un.</span>
+                  <span class="ls-money">R$ {{ m.valor_total|moeda }}</span>
+                  <span class="d-block ls-subtext">R$ {{ m.valor_unitario|moeda }} / un.</span>
                 {% else %}—{% endif %}
               </td>
               <td>
                 {% if m.documento %}<strong>{{ m.documento }}</strong>{% endif %}
-                {% if m.motivo %}<span class="d-block text-muted small">{{ m.motivo }}</span>{% endif %}
+                {% if m.motivo %}<span class="d-block ls-subtext">{{ m.motivo }}</span>{% endif %}
                 {% if not m.documento and not m.motivo %}—{% endif %}
               </td>
               <td>{{ m.responsavel.get_username|default:"—" }}</td>
             </tr>
           {% empty %}
-            <tr><td colspan="8" class="text-center text-muted py-5">
-              Nenhum movimento registrado com esses filtros.
-            </td></tr>
+            <tr><td colspan="8"><div class="ls-empty"><i class="bi bi-clock-history"></i>Nenhuma movimentação encontrada com esses filtros.</div></td></tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
+
     {% if total_movimentos >= 400 %}
-      <p class="text-muted small mt-3 mb-0">
-        Mostrando os 400 movimentos mais recentes. Use os filtros de data para ver períodos anteriores.
-      </p>
+      <div class="p-3 border-top" style="border-color:var(--line-soft)!important">
+        <span class="ls-subtext">Mostrando os 400 movimentos mais recentes. Use filtros de data para consultar períodos anteriores.</span>
+      </div>
     {% endif %}
-  </div></div>
-</div>
+  </div>
+</section>
 {% endblock %}

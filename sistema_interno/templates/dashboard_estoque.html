@@ -1,47 +1,167 @@
 {% extends "base_inner.html" %}
 {% load interno_extras %}
+
 {% block title %}Dashboard do Estoque | Lazer & Sport{% endblock %}
-{% block top_title %}Dashboard do estoque{% endblock %}
+{% block top_title %}Indicadores do estoque{% endblock %}
+
 {% block content %}
-<section class="ls-page-head">
-  <div><span class="ls-eyebrow">Inteligência de estoque</span><h1>Dashboard do estoque</h1><p>Visualize capital imobilizado, compras recentes, reposições e concentração de valor por tipo e fornecedor.</p></div>
-  <div class="ls-page-actions"><a class="btn btn-outline-secondary" href="{% url 'movimentacoes_inner' %}"><i class="bi bi-clock-history me-1"></i> Histórico</a><a class="btn btn-primary" href="{% url 'stock' %}"><i class="bi bi-box-seam me-1"></i> Abrir estoque</a></div>
+<section class="ls-page-hero">
+  <div class="ls-page-hero-copy">
+    <span class="ls-page-kicker">Inteligência operacional</span>
+    <h1>Dashboard do estoque</h1>
+    <p>Leia rapidamente capital imobilizado, compras recentes, riscos de reposição e concentração de valor por material e fornecedor.</p>
+  </div>
+  <div class="ls-page-hero-actions">
+    <a class="btn btn-outline-secondary" href="{% url 'movimentacoes_inner' %}">
+      <i class="bi bi-clock-history me-1"></i> Movimentações
+    </a>
+    <a class="btn btn-primary" href="{% url 'stock' %}">
+      <i class="bi bi-box-seam me-1"></i> Abrir estoque
+    </a>
+  </div>
 </section>
 
-<section class="ls-kpis">
-  <article class="ls-kpi success"><div class="ls-kpi-top"><span class="ls-kpi-label">Capital em estoque</span><span class="ls-kpi-icon"><i class="bi bi-cash-stack"></i></span></div><strong class="ls-kpi-value">R$ {{ valor_investido|moeda }}</strong><span class="ls-kpi-note">Saldo atual valorizado</span></article>
-  <article class="ls-kpi primary"><div class="ls-kpi-top"><span class="ls-kpi-label">Compras · 30 dias</span><span class="ls-kpi-icon"><i class="bi bi-cart-check"></i></span></div><strong class="ls-kpi-value">R$ {{ comprado_no_mes|moeda }}</strong><span class="ls-kpi-note">Entradas recentes</span></article>
-  <article class="ls-kpi violet"><div class="ls-kpi-top"><span class="ls-kpi-label">Unidades</span><span class="ls-kpi-icon"><i class="bi bi-boxes"></i></span></div><strong class="ls-kpi-value">{{ total_pecas|numero }}</strong><span class="ls-kpi-note">{{ total_locais }} local{{ total_locais|pluralize:"is" }} de guarda</span></article>
-  <article class="ls-kpi {% if criticos %}danger{% else %}success{% endif %}"><div class="ls-kpi-top"><span class="ls-kpi-label">Críticos</span><span class="ls-kpi-icon"><i class="bi bi-exclamation-triangle"></i></span></div><strong class="ls-kpi-value">{{ criticos|length }}</strong><span class="ls-kpi-note">Abaixo do mínimo</span></article>
+<section class="ls-metrics">
+  <article class="ls-metric-card green">
+    <div class="ls-metric-head"><span class="ls-metric-label">Capital em estoque</span><span class="ls-metric-icon"><i class="bi bi-cash-stack"></i></span></div>
+    <strong class="ls-metric-value">R$ {{ valor_investido|moeda }}</strong>
+    <span class="ls-metric-note">Saldo atual valorizado</span>
+  </article>
+  <article class="ls-metric-card blue">
+    <div class="ls-metric-head"><span class="ls-metric-label">Compras · 30 dias</span><span class="ls-metric-icon"><i class="bi bi-cart-check"></i></span></div>
+    <strong class="ls-metric-value">R$ {{ comprado_no_mes|moeda }}</strong>
+    <span class="ls-metric-note">Entradas registradas no período</span>
+  </article>
+  <article class="ls-metric-card violet">
+    <div class="ls-metric-head"><span class="ls-metric-label">Unidades</span><span class="ls-metric-icon"><i class="bi bi-boxes"></i></span></div>
+    <strong class="ls-metric-value">{{ total_pecas|numero }}</strong>
+    <span class="ls-metric-note">{{ total_locais }} local{{ total_locais|pluralize:"is" }} de guarda</span>
+  </article>
+  <article class="ls-metric-card {% if criticos %}red{% else %}green{% endif %}">
+    <div class="ls-metric-head"><span class="ls-metric-label">Itens críticos</span><span class="ls-metric-icon"><i class="bi bi-exclamation-triangle"></i></span></div>
+    <strong class="ls-metric-value">{{ criticos|length }}</strong>
+    <span class="ls-metric-note">Abaixo do estoque mínimo</span>
+  </article>
 </section>
 
-<section class="ls-grid-2 mb-3">
-  <article class="ls-panel"><div class="ls-panel-head"><div><h2>Valor por tipo de material</h2><p>Participação no capital imobilizado.</p></div></div><div class="ls-panel-body">
-  {% for linha in por_tipo %}
-    <div class="mb-3"><div class="d-flex justify-content-between align-items-end gap-2 mb-2"><div><strong style="font-size:.68rem;color:#26354a">{{ linha.nome }}</strong><span class="d-block ls-muted" style="font-size:.56rem">{{ linha.pecas }} unidade{{ linha.pecas|pluralize }}</span></div><span class="ls-amount" style="font-size:.66rem">R$ {{ linha.valor|moeda }}</span></div><div style="height:8px;border-radius:999px;background:#eef2f7;overflow:hidden"><span style="display:block;height:100%;width:{{ linha.percentual }}%;background:linear-gradient(90deg,#2563eb,#0ea5e9)"></span></div></div>
-  {% empty %}<div class="ls-empty"><i class="bi bi-pie-chart"></i>Nenhum valor para analisar.</div>{% endfor %}
-  </div></article>
+<section class="ls-grid-2">
+  <article class="ls-panel">
+    <div class="ls-panel-header">
+      <div><h2>Distribuição de valor por tipo</h2><p>Participação de cada grupo no capital armazenado.</p></div>
+    </div>
+    <div class="ls-panel-body">
+      {% for linha in por_tipo %}
+        <div class="ls-progress-row">
+          <div class="ls-progress-meta">
+            <div class="ls-progress-name">
+              <strong>{{ linha.nome }}</strong>
+              <span>{{ linha.pecas }} unidade{{ linha.pecas|pluralize }}</span>
+            </div>
+            <span class="ls-progress-value">R$ {{ linha.valor|moeda }}</span>
+          </div>
+          <div class="ls-progress-track">
+            <div class="ls-progress-bar" style="width:{{ linha.percentual }}%"></div>
+          </div>
+        </div>
+      {% empty %}
+        <div class="ls-empty"><i class="bi bi-pie-chart"></i>Nenhum valor para analisar.</div>
+      {% endfor %}
+    </div>
+  </article>
 
-  <article class="ls-panel"><div class="ls-panel-head"><div><h2>Reposição imediata</h2><p>Materiais com saldo crítico.</p></div><a class="ls-link" href="{% url 'stock' %}?situacao=critico">Gerenciar</a></div><div class="table-responsive"><table class="ls-table"><thead><tr><th>Material</th><th>Local</th><th class="text-end">Saldo</th><th class="text-end">Mín.</th></tr></thead><tbody>
-  {% for e in criticos %}<tr><td><strong>{{ e.material.nome_material }}</strong></td><td>{{ e.descricao_local }}</td><td class="text-end text-danger fw-bold">{{ e.quantidade }}</td><td class="text-end">{{ e.estoque_minimo }}</td></tr>
-  {% empty %}<tr><td colspan="4"><div class="ls-empty"><i class="bi bi-check-circle"></i>Nenhum item abaixo do mínimo.</div></td></tr>{% endfor %}
-  </tbody></table></div></article>
+  <article class="ls-panel">
+    <div class="ls-panel-header">
+      <div><h2>Reposição imediata</h2><p>Materiais cujo saldo já cruzou o limite mínimo.</p></div>
+      <a class="ls-panel-link" href="{% url 'stock' %}?situacao=critico">Gerenciar</a>
+    </div>
+    <div class="table-responsive">
+      <table class="ls-table">
+        <thead><tr><th>Material</th><th>Local</th><th class="text-end">Saldo</th><th class="text-end">Mínimo</th></tr></thead>
+        <tbody>
+          {% for e in criticos %}
+            <tr>
+              <td><strong>{{ e.material.nome_material }}</strong></td>
+              <td>{{ e.descricao_local }}</td>
+              <td class="text-end text-danger ls-number">{{ e.quantidade }}</td>
+              <td class="text-end ls-number">{{ e.estoque_minimo }}</td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="4"><div class="ls-empty"><i class="bi bi-check-circle"></i>Nenhum item abaixo do mínimo.</div></td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </article>
 </section>
 
-<section class="ls-grid-2 mb-3">
-  <article class="ls-panel"><div class="ls-panel-head"><div><h2>Itens de maior valor</h2><p>Onde há mais dinheiro armazenado.</p></div></div><div class="table-responsive"><table class="ls-table"><thead><tr><th>Material</th><th class="text-end">Qtd.</th><th class="text-end">Valor</th></tr></thead><tbody>
-  {% for e in mais_valiosos %}<tr><td><strong>{{ e.material.nome_material }}</strong><span class="d-block ls-muted">{{ e.descricao_local }}</span></td><td class="text-end">{{ e.quantidade }}</td><td class="text-end ls-amount">R$ {{ e.valor_total|moeda }}</td></tr>
-  {% empty %}<tr><td colspan="3"><div class="ls-empty">Nada cadastrado.</div></td></tr>{% endfor %}
-  </tbody></table></div></article>
+<section class="ls-grid-2 mt-3">
+  <article class="ls-panel">
+    <div class="ls-panel-header"><div><h2>Itens de maior valor</h2><p>Onde está concentrado o maior capital.</p></div></div>
+    <div class="table-responsive">
+      <table class="ls-table">
+        <thead><tr><th>Material</th><th class="text-end">Qtd.</th><th class="text-end">Valor</th></tr></thead>
+        <tbody>
+          {% for e in mais_valiosos %}
+            <tr>
+              <td><strong>{{ e.material.nome_material }}</strong><span class="d-block ls-subtext">{{ e.descricao_local }}</span></td>
+              <td class="text-end ls-number">{{ e.quantidade }}</td>
+              <td class="text-end ls-money">R$ {{ e.valor_total|moeda }}</td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="3"><div class="ls-empty">Nada cadastrado.</div></td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </article>
 
-  <article class="ls-panel"><div class="ls-panel-head"><div><h2>Concentração por fornecedor</h2><p>Valor do estoque agrupado pela origem.</p></div></div><div class="table-responsive"><table class="ls-table"><thead><tr><th>Fornecedor</th><th class="text-end">Itens</th><th class="text-end">Valor</th></tr></thead><tbody>
-  {% for linha in por_fornecedor %}<tr><td><strong>{{ linha.fornecedor__nome|default:"Sem fornecedor" }}</strong></td><td class="text-end">{{ linha.itens }}</td><td class="text-end ls-amount">R$ {{ linha.valor|moeda }}</td></tr>
-  {% empty %}<tr><td colspan="3"><div class="ls-empty">Nada cadastrado.</div></td></tr>{% endfor %}
-  </tbody></table></div></article>
+  <article class="ls-panel">
+    <div class="ls-panel-header"><div><h2>Valor por fornecedor</h2><p>Concentração financeira pela origem do material.</p></div></div>
+    <div class="table-responsive">
+      <table class="ls-table">
+        <thead><tr><th>Fornecedor</th><th class="text-end">Itens</th><th class="text-end">Valor</th></tr></thead>
+        <tbody>
+          {% for linha in por_fornecedor %}
+            <tr>
+              <td><strong>{{ linha.fornecedor__nome|default:"Sem fornecedor" }}</strong></td>
+              <td class="text-end ls-number">{{ linha.itens }}</td>
+              <td class="text-end ls-money">R$ {{ linha.valor|moeda }}</td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="3"><div class="ls-empty">Nada cadastrado.</div></td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </article>
 </section>
 
-<article class="ls-panel"><div class="ls-panel-head"><div><h2>Movimentações dos últimos 30 dias</h2><p>Rastro operacional recente do estoque.</p></div><a class="ls-link" href="{% url 'movimentacoes_inner' %}">Histórico completo</a></div><div class="table-responsive"><table class="ls-table"><thead><tr><th>Quando</th><th>Material</th><th>Tipo</th><th class="text-end">Qtd.</th><th>Responsável</th></tr></thead><tbody>
-{% for m in movimentos_mes %}<tr><td>{{ m.ocorrido_em|date:"d/m H:i" }}</td><td><strong>{{ m.estoque.material.nome_material }}</strong></td><td>{% if m.tipo == "entrada" %}<span class="ls-status success">Entrada</span>{% elif m.tipo == "saida" %}<span class="ls-status danger">Saída</span>{% else %}<span class="ls-status neutral">Ajuste</span>{% endif %}</td><td class="text-end">{{ m.quantidade }}</td><td>{{ m.responsavel.get_username|default:"—" }}</td></tr>
-{% empty %}<tr><td colspan="5"><div class="ls-empty">Nenhuma movimentação recente.</div></td></tr>{% endfor %}
-</tbody></table></div></article>
+<article class="ls-panel mt-3">
+  <div class="ls-panel-header">
+    <div><h2>Movimentações dos últimos 30 dias</h2><p>Rastro recente de entradas, saídas e ajustes.</p></div>
+    <a class="ls-panel-link" href="{% url 'movimentacoes_inner' %}">Histórico completo</a>
+  </div>
+  <div class="table-responsive">
+    <table class="ls-table">
+      <thead><tr><th>Quando</th><th>Material</th><th>Tipo</th><th class="text-end">Qtd.</th><th>Responsável</th></tr></thead>
+      <tbody>
+        {% for m in movimentos_mes %}
+          <tr>
+            <td>{{ m.ocorrido_em|date:"d/m H:i" }}</td>
+            <td><strong>{{ m.estoque.material.nome_material }}</strong></td>
+            <td>
+              {% if m.tipo == "entrada" %}<span class="ls-status success">Entrada</span>
+              {% elif m.tipo == "saida" %}<span class="ls-status danger">Saída</span>
+              {% else %}<span class="ls-status neutral">Ajuste</span>{% endif %}
+            </td>
+            <td class="text-end ls-number">{{ m.quantidade }}</td>
+            <td>{{ m.responsavel.get_username|default:"—" }}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="5"><div class="ls-empty">Nenhuma movimentação recente.</div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</article>
 {% endblock %}

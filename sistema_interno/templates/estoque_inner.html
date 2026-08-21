@@ -2,192 +2,173 @@
 {% load interno_extras %}
 
 {% block title %}Estoque de Materiais | Lazer & Sport{% endblock %}
-
-{% block extra_css %}
-<style>
-  .estoque-kpi { border: 0; border-radius: 16px; box-shadow: 0 6px 18px rgba(15, 23, 42, .08); }
-  .estoque-kpi .valor { font-size: 1.6rem; font-weight: 700; line-height: 1.1; }
-  .estoque-kpi .rotulo { font-size: .75rem; text-transform: uppercase; letter-spacing: .06em; color: #6c757d; }
-  .tabela-estoque { font-size: .88rem; }
-  .tabela-estoque th { white-space: nowrap; font-size: .74rem; text-transform: uppercase; letter-spacing: .04em; }
-  .tabela-estoque td { vertical-align: middle; }
-  .material-nome { font-weight: 600; color: #1e272e; }
-  .material-sub { font-size: .74rem; color: #6c757d; }
-  .valor-total { font-variant-numeric: tabular-nums; font-weight: 600; }
-  .acoes-linha { white-space: nowrap; }
-  .filtro-card { border: 0; border-radius: 16px; box-shadow: 0 4px 14px rgba(15, 23, 42, .06); }
-  @media (max-width: 768px) {
-    .tabela-estoque thead { display: none; }
-    .tabela-estoque, .tabela-estoque tbody, .tabela-estoque tr, .tabela-estoque td { display: block; width: 100%; }
-    .tabela-estoque tr { margin-bottom: .9rem; border: 1px solid #dee2e6; border-radius: 12px; padding: .6rem; background: #fff; }
-    .tabela-estoque td { border: 0; padding: .3rem .2rem; }
-    .tabela-estoque td::before { content: attr(data-rotulo) ": "; font-weight: 600; color: #6c757d; font-size: .74rem; }
-    .tabela-estoque td.sem-rotulo::before { content: ""; }
-  }
-</style>
-{% endblock %}
+{% block top_title %}Estoque de materiais{% endblock %}
 
 {% block content %}
-<div class="container-fluid px-0">
+<section class="ls-page-hero">
+  <div class="ls-page-hero-copy">
+    <span class="ls-page-kicker">Controle de inventário</span>
+    <h1>Estoque de materiais</h1>
+    <p>Veja o que existe, onde está armazenado, quanto foi investido e quais itens precisam de reposição.</p>
+  </div>
+  <div class="ls-page-hero-actions">
+    <a href="{% url 'materiais_inner' %}" class="btn btn-outline-secondary">
+      <i class="bi bi-tools me-1"></i> Materiais
+    </a>
+    <a href="{% url 'movimentacoes_inner' %}" class="btn btn-outline-secondary">
+      <i class="bi bi-clock-history me-1"></i> Histórico
+    </a>
+    <button type="button" class="btn btn-success" id="novoItem">
+      <i class="bi bi-plus-lg me-1"></i> Novo item
+    </button>
+  </div>
+</section>
 
-  <div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4">
+<section class="ls-metrics">
+  <article class="ls-metric-card blue">
+    <div class="ls-metric-head"><span class="ls-metric-label">Itens em estoque</span><span class="ls-metric-icon"><i class="bi bi-box-seam"></i></span></div>
+    <strong class="ls-metric-value">{{ total_locais }}</strong>
+    <span class="ls-metric-note">Registros por material e local</span>
+  </article>
+  <article class="ls-metric-card violet">
+    <div class="ls-metric-head"><span class="ls-metric-label">Unidades guardadas</span><span class="ls-metric-icon"><i class="bi bi-boxes"></i></span></div>
+    <strong class="ls-metric-value">{{ total_pecas|numero }}</strong>
+    <span class="ls-metric-note">Quantidade física registrada</span>
+  </article>
+  <article class="ls-metric-card green">
+    <div class="ls-metric-head"><span class="ls-metric-label">Capital armazenado</span><span class="ls-metric-icon"><i class="bi bi-cash-stack"></i></span></div>
+    <strong class="ls-metric-value">R$ {{ valor_investido|moeda }}</strong>
+    <span class="ls-metric-note">Total pago pelo saldo atual</span>
+  </article>
+  <article class="ls-metric-card {% if total_criticos %}red{% else %}green{% endif %}">
+    <div class="ls-metric-head"><span class="ls-metric-label">Reposição necessária</span><span class="ls-metric-icon"><i class="bi bi-exclamation-triangle"></i></span></div>
+    <strong class="ls-metric-value">{{ total_criticos }}</strong>
+    <span class="ls-metric-note">Itens abaixo do estoque mínimo</span>
+  </article>
+</section>
+
+<section class="ls-filter-panel">
+  <form method="get" class="row g-3 align-items-end">
+    <div class="col-12 col-lg-4">
+      <label class="form-label" for="filtroBusca">Buscar no estoque</label>
+      <input id="filtroBusca" name="q" value="{{ busca }}" class="form-control"
+             placeholder="Material, código, local, nota ou fornecedor">
+    </div>
+    <div class="col-6 col-lg-2">
+      <label class="form-label" for="filtroTipo">Tipo</label>
+      <select id="filtroTipo" name="tipo" class="form-select">
+        <option value="">Todos</option>
+        {% for tipo in tipos %}
+          <option value="{{ tipo.id }}" {% if tipo_ativo == tipo.id|stringformat:"s" %}selected{% endif %}>{{ tipo.descricao }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-6 col-lg-2">
+      <label class="form-label" for="filtroFornecedor">Fornecedor</label>
+      <select id="filtroFornecedor" name="fornecedor" class="form-select">
+        <option value="">Todos</option>
+        {% for f in fornecedores %}
+          <option value="{{ f.id }}" {% if fornecedor_ativo == f.id|stringformat:"s" %}selected{% endif %}>{{ f.nome }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-6 col-lg-2">
+      <label class="form-label" for="filtroSituacao">Situação</label>
+      <select id="filtroSituacao" name="situacao" class="form-select">
+        <option value="">Todas</option>
+        <option value="critico" {% if situacao_ativa == "critico" %}selected{% endif %}>Repor agora</option>
+        <option value="atencao" {% if situacao_ativa == "atencao" %}selected{% endif %}>Atenção</option>
+        <option value="estavel" {% if situacao_ativa == "estavel" %}selected{% endif %}>Estável</option>
+      </select>
+    </div>
+    <div class="col-6 col-lg-2 d-grid">
+      <button type="submit" class="btn btn-primary"><i class="bi bi-funnel me-1"></i> Aplicar filtros</button>
+    </div>
+  </form>
+</section>
+
+<section class="ls-data-panel">
+  <div class="ls-data-header">
     <div>
-      <h1 class="h3 mb-1">📦 Estoque de Materiais</h1>
-      <p class="text-muted mb-0">
-        O que existe, onde está guardado, quanto foi pago e quem mexeu.
-      </p>
-    </div>
-    <div class="d-flex gap-2">
-      <a href="{% url 'materiais_inner' %}" class="btn btn-outline-secondary">Materiais</a>
-      <a href="{% url 'movimentacoes_inner' %}" class="btn btn-outline-secondary">Histórico</a>
-      <button type="button" class="btn btn-success" id="novoItem">+ Novo item</button>
+      <h2>Inventário atual</h2>
+      <p>Saldo, custo, fornecedor, localização e situação de cada item.</p>
     </div>
   </div>
 
-  <div class="row g-3 mb-4">
-    <div class="col-6 col-lg-3">
-      <div class="card estoque-kpi h-100"><div class="card-body">
-        <div class="valor">{{ total_locais }}</div>
-        <div class="rotulo">Itens em estoque</div>
-      </div></div>
-    </div>
-    <div class="col-6 col-lg-3">
-      <div class="card estoque-kpi h-100"><div class="card-body">
-        <div class="valor">{{ total_pecas|numero }}</div>
-        <div class="rotulo">Unidades guardadas</div>
-      </div></div>
-    </div>
-    <div class="col-6 col-lg-3">
-      <div class="card estoque-kpi h-100"><div class="card-body">
-        <div class="valor text-success">R$ {{ valor_investido|moeda }}</div>
-        <div class="rotulo">Total pago no que está guardado</div>
-      </div></div>
-    </div>
-    <div class="col-6 col-lg-3">
-      <div class="card estoque-kpi h-100"><div class="card-body">
-        <div class="valor {% if total_criticos %}text-danger{% else %}text-muted{% endif %}">{{ total_criticos }}</div>
-        <div class="rotulo">Precisam de reposição</div>
-      </div></div>
-    </div>
-  </div>
-
-  <div class="card filtro-card mb-3">
-    <div class="card-body">
-      <form method="get" class="row g-2 align-items-end">
-        <div class="col-12 col-md-4">
-          <label class="form-label small text-muted mb-1" for="filtroBusca">Buscar</label>
-          <input id="filtroBusca" name="q" value="{{ busca }}" class="form-control"
-                 placeholder="Material, código, local, nota ou fornecedor">
-        </div>
-        <div class="col-6 col-md-2">
-          <label class="form-label small text-muted mb-1" for="filtroTipo">Tipo</label>
-          <select id="filtroTipo" name="tipo" class="form-select">
-            <option value="">Todos</option>
-            {% for tipo in tipos %}
-              <option value="{{ tipo.id }}" {% if tipo_ativo == tipo.id|stringformat:"s" %}selected{% endif %}>{{ tipo.descricao }}</option>
-            {% endfor %}
-          </select>
-        </div>
-        <div class="col-6 col-md-2">
-          <label class="form-label small text-muted mb-1" for="filtroFornecedor">Fornecedor</label>
-          <select id="filtroFornecedor" name="fornecedor" class="form-select">
-            <option value="">Todos</option>
-            {% for f in fornecedores %}
-              <option value="{{ f.id }}" {% if fornecedor_ativo == f.id|stringformat:"s" %}selected{% endif %}>{{ f.nome }}</option>
-            {% endfor %}
-          </select>
-        </div>
-        <div class="col-6 col-md-2">
-          <label class="form-label small text-muted mb-1" for="filtroSituacao">Situação</label>
-          <select id="filtroSituacao" name="situacao" class="form-select">
-            <option value="">Todas</option>
-            <option value="critico" {% if situacao_ativa == "critico" %}selected{% endif %}>Repor agora</option>
-            <option value="atencao" {% if situacao_ativa == "atencao" %}selected{% endif %}>Atenção</option>
-            <option value="estavel" {% if situacao_ativa == "estavel" %}selected{% endif %}>Estável</option>
-          </select>
-        </div>
-        <div class="col-6 col-md-2 d-grid">
-          <button type="submit" class="btn btn-dark">Filtrar</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <div class="card border-0 shadow-sm">
-    <div class="card-body">
-      <div class="table-responsive">
-        <table class="table table-hover align-middle tabela-estoque mb-0">
-          <thead class="table-dark">
+  <div class="ls-data-body">
+    <div class="table-responsive">
+      <table class="ls-table tabela-estoque">
+        <thead>
+          <tr>
+            <th>Material</th>
+            <th>Local</th>
+            <th>Fornecedor</th>
+            <th class="text-end">Qtd.</th>
+            <th class="text-end">Mín.</th>
+            <th class="text-end">Valor unitário</th>
+            <th class="text-end">Investido</th>
+            <th>Situação</th>
+            <th class="text-end">Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for estoque in estoques %}
             <tr>
-              <th>Material</th>
-              <th>Local</th>
-              <th>Fornecedor</th>
-              <th class="text-end">Qtd.</th>
-              <th class="text-end">Mín.</th>
-              <th class="text-end">Valor pago (un.)</th>
-              <th class="text-end">Total investido</th>
-              <th>Situação</th>
-              <th class="text-end">Ações</th>
+              <td data-rotulo="Material">
+                <span class="material-nome">{{ estoque.material.nome_material }}</span>
+                <span class="material-sub d-block">
+                  {{ estoque.material.tipo_material|default:"Sem tipo" }}
+                  {% if estoque.material.codigo_interno %} · {{ estoque.material.codigo_interno }}{% endif %}
+                  · {{ estoque.material.get_unidade_display }}
+                </span>
+              </td>
+              <td data-rotulo="Local">
+                {{ estoque.descricao_local }}
+                {% if estoque.nota_fiscal %}<span class="material-sub d-block">NF {{ estoque.nota_fiscal }}</span>{% endif %}
+              </td>
+              <td data-rotulo="Fornecedor">
+                {{ estoque.fornecedor.nome|default:"—" }}
+                {% if estoque.comprado_em %}<span class="material-sub d-block">{{ estoque.comprado_em|date:"d/m/Y" }}</span>{% endif %}
+              </td>
+              <td data-rotulo="Quantidade" class="text-end ls-number">{{ estoque.quantidade }}</td>
+              <td data-rotulo="Mínimo" class="text-end ls-muted">{{ estoque.estoque_minimo }}</td>
+              <td data-rotulo="Valor unitário" class="text-end ls-money">R$ {{ estoque.preco_fornecedor|moeda }}</td>
+              <td data-rotulo="Investido" class="text-end ls-money">R$ {{ estoque.valor_total|moeda }}</td>
+              <td data-rotulo="Situação">
+                {% if estoque.situacao == "critico" %}
+                  <span class="ls-status danger">{{ estoque.situacao_label }}</span>
+                {% elif estoque.situacao == "atencao" %}
+                  <span class="ls-status warning">{{ estoque.situacao_label }}</span>
+                {% else %}
+                  <span class="ls-status success">{{ estoque.situacao_label }}</span>
+                {% endif %}
+              </td>
+              <td data-rotulo="Ações" class="text-end ls-actions">
+                <button type="button" class="btn btn-sm btn-primary"
+                        data-movimentar="{{ estoque.id }}"
+                        data-nome="{{ estoque.material.nome_material }} — {{ estoque.descricao_local }}"
+                        data-saldo="{{ estoque.quantidade }}">
+                  <i class="bi bi-arrow-left-right"></i> Movimentar
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-editar="{{ estoque.id }}">
+                  <i class="bi bi-pencil"></i> Editar
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-danger"
+                        data-excluir="{{ estoque.id }}"
+                        data-nome="{{ estoque.material.nome_material }} — {{ estoque.descricao_local }}">
+                  <i class="bi bi-trash3"></i>
+                </button>
+              </td>
             </tr>
-          </thead>
-          <tbody>
-            {% for estoque in estoques %}
-              <tr>
-                <td data-rotulo="Material">
-                  <span class="material-nome">{{ estoque.material.nome_material }}</span>
-                  <span class="material-sub d-block">
-                    {{ estoque.material.tipo_material|default:"Sem tipo" }}
-                    {% if estoque.material.codigo_interno %} · {{ estoque.material.codigo_interno }}{% endif %}
-                    · {{ estoque.material.get_unidade_display }}
-                  </span>
-                </td>
-                <td data-rotulo="Local">
-                  {{ estoque.descricao_local }}
-                  {% if estoque.nota_fiscal %}<span class="material-sub d-block">NF {{ estoque.nota_fiscal }}</span>{% endif %}
-                </td>
-                <td data-rotulo="Fornecedor">
-                  {{ estoque.fornecedor.nome|default:"—" }}
-                  {% if estoque.comprado_em %}<span class="material-sub d-block">{{ estoque.comprado_em|date:"d/m/Y" }}</span>{% endif %}
-                </td>
-                <td data-rotulo="Quantidade" class="text-end fw-semibold">{{ estoque.quantidade }}</td>
-                <td data-rotulo="Mínimo" class="text-end text-muted">{{ estoque.estoque_minimo }}</td>
-                <td data-rotulo="Valor pago" class="text-end">R$ {{ estoque.preco_fornecedor|moeda }}</td>
-                <td data-rotulo="Total" class="text-end valor-total">R$ {{ estoque.valor_total|moeda }}</td>
-                <td data-rotulo="Situação">
-                  {% if estoque.situacao == "critico" %}
-                    <span class="badge bg-danger">{{ estoque.situacao_label }}</span>
-                  {% elif estoque.situacao == "atencao" %}
-                    <span class="badge bg-warning text-dark">{{ estoque.situacao_label }}</span>
-                  {% else %}
-                    <span class="badge bg-success">{{ estoque.situacao_label }}</span>
-                  {% endif %}
-                </td>
-                <td data-rotulo="Ações" class="text-end acoes-linha">
-                  <button type="button" class="btn btn-sm btn-primary"
-                          data-movimentar="{{ estoque.id }}"
-                          data-nome="{{ estoque.material.nome_material }} — {{ estoque.descricao_local }}"
-                          data-saldo="{{ estoque.quantidade }}">Movimentar</button>
-                  <button type="button" class="btn btn-sm btn-outline-secondary" data-editar="{{ estoque.id }}">Editar</button>
-                  <button type="button" class="btn btn-sm btn-outline-danger"
-                          data-excluir="{{ estoque.id }}"
-                          data-nome="{{ estoque.material.nome_material }} — {{ estoque.descricao_local }}">Excluir</button>
-                </td>
-              </tr>
-            {% empty %}
-              <tr>
-                <td colspan="9" class="text-center text-muted py-5 sem-rotulo">
-                  Nenhum material encontrado com esses filtros.
-                </td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
+          {% empty %}
+            <tr><td colspan="9" class="sem-rotulo"><div class="ls-empty"><i class="bi bi-search"></i>Nenhum material encontrado com esses filtros.</div></td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
   </div>
-</div>
+</section>
 
-<!-- ================= modal do item ================= -->
 <div class="modal fade" id="modalItem" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-scrollable">
     <form class="modal-content" id="formItem" method="post" action="{% url 'stock' %}">
@@ -200,19 +181,14 @@
       </div>
       <div class="modal-body">
         <div id="itemErro" class="alert alert-danger d-none" role="alert"></div>
-
         <div class="row g-3">
           <div class="col-12 col-md-6">
             <label class="form-label" for="itemMaterial">Material *</label>
             <select class="form-select" id="itemMaterial" name="material" data-rotulo="material" required>
               <option value="">Selecione</option>
-              {% for m in materiais %}
-                <option value="{{ m.id }}">{{ m.nome_material }}</option>
-              {% endfor %}
+              {% for m in materiais %}<option value="{{ m.id }}">{{ m.nome_material }}</option>{% endfor %}
             </select>
-            <div class="form-text">
-              Material novo? Cadastre em <a href="{% url 'materiais_inner' %}">Materiais</a>.
-            </div>
+            <div class="form-text">Material novo? Cadastre em <a href="{% url 'materiais_inner' %}">Materiais</a>.</div>
           </div>
 
           <div class="col-12 col-md-6">
@@ -224,11 +200,8 @@
 
           <div class="col-6 col-md-4">
             <label class="form-label" for="itemQuantidade">Quantidade inicial</label>
-            <input class="form-control" id="itemQuantidade" name="quantidade"
-                   inputmode="numeric" placeholder="0">
-            <div class="form-text" id="itemQuantidadeAviso">
-              Depois do cadastro, a quantidade só muda por entrada ou saída.
-            </div>
+            <input class="form-control" id="itemQuantidade" name="quantidade" inputmode="numeric" placeholder="0">
+            <div class="form-text" id="itemQuantidadeAviso">Depois do cadastro, a quantidade só muda por entrada ou saída.</div>
           </div>
 
           <div class="col-6 col-md-4">
@@ -242,8 +215,7 @@
 
           <div class="col-6 col-md-4">
             <label class="form-label" for="itemMinimo">Quantidade mínima</label>
-            <input class="form-control" id="itemMinimo" name="estoque_minimo"
-                   inputmode="numeric" placeholder="0">
+            <input class="form-control" id="itemMinimo" name="estoque_minimo" inputmode="numeric" placeholder="0">
             <div class="form-text">Abaixo disso o item entra na lista de reposição.</div>
           </div>
 
@@ -251,9 +223,7 @@
             <label class="form-label" for="itemFornecedor">Fornecedor</label>
             <select class="form-select" id="itemFornecedor" name="fornecedor">
               <option value="">Não informado</option>
-              {% for f in fornecedores %}
-                <option value="{{ f.id }}">{{ f.nome }}</option>
-              {% endfor %}
+              {% for f in fornecedores %}<option value="{{ f.id }}">{{ f.nome }}</option>{% endfor %}
             </select>
           </div>
 
@@ -281,7 +251,6 @@
   </div>
 </div>
 
-<!-- ================= modal de movimento ================= -->
 <div class="modal fade" id="modalMovimento" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog">
     <form class="modal-content" id="formMovimento" method="post" action="{% url 'stock' %}">
@@ -294,29 +263,23 @@
       </div>
       <div class="modal-body">
         <div id="movimentoErro" class="alert alert-danger d-none" role="alert"></div>
-
         <p class="mb-3">
           <strong id="movimentoNome"></strong><br>
-          <span class="text-muted small">Saldo atual: <span id="movimentoSaldo"></span></span>
+          <span class="text-muted">Saldo atual: <span id="movimentoSaldo"></span></span>
         </p>
 
         <div class="row g-3">
           <div class="col-12">
             <label class="form-label" for="movimentoTipo">Tipo *</label>
             <select class="form-select" id="movimentoTipo" name="tipo" data-rotulo="tipo" required>
-              {% for valor, rotulo in tipos_movimento %}
-                <option value="{{ valor }}">{{ rotulo }}</option>
-              {% endfor %}
+              {% for valor, rotulo in tipos_movimento %}<option value="{{ valor }}">{{ rotulo }}</option>{% endfor %}
             </select>
-            <div class="form-text" id="movimentoAjuda">
-              Entrada soma ao saldo. Saída desconta. Ajuste grava a contagem real.
-            </div>
+            <div class="form-text" id="movimentoAjuda">Entrada soma ao saldo. Saída desconta. Ajuste grava a contagem real.</div>
           </div>
 
           <div class="col-6">
             <label class="form-label" for="movimentoQuantidade">Quantidade *</label>
-            <input class="form-control" id="movimentoQuantidade" name="quantidade"
-                   data-rotulo="quantidade" inputmode="numeric" required>
+            <input class="form-control" id="movimentoQuantidade" name="quantidade" data-rotulo="quantidade" inputmode="numeric" required>
           </div>
 
           <div class="col-6">
@@ -348,7 +311,6 @@
   </div>
 </div>
 
-<!-- ================= modal de exclusão ================= -->
 <div class="modal fade" id="modalExcluir" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-sm">
     <form class="modal-content" id="formExcluir" method="post" action="{% url 'stock' %}">
@@ -361,10 +323,7 @@
       </div>
       <div class="modal-body">
         <div id="excluirErro" class="alert alert-danger d-none" role="alert"></div>
-        <p class="mb-0">
-          <strong id="excluirNome"></strong> sai do estoque junto com todo o
-          histórico de entradas e saídas dele. Não dá para desfazer.
-        </p>
+        <p class="mb-0"><strong id="excluirNome"></strong> sai do estoque junto com todo o histórico de entradas e saídas dele. Não dá para desfazer.</p>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
@@ -392,7 +351,6 @@ document.addEventListener("DOMContentLoaded", function () {
     })[0];
   }
 
-  // ---------------- item ----------------
   function abrirItem(id) {
     var form = document.getElementById("formItem");
     var item = id ? achar(id) : null;
@@ -405,8 +363,6 @@ document.addEventListener("DOMContentLoaded", function () {
       ? "Editar item do estoque"
       : "Novo item no estoque";
 
-    // Editar nao mexe na quantidade: mudar o numero direto apagaria o
-    // rastro de quem tirou ou colocou material.
     var campoQtd = document.getElementById("itemQuantidade");
     campoQtd.disabled = !!item;
     document.getElementById("itemQuantidadeAviso").textContent = item
@@ -440,7 +396,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
   Painel.ligar({ form: "formItem", erro: "itemErro" });
 
-  // ---------------- movimento ----------------
   document.querySelectorAll("[data-movimentar]").forEach(function (b) {
     b.addEventListener("click", function () {
       var form = document.getElementById("formMovimento");
@@ -472,13 +427,8 @@ document.addEventListener("DOMContentLoaded", function () {
       var quantidade = Number(campo.value.replace(/\D/g, ""));
       var saldo = Number(campo.dataset.saldo || 0);
 
-      if (!campo.value.trim()) {
-        return "Informe a quantidade.";
-      }
-      if (tipo !== "ajuste" && quantidade <= 0) {
-        return "A quantidade precisa ser maior que zero.";
-      }
-      // O servidor recusa de novo; aqui e so pra nao gastar a ida.
+      if (!campo.value.trim()) return "Informe a quantidade.";
+      if (tipo !== "ajuste" && quantidade <= 0) return "A quantidade precisa ser maior que zero.";
       if (tipo === "saida" && quantidade > saldo) {
         return "Saída de " + quantidade + " maior que o saldo atual (" + saldo + ").";
       }
@@ -486,7 +436,6 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   });
 
-  // ---------------- exclusão ----------------
   document.querySelectorAll("[data-excluir]").forEach(function (b) {
     b.addEventListener("click", function () {
       Painel.erro("excluirErro", "");

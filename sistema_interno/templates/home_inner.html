@@ -1,46 +1,170 @@
 {% extends "base_inner.html" %}
 {% load interno_extras %}
+
 {% block title %}Visão Geral | Lazer & Sport{% endblock %}
 {% block top_title %}Visão geral{% endblock %}
+
 {% block content %}
-<section class="ls-page-head">
-  <div><span class="ls-eyebrow">Centro operacional</span><h1>Visão geral</h1><p>Acompanhe estoque, reposição e movimentações recentes em uma única tela, com acesso direto às rotinas mais usadas pela equipe.</p></div>
-  <div class="ls-page-actions"><a class="btn btn-outline-secondary" href="{% url 'dashboard_estoque' %}"><i class="bi bi-graph-up me-1"></i> Analisar estoque</a><a class="btn btn-primary" href="{% url 'stock' %}"><i class="bi bi-box-seam me-1"></i> Gerenciar estoque</a></div>
+<section class="ls-page-hero">
+  <div class="ls-page-hero-copy">
+    <span class="ls-page-kicker">Centro operacional</span>
+    <h1>Visão geral</h1>
+    <p>Estoque, reposição e movimentações recentes em uma central visual única, com destaque imediato para o que exige ação.</p>
+  </div>
+  <div class="ls-page-hero-actions">
+    <a class="btn btn-outline-secondary" href="{% url 'dashboard_estoque' %}">
+      <i class="bi bi-graph-up-arrow me-1"></i> Ver indicadores
+    </a>
+    <a class="btn btn-primary" href="{% url 'stock' %}">
+      <i class="bi bi-box-seam me-1"></i> Gerenciar estoque
+    </a>
+  </div>
 </section>
 
-<section class="ls-kpis">
-  <article class="ls-kpi success"><div class="ls-kpi-top"><span class="ls-kpi-label">Valor em estoque</span><span class="ls-kpi-icon"><i class="bi bi-cash-stack"></i></span></div><strong class="ls-kpi-value">R$ {{ valor_investido|moeda }}</strong><span class="ls-kpi-note">Valor pago no saldo atual</span></article>
-  <article class="ls-kpi primary"><div class="ls-kpi-top"><span class="ls-kpi-label">Unidades</span><span class="ls-kpi-icon"><i class="bi bi-boxes"></i></span></div><strong class="ls-kpi-value">{{ total_pecas|numero }}</strong><span class="ls-kpi-note">Em {{ total_locais }} local{{ total_locais|pluralize:"is" }} de guarda</span></article>
-  <article class="ls-kpi violet"><div class="ls-kpi-top"><span class="ls-kpi-label">Materiais</span><span class="ls-kpi-icon"><i class="bi bi-tools"></i></span></div><strong class="ls-kpi-value">{{ total_materiais }}</strong><span class="ls-kpi-note">Cadastros ativos</span></article>
-  <article class="ls-kpi {% if total_criticos %}danger{% else %}success{% endif %}"><div class="ls-kpi-top"><span class="ls-kpi-label">Reposição</span><span class="ls-kpi-icon"><i class="bi bi-exclamation-triangle"></i></span></div><strong class="ls-kpi-value">{{ total_criticos }}</strong><span class="ls-kpi-note">{% if total_criticos %}Itens exigem atenção{% else %}Estoque sem críticos{% endif %}</span></article>
+<section class="ls-metrics">
+  <article class="ls-metric-card green">
+    <div class="ls-metric-head">
+      <span class="ls-metric-label">Capital em estoque</span>
+      <span class="ls-metric-icon"><i class="bi bi-cash-stack"></i></span>
+    </div>
+    <strong class="ls-metric-value">R$ {{ valor_investido|moeda }}</strong>
+    <span class="ls-metric-note">Valor pago no saldo atual</span>
+  </article>
+
+  <article class="ls-metric-card blue">
+    <div class="ls-metric-head">
+      <span class="ls-metric-label">Unidades guardadas</span>
+      <span class="ls-metric-icon"><i class="bi bi-boxes"></i></span>
+    </div>
+    <strong class="ls-metric-value">{{ total_pecas|numero }}</strong>
+    <span class="ls-metric-note">{{ total_locais }} local{{ total_locais|pluralize:"is" }} de guarda</span>
+  </article>
+
+  <article class="ls-metric-card violet">
+    <div class="ls-metric-head">
+      <span class="ls-metric-label">Materiais ativos</span>
+      <span class="ls-metric-icon"><i class="bi bi-tools"></i></span>
+    </div>
+    <strong class="ls-metric-value">{{ total_materiais }}</strong>
+    <span class="ls-metric-note">Cadastros disponíveis para operação</span>
+  </article>
+
+  <article class="ls-metric-card {% if total_criticos %}red{% else %}green{% endif %}">
+    <div class="ls-metric-head">
+      <span class="ls-metric-label">Reposição</span>
+      <span class="ls-metric-icon"><i class="bi bi-exclamation-triangle"></i></span>
+    </div>
+    <strong class="ls-metric-value">{{ total_criticos }}</strong>
+    <span class="ls-metric-note">{% if total_criticos %}Itens abaixo do nível esperado{% else %}Nenhum item crítico agora{% endif %}</span>
+  </article>
 </section>
 
-<section class="ls-grid-main">
+<section class="ls-layout-main">
   <article class="ls-panel">
-    <div class="ls-panel-head"><div><h2>Últimas movimentações</h2><p>Entradas, saídas e ajustes registrados recentemente.</p></div><a class="ls-link" href="{% url 'movimentacoes_inner' %}">Ver histórico</a></div>
-    <div class="table-responsive"><table class="ls-table"><thead><tr><th>Quando</th><th>Material</th><th>Movimento</th><th class="text-end">Qtd.</th><th>Responsável</th></tr></thead><tbody>
-    {% for m in ultimos_movimentos %}
-      <tr><td class="text-nowrap">{{ m.ocorrido_em|date:"d/m H:i" }}</td><td><strong>{{ m.estoque.material.nome_material }}</strong><span class="d-block ls-muted">{{ m.estoque.descricao_local }}</span></td><td>{% if m.tipo == "entrada" %}<span class="ls-status success">Entrada</span>{% elif m.tipo == "saida" %}<span class="ls-status danger">Saída</span>{% else %}<span class="ls-status neutral">Ajuste</span>{% endif %}</td><td class="text-end ls-amount">{{ m.quantidade }}</td><td>{{ m.responsavel.get_username|default:"—" }}</td></tr>
-    {% empty %}<tr><td colspan="5"><div class="ls-empty"><i class="bi bi-arrow-left-right"></i>Nenhuma movimentação registrada.</div></td></tr>{% endfor %}
-    </tbody></table></div>
+    <div class="ls-panel-header">
+      <div>
+        <h2>Movimentações recentes</h2>
+        <p>Últimas entradas, saídas e ajustes registrados pela equipe.</p>
+      </div>
+      <a class="ls-panel-link" href="{% url 'movimentacoes_inner' %}">
+        Histórico completo <i class="bi bi-arrow-right"></i>
+      </a>
+    </div>
+
+    <div class="table-responsive">
+      <table class="ls-table">
+        <thead>
+          <tr>
+            <th>Quando</th>
+            <th>Material</th>
+            <th>Movimento</th>
+            <th class="text-end">Quantidade</th>
+            <th>Responsável</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for m in ultimos_movimentos %}
+            <tr>
+              <td class="text-nowrap">{{ m.ocorrido_em|date:"d/m H:i" }}</td>
+              <td>
+                <strong>{{ m.estoque.material.nome_material }}</strong>
+                <span class="d-block ls-subtext">{{ m.estoque.descricao_local }}</span>
+              </td>
+              <td>
+                {% if m.tipo == "entrada" %}
+                  <span class="ls-status success">Entrada</span>
+                {% elif m.tipo == "saida" %}
+                  <span class="ls-status danger">Saída</span>
+                {% else %}
+                  <span class="ls-status neutral">Ajuste</span>
+                {% endif %}
+              </td>
+              <td class="text-end ls-number">{{ m.quantidade }}</td>
+              <td>{{ m.responsavel.get_username|default:"—" }}</td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="5"><div class="ls-empty"><i class="bi bi-arrow-left-right"></i>Nenhuma movimentação registrada.</div></td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
   </article>
 
   <article class="ls-panel">
-    <div class="ls-panel-head"><div><h2>Reposição prioritária</h2><p>Itens abaixo do estoque mínimo.</p></div><a class="ls-link" href="{% url 'stock' %}?situacao=critico">Abrir lista</a></div>
+    <div class="ls-panel-header">
+      <div>
+        <h2>Reposição prioritária</h2>
+        <p>Materiais que precisam de atenção agora.</p>
+      </div>
+      <a class="ls-panel-link" href="{% url 'stock' %}?situacao=critico">Abrir lista</a>
+    </div>
+
     <div class="ls-panel-body">
       {% for e in criticos %}
-        <div class="d-flex align-items-center gap-3 py-2 {% if not forloop.last %}border-bottom{% endif %}">
-          <span class="ls-kpi-icon" style="--accent:#dc2626;--tone:rgba(220,38,38,.08)"><i class="bi bi-exclamation-lg"></i></span>
-          <div class="flex-grow-1"><strong class="d-block" style="font-size:.69rem;color:#26354a">{{ e.material.nome_material }}</strong><span class="d-block ls-muted" style="font-size:.58rem">{{ e.descricao_local }}</span></div>
-          <div class="text-end"><strong class="d-block text-danger" style="font-size:.72rem">{{ e.quantidade }}</strong><span class="ls-muted" style="font-size:.55rem">mín. {{ e.estoque_minimo }}</span></div>
+        <div class="ls-priority-item">
+          <span class="ls-priority-icon"><i class="bi bi-exclamation-lg"></i></span>
+          <span class="ls-priority-copy">
+            <strong>{{ e.material.nome_material }}</strong>
+            <span>{{ e.descricao_local }}</span>
+          </span>
+          <span class="ls-priority-value">
+            <strong>{{ e.quantidade }}</strong>
+            <span>mín. {{ e.estoque_minimo }}</span>
+          </span>
         </div>
-      {% empty %}<div class="ls-empty"><i class="bi bi-check2-circle"></i>Nenhum item crítico agora.</div>{% endfor %}
+      {% empty %}
+        <div class="ls-empty"><i class="bi bi-check2-circle"></i>Estoque sem itens críticos.</div>
+      {% endfor %}
     </div>
   </article>
 </section>
 
-<section class="mt-3 ls-grid-2">
-  <a class="ls-panel text-decoration-none p-3 d-flex align-items-center gap-3" href="{% url 'materiais_inner' %}"><span class="ls-kpi-icon"><i class="bi bi-tools"></i></span><span><strong class="d-block text-dark" style="font-size:.7rem">Materiais e fornecedores</strong><small class="ls-muted">Organize cadastros e fornecedores.</small></span><i class="bi bi-chevron-right ms-auto ls-muted"></i></a>
-  <a class="ls-panel text-decoration-none p-3 d-flex align-items-center gap-3" href="{% url 'stock' %}"><span class="ls-kpi-icon" style="--accent:#059669;--tone:#ecfdf5"><i class="bi bi-plus-lg"></i></span><span><strong class="d-block text-dark" style="font-size:.7rem">Atualizar estoque</strong><small class="ls-muted">Cadastre itens e movimentações.</small></span><i class="bi bi-chevron-right ms-auto ls-muted"></i></a>
+<section class="ls-grid-3 mt-3">
+  <a class="ls-action-tile" href="{% url 'stock' %}">
+    <span class="ls-action-icon"><i class="bi bi-plus-lg"></i></span>
+    <span class="ls-action-copy">
+      <strong>Atualizar estoque</strong>
+      <span>Cadastre itens e registre movimentações.</span>
+    </span>
+    <i class="bi bi-chevron-right ms-auto ls-muted"></i>
+  </a>
+
+  <a class="ls-action-tile" href="{% url 'materiais_inner' %}">
+    <span class="ls-action-icon"><i class="bi bi-tools"></i></span>
+    <span class="ls-action-copy">
+      <strong>Materiais e fornecedores</strong>
+      <span>Organize cadastros que alimentam o estoque.</span>
+    </span>
+    <i class="bi bi-chevron-right ms-auto ls-muted"></i>
+  </a>
+
+  <a class="ls-action-tile" href="{% url 'movimentacoes_inner' %}">
+    <span class="ls-action-icon"><i class="bi bi-clock-history"></i></span>
+    <span class="ls-action-copy">
+      <strong>Histórico operacional</strong>
+      <span>Veja quem movimentou, quando e por quê.</span>
+    </span>
+    <i class="bi bi-chevron-right ms-auto ls-muted"></i>
+  </a>
 </section>
 {% endblock %}

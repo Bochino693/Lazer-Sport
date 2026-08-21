@@ -2,76 +2,86 @@
 {% load interno_extras %}
 
 {% block title %}Materiais e Fornecedores | Lazer & Sport{% endblock %}
-
-{% block extra_css %}
-<style>
-  .cadastro-kpi { border: 0; border-radius: 16px; box-shadow: 0 6px 18px rgba(15, 23, 42, .08); }
-  .cadastro-kpi .valor { font-size: 1.6rem; font-weight: 700; }
-  .cadastro-kpi .rotulo { font-size: .75rem; text-transform: uppercase; letter-spacing: .06em; color: #6c757d; }
-  .tabela-cadastro { font-size: .88rem; }
-  .tabela-cadastro th { font-size: .74rem; text-transform: uppercase; letter-spacing: .04em; white-space: nowrap; }
-  .tabela-cadastro td { vertical-align: middle; }
-  .linha-inativa { opacity: .55; }
-</style>
-{% endblock %}
+{% block top_title %}Materiais e fornecedores{% endblock %}
 
 {% block content %}
-<div class="container-fluid px-0">
-
-  <div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4">
-    <div>
-      <h1 class="h3 mb-1">🧰 Materiais, tipos e fornecedores</h1>
-      <p class="text-muted mb-0">O cadastro que alimenta o estoque.</p>
-    </div>
-    <div class="d-flex gap-2">
-      <a href="{% url 'stock' %}" class="btn btn-outline-secondary">Ir para o estoque</a>
-      <button type="button" class="btn btn-success" id="novoMaterial">+ Novo material</button>
-    </div>
+<section class="ls-page-hero">
+  <div class="ls-page-hero-copy">
+    <span class="ls-page-kicker">Cadastros operacionais</span>
+    <h1>Materiais e fornecedores</h1>
+    <p>Organize os cadastros que alimentam o estoque: materiais, tipos, unidades de medida e fornecedores.</p>
   </div>
-
-  <div class="row g-3 mb-4">
-    <div class="col-4">
-      <div class="card cadastro-kpi h-100"><div class="card-body">
-        <div class="valor">{{ total_materiais }}</div><div class="rotulo">Materiais</div>
-      </div></div>
-    </div>
-    <div class="col-4">
-      <div class="card cadastro-kpi h-100"><div class="card-body">
-        <div class="valor">{{ total_tipos }}</div><div class="rotulo">Tipos</div>
-      </div></div>
-    </div>
-    <div class="col-4">
-      <div class="card cadastro-kpi h-100"><div class="card-body">
-        <div class="valor">{{ total_fornecedores }}</div><div class="rotulo">Fornecedores ativos</div>
-      </div></div>
-    </div>
+  <div class="ls-page-hero-actions">
+    <a href="{% url 'stock' %}" class="btn btn-outline-secondary">
+      <i class="bi bi-box-seam me-1"></i> Ir para o estoque
+    </a>
+    <button type="button" class="btn btn-success" id="novoMaterial">
+      <i class="bi bi-plus-lg me-1"></i> Novo material
+    </button>
   </div>
+</section>
 
-  <ul class="nav nav-tabs mb-3" role="tablist">
-    <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#abaMateriais" type="button">Materiais</button></li>
-    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#abaTipos" type="button">Tipos</button></li>
-    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#abaFornecedores" type="button">Fornecedores</button></li>
-  </ul>
+<section class="ls-metrics">
+  <article class="ls-metric-card blue">
+    <div class="ls-metric-head"><span class="ls-metric-label">Materiais</span><span class="ls-metric-icon"><i class="bi bi-tools"></i></span></div>
+    <strong class="ls-metric-value">{{ total_materiais }}</strong>
+    <span class="ls-metric-note">Cadastros disponíveis</span>
+  </article>
+  <article class="ls-metric-card violet">
+    <div class="ls-metric-head"><span class="ls-metric-label">Tipos</span><span class="ls-metric-icon"><i class="bi bi-tags"></i></span></div>
+    <strong class="ls-metric-value">{{ total_tipos }}</strong>
+    <span class="ls-metric-note">Categorias de material</span>
+  </article>
+  <article class="ls-metric-card green">
+    <div class="ls-metric-head"><span class="ls-metric-label">Fornecedores ativos</span><span class="ls-metric-icon"><i class="bi bi-truck"></i></span></div>
+    <strong class="ls-metric-value">{{ total_fornecedores }}</strong>
+    <span class="ls-metric-note">Parceiros disponíveis</span>
+  </article>
+</section>
 
-  <div class="tab-content">
+<ul class="nav nav-tabs ls-tabs" role="tablist">
+  <li class="nav-item">
+    <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#abaMateriais" type="button">
+      <i class="bi bi-tools me-1"></i> Materiais
+    </button>
+  </li>
+  <li class="nav-item">
+    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#abaTipos" type="button">
+      <i class="bi bi-tags me-1"></i> Tipos
+    </button>
+  </li>
+  <li class="nav-item">
+    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#abaFornecedores" type="button">
+      <i class="bi bi-truck me-1"></i> Fornecedores
+    </button>
+  </li>
+</ul>
 
-    <!-- ---------------- materiais ---------------- -->
-    <div class="tab-pane fade show active" id="abaMateriais">
-      <form method="get" class="row g-2 mb-3">
-        <div class="col-12 col-md-6">
-          <input name="q" value="{{ busca }}" class="form-control"
-                 placeholder="Buscar por nome, código ou descrição">
+<div class="tab-content">
+  <div class="tab-pane fade show active" id="abaMateriais">
+    <section class="ls-filter-panel">
+      <form method="get" class="row g-3 align-items-end">
+        <div class="col-12 col-lg-8">
+          <label class="form-label">Buscar material</label>
+          <input name="q" value="{{ busca }}" class="form-control" placeholder="Nome, código ou descrição">
         </div>
-        <div class="col-6 col-md-2 d-grid"><button class="btn btn-dark" type="submit">Buscar</button></div>
+        <div class="col-12 col-lg-4 d-grid">
+          <button class="btn btn-primary" type="submit"><i class="bi bi-search me-1"></i> Buscar</button>
+        </div>
       </form>
+    </section>
 
-      <div class="card border-0 shadow-sm"><div class="card-body">
+    <section class="ls-data-panel">
+      <div class="ls-data-header">
+        <div><h2>Materiais cadastrados</h2><p>Dados de identificação, tipo, unidade e posição financeira.</p></div>
+      </div>
+      <div class="ls-data-body">
         <div class="table-responsive">
-          <table class="table table-hover align-middle tabela-cadastro mb-0">
-            <thead class="table-dark">
+          <table class="ls-table">
+            <thead>
               <tr>
                 <th>Material</th><th>Tipo</th><th>Unidade</th>
-                <th class="text-end">Em estoque</th><th class="text-end">Total investido</th>
+                <th class="text-end">Em estoque</th><th class="text-end">Investido</th>
                 <th class="text-end">Ações</th>
               </tr>
             </thead>
@@ -80,67 +90,79 @@
                 <tr class="{% if not m.ativo %}linha-inativa{% endif %}">
                   <td>
                     <strong>{{ m.nome_material }}</strong>
-                    {% if not m.ativo %}<span class="badge bg-secondary ms-1">Inativo</span>{% endif %}
-                    <span class="d-block text-muted small">
+                    {% if not m.ativo %}<span class="ls-status neutral ms-1">Inativo</span>{% endif %}
+                    <span class="d-block ls-subtext">
                       {% if m.codigo_interno %}{{ m.codigo_interno }} · {% endif %}{{ m.descricao|default:"Sem descrição" }}
                     </span>
                   </td>
                   <td>{{ m.tipo_material|default:"—" }}</td>
                   <td>{{ m.get_unidade_display }}</td>
-                  <td class="text-end fw-semibold">{{ m.quantidade_total }}</td>
-                  <td class="text-end">R$ {{ m.valor_total|moeda }}</td>
-                  <td class="text-end">
-                    <button type="button" class="btn btn-sm btn-outline-secondary" data-editar-material="{{ m.id }}">Editar</button>
+                  <td class="text-end ls-number">{{ m.quantidade_total }}</td>
+                  <td class="text-end ls-money">R$ {{ m.valor_total|moeda }}</td>
+                  <td class="text-end ls-actions">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-editar-material="{{ m.id }}">
+                      <i class="bi bi-pencil"></i> Editar
+                    </button>
                     <button type="button" class="btn btn-sm btn-outline-danger"
-                            data-excluir-material="{{ m.id }}" data-nome="{{ m.nome_material }}">Excluir</button>
+                            data-excluir-material="{{ m.id }}" data-nome="{{ m.nome_material }}">
+                      <i class="bi bi-trash3"></i>
+                    </button>
                   </td>
                 </tr>
               {% empty %}
-                <tr><td colspan="6" class="text-center text-muted py-5">Nenhum material cadastrado.</td></tr>
+                <tr><td colspan="6"><div class="ls-empty"><i class="bi bi-tools"></i>Nenhum material cadastrado.</div></td></tr>
               {% endfor %}
             </tbody>
           </table>
         </div>
-      </div></div>
+      </div>
+    </section>
+  </div>
+
+  <div class="tab-pane fade" id="abaTipos">
+    <div class="d-flex justify-content-end mb-3">
+      <button type="button" class="btn btn-success" id="novoTipo"><i class="bi bi-plus-lg me-1"></i> Novo tipo</button>
     </div>
 
-    <!-- ---------------- tipos ---------------- -->
-    <div class="tab-pane fade" id="abaTipos">
-      <div class="d-flex justify-content-end mb-3">
-        <button type="button" class="btn btn-success" id="novoTipo">+ Novo tipo</button>
-      </div>
-      <div class="card border-0 shadow-sm"><div class="card-body">
+    <section class="ls-data-panel">
+      <div class="ls-data-header"><div><h2>Tipos de material</h2><p>Classificações usadas para organizar os cadastros.</p></div></div>
+      <div class="ls-data-body">
         <div class="table-responsive">
-          <table class="table table-hover align-middle tabela-cadastro mb-0">
-            <thead class="table-dark"><tr><th>Tipo</th><th class="text-end">Materiais</th><th class="text-end">Ações</th></tr></thead>
+          <table class="ls-table">
+            <thead><tr><th>Tipo</th><th class="text-end">Materiais</th><th class="text-end">Ações</th></tr></thead>
             <tbody>
               {% for t in tipos %}
                 <tr>
-                  <td>{{ t.descricao }}</td>
-                  <td class="text-end">{{ t.material.count }}</td>
+                  <td><strong>{{ t.descricao }}</strong></td>
+                  <td class="text-end ls-number">{{ t.material.count }}</td>
                   <td class="text-end">
                     <button type="button" class="btn btn-sm btn-outline-secondary"
-                            data-editar-tipo="{{ t.id }}" data-descricao="{{ t.descricao }}">Editar</button>
+                            data-editar-tipo="{{ t.id }}" data-descricao="{{ t.descricao }}">
+                      <i class="bi bi-pencil"></i> Editar
+                    </button>
                   </td>
                 </tr>
               {% empty %}
-                <tr><td colspan="3" class="text-center text-muted py-5">Nenhum tipo cadastrado.</td></tr>
+                <tr><td colspan="3"><div class="ls-empty"><i class="bi bi-tags"></i>Nenhum tipo cadastrado.</div></td></tr>
               {% endfor %}
             </tbody>
           </table>
         </div>
-      </div></div>
+      </div>
+    </section>
+  </div>
+
+  <div class="tab-pane fade" id="abaFornecedores">
+    <div class="d-flex justify-content-end mb-3">
+      <button type="button" class="btn btn-success" id="novoFornecedor"><i class="bi bi-plus-lg me-1"></i> Novo fornecedor</button>
     </div>
 
-    <!-- ---------------- fornecedores ---------------- -->
-    <div class="tab-pane fade" id="abaFornecedores">
-      <div class="d-flex justify-content-end mb-3">
-        <button type="button" class="btn btn-success" id="novoFornecedor">+ Novo fornecedor</button>
-      </div>
-      <div class="card border-0 shadow-sm"><div class="card-body">
+    <section class="ls-data-panel">
+      <div class="ls-data-header"><div><h2>Fornecedores</h2><p>Contatos e parceiros vinculados às compras do estoque.</p></div></div>
+      <div class="ls-data-body">
         <div class="table-responsive">
-          <table class="table table-hover align-middle tabela-cadastro mb-0">
-            <thead class="table-dark">
+          <table class="ls-table">
+            <thead>
               <tr><th>Fornecedor</th><th>Contato</th><th>CNPJ / CPF</th><th class="text-end">Itens</th><th class="text-end">Ações</th></tr>
             </thead>
             <tbody>
@@ -148,32 +170,35 @@
                 <tr class="{% if not f.ativo %}linha-inativa{% endif %}">
                   <td>
                     <strong>{{ f.nome }}</strong>
-                    {% if not f.ativo %}<span class="badge bg-secondary ms-1">Inativo</span>{% endif %}
+                    {% if not f.ativo %}<span class="ls-status neutral ms-1">Inativo</span>{% endif %}
                   </td>
                   <td>
                     {{ f.telefone|default:"—" }}
-                    {% if f.email %}<span class="d-block text-muted small">{{ f.email }}</span>{% endif %}
+                    {% if f.email %}<span class="d-block ls-subtext">{{ f.email }}</span>{% endif %}
                   </td>
                   <td>{{ f.cnpj|default:"—" }}</td>
-                  <td class="text-end">{{ f.estoques.count }}</td>
-                  <td class="text-end">
-                    <button type="button" class="btn btn-sm btn-outline-secondary" data-editar-fornecedor="{{ f.id }}">Editar</button>
+                  <td class="text-end ls-number">{{ f.estoques.count }}</td>
+                  <td class="text-end ls-actions">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-editar-fornecedor="{{ f.id }}">
+                      <i class="bi bi-pencil"></i> Editar
+                    </button>
                     <button type="button" class="btn btn-sm btn-outline-danger"
-                            data-excluir-fornecedor="{{ f.id }}" data-nome="{{ f.nome }}">Excluir</button>
+                            data-excluir-fornecedor="{{ f.id }}" data-nome="{{ f.nome }}">
+                      <i class="bi bi-trash3"></i>
+                    </button>
                   </td>
                 </tr>
               {% empty %}
-                <tr><td colspan="5" class="text-center text-muted py-5">Nenhum fornecedor cadastrado.</td></tr>
+                <tr><td colspan="5"><div class="ls-empty"><i class="bi bi-truck"></i>Nenhum fornecedor cadastrado.</div></td></tr>
               {% endfor %}
             </tbody>
           </table>
         </div>
-      </div></div>
-    </div>
+      </div>
+    </section>
   </div>
 </div>
 
-<!-- ================= modal material ================= -->
 <div class="modal fade" id="modalMaterial" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-scrollable">
     <form class="modal-content" id="formMaterial" method="post" action="{% url 'materiais_inner' %}">
@@ -189,8 +214,7 @@
         <div class="row g-3">
           <div class="col-12 col-md-8">
             <label class="form-label" for="materialNome">Nome *</label>
-            <input class="form-control" id="materialNome" name="nome_material"
-                   data-rotulo="nome" maxlength="90" required>
+            <input class="form-control" id="materialNome" name="nome_material" data-rotulo="nome" maxlength="90" required>
           </div>
           <div class="col-12 col-md-4">
             <label class="form-label" for="materialCodigo">Código interno</label>
@@ -229,7 +253,6 @@
   </div>
 </div>
 
-<!-- ================= modal tipo ================= -->
 <div class="modal fade" id="modalTipo" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-sm">
     <form class="modal-content" id="formTipo" method="post" action="{% url 'materiais_inner' %}">
@@ -254,7 +277,6 @@
   </div>
 </div>
 
-<!-- ================= modal fornecedor ================= -->
 <div class="modal fade" id="modalFornecedor" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-scrollable">
     <form class="modal-content" id="formFornecedor" method="post" action="{% url 'materiais_inner' %}">
@@ -270,8 +292,7 @@
         <div class="row g-3">
           <div class="col-12 col-md-6">
             <label class="form-label" for="fornecedorNome">Nome *</label>
-            <input class="form-control" id="fornecedorNome" name="nome"
-                   data-rotulo="nome" maxlength="120" required>
+            <input class="form-control" id="fornecedorNome" name="nome" data-rotulo="nome" maxlength="120" required>
           </div>
           <div class="col-6 col-md-3">
             <label class="form-label" for="fornecedorTelefone">Telefone</label>
@@ -283,8 +304,7 @@
           </div>
           <div class="col-12 col-md-6">
             <label class="form-label" for="fornecedorEmail">E-mail</label>
-            <input type="email" class="form-control" id="fornecedorEmail" name="email"
-                   data-rotulo="e-mail" maxlength="150">
+            <input type="email" class="form-control" id="fornecedorEmail" name="email" data-rotulo="e-mail" maxlength="150">
           </div>
           <div class="col-12 col-md-6">
             <label class="form-label" for="fornecedorSite">Site</label>
@@ -310,7 +330,6 @@
   </div>
 </div>
 
-<!-- ================= modal exclusão ================= -->
 <div class="modal fade" id="modalExcluir" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-sm">
     <form class="modal-content" id="formExcluir" method="post" action="{% url 'materiais_inner' %}">
@@ -351,7 +370,6 @@ document.addEventListener("DOMContentLoaded", function () {
     })[0];
   }
 
-  // ---------------- material ----------------
   function abrirMaterial(id) {
     var form = document.getElementById("formMaterial");
     var m = id ? achar(materiais, id) : null;
@@ -378,14 +396,15 @@ document.addEventListener("DOMContentLoaded", function () {
   document.getElementById("novoMaterial").addEventListener("click", function () {
     abrirMaterial(null);
   });
+
   document.querySelectorAll("[data-editar-material]").forEach(function (b) {
     b.addEventListener("click", function () {
       abrirMaterial(b.dataset.editarMaterial);
     });
   });
+
   Painel.ligar({ form: "formMaterial", erro: "materialErro" });
 
-  // ---------------- tipo ----------------
   function abrirTipo(id, descricao) {
     var form = document.getElementById("formTipo");
     form.reset();
@@ -399,14 +418,15 @@ document.addEventListener("DOMContentLoaded", function () {
   document.getElementById("novoTipo").addEventListener("click", function () {
     abrirTipo(null, "");
   });
+
   document.querySelectorAll("[data-editar-tipo]").forEach(function (b) {
     b.addEventListener("click", function () {
       abrirTipo(b.dataset.editarTipo, b.dataset.descricao);
     });
   });
+
   Painel.ligar({ form: "formTipo", erro: "tipoErro" });
 
-  // ---------------- fornecedor ----------------
   function abrirFornecedor(id) {
     var form = document.getElementById("formFornecedor");
     var f = id ? achar(fornecedores, id) : null;
@@ -434,14 +454,15 @@ document.addEventListener("DOMContentLoaded", function () {
   document.getElementById("novoFornecedor").addEventListener("click", function () {
     abrirFornecedor(null);
   });
+
   document.querySelectorAll("[data-editar-fornecedor]").forEach(function (b) {
     b.addEventListener("click", function () {
       abrirFornecedor(b.dataset.editarFornecedor);
     });
   });
+
   Painel.ligar({ form: "formFornecedor", erro: "fornecedorErro" });
 
-  // ---------------- exclusão ----------------
   function pedirExclusao(acao, id, nome) {
     Painel.erro("excluirErro", "");
     Painel.valor("excluirAcao", acao);
@@ -455,11 +476,13 @@ document.addEventListener("DOMContentLoaded", function () {
       pedirExclusao("delete_material", b.dataset.excluirMaterial, b.dataset.nome);
     });
   });
+
   document.querySelectorAll("[data-excluir-fornecedor]").forEach(function (b) {
     b.addEventListener("click", function () {
       pedirExclusao("delete_fornecedor", b.dataset.excluirFornecedor, b.dataset.nome);
     });
   });
+
   Painel.ligar({ form: "formExcluir", erro: "excluirErro" });
 });
 </script>

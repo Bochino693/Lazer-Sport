@@ -1,10 +1,50 @@
 {% extends "base_inner.html" %}
-{% block title %}Manutenções | Lazer & Sport{% endblock %}{% block top_title %}Central de manutenções{% endblock %}
+{% block title %}Manutenções | Lazer & Sport{% endblock %}
+{% block top_title %}Central de manutenções{% endblock %}
+
 {% block content %}
-<section class="ls-page-head"><div><span class="ls-eyebrow">Pós-venda e assistência</span><h1>Manutenções</h1><p>Visualize solicitações, equipamento, local de atendimento e situação atual.</p></div></section>
-<section class="ls-kpis"><article class="ls-kpi warning"><div class="ls-kpi-top"><span class="ls-kpi-label">Solicitações</span><span class="ls-kpi-icon"><i class="bi bi-wrench-adjustable"></i></span></div><strong class="ls-kpi-value">{{ manutencoes|length }}</strong><span class="ls-kpi-note">Registros encontrados</span></article></section>
-<article class="ls-panel"><div class="ls-panel-head"><div><h2>Solicitações de manutenção</h2><p>Dados necessários para triagem e acompanhamento.</p></div></div><div class="table-responsive"><table class="ls-table"><thead><tr><th>ID</th><th>Equipamento</th><th>Status</th><th>Local</th><th>Contato</th><th>Aberta em</th></tr></thead><tbody>
-{% for m in manutencoes %}<tr><td><strong>#{{ m.id }}</strong></td><td><strong>{{ m.nome_equipamento }}</strong><span class="d-block ls-muted">{{ m.descricao|truncatechars:72 }}</span></td><td>{% if m.status == "P" %}<span class="ls-status warning">{{ m.get_status_display }}</span>{% elif m.status == "C" %}<span class="ls-status success">{{ m.get_status_display }}</span>{% else %}<span class="ls-status info">{{ m.get_status_display }}</span>{% endif %}</td><td>{{ m.cidade|default:"—" }}{% if m.estado %}/{{ m.estado }}{% endif %}</td><td>{{ m.telefone_contato|default:"—" }}</td><td>{{ m.criado_em|date:"d/m/Y H:i" }}</td></tr>
-{% empty %}<tr><td colspan="6"><div class="ls-empty"><i class="bi bi-wrench"></i>Nenhuma manutenção registrada.</div></td></tr>{% endfor %}
-</tbody></table></div></article>
+<section class="ls-page-hero">
+  <div class="ls-page-hero-copy">
+    <span class="ls-page-kicker">Pós-venda e assistência</span>
+    <h1>Manutenções</h1>
+    <p>Visualize solicitações, equipamento, local, contato e situação atual para uma triagem mais rápida da assistência.</p>
+  </div>
+</section>
+
+<section class="ls-metrics">
+  <article class="ls-metric-card yellow">
+    <div class="ls-metric-head"><span class="ls-metric-label">Solicitações encontradas</span><span class="ls-metric-icon"><i class="bi bi-wrench-adjustable"></i></span></div>
+    <strong class="ls-metric-value">{{ manutencoes|length }}</strong>
+    <span class="ls-metric-note">Registros disponíveis para acompanhamento</span>
+  </article>
+</section>
+
+<section class="ls-data-panel">
+  <div class="ls-data-header"><div><h2>Solicitações de manutenção</h2><p>Dados necessários para triagem e acompanhamento operacional.</p></div></div>
+  <div class="ls-data-body">
+    <div class="table-responsive">
+      <table class="ls-table">
+        <thead><tr><th>ID</th><th>Equipamento</th><th>Status</th><th>Local</th><th>Contato</th><th>Aberta em</th></tr></thead>
+        <tbody>
+          {% for m in manutencoes %}
+            <tr>
+              <td><strong>#{{ m.id }}</strong></td>
+              <td><strong>{{ m.nome_equipamento }}</strong><span class="d-block ls-subtext">{{ m.descricao|truncatechars:90 }}</span></td>
+              <td>
+                {% if m.status == "P" %}<span class="ls-status warning">{{ m.get_status_display }}</span>
+                {% elif m.status == "C" %}<span class="ls-status success">{{ m.get_status_display }}</span>
+                {% else %}<span class="ls-status info">{{ m.get_status_display }}</span>{% endif %}
+              </td>
+              <td>{{ m.cidade|default:"—" }}{% if m.estado %}/{{ m.estado }}{% endif %}</td>
+              <td>{{ m.telefone_contato|default:"—" }}</td>
+              <td>{{ m.criado_em|date:"d/m/Y H:i" }}</td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="6"><div class="ls-empty"><i class="bi bi-wrench"></i>Nenhuma manutenção registrada.</div></td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
 {% endblock %}
