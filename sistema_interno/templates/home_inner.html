@@ -1,212 +1,46 @@
-{% extends 'base_inner.html' %}
-{% load static %}
+{% extends "base_inner.html" %}
 {% load interno_extras %}
-
-{% block title %}Dashboards{% endblock %}
-
+{% block title %}Visão Geral | Lazer & Sport{% endblock %}
+{% block top_title %}Visão geral{% endblock %}
 {% block content %}
+<section class="ls-page-head">
+  <div><span class="ls-eyebrow">Centro operacional</span><h1>Visão geral</h1><p>Acompanhe estoque, reposição e movimentações recentes em uma única tela, com acesso direto às rotinas mais usadas pela equipe.</p></div>
+  <div class="ls-page-actions"><a class="btn btn-outline-secondary" href="{% url 'dashboard_estoque' %}"><i class="bi bi-graph-up me-1"></i> Analisar estoque</a><a class="btn btn-primary" href="{% url 'stock' %}"><i class="bi bi-box-seam me-1"></i> Gerenciar estoque</a></div>
+</section>
 
-<style>
-:root {
-    --bg: #0f172a;
-    --wrapper-bg: #1e293b;
-    --primary: #3b82f6;
-    --accent: #1e40af;
-    --kpi-bg1: #1e3a8a;
-    --kpi-bg2: #2563eb;
-    --kpi-bg3: #1e40af;
-    --kpi-bg4: #3b82f6;
-    --chart-bg: #1e293b;
-    --radius: 16px;
-    --shadow: 0 8px 20px rgba(0,0,0,.35);
-    --text: #f1f5f9;
-}
+<section class="ls-kpis">
+  <article class="ls-kpi success"><div class="ls-kpi-top"><span class="ls-kpi-label">Valor em estoque</span><span class="ls-kpi-icon"><i class="bi bi-cash-stack"></i></span></div><strong class="ls-kpi-value">R$ {{ valor_investido|moeda }}</strong><span class="ls-kpi-note">Valor pago no saldo atual</span></article>
+  <article class="ls-kpi primary"><div class="ls-kpi-top"><span class="ls-kpi-label">Unidades</span><span class="ls-kpi-icon"><i class="bi bi-boxes"></i></span></div><strong class="ls-kpi-value">{{ total_pecas|numero }}</strong><span class="ls-kpi-note">Em {{ total_locais }} local{{ total_locais|pluralize:"is" }} de guarda</span></article>
+  <article class="ls-kpi violet"><div class="ls-kpi-top"><span class="ls-kpi-label">Materiais</span><span class="ls-kpi-icon"><i class="bi bi-tools"></i></span></div><strong class="ls-kpi-value">{{ total_materiais }}</strong><span class="ls-kpi-note">Cadastros ativos</span></article>
+  <article class="ls-kpi {% if total_criticos %}danger{% else %}success{% endif %}"><div class="ls-kpi-top"><span class="ls-kpi-label">Reposição</span><span class="ls-kpi-icon"><i class="bi bi-exclamation-triangle"></i></span></div><strong class="ls-kpi-value">{{ total_criticos }}</strong><span class="ls-kpi-note">{% if total_criticos %}Itens exigem atenção{% else %}Estoque sem críticos{% endif %}</span></article>
+</section>
 
-body {
-    background: var(--bg);
-    color: var(--text);
-}
+<section class="ls-grid-main">
+  <article class="ls-panel">
+    <div class="ls-panel-head"><div><h2>Últimas movimentações</h2><p>Entradas, saídas e ajustes registrados recentemente.</p></div><a class="ls-link" href="{% url 'movimentacoes_inner' %}">Ver histórico</a></div>
+    <div class="table-responsive"><table class="ls-table"><thead><tr><th>Quando</th><th>Material</th><th>Movimento</th><th class="text-end">Qtd.</th><th>Responsável</th></tr></thead><tbody>
+    {% for m in ultimos_movimentos %}
+      <tr><td class="text-nowrap">{{ m.ocorrido_em|date:"d/m H:i" }}</td><td><strong>{{ m.estoque.material.nome_material }}</strong><span class="d-block ls-muted">{{ m.estoque.descricao_local }}</span></td><td>{% if m.tipo == "entrada" %}<span class="ls-status success">Entrada</span>{% elif m.tipo == "saida" %}<span class="ls-status danger">Saída</span>{% else %}<span class="ls-status neutral">Ajuste</span>{% endif %}</td><td class="text-end ls-amount">{{ m.quantidade }}</td><td>{{ m.responsavel.get_username|default:"—" }}</td></tr>
+    {% empty %}<tr><td colspan="5"><div class="ls-empty"><i class="bi bi-arrow-left-right"></i>Nenhuma movimentação registrada.</div></td></tr>{% endfor %}
+    </tbody></table></div>
+  </article>
 
-/* ===== WRAPPER ===== */
-.dashboard-wrapper {
-    background: var(--wrapper-bg);
-    padding: 40px 30px;
-    border-radius: var(--radius);
-    box-shadow: var(--shadow);
-    max-width: 1200px;
-    margin: 30px auto;
-}
-
-/* ===== HEADER ===== */
-.dashboard-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 30px;
-}
-
-.dashboard-header h2 {
-    margin: 0;
-    font-weight: 600;
-}
-
-.dashboard-filters {
-    display: flex;
-    gap: 10px;
-}
-
-.filter-btn {
-    padding: 8px 16px;
-    border-radius: 8px;
-    background: rgba(255,255,255,.08);
-    color: var(--text);
-    text-decoration: none;
-    transition: .3s;
-}
-
-.filter-btn:hover {
-    background: var(--accent);
-}
-
-.filter-btn.active {
-    background: var(--primary);
-}
-
-/* ===== KPIs ===== */
-.kpi-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 20px;
-    margin-bottom: 30px;
-}
-
-.kpi-card {
-    border-radius: var(--radius);
-    padding: 22px;
-    text-align: center;
-    box-shadow: var(--shadow);
-}
-
-.kpi-card h4 {
-    margin: 0;
-    font-size: 14px;
-    opacity: .8;
-}
-
-.kpi-card span {
-    display: block;
-    margin-top: 10px;
-    font-size: 28px;
-    font-weight: 700;
-}
-
-.kpi-1 { background: var(--kpi-bg1); }
-.kpi-2 { background: var(--kpi-bg2); }
-.kpi-3 { background: var(--kpi-bg3); }
-.kpi-4 { background: var(--kpi-bg4); }
-
-/* ===== CHARTS ===== */
-.charts-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-    gap: 20px;
-}
-
-.chart-card {
-    background: var(--chart-bg);
-    border-radius: var(--radius);
-    padding: 20px;
-    box-shadow: var(--shadow);
-}
-
-.chart-card h4 {
-    margin-bottom: 15px;
-    font-weight: 500;
-}
-</style>
-
-<div class="dashboard-wrapper">
-
-    <!-- Header -->
-    <div class="dashboard-header">
-        <h2>DASHBOARDS GERAIS</h2>
-        <div class="dashboard-filters">
-            <a class="filter-btn active">Geral</a>
-            <a class="filter-btn">7 dias</a>
-            <a class="filter-btn">30 dias</a>
-            <a class="filter-btn">Ano</a>
+  <article class="ls-panel">
+    <div class="ls-panel-head"><div><h2>Reposição prioritária</h2><p>Itens abaixo do estoque mínimo.</p></div><a class="ls-link" href="{% url 'stock' %}?situacao=critico">Abrir lista</a></div>
+    <div class="ls-panel-body">
+      {% for e in criticos %}
+        <div class="d-flex align-items-center gap-3 py-2 {% if not forloop.last %}border-bottom{% endif %}">
+          <span class="ls-kpi-icon" style="--accent:#dc2626;--tone:rgba(220,38,38,.08)"><i class="bi bi-exclamation-lg"></i></span>
+          <div class="flex-grow-1"><strong class="d-block" style="font-size:.69rem;color:#26354a">{{ e.material.nome_material }}</strong><span class="d-block ls-muted" style="font-size:.58rem">{{ e.descricao_local }}</span></div>
+          <div class="text-end"><strong class="d-block text-danger" style="font-size:.72rem">{{ e.quantidade }}</strong><span class="ls-muted" style="font-size:.55rem">mín. {{ e.estoque_minimo }}</span></div>
         </div>
+      {% empty %}<div class="ls-empty"><i class="bi bi-check2-circle"></i>Nenhum item crítico agora.</div>{% endfor %}
     </div>
+  </article>
+</section>
 
-    <!-- KPIs do estoque -->
-    <div class="kpi-grid">
-        <div class="kpi-card kpi-1">
-            <h4>Total pago no estoque</h4>
-            <span>R$ {{ valor_investido|moeda }}</span>
-        </div>
-
-        <div class="kpi-card kpi-2">
-            <h4>Unidades guardadas</h4>
-            <span>{{ total_pecas|numero }}</span>
-        </div>
-
-        <div class="kpi-card kpi-3">
-            <h4>Materiais cadastrados</h4>
-            <span>{{ total_materiais }}</span>
-        </div>
-
-        <div class="kpi-card kpi-4">
-            <h4>Precisam de reposição</h4>
-            <span>{{ total_criticos }}</span>
-        </div>
-    </div>
-
-    <div class="charts-grid">
-        <div class="chart-card">
-            <h4>Repor agora</h4>
-            <table class="table table-dark table-sm align-middle mb-0">
-                <thead>
-                    <tr><th>Material</th><th>Local</th><th class="text-end">Saldo</th><th class="text-end">Mín.</th></tr>
-                </thead>
-                <tbody>
-                    {% for e in criticos %}
-                        <tr>
-                            <td>{{ e.material.nome_material }}</td>
-                            <td class="text-secondary">{{ e.descricao_local }}</td>
-                            <td class="text-end text-danger fw-bold">{{ e.quantidade }}</td>
-                            <td class="text-end text-secondary">{{ e.estoque_minimo }}</td>
-                        </tr>
-                    {% empty %}
-                        <tr><td colspan="4" class="text-secondary">Nenhum item abaixo do mínimo.</td></tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-            <a href="{% url 'stock' %}?situacao=critico" class="filter-btn d-inline-block mt-3">Ver no estoque</a>
-        </div>
-
-        <div class="chart-card">
-            <h4>Últimos movimentos</h4>
-            <table class="table table-dark table-sm align-middle mb-0">
-                <thead>
-                    <tr><th>Quando</th><th>Material</th><th>Tipo</th><th class="text-end">Qtd.</th></tr>
-                </thead>
-                <tbody>
-                    {% for m in ultimos_movimentos %}
-                        <tr>
-                            <td class="text-nowrap">{{ m.ocorrido_em|date:"d/m H:i" }}</td>
-                            <td>{{ m.estoque.material.nome_material }}</td>
-                            <td>{{ m.get_tipo_display }}</td>
-                            <td class="text-end">{{ m.quantidade }}</td>
-                        </tr>
-                    {% empty %}
-                        <tr><td colspan="4" class="text-secondary">Nenhum movimento registrado ainda.</td></tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-            <a href="{% url 'movimentacoes_inner' %}" class="filter-btn d-inline-block mt-3">Ver histórico</a>
-        </div>
-    </div>
-
-</div>
-
+<section class="mt-3 ls-grid-2">
+  <a class="ls-panel text-decoration-none p-3 d-flex align-items-center gap-3" href="{% url 'materiais_inner' %}"><span class="ls-kpi-icon"><i class="bi bi-tools"></i></span><span><strong class="d-block text-dark" style="font-size:.7rem">Materiais e fornecedores</strong><small class="ls-muted">Organize cadastros e fornecedores.</small></span><i class="bi bi-chevron-right ms-auto ls-muted"></i></a>
+  <a class="ls-panel text-decoration-none p-3 d-flex align-items-center gap-3" href="{% url 'stock' %}"><span class="ls-kpi-icon" style="--accent:#059669;--tone:#ecfdf5"><i class="bi bi-plus-lg"></i></span><span><strong class="d-block text-dark" style="font-size:.7rem">Atualizar estoque</strong><small class="ls-muted">Cadastre itens e movimentações.</small></span><i class="bi bi-chevron-right ms-auto ls-muted"></i></a>
+</section>
 {% endblock %}
