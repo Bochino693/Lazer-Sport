@@ -4,7 +4,13 @@ from django.urls import reverse
 
 class SubdomainURLMiddleware:
     ROTAS_GLOBAIS = (
-        "/static/", "/media/", "/favicon.ico", "/system/", "/accounts/",
+        "/static/",
+        "/media/",
+        "/favicon.ico",
+        "/system/",
+        "/accounts/",
+        "/healthz/",
+        "/robots.txt",
     )
 
     def __init__(self, get_response):
