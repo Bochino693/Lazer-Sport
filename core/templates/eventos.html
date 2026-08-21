@@ -75,7 +75,7 @@
                     <div class="modal-brinquedos d-flex flex-wrap gap-3 justify-content-center">
                         {% for b in evento.brinquedos.all %}
                         <div class="brinquedo-card text-center p-2 border rounded shadow-sm">
-                            <img src="{{ b.imagem_brinquedo.url }}" class="img-fluid rounded mb-2" style="height:120px; object-fit:cover;" alt="{{ b.nome_brinquedo }}">
+                            <img src="{{ b.imagem_brinquedo.url }}" class="img-fluid rounded mb-2" style="height:120px; object-fit:contain; background:#fff;" alt="{{ b.nome_brinquedo }}">
                             <h6>{{ b.nome_brinquedo }}</h6>
                         </div>
                         {% empty %}
