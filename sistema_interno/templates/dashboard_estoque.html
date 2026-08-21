@@ -1,10 +1,172 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-</head>
-<body>
+{% extends "base_inner.html" %}
+{% load interno_extras %}
 
-</body>
-</html>
+{% block title %}Dashboard do Estoque | Lazer & Sport{% endblock %}
+
+{% block extra_css %}
+<style>
+  .dash-kpi { border: 0; border-radius: 18px; box-shadow: 0 8px 22px rgba(15, 23, 42, .09); }
+  .dash-kpi .valor { font-size: 1.75rem; font-weight: 700; line-height: 1.1; }
+  .dash-kpi .rotulo { font-size: .74rem; text-transform: uppercase; letter-spacing: .06em; color: #6c757d; }
+  .barra-tipo { height: 10px; border-radius: 999px; background: #e9ecef; overflow: hidden; }
+  .barra-tipo > span { display: block; height: 100%; background: linear-gradient(90deg, #0d6efd, #28a745); }
+  .lista-compacta th { font-size: .73rem; text-transform: uppercase; letter-spacing: .04em; }
+  .lista-compacta td { font-size: .86rem; vertical-align: middle; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+
+  <div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4">
+    <div>
+      <h1 class="h3 mb-1">📊 Dashboard do Estoque</h1>
+      <p class="text-muted mb-0">Onde está o dinheiro parado e o que precisa de reposição.</p>
+    </div>
+    <div class="d-flex gap-2">
+      <a href="{% url 'stock' %}" class="btn btn-outline-secondary">Estoque</a>
+      <a href="{% url 'movimentacoes_inner' %}" class="btn btn-outline-secondary">Histórico</a>
+    </div>
+  </div>
+
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-lg-3">
+      <div class="card dash-kpi h-100"><div class="card-body">
+        <div class="valor text-success">R$ {{ valor_investido|moeda }}</div>
+        <div class="rotulo">Total pago no que está guardado</div>
+      </div></div>
+    </div>
+    <div class="col-6 col-lg-3">
+      <div class="card dash-kpi h-100"><div class="card-body">
+        <div class="valor">R$ {{ comprado_no_mes|moeda }}</div>
+        <div class="rotulo">Comprado nos últimos 30 dias</div>
+      </div></div>
+    </div>
+    <div class="col-6 col-lg-3">
+      <div class="card dash-kpi h-100"><div class="card-body">
+        <div class="valor">{{ total_pecas|numero }}</div>
+        <div class="rotulo">Unidades em {{ total_locais }} local{{ total_locais|pluralize:"is" }}</div>
+      </div></div>
+    </div>
+    <div class="col-6 col-lg-3">
+      <div class="card dash-kpi h-100"><div class="card-body">
+        <div class="valor {% if criticos %}text-danger{% else %}text-muted{% endif %}">{{ criticos|length }}</div>
+        <div class="rotulo">Precisam de reposição</div>
+      </div></div>
+    </div>
+  </div>
+
+  <div class="row g-3">
+    <div class="col-12 col-lg-6">
+      <div class="card border-0 shadow-sm h-100"><div class="card-body">
+        <h2 class="h6 text-uppercase text-muted mb-3">Dinheiro parado por tipo de material</h2>
+        {% for linha in por_tipo %}
+          <div class="mb-3">
+            <div class="d-flex justify-content-between small mb-1">
+              <span class="fw-semibold">{{ linha.nome }}</span>
+              <span>R$ {{ linha.valor|moeda }} · {{ linha.pecas }} un.</span>
+            </div>
+            <div class="barra-tipo"><span style="width: {{ linha.percentual }}%"></span></div>
+          </div>
+        {% empty %}
+          <p class="text-muted mb-0">Nada cadastrado ainda.</p>
+        {% endfor %}
+      </div></div>
+    </div>
+
+    <div class="col-12 col-lg-6">
+      <div class="card border-0 shadow-sm h-100"><div class="card-body">
+        <h2 class="h6 text-uppercase text-muted mb-3">Repor agora</h2>
+        <div class="table-responsive">
+          <table class="table table-sm lista-compacta mb-0">
+            <thead><tr><th>Material</th><th>Local</th><th class="text-end">Saldo</th><th class="text-end">Mín.</th></tr></thead>
+            <tbody>
+              {% for e in criticos %}
+                <tr>
+                  <td>{{ e.material.nome_material }}</td>
+                  <td class="text-muted">{{ e.descricao_local }}</td>
+                  <td class="text-end text-danger fw-bold">{{ e.quantidade }}</td>
+                  <td class="text-end text-muted">{{ e.estoque_minimo }}</td>
+                </tr>
+              {% empty %}
+                <tr><td colspan="4" class="text-muted">Nenhum item abaixo do mínimo. 👍</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div></div>
+    </div>
+
+    <div class="col-12 col-lg-6">
+      <div class="card border-0 shadow-sm h-100"><div class="card-body">
+        <h2 class="h6 text-uppercase text-muted mb-3">Itens de maior valor guardado</h2>
+        <div class="table-responsive">
+          <table class="table table-sm lista-compacta mb-0">
+            <thead><tr><th>Material</th><th class="text-end">Qtd.</th><th class="text-end">Total</th></tr></thead>
+            <tbody>
+              {% for e in mais_valiosos %}
+                <tr>
+                  <td>
+                    {{ e.material.nome_material }}
+                    <span class="d-block text-muted small">{{ e.descricao_local }}</span>
+                  </td>
+                  <td class="text-end">{{ e.quantidade }}</td>
+                  <td class="text-end fw-semibold">R$ {{ e.valor_total|moeda }}</td>
+                </tr>
+              {% empty %}
+                <tr><td colspan="3" class="text-muted">Nada cadastrado ainda.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div></div>
+    </div>
+
+    <div class="col-12 col-lg-6">
+      <div class="card border-0 shadow-sm h-100"><div class="card-body">
+        <h2 class="h6 text-uppercase text-muted mb-3">Por fornecedor</h2>
+        <div class="table-responsive">
+          <table class="table table-sm lista-compacta mb-0">
+            <thead><tr><th>Fornecedor</th><th class="text-end">Itens</th><th class="text-end">Total pago</th></tr></thead>
+            <tbody>
+              {% for linha in por_fornecedor %}
+                <tr>
+                  <td>{{ linha.fornecedor__nome|default:"Sem fornecedor" }}</td>
+                  <td class="text-end">{{ linha.itens }}</td>
+                  <td class="text-end fw-semibold">R$ {{ linha.valor|moeda }}</td>
+                </tr>
+              {% empty %}
+                <tr><td colspan="3" class="text-muted">Nada cadastrado ainda.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div></div>
+    </div>
+
+    <div class="col-12">
+      <div class="card border-0 shadow-sm"><div class="card-body">
+        <h2 class="h6 text-uppercase text-muted mb-3">Últimos movimentos</h2>
+        <div class="table-responsive">
+          <table class="table table-sm lista-compacta mb-0">
+            <thead><tr><th>Quando</th><th>Material</th><th>Tipo</th><th class="text-end">Qtd.</th><th>Responsável</th></tr></thead>
+            <tbody>
+              {% for m in movimentos_mes %}
+                <tr>
+                  <td class="text-nowrap">{{ m.ocorrido_em|date:"d/m H:i" }}</td>
+                  <td>{{ m.estoque.material.nome_material }}</td>
+                  <td>{{ m.get_tipo_display }}</td>
+                  <td class="text-end">{{ m.quantidade }}</td>
+                  <td>{{ m.responsavel.get_username|default:"—" }}</td>
+                </tr>
+              {% empty %}
+                <tr><td colspan="5" class="text-muted">Nenhum movimento nos últimos 30 dias.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div></div>
+    </div>
+  </div>
+</div>
+{% endblock %}

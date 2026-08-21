@@ -16,6 +16,25 @@
 .image-policy{margin-bottom:11px;padding:10px 12px;border:1px solid rgba(96,165,250,.18);border-radius:11px;color:#9fb4cb;background:rgba(37,99,235,.08);font-size:.63rem;line-height:1.5}.image-policy strong{color:#bfdbfe}.image-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.image-slot{padding:11px;border:1px solid rgba(148,163,184,.13);border-radius:14px;background:rgba(13,23,39,.58);transition:.2s}.image-slot.active{border-color:rgba(96,165,250,.32);background:rgba(37,99,235,.07)}.image-slot.blocked:not(.active){opacity:.52}.slot-head{margin-bottom:8px;display:flex;justify-content:space-between;gap:8px}.slot-head strong,.slot-head span{display:block}.slot-head strong{color:#dbe5f3;font-size:.7rem}.slot-head span{margin-top:2px;color:#718096;font-size:.56rem}.kind{height:22px;padding:0 6px;border-radius:999px;display:inline-flex!important;align-items:center;color:#9eacc0;background:#1e2d46;font-size:.5rem!important;font-weight:900;white-space:nowrap}.kind.cover-kind{color:#bfdbfe;background:rgba(37,99,235,.17)}.preview{aspect-ratio:16/10;border-radius:10px;display:grid;place-items:center;overflow:hidden;color:#7890aa;background:#eef4fa}.preview img{width:100%;height:100%;padding:4px;display:none;object-fit:contain}.image-slot.active .preview img{display:block}.image-slot.active .placeholder{display:none}.placeholder{padding:10px;font-size:.58rem;font-weight:800;text-align:center}.slot-actions{margin-top:8px;display:flex;gap:6px}.pick{position:relative;min-height:35px;padding:0 9px;border:1px solid rgba(96,165,250,.2);border-radius:8px;display:inline-flex;align-items:center;color:#bfdbfe;background:rgba(37,99,235,.12);font-size:.58rem;font-weight:850;cursor:pointer}.pick input{position:absolute;width:1px;height:1px;opacity:0}.remove{min-height:35px;padding:0 8px;border:1px solid rgba(239,68,68,.18);border-radius:8px;display:inline-flex;align-items:center;gap:5px;color:#fca5a5;background:rgba(239,68,68,.07);font-size:.55rem}.remove.hidden{display:none}.counter{margin-top:10px;padding:8px 10px;border:1px solid var(--line);border-radius:9px;display:flex;justify-content:space-between;color:#8392a8;background:#0d1727;font-size:.6rem}.counter.error{color:#fca5a5;border-color:rgba(239,68,68,.22)}.counter strong{color:#dbeafe}
 .toggle{padding:10px;border:1px solid var(--line);border-radius:10px;display:flex;gap:8px;align-items:center;color:#aebdd0;background:#0d1727}.toggle input{accent-color:#3b82f6}.quick{padding:20px;display:grid;gap:10px}.quick h3{margin:0;color:#fff}.quick p{margin:0;color:#718096;font-size:.63rem}.quick input[type=file]{color:#94a3b8;font-size:.65rem}.quick-msg{min-height:16px;color:#fca5a5;font-size:.62rem}
 @media(max-width:950px){.toy-kpis{grid-template-columns:repeat(2,1fr)}}@media(max-width:720px){.toys-hero{align-items:stretch;flex-direction:column}.primary{width:100%}.toy-filter{grid-template-columns:1fr}.toy-table thead{display:none}.toy-table,.toy-table tbody{display:block}.toy-table-wrap{padding:9px;overflow:visible}.toy-table tbody{display:grid;gap:9px}.toy-table tr{padding:13px;border:1px solid var(--line);border-radius:13px;display:grid;gap:9px;background:#0f192a}.toy-table td{padding:0;border:0}.field,.field.third{grid-column:1/-1}.checks{grid-template-columns:1fr 1fr}.image-grid{grid-template-columns:1fr}}@media(max-width:500px){.toy-kpis{grid-template-columns:1fr 1fr}.dialog{padding:7px 0 0;align-items:flex-end}.dialog-card,.dialog-card.small{max-height:calc(100dvh - 7px);border-radius:20px 20px 0 0}.checks{grid-template-columns:1fr}}
+
+/* ---- Refatoração do modal de imagens ---------------------------------- */
+.dialog-alert{display:none;margin-bottom:16px;padding:12px 14px;border:1px solid rgba(239,68,68,.3);border-radius:11px;color:#fecaca;background:rgba(239,68,68,.1);font-size:.7rem;line-height:1.55}
+.dialog-alert.show{display:block}
+.dialog-alert strong{display:block;margin-bottom:3px;color:#fca5a5;font-size:.66rem;letter-spacing:.05em;text-transform:uppercase}
+.image-slot.blocked:not(.active) .pick{pointer-events:none;opacity:.45}
+.image-slot.removed{border-color:rgba(239,68,68,.28);background:rgba(239,68,68,.06)}
+.image-slot.removed .preview{opacity:.4}
+.preview{position:relative;cursor:default}
+.preview.zoomable{cursor:zoom-in}
+.slot-flag{position:absolute;left:8px;top:8px;z-index:2;padding:3px 7px;border-radius:999px;color:#0b1220;background:#93c5fd;font-size:.5rem;font-weight:900;letter-spacing:.04em;text-transform:uppercase}
+.slot-flag.warn{background:#fca5a5}
+.slot-actions{flex-wrap:wrap}
+.remove{cursor:pointer;font:inherit;font-weight:800}
+.remove.undo{border-color:rgba(148,163,184,.22);color:#cbd5e1;background:#1e2d46}
+.lightbox-figure{display:grid;place-items:center;padding:14px;border-radius:14px;background:#eef4fa}
+.lightbox-figure img{max-width:100%;max-height:70dvh;object-fit:contain}
+.lightbox-figure figcaption{margin-top:10px;color:#475569;font-size:.66rem;font-weight:800}
+button[disabled],.primary[disabled]{opacity:.6;cursor:progress}
 </style>
 
 <div class="toys-page">
@@ -65,25 +84,108 @@
 <div id="toyDialog" class="dialog" aria-hidden="true">
   <div class="dialog-card">
     <form id="toyForm" method="post" enctype="multipart/form-data" action="{% url 'brinquedos_admin' %}">
-      {% csrf_token %}<input type="hidden" name="action" value="save"><input id="toyId" type="hidden" name="id">
-      <header class="dialog-head"><div><strong id="toyTitle">Cadastrar brinquedo</strong><span>Dados comerciais e imagens tipadas.</span></div><button id="closeToy" class="close" type="button">×</button></header>
+      {% csrf_token %}
+      <input type="hidden" name="action" value="save">
+      <input id="toyId" type="hidden" name="id">
+      <header class="dialog-head">
+        <div><strong id="toyTitle">Cadastrar brinquedo</strong><span>Dados comerciais e imagens tipadas.</span></div>
+        <button id="closeToy" class="close" type="button" aria-label="Fechar">×</button>
+      </header>
       <div class="dialog-body">
+        <div id="toyError" class="dialog-alert" role="alert" aria-live="assertive"><strong>Não foi possível salvar</strong><span id="toyErrorText"></span></div>
+
         <section class="section">
           <div class="section-title"><strong>Identificação</strong><span>Informações públicas do produto.</span></div>
           <div class="form-grid">
-            <div class="field full"><label>Nome</label><input id="toyName" name="nome_brinquedo" maxlength="150" required></div>
-            <div class="field full"><label>Descrição</label><textarea id="toyDescription" name="descricao" maxlength="999" required></textarea></div>
+            <div class="field full"><label for="toyName">Nome</label><input id="toyName" name="nome_brinquedo" maxlength="150" required></div>
+            <div class="field full"><label for="toyDescription">Descrição</label><textarea id="toyDescription" name="descricao" maxlength="999" required></textarea></div>
           </div>
         </section>
 
         <section class="section">
           <div class="section-title"><strong>Imagens do brinquedo</strong><span>Máximo de 3 imagens. Cada foto possui um tipo fixo.</span></div>
-          <div class="image-policy"><strong>PERFIL / FRENTE é obrigatória.</strong> Ela é sempre a capa. Escolha no máximo mais 2 entre verso, lado direito e lado esquerdo.</div>
+          <div class="image-policy"><strong>PERFIL / FRENTE é obrigatória.</strong> Ela é sempre a capa. Escolha no máximo mais 2 entre verso, lado direito e lado esquerdo. Clique na miniatura para ver a foto inteira.</div>
           <div class="image-grid">
-            <article class="image-slot" data-slot="perfil"><div class="slot-head"><span><strong>Perfil / Frente</strong><span>Foto frontal</span></span><span class="kind cover-kind">CAPA</span></div><div class="preview"><img id="prev-perfil" alt=""><span class="placeholder">Imagem de capa</span></div><div class="slot-actions"><label class="pick">Escolher<input id="img-perfil" name="imagem_perfil" type="file" accept="image/png,image/jpeg,image/webp"></label><label id="removeWrap-perfil" class="remove hidden"><input id="remove-perfil" name="remover_imagem_perfil" type="checkbox">Remover</label></div></article>
-            <article class="image-slot" data-slot="verso"><div class="slot-head"><span><strong>Verso / Costas</strong><span>Vista traseira</span></span><span class="kind">OPCIONAL</span></div><div class="preview"><img id="prev-verso" alt=""><span class="placeholder">Vista traseira</span></div><div class="slot-actions"><label class="pick">Escolher<input id="img-verso" name="imagem_verso" type="file" accept="image/png,image/jpeg,image/webp"></label><label id="removeWrap-verso" class="remove hidden"><input id="remove-verso" name="remover_imagem_verso" type="checkbox">Remover</label></div></article>
-            <article class="image-slot" data-slot="lado_direito"><div class="slot-head"><span><strong>Lado direito</strong><span>Vista lateral direita</span></span><span class="kind">OPCIONAL</span></div><div class="preview"><img id="prev-lado_direito" alt=""><span class="placeholder">Lado direito</span></div><div class="slot-actions"><label class="pick">Escolher<input id="img-lado_direito" name="imagem_lado_direito" type="file" accept="image/png,image/jpeg,image/webp"></label><label id="removeWrap-lado_direito" class="remove hidden"><input id="remove-lado_direito" name="remover_imagem_lado_direito" type="checkbox">Remover</label></div></article>
-            <article class="image-slot" data-slot="lado_esquerdo"><div class="slot-head"><span><strong>Lado esquerdo</strong><span>Vista lateral esquerda</span></span><span class="kind">OPCIONAL</span></div><div class="preview"><img id="prev-lado_esquerdo" alt=""><span class="placeholder">Lado esquerdo</span></div><div class="slot-actions"><label class="pick">Escolher<input id="img-lado_esquerdo" name="imagem_lado_esquerdo" type="file" accept="image/png,image/jpeg,image/webp"></label><label id="removeWrap-lado_esquerdo" class="remove hidden"><input id="remove-lado_esquerdo" name="remover_imagem_lado_esquerdo" type="checkbox">Remover</label></div></article>
+            <article class="image-slot" data-slot="perfil">
+              <div class="slot-head">
+                <span><strong>Perfil / Frente</strong><span>Foto frontal — vira a capa</span></span>
+                <span class="kind cover-kind">CAPA</span>
+              </div>
+              <div class="preview" data-preview="perfil">
+                <span class="slot-flag" data-flag="perfil" hidden></span>
+                <img id="prev-perfil" alt="">
+                <span class="placeholder">Perfil / Frente</span>
+              </div>
+              <div class="slot-actions">
+                <label class="pick" data-pick="perfil">
+                  <span data-pick-label="perfil">Escolher</span>
+                  <input id="img-perfil" name="imagem_perfil" type="file"
+                         accept="image/png,image/jpeg,image/webp">
+                </label>
+                <button type="button" class="remove hidden" data-remove="perfil"></button>
+                <input id="flag-perfil" name="remover_imagem_perfil" type="checkbox" hidden>
+              </div>
+            </article>
+            <article class="image-slot" data-slot="verso">
+              <div class="slot-head">
+                <span><strong>Verso / Costas</strong><span>Vista traseira</span></span>
+                <span class="kind">OPCIONAL</span>
+              </div>
+              <div class="preview" data-preview="verso">
+                <span class="slot-flag" data-flag="verso" hidden></span>
+                <img id="prev-verso" alt="">
+                <span class="placeholder">Verso / Costas</span>
+              </div>
+              <div class="slot-actions">
+                <label class="pick" data-pick="verso">
+                  <span data-pick-label="verso">Escolher</span>
+                  <input id="img-verso" name="imagem_verso" type="file"
+                         accept="image/png,image/jpeg,image/webp">
+                </label>
+                <button type="button" class="remove hidden" data-remove="verso"></button>
+                <input id="flag-verso" name="remover_imagem_verso" type="checkbox" hidden>
+              </div>
+            </article>
+            <article class="image-slot" data-slot="lado_direito">
+              <div class="slot-head">
+                <span><strong>Lado direito</strong><span>Vista lateral direita</span></span>
+                <span class="kind">OPCIONAL</span>
+              </div>
+              <div class="preview" data-preview="lado_direito">
+                <span class="slot-flag" data-flag="lado_direito" hidden></span>
+                <img id="prev-lado_direito" alt="">
+                <span class="placeholder">Lado direito</span>
+              </div>
+              <div class="slot-actions">
+                <label class="pick" data-pick="lado_direito">
+                  <span data-pick-label="lado_direito">Escolher</span>
+                  <input id="img-lado_direito" name="imagem_lado_direito" type="file"
+                         accept="image/png,image/jpeg,image/webp">
+                </label>
+                <button type="button" class="remove hidden" data-remove="lado_direito"></button>
+                <input id="flag-lado_direito" name="remover_imagem_lado_direito" type="checkbox" hidden>
+              </div>
+            </article>
+            <article class="image-slot" data-slot="lado_esquerdo">
+              <div class="slot-head">
+                <span><strong>Lado esquerdo</strong><span>Vista lateral esquerda</span></span>
+                <span class="kind">OPCIONAL</span>
+              </div>
+              <div class="preview" data-preview="lado_esquerdo">
+                <span class="slot-flag" data-flag="lado_esquerdo" hidden></span>
+                <img id="prev-lado_esquerdo" alt="">
+                <span class="placeholder">Lado esquerdo</span>
+              </div>
+              <div class="slot-actions">
+                <label class="pick" data-pick="lado_esquerdo">
+                  <span data-pick-label="lado_esquerdo">Escolher</span>
+                  <input id="img-lado_esquerdo" name="imagem_lado_esquerdo" type="file"
+                         accept="image/png,image/jpeg,image/webp">
+                </label>
+                <button type="button" class="remove hidden" data-remove="lado_esquerdo"></button>
+                <input id="flag-lado_esquerdo" name="remover_imagem_lado_esquerdo" type="checkbox" hidden>
+              </div>
+            </article>
           </div>
           <div id="imgCounter" class="counter"><span>PERFIL é a capa obrigatória.</span><strong><span id="imgCount">0</span>/3 imagens</strong></div>
         </section>
@@ -99,71 +201,615 @@
         <section class="section">
           <div class="section-title"><strong>Comercial e especificações</strong><span>Preço, avaliação, voltagem e dimensões.</span></div>
           <div class="form-grid">
-            <div class="field third"><label>Valor</label><input id="toyPrice" name="valor_brinquedo" placeholder="10.990,00"></div>
-            <div class="field third"><label>Avaliação</label><input id="toyRating" name="avaliacao" placeholder="4,7" required></div>
-            <div class="field third"><label>Voltagem</label><select id="toyVoltage" name="voltz" required><option value="">Selecione</option><option value="110V">110V</option><option value="220V">220V</option><option value="Bivolt">Bivolt</option><option value="Não se aplica">Não se aplica</option></select></div>
-            <div class="field third"><label>Altura (m)</label><input id="toyHeight" name="altura_m" placeholder="1,85"></div>
-            <div class="field third"><label>Largura (m)</label><input id="toyWidth" name="largura_m" placeholder="0,80"></div>
-            <div class="field third"><label>Profundidade (m)</label><input id="toyDepth" name="profundidade_m" placeholder="2,20"></div>
+            <div class="field third"><label for="toyPrice">Valor</label><input id="toyPrice" name="valor_brinquedo" placeholder="10.990,00"></div>
+            <div class="field third"><label for="toyRating">Avaliação</label><input id="toyRating" name="avaliacao" placeholder="4,7" required></div>
+            <div class="field third"><label for="toyVoltage">Voltagem</label><select id="toyVoltage" name="voltz" required><option value="">Selecione</option><option value="110V">110V</option><option value="220V">220V</option><option value="Bivolt">Bivolt</option><option value="Não se aplica">Não se aplica</option></select></div>
+            <div class="field third"><label for="toyHeight">Altura (m)</label><input id="toyHeight" name="altura_m" placeholder="1,85"></div>
+            <div class="field third"><label for="toyWidth">Largura (m)</label><input id="toyWidth" name="largura_m" placeholder="0,80"></div>
+            <div class="field third"><label for="toyDepth">Profundidade (m)</label><input id="toyDepth" name="profundidade_m" placeholder="2,20"></div>
             <div class="field full"><label class="toggle"><input id="toyStore" name="exibir_na_loja" type="checkbox"><span>Disponível na loja</span></label></div>
           </div>
         </section>
       </div>
-      <footer class="dialog-foot"><button id="cancelToy" class="secondary" type="button">Cancelar</button><button class="primary" type="submit">Salvar brinquedo</button></footer>
+      <footer class="dialog-foot"><button id="cancelToy" class="secondary" type="button">Cancelar</button><button id="submitToy" class="primary" type="submit">Salvar brinquedo</button></footer>
     </form>
   </div>
 </div>
 
-<div id="deleteDialog" class="dialog" aria-hidden="true"><div class="dialog-card small"><form method="post" action="{% url 'brinquedos_admin' %}">{% csrf_token %}<input type="hidden" name="action" value="delete"><input id="deleteId" type="hidden" name="id"><input id="deleteHidden" type="hidden" name="confirmacao_exclusao"><div class="quick"><h3>Excluir brinquedo?</h3><p>Digite exatamente:</p><code id="deletePhrase" style="padding:9px;border-radius:8px;color:#fecaca;background:#0d1727"></code><input id="deleteInput" autocomplete="off"></div><footer class="dialog-foot"><button id="cancelDelete" class="secondary" type="button">Cancelar</button><button id="deleteSubmit" class="primary" style="background:#dc2626" type="submit" disabled>Excluir</button></footer></form></div></div>
+<div id="deleteDialog" class="dialog" aria-hidden="true">
+  <div class="dialog-card small">
+    <form id="deleteForm" method="post" action="{% url 'brinquedos_admin' %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="delete">
+      <input id="deleteId" type="hidden" name="id">
+      <input id="deleteHidden" type="hidden" name="confirmacao_exclusao">
+      <div class="quick">
+        <h3>Excluir brinquedo?</h3>
+        <p>Digite exatamente:</p>
+        <code id="deletePhrase" style="padding:9px;border-radius:8px;color:#fecaca;background:#0d1727"></code>
+        <input id="deleteInput" autocomplete="off" placeholder="Confirmação">
+        <div id="deleteMsg" class="quick-msg"></div>
+      </div>
+      <footer class="dialog-foot"><button id="cancelDelete" class="secondary" type="button">Cancelar</button><button id="deleteSubmit" class="primary" style="background:#dc2626" type="submit" disabled>Excluir</button></footer>
+    </form>
+  </div>
+</div>
 
-<div id="categoryDialog" class="dialog" aria-hidden="true"><div class="dialog-card small"><form id="categoryForm" class="quick" enctype="multipart/form-data">{% csrf_token %}<h3>Nova categoria</h3><p>Crie e selecione sem fechar o brinquedo.</p><input name="nome_categoria" placeholder="Nome" required><input name="imagem_categoria" type="file" accept="image/*" required><div id="categoryMsg" class="quick-msg"></div><div style="display:flex;justify-content:flex-end;gap:7px"><button id="cancelCategory" class="secondary" type="button">Cancelar</button><button class="primary" type="submit">Criar</button></div></form></div></div>
+<div id="categoryDialog" class="dialog" data-close-backdrop aria-hidden="true"><div class="dialog-card small"><form id="categoryForm" class="quick" enctype="multipart/form-data">{% csrf_token %}<h3>Nova categoria</h3><p>Crie e selecione sem fechar o brinquedo.</p><input name="nome_categoria" placeholder="Nome" required><input name="imagem_categoria" type="file" accept="image/*" required><div id="categoryMsg" class="quick-msg"></div><div style="display:flex;justify-content:flex-end;gap:7px"><button id="cancelCategory" class="secondary" type="button">Cancelar</button><button class="primary" type="submit">Criar</button></div></form></div></div>
 
-<div id="tagDialog" class="dialog" aria-hidden="true"><div class="dialog-card small"><form id="tagForm" class="quick">{% csrf_token %}<h3>Nova tag</h3><p>Crie e selecione sem fechar o brinquedo.</p><input name="nome_tag" placeholder="Nome" required><div id="tagMsg" class="quick-msg"></div><div style="display:flex;justify-content:flex-end;gap:7px"><button id="cancelTag" class="secondary" type="button">Cancelar</button><button class="primary" type="submit">Criar</button></div></form></div></div>
+<div id="tagDialog" class="dialog" data-close-backdrop aria-hidden="true"><div class="dialog-card small"><form id="tagForm" class="quick">{% csrf_token %}<h3>Nova tag</h3><p>Crie e selecione sem fechar o brinquedo.</p><input name="nome_tag" placeholder="Nome" required><div id="tagMsg" class="quick-msg"></div><div style="display:flex;justify-content:flex-end;gap:7px"><button id="cancelTag" class="secondary" type="button">Cancelar</button><button class="primary" type="submit">Criar</button></div></form></div></div>
+
+<div id="lightbox" class="dialog" data-close-backdrop aria-hidden="true">
+  <div class="dialog-card">
+    <header class="dialog-head"><div><strong>Foto do brinquedo</strong><span>Imagem inteira, sem corte.</span></div><button id="closeLightbox" class="close" type="button" aria-label="Fechar">×</button></header>
+    <div class="dialog-body"><figure class="lightbox-figure" style="margin:0"><img id="lightboxImg" alt=""><figcaption id="lightboxCaption"></figcaption></figure></div>
+  </div>
+</div>
 
 {{ brinquedos_dados|json_script:"toysAdminData" }}
 
 <script>
-(function(){
- const TYPES=['perfil','verso','lado_direito','lado_esquerdo'], MAX=3, MAXSIZE=15*1024*1024;
- const toys=JSON.parse(document.getElementById('toysAdminData').textContent||'[]');
- const toyDialog=document.getElementById('toyDialog'), form=document.getElementById('toyForm');
- let existing={}, urls={}, expectedDelete='';
+(function () {
+  "use strict";
 
- function modal(el,on){el.classList.toggle('open',on);el.setAttribute('aria-hidden',on?'false':'true');document.body.style.overflow=on?'hidden':'';}
- function setv(id,v){document.getElementById(id).value=v==null?'':v;}
- function mark(name,ids){const s=new Set((ids||[]).map(Number));document.querySelectorAll(`input[name="${name}"]`).forEach(x=>x.checked=s.has(Number(x.value)));}
- function input(t){return document.getElementById(`img-${t}`)} function rem(t){return document.getElementById(`remove-${t}`)}
- function revoke(t){if(urls[t]){URL.revokeObjectURL(urls[t]);delete urls[t];}}
- function file(t){return input(t).files&&input(t).files[0]?input(t).files[0]:null}
- function active(t){if(file(t))return true;if(rem(t).checked)return false;return !!existing[t]}
- function list(){return TYPES.filter(active)}
- function source(t){const f=file(t);if(f){if(!urls[t])urls[t]=URL.createObjectURL(f);return urls[t]}if(rem(t).checked)return '';return existing[t]?existing[t].url:''}
- function render(){
-   const a=list();
-   TYPES.forEach(t=>{
-     const slot=document.querySelector(`[data-slot="${t}"]`), img=document.getElementById(`prev-${t}`), wrap=document.getElementById(`removeWrap-${t}`), src=source(t);
-     slot.classList.toggle('active',!!src); slot.classList.toggle('blocked',!src&&a.length>=MAX);
-     if(src)img.src=src;else img.removeAttribute('src');
-     wrap.classList.toggle('hidden',!existing[t]);
-   });
-   document.getElementById('imgCount').textContent=a.length;
-   const c=document.getElementById('imgCounter'), msg=c.querySelector('span'), has=a.includes('perfil');
-   c.classList.toggle('error',!has||a.length>MAX);
-   msg.textContent=!has?'PERFIL / FRENTE é obrigatória e será a capa.':a.length>=MAX?'Limite atingido: 3 imagens. Remova uma para trocar o ângulo.':'PERFIL será a capa. Você pode adicionar até 2 vistas complementares.';
- }
- function resetImages(toy){Object.keys(urls).forEach(revoke);existing={};TYPES.forEach(t=>{input(t).value='';rem(t).checked=false});if(toy&&Array.isArray(toy.imagens))toy.imagens.forEach(i=>{if(i&&i.tipo&&i.url)existing[i.tipo]=i});if(toy&&!existing.perfil&&toy.imagem_url)existing.perfil={tipo:'perfil',url:toy.imagem_url};render();}
- function openToy(id){form.reset();const toy=id?toys.find(x=>Number(x.id)===Number(id)):null;setv('toyId',toy?toy.id:'');document.getElementById('toyTitle').textContent=toy?'Editar brinquedo':'Cadastrar brinquedo';if(toy){setv('toyName',toy.nome_brinquedo);setv('toyDescription',toy.descricao);setv('toyPrice',toy.valor_brinquedo);setv('toyRating',toy.avaliacao);setv('toyVoltage',toy.voltz);setv('toyHeight',toy.altura_m);setv('toyWidth',toy.largura_m);setv('toyDepth',toy.profundidade_m);document.getElementById('toyStore').checked=!!toy.exibir_na_loja;mark('categorias_brinquedos',toy.categorias_ids);mark('tags',toy.tags_ids)}else{mark('categorias_brinquedos',[]);mark('tags',[])}resetImages(toy);modal(toyDialog,true);}
- document.getElementById('newToy').addEventListener('click',()=>openToy(null));document.querySelectorAll('[data-edit]').forEach(b=>b.addEventListener('click',()=>openToy(b.dataset.edit)));document.getElementById('closeToy').addEventListener('click',()=>modal(toyDialog,false));document.getElementById('cancelToy').addEventListener('click',()=>modal(toyDialog,false));
- TYPES.forEach(t=>{input(t).addEventListener('change',()=>{revoke(t);rem(t).checked=false;const f=file(t);if(f&&(!f.type.startsWith('image/')||f.size>MAXSIZE)){input(t).value='';alert(f.size>MAXSIZE?'Cada imagem deve ter no máximo 15 MB.':'Selecione um arquivo de imagem válido.');render();return}if(list().length>MAX){input(t).value='';revoke(t);alert('Máximo de 3 imagens. Mantenha PERFIL e escolha apenas mais dois ângulos.')}render()});rem(t).addEventListener('change',()=>{if(rem(t).checked){input(t).value='';revoke(t)}render()})});
- form.addEventListener('submit',e=>{const a=list();if(!a.includes('perfil')){e.preventDefault();alert('A imagem PERFIL / FRENTE é obrigatória.');return}if(a.length>MAX){e.preventDefault();alert('Máximo de 3 imagens.');return}});
- document.querySelectorAll('[data-delete]').forEach(b=>b.addEventListener('click',()=>{expectedDelete=`CONFIRMAR EXCLUSÃO ${b.dataset.name}`;document.getElementById('deleteId').value=b.dataset.delete;document.getElementById('deletePhrase').textContent=expectedDelete;document.getElementById('deleteInput').value='';document.getElementById('deleteHidden').value='';document.getElementById('deleteSubmit').disabled=true;modal(document.getElementById('deleteDialog'),true)}));
- document.getElementById('cancelDelete').addEventListener('click',()=>modal(document.getElementById('deleteDialog'),false));document.getElementById('deleteInput').addEventListener('input',e=>{const ok=e.target.value===expectedDelete;document.getElementById('deleteSubmit').disabled=!ok;document.getElementById('deleteHidden').value=ok?expectedDelete:''});
- function append(grid,name,id,label){const l=document.createElement('label');l.className='check';const i=document.createElement('input');i.type='checkbox';i.name=name;i.value=id;i.checked=true;const s=document.createElement('span');s.textContent=label;l.append(i,s);document.getElementById(grid).appendChild(l)}
- async function quick(form,url,msg,done){document.getElementById(msg).textContent='';try{const r=await fetch(url,{method:'POST',body:new FormData(form)}),d=await r.json();if(!r.ok||d.status!=='sucesso')throw new Error(d.msg||'Não foi possível salvar.');done(d);form.reset()}catch(err){document.getElementById(msg).textContent=err.message}}
- document.getElementById('openCategory').addEventListener('click',()=>modal(document.getElementById('categoryDialog'),true));document.getElementById('cancelCategory').addEventListener('click',()=>modal(document.getElementById('categoryDialog'),false));document.getElementById('openTag').addEventListener('click',()=>modal(document.getElementById('tagDialog'),true));document.getElementById('cancelTag').addEventListener('click',()=>modal(document.getElementById('tagDialog'),false));
- document.getElementById('categoryForm').addEventListener('submit',e=>{e.preventDefault();quick(e.currentTarget,"{% url 'categoria_new' %}",'categoryMsg',d=>{append('categoryGrid','categorias_brinquedos',d.id,d.nome);modal(document.getElementById('categoryDialog'),false)})});
- document.getElementById('tagForm').addEventListener('submit',e=>{e.preventDefault();quick(e.currentTarget,"{% url 'tag_new' %}",'tagMsg',d=>{append('tagGrid','tags',d.id,d.nome);modal(document.getElementById('tagDialog'),false)})});
- document.querySelectorAll('.dialog').forEach(d=>d.addEventListener('click',e=>{if(e.target===d)modal(d,false)}));document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.dialog.open').forEach(d=>modal(d,false))});
+  var TIPOS = ["perfil", "verso", "lado_direito", "lado_esquerdo"];
+  var ROTULOS = {
+    perfil: "Perfil / Frente",
+    verso: "Verso / Costas",
+    lado_direito: "Lado direito",
+    lado_esquerdo: "Lado esquerdo"
+  };
+  var MAX = 3;
+  var MAX_BYTES = 15 * 1024 * 1024;
+
+  var brinquedos = JSON.parse(
+    document.getElementById("toysAdminData").textContent || "[]"
+  );
+
+  var toyDialog = document.getElementById("toyDialog");
+  var deleteDialog = document.getElementById("deleteDialog");
+  var categoryDialog = document.getElementById("categoryDialog");
+  var tagDialog = document.getElementById("tagDialog");
+  var lightbox = document.getElementById("lightbox");
+
+  var form = document.getElementById("toyForm");
+  var deleteForm = document.getElementById("deleteForm");
+
+  var salvas = {};      // tipo -> foto ja gravada no servidor
+  var previas = {};     // tipo -> object URL da foto recem escolhida
+  var fraseExclusao = "";
+
+  // ----------------------------------------------------------------
+  // Pilha de modais
+  //
+  // Antes, Escape fechava TODOS os modais de uma vez -- abrir "nova
+  // categoria" e apertar Escape derrubava junto o cadastro inteiro,
+  // com tudo o que ja tinha sido digitado. Agora so o modal do topo
+  // fecha, e o scroll do fundo so volta quando nao sobra nenhum.
+  // ----------------------------------------------------------------
+  var pilha = [];
+
+  function abrir(el) {
+    if (pilha.indexOf(el) === -1) {
+      pilha.push(el);
+    }
+    el.classList.add("open");
+    el.setAttribute("aria-hidden", "false");
+    document.body.style.overflow = "hidden";
+  }
+
+  function fechar(el) {
+    var i = pilha.indexOf(el);
+    if (i !== -1) {
+      pilha.splice(i, 1);
+    }
+    el.classList.remove("open");
+    el.setAttribute("aria-hidden", "true");
+    if (!pilha.length) {
+      document.body.style.overflow = "";
+    }
+  }
+
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && pilha.length) {
+      fechar(pilha[pilha.length - 1]);
+    }
+  });
+
+  // Clique no fundo so fecha modais descartaveis. O cadastro e a
+  // exclusao exigem Cancelar/×, senao um clique torto apaga o trabalho.
+  document.querySelectorAll(".dialog[data-close-backdrop]").forEach(function (d) {
+    d.addEventListener("click", function (e) {
+      if (e.target === d) {
+        fechar(d);
+      }
+    });
+  });
+
+  // ----------------------------------------------------------------
+  // Mensagens de erro dentro do proprio modal
+  // ----------------------------------------------------------------
+  function erro(texto) {
+    var caixa = document.getElementById("toyError");
+    document.getElementById("toyErrorText").textContent = texto || "";
+    caixa.classList.toggle("show", !!texto);
+    if (texto) {
+      caixa.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    }
+  }
+
+  // ----------------------------------------------------------------
+  // Slots de imagem
+  // ----------------------------------------------------------------
+  function entrada(tipo) {
+    return document.getElementById("img-" + tipo);
+  }
+
+  function marcador(tipo) {
+    return document.getElementById("flag-" + tipo);
+  }
+
+  function arquivo(tipo) {
+    var el = entrada(tipo);
+    return el.files && el.files.length ? el.files[0] : null;
+  }
+
+  function removida(tipo) {
+    return marcador(tipo).checked && !arquivo(tipo);
+  }
+
+  function ativa(tipo) {
+    return !!arquivo(tipo) || (!!salvas[tipo] && !removida(tipo));
+  }
+
+  function ativas() {
+    return TIPOS.filter(ativa);
+  }
+
+  function descartarPrevia(tipo) {
+    if (previas[tipo]) {
+      URL.revokeObjectURL(previas[tipo]);
+      delete previas[tipo];
+    }
+  }
+
+  function origem(tipo) {
+    var f = arquivo(tipo);
+    if (f) {
+      if (!previas[tipo]) {
+        previas[tipo] = URL.createObjectURL(f);
+      }
+      return previas[tipo];
+    }
+    if (removida(tipo)) {
+      return "";
+    }
+    return salvas[tipo] ? salvas[tipo].url : "";
+  }
+
+  function pintar() {
+    var lista = ativas();
+    var cheio = lista.length >= MAX;
+
+    TIPOS.forEach(function (tipo) {
+      var slot = document.querySelector('[data-slot="' + tipo + '"]');
+      var img = document.getElementById("prev-" + tipo);
+      var preview = slot.querySelector('[data-preview="' + tipo + '"]');
+      var flag = slot.querySelector('[data-flag="' + tipo + '"]');
+      var botao = slot.querySelector('[data-remove="' + tipo + '"]');
+      var rotulo = slot.querySelector('[data-pick-label="' + tipo + '"]');
+      var src = origem(tipo);
+      var nova = !!arquivo(tipo);
+      var apagando = removida(tipo);
+
+      slot.classList.toggle("active", !!src);
+      slot.classList.toggle("removed", apagando);
+      // Slot bloqueado agora bloqueia de verdade: antes o arquivo era
+      // carregado e so depois um alert desfazia a escolha.
+      slot.classList.toggle("blocked", !src && cheio);
+      entrada(tipo).disabled = !src && cheio;
+
+      if (src) {
+        img.src = src;
+      } else {
+        img.removeAttribute("src");
+      }
+      preview.classList.toggle("zoomable", !!src);
+
+      if (nova) {
+        flag.hidden = false;
+        flag.textContent = "Nova";
+        flag.classList.remove("warn");
+      } else if (apagando) {
+        flag.hidden = false;
+        flag.textContent = "Será removida";
+        flag.classList.add("warn");
+      } else {
+        flag.hidden = true;
+      }
+
+      rotulo.textContent = src && !apagando ? "Trocar" : "Escolher";
+
+      // Um mesmo botao resolve os dois casos que antes ficavam de fora:
+      // desfazer um arquivo escolhido por engano e desmarcar a remocao.
+      if (nova) {
+        botao.textContent = "Descartar";
+        botao.className = "remove";
+      } else if (apagando) {
+        botao.textContent = "Manter foto";
+        botao.className = "remove undo";
+      } else if (salvas[tipo]) {
+        botao.textContent = "Remover";
+        botao.className = "remove";
+      } else {
+        botao.className = "remove hidden";
+      }
+    });
+
+    document.getElementById("imgCount").textContent = lista.length;
+
+    var contador = document.getElementById("imgCounter");
+    var texto = contador.querySelector("span");
+    var temPerfil = lista.indexOf("perfil") !== -1;
+
+    contador.classList.toggle("error", !temPerfil || lista.length > MAX);
+    texto.textContent = !temPerfil
+      ? "PERFIL / FRENTE é obrigatória e será a capa."
+      : cheio
+        ? "Limite atingido: 3 imagens. Remova uma para trocar o ângulo."
+        : "PERFIL será a capa. Você pode adicionar até 2 vistas complementares.";
+  }
+
+  function zerarImagens(brinquedo) {
+    TIPOS.forEach(function (tipo) {
+      descartarPrevia(tipo);
+      entrada(tipo).value = "";
+      entrada(tipo).disabled = false;
+      marcador(tipo).checked = false;
+    });
+
+    salvas = {};
+
+    if (brinquedo && Array.isArray(brinquedo.imagens)) {
+      brinquedo.imagens.forEach(function (foto) {
+        if (foto && foto.tipo && foto.url) {
+          salvas[foto.tipo] = foto;
+        }
+      });
+    }
+    // Brinquedo antigo, cadastrado antes das fotos tipadas: a capa
+    // legada entra como PERFIL para o slot nao aparecer vazio.
+    if (brinquedo && !salvas.perfil && brinquedo.imagem_url) {
+      salvas.perfil = { tipo: "perfil", url: brinquedo.imagem_url };
+    }
+
+    pintar();
+  }
+
+  TIPOS.forEach(function (tipo) {
+    entrada(tipo).addEventListener("change", function () {
+      descartarPrevia(tipo);
+      marcador(tipo).checked = false;
+
+      var f = arquivo(tipo);
+
+      if (f && f.type.indexOf("image/") !== 0) {
+        entrada(tipo).value = "";
+        erro("O arquivo escolhido para " + ROTULOS[tipo] + " não é uma imagem.");
+      } else if (f && f.size > MAX_BYTES) {
+        entrada(tipo).value = "";
+        erro("Cada imagem deve ter no máximo 15 MB. " +
+             ROTULOS[tipo] + " tem " + (f.size / 1048576).toFixed(1) + " MB.");
+      } else {
+        erro("");
+      }
+
+      pintar();
+    });
+
+    document
+      .querySelector('[data-remove="' + tipo + '"]')
+      .addEventListener("click", function () {
+        if (arquivo(tipo)) {
+          // Desfaz apenas a escolha nova; a foto ja gravada continua.
+          descartarPrevia(tipo);
+          entrada(tipo).value = "";
+          marcador(tipo).checked = false;
+        } else {
+          marcador(tipo).checked = !marcador(tipo).checked;
+        }
+        erro("");
+        pintar();
+      });
+
+    document
+      .querySelector('[data-preview="' + tipo + '"]')
+      .addEventListener("click", function () {
+        var src = origem(tipo);
+        if (!src) {
+          return;
+        }
+        document.getElementById("lightboxImg").src = src;
+        document.getElementById("lightboxImg").alt = ROTULOS[tipo];
+        document.getElementById("lightboxCaption").textContent = ROTULOS[tipo];
+        abrir(lightbox);
+      });
+  });
+
+  document
+    .getElementById("closeLightbox")
+    .addEventListener("click", function () {
+      fechar(lightbox);
+    });
+
+  // ----------------------------------------------------------------
+  // Abertura do cadastro
+  // ----------------------------------------------------------------
+  function valor(id, v) {
+    document.getElementById(id).value = v === null || v === undefined ? "" : v;
+  }
+
+  function marcar(nome, ids) {
+    var alvo = (ids || []).map(Number);
+    // Escopo no proprio form: fora dele existem outros checkboxes.
+    form.querySelectorAll('input[name="' + nome + '"]').forEach(function (x) {
+      x.checked = alvo.indexOf(Number(x.value)) !== -1;
+    });
+  }
+
+  function abrirBrinquedo(id) {
+    form.reset();
+    erro("");
+    travar(false);
+
+    var brinquedo = id
+      ? brinquedos.filter(function (x) {
+          return Number(x.id) === Number(id);
+        })[0]
+      : null;
+
+    valor("toyId", brinquedo ? brinquedo.id : "");
+    document.getElementById("toyTitle").textContent = brinquedo
+      ? "Editar brinquedo"
+      : "Cadastrar brinquedo";
+
+    if (brinquedo) {
+      valor("toyName", brinquedo.nome_brinquedo);
+      valor("toyDescription", brinquedo.descricao);
+      valor("toyPrice", brinquedo.valor_brinquedo);
+      valor("toyRating", brinquedo.avaliacao);
+      valor("toyVoltage", brinquedo.voltz);
+      valor("toyHeight", brinquedo.altura_m);
+      valor("toyWidth", brinquedo.largura_m);
+      valor("toyDepth", brinquedo.profundidade_m);
+      document.getElementById("toyStore").checked = !!brinquedo.exibir_na_loja;
+      marcar("categorias_brinquedos", brinquedo.categorias_ids);
+      marcar("tags", brinquedo.tags_ids);
+    } else {
+      marcar("categorias_brinquedos", []);
+      marcar("tags", []);
+    }
+
+    zerarImagens(brinquedo);
+    abrir(toyDialog);
+  }
+
+  function fecharBrinquedo() {
+    TIPOS.forEach(descartarPrevia);
+    fechar(toyDialog);
+  }
+
+  document.getElementById("newToy").addEventListener("click", function () {
+    abrirBrinquedo(null);
+  });
+  document.querySelectorAll("[data-edit]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      abrirBrinquedo(b.dataset.edit);
+    });
+  });
+  document.getElementById("closeToy").addEventListener("click", fecharBrinquedo);
+  document.getElementById("cancelToy").addEventListener("click", fecharBrinquedo);
+
+  // ----------------------------------------------------------------
+  // Envio
+  //
+  // Vai por fetch: um erro de validacao volta como JSON e aparece no
+  // topo do modal. Antes o servidor respondia com redirect e o
+  // formulario inteiro -- textos, categorias, arquivos -- era perdido.
+  // ----------------------------------------------------------------
+  function travar(on) {
+    document.getElementById("submitToy").disabled = on;
+    document.getElementById("submitToy").textContent = on
+      ? "Salvando..."
+      : "Salvar brinquedo";
+    document.getElementById("cancelToy").disabled = on;
+    document.getElementById("closeToy").disabled = on;
+  }
+
+  async function enviar(formulario) {
+    // getAttribute, nao formulario.action: o form tem um
+    // <input name="action">, e o acesso por propriedade devolve esse
+    // input em vez da URL.
+    var destino = formulario.getAttribute("action");
+
+    var resposta = await fetch(destino, {
+      method: "POST",
+      body: new FormData(formulario),
+      headers: { "X-Requested-With": "XMLHttpRequest" },
+      credentials: "same-origin"
+    });
+
+    var dados = null;
+    try {
+      dados = await resposta.json();
+    } catch (e) {
+      dados = null;
+    }
+
+    if (!resposta.ok || !dados || dados.status !== "sucesso") {
+      throw new Error(
+        (dados && dados.msg) ||
+          "Não foi possível salvar. Tente novamente em instantes."
+      );
+    }
+
+    return dados;
+  }
+
+  // A validacao nativa do navegador nao bubbla e o balaozinho some
+  // assim que o modal rola. Aqui o motivo tambem vai pro banner fixo.
+  form.addEventListener(
+    "invalid",
+    function (e) {
+      var campo = e.target;
+      var etiqueta = form.querySelector('label[for="' + campo.id + '"]');
+      erro(
+        "Confira o campo obrigatório " +
+          ((etiqueta && etiqueta.textContent) || campo.name) +
+          ": " +
+          campo.validationMessage
+      );
+      campo.scrollIntoView({ block: "center", behavior: "smooth" });
+      travar(false);
+    },
+    true
+  );
+
+  form.addEventListener("submit", async function (e) {
+    e.preventDefault();
+    erro("");
+
+    var lista = ativas();
+
+    if (lista.indexOf("perfil") === -1) {
+      erro("A imagem PERFIL / FRENTE é obrigatória: ela é a capa do brinquedo.");
+      return;
+    }
+    if (lista.length > MAX) {
+      erro("Máximo de 3 imagens. Mantenha PERFIL e escolha apenas mais dois ângulos.");
+      return;
+    }
+
+    travar(true);
+    try {
+      await enviar(form);
+      window.location.reload();
+    } catch (err) {
+      erro(err.message);
+      travar(false);
+    }
+  });
+
+  // ----------------------------------------------------------------
+  // Exclusao
+  // ----------------------------------------------------------------
+  document.querySelectorAll("[data-delete]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      fraseExclusao = "CONFIRMAR EXCLUSÃO " + b.dataset.name;
+      document.getElementById("deleteId").value = b.dataset.delete;
+      document.getElementById("deletePhrase").textContent = fraseExclusao;
+      document.getElementById("deleteInput").value = "";
+      document.getElementById("deleteHidden").value = "";
+      document.getElementById("deleteMsg").textContent = "";
+      document.getElementById("deleteSubmit").disabled = true;
+      abrir(deleteDialog);
+    });
+  });
+
+  document.getElementById("cancelDelete").addEventListener("click", function () {
+    fechar(deleteDialog);
+  });
+
+  document.getElementById("deleteInput").addEventListener("input", function (e) {
+    var ok = e.target.value === fraseExclusao;
+    document.getElementById("deleteSubmit").disabled = !ok;
+    document.getElementById("deleteHidden").value = ok ? fraseExclusao : "";
+  });
+
+  deleteForm.addEventListener("submit", async function (e) {
+    e.preventDefault();
+    var botao = document.getElementById("deleteSubmit");
+    botao.disabled = true;
+    botao.textContent = "Excluindo...";
+    try {
+      await enviar(deleteForm);
+      window.location.reload();
+    } catch (err) {
+      document.getElementById("deleteMsg").textContent = err.message;
+      botao.disabled = false;
+      botao.textContent = "Excluir";
+    }
+  });
+
+  // ----------------------------------------------------------------
+  // Cadastros rapidos de categoria e tag
+  // ----------------------------------------------------------------
+  function anexar(grid, nome, id, texto) {
+    var l = document.createElement("label");
+    l.className = "check";
+    var i = document.createElement("input");
+    i.type = "checkbox";
+    i.name = nome;
+    i.value = id;
+    i.checked = true;
+    // Sem o atributo, o form.reset() da proxima abertura desmarcaria
+    // a opcao recem criada sem motivo aparente.
+    i.setAttribute("checked", "checked");
+    var s = document.createElement("span");
+    s.textContent = texto;
+    l.appendChild(i);
+    l.appendChild(s);
+    document.getElementById(grid).appendChild(l);
+  }
+
+  async function rapido(formulario, url, alvoMsg, pronto) {
+    document.getElementById(alvoMsg).textContent = "";
+    try {
+      var r = await fetch(url, {
+        method: "POST",
+        body: new FormData(formulario),
+        headers: { "X-Requested-With": "XMLHttpRequest" },
+        credentials: "same-origin"
+      });
+      var d = await r.json();
+      if (!r.ok || d.status !== "sucesso") {
+        throw new Error(d.msg || "Não foi possível salvar.");
+      }
+      pronto(d);
+      formulario.reset();
+    } catch (err) {
+      document.getElementById(alvoMsg).textContent = err.message;
+    }
+  }
+
+  document.getElementById("openCategory").addEventListener("click", function () {
+    abrir(categoryDialog);
+  });
+  document.getElementById("cancelCategory").addEventListener("click", function () {
+    fechar(categoryDialog);
+  });
+  document.getElementById("openTag").addEventListener("click", function () {
+    abrir(tagDialog);
+  });
+  document.getElementById("cancelTag").addEventListener("click", function () {
+    fechar(tagDialog);
+  });
+
+  document.getElementById("categoryForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    rapido(e.currentTarget, "{% url 'categoria_new' %}", "categoryMsg", function (d) {
+      anexar("categoryGrid", "categorias_brinquedos", d.id, d.nome);
+      fechar(categoryDialog);
+    });
+  });
+
+  document.getElementById("tagForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    rapido(e.currentTarget, "{% url 'tag_new' %}", "tagMsg", function (d) {
+      anexar("tagGrid", "tags", d.id, d.nome);
+      fechar(tagDialog);
+    });
+  });
 })();
 </script>
 {% endblock %}

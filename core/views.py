@@ -2263,6 +2263,10 @@ class PedidoAdminView(AdminOnlyMixin, View):
 
 
 
+class ErroDeFormulario(Exception):
+    """Falha previsível de validação: vira mensagem pro usuário, não 500."""
+
+
 class BrinquedoAdmin(AdminOnlyMixin, View):
 
     TIPOS_IMAGEM = (
@@ -2411,301 +2415,325 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
             context,
         )
 
+    # ------------------------------------------------------------------
+    # Respostas do formulário
+    #
+    # O modal envia por fetch e espera JSON: assim um erro de validação
+    # volta pro próprio modal, com tudo o que o usuário digitou ainda na
+    # tela. Um POST comum (JavaScript desligado) continua no fluxo antigo
+    # de messages + redirect.
+    # ------------------------------------------------------------------
+    @staticmethod
+    def _pede_json(request):
+        return (
+            request.headers.get("X-Requested-With") == "XMLHttpRequest"
+            or request.POST.get("resposta") == "json"
+        )
+
+    def _responder_erro(self, request, mensagem, status=400):
+        # O @transaction.atomic só desfaz sozinho quando a exceção sobe.
+        # Como aqui a falha vira resposta, o rollback é explícito.
+        transaction.set_rollback(True)
+
+        if self._pede_json(request):
+            return JsonResponse(
+                {"status": "erro", "msg": mensagem},
+                status=status,
+            )
+
+        messages.error(request, mensagem)
+        return redirect("brinquedos_admin")
+
+    def _responder_sucesso(self, request, mensagem, brinquedo_id=None):
+        messages.success(request, mensagem)
+
+        if self._pede_json(request):
+            return JsonResponse({
+                "status": "sucesso",
+                "msg": mensagem,
+                "id": brinquedo_id,
+            })
+
+        return redirect("brinquedos_admin")
+
     @transaction.atomic
     def post(self, request):
         try:
             action = request.POST.get("action", "save")
 
             if action == "delete":
-                brinquedo = get_object_or_404(
-                    Brinquedos,
-                    pk=request.POST.get("id"),
-                )
-                nome = brinquedo.nome_brinquedo or "Brinquedo"
-                frase_esperada = f"CONFIRMAR EXCLUSÃO {nome}"
-                frase_informada = request.POST.get(
-                    "confirmacao_exclusao",
-                    "",
-                ).strip()
-
-                if frase_informada != frase_esperada:
-                    messages.error(
-                        request,
-                        "Exclusão cancelada: o texto de confirmação não "
-                        "corresponde ao nome do brinquedo.",
-                    )
-                    return redirect("brinquedos_admin")
-
-                brinquedo.delete()
-                messages.success(
-                    request,
-                    f"Brinquedo '{nome}' excluído com sucesso.",
-                )
-                return redirect("brinquedos_admin")
+                return self._excluir(request)
 
             if action != "save":
-                messages.error(request, "Ação inválida.")
-                return redirect("brinquedos_admin")
+                raise ErroDeFormulario("Ação inválida.")
 
-            brinquedo_id = request.POST.get("id")
-            brinquedo = (
-                get_object_or_404(Brinquedos, pk=brinquedo_id)
-                if brinquedo_id else Brinquedos()
-            )
+            return self._salvar(request)
 
-            nome = request.POST.get("nome_brinquedo", "").strip()
-            descricao = request.POST.get("descricao", "").strip()
-            preco = request.POST.get("valor_brinquedo")
-            avaliacao = request.POST.get("avaliacao")
-            voltz = request.POST.get("voltz")
-            categorias_ids = request.POST.getlist(
-                "categorias_brinquedos"
-            )
-            tags_ids = request.POST.getlist("tags")
-            altura = request.POST.get("altura_m")
-            largura = request.POST.get("largura_m")
-            profundidade = request.POST.get("profundidade_m")
-
-            arquivos = {
-                tipo: request.FILES.get(f"imagem_{tipo}")
-                for tipo, _rotulo, _ordem in self.TIPOS_IMAGEM
-            }
-            remover = {
-                tipo
-                for tipo, _rotulo, _ordem in self.TIPOS_IMAGEM
-                if request.POST.get(f"remover_imagem_{tipo}") == "on"
-            }
-
-            existentes = {}
-            if brinquedo.pk:
-                existentes = {
-                    foto.tipo: foto
-                    for foto in brinquedo.imagens_brinquedo.all()
-                    if foto.tipo
-                }
-
-            tipos_finais = set(existentes)
-            if (
-                brinquedo.pk
-                and "perfil" not in tipos_finais
-                and brinquedo.imagem_brinquedo
-            ):
-                tipos_finais.add("perfil")
-
-            tipos_finais.difference_update(remover)
-            tipos_finais.update(
-                tipo
-                for tipo, arquivo in arquivos.items()
-                if arquivo
-            )
-
-            if not nome or not descricao:
-                messages.error(
-                    request,
-                    "Preencha todos os campos obrigatórios.",
-                )
-                return redirect("brinquedos_admin")
-
-            if "perfil" not in tipos_finais:
-                messages.error(
-                    request,
-                    "A imagem PERFIL / FRENTE é obrigatória. "
-                    "Ela será usada como capa.",
-                )
-                return redirect("brinquedos_admin")
-
-            if len(tipos_finais) > self.MAX_IMAGENS:
-                messages.error(
-                    request,
-                    "Cada brinquedo aceita no máximo 3 imagens: "
-                    "PERFIL e até duas vistas complementares.",
-                )
-                return redirect("brinquedos_admin")
-
-            for arquivo in arquivos.values():
-                if not arquivo:
-                    continue
-                if arquivo.size > self.MAX_TAMANHO_IMAGEM:
-                    messages.error(
-                        request,
-                        f"A imagem '{arquivo.name}' ultrapassa 15 MB.",
-                    )
-                    return redirect("brinquedos_admin")
-                if not (arquivo.content_type or "").startswith("image/"):
-                    messages.error(
-                        request,
-                        f"O arquivo '{arquivo.name}' não é uma imagem válida.",
-                    )
-                    return redirect("brinquedos_admin")
-
-            def parse_decimal(v, nome_campo, limite=None):
-                if v is None or not str(v).strip():
-                    return None
-
-                normalizado = (
-                    str(v)
-                    .strip()
-                    .replace("R$", "")
-                    .replace("m", "")
-                    .replace(" ", "")
-                )
-
-                if "," in normalizado:
-                    normalizado = (
-                        normalizado
-                        .replace(".", "")
-                        .replace(",", ".")
-                    )
-                elif normalizado.count(".") > 1:
-                    normalizado = normalizado.replace(".", "")
-
-                try:
-                    numero = Decimal(normalizado)
-                except (InvalidOperation, ValueError):
-                    raise ValueError(
-                        f"{nome_campo}: informe um número válido."
-                    )
-
-                if numero < 0:
-                    raise ValueError(
-                        f"{nome_campo}: o valor não pode ser negativo."
-                    )
-
-                if limite is not None and numero > limite:
-                    raise ValueError(
-                        f"{nome_campo}: o máximo permitido é "
-                        f"{str(limite).replace('.', ',')}."
-                    )
-
-                return numero.quantize(
-                    Decimal("0.01"),
-                    rounding=ROUND_HALF_UP,
-                )
-
-            preco = parse_decimal(
-                preco,
-                "Valor",
-                Decimal("99999999.99"),
-            )
-            avaliacao = parse_decimal(
-                avaliacao,
-                "Avaliação",
-                Decimal("5"),
-            )
-            altura = parse_decimal(
-                altura,
-                "Altura",
-                Decimal("9999.99"),
-            )
-            largura = parse_decimal(
-                largura,
-                "Largura",
-                Decimal("9999.99"),
-            )
-            profundidade = parse_decimal(
-                profundidade,
-                "Profundidade",
-                Decimal("9999.99"),
-            )
-
-            if avaliacao is None:
-                avaliacao = Decimal("0")
-
-            brinquedo.nome_brinquedo = nome
-            brinquedo.descricao = descricao
-            brinquedo.valor_brinquedo = preco
-            brinquedo.avaliacao = avaliacao
-            brinquedo.voltz = voltz or ""
-            brinquedo.altura_m = altura
-            brinquedo.largura_m = largura
-            brinquedo.profundidade_m = profundidade
-            brinquedo.exibir_na_loja = (
-                request.POST.get("exibir_na_loja") == "on"
-            )
-
-            perfil_novo = arquivos.get("perfil")
-            if perfil_novo:
-                brinquedo.imagem_brinquedo = perfil_novo
-
-            criando = not brinquedo.pk
-            brinquedo.save()
-
-            for tipo in remover:
-                if arquivos.get(tipo):
-                    continue
-                brinquedo.imagens_brinquedo.filter(tipo=tipo).delete()
-
-            if perfil_novo:
-                brinquedo.sincronizar_imagem_legada_com_galeria()
-            elif not brinquedo.imagens_brinquedo.filter(
-                tipo="perfil"
-            ).exists():
-                brinquedo.sincronizar_imagem_legada_com_galeria()
-
-            for tipo, rotulo, ordem in self.TIPOS_IMAGEM:
-                arquivo = arquivos.get(tipo)
-                if not arquivo or tipo == "perfil":
-                    continue
-
-                ImagemBrinquedo.objects.update_or_create(
-                    brinquedo=brinquedo,
-                    tipo=tipo,
-                    defaults={
-                        "imagem": arquivo,
-                        "ordem": ordem,
-                        "texto_alternativo": (
-                            f"{rotulo} de {brinquedo.nome_brinquedo}"
-                        ),
-                    },
-                )
-
-            ordem_por_tipo = {
-                tipo: ordem
-                for tipo, _rotulo, ordem in self.TIPOS_IMAGEM
-            }
-
-            for foto in brinquedo.imagens_brinquedo.filter(
-                tipo__in=tipos_finais
-            ):
-                ordem_correta = ordem_por_tipo.get(
-                    foto.tipo,
-                    foto.ordem,
-                )
-                if foto.ordem != ordem_correta:
-                    foto.ordem = ordem_correta
-                    foto.save(
-                        update_fields=["ordem", "atualizado"]
-                    )
-
-            brinquedo.categorias_brinquedos.set(categorias_ids)
-            brinquedo.tags.set(tags_ids)
-
-            messages.success(
-                request,
-                (
-                    f"Brinquedo '{brinquedo.nome_brinquedo}' cadastrado "
-                    "com sucesso."
-                    if criando else
-                    f"Brinquedo '{brinquedo.nome_brinquedo}' atualizado "
-                    "com sucesso."
-                ),
-            )
-            return redirect("brinquedos_admin")
+        except ErroDeFormulario as exc:
+            return self._responder_erro(request, str(exc))
 
         except (ArithmeticError, InvalidOperation, ValueError) as exc:
-            messages.error(request, str(exc))
-            return redirect("brinquedos_admin")
+            return self._responder_erro(request, str(exc))
 
         except Exception as exc:
             logging.getLogger(__name__).exception(
                 "Erro ao salvar brinquedo no painel administrativo"
             )
-            messages.error(
+            return self._responder_erro(
                 request,
-                "Não foi possível salvar o brinquedo. "
-                f"Erro: {type(exc).__name__}.",
+                (
+                    "Não foi possível salvar o brinquedo. "
+                    f"Erro: {type(exc).__name__}."
+                ),
+                status=500,
             )
-            return redirect("brinquedos_admin")
+
+    def _excluir(self, request):
+        brinquedo = get_object_or_404(
+            Brinquedos,
+            pk=request.POST.get("id"),
+        )
+        nome = brinquedo.nome_brinquedo or "Brinquedo"
+        frase_esperada = f"CONFIRMAR EXCLUSÃO {nome}"
+        frase_informada = request.POST.get(
+            "confirmacao_exclusao",
+            "",
+        ).strip()
+
+        if frase_informada != frase_esperada:
+            raise ErroDeFormulario(
+                "Exclusão cancelada: o texto de confirmação não "
+                "corresponde ao nome do brinquedo."
+            )
+
+        brinquedo.delete()
+        return self._responder_sucesso(
+            request,
+            f"Brinquedo '{nome}' excluído com sucesso.",
+        )
+
+    @staticmethod
+    def _parse_decimal(valor, nome_campo, limite=None):
+        if valor is None or not str(valor).strip():
+            return None
+
+        normalizado = (
+            str(valor)
+            .strip()
+            .replace("R$", "")
+            .replace("m", "")
+            .replace(" ", "")
+        )
+
+        if "," in normalizado:
+            normalizado = (
+                normalizado
+                .replace(".", "")
+                .replace(",", ".")
+            )
+        elif normalizado.count(".") > 1:
+            normalizado = normalizado.replace(".", "")
+
+        try:
+            numero = Decimal(normalizado)
+        except (InvalidOperation, ValueError):
+            raise ErroDeFormulario(
+                f"{nome_campo}: informe um número válido."
+            )
+
+        if numero < 0:
+            raise ErroDeFormulario(
+                f"{nome_campo}: o valor não pode ser negativo."
+            )
+
+        if limite is not None and numero > limite:
+            raise ErroDeFormulario(
+                f"{nome_campo}: o máximo permitido é "
+                f"{str(limite).replace('.', ',')}."
+            )
+
+        return numero.quantize(
+            Decimal("0.01"),
+            rounding=ROUND_HALF_UP,
+        )
+
+    def _ler_imagens(self, request, brinquedo):
+        """Lê os quatro slots e decide quais tipos o brinquedo vai ter."""
+        arquivos = {
+            tipo: request.FILES.get(f"imagem_{tipo}")
+            for tipo, _rotulo, _ordem in self.TIPOS_IMAGEM
+        }
+        remover = {
+            tipo
+            for tipo, _rotulo, _ordem in self.TIPOS_IMAGEM
+            # Um slot com arquivo novo está sendo trocado, não removido:
+            # o "remover" pendurado de um clique anterior é ignorado.
+            if request.POST.get(f"remover_imagem_{tipo}") == "on"
+            and not arquivos.get(tipo)
+        }
+
+        existentes = set()
+        if brinquedo.pk:
+            existentes = {
+                foto.tipo
+                for foto in brinquedo.imagens_brinquedo.all()
+                if foto.tipo
+            }
+            if "perfil" not in existentes and brinquedo.imagem_brinquedo:
+                existentes.add("perfil")
+
+        tipos_finais = existentes - remover
+        tipos_finais.update(
+            tipo for tipo, arquivo in arquivos.items() if arquivo
+        )
+
+        for arquivo in arquivos.values():
+            if not arquivo:
+                continue
+            if arquivo.size > self.MAX_TAMANHO_IMAGEM:
+                raise ErroDeFormulario(
+                    f"A imagem '{arquivo.name}' ultrapassa 15 MB."
+                )
+            if not (arquivo.content_type or "").startswith("image/"):
+                raise ErroDeFormulario(
+                    f"O arquivo '{arquivo.name}' não é uma imagem válida."
+                )
+
+        if "perfil" not in tipos_finais:
+            raise ErroDeFormulario(
+                "A imagem PERFIL / FRENTE é obrigatória. "
+                "Ela será usada como capa."
+            )
+
+        if len(tipos_finais) > self.MAX_IMAGENS:
+            raise ErroDeFormulario(
+                "Cada brinquedo aceita no máximo 3 imagens: "
+                "PERFIL e até duas vistas complementares."
+            )
+
+        return arquivos, remover, tipos_finais
+
+    def _gravar_imagens(self, brinquedo, arquivos, remover, tipos_finais):
+        for tipo in remover:
+            brinquedo.imagens_brinquedo.filter(tipo=tipo).delete()
+
+        # Mantém o campo legado imagem_brinquedo e a linha PERFIL da
+        # galeria apontando pro mesmo arquivo.
+        brinquedo.sincronizar_imagem_legada_com_galeria()
+
+        ordem_por_tipo = {
+            tipo: ordem
+            for tipo, _rotulo, ordem in self.TIPOS_IMAGEM
+        }
+
+        for tipo, rotulo, ordem in self.TIPOS_IMAGEM:
+            arquivo = arquivos.get(tipo)
+            if not arquivo or tipo == "perfil":
+                continue
+
+            ImagemBrinquedo.objects.update_or_create(
+                brinquedo=brinquedo,
+                tipo=tipo,
+                defaults={
+                    "imagem": arquivo,
+                    "ordem": ordem,
+                    "texto_alternativo": (
+                        f"{rotulo} de {brinquedo.nome_brinquedo}"
+                    ),
+                },
+            )
+
+        for foto in brinquedo.imagens_brinquedo.filter(
+            tipo__in=tipos_finais
+        ):
+            ordem_correta = ordem_por_tipo.get(foto.tipo, foto.ordem)
+            if foto.ordem != ordem_correta:
+                foto.ordem = ordem_correta
+                foto.save(update_fields=["ordem", "atualizado"])
+
+    def _salvar(self, request):
+        brinquedo_id = request.POST.get("id")
+        brinquedo = (
+            get_object_or_404(Brinquedos, pk=brinquedo_id)
+            if brinquedo_id else Brinquedos()
+        )
+
+        nome = request.POST.get("nome_brinquedo", "").strip()
+        descricao = request.POST.get("descricao", "").strip()
+
+        if not nome or not descricao:
+            raise ErroDeFormulario(
+                "Preencha o nome e a descrição do brinquedo."
+            )
+
+        arquivos, remover, tipos_finais = self._ler_imagens(
+            request,
+            brinquedo,
+        )
+
+        preco = self._parse_decimal(
+            request.POST.get("valor_brinquedo"),
+            "Valor",
+            Decimal("99999999.99"),
+        )
+        avaliacao = self._parse_decimal(
+            request.POST.get("avaliacao"),
+            "Avaliação",
+            Decimal("5"),
+        )
+        altura = self._parse_decimal(
+            request.POST.get("altura_m"),
+            "Altura",
+            Decimal("9999.99"),
+        )
+        largura = self._parse_decimal(
+            request.POST.get("largura_m"),
+            "Largura",
+            Decimal("9999.99"),
+        )
+        profundidade = self._parse_decimal(
+            request.POST.get("profundidade_m"),
+            "Profundidade",
+            Decimal("9999.99"),
+        )
+
+        brinquedo.nome_brinquedo = nome
+        brinquedo.descricao = descricao
+        brinquedo.valor_brinquedo = preco
+        brinquedo.avaliacao = avaliacao if avaliacao is not None else Decimal("0")
+        brinquedo.voltz = request.POST.get("voltz") or ""
+        brinquedo.altura_m = altura
+        brinquedo.largura_m = largura
+        brinquedo.profundidade_m = profundidade
+        brinquedo.exibir_na_loja = (
+            request.POST.get("exibir_na_loja") == "on"
+        )
+
+        perfil_novo = arquivos.get("perfil")
+        if perfil_novo:
+            brinquedo.imagem_brinquedo = perfil_novo
+
+        criando = not brinquedo.pk
+        brinquedo.save()
+
+        self._gravar_imagens(brinquedo, arquivos, remover, tipos_finais)
+
+        brinquedo.categorias_brinquedos.set(
+            request.POST.getlist("categorias_brinquedos")
+        )
+        brinquedo.tags.set(request.POST.getlist("tags"))
+
+        return self._responder_sucesso(
+            request,
+            (
+                f"Brinquedo '{brinquedo.nome_brinquedo}' cadastrado "
+                "com sucesso."
+                if criando else
+                f"Brinquedo '{brinquedo.nome_brinquedo}' atualizado "
+                "com sucesso."
+            ),
+            brinquedo_id=brinquedo.pk,
+        )
 
 
 from django.http import JsonResponse

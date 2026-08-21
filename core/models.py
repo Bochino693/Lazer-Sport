@@ -451,7 +451,14 @@ class Brinquedos(Prime):
         )
 
         if principal is None:
-            principal = self.imagens_brinquedo.filter(ordem=1).first()
+            # Só adota uma foto antiga que ainda não foi classificada.
+            # Sem esse filtro, uma galeria sem PERFIL transformava o
+            # verso (ou um lado) do brinquedo na capa do catálogo.
+            principal = (
+                self.imagens_brinquedo
+                .filter(tipo__isnull=True, ordem=1)
+                .first()
+            )
 
         if principal is None:
             return ImagemBrinquedo.objects.create(

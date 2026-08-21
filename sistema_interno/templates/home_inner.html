@@ -1,5 +1,6 @@
 {% extends 'base_inner.html' %}
 {% load static %}
+{% load interno_extras %}
 
 {% block title %}Dashboards{% endblock %}
 
@@ -137,77 +138,75 @@ body {
         </div>
     </div>
 
-    <!-- KPIs (dados fictícios) -->
+    <!-- KPIs do estoque -->
     <div class="kpi-grid">
         <div class="kpi-card kpi-1">
-            <h4>Total de Vendas</h4>
-            <span>R$ 42.780</span>
+            <h4>Total pago no estoque</h4>
+            <span>R$ {{ valor_investido|moeda }}</span>
         </div>
 
         <div class="kpi-card kpi-2">
-            <h4>Usuários Ativos</h4>
-            <span>1.392</span>
+            <h4>Unidades guardadas</h4>
+            <span>{{ total_pecas|numero }}</span>
         </div>
 
         <div class="kpi-card kpi-3">
-            <h4>Pedidos</h4>
-            <span>487</span>
+            <h4>Materiais cadastrados</h4>
+            <span>{{ total_materiais }}</span>
         </div>
 
         <div class="kpi-card kpi-4">
-            <h4>Conversão</h4>
-            <span>4,6%</span>
+            <h4>Precisam de reposição</h4>
+            <span>{{ total_criticos }}</span>
         </div>
     </div>
 
-    <!-- Gráficos -->
     <div class="charts-grid">
         <div class="chart-card">
-            <h4>Vendas por Período</h4>
-            <canvas id="chartVendas"></canvas>
+            <h4>Repor agora</h4>
+            <table class="table table-dark table-sm align-middle mb-0">
+                <thead>
+                    <tr><th>Material</th><th>Local</th><th class="text-end">Saldo</th><th class="text-end">Mín.</th></tr>
+                </thead>
+                <tbody>
+                    {% for e in criticos %}
+                        <tr>
+                            <td>{{ e.material.nome_material }}</td>
+                            <td class="text-secondary">{{ e.descricao_local }}</td>
+                            <td class="text-end text-danger fw-bold">{{ e.quantidade }}</td>
+                            <td class="text-end text-secondary">{{ e.estoque_minimo }}</td>
+                        </tr>
+                    {% empty %}
+                        <tr><td colspan="4" class="text-secondary">Nenhum item abaixo do mínimo.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <a href="{% url 'stock' %}?situacao=critico" class="filter-btn d-inline-block mt-3">Ver no estoque</a>
         </div>
 
         <div class="chart-card">
-            <h4>Usuários por Plano</h4>
-            <canvas id="chartUsuarios"></canvas>
+            <h4>Últimos movimentos</h4>
+            <table class="table table-dark table-sm align-middle mb-0">
+                <thead>
+                    <tr><th>Quando</th><th>Material</th><th>Tipo</th><th class="text-end">Qtd.</th></tr>
+                </thead>
+                <tbody>
+                    {% for m in ultimos_movimentos %}
+                        <tr>
+                            <td class="text-nowrap">{{ m.ocorrido_em|date:"d/m H:i" }}</td>
+                            <td>{{ m.estoque.material.nome_material }}</td>
+                            <td>{{ m.get_tipo_display }}</td>
+                            <td class="text-end">{{ m.quantidade }}</td>
+                        </tr>
+                    {% empty %}
+                        <tr><td colspan="4" class="text-secondary">Nenhum movimento registrado ainda.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <a href="{% url 'movimentacoes_inner' %}" class="filter-btn d-inline-block mt-3">Ver histórico</a>
         </div>
     </div>
 
 </div>
-
-<!-- Chart.js -->
-<script src="{% static 'js/Chart.min.js' %}"></script>
-<script>
-/* Vendas */
-new Chart(document.getElementById('chartVendas'), {
-    type: 'bar',
-    data: {
-        labels: ['Jan','Fev','Mar','Abr','Mai','Jun'],
-        datasets: [{
-            data: [8200, 10400, 9800, 12300, 14100, 15800],
-            backgroundColor: '#3b82f6'
-        }]
-    },
-    options: {
-        plugins: { legend: { display:false } },
-        scales: { y: { beginAtZero:true } }
-    }
-});
-
-/* Usuários */
-new Chart(document.getElementById('chartUsuarios'), {
-    type: 'bar',
-    data: {
-        labels: ['Free','Premium','Enterprise'],
-        datasets: [{
-            data: [860, 420, 112],
-            backgroundColor: ['#64748b','#3b82f6','#22c55e']
-        }]
-    },
-    options: {
-        plugins: { legend: { display:false } }
-    }
-});
-</script>
 
 {% endblock %}
