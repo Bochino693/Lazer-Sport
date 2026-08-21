@@ -1,10 +1,10 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-</head>
-<body>
-
-</body>
-</html>
+{% extends "base_inner.html" %}
+{% block title %}Vendas | Lazer & Sport{% endblock %}{% block top_title %}Central de vendas{% endblock %}
+{% block content %}
+<section class="ls-page-head"><div><span class="ls-eyebrow">Operação comercial</span><h1>Vendas</h1><p>Visão centralizada dos registros de venda disponíveis no sistema interno.</p></div></section>
+<section class="ls-kpis"><article class="ls-kpi primary"><div class="ls-kpi-top"><span class="ls-kpi-label">Registros</span><span class="ls-kpi-icon"><i class="bi bi-receipt"></i></span></div><strong class="ls-kpi-value">{{ vendas|length }}</strong><span class="ls-kpi-note">Vendas encontradas</span></article></section>
+<article class="ls-panel"><div class="ls-panel-head"><div><h2>Registros de vendas</h2><p>Origem e identificação dos registros existentes.</p></div></div><div class="table-responsive"><table class="ls-table"><thead><tr><th>ID</th><th>Origem</th><th>Registro</th><th>Atualização</th></tr></thead><tbody>
+{% for venda in vendas %}<tr><td><strong>#{{ venda.id }}</strong></td><td>{% if venda.origem == "site" %}<span class="ls-status info">Site</span>{% elif venda.origem == "interno" %}<span class="ls-status success">Interno</span>{% else %}<span class="ls-status neutral">{{ venda.origem|default:"—" }}</span>{% endif %}</td><td>{{ venda }}</td><td>{{ venda.atualizado|date:"d/m/Y H:i"|default:"—" }}</td></tr>
+{% empty %}<tr><td colspan="4"><div class="ls-empty"><i class="bi bi-receipt"></i>Nenhuma venda registrada.</div></td></tr>{% endfor %}
+</tbody></table></div></article>
+{% endblock %}

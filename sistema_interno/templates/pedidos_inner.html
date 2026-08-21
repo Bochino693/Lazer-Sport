@@ -1,10 +1,10 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-</head>
-<body>
-
-</body>
-</html>
+{% extends "base_inner.html" %}
+{% block title %}Pedidos Internos | Lazer & Sport{% endblock %}{% block top_title %}Central de pedidos{% endblock %}
+{% block content %}
+<section class="ls-page-head"><div><span class="ls-eyebrow">Acompanhamento operacional</span><h1>Pedidos internos</h1><p>Acompanhe rapidamente o estado dos pedidos registrados na central interna.</p></div></section>
+<section class="ls-kpis"><article class="ls-kpi primary"><div class="ls-kpi-top"><span class="ls-kpi-label">Total</span><span class="ls-kpi-icon"><i class="bi bi-box2"></i></span></div><strong class="ls-kpi-value">{{ pedidos|length }}</strong><span class="ls-kpi-note">Pedidos registrados</span></article></section>
+<article class="ls-panel"><div class="ls-panel-head"><div><h2>Fila de pedidos</h2><p>Status atual e descrição operacional.</p></div></div><div class="table-responsive"><table class="ls-table"><thead><tr><th>ID</th><th>Pedido</th><th>Status</th><th>Criado em</th></tr></thead><tbody>
+{% for pedido in pedidos %}<tr><td><strong>#{{ pedido.id }}</strong></td><td><strong>{{ pedido.descricao_pedido }}</strong></td><td>{% if pedido.status == "concluido" %}<span class="ls-status success">{{ pedido.get_status_display }}</span>{% elif pedido.status == "cancelado" %}<span class="ls-status danger">{{ pedido.get_status_display }}</span>{% elif pedido.status == "andamento" %}<span class="ls-status info">{{ pedido.get_status_display }}</span>{% else %}<span class="ls-status warning">{{ pedido.get_status_display }}</span>{% endif %}</td><td>{{ pedido.criacao|date:"d/m/Y H:i"|default:"—" }}</td></tr>
+{% empty %}<tr><td colspan="4"><div class="ls-empty"><i class="bi bi-box2"></i>Nenhum pedido na central.</div></td></tr>{% endfor %}
+</tbody></table></div></article>
+{% endblock %}

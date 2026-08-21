@@ -1,10 +1,10 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-</head>
-<body>
-
-</body>
-</html>
+{% extends "base_inner.html" %}
+{% block title %}Manutenções | Lazer & Sport{% endblock %}{% block top_title %}Central de manutenções{% endblock %}
+{% block content %}
+<section class="ls-page-head"><div><span class="ls-eyebrow">Pós-venda e assistência</span><h1>Manutenções</h1><p>Visualize solicitações, equipamento, local de atendimento e situação atual.</p></div></section>
+<section class="ls-kpis"><article class="ls-kpi warning"><div class="ls-kpi-top"><span class="ls-kpi-label">Solicitações</span><span class="ls-kpi-icon"><i class="bi bi-wrench-adjustable"></i></span></div><strong class="ls-kpi-value">{{ manutencoes|length }}</strong><span class="ls-kpi-note">Registros encontrados</span></article></section>
+<article class="ls-panel"><div class="ls-panel-head"><div><h2>Solicitações de manutenção</h2><p>Dados necessários para triagem e acompanhamento.</p></div></div><div class="table-responsive"><table class="ls-table"><thead><tr><th>ID</th><th>Equipamento</th><th>Status</th><th>Local</th><th>Contato</th><th>Aberta em</th></tr></thead><tbody>
+{% for m in manutencoes %}<tr><td><strong>#{{ m.id }}</strong></td><td><strong>{{ m.nome_equipamento }}</strong><span class="d-block ls-muted">{{ m.descricao|truncatechars:72 }}</span></td><td>{% if m.status == "P" %}<span class="ls-status warning">{{ m.get_status_display }}</span>{% elif m.status == "C" %}<span class="ls-status success">{{ m.get_status_display }}</span>{% else %}<span class="ls-status info">{{ m.get_status_display }}</span>{% endif %}</td><td>{{ m.cidade|default:"—" }}{% if m.estado %}/{{ m.estado }}{% endif %}</td><td>{{ m.telefone_contato|default:"—" }}</td><td>{{ m.criado_em|date:"d/m/Y H:i" }}</td></tr>
+{% empty %}<tr><td colspan="6"><div class="ls-empty"><i class="bi bi-wrench"></i>Nenhuma manutenção registrada.</div></td></tr>{% endfor %}
+</tbody></table></div></article>
+{% endblock %}
