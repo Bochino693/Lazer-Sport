@@ -818,7 +818,11 @@ class CategoriasInfoView(View):
 
     def get(self, request, pk):
 
-        categoria = get_object_or_404(CategoriasBrinquedos, id=pk)
+        categoria = get_object_or_404(
+            CategoriasBrinquedos,
+            id=pk,
+            ativo=True,
+        )
 
         # REGISTRA CLICK
         obj, created = CategoriaClick.objects.get_or_create(
@@ -834,7 +838,15 @@ class CategoriasInfoView(View):
                 quantidade_click=F('quantidade_click') + 1
             )
 
-        brinquedos = categoria.brinquedos.all()
+        brinquedos = (
+            categoria.brinquedos
+            .filter(ativo=True)
+            .prefetch_related(
+                "categorias_brinquedos",
+                "tags",
+                "imagens_brinquedo",
+            )
+        )
 
         ordenar = request.GET.get("ordenar", "az")
 
@@ -2253,7 +2265,11 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
 
         brinquedos = (
             Brinquedos.objects
-            .prefetch_related("categorias_brinquedos", "tags")
+            .prefetch_related(
+                "categorias_brinquedos",
+                "tags",
+                "imagens_brinquedo",
+            )
             .order_by("nome_brinquedo", "id")
         )
 
@@ -6054,3 +6070,4 @@ class SearchView(View):
             "total_resultados": len(resultados),
             "busca_realizada": bool(termo),
         })
+

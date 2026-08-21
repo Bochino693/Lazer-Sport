@@ -5,17 +5,33 @@
 
 {% block content %}
 <style>
-  .toys-page {
-    --toy-blue: #3b82f6;
-    --toy-green: #10b981;
-    --toy-amber: #f59e0b;
-    --toy-red: #ef4444;
+  .toy-admin {
+    --ta-blue: #3b82f6;
+    --ta-blue-2: #2563eb;
+    --ta-green: #10b981;
+    --ta-red: #ef4444;
+    --ta-amber: #f59e0b;
+    --ta-bg: #0b1322;
+    --ta-panel: #111b2e;
+    --ta-panel-2: #0f192a;
+    --ta-line: rgba(148, 163, 184, .14);
+    --ta-text: #e5edf8;
+    --ta-muted: #8090a7;
     width: min(100%, 1440px);
     margin: 0 auto;
   }
 
-  .toys-page svg,
-  .toy-modal svg {
+  .toy-admin *,
+  .toy-admin *::before,
+  .toy-admin *::after,
+  .toy-dialog *,
+  .toy-dialog *::before,
+  .toy-dialog *::after {
+    box-sizing: border-box;
+  }
+
+  .toy-admin svg,
+  .toy-dialog svg {
     width: 20px;
     height: 20px;
     display: block;
@@ -26,198 +42,200 @@
     stroke-linejoin: round;
   }
 
-  .toys-hero {
+  .ta-hero {
     position: relative;
-    min-height: 168px;
-    padding: clamp(22px, 4vw, 34px);
+    min-height: 175px;
+    padding: clamp(24px, 4vw, 36px);
+    overflow: hidden;
+    border: 1px solid rgba(96, 165, 250, .18);
+    border-radius: 25px;
     display: flex;
     align-items: flex-end;
     justify-content: space-between;
-    gap: 24px;
-    overflow: hidden;
-    border: 1px solid rgba(96, 165, 250, .18);
-    border-radius: 24px;
+    gap: 26px;
     background:
-      radial-gradient(circle at 84% 10%, rgba(59, 130, 246, .28), transparent 16rem),
+      radial-gradient(circle at 84% 10%, rgba(59,130,246,.29), transparent 16rem),
       linear-gradient(135deg, #17243a, #101a2d 58%, #111f37);
-    box-shadow: 0 22px 50px rgba(0, 0, 0, .18);
+    box-shadow: 0 22px 50px rgba(0,0,0,.18);
   }
 
-  .toys-hero::after {
+  .ta-hero::after {
     content: "";
     position: absolute;
-    right: -40px;
-    bottom: -92px;
-    width: 260px;
-    height: 260px;
-    border: 42px solid rgba(96, 165, 250, .055);
+    right: -50px;
+    bottom: -100px;
+    width: 280px;
+    height: 280px;
+    border: 44px solid rgba(96,165,250,.055);
     border-radius: 50%;
   }
 
-  .toys-hero-copy,
-  .toys-primary-button {
+  .ta-hero-copy,
+  .ta-primary {
     position: relative;
     z-index: 1;
   }
 
-  .toys-eyebrow {
+  .ta-eyebrow {
     margin: 0 0 9px;
     display: flex;
     align-items: center;
     gap: 8px;
     color: #93c5fd;
     font-size: .7rem;
-    font-weight: 800;
+    font-weight: 850;
     letter-spacing: .14em;
     text-transform: uppercase;
   }
 
-  .toys-hero h2 {
+  .ta-hero h2 {
     margin: 0;
     color: #fff;
-    font-size: clamp(1.5rem, 3vw, 2.15rem);
-    line-height: 1.12;
+    font-size: clamp(1.55rem, 3vw, 2.2rem);
+    line-height: 1.1;
   }
 
-  .toys-hero-description {
-    max-width: 680px;
+  .ta-hero p:last-child {
+    max-width: 760px;
     margin: 10px 0 0;
     color: #aebdd0;
-    font-size: .9rem;
-    line-height: 1.6;
+    font-size: .88rem;
+    line-height: 1.62;
   }
 
-  .toys-primary-button,
-  .toy-save-button,
-  .toy-secondary-button,
-  .toy-danger-button {
+  .ta-primary,
+  .ta-btn {
     min-height: 44px;
-    padding: 0 18px;
+    padding: 0 17px;
+    border-radius: 12px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
-    border-radius: 12px;
-    font-size: .76rem;
-    font-weight: 800;
+    font: inherit;
+    font-size: .74rem;
+    font-weight: 850;
     cursor: pointer;
   }
 
-  .toys-primary-button,
-  .toy-save-button {
-    border: 1px solid rgba(147, 197, 253, .22);
-    background: linear-gradient(135deg, #3b82f6, #2563eb);
+  .ta-primary,
+  .ta-btn.is-primary {
+    border: 1px solid rgba(147,197,253,.22);
     color: #fff;
-    box-shadow: 0 12px 28px rgba(37, 99, 235, .3);
+    background: linear-gradient(135deg, var(--ta-blue), var(--ta-blue-2));
+    box-shadow: 0 12px 28px rgba(37,99,235,.30);
   }
 
-  .toys-primary-button {
-    min-height: 48px;
+  .ta-primary {
+    min-height: 49px;
+    padding-inline: 20px;
   }
 
-  .toys-primary-button:hover,
-  .toy-save-button:hover {
-    transform: translateY(-1px);
-  }
-
-  .toy-secondary-button {
-    border: 1px solid rgba(148, 163, 184, .15);
+  .ta-btn.is-secondary {
+    border: 1px solid var(--ta-line);
+    color: #aebdd0;
     background: #1e2d46;
-    color: #b8c4d6;
   }
 
-  .toy-danger-button {
-    border: 1px solid rgba(248, 113, 113, .22);
-    background: #dc2626;
+  .ta-btn.is-danger {
+    border: 1px solid rgba(248,113,113,.23);
     color: #fff;
+    background: #dc2626;
   }
 
-  .toy-danger-button:disabled {
-    border-color: rgba(148, 163, 184, .1);
-    background: #334155;
-    color: #718096;
+  .ta-btn:disabled {
+    opacity: .45;
     cursor: not-allowed;
-    opacity: .72;
   }
 
-  .toys-kpis {
+  .ta-kpis {
     margin: 20px 0;
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 14px;
   }
 
-  .toys-kpi {
-    min-height: 108px;
-    padding: 18px;
+  .ta-kpi {
+    min-height: 105px;
+    padding: 17px;
+    border: 1px solid var(--ta-line);
+    border-radius: 17px;
     display: flex;
     align-items: center;
-    gap: 14px;
-    border: 1px solid var(--adm-border, rgba(148, 163, 184, .14));
-    border-radius: 17px;
-    background: linear-gradient(145deg, rgba(23, 36, 58, .96), rgba(17, 27, 46, .96));
-    box-shadow: 0 12px 28px rgba(0, 0, 0, .12);
+    gap: 13px;
+    background: linear-gradient(145deg, rgba(23,36,58,.96), rgba(17,27,46,.96));
+    box-shadow: 0 12px 28px rgba(0,0,0,.12);
   }
 
-  .toys-kpi-icon {
+  .ta-kpi-icon {
     width: 44px;
     height: 44px;
     flex: 0 0 44px;
+    border-radius: 13px;
     display: grid;
     place-items: center;
-    border-radius: 13px;
+    color: #93c5fd;
+    background: rgba(59,130,246,.12);
   }
 
-  .toys-kpi:nth-child(1) .toys-kpi-icon { color: #93c5fd; background: rgba(59, 130, 246, .12); }
-  .toys-kpi:nth-child(2) .toys-kpi-icon { color: #6ee7b7; background: rgba(16, 185, 129, .12); }
-  .toys-kpi:nth-child(3) .toys-kpi-icon { color: #c4b5fd; background: rgba(139, 92, 246, .12); }
-  .toys-kpi:nth-child(4) .toys-kpi-icon { color: #fcd34d; background: rgba(245, 158, 11, .12); }
+  .ta-kpi:nth-child(2) .ta-kpi-icon {
+    color: #6ee7b7;
+    background: rgba(16,185,129,.12);
+  }
 
-  .toys-kpi-value {
+  .ta-kpi:nth-child(3) .ta-kpi-icon {
+    color: #c4b5fd;
+    background: rgba(139,92,246,.12);
+  }
+
+  .ta-kpi:nth-child(4) .ta-kpi-icon {
+    color: #fcd34d;
+    background: rgba(245,158,11,.12);
+  }
+
+  .ta-kpi strong,
+  .ta-kpi span {
     display: block;
+  }
+
+  .ta-kpi strong {
     color: #f8fafc;
-    font-size: 1.65rem;
-    font-weight: 800;
+    font-size: 1.6rem;
+    font-weight: 850;
     line-height: 1;
   }
 
-  .toys-kpi-label {
-    display: block;
+  .ta-kpi span {
     margin-top: 6px;
     color: #94a3b8;
-    font-size: .76rem;
+    font-size: .73rem;
     font-weight: 650;
   }
 
-  .toys-panel {
+  .ta-panel {
     overflow: hidden;
-    border: 1px solid var(--adm-border, rgba(148, 163, 184, .14));
+    border: 1px solid var(--ta-line);
     border-radius: 20px;
-    background: rgba(17, 27, 46, .92);
-    box-shadow: 0 18px 38px rgba(0, 0, 0, .14);
+    background: rgba(17,27,46,.94);
+    box-shadow: 0 18px 38px rgba(0,0,0,.14);
   }
 
-  .toys-toolbar {
+  .ta-toolbar {
     padding: 17px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 14px;
-    border-bottom: 1px solid var(--adm-border, rgba(148, 163, 184, .14));
+    border-bottom: 1px solid var(--ta-line);
   }
 
-  .toys-filter-form {
-    width: 100%;
+  .ta-filter {
     display: grid;
-    grid-template-columns: minmax(240px, 1fr) minmax(180px, 260px) auto;
+    grid-template-columns: minmax(240px, 1fr) minmax(190px, 270px) auto;
     gap: 10px;
   }
 
-  .toys-search {
+  .ta-search {
     position: relative;
   }
 
-  .toys-search svg {
+  .ta-search svg {
     position: absolute;
     top: 50%;
     left: 14px;
@@ -228,592 +246,649 @@
     pointer-events: none;
   }
 
-  .toys-search input,
-  .toys-filter-form select {
+  .ta-search input,
+  .ta-filter select,
+  .ta-field input[type="text"],
+  .ta-field input[type="search"],
+  .ta-field select,
+  .ta-field textarea,
+  .ta-quick-form input[type="text"] {
     width: 100%;
-    height: 44px;
-    border: 1px solid rgba(148, 163, 184, .16);
-    border-radius: 12px;
+    border: 1px solid rgba(148,163,184,.16);
+    border-radius: 11px;
     outline: 0;
-    background: #0f192a;
-    color: #e5edf8;
-    font-size: .78rem;
+    color: var(--ta-text);
+    background: #0d1727;
+    font: inherit;
+    font-size: .77rem;
   }
 
-  .toys-search input {
-    padding: 0 14px 0 42px;
-  }
-
-  .toys-filter-form select {
+  .ta-search input,
+  .ta-filter select,
+  .ta-field input[type="text"],
+  .ta-field input[type="search"],
+  .ta-field select,
+  .ta-quick-form input[type="text"] {
+    height: 44px;
     padding: 0 12px;
   }
 
-  .toys-search input:focus,
-  .toys-filter-form select:focus {
-    border-color: rgba(96, 165, 250, .58);
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, .11);
+  .ta-search input {
+    padding-left: 42px;
   }
 
-  .toys-filter-submit {
+  .ta-field textarea {
+    min-height: 104px;
+    padding: 11px 12px;
+    resize: vertical;
+  }
+
+  .ta-filter button {
     min-height: 44px;
     padding: 0 18px;
-    border: 1px solid rgba(96, 165, 250, .24);
+    border: 1px solid rgba(96,165,250,.24);
     border-radius: 12px;
-    background: rgba(37, 99, 235, .18);
     color: #bfdbfe;
-    font-size: .75rem;
-    font-weight: 800;
+    background: rgba(37,99,235,.18);
+    font: inherit;
+    font-size: .73rem;
+    font-weight: 850;
     cursor: pointer;
   }
 
-  .toys-results-line {
-    padding: 12px 18px;
+  .ta-result-line {
+    padding: 11px 17px;
+    border-bottom: 1px solid rgba(148,163,184,.09);
     display: flex;
     justify-content: space-between;
     gap: 12px;
-    border-bottom: 1px solid rgba(148, 163, 184, .09);
     color: #718096;
-    font-size: .74rem;
+    font-size: .72rem;
   }
 
-  .toys-results-line strong {
-    color: #b8c4d6;
+  .ta-result-line strong {
+    color: #c1ccdc;
   }
 
-  .toys-table-wrap {
+  .ta-table-wrap {
     overflow-x: auto;
   }
 
-  .toys-table {
+  .ta-table {
     width: 100%;
     border-collapse: collapse;
   }
 
-  .toys-table th {
+  .ta-table th {
     padding: 13px 16px;
     color: #718096;
-    background: rgba(11, 18, 32, .46);
-    font-size: .67rem;
-    font-weight: 800;
-    letter-spacing: .09em;
+    background: rgba(11,18,32,.46);
+    font-size: .66rem;
+    font-weight: 850;
+    letter-spacing: .08em;
     text-align: left;
     text-transform: uppercase;
     white-space: nowrap;
   }
 
-  .toys-table td {
+  .ta-table td {
     padding: 15px 16px;
-    border-top: 1px solid rgba(148, 163, 184, .085);
+    border-top: 1px solid rgba(148,163,184,.085);
     color: #cbd5e1;
-    font-size: .8rem;
+    font-size: .78rem;
     vertical-align: middle;
   }
 
-  .toys-table tbody tr:hover {
-    background: rgba(59, 130, 246, .035);
+  .ta-table tbody tr:hover {
+    background: rgba(59,130,246,.035);
   }
 
-  .toy-identity {
-    min-width: 260px;
+  .ta-product {
+    min-width: 265px;
     display: flex;
     align-items: center;
     gap: 12px;
   }
 
-  .toy-image {
-    width: 58px;
-    height: 48px;
-    flex: 0 0 58px;
+  .ta-product-image {
+    width: 64px;
+    height: 52px;
+    flex: 0 0 64px;
+    padding: 4px;
+    border: 1px solid var(--ta-line);
+    border-radius: 11px;
+    overflow: hidden;
     display: grid;
     place-items: center;
-    overflow: hidden;
-    border: 1px solid rgba(148, 163, 184, .14);
-    border-radius: 11px;
-    background: #f8fafc;
     color: #64748b;
+    background: #f8fafc;
   }
 
-  .toy-image img {
+  .ta-product-image img {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    display: block;
+    object-fit: contain;
   }
 
-  .toy-name {
+  .ta-product-name {
     display: block;
-    max-width: 280px;
+    max-width: 300px;
     overflow: hidden;
     color: #edf4fc;
-    font-size: .85rem;
-    font-weight: 750;
+    font-size: .84rem;
+    font-weight: 780;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
-  .toy-id {
+  .ta-product-sub {
     display: block;
     margin-top: 4px;
     color: #64748b;
-    font-size: .68rem;
+    font-size: .66rem;
   }
 
-  .toy-price {
+  .ta-price {
     min-width: 120px;
     color: #93c5fd;
-    font-weight: 800;
-    white-space: nowrap;
+    font-weight: 850;
   }
 
-  .toy-categories {
-    min-width: 180px;
-    max-width: 300px;
+  .ta-chips {
+    min-width: 190px;
+    max-width: 330px;
     display: flex;
     flex-wrap: wrap;
     gap: 5px;
   }
 
-  .toy-chip,
-  .toy-status {
+  .ta-chip,
+  .ta-status {
     min-height: 24px;
     padding: 0 8px;
+    border-radius: 999px;
     display: inline-flex;
     align-items: center;
-    gap: 5px;
-    border-radius: 999px;
-    font-size: .64rem;
-    font-weight: 750;
+    font-size: .62rem;
+    font-weight: 800;
     white-space: nowrap;
   }
 
-  .toy-chip {
+  .ta-chip {
     color: #a5b4fc;
-    background: rgba(99, 102, 241, .11);
+    background: rgba(99,102,241,.11);
   }
 
-  .toy-status.is-store { color: #6ee7b7; background: rgba(16, 185, 129, .12); }
-  .toy-status.is-catalog { color: #94a3b8; background: rgba(148, 163, 184, .09); }
+  .ta-status.is-store {
+    color: #6ee7b7;
+    background: rgba(16,185,129,.12);
+  }
 
-  .toy-actions {
+  .ta-status.is-catalog {
+    color: #94a3b8;
+    background: rgba(148,163,184,.09);
+  }
+
+  .ta-actions {
     display: flex;
     justify-content: flex-end;
     gap: 6px;
   }
 
-  .toy-action {
+  .ta-action {
     width: 36px;
     height: 36px;
+    border: 1px solid var(--ta-line);
+    border-radius: 10px;
     display: inline-grid;
     place-items: center;
-    border: 1px solid rgba(148, 163, 184, .14);
-    border-radius: 10px;
-    background: rgba(30, 45, 70, .62);
     color: #9eacc0;
+    background: rgba(30,45,70,.62);
     cursor: pointer;
   }
 
-  .toy-action:hover {
+  .ta-action:hover {
     color: #fff;
-    border-color: rgba(96, 165, 250, .28);
-    background: rgba(59, 130, 246, .14);
+    border-color: rgba(96,165,250,.28);
+    background: rgba(59,130,246,.14);
   }
 
-  .toy-action.is-danger:hover {
+  .ta-action.is-danger:hover {
     color: #fecaca;
-    border-color: rgba(239, 68, 68, .3);
-    background: rgba(239, 68, 68, .12);
+    border-color: rgba(239,68,68,.30);
+    background: rgba(239,68,68,.12);
   }
 
-  .toy-action svg {
+  .ta-action svg {
     width: 16px;
     height: 16px;
   }
 
-  .toys-empty {
+  .ta-empty {
     padding: 58px 24px;
-    display: grid;
-    justify-items: center;
     color: #718096;
     text-align: center;
   }
 
-  .toys-empty-icon {
-    width: 58px;
-    height: 58px;
-    margin-bottom: 14px;
-    display: grid;
-    place-items: center;
-    border-radius: 18px;
-    background: rgba(59, 130, 246, .1);
-    color: #60a5fa;
-  }
-
-  .toys-empty h3 {
-    margin: 0;
+  .ta-empty strong {
+    display: block;
     color: #cbd5e1;
     font-size: 1rem;
   }
 
-  .toys-empty p {
-    max-width: 420px;
-    margin: 7px 0 0;
-    font-size: .8rem;
-    line-height: 1.55;
+  .ta-empty span {
+    display: block;
+    max-width: 430px;
+    margin: 7px auto 0;
+    font-size: .78rem;
   }
 
-  .toys-pagination {
+  .ta-pagination {
     padding: 16px;
+    border-top: 1px solid rgba(148,163,184,.09);
     display: flex;
-    align-items: center;
     justify-content: center;
+    flex-wrap: wrap;
     gap: 6px;
-    border-top: 1px solid rgba(148, 163, 184, .09);
   }
 
-  .toys-pagination a,
-  .toys-pagination span {
+  .ta-pagination a,
+  .ta-pagination span {
     min-width: 36px;
     height: 36px;
     padding: 0 10px;
+    border: 1px solid rgba(148,163,184,.13);
+    border-radius: 9px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    border: 1px solid rgba(148, 163, 184, .13);
-    border-radius: 9px;
     color: #94a3b8;
-    font-size: .72rem;
-    font-weight: 750;
+    font-size: .7rem;
+    font-weight: 800;
     text-decoration: none;
   }
 
-  .toys-pagination span {
-    border-color: rgba(96, 165, 250, .32);
-    background: rgba(37, 99, 235, .18);
+  .ta-pagination span {
+    border-color: rgba(96,165,250,.32);
     color: #bfdbfe;
+    background: rgba(37,99,235,.18);
   }
 
-  .toy-modal {
+  /* ---------- modal ---------- */
+  .toy-dialog {
     position: fixed;
     inset: 0;
     z-index: 3300;
+    padding: 20px;
     display: none;
     align-items: center;
     justify-content: center;
-    padding: 20px;
-    background: rgba(2, 6, 23, .8);
-    backdrop-filter: blur(6px);
+    background: rgba(2,6,23,.82);
+    backdrop-filter: blur(7px);
   }
 
-  .toy-modal.is-open {
+  .toy-dialog.is-open {
     display: flex;
   }
 
-  .toy-modal-card {
-    width: min(100%, 880px);
-    height: min(92dvh, 860px);
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    border: 1px solid rgba(148, 163, 184, .17);
-    border-radius: 22px;
-    background: #111b2e;
-    box-shadow: 0 30px 80px rgba(0, 0, 0, .46);
-  }
-
-  .toy-modal-card.is-small {
-    width: min(100%, 460px);
-    height: auto;
+  .toy-dialog-card {
+    width: min(100%, 940px);
     max-height: 92dvh;
-  }
-
-  .toy-modal-card > form {
-    width: 100%;
-    height: 100%;
-    min-height: 0;
+    overflow: hidden;
+    border: 1px solid rgba(148,163,184,.17);
+    border-radius: 22px;
     display: flex;
     flex-direction: column;
-    overflow: hidden;
+    background: #111b2e;
+    box-shadow: 0 30px 80px rgba(0,0,0,.46);
   }
 
-  .toy-modal-header {
-    position: relative;
-    z-index: 3;
+  .toy-dialog-card.is-small {
+    width: min(100%, 470px);
+  }
+
+  .toy-dialog-card > form {
+    min-height: 0;
+    max-height: 92dvh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .ta-modal-header {
     flex: 0 0 auto;
     padding: 18px 22px;
+    border-bottom: 1px solid rgba(148,163,184,.12);
     display: flex;
     align-items: center;
     gap: 14px;
-    border-bottom: 1px solid rgba(148, 163, 184, .12);
     background: #0f192a;
   }
 
-  .toy-modal-heading {
+  .ta-modal-heading {
     min-width: 0;
     flex: 1;
   }
 
-  .toy-modal-heading h2 {
+  .ta-modal-heading h2 {
     margin: 0;
     color: #f1f5f9;
-    font-size: 1.1rem;
+    font-size: 1.08rem;
   }
 
-  .toy-modal-heading p {
+  .ta-modal-heading p {
     margin: 4px 0 0;
     color: #718096;
-    font-size: .72rem;
+    font-size: .7rem;
   }
 
-  .toy-modal-close {
-    min-width: 88px;
-    height: 38px;
-    padding: 0 12px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 7px;
-    border: 1px solid rgba(148, 163, 184, .14);
+  .ta-close {
+    width: 39px;
+    height: 39px;
+    border: 1px solid var(--ta-line);
     border-radius: 11px;
-    background: #1e2d46;
+    display: grid;
+    place-items: center;
     color: #94a3b8;
-    font-size: .7rem;
-    font-weight: 750;
+    background: #1e2d46;
     cursor: pointer;
   }
 
-  .toy-modal-close:hover {
-    color: #fff;
-    border-color: rgba(248, 113, 113, .24);
-    background: rgba(239, 68, 68, .1);
-  }
-
-  .toy-modal-close svg {
-    width: 17px;
-    height: 17px;
-  }
-
-  .toy-modal-body {
-    flex: 1 1 auto;
+  .ta-modal-body {
     min-height: 0;
     padding: 22px;
     overflow-y: auto;
-    overflow-x: hidden;
     overscroll-behavior: contain;
-    scrollbar-gutter: stable;
     scrollbar-width: thin;
-    scrollbar-color: #3b4b64 #0d1727;
   }
 
-  .toy-modal-body::-webkit-scrollbar { width: 9px; }
-  .toy-modal-body::-webkit-scrollbar-track { background: #0d1727; }
-  .toy-modal-body::-webkit-scrollbar-thumb {
-    border: 2px solid #0d1727;
-    border-radius: 999px;
-    background: #3b4b64;
-  }
-
-  .toy-form-section + .toy-form-section {
+  .ta-section + .ta-section {
     margin-top: 24px;
     padding-top: 22px;
-    border-top: 1px solid rgba(148, 163, 184, .1);
+    border-top: 1px solid rgba(148,163,184,.10);
   }
 
-  .toy-form-title {
+  .ta-section-title {
     margin-bottom: 14px;
     display: flex;
     align-items: flex-start;
     gap: 10px;
   }
 
-  .toy-form-title svg {
+  .ta-section-title svg {
     width: 18px;
     height: 18px;
     margin-top: 1px;
     color: #60a5fa;
   }
 
-  .toy-form-title strong,
-  .toy-form-title span {
+  .ta-section-title strong,
+  .ta-section-title span {
     display: block;
   }
 
-  .toy-form-title strong {
+  .ta-section-title strong {
     color: #dbe5f3;
-    font-size: .85rem;
+    font-size: .83rem;
   }
 
-  .toy-form-title span {
+  .ta-section-title span {
     margin-top: 3px;
     color: #718096;
-    font-size: .69rem;
+    font-size: .67rem;
   }
 
-  .toy-form-grid {
+  .ta-form-grid {
     display: grid;
     grid-template-columns: repeat(12, minmax(0, 1fr));
     gap: 14px;
   }
 
-  .toy-field { grid-column: span 6; }
-  .toy-field.is-full { grid-column: 1 / -1; }
-  .toy-field.is-third { grid-column: span 4; }
+  .ta-field {
+    grid-column: span 6;
+  }
 
-  .toy-field label,
-  .toy-group-label {
+  .ta-field.is-full {
+    grid-column: 1 / -1;
+  }
+
+  .ta-field.is-third {
+    grid-column: span 4;
+  }
+
+  .ta-field label,
+  .ta-label {
     margin-bottom: 6px;
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 8px;
     color: #aebdd0;
-    font-size: .72rem;
-    font-weight: 750;
+    font-size: .7rem;
+    font-weight: 780;
   }
 
-  .toy-field label small {
+  .ta-field label small,
+  .ta-label small {
     color: #5f6d82;
-    font-size: .63rem;
-    font-weight: 600;
+    font-size: .61rem;
+    font-weight: 650;
   }
 
-  .toy-field input[type="text"],
-  .toy-field select,
-  .toy-field textarea,
-  .quick-create-form input[type="text"] {
-    width: 100%;
-    border: 1px solid rgba(148, 163, 184, .16);
-    border-radius: 11px;
-    outline: 0;
-    background: #0d1727;
-    color: #e5edf8;
-    font-size: .78rem;
+  .ta-field input:focus,
+  .ta-field select:focus,
+  .ta-field textarea:focus,
+  .ta-quick-form input:focus {
+    border-color: rgba(96,165,250,.58);
+    box-shadow: 0 0 0 3px rgba(59,130,246,.11);
   }
 
-  .toy-field input[type="text"],
-  .toy-field select,
-  .quick-create-form input[type="text"] {
-    height: 43px;
-    padding: 0 12px;
-  }
-
-  .toy-field textarea {
-    min-height: 100px;
-    padding: 11px 12px;
-    resize: vertical;
-  }
-
-  .toy-field input:focus,
-  .toy-field select:focus,
-  .toy-field textarea:focus,
-  .quick-create-form input:focus {
-    border-color: rgba(96, 165, 250, .58);
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, .11);
-  }
-
-  .toy-input-wrap {
+  .ta-input-wrap {
     position: relative;
   }
 
-  .toy-input-wrap input {
-    padding-left: 42px !important;
-    padding-right: 38px !important;
+  .ta-input-wrap input {
+    padding-left: 40px !important;
+    padding-right: 36px !important;
   }
 
-  .toy-input-prefix,
-  .toy-input-suffix {
+  .ta-prefix,
+  .ta-suffix {
     position: absolute;
     top: 50%;
     z-index: 1;
     color: #718096;
-    font-size: .7rem;
-    font-weight: 800;
-    pointer-events: none;
+    font-size: .68rem;
+    font-weight: 850;
     transform: translateY(-50%);
+    pointer-events: none;
   }
 
-  .toy-input-prefix { left: 12px; }
-  .toy-input-suffix { right: 12px; }
+  .ta-prefix { left: 12px; }
+  .ta-suffix { right: 12px; }
 
-  .toy-field-hint {
+  .ta-help {
     margin: 6px 0 0;
     color: #64748b;
-    font-size: .62rem;
-    line-height: 1.4;
+    font-size: .61rem;
+    line-height: 1.45;
   }
 
-  .toy-field input.is-invalid {
-    border-color: rgba(248, 113, 113, .62);
-    box-shadow: 0 0 0 3px rgba(239, 68, 68, .1);
+  /* ---------- galeria ---------- */
+  .ta-gallery-box {
+    padding: 15px;
+    border: 1px dashed rgba(96,165,250,.30);
+    border-radius: 16px;
+    background:
+      radial-gradient(circle at 100% 0, rgba(59,130,246,.08), transparent 16rem),
+      rgba(59,130,246,.035);
   }
 
-  .toy-upload {
-    min-height: 92px;
-    padding: 12px;
+  .ta-gallery-head {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
+    justify-content: space-between;
     gap: 14px;
-    border: 1px dashed rgba(96, 165, 250, .3);
-    border-radius: 14px;
-    background: rgba(59, 130, 246, .045);
   }
 
-  .toy-upload-preview {
-    width: 92px;
-    height: 68px;
-    flex: 0 0 92px;
-    display: grid;
-    place-items: center;
-    overflow: hidden;
-    border-radius: 12px;
-    background: #f8fafc;
-    color: #64748b;
-  }
-
-  .toy-upload-preview img {
-    width: 100%;
-    height: 100%;
-    display: none;
-    object-fit: cover;
-  }
-
-  .toy-upload-preview.has-image img { display: block; }
-  .toy-upload-preview.has-image svg { display: none; }
-
-  .toy-upload-copy strong,
-  .toy-upload-copy span {
+  .ta-gallery-head strong,
+  .ta-gallery-head span {
     display: block;
   }
 
-  .toy-upload-copy strong {
-    color: #cbd5e1;
+  .ta-gallery-head strong {
+    color: #dbe5f3;
     font-size: .77rem;
   }
 
-  .toy-upload-copy span {
+  .ta-gallery-head span {
     margin-top: 4px;
     color: #718096;
-    font-size: .67rem;
+    font-size: .65rem;
+    line-height: 1.45;
   }
 
-  .toy-file-button {
+  .ta-file-button {
     position: relative;
-    margin-top: 8px;
+    flex: 0 0 auto;
+    min-height: 38px;
+    padding: 0 12px;
+    border: 1px solid rgba(96,165,250,.21);
+    border-radius: 10px;
     display: inline-flex;
     align-items: center;
     gap: 7px;
-    color: #93c5fd;
-    font-size: .69rem;
-    font-weight: 800;
+    color: #bfdbfe;
+    background: rgba(37,99,235,.13);
+    font-size: .66rem;
+    font-weight: 850;
     cursor: pointer;
   }
 
-  .toy-file-button input {
+  .ta-file-button input {
     position: absolute;
     width: 1px;
     height: 1px;
     opacity: 0;
+    pointer-events: none;
   }
 
-  .toy-options-header {
+  .ta-gallery-status {
+    margin-top: 12px;
+    padding: 9px 11px;
+    border: 1px solid rgba(148,163,184,.10);
+    border-radius: 11px;
+    color: #8392a8;
+    background: rgba(13,23,39,.65);
+    font-size: .64rem;
+    line-height: 1.45;
+  }
+
+  .ta-gallery-status.is-new {
+    color: #bfdbfe;
+    border-color: rgba(96,165,250,.22);
+    background: rgba(37,99,235,.10);
+  }
+
+  .ta-gallery-grid {
+    min-height: 112px;
+    margin-top: 12px;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 9px;
+  }
+
+  .ta-gallery-empty {
+    grid-column: 1 / -1;
+    min-height: 105px;
+    border: 1px dashed rgba(148,163,184,.15);
+    border-radius: 12px;
+    display: grid;
+    place-items: center;
+    color: #64748b;
+    background: rgba(13,23,39,.45);
+    font-size: .68rem;
+    font-weight: 750;
+    text-align: center;
+  }
+
+  .ta-gallery-item {
+    position: relative;
+    min-width: 0;
+    aspect-ratio: 4 / 3;
+    padding: 5px;
+    overflow: hidden;
+    border: 1px solid rgba(148,163,184,.13);
+    border-radius: 12px;
+    background: #edf4fb;
+  }
+
+  .ta-gallery-item img {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: contain;
+    border-radius: 8px;
+  }
+
+  .ta-gallery-badge {
+    position: absolute;
+    top: 7px;
+    left: 7px;
+    min-height: 23px;
+    padding: 0 7px;
+    border: 1px solid rgba(255,255,255,.34);
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    color: #fff;
+    background: rgba(7,20,38,.78);
+    font-size: .56rem;
+    font-weight: 900;
+    backdrop-filter: blur(5px);
+  }
+
+  .ta-gallery-badge.is-main {
+    background: linear-gradient(135deg, #0878f9, #004aad);
+  }
+
+  .ta-gallery-number {
+    position: absolute;
+    right: 7px;
+    bottom: 7px;
+    width: 24px;
+    height: 24px;
+    border-radius: 8px;
+    display: grid;
+    place-items: center;
+    color: #fff;
+    background: rgba(7,20,38,.76);
+    font-size: .58rem;
+    font-weight: 900;
+  }
+
+  .ta-gallery-rule {
+    margin-top: 11px;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 7px;
+  }
+
+  .ta-gallery-rule span {
+    min-height: 39px;
+    padding: 7px 9px;
+    border: 1px solid rgba(148,163,184,.10);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    color: #718096;
+    background: rgba(13,23,39,.5);
+    font-size: .6rem;
+    line-height: 1.35;
+  }
+
+  .ta-options-head {
     margin-bottom: 8px;
     display: flex;
     align-items: center;
@@ -821,322 +896,305 @@
     gap: 10px;
   }
 
-  .toy-options-header .toy-group-label {
+  .ta-options-head .ta-label {
     margin: 0;
   }
 
-  .toy-inline-add {
+  .ta-inline-add {
     padding: 5px 9px;
-    border: 1px solid rgba(96, 165, 250, .2);
+    border: 1px solid rgba(96,165,250,.2);
     border-radius: 8px;
-    background: rgba(59, 130, 246, .09);
     color: #93c5fd;
-    font-size: .64rem;
-    font-weight: 800;
+    background: rgba(59,130,246,.09);
+    font: inherit;
+    font-size: .62rem;
+    font-weight: 850;
     cursor: pointer;
   }
 
-  .toy-check-grid {
+  .ta-check-grid {
     max-height: 174px;
     padding: 8px;
+    border: 1px solid rgba(148,163,184,.12);
+    border-radius: 12px;
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 7px;
     overflow-y: auto;
-    border: 1px solid rgba(148, 163, 184, .12);
-    border-radius: 12px;
     background: #0d1727;
   }
 
-  .toy-check {
+  .ta-check {
     min-height: 38px;
     padding: 8px 9px;
+    border: 1px solid rgba(148,163,184,.10);
+    border-radius: 9px;
     display: flex;
     align-items: center;
     gap: 8px;
-    border: 1px solid rgba(148, 163, 184, .1);
-    border-radius: 9px;
-    background: rgba(30, 45, 70, .42);
     color: #9eacc0;
-    font-size: .69rem;
+    background: rgba(30,45,70,.42);
+    font-size: .67rem;
     cursor: pointer;
   }
 
-  .toy-check:has(input:checked) {
-    border-color: rgba(96, 165, 250, .3);
-    background: rgba(37, 99, 235, .14);
+  .ta-check:has(input:checked) {
     color: #dbeafe;
+    border-color: rgba(96,165,250,.30);
+    background: rgba(37,99,235,.14);
   }
 
-  .toy-check input {
+  .ta-check input {
     accent-color: #3b82f6;
   }
 
-  .toy-toggle {
+  .ta-toggle {
     min-height: 64px;
     padding: 11px;
+    border: 1px solid rgba(148,163,184,.13);
+    border-radius: 12px;
     display: flex;
     align-items: center;
     gap: 10px;
-    border: 1px solid rgba(148, 163, 184, .13);
-    border-radius: 12px;
     background: #0e1829;
     cursor: pointer;
   }
 
-  .toy-toggle input {
+  .ta-toggle input {
     width: 17px;
     height: 17px;
     accent-color: #3b82f6;
   }
 
-  .toy-toggle strong,
-  .toy-toggle span {
+  .ta-toggle strong,
+  .ta-toggle span {
     display: block;
   }
 
-  .toy-toggle strong {
+  .ta-toggle strong {
     color: #cbd5e1;
-    font-size: .72rem;
+    font-size: .71rem;
   }
 
-  .toy-toggle span {
+  .ta-toggle span {
     margin-top: 3px;
     color: #64748b;
-    font-size: .62rem;
+    font-size: .61rem;
   }
 
-  .toy-modal-footer {
-    position: relative;
-    z-index: 3;
+  .ta-modal-footer {
     flex: 0 0 auto;
-    min-height: 72px;
-    padding: 14px 22px;
+    min-height: 70px;
+    padding: 13px 22px;
+    border-top: 1px solid rgba(148,163,184,.12);
     display: flex;
     align-items: center;
     justify-content: flex-end;
     gap: 9px;
-    border-top: 1px solid rgba(148, 163, 184, .12);
     background: #0f192a;
-    box-shadow: 0 -12px 30px rgba(2, 6, 23, .22);
   }
 
-  .toy-scroll-note {
+  .ta-footer-note {
     margin-right: auto;
-    display: inline-flex;
-    align-items: center;
-    gap: 7px;
     color: #64748b;
-    font-size: .65rem;
-    font-weight: 650;
+    font-size: .63rem;
   }
 
-  .toy-scroll-note svg {
-    width: 15px;
-    height: 15px;
-  }
-
-  .toy-confirm-content {
-    padding: 26px 24px 8px;
+  .ta-confirm {
+    padding: 25px 23px 7px;
+    color: #8d9bb0;
     text-align: center;
   }
 
-  .toy-confirm-icon {
-    width: 56px;
-    height: 56px;
-    margin: 0 auto 15px;
-    display: grid;
-    place-items: center;
-    border-radius: 17px;
-    background: rgba(239, 68, 68, .12);
-    color: #fca5a5;
-  }
-
-  .toy-confirm-content h2 {
+  .ta-confirm h2 {
     margin: 0;
     color: #f1f5f9;
-    font-size: 1.1rem;
+    font-size: 1.08rem;
   }
 
-  .toy-confirm-content p {
+  .ta-confirm p {
     margin: 8px 0 0;
-    color: #7f8da3;
-    font-size: .76rem;
+    font-size: .74rem;
     line-height: 1.55;
   }
 
-  .toy-confirm-content strong {
-    color: #cbd5e1;
-  }
-
-  .toy-confirm-box {
-    margin-top: 17px;
-    padding: 13px;
-    border: 1px solid rgba(248, 113, 113, .2);
-    border-radius: 12px;
-    background: rgba(239, 68, 68, .07);
-    text-align: left;
-  }
-
-  .toy-confirm-box label {
+  .ta-confirm code {
     display: block;
-    margin-bottom: 7px;
-    color: #aebdd0;
-    font-size: .69rem;
-    font-weight: 750;
-  }
-
-  .toy-confirm-box code {
-    display: block;
-    margin-bottom: 10px;
-    padding: 9px 10px;
+    margin: 15px 0 10px;
+    padding: 10px;
     overflow-wrap: anywhere;
     border-radius: 9px;
-    background: rgba(2, 6, 23, .38);
     color: #fecaca;
-    font-size: .7rem;
-    line-height: 1.5;
+    background: rgba(2,6,23,.38);
+    font-size: .68rem;
     user-select: all;
   }
 
-  .toy-confirm-box input {
+  .ta-confirm input {
     width: 100%;
     height: 42px;
     padding: 0 11px;
-    border: 1px solid rgba(148, 163, 184, .18);
+    border: 1px solid rgba(148,163,184,.18);
     border-radius: 10px;
     outline: 0;
-    background: #0d1727;
     color: #f1f5f9;
+    background: #0d1727;
   }
 
-  .quick-create-form {
+  .ta-quick-form {
     padding: 22px;
     display: grid;
-    gap: 13px;
+    gap: 12px;
   }
 
-  .quick-create-form label {
+  .ta-quick-form h2 {
+    margin: 0;
+    color: #f1f5f9;
+    font-size: 1.05rem;
+  }
+
+  .ta-quick-form p {
+    margin: -5px 0 4px;
+    color: #718096;
+    font-size: .68rem;
+  }
+
+  .ta-quick-form label {
     color: #aebdd0;
-    font-size: .72rem;
-    font-weight: 750;
+    font-size: .7rem;
+    font-weight: 780;
   }
 
-  .quick-create-message {
-    min-height: 20px;
-    color: #fca5a5;
+  .ta-quick-form input[type="file"] {
+    color: #94a3b8;
     font-size: .7rem;
   }
 
-  body.toy-modal-open {
+  .ta-quick-message {
+    min-height: 18px;
+    color: #fca5a5;
+    font-size: .67rem;
+  }
+
+  body.ta-modal-open {
     overflow: hidden;
   }
 
   @media (max-width: 1050px) {
-    .toys-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .ta-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .ta-gallery-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   }
 
   @media (max-width: 760px) {
-    .toys-hero { align-items: stretch; flex-direction: column; }
-    .toys-primary-button { width: 100%; }
-    .toys-filter-form { grid-template-columns: 1fr; }
-    .toys-table thead { display: none; }
-    .toys-table, .toys-table tbody { display: block; }
-    .toys-table-wrap { padding: 10px; overflow: visible; }
-    .toys-table tbody { display: grid; gap: 10px; }
-    .toys-table tbody tr {
+    .ta-hero {
+      align-items: stretch;
+      flex-direction: column;
+    }
+    .ta-primary { width: 100%; }
+    .ta-filter { grid-template-columns: 1fr; }
+    .ta-table thead { display: none; }
+    .ta-table, .ta-table tbody { display: block; }
+    .ta-table-wrap { padding: 10px; overflow: visible; }
+    .ta-table tbody { display: grid; gap: 10px; }
+    .ta-table tbody tr {
       padding: 14px;
-      display: grid;
-      grid-template-columns: 1fr auto;
-      gap: 12px;
-      border: 1px solid rgba(148, 163, 184, .12);
+      border: 1px solid var(--ta-line);
       border-radius: 15px;
+      display: grid;
+      gap: 11px;
       background: #0f192a;
     }
-    .toys-table td { padding: 0; display: block; border: 0; }
-    .toys-table td:nth-child(1) { grid-column: 1 / -1; }
-    .toys-table td:nth-child(4) { grid-column: 2; grid-row: 2 / span 3; align-self: center; }
-    .toy-actions { flex-direction: column; }
+    .ta-table td {
+      padding: 0;
+      border: 0;
+      display: block;
+    }
+    .ta-actions { justify-content: flex-start; }
+    .ta-field,
+    .ta-field.is-third { grid-column: 1 / -1; }
+    .ta-gallery-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .ta-gallery-rule { grid-template-columns: 1fr; }
   }
 
-  @media (max-width: 600px) {
-    .toys-kpis { grid-template-columns: 1fr 1fr; gap: 9px; }
-    .toys-kpi { min-height: 94px; padding: 12px; gap: 9px; }
-    .toys-kpi-icon { width: 36px; height: 36px; flex-basis: 36px; }
-    .toys-kpi-value { font-size: 1.3rem; }
-    .toy-modal { padding: 8px 0 0; align-items: flex-end; }
-    .toy-modal-card,
-    .toy-modal-card.is-small {
+  @media (max-width: 560px) {
+    .ta-kpis { grid-template-columns: 1fr 1fr; gap: 9px; }
+    .ta-kpi { min-height: 92px; padding: 12px; gap: 9px; }
+    .ta-kpi-icon { width: 36px; height: 36px; flex-basis: 36px; }
+    .ta-kpi strong { font-size: 1.28rem; }
+
+    .toy-dialog {
+      padding: 8px 0 0;
+      align-items: flex-end;
+    }
+    .toy-dialog-card,
+    .toy-dialog-card.is-small {
       width: 100%;
-      height: calc(100dvh - 8px);
       max-height: calc(100dvh - 8px);
       border-radius: 22px 22px 0 0;
     }
-    .toy-modal-card.is-small { height: auto; }
-    .toy-modal-header { padding: 15px; }
-    .toy-modal-close { min-width: 42px; width: 42px; padding: 0; }
-    .toy-modal-close span { display: none; }
-    .toy-modal-body { padding: 18px 15px; }
-    .toy-field, .toy-field.is-third { grid-column: 1 / -1; }
-    .toy-check-grid { grid-template-columns: 1fr 1fr; }
-    .toy-modal-footer { min-height: 68px; padding: 12px 15px; }
-    .toy-scroll-note { display: none; }
-    .toy-secondary-button, .toy-save-button { flex: 1; }
+    .ta-modal-header,
+    .ta-modal-body,
+    .ta-modal-footer { padding-inline: 15px; }
+    .ta-gallery-head { flex-direction: column; }
+    .ta-file-button { width: 100%; justify-content: center; }
+    .ta-check-grid { grid-template-columns: 1fr 1fr; }
+    .ta-footer-note { display: none; }
+    .ta-modal-footer .ta-btn { flex: 1; }
   }
 </style>
 
-<div class="toys-page">
+<div class="toy-admin">
   <svg width="0" height="0" aria-hidden="true" style="position:absolute">
-    <symbol id="toy-i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
-    <symbol id="toy-i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></symbol>
-    <symbol id="toy-i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
-    <symbol id="toy-i-edit" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4L16.5 3.5Z"/></symbol>
-    <symbol id="toy-i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14M10 11v6M14 11v6"/></symbol>
-    <symbol id="toy-i-upload" viewBox="0 0 24 24"><path d="M12 16V4M7 9l5-5 5 5M5 20h14"/></symbol>
-    <symbol id="toy-i-image" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 15-5-5L5 20"/></symbol>
-    <symbol id="toy-i-save" viewBox="0 0 24 24"><path d="M5 4h12l2 2v14H5V4Z"/><path d="M8 4v6h8V4M8 20v-6h8v6"/></symbol>
-    <symbol id="toy-i-scroll" viewBox="0 0 24 24"><path d="M12 3v17M6 14l6 6 6-6"/></symbol>
-    <symbol id="toy-i-game" viewBox="0 0 24 24"><path d="M8.5 8h7a5 5 0 0 1 4.7 6.7l-.8 2.2a2.4 2.4 0 0 1-4.1.7L14 16h-4l-1.3 1.6a2.4 2.4 0 0 1-4.1-.7l-.8-2.2A5 5 0 0 1 8.5 8Z"/><path d="M8 11v4M6 13h4M16.5 12.5h.01M18.5 14.5h.01"/></symbol>
+    <symbol id="ta-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="ta-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></symbol>
+    <symbol id="ta-edit" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4L16.5 3.5Z"/></symbol>
+    <symbol id="ta-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14M10 11v6M14 11v6"/></symbol>
+    <symbol id="ta-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
+    <symbol id="ta-upload" viewBox="0 0 24 24"><path d="M12 16V4M7 9l5-5 5 5M5 20h14"/></symbol>
+    <symbol id="ta-image" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 15-5-5L5 20"/></symbol>
+    <symbol id="ta-game" viewBox="0 0 24 24"><path d="M8.5 8h7a5 5 0 0 1 4.7 6.7l-.8 2.2a2.4 2.4 0 0 1-4.1.7L14 16h-4l-1.3 1.6a2.4 2.4 0 0 1-4.1-.7l-.8-2.2A5 5 0 0 1 8.5 8Z"/><path d="M8 11v4M6 13h4M16.5 12.5h.01M18.5 14.5h.01"/></symbol>
+    <symbol id="ta-save" viewBox="0 0 24 24"><path d="M5 4h12l2 2v14H5V4Z"/><path d="M8 4v6h8V4M8 20v-6h8v6"/></symbol>
   </svg>
 
-  <section class="toys-hero">
-    <div class="toys-hero-copy">
-      <p class="toys-eyebrow"><svg><use href="#toy-i-game"/></svg>Catálogo de produtos</p>
+  <section class="ta-hero">
+    <div class="ta-hero-copy">
+      <p class="ta-eyebrow"><svg><use href="#ta-game"/></svg> Catálogo de produtos</p>
       <h2>Brinquedos</h2>
-      <p class="toys-hero-description">
-        Cadastre e organize os brinquedos da Lazer &amp; Sport, suas especificações, categorias, tags e disponibilidade na loja.
+      <p>
+        Cadastre produtos, organize categorias e mantenha uma galeria de até
+        8 imagens por brinquedo. A primeira foto selecionada é a principal.
       </p>
     </div>
-    <button id="newToyButton" type="button" class="toys-primary-button">
-      <svg><use href="#toy-i-plus"/></svg>
+    <button id="newToyButton" class="ta-primary" type="button">
+      <svg><use href="#ta-plus"/></svg>
       Cadastrar brinquedo
     </button>
   </section>
 
-  <section class="toys-kpis" aria-label="Resumo dos brinquedos">
-    <article class="toys-kpi">
-      <span class="toys-kpi-icon"><svg><use href="#toy-i-game"/></svg></span>
-      <span><strong class="toys-kpi-value">{{ total_brinquedos }}</strong><span class="toys-kpi-label">Brinquedos cadastrados</span></span>
+  <section class="ta-kpis" aria-label="Resumo dos brinquedos">
+    <article class="ta-kpi">
+      <span class="ta-kpi-icon"><svg><use href="#ta-game"/></svg></span>
+      <span><strong>{{ total_brinquedos }}</strong><span>Brinquedos cadastrados</span></span>
     </article>
-    <article class="toys-kpi">
-      <span class="toys-kpi-icon"><svg><use href="#i-globe"/></svg></span>
-      <span><strong class="toys-kpi-value">{{ total_loja }}</strong><span class="toys-kpi-label">Disponíveis na loja</span></span>
+    <article class="ta-kpi">
+      <span class="ta-kpi-icon">✓</span>
+      <span><strong>{{ total_loja }}</strong><span>Disponíveis na loja</span></span>
     </article>
-    <article class="toys-kpi">
-      <span class="toys-kpi-icon"><svg><use href="#toy-i-image"/></svg></span>
-      <span><strong class="toys-kpi-value">{{ total_com_imagem }}</strong><span class="toys-kpi-label">Com imagem cadastrada</span></span>
+    <article class="ta-kpi">
+      <span class="ta-kpi-icon"><svg><use href="#ta-image"/></svg></span>
+      <span><strong>{{ total_com_imagem }}</strong><span>Com imagem principal</span></span>
     </article>
-    <article class="toys-kpi">
-      <span class="toys-kpi-icon"><svg><use href="#i-tag"/></svg></span>
-      <span><strong class="toys-kpi-value">{{ total_categorias }}</strong><span class="toys-kpi-label">Categorias disponíveis</span></span>
+    <article class="ta-kpi">
+      <span class="ta-kpi-icon">#</span>
+      <span><strong>{{ total_categorias }}</strong><span>Categorias disponíveis</span></span>
     </article>
   </section>
 
-  <section class="toys-panel">
-    <div class="toys-toolbar">
-      <form method="get" class="toys-filter-form">
-        <label class="toys-search">
-          <svg><use href="#toy-i-search"/></svg>
+  <section class="ta-panel">
+    <div class="ta-toolbar">
+      <form method="get" class="ta-filter">
+        <label class="ta-search">
+          <svg><use href="#ta-search"/></svg>
           <input name="q" type="search" value="{{ busca }}" placeholder="Buscar brinquedo pelo nome…">
         </label>
         <select name="categoria" aria-label="Filtrar por categoria">
@@ -1147,22 +1205,22 @@
             </option>
           {% endfor %}
         </select>
-        <button type="submit" class="toys-filter-submit">Aplicar filtros</button>
+        <button type="submit">Aplicar filtros</button>
       </form>
     </div>
 
-    <div class="toys-results-line">
+    <div class="ta-result-line">
       <span><strong>{{ page_obj.paginator.count }}</strong> resultado(s)</span>
       <span>Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
     </div>
 
-    {% if brinquedos %}
-      <div class="toys-table-wrap">
-        <table class="toys-table">
+    {% if brinquedos.object_list %}
+      <div class="ta-table-wrap">
+        <table class="ta-table">
           <thead>
             <tr>
               <th>Brinquedo</th>
-              <th>Preço</th>
+              <th>Preço / status</th>
               <th>Categorias</th>
               <th style="text-align:right">Ações</th>
             </tr>
@@ -1171,22 +1229,22 @@
             {% for brinquedo in brinquedos %}
               <tr>
                 <td>
-                  <div class="toy-identity">
-                    <span class="toy-image">
+                  <div class="ta-product">
+                    <span class="ta-product-image">
                       {% if brinquedo.imagem_brinquedo %}
                         <img src="{{ brinquedo.imagem_brinquedo.url }}" alt="{{ brinquedo.nome_brinquedo }}">
                       {% else %}
-                        <svg><use href="#toy-i-image"/></svg>
+                        <svg><use href="#ta-image"/></svg>
                       {% endif %}
                     </span>
                     <span>
-                      <strong class="toy-name">{{ brinquedo.nome_brinquedo }}</strong>
-                      <span class="toy-id">#{{ brinquedo.id }} · {{ brinquedo.voltz|default:"Sem voltagem" }}</span>
+                      <strong class="ta-product-name">{{ brinquedo.nome_brinquedo }}</strong>
+                      <span class="ta-product-sub">#{{ brinquedo.id }} · {{ brinquedo.voltz|default:"Sem voltagem" }}</span>
                     </span>
                   </div>
                 </td>
                 <td>
-                  <span class="toy-price">
+                  <span class="ta-price">
                     {% if brinquedo.valor_brinquedo != None %}
                       R$ {{ brinquedo.valor_brinquedo }}
                     {% else %}
@@ -1195,30 +1253,40 @@
                   </span>
                   <div style="margin-top:6px">
                     {% if brinquedo.exibir_na_loja %}
-                      <span class="toy-status is-store">Na loja</span>
+                      <span class="ta-status is-store">Na loja</span>
                     {% else %}
-                      <span class="toy-status is-catalog">Somente catálogo</span>
+                      <span class="ta-status is-catalog">Somente catálogo</span>
                     {% endif %}
                   </div>
                 </td>
                 <td>
-                  <div class="toy-categories">
+                  <div class="ta-chips">
                     {% for categoria in brinquedo.categorias_brinquedos.all %}
-                      <span class="toy-chip">{{ categoria.nome_categoria }}</span>
+                      <span class="ta-chip">{{ categoria.nome_categoria }}</span>
                     {% empty %}
-                      <span class="toy-chip">Sem categoria</span>
+                      <span class="ta-chip">Sem categoria</span>
                     {% endfor %}
                   </div>
                 </td>
                 <td>
-                  <div class="toy-actions">
-                    <button type="button" class="toy-action" data-edit-toy="{{ brinquedo.id }}" aria-label="Editar {{ brinquedo.nome_brinquedo }}" title="Editar brinquedo">
-                      <svg><use href="#toy-i-edit"/></svg>
+                  <div class="ta-actions">
+                    <button type="button" class="ta-action" data-edit-toy="{{ brinquedo.id }}" title="Editar brinquedo">
+                      <svg><use href="#ta-edit"/></svg>
                     </button>
-                    <button type="button" class="toy-action is-danger" data-delete-toy="{{ brinquedo.id }}" data-delete-name="{{ brinquedo.nome_brinquedo }}" aria-label="Excluir {{ brinquedo.nome_brinquedo }}" title="Excluir brinquedo">
-                      <svg><use href="#toy-i-trash"/></svg>
+                    <button type="button" class="ta-action is-danger" data-delete-toy="{{ brinquedo.id }}" data-delete-name="{{ brinquedo.nome_brinquedo }}" title="Excluir brinquedo">
+                      <svg><use href="#ta-trash"/></svg>
                     </button>
                   </div>
+
+                  <template id="toyExistingGallery-{{ brinquedo.id }}">
+                    {% for foto in brinquedo.imagens_brinquedo.all %}
+                      <span class="gallery-source-item" data-src="{{ foto.imagem.url }}" data-order="{{ foto.ordem }}"></span>
+                    {% empty %}
+                      {% if brinquedo.imagem_brinquedo %}
+                        <span class="gallery-source-item" data-src="{{ brinquedo.imagem_brinquedo.url }}" data-order="1"></span>
+                      {% endif %}
+                    {% endfor %}
+                  </template>
                 </td>
               </tr>
             {% endfor %}
@@ -1226,113 +1294,138 @@
         </table>
       </div>
     {% else %}
-      <div class="toys-empty">
-        <span class="toys-empty-icon"><svg><use href="#toy-i-search"/></svg></span>
-        <h3>Nenhum brinquedo encontrado</h3>
-        <p>Altere os filtros ou cadastre um novo brinquedo para começar.</p>
+      <div class="ta-empty">
+        <strong>Nenhum brinquedo encontrado</strong>
+        <span>Ajuste os filtros ou cadastre um novo produto.</span>
       </div>
     {% endif %}
 
     {% if page_obj.paginator.num_pages > 1 %}
-      <nav class="toys-pagination" aria-label="Paginação">
+      <nav class="ta-pagination" aria-label="Paginação">
         {% if page_obj.has_previous %}
-          <a href="?page={{ page_obj.previous_page_number }}&categoria={{ categoria_ativa }}&q={{ busca|urlencode }}">‹</a>
+          <a href="?q={{ busca|urlencode }}&categoria={{ categoria_ativa }}&page={{ page_obj.previous_page_number }}">Anterior</a>
         {% endif %}
-        {% for num in page_obj.paginator.page_range %}
-          {% if num == page_obj.number %}
-            <span>{{ num }}</span>
-          {% elif num > page_obj.number|add:-3 and num < page_obj.number|add:3 %}
-            <a href="?page={{ num }}&categoria={{ categoria_ativa }}&q={{ busca|urlencode }}">{{ num }}</a>
+        {% for numero in page_obj.paginator.page_range %}
+          {% if numero == page_obj.number %}
+            <span>{{ numero }}</span>
+          {% elif numero >= page_obj.number|add:"-2" and numero <= page_obj.number|add:"2" %}
+            <a href="?q={{ busca|urlencode }}&categoria={{ categoria_ativa }}&page={{ numero }}">{{ numero }}</a>
           {% endif %}
         {% endfor %}
         {% if page_obj.has_next %}
-          <a href="?page={{ page_obj.next_page_number }}&categoria={{ categoria_ativa }}&q={{ busca|urlencode }}">›</a>
+          <a href="?q={{ busca|urlencode }}&categoria={{ categoria_ativa }}&page={{ page_obj.next_page_number }}">Próxima</a>
         {% endif %}
       </nav>
     {% endif %}
   </section>
 </div>
 
-<div id="toyFormModal" class="toy-modal" role="dialog" aria-modal="true" aria-labelledby="toyModalTitle" aria-hidden="true">
-  <div class="toy-modal-card">
+<!-- Cadastro / edição -->
+<div id="toyFormModal" class="toy-dialog" role="dialog" aria-modal="true" aria-hidden="true">
+  <div class="toy-dialog-card">
     <form id="toyForm" method="post" enctype="multipart/form-data" action="{% url 'brinquedos_admin' %}">
       {% csrf_token %}
       <input type="hidden" name="action" value="save">
-      <input id="toyId" type="hidden" name="id" value="">
+      <input id="toyId" type="hidden" name="id">
 
-      <header class="toy-modal-header">
-        <div class="toy-modal-heading">
+      <header class="ta-modal-header">
+        <div class="ta-modal-heading">
           <h2 id="toyModalTitle">Cadastrar brinquedo</h2>
-          <p id="toyModalSubtitle">Adicione um produto ao catálogo Lazer &amp; Sport.</p>
+          <p id="toyModalSubtitle">Dados comerciais, classificação e galeria.</p>
         </div>
-        <button id="closeToyModal" class="toy-modal-close" type="button">
-          <svg><use href="#toy-i-close"/></svg><span>Fechar</span>
+        <button id="closeToyModal" class="ta-close" type="button" aria-label="Fechar">
+          <svg><use href="#ta-close"/></svg>
         </button>
       </header>
 
-      <div class="toy-modal-body">
-        <section class="toy-form-section">
-          <div class="toy-form-title">
-            <svg><use href="#toy-i-game"/></svg>
-            <span><strong>Identificação</strong><span>Nome, descrição e galeria do produto.</span></span>
+      <div class="ta-modal-body">
+        <section class="ta-section">
+          <div class="ta-section-title">
+            <svg><use href="#ta-game"/></svg>
+            <span><strong>Identificação</strong><span>Nome e descrição pública do brinquedo.</span></span>
           </div>
-          <div class="toy-form-grid">
-            <div class="toy-field is-full">
+          <div class="ta-form-grid">
+            <div class="ta-field is-full">
               <label for="toyName">Nome do brinquedo <small>Obrigatório</small></label>
-              <input id="toyName" type="text" name="nome_brinquedo" required maxlength="150">
+              <input id="toyName" type="text" name="nome_brinquedo" maxlength="150" required>
             </div>
-            <div class="toy-field is-full">
-              <label>Galeria de imagens <small id="toyImageRequirement">Obrigatória no cadastro</small></label>
-              <div class="toy-upload">
-                <span id="toyImagePreview" class="toy-upload-preview">
-                  <svg><use href="#toy-i-image"/></svg>
-                  <img id="toyImagePreviewImg" alt="Pré-visualização">
-                </span>
-                <span class="toy-upload-copy">
-                  <strong id="toyImageFileName">Escolha de 1 a 8 imagens</strong>
-                  <span>A primeira será a foto principal. Uma nova seleção substitui a galeria atual.</span>
-                  <label class="toy-file-button">
-                    <svg><use href="#toy-i-upload"/></svg>Selecionar imagens
-                    <input id="toyImage" type="file" name="imagens_brinquedo" accept="image/png,image/jpeg,image/webp" multiple>
-                  </label>
-                </span>
-              </div>
-            </div>
-            <div class="toy-field is-full">
+            <div class="ta-field is-full">
               <label for="toyDescription">Descrição <small>Obrigatória</small></label>
-              <textarea id="toyDescription" name="descricao" required maxlength="999"></textarea>
+              <textarea id="toyDescription" name="descricao" maxlength="999" required></textarea>
             </div>
           </div>
         </section>
 
-        <section class="toy-form-section">
-          <div class="toy-form-title">
-            <svg><use href="#i-tag"/></svg>
-            <span><strong>Organização</strong><span>Classifique o produto usando categorias e tags.</span></span>
+        <section class="ta-section">
+          <div class="ta-section-title">
+            <svg><use href="#ta-image"/></svg>
+            <span>
+              <strong>Galeria do produto</strong>
+              <span>Até 8 imagens. A posição 1 é a foto principal usada na vitrine.</span>
+            </span>
           </div>
-          <div class="toy-form-grid">
-            <div class="toy-field is-full">
-              <div class="toy-options-header">
-                <p class="toy-group-label">Categorias</p>
-                <button id="openCategoryModal" type="button" class="toy-inline-add">+ Nova categoria</button>
+
+          <div class="ta-gallery-box">
+            <div class="ta-gallery-head">
+              <span>
+                <strong id="toyGalleryTitle">Imagens do brinquedo</strong>
+                <span id="toyGallerySubtitle">
+                  No cadastro selecione de 1 a 8 fotos. Na edição, deixe vazio para manter a galeria atual.
+                </span>
+              </span>
+
+              <label class="ta-file-button">
+                <svg><use href="#ta-upload"/></svg>
+                Selecionar imagens
+                <input id="toyImage" type="file" name="imagens_brinquedo" accept="image/png,image/jpeg,image/webp" multiple>
+              </label>
+            </div>
+
+            <div id="toyGalleryStatus" class="ta-gallery-status">
+              Nenhuma nova seleção. Em uma edição, a galeria atual será mantida.
+            </div>
+
+            <div id="toyGalleryGrid" class="ta-gallery-grid">
+              <div class="ta-gallery-empty">As imagens aparecerão aqui.</div>
+            </div>
+
+            <div class="ta-gallery-rule">
+              <span><strong>1.</strong>&nbsp; A primeira imagem é a principal.</span>
+              <span><strong>2.</strong>&nbsp; Máximo de 8 imagens por brinquedo.</span>
+              <span><strong>3.</strong>&nbsp; Nova seleção substitui a galeria atual.</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="ta-section">
+          <div class="ta-section-title">
+            <span>#</span>
+            <span><strong>Organização</strong><span>Categorias e tags usadas no catálogo.</span></span>
+          </div>
+          <div class="ta-form-grid">
+            <div class="ta-field is-full">
+              <div class="ta-options-head">
+                <p class="ta-label">Categorias</p>
+                <button id="openCategoryModal" type="button" class="ta-inline-add">+ Nova categoria</button>
               </div>
-              <div id="toyCategoryGrid" class="toy-check-grid">
+              <div id="toyCategoryGrid" class="ta-check-grid">
                 {% for categoria in categorias %}
-                  <label class="toy-check">
+                  <label class="ta-check">
                     <input type="checkbox" name="categorias_brinquedos" value="{{ categoria.id }}">
                     <span>{{ categoria.nome_categoria }}</span>
                   </label>
                 {% endfor %}
               </div>
             </div>
-            <div class="toy-field is-full">
-              <div class="toy-options-header">
-                <p class="toy-group-label">Tags</p>
-                <button id="openTagModal" type="button" class="toy-inline-add">+ Nova tag</button>
+
+            <div class="ta-field is-full">
+              <div class="ta-options-head">
+                <p class="ta-label">Tags</p>
+                <button id="openTagModal" type="button" class="ta-inline-add">+ Nova tag</button>
               </div>
-              <div id="toyTagGrid" class="toy-check-grid">
+              <div id="toyTagGrid" class="ta-check-grid">
                 {% for tag in tags %}
-                  <label class="toy-check">
+                  <label class="ta-check">
                     <input type="checkbox" name="tags" value="{{ tag.id }}">
                     <span>{{ tag.nome_tags }}</span>
                   </label>
@@ -1342,29 +1435,29 @@
           </div>
         </section>
 
-        <section class="toy-form-section">
-          <div class="toy-form-title">
-            <svg><use href="#i-chart"/></svg>
-            <span><strong>Comercial e especificações</strong><span>Preço, avaliação, alimentação elétrica e dimensões.</span></span>
+        <section class="ta-section">
+          <div class="ta-section-title">
+            <span>R$</span>
+            <span><strong>Comercial e especificações</strong><span>Preço, avaliação, alimentação e dimensões.</span></span>
           </div>
-          <div class="toy-form-grid">
-            <div class="toy-field is-third">
+          <div class="ta-form-grid">
+            <div class="ta-field is-third">
               <label for="toyPrice">Valor</label>
-              <div class="toy-input-wrap">
-                <span class="toy-input-prefix">R$</span>
-                <input id="toyPrice" type="text" name="valor_brinquedo" inputmode="numeric" autocomplete="off" placeholder="10.990,00" maxlength="14">
+              <div class="ta-input-wrap">
+                <span class="ta-prefix">R$</span>
+                <input id="toyPrice" type="text" name="valor_brinquedo" inputmode="numeric" placeholder="10.990,00" maxlength="14">
               </div>
-              <p class="toy-field-hint">Exemplo: R$ 10.990,00</p>
             </div>
-            <div class="toy-field is-third">
+
+            <div class="ta-field is-third">
               <label for="toyRating">Avaliação</label>
-              <div class="toy-input-wrap">
-                <input id="toyRating" type="text" name="avaliacao" inputmode="decimal" autocomplete="off" placeholder="4,7" maxlength="3" required>
-                <span class="toy-input-suffix">/ 5</span>
+              <div class="ta-input-wrap">
+                <input id="toyRating" type="text" name="avaliacao" inputmode="decimal" placeholder="4,7" maxlength="3" required>
+                <span class="ta-suffix">/ 5</span>
               </div>
-              <p class="toy-field-hint">Nota entre 0 e 5. Ex.: 4,7</p>
             </div>
-            <div class="toy-field is-third">
+
+            <div class="ta-field is-third">
               <label for="toyVoltage">Voltagem</label>
               <select id="toyVoltage" name="voltz" required>
                 <option value="">Selecione</option>
@@ -1374,103 +1467,116 @@
                 <option value="Não se aplica">Não se aplica</option>
               </select>
             </div>
-            <div class="toy-field is-third">
-              <label for="toyHeight">Altura (m)</label>
-              <div class="toy-input-wrap">
-                <input id="toyHeight" type="text" name="altura_m" inputmode="decimal" autocomplete="off" placeholder="1,85" maxlength="7">
-                <span class="toy-input-suffix">m</span>
+
+            <div class="ta-field is-third">
+              <label for="toyHeight">Altura</label>
+              <div class="ta-input-wrap">
+                <input id="toyHeight" type="text" name="altura_m" inputmode="decimal" placeholder="1,85" maxlength="7">
+                <span class="ta-suffix">m</span>
               </div>
-              <p class="toy-field-hint">Em metros. Ex.: 1,85</p>
             </div>
-            <div class="toy-field is-third">
-              <label for="toyWidth">Largura (m)</label>
-              <div class="toy-input-wrap">
-                <input id="toyWidth" type="text" name="largura_m" inputmode="decimal" autocomplete="off" placeholder="0,80" maxlength="7">
-                <span class="toy-input-suffix">m</span>
+
+            <div class="ta-field is-third">
+              <label for="toyWidth">Largura</label>
+              <div class="ta-input-wrap">
+                <input id="toyWidth" type="text" name="largura_m" inputmode="decimal" placeholder="0,80" maxlength="7">
+                <span class="ta-suffix">m</span>
               </div>
-              <p class="toy-field-hint">Em metros. Ex.: 0,80</p>
             </div>
-            <div class="toy-field is-third">
-              <label for="toyDepth">Profundidade (m)</label>
-              <div class="toy-input-wrap">
-                <input id="toyDepth" type="text" name="profundidade_m" inputmode="decimal" autocomplete="off" placeholder="2,20" maxlength="7">
-                <span class="toy-input-suffix">m</span>
+
+            <div class="ta-field is-third">
+              <label for="toyDepth">Profundidade</label>
+              <div class="ta-input-wrap">
+                <input id="toyDepth" type="text" name="profundidade_m" inputmode="decimal" placeholder="2,20" maxlength="7">
+                <span class="ta-suffix">m</span>
               </div>
-              <p class="toy-field-hint">Em metros. Ex.: 2,20</p>
             </div>
-            <div class="toy-field is-full">
-              <label class="toy-toggle">
+
+            <div class="ta-field is-full">
+              <label class="ta-toggle">
                 <input id="toyStore" type="checkbox" name="exibir_na_loja">
-                <span><strong>Disponível na loja</strong><span>Exibe este brinquedo também na área de compras do site.</span></span>
+                <span>
+                  <strong>Disponível na loja</strong>
+                  <span>Mostra este brinquedo também na área de compra do site.</span>
+                </span>
               </label>
             </div>
           </div>
         </section>
       </div>
 
-      <footer class="toy-modal-footer">
-        <span class="toy-scroll-note"><svg><use href="#toy-i-scroll"/></svg>Role para revisar todos os campos</span>
-        <button id="cancelToyModal" type="button" class="toy-secondary-button">Cancelar</button>
-        <button type="submit" class="toy-save-button"><svg><use href="#toy-i-save"/></svg>Salvar brinquedo</button>
+      <footer class="ta-modal-footer">
+        <span class="ta-footer-note">Revise a galeria antes de salvar.</span>
+        <button id="cancelToyModal" class="ta-btn is-secondary" type="button">Cancelar</button>
+        <button class="ta-btn is-primary" type="submit">
+          <svg><use href="#ta-save"/></svg>
+          Salvar brinquedo
+        </button>
       </footer>
     </form>
   </div>
 </div>
 
-<div id="deleteToyModal" class="toy-modal" role="dialog" aria-modal="true" aria-labelledby="deleteToyTitle" aria-hidden="true">
-  <div class="toy-modal-card is-small">
+<!-- Exclusão -->
+<div id="deleteToyModal" class="toy-dialog" role="dialog" aria-modal="true" aria-hidden="true">
+  <div class="toy-dialog-card is-small">
     <form method="post" action="{% url 'brinquedos_admin' %}">
       {% csrf_token %}
       <input type="hidden" name="action" value="delete">
       <input id="deleteToyId" type="hidden" name="id">
       <input id="deleteToyConfirmationHidden" type="hidden" name="confirmacao_exclusao">
-      <div class="toy-confirm-content">
-        <span class="toy-confirm-icon"><svg><use href="#toy-i-trash"/></svg></span>
-        <h2 id="deleteToyTitle">Excluir brinquedo?</h2>
-        <p>O produto <strong id="deleteToyName"></strong> será removido definitivamente.</p>
-        <div class="toy-confirm-box">
-          <label for="deleteToyConfirmation">Digite exatamente:</label>
-          <code id="deleteToyRequiredPhrase"></code>
-          <input id="deleteToyConfirmation" type="text" autocomplete="off" spellcheck="false">
-        </div>
+
+      <div class="ta-confirm">
+        <h2>Excluir brinquedo?</h2>
+        <p>
+          O produto <strong id="deleteToyName"></strong> e sua galeria serão removidos.
+          Para confirmar, digite exatamente:
+        </p>
+        <code id="deleteToyRequiredPhrase"></code>
+        <input id="deleteToyConfirmation" type="text" autocomplete="off" spellcheck="false">
       </div>
-      <footer class="toy-modal-footer">
-        <button id="cancelDeleteToy" type="button" class="toy-secondary-button">Cancelar</button>
-        <button id="confirmDeleteToy" type="submit" class="toy-danger-button" disabled>Excluir definitivamente</button>
+
+      <footer class="ta-modal-footer">
+        <button id="cancelDeleteToy" class="ta-btn is-secondary" type="button">Cancelar</button>
+        <button id="confirmDeleteToy" class="ta-btn is-danger" type="submit" disabled>Excluir definitivamente</button>
       </footer>
     </form>
   </div>
 </div>
 
-<div id="categoryModal" class="toy-modal" role="dialog" aria-modal="true" aria-hidden="true">
-  <div class="toy-modal-card is-small">
-    <form id="categoryForm" class="quick-create-form" enctype="multipart/form-data">
+<!-- Categoria rápida -->
+<div id="categoryModal" class="toy-dialog" role="dialog" aria-modal="true" aria-hidden="true">
+  <div class="toy-dialog-card is-small">
+    <form id="categoryForm" class="ta-quick-form" enctype="multipart/form-data">
       {% csrf_token %}
-      <div class="toy-modal-heading"><h2>Nova categoria</h2><p>Crie uma opção sem sair do brinquedo.</p></div>
+      <h2>Nova categoria</h2>
+      <p>Crie uma categoria sem perder o formulário do brinquedo.</p>
       <label>Nome</label>
       <input type="text" name="nome_categoria" required>
       <label>Imagem da categoria</label>
       <input type="file" name="imagem_categoria" accept="image/*" required>
-      <div id="categoryMessage" class="quick-create-message"></div>
+      <div id="categoryMessage" class="ta-quick-message"></div>
       <div style="display:flex;justify-content:flex-end;gap:8px">
-        <button id="cancelCategoryModal" type="button" class="toy-secondary-button">Cancelar</button>
-        <button type="submit" class="toy-save-button">Criar categoria</button>
+        <button id="cancelCategoryModal" class="ta-btn is-secondary" type="button">Cancelar</button>
+        <button class="ta-btn is-primary" type="submit">Criar categoria</button>
       </div>
     </form>
   </div>
 </div>
 
-<div id="tagModal" class="toy-modal" role="dialog" aria-modal="true" aria-hidden="true">
-  <div class="toy-modal-card is-small">
-    <form id="tagForm" class="quick-create-form">
+<!-- Tag rápida -->
+<div id="tagModal" class="toy-dialog" role="dialog" aria-modal="true" aria-hidden="true">
+  <div class="toy-dialog-card is-small">
+    <form id="tagForm" class="ta-quick-form">
       {% csrf_token %}
-      <div class="toy-modal-heading"><h2>Nova tag</h2><p>Crie uma identificação para os brinquedos.</p></div>
+      <h2>Nova tag</h2>
+      <p>Crie uma tag e já selecione no brinquedo.</p>
       <label>Nome</label>
       <input type="text" name="nome_tag" required>
-      <div id="tagMessage" class="quick-create-message"></div>
+      <div id="tagMessage" class="ta-quick-message"></div>
       <div style="display:flex;justify-content:flex-end;gap:8px">
-        <button id="cancelTagModal" type="button" class="toy-secondary-button">Cancelar</button>
-        <button type="submit" class="toy-save-button">Criar tag</button>
+        <button id="cancelTagModal" class="ta-btn is-secondary" type="button">Cancelar</button>
+        <button class="ta-btn is-primary" type="submit">Criar tag</button>
       </div>
     </form>
   </div>
@@ -1480,29 +1586,222 @@
 
 <script>
 (function () {
-  const toysDataNode = document.getElementById('toysAdminData');
-  const toysData = toysDataNode ? JSON.parse(toysDataNode.textContent) : [];
+  const dataNode = document.getElementById('toysAdminData');
+  const toysData = dataNode ? JSON.parse(dataNode.textContent) : [];
+
   const toyModal = document.getElementById('toyFormModal');
-  const toyForm = document.getElementById('toyForm');
   const deleteModal = document.getElementById('deleteToyModal');
   const categoryModal = document.getElementById('categoryModal');
   const tagModal = document.getElementById('tagModal');
+
+  const toyForm = document.getElementById('toyForm');
   const toyImage = document.getElementById('toyImage');
-  const toyImagePreview = document.getElementById('toyImagePreview');
-  const toyImagePreviewImg = document.getElementById('toyImagePreviewImg');
-  const toyImageFileName = document.getElementById('toyImageFileName');
-  const toyPrice = document.getElementById('toyPrice');
-  const toyRating = document.getElementById('toyRating');
-  const dimensionInputs = [
-    document.getElementById('toyHeight'),
-    document.getElementById('toyWidth'),
-    document.getElementById('toyDepth')
-  ];
+  const galleryGrid = document.getElementById('toyGalleryGrid');
+  const galleryStatus = document.getElementById('toyGalleryStatus');
+
   const deleteInput = document.getElementById('deleteToyConfirmation');
   const deleteHidden = document.getElementById('deleteToyConfirmationHidden');
   const deleteButton = document.getElementById('confirmDeleteToy');
+
   let expectedDeletePhrase = '';
   let lastTrigger = null;
+  let previewUrls = [];
+
+  function setModal(modal, open, trigger) {
+    if (open) {
+      lastTrigger = trigger || document.activeElement;
+      modal.classList.add('is-open');
+      modal.setAttribute('aria-hidden', 'false');
+      document.body.classList.add('ta-modal-open');
+    } else {
+      modal.classList.remove('is-open');
+      modal.setAttribute('aria-hidden', 'true');
+      if (!document.querySelector('.toy-dialog.is-open')) {
+        document.body.classList.remove('ta-modal-open');
+      }
+      if (lastTrigger && lastTrigger.focus) lastTrigger.focus();
+    }
+  }
+
+  function setValue(id, value) {
+    const field = document.getElementById(id);
+    if (field) field.value = value == null ? '' : value;
+  }
+
+  function markChecks(name, ids) {
+    const selected = new Set((ids || []).map(Number));
+    document.querySelectorAll(`input[name="${name}"]`).forEach(input => {
+      input.checked = selected.has(Number(input.value));
+    });
+  }
+
+  function clearPreviewUrls() {
+    previewUrls.forEach(url => URL.revokeObjectURL(url));
+    previewUrls = [];
+  }
+
+  function galleryEmpty(text) {
+    galleryGrid.innerHTML = '';
+    const item = document.createElement('div');
+    item.className = 'ta-gallery-empty';
+    item.textContent = text || 'Nenhuma imagem.';
+    galleryGrid.appendChild(item);
+  }
+
+  function addGalleryImage(src, order, isNew) {
+    const item = document.createElement('div');
+    item.className = 'ta-gallery-item';
+
+    const img = document.createElement('img');
+    img.src = src;
+    img.alt = `Foto ${order}`;
+
+    const badge = document.createElement('span');
+    badge.className = 'ta-gallery-badge' + (Number(order) === 1 ? ' is-main' : '');
+    badge.textContent = Number(order) === 1
+      ? 'PRINCIPAL'
+      : (isNew ? 'NOVA' : 'ATUAL');
+
+    const number = document.createElement('span');
+    number.className = 'ta-gallery-number';
+    number.textContent = order;
+
+    item.append(img, badge, number);
+    galleryGrid.appendChild(item);
+  }
+
+  function renderExistingGallery(toy) {
+    clearPreviewUrls();
+    galleryGrid.innerHTML = '';
+
+    if (!toy) {
+      galleryEmpty('Selecione as fotos do novo brinquedo.');
+      galleryStatus.classList.remove('is-new');
+      galleryStatus.textContent = 'Novo brinquedo: selecione de 1 a 8 imagens.';
+      return;
+    }
+
+    const template = document.getElementById(`toyExistingGallery-${toy.id}`);
+    const sources = template
+      ? Array.from(template.content.querySelectorAll('.gallery-source-item'))
+      : [];
+
+    if (sources.length) {
+      sources.forEach((source, index) => {
+        addGalleryImage(
+          source.dataset.src,
+          Number(source.dataset.order || index + 1),
+          false
+        );
+      });
+      galleryStatus.classList.remove('is-new');
+      galleryStatus.textContent =
+        `${sources.length} imagem(ns) na galeria atual. ` +
+        'Se não selecionar novas fotos, elas serão mantidas.';
+      return;
+    }
+
+    if (toy.imagem_url) {
+      addGalleryImage(toy.imagem_url, 1, false);
+      galleryStatus.classList.remove('is-new');
+      galleryStatus.textContent =
+        '1 imagem principal legada encontrada. Selecione novas fotos para montar a galeria.';
+      return;
+    }
+
+    galleryEmpty('Este brinquedo ainda não possui imagens.');
+    galleryStatus.classList.remove('is-new');
+    galleryStatus.textContent =
+      'Sem galeria atual. Selecione de 1 a 8 imagens.';
+  }
+
+  function renderNewGallery(files) {
+    clearPreviewUrls();
+    galleryGrid.innerHTML = '';
+
+    files.forEach((file, index) => {
+      const url = URL.createObjectURL(file);
+      previewUrls.push(url);
+      addGalleryImage(url, index + 1, true);
+    });
+
+    galleryStatus.classList.add('is-new');
+    galleryStatus.textContent =
+      `${files.length} nova(s) imagem(ns) selecionada(s). ` +
+      'Ao salvar, esta seleção substituirá a galeria atual.';
+  }
+
+  function openToyForm(id, trigger) {
+    toyForm.reset();
+    toyImage.value = '';
+
+    const numericId = id ? Number(id) : null;
+    const toy = numericId
+      ? toysData.find(item => Number(item.id) === numericId)
+      : null;
+
+    setValue('toyId', toy ? toy.id : '');
+    document.getElementById('toyModalTitle').textContent =
+      toy ? 'Editar brinquedo' : 'Cadastrar brinquedo';
+    document.getElementById('toyModalSubtitle').textContent =
+      toy
+        ? 'Atualize os dados e revise a galeria deste produto.'
+        : 'Cadastre o produto e escolha de 1 a 8 imagens.';
+
+    if (toy) {
+      setValue('toyName', toy.nome_brinquedo);
+      setValue('toyDescription', toy.descricao);
+      setValue('toyPrice', toy.valor_brinquedo);
+      setValue('toyRating', toy.avaliacao);
+      setValue('toyVoltage', toy.voltz);
+      setValue('toyHeight', toy.altura_m);
+      setValue('toyWidth', toy.largura_m);
+      setValue('toyDepth', toy.profundidade_m);
+      document.getElementById('toyStore').checked = Boolean(toy.exibir_na_loja);
+      markChecks('categorias_brinquedos', toy.categorias_ids);
+      markChecks('tags', toy.tags_ids);
+    } else {
+      markChecks('categorias_brinquedos', []);
+      markChecks('tags', []);
+      document.getElementById('toyStore').checked = false;
+    }
+
+    toyImage.required = !toy;
+    renderExistingGallery(toy);
+    setModal(toyModal, true, trigger);
+
+    setTimeout(() => {
+      const body = toyModal.querySelector('.ta-modal-body');
+      if (body) body.scrollTop = 0;
+      document.getElementById('toyName').focus();
+    }, 60);
+  }
+
+  function closeToyForm() {
+    clearPreviewUrls();
+    setModal(toyModal, false);
+  }
+
+  function openDelete(id, name, trigger) {
+    const safeName = String(name || 'Brinquedo').trim();
+    expectedDeletePhrase = `CONFIRMAR EXCLUSÃO ${safeName}`;
+
+    document.getElementById('deleteToyId').value = id;
+    document.getElementById('deleteToyName').textContent = safeName;
+    document.getElementById('deleteToyRequiredPhrase').textContent = expectedDeletePhrase;
+
+    deleteInput.value = '';
+    deleteHidden.value = '';
+    deleteButton.disabled = true;
+
+    setModal(deleteModal, true, trigger);
+    setTimeout(() => deleteInput.focus(), 60);
+  }
+
+  function closeDelete() {
+    expectedDeletePhrase = '';
+    setModal(deleteModal, false);
+  }
 
   function maskCurrency(value) {
     const digits = String(value || '').replace(/\D/g, '').slice(0, 10);
@@ -1517,9 +1816,11 @@
     const sanitized = String(value || '')
       .replace(/\./g, ',')
       .replace(/[^\d,]/g, '');
+
     const parts = sanitized.split(',');
     const integer = (parts.shift() || '').slice(0, integerDigits);
     const decimal = parts.join('').slice(0, decimalDigits);
+
     return decimal || sanitized.includes(',')
       ? `${integer || '0'},${decimal}`
       : integer;
@@ -1532,123 +1833,26 @@
     return normalized ? Number(normalized) : null;
   }
 
-  function formatDecimalOnBlur(input, decimalDigits) {
-    const value = decimalNumber(input.value);
-    if (value == null || Number.isNaN(value)) return;
-    input.value = value.toLocaleString('pt-BR', {
-      minimumFractionDigits: decimalDigits,
-      maximumFractionDigits: decimalDigits,
-      useGrouping: false
-    });
-  }
+  document.getElementById('newToyButton').addEventListener('click', event => {
+    openToyForm(null, event.currentTarget);
+  });
 
-  function setModal(modal, open, trigger) {
-    if (open) {
-      lastTrigger = trigger || document.activeElement;
-      modal.classList.add('is-open');
-      modal.setAttribute('aria-hidden', 'false');
-      document.body.classList.add('toy-modal-open');
-    } else {
-      modal.classList.remove('is-open');
-      modal.setAttribute('aria-hidden', 'true');
-      if (!document.querySelector('.toy-modal.is-open')) {
-        document.body.classList.remove('toy-modal-open');
-      }
-      if (lastTrigger && lastTrigger.focus) lastTrigger.focus();
-    }
-  }
-
-  function setValue(id, value) {
-    const field = document.getElementById(id);
-    if (field) field.value = value == null ? '' : value;
-  }
-
-  function resetImagePreview() {
-    toyImagePreview.classList.remove('has-image');
-    toyImagePreviewImg.removeAttribute('src');
-    toyImageFileName.textContent = 'Escolha de 1 a 8 imagens';
-  }
-
-  function markChecks(name, ids) {
-    const selected = new Set((ids || []).map(Number));
-    document.querySelectorAll(`input[name="${name}"]`).forEach(input => {
-      input.checked = selected.has(Number(input.value));
-    });
-  }
-
-  function openToyForm(id, trigger) {
-    toyForm.reset();
-    resetImagePreview();
-    const numericId = id ? Number(id) : null;
-    const toy = numericId ? toysData.find(item => Number(item.id) === numericId) : null;
-
-    setValue('toyId', toy ? toy.id : '');
-    document.getElementById('toyModalTitle').textContent = toy ? 'Editar brinquedo' : 'Cadastrar brinquedo';
-    document.getElementById('toyModalSubtitle').textContent = toy
-      ? 'Atualize o catálogo e as especificações deste produto.'
-      : 'Adicione um produto ao catálogo Lazer & Sport.';
-    document.getElementById('toyImageRequirement').textContent = toy
-      ? 'Opcional ao editar'
-      : 'Obrigatória no cadastro';
-    toyImage.required = !toy;
-
-    if (toy) {
-      setValue('toyName', toy.nome_brinquedo);
-      setValue('toyDescription', toy.descricao);
-      setValue('toyPrice', toy.valor_brinquedo);
-      setValue('toyRating', toy.avaliacao);
-      setValue('toyVoltage', toy.voltz);
-      setValue('toyHeight', toy.altura_m);
-      setValue('toyWidth', toy.largura_m);
-      setValue('toyDepth', toy.profundidade_m);
-      document.getElementById('toyStore').checked = Boolean(toy.exibir_na_loja);
-      markChecks('categorias_brinquedos', toy.categorias_ids);
-      markChecks('tags', toy.tags_ids);
-      if (toy.imagem_url) {
-        toyImagePreviewImg.src = toy.imagem_url;
-        toyImagePreview.classList.add('has-image');
-        toyImageFileName.textContent = 'Galeria atual mantida — selecione para substituir';
-      }
-    } else {
-      markChecks('categorias_brinquedos', []);
-      markChecks('tags', []);
-      document.getElementById('toyStore').checked = false;
-    }
-
-    document.querySelector('#toyFormModal .toy-modal-body').scrollTop = 0;
-    setModal(toyModal, true, trigger);
-    setTimeout(() => document.getElementById('toyName').focus(), 70);
-  }
-
-  function closeToyForm() {
-    setModal(toyModal, false);
-  }
-
-  function openDelete(id, name, trigger) {
-    const safeName = String(name || 'Brinquedo').trim();
-    expectedDeletePhrase = `CONFIRMAR EXCLUSÃO ${safeName}`;
-    document.getElementById('deleteToyId').value = id;
-    document.getElementById('deleteToyName').textContent = safeName;
-    document.getElementById('deleteToyRequiredPhrase').textContent = expectedDeletePhrase;
-    deleteInput.value = '';
-    deleteHidden.value = '';
-    deleteButton.disabled = true;
-    setModal(deleteModal, true, trigger);
-    setTimeout(() => deleteInput.focus(), 70);
-  }
-
-  function closeDelete() {
-    expectedDeletePhrase = '';
-    setModal(deleteModal, false);
-  }
-
-  document.getElementById('newToyButton').addEventListener('click', event => openToyForm(null, event.currentTarget));
   document.querySelectorAll('[data-edit-toy]').forEach(button => {
-    button.addEventListener('click', () => openToyForm(button.dataset.editToy, button));
+    button.addEventListener('click', () => {
+      openToyForm(button.dataset.editToy, button);
+    });
   });
+
   document.querySelectorAll('[data-delete-toy]').forEach(button => {
-    button.addEventListener('click', () => openDelete(button.dataset.deleteToy, button.dataset.deleteName, button));
+    button.addEventListener('click', () => {
+      openDelete(
+        button.dataset.deleteToy,
+        button.dataset.deleteName,
+        button
+      );
+    });
   });
+
   document.getElementById('closeToyModal').addEventListener('click', closeToyForm);
   document.getElementById('cancelToyModal').addEventListener('click', closeToyForm);
   document.getElementById('cancelDeleteToy').addEventListener('click', closeDelete);
@@ -1661,40 +1865,42 @@
 
   toyImage.addEventListener('change', function () {
     const files = Array.from(toyImage.files || []);
-    const file = files[0];
-    if (!file) return resetImagePreview();
+
+    if (!files.length) {
+      const id = Number(document.getElementById('toyId').value || 0);
+      const toy = id ? toysData.find(item => Number(item.id) === id) : null;
+      renderExistingGallery(toy);
+      return;
+    }
 
     if (files.length > 8) {
       toyImage.value = '';
-      resetImagePreview();
       window.alert('Selecione no máximo 8 imagens.');
       return;
     }
 
-    if (files.some(item => !item.type.startsWith('image/'))) {
+    if (files.some(file => !file.type.startsWith('image/'))) {
       toyImage.value = '';
-      resetImagePreview();
       window.alert('Todos os arquivos selecionados devem ser imagens.');
       return;
     }
 
-    if (files.some(item => item.size > 15 * 1024 * 1024)) {
+    if (files.some(file => file.size > 15 * 1024 * 1024)) {
       toyImage.value = '';
-      resetImagePreview();
       window.alert('Cada imagem deve ter no máximo 15 MB.');
       return;
     }
 
-    toyImageFileName.textContent = files.length === 1
-      ? file.name
-      : `${files.length} imagens selecionadas — ${file.name} será a principal`;
-    const reader = new FileReader();
-    reader.addEventListener('load', function () {
-      toyImagePreviewImg.src = reader.result;
-      toyImagePreview.classList.add('has-image');
-    });
-    reader.readAsDataURL(file);
+    renderNewGallery(files);
   });
+
+  const toyPrice = document.getElementById('toyPrice');
+  const toyRating = document.getElementById('toyRating');
+  const dimensions = [
+    document.getElementById('toyHeight'),
+    document.getElementById('toyWidth'),
+    document.getElementById('toyDepth')
+  ];
 
   toyPrice.addEventListener('input', function () {
     toyPrice.value = maskCurrency(toyPrice.value);
@@ -1703,58 +1909,61 @@
   toyRating.addEventListener('input', function () {
     toyRating.value = maskDecimal(toyRating.value, 1, 1);
     const value = decimalNumber(toyRating.value);
-    const invalid = value != null && value > 5;
-    toyRating.classList.toggle('is-invalid', invalid);
     toyRating.setCustomValidity(
-      invalid ? 'A avaliação deve estar entre 0 e 5.' : ''
+      value != null && value > 5
+        ? 'A avaliação deve estar entre 0 e 5.'
+        : ''
     );
   });
 
-  toyRating.addEventListener('blur', function () {
-    formatDecimalOnBlur(toyRating, 1);
-  });
-
-  dimensionInputs.forEach(input => {
+  dimensions.forEach(input => {
     input.addEventListener('input', function () {
       input.value = maskDecimal(input.value, 4, 2);
-    });
-    input.addEventListener('blur', function () {
-      formatDecimalOnBlur(input, 2);
     });
   });
 
   toyForm.addEventListener('submit', function (event) {
-    const ratingValue = decimalNumber(toyRating.value);
-    if (ratingValue == null || ratingValue < 0 || ratingValue > 5) {
+    const rating = decimalNumber(toyRating.value);
+    if (rating == null || rating < 0 || rating > 5) {
       event.preventDefault();
-      toyRating.classList.add('is-invalid');
       toyRating.setCustomValidity('Informe uma avaliação entre 0 e 5.');
       toyRating.reportValidity();
       toyRating.focus();
       return;
     }
 
-    const submitButton = toyForm.querySelector('button[type="submit"]');
-    submitButton.disabled = true;
-    submitButton.innerHTML =
-      '<svg><use href="#toy-i-save"></use></svg>Salvando…';
+    const submit = toyForm.querySelector('button[type="submit"]');
+    submit.disabled = true;
+    submit.textContent = 'Salvando…';
   });
 
-  document.getElementById('openCategoryModal').addEventListener('click', event => setModal(categoryModal, true, event.currentTarget));
-  document.getElementById('cancelCategoryModal').addEventListener('click', () => setModal(categoryModal, false));
-  document.getElementById('openTagModal').addEventListener('click', event => setModal(tagModal, true, event.currentTarget));
-  document.getElementById('cancelTagModal').addEventListener('click', () => setModal(tagModal, false));
+  document.getElementById('openCategoryModal').addEventListener('click', event => {
+    setModal(categoryModal, true, event.currentTarget);
+  });
+  document.getElementById('cancelCategoryModal').addEventListener('click', () => {
+    setModal(categoryModal, false);
+  });
+
+  document.getElementById('openTagModal').addEventListener('click', event => {
+    setModal(tagModal, true, event.currentTarget);
+  });
+  document.getElementById('cancelTagModal').addEventListener('click', () => {
+    setModal(tagModal, false);
+  });
 
   function appendCheck(gridId, name, id, label) {
     const wrapper = document.createElement('label');
-    wrapper.className = 'toy-check';
+    wrapper.className = 'ta-check';
+
     const input = document.createElement('input');
     input.type = 'checkbox';
     input.name = name;
     input.value = id;
     input.checked = true;
+
     const text = document.createElement('span');
     text.textContent = label;
+
     wrapper.append(input, text);
     document.getElementById(gridId).appendChild(wrapper);
   }
@@ -1762,10 +1971,18 @@
   async function submitQuickForm(form, endpoint, messageId, onSuccess) {
     const message = document.getElementById(messageId);
     message.textContent = '';
+
     try {
-      const response = await fetch(endpoint, { method: 'POST', body: new FormData(form) });
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        body: new FormData(form)
+      });
       const data = await response.json();
-      if (!response.ok || data.status !== 'sucesso') throw new Error(data.msg || 'Não foi possível salvar.');
+
+      if (!response.ok || data.status !== 'sucesso') {
+        throw new Error(data.msg || 'Não foi possível salvar.');
+      }
+
       onSuccess(data);
       form.reset();
     } catch (error) {
@@ -1775,23 +1992,39 @@
 
   document.getElementById('categoryForm').addEventListener('submit', function (event) {
     event.preventDefault();
-    submitQuickForm(event.currentTarget, "{% url 'categoria_new' %}", 'categoryMessage', data => {
-      appendCheck('toyCategoryGrid', 'categorias_brinquedos', data.id, data.nome);
-      setModal(categoryModal, false);
-    });
+    submitQuickForm(
+      event.currentTarget,
+      "{% url 'categoria_new' %}",
+      'categoryMessage',
+      data => {
+        appendCheck(
+          'toyCategoryGrid',
+          'categorias_brinquedos',
+          data.id,
+          data.nome
+        );
+        setModal(categoryModal, false);
+      }
+    );
   });
 
   document.getElementById('tagForm').addEventListener('submit', function (event) {
     event.preventDefault();
-    submitQuickForm(event.currentTarget, "{% url 'tag_new' %}", 'tagMessage', data => {
-      appendCheck('toyTagGrid', 'tags', data.id, data.nome);
-      setModal(tagModal, false);
-    });
+    submitQuickForm(
+      event.currentTarget,
+      "{% url 'tag_new' %}",
+      'tagMessage',
+      data => {
+        appendCheck('toyTagGrid', 'tags', data.id, data.nome);
+        setModal(tagModal, false);
+      }
+    );
   });
 
   [toyModal, deleteModal, categoryModal, tagModal].forEach(modal => {
     modal.addEventListener('click', event => {
       if (event.target !== modal) return;
+
       if (modal === toyModal) closeToyForm();
       else if (modal === deleteModal) closeDelete();
       else setModal(modal, false);
@@ -1800,9 +2033,13 @@
 
   document.addEventListener('keydown', event => {
     if (event.key !== 'Escape') return;
-    const openModals = Array.from(document.querySelectorAll('.toy-modal.is-open'));
+
+    const openModals = Array.from(
+      document.querySelectorAll('.toy-dialog.is-open')
+    );
     const modal = openModals.at(-1);
     if (!modal) return;
+
     if (modal === toyModal) closeToyForm();
     else if (modal === deleteModal) closeDelete();
     else setModal(modal, false);
