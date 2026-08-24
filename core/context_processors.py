@@ -133,7 +133,8 @@ def clientes_rodape(request):
 # ============================================================
 
 def manutencao_notificacao(request):
-    if not request.user.is_authenticated:
+    # Alertas pessoais do cliente não pertencem ao painel da fábrica.
+    if getattr(request, "is_interno", False) or not request.user.is_authenticated:
         return {}
 
     vazio = {
@@ -286,7 +287,9 @@ def confirmacao_pagamento(request):
     próprio JS, uma vez por página, para não somar uma query a cada
     pageview de quem não comprou nada.
     """
-    if not request.user.is_authenticated:
+    # O subdomínio interno usa outro URLconf e não possui endpoints de
+    # checkout. Tentar resolvê-los ali derrubaria qualquer tela da fábrica.
+    if getattr(request, "is_interno", False) or not request.user.is_authenticated:
         return {}
 
     return {
