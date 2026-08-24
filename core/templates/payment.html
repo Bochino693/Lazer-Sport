@@ -911,6 +911,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const liveStatus = document.getElementById("payment-live-status");
     const liveTitle = document.getElementById("payment-live-title");
     const liveDetail = document.getElementById("payment-live-detail");
+    let currentPedidoId = "{{ pedido_reservado.id|default:'' }}";
     let brickController = null;
     let pollingTimer = null;
     let pollingActive = false;
@@ -925,6 +926,17 @@ document.addEventListener("DOMContentLoaded", () => {
     function clearError() {
         errorBox.textContent = "";
         errorBox.style.display = "none";
+    }
+
+    function rememberPedido(pedidoId) {
+        if (!pedidoId) return;
+        currentPedidoId = String(pedidoId);
+
+        // Torna F5 e reabertura da aba precisos: a URL passa a carregar o
+        // pedido exato desta tentativa, nunca apenas o carrinho reutilizável.
+        const url = new URL(window.location.href);
+        url.searchParams.set("pedido_id", currentPedidoId);
+        window.history.replaceState({}, "", url);
     }
 
     function updateLiveStatus(state, title, detail) {
@@ -1004,6 +1016,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     async function checkPaymentStatus({silent = true} = {}) {
         if (checkingPayment || leavingCheckout) return false;
+        if (!currentPedidoId) return false;
         checkingPayment = true;
         const controller = new AbortController();
         const timeout = window.setTimeout(() => controller.abort(), 9000);
@@ -1018,6 +1031,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const response = await fetch(
                 (
                     `{% url 'verificar_pagamento' %}?carrinho_id=${carrinhoId}` +
+                    `&pedido_id=${encodeURIComponent(currentPedidoId)}` +
                     `&_=${Date.now()}`
                 ),
                 {
@@ -1031,6 +1045,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
             );
             const data = await readJson(response);
+
+            rememberPedido(data.pedido_id);
 
             if (data.pago) {
                 finishCheckout(data);
@@ -1106,6 +1122,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
             );
             const data = await readJson(response);
+
+            rememberPedido(data.pedido_id);
 
             if (data.pago) {
                 finishCheckout(data);
@@ -1207,6 +1225,7 @@ document.addEventListener("DOMContentLoaded", () => {
                                 })
                             });
                             const data = await readJson(response);
+                            rememberPedido(data.pedido_id);
                             if (data.aprovado) {
                                 finishCheckout(data);
                             } else {

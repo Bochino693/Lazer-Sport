@@ -33,7 +33,7 @@ from .models import (
     ImagemPeca,
     PecasReposicao,
 )
-from .views import gerar_pix, processar_cartao
+from .views import gerar_pix, processar_cartao, verificar_pagamento
 
 
 def carrinho_mock(total="100.00", payment_id=None):
@@ -43,6 +43,16 @@ def carrinho_mock(total="100.00", payment_id=None):
     carrinho.mp_payment_id = payment_id
     carrinho.itens.exists.return_value = True
     return carrinho
+
+
+def pedido_mock(total="100.00", payment_id=None, pedido_id=31):
+    pedido = MagicMock()
+    pedido.id = pedido_id
+    pedido.total_final = Decimal(total)
+    pedido.mp_fingerprint = "fingerprint-do-pedido"
+    pedido.mp_payment_id = payment_id
+    pedido.status = "aguardando_pagamento"
+    return pedido
 
 
 def usuario_mock():
@@ -61,13 +71,23 @@ class MercadoPagoPixTests(SimpleTestCase):
         self.factory = RequestFactory()
 
     @patch("core.views.mercadopago.SDK")
+    @patch("core.views.checkout.expirar_reserva")
+    @patch("core.views.checkout.reservar_pedido")
+    @patch("core.views.checkout.pedido_reservado_do_carrinho")
     @patch("core.views._carrinho_pagamento_do_usuario")
     def test_erro_do_gateway_nao_vira_key_error(
         self,
         buscar_carrinho,
+        buscar_reserva,
+        reservar_pedido,
+        expirar_reserva,
         sdk_class,
     ):
-        buscar_carrinho.return_value = carrinho_mock()
+        carrinho = carrinho_mock()
+        pedido = pedido_mock()
+        buscar_carrinho.return_value = carrinho
+        buscar_reserva.return_value = None
+        reservar_pedido.return_value = (pedido, True)
         sdk_class.return_value.payment.return_value.create.return_value = {
             "status": 400,
             "response": {
@@ -84,21 +104,35 @@ class MercadoPagoPixTests(SimpleTestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(body["erro"], "Não foi possível gerar o Pix.")
         self.assertIn("payer.email", body["detalhe"])
+        expirar_reserva.assert_called_once_with(
+            pedido,
+            "cobrança recusada pelo provedor",
+        )
 
     @patch("core.views.mercadopago.SDK")
+    @patch("core.views.Carrinho.objects.filter")
+    @patch("core.views.checkout.reservar_pedido")
+    @patch("core.views.checkout.pedido_reservado_do_carrinho")
     @patch("core.views._carrinho_pagamento_do_usuario")
     def test_pix_valido_salva_payment_id_e_retorna_qr_code(
         self,
         buscar_carrinho,
+        buscar_reserva,
+        reservar_pedido,
+        filtrar_carrinhos,
         sdk_class,
     ):
         carrinho = carrinho_mock()
+        pedido = pedido_mock()
         buscar_carrinho.return_value = carrinho
+        buscar_reserva.return_value = None
+        reservar_pedido.return_value = (pedido, True)
         sdk_class.return_value.payment.return_value.create.return_value = {
             "status": 201,
             "response": {
                 "id": 123456,
                 "status": "pending",
+                "transaction_amount": 100.00,
                 "point_of_interaction": {
                     "transaction_data": {
                         "qr_code_base64": "BASE64",
@@ -116,9 +150,70 @@ class MercadoPagoPixTests(SimpleTestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(body["payment_id"], 123456)
+        self.assertEqual(body["pedido_id"], 31)
         self.assertEqual(body["qr_code"], "BASE64")
-        self.assertEqual(carrinho.mp_payment_id, "123456")
-        carrinho.save.assert_called_once_with(update_fields=["mp_payment_id"])
+        self.assertEqual(pedido.mp_payment_id, "123456")
+        pedido.save.assert_called_once_with(
+            update_fields=["mp_payment_id", "mp_status", "atualizado"]
+        )
+        filtrar_carrinhos.return_value.update.assert_called_once_with(
+            mp_payment_id="123456"
+        )
+
+
+@override_settings(
+    MP_ACCESS_TOKEN="TEST-ACCESS-TOKEN",
+    ALLOWED_HOSTS=["testserver"],
+)
+class VerificarPagamentoPedidoTests(SimpleTestCase):
+    def setUp(self):
+        self.factory = RequestFactory()
+
+    @patch("core.views.Pedido.objects.filter")
+    @patch("core.views._carrinho_pagamento_do_usuario")
+    def test_sem_pedido_id_nao_reaproveita_pagamento_antigo(
+        self,
+        buscar_carrinho,
+        filtrar_pedidos,
+    ):
+        buscar_carrinho.return_value = carrinho_mock()
+        request = self.factory.get("/verificar-pagamento/?carrinho_id=7")
+        request.user = usuario_mock()
+
+        response = verificar_pagamento(request)
+        body = json.loads(response.content)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(body["pago"])
+        self.assertEqual(body["status"], "waiting_payment")
+        filtrar_pedidos.assert_not_called()
+
+    @patch("core.views.Pedido.objects.filter")
+    @patch("core.views._carrinho_pagamento_do_usuario")
+    def test_confirma_somente_o_pedido_id_informado(
+        self,
+        buscar_carrinho,
+        filtrar_pedidos,
+    ):
+        carrinho = carrinho_mock()
+        pedido = SimpleNamespace(id=42, status="pago")
+        buscar_carrinho.return_value = carrinho
+        filtrar_pedidos.return_value.first.return_value = pedido
+        request = self.factory.get(
+            "/verificar-pagamento/?carrinho_id=7&pedido_id=42"
+        )
+        request.user = usuario_mock()
+
+        response = verificar_pagamento(request)
+        body = json.loads(response.content)
+
+        self.assertTrue(body["pago"])
+        self.assertEqual(body["pedido_id"], 42)
+        filtrar_pedidos.assert_called_once_with(
+            pk=42,
+            carrinho_origem=carrinho,
+            cliente__user=request.user,
+        )
 
 
 @override_settings(
@@ -129,12 +224,15 @@ class MercadoPagoCardTests(SimpleTestCase):
     def setUp(self):
         self.factory = RequestFactory()
 
+    @patch("core.views.checkout.pedido_reservado_do_carrinho")
     @patch("core.views._carrinho_pagamento_do_usuario")
     def test_abaixo_de_20_mil_rejeita_mais_de_12_parcelas(
         self,
         buscar_carrinho,
+        buscar_reserva,
     ):
         buscar_carrinho.return_value = carrinho_mock("19999.99")
+        buscar_reserva.return_value = pedido_mock("19999.99")
         request = self.factory.post(
             "/processar_cartao/",
             data=json.dumps({
@@ -155,20 +253,30 @@ class MercadoPagoCardTests(SimpleTestCase):
         self.assertIn("12 parcelas", body["mensagem"])
 
     @patch("core.views.mercadopago.SDK")
+    @patch("core.views.checkout.confirmar_pagamento")
+    @patch("core.views.Carrinho.objects.filter")
+    @patch("core.views.checkout.pedido_reservado_do_carrinho")
     @patch("core.views._carrinho_pagamento_do_usuario")
     def test_acima_de_20_mil_aceita_18_parcelas(
         self,
         buscar_carrinho,
+        buscar_reserva,
+        filtrar_carrinhos,
+        confirmar_pagamento,
         sdk_class,
     ):
         carrinho = carrinho_mock("20000.01")
+        pedido = pedido_mock("20000.01")
         buscar_carrinho.return_value = carrinho
+        buscar_reserva.return_value = pedido
+        confirmar_pagamento.return_value = (pedido, True)
         sdk_class.return_value.payment.return_value.create.return_value = {
             "status": 201,
             "response": {
                 "id": 987654,
                 "status": "approved",
                 "status_detail": "accredited",
+                "transaction_amount": 20000.01,
             },
         }
         request = self.factory.post(
@@ -196,7 +304,11 @@ class MercadoPagoCardTests(SimpleTestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertTrue(body["aprovado"])
-        self.assertEqual(carrinho.mp_payment_id, "987654")
+        self.assertEqual(body["pedido_id"], 31)
+        self.assertEqual(pedido.mp_payment_id, "987654")
+        filtrar_carrinhos.return_value.update.assert_called_once_with(
+            mp_payment_id="987654"
+        )
 
 
 class CatalogImageMigrationTests(TestCase):
@@ -540,3 +652,4 @@ class CatalogFilterUXTests(TestCase):
 
         self.assertEqual(resposta.status_code, 200)
         self.assertContains(resposta, 'value="1.234,50"')
+        

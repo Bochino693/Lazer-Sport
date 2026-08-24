@@ -4310,8 +4310,28 @@ class PaymentView(LoginRequiredMixin, View):
             cliente__user=request.user,
         )
 
+        try:
+            pedido_id = int(request.GET.get("pedido_id") or 0) or None
+        except (TypeError, ValueError):
+            pedido_id = None
         destino_pedidos = reverse("meus_pedidos") + "#pedidos"
-        reserva = checkout.pedido_reservado_do_carrinho(carrinho)
+
+        # Com pedido_id na URL (gravado pelo JavaScript ao criar a cobrança),
+        # retoma exatamente aquela reserva. Sem ele, ainda é permitido achar
+        # a única reserva aberta para suportar links antigos do checkout.
+        if pedido_id:
+            reserva = (
+                Pedido.objects
+                .filter(
+                    pk=pedido_id,
+                    carrinho_origem=carrinho,
+                    cliente__user=request.user,
+                    status="aguardando_pagamento",
+                )
+                .first()
+            )
+        else:
+            reserva = checkout.pedido_reservado_do_carrinho(carrinho)
 
         # Reserva com cobrança aberta: confere no provedor antes de desenhar
         # a tela. O webhook pode ter falhado, e o cliente não pode ficar
@@ -4343,19 +4363,24 @@ class PaymentView(LoginRequiredMixin, View):
                     reserva.id if reserva else None,
                 )
 
-        # Pedido desta rodada já pago: não há checkout a mostrar.
+        # Sem uma reserva aberta, só podemos considerar pago o pedido que a
+        # própria aba está acompanhando. O carrinho é reutilizado entre
+        # compras; buscar o "último pago" dele confunde uma compra antiga com
+        # a tentativa atual e encerra o checkout antes de o cliente pagar.
         if not reserva and not carrinho.itens.exists():
-            pago = (
-                Pedido.objects
-                .filter(
-                    carrinho_origem=carrinho,
-                    status="pago",
-                    cliente__user=request.user,
+            pedido_acompanhado = None
+            if pedido_id:
+                pedido_acompanhado = (
+                    Pedido.objects
+                    .filter(
+                        pk=pedido_id,
+                        carrinho_origem=carrinho,
+                        status="pago",
+                        cliente__user=request.user,
+                    )
+                    .first()
                 )
-                .order_by("-id")
-                .first()
-            )
-            if pago:
+            if pedido_acompanhado:
                 return redirect(destino_pedidos)
             return redirect("carrinho")
 
@@ -4895,7 +4920,12 @@ import mercadopago
 @require_GET
 @never_cache
 def verificar_pagamento(request):
-    """Consulta o estado da cobrança do pedido reservado deste carrinho."""
+    """Consulta exclusivamente a cobrança do pedido informado pela aba.
+
+    O carrinho não identifica uma compra: ele é reutilizado pelo cliente.
+    Por isso ``pedido_id`` é obrigatório para o polling e todo acesso também
+    é limitado ao carrinho e ao usuário autenticado.
+    """
     carrinho_id = request.GET.get("carrinho_id")
     if not carrinho_id:
         return JsonResponse({
@@ -4914,35 +4944,61 @@ def verificar_pagamento(request):
             "mensagem": "Carrinho não encontrado.",
         }, status=404)
 
-    reserva = checkout.pedido_reservado_do_carrinho(carrinho)
-
-    # Pedido já pago desta rodada: o webhook pode ter chegado antes do
-    # polling, e nesse caso não há mais reserva aberta para consultar.
-    if not reserva:
-        pago = (
-            Pedido.objects
-            .filter(
-                carrinho_origem=carrinho,
-                status="pago",
-                cliente__user=request.user,
-            )
-            .order_by("-id")
-            .first()
-        )
-        if pago:
-            return JsonResponse({
-                "pago": True,
-                "consulta_ok": True,
-                "status": "approved",
-                "pedido_id": pago.id,
-                "redirect_url": _url_meus_pedidos(),
-            })
-
+    pedido_id_bruto = request.GET.get("pedido_id")
+    if not pedido_id_bruto:
         return JsonResponse({
             "pago": False,
             "consulta_ok": True,
             "status": "waiting_payment",
             "mensagem": "Aguardando a criação da cobrança.",
+        })
+
+    try:
+        pedido_id = int(pedido_id_bruto)
+        if pedido_id <= 0:
+            raise ValueError
+    except (TypeError, ValueError):
+        return JsonResponse({
+            "pago": False,
+            "consulta_ok": False,
+            "status": "invalid_request",
+            "mensagem": "Pedido inválido.",
+        }, status=400)
+
+    reserva = (
+        Pedido.objects
+        .filter(
+            pk=pedido_id,
+            carrinho_origem=carrinho,
+            cliente__user=request.user,
+        )
+        .first()
+    )
+    if not reserva:
+        return JsonResponse({
+            "pago": False,
+            "consulta_ok": False,
+            "status": "not_found",
+            "mensagem": "Pedido não encontrado.",
+        }, status=404)
+
+    # O webhook pode ter confirmado exatamente este pedido antes do polling.
+    if reserva.status == "pago":
+        return JsonResponse({
+            "pago": True,
+            "consulta_ok": True,
+            "status": "approved",
+            "pedido_id": reserva.id,
+            "redirect_url": _url_meus_pedidos(),
+        })
+
+    if reserva.status != "aguardando_pagamento":
+        return JsonResponse({
+            "pago": False,
+            "consulta_ok": True,
+            "status": reserva.status,
+            "pedido_id": reserva.id,
+            "mensagem": "Este pedido não está aguardando pagamento.",
         })
 
     if not reserva.mp_payment_id:
@@ -6227,4 +6283,4 @@ class SearchView(View):
             "total_resultados": len(resultados),
             "busca_realizada": bool(termo),
         })
-
+    
