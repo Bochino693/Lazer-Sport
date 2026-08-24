@@ -38,6 +38,23 @@
 {% endif %}
   <script src="{% static 'site/ls-reveal.js' %}?v=1" defer></script>
   <script>
+    /* Marca a plataforma no <html> antes da primeira pintura. A caixa do
+       aplicativo no rodapé muda conforme o aparelho, e decidir isso no
+       servidor não serviria: a vitrine é cacheada, então a versão de um
+       aparelho acabaria servida para todos. Aqui cada visitante recebe o
+       HTML completo e o CSS mostra só o que faz sentido para ele. */
+    (function () {
+      var ua = navigator.userAgent || "";
+      var raiz = document.documentElement;
+
+      var android = /android/i.test(ua);
+      /* iPadOS 13+ se apresenta como Mac; o toque é o que o denuncia. */
+      var ios = /iPad|iPhone|iPod/.test(ua)
+        || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+
+      raiz.classList.add(android ? "ls-android" : ios ? "ls-ios" : "ls-outro");
+    })();
+
     /* Liga o estado inicial escondido antes da primeira pintura, para o bloco
        nunca aparecer e sumir. Se o ls-reveal.js não rodar em 2,5 s — bloqueio de
        CDN, erro de rede — o modo é desligado e a página volta ao normal. */
@@ -2123,6 +2140,32 @@ nav a.btn-login {
         cursor: default;
     }
 
+    /* Variantes por aparelho.
+       Sem JS nenhuma classe entra no <html>: as tres ficam visiveis e o
+       visitante ve todas as opcoes, que e melhor do que ver caixa vazia.
+       Com JS, so a do aparelho dele fica. */
+    .ls-android .ls-app-so:not(.ls-app-so-android),
+    .ls-ios     .ls-app-so:not(.ls-app-so-ios),
+    .ls-outro   .ls-app-so:not(.ls-app-so-outro) {
+        display: none;
+    }
+
+    .ls-app-so {
+        display: contents;
+    }
+
+    /* display:contents faria a nota perder o proprio bloco; ela precisa
+       continuar sendo uma linha inteira abaixo dos botoes. */
+    span.ls-app-note.ls-app-so {
+        display: block;
+    }
+
+    .ls-android span.ls-app-note.ls-app-so:not(.ls-app-so-android),
+    .ls-ios     span.ls-app-note.ls-app-so:not(.ls-app-so-ios),
+    .ls-outro   span.ls-app-note.ls-app-so:not(.ls-app-so-outro) {
+        display: none;
+    }
+
     .ls-app-note {
         display: block;
         margin-top: 14px;
@@ -2770,32 +2813,66 @@ nav a.btn-login {
                 <li><i class="fa-solid fa-screwdriver-wrench" aria-hidden="true"></i> Abertura de manutenção em 1 toque</li>
             </ul>
 
+            {% comment %}
+                As tres variantes vao no HTML e o CSS mostra a do aparelho.
+                Sem JS nenhuma classe entra no <html>: as tres aparecem, e o
+                visitante ve todas as opcoes em vez de uma caixa vazia.
+            {% endcomment %}
             <div class="ls-app-actions">
-                {% if app_android_play_url %}
-                    <a class="ls-app-btn primary"
-                       href="{{ app_android_play_url }}"
-                       target="_blank" rel="noopener">
-                        <i class="fa-brands fa-google-play" aria-hidden="true"></i>
-                        <span>
-                            <small>Baixar no</small>
-                            <strong>Google Play</strong>
-                        </span>
-                    </a>
-                {% endif %}
 
-                {% if app_android_apk_url %}
-                    <a class="ls-app-btn ghost"
-                       href="{{ app_android_apk_url }}"
-                       target="_blank" rel="noopener">
-                        <i class="fa-solid fa-download" aria-hidden="true"></i>
-                        <span>
-                            <small>Instalação direta</small>
-                            <strong>Baixar APK</strong>
-                        </span>
-                    </a>
-                {% endif %}
+                {% if app_android_disponivel %}
+                    {# ---- Android: o download de verdade ---- #}
+                    <span class="ls-app-so ls-app-so-android">
+                        {% if app_android_play_url %}
+                            <a class="ls-app-btn primary"
+                               href="{{ app_android_play_url }}"
+                               target="_blank" rel="noopener">
+                                <i class="fa-brands fa-google-play" aria-hidden="true"></i>
+                                <span>
+                                    <small>Baixar no</small>
+                                    <strong>Google Play</strong>
+                                </span>
+                            </a>
+                        {% endif %}
 
-                {% if not app_android_disponivel %}
+                        {% if app_android_apk_url %}
+                            <a class="ls-app-btn {% if app_android_play_url %}ghost{% else %}primary{% endif %}"
+                               href="{{ app_android_apk_url }}"
+                               {# download: o navegador salva em vez de tentar abrir o pacote #}
+                               download
+                               rel="noopener">
+                                <i class="fa-solid fa-download" aria-hidden="true"></i>
+                                <span>
+                                    <small>Instalação direta</small>
+                                    <strong>Baixar o APK</strong>
+                                </span>
+                            </a>
+                        {% endif %}
+                    </span>
+
+                    {# ---- iPhone: nao prometer o que ainda nao existe ---- #}
+                    <span class="ls-app-so ls-app-so-ios">
+                        <span class="ls-app-btn disabled" role="status">
+                            <i class="fa-brands fa-apple" aria-hidden="true"></i>
+                            <span>
+                                <small>Em preparação para</small>
+                                <strong>iPhone</strong>
+                            </span>
+                        </span>
+                    </span>
+
+                    {# ---- Computador: o APK nao serve aqui ---- #}
+                    <span class="ls-app-so ls-app-so-outro">
+                        <span class="ls-app-btn disabled" role="status">
+                            <i class="fa-solid fa-mobile-screen" aria-hidden="true"></i>
+                            <span>
+                                <small>Abra esta página no</small>
+                                <strong>seu celular Android</strong>
+                            </span>
+                        </span>
+                    </span>
+                {% else %}
+                    {# Sem aplicativo publicado: um estado só, para todo mundo. #}
                     <span class="ls-app-btn disabled" role="status">
                         <i class="fa-brands fa-google-play" aria-hidden="true"></i>
                         <span>
@@ -2816,8 +2893,20 @@ nav a.btn-login {
                 {% endif %}
             </div>
 
-            {% if app_android_versao %}
-                <span class="ls-app-note">Versão {{ app_android_versao }} — Android 8.0 ou superior</span>
+            {% if app_android_disponivel %}
+                <span class="ls-app-note ls-app-so ls-app-so-android">
+                    {% if app_android_versao %}Versão {{ app_android_versao }} — {% endif %}Android 8.0 ou superior.
+                    {% if app_android_apk_url and not app_android_play_url %}
+                        Na primeira instalação o Android pede para autorizar
+                        arquivos desta origem.
+                    {% endif %}
+                </span>
+                <span class="ls-app-note ls-app-so ls-app-so-ios">
+                    A versão para iPhone vem depois do Android.
+                </span>
+                <span class="ls-app-note ls-app-so ls-app-so-outro">
+                    O aplicativo é para celular Android.
+                </span>
             {% else %}
                 <span class="ls-app-note">Compatível com Android 8.0 ou superior</span>
             {% endif %}
