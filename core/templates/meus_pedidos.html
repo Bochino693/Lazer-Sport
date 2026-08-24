@@ -1351,9 +1351,11 @@ body {
         </div>
 
         {% if pedido.status == 'aguardando_pagamento' %}
-          {# O pedido nasce na hora em que o cliente inicia o pagamento. Se ele
-             fechou a aba com o Pix aberto, e daqui que ele volta a pagar --
-             sem isso, a reserva viraria um beco sem saida. #}
+          {% comment %}
+              O pedido nasce na hora em que o cliente inicia o pagamento. Se
+              ele fechou a aba com o Pix aberto, e daqui que ele volta a
+              pagar -- sem isso, a reserva viraria um beco sem saida.
+          {% endcomment %}
           <div class="pedido-pendente">
               <p class="pedido-pendente-texto">
                   <i class="fa-solid fa-clock" aria-hidden="true"></i>

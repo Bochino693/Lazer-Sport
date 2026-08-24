@@ -1,9 +1,11 @@
 {% extends "base_inner.html" %}
 {% load interno_extras l10n %}
 
-{# Números que entram em CSS e SVG passam por |unlocalize: em pt-BR o Django
-   renderiza 100.0 como "100,0", e "height: 100,0%" ou stroke-dasharray com
-   vírgula são declarações inválidas — o gráfico simplesmente não desenha. #}
+{% comment %}
+    Números que entram em CSS e SVG passam por |unlocalize: em pt-BR o Django
+    renderiza 100.0 como "100,0", e "height: 100,0%" ou stroke-dasharray com
+    vírgula são declarações inválidas — o gráfico simplesmente não desenha.
+{% endcomment %}
 
 {% block title %}Financeiro | Lazer & Sport{% endblock %}
 {% block top_title %}Financeiro{% endblock %}
