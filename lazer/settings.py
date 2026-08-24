@@ -4,6 +4,7 @@ import os
 import cloudinary
 import dj_database_url
 from dotenv import load_dotenv
+from whitenoise.compress import Compressor
 
 
 # ============================================================
@@ -412,6 +413,16 @@ DEFAULT_FILE_STORAGE = STORAGES["default"]["BACKEND"]
 
 WHITENOISE_AUTOREFRESH = DEBUG
 WHITENOISE_USE_FINDERS = DEBUG
+
+# O APK do app fica em static/app/. Um pacote Android já é um zip: comprimir
+# no collectstatic gastaria minutos de deploy e o dobro de disco para não
+# economizar quase nada. A lista padrão do WhiteNoise cobre "zip", mas não
+# a extensão ".apk"/".aab".
+WHITENOISE_SKIP_COMPRESS_EXTENSIONS = (
+    *Compressor.SKIP_COMPRESS_EXTENSIONS,
+    "apk",
+    "aab",
+)
 try:
     WHITENOISE_MAX_AGE = max(60, int(os.getenv("STATIC_CACHE_MAX_AGE", "86400")))
 except ValueError:

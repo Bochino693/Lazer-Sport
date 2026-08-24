@@ -27,8 +27,10 @@
 # do model (ou espere os 10 min).
 
 from django.conf import settings
+from django.contrib.staticfiles import finders
 from django.core.cache import cache
 from django.db.models import Count, Q, Sum
+from django.templatetags.static import static
 from django.urls import reverse
 from django.utils.functional import SimpleLazyObject
 
@@ -258,15 +260,49 @@ def admin_alertas_context(request):
 # APP ANDROID -- sem banco, só configuração
 # ============================================================
 
+# Onde o APK é procurado quando nenhuma URL é configurada: basta commitar
+# o arquivo em core/static/app/ para o download passar a existir, sem CDN
+# nem variável de ambiente.
+#
+# É static, e não media, de propósito. Em produção o Django só serve
+# /media/ com DEBUG ligado, e os uploads reais vão para o Cloudinary --
+# um APK solto em MEDIA_ROOT daria 404 no site publicado. O WhiteNoise
+# serve /static/ em produção, e o arquivo viaja junto com o repositório.
+APK_NO_STATIC = "app/lazer-sport.apk"
+CHAVE_APK_LOCAL = "app:apk-estatico:v1"
+
+
+def _apk_publicado_no_static():
+    """URL do APK versionado em static/, ou vazio se não houver arquivo.
+
+    O resultado fica em cache: sem isso seria uma varredura dos diretórios
+    de estáticos em toda página do site, inclusive nas de quem nem vai
+    chegar a ver o rodapé.
+    """
+    url = cache.get(CHAVE_APK_LOCAL)
+    if url is not None:
+        return url
+
+    try:
+        existe = finders.find(APK_NO_STATIC) is not None
+    except Exception:  # noqa: BLE001 - rodapé nunca derruba a página
+        existe = False
+
+    url = static(APK_NO_STATIC) if existe else ""
+    cache.set(CHAVE_APK_LOCAL, url, 300)
+    return url
+
+
 def app_android(request):
     """Alimenta a caixa de download do app no rodapé.
 
-    Não toca no banco: lê apenas as variáveis de ambiente. Enquanto nenhum
-    link estiver publicado, `app_android_disponivel` é False e o rodapé mostra
-    o estado "em produção" no mesmo espaço, sem quebrar o layout.
+    Não toca no banco. A escolha de o que mostrar — baixar, "em breve para
+    iPhone" ou "abra no Android" — é feita no navegador, e não aqui: a
+    vitrine do site é cacheada, e decidir por User-Agent no servidor
+    guardaria a versão de um aparelho e serviria para todos os outros.
     """
     play = getattr(settings, "APP_ANDROID_PLAY_URL", "")
-    apk = getattr(settings, "APP_ANDROID_APK_URL", "")
+    apk = getattr(settings, "APP_ANDROID_APK_URL", "") or _apk_publicado_no_static()
 
     return {
         "app_android_play_url": play,
