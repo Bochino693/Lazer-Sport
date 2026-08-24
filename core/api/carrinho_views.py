@@ -51,13 +51,31 @@ LIMITE_QUANTIDADE = 999
 
 
 class ItemEnvioSerializer(serializers.Serializer):
+    """Um item do carrinho do aparelho.
+
+    O identificador chega como `item_id` — é o nome que o app usa. `id`
+    também é aceito para uma versão do app que já esteja instalada usando
+    o nome curto: uma diferença de nome aqui viraria 400 em toda
+    sincronização, sem pista nenhuma para o cliente.
+    """
+
     tipo = serializers.ChoiceField(choices=sorted(MODELOS_POR_TIPO))
-    id = serializers.IntegerField(min_value=1)
+    item_id = serializers.IntegerField(min_value=1, required=False)
+    id = serializers.IntegerField(min_value=1, required=False)
     quantidade = serializers.IntegerField(
         min_value=1,
         max_value=LIMITE_QUANTIDADE,
         default=1,
     )
+
+    def validate(self, dados):
+        identificador = dados.get("item_id") or dados.get("id")
+        if not identificador:
+            raise serializers.ValidationError(
+                "Informe o item_id do produto."
+            )
+        dados["item_id"] = identificador
+        return dados
 
 
 class CarrinhoEnvioSerializer(serializers.Serializer):
@@ -146,7 +164,7 @@ class SincronizarCarrinhoAPI(APIView):
         # linhas do mesmo item violariam a leitura do carrinho no site.
         agrupados = {}
         for item in itens:
-            chave = (item["tipo"], item["id"])
+            chave = (item["tipo"], item["item_id"])
             agrupados[chave] = agrupados.get(chave, 0) + item["quantidade"]
 
         gravados = 0
