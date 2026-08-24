@@ -9,15 +9,21 @@ escrita em um lugar só.
 import json
 from decimal import Decimal
 
+from django.contrib import messages
+from django.contrib.auth.models import User
 from django.db import transaction
 from django.db.models import Count, Prefetch, Q
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.generic import View
 
 from . import financeiro as fin
 from .models import (
     Cliente,
+    ExecucaoEtapaProducao,
+    GuiaEtapaProducao,
+    HistoricoProducao,
+    ImagemGuiaProducao,
     ItemFichaTecnica,
     ItemOrcamento,
     Material,
@@ -28,7 +34,12 @@ from .models import (
     Setores,
 )
 from .utils import ErroDeFormulario, data, decimal_br, inteiro, texto
-from .views import InternoRequiredMixin, RespostaJSONMixin
+from .views import (
+    GestorInternoRequiredMixin,
+    InternoRequiredMixin,
+    RespostaJSONMixin,
+    eh_gestor_interno,
+)
 
 ZERO = Decimal("0.00")
 
@@ -295,7 +306,7 @@ class OrcamentosInnerView(RespostaJSONMixin, InternoRequiredMixin, View):
 # ======================================================================
 # PRODUÇÃO — produtos e ficha técnica
 # ======================================================================
-class ProdutosProducaoView(RespostaJSONMixin, InternoRequiredMixin, View):
+class ProdutosProducaoView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
     """O que a fábrica produz, do que é feito e quanto dá para montar hoje."""
 
     rota_padrao = "produtos_producao"
@@ -485,9 +496,141 @@ class ProdutosProducaoView(RespostaJSONMixin, InternoRequiredMixin, View):
 
 
 # ======================================================================
+# PRODUÇÃO — guias visuais por produto
+# ======================================================================
+class GuiasProducaoView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
+    rota_padrao = "guias_producao"
+    MAX_IMAGENS_ETAPA = 12
+    MAX_TAMANHO_IMAGEM = 10 * 1024 * 1024
+
+    def get(self, request):
+        produtos = list(
+            ProdutoInterno.objects
+            .filter(ativo=True)
+            .annotate(total_guias=Count("guias_producao"))
+            .order_by("nome")
+        )
+        produto_id = (request.GET.get("produto") or "").strip()
+        produto = (
+            next((p for p in produtos if str(p.pk) == produto_id), None)
+            or (produtos[0] if produtos else None)
+        )
+
+        etapas = []
+        if produto:
+            etapas = list(
+                produto.guias_producao
+                .prefetch_related("imagens")
+                .order_by("ordem", "id")
+            )
+
+        return render(request, "guias_producao.html", {
+            "produtos": produtos,
+            "produto": produto,
+            "etapas": etapas,
+            "etapas_dados": [self.serializar(etapa) for etapa in etapas],
+        })
+
+    @staticmethod
+    def serializar(etapa):
+        return {
+            "id": etapa.pk,
+            "ordem": etapa.ordem,
+            "titulo": etapa.titulo,
+            "instrucoes": etapa.instrucoes,
+            "criterio_conclusao": etapa.criterio_conclusao,
+            "tempo_estimado_min": etapa.tempo_estimado_min or "",
+            "ativo": etapa.ativo,
+        }
+
+    def acao_save(self, request):
+        produto = get_object_or_404(
+            ProdutoInterno,
+            pk=request.POST.get("produto"),
+        )
+        etapa_id = (request.POST.get("id") or "").strip()
+        etapa = (
+            get_object_or_404(GuiaEtapaProducao, pk=etapa_id, produto=produto)
+            if etapa_id else GuiaEtapaProducao(produto=produto)
+        )
+
+        etapa.ordem = inteiro(
+            request.POST.get("ordem"), "Ordem da etapa",
+            obrigatorio=True, minimo=1, maximo=999,
+        )
+        etapa.titulo = texto(
+            request, "titulo", obrigatorio=True,
+            rotulo="o título da etapa", limite=120,
+        )
+        etapa.instrucoes = texto(
+            request, "instrucoes", obrigatorio=True,
+            rotulo="as instruções do guia",
+        )
+        etapa.criterio_conclusao = texto(request, "criterio_conclusao")
+        etapa.tempo_estimado_min = inteiro(
+            request.POST.get("tempo_estimado_min"),
+            "Tempo estimado", minimo=1, maximo=100000,
+        )
+        etapa.ativo = request.POST.get("ativo") in {"1", "on", "true"}
+        etapa.save()
+
+        arquivos = request.FILES.getlist("imagens")
+        if etapa.imagens.count() + len(arquivos) > self.MAX_IMAGENS_ETAPA:
+            raise ErroDeFormulario(
+                f"Cada etapa aceita no máximo {self.MAX_IMAGENS_ETAPA} imagens."
+            )
+
+        legenda = texto(request, "legenda", limite=160)
+        proxima_ordem = etapa.imagens.count() + 1
+        for posicao, arquivo in enumerate(arquivos, start=proxima_ordem):
+            if arquivo.size > self.MAX_TAMANHO_IMAGEM:
+                raise ErroDeFormulario(
+                    f"A imagem {arquivo.name} ultrapassa o limite de 10 MB."
+                )
+            if not (getattr(arquivo, "content_type", "") or "").startswith("image/"):
+                raise ErroDeFormulario(f"{arquivo.name} não é uma imagem válida.")
+            ImagemGuiaProducao.objects.create(
+                etapa=etapa,
+                imagem=arquivo,
+                legenda=legenda,
+                ordem=posicao,
+            )
+
+        return self.sucesso(
+            request,
+            f"Etapa {etapa.ordem} · {etapa.titulo} salva.",
+            id=etapa.pk,
+        )
+
+    def acao_delete_imagem(self, request):
+        imagem = get_object_or_404(
+            ImagemGuiaProducao,
+            pk=request.POST.get("id"),
+        )
+        produto_id = imagem.etapa.produto_id
+        imagem.delete()
+        return self.sucesso(request, "Imagem removida.", produto=produto_id)
+
+    def acao_delete(self, request):
+        etapa = get_object_or_404(
+            GuiaEtapaProducao,
+            pk=request.POST.get("id"),
+        )
+        if etapa.execucoes.exists():
+            etapa.ativo = False
+            etapa.save(update_fields=["ativo", "atualizado"])
+            return self.sucesso(
+                request,
+                "A etapa já possui histórico e foi desativada, sem apagar o guia.",
+            )
+        etapa.delete()
+        return self.sucesso(request, "Etapa removida.")
+
+
+# ======================================================================
 # PRODUÇÃO — ordens
 # ======================================================================
-class OrdensProducaoView(RespostaJSONMixin, InternoRequiredMixin, View):
+class OrdensProducaoView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
     """Registro do que foi montado, com baixa automática no estoque."""
 
     rota_padrao = "ordens_producao"
@@ -497,8 +640,13 @@ class OrdensProducaoView(RespostaJSONMixin, InternoRequiredMixin, View):
 
         ordens = (
             OrdemProducao.objects
-            .select_related("produto", "montador", "setor", "responsavel")
-            .prefetch_related("produto__ficha__material__estoque")
+            .select_related(
+                "produto", "montador", "setor", "responsavel", "colaborador",
+            )
+            .prefetch_related(
+                "produto__ficha__material__estoque",
+                "etapas_execucao__guia_etapa",
+            )
         )
 
         if status in OrdemProducao.Status.values:
@@ -529,6 +677,11 @@ class OrdensProducaoView(RespostaJSONMixin, InternoRequiredMixin, View):
             ),
             "montadores": Montadores.objects.all(),
             "setores": Setores.objects.all(),
+            "colaboradores": (
+                User.objects
+                .filter(is_active=True, is_staff=True, is_superuser=False)
+                .order_by("first_name", "username")
+            ),
             "hoje": timezone.localdate(),
             "total_planejadas": contagem.get(OrdemProducao.Status.PLANEJADA, 0),
             "total_producao": contagem.get(OrdemProducao.Status.EM_PRODUCAO, 0),
@@ -551,21 +704,34 @@ class OrdensProducaoView(RespostaJSONMixin, InternoRequiredMixin, View):
             )
 
         produto_id = texto(request, "produto", obrigatorio=True, rotulo="o produto")
-        ordem.produto = get_object_or_404(ProdutoInterno, pk=produto_id)
+        produto = get_object_or_404(ProdutoInterno, pk=produto_id)
+        produto_anterior_id = ordem.produto_id
+
+        if not produto.guias_producao.filter(ativo=True).exists():
+            raise ErroDeFormulario(
+                "Cadastre o guia e suas etapas antes de criar uma ordem "
+                f"para {produto.nome}."
+            )
+
+        if (
+            ordem.pk
+            and produto_anterior_id != produto.pk
+            and ordem.etapas_execucao.exclude(
+                status=ExecucaoEtapaProducao.Status.AGUARDANDO
+            ).exists()
+        ):
+            raise ErroDeFormulario(
+                "O produto não pode ser trocado depois que uma etapa foi iniciada."
+            )
+        ordem.produto = produto
 
         ordem.quantidade = inteiro(
             request.POST.get("quantidade"), "Quantidade",
             obrigatorio=True, minimo=1, maximo=100000,
         )
 
-        status = (request.POST.get("status") or OrdemProducao.Status.PLANEJADA).strip()
-        if status not in OrdemProducao.Status.values:
-            raise ErroDeFormulario("Situação inválida para a ordem.")
-        if status == OrdemProducao.Status.CONCLUIDA:
-            raise ErroDeFormulario(
-                "Para concluir use o botão 'Concluir': é ele que dá baixa no estoque."
-            )
-        ordem.status = status
+        if not ordem.pk:
+            ordem.status = OrdemProducao.Status.PLANEJADA
 
         montador_id = (request.POST.get("montador") or "").strip()
         ordem.montador = (
@@ -579,18 +745,52 @@ class OrdensProducaoView(RespostaJSONMixin, InternoRequiredMixin, View):
             if setor_id.isdigit() else None
         )
 
+        colaborador_id = (request.POST.get("colaborador") or "").strip()
+        if not colaborador_id.isdigit():
+            raise ErroDeFormulario("Escolha o colaborador responsável pela produção.")
+        colaborador = get_object_or_404(
+            User,
+            pk=colaborador_id,
+            is_active=True,
+            is_staff=True,
+        )
+        if colaborador.is_superuser:
+            raise ErroDeFormulario("Escolha uma conta de colaborador, não o administrador.")
+        ordem.colaborador = colaborador
+
         ordem.prevista_para = data(request.POST.get("prevista_para"), "Data prevista")
         ordem.observacoes = texto(request, "observacoes")
 
-        if not ordem.pk:
+        nova = not ordem.pk
+        if nova:
             ordem.responsavel = request.user
 
         ordem.save()
+
+        if produto_anterior_id and produto_anterior_id != produto.pk:
+            ordem.etapas_execucao.all().delete()
+        ordem.preparar_etapas()
+
+        HistoricoProducao.objects.create(
+            ordem_producao=ordem,
+            usuario=request.user,
+            evento=(
+                HistoricoProducao.Evento.ORDEM_CRIADA
+                if nova else HistoricoProducao.Evento.ORDEM_EDITADA
+            ),
+            status_novo=ordem.status,
+            observacao=f"Colaborador: {colaborador.get_full_name() or colaborador.username}",
+        )
         return self.sucesso(request, f"Ordem #{ordem.pk} salva.", id=ordem.pk)
 
     @transaction.atomic
     def acao_concluir(self, request):
         ordem = get_object_or_404(OrdemProducao, pk=request.POST.get("id"))
+        if ordem.etapas_execucao.exists():
+            raise ErroDeFormulario(
+                "Conclua a ordem pelo acompanhamento das etapas. "
+                "Assim nenhuma fase do guia será pulada."
+            )
         ordem.concluir(usuario=request.user)
 
         return self.sucesso(
@@ -612,6 +812,12 @@ class OrdensProducaoView(RespostaJSONMixin, InternoRequiredMixin, View):
 
         ordem.status = OrdemProducao.Status.CANCELADA
         ordem.save(update_fields=["status", "atualizado"])
+        HistoricoProducao.objects.create(
+            ordem_producao=ordem,
+            usuario=request.user,
+            evento=HistoricoProducao.Evento.ORDEM_CANCELADA,
+            status_novo=OrdemProducao.Status.CANCELADA,
+        )
         return self.sucesso(request, f"Ordem #{ordem.pk} cancelada.")
 
     def acao_delete(self, request):
@@ -626,3 +832,120 @@ class OrdensProducaoView(RespostaJSONMixin, InternoRequiredMixin, View):
         numero = ordem.pk
         ordem.delete()
         return self.sucesso(request, f"Ordem #{numero} removida.")
+
+
+# ======================================================================
+# PRODUÇÃO — acompanhamento do colaborador
+# ======================================================================
+def _ordens_permitidas(user):
+    ordens = OrdemProducao.objects.all()
+    if not eh_gestor_interno(user):
+        ordens = ordens.filter(colaborador=user)
+    return ordens
+
+
+class MinhaProducaoView(InternoRequiredMixin, View):
+    def get(self, request):
+        status = (request.GET.get("status") or "").strip()
+        ordens = (
+            _ordens_permitidas(request.user)
+            .select_related("produto", "colaborador", "setor")
+            .prefetch_related("etapas_execucao__guia_etapa")
+        )
+        if status in OrdemProducao.Status.values:
+            ordens = ordens.filter(status=status)
+
+        ordens = list(ordens[:200])
+        for ordem in ordens:
+            etapas = list(ordem.etapas_execucao.all())
+            ordem.total_etapas_tela = len(etapas)
+            ordem.etapas_concluidas_tela = sum(
+                etapa.status == ExecucaoEtapaProducao.Status.CONCLUIDA
+                for etapa in etapas
+            )
+            ordem.etapa_atual_tela = next(
+                (
+                    etapa for etapa in etapas
+                    if etapa.status != ExecucaoEtapaProducao.Status.CONCLUIDA
+                ),
+                None,
+            )
+
+        return render(request, "minha_producao.html", {
+            "ordens": ordens,
+            "status_ativo": status,
+            "status_opcoes": OrdemProducao.Status.choices,
+            "eh_gestor": eh_gestor_interno(request.user),
+            "total_ativas": sum(
+                ordem.status not in (
+                    OrdemProducao.Status.CONCLUIDA,
+                    OrdemProducao.Status.CANCELADA,
+                )
+                for ordem in ordens
+            ),
+            "total_bloqueadas": sum(
+                ordem.status == OrdemProducao.Status.BLOQUEADA
+                for ordem in ordens
+            ),
+        })
+
+
+class OrdemProducaoDetalheView(InternoRequiredMixin, View):
+    def get(self, request, pk):
+        ordem = get_object_or_404(
+            _ordens_permitidas(request.user)
+            .select_related("produto", "colaborador", "setor", "montador")
+            .prefetch_related(
+                "etapas_execucao__guia_etapa__imagens",
+                "historico__usuario",
+                "historico__etapa__guia_etapa",
+            ),
+            pk=pk,
+        )
+        etapas = list(ordem.etapas_execucao.all())
+        atual = next(
+            (
+                etapa for etapa in etapas
+                if etapa.status != ExecucaoEtapaProducao.Status.CONCLUIDA
+            ),
+            None,
+        )
+        for etapa in etapas:
+            etapa.eh_atual = bool(atual and atual.pk == etapa.pk)
+
+        return render(request, "producao_ordem_detalhe.html", {
+            "ordem": ordem,
+            "etapas": etapas,
+            "etapa_atual": atual,
+            "historico": ordem.historico.all()[:40],
+            "eh_gestor": eh_gestor_interno(request.user),
+        })
+
+
+class AtualizarEtapaProducaoView(InternoRequiredMixin, View):
+    def post(self, request, pk, etapa_id):
+        ordem = get_object_or_404(_ordens_permitidas(request.user), pk=pk)
+        execucao = get_object_or_404(
+            ExecucaoEtapaProducao,
+            pk=etapa_id,
+            ordem_producao=ordem,
+        )
+        acao = (request.POST.get("acao") or "").strip()
+        observacao = (request.POST.get("observacao") or "").strip()
+
+        try:
+            atualizada = ExecucaoEtapaProducao.registrar_acao(
+                execucao.pk,
+                acao,
+                request.user,
+                observacao,
+            )
+            messages.success(
+                request,
+                f"{atualizada.guia_etapa.titulo}: "
+                f"{atualizada.get_status_display()}.",
+            )
+        except (ValueError, ExecucaoEtapaProducao.DoesNotExist) as exc:
+            messages.error(request, str(exc))
+
+        return redirect("producao_ordem_detalhe", pk=ordem.pk)

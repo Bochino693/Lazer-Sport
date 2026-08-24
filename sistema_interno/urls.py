@@ -13,8 +13,12 @@ from .views import (
     VendasView,
 )
 from .views_gestao import (
+    AtualizarEtapaProducaoView,
     FinanceiroInnerView,
+    GuiasProducaoView,
+    MinhaProducaoView,
     OrcamentosInnerView,
+    OrdemProducaoDetalheView,
     OrdensProducaoView,
     ProdutosProducaoView,
 )
@@ -36,8 +40,20 @@ urlpatterns = [
     path('orcamentos/', OrcamentosInnerView.as_view(), name='orcamentos_inner'),
 
     # ---------------- produção ----------------
+    path('producao/', MinhaProducaoView.as_view(), name='minha_producao'),
+    path('producao/guias/', GuiasProducaoView.as_view(), name='guias_producao'),
     path('producao/produtos/', ProdutosProducaoView.as_view(), name='produtos_producao'),
     path('producao/ordens/', OrdensProducaoView.as_view(), name='ordens_producao'),
+    path(
+        'producao/ordens/<int:pk>/',
+        OrdemProducaoDetalheView.as_view(),
+        name='producao_ordem_detalhe',
+    ),
+    path(
+        'producao/ordens/<int:pk>/etapas/<int:etapa_id>/',
+        AtualizarEtapaProducaoView.as_view(),
+        name='atualizar_etapa_producao',
+    ),
 
     # ---------------- acesso ----------------
     path('login/inner/', LoginInternoView.as_view(), name='login_inner'),

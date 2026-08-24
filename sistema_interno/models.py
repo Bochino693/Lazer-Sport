@@ -1173,4 +1173,3 @@ class ItemOrcamento(Prime):
         verbose_name = "Item do orçamento"
         verbose_name_plural = "Itens do orçamento"
         ordering = ("id",)
-        

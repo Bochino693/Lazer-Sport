@@ -10,8 +10,8 @@
     <span class="ls-page-kicker">Chão de fábrica</span>
     <h1>Ordens de produção</h1>
     <p>
-      Registre o que está sendo montado. Ao concluir, o estoque é baixado
-      automaticamente pela ficha técnica do produto — sem lançamento manual.
+      Crie a ordem manualmente, atribua um colaborador e acompanhe cada etapa
+      do guia. A baixa do estoque acontece somente ao concluir todo o fluxo.
     </p>
   </div>
   <div class="ls-page-hero-actions">
@@ -115,7 +115,10 @@
               <td data-rotulo="Qtd." class="text-end"><span class="ls-number">{{ ordem.quantidade }}</span></td>
 
               <td data-rotulo="Responsáveis">
-                {% if ordem.montador %}{{ ordem.montador.nome_montador }}{% else %}<span class="text-muted">Sem montador</span>{% endif %}
+                {% if ordem.colaborador %}
+                  <strong>{{ ordem.colaborador.get_full_name|default:ordem.colaborador.username }}</strong>
+                {% else %}<span class="text-muted">Sem colaborador</span>{% endif %}
+                {% if ordem.montador %}<span class="material-sub d-block">Montador: {{ ordem.montador.nome_montador }}</span>{% endif %}
                 {% if ordem.setor %}<span class="material-sub d-block">{{ ordem.setor.nome_setor }}</span>{% endif %}
               </td>
 
@@ -150,18 +153,24 @@
               </td>
 
               <td data-rotulo="Ações" class="ls-actions text-end">
+                <a class="btn btn-sm btn-outline-primary" href="{% url 'producao_ordem_detalhe' ordem.id %}">
+                  <i class="bi bi-list-check"></i> Etapas
+                </a>
                 {% if not ordem.baixa_aplicada and ordem.status != 'cancelada' %}
+                  {% if not ordem.etapas_execucao.count %}
                   <button type="button" class="btn btn-sm btn-success"
                           data-concluir="{{ ordem.id }}"
                           data-nome="OP #{{ ordem.id }} — {{ ordem.quantidade }} x {{ ordem.produto.nome }}"
                           data-material="{% if ordem.tem_material %}1{% else %}0{% endif %}">
                     <i class="bi bi-check2"></i> Concluir
                   </button>
+                  {% endif %}
                   <button type="button" class="btn btn-sm btn-outline-secondary"
                           data-editar="{{ ordem.id }}"
                           data-produto="{{ ordem.produto_id }}"
                           data-quantidade="{{ ordem.quantidade }}"
                           data-status="{{ ordem.status }}"
+                          data-colaborador="{{ ordem.colaborador_id|default_if_none:'' }}"
                           data-montador="{{ ordem.montador_id|default_if_none:'' }}"
                           data-setor="{{ ordem.setor_id|default_if_none:'' }}"
                           data-prazo="{{ ordem.prevista_para|date:'Y-m-d' }}"
@@ -264,7 +273,20 @@
             </select>
           </div>
 
-          <div class="col-12 col-md-4">
+          <div class="col-12 col-md-6">
+            <label class="form-label" for="ordemColaborador">Colaborador responsável *</label>
+            <select class="form-select" id="ordemColaborador" name="colaborador" data-rotulo="colaborador" required>
+              <option value="">Escolha o funcionário</option>
+              {% for colaborador in colaboradores %}
+                <option value="{{ colaborador.id }}">
+                  {{ colaborador.get_full_name|default:colaborador.username }} · {{ colaborador.username }}
+                </option>
+              {% endfor %}
+            </select>
+            <div class="form-text">A conta precisa estar ativa e marcada como equipe interna.</div>
+          </div>
+
+          <div class="col-12 col-md-3">
             <label class="form-label" for="ordemSetor">Setor</label>
             <select class="form-select" id="ordemSetor" name="setor">
               <option value="">Não definido</option>
@@ -272,7 +294,7 @@
             </select>
           </div>
 
-          <div class="col-12 col-md-4">
+          <div class="col-12 col-md-3">
             <label class="form-label" for="ordemPrazo">Prevista para</label>
             <input type="date" class="form-control" id="ordemPrazo" name="prevista_para">
           </div>
@@ -425,6 +447,7 @@ document.addEventListener("DOMContentLoaded", function () {
       Painel.valor("ordemProduto", gatilho.dataset.produto);
       Painel.valor("ordemQuantidade", gatilho.dataset.quantidade);
       Painel.valor("ordemStatus", gatilho.dataset.status);
+      Painel.valor("ordemColaborador", gatilho.dataset.colaborador);
       Painel.valor("ordemMontador", gatilho.dataset.montador);
       Painel.valor("ordemSetor", gatilho.dataset.setor);
       Painel.valor("ordemPrazo", gatilho.dataset.prazo);

@@ -79,6 +79,46 @@ try {
         throw "A core.0103 ainda e a versao antiga. Substitua pela migracao idempotente corrigida."
     }
 
+    $ArquivosProducao = @(
+        "sistema_interno\templates\guias_producao.html",
+        "sistema_interno\templates\minha_producao.html",
+        "sistema_interno\templates\producao_ordem_detalhe.html",
+        "sistema_interno\views_gestao.py",
+        "sistema_interno\urls.py"
+    )
+    foreach ($ArquivoRelativo in $ArquivosProducao) {
+        if (-not (Test-Path -LiteralPath (Join-Path $Raiz $ArquivoRelativo))) {
+            throw "Arquivo obrigatorio da producao guiada ausente: $ArquivoRelativo"
+        }
+    }
+
+    $ConteudoUrlsInternas = Get-Content -LiteralPath (
+        Join-Path $Raiz "sistema_interno\urls.py"
+    ) -Raw
+    $RotasProducao = @(
+        "minha_producao",
+        "guias_producao",
+        "producao_ordem_detalhe",
+        "atualizar_etapa_producao"
+    )
+    foreach ($Rota in $RotasProducao) {
+        if ($ConteudoUrlsInternas -notmatch [regex]::Escape("name='$Rota'")) {
+            throw "A rota interna '$Rota' nao esta registrada em sistema_interno\urls.py."
+        }
+    }
+
+    $ConteudoContexto = Get-Content -LiteralPath (
+        Join-Path $Raiz "core\context_processors.py"
+    ) -Raw
+    if (
+        $ConteudoContexto -notmatch (
+            '(?s)def confirmacao_pagamento\(request\):.*?' +
+            'getattr\(request, "is_interno", False\)'
+        )
+    ) {
+        throw "A protecao do pagamento para o subdominio interno esta ausente."
+    }
+
     Executar "Verificando configuracao do Django" $Python @(
         "manage.py", "check", "--settings=lazer.settings_test"
     )

@@ -22,6 +22,7 @@ from .models import (
     CentralVendas,
     EstoqueMaterial,
     Fornecedor,
+    Gerente,
     Material,
     MovimentoEstoque,
     TipoMaterial,
@@ -57,6 +58,32 @@ class InternoRequiredMixin(View):
         if not (request.user.is_staff or hasattr(request.user, "gerente")):
             return redirect("login_inner")
 
+        return super().dispatch(request, *args, **kwargs)
+
+
+def eh_gestor_interno(user):
+    """Diferencia quem administra o módulo de quem executa a produção."""
+    if not getattr(user, "is_authenticated", False):
+        return False
+    if user.is_superuser:
+        return True
+    try:
+        return bool(user.gerente.ativo)
+    except (AttributeError, Gerente.DoesNotExist):
+        return False
+
+
+class GestorInternoRequiredMixin(InternoRequiredMixin):
+    """Protege cadastros; colaboradores continuam no acompanhamento."""
+
+    def dispatch(self, request, *args, **kwargs):
+        if (
+            getattr(request, "is_interno", False)
+            and request.user.is_authenticated
+            and (request.user.is_staff or hasattr(request.user, "gerente"))
+            and not eh_gestor_interno(request.user)
+        ):
+            return redirect("minha_producao")
         return super().dispatch(request, *args, **kwargs)
 
 
@@ -130,7 +157,9 @@ class LoginInternoView(View):
             })
 
         login(request, user)
-        return redirect("home_inner")
+        if eh_gestor_interno(user):
+            return redirect("home_inner")
+        return redirect("minha_producao")
 
 
 class LogoutInnerView(View):

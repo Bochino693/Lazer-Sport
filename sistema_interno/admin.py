@@ -29,7 +29,9 @@ from .models import (
     Cliente, EnderecoCliente, Setores, EstoqueMaterial,
     CentralPedidos, CentralVendas, ComprasMensais, ItensCompra,
     CategoriaDespesa, DespesasMensais, FinanceiroMensal,
-    Fornecedor, MovimentoEstoque
+    ExecucaoEtapaProducao, Fornecedor, GuiaEtapaProducao,
+    HistoricoProducao, ImagemGuiaProducao, MovimentoEstoque,
+    OrdemProducao, ProdutoInterno,
 )
 
 # Inline para endereços dentro do Cliente
@@ -122,3 +124,48 @@ class FinanceiroMensalAdmin(admin.ModelAdmin):
     filter_horizontal = ('despesas_mensais',) # Facilita selecionar várias despesas
     list_filter = ('mes',)
 
+
+class ImagemGuiaProducaoInline(admin.TabularInline):
+    model = ImagemGuiaProducao
+    extra = 0
+    fields = ("ordem", "imagem", "legenda")
+
+
+@admin.register(GuiaEtapaProducao)
+class GuiaEtapaProducaoAdmin(admin.ModelAdmin):
+    list_display = ("produto", "ordem", "titulo", "ativo", "atualizado")
+    list_filter = ("ativo", "produto")
+    search_fields = ("produto__nome", "titulo", "instrucoes")
+    ordering = ("produto__nome", "ordem")
+    inlines = (ImagemGuiaProducaoInline,)
+
+
+@admin.register(OrdemProducao)
+class OrdemProducaoAdmin(admin.ModelAdmin):
+    list_display = ("id", "produto", "quantidade", "colaborador", "status", "prevista_para")
+    list_filter = ("status", "prevista_para")
+    search_fields = ("produto__nome", "colaborador__username", "observacoes")
+    autocomplete_fields = ("colaborador", "responsavel")
+
+
+@admin.register(ExecucaoEtapaProducao)
+class ExecucaoEtapaProducaoAdmin(admin.ModelAdmin):
+    list_display = ("ordem_producao", "guia_etapa", "status", "atualizado_por", "atualizado")
+    list_filter = ("status",)
+    readonly_fields = ("ordem_producao", "guia_etapa", "iniciado_em", "concluido_em", "atualizado_por")
+
+
+@admin.register(HistoricoProducao)
+class HistoricoProducaoAdmin(admin.ModelAdmin):
+    list_display = ("ordem_producao", "evento", "usuario", "status_novo", "criacao")
+    list_filter = ("evento", "criacao")
+    readonly_fields = (
+        "ordem_producao", "etapa", "usuario", "evento",
+        "status_anterior", "status_novo", "observacao", "criacao", "atualizado",
+    )
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
