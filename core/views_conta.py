@@ -209,7 +209,9 @@ class LoginUsuarioView(View):
         if not _telefone_preenchido(usuario):
             return _redirecionar_para_telefone()
 
-        return redirect("conta_transicao")
+        # Com a âncora: a tela de transição é longa e sem ela o cliente caía
+        # no topo, sem ver o card de boas-vindas que é o ponto da página.
+        return redirect(f"{reverse('conta_transicao')}#conta-criada")
 
 
 class RegistrarView(View):

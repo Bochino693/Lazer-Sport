@@ -1,0 +1,36 @@
+/* Âncoras: folga para o cabeçalho sticky e destaque do destino. */
+
+:root {
+    --ls-ancora-offset: 96px;
+}
+
+html {
+    /* Vale para a rolagem nativa (link com #, busca no navegador, teclado)
+       mesmo antes de o JS entrar em ação. */
+    scroll-padding-top: var(--ls-ancora-offset);
+}
+
+/* Destino recém-alcançado pisca uma vez: em página longa, chegar sem sinal
+   nenhum deixa a pessoa sem saber se algo aconteceu. */
+.ls-ancora-alvo {
+    animation: ls-ancora-pulso 1.4s ease-out;
+    outline: none;
+}
+
+@keyframes ls-ancora-pulso {
+    0% {
+        box-shadow: 0 0 0 0 rgba(0, 123, 255, 0.42);
+    }
+    60% {
+        box-shadow: 0 0 0 12px rgba(0, 123, 255, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(0, 123, 255, 0);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ls-ancora-alvo {
+        animation: none;
+    }
+}
