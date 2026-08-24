@@ -1,0 +1,169 @@
+/* =========================================================================
+   Aviso de pagamento aprovado.
+   -------------------------------------------------------------------------
+   O pagamento pode ser confirmado pelo webhook com o site fechado. Este
+   aviso é a entrega dessa confirmação na volta do cliente: aparece em
+   qualquer página, com o número do pedido e o caminho para acompanhá-lo.
+   ========================================================================= */
+
+.ls-confirma {
+    position: fixed;
+    right: 20px;
+    bottom: 24px;
+    z-index: 12000;
+
+    width: min(370px, calc(100vw - 32px));
+    padding: 18px 20px;
+    border-radius: 18px;
+
+    background: linear-gradient(150deg, #0f7a4a, #0b5f39);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    box-shadow: 0 22px 50px rgba(4, 46, 28, 0.42);
+    color: #f2fff8;
+
+    transform: translateY(22px) scale(0.97);
+    opacity: 0;
+    pointer-events: none;
+    transition:
+        opacity 0.38s cubic-bezier(0.22, 1, 0.36, 1),
+        transform 0.38s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.ls-confirma.is-open {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    pointer-events: auto;
+}
+
+.ls-confirma-topo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.ls-confirma-selo {
+    width: 42px;
+    height: 42px;
+    flex: 0 0 42px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.16);
+    font-size: 1.2rem;
+}
+
+/* O selo pulsa uma vez ao entrar: chama o olho sem virar animação infinita. */
+.ls-confirma.is-open .ls-confirma-selo {
+    animation: ls-confirma-pop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes ls-confirma-pop {
+    0%   { transform: scale(0.4); }
+    70%  { transform: scale(1.12); }
+    100% { transform: scale(1); }
+}
+
+.ls-confirma-titulo {
+    display: block;
+    font-size: 1.02rem;
+    font-weight: 800;
+    line-height: 1.25;
+}
+
+.ls-confirma-sub {
+    display: block;
+    margin-top: 2px;
+    font-size: 0.84rem;
+    color: rgba(238, 255, 246, 0.76);
+}
+
+.ls-confirma-fechar {
+    margin-left: auto;
+    width: 30px;
+    height: 30px;
+    flex: 0 0 30px;
+    display: grid;
+    place-items: center;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.12);
+    color: inherit;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.ls-confirma-fechar:hover {
+    background: rgba(255, 255, 255, 0.24);
+}
+
+.ls-confirma-acoes {
+    margin-top: 16px;
+    display: flex;
+    gap: 10px;
+}
+
+.ls-confirma-btn {
+    flex: 1;
+    /* 46px: mesmo alvo confortável usado no menu do usuário. */
+    min-height: 46px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 16px;
+    border-radius: 12px;
+    font-size: 0.92rem;
+    font-weight: 800;
+    text-decoration: none;
+    cursor: pointer;
+    border: 0;
+    transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.ls-confirma-btn.primario {
+    background: #ffffff;
+    color: #0b5f39;
+}
+
+.ls-confirma-btn.primario:hover {
+    color: #0b5f39;
+    transform: translateY(-2px);
+}
+
+.ls-confirma-btn.secundario {
+    flex: 0 0 auto;
+    background: rgba(255, 255, 255, 0.14);
+    color: #f2fff8;
+}
+
+.ls-confirma-btn.secundario:hover {
+    background: rgba(255, 255, 255, 0.24);
+    color: #ffffff;
+}
+
+/* Contagem regressiva do redirecionamento automático */
+.ls-confirma-timer {
+    display: block;
+    margin-top: 12px;
+    font-size: 0.78rem;
+    color: rgba(238, 255, 246, 0.66);
+    text-align: center;
+}
+
+@media (max-width: 560px) {
+    .ls-confirma {
+        right: 12px;
+        left: 12px;
+        bottom: 14px;
+        width: auto;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ls-confirma,
+    .ls-confirma.is-open .ls-confirma-selo {
+        transition: none;
+        animation: none;
+    }
+}

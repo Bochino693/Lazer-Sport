@@ -14,6 +14,8 @@ from .views import (
     webhook_mercadopago,
     EventosView,
     verificar_pagamento,
+    confirmacoes_pendentes,
+    marcar_confirmacao_vista,
     ProjetosView,
     ClientePerfilView,
     ComboInfoView,
@@ -238,6 +240,16 @@ urlpatterns = [
     path("pedido/pix/criar/", criar_pedido_pix, name="criar_pedido_pix"),
     path("pesquisa/", SearchView.as_view(), name="search"),
     path("api/webhook-mp/", webhook_mercadopago, name="webhook_mp"),
+    path(
+        "api/confirmacoes/",
+        confirmacoes_pendentes,
+        name="confirmacoes_pendentes",
+    ),
+    path(
+        "api/confirmacoes/vista/",
+        marcar_confirmacao_vista,
+        name="marcar_confirmacao_vista",
+    ),
     path("processar_cartao/", processar_cartao, name="processar_cartao"),
 
     # Conta pública: todas as views vêm de core/views_conta.py.

@@ -29,6 +29,7 @@
 from django.conf import settings
 from django.core.cache import cache
 from django.db.models import Count, Q, Sum
+from django.urls import reverse
 from django.utils.functional import SimpleLazyObject
 
 from .models import (
@@ -271,4 +272,26 @@ def app_android(request):
         "app_android_apk_url": apk,
         "app_android_versao": getattr(settings, "APP_ANDROID_VERSAO", ""),
         "app_android_disponivel": bool(play or apk),
+    }
+
+
+# ============================================================
+# AVISO DE PAGAMENTO APROVADO -- só URLs, sem banco
+# ============================================================
+
+def confirmacao_pagamento(request):
+    """Entrega ao JS os endereços dos endpoints de confirmação.
+
+    Não consulta nada: quem pergunta se existe pedido pendente de aviso é o
+    próprio JS, uma vez por página, para não somar uma query a cada
+    pageview de quem não comprou nada.
+    """
+    if not request.user.is_authenticated:
+        return {}
+
+    return {
+        "ls_confirmacao_urls": {
+            "consulta": reverse("confirmacoes_pendentes"),
+            "baixa": reverse("marcar_confirmacao_vista"),
+        }
     }

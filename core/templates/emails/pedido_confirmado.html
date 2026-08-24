@@ -1,0 +1,169 @@
+{% load static %}<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pedido #{{ pedido.id }} confirmado</title>
+</head>
+{# Tabelas e estilo inline: cliente de e-mail não roda flex/grid nem <style> externo. #}
+<body style="margin:0; padding:0; background:#f2f5fb; font-family:'Segoe UI',Arial,Helvetica,sans-serif; color:#2c3e50;">
+
+  <!-- Pré-cabeçalho: o texto que aparece na lista da caixa de entrada. -->
+  <div style="display:none; max-height:0; overflow:hidden; opacity:0;">
+    Pagamento aprovado. Seu pedido #{{ pedido.id }} já está em preparação.
+  </div>
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f2f5fb; padding:24px 12px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+               style="max-width:600px; background:#ffffff; border-radius:16px; overflow:hidden; box-shadow:0 8px 28px rgba(0,74,173,.12);">
+
+          <!-- Cabeçalho -->
+          <tr>
+            <td style="background:linear-gradient(90deg,#004AAD,#007BFF); padding:28px 30px; text-align:center;">
+              <div style="font-size:38px; line-height:1; color:#ffffff;">&#10003;</div>
+              <h1 style="margin:12px 0 4px; color:#ffffff; font-size:23px; font-weight:800;">
+                Pagamento aprovado!
+              </h1>
+              <p style="margin:0; color:#d6e6ff; font-size:15px;">
+                Pedido #{{ pedido.id }} confirmado
+              </p>
+            </td>
+          </tr>
+
+          <!-- Saudação -->
+          <tr>
+            <td style="padding:28px 30px 6px;">
+              <p style="margin:0 0 14px; font-size:16px; line-height:1.6;">
+                Olá, <strong>{{ primeiro_nome }}</strong>! Recebemos seu pagamento e
+                já começamos a preparar o seu pedido.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Itens -->
+          <tr>
+            <td style="padding:12px 30px 0;">
+              <h2 style="margin:0 0 12px; font-size:13px; font-weight:800; letter-spacing:.08em;
+                         text-transform:uppercase; color:#7b8aa0;">
+                Resumo do pedido
+              </h2>
+
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                {% for item in itens %}
+                  <tr>
+                    <td style="padding:10px 0; border-bottom:1px solid #eef2f9; font-size:15px;">
+                      <strong style="color:#004AAD;">{{ item.quantidade }}x</strong>
+                      {{ item.nome }}
+                    </td>
+                    <td align="right" style="padding:10px 0; border-bottom:1px solid #eef2f9;
+                                             font-size:15px; white-space:nowrap;">
+                      R$ {{ item.subtotal }}
+                    </td>
+                  </tr>
+                {% endfor %}
+              </table>
+            </td>
+          </tr>
+
+          <!-- Totais -->
+          <tr>
+            <td style="padding:16px 30px 0;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:15px;">
+                <tr>
+                  <td style="padding:5px 0; color:#61708a;">Subtotal</td>
+                  <td align="right" style="padding:5px 0;">R$ {{ total_liquido }}</td>
+                </tr>
+
+                {% if pedido.valor_frete %}
+                  <tr>
+                    <td style="padding:5px 0; color:#61708a;">Frete</td>
+                    <td align="right" style="padding:5px 0;">R$ {{ valor_frete }}</td>
+                  </tr>
+                {% endif %}
+
+                {% if pedido.cupom_codigo %}
+                  <tr>
+                    <td style="padding:5px 0; color:#1d9e63;">Cupom {{ pedido.cupom_codigo }}</td>
+                    <td align="right" style="padding:5px 0; color:#1d9e63;">
+                      &minus; R$ {{ valor_desconto }}
+                    </td>
+                  </tr>
+                {% endif %}
+
+                <tr>
+                  <td style="padding:14px 0 0; border-top:2px solid #eef2f9;
+                             font-size:17px; font-weight:800;">Total pago</td>
+                  <td align="right" style="padding:14px 0 0; border-top:2px solid #eef2f9;
+                                           font-size:19px; font-weight:800; color:#004AAD;">
+                    R$ {{ total_final }}
+                  </td>
+                </tr>
+
+                <tr>
+                  <td colspan="2" style="padding:8px 0 0; color:#7b8aa0; font-size:13px;">
+                    Pago com {{ pedido.get_forma_pagamento_display }}
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          {% if pedido.rua %}
+            <!-- Entrega -->
+            <tr>
+              <td style="padding:24px 30px 0;">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+                       style="background:#f6f9ff; border-radius:12px;">
+                  <tr>
+                    <td style="padding:16px 18px;">
+                      <h2 style="margin:0 0 8px; font-size:12px; font-weight:800; letter-spacing:.08em;
+                                 text-transform:uppercase; color:#7b8aa0;">Entrega</h2>
+                      <p style="margin:0; font-size:15px; line-height:1.6;">
+                        {{ pedido.rua }}{% if pedido.numero %}, {{ pedido.numero }}{% endif %}<br>
+                        {{ pedido.bairro }} &mdash; {{ pedido.cidade }}<br>
+                        CEP {{ pedido.cep }}
+                      </p>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          {% endif %}
+
+          <!-- Ação -->
+          <tr>
+            <td style="padding:28px 30px; text-align:center;">
+              <a href="{{ url_pedidos }}"
+                 style="display:inline-block; padding:15px 34px; background:#004AAD; color:#ffffff;
+                        font-size:16px; font-weight:700; text-decoration:none; border-radius:10px;">
+                Acompanhar meu pedido
+              </a>
+            </td>
+          </tr>
+
+          <!-- Rodapé -->
+          <tr>
+            <td style="padding:22px 30px 28px; background:#0d1b2e; text-align:center;">
+              <p style="margin:0 0 8px; color:#ffffff; font-size:15px; font-weight:700;">
+                Lazer &amp; Sport Brinquedos
+              </p>
+              <p style="margin:0 0 12px; color:rgba(255,255,255,.62); font-size:13px; line-height:1.7;">
+                Dúvidas sobre o pedido? Fale com a gente pelo
+                <a href="{{ whatsapp }}" style="color:#7fd4a0; text-decoration:none;">WhatsApp</a>.
+              </p>
+              <p style="margin:0; color:rgba(255,255,255,.36); font-size:11px;">
+                Você recebeu este e-mail porque fez uma compra em
+                <a href="{{ url_site }}" style="color:rgba(255,255,255,.5);">lazersport.com.br</a>.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+
+</body>
+</html>

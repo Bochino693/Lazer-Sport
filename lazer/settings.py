@@ -198,6 +198,7 @@ TEMPLATES = [
                 "sistema_interno.context_processors.fab_counts",
                 "core.context_processors.clientes_rodape",
                 "core.context_processors.app_android",
+                "core.context_processors.confirmacao_pagamento",
             ],
         },
     },
@@ -333,6 +334,15 @@ LANGUAGE_CODE = "pt-br"
 TIME_ZONE = "America/Sao_Paulo"
 USE_I18N = True
 USE_TZ = True
+
+
+# ============================================================
+# ENDEREÇO PÚBLICO DO SITE
+# ============================================================
+# O e-mail de confirmação é montado fora de um request (thread do webhook),
+# então não existe `request.build_absolute_uri` para gerar os links. Sem
+# esta base, o e-mail sairia com links relativos, que não clicam.
+SITE_URL = os.getenv("SITE_URL", "https://www.lazersport.com.br").strip()
 
 
 # ============================================================

@@ -1162,6 +1162,21 @@ class Pedido(Prime):
     cupom_codigo = models.CharField(max_length=20, blank=True, null=True)
     cupom_percentual = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
 
+    # O pagamento pode ser confirmado pelo webhook com o cliente já fora do
+    # site. Estes dois campos guardam o que ainda falta entregar a ele:
+    # o aviso na tela e o e-mail. Ambos são marcados só depois de dar certo,
+    # então uma falha de rede ou de SMTP apenas adia a entrega — nunca a
+    # perde, e nunca duplica.
+    confirmacao_notificada = models.BooleanField(
+        "Confirmação já exibida ao cliente",
+        default=False,
+        db_index=True,
+    )
+    email_confirmacao_enviado = models.BooleanField(
+        "E-mail de confirmação enviado",
+        default=False,
+    )
+
     observacoes = models.TextField(blank=True)
 
     def save(self, *args, **kwargs):

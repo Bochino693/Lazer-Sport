@@ -22,6 +22,10 @@
 
   <!-- Experiência de rolagem: skeletons, entrada dos blocos e barra de progresso. -->
   <link rel="stylesheet" href="{% static 'site/ls-reveal.css' %}?v=1">
+{% if user.is_authenticated %}
+  <!-- Aviso de pagamento aprovado confirmado fora da aba (webhook). -->
+  <link rel="stylesheet" href="{% static 'site/ls-confirmacao.css' %}?v=1">
+{% endif %}
   <script src="{% static 'site/ls-reveal.js' %}?v=1" defer></script>
   <script>
     /* Liga o estado inicial escondido antes da primeira pintura, para o bloco
@@ -3450,5 +3454,10 @@ window.addEventListener("pageshow", function (event) {
 
 
 </script>
+{% if user.is_authenticated %}
+  {# URLs pelo template para o JS nao precisar chutar caminho. #}
+  {{ ls_confirmacao_urls|json_script:"ls-confirmacao-config" }}
+  <script src="{% static 'site/ls-confirmacao.js' %}?v=1" defer></script>
+{% endif %}
 </body>
 </html>

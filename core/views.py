@@ -4557,14 +4557,72 @@ def _mp_error_message(payment):
     )
 
 
+def _qrcode_base64(payload):
+    """Desenha o PNG do QR a partir do payload copia-e-cola do Pix.
+
+    O Mercado Pago normalmente devolve `qr_code_base64` pronto, mas nem
+    sempre: em alguns retornos vem só o payload EMV em `qr_code`. Quando
+    isso acontecia, o checkout morria em "O Mercado Pago não retornou um
+    QR Code válido" mesmo com uma cobrança perfeitamente válida na mão.
+    O código copia-e-cola é a fonte da verdade — o desenho é só uma
+    representação dele, e podemos produzi-la aqui.
+    """
+    if not payload:
+        return None
+
+    try:
+        import base64
+        import io
+
+        import qrcode
+        from qrcode.constants import ERROR_CORRECT_M
+
+        qr = qrcode.QRCode(
+            version=None,
+            # O payload do Pix é longo; M equilibra tolerância a falha e
+            # densidade, mantendo o código legível na tela e impresso.
+            error_correction=ERROR_CORRECT_M,
+            box_size=8,
+            border=2,
+        )
+        qr.add_data(payload)
+        qr.make(fit=True)
+
+        buffer = io.BytesIO()
+        qr.make_image(fill_color="black", back_color="white").save(
+            buffer,
+            format="PNG",
+        )
+        return base64.b64encode(buffer.getvalue()).decode("ascii")
+    except Exception:
+        payment_logger.exception(
+            "Falha ao desenhar o QR Code do Pix localmente."
+        )
+        return None
+
+
 def _dados_pix(payment):
     transaction_data = (
         payment.get("point_of_interaction", {})
         .get("transaction_data", {})
     )
+
+    copia_cola = transaction_data.get("qr_code")
+    imagem = transaction_data.get("qr_code_base64")
+
+    # Só desenha quando o provedor não mandou a imagem: refazer o desenho
+    # de um QR que já veio pronto seria trabalho jogado fora.
+    if not imagem and copia_cola:
+        imagem = _qrcode_base64(copia_cola)
+        if imagem:
+            payment_logger.info(
+                "QR Code do Pix desenhado localmente para o payment %s.",
+                payment.get("id"),
+            )
+
     return {
-        "qr_code": transaction_data.get("qr_code_base64"),
-        "pix_copia_cola": transaction_data.get("qr_code"),
+        "qr_code": imagem,
+        "pix_copia_cola": copia_cola,
         "ticket_url": transaction_data.get("ticket_url"),
     }
 
@@ -4576,6 +4634,9 @@ def _forma_pagamento_mp(payment):
     if payment_type == "debit_card":
         return "debito"
     return "pix"
+
+
+from .notificacoes import enviar_confirmacao_de_compra
 
 
 class PagamentoDivergenteError(Exception):
@@ -4708,6 +4769,15 @@ def _finalizar_pagamento_aprovado(carrinho, payment):
         carrinho_bloqueado.mp_payment_id = payment_id
         carrinho_bloqueado.save(
             update_fields=["cupom", "mp_payment_id"]
+        )
+
+        # on_commit, e não uma chamada direta: a thread do e-mail lê o pedido
+        # do banco pela pk, e se esta função estiver dentro de uma transação
+        # externa a linha ainda não existe para outra conexão — o e-mail
+        # sumiria em silêncio. Agendado assim, ele só dispara depois do
+        # commit mais externo, e um rollback simplesmente não o envia.
+        transaction.on_commit(
+            lambda: enviar_confirmacao_de_compra(pedido)
         )
 
         return pedido, True
@@ -5185,6 +5255,71 @@ def verificar_pagamento(request):
         "pedido_id": pedido.id,
         "redirect_url": _url_meus_pedidos(),
     })
+
+
+@login_required
+@require_GET
+@never_cache
+def confirmacoes_pendentes(request):
+    """Pedidos aprovados que o cliente ainda não viu confirmados na tela.
+
+    É o que fecha o buraco de quando o pagamento é confirmado pelo webhook
+    com o site fechado: o aviso não depende da aba do checkout continuar
+    aberta, fica guardado no pedido e é entregue na próxima visita.
+    """
+    perfil = getattr(request.user, "perfil", None)
+    if not perfil:
+        return JsonResponse({"confirmacoes": []})
+
+    pedidos = (
+        Pedido.objects
+        .filter(
+            cliente=perfil,
+            confirmacao_notificada=False,
+            mp_status="approved",
+        )
+        .exclude(status="cancelado")
+        .order_by("-id")[:3]
+    )
+
+    return JsonResponse({
+        "confirmacoes": [
+            {
+                "pedido_id": pedido.id,
+                "total": f"{_valor_monetario(pedido.total_final) or Decimal('0.00'):.2f}",
+                "itens": pedido.itens.count(),
+                "redirect_url": _url_meus_pedidos(),
+            }
+            for pedido in pedidos
+        ],
+    })
+
+
+@login_required
+@require_POST
+def marcar_confirmacao_vista(request):
+    """Baixa o aviso depois que o cliente realmente o viu na tela."""
+    perfil = getattr(request.user, "perfil", None)
+    if not perfil:
+        return JsonResponse({"ok": False}, status=404)
+
+    try:
+        dados = json.loads(request.body.decode("utf-8") or "{}")
+    except (TypeError, ValueError):
+        dados = {}
+
+    pedido_id = dados.get("pedido_id")
+    if not pedido_id:
+        return JsonResponse({"ok": False}, status=400)
+
+    # O filtro por cliente impede que um id de outra pessoa seja baixado.
+    atualizados = Pedido.objects.filter(
+        pk=pedido_id,
+        cliente=perfil,
+        confirmacao_notificada=False,
+    ).update(confirmacao_notificada=True)
+
+    return JsonResponse({"ok": bool(atualizados)})
 
 
 @login_required
