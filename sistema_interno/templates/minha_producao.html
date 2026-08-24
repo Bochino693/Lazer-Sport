@@ -1,0 +1,49 @@
+{% extends "base_inner.html" %}
+
+{% block title %}Minha produção | Lazer & Sport{% endblock %}
+{% block top_title %}{% if eh_gestor %}Acompanhamento da produção{% else %}Minha produção{% endif %}{% endblock %}
+
+{% block extra_css %}
+<style>
+  .work-hero{margin-bottom:18px;padding:clamp(20px,4vw,34px);border:1px solid rgba(96,165,250,.18);border-radius:23px;background:radial-gradient(circle at 90% 10%,rgba(59,130,246,.18),transparent 35%),linear-gradient(145deg,#111c30,#0c1423)}.work-hero h1{margin:4px 0 8px;color:#fff;font-size:clamp(1.5rem,3vw,2.2rem)}.work-hero p{max-width:720px;margin:0;color:#9aacc1}.work-kicker{color:#60a5fa;font-size:.72rem;font-weight:900;letter-spacing:.13em;text-transform:uppercase}.work-summary{margin:0 0 18px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.work-stat{padding:16px;border:1px solid rgba(148,163,184,.14);border-radius:16px;background:#111827}.work-stat strong{display:block;color:#f8fafc;font-size:1.6rem}.work-stat span{color:#8393a8;font-size:.72rem}.work-filter{margin-bottom:16px;padding:14px;border:1px solid rgba(148,163,184,.14);border-radius:15px;background:#111827}.work-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(310px,1fr));gap:15px}.work-card{border:1px solid rgba(148,163,184,.16);border-radius:18px;background:#111827;overflow:hidden;box-shadow:0 15px 35px rgba(0,0,0,.12)}.work-card.blocked{border-color:rgba(248,113,113,.38)}.work-head{padding:16px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.work-id{color:#60a5fa;font-size:.7rem;font-weight:900}.work-head h2{margin:3px 0 0;color:#f8fafc;font-size:1rem}.work-status{padding:6px 9px;border-radius:999px;color:#bfdbfe;background:rgba(59,130,246,.13);font-size:.63rem;font-weight:850;white-space:nowrap}.work-status.bloqueada{color:#fecaca;background:rgba(239,68,68,.15)}.work-status.concluida{color:#a7f3d0;background:rgba(16,185,129,.14)}.work-meta{padding:0 16px 13px;display:grid;grid-template-columns:1fr 1fr;gap:8px;color:#8999ad;font-size:.72rem}.work-meta strong{display:block;margin-top:2px;color:#dbe5f3}.work-progress{padding:13px 16px;border-top:1px solid rgba(148,163,184,.1);background:#0d1625}.work-progress-copy{margin-bottom:8px;display:flex;justify-content:space-between;color:#94a3b8;font-size:.7rem}.work-track{height:8px;border-radius:999px;overflow:hidden;background:#1e293b}.work-track span{height:100%;display:block;border-radius:inherit;background:linear-gradient(90deg,#2563eb,#22c55e)}.work-current{padding:13px 16px;color:#cbd5e1;font-size:.76rem}.work-current small{display:block;margin-bottom:4px;color:#64748b;text-transform:uppercase}.work-action{padding:0 16px 16px}.work-action a{width:100%;min-height:42px;display:flex;align-items:center;justify-content:center;gap:7px}.work-empty{padding:70px 20px;border:1px dashed rgba(148,163,184,.22);border-radius:18px;color:#94a3b8;text-align:center}.work-empty i{display:block;margin-bottom:10px;font-size:2.3rem}@media(max-width:720px){.work-summary{grid-template-columns:1fr 1fr}.work-summary .work-stat:last-child{grid-column:1/-1}.work-grid{grid-template-columns:1fr}.work-meta{grid-template-columns:1fr}}
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="work-hero">
+  <span class="work-kicker">Fluxo manual e rastreável</span>
+  <h1>{% if eh_gestor %}Produção em andamento{% else %}Olá, {{ user.get_full_name|default:user.username }}{% endif %}</h1>
+  <p>{% if eh_gestor %}Veja em qual etapa cada colaborador está e onde existem bloqueios.{% else %}Abra uma ordem, consulte o guia da etapa atual e informe cada avanço. As próximas fases são liberadas em sequência.{% endif %}</p>
+</section>
+
+<section class="work-summary">
+  <article class="work-stat"><strong>{{ ordens|length }}</strong><span>Ordens exibidas</span></article>
+  <article class="work-stat"><strong>{{ total_ativas }}</strong><span>Em aberto</span></article>
+  <article class="work-stat"><strong>{{ total_bloqueadas }}</strong><span>Com dúvida ou bloqueio</span></article>
+</section>
+
+<form method="get" class="work-filter row g-2 align-items-end">
+  <div class="col-8 col-md-4"><label class="form-label" for="statusFiltro">Situação</label><select class="form-select" id="statusFiltro" name="status"><option value="">Todas</option>{% for valor,rotulo in status_opcoes %}<option value="{{ valor }}" {% if status_ativo == valor %}selected{% endif %}>{{ rotulo }}</option>{% endfor %}</select></div>
+  <div class="col-4 col-md-2 d-grid"><button class="btn btn-primary" type="submit">Filtrar</button></div>
+</form>
+
+{% if ordens %}
+<section class="work-grid">
+  {% for ordem in ordens %}
+    <article class="work-card {% if ordem.status == 'bloqueada' %}blocked{% endif %}">
+      <header class="work-head"><div><span class="work-id">ORDEM #{{ ordem.id }}</span><h2>{{ ordem.quantidade }} × {{ ordem.produto.nome }}</h2></div><span class="work-status {{ ordem.status }}">{{ ordem.get_status_display }}</span></header>
+      <div class="work-meta">
+        <div>Colaborador<strong>{% if ordem.colaborador %}{{ ordem.colaborador.get_full_name|default:ordem.colaborador.username }}{% else %}Não atribuído{% endif %}</strong></div>
+        <div>Prazo<strong>{% if ordem.prevista_para %}{{ ordem.prevista_para|date:"d/m/Y" }}{% else %}Sem prazo{% endif %}</strong></div>
+      </div>
+      <div class="work-progress"><div class="work-progress-copy"><span>Etapas concluídas</span><strong>{{ ordem.etapas_concluidas_tela }}/{{ ordem.total_etapas_tela }}</strong></div><div class="work-track"><span style="width:{{ ordem.progresso_percentual }}%"></span></div></div>
+      <div class="work-current"><small>Etapa atual</small>{% if ordem.etapa_atual_tela %}<strong>{{ ordem.etapa_atual_tela.guia_etapa.ordem }}. {{ ordem.etapa_atual_tela.guia_etapa.titulo }}</strong>{% else %}<strong>Fluxo encerrado</strong>{% endif %}</div>
+      <div class="work-action"><a href="{% url 'producao_ordem_detalhe' ordem.id %}" class="btn btn-primary"><i class="bi bi-journal-text"></i> Abrir etapas e guias</a></div>
+    </article>
+  {% endfor %}
+</section>
+{% else %}
+<div class="work-empty"><i class="bi bi-clipboard2-check"></i>Nenhuma produção encontrada para este filtro.</div>
+{% endif %}
+{% endblock %}
+

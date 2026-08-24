@@ -1,0 +1,122 @@
+{% extends "base_inner.html" %}
+
+{% block title %}Guias de produção | Lazer & Sport{% endblock %}
+{% block top_title %}Guias de produção{% endblock %}
+
+{% block extra_css %}
+<style>
+  .guide-layout{display:grid;grid-template-columns:minmax(230px,300px) 1fr;gap:20px}.guide-products,.guide-panel{border:1px solid rgba(148,163,184,.18);border-radius:20px;background:#111827;overflow:hidden}.guide-products{align-self:start;position:sticky;top:86px}.guide-products header,.guide-panel-head{padding:18px;border-bottom:1px solid rgba(148,163,184,.14)}.guide-products h2,.guide-panel h2{margin:0;color:#f8fafc;font-size:1rem}.guide-products p,.guide-panel p{margin:5px 0 0;color:#94a3b8;font-size:.78rem}.guide-product-list{padding:8px}.guide-product{margin:4px 0;padding:12px;border:1px solid transparent;border-radius:12px;display:flex;justify-content:space-between;gap:10px;color:#cbd5e1;text-decoration:none}.guide-product:hover,.guide-product.active{color:#fff;background:rgba(59,130,246,.13);border-color:rgba(96,165,250,.24)}.guide-count{min-width:25px;height:25px;padding:0 7px;border-radius:999px;display:grid;place-items:center;color:#bfdbfe;background:rgba(59,130,246,.17);font-size:.72rem;font-weight:800}.guide-panel-head{display:flex;align-items:center;justify-content:space-between;gap:14px}.guide-steps{padding:18px;display:grid;gap:14px}.guide-step{border:1px solid rgba(148,163,184,.15);border-radius:17px;background:#0d1626;overflow:hidden}.guide-step.inactive{opacity:.68}.guide-step-head{padding:15px 16px;display:flex;align-items:flex-start;gap:12px}.guide-number{width:36px;height:36px;flex:0 0 36px;border-radius:11px;display:grid;place-items:center;color:#dbeafe;background:linear-gradient(145deg,#2563eb,#1d4ed8);font-weight:900}.guide-title{min-width:0;flex:1}.guide-title h3{margin:0;color:#f8fafc;font-size:.96rem}.guide-title span{display:block;margin-top:4px;color:#64748b;font-size:.7rem}.guide-actions{display:flex;gap:7px}.guide-copy{padding:0 16px 15px;color:#cbd5e1;font-size:.82rem;line-height:1.65;white-space:pre-line}.guide-check{margin:0 16px 16px;padding:12px;border-left:3px solid #10b981;border-radius:0 10px 10px 0;color:#a7f3d0;background:rgba(16,185,129,.08);font-size:.78rem;white-space:pre-line}.guide-gallery{padding:0 16px 16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}.guide-image{position:relative;min-height:130px;border:1px solid rgba(148,163,184,.14);border-radius:13px;overflow:hidden;background:#060b14}.guide-image img{width:100%;height:145px;display:block;object-fit:cover}.guide-image figcaption{padding:8px;color:#94a3b8;font-size:.68rem}.guide-image button{position:absolute;top:7px;right:7px;width:30px;height:30px;border:0;border-radius:9px;color:#fff;background:rgba(185,28,28,.9)}.guide-empty{padding:55px 20px;color:#94a3b8;text-align:center}.guide-empty i{display:block;margin-bottom:10px;font-size:2rem}.modal-content{background:#111827;color:#e2e8f0}.modal-header,.modal-footer{border-color:rgba(148,163,184,.16)}.form-control,.form-select{color:#e2e8f0;background:#0b1220;border-color:rgba(148,163,184,.24)}.form-control:focus,.form-select:focus{color:#fff;background:#0b1220}.form-text{color:#8291a6}@media(max-width:900px){.guide-layout{grid-template-columns:1fr}.guide-products{position:static}.guide-product-list{display:flex;overflow-x:auto}.guide-product{min-width:190px}.guide-panel-head{align-items:flex-start;flex-direction:column}}
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="ls-page-hero">
+  <div class="ls-page-hero-copy">
+    <span class="ls-page-kicker">Conhecimento da fábrica</span>
+    <h1>Guias visuais das etapas</h1>
+    <p>Escreva o procedimento e adicione imagens. O colaborador verá este conteúdo durante a execução da ordem.</p>
+  </div>
+  <div class="ls-page-hero-actions">
+    <a href="{% url 'ordens_producao' %}" class="btn btn-outline-secondary"><i class="bi bi-hammer me-1"></i> Ordens</a>
+  </div>
+</section>
+
+<div class="guide-layout">
+  <aside class="guide-products">
+    <header><h2>Produtos</h2><p>Selecione qual manual deseja editar.</p></header>
+    <div class="guide-product-list">
+      {% for item in produtos %}
+        <a class="guide-product {% if produto.id == item.id %}active{% endif %}" href="?produto={{ item.id }}">
+          <span>{{ item.nome }}</span><span class="guide-count">{{ item.total_guias }}</span>
+        </a>
+      {% empty %}<div class="guide-empty">Cadastre primeiro um produto interno.</div>{% endfor %}
+    </div>
+  </aside>
+
+  <section class="guide-panel">
+    <header class="guide-panel-head">
+      <div><h2>{% if produto %}{{ produto.nome }}{% else %}Nenhum produto{% endif %}</h2><p>{{ etapas|length }} etapa(s) cadastrada(s)</p></div>
+      {% if produto %}<button type="button" class="btn btn-success" id="novaEtapa"><i class="bi bi-plus-lg me-1"></i> Nova etapa</button>{% endif %}
+    </header>
+    <div class="guide-steps">
+      {% for etapa in etapas %}
+        <article class="guide-step {% if not etapa.ativo %}inactive{% endif %}">
+          <div class="guide-step-head">
+            <span class="guide-number">{{ etapa.ordem }}</span>
+            <div class="guide-title"><h3>{{ etapa.titulo }}</h3><span>{% if etapa.tempo_estimado_min %}{{ etapa.tempo_estimado_min }} min · {% endif %}{% if etapa.ativo %}Disponível nas novas ordens{% else %}Desativada{% endif %}</span></div>
+            <div class="guide-actions">
+              <button type="button" class="btn btn-sm btn-outline-secondary" data-editar-etapa="{{ etapa.id }}" aria-label="Editar"><i class="bi bi-pencil"></i></button>
+              <button type="button" class="btn btn-sm btn-outline-danger" data-excluir-etapa="{{ etapa.id }}" data-nome="{{ etapa.titulo }}" aria-label="Excluir"><i class="bi bi-trash"></i></button>
+            </div>
+          </div>
+          <div class="guide-copy">{{ etapa.instrucoes }}</div>
+          {% if etapa.criterio_conclusao %}<div class="guide-check"><strong>Como conferir</strong><br>{{ etapa.criterio_conclusao }}</div>{% endif %}
+          {% if etapa.imagens.all %}
+            <div class="guide-gallery">
+              {% for foto in etapa.imagens.all %}
+                <figure class="guide-image">
+                  <img src="{{ foto.imagem.url }}" alt="{{ foto.legenda|default:etapa.titulo }}" loading="lazy">
+                  {% if foto.legenda %}<figcaption>{{ foto.legenda }}</figcaption>{% endif %}
+                  <button type="button" data-excluir-imagem="{{ foto.id }}" aria-label="Remover imagem"><i class="bi bi-x-lg"></i></button>
+                </figure>
+              {% endfor %}
+            </div>
+          {% endif %}
+        </article>
+      {% empty %}
+        <div class="guide-empty"><i class="bi bi-journal-plus"></i>Este produto ainda não tem etapas. Crie o guia antes de abrir uma ordem de produção.</div>
+      {% endfor %}
+    </div>
+  </section>
+</div>
+
+{% if produto %}
+<div class="modal fade" id="modalEtapa" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <form class="modal-content" id="formEtapa" method="post" enctype="multipart/form-data" action="{% url 'guias_producao' %}">
+      {% csrf_token %}<input type="hidden" name="action" value="save"><input type="hidden" name="produto" value="{{ produto.id }}"><input type="hidden" name="id" id="etapaId">
+      <div class="modal-header"><h2 class="modal-title fs-5" id="etapaModalTitulo">Nova etapa</h2><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body">
+        <div id="etapaErro" class="alert alert-danger d-none"></div>
+        <div class="row g-3">
+          <div class="col-3"><label class="form-label">Ordem *</label><input class="form-control" type="number" min="1" max="999" name="ordem" id="etapaOrdem" required></div>
+          <div class="col-9"><label class="form-label">Título *</label><input class="form-control" name="titulo" id="etapaTitulo" maxlength="120" required></div>
+          <div class="col-12"><label class="form-label">Instruções *</label><textarea class="form-control" name="instrucoes" id="etapaInstrucoes" rows="7" required placeholder="Explique o que fazer, os cuidados e a sequência..."></textarea></div>
+          <div class="col-12"><label class="form-label">Como conferir o resultado</label><textarea class="form-control" name="criterio_conclusao" id="etapaCriterio" rows="3" placeholder="O que precisa estar correto antes de avançar?"></textarea></div>
+          <div class="col-md-4"><label class="form-label">Tempo estimado (min)</label><input class="form-control" type="number" min="1" name="tempo_estimado_min" id="etapaTempo"></div>
+          <div class="col-md-8"><label class="form-label">Adicionar imagens</label><input class="form-control" type="file" name="imagens" id="etapaImagens" accept="image/*" multiple><div class="form-text">Até 12 imagens por etapa, com no máximo 10 MB cada.</div></div>
+          <div class="col-12"><label class="form-label">Legenda das novas imagens</label><input class="form-control" name="legenda" maxlength="160"></div>
+          <div class="col-12"><div class="form-check"><input class="form-check-input" type="checkbox" name="ativo" value="1" id="etapaAtivo" checked><label class="form-check-label" for="etapaAtivo">Usar esta etapa em novas ordens</label></div></div>
+        </div>
+      </div>
+      <div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button><button type="submit" class="btn btn-success">Salvar etapa</button></div>
+    </form>
+  </div>
+</div>
+{% endif %}
+
+<form id="formAcaoGuia" method="post" action="{% url 'guias_producao' %}" hidden>{% csrf_token %}<input name="action"><input name="id"></form>
+{{ etapas_dados|json_script:"etapasGuiaData" }}
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener("DOMContentLoaded",function(){
+  "use strict";
+  const dados=JSON.parse(document.getElementById("etapasGuiaData")?.textContent||"[]");
+  const porId=Object.fromEntries(dados.map(item=>[String(item.id),item]));
+  const form=document.getElementById("formEtapa");
+  function abrir(item){
+    form.reset(); Painel.erro("etapaErro","");
+    Painel.valor("etapaId",item?.id||""); Painel.valor("etapaOrdem",item?.ordem||{{ etapas|length|add:"1" }}); Painel.valor("etapaTitulo",item?.titulo||""); Painel.valor("etapaInstrucoes",item?.instrucoes||""); Painel.valor("etapaCriterio",item?.criterio_conclusao||""); Painel.valor("etapaTempo",item?.tempo_estimado_min||"");
+    document.getElementById("etapaAtivo").checked=item?item.ativo:true; document.getElementById("etapaModalTitulo").textContent=item?"Editar etapa "+item.ordem:"Nova etapa"; Painel.abrir("modalEtapa");
+  }
+  document.getElementById("novaEtapa")?.addEventListener("click",()=>abrir(null));
+  document.querySelectorAll("[data-editar-etapa]").forEach(btn=>btn.addEventListener("click",()=>abrir(porId[btn.dataset.editarEtapa])));
+  if(form)Painel.ligar({form:"formEtapa",erro:"etapaErro"});
+  function executar(action,id,confirmacao){if(confirmacao&&!window.confirm(confirmacao))return;const acao=document.getElementById("formAcaoGuia");acao.elements.action.value=action;acao.elements.id.value=id;Painel.enviar(acao).then(()=>location.reload()).catch(err=>alert(err.message));}
+  document.querySelectorAll("[data-excluir-etapa]").forEach(btn=>btn.addEventListener("click",()=>executar("delete",btn.dataset.excluirEtapa,"Remover a etapa “"+btn.dataset.nome+"”? Se ela já foi usada, será apenas desativada.")));
+  document.querySelectorAll("[data-excluir-imagem]").forEach(btn=>btn.addEventListener("click",()=>executar("delete_imagem",btn.dataset.excluirImagem,"Remover esta imagem do guia?")));
+});
+</script>
+{% endblock %}

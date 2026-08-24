@@ -610,12 +610,76 @@ class ItemFichaTecnica(Prime):
         ordering = ("material__nome_material",)
 
 
+class GuiaEtapaProducao(Prime):
+    """Uma etapa do manual de fabricação de um produto.
+
+    O guia pertence ao produto interno, não a um pedido do site. A ordem
+    numérica define a sequência que o colaborador precisa seguir.
+    """
+
+    produto = models.ForeignKey(
+        ProdutoInterno,
+        on_delete=models.CASCADE,
+        related_name="guias_producao",
+    )
+    ordem = models.PositiveIntegerField(default=1)
+    titulo = models.CharField(max_length=120)
+    instrucoes = models.TextField(
+        help_text="Explique, em detalhes, como executar esta etapa.",
+    )
+    criterio_conclusao = models.TextField(
+        "Como conferir o resultado",
+        blank=True,
+    )
+    tempo_estimado_min = models.PositiveIntegerField(
+        "Tempo estimado (minutos)",
+        null=True,
+        blank=True,
+    )
+    ativo = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f"{self.produto} · {self.ordem}. {self.titulo}"
+
+    class Meta:
+        verbose_name = "Etapa do guia de produção"
+        verbose_name_plural = "Etapas dos guias de produção"
+        ordering = ("produto__nome", "ordem", "id")
+        constraints = [
+            models.UniqueConstraint(
+                fields=("produto", "ordem"),
+                name="guia_etapa_ordem_unica_por_produto",
+            ),
+        ]
+
+
+class ImagemGuiaProducao(Prime):
+    etapa = models.ForeignKey(
+        GuiaEtapaProducao,
+        on_delete=models.CASCADE,
+        related_name="imagens",
+    )
+    imagem = models.ImageField(upload_to="producao/guias/")
+    legenda = models.CharField(max_length=160, blank=True)
+    ordem = models.PositiveIntegerField(default=1)
+
+    def __str__(self):
+        return f"Imagem de {self.etapa}"
+
+    class Meta:
+        verbose_name = "Imagem do guia de produção"
+        verbose_name_plural = "Imagens dos guias de produção"
+        ordering = ("ordem", "id")
+
+
 class OrdemProducao(Prime):
     """Uma rodada de produção: o que foi montado, quanto e por quem."""
 
     class Status(models.TextChoices):
         PLANEJADA = "planejada", "Planejada"
         EM_PRODUCAO = "producao", "Em produção"
+        PAUSADA = "pausada", "Pausada"
+        BLOQUEADA = "bloqueada", "Bloqueada"
         CONCLUIDA = "concluida", "Concluída"
         CANCELADA = "cancelada", "Cancelada"
 
@@ -652,6 +716,14 @@ class OrdemProducao(Prime):
         null=True,
         blank=True,
     )
+    colaborador = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name="producoes_atribuidas",
+        null=True,
+        blank=True,
+        help_text="Funcionário que executará e atualizará as etapas.",
+    )
     prevista_para = models.DateField(null=True, blank=True)
     concluida_em = models.DateTimeField(null=True, blank=True)
     observacoes = models.TextField(blank=True)
@@ -679,6 +751,47 @@ class OrdemProducao(Prime):
     def tem_material(self):
         linhas = self.materiais_necessarios
         return bool(linhas) and all(linha["suficiente"] for linha in linhas)
+
+    @property
+    def progresso_percentual(self):
+        etapas = list(self.etapas_execucao.all())
+        if not etapas:
+            return 0
+        concluidas = sum(
+            etapa.status == ExecucaoEtapaProducao.Status.CONCLUIDA
+            for etapa in etapas
+        )
+        return round((concluidas / len(etapas)) * 100)
+
+    def preparar_etapas(self):
+        """Cria o checklist da ordem a partir do guia ativo do produto."""
+        guias = list(
+            self.produto.guias_producao
+            .filter(ativo=True)
+            .order_by("ordem", "id")
+        )
+        if not guias:
+            raise ValueError(
+                "Este produto ainda não possui um guia de produção. "
+                "Cadastre as etapas antes de criar a ordem."
+            )
+
+        invalidas = [guia.titulo for guia in guias if not guia.instrucoes.strip()]
+        if invalidas:
+            raise ValueError(
+                "Todas as etapas precisam ter instruções. Confira: "
+                + ", ".join(invalidas)
+            )
+
+        existentes = set(
+            self.etapas_execucao.values_list("guia_etapa_id", flat=True)
+        )
+        ExecucaoEtapaProducao.objects.bulk_create([
+            ExecucaoEtapaProducao(ordem_producao=self, guia_etapa=guia)
+            for guia in guias
+            if guia.pk not in existentes
+        ])
+        return self.etapas_execucao.count()
 
     @transaction.atomic
     def concluir(self, usuario=None):
@@ -750,6 +863,204 @@ class OrdemProducao(Prime):
     class Meta:
         verbose_name = "Ordem de produção"
         verbose_name_plural = "Ordens de produção"
+        ordering = ("-criacao", "-id")
+
+
+class ExecucaoEtapaProducao(Prime):
+    """Andamento de uma etapa específica dentro de uma ordem."""
+
+    class Status(models.TextChoices):
+        AGUARDANDO = "aguardando", "Aguardando"
+        EM_ANDAMENTO = "andamento", "Em andamento"
+        PAUSADA = "pausada", "Pausada"
+        BLOQUEADA = "bloqueada", "Bloqueada / com dúvida"
+        CONCLUIDA = "concluida", "Concluída"
+
+    ordem_producao = models.ForeignKey(
+        OrdemProducao,
+        on_delete=models.CASCADE,
+        related_name="etapas_execucao",
+    )
+    guia_etapa = models.ForeignKey(
+        GuiaEtapaProducao,
+        on_delete=models.PROTECT,
+        related_name="execucoes",
+    )
+    status = models.CharField(
+        max_length=12,
+        choices=Status.choices,
+        default=Status.AGUARDANDO,
+        db_index=True,
+    )
+    iniciado_em = models.DateTimeField(null=True, blank=True)
+    concluido_em = models.DateTimeField(null=True, blank=True)
+    observacao = models.TextField(blank=True)
+    atualizado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name="etapas_producao_atualizadas",
+        null=True,
+        blank=True,
+    )
+
+    @classmethod
+    @transaction.atomic
+    def registrar_acao(cls, execucao_id, acao, usuario, observacao=""):
+        """Atualiza uma etapa com trava e sem permitir pular a sequência."""
+        execucao = (
+            cls.objects
+            .select_for_update()
+            .select_related("guia_etapa", "ordem_producao")
+            .get(pk=execucao_id)
+        )
+        ordem = (
+            OrdemProducao.objects
+            .select_for_update()
+            .get(pk=execucao.ordem_producao_id)
+        )
+
+        if ordem.status in (OrdemProducao.Status.CONCLUIDA, OrdemProducao.Status.CANCELADA):
+            raise ValueError("Esta ordem já foi encerrada e não aceita alterações.")
+
+        etapas = list(
+            cls.objects
+            .filter(ordem_producao=ordem)
+            .select_related("guia_etapa")
+            .order_by("guia_etapa__ordem", "guia_etapa_id")
+        )
+        etapa_atual = next(
+            (item for item in etapas if item.status != cls.Status.CONCLUIDA),
+            None,
+        )
+        if etapa_atual is None or etapa_atual.pk != execucao.pk:
+            raise ValueError(
+                "Conclua a etapa atual antes de avançar para a próxima."
+            )
+
+        transicoes = {
+            "iniciar": ({cls.Status.AGUARDANDO}, cls.Status.EM_ANDAMENTO),
+            "pausar": ({cls.Status.EM_ANDAMENTO}, cls.Status.PAUSADA),
+            "bloquear": (
+                {cls.Status.AGUARDANDO, cls.Status.EM_ANDAMENTO, cls.Status.PAUSADA},
+                cls.Status.BLOQUEADA,
+            ),
+            "retomar": (
+                {cls.Status.PAUSADA, cls.Status.BLOQUEADA},
+                cls.Status.EM_ANDAMENTO,
+            ),
+            "concluir": ({cls.Status.EM_ANDAMENTO}, cls.Status.CONCLUIDA),
+        }
+        if acao not in transicoes:
+            raise ValueError("Ação inválida para a etapa de produção.")
+
+        permitidos, novo_status = transicoes[acao]
+        if execucao.status not in permitidos:
+            raise ValueError(
+                f"Não é possível {acao} uma etapa que está "
+                f"{execucao.get_status_display().lower()}."
+            )
+
+        observacao = (observacao or "").strip()
+        if acao == "bloquear" and not observacao:
+            raise ValueError(
+                "Explique a dúvida ou o problema antes de bloquear a etapa."
+            )
+
+        anterior = execucao.status
+        agora = timezone.now()
+        execucao.status = novo_status
+        execucao.atualizado_por = usuario
+        if observacao:
+            execucao.observacao = observacao
+        if novo_status == cls.Status.EM_ANDAMENTO and not execucao.iniciado_em:
+            execucao.iniciado_em = agora
+        if novo_status == cls.Status.CONCLUIDA:
+            execucao.concluido_em = agora
+
+        execucao.save(update_fields=[
+            "status", "atualizado_por", "observacao", "iniciado_em",
+            "concluido_em", "atualizado",
+        ])
+
+        if novo_status == cls.Status.PAUSADA:
+            ordem.status = OrdemProducao.Status.PAUSADA
+        elif novo_status == cls.Status.BLOQUEADA:
+            ordem.status = OrdemProducao.Status.BLOQUEADA
+        else:
+            ordem.status = OrdemProducao.Status.EM_PRODUCAO
+
+        todas_concluidas = all(
+            item.pk == execucao.pk or item.status == cls.Status.CONCLUIDA
+            for item in etapas
+        )
+        if novo_status == cls.Status.CONCLUIDA and todas_concluidas:
+            ordem.concluir(usuario=usuario)
+        else:
+            ordem.save(update_fields=["status", "atualizado"])
+
+        HistoricoProducao.objects.create(
+            ordem_producao=ordem,
+            etapa=execucao,
+            usuario=usuario,
+            evento=HistoricoProducao.Evento.ETAPA_ATUALIZADA,
+            status_anterior=anterior,
+            status_novo=novo_status,
+            observacao=observacao,
+        )
+        return execucao
+
+    def __str__(self):
+        return f"{self.ordem_producao} · {self.guia_etapa.titulo}"
+
+    class Meta:
+        verbose_name = "Execução de etapa de produção"
+        verbose_name_plural = "Execuções de etapas de produção"
+        ordering = ("guia_etapa__ordem", "guia_etapa_id")
+        constraints = [
+            models.UniqueConstraint(
+                fields=("ordem_producao", "guia_etapa"),
+                name="execucao_unica_por_ordem_e_etapa",
+            ),
+        ]
+
+
+class HistoricoProducao(Prime):
+    class Evento(models.TextChoices):
+        ORDEM_CRIADA = "ordem_criada", "Ordem criada"
+        ORDEM_EDITADA = "ordem_editada", "Ordem editada"
+        ETAPA_ATUALIZADA = "etapa", "Etapa atualizada"
+        ORDEM_CANCELADA = "cancelada", "Ordem cancelada"
+
+    ordem_producao = models.ForeignKey(
+        OrdemProducao,
+        on_delete=models.CASCADE,
+        related_name="historico",
+    )
+    etapa = models.ForeignKey(
+        ExecucaoEtapaProducao,
+        on_delete=models.SET_NULL,
+        related_name="historico",
+        null=True,
+        blank=True,
+    )
+    usuario = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name="historico_producao",
+        null=True,
+        blank=True,
+    )
+    evento = models.CharField(max_length=20, choices=Evento.choices)
+    status_anterior = models.CharField(max_length=20, blank=True)
+    status_novo = models.CharField(max_length=20, blank=True)
+    observacao = models.TextField(blank=True)
+
+    def __str__(self):
+        return f"{self.ordem_producao} · {self.get_evento_display()}"
+
+    class Meta:
+        verbose_name = "Histórico de produção"
+        verbose_name_plural = "Históricos de produção"
         ordering = ("-criacao", "-id")
 
 
@@ -862,3 +1173,4 @@ class ItemOrcamento(Prime):
         verbose_name = "Item do orçamento"
         verbose_name_plural = "Itens do orçamento"
         ordering = ("id",)
+        

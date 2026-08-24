@@ -1,0 +1,62 @@
+{% extends "base_inner.html" %}
+
+{% block title %}Produção #{{ ordem.id }} | Lazer & Sport{% endblock %}
+{% block top_title %}Produção #{{ ordem.id }}{% endblock %}
+
+{% block extra_css %}
+<style>
+  .flow-back{margin-bottom:14px}.flow-back a{color:#93c5fd;text-decoration:none}.work-kicker{color:#60a5fa;font-size:.7rem;font-weight:900;letter-spacing:.13em;text-transform:uppercase}.flow-head{margin-bottom:18px;padding:22px;border:1px solid rgba(96,165,250,.2);border-radius:21px;background:linear-gradient(145deg,#111c30,#0c1423)}.flow-head-top{display:flex;align-items:flex-start;justify-content:space-between;gap:15px}.flow-head h1{margin:3px 0 6px;color:#fff;font-size:clamp(1.35rem,3vw,2rem)}.flow-head p{margin:0;color:#94a3b8}.flow-status{padding:7px 11px;border-radius:999px;color:#bfdbfe;background:rgba(59,130,246,.14);font-size:.68rem;font-weight:900}.flow-status.bloqueada{color:#fecaca;background:rgba(239,68,68,.15)}.flow-status.concluida{color:#a7f3d0;background:rgba(16,185,129,.14)}.flow-meta{margin-top:17px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}.flow-meta div{padding:10px;border:1px solid rgba(148,163,184,.1);border-radius:11px;background:rgba(2,6,23,.22)}.flow-meta span,.flow-meta strong{display:block}.flow-meta span{color:#64748b;font-size:.62rem;text-transform:uppercase}.flow-meta strong{margin-top:4px;color:#dbeafe;font-size:.76rem}.flow-progress{margin-top:14px}.flow-progress-copy{margin-bottom:7px;display:flex;justify-content:space-between;color:#94a3b8;font-size:.7rem}.flow-track{height:9px;border-radius:999px;overflow:hidden;background:#1e293b}.flow-track span{height:100%;display:block;background:linear-gradient(90deg,#2563eb,#22c55e)}.flow-layout{display:grid;grid-template-columns:minmax(0,1fr) 310px;gap:18px}.flow-steps{display:grid;gap:14px}.flow-step{border:1px solid rgba(148,163,184,.15);border-radius:18px;background:#111827;overflow:hidden}.flow-step.current{border-color:rgba(96,165,250,.5);box-shadow:0 0 0 3px rgba(59,130,246,.08)}.flow-step.done{border-color:rgba(52,211,153,.22)}.flow-step-head{padding:15px 17px;display:flex;align-items:center;gap:12px;border-bottom:1px solid rgba(148,163,184,.1)}.flow-number{width:37px;height:37px;flex:0 0 37px;border-radius:11px;display:grid;place-items:center;color:#dbeafe;background:#1e3a8a;font-weight:900}.done .flow-number{color:#d1fae5;background:#047857}.flow-step-title{min-width:0;flex:1}.flow-step-title h2{margin:0;color:#f8fafc;font-size:.98rem}.flow-step-title span{display:block;margin-top:3px;color:#64748b;font-size:.68rem}.step-status{padding:5px 8px;border-radius:999px;color:#cbd5e1;background:rgba(148,163,184,.11);font-size:.62rem;font-weight:850}.step-status.andamento{color:#bfdbfe;background:rgba(59,130,246,.15)}.step-status.bloqueada{color:#fecaca;background:rgba(239,68,68,.15)}.step-status.concluida{color:#a7f3d0;background:rgba(16,185,129,.14)}.flow-guide{padding:17px;color:#cbd5e1;font-size:.84rem;line-height:1.7;white-space:pre-line}.flow-check{margin:0 17px 17px;padding:13px;border-left:3px solid #10b981;border-radius:0 11px 11px 0;color:#a7f3d0;background:rgba(16,185,129,.08);font-size:.78rem;white-space:pre-line}.flow-gallery{padding:0 17px 17px;display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}.flow-gallery figure{margin:0;border:1px solid rgba(148,163,184,.13);border-radius:13px;overflow:hidden;background:#080e19}.flow-gallery img{width:100%;height:190px;display:block;object-fit:cover;cursor:zoom-in}.flow-gallery figcaption{padding:9px;color:#94a3b8;font-size:.68rem}.flow-action{margin:0 17px 17px;padding:14px;border:1px solid rgba(96,165,250,.2);border-radius:13px;background:rgba(30,64,175,.09)}.flow-action textarea{min-height:76px;color:#e2e8f0;background:#0b1220;border-color:rgba(148,163,184,.24)}.flow-buttons{margin-top:10px;display:flex;flex-wrap:wrap;gap:8px}.flow-note{margin:0 17px 17px;padding:11px;border-radius:10px;color:#fef3c7;background:rgba(245,158,11,.1);font-size:.75rem}.history{align-self:start;position:sticky;top:86px;border:1px solid rgba(148,163,184,.15);border-radius:18px;background:#111827;overflow:hidden}.history header{padding:15px;border-bottom:1px solid rgba(148,163,184,.1)}.history h2{margin:0;color:#f8fafc;font-size:.94rem}.history-list{max-height:70vh;padding:8px 15px 15px;overflow:auto}.history-item{position:relative;padding:12px 0 12px 18px;border-bottom:1px solid rgba(148,163,184,.08)}.history-item:before{content:"";position:absolute;left:0;top:18px;width:8px;height:8px;border-radius:50%;background:#3b82f6}.history-item strong{display:block;color:#dbeafe;font-size:.74rem}.history-item span{display:block;margin-top:3px;color:#7f90a5;font-size:.65rem;line-height:1.45}.image-lightbox{position:fixed;inset:0;z-index:5000;padding:20px;display:none;align-items:center;justify-content:center;background:rgba(2,6,23,.94)}.image-lightbox.open{display:flex}.image-lightbox img{max-width:96vw;max-height:92vh;object-fit:contain}.image-lightbox button{position:absolute;top:18px;right:18px;width:42px;height:42px;border:0;border-radius:50%;color:#fff;background:#1e293b;font-size:1.3rem}@media(max-width:980px){.flow-layout{grid-template-columns:1fr}.history{position:static}.flow-meta{grid-template-columns:repeat(2,1fr)}}@media(max-width:600px){.flow-head-top{flex-direction:column}.flow-meta{grid-template-columns:1fr}.flow-step-head{align-items:flex-start}.flow-gallery{grid-template-columns:1fr}.flow-gallery img{height:auto;max-height:350px}.flow-buttons .btn{flex:1 1 45%}}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="flow-back"><a href="{% url 'minha_producao' %}"><i class="bi bi-arrow-left me-1"></i> Voltar para a produção</a></div>
+<section class="flow-head">
+  <div class="flow-head-top"><div><span class="work-kicker">ORDEM #{{ ordem.id }}</span><h1>{{ ordem.quantidade }} × {{ ordem.produto.nome }}</h1><p>{{ ordem.observacoes|default:"Siga as etapas na ordem e consulte o guia sempre que necessário." }}</p></div><span class="flow-status {{ ordem.status }}">{{ ordem.get_status_display }}</span></div>
+  <div class="flow-meta">
+    <div><span>Colaborador</span><strong>{% if ordem.colaborador %}{{ ordem.colaborador.get_full_name|default:ordem.colaborador.username }}{% else %}Não atribuído{% endif %}</strong></div>
+    <div><span>Setor</span><strong>{% if ordem.setor %}{{ ordem.setor.nome_setor }}{% else %}Não definido{% endif %}</strong></div>
+    <div><span>Prazo</span><strong>{% if ordem.prevista_para %}{{ ordem.prevista_para|date:"d/m/Y" }}{% else %}Sem prazo{% endif %}</strong></div>
+    <div><span>Produto</span><strong>{{ ordem.produto.get_categoria_display }}</strong></div>
+  </div>
+  <div class="flow-progress"><div class="flow-progress-copy"><span>Progresso geral</span><strong>{{ ordem.progresso_percentual }}%</strong></div><div class="flow-track"><span style="width:{{ ordem.progresso_percentual }}%"></span></div></div>
+</section>
+
+<div class="flow-layout">
+  <section class="flow-steps">
+    {% for etapa in etapas %}
+      <article class="flow-step {% if etapa.eh_atual %}current{% endif %} {% if etapa.status == 'concluida' %}done{% endif %}">
+        <header class="flow-step-head"><span class="flow-number">{% if etapa.status == 'concluida' %}<i class="bi bi-check-lg"></i>{% else %}{{ etapa.guia_etapa.ordem }}{% endif %}</span><div class="flow-step-title"><h2>{{ etapa.guia_etapa.titulo }}</h2><span>{% if etapa.guia_etapa.tempo_estimado_min %}Tempo estimado: {{ etapa.guia_etapa.tempo_estimado_min }} min{% else %}Consulte todas as orientações abaixo{% endif %}</span></div><span class="step-status {{ etapa.status }}">{{ etapa.get_status_display }}</span></header>
+        <div class="flow-guide">{{ etapa.guia_etapa.instrucoes }}</div>
+        {% if etapa.guia_etapa.criterio_conclusao %}<div class="flow-check"><strong><i class="bi bi-check2-circle me-1"></i> Como conferir o resultado</strong><br>{{ etapa.guia_etapa.criterio_conclusao }}</div>{% endif %}
+        {% if etapa.guia_etapa.imagens.all %}<div class="flow-gallery">{% for foto in etapa.guia_etapa.imagens.all %}<figure><img src="{{ foto.imagem.url }}" alt="{{ foto.legenda|default:etapa.guia_etapa.titulo }}" loading="lazy" data-guia-imagem>{% if foto.legenda %}<figcaption>{{ foto.legenda }}</figcaption>{% endif %}</figure>{% endfor %}</div>{% endif %}
+        {% if etapa.observacao %}<div class="flow-note"><strong>Última observação:</strong> {{ etapa.observacao }}</div>{% endif %}
+
+        {% if etapa.eh_atual and ordem.status != 'cancelada' and ordem.status != 'concluida' %}
+          <form class="flow-action" method="post" action="{% url 'atualizar_etapa_producao' ordem.id etapa.id %}">
+            {% csrf_token %}
+            <label class="form-label" for="obs-{{ etapa.id }}">Observação, dúvida ou problema</label>
+            <textarea class="form-control" id="obs-{{ etapa.id }}" name="observacao" placeholder="Para bloquear a etapa, explique obrigatoriamente o que aconteceu.">{{ etapa.observacao }}</textarea>
+            <div class="flow-buttons">
+              {% if etapa.status == 'aguardando' %}<button class="btn btn-primary" type="submit" name="acao" value="iniciar"><i class="bi bi-play-fill"></i> Iniciar etapa</button>{% endif %}
+              {% if etapa.status == 'andamento' %}<button class="btn btn-success" type="submit" name="acao" value="concluir"><i class="bi bi-check2"></i> Concluir etapa</button><button class="btn btn-outline-warning" type="submit" name="acao" value="pausar"><i class="bi bi-pause-fill"></i> Pausar</button>{% endif %}
+              {% if etapa.status == 'pausada' or etapa.status == 'bloqueada' %}<button class="btn btn-primary" type="submit" name="acao" value="retomar"><i class="bi bi-play-fill"></i> Retomar</button>{% endif %}
+              {% if etapa.status != 'bloqueada' %}<button class="btn btn-outline-danger" type="submit" name="acao" value="bloquear"><i class="bi bi-question-octagon"></i> Tenho dúvida / bloqueio</button>{% endif %}
+            </div>
+          </form>
+        {% endif %}
+      </article>
+    {% empty %}<div class="alert alert-warning">Esta ordem ainda não possui etapas. O gestor precisa sincronizar o guia do produto.</div>{% endfor %}
+  </section>
+
+  <aside class="history"><header><h2><i class="bi bi-clock-history me-1"></i> Histórico</h2></header><div class="history-list">{% for item in historico %}<div class="history-item"><strong>{% if item.etapa %}{{ item.etapa.guia_etapa.titulo }}{% else %}{{ item.get_evento_display }}{% endif %}</strong><span>{{ item.usuario.get_full_name|default:item.usuario.username|default:"Sistema" }} · {{ item.criacao|date:"d/m/Y H:i" }}</span>{% if item.status_novo %}<span>{{ item.status_anterior|default:"—" }} → {{ item.status_novo }}</span>{% endif %}{% if item.observacao %}<span>{{ item.observacao }}</span>{% endif %}</div>{% empty %}<div class="history-item"><span>Nenhuma movimentação registrada.</span></div>{% endfor %}</div></aside>
+</div>
+
+<div class="image-lightbox" id="imageLightbox" aria-hidden="true"><button type="button" aria-label="Fechar">×</button><img src="" alt="Visualização ampliada"></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function(){const box=document.getElementById("imageLightbox"),foto=box.querySelector("img");function fechar(){box.classList.remove("open");box.setAttribute("aria-hidden","true");foto.src=""}document.querySelectorAll("[data-guia-imagem]").forEach(img=>img.addEventListener("click",()=>{foto.src=img.src;foto.alt=img.alt;box.classList.add("open");box.setAttribute("aria-hidden","false")}));box.querySelector("button").addEventListener("click",fechar);box.addEventListener("click",e=>{if(e.target===box)fechar()});document.addEventListener("keydown",e=>{if(e.key==="Escape")fechar()})})();
+</script>
+{% endblock %}
