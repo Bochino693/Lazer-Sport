@@ -1,7 +1,259 @@
 {% extends "base_inner.html" %}
+{% load interno_extras %}
+
 {% block title %}Financeiro | Lazer & Sport{% endblock %}
 {% block top_title %}Financeiro{% endblock %}
+
 {% block content %}
-<section class="ls-page-head"><div><span class="ls-eyebrow">Visão financeira</span><h1>Financeiro</h1><p>A estrutura visual está pronta para indicadores e fechamento mensal.</p></div></section>
-<article class="ls-panel"><div class="ls-panel-body"><div class="ls-empty"><i class="bi bi-layout-text-window-reverse"></i>Módulo preparado para a próxima etapa funcional.</div></div></article>
+<section class="ls-page-hero">
+  <div class="ls-page-hero-copy">
+    <span class="ls-page-kicker">Visão financeira</span>
+    <h1>Financeiro</h1>
+    <p>
+      Receita confirmada, saídas, lucro e composição das despesas dos últimos
+      {{ janela }} meses — de {{ inicio|date:"m/Y" }} a {{ fim|date:"m/Y" }}.
+    </p>
+  </div>
+  <div class="ls-page-hero-actions">
+    {% for opcao in janelas %}
+      <a class="btn {% if opcao == janela %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+         href="?meses={{ opcao }}">{{ opcao }} meses</a>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="ls-metrics">
+  <article class="ls-metric-card green">
+    <div class="ls-metric-head">
+      <span class="ls-metric-label">Receita do período</span>
+      <span class="ls-metric-icon"><i class="bi bi-graph-up-arrow"></i></span>
+    </div>
+    <strong class="ls-metric-value">R$ {{ receita_total|moeda }}</strong>
+    <span class="ls-metric-note">
+      Mês atual R$ {{ receita_mes|moeda }}
+      {% if variacao_receita is not None %}
+        <span class="ls-delta {% if variacao_receita >= 0 %}up{% else %}down{% endif %}">
+          {% if variacao_receita >= 0 %}▲{% else %}▼{% endif %} {{ variacao_receita }}%
+        </span>
+      {% endif %}
+    </span>
+  </article>
+
+  <article class="ls-metric-card red">
+    <div class="ls-metric-head">
+      <span class="ls-metric-label">Saídas do período</span>
+      <span class="ls-metric-icon"><i class="bi bi-cash-coin"></i></span>
+    </div>
+    <strong class="ls-metric-value">R$ {{ saida_total|moeda }}</strong>
+    <span class="ls-metric-note">
+      Despesas + compras de material
+      {% if variacao_saida is not None %}
+        <span class="ls-delta {% if variacao_saida <= 0 %}up{% else %}down{% endif %}">
+          {% if variacao_saida >= 0 %}▲{% else %}▼{% endif %} {{ variacao_saida }}%
+        </span>
+      {% endif %}
+    </span>
+  </article>
+
+  <article class="ls-metric-card {% if lucro_total >= 0 %}blue{% else %}red{% endif %}">
+    <div class="ls-metric-head">
+      <span class="ls-metric-label">Resultado</span>
+      <span class="ls-metric-icon"><i class="bi bi-wallet2"></i></span>
+    </div>
+    <strong class="ls-metric-value">R$ {{ lucro_total|moeda }}</strong>
+    <span class="ls-metric-note">
+      {% if margem is not None %}Margem de {{ margem }}% sobre a receita{% else %}Sem receita registrada no período{% endif %}
+    </span>
+  </article>
+
+  <article class="ls-metric-card violet">
+    <div class="ls-metric-head">
+      <span class="ls-metric-label">Capital em estoque</span>
+      <span class="ls-metric-icon"><i class="bi bi-boxes"></i></span>
+    </div>
+    <strong class="ls-metric-value">R$ {{ capital_estoque|moeda }}</strong>
+    <span class="ls-metric-note">Ticket médio de venda R$ {{ ticket_medio|moeda }}</span>
+  </article>
+</section>
+
+<section class="ls-grid-2 mb-3">
+
+  <!-- ---------------- Receita x saída ---------------- -->
+  <article class="ls-panel">
+    <div class="ls-panel-header">
+      <div>
+        <h2>Receita e saída por mês</h2>
+        <p>Barra clara é o que entrou; barra escura é o que saiu.</p>
+      </div>
+      <span class="ls-chart-legend">
+        <span><i class="ls-dot receita"></i> Receita</span>
+        <span><i class="ls-dot saida"></i> Saída</span>
+      </span>
+    </div>
+
+    <div class="ls-panel-body">
+      {% if teto %}
+        <div class="ls-bars" role="img"
+             aria-label="Comparativo mensal de receita e saída dos últimos {{ janela }} meses">
+          {% for linha in serie %}
+            <div class="ls-bar-col"
+                 title="{{ linha.rotulo_longo }} — receita R$ {{ linha.receita|moeda }} · saída R$ {{ linha.saida|moeda }}">
+              <div class="ls-bar-pair">
+                <span class="ls-bar receita" style="height: {{ linha.altura_receita }}%"></span>
+                <span class="ls-bar saida" style="height: {{ linha.altura_saida }}%"></span>
+              </div>
+              <span class="ls-bar-label">{{ linha.rotulo }}</span>
+            </div>
+          {% endfor %}
+        </div>
+        <div class="ls-chart-foot">
+          <span>Maior valor do período: R$ {{ teto|moeda }}</span>
+        </div>
+      {% else %}
+        <div class="ls-empty">
+          <i class="bi bi-bar-chart"></i>
+          Ainda não há venda nem despesa registrada nesta janela.
+        </div>
+      {% endif %}
+    </div>
+  </article>
+
+  <!-- ---------------- Curva de lucro ---------------- -->
+  <article class="ls-panel">
+    <div class="ls-panel-header">
+      <div>
+        <h2>Curva do resultado</h2>
+        <p>Acima da linha, lucro. Abaixo, prejuízo no mês.</p>
+      </div>
+    </div>
+
+    <div class="ls-panel-body">
+      {% if curva.pico %}
+        <svg class="ls-line-chart" viewBox="0 0 560 150" preserveAspectRatio="none"
+             role="img" aria-label="Evolução do resultado mensal">
+          <defs>
+            <linearGradient id="gradLucro" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#48d69e" stop-opacity="0.42"></stop>
+              <stop offset="100%" stop-color="#48d69e" stop-opacity="0"></stop>
+            </linearGradient>
+          </defs>
+
+          <line x1="0" y1="{{ curva.linha_zero }}" x2="560" y2="{{ curva.linha_zero }}"
+                stroke="rgba(147,166,191,.35)" stroke-dasharray="4 5"></line>
+
+          <polygon points="{{ curva.area }}" fill="url(#gradLucro)"></polygon>
+          <polyline points="{{ curva.pontos }}" fill="none" stroke="#48d69e"
+                    stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"
+                    vector-effect="non-scaling-stroke"></polyline>
+        </svg>
+
+        <div class="ls-line-labels">
+          {% for linha in serie %}<span>{{ linha.rotulo }}</span>{% endfor %}
+        </div>
+
+        <div class="ls-chart-foot">
+          <span>Pico do período: R$ {{ curva.pico|moeda }}</span>
+          <span>Resultado do mês: R$ {{ lucro_mes|moeda }}</span>
+        </div>
+      {% else %}
+        <div class="ls-empty">
+          <i class="bi bi-activity"></i>
+          Sem movimento suficiente para desenhar a curva.
+        </div>
+      {% endif %}
+    </div>
+  </article>
+</section>
+
+<section class="ls-grid-2">
+
+  <!-- ---------------- Despesas por categoria ---------------- -->
+  <article class="ls-panel">
+    <div class="ls-panel-header">
+      <div>
+        <h2>Despesas por categoria</h2>
+        <p>Para onde foi o dinheiro no período.</p>
+      </div>
+      <span class="ls-money">R$ {{ categorias.total|moeda }}</span>
+    </div>
+
+    <div class="ls-panel-body">
+      {% if categorias.fatias %}
+        <div class="ls-donut-wrap">
+          <svg class="ls-donut" viewBox="0 0 42 42" role="img"
+               aria-label="Distribuição das despesas por categoria">
+            <circle cx="21" cy="21" r="15.915" fill="none"
+                    stroke="rgba(147,166,191,.14)" stroke-width="5"></circle>
+            {% for fatia in categorias.fatias %}
+              <circle cx="21" cy="21" r="15.915" fill="none"
+                      stroke="{{ fatia.cor }}" stroke-width="5"
+                      stroke-dasharray="{{ fatia.traco }} {{ fatia.resto }}"
+                      stroke-dashoffset="{{ fatia.offset }}"></circle>
+            {% endfor %}
+          </svg>
+
+          <ul class="ls-donut-legend">
+            {% for fatia in categorias.fatias %}
+              <li>
+                <i class="ls-dot" style="background: {{ fatia.cor }}"></i>
+                <span class="ls-donut-name">{{ fatia.nome }}</span>
+                <span class="ls-donut-value">R$ {{ fatia.valor|moeda }}</span>
+                <span class="ls-donut-pct">{{ fatia.percentual }}%</span>
+              </li>
+            {% endfor %}
+          </ul>
+        </div>
+      {% else %}
+        <div class="ls-empty">
+          <i class="bi bi-pie-chart"></i>
+          Nenhuma despesa lançada nesta janela.
+        </div>
+      {% endif %}
+    </div>
+  </article>
+
+  <!-- ---------------- Fechamento mês a mês ---------------- -->
+  <article class="ls-data-panel">
+    <div class="ls-data-header">
+      <div>
+        <h2>Fechamento mês a mês</h2>
+        <p>Detalhe de cada mês, incluindo compras de material.</p>
+      </div>
+      <a class="ls-panel-link" href="{% url 'orcamentos_inner' %}">
+        {{ funil.aprovado }} orçamento(s) aprovado(s) →
+      </a>
+    </div>
+
+    <div class="ls-data-body">
+      <div class="table-responsive">
+        <table class="ls-table">
+          <thead>
+            <tr>
+              <th>Mês</th>
+              <th class="text-end">Receita</th>
+              <th class="text-end">Despesas</th>
+              <th class="text-end">Compras</th>
+              <th class="text-end">Resultado</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for linha in serie reversed %}
+              <tr>
+                <td data-rotulo="Mês">{{ linha.rotulo_longo }}</td>
+                <td data-rotulo="Receita" class="text-end">R$ {{ linha.receita|moeda }}</td>
+                <td data-rotulo="Despesas" class="text-end">R$ {{ linha.despesa|moeda }}</td>
+                <td data-rotulo="Compras" class="text-end">R$ {{ linha.compra|moeda }}</td>
+                <td data-rotulo="Resultado" class="text-end">
+                  <span class="ls-status {% if linha.lucro >= 0 %}success{% else %}danger{% endif %}">
+                    R$ {{ linha.lucro|moeda }}
+                  </span>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </article>
+</section>
 {% endblock %}

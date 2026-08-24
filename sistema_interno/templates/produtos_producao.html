@@ -1,0 +1,582 @@
+{% extends "base_inner.html" %}
+{% load interno_extras %}
+
+{% block title %}Produtos e ficha técnica | Lazer & Sport{% endblock %}
+{% block top_title %}Produtos e ficha técnica{% endblock %}
+
+{% block content %}
+<section class="ls-page-hero">
+  <div class="ls-page-hero-copy">
+    <span class="ls-page-kicker">Engenharia de produção</span>
+    <h1>Produtos e ficha técnica</h1>
+    <p>
+      Cadastre a máquina ou o produto, associe os materiais que entram em cada
+      unidade e veja imediatamente quantas unidades o estoque de hoje sustenta.
+    </p>
+  </div>
+  <div class="ls-page-hero-actions">
+    <a href="{% url 'ordens_producao' %}" class="btn btn-outline-secondary">
+      <i class="bi bi-hammer me-1"></i> Ordens de produção
+    </a>
+    <button type="button" class="btn btn-success" id="novoProduto">
+      <i class="bi bi-plus-lg me-1"></i> Novo produto
+    </button>
+  </div>
+</section>
+
+<section class="ls-metrics">
+  <article class="ls-metric-card blue">
+    <div class="ls-metric-head">
+      <span class="ls-metric-label">Produtos cadastrados</span>
+      <span class="ls-metric-icon"><i class="bi bi-diagram-3"></i></span>
+    </div>
+    <strong class="ls-metric-value">{{ total_produtos }}</strong>
+    <span class="ls-metric-note">Máquinas, brinquedos, peças e outros</span>
+  </article>
+
+  <article class="ls-metric-card green">
+    <div class="ls-metric-head">
+      <span class="ls-metric-label">Prontos para produzir</span>
+      <span class="ls-metric-icon"><i class="bi bi-check2-circle"></i></span>
+    </div>
+    <strong class="ls-metric-value">{{ total_prontos }}</strong>
+    <span class="ls-metric-note">Têm material para pelo menos uma unidade</span>
+  </article>
+
+  <article class="ls-metric-card red">
+    <div class="ls-metric-head">
+      <span class="ls-metric-label">Sem material</span>
+      <span class="ls-metric-icon"><i class="bi bi-exclamation-octagon"></i></span>
+    </div>
+    <strong class="ls-metric-value">{{ total_travados }}</strong>
+    <span class="ls-metric-note">Falta pelo menos um item da ficha</span>
+  </article>
+
+  <article class="ls-metric-card yellow">
+    <div class="ls-metric-head">
+      <span class="ls-metric-label">Sem ficha técnica</span>
+      <span class="ls-metric-icon"><i class="bi bi-question-circle"></i></span>
+    </div>
+    <strong class="ls-metric-value">{{ total_sem_ficha }}</strong>
+    <span class="ls-metric-note">Ainda não dá para calcular a capacidade</span>
+  </article>
+</section>
+
+<section class="ls-filter-panel">
+  <form method="get" class="row g-3 align-items-end">
+    <div class="col-12 col-lg-7">
+      <label class="form-label" for="filtroBusca">Buscar produto</label>
+      <input id="filtroBusca" name="q" value="{{ busca }}" class="form-control"
+             placeholder="Nome, código de produção ou descrição">
+    </div>
+    <div class="col-8 col-lg-3">
+      <label class="form-label" for="filtroCategoria">Categoria</label>
+      <select id="filtroCategoria" name="categoria" class="form-select">
+        <option value="">Todas</option>
+        {% for valor, rotulo in categorias %}
+          <option value="{{ valor }}" {% if categoria_ativa == valor %}selected{% endif %}>{{ rotulo }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-4 col-lg-2 d-grid">
+      <button type="submit" class="btn btn-primary"><i class="bi bi-funnel me-1"></i> Filtrar</button>
+    </div>
+  </form>
+</section>
+
+<section class="ls-data-panel">
+  <div class="ls-data-header">
+    <div>
+      <h2>O que dá para produzir hoje</h2>
+      <p>A capacidade é o limite do material mais escasso da ficha técnica.</p>
+    </div>
+  </div>
+
+  <div class="ls-data-body">
+    <div class="table-responsive">
+      <table class="ls-table">
+        <thead>
+          <tr>
+            <th>Produto</th>
+            <th>Categoria</th>
+            <th class="text-end">Materiais</th>
+            <th class="text-end">Custo de material</th>
+            <th class="text-end">Preço / margem</th>
+            <th>Capacidade</th>
+            <th class="text-end">Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for produto in produtos %}
+            <tr>
+              <td data-rotulo="Produto">
+                <span class="material-nome">{{ produto.nome }}</span>
+                <span class="material-sub d-block">
+                  {% if produto.codigo %}{{ produto.codigo }} · {% endif %}
+                  {% if produto.horas_producao %}{{ produto.horas_producao|moeda }} h de montagem{% else %}Sem tempo estimado{% endif %}
+                  {% if not produto.ativo %} · <span class="ls-status neutral">Inativo</span>{% endif %}
+                </span>
+              </td>
+
+              <td data-rotulo="Categoria">{{ produto.get_categoria_display }}</td>
+
+              <td data-rotulo="Materiais" class="text-end">{{ produto.ficha.count }}</td>
+
+              <td data-rotulo="Custo de material" class="text-end">
+                <span class="ls-money">R$ {{ produto.custo_materiais|moeda }}</span>
+              </td>
+
+              <td data-rotulo="Preço / margem" class="text-end">
+                <span class="ls-money">R$ {{ produto.preco_venda|moeda }}</span>
+                {% if produto.margem_estimada is not None %}
+                  <span class="material-sub d-block">
+                    Margem R$ {{ produto.margem_estimada|moeda }}
+                  </span>
+                {% endif %}
+              </td>
+
+              <td data-rotulo="Capacidade">
+                {% if produto.possivel_produzir is None %}
+                  <div class="ls-capacidade">
+                    <span class="ls-capacidade-valor vazio">—</span>
+                    <span class="ls-capacidade-nota">Cadastre a ficha técnica</span>
+                  </div>
+                {% elif produto.possivel_produzir == 0 %}
+                  <div class="ls-capacidade">
+                    <span class="ls-capacidade-valor zero">0</span>
+                    <span class="ls-capacidade-nota">
+                      Falta {{ produto.gargalo.material.nome_material }}
+                    </span>
+                  </div>
+                {% else %}
+                  <div class="ls-capacidade">
+                    <span class="ls-capacidade-valor ok">{{ produto.possivel_produzir }}</span>
+                    <span class="ls-capacidade-nota">
+                      Limite: {{ produto.gargalo.material.nome_material }}
+                    </span>
+                  </div>
+                {% endif %}
+              </td>
+
+              <td data-rotulo="Ações" class="ls-actions text-end">
+                <button type="button" class="btn btn-sm btn-outline-secondary"
+                        data-ficha="{{ produto.id }}">
+                  <i class="bi bi-list-check"></i> Ficha
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-secondary"
+                        data-editar="{{ produto.id }}">
+                  <i class="bi bi-pencil"></i> Editar
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-danger"
+                        data-excluir="{{ produto.id }}" data-nome="{{ produto.nome }}">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="7">
+                <div class="ls-empty">
+                  <i class="bi bi-diagram-3"></i>
+                  Nenhum produto cadastrado ainda. Comece pelo botão "Novo produto".
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ================= MODAL: produto ================= -->
+<div class="modal fade" id="modalProduto" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <form class="modal-content" id="formProduto" method="post" action="{% url 'produtos_producao' %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="save">
+      <input type="hidden" name="id" id="produtoId">
+
+      <div class="modal-header">
+        <h5 class="modal-title" id="produtoTitulo">Novo produto</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+
+      <div class="modal-body">
+        <div id="produtoErro" class="alert alert-danger d-none" role="alert"></div>
+
+        <div class="row g-3">
+          <div class="col-12 col-md-7">
+            <label class="form-label" for="produtoNome">Nome *</label>
+            <input class="form-control" id="produtoNome" name="nome" data-rotulo="nome"
+                   maxlength="120" required placeholder="Simulador de corrida, castelo inflável...">
+          </div>
+
+          <div class="col-6 col-md-5">
+            <label class="form-label" for="produtoCodigo">Código de produção</label>
+            <input class="form-control" id="produtoCodigo" name="codigo" maxlength="30">
+          </div>
+
+          <div class="col-6 col-md-4">
+            <label class="form-label" for="produtoCategoria">Categoria *</label>
+            <select class="form-select" id="produtoCategoria" name="categoria" required>
+              {% for valor, rotulo in categorias %}<option value="{{ valor }}">{{ rotulo }}</option>{% endfor %}
+            </select>
+          </div>
+
+          <div class="col-6 col-md-4">
+            <label class="form-label" for="produtoHoras">Horas de montagem</label>
+            <input class="form-control" id="produtoHoras" name="horas_producao"
+                   inputmode="decimal" placeholder="0,00">
+          </div>
+
+          <div class="col-6 col-md-4">
+            <label class="form-label" for="produtoPreco">Preço de venda</label>
+            <div class="input-group">
+              <span class="input-group-text">R$</span>
+              <input class="form-control" id="produtoPreco" name="preco_venda"
+                     inputmode="decimal" placeholder="0,00">
+            </div>
+          </div>
+
+          <div class="col-12">
+            <label class="form-label" for="produtoDescricao">Descrição</label>
+            <textarea class="form-control" id="produtoDescricao" name="descricao" rows="2"></textarea>
+          </div>
+
+          <div class="col-12">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="produtoAtivo" name="ativo" value="1" checked>
+              <label class="form-check-label" for="produtoAtivo">
+                Produto ativo (aparece nas ordens de produção e nos orçamentos)
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-success">Salvar produto</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ================= MODAL: ficha técnica ================= -->
+<div class="modal fade" id="modalFicha" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <form class="modal-content" id="formFicha" method="post" action="{% url 'produtos_producao' %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="ficha">
+      <input type="hidden" name="id" id="fichaId">
+      <input type="hidden" name="ficha" id="fichaPayload">
+
+      <div class="modal-header">
+        <h5 class="modal-title" id="fichaTitulo">Ficha técnica</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+
+      <div class="modal-body">
+        <div id="fichaErro" class="alert alert-danger d-none" role="alert"></div>
+
+        <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+          <div>
+            <h6 class="mb-1">Materiais por unidade</h6>
+            <span class="text-muted small">Quanto de cada material entra em UMA unidade do produto.</span>
+          </div>
+          <button type="button" class="btn btn-sm btn-outline-secondary" id="addMaterial">
+            <i class="bi bi-plus-lg me-1"></i> Adicionar material
+          </button>
+        </div>
+
+        <div class="table-responsive">
+          <table class="ls-table ls-itens-table">
+            <thead>
+              <tr>
+                <th style="width: 38%">Material</th>
+                <th style="width: 15%" class="text-end">Por unidade</th>
+                <th style="width: 15%" class="text-end">Em estoque</th>
+                <th style="width: 14%" class="text-end">Dá para</th>
+                <th>Observação</th>
+                <th style="width: 5%"></th>
+              </tr>
+            </thead>
+            <tbody id="fichaCorpo"></tbody>
+          </table>
+        </div>
+
+        <div class="ls-orcamento-total">
+          <div><span>Materiais na ficha</span><strong id="resumoMateriais">0</strong></div>
+          <div class="ls-orcamento-final">
+            <span>Unidades possíveis hoje</span>
+            <strong id="resumoCapacidade">—</strong>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-success">Salvar ficha técnica</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ================= MODAL: excluir ================= -->
+<div class="modal fade" id="modalExcluir" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-sm">
+    <form class="modal-content" id="formExcluir" method="post" action="{% url 'produtos_producao' %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="delete">
+      <input type="hidden" name="id" id="excluirId">
+      <div class="modal-header">
+        <h5 class="modal-title">Excluir produto?</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body">
+        <div id="excluirErro" class="alert alert-danger d-none" role="alert"></div>
+        <p class="mb-0"><strong id="excluirNome"></strong> sai do cadastro junto com a ficha técnica dele.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-danger">Excluir</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{{ produtos_dados|json_script:"produtosDados" }}
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  "use strict";
+
+  var produtos = JSON.parse(
+    document.getElementById("produtosDados").textContent || "[]"
+  );
+
+  /* Saldo de cada material, para calcular a capacidade sem ir ao servidor
+     a cada tecla digitada na ficha. */
+  var saldos = {
+    {% for m in materiais %}"{{ m.id }}": {{ m.quantidade_total|default:0 }}{% if not forloop.last %},{% endif %}
+    {% endfor %}
+  };
+
+  var opcoesMaterial = [
+    '<option value="">Escolha o material</option>'
+    {% for m in materiais %}
+      , '<option value="{{ m.id }}">{{ m.nome_material|escapejs }} ({{ m.get_unidade_display|escapejs }})</option>'
+    {% endfor %}
+  ].join("");
+
+  var fichaCorpo = document.getElementById("fichaCorpo");
+
+  function paraNumero(texto) {
+    var limpo = String(texto || "").trim().replace(/\s/g, "");
+    if (!limpo) return 0;
+    if (limpo.indexOf(",") >= 0) {
+      limpo = limpo.replace(/\./g, "").replace(",", ".");
+    }
+    var numero = parseFloat(limpo);
+    return isNaN(numero) ? 0 : numero;
+  }
+
+  function achar(id) {
+    return produtos.filter(function (p) {
+      return Number(p.id) === Number(id);
+    })[0];
+  }
+
+  /* ------------------------------------------------------------------
+     Cadastro do produto
+     ------------------------------------------------------------------ */
+  function abrirProduto(id) {
+    var form = document.getElementById("formProduto");
+    var produto = id ? achar(id) : null;
+
+    form.reset();
+    Painel.erro("produtoErro", "");
+    Painel.valor("produtoId", produto ? produto.id : "");
+
+    document.getElementById("produtoTitulo").textContent = produto
+      ? "Editar " + produto.nome
+      : "Novo produto";
+
+    document.getElementById("produtoAtivo").checked = produto ? produto.ativo : true;
+
+    if (produto) {
+      Painel.valor("produtoNome", produto.nome);
+      Painel.valor("produtoCodigo", produto.codigo);
+      Painel.valor("produtoCategoria", produto.categoria);
+      Painel.valor("produtoHoras", produto.horas_producao);
+      Painel.valor("produtoPreco", produto.preco_venda);
+      Painel.valor("produtoDescricao", produto.descricao);
+    }
+
+    Painel.abrir("modalProduto");
+  }
+
+  document.getElementById("novoProduto").addEventListener("click", function () {
+    abrirProduto(null);
+  });
+
+  document.querySelectorAll("[data-editar]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      abrirProduto(b.dataset.editar);
+    });
+  });
+
+  Painel.ligar({ form: "formProduto", erro: "produtoErro" });
+
+  /* ------------------------------------------------------------------
+     Ficha técnica
+     ------------------------------------------------------------------ */
+  function novaLinhaFicha(item) {
+    var tr = document.createElement("tr");
+    tr.innerHTML =
+      '<td data-rotulo="Material"><select class="form-select form-select-sm ls-ficha-material">' + opcoesMaterial + '</select></td>' +
+      '<td data-rotulo="Por unidade"><input class="form-control form-control-sm text-end ls-ficha-quantidade" inputmode="decimal" value="1"></td>' +
+      '<td data-rotulo="Em estoque" class="text-end"><span class="ls-number ls-ficha-saldo">—</span></td>' +
+      '<td data-rotulo="Dá para" class="text-end"><span class="ls-number ls-ficha-limite">—</span></td>' +
+      '<td data-rotulo="Observação"><input class="form-control form-control-sm ls-ficha-observacao" maxlength="150" placeholder="Opcional"></td>' +
+      '<td class="text-end"><button type="button" class="btn btn-sm btn-outline-danger ls-ficha-remover" aria-label="Remover material"><i class="bi bi-x-lg"></i></button></td>';
+
+    fichaCorpo.appendChild(tr);
+
+    if (item) {
+      tr.querySelector(".ls-ficha-material").value = item.material || "";
+      tr.querySelector(".ls-ficha-quantidade").value = item.quantidade || "1";
+      tr.querySelector(".ls-ficha-observacao").value = item.observacao || "";
+    }
+
+    recalcularFicha();
+    return tr;
+  }
+
+  function recalcularFicha() {
+    var linhas = fichaCorpo.querySelectorAll("tr");
+    var capacidade = null;
+
+    linhas.forEach(function (linha) {
+      var material = linha.querySelector(".ls-ficha-material").value;
+      var porUnidade = paraNumero(linha.querySelector(".ls-ficha-quantidade").value);
+      var saldo = material ? (saldos[material] || 0) : null;
+
+      linha.querySelector(".ls-ficha-saldo").textContent =
+        saldo === null ? "—" : String(saldo);
+
+      if (saldo === null || porUnidade <= 0) {
+        linha.querySelector(".ls-ficha-limite").textContent = "—";
+        return;
+      }
+
+      var limite = Math.floor(saldo / porUnidade);
+      linha.querySelector(".ls-ficha-limite").textContent = String(limite);
+
+      /* O material mais escasso define a capacidade do produto inteiro. */
+      capacidade = capacidade === null ? limite : Math.min(capacidade, limite);
+    });
+
+    document.getElementById("resumoMateriais").textContent = String(linhas.length);
+    document.getElementById("resumoCapacidade").textContent =
+      capacidade === null ? "—" : String(capacidade);
+  }
+
+  fichaCorpo.addEventListener("input", recalcularFicha);
+  fichaCorpo.addEventListener("change", recalcularFicha);
+
+  fichaCorpo.addEventListener("click", function (evento) {
+    var botao = evento.target.closest(".ls-ficha-remover");
+    if (!botao) return;
+    botao.closest("tr").remove();
+    recalcularFicha();
+  });
+
+  document.getElementById("addMaterial").addEventListener("click", function () {
+    novaLinhaFicha(null);
+  });
+
+  document.querySelectorAll("[data-ficha]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var produto = achar(b.dataset.ficha);
+      if (!produto) return;
+
+      fichaCorpo.innerHTML = "";
+      Painel.erro("fichaErro", "");
+      Painel.valor("fichaId", produto.id);
+      document.getElementById("fichaTitulo").textContent =
+        "Ficha técnica — " + produto.nome;
+
+      produto.ficha.forEach(novaLinhaFicha);
+      if (!fichaCorpo.children.length) novaLinhaFicha(null);
+
+      recalcularFicha();
+      Painel.abrir("modalFicha");
+    });
+  });
+
+  Painel.ligar({
+    form: "formFicha",
+    erro: "fichaErro",
+    antes: function () {
+      var linhas = [];
+      var vistos = {};
+      var problema = null;
+
+      fichaCorpo.querySelectorAll("tr").forEach(function (linha) {
+        var material = linha.querySelector(".ls-ficha-material").value;
+        var quantidade = linha.querySelector(".ls-ficha-quantidade").value.trim();
+
+        /* Linha em branco recém-adicionada é descartada em silêncio. */
+        if (!material && !quantidade) return;
+
+        if (!material) {
+          problema = problema || "Há uma linha sem material escolhido.";
+          return;
+        }
+
+        if (vistos[material]) {
+          problema = problema ||
+            "O mesmo material aparece duas vezes. Some as quantidades em uma linha só.";
+          return;
+        }
+        vistos[material] = true;
+
+        if (paraNumero(quantidade) <= 0) {
+          problema = problema || "A quantidade por unidade precisa ser maior que zero.";
+          return;
+        }
+
+        linhas.push({
+          material: material,
+          quantidade: quantidade,
+          observacao: linha.querySelector(".ls-ficha-observacao").value.trim()
+        });
+      });
+
+      if (problema) return problema;
+
+      document.getElementById("fichaPayload").value = JSON.stringify(linhas);
+      return null;
+    }
+  });
+
+  /* ------------------------------------------------------------------
+     Exclusão
+     ------------------------------------------------------------------ */
+  document.querySelectorAll("[data-excluir]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      Painel.erro("excluirErro", "");
+      Painel.valor("excluirId", b.dataset.excluir);
+      document.getElementById("excluirNome").textContent = b.dataset.nome;
+      Painel.abrir("modalExcluir");
+    });
+  });
+
+  Painel.ligar({ form: "formExcluir", erro: "excluirErro" });
+});
+</script>
+{% endblock %}

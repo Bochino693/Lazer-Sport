@@ -16,9 +16,13 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
 
   {% block extra_css %}{% endblock %}
-  <link href="{% static 'interno/interno_modern.css' %}?v=3.1" rel="stylesheet">
+  <link href="{% static 'interno/interno_modern.css' %}?v=3.2" rel="stylesheet">
+
+  <!-- Modal de carregamento compartilhado com o painel /adm. -->
+  <link rel="stylesheet" href="{% static 'site/ls-page-loader.css' %}?v=1">
+  <script src="{% static 'site/ls-page-loader.js' %}?v=1" defer></script>
 </head>
-<body class="ls-body">
+<body class="ls-body" data-loader-logo="{% static 'images/logoofi.png' %}">
 <div class="ls-shell">
   <aside class="ls-sidebar" id="sidebarMenu">
     <a class="ls-brand" href="{% url 'home_inner' %}">
@@ -57,6 +61,30 @@
         <a class="ls-nav-item {% if request.resolver_match.url_name == 'movimentacoes_inner' %}active{% endif %}" href="{% url 'movimentacoes_inner' %}">
           <span class="ls-nav-icon"><i class="bi bi-arrow-left-right"></i></span>
           <span>Movimentações</span>
+        </a>
+      </div>
+
+      <div class="ls-nav-section">
+        <span class="ls-nav-caption">Produção</span>
+        <a class="ls-nav-item {% if request.resolver_match.url_name == 'produtos_producao' %}active{% endif %}" href="{% url 'produtos_producao' %}">
+          <span class="ls-nav-icon"><i class="bi bi-diagram-3-fill"></i></span>
+          <span>Produtos e ficha técnica</span>
+        </a>
+        <a class="ls-nav-item {% if request.resolver_match.url_name == 'ordens_producao' %}active{% endif %}" href="{% url 'ordens_producao' %}">
+          <span class="ls-nav-icon"><i class="bi bi-hammer"></i></span>
+          <span>Ordens de produção</span>
+        </a>
+      </div>
+
+      <div class="ls-nav-section">
+        <span class="ls-nav-caption">Comercial</span>
+        <a class="ls-nav-item {% if request.resolver_match.url_name == 'financeiro_inner' %}active{% endif %}" href="{% url 'financeiro_inner' %}">
+          <span class="ls-nav-icon"><i class="bi bi-graph-up-arrow"></i></span>
+          <span>Financeiro</span>
+        </a>
+        <a class="ls-nav-item {% if request.resolver_match.url_name == 'orcamentos_inner' %}active{% endif %}" href="{% url 'orcamentos_inner' %}">
+          <span class="ls-nav-icon"><i class="bi bi-file-earmark-text-fill"></i></span>
+          <span>Orçamentos</span>
         </a>
       </div>
 

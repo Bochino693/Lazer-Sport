@@ -1,0 +1,592 @@
+{% extends "base_inner.html" %}
+{% load interno_extras %}
+
+{% block title %}Orçamentos | Lazer & Sport{% endblock %}
+{% block top_title %}Orçamentos{% endblock %}
+
+{% block content %}
+<section class="ls-page-hero">
+  <div class="ls-page-hero-copy">
+    <span class="ls-page-kicker">Proposta comercial</span>
+    <h1>Orçamentos</h1>
+    <p>Monte a proposta item a item, acompanhe o que foi enviado e veja quanto está aprovado.</p>
+  </div>
+  <div class="ls-page-hero-actions">
+    <a href="{% url 'financeiro_inner' %}" class="btn btn-outline-secondary">
+      <i class="bi bi-graph-up-arrow me-1"></i> Financeiro
+    </a>
+    <button type="button" class="btn btn-success" id="novoOrcamento">
+      <i class="bi bi-plus-lg me-1"></i> Novo orçamento
+    </button>
+  </div>
+</section>
+
+<section class="ls-metrics">
+  <article class="ls-metric-card blue">
+    <div class="ls-metric-head">
+      <span class="ls-metric-label">Orçamentos listados</span>
+      <span class="ls-metric-icon"><i class="bi bi-file-earmark-text"></i></span>
+    </div>
+    <strong class="ls-metric-value">{{ total_orcamentos }}</strong>
+    <span class="ls-metric-note">Conforme os filtros aplicados</span>
+  </article>
+
+  <article class="ls-metric-card yellow">
+    <div class="ls-metric-head">
+      <span class="ls-metric-label">Em aberto</span>
+      <span class="ls-metric-icon"><i class="bi bi-hourglass-split"></i></span>
+    </div>
+    <strong class="ls-metric-value">R$ {{ total_em_aberto|moeda }}</strong>
+    <span class="ls-metric-note">{{ quantidade_aberto }} proposta(s) aguardando resposta</span>
+  </article>
+
+  <article class="ls-metric-card green">
+    <div class="ls-metric-head">
+      <span class="ls-metric-label">Aprovado</span>
+      <span class="ls-metric-icon"><i class="bi bi-check2-circle"></i></span>
+    </div>
+    <strong class="ls-metric-value">R$ {{ total_aprovado|moeda }}</strong>
+    <span class="ls-metric-note">{{ quantidade_aprovado }} orçamento(s) fechado(s)</span>
+  </article>
+
+  <article class="ls-metric-card violet">
+    <div class="ls-metric-head">
+      <span class="ls-metric-label">Produtos disponíveis</span>
+      <span class="ls-metric-icon"><i class="bi bi-diagram-3"></i></span>
+    </div>
+    <strong class="ls-metric-value">{{ produtos|length }}</strong>
+    <span class="ls-metric-note">Cadastros de produção prontos para orçar</span>
+  </article>
+</section>
+
+<section class="ls-filter-panel">
+  <form method="get" class="row g-3 align-items-end">
+    <div class="col-12 col-lg-7">
+      <label class="form-label" for="filtroBusca">Buscar</label>
+      <input id="filtroBusca" name="q" value="{{ busca }}" class="form-control"
+             placeholder="Cliente, contato, item ou observação">
+    </div>
+    <div class="col-8 col-lg-3">
+      <label class="form-label" for="filtroStatus">Situação</label>
+      <select id="filtroStatus" name="status" class="form-select">
+        <option value="">Todas</option>
+        {% for valor, rotulo in status_opcoes %}
+          <option value="{{ valor }}" {% if status_ativo == valor %}selected{% endif %}>{{ rotulo }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-4 col-lg-2 d-grid">
+      <button type="submit" class="btn btn-primary"><i class="bi bi-funnel me-1"></i> Filtrar</button>
+    </div>
+  </form>
+</section>
+
+<section class="ls-data-panel">
+  <div class="ls-data-header">
+    <div>
+      <h2>Propostas</h2>
+      <p>Clique em editar para abrir a proposta com todos os itens.</p>
+    </div>
+  </div>
+
+  <div class="ls-data-body">
+    <div class="table-responsive">
+      <table class="ls-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Cliente</th>
+            <th class="text-end">Itens</th>
+            <th class="text-end">Total</th>
+            <th>Validade</th>
+            <th>Situação</th>
+            <th class="text-end">Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for orcamento in orcamentos %}
+            <tr>
+              <td data-rotulo="#"><span class="ls-number">{{ orcamento.id }}</span></td>
+              <td data-rotulo="Cliente">
+                <span class="material-nome">{{ orcamento.destinatario }}</span>
+                {% if orcamento.contato %}
+                  <span class="material-sub d-block">{{ orcamento.contato }}</span>
+                {% endif %}
+              </td>
+              <td data-rotulo="Itens" class="text-end">{{ orcamento.itens.count }}</td>
+              <td data-rotulo="Total" class="text-end">
+                <span class="ls-money">R$ {{ orcamento.total|moeda }}</span>
+              </td>
+              <td data-rotulo="Validade">
+                {% if orcamento.validade %}
+                  {{ orcamento.validade|date:"d/m/Y" }}
+                  {% if orcamento.vencido %}<span class="ls-status danger d-block mt-1">Vencido</span>{% endif %}
+                {% else %}
+                  <span class="text-muted">Sem prazo</span>
+                {% endif %}
+              </td>
+              <td data-rotulo="Situação">
+                <span class="ls-status
+                  {% if orcamento.status == 'aprovado' %}success
+                  {% elif orcamento.status == 'recusado' %}danger
+                  {% elif orcamento.status == 'enviado' %}info
+                  {% elif orcamento.status == 'expirado' %}warning
+                  {% else %}neutral{% endif %}">
+                  {{ orcamento.get_status_display }}
+                </span>
+              </td>
+              <td data-rotulo="Ações" class="ls-actions text-end">
+                <button type="button" class="btn btn-sm btn-outline-secondary"
+                        data-editar="{{ orcamento.id }}">
+                  <i class="bi bi-pencil"></i> Editar
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-secondary"
+                        data-situacao="{{ orcamento.id }}"
+                        data-nome="#{{ orcamento.id }} — {{ orcamento.destinatario }}"
+                        data-status="{{ orcamento.status }}">
+                  <i class="bi bi-flag"></i> Situação
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-danger"
+                        data-excluir="{{ orcamento.id }}"
+                        data-nome="Orçamento #{{ orcamento.id }}">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="7">
+                <div class="ls-empty">
+                  <i class="bi bi-file-earmark-text"></i>
+                  Nenhum orçamento encontrado. Comece criando o primeiro.
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ================= MODAL: montar orçamento ================= -->
+<div class="modal fade" id="modalOrcamento" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <form class="modal-content" id="formOrcamento" method="post" action="{% url 'orcamentos_inner' %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="save">
+      <input type="hidden" name="id" id="orcamentoId">
+      <input type="hidden" name="itens" id="orcamentoItens">
+
+      <div class="modal-header">
+        <h5 class="modal-title" id="orcamentoTitulo">Novo orçamento</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+
+      <div class="modal-body">
+        <div id="orcamentoErro" class="alert alert-danger d-none" role="alert"></div>
+
+        <div class="row g-3">
+          <div class="col-12 col-md-4">
+            <label class="form-label" for="orcamentoCliente">Cliente cadastrado</label>
+            <select class="form-select" id="orcamentoCliente" name="cliente">
+              <option value="">Não vincular</option>
+              {% for c in clientes %}<option value="{{ c.id }}">{{ c.nome_cliente }}</option>{% endfor %}
+            </select>
+          </div>
+
+          <div class="col-12 col-md-4">
+            <label class="form-label" for="orcamentoNome">Nome do destinatário</label>
+            <input class="form-control" id="orcamentoNome" name="nome_cliente" maxlength="120"
+                   placeholder="Usado quando não há cadastro">
+          </div>
+
+          <div class="col-12 col-md-4">
+            <label class="form-label" for="orcamentoContato">Contato</label>
+            <input class="form-control" id="orcamentoContato" name="contato" maxlength="120"
+                   placeholder="Telefone ou e-mail">
+          </div>
+
+          <div class="col-6 col-md-3">
+            <label class="form-label" for="orcamentoStatus">Situação</label>
+            <select class="form-select" id="orcamentoStatus" name="status">
+              {% for valor, rotulo in status_opcoes %}<option value="{{ valor }}">{{ rotulo }}</option>{% endfor %}
+            </select>
+          </div>
+
+          <div class="col-6 col-md-3">
+            <label class="form-label" for="orcamentoValidade">Válido até</label>
+            <input type="date" class="form-control" id="orcamentoValidade" name="validade">
+          </div>
+
+          <div class="col-6 col-md-3">
+            <label class="form-label" for="orcamentoFrete">Frete</label>
+            <div class="input-group">
+              <span class="input-group-text">R$</span>
+              <input class="form-control ls-recalcula" id="orcamentoFrete" name="frete"
+                     inputmode="decimal" placeholder="0,00">
+            </div>
+          </div>
+
+          <div class="col-6 col-md-3">
+            <label class="form-label" for="orcamentoDesconto">Desconto</label>
+            <div class="input-group">
+              <span class="input-group-text">R$</span>
+              <input class="form-control ls-recalcula" id="orcamentoDesconto" name="desconto"
+                     inputmode="decimal" placeholder="0,00">
+            </div>
+          </div>
+        </div>
+
+        <hr class="my-4">
+
+        <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+          <div>
+            <h6 class="mb-1">Itens da proposta</h6>
+            <span class="text-muted small">Escolha um produto de produção ou escreva livremente.</span>
+          </div>
+          <button type="button" class="btn btn-sm btn-outline-secondary" id="addItem">
+            <i class="bi bi-plus-lg me-1"></i> Adicionar item
+          </button>
+        </div>
+
+        <div class="table-responsive">
+          <table class="ls-table ls-itens-table">
+            <thead>
+              <tr>
+                <th style="width: 26%">Produto</th>
+                <th>Descrição</th>
+                <th style="width: 12%" class="text-end">Qtd.</th>
+                <th style="width: 17%" class="text-end">Valor unit.</th>
+                <th style="width: 15%" class="text-end">Subtotal</th>
+                <th style="width: 6%"></th>
+              </tr>
+            </thead>
+            <tbody id="itensCorpo"></tbody>
+          </table>
+        </div>
+
+        <div class="ls-orcamento-total">
+          <div><span>Subtotal dos itens</span><strong id="resumoSubtotal">R$ 0,00</strong></div>
+          <div><span>Frete</span><strong id="resumoFrete">R$ 0,00</strong></div>
+          <div><span>Desconto</span><strong id="resumoDesconto">− R$ 0,00</strong></div>
+          <div class="ls-orcamento-final"><span>Total do orçamento</span><strong id="resumoTotal">R$ 0,00</strong></div>
+        </div>
+
+        <div class="mt-3">
+          <label class="form-label" for="orcamentoObs">Observações</label>
+          <textarea class="form-control" id="orcamentoObs" name="observacoes" rows="2"
+                    placeholder="Prazo de entrega, condições de pagamento, garantia..."></textarea>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-success">Salvar orçamento</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ================= MODAL: mudar situação ================= -->
+<div class="modal fade" id="modalSituacao" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <form class="modal-content" id="formSituacao" method="post" action="{% url 'orcamentos_inner' %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="status">
+      <input type="hidden" name="id" id="situacaoId">
+      <div class="modal-header">
+        <h5 class="modal-title">Mudar situação</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body">
+        <div id="situacaoErro" class="alert alert-danger d-none" role="alert"></div>
+        <p class="mb-3"><strong id="situacaoNome"></strong></p>
+        <label class="form-label" for="situacaoStatus">Nova situação</label>
+        <select class="form-select" id="situacaoStatus" name="status">
+          {% for valor, rotulo in status_opcoes %}<option value="{{ valor }}">{{ rotulo }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-primary">Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ================= MODAL: excluir ================= -->
+<div class="modal fade" id="modalExcluir" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-sm">
+    <form class="modal-content" id="formExcluir" method="post" action="{% url 'orcamentos_inner' %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="delete">
+      <input type="hidden" name="id" id="excluirId">
+      <div class="modal-header">
+        <h5 class="modal-title">Excluir orçamento?</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body">
+        <div id="excluirErro" class="alert alert-danger d-none" role="alert"></div>
+        <p class="mb-0"><strong id="excluirNome"></strong> e todos os itens dele são apagados. Não dá para desfazer.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-danger">Excluir</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{{ orcamentos_dados|json_script:"orcamentosDados" }}
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  "use strict";
+
+  var orcamentos = JSON.parse(
+    document.getElementById("orcamentosDados").textContent || "[]"
+  );
+
+  var corpo = document.getElementById("itensCorpo");
+  var opcoesProduto = [
+    '<option value="">Item livre</option>'
+    {% for p in produtos %}
+      , '<option value="{{ p.id }}" data-preco="{{ p.preco_venda|stringformat:".2f" }}">{{ p.nome|escapejs }}</option>'
+    {% endfor %}
+  ].join("");
+
+  /* ------------------------------------------------------------------
+     Números
+     O painel inteiro digita no formato brasileiro; a conta é feita em
+     ponto e só a exibição volta para vírgula.
+     ------------------------------------------------------------------ */
+  function paraNumero(texto) {
+    var limpo = String(texto || "").trim().replace(/[R$\s]/g, "");
+    if (!limpo) return 0;
+
+    if (limpo.indexOf(",") >= 0) {
+      limpo = limpo.replace(/\./g, "").replace(",", ".");
+    }
+
+    var numero = parseFloat(limpo);
+    return isNaN(numero) ? 0 : numero;
+  }
+
+  function moeda(valor) {
+    return "R$ " + valor.toLocaleString("pt-BR", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+  }
+
+  /* ------------------------------------------------------------------
+     Linhas de item
+     ------------------------------------------------------------------ */
+  function novaLinha(item) {
+    var tr = document.createElement("tr");
+    tr.className = "ls-item-linha";
+    tr.innerHTML =
+      '<td data-rotulo="Produto"><select class="form-select form-select-sm ls-item-produto">' + opcoesProduto + '</select></td>' +
+      '<td data-rotulo="Descrição"><input class="form-control form-control-sm ls-item-descricao" maxlength="180" placeholder="Descrição que vai na proposta"></td>' +
+      '<td data-rotulo="Qtd."><input class="form-control form-control-sm text-end ls-item-quantidade" inputmode="numeric" value="1"></td>' +
+      '<td data-rotulo="Valor unit."><input class="form-control form-control-sm text-end ls-item-valor" inputmode="decimal" placeholder="0,00"></td>' +
+      '<td data-rotulo="Subtotal" class="text-end"><span class="ls-money ls-item-subtotal">R$ 0,00</span></td>' +
+      '<td class="text-end"><button type="button" class="btn btn-sm btn-outline-danger ls-item-remover" aria-label="Remover item"><i class="bi bi-x-lg"></i></button></td>';
+
+    corpo.appendChild(tr);
+
+    if (item) {
+      tr.querySelector(".ls-item-produto").value = item.produto || "";
+      tr.querySelector(".ls-item-descricao").value = item.descricao || "";
+      tr.querySelector(".ls-item-quantidade").value = item.quantidade || 1;
+      tr.querySelector(".ls-item-valor").value = item.valor_unitario || "";
+    }
+
+    recalcular();
+    return tr;
+  }
+
+  /* Escolher um produto preenche descrição e preço, mas nunca sobrescreve
+     o que o usuário já ajustou à mão. */
+  corpo.addEventListener("change", function (evento) {
+    var seletor = evento.target.closest(".ls-item-produto");
+    if (!seletor) return;
+
+    var linha = seletor.closest("tr");
+    var escolhida = seletor.options[seletor.selectedIndex];
+    var descricao = linha.querySelector(".ls-item-descricao");
+    var valor = linha.querySelector(".ls-item-valor");
+
+    if (seletor.value) {
+      if (!descricao.value.trim()) descricao.value = escolhida.textContent.trim();
+      if (!paraNumero(valor.value)) {
+        valor.value = String(escolhida.dataset.preco || "0").replace(".", ",");
+      }
+    }
+
+    recalcular();
+  });
+
+  corpo.addEventListener("input", recalcular);
+
+  corpo.addEventListener("click", function (evento) {
+    var botao = evento.target.closest(".ls-item-remover");
+    if (!botao) return;
+    botao.closest("tr").remove();
+    recalcular();
+  });
+
+  document.getElementById("addItem").addEventListener("click", function () {
+    novaLinha(null).querySelector(".ls-item-descricao").focus();
+  });
+
+  document.querySelectorAll(".ls-recalcula").forEach(function (campo) {
+    campo.addEventListener("input", recalcular);
+  });
+
+  /* ------------------------------------------------------------------
+     Totais
+     ------------------------------------------------------------------ */
+  function recalcular() {
+    var subtotal = 0;
+
+    corpo.querySelectorAll("tr").forEach(function (linha) {
+      var quantidade = parseInt(linha.querySelector(".ls-item-quantidade").value, 10) || 0;
+      var unitario = paraNumero(linha.querySelector(".ls-item-valor").value);
+      var parcial = quantidade * unitario;
+
+      linha.querySelector(".ls-item-subtotal").textContent = moeda(parcial);
+      subtotal += parcial;
+    });
+
+    var frete = paraNumero(document.getElementById("orcamentoFrete").value);
+    var desconto = paraNumero(document.getElementById("orcamentoDesconto").value);
+    var total = Math.max(subtotal + frete - desconto, 0);
+
+    document.getElementById("resumoSubtotal").textContent = moeda(subtotal);
+    document.getElementById("resumoFrete").textContent = moeda(frete);
+    document.getElementById("resumoDesconto").textContent = "− " + moeda(desconto);
+    document.getElementById("resumoTotal").textContent = moeda(total);
+  }
+
+  /* ------------------------------------------------------------------
+     Abertura do modal
+     ------------------------------------------------------------------ */
+  function achar(id) {
+    return orcamentos.filter(function (o) {
+      return Number(o.id) === Number(id);
+    })[0];
+  }
+
+  function abrir(id) {
+    var form = document.getElementById("formOrcamento");
+    var orcamento = id ? achar(id) : null;
+
+    form.reset();
+    corpo.innerHTML = "";
+    Painel.erro("orcamentoErro", "");
+    Painel.valor("orcamentoId", orcamento ? orcamento.id : "");
+
+    document.getElementById("orcamentoTitulo").textContent = orcamento
+      ? "Orçamento #" + orcamento.id
+      : "Novo orçamento";
+
+    if (orcamento) {
+      Painel.valor("orcamentoCliente", orcamento.cliente);
+      Painel.valor("orcamentoNome", orcamento.nome_cliente);
+      Painel.valor("orcamentoContato", orcamento.contato);
+      Painel.valor("orcamentoStatus", orcamento.status);
+      Painel.valor("orcamentoValidade", orcamento.validade);
+      Painel.valor("orcamentoFrete", orcamento.frete);
+      Painel.valor("orcamentoDesconto", orcamento.desconto);
+      Painel.valor("orcamentoObs", orcamento.observacoes);
+      orcamento.itens.forEach(novaLinha);
+    }
+
+    if (!corpo.children.length) novaLinha(null);
+
+    recalcular();
+    Painel.abrir("modalOrcamento");
+  }
+
+  document.getElementById("novoOrcamento").addEventListener("click", function () {
+    abrir(null);
+  });
+
+  document.querySelectorAll("[data-editar]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      abrir(b.dataset.editar);
+    });
+  });
+
+  /* ------------------------------------------------------------------
+     Envio
+     ------------------------------------------------------------------ */
+  Painel.ligar({
+    form: "formOrcamento",
+    erro: "orcamentoErro",
+    antes: function () {
+      var itens = [];
+      var vazio = false;
+
+      corpo.querySelectorAll("tr").forEach(function (linha) {
+        var descricao = linha.querySelector(".ls-item-descricao").value.trim();
+        var quantidade = parseInt(linha.querySelector(".ls-item-quantidade").value, 10) || 0;
+        var valor = linha.querySelector(".ls-item-valor").value.trim();
+
+        /* Linha totalmente em branco é descartada em silêncio: sobra do
+           botão "adicionar item" clicado sem preencher. */
+        if (!descricao && !valor && quantidade <= 1) return;
+
+        if (!descricao) {
+          vazio = true;
+          return;
+        }
+
+        itens.push({
+          descricao: descricao,
+          produto: linha.querySelector(".ls-item-produto").value,
+          quantidade: quantidade,
+          valor_unitario: valor || "0"
+        });
+      });
+
+      if (vazio) return "Há item sem descrição. Preencha ou remova a linha.";
+      if (!itens.length) return "Adicione pelo menos um item ao orçamento.";
+
+      document.getElementById("orcamentoItens").value = JSON.stringify(itens);
+      return null;
+    }
+  });
+
+  /* ------------------------------------------------------------------
+     Situação e exclusão
+     ------------------------------------------------------------------ */
+  document.querySelectorAll("[data-situacao]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      Painel.erro("situacaoErro", "");
+      Painel.valor("situacaoId", b.dataset.situacao);
+      Painel.valor("situacaoStatus", b.dataset.status);
+      document.getElementById("situacaoNome").textContent = b.dataset.nome;
+      Painel.abrir("modalSituacao");
+    });
+  });
+
+  Painel.ligar({ form: "formSituacao", erro: "situacaoErro" });
+
+  document.querySelectorAll("[data-excluir]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      Painel.erro("excluirErro", "");
+      Painel.valor("excluirId", b.dataset.excluir);
+      document.getElementById("excluirNome").textContent = b.dataset.nome;
+      Painel.abrir("modalExcluir");
+    });
+  });
+
+  Painel.ligar({ form: "formExcluir", erro: "excluirErro" });
+});
+</script>
+{% endblock %}

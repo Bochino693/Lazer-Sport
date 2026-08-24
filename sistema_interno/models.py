@@ -447,3 +447,418 @@ class FinanceiroMensal(Prime):
     class Meta:
         verbose_name = "Financeiro Mensal"
         verbose_name_plural = "Financeiros Mensais"
+
+
+# ======================================================================
+# PRODUÇÃO — o que a fábrica monta e do que é feito
+# ======================================================================
+class ProdutoInterno(Prime):
+    """Uma máquina ou produto que a fábrica monta.
+
+    Existe separado de `core.Brinquedos` de propósito: o catálogo do site
+    é vitrine (foto, preço, descrição de venda) e nem tudo que a fábrica
+    produz vai para a loja. Quando o produto também está no site, o campo
+    `brinquedo` faz a ponte entre os dois.
+    """
+
+    class Categoria(models.TextChoices):
+        MAQUINA = "maquina", "Máquina"
+        BRINQUEDO = "brinquedo", "Brinquedo"
+        PECA = "peca", "Peça / componente"
+        OUTRO = "outro", "Outro"
+
+    nome = models.CharField(max_length=120)
+    codigo = models.CharField(
+        "Código de produção",
+        max_length=30,
+        blank=True,
+        help_text="Código usado na ordem de serviço e na etiqueta.",
+    )
+    categoria = models.CharField(
+        max_length=15,
+        choices=Categoria.choices,
+        default=Categoria.MAQUINA,
+        db_index=True,
+    )
+    brinquedo = models.ForeignKey(
+        Brinquedos,
+        on_delete=models.SET_NULL,
+        related_name="produtos_internos",
+        null=True,
+        blank=True,
+        help_text="Item correspondente no catálogo do site, quando houver.",
+    )
+    descricao = models.TextField(blank=True)
+    horas_producao = models.DecimalField(
+        "Horas de montagem",
+        max_digits=6,
+        decimal_places=2,
+        default=Decimal("0.00"),
+    )
+    preco_venda = models.DecimalField(
+        "Preço de venda sugerido",
+        max_digits=12,
+        decimal_places=2,
+        default=Decimal("0.00"),
+    )
+    ativo = models.BooleanField(default=True)
+
+    # ---------------------------------------------------------------- custo
+    @property
+    def custo_materiais(self):
+        """Soma o preço de referência de cada material da ficha técnica."""
+        return sum(
+            (item.custo_estimado for item in self.ficha.all()),
+            Decimal("0.00"),
+        ).quantize(Decimal("0.01"))
+
+    @property
+    def margem_estimada(self):
+        """Preço de venda menos o custo de material. Sem ficha, devolve None."""
+        if not self.preco_venda:
+            return None
+        return (self.preco_venda - self.custo_materiais).quantize(Decimal("0.01"))
+
+    # ------------------------------------------------------------ produção
+    @property
+    def possivel_produzir(self):
+        """Quantas unidades o estoque atual sustenta.
+
+        É o menor limite entre os materiais da ficha: o material mais
+        escasso é quem define o teto da produção. Produto sem ficha
+        técnica devolve None — não dá para afirmar nada sobre ele.
+        """
+        itens = list(self.ficha.all())
+        if not itens:
+            return None
+
+        limites = [item.unidades_possiveis for item in itens]
+        return min(limites) if limites else 0
+
+    @property
+    def gargalo(self):
+        """O item da ficha que segura a produção. Serve para a tela de compras."""
+        itens = list(self.ficha.all())
+        if not itens:
+            return None
+        return min(itens, key=lambda item: item.unidades_possiveis)
+
+    def __str__(self):
+        return self.nome
+
+    class Meta:
+        verbose_name = "Produto de produção"
+        verbose_name_plural = "Produtos de produção"
+        ordering = ("nome",)
+
+
+class ItemFichaTecnica(Prime):
+    """Quanto de cada material entra em uma unidade do produto."""
+
+    produto = models.ForeignKey(
+        ProdutoInterno,
+        on_delete=models.CASCADE,
+        related_name="ficha",
+    )
+    material = models.ForeignKey(
+        Material,
+        on_delete=models.PROTECT,
+        related_name="fichas",
+    )
+    quantidade = models.DecimalField(
+        "Quantidade por unidade",
+        max_digits=10,
+        decimal_places=3,
+        default=Decimal("1.000"),
+    )
+    observacao = models.CharField(max_length=150, blank=True)
+
+    @property
+    def disponivel(self):
+        """Saldo do material somando todos os locais de guarda."""
+        return sum(local.quantidade for local in self.material.estoque.all())
+
+    @property
+    def unidades_possiveis(self):
+        """Quantas unidades do produto este material sozinho sustenta."""
+        if self.quantidade <= 0:
+            return 0
+        return int(Decimal(self.disponivel) // self.quantidade)
+
+    @property
+    def preco_referencia(self):
+        """Último preço pago; na falta dele, zero em vez de quebrar a tela."""
+        local = (
+            self.material.estoque
+            .exclude(preco_fornecedor=None)
+            .order_by("-atualizado")
+            .first()
+        )
+        return local.preco_fornecedor if local else Decimal("0.00")
+
+    @property
+    def custo_estimado(self):
+        return (self.preco_referencia * self.quantidade).quantize(Decimal("0.01"))
+
+    def __str__(self):
+        return f"{self.material} x {self.quantidade}"
+
+    class Meta:
+        verbose_name = "Item da ficha técnica"
+        verbose_name_plural = "Itens da ficha técnica"
+        unique_together = ("produto", "material")
+        ordering = ("material__nome_material",)
+
+
+class OrdemProducao(Prime):
+    """Uma rodada de produção: o que foi montado, quanto e por quem."""
+
+    class Status(models.TextChoices):
+        PLANEJADA = "planejada", "Planejada"
+        EM_PRODUCAO = "producao", "Em produção"
+        CONCLUIDA = "concluida", "Concluída"
+        CANCELADA = "cancelada", "Cancelada"
+
+    produto = models.ForeignKey(
+        ProdutoInterno,
+        on_delete=models.PROTECT,
+        related_name="ordens",
+    )
+    quantidade = models.PositiveIntegerField(default=1)
+    status = models.CharField(
+        max_length=12,
+        choices=Status.choices,
+        default=Status.PLANEJADA,
+        db_index=True,
+    )
+    montador = models.ForeignKey(
+        Montadores,
+        on_delete=models.SET_NULL,
+        related_name="ordens",
+        null=True,
+        blank=True,
+    )
+    setor = models.ForeignKey(
+        Setores,
+        on_delete=models.SET_NULL,
+        related_name="ordens",
+        null=True,
+        blank=True,
+    )
+    responsavel = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name="ordens_producao",
+        null=True,
+        blank=True,
+    )
+    prevista_para = models.DateField(null=True, blank=True)
+    concluida_em = models.DateTimeField(null=True, blank=True)
+    observacoes = models.TextField(blank=True)
+
+    # Só pode dar baixa uma vez: sem esta trava, reabrir e concluir de novo
+    # consumiria o estoque duas vezes pela mesma produção.
+    baixa_aplicada = models.BooleanField(default=False)
+
+    @property
+    def materiais_necessarios(self):
+        """Lista (item da ficha, total necessário, saldo) para a tela."""
+        linhas = []
+        for item in self.produto.ficha.all():
+            necessario = (item.quantidade * self.quantidade)
+            linhas.append({
+                "item": item,
+                "material": item.material,
+                "necessario": necessario,
+                "disponivel": item.disponivel,
+                "suficiente": Decimal(item.disponivel) >= necessario,
+            })
+        return linhas
+
+    @property
+    def tem_material(self):
+        linhas = self.materiais_necessarios
+        return bool(linhas) and all(linha["suficiente"] for linha in linhas)
+
+    @transaction.atomic
+    def concluir(self, usuario=None):
+        """Fecha a ordem e dá baixa no estoque de cada material da ficha.
+
+        A baixa passa por MovimentoEstoque.registrar para herdar a trava de
+        concorrência e deixar o mesmo rastro de qualquer outra saída — quem
+        olhar o histórico do material vê a ordem que consumiu a peça.
+        """
+        if self.baixa_aplicada:
+            raise ValueError("Esta ordem já deu baixa no estoque.")
+
+        if self.status == self.Status.CANCELADA:
+            raise ValueError("Ordem cancelada não pode ser concluída.")
+
+        itens = list(self.produto.ficha.select_related("material"))
+        if not itens:
+            raise ValueError(
+                "O produto não tem ficha técnica: cadastre os materiais "
+                "antes de concluir a produção."
+            )
+
+        for item in itens:
+            necessario = item.quantidade * self.quantidade
+
+            # A quantidade em estoque é inteira; frações da ficha (0,5 m de
+            # lona) são arredondadas para cima para não baixar menos do que
+            # a produção realmente consumiu.
+            consumir = int(necessario.to_integral_value(rounding="ROUND_CEILING"))
+            if consumir <= 0:
+                continue
+
+            locais = list(
+                item.material.estoque
+                .filter(quantidade__gt=0)
+                .order_by("-quantidade")
+            )
+
+            restante = consumir
+            for local in locais:
+                if restante <= 0:
+                    break
+
+                baixa = min(restante, local.quantidade)
+                MovimentoEstoque.registrar(
+                    local,
+                    MovimentoEstoque.Tipo.SAIDA,
+                    baixa,
+                    motivo=f"Produção OP #{self.pk} — {self.produto.nome}",
+                    responsavel=usuario,
+                )
+                restante -= baixa
+
+            if restante > 0:
+                raise ValueError(
+                    f"Estoque insuficiente de {item.material.nome_material}: "
+                    f"faltam {restante} para concluir a ordem."
+                )
+
+        self.status = self.Status.CONCLUIDA
+        self.concluida_em = timezone.now()
+        self.baixa_aplicada = True
+        self.save(update_fields=["status", "concluida_em", "baixa_aplicada", "atualizado"])
+        return self
+
+    def __str__(self):
+        return f"OP #{self.pk} — {self.produto} x{self.quantidade}"
+
+    class Meta:
+        verbose_name = "Ordem de produção"
+        verbose_name_plural = "Ordens de produção"
+        ordering = ("-criacao", "-id")
+
+
+# ======================================================================
+# ORÇAMENTOS
+# ======================================================================
+class Orcamento(Prime):
+    """Proposta comercial montada no painel interno."""
+
+    class Status(models.TextChoices):
+        RASCUNHO = "rascunho", "Rascunho"
+        ENVIADO = "enviado", "Enviado"
+        APROVADO = "aprovado", "Aprovado"
+        RECUSADO = "recusado", "Recusado"
+        EXPIRADO = "expirado", "Expirado"
+
+    cliente = models.ForeignKey(
+        Cliente,
+        on_delete=models.SET_NULL,
+        related_name="orcamentos",
+        null=True,
+        blank=True,
+    )
+    # Orçamento de balcão costuma nascer antes do cadastro do cliente.
+    nome_cliente = models.CharField(max_length=120, blank=True)
+    contato = models.CharField(max_length=120, blank=True)
+
+    status = models.CharField(
+        max_length=12,
+        choices=Status.choices,
+        default=Status.RASCUNHO,
+        db_index=True,
+    )
+    validade = models.DateField(null=True, blank=True)
+    desconto = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))
+    frete = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))
+    observacoes = models.TextField(blank=True)
+    responsavel = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name="orcamentos",
+        null=True,
+        blank=True,
+    )
+
+    @property
+    def destinatario(self):
+        if self.cliente:
+            return self.cliente.nome_cliente
+        return self.nome_cliente or "Sem cliente"
+
+    @property
+    def subtotal(self):
+        return sum(
+            (item.subtotal for item in self.itens.all()),
+            Decimal("0.00"),
+        ).quantize(Decimal("0.01"))
+
+    @property
+    def total(self):
+        bruto = self.subtotal + (self.frete or Decimal("0.00"))
+        liquido = bruto - (self.desconto or Decimal("0.00"))
+        # Desconto maior que o total viraria um orçamento negativo.
+        return max(liquido, Decimal("0.00")).quantize(Decimal("0.01"))
+
+    @property
+    def vencido(self):
+        return bool(
+            self.validade
+            and self.validade < timezone.localdate()
+            and self.status in (self.Status.RASCUNHO, self.Status.ENVIADO)
+        )
+
+    def __str__(self):
+        return f"Orçamento #{self.pk} — {self.destinatario}"
+
+    class Meta:
+        verbose_name = "Orçamento"
+        verbose_name_plural = "Orçamentos"
+        ordering = ("-criacao", "-id")
+
+
+class ItemOrcamento(Prime):
+    orcamento = models.ForeignKey(
+        Orcamento,
+        on_delete=models.CASCADE,
+        related_name="itens",
+    )
+    # A descrição é gravada mesmo quando há produto associado: se o cadastro
+    # mudar de nome depois, a proposta enviada ao cliente continua valendo.
+    descricao = models.CharField(max_length=180)
+    produto = models.ForeignKey(
+        ProdutoInterno,
+        on_delete=models.SET_NULL,
+        related_name="itens_orcamento",
+        null=True,
+        blank=True,
+    )
+    quantidade = models.PositiveIntegerField(default=1)
+    valor_unitario = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))
+
+    @property
+    def subtotal(self):
+        return (self.valor_unitario * self.quantidade).quantize(Decimal("0.01"))
+
+    def __str__(self):
+        return self.descricao
+
+    class Meta:
+        verbose_name = "Item do orçamento"
+        verbose_name_plural = "Itens do orçamento"
+        ordering = ("id",)

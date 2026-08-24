@@ -1,0 +1,486 @@
+{% extends "base_inner.html" %}
+{% load interno_extras %}
+
+{% block title %}Ordens de produção | Lazer & Sport{% endblock %}
+{% block top_title %}Ordens de produção{% endblock %}
+
+{% block content %}
+<section class="ls-page-hero">
+  <div class="ls-page-hero-copy">
+    <span class="ls-page-kicker">Chão de fábrica</span>
+    <h1>Ordens de produção</h1>
+    <p>
+      Registre o que está sendo montado. Ao concluir, o estoque é baixado
+      automaticamente pela ficha técnica do produto — sem lançamento manual.
+    </p>
+  </div>
+  <div class="ls-page-hero-actions">
+    <a href="{% url 'produtos_producao' %}" class="btn btn-outline-secondary">
+      <i class="bi bi-diagram-3 me-1"></i> Produtos e ficha
+    </a>
+    <button type="button" class="btn btn-success" id="novaOrdem">
+      <i class="bi bi-plus-lg me-1"></i> Nova ordem
+    </button>
+  </div>
+</section>
+
+<section class="ls-metrics">
+  <article class="ls-metric-card blue">
+    <div class="ls-metric-head">
+      <span class="ls-metric-label">Planejadas</span>
+      <span class="ls-metric-icon"><i class="bi bi-calendar-check"></i></span>
+    </div>
+    <strong class="ls-metric-value">{{ total_planejadas }}</strong>
+    <span class="ls-metric-note">Aguardando início da montagem</span>
+  </article>
+
+  <article class="ls-metric-card yellow">
+    <div class="ls-metric-head">
+      <span class="ls-metric-label">Em produção</span>
+      <span class="ls-metric-icon"><i class="bi bi-gear-wide-connected"></i></span>
+    </div>
+    <strong class="ls-metric-value">{{ total_producao }}</strong>
+    <span class="ls-metric-note">Na bancada agora</span>
+  </article>
+
+  <article class="ls-metric-card green">
+    <div class="ls-metric-head">
+      <span class="ls-metric-label">Concluídas</span>
+      <span class="ls-metric-icon"><i class="bi bi-check2-all"></i></span>
+    </div>
+    <strong class="ls-metric-value">{{ total_concluidas }}</strong>
+    <span class="ls-metric-note">Com baixa de estoque aplicada</span>
+  </article>
+
+  <article class="ls-metric-card violet">
+    <div class="ls-metric-head">
+      <span class="ls-metric-label">Unidades na lista</span>
+      <span class="ls-metric-icon"><i class="bi bi-boxes"></i></span>
+    </div>
+    <strong class="ls-metric-value">{{ total_unidades|numero }}</strong>
+    <span class="ls-metric-note">Somadas das ordens concluídas exibidas</span>
+  </article>
+</section>
+
+<section class="ls-filter-panel">
+  <form method="get" class="row g-3 align-items-end">
+    <div class="col-8 col-lg-4">
+      <label class="form-label" for="filtroStatus">Situação</label>
+      <select id="filtroStatus" name="status" class="form-select">
+        <option value="">Todas</option>
+        {% for valor, rotulo in status_opcoes %}
+          <option value="{{ valor }}" {% if status_ativo == valor %}selected{% endif %}>{{ rotulo }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-4 col-lg-2 d-grid">
+      <button type="submit" class="btn btn-primary"><i class="bi bi-funnel me-1"></i> Filtrar</button>
+    </div>
+  </form>
+</section>
+
+<section class="ls-data-panel">
+  <div class="ls-data-header">
+    <div>
+      <h2>Ordens registradas</h2>
+      <p>As 200 mais recentes. "Material" mostra se a ficha cabe no estoque atual.</p>
+    </div>
+  </div>
+
+  <div class="ls-data-body">
+    <div class="table-responsive">
+      <table class="ls-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Produto</th>
+            <th class="text-end">Qtd.</th>
+            <th>Responsáveis</th>
+            <th>Prazo</th>
+            <th>Material</th>
+            <th>Situação</th>
+            <th class="text-end">Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for ordem in ordens %}
+            <tr>
+              <td data-rotulo="#"><span class="ls-number">{{ ordem.id }}</span></td>
+
+              <td data-rotulo="Produto">
+                <span class="material-nome">{{ ordem.produto.nome }}</span>
+                <span class="material-sub d-block">{{ ordem.produto.get_categoria_display }}</span>
+              </td>
+
+              <td data-rotulo="Qtd." class="text-end"><span class="ls-number">{{ ordem.quantidade }}</span></td>
+
+              <td data-rotulo="Responsáveis">
+                {% if ordem.montador %}{{ ordem.montador.nome_montador }}{% else %}<span class="text-muted">Sem montador</span>{% endif %}
+                {% if ordem.setor %}<span class="material-sub d-block">{{ ordem.setor.nome_setor }}</span>{% endif %}
+              </td>
+
+              <td data-rotulo="Prazo">
+                {% if ordem.status == 'concluida' and ordem.concluida_em %}
+                  Concluída {{ ordem.concluida_em|date:"d/m/Y" }}
+                {% elif ordem.prevista_para %}
+                  {{ ordem.prevista_para|date:"d/m/Y" }}
+                {% else %}
+                  <span class="text-muted">Sem prazo</span>
+                {% endif %}
+              </td>
+
+              <td data-rotulo="Material">
+                {% if ordem.baixa_aplicada %}
+                  <span class="ls-status neutral">Baixado</span>
+                {% elif ordem.tem_material %}
+                  <span class="ls-status success">Disponível</span>
+                {% else %}
+                  <span class="ls-status danger">Insuficiente</span>
+                {% endif %}
+              </td>
+
+              <td data-rotulo="Situação">
+                <span class="ls-status
+                  {% if ordem.status == 'concluida' %}success
+                  {% elif ordem.status == 'cancelada' %}danger
+                  {% elif ordem.status == 'producao' %}warning
+                  {% else %}info{% endif %}">
+                  {{ ordem.get_status_display }}
+                </span>
+              </td>
+
+              <td data-rotulo="Ações" class="ls-actions text-end">
+                {% if not ordem.baixa_aplicada and ordem.status != 'cancelada' %}
+                  <button type="button" class="btn btn-sm btn-success"
+                          data-concluir="{{ ordem.id }}"
+                          data-nome="OP #{{ ordem.id }} — {{ ordem.quantidade }} x {{ ordem.produto.nome }}"
+                          data-material="{% if ordem.tem_material %}1{% else %}0{% endif %}">
+                    <i class="bi bi-check2"></i> Concluir
+                  </button>
+                  <button type="button" class="btn btn-sm btn-outline-secondary"
+                          data-editar="{{ ordem.id }}"
+                          data-produto="{{ ordem.produto_id }}"
+                          data-quantidade="{{ ordem.quantidade }}"
+                          data-status="{{ ordem.status }}"
+                          data-montador="{{ ordem.montador_id|default_if_none:'' }}"
+                          data-setor="{{ ordem.setor_id|default_if_none:'' }}"
+                          data-prazo="{{ ordem.prevista_para|date:'Y-m-d' }}"
+                          data-obs="{{ ordem.observacoes }}">
+                    <i class="bi bi-pencil"></i>
+                  </button>
+                  <button type="button" class="btn btn-sm btn-outline-warning"
+                          data-cancelar="{{ ordem.id }}" data-nome="OP #{{ ordem.id }}">
+                    <i class="bi bi-slash-circle"></i>
+                  </button>
+                {% endif %}
+
+                {% if not ordem.baixa_aplicada %}
+                  <button type="button" class="btn btn-sm btn-outline-danger"
+                          data-excluir="{{ ordem.id }}" data-nome="Ordem #{{ ordem.id }}">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                {% else %}
+                  <span class="text-muted small">Histórico</span>
+                {% endif %}
+              </td>
+            </tr>
+
+            {% if ordem.observacoes %}
+              <tr class="ls-linha-nota">
+                <td colspan="8">
+                  <span class="material-sub"><i class="bi bi-chat-left-text me-1"></i>{{ ordem.observacoes }}</span>
+                </td>
+              </tr>
+            {% endif %}
+          {% empty %}
+            <tr>
+              <td colspan="8">
+                <div class="ls-empty">
+                  <i class="bi bi-hammer"></i>
+                  Nenhuma ordem registrada. Crie a primeira para começar a controlar a produção.
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ================= MODAL: ordem ================= -->
+<div class="modal fade" id="modalOrdem" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <form class="modal-content" id="formOrdem" method="post" action="{% url 'ordens_producao' %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="save">
+      <input type="hidden" name="id" id="ordemId">
+
+      <div class="modal-header">
+        <h5 class="modal-title" id="ordemTitulo">Nova ordem de produção</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+
+      <div class="modal-body">
+        <div id="ordemErro" class="alert alert-danger d-none" role="alert"></div>
+
+        <div class="row g-3">
+          <div class="col-12 col-md-7">
+            <label class="form-label" for="ordemProduto">Produto *</label>
+            <select class="form-select" id="ordemProduto" name="produto" data-rotulo="produto" required>
+              <option value="">Escolha o produto</option>
+              {% for p in produtos %}
+                <option value="{{ p.id }}"
+                        data-capacidade="{% if p.possivel_produzir is None %}-1{% else %}{{ p.possivel_produzir }}{% endif %}">
+                  {{ p.nome }}
+                </option>
+              {% endfor %}
+            </select>
+            <div class="form-text" id="ordemCapacidade">
+              O estoque atual limita quantas unidades dá para montar.
+            </div>
+          </div>
+
+          <div class="col-6 col-md-2">
+            <label class="form-label" for="ordemQuantidade">Quantidade *</label>
+            <input class="form-control" id="ordemQuantidade" name="quantidade"
+                   data-rotulo="quantidade" inputmode="numeric" value="1" required>
+          </div>
+
+          <div class="col-6 col-md-3">
+            <label class="form-label" for="ordemStatus">Situação</label>
+            <select class="form-select" id="ordemStatus" name="status">
+              <option value="planejada">Planejada</option>
+              <option value="producao">Em produção</option>
+            </select>
+            <div class="form-text">Concluir é feito pelo botão da lista.</div>
+          </div>
+
+          <div class="col-12 col-md-4">
+            <label class="form-label" for="ordemMontador">Montador</label>
+            <select class="form-select" id="ordemMontador" name="montador">
+              <option value="">Não definido</option>
+              {% for m in montadores %}<option value="{{ m.id }}">{{ m.nome_montador }}</option>{% endfor %}
+            </select>
+          </div>
+
+          <div class="col-12 col-md-4">
+            <label class="form-label" for="ordemSetor">Setor</label>
+            <select class="form-select" id="ordemSetor" name="setor">
+              <option value="">Não definido</option>
+              {% for s in setores %}<option value="{{ s.id }}">{{ s.nome_setor }}</option>{% endfor %}
+            </select>
+          </div>
+
+          <div class="col-12 col-md-4">
+            <label class="form-label" for="ordemPrazo">Prevista para</label>
+            <input type="date" class="form-control" id="ordemPrazo" name="prevista_para">
+          </div>
+
+          <div class="col-12">
+            <label class="form-label" for="ordemObs">Observações</label>
+            <textarea class="form-control" id="ordemObs" name="observacoes" rows="2"
+                      placeholder="Cor, acabamento, cliente de destino..."></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-success">Salvar ordem</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ================= MODAL: concluir ================= -->
+<div class="modal fade" id="modalConcluir" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <form class="modal-content" id="formConcluir" method="post" action="{% url 'ordens_producao' %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="concluir">
+      <input type="hidden" name="id" id="concluirId">
+      <div class="modal-header">
+        <h5 class="modal-title">Concluir produção?</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body">
+        <div id="concluirErro" class="alert alert-danger d-none" role="alert"></div>
+        <p><strong id="concluirNome"></strong></p>
+        <p class="mb-0 text-muted">
+          Cada material da ficha técnica recebe uma saída de estoque com o número
+          desta ordem no histórico. A baixa só acontece uma vez e não pode ser desfeita
+          automaticamente.
+        </p>
+        <div id="concluirAviso" class="alert alert-warning mt-3 d-none" role="alert">
+          O estoque atual não cobre a ficha técnica inteira. Se continuar, a baixa
+          será recusada e nada é alterado.
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-success">Concluir e baixar estoque</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ================= MODAL: cancelar ================= -->
+<div class="modal fade" id="modalCancelar" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-sm">
+    <form class="modal-content" id="formCancelar" method="post" action="{% url 'ordens_producao' %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="cancelar">
+      <input type="hidden" name="id" id="cancelarId">
+      <div class="modal-header">
+        <h5 class="modal-title">Cancelar ordem?</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body">
+        <div id="cancelarErro" class="alert alert-danger d-none" role="alert"></div>
+        <p class="mb-0"><strong id="cancelarNome"></strong> passa para cancelada e sai da fila de produção.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Voltar</button>
+        <button type="submit" class="btn btn-warning">Cancelar ordem</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ================= MODAL: excluir ================= -->
+<div class="modal fade" id="modalExcluir" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-sm">
+    <form class="modal-content" id="formExcluir" method="post" action="{% url 'ordens_producao' %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="delete">
+      <input type="hidden" name="id" id="excluirId">
+      <div class="modal-header">
+        <h5 class="modal-title">Excluir ordem?</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body">
+        <div id="excluirErro" class="alert alert-danger d-none" role="alert"></div>
+        <p class="mb-0"><strong id="excluirNome"></strong> é apagada definitivamente.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-danger">Excluir</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  "use strict";
+
+  var seletorProduto = document.getElementById("ordemProduto");
+  var avisoCapacidade = document.getElementById("ordemCapacidade");
+  var campoQuantidade = document.getElementById("ordemQuantidade");
+
+  /* Mostra a capacidade do produto escolhido antes de o usuário salvar:
+     evita criar ordem que não tem como ser concluída. */
+  function atualizarCapacidade() {
+    var escolhida = seletorProduto.options[seletorProduto.selectedIndex];
+    var capacidade = escolhida ? Number(escolhida.dataset.capacidade) : NaN;
+
+    if (!seletorProduto.value || isNaN(capacidade)) {
+      avisoCapacidade.textContent =
+        "O estoque atual limita quantas unidades dá para montar.";
+      return;
+    }
+
+    if (capacidade < 0) {
+      avisoCapacidade.textContent =
+        "Este produto ainda não tem ficha técnica: não dá para calcular a capacidade nem baixar estoque.";
+      return;
+    }
+
+    var pedida = parseInt(campoQuantidade.value, 10) || 0;
+    avisoCapacidade.textContent =
+      "O estoque atual comporta " + capacidade + " unidade(s)." +
+      (pedida > capacidade ? " A quantidade pedida passa desse limite." : "");
+  }
+
+  seletorProduto.addEventListener("change", atualizarCapacidade);
+  campoQuantidade.addEventListener("input", atualizarCapacidade);
+
+  function abrirOrdem(id, gatilho) {
+    var form = document.getElementById("formOrdem");
+
+    form.reset();
+    Painel.erro("ordemErro", "");
+    Painel.valor("ordemId", id || "");
+
+    document.getElementById("ordemTitulo").textContent = id
+      ? "Editar ordem #" + id
+      : "Nova ordem de produção";
+
+    /* Os dados de edição vêm dos data-* da própria linha: a lista já
+       carrega tudo o que o formulário precisa. */
+    if (gatilho) {
+      Painel.valor("ordemProduto", gatilho.dataset.produto);
+      Painel.valor("ordemQuantidade", gatilho.dataset.quantidade);
+      Painel.valor("ordemStatus", gatilho.dataset.status);
+      Painel.valor("ordemMontador", gatilho.dataset.montador);
+      Painel.valor("ordemSetor", gatilho.dataset.setor);
+      Painel.valor("ordemPrazo", gatilho.dataset.prazo);
+      Painel.valor("ordemObs", gatilho.dataset.obs);
+    }
+
+    atualizarCapacidade();
+    Painel.abrir("modalOrdem");
+  }
+
+  document.getElementById("novaOrdem").addEventListener("click", function () {
+    abrirOrdem(null, null);
+  });
+
+  document.querySelectorAll("[data-editar]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      abrirOrdem(b.dataset.editar, b);
+    });
+  });
+
+  Painel.ligar({ form: "formOrdem", erro: "ordemErro" });
+
+  document.querySelectorAll("[data-concluir]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      Painel.erro("concluirErro", "");
+      Painel.valor("concluirId", b.dataset.concluir);
+      document.getElementById("concluirNome").textContent = b.dataset.nome;
+      document.getElementById("concluirAviso")
+        .classList.toggle("d-none", b.dataset.material === "1");
+      Painel.abrir("modalConcluir");
+    });
+  });
+
+  Painel.ligar({ form: "formConcluir", erro: "concluirErro" });
+
+  document.querySelectorAll("[data-cancelar]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      Painel.erro("cancelarErro", "");
+      Painel.valor("cancelarId", b.dataset.cancelar);
+      document.getElementById("cancelarNome").textContent = b.dataset.nome;
+      Painel.abrir("modalCancelar");
+    });
+  });
+
+  Painel.ligar({ form: "formCancelar", erro: "cancelarErro" });
+
+  document.querySelectorAll("[data-excluir]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      Painel.erro("excluirErro", "");
+      Painel.valor("excluirId", b.dataset.excluir);
+      document.getElementById("excluirNome").textContent = b.dataset.nome;
+      Painel.abrir("modalExcluir");
+    });
+  });
+
+  Painel.ligar({ form: "formExcluir", erro: "excluirErro" });
+});
+</script>
+{% endblock %}
