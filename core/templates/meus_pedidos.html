@@ -864,6 +864,71 @@ body {
     box-shadow: 0 8px 24px rgba(18, 42, 70, .17);
 }
 
+.pedido-pendente {
+    margin: 14px 0 4px;
+    padding: 14px 16px;
+    border-radius: 14px;
+    border: 1px solid rgba(230, 138, 0, .28);
+    background: rgba(245, 173, 24, .09);
+}
+
+.pedido-pendente-texto {
+    margin: 0 0 12px;
+    color: #a76a00;
+    font-size: .92rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.pedido-pendente-acoes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.pedido-btn {
+    /* 46px: mesmo alvo confortavel usado no menu do usuario e no aviso. */
+    min-height: 46px;
+    padding: 10px 18px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border: 0;
+    border-radius: 12px;
+    font-size: .9rem;
+    font-weight: 800;
+    text-decoration: none;
+    cursor: pointer;
+    transition: transform .2s ease, box-shadow .2s ease, background .2s ease;
+}
+
+.pedido-btn.pagar {
+    background: linear-gradient(135deg, #078b4b, #12b96a);
+    color: #fff;
+    box-shadow: 0 10px 22px rgba(7, 139, 75, .26);
+}
+
+.pedido-btn.pagar:hover {
+    transform: translateY(-2px);
+    color: #fff;
+}
+
+.pedido-btn.devolver {
+    background: rgba(102, 117, 138, .12);
+    color: #4a5768;
+}
+
+.pedido-btn.devolver:hover {
+    background: rgba(102, 117, 138, .2);
+}
+
+.pedido-btn[disabled] {
+    opacity: .6;
+    cursor: progress;
+}
+
 .pedido-status::before {
     content: "";
     width: 7px;
@@ -1285,6 +1350,33 @@ body {
             {{ pedido.get_status_display }}
         </div>
 
+        {% if pedido.status == 'aguardando_pagamento' %}
+          {# O pedido nasce na hora em que o cliente inicia o pagamento. Se ele
+             fechou a aba com o Pix aberto, e daqui que ele volta a pagar --
+             sem isso, a reserva viraria um beco sem saida. #}
+          <div class="pedido-pendente">
+              <p class="pedido-pendente-texto">
+                  <i class="fa-solid fa-clock" aria-hidden="true"></i>
+                  Este pedido está reservado e aguardando o pagamento.
+              </p>
+              <div class="pedido-pendente-acoes">
+                  {% if pedido.carrinho_origem_id %}
+                    <a class="pedido-btn pagar"
+                       href="{% url 'pagamento' pedido.carrinho_origem_id %}#pagamento">
+                        <i class="fa-solid fa-qrcode" aria-hidden="true"></i>
+                        Retomar pagamento
+                    </a>
+                  {% endif %}
+                  <button type="button"
+                          class="pedido-btn devolver"
+                          data-devolver="{{ pedido.id }}">
+                      <i class="fa-solid fa-cart-arrow-down" aria-hidden="true"></i>
+                      Cancelar e voltar ao carrinho
+                  </button>
+              </div>
+          </div>
+        {% endif %}
+
         <!-- Informações financeiras -->
         <div class="pedido-info">
             <div class="info-box">
@@ -1471,6 +1563,66 @@ document.addEventListener("DOMContentLoaded", function() {
         button.setAttribute('aria-expanded', 'false');
     });
 });
+
+/* Devolver um pedido reservado ao carrinho.
+   O pedido nasce quando o cliente inicia o pagamento; se ele desistir, é
+   por aqui que os itens voltam — sem isso os produtos ficariam presos num
+   pedido que nunca vai ser pago. */
+(function () {
+    const url = "{% url 'devolver_pedido_carrinho' %}";
+
+    function cookie(nome) {
+        let achado = "";
+        document.cookie.split(";").forEach((bruto) => {
+            const par = bruto.trim();
+            if (par.indexOf(nome + "=") === 0) {
+                achado = decodeURIComponent(par.substring(nome.length + 1));
+            }
+        });
+        return achado;
+    }
+
+    document.querySelectorAll("[data-devolver]").forEach((botao) => {
+        botao.addEventListener("click", async () => {
+            const rotulo = botao.innerHTML;
+            botao.disabled = true;
+            botao.textContent = "Devolvendo…";
+
+            try {
+                const resposta = await fetch(url, {
+                    method: "POST",
+                    credentials: "same-origin",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-CSRFToken": cookie("csrftoken"),
+                        "X-Requested-With": "XMLHttpRequest"
+                    },
+                    body: JSON.stringify({ pedido_id: botao.dataset.devolver })
+                });
+
+                const dados = await resposta.json().catch(() => ({}));
+
+                if (dados.redirect_url) {
+                    window.location.href = dados.redirect_url;
+                    return;
+                }
+
+                if (!dados.ok) {
+                    alert(dados.msg || "Não foi possível devolver os itens.");
+                    botao.disabled = false;
+                    botao.innerHTML = rotulo;
+                    return;
+                }
+
+                window.location.reload();
+            } catch (erro) {
+                alert("Falha de conexão. Tente novamente.");
+                botao.disabled = false;
+                botao.innerHTML = rotulo;
+            }
+        });
+    });
+})();
 </script>
 
 {% endblock %}

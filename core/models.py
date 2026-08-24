@@ -1177,6 +1177,63 @@ class Pedido(Prime):
         default=False,
     )
 
+    # Assinatura do carrinho no instante em que o pedido foi reservado.
+    # É ela que amarra a cobrança do Mercado Pago a este pedido: o carrinho
+    # é esvaziado na reserva, então a conferência de divergência não pode
+    # mais depender de reler os itens do carrinho.
+    mp_fingerprint = models.CharField(
+        "Assinatura da cobrança",
+        max_length=64,
+        blank=True,
+        default="",
+    )
+
+    @property
+    def aguardando_pagamento(self):
+        return self.status == "aguardando_pagamento"
+
+    @transaction.atomic
+    def devolver_ao_carrinho(self):
+        """Desfaz a reserva: os itens voltam para o carrinho de origem.
+
+        Chamado quando a cobrança é recusada, cancelada ou expira. Sem isto,
+        um Pix abandonado deixaria o cliente sem carrinho e sem pedido pago —
+        que é justamente o susto que reservar cedo poderia causar.
+        """
+        if self.status not in ("aguardando_pagamento", "cancelado"):
+            raise ValueError(
+                "Só um pedido ainda não pago pode voltar para o carrinho."
+            )
+
+        carrinho = self.carrinho_origem
+        if carrinho is None:
+            raise ValueError("Este pedido não tem carrinho de origem.")
+
+        for item in self.itens.all():
+            if not item.content_type_id or not item.object_id:
+                # Produto excluído do catálogo depois da reserva: não há o
+                # que devolver, e recriar a linha deixaria o carrinho com um
+                # item fantasma sem preço.
+                continue
+
+            linha, criado = ItemCarrinho.objects.get_or_create(
+                carrinho=carrinho,
+                content_type_id=item.content_type_id,
+                object_id=item.object_id,
+                defaults={"quantidade": item.quantidade},
+            )
+            if not criado:
+                linha.quantidade += item.quantidade
+                linha.save(update_fields=["quantidade"])
+
+        self.status = "cancelado"
+        self.mp_payment_id = None
+        self.save(update_fields=["status", "mp_payment_id", "atualizado"])
+
+        # A cobrança morreu junto com a reserva.
+        Carrinho.objects.filter(pk=carrinho.pk).update(mp_payment_id=None)
+        return carrinho
+
     observacoes = models.TextField(blank=True)
 
     def save(self, *args, **kwargs):

@@ -22,6 +22,16 @@
 
   <!-- Experiência de rolagem: skeletons, entrada dos blocos e barra de progresso. -->
   <link rel="stylesheet" href="{% static 'site/ls-reveal.css' %}?v=1">
+
+  <!-- Âncoras # param abaixo do cabeçalho sticky, com destaque no destino. -->
+  <link rel="stylesheet" href="{% static 'site/ls-ancoras.css' %}?v=1">
+  <script src="{% static 'site/ls-ancoras.js' %}?v=1" defer></script>
+
+  <!-- Carregamento visível também no site público. A ordem importa: este
+       script entra depois do de âncoras, para o clique em link interno já
+       chegar marcado como tratado e o overlay não piscar à toa. -->
+  <link rel="stylesheet" href="{% static 'site/ls-page-loader.css' %}?v=1">
+  <script src="{% static 'site/ls-page-loader.js' %}?v=1" defer></script>
 {% if user.is_authenticated %}
   <!-- Aviso de pagamento aprovado confirmado fora da aba (webhook). -->
   <link rel="stylesheet" href="{% static 'site/ls-confirmacao.css' %}?v=1">
@@ -1538,7 +1548,7 @@ nav a.btn-login {
   </style>
 
 </head>
-<body>
+<body data-loader-logo="{% static 'images/logoofi.png' %}">
 
 <!-- ======= CABEÇALHO ======= -->
 <header>
