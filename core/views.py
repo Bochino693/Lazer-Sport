@@ -18,6 +18,9 @@ from .models import Brinquedos, ImagemBrinquedo, CategoriasBrinquedos, Projetos,
     BrinquedoClick, ComboClick, PromocaoClick, CategoriaClick, PecasReposicao, CategoriaPeca, \
     ImagemProjetoBrinquedo, ImagemEvento, Clientes, EnderecoEmpresa
 from django.templatetags.static import static
+
+# Ciclo carrinho -> pedido reservado -> pedido pago.
+from . import checkout
 from .utils import LAT_EMPRESA, LON_EMPRESA
 from .home_cache import (
     get_cached_catalog_metadata,
@@ -4291,6 +4294,14 @@ def salvar_cpf_carrinho(request):
 
 
 class PaymentView(LoginRequiredMixin, View):
+    """Tela de checkout.
+
+    Ela atende dois estados: carrinho ainda cheio (vai reservar ao gerar a
+    cobrança) e reserva já aberta (carrinho vazio, pedido aguardando
+    pagamento). O segundo é o que acontece quando o cliente fecha a aba com
+    o Pix na tela e volta depois — antes disso, voltar para cá com o carrinho
+    vazio jogava a pessoa para /carrinho sem explicação.
+    """
 
     def get(self, request, carrinho_id):
         carrinho = get_object_or_404(
@@ -4300,104 +4311,107 @@ class PaymentView(LoginRequiredMixin, View):
         )
 
         destino_pedidos = reverse("meus_pedidos") + "#pedidos"
-        itens = carrinho.itens.select_related('content_type').all()
+        reserva = checkout.pedido_reservado_do_carrinho(carrinho)
 
-        # Um payment_id já consumido só representa este checkout quando o
-        # carrinho também já foi esvaziado. Se há itens, trata-se de uma nova
-        # solicitação e ela precisa receber uma cobrança própria.
-        if carrinho.mp_payment_id:
-            pedido_existente = Pedido.objects.filter(
-                mp_payment_id=str(carrinho.mp_payment_id),
-                cliente__user=request.user,
-            ).first()
-            if pedido_existente and not itens.exists():
+        # Reserva com cobrança aberta: confere no provedor antes de desenhar
+        # a tela. O webhook pode ter falhado, e o cliente não pode ficar
+        # olhando um QR de algo já pago.
+        if reserva and reserva.mp_payment_id and settings.MP_ACCESS_TOKEN:
+            try:
+                sdk = mercadopago.SDK(settings.MP_ACCESS_TOKEN)
+                payment = sdk.payment().get(reserva.mp_payment_id).get("response") or {}
+                status_pagamento = payment.get("status")
+
+                if status_pagamento == "approved":
+                    checkout.confirmar_pagamento(reserva, payment)
+                    return redirect(destino_pedidos)
+
+                if status_pagamento in checkout.STATUS_MORTOS:
+                    checkout.expirar_reserva(
+                        reserva,
+                        f"checkout reaberto: {status_pagamento}",
+                    )
+                    reserva = None
+            except checkout.PagamentoDivergente:
+                payment_logger.critical(
+                    "Pagamento divergente ao reabrir checkout pedido=%s",
+                    reserva.id,
+                )
+            except Exception:
+                payment_logger.exception(
+                    "Falha ao retomar o pagamento do pedido %s",
+                    reserva.id if reserva else None,
+                )
+
+        # Pedido desta rodada já pago: não há checkout a mostrar.
+        if not reserva and not carrinho.itens.exists():
+            pago = (
+                Pedido.objects
+                .filter(
+                    carrinho_origem=carrinho,
+                    status="pago",
+                    cliente__user=request.user,
+                )
+                .order_by("-id")
+                .first()
+            )
+            if pago:
                 return redirect(destino_pedidos)
-            if pedido_existente:
-                carrinho.mp_payment_id = None
-                carrinho.save(update_fields=["mp_payment_id"])
-
-            # O webhook pode demorar ou falhar temporariamente. Ao voltar para
-            # a página, consultamos o Mercado Pago e finalizamos localmente.
-            elif settings.MP_ACCESS_TOKEN:
-                try:
-                    sdk = mercadopago.SDK(settings.MP_ACCESS_TOKEN)
-                    consulta = sdk.payment().get(carrinho.mp_payment_id)
-                    payment = consulta.get("response") or {}
-
-                    if payment.get("status") == "approved":
-                        _finalizar_pagamento_aprovado(carrinho, payment)
-                        return redirect(destino_pedidos)
-
-                    if payment.get("status") in {
-                        "rejected",
-                        "cancelled",
-                        "refunded",
-                        "charged_back",
-                    }:
-                        carrinho.mp_payment_id = None
-                        carrinho.save(update_fields=["mp_payment_id"])
-                except PagamentoDivergenteError:
-                    payment_logger.critical(
-                        "Pagamento divergente ao reabrir checkout carrinho=%s",
-                        carrinho.id,
-                    )
-                    carrinho.mp_payment_id = None
-                    carrinho.save(update_fields=["mp_payment_id"])
-                except Exception:
-                    payment_logger.exception(
-                        "Falha ao retomar pagamento do carrinho %s",
-                        carrinho.id,
-                    )
-
-        if not itens.exists():
-            return redirect('carrinho')
+            return redirect("carrinho")
 
         # ==========================
         # 🔹 CRIAR OU ATUALIZAR FRETE
         # ==========================
-        # Se o carrinho for do tipo 'frete', garante que exista um objeto de Frete
-        if carrinho.tipo_envio == 'frete':
-            frete, created = Frete.objects.get_or_create(
+        if carrinho.tipo_envio == "frete":
+            frete, _ = Frete.objects.get_or_create(
                 carrinho=carrinho,
                 defaults={
-                    'valor': Decimal("0.00"),
-                    'cep': '',
-                    'rua': '',
-                    'bairro': '',
-                    'cidade': '',
-                    'estado': '',
-                    'numero': '',
-                }
+                    "valor": Decimal("0.00"),
+                    "cep": "",
+                    "rua": "",
+                    "bairro": "",
+                    "cidade": "",
+                    "estado": "",
+                    "numero": "",
+                },
             )
         else:
-            frete = None  # não precisa criar se for retirada
+            frete = None
 
-        valor_frete = frete.valor if frete else Decimal("0.00")
-
-        somente_pix = not request.user.is_authenticated or not itens.exists()
+        # Com a reserva aberta os números vêm do pedido, que é o compromisso
+        # real; o carrinho já está vazio e seus totais são zero.
+        if reserva:
+            itens = reserva.itens.all()
+            total_bruto = reserva.total_bruto
+            valor_desconto = reserva.valor_desconto
+            total_liquido = reserva.total_liquido
+            valor_frete = reserva.valor_frete or Decimal("0.00")
+            total_final = reserva.total_final
+        else:
+            itens = carrinho.itens.select_related("content_type").all()
+            total_bruto = carrinho.total_bruto
+            valor_desconto = carrinho.valor_desconto
+            total_liquido = carrinho.total_liquido
+            valor_frete = frete.valor if frete else Decimal("0.00")
+            total_final = carrinho.total_final
 
         context = {
-            'carrinho': carrinho,
-            'itens': itens,
-            'carrinho_vazio': not itens.exists(),
-
-            'total_bruto': carrinho.total_bruto,
-            'valor_desconto': carrinho.valor_desconto,
-
-            'frete': valor_frete,
-
-            'total_liquido': carrinho.total_liquido,
-
-            # ⭐ TOTAL FINAL COM FRETE
-            'total_final': carrinho.total_final,
-
-            'total_itens': itens.count(),
-            'somente_pix': somente_pix,
-            'mp_public_key': settings.MP_PUBLIC_KEY,
-            'max_parcelas': 18 if carrinho.total_final > Decimal("20000.00") else 12,
+            "carrinho": carrinho,
+            "pedido_reservado": reserva,
+            "itens": itens,
+            "carrinho_vazio": not itens,
+            "total_bruto": total_bruto,
+            "valor_desconto": valor_desconto,
+            "frete": valor_frete,
+            "total_liquido": total_liquido,
+            "total_final": total_final,
+            "total_itens": len(itens) if isinstance(itens, list) else itens.count(),
+            "somente_pix": not request.user.is_authenticated,
+            "mp_public_key": settings.MP_PUBLIC_KEY,
+            "max_parcelas": 18 if total_final > Decimal("20000.00") else 12,
         }
 
-        return render(request, 'payment.html', context)
+        return render(request, "payment.html", context)
 
 
 from decimal import Decimal
@@ -4419,86 +4433,8 @@ def _valor_monetario(valor):
         return None
 
 
-def _assinatura_carrinho(carrinho):
-    """
-    Assinatura imutável do estado cobrado.
-
-    Dois carrinhos com o mesmo total, mas itens diferentes, não podem
-    compartilhar a mesma cobrança nem a mesma chave de idempotência.
-    """
-    itens = []
-    queryset = (
-        carrinho.itens
-        .select_related("content_type")
-        .order_by("content_type_id", "object_id", "id")
-    )
-
-    for item in queryset:
-        preco_unitario = _valor_monetario(item.preco_unitario)
-        subtotal = _valor_monetario(item.subtotal)
-        if preco_unitario is None or subtotal is None:
-            raise ValueError(
-                f"Item {item.id} possui valor financeiro inválido."
-            )
-
-        itens.append({
-            "content_type_id": item.content_type_id,
-            "object_id": item.object_id,
-            "quantidade": item.quantidade,
-            "preco_unitario": f"{preco_unitario:.2f}",
-            "subtotal": f"{subtotal:.2f}",
-        })
-
-    valor_frete = _valor_monetario(carrinho.valor_frete)
-    total_final = _valor_monetario(carrinho.total_final)
-    if valor_frete is None or total_final is None:
-        raise ValueError("O carrinho possui total financeiro inválido.")
-
-    dados = {
-        "carrinho_id": carrinho.id,
-        "itens": itens,
-        "cupom_id": carrinho.cupom_id,
-        "tipo_envio": carrinho.tipo_envio,
-        "frete": f"{valor_frete:.2f}",
-        "total_final": f"{total_final:.2f}",
-    }
-
-    serializado = json.dumps(
-        dados,
-        sort_keys=True,
-        ensure_ascii=True,
-        separators=(",", ":"),
-    )
-    return hashlib.sha256(serializado.encode("utf-8")).hexdigest()
-
-
-def _pagamento_confere_com_carrinho(payment, carrinho, assinatura=None):
-    payment_id = str(payment.get("id") or "")
-    payment_id_atual = str(carrinho.mp_payment_id or "")
-    valor_pago = _valor_monetario(payment.get("transaction_amount"))
-    valor_esperado = _valor_monetario(carrinho.total_final)
-    referencia = str(payment.get("external_reference") or "")
-    metadata = payment.get("metadata") or {}
-    assinatura_mp = metadata.get("cart_fingerprint")
-    try:
-        assinatura_atual = assinatura or _assinatura_carrinho(carrinho)
-    except ValueError:
-        payment_logger.exception(
-            "Não foi possível assinar o carrinho %s.",
-            carrinho.id,
-        )
-        return False
-
-    return (
-            bool(payment_id)
-            and (not payment_id_atual or payment_id == payment_id_atual)
-            and valor_pago is not None
-            and valor_esperado is not None
-            and valor_pago == valor_esperado
-            and referencia == str(carrinho.id)
-            and bool(assinatura_mp)
-            and assinatura_mp == assinatura_atual
-    )
+# _assinatura_carrinho e _pagamento_confere_com_carrinho foram para
+# core/checkout.py, junto do resto do ciclo carrinho -> pedido.
 
 
 def _carrinho_pagamento_do_usuario(request, carrinho_id):
@@ -4627,194 +4563,40 @@ def _dados_pix(payment):
     }
 
 
-def _forma_pagamento_mp(payment):
-    payment_type = payment.get("payment_type_id")
-    if payment_type == "credit_card":
-        return "credito"
-    if payment_type == "debit_card":
-        return "debito"
-    return "pix"
-
-
-from .notificacoes import enviar_confirmacao_de_compra
-
-
-class PagamentoDivergenteError(Exception):
-    """A cobrança recebida não representa o estado atual do carrinho."""
+# _forma_pagamento_mp, PagamentoDivergenteError e
+# _finalizar_pagamento_aprovado foram substituidos por
+# checkout.forma_pagamento_mp, checkout.PagamentoDivergente e
+# checkout.confirmar_pagamento: o pedido nao nasce mais na aprovacao,
+# ele ja existe desde a reserva e so muda de status.
 
 
 def _url_meus_pedidos():
     return reverse("meus_pedidos") + "#pedidos"
 
 
-def _finalizar_pagamento_aprovado(carrinho, payment):
-    """
-    Cria exatamente um pedido para um pagamento aprovado.
-
-    O bloqueio pessimista no Carrinho serializa webhook, polling e retorno à
-    página. Se duas confirmações chegarem juntas, a segunda encontra o pedido
-    criado pela primeira e apenas o reutiliza.
-    """
-    payment_id = str(payment.get("id") or "")
-    if not payment_id or payment.get("status") != "approved":
-        raise PagamentoDivergenteError(
-            "O pagamento ainda não está aprovado."
-        )
-
-    with transaction.atomic():
-        carrinho_bloqueado = (
-            Carrinho.objects
-            .select_for_update()
-            .get(pk=carrinho.pk)
-        )
-
-        # IMPORTANTE:
-        # Não combine select_for_update() com select_related("frete").
-        # Frete é uma relação opcional e gera LEFT OUTER JOIN; no PostgreSQL,
-        # a parte anulável desse JOIN não pode receber FOR UPDATE. O carrinho
-        # é bloqueado sozinho e as relações são carregadas dentro da mesma
-        # transação, sob o bloqueio do objeto principal.
-
-        # A confirmação precisa pertencer exatamente à cobrança atualmente
-        # vinculada ao carrinho. Nunca aceita um pagamento antigo do mesmo
-        # usuário, carrinho ou valor.
-        payment_id_atual = str(carrinho_bloqueado.mp_payment_id or "")
-        if not payment_id_atual or payment_id != payment_id_atual:
-            raise PagamentoDivergenteError(
-                "O pagamento não pertence à solicitação atual."
-            )
-
-        # Idempotência local: o mesmo payment_id nunca cria outro pedido.
-        pedido_existente = (
-            Pedido.objects
-            .select_for_update()
-            .filter(mp_payment_id=payment_id)
-            .first()
-        )
-        if pedido_existente:
-            return pedido_existente, False
-
-        if not carrinho_bloqueado.itens.exists():
-            raise PagamentoDivergenteError(
-                "O carrinho não possui itens para gerar o pedido."
-            )
-
-        if not _pagamento_confere_com_carrinho(
-                payment,
-                carrinho_bloqueado,
-        ):
-            raise PagamentoDivergenteError(
-                "O valor ou os itens pagos não correspondem ao carrinho."
-            )
-
-        frete = getattr(carrinho_bloqueado, "frete", None)
-        cupom = carrinho_bloqueado.cupom
-        valor_frete = _valor_monetario(
-            carrinho_bloqueado.valor_frete
-        ) or Decimal("0.00")
-
-        pedido = Pedido.objects.create(
-            cliente=carrinho_bloqueado.cliente,
-            carrinho_origem=carrinho_bloqueado,
-            status="pago",
-            forma_pagamento=_forma_pagamento_mp(payment),
-            total_bruto=carrinho_bloqueado.total_bruto,
-            valor_desconto=carrinho_bloqueado.valor_desconto,
-            total_liquido=carrinho_bloqueado.total_liquido,
-            valor_frete=valor_frete,
-            total_final=carrinho_bloqueado.total_final,
-            cep=frete.cep if frete else None,
-            rua=frete.rua if frete else None,
-            bairro=frete.bairro if frete else None,
-            cidade=frete.cidade if frete else None,
-            numero=frete.numero if frete else None,
-            cupom_codigo=cupom.codigo if cupom else None,
-            cupom_percentual=(
-                cupom.desconto_percentual if cupom else None
-            ),
-            mp_payment_id=payment_id,
-            mp_status="approved",
-        )
-
-        itens_pedido = []
-        for item in carrinho_bloqueado.itens.all():
-            itens_pedido.append(
-                ItemPedido(
-                    pedido=pedido,
-                    content_type=item.content_type,
-                    object_id=item.object_id,
-                    nome_item=(
-                        str(item.item)
-                        if item.item
-                        else "Produto removido"
-                    ),
-                    tipo_item=item.content_type.model,
-                    preco_unitario=(
-                            _valor_monetario(item.preco_unitario)
-                            or Decimal("0.00")
-                    ),
-                    quantidade=item.quantidade,
-                    subtotal=(
-                            _valor_monetario(item.subtotal)
-                            or Decimal("0.00")
-                    ),
-                )
-            )
-        ItemPedido.objects.bulk_create(itens_pedido)
-
-        # Mantém o payment_id como recibo do último checkout. Ao adicionar
-        # qualquer novo item, _invalidar_pagamento_pendente o remove.
-        carrinho_bloqueado.itens.all().delete()
-        carrinho_bloqueado.cupom = None
-        carrinho_bloqueado.mp_payment_id = payment_id
-        carrinho_bloqueado.save(
-            update_fields=["cupom", "mp_payment_id"]
-        )
-
-        # on_commit, e não uma chamada direta: a thread do e-mail lê o pedido
-        # do banco pela pk, e se esta função estiver dentro de uma transação
-        # externa a linha ainda não existe para outra conexão — o e-mail
-        # sumiria em silêncio. Agendado assim, ele só dispara depois do
-        # commit mais externo, e um rollback simplesmente não o envia.
-        transaction.on_commit(
-            lambda: enviar_confirmacao_de_compra(pedido)
-        )
-
-        return pedido, True
+# Quanto tempo um pagamento aprovado ainda rende aviso na tela.
+JANELA_AVISO_PAGAMENTO_HORAS = 48
 
 
 @login_required
 @require_GET
 @never_cache
 def gerar_pix(request):
-    carrinho_id = request.GET.get("carrinho_id")
-    carrinho = _carrinho_pagamento_do_usuario(request, carrinho_id)
+    """Reserva o pedido e devolve o Pix dele.
+
+    A ordem importa: o carrinho vira pedido ANTES de a cobrança existir. Se o
+    Mercado Pago falhar em seguida, a reserva é desfeita e os itens voltam
+    para o carrinho — o cliente nunca fica sem carrinho e sem pedido.
+    """
+    carrinho = _carrinho_pagamento_do_usuario(
+        request,
+        request.GET.get("carrinho_id"),
+    )
 
     if not carrinho:
         return JsonResponse(
             {"erro": "Carrinho inválido ou sem permissão."},
             status=404,
-        )
-
-    if carrinho.mp_payment_id:
-        pedido_existente = Pedido.objects.filter(
-            mp_payment_id=str(carrinho.mp_payment_id),
-            cliente__user=request.user,
-        ).first()
-        if pedido_existente and not carrinho.itens.exists():
-            return JsonResponse({
-                "pago": True,
-                "pedido_id": pedido_existente.id,
-                "redirect_url": _url_meus_pedidos(),
-            })
-        if pedido_existente:
-            carrinho.mp_payment_id = None
-            carrinho.save(update_fields=["mp_payment_id"])
-
-    if not carrinho.itens.exists():
-        return JsonResponse(
-            {"erro": "O carrinho está vazio."},
-            status=400,
         )
 
     if not settings.MP_ACCESS_TOKEN:
@@ -4832,134 +4614,55 @@ def gerar_pix(request):
         )
 
     sdk = mercadopago.SDK(settings.MP_ACCESS_TOKEN)
-    total_final = _valor_monetario(carrinho.total_final)
-    if total_final is None or total_final <= Decimal("0.00"):
-        return JsonResponse(
-            {"erro": "O total do carrinho é inválido para pagamento."},
-            status=400,
-        )
 
+    # ------------------------------------------------------------------
+    # 1. Já existe reserva aberta? Reaproveita a cobrança dela.
+    # ------------------------------------------------------------------
+    reserva = checkout.pedido_reservado_do_carrinho(carrinho)
+
+    if reserva and reserva.mp_payment_id and not carrinho.itens.exists():
+        resposta = _reaproveitar_cobranca(sdk, reserva)
+        if resposta is not None:
+            return resposta
+
+    # ------------------------------------------------------------------
+    # 2. Reserva o pedido a partir do carrinho.
+    # ------------------------------------------------------------------
     try:
-        assinatura = _assinatura_carrinho(carrinho)
-    except ValueError as exc:
+        pedido, _ = checkout.reservar_pedido(carrinho, usuario=request.user)
+    except checkout.ReservaInvalida as exc:
+        return JsonResponse({"erro": str(exc)}, status=400)
+    except Exception:
         payment_logger.exception(
-            "Carrinho %s contém valor inválido.",
+            "Falha ao reservar pedido do carrinho %s",
             carrinho.id,
         )
-        return JsonResponse({"erro": str(exc)}, status=400)
-    pagamento_anterior_id = carrinho.mp_payment_id
+        return JsonResponse(
+            {"erro": "Não foi possível iniciar o pagamento."},
+            status=500,
+        )
 
-    # Reutiliza um Pix ainda pendente para não criar cobranças duplicadas
-    # quando a página é atualizada, mas somente se valor, referência e todos
-    # os itens forem exatamente os mesmos.
-    if carrinho.mp_payment_id:
-        try:
-            consulta = sdk.payment().get(carrinho.mp_payment_id)
-            existente = consulta.get("response") or {}
-            pix_existente = _dados_pix(existente)
-
-            if existente.get("status") == "approved":
-                pedido, _ = _finalizar_pagamento_aprovado(
-                    carrinho,
-                    existente,
-                )
-                return JsonResponse({
-                    "pago": True,
-                    "pedido_id": pedido.id,
-                    "redirect_url": _url_meus_pedidos(),
-                })
-
-            if (
-                    existente.get("status")
-                    in {"pending", "in_process", "authorized"}
-                    and _pagamento_confere_com_carrinho(
-                existente,
-                carrinho,
-                assinatura,
-            )
-                    and not (
-                    pix_existente["qr_code"]
-                    and pix_existente["pix_copia_cola"]
-            )
-            ):
-                return JsonResponse(
-                    {
-                        "erro": "Já existe outro pagamento em andamento.",
-                        "detalhe": (
-                            "Aguarde a conclusão do pagamento atual antes "
-                            "de gerar um novo Pix."
-                        ),
-                    },
-                    status=409,
-                )
-
-            if (
-                    existente.get("status") in {"pending", "in_process"}
-                    and _pagamento_confere_com_carrinho(
-                existente,
-                carrinho,
-                assinatura,
-            )
-                    and pix_existente["qr_code"]
-                    and pix_existente["pix_copia_cola"]
-            ):
-                return JsonResponse({
-                    **pix_existente,
-                    "payment_id": existente.get("id"),
-                    "status": existente.get("status"),
-                    "valor": (
-                        f"{_valor_monetario(existente.get('transaction_amount')):.2f}"
-                    ),
-                })
-
-            payment_logger.warning(
-                "Pix antigo descartado carrinho=%s payment=%s "
-                "valor_mp=%s valor_atual=%s",
-                carrinho.id,
-                existente.get("id"),
-                existente.get("transaction_amount"),
-                total_final,
-            )
-        except PagamentoDivergenteError as exc:
-            payment_logger.critical(
-                "Pix aprovado divergente carrinho=%s payment=%s",
-                carrinho.id,
-                carrinho.mp_payment_id,
-            )
-            return JsonResponse(
-                {
-                    "erro": "Pagamento aprovado com divergência.",
-                    "detalhe": str(exc),
-                },
-                status=409,
-            )
-        except Exception:
-            payment_logger.exception(
-                "Falha ao consultar Pix anterior do carrinho %s",
-                carrinho.id,
-            )
-
-        carrinho.mp_payment_id = None
-        carrinho.save(update_fields=["mp_payment_id"])
+    total_final = _valor_monetario(pedido.total_final)
 
     payment_data = {
         "transaction_amount": float(total_final),
-        "description": f"Lazer & Sport - Carrinho #{carrinho.id}",
+        "description": f"Lazer & Sport - Pedido #{pedido.id}",
         "payment_method_id": "pix",
-        "external_reference": str(carrinho.id),
+        "external_reference": checkout.referencia_do_pedido(pedido),
         "notification_url": request.build_absolute_uri(reverse("webhook_mp")),
         "payer": {"email": payer_email},
         "metadata": {
-            "cart_fingerprint": assinatura,
+            "cart_fingerprint": pedido.mp_fingerprint,
             "cart_total": f"{total_final:.2f}",
+            "pedido_id": pedido.id,
         },
     }
+
+    # A chave de idempotência inclui a reserva: uma nova reserva sempre gera
+    # uma cobrança nova, e recarregar a página não gera duas.
     idempotency_key = uuid.uuid5(
         uuid.NAMESPACE_URL,
-        (
-            f"lazersport:pix:{carrinho.id}:{assinatura}:"
-            f"{payer_email}:{pagamento_anterior_id or 'novo'}"
-        ),
+        f"lazersport:pix:pedido:{pedido.id}:{pedido.mp_fingerprint}",
     )
 
     try:
@@ -4969,9 +4672,10 @@ def gerar_pix(request):
         )
     except Exception:
         payment_logger.exception(
-            "Erro de comunicação ao criar Pix do carrinho %s",
-            carrinho.id,
+            "Erro de comunicação ao criar Pix do pedido %s",
+            pedido.id,
         )
+        checkout.expirar_reserva(pedido, "falha de comunicação com o provedor")
         return JsonResponse(
             {"erro": "Não foi possível comunicar com o Mercado Pago."},
             status=502,
@@ -4980,56 +4684,21 @@ def gerar_pix(request):
     payment = response.get("response") or {}
     status_code = int(response.get("status") or 500)
     pix = _dados_pix(payment)
-    pagamento_confere = (
-            bool(payment.get("id"))
-            and _pagamento_confere_com_carrinho(
-        payment,
-        carrinho,
-        assinatura,
-    )
+
+    recusado = (
+        status_code not in {200, 201}
+        or not payment.get("id")
+        or not pix["pix_copia_cola"]
     )
 
-    if (
-            status_code in {200, 201}
-            and payment.get("id")
-            and not pagamento_confere
-    ):
-        valor_retornado = _valor_monetario(
-            payment.get("transaction_amount")
-        )
-        payment_logger.critical(
-            "Mercado Pago criou Pix com divergência: "
-            "carrinho=%s esperado=%s retornado=%s payment=%s",
-            carrinho.id,
-            total_final,
-            valor_retornado,
-            payment.get("id"),
-        )
-        return JsonResponse(
-            {
-                "erro": "Cobrança bloqueada por divergência de valor.",
-                "detalhe": (
-                    f"O pedido vale R$ {total_final:.2f}, mas o "
-                    f"Mercado Pago retornou R$ "
-                    f"{(valor_retornado or Decimal('0.00')):.2f}."
-                ),
-            },
-            status=409,
-        )
-
-    if (
-            status_code not in {200, 201}
-            or not payment.get("id")
-            or not pagamento_confere
-            or not pix["qr_code"]
-            or not pix["pix_copia_cola"]
-    ):
+    if recusado:
         payment_logger.error(
-            "Mercado Pago recusou Pix carrinho=%s http=%s resposta=%r",
-            carrinho.id,
+            "Mercado Pago recusou Pix pedido=%s http=%s resposta=%r",
+            pedido.id,
             status_code,
             payment,
         )
+        checkout.expirar_reserva(pedido, "cobrança recusada pelo provedor")
         return JsonResponse(
             {
                 "erro": "Não foi possível gerar o Pix.",
@@ -5038,17 +4707,97 @@ def gerar_pix(request):
             status=400 if status_code < 500 else 502,
         )
 
-    carrinho.mp_payment_id = str(payment["id"])
-    carrinho.save(update_fields=["mp_payment_id"])
+    valor_retornado = _valor_monetario(payment.get("transaction_amount"))
+    if valor_retornado != total_final:
+        payment_logger.critical(
+            "Pix com divergência de valor: pedido=%s esperado=%s retornado=%s",
+            pedido.id,
+            total_final,
+            valor_retornado,
+        )
+        checkout.expirar_reserva(pedido, "divergência de valor na cobrança")
+        return JsonResponse(
+            {
+                "erro": "Cobrança bloqueada por divergência de valor.",
+                "detalhe": (
+                    f"O pedido vale R$ {total_final:.2f}, mas o Mercado Pago "
+                    f"retornou R$ {(valor_retornado or Decimal('0.00')):.2f}."
+                ),
+            },
+            status=409,
+        )
+
+    pedido.mp_payment_id = str(payment["id"])
+    pedido.mp_status = payment.get("status") or "pending"
+    pedido.save(update_fields=["mp_payment_id", "mp_status", "atualizado"])
+
+    Carrinho.objects.filter(pk=carrinho.pk).update(
+        mp_payment_id=pedido.mp_payment_id,
+    )
 
     return JsonResponse({
         **pix,
         "payment_id": payment["id"],
+        "pedido_id": pedido.id,
         "status": payment.get("status"),
-        "valor": (
-            f"{_valor_monetario(payment.get('transaction_amount')):.2f}"
-        ),
+        "valor": f"{total_final:.2f}",
     })
+
+
+def _reaproveitar_cobranca(sdk, pedido):
+    """Devolve a cobrança já aberta do pedido, quando ela ainda serve.
+
+    Três desfechos: já foi paga (confirma e manda para Meus Pedidos), ainda
+    está viva (devolve o mesmo QR) ou morreu (devolve None para o chamador
+    criar outra). Sem isto, atualizar a página de pagamento abriria uma
+    cobrança nova a cada F5.
+    """
+    try:
+        consulta = sdk.payment().get(str(pedido.mp_payment_id))
+        payment = consulta.get("response") or {}
+    except Exception:
+        payment_logger.exception(
+            "Falha ao consultar a cobrança do pedido %s",
+            pedido.id,
+        )
+        return None
+
+    status_pagamento = payment.get("status")
+
+    if status_pagamento == "approved":
+        try:
+            confirmado, _ = checkout.confirmar_pagamento(pedido, payment)
+        except checkout.PagamentoDivergente as exc:
+            payment_logger.critical(
+                "Cobrança aprovada divergente pedido=%s: %s",
+                pedido.id,
+                exc,
+            )
+            return JsonResponse(
+                {"erro": "Pagamento aprovado com divergência.", "detalhe": str(exc)},
+                status=409,
+            )
+        return JsonResponse({
+            "pago": True,
+            "pedido_id": confirmado.id,
+            "redirect_url": _url_meus_pedidos(),
+        })
+
+    if status_pagamento in checkout.STATUS_MORTOS:
+        checkout.expirar_reserva(pedido, f"cobrança {status_pagamento}")
+        return None
+
+    pix = _dados_pix(payment)
+    if status_pagamento in checkout.STATUS_VIVOS and pix["pix_copia_cola"]:
+        return JsonResponse({
+            **pix,
+            "payment_id": payment.get("id"),
+            "pedido_id": pedido.id,
+            "status": status_pagamento,
+            "valor": f"{_valor_monetario(pedido.total_final):.2f}",
+        })
+
+    return None
 
 
 from django.db import transaction
@@ -5084,31 +4833,55 @@ def webhook_mercadopago(request):
         return HttpResponse(status=200)
 
     sdk = mercadopago.SDK(settings.MP_ACCESS_TOKEN)
-    payment = sdk.payment().get(payment_id)["response"]
 
-    if payment.get("status") != "approved":
+    try:
+        payment = sdk.payment().get(payment_id)["response"]
+    except Exception:
+        payment_logger.exception(
+            "Webhook: falha ao consultar o pagamento %s",
+            payment_id,
+        )
+        # 200 assim mesmo: repetir a notificação não conserta uma falha de
+        # consulta, e devolver erro faria o Mercado Pago reenviar em laço.
         return HttpResponse(status=200)
 
-    carrinho_id = payment.get("external_reference")
-    if not carrinho_id:
+    pedido = checkout.pedido_da_cobranca(payment)
+    if not pedido:
+        payment_logger.warning(
+            "Webhook sem pedido correspondente: payment=%s referencia=%r",
+            payment_id,
+            payment.get("external_reference"),
+        )
         return HttpResponse(status=200)
 
-    carrinho = Carrinho.objects.filter(id=carrinho_id).first()
-    if not carrinho:
+    status_pagamento = payment.get("status")
+
+    # A cobrança morreu: os itens voltam para o carrinho em vez de o cliente
+    # ficar com um pedido travado em "aguardando pagamento" para sempre.
+    if status_pagamento in checkout.STATUS_MORTOS:
+        checkout.expirar_reserva(pedido, f"webhook: {status_pagamento}")
+        return HttpResponse(status=200)
+
+    if status_pagamento != "approved":
         return HttpResponse(status=200)
 
     try:
-        _finalizar_pagamento_aprovado(carrinho, payment)
-    except PagamentoDivergenteError:
+        checkout.confirmar_pagamento(pedido, payment)
+    except checkout.PagamentoDivergente as exc:
         payment_logger.critical(
-            "Webhook ignorado por divergência de cobrança: "
-            "carrinho=%s payment=%s valor_mp=%s valor_atual=%s",
-            carrinho.id,
+            "Webhook ignorado por divergência: pedido=%s payment=%s "
+            "valor_mp=%s valor_pedido=%s motivo=%s",
+            pedido.id,
             payment_id,
             payment.get("transaction_amount"),
-            carrinho.total_final,
+            pedido.total_final,
+            exc,
         )
-        return HttpResponse(status=200)
+    except Exception:
+        payment_logger.exception(
+            "Webhook: falha ao confirmar o pedido %s",
+            pedido.id,
+        )
 
     return HttpResponse(status=200)
 
@@ -5122,6 +4895,7 @@ import mercadopago
 @require_GET
 @never_cache
 def verificar_pagamento(request):
+    """Consulta o estado da cobrança do pedido reservado deste carrinho."""
     carrinho_id = request.GET.get("carrinho_id")
     if not carrinho_id:
         return JsonResponse({
@@ -5140,7 +4914,30 @@ def verificar_pagamento(request):
             "mensagem": "Carrinho não encontrado.",
         }, status=404)
 
-    if not carrinho.mp_payment_id:
+    reserva = checkout.pedido_reservado_do_carrinho(carrinho)
+
+    # Pedido já pago desta rodada: o webhook pode ter chegado antes do
+    # polling, e nesse caso não há mais reserva aberta para consultar.
+    if not reserva:
+        pago = (
+            Pedido.objects
+            .filter(
+                carrinho_origem=carrinho,
+                status="pago",
+                cliente__user=request.user,
+            )
+            .order_by("-id")
+            .first()
+        )
+        if pago:
+            return JsonResponse({
+                "pago": True,
+                "consulta_ok": True,
+                "status": "approved",
+                "pedido_id": pago.id,
+                "redirect_url": _url_meus_pedidos(),
+            })
+
         return JsonResponse({
             "pago": False,
             "consulta_ok": True,
@@ -5148,26 +4945,12 @@ def verificar_pagamento(request):
             "mensagem": "Aguardando a criação da cobrança.",
         })
 
-    pedido_existente = Pedido.objects.filter(
-        mp_payment_id=str(carrinho.mp_payment_id),
-        cliente__user=request.user,
-    ).first()
-    if pedido_existente and not carrinho.itens.exists():
-        return JsonResponse({
-            "pago": True,
-            "consulta_ok": True,
-            "status": "approved",
-            "pedido_id": pedido_existente.id,
-            "redirect_url": _url_meus_pedidos(),
-        })
-    if pedido_existente:
-        carrinho.mp_payment_id = None
-        carrinho.save(update_fields=["mp_payment_id"])
+    if not reserva.mp_payment_id:
         return JsonResponse({
             "pago": False,
             "consulta_ok": True,
-            "status": "stale_payment",
-            "mensagem": "Nova solicitação detectada. Gerando uma cobrança exclusiva.",
+            "status": "waiting_payment",
+            "mensagem": "Aguardando a criação da cobrança.",
         })
 
     try:
@@ -5175,14 +4958,12 @@ def verificar_pagamento(request):
             raise RuntimeError("MP_ACCESS_TOKEN não configurado.")
 
         sdk = mercadopago.SDK(settings.MP_ACCESS_TOKEN)
-        payment_info = sdk.payment().get(carrinho.mp_payment_id)
-        payment = payment_info.get("response") or {}
-
+        payment = sdk.payment().get(reserva.mp_payment_id).get("response") or {}
     except Exception:
         payment_logger.exception(
-            "Falha ao consultar status carrinho=%s payment=%s",
-            carrinho.id,
-            carrinho.mp_payment_id,
+            "Falha ao consultar status pedido=%s payment=%s",
+            reserva.id,
+            reserva.mp_payment_id,
         )
         return JsonResponse({
             "pago": False,
@@ -5195,6 +4976,20 @@ def verificar_pagamento(request):
         })
 
     status_pagamento = payment.get("status")
+
+    if status_pagamento in checkout.STATUS_MORTOS:
+        checkout.expirar_reserva(reserva, f"polling: {status_pagamento}")
+        return JsonResponse({
+            "pago": False,
+            "consulta_ok": True,
+            "status": status_pagamento,
+            "carrinho_restaurado": True,
+            "mensagem": (
+                "A cobrança foi encerrada sem pagamento. Seus itens "
+                "voltaram para o carrinho."
+            ),
+        })
+
     if status_pagamento != "approved":
         return JsonResponse({
             "pago": False,
@@ -5211,15 +5006,15 @@ def verificar_pagamento(request):
         })
 
     try:
-        pedido, _ = _finalizar_pagamento_aprovado(carrinho, payment)
-    except PagamentoDivergenteError as exc:
+        pedido, _ = checkout.confirmar_pagamento(reserva, payment)
+    except checkout.PagamentoDivergente as exc:
         payment_logger.critical(
-            "Pagamento aprovado com dados divergentes: "
-            "carrinho=%s payment=%s valor_mp=%s valor_atual=%s",
-            carrinho.id,
-            carrinho.mp_payment_id,
+            "Pagamento aprovado com dados divergentes: pedido=%s payment=%s "
+            "valor_mp=%s valor_pedido=%s",
+            reserva.id,
+            reserva.mp_payment_id,
             payment.get("transaction_amount"),
-            carrinho.total_final,
+            reserva.total_final,
         )
         return JsonResponse({
             "pago": False,
@@ -5228,15 +5023,13 @@ def verificar_pagamento(request):
             "erro": str(exc),
         }, status=409)
     except Exception:
-        # Uma indisponibilidade transitória do banco não deve matar o polling
-        # nem deixar o cliente preso com uma tela de erro. O pagamento segue
-        # aprovado no provedor e a próxima consulta tenta criar o pedido de
-        # forma idempotente novamente.
+        # Indisponibilidade transitória do banco não pode matar o polling nem
+        # prender o cliente numa tela de erro: o pagamento segue aprovado no
+        # provedor e a próxima consulta tenta confirmar de novo.
         payment_logger.exception(
-            "Falha transitória ao finalizar pagamento: "
-            "carrinho=%s payment=%s",
-            carrinho.id,
-            carrinho.mp_payment_id,
+            "Falha transitória ao confirmar pedido=%s payment=%s",
+            reserva.id,
+            reserva.mp_payment_id,
         )
         return JsonResponse({
             "pago": False,
@@ -5267,9 +5060,21 @@ def confirmacoes_pendentes(request):
     com o site fechado: o aviso não depende da aba do checkout continuar
     aberta, fica guardado no pedido e é entregue na próxima visita.
     """
+    from datetime import timedelta
+
+    from django.db.models import Sum
+
+    from .models import ItemCarrinho
+
     perfil = getattr(request.user, "perfil", None)
     if not perfil:
-        return JsonResponse({"confirmacoes": []})
+        return JsonResponse({"confirmacoes": [], "itens_carrinho": 0})
+
+    # Janela curta, além da marca de "já avisado". A marca sozinha não basta:
+    # um pedido que por qualquer motivo não tenha sido baixado não pode
+    # ressurgir semanas depois anunciando "pagamento aprovado!". Passado o
+    # prazo, o e-mail e a página Meus Pedidos são o registro — não o balão.
+    limite = timezone.now() - timedelta(hours=JANELA_AVISO_PAGAMENTO_HORAS)
 
     pedidos = (
         Pedido.objects
@@ -5277,12 +5082,24 @@ def confirmacoes_pendentes(request):
             cliente=perfil,
             confirmacao_notificada=False,
             mp_status="approved",
+            criacao__gte=limite,
         )
         .exclude(status="cancelado")
         .order_by("-id")[:3]
     )
 
+    # O selo do carrinho é corrigido com o número real, não zerado às cegas.
+    # Zerar sempre fazia o selo sumir e voltar na página seguinte quando havia
+    # itens novos no carrinho — parecia que a compra tinha desfeito o carrinho.
+    itens_carrinho = (
+        ItemCarrinho.objects
+        .filter(carrinho__cliente=perfil)
+        .aggregate(total=Sum("quantidade"))["total"]
+        or 0
+    )
+
     return JsonResponse({
+        "itens_carrinho": itens_carrinho,
         "confirmacoes": [
             {
                 "pedido_id": pedido.id,
@@ -5292,6 +5109,88 @@ def confirmacoes_pendentes(request):
             }
             for pedido in pedidos
         ],
+    })
+
+
+@login_required
+@require_POST
+def devolver_pedido_ao_carrinho(request):
+    """Cancela uma reserva e devolve os itens ao carrinho do cliente.
+
+    É a saída para quem desistiu do pagamento: sem ela, o pedido reservado
+    ficaria parado em "aguardando pagamento" e os itens presos nele.
+    """
+    perfil = getattr(request.user, "perfil", None)
+    if not perfil:
+        return JsonResponse({"ok": False, "msg": "Perfil não encontrado."}, status=404)
+
+    try:
+        dados = json.loads(request.body.decode("utf-8") or "{}")
+    except (TypeError, ValueError):
+        dados = {}
+
+    pedido = (
+        Pedido.objects
+        .filter(
+            pk=dados.get("pedido_id"),
+            cliente=perfil,
+            status="aguardando_pagamento",
+        )
+        .first()
+    )
+
+    if not pedido:
+        return JsonResponse(
+            {"ok": False, "msg": "Pedido não encontrado ou já processado."},
+            status=404,
+        )
+
+    # A cobrança aberta precisa morrer junto: deixá-la viva permitiria pagar
+    # um pedido que acabou de ser cancelado.
+    if pedido.mp_payment_id and settings.MP_ACCESS_TOKEN:
+        try:
+            sdk = mercadopago.SDK(settings.MP_ACCESS_TOKEN)
+            status_anterior, payment = _cancelar_pagamento_pendente_mp(
+                sdk,
+                pedido.mp_payment_id,
+            )
+
+            if status_anterior == "approved":
+                # Pagou enquanto clicava em cancelar: vale o pagamento.
+                confirmado, _ = checkout.confirmar_pagamento(pedido, payment)
+                return JsonResponse({
+                    "ok": False,
+                    "pago": True,
+                    "msg": "Este pedido acabou de ser pago.",
+                    "redirect_url": _url_meus_pedidos(),
+                    "pedido_id": confirmado.id,
+                })
+        except Exception:
+            payment_logger.exception(
+                "Falha ao cancelar a cobrança do pedido %s",
+                pedido.id,
+            )
+            return JsonResponse(
+                {
+                    "ok": False,
+                    "msg": (
+                        "Não foi possível encerrar a cobrança agora. "
+                        "Tente novamente em alguns instantes."
+                    ),
+                },
+                status=502,
+            )
+
+    try:
+        carrinho = pedido.devolver_ao_carrinho()
+    except ValueError as exc:
+        return JsonResponse({"ok": False, "msg": str(exc)}, status=400)
+
+    return JsonResponse({
+        "ok": True,
+        "msg": "Itens devolvidos ao carrinho.",
+        "redirect_url": reverse("carrinho") + "#carrinho",
+        "itens_carrinho": sum(i.quantidade for i in carrinho.itens.all()),
     })
 
 
@@ -5325,7 +5224,11 @@ def marcar_confirmacao_vista(request):
 @login_required
 @require_POST
 def processar_cartao(request):
-    """Processa apenas o token gerado pelo MercadoPago.js/Payment Brick."""
+    """Processa o token gerado pelo MercadoPago.js/Payment Brick.
+
+    Segue o mesmo desenho do Pix: o carrinho vira pedido antes de a cobrança
+    existir, e a reserva é desfeita se a cobrança não sair.
+    """
     try:
         dados = json.loads(request.body.decode("utf-8"))
     except (TypeError, ValueError, json.JSONDecodeError):
@@ -5338,9 +5241,9 @@ def processar_cartao(request):
         request,
         dados.get("carrinho_id"),
     )
-    if not carrinho or not carrinho.itens.exists():
+    if not carrinho:
         return JsonResponse(
-            {"sucesso": False, "mensagem": "Carrinho inválido ou vazio."},
+            {"sucesso": False, "mensagem": "Carrinho inválido."},
             status=404,
         )
 
@@ -5350,22 +5253,22 @@ def processar_cartao(request):
             status=503,
         )
 
-    # Nunca mantém Pix e cartão pendentes simultaneamente para o mesmo
-    # carrinho. Antes de abrir uma cobrança de cartão, conclui ou cancela
-    # a tentativa anterior.
-    if carrinho.mp_payment_id:
+    sdk = mercadopago.SDK(settings.MP_ACCESS_TOKEN)
+
+    # Nunca mantém duas cobranças vivas para o mesmo pedido. Se existe uma
+    # reserva com Pix pendente, ela é encerrada antes de abrir o cartão.
+    reserva = checkout.pedido_reservado_do_carrinho(carrinho)
+
+    if reserva and reserva.mp_payment_id:
         try:
-            sdk_anterior = mercadopago.SDK(settings.MP_ACCESS_TOKEN)
-            status_anterior, payment_anterior = (
-                _cancelar_pagamento_pendente_mp(
-                    sdk_anterior,
-                    carrinho.mp_payment_id,
-                )
+            status_anterior, payment_anterior = _cancelar_pagamento_pendente_mp(
+                sdk,
+                reserva.mp_payment_id,
             )
 
             if status_anterior == "approved":
-                pedido, _ = _finalizar_pagamento_aprovado(
-                    carrinho,
+                pedido, _ = checkout.confirmar_pagamento(
+                    reserva,
                     payment_anterior,
                 )
                 return JsonResponse({
@@ -5376,12 +5279,7 @@ def processar_cartao(request):
                     "mensagem": "Pagamento já aprovado.",
                 })
 
-            if status_anterior not in {
-                "cancelled",
-                "rejected",
-                "refunded",
-                "charged_back",
-            }:
+            if status_anterior not in checkout.STATUS_MORTOS:
                 return JsonResponse(
                     {
                         "sucesso": False,
@@ -5393,17 +5291,19 @@ def processar_cartao(request):
                     status=409,
                 )
 
-            carrinho.mp_payment_id = None
-            carrinho.save(update_fields=["mp_payment_id"])
-        except PagamentoDivergenteError as exc:
+            # A cobrança anterior morreu: a reserva continua válida e vai
+            # receber a cobrança de cartão. Só o vínculo com o Pix cai.
+            reserva.mp_payment_id = None
+            reserva.save(update_fields=["mp_payment_id", "atualizado"])
+        except checkout.PagamentoDivergente as exc:
             return JsonResponse(
                 {"sucesso": False, "mensagem": str(exc)},
                 status=409,
             )
         except Exception:
             payment_logger.exception(
-                "Falha ao encerrar cobrança anterior carrinho=%s",
-                carrinho.id,
+                "Falha ao encerrar cobrança anterior do pedido %s",
+                reserva.id,
             )
             return JsonResponse(
                 {
@@ -5416,6 +5316,7 @@ def processar_cartao(request):
                 status=502,
             )
 
+    # ---------------------------------------------------------------- dados
     token = dados.get("token")
     payment_method_id = dados.get("payment_method_id")
     payer = dados.get("payer") or {}
@@ -5426,16 +5327,6 @@ def processar_cartao(request):
     except (TypeError, ValueError):
         parcelas = 0
 
-    max_parcelas = 18 if carrinho.total_final > Decimal("20000.00") else 12
-    if parcelas < 1 or parcelas > max_parcelas:
-        return JsonResponse(
-            {
-                "sucesso": False,
-                "mensagem": f"Escolha entre 1 e {max_parcelas} parcelas.",
-            },
-            status=400,
-        )
-
     if not token or not payment_method_id or not payer_email:
         return JsonResponse(
             {
@@ -5445,35 +5336,46 @@ def processar_cartao(request):
             status=400,
         )
 
-    identification = payer.get("identification") or {}
-    total_final = _valor_monetario(carrinho.total_final)
-    if total_final is None or total_final <= Decimal("0.00"):
+    # ------------------------------------------------------------- reserva
+    if not reserva:
+        try:
+            reserva, _ = checkout.reservar_pedido(carrinho, usuario=request.user)
+        except checkout.ReservaInvalida as exc:
+            return JsonResponse(
+                {"sucesso": False, "mensagem": str(exc)},
+                status=400,
+            )
+        except Exception:
+            payment_logger.exception(
+                "Falha ao reservar pedido do carrinho %s (cartão)",
+                carrinho.id,
+            )
+            return JsonResponse(
+                {"sucesso": False, "mensagem": "Não foi possível iniciar o pagamento."},
+                status=500,
+            )
+
+    total_final = _valor_monetario(reserva.total_final)
+
+    max_parcelas = 18 if total_final > Decimal("20000.00") else 12
+    if parcelas < 1 or parcelas > max_parcelas:
         return JsonResponse(
             {
                 "sucesso": False,
-                "mensagem": "O total do carrinho é inválido.",
+                "mensagem": f"Escolha entre 1 e {max_parcelas} parcelas.",
             },
             status=400,
         )
 
-    try:
-        assinatura = _assinatura_carrinho(carrinho)
-    except ValueError as exc:
-        payment_logger.exception(
-            "Carrinho %s contém valor inválido.",
-            carrinho.id,
-        )
-        return JsonResponse(
-            {"sucesso": False, "mensagem": str(exc)},
-            status=400,
-        )
+    identification = payer.get("identification") or {}
+
     payment_data = {
         "transaction_amount": float(total_final),
         "token": token,
-        "description": f"Lazer & Sport - Carrinho #{carrinho.id}",
+        "description": f"Lazer & Sport - Pedido #{reserva.id}",
         "installments": parcelas,
         "payment_method_id": payment_method_id,
-        "external_reference": str(carrinho.id),
+        "external_reference": checkout.referencia_do_pedido(reserva),
         "notification_url": request.build_absolute_uri(reverse("webhook_mp")),
         "payer": {
             "email": payer_email,
@@ -5483,33 +5385,36 @@ def processar_cartao(request):
             },
         },
         "metadata": {
-            "cart_fingerprint": assinatura,
+            "cart_fingerprint": reserva.mp_fingerprint,
             "cart_total": f"{total_final:.2f}",
+            "pedido_id": reserva.id,
         },
     }
     if dados.get("issuer_id"):
         payment_data["issuer_id"] = dados["issuer_id"]
 
+    # O token entra na chave: reenviar o mesmo cartão não cobra duas vezes,
+    # e trocar de cartão gera uma cobrança nova.
     token_fingerprint = hashlib.sha256(token.encode("utf-8")).hexdigest()
     idempotency_key = uuid.uuid5(
         uuid.NAMESPACE_URL,
         (
-            f"lazersport:card:{carrinho.id}:{assinatura}:"
+            f"lazersport:card:pedido:{reserva.id}:{reserva.mp_fingerprint}:"
             f"{total_final}:{token_fingerprint}"
         ),
     )
 
     try:
-        sdk = mercadopago.SDK(settings.MP_ACCESS_TOKEN)
         response = sdk.payment().create(
             payment_data,
             _mp_request_options(idempotency_key),
         )
     except Exception:
         payment_logger.exception(
-            "Erro de comunicação ao pagar carrinho %s com cartão",
-            carrinho.id,
+            "Erro de comunicação ao pagar o pedido %s com cartão",
+            reserva.id,
         )
+        checkout.expirar_reserva(reserva, "falha de comunicação (cartão)")
         return JsonResponse(
             {
                 "sucesso": False,
@@ -5521,30 +5426,28 @@ def processar_cartao(request):
     payment = response.get("response") or {}
     status_code = int(response.get("status") or 500)
     payment_id = payment.get("id")
-    pagamento_confere = (
-            bool(payment_id)
-            and _pagamento_confere_com_carrinho(
-        payment,
-        carrinho,
-        assinatura,
-    )
-    )
 
-    if (
-            status_code in {200, 201}
-            and payment_id
-            and not pagamento_confere
-    ):
-        valor_retornado = _valor_monetario(
-            payment.get("transaction_amount")
+    if status_code not in {200, 201} or not payment_id:
+        payment_logger.error(
+            "Mercado Pago recusou cartão pedido=%s http=%s resposta=%r",
+            reserva.id,
+            status_code,
+            payment,
         )
+        # Cartão recusado não é fim de linha: o cliente costuma tentar outro.
+        # A reserva fica de pé para ele tentar de novo sem remontar o carrinho.
+        return JsonResponse(
+            {"sucesso": False, "mensagem": _mp_error_message(payment)},
+            status=400 if status_code < 500 else 502,
+        )
+
+    valor_retornado = _valor_monetario(payment.get("transaction_amount"))
+    if valor_retornado != total_final:
         payment_logger.critical(
-            "Mercado Pago criou cartão com divergência: "
-            "carrinho=%s esperado=%s retornado=%s payment=%s",
-            carrinho.id,
+            "Cartão com divergência de valor: pedido=%s esperado=%s retornado=%s",
+            reserva.id,
             total_final,
             valor_retornado,
-            payment_id,
         )
         return JsonResponse(
             {
@@ -5557,27 +5460,11 @@ def processar_cartao(request):
             status=409,
         )
 
-    if (
-            status_code not in {200, 201}
-            or not payment_id
-            or not pagamento_confere
-    ):
-        payment_logger.error(
-            "Mercado Pago recusou cartão carrinho=%s http=%s resposta=%r",
-            carrinho.id,
-            status_code,
-            payment,
-        )
-        return JsonResponse(
-            {
-                "sucesso": False,
-                "mensagem": _mp_error_message(payment),
-            },
-            status=400 if status_code < 500 else 502,
-        )
+    reserva.mp_payment_id = str(payment_id)
+    reserva.mp_status = payment.get("status") or "pending"
+    reserva.save(update_fields=["mp_payment_id", "mp_status", "atualizado"])
 
-    carrinho.mp_payment_id = str(payment_id)
-    carrinho.save(update_fields=["mp_payment_id"])
+    Carrinho.objects.filter(pk=carrinho.pk).update(mp_payment_id=str(payment_id))
 
     status_pagamento = payment.get("status")
     aprovado = status_pagamento == "approved"
@@ -5586,24 +5473,21 @@ def processar_cartao(request):
 
     if aprovado:
         try:
-            pedido, _ = _finalizar_pagamento_aprovado(
-                carrinho,
-                payment,
-            )
-        except PagamentoDivergenteError as exc:
+            pedido, _ = checkout.confirmar_pagamento(reserva, payment)
+        except checkout.PagamentoDivergente as exc:
             payment_logger.critical(
-                "Cartão aprovado divergente carrinho=%s payment=%s",
-                carrinho.id,
+                "Cartão aprovado divergente pedido=%s payment=%s",
+                reserva.id,
                 payment_id,
             )
             return JsonResponse(
-                {
-                    "sucesso": False,
-                    "aprovado": False,
-                    "mensagem": str(exc),
-                },
+                {"sucesso": False, "aprovado": False, "mensagem": str(exc)},
                 status=409,
             )
+    elif not pendente:
+        # Recusado de vez: devolve os itens para o carrinho, senão o cliente
+        # fica sem carrinho e com um pedido que nunca vai ser pago.
+        checkout.expirar_reserva(reserva, f"cartão {status_pagamento}")
 
     return JsonResponse(
         {
@@ -5611,9 +5495,10 @@ def processar_cartao(request):
             "aprovado": aprovado,
             "pendente": pendente,
             "payment_id": payment_id,
-            "pedido_id": pedido.id if pedido else None,
+            "pedido_id": pedido.id if pedido else reserva.id,
             "status": status_pagamento,
             "status_detail": payment.get("status_detail"),
+            "carrinho_restaurado": not (aprovado or pendente),
             "redirect_url": _url_meus_pedidos() if aprovado else None,
             "mensagem": (
                 "Pagamento aprovado."

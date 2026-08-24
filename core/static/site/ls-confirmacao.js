@@ -48,17 +48,20 @@
     }
 
     /* ---------------------------------------------------------------------
-       Some com o carrinho: o pedido virou pedido, o carrinho está vazio no
-       servidor. Uma página aberta antes do pagamento ainda mostra o número
-       antigo no selo, e deixar isso na tela passa a impressão de que a
-       compra não foi concluída.
+       Corrige o selo do carrinho com o número que o servidor acabou de
+       informar. Antes isto zerava às cegas: se o cliente já tivesse colocado
+       algo novo no carrinho, o selo sumia e reaparecia na página seguinte —
+       era o carrinho "tendo e não tendo produtos".
        --------------------------------------------------------------------- */
-    function zerarCarrinho() {
+    function ajustarCarrinho(quantidade) {
         var botao = document.getElementById("carrinho-float-btn");
         var contador = document.getElementById("carrinho-contador");
+        var total = Number(quantidade);
 
-        if (contador) contador.textContent = "0";
-        if (botao) botao.classList.add("hidden");
+        if (isNaN(total) || total < 0) return;
+
+        if (contador) contador.textContent = String(total);
+        if (botao) botao.classList.toggle("hidden", total === 0);
     }
 
     function baixarAviso(pedidoId) {
@@ -133,7 +136,6 @@
            cliente já foi informado, e repetir na próxima página seria
            insistência. O e-mail continua sendo o registro permanente. */
         baixarAviso(confirmacao.pedido_id);
-        zerarCarrinho();
 
         window.requestAnimationFrame(function () {
             caixa.classList.add("is-open");
@@ -177,7 +179,13 @@
                 return resposta.ok ? resposta.json() : null;
             })
             .then(function (dados) {
-                if (!dados || !dados.confirmacoes || !dados.confirmacoes.length) {
+                if (!dados) return;
+
+                /* O selo é acertado sempre, com ou sem aviso: é a resposta
+                   mais recente do servidor sobre o carrinho. */
+                ajustarCarrinho(dados.itens_carrinho);
+
+                if (!dados.confirmacoes || !dados.confirmacoes.length) {
                     return;
                 }
                 /* Mais de um pedido pendente é raro (duas compras sem voltar

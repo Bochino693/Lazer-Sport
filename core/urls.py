@@ -16,6 +16,7 @@ from .views import (
     verificar_pagamento,
     confirmacoes_pendentes,
     marcar_confirmacao_vista,
+    devolver_pedido_ao_carrinho,
     ProjetosView,
     ClientePerfilView,
     ComboInfoView,
@@ -249,6 +250,11 @@ urlpatterns = [
         "api/confirmacoes/vista/",
         marcar_confirmacao_vista,
         name="marcar_confirmacao_vista",
+    ),
+    path(
+        "api/pedido/devolver-carrinho/",
+        devolver_pedido_ao_carrinho,
+        name="devolver_pedido_carrinho",
     ),
     path("processar_cartao/", processar_cartao, name="processar_cartao"),
 
