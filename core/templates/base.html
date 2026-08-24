@@ -8,11 +8,38 @@
   <meta name="description" content="{% block meta_description %}Lazer & Sport Brinquedos: fábrica e loja de brinquedos, fliperama, mecânicos e simuladores para shoppings, quiosques e parques. Compra e reposição de peças.{% endblock %}">
   <link rel="canonical" href="https://www.lazersport.com.br{% block canonical_path %}{{ request.path }}{% endblock %}">
   <link rel="icon" type="image/x-icon" href="{% static 'images/logoofi.png' %}">
+  <meta name="theme-color" content="#004AAD">
+
+  <!-- Abre as conexões dos CDNs junto com o HTML, antes de o CSS pedir por elas. -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+  <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
+
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet"
         href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <!-- Experiência de rolagem: skeletons, entrada dos blocos e barra de progresso. -->
+  <link rel="stylesheet" href="{% static 'site/ls-reveal.css' %}?v=1">
+  <script src="{% static 'site/ls-reveal.js' %}?v=1" defer></script>
+  <script>
+    /* Liga o estado inicial escondido antes da primeira pintura, para o bloco
+       nunca aparecer e sumir. Se o ls-reveal.js não rodar em 2,5 s — bloqueio de
+       CDN, erro de rede — o modo é desligado e a página volta ao normal. */
+    (function () {
+      var raiz = document.documentElement;
+      var reduzir = window.matchMedia
+        && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+      if (reduzir || !("IntersectionObserver" in window)) return;
+
+      raiz.classList.add("ls-reveal-on");
+      window.__lsRevealFailsafe = window.setTimeout(function () {
+        raiz.classList.remove("ls-reveal-on");
+      }, 2500);
+    })();
+  </script>
 
 
 <style>
@@ -555,20 +582,7 @@
       50% { transform: translateY(4px); }
     }
 
-    /* A classe só é aplicada via JS: sem JS o conteúdo nunca fica oculto. */
-    [data-scroll-reveal].ls-reveal-pending {
-      opacity: 0;
-      transform: translateY(24px);
-    }
-
-    [data-scroll-reveal] {
-      transition: opacity .55s ease, transform .55s cubic-bezier(.2, .8, .2, 1);
-    }
-
-    [data-scroll-reveal].ls-reveal-visible {
-      opacity: 1;
-      transform: translateY(0);
-    }
+    /* [data-scroll-reveal] passou a ser tratado por site/ls-reveal.css. */
 
     @media (max-width: 960px) {
       main.content-section .ls-scroll-cue {
@@ -703,6 +717,26 @@ nav a.btn-login {
     color: white;
     font-weight: 600;
     cursor: pointer;
+
+    /* Virou <button> para abrir no clique e no teclado. */
+    appearance: none;
+    -webkit-appearance: none;
+    background: transparent;
+    border: 0;
+    font-family: inherit;
+    font-size: inherit;
+    line-height: inherit;
+
+    /* Alvo confortável de toque e de mouse em qualquer resolução. */
+    min-height: 48px;
+    padding: 4px 10px 4px 4px;
+    border-radius: 999px;
+    transition: background 0.2s var(--ease-out);
+}
+
+.user-icon:hover,
+.user-dropdown.is-open .user-icon {
+    background: rgba(255, 255, 255, 0.12);
 }
 
 /* Selo/avatar circular — iniciais quando logado, ícone genérico quando não */
@@ -732,7 +766,8 @@ nav a.btn-login {
     font-size: 16px;
 }
 
-.user-dropdown:hover .user-avatar {
+.user-dropdown:hover .user-avatar,
+.user-dropdown.is-open .user-avatar {
     transform: scale(1.08);
 }
 
@@ -752,7 +787,8 @@ nav a.btn-login {
     transition: transform 0.25s var(--ease-out);
 }
 
-.user-dropdown:hover .user-caret {
+.user-dropdown:hover .user-caret,
+.user-dropdown.is-open .user-caret {
     transform: rotate(180deg);
 }
 
@@ -763,19 +799,23 @@ nav a.btn-login {
 /* === DROPDOWN MELHORADO === */
 .dropdown-menu {
     position: absolute;
-    top: 60px;
+    /* Antes eram 60px fixos: em telas grandes o cabeçalho cresce e sobrava um
+       vão morto entre o gatilho e o menu, que fechava o hover no meio do
+       caminho para "Fazer Login". Agora o menu nasce colado no gatilho. */
+    top: calc(100% + 10px);
     left: 0;
     background: white;
     color: #333;
-    border-radius: 12px;
-    box-shadow: 0 14px 32px rgba(0, 0, 0, 0.2);
-    width: 210px;
+    border-radius: 14px;
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.24);
+    width: clamp(228px, 18vw, 300px);
     padding: 8px;
     overflow: hidden;
 
     /* Estado inicial (escondido) */
     opacity: 0;
     visibility: hidden;
+    pointer-events: none;
     transform: translateY(6px) scale(0.96);
     transform-origin: top left;
 
@@ -787,11 +827,33 @@ nav a.btn-login {
     z-index: 9999;
 }
 
-/* Quando o mouse está sobre o ícone OU sobre o menu */
-.user-dropdown:hover .dropdown-menu {
+/* Ponte invisível sobre o vão: o ponteiro atravessa sem perder o hover. */
+.dropdown-menu::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: -14px;
+    height: 14px;
+}
+
+/* Aberto por clique/teclado — é o estado que o usuário controla. */
+.user-dropdown.is-open .dropdown-menu {
     opacity: 1;
     visibility: visible;
+    pointer-events: auto;
     transform: translateY(0) scale(1);
+}
+
+/* O hover continua valendo como atalho, mas só onde existe ponteiro fino.
+   Em telas de toque o hover "grudava" e atrapalhava mais do que ajudava. */
+@media (hover: hover) and (pointer: fine) {
+    .user-dropdown:hover .dropdown-menu {
+        opacity: 1;
+        visibility: visible;
+        pointer-events: auto;
+        transform: translateY(0) scale(1);
+    }
 }
 
 /* Cabeçalho de identificação dentro do dropdown (só aparece quando logado) */
@@ -823,12 +885,18 @@ nav a.btn-login {
 
 /* Links dentro do menu */
 .dropdown-menu a {
-    display: block;
-    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    /* 46px de altura mínima: alvo clicável confortável do celular ao monitor
+       grande, que era a queixa em "Fazer Login" e "Criar Conta". */
+    min-height: 46px;
+    padding: 11px 14px;
     text-decoration: none;
     color: #004AAD;
     font-weight: 600;
-    border-radius: 8px;
+    font-size: 0.95rem;
+    border-radius: 10px;
     transition: background 0.2s var(--ease-out), color 0.2s var(--ease-out), transform 0.2s var(--ease-out);
 }
 
@@ -919,11 +987,7 @@ nav a.btn-login {
   .dropdown-menu {
     left: 0;
     right: auto;
-    transform: translateY(10px);
-  }
-
-  .user-dropdown:hover .dropdown-menu {
-    transform: translateY(0);
+    width: min(272px, calc(100vw - 24px));
   }
 
   /* Deixa a saudação um pouco mais compacta no header mobile */
@@ -1479,31 +1543,39 @@ nav a.btn-login {
   <!-- Área do usuário -->
   <div class="user-area">
     {% if user.is_authenticated %}
-      <div class="user-dropdown">
-        <a class="user-icon">
+      <div class="user-dropdown" data-user-dropdown>
+        <button type="button"
+                class="user-icon"
+                aria-haspopup="true"
+                aria-expanded="false"
+                aria-controls="ls-user-menu">
           <span class="user-avatar autenticado">{{ user.first_name|default:user.username|slice:":1"|upper }}</span>
           <span class="user-greeting">Olá, {{ user.first_name|default:user.username }}</span>
-          <i class="fa-solid fa-chevron-down user-caret"></i>
-        </a>
-        <div class="dropdown-menu">
+          <i class="fa-solid fa-chevron-down user-caret" aria-hidden="true"></i>
+        </button>
+        <div class="dropdown-menu" id="ls-user-menu" role="menu">
           <div class="dropdown-user-info">
             <strong>{{ user.get_full_name|default:user.username }}</strong>
             <span>{{ user.email }}</span>
           </div>
-          <a href="{% url 'perfil' %}#perfil-box">🎯 Meu Perfil</a>
-          <a href="{% url 'logout' %}#logout-box">🚪 Sair</a>
+          <a href="{% url 'perfil' %}#perfil-box" role="menuitem">🎯 Meu Perfil</a>
+          <a href="{% url 'logout' %}#logout-box" role="menuitem">🚪 Sair</a>
         </div>
       </div>
     {% else %}
-      <div class="user-dropdown">
-        <a class="user-icon">
-          <span class="user-avatar anonimo"><i class="fa-solid fa-user"></i></span>
+      <div class="user-dropdown" data-user-dropdown>
+        <button type="button"
+                class="user-icon"
+                aria-haspopup="true"
+                aria-expanded="false"
+                aria-controls="ls-user-menu">
+          <span class="user-avatar anonimo"><i class="fa-solid fa-user" aria-hidden="true"></i></span>
           <span class="user-greeting">Entrar / Cadastro</span>
-          <i class="fa-solid fa-chevron-down user-caret"></i>
-        </a>
-        <div class="dropdown-menu">
-         <a href="{% url 'login'  %}#login-box" >🔐 Fazer Login</a>
-          <a href="{% url 'registrar' %}#register-box">📝 Criar Conta</a>
+          <i class="fa-solid fa-chevron-down user-caret" aria-hidden="true"></i>
+        </button>
+        <div class="dropdown-menu" id="ls-user-menu" role="menu">
+          <a href="{% url 'login' %}#login-box" role="menuitem">🔐 Fazer Login</a>
+          <a href="{% url 'registrar' %}#register-box" role="menuitem">📝 Criar Conta</a>
         </div>
       </div>
     {% endif %}
@@ -1637,9 +1709,6 @@ nav a.btn-login {
     </div>
   </div>
 </section>
-
-<!-- Adicione Font Awesome no <head> -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
 <!-- ======= CONTEÚDO DINÂMICO ======= -->
 <main class="content-section{% block main_class %}{% endblock %}">
@@ -1826,6 +1895,249 @@ nav a.btn-login {
     .ls-footer a:hover {
         color: #E63946;
         padding-left: 4px;
+    }
+
+    /* ======= CAIXA DO APLICATIVO ANDROID (rodapé) ======= */
+    .ls-app-strip {
+        max-width: 1180px;
+        margin: 48px auto 8px;
+        padding: 30px;
+        display: grid;
+        grid-template-columns: minmax(150px, 210px) 1fr;
+        align-items: center;
+        gap: 32px;
+        border-radius: 22px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        background:
+            radial-gradient(circle at 12% 0%, rgba(0, 123, 255, 0.28), transparent 60%),
+            radial-gradient(circle at 92% 100%, rgba(255, 215, 0, 0.16), transparent 58%),
+            linear-gradient(135deg, #10233d, #0a1526);
+        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.32);
+        overflow: hidden;
+    }
+
+    /* Aparelho estilizado — puro CSS, sem baixar mockup nenhum. */
+    .ls-app-visual {
+        display: flex;
+        justify-content: center;
+    }
+
+    .ls-app-phone {
+        position: relative;
+        width: 132px;
+        height: 232px;
+        padding: 12px 10px;
+        border-radius: 26px;
+        background: linear-gradient(160deg, #1d3557, #0b1626);
+        border: 2px solid rgba(255, 255, 255, 0.16);
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.14);
+        transform: rotate(-6deg);
+        transition: transform 0.45s var(--ease-out);
+    }
+
+    .ls-app-strip:hover .ls-app-phone {
+        transform: rotate(-2deg) translateY(-4px);
+    }
+
+    .ls-app-phone-notch {
+        position: absolute;
+        top: 6px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 42px;
+        height: 5px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.22);
+    }
+
+    .ls-app-phone-screen {
+        height: 100%;
+        border-radius: 18px;
+        background: linear-gradient(180deg, #ffffff, #eaf1ff);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 9px;
+        padding: 16px 12px;
+    }
+
+    .ls-app-phone-screen img {
+        width: 62px;
+        height: 62px;
+        object-fit: contain;
+    }
+
+    .ls-app-phone-bar {
+        width: 74%;
+        height: 7px;
+        border-radius: 999px;
+        background: rgba(0, 74, 173, 0.22);
+    }
+
+    .ls-app-phone-bar.short {
+        width: 48%;
+        background: rgba(230, 57, 70, 0.28);
+    }
+
+    .ls-app-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 14px;
+        border-radius: 999px;
+        background: rgba(61, 220, 132, 0.16);
+        border: 1px solid rgba(61, 220, 132, 0.38);
+        color: #7ff0b4;
+        font-size: 0.78rem;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+    }
+
+    .ls-app-strip.is-soon .ls-app-badge {
+        background: rgba(255, 215, 0, 0.14);
+        border-color: rgba(255, 215, 0, 0.4);
+        color: #ffe27a;
+    }
+
+    .ls-footer .ls-app-copy h5 {
+        margin: 14px 0 8px;
+        font-size: 1.45rem;
+        line-height: 1.25;
+    }
+
+    .ls-footer .ls-app-copy p {
+        margin: 0;
+        max-width: 56ch;
+        line-height: 1.7;
+    }
+
+    .ls-app-features {
+        list-style: none;
+        margin: 16px 0 0;
+        padding: 0;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px 22px;
+    }
+
+    .ls-app-features li {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: rgba(255, 255, 255, 0.72);
+        font-size: 0.9rem;
+    }
+
+    .ls-app-features i {
+        color: #FFD700;
+        font-size: 0.85rem;
+    }
+
+    .ls-app-actions {
+        margin-top: 22px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+
+    .ls-footer .ls-app-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        /* 54px de altura: o mesmo alvo confortável usado no menu do usuário. */
+        min-height: 54px;
+        padding: 9px 20px;
+        border-radius: 14px;
+        text-decoration: none;
+        line-height: 1.15;
+        transition: transform 0.25s var(--ease-out), box-shadow 0.25s var(--ease-out), background 0.25s var(--ease-out);
+    }
+
+    .ls-footer .ls-app-btn:hover {
+        padding-left: 20px;
+    }
+
+    .ls-app-btn i {
+        font-size: 1.35rem;
+    }
+
+    .ls-app-btn small {
+        display: block;
+        font-size: 0.7rem;
+        font-weight: 600;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        opacity: 0.78;
+    }
+
+    .ls-app-btn strong {
+        display: block;
+        font-size: 1rem;
+        font-weight: 800;
+    }
+
+    .ls-footer .ls-app-btn.primary {
+        background: linear-gradient(135deg, #007BFF, #004AAD);
+        color: #fff;
+        box-shadow: 0 12px 28px rgba(0, 123, 255, 0.32);
+    }
+
+    .ls-footer .ls-app-btn.primary:hover {
+        color: #fff;
+        transform: translateY(-2px);
+        box-shadow: 0 18px 36px rgba(0, 123, 255, 0.42);
+    }
+
+    .ls-footer .ls-app-btn.ghost {
+        background: rgba(255, 255, 255, 0.07);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        color: rgba(255, 255, 255, 0.92);
+    }
+
+    .ls-footer .ls-app-btn.ghost:hover {
+        background: rgba(255, 255, 255, 0.13);
+        color: #fff;
+        transform: translateY(-2px);
+    }
+
+    .ls-footer .ls-app-btn.disabled {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px dashed rgba(255, 255, 255, 0.26);
+        color: rgba(255, 255, 255, 0.55);
+        cursor: default;
+    }
+
+    .ls-app-note {
+        display: block;
+        margin-top: 14px;
+        font-size: 0.8rem;
+        color: rgba(255, 255, 255, 0.5);
+    }
+
+    @media (max-width: 860px) {
+        .ls-app-strip {
+            grid-template-columns: 1fr;
+            justify-items: center;
+            text-align: center;
+            padding: 26px 20px;
+            gap: 22px;
+        }
+
+        .ls-app-features {
+            justify-content: center;
+        }
+
+        .ls-app-actions {
+            justify-content: center;
+            width: 100%;
+        }
+
+        .ls-footer .ls-app-btn {
+            flex: 1 1 220px;
+            justify-content: center;
+        }
     }
 
     .ls-footer-btn {
@@ -2402,6 +2714,102 @@ nav a.btn-login {
 
     </div>
 
+    <!-- ======= APP ANDROID =======
+         Espaço reservado no rodapé para o aplicativo. Enquanto
+         APP_ANDROID_PLAY_URL / APP_ANDROID_APK_URL não estiverem
+         configuradas, a caixa mostra o estado "em produção" — o layout
+         já é o definitivo, só troca o conteúdo dos botões. -->
+    <section class="ls-app-strip{% if not app_android_disponivel %} is-soon{% endif %}"
+             aria-labelledby="ls-app-title">
+
+        <div class="ls-app-visual" aria-hidden="true">
+            <div class="ls-app-phone">
+                <span class="ls-app-phone-notch"></span>
+                <div class="ls-app-phone-screen">
+                    <img src="{% static 'images/logoofi.png' %}"
+                         alt=""
+                         width="120" height="120"
+                         loading="lazy" decoding="async"
+                         data-ls-skip-skeleton="true">
+                    <span class="ls-app-phone-bar"></span>
+                    <span class="ls-app-phone-bar short"></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="ls-app-copy">
+            <span class="ls-app-badge">
+                <i class="fa-brands fa-android" aria-hidden="true"></i>
+                {% if app_android_disponivel %}Aplicativo Android{% else %}Aplicativo Android em produção{% endif %}
+            </span>
+
+            <h5 id="ls-app-title">Leve a Lazer &amp; Sport no bolso</h5>
+
+            <p>
+                Catálogo completo, acompanhamento de pedidos, chamados de
+                manutenção e orçamento direto pelo celular.
+            </p>
+
+            <ul class="ls-app-features">
+                <li><i class="fa-solid fa-bolt" aria-hidden="true"></i> Catálogo e preços atualizados</li>
+                <li><i class="fa-solid fa-truck-fast" aria-hidden="true"></i> Pedidos e entregas em tempo real</li>
+                <li><i class="fa-solid fa-screwdriver-wrench" aria-hidden="true"></i> Abertura de manutenção em 1 toque</li>
+            </ul>
+
+            <div class="ls-app-actions">
+                {% if app_android_play_url %}
+                    <a class="ls-app-btn primary"
+                       href="{{ app_android_play_url }}"
+                       target="_blank" rel="noopener">
+                        <i class="fa-brands fa-google-play" aria-hidden="true"></i>
+                        <span>
+                            <small>Baixar no</small>
+                            <strong>Google Play</strong>
+                        </span>
+                    </a>
+                {% endif %}
+
+                {% if app_android_apk_url %}
+                    <a class="ls-app-btn ghost"
+                       href="{{ app_android_apk_url }}"
+                       target="_blank" rel="noopener">
+                        <i class="fa-solid fa-download" aria-hidden="true"></i>
+                        <span>
+                            <small>Instalação direta</small>
+                            <strong>Baixar APK</strong>
+                        </span>
+                    </a>
+                {% endif %}
+
+                {% if not app_android_disponivel %}
+                    <span class="ls-app-btn disabled" role="status">
+                        <i class="fa-brands fa-google-play" aria-hidden="true"></i>
+                        <span>
+                            <small>Em breve no</small>
+                            <strong>Google Play</strong>
+                        </span>
+                    </span>
+
+                    <a class="ls-app-btn ghost"
+                       href="https://wa.me/5511960563135?text=Ol%C3%A1!%20Quero%20avisos%20sobre%20o%20aplicativo%20Android%20da%20Lazer%20e%20Sport."
+                       target="_blank" rel="noopener">
+                        <i class="fa-brands fa-whatsapp" aria-hidden="true"></i>
+                        <span>
+                            <small>Quero ser avisado</small>
+                            <strong>Entrar na lista</strong>
+                        </span>
+                    </a>
+                {% endif %}
+            </div>
+
+            {% if app_android_versao %}
+                <span class="ls-app-note">Versão {{ app_android_versao }} — Android 8.0 ou superior</span>
+            {% else %}
+                <span class="ls-app-note">Compatível com Android 8.0 ou superior</span>
+            {% endif %}
+        </div>
+    </section>
+
     {% if clientes_rodape %}
       <section class="ls-clientes-strip" aria-labelledby="ls-clientes-title">
           <div class="ls-clientes-heading">
@@ -2977,25 +3385,66 @@ window.addEventListener("pageshow", function (event) {
     }
 });
 
-/* Revelação progressiva leve para cards e blocos longos. O conteúdo permanece
-   visível quando IntersectionObserver não existe ou o usuário reduz movimento. */
-(function iniciarRevelacaoNaRolagem() {
-  const elementos = Array.from(document.querySelectorAll('[data-scroll-reveal]'));
-  const reduzirMovimento = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  if (!elementos.length || reduzirMovimento || !('IntersectionObserver' in window)) return;
+/* A revelação por rolagem agora vive em static/site/ls-reveal.js, com skeleton
+   das imagens e barra de progresso. Um observador só, para a página inteira. */
 
-  elementos.forEach((elemento) => elemento.classList.add('ls-reveal-pending'));
+/* Menu do usuário: abre no clique e continua aberto até o usuário decidir.
+   O hover segue existindo como atalho no desktop, mas quem clicar — inclusive
+   em telas grandes, onde o percurso do ponteiro até "Fazer Login" é longo —
+   não perde mais o menu no caminho. */
+(function iniciarMenuDoUsuario() {
+  const container = document.querySelector('[data-user-dropdown]');
+  if (!container) return;
 
-  const observador = new IntersectionObserver((entradas) => {
-    entradas.forEach((entrada) => {
-      if (!entrada.isIntersecting) return;
-      entrada.target.classList.remove('ls-reveal-pending');
-      entrada.target.classList.add('ls-reveal-visible');
-      observador.unobserve(entrada.target);
-    });
-  }, { rootMargin: '0px 0px -7% 0px', threshold: .08 });
+  const gatilho = container.querySelector('.user-icon');
+  const menu = container.querySelector('.dropdown-menu');
+  if (!gatilho || !menu) return;
 
-  elementos.forEach((elemento) => observador.observe(elemento));
+  function abrir() {
+    container.classList.add('is-open');
+    gatilho.setAttribute('aria-expanded', 'true');
+  }
+
+  function fechar({ devolverFoco = false } = {}) {
+    if (!container.classList.contains('is-open')) return;
+    container.classList.remove('is-open');
+    gatilho.setAttribute('aria-expanded', 'false');
+    if (devolverFoco) gatilho.focus();
+  }
+
+  gatilho.addEventListener('click', (evento) => {
+    evento.preventDefault();
+    evento.stopPropagation();
+    if (container.classList.contains('is-open')) {
+      fechar();
+    } else {
+      abrir();
+    }
+  });
+
+  /* Seta para baixo abre o menu e já entra no primeiro item. */
+  gatilho.addEventListener('keydown', (evento) => {
+    if (evento.key !== 'ArrowDown') return;
+    evento.preventDefault();
+    abrir();
+    const primeiro = menu.querySelector('a');
+    if (primeiro) primeiro.focus();
+  });
+
+  document.addEventListener('click', (evento) => {
+    if (container.contains(evento.target)) return;
+    fechar();
+  });
+
+  document.addEventListener('keydown', (evento) => {
+    if (evento.key === 'Escape') fechar({ devolverFoco: true });
+  });
+
+  /* Sair do menu pelo Tab também fecha, senão ele fica órfão na tela. */
+  container.addEventListener('focusout', (evento) => {
+    if (evento.relatedTarget && container.contains(evento.relatedTarget)) return;
+    fechar();
+  });
 })();
 
 

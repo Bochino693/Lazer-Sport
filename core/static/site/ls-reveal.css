@@ -1,0 +1,202 @@
+/* =========================================================================
+   Experiência de rolagem do site público — Lazer & Sport
+   -------------------------------------------------------------------------
+   Resolve o "espaço branco" que aparecia enquanto a seção seguinte carregava:
+   o conteúdo abaixo da dobra já reserva altura, mostra um skeleton com brilho
+   enquanto a imagem chega e entra em cena com um movimento curto e discreto.
+   Tudo é progressivo — sem JS a página continua legível e visível.
+   ========================================================================= */
+
+:root {
+    --ls-reveal-dur: 620ms;
+    --ls-reveal-ease: cubic-bezier(0.22, 1, 0.36, 1);
+    --ls-skeleton-base: #e8eef9;
+    --ls-skeleton-shine: #f7fafe;
+}
+
+/* -------------------------------------------------------------------------
+   1. Barra de progresso da rolagem
+   ------------------------------------------------------------------------- */
+.ls-scroll-progress {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 3px;
+    width: 100%;
+    z-index: 2000;
+    pointer-events: none;
+    transform: scaleX(0);
+    transform-origin: 0 50%;
+    background: linear-gradient(90deg, #004AAD, #007BFF 45%, #FFD700);
+    box-shadow: 0 0 12px rgba(0, 123, 255, 0.55);
+    will-change: transform;
+}
+
+/* -------------------------------------------------------------------------
+   2. Revelação por rolagem
+   O estado inicial só é aplicado quando o JS marca <html> com ls-reveal-on.
+   Assim quem estiver sem JS nunca fica com a página em branco.
+   ------------------------------------------------------------------------- */
+.ls-reveal-on [data-ls-reveal] {
+    opacity: 0;
+    transform: translate3d(0, var(--ls-reveal-shift, 26px), 0) scale(var(--ls-reveal-scale, 0.992));
+    filter: blur(var(--ls-reveal-blur, 6px));
+    transition:
+        opacity var(--ls-reveal-dur) var(--ls-reveal-ease),
+        transform var(--ls-reveal-dur) var(--ls-reveal-ease),
+        filter var(--ls-reveal-dur) var(--ls-reveal-ease);
+    transition-delay: var(--ls-reveal-delay, 0ms);
+    will-change: opacity, transform;
+}
+
+.ls-reveal-on [data-ls-reveal].is-visible {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+    filter: blur(0);
+}
+
+/* Depois de entrar, libera a GPU e evita camadas presas em páginas longas. */
+.ls-reveal-on [data-ls-reveal].is-settled {
+    will-change: auto;
+    transition: none;
+    filter: none;
+}
+
+/* Variações de entrada para dar ritmo à página */
+.ls-reveal-on [data-ls-reveal="left"]  { transform: translate3d(-30px, 0, 0); }
+.ls-reveal-on [data-ls-reveal="right"] { transform: translate3d(30px, 0, 0); }
+.ls-reveal-on [data-ls-reveal="zoom"]  { transform: scale(0.94); }
+.ls-reveal-on [data-ls-reveal="left"].is-visible,
+.ls-reveal-on [data-ls-reveal="right"].is-visible,
+.ls-reveal-on [data-ls-reveal="zoom"].is-visible {
+    transform: translate3d(0, 0, 0) scale(1);
+}
+
+/* -------------------------------------------------------------------------
+   3. Altura reservada para as seções abaixo da dobra
+   content-visibility corta o custo de layout/paint do que ainda não apareceu.
+   A palavra-chave `auto` em contain-intrinsic-size faz o navegador guardar o
+   tamanho real depois da primeira renderização, então a barra de rolagem para
+   de "pular" — que era exatamente o efeito ruim de antes.
+   ------------------------------------------------------------------------- */
+@supports (content-visibility: auto) and (contain-intrinsic-size: auto 1px) {
+    .ls-defer-paint {
+        content-visibility: auto;
+        contain-intrinsic-size: auto 640px;
+    }
+}
+
+/* -------------------------------------------------------------------------
+   4. Skeleton das imagens
+   Enquanto a imagem lazy não chega, o lugar dela mostra um brilho passando —
+   nunca mais o retângulo branco.
+   ------------------------------------------------------------------------- */
+@keyframes ls-skeleton-slide {
+    from { background-position: -160% 0; }
+    to   { background-position: 260% 0; }
+}
+
+.ls-img-skeleton {
+    position: relative;
+    background-color: var(--ls-skeleton-base);
+    background-image: linear-gradient(
+        100deg,
+        var(--ls-skeleton-base) 28%,
+        var(--ls-skeleton-shine) 46%,
+        var(--ls-skeleton-base) 64%
+    );
+    background-size: 220% 100%;
+    background-repeat: no-repeat;
+    animation: ls-skeleton-slide 1.35s linear infinite;
+}
+
+img.ls-img-skeleton {
+    color: transparent;
+}
+
+/* Entrada suave da foto assim que ela termina de decodificar */
+img[data-ls-img] {
+    transition: opacity 480ms var(--ls-reveal-ease), filter 480ms var(--ls-reveal-ease);
+}
+
+img[data-ls-img]:not(.is-loaded) {
+    opacity: 0.001;
+    filter: blur(10px);
+}
+
+img[data-ls-img].is-loaded {
+    opacity: 1;
+    filter: blur(0);
+    animation: none;
+    background-image: none;
+}
+
+/* Se a imagem falhar, some com o brilho para não animar para sempre */
+img[data-ls-img].is-failed {
+    opacity: 1;
+    filter: none;
+    animation: none;
+    background-image: none;
+}
+
+/* -------------------------------------------------------------------------
+   5. Skeleton de blocos (cards que ainda não têm conteúdo pintado)
+   ------------------------------------------------------------------------- */
+.ls-skeleton-block {
+    border-radius: 12px;
+    min-height: 14px;
+    background-color: var(--ls-skeleton-base);
+    background-image: linear-gradient(
+        100deg,
+        var(--ls-skeleton-base) 28%,
+        var(--ls-skeleton-shine) 46%,
+        var(--ls-skeleton-base) 64%
+    );
+    background-size: 220% 100%;
+    animation: ls-skeleton-slide 1.35s linear infinite;
+}
+
+/* -------------------------------------------------------------------------
+   6. Acessibilidade — quem pediu menos movimento recebe a página pronta
+   ------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+    .ls-reveal-on [data-ls-reveal],
+    .ls-reveal-on [data-ls-reveal].is-visible {
+        opacity: 1 !important;
+        transform: none !important;
+        filter: none !important;
+        transition: none !important;
+    }
+
+    .ls-img-skeleton,
+    .ls-skeleton-block {
+        animation: none;
+    }
+
+    img[data-ls-img]:not(.is-loaded) {
+        opacity: 1;
+        filter: none;
+    }
+
+    .ls-scroll-progress {
+        transition: none;
+    }
+}
+
+/* Impressão nunca deve esconder nada */
+@media print {
+    .ls-reveal-on [data-ls-reveal] {
+        opacity: 1 !important;
+        transform: none !important;
+        filter: none !important;
+    }
+    .ls-scroll-progress { display: none; }
+    .ls-defer-paint { content-visibility: visible; }
+}
+
+/* Seções que já animam os próprios cards entram só com opacidade,
+   para não somar dois deslocamentos no mesmo movimento. */
+.ls-reveal-on [data-ls-reveal="fade"] {
+    transform: none;
+    filter: none;
+}

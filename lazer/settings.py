@@ -197,6 +197,7 @@ TEMPLATES = [
                 "core.context_processors.admin_alertas_context",
                 "sistema_interno.context_processors.fab_counts",
                 "core.context_processors.clientes_rodape",
+                "core.context_processors.app_android",
             ],
         },
     },
@@ -332,6 +333,18 @@ LANGUAGE_CODE = "pt-br"
 TIME_ZONE = "America/Sao_Paulo"
 USE_I18N = True
 USE_TZ = True
+
+
+# ============================================================
+# APLICATIVO ANDROID
+# ============================================================
+# O rodapé do site reserva uma caixa para o app. Enquanto nenhuma URL estiver
+# configurada, a caixa aparece no estado "em produção" com a lista de espera —
+# ou seja, o espaço já existe no layout e não precisa de deploy de template
+# quando o app for publicado: basta preencher a variável de ambiente.
+APP_ANDROID_PLAY_URL = os.getenv("APP_ANDROID_PLAY_URL", "").strip()
+APP_ANDROID_APK_URL = os.getenv("APP_ANDROID_APK_URL", "").strip()
+APP_ANDROID_VERSAO = os.getenv("APP_ANDROID_VERSAO", "").strip()
 
 
 # ============================================================

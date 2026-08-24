@@ -26,6 +26,7 @@
 # estabelecimento/cliente no admin, chame limpar_cache_global() no save()
 # do model (ou espere os 10 min).
 
+from django.conf import settings
 from django.core.cache import cache
 from django.db.models import Count, Q, Sum
 from django.utils.functional import SimpleLazyObject
@@ -249,4 +250,25 @@ def admin_alertas_context(request):
         "tem_pedidos_alerta": SimpleLazyObject(lambda: pedidos > 0),
         "manutencoes_alerta": manutencoes,
         "tem_manutencoes_alerta": SimpleLazyObject(lambda: manutencoes > 0),
+    }
+
+# ============================================================
+# APP ANDROID -- sem banco, só configuração
+# ============================================================
+
+def app_android(request):
+    """Alimenta a caixa de download do app no rodapé.
+
+    Não toca no banco: lê apenas as variáveis de ambiente. Enquanto nenhum
+    link estiver publicado, `app_android_disponivel` é False e o rodapé mostra
+    o estado "em produção" no mesmo espaço, sem quebrar o layout.
+    """
+    play = getattr(settings, "APP_ANDROID_PLAY_URL", "")
+    apk = getattr(settings, "APP_ANDROID_APK_URL", "")
+
+    return {
+        "app_android_play_url": play,
+        "app_android_apk_url": apk,
+        "app_android_versao": getattr(settings, "APP_ANDROID_VERSAO", ""),
+        "app_android_disponivel": bool(play or apk),
     }
