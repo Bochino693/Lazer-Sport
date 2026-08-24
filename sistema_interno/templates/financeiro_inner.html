@@ -1,5 +1,9 @@
 {% extends "base_inner.html" %}
-{% load interno_extras %}
+{% load interno_extras l10n %}
+
+{# Números que entram em CSS e SVG passam por |unlocalize: em pt-BR o Django
+   renderiza 100.0 como "100,0", e "height: 100,0%" ou stroke-dasharray com
+   vírgula são declarações inválidas — o gráfico simplesmente não desenha. #}
 
 {% block title %}Financeiro | Lazer & Sport{% endblock %}
 {% block top_title %}Financeiro{% endblock %}
@@ -76,7 +80,7 @@
   </article>
 </section>
 
-<section class="ls-grid-2 mb-3">
+<section class="ls-grid-2 ls-grid-start mb-3">
 
   <!-- ---------------- Receita x saída ---------------- -->
   <article class="ls-panel">
@@ -99,8 +103,8 @@
             <div class="ls-bar-col"
                  title="{{ linha.rotulo_longo }} — receita R$ {{ linha.receita|moeda }} · saída R$ {{ linha.saida|moeda }}">
               <div class="ls-bar-pair">
-                <span class="ls-bar receita" style="height: {{ linha.altura_receita }}%"></span>
-                <span class="ls-bar saida" style="height: {{ linha.altura_saida }}%"></span>
+                <span class="ls-bar receita" style="height: {{ linha.altura_receita|unlocalize }}%"></span>
+                <span class="ls-bar saida" style="height: {{ linha.altura_saida|unlocalize }}%"></span>
               </div>
               <span class="ls-bar-label">{{ linha.rotulo }}</span>
             </div>
@@ -138,7 +142,7 @@
             </linearGradient>
           </defs>
 
-          <line x1="0" y1="{{ curva.linha_zero }}" x2="560" y2="{{ curva.linha_zero }}"
+          <line x1="0" y1="{{ curva.linha_zero|unlocalize }}" x2="560" y2="{{ curva.linha_zero|unlocalize }}"
                 stroke="rgba(147,166,191,.35)" stroke-dasharray="4 5"></line>
 
           <polygon points="{{ curva.area }}" fill="url(#gradLucro)"></polygon>
@@ -165,7 +169,7 @@
   </article>
 </section>
 
-<section class="ls-grid-2">
+<section class="ls-grid-2 ls-grid-start">
 
   <!-- ---------------- Despesas por categoria ---------------- -->
   <article class="ls-panel">
@@ -187,8 +191,8 @@
             {% for fatia in categorias.fatias %}
               <circle cx="21" cy="21" r="15.915" fill="none"
                       stroke="{{ fatia.cor }}" stroke-width="5"
-                      stroke-dasharray="{{ fatia.traco }} {{ fatia.resto }}"
-                      stroke-dashoffset="{{ fatia.offset }}"></circle>
+                      stroke-dasharray="{{ fatia.traco|unlocalize }} {{ fatia.resto|unlocalize }}"
+                      stroke-dashoffset="{{ fatia.offset|unlocalize }}"></circle>
             {% endfor %}
           </svg>
 
