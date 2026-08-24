@@ -110,6 +110,45 @@ class MercadoPagoPixTests(SimpleTestCase):
         )
 
     @patch("core.views.mercadopago.SDK")
+    @patch("core.views.checkout.expirar_reserva")
+    @patch("core.views.checkout.reservar_pedido")
+    @patch("core.views.checkout.pedido_reservado_do_carrinho")
+    @patch("core.views._carrinho_pagamento_do_usuario")
+    def test_erro_de_autorizacao_indica_access_token_sem_expor_resposta(
+        self,
+        buscar_carrinho,
+        buscar_reserva,
+        reservar_pedido,
+        expirar_reserva,
+        sdk_class,
+    ):
+        pedido = pedido_mock()
+        buscar_carrinho.return_value = carrinho_mock()
+        buscar_reserva.return_value = None
+        reservar_pedido.return_value = (pedido, True)
+        sdk_class.return_value.payment.return_value.create.return_value = {
+            "status": 401,
+            "response": {
+                "error": "unauthorized",
+                "message": "authorization value not present",
+            },
+        }
+        request = self.factory.get("/api/gerar-pix/?carrinho_id=7")
+        request.user = usuario_mock()
+
+        response = gerar_pix(request)
+        body = json.loads(response.content)
+
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(body["erro"], "Pagamento temporariamente indisponível.")
+        self.assertIn("MP_ACCESS_TOKEN", body["detalhe"])
+        self.assertNotIn("authorization value", body["detalhe"])
+        expirar_reserva.assert_called_once_with(
+            pedido,
+            "cobrança recusada pelo provedor",
+        )
+
+    @patch("core.views.mercadopago.SDK")
     @patch("core.views.Carrinho.objects.filter")
     @patch("core.views.checkout.reservar_pedido")
     @patch("core.views.checkout.pedido_reservado_do_carrinho")
@@ -652,4 +691,3 @@ class CatalogFilterUXTests(TestCase):
 
         self.assertEqual(resposta.status_code, 200)
         self.assertContains(resposta, 'value="1.234,50"')
-        

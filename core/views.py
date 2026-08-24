@@ -4518,6 +4518,22 @@ def _mp_error_message(payment):
     )
 
 
+def _mp_auth_error(status_code, payment):
+    """Identifica rejeição da credencial sem depender de uma única tradução."""
+    mensagem = " ".join(str(valor or "") for valor in (
+        payment.get("error"),
+        payment.get("message"),
+        payment.get("status"),
+    )).lower()
+    return status_code in {401, 403} or any(termo in mensagem for termo in (
+        "authorization",
+        "access token",
+        "unauthorized",
+        "forbidden",
+        "invalid token",
+    ))
+
+
 def _qrcode_base64(payload):
     """Desenha o PNG do QR a partir do payload copia-e-cola do Pix.
 
@@ -4724,6 +4740,19 @@ def gerar_pix(request):
             payment,
         )
         checkout.expirar_reserva(pedido, "cobrança recusada pelo provedor")
+
+        if _mp_auth_error(status_code, payment):
+            return JsonResponse(
+                {
+                    "erro": "Pagamento temporariamente indisponível.",
+                    "detalhe": (
+                        "A credencial do Mercado Pago não foi autorizada. "
+                        "Verifique MP_ACCESS_TOKEN no ambiente de produção."
+                    ),
+                },
+                status=503,
+            )
+
         return JsonResponse(
             {
                 "erro": "Não foi possível gerar o Pix.",
@@ -6283,4 +6312,3 @@ class SearchView(View):
             "total_resultados": len(resultados),
             "busca_realizada": bool(termo),
         })
-    

@@ -468,8 +468,27 @@ if COOKIE_DOMAIN:
 # ============================================================
 # MERCADO PAGO / DEMAIS CONFIGURAÇÕES
 # ============================================================
-MP_ACCESS_TOKEN = os.getenv("MP_ACCESS_TOKEN", "").strip()
-MP_PUBLIC_KEY = os.getenv("MP_PUBLIC_KEY", "").strip()
+def _credencial_mp(nome, remover_bearer=False):
+    """Lê uma credencial sem conservar adornos copiados para o painel.
+
+    No Render o valor deve ser apenas a chave. Ainda assim, é comum colar
+    ``"APP_USR-..."`` (com aspas) ou ``Bearer APP_USR-...``. O SDK já monta
+    o cabeçalho Authorization, então conservar esses adornos produz uma
+    credencial inválida mesmo com a variável aparentemente preenchida.
+    """
+    valor = os.getenv(nome, "").strip()
+
+    if len(valor) >= 2 and valor[0] == valor[-1] and valor[0] in {'"', "'"}:
+        valor = valor[1:-1].strip()
+
+    if remover_bearer and valor.lower().startswith("bearer "):
+        valor = valor[7:].strip()
+
+    return valor
+
+
+MP_ACCESS_TOKEN = _credencial_mp("MP_ACCESS_TOKEN", remover_bearer=True)
+MP_PUBLIC_KEY = _credencial_mp("MP_PUBLIC_KEY")
 
 # ============================================================
 # E-MAIL (SMTP) -- usado pra avisar o cliente quando o status de
@@ -556,3 +575,4 @@ try:
     CATALOG_CACHE_TTL = max(60, int(os.getenv("CATALOG_CACHE_TTL", "1800")))
 except ValueError:
     CATALOG_CACHE_TTL = 1800
+    

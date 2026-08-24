@@ -7476,6 +7476,41 @@ main.content-section {
             display: none !important;
         }
     }
+
+    /* Trilhos horizontais visíveis no desktop. */
+    @media (min-width: 769px) {
+        .categorias-section .scroll-container,
+        #promocoes-section .scroll-container,
+        #combos-section .scroll-container {
+            scrollbar-width: thin !important;
+            scrollbar-color: #0878f9 rgba(0, 74, 173, 0.12) !important;
+            scrollbar-gutter: stable !important;
+        }
+
+        .categorias-section .scroll-container::-webkit-scrollbar,
+        #promocoes-section .scroll-container::-webkit-scrollbar,
+        #combos-section .scroll-container::-webkit-scrollbar {
+            display: block !important;
+            height: 10px !important;
+        }
+
+        .categorias-section .scroll-container::-webkit-scrollbar-track,
+        #promocoes-section .scroll-container::-webkit-scrollbar-track,
+        #combos-section .scroll-container::-webkit-scrollbar-track {
+            border-radius: 999px;
+            background: rgba(0, 74, 173, 0.12);
+        }
+
+        .categorias-section .scroll-container::-webkit-scrollbar-thumb,
+        #promocoes-section .scroll-container::-webkit-scrollbar-thumb,
+        #combos-section .scroll-container::-webkit-scrollbar-thumb {
+            min-width: 48px;
+            border: 2px solid transparent;
+            border-radius: 999px;
+            background: linear-gradient(90deg, #004aad, #0878f9, #ffd700);
+            background-clip: padding-box;
+        }
+    }
 </style>
 
 <section id="clientes-section" class="clientes-section">
