@@ -6,8 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="dark">
 
-  <link rel="icon" type="image/png" href="{% static 'lgooo.png' %}?v=1">
-  <link rel="shortcut icon" type="image/png" href="{% static 'logooo.png' %}?v=1">
+  <link rel="icon" type="image/png" href="{% static 'images/lgooo.png' %}?v=2">
+  <link rel="shortcut icon" type="image/png" href="{% static 'images/lgooo.png' %}?v=2">
 
   <title>{% block title %}Gestão Interna | Lazer & Sport{% endblock %}</title>
 
@@ -66,14 +66,25 @@
 
       <div class="ls-nav-section">
         <span class="ls-nav-caption">Produção</span>
+        <a class="ls-nav-item {% if request.resolver_match.url_name == 'minha_producao' or request.resolver_match.url_name == 'producao_ordem_detalhe' %}active{% endif %}" href="{% url 'minha_producao' %}">
+          <span class="ls-nav-icon"><i class="bi bi-list-check"></i></span>
+          <span>{% if eh_gestor_interno %}Acompanhamento{% else %}Minha produção{% endif %}</span>
+          {% if count_producao %}<span class="ls-nav-count">{{ count_producao }}</span>{% endif %}
+        </a>
+        {% if eh_gestor_interno %}
         <a class="ls-nav-item {% if request.resolver_match.url_name == 'produtos_producao' %}active{% endif %}" href="{% url 'produtos_producao' %}">
           <span class="ls-nav-icon"><i class="bi bi-diagram-3-fill"></i></span>
           <span>Produtos e ficha técnica</span>
+        </a>
+        <a class="ls-nav-item {% if request.resolver_match.url_name == 'guias_producao' %}active{% endif %}" href="{% url 'guias_producao' %}">
+          <span class="ls-nav-icon"><i class="bi bi-journal-richtext"></i></span>
+          <span>Guias das etapas</span>
         </a>
         <a class="ls-nav-item {% if request.resolver_match.url_name == 'ordens_producao' %}active{% endif %}" href="{% url 'ordens_producao' %}">
           <span class="ls-nav-icon"><i class="bi bi-hammer"></i></span>
           <span>Ordens de produção</span>
         </a>
+        {% endif %}
       </div>
 
       <div class="ls-nav-section">
@@ -146,6 +157,15 @@
     </header>
 
     <main class="ls-content">
+      {% if messages %}
+        <div class="mb-3" aria-live="polite">
+          {% for message in messages %}
+            <div class="alert {% if message.tags == 'error' %}alert-danger{% elif message.tags == 'success' %}alert-success{% else %}alert-info{% endif %} mb-2">
+              {{ message }}
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
       {% block content %}{% endblock %}
       {% block grafico %}{% endblock %}
     </main>
