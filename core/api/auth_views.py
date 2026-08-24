@@ -87,6 +87,14 @@ class RegistroSerializer(serializers.Serializer):
 
 def _resposta_com_token(user):
     token, _ = Token.objects.get_or_create(user=user)
+
+    # O signal de User cria um ClientePerfil vazio, e essa instância fica
+    # em cache na relação. O registro grava nome e telefone logo depois,
+    # mas por outro caminho — sem limpar o cache, a resposta sairia com os
+    # dois campos vazios mesmo com o banco já correto.
+    if "perfil" in getattr(user, "_state").fields_cache:
+        del user._state.fields_cache["perfil"]
+
     perfil = getattr(user, "perfil", None)
 
     return {

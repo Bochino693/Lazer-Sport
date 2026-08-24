@@ -4,6 +4,7 @@ from django.urls import path
 
 from .auth_app_views import AppEntrarSocial, AppTokenSocial
 from .auth_views import LoginAPI, LogoutAPI, PerfilAPI, RegistroAPI
+from .carrinho_views import SincronizarCarrinhoAPI
 from .views import (
     BrinquedoDetalheAPI,
     BrinquedoListAPI,
@@ -51,4 +52,9 @@ urlpatterns = [
     # ---------- Área logada ----------
     path("manutencoes/", ManutencaoListCreateAPI.as_view(), name="manutencoes"),
     path("pedidos/", PedidoListAPI.as_view(), name="pedidos"),
+    path(
+        "carrinho/sincronizar/",
+        SincronizarCarrinhoAPI.as_view(),
+        name="carrinho_sincronizar",
+    ),
 ]

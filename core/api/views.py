@@ -84,6 +84,8 @@ class StatusAPI(APIView):
 
     def get(self, request):
         recursos = list(RECURSOS_DISPONIVEIS)
+        if "carrinho" not in recursos:
+            recursos.append("carrinho")
         if "google" in settings.SOCIALACCOUNT_PROVIDERS:
             recursos.insert(1, "auth_google")
 
