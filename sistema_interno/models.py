@@ -177,8 +177,27 @@ class Setores(Prime):
         verbose_name_plural = "Setores"
 
 
+class EstoqueMaterialQuerySet(models.QuerySet):
+    """A regra de "crítico" escrita como consulta, uma vez só.
+
+    `situacao` é propriedade Python: perfeita para uma linha na tela,
+    péssima para contar a tabela. Antes cada lugar que precisava da lista
+    de reposição carregava tudo e filtrava na memória -- a visão geral, o
+    painel de estoque e a central de avisos, três vezes a mesma varredura.
+
+    Aqui a conta é a MESMA de `situacao == CRITICO` (quantidade no mínimo
+    ou abaixo dele), só que resolvida pelo banco. Há teste comparando os
+    dois caminhos justamente para não deixarem de concordar.
+    """
+
+    def criticos(self):
+        return self.filter(quantidade__lte=models.F("estoque_minimo"))
+
+
 class EstoqueMaterial(Prime):
     """Um material guardado num local. É aqui que fica o valor pago."""
+
+    objects = EstoqueMaterialQuerySet.as_manager()
 
     ESTAVEL = "estavel"
     ATENCAO = "atencao"

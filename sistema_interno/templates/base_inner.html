@@ -31,18 +31,18 @@
       </span>
       <span class="ls-brand-text">
         <strong>Lazer & Sport</strong>
-        <small>Central de gestão</small>
+        <small>Gestão interna · fábrica</small>
       </span>
     </a>
 
     <nav class="ls-nav" aria-label="Navegação principal">
       <div class="ls-nav-section">
         <span class="ls-nav-caption">Painel</span>
-        <a class="ls-nav-item {% if request.resolver_match.url_name == 'home_inner' %}active{% endif %}" href="{% url 'home_inner' %}">
+        <a data-titulo="Visão geral" class="ls-nav-item {% if request.resolver_match.url_name == 'home_inner' %}active{% endif %}" href="{% url 'home_inner' %}">
           <span class="ls-nav-icon"><i class="bi bi-grid-fill"></i></span>
           <span>Visão geral</span>
         </a>
-        <a class="ls-nav-item {% if request.resolver_match.url_name == 'dashboard_estoque' %}active{% endif %}" href="{% url 'dashboard_estoque' %}">
+        <a data-titulo="Indicadores" class="ls-nav-item {% if request.resolver_match.url_name == 'dashboard_estoque' %}active{% endif %}" href="{% url 'dashboard_estoque' %}">
           <span class="ls-nav-icon"><i class="bi bi-activity"></i></span>
           <span>Indicadores</span>
         </a>
@@ -50,15 +50,15 @@
 
       <div class="ls-nav-section">
         <span class="ls-nav-caption">Estoque</span>
-        <a class="ls-nav-item {% if request.resolver_match.url_name == 'stock' or request.resolver_match.url_name == 'estoque_inner' %}active{% endif %}" href="{% url 'stock' %}">
+        <a data-titulo="Estoque" class="ls-nav-item {% if request.resolver_match.url_name == 'stock' or request.resolver_match.url_name == 'estoque_inner' %}active{% endif %}" href="{% url 'stock' %}">
           <span class="ls-nav-icon"><i class="bi bi-box-seam-fill"></i></span>
           <span>Estoque</span>
         </a>
-        <a class="ls-nav-item {% if request.resolver_match.url_name == 'materiais_inner' %}active{% endif %}" href="{% url 'materiais_inner' %}">
+        <a data-titulo="Materiais" class="ls-nav-item {% if request.resolver_match.url_name == 'materiais_inner' %}active{% endif %}" href="{% url 'materiais_inner' %}">
           <span class="ls-nav-icon"><i class="bi bi-tools"></i></span>
           <span>Materiais</span>
         </a>
-        <a class="ls-nav-item {% if request.resolver_match.url_name == 'movimentacoes_inner' %}active{% endif %}" href="{% url 'movimentacoes_inner' %}">
+        <a data-titulo="Movimentações" class="ls-nav-item {% if request.resolver_match.url_name == 'movimentacoes_inner' %}active{% endif %}" href="{% url 'movimentacoes_inner' %}">
           <span class="ls-nav-icon"><i class="bi bi-arrow-left-right"></i></span>
           <span>Movimentações</span>
         </a>
@@ -66,21 +66,21 @@
 
       <div class="ls-nav-section">
         <span class="ls-nav-caption">Produção</span>
-        <a class="ls-nav-item {% if request.resolver_match.url_name == 'minha_producao' or request.resolver_match.url_name == 'producao_ordem_detalhe' %}active{% endif %}" href="{% url 'minha_producao' %}">
+        <a data-titulo="{% if eh_gestor_interno %}Acompanhamento{% else %}Minha produção{% endif %}" class="ls-nav-item {% if request.resolver_match.url_name == 'minha_producao' or request.resolver_match.url_name == 'producao_ordem_detalhe' %}active{% endif %}" href="{% url 'minha_producao' %}">
           <span class="ls-nav-icon"><i class="bi bi-list-check"></i></span>
           <span>{% if eh_gestor_interno %}Acompanhamento{% else %}Minha produção{% endif %}</span>
           {% if count_producao %}<span class="ls-nav-count">{{ count_producao }}</span>{% endif %}
         </a>
         {% if eh_gestor_interno %}
-        <a class="ls-nav-item {% if request.resolver_match.url_name == 'produtos_producao' %}active{% endif %}" href="{% url 'produtos_producao' %}">
+        <a data-titulo="Produtos e ficha técnica" class="ls-nav-item {% if request.resolver_match.url_name == 'produtos_producao' %}active{% endif %}" href="{% url 'produtos_producao' %}">
           <span class="ls-nav-icon"><i class="bi bi-diagram-3-fill"></i></span>
           <span>Produtos e ficha técnica</span>
         </a>
-        <a class="ls-nav-item {% if request.resolver_match.url_name == 'guias_producao' %}active{% endif %}" href="{% url 'guias_producao' %}">
+        <a data-titulo="Guias das etapas" class="ls-nav-item {% if request.resolver_match.url_name == 'guias_producao' %}active{% endif %}" href="{% url 'guias_producao' %}">
           <span class="ls-nav-icon"><i class="bi bi-journal-richtext"></i></span>
           <span>Guias das etapas</span>
         </a>
-        <a class="ls-nav-item {% if request.resolver_match.url_name == 'ordens_producao' %}active{% endif %}" href="{% url 'ordens_producao' %}">
+        <a data-titulo="Ordens de produção" class="ls-nav-item {% if request.resolver_match.url_name == 'ordens_producao' %}active{% endif %}" href="{% url 'ordens_producao' %}">
           <span class="ls-nav-icon"><i class="bi bi-hammer"></i></span>
           <span>Ordens de produção</span>
         </a>
@@ -95,30 +95,31 @@
       {% if eh_gestor_interno %}
       <div class="ls-nav-section">
         <span class="ls-nav-caption">Comercial</span>
-        <a class="ls-nav-item {% if request.resolver_match.url_name == 'financeiro_inner' %}active{% endif %}" href="{% url 'financeiro_inner' %}">
+        <a data-titulo="Financeiro" class="ls-nav-item {% if request.resolver_match.url_name == 'financeiro_inner' %}active{% endif %}" href="{% url 'financeiro_inner' %}">
           <span class="ls-nav-icon"><i class="bi bi-graph-up-arrow"></i></span>
           <span>Financeiro</span>
         </a>
-        <a class="ls-nav-item {% if request.resolver_match.url_name == 'orcamentos_inner' %}active{% endif %}" href="{% url 'orcamentos_inner' %}">
+        <a data-titulo="Orçamentos" class="ls-nav-item {% if request.resolver_match.url_name == 'orcamentos_inner' %}active{% endif %}" href="{% url 'orcamentos_inner' %}">
           <span class="ls-nav-icon"><i class="bi bi-file-earmark-text-fill"></i></span>
           <span>Orçamentos</span>
+          {% if count_orcamentos %}<span class="ls-nav-count">{{ count_orcamentos }}</span>{% endif %}
         </a>
       </div>
       {% endif %}
 
       <div class="ls-nav-section">
         <span class="ls-nav-caption">Operação</span>
-        <a class="ls-nav-item {% if request.resolver_match.url_name == 'vendas_inner' %}active{% endif %}" href="{% url 'vendas_inner' %}">
+        <a data-titulo="Vendas" class="ls-nav-item {% if request.resolver_match.url_name == 'vendas_inner' %}active{% endif %}" href="{% url 'vendas_inner' %}">
           <span class="ls-nav-icon"><i class="bi bi-receipt-cutoff"></i></span>
           <span>Vendas</span>
           {% if count_vendas %}<span class="ls-nav-count">{{ count_vendas }}</span>{% endif %}
         </a>
-        <a class="ls-nav-item {% if request.resolver_match.url_name == 'pedidos_inner' %}active{% endif %}" href="{% url 'pedidos_inner' %}">
+        <a data-titulo="Pedidos" class="ls-nav-item {% if request.resolver_match.url_name == 'pedidos_inner' %}active{% endif %}" href="{% url 'pedidos_inner' %}">
           <span class="ls-nav-icon"><i class="bi bi-box2-heart-fill"></i></span>
           <span>Pedidos</span>
           {% if count_pedidos %}<span class="ls-nav-count">{{ count_pedidos }}</span>{% endif %}
         </a>
-        <a class="ls-nav-item {% if request.resolver_match.url_name == 'manutencao_inner' %}active{% endif %}" href="{% url 'manutencao_inner' %}">
+        <a data-titulo="Manutenções" class="ls-nav-item {% if request.resolver_match.url_name == 'manutencao_inner' %}active{% endif %}" href="{% url 'manutencao_inner' %}">
           <span class="ls-nav-icon"><i class="bi bi-wrench-adjustable-circle-fill"></i></span>
           <span>Manutenções</span>
         </a>
@@ -136,9 +137,14 @@
 
       <form method="post" action="{% url 'logout_inner' %}">
         {% csrf_token %}
-        <button class="ls-logout" type="submit">
+        {% comment %}
+          O rótulo vai num span porque no trilho do tablet ele é
+          escondido por CSS, e nó de texto solto não se esconde: o
+          "Encerrar sessão" vazava para fora dos 84px da lateral.
+        {% endcomment %}
+        <button class="ls-logout" type="submit" title="Encerrar sessão">
           <i class="bi bi-box-arrow-right"></i>
-          Encerrar sessão
+          <span>Encerrar sessão</span>
         </button>
       </form>
     </div>
@@ -154,11 +160,55 @@
 
       <div class="ls-topbar-copy">
         <strong>{% block top_title %}Painel interno{% endblock %}</strong>
-        <span>Operação Lazer & Sport</span>
+        <span>Operação Lazer &amp; Sport</span>
       </div>
 
       <div class="ls-topbar-side">
-        <span class="ls-security-pill"><i class="bi bi-shield-check"></i> Área protegida</span>
+        {% comment %}
+Dito em voz alta: este NÃO é o /adm do site. Quem trabalha nos
+           dois no mesmo dia precisa saber onde está antes de clicar.
+{% endcomment %}
+        <span class="ls-ambiente"><i class="bi bi-cone-striped"></i> Gestão interna</span>
+
+        <!-- ===================== central de avisos ===================== -->
+        <div class="ls-avisos">
+          <button type="button" class="ls-avisos-botao" id="avisosBotao"
+                  aria-haspopup="true" aria-expanded="false"
+                  aria-label="Avisos do painel">
+            <i class="bi bi-bell-fill"></i>
+            {% if total_avisos %}
+              <span class="ls-avisos-selo {% if avisos_urgentes %}urgente{% endif %}">
+                {{ total_avisos }}
+              </span>
+            {% endif %}
+          </button>
+
+          <div class="ls-avisos-painel" id="avisosPainel" hidden>
+            <div class="ls-avisos-topo">
+              <span>O que precisa de você</span>
+              {% if avisos_urgentes %}<span>{{ avisos_urgentes }} urgente{{ avisos_urgentes|pluralize }}</span>{% endif %}
+            </div>
+
+            {% for aviso in avisos %}
+              <a class="ls-aviso {{ aviso.nivel }}" href="{{ aviso.url }}">
+                <span class="ls-aviso-icone"><i class="bi {{ aviso.icone }}"></i></span>
+                <span class="ls-aviso-corpo">
+                  <span class="ls-aviso-titulo">
+                    {{ aviso.titulo }}
+                    <span class="ls-aviso-quantidade">{{ aviso.quantidade }}</span>
+                  </span>
+                  <span class="ls-aviso-detalhe">{{ aviso.detalhe }}</span>
+                </span>
+              </a>
+            {% empty %}
+              <div class="ls-avisos-vazio">
+                <i class="bi bi-check2-circle"></i>
+                Nada pendente agora.
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+
         <span class="ls-user-pill"><i class="bi bi-person-circle"></i> {{ user.username }}</span>
       </div>
     </header>
@@ -200,6 +250,37 @@
   overlay?.addEventListener("click", closeSidebar);
   document.addEventListener("keydown", function (event) {
     if (event.key === "Escape") closeSidebar();
+  });
+
+  /* ---------------------------------------------------------------
+     Central de avisos
+     --------------------------------------------------------------- */
+  const avisosBotao = document.getElementById("avisosBotao");
+  const avisosPainel = document.getElementById("avisosPainel");
+
+  function fecharAvisos() {
+    if (!avisosPainel) return;
+    avisosPainel.hidden = true;
+    avisosBotao?.setAttribute("aria-expanded", "false");
+  }
+
+  avisosBotao?.addEventListener("click", function (evento) {
+    evento.stopPropagation();
+    const abrindo = avisosPainel.hidden;
+    avisosPainel.hidden = !abrindo;
+    avisosBotao.setAttribute("aria-expanded", String(abrindo));
+  });
+
+  /* Toque fora fecha. No tablet não há Esc à mão, e um painel que fica
+     aberto por cima do conteúdo atrapalha mais do que ajuda. */
+  document.addEventListener("click", function (evento) {
+    if (!avisosPainel || avisosPainel.hidden) return;
+    if (evento.target.closest(".ls-avisos")) return;
+    fecharAvisos();
+  });
+
+  document.addEventListener("keydown", function (event) {
+    if (event.key === "Escape") fecharAvisos();
   });
 })();
 </script>

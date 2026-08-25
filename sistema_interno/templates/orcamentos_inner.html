@@ -313,12 +313,12 @@
 </div>
 
 <!-- ================= MODAL: brinquedo novo, sem sair daqui ================= -->
-{#
-  Cadastro mínimo de propósito: nome, valor e categoria. Foto e texto de
+{% comment %}
+Cadastro mínimo de propósito: nome, valor e categoria. Foto e texto de
   venda são trabalho de quem cuida da vitrine, e exigir isso aqui faria a
   pessoa desistir e digitar o item à mão -- que é justamente o que este
   modal existe para evitar. O brinquedo nasce fora da loja.
-#}
+{% endcomment %}
 <div class="modal fade" id="modalBrinquedoNovo" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog">
     <form class="modal-content" id="formBrinquedoNovo" method="post"

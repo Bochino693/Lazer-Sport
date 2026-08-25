@@ -21,6 +21,29 @@
   </div>
 </section>
 
+{% comment %}
+================= o que precisa de atenção agora =================
+   Os mesmos avisos do sininho, abertos. No tablet ninguém vai procurar
+   um ícone de 46px: chegando na visão geral, o que importa já está na
+   tela, e cada cartão leva direto para onde se resolve.
+{% endcomment %}
+{% if avisos %}
+<section class="ls-avisos-mural" aria-label="Pendências">
+  {% for aviso in avisos %}
+    <a class="ls-aviso {{ aviso.nivel }}" href="{{ aviso.url }}">
+      <span class="ls-aviso-icone"><i class="bi {{ aviso.icone }}"></i></span>
+      <span class="ls-aviso-corpo">
+        <span class="ls-aviso-titulo">
+          {{ aviso.titulo }}
+          <span class="ls-aviso-quantidade">{{ aviso.quantidade }}</span>
+        </span>
+        <span class="ls-aviso-detalhe">{{ aviso.detalhe }}</span>
+      </span>
+    </a>
+  {% endfor %}
+</section>
+{% endif %}
+
 <section class="ls-metrics">
   <article class="ls-metric-card green">
     <div class="ls-metric-head">

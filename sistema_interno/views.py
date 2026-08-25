@@ -181,7 +181,11 @@ class HomeInnerView(InternoRequiredMixin, View):
             investido=VALOR_EM_ESTOQUE,
         )
 
-        criticos = [e for e in estoques if e.situacao == EstoqueMaterial.CRITICO]
+        # A visão geral mostra oito itens de reposição e o total. Antes
+        # carregava a tabela inteira para filtrar em Python -- varredura
+        # completa do estoque para exibir oito linhas. A regra agora é a
+        # do próprio modelo, resolvida pelo banco.
+        criticos = EstoqueMaterial.objects.criticos().select_related("material")
 
         ctx = {
             "materiais": Material.objects.filter(ativo=True),
@@ -190,7 +194,7 @@ class HomeInnerView(InternoRequiredMixin, View):
             "total_pecas": resumo["pecas"],
             "valor_investido": resumo["investido"],
             "criticos": criticos[:8],
-            "total_criticos": len(criticos),
+            "total_criticos": criticos.count(),
             "ultimos_movimentos": (
                 MovimentoEstoque.objects
                 .select_related("estoque__material", "responsavel")[:8]
@@ -239,6 +243,9 @@ class EstoqueInnerView(RespostaJSONMixin, InternoRequiredMixin, View):
         if situacao in (EstoqueMaterial.CRITICO, EstoqueMaterial.ATENCAO, EstoqueMaterial.ESTAVEL):
             estoques = [e for e in estoques if e.situacao == situacao]
 
+        # Aqui a lista já está carregada -- a tela mostra cada linha e
+        # soma o valor de cada uma --, então contar em Python não custa
+        # varredura extra. É o caso oposto ao da visão geral.
         investido = sum((e.valor_total for e in estoques), Decimal("0.00"))
         criticos = [e for e in estoques if e.situacao == EstoqueMaterial.CRITICO]
 
