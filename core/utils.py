@@ -11,8 +11,37 @@ logger = logging.getLogger(__name__)
 CEP_EMPRESA = "02679-110"
 VALOR_KM = 3.50
 
+# Ponto de partida da empresa: origem do frete E alfinete da fábrica no
+# mapa. Estes valores são só o último recurso -- o endereço de verdade
+# fica em EnderecoEmpresa, editável pelo admin. Use origem_da_empresa()
+# em vez de ler as constantes direto: era daí que vinha a incoerência de
+# o mapa mostrar um lugar e o frete calcular de outro.
 LAT_EMPRESA = -23.459889
 LON_EMPRESA = -46.689654
+
+
+def origem_da_empresa():
+    """(latitude, longitude) de onde a empresa despacha e aparece no mapa.
+
+    Lê o cadastro do admin; sem cadastro, cai nas constantes. Uma função só
+    para os dois usos: antes o mapa lia EnderecoEmpresa e o frete lia a
+    constante, então corrigir o alfinete no admin não corrigia o frete --
+    e ninguém percebia, porque os dois números continuavam plausíveis.
+    """
+    try:
+        from .models import EnderecoEmpresa
+
+        endereco = (
+            EnderecoEmpresa.objects
+            .filter(ativo=True, latitude__isnull=False, longitude__isnull=False)
+            .first()
+        )
+        if endereco:
+            return float(endereco.latitude), float(endereco.longitude)
+    except Exception:  # noqa: BLE001 - frete nunca cai por causa do cadastro
+        logger.warning("[FRETE] Não foi possível ler EnderecoEmpresa.", exc_info=True)
+
+    return LAT_EMPRESA, LON_EMPRESA
 
 HTTP_TIMEOUT = (3.05, 9)
 USER_AGENT = (
@@ -92,86 +121,150 @@ def buscar_endereco(cep):
     )
 
 
-@lru_cache(maxsize=2000)
-def buscar_coordenadas(cep, numero=""):
-    """
-    Geocodifica o destino por níveis de precisão.
+# Níveis de precisão, do melhor para o pior. Guardar qual deles foi
+# alcançado é o que evita o defeito antigo: a busca caía de endereço para
+# rua, de rua para bairro e de bairro para o centro da cidade, e o
+# resultado era gravado como se fosse o endereço exato. Em São Paulo, o
+# nível "cidade" fica na Sé -- quilômetros de distância de quase qualquer
+# endereço real.
+PRECISAO_EXATO = "exato"
+PRECISAO_RUA = "rua"
+PRECISAO_BAIRRO = "bairro"
+PRECISAO_CIDADE = "cidade"
 
-    Tenta endereço com número, rua, bairro e somente então cidade. As
-    consultas usam um User-Agent identificável e ficam armazenadas em cache.
+# Acima deste nível a coordenada não representa o endereço, e sim uma
+# região. Serve para desenhar um mapa aproximado, nunca para dizer "é aqui".
+PRECISAO_CONFIAVEL = (PRECISAO_EXATO, PRECISAO_RUA)
+
+
+def _consultar_nominatim(params):
+    """Uma consulta ao Nominatim, já com cabeçalhos e tratamento de erro."""
+    try:
+        return _request_json(
+            "https://nominatim.openstreetmap.org/search",
+            params={
+                "format": "jsonv2",
+                "limit": 1,
+                "countrycodes": "br",
+                "addressdetails": 1,
+                **params,
+            },
+            headers={
+                "User-Agent": USER_AGENT,
+                "Accept-Language": "pt-BR,pt;q=0.9",
+            },
+        )
+    except (requests.RequestException, ValueError) as exc:
+        logger.warning("[GEO] Nominatim indisponível para %s: %s", params, exc)
+        return None
+
+
+def _ler_ponto(resultados):
+    if not resultados:
+        return None
+    try:
+        primeiro = resultados[0]
+        return (
+            float(primeiro["lat"]),
+            float(primeiro["lon"]),
+            (primeiro.get("address") or {}),
+        )
+    except (KeyError, IndexError, TypeError, ValueError):
+        return None
+
+
+@lru_cache(maxsize=2000)
+def geocodificar_endereco(cep, numero=""):
+    """Devolve (latitude, longitude, precisao) para um CEP e número.
+
+    A consulta é estruturada (street/city/state/postalcode em campos
+    separados) e não um texto único: para endereço brasileiro o Nominatim
+    acerta bem mais assim do que recebendo tudo espremido em ``q``.
+
+    A precisão nunca é presumida. Só devolve "exato" quando o resultado
+    volta com o número da casa -- se a rua não tem numeração mapeada, o
+    Nominatim responde com o meio da rua, e numa via longa isso já são
+    centenas de metros.
     """
     dados = buscar_dados_cep(cep)
     if not dados or not dados.get("cidade"):
-        return None, None
+        return None, None, None
 
     rua = dados["rua"]
     bairro = dados["bairro"]
     cidade = dados["cidade"]
     estado = dados["estado"]
     numero = str(numero or "").strip()
+    cep_limpo = _somente_digitos(cep)
 
-    consultas = []
+    tentativas = []
+
     if rua and numero:
-        consultas.append((
-            "endereco",
-            f"{rua}, {numero}, {bairro}, {cidade}, {estado}, Brasil",
-        ))
+        # O Nominatim espera "numero nome-da-rua" no campo street.
+        tentativas.append((PRECISAO_EXATO, {
+            "street": f"{numero} {rua}",
+            "city": cidade,
+            "state": estado,
+            "postalcode": cep_limpo,
+            "country": "Brasil",
+        }))
+
     if rua:
-        consultas.append((
-            "rua",
-            f"{rua}, {bairro}, {cidade}, {estado}, Brasil",
-        ))
+        tentativas.append((PRECISAO_RUA, {
+            "street": rua,
+            "city": cidade,
+            "state": estado,
+            "postalcode": cep_limpo,
+            "country": "Brasil",
+        }))
+
     if bairro:
-        consultas.append((
-            "bairro",
-            f"{bairro}, {cidade}, {estado}, Brasil",
-        ))
-    consultas.append(("cidade", f"{cidade}, {estado}, Brasil"))
+        tentativas.append((PRECISAO_BAIRRO, {
+            "q": f"{bairro}, {cidade}, {estado}, Brasil",
+        }))
 
-    for nivel, consulta in consultas:
-        try:
-            resultados = _request_json(
-                "https://nominatim.openstreetmap.org/search",
-                params={
-                    "q": consulta,
-                    "format": "jsonv2",
-                    "limit": 1,
-                    "countrycodes": "br",
-                    "addressdetails": 1,
-                },
-                headers={
-                    "User-Agent": USER_AGENT,
-                    "Accept-Language": "pt-BR,pt;q=0.9",
-                },
+    tentativas.append((PRECISAO_CIDADE, {
+        "q": f"{cidade}, {estado}, Brasil",
+    }))
+
+    for nivel, params in tentativas:
+        ponto = _ler_ponto(_consultar_nominatim(params))
+        if not ponto:
+            continue
+
+        latitude, longitude, endereco = ponto
+
+        # Pedimos o número, mas veio a rua inteira: é rua, não é exato.
+        if nivel == PRECISAO_EXATO and not endereco.get("house_number"):
+            logger.info(
+                "[GEO] CEP %s número %s: sem numeração no mapa, caiu para rua.",
+                cep_limpo, numero,
             )
-        except (requests.RequestException, ValueError) as exc:
+            nivel = PRECISAO_RUA
+
+        if nivel not in PRECISAO_CONFIAVEL:
             logger.warning(
-                "[FRETE] Nominatim indisponível para %s: %s",
-                consulta,
-                exc,
-            )
-            continue
-
-        if not resultados:
-            continue
-
-        try:
-            latitude = float(resultados[0]["lat"])
-            longitude = float(resultados[0]["lon"])
-        except (KeyError, TypeError, ValueError):
-            continue
-
-        if nivel != "endereco":
-            logger.warning(
-                "[FRETE] CEP %s geocodificado no nível %s.",
-                cep,
-                nivel,
+                "[GEO] CEP %s resolvido só no nível %s -- o ponto é a região, "
+                "não o endereço.",
+                cep_limpo, nivel,
             )
 
-        return latitude, longitude
+        return latitude, longitude, nivel
 
-    logger.error("[FRETE] Não foi possível geocodificar o CEP %s.", cep)
-    return None, None
+    logger.error("[GEO] Não foi possível geocodificar o CEP %s.", cep_limpo)
+    return None, None, None
+
+
+def buscar_coordenadas(cep, numero=""):
+    """Compatibilidade: só as coordenadas, sem o nível de precisão.
+
+    Usada pelo frete, que precisa de um ponto de destino mesmo quando ele
+    é aproximado -- um frete estimado é melhor do que recusar a venda.
+    Quem coloca alfinete em mapa deve usar geocodificar_endereco e olhar a
+    precisão antes de afirmar onde o lugar fica.
+    """
+    latitude, longitude, _ = geocodificar_endereco(cep, numero)
+    return latitude, longitude
 
 
 @lru_cache(maxsize=2000)
@@ -291,8 +384,8 @@ def buscar_rota_rodoviaria(lat1, lon1, lat2, lon2):
 def calcular_frete_detalhado(
     cep_cliente,
     numero_cliente="",
-    lat_origem=LAT_EMPRESA,
-    lon_origem=LON_EMPRESA,
+    lat_origem=None,
+    lon_origem=None,
 ):
     """
     Calcula o frete com rota rodoviária e fornece todos os dados do mapa.
@@ -301,6 +394,15 @@ def calcular_frete_detalhado(
     geográfica identificada explicitamente como estimativa. Nunca transforma
     falha de endereço em frete zero.
     """
+    # Resolvido aqui, e não no valor padrão do parâmetro: padrão de função
+    # é avaliado uma vez, na importação do módulo, e congelaria a origem
+    # até o processo reiniciar -- corrigir o endereço no admin não teria
+    # efeito nenhum no frete.
+    if lat_origem is None or lon_origem is None:
+        lat_padrao, lon_padrao = origem_da_empresa()
+        lat_origem = lat_padrao if lat_origem is None else lat_origem
+        lon_origem = lon_padrao if lon_origem is None else lon_origem
+
     cep_limpo_cliente = _somente_digitos(cep_cliente)
     cep_limpo_empresa = _somente_digitos(CEP_EMPRESA)
 

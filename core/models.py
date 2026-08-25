@@ -5,7 +5,7 @@ from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 import requests
 from cloudinary_storage.storage import MediaCloudinaryStorage
-from .utils import calcular_frete_por_cep, buscar_coordenadas, buscar_coordenadas_por_cidade, buscar_dados_cep
+from .utils import calcular_frete_por_cep, buscar_coordenadas, buscar_coordenadas_por_cidade, buscar_dados_cep, geocodificar_endereco
 
 
 class Prime(models.Model):
@@ -161,6 +161,21 @@ class Clientes(Prime):
         help_text="Desmarque para manter o cliente cadastrado sem exibi-lo no mapa público."
     )
 
+    class Precisao(models.TextChoices):
+        EXATO = "exato", "Endereço exato"
+        RUA = "rua", "Meio da rua"
+        BAIRRO = "bairro", "Centro do bairro"
+        CIDADE = "cidade", "Centro da cidade"
+        MANUAL = "manual", "Informada à mão"
+
+    precisao_local = models.CharField(
+        max_length=10, choices=Precisao.choices, blank=True, default="",
+        help_text="Até onde a busca automática conseguiu chegar. 'Centro da "
+                  "cidade' ou 'Centro do bairro' significa que o alfinete está "
+                  "na região, e não no endereço -- nesse caso vale abrir o "
+                  "Google Maps, copiar as coordenadas certas e colar acima."
+    )
+
     def __str__(self):
         return self.descricao_cliente
 
@@ -180,19 +195,31 @@ class Clientes(Prime):
         # se alguém digitou latitude/longitude na mão (pra ajustar um
         # ponto específico), isso nunca é sobrescrito automaticamente.
         if not self.latitude or not self.longitude:
-            lat, lon = None, None
+            lat, lon, precisao = None, None, None
 
             if self.cep:
-                lat, lon = buscar_coordenadas(self.cep, self.numero or "")
+                lat, lon, precisao = geocodificar_endereco(
+                    self.cep, self.numero or ""
+                )
 
             if (not lat or not lon) and self.cidade:
                 lat, lon = buscar_coordenadas_por_cidade(
                     self.cidade, self.estado or "", self.pais or "Brasil"
                 )
+                # Sem CEP só dá para chegar na cidade. Guardar isso é o que
+                # permite distinguir, depois, um alfinete no endereço de um
+                # alfinete no centro do município.
+                precisao = "cidade" if lat and lon else None
 
             if lat and lon:
                 self.latitude = lat
                 self.longitude = lon
+                self.precisao_local = precisao or ""
+
+        elif not self.precisao_local:
+            # Coordenada que já veio preenchida sem passar pela busca: só
+            # pode ter sido digitada por uma pessoa.
+            self.precisao_local = self.Precisao.MANUAL
 
         super().save(*args, **kwargs)
 

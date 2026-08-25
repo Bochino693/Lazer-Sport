@@ -21,7 +21,7 @@ from django.templatetags.static import static
 
 # Ciclo carrinho -> pedido reservado -> pedido pago.
 from . import checkout
-from .utils import LAT_EMPRESA, LON_EMPRESA
+from .utils import LAT_EMPRESA, LON_EMPRESA, origem_da_empresa
 from .home_cache import (
     get_cached_catalog_metadata,
     get_cached_home_context,
@@ -332,8 +332,9 @@ class HomeView(View):
                 f" — {endereco_fabrica.bairro or ''}"
             ).strip(" —")
         else:
-            fabrica_lat = LAT_EMPRESA
-            fabrica_lng = LON_EMPRESA
+            # Mesma função que o frete usa: mapa e cálculo partem sempre do
+            # mesmo ponto, aconteça o que acontecer com o cadastro.
+            fabrica_lat, fabrica_lng = origem_da_empresa()
 
         fabrica_mapa = {
             "tipo": "fabrica",
