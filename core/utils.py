@@ -16,8 +16,18 @@ VALOR_KM = 3.50
 # fica em EnderecoEmpresa, editável pelo admin. Use origem_da_empresa()
 # em vez de ler as constantes direto: era daí que vinha a incoerência de
 # o mapa mostrar um lugar e o frete calcular de outro.
-LAT_EMPRESA = -23.459889
-LON_EMPRESA = -46.689654
+# Rua São Roque de Minas, 104 -- Jardim Peri, São Paulo/SP, CEP 02679-110.
+#
+# O par anterior (-23.459889, -46.689654) caía na Vila Brasilândia, a
+# ~2,8 km a oeste: o Jardim Peri fica no distrito da Cachoeirinha, e o
+# ponto antigo estava a 1,2 km do centro da Brasilândia. Estes valores
+# são a coordenada do CEP -- acertam a rua, não necessariamente a porta
+# do número 104.
+#
+# Para descer ao número exato, rode em produção (onde o Nominatim é
+# alcançável):  python manage.py conferir_mapa --corrigir
+LAT_EMPRESA = -23.4532992
+LON_EMPRESA = -46.6628221
 
 
 def origem_da_empresa():
