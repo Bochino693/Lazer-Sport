@@ -1,69 +1,104 @@
 /* =========================================================================
-   ls-page-loader.js — overlay de carregamento das áreas internas.
+   ls-page-loader.js — barra de carregamento no topo da página.
    -------------------------------------------------------------------------
    Uso automático: qualquer clique em link interno ou envio de formulário.
    Uso manual:     LSLoader.show("Gerando relatório…") / LSLoader.hide()
+
+   O avanço é função do tempo decorrido, e não de um passo fixo por
+   intervalo: p(t) = TETO * (1 - e^(-t/TAU)). A curva anda depressa no
+   começo, quando quase toda navegação termina, e vai desacelerando --
+   assim ela nunca encosta no fim antes de a página chegar, e nunca fica
+   parada dando a impressão de travamento.
    ========================================================================= */
 (function (window, document) {
     "use strict";
 
     /* Só aparece se a navegação passar disso. Abaixo, a página nova já
-       chegou e o overlay só piscaria na tela. */
+       chegou e a barra só piscaria na tela. */
     var ATRASO_MS = 140;
 
-    var overlay = null;
-    var elTexto = null;
+    /* Constante de tempo da curva: em TAU ms a barra faz ~63% do caminho
+       até o teto. Calibrado para a navegação típica deste site. */
+    var TAU_MS = 900;
+
+    /* Teto do avanço automático. Os 8% que sobram são o pulo final, quando
+       a página realmente chega -- é isso que faz a barra terminar em vez
+       de simplesmente sumir. */
+    var TETO = 0.92;
+
+    var trilho = null;
+    var barra = null;
+    var aviso = null;
     var timer = null;
     var tetoTimer = null;
+    var quadro = null;
+    var inicio = 0;
     var aberto = false;
 
     function montar() {
-        if (overlay) return overlay;
+        if (barra) return barra;
 
-        overlay = document.querySelector(".ls-page-loader");
+        trilho = document.querySelector(".ls-load-track");
 
-        if (!overlay) {
-            /* Sem marcação no template: o overlay é criado aqui mesmo. */
-            overlay = document.createElement("div");
-            overlay.className = "ls-page-loader";
-            overlay.setAttribute("role", "status");
-            overlay.setAttribute("aria-live", "polite");
-            overlay.setAttribute("aria-hidden", "true");
-            overlay.innerHTML =
-                '<div class="ls-page-loader-card">' +
-                '  <div class="ls-page-loader-ring">' +
-                '    <div class="ls-page-loader-mark"></div>' +
-                '  </div>' +
-                '  <strong class="ls-page-loader-title">Carregando</strong>' +
-                '  <span class="ls-page-loader-text"></span>' +
-                '  <div class="ls-page-loader-bar"></div>' +
-                '</div>';
-            document.body.appendChild(overlay);
+        if (!trilho) {
+            trilho = document.createElement("div");
+            trilho.className = "ls-load-track";
+            trilho.setAttribute("aria-hidden", "true");
+
+            barra = document.createElement("div");
+            barra.className = "ls-load-progress";
+            trilho.appendChild(barra);
+
+            document.body.appendChild(trilho);
+        } else {
+            barra = trilho.querySelector(".ls-load-progress");
         }
 
-        elTexto = overlay.querySelector(".ls-page-loader-text");
-
-        /* A marca vem do data-logo do <body>, para o arquivo servir tanto a
-           /adm quanto ao subdomínio interno sem hardcode de caminho. */
-        var marca = overlay.querySelector(".ls-page-loader-mark");
-        var logo = document.body.getAttribute("data-loader-logo");
-        if (marca && logo && !marca.querySelector("img")) {
-            var img = document.createElement("img");
-            img.src = logo;
-            img.alt = "";
-            img.setAttribute("aria-hidden", "true");
-            marca.appendChild(img);
+        aviso = document.querySelector(".ls-load-status");
+        if (!aviso) {
+            aviso = document.createElement("div");
+            aviso.className = "ls-load-status";
+            aviso.setAttribute("role", "status");
+            aviso.setAttribute("aria-live", "polite");
+            document.body.appendChild(aviso);
         }
 
-        return overlay;
+        return barra;
+    }
+
+    function pintar(fracao) {
+        barra.style.transform = "scaleX(" + fracao + ")";
+    }
+
+    function passo() {
+        if (!aberto) return;
+        var decorrido = window.performance.now() - inicio;
+        pintar(TETO * (1 - Math.exp(-decorrido / TAU_MS)));
+        quadro = window.requestAnimationFrame(passo);
     }
 
     function mostrar(mensagem) {
         montar();
-        if (elTexto) elTexto.textContent = mensagem || "Preparando os dados…";
-        overlay.classList.add("is-open");
-        overlay.setAttribute("aria-hidden", "false");
+
+        if (aberto) return;
         aberto = true;
+
+        document.documentElement.classList.add("ls-carregando");
+        aviso.textContent = mensagem || "Carregando a página…";
+
+        /* Volta ao zero sem animar: sem isto a barra da navegação anterior
+           encolheria da direita para a esquerda na frente do visitante. */
+        barra.style.transition = "none";
+        pintar(0);
+        /* Leitura forçada para o navegador aplicar o zero antes de a
+           transição voltar -- sem ela as duas mudanças viram uma só. */
+        void barra.offsetWidth;
+        barra.style.transition = "";
+
+        trilho.classList.add("is-active");
+
+        inicio = window.performance.now();
+        quadro = window.requestAnimationFrame(passo);
     }
 
     function esconder() {
@@ -75,10 +110,23 @@
             window.clearTimeout(tetoTimer);
             tetoTimer = null;
         }
-        if (!overlay || !aberto) return;
-        overlay.classList.remove("is-open");
-        overlay.setAttribute("aria-hidden", "true");
+        if (!barra || !aberto) return;
+
         aberto = false;
+        if (quadro) {
+            window.cancelAnimationFrame(quadro);
+            quadro = null;
+        }
+
+        /* Fecha o percurso antes de sumir. Sumir no meio pareceria erro. */
+        pintar(1);
+        aviso.textContent = "";
+        document.documentElement.classList.remove("ls-carregando");
+
+        window.setTimeout(function () {
+            if (aberto) return;
+            trilho.classList.remove("is-active");
+        }, 220);
     }
 
     function agendar(mensagem) {
@@ -108,7 +156,7 @@
         if (href.charAt(0) === "#") return false;
         if (/^(mailto:|tel:|javascript:|whatsapp:|blob:|data:)/i.test(href)) return false;
 
-        /* Link para outro host abre fora do painel: o overlay ficaria preso. */
+        /* Link para outro host abre fora do painel: a barra ficaria presa. */
         if (link.host && link.host !== window.location.host) return false;
 
         /* Mesma página, só mudando a âncora. */
@@ -126,13 +174,13 @@
     /* Os dois ouvintes ficam na fase de bolha de propósito: assim rodam depois
        do código da própria tela e enxergam o preventDefault de quem trata o
        evento por fetch — como os modais do painel, que salvam sem sair da
-       página e deixariam o overlay girando à toa. */
+       página e deixariam a barra correndo à toa. */
     document.addEventListener("click", function (evento) {
         var link = evento.target.closest ? evento.target.closest("a[href]") : null;
         if (!link) return;
         if (!ehNavegacaoInterna(link, evento)) return;
 
-        agendar(link.dataset.loaderMsg || "Abrindo " + (link.textContent || "").trim().slice(0, 40));
+        agendar(link.dataset.loaderMsg || "Carregando a página…");
     });
 
     /* ---------------------------------------------------------------------
@@ -147,19 +195,19 @@
         /* Formulário interceptado por fetch/AJAX chama LSLoader na mão. */
         if (form.hasAttribute("data-ajax")) return;
 
-        agendar(form.dataset.loaderMsg || "Salvando…");
+        agendar(form.dataset.loaderMsg || "Enviando…");
     });
 
     /* ---------------------------------------------------------------------
        Fechamento
        --------------------------------------------------------------------- */
 
-    /* Voltar pelo histórico traz a página do cache: o overlay precisa sumir. */
+    /* Voltar pelo histórico traz a página do cache: a barra precisa sumir. */
     window.addEventListener("pageshow", esconder);
     window.addEventListener("load", esconder);
 
     /* Rede travada, download servido com Content-Disposition ou navegação
-       cancelada deixam a página no lugar. Sem este teto o overlay giraria
+       cancelada deixam a página no lugar. Sem este teto a barra correria
        para sempre por cima de uma tela que já está utilizável. */
     var TETO_MS = 20000;
 

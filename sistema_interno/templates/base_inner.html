@@ -18,11 +18,11 @@
   {% block extra_css %}{% endblock %}
   <link href="{% static 'interno/interno_modern.css' %}?v=3.2" rel="stylesheet">
 
-  <!-- Modal de carregamento compartilhado com o painel /adm. -->
-  <link rel="stylesheet" href="{% static 'site/ls-page-loader.css' %}?v=1">
-  <script src="{% static 'site/ls-page-loader.js' %}?v=1" defer></script>
+  <!-- Barra de carregamento no topo, compartilhada com o painel /adm. -->
+  <link rel="stylesheet" href="{% static 'site/ls-page-loader.css' %}?v=2">
+  <script src="{% static 'site/ls-page-loader.js' %}?v=2" defer></script>
 </head>
-<body class="ls-body" data-loader-logo="{% static 'images/logoofi.png' %}">
+<body class="ls-body">
 <div class="ls-shell">
   <aside class="ls-sidebar" id="sidebarMenu">
     <a class="ls-brand" href="{% url 'home_inner' %}">

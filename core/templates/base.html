@@ -27,11 +27,11 @@
   <link rel="stylesheet" href="{% static 'site/ls-ancoras.css' %}?v=1">
   <script src="{% static 'site/ls-ancoras.js' %}?v=1" defer></script>
 
-  <!-- Carregamento visível também no site público. A ordem importa: este
-       script entra depois do de âncoras, para o clique em link interno já
-       chegar marcado como tratado e o overlay não piscar à toa. -->
-  <link rel="stylesheet" href="{% static 'site/ls-page-loader.css' %}?v=1">
-  <script src="{% static 'site/ls-page-loader.js' %}?v=1" defer></script>
+  <!-- Barra de carregamento no topo. A ordem importa: este script entra
+       depois do de âncoras, para o clique em link interno já chegar
+       marcado como tratado e a barra não correr à toa. -->
+  <link rel="stylesheet" href="{% static 'site/ls-page-loader.css' %}?v=2">
+  <script src="{% static 'site/ls-page-loader.js' %}?v=2" defer></script>
 {% if user.is_authenticated %}
   <!-- Aviso de pagamento aprovado confirmado fora da aba (webhook). -->
   <link rel="stylesheet" href="{% static 'site/ls-confirmacao.css' %}?v=1">
@@ -197,6 +197,12 @@
 
 
     /* ======= MENU ======= */
+    /* Tudo daqui para baixo é escopado em .nav-desktop de propósito.
+       O seletor solto "nav a" também acertava o painel do celular e a
+       doca de contato -- os dois são <nav>. Era daí que saía o losango
+       vermelho no meio do menu do celular: o sublinhado do desktop
+       (position:absolute, 2px, vermelho) somava com o chevron do painel
+       (7x7, girado 45º) e o resultado era um quadrado vermelho girado. */
     /* No desktop o menu vira dois grupos simétricos (mesma quantidade
        de itens) nas laterais, com o login sempre centralizado entre
        eles -- em vez de um bloco só que quebra de forma desigual. */
@@ -209,7 +215,7 @@
        (a regra que esconde #nav no desktop fica dentro do media
        query de 769px+, logo abaixo — ver .nav-desktop) */
 
-    nav a {
+    .nav-desktop a {
       color: white;
       text-decoration: none;
       font-weight: 700;
@@ -233,11 +239,11 @@
       transition: color 0.25s var(--ease-out), transform 0.25s var(--ease-out);
     }
 
-    nav a i.nav-icon {
+    .nav-desktop a i.nav-icon {
       display: none;
     }
 
-    nav a::before {
+    .nav-desktop a::before {
       content: '';
       position: absolute;
       inset: 1px;
@@ -249,7 +255,7 @@
       z-index: -1;
     }
 
-    nav a::after {
+    .nav-desktop a::after {
       content: '';
       position: absolute;
       bottom: -4px;
@@ -260,17 +266,17 @@
       transition: width 0.3s var(--ease-out);
     }
 
-    nav a:hover {
+    .nav-desktop a:hover {
       color: #FFD700;
       transform: translateY(-1px);
     }
 
-    nav a:hover::before {
+    .nav-desktop a:hover::before {
       opacity: 1;
       transform: scale(1);
     }
 
-    nav a:hover::after {
+    .nav-desktop a:hover::after {
       width: 100%;
       left: 0;
     }
@@ -701,15 +707,15 @@
     scroll-behavior: smooth;
 }
 
-    nav a.active-link {
+    .nav-desktop a.active-link {
   color: #FFD700 !important;
 }
 
-nav a.active-link::after {
+.nav-desktop a.active-link::after {
   width: 100%;
 }
 
-nav a.btn-login {
+.nav-desktop a.btn-login {
     background: #E63946;
     width: 80%;
     margin: 10px auto;
@@ -1110,7 +1116,9 @@ nav a.btn-login {
     overflow: hidden;
   }
 
-  /* fina barra dourada na borda esquerda do painel, acabamento premium */
+  /* Fio na borda esquerda, nas cores do site: o azul da marca descendo
+     para o vermelho. Antes era dourado, uma cor que não existe em
+     nenhum outro lugar da identidade. */
   #ls-mobile-nav::before {
     content: '';
     position: absolute;
@@ -1118,8 +1126,8 @@ nav a.btn-login {
     left: 0;
     width: 3px;
     height: 100%;
-    background: linear-gradient(180deg, #FFD700, #E63946);
-    opacity: 0.85;
+    background: linear-gradient(180deg, #007BFF, #004AAD 55%, #E63946);
+    opacity: 0.9;
   }
 
   #ls-mobile-nav.active {
@@ -1152,65 +1160,46 @@ nav a.btn-login {
     min-width: 0;
   }
 
-  .ls-mobile-nav-badge {
-    width: 40px;
-    height: 40px;
+  .ls-mobile-nav-logo {
+    height: 42px;
+    width: auto;
+    max-width: 100%;
+    object-fit: contain;
+    display: block;
+    /* A arte foi desenhada sobre branco; sobre o painel escuro ela
+       precisa de um respiro claro para não ficar boiando. */
+    padding: 5px 10px;
     border-radius: 12px;
-    background: linear-gradient(135deg, #FFD700, #ffb300);
-    color: #0d1b2e;
-    font-weight: 800;
-    font-size: 0.92rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    box-shadow: 0 6px 14px rgba(255, 183, 0, 0.35);
-  }
-
-  .ls-mobile-nav-heading {
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-  }
-
-  .ls-mobile-nav-heading strong {
-    color: #fff;
-    font-size: 0.96rem;
-    font-weight: 800;
-    line-height: 1.2;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .ls-mobile-nav-heading em {
-    font-style: normal;
-    color: rgba(255, 255, 255, 0.45);
-    font-size: 0.68rem;
-    font-weight: 700;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    margin-top: 2px;
+    background: rgba(255, 255, 255, 0.94);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.28);
   }
 
   .ls-mobile-nav-close {
     display: flex !important;
     align-items: center;
     justify-content: center;
-    width: 38px;
-    height: 38px;
+    /* 44px e o alvo minimo de toque recomendado; com 38 e um circulo
+       quase da cor do fundo, fechar o menu virava tentativa e erro. */
+    width: 44px;
+    height: 44px;
     flex-shrink: 0;
-    border: none;
+    border: 1px solid rgba(255, 255, 255, 0.22);
     border-radius: 50%;
-    background: rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.14);
     color: #fff;
-    font-size: 1rem;
+    font-size: 1.05rem;
+    line-height: 1;
     cursor: pointer;
-    transition: background 0.25s var(--ease-out), transform 0.3s var(--ease-bounce);
+    transition:
+      background 0.25s var(--ease-out),
+      border-color 0.25s var(--ease-out),
+      transform 0.3s var(--ease-bounce);
   }
 
-  .ls-mobile-nav-close:hover {
+  .ls-mobile-nav-close:hover,
+  .ls-mobile-nav-close:focus-visible {
     background: #E63946;
+    border-color: #E63946;
     transform: rotate(90deg);
   }
 
@@ -1221,20 +1210,27 @@ nav a.btn-login {
     overflow-y: auto;
     display: flex;
     flex-direction: column;
-    gap: 3px;
-    padding: 14px 12px 10px;
+    gap: 6px;
+    /* A folga de baixo e para o ultimo item nao encostar no botao do
+       WhatsApp, que e fixo no rodape do painel. */
+    padding: 14px 12px 18px;
+    overscroll-behavior: contain;
   }
 
   .ls-mobile-nav-list a {
     display: flex;
     align-items: center;
     justify-content: flex-start;
-    gap: 14px;
-    padding: 13px 12px;
-    font-size: 0.92rem;
+    gap: 12px;
+    padding: 11px 12px;
+    /* color e text-decoration explicitos: o bloco base do menu virou
+       .nav-desktop, entao o painel nao herda mais nada dele. */
+    color: #ffffff;
+    text-decoration: none;
+    font-size: 0.9rem;
     font-weight: 700;
-    line-height: 1.3;
-    border-radius: 12px;
+    line-height: 1.25;
+    border-radius: 14px;
     border: 1px solid rgba(255, 255, 255, 0.08);
     background: rgba(255, 255, 255, 0.045);
     white-space: normal;
@@ -1295,8 +1291,12 @@ nav a.btn-login {
   .ls-mobile-nav-list a:active,
   .ls-mobile-nav-list a.active-link {
     color: #ffffff !important;
-    background: linear-gradient(135deg, rgba(230, 57, 70, 0.96), rgba(201, 21, 45, 0.96));
-    border-color: rgba(255, 255, 255, 0.24);
+    /* Azul do cabeçalho do site. O vermelho é a cor de destaque da
+       marca, não a de navegação -- usá-lo em cada item deixava o painel
+       parecendo outro site. */
+    background: linear-gradient(135deg, #0A63D6, #004AAD);
+    border-color: rgba(255, 255, 255, 0.22);
+    box-shadow: 0 8px 18px rgba(0, 74, 173, 0.35);
     transform: none;
   }
 
@@ -1307,11 +1307,66 @@ nav a.btn-login {
 
   .ls-mobile-nav-list a i.nav-icon {
     display: inline-flex;
-    width: 22px;
+    align-items: center;
     justify-content: center;
-    font-size: 1.02rem;
-    color: #FFD700;
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    /* Azul da marca, não dourado. O quadrinho atrás do ícone dá o
+       alinhamento vertical que faltava quando o rótulo quebra em
+       duas linhas. */
+    color: #8FC2FF;
+    background: rgba(0, 123, 255, 0.14);
     flex-shrink: 0;
+    transition: color 0.25s var(--ease-out), background 0.25s var(--ease-out);
+  }
+
+  .ls-mobile-nav-list a:hover i.nav-icon,
+  .ls-mobile-nav-list a:active i.nav-icon,
+  .ls-mobile-nav-list a.active-link i.nav-icon {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.22);
+  }
+
+  /* Celular deitado: sobra pouca altura, e o cabecalho do painel comia
+     um terco dela. Aqui a marca encolhe e os itens ficam mais rasos, para
+     caber mais opcao antes de precisar rolar. */
+  @media (max-height: 480px) {
+    .ls-mobile-nav-header {
+      padding: 10px 14px 8px;
+    }
+
+    .ls-mobile-nav-logo {
+      height: 32px;
+      padding: 4px 8px;
+    }
+
+    .ls-mobile-nav-list {
+      gap: 4px;
+      padding: 8px 12px 12px;
+    }
+
+    .ls-mobile-nav-list a {
+      padding: 8px 10px;
+    }
+
+    .ls-mobile-nav-list a i.nav-icon {
+      width: 28px;
+      height: 28px;
+    }
+
+    .ls-mobile-nav-cta {
+      margin: 6px 14px calc(10px + env(safe-area-inset-bottom, 0px));
+      padding: 10px 14px;
+    }
+  }
+
+  /* Sombra no pe da lista: sem ela nao da para saber que ainda ha itens
+     abaixo do ultimo visivel -- o painel parecia terminar ali. */
+  .ls-mobile-nav-list {
+    -webkit-mask-image: linear-gradient(180deg, #000 calc(100% - 26px), transparent 100%);
+    mask-image: linear-gradient(180deg, #000 calc(100% - 26px), transparent 100%);
   }
 
   /* ---- rodapé fixo do painel: atalho de WhatsApp ---- */
@@ -1567,7 +1622,7 @@ nav a.btn-login {
   </style>
 
 </head>
-<body data-loader-logo="{% static 'images/logoofi.png' %}">
+<body>
 
 <!-- ======= CABEÇALHO ======= -->
 <header>
@@ -1648,11 +1703,10 @@ nav a.btn-login {
 
   <div class="ls-mobile-nav-header">
     <div class="ls-mobile-nav-brand">
-      <span class="ls-mobile-nav-badge">LS</span>
-      <div class="ls-mobile-nav-heading">
-        <strong>Lazer &amp; Sport</strong>
-        <em>Menu</em>
-      </div>
+      {# A marca de verdade, e não um quadrado amarelo com "LS" escrito. #}
+      <img class="ls-mobile-nav-logo"
+           src="{% static 'images/logoofi.png' %}"
+           alt="Lazer &amp; Sport" width="132" height="44" decoding="async">
     </div>
     <button type="button" class="ls-mobile-nav-close" id="ls-mobile-nav-close" aria-label="Fechar menu">
       <i class="fa-solid fa-xmark"></i>
