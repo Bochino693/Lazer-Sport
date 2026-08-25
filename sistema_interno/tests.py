@@ -15,6 +15,44 @@ from .models import (
 from .views_gestao import OrdemProducaoDetalheView
 
 
+@override_settings(ALLOWED_HOSTS=["interno.testserver", "testserver"])
+class CentralDeTrabalhoTests(TestCase):
+    """A entrada do interno e operacional; colaborador vai para a execucao."""
+
+    def test_gestor_ve_as_quatro_frentes_da_empresa(self):
+        gestor = User.objects.create_superuser(
+            username="gestor-home",
+            password="senha-segura",
+            email="gestor-home@example.com",
+        )
+        self.client.force_login(gestor)
+
+        resposta = self.client.get("/", HTTP_HOST="interno.testserver")
+
+        self.assertEqual(resposta.status_code, 200)
+        self.assertContains(resposta, "O que precisa de você")
+        self.assertContains(resposta, "orçamentos em aberto")
+        self.assertContains(resposta, "pedidos em movimento")
+        self.assertContains(resposta, "ordens na produção")
+        self.assertContains(resposta, "manutenções abertas")
+
+    def test_colaborador_entra_direto_na_producao(self):
+        colaborador = User.objects.create_user(
+            username="operador-home",
+            password="senha-segura",
+            is_staff=True,
+        )
+        self.client.force_login(colaborador)
+
+        resposta = self.client.get("/", HTTP_HOST="interno.testserver")
+
+        self.assertRedirects(
+            resposta,
+            "/producao/",
+            fetch_redirect_response=False,
+        )
+
+
 class FluxoGuiadoProducaoTests(TestCase):
     def setUp(self):
         self.gestor = User.objects.create_superuser(

@@ -134,11 +134,28 @@
                   {% else %}neutral{% endif %}">
                   {{ orcamento.get_status_display }}
                 </span>
+                {% if orcamento.respondido_em %}
+                  <span class="material-sub d-block mt-1">
+                    {{ orcamento.respondido_por|default:"cliente" }} ·
+                    {{ orcamento.respondido_em|date:"d/m H:i" }}
+                  </span>
+                {% elif orcamento.enviado_em %}
+                  <span class="material-sub d-block mt-1">
+                    enviado {{ orcamento.enviado_em|date:"d/m" }}
+                  </span>
+                {% endif %}
               </td>
               <td data-rotulo="Ações" class="ls-actions text-end">
                 <button type="button" class="btn btn-sm btn-outline-secondary"
                         data-editar="{{ orcamento.id }}">
                   <i class="bi bi-pencil"></i> Editar
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-primary"
+                        data-enviar="{{ orcamento.id }}"
+                        data-nome="{{ orcamento.destinatario }}"
+                        title="Gerar o link da proposta para mandar ao cliente">
+                  <i class="bi bi-send"></i>
+                  {% if orcamento.enviado_em %}Link{% else %}Enviar{% endif %}
                 </button>
                 <button type="button" class="btn btn-sm btn-outline-secondary"
                         data-situacao="{{ orcamento.id }}"
@@ -243,18 +260,25 @@
         <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
           <div>
             <h6 class="mb-1">Itens da proposta</h6>
-            <span class="text-muted small">Escolha um produto de produção ou escreva livremente.</span>
+            <span class="text-muted small">
+              Escolha do catálogo do site. Não está lá? Cadastre na hora.
+            </span>
           </div>
-          <button type="button" class="btn btn-sm btn-outline-secondary" id="addItem">
-            <i class="bi bi-plus-lg me-1"></i> Adicionar item
-          </button>
+          <div class="d-flex gap-2 flex-wrap">
+            <button type="button" class="btn btn-sm btn-outline-success" id="novoBrinquedo">
+              <i class="bi bi-plus-circle me-1"></i> Novo brinquedo
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="addItem">
+              <i class="bi bi-plus-lg me-1"></i> Adicionar item
+            </button>
+          </div>
         </div>
 
         <div class="table-responsive">
           <table class="ls-table ls-itens-table">
             <thead>
               <tr>
-                <th style="width: 26%">Produto</th>
+                <th style="width: 28%">Brinquedo</th>
                 <th>Descrição</th>
                 <th style="width: 12%" class="text-end">Qtd.</th>
                 <th style="width: 17%" class="text-end">Valor unit.</th>
@@ -285,6 +309,108 @@
         <button type="submit" class="btn btn-success">Salvar orçamento</button>
       </div>
     </form>
+  </div>
+</div>
+
+<!-- ================= MODAL: brinquedo novo, sem sair daqui ================= -->
+{% comment %}
+Cadastro mínimo de propósito: nome, valor e categoria. Foto e texto de
+  venda são trabalho de quem cuida da vitrine, e exigir isso aqui faria a
+  pessoa desistir e digitar o item à mão -- que é justamente o que este
+  modal existe para evitar. O brinquedo nasce fora da loja.
+{% endcomment %}
+<div class="modal fade" id="modalBrinquedoNovo" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <form class="modal-content" id="formBrinquedoNovo" method="post"
+          action="{% url 'orcamentos_inner' %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="brinquedo_novo">
+
+      <div class="modal-header">
+        <h5 class="modal-title">Novo brinquedo no catálogo</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+
+      <div class="modal-body">
+        <div class="alert alert-danger d-none" id="brinquedoNovoErro"></div>
+
+        <p class="text-muted small">
+          Entra no catálogo do site e já fica disponível na linha do orçamento.
+          Não aparece na loja até alguém publicar com foto e descrição.
+        </p>
+
+        <div class="mb-3">
+          <label class="form-label" for="brinquedoNovoNome">Nome</label>
+          <input class="form-control" id="brinquedoNovoNome" name="nome"
+                 data-rotulo="nome" maxlength="150" required
+                 placeholder="Piscina de bolinhas 3x3">
+        </div>
+
+        <div class="row g-3">
+          <div class="col-sm-6">
+            <label class="form-label" for="brinquedoNovoValor">Valor</label>
+            <input class="form-control" id="brinquedoNovoValor" name="valor"
+                   inputmode="decimal" placeholder="0,00">
+          </div>
+          <div class="col-sm-6">
+            <label class="form-label" for="brinquedoNovoVoltz">Voltagem</label>
+            <input class="form-control" id="brinquedoNovoVoltz" name="voltz"
+                   maxlength="10" placeholder="110, 220, bivolt...">
+          </div>
+        </div>
+
+        <div class="mt-3">
+          <label class="form-label" for="brinquedoNovoCategoria">Categoria</label>
+          <select class="form-select" id="brinquedoNovoCategoria" name="categoria">
+            <option value="">Sem categoria</option>
+            {% for c in categorias %}
+              <option value="{{ c.id }}">{{ c.nome_categoria }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="mt-3">
+          <label class="form-label" for="brinquedoNovoDescricao">Descrição</label>
+          <textarea class="form-control" id="brinquedoNovoDescricao" name="descricao"
+                    rows="2" placeholder="Medidas, o que acompanha, público..."></textarea>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-success">Cadastrar e usar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ================= MODAL: link da proposta ================= -->
+<div class="modal fade" id="modalLink" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Link da proposta</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-danger d-none" id="linkErro"></div>
+        <p class="text-muted small mb-2">
+          Mande este endereço para <strong id="linkCliente"></strong>. A página
+          mostra a proposta inteira e tem os botões de aprovar e recusar — a
+          resposta volta para cá sozinha.
+        </p>
+        <div class="input-group">
+          <input class="form-control" id="linkCampo" readonly>
+          <button class="btn btn-outline-secondary" type="button" id="linkCopiar">
+            <i class="bi bi-clipboard"></i> Copiar
+          </button>
+        </div>
+        <a class="btn btn-sm btn-outline-primary mt-3" id="linkAbrir"
+           href="#" target="_blank" rel="noopener">
+          <i class="bi bi-box-arrow-up-right"></i> Abrir como o cliente vê
+        </a>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -339,6 +465,7 @@
 </div>
 
 {{ orcamentos_dados|json_script:"orcamentosDados" }}
+{{ catalogo_dados|json_script:"catalogoDados" }}
 {% endblock %}
 
 {% block scripts %}
@@ -351,12 +478,67 @@ document.addEventListener("DOMContentLoaded", function () {
   );
 
   var corpo = document.getElementById("itensCorpo");
-  var opcoesProduto = [
-    '<option value="">Item livre</option>'
-    {% for p in produtos %}
-      , '<option value="{{ p.id }}" data-preco="{{ p.preco_venda|stringformat:".2f" }}">{{ p.nome|escapejs }}</option>'
-    {% endfor %}
-  ].join("");
+
+  /* ------------------------------------------------------------------
+     O seletor de item
+
+     Uma lista só, com as duas origens separadas por optgroup, e o valor
+     carregando de onde a linha veio: "b:12" é o brinquedo 12 do catálogo
+     do site, "p:5" é o produto 5 da produção, vazio é linha escrita à
+     mão. Dois selects lado a lado seria mais explícito e muito pior de
+     usar num tablet, que é onde esta tela vive.
+
+     O prefixo é desmontado na hora de enviar, em `antes`.
+     ------------------------------------------------------------------ */
+  var catalogo = JSON.parse(
+    document.getElementById("catalogoDados").textContent || "[]"
+  );
+
+  function opcaoCatalogo(b) {
+    var opcao = document.createElement("option");
+    opcao.value = "b:" + b.id;
+    opcao.textContent = b.nome;
+    opcao.dataset.preco = b.valor || "";
+    return opcao;
+  }
+
+  /* Molde criado uma vez e clonado por linha. Montar o HTML de umas
+     centenas de brinquedos a cada linha nova travava a digitação. */
+  var molde = document.createElement("select");
+  molde.className = "form-select form-select-sm ls-item-produto";
+  molde.appendChild(new Option("Item livre (escrever à mão)", ""));
+
+  var grupoCatalogo = document.createElement("optgroup");
+  grupoCatalogo.label = "Catálogo do site";
+  catalogo.forEach(function (b) {
+    grupoCatalogo.appendChild(opcaoCatalogo(b));
+  });
+  molde.appendChild(grupoCatalogo);
+
+  {% if produtos %}
+  var grupoProducao = document.createElement("optgroup");
+  grupoProducao.label = "Produção (máquinas e peças)";
+  {% for p in produtos %}
+  (function () {
+    var opcao = new Option("{{ p.nome|escapejs }}", "p:{{ p.id }}");
+    opcao.dataset.preco = "{{ p.preco_venda|stringformat:'.2f' }}";
+    grupoProducao.appendChild(opcao);
+  })();
+  {% endfor %}
+  molde.appendChild(grupoProducao);
+  {% endif %}
+
+  /* Acrescenta um brinquedo recém-cadastrado a TODOS os seletores já na
+     tela, e não só ao molde: quem cadastrou está com três linhas abertas
+     e esperaria achar o item em qualquer uma delas. */
+  function registrarNoCatalogo(b) {
+    catalogo.push(b);
+    grupoCatalogo.appendChild(opcaoCatalogo(b));
+    corpo.querySelectorAll(".ls-item-produto").forEach(function (seletor) {
+      var grupo = seletor.querySelector('optgroup[label="Catálogo do site"]');
+      if (grupo) grupo.appendChild(opcaoCatalogo(b));
+    });
+  }
 
   /* ------------------------------------------------------------------
      Números
@@ -389,17 +571,26 @@ document.addEventListener("DOMContentLoaded", function () {
     var tr = document.createElement("tr");
     tr.className = "ls-item-linha";
     tr.innerHTML =
-      '<td data-rotulo="Produto"><select class="form-select form-select-sm ls-item-produto">' + opcoesProduto + '</select></td>' +
+      '<td data-rotulo="Brinquedo"></td>' +
       '<td data-rotulo="Descrição"><input class="form-control form-control-sm ls-item-descricao" maxlength="180" placeholder="Descrição que vai na proposta"></td>' +
       '<td data-rotulo="Qtd."><input class="form-control form-control-sm text-end ls-item-quantidade" inputmode="numeric" value="1"></td>' +
       '<td data-rotulo="Valor unit."><input class="form-control form-control-sm text-end ls-item-valor" inputmode="decimal" placeholder="0,00"></td>' +
       '<td data-rotulo="Subtotal" class="text-end"><span class="ls-money ls-item-subtotal">R$ 0,00</span></td>' +
       '<td class="text-end"><button type="button" class="btn btn-sm btn-outline-danger ls-item-remover" aria-label="Remover item"><i class="bi bi-x-lg"></i></button></td>';
 
+    tr.firstElementChild.appendChild(molde.cloneNode(true));
     corpo.appendChild(tr);
 
     if (item) {
-      tr.querySelector(".ls-item-produto").value = item.produto || "";
+      /* O item guardado tem um dos dois vínculos; o seletor junta os
+         dois num valor só. Brinquedo primeiro, que é a origem padrão. */
+      var seletor = tr.querySelector(".ls-item-produto");
+      if (item.brinquedo) {
+        seletor.value = "b:" + item.brinquedo;
+      } else if (item.produto) {
+        seletor.value = "p:" + item.produto;
+      }
+
       tr.querySelector(".ls-item-descricao").value = item.descricao || "";
       tr.querySelector(".ls-item-quantidade").value = item.quantidade || 1;
       tr.querySelector(".ls-item-valor").value = item.valor_unitario || "";
@@ -516,6 +707,13 @@ document.addEventListener("DOMContentLoaded", function () {
     abrir(null);
   });
 
+  /* A central de trabalho chega com ?novo=1. O toque em "Novo orçamento"
+     termina a acao aqui, ja com a primeira linha pronta, em vez de apenas
+     despejar a pessoa numa lista e obrigar um segundo toque. */
+  if (new URLSearchParams(window.location.search).get("novo") === "1") {
+    abrir(null);
+  }
+
   document.querySelectorAll("[data-editar]").forEach(function (b) {
     b.addEventListener("click", function () {
       abrir(b.dataset.editar);
@@ -546,9 +744,17 @@ document.addEventListener("DOMContentLoaded", function () {
           return;
         }
 
+        /* Desmonta "b:12" / "p:5" nos dois campos que o servidor
+           espera. Mandar os dois preenchidos criaria um item que o
+           próprio modelo recusa (ItemOrcamento.clean). */
+        var escolha = linha.querySelector(".ls-item-produto").value;
+        var origem = escolha.slice(0, 2);
+        var referencia = escolha.slice(2);
+
         itens.push({
           descricao: descricao,
-          produto: linha.querySelector(".ls-item-produto").value,
+          brinquedo: origem === "b:" ? referencia : "",
+          produto: origem === "p:" ? referencia : "",
           quantidade: quantidade,
           valor_unitario: valor || "0"
         });
@@ -587,6 +793,134 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 
   Painel.ligar({ form: "formExcluir", erro: "excluirErro" });
+
+  /* ------------------------------------------------------------------
+     Cadastrar brinquedo sem sair do orçamento
+
+     `depois` em vez do recarregamento padrão do Painel.ligar: recarregar
+     aqui jogaria fora o orçamento meio montado, que é exatamente o que
+     este atalho existe para não fazer.
+     ------------------------------------------------------------------ */
+  var linhaEsperando = null;
+
+  document.getElementById("novoBrinquedo").addEventListener("click", function () {
+    /* Se a última linha ainda está sem item escolhido, é nela que o novo
+       brinquedo entra assim que for cadastrado. */
+    var linhas = corpo.querySelectorAll("tr");
+    var ultima = linhas[linhas.length - 1];
+    linhaEsperando =
+      ultima && !ultima.querySelector(".ls-item-produto").value ? ultima : null;
+
+    document.getElementById("formBrinquedoNovo").reset();
+    Painel.erro("brinquedoNovoErro", "");
+    Painel.abrir("modalBrinquedoNovo");
+  });
+
+  Painel.ligar({
+    form: "formBrinquedoNovo",
+    erro: "brinquedoNovoErro",
+    depois: function (json) {
+      registrarNoCatalogo(json.brinquedo);
+
+      var alvo = linhaEsperando || novaLinha(null);
+      alvo.querySelector(".ls-item-produto").value = "b:" + json.brinquedo.id;
+
+      var descricao = alvo.querySelector(".ls-item-descricao");
+      if (!descricao.value.trim()) descricao.value = json.brinquedo.nome;
+
+      var valor = alvo.querySelector(".ls-item-valor");
+      if (!paraNumero(valor.value) && json.brinquedo.valor) {
+        valor.value = json.brinquedo.valor;
+      }
+
+      linhaEsperando = null;
+      recalcular();
+      Painel.fechar("modalBrinquedoNovo");
+      descricao.focus();
+    }
+  });
+
+  /* ------------------------------------------------------------------
+     Link da proposta
+
+     O endereço é montado pelo servidor -- daqui não dá para saber o
+     domínio público, porque o painel responde no subdomínio interno.
+     ------------------------------------------------------------------ */
+  var campoLink = document.getElementById("linkCampo");
+
+  document.querySelectorAll("[data-enviar]").forEach(function (botao) {
+    botao.addEventListener("click", function () {
+      var original = botao.innerHTML;
+      botao.disabled = true;
+      botao.textContent = "Gerando...";
+
+      var dados = new FormData();
+      dados.set("action", "enviar");
+      dados.set("id", botao.dataset.enviar);
+      dados.set(
+        "csrfmiddlewaretoken",
+        document.querySelector("[name=csrfmiddlewaretoken]").value
+      );
+
+      fetch(window.location.pathname, {
+        method: "POST",
+        body: dados,
+        headers: { "X-Requested-With": "XMLHttpRequest" },
+        credentials: "same-origin"
+      })
+        .then(function (r) { return r.json().catch(function () { return null; }); })
+        .then(function (json) {
+          if (!json || json.status !== "sucesso") {
+            throw new Error((json && json.msg) || "Não consegui gerar o link.");
+          }
+
+          document.getElementById("linkCliente").textContent = botao.dataset.nome;
+          campoLink.value = json.link;
+          document.getElementById("linkAbrir").href = json.link;
+          Painel.erro("linkErro", "");
+          Painel.abrir("modalLink");
+        })
+        .catch(function (erro) {
+          /* O erro aparece no próprio modal: um alert() sumiria assim
+             que a pessoa tocasse na tela do tablet. */
+          document.getElementById("linkCliente").textContent = botao.dataset.nome;
+          campoLink.value = "";
+          Painel.erro("linkErro", erro.message);
+          Painel.abrir("modalLink");
+        })
+        .finally(function () {
+          botao.disabled = false;
+          botao.innerHTML = original;
+        });
+    });
+  });
+
+  document.getElementById("linkCopiar").addEventListener("click", function () {
+    if (!campoLink.value) return;
+
+    var botao = this;
+    function avisar() {
+      botao.innerHTML = '<i class="bi bi-check-lg"></i> Copiado';
+      setTimeout(function () {
+        botao.innerHTML = '<i class="bi bi-clipboard"></i> Copiar';
+      }, 1800);
+    }
+
+    /* navigator.clipboard só existe em contexto seguro; no tablet da
+       fábrica, acessando por http, ele simplesmente não está lá. O
+       select+execCommand é o caminho que sobra. */
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(campoLink.value).then(avisar);
+      return;
+    }
+
+    campoLink.removeAttribute("readonly");
+    campoLink.select();
+    campoLink.setSelectionRange(0, 99999);
+    document.execCommand("copy");
+    campoLink.setAttribute("readonly", "readonly");
+    avisar();
+  });
 });
 </script>
 {% endblock %}

@@ -17,6 +17,8 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.generic import View
 
+from core.models import Brinquedos, CategoriasBrinquedos
+
 from . import financeiro as fin
 from .models import (
     Cliente,
@@ -33,7 +35,14 @@ from .models import (
     ProdutoInterno,
     Setores,
 )
-from .utils import ErroDeFormulario, data, decimal_br, inteiro, texto
+from .utils import (
+    ErroDeFormulario,
+    data,
+    decimal_br,
+    endereco_do_site,
+    inteiro,
+    texto,
+)
 from .views import (
     GestorInternoRequiredMixin,
     InternoRequiredMixin,
@@ -113,13 +122,16 @@ class OrcamentosInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
         )
 
         if busca:
-            orcamentos = orcamentos.filter(
+            filtro = (
                 Q(nome_cliente__icontains=busca)
                 | Q(cliente__nome_cliente__icontains=busca)
                 | Q(contato__icontains=busca)
                 | Q(observacoes__icontains=busca)
                 | Q(itens__descricao__icontains=busca)
-            ).distinct()
+            )
+            if busca.isdigit():
+                filtro |= Q(pk=int(busca))
+            orcamentos = orcamentos.filter(filtro).distinct()
 
         if status in Orcamento.Status.values:
             orcamentos = orcamentos.filter(status=status)
@@ -138,7 +150,13 @@ class OrcamentosInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
             "status_ativo": status,
             "status_opcoes": Orcamento.Status.choices,
             "clientes": Cliente.objects.order_by("nome_cliente"),
+            # O CATÁLOGO É A ORIGEM PADRÃO DOS ITENS. Antes o seletor só
+            # oferecia ProdutoInterno -- o que a fábrica monta --, e quem
+            # orça aluguel de brinquedo tinha de digitar tudo à mão, com
+            # nome e preço fora do que está publicado no site.
+            "brinquedos": self.catalogo(),
             "produtos": ProdutoInterno.objects.filter(ativo=True),
+            "categorias": CategoriasBrinquedos.objects.order_by("nome_categoria"),
             "hoje": timezone.localdate(),
             "total_orcamentos": len(orcamentos),
             "total_aprovado": sum((o.total for o in aprovados), ZERO),
@@ -146,8 +164,45 @@ class OrcamentosInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
             "quantidade_aberto": len(em_aberto),
             "quantidade_aprovado": len(aprovados),
             "orcamentos_dados": [self.serializar(o) for o in orcamentos],
+            "catalogo_dados": self.catalogo_serializado(),
+            # A página do cliente mora no site principal, não aqui.
+            "base_publica": endereco_do_site(request),
+            "vencendo": [
+                o for o in orcamentos
+                if o.status in Orcamento.EM_ABERTO
+                and o.dias_para_vencer is not None
+                and 0 <= o.dias_para_vencer <= 3
+            ],
         }
         return render(request, "orcamentos_inner.html", ctx)
+
+    @staticmethod
+    def catalogo():
+        """Brinquedos que podem entrar num orçamento.
+
+        Tudo que está cadastrado, e não só o que aparece na loja: a vitrine
+        do site é um recorte do que a empresa aluga, e orçamento de balcão
+        alcança o catálogo inteiro.
+        """
+        return (
+            Brinquedos.objects
+            .only("id", "nome_brinquedo", "valor_brinquedo", "imagem_brinquedo")
+            .order_by("nome_brinquedo")
+        )
+
+    def catalogo_serializado(self):
+        """Payload do seletor: preencher a linha não pode custar viagem."""
+        return [
+            {
+                "id": b.id,
+                "nome": b.nome_brinquedo,
+                "valor": (
+                    f"{b.valor_brinquedo:.2f}".replace(".", ",")
+                    if b.valor_brinquedo is not None else ""
+                ),
+            }
+            for b in self.catalogo()
+        ]
 
     @staticmethod
     def serializar(orcamento):
@@ -165,6 +220,7 @@ class OrcamentosInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
             "itens": [
                 {
                     "descricao": item.descricao,
+                    "brinquedo": item.brinquedo_id or "",
                     "produto": item.produto_id or "",
                     "quantidade": item.quantidade,
                     "valor_unitario": f"{item.valor_unitario:.2f}".replace(".", ","),
@@ -272,15 +328,29 @@ class OrcamentosInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
                 limite=Decimal("9999999999.99"),
             )
 
-            produto_id = str(linha.get("produto") or "").strip()
-            produto = (
-                ProdutoInterno.objects.filter(pk=produto_id).first()
-                if produto_id.isdigit() else None
+            # Catálogo primeiro: é de onde vem quase todo item. Se a
+            # linha aponta para um brinquedo, o produto de fábrica é
+            # ignorado -- são origens exclusivas (ver ItemOrcamento.clean),
+            # e aceitar as duas gravaria um item que o próprio modelo
+            # considera inválido.
+            brinquedo_id = str(linha.get("brinquedo") or "").strip()
+            brinquedo = (
+                Brinquedos.objects.filter(pk=brinquedo_id).first()
+                if brinquedo_id.isdigit() else None
             )
+
+            produto = None
+            if brinquedo is None:
+                produto_id = str(linha.get("produto") or "").strip()
+                produto = (
+                    ProdutoInterno.objects.filter(pk=produto_id).first()
+                    if produto_id.isdigit() else None
+                )
 
             novos.append(ItemOrcamento(
                 orcamento=orcamento,
                 descricao=descricao[:180],
+                brinquedo=brinquedo,
                 produto=produto,
                 quantidade=quantidade,
                 valor_unitario=valor,
@@ -309,6 +379,90 @@ class OrcamentosInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
         numero = orcamento.pk
         orcamento.delete()
         return self.sucesso(request, f"Orçamento #{numero} removido.")
+
+    # ------------------------------------------------ enviar ao cliente
+    def acao_enviar(self, request):
+        """Devolve o link da página do cliente e marca a proposta enviada.
+
+        Não dispara e-mail: hoje a proposta vai por WhatsApp, e forçar um
+        canal que a equipe não usa só criaria um envio que ninguém lê. O
+        que faltava era o endereço para colar lá — e o registro, aqui
+        dentro, de que a proposta saiu.
+        """
+        orcamento = get_object_or_404(Orcamento, pk=request.POST.get("id"))
+
+        if not orcamento.itens.exists():
+            raise ErroDeFormulario(
+                "Este orçamento não tem itens. Adicione ao menos um antes de enviar."
+            )
+
+        orcamento.marcar_enviado()
+        link = f"{endereco_do_site(request)}{orcamento.caminho_publico}"
+
+        return self.sucesso(
+            request,
+            f"Orçamento #{orcamento.pk} pronto para enviar.",
+            id=orcamento.pk,
+            link=link,
+            status=orcamento.status,
+        )
+
+    # --------------------------------- cadastrar brinquedo sem sair daqui
+    def acao_brinquedo_novo(self, request):
+        """Cria um brinquedo no catálogo do site, de dentro do orçamento.
+
+        POR QUE AQUI. Cliente pede algo que ainda não está cadastrado e a
+        alternativa era digitar a descrição à mão: o item entrava solto, sem
+        foto na proposta e sem virar catálogo. Na vez seguinte, tudo de novo.
+        Cadastrando na hora, a mesma digitação já vira registro.
+
+        Nasce fora da loja (`exibir_na_loja=False`) de propósito: publicar
+        na vitrine é decisão de quem cuida do site, com foto e texto de
+        venda prontos. Aqui o que se quer é poder orçar hoje.
+        """
+        nome = texto(request, "nome", obrigatorio=True, rotulo="o nome do brinquedo", limite=150)
+
+        if Brinquedos.objects.filter(nome_brinquedo__iexact=nome).exists():
+            raise ErroDeFormulario(
+                f"Já existe um brinquedo chamado “{nome}”. Procure na lista."
+            )
+
+        valor = decimal_br(
+            request.POST.get("valor"), "Valor",
+            limite=Decimal("9999999999.99"),
+        )
+
+        brinquedo = Brinquedos.objects.create(
+            nome_brinquedo=nome,
+            descricao=texto(request, "descricao", limite=999) or nome,
+            valor_brinquedo=valor,
+            # Campos que o modelo exige e que não cabem numa criação
+            # rápida. avaliacao é obrigatória no cadastro; zero significa
+            # "ainda não avaliado" e não polui a média da vitrine, já que
+            # o brinquedo nasce fora dela.
+            avaliacao=ZERO,
+            voltz=texto(request, "voltz", limite=10),
+            exibir_na_loja=False,
+        )
+
+        categoria_id = (request.POST.get("categoria") or "").strip()
+        if categoria_id.isdigit():
+            categoria = CategoriasBrinquedos.objects.filter(pk=categoria_id).first()
+            if categoria:
+                brinquedo.categorias_brinquedos.add(categoria)
+
+        return self.sucesso(
+            request,
+            f"“{brinquedo.nome_brinquedo}” entrou no catálogo.",
+            brinquedo={
+                "id": brinquedo.id,
+                "nome": brinquedo.nome_brinquedo,
+                "valor": (
+                    f"{brinquedo.valor_brinquedo:.2f}".replace(".", ",")
+                    if brinquedo.valor_brinquedo is not None else ""
+                ),
+            },
+        )
 
 
 # ======================================================================
