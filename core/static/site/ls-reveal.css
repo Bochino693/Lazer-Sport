@@ -8,10 +8,17 @@
    ========================================================================= */
 
 :root {
-    --ls-reveal-dur: 620ms;
-    --ls-reveal-ease: cubic-bezier(0.22, 1, 0.36, 1);
-    --ls-skeleton-base: #e8eef9;
-    --ls-skeleton-shine: #f7fafe;
+    /* Curto e decidido. A entrada longa fazia a seção parecer que ainda
+       estava carregando quando já estava pronta. */
+    --ls-reveal-dur: 520ms;
+
+    /* Saída exponencial: quase todo o percurso acontece no começo e o
+       final é um encosto. É o que faz o movimento parecer resolvido em
+       vez de arrastado. */
+    --ls-reveal-ease: cubic-bezier(0.16, 1, 0.3, 1);
+
+    --ls-skeleton-base: #dfe7f4;
+    --ls-skeleton-shine: #eef3fb;
 }
 
 /* -------------------------------------------------------------------------
@@ -19,29 +26,31 @@
    O estado inicial só é aplicado quando o JS marca <html> com ls-reveal-on.
    Assim quem estiver sem JS nunca fica com a página em branco.
    ------------------------------------------------------------------------- */
+/* Sem blur e sem redução de escala, de propósito.
+   O desfoque deixava a seção inteira leitosa enquanto entrava -- texto
+   ilegível por meio segundo e a sensação de fundo "lavado" que era
+   justamente o que se queria evitar. A escala 0,992 não se enxerga como
+   movimento: só desalinha texto por alguns quadros. Sobrou o que de fato
+   comunica entrada: um deslocamento curto e a opacidade. */
 .ls-reveal-on [data-ls-reveal] {
     opacity: 0;
-    transform: translate3d(0, var(--ls-reveal-shift, 26px), 0) scale(var(--ls-reveal-scale, 0.992));
-    filter: blur(var(--ls-reveal-blur, 6px));
+    transform: translate3d(0, var(--ls-reveal-shift, 22px), 0);
     transition:
         opacity var(--ls-reveal-dur) var(--ls-reveal-ease),
-        transform var(--ls-reveal-dur) var(--ls-reveal-ease),
-        filter var(--ls-reveal-dur) var(--ls-reveal-ease);
+        transform var(--ls-reveal-dur) var(--ls-reveal-ease);
     transition-delay: var(--ls-reveal-delay, 0ms);
     will-change: opacity, transform;
 }
 
 .ls-reveal-on [data-ls-reveal].is-visible {
     opacity: 1;
-    transform: translate3d(0, 0, 0) scale(1);
-    filter: blur(0);
+    transform: translate3d(0, 0, 0);
 }
 
 /* Depois de entrar, libera a GPU e evita camadas presas em páginas longas. */
 .ls-reveal-on [data-ls-reveal].is-settled {
     will-change: auto;
     transition: none;
-    filter: none;
 }
 
 /* Variações de entrada para dar ritmo à página */
@@ -96,19 +105,19 @@ img.ls-img-skeleton {
     color: transparent;
 }
 
-/* Entrada suave da foto assim que ela termina de decodificar */
+/* Entrada da foto assim que ela termina de decodificar.
+   Sem desfoque: a foto borrada virando nítida era o efeito que mais
+   pesava na sensação de "tudo embaçado" ao descer a página. */
 img[data-ls-img] {
-    transition: opacity 480ms var(--ls-reveal-ease), filter 480ms var(--ls-reveal-ease);
+    transition: opacity 380ms var(--ls-reveal-ease);
 }
 
 img[data-ls-img]:not(.is-loaded) {
     opacity: 0.001;
-    filter: blur(10px);
 }
 
 img[data-ls-img].is-loaded {
     opacity: 1;
-    filter: blur(0);
     animation: none;
     background-image: none;
 }
@@ -116,7 +125,6 @@ img[data-ls-img].is-loaded {
 /* Se a imagem falhar, some com o brilho para não animar para sempre */
 img[data-ls-img].is-failed {
     opacity: 1;
-    filter: none;
     animation: none;
     background-image: none;
 }
@@ -170,11 +178,4 @@ img[data-ls-img].is-failed {
         filter: none !important;
     }
     .ls-defer-paint { content-visibility: visible; }
-}
-
-/* Seções que já animam os próprios cards entram só com opacidade,
-   para não somar dois deslocamentos no mesmo movimento. */
-.ls-reveal-on [data-ls-reveal="fade"] {
-    transform: none;
-    filter: none;
 }

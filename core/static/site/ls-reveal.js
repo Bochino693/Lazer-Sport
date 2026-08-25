@@ -61,50 +61,8 @@
         "footer.ls-footer > .ls-footer-bottom"
     ].join(",");
 
-    /* Uma grade só vale o efeito escalonado se tiver cards de verdade. */
-    var MIN_CARDS_PARA_ESCALONAR = 3;
-    var MAX_CARDS_ESCALONADOS = 12;
-    var PASSO_DELAY_MS = 55;
-
     function elementos(lista) {
         return Array.prototype.slice.call(lista);
-    }
-
-    function ehGrade(el) {
-        var display = window.getComputedStyle(el).display;
-        return display === "grid" || display === "flex";
-    }
-
-    /* Procura, sem descer o DOM inteiro, a primeira grade de cards da seção. */
-    function acharGrade(secao) {
-        var candidatos = elementos(secao.children);
-        var profundidade = 0;
-        /* Teto de nós visitados: a varredura acontece no carregamento e não
-           pode custar mais do que o efeito que ela habilita. */
-        var orcamento = 400;
-
-        while (candidatos.length && profundidade < 4 && orcamento > 0) {
-            var proximos = [];
-
-            for (var i = 0; i < candidatos.length && orcamento > 0; i++) {
-                var el = candidatos[i];
-                var filhos = el.children;
-                orcamento -= 1;
-
-                if (filhos.length >= MIN_CARDS_PARA_ESCALONAR && ehGrade(el)) {
-                    return el;
-                }
-
-                for (var j = 0; j < filhos.length; j++) {
-                    proximos.push(filhos[j]);
-                }
-            }
-
-            candidatos = proximos;
-            profundidade += 1;
-        }
-
-        return null;
     }
 
     function marcar(el, tipo, atraso) {
@@ -119,25 +77,13 @@
         var blocos = elementos(document.querySelectorAll(SELETOR_BLOCOS));
 
         blocos.forEach(function (bloco, indice) {
-            var grade = acharGrade(bloco);
-            var cards = grade ? elementos(grade.children) : [];
-
-            if (cards.length >= MIN_CARDS_PARA_ESCALONAR) {
-                /* A seção some só com opacidade; o movimento fica nos cards. */
-                marcar(bloco, "fade");
-
-                cards.slice(0, MAX_CARDS_ESCALONADOS).forEach(function (card, i) {
-                    marcar(card, "up", i * PASSO_DELAY_MS);
-                });
-
-                /* Cards além do limite entram sem atraso: em listas longas o
-                   escalonamento viraria espera. */
-                cards.slice(MAX_CARDS_ESCALONADOS).forEach(function (card) {
-                    marcar(card, "up", 0);
-                });
-            } else {
-                marcar(bloco, "up");
-            }
+            /* A seção inteira entra num movimento só.
+               Antes cada card entrava por conta própria, com 55 ms de atraso
+               entre eles: numa grade de doze, o último chegava mais de meio
+               segundo depois do primeiro, e a seção se montava na frente do
+               visitante em vez de já estar lá. Agora o bloco é um só objeto
+               -- ele chega pronto. */
+            marcar(bloco, "up");
 
             /* A primeira dobra nunca espera rolagem. */
             if (indice === 0) {
@@ -180,10 +126,12 @@
                 observador.unobserve(entrada.target);
             });
         }, {
-            /* Começa a animação um pouco antes de o bloco tocar a viewport:
-               é isso que elimina a sensação de "esperar o conteúdo chegar". */
-            rootMargin: "0px 0px -8% 0px",
-            threshold: 0.04
+            /* Dispara quando o topo do bloco cruza ~88% da altura da janela.
+               threshold em 0 de propósito: agora quem anima é a seção
+               inteira, e exigir uma fração dela visível faria as seções
+               altas só começarem quando já estivessem meio na tela. */
+            rootMargin: "0px 0px -12% 0px",
+            threshold: 0
         });
     }
 
@@ -193,7 +141,53 @@
             .forEach(function (el) {
                 observador.observe(el);
             });
+        rede();
     }
+
+    /* Rede de segurança do último bloco.
+
+       O observador ignora os 12% de baixo da janela de propósito, para a
+       seção começar a entrar um pouco antes de encostar na borda. Só que
+       o último bloco da página fica justamente nessa faixa quando a
+       rolagem chega ao fim -- e, como não há mais para onde rolar, ele
+       nunca cruzava o gatilho: ficava em opacidade zero para sempre. Era
+       o rodapé inteiro sumindo.
+
+       Esta varredura revela qualquer bloco que já esteja de fato na tela.
+       Ela custa quase nada: percorre só o que ainda não entrou, e se
+       desliga sozinha quando não sobra nenhum. */
+    var redeAgendada = false;
+
+    function rede() {
+        if (redeAgendada) return;
+        redeAgendada = true;
+
+        window.requestAnimationFrame(function () {
+            redeAgendada = false;
+
+            var pendentes = elementos(
+                document.querySelectorAll("[data-ls-reveal]:not(.is-visible)")
+            );
+
+            if (!pendentes.length) {
+                window.removeEventListener("scroll", rede);
+                window.removeEventListener("resize", rede);
+                return;
+            }
+
+            var altura = window.innerHeight || document.documentElement.clientHeight;
+
+            pendentes.forEach(function (el) {
+                if (el.getBoundingClientRect().top < altura) {
+                    revelar(el);
+                    if (observador) observador.unobserve(el);
+                }
+            });
+        });
+    }
+
+    window.addEventListener("scroll", rede, { passive: true });
+    window.addEventListener("resize", rede, { passive: true });
 
     /* ---------------------------------------------------------------------
        3. Skeleton das imagens
