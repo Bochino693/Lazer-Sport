@@ -1,0 +1,522 @@
+{% load static interno_extras %}<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+{% comment %}
+noindex não é detalhe: a página é aberta por link, e um orçamento
+   indexado pelo Google seria uma proposta comercial pública.
+{% endcomment %}
+<meta name="theme-color" content="#0A1046">
+<title>Proposta #{{ orcamento.pk }} | Lazer &amp; Sport Brinquedos</title>
+<link rel="icon" type="image/png" href="{% static 'images/logoofi.png' %}">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<style>
+/* ====================================================================
+   PROPOSTA COMERCIAL — a página que o cliente abre.
+   Clara e sóbria de propósito: é um documento que se lê, se confere e
+   às vezes se imprime, e não uma vitrine. A cor da marca entra no topo
+   e nos botões; o resto é papel.
+   ==================================================================== */
+:root{
+  --tinta:#0F172A;
+  --tinta-2:#475569;
+  --tinta-3:#7C8CA5;
+  --papel:#FFFFFF;
+  --fundo:#EEF2F9;
+  --linha:#DFE6F1;
+  --linha-forte:#C7D3E6;
+  --marca:#2A2FC4;
+  --marca-clara:#EEF0FF;
+  --vermelho:#E11D48;
+  --vermelho-claro:#FFF1F4;
+  --verde:#0F9D58;
+  --verde-claro:#E9F8F0;
+  --ambar:#B45309;
+  --ambar-claro:#FEF6E7;
+  --raio:18px;
+  --raio-g:26px;
+  --sombra:0 18px 50px rgba(15,23,42,.09);
+  --sombra-alta:0 26px 70px rgba(15,23,42,.16);
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;background:var(--fundo);color:var(--tinta);
+  font-family:Manrope,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  line-height:1.55;-webkit-font-smoothing:antialiased;
+}
+.envelope{max-width:860px;margin:0 auto;padding:24px 16px 72px}
+
+/* ---------------------------------------------------------- entrada */
+/* Tudo entra escalonado, de baixo para cima. O atraso é dado por
+   --i no elemento, o que evita uma regra por posição. */
+.entra{opacity:0;transform:translateY(18px);
+  animation:sobe .62s cubic-bezier(.16,.84,.44,1) forwards;
+  animation-delay:calc(var(--i,0) * 80ms)}
+@keyframes sobe{to{opacity:1;transform:none}}
+/* Quem pediu menos movimento no sistema recebe a página parada. Sem
+   isto a entrada escalonada vira um problema de acessibilidade. */
+@media (prefers-reduced-motion:reduce){
+  .entra{animation:none;opacity:1;transform:none}
+  *{animation-duration:.01ms!important;transition-duration:.01ms!important}
+}
+
+/* ------------------------------------------------------------ topo */
+.capa{
+  position:relative;overflow:hidden;border-radius:var(--raio-g);
+  padding:34px 30px 30px;color:#fff;margin-bottom:18px;
+  background:linear-gradient(135deg,#0A1046 0%,#2A2FC4 62%,#FF2D6F 140%);
+  box-shadow:var(--sombra-alta);
+}
+.capa::after{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background:
+    radial-gradient(circle at 88% 6%,rgba(255,45,111,.42),transparent 56%),
+    radial-gradient(circle at 4% 96%,rgba(0,229,255,.34),transparent 58%);
+  mix-blend-mode:screen;
+}
+.capa>*{position:relative;z-index:1}
+.capa-topo{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.capa-logo{
+  width:54px;height:54px;flex:0 0 54px;border-radius:16px;background:#fff;
+  display:grid;place-items:center;padding:6px;box-shadow:0 10px 26px rgba(0,0,0,.24);
+}
+.capa-logo img{width:100%;height:100%;object-fit:contain}
+.capa-empresa strong{display:block;font-size:1.06rem;letter-spacing:-.3px}
+.capa-empresa span{font-size:.78rem;opacity:.8;letter-spacing:.4px}
+.capa h1{
+  margin:22px 0 4px;font-size:clamp(1.6rem,4.6vw,2.3rem);
+  font-weight:800;letter-spacing:-1px;line-height:1.1;
+}
+.capa-para{font-size:1rem;opacity:.9}
+.capa-linha{
+  display:flex;flex-wrap:wrap;gap:8px;margin-top:20px;
+}
+.selo{
+  display:inline-flex;align-items:center;gap:7px;padding:7px 13px;
+  border-radius:999px;font-size:.79rem;font-weight:700;letter-spacing:.2px;
+  background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.26);
+  backdrop-filter:blur(6px);
+}
+.selo.verde{background:rgba(16,185,129,.26);border-color:rgba(110,231,183,.5)}
+.selo.vermelho{background:rgba(244,63,94,.28);border-color:rgba(253,164,175,.5)}
+.selo.ambar{background:rgba(245,158,11,.28);border-color:rgba(252,211,77,.5)}
+
+/* ----------------------------------------------------------- cartão */
+.bloco{
+  background:var(--papel);border:1px solid var(--linha);
+  border-radius:var(--raio-g);box-shadow:var(--sombra);
+  padding:24px;margin-bottom:16px;
+}
+.bloco-titulo{
+  display:flex;align-items:baseline;justify-content:space-between;gap:12px;
+  margin:0 0 16px;flex-wrap:wrap;
+}
+.bloco-titulo h2{margin:0;font-size:1.06rem;font-weight:800;letter-spacing:-.3px}
+.bloco-titulo span{font-size:.82rem;color:var(--tinta-3);font-weight:600}
+
+/* ------------------------------------------------------------ itens */
+.item{
+  display:grid;grid-template-columns:74px 1fr auto;gap:16px;align-items:center;
+  padding:15px 0;border-top:1px solid var(--linha);
+}
+.item:first-of-type{border-top:0;padding-top:0}
+.item-foto{
+  width:74px;height:74px;border-radius:15px;overflow:hidden;background:var(--marca-clara);
+  display:grid;place-items:center;border:1px solid var(--linha);
+}
+.item-foto img{width:100%;height:100%;object-fit:cover}
+.item-foto .sem-foto{font-size:1.4rem;color:#93A2C4}
+.item-nome{font-weight:700;font-size:.99rem;letter-spacing:-.2px}
+.item-conta{font-size:.85rem;color:var(--tinta-2);margin-top:3px}
+.item-medidas{font-size:.78rem;color:var(--tinta-3);margin-top:2px}
+.item-valor{font-weight:800;font-size:1.02rem;white-space:nowrap;text-align:right}
+
+/* ---------------------------------------------------------- somatório */
+.soma{margin-top:20px;border-top:2px solid var(--linha-forte);padding-top:16px}
+.soma-linha{
+  display:flex;justify-content:space-between;gap:16px;
+  font-size:.92rem;color:var(--tinta-2);padding:5px 0;
+}
+.soma-linha.desconto{color:var(--verde);font-weight:700}
+.soma-total{
+  display:flex;justify-content:space-between;align-items:baseline;gap:16px;
+  margin-top:12px;padding-top:14px;border-top:1px dashed var(--linha-forte);
+}
+.soma-total span{font-size:.95rem;font-weight:700;color:var(--tinta-2)}
+.soma-total strong{font-size:clamp(1.7rem,5vw,2.15rem);font-weight:800;letter-spacing:-1.2px;color:var(--marca)}
+
+/* ------------------------------------------------------------ aviso */
+.faixa{
+  display:flex;gap:13px;align-items:flex-start;padding:16px 18px;
+  border-radius:var(--raio);font-size:.9rem;margin-bottom:16px;
+}
+.faixa-icone{font-size:1.2rem;line-height:1.2}
+.faixa.verde{background:var(--verde-claro);border:1px solid #B7E4CB;color:#0B6B3E}
+.faixa.vermelha{background:var(--vermelho-claro);border:1px solid #F8C9D4;color:#9F1239}
+.faixa.ambar{background:var(--ambar-claro);border:1px solid #F5DFAE;color:var(--ambar)}
+.faixa strong{display:block;margin-bottom:2px}
+
+/* ------------------------------------------------------------ ações */
+.decisao{
+  background:linear-gradient(180deg,#fff,#F7F9FE);
+  border:1px solid var(--linha);border-radius:var(--raio-g);
+  box-shadow:var(--sombra);padding:26px 24px;
+}
+.decisao h2{margin:0 0 5px;font-size:1.18rem;font-weight:800;letter-spacing:-.4px}
+.decisao p.ajuda{margin:0 0 20px;color:var(--tinta-2);font-size:.9rem}
+.campo{display:block;margin-bottom:15px}
+.campo span{display:block;font-size:.82rem;font-weight:700;color:var(--tinta-2);margin-bottom:6px}
+.campo input,.campo textarea{
+  width:100%;padding:13px 15px;font:inherit;font-size:.95rem;color:var(--tinta);
+  background:#fff;border:1.5px solid var(--linha-forte);border-radius:14px;
+  transition:border-color .18s ease,box-shadow .18s ease;
+}
+.campo input:focus,.campo textarea:focus{
+  outline:none;border-color:var(--marca);box-shadow:0 0 0 4px rgba(42,47,196,.13);
+}
+.campo textarea{resize:vertical;min-height:84px}
+.botoes{display:flex;gap:12px;flex-wrap:wrap;margin-top:4px}
+.btn{
+  flex:1 1 200px;min-height:56px;padding:15px 22px;border:0;border-radius:16px;
+  font:inherit;font-size:1rem;font-weight:800;letter-spacing:-.2px;cursor:pointer;
+  display:inline-flex;align-items:center;justify-content:center;gap:9px;
+  transition:transform .16s ease,box-shadow .16s ease,filter .16s ease;
+}
+.btn:active{transform:translateY(1px) scale(.995)}
+.btn-aprovar{
+  color:#fff;background:linear-gradient(135deg,#0F9D58,#15B36B);
+  box-shadow:0 12px 28px rgba(15,157,88,.32);
+}
+.btn-aprovar:hover{filter:brightness(1.06);box-shadow:0 16px 34px rgba(15,157,88,.4)}
+.btn-recusar{
+  color:var(--tinta-2);background:#fff;border:1.5px solid var(--linha-forte);
+}
+.btn-recusar:hover{border-color:var(--vermelho);color:var(--vermelho);background:var(--vermelho-claro)}
+.btn[disabled]{opacity:.6;cursor:progress}
+
+/* gaveta do motivo: abre por grid, que anima sem altura fixa */
+.gaveta{display:grid;grid-template-rows:0fr;transition:grid-template-rows .34s cubic-bezier(.16,.84,.44,1)}
+.gaveta.aberta{grid-template-rows:1fr}
+.gaveta>div{overflow:hidden}
+
+/* --------------------------------------------------------- resposta */
+.carimbo{text-align:center;padding:14px 0 4px}
+.carimbo-marca{
+  width:76px;height:76px;margin:0 auto 14px;border-radius:50%;
+  display:grid;place-items:center;font-size:2.1rem;
+  animation:brota .5s cubic-bezier(.2,1.5,.5,1) .12s both;
+}
+@keyframes brota{from{transform:scale(.4);opacity:0}to{transform:scale(1);opacity:1}}
+.carimbo-marca.verde{background:var(--verde-claro);color:var(--verde);border:2px solid #A8E0C4}
+.carimbo-marca.vermelha{background:var(--vermelho-claro);color:var(--vermelho);border:2px solid #F6BFCC}
+.carimbo h2{margin:0 0 6px;font-size:1.3rem;font-weight:800;letter-spacing:-.5px}
+.carimbo p{margin:0;color:var(--tinta-2);font-size:.92rem}
+
+/* ------------------------------------------------------------ rodapé */
+.rodape{text-align:center;color:var(--tinta-3);font-size:.8rem;margin-top:26px;line-height:1.8}
+.rodape a{color:var(--marca);font-weight:700;text-decoration:none}
+.rodape a:hover{text-decoration:underline}
+
+/* ------------------------------------------------------------- telas */
+@media (max-width:560px){
+  .envelope{padding:14px 12px 56px}
+  .capa{padding:26px 20px 24px;border-radius:22px}
+  .bloco,.decisao{padding:19px 16px;border-radius:20px}
+  .item{grid-template-columns:56px 1fr;gap:12px}
+  .item-foto{width:56px;height:56px}
+  /* o valor cai para a terceira coluna da própria linha do texto */
+  .item-valor{grid-column:2;text-align:left;font-size:.98rem;margin-top:2px}
+}
+
+/* ---------------------------------------------------------- impressão */
+@media print{
+  body{background:#fff}
+  .envelope{max-width:none;padding:0}
+  .decisao,.rodape .nao-imprime{display:none}
+  .capa{box-shadow:none;border-radius:0;
+    /* impressora costuma descartar fundo; o texto precisa sobreviver */
+    -webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .bloco{box-shadow:none;border-radius:0;break-inside:avoid}
+  .entra{animation:none;opacity:1;transform:none}
+}
+</style>
+</head>
+<body>
+
+<div class="envelope">
+
+  <!-- ======================================================== capa -->
+  <header class="capa entra" style="--i:0">
+    <div class="capa-topo">
+      <span class="capa-logo">
+        <img src="{% static 'images/logoofi.png' %}" alt="Lazer &amp; Sport Brinquedos">
+      </span>
+      <span class="capa-empresa">
+        <strong>Lazer &amp; Sport Brinquedos</strong>
+        <span>Brinquedos · Cenografia · Parques</span>
+      </span>
+    </div>
+
+    <h1>Proposta&nbsp;#{{ orcamento.pk }}</h1>
+    <p class="capa-para">Preparada para <strong>{{ orcamento.destinatario }}</strong></p>
+
+    <div class="capa-linha">
+      {% if respondido %}
+        {% if orcamento.status == 'aprovado' %}
+          <span class="selo verde">✓ Aprovada por você</span>
+        {% else %}
+          <span class="selo vermelho">✕ Recusada</span>
+        {% endif %}
+        <span class="selo">Respondida em {{ orcamento.respondido_em|date:"d/m/Y" }}</span>
+      {% elif vencido %}
+        <span class="selo vermelho">Validade encerrada</span>
+        <span class="selo">Venceu em {{ orcamento.validade|date:"d/m/Y" }}</span>
+      {% else %}
+        <span class="selo">Aguardando sua resposta</span>
+        {% if orcamento.validade %}
+          <span class="selo {% if dias_para_vencer <= 3 %}ambar{% endif %}">
+            {% if dias_para_vencer == 0 %}
+              Vence hoje
+            {% elif dias_para_vencer == 1 %}
+              Vence amanhã
+            {% else %}
+              Válida por mais {{ dias_para_vencer }} dias
+            {% endif %}
+          </span>
+        {% endif %}
+      {% endif %}
+      <span class="selo">{{ quantidade_itens }} {% if quantidade_itens == 1 %}item{% else %}itens{% endif %}</span>
+    </div>
+  </header>
+
+  <!-- ==================================================== situação -->
+  {% if respondido %}
+    <div class="faixa {% if orcamento.status == 'aprovado' %}verde{% else %}vermelha{% endif %} entra" style="--i:1">
+      <span class="faixa-icone">{% if orcamento.status == 'aprovado' %}✓{% else %}✕{% endif %}</span>
+      <span>
+        <strong>
+          {% if orcamento.status == 'aprovado' %}
+            Proposta aprovada{% if orcamento.respondido_por %} por {{ orcamento.respondido_por }}{% endif %}.
+          {% else %}
+            Proposta recusada{% if orcamento.respondido_por %} por {{ orcamento.respondido_por }}{% endif %}.
+          {% endif %}
+        </strong>
+        {% if orcamento.status == 'aprovado' %}
+          Nossa equipe já foi avisada e entra em contato para combinar datas e montagem.
+        {% else %}
+          Obrigado por responder. Se mudou de ideia ou quer ajustar algo, é só falar com a gente.
+        {% endif %}
+        {% if orcamento.motivo_recusa %}
+          <br><em>“{{ orcamento.motivo_recusa }}”</em>
+        {% endif %}
+      </span>
+    </div>
+  {% elif vencido %}
+    <div class="faixa ambar entra" style="--i:1">
+      <span class="faixa-icone">⏳</span>
+      <span>
+        <strong>A validade desta proposta terminou em {{ orcamento.validade|date:"d/m/Y" }}.</strong>
+        Os valores abaixo estão aqui para consulta. Fale com a gente e enviamos uma
+        proposta atualizada — normalmente no mesmo dia.
+      </span>
+    </div>
+  {% endif %}
+
+  {% if erro %}
+    <div class="faixa vermelha entra" style="--i:1">
+      <span class="faixa-icone">!</span>
+      <span><strong>{{ erro }}</strong></span>
+    </div>
+  {% endif %}
+
+  <!-- ======================================================= itens -->
+  <section class="bloco entra" style="--i:2">
+    <div class="bloco-titulo">
+      <h2>O que está incluído</h2>
+      <span>{{ itens|length }} {% if itens|length == 1 %}linha{% else %}linhas{% endif %}</span>
+    </div>
+
+    {% for item in itens %}
+      <div class="item">
+        <span class="item-foto">
+          {% if item.imagem %}
+            <img src="{{ item.imagem.url }}" alt="{{ item.descricao }}" loading="lazy">
+          {% else %}
+            <span class="sem-foto" aria-hidden="true">◎</span>
+          {% endif %}
+        </span>
+
+        <span>
+          <span class="item-nome">{{ item.descricao }}</span>
+          <span class="item-conta">
+            {{ item.quantidade }} × R$ {{ item.valor_unitario|moeda }}
+          </span>
+          {% if item.brinquedo and item.brinquedo.dimensoes_m %}
+            <span class="item-medidas">{{ item.brinquedo.dimensoes_m }}</span>
+          {% endif %}
+        </span>
+
+        <span class="item-valor">R$ {{ item.subtotal|moeda }}</span>
+      </div>
+    {% empty %}
+      <p style="color:var(--tinta-3);margin:0">Esta proposta ainda não tem itens.</p>
+    {% endfor %}
+
+    <div class="soma">
+      <div class="soma-linha">
+        <span>Subtotal</span>
+        <span>R$ {{ subtotal|moeda }}</span>
+      </div>
+      {% if orcamento.frete %}
+        <div class="soma-linha">
+          <span>Frete e montagem</span>
+          <span>R$ {{ orcamento.frete|moeda }}</span>
+        </div>
+      {% endif %}
+      {% if orcamento.desconto %}
+        <div class="soma-linha desconto">
+          <span>Desconto</span>
+          <span>− R$ {{ orcamento.desconto|moeda }}</span>
+        </div>
+      {% endif %}
+      <div class="soma-total">
+        <span>Total da proposta</span>
+        <strong>R$ {{ total|moeda }}</strong>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================= observações -->
+  {% if orcamento.observacoes %}
+    <section class="bloco entra" style="--i:3">
+      <div class="bloco-titulo"><h2>Observações</h2></div>
+      <p style="margin:0;color:var(--tinta-2);white-space:pre-line">{{ orcamento.observacoes }}</p>
+    </section>
+  {% endif %}
+
+  <!-- ====================================================== decisão -->
+  {% if pode_responder %}
+    <section class="decisao entra" style="--i:4">
+      <h2>O que você decide?</h2>
+      <p class="ajuda">
+        Sua resposta chega direto à nossa equipe. Se aprovar, entramos em contato
+        para combinar as datas.
+      </p>
+
+      <form method="post" id="formDecisao">
+        {% csrf_token %}
+        <input type="hidden" name="decisao" id="campoDecisao" value="{{ decisao_tentada|default:'' }}">
+
+        <label class="campo">
+          <span>Seu nome</span>
+          <input type="text" name="nome" id="campoNome" maxlength="120"
+                 autocomplete="name" placeholder="Quem está respondendo?" required>
+        </label>
+
+        <div class="gaveta" id="gavetaMotivo">
+          <div>
+            <label class="campo">
+              <span>O que não ficou bom? (opcional)</span>
+              <textarea name="motivo" maxlength="1000"
+                        placeholder="Preço, data, tamanho do brinquedo... o que puder contar ajuda a gente a ajustar."></textarea>
+            </label>
+          </div>
+        </div>
+
+        <div class="botoes">
+          <button type="submit" class="btn btn-aprovar" data-decisao="aprovar">
+            ✓ Aprovar proposta
+          </button>
+          <button type="submit" class="btn btn-recusar" data-decisao="recusar">
+            Recusar
+          </button>
+        </div>
+      </form>
+    </section>
+  {% elif respondido %}
+    <section class="decisao entra" style="--i:4">
+      <div class="carimbo">
+        <div class="carimbo-marca {% if orcamento.status == 'aprovado' %}verde{% else %}vermelha{% endif %}">
+          {% if orcamento.status == 'aprovado' %}✓{% else %}✕{% endif %}
+        </div>
+        <h2>Resposta registrada</h2>
+        <p>
+          {{ orcamento.respondido_em|date:"d/m/Y \à\s H:i" }}
+          {% if orcamento.respondido_por %} · {{ orcamento.respondido_por }}{% endif %}
+        </p>
+      </div>
+    </section>
+  {% endif %}
+
+  <p class="rodape">
+    Lazer &amp; Sport Brinquedos ·
+    <a href="https://www.lazersport.com.br">lazersport.com.br</a><br>
+    <span class="nao-imprime">Esta página é sua — guarde o link para consultar a proposta quando quiser.</span>
+  </p>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var form = document.getElementById("formDecisao");
+  if (!form) return;
+
+  var campoDecisao = document.getElementById("campoDecisao");
+  var gaveta = document.getElementById("gavetaMotivo");
+  var nome = document.getElementById("campoNome");
+  var enviando = false;
+
+  // Os dois botões enviam o MESMO formulário; quem diferencia é o campo
+  // escondido. Assim o navegador continua validando o nome pelo required
+  // e a página funciona igual sem JavaScript -- sem script, o botão ainda
+  // envia, e o servidor recusa com "escolha aprovar ou recusar", que é
+  // uma falha honesta em vez de um clique que não faz nada.
+  form.addEventListener("click", function (evento) {
+    var botao = evento.target.closest("[data-decisao]");
+    if (!botao) return;
+
+    var decisao = botao.getAttribute("data-decisao");
+    campoDecisao.value = decisao;
+
+    // Recusar abre o campo do motivo. Se ainda estava fechado, este
+    // clique só abre: pedir o porquê antes de registrar a recusa é o que
+    // dá à equipe a chance de salvar a proposta.
+    if (decisao === "recusar" && !gaveta.classList.contains("aberta")) {
+      evento.preventDefault();
+      gaveta.classList.add("aberta");
+      var area = gaveta.querySelector("textarea");
+      if (area) {
+        gaveta.scrollIntoView({ behavior: "smooth", block: "center" });
+        setTimeout(function () { area.focus(); }, 340);
+      }
+    }
+  });
+
+  form.addEventListener("submit", function (evento) {
+    // Trava contra o clique duplo: o segundo POST cairia na checagem de
+    // "já respondido" no servidor, mas o cliente veria a página piscar
+    // sem entender o motivo.
+    if (enviando) {
+      evento.preventDefault();
+      return;
+    }
+    if (!nome.value.trim()) return;   // deixa o required do navegador agir
+
+    enviando = true;
+    form.querySelectorAll(".btn").forEach(function (botao) {
+      botao.disabled = true;
+    });
+    var ativo = form.querySelector('[data-decisao="' + campoDecisao.value + '"]');
+    if (ativo) ativo.textContent = "Registrando...";
+  });
+})();
+</script>
+</body>
+</html>

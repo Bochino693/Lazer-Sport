@@ -1,6 +1,7 @@
 from django.urls import path, re_path
 from django.contrib.sitemaps.views import sitemap
 
+from .views_orcamento import orcamento_publico
 from .sitemaps import (
     PaginasEstaticasSitemap,
     BrinquedosSitemap,
@@ -303,6 +304,15 @@ urlpatterns = [
 
 
     path("produto-tag/<path:resto>", redirecionar_loja),
+
+    # ---- Orçamento que o cliente abre ----
+    # Antes do catch-all, senão o re_path abaixo engole a rota e manda o
+    # cliente para a loja. O token é a chave: nada de id sequencial aqui.
+    path(
+        "orcamento/<str:token>/",
+        orcamento_publico,
+        name="orcamento_publico",
+    ),
 
     # Deve permanecer por último.
     re_path(r"^.*$", redirecionar_loja),

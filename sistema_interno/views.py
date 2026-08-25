@@ -12,11 +12,10 @@ from django.db.models import Count, DecimalField, F, Q, Sum, Value
 from django.db.models.functions import Coalesce
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
-from django.urls import reverse
 from django.utils import timezone
 from django.views.generic import View
 
-from core.models import Manutencao, Pedido, Venda
+from core.models import Manutencao
 
 from .models import (
     CentralPedidos,
@@ -26,8 +25,6 @@ from .models import (
     Gerente,
     Material,
     MovimentoEstoque,
-    Orcamento,
-    OrdemProducao,
     TipoMaterial,
 )
 from .utils import ErroDeFormulario, data, decimal_br, inteiro, pede_json, texto
@@ -176,13 +173,6 @@ class LogoutInnerView(View):
 # ======================================================================
 class HomeInnerView(InternoRequiredMixin, View):
     def get(self, request):
-        # A home e o cockpit da gerencia. O colaborador de fabrica entra
-        # direto no fluxo guiado dele, sem precos, vendas ou ruido de outras
-        # areas. Isso tambem deixa evidente que o interno nao e o /admin.
-        if not eh_gestor_interno(request.user):
-            return redirect("minha_producao")
-
-        hoje = timezone.localdate()
         estoques = EstoqueMaterial.objects.select_related("material")
 
         resumo = estoques.aggregate(
@@ -191,127 +181,20 @@ class HomeInnerView(InternoRequiredMixin, View):
             investido=VALOR_EM_ESTOQUE,
         )
 
-        # A visão geral mostra oito itens de reposição e o total. Antes
-        # carregava a tabela inteira para filtrar em Python -- varredura
-        # completa do estoque para exibir oito linhas. A regra agora é a
-        # do próprio modelo, resolvida pelo banco.
-        criticos = EstoqueMaterial.objects.criticos().select_related("material")
-
-        orcamentos_abertos = (
-            Orcamento.objects
-            .filter(status__in=Orcamento.EM_ABERTO)
-            .select_related("cliente")
-            .prefetch_related("itens")
-            .order_by("validade", "-criacao")
-        )
-        orcamentos_vencendo = [
-            orcamento for orcamento in orcamentos_abertos
-            if orcamento.dias_para_vencer is not None
-            and orcamento.dias_para_vencer <= 3
-        ]
-
-        pedidos_abertos = (
-            Pedido.objects
-            .exclude(status__in=["finalizado", "cancelado"])
-            .select_related("cliente")
-            .order_by("-criacao")
-        )
-        manutencoes_abertas = (
-            Manutencao.objects
-            .filter(status__in=["P", "A"])
-            .select_related("brinquedo", "usuario__user")
-            .order_by("criado_em")
-        )
-        producao_aberta = (
-            OrdemProducao.objects
-            .exclude(status__in=[
-                OrdemProducao.Status.CONCLUIDA,
-                OrdemProducao.Status.CANCELADA,
-            ])
-            .select_related("produto", "colaborador")
-            .prefetch_related("etapas_execucao")
-            .order_by("prevista_para", "criacao")
-        )
-
-        # Uma unica fila de trabalho, ordenada por impacto. A pessoa leiga
-        # nao precisa descobrir em qual modulo procurar: ela ve a acao e
-        # toca no cartao que resolve.
-        fila_trabalho = []
-        for orcamento in orcamentos_vencendo[:3]:
-            dias = orcamento.dias_para_vencer
-            fila_trabalho.append({
-                "tipo": "orcamento",
-                "nivel": "critico" if dias < 0 else "atencao",
-                "icone": "bi-file-earmark-text",
-                "titulo": f"Orçamento #{orcamento.pk} · {orcamento.destinatario}",
-                "detalhe": (
-                    f"Vencido há {abs(dias)} dia(s). Renove ou fale com o cliente."
-                    if dias < 0 else
-                    ("Vence hoje. Faça o retorno ao cliente." if dias == 0 else
-                     f"Vence em {dias} dia(s). Ainda dá tempo de acompanhar.")
-                ),
-                "url": f"{reverse('orcamentos_inner', urlconf='sistema_interno.urls')}?q={orcamento.pk}",
-                "acao": "Abrir proposta",
-            })
-
-        for manutencao in manutencoes_abertas[:3]:
-            fila_trabalho.append({
-                "tipo": "manutencao",
-                "nivel": "atencao" if manutencao.status == "P" else "info",
-                "icone": "bi-wrench-adjustable",
-                "titulo": manutencao.nome_equipamento,
-                "detalhe": (
-                    "Novo chamado esperando triagem."
-                    if manutencao.status == "P" else "Servico em andamento."
-                ),
-                "url": reverse("manutencao_inner", urlconf="sistema_interno.urls"),
-                "acao": "Ver manutenção",
-            })
-
-        for ordem in producao_aberta.filter(
-            status__in=[OrdemProducao.Status.BLOQUEADA, OrdemProducao.Status.PAUSADA]
-        )[:3]:
-            fila_trabalho.append({
-                "tipo": "producao",
-                "nivel": "critico" if ordem.status == OrdemProducao.Status.BLOQUEADA else "atencao",
-                "icone": "bi-hammer",
-                "titulo": f"Produção #{ordem.pk} · {ordem.produto}",
-                "detalhe": f"{ordem.get_status_display()}. A equipe precisa de uma decisão.",
-                "url": reverse(
-                    "producao_ordem_detalhe",
-                    kwargs={"pk": ordem.pk},
-                    urlconf="sistema_interno.urls",
-                ),
-                "acao": "Resolver etapa",
-            })
-
-        peso = {"critico": 0, "atencao": 1, "info": 2}
-        fila_trabalho.sort(key=lambda item: peso[item["nivel"]])
+        criticos = [e for e in estoques if e.situacao == EstoqueMaterial.CRITICO]
 
         ctx = {
-            "hoje": hoje,
             "materiais": Material.objects.filter(ativo=True),
             "total_materiais": Material.objects.filter(ativo=True).count(),
             "total_locais": resumo["locais"],
             "total_pecas": resumo["pecas"],
             "valor_investido": resumo["investido"],
             "criticos": criticos[:8],
-            "total_criticos": criticos.count(),
+            "total_criticos": len(criticos),
             "ultimos_movimentos": (
                 MovimentoEstoque.objects
                 .select_related("estoque__material", "responsavel")[:8]
             ),
-            "fila_trabalho": fila_trabalho[:7],
-            "orcamentos_abertos": orcamentos_abertos[:5],
-            "total_orcamentos_abertos": orcamentos_abertos.count(),
-            "total_orcamentos_vencendo": len(orcamentos_vencendo),
-            "pedidos_abertos": pedidos_abertos[:5],
-            "total_pedidos_abertos": pedidos_abertos.count(),
-            "manutencoes_abertas": manutencoes_abertas[:5],
-            "total_manutencoes_abertas": manutencoes_abertas.count(),
-            "producao_aberta": producao_aberta[:5],
-            "total_producao_aberta": producao_aberta.count(),
-            "vendas_a_confirmar": Venda.objects.filter(confirmado=False).count(),
         }
         return render(request, "home_inner.html", ctx)
 
@@ -356,9 +239,6 @@ class EstoqueInnerView(RespostaJSONMixin, InternoRequiredMixin, View):
         if situacao in (EstoqueMaterial.CRITICO, EstoqueMaterial.ATENCAO, EstoqueMaterial.ESTAVEL):
             estoques = [e for e in estoques if e.situacao == situacao]
 
-        # Aqui a lista já está carregada -- a tela mostra cada linha e
-        # soma o valor de cada uma --, então contar em Python não custa
-        # varredura extra. É o caso oposto ao da visão geral.
         investido = sum((e.valor_total for e in estoques), Decimal("0.00"))
         criticos = [e for e in estoques if e.situacao == EstoqueMaterial.CRITICO]
 

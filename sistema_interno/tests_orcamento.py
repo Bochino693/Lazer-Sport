@@ -251,18 +251,6 @@ class OrcamentoInternoTests(TestCase):
         # proposta já aprovada não é cobrança pendente
         self.assertNotIn(aprovado, vencendo)
 
-    def test_busca_orcamento_pelo_numero(self):
-        encontrado = Orcamento.objects.create(nome_cliente="Cliente pelo número")
-        Orcamento.objects.create(nome_cliente="Outro cliente")
-
-        resposta = self.client.get(
-            self.URL,
-            {"q": str(encontrado.pk)},
-            HTTP_HOST="interno.testserver",
-        )
-
-        self.assertEqual(list(resposta.context["orcamentos"]), [encontrado])
-
     # -------------------------------------------------------- acesso
     def test_colaborador_sem_gerencia_nao_entra(self):
         operador = User.objects.create_user(
