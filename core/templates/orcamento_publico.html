@@ -4,8 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
-{# noindex não é detalhe: a página é aberta por link, e um orçamento
-   indexado pelo Google seria uma proposta comercial pública. #}
+{% comment %}
+noindex não é detalhe: a página é aberta por link, e um orçamento
+   indexado pelo Google seria uma proposta comercial pública.
+{% endcomment %}
 <meta name="theme-color" content="#0A1046">
 <title>Proposta #{{ orcamento.pk }} | Lazer &amp; Sport Brinquedos</title>
 <link rel="icon" type="image/png" href="{% static 'images/logoofi.png' %}">
