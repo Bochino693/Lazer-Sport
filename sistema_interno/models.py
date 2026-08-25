@@ -1,3 +1,4 @@
+import secrets
 from decimal import Decimal
 
 from django.conf import settings
@@ -176,8 +177,27 @@ class Setores(Prime):
         verbose_name_plural = "Setores"
 
 
+class EstoqueMaterialQuerySet(models.QuerySet):
+    """A regra de "crítico" escrita como consulta, uma vez só.
+
+    `situacao` é propriedade Python: perfeita para uma linha na tela,
+    péssima para contar a tabela. Antes cada lugar que precisava da lista
+    de reposição carregava tudo e filtrava na memória -- a visão geral, o
+    painel de estoque e a central de avisos, três vezes a mesma varredura.
+
+    Aqui a conta é a MESMA de `situacao == CRITICO` (quantidade no mínimo
+    ou abaixo dele), só que resolvida pelo banco. Há teste comparando os
+    dois caminhos justamente para não deixarem de concordar.
+    """
+
+    def criticos(self):
+        return self.filter(quantidade__lte=models.F("estoque_minimo"))
+
+
 class EstoqueMaterial(Prime):
     """Um material guardado num local. É aqui que fica o valor pago."""
+
+    objects = EstoqueMaterialQuerySet.as_manager()
 
     ESTAVEL = "estavel"
     ATENCAO = "atencao"
@@ -1067,6 +1087,17 @@ class HistoricoProducao(Prime):
 # ======================================================================
 # ORÇAMENTOS
 # ======================================================================
+def gerar_token_orcamento():
+    """Chave da página que o cliente abre.
+
+    token_urlsafe(24) dá 32 caracteres de 192 bits. É o que substitui uma
+    senha: a página pública é aberta por quem tiver o link, então o link
+    precisa ser impossível de adivinhar. Sequencial ou UUID1 não serviriam
+    -- de um orçamento se chegaria ao do concorrente.
+    """
+    return secrets.token_urlsafe(24)
+
+
 class Orcamento(Prime):
     """Proposta comercial montada no painel interno."""
 
@@ -1076,6 +1107,11 @@ class Orcamento(Prime):
         APROVADO = "aprovado", "Aprovado"
         RECUSADO = "recusado", "Recusado"
         EXPIRADO = "expirado", "Expirado"
+
+    #: Situações em que a proposta ainda está viva e pode receber resposta.
+    EM_ABERTO = (Status.RASCUNHO, Status.ENVIADO)
+    #: Situações em que o cliente já respondeu -- não se responde de novo.
+    RESPONDIDO = (Status.APROVADO, Status.RECUSADO)
 
     cliente = models.ForeignKey(
         Cliente,
@@ -1106,6 +1142,27 @@ class Orcamento(Prime):
         blank=True,
     )
 
+    # ---------------- página que o cliente abre ----------------
+    token = models.CharField(
+        max_length=64,
+        unique=True,
+        default=gerar_token_orcamento,
+        editable=False,
+        db_index=True,
+        help_text="Chave do link público. Não aparece em nenhuma tela interna.",
+    )
+    enviado_em = models.DateTimeField(null=True, blank=True)
+    respondido_em = models.DateTimeField(null=True, blank=True)
+    respondido_por = models.CharField(
+        max_length=120,
+        blank=True,
+        help_text="Nome que o cliente digitou ao aprovar ou recusar.",
+    )
+    motivo_recusa = models.TextField(
+        blank=True,
+        help_text="O que o cliente escreveu ao recusar, quando escreveu.",
+    )
+
     @property
     def destinatario(self):
         if self.cliente:
@@ -1131,7 +1188,85 @@ class Orcamento(Prime):
         return bool(
             self.validade
             and self.validade < timezone.localdate()
-            and self.status in (self.Status.RASCUNHO, self.Status.ENVIADO)
+            and self.status in self.EM_ABERTO
+        )
+
+    @property
+    def dias_para_vencer(self):
+        """Quantos dias faltam para a validade. Negativo já passou.
+
+        None quando não há validade -- que é diferente de "vence hoje", e
+        é por isso que a central de avisos precisa distinguir os dois.
+        """
+        if not self.validade:
+            return None
+        return (self.validade - timezone.localdate()).days
+
+    @property
+    def respondido(self):
+        return self.status in self.RESPONDIDO
+
+    @property
+    def caminho_publico(self):
+        """Caminho da página do cliente, sem domínio.
+
+        Sem domínio de propósito: o painel interno roda em
+        interno.lazersport.com.br e a página do cliente mora no site
+        principal. Quem monta o endereço completo é quem sabe qual é o
+        site -- ver `endereco_do_site` em utils.
+
+        O urlconf é passado NA MÃO, e isso não é firula. Num pedido que
+        chega pelo subdomínio interno, o SubdomainURLMiddleware troca o
+        urlconf do request para sistema_interno.urls, e o reverse passa a
+        enxergar só as rotas do painel. A rota pública mora no urlconf
+        raiz: sem apontar para ele, este reverse levanta NoReverseMatch
+        exatamente onde mais importa -- na hora de gerar o link para o
+        cliente, de dentro do painel.
+        """
+        from django.conf import settings
+        from django.urls import reverse
+
+        return reverse(
+            "orcamento_publico",
+            args=[self.token],
+            urlconf=settings.ROOT_URLCONF,
+        )
+
+    def marcar_enviado(self):
+        """Passa para "enviado" e carimba a hora, uma vez só.
+
+        Reenviar não reescreve `enviado_em`: a data que interessa é a da
+        primeira vez que a proposta saiu, que é de onde se conta há quanto
+        tempo o cliente está com ela na mão.
+        """
+        alterado = []
+
+        if self.status == self.Status.RASCUNHO:
+            self.status = self.Status.ENVIADO
+            alterado.append("status")
+
+        if self.enviado_em is None:
+            self.enviado_em = timezone.now()
+            alterado.append("enviado_em")
+
+        if alterado:
+            self.save(update_fields=alterado)
+
+        return bool(alterado)
+
+    def registrar_resposta(self, aprovado, nome="", motivo=""):
+        """Grava a decisão do cliente vinda da página pública."""
+        self.status = self.Status.APROVADO if aprovado else self.Status.RECUSADO
+        self.respondido_em = timezone.now()
+        self.respondido_por = (nome or "").strip()[:120]
+        self.motivo_recusa = "" if aprovado else (motivo or "").strip()
+        self.save(
+            update_fields=[
+                "status",
+                "respondido_em",
+                "respondido_por",
+                "motivo_recusa",
+            ]
         )
 
     def __str__(self):
@@ -1149,15 +1284,36 @@ class ItemOrcamento(Prime):
         on_delete=models.CASCADE,
         related_name="itens",
     )
-    # A descrição é gravada mesmo quando há produto associado: se o cadastro
+    # A descrição é gravada mesmo quando há item associado: se o cadastro
     # mudar de nome depois, a proposta enviada ao cliente continua valendo.
     descricao = models.CharField(max_length=180)
+
+    # DUAS ORIGENS, DE PROPÓSITO.
+    #
+    # `brinquedo` é o catálogo de verdade (core.Brinquedos) -- é dele que
+    # sai quase todo orçamento, porque é o que a empresa aluga e vende, e
+    # é o que traz foto, medidas e preço para a página do cliente.
+    #
+    # `produto` é o que a fábrica monta (ProdutoInterno). Continua aqui
+    # porque nem tudo que se orça está no catálogo: máquina, peça avulsa,
+    # serviço. Remover o campo apagaria o vínculo dos orçamentos antigos.
+    #
+    # Uma linha usa um ou outro, nunca os dois -- ver `clean`.
+    brinquedo = models.ForeignKey(
+        Brinquedos,
+        on_delete=models.SET_NULL,
+        related_name="itens_orcamento",
+        null=True,
+        blank=True,
+        help_text="Item do catálogo do site.",
+    )
     produto = models.ForeignKey(
         ProdutoInterno,
         on_delete=models.SET_NULL,
         related_name="itens_orcamento",
         null=True,
         blank=True,
+        help_text="Item de produção, quando não está no catálogo.",
     )
     quantidade = models.PositiveIntegerField(default=1)
     valor_unitario = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))
@@ -1165,6 +1321,26 @@ class ItemOrcamento(Prime):
     @property
     def subtotal(self):
         return (self.valor_unitario * self.quantidade).quantize(Decimal("0.01"))
+
+    @property
+    def imagem(self):
+        """Foto para a página do cliente, quando o item veio do catálogo.
+
+        Item de produção e linha escrita à mão não têm foto, e a página
+        precisa saber disso para desenhar o lugar da imagem de outro jeito
+        em vez de deixar um buraco.
+        """
+        if self.brinquedo_id and self.brinquedo and self.brinquedo.imagem_brinquedo:
+            return self.brinquedo.imagem_brinquedo
+        return None
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+
+        if self.brinquedo_id and self.produto_id:
+            raise ValidationError(
+                "Um item vem do catálogo ou da produção, não dos dois."
+            )
 
     def __str__(self):
         return self.descricao

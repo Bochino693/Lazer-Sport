@@ -1,71 +1,101 @@
-# sistem_interno/context_processors.py
+"""O que toda página do painel recebe sem pedir.
 
-# Importação direta dos modelos do app 'core'
-from django.core.exceptions import ObjectDoesNotExist
+Antes este arquivo contava vendas, pedidos, manutenções e produção com
+regras escritas aqui dentro, e a home recontava estoque crítico com outra
+regra. Agora quem sabe o que é pendência é `avisos.py`, e aqui só se
+traduz aquilo para o que os templates usam.
 
-from core.models import Venda, Pedido, Manutencao
-from .models import OrdemProducao
+Os `count_*` continuam existindo porque as bolinhas do menu lateral são
+montadas com eles em base_inner.html — e o painel /adm também usa
+count_manutencao. São derivados dos MESMOS avisos, e não de consultas
+próprias: enquanto forem a mesma conta, o número na bolinha e o número na
+central não podem divergir.
+
+POR QUE TUDO É PREGUIÇOSO. Este é um context processor global: roda em
+toda página do site, não só no painel. A versão antiga disparava quatro
+COUNT para qualquer usuário da equipe navegando na loja, e a central de
+avisos precisa de mais. Embrulhado em SimpleLazyObject, nada é consultado
+enquanto o template não pedir o valor — e a loja nunca pede. O cálculo em
+si acontece uma vez só por requisição, por mais chaves que sejam lidas.
+"""
+
+from django.utils.functional import SimpleLazyObject
+
+from .avisos import coletar, eh_gestor
+
+#: Estado de quem não é da equipe. O template nunca encontra variável
+#: faltando, e nenhuma consulta é feita para chegar aqui.
+VAZIO = {
+    "avisos": [],
+    "avisos_urgentes": 0,
+    "total_avisos": 0,
+    "count_vendas": 0,
+    "count_pedidos": 0,
+    "count_manutencao": 0,
+    "count_producao": 0,
+    "count_orcamentos": 0,
+    "eh_gestor_interno": False,
+}
+
+
+def _apurar(usuario):
+    """Roda as consultas e monta tudo que os templates podem pedir."""
+    avisos = coletar(usuario)
+    por_chave = {aviso.chave: aviso.quantidade for aviso in avisos}
+
+    return {
+        "avisos": avisos,
+        "avisos_urgentes": sum(1 for a in avisos if a.urgente),
+        "total_avisos": len(avisos),
+
+        # As bolinhas do menu. Zero quando não há aviso daquela chave —
+        # que é o mesmo que dizer "nada pendente aqui".
+        "count_vendas": por_chave.get("vendas", 0),
+        "count_pedidos": por_chave.get("pedidos", 0),
+        "count_manutencao": por_chave.get("manutencoes", 0),
+        "count_producao": por_chave.get("producao", 0),
+        "count_orcamentos": (
+            por_chave.get("orcamentos_vencidos", 0)
+            + por_chave.get("orcamentos_vencendo", 0)
+            + por_chave.get("orcamentos_aprovados", 0)
+        ),
+    }
 
 
 def fab_counts(request):
-    """
-    Retorna contagens globais para os FABs do painel administrativo.
-    """
-    # Retorna vazio se não estiver logado ou não for da equipe (staff)
-    if not request.user.is_authenticated:
-        return {
-            "count_vendas": 0,
-            "count_pedidos": 0,
-            "count_manutencao": 0,
-            "count_producao": 0,
-            "eh_gestor_interno": False,
-        }
+    """Avisos do painel + as contagens que os menus usam."""
+    usuario = getattr(request, "user", None)
 
-    try:
-        eh_gestor = request.user.is_superuser or request.user.gerente.ativo
-    except (AttributeError, ObjectDoesNotExist):
-        eh_gestor = request.user.is_superuser
+    if usuario is None or not usuario.is_authenticated:
+        return dict(VAZIO)
 
-    if not (request.user.is_staff or eh_gestor):
-        return {
-            "count_vendas": 0,
-            "count_pedidos": 0,
-            "count_manutencao": 0,
-            "count_producao": 0,
-            "eh_gestor_interno": False,
-        }
+    # eh_gestor não vai ao banco no caso comum (superusuário sai no
+    # primeiro if; os demais custam um acesso ao perfil de gerente, que o
+    # próprio menu já precisa para decidir o que mostrar).
+    gestor = eh_gestor(usuario)
 
-    # 1. Vendas não confirmadas
-    # (Ajuste o filtro se sua lógica de "venda pendente" for diferente)
-    count_vendas = Venda.objects.filter(confirmado=False).count()
+    if not (usuario.is_staff or gestor):
+        return dict(VAZIO)
 
-    # 2. Pedidos ativos (Tudo que não foi finalizado nem cancelado)
-    count_pedidos = Pedido.objects.exclude(
-        status__in=['finalizado', 'cancelado']
-    ).count()
+    # Um único cálculo compartilhado por todas as chaves: o SimpleLazyObject
+    # de fora memoriza o resultado, e os de dentro apenas leem dele.
+    apurado = SimpleLazyObject(lambda: _apurar(usuario))
 
-    # 3. Manutenções que precisam de atenção
-    # Sugestão: Pega 'P' (Pendente) e 'A' (Em Andamento/Aprovado)
-    # Se quiser só pendente, deixe apenas ['P']
-    count_manutencao = Manutencao.objects.filter(status__in=['P', 'A']).count()
+    def campo(chave):
+        return SimpleLazyObject(lambda: apurado[chave])
 
-    producoes = OrdemProducao.objects.exclude(
-        status__in=[OrdemProducao.Status.CONCLUIDA, OrdemProducao.Status.CANCELADA]
-    )
-    if not eh_gestor:
-        producoes = producoes.filter(colaborador=request.user)
-    count_producao = producoes.count()
-
-    return {
-        "count_vendas": count_vendas,
-        "count_pedidos": count_pedidos,
-        "count_manutencao": count_manutencao,
-        "count_producao": count_producao,
-        "eh_gestor_interno": eh_gestor,
-
-        # Opcional: booleanos para facilitar a lógica no template
-        "tem_vendas_pendentes": count_vendas > 0,
-        "tem_pedidos_ativos": count_pedidos > 0,
-        "tem_manutencao_pendente": count_manutencao > 0,
-        "tem_producao_pendente": count_producao > 0,
+    contexto = {
+        chave: campo(chave)
+        for chave in (
+            "avisos",
+            "avisos_urgentes",
+            "total_avisos",
+            "count_vendas",
+            "count_pedidos",
+            "count_manutencao",
+            "count_producao",
+            "count_orcamentos",
+        )
     }
+    contexto["eh_gestor_interno"] = gestor
+    return contexto

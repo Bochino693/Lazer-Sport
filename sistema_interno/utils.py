@@ -101,3 +101,29 @@ def data(valor, rotulo):
         return timezone.datetime.strptime(bruto, "%Y-%m-%d").date()
     except ValueError:
         raise ErroDeFormulario(f"{rotulo}: informe uma data válida.")
+
+
+def endereco_do_site(request):
+    """Base http(s)://... do SITE PÚBLICO, visto de dentro do painel.
+
+    O painel responde em interno.lazersport.com.br e a página do cliente
+    mora no site principal. `request.build_absolute_uri` devolveria o
+    endereço do subdomínio interno — um link que o cliente abre e leva na
+    cara uma tela de login de equipe.
+
+    Em produção a resposta é SITE_URL, que é o domínio publicado. Em
+    desenvolvimento isso apontaria para o site no ar, o que atrapalha
+    testar: ali o endereço é montado a partir do próprio host, só tirando
+    o "interno." da frente, para continuar valendo em
+    interno.localhost:8000 e em qualquer host alternativo.
+    """
+    from django.conf import settings
+
+    if not settings.DEBUG:
+        return settings.SITE_URL.rstrip("/")
+
+    host = request.get_host()
+    if host.startswith("interno."):
+        host = host[len("interno."):]
+
+    return f"{request.scheme}://{host}"
