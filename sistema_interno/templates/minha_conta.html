@@ -1,0 +1,72 @@
+{% extends "base_inner.html" %}
+
+{% block title %}Minha conta | Lazer & Sport{% endblock %}
+{% block top_title %}Minha conta{% endblock %}
+
+{% block content %}
+<div class="ls-page-head">
+  <div>
+    <span class="ls-eyebrow">PERFIL DA EQUIPE</span>
+    <h1>Seus dados, do seu jeito</h1>
+    <p>O nome salvo aqui aparece no painel e identifica quem preparou os orçamentos.</p>
+  </div>
+</div>
+
+<form method="post" class="row g-4" autocomplete="on">
+  {% csrf_token %}
+  <div class="col-12 col-xl-7">
+    <section class="ls-card h-100 p-4">
+      <div class="d-flex align-items-center gap-3 mb-4">
+        <span class="ls-user-avatar" style="width:54px;height:54px;font-size:1.2rem">{{ user.first_name|default:user.username|first|upper }}</span>
+        <div>
+          <h2 class="h5 mb-1">Identificação</h2>
+          <p class="text-muted mb-0">Informações usadas dentro da gestão.</p>
+        </div>
+      </div>
+      <div class="row g-3">
+        <div class="col-12 col-md-6">
+          <label class="form-label" for="contaNome">Nome</label>
+          <input class="form-control" id="contaNome" name="first_name" value="{{ user.first_name }}" required maxlength="150">
+        </div>
+        <div class="col-12 col-md-6">
+          <label class="form-label" for="contaSobrenome">Sobrenome</label>
+          <input class="form-control" id="contaSobrenome" name="last_name" value="{{ user.last_name }}" maxlength="150">
+        </div>
+        <div class="col-12 col-md-7">
+          <label class="form-label" for="contaEmail">E-mail</label>
+          <input type="email" class="form-control" id="contaEmail" name="email" value="{{ user.email }}" required autocomplete="email">
+        </div>
+        <div class="col-12 col-md-5">
+          <label class="form-label" for="contaTelefone">Telefone</label>
+          <input class="form-control" id="contaTelefone" name="telefone" value="{% if user.gerente %}{{ user.gerente.telefone|default:'' }}{% endif %}" inputmode="tel" autocomplete="tel" maxlength="20">
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="col-12 col-xl-5">
+    <section class="ls-card h-100 p-4">
+      <h2 class="h5 mb-1"><i class="bi bi-shield-lock me-2"></i>Alterar senha</h2>
+      <p class="text-muted mb-4">Deixe os três campos vazios para manter a senha atual.</p>
+      <div class="mb-3">
+        <label class="form-label" for="senhaAtual">Senha atual</label>
+        <input type="password" class="form-control" id="senhaAtual" name="senha_atual" autocomplete="current-password">
+      </div>
+      <div class="row g-3">
+        <div class="col-12">
+          <label class="form-label" for="senhaNova">Nova senha</label>
+          <input type="password" class="form-control" id="senhaNova" name="senha_nova" minlength="8" autocomplete="new-password">
+        </div>
+        <div class="col-12">
+          <label class="form-label" for="senhaConfirmacao">Confirmar nova senha</label>
+          <input type="password" class="form-control" id="senhaConfirmacao" name="senha_confirmacao" minlength="8" autocomplete="new-password">
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="col-12 d-flex justify-content-end">
+    <button class="btn btn-primary btn-lg px-4" type="submit"><i class="bi bi-check2-circle me-2"></i>Salvar minha conta</button>
+  </div>
+</form>
+{% endblock %}

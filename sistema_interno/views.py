@@ -6,16 +6,21 @@ guardado, quanto foi pago e quem mexeu.
 
 from decimal import Decimal
 
-from django.contrib.auth import authenticate, login, logout
+from django.contrib import messages
+from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
+from django.contrib.auth.models import User
+from django.core.exceptions import ValidationError
+from django.core.validators import validate_email
 from django.db import IntegrityError, transaction
 from django.db.models import Count, DecimalField, F, Q, Sum, Value
 from django.db.models.functions import Coalesce
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.views.generic import View
 
-from core.models import Manutencao
+from core.models import Manutencao, Pedido, Venda
 
 from .models import (
     CentralPedidos,
@@ -25,6 +30,8 @@ from .models import (
     Gerente,
     Material,
     MovimentoEstoque,
+    Orcamento,
+    OrdemProducao,
     TipoMaterial,
 )
 from .utils import ErroDeFormulario, data, decimal_br, inteiro, pede_json, texto
@@ -168,11 +175,78 @@ class LogoutInnerView(View):
         return render(request, "logout_inner.html")
 
 
+class MinhaContaView(InternoRequiredMixin, View):
+    """Dados da própria pessoa; separado do admin e acessível no tablet."""
+
+    template_name = "minha_conta.html"
+
+    def get(self, request):
+        return render(request, self.template_name)
+
+    def post(self, request):
+        user = request.user
+        primeiro_nome = (request.POST.get("first_name") or "").strip()[:150]
+        sobrenome = (request.POST.get("last_name") or "").strip()[:150]
+        email = (request.POST.get("email") or "").strip().lower()
+
+        if not primeiro_nome:
+            messages.error(request, "Informe seu nome.")
+            return render(request, self.template_name, status=400)
+        try:
+            validate_email(email)
+        except ValidationError:
+            messages.error(request, "Informe um e-mail válido.")
+            return render(request, self.template_name, status=400)
+        if User.objects.exclude(pk=user.pk).filter(email__iexact=email).exists():
+            messages.error(request, "Este e-mail já está sendo usado por outra conta.")
+            return render(request, self.template_name, status=400)
+
+        user.first_name = primeiro_nome
+        user.last_name = sobrenome
+        user.email = email
+        user.save(update_fields=["first_name", "last_name", "email"])
+
+        try:
+            gerente = user.gerente
+        except (AttributeError, Gerente.DoesNotExist):
+            gerente = None
+        if gerente:
+            gerente.nome = user.get_full_name()
+            gerente.telefone = (request.POST.get("telefone") or "").strip()[:20]
+            gerente.save(update_fields=["nome", "telefone", "atualizado"])
+
+        senha_atual = request.POST.get("senha_atual") or ""
+        senha_nova = request.POST.get("senha_nova") or ""
+        senha_confirmacao = request.POST.get("senha_confirmacao") or ""
+        if senha_atual or senha_nova or senha_confirmacao:
+            if not user.check_password(senha_atual):
+                messages.error(request, "A senha atual está incorreta; os demais dados foram salvos.")
+                return redirect("minha_conta_inner")
+            if len(senha_nova) < 8:
+                messages.error(request, "A nova senha precisa ter pelo menos 8 caracteres.")
+                return redirect("minha_conta_inner")
+            if senha_nova != senha_confirmacao:
+                messages.error(request, "A confirmação da nova senha não confere.")
+                return redirect("minha_conta_inner")
+            user.set_password(senha_nova)
+            user.save(update_fields=["password"])
+            update_session_auth_hash(request, user)
+            messages.success(request, "Conta e senha atualizadas.")
+        else:
+            messages.success(request, "Seus dados foram atualizados.")
+
+        return redirect("minha_conta_inner")
+
+
 # ======================================================================
 # HOME
 # ======================================================================
 class HomeInnerView(InternoRequiredMixin, View):
     def get(self, request):
+        if not eh_gestor_interno(request.user):
+            return redirect("minha_producao")
+
+        hoje = timezone.localdate()
         estoques = EstoqueMaterial.objects.select_related("material")
 
         resumo = estoques.aggregate(
@@ -181,20 +255,96 @@ class HomeInnerView(InternoRequiredMixin, View):
             investido=VALOR_EM_ESTOQUE,
         )
 
-        criticos = [e for e in estoques if e.situacao == EstoqueMaterial.CRITICO]
+        criticos = EstoqueMaterial.objects.criticos().select_related("material")
+
+        orcamentos_abertos = (
+            Orcamento.objects.filter(status__in=Orcamento.EM_ABERTO)
+            .select_related("cliente").prefetch_related("itens")
+            .order_by("validade", "-criacao")
+        )
+        orcamentos_vencendo = [
+            o for o in orcamentos_abertos
+            if o.dias_para_vencer is not None and o.dias_para_vencer <= 3
+        ]
+        pedidos_abertos = (
+            Pedido.objects.exclude(status__in=["finalizado", "cancelado"])
+            .select_related("cliente").order_by("-criacao")
+        )
+        manutencoes_abertas = (
+            Manutencao.objects.filter(status__in=["P", "A"])
+            .select_related("brinquedo", "usuario__user").order_by("criado_em")
+        )
+        producao_aberta = (
+            OrdemProducao.objects.exclude(status__in=[
+                OrdemProducao.Status.CONCLUIDA, OrdemProducao.Status.CANCELADA,
+            ])
+            .select_related("produto", "colaborador")
+            .prefetch_related("etapas_execucao")
+            .order_by("prevista_para", "criacao")
+        )
+
+        fila_trabalho = []
+        for orcamento in orcamentos_vencendo[:3]:
+            dias = orcamento.dias_para_vencer
+            fila_trabalho.append({
+                "nivel": "critico" if dias < 0 else "atencao",
+                "icone": "bi-file-earmark-text",
+                "titulo": f"Orçamento #{orcamento.pk} · {orcamento.destinatario}",
+                "detalhe": (
+                    f"Vencido há {abs(dias)} dia(s). Renove ou fale com o cliente."
+                    if dias < 0 else
+                    ("Vence hoje. Faça o retorno ao cliente." if dias == 0 else
+                     f"Vence em {dias} dia(s). Ainda dá tempo de acompanhar.")
+                ),
+                "url": f"{reverse('orcamentos_inner', urlconf='sistema_interno.urls')}?q={orcamento.pk}",
+                "acao": "Abrir proposta",
+            })
+        for manutencao in manutencoes_abertas[:3]:
+            fila_trabalho.append({
+                "nivel": "atencao" if manutencao.status == "P" else "info",
+                "icone": "bi-wrench-adjustable",
+                "titulo": manutencao.nome_equipamento,
+                "detalhe": "Novo chamado esperando triagem." if manutencao.status == "P" else "Serviço em andamento.",
+                "url": reverse("manutencao_inner", urlconf="sistema_interno.urls"),
+                "acao": "Ver manutenção",
+            })
+        for ordem in producao_aberta.filter(
+            status__in=[OrdemProducao.Status.BLOQUEADA, OrdemProducao.Status.PAUSADA]
+        )[:3]:
+            fila_trabalho.append({
+                "nivel": "critico" if ordem.status == OrdemProducao.Status.BLOQUEADA else "atencao",
+                "icone": "bi-hammer",
+                "titulo": f"Produção #{ordem.pk} · {ordem.produto}",
+                "detalhe": f"{ordem.get_status_display()}. A equipe precisa de uma decisão.",
+                "url": reverse("producao_ordem_detalhe", kwargs={"pk": ordem.pk}, urlconf="sistema_interno.urls"),
+                "acao": "Resolver etapa",
+            })
+        fila_trabalho.sort(key=lambda item: {"critico": 0, "atencao": 1, "info": 2}[item["nivel"]])
 
         ctx = {
+            "hoje": hoje,
             "materiais": Material.objects.filter(ativo=True),
             "total_materiais": Material.objects.filter(ativo=True).count(),
             "total_locais": resumo["locais"],
             "total_pecas": resumo["pecas"],
             "valor_investido": resumo["investido"],
             "criticos": criticos[:8],
-            "total_criticos": len(criticos),
+            "total_criticos": criticos.count(),
             "ultimos_movimentos": (
                 MovimentoEstoque.objects
                 .select_related("estoque__material", "responsavel")[:8]
             ),
+            "fila_trabalho": fila_trabalho[:7],
+            "orcamentos_abertos": orcamentos_abertos[:5],
+            "total_orcamentos_abertos": orcamentos_abertos.count(),
+            "total_orcamentos_vencendo": len(orcamentos_vencendo),
+            "pedidos_abertos": pedidos_abertos[:5],
+            "total_pedidos_abertos": pedidos_abertos.count(),
+            "manutencoes_abertas": manutencoes_abertas[:5],
+            "total_manutencoes_abertas": manutencoes_abertas.count(),
+            "producao_aberta": producao_aberta[:5],
+            "total_producao_aberta": producao_aberta.count(),
+            "vendas_a_confirmar": Venda.objects.filter(confirmado=False).count(),
         }
         return render(request, "home_inner.html", ctx)
 

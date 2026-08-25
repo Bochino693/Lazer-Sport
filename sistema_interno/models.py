@@ -1123,6 +1123,17 @@ class Orcamento(Prime):
     # Orçamento de balcão costuma nascer antes do cadastro do cliente.
     nome_cliente = models.CharField(max_length=120, blank=True)
     contato = models.CharField(max_length=120, blank=True)
+    whatsapp_cliente = models.CharField(
+        "WhatsApp do cliente",
+        max_length=24,
+        blank=True,
+        help_text="Número com DDD usado no envio da proposta.",
+    )
+    email_cliente = models.EmailField(
+        "E-mail do cliente",
+        blank=True,
+        help_text="Endereço que recebe a proposta comercial.",
+    )
 
     status = models.CharField(
         max_length=12,
@@ -1168,6 +1179,24 @@ class Orcamento(Prime):
         if self.cliente:
             return self.cliente.nome_cliente
         return self.nome_cliente or "Sem cliente"
+
+    @property
+    def whatsapp_destinatario(self):
+        """Canal explícito, com compatibilidade para propostas antigas."""
+        if self.whatsapp_cliente:
+            return self.whatsapp_cliente
+        if self.cliente_id and self.cliente and self.cliente.telefone:
+            return self.cliente.telefone
+        return self.contato if "@" not in (self.contato or "") else ""
+
+    @property
+    def email_destinatario(self):
+        """E-mail explícito, com compatibilidade para propostas antigas."""
+        if self.email_cliente:
+            return self.email_cliente
+        if self.cliente_id and self.cliente and self.cliente.email:
+            return self.cliente.email
+        return self.contato if "@" in (self.contato or "") else ""
 
     @property
     def subtotal(self):

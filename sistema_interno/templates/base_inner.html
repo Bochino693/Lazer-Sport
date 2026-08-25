@@ -140,13 +140,13 @@
     </nav>
 
     <div class="ls-sidebar-footer">
-      <div class="ls-user-card">
-        <span class="ls-user-avatar">{{ user.username|first|upper }}</span>
+      <a class="ls-user-card" href="{% url 'minha_conta_inner' %}" title="Gerenciar minha conta">
+        <span class="ls-user-avatar">{{ user.first_name|default:user.username|first|upper }}</span>
         <span class="ls-user-info">
           <strong>{{ user.get_full_name|default:user.username }}</strong>
-          <small>{% if user.is_superuser %}Administrador{% elif user.is_staff %}Equipe interna{% else %}Gerência{% endif %}</small>
+          <small><i class="bi bi-gear me-1"></i>{% if user.is_superuser %}Administrador{% elif user.is_staff %}Equipe interna{% else %}Gerência{% endif %}</small>
         </span>
-      </div>
+      </a>
 
       <form method="post" action="{% url 'logout_inner' %}">
         {% csrf_token %}
@@ -265,7 +265,10 @@ Dito em voz alta: este NÃO é o /adm do site. Quem trabalha nos
           </div>
         </div>
 
-        <span class="ls-user-pill"><i class="bi bi-person-circle"></i> {{ user.username }}</span>
+        <a class="ls-user-pill text-decoration-none" href="{% url 'minha_conta_inner' %}">
+          <i class="bi bi-person-circle"></i>
+          <span>{{ user.get_full_name|default:user.username }}</span>
+        </a>
       </div>
     </header>
 

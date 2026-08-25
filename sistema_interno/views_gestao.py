@@ -7,10 +7,16 @@ escrita em um lugar só.
 """
 
 import json
+import re
 from decimal import Decimal
+from urllib.parse import quote
 
 from django.contrib import messages
 from django.contrib.auth.models import User
+from django.conf import settings
+from django.core.mail import EmailMultiAlternatives
+from django.core.validators import validate_email
+from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import Count, Prefetch, Q
 from django.shortcuts import get_object_or_404, redirect, render
@@ -212,6 +218,8 @@ class OrcamentosInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
             "cliente": orcamento.cliente_id or "",
             "nome_cliente": orcamento.nome_cliente,
             "contato": orcamento.contato,
+            "whatsapp_cliente": orcamento.whatsapp_destinatario,
+            "email_cliente": orcamento.email_destinatario,
             "status": orcamento.status,
             "validade": orcamento.validade.isoformat() if orcamento.validade else "",
             "desconto": f"{orcamento.desconto:.2f}".replace(".", ","),
@@ -245,6 +253,14 @@ class OrcamentosInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
 
         orcamento.nome_cliente = texto(request, "nome_cliente", limite=120)
         orcamento.contato = texto(request, "contato", limite=120)
+        orcamento.whatsapp_cliente = texto(request, "whatsapp_cliente", limite=24)
+        orcamento.email_cliente = texto(request, "email_cliente", limite=254)
+
+        if orcamento.email_cliente:
+            try:
+                validate_email(orcamento.email_cliente)
+            except ValidationError:
+                raise ErroDeFormulario("Informe um e-mail válido para o cliente.")
 
         if not orcamento.cliente and not orcamento.nome_cliente:
             raise ErroDeFormulario(
@@ -382,13 +398,7 @@ class OrcamentosInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
 
     # ------------------------------------------------ enviar ao cliente
     def acao_enviar(self, request):
-        """Devolve o link da página do cliente e marca a proposta enviada.
-
-        Não dispara e-mail: hoje a proposta vai por WhatsApp, e forçar um
-        canal que a equipe não usa só criaria um envio que ninguém lê. O
-        que faltava era o endereço para colar lá — e o registro, aqui
-        dentro, de que a proposta saiu.
-        """
+        """Entrega a proposta pelo canal escolhido e registra o envio."""
         orcamento = get_object_or_404(Orcamento, pk=request.POST.get("id"))
 
         if not orcamento.itens.exists():
@@ -396,15 +406,78 @@ class OrcamentosInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
                 "Este orçamento não tem itens. Adicione ao menos um antes de enviar."
             )
 
-        orcamento.marcar_enviado()
         link = f"{endereco_do_site(request)}{orcamento.caminho_publico}"
+        canal = (request.POST.get("canal") or "link").strip().lower()
+
+        if canal not in ("link", "whatsapp", "email"):
+            raise ErroDeFormulario("Escolha WhatsApp, e-mail ou copiar link.")
+
+        extras = {"link": link}
+
+        if canal == "whatsapp":
+            telefone = texto(request, "whatsapp", limite=24) or orcamento.whatsapp_destinatario
+            digitos = re.sub(r"\D", "", telefone or "")
+            if len(digitos) < 10:
+                raise ErroDeFormulario("Informe o WhatsApp do cliente com DDD.")
+            if len(digitos) in (10, 11):
+                digitos = "55" + digitos
+
+            orcamento.whatsapp_cliente = telefone
+            orcamento.save(update_fields=["whatsapp_cliente", "atualizado"])
+            mensagem = (
+                f"Olá, {orcamento.destinatario}! Preparamos sua proposta "
+                f"Lazer & Sport nº {orcamento.pk}, no total de "
+                f"R$ {orcamento.total:.2f}. Você pode conferir os detalhes "
+                f"e aprovar ou recusar por aqui: {link}"
+            )
+            extras["whatsapp_url"] = f"https://wa.me/{digitos}?text={quote(mensagem)}"
+
+        elif canal == "email":
+            email = texto(request, "email", limite=254) or orcamento.email_destinatario
+            try:
+                validate_email(email)
+            except ValidationError:
+                raise ErroDeFormulario("Informe um e-mail válido para enviar a proposta.")
+
+            orcamento.email_cliente = email
+            orcamento.save(update_fields=["email_cliente", "atualizado"])
+            contexto = {"orcamento": orcamento, "link": link}
+            html = render(request, "emails/orcamento_enviado.html", contexto).content.decode()
+            texto_email = (
+                f"Olá, {orcamento.destinatario}.\n\n"
+                f"Sua proposta Lazer & Sport nº {orcamento.pk} está pronta. "
+                f"Acesse {link} para ver todos os itens e registrar sua decisão.\n\n"
+                "Lazer & Sport Brinquedos"
+            )
+            mensagem = EmailMultiAlternatives(
+                subject=f"Sua proposta Lazer & Sport #{orcamento.pk}",
+                body=texto_email,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                to=[email],
+            )
+            mensagem.attach_alternative(html, "text/html")
+            try:
+                enviados = mensagem.send(fail_silently=False)
+            except Exception:
+                raise ErroDeFormulario(
+                    "Não foi possível enviar o e-mail agora. Confira a configuração SMTP ou use o WhatsApp."
+                )
+            if enviados != 1:
+                raise ErroDeFormulario("O servidor de e-mail não confirmou o envio.")
+            extras["email"] = email
+
+        orcamento.marcar_enviado()
 
         return self.sucesso(
             request,
-            f"Orçamento #{orcamento.pk} pronto para enviar.",
+            (
+                f"Orçamento #{orcamento.pk} enviado por e-mail."
+                if canal == "email"
+                else f"Orçamento #{orcamento.pk} pronto para enviar."
+            ),
             id=orcamento.pk,
-            link=link,
             status=orcamento.status,
+            **extras,
         )
 
     # --------------------------------- cadastrar brinquedo sem sair daqui

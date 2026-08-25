@@ -189,6 +189,8 @@ a:hover{color:#FFD79A}
   padding:12px;display:grid;grid-template-columns:46px minmax(0,1fr);gap:11px;align-items:center;
   border:1px solid rgba(179,163,140,.11);border-radius:15px;background:rgba(255,255,255,.042);
 }
+.ls-user-card{text-decoration:none;color:inherit}
+.ls-user-card:hover{color:inherit;border-color:rgba(255,207,125,.34);background:rgba(255,255,255,.09)}
 .ls-user-avatar{
   width:46px;height:46px;display:grid;place-items:center;border-radius:13px;
   color:#F6E7CF;background:rgba(242,169,59,.16);border:1px solid rgba(242,169,59,.22);

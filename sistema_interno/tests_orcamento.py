@@ -10,6 +10,7 @@ from datetime import timedelta
 from decimal import Decimal
 
 from django.contrib.auth.models import User
+from django.core import mail
 from django.test import TestCase, override_settings
 from django.utils import timezone
 
@@ -224,6 +225,53 @@ class OrcamentoInternoTests(TestCase):
         self.post({"action": "enviar", "id": orcamento.id})
         orcamento.refresh_from_db()
         self.assertEqual(orcamento.enviado_em, primeira)
+
+    def test_enviar_por_whatsapp_devolve_conversa_pronta(self):
+        orcamento = self._orcamento_com_item()
+
+        resposta = self.post({
+            "action": "enviar",
+            "canal": "whatsapp",
+            "whatsapp": "(11) 99999-8888",
+            "id": orcamento.id,
+        })
+
+        self.assertEqual(resposta.status_code, 200)
+        dados = resposta.json()
+        self.assertTrue(dados["whatsapp_url"].startswith("https://wa.me/5511999998888"))
+        self.assertIn(orcamento.token, dados["whatsapp_url"])
+        orcamento.refresh_from_db()
+        self.assertEqual(orcamento.whatsapp_cliente, "(11) 99999-8888")
+
+    def test_enviar_por_email_entrega_template_da_marca(self):
+        orcamento = self._orcamento_com_item()
+
+        resposta = self.post({
+            "action": "enviar",
+            "canal": "email",
+            "email": "cliente@example.com",
+            "id": orcamento.id,
+        })
+
+        self.assertEqual(resposta.status_code, 200)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].to, ["cliente@example.com"])
+        self.assertIn("Lazer & Sport", mail.outbox[0].subject)
+        self.assertIn(orcamento.token, mail.outbox[0].alternatives[0].content)
+
+    def test_email_invalido_nao_marca_como_enviado(self):
+        orcamento = self._orcamento_com_item()
+
+        resposta = self.post({
+            "action": "enviar",
+            "canal": "email",
+            "email": "email quebrado",
+            "id": orcamento.id,
+        })
+
+        self.assertEqual(resposta.status_code, 400)
+        orcamento.refresh_from_db()
+        self.assertEqual(orcamento.status, Orcamento.Status.RASCUNHO)
 
     # ------------------------------------------------------- a vencer
     def test_tela_separa_os_que_vencem_em_ate_tres_dias(self):

@@ -6,6 +6,7 @@ from .views import (
     HomeInnerView,
     LoginInternoView,
     LogoutInnerView,
+    MinhaContaView,
     ManutencaoInnerView,
     MateriaisInnerView,
     MovimentacoesInnerView,
@@ -58,6 +59,7 @@ urlpatterns = [
     # ---------------- acesso ----------------
     path('login/inner/', LoginInternoView.as_view(), name='login_inner'),
     path('logout/inner/', LogoutInnerView.as_view(), name='logout_inner'),
+    path('minha-conta/', MinhaContaView.as_view(), name='minha_conta_inner'),
 
     # ---------------- demais telas ----------------
     path('vendas/inner/', VendasView.as_view(), name='vendas_inner'),
