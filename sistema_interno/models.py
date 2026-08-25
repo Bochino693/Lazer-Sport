@@ -1194,11 +1194,24 @@ class Orcamento(Prime):
         Sem domínio de propósito: o painel interno roda em
         interno.lazersport.com.br e a página do cliente mora no site
         principal. Quem monta o endereço completo é quem sabe qual é o
-        site -- ver `url_publica` nas views.
+        site -- ver `endereco_do_site` em utils.
+
+        O urlconf é passado NA MÃO, e isso não é firula. Num pedido que
+        chega pelo subdomínio interno, o SubdomainURLMiddleware troca o
+        urlconf do request para sistema_interno.urls, e o reverse passa a
+        enxergar só as rotas do painel. A rota pública mora no urlconf
+        raiz: sem apontar para ele, este reverse levanta NoReverseMatch
+        exatamente onde mais importa -- na hora de gerar o link para o
+        cliente, de dentro do painel.
         """
+        from django.conf import settings
         from django.urls import reverse
 
-        return reverse("orcamento_publico", args=[self.token])
+        return reverse(
+            "orcamento_publico",
+            args=[self.token],
+            urlconf=settings.ROOT_URLCONF,
+        )
 
     def marcar_enviado(self):
         """Passa para "enviado" e carimba a hora, uma vez só.
