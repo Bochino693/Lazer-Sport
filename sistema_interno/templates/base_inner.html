@@ -87,6 +87,12 @@
         {% endif %}
       </div>
 
+      {% comment %}
+          Financeiro e Orçamentos são de gestor. Sem este {% if %} o link
+          aparecia para todo colaborador e a view devolvia um desvio: menu
+          que leva a lugar nenhum é pior do que menu sem o item.
+      {% endcomment %}
+      {% if eh_gestor_interno %}
       <div class="ls-nav-section">
         <span class="ls-nav-caption">Comercial</span>
         <a class="ls-nav-item {% if request.resolver_match.url_name == 'financeiro_inner' %}active{% endif %}" href="{% url 'financeiro_inner' %}">
@@ -98,6 +104,7 @@
           <span>Orçamentos</span>
         </a>
       </div>
+      {% endif %}
 
       <div class="ls-nav-section">
         <span class="ls-nav-caption">Operação</span>

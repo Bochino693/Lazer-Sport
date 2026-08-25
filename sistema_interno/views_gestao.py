@@ -47,11 +47,15 @@ ZERO = Decimal("0.00")
 # ======================================================================
 # FINANCEIRO
 # ======================================================================
-class FinanceiroInnerView(InternoRequiredMixin, View):
+class FinanceiroInnerView(GestorInternoRequiredMixin, View):
     """Receita, saída, lucro e composição das despesas.
 
     Os gráficos são SVG/CSS montados a partir de números já calculados no
     servidor: a tela abre desenhada, sem esperar script de biblioteca.
+
+    Exige gestor, e não só conta de equipe: faturamento, margem e despesa
+    são mais sensíveis do que a lista de produtos, que já pedia gestor.
+    Quem monta brinquedo continua entrando pela Minha Produção.
     """
 
     JANELAS = (6, 12, 24)
@@ -88,8 +92,12 @@ class FinanceiroInnerView(InternoRequiredMixin, View):
 # ======================================================================
 # ORÇAMENTOS
 # ======================================================================
-class OrcamentosInnerView(RespostaJSONMixin, InternoRequiredMixin, View):
-    """Lista e monta orçamentos, com os itens em uma requisição só."""
+class OrcamentosInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
+    """Lista e monta orçamentos, com os itens em uma requisição só.
+
+    Gestor também: aqui se vê preço de cliente e margem, e daqui se cria
+    proposta em nome da empresa.
+    """
 
     rota_padrao = "orcamentos_inner"
 
