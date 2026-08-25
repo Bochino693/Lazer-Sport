@@ -61,7 +61,7 @@
   /* Largura da lateral encolhida em tablet: cabe o ícone e o alvo de
      toque, e nada mais. */
   --sidebar-rail:84px;
-  --topbar-h:78px;
+  --topbar-h:60px;
 }
 
 *{box-sizing:border-box}
@@ -183,42 +183,56 @@ a:hover{color:#FFD79A}
   font-size:.78rem;font-weight:850;
 }
 .ls-security-pill i,.ls-user-pill i{color:#ffcf7d}
-.ls-content{width:100%;max-width:1740px;margin:0 auto;padding:34px}
+.ls-content{width:100%;max-width:1740px;margin:0 auto;padding:22px 26px 34px}
 .ls-mobile-overlay{display:none;position:fixed;inset:0;z-index:1040;background:rgba(13,9,2,.75);backdrop-filter:blur(3px)}
 
 /* PAGE HERO */
+/* ----------------------------------------------------------------------
+   CABEÇALHO DE TELA — antes era um banner, agora é uma barra.
+
+   Era um bloco de 28px de recuo com título de até 2.65rem sobre
+   gradiente, um em cada tela. Isso é linguagem de SITE: a home do
+   lazersport.com.br tem um assim, e o /adm também. Num aplicativo de
+   trabalho, esse bloco empurra o conteúdo útil para baixo da dobra e
+   repete em toda tela uma informação que a barra lateral já dá.
+
+   Aqui virou uma linha: título, contagem e ações no mesmo eixo, com
+   filete embaixo em vez de caixa. Sem template nenhum ser mexido -- as
+   treze telas usam as mesmas classes, então a forma muda em todas de
+   uma vez.
+   ---------------------------------------------------------------------- */
 .ls-page-hero{
-  position:relative;overflow:hidden;margin-bottom:22px;padding:28px 30px;
-  display:flex;align-items:flex-end;justify-content:space-between;gap:22px;
-  border:1px solid #5f4b29;border-radius:var(--radius-xl);
-  background:
-    radial-gradient(circle at 90% -20%,rgba(242,169,59,.22),transparent 24rem),
-    linear-gradient(135deg,#3a2b12,#2e230f 58%,#302410);
-  box-shadow:var(--shadow-soft);
+  position:relative;margin:0 0 18px;padding:0 0 16px;
+  display:flex;align-items:flex-end;justify-content:space-between;gap:18px;
+  flex-wrap:wrap;border:0;border-bottom:1px solid var(--line);
+  background:none;box-shadow:none;border-radius:0;
 }
-.ls-page-hero::after{
-  content:"";position:absolute;width:260px;height:260px;right:-105px;bottom:-150px;border-radius:50%;
-  background:rgba(61,217,192,.06);
-}
+.ls-page-hero::after{content:none}
+.ls-page-hero-copy{min-width:0;flex:1 1 320px}
 .ls-page-hero-copy,.ls-page-hero-actions{position:relative;z-index:1}
 .ls-page-kicker{
-  display:block;margin-bottom:8px;color:#ffd283;font-size:.77rem;font-weight:950;
-  letter-spacing:.13em;text-transform:uppercase;
+  display:block;margin-bottom:3px;color:var(--acento);font-size:.68rem;font-weight:900;
+  letter-spacing:.14em;text-transform:uppercase;
 }
 .ls-page-hero h1{
-  margin:0;color:#fff;font-size:clamp(2rem,3vw,2.65rem);font-weight:950;letter-spacing:-.04em;
+  margin:0;color:#fff;font-size:1.45rem;font-weight:800;letter-spacing:-.02em;
+  line-height:1.2;
 }
+/* A frase explicativa vira apoio: continua no HTML para quem chega pela
+   primeira vez e para leitor de tela, mas não ocupa mais três linhas no
+   topo de cada visita. */
 .ls-page-hero p{
-  max-width:820px;margin:9px 0 0;color:#c2b9ad;font-size:1rem;line-height:1.65;
+  max-width:70ch;margin:5px 0 0;color:var(--muted);font-size:.86rem;line-height:1.5;
 }
-.ls-page-hero-actions{display:flex;gap:10px;flex-wrap:wrap}
+.ls-page-hero-actions{display:flex;gap:9px;flex-wrap:wrap;align-items:center}
+.ls-page-hero-actions .btn{min-height:42px;padding-inline:16px}
 
 /* METRICS */
 .ls-metrics{
-  display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin-bottom:22px;
+  display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:18px;
 }
 .ls-metric-card{
-  position:relative;min-height:156px;overflow:hidden;padding:21px 22px;
+  position:relative;min-height:104px;overflow:hidden;padding:14px 16px;
   border:1px solid var(--line);border-radius:20px;background:linear-gradient(180deg,#392b13,#2f2410);
   box-shadow:var(--shadow-soft);
 }
@@ -231,16 +245,17 @@ a:hover{color:#FFD79A}
 }
 .ls-metric-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .ls-metric-label{
-  color:#bbb2a6;font-size:.76rem;font-weight:950;letter-spacing:.08em;text-transform:uppercase;
+  color:#bbb2a6;font-size:.68rem;font-weight:900;letter-spacing:.09em;text-transform:uppercase;
+  line-height:1.3;
 }
 .ls-metric-icon{
-  width:43px;height:43px;display:grid;place-items:center;border-radius:13px;color:var(--metric,#F2A93B);
-  background:var(--metric-bg,rgba(242,169,59,.10));font-size:1.08rem;
+  width:34px;height:34px;display:grid;place-items:center;border-radius:11px;color:var(--metric,#F2A93B);
+  background:var(--metric-bg,rgba(242,169,59,.10));font-size:.95rem;
 }
 .ls-metric-value{
-  display:block;margin-top:16px;color:#fff;font-size:2rem;font-weight:950;line-height:1.05;letter-spacing:-.035em;
+  display:block;margin-top:10px;color:#fff;font-size:1.6rem;font-weight:900;line-height:1.05;letter-spacing:-.03em;
 }
-.ls-metric-note{display:block;margin-top:7px;color:#a89c8e;font-size:.82rem}
+.ls-metric-note{display:block;margin-top:4px;color:#a89c8e;font-size:.76rem;line-height:1.35}
 .ls-metric-card.blue{--metric:#F5BA5E;--metric-bg:rgba(242,169,59,.11)}
 .ls-metric-card.green{--metric:#55dda8;--metric-bg:rgba(72,214,158,.10)}
 .ls-metric-card.yellow{--metric:#f5c273;--metric-bg:rgba(242,187,100,.10)}
@@ -823,33 +838,41 @@ footer,.fab-container{display:none!important}
 }
 
 /* ======================================================================
-   TABLET — o aparelho em que este painel de fato roda
+   TRILHO E ABAS — a forma que separa este aplicativo do /adm
 
-   Entre 760 e 1180 a lateral vira um trilho de ícones sempre visível, em
-   vez de sumir atrás do botão de menu. Num tablet apoiado na bancada,
-   esconder a navegação inteira custa dois toques em toda troca de tela, e
-   o dedo está ocupado segurando o aparelho.
+   O /adm do site tem menu lateral escrito, sempre aberto: é a linguagem
+   de um painel web, e faz sentido lá, onde se entra de vez em quando
+   para mexer na vitrine. Aqui é o contrário -- a pessoa passa o dia
+   nesta tela, sabe onde ficam as coisas, e cada pixel do menu é pixel
+   que falta para a tabela.
+
+   Então a lateral nasce trilho, em TODA largura, e abre por botão quando
+   alguém quiser os nomes. Em tela estreita ela some de vez e a navegação
+   vai para a base, onde o polegar chega.
    ====================================================================== */
-@media (min-width:761px) and (max-width:1180px){
+@media (min-width:761px){
   .ls-sidebar{
     width:var(--sidebar-rail);transform:none;overflow:visible;
+    transition:width .2s cubic-bezier(.16,.84,.44,1);
   }
+  .ls-main{margin-left:var(--sidebar-rail);transition:margin-left .2s cubic-bezier(.16,.84,.44,1)}
+  .ls-mobile-menu{display:none}
+
   .ls-sidebar .ls-brand-text,
   .ls-sidebar .ls-nav-caption,
   .ls-sidebar .ls-nav-item>span:not(.ls-nav-icon):not(.ls-nav-count),
   .ls-sidebar .ls-user-info,
   .ls-sidebar .ls-logout span{display:none}
 
-  .ls-brand{justify-content:center;padding:16px 8px;min-height:82px}
-  .ls-brand-logo{width:46px;height:46px;flex:0 0 46px}
+  .ls-brand{justify-content:center;padding:14px 8px;min-height:70px}
+  .ls-brand-logo{width:42px;height:42px;flex:0 0 42px;border-radius:13px}
 
-  .ls-nav-item{
-    justify-content:center;padding:0;min-height:52px;position:relative;
-  }
-  .ls-nav-count{position:absolute;top:6px;right:12px}
+  .ls-nav{padding-inline:8px}
+  .ls-nav-item{justify-content:center;padding:0;min-height:48px;position:relative}
+  .ls-nav-count{position:absolute;top:5px;right:10px}
 
-  /* O nome da seção aparece ao tocar e segurar, que é como se confere
-     um ícone que não se reconhece. */
+  /* O nome aparece ao lado quando o dedo ou o ponteiro para em cima --
+     é como se confere um ícone que ainda não se reconhece. */
   .ls-nav-item::after{
     content:attr(data-titulo);position:absolute;left:calc(100% + 10px);
     padding:7px 12px;border-radius:10px;white-space:nowrap;
@@ -857,25 +880,110 @@ footer,.fab-container{display:none!important}
     color:var(--text);font-size:.82rem;font-weight:700;
     opacity:0;pointer-events:none;transform:translateX(-6px);
     transition:opacity .16s ease,transform .16s ease;z-index:1300;
+    box-shadow:var(--shadow-soft);
   }
-  .ls-nav-item:hover::after,.ls-nav-item:focus-visible::after{
-    opacity:1;transform:none;
-  }
+  .ls-nav-item:hover::after,.ls-nav-item:focus-visible::after{opacity:1;transform:none}
 
-  .ls-user-card{justify-content:center;padding:10px}
+  .ls-user-card{justify-content:center;padding:9px}
   .ls-logout{justify-content:center}
-  .ls-main{margin-left:var(--sidebar-rail)}
-  .ls-mobile-menu{display:none}
-  .ls-content{padding:24px 20px 32px}
 
-  /* Alvos de toque: no tablet o dedo é o ponteiro. */
-  .btn{min-height:48px}
-  .form-control,.form-select{min-height:50px}
-  .ls-table td,.ls-table th{padding-top:14px;padding-bottom:14px}
+  /* ---- aberta: volta a mostrar os nomes ---- */
+  .ls-sidebar.expandida{width:var(--sidebar-w)}
+  .ls-sidebar.expandida ~ .ls-main,
+  .ls-shell:has(.ls-sidebar.expandida) .ls-main{margin-left:var(--sidebar-w)}
+  .ls-sidebar.expandida .ls-brand-text,
+  .ls-sidebar.expandida .ls-nav-caption,
+  .ls-sidebar.expandida .ls-nav-item>span,
+  .ls-sidebar.expandida .ls-user-info,
+  .ls-sidebar.expandida .ls-logout span{display:block}
+  .ls-sidebar.expandida .ls-nav-item{justify-content:flex-start;padding:0 14px}
+  .ls-sidebar.expandida .ls-nav-item::after{content:none}
+  .ls-sidebar.expandida .ls-brand{justify-content:flex-start;padding:18px 18px 16px}
+  .ls-sidebar.expandida .ls-user-card{justify-content:flex-start;padding:11px}
+  .ls-sidebar.expandida .ls-logout{justify-content:center}
+  .ls-sidebar.expandida .ls-rail-toggle i{transform:rotate(180deg)}
 }
 
-/* Tablet deitado e telas médias: duas colunas leem melhor que três. */
+/* Botão de abrir e fechar o trilho. Fica na borda, na altura do olho. */
+.ls-rail-toggle{
+  position:absolute;top:26px;right:-13px;z-index:1400;
+  width:26px;height:26px;display:none;place-items:center;
+  border-radius:50%;cursor:pointer;font-size:.7rem;
+  color:#2A1B05;background:var(--acento);border:2px solid var(--bg-0);
+  box-shadow:0 4px 12px rgba(0,0,0,.4);
+}
+.ls-rail-toggle i{transition:transform .2s ease}
+@media (min-width:761px){ .ls-rail-toggle{display:grid} }
+
+/* ======================================================================
+   ABAS DE BAIXO — celular e tablet em pé
+   ====================================================================== */
+.ls-abas{display:none}
+
+@media (max-width:760px){
+  .ls-abas{
+    position:fixed;left:0;right:0;bottom:0;z-index:1100;
+    display:grid;grid-auto-flow:column;grid-auto-columns:1fr;
+    background:linear-gradient(180deg,rgba(30,25,19,.97),rgba(13,11,8,.99));
+    border-top:1px solid var(--line);
+    backdrop-filter:blur(14px);
+    /* respeita a faixa do gesto de voltar do aparelho */
+    padding-bottom:env(safe-area-inset-bottom,0);
+  }
+  .ls-aba{
+    position:relative;display:flex;flex-direction:column;align-items:center;
+    justify-content:center;gap:3px;min-height:58px;padding:7px 4px;
+    background:none;border:0;cursor:pointer;
+    color:var(--muted);text-decoration:none!important;
+    font-size:.66rem;font-weight:800;letter-spacing:.02em;
+  }
+  .ls-aba i{font-size:1.22rem;line-height:1}
+  .ls-aba.ativa{color:var(--acento)}
+  .ls-aba.ativa::before{
+    content:"";position:absolute;top:0;left:22%;right:22%;height:3px;
+    border-radius:0 0 4px 4px;background:var(--acento);
+  }
+  .ls-aba-selo{
+    position:absolute;top:5px;right:calc(50% - 22px);min-width:17px;height:17px;
+    padding:0 5px;display:grid;place-items:center;border-radius:999px;
+    font-size:.62rem;font-weight:900;color:#2A1B05;background:var(--acento);
+  }
+  .ls-aba-selo.urgente{background:var(--red);color:#3A0E08}
+
+  /* o conteúdo não pode terminar embaixo das abas */
+  .ls-content{padding-bottom:86px}
+  /* com as abas, o botão de menu do topo vira redundante */
+  .ls-mobile-menu{display:none}
+}
+
+/* Tablet e telas médias: duas colunas leem melhor que quatro. */
 @media (min-width:761px) and (max-width:1180px){
   .ls-grid-3{grid-template-columns:repeat(2,minmax(0,1fr))}
   .ls-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .btn{min-height:46px}
+  .form-control,.form-select{min-height:48px}
+}
+
+/* No tablet a linha explicativa do cabeçalho sai. Ela ajuda quem abre a
+   tela pela primeira vez, e atrapalha quem abre a mesma tela quarenta
+   vezes por dia -- que é o caso de quem usa isto na bancada. Continua no
+   HTML, então leitor de tela e desktop seguem tendo. */
+@media (max-width:1180px){
+  .ls-page-hero p{display:none}
+  .ls-page-hero{padding-bottom:12px;margin-bottom:14px}
+}
+
+
+/* Barra do topo em tela estreita: só o nome da tela e o sino.
+
+   O selo "Gestão interna" e o nome de usuário saem -- com as abas
+   embaixo, quem está no aplicativo já sabe onde está, e no celular o
+   espaço do topo é do título. O sino fica porque é o único caminho para
+   os avisos ali. */
+@media (max-width:760px){
+  .ls-ambiente,
+  .ls-user-pill{display:none}
+  .ls-topbar{padding:0 12px;gap:10px}
+  .ls-topbar-copy strong{font-size:1rem;line-height:1.2}
+  .ls-topbar-side{gap:8px}
 }

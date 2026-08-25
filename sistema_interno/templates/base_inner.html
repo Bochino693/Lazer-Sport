@@ -25,6 +25,19 @@
 <body class="ls-body">
 <div class="ls-shell">
   <aside class="ls-sidebar" id="sidebarMenu">
+    {% comment %}
+      A lateral nasce como TRILHO de ícones e só abre quando alguém pede.
+      É a diferença de forma entre este aplicativo e o /adm do site, que
+      tem menu escrito sempre aberto: aqui a tela inteira é para o
+      trabalho, e o menu é ferramenta, não vitrine. A escolha fica
+      guardada no aparelho — quem prefere com nome não precisa reabrir a
+      cada visita.
+    {% endcomment %}
+    <button type="button" class="ls-rail-toggle" id="railToggle"
+            aria-label="Expandir menu" title="Expandir menu">
+      <i class="bi bi-chevron-right"></i>
+    </button>
+
     <a class="ls-brand" href="{% url 'home_inner' %}">
       <span class="ls-brand-logo">
         <img src="{% static 'images/logoofi.png' %}" alt="Lazer & Sport">
@@ -151,6 +164,49 @@
   </aside>
 
   <div class="ls-mobile-overlay" id="sidebarOverlay"></div>
+
+  {% comment %}
+    ABAS DE BAIXO — só aparecem em tela estreita (celular e tablet em pé).
+    É o gesto que separa um aplicativo de um painel web: o polegar alcança
+    a base da tela, e o alto não. Nem o site nem o /adm têm isto, então é
+    também o sinal mais rápido de "estou no aplicativo da fábrica".
+
+    Quatro destinos e o menu. Quatro porque cinco alvos de 25% de largura
+    já ficam menores que o dedo.
+  {% endcomment %}
+  <nav class="ls-abas" aria-label="Atalhos">
+    <a class="ls-aba {% if request.resolver_match.url_name == 'home_inner' %}ativa{% endif %}"
+       href="{% url 'home_inner' %}">
+      <i class="bi bi-grid-fill"></i><span>Início</span>
+    </a>
+
+    {% if eh_gestor_interno %}
+      <a class="ls-aba {% if request.resolver_match.url_name == 'orcamentos_inner' %}ativa{% endif %}"
+         href="{% url 'orcamentos_inner' %}">
+        <i class="bi bi-file-earmark-text-fill"></i><span>Orçamentos</span>
+        {% if count_orcamentos %}<span class="ls-aba-selo">{{ count_orcamentos }}</span>{% endif %}
+      </a>
+      <a class="ls-aba {% if request.resolver_match.url_name == 'stock' or request.resolver_match.url_name == 'estoque_inner' %}ativa{% endif %}"
+         href="{% url 'stock' %}">
+        <i class="bi bi-box-seam-fill"></i><span>Estoque</span>
+      </a>
+    {% else %}
+      <a class="ls-aba {% if request.resolver_match.url_name == 'minha_producao' %}ativa{% endif %}"
+         href="{% url 'minha_producao' %}">
+        <i class="bi bi-list-check"></i><span>Produção</span>
+        {% if count_producao %}<span class="ls-aba-selo">{{ count_producao }}</span>{% endif %}
+      </a>
+      <a class="ls-aba {% if request.resolver_match.url_name == 'stock' %}ativa{% endif %}"
+         href="{% url 'stock' %}">
+        <i class="bi bi-box-seam-fill"></i><span>Estoque</span>
+      </a>
+    {% endif %}
+
+    <button type="button" class="ls-aba" id="abaMenu">
+      <i class="bi bi-list"></i><span>Menu</span>
+      {% if avisos_urgentes %}<span class="ls-aba-selo urgente">{{ avisos_urgentes }}</span>{% endif %}
+    </button>
+  </nav>
 
   <section class="ls-main">
     <header class="ls-topbar">
@@ -281,6 +337,38 @@ Dito em voz alta: este NÃO é o /adm do site. Quem trabalha nos
 
   document.addEventListener("keydown", function (event) {
     if (event.key === "Escape") fecharAvisos();
+  });
+
+  /* ---------------------------------------------------------------
+     Trilho: encolhido por padrão, e a escolha fica no aparelho.
+     --------------------------------------------------------------- */
+  const CHAVE = "ls-menu-aberto";
+  const railToggle = document.getElementById("railToggle");
+
+  function aplicarTrilho(aberto) {
+    sidebar?.classList.toggle("expandida", aberto);
+    railToggle?.setAttribute("aria-label", aberto ? "Encolher menu" : "Expandir menu");
+    railToggle?.setAttribute("title", aberto ? "Encolher menu" : "Expandir menu");
+  }
+
+  /* try/catch porque em navegador com armazenamento bloqueado o acesso
+     ao localStorage LEVANTA, e derrubaria o resto deste script junto --
+     inclusive o menu do celular. */
+  let aberto = false;
+  try { aberto = localStorage.getItem(CHAVE) === "1"; } catch (e) {}
+  aplicarTrilho(aberto);
+
+  railToggle?.addEventListener("click", function () {
+    aberto = !sidebar.classList.contains("expandida");
+    aplicarTrilho(aberto);
+    try { localStorage.setItem(CHAVE, aberto ? "1" : "0"); } catch (e) {}
+  });
+
+  /* A aba "Menu" abre a mesma gaveta do botão do topo. */
+  document.getElementById("abaMenu")?.addEventListener("click", function (evento) {
+    evento.stopPropagation();
+    sidebar?.classList.add("open");
+    overlay?.classList.add("open");
   });
 })();
 </script>
