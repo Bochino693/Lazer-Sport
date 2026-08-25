@@ -21,7 +21,7 @@
         href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
   <!-- Experiência de rolagem: skeletons, entrada dos blocos e barra de progresso. -->
-  <link rel="stylesheet" href="{% static 'site/ls-reveal.css' %}?v=1">
+  <link rel="stylesheet" href="{% static 'site/ls-reveal.css' %}?v=2">
 
   <!-- Âncoras # param abaixo do cabeçalho sticky, com destaque no destino. -->
   <link rel="stylesheet" href="{% static 'site/ls-ancoras.css' %}?v=1">
@@ -36,7 +36,7 @@
   <!-- Aviso de pagamento aprovado confirmado fora da aba (webhook). -->
   <link rel="stylesheet" href="{% static 'site/ls-confirmacao.css' %}?v=1">
 {% endif %}
-  <script src="{% static 'site/ls-reveal.js' %}?v=1" defer></script>
+  <script src="{% static 'site/ls-reveal.js' %}?v=2" defer></script>
   <script>
     /* Marca a plataforma no <html> antes da primeira pintura. A caixa do
        aplicativo no rodapé muda conforme o aparelho, e decidir isso no
@@ -1742,7 +1742,7 @@
 
 
 
-<div style="width: 100%; background: #f8fbff; border-bottom: 2px solid #004AAD; padding: 15px 0; display: flex; justify-content: center; align-items: center;">
+<div class="ls-faixa-marca" style="width: 100%; background: #f8fbff; border-bottom: 2px solid #004AAD; padding: 15px 0; display: flex; justify-content: center; align-items: center;">
     <div style="display: flex; align-items: center; gap: 20px; flex-wrap: wrap; justify-content: center;">
 
         <img id="image" src="{% static 'images/logoofi.png' %}" alt="Logo Fábrica"
@@ -2524,194 +2524,6 @@
         touch-action: none;
     }
 
-    .ls-cart-loader {
-        position: fixed;
-        inset: 0;
-        z-index: 2147483000;
-        display: grid;
-        place-items: center;
-        padding: 20px;
-        background:
-            radial-gradient(circle at 50% 44%, rgba(0, 123, 255, .20), transparent 31rem),
-            rgba(3, 12, 27, .82);
-        -webkit-backdrop-filter: blur(12px) saturate(125%);
-        backdrop-filter: blur(12px) saturate(125%);
-        opacity: 0;
-        visibility: hidden;
-        pointer-events: none;
-        transition: opacity .24s ease, visibility .24s ease;
-    }
-
-    .ls-cart-loader.is-visible {
-        opacity: 1;
-        visibility: visible;
-        pointer-events: all;
-    }
-
-    .ls-cart-loader-card {
-        position: relative;
-        isolation: isolate;
-        width: min(430px, 100%);
-        overflow: hidden;
-        padding: 34px 30px 28px;
-        border: 1px solid rgba(255, 255, 255, .18);
-        border-radius: 28px;
-        color: #ffffff;
-        background:
-            radial-gradient(circle at 92% 4%, rgba(230, 57, 70, .30), transparent 34%),
-            radial-gradient(circle at 8% 100%, rgba(0, 123, 255, .34), transparent 42%),
-            linear-gradient(145deg, #0d2343 0%, #071426 70%, #050d19 100%);
-        box-shadow:
-            0 32px 90px rgba(0, 0, 0, .52),
-            inset 0 1px 0 rgba(255, 255, 255, .12);
-        text-align: center;
-        transform: translateY(14px) scale(.96);
-        transition: transform .32s var(--ease-out);
-    }
-
-    .ls-cart-loader.is-visible .ls-cart-loader-card {
-        transform: translateY(0) scale(1);
-    }
-
-    .ls-cart-loader-card::before {
-        content: "";
-        position: absolute;
-        z-index: -1;
-        inset: 0;
-        opacity: .13;
-        background-image:
-            linear-gradient(rgba(255, 255, 255, .08) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(255, 255, 255, .08) 1px, transparent 1px);
-        background-size: 32px 32px;
-        mask-image: linear-gradient(to bottom, #000, transparent 82%);
-    }
-
-    .ls-cart-loader-brand {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        margin-bottom: 22px;
-        padding: 7px 11px;
-        border: 1px solid rgba(255, 255, 255, .16);
-        border-radius: 999px;
-        color: #bcd8ff;
-        background: rgba(255, 255, 255, .06);
-        font-size: .66rem;
-        font-weight: 800;
-        letter-spacing: .11em;
-        text-transform: uppercase;
-    }
-
-    .ls-cart-loader-visual {
-        position: relative;
-        display: grid;
-        place-items: center;
-        width: 94px;
-        height: 94px;
-        margin: 0 auto 21px;
-    }
-
-    .ls-cart-loader-ring {
-        position: absolute;
-        inset: 0;
-        border: 3px solid rgba(255, 255, 255, .10);
-        border-top-color: #58a7ff;
-        border-right-color: #e63946;
-        border-radius: 50%;
-        animation: ls-cart-spin .9s linear infinite;
-    }
-
-    .ls-cart-loader-icon {
-        display: grid;
-        place-items: center;
-        width: 66px;
-        height: 66px;
-        border: 1px solid rgba(255, 255, 255, .18);
-        border-radius: 22px;
-        color: #ffffff;
-        background: linear-gradient(145deg, #0878f9, #004aad);
-        box-shadow: 0 12px 28px rgba(0, 89, 194, .36);
-        font-size: 1.55rem;
-        animation: ls-cart-float 1.25s ease-in-out infinite;
-    }
-
-    .ls-cart-loader-title {
-        margin: 0;
-        color: #ffffff;
-        font-size: clamp(1.25rem, 5vw, 1.65rem);
-        font-weight: 800;
-        letter-spacing: -.035em;
-    }
-
-    .ls-cart-loader-text {
-        max-width: 330px;
-        margin: 9px auto 0;
-        color: #aebfd5;
-        font-size: .84rem;
-        line-height: 1.55;
-    }
-
-    .ls-cart-loader-progress {
-        position: relative;
-        height: 5px;
-        margin-top: 24px;
-        overflow: hidden;
-        border-radius: 999px;
-        background: rgba(255, 255, 255, .09);
-    }
-
-    .ls-cart-loader-progress::after {
-        content: "";
-        position: absolute;
-        inset: 0;
-        width: 45%;
-        border-radius: inherit;
-        background: linear-gradient(90deg, #0878f9, #65b2ff, #e63946);
-        box-shadow: 0 0 18px rgba(62, 155, 255, .68);
-        animation: ls-cart-progress 1.1s ease-in-out infinite;
-    }
-
-    .ls-cart-loader-note {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 7px;
-        margin-top: 17px;
-        color: #8397b1;
-        font-size: .68rem;
-        font-weight: 700;
-    }
-
-    .ls-cart-loader.is-success .ls-cart-loader-ring,
-    .ls-cart-loader.is-error .ls-cart-loader-ring {
-        animation: none;
-        border-color: rgba(255, 255, 255, .13);
-    }
-
-    .ls-cart-loader.is-success .ls-cart-loader-icon {
-        background: linear-gradient(145deg, #28b968, #138347);
-        box-shadow: 0 12px 28px rgba(19, 131, 71, .34);
-        animation: ls-cart-pop .42s var(--ease-bounce);
-    }
-
-    .ls-cart-loader.is-error .ls-cart-loader-icon {
-        background: linear-gradient(145deg, #e63946, #a91427);
-        box-shadow: 0 12px 28px rgba(169, 20, 39, .34);
-        animation: ls-cart-shake .38s ease;
-    }
-
-    .ls-cart-loader.is-success .ls-cart-loader-progress::after {
-        width: 100%;
-        background: #2ecc71;
-        animation: none;
-    }
-
-    .ls-cart-loader.is-error .ls-cart-loader-progress::after {
-        width: 100%;
-        background: #e63946;
-        animation: none;
-    }
-
     [data-ls-cart-locked="true"] {
         cursor: wait !important;
         pointer-events: none !important;
@@ -2743,29 +2555,9 @@
     }
 
     @media (max-width: 520px) {
-        .ls-cart-loader { padding: 14px; }
-        .ls-cart-loader-card {
-            padding: 28px 20px 24px;
-            border-radius: 23px;
-        }
-        .ls-cart-loader-visual {
-            width: 84px;
-            height: 84px;
-        }
-        .ls-cart-loader-icon {
-            width: 58px;
-            height: 58px;
-            border-radius: 19px;
-            font-size: 1.35rem;
-        }
     }
 
     @media (prefers-reduced-motion: reduce) {
-        .ls-cart-loader-ring,
-        .ls-cart-loader-icon,
-        .ls-cart-loader-progress::after {
-            animation-duration: 1.8s !important;
-        }
     }
 </style>
 
@@ -2995,41 +2787,7 @@
 </footer>
 <!-- ======= FIM DO BLOCO ADICIONADO ======= -->
 
-<!-- Carregamento único para qualquer inclusão no carrinho. -->
-<div id="ls-cart-loader"
-     class="ls-cart-loader"
-     hidden
-     aria-hidden="true">
-    <div class="ls-cart-loader-card"
-         role="status"
-         aria-live="polite"
-         aria-atomic="true">
-        <div class="ls-cart-loader-brand">
-            <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
-            Compra protegida
-        </div>
 
-        <div class="ls-cart-loader-visual" aria-hidden="true">
-            <span class="ls-cart-loader-ring"></span>
-            <span class="ls-cart-loader-icon" id="ls-cart-loader-icon">
-                <i class="fa-solid fa-cart-plus"></i>
-            </span>
-        </div>
-
-        <h2 class="ls-cart-loader-title" id="ls-cart-loader-title">
-            Adicionando ao carrinho
-        </h2>
-        <p class="ls-cart-loader-text" id="ls-cart-loader-text">
-            Aguarde um instante. Estamos atualizando seu pedido com segurança.
-        </p>
-
-        <div class="ls-cart-loader-progress" aria-hidden="true"></div>
-        <div class="ls-cart-loader-note">
-            <i class="fa-solid fa-lock" aria-hidden="true"></i>
-            Não feche nem atualize esta página
-        </div>
-    </div>
-</div>
 
 <script>
   /* ==========================================
@@ -3124,27 +2882,75 @@ if (lsHeader) {
   atualizarHeaderScroll();
 }
 
-  // Controle de Link Ativo no Scroll
+  /* Controle de link ativo no scroll.
+
+     Três coisas que a versão anterior errava:
+
+     1. No topo da home nenhum item acendia. O link de Home aponta para
+        "#", e a busca era por a[href$="#<id-da-secao>"] -- que nunca casa
+        com "#". Agora, acima da primeira seção, quem acende é o Home.
+     2. A limpeza dos outros links só acontecia quando alguma seção casava.
+        Rolando para uma faixa sem seção nenhuma, o item anterior ficava
+        aceso para sempre.
+     3. Rodava a conta inteira em todo evento de scroll. Agora passa por
+        requestAnimationFrame, então no máximo uma vez por quadro. */
   document.addEventListener("DOMContentLoaded", () => {
-      const sections = document.querySelectorAll("section[id]");
-      const menuLinks = document.querySelectorAll("#ls-mobile-nav a, .nav-desktop a");
+      const links = document.querySelectorAll("#ls-mobile-nav a, .nav-desktop a");
+      const linkHome = document.querySelector(
+        '#ls-mobile-nav a[href$="#"], .nav-desktop a[href$="#"]'
+      );
 
-      function updateActiveLink() {
-        let scrollY = window.pageYOffset + 200;
-        sections.forEach(section => {
-          let sectionTop = section.offsetTop;
-          let sectionHeight = section.offsetHeight;
-          let sectionId = section.getAttribute("id");
+      /* Só entram as seções que têm item no menu. A home tem seções que
+         ninguém aponta (contato, aplicativo, entre outras); incluí-las
+         apagava o menu inteiro ao passar por elas, porque não havia link
+         para acender. Agora o item aceso é o da última seção *com link*
+         acima da linha de leitura -- o menu nunca fica todo apagado. */
+      const secoes = Array.from(document.querySelectorAll("section[id]"))
+        .map(secao => ({
+          el: secao,
+          link: document.querySelector(
+            `#ls-mobile-nav a[href$="#${secao.id}"], .nav-desktop a[href$="#${secao.id}"]`
+          ),
+        }))
+        .filter(item => item.link)
+        .sort((a, b) => a.el.offsetTop - b.el.offsetTop);
 
-          if (scrollY >= sectionTop && scrollY < sectionTop + sectionHeight) {
-            menuLinks.forEach(link => link.classList.remove("active-link"));
-            const activeLink = document.querySelector(`#ls-mobile-nav a[href$="#${sectionId}"], .nav-desktop a[href$="#${sectionId}"]`);
-            if (activeLink) activeLink.classList.add("active-link");
-          }
-        });
+      /* A leitura tem de acontecer abaixo do cabeçalho fixo: sem essa
+         folga a seção só "chega" quando já saiu de vista. */
+      function folga() {
+        const cabecalho = document.querySelector("header");
+        return (cabecalho ? cabecalho.offsetHeight : 0) + 24;
       }
-      window.addEventListener("scroll", updateActiveLink);
-      updateActiveLink();
+
+      function acender(alvo) {
+        links.forEach(link => link.classList.toggle("active-link", link === alvo));
+      }
+
+      function atualizar() {
+        const linha = window.pageYOffset + folga();
+
+        let atual = null;
+        for (const item of secoes) {
+          if (item.el.offsetTop <= linha) atual = item;
+          else break;
+        }
+
+        /* Sem nenhuma seção acima da linha, estamos no começo da página. */
+        acender(atual ? atual.link : linkHome);
+      }
+
+      let agendado = false;
+      window.addEventListener("scroll", () => {
+        if (agendado) return;
+        agendado = true;
+        window.requestAnimationFrame(() => {
+          agendado = false;
+          atualizar();
+        });
+      }, { passive: true });
+
+      window.addEventListener("resize", atualizar, { passive: true });
+      atualizar();
   });
 
   // Scroll para logout/login boxes
@@ -3192,34 +2998,11 @@ const LS_CART_TRIGGER_SELECTOR = [
 ].join(',');
 
 const LSCartLoading = (() => {
-  const overlay = document.getElementById('ls-cart-loader');
-  const titulo = document.getElementById('ls-cart-loader-title');
-  const texto = document.getElementById('ls-cart-loader-text');
-  const icone = document.getElementById('ls-cart-loader-icon');
-
   let ativo = false;
   let tokenAtual = 0;
   let gatilhoPendente = null;
   let temporizador = null;
   let estadosBloqueados = [];
-
-  function definirConteudo(estado, tituloNovo, textoNovo) {
-    if (!overlay) return;
-
-    overlay.classList.remove('is-success', 'is-error');
-    if (estado) overlay.classList.add(estado);
-    if (titulo) titulo.textContent = tituloNovo;
-    if (texto) texto.textContent = textoNovo;
-
-    if (icone) {
-      const classe = estado === 'is-success'
-        ? 'fa-check'
-        : estado === 'is-error'
-          ? 'fa-triangle-exclamation'
-          : 'fa-cart-plus';
-      icone.innerHTML = `<i class="fa-solid ${classe}"></i>`;
-    }
-  }
 
   function bloquearAcoes() {
     estadosBloqueados = [];
@@ -3256,26 +3039,11 @@ const LSCartLoading = (() => {
     window.clearTimeout(temporizador);
     temporizador = null;
 
-    const finalizar = () => {
-      if (overlay) {
-        overlay.hidden = true;
-        overlay.setAttribute('aria-hidden', 'true');
-        overlay.classList.remove('is-success', 'is-error');
-      }
-      document.body.classList.remove('ls-cart-busy');
-      liberarAcoes();
-      ativo = false;
-      gatilhoPendente = null;
-    };
-
-    if (!overlay || imediato) {
-      if (overlay) overlay.classList.remove('is-visible');
-      finalizar();
-      return;
-    }
-
-    overlay.classList.remove('is-visible');
-    window.setTimeout(finalizar, 260);
+    if (window.LSLoader) window.LSLoader.hide();
+    document.body.classList.remove('ls-cart-busy');
+    liberarAcoes();
+    ativo = false;
+    gatilhoPendente = null;
   }
 
   function fecharDepois(ms) {
@@ -3295,17 +3063,10 @@ const LSCartLoading = (() => {
     bloquearAcoes();
     if (botao) botao.setAttribute('data-ls-cart-origin', 'true');
 
-    definirConteudo(
-      '',
-      vaiAbrirCarrinho ? 'Preparando sua compra' : 'Adicionando ao carrinho',
-      'Aguarde um instante. Estamos atualizando seu pedido com segurança.'
-    );
-
-    if (overlay) {
-      overlay.hidden = false;
-      overlay.setAttribute('aria-hidden', 'false');
-      void overlay.offsetWidth;
-      overlay.classList.add('is-visible');
+    if (window.LSLoader) {
+      window.LSLoader.show(
+        vaiAbrirCarrinho ? 'Preparando sua compra…' : 'Adicionando ao carrinho…'
+      );
     }
     document.body.classList.add('ls-cart-busy');
 
@@ -3325,19 +3086,15 @@ const LSCartLoading = (() => {
     if (!ativo || token !== tokenAtual) return;
     window.clearTimeout(temporizador);
 
-    definirConteudo(
-      'is-success',
-      'Produto adicionado!',
-      vaiAbrirCarrinho
-        ? 'Carrinho atualizado. Estamos abrindo seu pedido...'
-        : 'Seu carrinho foi atualizado com segurança.'
-    );
-
+    // Quem avisa que deu certo é o toast, que já existia e já dizia a
+    // mesma coisa. O painel de tela cheia repetia o recado por cima da
+    // loja e ainda travava a navegação por quase um segundo.
     if (vaiAbrirCarrinho) {
-      // Segurança caso a navegação seja bloqueada pelo navegador.
+      // A barra segue correndo até o carrinho abrir; este prazo é a
+      // rede de segurança para o caso de o navegador barrar a ida.
       fecharDepois(8000);
     } else {
-      fecharDepois(760);
+      fechar(true);
     }
   }
 
@@ -3345,12 +3102,10 @@ const LSCartLoading = (() => {
     if (!ativo || token !== tokenAtual) return;
     window.clearTimeout(temporizador);
 
-    definirConteudo(
-      'is-error',
-      'Não foi possível adicionar',
-      mensagem || 'Tente novamente. Nenhum novo clique será enviado automaticamente.'
-    );
-    fecharDepois(1500);
+    // O texto do erro vai pelo toast vermelho. Aqui só encerramos a
+    // barra e devolvemos os botões, para o cliente poder tentar de novo.
+    fechar(true);
+    if (mensagem) mostrarToast(mensagem, true);
   }
 
   document.addEventListener('click', event => {

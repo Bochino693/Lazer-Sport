@@ -83,7 +83,6 @@
         if (aberto) return;
         aberto = true;
 
-        document.documentElement.classList.add("ls-carregando");
         aviso.textContent = mensagem || "Carregando a página…";
 
         /* Volta ao zero sem animar: sem isto a barra da navegação anterior
@@ -121,7 +120,6 @@
         /* Fecha o percurso antes de sumir. Sumir no meio pareceria erro. */
         pintar(1);
         aviso.textContent = "";
-        document.documentElement.classList.remove("ls-carregando");
 
         window.setTimeout(function () {
             if (aberto) return;

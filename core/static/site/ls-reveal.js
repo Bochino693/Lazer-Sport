@@ -1,5 +1,5 @@
 /* =========================================================================
-   ls-reveal.js — entrada por rolagem, skeletons e barra de progresso.
+   ls-reveal.js — entrada por rolagem e skeletons.
    -------------------------------------------------------------------------
    Não exige marcação nova nos templates: as seções, os cards das grades e as
    imagens lazy são identificados aqui. Se algo falhar, o failsafe do <head>
@@ -33,8 +33,26 @@
        --------------------------------------------------------------------- */
 
     var SELETOR_BLOCOS = [
+        /* Blocos que ficam ENTRE o cabeçalho e o <main>. Estavam de fora
+           porque a lista só olhava para dentro de main e do rodapé -- e o
+           visitante passava por eles, no começo da página, sem nenhum
+           efeito. É a primeira coisa que ele vê depois do topo. */
+        "body > .ls-faixa-marca",
+        "body > section",
+
         "main.content-section > section",
         "main.content-section > article",
+
+        /* Invólucros de layout. Várias páginas embrulham o conteúdo em um
+           ou dois <div> (.loja-page > .loja-shell, .maintenance-page >
+           .maintenance-shell, .est-page), e as seções viravam netas ou
+           bisnetas do <main> -- ficavam de fora por um ou dois degraus.
+           Dois níveis cobrem todas as páginas do site hoje; mais do que
+           isso começaria a pegar conteúdo de dentro das seções. */
+        "main.content-section > div > section",
+        "main.content-section > div > article",
+        "main.content-section > div > div > section",
+        "main.content-section > div > div > article",
         "main.content-section > .ls-home-hero",
         "main.content-section > .ls-home-stats",
         "footer.ls-footer > .ls-footer-grid",
@@ -219,44 +237,15 @@
     }
 
     /* ---------------------------------------------------------------------
-       4. Barra de progresso da rolagem
+       4. (vago) A barra do topo é só do carregamento
+       ---------------------------------------------------------------------
+       Existia aqui uma barra que media a posição da rolagem. Ela dividia o
+       lugar -- e a aparência -- com a barra de carregamento, então o mesmo
+       traço no topo ora contava quanto faltava da página, ora quanto
+       faltava para a próxima chegar. Duas contas no mesmo pixel: quem olha
+       não tem como saber qual das duas está vendo. A do carregamento ficou
+       (ls-page-loader.js); esta saiu.
        --------------------------------------------------------------------- */
-
-    function montarProgresso() {
-        if (semMovimento) return;
-        if (document.querySelector(".ls-scroll-progress")) return;
-
-        var barra = document.createElement("div");
-        barra.className = "ls-scroll-progress";
-        barra.setAttribute("aria-hidden", "true");
-        document.body.appendChild(barra);
-
-        var agendado = false;
-
-        function atualizar() {
-            agendado = false;
-            var alturaRolavel =
-                document.documentElement.scrollHeight - window.innerHeight;
-            var progresso = alturaRolavel > 0
-                ? Math.min(1, Math.max(0, window.scrollY / alturaRolavel))
-                : 0;
-            barra.style.transform = "scaleX(" + progresso + ")";
-        }
-
-        window.addEventListener("scroll", function () {
-            if (agendado) return;
-            agendado = true;
-            window.requestAnimationFrame(atualizar);
-        }, { passive: true });
-
-        window.addEventListener("resize", function () {
-            if (agendado) return;
-            agendado = true;
-            window.requestAnimationFrame(atualizar);
-        }, { passive: true });
-
-        atualizar();
-    }
 
     /* ---------------------------------------------------------------------
        5. Conteúdo criado depois (modais, resultados de filtro, etc.)
@@ -300,7 +289,6 @@
             root.classList.remove("ls-reveal-on");
         }
 
-        montarProgresso();
         acompanharNovosNos();
 
         /* Âncora com hash precisa do destino já pintado. */

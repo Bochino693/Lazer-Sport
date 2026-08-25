@@ -6,10 +6,10 @@
    topo mostra o avanço em vez de cobrir o conteúdo que o visitante ainda
    está lendo.
 
-   A barra é irmã visual de .ls-scroll-progress (ls-reveal.css) de
-   propósito -- mesma altura, mesmo degradê, mesmo lugar. Para quem usa o
-   site é um elemento só, que ora conta a rolagem, ora conta o
-   carregamento.
+   O topo da página é só disto. Existiu ali uma segunda barra medindo a
+   posição da rolagem, com a mesma cara: o mesmo traço ora contava quanto
+   faltava da página, ora quanto faltava para a próxima chegar, e não
+   havia como saber qual das duas se estava vendo. Sobrou esta.
    ========================================================================= */
 
 /* Trilho: uma linha escura translúcida atrás da barra. Sem ele a metade
@@ -68,13 +68,6 @@
     height: 100%;
     background: linear-gradient(90deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.85));
     opacity: 0.7;
-}
-
-/* Enquanto a página nova não chega, a barra da rolagem sai de cena: as
-   duas moram no mesmo lugar e mostrariam números diferentes. */
-.ls-carregando .ls-scroll-progress {
-    opacity: 0;
-    transition: opacity 0.2s ease-out;
 }
 
 /* Texto só para leitor de tela. O overlay antigo anunciava "Carregando"
