@@ -34,8 +34,8 @@
   <meta name="csrf-token" content="{{ csrf_token }}">
 
   <!-- Curtir e guardar na lista de desejos, com ou sem conta. -->
-  <link rel="stylesheet" href="{% static 'site/ls-favoritos.css' %}?v=1">
-  <script src="{% static 'site/ls-favoritos.js' %}?v=1" defer></script>
+  <link rel="stylesheet" href="{% static 'site/ls-favoritos.css' %}?v=3">
+  <script src="{% static 'site/ls-favoritos.js' %}?v=2" defer></script>
 
   <!-- Âncoras # param abaixo do cabeçalho sticky, com destaque no destino. -->
   <link rel="stylesheet" href="{% static 'site/ls-ancoras.css' %}?v=1">
@@ -1672,7 +1672,7 @@
             <span>{{ user.email }}</span>
           </div>
           <a href="{% url 'perfil' %}#perfil-box" role="menuitem">🎯 Meu Perfil</a>
-          <a href="{% url 'lista_desejos' %}#lista-desejos" role="menuitem">🔖 Lista de desejos</a>
+          <a href="{% url 'lista_desejos' %}#lista-desejos" role="menuitem">⭐ Lista de desejos</a>
           <a href="{% url 'logout' %}#logout-box" role="menuitem">🚪 Sair</a>
         </div>
       </div>
@@ -1690,7 +1690,7 @@
         <div class="dropdown-menu" id="ls-user-menu" role="menu">
           <a href="{% url 'login' %}#login-box" role="menuitem">🔐 Fazer Login</a>
           <a href="{% url 'registrar' %}#register-box" role="menuitem">📝 Criar Conta</a>
-          <a href="{% url 'lista_desejos' %}#lista-desejos" role="menuitem">🔖 Lista de desejos</a>
+          <a href="{% url 'lista_desejos' %}#lista-desejos" role="menuitem">⭐ Lista de desejos</a>
         </div>
       </div>
     {% endif %}
@@ -1850,7 +1850,7 @@
        class="float-btn float-desejos"
        title="Lista de desejos"
        data-tooltip="Lista de desejos">
-        <i class="fa-solid fa-bookmark"></i>
+        <i class="fa-solid fa-star"></i>
         <span class="badge{% if not tem_lista_desejos %} vazio{% endif %}"
               data-lista-desejos-total>{{ total_lista_desejos|default:0 }}</span>
     </a>

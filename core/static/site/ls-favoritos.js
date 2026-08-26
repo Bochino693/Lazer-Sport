@@ -42,6 +42,14 @@
       botao.classList.toggle("is-on", marcado);
       botao.setAttribute("aria-pressed", marcado ? "true" : "false");
 
+      if (tipo === "desejo") {
+        var icone = botao.querySelector("[data-favorito-icone]");
+        if (icone) {
+          icone.classList.toggle("fa-solid", marcado);
+          icone.classList.toggle("fa-regular", !marcado);
+        }
+      }
+
       var rotulo = botao.querySelector("[data-favorito-rotulo]");
       if (!rotulo) return;
 

@@ -1459,3 +1459,40 @@ footer,.fab-container{display:none!important}
 .modal-title{font-weight:900!important;letter-spacing:-.02em}
 .modal-body{padding:20px!important}
 .modal-body hr{border-color:rgba(179,163,140,.22)!important;opacity:1!important}
+
+/* Correção final do drawer. `display:none` era a propriedade que ainda
+   escondia os textos; visibility sozinho não consegue revertê-la. */
+@media (min-width:761px){
+  .ls-sidebar.expandida .ls-brand-text,
+  .ls-sidebar.expandida .ls-nav-caption,
+  .ls-sidebar.expandida .ls-user-info,
+  .ls-sidebar.expandida .ls-logout>span{
+    display:block!important;
+  }
+  .ls-sidebar.expandida .ls-nav-item>span:not(.ls-nav-icon):not(.ls-nav-count){
+    display:inline-block!important;
+    min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  }
+  .ls-sidebar.expandida .ls-nav-item{justify-content:flex-start!important}
+}
+
+/* A busca é um campo inteiro, não um input curto solto dentro da coluna. */
+#orcamentoClienteBox,.ls-busca,.ls-busca-campo,.ls-busca-entrada{
+  width:100%!important;max-width:none!important;
+}
+.ls-busca{display:block!important;min-width:0}
+.ls-busca-campo{display:flex!important;padding-inline:14px!important}
+.ls-busca-entrada{flex:1 1 auto!important;min-width:0!important;padding:0!important}
+.ls-busca-lupa{display:inline-grid!important;place-items:center;width:20px}
+
+/* Formulários e ações do modal seguem uma grade regular. */
+#modalOrcamento .modal-body>.row>[class*="col-"]{display:flex;min-width:0;flex-direction:column}
+#modalOrcamento .form-control,
+#modalOrcamento .form-select,
+#modalOrcamento .ls-busca-campo,
+#modalOrcamento .input-group{width:100%!important}
+#modalOrcamento .form-text{display:block;margin-top:7px;line-height:1.45}
+#modalOrcamento .input-group{flex-wrap:nowrap}
+#modalOrcamento .input-group-text{flex:0 0 auto}
+#modalOrcamento .input-group>.form-control{min-width:0}
+#modalOrcamento .modal-footer{align-items:center;justify-content:flex-end}

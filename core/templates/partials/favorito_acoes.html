@@ -34,7 +34,7 @@ Parâmetros opcionais:
           data-chave="{{ fav_produto }}-{{ fav_id }}"
           aria-pressed="{% if fav_desejado %}true{% else %}false{% endif %}"
           title="Guardar na lista de desejos">
-    <i class="fa-solid fa-bookmark" aria-hidden="true"></i>
+    <i class="fa-{% if fav_desejado %}solid{% else %}regular{% endif %} fa-star" data-favorito-icone aria-hidden="true"></i>
     {% if not fav_so_icone %}
       <span data-favorito-rotulo>{% if fav_desejado %}Na lista{% else %}Lista de desejos{% endif %}</span>
     {% endif %}

@@ -159,3 +159,36 @@
   font-size: .72rem;
   line-height: 1.5;
 }
+
+/* Isolamento contra CSS antigo dos cards. Algumas páginas estilizam todo
+   `button` do card; sem estas regras o coração e a estrela viravam texto
+   ou quadrado sem acabamento. */
+.ls-fav-acoes{position:relative!important;z-index:6!important;display:inline-flex!important;align-items:center!important;gap:8px!important}
+.ls-fav-acoes .ls-fav-selo,
+.ls-fav-acoes .ls-fav-botao{
+  width:auto!important;max-width:none!important;min-width:40px!important;
+  min-height:40px!important;margin:0!important;padding:0 12px!important;
+  display:inline-flex!important;align-items:center!important;justify-content:center!important;gap:7px!important;
+  border-radius:999px!important;font-family:inherit!important;font-weight:800!important;
+  line-height:1!important;text-decoration:none!important;box-shadow:0 7px 18px rgba(15,23,42,.14)!important;
+}
+.ls-fav-acoes .ls-fav-selo{
+  border:1px solid rgba(225,29,72,.28)!important;
+  color:#e11d48!important;background:rgba(255,255,255,.96)!important;
+}
+.ls-fav-acoes .ls-fav-selo:hover{color:#be123c!important;background:#fff1f4!important;border-color:rgba(225,29,72,.5)!important}
+.ls-fav-acoes .ls-fav-botao{
+  border:1px solid rgba(217,119,6,.3)!important;
+  color:#b45309!important;background:rgba(255,255,255,.96)!important;
+}
+.ls-fav-acoes .ls-fav-botao:hover{color:#92400e!important;background:#fffbeb!important;border-color:rgba(217,119,6,.55)!important}
+.ls-fav-acoes .ls-fav-botao.is-on{
+  color:#fff!important;border-color:#d97706!important;
+  background:linear-gradient(135deg,#f59e0b,#d97706)!important;
+  box-shadow:0 8px 20px rgba(217,119,6,.28)!important;
+}
+.ls-fav-acoes .ls-fav-selo i,.ls-fav-acoes .ls-fav-botao i{font-size:1rem!important;line-height:1!important}
+.ls-fav-acoes.compacto .ls-fav-selo,.ls-fav-acoes.compacto .ls-fav-botao{
+  width:40px!important;height:40px!important;min-height:40px!important;padding:0!important;
+}
+.ls-fav-acoes.compacto .ls-fav-selo{width:auto!important;padding:0 11px!important}
