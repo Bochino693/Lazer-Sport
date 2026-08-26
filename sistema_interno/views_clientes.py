@@ -17,10 +17,11 @@ from decimal import Decimal
 
 from django.core.paginator import Paginator
 from django.db.models import Count, Prefetch, Q
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.views.generic import View
 
-from core.models import Estabelecimentos
+from core.models import Clientes as ClienteMapa, Estabelecimentos
 
 from . import clientes as svc
 from .models import Cliente, EnderecoCliente, Orcamento
@@ -81,7 +82,19 @@ class ClientesInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
         fichas = [self.ficha(cliente) for cliente in pagina.object_list]
 
         todos = Cliente.objects.all()
-        buffets = todos.filter(tipo=Cliente.Tipo.BUFFET).order_by("nome_cliente")
+        buffets = list(
+            todos.filter(tipo=Cliente.Tipo.BUFFET).order_by("nome_cliente")
+        )
+        totais = todos.aggregate(
+            clientes=Count("id"),
+            buffets=Count("id", filter=Q(tipo=Cliente.Tipo.BUFFET)),
+            vinculados=Count("id", filter=Q(parceiro__isnull=False)),
+            sem_contato=Count(
+                "id",
+                filter=(Q(telefone="") | Q(telefone__isnull=True))
+                & (Q(email="") | Q(email__isnull=True)),
+            ),
+        )
 
         contexto = {
             "fichas": fichas,
@@ -94,12 +107,11 @@ class ClientesInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
             "estabelecimentos": Estabelecimentos.objects.order_by(
                 "nome_estabelecimento",
             ),
-            "total_clientes": todos.count(),
-            "total_buffets": buffets.count(),
-            "total_vinculados": todos.filter(parceiro__isnull=False).count(),
-            "total_sem_contato": todos.filter(
-                Q(telefone="") | Q(telefone__isnull=True),
-            ).filter(Q(email="") | Q(email__isnull=True)).count(),
+            "clientes_mapa": ClienteMapa.objects.order_by("descricao_cliente"),
+            "total_clientes": totais["clientes"],
+            "total_buffets": totais["buffets"],
+            "total_vinculados": totais["vinculados"],
+            "total_sem_contato": totais["sem_contato"],
             "clientes_dados": [self.serializar(c) for c in pagina.object_list],
             "opcoes_buffets": [
                 {
@@ -155,6 +167,7 @@ class ClientesInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
             "email": cliente.email or "",
             "parceiro": str(cliente.parceiro_id or ""),
             "estabelecimento": str(cliente.estabelecimento_id or ""),
+            "cliente_mapa": str(cliente.cliente_mapa_id or ""),
             "observacoes": cliente.observacoes,
             "cep": endereco.cep if endereco else "",
             "endereco": endereco.endereco if endereco else "",
@@ -162,6 +175,7 @@ class ClientesInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
             "bairro": endereco.bairro if endereco else "",
             "cidade": endereco.cidade if endereco else "",
             "estado": endereco.estado if endereco else "",
+            "no_mapa": bool(cliente.cliente_mapa_id),
         }
 
     # ------------------------------------------------------------- ações
@@ -173,12 +187,20 @@ class ClientesInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
 
         salvo = svc.salvar_cliente(request, cliente)
         svc.salvar_endereco(request, salvo)
+        mapa = None
+        if salvo.orcamentos.filter(status=Orcamento.Status.APROVADO).exists():
+            mapa = svc.sincronizar_cliente_no_mapa(salvo)
 
         return self.sucesso(
             request,
-            f"Cliente “{salvo.nome_cliente}” salvo.",
+            (
+                f"Cliente “{salvo.nome_cliente}” salvo e atualizado no mapa."
+                if mapa and mapa.latitude and mapa.longitude
+                else f"Cliente “{salvo.nome_cliente}” salvo."
+            ),
             id=salvo.id,
             cliente=svc.opcao_de_busca(salvo),
+            mapa_publicado=bool(mapa and mapa.latitude and mapa.longitude),
         )
 
     def acao_delete(self, request):
@@ -201,3 +223,15 @@ class ClientesInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
         nome = cliente.nome_cliente
         cliente.delete()
         return self.sucesso(request, f"Cliente “{nome}” excluído.")
+
+
+class ConsultaCepInnerView(GestorInternoRequiredMixin, View):
+    """Uma rota interna para todos os formulários reaproveitarem o CEP."""
+
+    def get(self, request):
+        try:
+            dados = svc.consultar_cep(request.GET.get("cep") or "")
+        except ErroDeFormulario as exc:
+            return JsonResponse({"status": "erro", "msg": str(exc)}, status=400)
+
+        return JsonResponse({"status": "sucesso", "endereco": dados})

@@ -7,8 +7,10 @@ from django.utils import timezone
 
 from core.models import (
     Brinquedos,
+    Clientes as ClienteMapa,
     Estabelecimentos,
     ItemPedido,
+    PecasReposicao,
     Pedido,
     Venda,
 )
@@ -110,6 +112,18 @@ class Cliente(Prime):
         blank=True,
         verbose_name="Parceiro publicado no site",
         help_text="Liga este cadastro ao parceiro que aparece no site.",
+    )
+    cliente_mapa = models.OneToOneField(
+        ClienteMapa,
+        on_delete=models.SET_NULL,
+        related_name="cliente_interno",
+        null=True,
+        blank=True,
+        verbose_name="Cliente publicado no mapa",
+        help_text=(
+            "Vínculo automático criado quando um orçamento deste cliente "
+            "é aprovado. Buffets usam o vínculo de parceiro do site."
+        ),
     )
     observacoes = models.TextField("Observações", blank=True)
 
@@ -1391,6 +1405,19 @@ class Orcamento(Prime):
                 "motivo_recusa",
             ]
         )
+        if aprovado:
+            self.sincronizar_cliente_aprovado()
+
+    def sincronizar_cliente_aprovado(self):
+        """Mantém o cadastro interno e o pino público como a mesma pessoa."""
+        if self.status != self.Status.APROVADO or not self.cliente_id:
+            return None
+
+        # Import local evita ciclo: clientes importa os modelos para gravar
+        # endereço e orçamento importa o serviço apenas neste fluxo.
+        from .clientes import sincronizar_cliente_no_mapa
+
+        return sincronizar_cliente_no_mapa(self.cliente)
 
     def __str__(self):
         return f"Orçamento #{self.pk} — {self.destinatario}"
@@ -1411,7 +1438,7 @@ class ItemOrcamento(Prime):
     # mudar de nome depois, a proposta enviada ao cliente continua valendo.
     descricao = models.CharField(max_length=180)
 
-    # DUAS ORIGENS, DE PROPÓSITO.
+    # TRÊS ORIGENS, DE PROPÓSITO.
     #
     # `brinquedo` é o catálogo de verdade (core.Brinquedos) -- é dele que
     # sai quase todo orçamento, porque é o que a empresa aluga e vende, e
@@ -1421,7 +1448,11 @@ class ItemOrcamento(Prime):
     # porque nem tudo que se orça está no catálogo: máquina, peça avulsa,
     # serviço. Remover o campo apagaria o vínculo dos orçamentos antigos.
     #
-    # Uma linha usa um ou outro, nunca os dois -- ver `clean`.
+    # `peca` é o catálogo de reposição da loja. Mantê-la como vínculo real
+    # traz foto e preço para a proposta e evita digitar a mesma mola, lona
+    # ou rede como linha solta em toda venda.
+    #
+    # Uma linha usa uma origem, nunca várias -- ver `clean`.
     brinquedo = models.ForeignKey(
         Brinquedos,
         on_delete=models.SET_NULL,
@@ -1437,6 +1468,14 @@ class ItemOrcamento(Prime):
         null=True,
         blank=True,
         help_text="Item de produção, quando não está no catálogo.",
+    )
+    peca = models.ForeignKey(
+        PecasReposicao,
+        on_delete=models.SET_NULL,
+        related_name="itens_orcamento",
+        null=True,
+        blank=True,
+        help_text="Peça de reposição do catálogo da loja.",
     )
     quantidade = models.PositiveIntegerField(default=1)
     valor_unitario = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))
@@ -1455,14 +1494,23 @@ class ItemOrcamento(Prime):
         """
         if self.brinquedo_id and self.brinquedo and self.brinquedo.imagem_brinquedo:
             return self.brinquedo.imagem_brinquedo
+        if self.peca_id and self.peca:
+            imagem = self.peca.imagem_principal
+            if imagem and imagem.imagem:
+                return imagem.imagem
         return None
 
     def clean(self):
         from django.core.exceptions import ValidationError
 
-        if self.brinquedo_id and self.produto_id:
+        origens = sum(bool(valor) for valor in (
+            self.brinquedo_id,
+            self.produto_id,
+            self.peca_id,
+        ))
+        if origens > 1:
             raise ValidationError(
-                "Um item vem do catálogo ou da produção, não dos dois."
+                "Um item vem do catálogo, da produção ou das peças, nunca de mais de uma origem."
             )
 
     def __str__(self):

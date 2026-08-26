@@ -14,9 +14,9 @@ from django.core import mail
 from django.test import TestCase, override_settings
 from django.utils import timezone
 
-from core.models import Brinquedos, CategoriasBrinquedos
+from core.models import Brinquedos, CategoriaPeca, CategoriasBrinquedos, PecasReposicao
 
-from .models import ItemOrcamento, Orcamento, ProdutoInterno
+from .models import Cliente, ItemOrcamento, Orcamento, ProdutoInterno
 
 
 @override_settings(ALLOWED_HOSTS=["interno.testserver", "testserver"])
@@ -37,6 +37,7 @@ class OrcamentoInternoTests(TestCase):
         )
         self.brinquedo = Brinquedos.objects.create(
             nome_brinquedo="Cama elástica",
+            imagem_brinquedo="imagens_brinquedos/cama-elastica.jpg",
             descricao="Cama elástica 3m",
             valor_brinquedo=Decimal("280.00"),
             avaliacao=Decimal("5.00"),
@@ -52,23 +53,62 @@ class OrcamentoInternoTests(TestCase):
         )
 
     # -------------------------------------------------------- catálogo
-    def test_tela_oferece_o_catalogo_do_site(self):
+    def test_tela_busca_catalogo_sob_demanda(self):
         resposta = self.client.get(self.URL, HTTP_HOST="interno.testserver")
 
         self.assertEqual(resposta.status_code, 200)
-        self.assertIn(self.brinquedo, resposta.context["brinquedos"])
-
-        # O seletor é montado no navegador a partir deste payload, e não
-        # em HTML por linha: a tela abre com uma linha e ganha outras
-        # conforme a pessoa digita, e recriar centenas de <option> a cada
-        # linha travava a digitação no tablet. Então é o payload que
-        # precisa trazer o catálogo -- procurar o nome no HTML acharia
-        # só a versão escapada pelo json_script ("el\u00e1stica").
-        nomes = [b["nome"] for b in resposta.context["catalogo_dados"]]
-        self.assertIn("Cama elástica", nomes)
-
-        # e o atalho de cadastrar na hora está na tela
+        # O catálogo inteiro não é embutido na página: mil itens continuam
+        # sendo uma tela leve. O navegador consulta somente quando digita.
+        self.assertNotContains(resposta, "opcoesItens")
         self.assertContains(resposta, "Novo brinquedo")
+
+        busca = self.client.get(
+            "/orcamentos/itens/buscar/",
+            {"q": "cama elastica"},
+            HTTP_HOST="interno.testserver",
+        )
+        self.assertEqual(busca.status_code, 200)
+        opcoes = busca.json()["opcoes"]
+        self.assertEqual(opcoes[0]["valor"], f"b:{self.brinquedo.id}")
+        self.assertEqual(opcoes[0]["rotulo"], "Cama elástica")
+        self.assertTrue(opcoes[0]["imagem"])
+
+    def test_busca_nunca_devolve_catalogo_inteiro(self):
+        Brinquedos.objects.bulk_create([
+            Brinquedos(
+                nome_brinquedo=f"Brinquedo festa {numero:03d}",
+                descricao="Item para festa",
+                avaliacao=Decimal("0.00"),
+                voltz="bivolt",
+            )
+            for numero in range(40)
+        ])
+
+        resposta = self.client.get(
+            "/orcamentos/itens/buscar/",
+            {"q": "festa"},
+            HTTP_HOST="interno.testserver",
+        )
+
+        self.assertEqual(resposta.status_code, 200)
+        self.assertLessEqual(len(resposta.json()["opcoes"]), 24)
+
+    def test_clientes_tambem_sao_buscados_sob_demanda(self):
+        cliente = Cliente.objects.create(
+            nome_cliente="Escola Girassol",
+            telefone="(11) 95555-4444",
+        )
+
+        pagina = self.client.get(self.URL, HTTP_HOST="interno.testserver")
+        self.assertNotContains(pagina, "opcoesClientes")
+
+        resposta = self.client.get(
+            "/orcamentos/clientes/buscar/",
+            {"q": "Girassol"},
+            HTTP_HOST="interno.testserver",
+        )
+        opcoes = resposta.json()["opcoes"]
+        self.assertEqual(opcoes[0]["valor"], str(cliente.id))
 
     def test_catalogo_inclui_o_que_nao_esta_na_loja(self):
         """A vitrine é um recorte; orçamento alcança o cadastro inteiro."""
@@ -79,8 +119,13 @@ class OrcamentoInternoTests(TestCase):
             voltz="220",
             exibir_na_loja=False,
         )
-        resposta = self.client.get(self.URL, HTTP_HOST="interno.testserver")
-        self.assertIn(fora, resposta.context["brinquedos"])
+        resposta = self.client.get(
+            "/orcamentos/itens/buscar/",
+            {"q": "Tobogã antigo"},
+            HTTP_HOST="interno.testserver",
+        )
+        valores = [item["valor"] for item in resposta.json()["opcoes"]]
+        self.assertIn(f"b:{fora.id}", valores)
 
     def test_item_salvo_fica_ligado_ao_brinquedo(self):
         resposta = self.post({
@@ -135,6 +180,29 @@ class OrcamentoInternoTests(TestCase):
         self.assertEqual(item.produto, produto)
         self.assertIsNone(item.brinquedo)
 
+    def test_item_pode_vir_das_pecas_de_reposicao(self):
+        peca = PecasReposicao.objects.create(
+            nome="Mola de cama elástica",
+            descricao_peca="Mola galvanizada",
+            preco_venda=Decimal("12.50"),
+        )
+
+        resposta = self.post({
+            "action": "save",
+            "nome_cliente": "Fulano",
+            "status": Orcamento.Status.RASCUNHO,
+            "itens": (
+                '[{"descricao":"Mola galvanizada","peca":"%s",'
+                '"quantidade":"8","valor_unitario":"12,50"}]' % peca.id
+            ),
+        })
+
+        self.assertEqual(resposta.status_code, 200)
+        item = ItemOrcamento.objects.get()
+        self.assertEqual(item.peca, peca)
+        self.assertIsNone(item.brinquedo)
+        self.assertIsNone(item.produto)
+
     # ------------------------------------------- cadastrar sem sair daqui
     def test_cadastra_brinquedo_novo_e_devolve_para_a_linha(self):
         resposta = self.post({
@@ -177,6 +245,23 @@ class OrcamentoInternoTests(TestCase):
 
         self.assertEqual(resposta.status_code, 400)
         self.assertEqual(Brinquedos.objects.count(), 1)
+
+    def test_cadastra_peca_nova_e_devolve_para_a_linha(self):
+        categoria = CategoriaPeca.objects.create(nome_categoria_peca="Cama elástica")
+        resposta = self.post({
+            "action": "peca_nova",
+            "nome": "Rede de proteção",
+            "preco_venda": "89,90",
+            "preco_fornecedor": "50,00",
+            "categoria": categoria.id,
+            "descricao": "Rede preta para 3,05 m",
+        })
+
+        self.assertEqual(resposta.status_code, 200)
+        peca = PecasReposicao.objects.get(nome="Rede de proteção")
+        self.assertEqual(resposta.json()["peca"]["id"], peca.id)
+        self.assertEqual(peca.preco_venda, Decimal("89.90"))
+        self.assertIn(categoria, peca.categoria_peca.all())
 
     # -------------------------------------------------------- envio
     def _orcamento_com_item(self):

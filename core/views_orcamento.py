@@ -39,7 +39,11 @@ def _carregar(token):
     return get_object_or_404(
         Orcamento.objects
         .select_related("cliente", "responsavel")
-        .prefetch_related("itens__brinquedo", "itens__produto"),
+        .prefetch_related(
+            "itens__brinquedo",
+            "itens__produto",
+            "itens__peca__imagem_peca_reposicao",
+        ),
         token=token,
     )
 

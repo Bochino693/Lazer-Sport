@@ -19,6 +19,8 @@ enquanto o template não pedir o valor — e a loja nunca pede. O cálculo em
 si acontece uma vez só por requisição, por mais chaves que sejam lidas.
 """
 
+from django.conf import settings
+from django.core.cache import cache
 from django.utils.functional import SimpleLazyObject
 
 from .avisos import coletar, eh_gestor
@@ -62,6 +64,42 @@ def _apurar(usuario):
     }
 
 
+def _apurar_com_cache(usuario):
+    """Reaproveita os contadores durante a troca rápida entre telas.
+
+    A central custa vários COUNT no banco remoto e antes repetia todos em
+    cada clique do menu. Um intervalo curto mantém o aviso operacional vivo,
+    mas faz uma sequência Clientes → Orçamentos → Produção pagar a conta uma
+    vez só.
+    """
+    try:
+        ttl = max(5, int(getattr(settings, "INTERNO_AVISOS_CACHE_TTL", 20)))
+    except (TypeError, ValueError):
+        ttl = 20
+
+    chave = _chave_avisos(usuario)
+    apurado = cache.get(chave)
+    if apurado is None:
+        apurado = _apurar(usuario)
+        cache.set(chave, apurado, ttl)
+    return apurado
+
+
+def invalidar_avisos(usuario):
+    """Faz a próxima tela refletir imediatamente uma ação operacional."""
+    if getattr(usuario, "pk", None):
+        cache.delete(_chave_avisos(usuario))
+
+
+def _chave_avisos(usuario):
+    # O instante de criação diferencia uma conta real de outra que reutilize
+    # o mesmo id após limpeza/importação do banco — e também impede que o
+    # cache local sobreviva entre casos isolados da suíte de testes.
+    criado = getattr(usuario, "date_joined", None)
+    versao = int(criado.timestamp() * 1_000_000) if criado else 0
+    return f"interno:avisos:v2:{usuario.pk}:{versao}"
+
+
 def fab_counts(request):
     """Avisos do painel + as contagens que os menus usam."""
     usuario = getattr(request, "user", None)
@@ -79,7 +117,7 @@ def fab_counts(request):
 
     # Um único cálculo compartilhado por todas as chaves: o SimpleLazyObject
     # de fora memoriza o resultado, e os de dentro apenas leem dele.
-    apurado = SimpleLazyObject(lambda: _apurar(usuario))
+    apurado = SimpleLazyObject(lambda: _apurar_com_cache(usuario))
 
     def campo(chave):
         return SimpleLazyObject(lambda: apurado[chave])

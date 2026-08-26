@@ -124,6 +124,9 @@
                     <span class="ls-status info">Buffet parceiro</span>
                   {% else %}
                     {{ cliente.get_tipo_display }}
+                    {% if cliente.cliente_mapa_id %}
+                      · <span class="ls-map-linked"><i class="bi bi-geo-alt-fill"></i> no mapa</span>
+                    {% endif %}
                   {% endif %}
                   {% if cliente.documento %} · {{ cliente.documento }}{% endif %}
                 </span>
@@ -286,6 +289,21 @@
             <span class="form-text">Deixe vazio quando o cliente chegou direto.</span>
           </div>
 
+          <div class="col-12" id="blocoClienteMapa">
+            <label class="form-label" for="clienteMapa">Cliente já existente no mapa</label>
+            <select class="form-select" id="clienteMapa" name="cliente_mapa">
+              <option value="">Ainda não está no mapa</option>
+              {% for mapa in clientes_mapa %}
+                <option value="{{ mapa.id }}">
+                  {{ mapa.descricao_cliente }}{% if mapa.cidade %} · {{ mapa.cidade }}/{{ mapa.estado }}{% endif %}
+                </option>
+              {% endfor %}
+            </select>
+            <span class="form-text">
+              Use para unir um pino antigo a este cadastro. Se ficar vazio, a primeira proposta aprovada cria o vínculo automaticamente.
+            </span>
+          </div>
+
           <div class="col-12" id="blocoEstabelecimento" hidden>
             <label class="form-label" for="clienteEstabelecimento">Parceiro publicado no site</label>
             <select class="form-select" id="clienteEstabelecimento" name="estabelecimento">
@@ -300,10 +318,15 @@
 
         <hr class="my-4">
 
-        <h6 class="mb-1">Endereço</h6>
-        <p class="text-muted small">
-          Opcional. Serve para entrega, montagem e para o mapa de clientes.
-        </p>
+        <div class="d-flex align-items-center justify-content-between gap-2 mb-2 flex-wrap">
+          <div>
+            <h6 class="mb-1">Endereço</h6>
+            <p class="text-muted small mb-0">
+              Serve para entrega, montagem e publicação automática no mapa após aprovação.
+            </p>
+          </div>
+          <span class="ls-cep-status" id="clienteCepStatus" aria-live="polite"></span>
+        </div>
 
         <div class="row g-3">
           <div class="col-6 col-md-3">
@@ -404,6 +427,7 @@ document.addEventListener("DOMContentLoaded", function () {
   var campoTipo = document.getElementById("clienteTipo");
   var blocoParceiro = document.getElementById("blocoParceiro");
   var blocoEstabelecimento = document.getElementById("blocoEstabelecimento");
+  var blocoClienteMapa = document.getElementById("blocoClienteMapa");
 
   /* Buffet não vem por buffet: no lugar do campo de parceiro, ele ganha o
      de vínculo com o card do site. Um campo de cada vez evita a pergunta
@@ -412,6 +436,7 @@ document.addEventListener("DOMContentLoaded", function () {
     var ehBuffet = campoTipo.value === "buffet";
     blocoParceiro.hidden = ehBuffet;
     blocoEstabelecimento.hidden = !ehBuffet;
+    blocoClienteMapa.hidden = ehBuffet;
   }
 
   campoTipo.addEventListener("change", ajustarPorTipo);
@@ -452,11 +477,24 @@ document.addEventListener("DOMContentLoaded", function () {
 
     campoTipo.value = cliente ? cliente.tipo : "pessoa";
     Painel.valor("clienteEstabelecimento", cliente ? cliente.estabelecimento : "");
+    Painel.valor("clienteMapa", cliente ? cliente.cliente_mapa : "");
     buscaParceiro.definirValor(cliente ? cliente.parceiro : "", false);
 
     ajustarPorTipo();
     Painel.abrir("modalCliente");
   }
+
+  Painel.ligarCep({
+    url: "{% url 'consultar_cep_inner' %}",
+    cep: "clienteCep",
+    status: "clienteCepStatus",
+    campos: {
+      rua: "clienteEndereco",
+      bairro: "clienteBairro",
+      cidade: "clienteCidade",
+      estado: "clienteEstado"
+    }
+  });
 
   document.getElementById("novoCliente").addEventListener("click", function () {
     abrir(null);

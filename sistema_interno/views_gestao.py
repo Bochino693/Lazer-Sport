@@ -8,6 +8,7 @@ escrita em um lugar só.
 
 import json
 import re
+import unicodedata
 from decimal import Decimal
 from urllib.parse import quote
 
@@ -20,12 +21,19 @@ from core.email_utils import remetente, responder_para, smtp_configurado
 from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
 from django.db import transaction
-from django.db.models import Count, Prefetch, Q
+from django.db.models import Case, Count, IntegerField, Prefetch, Q, Value, When
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.generic import View
 
-from core.models import Brinquedos, CategoriasBrinquedos
+from core.models import (
+    Brinquedos,
+    CategoriaPeca,
+    CategoriasBrinquedos,
+    Estabelecimentos,
+    PecasReposicao,
+)
 
 from . import clientes as svc_clientes
 from . import etapas_padrao
@@ -127,8 +135,15 @@ class OrcamentosInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
 
         orcamentos = (
             Orcamento.objects
-            .select_related("cliente", "responsavel")
-            .prefetch_related("itens")
+            .select_related("cliente", "cliente__parceiro", "responsavel")
+            .prefetch_related(
+                Prefetch(
+                    "itens",
+                    queryset=ItemOrcamento.objects
+                    .select_related("brinquedo", "produto__brinquedo", "peca")
+                    .prefetch_related("peca__imagem_peca_reposicao"),
+                )
+            )
         )
 
         if busca:
@@ -154,19 +169,26 @@ class OrcamentosInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
             if o.status in (Orcamento.Status.RASCUNHO, Orcamento.Status.ENVIADO)
         ]
 
+        buffets = list(
+            Cliente.objects.filter(tipo=Cliente.Tipo.BUFFET).order_by("nome_cliente")
+        )
+
         ctx = {
             "orcamentos": orcamentos,
             "busca": busca,
             "status_ativo": status,
             "status_opcoes": Orcamento.Status.choices,
-            "clientes": Cliente.objects.order_by("nome_cliente"),
             # O CATÁLOGO É A ORIGEM PADRÃO DOS ITENS. Antes o seletor só
             # oferecia ProdutoInterno -- o que a fábrica monta --, e quem
             # orça aluguel de brinquedo tinha de digitar tudo à mão, com
             # nome e preço fora do que está publicado no site.
-            "brinquedos": self.catalogo(),
-            "produtos": ProdutoInterno.objects.filter(ativo=True),
+            "total_itens_disponiveis": (
+                Brinquedos.objects.count()
+                + ProdutoInterno.objects.filter(ativo=True).count()
+                + PecasReposicao.objects.filter(ativo=True).count()
+            ),
             "categorias": CategoriasBrinquedos.objects.order_by("nome_categoria"),
+            "categorias_peca": CategoriaPeca.objects.order_by("nome_categoria_peca"),
             "hoje": timezone.localdate(),
             "total_orcamentos": len(orcamentos),
             "total_aprovado": sum((o.total for o in aprovados), ZERO),
@@ -174,16 +196,14 @@ class OrcamentosInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
             "quantidade_aberto": len(em_aberto),
             "quantidade_aprovado": len(aprovados),
             "orcamentos_dados": [self.serializar(o) for o in orcamentos],
-            "catalogo_dados": self.catalogo_serializado(),
-            # Uma lista só para o campo de busca: catálogo do site e
-            # produção juntos, cada um com o seu grupo. O prefixo "b:" /
-            # "p:" diz de onde a linha veio e é desmontado no envio.
-            "opcoes_itens": self.opcoes_itens(),
-            "opcoes_clientes": self.opcoes_clientes(),
+            # A busca de item vem por endpoint e nunca despeja o catálogo
+            # inteiro nesta página. b:/p:/r: identificam brinquedo,
+            # produção e reposição quando a linha é enviada.
             "tipos_cliente": Cliente.Tipo.choices,
-            "buffets": Cliente.objects.filter(
-                tipo=Cliente.Tipo.BUFFET,
-            ).order_by("nome_cliente"),
+            "buffets": buffets,
+            "estabelecimentos": Estabelecimentos.objects.order_by(
+                "nome_estabelecimento"
+            ),
             # A página do cliente mora no site principal, não aqui.
             "base_publica": endereco_do_site(request),
             "vencendo": [
@@ -196,113 +216,15 @@ class OrcamentosInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
         return render(request, "orcamentos_inner.html", ctx)
 
     @staticmethod
-    def catalogo():
-        """Brinquedos que podem entrar num orçamento.
-
-        Tudo que está cadastrado, e não só o que aparece na loja: a vitrine
-        do site é um recorte do que a empresa aluga, e orçamento de balcão
-        alcança o catálogo inteiro.
-        """
-        return (
-            Brinquedos.objects
-            .only("id", "nome_brinquedo", "valor_brinquedo", "imagem_brinquedo")
-            .order_by("nome_brinquedo")
-        )
-
-    def catalogo_serializado(self):
-        """Payload do seletor: preencher a linha não pode custar viagem."""
-        return [
-            {
-                "id": b.id,
-                "nome": b.nome_brinquedo,
-                "valor": (
-                    f"{b.valor_brinquedo:.2f}".replace(".", ",")
-                    if b.valor_brinquedo is not None else ""
-                ),
-            }
-            for b in self.catalogo()
-        ]
-
-    def opcoes_itens(self):
-        """O que pode virar linha de orçamento, pronto para a busca.
-
-        Preço no canto direito porque quem monta a proposta na frente do
-        cliente precisa conferir o valor antes de escolher, e não depois.
-        """
-        opcoes = []
-
-        for brinquedo in self.catalogo():
-            opcoes.append({
-                "valor": f"b:{brinquedo.id}",
-                "rotulo": brinquedo.nome_brinquedo,
-                "grupo": "Catálogo do site",
-                "detalhe": "Brinquedo do catálogo",
-                "valorDireita": (
-                    f"R$ {brinquedo.valor_brinquedo:.2f}".replace(".", ",")
-                    if brinquedo.valor_brinquedo else "sob consulta"
-                ),
-                "preco": (
-                    f"{brinquedo.valor_brinquedo:.2f}".replace(".", ",")
-                    if brinquedo.valor_brinquedo is not None else ""
-                ),
-            })
-
-        for produto in ProdutoInterno.objects.filter(ativo=True).order_by("nome"):
-            opcoes.append({
-                "valor": f"p:{produto.id}",
-                "rotulo": produto.nome,
-                "grupo": "Produção (máquinas e peças)",
-                "detalhe": (
-                    f"{produto.get_categoria_display()}"
-                    + (f" · {produto.codigo}" if produto.codigo else "")
-                ),
-                "valorDireita": (
-                    f"R$ {produto.preco_venda:.2f}".replace(".", ",")
-                    if produto.preco_venda else "sem preço"
-                ),
-                "preco": f"{produto.preco_venda:.2f}".replace(".", ","),
-            })
-
-        return opcoes
-
-    @staticmethod
-    def opcoes_clientes():
-        """Clientes na busca, já dizendo quem é buffet e quem é atendido."""
-        opcoes = []
-        clientes = (
-            Cliente.objects
-            .select_related("parceiro")
-            .order_by("nome_cliente")
-        )
-
-        for cliente in clientes:
-            detalhe = cliente.get_tipo_display()
-            if cliente.parceiro_id and cliente.parceiro:
-                detalhe += f" · {cliente.parceiro.nome_cliente}"
-            elif cliente.telefone:
-                detalhe += f" · {cliente.telefone}"
-
-            opcoes.append({
-                "valor": str(cliente.id),
-                "rotulo": cliente.nome_cliente,
-                "detalhe": detalhe,
-                "grupo": (
-                    "Parceiros (buffets)"
-                    if cliente.tipo == Cliente.Tipo.BUFFET
-                    else "Clientes"
-                ),
-                "whatsapp": cliente.telefone or "",
-                "email": cliente.email or "",
-            })
-
-        return opcoes
-
-    @staticmethod
     def serializar(orcamento):
         """Payload que o modal usa para reabrir um orçamento já salvo."""
         return {
             "id": orcamento.id,
             "cliente": orcamento.cliente_id or "",
+            "cliente_opcao": (
+                svc_clientes.opcao_de_busca(orcamento.cliente)
+                if orcamento.cliente_id and orcamento.cliente else None
+            ),
             "nome_cliente": orcamento.nome_cliente,
             "contato": orcamento.contato,
             "whatsapp_cliente": orcamento.whatsapp_destinatario,
@@ -317,12 +239,93 @@ class OrcamentosInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
                     "descricao": item.descricao,
                     "brinquedo": item.brinquedo_id or "",
                     "produto": item.produto_id or "",
+                    "peca": item.peca_id or "",
+                    "opcao": OrcamentosInnerView.opcao_do_item(item),
                     "quantidade": item.quantidade,
                     "valor_unitario": f"{item.valor_unitario:.2f}".replace(".", ","),
                 }
                 for item in orcamento.itens.all()
             ],
         }
+
+    @staticmethod
+    def _url_imagem(arquivo):
+        try:
+            return arquivo.url if arquivo else ""
+        except (AttributeError, ValueError):
+            return ""
+
+    @classmethod
+    def opcao_brinquedo(cls, brinquedo):
+        return {
+            "valor": f"b:{brinquedo.id}",
+            "rotulo": brinquedo.nome_brinquedo,
+            "grupo": "Brinquedos",
+            "detalhe": (brinquedo.descricao or "Brinquedo do catálogo")[:90],
+            "valorDireita": (
+                f"R$ {brinquedo.valor_brinquedo:.2f}".replace(".", ",")
+                if brinquedo.valor_brinquedo is not None else "sob consulta"
+            ),
+            "preco": (
+                f"{brinquedo.valor_brinquedo:.2f}".replace(".", ",")
+                if brinquedo.valor_brinquedo is not None else ""
+            ),
+            "imagem": cls._url_imagem(brinquedo.imagem_brinquedo),
+        }
+
+    @classmethod
+    def opcao_produto(cls, produto):
+        imagem = (
+            produto.brinquedo.imagem_brinquedo
+            if produto.brinquedo_id and produto.brinquedo else None
+        )
+        return {
+            "valor": f"p:{produto.id}",
+            "rotulo": produto.nome,
+            "grupo": "Produção",
+            "detalhe": (
+                produto.descricao[:90]
+                if produto.descricao else produto.get_categoria_display()
+            ),
+            "valorDireita": (
+                f"R$ {produto.preco_venda:.2f}".replace(".", ",")
+                if produto.preco_venda is not None else "sem preço"
+            ),
+            "preco": (
+                f"{produto.preco_venda:.2f}".replace(".", ",")
+                if produto.preco_venda is not None else ""
+            ),
+            "imagem": cls._url_imagem(imagem),
+        }
+
+    @classmethod
+    def opcao_peca(cls, peca):
+        imagem = peca.imagem_principal
+        return {
+            "valor": f"r:{peca.id}",
+            "rotulo": peca.nome,
+            "grupo": "Peças de reposição",
+            "detalhe": (peca.descricao_peca or "Peça da loja")[:90],
+            "valorDireita": (
+                f"R$ {peca.preco_venda:.2f}".replace(".", ",")
+                if peca.preco_venda is not None else "sem preço"
+            ),
+            "preco": (
+                f"{peca.preco_venda:.2f}".replace(".", ",")
+                if peca.preco_venda is not None else ""
+            ),
+            "imagem": cls._url_imagem(imagem.imagem if imagem else None),
+        }
+
+    @classmethod
+    def opcao_do_item(cls, item):
+        if item.brinquedo_id and item.brinquedo:
+            return cls.opcao_brinquedo(item.brinquedo)
+        if item.produto_id and item.produto:
+            return cls.opcao_produto(item.produto)
+        if item.peca_id and item.peca:
+            return cls.opcao_peca(item.peca)
+        return None
 
     # ------------------------------------------------------------- ações
     def acao_save(self, request):
@@ -376,11 +379,19 @@ class OrcamentosInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
         orcamento.save()
 
         self._gravar_itens(orcamento, request.POST.get("itens"))
+        mapa = orcamento.sincronizar_cliente_aprovado()
+
+        complemento = ""
+        if mapa and mapa.latitude and mapa.longitude:
+            complemento = " Cliente atualizado no mapa do site."
+        elif orcamento.status == Orcamento.Status.APROVADO and orcamento.cliente_id:
+            complemento = " Para aparecer no mapa, complete o endereço do cliente."
 
         return self.sucesso(
             request,
-            f"Orçamento #{orcamento.pk} salvo — total {orcamento.total}.",
+            f"Orçamento #{orcamento.pk} salvo — total {orcamento.total}.{complemento}",
             id=orcamento.pk,
+            mapa_publicado=bool(mapa and mapa.latitude and mapa.longitude),
         )
 
     def _gravar_itens(self, orcamento, bruto):
@@ -433,9 +444,8 @@ class OrcamentosInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
 
             # Catálogo primeiro: é de onde vem quase todo item. Se a
             # linha aponta para um brinquedo, o produto de fábrica é
-            # ignorado -- são origens exclusivas (ver ItemOrcamento.clean),
-            # e aceitar as duas gravaria um item que o próprio modelo
-            # considera inválido.
+            # ignorado -- catálogo, produção e reposição são origens
+            # exclusivas (ver ItemOrcamento.clean).
             brinquedo_id = str(linha.get("brinquedo") or "").strip()
             brinquedo = (
                 Brinquedos.objects.filter(pk=brinquedo_id).first()
@@ -443,6 +453,7 @@ class OrcamentosInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
             )
 
             produto = None
+            peca = None
             if brinquedo is None:
                 produto_id = str(linha.get("produto") or "").strip()
                 produto = (
@@ -450,11 +461,19 @@ class OrcamentosInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
                     if produto_id.isdigit() else None
                 )
 
+            if brinquedo is None and produto is None:
+                peca_id = str(linha.get("peca") or "").strip()
+                peca = (
+                    PecasReposicao.objects.filter(pk=peca_id).first()
+                    if peca_id.isdigit() else None
+                )
+
             novos.append(ItemOrcamento(
                 orcamento=orcamento,
                 descricao=descricao[:180],
                 brinquedo=brinquedo,
                 produto=produto,
+                peca=peca,
                 quantidade=quantidade,
                 valor_unitario=valor,
             ))
@@ -471,10 +490,18 @@ class OrcamentosInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
 
         orcamento.status = status
         orcamento.save(update_fields=["status", "atualizado"])
+        mapa = orcamento.sincronizar_cliente_aprovado()
+
+        complemento = ""
+        if mapa and mapa.latitude and mapa.longitude:
+            complemento = " O cliente já está no mapa do site."
+        elif status == Orcamento.Status.APROVADO and orcamento.cliente_id:
+            complemento = " Complete o endereço do cliente para publicá-lo no mapa."
 
         return self.sucesso(
             request,
-            f"Orçamento #{orcamento.pk} marcado como {orcamento.get_status_display()}.",
+            f"Orçamento #{orcamento.pk} marcado como {orcamento.get_status_display()}.{complemento}",
+            mapa_publicado=bool(mapa and mapa.latitude and mapa.longitude),
         )
 
     def acao_delete(self, request):
@@ -635,6 +662,59 @@ class OrcamentosInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
             },
         )
 
+    # --------------------------- cadastrar peça sem sair do orçamento
+    def acao_peca_nova(self, request):
+        """Cria uma peça real da loja e devolve-a para a linha atual."""
+        nome = texto(
+            request,
+            "nome",
+            obrigatorio=True,
+            rotulo="o nome da peça",
+            limite=120,
+        )
+
+        if PecasReposicao.objects.filter(nome__iexact=nome).exists():
+            raise ErroDeFormulario(
+                f"Já existe uma peça chamada “{nome}”. Procure na lista."
+            )
+
+        preco_venda = decimal_br(
+            request.POST.get("preco_venda"),
+            "Preço de venda",
+            limite=Decimal("9999999.99"),
+        )
+        preco_fornecedor = decimal_br(
+            request.POST.get("preco_fornecedor"),
+            "Preço do fornecedor",
+            limite=Decimal("9999999.99"),
+        )
+
+        peca = PecasReposicao.objects.create(
+            nome=nome,
+            descricao_peca=texto(request, "descricao", limite=999) or nome,
+            preco_venda=preco_venda,
+            preco_fornecedor=preco_fornecedor,
+        )
+
+        categoria_id = (request.POST.get("categoria") or "").strip()
+        if categoria_id.isdigit():
+            categoria = CategoriaPeca.objects.filter(pk=categoria_id).first()
+            if categoria:
+                peca.categoria_peca.add(categoria)
+
+        return self.sucesso(
+            request,
+            f"“{peca.nome}” entrou nas peças de reposição.",
+            peca={
+                "id": peca.id,
+                "nome": peca.nome,
+                "valor": (
+                    f"{peca.preco_venda:.2f}".replace(".", ",")
+                    if peca.preco_venda is not None else ""
+                ),
+            },
+        )
+
 
     # ------------------------------- cadastrar cliente sem sair daqui
     def acao_cliente_novo(self, request):
@@ -650,12 +730,164 @@ class OrcamentosInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
         cadastro rápido não pode nascer com regra mais frouxa.
         """
         cliente = svc_clientes.salvar_cliente(request)
+        svc_clientes.salvar_endereco(request, cliente)
 
         return self.sucesso(
             request,
             f"“{cliente.nome_cliente}” entrou na lista de clientes.",
             cliente=svc_clientes.opcao_de_busca(cliente),
         )
+
+
+class BuscaItensOrcamentoView(GestorInternoRequiredMixin, View):
+    """Busca pequena e relevante para o seletor do orçamento.
+
+    Nenhum catálogo inteiro cruza a rede. Com termo vazio aparecem os mais
+    usados; digitando, igualdade e começo do nome vêm antes de ocorrências no
+    meio da descrição. Cada origem traz no máximo oito linhas.
+    """
+
+    LIMITE_POR_ORIGEM = 8
+
+    @staticmethod
+    def _prioridade(campo, termo):
+        return Case(
+            When(**{f"{campo}__iexact": termo, "then": Value(0)}),
+            When(**{f"{campo}__istartswith": termo, "then": Value(1)}),
+            default=Value(2),
+            output_field=IntegerField(),
+        )
+
+    @staticmethod
+    def _padrao_sem_acento(termo):
+        base = "".join(
+            caractere for caractere in unicodedata.normalize("NFD", termo.lower())
+            if unicodedata.category(caractere) != "Mn"
+        )
+        grupos = {
+            "a": "[aáàâãä]",
+            "e": "[eéèêë]",
+            "i": "[iíìîï]",
+            "o": "[oóòôõö]",
+            "u": "[uúùûü]",
+            "c": "[cç]",
+        }
+        return "".join(
+            r"\s+" if caractere.isspace()
+            else grupos.get(caractere, re.escape(caractere))
+            for caractere in base
+        )
+
+    def get(self, request):
+        termo = (request.GET.get("q") or "").strip()[:80]
+        limite = self.LIMITE_POR_ORIGEM
+
+        brinquedos = Brinquedos.objects.all()
+        produtos = ProdutoInterno.objects.filter(ativo=True).select_related("brinquedo")
+        pecas = (
+            PecasReposicao.objects.filter(ativo=True)
+            .prefetch_related("imagem_peca_reposicao")
+        )
+
+        if termo:
+            padrao = self._padrao_sem_acento(termo)
+            brinquedos = (
+                brinquedos.filter(
+                    Q(nome_brinquedo__iregex=padrao)
+                    | Q(descricao__iregex=padrao)
+                    | Q(categorias_brinquedos__nome_categoria__iregex=padrao)
+                )
+                .annotate(_prioridade=self._prioridade("nome_brinquedo", termo))
+                .order_by("_prioridade", "nome_brinquedo")
+                .distinct()
+            )
+            produtos = (
+                produtos.filter(
+                    Q(nome__iregex=padrao)
+                    | Q(codigo__iregex=padrao)
+                    | Q(descricao__iregex=padrao)
+                )
+                .annotate(_prioridade=self._prioridade("nome", termo))
+                .order_by("_prioridade", "nome")
+            )
+            pecas = (
+                pecas.filter(
+                    Q(nome__iregex=padrao)
+                    | Q(descricao_peca__iregex=padrao)
+                    | Q(categoria_peca__nome_categoria_peca__iregex=padrao)
+                )
+                .annotate(_prioridade=self._prioridade("nome", termo))
+                .order_by("_prioridade", "nome")
+                .distinct()
+            )
+        else:
+            # Sem digitação, os usados recentemente são atalhos; não uma
+            # lista infinita fingindo ser busca.
+            brinquedos = brinquedos.annotate(
+                _uso=Count("itens_orcamento")
+            ).order_by("-_uso", "nome_brinquedo")
+            produtos = produtos.annotate(
+                _uso=Count("itens_orcamento")
+            ).order_by("-_uso", "nome")
+            pecas = pecas.annotate(
+                _uso=Count("itens_orcamento")
+            ).order_by("-_uso", "nome")
+
+        opcoes = [
+            *[
+                OrcamentosInnerView.opcao_brinquedo(obj)
+                for obj in brinquedos[:limite]
+            ],
+            *[
+                OrcamentosInnerView.opcao_peca(obj)
+                for obj in pecas[:limite]
+            ],
+            *[
+                OrcamentosInnerView.opcao_produto(obj)
+                for obj in produtos[:limite]
+            ],
+        ]
+
+        resposta = JsonResponse({
+            "status": "sucesso",
+            "opcoes": opcoes,
+            "termo": termo,
+            "limite": len(opcoes),
+        })
+        resposta["Cache-Control"] = "private, max-age=60"
+        return resposta
+
+
+class BuscaClientesOrcamentoView(GestorInternoRequiredMixin, View):
+    """Autocompletar de clientes sem despejar a carteira inteira no HTML."""
+
+    LIMITE = 20
+
+    def get(self, request):
+        termo = (request.GET.get("q") or "").strip()[:80]
+        clientes = Cliente.objects.select_related("parceiro")
+
+        if termo:
+            clientes = svc_clientes.buscar(clientes, termo).annotate(
+                _prioridade=Case(
+                    When(nome_cliente__iexact=termo, then=Value(0)),
+                    When(nome_cliente__istartswith=termo, then=Value(1)),
+                    default=Value(2),
+                    output_field=IntegerField(),
+                )
+            ).order_by("_prioridade", "nome_cliente")
+        else:
+            clientes = clientes.annotate(
+                _uso=Count("orcamentos")
+            ).order_by("-_uso", "nome_cliente")
+
+        opcoes = [
+            svc_clientes.opcao_de_busca(cliente)
+            for cliente in clientes[:self.LIMITE]
+        ]
+        resposta = JsonResponse({"status": "sucesso", "opcoes": opcoes})
+        resposta["Cache-Control"] = "private, max-age=60"
+        return resposta
 
 
 # ======================================================================

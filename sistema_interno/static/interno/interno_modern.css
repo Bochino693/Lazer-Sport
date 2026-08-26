@@ -1180,6 +1180,13 @@ footer,.fab-container{display:none!important}
 .ls-busca-item:hover,.ls-busca-item.marcado{background:rgba(255,255,255,.07);color:var(--text)}
 .ls-busca-item.escolhido{background:rgba(61,217,192,.12);color:#fff}
 .ls-busca-item-corpo{min-width:0;display:flex;flex-direction:column;gap:2px}
+.ls-busca-item-foto{
+  width:46px;height:46px;flex:0 0 46px;overflow:hidden;
+  display:grid;place-items:center;border:1px solid rgba(179,163,140,.2);
+  border-radius:11px;background:#18130d;color:var(--muted-2);
+}
+.ls-busca-item-foto img{width:100%;height:100%;display:block;object-fit:cover}
+.ls-busca-item-foto.sem-foto{font-size:1rem}
 .ls-busca-item-nome{font-size:.9rem;font-weight:750;line-height:1.25}
 .ls-busca-item-detalhe{color:var(--muted);font-size:.74rem;font-weight:600}
 .ls-busca-item-direita{
@@ -1211,6 +1218,7 @@ footer,.fab-container{display:none!important}
   .ls-busca-campo{min-height:52px}
   .ls-busca-entrada{height:48px;font-size:1rem}
   .ls-busca-item{min-height:54px}
+  .ls-busca-item-foto{width:50px;height:50px;flex-basis:50px}
   .ls-busca-item-nome{font-size:.95rem}
 }
 
@@ -1496,3 +1504,140 @@ footer,.fab-container{display:none!important}
 #modalOrcamento .input-group-text{flex:0 0 auto}
 #modalOrcamento .input-group>.form-control{min-width:0}
 #modalOrcamento .modal-footer{align-items:center;justify-content:flex-end}
+
+
+/* ======================================================================
+   RESPONSIVIDADE FINAL — ícones, modais e formulários compostos
+   ====================================================================== */
+
+/* A fonte de ícones herda line-height de botões e títulos. No desktop isso
+   deslocava alguns desenhos para baixo e outros para fora do quadrado. */
+.bi{
+  display:inline-block;
+  line-height:1;
+  vertical-align:-.125em;
+}
+.btn>.bi,
+.ls-nav-icon>.bi,
+.ls-metric-icon>.bi,
+.ls-aviso-icone>.bi{
+  width:1em;height:1em;
+  display:inline-grid;
+  place-items:center;
+  line-height:1;
+  vertical-align:0;
+  flex:0 0 auto;
+}
+.ls-nav-icon,.ls-metric-icon,.ls-aviso-icone{position:relative;z-index:1}
+.ls-nav-item{overflow:hidden}
+.ls-nav-item>span:not(.ls-nav-icon):not(.ls-nav-count){line-height:1.25}
+.ls-actions .btn,.ls-acoes .btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  vertical-align:middle;
+}
+
+/* Um único dono da rolagem: o corpo. Cabeçalho e ações ficam sempre
+   acessíveis, inclusive em tablet deitado (pouca altura útil). */
+.modal{padding:0!important;overscroll-behavior:contain}
+.modal-dialog{
+  width:calc(100% - 24px);
+  margin:12px auto!important;
+  padding:0!important;
+}
+.modal-dialog-scrollable{height:calc(100dvh - 24px)}
+.modal-dialog-scrollable .modal-content,
+.modal-content{
+  max-height:calc(100dvh - 24px)!important;
+  display:flex;
+  flex-direction:column;
+  overflow:hidden!important;
+}
+.modal-header,.modal-footer{flex:0 0 auto}
+.modal-body{
+  flex:1 1 auto;
+  min-height:0;
+  overflow-x:hidden!important;
+  overflow-y:auto!important;
+  overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+}
+.modal-footer{
+  position:sticky;bottom:0;z-index:5;
+  box-shadow:0 -12px 28px rgba(0,0,0,.3);
+}
+.modal-open{overflow:hidden!important;padding-right:0!important}
+.modal .row>[class*="col-"]{min-width:0}
+.modal .form-control,.modal .form-select,.modal .input-group{max-width:100%;min-width:0}
+.modal .input-group>.form-control{min-width:0}
+.ls-modal-kicker{
+  display:block;margin-bottom:3px;color:var(--acento);
+  font-size:.66rem;font-weight:950;letter-spacing:.11em;text-transform:uppercase;
+}
+.ls-cep-status{
+  min-height:22px;display:inline-flex;align-items:center;gap:6px;
+  color:var(--muted-2);font-size:.76rem;font-weight:800;
+}
+.ls-cep-status.sucesso{color:#72e6b7}
+.ls-cep-status.erro{color:#ff9aaa}
+.ls-cep-status.carregando{color:#ffd18d}
+.ls-cep-status.carregando::before{
+  content:"";width:12px;height:12px;border:2px solid currentColor;
+  border-right-color:transparent;border-radius:50%;animation:ls-gira .7s linear infinite;
+}
+@keyframes ls-gira{to{transform:rotate(360deg)}}
+.ls-map-linked{color:#72e6b7;font-weight:800;white-space:nowrap}
+
+@media (max-width:900px){
+  .modal{overflow:hidden!important}
+  .modal-dialog,
+  .modal-dialog.modal-sm,
+  .modal-dialog.modal-lg,
+  .modal-dialog.modal-xl{
+    width:100%;max-width:none;height:100dvh;min-height:100dvh;
+    margin:0!important;padding:0!important;display:flex;align-items:flex-end;
+  }
+  .modal-content,
+  .modal-dialog-scrollable .modal-content{
+    width:100%;max-height:100dvh!important;
+    border-width:1px 0 0!important;border-radius:22px 22px 0 0!important;
+  }
+  .modal-header{padding:15px 16px!important}
+  .modal-body{padding:16px!important}
+  .modal-footer{
+    padding:12px 16px calc(12px + env(safe-area-inset-bottom))!important;
+  }
+  .modal-footer .btn{flex:1 1 180px;min-width:0}
+  .ls-modal-inline-actions{width:100%}
+  .ls-modal-inline-actions .btn{flex:1 1 150px}
+}
+
+@media (max-width:560px){
+  .modal-content,
+  .modal-dialog-scrollable .modal-content{border-radius:16px 16px 0 0!important}
+  .modal-body{padding:14px!important}
+  .modal-footer{display:grid!important;grid-template-columns:1fr 1fr;gap:8px!important}
+  .modal-footer .btn{width:100%;min-width:0!important;margin:0!important}
+  .modal-footer .btn:only-child{grid-column:1/-1}
+  .modal-footer .btn:last-child:nth-child(odd){grid-column:1/-1}
+  .ls-modal-inline-actions{display:grid!important;grid-template-columns:1fr!important}
+  .ls-modal-inline-actions .btn{width:100%}
+
+  /* WhatsApp/e-mail: o botão não espreme o campo para fora do modal. */
+  #modalLink .input-group{display:grid;grid-template-columns:46px minmax(0,1fr);gap:0}
+  #modalLink .input-group>.input-group-text{grid-column:1;border-radius:11px 0 0 11px!important}
+  #modalLink .input-group>.form-control{grid-column:2;border-radius:0 11px 11px 0!important}
+  #modalLink .input-group>.btn{grid-column:1/-1;margin-top:8px;border-radius:11px!important}
+}
+
+/* Tablet deitado pode ter só 600px de altura; usa a tela inteira mesmo
+   tendo largura de desktop. */
+@media (max-height:680px){
+  .modal-dialog,
+  .modal-dialog.modal-lg,
+  .modal-dialog.modal-xl{
+    height:100dvh;min-height:100dvh;margin:0 auto!important;
+  }
+  .modal-content,.modal-dialog-scrollable .modal-content{
+    max-height:100dvh!important;border-radius:0!important;
+  }
+}

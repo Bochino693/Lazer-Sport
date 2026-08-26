@@ -34,6 +34,7 @@ from .models import (
     OrdemProducao,
     TipoMaterial,
 )
+from .context_processors import invalidar_avisos
 from .utils import ErroDeFormulario, data, decimal_br, inteiro, pede_json, texto
 
 
@@ -106,6 +107,7 @@ class RespostaJSONMixin:
         return redirect(self.rota_padrao)
 
     def sucesso(self, request, mensagem, **extras):
+        invalidar_avisos(getattr(request, "user", None))
         if pede_json(request):
             return JsonResponse({"status": "sucesso", "msg": mensagem, **extras})
         return redirect(self.rota_padrao)

@@ -32,6 +32,37 @@
     }
   };
 
+  /* Bootstrap não suporta dois modais abertos ao mesmo tempo. Cliente,
+   * brinquedo e peça são cadastros-filhos do orçamento: esconder o pai
+   * antes de abrir o filho evita duas barras de rolagem, backdrop preso e
+   * formulário cortado no iPad. Ao fechar o filho, a proposta volta com
+   * tudo o que já estava digitado. */
+  Painel.abrirFilho = function (filhoId, paiId) {
+    var filhoEl = document.getElementById(filhoId);
+    var paiEl = document.getElementById(paiId);
+    if (!filhoEl || !paiEl) {
+      Painel.abrir(filhoId);
+      return;
+    }
+
+    var filho = Painel.modal(filhoId);
+    var pai = Painel.modal(paiId);
+
+    function mostrarFilho() {
+      filhoEl.addEventListener("hidden.bs.modal", function restaurarPai() {
+        global.setTimeout(function () { pai.show(); }, 0);
+      }, { once: true });
+      filho.show();
+    }
+
+    if (paiEl.classList.contains("show")) {
+      paiEl.addEventListener("hidden.bs.modal", mostrarFilho, { once: true });
+      pai.hide();
+    } else {
+      mostrarFilho();
+    }
+  };
+
   Painel.erro = function (id, texto) {
     var caixa = document.getElementById(id);
     if (!caixa) {
@@ -49,6 +80,111 @@
     if (el) {
       el.value = v === null || v === undefined ? "" : v;
     }
+  };
+
+  /* CEP compartilhado por qualquer formulário do painel. O resultado fica
+   * sete dias no sessionStorage do aparelho: abrir cliente, orçamento e
+   * entrega com o mesmo CEP reaproveita os dados e não cobra outra consulta
+   * do servidor. */
+  Painel.ligarCep = function (opcoes) {
+    var campoCep = document.getElementById(opcoes.cep);
+    if (!campoCep || !opcoes.url) return;
+
+    var status = opcoes.status ? document.getElementById(opcoes.status) : null;
+    var ultimo = "";
+    var emAndamento = null;
+    var validade = 7 * 24 * 60 * 60 * 1000;
+
+    function informar(texto, classe) {
+      if (!status) return;
+      status.textContent = texto || "";
+      status.className = "ls-cep-status" + (classe ? " " + classe : "");
+    }
+
+    function aplicar(dados) {
+      Object.keys(opcoes.campos || {}).forEach(function (chave) {
+        var campo = document.getElementById(opcoes.campos[chave]);
+        if (campo && dados[chave] !== undefined) campo.value = dados[chave] || "";
+      });
+      informar("Endereço encontrado", "sucesso");
+    }
+
+    function lerCache(cep) {
+      try {
+        var bruto = global.sessionStorage.getItem("ls:cep:" + cep);
+        var salvo = bruto ? JSON.parse(bruto) : null;
+        if (salvo && Date.now() - salvo.em < validade) return salvo.dados;
+      } catch (e) {
+        return null;
+      }
+      return null;
+    }
+
+    function guardarCache(cep, dados) {
+      try {
+        global.sessionStorage.setItem(
+          "ls:cep:" + cep,
+          JSON.stringify({ em: Date.now(), dados: dados })
+        );
+      } catch (e) {
+        /* Navegação privada pode negar armazenamento; o formulário segue. */
+      }
+    }
+
+    function consultar() {
+      var cep = String(campoCep.value || "").replace(/\D/g, "");
+      if (!cep) {
+        informar("");
+        ultimo = "";
+        return;
+      }
+      if (cep.length !== 8) {
+        informar("CEP incompleto", "erro");
+        return;
+      }
+      if (cep === ultimo) return;
+      ultimo = cep;
+
+      var cacheado = lerCache(cep);
+      if (cacheado) {
+        aplicar(cacheado);
+        return;
+      }
+
+      if (emAndamento && emAndamento.abort) emAndamento.abort();
+      emAndamento = global.AbortController ? new AbortController() : null;
+      informar("Consultando CEP…", "carregando");
+      campoCep.setAttribute("aria-busy", "true");
+
+      fetch(opcoes.url + "?cep=" + encodeURIComponent(cep), {
+        credentials: "same-origin",
+        headers: { "X-Requested-With": "XMLHttpRequest" },
+        signal: emAndamento ? emAndamento.signal : undefined
+      })
+        .then(function (resposta) {
+          return resposta.json().catch(function () { return null; }).then(function (json) {
+            if (!resposta.ok || !json || json.status !== "sucesso") {
+              throw new Error((json && json.msg) || "Não consegui consultar o CEP.");
+            }
+            return json.endereco;
+          });
+        })
+        .then(function (dados) {
+          guardarCache(cep, dados);
+          aplicar(dados);
+        })
+        .catch(function (erro) {
+          if (erro && erro.name === "AbortError") return;
+          informar(erro.message || "Não consegui consultar o CEP.", "erro");
+          ultimo = "";
+        })
+        .finally(function () {
+          campoCep.removeAttribute("aria-busy");
+        });
+    }
+
+    campoCep.addEventListener("blur", consultar);
+    campoCep.addEventListener("change", consultar);
   };
 
   Painel.enviar = function (form, extras) {

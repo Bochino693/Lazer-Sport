@@ -19,11 +19,14 @@ O que estes testes protegem:
 """
 
 from decimal import Decimal
+from unittest.mock import patch
 
 from django.contrib.auth.models import User
 from django.test import TestCase, override_settings
 
-from .models import Cliente, Orcamento
+from core.models import Clientes as ClienteMapa
+
+from .models import Cliente, EnderecoCliente, Orcamento
 
 
 @override_settings(ALLOWED_HOSTS=["interno.testserver", "testserver"])
@@ -171,7 +174,8 @@ class ClientesInternoTests(TestCase):
         endereco = cliente.endereco_principal
         self.assertEqual(endereco.cidade, "São Paulo")
 
-    def test_endereco_pela_metade_avisa_em_vez_de_salvar_torto(self):
+    @patch("sistema_interno.clientes.buscar_dados_cep", return_value=None)
+    def test_endereco_pela_metade_avisa_em_vez_de_salvar_torto(self, _buscar):
         resposta = self.post({
             "action": "save",
             "nome_cliente": "Endereço solto",
@@ -183,6 +187,119 @@ class ClientesInternoTests(TestCase):
         self.assertFalse(
             Cliente.objects.filter(nome_cliente="Endereço solto").exists()
         )
+
+    @patch("sistema_interno.clientes.buscar_dados_cep")
+    def test_consulta_cep_preenche_o_formulario(self, buscar):
+        buscar.return_value = {
+            "cep": "02909000",
+            "rua": "Rua das Palmeiras",
+            "bairro": "Centro",
+            "cidade": "São Paulo",
+            "estado": "SP",
+        }
+
+        resposta = self.client.get(
+            "/clientes/consultar-cep/",
+            {"cep": "02909-000"},
+            HTTP_HOST="interno.testserver",
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(resposta.status_code, 200)
+        self.assertEqual(resposta.json()["endereco"]["cidade"], "São Paulo")
+
+    @patch(
+        "core.models.geocodificar_endereco",
+        return_value=(-23.550520, -46.633308, "rua"),
+    )
+    def test_orcamento_aprovado_publica_cliente_no_mapa(self, _geocodificar):
+        cliente = Cliente.objects.create(
+            nome_cliente="Escola Horizonte",
+            tipo=Cliente.Tipo.EMPRESA,
+            telefone="(11) 95555-1111",
+        )
+        EnderecoCliente.objects.create(
+            cliente=cliente,
+            cep="01001-000",
+            endereco="Praça da Sé",
+            numero="10",
+            bairro="Sé",
+            cidade="São Paulo",
+            estado="SP",
+        )
+
+        resposta = self.client.post(
+            "/orcamentos/",
+            {
+                "action": "save",
+                "cliente": cliente.id,
+                "status": Orcamento.Status.APROVADO,
+                "itens": (
+                    '[{"descricao":"Locação","quantidade":"1",'
+                    '"valor_unitario":"300,00"}]'
+                ),
+            },
+            HTTP_HOST="interno.testserver",
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(resposta.status_code, 200)
+        cliente.refresh_from_db()
+        self.assertIsNotNone(cliente.cliente_mapa_id)
+        mapa = cliente.cliente_mapa
+        self.assertEqual(mapa.descricao_cliente, "Escola Horizonte")
+        self.assertEqual(mapa.cidade, "São Paulo")
+        self.assertTrue(mapa.exibir_no_mapa)
+        self.assertEqual(ClienteMapa.objects.count(), 1)
+
+    def test_pode_associar_cliente_que_ja_estava_no_mapa(self):
+        mapa = ClienteMapa.objects.create(
+            descricao_cliente="Cliente antigo",
+            cidade="Osasco",
+            estado="SP",
+            latitude=Decimal("-23.5320"),
+            longitude=Decimal("-46.7910"),
+        )
+
+        resposta = self.post({
+            "action": "save",
+            "nome_cliente": "Cliente antigo",
+            "telefone": "(11) 94444-2222",
+            "cliente_mapa": mapa.id,
+        })
+
+        self.assertEqual(resposta.status_code, 200)
+        interno = Cliente.objects.get(nome_cliente="Cliente antigo")
+        self.assertEqual(interno.cliente_mapa, mapa)
+
+    def test_buffet_aprovado_nao_duplica_o_parceiro_como_cliente_do_mapa(self):
+        EnderecoCliente.objects.create(
+            cliente=self.buffet,
+            cep="01001-000",
+            endereco="Praça da Sé",
+            numero="30",
+            bairro="Sé",
+            cidade="São Paulo",
+            estado="SP",
+        )
+
+        resposta = self.client.post(
+            "/orcamentos/",
+            {
+                "action": "save",
+                "cliente": self.buffet.id,
+                "status": Orcamento.Status.APROVADO,
+                "itens": (
+                    '[{"descricao":"Locação","quantidade":"1",'
+                    '"valor_unitario":"300,00"}]'
+                ),
+            },
+            HTTP_HOST="interno.testserver",
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(resposta.status_code, 200)
+        self.assertEqual(ClienteMapa.objects.count(), 0)
 
     def test_edicao_nao_reclama_do_proprio_nome(self):
         resposta = self.post({
@@ -332,6 +449,30 @@ class ClienteDentroDoOrcamentoTests(TestCase):
 
         self.assertEqual(resposta.status_code, 400)
         self.assertEqual(Cliente.objects.count(), 0)
+
+    @patch("sistema_interno.clientes.buscar_dados_cep")
+    def test_cadastro_rapido_guarda_endereco_pelo_cep(self, buscar):
+        buscar.return_value = {
+            "cep": "01001000",
+            "rua": "Praça da Sé",
+            "bairro": "Sé",
+            "cidade": "São Paulo",
+            "estado": "SP",
+        }
+        resposta = self.post({
+            "action": "cliente_novo",
+            "nome_cliente": "Cliente do orçamento",
+            "telefone": "(11) 96666-1111",
+            "cep": "01001-000",
+            "numero": "40",
+        })
+
+        self.assertEqual(resposta.status_code, 200)
+        endereco = Cliente.objects.get(
+            nome_cliente="Cliente do orçamento"
+        ).endereco_principal
+        self.assertEqual(endereco.endereco, "Praça da Sé")
+        self.assertEqual(endereco.cidade, "São Paulo")
 
 
 @override_settings(ALLOWED_HOSTS=["interno.testserver", "testserver"])

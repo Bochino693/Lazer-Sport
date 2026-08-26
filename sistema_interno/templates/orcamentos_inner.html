@@ -51,11 +51,11 @@
 
   <article class="ls-metric-card violet">
     <div class="ls-metric-head">
-      <span class="ls-metric-label">Produtos disponíveis</span>
+    <span class="ls-metric-label">Itens disponíveis</span>
       <span class="ls-metric-icon"><i class="bi bi-diagram-3"></i></span>
     </div>
-    <strong class="ls-metric-value">{{ produtos|length }}</strong>
-    <span class="ls-metric-note">Cadastros de produção prontos para orçar</span>
+    <strong class="ls-metric-value">{{ total_itens_disponiveis }}</strong>
+    <span class="ls-metric-note">Brinquedos, peças e produtos prontos para orçar</span>
   </article>
 </section>
 
@@ -278,9 +278,12 @@
               Escolha do catálogo do site. Não está lá? Cadastre na hora.
             </span>
           </div>
-          <div class="d-flex gap-2 flex-wrap">
+          <div class="d-flex gap-2 flex-wrap ls-modal-inline-actions">
             <button type="button" class="btn btn-sm btn-outline-success" id="novoBrinquedo">
               <i class="bi bi-plus-circle me-1"></i> Novo brinquedo
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-primary" id="novaPeca">
+              <i class="bi bi-plus-circle me-1"></i> Nova peça
             </button>
             <button type="button" class="btn btn-sm btn-outline-secondary" id="addItem">
               <i class="bi bi-plus-lg me-1"></i> Adicionar item
@@ -292,7 +295,7 @@
           <table class="ls-table ls-itens-table">
             <thead>
               <tr>
-                <th style="width: 28%">Brinquedo</th>
+                <th style="width: 28%">Item</th>
                 <th>Descrição</th>
                 <th style="width: 12%" class="text-end">Qtd.</th>
                 <th style="width: 17%" class="text-end">Valor unit.</th>
@@ -398,13 +401,83 @@ Cadastro mínimo de propósito: nome, valor e categoria. Foto e texto de
   </div>
 </div>
 
+<!-- ================= MODAL: peça nova, sem sair daqui ================= -->
+<div class="modal fade" id="modalPecaNova" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <form class="modal-content" id="formPecaNova" method="post"
+          action="{% url 'orcamentos_inner' %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="peca_nova">
+
+      <div class="modal-header">
+        <div>
+          <span class="ls-modal-kicker">Peças de reposição</span>
+          <h5 class="modal-title">Cadastrar e usar uma nova peça</h5>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+
+      <div class="modal-body">
+        <div class="alert alert-danger d-none" id="pecaNovaErro"></div>
+        <p class="text-muted small">
+          A peça fica salva no catálogo da loja e entra nesta proposta sem perder o que já foi digitado.
+        </p>
+
+        <div class="row g-3">
+          <div class="col-12 col-md-7">
+            <label class="form-label" for="pecaNovaNome">Nome da peça</label>
+            <input class="form-control" id="pecaNovaNome" name="nome"
+                   data-rotulo="nome da peça" maxlength="120" required
+                   placeholder="Ex.: Lona de salto 3,05 m">
+          </div>
+          <div class="col-12 col-md-5">
+            <label class="form-label" for="pecaNovaCategoria">Categoria</label>
+            <select class="form-select" id="pecaNovaCategoria" name="categoria">
+              <option value="">Sem categoria</option>
+              {% for c in categorias_peca %}
+                <option value="{{ c.id }}">{{ c.nome_categoria_peca }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-12 col-sm-6">
+            <label class="form-label" for="pecaNovaVenda">Preço de venda</label>
+            <div class="input-group">
+              <span class="input-group-text">R$</span>
+              <input class="form-control" id="pecaNovaVenda" name="preco_venda"
+                     inputmode="decimal" placeholder="0,00">
+            </div>
+          </div>
+          <div class="col-12 col-sm-6">
+            <label class="form-label" for="pecaNovaFornecedor">Custo do fornecedor</label>
+            <div class="input-group">
+              <span class="input-group-text">R$</span>
+              <input class="form-control" id="pecaNovaFornecedor" name="preco_fornecedor"
+                     inputmode="decimal" placeholder="0,00">
+            </div>
+          </div>
+          <div class="col-12">
+            <label class="form-label" for="pecaNovaDescricao">Descrição</label>
+            <textarea class="form-control" id="pecaNovaDescricao" name="descricao" rows="3"
+                      placeholder="Aplicação, medidas, compatibilidade e o que acompanha"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-success">Cadastrar e usar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <!-- ================= MODAL: cliente novo na hora ================= -->
 {% comment %}
   Quase todo orçamento nasce de quem ligou pela primeira vez. Obrigar a sair
   para a tela de clientes e voltar perderia a proposta pela metade.
 {% endcomment %}
 <div class="modal fade" id="modalClienteNovo" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
     <form class="modal-content" id="formClienteNovo" method="post"
           action="{% url 'orcamentos_inner' %}">
       {% csrf_token %}
@@ -422,15 +495,14 @@ Cadastro mínimo de propósito: nome, valor e categoria. Foto e texto de
           O cadastro fica salvo na aba Clientes e já entra neste orçamento.
         </p>
 
-        <div class="mb-3">
-          <label class="form-label" for="clienteNovoNome">Nome</label>
-          <input class="form-control" id="clienteNovoNome" name="nome_cliente"
-                 data-rotulo="nome" maxlength="90" required
-                 placeholder="Nome da pessoa, da empresa ou do buffet">
-        </div>
-
         <div class="row g-3">
-          <div class="col-sm-6">
+          <div class="col-12 col-md-7">
+            <label class="form-label" for="clienteNovoNome">Nome</label>
+            <input class="form-control" id="clienteNovoNome" name="nome_cliente"
+                   data-rotulo="nome" maxlength="90" required
+                   placeholder="Nome da pessoa, da empresa ou do buffet">
+          </div>
+          <div class="col-12 col-md-5">
             <label class="form-label" for="clienteNovoTipo">Tipo</label>
             <select class="form-select" id="clienteNovoTipo" name="tipo">
               {% for valor, rotulo in tipos_cliente %}
@@ -438,28 +510,77 @@ Cadastro mínimo de propósito: nome, valor e categoria. Foto e texto de
               {% endfor %}
             </select>
           </div>
-          <div class="col-sm-6">
+          <div class="col-12 col-md-6">
             <label class="form-label" for="clienteNovoTelefone">Telefone / WhatsApp</label>
             <input class="form-control" id="clienteNovoTelefone" name="telefone"
                    inputmode="tel" maxlength="24" placeholder="(11) 99999-9999">
           </div>
+          <div class="col-12 col-md-6">
+            <label class="form-label" for="clienteNovoEmail">E-mail</label>
+            <input type="email" class="form-control" id="clienteNovoEmail" name="email"
+                   maxlength="150" placeholder="cliente@empresa.com.br">
+          </div>
+          <div class="col-12 col-md-5">
+            <label class="form-label" for="clienteNovoDocumento">CPF ou CNPJ</label>
+            <input class="form-control" id="clienteNovoDocumento" name="documento"
+                   maxlength="20" placeholder="Opcional">
+          </div>
+          <div class="col-12 col-md-7" id="clienteNovoBlocoParceiro">
+            <label class="form-label" for="clienteNovoParceiro">Veio por qual buffet?</label>
+            <select class="form-select" id="clienteNovoParceiro" name="parceiro">
+              <option value="">Nenhum / veio direto</option>
+              {% for buffet in buffets %}
+                <option value="{{ buffet.id }}">{{ buffet.nome_cliente }}</option>
+              {% endfor %}
+            </select>
+            <span class="form-text">Mantém o histórico da festa ligado ao parceiro.</span>
+          </div>
+          <div class="col-12" id="clienteNovoBlocoEstabelecimento" hidden>
+            <label class="form-label" for="clienteNovoEstabelecimento">Buffet já publicado no site</label>
+            <select class="form-select" id="clienteNovoEstabelecimento" name="estabelecimento">
+              <option value="">Ainda não publicado</option>
+              {% for e in estabelecimentos %}
+                <option value="{{ e.id }}">{{ e.nome_estabelecimento }}</option>
+              {% endfor %}
+            </select>
+            <span class="form-text">Este é o paralelo do buffet na área pública de parceiros.</span>
+          </div>
         </div>
 
-        <div class="mt-3">
-          <label class="form-label" for="clienteNovoEmail">E-mail</label>
-          <input type="email" class="form-control" id="clienteNovoEmail" name="email"
-                 maxlength="150" placeholder="cliente@empresa.com.br">
+        <hr class="my-4">
+        <div class="d-flex align-items-center justify-content-between gap-2 mb-2 flex-wrap">
+          <div>
+            <h6 class="mb-1">Endereço principal</h6>
+            <span class="text-muted small">Ao aprovar a proposta, este endereço publica o cliente no mapa.</span>
+          </div>
+          <span class="ls-cep-status" id="clienteNovoCepStatus" aria-live="polite"></span>
         </div>
-
-        <div class="mt-3">
-          <label class="form-label" for="clienteNovoParceiro">Veio por qual buffet?</label>
-          <select class="form-select" id="clienteNovoParceiro" name="parceiro">
-            <option value="">Nenhum / veio direto</option>
-            {% for buffet in buffets %}
-              <option value="{{ buffet.id }}">{{ buffet.nome_cliente }}</option>
-            {% endfor %}
-          </select>
-          <span class="form-text">Só para quando a festa chega pelo parceiro.</span>
+        <div class="row g-3">
+          <div class="col-12 col-sm-4">
+            <label class="form-label" for="clienteNovoCep">CEP</label>
+            <input class="form-control" id="clienteNovoCep" name="cep" maxlength="18"
+                   inputmode="numeric" autocomplete="postal-code" placeholder="00000-000">
+          </div>
+          <div class="col-12 col-sm-8">
+            <label class="form-label" for="clienteNovoEndereco">Rua</label>
+            <input class="form-control" id="clienteNovoEndereco" name="endereco" maxlength="120">
+          </div>
+          <div class="col-5 col-sm-3">
+            <label class="form-label" for="clienteNovoNumero">Número</label>
+            <input class="form-control" id="clienteNovoNumero" name="numero" maxlength="5">
+          </div>
+          <div class="col-7 col-sm-4">
+            <label class="form-label" for="clienteNovoBairro">Bairro</label>
+            <input class="form-control" id="clienteNovoBairro" name="bairro" maxlength="50">
+          </div>
+          <div class="col-8 col-sm-3">
+            <label class="form-label" for="clienteNovoCidade">Cidade</label>
+            <input class="form-control" id="clienteNovoCidade" name="cidade" maxlength="25">
+          </div>
+          <div class="col-4 col-sm-2">
+            <label class="form-label" for="clienteNovoEstado">UF</label>
+            <input class="form-control" id="clienteNovoEstado" name="estado" maxlength="2" placeholder="SP">
+          </div>
         </div>
       </div>
 
@@ -568,9 +689,6 @@ Cadastro mínimo de propósito: nome, valor e categoria. Foto e texto de
 </div>
 
 {{ orcamentos_dados|json_script:"orcamentosDados" }}
-{{ catalogo_dados|json_script:"catalogoDados" }}
-{{ opcoes_itens|json_script:"opcoesItens" }}
-{{ opcoes_clientes|json_script:"opcoesClientes" }}
 {% endblock %}
 
 {% block scripts %}
@@ -595,8 +713,8 @@ document.addEventListener("DOMContentLoaded", function () {
      acento, mostra o preço ao lado do nome e traz "cadastrar na hora"
      quando o item ainda não existe.
 
-     O valor continua sendo "b:12" (brinquedo 12 do catálogo) ou "p:5"
-     (produto 5 da produção) -- o servidor não mudou. O prefixo é
+     O valor continua sendo "b:12" (brinquedo), "p:5" (produção) ou
+     "r:8" (reposição). O prefixo é
      desmontado no envio, em `antes`.
      ------------------------------------------------------------------ */
   /* ------------------------------------------------------------------
@@ -607,15 +725,56 @@ document.addEventListener("DOMContentLoaded", function () {
      sair do orçamento -- o caso mais comum de todos, porque quase todo
      orçamento nasce de alguém que ligou pela primeira vez.
      ------------------------------------------------------------------ */
-  var opcoesClientes = JSON.parse(
-    document.getElementById("opcoesClientes").textContent || "[]"
-  );
+  var endpointClientes = "{% url 'buscar_clientes_orcamento' %}";
+  var cacheBuscaClientes = new Map();
+
+  function buscarClientes(termo) {
+    var chave = LSBusca.semAcento(termo || "");
+    if (cacheBuscaClientes.has(chave)) return cacheBuscaClientes.get(chave);
+
+    var armazenamento = "ls:orcamento:clientes:" + chave;
+    try {
+      var bruto = sessionStorage.getItem(armazenamento);
+      var salvo = bruto ? JSON.parse(bruto) : null;
+      if (salvo && Date.now() - salvo.em < 5 * 60 * 1000) {
+        var pronto = Promise.resolve(salvo.opcoes || []);
+        cacheBuscaClientes.set(chave, pronto);
+        return pronto;
+      }
+    } catch (e) {}
+
+    var pedido = fetch(endpointClientes + "?q=" + encodeURIComponent(termo || ""), {
+      credentials: "same-origin",
+      headers: { "X-Requested-With": "XMLHttpRequest" },
+      cache: "no-store"
+    }).then(function (resposta) {
+      return resposta.json().catch(function () { return null; }).then(function (json) {
+        if (!resposta.ok || !json || json.status !== "sucesso") {
+          throw new Error("Não foi possível buscar os clientes.");
+        }
+        try {
+          sessionStorage.setItem(armazenamento, JSON.stringify({
+            em: Date.now(), opcoes: json.opcoes || []
+          }));
+        } catch (e) {}
+        return json.opcoes || [];
+      });
+    }).catch(function (erro) {
+      cacheBuscaClientes.delete(chave);
+      throw erro;
+    });
+
+    cacheBuscaClientes.set(chave, pedido);
+    return pedido;
+  }
 
   var buscaCliente = LSBusca.criar({
     nome: "cliente",
-    opcoes: opcoesClientes,
+    opcoes: [],
     placeholder: "Buscar cliente cadastrado...",
     rotuloAcessivel: "Cliente cadastrado",
+    minimoBusca: 2,
+    carregar: buscarClientes,
     criar: {
       rotulo: "Cadastrar cliente",
       aoClicar: function (digitado) {
@@ -640,9 +799,71 @@ document.addEventListener("DOMContentLoaded", function () {
   buscaCliente.entrada.id = "orcamentoClienteBusca";
   document.getElementById("orcamentoClienteBox").appendChild(buscaCliente.elemento);
 
-  var opcoesItens = JSON.parse(
-    document.getElementById("opcoesItens").textContent || "[]"
-  );
+  var endpointItens = "{% url 'buscar_itens_orcamento' %}";
+  var cacheBuscaItens = new Map();
+  var opcoesNovas = [];
+  var cacheBuscaValidade = 5 * 60 * 1000;
+
+  function chaveDaBusca(termo) {
+    return LSBusca.semAcento(termo || "");
+  }
+
+  function mesclarNovos(opcoes, termo) {
+    var chave = chaveDaBusca(termo);
+    var resultado = (opcoes || []).slice();
+    var vistos = new Set(resultado.map(function (o) { return String(o.valor); }));
+
+    opcoesNovas.forEach(function (opcao) {
+      if (vistos.has(String(opcao.valor))) return;
+      if (chave && chaveDaBusca(opcao.rotulo + " " + (opcao.detalhe || "")).indexOf(chave) < 0) return;
+      resultado.unshift(opcao);
+    });
+    return resultado;
+  }
+
+  function buscarItens(termo) {
+    var chave = chaveDaBusca(termo);
+    if (cacheBuscaItens.has(chave)) return cacheBuscaItens.get(chave);
+
+    var armazenamento = "ls:orcamento:itens:" + chave;
+    try {
+      var bruto = sessionStorage.getItem(armazenamento);
+      var salvo = bruto ? JSON.parse(bruto) : null;
+      if (salvo && Date.now() - salvo.em < cacheBuscaValidade) {
+        var pronto = Promise.resolve(mesclarNovos(salvo.opcoes, termo));
+        cacheBuscaItens.set(chave, pronto);
+        return pronto;
+      }
+    } catch (e) {
+      /* Sem armazenamento no modo privado: a memória da página ainda vale. */
+    }
+
+    var pedido = fetch(endpointItens + "?q=" + encodeURIComponent(termo || ""), {
+      credentials: "same-origin",
+      headers: { "X-Requested-With": "XMLHttpRequest" },
+      cache: "no-store"
+    })
+      .then(function (resposta) {
+        return resposta.json().catch(function () { return null; }).then(function (json) {
+          if (!resposta.ok || !json || json.status !== "sucesso") {
+            throw new Error("Não foi possível buscar os itens.");
+          }
+          try {
+            sessionStorage.setItem(armazenamento, JSON.stringify({
+              em: Date.now(), opcoes: json.opcoes || []
+            }));
+          } catch (e) {}
+          return mesclarNovos(json.opcoes || [], termo);
+        });
+      })
+      .catch(function (erro) {
+        cacheBuscaItens.delete(chave);
+        throw erro;
+      });
+
+    cacheBuscaItens.set(chave, pedido);
+    return pedido;
+  }
 
   /* Cada linha tem a sua busca; a lista de opções é a mesma para todas,
      então cadastrar um brinquedo novo precisa alcançar as já abertas. */
@@ -650,10 +871,13 @@ document.addEventListener("DOMContentLoaded", function () {
 
   function criarBuscaDeItem(linha) {
     var busca = LSBusca.criar({
-      opcoes: opcoesItens,
-      placeholder: "Buscar brinquedo ou produto...",
+      opcoes: opcoesNovas,
+      placeholder: "Buscar brinquedo, peça ou produto...",
       rotuloAcessivel: "Item da proposta",
       classe: "ls-busca-item-orcamento",
+      exibirImagem: true,
+      minimoBusca: 2,
+      carregar: buscarItens,
       criar: {
         rotulo: "Cadastrar brinquedo",
         aoClicar: function (digitado) {
@@ -697,11 +921,30 @@ document.addEventListener("DOMContentLoaded", function () {
       preco: b.valor || ""
     };
 
-    opcoesItens.push(opcao);
+    opcoesNovas.push(opcao);
+    cacheBuscaItens.clear();
     buscasDeItem.forEach(function (busca) {
-      busca.definirOpcoes(opcoesItens);
+      busca.adicionarOpcao(opcao, false);
     });
 
+    return opcao;
+  }
+
+  function registrarPeca(p) {
+    var opcao = {
+      valor: "r:" + p.id,
+      rotulo: p.nome,
+      grupo: "Peças de reposição",
+      detalhe: "Peça da loja",
+      valorDireita: p.valor ? "R$ " + p.valor : "sem preço",
+      preco: p.valor || ""
+    };
+
+    opcoesNovas.push(opcao);
+    cacheBuscaItens.clear();
+    buscasDeItem.forEach(function (busca) {
+      busca.adicionarOpcao(opcao, false);
+    });
     return opcao;
   }
 
@@ -736,7 +979,7 @@ document.addEventListener("DOMContentLoaded", function () {
     var tr = document.createElement("tr");
     tr.className = "ls-item-linha";
     tr.innerHTML =
-      '<td data-rotulo="Brinquedo"></td>' +
+      '<td data-rotulo="Item"></td>' +
       '<td data-rotulo="Descrição"><input class="form-control form-control-sm ls-item-descricao" maxlength="180" placeholder="Descrição que vai na proposta"></td>' +
       '<td data-rotulo="Qtd."><input class="form-control form-control-sm text-end ls-item-quantidade" inputmode="numeric" value="1"></td>' +
       '<td data-rotulo="Valor unit."><input class="form-control form-control-sm text-end ls-item-valor" inputmode="decimal" placeholder="0,00"></td>' +
@@ -752,6 +995,7 @@ document.addEventListener("DOMContentLoaded", function () {
     tr.buscaItem = busca;
 
     if (item) {
+      if (item.opcao) busca.adicionarOpcao(item.opcao, false);
       /* O item guardado tem um dos dois vínculos; a busca junta os dois
          num valor só. Brinquedo primeiro, que é a origem padrão.
          `false` no segundo argumento: repor o que já estava salvo não é
@@ -760,6 +1004,8 @@ document.addEventListener("DOMContentLoaded", function () {
         busca.definirValor("b:" + item.brinquedo, false);
       } else if (item.produto) {
         busca.definirValor("p:" + item.produto, false);
+      } else if (item.peca) {
+        busca.definirValor("r:" + item.peca, false);
       }
 
       tr.querySelector(".ls-item-descricao").value = item.descricao || "";
@@ -843,6 +1089,9 @@ document.addEventListener("DOMContentLoaded", function () {
       ? "Orçamento #" + orcamento.id
       : "Novo orçamento";
 
+    if (orcamento && orcamento.cliente_opcao) {
+      buscaCliente.adicionarOpcao(orcamento.cliente_opcao, false);
+    }
     buscaCliente.definirValor(orcamento ? orcamento.cliente : "", false);
 
     if (orcamento) {
@@ -905,8 +1154,8 @@ document.addEventListener("DOMContentLoaded", function () {
           return;
         }
 
-        /* Desmonta "b:12" / "p:5" nos dois campos que o servidor
-           espera. Mandar os dois preenchidos criaria um item que o
+        /* Desmonta b:/p:/r: nas três referências possíveis. Mandar mais
+           de uma preenchida criaria um item que o
            próprio modelo recusa (ItemOrcamento.clean). */
         var escolha = linha.buscaItem ? linha.buscaItem.valor() : "";
         var origem = escolha.slice(0, 2);
@@ -916,6 +1165,7 @@ document.addEventListener("DOMContentLoaded", function () {
           descricao: descricao,
           brinquedo: origem === "b:" ? referencia : "",
           produto: origem === "p:" ? referencia : "",
+          peca: origem === "r:" ? referencia : "",
           quantidade: quantidade,
           valor_unitario: valor || "0"
         });
@@ -977,7 +1227,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     Painel.erro("brinquedoNovoErro", "");
-    Painel.abrir("modalBrinquedoNovo");
+    Painel.abrirFilho("modalBrinquedoNovo", "modalOrcamento");
   }
 
   document.getElementById("novoBrinquedo").addEventListener("click", function () {
@@ -1016,8 +1266,60 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 
   /* ------------------------------------------------------------------
+     Cadastrar peça de reposição sem perder a proposta
+     ------------------------------------------------------------------ */
+  function abrirCadastroDePeca(linha, nomeDigitado) {
+    linhaEsperando = linha || null;
+    var form = document.getElementById("formPecaNova");
+    form.reset();
+    if (nomeDigitado) document.getElementById("pecaNovaNome").value = nomeDigitado;
+    Painel.erro("pecaNovaErro", "");
+    Painel.abrirFilho("modalPecaNova", "modalOrcamento");
+  }
+
+  document.getElementById("novaPeca").addEventListener("click", function () {
+    var linhas = corpo.querySelectorAll("tr");
+    var ultima = linhas[linhas.length - 1];
+    abrirCadastroDePeca(
+      ultima && ultima.buscaItem && !ultima.buscaItem.valor() ? ultima : null,
+      ""
+    );
+  });
+
+  Painel.ligar({
+    form: "formPecaNova",
+    erro: "pecaNovaErro",
+    depois: function (json) {
+      registrarPeca(json.peca);
+      var alvo = linhaEsperando || novaLinha(null);
+      alvo.buscaItem.definirValor("r:" + json.peca.id, false);
+
+      var descricao = alvo.querySelector(".ls-item-descricao");
+      if (!descricao.value.trim()) descricao.value = json.peca.nome;
+      var valor = alvo.querySelector(".ls-item-valor");
+      if (!paraNumero(valor.value) && json.peca.valor) valor.value = json.peca.valor;
+
+      linhaEsperando = null;
+      recalcular();
+      Painel.fechar("modalPecaNova");
+      descricao.focus();
+    }
+  });
+
+  /* ------------------------------------------------------------------
      Cadastrar cliente sem sair do orçamento
      ------------------------------------------------------------------ */
+  var clienteNovoTipo = document.getElementById("clienteNovoTipo");
+  var clienteNovoParceiro = document.getElementById("clienteNovoBlocoParceiro");
+  var clienteNovoEstabelecimento = document.getElementById("clienteNovoBlocoEstabelecimento");
+
+  function ajustarClienteNovoPorTipo() {
+    var buffet = clienteNovoTipo.value === "buffet";
+    clienteNovoParceiro.hidden = buffet;
+    clienteNovoEstabelecimento.hidden = !buffet;
+  }
+  clienteNovoTipo.addEventListener("change", ajustarClienteNovoPorTipo);
+
   function abrirCadastroDeCliente(nomeDigitado) {
     var form = document.getElementById("formClienteNovo");
     form.reset();
@@ -1025,15 +1327,34 @@ document.addEventListener("DOMContentLoaded", function () {
       document.getElementById("clienteNovoNome").value = nomeDigitado;
     }
     Painel.erro("clienteNovoErro", "");
-    Painel.abrir("modalClienteNovo");
+    ajustarClienteNovoPorTipo();
+    Painel.abrirFilho("modalClienteNovo", "modalOrcamento");
   }
+
+  Painel.ligarCep({
+    url: "{% url 'consultar_cep_inner' %}",
+    cep: "clienteNovoCep",
+    status: "clienteNovoCepStatus",
+    campos: {
+      rua: "clienteNovoEndereco",
+      bairro: "clienteNovoBairro",
+      cidade: "clienteNovoCidade",
+      estado: "clienteNovoEstado"
+    }
+  });
 
   Painel.ligar({
     form: "formClienteNovo",
     erro: "clienteNovoErro",
     depois: function (json) {
-      opcoesClientes.push(json.cliente);
-      buscaCliente.definirOpcoes(opcoesClientes);
+      cacheBuscaClientes.clear();
+      try {
+        sessionStorage.removeItem("ls:orcamento:clientes:");
+        sessionStorage.removeItem(
+          "ls:orcamento:clientes:" + LSBusca.semAcento(json.cliente.rotulo || "")
+        );
+      } catch (e) {}
+      buscaCliente.adicionarOpcao(json.cliente, false);
       buscaCliente.definirValor(json.cliente.valor);
 
       Painel.fechar("modalClienteNovo");

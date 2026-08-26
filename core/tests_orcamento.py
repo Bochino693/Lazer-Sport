@@ -14,12 +14,13 @@ login. Se alguma cair, o link deixa de ser seguro.
 
 from datetime import timedelta
 from decimal import Decimal
+from unittest.mock import patch
 
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from sistema_interno.models import ItemOrcamento, Orcamento
+from sistema_interno.models import Cliente, EnderecoCliente, ItemOrcamento, Orcamento
 
 from .models import Brinquedos, CategoriasBrinquedos
 
@@ -105,6 +106,36 @@ class OrcamentoPublicoTests(TestCase):
         self.assertEqual(self.orcamento.status, Orcamento.Status.APROVADO)
         self.assertEqual(self.orcamento.respondido_por, "Fulano de Tal")
         self.assertIsNotNone(self.orcamento.respondido_em)
+
+    @patch(
+        "core.models.geocodificar_endereco",
+        return_value=(-23.550520, -46.633308, "rua"),
+    )
+    def test_aprovacao_do_cliente_publica_o_cadastro_no_mapa(self, _geocodificar):
+        cliente = Cliente.objects.create(
+            nome_cliente="Colégio Sol",
+            telefone="(11) 99999-1111",
+        )
+        EnderecoCliente.objects.create(
+            cliente=cliente,
+            cep="01001-000",
+            endereco="Praça da Sé",
+            numero="20",
+            bairro="Sé",
+            cidade="São Paulo",
+            estado="SP",
+        )
+        self.orcamento.cliente = cliente
+        self.orcamento.save(update_fields=["cliente"])
+
+        self.client.post(
+            self.url(),
+            {"decisao": "aprovar", "nome": "Responsável do colégio"},
+        )
+
+        cliente.refresh_from_db()
+        self.assertIsNotNone(cliente.cliente_mapa_id)
+        self.assertEqual(cliente.cliente_mapa.cidade, "São Paulo")
 
     def test_recusar_guarda_o_motivo(self):
         self.client.post(

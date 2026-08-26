@@ -298,3 +298,16 @@ class CustoDoContextProcessorTests(TestCase):
         ).render(Context(contexto))
 
         self.assertEqual(saida, "tem 1")
+
+    def test_troca_de_tela_reaproveita_contadores_por_alguns_segundos(self):
+        Pedido.objects.create(status="pendente")
+        modelo = Template("{{ total_avisos }} {{ count_pedidos }}")
+
+        primeiro = fab_counts(self.pedido(self.gestor))
+        self.assertEqual(modelo.render(Context(primeiro)), "1 1")
+
+        # Uma nova requisição logo depois representa o clique em outra tela.
+        # Os mesmos nove COUNT não devem atravessar o Supabase outra vez.
+        segundo = fab_counts(self.pedido(self.gestor))
+        with self.assertNumQueries(0):
+            self.assertEqual(modelo.render(Context(segundo)), "1 1")

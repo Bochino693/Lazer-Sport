@@ -41,7 +41,10 @@ class EnderecoClienteInline(admin.StackedInline):
 
 @admin.register(Cliente)
 class ClienteAdmin(admin.ModelAdmin):
-    list_display = ('nome_cliente', 'telefone', 'email', 'criacao')
+    list_display = (
+        'nome_cliente', 'tipo', 'telefone', 'email', 'parceiro', 'cliente_mapa', 'criacao',
+    )
+    list_filter = ('tipo',)
     search_fields = ('nome_cliente', 'email', 'telefone')
     inlines = [EnderecoClienteInline]
 

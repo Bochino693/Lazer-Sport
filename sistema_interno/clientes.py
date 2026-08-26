@@ -13,6 +13,9 @@ import re
 
 from django.db.models import Q
 
+from core.models import Clientes as ClienteMapa
+from core.utils import buscar_dados_cep
+
 from .models import Cliente, EnderecoCliente
 from .utils import ErroDeFormulario, texto
 
@@ -78,7 +81,12 @@ def salvar_cliente(request, cliente: Cliente | None = None) -> Cliente:
     cliente.observacoes = texto(request, "observacoes")
 
     cliente.parceiro = _buffet_escolhido(request, cliente)
-    cliente.estabelecimento_id = _estabelecimento_escolhido(request)
+    cliente.estabelecimento_id = (
+        _estabelecimento_escolhido(request)
+        if cliente.tipo == Cliente.Tipo.BUFFET else None
+    )
+    if "cliente_mapa" in request.POST:
+        cliente.cliente_mapa_id = _cliente_mapa_escolhido(request, cliente)
 
     cliente.save()
     return cliente
@@ -113,6 +121,28 @@ def _estabelecimento_escolhido(request):
     return int(bruto) if bruto.isdigit() else None
 
 
+def _cliente_mapa_escolhido(request, cliente: Cliente):
+    if cliente.tipo == Cliente.Tipo.BUFFET:
+        return None
+
+    bruto = (request.POST.get("cliente_mapa") or "").strip()
+    if not bruto.isdigit():
+        return None
+
+    mapa = ClienteMapa.objects.filter(pk=int(bruto)).first()
+    if not mapa:
+        return None
+
+    ocupado = Cliente.objects.filter(cliente_mapa=mapa)
+    if cliente.pk:
+        ocupado = ocupado.exclude(pk=cliente.pk)
+    if ocupado.exists():
+        raise ErroDeFormulario(
+            "Esse cliente do mapa já está ligado a outro cadastro interno."
+        )
+    return mapa.pk
+
+
 def salvar_endereco(request, cliente: Cliente) -> EnderecoCliente | None:
     """Guarda o endereço principal, quando a tela mandou algum campo.
 
@@ -131,6 +161,23 @@ def salvar_endereco(request, cliente: Cliente) -> EnderecoCliente | None:
     if not any(campos.values()):
         return None
 
+    # O CEP digitado já resolve rua, bairro, cidade e UF no servidor. O
+    # navegador usa a mesma consulta para preencher a tela imediatamente,
+    # mas repetir a regra aqui é indispensável: um celular pode perder a
+    # conexão depois de digitar o CEP e antes de enviar o formulário.
+    # buscar_dados_cep tem cache por processo, portanto a segunda leitura
+    # normalmente não abre outra conexão com o ViaCEP.
+    if campos["cep"] and not all(
+        campos[chave] for chave in ("endereco", "cidade", "estado")
+    ):
+        dados_cep = buscar_dados_cep(campos["cep"])
+        if dados_cep:
+            campos["cep"] = dados_cep["cep"]
+            campos["endereco"] = (campos["endereco"] or dados_cep["rua"])[:120]
+            campos["bairro"] = (campos["bairro"] or dados_cep["bairro"])[:50]
+            campos["cidade"] = (campos["cidade"] or dados_cep["cidade"])[:25]
+            campos["estado"] = (campos["estado"] or dados_cep["estado"])[:20]
+
     if not campos["endereco"] or not campos["cidade"]:
         raise ErroDeFormulario(
             "Para guardar o endereço, informe pelo menos a rua e a cidade."
@@ -142,6 +189,86 @@ def salvar_endereco(request, cliente: Cliente) -> EnderecoCliente | None:
     endereco.save()
 
     return endereco
+
+
+def consultar_cep(cep: str) -> dict:
+    """Valida e consulta um CEP para os modais do painel."""
+    limpo = so_digitos(cep)
+    if len(limpo) != 8:
+        raise ErroDeFormulario("Informe um CEP com 8 números.")
+
+    dados = buscar_dados_cep(limpo)
+    if not dados:
+        raise ErroDeFormulario(
+            "Não encontrei esse CEP agora. Confira os números ou preencha o endereço manualmente."
+        )
+
+    return dados
+
+
+def sincronizar_cliente_no_mapa(cliente: Cliente):
+    """Publica no mapa o cliente de uma proposta aprovada.
+
+    Buffets já possuem um paralelo próprio: ``Cliente.estabelecimento``
+    aponta para o parceiro exibido na área pública. Criar também um pino de
+    cliente para o mesmo buffet duplicaria a empresa no site.
+
+    A relação OneToOne torna a operação idempotente: aprovar de novo ou
+    editar o orçamento atualiza o mesmo pino, nunca cria cópias.
+    """
+    if not cliente or cliente.eh_buffet:
+        return None
+
+    endereco = cliente.endereco_principal
+    if not endereco or not (endereco.cep or endereco.cidade):
+        return None
+
+    mapa = cliente.cliente_mapa or ClienteMapa()
+    endereco_anterior = (
+        mapa.cep,
+        mapa.rua,
+        mapa.numero,
+        mapa.bairro,
+        mapa.cidade,
+        mapa.estado,
+    )
+    endereco_novo = (
+        endereco.cep or None,
+        endereco.endereco or None,
+        endereco.numero or None,
+        endereco.bairro or None,
+        endereco.cidade or None,
+        (endereco.estado or "")[:2].upper() or None,
+    )
+
+    mapa.descricao_cliente = cliente.nome_cliente
+    (
+        mapa.cep,
+        mapa.rua,
+        mapa.numero,
+        mapa.bairro,
+        mapa.cidade,
+        mapa.estado,
+    ) = endereco_novo
+    mapa.pais = "Brasil"
+    mapa.ativo = True
+    mapa.exibir_no_mapa = True
+
+    # Endereço alterado precisa de um novo ponto. Se o endereço interno já
+    # tiver coordenadas confiáveis, elas são reaproveitadas e nenhuma
+    # consulta de geocodificação é feita.
+    if endereco_anterior != endereco_novo:
+        mapa.latitude = endereco.latitude
+        mapa.longitude = endereco.longitude
+        mapa.precisao_local = "manual" if endereco.latitude and endereco.longitude else ""
+
+    mapa.save()
+
+    if cliente.cliente_mapa_id != mapa.pk:
+        cliente.cliente_mapa = mapa
+        cliente.save(update_fields=["cliente_mapa", "telefone_digitos", "atualizado"])
+
+    return mapa
 
 
 def opcao_de_busca(cliente: Cliente) -> dict:

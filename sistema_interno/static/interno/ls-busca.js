@@ -19,6 +19,10 @@
      * anda pelo teclado (setas, Enter, Esc) para quem usa no computador;
      * cada linha tem 48px de altura -- é o tamanho do dedo.
 
+   Em catálogos grandes, `carregar(termo)` pode devolver uma Promise com
+   poucas opções do servidor. Nesse modo o componente espera 220 ms entre
+   teclas, ignora resposta antiga e nunca precisa receber a tabela inteira.
+
    COMO USAR:
 
      var campo = LSBusca.criar({
@@ -141,7 +145,13 @@
       if (opcao.detalhe) {
         corpo += '<span class="ls-busca-item-detalhe">' + escapar(opcao.detalhe) + "</span>";
       }
-      item.innerHTML = '<span class="ls-busca-item-corpo">' + corpo + "</span>";
+      var visual = "";
+      if (config.exibirImagem) {
+        visual = opcao.imagem
+          ? '<span class="ls-busca-item-foto"><img src="' + escaparAtributo(opcao.imagem) + '" alt="" loading="lazy"></span>'
+          : '<span class="ls-busca-item-foto sem-foto"><i class="bi bi-box-seam"></i></span>';
+      }
+      item.innerHTML = visual + '<span class="ls-busca-item-corpo">' + corpo + "</span>";
 
       if (opcao.valorDireita) {
         item.innerHTML +=
@@ -160,6 +170,10 @@
       var caixa = document.createElement("span");
       caixa.textContent = texto == null ? "" : String(texto);
       return caixa.innerHTML;
+    }
+
+    function escaparAtributo(texto) {
+      return escapar(texto).replace(/"/g, "&quot;").replace(/'/g, "&#39;");
     }
 
     function desenhar(filtro) {
@@ -205,6 +219,61 @@
           ? rotulo + ': "' + filtro + '"'
           : rotulo;
       }
+    }
+
+    var timerBusca = null;
+    var geracaoBusca = 0;
+
+    function mensagemBusca(texto) {
+      lista.innerHTML = "";
+      var aviso = document.createElement("p");
+      aviso.className = "ls-busca-vazio";
+      aviso.textContent = texto;
+      lista.appendChild(aviso);
+    }
+
+    function carregarRemoto(filtro, imediato) {
+      if (typeof config.carregar !== "function") {
+        desenhar(filtro);
+        return;
+      }
+
+      var termo = String(filtro || "").trim();
+      var minimo = Number(config.minimoBusca || 0);
+      if (termo && termo.length < minimo) {
+        mensagemBusca("Digite mais " + (minimo - termo.length) + " caractere(s).");
+        return;
+      }
+
+      if (timerBusca) janela.clearTimeout(timerBusca);
+      var geracao = ++geracaoBusca;
+
+      function executar() {
+        mensagemBusca("Buscando itens…");
+        Promise.resolve(config.carregar(termo))
+          .then(function (novas) {
+            if (geracao !== geracaoBusca) return;
+
+            var anterior = escolhida;
+            opcoes = indexar((novas || []).slice());
+            if (anterior && !acharOpcao(anterior.valor)) {
+              indexar([anterior]);
+              opcoes.unshift(anterior);
+            }
+            escolher(guardado.value, false);
+            if (!painel.hidden) {
+              desenhar(termo);
+              posicionar();
+            }
+          })
+          .catch(function () {
+            if (geracao !== geracaoBusca) return;
+            mensagemBusca("Não consegui buscar agora. Tente novamente.");
+          });
+      }
+
+      if (imediato) executar();
+      else timerBusca = janela.setTimeout(executar, 220);
     }
 
     /* --------------------------------------------------- abrir/fechar
@@ -266,7 +335,9 @@
       painel.hidden = false;
       raiz.classList.add("aberta");
       entrada.setAttribute("aria-expanded", "true");
-      desenhar(entrada.value === rotuloEscolhido() ? "" : entrada.value);
+      var filtro = entrada.value === rotuloEscolhido() ? "" : entrada.value;
+      if (typeof config.carregar === "function") carregarRemoto(filtro, true);
+      else desenhar(filtro);
       posicionar();
 
       /* `true` no terceiro argumento: a rolagem que interessa é a do
@@ -335,7 +406,8 @@
     entrada.addEventListener("input", function () {
       if (painel.hidden) abrir();
       marcado = -1;
-      desenhar(entrada.value);
+      if (typeof config.carregar === "function") carregarRemoto(entrada.value, false);
+      else desenhar(entrada.value);
     });
 
     entrada.addEventListener("keydown", function (evento) {
@@ -424,14 +496,20 @@
         if (!painel.hidden) desenhar(entrada.value);
       },
       adicionarOpcao: function (opcao, escolherAgora) {
-        indexar([opcao]);
-        opcoes.push(opcao);
+        var existente = acharOpcao(opcao && opcao.valor);
+        if (existente) Object.assign(existente, opcao);
+        else {
+          indexar([opcao]);
+          opcoes.push(opcao);
+        }
         if (escolherAgora) escolher(opcao.valor);
       },
       focar: function () { entrada.focus(); },
       /* Chamado quando o dono do campo some da tela (linha do orçamento
          removida): fecha e leva o painel junto. */
       destruir: function () {
+        if (timerBusca) janela.clearTimeout(timerBusca);
+        geracaoBusca += 1;
         fechar(false);
         raiz.remove();
       }

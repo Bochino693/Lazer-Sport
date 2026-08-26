@@ -14,9 +14,11 @@ from .views import (
     VendasView,
 )
 from .views_app import manifesto, service_worker
-from .views_clientes import ClientesInnerView
+from .views_clientes import ClientesInnerView, ConsultaCepInnerView
 from .views_gestao import (
     AtualizarEtapaProducaoView,
+    BuscaClientesOrcamentoView,
+    BuscaItensOrcamentoView,
     FinanceiroInnerView,
     GuiasProducaoView,
     MinhaProducaoView,
@@ -46,9 +48,24 @@ urlpatterns = [
 
     # ---------------- clientes ----------------
     path('clientes/', ClientesInnerView.as_view(), name='clientes_inner'),
+    path(
+        'clientes/consultar-cep/',
+        ConsultaCepInnerView.as_view(),
+        name='consultar_cep_inner',
+    ),
 
     # ---------------- orçamentos ----------------
     path('orcamentos/', OrcamentosInnerView.as_view(), name='orcamentos_inner'),
+    path(
+        'orcamentos/itens/buscar/',
+        BuscaItensOrcamentoView.as_view(),
+        name='buscar_itens_orcamento',
+    ),
+    path(
+        'orcamentos/clientes/buscar/',
+        BuscaClientesOrcamentoView.as_view(),
+        name='buscar_clientes_orcamento',
+    ),
 
     # ---------------- produção ----------------
     path('producao/', MinhaProducaoView.as_view(), name='minha_producao'),
