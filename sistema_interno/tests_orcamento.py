@@ -144,6 +144,36 @@ class OrcamentoInternoTests(TestCase):
         self.assertIsNone(item.produto)
         self.assertEqual(item.subtotal, Decimal("560.00"))
 
+    def test_salva_valores_e_condicoes_no_formato_brasileiro(self):
+        resposta = self.post({
+            "action": "save",
+            "nome_cliente": "Fulano",
+            "status": Orcamento.Status.RASCUNHO,
+            "frete": "1.250,90",
+            "desconto": "50,00",
+            "forma_pagamento": "50% na entrada e 50% na entrega",
+            "forma_envio": "Transportadora",
+            "itens": (
+                '[{"descricao":"Cama elástica","brinquedo":"%s",'
+                '"quantidade":"2","valor_unitario":"280,00"}]'
+                % self.brinquedo.id
+            ),
+        })
+
+        self.assertEqual(resposta.status_code, 200)
+        orcamento = Orcamento.objects.get()
+        self.assertEqual(orcamento.frete, Decimal("1250.90"))
+        self.assertEqual(orcamento.desconto, Decimal("50.00"))
+        self.assertEqual(orcamento.forma_envio, "Transportadora")
+
+    def test_tela_declara_mascaras_e_quantidade_numerica(self):
+        resposta = self.client.get(self.URL, HTTP_HOST="interno.testserver")
+
+        self.assertContains(resposta, 'data-mascara="cep"')
+        self.assertContains(resposta, 'data-mascara="telefone"')
+        self.assertContains(resposta, 'data-mascara="moeda"')
+        self.assertContains(resposta, 'type="number" class="form-control form-control-sm text-end ls-item-quantidade"')
+
     def test_linha_com_catalogo_e_producao_fica_so_com_o_catalogo(self):
         """São origens exclusivas: gravar as duas criaria item inválido."""
         produto = ProdutoInterno.objects.create(nome="Cama — versão fábrica")
@@ -289,6 +319,31 @@ class OrcamentoInternoTests(TestCase):
         orcamento.refresh_from_db()
         self.assertEqual(orcamento.status, Orcamento.Status.ENVIADO)
         self.assertIsNotNone(orcamento.enviado_em)
+
+    @override_settings(DEBUG=False, SITE_URL="interno.lazersport.com.br/")
+    def test_link_corrige_dominio_sem_protocolo_e_remove_interno(self):
+        orcamento = self._orcamento_com_item()
+
+        resposta = self.post({"action": "enviar", "id": orcamento.id})
+
+        self.assertTrue(
+            resposta.json()["link"].startswith(
+                "https://lazersport.com.br/orcamento/"
+            )
+        )
+
+    def test_previa_interna_abre_rascunho_sem_permitir_resposta(self):
+        orcamento = self._orcamento_com_item()
+
+        resposta = self.client.get(
+            f"/orcamentos/{orcamento.pk}/previa/",
+            HTTP_HOST="interno.testserver",
+        )
+
+        self.assertEqual(resposta.status_code, 200)
+        self.assertContains(resposta, "Prévia interna")
+        self.assertContains(resposta, "Cama elástica")
+        self.assertNotContains(resposta, 'id="formDecisao"')
 
     def test_enviar_orcamento_vazio_e_recusado(self):
         """Link para uma proposta sem itens é constrangimento na frente do cliente."""

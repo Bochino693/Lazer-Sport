@@ -168,7 +168,7 @@ def salvar_endereco(request, cliente: Cliente) -> EnderecoCliente | None:
     # buscar_dados_cep tem cache por processo, portanto a segunda leitura
     # normalmente não abre outra conexão com o ViaCEP.
     if campos["cep"] and not all(
-        campos[chave] for chave in ("endereco", "cidade", "estado")
+        campos[chave] for chave in ("endereco", "bairro", "cidade", "estado")
     ):
         dados_cep = buscar_dados_cep(campos["cep"])
         if dados_cep:
@@ -279,6 +279,8 @@ def opcao_de_busca(cliente: Cliente) -> dict:
     elif cliente.telefone:
         detalhe += f" · {cliente.telefone}"
 
+    endereco = cliente.endereco_principal
+
     return {
         "valor": str(cliente.id),
         "rotulo": cliente.nome_cliente,
@@ -290,6 +292,19 @@ def opcao_de_busca(cliente: Cliente) -> dict:
         ),
         "whatsapp": cliente.telefone or "",
         "email": cliente.email or "",
+        "documento": cliente.documento or "",
+        "tipo": cliente.tipo,
+        "endereco": (
+            {
+                "cep": endereco.cep or "",
+                "rua": endereco.endereco or "",
+                "numero": endereco.numero or "",
+                "bairro": endereco.bairro or "",
+                "cidade": endereco.cidade or "",
+                "estado": endereco.estado or "",
+            }
+            if endereco else None
+        ),
     }
 
 

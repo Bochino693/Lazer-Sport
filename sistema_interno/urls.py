@@ -23,6 +23,7 @@ from .views_gestao import (
     GuiasProducaoView,
     MinhaProducaoView,
     OrcamentosInnerView,
+    OrcamentoPreviaInnerView,
     OrdemProducaoDetalheView,
     OrdensProducaoView,
     ProdutosProducaoView,
@@ -56,6 +57,11 @@ urlpatterns = [
 
     # ---------------- orçamentos ----------------
     path('orcamentos/', OrcamentosInnerView.as_view(), name='orcamentos_inner'),
+    path(
+        'orcamentos/<int:pk>/previa/',
+        OrcamentoPreviaInnerView.as_view(),
+        name='orcamento_previa_inner',
+    ),
     path(
         'orcamentos/itens/buscar/',
         BuscaItensOrcamentoView.as_view(),

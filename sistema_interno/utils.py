@@ -1,6 +1,7 @@
 """Helpers de formulário do sistema interno."""
 
 from decimal import Decimal, InvalidOperation
+from urllib.parse import urlsplit, urlunsplit
 
 from django.utils import timezone
 
@@ -120,7 +121,23 @@ def endereco_do_site(request):
     from django.conf import settings
 
     if not settings.DEBUG:
-        return settings.SITE_URL.rstrip("/")
+        configurado = (getattr(settings, "SITE_URL", "") or "").strip()
+        if configurado:
+            if not configurado.startswith(("http://", "https://")):
+                configurado = "https://" + configurado
+            partes = urlsplit(configurado)
+            host = partes.hostname or ""
+            if host.startswith("interno."):
+                host = host[len("interno."):]
+            porta = f":{partes.port}" if partes.port else ""
+            if host:
+                return urlunsplit((
+                    partes.scheme or "https",
+                    host + porta,
+                    partes.path.rstrip("/"),
+                    "",
+                    "",
+                )).rstrip("/")
 
     host = request.get_host()
     if host.startswith("interno."):

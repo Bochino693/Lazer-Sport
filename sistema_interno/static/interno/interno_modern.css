@@ -1488,6 +1488,17 @@ footer,.fab-container{display:none!important}
 #orcamentoClienteBox,.ls-busca,.ls-busca-campo,.ls-busca-entrada{
   width:100%!important;max-width:none!important;
 }
+.ls-cliente-resumo{
+  margin-top:9px;padding:10px 12px;border:1px solid rgba(93,211,169,.38);
+  border-radius:11px;background:rgba(39,122,94,.12);color:#d9f7eb;
+  line-height:1.35
+}
+.ls-cliente-resumo strong{display:block;font-size:.76rem;color:#75e0b9;margin-bottom:3px}
+.ls-cliente-resumo span{display:block;font-size:.76rem;color:#cec5b9;overflow-wrap:anywhere}
+[data-mascara="moeda"],input[type="number"]{font-variant-numeric:tabular-nums}
+input[type="number"]{-moz-appearance:textfield}
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
 .ls-busca{display:block!important;min-width:0}
 .ls-busca-campo{display:flex!important;padding-inline:14px!important}
 .ls-busca-entrada{flex:1 1 auto!important;min-width:0!important;padding:0!important}

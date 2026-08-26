@@ -70,6 +70,40 @@ class OrcamentoPublicoTests(TestCase):
         # 2 x 520 = 1040, + 100 de frete, - 50 de desconto = 1.090,00
         self.assertContains(resposta, "1.090,00")
 
+    def test_documento_mostra_cliente_pagamento_envio_e_decisao(self):
+        cliente = Cliente.objects.create(
+            nome_cliente="R3 Boteco Original Ltda",
+            tipo=Cliente.Tipo.EMPRESA,
+            documento="48.646.647/0001-11",
+            telefone="(11) 95388-7201",
+            email="compras@example.com",
+        )
+        EnderecoCliente.objects.create(
+            cliente=cliente,
+            cep="01001-000",
+            endereco="Praça da Sé",
+            numero="300",
+            bairro="Sé",
+            cidade="São Paulo",
+            estado="SP",
+        )
+        self.orcamento.cliente = cliente
+        self.orcamento.forma_pagamento = "Pix"
+        self.orcamento.forma_envio = "Transportadora"
+        self.orcamento.save(update_fields=[
+            "cliente", "forma_pagamento", "forma_envio",
+        ])
+
+        resposta = self.client.get(self.url())
+
+        self.assertContains(resposta, "Dados do cliente")
+        self.assertContains(resposta, "48.646.647/0001-11")
+        self.assertContains(resposta, "Praça da Sé")
+        self.assertContains(resposta, "Pix")
+        self.assertContains(resposta, "Transportadora")
+        self.assertContains(resposta, "Aprovar proposta")
+        self.assertContains(resposta, "Recusar")
+
     def test_token_desconhecido_nao_existe(self):
         resposta = self.client.get(
             reverse("orcamento_publico", args=["token-que-nunca-foi-gerado"])

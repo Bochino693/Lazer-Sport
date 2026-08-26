@@ -1252,6 +1252,18 @@ class Orcamento(Prime):
     validade = models.DateField(null=True, blank=True)
     desconto = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))
     frete = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))
+    forma_pagamento = models.CharField(
+        "Forma de pagamento",
+        max_length=120,
+        blank=True,
+        help_text="Ex.: Pix, boleto, 50% na entrada e 50% na entrega.",
+    )
+    forma_envio = models.CharField(
+        "Forma de envio",
+        max_length=120,
+        blank=True,
+        help_text="Ex.: retirada, transportadora ou entrega Lazer & Sport.",
+    )
     observacoes = models.TextField(blank=True)
     responsavel = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -1368,6 +1380,12 @@ class Orcamento(Prime):
             args=[self.token],
             urlconf=settings.ROOT_URLCONF,
         )
+
+    @property
+    def numero_documento(self):
+        """Número legível no documento, estável e separado por ano."""
+        ano = self.criacao.year if self.criacao else timezone.localdate().year
+        return f"{(self.pk or 0):04d}/{ano}"
 
     def marcar_enviado(self):
         """Passa para "enviado" e carimba a hora, uma vez só.

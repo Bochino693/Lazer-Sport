@@ -146,6 +146,12 @@
                 {% endif %}
               </td>
               <td data-rotulo="Ações" class="ls-actions text-end">
+                <a class="btn btn-sm btn-outline-primary"
+                   href="{% url 'orcamento_previa_inner' orcamento.id %}"
+                   target="_blank" rel="noopener"
+                   title="Conferir o documento sem alterar a situação">
+                  <i class="bi bi-eye"></i> Prévia
+                </a>
                 <button type="button" class="btn btn-sm btn-outline-secondary"
                         data-editar="{{ orcamento.id }}">
                   <i class="bi bi-pencil"></i> Editar
@@ -212,6 +218,7 @@
             {% endcomment %}
             <div id="orcamentoClienteBox"></div>
             <span class="form-text">Digite para buscar. Sem cadastro? Use o nome do destinatário ao lado.</span>
+            <div class="ls-cliente-resumo" id="orcamentoClienteResumo" hidden></div>
           </div>
 
           <div class="col-12 col-md-4">
@@ -229,7 +236,8 @@
           <div class="col-12 col-md-4">
             <label class="form-label" for="orcamentoWhatsapp"><i class="bi bi-whatsapp text-success me-1"></i>WhatsApp</label>
             <input class="form-control" id="orcamentoWhatsapp" name="whatsapp_cliente" maxlength="24"
-                   inputmode="tel" autocomplete="tel" placeholder="(11) 99999-9999">
+                   inputmode="tel" autocomplete="tel" data-mascara="telefone"
+                   placeholder="(11) 99999-9999">
           </div>
 
           <div class="col-12 col-md-4">
@@ -255,7 +263,8 @@
             <div class="input-group">
               <span class="input-group-text">R$</span>
               <input class="form-control ls-recalcula" id="orcamentoFrete" name="frete"
-                     inputmode="decimal" placeholder="0,00">
+                     inputmode="decimal" data-mascara="moeda" autocomplete="off"
+                     placeholder="0,00">
             </div>
           </div>
 
@@ -264,8 +273,21 @@
             <div class="input-group">
               <span class="input-group-text">R$</span>
               <input class="form-control ls-recalcula" id="orcamentoDesconto" name="desconto"
-                     inputmode="decimal" placeholder="0,00">
+                     inputmode="decimal" data-mascara="moeda" autocomplete="off"
+                     placeholder="0,00">
             </div>
+          </div>
+
+          <div class="col-12 col-md-6">
+            <label class="form-label" for="orcamentoPagamento">Forma de pagamento</label>
+            <input class="form-control" id="orcamentoPagamento" name="forma_pagamento"
+                   maxlength="120" placeholder="Ex.: Pix ou 50% na entrada e 50% na entrega">
+          </div>
+
+          <div class="col-12 col-md-6">
+            <label class="form-label" for="orcamentoEnvio">Forma de envio</label>
+            <input class="form-control" id="orcamentoEnvio" name="forma_envio"
+                   maxlength="120" placeholder="Ex.: retirada, transportadora ou entrega própria">
           </div>
         </div>
 
@@ -367,7 +389,8 @@ Cadastro mínimo de propósito: nome, valor e categoria. Foto e texto de
           <div class="col-sm-6">
             <label class="form-label" for="brinquedoNovoValor">Valor</label>
             <input class="form-control" id="brinquedoNovoValor" name="valor"
-                   inputmode="decimal" placeholder="0,00">
+                   inputmode="decimal" data-mascara="moeda" autocomplete="off"
+                   placeholder="0,00">
           </div>
           <div class="col-sm-6">
             <label class="form-label" for="brinquedoNovoVoltz">Voltagem</label>
@@ -444,7 +467,8 @@ Cadastro mínimo de propósito: nome, valor e categoria. Foto e texto de
             <div class="input-group">
               <span class="input-group-text">R$</span>
               <input class="form-control" id="pecaNovaVenda" name="preco_venda"
-                     inputmode="decimal" placeholder="0,00">
+                     inputmode="decimal" data-mascara="moeda" autocomplete="off"
+                     placeholder="0,00">
             </div>
           </div>
           <div class="col-12 col-sm-6">
@@ -452,7 +476,8 @@ Cadastro mínimo de propósito: nome, valor e categoria. Foto e texto de
             <div class="input-group">
               <span class="input-group-text">R$</span>
               <input class="form-control" id="pecaNovaFornecedor" name="preco_fornecedor"
-                     inputmode="decimal" placeholder="0,00">
+                     inputmode="decimal" data-mascara="moeda" autocomplete="off"
+                     placeholder="0,00">
             </div>
           </div>
           <div class="col-12">
@@ -513,7 +538,8 @@ Cadastro mínimo de propósito: nome, valor e categoria. Foto e texto de
           <div class="col-12 col-md-6">
             <label class="form-label" for="clienteNovoTelefone">Telefone / WhatsApp</label>
             <input class="form-control" id="clienteNovoTelefone" name="telefone"
-                   inputmode="tel" maxlength="24" placeholder="(11) 99999-9999">
+                   inputmode="tel" maxlength="24" data-mascara="telefone"
+                   placeholder="(11) 99999-9999">
           </div>
           <div class="col-12 col-md-6">
             <label class="form-label" for="clienteNovoEmail">E-mail</label>
@@ -523,7 +549,8 @@ Cadastro mínimo de propósito: nome, valor e categoria. Foto e texto de
           <div class="col-12 col-md-5">
             <label class="form-label" for="clienteNovoDocumento">CPF ou CNPJ</label>
             <input class="form-control" id="clienteNovoDocumento" name="documento"
-                   maxlength="20" placeholder="Opcional">
+                   inputmode="numeric" maxlength="20" data-mascara="documento"
+                   placeholder="Opcional">
           </div>
           <div class="col-12 col-md-7" id="clienteNovoBlocoParceiro">
             <label class="form-label" for="clienteNovoParceiro">Veio por qual buffet?</label>
@@ -559,7 +586,8 @@ Cadastro mínimo de propósito: nome, valor e categoria. Foto e texto de
           <div class="col-12 col-sm-4">
             <label class="form-label" for="clienteNovoCep">CEP</label>
             <input class="form-control" id="clienteNovoCep" name="cep" maxlength="18"
-                   inputmode="numeric" autocomplete="postal-code" placeholder="00000-000">
+                   inputmode="numeric" autocomplete="postal-code" data-mascara="cep"
+                   placeholder="00000-000">
           </div>
           <div class="col-12 col-sm-8">
             <label class="form-label" for="clienteNovoEndereco">Rua</label>
@@ -609,7 +637,8 @@ Cadastro mínimo de propósito: nome, valor e categoria. Foto e texto de
             <label class="form-label" for="linkWhatsapp">WhatsApp do cliente</label>
             <div class="input-group">
               <span class="input-group-text"><i class="bi bi-whatsapp text-success"></i></span>
-              <input class="form-control" id="linkWhatsapp" inputmode="tel" placeholder="(11) 99999-9999">
+              <input class="form-control" id="linkWhatsapp" inputmode="tel"
+                     data-mascara="telefone" placeholder="(11) 99999-9999">
               <button class="btn btn-success" type="button" id="linkEnviarWhatsapp">Enviar</button>
             </div>
           </div>
@@ -631,7 +660,11 @@ Cadastro mínimo de propósito: nome, valor e categoria. Foto e texto de
         </div>
         <a class="btn btn-sm btn-outline-primary mt-3" id="linkAbrir"
            href="#" target="_blank" rel="noopener">
-          <i class="bi bi-box-arrow-up-right"></i> Abrir como o cliente vê
+          <i class="bi bi-box-arrow-up-right"></i> Abrir página pública
+        </a>
+        <a class="btn btn-sm btn-outline-secondary mt-3" id="linkPreviaInterna"
+           href="#" target="_blank" rel="noopener">
+          <i class="bi bi-eye"></i> Abrir prévia interna
         </a>
       </div>
     </div>
@@ -768,6 +801,43 @@ document.addEventListener("DOMContentLoaded", function () {
     return pedido;
   }
 
+  function aplicarClienteNoOrcamento(opcao, forcar) {
+    var resumo = document.getElementById("orcamentoClienteResumo");
+    var nome = document.getElementById("orcamentoNome");
+    var whatsapp = document.getElementById("orcamentoWhatsapp");
+    var email = document.getElementById("orcamentoEmail");
+
+    resumo.innerHTML = "";
+    resumo.hidden = !opcao;
+    if (!opcao) return;
+
+    if (forcar || !nome.value.trim()) nome.value = opcao.rotulo || "";
+    if (forcar || !whatsapp.value.trim()) whatsapp.value = opcao.whatsapp || "";
+    if (forcar || !email.value.trim()) email.value = opcao.email || "";
+    Painel.aplicarMascaras(document.getElementById("formOrcamento"));
+
+    var titulo = document.createElement("strong");
+    titulo.textContent = "Cadastro vinculado";
+    resumo.appendChild(titulo);
+
+    var partes = [];
+    if (opcao.documento) partes.push(opcao.documento);
+    if (opcao.whatsapp) partes.push(opcao.whatsapp);
+    if (opcao.email) partes.push(opcao.email);
+    if (opcao.endereco) {
+      var endereco = [
+        [opcao.endereco.rua, opcao.endereco.numero].filter(Boolean).join(", "),
+        opcao.endereco.bairro,
+        [opcao.endereco.cidade, opcao.endereco.estado].filter(Boolean).join("/")
+      ].filter(Boolean).join(" · ");
+      if (endereco) partes.push(endereco);
+    }
+
+    var detalhe = document.createElement("span");
+    detalhe.textContent = partes.length ? partes.join(" · ") : "Dados básicos carregados";
+    resumo.appendChild(detalhe);
+  }
+
   var buscaCliente = LSBusca.criar({
     nome: "cliente",
     opcoes: [],
@@ -782,17 +852,9 @@ document.addEventListener("DOMContentLoaded", function () {
       }
     },
     aoEscolher: function (opcao) {
-      if (!opcao) return;
-
       /* Puxa contato do cadastro só onde ainda está vazio: o orçamento
          pode ter um contato específico daquela festa. */
-      var nome = document.getElementById("orcamentoNome");
-      var whatsapp = document.getElementById("orcamentoWhatsapp");
-      var email = document.getElementById("orcamentoEmail");
-
-      if (!nome.value.trim()) nome.value = opcao.rotulo;
-      if (!whatsapp.value.trim() && opcao.whatsapp) whatsapp.value = opcao.whatsapp;
-      if (!email.value.trim() && opcao.email) email.value = opcao.email;
+      aplicarClienteNoOrcamento(opcao, false);
     }
   });
 
@@ -981,12 +1043,13 @@ document.addEventListener("DOMContentLoaded", function () {
     tr.innerHTML =
       '<td data-rotulo="Item"></td>' +
       '<td data-rotulo="Descrição"><input class="form-control form-control-sm ls-item-descricao" maxlength="180" placeholder="Descrição que vai na proposta"></td>' +
-      '<td data-rotulo="Qtd."><input class="form-control form-control-sm text-end ls-item-quantidade" inputmode="numeric" value="1"></td>' +
-      '<td data-rotulo="Valor unit."><input class="form-control form-control-sm text-end ls-item-valor" inputmode="decimal" placeholder="0,00"></td>' +
+      '<td data-rotulo="Qtd."><input type="number" class="form-control form-control-sm text-end ls-item-quantidade" inputmode="numeric" min="1" max="100000" step="1" value="1"></td>' +
+      '<td data-rotulo="Valor unit."><input class="form-control form-control-sm text-end ls-item-valor" inputmode="decimal" data-mascara="moeda" autocomplete="off" placeholder="0,00"></td>' +
       '<td data-rotulo="Subtotal" class="text-end"><span class="ls-money ls-item-subtotal">R$ 0,00</span></td>' +
       '<td class="text-end"><button type="button" class="btn btn-sm btn-outline-danger ls-item-remover" aria-label="Remover item"><i class="bi bi-x-lg"></i></button></td>';
 
     corpo.appendChild(tr);
+    Painel.aplicarMascaras(tr);
 
     /* A busca da linha nasce junto e fica guardada no próprio <tr>:
        remover a linha leva o componente embora, sem sobra. */
@@ -1093,6 +1156,10 @@ document.addEventListener("DOMContentLoaded", function () {
       buscaCliente.adicionarOpcao(orcamento.cliente_opcao, false);
     }
     buscaCliente.definirValor(orcamento ? orcamento.cliente : "", false);
+    aplicarClienteNoOrcamento(
+      orcamento ? orcamento.cliente_opcao : null,
+      false
+    );
 
     if (orcamento) {
       Painel.valor("orcamentoNome", orcamento.nome_cliente);
@@ -1103,6 +1170,8 @@ document.addEventListener("DOMContentLoaded", function () {
       Painel.valor("orcamentoValidade", orcamento.validade);
       Painel.valor("orcamentoFrete", orcamento.frete);
       Painel.valor("orcamentoDesconto", orcamento.desconto);
+      Painel.valor("orcamentoPagamento", orcamento.forma_pagamento);
+      Painel.valor("orcamentoEnvio", orcamento.forma_envio);
       Painel.valor("orcamentoObs", orcamento.observacoes);
       orcamento.itens.forEach(novaLinha);
     }
@@ -1355,7 +1424,11 @@ document.addEventListener("DOMContentLoaded", function () {
         );
       } catch (e) {}
       buscaCliente.adicionarOpcao(json.cliente, false);
-      buscaCliente.definirValor(json.cliente.valor);
+      buscaCliente.definirValor(json.cliente.valor, false);
+      /* Cadastro recém-gravado vence os textos soltos que estavam no
+         orçamento: nome, telefone e e-mail passam a refletir exatamente
+         a pessoa que acabou de ser salva. */
+      aplicarClienteNoOrcamento(json.cliente, true);
 
       Painel.fechar("modalClienteNovo");
     }
@@ -1402,6 +1475,7 @@ document.addEventListener("DOMContentLoaded", function () {
           document.getElementById("linkEmail").value = atual ? (atual.email_cliente || "") : "";
           campoLink.value = json.link;
           document.getElementById("linkAbrir").href = json.link;
+          document.getElementById("linkPreviaInterna").href = json.preview_url || "#";
           Painel.erro("linkErro", "");
           Painel.abrir("modalLink");
         })

@@ -1,70 +1,55 @@
-INTERNO VISUAL V3 — REFATORAÇÃO ESTRUTURAL
-=========================================
+ORÇAMENTO V4 — APLICAR COM SEGURANÇA
+====================================
 
-Esta versão NÃO é apenas um tema aplicado sobre o Bootstrap.
-As telas principais foram reconstruídas com componentes próprios.
+O pacote não contém .git, .idea, banco local nem ambiente virtual.
+Ele pode ser copiado por cima do projeto sem apagar o histórico do Git.
 
-ARQUIVOS:
-- sistema_interno/static/interno/interno_modern.css
-- sistema_interno/templates/base_inner.html
-- sistema_interno/templates/home_inner.html
-- sistema_interno/templates/dashboard_estoque.html
-- sistema_interno/templates/estoque_inner.html
-- sistema_interno/templates/material_inner.html
-- sistema_interno/templates/saidas_estoque.html
-- sistema_interno/templates/vendas_inner.html
-- sistema_interno/templates/pedidos_inner.html
-- sistema_interno/templates/manutencao_inner.html
-- sistema_interno/templates/login_inner.html
-- sistema_interno/templates/logout_inner.html
+ANTES DE COPIAR
+---------------
+Abra o PowerShell na pasta Lazer-Sport e execute:
 
-MANTIDO:
-- IDs dos formulários.
-- Names dos campos.
-- Actions POST.
-- painel.js.
-- JavaScript de estoque.
-- JavaScript de materiais.
-- Views, models e URLs.
-- Regras de negócio.
+git status
+git pull --ff-only origin main
 
-MUDANÇAS VISUAIS:
-- fundo grafite/azul-marinho real;
-- praticamente nenhum painel branco;
-- hierarquia de superfície em 3 níveis;
-- hero/header grande por tela;
-- KPIs altos e legíveis;
-- fonte maior;
-- tabelas com maior altura e contraste;
-- filtros separados visualmente;
-- botões maiores;
-- modais completamente escuros;
-- status por cor;
-- navegação maior;
-- mobile mais legível;
-- cache-busting do CSS com ?v=3.1.
+Se o Git informar que existe merge em andamento ou arquivos locais ainda
+não salvos, pare e resolva isso antes de substituir os arquivos.
 
-APLICAR SEMPRE NA MAIN:
+COMO APLICAR
+------------
+1. Extraia este ZIP em uma pasta temporária.
+2. Copie todo o conteúdo extraído para a pasta Lazer-Sport.
+3. Confirme a substituição dos arquivos existentes.
+4. Não apague a pasta .git que já existe no seu projeto.
 
-git switch main
-git pull origin main
+DEPOIS DE COPIAR
+----------------
+Execute dentro do ambiente virtual:
 
-git add sistema_interno/static/interno/interno_modern.css
-git add sistema_interno/templates/base_inner.html
-git add sistema_interno/templates/home_inner.html
-git add sistema_interno/templates/dashboard_estoque.html
-git add sistema_interno/templates/estoque_inner.html
-git add sistema_interno/templates/material_inner.html
-git add sistema_interno/templates/saidas_estoque.html
-git add sistema_interno/templates/vendas_inner.html
-git add sistema_interno/templates/pedidos_inner.html
-git add sistema_interno/templates/manutencao_inner.html
-git add sistema_interno/templates/login_inner.html
-git add sistema_interno/templates/logout_inner.html
+python manage.py migrate
+python manage.py collectstatic --noinput
+python manage.py check
+python manage.py test --settings=lazer.settings_test
 
-git diff --check
-git status --short
-git commit -m "evolui design completo do sistema interno"
+Se tudo passar:
+
+git add .
+git commit -m "refina orçamento, CEP, prévia e aprovação do cliente"
 git push origin main
 
-Não precisa makemigrations nem migrate.
+O QUE MUDOU
+-----------
+- CEP preenche rua, bairro, cidade e UF, com segunda fonte quando necessário.
+- CEP, telefone, CPF/CNPJ e dinheiro recebem máscaras no painel.
+- Quantidade aceita somente número inteiro; dinheiro abre teclado numérico.
+- Cliente criado dentro do orçamento volta imediatamente com todos os dados.
+- Prévia interna funciona inclusive em rascunho e nunca aceita resposta.
+- Link público marca como enviado e permite aprovar ou recusar.
+- Aprovação/recusa atualiza automaticamente a situação no interno.
+- Documento comercial responsivo com dados do cliente, itens, totais,
+  pagamento, envio, observações e identidade Lazer & Sport.
+- Nova migração: 0016_orcamento_formas_pagamento_envio.py.
+
+IMPORTANTE
+----------
+O GitHub permitiu leitura neste atendimento, mas recusou escrita com erro
+403. Por isso este pacote não foi publicado automaticamente em uma branch.

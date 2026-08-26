@@ -346,6 +346,19 @@ USE_TZ = True
 # esta base, o e-mail sairia com links relativos, que não clicam.
 SITE_URL = os.getenv("SITE_URL", "https://www.lazersport.com.br").strip()
 
+# Identidade exibida na proposta comercial. Fica configurável na
+# hospedagem, mas já nasce com os contatos oficiais usados nos documentos
+# da empresa para a prévia nunca aparecer incompleta.
+ORCAMENTO_TELEFONE = os.getenv(
+    "ORCAMENTO_TELEFONE", "(11) 95388-7201",
+).strip()
+ORCAMENTO_EMAIL = os.getenv(
+    "ORCAMENTO_EMAIL", "contato@lazersport.com.br",
+).strip()
+ORCAMENTO_INSTAGRAM = os.getenv(
+    "ORCAMENTO_INSTAGRAM", "@lazersportbrinquedos",
+).strip()
+
 
 # ============================================================
 # APLICATIVO ANDROID
@@ -607,4 +620,3 @@ try:
     CATALOG_CACHE_TTL = max(60, int(os.getenv("CATALOG_CACHE_TTL", "1800")))
 except ValueError:
     CATALOG_CACHE_TTL = 1800
-    

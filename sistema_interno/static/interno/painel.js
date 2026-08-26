@@ -82,6 +82,106 @@
     }
   };
 
+  /* Máscaras do aplicativo interno.
+   *
+   * type="number" é bom para quantidade inteira, mas ruim para dinheiro
+   * brasileiro: vários navegadores recusam a vírgula e apagam o valor ao
+   * enviar. Valores monetários continuam como texto com inputmode decimal,
+   * recebem teclado numérico no tablet e têm qualquer letra removida aqui.
+   */
+  Painel.aplicarMascaras = function (raiz) {
+    raiz = raiz || document;
+
+    function digitos(valor, limite) {
+      return String(valor || "").replace(/\D/g, "").slice(0, limite || 99);
+    }
+
+    function telefone(valor) {
+      var numero = digitos(valor, 13);
+      var pais = numero.length > 11 && numero.indexOf("55") === 0;
+      var local = pais ? numero.slice(2) : numero;
+      var prefixo = pais ? "+55 " : "";
+
+      if (!local) return prefixo.trim();
+      if (local.length < 3) return prefixo + "(" + local;
+
+      var ddd = local.slice(0, 2);
+      var corpo = local.slice(2);
+      if (corpo.length <= 4) return prefixo + "(" + ddd + ") " + corpo;
+
+      var corte = corpo.length > 8 ? 5 : 4;
+      return prefixo + "(" + ddd + ") " + corpo.slice(0, corte) + "-" + corpo.slice(corte, 9);
+    }
+
+    function cep(valor) {
+      var numero = digitos(valor, 8);
+      return numero.length > 5
+        ? numero.slice(0, 5) + "-" + numero.slice(5)
+        : numero;
+    }
+
+    function documento(valor) {
+      var numero = digitos(valor, 14);
+      if (numero.length <= 11) {
+        return numero
+          .replace(/^(\d{3})(\d)/, "$1.$2")
+          .replace(/^(\d{3})\.(\d{3})(\d)/, "$1.$2.$3")
+          .replace(/\.(\d{3})(\d)/, ".$1-$2");
+      }
+      return numero
+        .replace(/^(\d{2})(\d)/, "$1.$2")
+        .replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3")
+        .replace(/\.(\d{3})(\d)/, ".$1/$2")
+        .replace(/(\d{4})(\d)/, "$1-$2");
+    }
+
+    function moedaDigitada(valor) {
+      var limpo = String(valor || "").replace(/[^\d.,]/g, "");
+      var virgula = limpo.lastIndexOf(",");
+      if (virgula >= 0) {
+        limpo = limpo.slice(0, virgula).replace(/,/g, "") + limpo.slice(virgula);
+      }
+      return limpo.slice(0, 18);
+    }
+
+    function numeroMoeda(valor) {
+      var limpo = String(valor || "").replace(/[^\d.,]/g, "");
+      if (!limpo) return null;
+      if (limpo.indexOf(",") >= 0) {
+        limpo = limpo.replace(/\./g, "").replace(",", ".");
+      } else if ((limpo.match(/\./g) || []).length > 1) {
+        limpo = limpo.replace(/\./g, "");
+      }
+      var numero = Number(limpo);
+      return Number.isFinite(numero) ? numero : null;
+    }
+
+    raiz.querySelectorAll("[data-mascara]").forEach(function (campo) {
+      if (campo.dataset.mascaraLigada === "1") return;
+      campo.dataset.mascaraLigada = "1";
+      var tipo = campo.dataset.mascara;
+
+      function formatarEntrada() {
+        if (tipo === "telefone") campo.value = telefone(campo.value);
+        else if (tipo === "cep") campo.value = cep(campo.value);
+        else if (tipo === "documento") campo.value = documento(campo.value);
+        else if (tipo === "moeda") campo.value = moedaDigitada(campo.value);
+      }
+
+      campo.addEventListener("input", formatarEntrada);
+      if (tipo === "moeda") {
+        campo.addEventListener("blur", function () {
+          var numero = numeroMoeda(campo.value);
+          campo.value = numero === null ? "" : numero.toLocaleString("pt-BR", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+          });
+        });
+      }
+      formatarEntrada();
+    });
+  };
+
   /* CEP compartilhado por qualquer formulário do painel. O resultado fica
    * sete dias no sessionStorage do aparelho: abrir cliente, orçamento e
    * entrega com o mesmo CEP reaproveita os dados e não cobra outra consulta
@@ -94,6 +194,7 @@
     var ultimo = "";
     var emAndamento = null;
     var validade = 7 * 24 * 60 * 60 * 1000;
+    var timer = null;
 
     function informar(texto, classe) {
       if (!status) return;
@@ -106,12 +207,17 @@
         var campo = document.getElementById(opcoes.campos[chave]);
         if (campo && dados[chave] !== undefined) campo.value = dados[chave] || "";
       });
-      informar("Endereço encontrado", "sucesso");
+      if (dados.cep) campoCep.value = String(dados.cep).replace(/\D/g, "")
+        .replace(/^(\d{5})(\d{1,3})$/, "$1-$2");
+      informar(
+        dados.bairro ? "Endereço completo encontrado" : "Confira e complete o bairro",
+        dados.bairro ? "sucesso" : "erro"
+      );
     }
 
     function lerCache(cep) {
       try {
-        var bruto = global.sessionStorage.getItem("ls:cep:" + cep);
+        var bruto = global.sessionStorage.getItem("ls:cep:v2:" + cep);
         var salvo = bruto ? JSON.parse(bruto) : null;
         if (salvo && Date.now() - salvo.em < validade) return salvo.dados;
       } catch (e) {
@@ -123,7 +229,7 @@
     function guardarCache(cep, dados) {
       try {
         global.sessionStorage.setItem(
-          "ls:cep:" + cep,
+          "ls:cep:v2:" + cep,
           JSON.stringify({ em: Date.now(), dados: dados })
         );
       } catch (e) {
@@ -140,6 +246,7 @@
       }
       if (cep.length !== 8) {
         informar("CEP incompleto", "erro");
+        ultimo = "";
         return;
       }
       if (cep === ultimo) return;
@@ -185,6 +292,17 @@
 
     campoCep.addEventListener("blur", consultar);
     campoCep.addEventListener("change", consultar);
+    campoCep.addEventListener("input", function () {
+      if (timer) global.clearTimeout(timer);
+      var completo = String(campoCep.value || "").replace(/\D/g, "").length === 8;
+      if (!completo) {
+        ultimo = "";
+        if (campoCep.value) informar("CEP incompleto", "erro");
+        else informar("");
+        return;
+      }
+      timer = global.setTimeout(consultar, 180);
+    });
   };
 
   Painel.enviar = function (form, extras) {
@@ -293,4 +411,7 @@
   };
 
   global.Painel = Painel;
+  document.addEventListener("DOMContentLoaded", function () {
+    Painel.aplicarMascaras(document);
+  });
 })(window);

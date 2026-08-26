@@ -86,7 +86,13 @@ def cep_valido(cep):
 
 @lru_cache(maxsize=2000)
 def buscar_dados_cep(cep):
-    """Consulta o ViaCEP e devolve os campos normalizados do endereço."""
+    """Consulta o CEP e devolve rua, bairro, cidade e UF normalizados.
+
+    ViaCEP continua sendo a fonte principal. Alguns CEPs, porém, chegam sem
+    bairro (ou sem logradouro) mesmo quando outra base pública possui esse
+    dado. Nessa situação consultamos a BrasilAPI apenas para completar os
+    campos vazios; uma falha da segunda fonte nunca derruba a primeira.
+    """
     cep_limpo = _somente_digitos(cep)
     if not cep_valido(cep_limpo):
         logger.warning("[FRETE] CEP inválido: %s", cep)
@@ -104,13 +110,37 @@ def buscar_dados_cep(cep):
         logger.warning("[FRETE] CEP não encontrado: %s", cep_limpo)
         return None
 
-    return {
+    dados = {
         "cep": cep_limpo,
         "rua": (data.get("logradouro") or "").strip(),
         "bairro": (data.get("bairro") or "").strip(),
         "cidade": (data.get("localidade") or "").strip(),
         "estado": (data.get("uf") or "").strip(),
     }
+
+    if not all(dados[campo] for campo in ("rua", "bairro", "cidade", "estado")):
+        try:
+            alternativa = _request_json(
+                f"https://brasilapi.com.br/api/cep/v2/{cep_limpo}"
+            )
+        except (requests.RequestException, ValueError) as exc:
+            logger.info(
+                "[CEP] BrasilAPI indisponível para completar %s: %s",
+                cep_limpo,
+                exc,
+            )
+        else:
+            complementos = {
+                "rua": alternativa.get("street"),
+                "bairro": alternativa.get("neighborhood"),
+                "cidade": alternativa.get("city"),
+                "estado": alternativa.get("state"),
+            }
+            for campo, valor in complementos.items():
+                if not dados[campo] and valor:
+                    dados[campo] = str(valor).strip()
+
+    return dados
 
 
 def buscar_endereco(cep):

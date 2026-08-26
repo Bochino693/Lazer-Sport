@@ -20,16 +20,18 @@ sustenta isso:
     quem reabre é a equipe, dando nova validade.
 """
 
+from django.conf import settings
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 from django.views.generic import View
 
+from core.models import EnderecoEmpresa
 from sistema_interno.models import Orcamento
 
 
-def _carregar(token):
+def carregar_orcamento_exibicao(**filtros):
     """Busca a proposta pelo token, já com o que a página desenha.
 
     prefetch dos itens e do brinquedo de cada item: sem isso a página faz
@@ -40,20 +42,47 @@ def _carregar(token):
         Orcamento.objects
         .select_related("cliente", "responsavel")
         .prefetch_related(
+            "cliente__enderecos",
             "itens__brinquedo",
             "itens__produto",
             "itens__peca__imagem_peca_reposicao",
         ),
-        token=token,
+        **filtros,
     )
 
 
-def _contexto(orcamento):
+def _carregar(token):
+    return carregar_orcamento_exibicao(token=token)
+
+
+def contexto_orcamento(orcamento, *, previsualizacao=False):
+    """Dados compartilhados pela página pública e pela prévia interna."""
     itens = list(orcamento.itens.all())
+    endereco_cliente = (
+        orcamento.cliente.endereco_principal
+        if orcamento.cliente_id and orcamento.cliente else None
+    )
+    empresa = EnderecoEmpresa.objects.filter(ativo=True).first()
+    responsavel = "Equipe Lazer & Sport"
+    if orcamento.responsavel_id and orcamento.responsavel:
+        responsavel = (
+            orcamento.responsavel.get_full_name().strip()
+            or orcamento.responsavel.username
+        )
 
     return {
         "orcamento": orcamento,
         "itens": itens,
+        "empresa": empresa,
+        "telefone_empresa": (
+            (empresa.telefone if empresa else "")
+            or getattr(settings, "ORCAMENTO_TELEFONE", "")
+        ),
+        "email_empresa": getattr(settings, "ORCAMENTO_EMAIL", ""),
+        "instagram_empresa": getattr(settings, "ORCAMENTO_INSTAGRAM", ""),
+        "endereco_cliente": endereco_cliente,
+        "responsavel_nome": responsavel,
+        "previsualizacao": previsualizacao,
         "quantidade_itens": sum(item.quantidade for item in itens),
         "subtotal": orcamento.subtotal,
         "total": orcamento.total,
@@ -65,7 +94,9 @@ def _contexto(orcamento):
         # equipe. O template usa isto para decidir entre mostrar os botões
         # ou explicar por que eles não estão lá.
         "pode_responder": (
-            orcamento.status in Orcamento.EM_ABERTO and not orcamento.vencido
+            not previsualizacao
+            and orcamento.status in Orcamento.EM_ABERTO
+            and not orcamento.vencido
         ),
         "hoje": timezone.localdate(),
     }
@@ -86,12 +117,12 @@ class OrcamentoPublicoView(View):
         if orcamento.status == Orcamento.Status.RASCUNHO:
             raise Http404("Orçamento ainda não enviado.")
 
-        return render(request, self.template_name, _contexto(orcamento))
+        return render(request, self.template_name, contexto_orcamento(orcamento))
 
     def post(self, request, token):
         orcamento = _carregar(token)
 
-        contexto = _contexto(orcamento)
+        contexto = contexto_orcamento(orcamento)
         if not contexto["pode_responder"]:
             # Chegou tarde: alguém respondeu em outra aba, ou a validade
             # passou entre carregar e clicar. Redireciona para a própria

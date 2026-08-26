@@ -24,6 +24,7 @@ from django.db import transaction
 from django.db.models import Case, Count, IntegerField, Prefetch, Q, Value, When
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.views.generic import View
 
@@ -137,6 +138,7 @@ class OrcamentosInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
             Orcamento.objects
             .select_related("cliente", "cliente__parceiro", "responsavel")
             .prefetch_related(
+                "cliente__enderecos",
                 Prefetch(
                     "itens",
                     queryset=ItemOrcamento.objects
@@ -233,6 +235,8 @@ class OrcamentosInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
             "validade": orcamento.validade.isoformat() if orcamento.validade else "",
             "desconto": f"{orcamento.desconto:.2f}".replace(".", ","),
             "frete": f"{orcamento.frete:.2f}".replace(".", ","),
+            "forma_pagamento": orcamento.forma_pagamento,
+            "forma_envio": orcamento.forma_envio,
             "observacoes": orcamento.observacoes,
             "itens": [
                 {
@@ -371,6 +375,12 @@ class OrcamentosInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
             request.POST.get("frete"), "Frete",
             limite=Decimal("9999999999.99"),
         ) or ZERO
+        orcamento.forma_pagamento = texto(
+            request, "forma_pagamento", limite=120,
+        )
+        orcamento.forma_envio = texto(
+            request, "forma_envio", limite=120,
+        )
         orcamento.observacoes = texto(request, "observacoes")
 
         if not orcamento.pk:
@@ -526,7 +536,16 @@ class OrcamentosInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
         if canal not in ("link", "whatsapp", "email"):
             raise ErroDeFormulario("Escolha WhatsApp, e-mail ou copiar link.")
 
-        extras = {"link": link}
+        extras = {
+            "link": link,
+            "preview_url": request.build_absolute_uri(
+                reverse(
+                    "orcamento_previa_inner",
+                    args=[orcamento.pk],
+                    urlconf="sistema_interno.urls",
+                )
+            ),
+        }
 
         if canal == "whatsapp":
             telefone = texto(request, "whatsapp", limite=24) or orcamento.whatsapp_destinatario
@@ -739,6 +758,25 @@ class OrcamentosInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
         )
 
 
+class OrcamentoPreviaInnerView(GestorInternoRequiredMixin, View):
+    """Mostra o documento antes do envio, inclusive quando é rascunho.
+
+    A página pública esconde rascunhos por segurança. A prévia, por sua vez,
+    vive no subdomínio autenticado e nunca aceita a decisão do cliente; assim
+    a equipe confere o documento real sem precisar marcar como enviado.
+    """
+
+    def get(self, request, pk):
+        from core.views_orcamento import (
+            carregar_orcamento_exibicao,
+            contexto_orcamento,
+        )
+
+        orcamento = carregar_orcamento_exibicao(pk=pk)
+        contexto = contexto_orcamento(orcamento, previsualizacao=True)
+        return render(request, "orcamento_publico.html", contexto)
+
+
 class BuscaItensOrcamentoView(GestorInternoRequiredMixin, View):
     """Busca pequena e relevante para o seletor do orçamento.
 
@@ -865,7 +903,9 @@ class BuscaClientesOrcamentoView(GestorInternoRequiredMixin, View):
 
     def get(self, request):
         termo = (request.GET.get("q") or "").strip()[:80]
-        clientes = Cliente.objects.select_related("parceiro")
+        clientes = Cliente.objects.select_related("parceiro").prefetch_related(
+            "enderecos"
+        )
 
         if termo:
             clientes = svc_clientes.buscar(clientes, termo).annotate(

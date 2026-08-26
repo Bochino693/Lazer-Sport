@@ -29,9 +29,9 @@ noindex não é detalhe: a página é aberta por link, e um orçamento
   --fundo:#EEF2F9;
   --linha:#DFE6F1;
   --linha-forte:#C7D3E6;
-  --marca:#2A2FC4;
+  --marca:#071D68;
   --marca-clara:#EEF0FF;
-  --vermelho:#E11D48;
+  --vermelho:#E21A2C;
   --vermelho-claro:#FFF1F4;
   --verde:#0F9D58;
   --verde-claro:#E9F8F0;
@@ -45,11 +45,17 @@ noindex não é detalhe: a página é aberta por link, e um orçamento
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
 body{
-  margin:0;background:var(--fundo);color:var(--tinta);
+  margin:0;background:#e9edf5;color:var(--tinta);
   font-family:Manrope,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
   line-height:1.55;-webkit-font-smoothing:antialiased;
 }
-.envelope{max-width:860px;margin:0 auto;padding:24px 16px 72px}
+.envelope{max-width:980px;margin:0 auto;padding:24px 16px 72px}
+.previa-bar{
+  position:sticky;top:10px;z-index:20;margin:0 auto 12px;padding:11px 16px;
+  max-width:760px;border-radius:999px;background:#111827;color:#fff;
+  box-shadow:0 12px 32px rgba(15,23,42,.22);text-align:center;
+  font-size:.82rem;font-weight:750;letter-spacing:.1px
+}
 
 /* ---------------------------------------------------------- entrada */
 /* Tudo entra escalonado, de baixo para cima. O atraso é dado por
@@ -67,44 +73,50 @@ body{
 
 /* ------------------------------------------------------------ topo */
 .capa{
-  position:relative;overflow:hidden;border-radius:var(--raio-g);
-  padding:34px 30px 30px;color:#fff;margin-bottom:18px;
-  background:linear-gradient(135deg,#0A1046 0%,#2A2FC4 62%,#FF2D6F 140%);
-  box-shadow:var(--sombra-alta);
+  position:relative;overflow:hidden;border-radius:var(--raio-g) var(--raio-g) 10px 10px;
+  padding:56px 34px 30px;margin-bottom:0;background:#fff;
+  border:1px solid var(--linha);box-shadow:var(--sombra-alta);
+  display:grid;grid-template-columns:minmax(260px,.9fr) minmax(320px,1.1fr);gap:34px;
 }
-.capa::after{
-  content:"";position:absolute;inset:0;pointer-events:none;
-  background:
-    radial-gradient(circle at 88% 6%,rgba(255,45,111,.42),transparent 56%),
-    radial-gradient(circle at 4% 96%,rgba(0,229,255,.34),transparent 58%);
-  mix-blend-mode:screen;
+.capa::before{
+  content:"";position:absolute;inset:0 0 auto;height:34px;
+  background:linear-gradient(105deg,#071d68 0 48%,#fff 48.2% 55%,#e21a2c 55.2% 100%);
+  border-radius:0 0 55% 45%;transform:scaleX(1.08);transform-origin:top
 }
-.capa>*{position:relative;z-index:1}
-.capa-topo{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
-.capa-logo{
-  width:54px;height:54px;flex:0 0 54px;border-radius:16px;background:#fff;
-  display:grid;place-items:center;padding:6px;box-shadow:0 10px 26px rgba(0,0,0,.24);
-}
-.capa-logo img{width:100%;height:100%;object-fit:contain}
-.capa-empresa strong{display:block;font-size:1.06rem;letter-spacing:-.3px}
-.capa-empresa span{font-size:.78rem;opacity:.8;letter-spacing:.4px}
+.capa-marca{display:flex;flex-direction:column;justify-content:center;min-width:0}
+.capa-logo{display:block;width:min(100%,330px)}
+.capa-logo img{display:block;width:100%;height:auto;object-fit:contain}
+.capa-marca p{margin:18px 0 0;font-size:.84rem;color:var(--tinta-2);font-weight:650}
+.capa-meta{border-left:2px solid #d5deef;padding-left:32px}
+.capa-kicker{display:block;color:var(--vermelho);font-size:.78rem;font-weight:850;letter-spacing:1.8px;text-transform:uppercase}
 .capa h1{
-  margin:22px 0 4px;font-size:clamp(1.6rem,4.6vw,2.3rem);
-  font-weight:800;letter-spacing:-1px;line-height:1.1;
+  color:var(--marca);margin:4px 0 18px;font-size:clamp(2rem,5vw,3.15rem);
+  font-weight:850;letter-spacing:-1.7px;line-height:1;
 }
-.capa-para{font-size:1rem;opacity:.9}
-.capa-linha{
-  display:flex;flex-wrap:wrap;gap:8px;margin-top:20px;
-}
+.capa h1::after{content:"";display:block;width:74px;height:5px;border-radius:99px;background:var(--vermelho);margin-top:12px}
+.meta-lista{display:grid;gap:11px;margin:0}
+.meta-linha{display:grid;grid-template-columns:118px 1fr;gap:12px;align-items:baseline}
+.meta-linha dt{font-size:.77rem;color:var(--marca);font-weight:800}
+.meta-linha dd{margin:0;font-size:.86rem;color:var(--tinta);font-weight:650;overflow-wrap:anywhere}
+.capa-linha{display:flex;flex-wrap:wrap;gap:8px;margin-top:20px}
 .selo{
   display:inline-flex;align-items:center;gap:7px;padding:7px 13px;
   border-radius:999px;font-size:.79rem;font-weight:700;letter-spacing:.2px;
-  background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.26);
-  backdrop-filter:blur(6px);
+  color:var(--marca);background:#f4f6fb;border:1px solid #d9e0ed;
 }
-.selo.verde{background:rgba(16,185,129,.26);border-color:rgba(110,231,183,.5)}
-.selo.vermelho{background:rgba(244,63,94,.28);border-color:rgba(253,164,175,.5)}
-.selo.ambar{background:rgba(245,158,11,.28);border-color:rgba(252,211,77,.5)}
+.selo.verde{background:var(--verde-claro);border-color:#a8e0c4;color:#087443}
+.selo.vermelho{background:var(--vermelho-claro);border-color:#f6bfcc;color:#a10e2c}
+.selo.ambar{background:var(--ambar-claro);border-color:#f5d38e;color:#94500c}
+
+.cliente-bloco{
+  padding:25px 32px 27px;background:#fff;border:1px solid var(--linha);
+  border-top:0;border-radius:0 0 var(--raio-g) var(--raio-g);box-shadow:var(--sombra);
+  margin-bottom:16px
+}
+.secao-legenda{margin:0 0 14px;color:var(--marca);font-size:.9rem;font-weight:850;letter-spacing:.4px;text-transform:uppercase}
+.dados-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 26px}
+.dado{display:grid;grid-template-columns:105px 1fr;gap:10px;font-size:.86rem;min-width:0}
+.dado b{color:var(--marca);font-size:.78rem}.dado span{overflow-wrap:anywhere}
 
 /* ----------------------------------------------------------- cartão */
 .bloco{
@@ -120,21 +132,30 @@ body{
 .bloco-titulo span{font-size:.82rem;color:var(--tinta-3);font-weight:600}
 
 /* ------------------------------------------------------------ itens */
-.item{
-  display:grid;grid-template-columns:74px 1fr auto;gap:16px;align-items:center;
-  padding:15px 0;border-top:1px solid var(--linha);
+.item-cabecalho,.item{
+  display:grid;grid-template-columns:minmax(260px,1fr) 110px 145px 145px;
+  gap:0;align-items:stretch
 }
-.item:first-of-type{border-top:0;padding-top:0}
+.item-cabecalho{background:var(--marca);color:#fff;border-radius:13px 13px 0 0;overflow:hidden}
+.item-cabecalho span{padding:11px 13px;font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.5px;border-left:1px solid rgba(255,255,255,.24)}
+.item-cabecalho span:first-child{border-left:0}
+.item{border:1px solid var(--linha);border-top:0;background:#fff}
+.item:last-of-type{border-radius:0 0 13px 13px}
+.item>span{padding:12px 13px;border-left:1px solid var(--linha);display:flex;align-items:center}
+.item>span:first-child{border-left:0}
+.item-descricao{gap:12px;min-width:0}
 .item-foto{
-  width:74px;height:74px;border-radius:15px;overflow:hidden;background:var(--marca-clara);
+  width:58px;height:58px;flex:0 0 58px;border-radius:12px;overflow:hidden;background:var(--marca-clara);
   display:grid;place-items:center;border:1px solid var(--linha);
 }
 .item-foto img{width:100%;height:100%;object-fit:cover}
 .item-foto .sem-foto{font-size:1.4rem;color:#93A2C4}
 .item-nome{font-weight:700;font-size:.99rem;letter-spacing:-.2px}
-.item-conta{font-size:.85rem;color:var(--tinta-2);margin-top:3px}
+.item-texto{display:block;min-width:0}.item-conta{font-size:.8rem;color:var(--tinta-2);margin-top:3px}
 .item-medidas{font-size:.78rem;color:var(--tinta-3);margin-top:2px}
-.item-valor{font-weight:800;font-size:1.02rem;white-space:nowrap;text-align:right}
+.item-quantidade{justify-content:center;font-weight:750;color:var(--tinta-2)}
+.item-unitario,.item-valor{justify-content:flex-end;font-weight:750;white-space:nowrap;text-align:right}
+.item-valor{font-size:1rem;color:var(--marca)}
 
 /* ---------------------------------------------------------- somatório */
 .soma{margin-top:20px;border-top:2px solid var(--linha-forte);padding-top:16px}
@@ -149,6 +170,12 @@ body{
 }
 .soma-total span{font-size:.95rem;font-weight:700;color:var(--tinta-2)}
 .soma-total strong{font-size:clamp(1.7rem,5vw,2.15rem);font-weight:800;letter-spacing:-1.2px;color:var(--marca)}
+
+.comercial-grid{display:grid;grid-template-columns:1.05fr 1fr 1fr;gap:1px;padding:1px;background:var(--linha);border:1px solid var(--linha);border-radius:20px;overflow:hidden;box-shadow:var(--sombra);margin-bottom:16px}
+.comercial-item{background:#fff;padding:19px 18px;min-width:0}
+.comercial-item span{display:block;color:var(--tinta-3);font-size:.69rem;font-weight:800;letter-spacing:.6px;text-transform:uppercase;margin-bottom:6px}
+.comercial-item strong{display:block;color:var(--marca);font-size:.96rem;line-height:1.3;overflow-wrap:anywhere}
+.comercial-item.total strong{font-size:1.36rem;color:var(--vermelho)}
 
 /* ------------------------------------------------------------ aviso */
 .faixa{
@@ -223,21 +250,40 @@ body{
 .rodape a:hover{text-decoration:underline}
 
 /* ------------------------------------------------------------- telas */
-@media (max-width:560px){
+@media (max-width:820px){
+  .capa{grid-template-columns:1fr;gap:22px}
+  .capa-logo{width:min(100%,320px);margin:auto}
+  .capa-marca p{text-align:center}
+  .capa-meta{border-left:0;border-top:2px solid #d5deef;padding:22px 0 0}
+  .item-cabecalho,.item{grid-template-columns:minmax(220px,1fr) 82px 126px 126px}
+  .dados-grid{grid-template-columns:1fr}
+}
+@media (max-width:680px){
   .envelope{padding:14px 12px 56px}
-  .capa{padding:26px 20px 24px;border-radius:22px}
+  .capa{padding:48px 20px 22px;border-radius:22px 22px 8px 8px;grid-template-columns:1fr;gap:22px}
+  .capa-logo{width:min(100%,280px);margin:auto}
+  .capa-marca p{text-align:center;margin-top:10px}
+  .capa-meta{border-left:0;border-top:2px solid #d5deef;padding:20px 0 0}
+  .meta-linha{grid-template-columns:105px 1fr}
+  .cliente-bloco{padding:21px 18px;border-radius:0 0 20px 20px}
+  .dados-grid{grid-template-columns:1fr}.dado{grid-template-columns:88px 1fr}
   .bloco,.decisao{padding:19px 16px;border-radius:20px}
-  .item{grid-template-columns:56px 1fr;gap:12px}
-  .item-foto{width:56px;height:56px}
-  /* o valor cai para a terceira coluna da própria linha do texto */
-  .item-valor{grid-column:2;text-align:left;font-size:.98rem;margin-top:2px}
+  .item-cabecalho{display:none}
+  .item{grid-template-columns:1fr 1fr;border:1px solid var(--linha);border-radius:14px!important;margin-bottom:10px;overflow:hidden}
+  .item>span{border:0;padding:9px 11px}.item-descricao{grid-column:1/-1;padding:12px!important;border-bottom:1px solid var(--linha)!important}
+  .item-quantidade{justify-content:flex-start}.item-unitario{justify-content:flex-end}
+  .item-quantidade::before{content:"Qtd. ";font-size:.7rem;color:var(--tinta-3);margin-right:4px}
+  .item-unitario::before{content:"Unit. ";font-size:.7rem;color:var(--tinta-3);margin-right:4px}
+  .item-valor{grid-column:1/-1;justify-content:flex-end;background:#f6f8fc;border-top:1px solid var(--linha)!important}
+  .item-valor::before{content:"Total ";font-size:.72rem;color:var(--tinta-3);margin-right:6px}
+  .comercial-grid{grid-template-columns:1fr}.comercial-item{padding:16px 17px}
 }
 
 /* ---------------------------------------------------------- impressão */
 @media print{
   body{background:#fff}
   .envelope{max-width:none;padding:0}
-  .decisao,.rodape .nao-imprime{display:none}
+  .decisao,.rodape .nao-imprime,.previa-bar{display:none}
   .capa{box-shadow:none;border-radius:0;
     /* impressora costuma descartar fundo; o texto precisa sobreviver */
     -webkit-print-color-adjust:exact;print-color-adjust:exact}
@@ -250,52 +296,84 @@ body{
 
 <div class="envelope">
 
+  {% if previsualizacao %}
+    <div class="previa-bar">
+      Prévia interna · nenhum cliente pode responder por esta tela
+    </div>
+  {% endif %}
+
   <!-- ======================================================== capa -->
   <header class="capa entra" style="--i:0">
-    <div class="capa-topo">
+    <div class="capa-marca">
       <span class="capa-logo">
         <img src="{% static 'images/logoofi.png' %}" alt="Lazer &amp; Sport Brinquedos">
       </span>
-      <span class="capa-empresa">
-        <strong>Lazer &amp; Sport Brinquedos</strong>
-        <span>Brinquedos · Cenografia · Parques</span>
-      </span>
+      <p>Brinquedos · Cenografia · Parques</p>
     </div>
 
-    <h1>Proposta&nbsp;#{{ orcamento.pk }}</h1>
-    <p class="capa-para">Preparada para <strong>{{ orcamento.destinatario }}</strong></p>
+    <div class="capa-meta">
+      <span class="capa-kicker">Proposta comercial</span>
+      <h1>Orçamento</h1>
+      <dl class="meta-lista">
+        <div class="meta-linha"><dt>Data</dt><dd>{{ orcamento.criacao|date:"d/m/Y" }}</dd></div>
+        <div class="meta-linha"><dt>Nº do orçamento</dt><dd>{{ orcamento.numero_documento }}</dd></div>
+        <div class="meta-linha"><dt>Responsável</dt><dd>{{ responsavel_nome }}</dd></div>
+        {% if telefone_empresa %}
+          <div class="meta-linha"><dt>WhatsApp</dt><dd>{{ telefone_empresa }}</dd></div>
+        {% endif %}
+      </dl>
 
-    <div class="capa-linha">
-      {% if respondido %}
-        {% if orcamento.status == 'aprovado' %}
-          <span class="selo verde">✓ Aprovada por você</span>
+      <div class="capa-linha">
+        {% if previsualizacao %}
+          <span class="selo">Prévia do documento</span>
+        {% elif respondido %}
+          {% if orcamento.status == 'aprovado' %}
+            <span class="selo verde">✓ Aprovada</span>
+          {% else %}
+            <span class="selo vermelho">✕ Recusada</span>
+          {% endif %}
+        {% elif vencido %}
+          <span class="selo vermelho">Validade encerrada</span>
         {% else %}
-          <span class="selo vermelho">✕ Recusada</span>
+          <span class="selo">Aguardando resposta</span>
         {% endif %}
-        <span class="selo">Respondida em {{ orcamento.respondido_em|date:"d/m/Y" }}</span>
-      {% elif vencido %}
-        <span class="selo vermelho">Validade encerrada</span>
-        <span class="selo">Venceu em {{ orcamento.validade|date:"d/m/Y" }}</span>
-      {% else %}
-        <span class="selo">Aguardando sua resposta</span>
         {% if orcamento.validade %}
-          <span class="selo {% if dias_para_vencer <= 3 %}ambar{% endif %}">
-            {% if dias_para_vencer == 0 %}
-              Vence hoje
-            {% elif dias_para_vencer == 1 %}
-              Vence amanhã
-            {% else %}
-              Válida por mais {{ dias_para_vencer }} dias
-            {% endif %}
-          </span>
+          <span class="selo {% if not previsualizacao and dias_para_vencer <= 3 %}ambar{% endif %}">Válida até {{ orcamento.validade|date:"d/m/Y" }}</span>
         {% endif %}
-      {% endif %}
-      <span class="selo">{{ quantidade_itens }} {% if quantidade_itens == 1 %}item{% else %}itens{% endif %}</span>
+      </div>
     </div>
   </header>
 
+  <section class="cliente-bloco entra" style="--i:1">
+    <h2 class="secao-legenda">Dados do cliente</h2>
+    <div class="dados-grid">
+      <div class="dado"><b>Cliente</b><span>{{ orcamento.destinatario }}</span></div>
+      {% if orcamento.contato %}<div class="dado"><b>Contato</b><span>{{ orcamento.contato }}</span></div>{% endif %}
+      {% if orcamento.cliente and orcamento.cliente.documento %}
+        <div class="dado"><b>CPF/CNPJ</b><span>{{ orcamento.cliente.documento }}</span></div>
+      {% endif %}
+      {% if orcamento.whatsapp_destinatario %}
+        <div class="dado"><b>WhatsApp</b><span>{{ orcamento.whatsapp_destinatario }}</span></div>
+      {% endif %}
+      {% if orcamento.email_destinatario %}
+        <div class="dado"><b>E-mail</b><span>{{ orcamento.email_destinatario }}</span></div>
+      {% endif %}
+      {% if endereco_cliente %}
+        <div class="dado">
+          <b>Endereço</b>
+          <span>
+            {{ endereco_cliente.endereco }}{% if endereco_cliente.numero %}, {{ endereco_cliente.numero }}{% endif %}
+            {% if endereco_cliente.bairro %} · {{ endereco_cliente.bairro }}{% endif %}
+            {% if endereco_cliente.cidade %} · {{ endereco_cliente.cidade }}{% endif %}{% if endereco_cliente.estado %}/{{ endereco_cliente.estado }}{% endif %}
+            {% if endereco_cliente.cep %} · CEP {{ endereco_cliente.cep }}{% endif %}
+          </span>
+        </div>
+      {% endif %}
+    </div>
+  </section>
+
   <!-- ==================================================== situação -->
-  {% if respondido %}
+  {% if not previsualizacao and respondido %}
     <div class="faixa {% if orcamento.status == 'aprovado' %}verde{% else %}vermelha{% endif %} entra" style="--i:1">
       <span class="faixa-icone">{% if orcamento.status == 'aprovado' %}✓{% else %}✕{% endif %}</span>
       <span>
@@ -316,7 +394,7 @@ body{
         {% endif %}
       </span>
     </div>
-  {% elif vencido %}
+  {% elif not previsualizacao and vencido %}
     <div class="faixa ambar entra" style="--i:1">
       <span class="faixa-icone">⏳</span>
       <span>
@@ -341,26 +419,34 @@ body{
       <span>{{ itens|length }} {% if itens|length == 1 %}linha{% else %}linhas{% endif %}</span>
     </div>
 
+    {% if itens %}
+      <div class="item-cabecalho" aria-hidden="true">
+        <span>Descrição</span>
+        <span>Quantidade</span>
+        <span>Valor unitário</span>
+        <span>Valor total</span>
+      </div>
+    {% endif %}
+
     {% for item in itens %}
       <div class="item">
-        <span class="item-foto">
-          {% if item.imagem %}
-            <img src="{{ item.imagem.url }}" alt="{{ item.descricao }}" loading="lazy">
-          {% else %}
-            <span class="sem-foto" aria-hidden="true">◎</span>
-          {% endif %}
-        </span>
-
-        <span>
-          <span class="item-nome">{{ item.descricao }}</span>
-          <span class="item-conta">
-            {{ item.quantidade }} × R$ {{ item.valor_unitario|moeda }}
+        <span class="item-descricao">
+          <span class="item-foto">
+            {% if item.imagem %}
+              <img src="{{ item.imagem.url }}" alt="{{ item.descricao }}" loading="lazy">
+            {% else %}
+              <span class="sem-foto" aria-hidden="true">◎</span>
+            {% endif %}
           </span>
-          {% if item.brinquedo and item.brinquedo.dimensoes_m %}
-            <span class="item-medidas">{{ item.brinquedo.dimensoes_m }}</span>
-          {% endif %}
+          <span class="item-texto">
+            <span class="item-nome">{{ item.descricao }}</span>
+            {% if item.brinquedo and item.brinquedo.dimensoes_m %}
+              <span class="item-medidas">{{ item.brinquedo.dimensoes_m }}</span>
+            {% endif %}
+          </span>
         </span>
-
+        <span class="item-quantidade">{{ item.quantidade }}</span>
+        <span class="item-unitario">R$ {{ item.valor_unitario|moeda }}</span>
         <span class="item-valor">R$ {{ item.subtotal|moeda }}</span>
       </div>
     {% empty %}
@@ -391,6 +477,21 @@ body{
     </div>
   </section>
 
+  <section class="comercial-grid entra" style="--i:3" aria-label="Condições comerciais">
+    <div class="comercial-item total">
+      <span>Valor total</span>
+      <strong>R$ {{ total|moeda }}</strong>
+    </div>
+    <div class="comercial-item">
+      <span>Forma de pagamento</span>
+      <strong>{{ orcamento.forma_pagamento|default:"A combinar" }}</strong>
+    </div>
+    <div class="comercial-item">
+      <span>Forma de envio</span>
+      <strong>{{ orcamento.forma_envio|default:"A combinar" }}</strong>
+    </div>
+  </section>
+
   <!-- ================================================= observações -->
   {% if orcamento.observacoes %}
     <section class="bloco entra" style="--i:3">
@@ -400,7 +501,15 @@ body{
   {% endif %}
 
   <!-- ====================================================== decisão -->
-  {% if pode_responder %}
+  {% if previsualizacao %}
+    <section class="decisao entra" style="--i:4">
+      <div class="carimbo">
+        <div class="carimbo-marca verde">✓</div>
+        <h2>Prévia pronta para conferência</h2>
+        <p>Depois de enviar, o cliente verá aqui os botões para aprovar ou recusar e a situação será atualizada automaticamente no painel.</p>
+      </div>
+    </section>
+  {% elif pode_responder %}
     <section class="decisao entra" style="--i:4">
       <h2>O que você decide?</h2>
       <p class="ajuda">
@@ -455,7 +564,10 @@ body{
 
   <p class="rodape">
     Lazer &amp; Sport Brinquedos ·
-    <a href="https://www.lazersport.com.br">lazersport.com.br</a><br>
+    <a href="https://www.lazersport.com.br">lazersport.com.br</a>
+    {% if telefone_empresa %} · {{ telefone_empresa }}{% endif %}
+    {% if instagram_empresa %} · {{ instagram_empresa }}{% endif %}<br>
+    {% if email_empresa %}{{ email_empresa }}<br>{% endif %}
     <span class="nao-imprime">Esta página é sua — guarde o link para consultar a proposta quando quiser.</span>
   </p>
 </div>

@@ -208,6 +208,34 @@ class ClientesInternoTests(TestCase):
         self.assertEqual(resposta.status_code, 200)
         self.assertEqual(resposta.json()["endereco"]["cidade"], "São Paulo")
 
+    @patch("sistema_interno.clientes.buscar_dados_cep")
+    def test_bairro_vazio_e_completado_no_servidor_ao_salvar(self, buscar):
+        """Rua/cidade preenchidas pelo navegador não podem impedir o bairro."""
+        buscar.return_value = {
+            "cep": "02909000",
+            "rua": "Rua das Palmeiras",
+            "bairro": "Jardim Pery",
+            "cidade": "São Paulo",
+            "estado": "SP",
+        }
+
+        resposta = self.post({
+            "action": "save",
+            "nome_cliente": "Cliente com bairro",
+            "telefone": "(11) 99999-0000",
+            "cep": "02909-000",
+            "endereco": "Rua das Palmeiras",
+            "bairro": "",
+            "cidade": "São Paulo",
+            "estado": "SP",
+        })
+
+        self.assertEqual(resposta.status_code, 200)
+        endereco = Cliente.objects.get(
+            nome_cliente="Cliente com bairro"
+        ).endereco_principal
+        self.assertEqual(endereco.bairro, "Jardim Pery")
+
     @patch(
         "core.models.geocodificar_endereco",
         return_value=(-23.550520, -46.633308, "rua"),
@@ -473,6 +501,9 @@ class ClienteDentroDoOrcamentoTests(TestCase):
         ).endereco_principal
         self.assertEqual(endereco.endereco, "Praça da Sé")
         self.assertEqual(endereco.cidade, "São Paulo")
+        dados = resposta.json()["cliente"]
+        self.assertEqual(dados["whatsapp"], "(11) 96666-1111")
+        self.assertEqual(dados["endereco"]["bairro"], "Sé")
 
 
 @override_settings(ALLOWED_HOSTS=["interno.testserver", "testserver"])
