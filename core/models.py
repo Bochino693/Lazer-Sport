@@ -778,13 +778,26 @@ class Cupom(Prime):
     desconto_percentual = models.DecimalField(decimal_places=2, max_digits=10)
     brinquedo = models.ForeignKey(Brinquedos, on_delete=models.CASCADE, related_name='cupom', null=True)
     categoria = models.ForeignKey(CategoriasBrinquedos, on_delete=models.CASCADE, related_name='categoria', null=True)
-    cliente = models.ManyToManyField(ClientePerfil, related_name='cupons')
+    cliente = models.ManyToManyField(
+        ClientePerfil,
+        related_name='cupons',
+        blank=True,
+        help_text="Somente perfis de cliente podem receber cupons exclusivos.",
+    )
     quantidade_uso = models.IntegerField(default=1, null=True)
     todos_usuarios = models.BooleanField(
         default=True,
         help_text=(
             "Quando ativo, qualquer cliente pode usar o cupom. "
             "Quando desativado, somente os clientes selecionados podem usar."
+        ),
+    )
+    exibir_na_vitrine = models.BooleanField(
+        "Exibir na área de parceiros",
+        default=False,
+        help_text=(
+            "Mostra o código como benefício público no site. "
+            "Cupons pessoais nunca aparecem para outros clientes."
         ),
     )
     reutilizavel = models.BooleanField(
@@ -1810,6 +1823,14 @@ class RecompensaCupom(Prime):
     ordem = models.PositiveSmallIntegerField(
         default=1,
         help_text="Posição na vitrine do aplicativo.",
+    )
+    exibir_na_vitrine_site = models.BooleanField(
+        "Mostrar prévia no site",
+        default=True,
+        help_text=(
+            "Exibe a recompensa na área de parceiros, com aviso de que "
+            "o resgate por pontos acontece somente no aplicativo."
+        ),
     )
 
     @property

@@ -317,6 +317,7 @@ def resgatar(usuario, recompensa_id) -> ResgateCupom:
             desconto_percentual=recompensa.desconto_percentual,
             quantidade_uso=1,
             todos_usuarios=False,   # exclusivo de quem resgatou
+            exibir_na_vitrine=False,
             reutilizavel=False,
             data_expiracao=expira_em,
         )

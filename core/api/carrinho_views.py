@@ -130,7 +130,7 @@ class SincronizarCarrinhoAPI(APIView):
             if "tipo_envio" in dados:
                 carrinho.tipo_envio = dados["tipo_envio"]
 
-            carrinho.cupom = self._resolver_cupom(dados.get("cupom"))
+            carrinho.cupom = self._resolver_cupom(dados.get("cupom"), request.user)
 
             # Qualquer cobrança anterior perde a validade junto com a
             # composição que ela representava.
@@ -188,10 +188,18 @@ class SincronizarCarrinhoAPI(APIView):
         return gravados, ignorados
 
     @staticmethod
-    def _resolver_cupom(codigo):
-        """Cupom inválido não é erro: o pedido segue sem desconto."""
+    def _resolver_cupom(codigo, usuario):
+        """Só aplica cupom público ou pertencente ao perfil autenticado."""
         codigo = (codigo or "").strip()
         if not codigo:
             return None
 
-        return Cupom.objects.filter(codigo__iexact=codigo).first()
+        cupom = Cupom.objects.filter(codigo__iexact=codigo, ativo=True).first()
+        if cupom is None:
+            return None
+        if cupom.todos_usuarios:
+            return cupom
+        perfil = getattr(usuario, "perfil", None)
+        if perfil and cupom.cliente.filter(pk=perfil.pk).exists():
+            return cupom
+        return None

@@ -939,7 +939,7 @@ from django.db.models import (
 from django.db.models.functions import Cast, TruncDate, Coalesce
 
 from django.views.generic import ListView
-from .models import Estabelecimentos
+from .models import Estabelecimentos, RecompensaCupom
 
 
 class EstabelecimentosListView(ListView):
@@ -955,6 +955,34 @@ class EstabelecimentosListView(ListView):
             Brinquedos.objects
             .exclude(imagem_brinquedo="")
             [:8]
+        )
+
+        agora = timezone.now()
+        context["cupons_publicos"] = (
+            Cupom.objects
+            .filter(
+                ativo=True,
+                todos_usuarios=True,
+                exibir_na_vitrine=True,
+            )
+            .filter(Q(data_expiracao__isnull=True) | Q(data_expiracao__gt=agora))
+            .filter(Q(quantidade_uso__isnull=True) | Q(quantidade_uso__gt=0))
+            .select_related("brinquedo", "categoria")
+            .order_by("-desconto_percentual", "codigo")[:6]
+        )
+        context["recompensas_app"] = (
+            RecompensaCupom.objects
+            .filter(ativo=True, exibir_na_vitrine_site=True)
+            .order_by("ordem", "custo_pontos")[:6]
+        )
+
+        perfil = getattr(self.request.user, "perfil", None)
+        context["cupons_do_cliente"] = (
+            perfil.cupons
+            .filter(ativo=True)
+            .filter(Q(data_expiracao__isnull=True) | Q(data_expiracao__gt=agora))
+            .order_by("data_expiracao", "codigo")
+            if perfil is not None else Cupom.objects.none()
         )
 
         return context
@@ -1975,10 +2003,18 @@ class CupomAdminView(AdminOnlyMixin, View):
         cupom.desconto_percentual = desconto
         cupom.quantidade_uso = quantidade
         cupom.ativo = request.POST.get("ativo") == "on"
+        cupom.exibir_na_vitrine = request.POST.get("exibir_na_vitrine") == "on"
+        clientes_ids = request.POST.getlist("clientes")
+        # Cupom pessoal nunca vira promoção pública por engano.
+        if clientes_ids:
+            cupom.todos_usuarios = False
+            cupom.exibir_na_vitrine = False
+        else:
+            cupom.todos_usuarios = True
         cupom.brinquedo_id = request.POST.get("brinquedo") or None
         cupom.categoria_id = request.POST.get("categoria") or None
         cupom.save()
-        cupom.cliente.set(request.POST.getlist("clientes"))
+        cupom.cliente.set(clientes_ids)
         messages.success(request, "Cupom atualizado." if cupom_id else "Cupom criado com sucesso.")
         return redirect("cupons_admin")
 
@@ -4327,7 +4363,7 @@ def aplicar_cupom(request):
         })
 
     clientes_permitidos = cupom.cliente.all()
-    if clientes_permitidos.exists() and not clientes_permitidos.filter(pk=request.user.perfil.pk).exists():
+    if not cupom.todos_usuarios and not clientes_permitidos.filter(pk=request.user.perfil.pk).exists():
         return JsonResponse({
             'status': 'warning',
             'title': 'Cupom exclusivo',

@@ -544,6 +544,7 @@
         data-desconto="{{ cupom.desconto_percentual|unlocalize }}"
         data-quantidade="{{ cupom.quantidade_uso }}"
         data-ativo="{{ cupom.ativo|yesno:'1,0' }}"
+        data-vitrine="{{ cupom.exibir_na_vitrine|yesno:'1,0' }}"
         data-brinquedo="{{ cupom.brinquedo_id|default:'' }}"
         data-categoria="{{ cupom.categoria_id|default:'' }}"
         data-clientes="{% for c in cupom.cliente.all %}{{ c.id }}{% if not forloop.last %},{% endif %}{% endfor %}"
@@ -665,6 +666,11 @@
           <input type="checkbox" name="ativo" id="cupom_ativo" checked>
           <span>Cupom ativo e disponível para uso</span>
         </label>
+        <label class="cup-check">
+          <input type="checkbox" name="exibir_na_vitrine" id="cupom_vitrine">
+          <span>Mostrar como cupom público na área de parceiros</span>
+        </label>
+        <small>Ao selecionar clientes específicos, o cupom fica pessoal e nunca é exibido publicamente.</small>
       </div>
 
       <div class="cup-modal-footer">
@@ -725,6 +731,7 @@
   const categoria = document.getElementById("categoria");
   const clientes = document.getElementById("clientes");
   const cupomAtivo = document.getElementById("cupom_ativo");
+  const cupomVitrine = document.getElementById("cupom_vitrine");
   const modalTitle = document.getElementById("couponModalTitle");
   const modalSubtitle = document.getElementById("couponModalSubtitle");
 
@@ -754,6 +761,7 @@
     couponForm.reset();
     cupomId.value = "";
     cupomAtivo.checked = true;
+    cupomVitrine.checked = false;
   };
 
   document.querySelector("[data-open-create]").addEventListener("click", () => {
@@ -774,6 +782,7 @@
       desconto.value = d.desconto;
       quantidade.value = d.quantidade;
       cupomAtivo.checked = d.ativo === "1";
+      cupomVitrine.checked = d.vitrine === "1";
       brinquedo.value = d.brinquedo || "";
       categoria.value = d.categoria || "";
       const ids = (d.clientes || "").split(",").filter(Boolean);

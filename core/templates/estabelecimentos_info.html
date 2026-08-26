@@ -429,6 +429,23 @@
 .est-card:nth-child(6) { animation-delay: .30s; }
 .est-card:nth-child(n+7) { animation-delay: .36s; }
 
+/* Loja de cupons: pertence à mesma página, sem parecer um sistema colado. */
+.cup-vitrine{padding:32px 20px 42px;background:#eaf2ff}
+.cup-vitrine-inner{max-width:1200px;margin:0 auto;padding:clamp(22px,4vw,38px);border-radius:28px;color:#fff;background:linear-gradient(135deg,#071f49,#004aad 62%,#063776);box-shadow:0 22px 52px rgba(4,26,61,.20)}
+.cup-vitrine-head{display:flex;align-items:end;justify-content:space-between;gap:20px;margin-bottom:22px}
+.cup-vitrine-head h2{margin:5px 0 7px;font-size:clamp(1.5rem,3.5vw,2.25rem);font-weight:850}
+.cup-vitrine-head p{max-width:680px;margin:0;color:rgba(255,255,255,.78);line-height:1.6}
+.cup-app-selo{flex:0 0 auto;padding:10px 15px;border:1px solid rgba(255,215,0,.36);border-radius:999px;color:#ffe774;background:rgba(255,215,0,.11);font-size:.78rem;font-weight:850}
+.cup-grupo-titulo{margin:25px 0 12px;font-size:.78rem;font-weight:850;letter-spacing:.1em;text-transform:uppercase;color:#a8cfff}
+.cup-grade{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px}
+.cup-card{min-width:0;padding:18px;border:1px solid rgba(255,255,255,.16);border-radius:19px;background:rgba(255,255,255,.09);box-shadow:0 12px 30px rgba(0,0,0,.12)}
+.cup-card strong,.cup-card span{display:block}.cup-card strong{font-size:1.02rem}.cup-card span{margin-top:5px;color:rgba(255,255,255,.72);font-size:.82rem}
+.cup-codigo{display:inline-flex!important;margin-top:14px!important;padding:8px 11px;border-radius:9px;color:#092653!important;background:#ffd700!important;font-weight:900;letter-spacing:.08em}
+.cup-pontos{display:inline-flex!important;align-items:center;gap:6px;margin-top:14px!important;color:#ffe774!important;font-weight:850}
+.cup-pessoal{border-color:rgba(89,221,178,.38);background:rgba(27,173,126,.13)}
+@media(max-width:800px){.cup-grade{grid-template-columns:1fr 1fr}.cup-vitrine-head{align-items:flex-start;flex-direction:column}}
+@media(max-width:520px){.cup-grade{grid-template-columns:1fr}.cup-vitrine{padding-inline:14px}.cup-vitrine-inner{border-radius:22px}}
+
 /* =========================================================
    RESPONSIVO
 ========================================================= */
@@ -490,6 +507,48 @@
 <svg class="est-wave" viewBox="0 0 1440 60" preserveAspectRatio="none" aria-hidden="true">
     <path fill="#eaf2ff" d="M0,32 C240,64 480,0 720,16 C960,32 1200,64 1440,40 L1440,60 L0,60 Z"></path>
 </svg>
+
+{% if cupons_publicos or recompensas_app or cupons_do_cliente %}
+<section class="cup-vitrine" aria-labelledby="titulo-cupons">
+  <div class="cup-vitrine-inner">
+    <div class="cup-vitrine-head">
+      <div>
+        <span class="est-badge" style="margin:0">Benefícios Lazer &amp; Sport</span>
+        <h2 id="titulo-cupons">Cupons para aproveitar mais</h2>
+        <p>Alguns benefícios ficam disponíveis aqui. As recompensas compradas com pontos são exclusivas do aplicativo Lazer &amp; Sport.</p>
+      </div>
+      <span class="cup-app-selo"><i class="fa-solid fa-mobile-screen-button"></i> Resgate de pontos somente no app</span>
+    </div>
+
+    {% if cupons_do_cliente %}
+      <h3 class="cup-grupo-titulo">Seus cupons</h3>
+      <div class="cup-grade">
+        {% for cupom in cupons_do_cliente %}
+          <article class="cup-card cup-pessoal"><strong>{{ cupom.desconto_percentual|floatformat:0 }}% de desconto</strong><span>Exclusivo para o seu perfil{% if cupom.data_expiracao %} · válido até {{ cupom.data_expiracao|date:"d/m/Y" }}{% endif %}</span><span class="cup-codigo">{{ cupom.codigo }}</span></article>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    {% if cupons_publicos %}
+      <h3 class="cup-grupo-titulo">Disponíveis na loja</h3>
+      <div class="cup-grade">
+        {% for cupom in cupons_publicos %}
+          <article class="cup-card"><strong>{{ cupom.desconto_percentual|floatformat:0 }}% de desconto</strong><span>{% if cupom.brinquedo %}Para {{ cupom.brinquedo.nome_brinquedo }}{% elif cupom.categoria %}Na categoria {{ cupom.categoria.nome_categoria }}{% else %}Em produtos participantes{% endif %}</span><span class="cup-codigo">{{ cupom.codigo }}</span></article>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    {% if recompensas_app %}
+      <h3 class="cup-grupo-titulo">Loja de pontos do aplicativo</h3>
+      <div class="cup-grade">
+        {% for recompensa in recompensas_app %}
+          <article class="cup-card"><strong>{{ recompensa.nome }}</strong><span>{{ recompensa.descricao|default:"Transforme seus pontos em desconto na loja." }}</span><span class="cup-pontos"><i class="fa-solid fa-coins"></i> {{ recompensa.custo_pontos }} pontos · {{ recompensa.desconto_percentual|floatformat:0 }}%</span></article>
+        {% endfor %}
+      </div>
+    {% endif %}
+  </div>
+</section>
+{% endif %}
 
 <!-- ================= LISTAGEM ================= -->
 <section class="est-section">

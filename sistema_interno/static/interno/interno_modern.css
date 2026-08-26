@@ -1002,6 +1002,76 @@ footer,.fab-container{display:none!important}
   .ls-mobile-menu{display:none}
 }
 
+/* ======================================================================
+   CAMADA DE CONSISTÊNCIA
+
+   Fica no fim para neutralizar CSS antigo das telas sem transformar cada
+   template em uma exceção. Foco é âmbar (nunca o contorno preto padrão),
+   superfícies usam a mesma borda e controles formam uma peça única.
+   ====================================================================== */
+:where(a,button,input,select,textarea,[tabindex]):focus{outline:none!important}
+:where(a,button,input,select,textarea,[tabindex]):focus-visible{
+  outline:2px solid var(--acento)!important;
+  outline-offset:3px!important;
+}
+
+.ls-card,.ls-panel,.ls-data-panel,.ls-filter-panel,.card,
+.app-glance-card,.app-focus-panel,.app-start-panel,.app-pipeline,.app-stock-strip{
+  border-color:var(--line)!important;
+  box-shadow:0 12px 32px rgba(0,0,0,.22)!important;
+}
+
+.ls-sidebar.expandida .ls-brand-text,
+.ls-sidebar.expandida .ls-nav-caption,
+.ls-sidebar.expandida .ls-nav-item>span,
+.ls-sidebar.expandida .ls-user-info,
+.ls-sidebar.expandida .ls-logout span{
+  visibility:visible!important;opacity:1!important;color:inherit;
+}
+.ls-sidebar.expandida .ls-nav-item{color:#e9dfd0!important}
+.ls-sidebar.expandida .ls-nav-item.active{color:#fff!important}
+.ls-sidebar.expandida .ls-nav-caption{color:#b9a992!important}
+
+.form-control,.form-select,.ls-busca-campo{
+  border:1px solid #75603b!important;
+  background-color:#241c11!important;
+}
+.form-control::placeholder,.ls-busca-entrada::placeholder{color:#b3a58f!important;opacity:1}
+.input-group>.form-control,.input-group>.form-select{border-radius:0!important}
+.input-group>.input-group-text:first-child{border-radius:11px 0 0 11px!important;border-right:0!important}
+.input-group>.btn:last-child{border-radius:0 11px 11px 0!important}
+.input-group>.form-control:last-child{border-radius:0 11px 11px 0!important}
+
+.btn-primary,.btn-dark{color:#261704!important}
+.btn-primary i,.btn-dark i{color:inherit!important}
+.btn:disabled{opacity:.55!important;filter:saturate(.6)}
+
+.ls-busca-painel{border-color:#725d3a;background:#2a2115;box-shadow:0 24px 54px rgba(0,0,0,.52)}
+.ls-busca-item{color:#e7ddcb}
+.ls-busca-item small{color:#b8aa96!important}
+.ls-busca-item:hover,.ls-busca-item.marcado{color:#fff;background:#43331b}
+.ls-busca-criar{
+  min-height:52px!important;margin-top:6px!important;padding:10px 12px!important;
+  border:1px solid rgba(242,169,59,.42)!important;border-radius:11px!important;
+  color:#ffd28a!important;background:rgba(242,169,59,.10)!important;
+  font-weight:900!important;
+}
+.ls-busca-criar:hover,.ls-busca-criar:focus-visible{
+  color:#241605!important;background:var(--acento)!important;border-color:var(--acento)!important;
+}
+
+.modal-dialog{padding:10px}
+.modal-content{border-color:#755e37!important}
+.modal-body .row{--bs-gutter-y:1rem}
+.modal-footer{gap:9px;flex-wrap:wrap}
+.modal-footer .btn{min-width:132px}
+@media(max-width:560px){
+  .modal-dialog{margin:0;padding:8px}
+  .modal-content{max-height:calc(100dvh - 16px);border-radius:17px!important}
+  .modal-body{padding:17px!important}
+  .modal-footer .btn{flex:1 1 140px}
+}
+
 /* Tablet e telas médias: duas colunas leem melhor que quatro. */
 @media (min-width:761px) and (max-width:1180px){
   .ls-grid-3{grid-template-columns:repeat(2,minmax(0,1fr))}

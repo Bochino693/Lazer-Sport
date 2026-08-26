@@ -649,7 +649,8 @@ class PromocoesAdmin(admin.ModelAdmin):
 
 @admin.register(Cupom)
 class CupomAdmin(admin.ModelAdmin):
-    list_display = ('codigo', 'desconto_percentual')
+    list_display = ('codigo', 'desconto_percentual', 'todos_usuarios', 'exibir_na_vitrine', 'ativo')
+    list_filter = ('todos_usuarios', 'exibir_na_vitrine', 'ativo')
     search_fields = ('codigo',)
 
 
@@ -980,16 +981,17 @@ class RecompensaCupomAdmin(admin.ModelAdmin):
         "validade_dias",
         "estoque",
         "ativo",
+        "exibir_na_vitrine_site",
         "ordem",
     )
-    list_editable = ("custo_pontos", "estoque", "ativo", "ordem")
-    list_filter = ("ativo",)
+    list_editable = ("custo_pontos", "estoque", "ativo", "exibir_na_vitrine_site", "ordem")
+    list_filter = ("ativo", "exibir_na_vitrine_site")
     search_fields = ("nome", "descricao")
     ordering = ("ordem", "custo_pontos")
 
     fieldsets = (
         ("O que o cliente vê", {
-            "fields": ("nome", "descricao", "ordem", "ativo"),
+            "fields": ("nome", "descricao", "ordem", "ativo", "exibir_na_vitrine_site"),
         }),
         ("Preço e prêmio", {
             "description": (
