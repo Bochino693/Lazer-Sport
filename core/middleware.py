@@ -1,5 +1,54 @@
+import logging
+import os
+import time
+import uuid
+
 from django.shortcuts import redirect
 from django.urls import reverse
+
+
+logger_performance = logging.getLogger("lazer.performance")
+
+
+class RequestTimingMiddleware:
+    """Expõe e registra requisições lentas antes que virem um 502 opaco."""
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+        try:
+            self.limite_ms = max(250, int(os.getenv("SLOW_REQUEST_MS", "1800")))
+        except ValueError:
+            self.limite_ms = 1800
+
+    def __call__(self, request):
+        inicio = time.perf_counter()
+        request_id = request.headers.get("X-Request-ID") or uuid.uuid4().hex[:12]
+        try:
+            response = self.get_response(request)
+        except Exception:
+            duracao = round((time.perf_counter() - inicio) * 1000)
+            logger_performance.exception(
+                "request_failed id=%s method=%s path=%s duration_ms=%s",
+                request_id,
+                request.method,
+                request.path,
+                duracao,
+            )
+            raise
+
+        duracao = round((time.perf_counter() - inicio) * 1000)
+        response["X-Request-ID"] = request_id
+        response["Server-Timing"] = f'app;dur={duracao}'
+        if duracao >= self.limite_ms:
+            logger_performance.warning(
+                "slow_request id=%s method=%s path=%s status=%s duration_ms=%s",
+                request_id,
+                request.method,
+                request.path,
+                response.status_code,
+                duracao,
+            )
+        return response
 
 
 class SubdomainURLMiddleware:

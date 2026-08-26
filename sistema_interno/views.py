@@ -35,6 +35,15 @@ from .models import (
     TipoMaterial,
 )
 from .context_processors import invalidar_avisos
+from .permissoes import (
+    CRIACAO,
+    GESTAO,
+    PRODUCAO,
+    VENDAS,
+    capacidades,
+    faz_parte_da_equipe,
+    tem_funcao,
+)
 from .utils import ErroDeFormulario, data, decimal_br, inteiro, pede_json, texto
 
 
@@ -53,6 +62,21 @@ VALOR_EM_ESTOQUE = Coalesce(
 class InternoRequiredMixin(View):
     """Só entra pelo subdomínio interno e só com conta de equipe."""
 
+    funcoes_necessarias = ()
+
+    @staticmethod
+    def destino_do_usuario(user):
+        acesso = capacidades(user)
+        if acesso["gestao"]:
+            return "home_inner"
+        if acesso["vendas"]:
+            return "orcamentos_inner"
+        if acesso["producao"]:
+            return "minha_producao"
+        if acesso["criacao"]:
+            return "brinquedos_admin"
+        return "login_inner"
+
     def dispatch(self, request, *args, **kwargs):
         # A flag vem do SubdomainURLMiddleware. Antes a checagem era
         # feita de novo aqui com startswith('interno.'), o que duplicava
@@ -63,36 +87,61 @@ class InternoRequiredMixin(View):
         if not request.user.is_authenticated:
             return redirect("login_inner")
 
-        if not (request.user.is_staff or hasattr(request.user, "gerente")):
+        if not faz_parte_da_equipe(request.user):
             return redirect("login_inner")
+
+        if self.funcoes_necessarias and not tem_funcao(
+            request.user, *self.funcoes_necessarias
+        ):
+            return redirect(self.destino_do_usuario(request.user))
 
         return super().dispatch(request, *args, **kwargs)
 
 
 def eh_gestor_interno(user):
-    """Diferencia quem administra o módulo de quem executa a produção."""
-    if not getattr(user, "is_authenticated", False):
-        return False
-    if user.is_superuser:
-        return True
-    try:
-        return bool(user.gerente.ativo)
-    except (AttributeError, Gerente.DoesNotExist):
-        return False
+    """Compatibilidade dos templates antigos com a função Gestão."""
+    return tem_funcao(user, GESTAO)
 
 
 class GestorInternoRequiredMixin(InternoRequiredMixin):
-    """Protege cadastros; colaboradores continuam no acompanhamento."""
+    """Compatibilidade: telas comerciais aceitam Vendas ou Gestão."""
+
+    funcoes_necessarias = (VENDAS, GESTAO)
+
+
+class FinanceiroInternoRequiredMixin(InternoRequiredMixin):
+    funcoes_necessarias = (GESTAO,)
+
+
+class ProducaoInternoRequiredMixin(InternoRequiredMixin):
+    funcoes_necessarias = (PRODUCAO,)
+
+
+class EstoqueInternoRequiredMixin(InternoRequiredMixin):
+    funcoes_necessarias = (PRODUCAO, GESTAO)
+
+
+class OperacaoInternoRequiredMixin(InternoRequiredMixin):
+    funcoes_necessarias = (PRODUCAO, VENDAS, GESTAO)
+
+
+class CriacaoInternoRequiredMixin(InternoRequiredMixin):
+    funcoes_necessarias = (CRIACAO,)
+
+
+class SuperusuarioInternoRequiredMixin(InternoRequiredMixin):
+    """Delegar acesso altera segurança da empresa: somente o super."""
 
     def dispatch(self, request, *args, **kwargs):
         if (
             getattr(request, "is_interno", False)
             and request.user.is_authenticated
-            and (request.user.is_staff or hasattr(request.user, "gerente"))
-            and not eh_gestor_interno(request.user)
+            and faz_parte_da_equipe(request.user)
+            and not request.user.is_superuser
         ):
-            return redirect("minha_producao")
+            return redirect(self.destino_do_usuario(request.user))
         return super().dispatch(request, *args, **kwargs)
+
 
 
 class RespostaJSONMixin:
@@ -222,15 +271,13 @@ class LoginInternoView(View):
                 "error": "Usuário ou senha inválidos.",
             })
 
-        if not (user.is_staff or hasattr(user, "gerente")):
+        if not faz_parte_da_equipe(user):
             return render(request, self.template_name, {
                 "error": "Usuário sem permissão para acesso interno.",
             })
 
         login(request, user)
-        if eh_gestor_interno(user):
-            return redirect("home_inner")
-        return redirect("minha_producao")
+        return redirect(InternoRequiredMixin.destino_do_usuario(user))
 
 
 class LogoutInnerView(View):
@@ -386,8 +433,8 @@ class MinhaContaView(InternoRequiredMixin, View):
 # ======================================================================
 class HomeInnerView(InternoRequiredMixin, View):
     def get(self, request):
-        if not eh_gestor_interno(request.user):
-            return redirect("minha_producao")
+        if not tem_funcao(request.user, GESTAO):
+            return redirect(self.destino_do_usuario(request.user))
 
         hoje = timezone.localdate()
         estoques = EstoqueMaterial.objects.select_related("material")
@@ -400,15 +447,27 @@ class HomeInnerView(InternoRequiredMixin, View):
 
         criticos = EstoqueMaterial.objects.criticos().select_related("material")
 
-        orcamentos_abertos = (
+        orcamentos_base = (
             Orcamento.objects.filter(status__in=Orcamento.EM_ABERTO)
-            .select_related("cliente").prefetch_related("itens")
             .order_by("validade", "-criacao")
         )
-        orcamentos_vencendo = [
-            o for o in orcamentos_abertos
-            if o.dias_para_vencer is not None and o.dias_para_vencer <= 3
-        ]
+        # Antes a home carregava TODOS os itens de TODOS os orçamentos em
+        # aberto apenas para descobrir quais venciam em três dias. Agora o
+        # banco filtra validade; só as cinco propostas desenhadas trazem itens.
+        orcamentos_abertos = list(
+            orcamentos_base.select_related("cliente").prefetch_related("itens")[:5]
+        )
+        orcamentos_vencendo = list(
+            orcamentos_base
+            .filter(validade__lte=hoje + timezone.timedelta(days=3))
+            .select_related("cliente")[:20]
+        )
+        total_orcamentos_abertos = orcamentos_base.count()
+        total_orcamentos_vencendo = (
+            orcamentos_base
+            .filter(validade__lte=hoje + timezone.timedelta(days=3))
+            .count()
+        )
         pedidos_abertos = (
             Pedido.objects.exclude(status__in=["finalizado", "cancelado"])
             .select_related("cliente").order_by("-criacao")
@@ -478,9 +537,9 @@ class HomeInnerView(InternoRequiredMixin, View):
                 .select_related("estoque__material", "responsavel")[:8]
             ),
             "fila_trabalho": fila_trabalho[:7],
-            "orcamentos_abertos": orcamentos_abertos[:5],
-            "total_orcamentos_abertos": orcamentos_abertos.count(),
-            "total_orcamentos_vencendo": len(orcamentos_vencendo),
+            "orcamentos_abertos": orcamentos_abertos,
+            "total_orcamentos_abertos": total_orcamentos_abertos,
+            "total_orcamentos_vencendo": total_orcamentos_vencendo,
             "pedidos_abertos": pedidos_abertos[:5],
             "total_pedidos_abertos": pedidos_abertos.count(),
             "manutencoes_abertas": manutencoes_abertas[:5],
@@ -495,7 +554,7 @@ class HomeInnerView(InternoRequiredMixin, View):
 # ======================================================================
 # ESTOQUE DE MATERIAIS
 # ======================================================================
-class EstoqueInnerView(RespostaJSONMixin, InternoRequiredMixin, View):
+class EstoqueInnerView(RespostaJSONMixin, EstoqueInternoRequiredMixin, View):
     rota_padrao = "stock"
 
     def get(self, request):
@@ -692,7 +751,7 @@ class EstoqueInnerView(RespostaJSONMixin, InternoRequiredMixin, View):
 # ======================================================================
 # MATERIAIS, TIPOS E FORNECEDORES
 # ======================================================================
-class MateriaisInnerView(RespostaJSONMixin, InternoRequiredMixin, View):
+class MateriaisInnerView(RespostaJSONMixin, EstoqueInternoRequiredMixin, View):
     rota_padrao = "materiais_inner"
 
     def get(self, request):
@@ -850,7 +909,7 @@ class MateriaisInnerView(RespostaJSONMixin, InternoRequiredMixin, View):
 # ======================================================================
 # MOVIMENTAÇÕES
 # ======================================================================
-class MovimentacoesInnerView(InternoRequiredMixin, View):
+class MovimentacoesInnerView(EstoqueInternoRequiredMixin, View):
     def get(self, request):
         tipo = (request.GET.get("tipo") or "").strip()
         busca = (request.GET.get("q") or "").strip()
@@ -909,7 +968,7 @@ class MovimentacoesInnerView(InternoRequiredMixin, View):
 # ======================================================================
 # DASHBOARD DO ESTOQUE
 # ======================================================================
-class DashboardEstoqueView(InternoRequiredMixin, View):
+class DashboardEstoqueView(EstoqueInternoRequiredMixin, View):
     def get(self, request):
         estoques = list(
             EstoqueMaterial.objects
@@ -982,21 +1041,21 @@ class DashboardEstoqueView(InternoRequiredMixin, View):
 # ======================================================================
 # TELAS EXISTENTES
 # ======================================================================
-class VendasView(InternoRequiredMixin, View):
+class VendasView(OperacaoInternoRequiredMixin, View):
     def get(self, request):
         return render(request, "vendas_inner.html", {
             "vendas": CentralVendas.objects.all(),
         })
 
 
-class PedidosView(InternoRequiredMixin, View):
+class PedidosView(OperacaoInternoRequiredMixin, View):
     def get(self, request):
         return render(request, "pedidos_inner.html", {
             "pedidos": CentralPedidos.objects.all(),
         })
 
 
-class ManutencaoInnerView(InternoRequiredMixin, View):
+class ManutencaoInnerView(OperacaoInternoRequiredMixin, View):
     def get(self, request):
         return render(request, "manutencao_inner.html", {
             "manutencoes": Manutencao.objects.all(),

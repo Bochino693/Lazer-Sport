@@ -325,6 +325,10 @@
         var campo = document.getElementById(opcoes.campos[chave]);
         if (campo && dados[chave] !== undefined) campo.value = dados[chave] || "";
       });
+      Object.keys(opcoes.coordenadas || {}).forEach(function (chave) {
+        var campo = document.getElementById(opcoes.coordenadas[chave]);
+        if (campo) campo.value = dados[chave] == null ? "" : dados[chave];
+      });
       if (dados.cep) campoCep.value = String(dados.cep).replace(/\D/g, "")
         .replace(/^(\d{5})(\d{1,3})$/, "$1-$2");
       informar(

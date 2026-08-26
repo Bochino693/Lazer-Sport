@@ -23,7 +23,8 @@ from django.conf import settings
 from django.core.cache import cache
 from django.utils.functional import SimpleLazyObject
 
-from .avisos import coletar, eh_gestor
+from .avisos import coletar
+from .permissoes import capacidades, faz_parte_da_equipe
 
 #: Estado de quem não é da equipe. O template nunca encontra variável
 #: faltando, e nenhuma consulta é feita para chegar aqui.
@@ -37,6 +38,7 @@ VAZIO = {
     "count_producao": 0,
     "count_orcamentos": 0,
     "eh_gestor_interno": False,
+    "permissoes_interno": {},
 }
 
 
@@ -107,13 +109,10 @@ def fab_counts(request):
     if usuario is None or not usuario.is_authenticated:
         return dict(VAZIO)
 
-    # eh_gestor não vai ao banco no caso comum (superusuário sai no
-    # primeiro if; os demais custam um acesso ao perfil de gerente, que o
-    # próprio menu já precisa para decidir o que mostrar).
-    gestor = eh_gestor(usuario)
-
-    if not (usuario.is_staff or gestor):
+    if not faz_parte_da_equipe(usuario):
         return dict(VAZIO)
+
+    acesso = capacidades(usuario)
 
     # Um único cálculo compartilhado por todas as chaves: o SimpleLazyObject
     # de fora memoriza o resultado, e os de dentro apenas leem dele.
@@ -135,5 +134,6 @@ def fab_counts(request):
             "count_orcamentos",
         )
     }
-    contexto["eh_gestor_interno"] = gestor
+    contexto["eh_gestor_interno"] = acesso["gestao"]
+    contexto["permissoes_interno"] = acesso
     return contexto

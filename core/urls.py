@@ -8,6 +8,7 @@ from .views_favoritos import (
 )
 from .views_gestao_produtos import EngajamentoAdminView, PecaAdminView
 from .views_orcamento import orcamento_publico
+from .views_redirects import redirecionar_interno
 from .sitemaps import (
     PaginasEstaticasSitemap,
     BrinquedosSitemap,
@@ -147,7 +148,7 @@ urlpatterns = [
         name="estabelecimentos",
     ),
 
-    path("adm/login/", AdminLoginView.as_view(), name="admin_login"),
+    path("adm/login/", redirecionar_interno("login_inner"), name="admin_login"),
 
     path("manutencoes/", ManutencaoView.as_view(), name="manutencoes"),
     path(
@@ -195,47 +196,47 @@ urlpatterns = [
     path("eventos/", EventosView.as_view(), name="eventos"),
     path("projetos/", ProjetosView.as_view(), name="projetos"),
 
-    path("adm/brinquedos/", BrinquedoAdmin.as_view(), name="brinquedos_admin"),
-    path("categoria/admin/new/", NovaCategoria.as_view(), name="categoria_new"),
-    path("tags/admin/new/", NovaTag.as_view(), name="tag_new"),
-    path("adm/combos/", ComboAdminView.as_view(), name="combos_admin"),
+    path("adm/brinquedos/", redirecionar_interno("brinquedos_admin"), name="brinquedos_admin"),
+    path("categoria/admin/new/", redirecionar_interno("categoria_new"), name="categoria_new"),
+    path("tags/admin/new/", redirecionar_interno("tag_new"), name="tag_new"),
+    path("adm/combos/", redirecionar_interno("combos_admin"), name="combos_admin"),
     path(
         "adm/estatisticas/",
-        EstatisticasGeraisView.as_view(),
+        redirecionar_interno("estatisticas_gerais"),
         name="estatisticas_gerais",
     ),
-    path("adm/banners/", BannerAdminView.as_view(), name="banner_adm"),
+    path("adm/banners/", redirecionar_interno("banner_adm"), name="banner_adm"),
     path(
         "adm/banners/excluir/<int:pk>/",
-        BannerDeleteView.as_view(),
+        redirecionar_interno("banner_delete"),
         name="banner_delete",
     ),
-    path("adm/pedidos/", PedidoAdminView.as_view(), name="pedidos_adm"),
+    path("adm/pedidos/", redirecionar_interno("pedidos_inner"), name="pedidos_adm"),
     path(
         "adm/promocoes/",
-        PromocaoAdminView.as_view(),
+        redirecionar_interno("promocoes_admin"),
         name="promocoes_admin",
     ),
-    path("adm/dashboards/", DashboardAdminView.as_view(), name="dashboards"),
-    path("adm/clients/", UserAdminView.as_view(), name="clients"),
+    path("adm/dashboards/", redirecionar_interno("dashboards"), name="dashboards"),
+    path("adm/clients/", redirecionar_interno("clients"), name="clients"),
     path(
         "adm/manutencoes/",
-        ManutencaoAdminView.as_view(),
+        redirecionar_interno("manutencao_inner"),
         name="manutencoes_adm",
     ),
     path(
         "adm/relatorios-vendas/",
-        RelatorioVendasView.as_view(),
+        redirecionar_interno("financeiro_inner"),
         name="relatorio_vendas",
     ),
-    path("adm/clientes/", ClienteAdminView.as_view(), name="clientes_admin"),
-    path("adm/eventos/", EventoAdminView.as_view(), name="eventos_admin"),
-    path("adm/cupons/", CupomAdminView.as_view(), name="cupons_admin"),
-    path("adm/projetos/", ProjetoAdminView.as_view(), name="projetos_admin"),
-    path("adm/pecas/", PecaAdminView.as_view(), name="pecas_admin"),
+    path("adm/clientes/", redirecionar_interno("clientes_admin"), name="clientes_admin"),
+    path("adm/eventos/", redirecionar_interno("eventos_admin"), name="eventos_admin"),
+    path("adm/cupons/", redirecionar_interno("cupons_admin"), name="cupons_admin"),
+    path("adm/projetos/", redirecionar_interno("projetos_admin"), name="projetos_admin"),
+    path("adm/pecas/", redirecionar_interno("pecas_admin"), name="pecas_admin"),
     path(
         "adm/engajamento/",
-        EngajamentoAdminView.as_view(),
+        redirecionar_interno("engajamento_admin"),
         name="engajamento_admin",
     ),
 

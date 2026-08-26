@@ -1,0 +1,102 @@
+/* Uniformiza os CRUDs reaproveitados do antigo /adm dentro do aplicativo. */
+.gestao-integrada .ls-content {
+  color: var(--text, #f6f1e9);
+}
+
+.gestao-integrada .content,
+.gestao-integrada .page-container,
+.gestao-integrada .app,
+.gestao-integrada .container {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  color: inherit;
+}
+
+.gestao-integrada .page-title,
+.gestao-integrada h1,
+.gestao-integrada h2,
+.gestao-integrada h3 { color: #fff; }
+
+.gestao-integrada .card,
+.gestao-integrada .summary-card,
+.gestao-integrada .filters,
+.gestao-integrada .dashboard-card,
+.gestao-integrada .stat-card {
+  border: 1px solid rgba(250, 194, 96, .16) !important;
+  border-radius: 18px !important;
+  background: #251e14 !important;
+  color: #f6f1e9 !important;
+  box-shadow: 0 14px 32px rgba(0, 0, 0, .16) !important;
+}
+
+.gestao-integrada input:not([type="checkbox"]):not([type="radio"]),
+.gestao-integrada select,
+.gestao-integrada textarea {
+  min-height: 46px;
+  border: 1px solid rgba(250, 194, 96, .34) !important;
+  border-radius: 12px !important;
+  background-color: #1d170f !important;
+  color: #fff !important;
+  box-shadow: none !important;
+}
+
+.gestao-integrada textarea { min-height: 104px; }
+.gestao-integrada input::placeholder,
+.gestao-integrada textarea::placeholder { color: #9f9587 !important; opacity: 1; }
+.gestao-integrada label { color: #eee4d8; font-weight: 700; }
+
+.gestao-integrada table {
+  width: 100%;
+  color: #eee8df;
+  border-color: rgba(250, 194, 96, .13);
+}
+
+.gestao-integrada th { color: #fac260 !important; background: #21190d !important; }
+.gestao-integrada td { border-color: rgba(250, 194, 96, .1) !important; }
+.gestao-integrada p,
+.gestao-integrada small,
+.gestao-integrada .muted { color: #bdb3a6; }
+
+.gestao-integrada button,
+.gestao-integrada .btn,
+.gestao-integrada a.button {
+  min-height: 42px;
+  border-radius: 11px;
+  font-weight: 800;
+}
+
+.gestao-integrada .modal,
+.gestao-integrada [role="dialog"] { z-index: 1600; }
+
+.gestao-integrada .modal-content,
+.gestao-integrada .modal-card,
+.gestao-integrada .modal-box {
+  max-height: min(88dvh, 920px);
+  overflow: auto;
+  border: 1px solid rgba(250, 194, 96, .24) !important;
+  border-radius: 20px !important;
+  background: #211a11 !important;
+  color: #f7f1e8 !important;
+}
+
+@media (max-width: 900px) {
+  .gestao-integrada .summary,
+  .gestao-integrada .dashboard-grid,
+  .gestao-integrada .stats-grid { grid-template-columns: 1fr 1fr !important; }
+}
+
+@media (max-width: 640px) {
+  .gestao-integrada .ls-content { padding-inline: 12px; }
+  .gestao-integrada .summary,
+  .gestao-integrada .dashboard-grid,
+  .gestao-integrada .stats-grid { grid-template-columns: 1fr !important; }
+  .gestao-integrada .modal-dialog,
+  .gestao-integrada .modal-card,
+  .gestao-integrada .modal-box {
+    width: calc(100vw - 16px) !important;
+    max-width: none !important;
+    margin: 8px auto !important;
+  }
+}

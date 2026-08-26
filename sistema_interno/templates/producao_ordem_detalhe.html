@@ -14,7 +14,7 @@
 <section class="flow-head">
   <div class="flow-head-top"><div><span class="work-kicker">ORDEM #{{ ordem.id }}</span><h1>{{ ordem.quantidade }} × {{ ordem.produto.nome }}</h1><p>{{ ordem.observacoes|default:"Siga as etapas na ordem e consulte o guia sempre que necessário." }}</p></div><span class="flow-status {{ ordem.status }}">{{ ordem.get_status_display }}</span></div>
   <div class="flow-meta">
-    <div><span>Colaborador</span><strong>{% if ordem.colaborador %}{{ ordem.colaborador.get_full_name|default:ordem.colaborador.username }}{% else %}Não atribuído{% endif %}</strong></div>
+    <div><span>Colaborador</span><strong>{% if ordem.colaborador %}{{ ordem.colaborador.nome }}{% else %}Não atribuído{% endif %}</strong></div>
     <div><span>Setor</span><strong>{% if ordem.setor %}{{ ordem.setor.nome_setor }}{% else %}Não definido{% endif %}</strong></div>
     <div><span>Prazo</span><strong>{% if ordem.prevista_para %}{{ ordem.prevista_para|date:"d/m/Y" }}{% else %}Sem prazo{% endif %}</strong></div>
     <div><span>Produto</span><strong>{{ ordem.produto.get_categoria_display }}</strong></div>

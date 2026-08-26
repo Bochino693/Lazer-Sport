@@ -10,11 +10,12 @@ por aqui.
 from __future__ import annotations
 
 import re
+from decimal import Decimal, InvalidOperation
 
 from django.db.models import Q
 
-from core.models import Clientes as ClienteMapa
-from core.utils import buscar_dados_cep
+from core.models import Clientes as ClienteMapa, Estabelecimentos
+from core.utils import buscar_coordenadas_cep_rapido, buscar_dados_cep
 
 from .models import Cliente, EnderecoCliente
 from .utils import ErroDeFormulario, texto
@@ -82,7 +83,7 @@ def salvar_cliente(request, cliente: Cliente | None = None) -> Cliente:
 
     cliente.parceiro = _buffet_escolhido(request, cliente)
     cliente.estabelecimento_id = (
-        _estabelecimento_escolhido(request)
+        _estabelecimento_escolhido(request, cliente)
         if cliente.tipo == Cliente.Tipo.BUFFET else None
     )
     if "cliente_mapa" in request.POST:
@@ -116,9 +117,23 @@ def _buffet_escolhido(request, cliente: Cliente):
     return parceiro
 
 
-def _estabelecimento_escolhido(request):
+def _estabelecimento_escolhido(request, cliente):
     bruto = (request.POST.get("estabelecimento") or "").strip()
-    return int(bruto) if bruto.isdigit() else None
+    if not bruto.isdigit():
+        return None
+    estabelecimento_id = int(bruto)
+    if not Estabelecimentos.objects.filter(pk=estabelecimento_id).exists():
+        raise ErroDeFormulario(
+            "Esse parceiro do site não existe mais. Atualize a tela e escolha outro."
+        )
+    ocupado = Cliente.objects.filter(estabelecimento_id=estabelecimento_id)
+    if cliente.pk:
+        ocupado = ocupado.exclude(pk=cliente.pk)
+    if ocupado.exists():
+        raise ErroDeFormulario(
+            "Esse parceiro do site já está ligado a outro buffet interno."
+        )
+    return estabelecimento_id
 
 
 def _cliente_mapa_escolhido(request, cliente: Cliente):
@@ -184,8 +199,38 @@ def salvar_endereco(request, cliente: Cliente) -> EnderecoCliente | None:
         )
 
     endereco = cliente.enderecos.first() or EnderecoCliente(cliente=cliente)
+    endereco_anterior = (
+        endereco.cep,
+        endereco.endereco,
+        endereco.numero,
+        endereco.bairro,
+        endereco.cidade,
+        endereco.estado,
+    )
     for campo, valor in campos.items():
         setattr(endereco, campo, valor)
+
+    latitude = (request.POST.get("latitude") or "").strip().replace(",", ".")
+    longitude = (request.POST.get("longitude") or "").strip().replace(",", ".")
+    recebeu_coordenadas = "latitude" in request.POST or "longitude" in request.POST
+    if bool(latitude) != bool(longitude):
+        raise ErroDeFormulario("Informe latitude e longitude juntas.")
+    if latitude and longitude:
+        try:
+            latitude_decimal = Decimal(latitude)
+            longitude_decimal = Decimal(longitude)
+        except InvalidOperation as exc:
+            raise ErroDeFormulario("As coordenadas do endereço são inválidas.") from exc
+        if not (-90 <= latitude_decimal <= 90 and -180 <= longitude_decimal <= 180):
+            raise ErroDeFormulario("As coordenadas do endereço estão fora da faixa válida.")
+        endereco.latitude = latitude_decimal
+        endereco.longitude = longitude_decimal
+    elif recebeu_coordenadas or endereco_anterior != tuple(campos.values()):
+        # Um novo CEP sem coordenada não pode herdar o ponto do endereço
+        # anterior. Ele permanece pendente até uma fonte rápida ou uma
+        # pessoa informar o local correto.
+        endereco.latitude = None
+        endereco.longitude = None
     endereco.save()
 
     return endereco
@@ -203,6 +248,9 @@ def consultar_cep(cep: str) -> dict:
             "Não encontrei esse CEP agora. Confira os números ou preencha o endereço manualmente."
         )
 
+    latitude, longitude = buscar_coordenadas_cep_rapido(limpo)
+    dados["latitude"] = latitude
+    dados["longitude"] = longitude
     return dados
 
 
@@ -262,7 +310,11 @@ def sincronizar_cliente_no_mapa(cliente: Cliente):
         mapa.longitude = endereco.longitude
         mapa.precisao_local = "manual" if endereco.latitude and endereco.longitude else ""
 
-    mapa.save()
+    # Nunca faça geocodificação externa dentro da gravação do cliente. O
+    # CEP já tentou trazer coordenadas enquanto o formulário era preenchido;
+    # se a fonte estava fora, o cadastro fica pendente e pode ser completado
+    # depois, sem ocupar todas as threads do Render e causar 502.
+    mapa.save(geocodificar=False)
 
     if cliente.cliente_mapa_id != mapa.pk:
         cliente.cliente_mapa = mapa
@@ -302,6 +354,8 @@ def opcao_de_busca(cliente: Cliente) -> dict:
                 "bairro": endereco.bairro or "",
                 "cidade": endereco.cidade or "",
                 "estado": endereco.estado or "",
+                "latitude": str(endereco.latitude or ""),
+                "longitude": str(endereco.longitude or ""),
             }
             if endereco else None
         ),

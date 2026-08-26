@@ -14,7 +14,6 @@ from decimal import Decimal
 from urllib.parse import quote
 
 from django.contrib import messages
-from django.contrib.auth.models import User
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
 
@@ -42,6 +41,7 @@ from . import etapas_padrao
 from . import financeiro as fin
 from .models import (
     Cliente,
+    Colaborador,
     EnvioOrcamento,
     ExecucaoEtapaProducao,
     GuiaEtapaProducao,
@@ -50,7 +50,6 @@ from .models import (
     ItemFichaTecnica,
     ItemOrcamento,
     Material,
-    Montadores,
     Orcamento,
     OrdemProducao,
     ProdutoInterno,
@@ -65,10 +64,11 @@ from .utils import (
     texto,
 )
 from .views import (
+    FinanceiroInternoRequiredMixin,
     GestorInternoRequiredMixin,
     InternoRequiredMixin,
+    ProducaoInternoRequiredMixin,
     RespostaJSONMixin,
-    eh_gestor_interno,
 )
 
 ZERO = Decimal("0.00")
@@ -77,7 +77,7 @@ ZERO = Decimal("0.00")
 # ======================================================================
 # FINANCEIRO
 # ======================================================================
-class FinanceiroInnerView(GestorInternoRequiredMixin, View):
+class FinanceiroInnerView(FinanceiroInternoRequiredMixin, View):
     """Receita, saída, lucro e composição das despesas.
 
     Os gráficos são SVG/CSS montados a partir de números já calculados no
@@ -1131,7 +1131,7 @@ class BuscaClientesOrcamentoView(GestorInternoRequiredMixin, View):
 # ======================================================================
 # PRODUÇÃO — produtos e ficha técnica
 # ======================================================================
-class ProdutosProducaoView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
+class ProdutosProducaoView(RespostaJSONMixin, ProducaoInternoRequiredMixin, View):
     """O que a fábrica produz, do que é feito e quanto dá para montar hoje."""
 
     rota_padrao = "produtos_producao"
@@ -1323,7 +1323,7 @@ class ProdutosProducaoView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
 # ======================================================================
 # PRODUÇÃO — guias visuais por produto
 # ======================================================================
-class GuiasProducaoView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
+class GuiasProducaoView(RespostaJSONMixin, ProducaoInternoRequiredMixin, View):
     rota_padrao = "guias_producao"
     MAX_IMAGENS_ETAPA = 12
     MAX_TAMANHO_IMAGEM = 10 * 1024 * 1024
@@ -1590,7 +1590,7 @@ class GuiasProducaoView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
 # ======================================================================
 # PRODUÇÃO — ordens
 # ======================================================================
-class OrdensProducaoView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
+class OrdensProducaoView(RespostaJSONMixin, ProducaoInternoRequiredMixin, View):
     """Registro do que foi montado, com baixa automática no estoque."""
 
     rota_padrao = "ordens_producao"
@@ -1601,7 +1601,7 @@ class OrdensProducaoView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
         ordens = (
             OrdemProducao.objects
             .select_related(
-                "produto", "montador", "setor", "responsavel", "colaborador",
+                "produto", "setor", "responsavel", "colaborador",
             )
             .prefetch_related(
                 "produto__ficha__material__estoque",
@@ -1635,12 +1635,9 @@ class OrdensProducaoView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
                 .filter(ativo=True)
                 .prefetch_related("ficha__material__estoque")
             ),
-            "montadores": Montadores.objects.all(),
             "setores": Setores.objects.all(),
             "colaboradores": (
-                User.objects
-                .filter(is_active=True, is_staff=True, is_superuser=False)
-                .order_by("first_name", "username")
+                Colaborador.objects.filter(ativo=True).order_by("nome")
             ),
             "hoje": timezone.localdate(),
             "total_planejadas": contagem.get(OrdemProducao.Status.PLANEJADA, 0),
@@ -1693,12 +1690,6 @@ class OrdensProducaoView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
         if not ordem.pk:
             ordem.status = OrdemProducao.Status.PLANEJADA
 
-        montador_id = (request.POST.get("montador") or "").strip()
-        ordem.montador = (
-            get_object_or_404(Montadores, pk=montador_id)
-            if montador_id.isdigit() else None
-        )
-
         setor_id = (request.POST.get("setor") or "").strip()
         ordem.setor = (
             get_object_or_404(Setores, pk=setor_id)
@@ -1709,13 +1700,10 @@ class OrdensProducaoView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
         if not colaborador_id.isdigit():
             raise ErroDeFormulario("Escolha o colaborador responsável pela produção.")
         colaborador = get_object_or_404(
-            User,
+            Colaborador,
             pk=colaborador_id,
-            is_active=True,
-            is_staff=True,
+            ativo=True,
         )
-        if colaborador.is_superuser:
-            raise ErroDeFormulario("Escolha uma conta de colaborador, não o administrador.")
         ordem.colaborador = colaborador
 
         ordem.prevista_para = data(request.POST.get("prevista_para"), "Data prevista")
@@ -1739,9 +1727,32 @@ class OrdensProducaoView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
                 if nova else HistoricoProducao.Evento.ORDEM_EDITADA
             ),
             status_novo=ordem.status,
-            observacao=f"Colaborador: {colaborador.get_full_name() or colaborador.username}",
+            observacao=f"Colaborador da montagem: {colaborador.nome}",
         )
         return self.sucesso(request, f"Ordem #{ordem.pk} salva.", id=ordem.pk)
+
+    def acao_colaborador_save(self, request):
+        """Cria o nome operacional sem inventar uma conta de acesso."""
+        nome = texto(
+            request,
+            "nome_colaborador",
+            obrigatorio=True,
+            rotulo="o nome do colaborador",
+            limite=90,
+        )
+        existente = Colaborador.objects.filter(nome__iexact=nome).first()
+        if existente:
+            if not existente.ativo:
+                existente.ativo = True
+                existente.save(update_fields=["ativo", "atualizado"])
+            colaborador = existente
+        else:
+            colaborador = Colaborador.objects.create(nome=nome)
+        return self.sucesso(
+            request,
+            f"Colaborador “{colaborador.nome}” disponível na ordem.",
+            colaborador={"id": colaborador.pk, "nome": colaborador.nome},
+        )
 
     @transaction.atomic
     def acao_concluir(self, request):
@@ -1798,13 +1809,12 @@ class OrdensProducaoView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
 # PRODUÇÃO — acompanhamento do colaborador
 # ======================================================================
 def _ordens_permitidas(user):
-    ordens = OrdemProducao.objects.all()
-    if not eh_gestor_interno(user):
-        ordens = ordens.filter(colaborador=user)
-    return ordens
+    # Colaborador não é login. Quem possui a função Produção acompanha o
+    # chão de fábrica inteiro; o usuário da ação fica no histórico.
+    return OrdemProducao.objects.all()
 
 
-class MinhaProducaoView(InternoRequiredMixin, View):
+class MinhaProducaoView(ProducaoInternoRequiredMixin, View):
     def get(self, request):
         status = (request.GET.get("status") or "").strip()
         ordens = (
@@ -1835,7 +1845,7 @@ class MinhaProducaoView(InternoRequiredMixin, View):
             "ordens": ordens,
             "status_ativo": status,
             "status_opcoes": OrdemProducao.Status.choices,
-            "eh_gestor": eh_gestor_interno(request.user),
+            "eh_gestor": True,
             "total_ativas": sum(
                 ordem.status not in (
                     OrdemProducao.Status.CONCLUIDA,
@@ -1850,11 +1860,11 @@ class MinhaProducaoView(InternoRequiredMixin, View):
         })
 
 
-class OrdemProducaoDetalheView(InternoRequiredMixin, View):
+class OrdemProducaoDetalheView(ProducaoInternoRequiredMixin, View):
     def get(self, request, pk):
         ordem = get_object_or_404(
             _ordens_permitidas(request.user)
-            .select_related("produto", "colaborador", "setor", "montador")
+            .select_related("produto", "colaborador", "setor")
             .prefetch_related(
                 "etapas_execucao__guia_etapa__imagens",
                 "historico__usuario",
@@ -1878,11 +1888,11 @@ class OrdemProducaoDetalheView(InternoRequiredMixin, View):
             "etapas": etapas,
             "etapa_atual": atual,
             "historico": ordem.historico.all()[:40],
-            "eh_gestor": eh_gestor_interno(request.user),
+            "eh_gestor": True,
         })
 
 
-class AtualizarEtapaProducaoView(InternoRequiredMixin, View):
+class AtualizarEtapaProducaoView(ProducaoInternoRequiredMixin, View):
     def post(self, request, pk, etapa_id):
         ordem = get_object_or_404(_ordens_permitidas(request.user), pk=pk)
         execucao = get_object_or_404(

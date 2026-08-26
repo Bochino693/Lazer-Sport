@@ -95,7 +95,7 @@
             <th>#</th>
             <th>Produto</th>
             <th class="text-end">Qtd.</th>
-            <th>Responsáveis</th>
+            <th>Montagem</th>
             <th>Prazo</th>
             <th>Material</th>
             <th>Situação</th>
@@ -114,11 +114,10 @@
 
               <td data-rotulo="Qtd." class="text-end"><span class="ls-number">{{ ordem.quantidade }}</span></td>
 
-              <td data-rotulo="Responsáveis">
+              <td data-rotulo="Montagem">
                 {% if ordem.colaborador %}
-                  <strong>{{ ordem.colaborador.get_full_name|default:ordem.colaborador.username }}</strong>
+                  <strong>{{ ordem.colaborador.nome }}</strong>
                 {% else %}<span class="text-muted">Sem colaborador</span>{% endif %}
-                {% if ordem.montador %}<span class="material-sub d-block">Montador: {{ ordem.montador.nome_montador }}</span>{% endif %}
                 {% if ordem.setor %}<span class="material-sub d-block">{{ ordem.setor.nome_setor }}</span>{% endif %}
               </td>
 
@@ -171,7 +170,6 @@
                           data-quantidade="{{ ordem.quantidade }}"
                           data-status="{{ ordem.status }}"
                           data-colaborador="{{ ordem.colaborador_id|default_if_none:'' }}"
-                          data-montador="{{ ordem.montador_id|default_if_none:'' }}"
                           data-setor="{{ ordem.setor_id|default_if_none:'' }}"
                           data-prazo="{{ ordem.prevista_para|date:'Y-m-d' }}"
                           data-obs="{{ ordem.observacoes }}">
@@ -252,8 +250,8 @@
 
           <div class="col-6 col-md-2">
             <label class="form-label" for="ordemQuantidade">Quantidade *</label>
-            <input class="form-control" id="ordemQuantidade" name="quantidade"
-                   data-rotulo="quantidade" inputmode="numeric" value="1" required>
+            <input type="number" class="form-control" id="ordemQuantidade" name="quantidade"
+                   data-rotulo="quantidade" inputmode="numeric" min="1" step="1" value="1" required>
           </div>
 
           <div class="col-6 col-md-3">
@@ -265,25 +263,20 @@
             <div class="form-text">Concluir é feito pelo botão da lista.</div>
           </div>
 
-          <div class="col-12 col-md-4">
-            <label class="form-label" for="ordemMontador">Montador</label>
-            <select class="form-select" id="ordemMontador" name="montador">
-              <option value="">Não definido</option>
-              {% for m in montadores %}<option value="{{ m.id }}">{{ m.nome_montador }}</option>{% endfor %}
-            </select>
-          </div>
-
           <div class="col-12 col-md-6">
-            <label class="form-label" for="ordemColaborador">Colaborador responsável *</label>
-            <select class="form-select" id="ordemColaborador" name="colaborador" data-rotulo="colaborador" required>
-              <option value="">Escolha o funcionário</option>
-              {% for colaborador in colaboradores %}
-                <option value="{{ colaborador.id }}">
-                  {{ colaborador.get_full_name|default:colaborador.username }} · {{ colaborador.username }}
-                </option>
-              {% endfor %}
-            </select>
-            <div class="form-text">A conta precisa estar ativa e marcada como equipe interna.</div>
+            <label class="form-label" for="ordemColaborador">Quem está montando? *</label>
+            <div class="input-group">
+              <select class="form-select" id="ordemColaborador" name="colaborador" data-rotulo="colaborador" required>
+                <option value="">Escolha o colaborador</option>
+                {% for colaborador in colaboradores %}
+                  <option value="{{ colaborador.id }}">{{ colaborador.nome }}</option>
+                {% endfor %}
+              </select>
+              <button class="btn btn-outline-primary" type="button" id="novoColaborador">
+                <i class="bi bi-person-plus"></i> Novo
+              </button>
+            </div>
+            <div class="form-text">É apenas um cadastro de nome; não cria usuário nem senha.</div>
           </div>
 
           <div class="col-12 col-md-3">
@@ -310,6 +303,30 @@
       <div class="modal-footer">
         <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
         <button type="submit" class="btn btn-success">Salvar ordem</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Colaborador é um objeto operacional independente do login. -->
+<div class="modal fade" id="modalColaborador" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-sm">
+    <form class="modal-content" id="formColaborador" method="post" action="{% url 'ordens_producao' %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="colaborador_save">
+      <div class="modal-header">
+        <div><span class="ls-modal-kicker">Chão de fábrica</span><h5 class="modal-title">Novo colaborador</h5></div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body">
+        <div id="colaboradorErro" class="alert alert-danger d-none" role="alert"></div>
+        <label class="form-label" for="colaboradorNome">Nome da pessoa</label>
+        <input class="form-control" id="colaboradorNome" name="nome_colaborador" maxlength="90" autocomplete="off" required>
+        <div class="form-text">Use o nome pelo qual a equipe reconhece quem está na montagem.</div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-success">Cadastrar e escolher</button>
       </div>
     </form>
   </div>
@@ -448,7 +465,6 @@ document.addEventListener("DOMContentLoaded", function () {
       Painel.valor("ordemQuantidade", gatilho.dataset.quantidade);
       Painel.valor("ordemStatus", gatilho.dataset.status);
       Painel.valor("ordemColaborador", gatilho.dataset.colaborador);
-      Painel.valor("ordemMontador", gatilho.dataset.montador);
       Painel.valor("ordemSetor", gatilho.dataset.setor);
       Painel.valor("ordemPrazo", gatilho.dataset.prazo);
       Painel.valor("ordemObs", gatilho.dataset.obs);
@@ -469,6 +485,47 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 
   Painel.ligar({ form: "formOrdem", erro: "ordemErro" });
+
+  var modalOrdem = bootstrap.Modal.getOrCreateInstance(document.getElementById("modalOrdem"));
+  var modalColaborador = bootstrap.Modal.getOrCreateInstance(document.getElementById("modalColaborador"));
+  var voltarParaOrdem = false;
+  document.getElementById("novoColaborador").addEventListener("click", function () {
+    voltarParaOrdem = true;
+    modalOrdem.hide();
+    document.getElementById("modalOrdem").addEventListener("hidden.bs.modal", function abrirCadastro() {
+      modalColaborador.show();
+      setTimeout(function () { document.getElementById("colaboradorNome").focus(); }, 180);
+    }, { once: true });
+  });
+
+  document.getElementById("modalColaborador").addEventListener("hidden.bs.modal", function () {
+    if (voltarParaOrdem) {
+      voltarParaOrdem = false;
+      modalOrdem.show();
+    }
+  });
+
+  document.getElementById("formColaborador").addEventListener("submit", async function (evento) {
+    evento.preventDefault();
+    Painel.erro("colaboradorErro", "");
+    var resposta;
+    try {
+      resposta = await fetch(this.action, {
+        method: "POST",
+        body: new FormData(this),
+        headers: { "X-Requested-With": "XMLHttpRequest" },
+        credentials: "same-origin"
+      });
+      var json = await resposta.json();
+      if (!resposta.ok || json.status !== "sucesso") throw new Error(json.msg || "Não foi possível cadastrar.");
+      var opcao = new Option(json.colaborador.nome, json.colaborador.id, true, true);
+      document.getElementById("ordemColaborador").add(opcao);
+      this.reset();
+      modalColaborador.hide();
+    } catch (erro) {
+      Painel.erro("colaboradorErro", erro.message || "Não foi possível cadastrar agora.");
+    }
+  });
 
   document.querySelectorAll("[data-concluir]").forEach(function (b) {
     b.addEventListener("click", function () {

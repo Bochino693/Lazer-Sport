@@ -11,7 +11,7 @@ O que estes testes protegem:
 from decimal import Decimal
 
 from django.contrib.auth.models import User
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from .models import (
@@ -22,6 +22,7 @@ from .models import (
 )
 
 
+@override_settings(ALLOWED_HOSTS=["interno.testserver", "testserver"])
 class GestaoProdutosBaseTests(TestCase):
 
     def setUp(self):
@@ -39,15 +40,22 @@ class GestaoProdutosBaseTests(TestCase):
             preco_venda=Decimal("450.00"),
         )
         self.peca.categoria_peca.add(self.categoria)
-        self.url = reverse("pecas_admin")
+        self.url = reverse("pecas_admin", urlconf="sistema_interno.urls")
+        self.host = "interno.testserver"
+
+    def get(self, url, data=None):
+        return self.client.get(url, data or {}, HTTP_HOST=self.host)
+
+    def post(self, url, data):
+        return self.client.post(url, data, HTTP_HOST=self.host)
 
 
 class AcessoTests(GestaoProdutosBaseTests):
 
     def test_visitante_nao_entra(self):
-        resposta = self.client.get(self.url)
+        resposta = self.get(self.url)
 
-        self.assertRedirects(resposta, reverse("acesso_negado"))
+        self.assertRedirects(resposta, "/login/inner/", fetch_redirect_response=False)
 
     def test_cliente_comum_nao_entra(self):
         cliente = User.objects.create_user(
@@ -60,14 +68,14 @@ class AcessoTests(GestaoProdutosBaseTests):
         cliente.perfil.save(update_fields=["telefone"])
         self.client.login(username="cliente", password="123456789a")
 
-        resposta = self.client.get(self.url)
+        resposta = self.get(self.url)
 
-        self.assertRedirects(resposta, reverse("acesso_negado"))
+        self.assertRedirects(resposta, "/login/inner/", fetch_redirect_response=False)
 
     def test_administrador_entra(self):
         self.client.force_login(self.admin)
 
-        resposta = self.client.get(self.url)
+        resposta = self.get(self.url)
 
         self.assertEqual(resposta.status_code, 200)
         self.assertContains(resposta, "Motor 1/4 CV")
@@ -80,7 +88,7 @@ class CadastroDePecaTests(GestaoProdutosBaseTests):
         self.client.force_login(self.admin)
 
     def test_cadastra_peca_nova(self):
-        resposta = self.client.post(self.url, {
+        resposta = self.post(self.url, {
             "action": "save",
             "resposta": "json",
             "nome": "Correia dentada",
@@ -100,7 +108,7 @@ class CadastroDePecaTests(GestaoProdutosBaseTests):
         self.assertEqual(nova.preco_venda, Decimal("112.00"))
 
     def test_edita_peca_existente(self):
-        self.client.post(self.url, {
+        self.post(self.url, {
             "action": "save",
             "resposta": "json",
             "id": self.peca.id,
@@ -116,7 +124,7 @@ class CadastroDePecaTests(GestaoProdutosBaseTests):
         self.assertFalse(self.peca.ativo)
 
     def test_nome_vazio_e_recusado(self):
-        resposta = self.client.post(self.url, {
+        resposta = self.post(self.url, {
             "action": "save",
             "resposta": "json",
             "nome": "  ",
@@ -127,7 +135,7 @@ class CadastroDePecaTests(GestaoProdutosBaseTests):
         self.assertEqual(PecasReposicao.objects.count(), 1)
 
     def test_preco_invalido_e_recusado(self):
-        resposta = self.client.post(self.url, {
+        resposta = self.post(self.url, {
             "action": "save",
             "resposta": "json",
             "nome": "Peça torta",
@@ -142,7 +150,7 @@ class CadastroDePecaTests(GestaoProdutosBaseTests):
         self.peca.ativo = True
         self.peca.save(update_fields=["ativo"])
 
-        self.client.post(self.url, {
+        self.post(self.url, {
             "action": "alternar_ativo",
             "resposta": "json",
             "id": self.peca.id,
@@ -152,7 +160,7 @@ class CadastroDePecaTests(GestaoProdutosBaseTests):
         self.assertFalse(self.peca.ativo)
 
     def test_exclusao_exige_a_frase_certa(self):
-        resposta = self.client.post(self.url, {
+        resposta = self.post(self.url, {
             "action": "delete",
             "resposta": "json",
             "id": self.peca.id,
@@ -165,7 +173,7 @@ class CadastroDePecaTests(GestaoProdutosBaseTests):
         )
 
     def test_exclusao_com_a_frase_certa(self):
-        self.client.post(self.url, {
+        self.post(self.url, {
             "action": "delete",
             "resposta": "json",
             "id": self.peca.id,
@@ -177,7 +185,7 @@ class CadastroDePecaTests(GestaoProdutosBaseTests):
         )
 
     def test_categoria_nova_pelo_painel(self):
-        resposta = self.client.post(self.url, {
+        resposta = self.post(self.url, {
             "action": "categoria",
             "resposta": "json",
             "nome_categoria_peca": "Rolamentos",
@@ -191,7 +199,7 @@ class CadastroDePecaTests(GestaoProdutosBaseTests):
         )
 
     def test_categoria_repetida_nao_duplica(self):
-        self.client.post(self.url, {
+        self.post(self.url, {
             "action": "categoria",
             "resposta": "json",
             "nome_categoria_peca": "motores",
@@ -224,7 +232,7 @@ class EngajamentoAdminTests(GestaoProdutosBaseTests):
         self.client.force_login(self.admin)
 
     def test_painel_mostra_ranking_e_totais(self):
-        resposta = self.client.get(reverse("engajamento_admin"))
+        resposta = self.get(reverse("engajamento_admin", urlconf="sistema_interno.urls"))
 
         self.assertEqual(resposta.status_code, 200)
         self.assertEqual(resposta.context["total_curtidas"], 1)
@@ -236,8 +244,8 @@ class EngajamentoAdminTests(GestaoProdutosBaseTests):
         self.assertContains(resposta, "Motor 1/4 CV")
 
     def test_periodo_filtra_o_que_entra_na_conta(self):
-        resposta = self.client.get(
-            reverse("engajamento_admin"),
+        resposta = self.get(
+            reverse("engajamento_admin", urlconf="sistema_interno.urls"),
             {"periodo": "7dias"},
         )
 
@@ -255,6 +263,6 @@ class EngajamentoAdminTests(GestaoProdutosBaseTests):
         visitante.perfil.save(update_fields=["telefone"])
         self.client.login(username="visitante", password="123456789a")
 
-        resposta = self.client.get(reverse("engajamento_admin"))
+        resposta = self.get(reverse("engajamento_admin", urlconf="sistema_interno.urls"))
 
-        self.assertRedirects(resposta, reverse("acesso_negado"))
+        self.assertRedirects(resposta, "/login/inner/", fetch_redirect_response=False)

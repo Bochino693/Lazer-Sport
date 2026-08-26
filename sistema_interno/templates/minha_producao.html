@@ -1,7 +1,7 @@
 {% extends "base_inner.html" %}
 
-{% block title %}Minha produção | Lazer & Sport{% endblock %}
-{% block top_title %}{% if eh_gestor %}Acompanhamento da produção{% else %}Minha produção{% endif %}{% endblock %}
+{% block title %}Acompanhamento da produção | Lazer & Sport{% endblock %}
+{% block top_title %}Acompanhamento da produção{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -12,8 +12,8 @@
 {% block content %}
 <section class="work-hero">
   <span class="work-kicker">Fluxo manual e rastreável</span>
-  <h1>{% if eh_gestor %}Produção em andamento{% else %}Olá, {{ user.get_full_name|default:user.username }}{% endif %}</h1>
-  <p>{% if eh_gestor %}Veja em qual etapa cada colaborador está e onde existem bloqueios.{% else %}Abra uma ordem, consulte o guia da etapa atual e informe cada avanço. As próximas fases são liberadas em sequência.{% endif %}</p>
+  <h1>Produção em andamento</h1>
+  <p>Veja quem está montando, consulte o guia e registre cada avanço. O usuário que altera uma etapa fica guardado no histórico.</p>
 </section>
 
 <section class="work-summary">
@@ -33,7 +33,7 @@
     <article class="work-card {% if ordem.status == 'bloqueada' %}blocked{% endif %}">
       <header class="work-head"><div><span class="work-id">ORDEM #{{ ordem.id }}</span><h2>{{ ordem.quantidade }} × {{ ordem.produto.nome }}</h2></div><span class="work-status {{ ordem.status }}">{{ ordem.get_status_display }}</span></header>
       <div class="work-meta">
-        <div>Colaborador<strong>{% if ordem.colaborador %}{{ ordem.colaborador.get_full_name|default:ordem.colaborador.username }}{% else %}Não atribuído{% endif %}</strong></div>
+        <div>Colaborador<strong>{% if ordem.colaborador %}{{ ordem.colaborador.nome }}{% else %}Não atribuído{% endif %}</strong></div>
         <div>Prazo<strong>{% if ordem.prevista_para %}{{ ordem.prevista_para|date:"d/m/Y" }}{% else %}Sem prazo{% endif %}</strong></div>
       </div>
       <div class="work-progress"><div class="work-progress-copy"><span>Etapas concluídas</span><strong>{{ ordem.etapas_concluidas_tela }}/{{ ordem.total_etapas_tela }}</strong></div><div class="work-track"><span style="width:{{ ordem.progresso_percentual }}%"></span></div></div>

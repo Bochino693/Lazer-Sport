@@ -68,15 +68,48 @@ def _somente_digitos(valor):
     return "".join(char for char in str(valor or "") if char.isdigit())
 
 
-def _request_json(url, *, params=None, headers=None):
+def _request_json(url, *, params=None, headers=None, timeout=None):
     resposta = requests.get(
         url,
         params=params,
         headers=headers or {"User-Agent": USER_AGENT},
-        timeout=HTTP_TIMEOUT,
+        timeout=timeout or HTTP_TIMEOUT,
     )
     resposta.raise_for_status()
     return resposta.json()
+
+
+@lru_cache(maxsize=2000)
+def _brasilapi_cep_v2(cep_limpo):
+    return _request_json(
+        f"https://brasilapi.com.br/api/cep/v2/{cep_limpo}",
+        timeout=(1.5, 3),
+    )
+
+
+@lru_cache(maxsize=2000)
+def buscar_coordenadas_cep_rapido(cep):
+    """Tenta obter o ponto já calculado pela BrasilAPI, em uma chamada.
+
+    Esta é a rota usada enquanto a pessoa ainda está preenchendo o CEP. Ela
+    nunca cai no encadeamento de quatro buscas do Nominatim: se a fonte não
+    responder em poucos segundos, o endereço continua salvando e o mapa fica
+    marcado como pendente em vez de derrubar a requisição do usuário.
+    """
+    cep_limpo = _somente_digitos(cep)
+    if not cep_valido(cep_limpo):
+        return None, None
+    try:
+        resposta = _brasilapi_cep_v2(cep_limpo)
+        coordenadas = ((resposta.get("location") or {}).get("coordinates") or {})
+        latitude = coordenadas.get("latitude")
+        longitude = coordenadas.get("longitude")
+        if latitude in (None, "") or longitude in (None, ""):
+            return None, None
+        return float(latitude), float(longitude)
+    except (AttributeError, TypeError, ValueError, requests.RequestException) as exc:
+        logger.info("[GEO] Coordenada rápida indisponível para %s: %s", cep_limpo, exc)
+        return None, None
 
 
 def cep_valido(cep):
@@ -156,7 +189,14 @@ def buscar_dados_cep(cep):
             break
 
         try:
-            resposta = _request_json(molde.format(cep=cep_limpo))
+            resposta = (
+                _brasilapi_cep_v2(cep_limpo)
+                if nome == "brasilapi-v2"
+                else _request_json(
+                    molde.format(cep=cep_limpo),
+                    timeout=(1.5, 3),
+                )
+            )
         except (requests.RequestException, ValueError) as exc:
             logger.info("[CEP] %s indisponível para %s: %s", nome, cep_limpo, exc)
             continue

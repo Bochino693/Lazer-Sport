@@ -241,6 +241,8 @@
       {% csrf_token %}
       <input type="hidden" name="action" value="save">
       <input type="hidden" name="id" id="clienteId">
+      <input type="hidden" name="latitude" id="clienteLatitude">
+      <input type="hidden" name="longitude" id="clienteLongitude">
 
       <div class="modal-header">
         <h5 class="modal-title" id="clienteTitulo">Novo cliente</h5>
@@ -290,29 +292,17 @@
           </div>
 
           <div class="col-12" id="blocoClienteMapa">
-            <label class="form-label" for="clienteMapa">Cliente já existente no mapa</label>
-            <select class="form-select" id="clienteMapa" name="cliente_mapa">
-              <option value="">Ainda não está no mapa</option>
-              {% for mapa in clientes_mapa %}
-                <option value="{{ mapa.id }}">
-                  {{ mapa.descricao_cliente }}{% if mapa.cidade %} · {{ mapa.cidade }}/{{ mapa.estado }}{% endif %}
-                </option>
-              {% endfor %}
-            </select>
+            <label class="form-label" for="clienteMapaBusca">Cliente já existente no mapa</label>
+            <div id="clienteMapaBox"></div>
             <span class="form-text">
-              Use para unir um pino antigo a este cadastro. Se ficar vazio, a primeira proposta aprovada cria o vínculo automaticamente.
+              Digite o nome ou a cidade para unir um pino antigo. Se ficar vazio, a primeira proposta aprovada cria o vínculo automaticamente.
             </span>
           </div>
 
           <div class="col-12" id="blocoEstabelecimento" hidden>
-            <label class="form-label" for="clienteEstabelecimento">Parceiro publicado no site</label>
-            <select class="form-select" id="clienteEstabelecimento" name="estabelecimento">
-              <option value="">Não ligar a nenhum</option>
-              {% for e in estabelecimentos %}
-                <option value="{{ e.id }}">{{ e.nome_estabelecimento }}</option>
-              {% endfor %}
-            </select>
-            <span class="form-text">Liga este buffet ao card que aparece em “Nossos Parceiros”.</span>
+            <label class="form-label" for="clienteEstabelecimentoBusca">Parceiro publicado no site</label>
+            <div id="clienteEstabelecimentoBox"></div>
+            <span class="form-text">Busque e ligue este buffet ao card que aparece em “Nossos Parceiros”.</span>
           </div>
         </div>
 
@@ -398,6 +388,8 @@
 
 {{ clientes_dados|json_script:"clientesDados" }}
 {{ opcoes_buffets|json_script:"opcoesBuffets" }}
+{{ opcoes_clientes_mapa|json_script:"opcoesClientesMapa" }}
+{{ opcoes_estabelecimentos|json_script:"opcoesEstabelecimentos" }}
 {% endblock %}
 
 {% block scripts %}
@@ -411,6 +403,8 @@ document.addEventListener("DOMContentLoaded", function () {
   var opcoesBuffets = JSON.parse(
     document.getElementById("opcoesBuffets").textContent || "[]"
   );
+  var opcoesClientesMapa = JSON.parse(document.getElementById("opcoesClientesMapa").textContent || "[]");
+  var opcoesEstabelecimentos = JSON.parse(document.getElementById("opcoesEstabelecimentos").textContent || "[]");
 
   /* O buffet responsável é escolhido pela busca do painel: em fábrica com
      dezenas de parceiros, rolar lista no tablet é o que faz a pessoa
@@ -423,6 +417,24 @@ document.addEventListener("DOMContentLoaded", function () {
   });
   buscaParceiro.entrada.id = "clienteParceiroBusca";
   document.getElementById("clienteParceiroBox").appendChild(buscaParceiro.elemento);
+
+  var buscaMapa = LSBusca.criar({
+    nome: "cliente_mapa",
+    opcoes: opcoesClientesMapa,
+    placeholder: "Buscar nome, bairro ou cidade...",
+    rotuloAcessivel: "Cliente já publicado no mapa"
+  });
+  buscaMapa.entrada.id = "clienteMapaBusca";
+  document.getElementById("clienteMapaBox").appendChild(buscaMapa.elemento);
+
+  var buscaEstabelecimento = LSBusca.criar({
+    nome: "estabelecimento",
+    opcoes: opcoesEstabelecimentos,
+    placeholder: "Buscar parceiro publicado...",
+    rotuloAcessivel: "Parceiro publicado no site"
+  });
+  buscaEstabelecimento.entrada.id = "clienteEstabelecimentoBusca";
+  document.getElementById("clienteEstabelecimentoBox").appendChild(buscaEstabelecimento.elemento);
 
   var campoTipo = document.getElementById("clienteTipo");
   var blocoParceiro = document.getElementById("blocoParceiro");
@@ -461,7 +473,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
     var campos = [
       "nome_cliente", "telefone", "email", "documento", "observacoes",
-      "cep", "endereco", "numero", "bairro", "cidade", "estado"
+      "cep", "endereco", "numero", "bairro", "cidade", "estado",
+      "latitude", "longitude"
     ];
     var ids = {
       nome_cliente: "clienteNome", telefone: "clienteTelefone",
@@ -469,6 +482,7 @@ document.addEventListener("DOMContentLoaded", function () {
       observacoes: "clienteObservacoes", cep: "clienteCep",
       endereco: "clienteEndereco", numero: "clienteNumero",
       bairro: "clienteBairro", cidade: "clienteCidade", estado: "clienteEstado"
+      , latitude: "clienteLatitude", longitude: "clienteLongitude"
     };
 
     campos.forEach(function (campo) {
@@ -476,8 +490,8 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     campoTipo.value = cliente ? cliente.tipo : "pessoa";
-    Painel.valor("clienteEstabelecimento", cliente ? cliente.estabelecimento : "");
-    Painel.valor("clienteMapa", cliente ? cliente.cliente_mapa : "");
+    buscaEstabelecimento.definirValor(cliente ? cliente.estabelecimento : "", false);
+    buscaMapa.definirValor(cliente ? cliente.cliente_mapa : "", false);
     buscaParceiro.definirValor(cliente ? cliente.parceiro : "", false);
 
     ajustarPorTipo();
@@ -493,6 +507,10 @@ document.addEventListener("DOMContentLoaded", function () {
       bairro: "clienteBairro",
       cidade: "clienteCidade",
       estado: "clienteEstado"
+    },
+    coordenadas: {
+      latitude: "clienteLatitude",
+      longitude: "clienteLongitude"
     }
   });
 

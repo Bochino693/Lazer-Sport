@@ -164,6 +164,7 @@ SITE_ID = 1
 # MIDDLEWARE
 # ============================================================
 MIDDLEWARE = [
+    "core.middleware.RequestTimingMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.middleware.gzip.GZipMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
@@ -246,6 +247,15 @@ DATABASES = {
 
 # Compatível com os poolers do Supabase e evita estado de cursor entre conexões.
 DATABASES["default"]["DISABLE_SERVER_SIDE_CURSORS"] = True
+DATABASES["default"].setdefault("OPTIONS", {}).update({
+    # Falha rápido e deixa outro worker atender quando o pool remoto não
+    # aceita conexão, em vez de prender todas as threads até o proxy dar 502.
+    "connect_timeout": 5,
+    "keepalives": 1,
+    "keepalives_idle": 30,
+    "keepalives_interval": 10,
+    "keepalives_count": 3,
+})
 
 
 # ============================================================
@@ -616,6 +626,11 @@ LOGGING = {
             "level": "ERROR",
             "propagate": False,
         },
+        "lazer.performance": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
+        },
     },
 }
 
@@ -625,6 +640,19 @@ CACHES = {
         "LOCATION": "lazersport",
     }
 }
+
+try:
+    INTERNO_AVISOS_CACHE_TTL = max(
+        5,
+        int(os.getenv("INTERNO_AVISOS_CACHE_TTL", "20")),
+    )
+except ValueError:
+    INTERNO_AVISOS_CACHE_TTL = 20
+
+INTERNO_BASE_URL = os.getenv(
+    "INTERNO_BASE_URL",
+    "https://interno.lazersport.com.br",
+).strip().rstrip("/")
 
 # A Home usa somente dados públicos nesse cache. Carrinho, usuário e mensagens
 # continuam fora dele. Como saves no catálogo invalidam a chave na hora, um TTL

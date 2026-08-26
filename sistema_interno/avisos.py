@@ -20,13 +20,13 @@ inteira para filtrar na memória. A mesma regra escrita como
 from dataclasses import dataclass
 from datetime import timedelta
 
-from django.core.exceptions import ObjectDoesNotExist
 from django.urls import reverse
 from django.utils import timezone
 
 from core.models import Manutencao, Pedido, Venda
 
-from .models import EstoqueMaterial, Gerente, Orcamento, OrdemProducao
+from .models import EstoqueMaterial, Orcamento, OrdemProducao
+from .permissoes import GESTAO, PRODUCAO, VENDAS, capacidades, tem_funcao
 
 #: Rotas do painel. Passado na mão porque um pedido que chegue por fora
 #: do subdomínio interno resolveria contra o urlconf do site, onde estes
@@ -71,21 +71,8 @@ PESO = {"critico": 0, "atencao": 1, "novidade": 2, "info": 3}
 
 
 def eh_gestor(user):
-    """Gerência enxerga a operação inteira; montador enxerga o que é dele.
-
-    Mesma regra de `views.eh_gestor_interno`, repetida aqui de propósito:
-    importar de views criaria um ciclo (views já importa deste módulo, via
-    o context processor). Se a regra mudar, muda nos dois — e é por isso
-    que existe teste cobrindo os dois caminhos.
-    """
-    if not getattr(user, "is_authenticated", False):
-        return False
-    if user.is_superuser:
-        return True
-    try:
-        return bool(user.gerente.ativo)
-    except (AttributeError, ObjectDoesNotExist, Gerente.DoesNotExist):
-        return False
+    """Compatibilidade para quem ainda chama a regra pelo nome antigo."""
+    return tem_funcao(user, GESTAO)
 
 
 def _orcamentos(hoje):
@@ -241,8 +228,6 @@ def _producao(user, gestor):
     producoes = OrdemProducao.objects.exclude(
         status__in=[OrdemProducao.Status.CONCLUIDA, OrdemProducao.Status.CANCELADA]
     )
-    if not gestor:
-        producoes = producoes.filter(colaborador=user)
 
     total = producoes.count()
     if not total:
@@ -251,10 +236,7 @@ def _producao(user, gestor):
     return [Aviso(
         chave="producao",
         titulo="Ordem de produção aberta" if total == 1 else "Ordens de produção abertas",
-        detalhe=(
-            "Na fábrica, ainda não concluídas."
-            if gestor else "Atribuídas a você."
-        ),
+        detalhe="Na fábrica, ainda não concluídas.",
         quantidade=total,
         url=reverse("minha_producao", urlconf=URLCONF),
         nivel="info",
@@ -273,21 +255,28 @@ def coletar(user):
     if not getattr(user, "is_authenticated", False):
         return []
 
-    gestor = eh_gestor(user)
-
-    if not (getattr(user, "is_staff", False) or gestor):
+    acesso = capacidades(user)
+    if not any(acesso.values()):
         return []
 
     hoje = timezone.localdate()
     avisos = []
 
-    if gestor:
+    if acesso["orcamentos"]:
         avisos += _orcamentos(hoje)
         avisos += _respostas_de_cliente(timezone.now())
+
+    if acesso["operacao"]:
         avisos += _operacao()
+
+    if acesso["estoque"]:
         avisos += _estoque()
 
-    avisos += _producao(user, gestor)
+    if acesso["producao"]:
+        # A função é engenharia/acompanhamento de produção, portanto vê a
+        # fábrica inteira. A atribuição individual continua destacada nas
+        # próprias ordens.
+        avisos += _producao(user, True)
 
     avisos.sort(key=lambda a: (PESO.get(a.nivel, 9), -a.quantidade))
     return avisos

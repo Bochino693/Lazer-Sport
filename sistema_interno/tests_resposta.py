@@ -13,7 +13,7 @@ isso o problema durou. Estes testes olham para o formato da resposta, que
 """
 
 from django.contrib.auth.models import User
-from django.test import TestCase, override_settings
+from django.test import RequestFactory, TestCase, override_settings
 
 from core.models import Brinquedos
 from decimal import Decimal
@@ -98,10 +98,11 @@ class RespostaDoPainelTests(TestCase):
         class Fake(RespostaJSONMixin):
             rota_padrao = "orcamentos_inner"
 
-        pedido = self.client.request().wsgi_request
-        pedido.META["HTTP_X_REQUESTED_WITH"] = "XMLHttpRequest"
-        pedido.method = "POST"
-        pedido.POST = {}
+        pedido = RequestFactory().post(
+            "/orcamentos/",
+            {},
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
 
         resposta = Fake().sucesso(pedido, "deu certo", status="rascunho", msg="x")
         import json as _json

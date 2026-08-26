@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Material, TipoMaterial, Gerente
+from .models import Colaborador, Material, TipoMaterial, Gerente
 
 
 @admin.register(Gerente)
@@ -23,6 +23,13 @@ class MaterialAdmin(admin.ModelAdmin):
     list_filter = ('ativo', 'unidade', 'tipo_material')
     search_fields = ('nome_material', 'codigo_interno', 'descricao')
     ordering = ('nome_material',)
+
+
+@admin.register(Colaborador)
+class ColaboradorAdmin(admin.ModelAdmin):
+    list_display = ("nome", "ativo", "atualizado")
+    list_filter = ("ativo",)
+    search_fields = ("nome",)
 
 
 from .models import (
@@ -147,7 +154,7 @@ class GuiaEtapaProducaoAdmin(admin.ModelAdmin):
 class OrdemProducaoAdmin(admin.ModelAdmin):
     list_display = ("id", "produto", "quantidade", "colaborador", "status", "prevista_para")
     list_filter = ("status", "prevista_para")
-    search_fields = ("produto__nome", "colaborador__username", "observacoes")
+    search_fields = ("produto__nome", "colaborador__nome", "observacoes")
     autocomplete_fields = ("colaborador", "responsavel")
 
 

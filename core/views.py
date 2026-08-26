@@ -1605,7 +1605,36 @@ from . import favoritos as servico_favoritos
 
 
 class AdminOnlyMixin(View):
+    # Views antigas do /adm continuam sendo a implementação dos CRUDs do
+    # catálogo. No subdomínio interno, quem decide o acesso é a função
+    # atribuída à conta; no site público mantemos a proteção histórica de
+    # superusuário até todas as URLs /adm virarem redirecionamentos.
+    funcoes_necessarias = ()
+    superusuario_necessario = False
+
     def dispatch(self, request, *args, **kwargs):
+        if getattr(request, "is_interno", False):
+            from sistema_interno.permissoes import (
+                CRIACAO,
+                faz_parte_da_equipe,
+                tem_funcao,
+            )
+
+            # Estas views também atendem o conjunto de URLs interno. Ali
+            # não existe a antiga tela pública ``acesso_negado``: visitante
+            # e conta de cliente voltam ao login do aplicativo, enquanto um
+            # integrante autenticado sem esta função volta ao seu painel.
+            if not request.user.is_authenticated:
+                return redirect("login_inner")
+            if not faz_parte_da_equipe(request.user):
+                return redirect("login_inner")
+            if self.superusuario_necessario and not request.user.is_superuser:
+                return redirect("home_inner")
+
+            funcoes = self.funcoes_necessarias or (CRIACAO,)
+            if tem_funcao(request.user, *funcoes):
+                return super().dispatch(request, *args, **kwargs)
+            return redirect("home_inner")
 
         if not request.user.is_authenticated:
             return redirect('acesso_negado')
@@ -2937,7 +2966,7 @@ from .forms import ImagensSiteForm
 MAX_BANNERS = 5
 
 
-class BannerAdminView(LoginRequiredMixin, View):
+class BannerAdminView(AdminOnlyMixin, View):
     template_name = "gestao/banner_adm.html"
 
     def get(self, request):
@@ -3010,7 +3039,7 @@ class BannerAdminView(LoginRequiredMixin, View):
         return redirect('banner_adm')
 
 
-class BannerDeleteView(LoginRequiredMixin, View):
+class BannerDeleteView(AdminOnlyMixin, View):
 
     def post(self, request, pk):
         banner = get_object_or_404(ImagensSite, pk=pk)

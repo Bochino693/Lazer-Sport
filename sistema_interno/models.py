@@ -263,15 +263,24 @@ class Material(Prime):
         ordering = ("nome_material",)
 
 
-class Montadores(Prime):
-    nome_montador = models.CharField(max_length=90)
+class Colaborador(Prime):
+    """Pessoa da fábrica citada na produção, sem conta de acesso.
+
+    O usuário registra ações no sistema para auditoria. O colaborador diz
+    quem está montando fisicamente o brinquedo. Misturar os dois obrigava
+    a criar login para alguém que só precisava aparecer na ordem.
+    """
+
+    nome = models.CharField(max_length=90)
+    ativo = models.BooleanField(default=True)
 
     def __str__(self):
-        return self.nome_montador
+        return self.nome
 
     class Meta:
-        verbose_name = "Montadores"
-        verbose_name_plural = "Montadores"
+        verbose_name = "Colaborador"
+        verbose_name_plural = "Colaboradores"
+        ordering = ("nome",)
 
 
 class Setores(Prime):
@@ -823,12 +832,13 @@ class OrdemProducao(Prime):
         default=Status.PLANEJADA,
         db_index=True,
     )
-    montador = models.ForeignKey(
-        Montadores,
+    colaborador = models.ForeignKey(
+        Colaborador,
         on_delete=models.SET_NULL,
         related_name="ordens",
         null=True,
         blank=True,
+        help_text="Pessoa que está montando o brinquedo; não é uma conta do sistema.",
     )
     setor = models.ForeignKey(
         Setores,
@@ -843,14 +853,6 @@ class OrdemProducao(Prime):
         related_name="ordens_producao",
         null=True,
         blank=True,
-    )
-    colaborador = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.SET_NULL,
-        related_name="producoes_atribuidas",
-        null=True,
-        blank=True,
-        help_text="Funcionário que executará e atualizará as etapas.",
     )
     prevista_para = models.DateField(null=True, blank=True)
     concluida_em = models.DateTimeField(null=True, blank=True)

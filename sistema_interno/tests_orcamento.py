@@ -19,6 +19,7 @@ from django.utils import timezone
 from core.models import Brinquedos, CategoriaPeca, CategoriasBrinquedos, PecasReposicao
 
 from .models import Cliente, ItemOrcamento, Orcamento, ProdutoInterno
+from .permissoes import atribuir_funcoes
 
 
 @override_settings(ALLOWED_HOSTS=["interno.testserver", "testserver"])
@@ -589,6 +590,7 @@ class OrcamentoInternoTests(TestCase):
             password="senha-segura",
             is_staff=True,
         )
+        atribuir_funcoes(operador, ["producao"])
         self.client.force_login(operador)
 
         resposta = self.client.get(self.URL, HTTP_HOST="interno.testserver")
@@ -721,6 +723,7 @@ class RegistroDeEnvioTests(TestCase):
         self.assertIn(self.orcamento.token, dados["whatsapp_url"])
 
 
+@override_settings(ALLOWED_HOSTS=["interno.testserver", "testserver"])
 class DescontoInteligenteTests(TestCase):
     """Desconto em reais ou em porcentagem, sem calculadora à parte.
 

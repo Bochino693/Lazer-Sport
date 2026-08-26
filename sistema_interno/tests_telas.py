@@ -14,6 +14,7 @@ from django.contrib.auth.models import User
 from django.test import TestCase, override_settings
 
 from .models import Cliente, ProdutoInterno
+from .permissoes import atribuir_funcoes
 
 
 # Toda tela do painel, na ordem do menu. Tela nova entra aqui.
@@ -33,6 +34,19 @@ TELAS_DE_GESTOR = [
     "/vendas/inner/",
     "/pedidos/inner/",
     "/manutencoes/inner/",
+    "/site/brinquedos/",
+    "/site/combos/",
+    "/site/promocoes/",
+    "/site/eventos/",
+    "/site/projetos/",
+    "/site/cupons/",
+    "/site/pecas/",
+    "/site/banners/",
+    "/site/engajamento/",
+    "/site/indicadores/",
+    "/site/clientes-mapa/",
+    "/site/contas-clientes/",
+    "/equipe/",
     "/minha-conta/",
 ]
 
@@ -103,6 +117,7 @@ class TelasDoPainelTests(TestCase):
             password="senha-segura",
             is_staff=True,
         )
+        atribuir_funcoes(colaborador, ["producao"])
         self.client.force_login(colaborador)
 
         for rota in TELAS_DE_COLABORADOR:
@@ -116,6 +131,7 @@ class TelasDoPainelTests(TestCase):
             password="senha-segura",
             is_staff=True,
         )
+        atribuir_funcoes(colaborador, ["producao"])
         self.client.force_login(colaborador)
 
         resposta = self.abrir("/")
@@ -129,6 +145,7 @@ class TelasDoPainelTests(TestCase):
             password="senha-segura",
             is_staff=True,
         )
+        atribuir_funcoes(colaborador, ["producao"])
         self.client.force_login(colaborador)
 
         for rota in ["/clientes/", "/orcamentos/", "/financeiro/"]:

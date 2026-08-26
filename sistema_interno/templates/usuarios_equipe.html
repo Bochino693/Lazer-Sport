@@ -1,0 +1,144 @@
+{% extends "base_inner.html" %}
+
+{% block title %}Equipe e acessos | Lazer & Sport{% endblock %}
+{% block top_title %}Equipe e acessos{% endblock %}
+
+{% block content %}
+<div class="ls-page-head">
+  <div>
+    <span class="ls-eyebrow">SEGURANÇA E RESPONSABILIDADE</span>
+    <h1>Uma conta, as funções certas</h1>
+    <p>As funções se somam. Ninguém precisa de outra conta para trabalhar em duas áreas.</p>
+  </div>
+  <button class="btn btn-success" id="novoUsuario" type="button">
+    <i class="bi bi-person-plus me-1"></i> Nova pessoa da equipe
+  </button>
+</div>
+
+<section class="ls-metrics mb-3">
+  <article class="ls-metric-card green">
+    <div class="ls-metric-head"><span class="ls-metric-label">Equipe ativa</span><span class="ls-metric-icon"><i class="bi bi-people"></i></span></div>
+    <strong class="ls-metric-value">{{ total_ativos }}</strong>
+    <span class="ls-metric-note">Contas que podem entrar no sistema</span>
+  </article>
+  {% for funcao in funcoes %}
+  <article class="ls-metric-card {% cycle 'amber' 'violet' 'green' 'amber' %}">
+    <div class="ls-metric-head"><span class="ls-metric-label">{{ funcao.titulo }}</span><span class="ls-metric-icon"><i class="bi {{ funcao.icone }}"></i></span></div>
+    <span class="ls-metric-note">{{ funcao.descricao }}</span>
+  </article>
+  {% endfor %}
+</section>
+
+<section class="ls-card p-3 mb-3">
+  <form method="get" class="row g-2 align-items-end">
+    <div class="col-12 col-md">
+      <label class="form-label" for="buscaEquipe">Buscar pessoa</label>
+      <input class="form-control" id="buscaEquipe" name="q" value="{{ busca }}" placeholder="Nome, usuário ou e-mail">
+    </div>
+    <div class="col-12 col-md-auto">
+      <button class="btn btn-primary w-100" type="submit"><i class="bi bi-search me-1"></i> Buscar</button>
+    </div>
+  </form>
+</section>
+
+<section class="ls-card overflow-hidden">
+  <div class="table-responsive">
+    <table class="ls-table mb-0">
+      <thead><tr><th>Pessoa</th><th>Funções</th><th>Situação</th><th class="text-end">Ações</th></tr></thead>
+      <tbody>
+      {% for linha in linhas %}
+        <tr>
+          <td data-rotulo="Pessoa">
+            <strong>{{ linha.nome }}</strong>
+            <span class="material-sub d-block">@{{ linha.username }}{% if linha.email %} · {{ linha.email }}{% endif %}</span>
+          </td>
+          <td data-rotulo="Funções">
+            <div class="d-flex flex-wrap gap-1">
+              {% if linha.superusuario %}<span class="badge text-bg-warning">Super · vê tudo</span>{% endif %}
+              {% for titulo in linha.funcoes_titulos %}<span class="badge rounded-pill text-bg-secondary">{{ titulo }}</span>{% endfor %}
+            </div>
+          </td>
+          <td data-rotulo="Situação"><span class="badge {% if linha.ativo %}text-bg-success{% else %}text-bg-danger{% endif %}">{% if linha.ativo %}Ativo{% else %}Desativado{% endif %}</span></td>
+          <td data-rotulo="Ações" class="text-end">
+            {% if linha.superusuario %}
+              <span class="text-muted small"><i class="bi bi-shield-lock"></i> Protegido</span>
+            {% else %}
+              <button class="btn btn-sm btn-outline-primary" type="button" data-editar="{{ linha.id }}"><i class="bi bi-pencil"></i> Editar</button>
+              <button class="btn btn-sm btn-outline-secondary" type="button" data-alternar="{{ linha.id }}">{% if linha.ativo %}Desativar{% else %}Reativar{% endif %}</button>
+            {% endif %}
+          </td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="4" class="text-center py-5 text-muted">Nenhuma pessoa encontrada.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<div class="modal fade" id="modalUsuario" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <form class="modal-content" id="formUsuario" method="post" action="{% url 'usuarios_equipe' %}">
+      {% csrf_token %}<input type="hidden" name="action" value="save"><input type="hidden" name="id" id="usuarioId">
+      <div class="modal-header"><div><span class="ls-modal-kicker">Acesso interno</span><h5 class="modal-title" id="usuarioTitulo">Nova pessoa</h5></div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button></div>
+      <div class="modal-body">
+        <div class="alert alert-danger d-none" id="usuarioErro"></div>
+        <div class="row g-3">
+          <div class="col-12 col-md-6"><label class="form-label" for="usuarioNome">Nome</label><input class="form-control" id="usuarioNome" name="first_name" maxlength="150" required></div>
+          <div class="col-12 col-md-6"><label class="form-label" for="usuarioSobrenome">Sobrenome</label><input class="form-control" id="usuarioSobrenome" name="last_name" maxlength="150"></div>
+          <div class="col-12 col-md-6"><label class="form-label" for="usuarioLogin">Usuário</label><input class="form-control" id="usuarioLogin" name="username" maxlength="150" autocomplete="off" required></div>
+          <div class="col-12 col-md-6"><label class="form-label" for="usuarioEmail">E-mail</label><input type="email" class="form-control" id="usuarioEmail" name="email" maxlength="254"></div>
+          <div class="col-12"><label class="form-label" for="usuarioSenha">Senha <span class="text-muted" id="senhaAjuda">(obrigatória no primeiro acesso)</span></label><input type="password" class="form-control" id="usuarioSenha" name="password" minlength="8" autocomplete="new-password"></div>
+        </div>
+        <hr class="my-4">
+        <h6>O que esta pessoa faz?</h6>
+        <p class="text-muted small">Marque todas as funções necessárias. O menu e as rotas seguem exatamente esta escolha.</p>
+        <div class="row g-2">
+          {% for funcao in funcoes %}
+          <div class="col-12 col-md-6">
+            <label class="ls-funcao-opcao h-100 d-flex gap-3 p-3 rounded-3 border">
+              <input class="form-check-input mt-1" type="checkbox" name="funcoes" value="{{ funcao.codigo }}">
+              <span><strong class="d-block"><i class="bi {{ funcao.icone }} me-1"></i>{{ funcao.titulo }}</strong><small class="text-muted">{{ funcao.descricao }}</small></span>
+            </label>
+          </div>
+          {% endfor %}
+        </div>
+        <label class="form-check mt-4"><input class="form-check-input" id="usuarioAtivo" type="checkbox" name="is_active" checked><span class="form-check-label">Acesso ativo</span></label>
+      </div>
+      <div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancelar</button><button class="btn btn-success" type="submit">Salvar acesso</button></div>
+    </form>
+  </div>
+</div>
+
+<form id="formAlternar" method="post" action="{% url 'usuarios_equipe' %}" hidden>{% csrf_token %}<input name="action" value="alternar"><input name="id" id="alternarId"></form>
+{{ usuarios_dados|json_script:"usuariosDados" }}
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  "use strict";
+  var usuarios = JSON.parse(document.getElementById("usuariosDados").textContent || "[]");
+  var form = document.getElementById("formUsuario");
+  function achar(id) { return usuarios.find(function (u) { return Number(u.id) === Number(id); }); }
+  function abrir(usuario) {
+    form.reset(); Painel.erro("usuarioErro", "");
+    Painel.valor("usuarioId", usuario ? usuario.id : "");
+    Painel.valor("usuarioNome", usuario ? usuario.first_name : "");
+    Painel.valor("usuarioSobrenome", usuario ? usuario.last_name : "");
+    Painel.valor("usuarioLogin", usuario ? usuario.username : "");
+    Painel.valor("usuarioEmail", usuario ? usuario.email : "");
+    document.getElementById("usuarioAtivo").checked = usuario ? usuario.ativo : true;
+    document.getElementById("usuarioTitulo").textContent = usuario ? "Editar acesso" : "Nova pessoa";
+    document.getElementById("senhaAjuda").textContent = usuario ? "(deixe vazio para manter)" : "(obrigatória no primeiro acesso)";
+    form.querySelectorAll('[name="funcoes"]').forEach(function (campo) { campo.checked = !!(usuario && usuario.funcoes.includes(campo.value)); });
+    Painel.abrir("modalUsuario");
+  }
+  document.getElementById("novoUsuario").addEventListener("click", function () { abrir(null); });
+  document.querySelectorAll("[data-editar]").forEach(function (botao) { botao.addEventListener("click", function () { abrir(achar(botao.dataset.editar)); }); });
+  document.querySelectorAll("[data-alternar]").forEach(function (botao) { botao.addEventListener("click", function () { Painel.valor("alternarId", botao.dataset.alternar); document.getElementById("formAlternar").requestSubmit(); }); });
+  Painel.ligar({ form: "formUsuario", erro: "usuarioErro" });
+  Painel.ligar({ form: "formAlternar" });
+});
+</script>
+{% endblock %}

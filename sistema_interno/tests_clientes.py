@@ -27,6 +27,7 @@ from django.test import TestCase, override_settings
 from core.models import Clientes as ClienteMapa
 
 from .models import Cliente, EnderecoCliente, Orcamento
+from .permissoes import atribuir_funcoes
 
 
 @override_settings(ALLOWED_HOSTS=["interno.testserver", "testserver"])
@@ -73,11 +74,12 @@ class ClientesInternoTests(TestCase):
 
     def test_colaborador_sem_gerencia_nao_entra(self):
         self.client.logout()
-        User.objects.create_user(
+        montador = User.objects.create_user(
             username="montador",
             password="senha-segura",
             is_staff=True,
         )
+        atribuir_funcoes(montador, ["producao"])
         self.client.login(username="montador", password="senha-segura")
 
         resposta = self.abrir()
@@ -188,8 +190,12 @@ class ClientesInternoTests(TestCase):
             Cliente.objects.filter(nome_cliente="Endereço solto").exists()
         )
 
+    @patch(
+        "sistema_interno.clientes.buscar_coordenadas_cep_rapido",
+        return_value=(-23.55052, -46.633308),
+    )
     @patch("sistema_interno.clientes.buscar_dados_cep")
-    def test_consulta_cep_preenche_o_formulario(self, buscar):
+    def test_consulta_cep_preenche_o_formulario(self, buscar, _coordenadas):
         buscar.return_value = {
             "cep": "02909000",
             "rua": "Rua das Palmeiras",
@@ -207,6 +213,8 @@ class ClientesInternoTests(TestCase):
 
         self.assertEqual(resposta.status_code, 200)
         self.assertEqual(resposta.json()["endereco"]["cidade"], "São Paulo")
+        self.assertEqual(resposta.json()["endereco"]["bairro"], "Centro")
+        self.assertEqual(resposta.json()["endereco"]["latitude"], -23.55052)
 
     @patch("sistema_interno.clientes.buscar_dados_cep")
     def test_bairro_vazio_e_completado_no_servidor_ao_salvar(self, buscar):
@@ -235,6 +243,44 @@ class ClientesInternoTests(TestCase):
             nome_cliente="Cliente com bairro"
         ).endereco_principal
         self.assertEqual(endereco.bairro, "Jardim Pery")
+
+    def test_endereco_alterado_nao_conserva_coordenada_antiga(self):
+        cliente = Cliente.objects.create(
+            nome_cliente="Cliente que mudou",
+            telefone="(11) 99999-0000",
+        )
+        EnderecoCliente.objects.create(
+            cliente=cliente,
+            cep="01001-000",
+            endereco="Praça da Sé",
+            numero="1",
+            bairro="Sé",
+            cidade="São Paulo",
+            estado="SP",
+            latitude="-23.550520",
+            longitude="-46.633308",
+        )
+
+        resposta = self.post({
+            "action": "save",
+            "id": cliente.pk,
+            "nome_cliente": cliente.nome_cliente,
+            "telefone": cliente.telefone,
+            "tipo": Cliente.Tipo.PESSOA,
+            "cep": "20040-020",
+            "endereco": "Rua da Assembleia",
+            "numero": "10",
+            "bairro": "Centro",
+            "cidade": "Rio de Janeiro",
+            "estado": "RJ",
+            "latitude": "",
+            "longitude": "",
+        })
+
+        self.assertEqual(resposta.status_code, 200)
+        endereco = cliente.enderecos.get()
+        self.assertIsNone(endereco.latitude)
+        self.assertIsNone(endereco.longitude)
 
     @patch(
         "core.models.geocodificar_endereco",
@@ -523,11 +569,12 @@ class MenuInternoTests(TestCase):
         self.assertContains(resposta, 'href="/clientes/"')
 
     def test_colaborador_nao_ve_o_atalho(self):
-        User.objects.create_user(
+        montador = User.objects.create_user(
             username="montador",
             password="senha-segura",
             is_staff=True,
         )
+        atribuir_funcoes(montador, ["producao"])
         self.client.login(username="montador", password="senha-segura")
 
         resposta = self.client.get(

@@ -539,6 +539,8 @@ Cadastro mínimo de propósito: nome, valor e categoria. Foto e texto de
           action="{% url 'orcamentos_inner' %}">
       {% csrf_token %}
       <input type="hidden" name="action" value="cliente_novo">
+      <input type="hidden" name="latitude" id="clienteNovoLatitude">
+      <input type="hidden" name="longitude" id="clienteNovoLongitude">
 
       <div class="modal-header">
         <h5 class="modal-title">Novo cliente</h5>
@@ -1634,6 +1636,10 @@ document.addEventListener("DOMContentLoaded", function () {
       bairro: "clienteNovoBairro",
       cidade: "clienteNovoCidade",
       estado: "clienteNovoEstado"
+    },
+    coordenadas: {
+      latitude: "clienteNovoLatitude",
+      longitude: "clienteNovoLongitude"
     }
   });
 

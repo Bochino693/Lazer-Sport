@@ -21,9 +21,10 @@ from core.models import Manutencao, Pedido
 
 from . import avisos as mod
 from .context_processors import fab_counts
+from .permissoes import atribuir_funcoes
 from .models import (
+    Colaborador,
     EstoqueMaterial,
-    Gerente,
     Material,
     Orcamento,
     OrdemProducao,
@@ -197,6 +198,7 @@ class ColetaDeAvisosTests(TestCase):
         montador = User.objects.create_user(
             username="montador", password="x", is_staff=True,
         )
+        atribuir_funcoes(montador, ["producao"])
         Orcamento.objects.create(
             nome_cliente="Vencido",
             status=Orcamento.Status.ENVIADO,
@@ -207,24 +209,27 @@ class ColetaDeAvisosTests(TestCase):
         self.assertNotIn("orcamentos_vencidos", chaves)
         self.assertNotIn("vendas", chaves)
 
-    def test_montador_ve_a_propria_producao(self):
-        montador = User.objects.create_user(
-            username="montador", password="x", is_staff=True,
+    def test_equipe_de_producao_ve_a_fabrica_sem_ligar_montador_a_login(self):
+        usuario_producao = User.objects.create_user(
+            username="producao", password="x", is_staff=True,
         )
-        outro = User.objects.create_user(username="outro", password="x", is_staff=True)
+        atribuir_funcoes(usuario_producao, ["producao"])
+        montador = Colaborador.objects.create(nome="Montador A")
+        outro = Colaborador.objects.create(nome="Montador B")
         produto = ProdutoInterno.objects.create(nome="Máquina")
 
         OrdemProducao.objects.create(produto=produto, quantidade=1, colaborador=montador)
         OrdemProducao.objects.create(produto=produto, quantidade=1, colaborador=outro)
 
-        producao = [a for a in mod.coletar(montador) if a.chave == "producao"]
+        producao = [a for a in mod.coletar(usuario_producao) if a.chave == "producao"]
         self.assertEqual(len(producao), 1)
-        # só a dele, não a dos dois
-        self.assertEqual(producao[0].quantidade, 1)
+        self.assertEqual(producao[0].quantidade, 2)
 
-    def test_gerente_ativo_conta_como_gestor(self):
+    def test_funcao_gestao_conta_como_gestor(self):
+        from .permissoes import atribuir_funcoes
+
         usuario = User.objects.create_user(username="gerente", password="x")
-        Gerente.objects.create(user=usuario, ativo=True)
+        atribuir_funcoes(usuario, ["gestao"])
 
         self.assertTrue(mod.eh_gestor(usuario))
 

@@ -47,7 +47,7 @@ class ClientesInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
 
         consulta = (
             Cliente.objects
-            .select_related("parceiro", "estabelecimento")
+            .select_related("parceiro", "estabelecimento", "cliente_mapa")
             .prefetch_related(
                 Prefetch(
                     "enderecos",
@@ -96,6 +96,20 @@ class ClientesInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
             ),
         )
 
+        ids_da_pagina = [cliente.pk for cliente in pagina.object_list]
+        mapas_disponiveis = (
+            ClienteMapa.objects
+            .filter(Q(cliente_interno__isnull=True) | Q(cliente_interno__id__in=ids_da_pagina))
+            .distinct()
+            .order_by("descricao_cliente")
+        )
+        estabelecimentos_disponiveis = (
+            Estabelecimentos.objects
+            .filter(Q(clientes_internos__isnull=True) | Q(clientes_internos__id__in=ids_da_pagina))
+            .distinct()
+            .order_by("nome_estabelecimento")
+        )
+
         contexto = {
             "fichas": fichas,
             "page_obj": pagina,
@@ -104,10 +118,8 @@ class ClientesInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
             "parceiro_ativo": parceiro,
             "tipos": Cliente.Tipo.choices,
             "buffets": buffets,
-            "estabelecimentos": Estabelecimentos.objects.order_by(
-                "nome_estabelecimento",
-            ),
-            "clientes_mapa": ClienteMapa.objects.order_by("descricao_cliente"),
+            "estabelecimentos": estabelecimentos_disponiveis,
+            "clientes_mapa": mapas_disponiveis,
             "total_clientes": totais["clientes"],
             "total_buffets": totais["buffets"],
             "total_vinculados": totais["vinculados"],
@@ -120,6 +132,29 @@ class ClientesInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
                     "detalhe": b.contato_curto,
                 }
                 for b in buffets
+            ],
+            "opcoes_clientes_mapa": [
+                {
+                    "valor": str(mapa.pk),
+                    "rotulo": mapa.descricao_cliente or f"Cliente #{mapa.pk}",
+                    "detalhe": " · ".join(
+                        parte for parte in (
+                            mapa.bairro or "",
+                            f"{mapa.cidade}/{mapa.estado}" if mapa.cidade else "",
+                        ) if parte
+                    ) or "Pino público sem endereço completo",
+                    "grupo": "Clientes já publicados no mapa",
+                }
+                for mapa in mapas_disponiveis
+            ],
+            "opcoes_estabelecimentos": [
+                {
+                    "valor": str(estabelecimento.pk),
+                    "rotulo": estabelecimento.nome_estabelecimento,
+                    "detalhe": "Parceiro exibido no site",
+                    "grupo": "Parceiros públicos",
+                }
+                for estabelecimento in estabelecimentos_disponiveis
             ],
         }
 
@@ -175,7 +210,14 @@ class ClientesInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
             "bairro": endereco.bairro if endereco else "",
             "cidade": endereco.cidade if endereco else "",
             "estado": endereco.estado if endereco else "",
+            "latitude": str(endereco.latitude or "") if endereco else "",
+            "longitude": str(endereco.longitude or "") if endereco else "",
             "no_mapa": bool(cliente.cliente_mapa_id),
+            "mapa_pronto": bool(
+                cliente.cliente_mapa_id
+                and cliente.cliente_mapa.latitude
+                and cliente.cliente_mapa.longitude
+            ),
         }
 
     # ------------------------------------------------------------- ações

@@ -1,8 +1,8 @@
 from django.contrib.auth.models import User
-from django.http import Http404
-from django.test import RequestFactory, TestCase, override_settings
+from django.test import TestCase, override_settings
 
 from .models import (
+    Colaborador,
     ExecucaoEtapaProducao,
     EstoqueMaterial,
     GuiaEtapaProducao,
@@ -12,7 +12,7 @@ from .models import (
     OrdemProducao,
     ProdutoInterno,
 )
-from .views_gestao import OrdemProducaoDetalheView
+from .permissoes import atribuir_funcoes
 
 
 @override_settings(ALLOWED_HOSTS=["interno.testserver", "testserver"])
@@ -42,6 +42,7 @@ class CentralDeTrabalhoTests(TestCase):
             password="senha-segura",
             is_staff=True,
         )
+        atribuir_funcoes(colaborador, ["producao"])
         self.client.force_login(colaborador)
 
         resposta = self.client.get("/", HTTP_HOST="interno.testserver")
@@ -70,6 +71,9 @@ class FluxoGuiadoProducaoTests(TestCase):
             password="senha-segura",
             is_staff=True,
         )
+        atribuir_funcoes(self.colaborador, ["producao"])
+        atribuir_funcoes(self.outro_colaborador, ["producao"])
+        self.montador = Colaborador.objects.create(nome="João da Montagem")
         self.produto = ProdutoInterno.objects.create(nome="Máquina de teste")
         self.guia_1 = GuiaEtapaProducao.objects.create(
             produto=self.produto,
@@ -86,7 +90,7 @@ class FluxoGuiadoProducaoTests(TestCase):
         self.ordem = OrdemProducao.objects.create(
             produto=self.produto,
             quantidade=1,
-            colaborador=self.colaborador,
+            colaborador=self.montador,
         )
         self.ordem.preparar_etapas()
         self.etapa_1, self.etapa_2 = list(
@@ -186,13 +190,14 @@ class FluxoGuiadoProducaoTests(TestCase):
         self.assertTrue(self.ordem.baixa_aplicada)
         self.assertEqual(estoque.quantidade, 0)
 
-    def test_colaborador_nao_abre_ordem_de_outra_pessoa(self):
-        request = RequestFactory().get(f"/producao/ordens/{self.ordem.pk}/")
-        request.user = self.outro_colaborador
-        request.is_interno = True
-
-        with self.assertRaises(Http404):
-            OrdemProducaoDetalheView.as_view()(request, pk=self.ordem.pk)
+    @override_settings(ALLOWED_HOSTS=["interno.testserver", "testserver"])
+    def test_usuario_de_producao_acompanha_todas_as_ordens(self):
+        self.client.force_login(self.outro_colaborador)
+        resposta = self.client.get(
+            f"/producao/ordens/{self.ordem.pk}/",
+            HTTP_HOST="interno.testserver",
+        )
+        self.assertEqual(resposta.status_code, 200)
 
     @override_settings(ALLOWED_HOSTS=["interno.testserver", "testserver"])
     def test_telas_do_colaborador_renderizam_os_guias(self):
@@ -213,17 +218,13 @@ class FluxoGuiadoProducaoTests(TestCase):
         self.assertContains(detalhe, "Separe e confira todas as peças.")
 
     @override_settings(ALLOWED_HOSTS=["interno.testserver", "testserver"])
-    def test_colaborador_nao_acessa_editor_de_guias(self):
+    def test_funcao_producao_acessa_editor_de_guias(self):
         self.client.force_login(self.colaborador)
         resposta = self.client.get(
             "/producao/guias/",
             HTTP_HOST="interno.testserver",
         )
-        self.assertRedirects(
-            resposta,
-            "/producao/",
-            fetch_redirect_response=False,
-        )
+        self.assertEqual(resposta.status_code, 200)
 
     @override_settings(ALLOWED_HOSTS=["interno.testserver", "testserver"])
     def test_telas_de_gestao_de_producao_renderizam(self):
@@ -240,4 +241,4 @@ class FluxoGuiadoProducaoTests(TestCase):
         self.assertEqual(guias.status_code, 200)
         self.assertContains(guias, "Preparar peças")
         self.assertEqual(ordens.status_code, 200)
-        self.assertContains(ordens, "operador")
+        self.assertContains(ordens, "João da Montagem")

@@ -2,6 +2,7 @@ from django.contrib.auth.models import User
 from django.test import TestCase, override_settings
 
 from .models import Gerente
+from .permissoes import atribuir_funcoes
 
 
 @override_settings(ALLOWED_HOSTS=["interno.testserver", "testserver"])
@@ -14,6 +15,7 @@ class MinhaContaTests(TestCase):
             password="senha-antiga",
             is_staff=True,
         )
+        atribuir_funcoes(self.user, ["gestao"])
         self.gerente = Gerente.objects.create(user=self.user, nome="Thiago")
         self.client.force_login(self.user)
 

@@ -179,11 +179,11 @@ class Clientes(Prime):
     def __str__(self):
         return self.descricao_cliente
 
-    def save(self, *args, **kwargs):
+    def save(self, *args, geocodificar=True, **kwargs):
         # Se tem CEP mas ainda não tem cidade preenchida, busca o
         # endereço completo no ViaCEP -- assim quem cadastra só precisa
         # digitar o CEP, e rua/bairro/cidade/estado saem de graça.
-        if self.cep and not self.cidade:
+        if geocodificar and self.cep and not self.cidade:
             dados = buscar_dados_cep(self.cep)
             if dados:
                 self.rua = self.rua or dados["rua"]
@@ -194,7 +194,7 @@ class Clientes(Prime):
         # Só tenta geocodificar se ainda não tiver coordenadas -- assim,
         # se alguém digitou latitude/longitude na mão (pra ajustar um
         # ponto específico), isso nunca é sobrescrito automaticamente.
-        if not self.latitude or not self.longitude:
+        if geocodificar and (not self.latitude or not self.longitude):
             lat, lon, precisao = None, None, None
 
             if self.cep:
@@ -216,7 +216,7 @@ class Clientes(Prime):
                 self.longitude = lon
                 self.precisao_local = precisao or ""
 
-        elif not self.precisao_local:
+        elif self.latitude and self.longitude and not self.precisao_local:
             # Coordenada que já veio preenchida sem passar pela busca: só
             # pode ter sido digitada por uma pessoa.
             self.precisao_local = self.Precisao.MANUAL
