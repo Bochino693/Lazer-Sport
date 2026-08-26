@@ -5,7 +5,13 @@ from django.conf import settings
 from django.db import models, transaction
 from django.utils import timezone
 
-from core.models import Brinquedos, Pedido, Venda, ItemPedido
+from core.models import (
+    Brinquedos,
+    Estabelecimentos,
+    ItemPedido,
+    Pedido,
+    Venda,
+)
 
 
 class Prime(models.Model):
@@ -36,9 +42,96 @@ class Gerente(Prime):
 
 
 class Cliente(Prime):
-    nome_cliente = models.CharField(max_length=90)
-    telefone = models.CharField(max_length=14)
-    email = models.CharField(max_length=150, null=True)
+    """Quem compra, aluga ou recebe manutenção da Lazer & Sport.
+
+    UM CADASTRO SÓ, COM PAPÉIS DIFERENTES. Buffet, empresa e pessoa
+    física entram na mesma tabela porque, na prática, o buffet também é
+    cliente: aluga brinquedo, pede peça, chama manutenção. Separar em
+    duas tabelas obrigaria a cadastrar o mesmo buffet duas vezes e faria
+    o histórico dele nascer partido.
+
+    O que muda entre eles é o papel: ``tipo`` diz o que aquele cadastro
+    é, e ``parceiro`` liga um cliente ao buffet que o atende -- é assim
+    que se responde "quais clientes vieram pelo Buffet Alegria" sem
+    inventar um cadastro paralelo.
+    """
+
+    class Tipo(models.TextChoices):
+        PESSOA = "pessoa", "Pessoa física"
+        EMPRESA = "empresa", "Empresa"
+        BUFFET = "buffet", "Buffet parceiro"
+
+    nome_cliente = models.CharField("Nome", max_length=90)
+    tipo = models.CharField(
+        "Tipo de cadastro",
+        max_length=10,
+        choices=Tipo.choices,
+        default=Tipo.PESSOA,
+        db_index=True,
+    )
+    documento = models.CharField(
+        "CPF ou CNPJ",
+        max_length=20,
+        blank=True,
+        help_text="Usado na nota e no contrato. Pode ficar em branco.",
+    )
+    # Era max_length=14 -- não cabia "(11) 99999-9999", que tem 15. O
+    # cadastro pelo painel quebrava justamente no celular com máscara.
+    telefone = models.CharField("Telefone / WhatsApp", max_length=24, blank=True)
+    # Só os dígitos do telefone, preenchido no save.
+    #
+    # POR QUE UMA CÓPIA. Na lista, quem procura digita "11977776655" ou
+    # "977776655", e o cadastro está gravado como "(11) 97777-6655".
+    # Comparar texto com máscara nunca casa, e limpar a máscara dentro do
+    # SQL muda de banco para banco. A cópia limpa resolve com um índice.
+    telefone_digitos = models.CharField(
+        max_length=20,
+        blank=True,
+        db_index=True,
+        editable=False,
+    )
+    email = models.CharField(max_length=150, null=True, blank=True)
+
+    parceiro = models.ForeignKey(
+        "self",
+        on_delete=models.SET_NULL,
+        related_name="clientes_atendidos",
+        null=True,
+        blank=True,
+        limit_choices_to={"tipo": Tipo.BUFFET},
+        verbose_name="Buffet responsável",
+        help_text="Buffet que atende este cliente, quando a festa vem por ele.",
+    )
+    estabelecimento = models.ForeignKey(
+        Estabelecimentos,
+        on_delete=models.SET_NULL,
+        related_name="clientes_internos",
+        null=True,
+        blank=True,
+        verbose_name="Parceiro publicado no site",
+        help_text="Liga este cadastro ao parceiro que aparece no site.",
+    )
+    observacoes = models.TextField("Observações", blank=True)
+
+    @property
+    def eh_buffet(self) -> bool:
+        return self.tipo == self.Tipo.BUFFET
+
+    @property
+    def contato_curto(self) -> str:
+        """Primeira forma de falar com o cliente, para caber na lista."""
+        return self.telefone or (self.email or "") or "sem contato"
+
+    @property
+    def endereco_principal(self):
+        """O primeiro endereço cadastrado; None quando ainda não há."""
+        return self.enderecos.first()
+
+    def save(self, *args, **kwargs):
+        import re as _re
+
+        self.telefone_digitos = _re.sub(r"\D", "", self.telefone or "")
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.nome_cliente
@@ -46,6 +139,7 @@ class Cliente(Prime):
     class Meta:
         verbose_name = "Cliente"
         verbose_name_plural = "Clientes"
+        ordering = ("nome_cliente",)
 
 
 class EnderecoCliente(Prime):

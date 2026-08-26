@@ -13,6 +13,7 @@ from .views import (
     PedidosView,
     VendasView,
 )
+from .views_clientes import ClientesInnerView
 from .views_gestao import (
     AtualizarEtapaProducaoView,
     FinanceiroInnerView,
@@ -36,6 +37,9 @@ urlpatterns = [
 
     # ---------------- financeiro ----------------
     path('financeiro/', FinanceiroInnerView.as_view(), name='financeiro_inner'),
+
+    # ---------------- clientes ----------------
+    path('clientes/', ClientesInnerView.as_view(), name='clientes_inner'),
 
     # ---------------- orçamentos ----------------
     path('orcamentos/', OrcamentosInnerView.as_view(), name='orcamentos_inner'),

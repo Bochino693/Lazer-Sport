@@ -27,6 +27,7 @@ from django.views.generic import View
 
 from core.models import Brinquedos, CategoriasBrinquedos
 
+from . import clientes as svc_clientes
 from . import financeiro as fin
 from .models import (
     Cliente,
@@ -173,6 +174,15 @@ class OrcamentosInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
             "quantidade_aprovado": len(aprovados),
             "orcamentos_dados": [self.serializar(o) for o in orcamentos],
             "catalogo_dados": self.catalogo_serializado(),
+            # Uma lista só para o campo de busca: catálogo do site e
+            # produção juntos, cada um com o seu grupo. O prefixo "b:" /
+            # "p:" diz de onde a linha veio e é desmontado no envio.
+            "opcoes_itens": self.opcoes_itens(),
+            "opcoes_clientes": self.opcoes_clientes(),
+            "tipos_cliente": Cliente.Tipo.choices,
+            "buffets": Cliente.objects.filter(
+                tipo=Cliente.Tipo.BUFFET,
+            ).order_by("nome_cliente"),
             # A página do cliente mora no site principal, não aqui.
             "base_publica": endereco_do_site(request),
             "vencendo": [
@@ -211,6 +221,80 @@ class OrcamentosInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
             }
             for b in self.catalogo()
         ]
+
+    def opcoes_itens(self):
+        """O que pode virar linha de orçamento, pronto para a busca.
+
+        Preço no canto direito porque quem monta a proposta na frente do
+        cliente precisa conferir o valor antes de escolher, e não depois.
+        """
+        opcoes = []
+
+        for brinquedo in self.catalogo():
+            opcoes.append({
+                "valor": f"b:{brinquedo.id}",
+                "rotulo": brinquedo.nome_brinquedo,
+                "grupo": "Catálogo do site",
+                "detalhe": "Brinquedo do catálogo",
+                "valorDireita": (
+                    f"R$ {brinquedo.valor_brinquedo:.2f}".replace(".", ",")
+                    if brinquedo.valor_brinquedo else "sob consulta"
+                ),
+                "preco": (
+                    f"{brinquedo.valor_brinquedo:.2f}".replace(".", ",")
+                    if brinquedo.valor_brinquedo is not None else ""
+                ),
+            })
+
+        for produto in ProdutoInterno.objects.filter(ativo=True).order_by("nome"):
+            opcoes.append({
+                "valor": f"p:{produto.id}",
+                "rotulo": produto.nome,
+                "grupo": "Produção (máquinas e peças)",
+                "detalhe": (
+                    f"{produto.get_categoria_display()}"
+                    + (f" · {produto.codigo}" if produto.codigo else "")
+                ),
+                "valorDireita": (
+                    f"R$ {produto.preco_venda:.2f}".replace(".", ",")
+                    if produto.preco_venda else "sem preço"
+                ),
+                "preco": f"{produto.preco_venda:.2f}".replace(".", ","),
+            })
+
+        return opcoes
+
+    @staticmethod
+    def opcoes_clientes():
+        """Clientes na busca, já dizendo quem é buffet e quem é atendido."""
+        opcoes = []
+        clientes = (
+            Cliente.objects
+            .select_related("parceiro")
+            .order_by("nome_cliente")
+        )
+
+        for cliente in clientes:
+            detalhe = cliente.get_tipo_display()
+            if cliente.parceiro_id and cliente.parceiro:
+                detalhe += f" · {cliente.parceiro.nome_cliente}"
+            elif cliente.telefone:
+                detalhe += f" · {cliente.telefone}"
+
+            opcoes.append({
+                "valor": str(cliente.id),
+                "rotulo": cliente.nome_cliente,
+                "detalhe": detalhe,
+                "grupo": (
+                    "Parceiros (buffets)"
+                    if cliente.tipo == Cliente.Tipo.BUFFET
+                    else "Clientes"
+                ),
+                "whatsapp": cliente.telefone or "",
+                "email": cliente.email or "",
+            })
+
+        return opcoes
 
     @staticmethod
     def serializar(orcamento):
@@ -548,6 +632,28 @@ class OrcamentosInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
                     if brinquedo.valor_brinquedo is not None else ""
                 ),
             },
+        )
+
+
+    # ------------------------------- cadastrar cliente sem sair daqui
+    def acao_cliente_novo(self, request):
+        """Cria o cliente de dentro do orçamento.
+
+        POR QUE AQUI. A proposta quase sempre nasce de quem ligou pela
+        primeira vez. Mandar a pessoa para a aba Clientes e voltar
+        significaria perder o orçamento meio montado -- ou, o que
+        acontecia de verdade, deixar o campo vazio e digitar o nome à
+        mão, criando uma proposta sem dono no histórico.
+
+        A validação é a mesma da aba Clientes (sistema_interno/clientes.py):
+        cadastro rápido não pode nascer com regra mais frouxa.
+        """
+        cliente = svc_clientes.salvar_cliente(request)
+
+        return self.sucesso(
+            request,
+            f"“{cliente.nome_cliente}” entrou na lista de clientes.",
+            cliente=svc_clientes.opcao_de_busca(cliente),
         )
 
 

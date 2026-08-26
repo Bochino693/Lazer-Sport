@@ -205,11 +205,11 @@
 
         <div class="row g-3">
           <div class="col-12 col-md-4">
-            <label class="form-label" for="orcamentoCliente">Cliente cadastrado</label>
-            <select class="form-select" id="orcamentoCliente" name="cliente">
-              <option value="">Não vincular</option>
-              {% for c in clientes %}<option value="{{ c.id }}">{{ c.nome_cliente }}</option>{% endfor %}
-            </select>
+            <label class="form-label" for="orcamentoClienteBusca">Cliente cadastrado</label>
+            {# O campo é montado pelo ls-busca.js: digita o nome, acha na hora
+               e cadastra dali mesmo quando o cliente ainda não existe. #}
+            <div id="orcamentoClienteBox"></div>
+            <span class="form-text">Digite para buscar. Sem cadastro? Use o nome do destinatário ao lado.</span>
           </div>
 
           <div class="col-12 col-md-4">
@@ -396,6 +396,77 @@ Cadastro mínimo de propósito: nome, valor e categoria. Foto e texto de
   </div>
 </div>
 
+<!-- ================= MODAL: cliente novo na hora ================= -->
+{# Quase todo orçamento nasce de quem ligou pela primeira vez. Obrigar a
+   sair para a tela de clientes e voltar perderia a proposta pela metade. #}
+<div class="modal fade" id="modalClienteNovo" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <form class="modal-content" id="formClienteNovo" method="post"
+          action="{% url 'orcamentos_inner' %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="cliente_novo">
+
+      <div class="modal-header">
+        <h5 class="modal-title">Novo cliente</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+
+      <div class="modal-body">
+        <div class="alert alert-danger d-none" id="clienteNovoErro"></div>
+
+        <p class="text-muted small">
+          O cadastro fica salvo na aba Clientes e já entra neste orçamento.
+        </p>
+
+        <div class="mb-3">
+          <label class="form-label" for="clienteNovoNome">Nome</label>
+          <input class="form-control" id="clienteNovoNome" name="nome_cliente"
+                 data-rotulo="nome" maxlength="90" required
+                 placeholder="Nome da pessoa, da empresa ou do buffet">
+        </div>
+
+        <div class="row g-3">
+          <div class="col-sm-6">
+            <label class="form-label" for="clienteNovoTipo">Tipo</label>
+            <select class="form-select" id="clienteNovoTipo" name="tipo">
+              {% for valor, rotulo in tipos_cliente %}
+                <option value="{{ valor }}">{{ rotulo }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-sm-6">
+            <label class="form-label" for="clienteNovoTelefone">Telefone / WhatsApp</label>
+            <input class="form-control" id="clienteNovoTelefone" name="telefone"
+                   inputmode="tel" maxlength="24" placeholder="(11) 99999-9999">
+          </div>
+        </div>
+
+        <div class="mt-3">
+          <label class="form-label" for="clienteNovoEmail">E-mail</label>
+          <input type="email" class="form-control" id="clienteNovoEmail" name="email"
+                 maxlength="150" placeholder="cliente@empresa.com.br">
+        </div>
+
+        <div class="mt-3">
+          <label class="form-label" for="clienteNovoParceiro">Veio por qual buffet?</label>
+          <select class="form-select" id="clienteNovoParceiro" name="parceiro">
+            <option value="">Nenhum / veio direto</option>
+            {% for buffet in buffets %}
+              <option value="{{ buffet.id }}">{{ buffet.nome_cliente }}</option>
+            {% endfor %}
+          </select>
+          <span class="form-text">Só para quando a festa chega pelo parceiro.</span>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-success">Cadastrar e usar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <!-- ================= MODAL: link da proposta ================= -->
 <div class="modal fade" id="modalLink" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog">
@@ -494,6 +565,8 @@ Cadastro mínimo de propósito: nome, valor e categoria. Foto e texto de
 
 {{ orcamentos_dados|json_script:"orcamentosDados" }}
 {{ catalogo_dados|json_script:"catalogoDados" }}
+{{ opcoes_itens|json_script:"opcoesItens" }}
+{{ opcoes_clientes|json_script:"opcoesClientes" }}
 {% endblock %}
 
 {% block scripts %}
@@ -510,62 +583,122 @@ document.addEventListener("DOMContentLoaded", function () {
   /* ------------------------------------------------------------------
      O seletor de item
 
-     Uma lista só, com as duas origens separadas por optgroup, e o valor
-     carregando de onde a linha veio: "b:12" é o brinquedo 12 do catálogo
-     do site, "p:5" é o produto 5 da produção, vazio é linha escrita à
-     mão. Dois selects lado a lado seria mais explícito e muito pior de
-     usar num tablet, que é onde esta tela vive.
+     Era um <select> com trezentos brinquedos dentro. No tablet isso abre
+     uma roleta que não aceita digitar: para achar "Cama elástica" a
+     pessoa rolava a lista inteira na frente do cliente.
 
-     O prefixo é desmontado na hora de enviar, em `antes`.
+     Agora é o campo de busca do painel (ls-busca.js): digita, filtra sem
+     acento, mostra o preço ao lado do nome e traz "cadastrar na hora"
+     quando o item ainda não existe.
+
+     O valor continua sendo "b:12" (brinquedo 12 do catálogo) ou "p:5"
+     (produto 5 da produção) -- o servidor não mudou. O prefixo é
+     desmontado no envio, em `antes`.
      ------------------------------------------------------------------ */
-  var catalogo = JSON.parse(
-    document.getElementById("catalogoDados").textContent || "[]"
+  /* ------------------------------------------------------------------
+     O campo de cliente
+
+     Mesma história do seletor de item: era uma lista rolante. Agora
+     digita o nome e acha; e se o cliente ainda não existe, cadastra sem
+     sair do orçamento -- o caso mais comum de todos, porque quase todo
+     orçamento nasce de alguém que ligou pela primeira vez.
+     ------------------------------------------------------------------ */
+  var opcoesClientes = JSON.parse(
+    document.getElementById("opcoesClientes").textContent || "[]"
   );
 
-  function opcaoCatalogo(b) {
-    var opcao = document.createElement("option");
-    opcao.value = "b:" + b.id;
-    opcao.textContent = b.nome;
-    opcao.dataset.preco = b.valor || "";
-    return opcao;
+  var buscaCliente = LSBusca.criar({
+    nome: "cliente",
+    opcoes: opcoesClientes,
+    placeholder: "Buscar cliente cadastrado...",
+    rotuloAcessivel: "Cliente cadastrado",
+    criar: {
+      rotulo: "Cadastrar cliente",
+      aoClicar: function (digitado) {
+        abrirCadastroDeCliente(digitado);
+      }
+    },
+    aoEscolher: function (opcao) {
+      if (!opcao) return;
+
+      /* Puxa contato do cadastro só onde ainda está vazio: o orçamento
+         pode ter um contato específico daquela festa. */
+      var nome = document.getElementById("orcamentoNome");
+      var whatsapp = document.getElementById("orcamentoWhatsapp");
+      var email = document.getElementById("orcamentoEmail");
+
+      if (!nome.value.trim()) nome.value = opcao.rotulo;
+      if (!whatsapp.value.trim() && opcao.whatsapp) whatsapp.value = opcao.whatsapp;
+      if (!email.value.trim() && opcao.email) email.value = opcao.email;
+    }
+  });
+
+  buscaCliente.entrada.id = "orcamentoClienteBusca";
+  document.getElementById("orcamentoClienteBox").appendChild(buscaCliente.elemento);
+
+  var opcoesItens = JSON.parse(
+    document.getElementById("opcoesItens").textContent || "[]"
+  );
+
+  /* Cada linha tem a sua busca; a lista de opções é a mesma para todas,
+     então cadastrar um brinquedo novo precisa alcançar as já abertas. */
+  var buscasDeItem = [];
+
+  function criarBuscaDeItem(linha) {
+    var busca = LSBusca.criar({
+      opcoes: opcoesItens,
+      placeholder: "Buscar brinquedo ou produto...",
+      rotuloAcessivel: "Item da proposta",
+      classe: "ls-busca-item-orcamento",
+      criar: {
+        rotulo: "Cadastrar brinquedo",
+        aoClicar: function (digitado) {
+          abrirCadastroDeBrinquedo(linha, digitado);
+        }
+      },
+      aoEscolher: function (opcao) {
+        preencherLinha(linha, opcao);
+      }
+    });
+
+    buscasDeItem.push(busca);
+    return busca;
   }
 
-  /* Molde criado uma vez e clonado por linha. Montar o HTML de umas
-     centenas de brinquedos a cada linha nova travava a digitação. */
-  var molde = document.createElement("select");
-  molde.className = "form-select form-select-sm ls-item-produto";
-  molde.appendChild(new Option("Item livre (escrever à mão)", ""));
+  /* Escolher um item preenche descrição e preço, mas nunca sobrescreve o
+     que já foi ajustado à mão: o desconto combinado com o cliente vale
+     mais que a tabela. */
+  function preencherLinha(linha, opcao) {
+    var descricao = linha.querySelector(".ls-item-descricao");
+    var valor = linha.querySelector(".ls-item-valor");
 
-  var grupoCatalogo = document.createElement("optgroup");
-  grupoCatalogo.label = "Catálogo do site";
-  catalogo.forEach(function (b) {
-    grupoCatalogo.appendChild(opcaoCatalogo(b));
-  });
-  molde.appendChild(grupoCatalogo);
+    if (opcao) {
+      if (!descricao.value.trim()) descricao.value = opcao.rotulo;
+      if (!paraNumero(valor.value) && opcao.preco) valor.value = opcao.preco;
+    }
 
-  {% if produtos %}
-  var grupoProducao = document.createElement("optgroup");
-  grupoProducao.label = "Produção (máquinas e peças)";
-  {% for p in produtos %}
-  (function () {
-    var opcao = new Option("{{ p.nome|escapejs }}", "p:{{ p.id }}");
-    opcao.dataset.preco = "{{ p.preco_venda|stringformat:'.2f' }}";
-    grupoProducao.appendChild(opcao);
-  })();
-  {% endfor %}
-  molde.appendChild(grupoProducao);
-  {% endif %}
+    recalcular();
+  }
 
-  /* Acrescenta um brinquedo recém-cadastrado a TODOS os seletores já na
-     tela, e não só ao molde: quem cadastrou está com três linhas abertas
-     e esperaria achar o item em qualquer uma delas. */
+  /* Acrescenta um brinquedo recém-cadastrado à lista de todas as buscas
+     já na tela: quem cadastrou está com três linhas abertas e esperaria
+     achar o item em qualquer uma delas. */
   function registrarNoCatalogo(b) {
-    catalogo.push(b);
-    grupoCatalogo.appendChild(opcaoCatalogo(b));
-    corpo.querySelectorAll(".ls-item-produto").forEach(function (seletor) {
-      var grupo = seletor.querySelector('optgroup[label="Catálogo do site"]');
-      if (grupo) grupo.appendChild(opcaoCatalogo(b));
+    var opcao = {
+      valor: "b:" + b.id,
+      rotulo: b.nome,
+      grupo: "Catálogo do site",
+      detalhe: "Brinquedo do catálogo",
+      valorDireita: b.valor ? "R$ " + b.valor : "sob consulta",
+      preco: b.valor || ""
+    };
+
+    opcoesItens.push(opcao);
+    buscasDeItem.forEach(function (busca) {
+      busca.definirOpcoes(opcoesItens);
     });
+
+    return opcao;
   }
 
   /* ------------------------------------------------------------------
@@ -606,17 +739,23 @@ document.addEventListener("DOMContentLoaded", function () {
       '<td data-rotulo="Subtotal" class="text-end"><span class="ls-money ls-item-subtotal">R$ 0,00</span></td>' +
       '<td class="text-end"><button type="button" class="btn btn-sm btn-outline-danger ls-item-remover" aria-label="Remover item"><i class="bi bi-x-lg"></i></button></td>';
 
-    tr.firstElementChild.appendChild(molde.cloneNode(true));
     corpo.appendChild(tr);
 
+    /* A busca da linha nasce junto e fica guardada no próprio <tr>:
+       remover a linha leva o componente embora, sem sobra. */
+    var busca = criarBuscaDeItem(tr);
+    tr.firstElementChild.appendChild(busca.elemento);
+    tr.buscaItem = busca;
+
     if (item) {
-      /* O item guardado tem um dos dois vínculos; o seletor junta os
-         dois num valor só. Brinquedo primeiro, que é a origem padrão. */
-      var seletor = tr.querySelector(".ls-item-produto");
+      /* O item guardado tem um dos dois vínculos; a busca junta os dois
+         num valor só. Brinquedo primeiro, que é a origem padrão.
+         `false` no segundo argumento: repor o que já estava salvo não é
+         escolha nova e não pode reescrever descrição nem preço. */
       if (item.brinquedo) {
-        seletor.value = "b:" + item.brinquedo;
+        busca.definirValor("b:" + item.brinquedo, false);
       } else if (item.produto) {
-        seletor.value = "p:" + item.produto;
+        busca.definirValor("p:" + item.produto, false);
       }
 
       tr.querySelector(".ls-item-descricao").value = item.descricao || "";
@@ -628,33 +767,17 @@ document.addEventListener("DOMContentLoaded", function () {
     return tr;
   }
 
-  /* Escolher um produto preenche descrição e preço, mas nunca sobrescreve
-     o que o usuário já ajustou à mão. */
-  corpo.addEventListener("change", function (evento) {
-    var seletor = evento.target.closest(".ls-item-produto");
-    if (!seletor) return;
-
-    var linha = seletor.closest("tr");
-    var escolhida = seletor.options[seletor.selectedIndex];
-    var descricao = linha.querySelector(".ls-item-descricao");
-    var valor = linha.querySelector(".ls-item-valor");
-
-    if (seletor.value) {
-      if (!descricao.value.trim()) descricao.value = escolhida.textContent.trim();
-      if (!paraNumero(valor.value)) {
-        valor.value = String(escolhida.dataset.preco || "0").replace(".", ",");
-      }
-    }
-
-    recalcular();
-  });
-
   corpo.addEventListener("input", recalcular);
 
   corpo.addEventListener("click", function (evento) {
     var botao = evento.target.closest(".ls-item-remover");
     if (!botao) return;
-    botao.closest("tr").remove();
+
+    var linha = botao.closest("tr");
+    var indice = buscasDeItem.indexOf(linha.buscaItem);
+    if (indice >= 0) buscasDeItem.splice(indice, 1);
+
+    linha.remove();
     recalcular();
   });
 
@@ -713,8 +836,9 @@ document.addEventListener("DOMContentLoaded", function () {
       ? "Orçamento #" + orcamento.id
       : "Novo orçamento";
 
+    buscaCliente.definirValor(orcamento ? orcamento.cliente : "", false);
+
     if (orcamento) {
-      Painel.valor("orcamentoCliente", orcamento.cliente);
       Painel.valor("orcamentoNome", orcamento.nome_cliente);
       Painel.valor("orcamentoContato", orcamento.contato);
       Painel.valor("orcamentoWhatsapp", orcamento.whatsapp_cliente);
@@ -777,7 +901,7 @@ document.addEventListener("DOMContentLoaded", function () {
         /* Desmonta "b:12" / "p:5" nos dois campos que o servidor
            espera. Mandar os dois preenchidos criaria um item que o
            próprio modelo recusa (ItemOrcamento.clean). */
-        var escolha = linha.querySelector(".ls-item-produto").value;
+        var escolha = linha.buscaItem ? linha.buscaItem.valor() : "";
         var origem = escolha.slice(0, 2);
         var referencia = escolha.slice(2);
 
@@ -833,17 +957,31 @@ document.addEventListener("DOMContentLoaded", function () {
      ------------------------------------------------------------------ */
   var linhaEsperando = null;
 
+  /* Abre o cadastro de brinquedo já com o nome que a pessoa digitou na
+     busca: quem procurou "Piscina de bolinhas 3m" e não achou não vai
+     querer digitar o mesmo nome de novo. */
+  function abrirCadastroDeBrinquedo(linha, nomeDigitado) {
+    linhaEsperando = linha || null;
+
+    var form = document.getElementById("formBrinquedoNovo");
+    form.reset();
+    if (nomeDigitado) {
+      document.getElementById("brinquedoNovoNome").value = nomeDigitado;
+    }
+
+    Painel.erro("brinquedoNovoErro", "");
+    Painel.abrir("modalBrinquedoNovo");
+  }
+
   document.getElementById("novoBrinquedo").addEventListener("click", function () {
     /* Se a última linha ainda está sem item escolhido, é nela que o novo
        brinquedo entra assim que for cadastrado. */
     var linhas = corpo.querySelectorAll("tr");
     var ultima = linhas[linhas.length - 1];
-    linhaEsperando =
-      ultima && !ultima.querySelector(".ls-item-produto").value ? ultima : null;
-
-    document.getElementById("formBrinquedoNovo").reset();
-    Painel.erro("brinquedoNovoErro", "");
-    Painel.abrir("modalBrinquedoNovo");
+    abrirCadastroDeBrinquedo(
+      ultima && ultima.buscaItem && !ultima.buscaItem.valor() ? ultima : null,
+      ""
+    );
   });
 
   Painel.ligar({
@@ -853,7 +991,7 @@ document.addEventListener("DOMContentLoaded", function () {
       registrarNoCatalogo(json.brinquedo);
 
       var alvo = linhaEsperando || novaLinha(null);
-      alvo.querySelector(".ls-item-produto").value = "b:" + json.brinquedo.id;
+      alvo.buscaItem.definirValor("b:" + json.brinquedo.id, false);
 
       var descricao = alvo.querySelector(".ls-item-descricao");
       if (!descricao.value.trim()) descricao.value = json.brinquedo.nome;
@@ -867,6 +1005,31 @@ document.addEventListener("DOMContentLoaded", function () {
       recalcular();
       Painel.fechar("modalBrinquedoNovo");
       descricao.focus();
+    }
+  });
+
+  /* ------------------------------------------------------------------
+     Cadastrar cliente sem sair do orçamento
+     ------------------------------------------------------------------ */
+  function abrirCadastroDeCliente(nomeDigitado) {
+    var form = document.getElementById("formClienteNovo");
+    form.reset();
+    if (nomeDigitado) {
+      document.getElementById("clienteNovoNome").value = nomeDigitado;
+    }
+    Painel.erro("clienteNovoErro", "");
+    Painel.abrir("modalClienteNovo");
+  }
+
+  Painel.ligar({
+    form: "formClienteNovo",
+    erro: "clienteNovoErro",
+    depois: function (json) {
+      opcoesClientes.push(json.cliente);
+      buscaCliente.definirOpcoes(opcoesClientes);
+      buscaCliente.definirValor(json.cliente.valor);
+
+      Painel.fechar("modalClienteNovo");
     }
   });
 
