@@ -1,5 +1,5 @@
-ORÇAMENTO V4 — APLICAR COM SEGURANÇA
-====================================
+ORÇAMENTO V4.1 — APLICAR COM SEGURANÇA
+======================================
 
 O pacote não contém .git, .idea, banco local nem ambiente virtual.
 Ele pode ser copiado por cima do projeto sem apagar o histórico do Git.
@@ -44,6 +44,11 @@ O QUE MUDOU
 - Cliente criado dentro do orçamento volta imediatamente com todos os dados.
 - Prévia interna funciona inclusive em rascunho e nunca aceita resposta.
 - Link público marca como enviado e permite aprovar ou recusar.
+- Corrigido o erro “Field 'id' expected a number but got ''” ao enviar.
+- O modal de envio já abre com nome, WhatsApp e e-mail do cliente vinculado;
+  esses dados continuam editáveis antes de enviar.
+- O link só libera os botões de copiar e abrir depois que o servidor confirma
+  a URL, evitando compartilhar endereço vazio ou quebrado.
 - Aprovação/recusa atualiza automaticamente a situação no interno.
 - Documento comercial responsivo com dados do cliente, itens, totais,
   pagamento, envio, observações e identidade Lazer & Sport.

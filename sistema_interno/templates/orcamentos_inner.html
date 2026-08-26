@@ -158,7 +158,11 @@
                 </button>
                 <button type="button" class="btn btn-sm btn-outline-primary"
                         data-enviar="{{ orcamento.id }}"
+                        data-orcamento-id="{{ orcamento.id }}"
                         data-nome="{{ orcamento.destinatario }}"
+                        data-whatsapp="{{ orcamento.whatsapp_destinatario }}"
+                        data-email="{{ orcamento.email_destinatario }}"
+                        value="{{ orcamento.id }}"
                         title="Gerar o link da proposta para mandar ao cliente">
                   <i class="bi bi-send"></i>
                   {% if orcamento.enviado_em %}Link{% else %}Enviar{% endif %}
@@ -659,11 +663,11 @@ Cadastro mínimo de propósito: nome, valor e categoria. Foto e texto de
           </button>
         </div>
         <a class="btn btn-sm btn-outline-primary mt-3" id="linkAbrir"
-           href="#" target="_blank" rel="noopener">
+           href="#" target="_blank" rel="noopener" hidden>
           <i class="bi bi-box-arrow-up-right"></i> Abrir página pública
         </a>
         <a class="btn btn-sm btn-outline-secondary mt-3" id="linkPreviaInterna"
-           href="#" target="_blank" rel="noopener">
+           href="#" target="_blank" rel="noopener" hidden>
           <i class="bi bi-eye"></i> Abrir prévia interna
         </a>
       </div>
@@ -1441,16 +1445,52 @@ document.addEventListener("DOMContentLoaded", function () {
      domínio público, porque o painel responde no subdomínio interno.
      ------------------------------------------------------------------ */
   var campoLink = document.getElementById("linkCampo");
+  var linkAbrir = document.getElementById("linkAbrir");
+  var linkPrevia = document.getElementById("linkPreviaInterna");
+  var linkCopiar = document.getElementById("linkCopiar");
 
   document.querySelectorAll("[data-enviar]").forEach(function (botao) {
     botao.addEventListener("click", function () {
+      var id = String(
+        botao.dataset.orcamentoId || botao.dataset.enviar || botao.value || ""
+      ).trim();
+      var atual = id ? achar(id) : null;
+
+      /* O modal nasce preenchido com os dados renderizados pelo servidor.
+         A resposta do POST confirma os mesmos valores a partir do banco.
+         Assim uma falha na criação do link não apaga telefone/e-mail. */
+      document.getElementById("linkCliente").textContent =
+        botao.dataset.nome || (atual && atual.nome_cliente) || "cliente";
+      document.getElementById("linkOrcamentoId").value = id;
+      document.getElementById("linkWhatsapp").value =
+        botao.dataset.whatsapp || (atual && atual.whatsapp_cliente) || "";
+      document.getElementById("linkEmail").value =
+        botao.dataset.email || (atual && atual.email_cliente) || "";
+      Painel.aplicarMascaras(document.getElementById("modalLink"));
+      campoLink.value = "";
+      campoLink.placeholder = "Gerando link seguro…";
+      linkAbrir.hidden = true;
+      linkPrevia.hidden = true;
+      linkCopiar.disabled = true;
+      Painel.erro("linkErro", "");
+      Painel.abrir("modalLink");
+
+      if (!/^\d+$/.test(id)) {
+        campoLink.placeholder = "Link indisponível";
+        Painel.erro(
+          "linkErro",
+          "Não consegui identificar o orçamento. Recarregue a página e tente novamente."
+        );
+        return;
+      }
+
       var original = botao.innerHTML;
       botao.disabled = true;
       botao.textContent = "Gerando...";
 
       var dados = new FormData();
       dados.set("action", "enviar");
-      dados.set("id", botao.dataset.enviar);
+      dados.set("id", id);
       dados.set(
         "csrfmiddlewaretoken",
         document.querySelector("[name=csrfmiddlewaretoken]").value
@@ -1468,24 +1508,26 @@ document.addEventListener("DOMContentLoaded", function () {
             throw new Error((json && json.msg) || "Não consegui gerar o link.");
           }
 
-          document.getElementById("linkCliente").textContent = botao.dataset.nome;
-          var atual = achar(botao.dataset.enviar);
-          document.getElementById("linkOrcamentoId").value = botao.dataset.enviar;
-          document.getElementById("linkWhatsapp").value = atual ? (atual.whatsapp_cliente || "") : "";
-          document.getElementById("linkEmail").value = atual ? (atual.email_cliente || "") : "";
+          document.getElementById("linkCliente").textContent =
+            json.destinatario || botao.dataset.nome || "cliente";
+          document.getElementById("linkWhatsapp").value = json.whatsapp || "";
+          document.getElementById("linkEmail").value = json.email || "";
+          Painel.aplicarMascaras(document.getElementById("modalLink"));
           campoLink.value = json.link;
-          document.getElementById("linkAbrir").href = json.link;
-          document.getElementById("linkPreviaInterna").href = json.preview_url || "#";
+          campoLink.placeholder = "";
+          linkAbrir.href = json.link;
+          linkAbrir.hidden = false;
+          linkPrevia.href = json.preview_url || "#";
+          linkPrevia.hidden = !json.preview_url;
+          linkCopiar.disabled = false;
           Painel.erro("linkErro", "");
-          Painel.abrir("modalLink");
         })
         .catch(function (erro) {
           /* O erro aparece no próprio modal: um alert() sumiria assim
              que a pessoa tocasse na tela do tablet. */
-          document.getElementById("linkCliente").textContent = botao.dataset.nome;
           campoLink.value = "";
+          campoLink.placeholder = "Link indisponível";
           Painel.erro("linkErro", erro.message);
-          Painel.abrir("modalLink");
         })
         .finally(function () {
           botao.disabled = false;
@@ -1496,13 +1538,21 @@ document.addEventListener("DOMContentLoaded", function () {
 
   function enviarPorCanal(canal, botao, campo, chave) {
     Painel.erro("linkErro", "");
+    var orcamentoId = document.getElementById("linkOrcamentoId").value.trim();
+    if (!/^\d+$/.test(orcamentoId)) {
+      Painel.erro(
+        "linkErro",
+        "O orçamento não foi identificado. Feche esta janela e toque em Enviar novamente."
+      );
+      return;
+    }
     var original = botao.innerHTML;
     botao.disabled = true;
     botao.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Enviando';
 
     var dados = new FormData();
     dados.set("action", "enviar");
-    dados.set("id", document.getElementById("linkOrcamentoId").value);
+    dados.set("id", orcamentoId);
     dados.set("canal", canal);
     dados.set(chave, campo.value.trim());
     dados.set("csrfmiddlewaretoken", document.querySelector("[name=csrfmiddlewaretoken]").value);
@@ -1519,6 +1569,12 @@ document.addEventListener("DOMContentLoaded", function () {
           throw new Error((json && json.msg) || "Não foi possível enviar a proposta.");
         }
         campoLink.value = json.link;
+        campoLink.placeholder = "";
+        linkAbrir.href = json.link;
+        linkAbrir.hidden = false;
+        linkPrevia.href = json.preview_url || "#";
+        linkPrevia.hidden = !json.preview_url;
+        linkCopiar.disabled = false;
         if (canal === "whatsapp") {
           window.open(json.whatsapp_url, "_blank", "noopener");
         } else {

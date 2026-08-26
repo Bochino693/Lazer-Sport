@@ -523,7 +523,13 @@ class OrcamentosInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
     # ------------------------------------------------ enviar ao cliente
     def acao_enviar(self, request):
         """Entrega a proposta pelo canal escolhido e registra o envio."""
-        orcamento = get_object_or_404(Orcamento, pk=request.POST.get("id"))
+        orcamento_id = (request.POST.get("id") or "").strip()
+        if not orcamento_id.isdigit():
+            raise ErroDeFormulario(
+                "Não consegui identificar o orçamento. Feche esta janela, "
+                "recarregue a página e toque em Enviar novamente."
+            )
+        orcamento = get_object_or_404(Orcamento, pk=int(orcamento_id))
 
         if not orcamento.itens.exists():
             raise ErroDeFormulario(
@@ -538,6 +544,12 @@ class OrcamentosInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
 
         extras = {
             "link": link,
+            # O modal não tenta adivinhar os dados olhando uma cópia antiga
+            # no JavaScript. O cadastro vinculado é a fonte padrão; os
+            # campos continuam editáveis antes do envio.
+            "destinatario": orcamento.destinatario,
+            "whatsapp": orcamento.whatsapp_destinatario,
+            "email": orcamento.email_destinatario,
             "preview_url": request.build_absolute_uri(
                 reverse(
                     "orcamento_previa_inner",
@@ -611,6 +623,11 @@ class OrcamentosInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
             extras["email"] = email
 
         orcamento.marcar_enviado()
+
+        # Se o operador editou um canal neste mesmo pedido, devolvemos o
+        # valor recém-salvo para o modal continuar coerente.
+        extras["whatsapp"] = orcamento.whatsapp_destinatario
+        extras["email"] = orcamento.email_destinatario
 
         return self.sucesso(
             request,

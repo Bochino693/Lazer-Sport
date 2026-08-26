@@ -8,6 +8,7 @@ que o usuário veria.
 
 from datetime import timedelta
 from decimal import Decimal
+from urllib.parse import urlsplit
 
 from django.contrib.auth.models import User
 from django.core import mail
@@ -319,6 +320,59 @@ class OrcamentoInternoTests(TestCase):
         orcamento.refresh_from_db()
         self.assertEqual(orcamento.status, Orcamento.Status.ENVIADO)
         self.assertIsNotNone(orcamento.enviado_em)
+
+        # O endereço devolvido não é apenas uma string bonita: a própria
+        # aplicação precisa reconhecer o token e entregar o documento.
+        pagina = self.client.get(urlsplit(dados["link"]).path)
+        self.assertEqual(pagina.status_code, 200)
+        self.assertContains(pagina, "Aprovar proposta")
+
+    def test_gerar_link_devolve_contatos_do_cadastro_vinculado(self):
+        cliente = Cliente.objects.create(
+            nome_cliente="Leandro Almeida",
+            telefone="(11) 95388-7201",
+            email="leandro@example.com",
+        )
+        orcamento = self._orcamento_com_item()
+        orcamento.nome_cliente = ""
+        orcamento.cliente = cliente
+        orcamento.save(update_fields=["nome_cliente", "cliente"])
+
+        resposta = self.post({"action": "enviar", "id": orcamento.id})
+        dados = resposta.json()
+
+        self.assertEqual(resposta.status_code, 200)
+        self.assertEqual(dados["destinatario"], "Leandro Almeida")
+        self.assertEqual(dados["whatsapp"], "(11) 95388-7201")
+        self.assertEqual(dados["email"], "leandro@example.com")
+        self.assertIn(orcamento.token, dados["link"])
+
+    def test_botao_enviar_ja_carrega_id_e_contatos_do_cliente(self):
+        cliente = Cliente.objects.create(
+            nome_cliente="Leandro Almeida",
+            telefone="(11) 95388-7201",
+            email="leandro@example.com",
+        )
+        orcamento = self._orcamento_com_item()
+        orcamento.nome_cliente = ""
+        orcamento.cliente = cliente
+        orcamento.save(update_fields=["nome_cliente", "cliente"])
+
+        resposta = self.client.get(self.URL, HTTP_HOST="interno.testserver")
+
+        self.assertContains(
+            resposta,
+            f'data-orcamento-id="{orcamento.id}"',
+        )
+        self.assertContains(resposta, 'data-whatsapp="(11) 95388-7201"')
+        self.assertContains(resposta, 'data-email="leandro@example.com"')
+
+    def test_enviar_sem_id_devolve_erro_claro(self):
+        resposta = self.post({"action": "enviar", "id": ""})
+
+        self.assertEqual(resposta.status_code, 400)
+        self.assertIn("orçamento", resposta.json()["msg"].lower())
+        self.assertNotIn("expected a number", resposta.json()["msg"].lower())
 
     @override_settings(DEBUG=False, SITE_URL="interno.lazersport.com.br/")
     def test_link_corrige_dominio_sem_protocolo_e_remove_interno(self):
