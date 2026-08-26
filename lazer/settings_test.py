@@ -33,3 +33,22 @@ PASSWORD_HASHERS = [
     "django.contrib.auth.hashers.MD5PasswordHasher",
 ]
 EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
+
+# Os campos de imagem apontam para o Cloudinary direto no modelo, então o
+# storage de teste não os alcança: montar a URL exigia cloud_name e o teste
+# de galeria quebrava fora do servidor. Credencial falsa resolve -- montar
+# URL é cálculo local, nenhuma chamada de rede acontece aqui.
+import cloudinary  # noqa: E402
+
+CLOUDINARY_STORAGE = {
+    "CLOUD_NAME": "teste-local",
+    "API_KEY": "000000000000000",
+    "API_SECRET": "teste-local-sem-rede",
+}
+
+cloudinary.config(
+    cloud_name=CLOUDINARY_STORAGE["CLOUD_NAME"],
+    api_key=CLOUDINARY_STORAGE["API_KEY"],
+    api_secret=CLOUDINARY_STORAGE["API_SECRET"],
+    secure=True,
+)

@@ -1568,3 +1568,123 @@ class CategoriaClick(Prime):
     class Meta:
         verbose_name = "Categoria Clicada"
         verbose_name_plural = "Categorias Clicadas"
+
+
+class Favorito(Prime):
+    """Curtida e lista de desejos de brinquedos e peças de reposição.
+
+    Não exige login. Sem conta o registro pertence ao dispositivo (uma
+    chave gravada em cookie no site, ou enviada pelo cabeçalho
+    ``X-Dispositivo`` no aplicativo): vale uma curtida por dispositivo.
+    Ao entrar na conta o que estava no dispositivo migra para o usuário e
+    passa a valer uma por conta, mesmo que a pessoa troque de aparelho.
+    """
+
+    class Tipo(models.TextChoices):
+        CURTIDA = "curtida", "Curtida"
+        DESEJO = "desejo", "Lista de desejos"
+
+    class Origem(models.TextChoices):
+        APP = "app", "Aplicativo"
+        SITE = "site", "Site"
+
+    tipo = models.CharField(
+        max_length=10,
+        choices=Tipo.choices,
+        db_index=True,
+        verbose_name="Tipo",
+    )
+
+    brinquedo = models.ForeignKey(
+        Brinquedos,
+        on_delete=models.CASCADE,
+        related_name="favoritos",
+        null=True,
+        blank=True,
+    )
+    peca = models.ForeignKey(
+        PecasReposicao,
+        on_delete=models.CASCADE,
+        related_name="favoritos",
+        null=True,
+        blank=True,
+        verbose_name="Peça de reposição",
+    )
+
+    usuario = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="favoritos",
+        null=True,
+        blank=True,
+    )
+    dispositivo = models.CharField(
+        max_length=64,
+        db_index=True,
+        blank=True,
+        help_text="Chave anônima do aparelho que registrou a interação.",
+    )
+    origem = models.CharField(
+        max_length=6,
+        choices=Origem.choices,
+        default=Origem.SITE,
+        db_index=True,
+    )
+
+    class Meta:
+        verbose_name = "Curtida / desejo"
+        verbose_name_plural = "Curtidas e desejos"
+        ordering = ("-criacao", "-id")
+        constraints = [
+            # Um produto por registro: ou brinquedo, ou peça.
+            models.CheckConstraint(
+                condition=(
+                    models.Q(brinquedo__isnull=False, peca__isnull=True)
+                    | models.Q(brinquedo__isnull=True, peca__isnull=False)
+                ),
+                name="favorito_um_produto_apenas",
+            ),
+            # Logado: uma por conta, não importa o aparelho.
+            models.UniqueConstraint(
+                fields=["tipo", "brinquedo", "usuario"],
+                condition=models.Q(
+                    usuario__isnull=False,
+                    brinquedo__isnull=False,
+                ),
+                name="favorito_brinquedo_por_conta",
+            ),
+            models.UniqueConstraint(
+                fields=["tipo", "peca", "usuario"],
+                condition=models.Q(usuario__isnull=False, peca__isnull=False),
+                name="favorito_peca_por_conta",
+            ),
+            # Visitante: uma por aparelho.
+            models.UniqueConstraint(
+                fields=["tipo", "brinquedo", "dispositivo"],
+                condition=models.Q(
+                    usuario__isnull=True,
+                    brinquedo__isnull=False,
+                ),
+                name="favorito_brinquedo_por_dispositivo",
+            ),
+            models.UniqueConstraint(
+                fields=["tipo", "peca", "dispositivo"],
+                condition=models.Q(usuario__isnull=True, peca__isnull=False),
+                name="favorito_peca_por_dispositivo",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.get_tipo_display()} — {self.nome_produto}"
+
+    @property
+    def produto(self):
+        return self.brinquedo or self.peca
+
+    @property
+    def nome_produto(self) -> str:
+        if self.brinquedo_id and self.brinquedo:
+            return self.brinquedo.nome_brinquedo
+        if self.peca_id and self.peca:
+            return self.peca.nome
+        return "Produto removido"

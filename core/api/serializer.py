@@ -69,6 +69,18 @@ def _texto(valor):
 # CATÁLOGO
 # ============================================================
 
+def _curtidas(obj):
+    """Curtidas do produto.
+
+    Usa a anotação ``total_curtidas`` quando a view já trouxe o número na
+    mesma consulta -- sem ela, listagem viraria uma consulta por item.
+    """
+    total = getattr(obj, "total_curtidas", None)
+    if total is not None:
+        return total
+    return obj.favoritos.filter(tipo="curtida").count()
+
+
 class CategoriaSerializer(serializers.ModelSerializer):
     nome = serializers.CharField(source="nome_categoria")
     imagem = serializers.SerializerMethodField()
@@ -86,10 +98,22 @@ class BrinquedoListaSerializer(serializers.ModelSerializer):
     valor = serializers.SerializerMethodField()
     avaliacao = serializers.SerializerMethodField()
     imagem = serializers.SerializerMethodField()
+    curtidas = serializers.SerializerMethodField()
 
     class Meta:
         model = Brinquedos
-        fields = ("id", "nome", "valor", "avaliacao", "imagem", "exibir_na_loja")
+        fields = (
+            "id",
+            "nome",
+            "valor",
+            "avaliacao",
+            "imagem",
+            "exibir_na_loja",
+            "curtidas",
+        )
+
+    def get_curtidas(self, obj):
+        return _curtidas(obj)
 
     def get_valor(self, obj):
         return _texto(obj.valor_brinquedo)
@@ -113,6 +137,10 @@ class BrinquedoDetalheSerializer(serializers.ModelSerializer):
         read_only=True,
     )
     dimensoes = serializers.SerializerMethodField()
+    curtidas = serializers.SerializerMethodField()
+
+    def get_curtidas(self, obj):
+        return _curtidas(obj)
 
     class Meta:
         model = Brinquedos
@@ -127,6 +155,7 @@ class BrinquedoDetalheSerializer(serializers.ModelSerializer):
             "categorias",
             "dimensoes",
             "exibir_na_loja",
+            "curtidas",
         ]
 
     def get_valor(self, obj):
@@ -171,10 +200,14 @@ class PecaSerializer(serializers.ModelSerializer):
         many=True,
         read_only=True,
     )
+    curtidas = serializers.SerializerMethodField()
 
     class Meta:
         model = PecasReposicao
-        fields = ["id", "nome", "descricao", "preco", "imagens"]
+        fields = ["id", "nome", "descricao", "preco", "imagens", "curtidas"]
+
+    def get_curtidas(self, obj):
+        return _curtidas(obj)
 
     def get_preco(self, obj):
         return _texto(obj.preco_venda)

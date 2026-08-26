@@ -3,6 +3,7 @@ from django.db import transaction
 from django.db.models.signals import m2m_changed, post_delete, post_save
 from django.dispatch import receiver
 from django.contrib.auth.models import User
+from django.contrib.auth.signals import user_logged_in
 
 from .context_processors import limpar_cache_global
 from .home_cache import invalidate_public_catalog_caches
@@ -117,3 +118,18 @@ for _modelo in (CategoriasBrinquedos, Estabelecimentos, Clientes):
         weak=False,
         dispatch_uid=f"core.contexto.post_delete.{_identificador}",
     )
+
+
+# ------------------------------------------------------------------
+# Curtidas e lista de desejos
+# ------------------------------------------------------------------
+
+@receiver(user_logged_in)
+def adotar_favoritos_do_dispositivo(sender, request, user, **kwargs):
+    """O que a pessoa curtiu antes de entrar não pode sumir no login."""
+    if request is None:
+        return
+
+    from .favoritos import chave_dispositivo, migrar_dispositivo_para_conta
+
+    migrar_dispositivo_para_conta(user, chave_dispositivo(request))

@@ -32,6 +32,13 @@
         grid-template-columns: 1fr;
     }
 }
+.card-favoritos {
+    padding: 0 16px 4px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
 .card-link {
     display: block;
     color: inherit;
@@ -182,7 +189,8 @@
     <!-- GRID -->
     <div class="grid-cards">
 
-        {% for peca in pecas %}
+        {% for cartao in cartoes_pecas %}
+        {% with peca=cartao.obj %}
         <div class="card-produto" data-scroll-reveal>
 
             <a href="{% url 'reposicao_detalhe' peca.pk %}#container" class="card-link">
@@ -210,6 +218,11 @@
                 </div>
             </a>
 
+            <!-- CURTIR E GUARDAR -->
+            <div class="card-favoritos">
+                {% include "partials/favorito_acoes.html" with fav_produto="peca" fav_id=peca.id fav_curtido=cartao.curtido fav_desejado=cartao.desejado fav_curtidas=cartao.curtidas fav_compacto=True fav_so_icone=True %}
+            </div>
+
             <!-- BOTÕES -->
             <div class="card-footer">
 
@@ -226,6 +239,7 @@
 
             </div>
         </div>
+        {% endwith %}
         {% empty %}
             <p>Nenhuma peça cadastrada.</p>
         {% endfor %}

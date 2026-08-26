@@ -1,0 +1,97 @@
+/* Botões de curtida e lista de desejos. */
+
+.ls-fav-acoes {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.ls-fav-botao {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 0 15px;
+  border: 1px solid rgba(15, 23, 42, .14);
+  border-radius: 999px;
+  background: #fff;
+  color: #334155;
+  font: inherit;
+  font-size: .82rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  transition: transform .18s ease, border-color .18s ease,
+    background .18s ease, color .18s ease;
+}
+
+.ls-fav-botao:hover {
+  transform: translateY(-1px);
+  border-color: rgba(239, 68, 68, .45);
+}
+
+.ls-fav-botao i {
+  font-size: .95rem;
+}
+
+.ls-fav-botao[data-favorito="curtida"].is-on {
+  border-color: rgba(239, 68, 68, .5);
+  background: rgba(239, 68, 68, .1);
+  color: #dc2626;
+}
+
+.ls-fav-botao[data-favorito="desejo"].is-on {
+  border-color: rgba(37, 99, 235, .5);
+  background: rgba(37, 99, 235, .1);
+  color: #1d4ed8;
+}
+
+.ls-fav-total {
+  min-width: 20px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, .07);
+  font-size: .7rem;
+  font-weight: 800;
+}
+
+.ls-fav-botao.pulsa {
+  animation: ls-fav-pulsa .35s ease;
+}
+
+@keyframes ls-fav-pulsa {
+  0% { transform: scale(1); }
+  45% { transform: scale(1.12); }
+  100% { transform: scale(1); }
+}
+
+/* Versão compacta, para o canto do card do catálogo. */
+.ls-fav-acoes.compacto .ls-fav-botao {
+  min-height: 38px;
+  padding: 0 11px;
+  font-size: .74rem;
+}
+
+.ls-fav-aviso {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: #0f172a;
+  color: #fff;
+  font-size: .68rem;
+  font-weight: 600;
+  white-space: nowrap;
+  z-index: 20;
+}
+
+.ls-fav-nota {
+  margin: 8px 0 0;
+  color: #64748b;
+  font-size: .72rem;
+  line-height: 1.5;
+}

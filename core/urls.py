@@ -1,6 +1,7 @@
 from django.urls import path, re_path
 from django.contrib.sitemaps.views import sitemap
 
+from .views_favoritos import ListaDesejosView, alternar_favorito
 from .views_orcamento import orcamento_publico
 from .sitemaps import (
     PaginasEstaticasSitemap,
@@ -304,6 +305,19 @@ urlpatterns = [
 
 
     path("produto-tag/<path:resto>", redirecionar_loja),
+
+    # ---- Curtidas e lista de desejos ----
+    # Funciona sem login: quem não entrou fica preso ao próprio aparelho.
+    path(
+        "favoritos/alternar/",
+        alternar_favorito,
+        name="alternar_favorito",
+    ),
+    path(
+        "lista-desejos/",
+        ListaDesejosView.as_view(),
+        name="lista_desejos",
+    ),
 
     # ---- Orçamento que o cliente abre ----
     # Antes do catch-all, senão o re_path abaixo engole a rota e manda o

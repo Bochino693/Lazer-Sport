@@ -1,0 +1,131 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Lista de desejos | Lazer & Sport{% endblock %}
+{% block meta_description %}Os brinquedos e as peças que você guardou na Lazer & Sport.{% endblock %}
+
+{% block content %}
+<style>
+.desejos-wrap{max-width:1180px;margin:38px auto 70px;padding:0 20px}
+.desejos-hero{padding:30px;border-radius:26px;color:#fff;background:linear-gradient(135deg,#004AAD,#0f172a 70%);box-shadow:0 22px 45px rgba(2,32,71,.22)}
+.desejos-hero small{display:block;margin-bottom:9px;color:#93c5fd;font-size:.7rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase}
+.desejos-hero h1{margin:0;font-size:clamp(1.6rem,3.4vw,2.3rem)}
+.desejos-hero p{max-width:660px;margin:10px 0 0;color:#cbd5e1;font-size:.86rem;line-height:1.6}
+.desejos-kpis{margin-top:18px;display:flex;gap:10px;flex-wrap:wrap}
+.desejos-kpi{padding:11px 15px;border:1px solid rgba(255,255,255,.16);border-radius:14px;background:rgba(255,255,255,.08);font-size:.74rem;font-weight:700}
+.desejos-kpi strong{display:block;font-size:1.35rem}
+.desejos-secao{margin-top:34px}
+.desejos-secao h2{margin:0 0 4px;color:#0f172a;font-size:1.15rem}
+.desejos-secao p.sub{margin:0 0 16px;color:#64748b;font-size:.8rem}
+.desejos-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:18px}
+.desejo-card{display:flex;flex-direction:column;overflow:hidden;border:1px solid rgba(15,23,42,.08);border-radius:18px;background:#fff;box-shadow:0 10px 26px rgba(15,23,42,.07)}
+.desejo-foto{aspect-ratio:4/3;display:grid;place-items:center;overflow:hidden;background:#f1f5f9}
+.desejo-foto img{width:100%;height:100%;object-fit:cover}
+.desejo-foto span{color:#94a3b8;font-size:.76rem}
+.desejo-corpo{flex:1;padding:15px;display:flex;flex-direction:column;gap:8px}
+.desejo-corpo h3{margin:0;color:#0f172a;font-size:.95rem;line-height:1.35}
+.desejo-corpo .preco{color:#047857;font-weight:800;font-size:.9rem}
+.desejo-corpo .sem-preco{color:#64748b;font-size:.78rem}
+.desejo-links{margin-top:auto;display:flex;gap:8px;flex-wrap:wrap}
+.desejo-links a{padding:9px 13px;border-radius:999px;background:#004AAD;color:#fff;font-size:.75rem;font-weight:700;text-decoration:none}
+.desejo-links a.secundario{background:rgba(15,23,42,.06);color:#334155}
+.desejos-vazio{margin-top:30px;padding:46px 24px;border:1px dashed rgba(15,23,42,.16);border-radius:22px;text-align:center;background:#fff}
+.desejos-vazio h2{margin:0 0 8px;color:#0f172a;font-size:1.2rem}
+.desejos-vazio p{max-width:520px;margin:0 auto 18px;color:#64748b;font-size:.84rem;line-height:1.6}
+.desejos-vazio a{display:inline-block;padding:12px 20px;border-radius:999px;background:#004AAD;color:#fff;font-weight:700;font-size:.8rem;text-decoration:none}
+.desejos-aviso{margin-top:20px;padding:14px 16px;border:1px solid rgba(37,99,235,.2);border-radius:14px;background:rgba(37,99,235,.07);color:#1e3a8a;font-size:.78rem;line-height:1.6}
+.desejos-aviso a{color:#1d4ed8;font-weight:800}
+</style>
+
+<div class="desejos-wrap" id="lista-desejos">
+  <section class="desejos-hero">
+    <small>Sua seleção</small>
+    <h1>Lista de desejos</h1>
+    <p>Guarde brinquedos e peças para decidir com calma. Funciona sem cadastro: o que você marca fica salvo neste aparelho e, quando você entra na conta, vai junto.</p>
+    <div class="desejos-kpis">
+      <div class="desejos-kpi"><strong>{{ total_desejos }}</strong>na lista</div>
+      <div class="desejos-kpi"><strong>{{ total_curtidas }}</strong>curtida{{ total_curtidas|pluralize }}</div>
+    </div>
+  </section>
+
+  {% if not user.is_authenticated and total_desejos %}
+    <p class="desejos-aviso">
+      Esta lista está salva apenas neste aparelho.
+      <a href="{% url 'login' %}#login-box">Entre na sua conta</a>
+      para levá-la para o celular, o computador e o aplicativo — a migração é automática.
+    </p>
+  {% endif %}
+
+  {% if cartoes_brinquedos %}
+    <section class="desejos-secao">
+      <h2>Brinquedos</h2>
+      <p class="sub">{{ cartoes_brinquedos|length }} ite{{ cartoes_brinquedos|length|pluralize:"m,ns" }} guardado{{ cartoes_brinquedos|length|pluralize }}.</p>
+      <div class="desejos-grid">
+        {% for cartao in cartoes_brinquedos %}
+          {% with b=cartao.obj %}
+          <article class="desejo-card">
+            <div class="desejo-foto">
+              {% with capa=b.imagem_catalogo %}
+                {% if capa %}<img src="{{ capa.url }}" alt="{{ b.nome_brinquedo }}" loading="lazy">{% else %}<span>Sem foto cadastrada</span>{% endif %}
+              {% endwith %}
+            </div>
+            <div class="desejo-corpo">
+              <h3>{{ b.nome_brinquedo }}</h3>
+              {% if b.valor_brinquedo %}
+                <span class="preco">R$ {{ b.valor_brinquedo }}</span>
+              {% else %}
+                <span class="sem-preco">Valor sob consulta</span>
+              {% endif %}
+              {% include "partials/favorito_acoes.html" with fav_produto="brinquedo" fav_id=b.id fav_curtido=cartao.curtido fav_desejado=True fav_curtidas=cartao.curtidas fav_compacto=True %}
+              <div class="desejo-links">
+                <a href="{% url 'brinquedo_detalhe' b.id %}#detalhe">Ver brinquedo</a>
+              </div>
+            </div>
+          </article>
+          {% endwith %}
+        {% endfor %}
+      </div>
+    </section>
+  {% endif %}
+
+  {% if cartoes_pecas %}
+    <section class="desejos-secao">
+      <h2>Peças de reposição</h2>
+      <p class="sub">{{ cartoes_pecas|length }} peça{{ cartoes_pecas|length|pluralize }} guardada{{ cartoes_pecas|length|pluralize }}.</p>
+      <div class="desejos-grid">
+        {% for cartao in cartoes_pecas %}
+          {% with p=cartao.obj %}
+          <article class="desejo-card">
+            <div class="desejo-foto">
+              {% with capa=p.imagem_principal %}
+                {% if capa and capa.imagem %}<img src="{{ capa.imagem.url }}" alt="{{ p.nome }}" loading="lazy">{% else %}<span>Sem foto cadastrada</span>{% endif %}
+              {% endwith %}
+            </div>
+            <div class="desejo-corpo">
+              <h3>{{ p.nome }}</h3>
+              {% if p.preco_venda %}
+                <span class="preco">R$ {{ p.preco_venda }}</span>
+              {% else %}
+                <span class="sem-preco">Valor sob consulta</span>
+              {% endif %}
+              {% include "partials/favorito_acoes.html" with fav_produto="peca" fav_id=p.id fav_curtido=cartao.curtido fav_desejado=True fav_curtidas=cartao.curtidas fav_compacto=True %}
+              <div class="desejo-links">
+                <a href="{% url 'reposicao_detalhe' p.id %}#peca">Ver peça</a>
+              </div>
+            </div>
+          </article>
+          {% endwith %}
+        {% endfor %}
+      </div>
+    </section>
+  {% endif %}
+
+  {% if not total_desejos %}
+    <div class="desejos-vazio">
+      <h2>Sua lista ainda está vazia</h2>
+      <p>Toque no marcador dos brinquedos e das peças que te interessam. Eles aparecem aqui, prontos para comparar, pedir orçamento ou comprar depois.</p>
+      <a href="{% url 'loja' %}#catalogo">Explorar a loja</a>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

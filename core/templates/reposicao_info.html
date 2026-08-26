@@ -302,6 +302,7 @@
 }
 .peca-quantidade input { border: 0; font-weight: 800; height: 42px; text-align: center; width: 56px; }
 .peca-acoes { display: grid; gap: 10px; grid-template-columns: 1fr 1fr; }
+.peca-favoritos { margin: 4px 0 14px; }
 .peca-btn {
     align-items: center;
     border: 0;
@@ -660,6 +661,17 @@
                             <button type="button" data-qtd="1" aria-label="Aumentar quantidade">+</button>
                         </div>
                     </div>
+                    <div class="peca-favoritos">
+                        {% include "partials/favorito_acoes.html" with fav_produto="peca" fav_id=peca.id fav_curtido=favorito.curtido fav_desejado=favorito.desejado fav_curtidas=favorito.curtidas %}
+                        <p class="ls-fav-nota">
+                            {% if user.is_authenticated %}
+                                Salvo na sua conta: aparece no site e no aplicativo.
+                            {% else %}
+                                Sem cadastro: fica salvo neste aparelho e migra para a conta quando você entrar.
+                            {% endif %}
+                        </p>
+                    </div>
+
                     <div class="peca-acoes">
                         <button type="button" class="peca-btn carrinho" id="adicionar-peca"><i class="fas fa-cart-plus" aria-hidden="true"></i>Adicionar ao carrinho</button>
                         <a class="peca-btn whatsapp" href="https://wa.me/5511960563135?text={{ 'Olá! Tenho interesse nesta peça: '|urlencode }}{{ peca.nome|urlencode }}%0A{{ request.build_absolute_uri|urlencode }}" target="_blank" rel="noopener noreferrer"><i class="fab fa-whatsapp" aria-hidden="true"></i>Falar com especialista</a>

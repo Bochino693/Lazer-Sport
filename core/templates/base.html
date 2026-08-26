@@ -23,6 +23,14 @@
   <!-- Experiência de rolagem: skeletons, entrada dos blocos e barra de progresso. -->
   <link rel="stylesheet" href="{% static 'site/ls-reveal.css' %}?v=3">
 
+  <!-- Token do CSRF para o JS que salva curtida e lista de desejos.
+       Citar {{ csrf_token }} aqui também garante o cookie na resposta. -->
+  <meta name="csrf-token" content="{{ csrf_token }}">
+
+  <!-- Curtir e guardar na lista de desejos, com ou sem conta. -->
+  <link rel="stylesheet" href="{% static 'site/ls-favoritos.css' %}?v=1">
+  <script src="{% static 'site/ls-favoritos.js' %}?v=1" defer></script>
+
   <!-- Âncoras # param abaixo do cabeçalho sticky, com destaque no destino. -->
   <link rel="stylesheet" href="{% static 'site/ls-ancoras.css' %}?v=1">
   <script src="{% static 'site/ls-ancoras.js' %}?v=1" defer></script>
@@ -1562,6 +1570,17 @@
     background: linear-gradient(135deg, #e67e22, #d35400) !important; /* Laranja se estiver em curso */
 }
 
+/* Lista de desejos: mesma família visual dos outros botões flutuantes. */
+.float-desejos {
+    background: linear-gradient(135deg, #2563eb, #1d4ed8) !important;
+    box-shadow: 0 10px 20px rgba(37, 99, 235, 0.35) !important;
+}
+
+/* Zero na lista não merece selo vermelho chamando atenção. */
+.float-desejos .badge.vazio {
+    background: #94a3b8 !important;
+}
+
 /* Animação de Pulso para o Carrinho quando tiver itens */
 @keyframes pulse-carrinho {
     0% { box-shadow: 0 0 0 0 rgba(46, 204, 113, 0.7); }
@@ -1647,6 +1666,7 @@
             <span>{{ user.email }}</span>
           </div>
           <a href="{% url 'perfil' %}#perfil-box" role="menuitem">🎯 Meu Perfil</a>
+          <a href="{% url 'lista_desejos' %}#lista-desejos" role="menuitem">🔖 Lista de desejos</a>
           <a href="{% url 'logout' %}#logout-box" role="menuitem">🚪 Sair</a>
         </div>
       </div>
@@ -1664,6 +1684,7 @@
         <div class="dropdown-menu" id="ls-user-menu" role="menu">
           <a href="{% url 'login' %}#login-box" role="menuitem">🔐 Fazer Login</a>
           <a href="{% url 'registrar' %}#register-box" role="menuitem">📝 Criar Conta</a>
+          <a href="{% url 'lista_desejos' %}#lista-desejos" role="menuitem">🔖 Lista de desejos</a>
         </div>
       </div>
     {% endif %}
@@ -1818,6 +1839,15 @@
         <i class="fa-solid fa-crown"></i>
     </a>
     {% endif %}
+
+    <a href="{% url 'lista_desejos' %}#lista-desejos"
+       class="float-btn float-desejos"
+       title="Lista de desejos"
+       data-tooltip="Lista de desejos">
+        <i class="fa-solid fa-bookmark"></i>
+        <span class="badge{% if not tem_lista_desejos %} vazio{% endif %}"
+              data-lista-desejos-total>{{ total_lista_desejos|default:0 }}</span>
+    </a>
 
     {% if user.is_authenticated %}
     <a href="{% url 'meus_pedidos' %}#pedidos" class="float-btn float-pedidos" title="Meus pedidos" data-tooltip="Meus pedidos">

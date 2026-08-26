@@ -1314,6 +1314,17 @@
                     </section>
                 {% endif %}
 
+                <section class="produto-secao produto-favoritos">
+                    {% include "partials/favorito_acoes.html" with fav_produto="brinquedo" fav_id=brinquedo.id fav_curtido=favorito.curtido fav_desejado=favorito.desejado fav_curtidas=favorito.curtidas %}
+                    <p class="ls-fav-nota">
+                        {% if user.is_authenticated %}
+                            Salvo na sua conta: você reencontra em qualquer aparelho e no aplicativo.
+                        {% else %}
+                            Não precisa de cadastro — fica salvo neste aparelho. Ao entrar na conta, sua lista vai junto.
+                        {% endif %}
+                    </p>
+                </section>
+
                 {% if disponivel_loja %}
                     <form
                         class="produto-form"

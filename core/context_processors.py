@@ -334,3 +334,29 @@ def confirmacao_pagamento(request):
             "baixa": reverse("marcar_confirmacao_vista"),
         }
     }
+
+
+def favoritos_context(request):
+    """Contador da lista de desejos no cabeçalho.
+
+    Visitante sem cookie ainda não marcou nada -- e nesse caso não vale
+    gastar consulta nem criar chave de dispositivo só para exibir zero.
+    """
+    from .favoritos import COOKIE_DISPOSITIVO, meus_favoritos
+    from .models import Favorito
+
+    logado = request.user.is_authenticated
+    tem_cookie = bool(request.COOKIES.get(COOKIE_DISPOSITIVO))
+
+    if not logado and not tem_cookie:
+        return {"total_lista_desejos": 0, "tem_lista_desejos": False}
+
+    def _contar():
+        return meus_favoritos(request, Favorito.Tipo.DESEJO).count()
+
+    total = SimpleLazyObject(_contar)
+
+    return {
+        "total_lista_desejos": total,
+        "tem_lista_desejos": SimpleLazyObject(lambda: total > 0),
+    }

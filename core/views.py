@@ -394,14 +394,34 @@ class ReposicaoView(View):
 
     def get(self, request):
         categorias_peca = CategoriaPeca.objects.all()
+        pecas = list(
+            PecasReposicao.objects
+            .all()
+            .prefetch_related("imagem_peca_reposicao")
+        )
+
+        # Estado dos corações resolvido em três consultas, não uma por
+        # peça: marcados pelo visitante e total geral de curtidas.
+        curtidos = servico_favoritos.ids_marcados(request, "curtida")["peca"]
+        desejados = servico_favoritos.ids_marcados(request, "desejo")["peca"]
+        totais = servico_favoritos.contagem_curtidas(pecas)
 
         ctx = {
             'categorias_peca': categorias_peca,
-            'pecas': PecasReposicao.objects.all(),
-
+            'pecas': pecas,
+            'cartoes_pecas': [
+                {
+                    'obj': peca,
+                    'curtido': peca.pk in curtidos,
+                    'desejado': peca.pk in desejados,
+                    'curtidas': totais.get(peca.pk, 0),
+                }
+                for peca in pecas
+            ],
         }
 
-        return render(request, 'reposicao.html', ctx)
+        resposta = render(request, 'reposicao.html', ctx)
+        return servico_favoritos.aplicar_cookie(request, resposta)
 
 
 class ReposicaoDetalheView(View):
@@ -416,11 +436,13 @@ class ReposicaoDetalheView(View):
         )
         imagens = list(peca.imagens_ordenadas)
 
-        return render(request, 'reposicao_info.html', {
+        resposta = render(request, 'reposicao_info.html', {
             'peca': peca,
             'imagens_peca': imagens,
             'categorias_peca': list(peca.categoria_peca.all()),
+            'favorito': servico_favoritos.estado_do_produto(request, peca),
         })
+        return servico_favoritos.aplicar_cookie(request, resposta)
 
 
 from django.views import View
@@ -813,9 +835,16 @@ class BrinquedoInfoView(View):
             "imagens_brinquedo": imagens_brinquedo,
             "whatsapp_url": whatsapp_url,
             "permite_sob_medida": permite_sob_medida,
+            # Curtida e lista de desejos: valem sem login, presos ao
+            # aparelho enquanto o visitante não entra na conta.
+            "favorito": servico_favoritos.estado_do_produto(
+                request,
+                brinquedo,
+            ),
         }
 
-        return render(request, "brinquedo_info.html", context)
+        resposta = render(request, "brinquedo_info.html", context)
+        return servico_favoritos.aplicar_cookie(request, resposta)
 
 
 class CategoriasInfoView(View):
@@ -1476,6 +1505,9 @@ class AcessoNegadoView(View):
         return render(request, 'acesso_negado.html', {
             'bloqueio': True
         })
+
+
+from . import favoritos as servico_favoritos
 
 
 class AdminOnlyMixin(View):

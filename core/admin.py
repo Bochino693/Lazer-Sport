@@ -903,3 +903,55 @@ class EnderecoEmpresaAdmin(admin.ModelAdmin):
     )
 
     ordering = ('nome',)
+
+
+# ============================================================
+# CURTIDAS E LISTA DE DESEJOS
+# ============================================================
+
+from .models import Favorito
+
+
+@admin.register(Favorito)
+class FavoritoAdmin(admin.ModelAdmin):
+    """Só leitura: quem marca é o cliente, no site ou no aplicativo.
+
+    Editar aqui furaria a regra de uma marcação por conta/aparelho, então
+    a tela serve para conferir e, no máximo, apagar registro de teste.
+    """
+
+    list_display = (
+        "tipo",
+        "produto_marcado",
+        "quem_marcou",
+        "origem",
+        "criacao",
+    )
+    list_filter = ("tipo", "origem", "criacao")
+    search_fields = (
+        "brinquedo__nome_brinquedo",
+        "peca__nome",
+        "usuario__username",
+        "usuario__first_name",
+        "usuario__email",
+        "dispositivo",
+    )
+    autocomplete_fields = ("brinquedo", "peca", "usuario")
+    date_hierarchy = "criacao"
+    list_select_related = ("brinquedo", "peca", "usuario")
+
+    @admin.display(description="Produto", ordering="brinquedo__nome_brinquedo")
+    def produto_marcado(self, obj):
+        return obj.nome_produto
+
+    @admin.display(description="Quem marcou")
+    def quem_marcou(self, obj):
+        if obj.usuario:
+            return obj.usuario.get_full_name() or obj.usuario.username
+        return f"Visitante · {obj.dispositivo[:8]}…"
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False

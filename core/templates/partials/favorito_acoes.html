@@ -1,0 +1,42 @@
+{% comment %}
+Botões de curtir e guardar na lista de desejos.
+
+Uso:
+  {% include "partials/favorito_acoes.html" with fav_produto="brinquedo" fav_id=b.id fav_curtido=... fav_desejado=... fav_curtidas=... %}
+
+Parâmetros opcionais:
+  fav_compacto  -- botões menores, para card de catálogo
+  fav_so_icone  -- esconde o texto do botão
+{% endcomment %}
+<div class="ls-fav-acoes{% if fav_compacto %} compacto{% endif %}">
+  <button type="button"
+          class="ls-fav-botao{% if fav_curtido %} is-on{% endif %}"
+          data-favorito="curtida"
+          data-produto="{{ fav_produto }}"
+          data-id="{{ fav_id }}"
+          data-chave="{{ fav_produto }}-{{ fav_id }}"
+          aria-pressed="{% if fav_curtido %}true{% else %}false{% endif %}"
+          title="Curtir">
+    <i class="fa-solid fa-heart" aria-hidden="true"></i>
+    {% if not fav_so_icone %}
+      <span data-favorito-rotulo>{% if fav_curtido %}Curtido{% else %}Curtir{% endif %}</span>
+    {% endif %}
+    <span class="ls-fav-total"
+          data-favorito-total="{{ fav_produto }}-{{ fav_id }}"
+          {% if not fav_curtidas %}hidden{% endif %}>{{ fav_curtidas|default:0 }}</span>
+  </button>
+
+  <button type="button"
+          class="ls-fav-botao{% if fav_desejado %} is-on{% endif %}"
+          data-favorito="desejo"
+          data-produto="{{ fav_produto }}"
+          data-id="{{ fav_id }}"
+          data-chave="{{ fav_produto }}-{{ fav_id }}"
+          aria-pressed="{% if fav_desejado %}true{% else %}false{% endif %}"
+          title="Guardar na lista de desejos">
+    <i class="fa-solid fa-bookmark" aria-hidden="true"></i>
+    {% if not fav_so_icone %}
+      <span data-favorito-rotulo>{% if fav_desejado %}Na lista{% else %}Lista de desejos{% endif %}</span>
+    {% endif %}
+  </button>
+</div>

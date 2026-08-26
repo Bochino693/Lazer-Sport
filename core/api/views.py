@@ -42,6 +42,16 @@ from core.api.serializer import (
     PromocaoSerializer,
 )
 
+from django.db.models import Count, Q
+
+# Curtidas na mesma consulta do catálogo: sem isto, cada item da lista
+# faria a sua própria contagem.
+ANOTACAO_CURTIDAS = Count(
+    "favoritos",
+    filter=Q(favoritos__tipo="curtida"),
+    distinct=True,
+)
+
 CACHE_CATALOGO = 60 * 10
 
 VERSAO_API = "1.2"
@@ -57,6 +67,7 @@ RECURSOS_DISPONIVEIS = [
     "promocoes",
     "manutencoes",
     "pedidos",
+    "favoritos",
 ]
 
 
@@ -131,6 +142,7 @@ class BrinquedoListAPI(generics.ListAPIView):
             Brinquedos.objects
             .filter(ativo=True)
             .prefetch_related("imagens_brinquedo")
+            .annotate(total_curtidas=ANOTACAO_CURTIDAS)
             .only(
                 "id",
                 "nome_brinquedo",
@@ -142,15 +154,18 @@ class BrinquedoListAPI(generics.ListAPIView):
             .order_by("nome_brinquedo")
         )
 
-        # BrinquedoDetalheAPI.get_queryset()
-        return (
-            Brinquedos.objects
-            .filter(ativo=True)
-            .prefetch_related(
-                "categorias_brinquedos",
-                "imagens_brinquedo",
-            )
-        )
+        # Os filtros do docstring existiam só no papel: a versão anterior
+        # montava o queryset acima e devolvia outro, sem categoria nem
+        # busca. O app recebia o catálogo inteiro em toda tela.
+        categoria = (self.request.query_params.get("categoria") or "").strip()
+        if categoria.isdigit():
+            qs = qs.filter(categorias_brinquedos__id=int(categoria))
+
+        busca = (self.request.query_params.get("busca") or "").strip()
+        if busca:
+            qs = qs.filter(nome_brinquedo__icontains=busca)
+
+        return qs.distinct()
 
     @method_decorator(cache_page(CACHE_CATALOGO))
     def dispatch(self, *args, **kwargs):
@@ -166,6 +181,7 @@ class BrinquedoDetalheAPI(generics.RetrieveAPIView):
             Brinquedos.objects
             .filter(ativo=True)
             .prefetch_related("categorias_brinquedos", "imagens_brinquedo")
+            .annotate(total_curtidas=ANOTACAO_CURTIDAS)
         )
 
     @method_decorator(cache_page(CACHE_CATALOGO))
@@ -183,6 +199,7 @@ class PecaListAPI(generics.ListAPIView):
             PecasReposicao.objects
             .filter(ativo=True)
             .prefetch_related("imagem_peca_reposicao")
+            .annotate(total_curtidas=ANOTACAO_CURTIDAS)
             .order_by("nome")
         )
 
@@ -206,6 +223,7 @@ class PecaDetalheAPI(generics.RetrieveAPIView):
             PecasReposicao.objects
             .filter(ativo=True)
             .prefetch_related("imagem_peca_reposicao")
+            .annotate(total_curtidas=ANOTACAO_CURTIDAS)
         )
 
 

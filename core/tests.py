@@ -405,11 +405,18 @@ class CatalogImageMigrationTests(TestCase):
             avaliacao=Decimal("4.50"),
             voltz="220V",
         )
-        for ordem in (1, 2):
+        # A galeria pública só mostra foto tipada: sem tipo, a imagem é
+        # legado esperando o comando preparar_galerias_catalogo.
+        tipos = (
+            ImagemBrinquedo.TIPO_PERFIL,
+            ImagemBrinquedo.TIPO_LADO_DIREITO,
+        )
+        for ordem, tipo in enumerate(tipos, start=1):
             ImagemBrinquedo.objects.create(
                 brinquedo=brinquedo,
                 imagem=f"imagens_brinquedos/foto-{ordem}.jpg",
                 ordem=ordem,
+                tipo=tipo,
             )
 
         resposta_brinquedo = self.client.get(

@@ -200,6 +200,7 @@ TEMPLATES = [
                 "core.context_processors.clientes_rodape",
                 "core.context_processors.app_android",
                 "core.context_processors.confirmacao_pagamento",
+                "core.context_processors.favoritos_context",
             ],
         },
     },

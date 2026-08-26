@@ -5,6 +5,7 @@ from django.urls import path
 from .auth_app_views import AppEntrarSocial, AppTokenSocial
 from .auth_views import LoginAPI, LogoutAPI, PerfilAPI, RegistroAPI
 from .carrinho_views import SincronizarCarrinhoAPI
+from .favoritos_views import FavoritoAlternarAPI, FavoritoListaAPI
 from .views import (
     BrinquedoDetalheAPI,
     BrinquedoListAPI,
@@ -42,6 +43,14 @@ urlpatterns = [
     path("brinquedos/<int:pk>/", BrinquedoDetalheAPI.as_view(), name="brinquedo_detalhe"),
     path("pecas/", PecaListAPI.as_view(), name="pecas"),
     path("pecas/<int:pk>/", PecaDetalheAPI.as_view(), name="peca_detalhe"),
+
+    # ---------- Curtidas e lista de desejos (funciona sem login) ----------
+    path("favoritos/", FavoritoListaAPI.as_view(), name="favoritos"),
+    path(
+        "favoritos/alternar/",
+        FavoritoAlternarAPI.as_view(),
+        name="favoritos_alternar",
+    ),
 
     # ---------- Institucional (público) ----------
     path("estabelecimentos/", EstabelecimentoListAPI.as_view(), name="estabelecimentos"),
