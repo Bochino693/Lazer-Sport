@@ -1179,6 +1179,25 @@ class BrinquedosView(View):
         paginator = Paginator(brinquedos_list, 12)
         page_obj = paginator.get_page(request.GET.get("page"))
 
+        # A lista vira list() para o total de curtidas colado em cada item
+        # sobreviver: o queryset da página seria consultado de novo no
+        # template e os atributos se perderiam pelo caminho.
+        page_obj.object_list = list(page_obj.object_list)
+        totais_curtidas = servico_favoritos.contagem_curtidas(
+            page_obj.object_list,
+        )
+        for item in page_obj.object_list:
+            item.total_curtidas = totais_curtidas.get(item.pk, 0)
+
+        marcados_curtida = servico_favoritos.ids_marcados(
+            request,
+            "curtida",
+        )["brinquedo"]
+        marcados_desejo = servico_favoritos.ids_marcados(
+            request,
+            "desejo",
+        )["brinquedo"]
+
         query_params = request.GET.copy()
         query_params.pop("page", None)
 
@@ -1217,9 +1236,12 @@ class BrinquedosView(View):
             "total_loja": metadata["total_loja"],
             "total_categorias": metadata["total_categorias"],
             "querystring": query_params.urlencode(),
+            "fav_curtidos": marcados_curtida,
+            "fav_desejados": marcados_desejo,
         }
 
-        return render(request, "brinquedos.html", context)
+        resposta = render(request, "brinquedos.html", context)
+        return servico_favoritos.aplicar_cookie(request, resposta)
 
 
 class LojaView(View):

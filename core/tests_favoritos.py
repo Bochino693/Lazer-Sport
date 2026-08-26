@@ -241,6 +241,42 @@ class ListaDesejosTests(FavoritoBaseTests):
         self.assertEqual(resposta.context["total_curtidas"], 1)
 
 
+class CatalogoTests(FavoritoBaseTests):
+    """Os corações do catálogo vêm pintados do servidor."""
+
+    def test_catalogo_de_brinquedos_marca_o_que_o_aparelho_curtiu(self):
+        self.client.cookies[COOKIE_DISPOSITIVO] = DISPOSITIVO_A
+        self.alternar(tipo="curtida")
+
+        resposta = self.client.get(reverse("brinquedos"))
+
+        self.assertEqual(resposta.status_code, 200)
+        self.assertIn(self.brinquedo.pk, resposta.context["fav_curtidos"])
+        self.assertNotIn(self.brinquedo.pk, resposta.context["fav_desejados"])
+        self.assertContains(resposta, 'data-favorito="curtida"')
+
+    def test_catalogo_de_pecas_mostra_o_total_de_curtidas(self):
+        self.client.cookies[COOKIE_DISPOSITIVO] = DISPOSITIVO_A
+        self.alternar(produto="peca", produto_id=self.peca.pk)
+
+        resposta = self.client.get(reverse("pecas_reposicao"))
+
+        cartao = resposta.context["cartoes_pecas"][0]
+        self.assertTrue(cartao["curtido"])
+        self.assertEqual(cartao["curtidas"], 1)
+
+    def test_detalhe_do_brinquedo_traz_o_estado_do_visitante(self):
+        self.client.cookies[COOKIE_DISPOSITIVO] = DISPOSITIVO_A
+        self.alternar(tipo="desejo")
+
+        resposta = self.client.get(
+            reverse("brinquedo_detalhe", args=[self.brinquedo.pk])
+        )
+
+        self.assertTrue(resposta.context["favorito"]["desejado"])
+        self.assertFalse(resposta.context["favorito"]["curtido"])
+
+
 class FavoritoAppTests(FavoritoBaseTests):
     """O aplicativo manda a chave no cabeçalho, não em cookie."""
 
