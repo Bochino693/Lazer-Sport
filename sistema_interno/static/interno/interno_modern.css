@@ -746,7 +746,11 @@ footer,.fab-container{display:none!important}
   margin-top:3px;padding-top:11px;border-top:1px solid var(--line-soft);
   color:#efe7d8!important;font-size:1rem!important;
 }
-.ls-orcamento-final strong{color:#7ce7bc!important;font-size:1.24rem}
+/* O total não quebra entre o "R$" e o número: lido de relance, "R$"
+   numa linha e "1.308,66" na outra parecem dois valores. */
+.ls-orcamento-final strong{
+  color:#7ce7bc!important;font-size:1.24rem;white-space:nowrap;
+}
 
 /* ---- capacidade de produção ---- */
 .ls-capacidade{
@@ -1067,7 +1071,7 @@ footer,.fab-container{display:none!important}
 .modal-footer .btn{min-width:132px}
 @media(max-width:560px){
   .modal-dialog{margin:0;padding:8px}
-  .modal-content{max-height:calc(100dvh - 16px);border-radius:17px!important}
+  .modal-content{max-height:calc(var(--ls-vh) - 16px);border-radius:17px!important}
   .modal-body{padding:17px!important}
   .modal-footer .btn{flex:1 1 140px}
 }
@@ -1549,16 +1553,27 @@ input[type="number"]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0
 
 /* Um único dono da rolagem: o corpo. Cabeçalho e ações ficam sempre
    acessíveis, inclusive em tablet deitado (pouca altura útil). */
-.modal{padding:0!important;overscroll-behavior:contain}
+/* A ALTURA ÚTIL DA JANELA.
+
+   `--ls-vh` é a altura que o usuário realmente vê, escrita pelo
+   painel.js a partir do visualViewport. É diferente de 100dvh quando o
+   teclado do tablet está aberto: dvh ignora o teclado, e era por isso
+   que "Salvar" e "Cancelar" ficavam escondidos atrás dele. O fallback
+   cobre o primeiro instante da página e o navegador sem a API. */
+:root{--ls-vh:100dvh}
+/* A camada da janela também respeita a área visível: centralizar
+   dentro da tela inteira, com o teclado aberto, empurraria a janela
+   curta para trás do teclado mesmo tendo espaço de sobra. */
+.modal{padding:0!important;height:var(--ls-vh);overscroll-behavior:contain}
 .modal-dialog{
   width:calc(100% - 24px);
   margin:12px auto!important;
   padding:0!important;
 }
-.modal-dialog-scrollable{height:calc(100dvh - 24px)}
+.modal-dialog-scrollable{height:calc(var(--ls-vh) - 24px)}
 .modal-dialog-scrollable .modal-content,
 .modal-content{
-  max-height:calc(100dvh - 24px)!important;
+  max-height:calc(var(--ls-vh) - 24px)!important;
   display:flex;
   flex-direction:column;
   overflow:hidden!important;
@@ -1604,12 +1619,12 @@ input[type="number"]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0
   .modal-dialog.modal-sm,
   .modal-dialog.modal-lg,
   .modal-dialog.modal-xl{
-    width:100%;max-width:none;height:100dvh;min-height:100dvh;
+    width:100%;max-width:none;height:var(--ls-vh);min-height:var(--ls-vh);
     margin:0!important;padding:0!important;display:flex;align-items:flex-end;
   }
   .modal-content,
   .modal-dialog-scrollable .modal-content{
-    width:100%;max-height:100dvh!important;
+    width:100%;max-height:var(--ls-vh)!important;
     border-width:1px 0 0!important;border-radius:22px 22px 0 0!important;
   }
   .modal-header{padding:15px 16px!important}
@@ -1646,10 +1661,10 @@ input[type="number"]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0
   .modal-dialog,
   .modal-dialog.modal-lg,
   .modal-dialog.modal-xl{
-    height:100dvh;min-height:100dvh;margin:0 auto!important;
+    height:var(--ls-vh);min-height:var(--ls-vh);margin:0 auto!important;
   }
   .modal-content,.modal-dialog-scrollable .modal-content{
-    max-height:100dvh!important;border-radius:0!important;
+    max-height:var(--ls-vh)!important;border-radius:0!important;
   }
 }
 
@@ -1688,3 +1703,53 @@ input[type="number"]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0
 .ls-envio-estado.ok strong{color:#8fe6ae}
 .ls-envio-estado.parado{border-color:rgba(255,201,77,.35);background:rgba(255,201,77,.07)}
 .ls-envio-estado.parado strong{color:#ffd77a}
+
+
+/* ====================================================================
+   DESCONTO INTELIGENTE, no formulário do orçamento.
+
+   Fechar venda é conversa: "dá dez por cento?", "deixa em mil e
+   duzentos?". O botão da esquerda troca reais por porcentagem, os atalhos
+   resolvem os pedidos mais comuns num toque, e a linha de baixo diz em voz
+   alta o que o desconto significa nas duas moedas. O campo enviado ao
+   servidor continua em reais.
+   ==================================================================== */
+.ls-unidade{
+  min-width:56px;font-weight:950;
+  color:var(--acento)!important;
+  border-color:#6b5a3c!important;
+  background:rgba(242,169,59,.09)!important;
+}
+.ls-unidade:hover,.ls-unidade:focus{
+  color:#1b1409!important;background:var(--acento)!important;
+}
+
+.ls-desconto-atalhos{
+  margin-top:8px;display:flex;flex-wrap:wrap;gap:6px;
+}
+.ls-chip{
+  min-height:34px;padding:5px 11px;
+  display:inline-flex;align-items:center;gap:5px;
+  border:1px solid var(--line-soft);border-radius:999px;
+  color:var(--text-2);background:rgba(255,255,255,.035);
+  font-size:.74rem;font-weight:800;line-height:1;
+  transition:.15s ease;
+}
+.ls-chip:hover{
+  border-color:#7a6640;color:#fff;background:rgba(242,169,59,.13);
+}
+.ls-chip-zerar{color:var(--muted-2)}
+.ls-chip-zerar:hover{color:#ffb3bf;border-color:#7a4450;background:rgba(255,113,132,.1)}
+
+#descontoExplicacao{
+  display:block;min-height:20px;margin-top:6px;
+  color:var(--green);font-size:.74rem;font-weight:700;
+}
+
+/* Tablet: alvo de toque maior e atalhos em linha rolável, para não
+   empurrar o resto do formulário para baixo. */
+@media (max-width:900px){
+  .ls-chip{min-height:40px;padding:7px 14px;font-size:.78rem}
+  .ls-desconto-atalhos{flex-wrap:nowrap;overflow-x:auto;padding-bottom:2px}
+  .ls-desconto-atalhos::-webkit-scrollbar{display:none}
+}

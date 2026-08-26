@@ -104,10 +104,17 @@ def contexto_orcamento(orcamento, *, previsualizacao=False, request=None):
         "itens": itens,
         "imagem_previa": imagem_previa,
         "empresa": empresa,
+        # O CONTATO DA PROPOSTA É O DA EMPRESA, não o de quem montou.
+        #
+        # A ordem aqui é deliberada: a configuração da hospedagem manda,
+        # e o cadastro de endereço só entra se ela estiver vazia. Era o
+        # contrário, e a proposta saía com o telefone pessoal gravado num
+        # cadastro antigo -- o cliente ligava para a pessoa errada.
         "telefone_empresa": (
-            (empresa.telefone if empresa else "")
-            or getattr(settings, "ORCAMENTO_TELEFONE", "")
+            getattr(settings, "ORCAMENTO_TELEFONE", "")
+            or (empresa.telefone if empresa else "")
         ),
+        "whatsapp_empresa": getattr(settings, "ORCAMENTO_WHATSAPP", ""),
         "email_empresa": getattr(settings, "ORCAMENTO_EMAIL", ""),
         "instagram_empresa": getattr(settings, "ORCAMENTO_INSTAGRAM", ""),
         "endereco_cliente": endereco_cliente,

@@ -337,7 +337,19 @@ body{
         <div class="meta-linha"><dt>Nº do orçamento</dt><dd>{{ orcamento.numero_documento }}</dd></div>
         <div class="meta-linha"><dt>Responsável</dt><dd>{{ responsavel_nome }}</dd></div>
         {% if telefone_empresa %}
-          <div class="meta-linha"><dt>WhatsApp</dt><dd>{{ telefone_empresa }}</dd></div>
+          {% comment %}
+            Dúvida sobre a proposta vira conversa num toque, e cai no
+            WhatsApp da EMPRESA -- que é onde alguém sabe responder.
+          {% endcomment %}
+          <div class="meta-linha">
+            <dt>WhatsApp</dt>
+            <dd>
+              {% if whatsapp_empresa %}
+                <a href="https://wa.me/{{ whatsapp_empresa }}?text=Ol%C3%A1!%20Tenho%20uma%20d%C3%BAvida%20sobre%20a%20proposta%20n%C2%BA%20{{ orcamento.pk }}."
+                   target="_blank" rel="noopener">{{ telefone_empresa }}</a>
+              {% else %}{{ telefone_empresa }}{% endif %}
+            </dd>
+          </div>
         {% endif %}
       </dl>
 
@@ -583,9 +595,9 @@ body{
   <p class="rodape">
     Lazer &amp; Sport Brinquedos ·
     <a href="https://www.lazersport.com.br">lazersport.com.br</a>
-    {% if telefone_empresa %} · {{ telefone_empresa }}{% endif %}
+    {% if telefone_empresa %} · <a href="tel:+{{ whatsapp_empresa|default:'' }}">{{ telefone_empresa }}</a>{% endif %}
     {% if instagram_empresa %} · {{ instagram_empresa }}{% endif %}<br>
-    {% if email_empresa %}{{ email_empresa }}<br>{% endif %}
+    {% if email_empresa %}<a href="mailto:{{ email_empresa }}">{{ email_empresa }}</a><br>{% endif %}
     <span class="nao-imprime">Esta página é sua — guarde o link para consultar a proposta quando quiser.</span>
   </p>
 </div>

@@ -160,6 +160,46 @@ Painel.ligar({form: "formCliente", erro: "clienteErro"});
 No servidor, `RespostaJSONMixin` despacha para `acao_<nome>` e
 `ErroDeFormulario` vira mensagem — nunca 500.
 
+### A janela (modal) — o contrato de estrutura
+Toda janela tem **cabeçalho fixo, corpo que rola, rodapé fixo**. O
+`painel.js` marca `modal-dialog-scrollable modal-dialog-centered` em toda
+janela do painel, na carga e no `show.bs.modal` — então **não é preciso
+lembrar disso no template**, e janela nova nasce certa.
+
+A altura vem de `--ls-vh`, escrita pelo `painel.js` a partir do
+`visualViewport`. **Nunca use `100dvh` para medir janela**: `dvh` não
+enxerga o teclado do tablet, e era exatamente isso que deixava "Salvar" e
+"Cancelar" escondidos atrás dele, sem rolagem que os alcançasse. Um teste
+(`JanelasDoPainelTests`) reprova o `100dvh` que voltar.
+
+Campo que ganha foco e está fora de vista é trazido para o meio do corpo
+da janela — rolar a página não resolveria, porque no modal quem rola é o
+corpo.
+
+### Campos que se digitam da direita para a esquerda
+Dinheiro, metragem e porcentagem funcionam como maquininha: só dígitos,
+duas casas sempre. `1` → `0,01`, `10` → `0,10`, `100` → `1,00`,
+`123456` → `1.234,56`.
+
+```html
+<input data-mascara="moeda"      inputmode="decimal">  <!-- R$        -->
+<input data-mascara="medida"     inputmode="decimal">  <!-- metros    -->
+<input data-mascara="percentual" inputmode="decimal">  <!-- 0 a 100 % -->
+```
+
+Valor que **já existe** (vindo do servidor ou posto por `Painel.valor`) é
+número, não digitação: entra por `moedaFinal`, senão "80" viraria "0,80".
+Linha criada por JavaScript precisa de `Painel.aplicarMascaras(tr)`.
+
+Nunca use `type="number"` para dinheiro: vários navegadores recusam a
+vírgula e apagam o valor no envio.
+
+### Campo de texto
+`<textarea>` cresce com o que se escreve, até 320px, e só então rola.
+Automático — `Painel.acomodarTextos` roda na carga e ao abrir a janela.
+Medir um campo escondido devolve zero, por isso o ajuste acontece no
+`shown.bs.modal`, não antes.
+
 ### Tabela
 `.ls-table` com `data-rotulo` em cada `<td>`: em tela estreita a linha
 vira cartão e o rótulo aparece sozinho. Sem `data-rotulo`, a tabela fica
@@ -180,7 +220,8 @@ Regras que valem para qualquer aparelho de toque (bloco
 * campo de formulário com **16px** de fonte — abaixo disso o Safari do
   iPad dá zoom sozinho ao focar e a pessoa perde o formulário de vista;
 * rodapé de modal **grudado na base**, senão o "Salvar" desaparece abaixo
-  da dobra em formulário longo;
+  da dobra em formulário longo — e a altura da janela sai de `--ls-vh`,
+  não de `dvh`, para o teclado não cobrir esse rodapé;
 * em tela estreita o modal vira **folha**, encostada na base, com o topo
   arredondado;
 * o que é destrutivo pede confirmação em texto (o nome digitado), nunca um

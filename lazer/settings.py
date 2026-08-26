@@ -346,18 +346,33 @@ USE_TZ = True
 # esta base, o e-mail sairia com links relativos, que não clicam.
 SITE_URL = os.getenv("SITE_URL", "https://www.lazersport.com.br").strip()
 
-# Identidade exibida na proposta comercial. Fica configurável na
-# hospedagem, mas já nasce com os contatos oficiais usados nos documentos
-# da empresa para a prévia nunca aparecer incompleta.
-ORCAMENTO_TELEFONE = os.getenv(
-    "ORCAMENTO_TELEFONE", "(11) 95388-7201",
+# ============================================================
+# CONTATO DA EMPRESA
+# ============================================================
+# UM LUGAR SÓ, e é o mesmo contato que o site inteiro mostra.
+#
+# A proposta saía com o telefone pessoal de quem montou o sistema. Isso
+# não é detalhe de configuração: um documento comercial com o número
+# errado manda o cliente ligar para a pessoa errada, e quem responder não
+# vai saber de qual proposta se trata. O padrão aqui é o número que está
+# no rodapé, no botão de WhatsApp e em cada página do site.
+#
+# Tudo é sobrescrevível por variável de ambiente, que é como se muda um
+# contato sem mexer em código.
+EMPRESA_TELEFONE = os.getenv("EMPRESA_TELEFONE", "(11) 96056-3135").strip()
+EMPRESA_WHATSAPP = os.getenv("EMPRESA_WHATSAPP", "5511960563135").strip()
+EMPRESA_EMAIL = os.getenv("EMPRESA_EMAIL", "contato@lazersport.com").strip()
+EMPRESA_INSTAGRAM = os.getenv(
+    "EMPRESA_INSTAGRAM", "@lazersportbrinquedos",
 ).strip()
-ORCAMENTO_EMAIL = os.getenv(
-    "ORCAMENTO_EMAIL", "contato@lazersport.com.br",
-).strip()
-ORCAMENTO_INSTAGRAM = os.getenv(
-    "ORCAMENTO_INSTAGRAM", "@lazersportbrinquedos",
-).strip()
+
+# Identidade exibida na proposta comercial. Nasce do contato da empresa
+# acima; as variáveis ORCAMENTO_* continuam existindo para quem já as
+# tinha configuradas na hospedagem.
+ORCAMENTO_TELEFONE = os.getenv("ORCAMENTO_TELEFONE", EMPRESA_TELEFONE).strip()
+ORCAMENTO_EMAIL = os.getenv("ORCAMENTO_EMAIL", EMPRESA_EMAIL).strip()
+ORCAMENTO_INSTAGRAM = os.getenv("ORCAMENTO_INSTAGRAM", EMPRESA_INSTAGRAM).strip()
+ORCAMENTO_WHATSAPP = os.getenv("ORCAMENTO_WHATSAPP", EMPRESA_WHATSAPP).strip()
 
 
 # ============================================================
@@ -556,9 +571,12 @@ if EMAIL_REMETENTE_NOME and "<" not in DEFAULT_FROM_EMAIL:
 # Para onde vai a resposta do cliente. Muitos provedores exigem que o
 # remetente seja a própria conta autenticada no SMTP -- então o jeito
 # certo de receber respostas no seu e-mail é este campo, não o "de".
+# Vazio, a resposta do cliente caía na conta técnica do SMTP e ninguém
+# via. O contato da empresa é o destino natural, e continua trocável por
+# variável de ambiente.
 EMAIL_RESPOSTA = os.getenv(
     "EMAIL_RESPOSTA",
-    os.getenv("EMAIL_CONTATO", ""),
+    os.getenv("EMAIL_CONTATO", "") or EMPRESA_EMAIL,
 ).strip()
 # Timeout curto: numa função serverless, é melhor a notificação falhar
 # rápido (e cair no aviso "não foi possível avisar") do que travar a

@@ -6,6 +6,7 @@ liga `is_interno` e a view devolve um desvio para a loja, que é o mesmo
 que o usuário veria.
 """
 
+import json
 from datetime import timedelta
 from decimal import Decimal
 from urllib.parse import urlsplit
@@ -718,3 +719,70 @@ class RegistroDeEnvioTests(TestCase):
         self.orcamento.refresh_from_db()
         self.assertTrue(dados["whatsapp_url"].startswith("https://wa.me/5511999998888"))
         self.assertIn(self.orcamento.token, dados["whatsapp_url"])
+
+
+class DescontoInteligenteTests(TestCase):
+    """Desconto em reais ou em porcentagem, sem calculadora à parte.
+
+    No telefone o cliente pede "dá dez por cento?". Antes, quem montava a
+    proposta abria a calculadora, fazia a conta do subtotal e digitava o
+    resultado -- e errava quando um item mudava depois.
+
+    O QUE NÃO PODE MUDAR: o campo que chega ao servidor continua sendo
+    reais. A porcentagem é jeito de digitar, não jeito de guardar; a
+    proposta que o cliente lê mostra um valor, não uma conta.
+    """
+
+    URL = "/orcamentos/"
+
+    def setUp(self):
+        self.gestor = User.objects.create_superuser(
+            username="gestor", password="senha-segura", email="g@example.com",
+        )
+        self.client.force_login(self.gestor)
+
+    def tela(self):
+        return self.client.get(self.URL, HTTP_HOST="interno.testserver").content.decode()
+
+    def test_o_campo_enviado_ao_servidor_continua_em_reais(self):
+        html = self.tela()
+
+        # O campo visível perdeu o `name`: quem viaja é o escondido, já
+        # convertido para reais pelo navegador.
+        self.assertIn('id="orcamentoDescontoValor"', html)
+        self.assertIn('type="hidden" id="orcamentoDescontoValor" name="desconto"', html)
+
+    def test_a_tela_oferece_troca_de_unidade_e_atalhos(self):
+        html = self.tela()
+
+        self.assertIn('id="descontoUnidade"', html)
+        self.assertIn('data-desconto-pct="10"', html)
+        self.assertIn('id="descontoRedondo"', html)
+        self.assertIn('id="descontoZerar"', html)
+
+    def test_o_servidor_aceita_o_desconto_convertido(self):
+        """Dez por cento de 1.287,40 chega como 128,74 e é assim que fica
+        guardado -- é o número que o cliente vê na proposta."""
+        resposta = self.client.post(
+            self.URL,
+            {
+                "action": "save",
+                "id": "",
+                "nome_cliente": "Buffet Estrela Azul",
+                "status": Orcamento.Status.RASCUNHO,
+                "frete": "150,00",
+                "desconto": "128,74",
+                "itens": json.dumps([{
+                    "descricao": "Tobogã inflável",
+                    "quantidade": 1,
+                    "valor_unitario": "1287.40",
+                }]),
+            },
+            HTTP_HOST="interno.testserver",
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(resposta.json()["status"], "sucesso", resposta.json())
+        orcamento = Orcamento.objects.get(nome_cliente="Buffet Estrela Azul")
+        self.assertEqual(orcamento.desconto, Decimal("128.74"))
+        self.assertEqual(orcamento.total, Decimal("1308.66"))

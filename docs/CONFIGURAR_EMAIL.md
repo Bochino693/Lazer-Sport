@@ -73,6 +73,37 @@ Esta é a opção que chega melhor: e-mail no próprio domínio, com SPF e
 DKIM do provedor, quase não cai em spam. O Gmail comum funciona, mas
 entrega pior porque o domínio de envio não é o do site.
 
+## O contato que aparece na proposta
+
+Este é outro assunto — não é por onde o e-mail **sai**, é o que o cliente
+**lê** no documento e para onde ele liga.
+
+```
+EMPRESA_TELEFONE=(11) 96056-3135
+EMPRESA_WHATSAPP=5511960563135
+EMPRESA_EMAIL=contato@lazersport.com
+EMPRESA_INSTAGRAM=@lazersportbrinquedos
+```
+
+Sem essas variáveis o sistema já usa esses mesmos valores — são o telefone
+e o e-mail que estão no rodapé do site e no botão de WhatsApp de todas as
+páginas. Defina só o que quiser mudar.
+
+Três coisas que decorrem daí:
+
+* a proposta mostra esse telefone, e ele abre a conversa no WhatsApp da
+  empresa com a dúvida já escrita;
+* `EMAIL_RESPOSTA`, se não for definido, passa a ser o `EMPRESA_EMAIL` —
+  antes ficava vazio e a resposta do cliente caía na conta técnica do SMTP,
+  onde ninguém olhava;
+* quem precisar de um contato diferente **só na proposta** pode usar
+  `ORCAMENTO_TELEFONE`, `ORCAMENTO_EMAIL`, `ORCAMENTO_WHATSAPP` e
+  `ORCAMENTO_INSTAGRAM`, que ganham do contato geral.
+
+> Se a proposta ainda mostrar um telefone antigo depois de configurar,
+> ele está no cadastro **Endereço da empresa** do painel — a configuração
+> ganha dele, mas o cadastro é o que preenche quando ela está vazia.
+
 ## Conferir se funcionou
 
 No servidor (Render Shell) ou na sua máquina:

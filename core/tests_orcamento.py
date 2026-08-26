@@ -16,7 +16,7 @@ from datetime import timedelta
 from decimal import Decimal
 from unittest.mock import patch
 
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
@@ -91,6 +91,45 @@ class OrcamentoPublicoTests(TestCase):
         # A prévia não desfaz o noindex: quem não tem o link continua
         # sem chegar à proposta por busca.
         self.assertIn('content="noindex, nofollow"', html)
+
+    def test_o_contato_do_documento_e_o_da_empresa(self):
+        """A proposta leva o contato da EMPRESA, nunca o pessoal.
+
+        Um documento comercial com o telefone errado manda o cliente
+        ligar para a pessoa errada, e quem atende não sabe de qual
+        proposta se trata. O padrão é o mesmo número e o mesmo e-mail que
+        o site inteiro mostra; a hospedagem pode trocar por variável de
+        ambiente.
+        """
+        from django.conf import settings
+
+        resposta = self.client.get(self.url())
+        html = resposta.content.decode()
+
+        self.assertEqual(settings.ORCAMENTO_TELEFONE, settings.EMPRESA_TELEFONE)
+        self.assertEqual(settings.ORCAMENTO_EMAIL, settings.EMPRESA_EMAIL)
+        self.assertIn(settings.EMPRESA_TELEFONE, html)
+        self.assertIn(settings.EMPRESA_EMAIL, html)
+        # E a dúvida vira conversa no WhatsApp da empresa.
+        self.assertIn(f"wa.me/{settings.EMPRESA_WHATSAPP}", html)
+
+    @override_settings(
+        ORCAMENTO_TELEFONE="(11) 4000-1000",
+        ORCAMENTO_EMAIL="vendas@lazersport.com",
+    )
+    def test_cadastro_antigo_nao_sobrepoe_o_contato_configurado(self):
+        """Era o contrário: um telefone gravado no cadastro de endereço
+        ganhava da configuração, e a proposta saía com ele."""
+        from core.models import EnderecoEmpresa
+
+        EnderecoEmpresa.objects.create(
+            telefone="(11) 95388-7201", ativo=True,
+        )
+
+        html = self.client.get(self.url()).content.decode()
+
+        self.assertIn("(11) 4000-1000", html)
+        self.assertNotIn("95388-7201", html)
 
     def test_documento_mostra_cliente_pagamento_envio_e_decisao(self):
         cliente = Cliente.objects.create(

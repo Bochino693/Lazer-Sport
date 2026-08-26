@@ -140,18 +140,51 @@
         .replace(/(\d{4})(\d)/, "$1-$2");
     },
 
-    /* Enquanto digita: tira letra e símbolo, deixa uma vírgula só. O
-       arredondamento para duas casas fica para o blur -- formatar no meio
-       da digitação empurra o cursor e faz a pessoa errar o número. */
+    /* DINHEIRO SE DIGITA DA DIREITA PARA A ESQUERDA.
+     *
+     * É como toda maquininha e todo caixa funcionam, e é o que a equipe
+     * espera: 1 vira 0,01; 10 vira 0,10; 100 vira 1,00; 123456 vira
+     * 1.234,56. Só dígitos importam -- vírgula, ponto e letra são
+     * ignorados na digitação, então não há como escrever "80,0,0" nem
+     * mandar letra para o servidor.
+     *
+     * A versão anterior deixava o campo cru até sair dele. Quem digitava
+     * "80" via "80" e só descobria no blur que virou "80,00"; quem
+     * digitava "8,5" via "8,5" e mandava oito e meio achando que eram
+     * oito e cinquenta. Formatando a cada tecla, o valor na tela é
+     * sempre o valor real. */
     moeda: function (valor) {
-      var limpo = String(valor || "").replace(/[^\d.,]/g, "");
-      var virgula = limpo.lastIndexOf(",");
-      if (virgula >= 0) {
-        limpo = limpo.slice(0, virgula).replace(/,/g, "") + limpo.slice(virgula);
-      }
-      return limpo.slice(0, 18);
+      var centavos = digitos(valor, 15);
+      if (!centavos) return "";
+
+      // Zeros à esquerda não têm valor: "007" é 0,07, não 007,00.
+      centavos = centavos.replace(/^0+(?=\d{3})/, "");
+      while (centavos.length < 3) centavos = "0" + centavos;
+
+      var inteiros = centavos.slice(0, -2);
+      var resto = centavos.slice(-2);
+      return agrupar(inteiros) + "," + resto;
+    },
+
+    /* Metragem: mesma digitação da direita para a esquerda, em metros.
+     * 350 vira 3,50 -- e não 350 metros de brinquedo. */
+    medida: function (valor) {
+      return mascaras.moeda(valor);
+    },
+
+    /* Percentual de 0 a 100, com duas casas: 5 vira 0,05 e 1000 vira
+     * 10,00. Passar de cem por cento não é desconto, é engano. */
+    percentual: function (valor) {
+      var texto = mascaras.moeda(valor);
+      if (!texto) return "";
+      return numeroMoeda(texto) > 100 ? "100,00" : texto;
     }
   };
+
+  /* Ponto de milhar, que é o que separa "1.234,56" de "123456". */
+  function agrupar(inteiros) {
+    return inteiros.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  }
 
   function numeroMoeda(valor) {
     var limpo = String(valor || "").replace(/[^\d.,]/g, "");
@@ -188,6 +221,18 @@
    * aqui conserta os dois de uma vez, porque toda tela do painel enche
    * modal por esta função.
    */
+  /* Os tipos que se digitam da direita para a esquerda. Um valor que já
+   * existe (vindo do servidor, ou preenchido por JavaScript) é um NÚMERO,
+   * não uma sequência de teclas: "80" ali significa oitenta reais, e
+   * passá-lo pela máscara de digitação o transformaria em 0,80. Por isso
+   * valor existente entra por `moedaFinal`, e só o que a pessoa digita
+   * passa pela máscara. */
+  var TIPOS_NUMERICOS = ["moeda", "medida", "percentual"];
+
+  function ehNumerico(tipo) {
+    return TIPOS_NUMERICOS.indexOf(tipo) >= 0;
+  }
+
   Painel.valor = function (id, v) {
     var el = document.getElementById(id);
     if (!el) return;
@@ -200,40 +245,58 @@
       return;
     }
 
-    if (tipo === "moeda") el.value = moedaFinal(bruto) || bruto;
+    if (ehNumerico(tipo)) el.value = moedaFinal(bruto) || bruto;
     else if (tipo) el.value = Painel.mascarar(tipo, bruto);
     else el.value = bruto;
+
+    if (el.tagName === "TEXTAREA" && Painel.acomodarTextos) {
+      Painel.acomodarTextos(el.parentNode || document);
+    }
   };
 
   Painel.aplicarMascaras = function (raiz) {
     raiz = raiz || document;
 
     raiz.querySelectorAll("[data-mascara]").forEach(function (campo) {
+      var tipo = campo.dataset.mascara;
+
+      /* Valor que já estava no campo é número, não digitação. */
+      function normalizarExistente() {
+        if (!campo.value) return;
+        campo.value = ehNumerico(tipo)
+          ? (moedaFinal(campo.value) || campo.value)
+          : Painel.mascarar(tipo, campo.value);
+      }
+
       if (campo.dataset.mascaraLigada === "1") {
         /* Já ligado, mas o valor pode ter sido trocado por JavaScript
            desde então: reformata e sai. */
-        if (campo.value) campo.value = Painel.mascarar(campo.dataset.mascara, campo.value);
+        normalizarExistente();
         return;
       }
 
       campo.dataset.mascaraLigada = "1";
-      var tipo = campo.dataset.mascara;
 
-      function formatarEntrada() {
+      campo.addEventListener("input", function () {
         campo.value = Painel.mascarar(tipo, campo.value);
-      }
+        /* O cursor vai para o fim: em campo que se preenche da direita
+           para a esquerda é onde a próxima tecla entra. */
+        if (ehNumerico(tipo) && campo.setSelectionRange) {
+          try {
+            campo.setSelectionRange(campo.value.length, campo.value.length);
+          } catch (e) { /* type=email e afins não aceitam seleção */ }
+        }
+      });
 
-      campo.addEventListener("input", formatarEntrada);
-
-      if (tipo === "moeda") {
-        /* Ao sair do campo o número ganha as duas casas: "80" vira
-           "80,00" e "1234,5" vira "1.234,50". */
+      if (ehNumerico(tipo)) {
+        /* Colar "1234.5" ou "R$ 80" continua funcionando: ao sair do
+           campo o texto vira número de verdade. */
         campo.addEventListener("blur", function () {
-          campo.value = moedaFinal(campo.value);
+          if (campo.value) campo.value = moedaFinal(campo.value) || campo.value;
         });
       }
 
-      formatarEntrada();
+      normalizarExistente();
     });
   };
 
@@ -465,8 +528,113 @@
     });
   };
 
+  /* ==================================================================
+     A JANELA CABE NA TELA -- SEMPRE, INCLUSIVE COM O TECLADO ABERTO.
+
+     Este é o bug que mais atrapalhou o dia a dia: no tablet, ao tocar
+     num campo, o teclado sobe e cobre a parte de baixo da tela. Só que
+     `100dvh` NÃO enxerga o teclado -- para o CSS a janela continua com a
+     altura inteira, e "Salvar" e "Cancelar" ficam atrás do teclado, sem
+     rolagem que os alcance. A pessoa digita e não tem como salvar.
+
+     Quem enxerga o teclado é o `visualViewport`. Copiamos a altura dele
+     para `--ls-vh` e o CSS usa essa medida no lugar de `100dvh`: quando
+     o teclado sobe, a janela encolhe junto e o rodapé continua visível.
+     ================================================================== */
+  function medirTela() {
+    var vv = global.visualViewport;
+    var altura = vv ? vv.height : global.innerHeight;
+    document.documentElement.style.setProperty("--ls-vh", Math.round(altura) + "px");
+  }
+
+  function ligarMedidaDeTela() {
+    medirTela();
+    if (global.visualViewport) {
+      global.visualViewport.addEventListener("resize", medirTela);
+      global.visualViewport.addEventListener("scroll", medirTela);
+    }
+    global.addEventListener("resize", medirTela);
+    global.addEventListener("orientationchange", function () {
+      setTimeout(medirTela, 220);
+    });
+  }
+
+  /* Toda janela do painel tem a mesma estrutura: cabeçalho fixo, corpo
+     que rola, rodapé fixo. Marcar isso aqui, e não em cada template,
+     é o que garante que a próxima janela nasça certa -- metade delas
+     estava sem a marca e dependia de sorte para o rodapé aparecer. */
+  function normalizarJanela(modal) {
+    var dialogo = modal.querySelector(".modal-dialog");
+    if (!dialogo) return;
+    dialogo.classList.add("modal-dialog-scrollable", "modal-dialog-centered");
+  }
+
+  /* Campo focado atrás do teclado: o navegador rola a PÁGINA, que no
+     modal não rola nada. Rolamos o corpo da janela, que é quem rola. */
+  function trazerCampoParaVista(campo) {
+    var corpo = campo.closest(".modal-body");
+    if (!corpo) return;
+
+    var c = corpo.getBoundingClientRect();
+    var e = campo.getBoundingClientRect();
+    if (e.top >= c.top + 8 && e.bottom <= c.bottom - 8) return;
+
+    corpo.scrollTop += e.top - c.top - (c.height - e.height) / 2;
+  }
+
+  /* ==================================================================
+     ESCREVER SEM APERTO.
+
+     Campo de observação com três linhas fixas obriga a rolar por dentro
+     de uma caixinha para reler o que se escreveu -- no tablet, com o
+     teclado ocupando metade da tela, é quase impossível conferir o
+     texto antes de salvar. O campo cresce com o que se digita, até um
+     limite, e aí sim começa a rolar.
+     ================================================================== */
+  var ALTURA_MAXIMA_TEXTO = 320;
+
+  function acomodarTexto(campo) {
+    campo.style.height = "auto";
+    var preciso = campo.scrollHeight + 2;
+    campo.style.height = Math.min(preciso, ALTURA_MAXIMA_TEXTO) + "px";
+    campo.style.overflowY = preciso > ALTURA_MAXIMA_TEXTO ? "auto" : "hidden";
+  }
+
+  Painel.acomodarTextos = function (raiz) {
+    (raiz || document).querySelectorAll("textarea").forEach(function (campo) {
+      if (campo.dataset.crescer !== "1") {
+        campo.dataset.crescer = "1";
+        campo.addEventListener("input", function () { acomodarTexto(campo); });
+      }
+      acomodarTexto(campo);
+    });
+  };
+
   global.Painel = Painel;
   document.addEventListener("DOMContentLoaded", function () {
     Painel.aplicarMascaras(document);
+    Painel.acomodarTextos(document);
+    ligarMedidaDeTela();
+    document.querySelectorAll(".modal").forEach(normalizarJanela);
+  });
+
+  /* Janelas criadas depois (ou trocadas por JavaScript) entram no mesmo
+     contrato no momento em que aparecem. */
+  document.addEventListener("show.bs.modal", function (evento) {
+    normalizarJanela(evento.target);
+    medirTela();
+  });
+
+  /* A altura só pode ser medida com a janela na tela: `scrollHeight` de
+     um campo escondido é zero, e o campo abria espremido. */
+  document.addEventListener("shown.bs.modal", function (evento) {
+    Painel.acomodarTextos(evento.target);
+  });
+
+  document.addEventListener("focusin", function (evento) {
+    var campo = evento.target;
+    if (!campo.matches || !campo.matches("input, select, textarea")) return;
+    /* Espera o teclado terminar de subir antes de medir. */
+    setTimeout(function () { trazerCampoParaVista(campo); }, 320);
   });
 })(window);

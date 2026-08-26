@@ -275,14 +275,39 @@
             </div>
           </div>
 
+          {% comment %}
+            DESCONTO EM REAIS OU EM PORCENTAGEM.
+
+            No telefone o cliente pede "dá dez por cento?", e quem monta a
+            proposta tinha de abrir a calculadora, fazer a conta do
+            subtotal e digitar o resultado -- errando quando um item
+            mudava depois. Aqui o botão troca a unidade: em "%", o valor
+            digitado acompanha o subtotal sozinho. O campo enviado ao
+            servidor continua sendo reais, então nada muda do outro lado.
+          {% endcomment %}
           <div class="col-12 col-md-4">
             <label class="form-label" for="orcamentoDesconto">Desconto</label>
             <div class="input-group">
-              <span class="input-group-text">R$</span>
-              <input class="form-control ls-recalcula" id="orcamentoDesconto" name="desconto"
+              <button class="btn btn-outline-secondary ls-unidade" type="button"
+                      id="descontoUnidade" data-modo="valor"
+                      title="Trocar entre reais e porcentagem"
+                      aria-label="Trocar entre reais e porcentagem">R$</button>
+              <input class="form-control ls-recalcula" id="orcamentoDesconto"
                      inputmode="decimal" data-mascara="moeda" autocomplete="off"
                      placeholder="0,00">
             </div>
+            <input type="hidden" id="orcamentoDescontoValor" name="desconto">
+            <div class="ls-desconto-atalhos">
+              <button type="button" class="ls-chip" data-desconto-pct="5">5%</button>
+              <button type="button" class="ls-chip" data-desconto-pct="10">10%</button>
+              <button type="button" class="ls-chip" data-desconto-pct="15">15%</button>
+              <button type="button" class="ls-chip" id="descontoRedondo"
+                      title="Baixar o total até a dezena mais próxima">
+                <i class="bi bi-magic"></i> Arredondar
+              </button>
+              <button type="button" class="ls-chip ls-chip-zerar" id="descontoZerar">Zerar</button>
+            </div>
+            <span class="form-text" id="descontoExplicacao"></span>
           </div>
 
           <div class="col-12 col-md-6">
@@ -1161,6 +1186,130 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 
   /* ------------------------------------------------------------------
+     Desconto: em reais ou em porcentagem do subtotal
+
+     Quem fecha a venda pensa em "dez por cento", não em "cento e vinte e
+     oito reais". O botão da esquerda troca a unidade; o campo escondido
+     `desconto` continua saindo em reais, porque é o que o servidor
+     guarda e o que a proposta mostra ao cliente.
+     ------------------------------------------------------------------ */
+  var campoDesconto = document.getElementById("orcamentoDesconto");
+  var descontoEmReais = document.getElementById("orcamentoDescontoValor");
+  var botaoUnidade = document.getElementById("descontoUnidade");
+  var explicacao = document.getElementById("descontoExplicacao");
+
+  function modoPorcentagem() {
+    return botaoUnidade.dataset.modo === "porcentagem";
+  }
+
+  function trocarUnidade(modo, manterValor) {
+    var subtotal = somaDosItens();
+    var reais = descontoAtual(subtotal);
+
+    botaoUnidade.dataset.modo = modo;
+    botaoUnidade.textContent = modo === "porcentagem" ? "%" : "R$";
+    campoDesconto.dataset.mascara = modo === "porcentagem" ? "percentual" : "moeda";
+    campoDesconto.placeholder = modo === "porcentagem" ? "0,00" : "0,00";
+
+    if (manterValor === false) return;
+
+    /* Trocar a unidade não muda o desconto, só como ele é escrito: dez
+       por cento de mil continua sendo cem reais nos dois modos. */
+    if (!reais) {
+      campoDesconto.value = "";       // sem desconto o campo fica vazio,
+      return;                          // não "0,00" pedindo para ser apagado
+    }
+
+    if (modo === "porcentagem") {
+      campoDesconto.value = subtotal > 0
+        ? Painel.mascarar("percentual", String(Math.round((reais / subtotal) * 10000)))
+        : "";
+    } else {
+      campoDesconto.value = moedaSimples(reais);
+    }
+  }
+
+  function somaDosItens() {
+    var subtotal = 0;
+    corpo.querySelectorAll("tr").forEach(function (linha) {
+      var quantidade = parseInt(linha.querySelector(".ls-item-quantidade").value, 10) || 0;
+      subtotal += quantidade * paraNumero(linha.querySelector(".ls-item-valor").value);
+    });
+    return subtotal;
+  }
+
+  function descontoAtual(subtotal) {
+    var digitado = paraNumero(campoDesconto.value);
+    if (!modoPorcentagem()) return digitado;
+    return Math.round(subtotal * (digitado / 100) * 100) / 100;
+  }
+
+  function moedaSimples(numero) {
+    return numero.toLocaleString("pt-BR", {
+      minimumFractionDigits: 2, maximumFractionDigits: 2
+    });
+  }
+
+  botaoUnidade.addEventListener("click", function () {
+    trocarUnidade(modoPorcentagem() ? "valor" : "porcentagem", true);
+    recalcular();
+    campoDesconto.focus();
+  });
+
+  document.querySelectorAll("[data-desconto-pct]").forEach(function (chip) {
+    chip.addEventListener("click", function () {
+      trocarUnidade("porcentagem", false);
+      campoDesconto.value = Painel.mascarar(
+        "percentual", String(Number(chip.dataset.descontoPct) * 100)
+      );
+      recalcular();
+    });
+  });
+
+  /* ARREDONDAR: o desconto que faz o total virar número redondo.
+     "R$ 1.287,40" vira "R$ 1.250,00" -- número que se fala no telefone e
+     se lembra depois de desligar.
+
+     O passo acompanha o tamanho da proposta: dezena numa venda pequena,
+     centena numa grande. Arredondar dez mil reais para a dezena seria
+     um desconto de dez reais, que ninguém percebe. */
+  function passoDeArredondamento(bruto) {
+    if (bruto < 1000) return 10;
+    if (bruto < 10000) return 50;
+    return 100;
+  }
+
+  document.getElementById("descontoRedondo").addEventListener("click", function () {
+    var subtotal = somaDosItens();
+    var frete = paraNumero(document.getElementById("orcamentoFrete").value);
+    var bruto = Math.round((subtotal + frete) * 100) / 100;
+    if (bruto <= 0) return;
+
+    trocarUnidade("valor", false);
+
+    var passo = passoDeArredondamento(bruto);
+    var alvo = Math.floor(bruto / passo) * passo;
+
+    /* Total já redondo não vira desconto: arredondar não é sinônimo de
+       "dar mais um pouco". Quem quer descer mais usa os atalhos de
+       porcentagem, que dizem exatamente quanto estão dando. */
+    if (alvo === bruto) {
+      campoDesconto.value = "";
+      recalcular();
+      explicacao.textContent = "O total já é redondo: R$ " + moedaSimples(bruto) + ".";
+      return;
+    }
+
+    campoDesconto.value = moedaSimples(bruto - alvo);
+    recalcular();
+  });
+
+  document.getElementById("descontoZerar").addEventListener("click", function () {
+    campoDesconto.value = "";
+    recalcular();
+  });
+
+  /* ------------------------------------------------------------------
      Totais
      ------------------------------------------------------------------ */
   function recalcular() {
@@ -1176,13 +1325,30 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     var frete = paraNumero(document.getElementById("orcamentoFrete").value);
-    var desconto = paraNumero(document.getElementById("orcamentoDesconto").value);
+    var desconto = Math.min(descontoAtual(subtotal), subtotal + frete);
     var total = Math.max(subtotal + frete - desconto, 0);
+
+    /* O servidor recebe reais, sempre -- inclusive quando a tela está em
+       porcentagem. */
+    descontoEmReais.value = desconto > 0 ? moedaSimples(desconto) : "";
 
     document.getElementById("resumoSubtotal").textContent = moeda(subtotal);
     document.getElementById("resumoFrete").textContent = moeda(frete);
     document.getElementById("resumoDesconto").textContent = "− " + moeda(desconto);
     document.getElementById("resumoTotal").textContent = moeda(total);
+
+    if (!desconto) {
+      explicacao.textContent = "";
+    } else if (modoPorcentagem()) {
+      explicacao.textContent =
+        paraNumero(campoDesconto.value) + "% do subtotal = " + moeda(desconto);
+    } else if (subtotal > 0) {
+      explicacao.textContent =
+        moeda(desconto) + " = " +
+        (Math.round((desconto / subtotal) * 1000) / 10) + "% do subtotal";
+    } else {
+      explicacao.textContent = "";
+    }
   }
 
   /* ------------------------------------------------------------------
@@ -1200,6 +1366,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
     form.reset();
     corpo.innerHTML = "";
+    trocarUnidade("valor", false);
+    campoDesconto.value = "";
+    explicacao.textContent = "";
     Painel.erro("orcamentoErro", "");
     Painel.valor("orcamentoId", orcamento ? orcamento.id : "");
 
@@ -1224,6 +1393,7 @@ document.addEventListener("DOMContentLoaded", function () {
       Painel.valor("orcamentoStatus", orcamento.status);
       Painel.valor("orcamentoValidade", orcamento.validade);
       Painel.valor("orcamentoFrete", orcamento.frete);
+      trocarUnidade("valor", false);
       Painel.valor("orcamentoDesconto", orcamento.desconto);
       Painel.valor("orcamentoPagamento", orcamento.forma_pagamento);
       Painel.valor("orcamentoEnvio", orcamento.forma_envio);

@@ -438,7 +438,7 @@ document.addEventListener("DOMContentLoaded", function () {
     var tr = document.createElement("tr");
     tr.innerHTML =
       '<td data-rotulo="Material"><select class="form-select form-select-sm ls-ficha-material">' + opcoesMaterial + '</select></td>' +
-      '<td data-rotulo="Por unidade"><input class="form-control form-control-sm text-end ls-ficha-quantidade" inputmode="decimal" value="1"></td>' +
+      '<td data-rotulo="Por unidade"><input class="form-control form-control-sm text-end ls-ficha-quantidade" inputmode="decimal" data-mascara="medida" value="1,00"></td>' +
       '<td data-rotulo="Em estoque" class="text-end"><span class="ls-number ls-ficha-saldo">—</span></td>' +
       '<td data-rotulo="Dá para" class="text-end"><span class="ls-number ls-ficha-limite">—</span></td>' +
       '<td data-rotulo="Observação"><input class="form-control form-control-sm ls-ficha-observacao" maxlength="150" placeholder="Opcional"></td>' +
@@ -451,6 +451,10 @@ document.addEventListener("DOMContentLoaded", function () {
       tr.querySelector(".ls-ficha-quantidade").value = item.quantidade || "1";
       tr.querySelector(".ls-ficha-observacao").value = item.observacao || "";
     }
+
+    /* Linha criada agora precisa da máscara ligada -- sem isto a
+       quantidade por unidade voltava a aceitar letra e ponto. */
+    Painel.aplicarMascaras(tr);
 
     recalcularFicha();
     return tr;

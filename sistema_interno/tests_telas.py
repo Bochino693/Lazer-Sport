@@ -256,3 +256,73 @@ class SemDependenciaDeCDNTests(TestCase):
             [],
             "Arquivo externo no painel interno:\n" + "\n".join(problemas),
         )
+
+
+class JanelasDoPainelTests(TestCase):
+    """A estrutura das janelas -- o que decide se dá para salvar.
+
+    Duas falhas de tablet que teste de regra de negócio não pega:
+
+      * "Salvar" e "Cancelar" atrás do teclado. `100dvh` não enxerga o
+        teclado, então a janela continua com a altura inteira e o rodapé
+        fica fora da área visível, sem rolagem que o alcance. Quem enxerga
+        é o `visualViewport`, copiado para `--ls-vh`;
+      * janela sem o contrato "cabeçalho fixo / corpo que rola / rodapé
+        fixo". Metade dos templates não trazia a marca e dependia de o
+        conteúdo ser curto o bastante.
+
+    Estes testes olham o que é servido ao navegador: a folha de estilo e o
+    painel.js. Não substituem abrir no aparelho, mas impedem a volta
+    silenciosa do `100dvh` e do rodapé solto.
+    """
+
+    def ler(self, caminho):
+        from pathlib import Path
+        from django.conf import settings
+
+        base = Path(settings.BASE_DIR) / "sistema_interno" / "static" / "interno"
+        return (base / caminho).read_text(encoding="utf-8")
+
+    def test_altura_das_janelas_vem_do_visualviewport(self):
+        js = self.ler("painel.js")
+
+        self.assertIn("visualViewport", js)
+        self.assertIn("--ls-vh", js)
+
+    def test_folha_de_estilo_nao_usa_mais_dvh_para_medir_janela(self):
+        """`100dvh` é o que ignora o teclado. Só pode sobrar como reserva
+        na declaração da própria variável."""
+        import re
+
+        # Comentário pode citar o problema pelo nome sem ser o problema.
+        css = re.sub(r"/\*.*?\*/", "", self.ler("interno_modern.css"), flags=re.S)
+
+        for linha in css.splitlines():
+            if "100dvh" not in linha:
+                continue
+            self.assertIn(
+                "--ls-vh:100dvh", linha.replace(" ", ""),
+                f"100dvh fora da reserva da variável: {linha.strip()}",
+            )
+
+    def test_toda_janela_recebe_cabecalho_e_rodape_fixos(self):
+        js = self.ler("painel.js")
+
+        self.assertIn("modal-dialog-scrollable", js)
+        self.assertIn("show.bs.modal", js)
+
+    def test_dinheiro_se_digita_da_direita_para_a_esquerda(self):
+        """0,01 -> 0,10 -> 1,00, como em qualquer maquininha."""
+        js = self.ler("painel.js")
+
+        # A máscara trabalha em centavos: o que garante a progressão é
+        # completar até três dígitos antes de cortar as duas casas.
+        self.assertIn('while (centavos.length < 3) centavos = "0" + centavos;', js)
+        self.assertIn("medida:", js)
+        self.assertIn("percentual:", js)
+
+    def test_campo_de_texto_cresce_com_o_que_se_escreve(self):
+        js = self.ler("painel.js")
+
+        self.assertIn("acomodarTextos", js)
+        self.assertIn("shown.bs.modal", js)
