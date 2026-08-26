@@ -1,0 +1,166 @@
+{% extends "gestao/base_adm.html" %}
+
+{% block title %}Curtidas e desejos{% endblock %}
+{% block page_heading %}Curtidas e Lista de Desejos{% endblock %}
+
+{% block content %}
+<style>
+.eng-page{color:#dce7f5}
+.eng-hero{padding:26px;border:1px solid rgba(96,165,250,.18);border-radius:24px;background:radial-gradient(circle at 88% 4%,rgba(139,92,246,.24),transparent 17rem),linear-gradient(135deg,#17243a,#101a2d 60%,#111f37)}
+.eng-hero small{display:block;margin-bottom:8px;color:#c4b5fd;font-weight:900;letter-spacing:.12em;text-transform:uppercase;font-size:.62rem}
+.eng-hero h2{margin:0;color:#fff;font-size:clamp(1.5rem,3vw,2.1rem)}
+.eng-hero p{max-width:760px;margin:9px 0 0;color:#aebdd0;font-size:.8rem;line-height:1.6}
+.eng-periodo{margin:18px 0;display:flex;gap:8px;flex-wrap:wrap}
+.eng-periodo a{padding:10px 16px;border:1px solid rgba(148,163,184,.14);border-radius:999px;color:#94a3b8;background:#111b2e;font-size:.72rem;font-weight:800;text-decoration:none}
+.eng-periodo a.on{border-color:rgba(96,165,250,.35);color:#bfdbfe;background:rgba(37,99,235,.16)}
+.eng-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.ekpi{padding:16px;border:1px solid rgba(148,163,184,.14);border-radius:16px;background:linear-gradient(145deg,#17243a,#111b2e)}
+.ekpi strong{display:block;color:#fff;font-size:1.45rem}.ekpi span{display:block;margin-top:5px;color:#899bb0;font-size:.66rem}
+.eng-colunas{margin-top:16px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.eng-painel{overflow:hidden;border:1px solid rgba(148,163,184,.14);border-radius:18px;background:#111b2e}
+.eng-painel header{padding:15px 17px;border-bottom:1px solid rgba(148,163,184,.1);background:#0f192a}
+.eng-painel header h3{margin:0;color:#fff;font-size:.86rem}
+.eng-painel header p{margin:5px 0 0;color:#75879c;font-size:.66rem}
+.eng-lista{padding:8px 0;display:grid}
+.eng-item{padding:11px 17px;display:flex;align-items:center;gap:12px;border-top:1px solid rgba(148,163,184,.06)}
+.eng-item:first-child{border-top:0}
+.eng-pos{width:26px;height:26px;flex:0 0 26px;display:grid;place-items:center;border-radius:9px;color:#bfdbfe;background:rgba(59,130,246,.14);font-size:.66rem;font-weight:900}
+.eng-nome{flex:1;color:#cbd5e1;font-size:.74rem;overflow-wrap:anywhere}
+.eng-total{color:#fff;font-size:.8rem;font-weight:900}
+.eng-vazio{padding:34px 17px;color:#64748b;text-align:center;font-size:.72rem}
+.eng-tabela{margin-top:16px;overflow:hidden;border:1px solid rgba(148,163,184,.14);border-radius:18px;background:#111b2e}
+.eng-tabela .rolagem{overflow-x:auto}
+.eng-tabela table{width:100%;border-collapse:collapse}
+.eng-tabela th{padding:12px 13px;color:#718096;background:rgba(11,18,32,.45);font-size:.61rem;text-transform:uppercase;text-align:left}
+.eng-tabela td{padding:12px 13px;border-top:1px solid rgba(148,163,184,.08);color:#cbd5e1;font-size:.71rem}
+.selo{padding:4px 8px;border-radius:999px;font-size:.57rem;font-weight:850}
+.selo.curtida{color:#fca5a5;background:rgba(239,68,68,.12)}
+.selo.desejo{color:#93c5fd;background:rgba(59,130,246,.12)}
+.selo.app{color:#c4b5fd;background:rgba(139,92,246,.12)}
+.selo.site{color:#94a3b8;background:rgba(148,163,184,.12)}
+@media(max-width:1000px){.eng-kpis{grid-template-columns:repeat(2,1fr)}.eng-colunas{grid-template-columns:1fr}}
+</style>
+
+<div class="eng-page">
+  <section class="eng-hero">
+    <small>Interesse do público</small>
+    <h2>Curtidas e lista de desejos</h2>
+    <p>O que o público marca no site e no aplicativo, com ou sem cadastro. Sem conta vale um por aparelho; com conta, um por conta — por isso o número aqui é interesse real, não clique repetido.</p>
+  </section>
+
+  <nav class="eng-periodo" aria-label="Período">
+    <a href="?periodo=7dias" class="{% if periodo == '7dias' %}on{% endif %}">7 dias</a>
+    <a href="?periodo=30dias" class="{% if periodo == '30dias' %}on{% endif %}">30 dias</a>
+    <a href="?periodo=90dias" class="{% if periodo == '90dias' %}on{% endif %}">90 dias</a>
+    <a href="?periodo=geral" class="{% if periodo == 'geral' %}on{% endif %}">Desde o início</a>
+  </nav>
+
+  <section class="eng-kpis">
+    <div class="ekpi"><strong>{{ total_curtidas }}</strong><span>Curtidas</span></div>
+    <div class="ekpi"><strong>{{ total_desejos }}</strong><span>Itens em listas de desejos</span></div>
+    <div class="ekpi"><strong>{{ total_pelo_app }}</strong><span>Marcações pelo aplicativo</span></div>
+    <div class="ekpi"><strong>{{ total_pelo_site }}</strong><span>Marcações pelo site</span></div>
+    <div class="ekpi"><strong>{{ total_com_conta }}</strong><span>De clientes com conta</span></div>
+    <div class="ekpi"><strong>{{ total_sem_conta }}</strong><span>De visitantes sem conta</span></div>
+    <div class="ekpi"><strong>{{ aparelhos }}</strong><span>Aparelhos diferentes</span></div>
+    <div class="ekpi"><strong>{{ total_curtidas|add:total_desejos }}</strong><span>Marcações no período</span></div>
+  </section>
+
+  <div class="eng-colunas">
+    <section class="eng-painel">
+      <header><h3>Brinquedos mais curtidos</h3><p>Ordem de preferência declarada pelo público.</p></header>
+      <div class="eng-lista">
+        {% for item in brinquedos_curtidos %}
+          <div class="eng-item">
+            <span class="eng-pos">{{ forloop.counter }}</span>
+            <span class="eng-nome">{{ item.nome }}</span>
+            <span class="eng-total">{{ item.total }}</span>
+          </div>
+        {% empty %}
+          <p class="eng-vazio">Nenhuma curtida em brinquedos neste período.</p>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="eng-painel">
+      <header><h3>Brinquedos mais guardados</h3><p>Estão na lista de desejos: intenção de compra.</p></header>
+      <div class="eng-lista">
+        {% for item in brinquedos_desejados %}
+          <div class="eng-item">
+            <span class="eng-pos">{{ forloop.counter }}</span>
+            <span class="eng-nome">{{ item.nome }}</span>
+            <span class="eng-total">{{ item.total }}</span>
+          </div>
+        {% empty %}
+          <p class="eng-vazio">Nenhum brinquedo guardado neste período.</p>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="eng-painel">
+      <header><h3>Peças mais curtidas</h3><p>Bom indicador para estoque de reposição.</p></header>
+      <div class="eng-lista">
+        {% for item in pecas_curtidas %}
+          <div class="eng-item">
+            <span class="eng-pos">{{ forloop.counter }}</span>
+            <span class="eng-nome">{{ item.nome }}</span>
+            <span class="eng-total">{{ item.total }}</span>
+          </div>
+        {% empty %}
+          <p class="eng-vazio">Nenhuma curtida em peças neste período.</p>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="eng-painel">
+      <header><h3>Peças mais guardadas</h3><p>Quem guardou pretende comprar depois.</p></header>
+      <div class="eng-lista">
+        {% for item in pecas_desejadas %}
+          <div class="eng-item">
+            <span class="eng-pos">{{ forloop.counter }}</span>
+            <span class="eng-nome">{{ item.nome }}</span>
+            <span class="eng-total">{{ item.total }}</span>
+          </div>
+        {% empty %}
+          <p class="eng-vazio">Nenhuma peça guardada neste período.</p>
+        {% endfor %}
+      </div>
+    </section>
+  </div>
+
+  <section class="eng-tabela">
+    <div class="rolagem">
+      <table>
+        <thead>
+          <tr>
+            <th>Quando</th>
+            <th>O que</th>
+            <th>Produto</th>
+            <th>Quem</th>
+            <th>Origem</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in ultimos %}
+            <tr>
+              <td>{{ item.criacao|date:"d/m/Y H:i" }}</td>
+              <td><span class="selo {{ item.tipo }}">{{ item.get_tipo_display }}</span></td>
+              <td>{{ item.nome_produto }}</td>
+              <td>
+                {% if item.usuario %}
+                  {{ item.usuario.get_full_name|default:item.usuario.username }}
+                {% else %}
+                  Visitante · {{ item.dispositivo|slice:":8" }}…
+                {% endif %}
+              </td>
+              <td><span class="selo {{ item.origem }}">{{ item.get_origem_display }}</span></td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="5" class="eng-vazio">Nada marcado neste período.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+{% endblock %}

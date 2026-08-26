@@ -1502,7 +1502,10 @@ class AdminLoginView(View):
 
 class AcessoNegadoView(View):
     def get(self, request):
-        return render(request, 'acesso_negado.html', {
+        # O template mora em gestao/: apontar para a raiz derrubava a
+        # página de bloqueio com TemplateDoesNotExist -- quem tentava
+        # abrir uma tela restrita levava erro 500 no lugar do aviso.
+        return render(request, 'gestao/acesso_negado.html', {
             'bloqueio': True
         })
 

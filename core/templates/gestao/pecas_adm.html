@@ -1,0 +1,379 @@
+{% extends "gestao/base_adm.html" %}
+
+{% block title %}Peças de reposição{% endblock %}
+{% block page_heading %}Peças de Reposição{% endblock %}
+
+{% block content %}
+<style>
+.pecas-page{color:#dce7f5}
+.pecas-hero{padding:26px;border:1px solid rgba(96,165,250,.18);border-radius:24px;display:flex;justify-content:space-between;gap:22px;flex-wrap:wrap;background:radial-gradient(circle at 88% 4%,rgba(59,130,246,.26),transparent 17rem),linear-gradient(135deg,#17243a,#101a2d 60%,#111f37)}
+.pecas-hero small{display:block;margin-bottom:8px;color:#93c5fd;font-weight:900;letter-spacing:.12em;text-transform:uppercase;font-size:.62rem}
+.pecas-hero h2{margin:0;color:#fff;font-size:clamp(1.5rem,3vw,2.1rem)}
+.pecas-hero p{max-width:720px;margin:9px 0 0;color:#aebdd0;font-size:.8rem;line-height:1.6}
+.btn-nova{align-self:center;padding:13px 20px;border:0;border-radius:12px;color:#fff;background:linear-gradient(135deg,#3b82f6,#2563eb);font-weight:850;font-size:.78rem;cursor:pointer}
+.pecas-kpis{margin:18px 0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.pkpi{padding:16px;border:1px solid rgba(148,163,184,.14);border-radius:16px;background:linear-gradient(145deg,#17243a,#111b2e)}
+.pkpi strong{display:block;color:#fff;font-size:1.45rem}.pkpi span{display:block;margin-top:5px;color:#899bb0;font-size:.66rem}
+.pecas-filtro{padding:15px;border:1px solid rgba(148,163,184,.14);border-radius:16px;display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:9px;background:#111b2e}
+.pecas-filtro input,.pecas-filtro select{height:43px;padding:0 12px;border:1px solid rgba(148,163,184,.14);border-radius:10px;color:#dce7f5;background:#0d1727}
+.pecas-filtro button{padding:0 18px;border:0;border-radius:10px;color:#fff;background:linear-gradient(135deg,#3b82f6,#2563eb);font-weight:850;cursor:pointer}
+.pecas-grid{margin-top:16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
+.peca-card{overflow:hidden;border:1px solid rgba(148,163,184,.14);border-radius:18px;display:flex;flex-direction:column;background:#111b2e;box-shadow:0 14px 32px rgba(0,0,0,.14)}
+.peca-capa{aspect-ratio:16/10;display:grid;place-items:center;overflow:hidden;background:#0d1727;color:#5c6b80;font-size:.68rem}
+.peca-capa img{width:100%;height:100%;object-fit:cover}
+.peca-corpo{flex:1;padding:15px;display:flex;flex-direction:column;gap:8px}
+.peca-corpo h3{margin:0;color:#fff;font-size:.92rem;line-height:1.35}
+.peca-corpo p{margin:0;color:#8ea0b6;font-size:.7rem;line-height:1.55}
+.peca-tags{display:flex;gap:6px;flex-wrap:wrap}
+.peca-tag{padding:4px 8px;border-radius:999px;color:#bfdbfe;background:rgba(59,130,246,.14);font-size:.58rem;font-weight:800}
+.peca-linha{display:flex;justify-content:space-between;gap:8px;color:#94a3b8;font-size:.68rem}
+.peca-linha strong{color:#6ee7b7}
+.peca-status{padding:4px 9px;border-radius:999px;font-size:.58rem;font-weight:850}
+.peca-status.on{color:#6ee7b7;background:rgba(16,185,129,.13)}
+.peca-status.off{color:#fca5a5;background:rgba(239,68,68,.13)}
+.peca-acoes{padding:12px 15px;border-top:1px solid rgba(148,163,184,.1);display:flex;gap:8px;flex-wrap:wrap}
+.peca-acoes button{flex:1;min-height:38px;padding:0 10px;border:1px solid rgba(96,165,250,.2);border-radius:10px;color:#bfdbfe;background:rgba(37,99,235,.12);font-weight:850;font-size:.68rem;cursor:pointer}
+.peca-acoes button.perigo{border-color:rgba(239,68,68,.25);color:#fca5a5;background:rgba(239,68,68,.1)}
+.pecas-vazio{margin-top:20px;padding:50px 20px;border:1px dashed rgba(148,163,184,.2);border-radius:18px;color:#718096;text-align:center}
+.pecas-modal{position:fixed;inset:0;z-index:3500;padding:18px;display:none;align-items:center;justify-content:center;background:rgba(2,6,23,.84);backdrop-filter:blur(7px)}
+.pecas-modal.open{display:flex}
+.pecas-card{width:min(820px,100%);max-height:92dvh;overflow:hidden;border:1px solid rgba(148,163,184,.14);border-radius:20px;display:flex;flex-direction:column;background:#111b2e}
+.pecas-card-head{padding:16px 20px;border-bottom:1px solid rgba(148,163,184,.14);display:flex;align-items:center;gap:12px;background:#0f192a}
+.pecas-card-head strong{flex:1;color:#fff}
+.fechar{width:38px;height:38px;border:1px solid rgba(148,163,184,.14);border-radius:10px;color:#94a3b8;background:#1e2d46;font-size:1.1rem;cursor:pointer}
+.pecas-form{padding:20px;overflow:auto;display:grid;gap:13px}
+.campo{display:grid;gap:6px}
+.campo label{color:#93a6bd;font-size:.65rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em}
+.campo input,.campo textarea,.campo select{padding:11px 12px;border:1px solid rgba(148,163,184,.14);border-radius:10px;color:#dce7f5;background:#0d1727;font:inherit;font-size:.78rem}
+.campo textarea{min-height:96px;resize:vertical}
+.campo-duplo{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+.categorias-box{max-height:150px;overflow:auto;padding:11px;border:1px solid rgba(148,163,184,.14);border-radius:10px;display:grid;gap:7px;background:#0d1727}
+.categorias-box label{display:flex;align-items:center;gap:8px;color:#cbd5e1;font-size:.74rem;font-weight:600;text-transform:none;letter-spacing:0}
+.galeria{display:flex;gap:8px;flex-wrap:wrap}
+.galeria figure{position:relative;width:84px;height:84px;margin:0;overflow:hidden;border-radius:10px;background:#0d1727}
+.galeria img{width:100%;height:100%;object-fit:cover}
+.galeria button{position:absolute;top:4px;right:4px;width:22px;height:22px;border:0;border-radius:6px;color:#fff;background:rgba(220,38,38,.9);font-size:.7rem;cursor:pointer}
+.pecas-form-acoes{display:flex;gap:9px;justify-content:flex-end;flex-wrap:wrap}
+.pecas-form-acoes button{min-height:44px;padding:0 20px;border:0;border-radius:11px;font-weight:850;font-size:.76rem;cursor:pointer}
+.pecas-form-acoes .salvar{color:#fff;background:linear-gradient(135deg,#3b82f6,#2563eb)}
+.pecas-form-acoes .cancelar{color:#cbd5e1;background:#1e2d46}
+.aviso-form{padding:11px 13px;border:1px solid rgba(239,68,68,.25);border-radius:10px;color:#fca5a5;background:rgba(239,68,68,.1);font-size:.72rem;display:none}
+.aviso-form.on{display:block}
+@media(max-width:950px){.pecas-kpis{grid-template-columns:repeat(2,1fr)}.pecas-filtro{grid-template-columns:1fr}.campo-duplo{grid-template-columns:1fr}}
+</style>
+
+<div class="pecas-page">
+  <section class="pecas-hero">
+    <div>
+      <small>Catálogo e site</small>
+      <h2>Peças de reposição</h2>
+      <p>Cadastre, publique e retire peças do ar sem passar pelo Django. O preço de venda sai automático do preço do fornecedor (+12%) quando você deixa em branco, e o ganho potencial é recalculado a cada salvamento.</p>
+    </div>
+    <button type="button" class="btn-nova" data-nova-peca>+ Nova peça</button>
+  </section>
+
+  <section class="pecas-kpis">
+    <div class="pkpi"><strong>{{ total_pecas }}</strong><span>Peças cadastradas</span></div>
+    <div class="pkpi"><strong>{{ total_ativas }}</strong><span>Publicadas no site</span></div>
+    <div class="pkpi"><strong>{{ total_sem_foto }}</strong><span>Sem nenhuma foto</span></div>
+    <div class="pkpi"><strong>{{ total_sem_preco }}</strong><span>Sem preço de venda</span></div>
+  </section>
+
+  <form method="get" class="pecas-filtro">
+    <input type="search" name="q" value="{{ filtro_busca }}" placeholder="Buscar por nome ou descrição">
+    <select name="categoria">
+      <option value="todas">Todas as categorias</option>
+      {% for categoria in categorias %}
+        <option value="{{ categoria.id }}" {% if filtro_categoria == categoria.id|stringformat:"s" %}selected{% endif %}>{{ categoria.nome_categoria_peca }}</option>
+      {% endfor %}
+    </select>
+    <select name="situacao">
+      <option value="todas" {% if filtro_situacao == "todas" %}selected{% endif %}>Todas as situações</option>
+      <option value="ativas" {% if filtro_situacao == "ativas" %}selected{% endif %}>Publicadas</option>
+      <option value="inativas" {% if filtro_situacao == "inativas" %}selected{% endif %}>Fora do site</option>
+      <option value="sem_foto" {% if filtro_situacao == "sem_foto" %}selected{% endif %}>Sem foto</option>
+      <option value="sem_preco" {% if filtro_situacao == "sem_preco" %}selected{% endif %}>Sem preço</option>
+    </select>
+    <button type="submit">Filtrar</button>
+  </form>
+
+  <div class="pecas-grid">
+    {% for peca in pecas %}
+      <article class="peca-card" data-peca-id="{{ peca.id }}">
+        <div class="peca-capa">
+          {% if peca.capa %}<img src="{{ peca.capa }}" alt="{{ peca.nome }}" loading="lazy">{% else %}Sem foto cadastrada{% endif %}
+        </div>
+        <div class="peca-corpo">
+          <h3>{{ peca.nome }}</h3>
+          <p>{{ peca.descricao_peca|truncatechars:110 }}</p>
+          {% if peca.categorias_nomes %}
+            <div class="peca-tags">
+              {% for nome in peca.categorias_nomes %}<span class="peca-tag">{{ nome }}</span>{% endfor %}
+            </div>
+          {% endif %}
+          <div class="peca-linha">
+            <span>Venda <strong>{% if peca.preco_venda %}R$ {{ peca.preco_venda }}{% else %}—{% endif %}</strong></span>
+            <span class="peca-status {% if peca.ativo %}on{% else %}off{% endif %}">{% if peca.ativo %}No site{% else %}Fora do site{% endif %}</span>
+          </div>
+          <div class="peca-linha">
+            <span>Fornecedor {% if peca.preco_fornecedor %}R$ {{ peca.preco_fornecedor }}{% else %}—{% endif %}</span>
+            <span>Ganho {% if peca.ganho_potencial %}R$ {{ peca.ganho_potencial }}{% else %}—{% endif %}</span>
+          </div>
+          <div class="peca-linha">
+            <span>{{ peca.curtidas }} curtida{{ peca.curtidas|pluralize }}</span>
+            <span>{{ peca.desejos }} na lista de desejos</span>
+          </div>
+        </div>
+        <div class="peca-acoes">
+          <button type="button" data-editar>Editar</button>
+          <button type="button" data-alternar>{% if peca.ativo %}Tirar do site{% else %}Publicar{% endif %}</button>
+          <button type="button" class="perigo" data-excluir>Excluir</button>
+        </div>
+      </article>
+    {% empty %}
+      <div class="pecas-vazio">Nenhuma peça encontrada com esses filtros.</div>
+    {% endfor %}
+  </div>
+</div>
+
+{# Os dados da página em um bloco só: o modal preenche a partir daqui,
+   sem HTML gigante em atributo e sem uma segunda ida ao servidor. #}
+{{ pecas|json_script:"pecas-dados" }}
+
+<!-- MODAL -->
+<div class="pecas-modal" id="modalPeca" role="dialog" aria-modal="true" aria-labelledby="tituloModalPeca">
+  <div class="pecas-card">
+    <header class="pecas-card-head">
+      <strong id="tituloModalPeca">Nova peça</strong>
+      <button type="button" class="fechar" data-fechar aria-label="Fechar">×</button>
+    </header>
+
+    <form class="pecas-form" id="formPeca" method="post" enctype="multipart/form-data" action="{% url 'pecas_admin' %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="save">
+      <input type="hidden" name="resposta" value="json">
+      <input type="hidden" name="id" id="pecaId">
+
+      <p class="aviso-form" id="avisoPeca"></p>
+
+      <div class="campo">
+        <label for="pecaNome">Nome da peça</label>
+        <input id="pecaNome" name="nome" maxlength="120" required>
+      </div>
+
+      <div class="campo">
+        <label for="pecaDescricao">Descrição</label>
+        <textarea id="pecaDescricao" name="descricao_peca" maxlength="999" required></textarea>
+      </div>
+
+      <div class="campo-duplo">
+        <div class="campo">
+          <label for="pecaVenda">Preço de venda (R$)</label>
+          <input id="pecaVenda" name="preco_venda" inputmode="decimal" placeholder="Ex.: 180,00">
+        </div>
+        <div class="campo">
+          <label for="pecaFornecedor">Preço do fornecedor (R$)</label>
+          <input id="pecaFornecedor" name="preco_fornecedor" inputmode="decimal" placeholder="Ex.: 120,00">
+        </div>
+      </div>
+
+      <div class="campo">
+        <label>Categorias</label>
+        <div class="categorias-box" id="categoriasBox">
+          {% for categoria in categorias %}
+            <label><input type="checkbox" name="categorias" value="{{ categoria.id }}"> {{ categoria.nome_categoria_peca }}</label>
+          {% empty %}
+            <span style="color:#718096;font-size:.72rem">Nenhuma categoria de peça cadastrada ainda.</span>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="campo-duplo">
+        <div class="campo">
+          <label for="pecaFotos">Fotos (até {{ max_imagens }})</label>
+          <input id="pecaFotos" type="file" name="imagens" accept="image/*" multiple>
+        </div>
+        <div class="campo">
+          <label for="pecaPosicao">Posição das fotos enviadas</label>
+          <select id="pecaPosicao" name="posicao_imagem">
+            {% for valor, rotulo in posicoes %}<option value="{{ valor }}">{{ rotulo }}</option>{% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div class="campo">
+        <label>Galeria atual</label>
+        <div class="galeria" id="galeriaPeca"><span style="color:#718096;font-size:.72rem">Sem fotos.</span></div>
+      </div>
+
+      <div class="campo">
+        <label><input type="checkbox" name="ativo" id="pecaAtivo" value="1" checked> Publicar no site e no aplicativo</label>
+      </div>
+
+      <div class="pecas-form-acoes">
+        <button type="button" class="cancelar" data-fechar>Cancelar</button>
+        <button type="submit" class="salvar">Salvar peça</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<form method="post" id="formAcaoRapida" hidden action="{% url 'pecas_admin' %}">
+  {% csrf_token %}
+  <input type="hidden" name="action" id="acaoRapida">
+  <input type="hidden" name="id" id="acaoRapidaId">
+  <input type="hidden" name="imagem_id" id="acaoRapidaImagem">
+  <input type="hidden" name="confirmacao_exclusao" id="acaoRapidaConfirma">
+</form>
+
+<script>
+(function () {
+  "use strict";
+
+  var modal = document.getElementById("modalPeca");
+  var form = document.getElementById("formPeca");
+  var aviso = document.getElementById("avisoPeca");
+  var galeria = document.getElementById("galeriaPeca");
+  var acaoRapida = document.getElementById("formAcaoRapida");
+
+  var catalogo = {};
+  try {
+    JSON.parse(
+      document.getElementById("pecas-dados").textContent
+    ).forEach(function (peca) {
+      catalogo[String(peca.id)] = peca;
+    });
+  } catch (erro) {
+    catalogo = {};
+  }
+
+  function dadosDoCard(botao) {
+    var card = botao.closest("[data-peca-id]");
+    return card ? catalogo[card.dataset.pecaId] : null;
+  }
+
+  function abrir(peca) {
+    aviso.classList.remove("on");
+    form.reset();
+    document.getElementById("pecaId").value = peca ? peca.id : "";
+    document.getElementById("tituloModalPeca").textContent =
+      peca ? "Editar peça" : "Nova peça";
+
+    if (peca) {
+      document.getElementById("pecaNome").value = peca.nome || "";
+      document.getElementById("pecaDescricao").value = peca.descricao_peca || "";
+      document.getElementById("pecaVenda").value = peca.preco_venda || "";
+      document.getElementById("pecaFornecedor").value = peca.preco_fornecedor || "";
+      document.getElementById("pecaAtivo").checked = !!peca.ativo;
+
+      var ids = peca.categorias_ids || [];
+      form.querySelectorAll('input[name="categorias"]').forEach(function (caixa) {
+        caixa.checked = ids.indexOf(parseInt(caixa.value, 10)) >= 0;
+      });
+
+      desenharGaleria(peca.imagens || []);
+    } else {
+      document.getElementById("pecaAtivo").checked = true;
+      desenharGaleria([]);
+    }
+
+    modal.classList.add("open");
+  }
+
+  function desenharGaleria(imagens) {
+    galeria.innerHTML = "";
+    if (!imagens.length) {
+      galeria.innerHTML =
+        '<span style="color:#718096;font-size:.72rem">Sem fotos.</span>';
+      return;
+    }
+    imagens.forEach(function (foto) {
+      var figura = document.createElement("figure");
+      figura.innerHTML =
+        '<img src="' + foto.url + '" alt="' + (foto.posicao || "") + '">' +
+        '<button type="button" data-remover-foto="' + foto.id + '" title="Remover foto">×</button>';
+      galeria.appendChild(figura);
+    });
+  }
+
+  function fechar() {
+    modal.classList.remove("open");
+  }
+
+  function dispararAcaoRapida(acao, id, extras) {
+    document.getElementById("acaoRapida").value = acao;
+    document.getElementById("acaoRapidaId").value = id || "";
+    document.getElementById("acaoRapidaImagem").value =
+      (extras && extras.imagem) || "";
+    document.getElementById("acaoRapidaConfirma").value =
+      (extras && extras.confirmacao) || "";
+    acaoRapida.submit();
+  }
+
+  document.addEventListener("click", function (evento) {
+    var alvo = evento.target;
+
+    if (alvo.closest("[data-nova-peca]")) return abrir(null);
+    if (alvo.closest("[data-fechar]")) return fechar();
+
+    var editar = alvo.closest("[data-editar]");
+    if (editar) return abrir(dadosDoCard(editar));
+
+    var alternar = alvo.closest("[data-alternar]");
+    if (alternar) {
+      var peca = dadosDoCard(alternar);
+      return dispararAcaoRapida("alternar_ativo", peca.id, null);
+    }
+
+    var excluir = alvo.closest("[data-excluir]");
+    if (excluir) {
+      var alvoPeca = dadosDoCard(excluir);
+      var frase = "CONFIRMAR EXCLUSÃO " + alvoPeca.nome;
+      var digitado = window.prompt(
+        "Para excluir, digite exatamente:\n" + frase
+      );
+      if (digitado === null) return;
+      return dispararAcaoRapida("delete", alvoPeca.id, { confirmacao: digitado });
+    }
+
+    var foto = alvo.closest("[data-remover-foto]");
+    if (foto) {
+      return dispararAcaoRapida("imagem_excluir", "", {
+        imagem: foto.dataset.removerFoto
+      });
+    }
+
+    if (alvo === modal) fechar();
+  });
+
+  document.addEventListener("keydown", function (evento) {
+    if (evento.key === "Escape") fechar();
+  });
+
+  form.addEventListener("submit", function (evento) {
+    evento.preventDefault();
+    aviso.classList.remove("on");
+
+    fetch(form.action, {
+      method: "POST",
+      body: new FormData(form),
+      credentials: "same-origin",
+      headers: { "X-Requested-With": "XMLHttpRequest" }
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (dados) {
+        if (dados.status === "sucesso") {
+          window.location.reload();
+          return;
+        }
+        aviso.textContent = dados.msg || "Não foi possível salvar.";
+        aviso.classList.add("on");
+      })
+      .catch(function () {
+        aviso.textContent = "Falha de conexão ao salvar.";
+        aviso.classList.add("on");
+      });
+  });
+})();
+</script>
+{% endblock %}

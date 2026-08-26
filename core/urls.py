@@ -2,6 +2,7 @@ from django.urls import path, re_path
 from django.contrib.sitemaps.views import sitemap
 
 from .views_favoritos import ListaDesejosView, alternar_favorito
+from .views_gestao_produtos import EngajamentoAdminView, PecaAdminView
 from .views_orcamento import orcamento_publico
 from .sitemaps import (
     PaginasEstaticasSitemap,
@@ -227,6 +228,12 @@ urlpatterns = [
     path("adm/eventos/", EventoAdminView.as_view(), name="eventos_admin"),
     path("adm/cupons/", CupomAdminView.as_view(), name="cupons_admin"),
     path("adm/projetos/", ProjetoAdminView.as_view(), name="projetos_admin"),
+    path("adm/pecas/", PecaAdminView.as_view(), name="pecas_admin"),
+    path(
+        "adm/engajamento/",
+        EngajamentoAdminView.as_view(),
+        name="engajamento_admin",
+    ),
 
     path(
         "pagamento/<int:carrinho_id>/",
