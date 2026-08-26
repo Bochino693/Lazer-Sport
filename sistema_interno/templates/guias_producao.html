@@ -5,7 +5,7 @@
 
 {% block extra_css %}
 <style>
-  .guide-layout{display:grid;grid-template-columns:minmax(230px,300px) 1fr;gap:20px}.guide-products,.guide-panel{border:1px solid rgba(176,167,156,.18);border-radius:20px;background:#271f11;overflow:hidden}.guide-products{align-self:start;position:sticky;top:86px}.guide-products header,.guide-panel-head{padding:18px;border-bottom:1px solid rgba(176,167,156,.14)}.guide-products h2,.guide-panel h2{margin:0;color:#fcfbf8;font-size:1rem}.guide-products p,.guide-panel p{margin:5px 0 0;color:#b0a79c;font-size:.78rem}.guide-product-list{padding:8px}.guide-product{margin:4px 0;padding:12px;border:1px solid transparent;border-radius:12px;display:flex;justify-content:space-between;gap:10px;color:#dcd7d0;text-decoration:none}.guide-product:hover,.guide-product.active{color:#fff;background:rgba(246,177,59,.13);border-color:rgba(250,194,96,.24)}.guide-count{min-width:25px;height:25px;padding:0 7px;border-radius:999px;display:grid;place-items:center;color:#fee7bf;background:rgba(246,177,59,.17);font-size:.72rem;font-weight:800}.guide-panel-head{display:flex;align-items:center;justify-content:space-between;gap:14px}.guide-steps{padding:18px;display:grid;gap:14px}.guide-step{border:1px solid rgba(176,167,156,.15);border-radius:17px;background:#261d0d;overflow:hidden}.guide-step.inactive{opacity:.68}.guide-step-head{padding:15px 16px;display:flex;align-items:flex-start;gap:12px}.guide-number{width:36px;height:36px;flex:0 0 36px;border-radius:11px;display:grid;place-items:center;color:#fef1db;background:linear-gradient(145deg,#eba225,#d8931d);font-weight:900}.guide-title{min-width:0;flex:1}.guide-title h3{margin:0;color:#fcfbf8;font-size:.96rem}.guide-title span{display:block;margin-top:4px;color:#82796d;font-size:.7rem}.guide-actions{display:flex;gap:7px}.guide-copy{padding:0 16px 15px;color:#dcd7d0;font-size:.82rem;line-height:1.65;white-space:pre-line}.guide-check{margin:0 16px 16px;padding:12px;border-left:3px solid #10b981;border-radius:0 10px 10px 0;color:#a7f3d0;background:rgba(16,185,129,.08);font-size:.78rem;white-space:pre-line}.guide-gallery{padding:0 16px 16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}.guide-image{position:relative;min-height:130px;border:1px solid rgba(176,167,156,.14);border-radius:13px;overflow:hidden;background:#140f06}.guide-image img{width:100%;height:145px;display:block;object-fit:cover}.guide-image figcaption{padding:8px;color:#b0a79c;font-size:.68rem}.guide-image button{position:absolute;top:7px;right:7px;width:30px;height:30px;border:0;border-radius:9px;color:#fff;background:rgba(185,28,28,.9)}.guide-empty{padding:55px 20px;color:#b0a79c;text-align:center}.guide-empty i{display:block;margin-bottom:10px;font-size:2rem}.modal-content{background:#271f11;color:#f0ebe2}.modal-header,.modal-footer{border-color:rgba(176,167,156,.16)}.form-control,.form-select{color:#f0ebe2;background:#20180b;border-color:rgba(176,167,156,.24)}.form-control:focus,.form-select:focus{color:#fff;background:#20180b}.form-text{color:#9e958a}@media(max-width:900px){.guide-layout{grid-template-columns:1fr}.guide-products{position:static}.guide-product-list{display:flex;overflow-x:auto}.guide-product{min-width:190px}.guide-panel-head{align-items:flex-start;flex-direction:column}}
+  .guide-layout{display:grid;grid-template-columns:minmax(230px,300px) 1fr;gap:20px}.guide-products,.guide-panel{border:1px solid rgba(176,167,156,.18);border-radius:20px;background:#271f11;overflow:hidden}.guide-products{align-self:start;position:sticky;top:86px}.guide-products header,.guide-panel-head{padding:18px;border-bottom:1px solid rgba(176,167,156,.14)}.guide-products h2,.guide-panel h2{margin:0;color:#fcfbf8;font-size:1rem}.guide-products p,.guide-panel p{margin:5px 0 0;color:#b0a79c;font-size:.78rem}.guide-product-list{padding:8px}.guide-product{margin:4px 0;padding:12px;border:1px solid transparent;border-radius:12px;display:flex;justify-content:space-between;gap:10px;color:#dcd7d0;text-decoration:none}.guide-product:hover,.guide-product.active{color:#fff;background:rgba(246,177,59,.13);border-color:rgba(250,194,96,.24)}.guide-count{min-width:25px;height:25px;padding:0 7px;border-radius:999px;display:grid;place-items:center;color:#fee7bf;background:rgba(246,177,59,.17);font-size:.72rem;font-weight:800}.guide-panel-head{display:flex;align-items:center;justify-content:space-between;gap:14px}.guide-products-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.guide-head-actions{display:flex;gap:8px;flex-wrap:wrap}.guide-head-actions .btn{min-height:44px}.guide-steps{padding:18px;display:grid;gap:14px}.guide-step{border:1px solid rgba(176,167,156,.15);border-radius:17px;background:#261d0d;overflow:hidden}.guide-step.inactive{opacity:.68}.guide-step-head{padding:15px 16px;display:flex;align-items:flex-start;gap:12px}.guide-number{width:36px;height:36px;flex:0 0 36px;border-radius:11px;display:grid;place-items:center;color:#fef1db;background:linear-gradient(145deg,#eba225,#d8931d);font-weight:900}.guide-title{min-width:0;flex:1}.guide-title h3{margin:0;color:#fcfbf8;font-size:.96rem}.guide-title span{display:block;margin-top:4px;color:#82796d;font-size:.7rem}.guide-actions{display:flex;gap:7px}.guide-copy{padding:0 16px 15px;color:#dcd7d0;font-size:.82rem;line-height:1.65;white-space:pre-line}.guide-check{margin:0 16px 16px;padding:12px;border-left:3px solid #10b981;border-radius:0 10px 10px 0;color:#a7f3d0;background:rgba(16,185,129,.08);font-size:.78rem;white-space:pre-line}.guide-gallery{padding:0 16px 16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}.guide-image{position:relative;min-height:130px;border:1px solid rgba(176,167,156,.14);border-radius:13px;overflow:hidden;background:#140f06}.guide-image img{width:100%;height:145px;display:block;object-fit:cover}.guide-image figcaption{padding:8px;color:#b0a79c;font-size:.68rem}.guide-image button{position:absolute;top:7px;right:7px;width:30px;height:30px;border:0;border-radius:9px;color:#fff;background:rgba(185,28,28,.9)}.guide-empty{padding:55px 20px;color:#b0a79c;text-align:center}.guide-empty i{display:block;margin-bottom:10px;font-size:2rem}.modal-content{background:#271f11;color:#f0ebe2}.modal-header,.modal-footer{border-color:rgba(176,167,156,.16)}.form-control,.form-select{color:#f0ebe2;background:#20180b;border-color:rgba(176,167,156,.24)}.form-control:focus,.form-select:focus{color:#fff;background:#20180b}.form-text{color:#9e958a}@media(max-width:900px){.guide-layout{grid-template-columns:1fr}.guide-products{position:static}.guide-product-list{display:flex;overflow-x:auto}.guide-product{min-width:190px}.guide-panel-head{align-items:flex-start;flex-direction:column}}
 </style>
 {% endblock %}
 
@@ -23,7 +23,15 @@
 
 <div class="guide-layout">
   <aside class="guide-products">
-    <header><h2>Produtos</h2><p>Selecione qual manual deseja editar.</p></header>
+    <header class="guide-products-head">
+      <div>
+        <h2>Produtos</h2>
+        <p>Selecione qual manual deseja editar.</p>
+      </div>
+      <button type="button" class="btn btn-sm btn-success" id="novoProdutoGuia">
+        <i class="bi bi-plus-lg"></i><span class="ms-1">Novo</span>
+      </button>
+    </header>
     <div class="guide-product-list">
       {% for item in produtos %}
         <a class="guide-product {% if produto.id == item.id %}active{% endif %}" href="?produto={{ item.id }}">
@@ -36,7 +44,21 @@
   <section class="guide-panel">
     <header class="guide-panel-head">
       <div><h2>{% if produto %}{{ produto.nome }}{% else %}Nenhum produto{% endif %}</h2><p>{{ etapas|length }} etapa(s) cadastrada(s)</p></div>
-      {% if produto %}<button type="button" class="btn btn-success" id="novaEtapa"><i class="bi bi-plus-lg me-1"></i> Nova etapa</button>{% endif %}
+      {% if produto %}
+        <div class="guide-head-actions">
+          <button type="button" class="btn btn-outline-warning" id="gerarPadrao">
+            <i class="bi bi-magic me-1"></i> Gerar roteiro padrão
+          </button>
+          {% if opcoes_copiar %}
+            <button type="button" class="btn btn-outline-secondary" id="copiarEtapas">
+              <i class="bi bi-files me-1"></i> Copiar de outro
+            </button>
+          {% endif %}
+          <button type="button" class="btn btn-success" id="novaEtapa">
+            <i class="bi bi-plus-lg me-1"></i> Nova etapa
+          </button>
+        </div>
+      {% endif %}
     </header>
     <div class="guide-steps">
       {% for etapa in etapas %}
@@ -64,7 +86,21 @@
           {% endif %}
         </article>
       {% empty %}
-        <div class="guide-empty"><i class="bi bi-journal-plus"></i>Este produto ainda não tem etapas. Crie o guia antes de abrir uma ordem de produção.</div>
+        <div class="guide-empty">
+          <i class="bi bi-journal-plus"></i>
+          <p class="mb-1"><strong>Este produto ainda não tem manual.</strong></p>
+          <p class="mb-3">
+            Sem etapa cadastrada, a ordem de produção sai sem acompanhamento.
+            Comece pelo roteiro da fábrica e ajuste o que for específico
+            deste produto.
+          </p>
+          {% if produto %}
+            <button type="button" class="btn btn-warning" id="gerarPadraoVazio">
+              <i class="bi bi-magic me-1"></i>
+              Gerar as {{ roteiro_previsto }} etapas do roteiro padrão
+            </button>
+          {% endif %}
+        </div>
       {% endfor %}
     </div>
   </section>
@@ -95,8 +131,112 @@
 </div>
 {% endif %}
 
-<form id="formAcaoGuia" method="post" action="{% url 'guias_producao' %}" hidden>{% csrf_token %}<input name="action"><input name="id"></form>
+<!-- ============ MODAL: produto novo, sem sair do manual ============ -->
+{# O manual é escrito quando o brinquedo aparece, e muita vez ele existe
+   só no site, sem ficha de produção. Ir até a tela de produtos e voltar é
+   onde a montagem do guia era abandonada. #}
+<div class="modal fade" id="modalProdutoGuia" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <form class="modal-content" id="formProdutoGuia" method="post" action="{% url 'guias_producao' %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="produto_novo">
+
+      <div class="modal-header">
+        <h2 class="modal-title fs-5">Novo produto de produção</h2>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+        <div id="produtoGuiaErro" class="alert alert-danger d-none"></div>
+
+        <div class="mb-3">
+          <label class="form-label" for="produtoGuiaBrinquedoBusca">Já está no catálogo do site?</label>
+          <div id="produtoGuiaBrinquedoBox"></div>
+          <div class="form-text">Escolher aqui preenche o nome e liga o produto ao item do site.</div>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label" for="produtoGuiaNome">Nome do produto *</label>
+          <input class="form-control" id="produtoGuiaNome" name="nome" maxlength="120" required
+                 placeholder="Cama elástica 3m">
+        </div>
+
+        <div class="row g-3">
+          <div class="col-sm-6">
+            <label class="form-label" for="produtoGuiaCategoria">Tipo</label>
+            <select class="form-select" id="produtoGuiaCategoria" name="categoria">
+              {% for valor, rotulo in categorias_produto %}
+                <option value="{{ valor }}" {% if valor == "brinquedo" %}selected{% endif %}>{{ rotulo }}</option>
+              {% endfor %}
+            </select>
+            <div class="form-text">Define qual roteiro padrão será gerado.</div>
+          </div>
+          <div class="col-sm-6">
+            <label class="form-label" for="produtoGuiaCodigo">Código de produção</label>
+            <input class="form-control" id="produtoGuiaCodigo" name="codigo" maxlength="30" placeholder="Opcional">
+          </div>
+        </div>
+
+        <div class="mt-3">
+          <label class="form-label" for="produtoGuiaPreco">Preço de venda sugerido</label>
+          <input class="form-control" id="produtoGuiaPreco" name="preco_venda" inputmode="decimal" placeholder="0,00">
+        </div>
+
+        <div class="form-check mt-3">
+          <input class="form-check-input" type="checkbox" name="gerar_etapas" value="1" id="produtoGuiaGerar" checked>
+          <label class="form-check-label" for="produtoGuiaGerar">
+            Já gerar o roteiro padrão de etapas
+          </label>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-success">Criar produto</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% if produto and opcoes_copiar %}
+<!-- ============ MODAL: copiar manual de outro produto ============ -->
+<div class="modal fade" id="modalCopiarEtapas" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <form class="modal-content" id="formCopiarEtapas" method="post" action="{% url 'guias_producao' %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="copiar_etapas">
+      <input type="hidden" name="produto" value="{{ produto.id }}">
+
+      <div class="modal-header">
+        <h2 class="modal-title fs-5">Copiar etapas para {{ produto.nome }}</h2>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+        <div id="copiarErro" class="alert alert-danger d-none"></div>
+        <p class="text-muted small">
+          Produto parecido já tem o manual pronto. As etapas vêm com texto e
+          tempo; as fotos não, porque imagem de outro produto engana quem
+          está montando.
+        </p>
+
+        <label class="form-label" for="copiarOrigemBusca">Copiar de</label>
+        <div id="copiarOrigemBox"></div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-success">Copiar etapas</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endif %}
+
+<form id="formAcaoGuia" method="post" action="{% url 'guias_producao' %}" hidden>{% csrf_token %}<input name="action"><input name="id"><input name="produto"></form>
 {{ etapas_dados|json_script:"etapasGuiaData" }}
+{{ opcoes_brinquedos|json_script:"opcoesBrinquedosGuia" }}
+{{ opcoes_copiar|json_script:"opcoesCopiarGuia" }}
 {% endblock %}
 
 {% block scripts %}
@@ -114,7 +254,101 @@ document.addEventListener("DOMContentLoaded",function(){
   document.getElementById("novaEtapa")?.addEventListener("click",()=>abrir(null));
   document.querySelectorAll("[data-editar-etapa]").forEach(btn=>btn.addEventListener("click",()=>abrir(porId[btn.dataset.editarEtapa])));
   if(form)Painel.ligar({form:"formEtapa",erro:"etapaErro"});
-  function executar(action,id,confirmacao){if(confirmacao&&!window.confirm(confirmacao))return;const acao=document.getElementById("formAcaoGuia");acao.elements.action.value=action;acao.elements.id.value=id;Painel.enviar(acao).then(()=>location.reload()).catch(err=>alert(err.message));}
+  function executar(action,id,confirmacao,produto){
+    if(confirmacao&&!window.confirm(confirmacao))return;
+    const acao=document.getElementById("formAcaoGuia");
+    acao.elements.action.value=action;
+    acao.elements.id.value=id||"";
+    acao.elements.produto.value=produto||"";
+    Painel.enviar(acao)
+      .then(json=>{
+        if(json&&json.produto){
+          location.href="?produto="+json.produto;
+          return;
+        }
+        location.reload();
+      })
+      .catch(err=>alert(err.message));
+  }
+
+  /* ------------------------------------------------------------------
+     Roteiro padrão
+
+     Escrever oito etapas do zero é o passo que trava a produção: sem
+     manual a ordem sai sem acompanhamento, e quem precisa abrir a ordem
+     hoje não vai parar para escrever. O roteiro base entra com um toque e
+     depois é corrigido — é rascunho bom, não verdade absoluta.
+     ------------------------------------------------------------------ */
+  const PRODUTO_ATUAL = "{{ produto.id|default:'' }}";
+
+  function gerarPadrao(){
+    executar("gerar_padrao","",null,PRODUTO_ATUAL);
+  }
+
+  document.getElementById("gerarPadrao")?.addEventListener("click",gerarPadrao);
+  document.getElementById("gerarPadraoVazio")?.addEventListener("click",gerarPadrao);
+
+  /* ------------------------------------------------------------------
+     Criar o produto e copiar manual: as duas buscas desta tela
+     ------------------------------------------------------------------ */
+  const opcoesBrinquedos=JSON.parse(document.getElementById("opcoesBrinquedosGuia")?.textContent||"[]");
+  const buscaBrinquedo=LSBusca.criar({
+    nome:"brinquedo",
+    opcoes:opcoesBrinquedos,
+    placeholder:"Buscar no catálogo do site...",
+    rotuloAcessivel:"Brinquedo do catálogo",
+    aoEscolher:function(opcao){
+      /* Escolher o item do site preenche o nome: é o mesmo produto, e
+         digitar de novo só cria diferença de grafia entre os dois. */
+      const nome=document.getElementById("produtoGuiaNome");
+      if(opcao&&!nome.value.trim())nome.value=opcao.rotulo;
+    }
+  });
+  buscaBrinquedo.entrada.id="produtoGuiaBrinquedoBusca";
+  document.getElementById("produtoGuiaBrinquedoBox")?.appendChild(buscaBrinquedo.elemento);
+
+  document.getElementById("novoProdutoGuia")?.addEventListener("click",function(){
+    document.getElementById("formProdutoGuia").reset();
+    buscaBrinquedo.definirValor("",false);
+    Painel.erro("produtoGuiaErro","");
+    Painel.abrir("modalProdutoGuia");
+  });
+
+  Painel.ligar({
+    form:"formProdutoGuia",
+    erro:"produtoGuiaErro",
+    /* Abre o manual do produto recém-criado em vez de recarregar na
+       lista: quem criou quer escrever as etapas agora. */
+    depois:function(json){location.href="?produto="+json.produto;}
+  });
+
+  const opcoesCopiar=JSON.parse(document.getElementById("opcoesCopiarGuia")?.textContent||"[]");
+  const caixaCopiar=document.getElementById("copiarOrigemBox");
+  if(caixaCopiar){
+    const buscaCopiar=LSBusca.criar({
+      nome:"origem",
+      opcoes:opcoesCopiar,
+      placeholder:"Buscar produto com manual pronto...",
+      rotuloAcessivel:"Produto de origem"
+    });
+    buscaCopiar.entrada.id="copiarOrigemBusca";
+    caixaCopiar.appendChild(buscaCopiar.elemento);
+
+    document.getElementById("copiarEtapas")?.addEventListener("click",function(){
+      Painel.erro("copiarErro","");
+      buscaCopiar.definirValor("",false);
+      Painel.abrir("modalCopiarEtapas");
+    });
+
+    Painel.ligar({
+      form:"formCopiarEtapas",
+      erro:"copiarErro",
+      antes:function(){
+        if(!buscaCopiar.valor())return "Escolha de qual produto copiar as etapas.";
+        return null;
+      }
+    });
+  }
   document.querySelectorAll("[data-excluir-etapa]").forEach(btn=>btn.addEventListener("click",()=>executar("delete",btn.dataset.excluirEtapa,"Remover a etapa “"+btn.dataset.nome+"”? Se ela já foi usada, será apenas desativada.")));
   document.querySelectorAll("[data-excluir-imagem]").forEach(btn=>btn.addEventListener("click",()=>executar("delete_imagem",btn.dataset.excluirImagem,"Remover esta imagem do guia?")));
 });

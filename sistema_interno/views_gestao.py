@@ -28,6 +28,7 @@ from django.views.generic import View
 from core.models import Brinquedos, CategoriasBrinquedos
 
 from . import clientes as svc_clientes
+from . import etapas_padrao
 from . import financeiro as fin
 from .models import (
     Cliente,
@@ -883,7 +884,40 @@ class GuiasProducaoView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
             "produto": produto,
             "etapas": etapas,
             "etapas_dados": [self.serializar(etapa) for etapa in etapas],
+            "categorias_produto": ProdutoInterno.Categoria.choices,
+            # Brinquedo do site que ainda não virou produto de produção:
+            # é dele que quase todo manual novo nasce.
+            "opcoes_brinquedos": self.opcoes_brinquedos(),
+            "opcoes_copiar": [
+                {
+                    "valor": str(p.pk),
+                    "rotulo": p.nome,
+                    "detalhe": (
+                        f"{p.total_guias} etapa"
+                        f"{'s' if p.total_guias != 1 else ''}"
+                    ),
+                }
+                for p in produtos
+                if p.total_guias and (not produto or p.pk != produto.pk)
+            ],
+            "roteiro_previsto": (
+                len(etapas_padrao.roteiro_de(produto)) if produto else 0
+            ),
         })
+
+    @staticmethod
+    def opcoes_brinquedos():
+        """Catálogo do site para a busca do cadastro rápido de produto."""
+        return [
+            {
+                "valor": str(b.id),
+                "rotulo": b.nome_brinquedo,
+                "detalhe": "Brinquedo do catálogo do site",
+            }
+            for b in Brinquedos.objects
+            .only("id", "nome_brinquedo")
+            .order_by("nome_brinquedo")
+        ]
 
     @staticmethod
     def serializar(etapa):
@@ -954,6 +988,108 @@ class GuiasProducaoView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
             request,
             f"Etapa {etapa.ordem} · {etapa.titulo} salva.",
             id=etapa.pk,
+        )
+
+    # ------------------------------- criar o produto sem sair da tela
+    def acao_produto_novo(self, request):
+        """Cria o produto de produção na hora, de dentro do manual.
+
+        POR QUE AQUI. O manual é escrito quando o brinquedo aparece --
+        muitas vezes um item do site que nunca teve ficha de produção.
+        Mandar a pessoa para a tela de produtos e voltar é o passo em que
+        a montagem do guia era abandonada.
+        """
+        nome = texto(
+            request, "nome", obrigatorio=True,
+            rotulo="o nome do produto", limite=120,
+        )
+
+        if ProdutoInterno.objects.filter(nome__iexact=nome).exists():
+            raise ErroDeFormulario(
+                f"Já existe um produto chamado “{nome}”. Procure na lista."
+            )
+
+        categoria = (request.POST.get("categoria") or "").strip()
+        if categoria not in ProdutoInterno.Categoria.values:
+            categoria = ProdutoInterno.Categoria.BRINQUEDO
+
+        brinquedo_id = (request.POST.get("brinquedo") or "").strip()
+        brinquedo = (
+            Brinquedos.objects.filter(pk=brinquedo_id).first()
+            if brinquedo_id.isdigit() else None
+        )
+
+        produto = ProdutoInterno.objects.create(
+            nome=nome,
+            categoria=categoria,
+            brinquedo=brinquedo,
+            codigo=texto(request, "codigo", limite=30),
+            preco_venda=decimal_br(
+                request.POST.get("preco_venda"),
+                "Preço de venda",
+                limite=Decimal("9999999999.99"),
+            ) or ZERO,
+        )
+
+        criadas = 0
+        if request.POST.get("gerar_etapas") in {"1", "on", "true"}:
+            criadas = etapas_padrao.gerar(produto)
+
+        recado = f"“{produto.nome}” criado."
+        if criadas:
+            recado += f" {criadas} etapas do roteiro padrão já entraram."
+
+        return self.sucesso(request, recado, produto=produto.pk, id=produto.pk)
+
+    # ------------------------------------- gerar e copiar o roteiro
+    def acao_gerar_padrao(self, request):
+        """Escreve o roteiro base da fábrica para este produto."""
+        produto = get_object_or_404(
+            ProdutoInterno,
+            pk=request.POST.get("produto") or request.POST.get("id"),
+        )
+
+        criadas = etapas_padrao.gerar(produto)
+
+        if not criadas:
+            raise ErroDeFormulario(
+                "O roteiro padrão já está inteiro neste produto. Edite as "
+                "etapas ou crie uma nova pelo botão “Nova etapa”."
+            )
+
+        return self.sucesso(
+            request,
+            f"{criadas} etapa{'s' if criadas > 1 else ''} do roteiro padrão "
+            f"{'entraram' if criadas > 1 else 'entrou'} em {produto.nome}. "
+            "Ajuste o texto para o que este produto tem de específico.",
+            produto=produto.pk,
+        )
+
+    def acao_copiar_etapas(self, request):
+        """Traz o manual de um produto parecido, sem as fotos."""
+        destino = get_object_or_404(
+            ProdutoInterno,
+            pk=request.POST.get("produto"),
+        )
+        origem = get_object_or_404(
+            ProdutoInterno,
+            pk=request.POST.get("origem"),
+        )
+
+        copiadas = etapas_padrao.copiar(origem, destino)
+
+        if not copiadas:
+            raise ErroDeFormulario(
+                f"Nada veio de {origem.nome}: as etapas dele já existem "
+                "aqui, ou o produto escolhido é este mesmo."
+            )
+
+        return self.sucesso(
+            request,
+            f"{copiadas} etapa{'s' if copiadas > 1 else ''} copiada"
+            f"{'s' if copiadas > 1 else ''} de {origem.nome}. As fotos não "
+            "vêm junto: imagem de outro produto engana quem monta.",
+            produto=destino.pk,
         )
 
     def acao_delete_imagem(self, request):
