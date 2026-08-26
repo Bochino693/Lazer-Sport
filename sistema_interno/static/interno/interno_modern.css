@@ -1082,7 +1082,9 @@ footer,.fab-container{display:none!important}
 .ls-busca-limpar[hidden]{display:none}
 
 .ls-busca-painel{
-  position:absolute;z-index:1300;top:calc(100% + 6px);left:0;right:0;
+  /* z-index acima do modal do Bootstrap (1055): aberto, o painel vive no
+     <body> e precisa ficar por cima de tudo. */
+  position:absolute;z-index:2000;top:calc(100% + 6px);left:0;right:0;
   max-height:min(58vh,420px);overflow-y:auto;
   padding:6px;
   border:1px solid var(--line);border-radius:var(--radius-md);
@@ -1198,3 +1200,192 @@ footer,.fab-container{display:none!important}
   .modal-body{padding-inline:16px}
   .modal-footer{padding-inline:16px}
 }
+
+
+/* ======================================================================
+   CORREÇÕES DE ACABAMENTO
+
+   Achadas abrindo o painel no navegador, em tamanho de tablet. Ficam no
+   fim do arquivo de propósito: são consertos sobre regras que já existem
+   acima, e ler daqui é ler o que mudou e por quê.
+   ====================================================================== */
+
+/* 1. OS NOMES DO MENU SUMIAM COM O TRILHO ABERTO.
+      Quem clicava para expandir a lateral via os ícones se afastarem e
+      nenhum texto aparecer -- pior que o trilho fechado.
+
+      A causa é especificidade: a regra que esconde
+      (`.ls-sidebar .ls-nav-item>span:not(.ls-nav-icon):not(.ls-nav-count)`)
+      pesa quatro classes, e a que devolvia (`.ls-sidebar.expandida
+      .ls-nav-item>span`) pesa três. Repetir os :not() aqui empata em
+      classes e o `.expandida` desempata. */
+@media (min-width:761px){
+  .ls-sidebar.expandida .ls-nav-item>span:not(.ls-nav-icon):not(.ls-nav-count){
+    display:block;
+  }
+  /* O contador volta a ficar ao lado do nome, não sobreposto ao ícone. */
+  .ls-sidebar.expandida .ls-nav-count{
+    position:static;margin-left:auto;
+  }
+  .ls-sidebar.expandida .ls-nav-item{gap:12px}
+}
+
+/* 2. SELECT SEM SETA.
+      `background:` (atalho) apagava a seta que o Bootstrap desenha em
+      `background-image`. Resultado: o campo parecia um texto comum e
+      ninguém percebia que dava para escolher. Aqui a cor volta a ser só
+      `background-color` e a seta é desenhada de novo, em âmbar. */
+.form-select{
+  background-color:#261c0b!important;
+  background-image:url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23F2A93B' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e")!important;
+  background-repeat:no-repeat!important;
+  background-position:right 14px center!important;
+  background-size:15px 12px!important;
+  padding-right:40px!important;
+  cursor:pointer;
+}
+.form-select:focus{background-color:#30240f!important}
+
+/* 3. O "R$" SOLTO AO LADO DO CAMPO.
+      No input-group os dois pedaços vinham com raio próprio e pareciam
+      duas caixas encostadas. Agora formam um campo só. */
+.input-group{flex-wrap:nowrap}
+.input-group>.input-group-text{
+  border-right:0!important;
+  border-radius:11px 0 0 11px!important;
+  padding-inline:13px!important;
+  font-weight:800!important;
+}
+.input-group>.form-control{
+  border-left:0!important;
+  border-radius:0 11px 11px 0!important;
+}
+.input-group:focus-within>.input-group-text{border-color:#f1c16d!important}
+
+/* 4. A COLUNA DA DESCRIÇÃO ESPREMIDA.
+      Na linha do orçamento a descrição é o que o cliente lê na proposta,
+      e sobrava para ela um campo de dois dedos. As larguras agora saem do
+      CSS, e não de porcentagens espalhadas no HTML. */
+.ls-itens-table{table-layout:fixed;width:100%}
+.ls-itens-table th:nth-child(1),
+.ls-itens-table td:nth-child(1){width:30%}
+.ls-itens-table th:nth-child(2),
+.ls-itens-table td:nth-child(2){width:auto}
+.ls-itens-table th:nth-child(3),
+.ls-itens-table td:nth-child(3){width:88px}
+.ls-itens-table th:nth-child(4),
+.ls-itens-table td:nth-child(4){width:130px}
+.ls-itens-table th:nth-child(5),
+.ls-itens-table td:nth-child(5){width:118px}
+.ls-itens-table th:nth-child(6),
+.ls-itens-table td:nth-child(6){width:56px}
+.ls-itens-table td{padding-inline:7px}
+.ls-itens-table .ls-busca,
+.ls-itens-table .form-control{min-width:0}
+
+/* Abaixo de ~1100px a linha vira cartão.
+
+   A proposta tem seis campos por item. Espremidos em uma linha dentro do
+   modal, a descrição -- que é o texto que o cliente lê -- sobrava com
+   dois dedos de largura. Empilhado, cada campo recebe a linha inteira, o
+   rótulo vem do `data-rotulo` e some a rolagem lateral, que no tablet é o
+   gesto mais fácil de errar. */
+@media (max-width:1100px){
+  .ls-itens-table{table-layout:auto}
+  .ls-itens-table thead{display:none}
+  .ls-itens-table,
+  .ls-itens-table tbody,
+  .ls-itens-table tr,
+  .ls-itens-table td{display:block;width:auto}
+  .ls-itens-table tr{
+    position:relative;
+    margin-bottom:12px;padding:13px 13px 9px;
+    border:1px solid var(--line);border-radius:15px;
+    background:rgba(255,255,255,.025);
+  }
+  /* As larguras fixas de coluna são de tabela; em cartão cada campo
+     ocupa a linha. Repetir o :nth-child aqui é o que desempata com as
+     regras de largura definidas acima. */
+  .ls-itens-table td:nth-child(1),
+  .ls-itens-table td:nth-child(2){width:100%}
+  /* Quantidade e valor andam juntos na cabeça de quem digita: ficam lado
+     a lado, e a linha inteira sobra para o que é texto. */
+  .ls-itens-table td:nth-child(3),
+  .ls-itens-table td:nth-child(4){
+    display:inline-block;width:calc(50% - 5px);vertical-align:top;
+  }
+  .ls-itens-table td:nth-child(3){margin-right:8px}
+  .ls-itens-table td:nth-child(3) .form-control,
+  .ls-itens-table td:nth-child(4) .form-control{text-align:right}
+  .ls-itens-table td{padding:0 0 10px}
+  .ls-itens-table td::before{
+    content:attr(data-rotulo);
+    display:block;margin-bottom:5px;
+    color:var(--muted-2);font-size:.68rem;font-weight:900;
+    letter-spacing:.08em;text-transform:uppercase;
+  }
+  /* Subtotal e remover dividem a última linha do cartão. */
+  .ls-itens-table td:nth-child(5){
+    display:inline-block;width:auto;padding-bottom:0;
+  }
+  .ls-itens-table td:nth-child(6){
+    position:absolute;top:10px;right:10px;padding:0;
+  }
+  .ls-itens-table td:nth-child(6)::before{content:""}
+  .ls-itens-table td:nth-child(1){padding-right:52px}
+}
+
+/* 5. CONTRASTE.
+      Texto de apoio, dica de campo e placeholder estavam apagados demais
+      para uma tela lida sob luz de galpão, muitas vezes com o tablet
+      inclinado. Todos sobem de tom; nenhum vira branco, para o olho
+      continuar sabendo o que é principal e o que é apoio. */
+:root{
+  --muted:#C4B6A0;
+  --muted-2:#A2917A;
+}
+.form-control::placeholder{color:#9d8f7c!important}
+.form-text,.small,small{color:#bcae9d!important}
+.text-muted{color:#bcae9d!important}
+.ls-busca-entrada::placeholder{color:#9d8f7c}
+.ls-busca-item-detalhe{color:#bcae9d}
+.ls-busca-grupo{color:#a2917a}
+
+/* Borda de campo um pouco mais presente: em fundo escuro, borda fraca
+   faz o campo desaparecer e a pessoa não sabe onde tocar. */
+.form-control,.form-select,.input-group-text{border-color:#7a6540!important}
+.ls-busca-campo{border-color:#7a6540}
+
+/* 6. O CAMPO DE BUSCA E O RESTO DO FORMULÁRIO PRECISAM PARECER IRMÃOS.
+      Alturas e raios batendo, para a linha do formulário não ficar
+      serrilhada. */
+.ls-busca-campo{
+  min-height:49px;
+  border-radius:11px;
+  background:#261c0b;
+}
+.ls-busca-entrada{height:45px;font-size:.92rem}
+.ls-busca.aberta .ls-busca-campo,
+.ls-busca-campo:focus-within{background:#30240f}
+.ls-busca-painel{border-color:#7a6540;background:#2a2010}
+.ls-busca-item:hover,.ls-busca-item.marcado{background:rgba(242,169,59,.14)}
+
+/* 7. O BOTÃO DE CADASTRAR NA HORA.
+      É a saída para quando o cadastro não existe: precisa parecer um
+      convite, e não um aviso de erro no rodapé da lista. */
+.ls-busca-criar{
+  min-height:50px;
+  border-style:solid;
+  border-color:rgba(242,169,59,.5);
+  color:#ffd591;
+  background:rgba(242,169,59,.12);
+  font-size:.85rem;
+}
+.ls-busca-criar:hover{color:#2A1B05;background:var(--acento);border-color:var(--acento)}
+
+/* 8. MODAL: cabeçalho e rodapé com peso, corpo com respiro. */
+.modal-content{border-color:#5f4e30!important;background:#241b0d!important}
+.modal-header,.modal-footer{border-color:rgba(179,163,140,.2)!important;background:#2b2110!important}
+.modal-title{font-weight:900!important;letter-spacing:-.02em}
+.modal-body{padding:20px!important}
+.modal-body hr{border-color:rgba(179,163,140,.22)!important;opacity:1!important}

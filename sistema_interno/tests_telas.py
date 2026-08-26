@@ -208,3 +208,51 @@ class AplicativoInstalavelTests(TestCase):
 
         self.assertIn('rel="manifest" href="/manifest.webmanifest"', corpo)
         self.assertIn('name="apple-mobile-web-app-capable"', corpo)
+
+
+class SemDependenciaDeCDNTests(TestCase):
+    """O painel não pode depender de servidor de terceiro para funcionar.
+
+    Bootstrap e ícones vinham de CDN. Quando o CDN não responde -- wi-fi
+    ruim no galpão, DNS travado, operadora bloqueando --, o JavaScript do
+    Bootstrap não carrega e TODOS os modais param: cadastrar cliente,
+    montar orçamento, abrir etapa. A tela abre e não faz nada.
+
+    Este teste lê os templates do painel: qualquer endereço externo novo
+    reabre o mesmo buraco.
+    """
+
+    HOSPEDEIROS_PROIBIDOS = (
+        "cdn.jsdelivr.net",
+        "cdnjs.cloudflare.com",
+        "unpkg.com",
+        "stackpath.bootstrapcdn.com",
+        "maxcdn.bootstrapcdn.com",
+        "fonts.googleapis.com",
+        "code.jquery.com",
+    )
+
+    def test_nenhum_template_do_painel_puxa_arquivo_de_fora(self):
+        from pathlib import Path
+
+        pasta = Path(__file__).resolve().parent / "templates"
+        problemas = []
+
+        for template in sorted(pasta.glob("*.html")):
+            texto = template.read_text(encoding="utf-8")
+
+            for numero, linha in enumerate(texto.splitlines(), 1):
+                # O texto do comentário que explica a mudança cita o CDN
+                # de propósito; o que não pode é src/href apontando pra lá.
+                if "src=" not in linha and "href=" not in linha:
+                    continue
+
+                for hospedeiro in self.HOSPEDEIROS_PROIBIDOS:
+                    if hospedeiro in linha:
+                        problemas.append(f"{template.name}:{numero} → {hospedeiro}")
+
+        self.assertEqual(
+            problemas,
+            [],
+            "Arquivo externo no painel interno:\n" + "\n".join(problemas),
+        )

@@ -6,7 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="dark">
   <title>Acesso Interno | Lazer & Sport</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  {# Ícones do próprio servidor: a tela de entrada não pode depender de CDN. #}
+  <link href="{% static 'interno/vendor/bootstrap-icons.min.css' %}" rel="stylesheet">
   <style>
     *{box-sizing:border-box}
     :root{--bg:#171106;--panel:#2f230f;--line:#5f4b29;--text:#fcfaf7;--muted:#b6ac9f;--blue:#ffc766}

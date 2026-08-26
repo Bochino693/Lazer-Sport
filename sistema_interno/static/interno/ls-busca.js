@@ -207,27 +207,87 @@
       }
     }
 
-    /* --------------------------------------------------- abrir/fechar */
+    /* --------------------------------------------------- abrir/fechar
+
+       O PAINEL SAI DE DENTRO DO FORMULÁRIO PARA ABRIR.
+
+       Enquanto ele era filho do campo, quem o cortava era o contêiner de
+       cima: o corpo do modal rola (`overflow:auto`) e a tabela de itens
+       do orçamento rola de lado. O resultado era a lista aparecendo pela
+       metade, escondida atrás da borda -- exatamente onde ela mais é
+       usada.
+
+       Aberto, o painel vai para o <body> em `position:fixed`, colado ao
+       campo por coordenada. Fechado, volta para dentro do componente,
+       para não sobrar nó solto quando a linha do orçamento é removida.
+    */
+    function posicionar() {
+      var caixa = campo.getBoundingClientRect();
+      var folga = 6;
+      var espacoAbaixo = janela.innerHeight - caixa.bottom - folga;
+      var espacoAcima = caixa.top - folga;
+      var altura = Math.min(420, janela.innerHeight * 0.58);
+
+      /* O painel acompanha o campo, mas nunca fica mais estreito que o
+         necessário para ler o nome do produto: dentro da tabela do
+         orçamento a coluna tem 30% da largura, e "Cama elástica 3m"
+         quebrava em três linhas. Quando estica, ele desliza para caber
+         na tela em vez de vazar pela direita. */
+      var largura = Math.min(
+        Math.max(caixa.width, 340),
+        janela.innerWidth - 16
+      );
+      var esquerda = Math.min(
+        Math.max(8, caixa.left),
+        janela.innerWidth - largura - 8
+      );
+
+      painel.style.position = "fixed";
+      painel.style.left = esquerda + "px";
+      painel.style.width = largura + "px";
+
+      /* Campo perto da base da tela abre para cima -- é o caso do último
+         item da proposta, com o teclado do tablet ocupando o resto. */
+      if (espacoAbaixo < 200 && espacoAcima > espacoAbaixo) {
+        painel.style.top = "auto";
+        painel.style.bottom = (janela.innerHeight - caixa.top + folga) + "px";
+        painel.style.maxHeight = Math.min(altura, espacoAcima) + "px";
+      } else {
+        painel.style.bottom = "auto";
+        painel.style.top = (caixa.bottom + folga) + "px";
+        painel.style.maxHeight = Math.min(altura, espacoAbaixo) + "px";
+      }
+    }
+
     function abrir() {
       if (!painel.hidden) return;
+
+      document.body.appendChild(painel);
       painel.hidden = false;
       raiz.classList.add("aberta");
       entrada.setAttribute("aria-expanded", "true");
       desenhar(entrada.value === rotuloEscolhido() ? "" : entrada.value);
+      posicionar();
 
-      /* No tablet o teclado sobe e come metade da tela: garantir que a
-         lista fique visível evita o usuário digitar às cegas. */
-      janela.setTimeout(function () {
-        raiz.scrollIntoView({ block: "nearest", behavior: "smooth" });
-      }, 60);
+      /* `true` no terceiro argumento: a rolagem que interessa é a do
+         modal e a da tabela, e nenhuma das duas borbulha até o document
+         sem a fase de captura. */
+      janela.addEventListener("scroll", posicionar, true);
+      janela.addEventListener("resize", posicionar);
     }
 
     function fechar(restaurar) {
       if (painel.hidden) return;
+
       painel.hidden = true;
       raiz.classList.remove("aberta");
       entrada.setAttribute("aria-expanded", "false");
       marcado = -1;
+
+      janela.removeEventListener("scroll", posicionar, true);
+      janela.removeEventListener("resize", posicionar);
+      painel.removeAttribute("style");
+      raiz.appendChild(painel);
 
       /* Texto pela metade no campo faz o usuário achar que escolheu algo
          que não escolheu. Fechar devolve o rótulo do que está valendo. */
@@ -333,6 +393,10 @@
 
     document.addEventListener("click", function (evento) {
       if (raiz.contains(evento.target)) return;
+      /* O painel está no <body> enquanto aberto: sem esta linha, clicar
+         numa opção contaria como "clique fora" e fecharia antes da
+         escolha ser registrada. */
+      if (painel.contains(evento.target)) return;
       fechar();
     });
 
@@ -364,7 +428,13 @@
         opcoes.push(opcao);
         if (escolherAgora) escolher(opcao.valor);
       },
-      focar: function () { entrada.focus(); }
+      focar: function () { entrada.focus(); },
+      /* Chamado quando o dono do campo some da tela (linha do orçamento
+         removida): fecha e leva o painel junto. */
+      destruir: function () {
+        fechar(false);
+        raiz.remove();
+      }
     };
   }
 

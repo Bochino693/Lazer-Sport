@@ -781,6 +781,9 @@ document.addEventListener("DOMContentLoaded", function () {
     var indice = buscasDeItem.indexOf(linha.buscaItem);
     if (indice >= 0) buscasDeItem.splice(indice, 1);
 
+    /* Fecha a busca antes de tirar a linha: com o painel aberto ele está
+       no <body>, e remover só o <tr> deixaria a lista órfã na tela. */
+    if (linha.buscaItem) linha.buscaItem.destruir();
     linha.remove();
     recalcular();
   });
