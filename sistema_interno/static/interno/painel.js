@@ -20,9 +20,18 @@
 
   Painel.abrir = function (id) {
     var m = Painel.modal(id);
-    if (m) {
-      m.show();
-    }
+    if (!m) return;
+
+    /* Toda janela do painel entra na tela com as máscaras ligadas.
+     *
+     * Antes cada tela precisava lembrar de chamar `aplicarMascaras`, e as
+     * que esqueceram mostravam telefone e dinheiro crus -- "11999998888"
+     * no lugar de "(11) 99999-8888". Ligar aqui resolve para as janelas
+     * que existem e para as próximas, que é o ponto. */
+    var elemento = document.getElementById(id);
+    if (elemento) Painel.aplicarMascaras(elemento);
+
+    m.show();
   };
 
   Painel.fechar = function (id) {
@@ -75,28 +84,24 @@
     }
   };
 
-  Painel.valor = function (id, v) {
-    var el = document.getElementById(id);
-    if (el) {
-      el.value = v === null || v === undefined ? "" : v;
-    }
-  };
-
   /* Máscaras do aplicativo interno.
    *
    * type="number" é bom para quantidade inteira, mas ruim para dinheiro
    * brasileiro: vários navegadores recusam a vírgula e apagam o valor ao
-   * enviar. Valores monetários continuam como texto com inputmode decimal,
-   * recebem teclado numérico no tablet e têm qualquer letra removida aqui.
+   * enviar. Valores monetários continuam como texto com inputmode
+   * decimal, recebem teclado numérico no tablet e têm qualquer letra
+   * removida na digitação.
+   *
+   * As funções vivem aqui fora, e não dentro de `aplicarMascaras`, porque
+   * quem preenche um campo por JavaScript também precisa delas -- ver
+   * `Painel.valor`.
    */
-  Painel.aplicarMascaras = function (raiz) {
-    raiz = raiz || document;
+  function digitos(valor, limite) {
+    return String(valor || "").replace(/\D/g, "").slice(0, limite || 99);
+  }
 
-    function digitos(valor, limite) {
-      return String(valor || "").replace(/\D/g, "").slice(0, limite || 99);
-    }
-
-    function telefone(valor) {
+  var mascaras = {
+    telefone: function (valor) {
       var numero = digitos(valor, 13);
       var pais = numero.length > 11 && numero.indexOf("55") === 0;
       var local = pais ? numero.slice(2) : numero;
@@ -111,16 +116,16 @@
 
       var corte = corpo.length > 8 ? 5 : 4;
       return prefixo + "(" + ddd + ") " + corpo.slice(0, corte) + "-" + corpo.slice(corte, 9);
-    }
+    },
 
-    function cep(valor) {
+    cep: function (valor) {
       var numero = digitos(valor, 8);
       return numero.length > 5
         ? numero.slice(0, 5) + "-" + numero.slice(5)
         : numero;
-    }
+    },
 
-    function documento(valor) {
+    documento: function (valor) {
       var numero = digitos(valor, 14);
       if (numero.length <= 11) {
         return numero
@@ -133,9 +138,12 @@
         .replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3")
         .replace(/\.(\d{3})(\d)/, ".$1/$2")
         .replace(/(\d{4})(\d)/, "$1-$2");
-    }
+    },
 
-    function moedaDigitada(valor) {
+    /* Enquanto digita: tira letra e símbolo, deixa uma vírgula só. O
+       arredondamento para duas casas fica para o blur -- formatar no meio
+       da digitação empurra o cursor e faz a pessoa errar o número. */
+    moeda: function (valor) {
       var limpo = String(valor || "").replace(/[^\d.,]/g, "");
       var virgula = limpo.lastIndexOf(",");
       if (virgula >= 0) {
@@ -143,41 +151,88 @@
       }
       return limpo.slice(0, 18);
     }
+  };
 
-    function numeroMoeda(valor) {
-      var limpo = String(valor || "").replace(/[^\d.,]/g, "");
-      if (!limpo) return null;
-      if (limpo.indexOf(",") >= 0) {
-        limpo = limpo.replace(/\./g, "").replace(",", ".");
-      } else if ((limpo.match(/\./g) || []).length > 1) {
-        limpo = limpo.replace(/\./g, "");
-      }
-      var numero = Number(limpo);
-      return Number.isFinite(numero) ? numero : null;
+  function numeroMoeda(valor) {
+    var limpo = String(valor || "").replace(/[^\d.,]/g, "");
+    if (!limpo) return null;
+    if (limpo.indexOf(",") >= 0) {
+      limpo = limpo.replace(/\./g, "").replace(",", ".");
+    } else if ((limpo.match(/\./g) || []).length > 1) {
+      limpo = limpo.replace(/\./g, "");
+    }
+    var numero = Number(limpo);
+    return Number.isFinite(numero) ? numero : null;
+  }
+
+  function moedaFinal(valor) {
+    var numero = numeroMoeda(valor);
+    return numero === null ? "" : numero.toLocaleString("pt-BR", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+  }
+
+  Painel.mascarar = function (tipo, valor) {
+    var formatar = mascaras[tipo];
+    return formatar ? formatar(valor) : valor;
+  };
+
+  Painel.valorNumerico = numeroMoeda;
+
+  /* Preenche um campo pelo id.
+   *
+   * APLICA A MÁSCARA. Reabrir um cadastro salvo jogava o valor cru na
+   * tela -- "11999998888" no lugar de "(11) 99999-8888" -- e, pior, o
+   * primeiro salvamento depois disso gravava o cru de volta. Formatar
+   * aqui conserta os dois de uma vez, porque toda tela do painel enche
+   * modal por esta função.
+   */
+  Painel.valor = function (id, v) {
+    var el = document.getElementById(id);
+    if (!el) return;
+
+    var bruto = v === null || v === undefined ? "" : String(v);
+    var tipo = el.dataset ? el.dataset.mascara : "";
+
+    if (!bruto) {
+      el.value = "";
+      return;
     }
 
+    if (tipo === "moeda") el.value = moedaFinal(bruto) || bruto;
+    else if (tipo) el.value = Painel.mascarar(tipo, bruto);
+    else el.value = bruto;
+  };
+
+  Painel.aplicarMascaras = function (raiz) {
+    raiz = raiz || document;
+
     raiz.querySelectorAll("[data-mascara]").forEach(function (campo) {
-      if (campo.dataset.mascaraLigada === "1") return;
+      if (campo.dataset.mascaraLigada === "1") {
+        /* Já ligado, mas o valor pode ter sido trocado por JavaScript
+           desde então: reformata e sai. */
+        if (campo.value) campo.value = Painel.mascarar(campo.dataset.mascara, campo.value);
+        return;
+      }
+
       campo.dataset.mascaraLigada = "1";
       var tipo = campo.dataset.mascara;
 
       function formatarEntrada() {
-        if (tipo === "telefone") campo.value = telefone(campo.value);
-        else if (tipo === "cep") campo.value = cep(campo.value);
-        else if (tipo === "documento") campo.value = documento(campo.value);
-        else if (tipo === "moeda") campo.value = moedaDigitada(campo.value);
+        campo.value = Painel.mascarar(tipo, campo.value);
       }
 
       campo.addEventListener("input", formatarEntrada);
+
       if (tipo === "moeda") {
+        /* Ao sair do campo o número ganha as duas casas: "80" vira
+           "80,00" e "1234,5" vira "1.234,50". */
         campo.addEventListener("blur", function () {
-          var numero = numeroMoeda(campo.value);
-          campo.value = numero === null ? "" : numero.toLocaleString("pt-BR", {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2
-          });
+          campo.value = moedaFinal(campo.value);
         });
       }
+
       formatarEntrada();
     });
   };

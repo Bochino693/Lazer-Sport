@@ -106,11 +106,44 @@ class RespostaJSONMixin:
             return JsonResponse({"status": "erro", "msg": mensagem}, status=status)
         return redirect(self.rota_padrao)
 
+    #: Chaves que a resposta usa para dizer se deu certo. Nenhum extra
+    #: pode ocupá-las -- ver `sucesso`.
+    CAMPOS_RESERVADOS = ("status", "msg")
+
     def sucesso(self, request, mensagem, **extras):
+        """Resposta de sucesso, com os dados extras que a tela pediu.
+
+        OS EXTRAS NÃO PODEM SOBRESCREVER `status` E `msg`.
+
+        Isto já custou caro uma vez: a ação de enviar orçamento passava
+        `status=orcamento.status` como extra, o dicionário final saía com
+        `"status": "rascunho"` no lugar de `"sucesso"`, e o JavaScript --
+        que confere `json.status !== "sucesso"` -- tratava um envio bem
+        sucedido como falha. O link da proposta nunca aparecia na tela e a
+        mensagem de sucesso ia parar na tarja vermelha de erro.
+
+        O acidente é silencioso porque o servidor responde 200 e o teste
+        de servidor passa. Por isso a proteção mora aqui, e não na
+        lembrança de quem escreve a próxima ação: extra com nome
+        reservado é renomeado, e quem lê a resposta continua achando o
+        valor -- só que em outra chave.
+        """
         invalidar_avisos(getattr(request, "user", None))
-        if pede_json(request):
-            return JsonResponse({"status": "sucesso", "msg": mensagem, **extras})
-        return redirect(self.rota_padrao)
+
+        if not pede_json(request):
+            return redirect(self.rota_padrao)
+
+        corpo = {}
+        for chave, valor in extras.items():
+            if chave in self.CAMPOS_RESERVADOS:
+                corpo[f"{chave}_do_registro"] = valor
+            else:
+                corpo[chave] = valor
+
+        corpo["status"] = "sucesso"
+        corpo["msg"] = mensagem
+
+        return JsonResponse(corpo)
 
     def despachar_acao(self, request):
         acao = request.POST.get("action", "")

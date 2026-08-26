@@ -84,61 +84,104 @@ def cep_valido(cep):
     return bool(re.fullmatch(r"\d{8}", _somente_digitos(cep)))
 
 
+#: Fontes de CEP, na ordem em que são tentadas.
+#
+# POR QUE MAIS DE UMA. O ViaCEP é a mais conhecida e a mais completa em
+# logradouro, mas devolve bairro vazio numa fatia grande de CEPs -- e
+# bairro vazio é justamente o campo que quem monta uma entrega precisa. A
+# BrasilAPI busca em outras bases (inclusive a dos Correios) e costuma
+# ter o bairro que falta.
+#
+# Elas não competem: a primeira que responder define o endereço, e as
+# seguintes só PREENCHEM O QUE FICOU VAZIO. Assim, se o ViaCEP estiver
+# fora do ar, o CEP continua funcionando pela segunda fonte, em vez de a
+# tela dizer "não encontrei" para um CEP que existe.
+FONTES_DE_CEP = (
+    (
+        "viacep",
+        "https://viacep.com.br/ws/{cep}/json/",
+        {
+            "rua": "logradouro",
+            "bairro": "bairro",
+            "cidade": "localidade",
+            "estado": "uf",
+        },
+    ),
+    (
+        "brasilapi-v2",
+        "https://brasilapi.com.br/api/cep/v2/{cep}",
+        {
+            "rua": "street",
+            "bairro": "neighborhood",
+            "cidade": "city",
+            "estado": "state",
+        },
+    ),
+    (
+        "brasilapi-v1",
+        "https://brasilapi.com.br/api/cep/v1/{cep}",
+        {
+            "rua": "street",
+            "bairro": "neighborhood",
+            "cidade": "city",
+            "estado": "state",
+        },
+    ),
+)
+
+CAMPOS_DE_ENDERECO = ("rua", "bairro", "cidade", "estado")
+
+
 @lru_cache(maxsize=2000)
 def buscar_dados_cep(cep):
     """Consulta o CEP e devolve rua, bairro, cidade e UF normalizados.
 
-    ViaCEP continua sendo a fonte principal. Alguns CEPs, porém, chegam sem
-    bairro (ou sem logradouro) mesmo quando outra base pública possui esse
-    dado. Nessa situação consultamos a BrasilAPI apenas para completar os
-    campos vazios; uma falha da segunda fonte nunca derruba a primeira.
+    Percorre `FONTES_DE_CEP` até ter os quatro campos. Cada fonte só
+    acrescenta o que ainda falta, então uma resposta incompleta da
+    primeira não impede a segunda de completar o bairro -- que é o caso
+    mais comum e o que mais atrapalha na hora da entrega.
+
+    Devolve None só quando NENHUMA fonte reconheceu o CEP.
     """
     cep_limpo = _somente_digitos(cep)
     if not cep_valido(cep_limpo):
-        logger.warning("[FRETE] CEP inválido: %s", cep)
+        logger.warning("[CEP] CEP inválido: %s", cep)
         return None
 
-    try:
-        data = _request_json(
-            f"https://viacep.com.br/ws/{cep_limpo}/json/"
-        )
-    except (requests.RequestException, ValueError) as exc:
-        logger.error("[FRETE] Falha no ViaCEP para %s: %s", cep_limpo, exc)
-        return None
+    dados = {"cep": cep_limpo, "rua": "", "bairro": "", "cidade": "", "estado": ""}
+    achou_alguma = False
 
-    if data.get("erro"):
-        logger.warning("[FRETE] CEP não encontrado: %s", cep_limpo)
-        return None
+    for nome, molde, mapa in FONTES_DE_CEP:
+        if all(dados[campo] for campo in CAMPOS_DE_ENDERECO):
+            break
 
-    dados = {
-        "cep": cep_limpo,
-        "rua": (data.get("logradouro") or "").strip(),
-        "bairro": (data.get("bairro") or "").strip(),
-        "cidade": (data.get("localidade") or "").strip(),
-        "estado": (data.get("uf") or "").strip(),
-    }
-
-    if not all(dados[campo] for campo in ("rua", "bairro", "cidade", "estado")):
         try:
-            alternativa = _request_json(
-                f"https://brasilapi.com.br/api/cep/v2/{cep_limpo}"
-            )
+            resposta = _request_json(molde.format(cep=cep_limpo))
         except (requests.RequestException, ValueError) as exc:
-            logger.info(
-                "[CEP] BrasilAPI indisponível para completar %s: %s",
-                cep_limpo,
-                exc,
-            )
-        else:
-            complementos = {
-                "rua": alternativa.get("street"),
-                "bairro": alternativa.get("neighborhood"),
-                "cidade": alternativa.get("city"),
-                "estado": alternativa.get("state"),
-            }
-            for campo, valor in complementos.items():
-                if not dados[campo] and valor:
-                    dados[campo] = str(valor).strip()
+            logger.info("[CEP] %s indisponível para %s: %s", nome, cep_limpo, exc)
+            continue
+
+        # O ViaCEP responde 200 com {"erro": true} para CEP inexistente.
+        if not isinstance(resposta, dict) or resposta.get("erro"):
+            continue
+
+        preencheu = False
+        for campo, chave in mapa.items():
+            valor = str(resposta.get(chave) or "").strip()
+            if valor and not dados[campo]:
+                dados[campo] = valor
+                preencheu = True
+
+        achou_alguma = achou_alguma or preencheu
+
+    if not achou_alguma:
+        logger.warning("[CEP] Nenhuma fonte reconheceu o CEP %s", cep_limpo)
+        return None
+
+    if not dados["bairro"]:
+        # Não é erro: CEP de cidade inteira não tem bairro. A tela avisa
+        # para conferir, em vez de deixar o campo vazio sem explicação.
+        logger.info("[CEP] %s veio sem bairro em todas as fontes", cep_limpo)
 
     return dados
 

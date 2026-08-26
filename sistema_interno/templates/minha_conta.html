@@ -38,7 +38,7 @@
         </div>
         <div class="col-12 col-md-5">
           <label class="form-label" for="contaTelefone">Telefone</label>
-          <input class="form-control" id="contaTelefone" name="telefone" value="{% if user.gerente %}{{ user.gerente.telefone|default:'' }}{% endif %}" inputmode="tel" autocomplete="tel" maxlength="20">
+          <input class="form-control" id="contaTelefone" name="telefone" value="{% if user.gerente %}{{ user.gerente.telefone|default:'' }}{% endif %}" inputmode="tel" autocomplete="tel" maxlength="20" data-mascara="telefone">
         </div>
       </div>
     </section>

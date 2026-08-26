@@ -209,7 +209,7 @@
             <div class="input-group">
               <span class="input-group-text">R$</span>
               <input class="form-control" id="itemPreco" name="preco_fornecedor"
-                     data-rotulo="valor pago" inputmode="decimal" placeholder="1.250,00" required>
+                     data-rotulo="valor pago" inputmode="decimal" placeholder="1.250,00" required data-mascara="moeda">
             </div>
           </div>
 
@@ -286,7 +286,7 @@
             <label class="form-label" for="movimentoValor">Valor pago (un.)</label>
             <div class="input-group">
               <span class="input-group-text">R$</span>
-              <input class="form-control" id="movimentoValor" name="valor_unitario" inputmode="decimal">
+              <input class="form-control" id="movimentoValor" name="valor_unitario" inputmode="decimal" data-mascara="moeda">
             </div>
             <div class="form-text">Numa entrada, vira o novo valor de referência.</div>
           </div>

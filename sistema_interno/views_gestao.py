@@ -637,7 +637,10 @@ class OrcamentosInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
                 else f"Orçamento #{orcamento.pk} pronto para enviar."
             ),
             id=orcamento.pk,
-            status=orcamento.status,
+            # `situacao`, e não `status`: a chave `status` é a que diz se a
+            # requisição deu certo, e mandar a situação do orçamento nela
+            # fazia o painel ler um envio bem sucedido como falha.
+            situacao=orcamento.status,
             **extras,
         )
 
