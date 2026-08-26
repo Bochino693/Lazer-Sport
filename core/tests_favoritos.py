@@ -278,7 +278,8 @@ class ListaDesejosTests(FavoritoBaseTests):
 class CatalogoTests(FavoritoBaseTests):
     """Os corações do catálogo vêm pintados do servidor."""
 
-    def test_catalogo_de_brinquedos_marca_o_que_o_aparelho_curtiu(self):
+    def test_catalogo_mostra_curtidas_do_app_e_o_botao_de_desejo(self):
+        """No site a curtida é número; a ação disponível é guardar."""
         self.client.cookies[COOKIE_DISPOSITIVO] = DISPOSITIVO_A
         self.alternar(tipo="curtida")
 
@@ -287,7 +288,15 @@ class CatalogoTests(FavoritoBaseTests):
         self.assertEqual(resposta.status_code, 200)
         self.assertIn(self.brinquedo.pk, resposta.context["fav_curtidos"])
         self.assertNotIn(self.brinquedo.pk, resposta.context["fav_desejados"])
-        self.assertContains(resposta, 'data-favorito="curtida"')
+
+        # Coração: só leitura, com o total do aplicativo.
+        self.assertContains(
+            resposta,
+            f'data-favorito-total="brinquedo-{self.brinquedo.pk}"',
+        )
+        self.assertNotContains(resposta, 'data-favorito="curtida"')
+        # Guardar continua sendo uma ação do site.
+        self.assertContains(resposta, 'data-favorito="desejo"')
 
     def test_catalogo_de_pecas_mostra_o_total_de_curtidas(self):
         self.client.cookies[COOKIE_DISPOSITIVO] = DISPOSITIVO_A
@@ -371,3 +380,108 @@ class FavoritoAppTests(FavoritoBaseTests):
         )
 
         self.assertEqual(resposta.json()["curtidas"], 1)
+
+
+class EstadoDoVisitanteTests(FavoritoBaseTests):
+    """A home é cacheada: o card sai neutro e o JS pergunta o estado.
+
+    Sem este endereço, marcar o card no servidor faria a lista de uma
+    pessoa aparecer para as outras, que é o preço de um HTML compartilhado
+    entre todos os visitantes.
+    """
+
+    def test_devolve_o_que_o_aparelho_guardou(self):
+        self.client.cookies[COOKIE_DISPOSITIVO] = DISPOSITIVO_A
+        self.alternar(tipo="desejo")
+        self.alternar(tipo="desejo", produto="peca", produto_id=self.peca.pk)
+
+        dados = self.client.get(reverse("meus_favoritos")).json()
+
+        self.assertTrue(dados["ok"])
+        self.assertEqual(dados["desejo"]["brinquedo"], [self.brinquedo.pk])
+        self.assertEqual(dados["desejo"]["peca"], [self.peca.pk])
+        self.assertEqual(dados["total_desejos"], 2)
+
+    def test_visitante_novo_recebe_lista_vazia_sem_ganhar_cookie(self):
+        """Quem só passou pela home não precisa sair com chave de aparelho."""
+        resposta = self.client.get(reverse("meus_favoritos"))
+
+        self.assertEqual(resposta.json()["total_desejos"], 0)
+        self.assertNotIn(COOKIE_DISPOSITIVO, resposta.cookies)
+
+    def test_lista_de_outro_aparelho_nao_vaza(self):
+        self.client.cookies[COOKIE_DISPOSITIVO] = DISPOSITIVO_A
+        self.alternar(tipo="desejo")
+
+        self.client.cookies[COOKIE_DISPOSITIVO] = DISPOSITIVO_B
+        dados = self.client.get(reverse("meus_favoritos")).json()
+
+        self.assertEqual(dados["desejo"]["brinquedo"], [])
+
+
+class CardsDoSiteTests(FavoritoBaseTests):
+    """O coração e o marcador aparecem onde o cliente escolhe produto."""
+
+    def test_vitrine_da_loja_traz_curtidas_e_marcador(self):
+        self.brinquedo.exibir_na_loja = True
+        self.brinquedo.save(update_fields=["exibir_na_loja"])
+        self.alternar(tipo="curtida")
+
+        resposta = self.client.get(reverse("loja"))
+
+        self.assertEqual(resposta.status_code, 200)
+        cartao = [
+            item for item in resposta.context["itens_loja"]
+            if item["tipo"] == "brinquedo"
+        ][0]
+        self.assertEqual(cartao["fav_curtidas"], 1)
+        self.assertContains(resposta, 'data-favorito="desejo"')
+
+    def test_pagina_da_categoria_traz_o_total_de_curtidas(self):
+        from .models import CategoriasBrinquedos
+
+        categoria = CategoriasBrinquedos.objects.create(
+            nome_categoria="Infláveis",
+        )
+        self.brinquedo.categorias_brinquedos.add(categoria)
+        self.alternar(tipo="curtida")
+
+        resposta = self.client.get(
+            reverse("categoria_detalhe", args=[categoria.pk])
+        )
+
+        item = resposta.context["page_obj"].object_list[0]
+        self.assertEqual(item.total_curtidas, 1)
+        self.assertContains(
+            resposta,
+            f'data-favorito-total="brinquedo-{self.brinquedo.pk}"',
+        )
+
+
+class ProgramaDePontosNaListaTests(FavoritoBaseTests):
+
+    def test_lista_mostra_a_meta_e_o_que_falta(self):
+        self.client.cookies[COOKIE_DISPOSITIVO] = DISPOSITIVO_A
+        self.alternar(tipo="desejo")
+
+        resposta = self.client.get(reverse("lista_desejos"))
+
+        self.assertContains(resposta, "Programa de pontos")
+        self.assertContains(resposta, "Baixar o aplicativo")
+
+    def test_cliente_logado_ve_o_saldo(self):
+        from django.contrib.auth.models import User
+
+        user = User.objects.create_user(
+            username="cliente-pontos",
+            password="senha-forte-123",
+        )
+        perfil = user.perfil
+        perfil.telefone = "(11) 91234-5678"
+        perfil.save(update_fields=["telefone"])
+        self.client.force_login(user)
+
+        resposta = self.client.get(reverse("lista_desejos"))
+
+        self.assertTrue(resposta.context["pontos"]["logado"])
+        self.assertContains(resposta, "Você tem 0 pontos")

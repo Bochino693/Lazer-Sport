@@ -1,7 +1,11 @@
 from django.urls import path, re_path
 from django.contrib.sitemaps.views import sitemap
 
-from .views_favoritos import ListaDesejosView, alternar_favorito
+from .views_favoritos import (
+    ListaDesejosView,
+    alternar_favorito,
+    meus_favoritos,
+)
 from .views_gestao_produtos import EngajamentoAdminView, PecaAdminView
 from .views_orcamento import orcamento_publico
 from .sitemaps import (
@@ -324,6 +328,11 @@ urlpatterns = [
         "lista-desejos/",
         ListaDesejosView.as_view(),
         name="lista_desejos",
+    ),
+    path(
+        "favoritos/meus/",
+        meus_favoritos,
+        name="meus_favoritos",
     ),
 
     # ---- Orçamento que o cliente abre ----

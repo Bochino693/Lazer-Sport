@@ -182,23 +182,25 @@ def _pagar_metas(usuario, origem, metas, alcancado, rotulo):
 
 
 # ------------------------------------------------------------------ metas
-def progresso(usuario) -> dict:
-    """O que a tela do aplicativo mostra: saldo, metas e o que falta."""
-    if not _usuario_valido(usuario):
-        return {
-            "saldo": 0,
-            "total_ganho": 0,
-            "curtidas": 0,
-            "desejos": 0,
-            "pontos_por_curtida": PONTOS_POR_CURTIDA,
-            "metas": [],
-            "logado": False,
-        }
+def progresso(usuario, curtidas=None, desejos=None) -> dict:
+    """Saldo, metas e o que falta para a próxima.
 
-    favoritos = Favorito.objects.filter(usuario=usuario)
-    curtidas = favoritos.filter(tipo=Favorito.Tipo.CURTIDA).count()
-    desejos = favoritos.filter(tipo=Favorito.Tipo.DESEJO).count()
-    carteira = carteira_de(usuario)
+    Aceita as contagens de fora porque o visitante sem conta também
+    precisa ver as metas -- e vê-las com o progresso DELE, contado pelo
+    aparelho. Uma barra em "2 de 5" convence a criar conta; um "entre
+    para participar" não convence ninguém.
+    """
+    logado = _usuario_valido(usuario)
+
+    if logado:
+        favoritos = Favorito.objects.filter(usuario=usuario)
+        curtidas = favoritos.filter(tipo=Favorito.Tipo.CURTIDA).count()
+        desejos = favoritos.filter(tipo=Favorito.Tipo.DESEJO).count()
+        carteira = carteira_de(usuario)
+    else:
+        curtidas = curtidas or 0
+        desejos = desejos or 0
+        carteira = None
 
     metas = []
     for alvo, premio in METAS_DESEJO:
@@ -219,13 +221,20 @@ def progresso(usuario) -> dict:
         ))
 
     return {
-        "saldo": carteira.saldo,
-        "total_ganho": carteira.total_ganho,
+        "saldo": carteira.saldo if carteira else 0,
+        "total_ganho": carteira.total_ganho if carteira else 0,
         "curtidas": curtidas,
         "desejos": desejos,
         "pontos_por_curtida": PONTOS_POR_CURTIDA,
         "metas": metas,
-        "logado": True,
+        # Quanto o visitante já teria conquistado se estivesse na conta.
+        # É esse número que faz valer a pena criar cadastro agora.
+        "a_creditar": (
+            0 if logado
+            else sum(m["premio"] for m in metas if m["concluida"])
+            + curtidas * PONTOS_POR_CURTIDA
+        ),
+        "logado": logado,
     }
 
 

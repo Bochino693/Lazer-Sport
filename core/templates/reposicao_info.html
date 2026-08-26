@@ -662,7 +662,7 @@
                         </div>
                     </div>
                     <div class="peca-favoritos">
-                        {% include "partials/favorito_acoes.html" with fav_produto="peca" fav_id=peca.id fav_curtido=favorito.curtido fav_desejado=favorito.desejado fav_curtidas=favorito.curtidas %}
+                        {% include "partials/favorito_acoes.html" with fav_produto="peca" fav_id=peca.id fav_desejado=favorito.desejado fav_curtidas=favorito.curtidas %}
                         <p class="ls-fav-nota">
                             {% if user.is_authenticated %}
                                 Salvo na sua conta: aparece no site e no aplicativo.

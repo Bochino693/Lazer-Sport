@@ -11,7 +11,7 @@
 {% cache home_cache_ttl home_public_v2 %}
 
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600&display=swap');
+/* Montserrat vem de core/static/vendor/fontes.css, servida pelo site. */
 
 /* =========================================================
    BASE
@@ -1346,6 +1346,13 @@ main.content-section {
   color: #10233f;
   font-size: .92rem;
   font-weight: 850;
+}
+
+.produto-favoritos {
+  margin: 0 0 10px;
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
 }
 
 .acoes-fixas {
@@ -3002,7 +3009,7 @@ main.content-section {
 </style>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+{# Font Awesome já vem do base.html, do próprio servidor. #}
 
 <!-- ======= HERO NOVO (inspirado no site da ArtSkala) — só adiciona, nada abaixo foi removido ======= -->
 <style>
@@ -3884,6 +3891,16 @@ main.content-section {
                     </strong>
                   {% endif %}
                 </div>
+              </div>
+
+              {% comment %}
+                Curtidas (número, feito no aplicativo) e lista de desejos
+                (ação, funciona aqui mesmo, sem cadastro). O card sai do
+                cache neutro; o que ESTE visitante já guardou é marcado
+                pelo ls-favoritos.js, com uma chamada por página.
+              {% endcomment %}
+              <div class="produto-favoritos">
+                {% include "partials/favorito_acoes.html" with fav_produto="brinquedo" fav_id=brinquedo.id fav_desejado=False fav_curtidas=brinquedo.total_curtidas fav_compacto=True fav_so_icone=True %}
               </div>
 
               <div class="acoes-fixas">
@@ -7587,8 +7604,9 @@ main.content-section {
 }
 </script>
 {{ pontos_mapa|json_script:"dados-clientes-mapa" }}
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+{# O mapa de clientes também sai daqui: sem CDN, a seção inteira sumia. #}
+<link rel="stylesheet" href="{% static 'vendor/leaflet/leaflet.css' %}?v=1">
+<script src="{% static 'vendor/leaflet/leaflet.js' %}?v=1"></script>
 <script>
 (function () {
     const todosPontosBrutos = JSON.parse(document.getElementById('dados-clientes-mapa').textContent);

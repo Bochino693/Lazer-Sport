@@ -14,6 +14,27 @@
 .desejos-kpis{margin-top:18px;display:flex;gap:10px;flex-wrap:wrap}
 .desejos-kpi{padding:11px 15px;border:1px solid rgba(255,255,255,.16);border-radius:14px;background:rgba(255,255,255,.08);font-size:.74rem;font-weight:700}
 .desejos-kpi strong{display:block;font-size:1.35rem}
+.desejos-pontos{margin-top:22px;padding:22px;border:1px solid rgba(15,23,42,.08);border-radius:22px;background:#fff;box-shadow:0 12px 30px rgba(15,23,42,.06)}
+.desejos-pontos-topo{display:flex;gap:18px;justify-content:space-between;align-items:flex-start;flex-wrap:wrap}
+.desejos-pontos-kicker{display:block;margin-bottom:6px;color:#b45309;font-size:.67rem;font-weight:900;letter-spacing:.14em;text-transform:uppercase}
+.desejos-pontos h2{margin:0;color:#0f172a;font-size:1.25rem}
+.desejos-pontos p{max-width:640px;margin:8px 0 0;color:#64748b;font-size:.82rem;line-height:1.6}
+.desejos-pontos-app{display:inline-flex;align-items:center;gap:11px;padding:12px 16px;border-radius:16px;background:#0f172a;color:#fff;text-decoration:none}
+.desejos-pontos-app i{font-size:1.2rem}
+.desejos-pontos-app strong,.desejos-pontos-app small{display:block}
+.desejos-pontos-app strong{font-size:.85rem}
+.desejos-pontos-app small{margin-top:2px;color:#94a3b8;font-size:.7rem}
+.desejos-metas{margin-top:18px;display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.desejos-meta{padding:14px;border:1px solid rgba(15,23,42,.08);border-radius:16px;background:#f8fafc}
+.desejos-meta.concluida{border-color:rgba(16,185,129,.35);background:rgba(16,185,129,.07)}
+.desejos-meta header{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.desejos-meta header strong{color:#0f172a;font-size:.82rem;line-height:1.35}
+.desejos-meta header span{color:#b45309;font-size:.76rem;font-weight:900;white-space:nowrap}
+.desejos-barra{height:8px;margin:10px 0 7px;border-radius:999px;overflow:hidden;background:rgba(15,23,42,.09)}
+.desejos-barra span{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#f59e0b,#ef4444)}
+.desejos-meta.concluida .desejos-barra span{background:linear-gradient(90deg,#34d399,#10b981)}
+.desejos-meta small{color:#64748b;font-size:.72rem}
+.desejos-metas-vazio{margin:16px 0 0;color:#64748b;font-size:.82rem}
 .desejos-secao{margin-top:34px}
 .desejos-secao h2{margin:0 0 4px;color:#0f172a;font-size:1.15rem}
 .desejos-secao p.sub{margin:0 0 16px;color:#64748b;font-size:.8rem}
@@ -48,6 +69,56 @@
     </div>
   </section>
 
+  <section class="desejos-pontos">
+    <div class="desejos-pontos-topo">
+      <div>
+        <span class="desejos-pontos-kicker">Programa de pontos</span>
+        <h2>
+          {% if pontos.logado %}
+            Você tem {{ pontos.saldo }} ponto{{ pontos.saldo|pluralize }}
+          {% else %}
+            Guardar produtos vale ponto
+          {% endif %}
+        </h2>
+        <p>
+          Cada curtida no aplicativo vale {{ pontos.pontos_por_curtida }} pontos, e as
+          metas abaixo liberam bônus. Os pontos viram cupom de desconto na
+          loja de cupons, dentro do aplicativo.
+          {% if not pontos.logado and pontos.a_creditar %}
+            <strong>Você já tem {{ pontos.a_creditar }} pontos esperando:</strong>
+            entre na sua conta e eles são creditados na hora.
+          {% endif %}
+        </p>
+      </div>
+      <a class="desejos-pontos-app" href="{% url 'home' %}#aplicativo">
+        <i class="fa-solid fa-mobile-screen-button" aria-hidden="true"></i>
+        <span><strong>Baixar o aplicativo</strong><small>Curtir e resgatar é por lá</small></span>
+      </a>
+    </div>
+
+    <div class="desejos-metas">
+      {% for meta in pontos.metas %}
+        <article class="desejos-meta{% if meta.concluida %} concluida{% endif %}">
+          <header>
+            <strong>{{ meta.titulo }}</strong>
+            <span>+{{ meta.premio }} pts</span>
+          </header>
+          <div class="desejos-barra" role="img"
+               aria-label="{{ meta.alcancado }} de {{ meta.alvo }}">
+            <span style="width: {{ meta.percentual }}%"></span>
+          </div>
+          <small>
+            {% if meta.concluida %}
+              Meta cumprida — pontos liberados.
+            {% else %}
+              {{ meta.alcancado }} de {{ meta.alvo }} · faltam {{ meta.falta }}
+            {% endif %}
+          </small>
+        </article>
+      {% endfor %}
+    </div>
+  </section>
+
   {% if not user.is_authenticated and total_desejos %}
     <p class="desejos-aviso">
       Esta lista está salva apenas neste aparelho.
@@ -76,7 +147,7 @@
               {% else %}
                 <span class="sem-preco">Valor sob consulta</span>
               {% endif %}
-              {% include "partials/favorito_acoes.html" with fav_produto="brinquedo" fav_id=b.id fav_curtido=cartao.curtido fav_desejado=True fav_curtidas=cartao.curtidas fav_compacto=True %}
+              {% include "partials/favorito_acoes.html" with fav_produto="brinquedo" fav_id=b.id fav_desejado=True fav_curtidas=cartao.curtidas fav_compacto=True %}
               <div class="desejo-links">
                 <a href="{% url 'brinquedo_detalhe' b.id %}#detalhe">Ver brinquedo</a>
               </div>
@@ -108,7 +179,7 @@
               {% else %}
                 <span class="sem-preco">Valor sob consulta</span>
               {% endif %}
-              {% include "partials/favorito_acoes.html" with fav_produto="peca" fav_id=p.id fav_curtido=cartao.curtido fav_desejado=True fav_curtidas=cartao.curtidas fav_compacto=True %}
+              {% include "partials/favorito_acoes.html" with fav_produto="peca" fav_id=p.id fav_desejado=True fav_curtidas=cartao.curtidas fav_compacto=True %}
               <div class="desejo-links">
                 <a href="{% url 'reposicao_detalhe' p.id %}#peca">Ver peça</a>
               </div>

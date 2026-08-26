@@ -10,15 +10,21 @@
   <link rel="icon" type="image/x-icon" href="{% static 'images/logoofi.png' %}">
   <meta name="theme-color" content="#004AAD">
 
-  <!-- Abre as conexões dos CDNs junto com o HTML, antes de o CSS pedir por elas. -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
-  <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
+  {% comment %}
+    FONTES E ÍCONES SAEM DO PRÓPRIO SERVIDOR.
 
-  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet"
-        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    Vinham do Google e do cdnjs. Quando um CDN não responde -- e acontece
+    por operadora, por DNS, por bloqueio de rede corporativa --, o site
+    perde TODOS os ícones de uma vez: botão de carrinho, WhatsApp,
+    coração, seta. A página continua no ar parecendo quebrada, que é pior
+    do que sair do ar.
+
+    Servindo daqui, o site depende só do servidor que ele já precisa
+    alcançar. De quebra, o visitante para de ter o IP entregue a
+    terceiros a cada visita.
+  {% endcomment %}
+  <link rel="stylesheet" href="{% static 'vendor/fontes.css' %}?v=1">
+  <link rel="stylesheet" href="{% static 'vendor/fontawesome/css/all.min.css' %}?v=1">
 
   <!-- Experiência de rolagem: skeletons, entrada dos blocos e barra de progresso. -->
   <link rel="stylesheet" href="{% static 'site/ls-reveal.css' %}?v=3">
@@ -2681,12 +2687,19 @@
 
             <p>
                 Catálogo completo, acompanhamento de pedidos, chamados de
-                manutenção e orçamento direto pelo celular.
+                manutenção e orçamento direto pelo celular — e o programa
+                de pontos, que só existe aqui.
             </p>
 
+            {% comment %}
+                O programa de pontos entra na lista porque é a única coisa
+                do aplicativo que o site NÃO faz: curtir vale ponto, ponto
+                vira cupom. É a resposta para "por que eu instalaria?".
+            {% endcomment %}
             <ul class="ls-app-features">
+                <li><i class="fa-solid fa-heart" aria-hidden="true"></i> Curta produtos e ganhe 5 pontos por curtida</li>
+                <li><i class="fa-solid fa-ticket" aria-hidden="true"></i> Troque os pontos por cupons de desconto</li>
                 <li><i class="fa-solid fa-bolt" aria-hidden="true"></i> Catálogo e preços atualizados</li>
-                <li><i class="fa-solid fa-truck-fast" aria-hidden="true"></i> Pedidos e entregas em tempo real</li>
                 <li><i class="fa-solid fa-screwdriver-wrench" aria-hidden="true"></i> Abertura de manutenção em 1 toque</li>
             </ul>
 

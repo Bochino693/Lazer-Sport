@@ -5,7 +5,7 @@
 
 {% block content %}
 
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap">
+{# Inter vem de vendor/fontes.css, carregada no base.html. #}
 
 <style>
 /* ===== GRID ===== */
@@ -166,7 +166,7 @@
 }
 </style>
 
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+{# Font Awesome já vem do base.html, do próprio servidor. #}
 
 <!-- BREADCRUMB -->
 <nav class="breadcrumb ls-breadcrumb" id="breadcrumb" aria-label="Navegação estrutural">
@@ -220,7 +220,7 @@
 
             <!-- CURTIR E GUARDAR -->
             <div class="card-favoritos">
-                {% include "partials/favorito_acoes.html" with fav_produto="peca" fav_id=peca.id fav_curtido=cartao.curtido fav_desejado=cartao.desejado fav_curtidas=cartao.curtidas fav_compacto=True fav_so_icone=True %}
+                {% include "partials/favorito_acoes.html" with fav_produto="peca" fav_id=peca.id fav_desejado=cartao.desejado fav_curtidas=cartao.curtidas fav_compacto=True fav_so_icone=True %}
             </div>
 
             <!-- BOTÕES -->

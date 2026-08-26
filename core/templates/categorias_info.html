@@ -722,6 +722,13 @@
     font-weight: 850;
 }
 
+.arena-product-favoritos {
+    padding: 0 20px 4px;
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
 .arena-product-footer {
     grid-column: 1 / -1;
     padding: 13px 16px;
@@ -1234,6 +1241,10 @@
                                         Galeria no detalhe
                                     </span>
                                 </div>
+                            </div>
+
+                            <div class="arena-product-favoritos">
+                                {% include "partials/favorito_acoes.html" with fav_produto="brinquedo" fav_id=item.id fav_desejado=False fav_curtidas=item.total_curtidas fav_compacto=True fav_so_icone=True %}
                             </div>
 
                             <footer class="arena-product-footer">

@@ -147,6 +147,14 @@ class HomeView(View):
             .order_by("nome_brinquedo")
         )
 
+        # Curtidas por brinquedo, para o coração do card já abrir com o
+        # número. Vem do cache da home junto do resto: curtida não precisa
+        # ser tempo real, e uma consulta a mais por card na página mais
+        # visitada do site sairia caro.
+        totais_curtidas = servico_favoritos.contagem_curtidas(brinquedos_todos)
+        for brinquedo in brinquedos_todos:
+            brinquedo.total_curtidas = totais_curtidas.get(brinquedo.pk, 0)
+
         categorias_brinquedos = list(
             CategoriasBrinquedos.objects
             .filter(ativo=True)
@@ -896,13 +904,21 @@ class CategoriasInfoView(View):
         page_number = request.GET.get("page")
         page_obj = paginator.get_page(page_number)
 
+        # O coração do card abre com o número certo; o que ESTE visitante
+        # guardou é marcado pelo JS, com uma chamada só para a página.
+        page_obj.object_list = list(page_obj.object_list)
+        totais = servico_favoritos.contagem_curtidas(page_obj.object_list)
+        for item in page_obj.object_list:
+            item.total_curtidas = totais.get(item.pk, 0)
+
         ctx = {
             "categoria": categoria,
             "page_obj": page_obj,
             "ordenar": ordenar,
         }
 
-        return render(request, "categorias_info.html", ctx)
+        resposta = render(request, "categorias_info.html", ctx)
+        return servico_favoritos.aplicar_cookie(request, resposta)
 
 
 from django.core.paginator import Paginator
@@ -1254,6 +1270,22 @@ class LojaView(View):
     """
     template_name = 'loja.html'
 
+    @staticmethod
+    def _marcar_favoritos(request, itens, tipo, modelo):
+        """Anexa curtidas e estado da lista de desejos aos cards do tipo."""
+        alvos = [item for item in itens if item['tipo'] == tipo]
+        if not alvos:
+            return
+
+        objetos = modelo.objects.filter(id__in=[item['id'] for item in alvos])
+        totais = servico_favoritos.contagem_curtidas(objetos)
+        desejados = servico_favoritos.ids_marcados(request, 'desejo')[tipo]
+
+        for item in alvos:
+            item['fav_produto'] = tipo
+            item['fav_curtidas'] = totais.get(item['id'], 0)
+            item['fav_desejado'] = item['id'] in desejados
+
     def get(self, request):
         itens = []
 
@@ -1321,6 +1353,14 @@ class LojaView(View):
                 'url': reverse('brinquedo_detalhe', args=[brinquedo.id]),
             })
 
+        # Curtidas e lista de desejos nos cards da vitrine.
+        #
+        # Só brinquedo e peça têm: combo e promoção são arranjos de venda,
+        # não produtos que alguém guarda. Duas consultas resolvem a página
+        # inteira -- uma por tipo --, em vez de duas por card.
+        self._marcar_favoritos(request, itens, 'brinquedo', Brinquedos)
+        self._marcar_favoritos(request, itens, 'peca', PecasReposicao)
+
         contagem_por_tipo = {
             'peca': sum(1 for i in itens if i['tipo'] == 'peca'),
             'promocao': sum(1 for i in itens if i['tipo'] == 'promocao'),
@@ -1334,7 +1374,8 @@ class LojaView(View):
             'contagem_por_tipo': contagem_por_tipo,
         }
 
-        return render(request, self.template_name, context)
+        resposta = render(request, self.template_name, context)
+        return servico_favoritos.aplicar_cookie(request, resposta)
 
 
 class ComboInfoView(View):

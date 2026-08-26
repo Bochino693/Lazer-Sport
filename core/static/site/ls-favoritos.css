@@ -49,12 +49,76 @@
 }
 
 .ls-fav-total {
-  min-width: 20px;
-  padding: 2px 7px;
-  border-radius: 999px;
-  background: rgba(15, 23, 42, .07);
-  font-size: .7rem;
+  min-width: 18px;
+  font-size: .78rem;
   font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+/* O SELO DE CURTIDAS.
+
+   No site ele é leitura: mostra quantas pessoas curtiram no aplicativo.
+   Continua sendo um <button> porque o toque tem resposta -- explica onde
+   se curte e convida a instalar. Um <span> mudo deixaria a pessoa
+   tocando num coração que não faz nada. */
+.ls-fav-selo {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 42px;
+  padding: 0 13px;
+  border: 1px solid rgba(220, 38, 38, .28);
+  border-radius: 999px;
+  background: rgba(239, 68, 68, .08);
+  color: #dc2626;
+  font: inherit;
+  font-size: .8rem;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+  transition: transform .18s ease, background .18s ease;
+}
+
+.ls-fav-selo:hover {
+  transform: translateY(-1px);
+  background: rgba(239, 68, 68, .14);
+}
+
+.ls-fav-convite {
+  /* Fixo no <body>: dentro do card ele seria cortado pela borda. */
+  position: fixed;
+  z-index: 9999;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #0f172a;
+  color: #fff;
+  font-size: .72rem;
+  font-weight: 600;
+  line-height: 1.45;
+  text-align: left;
+  white-space: normal;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, .35);
+}
+
+.ls-fav-convite strong {
+  display: block;
+  margin-bottom: 3px;
+  font-size: .78rem;
+}
+
+.ls-fav-convite a {
+  display: inline-block;
+  margin-top: 5px;
+  color: #93c5fd;
+  font-weight: 800;
+  text-decoration: underline;
+}
+
+.ls-fav-acoes.compacto .ls-fav-selo {
+  min-height: 38px;
+  padding: 0 11px;
+  font-size: .74rem;
 }
 
 .ls-fav-botao.pulsa {

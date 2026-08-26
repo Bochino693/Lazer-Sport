@@ -565,6 +565,13 @@
     font-weight: 850;
 }
 
+.loja-card-favoritos {
+    margin: 0 0 10px;
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
 .loja-card-acoes {
     display: grid;
     grid-template-columns: 1.25fr 1fr;
@@ -947,6 +954,12 @@
                                     </strong>
                                 {% endif %}
                             </div>
+
+                            {% if item.fav_produto %}
+                              <div class="loja-card-favoritos">
+                                {% include "partials/favorito_acoes.html" with fav_produto=item.fav_produto fav_id=item.id fav_desejado=item.fav_desejado fav_curtidas=item.fav_curtidas fav_compacto=True fav_so_icone=True %}
+                              </div>
+                            {% endif %}
 
                             <div class="loja-card-acoes">
                                 <button

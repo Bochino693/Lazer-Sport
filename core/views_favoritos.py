@@ -86,6 +86,35 @@ def alternar_favorito(request):
     return servico.aplicar_cookie(request, JsonResponse(estado))
 
 
+def meus_favoritos(request):
+    """GET: o que ESTE visitante marcou, para o JS pintar os cards.
+
+    POR QUE UM ENDEREÇO SÓ PARA ISSO. A home do site é cacheada e servida
+    igual para todo mundo -- é o que a mantém rápida. Um card renderizado
+    já marcado vazaria a lista de uma pessoa para as outras. Então o HTML
+    sai neutro e o estado de quem está olhando chega aqui, em uma chamada
+    por página.
+    """
+    marcados = servico.ids_marcados(request, Favorito.Tipo.DESEJO)
+
+    resposta = JsonResponse({
+        "ok": True,
+        "desejo": {
+            "brinquedo": sorted(marcados["brinquedo"]),
+            "peca": sorted(marcados["peca"]),
+        },
+        "total_desejos": len(marcados["brinquedo"]) + len(marcados["peca"]),
+        "logado": servico.usuario_logado(request) is not None,
+    })
+
+    # Sem marcação nenhuma não vale criar chave de aparelho: o visitante
+    # que só passou pela home não precisa sair daqui com cookie.
+    if not marcados["brinquedo"] and not marcados["peca"]:
+        return resposta
+
+    return servico.aplicar_cookie(request, resposta)
+
+
 class ListaDesejosView(View):
     """A lista funciona sem login: visitante vê a do próprio aparelho."""
 
@@ -124,12 +153,25 @@ class ListaDesejosView(View):
             for peca in pecas
         ]
 
+        # O programa de pontos aparece aqui de propósito: esta é a tela de
+        # quem já demonstrou interesse. É o melhor lugar do site para
+        # mostrar quanto falta para a próxima meta -- e que curtir, no
+        # aplicativo, também vale ponto.
+        from . import pontos as servico_pontos
+
         contexto = {
             "cartoes_brinquedos": cartoes_brinquedos,
             "cartoes_pecas": cartoes_pecas,
             "total_desejos": len(cartoes_brinquedos) + len(cartoes_pecas),
             "total_curtidas": (
                 len(curtidos["brinquedo"]) + len(curtidos["peca"])
+            ),
+            # Visitante sem conta vê as metas com o progresso do próprio
+            # aparelho: é a barra em "2 de 5" que faz criar cadastro.
+            "pontos": servico_pontos.progresso(
+                servico.usuario_logado(request),
+                curtidas=len(curtidos["brinquedo"]) + len(curtidos["peca"]),
+                desejos=len(cartoes_brinquedos) + len(cartoes_pecas),
             ),
         }
 
