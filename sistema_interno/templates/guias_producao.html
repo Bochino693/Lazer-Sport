@@ -132,9 +132,11 @@
 {% endif %}
 
 <!-- ============ MODAL: produto novo, sem sair do manual ============ -->
-{# O manual é escrito quando o brinquedo aparece, e muita vez ele existe
-   só no site, sem ficha de produção. Ir até a tela de produtos e voltar é
-   onde a montagem do guia era abandonada. #}
+{% comment %}
+  O manual é escrito quando o brinquedo aparece, e muita vez ele existe só
+  no site, sem ficha de produção. Ir até a tela de produtos e voltar é onde
+  a montagem do guia era abandonada.
+{% endcomment %}
 <div class="modal fade" id="modalProdutoGuia" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog">
     <form class="modal-content" id="formProdutoGuia" method="post" action="{% url 'guias_producao' %}">

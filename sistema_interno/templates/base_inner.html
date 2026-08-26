@@ -9,6 +9,26 @@
   <link rel="icon" type="image/png" href="{% static 'images/lgooo.png' %}?v=2">
   <link rel="shortcut icon" type="image/png" href="{% static 'images/lgooo.png' %}?v=2">
 
+  {% comment %}
+    APLICATIVO DE VERDADE NO TABLET.
+
+    Com o manifesto e o service worker, o navegador oferece "instalar" e o
+    painel passa a abrir em tela cheia, com ícone próprio, sem barra de
+    endereço. É a diferença entre um site que a fábrica acessa e um
+    aplicativo que a fábrica abre -- e some com o toque acidental no
+    endereço, que tirava a pessoa do meio de um cadastro.
+
+    O service worker precisa vir da raiz do subdomínio para valer para o
+    painel inteiro; por isso é uma view, e não um arquivo estático.
+  {% endcomment %}
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="theme-color" content="#13100B">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="L&amp;S Gestão">
+  <link rel="apple-touch-icon" href="{% static 'interno/app-icone-192.png' %}">
+
   <title>{% block title %}Gestão Interna | Lazer & Sport{% endblock %}</title>
 
   <link rel="preconnect" href="https://cdn.jsdelivr.net">
@@ -376,6 +396,22 @@ Dito em voz alta: este NÃO é o /adm do site. Quem trabalha nos
     aplicarTrilho(aberto);
     try { localStorage.setItem(CHAVE, aberto ? "1" : "0"); } catch (e) {}
   });
+
+  /* ---------------------------------------------------------------
+     Instalação no tablet
+
+     O registro fica dentro de try/catch e preso a HTTPS/localhost: em
+     acesso por http comum o navegador recusa o service worker, e uma
+     exceção aqui derrubaria o menu junto.
+     --------------------------------------------------------------- */
+  if ("serviceWorker" in navigator && window.isSecureContext) {
+    window.addEventListener("load", function () {
+      navigator.serviceWorker.register("/sw.js").catch(function () {
+        /* Sem service worker o painel continua inteiro: ele só deixa de
+           ser oferecido como aplicativo para instalar. */
+      });
+    });
+  }
 
   /* A aba "Menu" abre a mesma gaveta do botão do topo. */
   document.getElementById("abaMenu")?.addEventListener("click", function (evento) {

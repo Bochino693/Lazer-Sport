@@ -136,8 +136,10 @@
   </div>
 </div>
 
-{# Os dados da página em um bloco só: o modal preenche a partir daqui,
-   sem HTML gigante em atributo e sem uma segunda ida ao servidor. #}
+{% comment %}
+  Os dados da página em um bloco só: o modal preenche a partir daqui, sem
+  HTML gigante em atributo e sem uma segunda ida ao servidor.
+{% endcomment %}
 {{ pecas|json_script:"pecas-dados" }}
 
 <!-- MODAL -->

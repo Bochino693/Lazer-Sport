@@ -332,3 +332,35 @@ class ClienteDentroDoOrcamentoTests(TestCase):
 
         self.assertEqual(resposta.status_code, 400)
         self.assertEqual(Cliente.objects.count(), 0)
+
+
+@override_settings(ALLOWED_HOSTS=["interno.testserver", "testserver"])
+class MenuInternoTests(TestCase):
+    """O menu não pode oferecer caminho que a view devolve como desvio."""
+
+    def test_gestor_ve_o_atalho_de_clientes(self):
+        gestor = User.objects.create_superuser(
+            username="gestor",
+            password="senha-segura",
+            email="gestor@example.com",
+        )
+        self.client.force_login(gestor)
+
+        resposta = self.client.get("/", HTTP_HOST="interno.testserver")
+
+        self.assertContains(resposta, 'href="/clientes/"')
+
+    def test_colaborador_nao_ve_o_atalho(self):
+        User.objects.create_user(
+            username="montador",
+            password="senha-segura",
+            is_staff=True,
+        )
+        self.client.login(username="montador", password="senha-segura")
+
+        resposta = self.client.get(
+            "/producao/",
+            HTTP_HOST="interno.testserver",
+        )
+
+        self.assertNotContains(resposta, 'href="/clientes/"')

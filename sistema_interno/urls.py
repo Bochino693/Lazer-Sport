@@ -13,6 +13,7 @@ from .views import (
     PedidosView,
     VendasView,
 )
+from .views_app import manifesto, service_worker
 from .views_clientes import ClientesInnerView
 from .views_gestao import (
     AtualizarEtapaProducaoView,
@@ -37,6 +38,11 @@ urlpatterns = [
 
     # ---------------- financeiro ----------------
     path('financeiro/', FinanceiroInnerView.as_view(), name='financeiro_inner'),
+
+    # ---------------- aplicativo instalável ----------------
+    # Os dois respondem na raiz do subdomínio; ver views_app.py.
+    path('manifest.webmanifest', manifesto, name='manifesto_interno'),
+    path('sw.js', service_worker, name='service_worker_interno'),
 
     # ---------------- clientes ----------------
     path('clientes/', ClientesInnerView.as_view(), name='clientes_inner'),

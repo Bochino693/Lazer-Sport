@@ -1077,6 +1077,9 @@ footer,.fab-container{display:none!important}
   font-size:.72rem;cursor:pointer;
 }
 .ls-busca-limpar:hover{color:var(--text);background:rgba(255,255,255,.12)}
+/* O botão nasce com o atributo hidden, e `display:grid` acima venceria a
+   regra do navegador: sem isto, o X de limpar aparecia em campo vazio. */
+.ls-busca-limpar[hidden]{display:none}
 
 .ls-busca-painel{
   position:absolute;z-index:1300;top:calc(100% + 6px);left:0;right:0;
@@ -1137,4 +1140,61 @@ footer,.fab-container{display:none!important}
   .ls-busca-entrada{height:48px;font-size:1rem}
   .ls-busca-item{min-height:54px}
   .ls-busca-item-nome{font-size:.95rem}
+}
+
+
+/* ======================================================================
+   TOQUE — o painel é usado em tablet, em pé, na bancada
+
+   Não é preferência de gosto: com o aparelho na mão e a outra mão
+   ocupada, alvo pequeno é toque errado, e toque errado em tela de
+   cadastro é dado perdido. As medidas abaixo valem em qualquer aparelho
+   de toque, inclusive tablet grande, que pelo tamanho da tela cairia nas
+   regras de desktop.
+
+   O tamanho de fonte 16px nos campos tem um motivo específico: abaixo
+   disso o Safari do iPad dá zoom sozinho ao focar o campo, e a pessoa
+   perde o formulário de vista no meio da digitação.
+   ====================================================================== */
+@media (pointer:coarse){
+  .btn{min-height:48px;padding-inline:18px}
+  .btn-sm{min-height:44px;padding-inline:14px}
+
+  .form-control,.form-select{min-height:52px;font-size:16px}
+  textarea.form-control{min-height:120px;line-height:1.6}
+
+  .form-check-input{width:1.35em;height:1.35em;margin-top:.15em}
+  .form-check-label{padding-left:4px;font-size:.95rem}
+  .form-label{font-size:.86rem;font-weight:750}
+  .form-text{font-size:.8rem;line-height:1.5}
+
+  /* Botão de ação dentro da tabela: quadrado de dedo, não de mouse. */
+  .ls-acoes .btn,
+  .guide-actions .btn{min-width:46px;min-height:46px}
+  .ls-acoes{gap:8px}
+
+  .ls-table td,.ls-table th{padding-block:14px}
+
+  /* O rodapé do modal fica colado embaixo: em formulário longo, o
+     "Salvar" desaparecia acima da dobra e a pessoa fechava a tela
+     achando que não dava para gravar. */
+  .modal-dialog-scrollable .modal-footer{
+    position:sticky;bottom:0;z-index:2;
+    background:var(--panel);
+    box-shadow:0 -10px 24px rgba(0,0,0,.28);
+  }
+  .modal-footer .btn{flex:1 1 46%;min-height:52px;font-weight:800}
+}
+
+/* Celular e tablet em pé: o modal encosta na base da tela e vira folha,
+   com o topo arredondado. É o gesto que o aplicativo do telefone tem e
+   o painel web não tinha. */
+@media (max-width:900px){
+  .modal-dialog{margin:0;align-items:flex-end;min-height:100%}
+  .modal-content{
+    border-radius:22px 22px 0 0;
+    max-height:96dvh;
+  }
+  .modal-body{padding-inline:16px}
+  .modal-footer{padding-inline:16px}
 }

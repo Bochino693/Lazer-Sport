@@ -206,8 +206,10 @@
         <div class="row g-3">
           <div class="col-12 col-md-4">
             <label class="form-label" for="orcamentoClienteBusca">Cliente cadastrado</label>
-            {# O campo é montado pelo ls-busca.js: digita o nome, acha na hora
-               e cadastra dali mesmo quando o cliente ainda não existe. #}
+            {% comment %}
+              O campo é montado pelo ls-busca.js: digita o nome, acha na hora
+              e cadastra dali mesmo quando o cliente ainda não existe.
+            {% endcomment %}
             <div id="orcamentoClienteBox"></div>
             <span class="form-text">Digite para buscar. Sem cadastro? Use o nome do destinatário ao lado.</span>
           </div>
@@ -397,8 +399,10 @@ Cadastro mínimo de propósito: nome, valor e categoria. Foto e texto de
 </div>
 
 <!-- ================= MODAL: cliente novo na hora ================= -->
-{# Quase todo orçamento nasce de quem ligou pela primeira vez. Obrigar a
-   sair para a tela de clientes e voltar perderia a proposta pela metade. #}
+{% comment %}
+  Quase todo orçamento nasce de quem ligou pela primeira vez. Obrigar a sair
+  para a tela de clientes e voltar perderia a proposta pela metade.
+{% endcomment %}
 <div class="modal fade" id="modalClienteNovo" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog">
     <form class="modal-content" id="formClienteNovo" method="post"
