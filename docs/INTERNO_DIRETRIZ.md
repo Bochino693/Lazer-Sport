@@ -176,6 +176,12 @@ Campo que ganha foco e está fora de vista é trazido para o meio do corpo
 da janela — rolar a página não resolveria, porque no modal quem rola é o
 corpo.
 
+**Nada fixo pode ficar acima da janela.** O modal do Bootstrap é
+z-index 1055. As abas de baixo são 1100 e cobriam o rodapé: num aparelho
+estreito o toque em "Salvar" caía na aba. Elas somem com
+`body.modal-open`. Elemento fixo novo que passe de 1055 precisa sumir do
+mesmo jeito — há teste que reprova o que aparecer.
+
 ### Campos que se digitam da direita para a esquerda
 Dinheiro, metragem e porcentagem funcionam como maquininha: só dígitos,
 duas casas sempre. `1` → `0,01`, `10` → `0,10`, `100` → `1,00`,

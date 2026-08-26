@@ -321,6 +321,41 @@ class JanelasDoPainelTests(TestCase):
         self.assertIn("medida:", js)
         self.assertIn("percentual:", js)
 
+    def test_nada_fixo_fica_por_cima_da_janela_aberta(self):
+        """As abas de baixo cobriam o rodapé da janela.
+
+        Elas são `position:fixed` com z-index 1100; o modal do Bootstrap é
+        1055. Num aparelho estreito o toque em "Salvar" caía na aba, não
+        no botão -- não dava para salvar nem cancelar. Elas somem enquanto
+        há janela aberta (e nem fazem falta: a página atrás está travada).
+
+        A segunda metade do teste é a que protege o futuro: qualquer
+        elemento fixo que nasça acima do modal precisa ser neutralizado do
+        mesmo jeito, senão repete o bug em outro canto da tela.
+        """
+        import re
+
+        css = re.sub(r"/\*.*?\*/", "", self.ler("interno_modern.css"), flags=re.S)
+        sem_espaco = css.replace(" ", "").replace("\n", "")
+
+        self.assertIn("body.modal-open.ls-abas{display:none!important}", sem_espaco)
+
+        acima_do_modal = []
+        for bloco in re.finditer(r"([^{}]+)\{([^{}]*)\}", css):
+            seletor, corpo = bloco.group(1).strip(), bloco.group(2)
+            if "position:fixed" not in corpo.replace(" ", ""):
+                continue
+            altura = re.search(r"z-index:\s*(\d+)", corpo)
+            if altura and int(altura.group(1)) > 1055:
+                acima_do_modal.append(seletor.split()[-1])
+
+        # Hoje só as abas -- e elas já somem com a janela aberta.
+        self.assertEqual(
+            sorted(set(acima_do_modal)), [".ls-abas"],
+            "elemento fixo acima do modal sem sumir com body.modal-open: "
+            f"{sorted(set(acima_do_modal))}",
+        )
+
     def test_campo_de_texto_cresce_com_o_que_se_escreve(self):
         js = self.ler("painel.js")
 

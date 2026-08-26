@@ -970,6 +970,18 @@ footer,.fab-container{display:none!important}
    ====================================================================== */
 .ls-abas{display:none}
 
+/* JANELA ABERTA, ABAS FORA.
+
+   As abas são `position:fixed` no rodapé com z-index 1100 -- acima do
+   modal do Bootstrap, que é 1055. Com uma janela aberta elas ficavam POR
+   CIMA do rodapé dela: o toque em "Salvar" caía na aba, não no botão, e
+   não havia como salvar nem cancelar num aparelho estreito.
+
+   Esconder é melhor do que só baixar o z-index: com a janela aberta as
+   abas não levam a lugar nenhum mesmo (o Bootstrap trava a rolagem da
+   página atrás), e ainda devolvem 58px de altura para o formulário. */
+body.modal-open .ls-abas{display:none!important}
+
 @media (max-width:760px){
   .ls-abas{
     position:fixed;left:0;right:0;bottom:0;z-index:1100;
