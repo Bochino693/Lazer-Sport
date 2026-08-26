@@ -367,6 +367,26 @@ class OrcamentoInternoTests(TestCase):
         self.assertContains(resposta, 'data-whatsapp="(11) 95388-7201"')
         self.assertContains(resposta, 'data-email="leandro@example.com"')
 
+    def test_whatsapp_explica_confirmacao_e_tem_fallback_para_popup_bloqueado(self):
+        """A conversa sai do WhatsApp de quem está logado no aparelho.
+
+        A guia é reservada no toque, que é o único momento em que o
+        navegador autoriza abrir. Quando ainda assim ela é bloqueada, a
+        saída é um botão que a pessoa toca -- e NÃO trocar a guia do
+        painel pela do WhatsApp: no computador isso levava o operador para
+        o WhatsApp Web e ele perdia a proposta de vista no meio do envio.
+        """
+        self._orcamento_com_item()
+
+        resposta = self.client.get(self.URL, HTTP_HOST="interno.testserver")
+
+        # A saída existe e está escrita na tela.
+        self.assertContains(resposta, "Abrir conversa no WhatsApp")
+        self.assertContains(resposta, "Confirme o envio dentro do WhatsApp")
+
+        # A guia é reservada no clique, antes de falar com o servidor.
+        self.assertContains(resposta, 'window.open("about:blank"')
+
     def test_enviar_sem_id_devolve_erro_claro(self):
         resposta = self.post({"action": "enviar", "id": ""})
 
