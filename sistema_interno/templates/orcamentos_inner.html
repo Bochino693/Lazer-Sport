@@ -162,6 +162,9 @@
                         data-nome="{{ orcamento.destinatario }}"
                         data-whatsapp="{{ orcamento.whatsapp_destinatario }}"
                         data-email="{{ orcamento.email_destinatario }}"
+                        data-link="{{ orcamento.link_publico }}"
+                        data-mensagem="{{ orcamento.mensagem_whatsapp }}"
+                        data-previa="{% url 'orcamento_previa_inner' orcamento.id %}"
                         value="{{ orcamento.id }}"
                         title="Gerar o link da proposta para mandar ao cliente">
                   <i class="bi bi-send"></i>
@@ -626,7 +629,13 @@ Cadastro mínimo de propósito: nome, valor e categoria. Foto e texto de
 
 <!-- ================= MODAL: link da proposta ================= -->
 <div class="modal fade" id="modalLink" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog">
+  {% comment %}
+    scrollable + centered: com o histórico de envios embaixo, a janela
+    passava da altura do tablet e as últimas tentativas ficavam fora da
+    tela, sem barra de rolagem nenhuma -- a janela "não enquadrava".
+    Assim o corpo rola por dentro e o cabeçalho fica sempre visível.
+  {% endcomment %}
+  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title">Enviar proposta</h5>
@@ -635,10 +644,6 @@ Cadastro mínimo de propósito: nome, valor e categoria. Foto e texto de
       <div class="modal-body">
         <div class="alert alert-danger d-none" id="linkErro"></div>
         <p class="text-muted small mb-2">Escolha como compartilhar com <strong id="linkCliente"></strong>. O cliente abre uma página Lazer &amp; Sport com todos os detalhes e responde por ali.</p>
-        <div class="alert alert-info py-2 px-3 small mb-3" role="note">
-          <i class="bi bi-info-circle me-1"></i>
-          No WhatsApp, a conversa abrirá com a mensagem pronta. Confirme o envio no aplicativo.
-        </div>
         <input type="hidden" id="linkOrcamentoId">
         <div class="row g-3 mb-3">
           <div class="col-12">
@@ -692,14 +697,16 @@ Cadastro mínimo de propósito: nome, valor e categoria. Foto e texto de
             <i class="bi bi-clipboard"></i> Copiar
           </button>
         </div>
-        <a class="btn btn-sm btn-outline-primary mt-3" id="linkAbrir"
-           href="#" target="_blank" rel="noopener" hidden>
-          <i class="bi bi-box-arrow-up-right"></i> Abrir página pública
-        </a>
-        <a class="btn btn-sm btn-outline-secondary mt-3" id="linkPreviaInterna"
-           href="#" target="_blank" rel="noopener" hidden>
-          <i class="bi bi-eye"></i> Abrir prévia interna
-        </a>
+        <div class="d-flex flex-wrap gap-2 mt-3">
+          <a class="btn btn-sm btn-outline-primary" id="linkAbrir"
+             href="#" target="_blank" rel="noopener" hidden>
+            <i class="bi bi-box-arrow-up-right"></i> Abrir página pública
+          </a>
+          <a class="btn btn-sm btn-outline-secondary" id="linkPreviaInterna"
+             href="#" target="_blank" rel="noopener" hidden>
+            <i class="bi bi-eye"></i> Abrir prévia interna
+          </a>
+        </div>
 
         {% comment %}
           Saída para quando o navegador bloqueia a janela do WhatsApp: um
@@ -1537,147 +1544,58 @@ document.addEventListener("DOMContentLoaded", function () {
   var linkPrevia = document.getElementById("linkPreviaInterna");
   var linkCopiar = document.getElementById("linkCopiar");
 
-  document.querySelectorAll("[data-enviar]").forEach(function (botao) {
-    botao.addEventListener("click", function () {
-      var id = String(
-        botao.dataset.orcamentoId || botao.dataset.enviar || botao.value || ""
-      ).trim();
-      var atual = id ? achar(id) : null;
+  /* A PROPOSTA ABERTA NO MOMENTO.
 
-      /* O modal nasce preenchido com os dados renderizados pelo servidor.
-         A resposta do POST confirma os mesmos valores a partir do banco.
-         Assim uma falha na criação do link não apaga telefone/e-mail. */
-      document.getElementById("linkCliente").textContent =
-        botao.dataset.nome || (atual && atual.nome_cliente) || "cliente";
-      document.getElementById("linkOrcamentoId").value = id;
-      document.getElementById("linkWhatsapp").value =
-        botao.dataset.whatsapp || (atual && atual.whatsapp_cliente) || "";
-      document.getElementById("linkEmail").value =
-        botao.dataset.email || (atual && atual.email_cliente) || "";
-      Painel.aplicarMascaras(document.getElementById("modalLink"));
-      campoLink.value = "";
-      campoLink.placeholder = "Gerando link seguro…";
-      linkAbrir.hidden = true;
-      linkPrevia.hidden = true;
-      linkCopiar.disabled = true;
-      var atalhoWpp = document.getElementById("linkWhatsappAtalho");
-      if (atalhoWpp) atalhoWpp.hidden = true;
-      Painel.erro("linkErro", "");
-      Painel.abrir("modalLink");
+     Link, mensagem e conversa chegam prontos do servidor, escritos nos
+     atributos do próprio botão "Enviar". O modal não precisa pedir nada
+     para mostrar tudo: abre já preenchido.
 
-      if (!/^\d+$/.test(id)) {
-        campoLink.placeholder = "Link indisponível";
-        Painel.erro(
-          "linkErro",
-          "Não consegui identificar o orçamento. Recarregue a página e tente novamente."
-        );
-        return;
-      }
+     Isso não é um detalhe de desempenho, é o que faz a tela funcionar. Na
+     versão anterior o modal só sabia o link depois de um POST; qualquer
+     tropeço nessa ida deixava "Link indisponível" e o botão do WhatsApp
+     girando para sempre, num orçamento perfeitamente pronto. Agora o POST
+     virou registro: acontece por trás, e se falhar ninguém fica sem
+     mandar a proposta. */
+  var propostaAtual = { link: "", mensagem: "", previa: "" };
 
-      var original = botao.innerHTML;
-      botao.disabled = true;
-      botao.textContent = "Gerando...";
+  function montarConversa(telefone, mensagem) {
+    /* Mesma regra do servidor (conversa_whatsapp), aqui para a conversa
+       abrir no mesmo toque em que a pessoa pede -- sem esperar resposta
+       nenhuma, que é quando o navegador bloqueia a janela. */
+    var digitos = String(telefone || "").replace(/\D/g, "");
+    if (digitos.length < 10) return "";
+    if (digitos.length === 10 || digitos.length === 11) digitos = "55" + digitos;
+    return "https://wa.me/" + digitos + "?text=" + encodeURIComponent(mensagem);
+  }
 
-      var dados = new FormData();
-      dados.set("action", "enviar");
-      dados.set("id", id);
-      dados.set(
-        "csrfmiddlewaretoken",
-        document.querySelector("[name=csrfmiddlewaretoken]").value
-      );
+  function mostrarLink(link, previa) {
+    if (!link) return;
+    propostaAtual.link = link;
+    campoLink.value = link;
+    campoLink.placeholder = "";
+    linkAbrir.href = link;
+    linkAbrir.hidden = false;
+    if (previa) propostaAtual.previa = previa;
+    linkPrevia.href = propostaAtual.previa || "#";
+    linkPrevia.hidden = !propostaAtual.previa;
+    linkCopiar.disabled = false;
+  }
 
-      fetch(window.location.pathname, {
-        method: "POST",
-        body: dados,
-        headers: { "X-Requested-With": "XMLHttpRequest" },
-        credentials: "same-origin"
-      })
-        .then(function (r) { return r.json().catch(function () { return null; }); })
-        .then(function (json) {
-          if (!json || json.status !== "sucesso") {
-            throw new Error((json && json.msg) || "Não consegui gerar o link.");
-          }
-
-          document.getElementById("linkCliente").textContent =
-            json.destinatario || botao.dataset.nome || "cliente";
-          document.getElementById("linkWhatsapp").value = json.whatsapp || "";
-          document.getElementById("linkEmail").value = json.email || "";
-          Painel.aplicarMascaras(document.getElementById("modalLink"));
-          campoLink.value = json.link;
-          campoLink.placeholder = "";
-          linkAbrir.href = json.link;
-          linkAbrir.hidden = false;
-          linkPrevia.href = json.preview_url || "#";
-          linkPrevia.hidden = !json.preview_url;
-          linkCopiar.disabled = false;
-          desenharEnvios(json.envios);
-          Painel.erro("linkErro", "");
-        })
-        .catch(function (erro) {
-          /* O erro aparece no próprio modal: um alert() sumiria assim
-             que a pessoa tocasse na tela do tablet. */
-          campoLink.value = "";
-          campoLink.placeholder = "Link indisponível";
-          Painel.erro("linkErro", erro.message);
-        })
-        .finally(function () {
-          botao.disabled = false;
-          botao.innerHTML = original;
-        });
-    });
-  });
-
-  function enviarPorCanal(canal, botao, campo, chave, janelaCanal) {
-    Painel.erro("linkErro", "");
-    var orcamentoId = document.getElementById("linkOrcamentoId").value.trim();
-
-    /* A JANELA DO WHATSAPP ABRE AGORA, NO CLIQUE.
-     *
-     * Ela era aberta depois da resposta do servidor, e navegador nenhum
-     * deixa: `window.open` fora do gesto da pessoa é bloqueado como
-     * pop-up. O resultado era o pior possível -- o painel dizia "enviado"
-     * e nada acontecia na tela, então a proposta nunca saía e ninguém
-     * entendia por quê.
-     *
-     * Abrindo aqui, a aba nasce autorizada e só espera o endereço. A
-     * conversa abre no WhatsApp de QUEM ESTÁ LOGADO no aparelho: a
-     * proposta sai do número do atendente, como qualquer mensagem dele. */
-    var abaWhatsapp = janelaCanal || null;
-    if (!abaWhatsapp && canal === "whatsapp") {
-      abaWhatsapp = window.open("", "_blank");
-    }
-
-    function levarPara(url) {
-      if (abaWhatsapp && !abaWhatsapp.closed) {
-        abaWhatsapp.location.href = url;
-        return true;
-      }
-      return false;
-    }
-
-    function fecharAba() {
-      if (abaWhatsapp && !abaWhatsapp.closed) abaWhatsapp.close();
-    }
-
-    if (!/^\d+$/.test(orcamentoId)) {
-      Painel.erro(
-        "linkErro",
-        "O orçamento não foi identificado. Feche esta janela e toque em Enviar novamente."
-      );
-      return;
-    }
-    var original = botao.innerHTML;
-    botao.disabled = true;
-    botao.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Enviando';
-
+  function corpoDoEnvio(canal, chave, valor) {
     var dados = new FormData();
     dados.set("action", "enviar");
-    dados.set("id", orcamentoId);
-    dados.set("canal", canal);
-    dados.set(chave, campo.value.trim());
-    dados.set("csrfmiddlewaretoken", document.querySelector("[name=csrfmiddlewaretoken]").value);
+    dados.set("id", document.getElementById("linkOrcamentoId").value.trim());
+    if (canal) dados.set("canal", canal);
+    if (chave) dados.set(chave, valor || "");
+    dados.set(
+      "csrfmiddlewaretoken",
+      document.querySelector("[name=csrfmiddlewaretoken]").value
+    );
+    return dados;
+  }
 
-    fetch(window.location.pathname, {
+  function pedirAoServidor(dados) {
+    return fetch(window.location.pathname, {
       method: "POST",
       body: dados,
       headers: { "X-Requested-With": "XMLHttpRequest" },
@@ -1688,72 +1606,180 @@ document.addEventListener("DOMContentLoaded", function () {
         if (!json || json.status !== "sucesso") {
           throw new Error((json && json.msg) || "Não foi possível enviar a proposta.");
         }
-        campoLink.value = json.link;
-        campoLink.placeholder = "";
-        linkAbrir.href = json.link;
-        linkAbrir.hidden = false;
-        linkPrevia.href = json.preview_url || "#";
-        linkPrevia.hidden = !json.preview_url;
-        linkCopiar.disabled = false;
-        desenharEnvios(json.envios);
-
-        if (canal === "whatsapp") {
-          /* A guia foi reservada no toque do operador, que é o único
-             momento em que o navegador autoriza abrir. Quando mesmo assim
-             ela é bloqueada, NÃO trocamos a guia do painel: quem está
-             enviando perderia a proposta de vista no meio do trabalho.
-             Em vez disso aparece o botão verde, que a pessoa toca -- e o
-             toque autoriza a abertura. */
-          var abriu = levarPara(json.whatsapp_url);
-          mostrarAtalhoWhatsapp(json.whatsapp_url, abriu);
-
-          document.getElementById("linkErro").className = "alert alert-info";
-          Painel.erro(
-            "linkErro",
-            abriu
-              ? "A conversa abriu no seu WhatsApp com a proposta escrita. " +
-                "Confirme o envio por lá para o cliente receber."
-              : "O navegador bloqueou a janela. Use o botão verde " +
-                "\u201cAbrir conversa no WhatsApp\u201d aqui embaixo."
-          );
-        } else {
-          botao.innerHTML = '<i class="bi bi-check-lg me-1"></i> Enviado';
-          setTimeout(function () { botao.innerHTML = original; }, 2400);
-        }
-      })
-      .catch(function (erro) {
-        /* Sem endereço para levar, a guia em branco só confunde. */
-        fecharAba();
-        document.getElementById("linkErro").className = "alert alert-danger";
-        Painel.erro("linkErro", erro.message);
-      })
-      .finally(function () {
-        botao.disabled = false;
-        if (canal === "whatsapp") botao.innerHTML = original;
+        return json;
       });
   }
 
+  document.querySelectorAll("[data-enviar]").forEach(function (botao) {
+    botao.addEventListener("click", function () {
+      var id = String(
+        botao.dataset.orcamentoId || botao.dataset.enviar || botao.value || ""
+      ).trim();
+      var atual = id ? achar(id) : null;
+
+      document.getElementById("linkCliente").textContent =
+        botao.dataset.nome || (atual && atual.nome_cliente) || "cliente";
+      document.getElementById("linkOrcamentoId").value = id;
+      document.getElementById("linkWhatsapp").value =
+        botao.dataset.whatsapp || (atual && atual.whatsapp_cliente) || "";
+      document.getElementById("linkEmail").value =
+        botao.dataset.email || (atual && atual.email_cliente) || "";
+      Painel.aplicarMascaras(document.getElementById("modalLink"));
+
+      propostaAtual = {
+        link: botao.dataset.link || "",
+        mensagem: botao.dataset.mensagem || "",
+        previa: botao.dataset.previa || ""
+      };
+
+      campoLink.value = "";
+      campoLink.placeholder = "Gerando link seguro…";
+      linkAbrir.hidden = true;
+      linkPrevia.hidden = true;
+      linkCopiar.disabled = true;
+      var atalhoWpp = document.getElementById("linkWhatsappAtalho");
+      if (atalhoWpp) atalhoWpp.hidden = true;
+      Painel.erro("linkErro", "");
+      Painel.abrir("modalLink");
+
+      /* O link já veio com a página: aparece antes de qualquer rede. */
+      if (propostaAtual.link) {
+        mostrarLink(propostaAtual.link, propostaAtual.previa);
+      }
+
+      if (!/^\d+$/.test(id)) {
+        if (!propostaAtual.link) {
+          campoLink.placeholder = "Link indisponível";
+          Painel.erro(
+            "linkErro",
+            "Não consegui identificar o orçamento. Recarregue a página e tente novamente."
+          );
+        }
+        return;
+      }
+
+      /* Daqui para baixo é só confirmação e histórico. Se falhar, a tela
+         continua utilizável: o link está na mão e o WhatsApp abre. */
+      pedirAoServidor(corpoDoEnvio("link", null, null))
+        .then(function (json) {
+          document.getElementById("linkCliente").textContent =
+            json.destinatario || botao.dataset.nome || "cliente";
+          if (json.whatsapp) document.getElementById("linkWhatsapp").value = json.whatsapp;
+          if (json.email) document.getElementById("linkEmail").value = json.email;
+          Painel.aplicarMascaras(document.getElementById("modalLink"));
+          if (json.mensagem) propostaAtual.mensagem = json.mensagem;
+          mostrarLink(json.link, json.preview_url);
+          desenharEnvios(json.envios);
+        })
+        .catch(function (erro) {
+          if (propostaAtual.link) return;  /* já tem o que compartilhar */
+          campoLink.value = "";
+          campoLink.placeholder = "Link indisponível";
+          Painel.erro("linkErro", erro.message);
+        });
+    });
+  });
+
   document.getElementById("linkEnviarWhatsapp").addEventListener("click", function () {
-    /* Esta chamada ainda acontece dentro do gesto do usuário, portanto o
-       navegador permite a guia. Ela será direcionada para wa.me assim que
-       o servidor devolver a mensagem e o link da proposta. */
-    var janelaWhatsApp = window.open("about:blank", "lsOrcamentoWhatsApp");
-    if (janelaWhatsApp) {
-      janelaWhatsApp.opener = null;
-      janelaWhatsApp.document.title = "Abrindo WhatsApp";
-      janelaWhatsApp.document.body.textContent = "Preparando a proposta…";
+    /* A CONVERSA ABRE AGORA, NESTE TOQUE.
+     *
+     * Antes o botão esperava o servidor para saber o endereço, e nesse
+     * meio-tempo duas coisas davam errado: o navegador bloqueava a janela
+     * (abrir fora do gesto da pessoa é pop-up) e, quando o POST demorava
+     * ou falhava, o botão ficava "calculando proposta" sem fim. Tudo o
+     * que a conversa precisa -- número e mensagem -- já está aqui. */
+    var campo = document.getElementById("linkWhatsapp");
+    var telefone = campo.value.trim();
+    var mensagem = propostaAtual.mensagem;
+
+    if (!mensagem && propostaAtual.link) {
+      mensagem =
+        "Olá! Sua proposta Lazer & Sport está pronta: " + propostaAtual.link;
     }
-    enviarPorCanal(
-      "whatsapp",
-      this,
-      document.getElementById("linkWhatsapp"),
-      "whatsapp",
-      janelaWhatsApp
+    if (!mensagem) {
+      document.getElementById("linkErro").className = "alert alert-danger";
+      Painel.erro(
+        "linkErro",
+        "A proposta ainda não tem link. Recarregue a página e toque em Enviar novamente."
+      );
+      return;
+    }
+
+    var url = montarConversa(telefone, mensagem);
+    if (!url) {
+      document.getElementById("linkErro").className = "alert alert-danger";
+      Painel.erro("linkErro", "Informe o WhatsApp do cliente com DDD.");
+      campo.focus();
+      return;
+    }
+
+    /* O WhatsApp que abre é o de QUEM ESTÁ LOGADO no aparelho: a proposta
+       sai do número do atendente, como qualquer mensagem dele. */
+    var aba = window.open(url, "_blank");
+    var abriu = !!aba;
+    if (abriu) { try { aba.opener = null; } catch (e) {} }
+
+    mostrarAtalhoWhatsapp(url, abriu);
+    document.getElementById("linkErro").className = "alert alert-info";
+    Painel.erro(
+      "linkErro",
+      abriu
+        ? "A conversa abriu no seu WhatsApp com a proposta escrita. " +
+          "Confirme o envio por lá para o cliente receber."
+        : "O navegador bloqueou a janela. Use o botão verde " +
+          "“Abrir conversa no WhatsApp” aqui embaixo."
     );
+
+    /* O registro vai por trás: marca o orçamento como enviado e guarda a
+       tentativa. A conversa já está aberta, então nada disso segura o
+       trabalho de ninguém. */
+    pedirAoServidor(corpoDoEnvio("whatsapp", "whatsapp", telefone))
+      .then(function (json) {
+        if (json.mensagem) propostaAtual.mensagem = json.mensagem;
+        mostrarLink(json.link, json.preview_url);
+        desenharEnvios(json.envios);
+      })
+      .catch(function () {
+        /* Silêncio de propósito: a mensagem saiu. Um erro vermelho aqui
+           só faria o atendente achar que precisa mandar de novo. */
+      });
   });
 
   document.getElementById("linkEnviarEmail").addEventListener("click", function () {
-    enviarPorCanal("email", this, document.getElementById("linkEmail"), "email");
+    /* O e-mail é o único canal que depende mesmo do servidor: quem manda
+       a mensagem é a hospedagem, não o aparelho. Por isso aqui -- e só
+       aqui -- o botão espera a resposta e mostra o erro do provedor. */
+    var botao = this;
+    var campo = document.getElementById("linkEmail");
+    var original = botao.innerHTML;
+
+    Painel.erro("linkErro", "");
+    if (!/^\d+$/.test(document.getElementById("linkOrcamentoId").value.trim())) {
+      document.getElementById("linkErro").className = "alert alert-danger";
+      Painel.erro(
+        "linkErro",
+        "O orçamento não foi identificado. Feche esta janela e toque em Enviar novamente."
+      );
+      return;
+    }
+
+    botao.disabled = true;
+    botao.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Enviando';
+
+    pedirAoServidor(corpoDoEnvio("email", "email", campo.value.trim()))
+      .then(function (json) {
+        if (json.mensagem) propostaAtual.mensagem = json.mensagem;
+        mostrarLink(json.link, json.preview_url);
+        desenharEnvios(json.envios);
+        botao.innerHTML = '<i class="bi bi-check-lg me-1"></i> Enviado';
+        setTimeout(function () { botao.innerHTML = original; }, 2400);
+      })
+      .catch(function (erro) {
+        document.getElementById("linkErro").className = "alert alert-danger";
+        Painel.erro("linkErro", erro.message);
+        botao.innerHTML = original;
+      })
+      .finally(function () { botao.disabled = false; });
   });
 
   document.getElementById("linkCopiar").addEventListener("click", function () {

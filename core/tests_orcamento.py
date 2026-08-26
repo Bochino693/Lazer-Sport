@@ -70,6 +70,28 @@ class OrcamentoPublicoTests(TestCase):
         # 2 x 520 = 1040, + 100 de frete, - 50 de desconto = 1.090,00
         self.assertContains(resposta, "1.090,00")
 
+    def test_link_chega_ao_whatsapp_como_cartao_e_nao_endereco_cru(self):
+        """No WhatsApp o link vira cartão com foto, número e total.
+
+        Link cru numa conversa parece golpe, e o cliente não abre. As
+        marcas Open Graph são o mais perto de "mandar a imagem junto"
+        que uma conversa aberta pelo próprio atendente permite -- o
+        WhatsApp desenha a prévia sozinho, a partir da página.
+        """
+        resposta = self.client.get(self.url())
+        html = resposta.content.decode()
+
+        self.assertIn('property="og:title"', html)
+        self.assertIn(f"Proposta nº {self.orcamento.pk}", html)
+        self.assertIn('property="og:image"', html)
+        # Sem foto no item, entra a logo: cartão sem imagem nenhuma some
+        # na conversa.
+        self.assertIn('property="og:url"', html)
+        self.assertIn(self.orcamento.token, html)
+        # A prévia não desfaz o noindex: quem não tem o link continua
+        # sem chegar à proposta por busca.
+        self.assertIn('content="noindex, nofollow"', html)
+
     def test_documento_mostra_cliente_pagamento_envio_e_decisao(self):
         cliente = Cliente.objects.create(
             nome_cliente="R3 Boteco Original Ltda",

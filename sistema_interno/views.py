@@ -100,7 +100,7 @@ class RespostaJSONMixin:
 
     rota_padrao = "stock"
 
-    def erro(self, request, mensagem, status=400):
+    def erro(self, request, mensagem, /, status=400):
         # Ação declarada em ACOES_SEM_TRANSACAO não abriu transação, então
         # não tem nada para desfazer -- e marcar rollback aqui derrubaria
         # a transação de quem chamou (em teste, a do próprio TestCase),
@@ -116,8 +116,13 @@ class RespostaJSONMixin:
     #: pode ocupá-las -- ver `sucesso`.
     CAMPOS_RESERVADOS = ("status", "msg")
 
-    def sucesso(self, request, mensagem, **extras):
+    def sucesso(self, request, mensagem, /, **extras):
         """Resposta de sucesso, com os dados extras que a tela pediu.
+
+        A BARRA NA ASSINATURA NÃO É ENFEITE. Sem ela, um extra chamado
+        `mensagem` -- nome óbvio para "o texto que vai ao cliente" -- não
+        cai em `**extras`: colide com este parâmetro e a ação estoura com
+        TypeError. Posicional-só, qualquer nome de extra é aceito.
 
         OS EXTRAS NÃO PODEM SOBRESCREVER `status` E `msg`.
 

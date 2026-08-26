@@ -21,6 +21,7 @@ sustenta isso:
 """
 
 from django.conf import settings
+from django.templatetags.static import static
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -55,7 +56,7 @@ def _carregar(token):
     return carregar_orcamento_exibicao(token=token)
 
 
-def contexto_orcamento(orcamento, *, previsualizacao=False):
+def contexto_orcamento(orcamento, *, previsualizacao=False, request=None):
     """Dados compartilhados pela página pública e pela prévia interna."""
     itens = list(orcamento.itens.all())
     endereco_cliente = (
@@ -70,9 +71,38 @@ def contexto_orcamento(orcamento, *, previsualizacao=False):
             or orcamento.responsavel.username
         )
 
+    # CARTÃO DE PRÉ-VISUALIZAÇÃO DO LINK.
+    #
+    # No WhatsApp a proposta chega como um link, e link cru parece spam.
+    # Com as marcas Open Graph abaixo o aplicativo desenha um cartão com
+    # a foto do primeiro brinquedo, o número da proposta e o total -- que
+    # é o mais perto de "mandar a imagem junto" que uma conversa aberta
+    # pelo próprio atendente permite.
+    def _endereco_da_foto(item):
+        # A foto vive no Cloudinary. Se a chave da conta não estiver
+        # configurada nesta hospedagem, montar o endereço levanta erro --
+        # e uma proposta não pode deixar de abrir para o cliente porque a
+        # miniatura do WhatsApp falhou. Sem foto, entra a logo.
+        try:
+            imagem = item.imagem
+            return imagem.url if imagem else ""
+        except Exception:
+            return ""
+
+    imagem_previa = ""
+    for item in itens:
+        imagem_previa = _endereco_da_foto(item)
+        if imagem_previa:
+            break
+    if not imagem_previa:
+        imagem_previa = static("images/logoofi.png")
+    if request is not None and not imagem_previa.startswith("http"):
+        imagem_previa = request.build_absolute_uri(imagem_previa)
+
     return {
         "orcamento": orcamento,
         "itens": itens,
+        "imagem_previa": imagem_previa,
         "empresa": empresa,
         "telefone_empresa": (
             (empresa.telefone if empresa else "")
@@ -117,12 +147,16 @@ class OrcamentoPublicoView(View):
         if orcamento.status == Orcamento.Status.RASCUNHO:
             raise Http404("Orçamento ainda não enviado.")
 
-        return render(request, self.template_name, contexto_orcamento(orcamento))
+        return render(
+            request,
+            self.template_name,
+            contexto_orcamento(orcamento, request=request),
+        )
 
     def post(self, request, token):
         orcamento = _carregar(token)
 
-        contexto = contexto_orcamento(orcamento)
+        contexto = contexto_orcamento(orcamento, request=request)
         if not contexto["pode_responder"]:
             # Chegou tarde: alguém respondeu em outra aba, ou a validade
             # passou entre carregar e clicar. Redireciona para a própria

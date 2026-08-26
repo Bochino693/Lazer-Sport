@@ -370,11 +370,12 @@ class OrcamentoInternoTests(TestCase):
     def test_whatsapp_explica_confirmacao_e_tem_fallback_para_popup_bloqueado(self):
         """A conversa sai do WhatsApp de quem está logado no aparelho.
 
-        A guia é reservada no toque, que é o único momento em que o
-        navegador autoriza abrir. Quando ainda assim ela é bloqueada, a
-        saída é um botão que a pessoa toca -- e NÃO trocar a guia do
-        painel pela do WhatsApp: no computador isso levava o operador para
-        o WhatsApp Web e ele perdia a proposta de vista no meio do envio.
+        Ela abre no próprio toque, com o endereço já montado na página --
+        único momento em que o navegador autoriza abrir uma janela. Quando
+        ainda assim ela é bloqueada, a saída é um botão que a pessoa toca,
+        e NÃO trocar a guia do painel pela do WhatsApp: no computador isso
+        levava o operador para o WhatsApp Web e ele perdia a proposta de
+        vista no meio do envio.
         """
         self._orcamento_com_item()
 
@@ -384,8 +385,53 @@ class OrcamentoInternoTests(TestCase):
         self.assertContains(resposta, "Abrir conversa no WhatsApp")
         self.assertContains(resposta, "Confirme o envio dentro do WhatsApp")
 
-        # A guia é reservada no clique, antes de falar com o servidor.
-        self.assertContains(resposta, 'window.open("about:blank"')
+        # O endereço da conversa é montado no próprio navegador, sem
+        # esperar resposta nenhuma -- era a espera que fazia o botão ficar
+        # "calculando" e a janela ser bloqueada.
+        self.assertContains(resposta, "function montarConversa(")
+        self.assertContains(resposta, 'window.open(url, "_blank")')
+
+    def test_link_e_mensagem_ja_vem_prontos_no_botao_enviar(self):
+        """A tela não depende de rede para mostrar o que compartilhar.
+
+        Era isto que faltava: o modal pedia o link por POST ao abrir e,
+        quando esse pedido tropeçava -- bastou uma tabela de histórico
+        ainda não migrada no servidor --, aparecia "Link indisponível"
+        num orçamento que estava perfeito.
+        """
+        orcamento = self._orcamento_com_item()
+
+        resposta = self.client.get(self.URL, HTTP_HOST="interno.testserver")
+        html = resposta.content.decode()
+
+        self.assertIn(f'data-link="', html)
+        self.assertIn(orcamento.token, html)
+        self.assertIn("data-mensagem=", html)
+        # A mensagem levada ao WhatsApp traz o essencial da proposta.
+        self.assertIn("Aqui é da Lazer &amp; Sport", html)
+
+    def test_mensagem_da_proposta_tem_itens_total_e_link(self):
+        from sistema_interno.views_gestao import OrcamentosInnerView
+
+        orcamento = self._orcamento_com_item()
+        texto = OrcamentosInnerView.mensagem_da_proposta(
+            orcamento, "https://exemplo.com/orcamento/abc/"
+        )
+
+        self.assertIn(orcamento.destinatario, texto)
+        self.assertIn(f"nº {orcamento.pk}", texto)
+        self.assertIn("Total: R$", texto)
+        self.assertIn("https://exemplo.com/orcamento/abc/", texto)
+
+    def test_conversa_whatsapp_monta_o_endereco_com_ddi(self):
+        from sistema_interno.views_gestao import OrcamentosInnerView
+
+        url = OrcamentosInnerView.conversa_whatsapp("(11) 99999-8888", "oi")
+
+        self.assertTrue(url.startswith("https://wa.me/5511999998888?text="))
+        # Número curto demais não vira conversa: melhor botão sem link do
+        # que abrir uma conversa com o número errado.
+        self.assertEqual(OrcamentosInnerView.conversa_whatsapp("123", "oi"), "")
 
     def test_enviar_sem_id_devolve_erro_claro(self):
         resposta = self.post({"action": "enviar", "id": ""})

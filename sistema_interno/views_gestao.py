@@ -7,6 +7,7 @@ escrita em um lugar só.
 """
 
 import json
+import logging
 import re
 import unicodedata
 from decimal import Decimal
@@ -170,6 +171,26 @@ class OrcamentosInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
             orcamentos = orcamentos.filter(status=status)
 
         orcamentos = list(orcamentos)
+
+        # LINK E CONVERSA JÁ VÊM PRONTOS DO SERVIDOR.
+        #
+        # Antes o modal pedia os dois por POST ao abrir. Qualquer tropeço
+        # nessa ida -- e bastou uma tabela de histórico ainda não migrada
+        # para derrubá-la -- deixava a tela com "Link indisponível" e o
+        # botão do WhatsApp girando sem fim, num orçamento que estava
+        # perfeito. Montados aqui, aparecem na hora e não dependem de mais
+        # nada; o POST continua existindo, mas só para registrar o envio.
+        base_publica = endereco_do_site(request)
+        for orcamento in orcamentos:
+            orcamento.link_publico = f"{base_publica}{orcamento.caminho_publico}"
+            orcamento.mensagem_whatsapp = self.mensagem_da_proposta(
+                orcamento,
+                orcamento.link_publico,
+            )
+            orcamento.conversa_url = self.conversa_whatsapp(
+                orcamento.whatsapp_destinatario,
+                orcamento.mensagem_whatsapp,
+            )
 
         aprovados = [o for o in orcamentos if o.status == Orcamento.Status.APROVADO]
         em_aberto = [
@@ -551,8 +572,11 @@ class OrcamentosInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
         if canal not in ("link", "whatsapp", "email"):
             raise ErroDeFormulario("Escolha WhatsApp, e-mail ou copiar link.")
 
+        mensagem = self.mensagem_da_proposta(orcamento, link)
+
         extras = {
             "link": link,
+            "mensagem": mensagem,
             # O modal não tenta adivinhar os dados olhando uma cópia antiga
             # no JavaScript. O cadastro vinculado é a fonte padrão; os
             # campos continuam editáveis antes do envio.
@@ -578,13 +602,7 @@ class OrcamentosInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
 
             orcamento.whatsapp_cliente = telefone
             orcamento.save(update_fields=["whatsapp_cliente", "atualizado"])
-            mensagem = (
-                f"Olá, {orcamento.destinatario}! Preparamos sua proposta "
-                f"Lazer & Sport nº {orcamento.pk}, no total de "
-                f"R$ {orcamento.total:.2f}. Você pode conferir os detalhes "
-                f"e aprovar ou recusar por aqui: {link}"
-            )
-            extras["whatsapp_url"] = f"https://wa.me/{digitos}?text={quote(mensagem)}"
+            extras["whatsapp_url"] = self.conversa_whatsapp(telefone, mensagem)
 
         elif canal == "email":
             email = texto(request, "email", limite=254) or orcamento.email_destinatario
@@ -796,6 +814,64 @@ class OrcamentosInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
         )
 
 
+    # ----------------------------------------- a mensagem e o link prontos
+    @staticmethod
+    def mensagem_da_proposta(orcamento, link):
+        """O texto que vai no WhatsApp: curto, com o essencial e o link.
+
+        É mensagem de gente, não de robô: quem recebe precisa entender em
+        três linhas o que é, quanto custa e onde clica.
+        """
+        itens = list(orcamento.itens.all())
+        linhas = [
+            f"Olá, {orcamento.destinatario}! Aqui é da Lazer & Sport.",
+            "",
+            f"Sua proposta nº {orcamento.pk} está pronta:",
+        ]
+
+        # Até três itens no corpo; o resto a pessoa vê na página. Uma lista
+        # comprida no WhatsApp vira parede de texto e ninguém lê.
+        for item in itens[:3]:
+            # A vírgula entra só no dinheiro. Trocar ponto por vírgula na
+            # linha inteira estragava descrições como "Bola 3.5" -- o
+            # cliente recebia um item com nome errado.
+            subtotal = f"{item.subtotal:.2f}".replace(".", ",")
+            linhas.append(
+                f"• {item.quantidade}x {item.descricao} — R$ {subtotal}"
+            )
+        if len(itens) > 3:
+            linhas.append(f"• e mais {len(itens) - 3} item(ns) na proposta")
+
+        linhas.append("")
+        total = f"{orcamento.total:.2f}".replace(".", ",")
+        linhas.append(f"Total: R$ {total}")
+
+        if orcamento.forma_pagamento:
+            linhas.append(f"Pagamento: {orcamento.forma_pagamento}")
+        if orcamento.validade:
+            linhas.append(
+                f"Válida até {orcamento.validade.strftime('%d/%m/%Y')}"
+            )
+
+        linhas.extend([
+            "",
+            "Abra a proposta completa, com fotos e detalhes, e responda "
+            "aprovando ou recusando por aqui:",
+            link,
+        ])
+
+        return "\n".join(linhas)
+
+    @staticmethod
+    def conversa_whatsapp(telefone, mensagem):
+        """Endereço que abre a conversa já escrita. Vazio se o número não serve."""
+        digitos = re.sub(r"\D", "", telefone or "")
+        if len(digitos) < 10:
+            return ""
+        if len(digitos) in (10, 11):
+            digitos = "55" + digitos
+        return f"https://wa.me/{digitos}?text={quote(mensagem)}"
+
     # ---------------------------------- registro de quem recebeu o quê
     @staticmethod
     def registrar_envio(request, orcamento, canal, destino, sucesso=True, detalhe=""):
@@ -805,36 +881,55 @@ class OrcamentosInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
         comercial. Sem registro ninguém responde se saiu, para onde e o
         que o servidor respondeu.
         """
-        EnvioOrcamento.objects.create(
-            orcamento=orcamento,
-            canal=canal if canal in EnvioOrcamento.Canal.values else (
-                EnvioOrcamento.Canal.LINK
-            ),
-            destino=(destino or "")[:254],
-            sucesso=sucesso,
-            detalhe=detalhe[:240],
-            responsavel=request.user if request.user.is_authenticated else None,
-        )
+        # O registro é histórico, não é o trabalho. Se ele falhar -- tabela
+        # ainda não migrada no servidor, banco em manutenção --, a proposta
+        # tem de sair do mesmo jeito. Foi exatamente isso que derrubou o
+        # envio uma vez: a tela dizia "Link indisponível" porque o log não
+        # conseguia gravar.
+        try:
+            EnvioOrcamento.objects.create(
+                orcamento=orcamento,
+                canal=canal if canal in EnvioOrcamento.Canal.values else (
+                    EnvioOrcamento.Canal.LINK
+                ),
+                destino=(destino or "")[:254],
+                sucesso=sucesso,
+                detalhe=detalhe[:240],
+                responsavel=request.user if request.user.is_authenticated else None,
+            )
+        except Exception:
+            logging.getLogger(__name__).exception(
+                "Não consegui registrar o envio do orçamento %s", orcamento.pk
+            )
 
     @staticmethod
     def historico_de_envio(orcamento, limite=6):
         """As últimas tentativas, prontas para o modal mostrar."""
-        return [
-            {
-                "canal": envio.get_canal_display(),
-                "destino": envio.destino,
-                "sucesso": envio.sucesso,
-                "detalhe": envio.detalhe,
-                "quando": timezone.localtime(envio.criacao).strftime(
-                    "%d/%m/%Y %H:%M"
-                ) if envio.criacao else "",
-                "por": (
-                    envio.responsavel.get_full_name()
-                    or envio.responsavel.username
-                ) if envio.responsavel else "",
-            }
-            for envio in orcamento.envios.select_related("responsavel")[:limite]
-        ]
+        try:
+            return [
+                {
+                    "canal": envio.get_canal_display(),
+                    "destino": envio.destino,
+                    "sucesso": envio.sucesso,
+                    "detalhe": envio.detalhe,
+                    "quando": timezone.localtime(envio.criacao).strftime(
+                        "%d/%m/%Y %H:%M"
+                    ) if envio.criacao else "",
+                    "por": (
+                        envio.responsavel.get_full_name()
+                        or envio.responsavel.username
+                    ) if envio.responsavel else "",
+                }
+                for envio in orcamento.envios.select_related("responsavel")[:limite]
+            ]
+        except Exception:
+            # Mesma regra do registro: histórico indisponível não pode
+            # impedir ninguém de mandar a proposta.
+            logging.getLogger(__name__).exception(
+                "Não consegui ler o histórico de envio do orçamento %s",
+                orcamento.pk,
+            )
+            return []
 
     # ------------------------------- cadastrar cliente sem sair daqui
     def acao_cliente_novo(self, request):
@@ -874,7 +969,9 @@ class OrcamentoPreviaInnerView(GestorInternoRequiredMixin, View):
         )
 
         orcamento = carregar_orcamento_exibicao(pk=pk)
-        contexto = contexto_orcamento(orcamento, previsualizacao=True)
+        contexto = contexto_orcamento(
+            orcamento, previsualizacao=True, request=request
+        )
         return render(request, "orcamento_publico.html", contexto)
 
 

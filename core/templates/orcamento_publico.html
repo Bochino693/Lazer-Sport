@@ -10,6 +10,24 @@ noindex não é detalhe: a página é aberta por link, e um orçamento
 {% endcomment %}
 <meta name="theme-color" content="#0A1046">
 <title>Proposta #{{ orcamento.pk }} | Lazer &amp; Sport Brinquedos</title>
+
+{% comment %}
+  O cartão que o WhatsApp desenha quando o atendente manda o link.
+  Sem isto chega um endereço cru, que parece golpe; com isto chega a foto
+  do brinquedo, o número da proposta e o total -- o cliente reconhece o
+  que é antes mesmo de abrir. As marcas não expõem nada além do que a
+  própria página já mostra a quem tem o link, e o noindex acima continua
+  valendo: pré-visualização não é indexação.
+{% endcomment %}
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Lazer &amp; Sport Brinquedos">
+<meta property="og:title" content="Proposta nº {{ orcamento.pk }} — {{ orcamento.destinatario }}">
+<meta property="og:description" content="{{ quantidade_itens }} item(ns) · Total R$ {{ total|floatformat:2 }}. Abra para conferir os detalhes e responder.">
+<meta property="og:url" content="{{ request.build_absolute_uri }}">
+<meta property="og:image" content="{{ imagem_previa }}">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Proposta nº {{ orcamento.pk }} — Lazer &amp; Sport">
+<meta name="twitter:image" content="{{ imagem_previa }}">
 <link rel="icon" type="image/png" href="{% static 'images/logoofi.png' %}">
 {# Fonte servida pelo próprio site; ver vendor/fontes.css. #}
 <link rel="stylesheet" href="{% static 'vendor/fontes.css' %}?v=1">
