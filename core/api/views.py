@@ -54,7 +54,7 @@ ANOTACAO_CURTIDAS = Count(
 
 CACHE_CATALOGO = 60 * 10
 
-VERSAO_API = "1.2"
+VERSAO_API = "1.3"
 
 RECURSOS_DISPONIVEIS = [
     "auth",
@@ -68,6 +68,8 @@ RECURSOS_DISPONIVEIS = [
     "manutencoes",
     "pedidos",
     "favoritos",
+    "pontos",
+    "loja_cupons",
 ]
 
 

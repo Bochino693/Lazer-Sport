@@ -1688,3 +1688,173 @@ class Favorito(Prime):
         if self.peca_id and self.peca:
             return self.peca.nome
         return "Produto removido"
+
+
+# ======================================================================
+# PONTOS, METAS E LOJA DE CUPONS
+#
+# A ideia em uma frase: o cliente marca o que gosta no aplicativo, isso
+# vira ponto, e ponto vira cupom de desconto na loja do site.
+#
+# POR QUE UM LIVRO-CAIXA, E NÃO UM CONTADOR. Guardar só o saldo esconde
+# de onde ele veio -- e um saldo que ninguém consegue explicar é um saldo
+# que ninguém confia, nem o cliente nem o atendimento. Cada linha de
+# PontoGanho é um fato ("curtiu o brinquedo 12", "chegou a 5 itens na
+# lista", "resgatou o cupom X"), e o saldo é a soma delas. Desfazer a
+# curtida apaga a linha correspondente: sem isso, curtir e descurtir em
+# sequência viraria uma fábrica de pontos.
+# ======================================================================
+
+class PontoGanho(Prime):
+    """Uma linha do extrato de pontos do cliente."""
+
+    class Origem(models.TextChoices):
+        CURTIDA = "curtida", "Curtida no aplicativo"
+        META_DESEJO = "meta_desejo", "Meta da lista de desejos"
+        META_CURTIDA = "meta_curtida", "Meta de curtidas"
+        RESGATE = "resgate", "Resgate de cupom"
+        AJUSTE = "ajuste", "Ajuste manual"
+
+    #: Origens recalculadas a partir dos favoritos. As demais são
+    #: definitivas -- resgate não se refaz sozinho.
+    ORIGENS_AUTOMATICAS = (
+        Origem.CURTIDA,
+        Origem.META_DESEJO,
+        Origem.META_CURTIDA,
+    )
+
+    usuario = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="pontos",
+    )
+    origem = models.CharField(
+        max_length=15,
+        choices=Origem.choices,
+        db_index=True,
+    )
+    # Identifica o FATO que gerou os pontos: "favorito:12", "desejo:5",
+    # "resgate:31". É o que impede pagar duas vezes pela mesma coisa.
+    chave = models.CharField(max_length=60)
+    pontos = models.IntegerField(
+        help_text="Negativo quando o cliente gasta.",
+    )
+    descricao = models.CharField(max_length=140, blank=True)
+
+    class Meta:
+        verbose_name = "Ponto do cliente"
+        verbose_name_plural = "Pontos dos clientes"
+        ordering = ("-criacao", "-id")
+        constraints = [
+            models.UniqueConstraint(
+                fields=["usuario", "origem", "chave"],
+                name="ponto_um_por_fato",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.usuario} · {self.pontos:+d} ({self.get_origem_display()})"
+
+
+class CarteiraPontos(Prime):
+    """Saldo do cliente, mantido junto do extrato.
+
+    Existe para duas coisas que a soma não resolve bem: mostrar o saldo
+    sem varrer o extrato a cada tela, e travar a linha no resgate
+    (`select_for_update`), para dois toques no mesmo botão não gastarem o
+    mesmo ponto duas vezes.
+    """
+
+    usuario = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name="carteira_pontos",
+    )
+    # Inteiro com sinal de propósito: se o cliente gastar e depois desfazer
+    # curtidas, o saldo pode ficar negativo. Preferimos registrar isso a
+    # fingir que não aconteceu -- e o resgate já exige saldo suficiente.
+    saldo = models.IntegerField(default=0)
+    total_ganho = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        verbose_name = "Carteira de pontos"
+        verbose_name_plural = "Carteiras de pontos"
+
+    def __str__(self):
+        return f"{self.usuario} · {self.saldo} pontos"
+
+
+class RecompensaCupom(Prime):
+    """O que o cliente pode trocar por pontos, na loja do aplicativo."""
+
+    nome = models.CharField(max_length=90)
+    descricao = models.CharField(max_length=180, blank=True)
+    custo_pontos = models.PositiveIntegerField(
+        help_text="Quantos pontos o cliente gasta para resgatar.",
+    )
+    desconto_percentual = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        help_text="Desconto do cupom gerado, em porcentagem.",
+    )
+    validade_dias = models.PositiveIntegerField(
+        default=30,
+        help_text="Dias de validade do cupom depois do resgate.",
+    )
+    # None = sem limite. O limite é por recompensa, não por cliente.
+    estoque = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text="Quantos ainda podem ser resgatados. Vazio = ilimitado.",
+    )
+    ordem = models.PositiveSmallIntegerField(
+        default=1,
+        help_text="Posição na vitrine do aplicativo.",
+    )
+
+    @property
+    def disponivel(self) -> bool:
+        return bool(self.ativo) and (self.estoque is None or self.estoque > 0)
+
+    class Meta:
+        verbose_name = "Recompensa da loja de pontos"
+        verbose_name_plural = "Recompensas da loja de pontos"
+        ordering = ("ordem", "custo_pontos", "id")
+
+    def __str__(self):
+        return f"{self.nome} ({self.custo_pontos} pts)"
+
+
+class ResgateCupom(Prime):
+    """O cupom que o cliente comprou com pontos.
+
+    O cupom gerado é um `Cupom` de verdade, exclusivo daquele cliente:
+    assim ele passa pela mesma validação do carrinho que qualquer outro,
+    e o checkout não precisa saber que pontos existem.
+    """
+
+    usuario = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="resgates",
+    )
+    recompensa = models.ForeignKey(
+        RecompensaCupom,
+        on_delete=models.PROTECT,
+        related_name="resgates",
+    )
+    cupom = models.OneToOneField(
+        Cupom,
+        on_delete=models.CASCADE,
+        related_name="resgate",
+    )
+    pontos_gastos = models.PositiveIntegerField()
+    expira_em = models.DateTimeField()
+
+    class Meta:
+        verbose_name = "Resgate de cupom"
+        verbose_name_plural = "Resgates de cupons"
+        ordering = ("-criacao", "-id")
+
+    def __str__(self):
+        return f"{self.usuario} · {self.cupom.codigo}"

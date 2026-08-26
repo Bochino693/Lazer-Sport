@@ -45,15 +45,43 @@ class FavoritoBaseTests(TestCase):
         self.url = reverse("alternar_favorito")
 
     def alternar(self, tipo="curtida", produto="brinquedo", produto_id=None):
+        """Marca pelo caminho de quem realmente faz aquilo.
+
+        Curtir é exclusivo do aplicativo, então a curtida vai pela API,
+        levando a chave do aparelho no cabeçalho -- é assim que o app
+        conversa com o servidor. A lista de desejos continua valendo em
+        qualquer lugar e usa a rota do site.
+        """
+        corpo = {
+            "tipo": tipo,
+            "produto": produto,
+            "id": produto_id or self.brinquedo.pk,
+        }
+
+        if tipo == "curtida":
+            return self.client.post(
+                reverse("api:favoritos_alternar"),
+                data=corpo,
+                content_type="application/json",
+                **self.cabecalho_do_aparelho(),
+            )
+
         return self.client.post(
             self.url,
-            data={
-                "tipo": tipo,
-                "produto": produto,
-                "id": produto_id or self.brinquedo.pk,
-            },
+            data=corpo,
             content_type="application/json",
         )
+
+    def cabecalho_do_aparelho(self):
+        """O app manda a chave no cabeçalho; o site, em cookie.
+
+        Sem cookie definido pelo teste, vale a chave padrão: o aparelho
+        de verdade gera a dele uma vez, na instalação, e repete sempre --
+        chave nova a cada chamada faria toda curtida parecer de um
+        aparelho diferente.
+        """
+        chave = self.client.cookies.get(COOKIE_DISPOSITIVO)
+        return {"HTTP_X_DISPOSITIVO": chave.value if chave else DISPOSITIVO_A}
 
 
 class CurtidaSemLoginTests(FavoritoBaseTests):
@@ -69,11 +97,17 @@ class CurtidaSemLoginTests(FavoritoBaseTests):
         self.assertFalse(dados["logado"])
         self.assertEqual(Favorito.objects.count(), 1)
 
-    def test_primeira_curtida_grava_o_cookie_do_aparelho(self):
-        resposta = self.alternar()
+    def test_primeira_marcacao_no_site_grava_o_cookie_do_aparelho(self):
+        resposta = self.alternar(tipo="desejo")
 
         self.assertIn(COOKIE_DISPOSITIVO, resposta.cookies)
         self.assertEqual(len(resposta.cookies[COOKIE_DISPOSITIVO].value), 32)
+
+    def test_aplicativo_recebe_a_chave_do_aparelho_na_resposta(self):
+        """O app guarda a chave e a repete; não há cookie para ele."""
+        resposta = self.alternar()
+
+        self.assertEqual(resposta.json()["dispositivo"], DISPOSITIVO_A)
 
     def test_curtir_de_novo_desfaz(self):
         self.alternar()

@@ -231,6 +231,9 @@ def alternar(request, tipo: str, produto, origem: str = Favorito.Origem.SITE) ->
         estado = estado_do_produto(request, produto)
         estado["marcado"] = False
         estado["tipo"] = tipo
+        # Descurtir devolve o ponto: sem isso, curtir e descurtir em
+        # sequência seria uma fábrica de pontos.
+        _pontuar(request)
         return estado
 
     dados = {
@@ -255,7 +258,23 @@ def alternar(request, tipo: str, produto, origem: str = Favorito.Origem.SITE) ->
     estado = estado_do_produto(request, produto)
     estado["marcado"] = True
     estado["tipo"] = tipo
+    _pontuar(request)
     return estado
+
+
+def _pontuar(request) -> None:
+    """Recalcula os pontos de quem está logado, se houver alguém.
+
+    Import local porque `core.pontos` importa os modelos e este módulo é
+    carregado cedo -- no topo, o ciclo se fecha.
+    """
+    usuario = usuario_logado(request)
+    if usuario is None:
+        return
+
+    from . import pontos
+
+    pontos.sincronizar(usuario)
 
 
 def migrar_dispositivo_para_conta(usuario, dispositivo: str) -> int:
@@ -297,5 +316,11 @@ def migrar_dispositivo_para_conta(usuario, dispositivo: str) -> int:
 
     if repetidos:
         Favorito.objects.filter(pk__in=repetidos).delete()
+
+    # O que a pessoa curtiu antes de entrar também vale ponto: a conta
+    # recebe o crédito no mesmo instante em que recebe as marcações.
+    from . import pontos
+
+    pontos.sincronizar(usuario)
 
     return migrados

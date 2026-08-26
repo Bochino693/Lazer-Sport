@@ -6,6 +6,12 @@ from .auth_app_views import AppEntrarSocial, AppTokenSocial
 from .auth_views import LoginAPI, LogoutAPI, PerfilAPI, RegistroAPI
 from .carrinho_views import SincronizarCarrinhoAPI
 from .favoritos_views import FavoritoAlternarAPI, FavoritoListaAPI
+from .pontos_views import (
+    LojaCuponsAPI,
+    MeusCuponsAPI,
+    PontosResumoAPI,
+    ResgatarCupomAPI,
+)
 from .views import (
     BrinquedoDetalheAPI,
     BrinquedoListAPI,
@@ -50,6 +56,16 @@ urlpatterns = [
         "favoritos/alternar/",
         FavoritoAlternarAPI.as_view(),
         name="favoritos_alternar",
+    ),
+
+    # ---------- Pontos e loja de cupons (só o aplicativo tem) ----------
+    path("pontos/", PontosResumoAPI.as_view(), name="pontos"),
+    path("cupons/loja/", LojaCuponsAPI.as_view(), name="cupons_loja"),
+    path("cupons/meus/", MeusCuponsAPI.as_view(), name="cupons_meus"),
+    path(
+        "cupons/resgatar/",
+        ResgatarCupomAPI.as_view(),
+        name="cupons_resgatar",
     ),
 
     # ---------- Institucional (público) ----------

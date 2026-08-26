@@ -50,13 +50,32 @@ def alternar_favorito(request):
             status=404,
         )
 
-    origem = (
-        Favorito.Origem.APP
-        if str(dados.get("origem", "")).lower() == "app"
-        else Favorito.Origem.SITE
-    )
+    # CURTIR É EXCLUSIVO DO APLICATIVO.
+    #
+    # O site mostra quantas curtidas o produto tem -- é prova social e
+    # ajuda a escolher --, mas quem curte é quem instalou o aplicativo.
+    # A regra é o que dá valor ao aplicativo: o ponto que vira cupom
+    # nasce lá dentro. Guardar na lista de desejos continua valendo em
+    # qualquer lugar, porque essa é a porta de entrada.
+    if tipo == Favorito.Tipo.CURTIDA:
+        return JsonResponse(
+            {
+                "ok": False,
+                "erro": (
+                    "As curtidas são exclusivas do aplicativo Lazer & Sport. "
+                    "Instale para curtir, juntar pontos e trocar por cupons."
+                ),
+                "somente_app": True,
+            },
+            status=403,
+        )
 
-    estado = servico.alternar(request, tipo, produto, origem=origem)
+    estado = servico.alternar(
+        request,
+        tipo,
+        produto,
+        origem=Favorito.Origem.SITE,
+    )
     estado["ok"] = True
     estado["logado"] = servico.usuario_logado(request) is not None
     estado["total_desejos"] = servico.meus_favoritos(

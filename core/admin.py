@@ -955,3 +955,115 @@ class FavoritoAdmin(admin.ModelAdmin):
 
     def has_change_permission(self, request, obj=None):
         return False
+
+
+# ============================================================
+# PONTOS E LOJA DE CUPONS
+# ============================================================
+
+from .models import CarteiraPontos, PontoGanho, RecompensaCupom, ResgateCupom
+
+
+@admin.register(RecompensaCupom)
+class RecompensaCupomAdmin(admin.ModelAdmin):
+    """A vitrine da loja de pontos do aplicativo.
+
+    É a única tela editável desta parte: preço em pontos, desconto e
+    estoque são decisão comercial. O resto (extrato, carteira, resgates)
+    é histórico e não se edita.
+    """
+
+    list_display = (
+        "nome",
+        "custo_pontos",
+        "desconto_percentual",
+        "validade_dias",
+        "estoque",
+        "ativo",
+        "ordem",
+    )
+    list_editable = ("custo_pontos", "estoque", "ativo", "ordem")
+    list_filter = ("ativo",)
+    search_fields = ("nome", "descricao")
+    ordering = ("ordem", "custo_pontos")
+
+    fieldsets = (
+        ("O que o cliente vê", {
+            "fields": ("nome", "descricao", "ordem", "ativo"),
+        }),
+        ("Preço e prêmio", {
+            "description": (
+                "O custo é em pontos. Curtida vale 5; a meta de 5 itens "
+                "na lista de desejos vale 30."
+            ),
+            "fields": ("custo_pontos", "desconto_percentual", "validade_dias"),
+        }),
+        ("Limite", {
+            "description": "Estoque vazio significa ilimitado.",
+            "fields": ("estoque",),
+        }),
+    )
+
+
+@admin.register(ResgateCupom)
+class ResgateCupomAdmin(admin.ModelAdmin):
+    """Histórico: quem trocou pontos por qual cupom."""
+
+    list_display = (
+        "codigo_do_cupom",
+        "usuario",
+        "recompensa",
+        "pontos_gastos",
+        "criacao",
+        "expira_em",
+    )
+    list_filter = ("recompensa", "criacao")
+    search_fields = (
+        "cupom__codigo",
+        "usuario__username",
+        "usuario__first_name",
+        "usuario__email",
+    )
+    date_hierarchy = "criacao"
+    list_select_related = ("cupom", "recompensa", "usuario")
+
+    @admin.display(description="Cupom", ordering="cupom__codigo")
+    def codigo_do_cupom(self, obj):
+        return obj.cupom.codigo
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(PontoGanho)
+class PontoGanhoAdmin(admin.ModelAdmin):
+    """Extrato. Só leitura: o saldo é a soma daqui, e editar à mão
+    faria a carteira e o extrato contarem histórias diferentes."""
+
+    list_display = ("usuario", "pontos", "origem", "descricao", "criacao")
+    list_filter = ("origem", "criacao")
+    search_fields = ("usuario__username", "usuario__email", "descricao")
+    date_hierarchy = "criacao"
+    list_select_related = ("usuario",)
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(CarteiraPontos)
+class CarteiraPontosAdmin(admin.ModelAdmin):
+    list_display = ("usuario", "saldo", "total_ganho", "atualizado")
+    search_fields = ("usuario__username", "usuario__email")
+    list_select_related = ("usuario",)
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
