@@ -15,6 +15,8 @@ from django.contrib import messages
 from django.contrib.auth.models import User
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
+
+from core.email_utils import remetente, responder_para, smtp_configurado
 from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
 from django.db import transaction
@@ -449,11 +451,22 @@ class OrcamentosInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
                 f"Acesse {link} para ver todos os itens e registrar sua decisão.\n\n"
                 "Lazer & Sport Brinquedos"
             )
+            if not smtp_configurado():
+                raise ErroDeFormulario(
+                    "O envio por e-mail ainda não está configurado na "
+                    "hospedagem (EMAIL_HOST_USER e EMAIL_HOST_PASSWORD). "
+                    "Use o WhatsApp ou copie o link enquanto isso."
+                )
+
+            # O "de" é sempre a conta autenticada no SMTP -- provedor
+            # nenhum deixa assinar com outro endereço. Quem recebe a
+            # resposta do cliente é quem está enviando agora.
             mensagem = EmailMultiAlternatives(
                 subject=f"Sua proposta Lazer & Sport #{orcamento.pk}",
                 body=texto_email,
-                from_email=settings.DEFAULT_FROM_EMAIL,
+                from_email=remetente(),
                 to=[email],
+                reply_to=responder_para(request.user),
             )
             mensagem.attach_alternative(html, "text/html")
             try:

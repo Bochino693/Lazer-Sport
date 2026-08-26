@@ -15,6 +15,8 @@ import threading
 
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
+
+from .email_utils import remetente, responder_para
 from django.db import close_old_connections
 from django.template.loader import render_to_string
 from django.urls import reverse
@@ -108,8 +110,11 @@ def montar_email_confirmacao(pedido):
     mensagem = EmailMultiAlternatives(
         subject=f"Pedido #{pedido.id} confirmado — Lazer & Sport",
         body=corpo_texto or strip_tags(corpo_html),
-        from_email=settings.DEFAULT_FROM_EMAIL,
+        from_email=remetente(),
         to=[destinatario],
+        # Cliente responde a confirmação para tirar dúvida: a resposta
+        # precisa cair no atendimento, não na caixa do robô.
+        reply_to=responder_para(),
     )
     mensagem.attach_alternative(corpo_html, "text/html")
     return mensagem

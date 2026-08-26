@@ -259,6 +259,28 @@ class OrcamentoInternoTests(TestCase):
         self.assertIn("Lazer & Sport", mail.outbox[0].subject)
         self.assertIn(orcamento.token, mail.outbox[0].alternatives[0].content)
 
+    @override_settings(
+        DEFAULT_FROM_EMAIL="Lazer & Sport <contato@lazersport.com.br>",
+        EMAIL_RESPOSTA="vendas@lazersport.com.br",
+    )
+    def test_email_sai_com_a_marca_e_volta_para_quem_enviou(self):
+        orcamento = self._orcamento_com_item()
+
+        self.post({
+            "action": "enviar",
+            "canal": "email",
+            "email": "cliente@example.com",
+            "id": orcamento.id,
+        })
+
+        enviado = mail.outbox[0]
+        self.assertEqual(
+            enviado.from_email,
+            "Lazer & Sport <contato@lazersport.com.br>",
+        )
+        # O atendente logado é o primeiro a receber a resposta.
+        self.assertIn("vendas@lazersport.com.br", enviado.reply_to)
+
     def test_email_invalido_nao_marca_como_enviado(self):
         orcamento = self._orcamento_com_item()
 

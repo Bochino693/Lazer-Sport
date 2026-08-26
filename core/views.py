@@ -3583,8 +3583,9 @@ class ManutencaoAdminView(AdminOnlyMixin, View):
         - None: cliente não tem e-mail válido cadastrado -- não é uma
           falha, só não tinha pra quem mandar.
         """
-        from django.core.mail import send_mail
-        from django.conf import settings
+        from django.core.mail import EmailMessage
+
+        from .email_utils import remetente, responder_para
 
         email = (manutencao.usuario.user.email or "").strip()
         if not email or not self._email_valido(email):
@@ -3609,15 +3610,18 @@ class ManutencaoAdminView(AdminOnlyMixin, View):
                 "Atenciosamente,\nEquipe técnica Lazer & Sport Brinquedos"
             )
 
-            enviados = send_mail(
-                assunto,
-                corpo,
-                getattr(settings, "DEFAULT_FROM_EMAIL", None),
-                [email],
-                fail_silently=False,
+            # O corpo promete "é só responder este e-mail": sem Reply-To
+            # a resposta caía na conta do SMTP e ninguém lia.
+            mensagem = EmailMessage(
+                subject=assunto,
+                body=corpo,
+                from_email=remetente(),
+                to=[email],
+                reply_to=responder_para(),
             )
-            # send_mail devolve quantas mensagens foram entregues ao
-            # backend -- 0 também conta como falha, mesmo sem exceção.
+            enviados = mensagem.send(fail_silently=False)
+            # send devolve quantas mensagens foram entregues ao backend --
+            # 0 também conta como falha, mesmo sem exceção.
             return bool(enviados)
         except Exception:
             logging.getLogger(__name__).exception(

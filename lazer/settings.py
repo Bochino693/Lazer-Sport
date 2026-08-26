@@ -527,6 +527,26 @@ DEFAULT_FROM_EMAIL = os.getenv(
     "DEFAULT_FROM_EMAIL",
     EMAIL_HOST_USER or "nao-responda@lazersport.com.br",
 ).strip()
+
+# Nome que aparece na caixa de entrada do cliente, antes do endereço.
+# Sem isso, o cliente vê só "lazersport2020@gmail.com" e a proposta parece
+# spam. Se DEFAULT_FROM_EMAIL já vier no formato "Nome <e-mail>", o valor
+# do ambiente vence e nada é montado por cima.
+EMAIL_REMETENTE_NOME = os.getenv(
+    "EMAIL_REMETENTE_NOME",
+    "Lazer & Sport Brinquedos",
+).strip()
+
+if EMAIL_REMETENTE_NOME and "<" not in DEFAULT_FROM_EMAIL:
+    DEFAULT_FROM_EMAIL = f"{EMAIL_REMETENTE_NOME} <{DEFAULT_FROM_EMAIL}>"
+
+# Para onde vai a resposta do cliente. Muitos provedores exigem que o
+# remetente seja a própria conta autenticada no SMTP -- então o jeito
+# certo de receber respostas no seu e-mail é este campo, não o "de".
+EMAIL_RESPOSTA = os.getenv(
+    "EMAIL_RESPOSTA",
+    os.getenv("EMAIL_CONTATO", ""),
+).strip()
 # Timeout curto: numa função serverless, é melhor a notificação falhar
 # rápido (e cair no aviso "não foi possível avisar") do que travar a
 # resposta inteira esperando um SMTP fora do ar.
