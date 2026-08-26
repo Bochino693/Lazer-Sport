@@ -367,6 +367,18 @@ class OrcamentoInternoTests(TestCase):
         self.assertContains(resposta, 'data-whatsapp="(11) 95388-7201"')
         self.assertContains(resposta, 'data-email="leandro@example.com"')
 
+    def test_whatsapp_explica_confirmacao_e_tem_fallback_para_popup_bloqueado(self):
+        self._orcamento_com_item()
+
+        resposta = self.client.get(self.URL, HTTP_HOST="interno.testserver")
+
+        self.assertContains(resposta, "Abrir WhatsApp")
+        self.assertContains(resposta, "Confirme o envio no aplicativo")
+        self.assertContains(
+            resposta,
+            "window.location.assign(json.whatsapp_url)",
+        )
+
     def test_enviar_sem_id_devolve_erro_claro(self):
         resposta = self.post({"action": "enviar", "id": ""})
 

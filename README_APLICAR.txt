@@ -1,4 +1,4 @@
-ORÇAMENTO V4.1 — APLICAR COM SEGURANÇA
+ORÇAMENTO V4.2 — APLICAR COM SEGURANÇA
 ======================================
 
 O pacote não contém .git, .idea, banco local nem ambiente virtual.
@@ -49,6 +49,8 @@ O QUE MUDOU
   esses dados continuam editáveis antes de enviar.
 - O link só libera os botões de copiar e abrir depois que o servidor confirma
   a URL, evitando compartilhar endereço vazio ou quebrado.
+- WhatsApp abre a conversa preparada mesmo quando o navegador do tablet
+  bloquear pop-ups; o operador apenas confirma o envio no aplicativo.
 - Aprovação/recusa atualiza automaticamente a situação no interno.
 - Documento comercial responsivo com dados do cliente, itens, totais,
   pagamento, envio, observações e identidade Lazer & Sport.

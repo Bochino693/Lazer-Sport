@@ -634,7 +634,11 @@ Cadastro mínimo de propósito: nome, valor e categoria. Foto e texto de
       </div>
       <div class="modal-body">
         <div class="alert alert-danger d-none" id="linkErro"></div>
-        <p class="text-muted small mb-3">Escolha como enviar para <strong id="linkCliente"></strong>. O cliente abre uma página Lazer &amp; Sport com todos os detalhes e responde por ali.</p>
+        <p class="text-muted small mb-2">Escolha como compartilhar com <strong id="linkCliente"></strong>. O cliente abre uma página Lazer &amp; Sport com todos os detalhes e responde por ali.</p>
+        <div class="alert alert-info py-2 px-3 small mb-3" role="note">
+          <i class="bi bi-info-circle me-1"></i>
+          No WhatsApp, a conversa abrirá com a mensagem pronta. Confirme o envio no aplicativo.
+        </div>
         <input type="hidden" id="linkOrcamentoId">
         <div class="row g-3 mb-3">
           <div class="col-12">
@@ -643,7 +647,7 @@ Cadastro mínimo de propósito: nome, valor e categoria. Foto e texto de
               <span class="input-group-text"><i class="bi bi-whatsapp text-success"></i></span>
               <input class="form-control" id="linkWhatsapp" inputmode="tel"
                      data-mascara="telefone" placeholder="(11) 99999-9999">
-              <button class="btn btn-success" type="button" id="linkEnviarWhatsapp">Enviar</button>
+              <button class="btn btn-success" type="button" id="linkEnviarWhatsapp">Abrir WhatsApp</button>
             </div>
           </div>
           <div class="col-12">
@@ -1536,7 +1540,7 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   });
 
-  function enviarPorCanal(canal, botao, campo, chave) {
+  function enviarPorCanal(canal, botao, campo, chave, janelaCanal) {
     Painel.erro("linkErro", "");
     var orcamentoId = document.getElementById("linkOrcamentoId").value.trim();
     if (!/^\d+$/.test(orcamentoId)) {
@@ -1576,13 +1580,24 @@ document.addEventListener("DOMContentLoaded", function () {
         linkPrevia.hidden = !json.preview_url;
         linkCopiar.disabled = false;
         if (canal === "whatsapp") {
-          window.open(json.whatsapp_url, "_blank", "noopener");
+          /* Abrir uma nova guia somente depois do fetch costuma ser
+             bloqueado no tablet. A guia é reservada no toque do operador;
+             se o navegador ainda assim a bloquear, navegamos nesta mesma
+             guia para que a conversa nunca simplesmente desapareça. */
+          if (janelaCanal && !janelaCanal.closed) {
+            janelaCanal.location.replace(json.whatsapp_url);
+          } else {
+            window.location.assign(json.whatsapp_url);
+          }
         } else {
           botao.innerHTML = '<i class="bi bi-check-lg me-1"></i> Enviado';
           setTimeout(function () { botao.innerHTML = original; }, 2400);
         }
       })
-      .catch(function (erro) { Painel.erro("linkErro", erro.message); })
+      .catch(function (erro) {
+        if (janelaCanal && !janelaCanal.closed) janelaCanal.close();
+        Painel.erro("linkErro", erro.message);
+      })
       .finally(function () {
         botao.disabled = false;
         if (canal === "whatsapp") botao.innerHTML = original;
@@ -1590,7 +1605,22 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   document.getElementById("linkEnviarWhatsapp").addEventListener("click", function () {
-    enviarPorCanal("whatsapp", this, document.getElementById("linkWhatsapp"), "whatsapp");
+    /* Esta chamada ainda acontece dentro do gesto do usuário, portanto o
+       navegador permite a guia. Ela será direcionada para wa.me assim que
+       o servidor devolver a mensagem e o link da proposta. */
+    var janelaWhatsApp = window.open("about:blank", "lsOrcamentoWhatsApp");
+    if (janelaWhatsApp) {
+      janelaWhatsApp.opener = null;
+      janelaWhatsApp.document.title = "Abrindo WhatsApp";
+      janelaWhatsApp.document.body.textContent = "Preparando a proposta…";
+    }
+    enviarPorCanal(
+      "whatsapp",
+      this,
+      document.getElementById("linkWhatsapp"),
+      "whatsapp",
+      janelaWhatsApp
+    );
   });
 
   document.getElementById("linkEnviarEmail").addEventListener("click", function () {
