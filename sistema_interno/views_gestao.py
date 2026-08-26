@@ -41,6 +41,7 @@ from . import etapas_padrao
 from . import financeiro as fin
 from .models import (
     Cliente,
+    EnvioOrcamento,
     ExecucaoEtapaProducao,
     GuiaEtapaProducao,
     HistoricoProducao,
@@ -129,6 +130,11 @@ class OrcamentosInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
 
     rota_padrao = "orcamentos_inner"
 
+    # O envio registra a tentativa -- inclusive quando falha. Dentro da
+    # transação, o rollback do erro levaria o registro junto e o histórico
+    # perderia justamente a linha que explica o "não chegou".
+    ACOES_SEM_TRANSACAO = ("enviar",)
+
     # ------------------------------------------------------------ leitura
     def get(self, request):
         busca = (request.GET.get("q") or "").strip()
@@ -202,6 +208,9 @@ class OrcamentosInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
             # inteiro nesta página. b:/p:/r: identificam brinquedo,
             # produção e reposição quando a linha é enviada.
             "tipos_cliente": Cliente.Tipo.choices,
+            # O gestor precisa saber ANTES de tentar que o e-mail não sai
+            # daqui: sem isso, "enviei e não chegou" vira mistério.
+            "email_configurado": smtp_configurado(),
             "buffets": buffets,
             "estabelecimentos": Estabelecimentos.objects.order_by(
                 "nome_estabelecimento"
@@ -595,6 +604,11 @@ class OrcamentosInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
                 "Lazer & Sport Brinquedos"
             )
             if not smtp_configurado():
+                self.registrar_envio(
+                    request, orcamento, canal, email,
+                    sucesso=False,
+                    detalhe="SMTP não configurado na hospedagem.",
+                )
                 raise ErroDeFormulario(
                     "O envio por e-mail ainda não está configurado na "
                     "hospedagem (EMAIL_HOST_USER e EMAIL_HOST_PASSWORD). "
@@ -614,20 +628,47 @@ class OrcamentosInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
             mensagem.attach_alternative(html, "text/html")
             try:
                 enviados = mensagem.send(fail_silently=False)
-            except Exception:
-                raise ErroDeFormulario(
-                    "Não foi possível enviar o e-mail agora. Confira a configuração SMTP ou use o WhatsApp."
+            except Exception as erro:
+                # O motivo do provedor vai para o registro: "não chegou"
+                # deixa de ser mistério e vira "535 senha recusada".
+                self.registrar_envio(
+                    request, orcamento, canal, email,
+                    sucesso=False,
+                    detalhe=f"{type(erro).__name__}: {erro}"[:240],
                 )
+                raise ErroDeFormulario(
+                    "Não foi possível enviar o e-mail agora: "
+                    f"{type(erro).__name__}. Confira a configuração SMTP "
+                    "(docs/CONFIGURAR_EMAIL.md) ou use o WhatsApp."
+                )
+
             if enviados != 1:
+                self.registrar_envio(
+                    request, orcamento, canal, email,
+                    sucesso=False,
+                    detalhe="O servidor aceitou a conexão e não confirmou o envio.",
+                )
                 raise ErroDeFormulario("O servidor de e-mail não confirmou o envio.")
+
             extras["email"] = email
 
         orcamento.marcar_enviado()
+
+        self.registrar_envio(
+            request,
+            orcamento,
+            canal,
+            extras.get("email") if canal == "email" else (
+                orcamento.whatsapp_destinatario if canal == "whatsapp" else ""
+            ),
+        )
 
         # Se o operador editou um canal neste mesmo pedido, devolvemos o
         # valor recém-salvo para o modal continuar coerente.
         extras["whatsapp"] = orcamento.whatsapp_destinatario
         extras["email"] = orcamento.email_destinatario
+        extras["envios"] = self.historico_de_envio(orcamento)
+        extras["email_configurado"] = smtp_configurado()
 
         return self.sucesso(
             request,
@@ -754,6 +795,46 @@ class OrcamentosInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
             },
         )
 
+
+    # ---------------------------------- registro de quem recebeu o quê
+    @staticmethod
+    def registrar_envio(request, orcamento, canal, destino, sucesso=True, detalhe=""):
+        """Guarda a tentativa, tenha dado certo ou não.
+
+        "O cliente disse que não recebeu" é a frase mais comum do
+        comercial. Sem registro ninguém responde se saiu, para onde e o
+        que o servidor respondeu.
+        """
+        EnvioOrcamento.objects.create(
+            orcamento=orcamento,
+            canal=canal if canal in EnvioOrcamento.Canal.values else (
+                EnvioOrcamento.Canal.LINK
+            ),
+            destino=(destino or "")[:254],
+            sucesso=sucesso,
+            detalhe=detalhe[:240],
+            responsavel=request.user if request.user.is_authenticated else None,
+        )
+
+    @staticmethod
+    def historico_de_envio(orcamento, limite=6):
+        """As últimas tentativas, prontas para o modal mostrar."""
+        return [
+            {
+                "canal": envio.get_canal_display(),
+                "destino": envio.destino,
+                "sucesso": envio.sucesso,
+                "detalhe": envio.detalhe,
+                "quando": timezone.localtime(envio.criacao).strftime(
+                    "%d/%m/%Y %H:%M"
+                ) if envio.criacao else "",
+                "por": (
+                    envio.responsavel.get_full_name()
+                    or envio.responsavel.username
+                ) if envio.responsavel else "",
+            }
+            for envio in orcamento.envios.select_related("responsavel")[:limite]
+        ]
 
     # ------------------------------- cadastrar cliente sem sair daqui
     def acao_cliente_novo(self, request):

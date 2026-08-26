@@ -528,3 +528,127 @@ class OrcamentoInternoTests(TestCase):
 
         self.assertEqual(resposta.status_code, 302)
         self.assertIn("producao", resposta["Location"])
+
+
+@override_settings(ALLOWED_HOSTS=["interno.testserver", "testserver"])
+class RegistroDeEnvioTests(TestCase):
+    """"O cliente disse que não recebeu" precisa ter onde ser conferido.
+
+    Sem registro, ninguém responde se a proposta saiu, para qual endereço
+    e o que o servidor de e-mail respondeu. Cada tentativa vira uma linha
+    -- inclusive, e principalmente, as que falharam.
+    """
+
+    URL = "/orcamentos/"
+
+    def setUp(self):
+        self.gestor = User.objects.create_superuser(
+            username="gestor",
+            password="senha-segura",
+            email="gestor@example.com",
+        )
+        self.client.force_login(self.gestor)
+
+        self.brinquedo = Brinquedos.objects.create(
+            nome_brinquedo="Cama elástica",
+            descricao="Cama elástica 3m",
+            valor_brinquedo=Decimal("280.00"),
+            avaliacao=Decimal("5.00"),
+            voltz="110",
+        )
+        self.orcamento = Orcamento.objects.create(
+            nome_cliente="Festa da Ana",
+            whatsapp_cliente="(11) 99999-8888",
+            email_cliente="ana@example.com",
+        )
+        ItemOrcamento.objects.create(
+            orcamento=self.orcamento,
+            descricao="Cama elástica",
+            brinquedo=self.brinquedo,
+            quantidade=1,
+            valor_unitario=Decimal("280.00"),
+        )
+
+    def post(self, dados):
+        return self.client.post(
+            self.URL,
+            dados,
+            HTTP_HOST="interno.testserver",
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+    def test_envio_por_whatsapp_fica_registrado(self):
+        self.post({
+            "action": "enviar",
+            "canal": "whatsapp",
+            "whatsapp": "(11) 99999-8888",
+            "id": self.orcamento.pk,
+        })
+
+        envio = self.orcamento.envios.get()
+        self.assertEqual(envio.canal, "whatsapp")
+        self.assertEqual(envio.destino, "(11) 99999-8888")
+        self.assertTrue(envio.sucesso)
+        self.assertEqual(envio.responsavel, self.gestor)
+
+    def test_envio_por_email_fica_registrado(self):
+        self.post({
+            "action": "enviar",
+            "canal": "email",
+            "email": "ana@example.com",
+            "id": self.orcamento.pk,
+        })
+
+        envio = self.orcamento.envios.get()
+        self.assertEqual(envio.canal, "email")
+        self.assertEqual(envio.destino, "ana@example.com")
+        self.assertTrue(envio.sucesso)
+
+    @override_settings(
+        EMAIL_BACKEND="django.core.mail.backends.smtp.EmailBackend",
+        EMAIL_HOST_USER="",
+        EMAIL_HOST_PASSWORD="",
+    )
+    def test_smtp_desligado_vira_registro_de_falha(self):
+        """A falha é justamente a que precisa aparecer no histórico."""
+        resposta = self.post({
+            "action": "enviar",
+            "canal": "email",
+            "email": "ana@example.com",
+            "id": self.orcamento.pk,
+        })
+
+        self.assertEqual(resposta.status_code, 400)
+        envio = self.orcamento.envios.get()
+        self.assertFalse(envio.sucesso)
+        self.assertIn("SMTP", envio.detalhe)
+
+    def test_resposta_traz_o_historico_para_a_tela(self):
+        self.post({
+            "action": "enviar",
+            "canal": "whatsapp",
+            "whatsapp": "(11) 99999-8888",
+            "id": self.orcamento.pk,
+        })
+
+        dados = self.post({
+            "action": "enviar",
+            "id": self.orcamento.pk,
+        }).json()
+
+        self.assertGreaterEqual(len(dados["envios"]), 1)
+        self.assertIn("canal", dados["envios"][0])
+        self.assertIn("email_configurado", dados)
+
+    def test_conversa_do_whatsapp_vem_pronta_com_o_link(self):
+        """A proposta sai do WhatsApp de quem está logado no aparelho."""
+        dados = self.post({
+            "action": "enviar",
+            "canal": "whatsapp",
+            "whatsapp": "(11) 99999-8888",
+            "id": self.orcamento.pk,
+        }).json()
+
+        self.orcamento.refresh_from_db()
+        self.assertTrue(dados["whatsapp_url"].startswith("https://wa.me/5511999998888"))
+        self.assertIn(self.orcamento.token, dados["whatsapp_url"])

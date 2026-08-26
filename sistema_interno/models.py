@@ -1446,6 +1446,58 @@ class Orcamento(Prime):
         ordering = ("-criacao", "-id")
 
 
+class EnvioOrcamento(Prime):
+    """Cada tentativa de mandar a proposta para o cliente.
+
+    POR QUE GUARDAR ISTO. "O cliente disse que não recebeu" é a frase mais
+    comum do comercial, e sem registro ninguém sabe responder: saiu? para
+    qual endereço? deu erro? Com o histórico, a resposta está na tela --
+    inclusive o motivo exato quando o servidor de e-mail recusou.
+
+    Falha também vira registro. Uma tentativa que deu errado é justamente
+    a que precisa aparecer.
+    """
+
+    class Canal(models.TextChoices):
+        LINK = "link", "Link copiado"
+        WHATSAPP = "whatsapp", "WhatsApp"
+        EMAIL = "email", "E-mail"
+
+    orcamento = models.ForeignKey(
+        "Orcamento",
+        on_delete=models.CASCADE,
+        related_name="envios",
+    )
+    canal = models.CharField(max_length=10, choices=Canal.choices, db_index=True)
+    destino = models.CharField(
+        max_length=254,
+        blank=True,
+        help_text="Telefone ou e-mail para onde a proposta foi mandada.",
+    )
+    sucesso = models.BooleanField(default=True)
+    detalhe = models.CharField(
+        max_length=240,
+        blank=True,
+        help_text="Motivo da falha, quando houve.",
+    )
+    responsavel = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name="envios_orcamento",
+        null=True,
+        blank=True,
+    )
+
+    class Meta:
+        verbose_name = "Envio de orçamento"
+        verbose_name_plural = "Envios de orçamento"
+        ordering = ("-criacao", "-id")
+
+    def __str__(self):
+        estado = "ok" if self.sucesso else "falhou"
+        return f"#{self.orcamento_id} · {self.get_canal_display()} · {estado}"
+
+
 class ItemOrcamento(Prime):
     orcamento = models.ForeignKey(
         Orcamento,

@@ -1652,3 +1652,39 @@ input[type="number"]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0
     max-height:100dvh!important;border-radius:0!important;
   }
 }
+
+
+/* Histórico de tentativas de envio, dentro do modal da proposta.
+
+   Existe para responder "o cliente disse que não recebeu": mostra o
+   canal, para onde foi, quando, quem mandou e -- quando falhou -- o que
+   o servidor respondeu. */
+.ls-envios{border-top:1px solid var(--line-soft);padding-top:14px}
+.ls-envios h6{color:var(--text-2);font-size:.82rem;font-weight:900}
+.ls-envios-lista{margin:0;padding:0;list-style:none;display:grid;gap:8px}
+.ls-envios-lista li{
+  padding:10px 12px;border-radius:11px;
+  border-left:3px solid var(--green);
+  background:rgba(255,255,255,.03);
+  color:var(--text-2);font-size:.78rem;line-height:1.45;
+}
+.ls-envios-lista li.falhou{border-left-color:var(--red);background:rgba(255,122,107,.07)}
+.ls-envios-lista li span{display:block;margin-top:2px;color:var(--muted);font-size:.72rem}
+.ls-envios-lista li em{display:block;margin-top:4px;color:#ffb3a8;font-size:.72rem;font-style:normal}
+
+/* Estado do envio de e-mail, na tela da conta. */
+.ls-envio-estado{
+  padding:14px 16px;border-radius:14px;
+  border:1px solid var(--line);background:rgba(255,255,255,.03);
+  display:grid;gap:5px;
+}
+.ls-envio-estado strong{color:var(--text);font-size:.88rem}
+.ls-envio-estado span{color:var(--muted);font-size:.79rem;line-height:1.5}
+.ls-envio-estado code{
+  padding:1px 6px;border-radius:6px;
+  background:rgba(255,255,255,.07);color:var(--acento);font-size:.76rem;
+}
+.ls-envio-estado.ok{border-color:rgba(95,214,138,.35);background:rgba(95,214,138,.07)}
+.ls-envio-estado.ok strong{color:#8fe6ae}
+.ls-envio-estado.parado{border-color:rgba(255,201,77,.35);background:rgba(255,201,77,.07)}
+.ls-envio-estado.parado strong{color:#ffd77a}

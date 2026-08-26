@@ -69,4 +69,51 @@
     <button class="btn btn-primary btn-lg px-4" type="submit"><i class="bi bi-check2-circle me-2"></i>Salvar minha conta</button>
   </div>
 </form>
+
+{% comment %}
+  ENVIO DE E-MAIL: um lugar para conferir sem abrir documentação.
+
+  "Mandei a proposta e o cliente não recebeu" era um beco sem saída:
+  ninguém sabia se o problema era o endereço do cliente, a caixa dele ou
+  o servidor. Um teste para a própria conta separa as três coisas em dez
+  segundos -- e mostra o erro do provedor na tela, em vez de deixá-lo no
+  log do servidor.
+{% endcomment %}
+<section class="ls-card p-4 mt-4">
+  <h2 class="h5 mb-1"><i class="bi bi-envelope-check me-2"></i>Envio de e-mail</h2>
+  <p class="text-muted mb-3">
+    É por aqui que a proposta chega ao cliente quando você escolhe enviar por e-mail.
+  </p>
+
+  <div class="ls-envio-estado {% if email_configurado %}ok{% else %}parado{% endif %}">
+    {% if email_configurado %}
+      <strong><i class="bi bi-check-circle me-1"></i> Configurado nesta hospedagem</strong>
+      <span>Sai como <code>{{ email_remetente }}</code>.</span>
+      {% if email_resposta %}
+        <span>A resposta do cliente volta para <code>{{ email_resposta|join:", " }}</code>.</span>
+      {% else %}
+        <span>Sem endereço de resposta: a resposta cai na conta técnica. Defina <code>EMAIL_RESPOSTA</code> ou cadastre seu e-mail acima.</span>
+      {% endif %}
+    {% else %}
+      <strong><i class="bi bi-exclamation-triangle me-1"></i> Ainda não configurado</strong>
+      <span>
+        Faltam <code>EMAIL_HOST_USER</code> e <code>EMAIL_HOST_PASSWORD</code> na
+        hospedagem. Enquanto isso, mande a proposta pelo WhatsApp ou copie o link.
+      </span>
+      <span>Passo a passo: <strong>docs/CONFIGURAR_EMAIL.md</strong>.</span>
+    {% endif %}
+  </div>
+
+  <form method="post" action="{% url 'minha_conta_inner' %}" class="mt-3">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="testar_email">
+    <button class="btn btn-outline-primary" type="submit" {% if not email_configurado %}disabled{% endif %}>
+      <i class="bi bi-send-check me-1"></i>
+      Enviar um teste para mim
+    </button>
+    <span class="form-text d-block mt-2">
+      Vai para <strong>{{ user.email|default:"(cadastre seu e-mail acima)" }}</strong>.
+    </span>
+  </form>
+</section>
 {% endblock %}

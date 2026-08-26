@@ -651,10 +651,36 @@ Cadastro mínimo de propósito: nome, valor e categoria. Foto e texto de
             <div class="input-group">
               <span class="input-group-text"><i class="bi bi-envelope"></i></span>
               <input type="email" class="form-control" id="linkEmail" placeholder="cliente@empresa.com.br">
-              <button class="btn btn-primary" type="button" id="linkEnviarEmail">Enviar</button>
+              <button class="btn btn-primary" type="button" id="linkEnviarEmail"
+                      {% if not email_configurado %}disabled{% endif %}>Enviar</button>
             </div>
+            {% if not email_configurado %}
+              {% comment %}
+                Dizer ANTES de tentar. O gestor apertava "Enviar", via uma
+                mensagem genérica e ficava achando que a proposta tinha
+                saído -- o cliente é que sabia que não chegou.
+              {% endcomment %}
+              <div class="alert alert-warning mt-2 mb-0 py-2 px-3 small" role="status">
+                <i class="bi bi-exclamation-triangle me-1"></i>
+                O envio por e-mail ainda não está ligado nesta hospedagem.
+                Use o WhatsApp ou copie o link. Para ligar, veja
+                <strong>docs/CONFIGURAR_EMAIL.md</strong> — faltam
+                <code>EMAIL_HOST_USER</code> e <code>EMAIL_HOST_PASSWORD</code>.
+              </div>
+            {% endif %}
           </div>
         </div>
+
+        {% comment %}
+          O WhatsApp abre a conversa com a mensagem pronta; quem aperta
+          "enviar" é uma pessoa. Dizer isso aqui evita a dúvida mais comum
+          do comercial -- "mandei ou não mandei?".
+        {% endcomment %}
+        <p class="text-muted small mb-3">
+          <i class="bi bi-info-circle me-1"></i>
+          O botão do WhatsApp abre a conversa com a proposta escrita.
+          Confirme o envio dentro do WhatsApp para o cliente receber.
+        </p>
         <label class="form-label" for="linkCampo">Ou compartilhe o link</label>
         <div class="input-group">
           <input class="form-control" id="linkCampo" readonly>
@@ -670,6 +696,20 @@ Cadastro mínimo de propósito: nome, valor e categoria. Foto e texto de
            href="#" target="_blank" rel="noopener" hidden>
           <i class="bi bi-eye"></i> Abrir prévia interna
         </a>
+
+        {% comment %}
+          Saída para quando o navegador bloqueia a janela do WhatsApp: um
+          botão que a pessoa toca, com o gesto dela, e a conversa abre.
+        {% endcomment %}
+        <a class="btn btn-success w-100 mt-3" id="linkWhatsappAtalho"
+           href="#" target="_blank" rel="noopener" hidden>
+          <i class="bi bi-whatsapp me-1"></i> Abrir conversa no WhatsApp
+        </a>
+
+        <section class="ls-envios mt-4" id="linkEnvios" hidden>
+          <h6 class="mb-2"><i class="bi bi-clock-history me-1"></i> Tentativas de envio</h6>
+          <ul class="ls-envios-lista" id="linkEnviosLista"></ul>
+        </section>
       </div>
     </div>
   </div>
@@ -1446,6 +1486,50 @@ document.addEventListener("DOMContentLoaded", function () {
      ------------------------------------------------------------------ */
   var campoLink = document.getElementById("linkCampo");
   var linkAbrir = document.getElementById("linkAbrir");
+
+  /* Histórico de tentativas.
+
+     "O cliente disse que não recebeu" era impossível de responder: não
+     havia onde olhar. Agora a última tentativa aparece aqui, com canal,
+     destino, hora e -- quando falhou -- o motivo que o servidor devolveu. */
+  /* O atalho fica visível depois de gerar a conversa: serve de saída
+     quando o navegador bloqueou a janela, e de "abrir de novo" quando a
+     pessoa fechou sem querer. */
+  function mostrarAtalhoWhatsapp(url, jaAbriu) {
+    var atalho = document.getElementById("linkWhatsappAtalho");
+    if (!atalho || !url) return;
+
+    atalho.href = url;
+    atalho.hidden = false;
+    atalho.innerHTML = jaAbriu
+      ? '<i class="bi bi-whatsapp me-1"></i> Abrir a conversa de novo'
+      : '<i class="bi bi-whatsapp me-1"></i> Abrir conversa no WhatsApp';
+  }
+
+  function desenharEnvios(envios) {
+    var caixa = document.getElementById("linkEnvios");
+    var lista = document.getElementById("linkEnviosLista");
+    if (!caixa || !lista) return;
+
+    lista.innerHTML = "";
+    if (!envios || !envios.length) {
+      caixa.hidden = true;
+      return;
+    }
+
+    envios.forEach(function (envio) {
+      var item = document.createElement("li");
+      item.className = envio.sucesso ? "ok" : "falhou";
+      item.innerHTML =
+        '<strong>' + envio.canal + "</strong>" +
+        (envio.destino ? " · " + envio.destino : "") +
+        '<span>' + envio.quando + (envio.por ? " · " + envio.por : "") + "</span>" +
+        (envio.detalhe ? '<em>' + envio.detalhe + "</em>" : "");
+      lista.appendChild(item);
+    });
+
+    caixa.hidden = false;
+  }
   var linkPrevia = document.getElementById("linkPreviaInterna");
   var linkCopiar = document.getElementById("linkCopiar");
 
@@ -1472,6 +1556,8 @@ document.addEventListener("DOMContentLoaded", function () {
       linkAbrir.hidden = true;
       linkPrevia.hidden = true;
       linkCopiar.disabled = true;
+      var atalhoWpp = document.getElementById("linkWhatsappAtalho");
+      if (atalhoWpp) atalhoWpp.hidden = true;
       Painel.erro("linkErro", "");
       Painel.abrir("modalLink");
 
@@ -1520,6 +1606,7 @@ document.addEventListener("DOMContentLoaded", function () {
           linkPrevia.href = json.preview_url || "#";
           linkPrevia.hidden = !json.preview_url;
           linkCopiar.disabled = false;
+          desenharEnvios(json.envios);
           Painel.erro("linkErro", "");
         })
         .catch(function (erro) {
@@ -1539,6 +1626,35 @@ document.addEventListener("DOMContentLoaded", function () {
   function enviarPorCanal(canal, botao, campo, chave) {
     Painel.erro("linkErro", "");
     var orcamentoId = document.getElementById("linkOrcamentoId").value.trim();
+
+    /* A JANELA DO WHATSAPP ABRE AGORA, NO CLIQUE.
+     *
+     * Ela era aberta depois da resposta do servidor, e navegador nenhum
+     * deixa: `window.open` fora do gesto da pessoa é bloqueado como
+     * pop-up. O resultado era o pior possível -- o painel dizia "enviado"
+     * e nada acontecia na tela, então a proposta nunca saía e ninguém
+     * entendia por quê.
+     *
+     * Abrindo aqui, a aba nasce autorizada e só espera o endereço. A
+     * conversa abre no WhatsApp de QUEM ESTÁ LOGADO no aparelho: a
+     * proposta sai do número do atendente, como qualquer mensagem dele. */
+    var abaWhatsapp = null;
+    if (canal === "whatsapp") {
+      abaWhatsapp = window.open("", "_blank");
+    }
+
+    function levarPara(url) {
+      if (abaWhatsapp && !abaWhatsapp.closed) {
+        abaWhatsapp.location.href = url;
+        return true;
+      }
+      return false;
+    }
+
+    function fecharAba() {
+      if (abaWhatsapp && !abaWhatsapp.closed) abaWhatsapp.close();
+    }
+
     if (!/^\d+$/.test(orcamentoId)) {
       Painel.erro(
         "linkErro",
@@ -1575,14 +1691,32 @@ document.addEventListener("DOMContentLoaded", function () {
         linkPrevia.href = json.preview_url || "#";
         linkPrevia.hidden = !json.preview_url;
         linkCopiar.disabled = false;
+        desenharEnvios(json.envios);
+
         if (canal === "whatsapp") {
-          window.open(json.whatsapp_url, "_blank", "noopener");
+          var abriu = levarPara(json.whatsapp_url);
+          mostrarAtalhoWhatsapp(json.whatsapp_url, abriu);
+
+          document.getElementById("linkErro").className = "alert alert-info";
+          Painel.erro(
+            "linkErro",
+            abriu
+              ? "A conversa abriu no seu WhatsApp com a proposta escrita. " +
+                "Confirme o envio por lá para o cliente receber."
+              : "O navegador bloqueou a janela. Use o botão verde " +
+                "\u201cAbrir conversa no WhatsApp\u201d aqui embaixo."
+          );
         } else {
           botao.innerHTML = '<i class="bi bi-check-lg me-1"></i> Enviado';
           setTimeout(function () { botao.innerHTML = original; }, 2400);
         }
       })
-      .catch(function (erro) { Painel.erro("linkErro", erro.message); })
+      .catch(function (erro) {
+        /* Sem endereço para levar, a aba em branco só confunde. */
+        fecharAba();
+        document.getElementById("linkErro").className = "alert alert-danger";
+        Painel.erro("linkErro", erro.message);
+      })
       .finally(function () {
         botao.disabled = false;
         if (canal === "whatsapp") botao.innerHTML = original;

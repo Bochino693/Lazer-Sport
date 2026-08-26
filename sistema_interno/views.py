@@ -101,7 +101,13 @@ class RespostaJSONMixin:
     rota_padrao = "stock"
 
     def erro(self, request, mensagem, status=400):
-        transaction.set_rollback(True)
+        # Ação declarada em ACOES_SEM_TRANSACAO não abriu transação, então
+        # não tem nada para desfazer -- e marcar rollback aqui derrubaria
+        # a transação de quem chamou (em teste, a do próprio TestCase),
+        # impedindo qualquer consulta seguinte.
+        if not getattr(self, "_acao_sem_transacao", False):
+            transaction.set_rollback(True)
+
         if pede_json(request):
             return JsonResponse({"status": "erro", "msg": mensagem}, status=status)
         return redirect(self.rota_padrao)
@@ -154,8 +160,26 @@ class RespostaJSONMixin:
 
         return metodo(request)
 
-    @transaction.atomic
+    #: Ações que NÃO rodam dentro de uma transação.
+    #
+    # Quase tudo aqui salva um cadastro inteiro e precisa de tudo-ou-nada.
+    # Envio de proposta é outra coisa: ele registra a TENTATIVA, e a
+    # tentativa que interessa guardar é justamente a que falhou. Dentro da
+    # transação, o rollback do erro apagava o registro junto -- e o
+    # histórico ficava sem a única linha que explicava o problema.
+    ACOES_SEM_TRANSACAO = ()
+
     def post(self, request, *args, **kwargs):
+        acao = request.POST.get("action", "")
+        self._acao_sem_transacao = acao in self.ACOES_SEM_TRANSACAO
+
+        if self._acao_sem_transacao:
+            return self._executar(request)
+
+        with transaction.atomic():
+            return self._executar(request)
+
+    def _executar(self, request):
         try:
             return self.despachar_acao(request)
         except ErroDeFormulario as exc:
@@ -216,9 +240,21 @@ class MinhaContaView(InternoRequiredMixin, View):
     template_name = "minha_conta.html"
 
     def get(self, request):
-        return render(request, self.template_name)
+        from core.email_utils import remetente, responder_para, smtp_configurado
+
+        return render(request, self.template_name, {
+            # Quem envia proposta precisa saber, sem abrir documentação,
+            # se o e-mail sai deste servidor -- e para onde volta a
+            # resposta do cliente.
+            "email_configurado": smtp_configurado(),
+            "email_remetente": remetente(),
+            "email_resposta": responder_para(request.user),
+        })
 
     def post(self, request):
+        if request.POST.get("action") == "testar_email":
+            return self._testar_email(request)
+
         user = request.user
         primeiro_nome = (request.POST.get("first_name") or "").strip()[:150]
         sobrenome = (request.POST.get("last_name") or "").strip()[:150]
@@ -270,6 +306,73 @@ class MinhaContaView(InternoRequiredMixin, View):
         else:
             messages.success(request, "Seus dados foram atualizados.")
 
+        return redirect("minha_conta_inner")
+
+    def _testar_email(self, request):
+        """Manda um e-mail de teste para o próprio usuário.
+
+        POR QUE ISTO EXISTE. "Enviei a proposta e o cliente não recebeu"
+        era um beco sem saída: ninguém tinha como saber se o problema era
+        o endereço do cliente, a caixa dele ou o servidor de e-mail. Um
+        teste para a própria conta separa as três coisas em dez segundos,
+        e o erro do provedor aparece na tela em vez de ficar no log.
+        """
+        from django.core.mail import EmailMultiAlternatives
+
+        from core.email_utils import remetente, responder_para, smtp_configurado
+
+        destino = (request.user.email or "").strip()
+        if not destino:
+            messages.error(
+                request,
+                "Cadastre seu e-mail acima antes de testar o envio.",
+            )
+            return redirect("minha_conta_inner")
+
+        if not smtp_configurado():
+            messages.error(
+                request,
+                "O servidor de e-mail ainda não está configurado nesta "
+                "hospedagem: faltam EMAIL_HOST_USER e EMAIL_HOST_PASSWORD. "
+                "O passo a passo está em docs/CONFIGURAR_EMAIL.md.",
+            )
+            return redirect("minha_conta_inner")
+
+        mensagem = EmailMultiAlternatives(
+            subject="Teste de envio — Lazer & Sport",
+            body=(
+                "Se você está lendo isto, o envio de e-mail do sistema está "
+                "funcionando: as propostas saem por aqui.\n\n"
+                "Responda esta mensagem para conferir também o endereço de "
+                "resposta."
+            ),
+            from_email=remetente(),
+            to=[destino],
+            reply_to=responder_para(request.user),
+        )
+
+        try:
+            enviados = mensagem.send(fail_silently=False)
+        except Exception as erro:
+            messages.error(
+                request,
+                f"O servidor de e-mail recusou o envio: {type(erro).__name__}: "
+                f"{erro}",
+            )
+            return redirect("minha_conta_inner")
+
+        if enviados != 1:
+            messages.error(
+                request,
+                "O servidor aceitou a conexão mas não confirmou o envio.",
+            )
+            return redirect("minha_conta_inner")
+
+        messages.success(
+            request,
+            f"E-mail de teste enviado para {destino}. Se não chegar em "
+            "alguns minutos, confira a caixa de spam.",
+        )
         return redirect("minha_conta_inner")
 
 
