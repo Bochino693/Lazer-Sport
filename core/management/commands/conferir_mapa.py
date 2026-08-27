@@ -5,7 +5,7 @@ Roda em produção, onde o Nominatim é alcançável:
     python manage.py conferir_mapa            # só relata, não grava
     python manage.py conferir_mapa --corrigir # regrava o que estiver ruim
 
-O relatório diz, para cada estabelecimento, até onde a busca conseguiu
+O relatório diz, para cada cliente publicado, até onde a busca conseguiu
 chegar. É isso que separa "o alfinete está no endereço" de "o alfinete
 está na região" -- distinção que antes se perdia, porque um resultado de
 nível cidade era gravado igual a um resultado exato.
@@ -15,7 +15,8 @@ import time
 
 from django.core.management.base import BaseCommand
 
-from core.models import Clientes, EnderecoEmpresa
+from core.models import EnderecoEmpresa
+from sistema_interno.models import EnderecoCliente
 from core.utils import (
     PRECISAO_CONFIAVEL,
     distancia_km,
@@ -51,9 +52,14 @@ class Command(BaseCommand):
         self._conferir_empresa(corrigir)
 
         self.stdout.write("")
-        self.stdout.write(self.style.MIGRATE_HEADING("Estabelecimentos no mapa"))
+        self.stdout.write(self.style.MIGRATE_HEADING("Clientes no mapa"))
 
-        cadastros = Clientes.objects.filter(exibir_no_mapa=True).order_by("descricao_cliente")
+        cadastros = (
+            EnderecoCliente.objects
+            .filter(cliente__publicar_no_mapa=True, cliente__ativo=True)
+            .select_related("cliente")
+            .order_by("cliente__nome_cliente")
+        )
         if not cadastros:
             self.stdout.write("  nenhum cadastro para conferir.")
             return
@@ -61,9 +67,9 @@ class Command(BaseCommand):
         contagem = {"exato": 0, "rua": 0, "bairro": 0, "cidade": 0, "manual": 0, "sem": 0}
 
         for cadastro in cadastros:
-            nome = (cadastro.descricao_cliente or f"#{cadastro.pk}")[:38]
+            nome = (cadastro.cliente.nome_cliente or f"#{cadastro.pk}")[:38]
 
-            if cadastro.precisao_local == Clientes.Precisao.MANUAL and not incluir_manuais:
+            if cadastro.precisao == EnderecoCliente.Precisao.MANUAL and not incluir_manuais:
                 contagem["manual"] += 1
                 self.stdout.write(f"  {nome:40} ajustado à mão, mantido")
                 continue
@@ -106,8 +112,8 @@ class Command(BaseCommand):
             if corrigir and (distancia is None or distancia >= 0.05):
                 cadastro.latitude = lat
                 cadastro.longitude = lon
-                cadastro.precisao_local = precisao
-                cadastro.save(update_fields=["latitude", "longitude", "precisao_local"])
+                cadastro.precisao = precisao
+                cadastro.save(update_fields=["latitude", "longitude", "precisao"])
 
         self.stdout.write("")
         self.stdout.write(

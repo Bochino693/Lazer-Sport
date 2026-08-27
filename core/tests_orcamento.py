@@ -134,7 +134,7 @@ class OrcamentoPublicoTests(TestCase):
     def test_documento_mostra_cliente_pagamento_envio_e_decisao(self):
         cliente = Cliente.objects.create(
             nome_cliente="R3 Boteco Original Ltda",
-            tipo=Cliente.Tipo.EMPRESA,
+            tipo=Cliente.Tipo.COMERCIAL,
             documento="48.646.647/0001-11",
             telefone="(11) 95388-7201",
             email="compras@example.com",
@@ -202,11 +202,12 @@ class OrcamentoPublicoTests(TestCase):
         self.assertEqual(self.orcamento.respondido_por, "Fulano de Tal")
         self.assertIsNotNone(self.orcamento.respondido_em)
 
-    @patch(
-        "core.models.geocodificar_endereco",
-        return_value=(-23.550520, -46.633308, "rua"),
-    )
-    def test_aprovacao_do_cliente_publica_o_cadastro_no_mapa(self, _geocodificar):
+    def test_aprovacao_do_cliente_publica_o_cadastro_no_mapa(self):
+        """Aprovar a proposta liga a chave do mapa no próprio cliente.
+
+        Nada de rede aqui: publicar deixou de copiar o cadastro para uma
+        segunda tabela, e por isso não passa mais por geocodificação.
+        """
         cliente = Cliente.objects.create(
             nome_cliente="Colégio Sol",
             telefone="(11) 99999-1111",
@@ -229,8 +230,8 @@ class OrcamentoPublicoTests(TestCase):
         )
 
         cliente.refresh_from_db()
-        self.assertIsNotNone(cliente.cliente_mapa_id)
-        self.assertEqual(cliente.cliente_mapa.cidade, "São Paulo")
+        self.assertTrue(cliente.publicar_no_mapa)
+        self.assertEqual(cliente.endereco_principal.cidade, "São Paulo")
 
     def test_recusar_guarda_o_motivo(self):
         self.client.post(

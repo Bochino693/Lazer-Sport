@@ -6,16 +6,16 @@
 {% block content %}
 <style>
     :root {
-        --combo-surface: rgba(15, 30, 52, .94);
-        --combo-surface-2: #132943;
-        --combo-border: rgba(148, 163, 184, .16);
-        --combo-text: #f8fafc;
-        --combo-muted: #94a3b8;
-        --combo-primary: #7c3aed;
-        --combo-primary-2: #4f46e5;
-        --combo-success: #22c55e;
-        --combo-danger: #ef4444;
-        --combo-warning: #fbbf24;
+        --combo-surface: rgba(30, 25, 19, .94);
+        --combo-surface-2: #231D16;
+        --combo-border: rgba(44, 37, 27, .16);
+        --combo-text: #FCF8F1;
+        --combo-muted: #C4B6A0;
+        --combo-primary: #F2A93B;
+        --combo-primary-2: #F2A93B;
+        --combo-success: #5FD68A;
+        --combo-danger: #FF7A6B;
+        --combo-warning: #FFC94D;
     }
 
     .combo-page,
@@ -41,8 +41,8 @@
         border: 1px solid var(--combo-border);
         border-radius: 24px;
         background:
-            radial-gradient(circle at 92% 15%, rgba(124, 58, 237, .25), transparent 34%),
-            linear-gradient(135deg, rgba(30, 41, 59, .98), rgba(8, 18, 34, .98));
+            radial-gradient(circle at 92% 15%, rgba(242, 169, 59, .25), transparent 34%),
+            linear-gradient(135deg, rgba(35, 29, 22, .98), rgba(24, 20, 16, .98));
         box-shadow: 0 24px 60px rgba(0, 0, 0, .25);
     }
 
@@ -53,7 +53,7 @@
         bottom: -110px;
         width: 280px;
         height: 280px;
-        border: 45px solid rgba(255, 255, 255, .025);
+        border: 45px solid rgba(44, 37, 27, .025);
         border-radius: 50%;
         pointer-events: none;
     }
@@ -63,7 +63,7 @@
         align-items: center;
         gap: 8px;
         margin-bottom: 8px;
-        color: #c4b5fd;
+        color: #C4B6A0;
         font-size: .75rem;
         font-weight: 800;
         letter-spacing: .12em;
@@ -103,9 +103,9 @@
         min-height: 46px;
         padding: 0 20px;
         border-radius: 14px;
-        color: #fff;
+        color: #FCF8F1;
         background: linear-gradient(135deg, var(--combo-primary), var(--combo-primary-2));
-        box-shadow: 0 12px 28px rgba(79, 70, 229, .34);
+        box-shadow: 0 12px 28px rgba(242, 169, 59, .34);
         font-weight: 800;
         white-space: nowrap;
     }
@@ -151,7 +151,7 @@
         flex: 0 0 46px;
         place-items: center;
         border-radius: 14px;
-        background: rgba(124, 58, 237, .16);
+        background: rgba(242, 169, 59, .16);
         font-size: 1.25rem;
     }
 
@@ -205,7 +205,7 @@
         border-radius: 13px;
         outline: none;
         color: var(--combo-text);
-        background: rgba(7, 17, 31, .88);
+        background: rgba(24, 20, 16, .88);
         font: inherit;
         transition: border-color .2s ease, box-shadow .2s ease;
     }
@@ -225,14 +225,14 @@
         border: 1px solid var(--combo-border);
         border-radius: 13px;
         color: var(--combo-text);
-        background: rgba(7, 17, 31, .88);
+        background: rgba(24, 20, 16, .88);
     }
 
     .combo-search input:focus,
     .combo-toolbar select:focus,
     .combo-field input:focus {
-        border-color: #8b5cf6;
-        box-shadow: 0 0 0 4px rgba(124, 58, 237, .14);
+        border-color: #7A6540;
+        box-shadow: 0 0 0 4px rgba(242, 169, 59, .14);
     }
 
     .combo-secondary-btn {
@@ -244,7 +244,7 @@
         border: 1px solid var(--combo-border);
         border-radius: 13px;
         color: var(--combo-text);
-        background: #1e334d;
+        background: #231D16;
         font-weight: 750;
         text-decoration: none;
     }
@@ -267,7 +267,7 @@
 
     .combo-card:hover {
         transform: translateY(-5px);
-        border-color: rgba(139, 92, 246, .48);
+        border-color: rgba(90, 70, 112, .48);
         box-shadow: 0 24px 52px rgba(0, 0, 0, .32);
     }
 
@@ -276,8 +276,8 @@
         height: 200px;
         overflow: hidden;
         background:
-            radial-gradient(circle at 50% 30%, rgba(124, 58, 237, .28), transparent 48%),
-            #0a1729;
+            radial-gradient(circle at 50% 30%, rgba(242, 169, 59, .28), transparent 48%),
+            #1A1610;
     }
 
     .combo-card-media img {
@@ -296,7 +296,7 @@
         width: 100%;
         height: 100%;
         place-items: center;
-        color: #a78bfa;
+        color: #F5C070;
         font-size: 3rem;
     }
 
@@ -308,18 +308,18 @@
         align-items: center;
         gap: 6px;
         padding: 7px 10px;
-        border: 1px solid rgba(255, 255, 255, .16);
+        border: 1px solid rgba(44, 37, 27, .16);
         border-radius: 999px;
-        color: #dcfce7;
-        background: rgba(22, 101, 52, .86);
+        color: #E7DDCB;
+        background: rgba(95, 214, 138, .86);
         backdrop-filter: blur(8px);
         font-size: .72rem;
         font-weight: 850;
     }
 
     .combo-status.is-off {
-        color: #e2e8f0;
-        background: rgba(51, 65, 85, .9);
+        color: #E7DDCB;
+        background: rgba(43, 36, 27, .9);
     }
 
     .combo-card-body {
@@ -346,10 +346,10 @@
     .combo-products li {
         align-self: flex-start;
         padding: 6px 9px;
-        border: 1px solid rgba(148, 163, 184, .14);
+        border: 1px solid rgba(44, 37, 27, .14);
         border-radius: 999px;
-        color: #cbd5e1;
-        background: rgba(30, 51, 77, .82);
+        color: #E7DDCB;
+        background: rgba(35, 29, 22, .82);
         font-size: .75rem;
     }
 
@@ -371,19 +371,19 @@
         display: grid;
         min-height: 44px;
         place-items: center;
-        border: 1px solid rgba(239, 68, 68, .2);
+        border: 1px solid rgba(110, 64, 56, .2);
         border-radius: 13px;
-        color: #fecaca;
-        background: rgba(127, 29, 29, .38);
+        color: #FF9AAA;
+        background: rgba(255, 122, 107, .38);
     }
 
     .combo-empty {
         grid-column: 1 / -1;
         padding: 60px 24px;
-        border: 1px dashed rgba(148, 163, 184, .24);
+        border: 1px dashed rgba(44, 37, 27, .24);
         border-radius: 22px;
         text-align: center;
-        background: rgba(15, 30, 52, .55);
+        background: rgba(30, 25, 19, .55);
     }
 
     .combo-empty > span {
@@ -415,13 +415,13 @@
     }
 
     .combo-message.success {
-        border-color: rgba(34, 197, 94, .3);
-        color: #bbf7d0;
+        border-color: rgba(63, 107, 82, .3);
+        color: #7CE7BC;
     }
 
     .combo-message.error {
-        border-color: rgba(239, 68, 68, .3);
-        color: #fecaca;
+        border-color: rgba(110, 64, 56, .3);
+        color: #FF9AAA;
     }
 
     body.combo-modal-open {
@@ -450,7 +450,7 @@
     .combo-modal-backdrop {
         position: absolute;
         inset: 0;
-        background: rgba(2, 6, 23, .84);
+        background: rgba(19, 16, 11, .84);
         backdrop-filter: blur(7px);
     }
 
@@ -460,9 +460,9 @@
         width: min(820px, 100%);
         max-height: min(92vh, 900px);
         overflow: auto;
-        border: 1px solid rgba(148, 163, 184, .2);
+        border: 1px solid rgba(44, 37, 27, .2);
         border-radius: 24px;
-        background: linear-gradient(160deg, #132943, #0a1729);
+        background: linear-gradient(160deg, #231D16, #1A1610);
         box-shadow: 0 36px 100px rgba(0, 0, 0, .55);
         transform: translateY(14px) scale(.98);
         transition: transform .24s ease;
@@ -505,7 +505,7 @@
         border: 1px solid var(--combo-border);
         border-radius: 12px;
         color: var(--combo-text);
-        background: rgba(30, 51, 77, .85);
+        background: rgba(35, 29, 22, .85);
         cursor: pointer;
     }
 
@@ -533,7 +533,7 @@
     .combo-field-label {
         display: block;
         margin: 0 0 7px;
-        color: #cbd5e1;
+        color: #E7DDCB;
         font-size: .78rem;
         font-weight: 800;
     }
@@ -551,9 +551,9 @@
         gap: 16px;
         align-items: center;
         padding: 13px;
-        border: 1px dashed rgba(139, 92, 246, .48);
+        border: 1px dashed rgba(90, 70, 112, .48);
         border-radius: 16px;
-        background: rgba(124, 58, 237, .07);
+        background: rgba(242, 169, 59, .07);
     }
 
     .combo-image-preview {
@@ -563,8 +563,8 @@
         overflow: hidden;
         place-items: center;
         border-radius: 12px;
-        color: #a78bfa;
-        background: #07111f;
+        color: #F5C070;
+        background: #181410;
         font-size: 1.7rem;
     }
 
@@ -584,7 +584,7 @@
         padding: 14px;
         border: 1px solid var(--combo-border);
         border-radius: 16px;
-        background: rgba(7, 17, 31, .62);
+        background: rgba(24, 20, 16, .62);
     }
 
     .combo-toy-search {
@@ -608,15 +608,15 @@
         padding: 10px;
         border: 1px solid var(--combo-border);
         border-radius: 12px;
-        color: #cbd5e1;
-        background: rgba(30, 51, 77, .65);
+        color: #E7DDCB;
+        background: rgba(35, 29, 22, .65);
         cursor: pointer;
         transition: border-color .2s ease, background .2s ease;
     }
 
     .combo-toy-option:has(input:checked) {
-        border-color: #8b5cf6;
-        background: rgba(124, 58, 237, .18);
+        border-color: #7A6540;
+        background: rgba(242, 169, 59, .18);
     }
 
     .combo-toy-option input {
@@ -636,7 +636,7 @@
 
     .combo-selected-count {
         margin-top: 10px;
-        color: #c4b5fd;
+        color: #C4B6A0;
         font-size: .78rem;
         font-weight: 800;
     }
@@ -645,7 +645,7 @@
         display: flex;
         align-items: center;
         gap: 10px;
-        color: #cbd5e1;
+        color: #E7DDCB;
         cursor: pointer;
     }
 
@@ -670,21 +670,21 @@
         min-height: 44px;
         padding: 0 18px;
         border-radius: 13px;
-        color: #fff;
-        background: linear-gradient(135deg, #ef4444, #b91c1c);
+        color: #211605;
+        background: linear-gradient(135deg, #FF7A6B, #FF7A6B);
         font-weight: 800;
     }
 
     .combo-delete-copy {
         padding: 24px;
-        color: #cbd5e1;
+        color: #E7DDCB;
         line-height: 1.6;
     }
 
     .combo-delete-name {
         display: block;
         margin: 10px 0 18px;
-        color: #fff;
+        color: #FCF8F1;
         font-size: 1.05rem;
     }
 

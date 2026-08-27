@@ -1,6 +1,5 @@
 from django.contrib import admin
 from .models import (
-    Clientes,
     CategoriasBrinquedos,
     TagsBrinquedos,
     Estabelecimentos,
@@ -374,70 +373,6 @@ class ImagensSiteAdmin(admin.ModelAdmin):
 
 
 # ========= MODELOS PRINCIPAIS =========
-@admin.register(Clientes)
-class ClientesAdmin(admin.ModelAdmin):
-    list_display = (
-        'id', 'descricao_cliente', 'cidade', 'estado', 'pais',
-        'alfinete', 'exibir_no_mapa', 'ativo', 'criacao',
-    )
-    list_filter = ('ativo', 'exibir_no_mapa', 'precisao_local', 'pais', 'estado')
-    search_fields = ('id', 'descricao_cliente', 'cidade', 'cep')
-    readonly_fields = ('criacao', 'atualizado')
-    ordering = ('-criacao',)
-    fieldsets = (
-        (None, {
-            'fields': ('descricao_cliente', 'logo_cliente', 'ativo')
-        }),
-        ('Endereço (Brasil)', {
-            'fields': ('cep', 'rua', 'numero', 'bairro'),
-            'description': (
-                'Preenchendo o CEP, cidade/estado e as coordenadas do mapa são '
-                'calculados automaticamente ao salvar -- não precisa digitar '
-                'latitude/longitude na mão. Deixe em branco para clientes fora '
-                'do Brasil.'
-            ),
-        }),
-        ('Localização no mapa', {
-            'fields': (
-                'cidade', 'estado', 'pais',
-                'latitude', 'longitude', 'precisao_local',
-                'site_cliente', 'exibir_no_mapa',
-            ),
-            'description': (
-                'Cliente fora do Brasil (sem CEP)? Preencha cidade, estado '
-                '(se aplicável) e país aqui -- as coordenadas também são '
-                'calculadas automaticamente por eles ao salvar. Latitude/'
-                'longitude só precisam ser digitadas na mão se quiser '
-                'corrigir um ponto específico manualmente.'
-            ),
-        }),
-        ('Datas', {
-            'fields': ('criacao', 'atualizado'),
-        }),
-    )
-
-    @admin.display(description='Alfinete', ordering='precisao_local')
-    def alfinete(self, obj):
-        """Mostra na lista quais pontos são o endereço e quais são só a região.
-
-        Sem esta coluna não havia como saber: um alfinete no centro da
-        cidade e um alfinete na porta do cliente apareciam exatamente
-        iguais no cadastro.
-        """
-        if not obj.latitude or not obj.longitude:
-            return format_html('<span style="color:#b91c1c">sem ponto</span>')
-
-        rotulos = {
-            Clientes.Precisao.EXATO: ('#15803d', 'no endereço'),
-            Clientes.Precisao.MANUAL: ('#15803d', 'à mão'),
-            Clientes.Precisao.RUA: ('#a16207', 'meio da rua'),
-            Clientes.Precisao.BAIRRO: ('#b45309', 'só o bairro'),
-            Clientes.Precisao.CIDADE: ('#b91c1c', 'só a cidade'),
-        }
-        cor, texto = rotulos.get(obj.precisao_local, ('#6b7280', 'não conferido'))
-        return format_html('<span style="color:{}">{}</span>', cor, texto)
-
-
 @admin.register(CategoriasBrinquedos)
 class CategoriasBrinquedosAdmin(admin.ModelAdmin):
     list_display = ('nome_categoria', 'ativo', 'criacao')

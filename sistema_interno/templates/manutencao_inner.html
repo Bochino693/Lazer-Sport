@@ -31,8 +31,15 @@
               <td><strong>#{{ m.id }}</strong></td>
               <td><strong>{{ m.nome_equipamento }}</strong><span class="d-block ls-subtext">{{ m.descricao|truncatechars:90 }}</span></td>
               <td>
+                {% comment %}
+                  Chamado cancelado caía no `else` e saía com o selo de
+                  "info", que é teal -- a mesma família do concluído. Numa
+                  tela de triagem lida de relance, cancelado passava por
+                  resolvido. Cancelado é ausência de trabalho: selo neutro.
+                {% endcomment %}
                 {% if m.status == "P" %}<span class="ls-status warning">{{ m.get_status_display }}</span>
                 {% elif m.status == "C" %}<span class="ls-status success">{{ m.get_status_display }}</span>
+                {% elif m.status == "X" %}<span class="ls-status neutral">{{ m.get_status_display }}</span>
                 {% else %}<span class="ls-status info">{{ m.get_status_display }}</span>{% endif %}
               </td>
               <td>{{ m.cidade|default:"—" }}{% if m.estado %}/{{ m.estado }}{% endif %}</td>

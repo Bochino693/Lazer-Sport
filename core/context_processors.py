@@ -37,7 +37,6 @@ from django.utils.functional import SimpleLazyObject
 from .models import (
     Carrinho,
     CategoriasBrinquedos,
-    Clientes,
     Estabelecimentos,
     Manutencao,
     Pedido,
@@ -61,7 +60,7 @@ _CATEGORIAS_OCULTAS = (
 
 def limpar_cache_global():
     """Chame isto no save()/delete() de CategoriasBrinquedos,
-    Estabelecimentos e Clientes pra o header/rodapé atualizar na hora."""
+    Estabelecimentos e clientes pra o header/rodapé atualizar na hora."""
     cache.delete_many([
         CHAVE_CATEGORIAS,
         CHAVE_ESTABELECIMENTOS,
@@ -107,21 +106,23 @@ def estabelecimentos_globais(request):
 
 
 def clientes_rodape(request):
-    """Seis primeiros clientes ativos com logo, para o base.html."""
+    """Seis primeiros clientes ativos com logo, para o base.html.
+
+    Sai do cadastro do painel, como o mapa: quem entra na faixa do rodapé
+    é o mesmo cliente que a fábrica atende, e não uma lista à parte que
+    alguém precisava lembrar de manter.
+    """
     def _buscar():
+        from sistema_interno.models import Cliente
+
         dados = cache.get(CHAVE_CLIENTES_RODAPE)
         if dados is None:
             dados = list(
-                Clientes.objects
+                Cliente.objects
                 .filter(ativo=True)
-                .exclude(logo_cliente__isnull=True)
-                .exclude(logo_cliente="")
-                .only(
-                    "id",
-                    "descricao_cliente",
-                    "logo_cliente",
-                    "criacao",
-                )
+                .exclude(logo__isnull=True)
+                .exclude(logo="")
+                .only("id", "nome_cliente", "logo", "criacao")
                 .order_by("-criacao", "-id")[:6]
             )
             cache.set(CHAVE_CLIENTES_RODAPE, dados, TTL_GLOBAL)

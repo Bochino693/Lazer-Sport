@@ -5,7 +5,8 @@ from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 import requests
 from cloudinary_storage.storage import MediaCloudinaryStorage
-from .utils import calcular_frete_por_cep, buscar_coordenadas, buscar_coordenadas_por_cidade, buscar_dados_cep, geocodificar_endereco
+# As buscas de CEP e coordenada saíram junto com o cadastro de cliente:
+# quem geocodifica hoje é `sistema_interno.EnderecoCliente.localizar`.
 
 
 class Prime(models.Model):
@@ -118,115 +119,19 @@ class ImagensSite(Prime):
         verbose_name_plural = "Imagens do Site"
 
 
-class Clientes(Prime):
-    descricao_cliente = models.CharField(max_length=120, null=True)
-    logo_cliente = models.ImageField(upload_to='logo_clientes/', null=False, blank=False)
-
-    # --- Campos para exibição no mapa de clientes ---
-    cep = models.CharField(
-        max_length=9, blank=True, null=True,
-        help_text="Só para clientes no Brasil. Preenchendo o CEP, cidade/estado e "
-                  "coordenadas são preenchidos automaticamente ao salvar (não precisa "
-                  "digitar latitude/longitude na mão)."
-    )
-    rua = models.CharField(max_length=180, blank=True, null=True)
-    numero = models.CharField(max_length=20, blank=True, null=True)
-    bairro = models.CharField(max_length=100, blank=True, null=True)
-    cidade = models.CharField(
-        max_length=100, blank=True, null=True,
-        help_text="Se não tiver CEP (ex: cliente fora do Brasil), preencha cidade/estado/país "
-                  "aqui -- as coordenadas também são calculadas automaticamente por eles."
-    )
-    estado = models.CharField(
-        max_length=2, blank=True, null=True,
-        help_text="Sigla da UF (ex: SP). Deixe em branco para clientes fora do Brasil."
-    )
-    pais = models.CharField(max_length=100, default="Brasil")
-    latitude = models.DecimalField(
-        max_digits=9, decimal_places=6, blank=True, null=True,
-        help_text="Preenchido automaticamente a partir do CEP ou da cidade/país ao salvar. "
-                  "Só edite na mão se quiser corrigir uma localização específica."
-    )
-    longitude = models.DecimalField(
-        max_digits=9, decimal_places=6, blank=True, null=True,
-        help_text="Preenchido automaticamente a partir do CEP ou da cidade/país ao salvar. "
-                  "Só edite na mão se quiser corrigir uma localização específica."
-    )
-    site_cliente = models.URLField(
-        blank=True, null=True,
-        help_text="Link do Instagram do cliente. Aparece como \"Visitar Instagram\" no popup do mapa."
-    )
-    exibir_no_mapa = models.BooleanField(
-        default=True,
-        help_text="Desmarque para manter o cliente cadastrado sem exibi-lo no mapa público."
-    )
-
-    class Precisao(models.TextChoices):
-        EXATO = "exato", "Endereço exato"
-        RUA = "rua", "Meio da rua"
-        BAIRRO = "bairro", "Centro do bairro"
-        CIDADE = "cidade", "Centro da cidade"
-        MANUAL = "manual", "Informada à mão"
-
-    precisao_local = models.CharField(
-        max_length=10, choices=Precisao.choices, blank=True, default="",
-        help_text="Até onde a busca automática conseguiu chegar. 'Centro da "
-                  "cidade' ou 'Centro do bairro' significa que o alfinete está "
-                  "na região, e não no endereço -- nesse caso vale abrir o "
-                  "Google Maps, copiar as coordenadas certas e colar acima."
-    )
-
-    def __str__(self):
-        return self.descricao_cliente
-
-    def save(self, *args, geocodificar=True, **kwargs):
-        # Se tem CEP mas ainda não tem cidade preenchida, busca o
-        # endereço completo no ViaCEP -- assim quem cadastra só precisa
-        # digitar o CEP, e rua/bairro/cidade/estado saem de graça.
-        if geocodificar and self.cep and not self.cidade:
-            dados = buscar_dados_cep(self.cep)
-            if dados:
-                self.rua = self.rua or dados["rua"]
-                self.bairro = self.bairro or dados["bairro"]
-                self.cidade = dados["cidade"]
-                self.estado = dados["estado"]
-
-        # Só tenta geocodificar se ainda não tiver coordenadas -- assim,
-        # se alguém digitou latitude/longitude na mão (pra ajustar um
-        # ponto específico), isso nunca é sobrescrito automaticamente.
-        if geocodificar and (not self.latitude or not self.longitude):
-            lat, lon, precisao = None, None, None
-
-            if self.cep:
-                lat, lon, precisao = geocodificar_endereco(
-                    self.cep, self.numero or ""
-                )
-
-            if (not lat or not lon) and self.cidade:
-                lat, lon = buscar_coordenadas_por_cidade(
-                    self.cidade, self.estado or "", self.pais or "Brasil"
-                )
-                # Sem CEP só dá para chegar na cidade. Guardar isso é o que
-                # permite distinguir, depois, um alfinete no endereço de um
-                # alfinete no centro do município.
-                precisao = "cidade" if lat and lon else None
-
-            if lat and lon:
-                self.latitude = lat
-                self.longitude = lon
-                self.precisao_local = precisao or ""
-
-        elif self.latitude and self.longitude and not self.precisao_local:
-            # Coordenada que já veio preenchida sem passar pela busca: só
-            # pode ter sido digitada por uma pessoa.
-            self.precisao_local = self.Precisao.MANUAL
-
-        super().save(*args, **kwargs)
-
-    class Meta:
-        verbose_name = "Cliente"
-        verbose_name_plural = "Clientes"
-        ordering = ['pais', 'estado', 'cidade', 'descricao_cliente']
+# O CADASTRO DE CLIENTE NÃO MORA MAIS AQUI.
+#
+# Havia uma classe `Clientes` neste arquivo cuja única razão de existir era
+# pôr um alfinete no mapa da página inicial. O painel interno tinha a sua,
+# com contato, documento e histórico -- e o mesmo buffet precisava ser
+# digitado nos dois lugares, sem nada que obrigasse os dois cadastros a
+# concordarem. Na prática, o mapa mostrava o endereço antigo enquanto a
+# proposta saía com o novo.
+#
+# Agora existe um cadastro só, `sistema_interno.Cliente`, e a vitrine o LÊ:
+# `publicar_no_mapa` diz se o alfinete aparece e o endereço do
+# estabelecimento diz onde. A mudança e o transporte das linhas antigas
+# estão na migração `sistema_interno/0020_cliente_unico.py`.
 
 
 class CategoriasBrinquedos(Prime):
@@ -1406,7 +1311,7 @@ class Manutencao(models.Model):
         ('P', 'Pendente'),
         ('A', 'Em andamento'),
         ('C', 'Concluída'),
-        ('X', 'cancelada'),
+        ('X', 'Cancelada'),
     ]
 
     brinquedo = models.ForeignKey(

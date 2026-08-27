@@ -13,7 +13,6 @@ from .models import (
     CategoriaPeca,
     CategoriasBrinquedos,
     ClientePerfil,
-    Clientes,
     Combos,
     EnderecoEmpresa,
     Estabelecimentos,
@@ -62,7 +61,6 @@ _MODELOS_DA_HOME = (
     BrinquedosProjeto,
     ImagemProjetoBrinquedo,
     ImagensSite,
-    Clientes,
     EnderecoEmpresa,
 )
 
@@ -104,7 +102,13 @@ def _invalidar_contexto_global(sender, **kwargs):
     transaction.on_commit(limpar_cache_global)
 
 
-for _modelo in (CategoriasBrinquedos, Estabelecimentos, Clientes):
+# O cliente vive no app do painel; a vitrine só o lê. Importado aqui
+# dentro -- e não no topo -- porque este módulo é carregado no `ready()` do
+# core, e nesse instante o app do painel ainda pode não ter modelos
+# prontos.
+from sistema_interno.models import Cliente as _ClienteDoPainel  # noqa: E402
+
+for _modelo in (CategoriasBrinquedos, Estabelecimentos, _ClienteDoPainel):
     _identificador = _modelo._meta.label_lower
     post_save.connect(
         _invalidar_contexto_global,
