@@ -688,6 +688,113 @@
     });
   };
 
+  /* ====================================================================
+     WHATSAPP: O APLICATIVO INSTALADO PRIMEIRO, A WEB SÓ SE PRECISAR
+     --------------------------------------------------------------------
+     No computador, `wa.me` abre o WhatsApp Web -- outra aba, outro QR
+     code, e a mensagem demora. Quem atende tem o aplicativo instalado, e
+     é nele que a conversa deve abrir.
+
+     O caminho é o esquema `whatsapp://`, que o Windows e o macOS
+     entregam ao aplicativo. Ele tem um porém: se o aplicativo NÃO estiver
+     instalado, o navegador não avisa nada -- simplesmente não acontece
+     nada. Por isso o atalho verde para a versão web continua aparecendo
+     sempre, e o texto ao lado diz o que fazer se nada abrir.
+
+     No celular ninguém tem esse problema: `wa.me` já leva ao aplicativo,
+     e é o caminho que o próprio WhatsApp recomenda. Não se mexe.
+     ==================================================================== */
+  function numeroComDdi(telefone) {
+    var digitos = String(telefone || "").replace(/\D/g, "");
+    if (digitos.length < 10) return "";
+    /* 10 ou 11 dígitos é número brasileiro sem DDI. Acima disso a pessoa
+       já digitou o país -- inclusive para cliente de fora. */
+    if (digitos.length === 10 || digitos.length === 11) digitos = "55" + digitos;
+    return digitos;
+  }
+
+  function noCelular() {
+    /* `maxTouchPoints` pega o iPad, que se anuncia como Mac há anos. */
+    return (
+      /Android|iPhone|iPad|iPod|Windows Phone/i.test(navigator.userAgent) ||
+      (navigator.maxTouchPoints > 1 && /Macintosh/.test(navigator.userAgent))
+    );
+  }
+
+  Painel.whatsapp = {
+    numero: numeroComDdi,
+
+    /* Endereço da versão web -- o que se copia, se guarda e serve de
+       atalho de reserva. */
+    web: function (telefone, mensagem) {
+      var digitos = numeroComDdi(telefone);
+      if (!digitos) return "";
+      return "https://wa.me/" + digitos + "?text=" + encodeURIComponent(mensagem || "");
+    },
+
+    /* Endereço do aplicativo instalado. */
+    app: function (telefone, mensagem) {
+      var digitos = numeroComDdi(telefone);
+      if (!digitos) return "";
+      return (
+        "whatsapp://send?phone=" + digitos +
+        "&text=" + encodeURIComponent(mensagem || "")
+      );
+    },
+
+    noCelular: noCelular,
+
+    /* Abre a conversa e devolve o que aconteceu, para a tela explicar.
+       Precisa ser chamado DENTRO do clique: fora do gesto da pessoa o
+       navegador trata como pop-up e bloqueia. */
+    abrir: function (telefone, mensagem) {
+      var web = this.web(telefone, mensagem);
+      if (!web) return { ok: false, motivo: "numero", web: "" };
+
+      if (noCelular()) {
+        var aba = window.open(web, "_blank");
+        if (aba) { try { aba.opener = null; } catch (e) {} }
+        return { ok: !!aba, motivo: aba ? "web" : "bloqueado", web: web };
+      }
+
+      /* No computador: pede o aplicativo. Navegar a própria página para
+         um esquema que o sistema conhece não troca a página -- o
+         navegador entrega ao aplicativo e fica onde está. Se ninguém
+         responder pelo esquema, também não acontece nada, e é para isso
+         que o atalho verde existe. */
+      try {
+        window.location.href = this.app(telefone, mensagem);
+        return { ok: true, motivo: "aplicativo", web: web };
+      } catch (e) {
+        var reserva = window.open(web, "_blank");
+        if (reserva) { try { reserva.opener = null; } catch (e2) {} }
+        return { ok: !!reserva, motivo: reserva ? "web" : "bloqueado", web: web };
+      }
+    },
+  };
+
+  /* Todo link "wa.me" do painel segue a mesma regra, sem cada tela ter de
+     lembrar disso: no computador vai para o aplicativo instalado. O link
+     continua sendo wa.me no HTML -- é o que se copia, o que funciona sem
+     JavaScript e o que serve de reserva. Quem quiser mesmo a versão web
+     (o botão verde de "não abriu?") marca `data-whatsapp-web`. */
+  document.addEventListener("click", function (evento) {
+    var link = evento.target.closest
+      ? evento.target.closest('a[href^="https://wa.me/"]')
+      : null;
+    if (!link || link.hasAttribute("data-whatsapp-web")) return;
+    if (noCelular()) return;
+
+    var endereco = new URL(link.href);
+    var telefone = endereco.pathname.replace(/\//g, "");
+    if (!telefone) return;
+
+    evento.preventDefault();
+    window.location.href =
+      "whatsapp://send?phone=" + telefone +
+      "&text=" + encodeURIComponent(endereco.searchParams.get("text") || "");
+  });
+
   global.Painel = Painel;
   document.addEventListener("DOMContentLoaded", function () {
     Painel.aplicarMascaras(document);

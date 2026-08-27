@@ -644,7 +644,29 @@ class OrcamentoInternoTests(TestCase):
         # esperar resposta nenhuma -- era a espera que fazia o botão ficar
         # "calculando" e a janela ser bloqueada.
         self.assertContains(resposta, "function montarConversa(")
-        self.assertContains(resposta, 'window.open(url, "_blank")')
+        self.assertContains(resposta, "Painel.whatsapp.abrir(telefone, mensagem)")
+
+        # O botão verde é DE PROPÓSITO a versão web: é a saída de quem não
+        # tem o aplicativo instalado. Mandá-lo de volta ao aplicativo faria
+        # dele um botão que não faz nada.
+        self.assertContains(resposta, "data-whatsapp-web")
+
+    def test_no_computador_a_conversa_abre_no_aplicativo_instalado(self):
+        """`wa.me` no PC abre o WhatsApp Web -- outra aba, outro QR code.
+
+        Quem atende tem o aplicativo instalado, e é nele que a conversa
+        deve abrir: cada envio pelo Web custa segundos que se somam num
+        dia de propostas.
+        """
+        from pathlib import Path
+
+        painel = Path(
+            "sistema_interno/static/interno/painel.js"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("whatsapp://send?phone=", painel)
+        # E no celular ninguém mexe: wa.me já leva ao aplicativo.
+        self.assertIn("if (noCelular()) return;", painel)
 
     def test_link_e_mensagem_ja_vem_prontos_no_botao_enviar(self):
         """A tela não depende de rede para mostrar o que compartilhar.

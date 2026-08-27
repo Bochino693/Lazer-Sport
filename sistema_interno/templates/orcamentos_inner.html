@@ -832,8 +832,13 @@ Cadastro mínimo de propósito: nome, valor e categoria. Foto e texto de
           Saída para quando o navegador bloqueia a janela do WhatsApp: um
           botão que a pessoa toca, com o gesto dela, e a conversa abre.
         {% endcomment %}
+        {% comment %}
+          data-whatsapp-web: este botão é DE PROPÓSITO a versão web. É a
+          saída para quando o aplicativo instalado não abriu -- mandá-lo
+          de volta para o aplicativo faria dele um botão que não faz nada.
+        {% endcomment %}
         <a class="btn btn-success w-100 mt-3" id="linkWhatsappAtalho"
-           href="#" target="_blank" rel="noopener" hidden>
+           href="#" target="_blank" rel="noopener" data-whatsapp-web hidden>
           <i class="bi bi-whatsapp me-1"></i> Abrir conversa no WhatsApp
         </a>
 
@@ -1923,11 +1928,12 @@ document.addEventListener("DOMContentLoaded", function () {
   function montarConversa(telefone, mensagem) {
     /* Mesma regra do servidor (conversa_whatsapp), aqui para a conversa
        abrir no mesmo toque em que a pessoa pede -- sem esperar resposta
-       nenhuma, que é quando o navegador bloqueia a janela. */
-    var digitos = String(telefone || "").replace(/\D/g, "");
-    if (digitos.length < 10) return "";
-    if (digitos.length === 10 || digitos.length === 11) digitos = "55" + digitos;
-    return "https://wa.me/" + digitos + "?text=" + encodeURIComponent(mensagem);
+       nenhuma, que é quando o navegador bloqueia a janela.
+
+       Este é o endereço da versão WEB: o que se copia e o que fica no
+       botão verde de reserva. Quem escolhe entre o aplicativo instalado
+       e ele é `Painel.whatsapp.abrir`. */
+    return Painel.whatsapp.web(telefone, mensagem);
   }
 
   function mostrarLink(link, previa) {
@@ -2076,20 +2082,30 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     /* O WhatsApp que abre é o de QUEM ESTÁ LOGADO no aparelho: a proposta
-       sai do número do atendente, como qualquer mensagem dele. */
-    var aba = window.open(url, "_blank");
-    var abriu = !!aba;
-    if (abriu) { try { aba.opener = null; } catch (e) {} }
+       sai do número do atendente, como qualquer mensagem dele.
 
-    mostrarAtalhoWhatsapp(url, abriu);
-    document.getElementById("linkErro").className = "alert alert-info";
+       No computador quem abre é o APLICATIVO INSTALADO, não o WhatsApp
+       Web -- outra aba com QR code atrasa cada envio. Se o aplicativo não
+       estiver instalado o sistema simplesmente ignora o pedido, sem
+       avisar ninguém; por isso o botão verde para a versão web fica
+       sempre visível logo abaixo. */
+    var saida = Painel.whatsapp.abrir(telefone, mensagem);
+
+    mostrarAtalhoWhatsapp(url, saida.motivo !== "aplicativo" && saida.ok);
+    document.getElementById("linkErro").className = saida.ok
+      ? "alert alert-info"
+      : "alert alert-danger";
     Painel.erro(
       "linkErro",
-      abriu
-        ? "A conversa abriu no seu WhatsApp com a proposta escrita. " +
-          "Confirme o envio por lá para o cliente receber."
-        : "O navegador bloqueou a janela. Use o botão verde " +
-          "“Abrir conversa no WhatsApp” aqui embaixo."
+      saida.motivo === "aplicativo"
+        ? "Pedimos ao WhatsApp instalado no seu computador para abrir a " +
+          "conversa com a proposta escrita. Não abriu? Use o botão verde " +
+          "aqui embaixo, que vai pela versão web."
+        : saida.ok
+          ? "A conversa abriu no seu WhatsApp com a proposta escrita. " +
+            "Confirme o envio por lá para o cliente receber."
+          : "O navegador bloqueou a janela. Use o botão verde " +
+            "“Abrir conversa no WhatsApp” aqui embaixo."
     );
 
     /* O registro vai por trás: marca o orçamento como enviado e guarda a
