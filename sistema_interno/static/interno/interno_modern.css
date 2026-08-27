@@ -2095,3 +2095,21 @@ input[type="number"]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0
   .ls-paginacao > span{grid-column:1 / -1;order:-1}
   .ls-paginacao .btn{width:100%}
 }
+
+/* ======================================================================
+   O QUE ACABOU DE MUDAR
+   ----------------------------------------------------------------------
+   A situação de uma proposta muda sozinha na tela quando o cliente
+   responde. Sem um sinal, a mudança acontece fora do canto para onde a
+   pessoa estava olhando e ninguém percebe. Uma piscada curta e uma vez
+   só: chamar atenção é o objetivo, incomodar não é.
+   ====================================================================== */
+@keyframes ls-mudou{
+  from{background:rgba(80,180,255,.20)}
+  to{background:transparent}
+}
+.ls-mudou > td, .ls-mudou{animation:ls-mudou 2.2s ease-out 1}
+
+@media (prefers-reduced-motion:reduce){
+  .ls-mudou > td, .ls-mudou{animation:none;background:rgba(80,180,255,.10)}
+}

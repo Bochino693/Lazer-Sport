@@ -48,13 +48,13 @@
   <link href="{% static 'interno/vendor/bootstrap-icons.min.css' %}" rel="stylesheet">
 
   {% block extra_css %}{% endblock %}
-  <link href="{% static 'interno/interno_modern.css' %}?v=15" rel="stylesheet">
+  <link href="{% static 'interno/interno_modern.css' %}?v=16" rel="stylesheet">
 
   <!-- Barra de carregamento no topo, compartilhada com o painel /adm. -->
   <link rel="stylesheet" href="{% static 'site/ls-page-loader.css' %}?v=2">
   <script src="{% static 'site/ls-page-loader.js' %}?v=2" defer></script>
 </head>
-<body class="ls-body {% block body_class %}{% endblock %}">
+<body class="ls-body {% block body_class %}{% endblock %}" data-avisos="{% url 'avisos_estado' %}">
 <svg width="0" height="0" aria-hidden="true" focusable="false" style="position:absolute">
   <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></symbol>
   <symbol id="i-map-pin" viewBox="0 0 24 24"><path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></symbol>
@@ -124,7 +124,7 @@
         <a data-titulo="Acompanhamento" class="ls-nav-item {% if request.resolver_match.url_name == 'minha_producao' or request.resolver_match.url_name == 'producao_ordem_detalhe' %}active{% endif %}" href="{% url 'minha_producao' %}">
           <span class="ls-nav-icon"><i class="bi bi-list-check"></i></span>
           <span>Acompanhamento</span>
-          {% if count_producao %}<span class="ls-nav-count">{{ count_producao }}</span>{% endif %}
+          <span class="ls-nav-count" data-selo="count_producao" {% if not count_producao %}hidden{% endif %}>{{ count_producao }}</span>
         </a>
         <a data-titulo="Produtos e ficha técnica" class="ls-nav-item {% if request.resolver_match.url_name == 'produtos_producao' %}active{% endif %}" href="{% url 'produtos_producao' %}">
           <span class="ls-nav-icon"><i class="bi bi-diagram-3-fill"></i></span>
@@ -160,21 +160,21 @@
         <a data-titulo="Vendas" class="ls-nav-item {% if request.resolver_match.url_name == 'vendas_inner' %}active{% endif %}" href="{% url 'vendas_inner' %}">
           <span class="ls-nav-icon"><i class="bi bi-receipt-cutoff"></i></span>
           <span>Vendas</span>
-          {% if count_vendas %}<span class="ls-nav-count">{{ count_vendas }}</span>{% endif %}
+          <span class="ls-nav-count" data-selo="count_vendas" {% if not count_vendas %}hidden{% endif %}>{{ count_vendas }}</span>
         </a>
         {% endif %}
         {% if permissoes_interno.pedidos %}
         <a data-titulo="Pedidos" class="ls-nav-item {% if request.resolver_match.url_name == 'pedidos_inner' %}active{% endif %}" href="{% url 'pedidos_inner' %}">
           <span class="ls-nav-icon"><i class="bi bi-box2-heart-fill"></i></span>
           <span>Pedidos</span>
-          {% if count_pedidos %}<span class="ls-nav-count">{{ count_pedidos }}</span>{% endif %}
+          <span class="ls-nav-count" data-selo="count_pedidos" {% if not count_pedidos %}hidden{% endif %}>{{ count_pedidos }}</span>
         </a>
         {% endif %}
         {% if permissoes_interno.orcamentos %}
         <a data-titulo="Orçamentos" class="ls-nav-item {% if request.resolver_match.url_name == 'orcamentos_inner' %}active{% endif %}" href="{% url 'orcamentos_inner' %}">
           <span class="ls-nav-icon"><i class="bi bi-file-earmark-text-fill"></i></span>
           <span>Orçamentos</span>
-          {% if count_orcamentos %}<span class="ls-nav-count">{{ count_orcamentos }}</span>{% endif %}
+          <span class="ls-nav-count" data-selo="count_orcamentos" {% if not count_orcamentos %}hidden{% endif %}>{{ count_orcamentos }}</span>
         </a>
         {% endif %}
         {% if permissoes_interno.gestao %}
@@ -296,7 +296,7 @@
       <a class="ls-aba {% if request.resolver_match.url_name == 'orcamentos_inner' %}ativa{% endif %}"
          href="{% url 'orcamentos_inner' %}">
         <i class="bi bi-file-earmark-text-fill"></i><span>Orçamentos</span>
-        {% if count_orcamentos %}<span class="ls-aba-selo">{{ count_orcamentos }}</span>{% endif %}
+        <span class="ls-aba-selo" data-selo="count_orcamentos" {% if not count_orcamentos %}hidden{% endif %}>{{ count_orcamentos }}</span>
       </a>
       <a class="ls-aba {% if request.resolver_match.url_name == 'stock' or request.resolver_match.url_name == 'estoque_inner' %}ativa{% endif %}"
          href="{% url 'stock' %}">
@@ -306,7 +306,7 @@
       <a class="ls-aba {% if request.resolver_match.url_name == 'minha_producao' %}ativa{% endif %}"
          href="{% url 'minha_producao' %}">
         <i class="bi bi-list-check"></i><span>Produção</span>
-        {% if count_producao %}<span class="ls-aba-selo">{{ count_producao }}</span>{% endif %}
+        <span class="ls-aba-selo" data-selo="count_producao" {% if not count_producao %}hidden{% endif %}>{{ count_producao }}</span>
       </a>
       <a class="ls-aba {% if request.resolver_match.url_name == 'stock' %}ativa{% endif %}"
          href="{% url 'stock' %}">
@@ -323,7 +323,7 @@
 
     <button type="button" class="ls-aba" id="abaMenu">
       <i class="bi bi-list"></i><span>Menu</span>
-      {% if avisos_urgentes %}<span class="ls-aba-selo urgente">{{ avisos_urgentes }}</span>{% endif %}
+      <span class="ls-aba-selo urgente" data-selo="urgentes" {% if not avisos_urgentes %}hidden{% endif %}>{{ avisos_urgentes }}</span>
     </button>
   </nav>
 
@@ -351,19 +351,17 @@ Dito em voz alta: este NÃO é o /adm do site. Quem trabalha nos
                   aria-haspopup="true" aria-expanded="false"
                   aria-label="Avisos do painel">
             <i class="bi bi-bell-fill"></i>
-            {% if total_avisos %}
-              <span class="ls-avisos-selo {% if avisos_urgentes %}urgente{% endif %}">
-                {{ total_avisos }}
-              </span>
-            {% endif %}
+            <span class="ls-avisos-selo {% if avisos_urgentes %}urgente{% endif %}"
+                  data-selo="total" {% if not total_avisos %}hidden{% endif %}>{{ total_avisos }}</span>
           </button>
 
           <div class="ls-avisos-painel" id="avisosPainel" hidden>
             <div class="ls-avisos-topo">
               <span>O que precisa de você</span>
-              {% if avisos_urgentes %}<span>{{ avisos_urgentes }} urgente{{ avisos_urgentes|pluralize }}</span>{% endif %}
+              <span data-selo="urgentes-texto" {% if not avisos_urgentes %}hidden{% endif %}>{{ avisos_urgentes }} urgente{{ avisos_urgentes|pluralize }}</span>
             </div>
 
+            <div id="avisosLista">
             {% for aviso in avisos %}
               <a class="ls-aviso {{ aviso.nivel }}" href="{{ aviso.url }}">
                 <span class="ls-aviso-icone"><i class="bi {{ aviso.icone }}"></i></span>
@@ -381,6 +379,7 @@ Dito em voz alta: este NÃO é o /adm do site. Quem trabalha nos
                 Nada pendente agora.
               </div>
             {% endfor %}
+            </div>
           </div>
         </div>
 
@@ -408,7 +407,7 @@ Dito em voz alta: este NÃO é o /adm do site. Quem trabalha nos
 </div>
 
 <script src="{% static 'interno/vendor/bootstrap.bundle.min.js' %}"></script>
-<script src="{% static 'interno/painel.js' %}?v=6"></script>
+<script src="{% static 'interno/painel.js' %}?v=7"></script>
 {% comment %}
   Campo de busca do painel (catálogo, clientes, colaboradores). Carrega
   em toda tela porque o mesmo componente é usado em orçamento, produção e

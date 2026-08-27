@@ -457,6 +457,11 @@
                 "Não foi possível salvar. Tente novamente em instantes."
             );
           }
+          /* Salvou: os avisos podem ter mudado agora mesmo -- um pedido
+             que virou produção, um orçamento que saiu. Perguntar aqui faz
+             a bolinha acompanhar a ação de quem está na tela, sem esperar
+             o próximo intervalo. */
+          if (Painel.avisos) Painel.avisos.agora();
           return json;
         });
     });
@@ -795,8 +800,182 @@
       "&text=" + encodeURIComponent(endereco.searchParams.get("text") || "");
   });
 
+  /* ====================================================================
+     AVISOS AO VIVO
+     --------------------------------------------------------------------
+     As bolinhas do menu e a central eram desenhadas uma vez, no HTML. Um
+     pedido que entrava com o painel aberto na bancada só aparecia depois
+     de recarregar -- e como a sessão dura o dia inteiro, na prática só
+     depois de sair e entrar de novo. Aviso que chega tarde é o mesmo que
+     aviso que não chega.
+
+     Agora a tela pergunta ao servidor de tempos em tempos. Regras que
+     mantêm isso barato:
+
+       * só pergunta com a aba VISÍVEL -- dez abas de fundo não custam
+         nada, e ao voltar para a aba a resposta é imediata;
+       * o servidor devolve uma `assinatura` do estado; enquanto ela não
+         muda, nada é redesenhado;
+       * quem acabou de salvar alguma coisa pede uma atualização na hora
+         (`Painel.avisos.agora()`), sem esperar o próximo intervalo.
+
+     Sessão caída devolve 401, e aí a tela PARA de perguntar: insistir
+     contra o login é gastar rede para nada.
+     ==================================================================== */
+  var avisos = {
+    endereco: "",
+    intervalo: 30000,
+    assinatura: null,
+    relogio: null,
+    parado: false,
+    ouvintes: [],
+  };
+
+  function pintarSelo(elemento, quantidade) {
+    if (!elemento) return;
+    var numero = Number(quantidade) || 0;
+    elemento.textContent = numero;
+    elemento.hidden = numero === 0;
+  }
+
+  function desenharAvisos(dados) {
+    var contagens = dados.contagens || {};
+    Object.keys(contagens).forEach(function (chave) {
+      document.querySelectorAll('[data-selo="' + chave + '"]').forEach(
+        function (selo) { pintarSelo(selo, contagens[chave]); }
+      );
+    });
+
+    document.querySelectorAll('[data-selo="urgentes"]').forEach(function (selo) {
+      pintarSelo(selo, dados.urgentes);
+    });
+    document.querySelectorAll('[data-selo="total"]').forEach(function (selo) {
+      pintarSelo(selo, dados.total);
+      selo.classList.toggle("urgente", (Number(dados.urgentes) || 0) > 0);
+    });
+
+    var texto = document.querySelector('[data-selo="urgentes-texto"]');
+    if (texto) {
+      var quantos = Number(dados.urgentes) || 0;
+      texto.textContent = quantos + " urgente" + (quantos === 1 ? "" : "s");
+      texto.hidden = quantos === 0;
+    }
+
+    var lista = document.getElementById("avisosLista");
+    if (lista) lista.innerHTML = montarLista(dados.avisos || []);
+  }
+
+  function escapar(texto) {
+    var caixa = document.createElement("span");
+    caixa.textContent = texto == null ? "" : String(texto);
+    return caixa.innerHTML;
+  }
+
+  function montarLista(itens) {
+    if (!itens.length) {
+      return (
+        '<div class="ls-avisos-vazio">' +
+        '<i class="bi bi-check2-circle"></i> Nada pendente agora.</div>'
+      );
+    }
+    return itens.map(function (aviso) {
+      return (
+        '<a class="ls-aviso ' + escapar(aviso.nivel) + '" href="' + escapar(aviso.url) + '">' +
+        '<span class="ls-aviso-icone"><i class="bi ' + escapar(aviso.icone) + '"></i></span>' +
+        '<span class="ls-aviso-corpo">' +
+        '<span class="ls-aviso-titulo">' + escapar(aviso.titulo) +
+        '<span class="ls-aviso-quantidade">' + escapar(aviso.quantidade) + "</span></span>" +
+        '<span class="ls-aviso-detalhe">' + escapar(aviso.detalhe) + "</span>" +
+        "</span></a>"
+      );
+    }).join("");
+  }
+
+  function buscarAvisos() {
+    if (avisos.parado) return Promise.resolve(null);
+
+    return fetch(avisos.endereco, {
+      headers: { "X-Requested-With": "XMLHttpRequest" },
+      credentials: "same-origin",
+      cache: "no-store",
+    })
+      .then(function (resposta) {
+        if (resposta.status === 401 || resposta.status === 403) {
+          /* Sessão caída ou conta sem painel: parar é a resposta certa.
+             Insistir só encheria o log do servidor. */
+          avisos.parado = true;
+          return null;
+        }
+        if (!resposta.ok) return null;
+        return resposta.json();
+      })
+      .then(function (dados) {
+        if (!dados) return null;
+        if (dados.assinatura && dados.assinatura === avisos.assinatura) {
+          /* Nada mudou: não se mexe no DOM. Redesenhar à toa faria a
+             central piscar debaixo do dedo de quem está lendo. */
+          return dados;
+        }
+        avisos.assinatura = dados.assinatura || null;
+        desenharAvisos(dados);
+        avisos.ouvintes.forEach(function (fn) {
+          try { fn(dados); } catch (e) {}
+        });
+        return dados;
+      })
+      .catch(function () {
+        /* Rede oscilando não é motivo para alarme na tela: o próximo
+           intervalo tenta de novo. */
+        return null;
+      });
+  }
+
+  Painel.avisos = {
+    /* Pede uma atualização imediata. Quem acabou de salvar chama isto. */
+    agora: buscarAvisos,
+
+    /* Avisa quando o estado muda -- a lista de orçamentos usa para
+       repintar o status de uma proposta que o cliente acabou de
+       responder. */
+    aoMudar: function (fn) {
+      if (typeof fn === "function") avisos.ouvintes.push(fn);
+    },
+
+    parar: function () {
+      avisos.parado = true;
+      if (avisos.relogio) global.clearInterval(avisos.relogio);
+      avisos.relogio = null;
+    },
+  };
+
+  function ligarAvisosAoVivo() {
+    var sino = document.querySelector('[data-selo="total"]');
+    if (!sino) return;  /* Fora do painel (ou sem equipe): nada a fazer. */
+
+    /* A rota vem do HTML (que a montou com {% url %}), e não escrita à
+       mão aqui: quem manda no endereço é o urls.py. */
+    avisos.endereco = document.body.getAttribute("data-avisos") || "";
+    if (!avisos.endereco) return;
+
+    /* A assinatura do que já está na tela: assim a primeira resposta não
+       redesenha uma central que já está certa. */
+    buscarAvisos();
+
+    avisos.relogio = global.setInterval(function () {
+      if (document.visibilityState === "visible") buscarAvisos();
+    }, avisos.intervalo);
+
+    document.addEventListener("visibilitychange", function () {
+      /* Voltar para a aba é o momento em que a pessoa QUER ver o estado
+         de agora -- e é quando o intervalo tem mais chance de estar no
+         meio de uma espera. */
+      if (document.visibilityState === "visible") buscarAvisos();
+    });
+  }
+
   global.Painel = Painel;
   document.addEventListener("DOMContentLoaded", function () {
+    ligarAvisosAoVivo();
     Painel.aplicarMascaras(document);
     Painel.acomodarTextos(document);
     ligarMedidaDeTela();

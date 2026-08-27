@@ -1414,6 +1414,78 @@ class BuscaItensOrcamentoView(OrcamentoInternoRequiredMixin, View):
         return resposta
 
 
+class EstadoOrcamentosView(OrcamentoInternoRequiredMixin, View):
+    """GET /orcamentos/estados/?ids=1,2,3 -> a situação de cada proposta.
+
+    POR QUE ISSO EXISTE. O cliente responde pela página pública, e quem
+    está no painel só via a mudança ao recarregar -- na prática, ao sair e
+    entrar de novo, porque a sessão dura o dia inteiro. Um "aprovado" que
+    demora meia hora para aparecer na tela é um cliente esperando meia
+    hora por um retorno que já podia ter saído.
+
+    Só volta o que a tela desenha: situação, rótulo, cor e a linha de
+    "quem respondeu quando". Nada de proposta inteira -- é uma consulta
+    que se repete, e leveza aqui é o que a torna repetível.
+
+    O limite de ids não é medo de abuso, é o tamanho da página: 25 linhas.
+    Pedir mais que isso significa que alguém montou o pedido à mão.
+    """
+
+    #: Duas páginas cheias, com folga para a tela crescer.
+    LIMITE = 60
+
+    #: Cor de cada situação. A MESMA lista do template -- se divergirem, a
+    #: linha muda de cor ao atualizar e ninguém entende por quê.
+    COR = {
+        Orcamento.Status.APROVADO: "success",
+        Orcamento.Status.RECUSADO: "danger",
+        Orcamento.Status.ENVIADO: "info",
+        Orcamento.Status.EXPIRADO: "warning",
+    }
+
+    def get(self, request):
+        cru = (request.GET.get("ids") or "").strip()
+        ids = []
+        for pedaco in cru.split(",")[: self.LIMITE]:
+            pedaco = pedaco.strip()
+            if pedaco.isdigit():
+                ids.append(int(pedaco))
+
+        if not ids:
+            return JsonResponse({"orcamentos": {}})
+
+        # limitar_orcamentos: quem só enxerga a própria carteira não
+        # descobre a situação da carteira do colega perguntando por id.
+        consulta = limitar_orcamentos(
+            request.user, Orcamento.objects.filter(pk__in=ids)
+        ).only(
+            "id", "status", "validade", "respondido_em", "respondido_por",
+            "enviado_em",
+        )
+
+        estados = {}
+        for orcamento in consulta:
+            estados[str(orcamento.pk)] = {
+                "status": orcamento.status,
+                "rotulo": orcamento.get_status_display(),
+                "cor": self.COR.get(orcamento.status, "neutral"),
+                "vencido": orcamento.vencido,
+                "respondido_por": orcamento.respondido_por or "",
+                "respondido_em": (
+                    timezone.localtime(orcamento.respondido_em).strftime("%d/%m %H:%M")
+                    if orcamento.respondido_em else ""
+                ),
+                "enviado_em": (
+                    timezone.localtime(orcamento.enviado_em).strftime("%d/%m")
+                    if orcamento.enviado_em else ""
+                ),
+            }
+
+        resposta = JsonResponse({"orcamentos": estados})
+        resposta["Cache-Control"] = "no-store, private"
+        return resposta
+
+
 class BuscaClientesOrcamentoView(OrcamentoInternoRequiredMixin, View):
     """Autocompletar de clientes sem despejar a carteira inteira no HTML."""
 

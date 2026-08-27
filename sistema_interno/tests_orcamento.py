@@ -187,6 +187,83 @@ class OrcamentoInternoTests(TestCase):
             OrcamentosInnerView.POR_PAGINA, self.POR_PAGINA_ESPERADA
         )
 
+    # ------------------------------------------------ situação ao vivo
+    def test_a_situacao_da_proposta_pode_ser_lida_sem_recarregar(self):
+        """O cliente responde na página pública; o painel precisa ver.
+
+        Antes a mudança só aparecia ao recarregar -- e como a sessão dura
+        o dia inteiro, na prática só ao sair e entrar de novo. Um
+        "aprovado" que demora meia hora para aparecer é um cliente
+        esperando meia hora por um retorno que já podia ter saído.
+        """
+        orcamento = Orcamento.objects.create(
+            nome_cliente="Festa da Ana",
+            contato="(11) 90000-0000",
+            status=Orcamento.Status.ENVIADO,
+        )
+
+        # O cliente responde, como responderia pela página pública.
+        orcamento.status = Orcamento.Status.APROVADO
+        orcamento.respondido_por = "Ana"
+        orcamento.respondido_em = timezone.now()
+        orcamento.save()
+
+        resposta = self.client.get(
+            "/orcamentos/estados/",
+            {"ids": str(orcamento.pk)},
+            HTTP_HOST="interno.testserver",
+        )
+        estado = resposta.json()["orcamentos"][str(orcamento.pk)]
+
+        self.assertEqual(estado["status"], Orcamento.Status.APROVADO)
+        self.assertEqual(estado["rotulo"], "Aprovado")
+        # A cor é a MESMA que o template usa: se divergirem, a linha muda
+        # de cor ao atualizar e ninguém entende por quê.
+        self.assertEqual(estado["cor"], "success")
+        self.assertEqual(estado["respondido_por"], "Ana")
+        self.assertTrue(estado["respondido_em"])
+
+    def test_a_lista_de_situacoes_ignora_lixo_e_nao_estoura(self):
+        """Os ids vêm de um endereço, então chegam como qualquer coisa."""
+        resposta = self.client.get(
+            "/orcamentos/estados/",
+            {"ids": "abc, ,-1, 9' OR 1=1,"},
+            HTTP_HOST="interno.testserver",
+        )
+
+        self.assertEqual(resposta.status_code, 200)
+        self.assertEqual(resposta.json()["orcamentos"], {})
+
+    def test_a_situacao_respeita_quem_ve_o_que(self):
+        """Quem só enxerga a própria carteira não descobre a do colega.
+
+        Sem `limitar_orcamentos` aqui, bastaria pedir a situação por id
+        para contornar a regra que a lista aplica.
+        """
+        alheio = Orcamento.objects.create(
+            nome_cliente="Do colega",
+            status=Orcamento.Status.APROVADO,
+            origem=Orcamento.Origem.AMBULANTE,
+        )
+        vendedor = User.objects.create_user(
+            username="ambulante", password="senha-segura", is_staff=True
+        )
+        atribuir_funcoes(vendedor, ["vendas"])
+        self.client.force_login(vendedor)
+
+        visiveis = self.client.get(
+            "/orcamentos/estados/",
+            {"ids": str(alheio.pk)},
+            HTTP_HOST="interno.testserver",
+        ).json()["orcamentos"]
+
+        from .permissoes import limitar_orcamentos
+        esperado = limitar_orcamentos(
+            vendedor, Orcamento.objects.filter(pk=alheio.pk)
+        ).exists()
+
+        self.assertEqual(str(alheio.pk) in visiveis, esperado)
+
     # -------------------------------------------------------- catálogo
     def test_tela_busca_catalogo_sob_demanda(self):
         resposta = self.client.get(self.URL, HTTP_HOST="interno.testserver")
