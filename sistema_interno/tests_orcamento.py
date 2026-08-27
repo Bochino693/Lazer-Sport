@@ -328,7 +328,7 @@ class OrcamentoInternoTests(TestCase):
         aprovar_blocos(orcamento, self.gestor)
         return orcamento
 
-    def test_envio_fica_bloqueado_ate_os_dois_setores_serem_aprovados(self):
+    def test_avaliacoes_pendentes_nao_bloqueiam_o_envio_ao_cliente(self):
         orcamento = Orcamento.objects.create(nome_cliente="Aguardando revisão")
         ItemOrcamento.objects.create(
             orcamento=orcamento,
@@ -344,10 +344,17 @@ class OrcamentoInternoTests(TestCase):
             avaliador=self.gestor,
         )
 
+        pagina = self.client.get(self.URL, HTTP_HOST="interno.testserver")
+        self.assertContains(pagina, f'data-enviar="{orcamento.id}"')
+        self.assertNotContains(pagina, f'value="{orcamento.id}" disabled')
+
         resposta = self.post({"action": "enviar", "id": orcamento.id})
 
-        self.assertEqual(resposta.status_code, 400)
-        self.assertIn("Financeiro", resposta.json()["msg"])
+        self.assertEqual(resposta.status_code, 200)
+        self.assertIn(orcamento.token, resposta.json()["link"])
+        self.assertFalse(
+            orcamento.avaliacoes_blocos.filter(bloco="financeiro").exists()
+        )
 
     # -------------------------------------------------------- exclusão
     def test_exclusao_de_rascunho_exige_confirmacao_escrita(self):

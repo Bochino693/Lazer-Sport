@@ -777,23 +777,6 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
             )
         orcamento = self._orcamento_do_usuario(request, int(orcamento_id))
 
-        aprovados = set(
-            orcamento.avaliacoes_blocos.filter(
-                status=AvaliacaoBlocoOrcamento.Status.APROVADO,
-            ).values_list("bloco", flat=True)
-        )
-        exigidos = set(AvaliacaoBlocoOrcamento.Bloco.values)
-        if aprovados != exigidos:
-            pendentes = [
-                rotulo for valor, rotulo in AvaliacaoBlocoOrcamento.Bloco.choices
-                if valor not in aprovados
-            ]
-            raise ErroDeFormulario(
-                "Antes do envio, o superadministrador deve aprovar: "
-                + " e ".join(pendentes)
-                + "."
-            )
-
         if not orcamento.itens.exists():
             raise ErroDeFormulario(
                 "Este orçamento não tem itens. Adicione ao menos um antes de enviar."

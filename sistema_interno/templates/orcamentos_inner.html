@@ -206,9 +206,9 @@
                         data-link="{{ orcamento.link_publico }}"
                         data-mensagem="{{ orcamento.mensagem_whatsapp }}"
                         data-previa="{% url 'orcamento_previa_inner' orcamento.id %}"
-                        value="{{ orcamento.id }}" {% if not orcamento.blocos_aprovados %}disabled{% endif %}
+                        value="{{ orcamento.id }}"
                         aria-label="Enviar orçamento {{ orcamento.id }}"
-                        title="{% if orcamento.blocos_aprovados %}Gerar o link da proposta para mandar ao cliente{% else %}Aguardando aprovação dos blocos Comercial e Financeiro{% endif %}">
+                        title="Gerar o link da proposta para mandar ao cliente">
                   <i class="bi bi-send"></i>
                   <span class="ls-action-label">{% if orcamento.enviado_em %}Link{% else %}Enviar{% endif %}</span>
                 </button>{% endif %}
