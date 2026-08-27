@@ -52,6 +52,10 @@ from .views_gestao import (
     ProdutosProducaoView,
 )
 from .views_site import LinkSitePublicoView
+from .views_ordens_servico import (
+    OrdemServicoPreviaInnerView,
+    OrdensServicoInnerView,
+)
 
 
 def por_funcoes(view_class, *funcoes, somente_super=False):
@@ -152,6 +156,18 @@ urlpatterns = [
         'orcamentos/estados/',
         EstadoOrcamentosView.as_view(),
         name='estados_orcamentos',
+    ),
+
+    # ---------------- ordens de serviço ----------------
+    path(
+        'ordens-servico/',
+        OrdensServicoInnerView.as_view(),
+        name='ordens_servico_inner',
+    ),
+    path(
+        'ordens-servico/<int:pk>/previa/',
+        OrdemServicoPreviaInnerView.as_view(),
+        name='ordem_servico_previa_inner',
     ),
 
     # ---------------- produção ----------------

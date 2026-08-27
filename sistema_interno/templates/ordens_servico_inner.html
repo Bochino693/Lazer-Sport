@@ -1,0 +1,158 @@
+{% extends "base_inner.html" %}
+{% load interno_extras %}
+
+{% block title %}Ordens de Serviço | Lazer & Sport{% endblock %}
+{% block top_title %}Ordens de Serviço{% endblock %}
+
+{% block content %}
+<section class="ls-page-hero">
+  <div class="ls-page-hero-copy">
+    <span class="ls-page-kicker">Execução e assistência técnica</span>
+    <h1>Ordens de Serviço</h1>
+    <p>Registre manutenção, instalação, revisão e serviços prestados sem misturar execução com proposta comercial.</p>
+  </div>
+  <div class="ls-page-hero-actions">
+    <a class="btn btn-outline-secondary" href="{% url 'manutencao_inner' %}"><i class="bi bi-inbox me-1"></i> Chamados</a>
+    {% if pode_editar %}<button class="btn btn-success" type="button" id="novaOS"><i class="bi bi-plus-lg me-1"></i> Nova O.S.</button>{% endif %}
+  </div>
+</section>
+
+<section class="ls-budget-card-filters" aria-label="Filtrar ordens por fase">
+  {% for chave, rotulo, quantidade, icone in cards %}
+    <a class="ls-budget-filter-card {% if filtro_ativo == chave %}active{% endif %}"
+       href="?filtro={{ chave }}{% if busca %}&q={{ busca|urlencode }}{% endif %}">
+      <span><i class="bi {{ icone }}"></i></span><strong>{{ quantidade }}</strong><small>{{ rotulo }}</small>
+    </a>
+  {% endfor %}
+</section>
+
+<section class="ls-budget-money-strip">
+  <div class="success"><span>Total recebido nas O.S.</span><strong>R$ {{ total_recebido|moeda }}</strong></div>
+  <div><span>Documento</span><strong>Operacional</strong></div>
+  <div><span>Orçamento</span><strong>Negociação separada</strong></div>
+  <div><span>Impressão</span><strong>A4 e PDF</strong></div>
+</section>
+
+<section class="ls-data-panel">
+  <div class="ls-data-header">
+    <div><h2>Serviços registrados</h2><p>A O.S. enviada continua editável para registrar o andamento real do trabalho.</p></div>
+    <form method="get" class="ls-budget-search">
+      <input type="hidden" name="filtro" value="{{ filtro_ativo }}">
+      <div class="input-group"><input class="form-control" name="q" value="{{ busca }}" placeholder="O.S., cliente, equipamento ou defeito"><button class="btn btn-primary"><i class="bi bi-search"></i></button></div>
+    </form>
+  </div>
+  <div class="ls-data-body">
+    <div class="table-responsive">
+      <table class="ls-table ls-commercial-table">
+        <thead><tr><th>O.S.</th><th>Cliente / equipamento</th><th>Tipo</th><th>Situação</th><th>Agenda</th><th class="text-end">Total</th><th>Pagamento</th><th>Técnico</th><th class="text-end">Ações</th></tr></thead>
+        <tbody>
+        {% for ordem in ordens %}
+          <tr>
+            <td data-rotulo="O.S."><strong>{{ ordem.numero_documento }}</strong>{% if ordem.orcamento_id %}<span class="material-sub d-block">proposta #{{ ordem.orcamento_id }}</span>{% endif %}</td>
+            <td data-rotulo="Cliente / equipamento"><strong>{{ ordem.destinatario }}</strong><span class="material-sub d-block">{{ ordem.equipamento }}</span>{% if ordem.numero_serie %}<span class="material-sub d-block">Série: {{ ordem.numero_serie }}</span>{% endif %}</td>
+            <td data-rotulo="Tipo">{{ ordem.get_tipo_display }}{% if ordem.prioridade == 'urgente' or ordem.prioridade == 'alta' %}<span class="ls-status danger d-block mt-1">{{ ordem.get_prioridade_display }}</span>{% endif %}</td>
+            <td data-rotulo="Situação"><span class="ls-status {% if ordem.status == 'concluida' %}success{% elif ordem.status == 'cancelada' %}neutral{% elif ordem.status == 'aguardando_peca' %}warning{% elif ordem.status == 'em_execucao' or ordem.status == 'aguardando_resposta' %}info{% else %}neutral{% endif %}">{{ ordem.get_status_display }}</span>{% if ordem.cliente_ciente %}<span class="material-sub d-block mt-1">cliente ciente ✓</span>{% endif %}</td>
+            <td data-rotulo="Agenda">{% if ordem.agendada_para %}{{ ordem.agendada_para|date:"d/m/Y H:i" }}{% else %}<span class="text-muted">Não agendada</span>{% endif %}</td>
+            <td data-rotulo="Total" class="text-end"><strong class="ls-money">R$ {{ ordem.total|moeda }}</strong></td>
+            <td data-rotulo="Pagamento"><span class="ls-status {% if ordem.status_pagamento == 'pago' %}success{% elif ordem.status_pagamento == 'parcial' %}warning{% else %}neutral{% endif %}">{{ ordem.get_status_pagamento_display }}</span>{% if ordem.valor_pago %}<span class="material-sub d-block mt-1">R$ {{ ordem.valor_pago|moeda }}</span>{% endif %}</td>
+            <td data-rotulo="Técnico">{% if ordem.tecnico %}{{ ordem.tecnico.get_full_name|default:ordem.tecnico.username }}{% else %}<span class="text-muted">A definir</span>{% endif %}</td>
+            <td data-rotulo="Ações" class="text-end"><div class="ls-row-actions">
+              <a class="btn btn-sm btn-outline-primary" href="{% url 'ordem_servico_previa_inner' ordem.id %}" target="_blank" rel="noopener" title="Visualizar e imprimir"><i class="bi bi-printer"></i><span class="ls-action-label">Imprimir</span></a>
+              {% if pode_editar %}<button class="btn btn-sm btn-outline-secondary" type="button" data-editar-os="{{ ordem.id }}"><i class="bi bi-pencil"></i><span class="ls-action-label">Editar</span></button>
+              <button class="btn btn-sm btn-outline-primary" type="button" data-enviar-os="{{ ordem.id }}" data-nome="{{ ordem.destinatario }}" data-whatsapp="{{ ordem.whatsapp_destinatario }}" data-email="{{ ordem.email_destinatario }}"><i class="bi bi-send"></i><span class="ls-action-label">Enviar</span></button>{% endif %}
+              {% if pode_pagamento %}<button class="btn btn-sm btn-outline-success" type="button" data-pagamento-os="{{ ordem.id }}" data-nome="{{ ordem.numero_documento }} — {{ ordem.destinatario }}" data-total="{{ ordem.total }}" data-pago="{{ ordem.valor_pago }}"><i class="bi bi-cash-coin"></i><span class="ls-action-label">Pagamento</span></button>{% endif %}
+              {% if pode_editar and ordem.status == 'rascunho' and not ordem.enviada_em %}<button class="btn btn-sm btn-outline-danger" type="button" data-excluir="{{ ordem.id }}" data-nome="{{ ordem.numero_documento }} — {{ ordem.destinatario }}"><i class="bi bi-trash"></i></button>{% endif %}
+            </div></td>
+          </tr>
+        {% empty %}<tr><td colspan="9"><div class="ls-empty"><i class="bi bi-clipboard2-check"></i>Nenhuma Ordem de Serviço encontrada.</div></td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% if page_obj.has_other_pages %}<nav class="ls-paginacao">{% if page_obj.has_previous %}<a class="btn btn-sm btn-outline-secondary" href="?page={{ page_obj.previous_page_number }}&filtro={{ filtro_ativo }}&q={{ busca|urlencode }}">Anterior</a>{% endif %}<span>Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>{% if page_obj.has_next %}<a class="btn btn-sm btn-outline-secondary" href="?page={{ page_obj.next_page_number }}&filtro={{ filtro_ativo }}&q={{ busca|urlencode }}">Próxima</a>{% endif %}</nav>{% endif %}
+  </div>
+</section>
+
+<!-- Montagem da O.S. -->
+<div class="modal fade" id="modalOS" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-xl modal-dialog-scrollable"><form class="modal-content" id="formOS" method="post" action="{% url 'ordens_servico_inner' %}">
+  {% csrf_token %}<input type="hidden" name="action" value="save"><input type="hidden" name="id" id="osId"><input type="hidden" name="itens" id="osItens">
+  <div class="modal-header"><div><span class="ls-modal-kicker">Execução operacional</span><h5 class="modal-title" id="osTitulo">Nova Ordem de Serviço</h5></div><button class="btn-close" type="button" data-bs-dismiss="modal"></button></div>
+  <div class="modal-body"><div id="osErro" class="alert alert-danger d-none"></div>
+    <div class="row g-3">
+      <div class="col-12"><div class="ls-budget-block-title comercial"><i class="bi bi-person-vcard"></i><span><strong>Cliente e origem</strong><small>A O.S. pode nascer de uma proposta aprovada, de um chamado ou de atendimento direto.</small></span></div></div>
+      <div class="col-md-4"><label class="form-label" for="osCliente">Cliente cadastrado</label><select class="form-select" id="osCliente" name="cliente"><option value="">Sem vínculo</option>{% for c in clientes %}<option value="{{ c.id }}" data-nome="{{ c.nome_cliente }}" data-whatsapp="{{ c.telefone|default:'' }}" data-email="{{ c.email|default:'' }}">{{ c.nome_cliente }}</option>{% endfor %}</select></div>
+      <div class="col-md-4"><label class="form-label" for="osManutencao">Chamado de manutenção</label><select class="form-select" id="osManutencao" name="manutencao"><option value="">Atendimento direto</option>{% for m in manutencoes %}<option value="{{ m.id }}" data-equipamento="{{ m.nome_equipamento }}" data-nome="{{ m.usuario.nome_completo|default:m.usuario.user.username }}" data-whatsapp="{{ m.telefone_contato|default:m.usuario.telefone }}" data-email="{{ m.usuario.user.email }}" data-defeito="{{ m.descricao }}" data-endereco="{{ m.endereco|default:'' }}{% if m.numero %}, {{ m.numero }}{% endif %} · {{ m.cidade|default:'' }}/{{ m.estado|default:'' }}">MAN-{{ m.id|stringformat:'05d' }} · {{ m.nome_equipamento }} · {{ m.usuario.nome_completo|default:m.usuario.user.username }}</option>{% endfor %}</select></div>
+      <div class="col-md-4"><label class="form-label" for="osNome">Nome do destinatário</label><input class="form-control" id="osNome" name="nome_cliente" maxlength="120"></div>
+      <div class="col-md-4"><label class="form-label" for="osContato">Contato / responsável local</label><input class="form-control" id="osContato" name="contato" maxlength="120"></div>
+      <div class="col-md-4"><label class="form-label" for="osWhatsapp">WhatsApp</label><input class="form-control" id="osWhatsapp" name="whatsapp_cliente" data-mascara="telefone" maxlength="24"></div>
+      <div class="col-md-4"><label class="form-label" for="osEmail">E-mail</label><input class="form-control" id="osEmail" name="email_cliente" type="email" maxlength="254"></div>
+      <div class="col-12"><label class="form-label" for="osEndereco">Endereço do serviço</label><input class="form-control" id="osEndereco" name="endereco_servico" maxlength="320"></div>
+
+      <div class="col-12"><div class="ls-budget-block-title financeiro"><i class="bi bi-wrench-adjustable"></i><span><strong>Atendimento técnico</strong><small>Problema, diagnóstico, execução, técnico e garantia.</small></span></div></div>
+      <div class="col-md-3"><label class="form-label" for="osTipo">Tipo</label><select class="form-select" id="osTipo" name="tipo">{% for v,r in tipos %}<option value="{{ v }}">{{ r }}</option>{% endfor %}</select></div>
+      <div class="col-md-3"><label class="form-label" for="osStatus">Situação</label><select class="form-select" id="osStatus" name="status">{% for v,r in status_opcoes %}<option value="{{ v }}">{{ r }}</option>{% endfor %}</select></div>
+      <div class="col-md-3"><label class="form-label" for="osPrioridade">Prioridade</label><select class="form-select" id="osPrioridade" name="prioridade">{% for v,r in prioridades %}<option value="{{ v }}">{{ r }}</option>{% endfor %}</select></div>
+      <div class="col-md-3"><label class="form-label" for="osTecnico">Técnico</label><select class="form-select" id="osTecnico" name="tecnico"><option value="">A definir</option>{% for t in tecnicos %}<option value="{{ t.id }}">{{ t.get_full_name|default:t.username }}</option>{% endfor %}</select></div>
+      <div class="col-md-8"><label class="form-label" for="osEquipamento">Equipamento</label><input class="form-control" id="osEquipamento" name="equipamento" maxlength="180" required></div>
+      <div class="col-md-4"><label class="form-label" for="osSerie">Número de série / patrimônio</label><input class="form-control" id="osSerie" name="numero_serie" maxlength="80"></div>
+      <div class="col-md-6"><label class="form-label" for="osAgenda">Agendada para</label><input class="form-control" id="osAgenda" name="agendada_para" type="datetime-local"></div>
+      <div class="col-md-6"><label class="form-label" for="osGarantia">Garantia até</label><input class="form-control" id="osGarantia" name="garantia_ate" type="date"></div>
+      <div class="col-md-6"><label class="form-label" for="osDefeito">Defeito relatado / solicitação</label><textarea class="form-control" id="osDefeito" name="defeito_relatado" rows="3"></textarea></div>
+      <div class="col-md-6"><label class="form-label" for="osDiagnostico">Diagnóstico técnico</label><textarea class="form-control" id="osDiagnostico" name="diagnostico" rows="3"></textarea></div>
+      <div class="col-12"><label class="form-label" for="osExecutado">Serviço executado</label><textarea class="form-control" id="osExecutado" name="servico_executado" rows="3"></textarea></div>
+    </div>
+    <hr class="my-4"><div class="d-flex justify-content-between align-items-center mb-3"><div><h6 class="mb-1">Serviços, peças e materiais</h6><span class="text-muted small">Valores ficam registrados para cobrança e pagamento.</span></div><button class="btn btn-sm btn-outline-primary" type="button" id="adicionarItemOS"><i class="bi bi-plus-lg me-1"></i>Adicionar item</button></div>
+    <div class="table-responsive"><table class="ls-table"><thead><tr><th>Tipo</th><th>Descrição</th><th class="text-end">Quantidade</th><th class="text-end">Valor unit.</th><th class="text-end">Subtotal</th><th></th></tr></thead><tbody id="itensOSCorpo"></tbody></table></div>
+    <div class="ls-orcamento-total"><div class="ls-orcamento-final"><span>Total da O.S.</span><strong id="osTotal">R$ 0,00</strong></div></div>
+    <div class="row g-3 mt-1"><div class="col-md-6"><label class="form-label" for="osFormaPagamento">Forma de pagamento</label><input class="form-control" id="osFormaPagamento" name="forma_pagamento" maxlength="120" placeholder="Ex.: Pix"></div><div class="col-md-6"><label class="form-label" for="osObservacoes">Observações e recomendações</label><textarea class="form-control" id="osObservacoes" name="observacoes" rows="2"></textarea></div></div>
+  </div>
+  <div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancelar</button><button class="btn btn-success" type="submit">Salvar O.S.</button></div>
+</form></div></div>
+
+<!-- Envio -->
+<div class="modal fade" id="modalEnviarOS" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><form class="modal-content" id="formEnviarOS" method="post" action="{% url 'ordens_servico_inner' %}">
+  {% csrf_token %}<input type="hidden" name="action" value="enviar"><input type="hidden" name="id" id="envioOSId">
+  <div class="modal-header"><div><span class="ls-modal-kicker">Documento do cliente</span><h5 class="modal-title" id="envioOSTitulo">Enviar O.S.</h5></div><button class="btn-close" type="button" data-bs-dismiss="modal"></button></div>
+  <div class="modal-body"><div id="envioOSErro" class="alert alert-danger d-none"></div><label class="form-label" for="envioOSCanal">Canal</label><select class="form-select mb-3" id="envioOSCanal" name="canal"><option value="link">Copiar link</option><option value="whatsapp">WhatsApp</option><option value="email">E-mail{% if not email_configurado %} — não configurado{% endif %}</option></select><label class="form-label" for="envioOSWhatsapp">WhatsApp</label><input class="form-control mb-3" id="envioOSWhatsapp" name="whatsapp" data-mascara="telefone"><label class="form-label" for="envioOSEmail">E-mail</label><input class="form-control" id="envioOSEmail" name="email" type="email"><div class="mt-3" id="envioOSResultado" hidden><label class="form-label">Link público</label><div class="input-group"><input class="form-control" id="envioOSLink" readonly><button class="btn btn-outline-primary" type="button" id="copiarLinkOS">Copiar</button></div></div><section class="ls-envios mt-4"><h6 class="mb-2"><i class="bi bi-clock-history me-1"></i>Histórico de envios desta O.S.</h6><ul class="ls-envios-lista" id="enviosOSLista"></ul></section></div>
+  <div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Fechar</button><button class="btn btn-primary" type="submit"><i class="bi bi-send me-1"></i>Preparar envio</button></div>
+</form></div></div>
+
+<!-- Pagamento -->
+<div class="modal fade" id="modalPagamentoOS" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><form class="modal-content" id="formPagamentoOS" method="post" action="{% url 'ordens_servico_inner' %}">
+  {% csrf_token %}<input type="hidden" name="action" value="pagamento"><input type="hidden" name="id" id="pagamentoOSId"><div class="modal-header"><div><span class="ls-modal-kicker">Financeiro</span><h5 class="modal-title" id="pagamentoOSTitulo">Pagamento</h5></div><button class="btn-close" type="button" data-bs-dismiss="modal"></button></div><div class="modal-body"><div id="pagamentoOSErro" class="alert alert-danger d-none"></div><div class="alert alert-light border" id="pagamentoOSResumo"></div><label class="form-label" for="pagamentoOSValor">Valor total recebido até agora</label><div class="input-group mb-3"><span class="input-group-text">R$</span><input class="form-control" id="pagamentoOSValor" name="valor_pago" data-mascara="moeda" required></div><label class="form-label" for="pagamentoOSObs">Observação</label><input class="form-control" id="pagamentoOSObs" name="observacao_pagamento" maxlength="240"></div><div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancelar</button><button class="btn btn-success" type="submit">Atualizar pagamento</button></div>
+</form></div></div>
+
+{% url 'ordens_servico_inner' as exclusao_url %}
+{% include "includes/modal_confirmar_exclusao.html" with exclusao_url=exclusao_url exclusao_titulo="Excluir Ordem de Serviço" exclusao_aviso="Somente rascunhos nunca enviados podem ser excluídos. O histórico operacional permanece preservado." %}
+{{ ordens_dados|json_script:"ordensServicoDados" }}
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  "use strict";
+  var ordens = JSON.parse(document.getElementById("ordensServicoDados").textContent || "[]");
+  var corpo = document.getElementById("itensOSCorpo");
+  var tiposItem = [{% for v,r in item_tipos %}{value:"{{ v }}", label:"{{ r|escapejs }}"},{% endfor %}];
+
+  function achar(id){return ordens.find(function(o){return Number(o.id)===Number(id);});}
+  function numero(valor){var s=String(valor||"").replace(/[^\d,.-]/g,"");if(s.indexOf(",")>=0)s=s.replace(/\./g,"").replace(",",".");return Number(s)||0;}
+  function moeda(v){return Number(v||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"});}
+  function valor(id,v){var e=document.getElementById(id);if(e)e.value=v==null?"":v;}
+  function recalcular(){var total=0;corpo.querySelectorAll("tr").forEach(function(l){var q=numero(l.querySelector("[data-qtd]").value),v=numero(l.querySelector("[data-valor]").value);var sub=q*v;total+=sub;l.querySelector("[data-subtotal]").textContent=moeda(sub);});document.getElementById("osTotal").textContent=moeda(total);}
+  function linha(item){item=item||{tipo:"servico",descricao:"",quantidade:"1,00",valor_unitario:"0,00"};var tr=document.createElement("tr");var opcoes=tiposItem.map(function(t){return '<option value="'+t.value+'"'+(t.value===item.tipo?' selected':'')+'>'+t.label+'</option>';}).join("");tr.innerHTML='<td><select class="form-select form-select-sm" data-tipo>'+opcoes+'</select></td><td><input class="form-control form-control-sm" data-descricao maxlength="200" value="'+String(item.descricao||"").replace(/&/g,"&amp;").replace(/"/g,"&quot;")+'"></td><td><input class="form-control form-control-sm text-end" data-qtd inputmode="decimal" value="'+item.quantidade+'"></td><td><input class="form-control form-control-sm text-end" data-valor inputmode="decimal" value="'+item.valor_unitario+'"></td><td class="text-end" data-subtotal>R$ 0,00</td><td><button class="btn btn-sm btn-outline-danger" type="button" data-remover><i class="bi bi-x-lg"></i></button></td>';tr.addEventListener("input",recalcular);tr.querySelector("[data-remover]").addEventListener("click",function(){tr.remove();if(!corpo.children.length)linha();recalcular();});corpo.appendChild(tr);recalcular();}
+  function abrir(id){var o=id?achar(id):null;document.getElementById("formOS").reset();corpo.innerHTML="";valor("osId",o?o.id:"");document.getElementById("osTitulo").textContent=o?"Editar "+("OS-"+String(o.id).padStart(5,"0")):"Nova Ordem de Serviço";["cliente","manutencao","nome_cliente","contato","whatsapp_cliente","email_cliente","endereco_servico","tipo","status","prioridade","equipamento","numero_serie","agendada_para","garantia_ate","tecnico","defeito_relatado","diagnostico","servico_executado","forma_pagamento","observacoes"].forEach(function(chave){var mapa={cliente:"osCliente",manutencao:"osManutencao",nome_cliente:"osNome",contato:"osContato",whatsapp_cliente:"osWhatsapp",email_cliente:"osEmail",endereco_servico:"osEndereco",tipo:"osTipo",status:"osStatus",prioridade:"osPrioridade",equipamento:"osEquipamento",numero_serie:"osSerie",agendada_para:"osAgenda",garantia_ate:"osGarantia",tecnico:"osTecnico",defeito_relatado:"osDefeito",diagnostico:"osDiagnostico",servico_executado:"osExecutado",forma_pagamento:"osFormaPagamento",observacoes:"osObservacoes"};valor(mapa[chave],o?o[chave]:"");});(o&&o.itens.length?o.itens:[null]).forEach(linha);Painel.erro("osErro","");Painel.abrir("modalOS");}
+  document.getElementById("novaOS")?.addEventListener("click",function(){abrir(null);});document.querySelectorAll("[data-editar-os]").forEach(function(b){b.addEventListener("click",function(){abrir(b.dataset.editarOs);});});document.getElementById("adicionarItemOS")?.addEventListener("click",function(){linha();});
+  document.getElementById("osCliente")?.addEventListener("change",function(){var op=this.selectedOptions[0];if(!op||!op.value)return;valor("osNome",op.dataset.nome);valor("osWhatsapp",op.dataset.whatsapp);valor("osEmail",op.dataset.email);});
+  document.getElementById("osManutencao")?.addEventListener("change",function(){var op=this.selectedOptions[0];if(!op||!op.value)return;valor("osEquipamento",op.dataset.equipamento);valor("osNome",op.dataset.nome);valor("osWhatsapp",op.dataset.whatsapp);valor("osEmail",op.dataset.email);valor("osDefeito",op.dataset.defeito);valor("osEndereco",op.dataset.endereco);valor("osTipo","manutencao");});
+  Painel.ligar({form:"formOS",erro:"osErro",antes:function(){var itens=[];corpo.querySelectorAll("tr").forEach(function(l){itens.push({tipo:l.querySelector("[data-tipo]").value,descricao:l.querySelector("[data-descricao]").value,quantidade:l.querySelector("[data-qtd]").value,valor_unitario:l.querySelector("[data-valor]").value});});document.getElementById("osItens").value=JSON.stringify(itens);}});
+
+  function desenharEnviosOS(envios){var lista=document.getElementById("enviosOSLista");lista.innerHTML="";(envios||[]).forEach(function(e){var li=document.createElement("li");li.className=e.sucesso?"ok":"falhou";li.innerHTML="<strong>"+e.canal+"</strong>"+(e.destino?" · "+e.destino:"")+"<span>"+e.quando+(e.por?" · "+e.por:"")+"</span>"+(e.detalhe?"<em>"+e.detalhe+"</em>":"");lista.appendChild(li);});if(!lista.children.length){var vazio=document.createElement("li");vazio.innerHTML="<span>Nenhum envio registrado nesta O.S.</span>";lista.appendChild(vazio);}}
+  document.querySelectorAll("[data-enviar-os]").forEach(function(b){b.addEventListener("click",function(){var o=achar(b.dataset.enviarOs);valor("envioOSId",b.dataset.enviarOs);valor("envioOSWhatsapp",b.dataset.whatsapp);valor("envioOSEmail",b.dataset.email);document.getElementById("envioOSTitulo").textContent="Enviar O.S. para "+b.dataset.nome;document.getElementById("envioOSResultado").hidden=true;desenharEnviosOS(o?o.envios:[]);Painel.erro("envioOSErro","");Painel.abrir("modalEnviarOS");});});
+  document.getElementById("formEnviarOS")?.addEventListener("submit",async function(e){e.preventDefault();Painel.erro("envioOSErro","");var form=e.currentTarget,botao=form.querySelector('[type="submit"]');botao.disabled=true;try{var r=await fetch(form.action,{method:"POST",body:new FormData(form),headers:{"X-Requested-With":"XMLHttpRequest"}}),j=await r.json();if(j.status!=="sucesso")throw new Error(j.msg||"Não foi possível preparar o envio.");valor("envioOSLink",j.link);document.getElementById("envioOSResultado").hidden=false;if(j.whatsapp_url)window.open(j.whatsapp_url,"_blank");if(document.getElementById("envioOSCanal").value==="link")navigator.clipboard?.writeText(j.link);}catch(err){Painel.erro("envioOSErro",err.message);}finally{botao.disabled=false;}});
+  document.getElementById("copiarLinkOS")?.addEventListener("click",function(){var c=document.getElementById("envioOSLink");navigator.clipboard?.writeText(c.value);this.textContent="Copiado ✓";});
+  document.querySelectorAll("[data-pagamento-os]").forEach(function(b){b.addEventListener("click",function(){valor("pagamentoOSId",b.dataset.pagamentoOs);valor("pagamentoOSValor",String(b.dataset.pago||"0").replace(".",","));valor("pagamentoOSObs","");document.getElementById("pagamentoOSTitulo").textContent=b.dataset.nome;document.getElementById("pagamentoOSResumo").textContent="Total da O.S.: R$ "+String(b.dataset.total).replace(".",",");Painel.erro("pagamentoOSErro","");Painel.abrir("modalPagamentoOS");});});Painel.ligar({form:"formPagamentoOS",erro:"pagamentoOSErro"});Painel.ligarExclusao();
+
+  var params=new URLSearchParams(location.search);if(params.get("novo")==="1"&&document.getElementById("novaOS")){abrir(null);if(params.get("manutencao")){valor("osManutencao",params.get("manutencao"));document.getElementById("osManutencao").dispatchEvent(new Event("change"));}}
+});
+</script>
+{% endblock %}

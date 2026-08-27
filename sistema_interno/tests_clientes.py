@@ -314,6 +314,18 @@ class ClientesInternoTests(TestCase):
         )
 
         self.assertEqual(resposta.status_code, 200)
+        orcamento = Orcamento.objects.get(cliente=cliente)
+        resposta = self.client.post(
+            "/orcamentos/",
+            {
+                "action": "status",
+                "id": orcamento.id,
+                "status": Orcamento.Status.APROVADO,
+            },
+            HTTP_HOST="interno.testserver",
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+        self.assertEqual(resposta.status_code, 200)
         cliente.refresh_from_db()
         # Publicar virou ligar uma chave no próprio cliente: não existe
         # mais uma segunda ficha para o mapa conferir.
@@ -565,7 +577,7 @@ class ClientesInternoTests(TestCase):
         )
         Orcamento.objects.create(
             cliente=self.buffet,
-            status=Orcamento.Status.ENVIADO,
+            status=Orcamento.Status.AGUARDANDO_RESPOSTA,
         )
 
         resposta = self.abrir()

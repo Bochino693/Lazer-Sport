@@ -1,0 +1,17 @@
+PACOTE PRONTO PARA SUBSTITUIR DIRETAMENTE
+
+1. Abra a pasta local do projeto Lazer-Sport, onde está o manage.py.
+2. Extraia este ZIP diretamente nessa pasta.
+3. Confirme "Substituir todos os arquivos" quando o Windows perguntar.
+4. Arquivos que ainda não existem, como a nova Ordem de Serviço, serão criados.
+5. Depois execute no terminal:
+
+   py -m pip install -r requirements.txt
+   py manage.py migrate
+   py manage.py check
+
+Não apague nenhuma outra pasta do projeto. Este ZIP é incremental: substitui
+somente os arquivos alterados e cria os novos arquivos necessários.
+
+O pacote foi preparado sobre a versão Git 345c49711717 e validado com
+350 testes aprovados. Nenhuma alteração foi enviada ao GitHub.

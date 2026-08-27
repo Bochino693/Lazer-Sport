@@ -43,7 +43,7 @@ O QUE MUDOU
 - Quantidade aceita somente número inteiro; dinheiro abre teclado numérico.
 - Cliente criado dentro do orçamento volta imediatamente com todos os dados.
 - Prévia interna funciona inclusive em rascunho e nunca aceita resposta.
-- Link público marca como enviado e permite aprovar ou recusar.
+- Link público marca como aguardando resposta e permite aprovar, pedir ajustes ou recusar.
 - Corrigido o erro “Field 'id' expected a number but got ''” ao enviar.
 - O modal de envio já abre com nome, WhatsApp e e-mail do cliente vinculado;
   esses dados continuam editáveis antes de enviar.

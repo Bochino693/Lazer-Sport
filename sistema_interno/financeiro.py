@@ -321,7 +321,7 @@ def funil_de_orcamentos(inicio):
 
     return {
         "rascunho": contagem.get(Orcamento.Status.RASCUNHO, 0),
-        "enviado": contagem.get(Orcamento.Status.ENVIADO, 0),
+        "enviado": contagem.get(Orcamento.Status.AGUARDANDO_RESPOSTA, 0),
         "aprovado": contagem.get(Orcamento.Status.APROVADO, 0),
         "recusado": contagem.get(Orcamento.Status.RECUSADO, 0),
         "total": sum(contagem.values()),

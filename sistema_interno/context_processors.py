@@ -37,6 +37,7 @@ VAZIO = {
     "count_manutencao": 0,
     "count_producao": 0,
     "count_orcamentos": 0,
+    "count_ordens_servico": 0,
     "eh_gestor_interno": False,
     "permissoes_interno": {},
 }
@@ -63,6 +64,7 @@ def _apurar(usuario):
             + por_chave.get("orcamentos_vencendo", 0)
             + por_chave.get("orcamentos_aprovados", 0)
         ),
+        "count_ordens_servico": por_chave.get("ordens_servico", 0),
     }
 
 
@@ -132,6 +134,7 @@ def fab_counts(request):
             "count_manutencao",
             "count_producao",
             "count_orcamentos",
+            "count_ordens_servico",
         )
     }
     contexto["eh_gestor_interno"] = acesso["gestao"]

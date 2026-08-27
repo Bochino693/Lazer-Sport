@@ -59,6 +59,7 @@ from .models import (
     Cliente,
     Colaborador,
     EnvioOrcamento,
+    ItemOrdemServico,
     ExecucaoEtapaProducao,
     GuiaEtapaProducao,
     HistoricoProducao,
@@ -68,6 +69,7 @@ from .models import (
     Material,
     AvaliacaoBlocoOrcamento,
     Orcamento,
+    OrdemServico,
     OrdemProducao,
     ProdutoInterno,
     Setores,
@@ -216,6 +218,15 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
         )
         em_aberto = Q(status__in=Orcamento.EM_ABERTO)
         aprovado = Q(status=Orcamento.Status.APROVADO)
+        aguardando = Q(status=Orcamento.Status.AGUARDANDO_RESPOSTA)
+        negociacao = Q(status=Orcamento.Status.EM_NEGOCIACAO)
+        recusado = Q(status=Orcamento.Status.RECUSADO)
+        expirado = Q(status=Orcamento.Status.EXPIRADO)
+        substituido = Q(status=Orcamento.Status.SUBSTITUIDO)
+        pagamento_pendente = aprovado & ~Q(
+            status_pagamento=Orcamento.StatusPagamento.PAGO
+        )
+        pago = Q(status_pagamento=Orcamento.StatusPagamento.PAGO)
 
         return com_total.aggregate(
             quantidade=Count("pk", distinct=True),
@@ -223,6 +234,30 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
             total_em_aberto=Coalesce(Sum("_total", filter=em_aberto), zero),
             quantidade_aprovado=Count("pk", filter=aprovado, distinct=True),
             quantidade_aberto=Count("pk", filter=em_aberto, distinct=True),
+            quantidade_rascunho=Count(
+                "pk", filter=Q(status=Orcamento.Status.RASCUNHO), distinct=True,
+            ),
+            quantidade_aguardando=Count("pk", filter=aguardando, distinct=True),
+            quantidade_negociacao=Count("pk", filter=negociacao, distinct=True),
+            quantidade_recusado=Count("pk", filter=recusado, distinct=True),
+            quantidade_expirado=Count("pk", filter=expirado, distinct=True),
+            quantidade_substituido=Count("pk", filter=substituido, distinct=True),
+            quantidade_pagamento_pendente=Count(
+                "pk", filter=pagamento_pendente, distinct=True,
+            ),
+            quantidade_pago=Count("pk", filter=pago, distinct=True),
+            total_recebido=Coalesce(Sum("valor_pago", filter=pago | aprovado), zero),
+            total_a_receber=Coalesce(
+                Sum(
+                    Greatest(
+                        F("_total") - Coalesce(F("valor_pago"), zero),
+                        zero,
+                        output_field=DecimalField(max_digits=12, decimal_places=2),
+                    ),
+                    filter=aprovado,
+                ),
+                zero,
+            ),
             quantidade_interno=Count(
                 "pk", filter=Q(origem=Orcamento.Origem.INTERNO), distinct=True,
             ),
@@ -233,12 +268,15 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
 
     def get(self, request):
         busca = (request.GET.get("q") or "").strip()
-        status = (request.GET.get("status") or "").strip()
+        filtro_card = (request.GET.get("filtro") or "todos").strip()
         origem = (request.GET.get("origem") or "").strip()
 
         orcamentos = limitar_orcamentos(request.user, (
             Orcamento.objects
-            .select_related("cliente", "cliente__parceiro", "responsavel")
+            .select_related(
+                "cliente", "cliente__parceiro", "responsavel",
+                "orcamento_anterior", "orcamento_refeito", "ordem_servico",
+            )
             .prefetch_related(
                 "cliente__enderecos",
                 Prefetch(
@@ -268,11 +306,31 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
                 filtro |= Q(pk=int(busca))
             orcamentos = orcamentos.filter(filtro).distinct()
 
-        if status in Orcamento.Status.values:
-            orcamentos = orcamentos.filter(status=status)
-
         if origem in Orcamento.Origem.values:
             orcamentos = orcamentos.filter(origem=origem)
+
+        # As quantidades dos cards vêm da busca, antes de aplicar o card
+        # selecionado. Assim cada card continua mostrando o tamanho real
+        # da sua fila e não vira zero depois do clique.
+        resumo_cards = self.resumo_do_filtro(orcamentos)
+
+        filtros_cards = {
+            "todos": Q(),
+            "rascunhos": Q(status=Orcamento.Status.RASCUNHO),
+            "aguardando": Q(status=Orcamento.Status.AGUARDANDO_RESPOSTA),
+            "negociacao": Q(status=Orcamento.Status.EM_NEGOCIACAO),
+            "aprovados": Q(status=Orcamento.Status.APROVADO),
+            "recusados": Q(status=Orcamento.Status.RECUSADO),
+            "expirados": Q(status=Orcamento.Status.EXPIRADO),
+            "substituidos": Q(status=Orcamento.Status.SUBSTITUIDO),
+            "a_receber": Q(status=Orcamento.Status.APROVADO) & ~Q(
+                status_pagamento=Orcamento.StatusPagamento.PAGO
+            ),
+            "pagos": Q(status_pagamento=Orcamento.StatusPagamento.PAGO),
+        }
+        if filtro_card not in filtros_cards:
+            filtro_card = "todos"
+        orcamentos = orcamentos.filter(filtros_cards[filtro_card])
 
         # O RESUMO SAI DO FILTRO INTEIRO, a página é só o que se desenha.
         resumo = self.resumo_do_filtro(orcamentos)
@@ -341,7 +399,19 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
         ctx = {
             "orcamentos": orcamentos,
             "busca": busca,
-            "status_ativo": status,
+            "filtro_ativo": filtro_card,
+            "cards": (
+                ("todos", "Todos", resumo_cards["quantidade"], "bi-grid"),
+                ("rascunhos", "Rascunhos", resumo_cards["quantidade_rascunho"], "bi-pencil-square"),
+                ("aguardando", "Aguardando resposta", resumo_cards["quantidade_aguardando"], "bi-hourglass-split"),
+                ("negociacao", "Em negociação", resumo_cards["quantidade_negociacao"], "bi-arrow-repeat"),
+                ("aprovados", "Aprovados", resumo_cards["quantidade_aprovado"], "bi-patch-check"),
+                ("recusados", "Recusados", resumo_cards["quantidade_recusado"], "bi-x-circle"),
+                ("expirados", "Expirados", resumo_cards["quantidade_expirado"], "bi-calendar-x"),
+                ("substituidos", "Versões anteriores", resumo_cards["quantidade_substituido"], "bi-clock-history"),
+                ("a_receber", "A receber", resumo_cards["quantidade_pagamento_pendente"], "bi-wallet2"),
+                ("pagos", "Pagos", resumo_cards["quantidade_pago"], "bi-cash-coin"),
+            ),
             "status_opcoes": Orcamento.Status.choices,
             "origem_ativa": origem,
             "origem_opcoes": Orcamento.Origem.choices,
@@ -369,6 +439,8 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
             "quantidade_aprovado": resumo["quantidade_aprovado"],
             "quantidade_interno": resumo["quantidade_interno"],
             "quantidade_ambulante": resumo["quantidade_ambulante"],
+            "total_recebido": resumo_cards["total_recebido"],
+            "total_a_receber": resumo_cards["total_a_receber"],
             "orcamentos_dados": [self.serializar(o) for o in orcamentos],
             # A busca de item vem por endpoint e nunca despeja o catálogo
             # inteiro nesta página. b:/p:/r: identificam brinquedo,
@@ -393,6 +465,7 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
             "pode_editar_comercial": acesso["orcamentos_editar_comercial"],
             "pode_editar_financeiro": acesso["orcamentos_editar_financeiro"],
             "pode_avaliar_blocos": acesso["avaliar_blocos_orcamento"],
+            "pode_ordens_servico": acesso["ordens_servico"],
             "blocos_opcoes": AvaliacaoBlocoOrcamento.Bloco.choices,
             "avaliacao_status_opcoes": (
                 (AvaliacaoBlocoOrcamento.Status.APROVADO, "Aprovar"),
@@ -416,6 +489,12 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
             "whatsapp_cliente": orcamento.whatsapp_destinatario,
             "email_cliente": orcamento.email_destinatario,
             "status": orcamento.status,
+            "pode_editar": orcamento.pode_editar,
+            "versao": orcamento.versao,
+            "orcamento_anterior": orcamento.orcamento_anterior_id or "",
+            "motivo_negociacao": orcamento.motivo_negociacao,
+            "status_pagamento": orcamento.status_pagamento,
+            "valor_pago": f"{orcamento.valor_pago:.2f}".replace(".", ","),
             "origem": orcamento.origem,
             "origem_rotulo": orcamento.get_origem_display(),
             "bloco_comercial": OrcamentosInnerView.serializar_avaliacao(
@@ -570,6 +649,16 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
             self._orcamento_do_usuario(request, orcamento_id)
             if orcamento_id else Orcamento()
         )
+        if orcamento.pk and not orcamento.pode_editar:
+            return self.erro(
+                request,
+                (
+                    "Uma proposta já enviada não pode ser sobrescrita. "
+                    "Use ‘Refazer proposta’ para criar uma nova versão e "
+                    "preservar o que o cliente recebeu."
+                ),
+                status=409,
+            )
         comercial_antes = self._assinatura_comercial(orcamento) if orcamento.pk else None
         financeiro_antes = self._assinatura_financeira(orcamento) if orcamento.pk else None
 
@@ -594,10 +683,9 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
                     "Escolha um cliente cadastrado ou escreva o nome do destinatário."
                 )
 
-            status = (request.POST.get("status") or Orcamento.Status.RASCUNHO).strip()
-            if status not in Orcamento.Status.values:
-                raise ErroDeFormulario("Situação inválida para o orçamento.")
-            orcamento.status = status
+            # Situação não é campo de edição: rascunho vira aguardando
+            # resposta ao enviar; decisão e negociação têm ações próprias.
+            orcamento.status = Orcamento.Status.RASCUNHO
             orcamento.validade = data(request.POST.get("validade"), "Validade")
             orcamento.forma_envio = texto(request, "forma_envio", limite=120)
             orcamento.observacoes = texto(request, "observacoes")
@@ -777,11 +865,30 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
         orcamento = self._orcamento_do_usuario(request, request.POST.get("id"))
         status = (request.POST.get("status") or "").strip()
 
-        if status not in Orcamento.Status.values:
+        permitidos = {
+            Orcamento.Status.APROVADO,
+            Orcamento.Status.RECUSADO,
+            Orcamento.Status.EXPIRADO,
+            Orcamento.Status.EM_NEGOCIACAO,
+        }
+        if status not in permitidos:
             raise ErroDeFormulario("Situação inválida para o orçamento.")
 
+        if orcamento.status == Orcamento.Status.SUBSTITUIDO:
+            raise ErroDeFormulario(
+                "Esta versão foi substituída e permanece somente no histórico."
+            )
+        if hasattr(orcamento, "ordem_servico") and status != orcamento.status:
+            raise ErroDeFormulario(
+                "A proposta já liberou uma O.S. e permanece congelada no "
+                "histórico comercial. Atualize somente a Ordem de Serviço."
+            )
+
+        if status == Orcamento.Status.EM_NEGOCIACAO:
+            orcamento.motivo_negociacao = texto(request, "motivo")
+
         orcamento.status = status
-        orcamento.save(update_fields=["status", "atualizado"])
+        orcamento.save(update_fields=["status", "motivo_negociacao", "atualizado"])
         mapa = orcamento.sincronizar_cliente_aprovado()
 
         complemento = ""
@@ -794,6 +901,147 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
             request,
             f"Orçamento #{orcamento.pk} marcado como {orcamento.get_status_display()}.{complemento}",
             mapa_publicado=bool(mapa and mapa.latitude and mapa.longitude),
+        )
+
+    def acao_refazer(self, request):
+        """Clona a proposta para negociar sem apagar a versão enviada."""
+        if not capacidades(request.user)["orcamentos_editar_comercial"]:
+            return self.erro(
+                request, "Somente o Comercial pode refazer uma proposta.", status=403,
+            )
+
+        anterior = self._orcamento_do_usuario(request, request.POST.get("id"))
+        if anterior.status == Orcamento.Status.RASCUNHO:
+            raise ErroDeFormulario("Este orçamento ainda é rascunho e pode ser editado.")
+        if hasattr(anterior, "ordem_servico"):
+            raise ErroDeFormulario(
+                "Esta proposta já originou uma O.S. e não pode ganhar outra "
+                "versão. Os dois históricos permanecem congelados e separados."
+            )
+        if hasattr(anterior, "orcamento_refeito"):
+            nova = anterior.orcamento_refeito
+            return self.sucesso(
+                request,
+                f"A versão {nova.versao} desta proposta já existe.",
+                id=nova.pk,
+            )
+
+        with transaction.atomic():
+            anterior = Orcamento.objects.select_for_update().get(pk=anterior.pk)
+            nova = Orcamento.objects.create(
+                cliente=anterior.cliente,
+                nome_cliente=anterior.nome_cliente,
+                contato=anterior.contato,
+                whatsapp_cliente=anterior.whatsapp_cliente,
+                email_cliente=anterior.email_cliente,
+                origem=anterior.origem,
+                validade=anterior.validade,
+                desconto=anterior.desconto,
+                frete=anterior.frete,
+                forma_pagamento=anterior.forma_pagamento,
+                forma_envio=anterior.forma_envio,
+                observacoes=anterior.observacoes,
+                responsavel=request.user,
+                orcamento_anterior=anterior,
+                versao=anterior.versao + 1,
+                status=Orcamento.Status.RASCUNHO,
+            )
+            ItemOrcamento.objects.bulk_create([
+                ItemOrcamento(
+                    orcamento=nova,
+                    descricao=item.descricao,
+                    brinquedo=item.brinquedo,
+                    produto=item.produto,
+                    peca=item.peca,
+                    quantidade=item.quantidade,
+                    valor_unitario=item.valor_unitario,
+                )
+                for item in anterior.itens.select_related(
+                    "brinquedo", "produto", "peca"
+                )
+            ])
+            anterior.status = Orcamento.Status.SUBSTITUIDO
+            anterior.save(update_fields=["status", "atualizado"])
+            self._reabrir_bloco(nova, AvaliacaoBlocoOrcamento.Bloco.COMERCIAL)
+            self._reabrir_bloco(nova, AvaliacaoBlocoOrcamento.Bloco.FINANCEIRO)
+
+        return self.sucesso(
+            request,
+            f"Versão {nova.versao} criada. Ajuste os itens ou descontos e envie novamente.",
+            id=nova.pk,
+        )
+
+    def acao_pagamento(self, request):
+        if not capacidades(request.user)["orcamentos_editar_financeiro"]:
+            return self.erro(
+                request, "Somente Financeiro ou Gestão registra pagamentos.", status=403,
+            )
+        orcamento = self._orcamento_do_usuario(request, request.POST.get("id"))
+        if orcamento.status != Orcamento.Status.APROVADO:
+            raise ErroDeFormulario(
+                "O pagamento só é registrado depois da aprovação definitiva."
+            )
+        valor = decimal_br(
+            request.POST.get("valor_pago"),
+            "Valor pago",
+            obrigatorio=True,
+            limite=Decimal("9999999999.99"),
+        )
+        orcamento.registrar_pagamento(
+            valor, texto(request, "observacao_pagamento", limite=240),
+        )
+        return self.sucesso(
+            request,
+            f"Pagamento do orçamento #{orcamento.pk} atualizado para "
+            f"{orcamento.get_status_pagamento_display().lower()}.",
+            status_pagamento=orcamento.status_pagamento,
+            valor_pago=f"{orcamento.valor_pago:.2f}".replace(".", ","),
+            saldo=f"{orcamento.saldo_pagamento:.2f}".replace(".", ","),
+        )
+
+    def acao_gerar_ordem_servico(self, request):
+        """Libera a execução somente a partir da proposta aprovada."""
+        if not capacidades(request.user)["ordens_servico"]:
+            return self.erro(request, "Você não tem acesso às ordens de serviço.", status=403)
+        orcamento = self._orcamento_do_usuario(request, request.POST.get("id"))
+        if orcamento.status != Orcamento.Status.APROVADO:
+            raise ErroDeFormulario(
+                "A Ordem de Serviço só pode ser gerada após a aprovação definitiva."
+            )
+        if hasattr(orcamento, "ordem_servico"):
+            ordem = orcamento.ordem_servico
+        else:
+            with transaction.atomic():
+                ordem = OrdemServico.objects.create(
+                    orcamento=orcamento,
+                    cliente=orcamento.cliente,
+                    nome_cliente=orcamento.nome_cliente,
+                    contato=orcamento.contato,
+                    whatsapp_cliente=orcamento.whatsapp_destinatario,
+                    email_cliente=orcamento.email_destinatario,
+                    tipo=OrdemServico.Tipo.INSTALACAO,
+                    equipamento=", ".join(
+                        item.descricao for item in orcamento.itens.all()[:4]
+                    )[:180] or "Serviço conforme proposta",
+                    forma_pagamento=orcamento.forma_pagamento,
+                    responsavel=request.user,
+                )
+                ItemOrdemServico.objects.bulk_create([
+                    ItemOrdemServico(
+                        ordem=ordem,
+                        tipo=ItemOrdemServico.Tipo.OUTRO,
+                        descricao=item.descricao,
+                        quantidade=Decimal(item.quantidade),
+                        valor_unitario=item.valor_unitario,
+                    )
+                    for item in orcamento.itens.all()
+                ])
+        return self.sucesso(
+            request,
+            f"{ordem.numero_documento} pronta para completar e enviar.",
+            id=ordem.pk,
+            url=reverse("ordens_servico_inner", urlconf="sistema_interno.urls")
+            + f"?q={ordem.pk}",
         )
 
     def acao_avaliar_bloco(self, request):
@@ -1439,7 +1687,9 @@ class EstadoOrcamentosView(OrcamentoInternoRequiredMixin, View):
     COR = {
         Orcamento.Status.APROVADO: "success",
         Orcamento.Status.RECUSADO: "danger",
-        Orcamento.Status.ENVIADO: "info",
+        Orcamento.Status.AGUARDANDO_RESPOSTA: "info",
+        Orcamento.Status.EM_NEGOCIACAO: "warning",
+        Orcamento.Status.SUBSTITUIDO: "neutral",
         Orcamento.Status.EXPIRADO: "warning",
     }
 

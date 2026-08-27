@@ -25,7 +25,7 @@ from django.utils import timezone
 
 from core.models import Manutencao, Pedido, Venda
 
-from .models import EstoqueMaterial, Orcamento, OrdemProducao
+from .models import EstoqueMaterial, Orcamento, OrdemProducao, OrdemServico
 from .permissoes import GESTAO, capacidades, limitar_orcamentos, tem_funcao
 
 #: Rotas do painel. Passado na mão porque um pedido que chegue por fora
@@ -143,7 +143,7 @@ def _respostas_de_cliente(user, agora):
             titulo="Proposta aprovada" if aprovados == 1 else "Propostas aprovadas",
             detalhe="O cliente aprovou. Combine data e montagem.",
             quantidade=aprovados,
-            url=reverse("orcamentos_inner", urlconf=URLCONF) + "?status=aprovado",
+            url=reverse("orcamentos_inner", urlconf=URLCONF) + "?filtro=aprovados",
             nivel="novidade",
             icone="bi-patch-check",
         ))
@@ -154,7 +154,7 @@ def _respostas_de_cliente(user, agora):
             titulo="Proposta recusada" if recusados == 1 else "Propostas recusadas",
             detalhe="Vale ler o motivo antes de refazer.",
             quantidade=recusados,
-            url=reverse("orcamentos_inner", urlconf=URLCONF) + "?status=recusado",
+            url=reverse("orcamentos_inner", urlconf=URLCONF) + "?filtro=recusados",
             nivel="info",
             icone="bi-emoji-frown",
         ))
@@ -205,6 +205,19 @@ def _operacao(acesso):
                 url=reverse("manutencao_inner", urlconf=URLCONF),
                 nivel="atencao",
                 icone="bi-wrench-adjustable",
+            ))
+
+    if acesso["ordens_servico"]:
+        ordens = OrdemServico.objects.filter(status__in=OrdemServico.ABERTAS).count()
+        if ordens:
+            avisos.append(Aviso(
+                chave="ordens_servico",
+                titulo="O.S. em aberto" if ordens == 1 else "Ordens de Serviço em aberto",
+                detalhe="Execução, agenda ou peça ainda pendente.",
+                quantidade=ordens,
+                url=reverse("ordens_servico_inner", urlconf=URLCONF),
+                nivel="atencao",
+                icone="bi-clipboard2-pulse",
             ))
 
     return avisos

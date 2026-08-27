@@ -23,83 +23,39 @@
   </div>
 </section>
 
-<section class="ls-metrics">
-  <article class="ls-metric-card blue">
-    <div class="ls-metric-head">
-      <span class="ls-metric-label">Orçamentos listados</span>
-      <span class="ls-metric-icon"><i class="bi bi-file-earmark-text"></i></span>
-    </div>
-    <strong class="ls-metric-value">{{ total_orcamentos }}</strong>
-    <span class="ls-metric-note">
-      {{ quantidade_interno }} interno(s) · {{ quantidade_ambulante }} ambulante(s)
-    </span>
-  </article>
-
-  <article class="ls-metric-card yellow">
-    <div class="ls-metric-head">
-      <span class="ls-metric-label">Em aberto</span>
-      <span class="ls-metric-icon"><i class="bi bi-hourglass-split"></i></span>
-    </div>
-    <strong class="ls-metric-value">R$ {{ total_em_aberto|moeda }}</strong>
-    <span class="ls-metric-note">{{ quantidade_aberto }} proposta(s) aguardando resposta</span>
-  </article>
-
-  <article class="ls-metric-card green">
-    <div class="ls-metric-head">
-      <span class="ls-metric-label">Aprovado</span>
-      <span class="ls-metric-icon"><i class="bi bi-check2-circle"></i></span>
-    </div>
-    <strong class="ls-metric-value">R$ {{ total_aprovado|moeda }}</strong>
-    <span class="ls-metric-note">{{ quantidade_aprovado }} orçamento(s) fechado(s)</span>
-  </article>
-
-  <article class="ls-metric-card violet">
-    <div class="ls-metric-head">
-    <span class="ls-metric-label">Itens disponíveis</span>
-      <span class="ls-metric-icon"><i class="bi bi-diagram-3"></i></span>
-    </div>
-    <strong class="ls-metric-value">{{ total_itens_disponiveis }}</strong>
-    <span class="ls-metric-note">Brinquedos, peças e produtos prontos para orçar</span>
-  </article>
+<section class="ls-budget-card-filters" aria-label="Filtrar orçamentos por fase">
+  {% for chave, rotulo, quantidade, icone in cards %}
+    <a class="ls-budget-filter-card {% if filtro_ativo == chave %}active{% endif %}"
+       href="?filtro={{ chave }}{% if busca %}&q={{ busca|urlencode }}{% endif %}"
+       aria-current="{% if filtro_ativo == chave %}page{% else %}false{% endif %}">
+      <span><i class="bi {{ icone }}"></i></span>
+      <strong>{{ quantidade }}</strong>
+      <small>{{ rotulo }}</small>
+    </a>
+  {% endfor %}
 </section>
 
-<section class="ls-filter-panel">
-  <form method="get" class="row g-3 align-items-end">
-    <div class="col-12 col-xl-5">
-      <label class="form-label" for="filtroBusca">Buscar</label>
-      <input id="filtroBusca" name="q" value="{{ busca }}" class="form-control"
-             placeholder="Cliente, contato, item ou observação">
-    </div>
-    <div class="col-6 col-md-4 col-xl-3">
-      <label class="form-label" for="filtroStatus">Situação</label>
-      <select id="filtroStatus" name="status" class="form-select">
-        <option value="">Todas</option>
-        {% for valor, rotulo in status_opcoes %}
-          <option value="{{ valor }}" {% if status_ativo == valor %}selected{% endif %}>{{ rotulo }}</option>
-        {% endfor %}
-      </select>
-    </div>
-    <div class="col-6 col-md-4 col-xl-2">
-      <label class="form-label" for="filtroOrigem">Origem</label>
-      <select id="filtroOrigem" name="origem" class="form-select">
-        <option value="">Todas</option>
-        {% for valor, rotulo in origem_opcoes %}
-          <option value="{{ valor }}" {% if origem_ativa == valor %}selected{% endif %}>{{ rotulo }}</option>
-        {% endfor %}
-      </select>
-    </div>
-    <div class="col-12 col-md-4 col-xl-2 d-grid">
-      <button type="submit" class="btn btn-primary"><i class="bi bi-funnel me-1"></i> Filtrar</button>
-    </div>
-  </form>
+<section class="ls-budget-money-strip">
+  <div><span>Em propostas abertas</span><strong>R$ {{ total_em_aberto|moeda }}</strong></div>
+  <div><span>Aprovado</span><strong>R$ {{ total_aprovado|moeda }}</strong></div>
+  <div class="success"><span>Recebido</span><strong>R$ {{ total_recebido|moeda }}</strong></div>
+  <div class="warning"><span>A receber</span><strong>R$ {{ total_a_receber|moeda }}</strong></div>
 </section>
 
 <section class="ls-data-panel">
   <div class="ls-data-header">
     <div>
       <h2>Propostas</h2>
-      <p>Clique em editar para abrir a proposta com todos os itens.</p>
+      <p>Enviada não é sobrescrita: use Refazer para criar outra versão.</p>
     </div>
+    <form method="get" class="ls-budget-search">
+      <input type="hidden" name="filtro" value="{{ filtro_ativo }}">
+      <div class="input-group">
+        <input name="q" value="{{ busca }}" class="form-control"
+               placeholder="Cliente, número, item ou contato" aria-label="Buscar orçamentos">
+        <button class="btn btn-primary" type="submit"><i class="bi bi-search"></i></button>
+      </div>
+    </form>
   </div>
 
   <div class="ls-data-body">
@@ -112,6 +68,7 @@
             <th>Origem</th>
             <th class="text-end">Itens</th>
             <th class="text-end">Total</th>
+            <th>Pagamento</th>
             <th>Validade</th>
             <th>Situação</th>
             <th>Revisão dos blocos</th>
@@ -121,7 +78,10 @@
         <tbody>
           {% for orcamento in orcamentos %}
             <tr>
-              <td data-rotulo="#"><span class="ls-number">{{ orcamento.id }}</span></td>
+              <td data-rotulo="#">
+                <span class="ls-number">{{ orcamento.id }}</span>
+                <span class="material-sub d-block">versão {{ orcamento.versao }}</span>
+              </td>
               <td data-rotulo="Cliente">
                 <span class="material-nome">{{ orcamento.destinatario }}</span>
                 {% if orcamento.contato %}
@@ -143,6 +103,12 @@
               <td data-rotulo="Total" class="text-end">
                 <span class="ls-money">R$ {{ orcamento.total|moeda }}</span>
               </td>
+              <td data-rotulo="Pagamento">
+                <span class="ls-status {% if orcamento.status_pagamento == 'pago' %}success{% elif orcamento.status_pagamento == 'parcial' %}warning{% else %}neutral{% endif %}">
+                  {{ orcamento.get_status_pagamento_display }}
+                </span>
+                {% if orcamento.valor_pago %}<span class="material-sub d-block mt-1">R$ {{ orcamento.valor_pago|moeda }} recebido</span>{% endif %}
+              </td>
               <td data-rotulo="Validade">
                 {% if orcamento.validade %}
                   {{ orcamento.validade|date:"d/m/Y" }}
@@ -161,7 +127,8 @@
                 <span class="ls-status
                   {% if orcamento.status == 'aprovado' %}success
                   {% elif orcamento.status == 'recusado' %}danger
-                  {% elif orcamento.status == 'enviado' %}info
+                  {% elif orcamento.status == 'aguardando_resposta' %}info
+                  {% elif orcamento.status == 'em_negociacao' %}warning
                   {% elif orcamento.status == 'expirado' %}warning
                   {% else %}neutral{% endif %}" data-situacao-selo>
                   {{ orcamento.get_status_display }}
@@ -199,8 +166,9 @@
                 </a>
                 <button type="button" class="btn btn-sm btn-outline-secondary"
                         data-editar="{{ orcamento.id }}"
-                        aria-label="Editar orçamento {{ orcamento.id }}" title="Editar orçamento">
-                  <i class="bi bi-pencil"></i><span class="ls-action-label">Editar</span>
+                        aria-label="{% if orcamento.pode_editar %}Editar{% else %}Consultar{% endif %} orçamento {{ orcamento.id }}"
+                        title="{% if orcamento.pode_editar %}Editar rascunho{% else %}Consultar versão preservada{% endif %}">
+                  <i class="bi {% if orcamento.pode_editar %}bi-pencil{% else %}bi-search{% endif %}"></i><span class="ls-action-label">{% if orcamento.pode_editar %}Editar{% else %}Ver{% endif %}</span>
                 </button>
                 {% if pode_editar_comercial %}<button type="button" class="btn btn-sm btn-outline-primary"
                         data-enviar="{{ orcamento.id }}"
@@ -217,7 +185,31 @@
                   <i class="bi bi-send"></i>
                   <span class="ls-action-label">{% if orcamento.enviado_em %}Link{% else %}Enviar{% endif %}</span>
                 </button>{% endif %}
-                {% if pode_editar_comercial %}<button type="button" class="btn btn-sm btn-outline-secondary"
+                {% if pode_editar_comercial and not orcamento.pode_editar and orcamento.status != 'substituido' and not orcamento.orcamento_refeito and not orcamento.ordem_servico %}
+                <form method="post" class="d-inline" action="{% url 'orcamentos_inner' %}">
+                  {% csrf_token %}<input type="hidden" name="action" value="refazer"><input type="hidden" name="id" value="{{ orcamento.id }}">
+                  <button class="btn btn-sm btn-outline-warning" type="submit" title="Criar nova versão para negociar">
+                    <i class="bi bi-arrow-repeat"></i><span class="ls-action-label">Refazer</span>
+                  </button>
+                </form>
+                {% endif %}
+                {% if pode_editar_financeiro and orcamento.status == 'aprovado' %}
+                <button type="button" class="btn btn-sm btn-outline-success"
+                        data-pagamento="{{ orcamento.id }}" data-total="{{ orcamento.total }}"
+                        data-pago="{{ orcamento.valor_pago }}" data-nome="#{{ orcamento.id }} — {{ orcamento.destinatario }}"
+                        title="Registrar valor recebido">
+                  <i class="bi bi-cash-coin"></i><span class="ls-action-label">Pagamento</span>
+                </button>
+                {% endif %}
+                {% if pode_ordens_servico and orcamento.status == 'aprovado' %}
+                <form method="post" class="d-inline" action="{% url 'orcamentos_inner' %}">
+                  {% csrf_token %}<input type="hidden" name="action" value="gerar_ordem_servico"><input type="hidden" name="id" value="{{ orcamento.id }}">
+                  <button class="btn btn-sm btn-outline-primary" type="submit" title="Liberar execução na Ordem de Serviço">
+                    <i class="bi bi-clipboard2-check"></i><span class="ls-action-label">Gerar O.S.</span>
+                  </button>
+                </form>
+                {% endif %}
+                {% if pode_editar_comercial and not orcamento.ordem_servico %}<button type="button" class="btn btn-sm btn-outline-secondary"
                         data-situacao="{{ orcamento.id }}"
                         data-nome="#{{ orcamento.id }} — {{ orcamento.destinatario }}"
                         data-status="{{ orcamento.status }}"
@@ -243,7 +235,7 @@
             </tr>
           {% empty %}
             <tr>
-              <td colspan="9">
+              <td colspan="10">
                 <div class="ls-empty">
                   <i class="bi bi-file-earmark-text"></i>
                   Nenhum orçamento encontrado. Comece criando o primeiro.
@@ -267,7 +259,7 @@
       <nav class="ls-paginacao" aria-label="Páginas">
         {% if page_obj.has_previous %}
           <a class="btn btn-sm btn-outline-secondary"
-             href="?page={{ page_obj.previous_page_number }}&q={{ busca|urlencode }}&status={{ status_ativo }}&origem={{ origem_ativa }}">Anterior</a>
+             href="?page={{ page_obj.previous_page_number }}&q={{ busca|urlencode }}&filtro={{ filtro_ativo }}">Anterior</a>
         {% endif %}
         <span>
           Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
@@ -275,7 +267,7 @@
         </span>
         {% if page_obj.has_next %}
           <a class="btn btn-sm btn-outline-secondary"
-             href="?page={{ page_obj.next_page_number }}&q={{ busca|urlencode }}&status={{ status_ativo }}&origem={{ origem_ativa }}">Próxima</a>
+             href="?page={{ page_obj.next_page_number }}&q={{ busca|urlencode }}&filtro={{ filtro_ativo }}">Próxima</a>
         {% endif %}
       </nav>
     {% endif %}
@@ -339,9 +331,10 @@
 
           <div class="col-12 col-md-4">
             <label class="form-label" for="orcamentoStatus">Situação</label>
-            <select class="form-select" id="orcamentoStatus" name="status">
+            <select class="form-select" id="orcamentoStatus" disabled>
               {% for valor, rotulo in status_opcoes %}<option value="{{ valor }}">{{ rotulo }}</option>{% endfor %}
             </select>
+            <span class="form-text">A fase muda pelo envio ou pela resposta; não é edição manual.</span>
           </div>
 
           <div class="col-12 col-md-4">
@@ -475,7 +468,7 @@
 
       <div class="modal-footer">
         <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-        <button type="submit" class="btn btn-success">Salvar orçamento</button>
+        <button type="submit" class="btn btn-success" id="salvarOrcamento">Salvar orçamento</button>
       </div>
     </form>
   </div>
@@ -872,12 +865,46 @@ Cadastro mínimo de propósito: nome, valor e categoria. Foto e texto de
         <p class="mb-3"><strong id="situacaoNome"></strong></p>
         <label class="form-label" for="situacaoStatus">Nova situação</label>
         <select class="form-select" id="situacaoStatus" name="status">
-          {% for valor, rotulo in status_opcoes %}<option value="{{ valor }}">{{ rotulo }}</option>{% endfor %}
+          {% for valor, rotulo in status_opcoes %}
+            {% if valor == 'aprovado' or valor == 'recusado' or valor == 'expirado' or valor == 'em_negociacao' %}
+              <option value="{{ valor }}">{{ rotulo }}</option>
+            {% endif %}
+          {% endfor %}
         </select>
+        <label class="form-label mt-3" for="situacaoMotivo">Motivo ou observação</label>
+        <textarea class="form-control" id="situacaoMotivo" name="motivo" rows="3"
+                  placeholder="Ex.: cliente pediu desconto e troca de um item"></textarea>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
         <button type="submit" class="btn btn-primary">Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ================= MODAL: registrar pagamento ================= -->
+<div class="modal fade" id="modalPagamento" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <form class="modal-content" id="formPagamento" method="post" action="{% url 'orcamentos_inner' %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="pagamento">
+      <input type="hidden" name="id" id="pagamentoId">
+      <div class="modal-header">
+        <div><span class="ls-modal-kicker">Financeiro</span><h5 class="modal-title" id="pagamentoNome">Registrar pagamento</h5></div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body">
+        <div id="pagamentoErro" class="alert alert-danger d-none"></div>
+        <div class="alert alert-light border" id="pagamentoResumo"></div>
+        <label class="form-label" for="pagamentoValor">Valor total recebido até agora</label>
+        <div class="input-group mb-3"><span class="input-group-text">R$</span><input class="form-control" id="pagamentoValor" name="valor_pago" inputmode="decimal" data-mascara="moeda" required></div>
+        <label class="form-label" for="pagamentoObservacao">Observação</label>
+        <input class="form-control" id="pagamentoObservacao" name="observacao_pagamento" maxlength="240" placeholder="Ex.: sinal via Pix em 27/08">
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-success"><i class="bi bi-check2-circle me-1"></i> Atualizar pagamento</button>
       </div>
     </form>
   </div>
@@ -1525,7 +1552,7 @@ document.addEventListener("DOMContentLoaded", function () {
     Painel.valor("orcamentoId", orcamento ? orcamento.id : "");
 
     document.getElementById("orcamentoTitulo").textContent = orcamento
-      ? "Orçamento #" + orcamento.id
+      ? "Orçamento #" + orcamento.id + " · versão " + orcamento.versao
       : "Novo orçamento";
     mostrarOrigem(orcamento);
 
@@ -1557,35 +1584,37 @@ document.addEventListener("DOMContentLoaded", function () {
     if (!corpo.children.length) novaLinha(null);
 
     recalcular();
-    aplicarPermissoesEdicao();
+    aplicarPermissoesEdicao(!orcamento || orcamento.pode_editar);
     Painel.abrir("modalOrcamento");
   }
 
-  function aplicarPermissoesEdicao() {
+  function aplicarPermissoesEdicao(mutavel) {
     [
       "orcamentoNome", "orcamentoContato", "orcamentoWhatsapp",
       "orcamentoEmail", "orcamentoStatus", "orcamentoValidade",
       "orcamentoEnvio", "orcamentoObs", "addItem", "novoBrinquedo", "novaPeca"
     ].forEach(function (id) {
       var campo = document.getElementById(id);
-      if (campo) campo.disabled = !podeEditarComercial;
+      if (campo) campo.disabled = !mutavel || !podeEditarComercial;
     });
     [
       "orcamentoFrete", "orcamentoDesconto", "descontoUnidade",
       "descontoRedondo", "descontoZerar", "orcamentoPagamento"
     ].forEach(function (id) {
       var campo = document.getElementById(id);
-      if (campo) campo.disabled = !podeEditarFinanceiro;
+      if (campo) campo.disabled = !mutavel || !podeEditarFinanceiro;
     });
     document.querySelectorAll("[data-desconto-pct]").forEach(function (campo) {
-      campo.disabled = !podeEditarFinanceiro;
+      campo.disabled = !mutavel || !podeEditarFinanceiro;
     });
     corpo.querySelectorAll("input, button").forEach(function (campo) {
-      campo.disabled = !podeEditarComercial;
+      campo.disabled = !mutavel || !podeEditarComercial;
     });
     buscasDeItem.forEach(function (busca) {
-      busca.entrada.disabled = !podeEditarComercial;
+      busca.entrada.disabled = !mutavel || !podeEditarComercial;
     });
+    var salvar = document.getElementById("salvarOrcamento");
+    if (salvar) salvar.hidden = !mutavel;
   }
 
   var botaoNovoOrcamento = document.getElementById("novoOrcamento");
@@ -1663,12 +1692,27 @@ document.addEventListener("DOMContentLoaded", function () {
       Painel.erro("situacaoErro", "");
       Painel.valor("situacaoId", b.dataset.situacao);
       Painel.valor("situacaoStatus", b.dataset.status);
+      Painel.valor("situacaoMotivo", "");
       document.getElementById("situacaoNome").textContent = b.dataset.nome;
       Painel.abrir("modalSituacao");
     });
   });
 
   Painel.ligar({ form: "formSituacao", erro: "situacaoErro" });
+
+  document.querySelectorAll("[data-pagamento]").forEach(function (botao) {
+    botao.addEventListener("click", function () {
+      Painel.erro("pagamentoErro", "");
+      Painel.valor("pagamentoId", botao.dataset.pagamento);
+      Painel.valor("pagamentoValor", String(botao.dataset.pago || "0").replace(".", ","));
+      Painel.valor("pagamentoObservacao", "");
+      document.getElementById("pagamentoNome").textContent = botao.dataset.nome;
+      document.getElementById("pagamentoResumo").textContent =
+        "Total da proposta: R$ " + String(botao.dataset.total || "0").replace(".", ",");
+      Painel.abrir("modalPagamento");
+    });
+  });
+  Painel.ligar({ form: "formPagamento", erro: "pagamentoErro" });
 
   var formAvaliacao = document.getElementById("formAvaliacaoBloco");
   if (formAvaliacao) {

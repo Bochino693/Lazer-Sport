@@ -43,7 +43,7 @@ class OrcamentoPublicoTests(TestCase):
         self.orcamento = Orcamento.objects.create(
             nome_cliente="Fulano de Tal",
             contato="11 90000-0000",
-            status=Orcamento.Status.ENVIADO,
+            status=Orcamento.Status.AGUARDANDO_RESPOSTA,
             validade=timezone.localdate() + timedelta(days=7),
             frete=Decimal("100.00"),
             desconto=Decimal("50.00"),
@@ -235,7 +235,7 @@ class OrcamentoPublicoTests(TestCase):
     def test_cada_orcamento_tem_token_proprio(self):
         outro = Orcamento.objects.create(
             nome_cliente="Sicrano",
-            status=Orcamento.Status.ENVIADO,
+            status=Orcamento.Status.AGUARDANDO_RESPOSTA,
         )
         self.assertNotEqual(outro.token, self.orcamento.token)
 
@@ -322,7 +322,7 @@ class OrcamentoPublicoTests(TestCase):
 
         self.assertEqual(resposta.status_code, 400)
         self.orcamento.refresh_from_db()
-        self.assertEqual(self.orcamento.status, Orcamento.Status.ENVIADO)
+        self.assertEqual(self.orcamento.status, Orcamento.Status.AGUARDANDO_RESPOSTA)
 
     def test_decisao_invalida_nao_registra(self):
         resposta = self.client.post(
@@ -332,7 +332,7 @@ class OrcamentoPublicoTests(TestCase):
 
         self.assertEqual(resposta.status_code, 400)
         self.orcamento.refresh_from_db()
-        self.assertEqual(self.orcamento.status, Orcamento.Status.ENVIADO)
+        self.assertEqual(self.orcamento.status, Orcamento.Status.AGUARDANDO_RESPOSTA)
 
     def test_resposta_e_definitiva(self):
         """Aprovada, a proposta não vira recusada por um segundo clique."""
@@ -349,7 +349,7 @@ class OrcamentoPublicoTests(TestCase):
         self.client.post(self.url(), {"decisao": "aprovar", "nome": "Fulano"})
 
         self.orcamento.refresh_from_db()
-        self.assertEqual(self.orcamento.status, Orcamento.Status.ENVIADO)
+        self.assertEqual(self.orcamento.status, Orcamento.Status.AGUARDANDO_RESPOSTA)
 
     def test_vencido_ainda_pode_ser_consultado(self):
         """Vencer tira o botão, não a proposta: o cliente ainda quer ver."""
@@ -386,7 +386,7 @@ class OrcamentoModeloTests(TestCase):
         orcamento.marcar_enviado()
         primeira = orcamento.enviado_em
 
-        self.assertEqual(orcamento.status, Orcamento.Status.ENVIADO)
+        self.assertEqual(orcamento.status, Orcamento.Status.AGUARDANDO_RESPOSTA)
         self.assertIsNotNone(primeira)
 
         # reenviar não reescreve a data: o que interessa é quando a

@@ -24,7 +24,7 @@
   <div class="ls-data-body">
     <div class="table-responsive">
       <table class="ls-table">
-        <thead><tr><th>ID</th><th>Equipamento</th><th>Status</th><th>Local</th><th>Contato</th><th>Aberta em</th></tr></thead>
+        <thead><tr><th>ID</th><th>Equipamento</th><th>Status</th><th>Local</th><th>Contato</th><th>Aberta em</th><th class="text-end">Ação</th></tr></thead>
         <tbody>
           {% for m in manutencoes %}
             <tr>
@@ -45,9 +45,10 @@
               <td>{{ m.cidade|default:"—" }}{% if m.estado %}/{{ m.estado }}{% endif %}</td>
               <td>{{ m.telefone_contato|default:"—" }}</td>
               <td>{{ m.criado_em|date:"d/m/Y H:i" }}</td>
+              <td class="text-end"><a class="btn btn-sm btn-outline-primary" href="{% url 'ordens_servico_inner' %}?novo=1&manutencao={{ m.id }}"><i class="bi bi-clipboard2-plus me-1"></i>Gerar O.S.</a></td>
             </tr>
           {% empty %}
-            <tr><td colspan="6"><div class="ls-empty"><i class="bi bi-wrench"></i>Nenhuma manutenção registrada.</div></td></tr>
+            <tr><td colspan="7"><div class="ls-empty"><i class="bi bi-wrench"></i>Nenhuma manutenção registrada.</div></td></tr>
           {% endfor %}
         </tbody>
       </table>

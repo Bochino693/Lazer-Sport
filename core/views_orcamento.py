@@ -32,6 +32,7 @@ from django.views.generic import View
 
 from core.models import EnderecoEmpresa
 from sistema_interno.models import Orcamento
+from sistema_interno.pix import dados_pix
 from sistema_interno.utils import endereco_do_site
 
 
@@ -118,7 +119,7 @@ def contexto_orcamento(orcamento, *, previsualizacao=False, request=None):
     elif request is not None and not imagem_previa.startswith("http"):
         imagem_previa = request.build_absolute_uri(imagem_previa)
 
-    return {
+    contexto = {
         "orcamento": orcamento,
         "itens": itens,
         "imagem_previa": imagem_previa,
@@ -152,11 +153,17 @@ def contexto_orcamento(orcamento, *, previsualizacao=False, request=None):
         # ou explicar por que eles não estão lá.
         "pode_responder": (
             not previsualizacao
-            and orcamento.status in Orcamento.EM_ABERTO
+            and orcamento.status == Orcamento.Status.AGUARDANDO_RESPOSTA
             and not orcamento.vencido
         ),
         "hoje": timezone.localdate(),
     }
+    contexto.update(dados_pix(orcamento) if orcamento.status == Orcamento.Status.APROVADO else {
+        "pix_configurado": False,
+        "pix_copia_cola": "",
+        "pix_qr": "",
+    })
+    return contexto
 
 
 class OrcamentoPublicoView(View):
@@ -191,8 +198,8 @@ class OrcamentoPublicoView(View):
             return redirect("orcamento_publico", token=token)
 
         decisao = (request.POST.get("decisao") or "").strip()
-        if decisao not in ("aprovar", "recusar"):
-            contexto["erro"] = "Escolha aprovar ou recusar a proposta."
+        if decisao not in ("aprovar", "ajustes", "recusar"):
+            contexto["erro"] = "Escolha aprovar, pedir ajustes ou recusar a proposta."
             return render(request, self.template_name, contexto, status=400)
 
         nome = (request.POST.get("nome") or "").strip()
@@ -201,11 +208,27 @@ class OrcamentoPublicoView(View):
             contexto["decisao_tentada"] = decisao
             return render(request, self.template_name, contexto, status=400)
 
-        orcamento.registrar_resposta(
-            aprovado=decisao == "aprovar",
-            nome=nome,
-            motivo=request.POST.get("motivo") or "",
-        )
+        if decisao == "ajustes":
+            orcamento.status = Orcamento.Status.EM_NEGOCIACAO
+            orcamento.respondido_em = timezone.now()
+            orcamento.respondido_por = nome[:120]
+            orcamento.motivo_negociacao = (
+                request.POST.get("motivo") or ""
+            ).strip()
+            if not orcamento.motivo_negociacao:
+                contexto["erro"] = "Conte o que precisa mudar para prepararmos outra versão."
+                contexto["decisao_tentada"] = decisao
+                return render(request, self.template_name, contexto, status=400)
+            orcamento.save(update_fields=[
+                "status", "respondido_em", "respondido_por",
+                "motivo_negociacao", "atualizado",
+            ])
+        else:
+            orcamento.registrar_resposta(
+                aprovado=decisao == "aprovar",
+                nome=nome,
+                motivo=request.POST.get("motivo") or "",
+            )
 
         # O TELEFONE DA EQUIPE TOCA AGORA.
         #

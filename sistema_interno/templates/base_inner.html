@@ -186,13 +186,22 @@
       </div>
       {% endif %}
 
-      {% if permissoes_interno.manutencoes %}
+      {% if permissoes_interno.manutencoes or permissoes_interno.ordens_servico %}
       <div class="ls-nav-section">
         <span class="ls-nav-caption">Operação</span>
+        {% if permissoes_interno.ordens_servico %}
+        <a data-titulo="Ordens de Serviço" class="ls-nav-item {% if request.resolver_match.url_name == 'ordens_servico_inner' or request.resolver_match.url_name == 'ordem_servico_previa_inner' %}active{% endif %}" href="{% url 'ordens_servico_inner' %}">
+          <span class="ls-nav-icon"><i class="bi bi-clipboard2-check-fill"></i></span>
+          <span>Ordens de Serviço</span>
+          <span class="ls-nav-count" data-selo="count_ordens_servico" {% if not count_ordens_servico %}hidden{% endif %}>{{ count_ordens_servico }}</span>
+        </a>
+        {% endif %}
+        {% if permissoes_interno.manutencoes %}
         <a data-titulo="Manutenções" class="ls-nav-item {% if request.resolver_match.url_name == 'manutencao_inner' %}active{% endif %}" href="{% url 'manutencao_inner' %}">
           <span class="ls-nav-icon"><i class="bi bi-wrench-adjustable-circle-fill"></i></span>
           <span>Manutenções</span>
         </a>
+        {% endif %}
       </div>
       {% endif %}
 

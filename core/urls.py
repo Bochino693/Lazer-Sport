@@ -10,6 +10,7 @@ from .views_favoritos import (
 )
 from .views_gestao_produtos import EngajamentoAdminView, PecaAdminView
 from .views_orcamento import orcamento_publico
+from .views_ordem_servico import ordem_servico_publica
 from .views_redirects import redirecionar_interno
 from .sitemaps import (
     PaginasEstaticasSitemap,
@@ -344,6 +345,11 @@ urlpatterns = [
         "orcamento/<str:token>/",
         orcamento_publico,
         name="orcamento_publico",
+    ),
+    path(
+        "ordem-servico/<str:token>/",
+        ordem_servico_publica,
+        name="ordem_servico_publica",
     ),
 
     # O ÍCONE DA ABA, ANTES DO CURINGA.

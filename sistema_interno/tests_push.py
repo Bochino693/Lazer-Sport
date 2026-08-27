@@ -220,7 +220,7 @@ class AvisoDaRespostaTests(TestCase):
         self.orcamento = Orcamento.objects.create(
             nome_cliente="Festa da Ana",
             contato="(11) 90000-0000",
-            status=Orcamento.Status.ENVIADO,
+            status=Orcamento.Status.AGUARDANDO_RESPOSTA,
         )
         ItemOrcamento.objects.create(
             orcamento=self.orcamento, descricao="Cama elástica",

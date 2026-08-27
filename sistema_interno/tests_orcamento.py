@@ -199,7 +199,7 @@ class OrcamentoInternoTests(TestCase):
         orcamento = Orcamento.objects.create(
             nome_cliente="Festa da Ana",
             contato="(11) 90000-0000",
-            status=Orcamento.Status.ENVIADO,
+            status=Orcamento.Status.AGUARDANDO_RESPOSTA,
         )
 
         # O cliente responde, como responderia pela página pública.
@@ -614,7 +614,7 @@ class OrcamentoInternoTests(TestCase):
                 responsavel=self.gestor,
             )
             for status in (
-                Orcamento.Status.ENVIADO,
+                Orcamento.Status.AGUARDANDO_RESPOSTA,
                 Orcamento.Status.APROVADO,
                 Orcamento.Status.RECUSADO,
                 Orcamento.Status.EXPIRADO,
@@ -650,7 +650,7 @@ class OrcamentoInternoTests(TestCase):
         self.assertNotIn("interno.", dados["link"])
 
         orcamento.refresh_from_db()
-        self.assertEqual(orcamento.status, Orcamento.Status.ENVIADO)
+        self.assertEqual(orcamento.status, Orcamento.Status.AGUARDANDO_RESPOSTA)
         self.assertIsNotNone(orcamento.enviado_em)
 
         # O endereço devolvido não é apenas uma string bonita: a própria
@@ -913,12 +913,12 @@ class OrcamentoInternoTests(TestCase):
     def test_tela_separa_os_que_vencem_em_ate_tres_dias(self):
         perto = Orcamento.objects.create(
             nome_cliente="Vence logo",
-            status=Orcamento.Status.ENVIADO,
+            status=Orcamento.Status.AGUARDANDO_RESPOSTA,
             validade=timezone.localdate() + timedelta(days=2),
         )
         longe = Orcamento.objects.create(
             nome_cliente="Tem tempo",
-            status=Orcamento.Status.ENVIADO,
+            status=Orcamento.Status.AGUARDANDO_RESPOSTA,
             validade=timezone.localdate() + timedelta(days=20),
         )
         aprovado = Orcamento.objects.create(

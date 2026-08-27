@@ -40,7 +40,7 @@ from .models import (
     CategoriaDespesa, DespesasMensais, FinanceiroMensal,
     ExecucaoEtapaProducao, Fornecedor, GuiaEtapaProducao,
     HistoricoProducao, ImagemGuiaProducao, MovimentoEstoque,
-    Orcamento, OrdemProducao, ProdutoInterno,
+    Orcamento, OrdemProducao, OrdemServico, ProdutoInterno,
 )
 
 # Inline para endereços dentro do Cliente
@@ -177,6 +177,25 @@ class OrcamentoAdmin(admin.ModelAdmin):
         "responsavel__username", "responsavel__first_name",
     )
     autocomplete_fields = ("cliente", "responsavel")
+
+
+@admin.register(OrdemServico)
+class OrdemServicoAdmin(admin.ModelAdmin):
+    list_display = (
+        "numero_documento", "destinatario", "tipo", "status",
+        "status_pagamento", "tecnico", "criacao",
+    )
+    list_filter = ("tipo", "status", "status_pagamento", "prioridade", "criacao")
+    search_fields = (
+        "nome_cliente", "cliente__nome_cliente", "equipamento",
+        "numero_serie", "defeito_relatado",
+    )
+    autocomplete_fields = (
+        "cliente", "orcamento", "manutencao", "tecnico", "responsavel",
+    )
+    readonly_fields = (
+        "token", "enviada_em", "cliente_ciente_em", "cliente_ciente_por",
+    )
 
 
 @admin.register(AvaliacaoBlocoOrcamento)

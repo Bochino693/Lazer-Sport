@@ -241,21 +241,25 @@ DATABASES = {
         SUPABASE_DATABASE_URL,
         conn_max_age=DB_CONN_MAX_AGE,
         conn_health_checks=DB_CONN_MAX_AGE > 0,
-        ssl_require=True,
+        ssl_require=SUPABASE_DATABASE_URL.startswith(("postgres://", "postgresql://")),
     )
 }
 
 # Compatível com os poolers do Supabase e evita estado de cursor entre conexões.
-DATABASES["default"]["DISABLE_SERVER_SIDE_CURSORS"] = True
-DATABASES["default"].setdefault("OPTIONS", {}).update({
-    # Falha rápido e deixa outro worker atender quando o pool remoto não
-    # aceita conexão, em vez de prender todas as threads até o proxy dar 502.
-    "connect_timeout": 5,
-    "keepalives": 1,
-    "keepalives_idle": 30,
-    "keepalives_interval": 10,
-    "keepalives_count": 3,
-})
+# As opções abaixo são exclusivas do PostgreSQL. Mantê-las condicionais também
+# permite rodar a suíte local com um banco SQLite descartável, sem mudar o banco
+# usado em produção.
+if DATABASES["default"]["ENGINE"] == "django.db.backends.postgresql":
+    DATABASES["default"]["DISABLE_SERVER_SIDE_CURSORS"] = True
+    DATABASES["default"].setdefault("OPTIONS", {}).update({
+        # Falha rápido e deixa outro worker atender quando o pool remoto não
+        # aceita conexão, em vez de prender todas as threads até o proxy dar 502.
+        "connect_timeout": 5,
+        "keepalives": 1,
+        "keepalives_idle": 30,
+        "keepalives_interval": 10,
+        "keepalives_count": 3,
+    })
 
 
 # ============================================================
@@ -383,6 +387,15 @@ ORCAMENTO_TELEFONE = os.getenv("ORCAMENTO_TELEFONE", EMPRESA_TELEFONE).strip()
 ORCAMENTO_EMAIL = os.getenv("ORCAMENTO_EMAIL", EMPRESA_EMAIL).strip()
 ORCAMENTO_INSTAGRAM = os.getenv("ORCAMENTO_INSTAGRAM", EMPRESA_INSTAGRAM).strip()
 ORCAMENTO_WHATSAPP = os.getenv("ORCAMENTO_WHATSAPP", EMPRESA_WHATSAPP).strip()
+
+# Pix exibido nas propostas aprovadas e nas ordens de serviço. A chave é
+# pública por natureza (é entregue ao pagador), mas continua sobrescrevível
+# no Render sem precisar publicar uma alteração de código.
+PIX_CHAVE = os.getenv("PIX_CHAVE", "54.486.908/0001-86").strip()
+PIX_RECEBEDOR = os.getenv(
+    "PIX_RECEBEDOR", "LAZER SPORT BRINQUEDOS",
+).strip()
+PIX_CIDADE = os.getenv("PIX_CIDADE", "SAO PAULO").strip()
 
 
 # ============================================================

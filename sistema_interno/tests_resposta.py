@@ -77,7 +77,7 @@ class RespostaDoPainelTests(TestCase):
 
         dados = resposta.json()
         self.assertEqual(dados["status"], "sucesso")
-        self.assertEqual(dados["situacao"], Orcamento.Status.ENVIADO)
+        self.assertEqual(dados["situacao"], Orcamento.Status.AGUARDANDO_RESPOSTA)
 
     def test_enviar_devolve_o_link_publico(self):
         dados = self.post({

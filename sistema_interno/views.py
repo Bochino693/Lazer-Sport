@@ -31,6 +31,7 @@ from .models import (
     Material,
     MovimentoEstoque,
     Orcamento,
+    OrdemServico,
     OrdemProducao,
     TipoMaterial,
 )
@@ -135,6 +136,10 @@ class EstoqueInternoRequiredMixin(InternoRequiredMixin):
 
 class ManutencaoInternoRequiredMixin(InternoRequiredMixin):
     funcoes_necessarias = (PRODUCAO, GESTAO)
+
+
+class OrdemServicoInternoRequiredMixin(InternoRequiredMixin):
+    funcoes_necessarias = (PRODUCAO, FINANCEIRO, GESTAO)
 
 
 class CriacaoInternoRequiredMixin(InternoRequiredMixin):
@@ -488,6 +493,11 @@ class HomeInnerView(InternoRequiredMixin, View):
             Manutencao.objects.filter(status__in=["P", "A"])
             .select_related("brinquedo", "usuario__user").order_by("criado_em")
         )
+        ordens_servico_abertas = (
+            OrdemServico.objects.filter(status__in=OrdemServico.ABERTAS)
+            .select_related("cliente", "tecnico")
+            .order_by("agendada_para", "criacao")
+        )
         producao_aberta = (
             OrdemProducao.objects.exclude(status__in=[
                 OrdemProducao.Status.CONCLUIDA, OrdemProducao.Status.CANCELADA,
@@ -521,6 +531,22 @@ class HomeInnerView(InternoRequiredMixin, View):
                 "detalhe": "Novo chamado esperando triagem." if manutencao.status == "P" else "Serviço em andamento.",
                 "url": reverse("manutencao_inner", urlconf="sistema_interno.urls"),
                 "acao": "Ver manutenção",
+            })
+        for ordem_servico in ordens_servico_abertas[:3]:
+            fila_trabalho.append({
+                "nivel": (
+                    "critico"
+                    if ordem_servico.prioridade == OrdemServico.Prioridade.URGENTE
+                    else "atencao"
+                ),
+                "icone": "bi-clipboard2-pulse",
+                "titulo": f"{ordem_servico.numero_documento} · {ordem_servico.destinatario}",
+                "detalhe": (
+                    f"{ordem_servico.get_status_display()} · {ordem_servico.equipamento}"
+                ),
+                "url": reverse("ordens_servico_inner", urlconf="sistema_interno.urls")
+                + f"?q={ordem_servico.pk}",
+                "acao": "Abrir O.S.",
             })
         for ordem in producao_aberta.filter(
             status__in=[OrdemProducao.Status.BLOQUEADA, OrdemProducao.Status.PAUSADA]
@@ -556,6 +582,8 @@ class HomeInnerView(InternoRequiredMixin, View):
             "total_pedidos_abertos": pedidos_abertos.count(),
             "manutencoes_abertas": manutencoes_abertas[:5],
             "total_manutencoes_abertas": manutencoes_abertas.count(),
+            "ordens_servico_abertas": ordens_servico_abertas[:5],
+            "total_ordens_servico_abertas": ordens_servico_abertas.count(),
             "producao_aberta": producao_aberta[:5],
             "total_producao_aberta": producao_aberta.count(),
             "vendas_a_confirmar": Venda.objects.filter(confirmado=False).count(),

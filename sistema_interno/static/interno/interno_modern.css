@@ -792,6 +792,32 @@ textarea.form-control{min-height:100px!important}
   border:1px solid var(--line);border-radius:16px;background:rgba(255,255,255,.02);
   display:grid;gap:9px;
 }
+
+/* Orçamentos: a própria métrica é o filtro. Evita repetir a mesma fase
+   num seletor horizontal escondido abaixo dos números que a explicam. */
+.ls-budget-card-filters{
+  display:grid;grid-auto-flow:column;grid-auto-columns:minmax(130px,1fr);gap:12px;
+  margin:0 0 14px;overflow-x:auto;padding:2px 2px 8px;
+}
+.ls-budget-filter-card{
+  min-width:130px;padding:15px 14px;border:1px solid var(--ls-border,#dedbd5);
+  border-radius:18px;background:var(--ls-surface,#fff);color:inherit;
+  text-decoration:none;display:grid;grid-template-columns:auto 1fr;gap:3px 10px;
+  box-shadow:0 8px 24px rgba(35,28,17,.05);transition:.18s ease;
+}
+.ls-budget-filter-card>span{grid-row:1/3;width:36px;height:36px;border-radius:12px;display:grid;place-items:center;background:#f1eee8;color:#6a5c49}
+.ls-budget-filter-card strong{font-size:1.28rem;line-height:1;color:#252018}
+.ls-budget-filter-card small{font-size:.72rem;color:#746c61;white-space:nowrap}
+.ls-budget-filter-card:hover{transform:translateY(-2px);border-color:#b8aa96}
+.ls-budget-filter-card.active{border-color:#cb2f37;background:linear-gradient(145deg,#fff,#fff4f4);box-shadow:0 10px 28px rgba(203,47,55,.13)}
+.ls-budget-filter-card.active>span{background:#cb2f37;color:#fff}
+.ls-budget-money-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;margin-bottom:18px;background:#dedbd5;border:1px solid #dedbd5;border-radius:16px;overflow:hidden}
+.ls-budget-money-strip>div{background:#fff;padding:13px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.ls-budget-money-strip span{font-size:.75rem;color:#746c61}.ls-budget-money-strip strong{font-size:1rem;color:#252018;white-space:nowrap}
+.ls-budget-money-strip .success strong{color:#16784a}.ls-budget-money-strip .warning strong{color:#a15b08}
+.ls-budget-search{width:min(100%,390px)}
+@media(max-width:900px){.ls-budget-card-filters{grid-auto-columns:150px}.ls-budget-money-strip{grid-template-columns:1fr 1fr}}
+@media(max-width:560px){.ls-budget-money-strip{grid-template-columns:1fr}.ls-budget-money-strip>div{padding:11px 13px}.ls-budget-search{width:100%}}
 .ls-orcamento-total > div{
   display:flex;align-items:center;justify-content:space-between;gap:16px;
   color:#c5bcb0;font-size:.86rem;font-weight:800;

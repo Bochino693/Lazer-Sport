@@ -1389,17 +1389,29 @@ class Orcamento(Prime):
 
     class Status(models.TextChoices):
         RASCUNHO = "rascunho", "Rascunho"
-        ENVIADO = "enviado", "Enviado"
+        AGUARDANDO_RESPOSTA = "aguardando_resposta", "Aguardando resposta"
+        EM_NEGOCIACAO = "em_negociacao", "Em negociação"
         APROVADO = "aprovado", "Aprovado"
         RECUSADO = "recusado", "Recusado"
         EXPIRADO = "expirado", "Expirado"
+        SUBSTITUIDO = "substituido", "Substituído por nova versão"
+
+    class StatusPagamento(models.TextChoices):
+        PENDENTE = "pendente", "Pagamento pendente"
+        PARCIAL = "parcial", "Pagamento parcial"
+        PAGO = "pago", "Pago"
+        ESTORNADO = "estornado", "Estornado"
 
     class Origem(models.TextChoices):
         INTERNO = "interno", "Atendimento interno"
         AMBULANTE = "ambulante", "Vendedor ambulante"
 
     #: Situações em que a proposta ainda está viva e pode receber resposta.
-    EM_ABERTO = (Status.RASCUNHO, Status.ENVIADO)
+    EM_ABERTO = (
+        Status.RASCUNHO,
+        Status.AGUARDANDO_RESPOSTA,
+        Status.EM_NEGOCIACAO,
+    )
     #: Situações em que o cliente já respondeu -- não se responde de novo.
     RESPONDIDO = (Status.APROVADO, Status.RECUSADO)
 
@@ -1426,7 +1438,7 @@ class Orcamento(Prime):
     )
 
     status = models.CharField(
-        max_length=12,
+        max_length=24,
         choices=Status.choices,
         default=Status.RASCUNHO,
         db_index=True,
@@ -1464,6 +1476,35 @@ class Orcamento(Prime):
         null=True,
         blank=True,
     )
+
+    # ---------------- histórico de negociação ----------------
+    # Proposta enviada nunca volta a ser um arquivo editável. Quando o
+    # cliente pede desconto ou troca de item, nasce outra versão e esta
+    # continua intacta como prova do que foi apresentado naquele momento.
+    orcamento_anterior = models.OneToOneField(
+        "self",
+        on_delete=models.SET_NULL,
+        related_name="orcamento_refeito",
+        null=True,
+        blank=True,
+    )
+    versao = models.PositiveIntegerField(default=1)
+    motivo_negociacao = models.TextField(blank=True)
+
+    # ---------------- pagamento ----------------
+    status_pagamento = models.CharField(
+        max_length=12,
+        choices=StatusPagamento.choices,
+        default=StatusPagamento.PENDENTE,
+        db_index=True,
+    )
+    valor_pago = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=Decimal("0.00"),
+    )
+    pago_em = models.DateTimeField(null=True, blank=True)
+    observacao_pagamento = models.CharField(max_length=240, blank=True)
 
     # ---------------- página que o cliente abre ----------------
     token = models.CharField(
@@ -1548,6 +1589,25 @@ class Orcamento(Prime):
         return self.status in self.RESPONDIDO
 
     @property
+    def pode_editar(self):
+        """Somente rascunho é mutável; negociação gera uma nova versão."""
+        return self.status == self.Status.RASCUNHO
+
+    @property
+    def saldo_pagamento(self):
+        return max(
+            self.total - (self.valor_pago or Decimal("0.00")),
+            Decimal("0.00"),
+        ).quantize(Decimal("0.01"))
+
+    @property
+    def grupo_versoes_id(self):
+        atual = self
+        while atual.orcamento_anterior_id:
+            atual = atual.orcamento_anterior
+        return atual.pk
+
+    @property
     def caminho_publico(self):
         """Caminho da página do cliente, sem domínio.
 
@@ -1580,7 +1640,7 @@ class Orcamento(Prime):
         return f"{(self.pk or 0):04d}/{ano}"
 
     def marcar_enviado(self):
-        """Passa para "enviado" e carimba a hora, uma vez só.
+        """Passa para "aguardando resposta" e carimba a hora, uma vez só.
 
         Reenviar não reescreve `enviado_em`: a data que interessa é a da
         primeira vez que a proposta saiu, que é de onde se conta há quanto
@@ -1589,7 +1649,7 @@ class Orcamento(Prime):
         alterado = []
 
         if self.status == self.Status.RASCUNHO:
-            self.status = self.Status.ENVIADO
+            self.status = self.Status.AGUARDANDO_RESPOSTA
             alterado.append("status")
 
         if self.enviado_em is None:
@@ -1600,6 +1660,25 @@ class Orcamento(Prime):
             self.save(update_fields=alterado)
 
         return bool(alterado)
+
+    def registrar_pagamento(self, valor, observacao=""):
+        """Atualiza o recebido e deriva a situação sem aceitar saldo negativo."""
+        valor = max(Decimal(valor or 0), Decimal("0.00")).quantize(Decimal("0.01"))
+        self.valor_pago = valor
+        self.observacao_pagamento = (observacao or "").strip()[:240]
+        if valor <= 0:
+            self.status_pagamento = self.StatusPagamento.PENDENTE
+            self.pago_em = None
+        elif valor < self.total:
+            self.status_pagamento = self.StatusPagamento.PARCIAL
+            self.pago_em = None
+        else:
+            self.status_pagamento = self.StatusPagamento.PAGO
+            self.pago_em = self.pago_em or timezone.now()
+        self.save(update_fields=[
+            "valor_pago", "status_pagamento", "pago_em",
+            "observacao_pagamento", "atualizado",
+        ])
 
     def registrar_resposta(self, aprovado, nome="", motivo=""):
         """Grava a decisão do cliente vinda da página pública."""
@@ -1882,6 +1961,358 @@ class ItemOrcamento(Prime):
         verbose_name = "Item do orçamento"
         verbose_name_plural = "Itens do orçamento"
         ordering = ("id",)
+
+
+# ======================================================================
+# ORDENS DE SERVIÇO
+# ======================================================================
+class OrdemServico(Prime):
+    """Execução operacional separada da proposta comercial.
+
+    Orçamento responde *quanto custa e se o cliente aprova*. A ordem de
+    serviço responde *o que aconteceu com o equipamento, quem executou e
+    quando foi entregue*. Os dois documentos podem ter itens e valores,
+    mas não compartilham situação nem histórico: transformar a proposta
+    em ficha técnica apagaria a decisão comercial original.
+
+    Uma O.S. pode nascer de um chamado público de manutenção, mas também
+    pode registrar instalação, revisão, visita técnica ou outro serviço
+    prestado diretamente pela equipe.
+    """
+
+    class Tipo(models.TextChoices):
+        MANUTENCAO = "manutencao", "Manutenção"
+        INSTALACAO = "instalacao", "Instalação"
+        REVISAO = "revisao", "Revisão preventiva"
+        VISITA = "visita", "Visita técnica"
+        OUTRO = "outro", "Outro serviço"
+
+    class Status(models.TextChoices):
+        RASCUNHO = "rascunho", "Rascunho"
+        AGUARDANDO_RESPOSTA = "aguardando_resposta", "Aguardando ciência"
+        ABERTA = "aberta", "Aberta"
+        AGENDADA = "agendada", "Agendada"
+        EM_EXECUCAO = "em_execucao", "Em execução"
+        AGUARDANDO_PECA = "aguardando_peca", "Aguardando peça"
+        CONCLUIDA = "concluida", "Concluída"
+        CANCELADA = "cancelada", "Cancelada"
+
+    class Prioridade(models.TextChoices):
+        BAIXA = "baixa", "Baixa"
+        NORMAL = "normal", "Normal"
+        ALTA = "alta", "Alta"
+        URGENTE = "urgente", "Urgente"
+
+    class StatusPagamento(models.TextChoices):
+        PENDENTE = "pendente", "Pagamento pendente"
+        PARCIAL = "parcial", "Pagamento parcial"
+        PAGO = "pago", "Pago"
+        ESTORNADO = "estornado", "Estornado"
+
+    ABERTAS = (
+        Status.AGUARDANDO_RESPOSTA,
+        Status.ABERTA,
+        Status.AGENDADA,
+        Status.EM_EXECUCAO,
+        Status.AGUARDANDO_PECA,
+    )
+
+    cliente = models.ForeignKey(
+        Cliente,
+        on_delete=models.SET_NULL,
+        related_name="ordens_servico",
+        null=True,
+        blank=True,
+    )
+    orcamento = models.OneToOneField(
+        Orcamento,
+        on_delete=models.SET_NULL,
+        related_name="ordem_servico",
+        null=True,
+        blank=True,
+        help_text=(
+            "Referência histórica da proposta que originou a execução. "
+            "Situação, valores recebidos e envios não são sincronizados."
+        ),
+    )
+    manutencao = models.ForeignKey(
+        "core.Manutencao",
+        on_delete=models.SET_NULL,
+        related_name="ordens_servico",
+        null=True,
+        blank=True,
+        help_text="Chamado que originou a O.S., quando houver.",
+    )
+
+    nome_cliente = models.CharField(max_length=120, blank=True)
+    contato = models.CharField(max_length=120, blank=True)
+    whatsapp_cliente = models.CharField(max_length=24, blank=True)
+    email_cliente = models.EmailField(blank=True)
+    endereco_servico = models.CharField(max_length=320, blank=True)
+
+    tipo = models.CharField(
+        max_length=16,
+        choices=Tipo.choices,
+        default=Tipo.MANUTENCAO,
+        db_index=True,
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.RASCUNHO,
+        db_index=True,
+    )
+    prioridade = models.CharField(
+        max_length=10,
+        choices=Prioridade.choices,
+        default=Prioridade.NORMAL,
+        db_index=True,
+    )
+
+    equipamento = models.CharField(max_length=180)
+    numero_serie = models.CharField(max_length=80, blank=True)
+    defeito_relatado = models.TextField(blank=True)
+    diagnostico = models.TextField(blank=True)
+    servico_executado = models.TextField(blank=True)
+    observacoes = models.TextField(blank=True)
+    forma_pagamento = models.CharField(max_length=120, blank=True)
+    status_pagamento = models.CharField(
+        max_length=12,
+        choices=StatusPagamento.choices,
+        default=StatusPagamento.PENDENTE,
+        db_index=True,
+    )
+    valor_pago = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=Decimal("0.00"),
+    )
+    pago_em = models.DateTimeField(null=True, blank=True)
+    observacao_pagamento = models.CharField(max_length=240, blank=True)
+
+    agendada_para = models.DateTimeField(null=True, blank=True, db_index=True)
+    iniciada_em = models.DateTimeField(null=True, blank=True)
+    concluida_em = models.DateTimeField(null=True, blank=True, db_index=True)
+    garantia_ate = models.DateField(null=True, blank=True)
+
+    tecnico = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name="ordens_servico_tecnico",
+        null=True,
+        blank=True,
+    )
+    responsavel = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name="ordens_servico_criadas",
+        null=True,
+        blank=True,
+    )
+
+    token = models.CharField(
+        max_length=64,
+        unique=True,
+        default=gerar_token_orcamento,
+        editable=False,
+        db_index=True,
+    )
+    enviada_em = models.DateTimeField(null=True, blank=True)
+    cliente_ciente_em = models.DateTimeField(null=True, blank=True)
+    cliente_ciente_por = models.CharField(max_length=120, blank=True)
+
+    @property
+    def destinatario(self):
+        if self.cliente_id and self.cliente:
+            return self.cliente.nome_cliente
+        if self.nome_cliente:
+            return self.nome_cliente
+        if self.manutencao_id and self.manutencao:
+            perfil = self.manutencao.usuario
+            return (
+                perfil.nome_completo
+                or perfil.user.get_full_name()
+                or perfil.user.username
+            )
+        return "Sem cliente"
+
+    @property
+    def whatsapp_destinatario(self):
+        if self.whatsapp_cliente:
+            return self.whatsapp_cliente
+        if self.cliente_id and self.cliente and self.cliente.telefone:
+            return self.cliente.telefone
+        if self.manutencao_id and self.manutencao:
+            return self.manutencao.telefone_contato or self.manutencao.usuario.telefone
+        return ""
+
+    @property
+    def email_destinatario(self):
+        if self.email_cliente:
+            return self.email_cliente
+        if self.cliente_id and self.cliente and self.cliente.email:
+            return self.cliente.email
+        if self.manutencao_id and self.manutencao:
+            return self.manutencao.usuario.user.email or ""
+        return ""
+
+    @property
+    def total(self):
+        return sum(
+            (item.subtotal for item in self.itens.all()),
+            Decimal("0.00"),
+        ).quantize(Decimal("0.01"))
+
+    @property
+    def saldo_pagamento(self):
+        return max(
+            self.total - (self.valor_pago or Decimal("0.00")),
+            Decimal("0.00"),
+        ).quantize(Decimal("0.01"))
+
+    @property
+    def numero_documento(self):
+        ano = self.criacao.year if self.criacao else timezone.localdate().year
+        return f"OS-{(self.pk or 0):05d}/{ano}"
+
+    @property
+    def caminho_publico(self):
+        from django.urls import reverse
+
+        return reverse(
+            "ordem_servico_publica",
+            args=[self.token],
+            urlconf=settings.ROOT_URLCONF,
+        )
+
+    @property
+    def cliente_ciente(self):
+        return bool(self.cliente_ciente_em)
+
+    def marcar_enviada(self):
+        alterados = []
+        if self.status == self.Status.RASCUNHO:
+            self.status = self.Status.AGUARDANDO_RESPOSTA
+            alterados.append("status")
+        if self.enviada_em is None:
+            self.enviada_em = timezone.now()
+            alterados.append("enviada_em")
+        if alterados:
+            self.save(update_fields=[*alterados, "atualizado"])
+        return bool(alterados)
+
+    def registrar_ciencia(self, nome):
+        if self.cliente_ciente_em:
+            return False
+        self.cliente_ciente_em = timezone.now()
+        self.cliente_ciente_por = (nome or "").strip()[:120]
+        alterados = ["cliente_ciente_em", "cliente_ciente_por", "atualizado"]
+        if self.status == self.Status.AGUARDANDO_RESPOSTA:
+            self.status = self.Status.ABERTA
+            alterados.append("status")
+        self.save(update_fields=alterados)
+        return True
+
+    def registrar_pagamento(self, valor, observacao=""):
+        valor = max(Decimal(valor or 0), Decimal("0.00")).quantize(Decimal("0.01"))
+        self.valor_pago = valor
+        self.observacao_pagamento = (observacao or "").strip()[:240]
+        if valor <= 0:
+            self.status_pagamento = self.StatusPagamento.PENDENTE
+            self.pago_em = None
+        elif valor < self.total:
+            self.status_pagamento = self.StatusPagamento.PARCIAL
+            self.pago_em = None
+        else:
+            self.status_pagamento = self.StatusPagamento.PAGO
+            self.pago_em = self.pago_em or timezone.now()
+        self.save(update_fields=[
+            "valor_pago", "status_pagamento", "pago_em",
+            "observacao_pagamento", "atualizado",
+        ])
+
+    def __str__(self):
+        return f"{self.numero_documento} — {self.destinatario}"
+
+    class Meta:
+        verbose_name = "Ordem de serviço"
+        verbose_name_plural = "Ordens de serviço"
+        ordering = ("-criacao", "-id")
+
+
+class ItemOrdemServico(Prime):
+    class Tipo(models.TextChoices):
+        SERVICO = "servico", "Serviço / mão de obra"
+        PECA = "peca", "Peça / material"
+        DESLOCAMENTO = "deslocamento", "Deslocamento"
+        OUTRO = "outro", "Outro"
+
+    ordem = models.ForeignKey(
+        OrdemServico,
+        on_delete=models.CASCADE,
+        related_name="itens",
+    )
+    tipo = models.CharField(
+        max_length=14,
+        choices=Tipo.choices,
+        default=Tipo.SERVICO,
+    )
+    descricao = models.CharField(max_length=200)
+    quantidade = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal("1.00"),
+    )
+    valor_unitario = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=Decimal("0.00"),
+    )
+
+    @property
+    def subtotal(self):
+        return (self.quantidade * self.valor_unitario).quantize(Decimal("0.01"))
+
+    def __str__(self):
+        return self.descricao
+
+    class Meta:
+        verbose_name = "Item da ordem de serviço"
+        verbose_name_plural = "Itens da ordem de serviço"
+        ordering = ("id",)
+
+
+class EnvioOrdemServico(Prime):
+    class Canal(models.TextChoices):
+        LINK = "link", "Link copiado"
+        WHATSAPP = "whatsapp", "WhatsApp"
+        EMAIL = "email", "E-mail"
+
+    ordem = models.ForeignKey(
+        OrdemServico,
+        on_delete=models.CASCADE,
+        related_name="envios",
+    )
+    canal = models.CharField(max_length=10, choices=Canal.choices, db_index=True)
+    destino = models.CharField(max_length=254, blank=True)
+    sucesso = models.BooleanField(default=True)
+    detalhe = models.CharField(max_length=240, blank=True)
+    responsavel = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name="envios_ordem_servico",
+        null=True,
+        blank=True,
+    )
+
+    class Meta:
+        verbose_name = "Envio de ordem de serviço"
+        verbose_name_plural = "Envios de ordens de serviço"
+        ordering = ("-criacao", "-id")
+
+    def __str__(self):
+        estado = "ok" if self.sucesso else "falhou"
+        return f"{self.ordem.numero_documento} · {self.get_canal_display()} · {estado}"
 
 
 # ======================================================================

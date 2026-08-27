@@ -23,7 +23,7 @@ from django.utils import timezone
 
 from . import push
 from .models import InscricaoPush
-from .permissoes import GESTAO, VENDAS, tem_funcao
+from .permissoes import FINANCEIRO, GESTAO, PRODUCAO, VENDAS, tem_funcao
 
 log = logging.getLogger(__name__)
 
@@ -88,21 +88,57 @@ def avisar_resposta_do_cliente(orcamento):
     pode ser vendida de novo.
     """
     aprovado = orcamento.status == orcamento.Status.APROVADO
+    negociacao = orcamento.status == orcamento.Status.EM_NEGOCIACAO
     quem = orcamento.respondido_por or "O cliente"
+
+    if negociacao:
+        titulo = f"Ajuste pedido na proposta nº {orcamento.pk}"
+        urgente = True
+    elif aprovado:
+        titulo = f"Proposta nº {orcamento.pk} aprovada"
+        urgente = True
+    else:
+        titulo = f"Proposta nº {orcamento.pk} recusada"
+        urgente = False
 
     return _entregar(
         _quem_cuida_de_orcamento(orcamento),
         {
-            "titulo": (
-                f"Proposta nº {orcamento.pk} aprovada"
-                if aprovado
-                else f"Proposta nº {orcamento.pk} recusada"
-            ),
+            "titulo": titulo,
             "corpo": f"{quem} respondeu · {orcamento.destinatario}",
             "url": "/orcamentos/?q=" + str(orcamento.pk),
             "marca": f"orcamento-{orcamento.pk}",
             # Aprovação vibra; recusa não. Uma vibração para cada coisa
             # que acontece no dia treina a pessoa a ignorar todas.
-            "urgente": aprovado,
+            "urgente": urgente,
+        },
+    )
+
+
+def avisar_ciencia_ordem_servico(ordem):
+    """Cliente confirmou o recebimento de uma O.S. concluída."""
+    pessoas = {}
+    for usuario in User.objects.filter(is_active=True):
+        if (
+            tem_funcao(usuario, PRODUCAO)
+            or tem_funcao(usuario, FINANCEIRO)
+            or tem_funcao(usuario, GESTAO)
+        ):
+            pessoas[usuario.pk] = usuario
+    for usuario in (ordem.responsavel, ordem.tecnico):
+        if usuario is not None and usuario.is_active:
+            pessoas[usuario.pk] = usuario
+
+    return _entregar(
+        pessoas.values(),
+        {
+            "titulo": f"{ordem.numero_documento} confirmada",
+            "corpo": (
+                f"{ordem.cliente_ciente_por or 'Cliente'} confirmou · "
+                f"{ordem.destinatario}"
+            ),
+            "url": "/ordens-servico/?q=" + str(ordem.pk),
+            "marca": f"ordem-servico-{ordem.pk}",
+            "urgente": False,
         },
     )

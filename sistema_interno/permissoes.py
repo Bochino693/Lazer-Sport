@@ -170,6 +170,9 @@ def capacidades(user) -> dict[str, bool]:
         "vendas_financeiro": acesso_financeiro,
         "pedidos": acesso_financeiro,
         "manutencoes": producao or gestao,
+        "ordens_servico": producao or acesso_financeiro or gestao,
+        "ordens_servico_editar": producao or gestao,
+        "ordens_servico_pagamento": acesso_financeiro,
         # Compatibilidade com pontos antigos que perguntam se existe alguma
         # operação acessível. As telas usam as capacidades específicas.
         "operacao": producao or acesso_financeiro or gestao,

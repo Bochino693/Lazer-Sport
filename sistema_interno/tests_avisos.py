@@ -51,12 +51,12 @@ class ColetaDeAvisosTests(TestCase):
         """Vencido é perda; a vencer ainda dá para salvar num telefonema."""
         Orcamento.objects.create(
             nome_cliente="Já era",
-            status=Orcamento.Status.ENVIADO,
+            status=Orcamento.Status.AGUARDANDO_RESPOSTA,
             validade=self.hoje - timedelta(days=1),
         )
         Orcamento.objects.create(
             nome_cliente="Ainda dá",
-            status=Orcamento.Status.ENVIADO,
+            status=Orcamento.Status.AGUARDANDO_RESPOSTA,
             validade=self.hoje + timedelta(days=2),
         )
 
@@ -75,7 +75,7 @@ class ColetaDeAvisosTests(TestCase):
     def test_validade_distante_nao_vira_aviso(self):
         Orcamento.objects.create(
             nome_cliente="Tem tempo",
-            status=Orcamento.Status.ENVIADO,
+            status=Orcamento.Status.AGUARDANDO_RESPOSTA,
             validade=self.hoje + timedelta(days=30),
         )
         self.assertNotIn("orcamentos_vencendo", self.chaves())
@@ -83,7 +83,7 @@ class ColetaDeAvisosTests(TestCase):
     def test_resposta_recente_do_cliente_vira_novidade(self):
         orcamento = Orcamento.objects.create(
             nome_cliente="Fulano",
-            status=Orcamento.Status.ENVIADO,
+            status=Orcamento.Status.AGUARDANDO_RESPOSTA,
         )
         orcamento.registrar_resposta(aprovado=True, nome="Fulano")
 
@@ -182,7 +182,7 @@ class ColetaDeAvisosTests(TestCase):
     def test_pior_vem_primeiro(self):
         Orcamento.objects.create(
             nome_cliente="Vencido",
-            status=Orcamento.Status.ENVIADO,
+            status=Orcamento.Status.AGUARDANDO_RESPOSTA,
             validade=self.hoje - timedelta(days=1),
         )
         Pedido.objects.create(status="pendente")
@@ -201,7 +201,7 @@ class ColetaDeAvisosTests(TestCase):
         atribuir_funcoes(montador, ["producao"])
         Orcamento.objects.create(
             nome_cliente="Vencido",
-            status=Orcamento.Status.ENVIADO,
+            status=Orcamento.Status.AGUARDANDO_RESPOSTA,
             validade=self.hoje - timedelta(days=1),
         )
 
@@ -262,7 +262,7 @@ class CustoDoContextProcessorTests(TestCase):
     def test_valores_sao_calculados_uma_vez_so(self):
         Orcamento.objects.create(
             nome_cliente="Vencido",
-            status=Orcamento.Status.ENVIADO,
+            status=Orcamento.Status.AGUARDANDO_RESPOSTA,
             validade=timezone.localdate() - timedelta(days=1),
         )
         contexto = fab_counts(self.pedido(self.gestor))
@@ -346,7 +346,7 @@ class EstadoAoVivoTests(TestCase):
         """
         Orcamento.objects.create(
             nome_cliente="Vencido",
-            status=Orcamento.Status.ENVIADO,
+            status=Orcamento.Status.AGUARDANDO_RESPOSTA,
             validade=timezone.localdate() - timedelta(days=2),
         )
 
@@ -378,7 +378,7 @@ class EstadoAoVivoTests(TestCase):
 
         Orcamento.objects.create(
             nome_cliente="Novo vencido",
-            status=Orcamento.Status.ENVIADO,
+            status=Orcamento.Status.AGUARDANDO_RESPOSTA,
             validade=timezone.localdate() - timedelta(days=1),
         )
         from .context_processors import invalidar_avisos

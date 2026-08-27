@@ -239,6 +239,10 @@ body{
   box-shadow:0 12px 28px rgba(15,157,88,.32);
 }
 .btn-aprovar:hover{filter:brightness(1.06);box-shadow:0 16px 34px rgba(15,157,88,.4)}
+.btn-ajustes{
+  color:#7A4A00;background:#FFF6DD;border:1.5px solid #F0D38A;
+}
+.btn-ajustes:hover{background:#FFEFC1;border-color:#D7A83D}
 .btn-recusar{
   color:var(--tinta-2);background:#fff;border:1.5px solid var(--linha-forte);
 }
@@ -249,6 +253,14 @@ body{
 .gaveta{display:grid;grid-template-rows:0fr;transition:grid-template-rows .34s cubic-bezier(.16,.84,.44,1)}
 .gaveta.aberta{grid-template-rows:1fr}
 .gaveta>div{overflow:hidden}
+
+/* Pix aparece só depois da aprovação definitiva. */
+.pix-box{display:grid;grid-template-columns:170px 1fr;gap:22px;align-items:center}
+.pix-qr{width:170px;height:170px;padding:8px;background:#fff;border:1px solid var(--linha);border-radius:16px}
+.pix-qr img{display:block;width:100%;height:100%}
+.pix-copy{display:flex;gap:8px;margin-top:12px}
+.pix-copy input{min-width:0;flex:1;padding:12px;border:1px solid var(--linha-forte);border-radius:12px;background:#F7F9FC;color:var(--tinta-2)}
+.pix-copy button{border:0;border-radius:12px;padding:0 16px;background:var(--marca);color:#fff;font-weight:800;cursor:pointer}
 
 /* --------------------------------------------------------- resposta */
 .carimbo{text-align:center;padding:14px 0 4px}
@@ -296,6 +308,8 @@ body{
   .item-valor{grid-column:1/-1;justify-content:flex-end;background:#f6f8fc;border-top:1px solid var(--linha)!important}
   .item-valor::before{content:"Total ";font-size:.72rem;color:var(--tinta-3);margin-right:6px}
   .comercial-grid{grid-template-columns:1fr}.comercial-item{padding:16px 17px}
+  .pix-box{grid-template-columns:1fr;text-align:center}.pix-qr{margin:auto}
+  .pix-copy{flex-direction:column}.pix-copy button{min-height:48px}
 }
 
 /* ---------------------------------------------------------- impressão */
@@ -336,6 +350,7 @@ body{
       <dl class="meta-lista">
         <div class="meta-linha"><dt>Data</dt><dd>{{ orcamento.criacao|date:"d/m/Y" }}</dd></div>
         <div class="meta-linha"><dt>Nº do orçamento</dt><dd>{{ orcamento.numero_documento }}</dd></div>
+        <div class="meta-linha"><dt>Versão</dt><dd>{{ orcamento.versao }}</dd></div>
         <div class="meta-linha"><dt>Responsável</dt><dd>{{ responsavel_nome }}</dd></div>
         {% if telefone_empresa %}
           {% comment %}
@@ -363,6 +378,10 @@ body{
           {% else %}
             <span class="selo vermelho">✕ Recusada</span>
           {% endif %}
+        {% elif orcamento.status == 'em_negociacao' %}
+          <span class="selo ambar">Ajustes solicitados</span>
+        {% elif orcamento.status == 'substituido' %}
+          <span class="selo">Versão substituída</span>
         {% elif vencido %}
           <span class="selo vermelho">Validade encerrada</span>
         {% else %}
@@ -424,6 +443,20 @@ body{
           <br><em>“{{ orcamento.motivo_recusa }}”</em>
         {% endif %}
       </span>
+    </div>
+  {% elif not previsualizacao and orcamento.status == 'em_negociacao' %}
+    <div class="faixa ambar entra" style="--i:1">
+      <span class="faixa-icone">↻</span>
+      <span>
+        <strong>Ajustes solicitados{% if orcamento.respondido_por %} por {{ orcamento.respondido_por }}{% endif %}.</strong>
+        Nossa equipe foi avisada e vai preparar uma nova versão sem apagar esta proposta.
+        {% if orcamento.motivo_negociacao %}<br><em>“{{ orcamento.motivo_negociacao }}”</em>{% endif %}
+      </span>
+    </div>
+  {% elif not previsualizacao and orcamento.status == 'substituido' %}
+    <div class="faixa ambar entra" style="--i:1">
+      <span class="faixa-icone">↗</span>
+      <span><strong>Esta versão foi substituída por uma proposta atualizada.</strong> Ela permanece disponível apenas como histórico do que foi apresentado.</span>
     </div>
   {% elif not previsualizacao and vencido %}
     <div class="faixa ambar entra" style="--i:1">
@@ -508,6 +541,35 @@ body{
     </div>
   </section>
 
+  {% if not previsualizacao and orcamento.status == 'aprovado' %}
+    <section class="bloco entra" style="--i:3">
+      <div class="bloco-titulo">
+        <h2>Pagamento</h2>
+        <span>{{ orcamento.get_status_pagamento_display }}</span>
+      </div>
+      {% if orcamento.status_pagamento == 'pago' %}
+        <div class="faixa verde" style="margin:0">
+          <span class="faixa-icone">✓</span>
+          <span><strong>Pagamento registrado.</strong> Valor recebido: R$ {{ orcamento.valor_pago|moeda }}.</span>
+        </div>
+      {% elif pix_configurado %}
+        <div class="pix-box">
+          <div class="pix-qr"><img src="{{ pix_qr }}" alt="QR Code Pix do orçamento"></div>
+          <div>
+            <h3 style="margin:0 0 6px">Pague o saldo de R$ {{ orcamento.saldo_pagamento|moeda }} por Pix</h3>
+            <p style="margin:0;color:var(--tinta-2)">Escaneie o QR Code ou copie o código abaixo no aplicativo do seu banco.</p>
+            <div class="pix-copy">
+              <input id="pixCopiaCola" value="{{ pix_copia_cola }}" readonly aria-label="Pix Copia e Cola">
+              <button type="button" id="copiarPix">Copiar Pix</button>
+            </div>
+          </div>
+        </div>
+      {% else %}
+        <p style="margin:0;color:var(--tinta-2)">Combine os dados de pagamento com nossa equipe.</p>
+      {% endif %}
+    </section>
+  {% endif %}
+
   <section class="comercial-grid entra" style="--i:3" aria-label="Condições comerciais">
     <div class="comercial-item total">
       <span>Valor total</span>
@@ -545,7 +607,8 @@ body{
       <h2>O que você decide?</h2>
       <p class="ajuda">
         Sua resposta chega direto à nossa equipe. Se aprovar, entramos em contato
-        para combinar as datas.
+        para combinar as datas. Se algum item ou valor precisar mudar,
+        peça ajustes e enviaremos uma nova versão.
       </p>
 
       <form method="post" id="formDecisao">
@@ -561,7 +624,7 @@ body{
         <div class="gaveta" id="gavetaMotivo">
           <div>
             <label class="campo">
-              <span>O que não ficou bom? (opcional)</span>
+              <span>O que precisa mudar?</span>
               <textarea name="motivo" maxlength="1000"
                         placeholder="Preço, data, tamanho do brinquedo... o que puder contar ajuda a gente a ajustar."></textarea>
             </label>
@@ -571,6 +634,9 @@ body{
         <div class="botoes">
           <button type="submit" class="btn btn-aprovar" data-decisao="aprovar">
             ✓ Aprovar proposta
+          </button>
+          <button type="submit" class="btn btn-ajustes" data-decisao="ajustes">
+            ↻ Pedir ajustes
           </button>
           <button type="submit" class="btn btn-recusar" data-decisao="recusar">
             Recusar
@@ -630,7 +696,7 @@ body{
     // Recusar abre o campo do motivo. Se ainda estava fechado, este
     // clique só abre: pedir o porquê antes de registrar a recusa é o que
     // dá à equipe a chance de salvar a proposta.
-    if (decisao === "recusar" && !gaveta.classList.contains("aberta")) {
+    if ((decisao === "recusar" || decisao === "ajustes") && !gaveta.classList.contains("aberta")) {
       evento.preventDefault();
       gaveta.classList.add("aberta");
       var area = gaveta.querySelector("textarea");
@@ -657,6 +723,22 @@ body{
     });
     var ativo = form.querySelector('[data-decisao="' + campoDecisao.value + '"]');
     if (ativo) ativo.textContent = "Registrando...";
+  });
+})();
+
+(function () {
+  var botao = document.getElementById("copiarPix");
+  var campo = document.getElementById("pixCopiaCola");
+  if (!botao || !campo) return;
+  botao.addEventListener("click", async function () {
+    try {
+      await navigator.clipboard.writeText(campo.value);
+    } catch (erro) {
+      campo.select();
+      document.execCommand("copy");
+    }
+    botao.textContent = "Pix copiado ✓";
+    setTimeout(function () { botao.textContent = "Copiar Pix"; }, 2200);
   });
 })();
 </script>
