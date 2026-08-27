@@ -14,8 +14,10 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ("core", "0108_vitrine_cupons"),
-        # Garante que as linhas já foram copiadas antes de a tabela cair.
-        ("sistema_interno", "0020_cliente_unico"),
+        # As linhas já foram copiadas (0021) e a coluna que apontava para
+        # cá já caiu (0022). Sem a 0022 antes, esta tabela ainda teria uma
+        # chave estrangeira apontando para ela e não poderia ser apagada.
+        ("sistema_interno", "0022_remove_cliente_mapa"),
     ]
 
     operations = [
