@@ -46,9 +46,13 @@ class FuncoesDaEquipeTests(TestCase):
 
     def test_vendedor_abre_cliente_e_orcamento_sem_ver_financeiro(self):
         vendedor = self.usuario("vendedor", "vendas")
+        acesso = capacidades(vendedor)
 
         self.assertEqual(self.abrir("/clientes/", vendedor).status_code, 200)
         self.assertEqual(self.abrir("/orcamentos/", vendedor).status_code, 200)
+        self.assertFalse(acesso["excluir_clientes"])
+        self.assertTrue(acesso["excluir_orcamentos"])
+        self.assertFalse(acesso["excluir_orcamentos_alheios"])
         self.assertRedirects(
             self.abrir("/financeiro/", vendedor),
             "/orcamentos/",

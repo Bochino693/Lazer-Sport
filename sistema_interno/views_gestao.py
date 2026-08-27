@@ -55,11 +55,13 @@ from .models import (
     ProdutoInterno,
     Setores,
 )
+from .permissoes import pode_excluir_orcamento
 from .utils import (
     ErroDeFormulario,
     data,
     decimal_br,
     endereco_do_site,
+    exigir_confirmacao_exclusao,
     inteiro,
     texto,
 )
@@ -190,6 +192,10 @@ class OrcamentosInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
             orcamento.conversa_url = self.conversa_whatsapp(
                 orcamento.whatsapp_destinatario,
                 orcamento.mensagem_whatsapp,
+            )
+            orcamento.pode_excluir = pode_excluir_orcamento(
+                request.user,
+                orcamento,
             )
 
         aprovados = [o for o in orcamentos if o.status == Orcamento.Status.APROVADO]
@@ -546,6 +552,17 @@ class OrcamentosInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
 
     def acao_delete(self, request):
         orcamento = get_object_or_404(Orcamento, pk=request.POST.get("id"))
+        if not pode_excluir_orcamento(request.user, orcamento):
+            return self.erro(
+                request,
+                (
+                    "Somente rascunhos podem ser excluídos. Em Vendas, "
+                    "você só pode excluir os rascunhos criados por você."
+                ),
+                status=403,
+            )
+
+        exigir_confirmacao_exclusao(request)
         numero = orcamento.pk
         orcamento.delete()
         return self.sucesso(request, f"Orçamento #{numero} removido.")

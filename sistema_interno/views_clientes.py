@@ -21,11 +21,12 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.views.generic import View
 
-from core.models import Clientes as ClienteMapa, Estabelecimentos
+from core.models import Estabelecimentos
 
 from . import clientes as svc
 from .models import Cliente, EnderecoCliente, Orcamento
-from .utils import ErroDeFormulario
+from .permissoes import pode_excluir_cliente
+from .utils import ErroDeFormulario, exigir_confirmacao_exclusao
 from .views import GestorInternoRequiredMixin, RespostaJSONMixin
 
 
@@ -47,7 +48,7 @@ class ClientesInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
 
         consulta = (
             Cliente.objects
-            .select_related("parceiro", "estabelecimento", "cliente_mapa")
+            .select_related("parceiro", "estabelecimento")
             .prefetch_related(
                 Prefetch(
                     "enderecos",
@@ -94,15 +95,10 @@ class ClientesInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
                 filter=(Q(telefone="") | Q(telefone__isnull=True))
                 & (Q(email="") | Q(email__isnull=True)),
             ),
+            no_mapa=Count("id", filter=Q(publicar_no_mapa=True, ativo=True)),
         )
 
         ids_da_pagina = [cliente.pk for cliente in pagina.object_list]
-        mapas_disponiveis = (
-            ClienteMapa.objects
-            .filter(Q(cliente_interno__isnull=True) | Q(cliente_interno__id__in=ids_da_pagina))
-            .distinct()
-            .order_by("descricao_cliente")
-        )
         estabelecimentos_disponiveis = (
             Estabelecimentos.objects
             .filter(Q(clientes_internos__isnull=True) | Q(clientes_internos__id__in=ids_da_pagina))
@@ -119,11 +115,11 @@ class ClientesInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
             "tipos": Cliente.Tipo.choices,
             "buffets": buffets,
             "estabelecimentos": estabelecimentos_disponiveis,
-            "clientes_mapa": mapas_disponiveis,
             "total_clientes": totais["clientes"],
             "total_buffets": totais["buffets"],
             "total_vinculados": totais["vinculados"],
             "total_sem_contato": totais["sem_contato"],
+            "total_no_mapa": totais["no_mapa"],
             "clientes_dados": [self.serializar(c) for c in pagina.object_list],
             "opcoes_buffets": [
                 {
@@ -132,20 +128,6 @@ class ClientesInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
                     "detalhe": b.contato_curto,
                 }
                 for b in buffets
-            ],
-            "opcoes_clientes_mapa": [
-                {
-                    "valor": str(mapa.pk),
-                    "rotulo": mapa.descricao_cliente or f"Cliente #{mapa.pk}",
-                    "detalhe": " · ".join(
-                        parte for parte in (
-                            mapa.bairro or "",
-                            f"{mapa.cidade}/{mapa.estado}" if mapa.cidade else "",
-                        ) if parte
-                    ) or "Pino público sem endereço completo",
-                    "grupo": "Clientes já publicados no mapa",
-                }
-                for mapa in mapas_disponiveis
             ],
             "opcoes_estabelecimentos": [
                 {
@@ -202,22 +184,27 @@ class ClientesInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
             "email": cliente.email or "",
             "parceiro": str(cliente.parceiro_id or ""),
             "estabelecimento": str(cliente.estabelecimento_id or ""),
-            "cliente_mapa": str(cliente.cliente_mapa_id or ""),
             "observacoes": cliente.observacoes,
             "cep": endereco.cep if endereco else "",
             "endereco": endereco.endereco if endereco else "",
             "numero": endereco.numero if endereco else "",
+            "complemento": endereco.complemento if endereco else "",
             "bairro": endereco.bairro if endereco else "",
             "cidade": endereco.cidade if endereco else "",
             "estado": endereco.estado if endereco else "",
+            "pais": (endereco.pais if endereco else "") or "Brasil",
             "latitude": str(endereco.latitude or "") if endereco else "",
             "longitude": str(endereco.longitude or "") if endereco else "",
-            "no_mapa": bool(cliente.cliente_mapa_id),
-            "mapa_pronto": bool(
-                cliente.cliente_mapa_id
-                and cliente.cliente_mapa.latitude
-                and cliente.cliente_mapa.longitude
-            ),
+            # O que o site mostra deste cliente.
+            "publicar_no_mapa": cliente.publicar_no_mapa,
+            "site_cliente": cliente.site_cliente or "",
+            "logo_url": cliente.logo.url if cliente.logo else "",
+            "ativo": cliente.ativo,
+            # "Marcado para o mapa" e "desenhado no mapa" são coisas
+            # diferentes: sem coordenada, o alfinete não existe. A tela
+            # precisa dizer isso em vez de deixar a pessoa achar que
+            # publicou.
+            "no_mapa": cliente.no_mapa,
         }
 
     # ------------------------------------------------------------- ações
@@ -229,24 +216,35 @@ class ClientesInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
 
         salvo = svc.salvar_cliente(request, cliente)
         svc.salvar_endereco(request, salvo)
-        mapa = None
-        if salvo.orcamentos.filter(status=Orcamento.Status.APROVADO).exists():
-            mapa = svc.sincronizar_cliente_no_mapa(salvo)
 
+        # Proposta já fechada põe o cliente no mapa sem ninguém precisar
+        # lembrar de marcar a caixa.
+        if salvo.orcamentos.filter(status=Orcamento.Status.APROVADO).exists():
+            svc.publicar_no_mapa(salvo)
+
+        salvo.refresh_from_db()
         return self.sucesso(
             request,
             (
-                f"Cliente “{salvo.nome_cliente}” salvo e atualizado no mapa."
-                if mapa and mapa.latitude and mapa.longitude
+                f"Cliente “{salvo.nome_cliente}” salvo e no mapa do site."
+                if salvo.no_mapa
                 else f"Cliente “{salvo.nome_cliente}” salvo."
             ),
             id=salvo.id,
             cliente=svc.opcao_de_busca(salvo),
-            mapa_publicado=bool(mapa and mapa.latitude and mapa.longitude),
+            mapa_publicado=salvo.no_mapa,
         )
 
     def acao_delete(self, request):
+        if not pode_excluir_cliente(request.user):
+            return self.erro(
+                request,
+                "Somente a equipe de Gestão pode excluir clientes.",
+                status=403,
+            )
+
         cliente = get_object_or_404(Cliente, pk=request.POST.get("id"))
+        exigir_confirmacao_exclusao(request)
 
         # Apagar levaria junto o vínculo dos orçamentos (SET_NULL) e o
         # histórico do cliente sumiria da proposta já enviada.

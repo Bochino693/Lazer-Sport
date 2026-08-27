@@ -308,6 +308,98 @@ class OrcamentoInternoTests(TestCase):
         )
         return orcamento
 
+    # -------------------------------------------------------- exclusão
+    def test_exclusao_de_rascunho_exige_confirmacao_escrita(self):
+        orcamento = Orcamento.objects.create(
+            nome_cliente="Rascunho duplicado",
+            responsavel=self.gestor,
+        )
+
+        sem_confirmar = self.post({"action": "delete", "id": orcamento.id})
+
+        self.assertEqual(sem_confirmar.status_code, 400)
+        self.assertIn("CONFIRMAR", sem_confirmar.json()["msg"])
+        self.assertTrue(Orcamento.objects.filter(pk=orcamento.pk).exists())
+
+        confirmado = self.post({
+            "action": "delete",
+            "id": orcamento.id,
+            "confirmacao_exclusao": "confirmar",
+        })
+
+        self.assertEqual(confirmado.status_code, 200)
+        self.assertFalse(Orcamento.objects.filter(pk=orcamento.pk).exists())
+
+    def test_vendas_so_exclui_o_proprio_rascunho(self):
+        vendedor = User.objects.create_user(
+            username="vendedor-orcamento",
+            password="senha-segura",
+        )
+        atribuir_funcoes(vendedor, ["vendas"])
+        proprio = Orcamento.objects.create(
+            nome_cliente="Meu rascunho",
+            responsavel=vendedor,
+        )
+        alheio = Orcamento.objects.create(
+            nome_cliente="Rascunho de outra pessoa",
+            responsavel=self.gestor,
+        )
+        self.client.force_login(vendedor)
+
+        pagina = self.client.get(self.URL, HTTP_HOST="interno.testserver")
+
+        self.assertContains(pagina, f'data-excluir="{proprio.id}"')
+        self.assertNotContains(pagina, f'data-excluir="{alheio.id}"')
+        self.assertContains(pagina, 'name="confirmacao_exclusao"')
+
+        proprio_resposta = self.post({
+            "action": "delete",
+            "id": proprio.id,
+            "confirmacao_exclusao": "ConFiRmAr",
+        })
+        alheio_resposta = self.post({
+            "action": "delete",
+            "id": alheio.id,
+            "confirmacao_exclusao": "CONFIRMAR",
+        })
+
+        self.assertEqual(proprio_resposta.status_code, 200)
+        self.assertEqual(alheio_resposta.status_code, 403)
+        self.assertFalse(Orcamento.objects.filter(pk=proprio.pk).exists())
+        self.assertTrue(Orcamento.objects.filter(pk=alheio.pk).exists())
+
+    def test_propostas_fora_do_rascunho_ficam_no_historico(self):
+        protegidos = [
+            Orcamento.objects.create(
+                nome_cliente=f"Histórico {status}",
+                status=status,
+                responsavel=self.gestor,
+            )
+            for status in (
+                Orcamento.Status.ENVIADO,
+                Orcamento.Status.APROVADO,
+                Orcamento.Status.RECUSADO,
+                Orcamento.Status.EXPIRADO,
+            )
+        ]
+
+        pagina = self.client.get(self.URL, HTTP_HOST="interno.testserver")
+        for orcamento in protegidos:
+            with self.subTest(status=orcamento.status):
+                self.assertNotContains(
+                    pagina,
+                    f'data-excluir="{orcamento.id}"',
+                )
+                resposta = self.post({
+                    "action": "delete",
+                    "id": orcamento.id,
+                    "confirmacao_exclusao": "CONFIRMAR",
+                })
+                self.assertEqual(resposta.status_code, 403)
+                self.assertTrue(
+                    Orcamento.objects.filter(pk=orcamento.pk).exists()
+                )
+
     def test_enviar_devolve_o_link_do_site_publico(self):
         orcamento = self._orcamento_com_item()
 

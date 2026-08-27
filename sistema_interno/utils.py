@@ -10,6 +10,24 @@ class ErroDeFormulario(Exception):
     """Falha previsível de validação: vira mensagem pro usuário, não 500."""
 
 
+PALAVRA_CONFIRMACAO_EXCLUSAO = "CONFIRMAR"
+
+
+def exigir_confirmacao_exclusao(request):
+    """Exige a confirmação escrita das exclusões permanentes.
+
+    A comparação ignora caixa e espaços nas pontas: ``confirmar``,
+    ``Confirmar`` e ``CONFIRMAR`` expressam a mesma intenção. A validação
+    mora no servidor porque esconder/desabilitar o botão no navegador não
+    protege uma chamada POST feita à mão.
+    """
+    recebido = (request.POST.get("confirmacao_exclusao") or "").strip()
+    if recebido.casefold() != PALAVRA_CONFIRMACAO_EXCLUSAO.casefold():
+        raise ErroDeFormulario(
+            f"Digite {PALAVRA_CONFIRMACAO_EXCLUSAO} para autorizar a exclusão."
+        )
+
+
 def pede_json(request):
     """O painel envia por fetch; um POST sem JavaScript segue o fluxo normal."""
     return (

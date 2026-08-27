@@ -378,3 +378,14 @@ class JanelasDoPainelTests(TestCase):
 
         self.assertIn("acomodarTextos", js)
         self.assertIn("shown.bs.modal", js)
+
+    def test_exclusao_tem_confirmacao_reutilizavel_e_layout_responsivo(self):
+        js = self.ler("painel.js")
+        css = self.ler("interno_modern.css")
+
+        self.assertIn("ligarExclusao", js)
+        self.assertIn("toLocaleUpperCase", js)
+        self.assertIn('name="confirmacao_exclusao"', js)
+        self.assertIn(".ls-delete-modal", css)
+        self.assertIn(".ls-commercial-table", css)
+        self.assertIn("@media (max-width:900px)", css)

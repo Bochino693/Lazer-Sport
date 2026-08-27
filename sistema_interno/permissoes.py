@@ -128,11 +128,38 @@ def capacidades(user) -> dict[str, bool]:
         "estoque": producao or gestao,
         "clientes": vendas or gestao,
         "orcamentos": vendas or gestao,
+        # Vendas corrige o próprio rascunho; Gestão pode remover qualquer
+        # rascunho. Clientes não têm autoria, então a exclusão fica com
+        # Gestão. O estado do orçamento ainda é conferido por objeto abaixo.
+        "excluir_clientes": gestao,
+        "excluir_orcamentos": vendas or gestao,
+        "excluir_orcamentos_alheios": gestao,
         "financeiro": gestao,
         "operacao": producao or vendas or gestao,
         "site": criacao,
         "usuarios": superusuario,
     }
+
+
+def pode_excluir_cliente(user) -> bool:
+    """Cadastro comercial sem histórico só pode ser apagado por Gestão."""
+    return capacidades(user)["excluir_clientes"]
+
+
+def pode_excluir_orcamento(user, orcamento) -> bool:
+    """Limita exclusão a rascunhos e respeita a autoria em Vendas.
+
+    Uma proposta enviada, respondida ou expirada já é histórico comercial.
+    Ela pode mudar de situação, mas não deve desaparecer da linha do tempo.
+    """
+    acesso = capacidades(user)
+    if not acesso["excluir_orcamentos"]:
+        return False
+    if getattr(orcamento, "status", None) != "rascunho":
+        return False
+    if acesso["excluir_orcamentos_alheios"]:
+        return True
+    return getattr(orcamento, "responsavel_id", None) == getattr(user, "pk", None)
 
 
 def atribuir_funcoes(user, codigos) -> list[Funcao]:

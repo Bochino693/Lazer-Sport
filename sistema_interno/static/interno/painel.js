@@ -464,7 +464,7 @@
 
   /* Liga um formulario de modal ao envio por fetch.
    *
-   * opcoes: { form, erro, action, antes, depois }
+   * opcoes: { form, erro, action, antes, depois, rotuloCarregando }
    * - antes: devolve string com um erro de validacao para barrar o envio
    * - depois: recebe o JSON; por padrao recarrega a pagina
    */
@@ -482,7 +482,7 @@
         return;
       }
       botao.disabled = on;
-      botao.textContent = on ? "Salvando..." : rotulo;
+      botao.textContent = on ? (opcoes.rotuloCarregando || "Salvando...") : rotulo;
     }
 
     // A validacao nativa nao bubbla e o balaozinho some quando o modal
@@ -529,6 +529,80 @@
           Painel.erro(opcoes.erro, err.message);
           travar(false);
         });
+    });
+  };
+
+  /* Exclusão permanente com confirmação escrita.
+   *
+   * O botão só habilita quando a palavra está certa, mas isto é apenas a
+   * orientação da interface. O servidor repete a validação e a permissão;
+   * assim um POST manual nunca contorna a proteção. Uma função única atende
+   * clientes e orçamentos e mantém o comportamento igual nas duas telas. */
+  Painel.ligarExclusao = function (opcoes) {
+    opcoes = opcoes || {};
+
+    var formId = opcoes.form || "formExcluir";
+    var erroId = opcoes.erro || "excluirErro";
+    var modalId = opcoes.modal || "modalExcluir";
+    var form = document.getElementById(formId);
+    if (!form) return;
+
+    var campo = form.querySelector('[name="confirmacao_exclusao"]');
+    var botao = form.querySelector('[type="submit"]');
+    var nome = document.getElementById(opcoes.nome || "excluirNome");
+    var id = document.getElementById(opcoes.id || "excluirId");
+    var palavra = String(opcoes.palavra || "CONFIRMAR");
+
+    function normalizar(valor) {
+      return String(valor || "").trim().toLocaleUpperCase("pt-BR");
+    }
+
+    function confirmacaoCorreta() {
+      return campo && normalizar(campo.value) === normalizar(palavra);
+    }
+
+    function atualizarConfirmacao() {
+      var correta = confirmacaoCorreta();
+      if (botao) botao.disabled = !correta;
+      if (campo) {
+        campo.classList.toggle("is-valid", correta);
+        campo.classList.remove("is-invalid");
+        campo.setAttribute("aria-invalid", "false");
+      }
+    }
+
+    if (campo) campo.addEventListener("input", atualizarConfirmacao);
+
+    document.querySelectorAll(opcoes.gatilho || "[data-excluir]").forEach(function (gatilho) {
+      gatilho.addEventListener("click", function () {
+        form.reset();
+        Painel.erro(erroId, "");
+        if (id) id.value = gatilho.dataset.excluir || "";
+        if (nome) nome.textContent = gatilho.dataset.nome || "Registro selecionado";
+        atualizarConfirmacao();
+        Painel.abrir(modalId);
+
+        /* No celular, abrir o teclado imediatamente esconde a explicação.
+         * No desktop, foco direto economiza um clique. */
+        if (campo && global.matchMedia("(min-width: 901px)").matches) {
+          global.setTimeout(function () { campo.focus(); }, 180);
+        }
+      });
+    });
+
+    Painel.ligar({
+      form: formId,
+      erro: erroId,
+      rotuloCarregando: "Excluindo...",
+      antes: function () {
+        if (confirmacaoCorreta()) return null;
+        if (campo) {
+          campo.classList.add("is-invalid");
+          campo.setAttribute("aria-invalid", "true");
+          campo.focus();
+        }
+        return "Digite " + palavra + " para autorizar a exclusão.";
+      }
     });
   };
 

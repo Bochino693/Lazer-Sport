@@ -90,8 +90,8 @@
   </div>
 
   <div class="ls-data-body">
-    <div class="table-responsive">
-      <table class="ls-table">
+    <div class="table-responsive ls-commercial-table-wrap">
+      <table class="ls-table ls-commercial-table ls-orcamentos-table">
         <thead>
           <tr>
             <th>#</th>
@@ -145,16 +145,19 @@
                   </span>
                 {% endif %}
               </td>
-              <td data-rotulo="Ações" class="ls-actions text-end">
+              <td data-rotulo="Ações" class="ls-actions ls-commercial-actions text-end">
+                <div class="ls-row-actions">
                 <a class="btn btn-sm btn-outline-primary"
                    href="{% url 'orcamento_previa_inner' orcamento.id %}"
                    target="_blank" rel="noopener"
+                   aria-label="Abrir prévia do orçamento {{ orcamento.id }}"
                    title="Conferir o documento sem alterar a situação">
-                  <i class="bi bi-eye"></i> Prévia
+                  <i class="bi bi-eye"></i><span class="ls-action-label">Prévia</span>
                 </a>
                 <button type="button" class="btn btn-sm btn-outline-secondary"
-                        data-editar="{{ orcamento.id }}">
-                  <i class="bi bi-pencil"></i> Editar
+                        data-editar="{{ orcamento.id }}"
+                        aria-label="Editar orçamento {{ orcamento.id }}" title="Editar orçamento">
+                  <i class="bi bi-pencil"></i><span class="ls-action-label">Editar</span>
                 </button>
                 <button type="button" class="btn btn-sm btn-outline-primary"
                         data-enviar="{{ orcamento.id }}"
@@ -166,21 +169,27 @@
                         data-mensagem="{{ orcamento.mensagem_whatsapp }}"
                         data-previa="{% url 'orcamento_previa_inner' orcamento.id %}"
                         value="{{ orcamento.id }}"
+                        aria-label="Enviar orçamento {{ orcamento.id }}"
                         title="Gerar o link da proposta para mandar ao cliente">
                   <i class="bi bi-send"></i>
-                  {% if orcamento.enviado_em %}Link{% else %}Enviar{% endif %}
+                  <span class="ls-action-label">{% if orcamento.enviado_em %}Link{% else %}Enviar{% endif %}</span>
                 </button>
                 <button type="button" class="btn btn-sm btn-outline-secondary"
                         data-situacao="{{ orcamento.id }}"
                         data-nome="#{{ orcamento.id }} — {{ orcamento.destinatario }}"
-                        data-status="{{ orcamento.status }}">
-                  <i class="bi bi-flag"></i> Situação
+                        data-status="{{ orcamento.status }}"
+                        aria-label="Alterar situação do orçamento {{ orcamento.id }}" title="Alterar situação">
+                  <i class="bi bi-flag"></i><span class="ls-action-label">Situação</span>
                 </button>
+                {% if orcamento.pode_excluir %}
                 <button type="button" class="btn btn-sm btn-outline-danger"
                         data-excluir="{{ orcamento.id }}"
-                        data-nome="Orçamento #{{ orcamento.id }}">
-                  <i class="bi bi-trash"></i>
+                        data-nome="Orçamento #{{ orcamento.id }} — {{ orcamento.destinatario }}"
+                        aria-label="Excluir orçamento {{ orcamento.id }}" title="Excluir rascunho">
+                  <i class="bi bi-trash"></i><span class="ls-action-label">Excluir</span>
                 </button>
+                {% endif %}
+                </div>
               </td>
             </tr>
           {% empty %}
@@ -781,27 +790,8 @@ Cadastro mínimo de propósito: nome, valor e categoria. Foto e texto de
 </div>
 
 <!-- ================= MODAL: excluir ================= -->
-<div class="modal fade" id="modalExcluir" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-sm">
-    <form class="modal-content" id="formExcluir" method="post" action="{% url 'orcamentos_inner' %}">
-      {% csrf_token %}
-      <input type="hidden" name="action" value="delete">
-      <input type="hidden" name="id" id="excluirId">
-      <div class="modal-header">
-        <h5 class="modal-title">Excluir orçamento?</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
-      </div>
-      <div class="modal-body">
-        <div id="excluirErro" class="alert alert-danger d-none" role="alert"></div>
-        <p class="mb-0"><strong id="excluirNome"></strong> e todos os itens dele são apagados. Não dá para desfazer.</p>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-        <button type="submit" class="btn btn-danger">Excluir</button>
-      </div>
-    </form>
-  </div>
-</div>
+{% url 'orcamentos_inner' as exclusao_url %}
+{% include "includes/modal_confirmar_exclusao.html" with exclusao_url=exclusao_url exclusao_titulo="Excluir orçamento" exclusao_aviso="O rascunho e todos os itens serão apagados. Propostas enviadas, respondidas ou expiradas permanecem no histórico comercial." %}
 
 {{ orcamentos_dados|json_script:"orcamentosDados" }}
 {% endblock %}
@@ -1490,16 +1480,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
   Painel.ligar({ form: "formSituacao", erro: "situacaoErro" });
 
-  document.querySelectorAll("[data-excluir]").forEach(function (b) {
-    b.addEventListener("click", function () {
-      Painel.erro("excluirErro", "");
-      Painel.valor("excluirId", b.dataset.excluir);
-      document.getElementById("excluirNome").textContent = b.dataset.nome;
-      Painel.abrir("modalExcluir");
-    });
-  });
-
-  Painel.ligar({ form: "formExcluir", erro: "excluirErro" });
+  Painel.ligarExclusao();
 
   /* ------------------------------------------------------------------
      Cadastrar brinquedo sem sair do orçamento

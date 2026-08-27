@@ -1,0 +1,45 @@
+<div class="modal fade ls-delete-modal" id="modalExcluir" tabindex="-1" aria-labelledby="excluirTitulo" aria-hidden="true">
+  <div class="modal-dialog">
+    <form class="modal-content" id="formExcluir" method="post" action="{{ exclusao_url }}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="delete">
+      <input type="hidden" name="id" id="excluirId">
+
+      <div class="modal-header">
+        <div>
+          <span class="ls-modal-kicker">Ação permanente</span>
+          <h5 class="modal-title" id="excluirTitulo">{{ exclusao_titulo }}</h5>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+
+      <div class="modal-body">
+        <div id="excluirErro" class="alert alert-danger d-none" role="alert"></div>
+
+        <div class="ls-delete-warning" role="note">
+          <span class="ls-delete-warning-icon" aria-hidden="true"><i class="bi bi-exclamation-triangle-fill"></i></span>
+          <div>
+            <strong id="excluirNome"></strong>
+            <p>{{ exclusao_aviso }}</p>
+          </div>
+        </div>
+
+        <label class="form-label mt-4" for="excluirConfirmacao">
+          Para confirmar, digite <span class="ls-confirm-word">CONFIRMAR</span>
+        </label>
+        <input class="form-control ls-confirm-input" id="excluirConfirmacao"
+               name="confirmacao_exclusao" type="text" required maxlength="9"
+               autocomplete="off" autocorrect="off" spellcheck="false"
+               data-rotulo="confirmação" aria-describedby="excluirAjuda">
+        <span class="form-text" id="excluirAjuda">
+          Pode usar letras maiúsculas ou minúsculas. O botão só será liberado quando estiver correto.
+        </span>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-danger" id="excluirEnviar" disabled>Excluir definitivamente</button>
+      </div>
+    </form>
+  </div>
+</div>

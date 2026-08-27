@@ -48,7 +48,7 @@
   <link href="{% static 'interno/vendor/bootstrap-icons.min.css' %}" rel="stylesheet">
 
   {% block extra_css %}{% endblock %}
-  <link href="{% static 'interno/interno_modern.css' %}?v=7" rel="stylesheet">
+  <link href="{% static 'interno/interno_modern.css' %}?v=13" rel="stylesheet">
 
   <!-- Barra de carregamento no topo, compartilhada com o painel /adm. -->
   <link rel="stylesheet" href="{% static 'site/ls-page-loader.css' %}?v=2">
@@ -164,9 +164,9 @@
         </a>
         {% endif %}
         {% if permissoes_interno.gestao %}
-        <a data-titulo="Mapa de clientes" class="ls-nav-item {% if request.resolver_match.url_name == 'clientes_admin' %}active{% endif %}" href="{% url 'clientes_admin' %}">
+        <a data-titulo="Clientes no mapa" class="ls-nav-item {% if request.resolver_match.url_name == 'clientes_admin' %}active{% endif %}" href="{% url 'clientes_admin' %}">
           <span class="ls-nav-icon"><i class="bi bi-geo-alt-fill"></i></span>
-          <span>Mapa de clientes</span>
+          <span>Clientes no mapa</span>
         </a>
         {% endif %}
       </div>
@@ -401,7 +401,7 @@ Dito em voz alta: este NÃO é o /adm do site. Quem trabalha nos
 </div>
 
 <script src="{% static 'interno/vendor/bootstrap.bundle.min.js' %}"></script>
-<script src="{% static 'interno/painel.js' %}?v=4"></script>
+<script src="{% static 'interno/painel.js' %}?v=5"></script>
 {% comment %}
   Campo de busca do painel (catálogo, clientes, colaboradores). Carrega
   em toda tela porque o mesmo componente é usado em orçamento, produção e
