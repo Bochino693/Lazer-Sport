@@ -151,25 +151,30 @@
                   <span class="text-muted">Sem prazo</span>
                 {% endif %}
               </td>
-              <td data-rotulo="Situação">
+              {% comment %}
+                data-situacao: a célula que o painel repinta sozinho
+                quando o cliente responde pela página pública. Sem isso a
+                mudança só aparecia ao recarregar -- e como a sessão dura
+                o dia inteiro, na prática só ao sair e entrar de novo.
+              {% endcomment %}
+              <td data-rotulo="Situação" data-situacao="{{ orcamento.id }}">
                 <span class="ls-status
                   {% if orcamento.status == 'aprovado' %}success
                   {% elif orcamento.status == 'recusado' %}danger
                   {% elif orcamento.status == 'enviado' %}info
                   {% elif orcamento.status == 'expirado' %}warning
-                  {% else %}neutral{% endif %}">
+                  {% else %}neutral{% endif %}" data-situacao-selo>
                   {{ orcamento.get_status_display }}
                 </span>
-                {% if orcamento.respondido_em %}
-                  <span class="material-sub d-block mt-1">
+                <span class="material-sub d-block mt-1" data-situacao-nota
+                      {% if not orcamento.respondido_em and not orcamento.enviado_em %}hidden{% endif %}>
+                  {% if orcamento.respondido_em %}
                     {{ orcamento.respondido_por|default:"cliente" }} ·
                     {{ orcamento.respondido_em|date:"d/m H:i" }}
-                  </span>
-                {% elif orcamento.enviado_em %}
-                  <span class="material-sub d-block mt-1">
+                  {% elif orcamento.enviado_em %}
                     enviado {{ orcamento.enviado_em|date:"d/m" }}
-                  </span>
-                {% endif %}
+                  {% endif %}
+                </span>
               </td>
               <td data-rotulo="Revisão dos blocos">
                 <div class="ls-block-review">
@@ -249,6 +254,31 @@
         </tbody>
       </table>
     </div>
+
+    {% if page_obj.has_other_pages %}
+      {% comment %}
+        A tela não era paginada, e cada linha carrega muito: os itens, o
+        texto pronto do WhatsApp e a proposta inteira em JSON para o modal
+        de edição. Com algumas centenas de propostas isso virava megabytes
+        de HTML, e no servidor a resposta estourava o tempo do gunicorn --
+        o 502 ao abrir Orçamentos. Os números do topo continuam somando o
+        filtro inteiro; só a lista é que vem por página.
+      {% endcomment %}
+      <nav class="ls-paginacao" aria-label="Páginas">
+        {% if page_obj.has_previous %}
+          <a class="btn btn-sm btn-outline-secondary"
+             href="?page={{ page_obj.previous_page_number }}&q={{ busca|urlencode }}&status={{ status_ativo }}&origem={{ origem_ativa }}">Anterior</a>
+        {% endif %}
+        <span>
+          Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
+          · {{ page_obj.paginator.count }} proposta{{ page_obj.paginator.count|pluralize }}
+        </span>
+        {% if page_obj.has_next %}
+          <a class="btn btn-sm btn-outline-secondary"
+             href="?page={{ page_obj.next_page_number }}&q={{ busca|urlencode }}&status={{ status_ativo }}&origem={{ origem_ativa }}">Próxima</a>
+        {% endif %}
+      </nav>
+    {% endif %}
   </div>
 </section>
 
@@ -807,8 +837,13 @@ Cadastro mínimo de propósito: nome, valor e categoria. Foto e texto de
           Saída para quando o navegador bloqueia a janela do WhatsApp: um
           botão que a pessoa toca, com o gesto dela, e a conversa abre.
         {% endcomment %}
+        {% comment %}
+          data-whatsapp-web: este botão é DE PROPÓSITO a versão web. É a
+          saída para quando o aplicativo instalado não abriu -- mandá-lo
+          de volta para o aplicativo faria dele um botão que não faz nada.
+        {% endcomment %}
         <a class="btn btn-success w-100 mt-3" id="linkWhatsappAtalho"
-           href="#" target="_blank" rel="noopener" hidden>
+           href="#" target="_blank" rel="noopener" data-whatsapp-web hidden>
           <i class="bi bi-whatsapp me-1"></i> Abrir conversa no WhatsApp
         </a>
 
@@ -1898,11 +1933,12 @@ document.addEventListener("DOMContentLoaded", function () {
   function montarConversa(telefone, mensagem) {
     /* Mesma regra do servidor (conversa_whatsapp), aqui para a conversa
        abrir no mesmo toque em que a pessoa pede -- sem esperar resposta
-       nenhuma, que é quando o navegador bloqueia a janela. */
-    var digitos = String(telefone || "").replace(/\D/g, "");
-    if (digitos.length < 10) return "";
-    if (digitos.length === 10 || digitos.length === 11) digitos = "55" + digitos;
-    return "https://wa.me/" + digitos + "?text=" + encodeURIComponent(mensagem);
+       nenhuma, que é quando o navegador bloqueia a janela.
+
+       Este é o endereço da versão WEB: o que se copia e o que fica no
+       botão verde de reserva. Quem escolhe entre o aplicativo instalado
+       e ele é `Painel.whatsapp.abrir`. */
+    return Painel.whatsapp.web(telefone, mensagem);
   }
 
   function mostrarLink(link, previa) {
@@ -2051,20 +2087,30 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     /* O WhatsApp que abre é o de QUEM ESTÁ LOGADO no aparelho: a proposta
-       sai do número do atendente, como qualquer mensagem dele. */
-    var aba = window.open(url, "_blank");
-    var abriu = !!aba;
-    if (abriu) { try { aba.opener = null; } catch (e) {} }
+       sai do número do atendente, como qualquer mensagem dele.
 
-    mostrarAtalhoWhatsapp(url, abriu);
-    document.getElementById("linkErro").className = "alert alert-info";
+       No computador quem abre é o APLICATIVO INSTALADO, não o WhatsApp
+       Web -- outra aba com QR code atrasa cada envio. Se o aplicativo não
+       estiver instalado o sistema simplesmente ignora o pedido, sem
+       avisar ninguém; por isso o botão verde para a versão web fica
+       sempre visível logo abaixo. */
+    var saida = Painel.whatsapp.abrir(telefone, mensagem);
+
+    mostrarAtalhoWhatsapp(url, saida.motivo !== "aplicativo" && saida.ok);
+    document.getElementById("linkErro").className = saida.ok
+      ? "alert alert-info"
+      : "alert alert-danger";
     Painel.erro(
       "linkErro",
-      abriu
-        ? "A conversa abriu no seu WhatsApp com a proposta escrita. " +
-          "Confirme o envio por lá para o cliente receber."
-        : "O navegador bloqueou a janela. Use o botão verde " +
-          "“Abrir conversa no WhatsApp” aqui embaixo."
+      saida.motivo === "aplicativo"
+        ? "Pedimos ao WhatsApp instalado no seu computador para abrir a " +
+          "conversa com a proposta escrita. Não abriu? Use o botão verde " +
+          "aqui embaixo, que vai pela versão web."
+        : saida.ok
+          ? "A conversa abriu no seu WhatsApp com a proposta escrita. " +
+            "Confirme o envio por lá para o cliente receber."
+          : "O navegador bloqueou a janela. Use o botão verde " +
+            "“Abrir conversa no WhatsApp” aqui embaixo."
     );
 
     /* O registro vai por trás: marca o orçamento como enviado e guarda a
@@ -2146,5 +2192,91 @@ document.addEventListener("DOMContentLoaded", function () {
     avisar();
   });
 });
+
+/* ======================================================================
+   A SITUAÇÃO DA PROPOSTA, AO VIVO
+   ----------------------------------------------------------------------
+   O cliente aprova ou recusa pela página pública, e quem está no painel
+   via a mudança só ao recarregar. Como a sessão dura o dia inteiro, na
+   prática isso queria dizer "só depois de sair e entrar de novo" -- e um
+   "aprovado" que demora meia hora para aparecer é um cliente esperando
+   meia hora por um retorno que já podia ter saído.
+
+   Pergunta só a situação das linhas que estão na tela, só com a aba
+   visível, e só mexe no que realmente mudou. Uma linha que muda pisca uma
+   vez: sem isso a mudança acontece fora do canto onde a pessoa olhava.
+   ====================================================================== */
+(function () {
+  var ROTA = "{% url 'estados_orcamentos' %}";
+  var INTERVALO = 30000;
+
+  function celulas() {
+    return Array.prototype.slice.call(
+      document.querySelectorAll("[data-situacao]")
+    );
+  }
+
+  function pintar(celula, estado) {
+    var selo = celula.querySelector("[data-situacao-selo]");
+    var nota = celula.querySelector("[data-situacao-nota]");
+    if (!selo) return false;
+
+    var rotuloAtual = selo.textContent.trim();
+    if (rotuloAtual === estado.rotulo) return false;
+
+    selo.className = "ls-status " + (estado.cor || "neutral");
+    selo.textContent = estado.rotulo;
+
+    if (nota) {
+      var texto = estado.respondido_em
+        ? (estado.respondido_por || "cliente") + " · " + estado.respondido_em
+        : (estado.enviado_em ? "enviado " + estado.enviado_em : "");
+      nota.textContent = texto;
+      nota.hidden = !texto;
+    }
+
+    var linha = celula.closest("tr") || celula;
+    linha.classList.remove("ls-mudou");
+    /* Reiniciar a animação exige uma leitura de layout entre remover e
+       pôr de volta -- sem isso o navegador não vê mudança nenhuma. */
+    void linha.offsetWidth;
+    linha.classList.add("ls-mudou");
+    return true;
+  }
+
+  function conferir() {
+    var alvos = celulas();
+    if (!alvos.length) return;
+
+    var ids = alvos.map(function (c) { return c.getAttribute("data-situacao"); });
+    fetch(ROTA + "?ids=" + encodeURIComponent(ids.join(",")), {
+      headers: { "X-Requested-With": "XMLHttpRequest" },
+      credentials: "same-origin",
+      cache: "no-store",
+    })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (dados) {
+        if (!dados || !dados.orcamentos) return;
+        var mudou = 0;
+        alvos.forEach(function (celula) {
+          var estado = dados.orcamentos[celula.getAttribute("data-situacao")];
+          if (estado && pintar(celula, estado)) mudou += 1;
+        });
+        /* Se alguma proposta mudou, as bolinhas do menu mudaram junto. */
+        if (mudou && window.Painel && Painel.avisos) Painel.avisos.agora();
+      })
+      .catch(function () {
+        /* Rede oscilando não vira alarme: o próximo ciclo tenta de novo. */
+      });
+  }
+
+  setInterval(function () {
+    if (document.visibilityState === "visible") conferir();
+  }, INTERVALO);
+
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState === "visible") conferir();
+  });
+})();
 </script>
 {% endblock %}

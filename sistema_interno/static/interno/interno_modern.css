@@ -2064,3 +2064,82 @@ input[type="number"]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0
   .ls-delete-modal .modal-footer{grid-template-columns:1fr}
   .ls-delete-modal .modal-footer .btn{grid-column:1!important}
 }
+
+/* ======================================================================
+   PAGINAÇÃO
+   ----------------------------------------------------------------------
+   Clientes e Orçamentos vêm por página. O rodapé da lista precisa dizer
+   três coisas de uma olhada: onde estou, quanto tem no total, e para onde
+   dá para ir. Sem o total, "Próxima" vira um botão de fé.
+   ====================================================================== */
+.ls-paginacao{
+  display:flex;flex-wrap:wrap;align-items:center;justify-content:center;
+  gap:10px 14px;margin:18px 0 4px;padding:12px 14px;
+  border-top:1px solid var(--ls-linha,rgba(255,255,255,.08));
+}
+.ls-paginacao > span{
+  font-size:.86rem;font-weight:600;letter-spacing:.01em;
+  color:var(--ls-texto-2,rgba(255,255,255,.62));
+  text-align:center;
+}
+.ls-paginacao .btn{
+  min-height:38px;padding-inline:16px;font-weight:700;white-space:nowrap;
+}
+
+/* No celular os dois botões dividem a linha e a contagem fica em cima:
+   polegar não acerta link de 12px encostado no outro. */
+@media (max-width:560px){
+  .ls-paginacao{
+    display:grid;grid-template-columns:1fr 1fr;gap:10px;
+  }
+  .ls-paginacao > span{grid-column:1 / -1;order:-1}
+  .ls-paginacao .btn{width:100%}
+}
+
+/* ======================================================================
+   O QUE ACABOU DE MUDAR
+   ----------------------------------------------------------------------
+   A situação de uma proposta muda sozinha na tela quando o cliente
+   responde. Sem um sinal, a mudança acontece fora do canto para onde a
+   pessoa estava olhando e ninguém percebe. Uma piscada curta e uma vez
+   só: chamar atenção é o objetivo, incomodar não é.
+   ====================================================================== */
+@keyframes ls-mudou{
+  from{background:rgba(80,180,255,.20)}
+  to{background:transparent}
+}
+.ls-mudou > td, .ls-mudou{animation:ls-mudou 2.2s ease-out 1}
+
+@media (prefers-reduced-motion:reduce){
+  .ls-mudou > td, .ls-mudou{animation:none;background:rgba(80,180,255,.10)}
+}
+
+/* ======================================================================
+   AVISO NO CELULAR — o pé da central de avisos
+   ====================================================================== */
+.ls-avisos-aparelho{
+  border-top:1px solid var(--ls-linha,rgba(255,255,255,.08));
+  padding:12px 14px 14px;
+}
+.ls-avisos-aparelho-botao{
+  display:flex;align-items:center;gap:10px;width:100%;
+  min-height:44px;padding:10px 12px;
+  border:1px solid var(--ls-linha,rgba(255,255,255,.12));border-radius:12px;
+  background:transparent;color:inherit;
+  font-size:.9rem;font-weight:700;text-align:left;cursor:pointer;
+}
+.ls-avisos-aparelho-botao:hover:not(:disabled){
+  border-color:rgba(120,190,255,.45);background:rgba(120,190,255,.08);
+}
+.ls-avisos-aparelho-botao:disabled{opacity:.62;cursor:default}
+.ls-avisos-aparelho-botao i{font-size:1.15rem;flex:none}
+/* Ligado tem cor própria: a pessoa precisa saber, de relance, se este
+   aparelho vai tocar ou não. */
+.ls-avisos-aparelho-botao.ligado{
+  border-color:rgba(72,214,158,.5);background:rgba(72,214,158,.10);
+  color:#7ff0c0;
+}
+.ls-avisos-aparelho-nota{
+  margin:9px 2px 0;font-size:.78rem;line-height:1.45;
+  color:var(--ls-texto-2,rgba(255,255,255,.6));
+}

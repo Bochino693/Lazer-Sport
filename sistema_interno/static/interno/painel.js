@@ -457,6 +457,11 @@
                 "Não foi possível salvar. Tente novamente em instantes."
             );
           }
+          /* Salvou: os avisos podem ter mudado agora mesmo -- um pedido
+             que virou produção, um orçamento que saiu. Perguntar aqui faz
+             a bolinha acompanhar a ação de quem está na tela, sem esperar
+             o próximo intervalo. */
+          if (Painel.avisos) Painel.avisos.agora();
           return json;
         });
     });
@@ -688,8 +693,477 @@
     });
   };
 
+  /* ====================================================================
+     WHATSAPP: O APLICATIVO INSTALADO PRIMEIRO, A WEB SÓ SE PRECISAR
+     --------------------------------------------------------------------
+     No computador, `wa.me` abre o WhatsApp Web -- outra aba, outro QR
+     code, e a mensagem demora. Quem atende tem o aplicativo instalado, e
+     é nele que a conversa deve abrir.
+
+     O caminho é o esquema `whatsapp://`, que o Windows e o macOS
+     entregam ao aplicativo. Ele tem um porém: se o aplicativo NÃO estiver
+     instalado, o navegador não avisa nada -- simplesmente não acontece
+     nada. Por isso o atalho verde para a versão web continua aparecendo
+     sempre, e o texto ao lado diz o que fazer se nada abrir.
+
+     No celular ninguém tem esse problema: `wa.me` já leva ao aplicativo,
+     e é o caminho que o próprio WhatsApp recomenda. Não se mexe.
+     ==================================================================== */
+  function numeroComDdi(telefone) {
+    var digitos = String(telefone || "").replace(/\D/g, "");
+    if (digitos.length < 10) return "";
+    /* 10 ou 11 dígitos é número brasileiro sem DDI. Acima disso a pessoa
+       já digitou o país -- inclusive para cliente de fora. */
+    if (digitos.length === 10 || digitos.length === 11) digitos = "55" + digitos;
+    return digitos;
+  }
+
+  function noCelular() {
+    /* `maxTouchPoints` pega o iPad, que se anuncia como Mac há anos. */
+    return (
+      /Android|iPhone|iPad|iPod|Windows Phone/i.test(navigator.userAgent) ||
+      (navigator.maxTouchPoints > 1 && /Macintosh/.test(navigator.userAgent))
+    );
+  }
+
+  Painel.whatsapp = {
+    numero: numeroComDdi,
+
+    /* Endereço da versão web -- o que se copia, se guarda e serve de
+       atalho de reserva. */
+    web: function (telefone, mensagem) {
+      var digitos = numeroComDdi(telefone);
+      if (!digitos) return "";
+      return "https://wa.me/" + digitos + "?text=" + encodeURIComponent(mensagem || "");
+    },
+
+    /* Endereço do aplicativo instalado. */
+    app: function (telefone, mensagem) {
+      var digitos = numeroComDdi(telefone);
+      if (!digitos) return "";
+      return (
+        "whatsapp://send?phone=" + digitos +
+        "&text=" + encodeURIComponent(mensagem || "")
+      );
+    },
+
+    noCelular: noCelular,
+
+    /* Abre a conversa e devolve o que aconteceu, para a tela explicar.
+       Precisa ser chamado DENTRO do clique: fora do gesto da pessoa o
+       navegador trata como pop-up e bloqueia. */
+    abrir: function (telefone, mensagem) {
+      var web = this.web(telefone, mensagem);
+      if (!web) return { ok: false, motivo: "numero", web: "" };
+
+      if (noCelular()) {
+        var aba = window.open(web, "_blank");
+        if (aba) { try { aba.opener = null; } catch (e) {} }
+        return { ok: !!aba, motivo: aba ? "web" : "bloqueado", web: web };
+      }
+
+      /* No computador: pede o aplicativo. Navegar a própria página para
+         um esquema que o sistema conhece não troca a página -- o
+         navegador entrega ao aplicativo e fica onde está. Se ninguém
+         responder pelo esquema, também não acontece nada, e é para isso
+         que o atalho verde existe. */
+      try {
+        window.location.href = this.app(telefone, mensagem);
+        return { ok: true, motivo: "aplicativo", web: web };
+      } catch (e) {
+        var reserva = window.open(web, "_blank");
+        if (reserva) { try { reserva.opener = null; } catch (e2) {} }
+        return { ok: !!reserva, motivo: reserva ? "web" : "bloqueado", web: web };
+      }
+    },
+  };
+
+  /* Todo link "wa.me" do painel segue a mesma regra, sem cada tela ter de
+     lembrar disso: no computador vai para o aplicativo instalado. O link
+     continua sendo wa.me no HTML -- é o que se copia, o que funciona sem
+     JavaScript e o que serve de reserva. Quem quiser mesmo a versão web
+     (o botão verde de "não abriu?") marca `data-whatsapp-web`. */
+  document.addEventListener("click", function (evento) {
+    var link = evento.target.closest
+      ? evento.target.closest('a[href^="https://wa.me/"]')
+      : null;
+    if (!link || link.hasAttribute("data-whatsapp-web")) return;
+    if (noCelular()) return;
+
+    var endereco = new URL(link.href);
+    var telefone = endereco.pathname.replace(/\//g, "");
+    if (!telefone) return;
+
+    evento.preventDefault();
+    window.location.href =
+      "whatsapp://send?phone=" + telefone +
+      "&text=" + encodeURIComponent(endereco.searchParams.get("text") || "");
+  });
+
+  /* ====================================================================
+     AVISOS AO VIVO
+     --------------------------------------------------------------------
+     As bolinhas do menu e a central eram desenhadas uma vez, no HTML. Um
+     pedido que entrava com o painel aberto na bancada só aparecia depois
+     de recarregar -- e como a sessão dura o dia inteiro, na prática só
+     depois de sair e entrar de novo. Aviso que chega tarde é o mesmo que
+     aviso que não chega.
+
+     Agora a tela pergunta ao servidor de tempos em tempos. Regras que
+     mantêm isso barato:
+
+       * só pergunta com a aba VISÍVEL -- dez abas de fundo não custam
+         nada, e ao voltar para a aba a resposta é imediata;
+       * o servidor devolve uma `assinatura` do estado; enquanto ela não
+         muda, nada é redesenhado;
+       * quem acabou de salvar alguma coisa pede uma atualização na hora
+         (`Painel.avisos.agora()`), sem esperar o próximo intervalo.
+
+     Sessão caída devolve 401, e aí a tela PARA de perguntar: insistir
+     contra o login é gastar rede para nada.
+     ==================================================================== */
+  var avisos = {
+    endereco: "",
+    intervalo: 30000,
+    assinatura: null,
+    relogio: null,
+    parado: false,
+    ouvintes: [],
+  };
+
+  function pintarSelo(elemento, quantidade) {
+    if (!elemento) return;
+    var numero = Number(quantidade) || 0;
+    elemento.textContent = numero;
+    elemento.hidden = numero === 0;
+  }
+
+  function desenharAvisos(dados) {
+    var contagens = dados.contagens || {};
+    Object.keys(contagens).forEach(function (chave) {
+      document.querySelectorAll('[data-selo="' + chave + '"]').forEach(
+        function (selo) { pintarSelo(selo, contagens[chave]); }
+      );
+    });
+
+    document.querySelectorAll('[data-selo="urgentes"]').forEach(function (selo) {
+      pintarSelo(selo, dados.urgentes);
+    });
+    document.querySelectorAll('[data-selo="total"]').forEach(function (selo) {
+      pintarSelo(selo, dados.total);
+      selo.classList.toggle("urgente", (Number(dados.urgentes) || 0) > 0);
+    });
+
+    var texto = document.querySelector('[data-selo="urgentes-texto"]');
+    if (texto) {
+      var quantos = Number(dados.urgentes) || 0;
+      texto.textContent = quantos + " urgente" + (quantos === 1 ? "" : "s");
+      texto.hidden = quantos === 0;
+    }
+
+    var lista = document.getElementById("avisosLista");
+    if (lista) lista.innerHTML = montarLista(dados.avisos || []);
+  }
+
+  function escapar(texto) {
+    var caixa = document.createElement("span");
+    caixa.textContent = texto == null ? "" : String(texto);
+    return caixa.innerHTML;
+  }
+
+  function montarLista(itens) {
+    if (!itens.length) {
+      return (
+        '<div class="ls-avisos-vazio">' +
+        '<i class="bi bi-check2-circle"></i> Nada pendente agora.</div>'
+      );
+    }
+    return itens.map(function (aviso) {
+      return (
+        '<a class="ls-aviso ' + escapar(aviso.nivel) + '" href="' + escapar(aviso.url) + '">' +
+        '<span class="ls-aviso-icone"><i class="bi ' + escapar(aviso.icone) + '"></i></span>' +
+        '<span class="ls-aviso-corpo">' +
+        '<span class="ls-aviso-titulo">' + escapar(aviso.titulo) +
+        '<span class="ls-aviso-quantidade">' + escapar(aviso.quantidade) + "</span></span>" +
+        '<span class="ls-aviso-detalhe">' + escapar(aviso.detalhe) + "</span>" +
+        "</span></a>"
+      );
+    }).join("");
+  }
+
+  function buscarAvisos() {
+    if (avisos.parado) return Promise.resolve(null);
+
+    return fetch(avisos.endereco, {
+      headers: { "X-Requested-With": "XMLHttpRequest" },
+      credentials: "same-origin",
+      cache: "no-store",
+    })
+      .then(function (resposta) {
+        if (resposta.status === 401 || resposta.status === 403) {
+          /* Sessão caída ou conta sem painel: parar é a resposta certa.
+             Insistir só encheria o log do servidor. */
+          avisos.parado = true;
+          return null;
+        }
+        if (!resposta.ok) return null;
+        return resposta.json();
+      })
+      .then(function (dados) {
+        if (!dados) return null;
+        if (dados.assinatura && dados.assinatura === avisos.assinatura) {
+          /* Nada mudou: não se mexe no DOM. Redesenhar à toa faria a
+             central piscar debaixo do dedo de quem está lendo. */
+          return dados;
+        }
+        avisos.assinatura = dados.assinatura || null;
+        desenharAvisos(dados);
+        avisos.ouvintes.forEach(function (fn) {
+          try { fn(dados); } catch (e) {}
+        });
+        return dados;
+      })
+      .catch(function () {
+        /* Rede oscilando não é motivo para alarme na tela: o próximo
+           intervalo tenta de novo. */
+        return null;
+      });
+  }
+
+  Painel.avisos = {
+    /* Pede uma atualização imediata. Quem acabou de salvar chama isto. */
+    agora: buscarAvisos,
+
+    /* Avisa quando o estado muda -- a lista de orçamentos usa para
+       repintar o status de uma proposta que o cliente acabou de
+       responder. */
+    aoMudar: function (fn) {
+      if (typeof fn === "function") avisos.ouvintes.push(fn);
+    },
+
+    parar: function () {
+      avisos.parado = true;
+      if (avisos.relogio) global.clearInterval(avisos.relogio);
+      avisos.relogio = null;
+    },
+  };
+
+  function ligarAvisosAoVivo() {
+    var sino = document.querySelector('[data-selo="total"]');
+    if (!sino) return;  /* Fora do painel (ou sem equipe): nada a fazer. */
+
+    /* A rota vem do HTML (que a montou com {% url %}), e não escrita à
+       mão aqui: quem manda no endereço é o urls.py. */
+    avisos.endereco = document.body.getAttribute("data-avisos") || "";
+    if (!avisos.endereco) return;
+
+    /* A assinatura do que já está na tela: assim a primeira resposta não
+       redesenha uma central que já está certa. */
+    buscarAvisos();
+
+    avisos.relogio = global.setInterval(function () {
+      if (document.visibilityState === "visible") buscarAvisos();
+    }, avisos.intervalo);
+
+    document.addEventListener("visibilitychange", function () {
+      /* Voltar para a aba é o momento em que a pessoa QUER ver o estado
+         de agora -- e é quando o intervalo tem mais chance de estar no
+         meio de uma espera. */
+      if (document.visibilityState === "visible") buscarAvisos();
+    });
+  }
+
+  /* ====================================================================
+     AVISO NO CELULAR (Web Push)
+     --------------------------------------------------------------------
+     As bolinhas resolvem para quem está com o painel aberto. Quem está na
+     estrada montando um brinquedo não está -- e para essa pessoa o aviso
+     só existe se o telefone tocar. É o caso do orçamento aprovado, que
+     precisa virar agenda antes de a data ser vendida de novo.
+
+     TRÊS COISAS PRECISAM SER VERDADE, e cada uma esconde o botão quando
+     não é:
+
+       1. a hospedagem tem a chave da aplicação configurada;
+       2. o navegador tem Push -- todo Android moderno tem;
+       3. no IPHONE, o painel precisa estar ADICIONADO À TELA DE INÍCIO.
+          A Apple não entrega notificação para site aberto no Safari, e
+          essa é a diferença que mais confunde: a pessoa acha que o
+          aplicativo está com defeito. Por isso, no iPhone fora da tela de
+          início, o texto explica o que fazer em vez de sumir calado.
+
+     A permissão do navegador só pode ser pedida dentro de um clique. É
+     por isso que existe um botão, e não um pedido automático ao abrir --
+     que aliás o navegador recusaria, e alguns bloqueiam o site depois.
+     ==================================================================== */
+  function ehIphone() {
+    return (
+      /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+      (navigator.maxTouchPoints > 1 && /Macintosh/.test(navigator.userAgent))
+    );
+  }
+
+  function instaladoNaTelaDeInicio() {
+    return (
+      global.navigator.standalone === true ||
+      (global.matchMedia &&
+        global.matchMedia("(display-mode: standalone)").matches)
+    );
+  }
+
+  function bytesDaChave(base64) {
+    /* A chave chega em base64url; `atob` só entende base64 comum. */
+    var preenchido = (base64 + "===").slice(0, base64.length + (4 - (base64.length % 4)) % 4);
+    var normal = preenchido.replace(/-/g, "+").replace(/_/g, "/");
+    var cru = global.atob(normal);
+    var saida = new Uint8Array(cru.length);
+    for (var i = 0; i < cru.length; i += 1) saida[i] = cru.charCodeAt(i);
+    return saida;
+  }
+
+  function chaveEmTexto(inscricao, nome) {
+    var bruto = inscricao.getKey(nome);
+    if (!bruto) return "";
+    var bytes = new Uint8Array(bruto);
+    var texto = "";
+    for (var i = 0; i < bytes.length; i += 1) texto += String.fromCharCode(bytes[i]);
+    return global.btoa(texto).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  }
+
+  function ligarAvisoNoCelular() {
+    var caixa = document.getElementById("avisosAparelho");
+    var botao = document.getElementById("avisosAparelhoBotao");
+    var rotulo = document.getElementById("avisosAparelhoRotulo");
+    var nota = document.getElementById("avisosAparelhoNota");
+    var rota = document.body.getAttribute("data-aparelho") || "";
+    if (!caixa || !botao || !rota) return;
+
+    function dizer(texto) {
+      if (!nota) return;
+      nota.textContent = texto || "";
+      nota.hidden = !texto;
+    }
+
+    /* iPhone fora da tela de início: explicar, não esconder. A pessoa
+       precisa saber que o caminho existe -- e qual é. */
+    if (ehIphone() && !instaladoNaTelaDeInicio()) {
+      caixa.hidden = false;
+      botao.disabled = true;
+      rotulo.textContent = "Avisos no iPhone";
+      dizer(
+        "No iPhone o aviso só chega com o painel adicionado à tela de " +
+        "início: toque em Compartilhar e depois em “Adicionar à Tela de Início”."
+      );
+      return;
+    }
+
+    var temSuporte =
+      "serviceWorker" in navigator &&
+      "PushManager" in global &&
+      "Notification" in global &&
+      global.isSecureContext;
+    if (!temSuporte) return;
+
+    var chaveDoServidor = "";
+
+    fetch(rota, { credentials: "same-origin" })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (dados) {
+        /* Sem chave na hospedagem o botão não aparece: oferecer um aviso
+           que nunca sairia é pior do que não oferecer. */
+        if (!dados || !dados.configurado || !dados.chave) return;
+        chaveDoServidor = dados.chave;
+        caixa.hidden = false;
+        return navigator.serviceWorker.ready;
+      })
+      .then(function (registro) {
+        if (!registro) return null;
+        return registro.pushManager.getSubscription();
+      })
+      .then(function (inscricao) {
+        mostrarEstado(!!inscricao);
+      })
+      .catch(function () {});
+
+    function mostrarEstado(inscrito) {
+      rotulo.textContent = inscrito
+        ? "Avisos ligados neste aparelho"
+        : "Avisar no meu celular";
+      botao.classList.toggle("ligado", inscrito);
+      botao.disabled = false;
+      dizer(
+        inscrito
+          ? "Toque de novo para desligar só neste aparelho."
+          : ""
+      );
+    }
+
+    function guardar(inscricao, acao) {
+      var dados = new FormData();
+      dados.set("endpoint", inscricao.endpoint);
+      dados.set("aparelho", navigator.userAgent.slice(0, 120));
+      if (acao) dados.set("acao", acao);
+      if (!acao) {
+        dados.set("p256dh", chaveEmTexto(inscricao, "p256dh"));
+        dados.set("auth", chaveEmTexto(inscricao, "auth"));
+      }
+      var campo = document.querySelector("[name=csrfmiddlewaretoken]");
+      if (campo) dados.set("csrfmiddlewaretoken", campo.value);
+      return fetch(rota, {
+        method: "POST",
+        body: dados,
+        credentials: "same-origin",
+        headers: { "X-CSRFToken": campo ? campo.value : "" },
+      });
+    }
+
+    botao.addEventListener("click", function () {
+      botao.disabled = true;
+      dizer("");
+
+      navigator.serviceWorker.ready
+        .then(function (registro) {
+          return registro.pushManager.getSubscription().then(function (atual) {
+            if (atual) {
+              /* Já ligado: este clique desliga -- e desliga NESTE
+                 aparelho só, não no celular da pessoa também. */
+              return guardar(atual, "cancelar")
+                .then(function () { return atual.unsubscribe(); })
+                .then(function () { mostrarEstado(false); });
+            }
+
+            return global.Notification.requestPermission().then(function (resposta) {
+              if (resposta !== "granted") {
+                botao.disabled = false;
+                dizer(
+                  resposta === "denied"
+                    ? "O navegador está bloqueando avisos deste site. Libere nas configurações do site e toque de novo."
+                    : "Permissão não concedida."
+                );
+                return null;
+              }
+              return registro.pushManager
+                .subscribe({
+                  userVisibleOnly: true,
+                  applicationServerKey: bytesDaChave(chaveDoServidor),
+                })
+                .then(function (nova) {
+                  return guardar(nova).then(function () { mostrarEstado(true); });
+                });
+            });
+          });
+        })
+        .catch(function () {
+          botao.disabled = false;
+          dizer("Não consegui ligar os avisos neste aparelho. Tente de novo.");
+        });
+    });
+  }
+
   global.Painel = Painel;
   document.addEventListener("DOMContentLoaded", function () {
+    ligarAvisosAoVivo();
+    ligarAvisoNoCelular();
     Painel.aplicarMascaras(document);
     Painel.acomodarTextos(document);
     ligarMedidaDeTela();

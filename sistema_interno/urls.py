@@ -34,12 +34,14 @@ from .views import (
     VendasView,
 )
 from .views_app import manifesto, service_worker
+from .views_avisos import EstadoAvisosView, InscricaoPushView
 from .views_acessos import AvaliacaoSetoresInnerView, UsuariosEquipeInnerView
 from .views_clientes import ClientesInnerView, ConsultaCepInnerView
 from .views_gestao import (
     AtualizarEtapaProducaoView,
     BuscaClientesOrcamentoView,
     BuscaItensOrcamentoView,
+    EstadoOrcamentosView,
     FinanceiroInnerView,
     GuiasProducaoView,
     MinhaProducaoView,
@@ -144,6 +146,13 @@ urlpatterns = [
         BuscaClientesOrcamentoView.as_view(),
         name='buscar_clientes_orcamento',
     ),
+    # A situação de cada proposta, para a lista acompanhar a resposta do
+    # cliente sem ninguém recarregar a tela.
+    path(
+        'orcamentos/estados/',
+        EstadoOrcamentosView.as_view(),
+        name='estados_orcamentos',
+    ),
 
     # ---------------- produção ----------------
     path('producao/', MinhaProducaoView.as_view(), name='minha_producao'),
@@ -160,6 +169,15 @@ urlpatterns = [
         AtualizarEtapaProducaoView.as_view(),
         name='atualizar_etapa_producao',
     ),
+
+    # ---------------- avisos ao vivo ----------------
+    # As bolinhas do menu e a central se atualizam sozinhas por aqui: o
+    # painel fica aberto o dia inteiro, e aviso que só aparece depois de
+    # relogar chega tarde demais.
+    path('avisos/estado/', EstadoAvisosView.as_view(), name='avisos_estado'),
+    # O aparelho pede (ou desiste de) receber aviso quando o painel está
+    # fechado -- é o único caminho até quem está na estrada.
+    path('avisos/aparelho/', InscricaoPushView.as_view(), name='avisos_aparelho'),
 
     # ---------------- acesso ----------------
     path('login/inner/', LoginInternoView.as_view(), name='login_inner'),

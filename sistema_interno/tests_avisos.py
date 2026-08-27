@@ -316,3 +316,88 @@ class CustoDoContextProcessorTests(TestCase):
         segundo = fab_counts(self.pedido(self.gestor))
         with self.assertNumQueries(0):
             self.assertEqual(modelo.render(Context(segundo)), "1 1")
+
+
+class EstadoAoVivoTests(TestCase):
+    """As bolinhas e a situação da proposta se atualizam sem recarregar.
+
+    O painel fica aberto o dia inteiro numa bancada, e a sessão dura o dia
+    inteiro junto. Antes, um pedido novo ou um "aprovado" vindo do cliente
+    só apareciam depois de sair e entrar de novo -- aviso que chega tarde
+    é o mesmo que aviso que não chega.
+    """
+
+    URL = "/avisos/estado/"
+
+    def setUp(self):
+        self.gestor = User.objects.create_superuser(
+            username="chefe", password="x", email="c@example.com",
+        )
+        self.client.force_login(self.gestor)
+
+    def pedir(self):
+        return self.client.get(self.URL, HTTP_HOST="interno.testserver")
+
+    def test_devolve_as_mesmas_contagens_que_a_tela_desenha(self):
+        """Duas fontes para o mesmo número acabam divergindo.
+
+        O HTML e a atualização saem os dois de `avisos.coletar`; este
+        teste é o que impede alguém de dar um atalho em um dos dois.
+        """
+        Orcamento.objects.create(
+            nome_cliente="Vencido",
+            status=Orcamento.Status.ENVIADO,
+            validade=timezone.localdate() - timedelta(days=2),
+        )
+
+        dados = self.pedir().json()
+        do_contexto = fab_counts(self._pedido_falso())
+
+        # str() antes de int(): o context processor devolve tudo
+        # embrulhado em SimpleLazyObject, para a loja não pagar consulta
+        # nenhuma quando o template não pede o valor.
+        self.assertEqual(
+            dados["contagens"]["count_orcamentos"],
+            int(str(do_contexto["count_orcamentos"])),
+        )
+        self.assertEqual(dados["total"], int(str(do_contexto["total_avisos"])))
+
+    def _pedido_falso(self):
+        pedido = RequestFactory().get("/")
+        pedido.user = self.gestor
+        return pedido
+
+    def test_a_assinatura_muda_quando_o_estado_muda(self):
+        """É o que deixa a tela quieta enquanto não há novidade.
+
+        Redesenhar a central a cada 30 segundos faria a lista piscar
+        debaixo do dedo de quem está lendo.
+        """
+        primeira = self.pedir().json()["assinatura"]
+        self.assertEqual(self.pedir().json()["assinatura"], primeira)
+
+        Orcamento.objects.create(
+            nome_cliente="Novo vencido",
+            status=Orcamento.Status.ENVIADO,
+            validade=timezone.localdate() - timedelta(days=1),
+        )
+        from .context_processors import invalidar_avisos
+        invalidar_avisos(self.gestor)
+
+        self.assertNotEqual(self.pedir().json()["assinatura"], primeira)
+
+    def test_sessao_caida_devolve_401_para_a_tela_parar_de_perguntar(self):
+        """403 faria o JavaScript insistir contra uma tela de login."""
+        self.client.logout()
+
+        self.assertEqual(self.pedir().status_code, 401)
+
+    def test_quem_nao_e_da_equipe_nao_le_o_estado_do_painel(self):
+        cliente = User.objects.create_user(username="cliente", password="x")
+        self.client.force_login(cliente)
+
+        self.assertEqual(self.pedir().status_code, 403)
+
+    def test_a_resposta_nao_pode_ser_guardada_por_ninguem(self):
+        """É pessoal: o painel de um não pode ser servido a outro."""
+        self.assertIn("no-store", self.pedir()["Cache-Control"])

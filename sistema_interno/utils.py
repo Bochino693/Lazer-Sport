@@ -122,7 +122,7 @@ def data(valor, rotulo):
         raise ErroDeFormulario(f"{rotulo}: informe uma data válida.")
 
 
-def endereco_do_site(request):
+def endereco_do_site(request=None):
     """Base http(s)://... do SITE PÚBLICO, visto de dentro do painel.
 
     O painel responde em interno.lazersport.com.br e a página do cliente
@@ -156,6 +156,14 @@ def endereco_do_site(request):
                     "",
                     "",
                 )).rstrip("/")
+
+    if request is None:
+        # Sem pedido não há host de onde partir. É o caso da própria página
+        # do cliente, que precisa do endereço canônico para o cartão de
+        # pré-visualização: quem chegou por lazersport.com.br e quem chegou
+        # por www.lazersport.com.br têm de gerar o MESMO og:url, senão o
+        # WhatsApp guarda dois cartões para a mesma proposta.
+        return ""
 
     host = request.get_host()
     if host.startswith("interno."):

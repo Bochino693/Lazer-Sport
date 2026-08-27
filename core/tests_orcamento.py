@@ -92,6 +92,60 @@ class OrcamentoPublicoTests(TestCase):
         # sem chegar à proposta por busca.
         self.assertIn('content="noindex, nofollow"', html)
 
+    def test_o_link_nao_tem_caractere_que_o_whatsapp_come(self):
+        """O token só usa letra e número, e isso é o conserto de um bug real.
+
+        O link chegava quebrado do outro lado. `secrets.token_urlsafe`
+        sorteia também "_", e o WhatsApp lê "_texto_" como itálico: um
+        token com dois sublinhados era entregue em itálico e SEM eles, o
+        cliente clicava e caía num 404. Não é só o WhatsApp -- qualquer
+        conversa que formate texto faz o mesmo.
+        """
+        for _ in range(60):
+            token = Orcamento.objects.create(
+                nome_cliente="Teste do alfabeto",
+            ).token
+            self.assertEqual(len(token), 32)
+            self.assertTrue(
+                token.isalnum() and token.isascii(),
+                f"token com caractere que o WhatsApp formata: {token!r}",
+            )
+
+    def test_tokens_antigos_continuam_abrindo(self):
+        """Trocar o alfabeto não invalida proposta já enviada.
+
+        Existem links com "_" e "-" em conversas de clientes. O campo só
+        guarda texto: o que mudou foi como se sorteia um token novo.
+        """
+        self.orcamento.token = "_uYepJ8hBAuIU2MpPjdVlgR4j5tPBTrD"
+        self.orcamento.save(update_fields=["token"])
+
+        self.assertEqual(self.client.get(self.url()).status_code, 200)
+
+    @override_settings(DEBUG=False, SITE_URL="https://www.lazersport.com.br")
+    def test_o_cartao_aponta_para_o_endereco_canonico(self):
+        """og:url é o endereço publicado, não o host de quem abriu.
+
+        O WhatsApp guarda o cartão pela og:url. Com o host da vez ali,
+        a mesma proposta virava dois cartões -- um deles apontando para
+        um endereço que o servidor de prévia do aplicativo não alcança.
+        """
+        html = self.client.get(
+            self.url(), HTTP_HOST="lazersport.onrender.com",
+        ).content.decode()
+
+        esperado = (
+            f"https://www.lazersport.com.br{self.orcamento.caminho_publico}"
+        )
+        self.assertIn(f'property="og:url" content="{esperado}"', html)
+        self.assertIn(f'rel="canonical" href="{esperado}"', html)
+        self.assertNotIn("lazersport.onrender.com", html)
+        # A imagem do cartão também precisa ser absoluta: caminho
+        # relativo o WhatsApp não busca.
+        self.assertIn(
+            'property="og:image" content="https://www.lazersport.com.br/', html,
+        )
+
     def test_o_contato_do_documento_e_o_da_empresa(self):
         """A proposta leva o contato da EMPRESA, nunca o pessoal.
 

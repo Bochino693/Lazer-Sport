@@ -10,6 +10,7 @@ import json
 import logging
 import re
 import unicodedata
+from datetime import timedelta
 from decimal import Decimal
 from urllib.parse import quote
 
@@ -21,7 +22,22 @@ from core.email_utils import remetente, responder_para, smtp_configurado
 from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
 from django.db import transaction
-from django.db.models import Case, Count, IntegerField, Prefetch, Q, Value, When
+from django.core.paginator import Paginator
+from django.db.models import (
+    Case,
+    Count,
+    DecimalField,
+    F,
+    IntegerField,
+    OuterRef,
+    Prefetch,
+    Q,
+    Subquery,
+    Sum,
+    Value,
+    When,
+)
+from django.db.models.functions import Coalesce, Greatest
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -146,6 +162,75 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
     ACOES_SEM_TRANSACAO = ("enviar",)
 
     # ------------------------------------------------------------ leitura
+    #: Quantas propostas por página.
+    #:
+    #: A tela NÃO era paginada, e cada linha carrega muito: os itens, o
+    #: texto pronto do WhatsApp e a proposta inteira em JSON para o modal
+    #: de edição. Com 400 propostas isso dava 2 MB de HTML; com alguns
+    #: milhares o servidor estourava o tempo do gunicorn e a resposta virava
+    #: 502. O peso agora é o da página, e não o do histórico da empresa.
+    POR_PAGINA = 25
+
+    #: Soma dos itens de UMA proposta, sem multiplicar linhas.
+    #:
+    #: Como subconsulta, e não como `annotate` com join: a busca já entra
+    #: por `itens__descricao`, e um segundo join faria a soma contar o
+    #: mesmo item várias vezes -- o total apareceria inflado justamente
+    #: quando alguém filtrasse por texto.
+    @staticmethod
+    def _subtotal_por_proposta():
+        return Subquery(
+            ItemOrcamento.objects
+            .filter(orcamento=OuterRef("pk"))
+            .values("orcamento")
+            .annotate(
+                soma=Sum(
+                    F("quantidade") * F("valor_unitario"),
+                    output_field=DecimalField(max_digits=12, decimal_places=2),
+                )
+            )
+            .values("soma")[:1],
+            output_field=DecimalField(max_digits=12, decimal_places=2),
+        )
+
+    @classmethod
+    def resumo_do_filtro(cls, consulta):
+        """Os números do topo somam o FILTRO INTEIRO, não a página.
+
+        "Aprovado" é o que a empresa fechou; se mudasse ao virar de página
+        deixaria de responder qualquer coisa.
+        """
+        zero = Value(Decimal("0.00"), output_field=DecimalField(max_digits=12, decimal_places=2))
+        com_total = (
+            consulta
+            .annotate(_subtotal=Coalesce(cls._subtotal_por_proposta(), zero))
+            .annotate(
+                _total=Greatest(
+                    F("_subtotal")
+                    + Coalesce(F("frete"), zero)
+                    - Coalesce(F("desconto"), zero),
+                    zero,
+                    output_field=DecimalField(max_digits=12, decimal_places=2),
+                )
+            )
+        )
+        em_aberto = Q(status__in=Orcamento.EM_ABERTO)
+        aprovado = Q(status=Orcamento.Status.APROVADO)
+
+        return com_total.aggregate(
+            quantidade=Count("pk", distinct=True),
+            total_aprovado=Coalesce(Sum("_total", filter=aprovado), zero),
+            total_em_aberto=Coalesce(Sum("_total", filter=em_aberto), zero),
+            quantidade_aprovado=Count("pk", filter=aprovado, distinct=True),
+            quantidade_aberto=Count("pk", filter=em_aberto, distinct=True),
+            quantidade_interno=Count(
+                "pk", filter=Q(origem=Orcamento.Origem.INTERNO), distinct=True,
+            ),
+            quantidade_ambulante=Count(
+                "pk", filter=Q(origem=Orcamento.Origem.AMBULANTE), distinct=True,
+            ),
+        )
+
     def get(self, request):
         busca = (request.GET.get("q") or "").strip()
         status = (request.GET.get("status") or "").strip()
@@ -189,7 +274,22 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
         if origem in Orcamento.Origem.values:
             orcamentos = orcamentos.filter(origem=origem)
 
-        orcamentos = list(orcamentos)
+        # O RESUMO SAI DO FILTRO INTEIRO, a página é só o que se desenha.
+        resumo = self.resumo_do_filtro(orcamentos)
+
+        hoje = timezone.localdate()
+        vencendo = list(
+            orcamentos.filter(
+                status__in=Orcamento.EM_ABERTO,
+                validade__gte=hoje,
+                validade__lte=hoje + timedelta(days=3),
+            ).order_by("validade", "pk")[:20]
+        )
+
+        pagina = Paginator(orcamentos, self.POR_PAGINA).get_page(
+            request.GET.get("page")
+        )
+        orcamentos = list(pagina.object_list)
 
         # LINK E CONVERSA JÁ VÊM PRONTOS DO SERVIDOR.
         #
@@ -233,12 +333,6 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
                 orcamento,
             )
 
-        aprovados = [o for o in orcamentos if o.status == Orcamento.Status.APROVADO]
-        em_aberto = [
-            o for o in orcamentos
-            if o.status in (Orcamento.Status.RASCUNHO, Orcamento.Status.ENVIADO)
-        ]
-
         buffets = list(
             Cliente.objects.filter(tipo=Cliente.Tipo.BUFFET).order_by("nome_cliente")
         )
@@ -267,19 +361,14 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
             "categorias": CategoriasBrinquedos.objects.order_by("nome_categoria"),
             "categorias_peca": CategoriaPeca.objects.order_by("nome_categoria_peca"),
             "hoje": timezone.localdate(),
-            "total_orcamentos": len(orcamentos),
-            "total_aprovado": sum((o.total for o in aprovados), ZERO),
-            "total_em_aberto": sum((o.total for o in em_aberto), ZERO),
-            "quantidade_aberto": len(em_aberto),
-            "quantidade_aprovado": len(aprovados),
-            "quantidade_interno": sum(
-                1 for o in orcamentos
-                if o.origem == Orcamento.Origem.INTERNO
-            ),
-            "quantidade_ambulante": sum(
-                1 for o in orcamentos
-                if o.origem == Orcamento.Origem.AMBULANTE
-            ),
+            "page_obj": pagina,
+            "total_orcamentos": resumo["quantidade"],
+            "total_aprovado": resumo["total_aprovado"],
+            "total_em_aberto": resumo["total_em_aberto"],
+            "quantidade_aberto": resumo["quantidade_aberto"],
+            "quantidade_aprovado": resumo["quantidade_aprovado"],
+            "quantidade_interno": resumo["quantidade_interno"],
+            "quantidade_ambulante": resumo["quantidade_ambulante"],
             "orcamentos_dados": [self.serializar(o) for o in orcamentos],
             # A busca de item vem por endpoint e nunca despeja o catálogo
             # inteiro nesta página. b:/p:/r: identificam brinquedo,
@@ -294,12 +383,12 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
             ),
             # A página do cliente mora no site principal, não aqui.
             "base_publica": endereco_do_site(request),
-            "vencendo": [
-                o for o in orcamentos
-                if o.status in Orcamento.EM_ABERTO
-                and o.dias_para_vencer is not None
-                and 0 <= o.dias_para_vencer <= 3
-            ],
+            # O AVISO DE VENCIMENTO OLHA O FILTRO INTEIRO, não a página.
+            #
+            # Varrer só a página esconderia justamente a proposta que
+            # vence amanhã e caiu na página 3 -- que é a única para a
+            # qual este aviso existe.
+            "vencendo": vencendo,
             "pode_criar_orcamento": acesso["orcamentos_criar"],
             "pode_editar_comercial": acesso["orcamentos_editar_comercial"],
             "pode_editar_financeiro": acesso["orcamentos_editar_financeiro"],
@@ -1322,6 +1411,78 @@ class BuscaItensOrcamentoView(OrcamentoInternoRequiredMixin, View):
             "limite": len(opcoes),
         })
         resposta["Cache-Control"] = "private, max-age=60"
+        return resposta
+
+
+class EstadoOrcamentosView(OrcamentoInternoRequiredMixin, View):
+    """GET /orcamentos/estados/?ids=1,2,3 -> a situação de cada proposta.
+
+    POR QUE ISSO EXISTE. O cliente responde pela página pública, e quem
+    está no painel só via a mudança ao recarregar -- na prática, ao sair e
+    entrar de novo, porque a sessão dura o dia inteiro. Um "aprovado" que
+    demora meia hora para aparecer na tela é um cliente esperando meia
+    hora por um retorno que já podia ter saído.
+
+    Só volta o que a tela desenha: situação, rótulo, cor e a linha de
+    "quem respondeu quando". Nada de proposta inteira -- é uma consulta
+    que se repete, e leveza aqui é o que a torna repetível.
+
+    O limite de ids não é medo de abuso, é o tamanho da página: 25 linhas.
+    Pedir mais que isso significa que alguém montou o pedido à mão.
+    """
+
+    #: Duas páginas cheias, com folga para a tela crescer.
+    LIMITE = 60
+
+    #: Cor de cada situação. A MESMA lista do template -- se divergirem, a
+    #: linha muda de cor ao atualizar e ninguém entende por quê.
+    COR = {
+        Orcamento.Status.APROVADO: "success",
+        Orcamento.Status.RECUSADO: "danger",
+        Orcamento.Status.ENVIADO: "info",
+        Orcamento.Status.EXPIRADO: "warning",
+    }
+
+    def get(self, request):
+        cru = (request.GET.get("ids") or "").strip()
+        ids = []
+        for pedaco in cru.split(",")[: self.LIMITE]:
+            pedaco = pedaco.strip()
+            if pedaco.isdigit():
+                ids.append(int(pedaco))
+
+        if not ids:
+            return JsonResponse({"orcamentos": {}})
+
+        # limitar_orcamentos: quem só enxerga a própria carteira não
+        # descobre a situação da carteira do colega perguntando por id.
+        consulta = limitar_orcamentos(
+            request.user, Orcamento.objects.filter(pk__in=ids)
+        ).only(
+            "id", "status", "validade", "respondido_em", "respondido_por",
+            "enviado_em",
+        )
+
+        estados = {}
+        for orcamento in consulta:
+            estados[str(orcamento.pk)] = {
+                "status": orcamento.status,
+                "rotulo": orcamento.get_status_display(),
+                "cor": self.COR.get(orcamento.status, "neutral"),
+                "vencido": orcamento.vencido,
+                "respondido_por": orcamento.respondido_por or "",
+                "respondido_em": (
+                    timezone.localtime(orcamento.respondido_em).strftime("%d/%m %H:%M")
+                    if orcamento.respondido_em else ""
+                ),
+                "enviado_em": (
+                    timezone.localtime(orcamento.enviado_em).strftime("%d/%m")
+                    if orcamento.enviado_em else ""
+                ),
+            }
+
+        resposta = JsonResponse({"orcamentos": estados})
+        resposta["Cache-Control"] = "no-store, private"
         return resposta
 
 

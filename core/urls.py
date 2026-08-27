@@ -1,3 +1,5 @@
+from django.contrib.staticfiles.storage import staticfiles_storage
+from django.views.generic import RedirectView
 from django.urls import path, re_path
 from django.contrib.sitemaps.views import sitemap
 
@@ -342,6 +344,19 @@ urlpatterns = [
         "orcamento/<str:token>/",
         orcamento_publico,
         name="orcamento_publico",
+    ),
+
+    # O ÍCONE DA ABA, ANTES DO CURINGA.
+    #
+    # /favicon.ico caía no `re_path` abaixo e era redirecionado para a
+    # loja -- no site o navegador recebia uma página HTML no lugar de uma
+    # imagem, e no subdomínio interno o destino nem existe: 404 em toda
+    # abertura do painel, e aba sem ícone. Não é decoração: quem trabalha
+    # com o painel e o site abertos ao mesmo tempo acha a aba pelo ícone.
+    path(
+        "favicon.ico",
+        RedirectView.as_view(url=staticfiles_storage.url("images/logoofi.png")),
+        name="favicon",
     ),
 
     # Deve permanecer por último.

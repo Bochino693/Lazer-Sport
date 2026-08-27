@@ -386,6 +386,25 @@ ORCAMENTO_WHATSAPP = os.getenv("ORCAMENTO_WHATSAPP", EMPRESA_WHATSAPP).strip()
 
 
 # ============================================================
+# NOTIFICAÇÃO NO CELULAR (Web Push)
+# ============================================================
+# Sem estas duas variáveis o painel simplesmente não oferece o aviso: a
+# tela esconde o botão em vez de mostrar um que não faz nada. Para gerar
+# um par novo, uma vez só:
+#
+#     python -c "import django,os; os.environ.setdefault('DJANGO_SETTINGS_MODULE','lazer.settings'); \
+#                django.setup(); from sistema_interno.push import gerar_par; print(gerar_par())"
+#
+# A PRIVADA fica só na hospedagem, nunca no repositório: quem a tem pode
+# mandar notificação em nome da empresa para todo aparelho inscrito.
+PUSH_VAPID_PRIVADA = os.getenv("PUSH_VAPID_PRIVADA", "").strip()
+PUSH_VAPID_PUBLICA = os.getenv("PUSH_VAPID_PUBLICA", "").strip()
+# Endereço de contato que acompanha cada envio. É por ele que um serviço
+# de push fala conosco sobre volume ou abuso antes de simplesmente cortar.
+PUSH_CONTATO = os.getenv("PUSH_CONTATO", "").strip()
+
+
+# ============================================================
 # APLICATIVO ANDROID
 # ============================================================
 # O rodapé do site reserva uma caixa para o app. Enquanto nenhuma URL estiver
