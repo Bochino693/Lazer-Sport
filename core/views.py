@@ -1533,71 +1533,17 @@ from django.core.cache import cache
 import time
 
 
-class AdminLoginView(View):
-    template_name = 'admin_login.html'
-
-    MAX_ATTEMPTS = 3
-    BLOCK_TIME = 600  # 10 minutos (em segundos)
-
-    def get_client_ip(self, request):
-        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
-        if x_forwarded_for:
-            return x_forwarded_for.split(',')[0].strip()
-        return request.META.get('REMOTE_ADDR')
-
-    def get(self, request):
-        if request.user.is_authenticated and request.user.is_staff and request.user.is_superuser:
-            return redirect('/adm/banners/')
-
-        ip = self.get_client_ip(request)
-        cache_key = f'admin_login:{ip}'
-        data = cache.get(cache_key)
-
-        # ⛔ IP bloqueado
-        if data and data.get('blocked_until', 0) > time.time():
-            return redirect('acesso_negado')
-
-        return render(request, self.template_name)
-
-    def post(self, request):
-        ip = self.get_client_ip(request)
-        cache_key = f'admin_login:{ip}'
-
-        data = cache.get(cache_key, {
-            'attempts': 0,
-            'blocked_until': 0
-        })
-
-        # ⛔ Ainda bloqueado
-        if data['blocked_until'] > time.time():
-            return redirect('acesso_negado')
-
-        username = request.POST.get('username')
-        password = request.POST.get('password')
-
-        user = authenticate(request, username=username, password=password)
-
-        # ❌ Login inválido
-        if not user or not (user.is_staff and user.is_superuser):
-            data['attempts'] += 1
-
-            # 🔒 Estourou limite
-            if data['attempts'] >= self.MAX_ATTEMPTS:
-                data['blocked_until'] = time.time() + self.BLOCK_TIME
-                cache.set(cache_key, data, timeout=self.BLOCK_TIME)
-                return redirect('acesso_negado')
-
-            cache.set(cache_key, data, timeout=self.BLOCK_TIME)
-
-            return render(request, self.template_name, {
-                'error': 'Usuário ou senha inválidos.'
-            })
-
-        # ✅ Login OK → limpa tudo
-        cache.delete(cache_key)
-        login(request, user)
-
-        return redirect('/adm/banners/')
+# A TELA DE LOGIN DO /adm NÃO EXISTE MAIS.
+#
+# Havia aqui uma `AdminLoginView`, com contagem de tentativas e bloqueio
+# por IP, para a porta do painel /adm. Essa porta foi fechada quando a
+# gestão do site passou a morar dentro do aplicativo: a rota `adm/login/`
+# hoje só redireciona para o login do painel interno, a view não estava
+# ligada a URL nenhuma, e o template que ela pedia (`admin_login.html`)
+# nem resolvia -- ele mora em `gestao/`. Chamá-la daria
+# TemplateDoesNotExist.
+#
+# Quem cuida de tentativa e bloqueio agora é o login do painel interno.
 
 
 class AcessoNegadoView(View):

@@ -58,7 +58,6 @@ from .views import (
     EventoAdminView,
     BannerAdminView,
     BannerDeleteView,
-    AdminLoginView,
     AcessoNegadoView,
     DashboardAdminView,
     UserAdminView,

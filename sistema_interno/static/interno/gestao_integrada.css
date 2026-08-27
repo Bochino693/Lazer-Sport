@@ -99,6 +99,17 @@
 .gestao-integrada .ls-content input[type="checkbox"],
 .gestao-integrada .ls-content input[type="radio"]{accent-color:var(--acento);width:19px;height:19px}
 
+/* Lista de escolha múltipla não leva seta -- ver a regra irmã no
+   interno_modern.css. Aqui ela é repetida porque o seletor de select
+   abaixo é mais específico e apagaria aquela. */
+.gestao-integrada .ls-content select[multiple],
+.gestao-integrada .ls-content select[size]:not([size="1"]){
+  min-height:150px!important;
+  padding-right:14px!important;
+  background-image:none!important;
+  cursor:default;
+}
+
 /* A seta do select é desenhada por nós: o `background` das telas antigas
    apagava a nativa e o campo passava a parecer texto comum. */
 .gestao-integrada .ls-content select{

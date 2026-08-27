@@ -642,6 +642,11 @@ textarea.form-control{min-height:100px!important}
   .ls-topbar-copy span,.ls-security-pill{display:none}
   .ls-content{padding:20px 12px 30px}
   .ls-page-hero{padding:22px;align-items:stretch;flex-direction:column}
+  /* `flex:1 1 320px` no bloco de texto foi escrito para a linha: 320px de
+     LARGURA mínima. Empilhado, o mesmo valor vira 320px de ALTURA, e
+     abria um vão vazio do tamanho de meia tela entre o título e o botão
+     -- justamente no celular, onde a tela é toda dela. */
+  .ls-page-hero-copy{flex:0 1 auto}
   .ls-page-hero h1{font-size:1.85rem}
   .ls-page-hero p{font-size:.94rem}
   .ls-page-hero-actions{width:100%}
@@ -1101,6 +1106,50 @@ body.modal-open .ls-abas{display:none!important}
   /* com as abas, o botão de menu do topo vira redundante */
   .ls-mobile-menu{display:none}
 }
+
+/* Escolher arquivo: o mesmo retângulo tracejado, mesmo sem miniatura.
+
+   `.ls-foto` serve para UMA imagem, com prévia. Onde a tela pede várias
+   de uma vez (as fotos de uma etapa de produção, por exemplo), não há
+   miniatura única para mostrar -- mas o campo continua sendo o mesmo
+   convite. O que não podia ficar era o botão cinza do sistema no meio de
+   um formulário âmbar. */
+input[type="file"].form-control,
+.ls-content input[type="file"]{
+  min-height:52px;
+  padding:11px 14px!important;
+  border:1.5px dashed #7a6540!important;
+  border-radius:12px!important;
+  color:var(--muted)!important;
+  background:rgba(242,169,59,.045)!important;
+  font-size:.85rem;
+  cursor:pointer;
+}
+input[type="file"].form-control:hover,
+.ls-content input[type="file"]:hover{
+  border-color:var(--acento)!important;background:rgba(242,169,59,.1)!important;
+}
+input[type="file"]::file-selector-button{
+  margin-right:12px;
+  min-height:34px;padding:0 14px;
+  border:1px solid rgba(242,169,59,.5);border-radius:9px;
+  color:#ffd591;background:rgba(242,169,59,.14);
+  font-family:inherit;font-size:.79rem;font-weight:850;
+  cursor:pointer;
+}
+input[type="file"]::file-selector-button:hover{color:#2A1B05;background:var(--acento)}
+
+/* Lista de escolha múltipla não é menu suspenso: não leva a seta, e
+   precisa de altura para mostrar mais de uma linha. Com a seta desenhada
+   por cima, ela parecia um campo que abre -- e não abre. */
+select[multiple],
+select[size]:not([size="1"]){
+  min-height:150px!important;
+  padding-right:14px!important;
+  background-image:none!important;
+  cursor:default;
+}
+select[multiple] option{padding:7px 10px;border-radius:8px}
 
 /* ======================================================================
    CAMPO DE FOTO — uma peça só para o painel inteiro
