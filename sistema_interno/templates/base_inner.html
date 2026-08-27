@@ -48,7 +48,7 @@
   <link href="{% static 'interno/vendor/bootstrap-icons.min.css' %}" rel="stylesheet">
 
   {% block extra_css %}{% endblock %}
-  <link href="{% static 'interno/interno_modern.css' %}?v=13" rel="stylesheet">
+  <link href="{% static 'interno/interno_modern.css' %}?v=14" rel="stylesheet">
 
   <!-- Barra de carregamento no topo, compartilhada com o painel /adm. -->
   <link rel="stylesheet" href="{% static 'site/ls-page-loader.css' %}?v=2">
@@ -141,7 +141,7 @@
       </div>
       {% endif %}
 
-      {% if permissoes_interno.clientes or permissoes_interno.orcamentos or permissoes_interno.financeiro %}
+      {% if permissoes_interno.clientes or permissoes_interno.orcamentos or permissoes_interno.financeiro or permissoes_interno.vendas_financeiro or permissoes_interno.pedidos %}
       <div class="ls-nav-section">
         <span class="ls-nav-caption">Comercial</span>
         {% if permissoes_interno.clientes %}
@@ -154,6 +154,20 @@
         <a data-titulo="Financeiro" class="ls-nav-item {% if request.resolver_match.url_name == 'financeiro_inner' %}active{% endif %}" href="{% url 'financeiro_inner' %}">
           <span class="ls-nav-icon"><i class="bi bi-graph-up-arrow"></i></span>
           <span>Financeiro</span>
+        </a>
+        {% endif %}
+        {% if permissoes_interno.vendas_financeiro %}
+        <a data-titulo="Vendas" class="ls-nav-item {% if request.resolver_match.url_name == 'vendas_inner' %}active{% endif %}" href="{% url 'vendas_inner' %}">
+          <span class="ls-nav-icon"><i class="bi bi-receipt-cutoff"></i></span>
+          <span>Vendas</span>
+          {% if count_vendas %}<span class="ls-nav-count">{{ count_vendas }}</span>{% endif %}
+        </a>
+        {% endif %}
+        {% if permissoes_interno.pedidos %}
+        <a data-titulo="Pedidos" class="ls-nav-item {% if request.resolver_match.url_name == 'pedidos_inner' %}active{% endif %}" href="{% url 'pedidos_inner' %}">
+          <span class="ls-nav-icon"><i class="bi bi-box2-heart-fill"></i></span>
+          <span>Pedidos</span>
+          {% if count_pedidos %}<span class="ls-nav-count">{{ count_pedidos }}</span>{% endif %}
         </a>
         {% endif %}
         {% if permissoes_interno.orcamentos %}
@@ -172,19 +186,9 @@
       </div>
       {% endif %}
 
-      {% if permissoes_interno.operacao %}
+      {% if permissoes_interno.manutencoes %}
       <div class="ls-nav-section">
         <span class="ls-nav-caption">Operação</span>
-        <a data-titulo="Vendas" class="ls-nav-item {% if request.resolver_match.url_name == 'vendas_inner' %}active{% endif %}" href="{% url 'vendas_inner' %}">
-          <span class="ls-nav-icon"><i class="bi bi-receipt-cutoff"></i></span>
-          <span>Vendas</span>
-          {% if count_vendas %}<span class="ls-nav-count">{{ count_vendas }}</span>{% endif %}
-        </a>
-        <a data-titulo="Pedidos" class="ls-nav-item {% if request.resolver_match.url_name == 'pedidos_inner' %}active{% endif %}" href="{% url 'pedidos_inner' %}">
-          <span class="ls-nav-icon"><i class="bi bi-box2-heart-fill"></i></span>
-          <span>Pedidos</span>
-          {% if count_pedidos %}<span class="ls-nav-count">{{ count_pedidos }}</span>{% endif %}
-        </a>
         <a data-titulo="Manutenções" class="ls-nav-item {% if request.resolver_match.url_name == 'manutencao_inner' %}active{% endif %}" href="{% url 'manutencao_inner' %}">
           <span class="ls-nav-icon"><i class="bi bi-wrench-adjustable-circle-fill"></i></span>
           <span>Manutenções</span>
@@ -236,6 +240,9 @@
         <span class="ls-nav-caption">Administração</span>
         <a data-titulo="Equipe e acessos" class="ls-nav-item {% if request.resolver_match.url_name == 'usuarios_equipe' %}active{% endif %}" href="{% url 'usuarios_equipe' %}">
           <span class="ls-nav-icon"><i class="bi bi-shield-lock-fill"></i></span><span>Equipe e acessos</span>
+        </a>
+        <a data-titulo="Avaliação dos setores" class="ls-nav-item {% if request.resolver_match.url_name == 'avaliacao_setores' %}active{% endif %}" href="{% url 'avaliacao_setores' %}">
+          <span class="ls-nav-icon"><i class="bi bi-clipboard-data-fill"></i></span><span>Avaliação dos setores</span>
         </a>
         <a data-titulo="Contas de clientes" class="ls-nav-item {% if request.resolver_match.url_name == 'clients' %}active{% endif %}" href="{% url 'clients' %}">
           <span class="ls-nav-icon"><i class="bi bi-person-vcard-fill"></i></span><span>Contas de clientes</span>

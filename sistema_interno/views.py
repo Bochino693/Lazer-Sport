@@ -36,7 +36,9 @@ from .models import (
 )
 from .context_processors import invalidar_avisos
 from .permissoes import (
+    AMBULANTE,
     CRIACAO,
+    FINANCEIRO,
     GESTAO,
     PRODUCAO,
     VENDAS,
@@ -69,7 +71,11 @@ class InternoRequiredMixin(View):
         acesso = capacidades(user)
         if acesso["gestao"]:
             return "home_inner"
+        if acesso["financeiro"]:
+            return "financeiro_inner"
         if acesso["vendas"]:
+            return "orcamentos_inner"
+        if acesso["ambulante"]:
             return "orcamentos_inner"
         if acesso["producao"]:
             return "minha_producao"
@@ -104,13 +110,19 @@ def eh_gestor_interno(user):
 
 
 class GestorInternoRequiredMixin(InternoRequiredMixin):
-    """Compatibilidade: telas comerciais aceitam Vendas ou Gestão."""
+    """Compatibilidade: telas comerciais aceitam a equipe de propostas."""
 
-    funcoes_necessarias = (VENDAS, GESTAO)
+    funcoes_necessarias = (VENDAS, AMBULANTE, GESTAO)
+
+
+class OrcamentoInternoRequiredMixin(InternoRequiredMixin):
+    """A proposta reúne Comercial e Financeiro sem abrir todo o CRM."""
+
+    funcoes_necessarias = (VENDAS, AMBULANTE, FINANCEIRO, GESTAO)
 
 
 class FinanceiroInternoRequiredMixin(InternoRequiredMixin):
-    funcoes_necessarias = (GESTAO,)
+    funcoes_necessarias = (FINANCEIRO, GESTAO)
 
 
 class ProducaoInternoRequiredMixin(InternoRequiredMixin):
@@ -121,8 +133,8 @@ class EstoqueInternoRequiredMixin(InternoRequiredMixin):
     funcoes_necessarias = (PRODUCAO, GESTAO)
 
 
-class OperacaoInternoRequiredMixin(InternoRequiredMixin):
-    funcoes_necessarias = (PRODUCAO, VENDAS, GESTAO)
+class ManutencaoInternoRequiredMixin(InternoRequiredMixin):
+    funcoes_necessarias = (PRODUCAO, GESTAO)
 
 
 class CriacaoInternoRequiredMixin(InternoRequiredMixin):
@@ -1041,21 +1053,21 @@ class DashboardEstoqueView(EstoqueInternoRequiredMixin, View):
 # ======================================================================
 # TELAS EXISTENTES
 # ======================================================================
-class VendasView(OperacaoInternoRequiredMixin, View):
+class VendasView(FinanceiroInternoRequiredMixin, View):
     def get(self, request):
         return render(request, "vendas_inner.html", {
             "vendas": CentralVendas.objects.all(),
         })
 
 
-class PedidosView(OperacaoInternoRequiredMixin, View):
+class PedidosView(FinanceiroInternoRequiredMixin, View):
     def get(self, request):
         return render(request, "pedidos_inner.html", {
             "pedidos": CentralPedidos.objects.all(),
         })
 
 
-class ManutencaoInnerView(OperacaoInternoRequiredMixin, View):
+class ManutencaoInnerView(ManutencaoInternoRequiredMixin, View):
     def get(self, request):
         return render(request, "manutencao_inner.html", {
             "manutencoes": Manutencao.objects.all(),

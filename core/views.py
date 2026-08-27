@@ -34,6 +34,8 @@ from django.templatetags.static import static
 from . import checkout
 from .utils import LAT_EMPRESA, LON_EMPRESA, origem_da_empresa
 from .home_cache import (
+    admin_catalog_etag,
+    aplicar_cache_condicional,
     get_cached_catalog_metadata,
     get_cached_home_context,
     home_cache_timeout,
@@ -41,7 +43,7 @@ from .home_cache import (
 
 import mimetypes
 from pathlib import Path
-from django.http import FileResponse, Http404, HttpResponse
+from django.http import FileResponse, Http404, HttpResponse, HttpResponseNotModified
 from django.conf import settings
 from django.utils.http import http_date
 from random import shuffle, sample
@@ -2434,6 +2436,10 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
     MAX_TAMANHO_IMAGEM = 15 * 1024 * 1024
 
     def get(self, request):
+        etag = admin_catalog_etag(request, "brinquedos")
+        if request.headers.get("If-None-Match") == etag:
+            return aplicar_cache_condicional(HttpResponseNotModified(), etag)
+
         categoria = request.GET.get("categoria", "todas")
         busca = request.GET.get("q", "").strip()
 
@@ -2457,7 +2463,7 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
                 nome_brinquedo__icontains=busca
             )
 
-        paginator = Paginator(brinquedos, 50)
+        paginator = Paginator(brinquedos, 18)
         page = request.GET.get("page")
         brinquedos_page = paginator.get_page(page)
 
@@ -2564,11 +2570,12 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
             "total_categorias": categorias.count(),
         }
 
-        return render(
+        response = render(
             request,
             "gestao/brinquedos_adm.html",
             context,
         )
+        return aplicar_cache_condicional(response, etag)
 
     # ------------------------------------------------------------------
     # Respostas do formulário

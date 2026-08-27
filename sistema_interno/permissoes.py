@@ -16,6 +16,8 @@ from django.contrib.auth.models import Group
 PRODUCAO = "Equipe · Produção"
 CRIACAO = "Equipe · Criação do site"
 VENDAS = "Equipe · Vendas"
+AMBULANTE = "Equipe · Vendedor ambulante"
+FINANCEIRO = "Equipe · Financeiro"
 GESTAO = "Equipe · Gestão"
 
 
@@ -47,14 +49,28 @@ FUNCOES = (
         "vendas",
         VENDAS,
         "Vendas",
-        "Clientes, orçamentos, pedidos e acompanhamento comercial.",
+        "Clientes, propostas e acompanhamento do bloco comercial dos orçamentos.",
         "bi-file-earmark-text",
+    ),
+    Funcao(
+        "ambulante",
+        AMBULANTE,
+        "Vendedor ambulante",
+        "Visitas externas, clientes compartilhados e os próprios orçamentos.",
+        "bi-geo-alt-fill",
+    ),
+    Funcao(
+        "financeiro",
+        FINANCEIRO,
+        "Financeiro",
+        "Vendas, pedidos, recebimentos, despesas e indicadores financeiros.",
+        "bi-cash-stack",
     ),
     Funcao(
         "gestao",
         GESTAO,
         "Gestão",
-        "Financeiro, indicadores, clientes, orçamentos e operação comercial.",
+        "Supervisão de indicadores, clientes, orçamentos e de todas as áreas.",
         "bi-graph-up-arrow",
     ),
 )
@@ -117,27 +133,50 @@ def capacidades(user) -> dict[str, bool]:
     producao = tem_funcao(user, PRODUCAO)
     criacao = tem_funcao(user, CRIACAO)
     vendas = tem_funcao(user, VENDAS)
+    ambulante = tem_funcao(user, AMBULANTE)
+    funcao_financeiro = tem_funcao(user, FINANCEIRO)
     gestao = tem_funcao(user, GESTAO)
+    comercial = vendas or ambulante or gestao
+    acesso_financeiro = funcao_financeiro or gestao
 
     return {
         "superusuario": superusuario,
         "producao": producao,
         "criacao": criacao,
         "vendas": vendas,
+        "ambulante": ambulante,
+        "financeiro_funcao": funcao_financeiro,
         "gestao": gestao,
         "estoque": producao or gestao,
-        "clientes": vendas or gestao,
-        "orcamentos": vendas or gestao,
+        "clientes": comercial,
+        # Financeiro participa do mesmo orçamento, mas somente no bloco
+        # de preço/condições. Criar a proposta e definir os itens continua
+        # sendo responsabilidade comercial.
+        "orcamentos": comercial or acesso_financeiro,
+        "orcamentos_criar": comercial,
+        "orcamentos_editar_comercial": comercial,
+        "orcamentos_editar_financeiro": acesso_financeiro,
+        # Uma conta exclusivamente Ambulante trabalha apenas a própria
+        # carteira de propostas. Se também receber Vendas ou Gestão, passa
+        # a participar da central compartilhada como essas funções preveem.
+        "orcamentos_proprios": ambulante and not (vendas or gestao),
         # Vendas corrige o próprio rascunho; Gestão pode remover qualquer
         # rascunho. Clientes não têm autoria, então a exclusão fica com
         # Gestão. O estado do orçamento ainda é conferido por objeto abaixo.
         "excluir_clientes": gestao,
-        "excluir_orcamentos": vendas or gestao,
+        "excluir_orcamentos": comercial,
         "excluir_orcamentos_alheios": gestao,
-        "financeiro": gestao,
-        "operacao": producao or vendas or gestao,
+        "financeiro": acesso_financeiro,
+        "vendas_financeiro": acesso_financeiro,
+        "pedidos": acesso_financeiro,
+        "manutencoes": producao or gestao,
+        # Compatibilidade com pontos antigos que perguntam se existe alguma
+        # operação acessível. As telas usam as capacidades específicas.
+        "operacao": producao or acesso_financeiro or gestao,
         "site": criacao,
         "usuarios": superusuario,
+        "avaliar_blocos_orcamento": superusuario,
+        "avaliar_setores": superusuario,
     }
 
 
@@ -160,6 +199,28 @@ def pode_excluir_orcamento(user, orcamento) -> bool:
     if acesso["excluir_orcamentos_alheios"]:
         return True
     return getattr(orcamento, "responsavel_id", None) == getattr(user, "pk", None)
+
+
+def limitar_orcamentos(user, queryset):
+    """Aplica a carteira individual da função Ambulante no próprio banco."""
+    if capacidades(user)["orcamentos_proprios"]:
+        return queryset.filter(responsavel=user)
+    return queryset
+
+
+def pode_acessar_orcamento(user, orcamento) -> bool:
+    """Confere o objeto, inclusive em POST e prévia por URL direta."""
+    acesso = capacidades(user)
+    if not acesso["orcamentos"]:
+        return False
+    if not acesso["orcamentos_proprios"]:
+        return True
+    return getattr(orcamento, "responsavel_id", None) == getattr(user, "pk", None)
+
+
+def origem_padrao_orcamento(user) -> str:
+    """Origem confiável, derivada da função em vez de um campo do navegador."""
+    return "ambulante" if capacidades(user)["orcamentos_proprios"] else "interno"
 
 
 def atribuir_funcoes(user, codigos) -> list[Funcao]:

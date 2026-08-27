@@ -34,12 +34,13 @@ class ColaboradorAdmin(admin.ModelAdmin):
 
 
 from .models import (
+    AvaliacaoBlocoOrcamento, AvaliacaoSetor,
     Cliente, EnderecoCliente, Setores, EstoqueMaterial,
     CentralPedidos, CentralVendas, ComprasMensais, ItensCompra,
     CategoriaDespesa, DespesasMensais, FinanceiroMensal,
     ExecucaoEtapaProducao, Fornecedor, GuiaEtapaProducao,
     HistoricoProducao, ImagemGuiaProducao, MovimentoEstoque,
-    OrdemProducao, ProdutoInterno,
+    Orcamento, OrdemProducao, ProdutoInterno,
 )
 
 # Inline para endereços dentro do Cliente
@@ -163,6 +164,40 @@ class CentralPedidosAdmin(admin.ModelAdmin):
 class CentralVendasAdmin(admin.ModelAdmin):
     list_display = ('id', 'origem', 'criacao')
     list_filter = ('origem',)
+
+
+@admin.register(Orcamento)
+class OrcamentoAdmin(admin.ModelAdmin):
+    list_display = (
+        "id", "cliente", "origem", "status", "responsavel", "criacao",
+    )
+    list_filter = ("origem", "status", "criacao")
+    search_fields = (
+        "nome_cliente", "cliente__nome_cliente", "contato",
+        "responsavel__username", "responsavel__first_name",
+    )
+    autocomplete_fields = ("cliente", "responsavel")
+
+
+@admin.register(AvaliacaoBlocoOrcamento)
+class AvaliacaoBlocoOrcamentoAdmin(admin.ModelAdmin):
+    list_display = (
+        "orcamento", "bloco", "status", "avaliador", "avaliado_em",
+    )
+    list_filter = ("bloco", "status", "avaliado_em")
+    search_fields = (
+        "orcamento__nome_cliente", "orcamento__cliente__nome_cliente",
+        "avaliador__username", "observacao",
+    )
+    autocomplete_fields = ("orcamento", "avaliador")
+
+
+@admin.register(AvaliacaoSetor)
+class AvaliacaoSetorAdmin(admin.ModelAdmin):
+    list_display = ("setor", "periodo", "nota", "avaliador", "atualizado")
+    list_filter = ("setor", "nota", "periodo")
+    search_fields = ("observacao", "avaliador__username")
+    autocomplete_fields = ("avaliador",)
 
 # Inline para itens dentro da compra
 class ItensCompraInline(admin.TabularInline):

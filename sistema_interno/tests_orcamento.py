@@ -18,8 +18,27 @@ from django.utils import timezone
 
 from core.models import Brinquedos, CategoriaPeca, CategoriasBrinquedos, PecasReposicao
 
-from .models import Cliente, ItemOrcamento, Orcamento, ProdutoInterno
+from .models import (
+    AvaliacaoBlocoOrcamento,
+    Cliente,
+    ItemOrcamento,
+    Orcamento,
+    ProdutoInterno,
+)
 from .permissoes import atribuir_funcoes
+
+
+def aprovar_blocos(orcamento, avaliador):
+    AvaliacaoBlocoOrcamento.objects.bulk_create([
+        AvaliacaoBlocoOrcamento(
+            orcamento=orcamento,
+            bloco=bloco,
+            status=AvaliacaoBlocoOrcamento.Status.APROVADO,
+            avaliador=avaliador,
+            avaliado_em=timezone.now(),
+        )
+        for bloco in AvaliacaoBlocoOrcamento.Bloco.values
+    ])
 
 
 @override_settings(ALLOWED_HOSTS=["interno.testserver", "testserver"])
@@ -306,7 +325,29 @@ class OrcamentoInternoTests(TestCase):
             quantidade=1,
             valor_unitario=Decimal("280.00"),
         )
+        aprovar_blocos(orcamento, self.gestor)
         return orcamento
+
+    def test_envio_fica_bloqueado_ate_os_dois_setores_serem_aprovados(self):
+        orcamento = Orcamento.objects.create(nome_cliente="Aguardando revisão")
+        ItemOrcamento.objects.create(
+            orcamento=orcamento,
+            descricao="Cama elástica",
+            brinquedo=self.brinquedo,
+            quantidade=1,
+            valor_unitario=Decimal("280.00"),
+        )
+        AvaliacaoBlocoOrcamento.objects.create(
+            orcamento=orcamento,
+            bloco=AvaliacaoBlocoOrcamento.Bloco.COMERCIAL,
+            status=AvaliacaoBlocoOrcamento.Status.APROVADO,
+            avaliador=self.gestor,
+        )
+
+        resposta = self.post({"action": "enviar", "id": orcamento.id})
+
+        self.assertEqual(resposta.status_code, 400)
+        self.assertIn("Financeiro", resposta.json()["msg"])
 
     # -------------------------------------------------------- exclusão
     def test_exclusao_de_rascunho_exige_confirmacao_escrita(self):
@@ -729,6 +770,7 @@ class RegistroDeEnvioTests(TestCase):
             quantidade=1,
             valor_unitario=Decimal("280.00"),
         )
+        aprovar_blocos(self.orcamento, self.gestor)
 
     def post(self, dados):
         return self.client.post(

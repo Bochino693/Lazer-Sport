@@ -207,6 +207,68 @@ class CadastroDePecaTests(GestaoProdutosBaseTests):
 
         self.assertEqual(CategoriaPeca.objects.count(), 1)
 
+    def test_lista_paginaa_e_revalida_pelo_etag(self):
+        PecasReposicao.objects.bulk_create([
+            PecasReposicao(nome=f"Peça {numero:02d}", descricao_peca="Teste")
+            for numero in range(30)
+        ])
+        primeira = self.get(self.url)
+        self.assertEqual(len(primeira.context["pecas"]), 18)
+        self.assertContains(primeira, "Paginação de peças")
+        etag = primeira["ETag"]
+
+        igual = self.client.get(
+            self.url,
+            HTTP_HOST=self.host,
+            HTTP_IF_NONE_MATCH=etag,
+        )
+        self.assertEqual(igual.status_code, 304)
+        self.assertIn("must-revalidate", igual["Cache-Control"])
+
+        with self.captureOnCommitCallbacks(execute=True):
+            PecasReposicao.objects.create(nome="Peça nova", descricao_peca="Nova")
+        alterada = self.client.get(
+            self.url,
+            HTTP_HOST=self.host,
+            HTTP_IF_NONE_MATCH=etag,
+        )
+        self.assertEqual(alterada.status_code, 200)
+        self.assertNotEqual(alterada["ETag"], etag)
+
+    def test_modal_tem_mascara_monetaria_e_seletor_arejado(self):
+        resposta = self.get(self.url)
+        self.assertContains(resposta, 'data-mascara="moeda"', count=2)
+        self.assertContains(resposta, 'id="buscarCategoriaPeca"')
+        self.assertContains(resposta, 'id="modalExcluirPeca"')
+
+
+class CatalogoBrinquedosResponsivoTests(GestaoProdutosBaseTests):
+    def setUp(self):
+        super().setUp()
+        self.client.force_login(self.admin)
+        self.url = reverse("brinquedos_admin", urlconf="sistema_interno.urls")
+
+    def test_lista_paginaa_em_lotes_menores(self):
+        Brinquedos.objects.bulk_create([
+            Brinquedos(
+                nome_brinquedo=f"Brinquedo {numero:02d}",
+                descricao="Teste",
+                avaliacao=Decimal("5.00"),
+                voltz="Bivolt",
+            )
+            for numero in range(24)
+        ])
+        resposta = self.get(self.url)
+        self.assertEqual(len(resposta.context["brinquedos"]), 18)
+        self.assertGreater(resposta.context["page_obj"].paginator.num_pages, 1)
+
+    def test_modal_formata_dinheiro_metros_e_opcoes(self):
+        resposta = self.get(self.url)
+        self.assertContains(resposta, 'data-mascara="moeda"')
+        self.assertContains(resposta, 'data-mascara="medida"', count=3)
+        self.assertContains(resposta, 'data-options-tools="categoryGrid"')
+        self.assertContains(resposta, 'data-options-tools="tagGrid"')
+
 
 class EngajamentoAdminTests(GestaoProdutosBaseTests):
 

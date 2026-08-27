@@ -2,6 +2,7 @@ import secrets
 from decimal import Decimal
 
 from django.conf import settings
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models, transaction
 from django.utils import timezone
 
@@ -662,7 +663,11 @@ class CentralPedidos(Prime):
 
 class CentralVendas(Venda):
     origem = models.CharField(
-        choices=(('site', 'Site'), ('interno', 'Interno')),
+        choices=(
+            ('site', 'Site'),
+            ('interno', 'Atendimento interno'),
+            ('ambulante', 'Vendedor ambulante'),
+        ),
         max_length=20, null=True
     )
 
@@ -1368,6 +1373,10 @@ class Orcamento(Prime):
         RECUSADO = "recusado", "Recusado"
         EXPIRADO = "expirado", "Expirado"
 
+    class Origem(models.TextChoices):
+        INTERNO = "interno", "Atendimento interno"
+        AMBULANTE = "ambulante", "Vendedor ambulante"
+
     #: Situações em que a proposta ainda está viva e pode receber resposta.
     EM_ABERTO = (Status.RASCUNHO, Status.ENVIADO)
     #: Situações em que o cliente já respondeu -- não se responde de novo.
@@ -1400,6 +1409,16 @@ class Orcamento(Prime):
         choices=Status.choices,
         default=Status.RASCUNHO,
         db_index=True,
+    )
+    origem = models.CharField(
+        "Origem comercial",
+        max_length=20,
+        choices=Origem.choices,
+        default=Origem.INTERNO,
+        db_index=True,
+        help_text=(
+            "Preenchida automaticamente pela função de quem criou a proposta."
+        ),
     )
     validade = models.DateField(null=True, blank=True)
     desconto = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))
@@ -1601,6 +1620,101 @@ class Orcamento(Prime):
         verbose_name = "Orçamento"
         verbose_name_plural = "Orçamentos"
         ordering = ("-criacao", "-id")
+
+
+class AvaliacaoBlocoOrcamento(Prime):
+    """Decisão do superadministrador sobre cada responsabilidade da proposta."""
+
+    class Bloco(models.TextChoices):
+        COMERCIAL = "comercial", "Comercial"
+        FINANCEIRO = "financeiro", "Financeiro"
+
+    class Status(models.TextChoices):
+        PENDENTE = "pendente", "Pendente"
+        APROVADO = "aprovado", "Aprovado"
+        AJUSTES = "ajustes", "Requer ajustes"
+
+    orcamento = models.ForeignKey(
+        Orcamento,
+        on_delete=models.CASCADE,
+        related_name="avaliacoes_blocos",
+    )
+    bloco = models.CharField(max_length=12, choices=Bloco.choices)
+    status = models.CharField(
+        max_length=10,
+        choices=Status.choices,
+        default=Status.PENDENTE,
+        db_index=True,
+    )
+    observacao = models.TextField(blank=True)
+    avaliador = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name="avaliacoes_blocos_orcamento",
+        null=True,
+        blank=True,
+    )
+    avaliado_em = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = "Avaliação de bloco do orçamento"
+        verbose_name_plural = "Avaliações dos blocos dos orçamentos"
+        ordering = ("orcamento_id", "bloco")
+        constraints = [
+            models.UniqueConstraint(
+                fields=("orcamento", "bloco"),
+                name="uniq_avaliacao_bloco_orcamento",
+            ),
+        ]
+
+    def __str__(self):
+        return (
+            f"Orçamento #{self.orcamento_id} · "
+            f"{self.get_bloco_display()} · {self.get_status_display()}"
+        )
+
+
+class AvaliacaoSetor(Prime):
+    """Nota periódica e comentário do superadministrador por setor."""
+
+    class Setor(models.TextChoices):
+        PRODUCAO = "producao", "Produção"
+        CRIACAO = "criacao", "Criação e site"
+        VENDAS = "vendas", "Vendas internas"
+        AMBULANTE = "ambulante", "Vendedores ambulantes"
+        FINANCEIRO = "financeiro", "Financeiro"
+        GESTAO = "gestao", "Gestão"
+
+    setor = models.CharField(max_length=16, choices=Setor.choices, db_index=True)
+    periodo = models.DateField(
+        db_index=True,
+        help_text="Primeiro dia do mês avaliado.",
+    )
+    nota = models.PositiveSmallIntegerField(
+        validators=(MinValueValidator(1), MaxValueValidator(5)),
+    )
+    observacao = models.TextField(blank=True)
+    avaliador = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name="avaliacoes_setores",
+        null=True,
+        blank=True,
+    )
+
+    class Meta:
+        verbose_name = "Avaliação de setor"
+        verbose_name_plural = "Avaliações dos setores"
+        ordering = ("-periodo", "setor")
+        constraints = [
+            models.UniqueConstraint(
+                fields=("setor", "periodo"),
+                name="uniq_avaliacao_setor_periodo",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.get_setor_display()} · {self.periodo:%m/%Y} · nota {self.nota}"
 
 
 class EnvioOrcamento(Prime):

@@ -34,7 +34,7 @@ from .views import (
     VendasView,
 )
 from .views_app import manifesto, service_worker
-from .views_acessos import UsuariosEquipeInnerView
+from .views_acessos import AvaliacaoSetoresInnerView, UsuariosEquipeInnerView
 from .views_clientes import ClientesInnerView, ConsultaCepInnerView
 from .views_gestao import (
     AtualizarEtapaProducaoView,
@@ -166,6 +166,11 @@ urlpatterns = [
     path('logout/inner/', LogoutInnerView.as_view(), name='logout_inner'),
     path('minha-conta/', MinhaContaView.as_view(), name='minha_conta_inner'),
     path('equipe/', UsuariosEquipeInnerView.as_view(), name='usuarios_equipe'),
+    path(
+        'equipe/avaliacoes/',
+        AvaliacaoSetoresInnerView.as_view(),
+        name='avaliacao_setores',
+    ),
 
     # ---------------- demais telas ----------------
     path('vendas/inner/', VendasView.as_view(), name='vendas_inner'),

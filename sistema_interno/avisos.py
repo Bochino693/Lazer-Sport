@@ -26,7 +26,7 @@ from django.utils import timezone
 from core.models import Manutencao, Pedido, Venda
 
 from .models import EstoqueMaterial, Orcamento, OrdemProducao
-from .permissoes import GESTAO, PRODUCAO, VENDAS, capacidades, tem_funcao
+from .permissoes import GESTAO, capacidades, limitar_orcamentos, tem_funcao
 
 #: Rotas do painel. Passado na mão porque um pedido que chegue por fora
 #: do subdomínio interno resolveria contra o urlconf do site, onde estes
@@ -71,18 +71,21 @@ PESO = {"critico": 0, "atencao": 1, "novidade": 2, "info": 3}
 
 
 def eh_gestor(user):
-    """Compatibilidade para quem ainda chama a regra pelo nome antigo."""
+    """Compatibilidade para chamadas antigas da regra de Gestão."""
     return tem_funcao(user, GESTAO)
 
 
-def _orcamentos(hoje):
+def _orcamentos(user, hoje):
     """Vencidos e a vencer. Duas consultas, dois avisos diferentes.
 
     Vencido é perda: a proposta morreu sem resposta. A vencer ainda dá
     para salvar com um telefonema. Juntar os dois num número só apagaria
     justamente a diferença que faz alguém agir.
     """
-    abertos = Orcamento.objects.filter(status__in=Orcamento.EM_ABERTO)
+    abertos = limitar_orcamentos(
+        user,
+        Orcamento.objects.filter(status__in=Orcamento.EM_ABERTO),
+    )
 
     vencidos = abertos.filter(validade__lt=hoje).count()
     a_vencer = abertos.filter(
@@ -117,14 +120,17 @@ def _orcamentos(hoje):
     return avisos
 
 
-def _respostas_de_cliente(agora):
+def _respostas_de_cliente(user, agora):
     """Cliente respondeu pela página pública e ninguém viu ainda.
 
     É o aviso mais importante da lista em termos de dinheiro: uma proposta
     aprovada que fica parada é uma venda esfriando.
     """
     desde = agora - timedelta(days=DIAS_DE_NOVIDADE)
-    respondidos = Orcamento.objects.filter(respondido_em__gte=desde)
+    respondidos = limitar_orcamentos(
+        user,
+        Orcamento.objects.filter(respondido_em__gte=desde),
+    )
 
     aprovados = respondidos.filter(status=Orcamento.Status.APROVADO).count()
     recusados = respondidos.filter(status=Orcamento.Status.RECUSADO).count()
@@ -156,47 +162,50 @@ def _respostas_de_cliente(agora):
     return avisos
 
 
-def _operacao():
-    """Pedidos, vendas e manutenções — o giro do dia."""
+def _operacao(acesso):
+    """Pendências operacionais sem revelar módulos fora da função."""
     avisos = []
 
-    pedidos = Pedido.objects.exclude(
-        status__in=["finalizado", "cancelado"]
-    ).count()
-    if pedidos:
-        avisos.append(Aviso(
-            chave="pedidos",
-            titulo="Pedido em aberto" if pedidos == 1 else "Pedidos em aberto",
-            detalhe="Ainda não finalizados nem cancelados.",
-            quantidade=pedidos,
-            url=reverse("pedidos_inner", urlconf=URLCONF),
-            nivel="info",
-            icone="bi-box2-heart",
-        ))
+    if acesso["pedidos"]:
+        pedidos = Pedido.objects.exclude(
+            status__in=["finalizado", "cancelado"]
+        ).count()
+        if pedidos:
+            avisos.append(Aviso(
+                chave="pedidos",
+                titulo="Pedido em aberto" if pedidos == 1 else "Pedidos em aberto",
+                detalhe="Ainda não finalizados nem cancelados.",
+                quantidade=pedidos,
+                url=reverse("pedidos_inner", urlconf=URLCONF),
+                nivel="info",
+                icone="bi-box2-heart",
+            ))
 
-    vendas = Venda.objects.filter(confirmado=False).count()
-    if vendas:
-        avisos.append(Aviso(
-            chave="vendas",
-            titulo="Venda a confirmar" if vendas == 1 else "Vendas a confirmar",
-            detalhe="Pagamento registrado, confirmação pendente.",
-            quantidade=vendas,
-            url=reverse("vendas_inner", urlconf=URLCONF),
-            nivel="atencao",
-            icone="bi-receipt",
-        ))
+    if acesso["vendas_financeiro"]:
+        vendas = Venda.objects.filter(confirmado=False).count()
+        if vendas:
+            avisos.append(Aviso(
+                chave="vendas",
+                titulo="Venda a confirmar" if vendas == 1 else "Vendas a confirmar",
+                detalhe="Pagamento registrado, confirmação pendente.",
+                quantidade=vendas,
+                url=reverse("vendas_inner", urlconf=URLCONF),
+                nivel="atencao",
+                icone="bi-receipt",
+            ))
 
-    manutencoes = Manutencao.objects.filter(status__in=["P", "A"]).count()
-    if manutencoes:
-        avisos.append(Aviso(
-            chave="manutencoes",
-            titulo="Manutenção aberta" if manutencoes == 1 else "Manutenções abertas",
-            detalhe="Chamado do cliente esperando resposta.",
-            quantidade=manutencoes,
-            url=reverse("manutencao_inner", urlconf=URLCONF),
-            nivel="atencao",
-            icone="bi-wrench-adjustable",
-        ))
+    if acesso["manutencoes"]:
+        manutencoes = Manutencao.objects.filter(status__in=["P", "A"]).count()
+        if manutencoes:
+            avisos.append(Aviso(
+                chave="manutencoes",
+                titulo="Manutenção aberta" if manutencoes == 1 else "Manutenções abertas",
+                detalhe="Chamado do cliente esperando resposta.",
+                quantidade=manutencoes,
+                url=reverse("manutencao_inner", urlconf=URLCONF),
+                nivel="atencao",
+                icone="bi-wrench-adjustable",
+            ))
 
     return avisos
 
@@ -263,11 +272,11 @@ def coletar(user):
     avisos = []
 
     if acesso["orcamentos"]:
-        avisos += _orcamentos(hoje)
-        avisos += _respostas_de_cliente(timezone.now())
+        avisos += _orcamentos(user, hoje)
+        avisos += _respostas_de_cliente(user, timezone.now())
 
     if acesso["operacao"]:
-        avisos += _operacao()
+        avisos += _operacao(acesso)
 
     if acesso["estoque"]:
         avisos += _estoque()

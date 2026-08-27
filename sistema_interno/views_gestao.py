@@ -50,12 +50,18 @@ from .models import (
     ItemFichaTecnica,
     ItemOrcamento,
     Material,
+    AvaliacaoBlocoOrcamento,
     Orcamento,
     OrdemProducao,
     ProdutoInterno,
     Setores,
 )
-from .permissoes import pode_excluir_orcamento
+from .permissoes import (
+    capacidades,
+    limitar_orcamentos,
+    origem_padrao_orcamento,
+    pode_excluir_orcamento,
+)
 from .utils import (
     ErroDeFormulario,
     data,
@@ -67,8 +73,8 @@ from .utils import (
 )
 from .views import (
     FinanceiroInternoRequiredMixin,
-    GestorInternoRequiredMixin,
     InternoRequiredMixin,
+    OrcamentoInternoRequiredMixin,
     ProducaoInternoRequiredMixin,
     RespostaJSONMixin,
 )
@@ -113,6 +119,7 @@ class FinanceiroInnerView(FinanceiroInternoRequiredMixin, View):
             "curva": fin.curva_de_lucro(serie),
             "categorias": fin.despesas_por_categoria(meses[0]),
             "funil": fin.funil_de_orcamentos(meses[0]),
+            "origens_comerciais": fin.orcamentos_por_origem(meses[0]),
             "inicio": meses[0],
             "fim": meses[-1],
         }
@@ -124,7 +131,7 @@ class FinanceiroInnerView(FinanceiroInternoRequiredMixin, View):
 # ======================================================================
 # ORÇAMENTOS
 # ======================================================================
-class OrcamentosInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
+class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View):
     """Lista e monta orçamentos, com os itens em uma requisição só.
 
     Gestor também: aqui se vê preço de cliente e margem, e daqui se cria
@@ -142,12 +149,19 @@ class OrcamentosInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
     def get(self, request):
         busca = (request.GET.get("q") or "").strip()
         status = (request.GET.get("status") or "").strip()
+        origem = (request.GET.get("origem") or "").strip()
 
-        orcamentos = (
+        orcamentos = limitar_orcamentos(request.user, (
             Orcamento.objects
             .select_related("cliente", "cliente__parceiro", "responsavel")
             .prefetch_related(
                 "cliente__enderecos",
+                Prefetch(
+                    "avaliacoes_blocos",
+                    queryset=AvaliacaoBlocoOrcamento.objects.select_related(
+                        "avaliador"
+                    ),
+                ),
                 Prefetch(
                     "itens",
                     queryset=ItemOrcamento.objects
@@ -155,7 +169,7 @@ class OrcamentosInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
                     .prefetch_related("peca__imagem_peca_reposicao"),
                 )
             )
-        )
+        ))
 
         if busca:
             filtro = (
@@ -172,6 +186,9 @@ class OrcamentosInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
         if status in Orcamento.Status.values:
             orcamentos = orcamentos.filter(status=status)
 
+        if origem in Orcamento.Origem.values:
+            orcamentos = orcamentos.filter(origem=origem)
+
         orcamentos = list(orcamentos)
 
         # LINK E CONVERSA JÁ VÊM PRONTOS DO SERVIDOR.
@@ -184,6 +201,24 @@ class OrcamentosInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
         # nada; o POST continua existindo, mas só para registrar o envio.
         base_publica = endereco_do_site(request)
         for orcamento in orcamentos:
+            avaliacoes = {
+                avaliacao.bloco: avaliacao
+                for avaliacao in orcamento.avaliacoes_blocos.all()
+            }
+            orcamento.bloco_comercial = avaliacoes.get(
+                AvaliacaoBlocoOrcamento.Bloco.COMERCIAL
+            )
+            orcamento.bloco_financeiro = avaliacoes.get(
+                AvaliacaoBlocoOrcamento.Bloco.FINANCEIRO
+            )
+            orcamento.blocos_aprovados = all(
+                avaliacao
+                and avaliacao.status == AvaliacaoBlocoOrcamento.Status.APROVADO
+                for avaliacao in (
+                    orcamento.bloco_comercial,
+                    orcamento.bloco_financeiro,
+                )
+            )
             orcamento.link_publico = f"{base_publica}{orcamento.caminho_publico}"
             orcamento.mensagem_whatsapp = self.mensagem_da_proposta(
                 orcamento,
@@ -208,11 +243,18 @@ class OrcamentosInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
             Cliente.objects.filter(tipo=Cliente.Tipo.BUFFET).order_by("nome_cliente")
         )
 
+        acesso = capacidades(request.user)
         ctx = {
             "orcamentos": orcamentos,
             "busca": busca,
             "status_ativo": status,
             "status_opcoes": Orcamento.Status.choices,
+            "origem_ativa": origem,
+            "origem_opcoes": Orcamento.Origem.choices,
+            "origem_nova": origem_padrao_orcamento(request.user),
+            "origem_nova_rotulo": dict(Orcamento.Origem.choices)[
+                origem_padrao_orcamento(request.user)
+            ],
             # O CATÁLOGO É A ORIGEM PADRÃO DOS ITENS. Antes o seletor só
             # oferecia ProdutoInterno -- o que a fábrica monta --, e quem
             # orça aluguel de brinquedo tinha de digitar tudo à mão, com
@@ -230,6 +272,14 @@ class OrcamentosInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
             "total_em_aberto": sum((o.total for o in em_aberto), ZERO),
             "quantidade_aberto": len(em_aberto),
             "quantidade_aprovado": len(aprovados),
+            "quantidade_interno": sum(
+                1 for o in orcamentos
+                if o.origem == Orcamento.Origem.INTERNO
+            ),
+            "quantidade_ambulante": sum(
+                1 for o in orcamentos
+                if o.origem == Orcamento.Origem.AMBULANTE
+            ),
             "orcamentos_dados": [self.serializar(o) for o in orcamentos],
             # A busca de item vem por endpoint e nunca despeja o catálogo
             # inteiro nesta página. b:/p:/r: identificam brinquedo,
@@ -250,6 +300,15 @@ class OrcamentosInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
                 and o.dias_para_vencer is not None
                 and 0 <= o.dias_para_vencer <= 3
             ],
+            "pode_criar_orcamento": acesso["orcamentos_criar"],
+            "pode_editar_comercial": acesso["orcamentos_editar_comercial"],
+            "pode_editar_financeiro": acesso["orcamentos_editar_financeiro"],
+            "pode_avaliar_blocos": acesso["avaliar_blocos_orcamento"],
+            "blocos_opcoes": AvaliacaoBlocoOrcamento.Bloco.choices,
+            "avaliacao_status_opcoes": (
+                (AvaliacaoBlocoOrcamento.Status.APROVADO, "Aprovar"),
+                (AvaliacaoBlocoOrcamento.Status.AJUSTES, "Solicitar ajustes"),
+            ),
         }
         return render(request, "orcamentos_inner.html", ctx)
 
@@ -268,6 +327,15 @@ class OrcamentosInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
             "whatsapp_cliente": orcamento.whatsapp_destinatario,
             "email_cliente": orcamento.email_destinatario,
             "status": orcamento.status,
+            "origem": orcamento.origem,
+            "origem_rotulo": orcamento.get_origem_display(),
+            "bloco_comercial": OrcamentosInnerView.serializar_avaliacao(
+                getattr(orcamento, "bloco_comercial", None)
+            ),
+            "bloco_financeiro": OrcamentosInnerView.serializar_avaliacao(
+                getattr(orcamento, "bloco_financeiro", None)
+            ),
+            "blocos_aprovados": getattr(orcamento, "blocos_aprovados", False),
             "validade": orcamento.validade.isoformat() if orcamento.validade else "",
             "desconto": f"{orcamento.desconto:.2f}".replace(".", ","),
             "frete": f"{orcamento.frete:.2f}".replace(".", ","),
@@ -286,6 +354,29 @@ class OrcamentosInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
                 }
                 for item in orcamento.itens.all()
             ],
+        }
+
+    @staticmethod
+    def serializar_avaliacao(avaliacao):
+        if not avaliacao:
+            return {
+                "status": AvaliacaoBlocoOrcamento.Status.PENDENTE,
+                "rotulo": AvaliacaoBlocoOrcamento.Status.PENDENTE.label,
+                "observacao": "",
+            }
+        return {
+            "status": avaliacao.status,
+            "rotulo": avaliacao.get_status_display(),
+            "observacao": avaliacao.observacao,
+            "avaliado_em": (
+                timezone.localtime(avaliacao.avaliado_em).strftime("%d/%m/%Y %H:%M")
+                if avaliacao.avaliado_em else ""
+            ),
+            "avaliador": (
+                avaliacao.avaliador.get_full_name()
+                or avaliacao.avaliador.username
+                if avaliacao.avaliador else ""
+            ),
         }
 
     @staticmethod
@@ -368,63 +459,88 @@ class OrcamentosInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
         return None
 
     # ------------------------------------------------------------- ações
+    @staticmethod
+    def _orcamento_do_usuario(request, pk):
+        return get_object_or_404(
+            limitar_orcamentos(request.user, Orcamento.objects.all()),
+            pk=pk,
+        )
+
     def acao_save(self, request):
         orcamento_id = request.POST.get("id")
-        orcamento = (
-            get_object_or_404(Orcamento, pk=orcamento_id)
-            if orcamento_id else Orcamento()
-        )
-
-        cliente_id = (request.POST.get("cliente") or "").strip()
-        orcamento.cliente = (
-            get_object_or_404(Cliente, pk=cliente_id)
-            if cliente_id.isdigit() else None
-        )
-
-        orcamento.nome_cliente = texto(request, "nome_cliente", limite=120)
-        orcamento.contato = texto(request, "contato", limite=120)
-        orcamento.whatsapp_cliente = texto(request, "whatsapp_cliente", limite=24)
-        orcamento.email_cliente = texto(request, "email_cliente", limite=254)
-
-        if orcamento.email_cliente:
-            try:
-                validate_email(orcamento.email_cliente)
-            except ValidationError:
-                raise ErroDeFormulario("Informe um e-mail válido para o cliente.")
-
-        if not orcamento.cliente and not orcamento.nome_cliente:
-            raise ErroDeFormulario(
-                "Escolha um cliente cadastrado ou escreva o nome do destinatário."
+        acesso = capacidades(request.user)
+        novo = not bool(orcamento_id)
+        if novo and not acesso["orcamentos_criar"]:
+            return self.erro(
+                request,
+                "O Financeiro participa de propostas existentes; a criação cabe ao Comercial.",
+                status=403,
             )
 
-        status = (request.POST.get("status") or Orcamento.Status.RASCUNHO).strip()
-        if status not in Orcamento.Status.values:
-            raise ErroDeFormulario("Situação inválida para o orçamento.")
-        orcamento.status = status
+        orcamento = (
+            self._orcamento_do_usuario(request, orcamento_id)
+            if orcamento_id else Orcamento()
+        )
+        comercial_antes = self._assinatura_comercial(orcamento) if orcamento.pk else None
+        financeiro_antes = self._assinatura_financeira(orcamento) if orcamento.pk else None
 
-        orcamento.validade = data(request.POST.get("validade"), "Validade")
-        orcamento.desconto = decimal_br(
-            request.POST.get("desconto"), "Desconto",
-            limite=Decimal("9999999999.99"),
-        ) or ZERO
-        orcamento.frete = decimal_br(
-            request.POST.get("frete"), "Frete",
-            limite=Decimal("9999999999.99"),
-        ) or ZERO
-        orcamento.forma_pagamento = texto(
-            request, "forma_pagamento", limite=120,
-        )
-        orcamento.forma_envio = texto(
-            request, "forma_envio", limite=120,
-        )
-        orcamento.observacoes = texto(request, "observacoes")
+        if acesso["orcamentos_editar_comercial"]:
+            cliente_id = (request.POST.get("cliente") or "").strip()
+            orcamento.cliente = (
+                get_object_or_404(Cliente, pk=cliente_id)
+                if cliente_id.isdigit() else None
+            )
+            orcamento.nome_cliente = texto(request, "nome_cliente", limite=120)
+            orcamento.contato = texto(request, "contato", limite=120)
+            orcamento.whatsapp_cliente = texto(request, "whatsapp_cliente", limite=24)
+            orcamento.email_cliente = texto(request, "email_cliente", limite=254)
+
+            if orcamento.email_cliente:
+                try:
+                    validate_email(orcamento.email_cliente)
+                except ValidationError:
+                    raise ErroDeFormulario("Informe um e-mail válido para o cliente.")
+            if not orcamento.cliente and not orcamento.nome_cliente:
+                raise ErroDeFormulario(
+                    "Escolha um cliente cadastrado ou escreva o nome do destinatário."
+                )
+
+            status = (request.POST.get("status") or Orcamento.Status.RASCUNHO).strip()
+            if status not in Orcamento.Status.values:
+                raise ErroDeFormulario("Situação inválida para o orçamento.")
+            orcamento.status = status
+            orcamento.validade = data(request.POST.get("validade"), "Validade")
+            orcamento.forma_envio = texto(request, "forma_envio", limite=120)
+            orcamento.observacoes = texto(request, "observacoes")
+
+        if acesso["orcamentos_editar_financeiro"]:
+            orcamento.desconto = decimal_br(
+                request.POST.get("desconto"), "Desconto",
+                limite=Decimal("9999999999.99"),
+            ) or ZERO
+            orcamento.frete = decimal_br(
+                request.POST.get("frete"), "Frete",
+                limite=Decimal("9999999999.99"),
+            ) or ZERO
+            orcamento.forma_pagamento = texto(
+                request, "forma_pagamento", limite=120,
+            )
 
         if not orcamento.pk:
             orcamento.responsavel = request.user
+            orcamento.origem = origem_padrao_orcamento(request.user)
 
         orcamento.save()
+        if acesso["orcamentos_editar_comercial"]:
+            self._gravar_itens(orcamento, request.POST.get("itens"))
 
-        self._gravar_itens(orcamento, request.POST.get("itens"))
+        comercial_mudou = novo or comercial_antes != self._assinatura_comercial(orcamento)
+        financeiro_mudou = novo or financeiro_antes != self._assinatura_financeira(orcamento)
+        if comercial_mudou:
+            self._reabrir_bloco(orcamento, AvaliacaoBlocoOrcamento.Bloco.COMERCIAL)
+        if financeiro_mudou:
+            self._reabrir_bloco(orcamento, AvaliacaoBlocoOrcamento.Bloco.FINANCEIRO)
+
         mapa = orcamento.sincronizar_cliente_aprovado()
 
         complemento = ""
@@ -438,6 +554,42 @@ class OrcamentosInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
             f"Orçamento #{orcamento.pk} salvo — total {orcamento.total}.{complemento}",
             id=orcamento.pk,
             mapa_publicado=bool(mapa and mapa.latitude and mapa.longitude),
+        )
+
+    @staticmethod
+    def _assinatura_comercial(orcamento):
+        if not orcamento.pk:
+            return None
+        itens = tuple(
+            orcamento.itens.order_by("id").values_list(
+                "descricao", "brinquedo_id", "produto_id", "peca_id",
+                "quantidade", "valor_unitario",
+            )
+        )
+        return (
+            orcamento.cliente_id, orcamento.nome_cliente, orcamento.contato,
+            orcamento.whatsapp_cliente, orcamento.email_cliente,
+            orcamento.status, orcamento.validade, orcamento.forma_envio,
+            orcamento.observacoes, itens,
+        )
+
+    @staticmethod
+    def _assinatura_financeira(orcamento):
+        if not orcamento.pk:
+            return None
+        return orcamento.desconto, orcamento.frete, orcamento.forma_pagamento
+
+    @staticmethod
+    def _reabrir_bloco(orcamento, bloco):
+        AvaliacaoBlocoOrcamento.objects.update_or_create(
+            orcamento=orcamento,
+            bloco=bloco,
+            defaults={
+                "status": AvaliacaoBlocoOrcamento.Status.PENDENTE,
+                "observacao": "",
+                "avaliador": None,
+                "avaliado_em": None,
+            },
         )
 
     def _gravar_itens(self, orcamento, bruto):
@@ -528,7 +680,12 @@ class OrcamentosInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
         ItemOrcamento.objects.bulk_create(novos)
 
     def acao_status(self, request):
-        orcamento = get_object_or_404(Orcamento, pk=request.POST.get("id"))
+        if not capacidades(request.user)["orcamentos_editar_comercial"]:
+            return self.erro(
+                request, "Somente o setor Comercial altera a situação da proposta.",
+                status=403,
+            )
+        orcamento = self._orcamento_do_usuario(request, request.POST.get("id"))
         status = (request.POST.get("status") or "").strip()
 
         if status not in Orcamento.Status.values:
@@ -550,8 +707,45 @@ class OrcamentosInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
             mapa_publicado=bool(mapa and mapa.latitude and mapa.longitude),
         )
 
-    def acao_delete(self, request):
+    def acao_avaliar_bloco(self, request):
+        if not capacidades(request.user)["avaliar_blocos_orcamento"]:
+            return self.erro(
+                request, "Somente o superadministrador avalia os blocos.",
+                status=403,
+            )
+
         orcamento = get_object_or_404(Orcamento, pk=request.POST.get("id"))
+        bloco = (request.POST.get("bloco") or "").strip()
+        status = (request.POST.get("status") or "").strip()
+        observacao = texto(request, "observacao")
+        if bloco not in AvaliacaoBlocoOrcamento.Bloco.values:
+            raise ErroDeFormulario("Escolha o bloco Comercial ou Financeiro.")
+        if status not in (
+            AvaliacaoBlocoOrcamento.Status.APROVADO,
+            AvaliacaoBlocoOrcamento.Status.AJUSTES,
+        ):
+            raise ErroDeFormulario("Escolha aprovar ou solicitar ajustes.")
+        if status == AvaliacaoBlocoOrcamento.Status.AJUSTES and not observacao:
+            raise ErroDeFormulario("Explique o ajuste necessário para o setor responsável.")
+
+        avaliacao, _ = AvaliacaoBlocoOrcamento.objects.update_or_create(
+            orcamento=orcamento,
+            bloco=bloco,
+            defaults={
+                "status": status,
+                "observacao": observacao,
+                "avaliador": request.user,
+                "avaliado_em": timezone.now(),
+            },
+        )
+        return self.sucesso(
+            request,
+            f"Bloco {avaliacao.get_bloco_display()} marcado como "
+            f"{avaliacao.get_status_display().lower()}.",
+        )
+
+    def acao_delete(self, request):
+        orcamento = self._orcamento_do_usuario(request, request.POST.get("id"))
         if not pode_excluir_orcamento(request.user, orcamento):
             return self.erro(
                 request,
@@ -570,13 +764,35 @@ class OrcamentosInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
     # ------------------------------------------------ enviar ao cliente
     def acao_enviar(self, request):
         """Entrega a proposta pelo canal escolhido e registra o envio."""
+        if not capacidades(request.user)["orcamentos_editar_comercial"]:
+            return self.erro(
+                request, "Somente o Comercial envia a proposta ao cliente.",
+                status=403,
+            )
         orcamento_id = (request.POST.get("id") or "").strip()
         if not orcamento_id.isdigit():
             raise ErroDeFormulario(
                 "Não consegui identificar o orçamento. Feche esta janela, "
                 "recarregue a página e toque em Enviar novamente."
             )
-        orcamento = get_object_or_404(Orcamento, pk=int(orcamento_id))
+        orcamento = self._orcamento_do_usuario(request, int(orcamento_id))
+
+        aprovados = set(
+            orcamento.avaliacoes_blocos.filter(
+                status=AvaliacaoBlocoOrcamento.Status.APROVADO,
+            ).values_list("bloco", flat=True)
+        )
+        exigidos = set(AvaliacaoBlocoOrcamento.Bloco.values)
+        if aprovados != exigidos:
+            pendentes = [
+                rotulo for valor, rotulo in AvaliacaoBlocoOrcamento.Bloco.choices
+                if valor not in aprovados
+            ]
+            raise ErroDeFormulario(
+                "Antes do envio, o superadministrador deve aprovar: "
+                + " e ".join(pendentes)
+                + "."
+            )
 
         if not orcamento.itens.exists():
             raise ErroDeFormulario(
@@ -733,6 +949,8 @@ class OrcamentosInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
         na vitrine é decisão de quem cuida do site, com foto e texto de
         venda prontos. Aqui o que se quer é poder orçar hoje.
         """
+        if not capacidades(request.user)["orcamentos_editar_comercial"]:
+            return self.erro(request, "Cadastro de item pertence ao Comercial.", status=403)
         nome = texto(request, "nome", obrigatorio=True, rotulo="o nome do brinquedo", limite=150)
 
         if Brinquedos.objects.filter(nome_brinquedo__iexact=nome).exists():
@@ -780,6 +998,8 @@ class OrcamentosInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
     # --------------------------- cadastrar peça sem sair do orçamento
     def acao_peca_nova(self, request):
         """Cria uma peça real da loja e devolve-a para a linha atual."""
+        if not capacidades(request.user)["orcamentos_editar_comercial"]:
+            return self.erro(request, "Cadastro de item pertence ao Comercial.", status=403)
         nome = texto(
             request,
             "nome",
@@ -961,6 +1181,8 @@ class OrcamentosInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
         A validação é a mesma da aba Clientes (sistema_interno/clientes.py):
         cadastro rápido não pode nascer com regra mais frouxa.
         """
+        if not capacidades(request.user)["orcamentos_editar_comercial"]:
+            return self.erro(request, "Cadastro de cliente pertence ao Comercial.", status=403)
         cliente = svc_clientes.salvar_cliente(request)
         svc_clientes.salvar_endereco(request, cliente)
 
@@ -971,7 +1193,7 @@ class OrcamentosInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
         )
 
 
-class OrcamentoPreviaInnerView(GestorInternoRequiredMixin, View):
+class OrcamentoPreviaInnerView(OrcamentoInternoRequiredMixin, View):
     """Mostra o documento antes do envio, inclusive quando é rascunho.
 
     A página pública esconde rascunhos por segurança. A prévia, por sua vez,
@@ -985,6 +1207,15 @@ class OrcamentoPreviaInnerView(GestorInternoRequiredMixin, View):
             contexto_orcamento,
         )
 
+        # A prévia também é uma rota direta: a carteira individual do
+        # Ambulante precisa valer aqui, não apenas na lista visual.
+        get_object_or_404(
+            limitar_orcamentos(
+                request.user,
+                Orcamento.objects.only("pk", "responsavel_id"),
+            ),
+            pk=pk,
+        )
         orcamento = carregar_orcamento_exibicao(pk=pk)
         contexto = contexto_orcamento(
             orcamento, previsualizacao=True, request=request
@@ -992,7 +1223,7 @@ class OrcamentoPreviaInnerView(GestorInternoRequiredMixin, View):
         return render(request, "orcamento_publico.html", contexto)
 
 
-class BuscaItensOrcamentoView(GestorInternoRequiredMixin, View):
+class BuscaItensOrcamentoView(OrcamentoInternoRequiredMixin, View):
     """Busca pequena e relevante para o seletor do orçamento.
 
     Nenhum catálogo inteiro cruza a rede. Com termo vazio aparecem os mais
@@ -1111,7 +1342,7 @@ class BuscaItensOrcamentoView(GestorInternoRequiredMixin, View):
         return resposta
 
 
-class BuscaClientesOrcamentoView(GestorInternoRequiredMixin, View):
+class BuscaClientesOrcamentoView(OrcamentoInternoRequiredMixin, View):
     """Autocompletar de clientes sem despejar a carteira inteira no HTML."""
 
     LIMITE = 20

@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+from datetime import date
+
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, render
+from django.utils import timezone
 from django.views.generic import View
 
 from .permissoes import (
@@ -15,6 +18,7 @@ from .permissoes import (
     atribuir_funcoes,
     nomes_das_funcoes,
 )
+from .models import AvaliacaoSetor
 from .utils import ErroDeFormulario, texto
 from .views import RespostaJSONMixin, SuperusuarioInternoRequiredMixin
 
@@ -154,4 +158,90 @@ class UsuariosEquipeInnerView(
             request,
             f"{usuario.get_full_name() or usuario.username} "
             f"{'reativado' if usuario.is_active else 'desativado'}.",
+        )
+
+
+class AvaliacaoSetoresInnerView(
+    RespostaJSONMixin,
+    SuperusuarioInternoRequiredMixin,
+    View,
+):
+    """Avaliação mensal dos setores, reservada ao superadministrador."""
+
+    rota_padrao = "avaliacao_setores"
+    template_name = "avaliacao_setores.html"
+
+    @staticmethod
+    def _periodo(valor):
+        valor = (valor or "").strip()
+        try:
+            ano, mes = (int(parte) for parte in valor.split("-", 1))
+            periodo = date(ano, mes, 1)
+        except (TypeError, ValueError):
+            hoje = timezone.localdate()
+            periodo = date(hoje.year, hoje.month, 1)
+        return periodo
+
+    def get(self, request):
+        periodo = self._periodo(request.GET.get("periodo"))
+        existentes = {
+            avaliacao.setor: avaliacao
+            for avaliacao in AvaliacaoSetor.objects.filter(periodo=periodo)
+            .select_related("avaliador")
+        }
+        grupos = {funcao.codigo: funcao for funcao in FUNCOES}
+        linhas = []
+        for valor, rotulo in AvaliacaoSetor.Setor.choices:
+            funcao = grupos.get(valor)
+            integrantes = (
+                User.objects.filter(is_active=True, groups__name=funcao.grupo)
+                .distinct().count()
+                if funcao else 0
+            )
+            linhas.append({
+                "codigo": valor,
+                "rotulo": rotulo,
+                "icone": funcao.icone if funcao else "bi-diagram-3",
+                "integrantes": integrantes,
+                "avaliacao": existentes.get(valor),
+            })
+
+        historico = (
+            AvaliacaoSetor.objects.select_related("avaliador")
+            .exclude(periodo=periodo)[:36]
+        )
+        return render(request, self.template_name, {
+            "periodo": periodo,
+            "periodo_campo": periodo.strftime("%Y-%m"),
+            "linhas": linhas,
+            "historico": historico,
+            "avaliados": len(existentes),
+            "total_setores": len(AvaliacaoSetor.Setor.choices),
+        })
+
+    def acao_save(self, request):
+        setor = (request.POST.get("setor") or "").strip()
+        if setor not in AvaliacaoSetor.Setor.values:
+            raise ErroDeFormulario("Escolha um setor válido.")
+        periodo = self._periodo(request.POST.get("periodo"))
+        try:
+            nota = int(request.POST.get("nota") or 0)
+        except (TypeError, ValueError):
+            nota = 0
+        if nota not in range(1, 6):
+            raise ErroDeFormulario("A nota precisa estar entre 1 e 5.")
+
+        avaliacao, criada = AvaliacaoSetor.objects.update_or_create(
+            setor=setor,
+            periodo=periodo,
+            defaults={
+                "nota": nota,
+                "observacao": texto(request, "observacao"),
+                "avaliador": request.user,
+            },
+        )
+        verbo = "registrada" if criada else "atualizada"
+        return self.sucesso(
+            request,
+            f"Avaliação de {avaliacao.get_setor_display()} {verbo} com nota {nota}.",
         )

@@ -18,7 +18,7 @@ from django.test import RequestFactory, TestCase, override_settings
 from core.models import Brinquedos
 from decimal import Decimal
 
-from .models import ItemOrcamento, Orcamento
+from .models import AvaliacaoBlocoOrcamento, ItemOrcamento, Orcamento
 
 
 @override_settings(ALLOWED_HOSTS=["interno.testserver", "testserver"])
@@ -53,6 +53,15 @@ class RespostaDoPainelTests(TestCase):
             quantidade=1,
             valor_unitario=Decimal("280.00"),
         )
+        AvaliacaoBlocoOrcamento.objects.bulk_create([
+            AvaliacaoBlocoOrcamento(
+                orcamento=self.orcamento,
+                bloco=bloco,
+                status=AvaliacaoBlocoOrcamento.Status.APROVADO,
+                avaliador=self.gestor,
+            )
+            for bloco in AvaliacaoBlocoOrcamento.Bloco.values
+        ])
 
     def post(self, dados):
         return self.client.post(

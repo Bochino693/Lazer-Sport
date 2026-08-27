@@ -21,7 +21,7 @@ from django.contrib import messages
 from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Count, Q
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponseNotModified
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views import View
@@ -34,6 +34,7 @@ from .models import (
     PecasReposicao,
 )
 from .views import AdminOnlyMixin, ErroDeFormulario
+from .home_cache import admin_catalog_etag, aplicar_cache_condicional
 
 
 logger = logging.getLogger(__name__)
@@ -84,6 +85,10 @@ class PecaAdminView(AdminOnlyMixin, View):
     # Leitura
     # ------------------------------------------------------------------
     def get(self, request):
+        etag = admin_catalog_etag(request, "pecas")
+        if request.headers.get("If-None-Match") == etag:
+            return aplicar_cache_condicional(HttpResponseNotModified(), etag)
+
         categoria = (request.GET.get("categoria") or "todas").strip()
         busca = (request.GET.get("q") or "").strip()
         situacao = (request.GET.get("situacao") or "todas").strip()
@@ -123,7 +128,7 @@ class PecaAdminView(AdminOnlyMixin, View):
         elif situacao == "sem_preco":
             pecas = pecas.filter(preco_venda__isnull=True)
 
-        pagina = Paginator(pecas, 40).get_page(request.GET.get("page"))
+        pagina = Paginator(pecas, 18).get_page(request.GET.get("page"))
 
         dados = []
         for peca in pagina:
@@ -176,7 +181,8 @@ class PecaAdminView(AdminOnlyMixin, View):
             "total_sem_preco": todas.filter(preco_venda__isnull=True).count(),
         }
 
-        return render(request, self.template_name, contexto)
+        response = render(request, self.template_name, contexto)
+        return aplicar_cache_condicional(response, etag)
 
     # ------------------------------------------------------------------
     # Escrita

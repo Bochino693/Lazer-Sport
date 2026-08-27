@@ -326,3 +326,40 @@ def funil_de_orcamentos(inicio):
         "recusado": contagem.get(Orcamento.Status.RECUSADO, 0),
         "total": sum(contagem.values()),
     }
+
+
+def orcamentos_por_origem(inicio):
+    """Compara a equipe interna e o vendedor ambulante sem consultas N+1."""
+    resumo = {
+        valor: {
+            "codigo": valor,
+            "rotulo": rotulo,
+            "total": 0,
+            "aprovados": 0,
+            "valor_aprovado": ZERO,
+        }
+        for valor, rotulo in Orcamento.Origem.choices
+    }
+
+    orcamentos = (
+        Orcamento.objects
+        .filter(criacao__date__gte=inicio)
+        .prefetch_related("itens")
+    )
+    for orcamento in orcamentos:
+        linha = resumo.get(orcamento.origem)
+        if linha is None:
+            continue
+        linha["total"] += 1
+        if orcamento.status == Orcamento.Status.APROVADO:
+            linha["aprovados"] += 1
+            linha["valor_aprovado"] += orcamento.total
+
+    for linha in resumo.values():
+        linha["valor_aprovado"] = _dinheiro(linha["valor_aprovado"])
+        linha["conversao"] = round(
+            linha["aprovados"] / linha["total"] * 100,
+            1,
+        ) if linha["total"] else 0.0
+
+    return list(resumo.values())

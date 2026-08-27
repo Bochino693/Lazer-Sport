@@ -82,6 +82,25 @@
   </article>
 </section>
 
+<section class="ls-origin-finance-grid mb-3" aria-label="Desempenho por origem comercial">
+  {% for origem in origens_comerciais %}
+  <article class="ls-origin-finance-card {{ origem.codigo }}">
+    <div class="ls-origin-finance-head">
+      <span class="ls-origin-badge {{ origem.codigo }}">
+        <i class="bi {% if origem.codigo == 'ambulante' %}bi-geo-alt-fill{% else %}bi-building{% endif %}"></i>
+        {{ origem.rotulo }}
+      </span>
+      <strong>{{ origem.total }} proposta{{ origem.total|pluralize }}</strong>
+    </div>
+    <div class="ls-origin-finance-values">
+      <span><small>Aprovadas</small><strong>{{ origem.aprovados }}</strong></span>
+      <span><small>Valor aprovado</small><strong>R$ {{ origem.valor_aprovado|moeda }}</strong></span>
+      <span><small>Conversão</small><strong>{{ origem.conversao }}%</strong></span>
+    </div>
+  </article>
+  {% endfor %}
+</section>
+
 <section class="ls-grid-2 ls-grid-start mb-3">
 
   <!-- ---------------- Receita x saída ---------------- -->

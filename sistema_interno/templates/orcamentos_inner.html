@@ -12,12 +12,14 @@
     <p>Monte a proposta item a item, acompanhe o que foi enviado e veja quanto está aprovado.</p>
   </div>
   <div class="ls-page-hero-actions">
+    {% if permissoes_interno.financeiro %}
     <a href="{% url 'financeiro_inner' %}" class="btn btn-outline-secondary">
       <i class="bi bi-graph-up-arrow me-1"></i> Financeiro
     </a>
-    <button type="button" class="btn btn-success" id="novoOrcamento">
+    {% endif %}
+    {% if pode_criar_orcamento %}<button type="button" class="btn btn-success" id="novoOrcamento">
       <i class="bi bi-plus-lg me-1"></i> Novo orçamento
-    </button>
+    </button>{% endif %}
   </div>
 </section>
 
@@ -28,7 +30,9 @@
       <span class="ls-metric-icon"><i class="bi bi-file-earmark-text"></i></span>
     </div>
     <strong class="ls-metric-value">{{ total_orcamentos }}</strong>
-    <span class="ls-metric-note">Conforme os filtros aplicados</span>
+    <span class="ls-metric-note">
+      {{ quantidade_interno }} interno(s) · {{ quantidade_ambulante }} ambulante(s)
+    </span>
   </article>
 
   <article class="ls-metric-card yellow">
@@ -61,12 +65,12 @@
 
 <section class="ls-filter-panel">
   <form method="get" class="row g-3 align-items-end">
-    <div class="col-12 col-lg-7">
+    <div class="col-12 col-xl-5">
       <label class="form-label" for="filtroBusca">Buscar</label>
       <input id="filtroBusca" name="q" value="{{ busca }}" class="form-control"
              placeholder="Cliente, contato, item ou observação">
     </div>
-    <div class="col-8 col-lg-3">
+    <div class="col-6 col-md-4 col-xl-3">
       <label class="form-label" for="filtroStatus">Situação</label>
       <select id="filtroStatus" name="status" class="form-select">
         <option value="">Todas</option>
@@ -75,7 +79,16 @@
         {% endfor %}
       </select>
     </div>
-    <div class="col-4 col-lg-2 d-grid">
+    <div class="col-6 col-md-4 col-xl-2">
+      <label class="form-label" for="filtroOrigem">Origem</label>
+      <select id="filtroOrigem" name="origem" class="form-select">
+        <option value="">Todas</option>
+        {% for valor, rotulo in origem_opcoes %}
+          <option value="{{ valor }}" {% if origem_ativa == valor %}selected{% endif %}>{{ rotulo }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-12 col-md-4 col-xl-2 d-grid">
       <button type="submit" class="btn btn-primary"><i class="bi bi-funnel me-1"></i> Filtrar</button>
     </div>
   </form>
@@ -96,10 +109,12 @@
           <tr>
             <th>#</th>
             <th>Cliente</th>
+            <th>Origem</th>
             <th class="text-end">Itens</th>
             <th class="text-end">Total</th>
             <th>Validade</th>
             <th>Situação</th>
+            <th>Revisão dos blocos</th>
             <th class="text-end">Ações</th>
           </tr>
         </thead>
@@ -112,6 +127,17 @@
                 {% if orcamento.contato %}
                   <span class="material-sub d-block">{{ orcamento.contato }}</span>
                 {% endif %}
+                {% if orcamento.responsavel %}
+                  <span class="material-sub d-block">
+                    {{ orcamento.responsavel.get_full_name|default:orcamento.responsavel.username }}
+                  </span>
+                {% endif %}
+              </td>
+              <td data-rotulo="Origem">
+                <span class="ls-origin-badge {{ orcamento.origem }}">
+                  <i class="bi {% if orcamento.origem == 'ambulante' %}bi-geo-alt-fill{% else %}bi-building{% endif %}"></i>
+                  {{ orcamento.get_origem_display }}
+                </span>
               </td>
               <td data-rotulo="Itens" class="text-end">{{ orcamento.itens.count }}</td>
               <td data-rotulo="Total" class="text-end">
@@ -145,6 +171,18 @@
                   </span>
                 {% endif %}
               </td>
+              <td data-rotulo="Revisão dos blocos">
+                <div class="ls-block-review">
+                  <span class="ls-status {% if orcamento.bloco_comercial.status == 'aprovado' %}success{% elif orcamento.bloco_comercial.status == 'ajustes' %}danger{% else %}warning{% endif %}"
+                        title="{{ orcamento.bloco_comercial.observacao|default:'Aguardando avaliação' }}">
+                    Comercial: {{ orcamento.bloco_comercial.get_status_display|default:"Pendente" }}
+                  </span>
+                  <span class="ls-status {% if orcamento.bloco_financeiro.status == 'aprovado' %}success{% elif orcamento.bloco_financeiro.status == 'ajustes' %}danger{% else %}warning{% endif %}"
+                        title="{{ orcamento.bloco_financeiro.observacao|default:'Aguardando avaliação' }}">
+                    Financeiro: {{ orcamento.bloco_financeiro.get_status_display|default:"Pendente" }}
+                  </span>
+                </div>
+              </td>
               <td data-rotulo="Ações" class="ls-actions ls-commercial-actions text-end">
                 <div class="ls-row-actions">
                 <a class="btn btn-sm btn-outline-primary"
@@ -159,7 +197,7 @@
                         aria-label="Editar orçamento {{ orcamento.id }}" title="Editar orçamento">
                   <i class="bi bi-pencil"></i><span class="ls-action-label">Editar</span>
                 </button>
-                <button type="button" class="btn btn-sm btn-outline-primary"
+                {% if pode_editar_comercial %}<button type="button" class="btn btn-sm btn-outline-primary"
                         data-enviar="{{ orcamento.id }}"
                         data-orcamento-id="{{ orcamento.id }}"
                         data-nome="{{ orcamento.destinatario }}"
@@ -168,19 +206,25 @@
                         data-link="{{ orcamento.link_publico }}"
                         data-mensagem="{{ orcamento.mensagem_whatsapp }}"
                         data-previa="{% url 'orcamento_previa_inner' orcamento.id %}"
-                        value="{{ orcamento.id }}"
+                        value="{{ orcamento.id }}" {% if not orcamento.blocos_aprovados %}disabled{% endif %}
                         aria-label="Enviar orçamento {{ orcamento.id }}"
-                        title="Gerar o link da proposta para mandar ao cliente">
+                        title="{% if orcamento.blocos_aprovados %}Gerar o link da proposta para mandar ao cliente{% else %}Aguardando aprovação dos blocos Comercial e Financeiro{% endif %}">
                   <i class="bi bi-send"></i>
                   <span class="ls-action-label">{% if orcamento.enviado_em %}Link{% else %}Enviar{% endif %}</span>
-                </button>
-                <button type="button" class="btn btn-sm btn-outline-secondary"
+                </button>{% endif %}
+                {% if pode_editar_comercial %}<button type="button" class="btn btn-sm btn-outline-secondary"
                         data-situacao="{{ orcamento.id }}"
                         data-nome="#{{ orcamento.id }} — {{ orcamento.destinatario }}"
                         data-status="{{ orcamento.status }}"
                         aria-label="Alterar situação do orçamento {{ orcamento.id }}" title="Alterar situação">
                   <i class="bi bi-flag"></i><span class="ls-action-label">Situação</span>
-                </button>
+                </button>{% endif %}
+                {% if pode_avaliar_blocos %}<button type="button" class="btn btn-sm btn-outline-warning"
+                        data-avaliar="{{ orcamento.id }}"
+                        data-nome="#{{ orcamento.id }} — {{ orcamento.destinatario }}"
+                        aria-label="Avaliar blocos do orçamento {{ orcamento.id }}" title="Avaliar blocos">
+                  <i class="bi bi-clipboard-check"></i><span class="ls-action-label">Avaliar</span>
+                </button>{% endif %}
                 {% if orcamento.pode_excluir %}
                 <button type="button" class="btn btn-sm btn-outline-danger"
                         data-excluir="{{ orcamento.id }}"
@@ -194,7 +238,7 @@
             </tr>
           {% empty %}
             <tr>
-              <td colspan="7">
+              <td colspan="9">
                 <div class="ls-empty">
                   <i class="bi bi-file-earmark-text"></i>
                   Nenhum orçamento encontrado. Comece criando o primeiro.
@@ -226,6 +270,7 @@
         <div id="orcamentoErro" class="alert alert-danger d-none" role="alert"></div>
 
         <div class="row g-3">
+          <div class="col-12"><div class="ls-budget-block-title comercial"><i class="bi bi-people-fill"></i><span><strong>Bloco Comercial</strong><small>Cliente, atendimento, validade, entrega e itens.</small></span></div></div>
           <div class="col-12 col-md-4">
             <label class="form-label" for="orcamentoClienteBusca">Cliente cadastrado</label>
             {% comment %}
@@ -270,9 +315,23 @@
           </div>
 
           <div class="col-12 col-md-4">
+            <label class="form-label">Origem comercial</label>
+            <div class="ls-origin-field" id="orcamentoOrigem"
+                 data-nova="{{ origem_nova }}" data-nova-rotulo="{{ origem_nova_rotulo }}">
+              <span class="ls-origin-badge {{ origem_nova }}" id="orcamentoOrigemBadge">
+                <i class="bi {% if origem_nova == 'ambulante' %}bi-geo-alt-fill{% else %}bi-building{% endif %}"></i>
+                <span id="orcamentoOrigemTexto">{{ origem_nova_rotulo }}</span>
+              </span>
+              <small>Definida automaticamente pela função de quem criou.</small>
+            </div>
+          </div>
+
+          <div class="col-12 col-md-4">
             <label class="form-label" for="orcamentoValidade">Válido até</label>
             <input type="date" class="form-control" id="orcamentoValidade" name="validade">
           </div>
+
+          <div class="col-12"><div class="ls-budget-block-title financeiro"><i class="bi bi-cash-stack"></i><span><strong>Bloco Financeiro</strong><small>Frete, desconto e condições de pagamento.</small></span></div></div>
 
           <div class="col-12 col-md-4">
             <label class="form-label" for="orcamentoFrete">Frete</label>
@@ -789,6 +848,53 @@ Cadastro mínimo de propósito: nome, valor e categoria. Foto e texto de
   </div>
 </div>
 
+{% if pode_avaliar_blocos %}
+<!-- ================ MODAL: avaliação setorizada ================= -->
+<div class="modal fade" id="modalAvaliacaoBloco" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <form class="modal-content" id="formAvaliacaoBloco" method="post" action="{% url 'orcamentos_inner' %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="avaliar_bloco">
+      <input type="hidden" name="id" id="avaliacaoOrcamentoId">
+      <div class="modal-header">
+        <div>
+          <span class="ls-modal-kicker">Avaliação do superadministrador</span>
+          <h5 class="modal-title" id="avaliacaoOrcamentoNome">Avaliar orçamento</h5>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body">
+        <div id="avaliacaoBlocoErro" class="alert alert-danger d-none" role="alert"></div>
+        <div class="row g-3">
+          <div class="col-12 col-sm-6">
+            <label class="form-label" for="avaliacaoBloco">Bloco responsável</label>
+            <select class="form-select" id="avaliacaoBloco" name="bloco" required>
+              {% for valor, rotulo in blocos_opcoes %}<option value="{{ valor }}">{{ rotulo }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="col-12 col-sm-6">
+            <label class="form-label" for="avaliacaoStatus">Decisão</label>
+            <select class="form-select" id="avaliacaoStatus" name="status" required>
+              {% for valor, rotulo in avaliacao_status_opcoes %}<option value="{{ valor }}">{{ rotulo }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="col-12">
+            <label class="form-label" for="avaliacaoObservacao">Parecer</label>
+            <textarea class="form-control" id="avaliacaoObservacao" name="observacao" rows="4"
+                      placeholder="Obrigatório quando houver ajustes; opcional na aprovação."></textarea>
+            <div class="form-text" id="avaliacaoAtual"></div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-warning"><i class="bi bi-clipboard-check me-1"></i> Registrar avaliação</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endif %}
+
 <!-- ================= MODAL: excluir ================= -->
 {% url 'orcamentos_inner' as exclusao_url %}
 {% include "includes/modal_confirmar_exclusao.html" with exclusao_url=exclusao_url exclusao_titulo="Excluir orçamento" exclusao_aviso="O rascunho e todos os itens serão apagados. Propostas enviadas, respondidas ou expiradas permanecem no histórico comercial." %}
@@ -806,6 +912,8 @@ document.addEventListener("DOMContentLoaded", function () {
   );
 
   var corpo = document.getElementById("itensCorpo");
+  var podeEditarComercial = {{ pode_editar_comercial|yesno:"true,false" }};
+  var podeEditarFinanceiro = {{ pode_editar_financeiro|yesno:"true,false" }};
 
   /* ------------------------------------------------------------------
      O seletor de item
@@ -932,6 +1040,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
   buscaCliente.entrada.id = "orcamentoClienteBusca";
   document.getElementById("orcamentoClienteBox").appendChild(buscaCliente.elemento);
+  buscaCliente.entrada.disabled = !podeEditarComercial;
 
   var endpointItens = "{% url 'buscar_itens_orcamento' %}";
   var cacheBuscaItens = new Map();
@@ -1128,6 +1237,7 @@ document.addEventListener("DOMContentLoaded", function () {
     var busca = criarBuscaDeItem(tr);
     tr.firstElementChild.appendChild(busca.elemento);
     tr.buscaItem = busca;
+    busca.entrada.disabled = !podeEditarComercial;
 
     if (item) {
       if (item.opcao) busca.adicionarOpcao(item.opcao, false);
@@ -1352,6 +1462,21 @@ document.addEventListener("DOMContentLoaded", function () {
     })[0];
   }
 
+  function mostrarOrigem(orcamento) {
+    var campo = document.getElementById("orcamentoOrigem");
+    var badge = document.getElementById("orcamentoOrigemBadge");
+    var texto = document.getElementById("orcamentoOrigemTexto");
+    var origem = orcamento ? orcamento.origem : campo.dataset.nova;
+    var rotulo = orcamento ? orcamento.origem_rotulo : campo.dataset.novaRotulo;
+    var icone = badge.querySelector("i");
+
+    badge.className = "ls-origin-badge " + origem;
+    texto.textContent = rotulo;
+    icone.className = "bi " + (
+      origem === "ambulante" ? "bi-geo-alt-fill" : "bi-building"
+    );
+  }
+
   function abrir(id) {
     var form = document.getElementById("formOrcamento");
     var orcamento = id ? achar(id) : null;
@@ -1367,6 +1492,7 @@ document.addEventListener("DOMContentLoaded", function () {
     document.getElementById("orcamentoTitulo").textContent = orcamento
       ? "Orçamento #" + orcamento.id
       : "Novo orçamento";
+    mostrarOrigem(orcamento);
 
     if (orcamento && orcamento.cliente_opcao) {
       buscaCliente.adicionarOpcao(orcamento.cliente_opcao, false);
@@ -1396,17 +1522,46 @@ document.addEventListener("DOMContentLoaded", function () {
     if (!corpo.children.length) novaLinha(null);
 
     recalcular();
+    aplicarPermissoesEdicao();
     Painel.abrir("modalOrcamento");
   }
 
-  document.getElementById("novoOrcamento").addEventListener("click", function () {
+  function aplicarPermissoesEdicao() {
+    [
+      "orcamentoNome", "orcamentoContato", "orcamentoWhatsapp",
+      "orcamentoEmail", "orcamentoStatus", "orcamentoValidade",
+      "orcamentoEnvio", "orcamentoObs", "addItem", "novoBrinquedo", "novaPeca"
+    ].forEach(function (id) {
+      var campo = document.getElementById(id);
+      if (campo) campo.disabled = !podeEditarComercial;
+    });
+    [
+      "orcamentoFrete", "orcamentoDesconto", "descontoUnidade",
+      "descontoRedondo", "descontoZerar", "orcamentoPagamento"
+    ].forEach(function (id) {
+      var campo = document.getElementById(id);
+      if (campo) campo.disabled = !podeEditarFinanceiro;
+    });
+    document.querySelectorAll("[data-desconto-pct]").forEach(function (campo) {
+      campo.disabled = !podeEditarFinanceiro;
+    });
+    corpo.querySelectorAll("input, button").forEach(function (campo) {
+      campo.disabled = !podeEditarComercial;
+    });
+    buscasDeItem.forEach(function (busca) {
+      busca.entrada.disabled = !podeEditarComercial;
+    });
+  }
+
+  var botaoNovoOrcamento = document.getElementById("novoOrcamento");
+  if (botaoNovoOrcamento) botaoNovoOrcamento.addEventListener("click", function () {
     abrir(null);
   });
 
   /* A central de trabalho chega com ?novo=1. O toque em "Novo orçamento"
      termina a acao aqui, ja com a primeira linha pronta, em vez de apenas
      despejar a pessoa numa lista e obrigar um segundo toque. */
-  if (new URLSearchParams(window.location.search).get("novo") === "1") {
+  if (botaoNovoOrcamento && new URLSearchParams(window.location.search).get("novo") === "1") {
     abrir(null);
   }
 
@@ -1479,6 +1634,31 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 
   Painel.ligar({ form: "formSituacao", erro: "situacaoErro" });
+
+  var formAvaliacao = document.getElementById("formAvaliacaoBloco");
+  if (formAvaliacao) {
+    function atualizarAvaliacaoAtual() {
+      var orcamento = achar(document.getElementById("avaliacaoOrcamentoId").value);
+      var bloco = document.getElementById("avaliacaoBloco").value;
+      var atual = orcamento && orcamento["bloco_" + bloco];
+      document.getElementById("avaliacaoAtual").textContent = atual
+        ? "Situação atual: " + atual.rotulo + (atual.observacao ? " — " + atual.observacao : "")
+        : "Situação atual: pendente";
+    }
+
+    document.querySelectorAll("[data-avaliar]").forEach(function (botao) {
+      botao.addEventListener("click", function () {
+        formAvaliacao.reset();
+        Painel.erro("avaliacaoBlocoErro", "");
+        Painel.valor("avaliacaoOrcamentoId", botao.dataset.avaliar);
+        document.getElementById("avaliacaoOrcamentoNome").textContent = botao.dataset.nome;
+        atualizarAvaliacaoAtual();
+        Painel.abrir("modalAvaliacaoBloco");
+      });
+    });
+    document.getElementById("avaliacaoBloco").addEventListener("change", atualizarAvaliacaoAtual);
+    Painel.ligar({ form: "formAvaliacaoBloco", erro: "avaliacaoBlocoErro" });
+  }
 
   Painel.ligarExclusao();
 

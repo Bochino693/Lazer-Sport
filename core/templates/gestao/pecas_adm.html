@@ -37,7 +37,7 @@
 .pecas-vazio{margin-top:20px;padding:50px 20px;border:1px dashed rgba(44, 37, 27, .2);border-radius:18px;color:#A2917A;text-align:center}
 .pecas-modal{position:fixed;inset:0;z-index:3500;padding:18px;display:none;align-items:center;justify-content:center;background:rgba(19, 16, 11, .84);backdrop-filter:blur(7px)}
 .pecas-modal.open{display:flex}
-.pecas-card{width:min(820px,100%);max-height:92dvh;overflow:hidden;border:1px solid rgba(44, 37, 27, .14);border-radius:20px;display:flex;flex-direction:column;background:#1E1913}
+.pecas-card{width:min(820px,100%);max-height:92vh;max-height:92dvh;overflow:hidden;border:1px solid rgba(44, 37, 27, .14);border-radius:20px;display:flex;flex-direction:column;background:#1E1913}
 .pecas-card-head{padding:16px 20px;border-bottom:1px solid rgba(44, 37, 27, .14);display:flex;align-items:center;gap:12px;background:#1A1610}
 .pecas-card-head strong{flex:1;color:#FCF8F1}
 .fechar{width:38px;height:38px;border:1px solid rgba(44, 37, 27, .14);border-radius:10px;color:#C4B6A0;background:#231D16;font-size:1.1rem;cursor:pointer}
@@ -49,6 +49,7 @@
 .campo-duplo{display:grid;grid-template-columns:1fr 1fr;gap:13px}
 .categorias-box{max-height:150px;overflow:auto;padding:11px;border:1px solid rgba(44, 37, 27, .14);border-radius:10px;display:grid;gap:7px;background:#1A1610}
 .categorias-box label{display:flex;align-items:center;gap:8px;color:#E7DDCB;font-size:.74rem;font-weight:600;text-transform:none;letter-spacing:0}
+.categorias-box{max-height:220px;padding:10px;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;border-color:rgba(242,169,59,.18)}.categorias-box label{min-height:42px;padding:9px 10px;border:1px solid rgba(242,169,59,.13);border-radius:10px;background:rgba(35,29,22,.68);cursor:pointer}.categorias-box label:has(input:checked){border-color:rgba(242,169,59,.55);background:rgba(242,169,59,.13)}.categorias-box input{width:17px;height:17px;accent-color:#F2A93B}.categoria-tools{display:flex;align-items:center;gap:8px}.categoria-tools input{min-width:0;flex:1;height:39px;padding:0 10px;border:1px solid rgba(242,169,59,.16);border-radius:9px;color:#E7DDCB;background:#231D16}.categoria-tools span{color:#F5C070;font-size:.7rem;font-weight:850;white-space:nowrap}.categoria-tools button{border:0;color:#C4B6A0;background:transparent;font-size:.7rem}.money-input{display:flex}.money-input span{padding:0 11px;border:1px solid rgba(242,169,59,.17);border-right:0;border-radius:10px 0 0 10px;display:grid;place-items:center;color:#F5C070;background:#231D16;font-size:.72rem;font-weight:900}.money-input input{min-width:0;flex:1;border-radius:0 10px 10px 0}.pecas-card{position:relative}.pecas-card.is-loading:after{content:"Salvando alterações…";position:absolute;inset:0;z-index:20;display:grid;place-items:center;color:#FCF8F1;background:rgba(26,22,16,.78);backdrop-filter:blur(2px);font-weight:900}.pecas-pagination{margin-top:18px;display:flex;justify-content:center;gap:6px;flex-wrap:wrap}.pecas-pagination a,.pecas-pagination span{min-width:38px;height:38px;padding:0 10px;border:1px solid rgba(242,169,59,.18);border-radius:9px;display:grid;place-items:center;color:#C4B6A0;background:#1E1913;text-decoration:none;font-size:.74rem}.pecas-pagination span{color:#211605;background:#F2A93B;font-weight:900}
 .galeria{display:flex;gap:8px;flex-wrap:wrap}
 .galeria figure{position:relative;width:84px;height:84px;margin:0;overflow:hidden;border-radius:10px;background:#1A1610}
 .galeria img{width:100%;height:100%;object-fit:cover}
@@ -59,7 +60,7 @@
 .pecas-form-acoes .cancelar{color:#E7DDCB;background:#231D16}
 .aviso-form{padding:11px 13px;border:1px solid rgba(110, 64, 56, .25);border-radius:10px;color:#FF9AAA;background:rgba(255, 122, 107, .1);font-size:.72rem;display:none}
 .aviso-form.on{display:block}
-@media(max-width:950px){.pecas-kpis{grid-template-columns:repeat(2,1fr)}.pecas-filtro{grid-template-columns:1fr}.campo-duplo{grid-template-columns:1fr}}
+@media(max-width:950px){.pecas-kpis{grid-template-columns:repeat(2,1fr)}.pecas-filtro{grid-template-columns:1fr}.campo-duplo{grid-template-columns:1fr}}@media(max-width:600px){.pecas-modal{padding:7px 0 0;align-items:flex-end}.pecas-card{max-height:calc(var(--ls-vh, 100dvh) - 7px);border-radius:20px 20px 0 0}.pecas-form{padding:16px}.categorias-box{grid-template-columns:1fr}.pecas-form-acoes{position:sticky;bottom:-16px;margin:2px -16px -16px;padding:12px 16px;background:#1A1610}.pecas-kpis{grid-template-columns:1fr 1fr}.pecas-grid{grid-template-columns:1fr}}
 </style>
 
 <div class="pecas-page">
@@ -134,6 +135,11 @@
       <div class="pecas-vazio">Nenhuma peça encontrada com esses filtros.</div>
     {% endfor %}
   </div>
+  {% if page_obj.paginator.num_pages > 1 %}<nav class="pecas-pagination" aria-label="Paginação de peças">
+    {% if page_obj.has_previous %}<a href="?q={{ filtro_busca|urlencode }}&categoria={{ filtro_categoria }}&situacao={{ filtro_situacao }}&page={{ page_obj.previous_page_number }}">Anterior</a>{% endif %}
+    {% for numero in page_obj.paginator.page_range %}{% if numero == page_obj.number %}<span aria-current="page">{{ numero }}</span>{% elif numero >= page_obj.number|add:"-2" and numero <= page_obj.number|add:"2" %}<a href="?q={{ filtro_busca|urlencode }}&categoria={{ filtro_categoria }}&situacao={{ filtro_situacao }}&page={{ numero }}">{{ numero }}</a>{% endif %}{% endfor %}
+    {% if page_obj.has_next %}<a href="?q={{ filtro_busca|urlencode }}&categoria={{ filtro_categoria }}&situacao={{ filtro_situacao }}&page={{ page_obj.next_page_number }}">Próxima</a>{% endif %}
+  </nav>{% endif %}
 </div>
 
 {% comment %}
@@ -171,16 +177,17 @@
       <div class="campo-duplo">
         <div class="campo">
           <label for="pecaVenda">Preço de venda (R$)</label>
-          <input id="pecaVenda" name="preco_venda" inputmode="decimal" placeholder="Ex.: 180,00">
+          <div class="money-input"><span>R$</span><input id="pecaVenda" name="preco_venda" inputmode="decimal" autocomplete="off" data-mascara="moeda" placeholder="0,00"></div>
         </div>
         <div class="campo">
           <label for="pecaFornecedor">Preço do fornecedor (R$)</label>
-          <input id="pecaFornecedor" name="preco_fornecedor" inputmode="decimal" placeholder="Ex.: 120,00">
+          <div class="money-input"><span>R$</span><input id="pecaFornecedor" name="preco_fornecedor" inputmode="decimal" autocomplete="off" data-mascara="moeda" placeholder="0,00"></div>
         </div>
       </div>
 
       <div class="campo">
         <label>Categorias</label>
+        <div class="categoria-tools"><input type="search" id="buscarCategoriaPeca" placeholder="Filtrar categorias" aria-label="Filtrar categorias"><span id="categoriasPecaContador">0 selecionadas</span><button type="button" id="limparCategoriasPeca">Limpar</button></div>
         <div class="categorias-box" id="categoriasBox">
           {% for categoria in categorias %}
             <label><input type="checkbox" name="categorias" value="{{ categoria.id }}"> {{ categoria.nome_categoria_peca }}</label>
@@ -220,6 +227,18 @@
   </div>
 </div>
 
+<div class="pecas-modal" id="modalExcluirPeca" role="dialog" aria-modal="true" aria-labelledby="tituloExcluirPeca">
+  <div class="pecas-card" style="width:min(500px,100%)">
+    <header class="pecas-card-head"><strong id="tituloExcluirPeca">Excluir peça</strong><button type="button" class="fechar" data-fechar-exclusao aria-label="Fechar">×</button></header>
+    <div class="pecas-form">
+      <p style="margin:0;color:#C4B6A0;font-size:.78rem;line-height:1.6">Esta ação apaga o cadastro e a galeria. Para confirmar, escreva exatamente:</p>
+      <strong id="fraseExcluirPeca" style="color:#FF9AAA;overflow-wrap:anywhere"></strong>
+      <div class="campo"><label for="confirmarExcluirPeca">Confirmação</label><input id="confirmarExcluirPeca" autocomplete="off" spellcheck="false"></div>
+      <div class="pecas-form-acoes"><button type="button" class="cancelar" data-fechar-exclusao>Cancelar</button><button type="button" class="salvar" id="executarExcluirPeca" disabled>Excluir definitivamente</button></div>
+    </div>
+  </div>
+</div>
+
 <form method="post" id="formAcaoRapida" hidden action="{% url 'pecas_admin' %}">
   {% csrf_token %}
   <input type="hidden" name="action" id="acaoRapida">
@@ -237,6 +256,26 @@
   var aviso = document.getElementById("avisoPeca");
   var galeria = document.getElementById("galeriaPeca");
   var acaoRapida = document.getElementById("formAcaoRapida");
+  var modalExcluir = document.getElementById("modalExcluirPeca");
+  var fraseExcluir = "";
+  var pecaExcluir = null;
+
+  function atualizarCategorias() {
+    var total = form.querySelectorAll('input[name="categorias"]:checked').length;
+    document.getElementById("categoriasPecaContador").textContent =
+      total + (total === 1 ? " selecionada" : " selecionadas");
+  }
+  document.getElementById("buscarCategoriaPeca").addEventListener("input", function (evento) {
+    var termo = evento.target.value.toLocaleLowerCase("pt-BR").trim();
+    document.querySelectorAll("#categoriasBox label").forEach(function (opcao) {
+      opcao.hidden = !!termo && opcao.textContent.toLocaleLowerCase("pt-BR").indexOf(termo) < 0;
+    });
+  });
+  document.getElementById("categoriasBox").addEventListener("change", atualizarCategorias);
+  document.getElementById("limparCategoriasPeca").addEventListener("click", function () {
+    form.querySelectorAll('input[name="categorias"]').forEach(function (caixa) { caixa.checked = false; });
+    atualizarCategorias();
+  });
 
   var catalogo = {};
   try {
@@ -279,6 +318,10 @@
       desenharGaleria([]);
     }
 
+    document.getElementById("buscarCategoriaPeca").value = "";
+    document.querySelectorAll("#categoriasBox label").forEach(function (opcao) { opcao.hidden = false; });
+    atualizarCategorias();
+    if (window.Painel) Painel.aplicarMascaras(form);
     modal.classList.add("open");
   }
 
@@ -329,13 +372,14 @@
 
     var excluir = alvo.closest("[data-excluir]");
     if (excluir) {
-      var alvoPeca = dadosDoCard(excluir);
-      var frase = "CONFIRMAR EXCLUSÃO " + alvoPeca.nome;
-      var digitado = window.prompt(
-        "Para excluir, digite exatamente:\n" + frase
-      );
-      if (digitado === null) return;
-      return dispararAcaoRapida("delete", alvoPeca.id, { confirmacao: digitado });
+      pecaExcluir = dadosDoCard(excluir);
+      fraseExcluir = "CONFIRMAR EXCLUSÃO " + pecaExcluir.nome;
+      document.getElementById("fraseExcluirPeca").textContent = fraseExcluir;
+      document.getElementById("confirmarExcluirPeca").value = "";
+      document.getElementById("executarExcluirPeca").disabled = true;
+      modalExcluir.classList.add("open");
+      document.getElementById("confirmarExcluirPeca").focus();
+      return;
     }
 
     var foto = alvo.closest("[data-remover-foto]");
@@ -346,15 +390,21 @@
     }
 
     if (alvo === modal) fechar();
+    if (alvo === modalExcluir || alvo.closest("[data-fechar-exclusao]")) {
+      modalExcluir.classList.remove("open");
+    }
   });
 
   document.addEventListener("keydown", function (evento) {
-    if (evento.key === "Escape") fechar();
+    if (evento.key !== "Escape") return;
+    if (modalExcluir.classList.contains("open")) modalExcluir.classList.remove("open");
+    else fechar();
   });
 
   form.addEventListener("submit", function (evento) {
     evento.preventDefault();
     aviso.classList.remove("on");
+    modal.querySelector(".pecas-card").classList.add("is-loading");
 
     fetch(form.action, {
       method: "POST",
@@ -370,11 +420,21 @@
         }
         aviso.textContent = dados.msg || "Não foi possível salvar.";
         aviso.classList.add("on");
+        modal.querySelector(".pecas-card").classList.remove("is-loading");
       })
       .catch(function () {
         aviso.textContent = "Falha de conexão ao salvar.";
         aviso.classList.add("on");
+        modal.querySelector(".pecas-card").classList.remove("is-loading");
       });
+  });
+
+  document.getElementById("confirmarExcluirPeca").addEventListener("input", function (evento) {
+    document.getElementById("executarExcluirPeca").disabled = evento.target.value !== fraseExcluir;
+  });
+  document.getElementById("executarExcluirPeca").addEventListener("click", function () {
+    if (!pecaExcluir || document.getElementById("confirmarExcluirPeca").value !== fraseExcluir) return;
+    dispararAcaoRapida("delete", pecaExcluir.id, { confirmacao: fraseExcluir });
   });
 })();
 </script>
