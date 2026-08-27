@@ -1,7 +1,7 @@
 {% extends "gestao/base_adm.html" %}
 
-{% block title %}Clientes Lazer & Sport{% endblock %}
-{% block page_heading %}Clientes Lazer &amp; Sport{% endblock %}
+{% block title %}Clientes no mapa | Lazer & Sport{% endblock %}
+{% block page_heading %}Clientes no mapa{% endblock %}
 
 {% block content %}
 <style>
@@ -1437,9 +1437,10 @@
         <svg><use href="#i-map-pin"/></svg>
         Presença da marca
       </p>
-      <h2>Rede de clientes</h2>
+      <h2>Clientes no mapa</h2>
       <p class="clients-hero-description">
-        Gerencie os estabelecimentos atendidos pela Lazer &amp; Sport e controle quais clientes aparecem no mapa público do site.
+        É o mesmo cadastro da aba Clientes, visto pelo lado da vitrine: quem
+        aparece no mapa da página inicial, com que logo e com que endereço.
       </p>
     </div>
     <button id="newClientButton" type="button" class="clients-primary-button">
@@ -1634,7 +1635,7 @@
       <header class="client-modal-header">
         <div class="client-modal-heading">
           <h2 id="clientModalTitle">Cadastrar cliente</h2>
-          <p id="clientModalSubtitle">Adicione um novo estabelecimento à rede Lazer &amp; Sport.</p>
+          <p id="clientModalSubtitle">O cadastro é o mesmo da aba Clientes.</p>
         </div>
         <button id="closeClientModal" class="client-modal-close" type="button" aria-label="Fechar formulário">
           <svg><use href="#client-i-close"/></svg>
@@ -2091,8 +2092,8 @@
     document.getElementById('clientModalTitle').textContent =
       client ? 'Editar cliente' : 'Cadastrar cliente';
     document.getElementById('clientModalSubtitle').textContent = client
-      ? 'Atualize os dados e a publicação deste estabelecimento.'
-      : 'Adicione um novo estabelecimento à rede Lazer & Sport.';
+      ? 'Atualize os dados e a publicação deste cliente.'
+      : 'O cadastro é o mesmo da aba Clientes.';
     document.getElementById('clientLogoRequirement').textContent = 'Opcional';
     clientLogo.required = false;
 

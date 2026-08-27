@@ -1,115 +1,86 @@
-# Reparo do ADM — Pedidos + imagens tipadas de brinquedos
+# Lazer & Sport
 
-Base analisada: `Bochino693/Lazer-Sport`, commit `c6e52e09ecebf7a4f3eca7b3513cb11aeb1364a7`.
+Duas coisas no mesmo projeto Django, servidas pelo mesmo deploy e
+separadas pelo **subdomínio**:
 
-## O que este pacote faz
+| Onde | O quê | Código |
+|---|---|---|
+| `lazersport.com.br` | A loja: catálogo, carrinho, pedidos, pontos | `core/` |
+| `interno.lazersport.com.br` | O aplicativo da fábrica: orçamento, produção, estoque, clientes, financeiro, manutenção — e a gestão do conteúdo do site | `sistema_interno/` |
 
-### Pedidos
-- corrige o template para herdar `gestao/base_adm.html`;
-- moderniza a tela `/adm/pedidos/`;
-- mantém filtros por impressão, pagamento e status;
-- usa `Pedido.valor_frete`, o snapshot salvo no pedido;
-- deixa de depender de `carrinho_origem.valor_frete`;
-- mostra os itens e os totais históricos em modal;
-- adiciona indicadores de total, aguardando pagamento, pagos e não impressos.
+Quem faz a troca é `core.middleware.SubdomainURLMiddleware`: host começando
+com `interno.` passa a resolver por `sistema_interno/urls.py`. Não há dois
+deploys, dois bancos nem dois logins.
 
-### Brinquedos — imagens
-Passam a existir quatro tipos possíveis:
-- `perfil`: Perfil / Frente — obrigatória e sempre a capa;
-- `verso`: Verso / Costas;
-- `lado_direito`: Lado direito;
-- `lado_esquerdo`: Lado esquerdo.
+> **Já houve um terceiro lugar.** O painel `/adm/` do site era um segundo
+> painel, azul, com cadastro de cliente próprio. Ele deixou de existir: as
+> telas foram para dentro do aplicativo interno (`core/templates/gestao/`,
+> servidas em `/site/...`) e o cadastro de cliente virou um só. Se você
+> encontrar `/adm/` em algum link antigo, ele redireciona.
 
-Cada brinquedo pode ter no máximo **3 imagens**:
-- PERFIL é obrigatória;
-- escolha no máximo 2 entre as outras 3 vistas.
+## Rodar na sua máquina
 
-O editor do `/adm/brinquedos/` mostra quatro slots visuais e bloqueia uma quarta imagem.
-
-### Capa / requisições
-`Brinquedos.imagem_catalogo` passa a significar a imagem `perfil`.
-
-Também são adaptados:
-- API de lista de brinquedos;
-- API de detalhe de brinquedo;
-- promoção que herda imagem do brinquedo;
-- loja;
-- busca;
-- thumbnail do painel administrativo.
-
-Assim as requisições deixam de escolher “a primeira foto” e passam a usar a foto semanticamente marcada como PERFIL.
-
-## Migration
-
-É criada:
-
-`core/migrations/0099_imagembrinquedo_tipo.py`
-
-Para dados existentes:
-- 1ª foto atual -> PERFIL;
-- 2ª -> VERSO;
-- 3ª -> LADO DIREITO;
-- fotos antigas excedentes não são apagadas automaticamente, mas ficam fora da galeria moderna até revisão.
-
-Isso evita apagar arquivos antigos durante a migração.
-
-## Como aplicar
-
-Extraia este pacote em qualquer pasta FORA do repositório.
-
-Com o terminal na raiz do projeto:
-
-```powershell
-python "CAMINHO\DO\PACOTE\APLICAR_REPARO_ADM.py" .
+```bash
+python -m venv .venv
+.venv/bin/pip install -r requirements.txt
 ```
 
-O aplicador:
-1. faz backup em `%TEMP%`;
-2. altera os arquivos Python;
-3. substitui os dois templates;
-4. cria a migration 0099;
-5. valida sintaxe Python;
-6. executa `python manage.py check`;
-7. não executa migration, commit ou push.
+Crie um `.env` na raiz, ao lado do `manage.py`:
+
+```
+SUPABASE_DATABASE_URL=postgresql://...      # obrigatório
+SECRET_KEY=qualquer-coisa-em-desenvolvimento
+CLOUDINARY_CLOUD_NAME=...                   # imagens
+CLOUDINARY_API_KEY=...
+CLOUDINARY_API_SECRET=...
+```
 
 Depois:
 
-```powershell
+```bash
 python manage.py migrate
 python manage.py runserver
 ```
 
-Teste:
-- `/adm/pedidos/`
-- `/adm/brinquedos/`
-- `/api/v1/brinquedos/`
+- A loja abre em `http://localhost:8000/`.
+- O aplicativo interno abre em `http://interno.localhost:8000/` — o
+  navegador resolve `*.localhost` sozinho, sem mexer no arquivo `hosts`.
 
-Depois confira:
+## Testes
 
-```powershell
-git diff --check
-git status
+O banco de teste é sqlite em memória e **nunca** toca no Supabase:
+
+```bash
+python manage.py test --settings=lazer.settings_test
 ```
 
-Se estiver tudo correto, adicione somente os arquivos desta alteração:
+Vale rodar antes de qualquer entrega. Boa parte dos testes existe para
+proteger comportamento que já quebrou uma vez — o CEP com fonte fora do
+ar, o rodapé da janela sumindo atrás do teclado do tablet, o cadastro de
+cliente perdendo o vínculo com o mapa.
 
-```powershell
-git add core/models.py `
-        core/views.py `
-        core/api/views.py `
-        core/api/serializer.py `
-        core/templates/gestao/pedidos_adm.html `
-        core/templates/gestao/brinquedos_adm.html `
-        core/migrations/0099_imagembrinquedo_tipo.py
-```
+## Por onde começar a ler
 
-Então:
+| Arquivo | Para quê |
+|---|---|
+| `docs/INTERNO_DIRETRIZ.md` | **Leia antes de mexer no aplicativo interno.** Cor, forma, componentes, contrato de janela, cadastro de cliente e o checklist de tela nova. |
+| `docs/CLOUDFLARE_INTERNO.md` | Pôr o subdomínio interno no ar |
+| `docs/CONFIGURAR_EMAIL.md` | Envio de proposta por e-mail |
+| `docs/APP_PONTOS.md` | Contrato do programa de pontos com o aplicativo Android |
 
-```powershell
-git commit -m "refatora pedidos e imagens de brinquedos"
-git push
-```
+## Publicação
 
-## Backup
+`Procfile` na raiz; o deploy é no Render, com Postgres no Supabase e
+imagens no Cloudinary. Estáticos são servidos pelo WhiteNoise a partir de
+`staticfiles/` — Bootstrap e os ícones vêm do próprio servidor, e não de
+CDN, porque no galpão a rede cai e um CDN fora do ar levava junto todos os
+modais do painel.
 
-O aplicador informa na tela o caminho exato do backup criado em `%TEMP%`.
+## Sobras de mudanças antigas
+
+Na raiz ainda estão `APLICAR_REPARO_ADM.py`, `README_APLICAR.txt`,
+`mandarparamain.ps1`, `substituirarquivos.ps1`, `remove_index.py` e três
+`Lazer-Sport-orcamento-v4*.zip`. São aplicadores de pacote de uma época em
+que a mudança chegava por arquivo copiado, e não por commit. Nada no
+projeto depende deles; ficam por enquanto para consulta e podem ser
+apagados quando ninguém mais precisar olhar para trás.

@@ -1,12 +1,19 @@
 # Diretriz do aplicativo interno
 
 Este documento vale para tudo que roda em **interno.lazersport.com.br**
-(`sistema_interno/`). Não vale para o `/adm/` do site (`core/templates/gestao/`),
-que é outro lugar, com outra cara e outro público.
+(`sistema_interno/`) — **e também para as telas de gestão do site**
+(`core/templates/gestao/`), que hoje moram dentro deste aplicativo.
+
+Já foram dois painéis. O `/adm/` era um lugar à parte, azul, com menu
+escrito sempre aberto, e este documento dizia que não valia para lá.
+Aquele painel deixou de existir: menu, topo, sessão, identidade e regras
+de cadastro passaram a ser os daqui, e as telas herdadas foram traduzidas
+para esta paleta. Onde este documento fala em "tela nova", vale igual para
+uma tela herdada que for mexida.
 
 Quem lê isto antes de criar uma tela nova entrega algo que parece parte do
-mesmo aplicativo. Quem não lê entrega mais uma tela parecida com o painel
-do site — e o objetivo aqui é justamente o contrário.
+mesmo aplicativo. Quem não lê entrega mais uma tela com desenho próprio —
+e o preço disso já foi pago uma vez.
 
 ---
 
@@ -21,14 +28,14 @@ Três fatos moldam todas as decisões de interface:
    luva, com o aparelho apoiado na bancada. Não é um sistema de escritório.
 2. **Quem usa não trabalha com computador.** Monta brinquedo, atende
    cliente, controla material. A tela precisa ser óbvia sem treinamento.
-3. **A mesma pessoa também abre o `/adm/` do site no mesmo dia.** Se os
-   dois forem parecidos, ela mexe no lugar errado.
+3. **A mesma pessoa cuida do chão de fábrica e da vitrine no mesmo dia.**
+   Trocar de assunto não pode parecer trocar de sistema.
 
 Por isso o interno é **grafite quente com âmbar**, tem **trilho de ícones**
 no lugar de menu escrito, e tem **abas na base da tela** no celular e no
-tablet em pé. O `/adm/` é azul, com menu escrito sempre aberto. A diferença
-é proposital: cor e forma são o jeito mais rápido de o olho saber onde
-está, antes de ler qualquer título.
+tablet em pé — e por isso as telas do site seguem a mesma cor e a mesma
+forma. Enquanto elas eram azuis, a identidade mudava a cada clique do
+menu, e a pessoa parava para se localizar antes de cada tarefa.
 
 ---
 
@@ -119,7 +126,9 @@ Dentro do conteúdo, a ordem é sempre a mesma:
 1. `ls-page-hero` — o que é esta tela, em uma frase, e a ação principal à
    direita. (O parágrafo some no tablet: ajuda quem abre pela primeira vez
    e atrapalha quem abre quarenta vezes por dia.)
-2. `ls-metrics` — no máximo quatro números que mudam a decisão.
+2. `ls-metrics` — poucos números, todos ligados a uma decisão. A faixa se
+   ajusta à quantidade de cartões; passar de cinco é sinal de que a tela
+   virou relatório.
 3. `ls-filter-panel` — busca e filtros, em `<form method="get">`.
 4. `ls-data-panel` — a lista ou tabela, com `ls-empty` desenhado.
 5. Modais no fim do arquivo, dados via `{{ ...|json_script:"..." }}`.
@@ -215,6 +224,48 @@ ilegível no celular.
 `.ls-status` com `success` / `warning` / `danger` / `info` / `neutral`.
 Um selo por linha. Dois selos disputando atenção não informam nada.
 
+### Campo de foto (`.ls-foto`)
+Uma peça só para o painel inteiro: retângulo tracejado que aceita clique e
+arraste, miniatura dentro dele quando já há imagem, e um "Remover" que
+manda `remover_logo=1` para o servidor. Antes cada tela tinha o seu — numa
+o `input type=file` aparecia cru, com o botão cinza do sistema; noutra uma
+área branca tracejada; noutra um botão azul dentro de um cartão.
+
+```html
+<div class="ls-foto" id="clienteLogoCampo">
+  <span class="ls-foto-miniatura"><i class="bi bi-image"></i><img src="" alt=""></span>
+  <span class="ls-foto-copy">
+    <strong>Escolha uma imagem</strong>
+    <span>PNG, JPG ou WEBP.</span>
+    <span class="ls-foto-acoes">
+      <label class="ls-foto-escolher">Selecionar
+        <input type="file" name="logo" accept="image/png,image/jpeg,image/webp">
+      </label>
+      <button type="button" class="ls-foto-limpar" hidden>Remover</button>
+    </span>
+  </span>
+</div>
+```
+
+A classe `tem-imagem` no `.ls-foto` troca o ícone pela miniatura. Onde a
+tela pede VÁRIAS imagens de uma vez não há miniatura única para mostrar:
+ali basta o `input type=file`, que já nasce com o mesmo retângulo
+tracejado.
+
+### Os três papéis de botão
+Só existem três, e a cor é a mesma no painel inteiro:
+
+| Papel | Como | Exemplo |
+|---|---|---|
+| Conclui | verde (`.btn-success`) | Salvar, Criar, Novo cliente |
+| Mexe na tela | âmbar (`.btn-primary`) | Filtrar, Buscar, Recalcular |
+| Destrói | vermelho (`.btn-danger`) | Excluir |
+
+Nas telas herdadas, quem separa "concluir" de "filtrar" é o **método do
+formulário**, e não o nome da classe: metade dos botões de filtrar é um
+`<button type="submit">` sem classe nenhuma. `GET` reorganiza a tela;
+`POST` grava.
+
 ---
 
 ## 6. Toque
@@ -253,7 +304,42 @@ guardar algo, que seja uma fila de envio — nunca a resposta de uma tela.
 
 ---
 
-## 8. Permissão
+## 8. Cadastro de cliente — um só
+
+Não existe "cliente do painel" e "cliente do site". Existe
+`sistema_interno.Cliente`, e a vitrine **lê** dele:
+
+* `tipo` diz onde o brinquedo vai parar — residencial, comercial, buffet,
+  condomínio, escola, órgão público. Não é burocracia: residência quer
+  entrega na porta; comércio quer nota, horário de carga e alguém para
+  receber; escola e condomínio pedem portaria.
+* `publicar_no_mapa` diz se o alfinete aparece na página inicial; o
+  **endereço do estabelecimento** diz onde. É um endereço só, e serve para
+  entrega, montagem e mapa.
+* `logo` e `site_cliente` são a parte do cadastro que fica visível para
+  quem não é da casa.
+* Buffet nunca vira alfinete: ele já tem o card dele em "Nossos
+  Parceiros", e os dois juntos o mostrariam duas vezes. A regra mora no
+  `save()` do modelo.
+
+Marcado para o mapa **não é** o mesmo que desenhado no mapa: sem
+coordenada não há alfinete, e a tela diz isso (`Cliente.no_mapa`) em vez
+de deixar a pessoa achar que publicou.
+
+Toda gravação passa por `sistema_interno/clientes.py`, venha da aba
+Clientes, da tela do mapa ou do cadastro rápido de dentro do orçamento —
+é o que mantém nome repetido, contato obrigatório e endereço com a mesma
+regra em todo lugar.
+
+> **Cuidado com caixa de marcar.** Caixa desmarcada não é enviada pelo
+> navegador, e "não veio" é indistinguível de "esta tela não pergunta
+> isso" — o cadastro rápido do orçamento não pergunta sobre o mapa e não
+> pode despublicar ninguém. Por isso todo formulário que pergunta manda um
+> `<input type="hidden">` de mesmo nome, antes da caixa.
+
+---
+
+## 9. Permissão
 
 | Papel | Vê |
 |---|---|
@@ -266,7 +352,7 @@ gestor, envolva o link em `{% if eh_gestor_interno %}`.
 
 ---
 
-## 9. Checklist da tela nova
+## 10. Checklist da tela nova
 
 - [ ] Estende `base_inner.html` e preenche `top_title`.
 - [ ] Hero com uma frase e a ação principal.
@@ -279,3 +365,7 @@ gestor, envolva o link em `{% if eh_gestor_interno %}`.
 - [ ] Testado com `HTTP_HOST="interno.testserver"` — inclusive o caso de
       quem não é gestor.
 - [ ] Nenhuma cor solta: só tokens.
+- [ ] Imagem entra por `.ls-foto` (ou por `input type=file`, se forem
+      várias) — nunca pelo botão cru do navegador.
+- [ ] Botão de concluir verde, de filtrar âmbar, de excluir vermelho.
+- [ ] Caixa de marcar acompanhada do campo escondido de mesmo nome.

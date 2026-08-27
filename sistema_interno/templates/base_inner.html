@@ -164,9 +164,9 @@
         </a>
         {% endif %}
         {% if permissoes_interno.gestao %}
-        <a data-titulo="Mapa de clientes" class="ls-nav-item {% if request.resolver_match.url_name == 'clientes_admin' %}active{% endif %}" href="{% url 'clientes_admin' %}">
+        <a data-titulo="Clientes no mapa" class="ls-nav-item {% if request.resolver_match.url_name == 'clientes_admin' %}active{% endif %}" href="{% url 'clientes_admin' %}">
           <span class="ls-nav-icon"><i class="bi bi-geo-alt-fill"></i></span>
-          <span>Mapa de clientes</span>
+          <span>Clientes no mapa</span>
         </a>
         {% endif %}
       </div>
