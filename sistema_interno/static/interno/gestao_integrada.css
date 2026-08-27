@@ -1,102 +1,537 @@
-/* Uniformiza os CRUDs reaproveitados do antigo /adm dentro do aplicativo. */
-.gestao-integrada .ls-content {
-  color: var(--text, #f6f1e9);
+/* ======================================================================
+   TELAS DE GESTÃO DO SITE, DENTRO DO APLICATIVO
+
+   Estas telas vieram do /adm, que era um painel à parte, com desenho
+   próprio. O painel à parte deixou de existir: menu, topo, sessão e
+   identidade agora são os do aplicativo. A cor de cada tela já foi
+   traduzida para o âmbar e o grafite no próprio template -- não há mais
+   azul-marinho escondido em nenhuma delas.
+
+   O que sobra para este arquivo é o que a tradução de cor não alcança: a
+   FORMA das peças. Cada tela antiga inventou o seu botão, o seu campo de
+   foto e a sua janela, com nomes diferentes para a mesma coisa
+   (`mnt-btn`, `promo-primary-btn`, `cup-secondary-button`...). Aqui elas
+   voltam a ser uma peça só, com a medida do resto do aplicativo: alvo de
+   toque de tablet, raio, borda e tipografia iguais aos de Estoque,
+   Orçamentos e Clientes.
+
+   Por que `!important`: o desenho antigo mora em `<style>` dentro do
+   corpo da página, que na cascata vem depois desta folha. Sem o peso
+   extra, a regra da tela venceria a regra comum -- e a padronização não
+   sairia do papel.
+
+   Tudo aqui dentro é escopado em `.ls-content`, e não no corpo da
+   página: o seletor de botão precisa alcançar todo botão da TELA, mas
+   nenhum do aplicativo em volta -- foi o que aconteceu na primeira
+   tentativa, e o "Encerrar sessão" da lateral virou botão âmbar de
+   confirmar.
+   ====================================================================== */
+
+.gestao-integrada .ls-content{color:var(--text)}
+
+/* O conteúdo herdado usava a largura do painel antigo. Aqui quem decide a
+   margem é a área de trabalho do aplicativo. */
+.gestao-integrada .ls-content .content,
+.gestao-integrada .ls-content .page-container,
+.gestao-integrada .ls-content .app,
+.gestao-integrada .ls-content .container{
+  width:100%;max-width:none;margin:0;padding:0;color:inherit;
 }
 
-.gestao-integrada .content,
-.gestao-integrada .page-container,
-.gestao-integrada .app,
-.gestao-integrada .container {
-  width: 100%;
-  max-width: none;
-  margin: 0;
-  padding: 0;
-  color: inherit;
+.gestao-integrada .ls-content .page-title,
+.gestao-integrada .ls-content h1,
+.gestao-integrada .ls-content h2,
+.gestao-integrada .ls-content h3{color:#fff}
+
+
+/* ----------------------------------------------------------------------
+   SUPERFÍCIES
+   Um cartão é um cartão, tenha ele o nome que tiver na tela de origem.
+   ---------------------------------------------------------------------- */
+.gestao-integrada .ls-content .card,
+.gestao-integrada .ls-content .summary-card,
+.gestao-integrada .ls-content .filters,
+.gestao-integrada .ls-content .dashboard-card,
+.gestao-integrada .ls-content .stat-card,
+.gestao-integrada .ls-content [class$="-card"],
+.gestao-integrada .ls-content [class$="-panel"],
+.gestao-integrada .ls-content [class$="-kpi"]{
+  border:1px solid var(--line)!important;
+  border-radius:18px!important;
+  background:linear-gradient(180deg,#241E17,#19150F)!important;
+  color:var(--text-2)!important;
+  box-shadow:0 12px 32px rgba(0,0,0,.22)!important;
 }
 
-.gestao-integrada .page-title,
-.gestao-integrada h1,
-.gestao-integrada h2,
-.gestao-integrada h3 { color: #fff; }
+.gestao-integrada .ls-content p,
+.gestao-integrada .ls-content small,
+.gestao-integrada .ls-content .muted{color:var(--muted)}
 
-.gestao-integrada .card,
-.gestao-integrada .summary-card,
-.gestao-integrada .filters,
-.gestao-integrada .dashboard-card,
-.gestao-integrada .stat-card {
-  border: 1px solid rgba(250, 194, 96, .16) !important;
-  border-radius: 18px !important;
-  background: #251e14 !important;
-  color: #f6f1e9 !important;
-  box-shadow: 0 14px 32px rgba(0, 0, 0, .16) !important;
+
+/* ----------------------------------------------------------------------
+   CAMPOS
+   Mesma altura, mesmo raio e mesma borda dos campos do aplicativo -- a
+   linha do formulário não pode ficar serrilhada quando duas telas
+   diferentes aparecem lado a lado.
+   ---------------------------------------------------------------------- */
+.gestao-integrada .ls-content input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+.gestao-integrada .ls-content select,
+.gestao-integrada .ls-content textarea{
+  min-height:49px;
+  padding:10px 14px;
+  border:1px solid #7a6540!important;
+  border-radius:11px!important;
+  background-color:#241c11!important;
+  color:var(--text)!important;
+  font-size:.95rem;
+  box-shadow:none!important;
+}
+.gestao-integrada .ls-content textarea{min-height:104px}
+.gestao-integrada .ls-content input::placeholder,
+.gestao-integrada .ls-content textarea::placeholder{color:#9d8f7c!important;opacity:1}
+.gestao-integrada .ls-content label{color:var(--text-2);font-weight:700}
+.gestao-integrada .ls-content input:focus,
+.gestao-integrada .ls-content select:focus,
+.gestao-integrada .ls-content textarea:focus{
+  border-color:#f1c16d!important;
+  outline:none!important;
+}
+.gestao-integrada .ls-content input[type="checkbox"],
+.gestao-integrada .ls-content input[type="radio"]{accent-color:var(--acento);width:19px;height:19px}
+
+/* A seta do select é desenhada por nós: o `background` das telas antigas
+   apagava a nativa e o campo passava a parecer texto comum. */
+.gestao-integrada .ls-content select{
+  appearance:none;-webkit-appearance:none;
+  padding-right:40px!important;
+  background-image:url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23F2A93B' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e")!important;
+  background-repeat:no-repeat!important;
+  background-position:right 14px center!important;
+  background-size:15px 12px!important;
+  cursor:pointer;
 }
 
-.gestao-integrada input:not([type="checkbox"]):not([type="radio"]),
-.gestao-integrada select,
-.gestao-integrada textarea {
-  min-height: 46px;
-  border: 1px solid rgba(250, 194, 96, .34) !important;
-  border-radius: 12px !important;
-  background-color: #1d170f !important;
-  color: #fff !important;
-  box-shadow: none !important;
+
+/* ----------------------------------------------------------------------
+   BOTÕES
+
+   Três papéis, e só três: o que conclui (âmbar cheio, tinta escura), o
+   que acompanha (contorno) e o que destrói (vermelho). Cada tela antiga
+   tinha o seu nome para isso; o seletor cobre todos e o papel é lido do
+   próprio nome da classe.
+   ---------------------------------------------------------------------- */
+.gestao-integrada .ls-content button,
+.gestao-integrada .ls-content .btn,
+.gestao-integrada .ls-content a.button,
+.gestao-integrada .ls-content [class*="-btn"],
+.gestao-integrada .ls-content [class*="-button"]{
+  min-height:44px;
+  padding:0 16px;
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  border:1px solid var(--line)!important;
+  border-radius:12px!important;
+  color:var(--text-2)!important;
+  background:rgba(255,255,255,.045)!important;
+  font-size:.85rem;font-weight:850;line-height:1;
+  text-decoration:none;cursor:pointer;
+  transition:.16s ease;
+}
+.gestao-integrada .ls-content button:hover,
+.gestao-integrada .ls-content .btn:hover,
+.gestao-integrada .ls-content a.button:hover,
+.gestao-integrada .ls-content [class*="-btn"]:hover,
+.gestao-integrada .ls-content [class*="-button"]:hover{
+  border-color:#7a6540!important;
+  color:#fff!important;
+  background:rgba(242,169,59,.13)!important;
 }
 
-.gestao-integrada textarea { min-height: 104px; }
-.gestao-integrada input::placeholder,
-.gestao-integrada textarea::placeholder { color: #9f9587 !important; opacity: 1; }
-.gestao-integrada label { color: #eee4d8; font-weight: 700; }
-
-.gestao-integrada table {
-  width: 100%;
-  color: #eee8df;
-  border-color: rgba(250, 194, 96, .13);
+/* ---- o que conclui ---- */
+.gestao-integrada .ls-content button[type="submit"],
+.gestao-integrada .ls-content [class*="primary"],
+.gestao-integrada .ls-content [class*="salvar"],
+.gestao-integrada .ls-content [class*="-save"]{
+  border-color:rgba(255,211,132,.42)!important;
+  color:#211605!important;
+  background:linear-gradient(135deg,#FFD17F,#E8A83E)!important;
+  box-shadow:0 12px 28px rgba(196,132,32,.22)!important;
+}
+.gestao-integrada .ls-content button[type="submit"]:hover,
+.gestao-integrada .ls-content [class*="primary"]:hover,
+.gestao-integrada .ls-content [class*="salvar"]:hover,
+.gestao-integrada .ls-content [class*="-save"]:hover{
+  color:#170E02!important;
+  background:linear-gradient(135deg,#FFDA94,#F2B44B)!important;
+  transform:translateY(-1px);
 }
 
-.gestao-integrada th { color: #fac260 !important; background: #21190d !important; }
-.gestao-integrada td { border-color: rgba(250, 194, 96, .1) !important; }
-.gestao-integrada p,
-.gestao-integrada small,
-.gestao-integrada .muted { color: #bdb3a6; }
-
-.gestao-integrada button,
-.gestao-integrada .btn,
-.gestao-integrada a.button {
-  min-height: 42px;
-  border-radius: 11px;
-  font-weight: 800;
+/* ---- o que destrói ---- */
+.gestao-integrada .ls-content [class*="danger"],
+.gestao-integrada .ls-content [class*="delete"],
+.gestao-integrada .ls-content [class*="excluir"],
+.gestao-integrada .ls-content [class*="remover"],
+.gestao-integrada .ls-content .remove{
+  border-color:rgba(255,122,107,.34)!important;
+  color:#FF9AAA!important;
+  background:rgba(255,122,107,.09)!important;
+  box-shadow:none!important;
+}
+.gestao-integrada .ls-content [class*="danger"]:hover,
+.gestao-integrada .ls-content [class*="delete"]:hover,
+.gestao-integrada .ls-content [class*="excluir"]:hover,
+.gestao-integrada .ls-content [class*="remover"]:hover,
+.gestao-integrada .ls-content .remove:hover{
+  color:#3A0E08!important;background:var(--red)!important;border-color:var(--red)!important;
 }
 
-.gestao-integrada .modal,
-.gestao-integrada [role="dialog"] { z-index: 1600; }
-
-.gestao-integrada .modal-content,
-.gestao-integrada .modal-card,
-.gestao-integrada .modal-box {
-  max-height: min(88dvh, 920px);
-  overflow: auto;
-  border: 1px solid rgba(250, 194, 96, .24) !important;
-  border-radius: 20px !important;
-  background: #211a11 !important;
-  color: #f7f1e8 !important;
+/* ---- discreto ---- */
+.gestao-integrada .ls-content [class*="secondary"],
+.gestao-integrada .ls-content [class*="ghost"],
+.gestao-integrada .ls-content [class*="cancel"],
+.gestao-integrada .ls-content [class*="cancelar"]{
+  color:var(--muted)!important;
+  background:transparent!important;
+  box-shadow:none!important;
 }
 
-@media (max-width: 900px) {
-  .gestao-integrada .summary,
-  .gestao-integrada .dashboard-grid,
-  .gestao-integrada .stats-grid { grid-template-columns: 1fr 1fr !important; }
+.gestao-integrada .ls-content button:disabled,
+.gestao-integrada .ls-content .btn:disabled{opacity:.5;cursor:not-allowed;transform:none!important}
+
+/* Botão sem rótulo fica quadrado -- mas em `min-width`, e nunca em
+   `width`: a tela de brinquedos chama de `icon-btn` um botão que ESCREVE
+   "Editar", e largura fixa cortava a palavra e empurrava o vizinho por
+   cima. */
+.gestao-integrada .ls-content [class*="ico-btn"],
+.gestao-integrada .ls-content .icon-btn{min-width:44px;padding:0 11px!important}
+
+/* Tira de abas e filas de filtro: com o alvo de toque maior, quatro
+   escolhas já não cabiam na largura do cartão e a última era cortada.
+   Quebram a linha em vez de escapar. */
+.gestao-integrada .ls-content [class*="-tabs"],
+.gestao-integrada .ls-content [class*="-filters"],
+.gestao-integrada .ls-content [class*="-chips"],
+.gestao-integrada .ls-content [class*="-segmented"]{
+  display:flex;flex-wrap:wrap;gap:8px;min-width:0;
+}
+.gestao-integrada .ls-content [class*="-tabs"]>*,
+.gestao-integrada .ls-content [class*="-chips"]>*{flex:0 1 auto}
+
+/* Fila de ações: os botões respiram e quebram a linha em tela estreita. */
+.gestao-integrada .ls-content .actions,
+.gestao-integrada .ls-content [class*="-actions"],
+.gestao-integrada .ls-content [class*="-acoes"]{
+  display:flex;flex-wrap:wrap;align-items:center;gap:8px;
 }
 
-@media (max-width: 640px) {
-  .gestao-integrada .ls-content { padding-inline: 12px; }
-  .gestao-integrada .summary,
-  .gestao-integrada .dashboard-grid,
-  .gestao-integrada .stats-grid { grid-template-columns: 1fr !important; }
-  .gestao-integrada .modal-dialog,
-  .gestao-integrada .modal-card,
-  .gestao-integrada .modal-box {
-    width: calc(100vw - 16px) !important;
-    max-width: none !important;
-    margin: 8px auto !important;
+/* Dentro da tabela a linha é apertada: o alvo continua confortável, mas
+   sem o corpo de um botão de formulário. */
+.gestao-integrada .ls-content td button,
+.gestao-integrada .ls-content td .btn,
+.gestao-integrada .ls-content td [class*="-btn"],
+.gestao-integrada .ls-content td [class*="-button"]{
+  min-height:38px;padding:0 12px;font-size:.78rem;
+}
+
+
+/* ----------------------------------------------------------------------
+   CAMPO DE FOTO — uma peça só para o painel inteiro
+
+   Era o pedaço mais desencontrado das telas herdadas: numa página o
+   `input type=file` aparecia cru, com o botão cinza do sistema; noutra,
+   uma área tracejada branca; noutra, um botão azul dentro de um cartão.
+   Três desenhos para a mesma pergunta -- "qual imagem?".
+
+   Agora é sempre a mesma coisa: um retângulo tracejado que aceita clique
+   e arraste, com a miniatura dentro dele quando já há foto. Vale tanto
+   para a marcação nova (`.ls-foto`) quanto para a antiga, que é
+   reaproveitada por adaptação logo abaixo.
+   ---------------------------------------------------------------------- */
+.ls-foto{
+  position:relative;
+  min-height:150px;
+  padding:16px;
+  display:grid;
+  grid-template-columns:96px minmax(0,1fr);
+  align-items:center;
+  gap:16px;
+  border:1.5px dashed #7a6540;
+  border-radius:16px;
+  background:rgba(242,169,59,.045);
+  transition:.16s ease;
+}
+.ls-foto:hover,
+.ls-foto:focus-within,
+.ls-foto.arrastando{
+  border-color:var(--acento);
+  background:rgba(242,169,59,.1);
+}
+.ls-foto-miniatura{
+  width:96px;height:96px;
+  display:grid;place-items:center;overflow:hidden;
+  border:1px solid var(--line);border-radius:13px;
+  background:#1A1610;
+  color:var(--muted-2);font-size:1.6rem;
+}
+.ls-foto-miniatura img{
+  width:100%;height:100%;padding:5px;
+  object-fit:contain;
+  display:none;
+}
+.ls-foto.tem-imagem .ls-foto-miniatura img{display:block}
+.ls-foto.tem-imagem .ls-foto-miniatura i,
+.ls-foto.tem-imagem .ls-foto-miniatura svg{display:none}
+.ls-foto-copy{min-width:0}
+.ls-foto-copy strong{
+  display:block;color:var(--text);font-size:.9rem;font-weight:900;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.ls-foto-copy span{
+  display:block;margin-top:4px;color:var(--muted);
+  font-size:.76rem;line-height:1.45;
+}
+.ls-foto-acoes{margin-top:11px;display:flex;flex-wrap:wrap;gap:8px}
+.ls-foto-escolher{
+  position:relative;overflow:hidden;
+  min-height:42px;padding:0 15px;
+  display:inline-flex;align-items:center;gap:8px;
+  border:1px solid rgba(242,169,59,.5);border-radius:11px;
+  color:#ffd591;background:rgba(242,169,59,.12);
+  font-size:.8rem;font-weight:850;cursor:pointer;
+}
+.ls-foto-escolher:hover{color:#2A1B05;background:var(--acento);border-color:var(--acento)}
+/* O `input` de verdade fica por cima e transparente: o clique e o
+   arraste caem nele, e o desenho é todo nosso. Esconder com `display:none`
+   tiraria o arraste junto. */
+.ls-foto-escolher input[type="file"]{
+  position:absolute;inset:0;width:100%;height:100%;
+  opacity:0;cursor:pointer;
+}
+.ls-foto-limpar{
+  min-height:42px;padding:0 13px;
+  display:inline-flex;align-items:center;gap:7px;
+  border:1px solid rgba(255,122,107,.3);border-radius:11px;
+  color:#FF9AAA;background:rgba(255,122,107,.08);
+  font-size:.8rem;font-weight:850;cursor:pointer;
+}
+.ls-foto-limpar:hover{color:#3A0E08;background:var(--red)}
+
+@media (max-width:560px){
+  .ls-foto{grid-template-columns:1fr;justify-items:center;text-align:center}
+  .ls-foto-copy strong{white-space:normal}
+  .ls-foto-acoes{justify-content:center}
+}
+
+/* ---- adaptação da marcação antiga ---- */
+
+/* `input type=file` solto, sem embrulho nenhum: o botão cinza do sistema
+   é o que mais destoava do painel. Aqui ele vira a mesma pastilha âmbar
+   dos outros lugares. */
+.gestao-integrada .ls-content input[type="file"]{
+  width:100%;
+  min-height:52px;
+  padding:11px 14px;
+  border:1.5px dashed #7a6540;
+  border-radius:12px;
+  color:var(--muted);
+  background:rgba(242,169,59,.045);
+  font-size:.83rem;
+  cursor:pointer;
+}
+.gestao-integrada .ls-content input[type="file"]:hover{
+  border-color:var(--acento);background:rgba(242,169,59,.1);
+}
+.gestao-integrada .ls-content input[type="file"]::file-selector-button{
+  margin-right:12px;
+  min-height:34px;padding:0 14px;
+  border:1px solid rgba(242,169,59,.5);border-radius:9px;
+  color:#ffd591;background:rgba(242,169,59,.14);
+  font-family:inherit;font-size:.79rem;font-weight:850;
+  cursor:pointer;
+}
+.gestao-integrada .ls-content input[type="file"]::file-selector-button:hover{
+  color:#2A1B05;background:var(--acento);
+}
+
+/* Áreas de arrastar que já existiam, com nomes variados. */
+.gestao-integrada .ls-content .update-dropzone,
+.gestao-integrada .ls-content [class*="dropzone"],
+.gestao-integrada .ls-content .client-logo-upload{
+  min-height:150px;
+  padding:16px;
+  display:flex;align-items:center;justify-content:center;gap:14px;
+  border:1.5px dashed #7a6540!important;
+  border-radius:16px!important;
+  color:var(--text-2)!important;
+  background:rgba(242,169,59,.045)!important;
+  cursor:pointer;
+}
+.gestao-integrada .ls-content .update-dropzone:hover,
+.gestao-integrada .ls-content [class*="dropzone"]:hover,
+.gestao-integrada .ls-content .client-logo-upload:hover{
+  border-color:var(--acento)!important;background:rgba(242,169,59,.1)!important;
+}
+.gestao-integrada .ls-content [class*="dropzone"] span,
+.gestao-integrada .ls-content [class*="dropzone"] strong{color:var(--text-2)!important}
+.gestao-integrada .ls-content [class*="dropzone"] input[type="file"]{
+  position:absolute;inset:0;width:100%;height:100%;
+  min-height:0;padding:0;border:0;background:none;opacity:0;
+}
+
+/* O botão "selecionar arquivo" com o input escondido dentro. */
+.gestao-integrada .ls-content .client-file-button,
+.gestao-integrada .ls-content .pick{
+  position:relative;overflow:hidden;
+  min-height:42px;padding:0 15px;
+  display:inline-flex;align-items:center;gap:8px;
+  border:1px solid rgba(242,169,59,.5)!important;border-radius:11px!important;
+  color:#ffd591!important;background:rgba(242,169,59,.12)!important;
+  font-size:.8rem;font-weight:850;cursor:pointer;
+}
+.gestao-integrada .ls-content .client-file-button:hover,
+.gestao-integrada .ls-content .pick:hover{
+  color:#2A1B05!important;background:var(--acento)!important;
+}
+.gestao-integrada .ls-content .client-file-button input[type="file"],
+.gestao-integrada .ls-content .pick input[type="file"]{
+  position:absolute;inset:0;width:100%;height:100%;
+  min-height:0;padding:0;border:0;background:none;opacity:0;cursor:pointer;
+}
+
+/* Onde a foto aparece. Vazio, é o mesmo retângulo tracejado do resto do
+   painel -- é ele que diz "cabe uma imagem aqui". Cheio, a linha fecha e
+   o quadro passa a ser moldura da foto. */
+.gestao-integrada .ls-content .client-logo-preview,
+.gestao-integrada .ls-content .preview,
+.gestao-integrada .ls-content .image-slot .preview{
+  border:1.5px dashed #7a6540!important;
+  border-radius:13px!important;
+  background:rgba(242,169,59,.045)!important;
+  color:var(--muted)!important;
+  overflow:hidden;
+}
+.gestao-integrada .ls-content .image-slot:hover .preview{
+  border-color:var(--acento)!important;background:rgba(242,169,59,.09)!important;
+}
+.gestao-integrada .ls-content .image-slot.active .preview,
+.gestao-integrada .ls-content .client-logo-preview:has(img[src]:not([src=""])){
+  border-style:solid!important;
+  border-color:var(--line)!important;
+  background:#1A1610!important;
+}
+.gestao-integrada .ls-content .slot-vazio{font-size:.78rem!important;color:var(--muted)}
+
+
+/* ----------------------------------------------------------------------
+   TABELAS
+   ---------------------------------------------------------------------- */
+.gestao-integrada .ls-content table{width:100%;color:var(--text-2);border-color:var(--line-soft)}
+.gestao-integrada .ls-content th{
+  padding:12px 14px;
+  color:var(--acento)!important;background:#1E1913!important;
+  font-size:.72rem;font-weight:900;letter-spacing:.06em;text-transform:uppercase;
+  text-align:left;
+}
+.gestao-integrada .ls-content td{
+  padding:13px 14px;
+  border-color:var(--line-soft)!important;
+}
+.gestao-integrada .ls-content tbody tr:hover{background:rgba(255,255,255,.025)}
+
+
+/* ----------------------------------------------------------------------
+   JANELAS
+
+   As telas antigas trazem cada uma a sua janela, escrita à mão -- não são
+   modais do Bootstrap. Elas ganham aqui a mesma moldura, o mesmo fundo e
+   o mesmo comportamento das janelas do aplicativo: cabeçalho e rodapé
+   fixos, corpo rolando por dentro, e no celular a folha subindo da base.
+   ---------------------------------------------------------------------- */
+.gestao-integrada .ls-content [class*="modal-backdrop"],
+.gestao-integrada .ls-content .modal{
+  z-index:1600;
+  background:rgba(9,7,4,.72)!important;
+  backdrop-filter:blur(6px);
+}
+
+.gestao-integrada .ls-content .modal-content,
+.gestao-integrada .ls-content .modal-card,
+.gestao-integrada .ls-content .modal-box,
+.gestao-integrada .ls-content [class*="modal-dialog"],
+.gestao-integrada .ls-content [class*="modal-card"]{
+  display:flex;flex-direction:column;
+  max-height:min(92dvh,940px);
+  overflow:hidden!important;
+  border:1px solid #5f4e30!important;
+  border-radius:20px!important;
+  background:#241B0D!important;
+  color:var(--text)!important;
+  box-shadow:0 30px 80px rgba(0,0,0,.5)!important;
+}
+
+.gestao-integrada .ls-content [class*="modal-header"],
+.gestao-integrada .ls-content [class*="modal-head"],
+.gestao-integrada .ls-content [class*="modal-footer"],
+.gestao-integrada .ls-content .modal-actions{
+  flex:0 0 auto;
+  padding:15px 20px;
+  background:#2B2110!important;
+  border-color:rgba(179,163,140,.2)!important;
+}
+.gestao-integrada .ls-content [class*="modal-header"],
+.gestao-integrada .ls-content [class*="modal-head"]{border-bottom:1px solid rgba(179,163,140,.2)!important}
+.gestao-integrada .ls-content [class*="modal-footer"],
+.gestao-integrada .ls-content .modal-actions{
+  border-top:1px solid rgba(179,163,140,.2)!important;
+  display:flex;gap:9px;justify-content:flex-end;
+}
+.gestao-integrada .ls-content [class*="modal-heading"],
+.gestao-integrada .ls-content [class*="modal-title"]{font-weight:900;letter-spacing:-.02em}
+.gestao-integrada .ls-content [class*="modal-body"]{
+  flex:1 1 auto;min-height:0;padding:20px;
+  overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;
+}
+.gestao-integrada .ls-content [class*="modal-close"]{
+  width:40px;min-height:40px;padding:0!important;border-radius:11px!important;
+}
+
+@media (max-width:900px){
+  .gestao-integrada .ls-content .modal-content,
+  .gestao-integrada .ls-content .modal-card,
+  .gestao-integrada .ls-content .modal-box,
+  .gestao-integrada .ls-content [class*="modal-dialog"],
+  .gestao-integrada .ls-content [class*="modal-card"]{
+    width:100%!important;max-width:none!important;
+    max-height:96dvh!important;
+    margin:0!important;
+    border-width:1px 0 0!important;
+    border-radius:22px 22px 0 0!important;
   }
+  .gestao-integrada .ls-content [class*="modal-backdrop"]{
+    align-items:flex-end!important;padding:0!important;
+  }
+  .gestao-integrada .ls-content [class*="modal-footer"],
+  .gestao-integrada .ls-content .modal-actions{
+    padding-bottom:calc(15px + env(safe-area-inset-bottom))!important;
+  }
+  .gestao-integrada .ls-content [class*="modal-footer"] button,
+  .gestao-integrada .ls-content .modal-actions button{flex:1 1 150px}
+}
+
+
+/* ----------------------------------------------------------------------
+   GRADES E RESPIRO
+   ---------------------------------------------------------------------- */
+@media (max-width:900px){
+  .gestao-integrada .ls-content .summary,
+  .gestao-integrada .ls-content .dashboard-grid,
+  .gestao-integrada .ls-content .stats-grid,
+  .gestao-integrada .ls-content [class*="-kpis"]{grid-template-columns:1fr 1fr!important}
+}
+
+@media (max-width:640px){
+  .gestao-integrada .ls-content{padding-inline:12px}
+  .gestao-integrada .ls-content .summary,
+  .gestao-integrada .ls-content .dashboard-grid,
+  .gestao-integrada .ls-content .stats-grid,
+  .gestao-integrada .ls-content [class*="-kpis"]{grid-template-columns:1fr!important}
 }

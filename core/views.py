@@ -1987,9 +1987,20 @@ class CupomAdminView(AdminOnlyMixin, View):
         if busca:
             cupons = cupons.filter(codigo__icontains=busca)
 
+        # Os três números do topo. A tela sempre os desenhou; a view nunca
+        # os mandou, e o resultado eram três caixas de resumo vazias --
+        # exatamente a informação que a pessoa vem buscar ao abrir a tela.
+        # A contagem é do cadastro inteiro, e não do filtro: "quantos
+        # cupons existem" não muda porque alguém digitou uma busca.
+        total_cupons = Cupom.objects.count()
+        total_ativos = Cupom.objects.filter(ativo=True).count()
+
         return render(request, self.template_name, {
             "cupons": cupons,
             "busca": busca,
+            "total_cupons": total_cupons,
+            "total_ativos": total_ativos,
+            "total_inativos": total_cupons - total_ativos,
             "brinquedos": Brinquedos.objects.filter(ativo=True).order_by("nome_brinquedo"),
             "categorias": CategoriasBrinquedos.objects.filter(ativo=True).order_by("nome_categoria"),
             "clientes": ClientePerfil.objects.select_related("user").order_by("user__username"),

@@ -588,7 +588,18 @@ textarea.form-control{min-height:100px!important}
   border:1px solid var(--line)!important;color:var(--text)!important;background:var(--panel)!important;box-shadow:var(--shadow-soft)!important;
 }
 .linha-inativa{opacity:.55!important}
-footer,.fab-container{display:none!important}
+/* O RODAPÉ DA LOJA NÃO ENTRA NO PAINEL -- MAS SÓ ELE.
+
+   Esta regra era `footer{display:none!important}`, para o dia em que uma
+   tela da loja fosse aberta por dentro do painel e trouxesse o rodapé
+   público junto. Só que ela some com TODO elemento `<footer>`, e as telas
+   de gestão herdadas do /adm põem as ações das janelas exatamente ali:
+   "Salvar cliente", "Salvar brinquedo", "Excluir". O resultado é que
+   nenhuma dessas janelas tinha como ser concluída -- abria o cadastro,
+   preenchia tudo e não havia botão nenhum no fim.
+
+   Agora o alvo é o rodapé da loja pelo nome (`.ls-footer`), e mais nada. */
+.ls-footer,.fab-container{display:none!important}
 
 /* MOBILE TABLE CARDS */
 @media(max-width:768px){
