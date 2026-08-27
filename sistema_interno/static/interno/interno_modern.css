@@ -159,10 +159,38 @@ a:hover{color:#FFD79A}
   display:block;padding:0 12px 9px;color:#897d6e;font-size:.71rem;font-weight:900;
   letter-spacing:.13em;text-transform:uppercase;
 }
+/* O QUE É NOME E O QUE É DESENHO.
+
+   `--ls-rotulo` manda em tudo que é TEXTO ESCRITO do menu: some no
+   trilho, volta com a lateral aberta. Ícone e contador ficam de fora de
+   propósito.
+
+   Ficar de fora não é detalhe: os dois são caixas `grid`, e quem
+   centraliza o desenho dentro delas é o `place-items`. As regras antigas
+   diziam `.ls-sidebar.expandida .ls-nav-item>span{display:block}` -- o
+   `>span` pega o ícone junto, troca o `grid` por `block`, e o desenho
+   escorrega para o canto de cima da caixa. Era esse o ícone torto: só
+   aparecia com a lateral ABERTA, e só no computador e no iPad, porque no
+   celular a regra vive dentro de `min-width:761px` e nunca chegava a
+   valer. Com uma variável no lugar de uma regra por elemento, não há
+   mais briga de especificidade para remendar. */
+.ls-sidebar{--ls-rotulo:block}
+.ls-brand-text,
+.ls-nav-caption,
+.ls-user-info,
+.ls-logout>span,
+.ls-nav-item>span:not(.ls-nav-icon):not(.ls-nav-count){display:var(--ls-rotulo)}
+
 .ls-nav-item{
+  position:relative;
   min-height:54px;margin:4px 0;padding:0 13px;display:flex;align-items:center;gap:12px;
   border:1px solid transparent;border-radius:14px;color:#bcb2a5!important;text-decoration:none;
   font-size:.94rem;font-weight:800;transition:.18s ease;
+}
+/* O corte do nome comprido é do NOME, não do item: `overflow:hidden` no
+   item inteiro decepava o balãozinho com o título, que nasce fora dele. */
+.ls-nav-item>span:not(.ls-nav-icon):not(.ls-nav-count){
+  min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.25;
 }
 .ls-nav-item:hover{
   color:#fff!important;border-color:rgba(242,169,59,.12);
@@ -175,13 +203,19 @@ a:hover{color:#FFD79A}
 }
 .ls-nav-icon{
   width:34px;height:34px;flex:0 0 34px;display:grid;place-items:center;border-radius:10px;
-  color:#a6998a;background:rgba(255,255,255,.035);font-size:1.02rem;
+  color:#a6998a;background:rgba(255,255,255,.035);font-size:1.02rem;line-height:1;
 }
 .ls-nav-item:hover .ls-nav-icon,.ls-nav-item.active .ls-nav-icon{color:#fff;background:rgba(255,255,255,.09)}
+
+/* Contador com a lateral aberta: pastilha no fim da linha, alinhada com
+   o nome. `tabular-nums` para 9 e 11 ocuparem a mesma largura e a coluna
+   de números não dançar de um item para o outro. */
 .ls-nav-count{
-  margin-left:auto;min-width:28px;height:28px;padding:0 8px;display:grid;place-items:center;
+  margin-left:auto;min-width:26px;height:24px;padding:0 8px;
+  display:grid;place-items:center;flex:0 0 auto;
   border:1px solid rgba(255,255,255,.13);border-radius:999px;color:#fff9ee;
-  background:rgba(255,255,255,.08);font-size:.72rem;font-weight:900;
+  background:rgba(255,255,255,.08);
+  font-size:.72rem;font-weight:900;line-height:1;font-variant-numeric:tabular-nums;
 }
 
 .ls-sidebar-footer{padding:14px;border-top:1px solid rgba(179,163,140,.11);background:rgba(0,0,0,.08)}
@@ -795,11 +829,16 @@ footer,.fab-container{display:none!important}
 }
 .ls-avisos-botao:hover{background:rgba(242,169,59,.18);border-color:rgba(242,169,59,.4)}
 .ls-avisos-botao:active{transform:scale(.95)}
+/* O anel do selo é recorte: ele imita a cor da barra do topo para o
+   número parecer descolado do botão. Estava pedindo `--bg-1`, que é o
+   fundo da PÁGINA -- um tom diferente do da barra, e a diferença lia
+   como um halo fora de lugar em volta do número. */
 .ls-avisos-selo{
-  position:absolute;top:-5px;right:-5px;min-width:21px;height:21px;padding:0 6px;
+  position:absolute;top:-4px;right:-4px;min-width:20px;height:20px;padding:0 6px;
   display:grid;place-items:center;border-radius:999px;
-  font-size:.7rem;font-weight:900;color:#2A1B05;background:var(--acento);
-  border:2px solid var(--bg-1);box-shadow:0 4px 12px rgba(242,169,59,.45);
+  font-size:.68rem;font-weight:900;line-height:1;font-variant-numeric:tabular-nums;
+  color:#2A1B05;background:var(--acento);
+  border:2px solid #1d1508;box-shadow:0 4px 12px rgba(242,169,59,.45);
 }
 .ls-avisos-selo.urgente{
   background:var(--red);color:#3A0E08;box-shadow:0 4px 12px rgba(255,122,107,.5);
@@ -902,24 +941,31 @@ footer,.fab-container{display:none!important}
    ====================================================================== */
 @media (min-width:761px){
   .ls-sidebar{
+    --ls-rotulo:none;
     width:var(--sidebar-rail);transform:none;overflow:visible;
     transition:width .2s cubic-bezier(.16,.84,.44,1);
   }
   .ls-main{margin-left:var(--sidebar-rail);transition:margin-left .2s cubic-bezier(.16,.84,.44,1)}
   .ls-mobile-menu{display:none}
 
-  .ls-sidebar .ls-brand-text,
-  .ls-sidebar .ls-nav-caption,
-  .ls-sidebar .ls-nav-item>span:not(.ls-nav-icon):not(.ls-nav-count),
-  .ls-sidebar .ls-user-info,
-  .ls-sidebar .ls-logout span{display:none}
-
   .ls-brand{justify-content:center;padding:14px 8px;min-height:70px}
   .ls-brand-logo{width:42px;height:42px;flex:0 0 42px;border-radius:13px}
 
   .ls-nav{padding-inline:8px}
-  .ls-nav-item{justify-content:center;padding:0;min-height:48px;position:relative}
-  .ls-nav-count{position:absolute;top:5px;right:10px}
+  .ls-nav-item{justify-content:center;padding:0;min-height:48px}
+
+  /* Contador no trilho: selo no canto do ícone, com anel da cor da
+     lateral para o número não encostar no desenho. Antes era a mesma
+     pastilha de 28px da lateral aberta, jogada em `top:5px;right:10px`:
+     num item de 48px ela cobria metade do ícone e escapava para fora do
+     alinhamento de todos os outros. */
+  .ls-nav-count{
+    position:absolute;top:4px;right:calc(50% - 23px);
+    margin:0;min-width:19px;height:19px;padding:0 5px;
+    border:2px solid var(--sidebar);
+    color:#2A1B05;background:var(--acento);
+    font-size:.63rem;
+  }
 
   /* O nome aparece ao lado quando o dedo ou o ponteiro para em cima --
      é como se confere um ícone que ainda não se reconhece. */
@@ -934,24 +980,38 @@ footer,.fab-container{display:none!important}
   }
   .ls-nav-item:hover::after,.ls-nav-item:focus-visible::after{opacity:1;transform:none}
 
-  .ls-user-card{justify-content:center;padding:9px}
+  /* O cartão da pessoa é uma grade de duas colunas: avatar e nome. Some
+     o nome, mas a coluna dele continua reservada, e o avatar ficava
+     empurrado para a esquerda -- fora do prumo dos ícones logo acima.
+     No trilho a grade tem UMA coluna. */
+  .ls-sidebar-footer{padding:10px 8px}
+  .ls-user-card{grid-template-columns:46px;justify-content:center;padding:9px}
   .ls-logout{justify-content:center}
 
   /* ---- aberta: volta a mostrar os nomes ---- */
-  .ls-sidebar.expandida{width:var(--sidebar-w)}
+  .ls-sidebar.expandida{--ls-rotulo:block;width:var(--sidebar-w)}
   .ls-sidebar.expandida ~ .ls-main,
   .ls-shell:has(.ls-sidebar.expandida) .ls-main{margin-left:var(--sidebar-w)}
-  .ls-sidebar.expandida .ls-brand-text,
-  .ls-sidebar.expandida .ls-nav-caption,
-  .ls-sidebar.expandida .ls-nav-item>span,
-  .ls-sidebar.expandida .ls-user-info,
-  .ls-sidebar.expandida .ls-logout span{display:block}
-  .ls-sidebar.expandida .ls-nav-item{justify-content:flex-start;padding:0 14px}
+  .ls-sidebar.expandida .ls-nav-item{justify-content:flex-start;padding:0 14px;gap:12px}
   .ls-sidebar.expandida .ls-nav-item::after{content:none}
   .ls-sidebar.expandida .ls-brand{justify-content:flex-start;padding:18px 18px 16px}
-  .ls-sidebar.expandida .ls-user-card{justify-content:flex-start;padding:11px}
+  .ls-sidebar.expandida .ls-sidebar-footer{padding:14px}
+  .ls-sidebar.expandida .ls-user-card{
+    grid-template-columns:46px minmax(0,1fr);justify-content:flex-start;padding:11px;
+  }
   .ls-sidebar.expandida .ls-logout{justify-content:center}
   .ls-sidebar.expandida .ls-rail-toggle i{transform:rotate(180deg)}
+
+  /* Voltou a ser a pastilha do fim da linha: o `position:absolute` do
+     trilho precisa ser desfeito por inteiro, senão o número fica preso
+     sobre o ícone mesmo com a lateral aberta. */
+  .ls-sidebar.expandida .ls-nav-count{
+    position:static;margin-left:auto;
+    min-width:26px;height:24px;padding:0 8px;
+    border:1px solid rgba(255,255,255,.13);
+    color:#fff9ee;background:rgba(255,255,255,.08);
+    font-size:.72rem;
+  }
 }
 
 /* Botão de abrir e fechar o trilho. Fica na borda, na altura do olho. */
@@ -1005,10 +1065,18 @@ body.modal-open .ls-abas{display:none!important}
     content:"";position:absolute;top:0;left:22%;right:22%;height:3px;
     border-radius:0 0 4px 4px;background:var(--acento);
   }
+  /* O selo mora no canto de cima do ÍCONE, e não num ponto fixo da aba.
+     Em `top:5px` ele flutuava acima do desenho, e a distância mudava de
+     aba para aba conforme o rótulo: quatro números na mesma barra, cada
+     um numa altura. O anel na cor da barra é o que impede o número de
+     encostar no traço do ícone. */
   .ls-aba-selo{
-    position:absolute;top:5px;right:calc(50% - 22px);min-width:17px;height:17px;
-    padding:0 5px;display:grid;place-items:center;border-radius:999px;
-    font-size:.62rem;font-weight:900;color:#2A1B05;background:var(--acento);
+    position:absolute;top:6px;right:calc(50% - 25px);
+    min-width:18px;height:18px;padding:0 5px;
+    display:grid;place-items:center;border-radius:999px;
+    border:2px solid #14110c;
+    font-size:.62rem;font-weight:900;line-height:1;font-variant-numeric:tabular-nums;
+    color:#2A1B05;background:var(--acento);
   }
   .ls-aba-selo.urgente{background:var(--red);color:#3A0E08}
 
@@ -1037,13 +1105,6 @@ body.modal-open .ls-abas{display:none!important}
   box-shadow:0 12px 32px rgba(0,0,0,.22)!important;
 }
 
-.ls-sidebar.expandida .ls-brand-text,
-.ls-sidebar.expandida .ls-nav-caption,
-.ls-sidebar.expandida .ls-nav-item>span,
-.ls-sidebar.expandida .ls-user-info,
-.ls-sidebar.expandida .ls-logout span{
-  visibility:visible!important;opacity:1!important;color:inherit;
-}
 .ls-sidebar.expandida .ls-nav-item{color:#e9dfd0!important}
 .ls-sidebar.expandida .ls-nav-item.active{color:#fff!important}
 .ls-sidebar.expandida .ls-nav-caption{color:#b9a992!important}
@@ -1304,25 +1365,12 @@ body.modal-open .ls-abas{display:none!important}
    acima, e ler daqui é ler o que mudou e por quê.
    ====================================================================== */
 
-/* 1. OS NOMES DO MENU SUMIAM COM O TRILHO ABERTO.
-      Quem clicava para expandir a lateral via os ícones se afastarem e
-      nenhum texto aparecer -- pior que o trilho fechado.
+/* 1. O SELECT DA LISTA DE ORÇAMENTO E OS CAMPOS COMPOSTOS.
 
-      A causa é especificidade: a regra que esconde
-      (`.ls-sidebar .ls-nav-item>span:not(.ls-nav-icon):not(.ls-nav-count)`)
-      pesa quatro classes, e a que devolvia (`.ls-sidebar.expandida
-      .ls-nav-item>span`) pesa três. Repetir os :not() aqui empata em
-      classes e o `.expandida` desempata. */
-@media (min-width:761px){
-  .ls-sidebar.expandida .ls-nav-item>span:not(.ls-nav-icon):not(.ls-nav-count){
-    display:block;
-  }
-  /* O contador volta a ficar ao lado do nome, não sobreposto ao ícone. */
-  .ls-sidebar.expandida .ls-nav-count{
-    position:static;margin-left:auto;
-  }
-  .ls-sidebar.expandida .ls-nav-item{gap:12px}
-}
+      Os consertos do menu lateral que moravam aqui subiram para o bloco
+      do trilho: eles não eram acabamento, eram a regra de quando o nome
+      aparece, e valia lê-la junto com o resto do menu.
+      ------------------------------------------------------------------ */
 
 /* 2. SELECT SEM SETA.
       `background:` (atalho) apagava a seta que o Bootstrap desenha em
@@ -1484,22 +1532,6 @@ body.modal-open .ls-abas{display:none!important}
 .modal-body{padding:20px!important}
 .modal-body hr{border-color:rgba(179,163,140,.22)!important;opacity:1!important}
 
-/* Correção final do drawer. `display:none` era a propriedade que ainda
-   escondia os textos; visibility sozinho não consegue revertê-la. */
-@media (min-width:761px){
-  .ls-sidebar.expandida .ls-brand-text,
-  .ls-sidebar.expandida .ls-nav-caption,
-  .ls-sidebar.expandida .ls-user-info,
-  .ls-sidebar.expandida .ls-logout>span{
-    display:block!important;
-  }
-  .ls-sidebar.expandida .ls-nav-item>span:not(.ls-nav-icon):not(.ls-nav-count){
-    display:inline-block!important;
-    min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
-  }
-  .ls-sidebar.expandida .ls-nav-item{justify-content:flex-start!important}
-}
-
 /* A busca é um campo inteiro, não um input curto solto dentro da coluna. */
 #orcamentoClienteBox,.ls-busca,.ls-busca-campo,.ls-busca-entrada{
   width:100%!important;max-width:none!important;
@@ -1556,8 +1588,6 @@ input[type="number"]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0
   flex:0 0 auto;
 }
 .ls-nav-icon,.ls-metric-icon,.ls-aviso-icone{position:relative;z-index:1}
-.ls-nav-item{overflow:hidden}
-.ls-nav-item>span:not(.ls-nav-icon):not(.ls-nav-count){line-height:1.25}
 .ls-actions .btn,.ls-acoes .btn{
   display:inline-flex;align-items:center;justify-content:center;gap:6px;
   vertical-align:middle;
