@@ -34,7 +34,7 @@ from .views import (
     VendasView,
 )
 from .views_app import manifesto, service_worker
-from .views_avisos import EstadoAvisosView
+from .views_avisos import EstadoAvisosView, InscricaoPushView
 from .views_acessos import AvaliacaoSetoresInnerView, UsuariosEquipeInnerView
 from .views_clientes import ClientesInnerView, ConsultaCepInnerView
 from .views_gestao import (
@@ -175,6 +175,9 @@ urlpatterns = [
     # painel fica aberto o dia inteiro, e aviso que só aparece depois de
     # relogar chega tarde demais.
     path('avisos/estado/', EstadoAvisosView.as_view(), name='avisos_estado'),
+    # O aparelho pede (ou desiste de) receber aviso quando o painel está
+    # fechado -- é o único caminho até quem está na estrada.
+    path('avisos/aparelho/', InscricaoPushView.as_view(), name='avisos_aparelho'),
 
     # ---------------- acesso ----------------
     path('login/inner/', LoginInternoView.as_view(), name='login_inner'),

@@ -973,9 +973,197 @@
     });
   }
 
+  /* ====================================================================
+     AVISO NO CELULAR (Web Push)
+     --------------------------------------------------------------------
+     As bolinhas resolvem para quem está com o painel aberto. Quem está na
+     estrada montando um brinquedo não está -- e para essa pessoa o aviso
+     só existe se o telefone tocar. É o caso do orçamento aprovado, que
+     precisa virar agenda antes de a data ser vendida de novo.
+
+     TRÊS COISAS PRECISAM SER VERDADE, e cada uma esconde o botão quando
+     não é:
+
+       1. a hospedagem tem a chave da aplicação configurada;
+       2. o navegador tem Push -- todo Android moderno tem;
+       3. no IPHONE, o painel precisa estar ADICIONADO À TELA DE INÍCIO.
+          A Apple não entrega notificação para site aberto no Safari, e
+          essa é a diferença que mais confunde: a pessoa acha que o
+          aplicativo está com defeito. Por isso, no iPhone fora da tela de
+          início, o texto explica o que fazer em vez de sumir calado.
+
+     A permissão do navegador só pode ser pedida dentro de um clique. É
+     por isso que existe um botão, e não um pedido automático ao abrir --
+     que aliás o navegador recusaria, e alguns bloqueiam o site depois.
+     ==================================================================== */
+  function ehIphone() {
+    return (
+      /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+      (navigator.maxTouchPoints > 1 && /Macintosh/.test(navigator.userAgent))
+    );
+  }
+
+  function instaladoNaTelaDeInicio() {
+    return (
+      global.navigator.standalone === true ||
+      (global.matchMedia &&
+        global.matchMedia("(display-mode: standalone)").matches)
+    );
+  }
+
+  function bytesDaChave(base64) {
+    /* A chave chega em base64url; `atob` só entende base64 comum. */
+    var preenchido = (base64 + "===").slice(0, base64.length + (4 - (base64.length % 4)) % 4);
+    var normal = preenchido.replace(/-/g, "+").replace(/_/g, "/");
+    var cru = global.atob(normal);
+    var saida = new Uint8Array(cru.length);
+    for (var i = 0; i < cru.length; i += 1) saida[i] = cru.charCodeAt(i);
+    return saida;
+  }
+
+  function chaveEmTexto(inscricao, nome) {
+    var bruto = inscricao.getKey(nome);
+    if (!bruto) return "";
+    var bytes = new Uint8Array(bruto);
+    var texto = "";
+    for (var i = 0; i < bytes.length; i += 1) texto += String.fromCharCode(bytes[i]);
+    return global.btoa(texto).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  }
+
+  function ligarAvisoNoCelular() {
+    var caixa = document.getElementById("avisosAparelho");
+    var botao = document.getElementById("avisosAparelhoBotao");
+    var rotulo = document.getElementById("avisosAparelhoRotulo");
+    var nota = document.getElementById("avisosAparelhoNota");
+    var rota = document.body.getAttribute("data-aparelho") || "";
+    if (!caixa || !botao || !rota) return;
+
+    function dizer(texto) {
+      if (!nota) return;
+      nota.textContent = texto || "";
+      nota.hidden = !texto;
+    }
+
+    /* iPhone fora da tela de início: explicar, não esconder. A pessoa
+       precisa saber que o caminho existe -- e qual é. */
+    if (ehIphone() && !instaladoNaTelaDeInicio()) {
+      caixa.hidden = false;
+      botao.disabled = true;
+      rotulo.textContent = "Avisos no iPhone";
+      dizer(
+        "No iPhone o aviso só chega com o painel adicionado à tela de " +
+        "início: toque em Compartilhar e depois em “Adicionar à Tela de Início”."
+      );
+      return;
+    }
+
+    var temSuporte =
+      "serviceWorker" in navigator &&
+      "PushManager" in global &&
+      "Notification" in global &&
+      global.isSecureContext;
+    if (!temSuporte) return;
+
+    var chaveDoServidor = "";
+
+    fetch(rota, { credentials: "same-origin" })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (dados) {
+        /* Sem chave na hospedagem o botão não aparece: oferecer um aviso
+           que nunca sairia é pior do que não oferecer. */
+        if (!dados || !dados.configurado || !dados.chave) return;
+        chaveDoServidor = dados.chave;
+        caixa.hidden = false;
+        return navigator.serviceWorker.ready;
+      })
+      .then(function (registro) {
+        if (!registro) return null;
+        return registro.pushManager.getSubscription();
+      })
+      .then(function (inscricao) {
+        mostrarEstado(!!inscricao);
+      })
+      .catch(function () {});
+
+    function mostrarEstado(inscrito) {
+      rotulo.textContent = inscrito
+        ? "Avisos ligados neste aparelho"
+        : "Avisar no meu celular";
+      botao.classList.toggle("ligado", inscrito);
+      botao.disabled = false;
+      dizer(
+        inscrito
+          ? "Toque de novo para desligar só neste aparelho."
+          : ""
+      );
+    }
+
+    function guardar(inscricao, acao) {
+      var dados = new FormData();
+      dados.set("endpoint", inscricao.endpoint);
+      dados.set("aparelho", navigator.userAgent.slice(0, 120));
+      if (acao) dados.set("acao", acao);
+      if (!acao) {
+        dados.set("p256dh", chaveEmTexto(inscricao, "p256dh"));
+        dados.set("auth", chaveEmTexto(inscricao, "auth"));
+      }
+      var campo = document.querySelector("[name=csrfmiddlewaretoken]");
+      if (campo) dados.set("csrfmiddlewaretoken", campo.value);
+      return fetch(rota, {
+        method: "POST",
+        body: dados,
+        credentials: "same-origin",
+        headers: { "X-CSRFToken": campo ? campo.value : "" },
+      });
+    }
+
+    botao.addEventListener("click", function () {
+      botao.disabled = true;
+      dizer("");
+
+      navigator.serviceWorker.ready
+        .then(function (registro) {
+          return registro.pushManager.getSubscription().then(function (atual) {
+            if (atual) {
+              /* Já ligado: este clique desliga -- e desliga NESTE
+                 aparelho só, não no celular da pessoa também. */
+              return guardar(atual, "cancelar")
+                .then(function () { return atual.unsubscribe(); })
+                .then(function () { mostrarEstado(false); });
+            }
+
+            return global.Notification.requestPermission().then(function (resposta) {
+              if (resposta !== "granted") {
+                botao.disabled = false;
+                dizer(
+                  resposta === "denied"
+                    ? "O navegador está bloqueando avisos deste site. Libere nas configurações do site e toque de novo."
+                    : "Permissão não concedida."
+                );
+                return null;
+              }
+              return registro.pushManager
+                .subscribe({
+                  userVisibleOnly: true,
+                  applicationServerKey: bytesDaChave(chaveDoServidor),
+                })
+                .then(function (nova) {
+                  return guardar(nova).then(function () { mostrarEstado(true); });
+                });
+            });
+          });
+        })
+        .catch(function () {
+          botao.disabled = false;
+          dizer("Não consegui ligar os avisos neste aparelho. Tente de novo.");
+        });
+    });
+  }
+
   global.Painel = Painel;
   document.addEventListener("DOMContentLoaded", function () {
     ligarAvisosAoVivo();
+    ligarAvisoNoCelular();
     Painel.aplicarMascaras(document);
     Painel.acomodarTextos(document);
     ligarMedidaDeTela();

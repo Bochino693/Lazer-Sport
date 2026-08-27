@@ -1882,3 +1882,45 @@ class ItemOrcamento(Prime):
         verbose_name = "Item do orçamento"
         verbose_name_plural = "Itens do orçamento"
         ordering = ("id",)
+
+
+# ======================================================================
+# NOTIFICAÇÃO NO CELULAR
+# ======================================================================
+class InscricaoPush(Prime):
+    """O aparelho de uma pessoa, pronto para receber aviso.
+
+    POR QUE UMA LINHA POR APARELHO, e não uma por pessoa: quem atende usa
+    o celular na rua e o tablet na bancada, e o aviso precisa chegar nos
+    dois. Trocar de aparelho não apaga o antigo -- quem apaga é o próprio
+    serviço do fabricante, respondendo 404/410 na primeira tentativa
+    depois de o aplicativo ser desinstalado (ver `push.InscricaoMorta`).
+
+    O QUE ESTÁ GUARDADO AQUI. `endpoint` é o endereço no serviço do
+    fabricante; `p256dh` e `auth` são as chaves públicas que o navegador
+    gerou para este aparelho. Com elas se CIFRA a mensagem: quem tem o
+    banco não lê aviso nenhum sem elas, e o serviço do fabricante nunca
+    lê -- ele só entrega o pacote fechado.
+    """
+
+    usuario = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="inscricoes_push",
+    )
+    # O endpoint pode ser longo (o da Apple passa de 300 caracteres), e é
+    # único: dois aparelhos nunca compartilham o mesmo.
+    endpoint = models.CharField(max_length=600, unique=True)
+    p256dh = models.CharField(max_length=200)
+    auth = models.CharField(max_length=100)
+    #: Só para a pessoa se reconhecer na lista dos próprios aparelhos.
+    aparelho = models.CharField(max_length=120, blank=True)
+    ultimo_aviso = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = "Inscrição de notificação"
+        verbose_name_plural = "Inscrições de notificação"
+        ordering = ("-criacao", "-id")
+
+    def __str__(self):
+        return f"{self.usuario} · {self.aparelho or 'aparelho'}"

@@ -2113,3 +2113,33 @@ input[type="number"]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0
 @media (prefers-reduced-motion:reduce){
   .ls-mudou > td, .ls-mudou{animation:none;background:rgba(80,180,255,.10)}
 }
+
+/* ======================================================================
+   AVISO NO CELULAR — o pé da central de avisos
+   ====================================================================== */
+.ls-avisos-aparelho{
+  border-top:1px solid var(--ls-linha,rgba(255,255,255,.08));
+  padding:12px 14px 14px;
+}
+.ls-avisos-aparelho-botao{
+  display:flex;align-items:center;gap:10px;width:100%;
+  min-height:44px;padding:10px 12px;
+  border:1px solid var(--ls-linha,rgba(255,255,255,.12));border-radius:12px;
+  background:transparent;color:inherit;
+  font-size:.9rem;font-weight:700;text-align:left;cursor:pointer;
+}
+.ls-avisos-aparelho-botao:hover:not(:disabled){
+  border-color:rgba(120,190,255,.45);background:rgba(120,190,255,.08);
+}
+.ls-avisos-aparelho-botao:disabled{opacity:.62;cursor:default}
+.ls-avisos-aparelho-botao i{font-size:1.15rem;flex:none}
+/* Ligado tem cor própria: a pessoa precisa saber, de relance, se este
+   aparelho vai tocar ou não. */
+.ls-avisos-aparelho-botao.ligado{
+  border-color:rgba(72,214,158,.5);background:rgba(72,214,158,.10);
+  color:#7ff0c0;
+}
+.ls-avisos-aparelho-nota{
+  margin:9px 2px 0;font-size:.78rem;line-height:1.45;
+  color:var(--ls-texto-2,rgba(255,255,255,.6));
+}

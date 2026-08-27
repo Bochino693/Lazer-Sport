@@ -100,6 +100,62 @@ self.addEventListener("activate", function (evento) {
 self.addEventListener("fetch", function (evento) {
   evento.respondWith(fetch(evento.request));
 });
+
+/* ----------------------------------------------------------------------
+   AVISO NO CELULAR
+
+   Quem está na estrada montando um brinquedo não tem o painel aberto.
+   Para essa pessoa o aviso só existe se o telefone tocar -- e é o caso do
+   orçamento que o cliente acabou de aprovar, que precisa virar agenda
+   antes de a data ser vendida de novo.
+
+   O corpo chega CIFRADO de ponta a ponta: o serviço do fabricante
+   (Google no Android, Apple no iPhone) entrega, mas não lê.
+   ---------------------------------------------------------------------- */
+self.addEventListener("push", function (evento) {
+  var dados = {};
+  try { dados = evento.data ? evento.data.json() : {}; } catch (e) {}
+
+  var titulo = dados.titulo || "Lazer & Sport · Gestão";
+  var opcoes = {
+    body: dados.corpo || "",
+    icon: dados.icone || "/static/interno/app-icone-192.png",
+    badge: "/static/interno/app-icone-192.png",
+    data: { url: dados.url || "/" },
+    /* A marca substitui o aviso anterior do MESMO assunto em vez de
+       empilhar. Três notificações da proposta 412 na tela de bloqueio
+       fazem a pessoa limpar todas sem ler nenhuma. */
+    tag: dados.marca || "lazersport",
+    renotify: !!dados.urgente,
+    /* Vibra só o que é decisão do cliente. Uma vibração para cada coisa
+       que acontece no dia treina a pessoa a ignorar todas. */
+    vibrate: dados.urgente ? [80, 40, 80] : undefined,
+  };
+
+  evento.waitUntil(self.registration.showNotification(titulo, opcoes));
+});
+
+self.addEventListener("notificationclick", function (evento) {
+  evento.notification.close();
+  var destino = (evento.notification.data && evento.notification.data.url) || "/";
+
+  /* Se o painel já está aberto em alguma aba, é ela que vai para o
+     assunto -- abrir uma segunda aba do mesmo painel a cada aviso
+     acabaria com dez abas iguais no fim do dia. */
+  evento.waitUntil(
+    self.clients
+      .matchAll({ type: "window", includeUncontrolled: true })
+      .then(function (abas) {
+        for (var i = 0; i < abas.length; i += 1) {
+          if ("focus" in abas[i]) {
+            if ("navigate" in abas[i]) abas[i].navigate(destino);
+            return abas[i].focus();
+          }
+        }
+        return self.clients.openWindow(destino);
+      })
+  );
+});
 """
 
 

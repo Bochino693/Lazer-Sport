@@ -48,13 +48,13 @@
   <link href="{% static 'interno/vendor/bootstrap-icons.min.css' %}" rel="stylesheet">
 
   {% block extra_css %}{% endblock %}
-  <link href="{% static 'interno/interno_modern.css' %}?v=16" rel="stylesheet">
+  <link href="{% static 'interno/interno_modern.css' %}?v=17" rel="stylesheet">
 
   <!-- Barra de carregamento no topo, compartilhada com o painel /adm. -->
   <link rel="stylesheet" href="{% static 'site/ls-page-loader.css' %}?v=2">
   <script src="{% static 'site/ls-page-loader.js' %}?v=2" defer></script>
 </head>
-<body class="ls-body {% block body_class %}{% endblock %}" data-avisos="{% url 'avisos_estado' %}">
+<body class="ls-body {% block body_class %}{% endblock %}" data-avisos="{% url 'avisos_estado' %}" data-aparelho="{% url 'avisos_aparelho' %}">
 <svg width="0" height="0" aria-hidden="true" focusable="false" style="position:absolute">
   <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></symbol>
   <symbol id="i-map-pin" viewBox="0 0 24 24"><path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></symbol>
@@ -380,6 +380,25 @@ Dito em voz alta: este NÃO é o /adm do site. Quem trabalha nos
               </div>
             {% endfor %}
             </div>
+
+            {% comment %}
+              AVISO NO CELULAR.
+
+              Quem está na estrada montando um brinquedo não tem o painel
+              aberto, e para essa pessoa o aviso só existe se o telefone
+              tocar. O bloco fica escondido até o JavaScript descobrir se
+              este aparelho pode: sem chave configurada na hospedagem, e
+              no iPhone que ainda não adicionou o painel à tela de início,
+              ele não aparece -- botão que não faz nada é pior que botão
+              nenhum.
+            {% endcomment %}
+            <div class="ls-avisos-aparelho" id="avisosAparelho" hidden>
+              <button type="button" class="ls-avisos-aparelho-botao" id="avisosAparelhoBotao">
+                <i class="bi bi-phone-vibrate"></i>
+                <span id="avisosAparelhoRotulo">Avisar no meu celular</span>
+              </button>
+              <p class="ls-avisos-aparelho-nota" id="avisosAparelhoNota" hidden></p>
+            </div>
           </div>
         </div>
 
@@ -407,7 +426,7 @@ Dito em voz alta: este NÃO é o /adm do site. Quem trabalha nos
 </div>
 
 <script src="{% static 'interno/vendor/bootstrap.bundle.min.js' %}"></script>
-<script src="{% static 'interno/painel.js' %}?v=7"></script>
+<script src="{% static 'interno/painel.js' %}?v=8"></script>
 {% comment %}
   Campo de busca do painel (catálogo, clientes, colaboradores). Carrega
   em toda tela porque o mesmo componente é usado em orçamento, produção e

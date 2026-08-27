@@ -20,6 +20,8 @@ sustenta isso:
     quem reabre é a equipe, dando nova validade.
 """
 
+import logging
+
 from django.conf import settings
 from django.templatetags.static import static
 from django.http import Http404
@@ -204,6 +206,25 @@ class OrcamentoPublicoView(View):
             nome=nome,
             motivo=request.POST.get("motivo") or "",
         )
+
+        # O TELEFONE DA EQUIPE TOCA AGORA.
+        #
+        # Quem está na estrada montando um brinquedo não tem o painel
+        # aberto: sem isso, um "aprovado" fica parado até alguém sentar na
+        # bancada, e nesse meio-tempo a data pode ser vendida de novo.
+        #
+        # Nada disso pode atrapalhar o cliente. Ele acabou de decidir, a
+        # resposta já está gravada, e um serviço de push fora do ar não
+        # pode virar tela de erro para ele -- por isso o try largo.
+        try:
+            from sistema_interno.notificacoes import avisar_resposta_do_cliente
+
+            avisar_resposta_do_cliente(orcamento)
+        except Exception:
+            logging.getLogger(__name__).exception(
+                "Não consegui avisar a equipe sobre a resposta do orçamento %s",
+                orcamento.pk,
+            )
 
         # Redireciona em vez de renderizar: sem isso, atualizar a página
         # reenviaria o formulário, e o cliente veria um aviso do navegador
