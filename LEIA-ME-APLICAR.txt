@@ -1,4 +1,4 @@
-PACOTE INCREMENTAL — CARDS, NAVEGAÇÃO E ORDEM DE SERVIÇO
+PACOTE INCREMENTAL V2 — ORÇAMENTOS, CLIENTES, ROTAS, AVISOS E O.S.
 Lazer & Sport
 ======================================================================
 
@@ -21,6 +21,43 @@ Este pacote NÃO cria migração e NÃO adiciona dependência Python ou JavaScri
 
 
 O QUE FOI CORRIGIDO
+
+ACABAMENTO, CENTRALIZAÇÃO E TABLET EM RETRATO
+- Orçamentos, Clientes e O.S. usam o mesmo eixo central e as mesmas margens.
+- Cards compactos aproveitam três colunas no tablet em retrato.
+- Modais reorganizam campos curtos e longos numa grade de 12 colunas.
+- CEP, número, UF, tipo, status, prioridade e valores não desperdiçam uma
+  linha inteira; textos e endereços recebem mais espaço.
+- Inputs continuam com área de toque confortável, mas perderam altura e
+  espaçamento excessivos dentro dos modais.
+- Selects fixos ganharam seta, borda, hover e foco no tema grafite/âmbar.
+  As buscas de objetos continuam usando LSBusca e não foram descaracterizadas.
+
+CLIENTES, ENDEREÇOS E ROTAS
+- A lista mostra rua, número, bairro, cidade/UF e CEP.
+- Google Maps recebe a fábrica como origem e o cliente como destino.
+- Waze abre o destino no aplicativo ou na web, conforme o aparelho.
+- Quando fábrica e cliente têm latitude/longitude, a lista mostra a distância
+  aproximada em linha reta. O roteador calcula a distância real pelas vias.
+- A O.S. mostra os mesmos atalhos na lista e no resumo do cliente escolhido.
+- Se o endereço da O.S. for alterado manualmente, a rota usa o texto salvo e
+  não reaproveita coordenadas possivelmente incorretas do cadastro.
+
+CADASTROS INCOMPLETOS E AVISOS DINÂMICOS
+- Cliente ativo sem contato, CPF/CNPJ ou endereço entra no card de pendências.
+- A central de avisos e o selo do menu Clientes mostram essa pendência.
+- O aviso abre Clientes já filtrado nos cadastros que precisam de correção.
+- Uma notificação nova recebida com o painel aberto emite um toque curto,
+  gerado no próprio navegador e sem baixar arquivo de áudio.
+- O primeiro estado carregado não toca; o som acontece só quando uma contagem
+  cresce depois disso e somente após a primeira interação exigida pelo navegador.
+
+PREENCHIMENTO E DINHEIRO
+- Escolher explicitamente um cliente no orçamento substitui nome, WhatsApp e
+  e-mail pelos dados atuais do cadastro; apenas reabrir uma versão preservada
+  continua respeitando o snapshot original.
+- Escolher cliente na O.S. também atualiza contato e endereço.
+- Totais e resumos dinâmicos usam o padrão completo R$ 4.666,33.
 
 CARDS DE ORÇAMENTOS E ORDENS DE SERVIÇO
 - Os filtros usam o mesmo componente visual dos cards corretos do painel.
@@ -80,22 +117,29 @@ core/
   views_ordem_servico.py
 
 sistema_interno/
+  avisos.py
+  completude_clientes.py              (novo)
+  context_processors.py
+  rotas.py                             (novo)
+  static/interno/painel.js
   static/interno/interno_modern.css
   static/interno/ls-soft-navigation.js   (novo)
   templates/base_inner.html
+  templates/clientes_inner.html
   templates/orcamentos_inner.html
   templates/ordens_servico_inner.html
+  views_avisos.py
+  views_clientes.py
   views_ordens_servico.py
 
 
 VALIDAÇÕES EXECUTADAS ANTES DE GERAR O ZIP
 
 - Sintaxe do novo JavaScript com node --check.
-- Sintaxe dos dois arquivos Python com py_compile.
+- Sintaxe dos arquivos Python por compilação em memória (sem gerar .pyc).
 - Sintaxe dos scripts inline das três telas alteradas.
 - Balanceamento dos blocos Django if/for/block/comment/with.
 - Conferência dos vínculos entre template, contexto e arquivo estático.
 
 A suíte completa do Django deve ser executada dentro do projeto, pois este ZIP
 é incremental e não contém banco, settings nem dependências do repositório.
-

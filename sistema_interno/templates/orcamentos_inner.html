@@ -3,6 +3,7 @@
 
 {% block title %}Orçamentos | Lazer & Sport{% endblock %}
 {% block top_title %}Orçamentos{% endblock %}
+{% block body_class %}ls-orcamentos-body ls-commercial-body{% endblock %}
 
 {% block content %}
 <section class="ls-page-hero">
@@ -291,12 +292,12 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
       </div>
 
-      <div class="modal-body">
+      <div class="modal-body ls-compact-form">
         <div id="orcamentoErro" class="alert alert-danger d-none" role="alert"></div>
 
         <div class="row g-3">
           <div class="col-12"><div class="ls-budget-block-title comercial"><i class="bi bi-people-fill"></i><span><strong>Bloco Comercial</strong><small>Cliente, atendimento, validade, entrega e itens.</small></span></div></div>
-          <div class="col-12 col-md-4">
+          <div class="col-12 col-md-5">
             <label class="form-label" for="orcamentoClienteBusca">Cliente cadastrado</label>
             {% comment %}
               O campo é montado pelo ls-busca.js: digita o nome, acha na hora
@@ -313,20 +314,20 @@
                    placeholder="Usado quando não há cadastro">
           </div>
 
-          <div class="col-12 col-md-4">
+          <div class="col-12 col-md-3">
             <label class="form-label" for="orcamentoContato">Referência de contato</label>
             <input class="form-control" id="orcamentoContato" name="contato" maxlength="120"
                    placeholder="Empresa, evento ou observação">
           </div>
 
-          <div class="col-12 col-md-4">
+          <div class="col-12 col-md-3">
             <label class="form-label" for="orcamentoWhatsapp"><i class="bi bi-whatsapp text-success me-1"></i>WhatsApp</label>
             <input class="form-control" id="orcamentoWhatsapp" name="whatsapp_cliente" maxlength="24"
                    inputmode="tel" autocomplete="tel" data-mascara="telefone"
                    placeholder="(11) 99999-9999">
           </div>
 
-          <div class="col-12 col-md-4">
+          <div class="col-12 col-md-5">
             <label class="form-label" for="orcamentoEmail"><i class="bi bi-envelope me-1"></i>E-mail</label>
             <input type="email" class="form-control" id="orcamentoEmail" name="email_cliente" maxlength="254"
                    autocomplete="email" placeholder="cliente@empresa.com.br">
@@ -340,7 +341,7 @@
             <span class="form-text">A fase muda pelo envio ou pela resposta; não é edição manual.</span>
           </div>
 
-          <div class="col-12 col-md-4">
+          <div class="col-12 col-md-7">
             <label class="form-label">Origem comercial</label>
             <div class="ls-origin-field" id="orcamentoOrigem"
                  data-nova="{{ origem_nova }}" data-nova-rotulo="{{ origem_nova_rotulo }}">
@@ -352,14 +353,14 @@
             </div>
           </div>
 
-          <div class="col-12 col-md-4">
+          <div class="col-12 col-md-5">
             <label class="form-label" for="orcamentoValidade">Válido até</label>
             <input type="date" class="form-control" id="orcamentoValidade" name="validade">
           </div>
 
           <div class="col-12"><div class="ls-budget-block-title financeiro"><i class="bi bi-cash-stack"></i><span><strong>Bloco Financeiro</strong><small>Frete, desconto e condições de pagamento.</small></span></div></div>
 
-          <div class="col-12 col-md-4">
+          <div class="col-12 col-md-3">
             <label class="form-label" for="orcamentoFrete">Frete</label>
             <div class="input-group">
               <span class="input-group-text">R$</span>
@@ -379,7 +380,7 @@
             digitado acompanha o subtotal sozinho. O campo enviado ao
             servidor continua sendo reais, então nada muda do outro lado.
           {% endcomment %}
-          <div class="col-12 col-md-4">
+          <div class="col-12 col-md-3">
             <label class="form-label" for="orcamentoDesconto">Desconto</label>
             <div class="input-group">
               <button class="btn btn-outline-secondary ls-unidade" type="button"
@@ -404,13 +405,13 @@
             <span class="form-text" id="descontoExplicacao"></span>
           </div>
 
-          <div class="col-12 col-md-6">
+          <div class="col-12 col-md-3">
             <label class="form-label" for="orcamentoPagamento">Forma de pagamento</label>
             <input class="form-control" id="orcamentoPagamento" name="forma_pagamento"
                    maxlength="120" placeholder="Ex.: Pix ou 50% na entrada e 50% na entrega">
           </div>
 
-          <div class="col-12 col-md-6">
+          <div class="col-12 col-md-3">
             <label class="form-label" for="orcamentoEnvio">Forma de envio</label>
             <input class="form-control" id="orcamentoEnvio" name="forma_envio"
                    maxlength="120" placeholder="Ex.: retirada, transportadora ou entrega própria">
@@ -1097,9 +1098,10 @@ document.addEventListener("DOMContentLoaded", function () {
       }
     },
     aoEscolher: function (opcao) {
-      /* Puxa contato do cadastro só onde ainda está vazio: o orçamento
-         pode ter um contato específico daquela festa. */
-      aplicarClienteNoOrcamento(opcao, false);
+      /* Escolha explícita significa usar a ficha atual. Assim telefone e
+         e-mail antigos no modal não vencem o cadastro central. Ao apenas
+         reabrir uma proposta preservada, o snapshot continua intacto. */
+      aplicarClienteNoOrcamento(opcao, true);
     }
   });
 
@@ -1707,11 +1709,11 @@ document.addEventListener("DOMContentLoaded", function () {
     botao.addEventListener("click", function () {
       Painel.erro("pagamentoErro", "");
       Painel.valor("pagamentoId", botao.dataset.pagamento);
-      Painel.valor("pagamentoValor", String(botao.dataset.pago || "0").replace(".", ","));
+      Painel.valor("pagamentoValor", botao.dataset.pago || "0");
       Painel.valor("pagamentoObservacao", "");
       document.getElementById("pagamentoNome").textContent = botao.dataset.nome;
       document.getElementById("pagamentoResumo").textContent =
-        "Total da proposta: R$ " + String(botao.dataset.total || "0").replace(".", ",");
+        "Total da proposta: " + moeda(paraNumero(botao.dataset.total || "0"));
       Painel.abrir("modalPagamento");
     });
   });
@@ -2327,4 +2329,3 @@ document.addEventListener("DOMContentLoaded", function () {
 })();
 </script>
 {% endblock %}
-

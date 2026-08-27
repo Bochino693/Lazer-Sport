@@ -17,7 +17,7 @@ from django.core.mail import EmailMultiAlternatives
 from django.core.paginator import Paginator
 from django.core.validators import validate_email
 from django.db import transaction
-from django.db.models import Count, Q, Sum
+from django.db.models import Count, Prefetch, Q, Sum
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
@@ -30,11 +30,13 @@ from core.models import Manutencao
 from . import clientes as svc_clientes
 from .models import (
     Cliente,
+    EnderecoCliente,
     EnvioOrdemServico,
     ItemOrdemServico,
     OrdemServico,
 )
 from .permissoes import capacidades
+from .rotas import dados_rota, origem_empresa, texto_endereco
 from .utils import (
     ErroDeFormulario,
     decimal_br,
@@ -75,7 +77,14 @@ class OrdensServicoInnerView(
                 "cliente", "orcamento", "manutencao__usuario__user",
                 "tecnico", "responsavel",
             )
-            .prefetch_related("itens", "envios__responsavel")
+            .prefetch_related(
+                "itens",
+                "envios__responsavel",
+                Prefetch(
+                    "cliente__enderecos",
+                    queryset=EnderecoCliente.objects.order_by("id"),
+                ),
+            )
         )
         if busca:
             condicao = (
@@ -137,17 +146,35 @@ class OrdensServicoInnerView(
         ordens = list(pagina.object_list)
 
         base_publica = endereco_do_site(request)
+        origem = origem_empresa()
         for ordem in ordens:
             ordem.link_publico = f"{base_publica}{ordem.caminho_publico}"
             ordem.mensagem_whatsapp = self.mensagem(ordem, ordem.link_publico)
             ordem.whatsapp_url = self.conversa_whatsapp(
                 ordem.whatsapp_destinatario, ordem.mensagem_whatsapp
             )
+            endereco_cliente = (
+                ordem.cliente.endereco_principal if ordem.cliente_id else None
+            )
+            usar_coordenadas = (
+                endereco_cliente
+                if not ordem.endereco_servico
+                or ordem.endereco_servico == texto_endereco(endereco_cliente)
+                else None
+            )
+            ordem.rota = dados_rota(
+                destino_texto=ordem.endereco_servico,
+                destino=usar_coordenadas,
+                origem=origem,
+            )
 
         clientes = (
             Cliente.objects
             .select_related("parceiro")
-            .prefetch_related("enderecos")
+            .prefetch_related(Prefetch(
+                "enderecos",
+                queryset=EnderecoCliente.objects.order_by("id"),
+            ))
             .order_by("nome_cliente")
         )
         clientes_dados = [
@@ -175,6 +202,7 @@ class OrdensServicoInnerView(
             ),
             "total_recebido": financeiro["recebido"] or Decimal("0.00"),
             "clientes_dados": clientes_dados,
+            "empresa_localizacao": origem,
             "manutencoes": (
                 Manutencao.objects
                 .filter(status__in=("P", "A"))

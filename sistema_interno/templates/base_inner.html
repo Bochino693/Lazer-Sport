@@ -48,7 +48,7 @@
   <link href="{% static 'interno/vendor/bootstrap-icons.min.css' %}" rel="stylesheet">
 
   {% block extra_css %}{% endblock %}
-  <link href="{% static 'interno/interno_modern.css' %}?v=18" rel="stylesheet">
+  <link href="{% static 'interno/interno_modern.css' %}?v=19" rel="stylesheet">
 
   <!-- Barra de carregamento no topo, compartilhada com o painel /adm. -->
   <link rel="stylesheet" href="{% static 'site/ls-page-loader.css' %}?v=2">
@@ -150,6 +150,7 @@
         <a data-titulo="Clientes" class="ls-nav-item {% if request.resolver_match.url_name == 'clientes_inner' %}active{% endif %}" href="{% url 'clientes_inner' %}">
           <span class="ls-nav-icon"><i class="bi bi-people-fill"></i></span>
           <span>Clientes</span>
+          <span class="ls-nav-count" data-selo="count_clientes_incompletos" {% if not count_clientes_incompletos %}hidden{% endif %}>{{ count_clientes_incompletos }}</span>
         </a>
         {% endif %}
         {% if permissoes_interno.financeiro %}
@@ -437,7 +438,7 @@ Dito em voz alta: este NÃO é o /adm do site. Quem trabalha nos
 </div>
 
 <script src="{% static 'interno/vendor/bootstrap.bundle.min.js' %}"></script>
-<script src="{% static 'interno/painel.js' %}?v=8"></script>
+<script src="{% static 'interno/painel.js' %}?v=9"></script>
 {% comment %}
   Campo de busca do painel (catálogo, clientes, colaboradores). Carrega
   em toda tela porque o mesmo componente é usado em orçamento, produção e
@@ -548,4 +549,3 @@ Dito em voz alta: este NÃO é o /adm do site. Quem trabalha nos
 {% block scripts %}{% endblock %}
 </body>
 </html>
-

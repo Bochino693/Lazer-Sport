@@ -2190,3 +2190,105 @@ input[type="number"]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0
   color:var(--ls-texto-2,rgba(255,255,255,.6));
 }
 
+/* ======================================================================
+   ACABAMENTO COMERCIAL V19 — orçamento, clientes e O.S.
+   ====================================================================== */
+.ls-commercial-body .ls-content{
+  width:100%;max-width:1520px;margin-inline:auto;padding-inline:clamp(14px,2.2vw,30px);
+}
+.ls-commercial-body .ls-page-hero,
+.ls-commercial-body .ls-metrics,
+.ls-commercial-body .ls-budget-money-strip,
+.ls-commercial-body .ls-filter-panel,
+.ls-commercial-body .ls-data-panel{margin-inline:auto;width:100%}
+
+/* Select fixo: seta, estados e opções pertencem ao mesmo sistema visual.
+   O componente LSBusca mantém seu próprio painel e não é afetado. */
+.form-select:not([multiple]){
+  border-color:#735f3b!important;
+  background-color:#241c10!important;
+  background-image:url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23F2A93B' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m3 6 5 5 5-5'/%3e%3c/svg%3e")!important;
+  background-position:right 12px center!important;background-size:14px 11px!important;
+  padding-right:38px!important;box-shadow:inset 0 1px rgba(255,255,255,.025)!important;
+}
+.form-select:not([multiple]):hover{border-color:#a17d42!important;background-color:#2c2111!important}
+.form-select:not([multiple]):focus{border-color:var(--acento)!important;box-shadow:0 0 0 3px rgba(242,169,59,.14)!important}
+.form-select option{padding:9px 12px;color:#fbf6ed;background:#241c10}
+
+.ls-compact-form .row{--bs-gutter-x:.78rem;--bs-gutter-y:.72rem}
+.ls-compact-form .form-label{margin-bottom:4px!important;font-size:.76rem!important;letter-spacing:.01em}
+.ls-compact-form .form-text{margin-top:4px!important;font-size:.7rem!important;line-height:1.25!important}
+.ls-compact-form .form-control,
+.ls-compact-form .form-select,
+.ls-compact-form .input-group-text,
+.ls-compact-form .ls-busca-campo{min-height:42px!important;font-size:.86rem!important}
+.ls-compact-form .ls-busca-entrada{height:40px!important;font-size:.86rem!important}
+.ls-compact-form textarea.form-control{min-height:66px!important;padding-block:9px!important}
+.ls-compact-form hr{margin-block:15px!important}
+.ls-compact-form .ls-budget-block-title{min-height:48px;margin-bottom:0;padding:9px 12px}
+.ls-compact-form .ls-budget-block-title small{font-size:.69rem}
+.ls-compact-form .ls-cliente-resumo{margin-top:6px;padding:8px 10px}
+.ls-compact-form input[type="date"],
+.ls-compact-form input[type="datetime-local"]{font-variant-numeric:tabular-nums}
+
+.ls-route-actions{display:flex!important;flex-wrap:wrap;align-items:center;gap:6px;margin-top:7px}
+.ls-route-link,.ls-distance-chip{
+  min-height:27px;padding:5px 8px;display:inline-flex!important;align-items:center;gap:5px;
+  border:1px solid rgba(255,255,255,.12);border-radius:8px;
+  font-size:.69rem!important;font-weight:900;text-decoration:none!important;white-space:nowrap;
+}
+.ls-distance-chip{color:#ffd38d;background:rgba(242,169,59,.09);border-color:rgba(242,169,59,.27)}
+.ls-route-link.maps{color:#87c8ff;background:rgba(73,155,255,.09);border-color:rgba(73,155,255,.28)}
+.ls-route-link.waze{color:#75e5d4;background:rgba(61,217,192,.09);border-color:rgba(61,217,192,.28)}
+.ls-route-link:hover{filter:brightness(1.22);transform:translateY(-1px)}
+.ls-address-line{display:block;max-width:340px;overflow-wrap:anywhere}
+.ls-incomplete-chip{
+  width:max-content;max-width:100%;margin-top:6px;padding:5px 8px;display:flex;align-items:center;gap:5px;
+  border:1px solid rgba(255,128,145,.27);border-radius:8px;color:#ff9dac;background:rgba(255,113,132,.08);
+  font-size:.69rem;font-weight:850;line-height:1.25;
+}
+.ls-clientes-table th:nth-child(4),.ls-clientes-table td:nth-child(4){min-width:245px}
+
+/* Cards clicáveis têm o mesmo foco visível dos controles do formulário. */
+a.ls-metric-card{color:inherit}
+a.ls-metric-card:focus-visible{outline:3px solid rgba(242,169,59,.4);outline-offset:3px}
+a.ls-metric-card.active{border-color:var(--metric);box-shadow:0 0 0 2px rgba(242,169,59,.2),var(--shadow-soft)}
+
+@media (min-width:1181px){
+  .ls-budget-card-filters{grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}
+  .ls-budget-filter-card{min-height:104px;padding:13px 14px}
+}
+
+/* Tablet em retrato: três cards por linha e formulário em grade de 12
+   colunas. O Bootstrap mantém cada col-md-* na mesma linha planejada. */
+@media (min-width:761px) and (max-width:980px){
+  .ls-commercial-body .ls-content{padding:14px 16px 26px}
+  .ls-commercial-body .ls-metrics,
+  .ls-commercial-body .ls-budget-card-filters{grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+  .ls-commercial-body .ls-metric-card{min-height:88px;padding:10px 11px}
+  .ls-commercial-body .ls-metric-value{margin-top:6px;font-size:1.32rem}
+  .ls-commercial-body .ls-metric-note{font-size:.67rem}
+  .ls-commercial-body .ls-budget-money-strip{grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+  .ls-commercial-body .ls-budget-money-strip>div{min-height:66px;padding:10px}
+  .ls-commercial-body .ls-budget-money-strip strong{font-size:.94rem}
+  .ls-compact-form{padding:13px!important}
+  .ls-compact-form .row{--bs-gutter-x:.62rem;--bs-gutter-y:.58rem}
+  .ls-compact-form .form-control,
+  .ls-compact-form .form-select,
+  .ls-compact-form .input-group-text,
+  .ls-compact-form .ls-busca-campo{min-height:40px!important}
+  .ls-compact-form .ls-busca-entrada{height:38px!important}
+  .ls-compact-form .ls-budget-block-title small{display:none}
+}
+
+@media (min-width:981px) and (max-width:1180px){
+  .ls-commercial-body .ls-metrics,
+  .ls-commercial-body .ls-budget-card-filters{grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+  .ls-commercial-body .ls-metric-card{min-height:96px;padding:12px}
+}
+
+@media (max-width:760px){
+  .ls-commercial-body .ls-content{padding-inline:11px}
+  .ls-route-actions{gap:5px}
+  .ls-route-link,.ls-distance-chip{min-height:30px}
+}

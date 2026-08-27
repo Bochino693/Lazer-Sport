@@ -3,6 +3,7 @@
 
 {% block title %}Clientes | Lazer & Sport{% endblock %}
 {% block top_title %}Clientes{% endblock %}
+{% block body_class %}ls-clientes-body ls-commercial-body{% endblock %}
 
 {% block content %}
 <section class="ls-page-hero">
@@ -60,6 +61,16 @@
     <span class="ls-metric-note">Cadastro que ninguém consegue usar</span>
   </article>
 
+  <a class="ls-metric-card yellow text-decoration-none {% if apenas_incompletos %}active{% endif %}"
+     href="{% if apenas_incompletos %}{% url 'clientes_inner' %}{% else %}?incompletos=1{% endif %}">
+    <div class="ls-metric-head">
+      <span class="ls-metric-label">Cadastros incompletos</span>
+      <span class="ls-metric-icon"><i class="bi bi-person-exclamation"></i></span>
+    </div>
+    <strong class="ls-metric-value">{{ total_incompletos }}</strong>
+    <span class="ls-metric-note">Sem contato, documento ou endereço</span>
+  </a>
+
   <article class="ls-metric-card blue">
     <div class="ls-metric-head">
       <span class="ls-metric-label">No mapa do site</span>
@@ -72,6 +83,7 @@
 
 <section class="ls-filter-panel">
   <form method="get" class="row g-3 align-items-end">
+    {% if apenas_incompletos %}<input type="hidden" name="incompletos" value="1">{% endif %}
     <div class="col-12 col-lg-5">
       <label class="form-label" for="filtroBusca">Buscar cliente</label>
       <input id="filtroBusca" name="q" value="{{ busca }}" class="form-control"
@@ -142,6 +154,9 @@
                   {% endif %}
                   {% if cliente.documento %} · {{ cliente.documento }}{% endif %}
                 </span>
+                {% if ficha.pendencias %}
+                  <span class="ls-incomplete-chip"><i class="bi bi-exclamation-circle"></i> Falta {{ ficha.pendencias|join:", " }}</span>
+                {% endif %}
               </td>
 
               <td data-rotulo="Contato">
@@ -174,10 +189,17 @@
 
               <td data-rotulo="Onde fica">
                 {% if ficha.endereco %}
-                  {{ ficha.endereco.cidade }}{% if ficha.endereco.estado %}/{{ ficha.endereco.estado }}{% endif %}
-                  <span class="material-sub d-block">{{ ficha.endereco.bairro }}</span>
+                  <strong class="ls-address-line">{{ ficha.endereco.endereco }}{% if ficha.endereco.numero %}, {{ ficha.endereco.numero }}{% endif %}</strong>
+                  <span class="material-sub d-block">
+                    {% if ficha.endereco.bairro %}{{ ficha.endereco.bairro }} · {% endif %}{{ ficha.endereco.cidade }}{% if ficha.endereco.estado %}/{{ ficha.endereco.estado }}{% endif %}{% if ficha.endereco.cep %} · CEP {{ ficha.endereco.cep }}{% endif %}
+                  </span>
+                  <span class="ls-route-actions">
+                    {% if ficha.rota.distancia_km != None %}<span class="ls-distance-chip" title="Estimativa em linha reta"><i class="bi bi-signpost-split"></i> ≈ {{ ficha.rota.distancia_km|stringformat:".1f" }} km</span>{% endif %}
+                    {% if ficha.rota.google_maps_url %}<a href="{{ ficha.rota.google_maps_url }}" target="_blank" rel="noopener" class="ls-route-link maps" title="Calcular rota no Google Maps"><i class="bi bi-map"></i> Maps</a>{% endif %}
+                    {% if ficha.rota.waze_url %}<a href="{{ ficha.rota.waze_url }}" target="_blank" rel="noopener" class="ls-route-link waze" title="Calcular rota no Waze"><i class="bi bi-navigation"></i> Waze</a>{% endif %}
+                  </span>
                 {% else %}
-                  <span class="text-muted">Sem endereço</span>
+                  <span class="ls-status warning">Sem endereço</span>
                 {% endif %}
               </td>
 
@@ -237,12 +259,12 @@
       <nav class="ls-paginacao" aria-label="Páginas">
         {% if page_obj.has_previous %}
           <a class="btn btn-sm btn-outline-secondary"
-             href="?page={{ page_obj.previous_page_number }}&q={{ busca|urlencode }}&tipo={{ tipo_ativo }}&parceiro={{ parceiro_ativo }}">Anterior</a>
+             href="?page={{ page_obj.previous_page_number }}&q={{ busca|urlencode }}&tipo={{ tipo_ativo }}&parceiro={{ parceiro_ativo }}{% if apenas_incompletos %}&incompletos=1{% endif %}">Anterior</a>
         {% endif %}
         <span>Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
         {% if page_obj.has_next %}
           <a class="btn btn-sm btn-outline-secondary"
-             href="?page={{ page_obj.next_page_number }}&q={{ busca|urlencode }}&tipo={{ tipo_ativo }}&parceiro={{ parceiro_ativo }}">Próxima</a>
+             href="?page={{ page_obj.next_page_number }}&q={{ busca|urlencode }}&tipo={{ tipo_ativo }}&parceiro={{ parceiro_ativo }}{% if apenas_incompletos %}&incompletos=1{% endif %}">Próxima</a>
         {% endif %}
       </nav>
     {% endif %}
@@ -265,43 +287,43 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
       </div>
 
-      <div class="modal-body">
+      <div class="modal-body ls-compact-form">
         <div class="alert alert-danger d-none" id="clienteErro"></div>
 
         <div class="row g-3">
-          <div class="col-12 col-md-7">
+          <div class="col-12 col-md-6">
             <label class="form-label" for="clienteNome">Nome</label>
             <input class="form-control" id="clienteNome" name="nome_cliente"
                    data-rotulo="nome" maxlength="90" required
                    placeholder="Nome da pessoa, da empresa ou do buffet">
           </div>
 
-          <div class="col-12 col-md-5">
+          <div class="col-6 col-md-3">
             <label class="form-label" for="clienteTipo">Tipo de cadastro</label>
             <select class="form-select" id="clienteTipo" name="tipo">
               {% for valor, rotulo in tipos %}<option value="{{ valor }}">{{ rotulo }}</option>{% endfor %}
             </select>
           </div>
 
-          <div class="col-12 col-md-6">
+          <div class="col-6 col-md-3">
             <label class="form-label" for="clienteTelefone">Telefone / WhatsApp</label>
             <input class="form-control" id="clienteTelefone" name="telefone"
                    inputmode="tel" maxlength="24" placeholder="(11) 99999-9999" data-mascara="telefone">
           </div>
 
-          <div class="col-12 col-md-6">
+          <div class="col-12 col-md-5">
             <label class="form-label" for="clienteEmail">E-mail</label>
             <input type="email" class="form-control" id="clienteEmail" name="email"
                    maxlength="150" placeholder="cliente@empresa.com.br">
           </div>
 
-          <div class="col-12 col-md-6">
+          <div class="col-6 col-md-3">
             <label class="form-label" for="clienteDocumento">CPF ou CNPJ</label>
             <input class="form-control" id="clienteDocumento" name="documento"
                    maxlength="20" placeholder="Opcional" data-mascara="documento" inputmode="numeric">
           </div>
 
-          <div class="col-12 col-md-6" id="blocoParceiro">
+          <div class="col-12 col-md-4" id="blocoParceiro">
             <label class="form-label" for="clienteParceiroBusca">Veio por qual buffet?</label>
             <div id="clienteParceiroBox"></div>
             <span class="form-text">Deixe vazio quando o cliente chegou direto.</span>
@@ -328,7 +350,7 @@
         </div>
 
         <div class="row g-3">
-          <div class="col-6 col-md-3">
+          <div class="col-5 col-md-2">
             <label class="form-label" for="clienteCep">CEP</label>
             <input class="form-control" id="clienteCep" name="cep" maxlength="18" inputmode="numeric" data-mascara="cep">
           </div>
@@ -336,29 +358,29 @@
             <label class="form-label" for="clienteEndereco">Rua</label>
             <input class="form-control" id="clienteEndereco" name="endereco" maxlength="120">
           </div>
-          <div class="col-6 col-md-3">
+          <div class="col-3 col-md-2">
             <label class="form-label" for="clienteNumero">Número</label>
             <input class="form-control" id="clienteNumero" name="numero" maxlength="10"
                    placeholder="104 ou S/N">
           </div>
-          <div class="col-12 col-md-4">
+          <div class="col-12 col-md-2">
             <label class="form-label" for="clienteComplemento">Complemento</label>
             <input class="form-control" id="clienteComplemento" name="complemento" maxlength="60"
                    placeholder="Bloco, sala, referência">
           </div>
-          <div class="col-12 col-md-4">
+          <div class="col-12 col-md-3">
             <label class="form-label" for="clienteBairro">Bairro</label>
             <input class="form-control" id="clienteBairro" name="bairro" maxlength="50">
           </div>
-          <div class="col-8 col-md-5">
+          <div class="col-8 col-md-4">
             <label class="form-label" for="clienteCidade">Cidade</label>
             <input class="form-control" id="clienteCidade" name="cidade" maxlength="60">
           </div>
-          <div class="col-4 col-md-3">
+          <div class="col-4 col-md-2">
             <label class="form-label" for="clienteEstado">Estado</label>
             <input class="form-control" id="clienteEstado" name="estado" maxlength="20" placeholder="SP">
           </div>
-          <div class="col-12 col-md-4">
+          <div class="col-12 col-md-3">
             <label class="form-label" for="clientePais">País</label>
             <input class="form-control" id="clientePais" name="pais" maxlength="60" value="Brasil">
             <span class="form-text">Cliente fora do Brasil não tem CEP: preencha cidade, estado e país.</span>
@@ -613,7 +635,7 @@ document.addEventListener("DOMContentLoaded", function () {
         ? "Marcado, mas ainda sem localização: confira o CEP ou a cidade."
         : "";
 
-    campoTipo.value = cliente ? cliente.tipo : "pessoa";
+    campoTipo.value = cliente ? cliente.tipo : "residencial";
     buscaEstabelecimento.definirValor(cliente ? cliente.estabelecimento : "", false);
     buscaParceiro.definirValor(cliente ? cliente.parceiro : "", false);
 

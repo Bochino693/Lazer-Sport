@@ -65,6 +65,7 @@ class EstadoAvisosView(View):
                 "count_producao",
                 "count_orcamentos",
                 "count_ordens_servico",
+                "count_clientes_incompletos",
             )
         }
         corpo = {

@@ -25,7 +25,8 @@ from django.utils import timezone
 
 from core.models import Manutencao, Pedido, Venda
 
-from .models import EstoqueMaterial, Orcamento, OrdemProducao, OrdemServico
+from .completude_clientes import filtro_incompletos
+from .models import Cliente, EstoqueMaterial, Orcamento, OrdemProducao, OrdemServico
 from .permissoes import GESTAO, capacidades, limitar_orcamentos, tem_funcao
 
 #: Rotas do painel. Passado na mão porque um pedido que chegue por fora
@@ -246,6 +247,28 @@ def _estoque():
     )]
 
 
+def _clientes_incompletos():
+    """Cadastros que ainda não sustentam orçamento, contato e deslocamento."""
+    total = (
+        Cliente.objects
+        .filter(ativo=True)
+        .filter(filtro_incompletos())
+        .distinct()
+        .count()
+    )
+    if not total:
+        return []
+    return [Aviso(
+        chave="clientes_incompletos",
+        titulo="Cadastro de cliente incompleto" if total == 1 else "Cadastros de clientes incompletos",
+        detalhe="Falta contato, CPF/CNPJ ou endereço. Toque para corrigir.",
+        quantidade=total,
+        url=reverse("clientes_inner", urlconf=URLCONF) + "?incompletos=1",
+        nivel="atencao",
+        icone="bi-person-exclamation",
+    )]
+
+
 def _producao(user, gestor):
     producoes = OrdemProducao.objects.exclude(
         status__in=[OrdemProducao.Status.CONCLUIDA, OrdemProducao.Status.CANCELADA]
@@ -287,6 +310,9 @@ def coletar(user):
     if acesso["orcamentos"]:
         avisos += _orcamentos(user, hoje)
         avisos += _respostas_de_cliente(user, timezone.now())
+
+    if acesso["clientes"]:
+        avisos += _clientes_incompletos()
 
     if acesso["operacao"]:
         avisos += _operacao(acesso)

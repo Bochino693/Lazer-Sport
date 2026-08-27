@@ -24,8 +24,10 @@ from django.views.generic import View
 from core.models import Estabelecimentos
 
 from . import clientes as svc
+from .completude_clientes import filtro_incompletos, pendencias_do_cliente
 from .models import Cliente, EnderecoCliente, Orcamento
 from .permissoes import pode_excluir_cliente
+from .rotas import dados_rota, origem_empresa
 from .utils import ErroDeFormulario, exigir_confirmacao_exclusao
 from .views import GestorInternoRequiredMixin, RespostaJSONMixin
 
@@ -45,6 +47,7 @@ class ClientesInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
         busca = (request.GET.get("q") or "").strip()
         tipo = (request.GET.get("tipo") or "").strip()
         parceiro = (request.GET.get("parceiro") or "").strip()
+        apenas_incompletos = (request.GET.get("incompletos") or "") == "1"
 
         consulta = (
             Cliente.objects
@@ -73,6 +76,9 @@ class ClientesInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
         if parceiro.isdigit():
             consulta = consulta.filter(parceiro_id=int(parceiro))
 
+        if apenas_incompletos:
+            consulta = consulta.filter(filtro_incompletos()).distinct()
+
         pagina = Paginator(consulta, self.POR_PAGINA).get_page(
             request.GET.get("page")
         )
@@ -80,22 +86,25 @@ class ClientesInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
         # A lista vira list() para os totais calculados abaixo não se
         # perderem quando o template percorrer a página de novo.
         pagina.object_list = list(pagina.object_list)
-        fichas = [self.ficha(cliente) for cliente in pagina.object_list]
+        origem = origem_empresa()
+        fichas = [self.ficha(cliente, origem) for cliente in pagina.object_list]
 
         todos = Cliente.objects.all()
         buffets = list(
             todos.filter(tipo=Cliente.Tipo.BUFFET).order_by("nome_cliente")
         )
         totais = todos.aggregate(
-            clientes=Count("id"),
-            buffets=Count("id", filter=Q(tipo=Cliente.Tipo.BUFFET)),
-            vinculados=Count("id", filter=Q(parceiro__isnull=False)),
+            clientes=Count("id", distinct=True),
+            buffets=Count("id", filter=Q(tipo=Cliente.Tipo.BUFFET), distinct=True),
+            vinculados=Count("id", filter=Q(parceiro__isnull=False), distinct=True),
             sem_contato=Count(
                 "id",
                 filter=(Q(telefone="") | Q(telefone__isnull=True))
                 & (Q(email="") | Q(email__isnull=True)),
+                distinct=True,
             ),
-            no_mapa=Count("id", filter=Q(publicar_no_mapa=True, ativo=True)),
+            no_mapa=Count("id", filter=Q(publicar_no_mapa=True, ativo=True), distinct=True),
+            incompletos=Count("id", filter=filtro_incompletos(), distinct=True),
         )
 
         ids_da_pagina = [cliente.pk for cliente in pagina.object_list]
@@ -112,6 +121,7 @@ class ClientesInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
             "busca": busca,
             "tipo_ativo": tipo,
             "parceiro_ativo": parceiro,
+            "apenas_incompletos": apenas_incompletos,
             "tipos": Cliente.Tipo.choices,
             "buffets": buffets,
             "estabelecimentos": estabelecimentos_disponiveis,
@@ -120,6 +130,8 @@ class ClientesInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
             "total_vinculados": totais["vinculados"],
             "total_sem_contato": totais["sem_contato"],
             "total_no_mapa": totais["no_mapa"],
+            "total_incompletos": totais["incompletos"],
+            "empresa_localizacao": origem,
             "clientes_dados": [self.serializar(c) for c in pagina.object_list],
             "opcoes_buffets": [
                 {
@@ -143,7 +155,7 @@ class ClientesInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
         return render(request, self.template_name, contexto)
 
     @staticmethod
-    def ficha(cliente: Cliente) -> dict:
+    def ficha(cliente: Cliente, origem: dict) -> dict:
         """O que a lista mostra de cada cliente, já somado.
 
         Os orçamentos vêm no prefetch, então a soma acontece em memória:
@@ -157,9 +169,12 @@ class ClientesInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
         ]
         abertos = [o for o in orcamentos if o.status in Orcamento.EM_ABERTO]
 
+        endereco = cliente.endereco_principal
         return {
             "obj": cliente,
-            "endereco": cliente.endereco_principal,
+            "endereco": endereco,
+            "pendencias": pendencias_do_cliente(cliente),
+            "rota": dados_rota(destino=endereco, origem=origem),
             "orcamentos": len(orcamentos),
             "aprovados": len(aprovados),
             "abertos": len(abertos),

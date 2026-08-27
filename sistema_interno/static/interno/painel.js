@@ -829,7 +829,61 @@
     relogio: null,
     parado: false,
     ouvintes: [],
+    inicializado: false,
+    quantidades: {},
   };
+
+  /* Som curto gerado pelo próprio navegador: não baixa MP3, funciona
+     offline e não cria mais uma requisição. Navegadores só liberam áudio
+     depois do primeiro toque/clique; até lá a central continua visual. */
+  var contextoDeAudio = null;
+
+  function prepararSom() {
+    if (contextoDeAudio) return contextoDeAudio;
+    var Construtor = global.AudioContext || global.webkitAudioContext;
+    if (!Construtor) return null;
+    try {
+      contextoDeAudio = new Construtor();
+      if (contextoDeAudio.state === "suspended") contextoDeAudio.resume();
+    } catch (e) {
+      contextoDeAudio = null;
+    }
+    return contextoDeAudio;
+  }
+
+  function tocarSomDeAviso() {
+    var audio = prepararSom();
+    if (!audio || audio.state !== "running") return;
+    var inicio = audio.currentTime;
+    [0, 0.13].forEach(function (atraso, indice) {
+      var oscilador = audio.createOscillator();
+      var ganho = audio.createGain();
+      oscilador.type = "sine";
+      oscilador.frequency.value = indice ? 880 : 660;
+      ganho.gain.setValueAtTime(0.0001, inicio + atraso);
+      ganho.gain.exponentialRampToValueAtTime(0.09, inicio + atraso + 0.012);
+      ganho.gain.exponentialRampToValueAtTime(0.0001, inicio + atraso + 0.11);
+      oscilador.connect(ganho);
+      ganho.connect(audio.destination);
+      oscilador.start(inicio + atraso);
+      oscilador.stop(inicio + atraso + 0.12);
+    });
+  }
+
+  function houveAvisoNovo(dados) {
+    var atuais = {};
+    var novo = false;
+    (dados.avisos || []).forEach(function (item) {
+      var quantidade = Number(item.quantidade) || 0;
+      atuais[item.chave] = quantidade;
+      if (avisos.inicializado && quantidade > (avisos.quantidades[item.chave] || 0)) {
+        novo = true;
+      }
+    });
+    avisos.quantidades = atuais;
+    if (!avisos.inicializado) avisos.inicializado = true;
+    return novo;
+  }
 
   function pintarSelo(elemento, quantidade) {
     if (!elemento) return;
@@ -916,8 +970,10 @@
              central piscar debaixo do dedo de quem está lendo. */
           return dados;
         }
+        var avisoNovo = houveAvisoNovo(dados);
         avisos.assinatura = dados.assinatura || null;
         desenharAvisos(dados);
+        if (avisoNovo && document.visibilityState === "visible") tocarSomDeAviso();
         avisos.ouvintes.forEach(function (fn) {
           try { fn(dados); } catch (e) {}
         });
@@ -956,6 +1012,10 @@
        mão aqui: quem manda no endereço é o urls.py. */
     avisos.endereco = document.body.getAttribute("data-avisos") || "";
     if (!avisos.endereco) return;
+
+    ["pointerdown", "keydown"].forEach(function (evento) {
+      document.addEventListener(evento, prepararSom, { once: true, passive: true });
+    });
 
     /* A assinatura do que já está na tela: assim a primeira resposta não
        redesenha uma central que já está certa. */
