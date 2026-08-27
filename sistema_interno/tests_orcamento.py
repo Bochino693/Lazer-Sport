@@ -45,6 +45,8 @@ def aprovar_blocos(orcamento, avaliador):
 class OrcamentoInternoTests(TestCase):
 
     URL = "/orcamentos/"
+    #: Espelha `OrcamentosInnerView.POR_PAGINA`; conferido logo abaixo.
+    POR_PAGINA_ESPERADA = 25
 
     def setUp(self):
         self.gestor = User.objects.create_superuser(
@@ -72,6 +74,117 @@ class OrcamentoInternoTests(TestCase):
             dados,
             HTTP_HOST="interno.testserver",
             HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+    # ------------------------------------------------------- paginação
+    def test_lista_vem_por_pagina(self):
+        """A tela não era paginada e a resposta crescia com o histórico.
+
+        Cada linha carrega os itens, o texto pronto do WhatsApp e a
+        proposta inteira em JSON para o modal -- com algumas centenas de
+        propostas virava megabytes de HTML, e no servidor a resposta
+        estourava o tempo do gunicorn (o 502 ao abrir Orçamentos).
+        """
+        for i in range(OrcamentoInternoTests.POR_PAGINA_ESPERADA + 7):
+            Orcamento.objects.create(
+                nome_cliente=f"Cliente {i}",
+                contato="(11) 90000-0000",
+            )
+
+        resposta = self.client.get(self.URL, HTTP_HOST="interno.testserver")
+        pagina = resposta.context["page_obj"]
+
+        self.assertEqual(
+            len(pagina.object_list), OrcamentoInternoTests.POR_PAGINA_ESPERADA
+        )
+        self.assertTrue(pagina.has_next())
+
+    def test_os_numeros_do_topo_somam_o_filtro_inteiro(self):
+        """Se mudassem ao virar de página, não responderiam nada.
+
+        A soma sai de uma subconsulta em SQL; este teste compara com o
+        cálculo em Python (`Orcamento.total`), que é a definição.
+        """
+        aprovados = []
+        for i in range(OrcamentoInternoTests.POR_PAGINA_ESPERADA + 5):
+            orcamento = Orcamento.objects.create(
+                nome_cliente=f"Fechado {i}",
+                contato="(11) 90000-0000",
+                status=Orcamento.Status.APROVADO,
+                frete=Decimal("120.00"),
+                desconto=Decimal("30.00"),
+            )
+            ItemOrcamento.objects.create(
+                orcamento=orcamento,
+                descricao="Locação",
+                quantidade=2,
+                valor_unitario=Decimal("310.50"),
+            )
+            aprovados.append(orcamento)
+
+        esperado = sum((o.total for o in aprovados), Decimal("0.00"))
+
+        resposta = self.client.get(self.URL, HTTP_HOST="interno.testserver")
+
+        self.assertEqual(resposta.context["total_aprovado"], esperado)
+        self.assertEqual(resposta.context["quantidade_aprovado"], len(aprovados))
+        # E a página mostra menos linhas do que o número somado.
+        self.assertLess(
+            len(resposta.context["page_obj"].object_list), len(aprovados)
+        )
+
+    def test_o_desconto_maior_que_o_total_nao_vira_numero_negativo(self):
+        """`Orcamento.total` trava em zero; a soma em SQL precisa travar também."""
+        orcamento = Orcamento.objects.create(
+            nome_cliente="Desconto grande",
+            contato="(11) 90000-0000",
+            status=Orcamento.Status.APROVADO,
+            desconto=Decimal("900.00"),
+        )
+        ItemOrcamento.objects.create(
+            orcamento=orcamento,
+            descricao="Locação",
+            quantidade=1,
+            valor_unitario=Decimal("100.00"),
+        )
+
+        resposta = self.client.get(self.URL, HTTP_HOST="interno.testserver")
+
+        self.assertEqual(orcamento.total, Decimal("0.00"))
+        self.assertEqual(resposta.context["total_aprovado"], Decimal("0.00"))
+
+    def test_a_busca_por_texto_de_item_nao_infla_o_total(self):
+        """Buscar por item entra por join, e join multiplica linha.
+
+        Somar por cima desse join contaria o mesmo item várias vezes -- o
+        total apareceria inflado justamente quando alguém filtrasse.
+        """
+        orcamento = Orcamento.objects.create(
+            nome_cliente="Com três itens",
+            contato="(11) 90000-0000",
+            status=Orcamento.Status.APROVADO,
+        )
+        for i in range(3):
+            ItemOrcamento.objects.create(
+                orcamento=orcamento,
+                descricao=f"Cama elástica {i}",
+                quantidade=1,
+                valor_unitario=Decimal("100.00"),
+            )
+
+        resposta = self.client.get(
+            self.URL, {"q": "Cama elástica"}, HTTP_HOST="interno.testserver"
+        )
+
+        self.assertEqual(resposta.context["total_aprovado"], orcamento.total)
+        self.assertEqual(resposta.context["total_orcamentos"], 1)
+
+    def test_a_pagina_do_teste_acompanha_a_da_view(self):
+        """Se a view mudar o tamanho da página, os testes acima sabem."""
+        from .views_gestao import OrcamentosInnerView
+
+        self.assertEqual(
+            OrcamentosInnerView.POR_PAGINA, self.POR_PAGINA_ESPERADA
         )
 
     # -------------------------------------------------------- catálogo

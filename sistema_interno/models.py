@@ -1352,15 +1352,36 @@ class HistoricoProducao(Prime):
 # ======================================================================
 # ORÇAMENTOS
 # ======================================================================
+# Letras e números, e SÓ letras e números. A ausência do "_" e do "-" é o
+# ponto do alfabeto, não um detalhe de estilo -- ver gerar_token_orcamento.
+ALFABETO_DO_TOKEN = (
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    "abcdefghijklmnopqrstuvwxyz"
+    "0123456789"
+)
+
+TAMANHO_DO_TOKEN = 32
+
+
 def gerar_token_orcamento():
     """Chave da página que o cliente abre.
 
-    token_urlsafe(24) dá 32 caracteres de 192 bits. É o que substitui uma
-    senha: a página pública é aberta por quem tiver o link, então o link
-    precisa ser impossível de adivinhar. Sequencial ou UUID1 não serviriam
-    -- de um orçamento se chegaria ao do concorrente.
+    32 caracteres sorteados de um alfabeto de 62 dão ~190 bits. É o que
+    substitui uma senha: a página pública é aberta por quem tiver o link,
+    então o link precisa ser impossível de adivinhar. Sequencial ou UUID1
+    não serviriam -- de um orçamento se chegaria ao do concorrente.
+
+    POR QUE NÃO `secrets.token_urlsafe`. Ele sorteia também "_" e "-", e
+    era o que quebrava a proposta no WhatsApp: o aplicativo trata "_" como
+    marca de itálico, e um token como `_uYep...PBTrD` chegava do outro
+    lado em itálico e SEM os sublinhados -- o cliente clicava e caía num
+    404. O mesmo vale para colar o link em qualquer conversa que formate
+    texto. Trocar o alfabeto resolve na origem, e sem tocar em nada: os
+    tokens antigos continuam valendo, porque o campo só guarda texto.
     """
-    return secrets.token_urlsafe(24)
+    return "".join(
+        secrets.choice(ALFABETO_DO_TOKEN) for _ in range(TAMANHO_DO_TOKEN)
+    )
 
 
 class Orcamento(Prime):

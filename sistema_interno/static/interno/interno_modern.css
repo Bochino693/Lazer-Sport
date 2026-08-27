@@ -2064,3 +2064,34 @@ input[type="number"]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0
   .ls-delete-modal .modal-footer{grid-template-columns:1fr}
   .ls-delete-modal .modal-footer .btn{grid-column:1!important}
 }
+
+/* ======================================================================
+   PAGINAÇÃO
+   ----------------------------------------------------------------------
+   Clientes e Orçamentos vêm por página. O rodapé da lista precisa dizer
+   três coisas de uma olhada: onde estou, quanto tem no total, e para onde
+   dá para ir. Sem o total, "Próxima" vira um botão de fé.
+   ====================================================================== */
+.ls-paginacao{
+  display:flex;flex-wrap:wrap;align-items:center;justify-content:center;
+  gap:10px 14px;margin:18px 0 4px;padding:12px 14px;
+  border-top:1px solid var(--ls-linha,rgba(255,255,255,.08));
+}
+.ls-paginacao > span{
+  font-size:.86rem;font-weight:600;letter-spacing:.01em;
+  color:var(--ls-texto-2,rgba(255,255,255,.62));
+  text-align:center;
+}
+.ls-paginacao .btn{
+  min-height:38px;padding-inline:16px;font-weight:700;white-space:nowrap;
+}
+
+/* No celular os dois botões dividem a linha e a contagem fica em cima:
+   polegar não acerta link de 12px encostado no outro. */
+@media (max-width:560px){
+  .ls-paginacao{
+    display:grid;grid-template-columns:1fr 1fr;gap:10px;
+  }
+  .ls-paginacao > span{grid-column:1 / -1;order:-1}
+  .ls-paginacao .btn{width:100%}
+}

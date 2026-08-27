@@ -249,6 +249,31 @@
         </tbody>
       </table>
     </div>
+
+    {% if page_obj.has_other_pages %}
+      {% comment %}
+        A tela não era paginada, e cada linha carrega muito: os itens, o
+        texto pronto do WhatsApp e a proposta inteira em JSON para o modal
+        de edição. Com algumas centenas de propostas isso virava megabytes
+        de HTML, e no servidor a resposta estourava o tempo do gunicorn --
+        o 502 ao abrir Orçamentos. Os números do topo continuam somando o
+        filtro inteiro; só a lista é que vem por página.
+      {% endcomment %}
+      <nav class="ls-paginacao" aria-label="Páginas">
+        {% if page_obj.has_previous %}
+          <a class="btn btn-sm btn-outline-secondary"
+             href="?page={{ page_obj.previous_page_number }}&q={{ busca|urlencode }}&status={{ status_ativo }}&origem={{ origem_ativa }}">Anterior</a>
+        {% endif %}
+        <span>
+          Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
+          · {{ page_obj.paginator.count }} proposta{{ page_obj.paginator.count|pluralize }}
+        </span>
+        {% if page_obj.has_next %}
+          <a class="btn btn-sm btn-outline-secondary"
+             href="?page={{ page_obj.next_page_number }}&q={{ busca|urlencode }}&status={{ status_ativo }}&origem={{ origem_ativa }}">Próxima</a>
+        {% endif %}
+      </nav>
+    {% endif %}
   </div>
 </section>
 

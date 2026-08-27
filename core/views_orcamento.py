@@ -30,6 +30,7 @@ from django.views.generic import View
 
 from core.models import EnderecoEmpresa
 from sistema_interno.models import Orcamento
+from sistema_interno.utils import endereco_do_site
 
 
 def carregar_orcamento_exibicao(**filtros):
@@ -96,13 +97,30 @@ def contexto_orcamento(orcamento, *, previsualizacao=False, request=None):
             break
     if not imagem_previa:
         imagem_previa = static("images/logoofi.png")
-    if request is not None and not imagem_previa.startswith("http"):
+
+    # O ENDEREÇO DO CARTÃO É O CANÔNICO, não o host de quem abriu.
+    #
+    # `request.build_absolute_uri` devolveria o host da vez -- com www ou
+    # sem, http em desenvolvimento, o domínio interno numa prévia. O
+    # WhatsApp guarda o cartão pela og:url, então dois hosts para a mesma
+    # proposta viram dois cartões, e um deles aponta para um endereço que
+    # o servidor de pré-visualização do aplicativo não alcança.
+    base_publica = endereco_do_site(request) if request is not None else ""
+    endereco_publico = (
+        f"{base_publica}{orcamento.caminho_publico}"
+        if base_publica and orcamento.token
+        else (request.build_absolute_uri() if request is not None else "")
+    )
+    if base_publica and not imagem_previa.startswith("http"):
+        imagem_previa = f"{base_publica}{imagem_previa}"
+    elif request is not None and not imagem_previa.startswith("http"):
         imagem_previa = request.build_absolute_uri(imagem_previa)
 
     return {
         "orcamento": orcamento,
         "itens": itens,
         "imagem_previa": imagem_previa,
+        "endereco_publico": endereco_publico,
         "empresa": empresa,
         # O CONTATO DA PROPOSTA É O DA EMPRESA, não o de quem montou.
         #
