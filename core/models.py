@@ -1311,7 +1311,7 @@ class Manutencao(models.Model):
         ('P', 'Pendente'),
         ('A', 'Em andamento'),
         ('C', 'Concluída'),
-        ('X', 'cancelada'),
+        ('X', 'Cancelada'),
     ]
 
     brinquedo = models.ForeignKey(
