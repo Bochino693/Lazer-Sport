@@ -2292,3 +2292,63 @@ a.ls-metric-card.active{border-color:var(--metric);box-shadow:0 0 0 2px rgba(242
   .ls-route-actions{gap:5px}
   .ls-route-link,.ls-distance-chip{min-height:30px}
 }
+
+/* ======================================================================
+   ACABAMENTO COMERCIAL V20 — envio, datas e selects previsíveis
+   ====================================================================== */
+.form-select:not([multiple]){
+  -webkit-appearance:none!important;appearance:none!important;
+  transition:border-color .16s ease,box-shadow .16s ease!important;
+}
+/* Em telas por toque o estado :hover pode ficar preso depois que a lista
+   fecha. O fundo não muda mais; só mouse de verdade recebe realce de borda. */
+.form-select:not([multiple]):hover{background-color:#241c10!important}
+@media (hover:hover) and (pointer:fine){
+  .form-select:not([multiple]):hover{border-color:#a17d42!important}
+}
+@media (hover:none), (pointer:coarse){
+  .form-select:not([multiple]):hover{border-color:#735f3b!important;box-shadow:none!important}
+}
+
+.ls-date-shortcuts{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+.ls-date-shortcuts .ls-chip{min-height:27px;padding:4px 8px;font-size:.67rem}
+
+.ls-share-preview{
+  display:grid;grid-template-columns:46px minmax(0,1fr) auto;align-items:center;gap:12px;
+  margin:12px 0 16px;padding:13px 14px;border:1px solid rgba(95,137,255,.24);
+  border-radius:15px;background:linear-gradient(135deg,rgba(44,86,185,.14),rgba(226,26,44,.05));
+}
+.ls-share-preview-mark{
+  width:46px;height:46px;display:grid;place-items:center;border-radius:13px;
+  color:#9fc3ff;background:rgba(53,104,218,.18);font-size:1.25rem;
+}
+.ls-share-preview-copy{display:grid;gap:2px;min-width:0}
+.ls-share-preview-copy>span{color:#8fa7ca;font-size:.66rem;font-weight:850;letter-spacing:.65px;text-transform:uppercase}
+.ls-share-preview-copy>strong{color:#fff;font-size:.88rem;line-height:1.25;overflow-wrap:anywhere}
+.ls-share-preview-copy>small{color:rgba(255,255,255,.6);font-size:.72rem;line-height:1.3}
+.ls-message-preview{border:1px solid rgba(255,255,255,.1);border-radius:12px;overflow:hidden;background:rgba(0,0,0,.12)}
+.ls-message-preview summary{padding:10px 12px;color:#a9bee1;font-size:.75rem;font-weight:800;cursor:pointer;list-style:none}
+.ls-message-preview summary::-webkit-details-marker{display:none}
+.ls-message-preview[open] summary{border-bottom:1px solid rgba(255,255,255,.08)}
+.ls-message-preview pre{
+  max-height:220px;margin:0;padding:12px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;
+  color:#e8edf8;background:rgba(5,9,18,.3);font:500 .75rem/1.55 Manrope,system-ui,sans-serif;
+}
+#modalLink .alert{font-size:.78rem;line-height:1.45}
+
+@media (min-width:761px) and (max-width:980px){
+  #modalLink .modal-dialog,#modalEnviarOS .modal-dialog{max-width:calc(100vw - 28px);margin-inline:auto}
+  #modalLink .modal-body,#modalEnviarOS .modal-body{padding:14px}
+  #modalLink .row,#modalEnviarOS .row{--bs-gutter-y:.65rem}
+  .ls-share-preview{margin-top:8px;padding:10px 11px}
+}
+@media (max-width:575px){
+  .ls-share-preview{grid-template-columns:40px minmax(0,1fr);gap:9px}
+  .ls-share-preview-mark{width:40px;height:40px}
+  .ls-share-preview>a{grid-column:1/-1;width:100%}
+  .ls-date-shortcuts .ls-chip{flex:1 1 auto}
+  #modalEnviarOS .input-group{display:grid;grid-template-columns:46px minmax(0,1fr)}
+  #modalEnviarOS .input-group>.input-group-text{grid-column:1;border-radius:11px 0 0 11px!important}
+  #modalEnviarOS .input-group>.form-control{grid-column:2;border-radius:0 11px 11px 0!important}
+  #modalEnviarOS .input-group>.btn{grid-column:1/-1;margin-top:8px;border-radius:11px!important}
+}

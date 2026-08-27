@@ -22,7 +22,7 @@ noindex não é detalhe: a página é aberta por link, e um orçamento
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Lazer &amp; Sport Brinquedos">
 <meta property="og:title" content="Proposta nº {{ orcamento.pk }} — {{ orcamento.destinatario }}">
-<meta property="og:description" content="{{ quantidade_itens }} item(ns) · Total R$ {{ total|floatformat:2 }}. Abra para conferir os detalhes e responder.">
+<meta property="og:description" content="{{ quantidade_itens }} item(ns) · Total R$ {{ total|moeda }}. Abra para conferir os detalhes e responder.">
 <meta property="og:url" content="{{ endereco_publico }}">
 <link rel="canonical" href="{{ endereco_publico }}">
 <meta property="og:image" content="{{ imagem_previa }}">
@@ -279,6 +279,16 @@ body{
 .rodape{text-align:center;color:var(--tinta-3);font-size:.8rem;margin-top:26px;line-height:1.8}
 .rodape a{color:var(--marca);font-weight:700;text-decoration:none}
 .rodape a:hover{text-decoration:underline}
+.documento-acoes{
+  display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;
+  margin:16px 0 0;padding:14px 16px;border:1px solid var(--linha);border-radius:16px;
+  background:rgba(255,255,255,.72);color:var(--tinta-2);font-size:.78rem;
+}
+.documento-acoes button{
+  min-height:42px;padding:10px 15px;border:1px solid var(--linha-forte);border-radius:12px;
+  background:#fff;color:var(--marca);font:inherit;font-size:.82rem;font-weight:800;cursor:pointer;
+}
+.documento-acoes button:hover{border-color:var(--marca);background:var(--marca-clara)}
 
 /* ------------------------------------------------------------- telas */
 @media (max-width:820px){
@@ -310,13 +320,14 @@ body{
   .comercial-grid{grid-template-columns:1fr}.comercial-item{padding:16px 17px}
   .pix-box{grid-template-columns:1fr;text-align:center}.pix-qr{margin:auto}
   .pix-copy{flex-direction:column}.pix-copy button{min-height:48px}
+  .documento-acoes{align-items:stretch}.documento-acoes button{width:100%}
 }
 
 /* ---------------------------------------------------------- impressão */
 @media print{
   body{background:#fff}
   .envelope{max-width:none;padding:0}
-  .decisao,.rodape .nao-imprime,.previa-bar{display:none}
+  .decisao,.rodape .nao-imprime,.previa-bar,.documento-acoes{display:none}
   .capa{box-shadow:none;border-radius:0;
     /* impressora costuma descartar fundo; o texto precisa sobreviver */
     -webkit-print-color-adjust:exact;print-color-adjust:exact}
@@ -349,6 +360,7 @@ body{
       <h1>Orçamento</h1>
       <dl class="meta-lista">
         <div class="meta-linha"><dt>Data</dt><dd>{{ orcamento.criacao|date:"d/m/Y" }}</dd></div>
+        <div class="meta-linha"><dt>Atualização</dt><dd>{{ orcamento.atualizado|date:"d/m/Y \à\s H:i" }}</dd></div>
         <div class="meta-linha"><dt>Nº do orçamento</dt><dd>{{ orcamento.numero_documento }}</dd></div>
         <div class="meta-linha"><dt>Versão</dt><dd>{{ orcamento.versao }}</dd></div>
         <div class="meta-linha"><dt>Responsável</dt><dd>{{ responsavel_nome }}</dd></div>
@@ -659,6 +671,11 @@ body{
     </section>
   {% endif %}
 
+  <div class="documento-acoes nao-imprime entra" style="--i:5">
+    <span>Documento atualizado em {{ orcamento.atualizado|date:"d/m/Y \à\s H:i" }}. Você pode guardar uma cópia em PDF.</span>
+    <button type="button" id="imprimirProposta">▣ Imprimir ou salvar em PDF</button>
+  </div>
+
   <p class="rodape">
     Lazer &amp; Sport Brinquedos ·
     <a href="https://www.lazersport.com.br">lazersport.com.br</a>
@@ -724,6 +741,11 @@ body{
     var ativo = form.querySelector('[data-decisao="' + campoDecisao.value + '"]');
     if (ativo) ativo.textContent = "Registrando...";
   });
+})();
+
+(function () {
+  var botaoImprimir = document.getElementById("imprimirProposta");
+  if (botaoImprimir) botaoImprimir.addEventListener("click", function () { window.print(); });
 })();
 
 (function () {

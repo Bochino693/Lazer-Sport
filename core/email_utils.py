@@ -13,12 +13,20 @@ Dois pontos que decidem se a mensagem chega e se a resposta volta:
 
 from __future__ import annotations
 
+from email.utils import formataddr, parseaddr
+
 from django.conf import settings
 
 
 def remetente() -> str:
     """Endereço que assina o envio, no formato 'Nome <e-mail>'."""
-    return settings.DEFAULT_FROM_EMAIL
+    configurado = (getattr(settings, "DEFAULT_FROM_EMAIL", "") or "").strip()
+    nome, endereco = parseaddr(configurado)
+    if not endereco:
+        endereco = (getattr(settings, "EMAIL_HOST_USER", "") or "").strip()
+    if not endereco:
+        return configurado
+    return formataddr((nome or "Lazer & Sport Brinquedos", endereco))
 
 
 def _endereco_valido(valor: str) -> bool:
@@ -43,6 +51,10 @@ def responder_para(usuario=None) -> list[str]:
     if _endereco_valido(padrao) and padrao.strip() not in candidatos:
         candidatos.append(padrao.strip())
 
+    comercial = getattr(settings, "ORCAMENTO_EMAIL", "")
+    if _endereco_valido(comercial) and comercial.strip() not in candidatos:
+        candidatos.append(comercial.strip())
+
     return candidatos
 
 
@@ -60,3 +72,23 @@ def smtp_configurado() -> bool:
         getattr(settings, "EMAIL_HOST_USER", "")
         and getattr(settings, "EMAIL_HOST_PASSWORD", "")
     )
+
+
+def diagnostico_smtp() -> str:
+    """Explicação curta e segura para a tela de envio.
+
+    Não devolve host, usuário nem segredo. A equipe só precisa saber se o
+    envio está disponível e, quando não está, qual grupo de configuração
+    falta na hospedagem.
+    """
+    backend = getattr(settings, "EMAIL_BACKEND", "")
+    if "smtp" not in backend:
+        return "Envio de e-mail disponível pelo backend configurado."
+    faltam = []
+    if not getattr(settings, "EMAIL_HOST_USER", ""):
+        faltam.append("usuário")
+    if not getattr(settings, "EMAIL_HOST_PASSWORD", ""):
+        faltam.append("senha")
+    if faltam:
+        return "SMTP indisponível: falta " + " e ".join(faltam) + "."
+    return "SMTP configurado e pronto para tentativa de envio."

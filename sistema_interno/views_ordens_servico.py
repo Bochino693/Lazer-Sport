@@ -8,7 +8,6 @@ um como substituto do outro.
 import json
 import logging
 import re
-from datetime import datetime
 from decimal import Decimal
 from urllib.parse import quote
 
@@ -22,9 +21,10 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.dateparse import parse_date, parse_datetime
 from django.views.generic import View
 
-from core.email_utils import remetente, responder_para, smtp_configurado
+from core.email_utils import diagnostico_smtp, remetente, responder_para, smtp_configurado
 from core.models import Manutencao
 
 from . import clientes as svc_clientes
@@ -51,13 +51,37 @@ def _data_hora(valor, rotulo):
     valor = (valor or "").strip()
     if not valor:
         return None
-    try:
-        momento = datetime.fromisoformat(valor)
-    except ValueError:
+    # Aceita o formato nativo dos navegadores (YYYY-MM-DDTHH:MM) e o
+    # equivalente com espaço. Segundos são descartados: a agenda é uma
+    # decisão operacional, não um cronômetro.
+    momento = parse_datetime(valor.replace(" ", "T"))
+    if momento is None:
         raise ErroDeFormulario(f"{rotulo}: data ou hora inválida.")
     if timezone.is_naive(momento):
-        momento = timezone.make_aware(momento, timezone.get_current_timezone())
-    return momento
+        try:
+            momento = timezone.make_aware(
+                momento, timezone.get_current_timezone()
+            )
+        except (OverflowError, ValueError):
+            raise ErroDeFormulario(
+                f"{rotulo}: este horário não existe no fuso configurado."
+            )
+    return momento.replace(second=0, microsecond=0)
+
+
+def _data_calendario(valor, rotulo):
+    valor = (valor or "").strip()
+    if not valor:
+        return None
+    resultado = parse_date(valor)
+    if resultado is None:
+        raise ErroDeFormulario(f"{rotulo}: data inválida.")
+    return resultado
+
+
+def _moeda_br(valor):
+    numero = Decimal(valor or 0).quantize(Decimal("0.01"))
+    return f"{numero:,.2f}".replace(",", "_").replace(".", ",").replace("_", ".")
 
 
 class OrdensServicoInnerView(
@@ -215,6 +239,7 @@ class OrdensServicoInnerView(
             "prioridades": OrdemServico.Prioridade.choices,
             "item_tipos": ItemOrdemServico.Tipo.choices,
             "email_configurado": smtp_configurado(),
+            "email_diagnostico": diagnostico_smtp(),
             "pode_editar": acesso["ordens_servico_editar"],
             "pode_pagamento": acesso["ordens_servico_pagamento"],
         })
@@ -255,26 +280,19 @@ class OrdensServicoInnerView(
             "forma_pagamento": ordem.forma_pagamento,
             "status_pagamento": ordem.status_pagamento,
             "valor_pago": f"{ordem.valor_pago:.2f}".replace(".", ","),
+            "link_publico": getattr(ordem, "link_publico", ""),
+            "mensagem_whatsapp": getattr(ordem, "mensagem_whatsapp", ""),
+            "preview_url": reverse(
+                "ordem_servico_previa_inner", args=[ordem.pk],
+                urlconf="sistema_interno.urls",
+            ),
             "agendada_para": (
                 timezone.localtime(ordem.agendada_para).strftime("%Y-%m-%dT%H:%M")
                 if ordem.agendada_para else ""
             ),
             "garantia_ate": ordem.garantia_ate.isoformat() if ordem.garantia_ate else "",
             "tecnico": ordem.tecnico_id or "",
-            "envios": [{
-                "canal": envio.get_canal_display(),
-                "destino": envio.destino,
-                "sucesso": envio.sucesso,
-                "detalhe": envio.detalhe,
-                "quando": (
-                    timezone.localtime(envio.criacao).strftime("%d/%m/%Y %H:%M")
-                    if envio.criacao else ""
-                ),
-                "por": (
-                    envio.responsavel.get_full_name()
-                    or envio.responsavel.username
-                ) if envio.responsavel else "",
-            } for envio in ordem.envios.all()[:12]],
+            "envios": OrdensServicoInnerView.historico_envios(ordem),
             "itens": [{
                 "tipo": item.tipo,
                 "descricao": item.descricao,
@@ -331,9 +349,8 @@ class OrdensServicoInnerView(
         ordem.status = status
         ordem.prioridade = prioridade
         ordem.agendada_para = _data_hora(request.POST.get("agendada_para"), "Agendamento")
-        ordem.garantia_ate = (
-            datetime.strptime(request.POST["garantia_ate"], "%Y-%m-%d").date()
-            if (request.POST.get("garantia_ate") or "").strip() else None
+        ordem.garantia_ate = _data_calendario(
+            request.POST.get("garantia_ate"), "Garantia"
         )
         from django.contrib.auth.models import User
         ordem.tecnico = User.objects.filter(pk=tecnico_id).first() if tecnico_id.isdigit() else None
@@ -461,12 +478,24 @@ class OrdensServicoInnerView(
                 self._registrar_envio(request, ordem, canal, email, False, "SMTP não configurado.")
                 raise ErroDeFormulario("E-mail não configurado na hospedagem; use WhatsApp ou link.")
             destino = email
+            ordem.email_cliente = email
+            ordem.save(update_fields=["email_cliente", "atualizado"])
             corpo = (
                 f"Olá, {ordem.destinatario}.\n\n"
                 f"A {ordem.numero_documento} está disponível em {link}.\n\n"
                 "Você pode consultar, imprimir e confirmar o recebimento pelo link.\n\n"
                 "Lazer & Sport Brinquedos"
             )
+            html = render(
+                request,
+                "emails/ordem_servico_enviada.html",
+                {
+                    "ordem": ordem,
+                    "itens": ordem.itens.all(),
+                    "link": link,
+                    "total_formatado": _moeda_br(ordem.total),
+                },
+            ).content.decode()
             email_msg = EmailMultiAlternatives(
                 subject=f"Ordem de Serviço {ordem.numero_documento}",
                 body=corpo,
@@ -474,6 +503,7 @@ class OrdensServicoInnerView(
                 to=[email],
                 reply_to=responder_para(request.user),
             )
+            email_msg.attach_alternative(html, "text/html")
             try:
                 enviados = email_msg.send(fail_silently=False)
             except Exception as erro:
@@ -487,9 +517,14 @@ class OrdensServicoInnerView(
 
         ordem.marcar_enviada()
         self._registrar_envio(request, ordem, canal, destino)
+        extras["envios"] = self.historico_envios(ordem)
         return self.sucesso(
             request,
-            f"{ordem.numero_documento} pronta para enviar.",
+            (
+                f"{ordem.numero_documento} enviada por e-mail."
+                if canal == EnvioOrdemServico.Canal.EMAIL
+                else f"{ordem.numero_documento} liberada para o cliente."
+            ),
             whatsapp=ordem.whatsapp_destinatario,
             email=ordem.email_destinatario,
             **extras,
@@ -512,19 +547,50 @@ class OrdensServicoInnerView(
             )
 
     @staticmethod
+    def historico_envios(ordem, limite=12):
+        try:
+            return [{
+                "canal": envio.get_canal_display(),
+                "destino": envio.destino,
+                "sucesso": envio.sucesso,
+                "detalhe": envio.detalhe,
+                "quando": (
+                    timezone.localtime(envio.criacao).strftime("%d/%m/%Y %H:%M")
+                    if envio.criacao else ""
+                ),
+                "por": (
+                    envio.responsavel.get_full_name()
+                    or envio.responsavel.username
+                ) if envio.responsavel else "",
+            } for envio in ordem.envios.select_related("responsavel")[:limite]]
+        except Exception:
+            logging.getLogger(__name__).exception(
+                "Falha ao ler histórico de envio da O.S. %s", ordem.pk
+            )
+            return []
+
+    @staticmethod
     def mensagem(ordem, link):
         linhas = [
-            f"Olá, {ordem.destinatario}! Aqui é da Lazer & Sport.", "",
-            f"Sua {ordem.numero_documento} está disponível.",
-            f"Equipamento: {ordem.equipamento}",
-            f"Situação: {ordem.get_status_display()}",
+            f"Olá, {ordem.destinatario}! 👋", "",
+            f"Sua *{ordem.numero_documento}* da Lazer & Sport está disponível.", "",
+            f"*Equipamento:* {ordem.equipamento}",
+            f"*Situação:* {ordem.get_status_display()}",
+            f"*Total:* R$ {_moeda_br(ordem.total)}",
         ]
         if ordem.agendada_para:
             linhas.append(
                 "Agendamento: "
                 + timezone.localtime(ordem.agendada_para).strftime("%d/%m/%Y às %H:%M")
             )
-        linhas.extend(["", "Abra para consultar, imprimir e confirmar:", link])
+        linhas.extend([
+            "",
+            "Abra o documento para consultar itens, fotos do atendimento, "
+            "imprimir e confirmar o recebimento:",
+            link,
+            "",
+            "Se precisar, responda esta mensagem. 😊",
+        ])
         return "\n".join(linhas)
 
     @staticmethod
@@ -534,7 +600,7 @@ class OrdensServicoInnerView(
             digitos = "55" + digitos
         if len(digitos) < 12:
             return ""
-        return f"https://wa.me/{digitos}?text={quote(mensagem)}"
+        return f"https://wa.me/{digitos}?text={quote(mensagem, safe='')}"
 
 
 class OrdemServicoPreviaInnerView(OrdemServicoInternoRequiredMixin, View):

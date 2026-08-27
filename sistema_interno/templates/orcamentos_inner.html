@@ -183,6 +183,8 @@
                         data-link="{{ orcamento.link_publico }}"
                         data-mensagem="{{ orcamento.mensagem_whatsapp }}"
                         data-previa="{% url 'orcamento_previa_inner' orcamento.id %}"
+                        data-total="R$ {{ orcamento.total|moeda }}"
+                        data-validade="{% if orcamento.validade %}{{ orcamento.validade|date:'d/m/Y' }}{% endif %}"
                         value="{{ orcamento.id }}"
                         aria-label="Enviar orçamento {{ orcamento.id }}"
                         title="Gerar o link da proposta para mandar ao cliente">
@@ -356,6 +358,12 @@
           <div class="col-12 col-md-5">
             <label class="form-label" for="orcamentoValidade">Válido até</label>
             <input type="date" class="form-control" id="orcamentoValidade" name="validade">
+            <div class="ls-date-shortcuts" aria-label="Atalhos de validade">
+              <button type="button" class="ls-chip" data-validade-dias="7">7 dias</button>
+              <button type="button" class="ls-chip" data-validade-dias="15">15 dias</button>
+              <button type="button" class="ls-chip" data-validade-dias="30">30 dias</button>
+              <button type="button" class="ls-chip ls-chip-zerar" data-validade-limpar>Sem prazo</button>
+            </div>
           </div>
 
           <div class="col-12"><div class="ls-budget-block-title financeiro"><i class="bi bi-cash-stack"></i><span><strong>Bloco Financeiro</strong><small>Frete, desconto e condições de pagamento.</small></span></div></div>
@@ -757,7 +765,7 @@ Cadastro mínimo de propósito: nome, valor e categoria. Foto e texto de
     tela, sem barra de rolagem nenhuma -- a janela "não enquadrava".
     Assim o corpo rola por dentro e o cabeçalho fica sempre visível.
   {% endcomment %}
-  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title">Enviar proposta</h5>
@@ -765,8 +773,20 @@ Cadastro mínimo de propósito: nome, valor e categoria. Foto e texto de
       </div>
       <div class="modal-body">
         <div class="alert alert-danger d-none" id="linkErro"></div>
+        <div class="alert alert-success d-none" id="linkSucesso" role="status"></div>
         <p class="text-muted small mb-2">Escolha como compartilhar com <strong id="linkCliente"></strong>. O cliente abre uma página Lazer &amp; Sport com todos os detalhes e responde por ali.</p>
         <input type="hidden" id="linkOrcamentoId">
+        <section class="ls-share-preview" aria-label="Prévia do compartilhamento">
+          <div class="ls-share-preview-mark"><i class="bi bi-file-earmark-check"></i></div>
+          <div class="ls-share-preview-copy">
+            <span>Proposta Lazer &amp; Sport</span>
+            <strong id="linkPreviaTitulo">Documento pronto para o cliente</strong>
+            <small id="linkPreviaResumo">Itens, fotos, condições e resposta on-line.</small>
+          </div>
+          <a class="btn btn-sm btn-outline-primary" id="linkPreviaCard" href="#" target="_blank" rel="noopener" hidden>
+            <i class="bi bi-eye me-1"></i> Conferir
+          </a>
+        </section>
         <div class="row g-3 mb-3">
           <div class="col-12">
             <label class="form-label" for="linkWhatsapp">WhatsApp do cliente</label>
@@ -797,6 +817,7 @@ Cadastro mínimo de propósito: nome, valor e categoria. Foto e texto de
                 Use o WhatsApp ou copie o link. Para ligar, veja
                 <strong>docs/CONFIGURAR_EMAIL.md</strong> — faltam
                 <code>EMAIL_HOST_USER</code> e <code>EMAIL_HOST_PASSWORD</code>.
+                <span class="d-block mt-1">{{ email_diagnostico }}</span>
               </div>
             {% endif %}
           </div>
@@ -812,6 +833,10 @@ Cadastro mínimo de propósito: nome, valor e categoria. Foto e texto de
           O botão do WhatsApp abre a conversa com a proposta escrita.
           Confirme o envio dentro do WhatsApp para o cliente receber.
         </p>
+        <details class="ls-message-preview mb-3">
+          <summary><i class="bi bi-chat-left-text me-1"></i> Ver mensagem que será enviada</summary>
+          <pre id="linkMensagemPrevia"></pre>
+        </details>
         <label class="form-label" for="linkCampo">Ou compartilhe o link</label>
         <div class="input-group">
           <input class="form-control" id="linkCampo" readonly>
@@ -980,6 +1005,23 @@ document.addEventListener("DOMContentLoaded", function () {
   var corpo = document.getElementById("itensCorpo");
   var podeEditarComercial = {{ pode_editar_comercial|yesno:"true,false" }};
   var podeEditarFinanceiro = {{ pode_editar_financeiro|yesno:"true,false" }};
+  var endpointEnvio = "{% url 'orcamentos_inner' %}";
+
+  /* Datas de validade trabalham no calendário local do aparelho. Usar
+     toISOString aqui empurrava a data um dia para trás em alguns fusos. */
+  document.querySelectorAll("[data-validade-dias]").forEach(function (botao) {
+    botao.addEventListener("click", function () {
+      var campo = document.getElementById("orcamentoValidade");
+      var dia = new Date();
+      dia.setHours(12, 0, 0, 0);
+      dia.setDate(dia.getDate() + Number(botao.dataset.validadeDias || 0));
+      campo.value = Painel.datas.paraDataLocal(dia);
+      campo.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+  });
+  document.querySelector("[data-validade-limpar]")?.addEventListener("click", function () {
+    document.getElementById("orcamentoValidade").value = "";
+  });
 
   /* ------------------------------------------------------------------
      O seletor de item
@@ -1977,7 +2019,28 @@ document.addEventListener("DOMContentLoaded", function () {
      girando para sempre, num orçamento perfeitamente pronto. Agora o POST
      virou registro: acontece por trás, e se falhar ninguém fica sem
      mandar a proposta. */
-  var propostaAtual = { link: "", mensagem: "", previa: "" };
+  var propostaAtual = { link: "", mensagem: "", previa: "", total: "", validade: "" };
+
+  function avisarEnvio(texto, tipo) {
+    var sucesso = document.getElementById("linkSucesso");
+    Painel.erro("linkErro", tipo === "erro" ? texto : "");
+    if (sucesso) {
+      sucesso.textContent = tipo === "sucesso" ? texto : "";
+      sucesso.classList.toggle("d-none", tipo !== "sucesso" || !texto);
+    }
+  }
+
+  function atualizarPrevia() {
+    var titulo = document.getElementById("linkPreviaTitulo");
+    var resumo = document.getElementById("linkPreviaResumo");
+    var texto = document.getElementById("linkMensagemPrevia");
+    var id = document.getElementById("linkOrcamentoId").value;
+    if (titulo) titulo.textContent = "Proposta nº " + id + " · " + (propostaAtual.total || "valor calculado");
+    if (resumo) resumo.textContent = propostaAtual.validade
+      ? "Válida até " + propostaAtual.validade + " · resposta on-line"
+      : "Itens, fotos, condições e resposta on-line";
+    if (texto) texto.textContent = propostaAtual.mensagem || "Preparando mensagem…";
+  }
 
   function montarConversa(telefone, mensagem) {
     /* Mesma regra do servidor (conversa_whatsapp), aqui para a conversa
@@ -2000,7 +2063,13 @@ document.addEventListener("DOMContentLoaded", function () {
     if (previa) propostaAtual.previa = previa;
     linkPrevia.href = propostaAtual.previa || "#";
     linkPrevia.hidden = !propostaAtual.previa;
+    var card = document.getElementById("linkPreviaCard");
+    if (card) {
+      card.href = propostaAtual.previa || link;
+      card.hidden = !(propostaAtual.previa || link);
+    }
     linkCopiar.disabled = false;
+    atualizarPrevia();
   }
 
   function corpoDoEnvio(canal, chave, valor) {
@@ -2017,13 +2086,23 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function pedirAoServidor(dados) {
-    return fetch(window.location.pathname, {
+    return fetch(endpointEnvio, {
       method: "POST",
       body: dados,
       headers: { "X-Requested-With": "XMLHttpRequest" },
       credentials: "same-origin"
     })
-      .then(function (r) { return r.json().catch(function () { return null; }); })
+      .then(function (r) {
+        return r.text().then(function (texto) {
+          var json = null;
+          try { json = texto ? JSON.parse(texto) : null; } catch (e) {}
+          if (!r.ok || !json || json.status !== "sucesso") {
+            if (r.status === 403) throw new Error("Sua sessão ou permissão de envio expirou. Entre novamente e tente de novo.");
+            throw new Error((json && json.msg) || "O servidor não confirmou o envio (HTTP " + r.status + ").");
+          }
+          return json;
+        });
+      })
       .then(function (json) {
         if (!json || json.status !== "sucesso") {
           throw new Error((json && json.msg) || "Não foi possível enviar a proposta.");
@@ -2051,7 +2130,9 @@ document.addEventListener("DOMContentLoaded", function () {
       propostaAtual = {
         link: botao.dataset.link || "",
         mensagem: botao.dataset.mensagem || "",
-        previa: botao.dataset.previa || ""
+        previa: botao.dataset.previa || "",
+        total: botao.dataset.total || "",
+        validade: botao.dataset.validade || ""
       };
 
       campoLink.value = "";
@@ -2062,6 +2143,8 @@ document.addEventListener("DOMContentLoaded", function () {
       var atalhoWpp = document.getElementById("linkWhatsappAtalho");
       if (atalhoWpp) atalhoWpp.hidden = true;
       Painel.erro("linkErro", "");
+      avisarEnvio("", "");
+      atualizarPrevia();
       Painel.abrir("modalLink");
 
       /* O link já veio com a página: aparece antes de qualquer rede. */
@@ -2082,7 +2165,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
       /* Daqui para baixo é só confirmação e histórico. Se falhar, a tela
          continua utilizável: o link está na mão e o WhatsApp abre. */
-      pedirAoServidor(corpoDoEnvio("link", null, null))
+      pedirAoServidor(corpoDoEnvio("preparar", null, null))
         .then(function (json) {
           document.getElementById("linkCliente").textContent =
             json.destinatario || botao.dataset.nome || "cliente";
@@ -2094,10 +2177,9 @@ document.addEventListener("DOMContentLoaded", function () {
           desenharEnvios(json.envios);
         })
         .catch(function (erro) {
-          if (propostaAtual.link) return;  /* já tem o que compartilhar */
-          campoLink.value = "";
-          campoLink.placeholder = "Link indisponível";
-          Painel.erro("linkErro", erro.message);
+          campoLink.value = propostaAtual.link || "";
+          campoLink.placeholder = propostaAtual.link ? "" : "Link indisponível";
+          avisarEnvio(erro.message, "erro");
         });
     });
   });
@@ -2146,11 +2228,7 @@ document.addEventListener("DOMContentLoaded", function () {
     var saida = Painel.whatsapp.abrir(telefone, mensagem);
 
     mostrarAtalhoWhatsapp(url, saida.motivo !== "aplicativo" && saida.ok);
-    document.getElementById("linkErro").className = saida.ok
-      ? "alert alert-info"
-      : "alert alert-danger";
-    Painel.erro(
-      "linkErro",
+    avisarEnvio(
       saida.motivo === "aplicativo"
         ? "Pedimos ao WhatsApp instalado no seu computador para abrir a " +
           "conversa com a proposta escrita. Não abriu? Use o botão verde " +
@@ -2159,7 +2237,8 @@ document.addEventListener("DOMContentLoaded", function () {
           ? "A conversa abriu no seu WhatsApp com a proposta escrita. " +
             "Confirme o envio por lá para o cliente receber."
           : "O navegador bloqueou a janela. Use o botão verde " +
-            "“Abrir conversa no WhatsApp” aqui embaixo."
+            "“Abrir conversa no WhatsApp” aqui embaixo.",
+      saida.ok ? "sucesso" : "erro"
     );
 
     /* O registro vai por trás: marca o orçamento como enviado e guarda a
@@ -2170,10 +2249,17 @@ document.addEventListener("DOMContentLoaded", function () {
         if (json.mensagem) propostaAtual.mensagem = json.mensagem;
         mostrarLink(json.link, json.preview_url);
         desenharEnvios(json.envios);
+        avisarEnvio(
+          "A proposta foi liberada e registrada. Agora confirme o envio dentro do WhatsApp.",
+          "sucesso"
+        );
       })
-      .catch(function () {
-        /* Silêncio de propósito: a mensagem saiu. Um erro vermelho aqui
-           só faria o atendente achar que precisa mandar de novo. */
+      .catch(function (erro) {
+        avisarEnvio(
+          "A conversa abriu, mas o sistema não conseguiu liberar/registrar a página: " +
+          erro.message + " Não confirme o envio no WhatsApp até tentar novamente.",
+          "erro"
+        );
       });
   });
 
@@ -2204,11 +2290,11 @@ document.addEventListener("DOMContentLoaded", function () {
         mostrarLink(json.link, json.preview_url);
         desenharEnvios(json.envios);
         botao.innerHTML = '<i class="bi bi-check-lg me-1"></i> Enviado';
+        avisarEnvio("E-mail enviado e registrado com sucesso.", "sucesso");
         setTimeout(function () { botao.innerHTML = original; }, 2400);
       })
       .catch(function (erro) {
-        document.getElementById("linkErro").className = "alert alert-danger";
-        Painel.erro("linkErro", erro.message);
+        avisarEnvio(erro.message, "erro");
         botao.innerHTML = original;
       })
       .finally(function () { botao.disabled = false; });
@@ -2223,22 +2309,37 @@ document.addEventListener("DOMContentLoaded", function () {
       setTimeout(function () {
         botao.innerHTML = '<i class="bi bi-clipboard"></i> Copiar';
       }, 1800);
+      pedirAoServidor(corpoDoEnvio("link", null, null))
+        .then(function (json) {
+          desenharEnvios(json.envios);
+          avisarEnvio("Link copiado e proposta liberada para o cliente.", "sucesso");
+        })
+        .catch(function (erro) {
+          avisarEnvio(
+            "O link foi copiado, mas a página não foi liberada pelo servidor: " + erro.message,
+            "erro"
+          );
+        });
     }
 
     /* navigator.clipboard só existe em contexto seguro; no tablet da
        fábrica, acessando por http, ele simplesmente não está lá. O
        select+execCommand é o caminho que sobra. */
-    if (navigator.clipboard && window.isSecureContext) {
-      navigator.clipboard.writeText(campoLink.value).then(avisar);
-      return;
+    function copiarLegado() {
+      campoLink.removeAttribute("readonly");
+      campoLink.select();
+      campoLink.setSelectionRange(0, 99999);
+      var copiou = document.execCommand("copy");
+      campoLink.setAttribute("readonly", "readonly");
+      if (copiou) avisar();
+      else avisarEnvio("Não consegui copiar automaticamente. Selecione o link e copie manualmente.", "erro");
     }
 
-    campoLink.removeAttribute("readonly");
-    campoLink.select();
-    campoLink.setSelectionRange(0, 99999);
-    document.execCommand("copy");
-    campoLink.setAttribute("readonly", "readonly");
-    avisar();
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(campoLink.value).then(avisar).catch(copiarLegado);
+    } else {
+      copiarLegado();
+    }
   });
 });
 

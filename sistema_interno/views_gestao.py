@@ -18,7 +18,12 @@ from django.contrib import messages
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
 
-from core.email_utils import remetente, responder_para, smtp_configurado
+from core.email_utils import (
+    diagnostico_smtp,
+    remetente,
+    responder_para,
+    smtp_configurado,
+)
 from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
 from django.db import transaction
@@ -98,6 +103,12 @@ from .views import (
 )
 
 ZERO = Decimal("0.00")
+
+
+def moeda_br(valor):
+    """Dinheiro para mensagens fora dos templates: 4666.33 -> 4.666,33."""
+    numero = Decimal(valor or ZERO).quantize(Decimal("0.01"))
+    return f"{numero:,.2f}".replace(",", "_").replace(".", ",").replace("_", ".")
 
 
 # ======================================================================
@@ -449,6 +460,7 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
             # O gestor precisa saber ANTES de tentar que o e-mail não sai
             # daqui: sem isso, "enviei e não chegou" vira mistério.
             "email_configurado": smtp_configurado(),
+            "email_diagnostico": diagnostico_smtp(),
             "buffets": buffets,
             "estabelecimentos": Estabelecimentos.objects.order_by(
                 "nome_estabelecimento"
@@ -1122,7 +1134,7 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
         link = f"{endereco_do_site(request)}{orcamento.caminho_publico}"
         canal = (request.POST.get("canal") or "link").strip().lower()
 
-        if canal not in ("link", "whatsapp", "email"):
+        if canal not in ("preparar", "link", "whatsapp", "email"):
             raise ErroDeFormulario("Escolha WhatsApp, e-mail ou copiar link.")
 
         mensagem = self.mensagem_da_proposta(orcamento, link)
@@ -1145,6 +1157,22 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
             ),
         }
 
+        # Abrir o modal é somente consultar a proposta. A versão anterior
+        # registrava um "envio por link" e mudava o orçamento para enviado
+        # só porque o operador abriu a janela — antes de copiar ou mandar
+        # qualquer coisa. Preparar agora não altera status nem histórico.
+        if canal == "preparar":
+            extras["envios"] = self.historico_de_envio(orcamento)
+            extras["email_configurado"] = smtp_configurado()
+            extras["email_diagnostico"] = diagnostico_smtp()
+            return self.sucesso(
+                request,
+                f"Proposta #{orcamento.pk} pronta para compartilhar.",
+                id=orcamento.pk,
+                situacao=orcamento.status,
+                **extras,
+            )
+
         if canal == "whatsapp":
             telefone = texto(request, "whatsapp", limite=24) or orcamento.whatsapp_destinatario
             digitos = re.sub(r"\D", "", telefone or "")
@@ -1166,13 +1194,22 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
 
             orcamento.email_cliente = email
             orcamento.save(update_fields=["email_cliente", "atualizado"])
-            contexto = {"orcamento": orcamento, "link": link}
+            contexto = {
+                "orcamento": orcamento,
+                "itens": orcamento.itens.all(),
+                "link": link,
+                "total_formatado": moeda_br(orcamento.total),
+            }
             html = render(request, "emails/orcamento_enviado.html", contexto).content.decode()
             texto_email = (
                 f"Olá, {orcamento.destinatario}.\n\n"
-                f"Sua proposta Lazer & Sport nº {orcamento.pk} está pronta. "
-                f"Acesse {link} para ver todos os itens e registrar sua decisão.\n\n"
-                "Lazer & Sport Brinquedos"
+                f"Preparamos a proposta Lazer & Sport nº {orcamento.pk}, "
+                f"no total de R$ {moeda_br(orcamento.total)}.\n\n"
+                "Abra o endereço abaixo para conferir itens, fotos e condições "
+                "e registrar sua aprovação ou pedido de ajustes:\n"
+                f"{link}\n\n"
+                "Se precisar, basta responder a este e-mail.\n\n"
+                "Equipe Lazer & Sport Brinquedos"
             )
             if not smtp_configurado():
                 self.registrar_envio(
@@ -1207,10 +1244,18 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
                     sucesso=False,
                     detalhe=f"{type(erro).__name__}: {erro}"[:240],
                 )
+                tipo = type(erro).__name__.lower()
+                if "authentication" in tipo:
+                    motivo = "o servidor recusou o usuário ou a senha do e-mail"
+                elif "recipient" in tipo or "sender" in tipo:
+                    motivo = "o servidor recusou o endereço de remetente ou destinatário"
+                elif "timeout" in tipo or "connection" in tipo:
+                    motivo = "o servidor de e-mail não respondeu a tempo"
+                else:
+                    motivo = "o provedor não confirmou o envio"
                 raise ErroDeFormulario(
-                    "Não foi possível enviar o e-mail agora: "
-                    f"{type(erro).__name__}. Confira a configuração SMTP "
-                    "(docs/CONFIGURAR_EMAIL.md) ou use o WhatsApp."
+                    f"Não foi possível enviar: {motivo}. A tentativa ficou "
+                    "registrada; confira o SMTP ou use o WhatsApp/copiar link."
                 )
 
             if enviados != 1:
@@ -1240,6 +1285,7 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
         extras["email"] = orcamento.email_destinatario
         extras["envios"] = self.historico_de_envio(orcamento)
         extras["email_configurado"] = smtp_configurado()
+        extras["email_diagnostico"] = diagnostico_smtp()
 
         return self.sucesso(
             request,
@@ -1381,9 +1427,11 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
         """
         itens = list(orcamento.itens.all())
         linhas = [
-            f"Olá, {orcamento.destinatario}! Aqui é da Lazer & Sport.",
+            f"Olá, {orcamento.destinatario}! 👋",
             "",
-            f"Sua proposta nº {orcamento.pk} está pronta:",
+            f"Preparamos sua *proposta Lazer & Sport nº {orcamento.pk}*.",
+            "",
+            "*Resumo*",
         ]
 
         # Até três itens no corpo; o resto a pessoa vê na página. Uma lista
@@ -1392,16 +1440,14 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
             # A vírgula entra só no dinheiro. Trocar ponto por vírgula na
             # linha inteira estragava descrições como "Bola 3.5" -- o
             # cliente recebia um item com nome errado.
-            subtotal = f"{item.subtotal:.2f}".replace(".", ",")
             linhas.append(
-                f"• {item.quantidade}x {item.descricao} — R$ {subtotal}"
+                f"• {item.quantidade}x {item.descricao} — R$ {moeda_br(item.subtotal)}"
             )
         if len(itens) > 3:
             linhas.append(f"• e mais {len(itens) - 3} item(ns) na proposta")
 
         linhas.append("")
-        total = f"{orcamento.total:.2f}".replace(".", ",")
-        linhas.append(f"Total: R$ {total}")
+        linhas.append(f"*Total: R$ {moeda_br(orcamento.total)}*")
 
         if orcamento.forma_pagamento:
             linhas.append(f"Pagamento: {orcamento.forma_pagamento}")
@@ -1412,9 +1458,11 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
 
         linhas.extend([
             "",
-            "Abra a proposta completa, com fotos e detalhes, e responda "
-            "aprovando ou recusando por aqui:",
+            "Abra a proposta completa para conferir fotos, itens e condições. "
+            "Por essa mesma página você pode *aprovar ou pedir ajustes*:",
             link,
+            "",
+            "Se tiver qualquer dúvida, responda esta mensagem. 😊",
         ])
 
         return "\n".join(linhas)
@@ -1427,7 +1475,7 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
             return ""
         if len(digitos) in (10, 11):
             digitos = "55" + digitos
-        return f"https://wa.me/{digitos}?text={quote(mensagem)}"
+        return f"https://wa.me/{digitos}?text={quote(mensagem, safe='')}"
 
     # ---------------------------------- registro de quem recebeu o quê
     @staticmethod

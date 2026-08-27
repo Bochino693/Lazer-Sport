@@ -254,8 +254,58 @@
     }
   };
 
+  /* Datas sem deslocamento de fuso.
+   *
+   * `toISOString()` sempre converte para UTC. Em aparelhos do Brasil,
+   * datas próximas da meia-noite podiam voltar como o dia anterior e o
+   * datetime-local aparecia algumas horas adiantado. Estes helpers usam
+   * os componentes locais do próprio aparelho e mantêm o valor que a
+   * pessoa realmente escolheu. */
+  function dois(numero) {
+    return String(numero).padStart(2, "0");
+  }
+
+  Painel.datas = {
+    paraDataLocal: function (data) {
+      data = data instanceof Date ? data : new Date(data);
+      if (Number.isNaN(data.getTime())) return "";
+      return [data.getFullYear(), dois(data.getMonth() + 1), dois(data.getDate())].join("-");
+    },
+
+    paraDataHoraLocal: function (data) {
+      data = data instanceof Date ? data : new Date(data);
+      if (Number.isNaN(data.getTime())) return "";
+      return Painel.datas.paraDataLocal(data) + "T" + dois(data.getHours()) + ":" + dois(data.getMinutes());
+    },
+
+    agoraArredondado: function (minutos) {
+      var passo = Math.max(1, Number(minutos) || 15);
+      var data = new Date();
+      data.setSeconds(0, 0);
+      data.setMinutes(Math.ceil(data.getMinutes() / passo) * passo);
+      return data;
+    },
+
+    fusoDoAparelho: function () {
+      try {
+        return Intl.DateTimeFormat().resolvedOptions().timeZone || "horário local";
+      } catch (e) {
+        return "horário local";
+      }
+    },
+
+    aprimorar: function (raiz) {
+      (raiz || document).querySelectorAll('input[type="datetime-local"]').forEach(function (campo) {
+        if (!campo.step || campo.step === "60") campo.step = "300";
+        campo.setAttribute("title", "Horário local do aparelho · " + Painel.datas.fusoDoAparelho());
+      });
+    }
+  };
+
   Painel.aplicarMascaras = function (raiz) {
     raiz = raiz || document;
+
+    Painel.datas.aprimorar(raiz);
 
     raiz.querySelectorAll("[data-mascara]").forEach(function (campo) {
       var tipo = campo.dataset.mascara;

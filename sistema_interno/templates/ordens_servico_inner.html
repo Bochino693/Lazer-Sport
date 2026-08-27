@@ -106,8 +106,27 @@
       <div class="col-md-5"><label class="form-label" for="osTecnico">Técnico</label><select class="form-select" id="osTecnico" name="tecnico"><option value="">A definir</option>{% for t in tecnicos %}<option value="{{ t.id }}">{{ t.get_full_name|default:t.username }}</option>{% endfor %}</select></div>
       <div class="col-md-8"><label class="form-label" for="osEquipamento">Equipamento</label><input class="form-control" id="osEquipamento" name="equipamento" maxlength="180" required></div>
       <div class="col-md-4"><label class="form-label" for="osSerie">Número de série / patrimônio</label><input class="form-control" id="osSerie" name="numero_serie" maxlength="80"></div>
-      <div class="col-md-6"><label class="form-label" for="osAgenda">Agendada para</label><input class="form-control" id="osAgenda" name="agendada_para" type="datetime-local"></div>
-      <div class="col-md-6"><label class="form-label" for="osGarantia">Garantia até</label><input class="form-control" id="osGarantia" name="garantia_ate" type="date"></div>
+      <div class="col-md-6">
+        <label class="form-label" for="osAgenda">Agendada para</label>
+        <input class="form-control" id="osAgenda" name="agendada_para" type="datetime-local" step="300">
+        <div class="ls-date-shortcuts">
+          <button type="button" class="ls-chip" data-agenda="agora">Agora</button>
+          <button type="button" class="ls-chip" data-agenda="1h">+1 hora</button>
+          <button type="button" class="ls-chip" data-agenda="amanha">Amanhã 09:00</button>
+          <button type="button" class="ls-chip ls-chip-zerar" data-agenda="limpar">Limpar</button>
+        </div>
+        <span class="form-text" id="osAgendaFuso"></span>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label" for="osGarantia">Garantia até</label>
+        <input class="form-control" id="osGarantia" name="garantia_ate" type="date">
+        <div class="ls-date-shortcuts">
+          <button type="button" class="ls-chip" data-garantia-dias="30">30 dias</button>
+          <button type="button" class="ls-chip" data-garantia-dias="90">90 dias</button>
+          <button type="button" class="ls-chip" data-garantia-dias="180">6 meses</button>
+          <button type="button" class="ls-chip ls-chip-zerar" data-garantia-limpar>Sem garantia</button>
+        </div>
+      </div>
       <div class="col-md-6"><label class="form-label" for="osDefeito">Defeito relatado / solicitação</label><textarea class="form-control" id="osDefeito" name="defeito_relatado" rows="3"></textarea></div>
       <div class="col-md-6"><label class="form-label" for="osDiagnostico">Diagnóstico técnico</label><textarea class="form-control" id="osDiagnostico" name="diagnostico" rows="3"></textarea></div>
       <div class="col-12"><label class="form-label" for="osExecutado">Serviço executado</label><textarea class="form-control" id="osExecutado" name="servico_executado" rows="3"></textarea></div>
@@ -120,13 +139,41 @@
   <div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancelar</button><button class="btn btn-success" type="submit">Salvar O.S.</button></div>
 </form></div></div>
 
-<!-- Envio -->
-<div class="modal fade" id="modalEnviarOS" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><form class="modal-content" id="formEnviarOS" method="post" action="{% url 'ordens_servico_inner' %}">
-  {% csrf_token %}<input type="hidden" name="action" value="enviar"><input type="hidden" name="id" id="envioOSId">
-  <div class="modal-header"><div><span class="ls-modal-kicker">Documento do cliente</span><h5 class="modal-title" id="envioOSTitulo">Enviar O.S.</h5></div><button class="btn-close" type="button" data-bs-dismiss="modal"></button></div>
-  <div class="modal-body"><div id="envioOSErro" class="alert alert-danger d-none"></div><label class="form-label" for="envioOSCanal">Canal</label><select class="form-select mb-3" id="envioOSCanal" name="canal"><option value="link">Copiar link</option><option value="whatsapp">WhatsApp</option><option value="email">E-mail{% if not email_configurado %} — não configurado{% endif %}</option></select><label class="form-label" for="envioOSWhatsapp">WhatsApp</label><input class="form-control mb-3" id="envioOSWhatsapp" name="whatsapp" data-mascara="telefone"><label class="form-label" for="envioOSEmail">E-mail</label><input class="form-control" id="envioOSEmail" name="email" type="email"><div class="mt-3" id="envioOSResultado" hidden><label class="form-label">Link público</label><div class="input-group"><input class="form-control" id="envioOSLink" readonly><button class="btn btn-outline-primary" type="button" id="copiarLinkOS">Copiar</button></div></div><section class="ls-envios mt-4"><h6 class="mb-2"><i class="bi bi-clock-history me-1"></i>Histórico de envios desta O.S.</h6><ul class="ls-envios-lista" id="enviosOSLista"></ul></section></div>
-  <div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Fechar</button><button class="btn btn-primary" type="submit"><i class="bi bi-send me-1"></i>Preparar envio</button></div>
-</form></div></div>
+<!-- Envio: os mesmos dois caminhos diretos usados nos orçamentos. -->
+<div class="modal fade" id="modalEnviarOS" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+    <form class="modal-content" id="formEnviarOS" method="post" action="{% url 'ordens_servico_inner' %}">
+      {% csrf_token %}<input type="hidden" name="action" value="enviar"><input type="hidden" name="id" id="envioOSId">
+      <div class="modal-header"><div><span class="ls-modal-kicker">Documento do cliente</span><h5 class="modal-title" id="envioOSTitulo">Enviar O.S.</h5></div><button class="btn-close" type="button" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body">
+        <div id="envioOSErro" class="alert alert-danger d-none"></div>
+        <div id="envioOSSucesso" class="alert alert-success d-none" role="status"></div>
+        <section class="ls-share-preview" aria-label="Prévia da Ordem de Serviço">
+          <div class="ls-share-preview-mark"><i class="bi bi-clipboard2-check"></i></div>
+          <div class="ls-share-preview-copy"><span>Ordem de Serviço Lazer &amp; Sport</span><strong id="envioOSResumo">Documento pronto para o cliente</strong><small>Atendimento, itens, fotos, impressão e confirmação.</small></div>
+          <a class="btn btn-sm btn-outline-primary" id="envioOSPrevia" href="#" target="_blank" rel="noopener"><i class="bi bi-eye me-1"></i> Conferir</a>
+        </section>
+        <div class="row g-3">
+          <div class="col-12">
+            <label class="form-label" for="envioOSWhatsapp">WhatsApp do cliente</label>
+            <div class="input-group"><span class="input-group-text"><i class="bi bi-whatsapp text-success"></i></span><input class="form-control" id="envioOSWhatsapp" name="whatsapp" data-mascara="telefone" inputmode="tel"><button class="btn btn-success" id="enviarOSWhatsapp" type="button">Enviar</button></div>
+          </div>
+          <div class="col-12">
+            <label class="form-label" for="envioOSEmail">E-mail do cliente</label>
+            <div class="input-group"><span class="input-group-text"><i class="bi bi-envelope"></i></span><input class="form-control" id="envioOSEmail" name="email" type="email"><button class="btn btn-primary" id="enviarOSEmail" type="button" {% if not email_configurado %}disabled{% endif %}>Enviar</button></div>
+            {% if not email_configurado %}<div class="alert alert-warning mt-2 mb-0 py-2 px-3 small"><i class="bi bi-exclamation-triangle me-1"></i>{{ email_diagnostico }} Use WhatsApp ou copie o link.</div>{% endif %}
+          </div>
+        </div>
+        <p class="text-muted small mt-3 mb-2"><i class="bi bi-info-circle me-1"></i>No WhatsApp, confirme o envio dentro da conversa que será aberta.</p>
+        <label class="form-label" for="envioOSLink">Ou compartilhe o link</label>
+        <div class="input-group"><input class="form-control" id="envioOSLink" readonly><button class="btn btn-outline-primary" type="button" id="copiarLinkOS"><i class="bi bi-clipboard me-1"></i>Copiar</button></div>
+        <details class="ls-message-preview mt-3"><summary><i class="bi bi-chat-left-text me-1"></i> Ver mensagem do WhatsApp</summary><pre id="envioOSMensagem"></pre></details>
+        <section class="ls-envios mt-4"><h6 class="mb-2"><i class="bi bi-clock-history me-1"></i>Histórico de envios desta O.S.</h6><ul class="ls-envios-lista" id="enviosOSLista"></ul></section>
+      </div>
+      <div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Fechar</button></div>
+    </form>
+  </div>
+</div>
 
 <!-- Pagamento -->
 <div class="modal fade" id="modalPagamentoOS" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><form class="modal-content" id="formPagamentoOS" method="post" action="{% url 'ordens_servico_inner' %}">
@@ -149,6 +196,34 @@ document.addEventListener("DOMContentLoaded", function () {
   var empresa = JSON.parse(document.getElementById("empresaLocalizacaoDados").textContent || "{}");
   var corpo = document.getElementById("itensOSCorpo");
   var tiposItem = [{% for v,r in item_tipos %}{value:"{{ v }}", label:"{{ r|escapejs }}"},{% endfor %}];
+
+  document.getElementById("osAgendaFuso").textContent =
+    "Horário local do aparelho · " + Painel.datas.fusoDoAparelho();
+  document.querySelectorAll("[data-agenda]").forEach(function (botao) {
+    botao.addEventListener("click", function () {
+      var campo = document.getElementById("osAgenda");
+      var acao = botao.dataset.agenda;
+      if (acao === "limpar") { campo.value = ""; return; }
+      var momento = Painel.datas.agoraArredondado(15);
+      if (acao === "1h") momento.setHours(momento.getHours() + 1);
+      if (acao === "amanha") {
+        momento.setDate(momento.getDate() + 1);
+        momento.setHours(9, 0, 0, 0);
+      }
+      campo.value = Painel.datas.paraDataHoraLocal(momento);
+    });
+  });
+  document.querySelectorAll("[data-garantia-dias]").forEach(function (botao) {
+    botao.addEventListener("click", function () {
+      var dia = new Date();
+      dia.setHours(12, 0, 0, 0);
+      dia.setDate(dia.getDate() + Number(botao.dataset.garantiaDias || 0));
+      document.getElementById("osGarantia").value = Painel.datas.paraDataLocal(dia);
+    });
+  });
+  document.querySelector("[data-garantia-limpar]")?.addEventListener("click", function () {
+    document.getElementById("osGarantia").value = "";
+  });
 
   function achar(id){return ordens.find(function(o){return Number(o.id)===Number(id);});}
   function numero(valor){var s=String(valor||"").replace(/[^\d,.-]/g,"");if(s.indexOf(",")>=0)s=s.replace(/\./g,"").replace(",",".");return Number(s)||0;}
@@ -226,10 +301,22 @@ document.addEventListener("DOMContentLoaded", function () {
   document.getElementById("osManutencao")?.addEventListener("change",function(){var op=this.selectedOptions[0];if(!op||!op.value)return;buscaClienteOS.definirValor("",false);resumoCliente(null);valor("osEquipamento",op.dataset.equipamento);valor("osNome",op.dataset.nome);valor("osWhatsapp",op.dataset.whatsapp);valor("osEmail",op.dataset.email);valor("osDefeito",op.dataset.defeito);valor("osEndereco",op.dataset.endereco);valor("osTipo","manutencao");});
   Painel.ligar({form:"formOS",erro:"osErro",antes:function(){var itens=[];corpo.querySelectorAll("tr").forEach(function(l){itens.push({tipo:l.querySelector("[data-tipo]").value,descricao:l.querySelector("[data-descricao]").value,quantidade:l.querySelector("[data-qtd]").value,valor_unitario:l.querySelector("[data-valor]").value});});document.getElementById("osItens").value=JSON.stringify(itens);}});
 
-  function desenharEnviosOS(envios){var lista=document.getElementById("enviosOSLista");lista.innerHTML="";(envios||[]).forEach(function(e){var li=document.createElement("li");li.className=e.sucesso?"ok":"falhou";li.innerHTML="<strong>"+e.canal+"</strong>"+(e.destino?" · "+e.destino:"")+"<span>"+e.quando+(e.por?" · "+e.por:"")+"</span>"+(e.detalhe?"<em>"+e.detalhe+"</em>":"");lista.appendChild(li);});if(!lista.children.length){var vazio=document.createElement("li");vazio.innerHTML="<span>Nenhum envio registrado nesta O.S.</span>";lista.appendChild(vazio);}}
-  document.querySelectorAll("[data-enviar-os]").forEach(function(b){b.addEventListener("click",function(){var o=achar(b.dataset.enviarOs);valor("envioOSId",b.dataset.enviarOs);valor("envioOSWhatsapp",b.dataset.whatsapp);valor("envioOSEmail",b.dataset.email);document.getElementById("envioOSTitulo").textContent="Enviar O.S. para "+b.dataset.nome;document.getElementById("envioOSResultado").hidden=true;desenharEnviosOS(o?o.envios:[]);Painel.erro("envioOSErro","");Painel.abrir("modalEnviarOS");});});
-  document.getElementById("formEnviarOS")?.addEventListener("submit",async function(e){e.preventDefault();Painel.erro("envioOSErro","");var form=e.currentTarget,botao=form.querySelector('[type="submit"]');botao.disabled=true;try{var r=await fetch(form.action,{method:"POST",body:new FormData(form),headers:{"X-Requested-With":"XMLHttpRequest"}}),j=await r.json();if(j.status!=="sucesso")throw new Error(j.msg||"Não foi possível preparar o envio.");valor("envioOSLink",j.link);document.getElementById("envioOSResultado").hidden=false;if(j.whatsapp_url)window.open(j.whatsapp_url,"_blank");if(document.getElementById("envioOSCanal").value==="link")navigator.clipboard?.writeText(j.link);}catch(err){Painel.erro("envioOSErro",err.message);}finally{botao.disabled=false;}});
-  document.getElementById("copiarLinkOS")?.addEventListener("click",function(){var c=document.getElementById("envioOSLink");navigator.clipboard?.writeText(c.value);this.textContent="Copiado ✓";});
+  function desenharEnviosOS(envios){var lista=document.getElementById("enviosOSLista");lista.innerHTML="";(envios||[]).forEach(function(e){var li=document.createElement("li");li.className=e.sucesso?"ok":"falhou";var forte=document.createElement("strong");forte.textContent=e.canal+(e.destino?" · "+e.destino:"");var quando=document.createElement("span");quando.textContent=e.quando+(e.por?" · "+e.por:"");li.appendChild(forte);li.appendChild(quando);if(e.detalhe){var detalhe=document.createElement("em");detalhe.textContent=e.detalhe;li.appendChild(detalhe);}lista.appendChild(li);});if(!lista.children.length){var vazio=document.createElement("li"),span=document.createElement("span");span.textContent="Nenhum envio registrado nesta O.S.";vazio.appendChild(span);lista.appendChild(vazio);}}
+
+  var osEnvioAtual=null;
+  function avisoOS(texto,tipo){Painel.erro("envioOSErro",tipo==="erro"?texto:"");var ok=document.getElementById("envioOSSucesso");ok.textContent=tipo==="sucesso"?texto:"";ok.classList.toggle("d-none",tipo!=="sucesso"||!texto);}
+  function dadosEnvioOS(canal,chave,conteudo){var form=document.getElementById("formEnviarOS"),dados=new FormData(form);dados.set("action","enviar");dados.set("canal",canal);if(chave)dados.set(chave,conteudo||"");return dados;}
+  async function requisitarEnvioOS(canal,chave,conteudo){var form=document.getElementById("formEnviarOS"),resposta=await fetch(form.getAttribute("action"),{method:"POST",body:dadosEnvioOS(canal,chave,conteudo),headers:{"X-Requested-With":"XMLHttpRequest"},credentials:"same-origin"});var bruto=await resposta.text(),json=null;try{json=bruto?JSON.parse(bruto):null;}catch(e){}if(!resposta.ok||!json||json.status!=="sucesso")throw new Error((json&&json.msg)||"O servidor não confirmou o envio (HTTP "+resposta.status+").");return json;}
+  function atualizarEnvioOS(json){if(json.link)valor("envioOSLink",json.link);if(json.mensagem){osEnvioAtual.mensagem_whatsapp=json.mensagem;document.getElementById("envioOSMensagem").textContent=json.mensagem;}if(json.whatsapp)valor("envioOSWhatsapp",json.whatsapp);if(json.email)valor("envioOSEmail",json.email);if(json.envios)desenharEnviosOS(json.envios);}
+
+  document.querySelectorAll("[data-enviar-os]").forEach(function(b){b.addEventListener("click",function(){osEnvioAtual=achar(b.dataset.enviarOs)||{};valor("envioOSId",b.dataset.enviarOs);valor("envioOSWhatsapp",b.dataset.whatsapp||osEnvioAtual.whatsapp_cliente);valor("envioOSEmail",b.dataset.email||osEnvioAtual.email_cliente);valor("envioOSLink",osEnvioAtual.link_publico||"");document.getElementById("envioOSTitulo").textContent="Enviar O.S. para "+b.dataset.nome;document.getElementById("envioOSResumo").textContent="OS-"+String(b.dataset.enviarOs).padStart(5,"0")+" · "+(osEnvioAtual.equipamento||"atendimento");document.getElementById("envioOSMensagem").textContent=osEnvioAtual.mensagem_whatsapp||"Mensagem pronta após salvar a O.S.";document.getElementById("envioOSPrevia").href=osEnvioAtual.preview_url||osEnvioAtual.link_publico||"#";desenharEnviosOS(osEnvioAtual.envios||[]);avisoOS("","");Painel.abrir("modalEnviarOS");});});
+  document.getElementById("formEnviarOS")?.addEventListener("submit",function(e){e.preventDefault();});
+
+  document.getElementById("enviarOSWhatsapp")?.addEventListener("click",function(){var telefone=document.getElementById("envioOSWhatsapp").value.trim(),mensagem=(osEnvioAtual&&osEnvioAtual.mensagem_whatsapp)||"";if(!Painel.whatsapp.web(telefone,mensagem)){avisoOS("Informe o WhatsApp do cliente com DDD.","erro");return;}var saida=Painel.whatsapp.abrir(telefone,mensagem);avisoOS(saida.ok?"A conversa foi aberta. Confirme o envio dentro do WhatsApp.":"O navegador bloqueou a conversa; tente novamente.",saida.ok?"sucesso":"erro");requisitarEnvioOS("whatsapp","whatsapp",telefone).then(function(json){atualizarEnvioOS(json);avisoOS("O.S. liberada e registrada. Confirme o envio dentro do WhatsApp.","sucesso");}).catch(function(erro){avisoOS("A conversa abriu, mas a O.S. não foi liberada pelo servidor: "+erro.message,"erro");});});
+
+  document.getElementById("enviarOSEmail")?.addEventListener("click",async function(){var botao=this,email=document.getElementById("envioOSEmail").value.trim(),rotulo=botao.innerHTML;avisoOS("","");botao.disabled=true;botao.innerHTML='<span class="spinner-border spinner-border-sm me-1"></span>Enviando';try{var json=await requisitarEnvioOS("email","email",email);atualizarEnvioOS(json);avisoOS("E-mail enviado e registrado com sucesso.","sucesso");botao.innerHTML='<i class="bi bi-check-lg me-1"></i>Enviado';setTimeout(function(){botao.innerHTML=rotulo;botao.disabled=false;},2200);}catch(erro){avisoOS(erro.message,"erro");botao.innerHTML=rotulo;botao.disabled=false;}});
+
+  document.getElementById("copiarLinkOS")?.addEventListener("click",function(){var botao=this,campo=document.getElementById("envioOSLink");if(!campo.value)return;function sucesso(){botao.innerHTML='<i class="bi bi-check-lg me-1"></i>Copiado';requisitarEnvioOS("link").then(function(json){atualizarEnvioOS(json);avisoOS("Link copiado e O.S. liberada para o cliente.","sucesso");}).catch(function(erro){avisoOS("O link foi copiado, mas a O.S. não foi liberada: "+erro.message,"erro");});}function legado(){campo.removeAttribute("readonly");campo.select();var ok=document.execCommand("copy");campo.setAttribute("readonly","readonly");if(ok)sucesso();else avisoOS("Selecione e copie o link manualmente.","erro");}if(navigator.clipboard&&window.isSecureContext)navigator.clipboard.writeText(campo.value).then(sucesso).catch(legado);else legado();});
   document.querySelectorAll("[data-pagamento-os]").forEach(function(b){b.addEventListener("click",function(){valor("pagamentoOSId",b.dataset.pagamentoOs);valor("pagamentoOSValor",b.dataset.pago||"0");valor("pagamentoOSObs","");document.getElementById("pagamentoOSTitulo").textContent=b.dataset.nome;document.getElementById("pagamentoOSResumo").textContent="Total da O.S.: "+moeda(numero(b.dataset.total));Painel.erro("pagamentoOSErro","");Painel.abrir("modalPagamentoOS");});});Painel.ligar({form:"formPagamentoOS",erro:"pagamentoOSErro"});Painel.ligarExclusao();
 
   var params=new URLSearchParams(location.search);if(params.get("novo")==="1"&&document.getElementById("novaOS")){abrir(null);if(params.get("manutencao")){valor("osManutencao",params.get("manutencao"));document.getElementById("osManutencao").dispatchEvent(new Event("change"));}}

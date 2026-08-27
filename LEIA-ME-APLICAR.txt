@@ -1,4 +1,4 @@
-PACOTE INCREMENTAL V2 — ORÇAMENTOS, CLIENTES, ROTAS, AVISOS E O.S.
+PACOTE INCREMENTAL V3 — ENVIOS, PRÉVIAS, DATAS, ORÇAMENTOS E O.S.
 Lazer & Sport
 ======================================================================
 
@@ -21,6 +21,46 @@ Este pacote NÃO cria migração e NÃO adiciona dependência Python ou JavaScri
 
 
 O QUE FOI CORRIGIDO
+
+ENVIO DE ORÇAMENTOS
+- Corrigida a falha que impedia o e-mail: o backend referenciava o template
+  emails/orcamento_enviado.html, mas esse arquivo não existia no repositório.
+- O endereço do POST agora é explícito; troca suave de telas não faz o envio
+  cair por engano na URL atualmente visível.
+- Abrir o modal apenas prepara a proposta. O orçamento só é marcado como
+  enviado quando o e-mail sai, o WhatsApp é aberto ou o link é copiado.
+- Falhas de sessão, permissão, resposta HTML e SMTP deixam de ficar silenciosas.
+- A mensagem do WhatsApp ganhou resumo, total com milhar, validade, chamada
+  para aprovação/ajustes e texto mais natural.
+- O e-mail ganhou documento visual responsivo, resumo dos itens, total e botão
+  direto para a página de aprovação.
+- O modal mostra uma prévia do documento e permite conferir a mensagem antes
+  de enviá-la.
+
+ENVIO DE ORDENS DE SERVIÇO
+- O dropdown de canal foi removido. Como nos orçamentos, WhatsApp e e-mail
+  ficam visíveis, cada um com o próprio botão Enviar.
+- Link público, prévia interna, mensagem pronta, histórico e retorno de erro
+  aparecem na mesma janela.
+- O e-mail da O.S. também ganhou layout visual e botão para abrir o documento.
+- A mensagem do WhatsApp inclui equipamento, situação, total, agendamento e
+  acesso à página com fotos e confirmação do cliente.
+
+DATAS, HORÁRIOS E DROPDOWNS
+- Datas preenchidas pelo JavaScript usam os componentes locais do aparelho e
+  não passam mais por UTC, evitando voltar um dia ou deslocar algumas horas.
+- A agenda da O.S. mostra o fuso do aparelho e atalhos Agora, +1 hora e
+  Amanhã 09:00; garantia e validade ganharam atalhos compactos.
+- O servidor valida datetime-local e data de calendário com mensagens claras.
+- Selects fixos não mudam mais o fundo no hover; em telas por toque, o hover
+  preso foi neutralizado. Foco de teclado e seta do tema foram mantidos.
+
+PRÉVIA DO CLIENTE
+- A proposta pública mostra data e hora da última atualização.
+- Valores do cartão de compartilhamento usam R$ 4.666,33.
+- O cliente pode imprimir ou salvar a proposta em PDF por um botão próprio.
+- A apresentação de e-mail, WhatsApp, prévia interna e página pública agora
+  usa o mesmo vocabulário visual e comercial.
 
 ACABAMENTO, CENTRALIZAÇÃO E TABLET EM RETRATO
 - Orçamentos, Clientes e O.S. usam o mesmo eixo central e as mesmas margens.
@@ -113,7 +153,10 @@ A página do cliente lê as imagens diretamente do chamado original.
 ARQUIVOS INCLUÍDOS
 
 core/
+  email_utils.py
+  templates/orcamento_publico.html
   templates/ordem_servico_publica.html
+  views_orcamento.py
   views_ordem_servico.py
 
 sistema_interno/
@@ -126,10 +169,13 @@ sistema_interno/
   static/interno/ls-soft-navigation.js   (novo)
   templates/base_inner.html
   templates/clientes_inner.html
+  templates/emails/orcamento_enviado.html       (novo)
+  templates/emails/ordem_servico_enviada.html   (novo)
   templates/orcamentos_inner.html
   templates/ordens_servico_inner.html
   views_avisos.py
   views_clientes.py
+  views_gestao.py
   views_ordens_servico.py
 
 

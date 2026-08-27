@@ -260,3 +260,4 @@ class OrcamentoPublicoView(View):
 orcamento_publico = require_http_methods(["GET", "POST"])(
     OrcamentoPublicoView.as_view()
 )
+

@@ -1,0 +1,72 @@
+{% load interno_extras %}<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Proposta Lazer &amp; Sport nº {{ orcamento.pk }}</title>
+</head>
+<body style="margin:0;padding:0;background:#eef2f8;color:#172033;font-family:Arial,Helvetica,sans-serif;">
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;">
+    Proposta nº {{ orcamento.pk }} no valor de R$ {{ total_formatado }}. Confira e responda pela página segura.
+  </div>
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#eef2f8;">
+    <tr>
+      <td align="center" style="padding:28px 12px;">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:680px;background:#ffffff;border:1px solid #dce4ef;border-radius:22px;overflow:hidden;box-shadow:0 16px 44px rgba(20,35,70,.10);">
+          <tr>
+            <td style="height:12px;background:linear-gradient(90deg,#071d68 0 67%,#e21a2c 67% 100%);font-size:0;line-height:0;">&nbsp;</td>
+          </tr>
+          <tr>
+            <td style="padding:32px 34px 22px;">
+              <div style="font-size:12px;line-height:1.4;font-weight:800;letter-spacing:1.4px;text-transform:uppercase;color:#e21a2c;">Proposta comercial</div>
+              <h1 style="margin:6px 0 10px;color:#071d68;font-size:30px;line-height:1.15;">Lazer &amp; Sport</h1>
+              <p style="margin:0;color:#5f6c80;font-size:14px;line-height:1.6;">Brinquedos · Cenografia · Parques</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:0 34px 26px;">
+              <p style="margin:0 0 12px;font-size:17px;line-height:1.6;">Olá, <strong>{{ orcamento.destinatario }}</strong>.</p>
+              <p style="margin:0 0 22px;color:#475569;font-size:15px;line-height:1.65;">Sua proposta nº <strong>{{ orcamento.pk }}</strong> está pronta. Confira os itens, fotos e condições e registre sua aprovação ou pedido de ajustes pela página abaixo.</p>
+
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:0 0 24px;border:1px solid #dfe6f1;border-radius:16px;background:#f8faff;">
+                <tr>
+                  <td style="padding:17px 18px;color:#64748b;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;">Proposta</td>
+                  <td align="right" style="padding:17px 18px;color:#071d68;font-size:15px;font-weight:800;">nº {{ orcamento.pk }}</td>
+                </tr>
+                <tr><td colspan="2" style="border-top:1px solid #e3e9f2;font-size:0;line-height:0;">&nbsp;</td></tr>
+                {% for item in itens|slice:":4" %}
+                <tr>
+                  <td style="padding:12px 18px;color:#334155;font-size:14px;line-height:1.45;">{{ item.quantidade }}x {{ item.descricao }}</td>
+                  <td align="right" style="padding:12px 18px;color:#071d68;font-size:14px;font-weight:700;white-space:nowrap;">R$ {{ item.subtotal|moeda }}</td>
+                </tr>
+                {% endfor %}
+                {% if itens|length > 4 %}
+                <tr><td colspan="2" style="padding:4px 18px 12px;color:#7c8ca5;font-size:12px;">Mais {{ itens|length|add:"-4" }} item(ns) na proposta completa.</td></tr>
+                {% endif %}
+                <tr><td colspan="2" style="border-top:1px solid #d8e0ed;font-size:0;line-height:0;">&nbsp;</td></tr>
+                <tr>
+                  <td style="padding:18px;color:#334155;font-size:15px;font-weight:700;">Valor total</td>
+                  <td align="right" style="padding:18px;color:#e21a2c;font-size:22px;font-weight:800;white-space:nowrap;">R$ {{ total_formatado }}</td>
+                </tr>
+              </table>
+
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin:0 auto 22px;">
+                <tr>
+                  <td align="center" bgcolor="#0f9d58" style="border-radius:14px;">
+                    <a href="{{ link }}" target="_blank" style="display:inline-block;padding:16px 28px;color:#ffffff;text-decoration:none;font-size:16px;font-weight:800;line-height:1;">Abrir proposta e responder</a>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin:0;text-align:center;color:#7c8ca5;font-size:12px;line-height:1.55;">Se o botão não abrir, copie este endereço no navegador:<br><a href="{{ link }}" style="color:#071d68;word-break:break-all;">{{ link }}</a></p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:20px 34px;background:#071d68;color:#dbe4ff;text-align:center;font-size:12px;line-height:1.6;">Você pode responder diretamente a este e-mail se precisar falar com nossa equipe.<br><strong style="color:#ffffff;">Lazer &amp; Sport Brinquedos</strong></td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
