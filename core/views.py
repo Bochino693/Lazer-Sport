@@ -3884,10 +3884,24 @@ class UserAdminView(AdminOnlyMixin, View):
             usuarios = usuarios.filter(is_staff=False)
         elif tipo == "inativos":
             usuarios = usuarios.filter(is_active=False)
+        # Os quatro números do topo. A tela sempre os desenhou; a view
+        # nunca os mandou, e o resumo aparecia com as quatro caixas vazias.
+        # A contagem é do cadastro inteiro, e não do filtro: "quantos
+        # administradores existem" não muda porque alguém digitou uma busca.
+        contagem = User.objects.aggregate(
+            total=Count("id"),
+            admins=Count("id", filter=Q(is_staff=True)),
+            inativos=Count("id", filter=Q(is_active=False)),
+        )
+
         return render(request, self.template_name, {
             "usuarios": usuarios,
             "busca": busca,
             "tipo": tipo,
+            "total_usuarios": contagem["total"],
+            "total_admins": contagem["admins"],
+            "total_clientes": contagem["total"] - contagem["admins"],
+            "total_inativos": contagem["inativos"],
         })
 
     @transaction.atomic

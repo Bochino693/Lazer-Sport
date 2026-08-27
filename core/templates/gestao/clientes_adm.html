@@ -1452,28 +1452,28 @@
     <article class="clients-kpi">
       <span class="clients-kpi-icon"><svg><use href="#i-users"/></svg></span>
       <span class="clients-kpi-copy">
-        <strong id="kpiTotal" class="clients-kpi-value">{{ clientes|length }}</strong>
+        <strong id="kpiTotal" class="clients-kpi-value">{{ total_clientes }}</strong>
         <span class="clients-kpi-label">Clientes cadastrados</span>
       </span>
     </article>
     <article class="clients-kpi">
       <span class="clients-kpi-icon"><svg><use href="#client-i-building"/></svg></span>
       <span class="clients-kpi-copy">
-        <strong id="kpiActive" class="clients-kpi-value">0</strong>
+        <strong id="kpiActive" class="clients-kpi-value">{{ total_ativos }}</strong>
         <span class="clients-kpi-label">Cadastros ativos</span>
       </span>
     </article>
     <article class="clients-kpi">
       <span class="clients-kpi-icon"><svg><use href="#i-map-pin"/></svg></span>
       <span class="clients-kpi-copy">
-        <strong id="kpiPublished" class="clients-kpi-value">0</strong>
+        <strong id="kpiPublished" class="clients-kpi-value">{{ total_no_mapa }}</strong>
         <span class="clients-kpi-label">Visíveis no mapa</span>
       </span>
     </article>
     <article class="clients-kpi">
       <span class="clients-kpi-icon"><svg><use href="#i-globe"/></svg></span>
       <span class="clients-kpi-copy">
-        <strong id="kpiLocated" class="clients-kpi-value">0</strong>
+        <strong id="kpiLocated" class="clients-kpi-value">{{ total_localizados }}</strong>
         <span class="clients-kpi-label">Com localização</span>
       </span>
     </article>

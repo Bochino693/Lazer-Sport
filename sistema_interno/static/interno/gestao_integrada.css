@@ -182,6 +182,39 @@
   transform:translateY(-1px);
 }
 
+/* Filtrar e buscar não CONCLUEM nada: reorganizam o que está na tela, e a
+   pessoa vai clicar de novo daqui a pouco. Pelo `button[type=submit]` da
+   regra acima eles nasciam verdes, do mesmo peso de um "Salvar" -- e o
+   verde perde o sentido quando aparece em tudo. Ficam em âmbar, que é a
+   cor de mexer na tela.
+
+   Quem separa um do outro é o MÉTODO do formulário, e não o nome da
+   classe: metade desses botões é um `<button type="submit">Filtrar</button>`
+   sem classe nenhuma. Formulário GET reorganiza a tela; formulário POST
+   grava. É a distinção que já existe no HTML.
+
+   O seletor é `button[...]` e não `[class*=...]` de propósito: sem o
+   elemento, ele pegava também o `<form class="usr-filter-form">` em volta
+   e desenhava a barra inteira como se fosse um botão. */
+.gestao-integrada .ls-content form[method="get"] button[type="submit"],
+.gestao-integrada .ls-content button[class*="filtrar"],
+.gestao-integrada .ls-content button[class*="filter-submit"],
+.gestao-integrada .ls-content button[class*="buscar"],
+.gestao-integrada .ls-content button[class*="search-submit"]{
+  border-color:#D98E22!important;
+  color:#261704!important;
+  background:linear-gradient(135deg,#F2A93B,#D98E22)!important;
+  box-shadow:none!important;
+}
+.gestao-integrada .ls-content form[method="get"] button[type="submit"]:hover,
+.gestao-integrada .ls-content button[class*="filtrar"]:hover,
+.gestao-integrada .ls-content button[class*="filter-submit"]:hover,
+.gestao-integrada .ls-content button[class*="buscar"]:hover,
+.gestao-integrada .ls-content button[class*="search-submit"]:hover{
+  color:#170E02!important;
+  background:linear-gradient(135deg,#FFCD77,#EBB75C)!important;
+}
+
 /* Ação de linha é ÍCONE, não confirmação. "Recalcular localização" é um
    `<button type=submit>` dentro de um formulariozinho da própria linha, e
    pela regra acima nascia verde -- do tamanho e do peso de um "Salvar",
