@@ -1,0 +1,101 @@
+PACOTE INCREMENTAL — CARDS, NAVEGAÇÃO E ORDEM DE SERVIÇO
+Lazer & Sport
+======================================================================
+
+COMO APLICAR
+
+1. Faça uma cópia de segurança do projeto.
+2. Abra a pasta do projeto onde está o arquivo manage.py.
+3. Extraia este ZIP diretamente nessa pasta.
+4. Confirme "Substituir todos os arquivos".
+5. Execute:
+
+   py manage.py check
+   py manage.py collectstatic --noinput
+
+   Em Linux/macOS, troque "py" por "python".
+
+6. Reinicie o servidor/aplicação.
+
+Este pacote NÃO cria migração e NÃO adiciona dependência Python ou JavaScript.
+
+
+O QUE FOI CORRIGIDO
+
+CARDS DE ORÇAMENTOS E ORDENS DE SERVIÇO
+- Os filtros usam o mesmo componente visual dos cards corretos do painel.
+- Fonte, ícone, brilho, cores semânticas e efeito de elevação foram preservados.
+- O card ativo fica claramente marcado.
+- O layout volta a se adaptar a computador, tablet e celular.
+- A faixa financeira deixou de usar o tema branco que quebrava a identidade
+  grafite/âmbar do painel.
+
+FILTROS, CARREGAMENTO E TROCA DE TELAS
+- Links internos e formulários GET passam por navegação suave.
+- Filtro, busca e paginação não exigem recarregamento nativo da página.
+- A barra superior aparece imediatamente durante a espera e usa as cores do
+  painel interno.
+- A tela anterior continua visível enquanto a próxima resposta chega.
+- HTML recente fica em cache curto no sessionStorage.
+- O cache é limitado a sete telas, expira rapidamente e é apagado ao enviar
+  formulários que alteram dados.
+- O cache não sobrevive ao fechamento da aba, evitando deixar a carteira de
+  clientes disponível para o próximo usuário de um tablet compartilhado.
+- Passar o ponteiro ou focar um link antecipa somente a tela que a pessoa
+  demonstra intenção de abrir; nenhuma varredura baixa o menu inteiro.
+
+ORDEM DE SERVIÇO
+- "Cliente cadastrado" virou busca digitável.
+- A busca aceita nome, telefone, CPF/CNPJ e buffet parceiro.
+- Todos os clientes já vêm no HTML da tela: digitar e escolher não cria uma
+  nova requisição.
+- Ao escolher o cliente, a O.S. preenche nome, contato, WhatsApp, e-mail e
+  endereço completo.
+- O telefone passa pelo mesmo formatador/máscara usado no restante do painel.
+- Ao editar uma O.S., o cliente vinculado e seu resumo voltam selecionados.
+- Escolher um chamado de manutenção continua preenchendo equipamento, cliente,
+  telefone, e-mail, defeito e endereço.
+- A página HTML pública mostra automaticamente as fotos que já pertencem ao
+  chamado de manutenção vinculado.
+- As fotos abrem em tamanho completo, carregam sob demanda e aparecem também
+  na prévia interna.
+- Continuam disponíveis confirmação de ciência/recebimento pelo cliente,
+  impressão/salvamento em PDF e pagamento por Pix quando configurado.
+
+
+OBSERVAÇÃO SOBRE AS FOTOS
+
+As fotos não são duplicadas. Para aparecerem na O.S.:
+
+1. o chamado de manutenção precisa ter imagens;
+2. a O.S. precisa estar vinculada a esse chamado.
+
+A página do cliente lê as imagens diretamente do chamado original.
+
+
+ARQUIVOS INCLUÍDOS
+
+core/
+  templates/ordem_servico_publica.html
+  views_ordem_servico.py
+
+sistema_interno/
+  static/interno/interno_modern.css
+  static/interno/ls-soft-navigation.js   (novo)
+  templates/base_inner.html
+  templates/orcamentos_inner.html
+  templates/ordens_servico_inner.html
+  views_ordens_servico.py
+
+
+VALIDAÇÕES EXECUTADAS ANTES DE GERAR O ZIP
+
+- Sintaxe do novo JavaScript com node --check.
+- Sintaxe dos dois arquivos Python com py_compile.
+- Sintaxe dos scripts inline das três telas alteradas.
+- Balanceamento dos blocos Django if/for/block/comment/with.
+- Conferência dos vínculos entre template, contexto e arquivo estático.
+
+A suíte completa do Django deve ser executada dentro do projeto, pois este ZIP
+é incremental e não contém banco, settings nem dependências do repositório.
+

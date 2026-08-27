@@ -20,7 +20,7 @@ def carregar_ordem(**filtros):
             "cliente", "orcamento", "manutencao__usuario__user",
             "tecnico", "responsavel",
         )
-        .prefetch_related("itens"),
+        .prefetch_related("itens", "manutencao__imagens"),
         **filtros,
     )
 
@@ -40,6 +40,10 @@ def contexto_ordem(ordem, *, previsualizacao=False, request=None):
     contexto = {
         "ordem": ordem,
         "itens": list(ordem.itens.all()),
+        "fotos": (
+            list(ordem.manutencao.imagens.all())
+            if ordem.manutencao_id else []
+        ),
         "empresa": empresa,
         "responsavel_nome": responsavel,
         "tecnico_nome": tecnico,
@@ -97,3 +101,4 @@ class OrdemServicoPublicaView(View):
 ordem_servico_publica = require_http_methods(["GET", "POST"])(
     OrdemServicoPublicaView.as_view()
 )
+

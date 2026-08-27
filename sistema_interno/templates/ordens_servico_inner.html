@@ -17,11 +17,17 @@
   </div>
 </section>
 
-<section class="ls-budget-card-filters" aria-label="Filtrar ordens por fase">
+<section class="ls-metrics ls-budget-card-filters" aria-label="Filtrar ordens por fase">
   {% for chave, rotulo, quantidade, icone in cards %}
-    <a class="ls-budget-filter-card {% if filtro_ativo == chave %}active{% endif %}"
-       href="?filtro={{ chave }}{% if busca %}&q={{ busca|urlencode }}{% endif %}">
-      <span><i class="bi {{ icone }}"></i></span><strong>{{ quantidade }}</strong><small>{{ rotulo }}</small>
+    <a class="ls-metric-card ls-budget-filter-card {% if chave == 'concluidas' or chave == 'pagas' %}green{% elif chave == 'aguardando' or chave == 'pecas' or chave == 'a_receber' %}yellow{% elif chave == 'execucao' %}cyan{% else %}blue{% endif %} {% if filtro_ativo == chave %}active{% endif %}"
+       href="?filtro={{ chave }}{% if busca %}&q={{ busca|urlencode }}{% endif %}"
+       aria-current="{% if filtro_ativo == chave %}page{% else %}false{% endif %}">
+      <div class="ls-metric-head">
+        <span class="ls-metric-label">{{ rotulo }}</span>
+        <span class="ls-metric-icon"><i class="bi {{ icone }}"></i></span>
+      </div>
+      <strong class="ls-metric-value">{{ quantidade }}</strong>
+      <span class="ls-metric-note">{% if filtro_ativo == chave %}Filtro ativo{% else %}Toque para filtrar{% endif %}</span>
     </a>
   {% endfor %}
 </section>
@@ -79,7 +85,12 @@
   <div class="modal-body"><div id="osErro" class="alert alert-danger d-none"></div>
     <div class="row g-3">
       <div class="col-12"><div class="ls-budget-block-title comercial"><i class="bi bi-person-vcard"></i><span><strong>Cliente e origem</strong><small>A O.S. pode nascer de uma proposta aprovada, de um chamado ou de atendimento direto.</small></span></div></div>
-      <div class="col-md-4"><label class="form-label" for="osCliente">Cliente cadastrado</label><select class="form-select" id="osCliente" name="cliente"><option value="">Sem vínculo</option>{% for c in clientes %}<option value="{{ c.id }}" data-nome="{{ c.nome_cliente }}" data-whatsapp="{{ c.telefone|default:'' }}" data-email="{{ c.email|default:'' }}">{{ c.nome_cliente }}</option>{% endfor %}</select></div>
+      <div class="col-md-4">
+        <label class="form-label" for="osClienteBusca">Cliente cadastrado</label>
+        <div id="osClienteBox"></div>
+        <span class="form-text">Digite nome, telefone, documento ou buffet. Os dados são preenchidos automaticamente.</span>
+        <div class="ls-cliente-resumo" id="osClienteResumo" hidden></div>
+      </div>
       <div class="col-md-4"><label class="form-label" for="osManutencao">Chamado de manutenção</label><select class="form-select" id="osManutencao" name="manutencao"><option value="">Atendimento direto</option>{% for m in manutencoes %}<option value="{{ m.id }}" data-equipamento="{{ m.nome_equipamento }}" data-nome="{{ m.usuario.nome_completo|default:m.usuario.user.username }}" data-whatsapp="{{ m.telefone_contato|default:m.usuario.telefone }}" data-email="{{ m.usuario.user.email }}" data-defeito="{{ m.descricao }}" data-endereco="{{ m.endereco|default:'' }}{% if m.numero %}, {{ m.numero }}{% endif %} · {{ m.cidade|default:'' }}/{{ m.estado|default:'' }}">MAN-{{ m.id|stringformat:'05d' }} · {{ m.nome_equipamento }} · {{ m.usuario.nome_completo|default:m.usuario.user.username }}</option>{% endfor %}</select></div>
       <div class="col-md-4"><label class="form-label" for="osNome">Nome do destinatário</label><input class="form-control" id="osNome" name="nome_cliente" maxlength="120"></div>
       <div class="col-md-4"><label class="form-label" for="osContato">Contato / responsável local</label><input class="form-control" id="osContato" name="contato" maxlength="120"></div>
@@ -123,6 +134,7 @@
 
 {% url 'ordens_servico_inner' as exclusao_url %}
 {% include "includes/modal_confirmar_exclusao.html" with exclusao_url=exclusao_url exclusao_titulo="Excluir Ordem de Serviço" exclusao_aviso="Somente rascunhos nunca enviados podem ser excluídos. O histórico operacional permanece preservado." %}
+{{ clientes_dados|json_script:"clientesOSDados" }}
 {{ ordens_dados|json_script:"ordensServicoDados" }}
 {% endblock %}
 
@@ -131,19 +143,60 @@
 document.addEventListener("DOMContentLoaded", function () {
   "use strict";
   var ordens = JSON.parse(document.getElementById("ordensServicoDados").textContent || "[]");
+  var clientes = JSON.parse(document.getElementById("clientesOSDados").textContent || "[]");
   var corpo = document.getElementById("itensOSCorpo");
   var tiposItem = [{% for v,r in item_tipos %}{value:"{{ v }}", label:"{{ r|escapejs }}"},{% endfor %}];
 
   function achar(id){return ordens.find(function(o){return Number(o.id)===Number(id);});}
   function numero(valor){var s=String(valor||"").replace(/[^\d,.-]/g,"");if(s.indexOf(",")>=0)s=s.replace(/\./g,"").replace(",",".");return Number(s)||0;}
   function moeda(v){return Number(v||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"});}
-  function valor(id,v){var e=document.getElementById(id);if(e)e.value=v==null?"":v;}
+  function valor(id,v){Painel.valor(id,v);}
+  function enderecoCliente(opcao){
+    if(!opcao||!opcao.endereco)return "";
+    var e=opcao.endereco;
+    return [
+      [e.rua,e.numero].filter(Boolean).join(", "),
+      e.bairro,
+      [e.cidade,e.estado].filter(Boolean).join("/"),
+      e.cep ? "CEP "+e.cep : ""
+    ].filter(Boolean).join(" · ");
+  }
+  function resumoCliente(opcao){
+    var caixa=document.getElementById("osClienteResumo");
+    if(!opcao){caixa.hidden=true;caixa.innerHTML="";return;}
+    var dados=[opcao.detalhe,opcao.whatsapp,opcao.email,enderecoCliente(opcao)].filter(Boolean);
+    caixa.innerHTML="";
+    var nome=document.createElement("strong"),detalhe=document.createElement("span");
+    nome.textContent=opcao.rotulo;
+    detalhe.textContent=dados.join(" · ")||"Dados básicos carregados";
+    caixa.appendChild(nome);caixa.appendChild(detalhe);
+    caixa.hidden=false;
+  }
+  function preencherCliente(opcao){
+    resumoCliente(opcao);
+    if(!opcao)return;
+    valor("osNome",opcao.rotulo||"");
+    if(!document.getElementById("osContato").value.trim())valor("osContato",opcao.rotulo||"");
+    valor("osWhatsapp",opcao.whatsapp||"");
+    valor("osEmail",opcao.email||"");
+    var endereco=enderecoCliente(opcao);
+    if(endereco)valor("osEndereco",endereco);
+  }
+  var buscaClienteOS=LSBusca.criar({
+    nome:"cliente",
+    opcoes:clientes,
+    placeholder:"Buscar cliente cadastrado...",
+    rotuloAcessivel:"Cliente cadastrado",
+    aoEscolher:preencherCliente
+  });
+  buscaClienteOS.entrada.id="osClienteBusca";
+  document.getElementById("osClienteBox").appendChild(buscaClienteOS.elemento);
+
   function recalcular(){var total=0;corpo.querySelectorAll("tr").forEach(function(l){var q=numero(l.querySelector("[data-qtd]").value),v=numero(l.querySelector("[data-valor]").value);var sub=q*v;total+=sub;l.querySelector("[data-subtotal]").textContent=moeda(sub);});document.getElementById("osTotal").textContent=moeda(total);}
   function linha(item){item=item||{tipo:"servico",descricao:"",quantidade:"1,00",valor_unitario:"0,00"};var tr=document.createElement("tr");var opcoes=tiposItem.map(function(t){return '<option value="'+t.value+'"'+(t.value===item.tipo?' selected':'')+'>'+t.label+'</option>';}).join("");tr.innerHTML='<td><select class="form-select form-select-sm" data-tipo>'+opcoes+'</select></td><td><input class="form-control form-control-sm" data-descricao maxlength="200" value="'+String(item.descricao||"").replace(/&/g,"&amp;").replace(/"/g,"&quot;")+'"></td><td><input class="form-control form-control-sm text-end" data-qtd inputmode="decimal" value="'+item.quantidade+'"></td><td><input class="form-control form-control-sm text-end" data-valor inputmode="decimal" value="'+item.valor_unitario+'"></td><td class="text-end" data-subtotal>R$ 0,00</td><td><button class="btn btn-sm btn-outline-danger" type="button" data-remover><i class="bi bi-x-lg"></i></button></td>';tr.addEventListener("input",recalcular);tr.querySelector("[data-remover]").addEventListener("click",function(){tr.remove();if(!corpo.children.length)linha();recalcular();});corpo.appendChild(tr);recalcular();}
-  function abrir(id){var o=id?achar(id):null;document.getElementById("formOS").reset();corpo.innerHTML="";valor("osId",o?o.id:"");document.getElementById("osTitulo").textContent=o?"Editar "+("OS-"+String(o.id).padStart(5,"0")):"Nova Ordem de Serviço";["cliente","manutencao","nome_cliente","contato","whatsapp_cliente","email_cliente","endereco_servico","tipo","status","prioridade","equipamento","numero_serie","agendada_para","garantia_ate","tecnico","defeito_relatado","diagnostico","servico_executado","forma_pagamento","observacoes"].forEach(function(chave){var mapa={cliente:"osCliente",manutencao:"osManutencao",nome_cliente:"osNome",contato:"osContato",whatsapp_cliente:"osWhatsapp",email_cliente:"osEmail",endereco_servico:"osEndereco",tipo:"osTipo",status:"osStatus",prioridade:"osPrioridade",equipamento:"osEquipamento",numero_serie:"osSerie",agendada_para:"osAgenda",garantia_ate:"osGarantia",tecnico:"osTecnico",defeito_relatado:"osDefeito",diagnostico:"osDiagnostico",servico_executado:"osExecutado",forma_pagamento:"osFormaPagamento",observacoes:"osObservacoes"};valor(mapa[chave],o?o[chave]:"");});(o&&o.itens.length?o.itens:[null]).forEach(linha);Painel.erro("osErro","");Painel.abrir("modalOS");}
+  function abrir(id){var o=id?achar(id):null;document.getElementById("formOS").reset();buscaClienteOS.definirValor("",false);resumoCliente(null);corpo.innerHTML="";valor("osId",o?o.id:"");document.getElementById("osTitulo").textContent=o?"Editar "+("OS-"+String(o.id).padStart(5,"0")):"Nova Ordem de Serviço";["manutencao","nome_cliente","contato","whatsapp_cliente","email_cliente","endereco_servico","tipo","status","prioridade","equipamento","numero_serie","agendada_para","garantia_ate","tecnico","defeito_relatado","diagnostico","servico_executado","forma_pagamento","observacoes"].forEach(function(chave){var mapa={manutencao:"osManutencao",nome_cliente:"osNome",contato:"osContato",whatsapp_cliente:"osWhatsapp",email_cliente:"osEmail",endereco_servico:"osEndereco",tipo:"osTipo",status:"osStatus",prioridade:"osPrioridade",equipamento:"osEquipamento",numero_serie:"osSerie",agendada_para:"osAgenda",garantia_ate:"osGarantia",tecnico:"osTecnico",defeito_relatado:"osDefeito",diagnostico:"osDiagnostico",servico_executado:"osExecutado",forma_pagamento:"osFormaPagamento",observacoes:"osObservacoes"};valor(mapa[chave],o?o[chave]:"");});buscaClienteOS.definirValor(o?o.cliente:"",false);if(o&&o.cliente){resumoCliente(clientes.find(function(c){return String(c.valor)===String(o.cliente);})||null);}(o&&o.itens.length?o.itens:[null]).forEach(linha);Painel.erro("osErro","");Painel.abrir("modalOS");}
   document.getElementById("novaOS")?.addEventListener("click",function(){abrir(null);});document.querySelectorAll("[data-editar-os]").forEach(function(b){b.addEventListener("click",function(){abrir(b.dataset.editarOs);});});document.getElementById("adicionarItemOS")?.addEventListener("click",function(){linha();});
-  document.getElementById("osCliente")?.addEventListener("change",function(){var op=this.selectedOptions[0];if(!op||!op.value)return;valor("osNome",op.dataset.nome);valor("osWhatsapp",op.dataset.whatsapp);valor("osEmail",op.dataset.email);});
-  document.getElementById("osManutencao")?.addEventListener("change",function(){var op=this.selectedOptions[0];if(!op||!op.value)return;valor("osEquipamento",op.dataset.equipamento);valor("osNome",op.dataset.nome);valor("osWhatsapp",op.dataset.whatsapp);valor("osEmail",op.dataset.email);valor("osDefeito",op.dataset.defeito);valor("osEndereco",op.dataset.endereco);valor("osTipo","manutencao");});
+  document.getElementById("osManutencao")?.addEventListener("change",function(){var op=this.selectedOptions[0];if(!op||!op.value)return;buscaClienteOS.definirValor("",false);resumoCliente(null);valor("osEquipamento",op.dataset.equipamento);valor("osNome",op.dataset.nome);valor("osWhatsapp",op.dataset.whatsapp);valor("osEmail",op.dataset.email);valor("osDefeito",op.dataset.defeito);valor("osEndereco",op.dataset.endereco);valor("osTipo","manutencao");});
   Painel.ligar({form:"formOS",erro:"osErro",antes:function(){var itens=[];corpo.querySelectorAll("tr").forEach(function(l){itens.push({tipo:l.querySelector("[data-tipo]").value,descricao:l.querySelector("[data-descricao]").value,quantidade:l.querySelector("[data-qtd]").value,valor_unitario:l.querySelector("[data-valor]").value});});document.getElementById("osItens").value=JSON.stringify(itens);}});
 
   function desenharEnviosOS(envios){var lista=document.getElementById("enviosOSLista");lista.innerHTML="";(envios||[]).forEach(function(e){var li=document.createElement("li");li.className=e.sucesso?"ok":"falhou";li.innerHTML="<strong>"+e.canal+"</strong>"+(e.destino?" · "+e.destino:"")+"<span>"+e.quando+(e.por?" · "+e.por:"")+"</span>"+(e.detalhe?"<em>"+e.detalhe+"</em>":"");lista.appendChild(li);});if(!lista.children.length){var vazio=document.createElement("li");vazio.innerHTML="<span>Nenhum envio registrado nesta O.S.</span>";lista.appendChild(vazio);}}

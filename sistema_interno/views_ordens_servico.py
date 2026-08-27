@@ -144,6 +144,17 @@ class OrdensServicoInnerView(
                 ordem.whatsapp_destinatario, ordem.mensagem_whatsapp
             )
 
+        clientes = (
+            Cliente.objects
+            .select_related("parceiro")
+            .prefetch_related("enderecos")
+            .order_by("nome_cliente")
+        )
+        clientes_dados = [
+            svc_clientes.opcao_de_busca(cliente)
+            for cliente in clientes
+        ]
+
         acesso = capacidades(request.user)
         return render(request, "ordens_servico_inner.html", {
             "ordens": ordens,
@@ -163,7 +174,7 @@ class OrdensServicoInnerView(
                 ("pagas", "Pagas", contagens["pagas"], "bi-cash-coin"),
             ),
             "total_recebido": financeiro["recebido"] or Decimal("0.00"),
-            "clientes": Cliente.objects.order_by("nome_cliente"),
+            "clientes_dados": clientes_dados,
             "manutencoes": (
                 Manutencao.objects
                 .filter(status__in=("P", "A"))

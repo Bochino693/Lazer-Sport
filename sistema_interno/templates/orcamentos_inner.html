@@ -23,14 +23,17 @@
   </div>
 </section>
 
-<section class="ls-budget-card-filters" aria-label="Filtrar orçamentos por fase">
+<section class="ls-metrics ls-budget-card-filters" aria-label="Filtrar orçamentos por fase">
   {% for chave, rotulo, quantidade, icone in cards %}
-    <a class="ls-budget-filter-card {% if filtro_ativo == chave %}active{% endif %}"
+    <a class="ls-metric-card ls-budget-filter-card {% if chave == 'aprovados' or chave == 'pagos' %}green{% elif chave == 'recusados' or chave == 'expirados' %}red{% elif chave == 'negociacao' or chave == 'substituidos' %}violet{% elif chave == 'aguardando' or chave == 'a_receber' %}yellow{% else %}blue{% endif %} {% if filtro_ativo == chave %}active{% endif %}"
        href="?filtro={{ chave }}{% if busca %}&q={{ busca|urlencode }}{% endif %}"
        aria-current="{% if filtro_ativo == chave %}page{% else %}false{% endif %}">
-      <span><i class="bi {{ icone }}"></i></span>
-      <strong>{{ quantidade }}</strong>
-      <small>{{ rotulo }}</small>
+      <div class="ls-metric-head">
+        <span class="ls-metric-label">{{ rotulo }}</span>
+        <span class="ls-metric-icon"><i class="bi {{ icone }}"></i></span>
+      </div>
+      <strong class="ls-metric-value">{{ quantidade }}</strong>
+      <span class="ls-metric-note">{% if filtro_ativo == chave %}Filtro ativo{% else %}Toque para filtrar{% endif %}</span>
     </a>
   {% endfor %}
 </section>
@@ -2324,3 +2327,4 @@ document.addEventListener("DOMContentLoaded", function () {
 })();
 </script>
 {% endblock %}
+
