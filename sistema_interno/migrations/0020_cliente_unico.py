@@ -58,7 +58,12 @@ def trazer_clientes_do_site(apps, schema_editor):
             interno.logo = antigo.logo_cliente
         if antigo.site_cliente and not interno.site_cliente:
             interno.site_cliente = antigo.site_cliente
-        if antigo.exibir_no_mapa and antigo.ativo:
+
+        # Buffet não vira alfinete de cliente: ele já tem o card dele em
+        # "Nossos Parceiros", e os dois juntos o mostrariam duas vezes no
+        # site. A regra vive no `save()` do modelo, que a migração não
+        # executa -- por isso é repetida aqui.
+        if antigo.exibir_no_mapa and antigo.ativo and interno.tipo != "buffet":
             interno.publicar_no_mapa = True
         interno.save()
 
@@ -67,9 +72,15 @@ def trazer_clientes_do_site(apps, schema_editor):
         if endereco is None:
             endereco = EnderecoCliente(cliente=interno)
 
-        # Endereço do painel, quando existe, é o mais recente: o do site
-        # só preenche o que estiver vazio. A coordenada é a exceção --
-        # a do mapa já foi conferida por alguém e não se joga fora.
+        # Endereço do painel, quando existe, é o mais recente: o do site só
+        # preenche o que estiver vazio.
+        mesma_rua = (
+            (endereco.cep or "").strip() == (antigo.cep or "").strip()
+            and (endereco.endereco or "").strip().lower()
+            == (antigo.rua or "").strip().lower()
+            and (endereco.numero or "").strip() == (antigo.numero or "").strip()
+        )
+
         endereco.cep = endereco.cep or (antigo.cep or "")
         endereco.endereco = endereco.endereco or (antigo.rua or "")
         endereco.numero = endereco.numero or (antigo.numero or "")
@@ -77,7 +88,19 @@ def trazer_clientes_do_site(apps, schema_editor):
         endereco.cidade = endereco.cidade or (antigo.cidade or "")
         endereco.estado = endereco.estado or (antigo.estado or "")
         endereco.pais = antigo.pais or "Brasil"
-        if endereco.latitude is None and antigo.latitude is not None:
+
+        # A COORDENADA SÓ VEM JUNTO COM O ENDEREÇO DELA.
+        #
+        # A do mapa já foi conferida por alguém e vale a pena aproveitar --
+        # mas só enquanto apontar para a rua que ficou gravada. Se o painel
+        # já tinha um endereço diferente (mudança de sede, correção), o
+        # ponto do mapa é do endereço ANTIGO: herdá-lo escreveria a rua nova
+        # com o alfinete velho, que é exatamente a divergência que esta
+        # migração existe para acabar. Sem coordenada, o cadastro fica
+        # pendente e é localizado depois -- pelo botão "recalcular" da tela
+        # ou pelo comando `conferir_mapa`.
+        herda_ponto = not tinha_endereco or mesma_rua
+        if endereco.latitude is None and antigo.latitude is not None and herda_ponto:
             endereco.latitude = antigo.latitude
             endereco.longitude = antigo.longitude
             endereco.precisao = antigo.precisao_local or ""
