@@ -24,7 +24,6 @@ from unittest.mock import patch
 from django.contrib.auth.models import User
 from django.test import TestCase, override_settings
 
-from core.models import Clientes as ClienteMapa
 
 from .models import Cliente, EnderecoCliente, Orcamento
 from .permissoes import atribuir_funcoes
@@ -92,7 +91,7 @@ class ClientesInternoTests(TestCase):
         resposta = self.post({
             "action": "save",
             "nome_cliente": "Marina Souza",
-            "tipo": Cliente.Tipo.PESSOA,
+            "tipo": Cliente.Tipo.RESIDENCIAL,
             "telefone": "(11) 99999-8888",
             "parceiro": self.buffet.id,
         })
@@ -119,7 +118,7 @@ class ClientesInternoTests(TestCase):
         resposta = self.post({
             "action": "save",
             "nome_cliente": "Cliente fantasma",
-            "tipo": Cliente.Tipo.PESSOA,
+            "tipo": Cliente.Tipo.RESIDENCIAL,
         })
 
         self.assertEqual(resposta.status_code, 400)
@@ -266,7 +265,7 @@ class ClientesInternoTests(TestCase):
             "id": cliente.pk,
             "nome_cliente": cliente.nome_cliente,
             "telefone": cliente.telefone,
-            "tipo": Cliente.Tipo.PESSOA,
+            "tipo": Cliente.Tipo.RESIDENCIAL,
             "cep": "20040-020",
             "endereco": "Rua da Assembleia",
             "numero": "10",
@@ -282,14 +281,10 @@ class ClientesInternoTests(TestCase):
         self.assertIsNone(endereco.latitude)
         self.assertIsNone(endereco.longitude)
 
-    @patch(
-        "core.models.geocodificar_endereco",
-        return_value=(-23.550520, -46.633308, "rua"),
-    )
-    def test_orcamento_aprovado_publica_cliente_no_mapa(self, _geocodificar):
+    def test_orcamento_aprovado_publica_cliente_no_mapa(self):
         cliente = Cliente.objects.create(
             nome_cliente="Escola Horizonte",
-            tipo=Cliente.Tipo.EMPRESA,
+            tipo=Cliente.Tipo.COMERCIAL,
             telefone="(11) 95555-1111",
         )
         EnderecoCliente.objects.create(
@@ -319,32 +314,89 @@ class ClientesInternoTests(TestCase):
 
         self.assertEqual(resposta.status_code, 200)
         cliente.refresh_from_db()
-        self.assertIsNotNone(cliente.cliente_mapa_id)
-        mapa = cliente.cliente_mapa
-        self.assertEqual(mapa.descricao_cliente, "Escola Horizonte")
-        self.assertEqual(mapa.cidade, "São Paulo")
-        self.assertTrue(mapa.exibir_no_mapa)
-        self.assertEqual(ClienteMapa.objects.count(), 1)
+        # Publicar virou ligar uma chave no próprio cliente: não existe
+        # mais uma segunda ficha para o mapa conferir.
+        self.assertTrue(cliente.publicar_no_mapa)
+        self.assertEqual(cliente.endereco_principal.cidade, "São Paulo")
+        self.assertEqual(Cliente.objects.filter(publicar_no_mapa=True).count(), 1)
 
-    def test_pode_associar_cliente_que_ja_estava_no_mapa(self):
-        mapa = ClienteMapa.objects.create(
-            descricao_cliente="Cliente antigo",
+    def test_cliente_marcado_sem_coordenada_nao_conta_como_no_mapa(self):
+        """"Marcado para o mapa" e "desenhado no mapa" são coisas diferentes.
+
+        Sem coordenada não há alfinete, e a tela precisa dizer isso -- senão
+        alguém marca a caixa, sai satisfeito e o cliente nunca aparece.
+        """
+        cliente = Cliente.objects.create(
+            nome_cliente="Cliente sem ponto",
+            tipo=Cliente.Tipo.COMERCIAL,
+            telefone="(11) 94444-2222",
+            publicar_no_mapa=True,
+        )
+        EnderecoCliente.objects.create(
+            cliente=cliente,
+            endereco="Rua sem coordenada",
             cidade="Osasco",
             estado="SP",
-            latitude=Decimal("-23.5320"),
-            longitude=Decimal("-46.7910"),
+        )
+
+        self.assertFalse(cliente.no_mapa)
+
+        # `endereco_principal` consulta o banco a cada chamada e devolve uma
+        # instância nova -- guardar numa variável é o que faz o save valer.
+        endereco = cliente.endereco_principal
+        endereco.latitude = Decimal("-23.5320")
+        endereco.longitude = Decimal("-46.7910")
+        endereco.save()
+        self.assertTrue(cliente.no_mapa)
+
+    def test_desmarcar_no_formulario_tira_o_cliente_do_mapa(self):
+        """Caixa desmarcada não é enviada pelo navegador.
+
+        O formulário manda um campo escondido de mesmo nome para que
+        "desmarquei" chegue como resposta, e não como silêncio -- que é
+        indistinguível de "esta tela não pergunta isso".
+        """
+        cliente = Cliente.objects.create(
+            nome_cliente="Cliente publicado",
+            tipo=Cliente.Tipo.COMERCIAL,
+            telefone="(11) 94444-3333",
+            publicar_no_mapa=True,
         )
 
         resposta = self.post({
             "action": "save",
-            "nome_cliente": "Cliente antigo",
-            "telefone": "(11) 94444-2222",
-            "cliente_mapa": mapa.id,
+            "id": cliente.id,
+            "nome_cliente": "Cliente publicado",
+            "telefone": "(11) 94444-3333",
+            "publicar_no_mapa": "",
         })
 
         self.assertEqual(resposta.status_code, 200)
-        interno = Cliente.objects.get(nome_cliente="Cliente antigo")
-        self.assertEqual(interno.cliente_mapa, mapa)
+        cliente.refresh_from_db()
+        self.assertFalse(cliente.publicar_no_mapa)
+
+    def test_cadastro_rapido_nao_despublica_quem_ja_esta_no_mapa(self):
+        """O formulário de dentro do orçamento não pergunta sobre o mapa.
+
+        Ausência do campo ali não pode significar "tire do mapa".
+        """
+        cliente = Cliente.objects.create(
+            nome_cliente="Cliente do balcão",
+            tipo=Cliente.Tipo.COMERCIAL,
+            telefone="(11) 94444-4444",
+            publicar_no_mapa=True,
+        )
+
+        resposta = self.post({
+            "action": "save",
+            "id": cliente.id,
+            "nome_cliente": "Cliente do balcão",
+            "telefone": "(11) 94444-4444",
+        })
+
+        self.assertEqual(resposta.status_code, 200)
+        cliente.refresh_from_db()
+        self.assertTrue(cliente.publicar_no_mapa)
 
     def test_buffet_aprovado_nao_duplica_o_parceiro_como_cliente_do_mapa(self):
         EnderecoCliente.objects.create(
@@ -373,7 +425,8 @@ class ClientesInternoTests(TestCase):
         )
 
         self.assertEqual(resposta.status_code, 200)
-        self.assertEqual(ClienteMapa.objects.count(), 0)
+        self.buffet.refresh_from_db()
+        self.assertFalse(self.buffet.publicar_no_mapa)
 
     def test_edicao_nao_reclama_do_proprio_nome(self):
         resposta = self.post({
@@ -583,3 +636,132 @@ class MenuInternoTests(TestCase):
         )
 
         self.assertNotContains(resposta, 'href="/clientes/"')
+
+
+@override_settings(ALLOWED_HOSTS=["interno.testserver", "testserver"])
+class ClientesNoMapaTests(TestCase):
+    """A tela "Mapa de clientes" abre o MESMO cadastro da aba Clientes.
+
+    Era um segundo cadastro, com tabela própria: o mesmo buffet precisava
+    ser digitado nos dois lugares e nada obrigava as duas fichas a
+    concordarem. O que estes testes protegem é justamente isso -- que
+    cadastrar por aqui cria um cliente do painel, sujeito às mesmas
+    regras, e que a chave do mapa é do próprio cliente.
+    """
+
+    URL = "/site/clientes-mapa/"
+
+    def setUp(self):
+        self.gestor = User.objects.create_superuser(
+            username="gestor-mapa",
+            password="senha-segura",
+            email="gestor-mapa@example.com",
+        )
+        self.client.force_login(self.gestor)
+
+    def post(self, dados):
+        return self.client.post(self.URL, dados, HTTP_HOST="interno.testserver")
+
+    def test_cadastro_pela_tela_do_mapa_cria_cliente_do_painel(self):
+        resposta = self.post({
+            "action": "save",
+            "nome_cliente": "Salão do Bairro",
+            "tipo": Cliente.Tipo.COMERCIAL,
+            "telefone": "(11) 98888-1234",
+            "endereco": "Rua Teste",
+            "numero": "77",
+            "cidade": "Guarulhos",
+            "estado": "SP",
+            "publicar_no_mapa": "on",
+        })
+
+        self.assertEqual(resposta.status_code, 302)
+        cliente = Cliente.objects.get(nome_cliente="Salão do Bairro")
+        self.assertEqual(cliente.tipo, Cliente.Tipo.COMERCIAL)
+        self.assertTrue(cliente.publicar_no_mapa)
+        self.assertEqual(cliente.endereco_principal.cidade, "Guarulhos")
+
+    def test_a_tela_do_mapa_lista_o_cliente_criado_na_aba_clientes(self):
+        Cliente.objects.create(
+            nome_cliente="Colégio Sol",
+            tipo=Cliente.Tipo.ESCOLA,
+            telefone="(11) 94444-2211",
+        )
+
+        resposta = self.client.get(self.URL, HTTP_HOST="interno.testserver")
+
+        self.assertContains(resposta, "Colégio Sol")
+
+    def test_mesma_regra_de_contato_obrigatorio(self):
+        """Cadastro sem telefone nem e-mail é linha morta em qualquer tela."""
+        resposta = self.post({
+            "action": "save",
+            "nome_cliente": "Sem contato nenhum",
+            "tipo": Cliente.Tipo.COMERCIAL,
+        })
+
+        self.assertEqual(resposta.status_code, 302)
+        self.assertFalse(
+            Cliente.objects.filter(nome_cliente="Sem contato nenhum").exists()
+        )
+
+    def test_cliente_com_proposta_nao_e_apagado_pela_tela_do_mapa(self):
+        """O cadastro é o mesmo do painel: apagar levaria o histórico junto."""
+        cliente = Cliente.objects.create(
+            nome_cliente="Cliente com proposta",
+            telefone="(11) 91111-2222",
+        )
+        Orcamento.objects.create(
+            cliente=cliente,
+            nome_cliente="Cliente com proposta",
+            contato="(11) 91111-2222",
+        )
+
+        resposta = self.post({
+            "action": "delete",
+            "id": cliente.id,
+            "confirmacao_exclusao": "CONFIRMAR EXCLUSÃO Cliente com proposta",
+        })
+
+        self.assertEqual(resposta.status_code, 302)
+        self.assertTrue(Cliente.objects.filter(pk=cliente.pk).exists())
+
+
+@override_settings(ALLOWED_HOSTS=["interno.testserver", "testserver"])
+class BuffetForaDoMapaTests(TestCase):
+    """Buffet tem o card dele em "Nossos Parceiros" e não vira alfinete.
+
+    Os dois juntos o mostrariam duas vezes no mesmo site. A tela esconde a
+    pergunta para buffet, mas a regra mora no modelo -- senão bastava mudar
+    o tipo de um cliente já publicado para o site passar a repeti-lo.
+    """
+
+    def test_virar_buffet_tira_o_cliente_do_mapa(self):
+        cliente = Cliente.objects.create(
+            nome_cliente="Espaço Festa",
+            tipo=Cliente.Tipo.COMERCIAL,
+            telefone="(11) 92222-3333",
+            publicar_no_mapa=True,
+        )
+
+        cliente.tipo = Cliente.Tipo.BUFFET
+        cliente.save()
+
+        cliente.refresh_from_db()
+        self.assertFalse(cliente.publicar_no_mapa)
+
+    def test_a_regra_vale_mesmo_com_update_fields(self):
+        """Gravação parcial não pode escapar da regra."""
+        cliente = Cliente.objects.create(
+            nome_cliente="Espaço Festa 2",
+            tipo=Cliente.Tipo.BUFFET,
+            telefone="(11) 92222-4444",
+        )
+        Cliente.objects.filter(pk=cliente.pk).update(publicar_no_mapa=True)
+
+        cliente.refresh_from_db()
+        cliente.telefone = "(11) 92222-5555"
+        cliente.save(update_fields=["telefone", "telefone_digitos"])
+
+        cliente.refresh_from_db()
+        self.assertFalse(cliente.publicar_no_mapa)

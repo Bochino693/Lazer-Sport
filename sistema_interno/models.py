@@ -7,13 +7,13 @@ from django.utils import timezone
 
 from core.models import (
     Brinquedos,
-    Clientes as ClienteMapa,
     Estabelecimentos,
     ItemPedido,
     PecasReposicao,
     Pedido,
     Venda,
 )
+from core.utils import buscar_coordenadas_por_cidade, geocodificar_endereco
 
 
 class Prime(models.Model):
@@ -46,29 +46,51 @@ class Gerente(Prime):
 class Cliente(Prime):
     """Quem compra, aluga ou recebe manutenção da Lazer & Sport.
 
-    UM CADASTRO SÓ, COM PAPÉIS DIFERENTES. Buffet, empresa e pessoa
-    física entram na mesma tabela porque, na prática, o buffet também é
-    cliente: aluga brinquedo, pede peça, chama manutenção. Separar em
-    duas tabelas obrigaria a cadastrar o mesmo buffet duas vezes e faria
-    o histórico dele nascer partido.
+    UM CADASTRO SÓ, PARA TUDO. Antes eram dois. Este, do painel, guardava
+    contato, documento e histórico de proposta; e havia um segundo, do
+    site, que existia só para pôr um alfinete no mapa da vitrine. O mesmo
+    buffet precisava ser digitado nos dois lugares, e nada obrigava os
+    dois cadastros a concordarem: o mapa mostrava o endereço antigo
+    enquanto a proposta saía com o novo, e ninguém sabia qual dos dois
+    estava certo.
 
-    O que muda entre eles é o papel: ``tipo`` diz o que aquele cadastro
-    é, e ``parceiro`` liga um cliente ao buffet que o atende -- é assim
-    que se responde "quais clientes vieram pelo Buffet Alegria" sem
-    inventar um cadastro paralelo.
+    Agora existe esta tabela e mais nenhuma. O cliente é criado aqui, e o
+    mapa público é uma LEITURA deste cadastro -- ``publicar_no_mapa`` diz
+    se o alfinete aparece, e o endereço do estabelecimento diz onde.
+
+    O que muda de um cliente para outro é o papel: ``tipo`` separa a casa
+    do salão de festas, e ``parceiro`` liga um cliente ao buffet que o
+    atende -- é assim que se responde "quais clientes vieram pelo Buffet
+    Alegria" sem inventar um cadastro paralelo.
     """
 
     class Tipo(models.TextChoices):
-        PESSOA = "pessoa", "Pessoa física"
-        EMPRESA = "empresa", "Empresa"
+        """Onde o brinquedo vai parar.
+
+        A distinção não é burocrática: residência quer entrega na porta e
+        montagem no quintal; comércio e buffet querem nota, horário de
+        carga e alguém no local para receber. Escola e condomínio pedem
+        autorização de portaria. Quem monta a rota lê esta coluna antes
+        de tudo.
+
+        `pessoa` e `empresa` eram os nomes antigos e viraram
+        `residencial` e `comercial` na migração 0020 -- mesmo cadastro,
+        nome que diz o que interessa para quem carrega o caminhão.
+        """
+
+        RESIDENCIAL = "residencial", "Residencial"
+        COMERCIAL = "comercial", "Comercial"
         BUFFET = "buffet", "Buffet parceiro"
+        CONDOMINIO = "condominio", "Condomínio"
+        ESCOLA = "escola", "Escola"
+        ORGAO = "orgao", "Órgão público"
 
     nome_cliente = models.CharField("Nome", max_length=90)
     tipo = models.CharField(
         "Tipo de cadastro",
-        max_length=10,
+        max_length=12,
         choices=Tipo.choices,
-        default=Tipo.PESSOA,
+        default=Tipo.RESIDENCIAL,
         db_index=True,
     )
     documento = models.CharField(
@@ -94,6 +116,12 @@ class Cliente(Prime):
     )
     email = models.CharField(max_length=150, null=True, blank=True)
 
+    ativo = models.BooleanField(
+        "Cadastro ativo",
+        default=True,
+        help_text="Desmarque para arquivar sem apagar o histórico de propostas.",
+    )
+
     parceiro = models.ForeignKey(
         "self",
         on_delete=models.SET_NULL,
@@ -113,19 +141,36 @@ class Cliente(Prime):
         verbose_name="Parceiro publicado no site",
         help_text="Liga este cadastro ao parceiro que aparece no site.",
     )
-    cliente_mapa = models.OneToOneField(
-        ClienteMapa,
-        on_delete=models.SET_NULL,
-        related_name="cliente_interno",
-        null=True,
-        blank=True,
-        verbose_name="Cliente publicado no mapa",
+    observacoes = models.TextField("Observações", blank=True)
+
+    # ------------------------------------------------------------------
+    # O QUE O SITE MOSTRA
+    #
+    # Três campos, e só. Não é um "cadastro de vitrine" paralelo: é a
+    # parte deste cadastro que fica visível para quem não é da casa.
+    # ------------------------------------------------------------------
+    publicar_no_mapa = models.BooleanField(
+        "Aparece no mapa do site",
+        default=False,
+        db_index=True,
         help_text=(
-            "Vínculo automático criado quando um orçamento deste cliente "
-            "é aprovado. Buffets usam o vínculo de parceiro do site."
+            "Põe o alfinete deste cliente no mapa da página inicial. "
+            "Precisa do endereço do estabelecimento com localização."
         ),
     )
-    observacoes = models.TextField("Observações", blank=True)
+    logo = models.ImageField(
+        "Logo do cliente",
+        upload_to="logo_clientes/",
+        null=True,
+        blank=True,
+        help_text="Aparece no mapa e na faixa de clientes do rodapé do site.",
+    )
+    site_cliente = models.URLField(
+        "Instagram ou site",
+        blank=True,
+        null=True,
+        help_text='Vira o link "Visitar Instagram" no balão do mapa.',
+    )
 
     @property
     def eh_buffet(self) -> bool:
@@ -138,13 +183,43 @@ class Cliente(Prime):
 
     @property
     def endereco_principal(self):
-        """O primeiro endereço cadastrado; None quando ainda não há."""
+        """O endereço do estabelecimento; None quando ainda não há.
+
+        É o mesmo endereço que vai ao mapa, à entrega e à montagem --
+        um só, de propósito: dois endereços "principais" é como o
+        cadastro antigo passava a mostrar coisas diferentes em telas
+        diferentes.
+        """
         return self.enderecos.first()
+
+    @property
+    def no_mapa(self) -> bool:
+        """Está de fato desenhado no mapa, e não só marcado para estar."""
+        endereco = self.endereco_principal
+        return bool(
+            self.publicar_no_mapa
+            and self.ativo
+            and endereco
+            and endereco.latitude is not None
+            and endereco.longitude is not None
+        )
 
     def save(self, *args, **kwargs):
         import re as _re
 
         self.telefone_digitos = _re.sub(r"\D", "", self.telefone or "")
+
+        # Buffet não vira alfinete de cliente: ele já tem o card dele em
+        # "Nossos Parceiros", e as duas coisas juntas o mostrariam duas
+        # vezes no mesmo site. A tela esconde a pergunta para buffet, mas a
+        # regra mora aqui -- senão bastava mudar o tipo de um cliente já
+        # publicado para o site passar a repeti-lo.
+        if self.tipo == self.Tipo.BUFFET and self.publicar_no_mapa:
+            self.publicar_no_mapa = False
+            campos = kwargs.get("update_fields")
+            if campos is not None and "publicar_no_mapa" not in campos:
+                kwargs["update_fields"] = list(campos) + ["publicar_no_mapa"]
+
         super().save(*args, **kwargs)
 
     def __str__(self):
@@ -157,13 +232,42 @@ class Cliente(Prime):
 
 
 class EnderecoCliente(Prime):
-    cep = models.CharField(max_length=18)
+    """Onde o brinquedo é entregue, montado -- e onde cai o alfinete.
+
+    Um por cliente. O endereço do estabelecimento é este; não existe um
+    "endereço do mapa" separado, que era justamente o que fazia a vitrine
+    e a proposta discordarem.
+    """
+
+    class Precisao(models.TextChoices):
+        """Até onde a busca automática conseguiu chegar.
+
+        Guardar isto é o que permite distinguir, depois, um alfinete no
+        endereço de um alfinete no meio do município -- e é a diferença
+        entre "o motorista chega" e "o motorista liga perguntando".
+        """
+
+        EXATO = "exato", "Endereço exato"
+        RUA = "rua", "Meio da rua"
+        BAIRRO = "bairro", "Centro do bairro"
+        CIDADE = "cidade", "Centro da cidade"
+        MANUAL = "manual", "Informada à mão"
+
+    cep = models.CharField(max_length=18, blank=True)
     endereco = models.CharField(max_length=120)
-    numero = models.CharField(max_length=5)
-    bairro = models.CharField(max_length=50)
-    cidade = models.CharField(max_length=25)
-    estado = models.CharField(max_length=20)
-    cliente = models.ForeignKey(Cliente, related_name='enderecos', on_delete=models.CASCADE, null=True)
+    numero = models.CharField(max_length=10, blank=True)
+    complemento = models.CharField(max_length=60, blank=True)
+    bairro = models.CharField(max_length=50, blank=True)
+    cidade = models.CharField(max_length=60)
+    estado = models.CharField(max_length=20, blank=True)
+    pais = models.CharField(
+        max_length=60,
+        default="Brasil",
+        help_text="Cliente fora do Brasil não tem CEP: preencha cidade, estado e país.",
+    )
+    cliente = models.ForeignKey(
+        Cliente, related_name="enderecos", on_delete=models.CASCADE, null=True
+    )
 
     latitude = models.DecimalField(
         max_digits=50, decimal_places=30, null=True, blank=True
@@ -171,6 +275,52 @@ class EnderecoCliente(Prime):
     longitude = models.DecimalField(
         max_digits=50, decimal_places=30, null=True, blank=True
     )
+    precisao = models.CharField(
+        max_length=10, choices=Precisao.choices, blank=True, default=""
+    )
+
+    @property
+    def linha_curta(self) -> str:
+        """Uma linha, para caber na lista e no balão do mapa."""
+        pedacos = [p for p in (self.cidade, self.estado) if p]
+        return "/".join(pedacos) if pedacos else (self.pais or "")
+
+    @property
+    def tem_local(self) -> bool:
+        return self.latitude is not None and self.longitude is not None
+
+    def localizar(self):
+        """Procura a coordenada deste endereço, sem apagar a que já existe.
+
+        Nunca é chamada dentro de um `save`. Geocodificação é uma consulta
+        a serviço de fora: prender a gravação do cadastro a ela é como o
+        painel travava quando a fonte estava fora do ar -- e o cadastro
+        que a pessoa acabou de digitar se perdia junto.
+        """
+        if self.tem_local:
+            return False
+
+        latitude = longitude = precisao = None
+
+        if self.cep:
+            latitude, longitude, precisao = geocodificar_endereco(
+                self.cep, self.numero or ""
+            )
+
+        if (not latitude or not longitude) and self.cidade:
+            latitude, longitude = buscar_coordenadas_por_cidade(
+                self.cidade, self.estado or "", self.pais or "Brasil"
+            )
+            # Sem CEP só dá para chegar na cidade.
+            precisao = self.Precisao.CIDADE if latitude and longitude else None
+
+        if not (latitude and longitude):
+            return False
+
+        self.latitude = latitude
+        self.longitude = longitude
+        self.precisao = precisao or ""
+        return True
 
     def __str__(self):
         return self.endereco
@@ -1429,15 +1579,20 @@ class Orcamento(Prime):
             self.sincronizar_cliente_aprovado()
 
     def sincronizar_cliente_aprovado(self):
-        """Mantém o cadastro interno e o pino público como a mesma pessoa."""
+        """Proposta fechada põe o cliente no mapa do site.
+
+        Antes esta chamada COPIAVA o cadastro para uma segunda tabela, a da
+        vitrine, e o trabalho era manter as duas cópias parecidas. Não há
+        mais duas: publicar virou ligar uma chave no próprio cliente.
+        """
         if self.status != self.Status.APROVADO or not self.cliente_id:
             return None
 
         # Import local evita ciclo: clientes importa os modelos para gravar
         # endereço e orçamento importa o serviço apenas neste fluxo.
-        from .clientes import sincronizar_cliente_no_mapa
+        from .clientes import publicar_no_mapa
 
-        return sincronizar_cliente_no_mapa(self.cliente)
+        return publicar_no_mapa(self.cliente)
 
     def __str__(self):
         return f"Orçamento #{self.pk} — {self.destinatario}"

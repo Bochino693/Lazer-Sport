@@ -14,7 +14,7 @@ from decimal import Decimal, InvalidOperation
 
 from django.db.models import Q
 
-from core.models import Clientes as ClienteMapa, Estabelecimentos
+from core.models import Estabelecimentos
 from core.utils import buscar_coordenadas_cep_rapido, buscar_dados_cep
 
 from .models import Cliente, EnderecoCliente
@@ -27,9 +27,19 @@ def so_digitos(valor: str) -> str:
 
 def normalizar_tipo(valor: str) -> str:
     tipo = (valor or "").strip().lower()
+    # Nomes antigos ainda chegam de aba aberta antes da mudança e de link
+    # guardado no favorito. Traduzir é mais barato que perder o cadastro.
+    tipo = {"pessoa": Cliente.Tipo.RESIDENCIAL, "empresa": Cliente.Tipo.COMERCIAL}.get(
+        tipo, tipo
+    )
     if tipo not in Cliente.Tipo.values:
-        return Cliente.Tipo.PESSOA
+        return Cliente.Tipo.RESIDENCIAL
     return tipo
+
+
+def marcado(request, campo: str) -> bool:
+    """Caixa marcada no formulário, aceitando as três formas que chegam."""
+    return (request.POST.get(campo) or "").strip().lower() in ("1", "on", "true")
 
 
 def salvar_cliente(request, cliente: Cliente | None = None) -> Cliente:
@@ -86,8 +96,26 @@ def salvar_cliente(request, cliente: Cliente | None = None) -> Cliente:
         _estabelecimento_escolhido(request, cliente)
         if cliente.tipo == Cliente.Tipo.BUFFET else None
     )
-    if "cliente_mapa" in request.POST:
-        cliente.cliente_mapa_id = _cliente_mapa_escolhido(request, cliente)
+
+    # ------------------------------------------------------------------
+    # O que o site mostra deste cliente.
+    #
+    # Só é lido quando a tela mandou o campo: o cadastro rápido, feito de
+    # dentro do orçamento, não tem essa parte do formulário, e ausência ali
+    # não pode significar "despublique o cliente do mapa".
+    # ------------------------------------------------------------------
+    if "publicar_no_mapa" in request.POST:
+        cliente.publicar_no_mapa = marcado(request, "publicar_no_mapa")
+    if "site_cliente" in request.POST:
+        cliente.site_cliente = texto(request, "site_cliente", limite=200)
+    if "ativo" in request.POST:
+        cliente.ativo = marcado(request, "ativo")
+
+    logo = request.FILES.get("logo")
+    if logo:
+        cliente.logo = logo
+    elif marcado(request, "remover_logo"):
+        cliente.logo = None
 
     cliente.save()
     return cliente
@@ -136,30 +164,13 @@ def _estabelecimento_escolhido(request, cliente):
     return estabelecimento_id
 
 
-def _cliente_mapa_escolhido(request, cliente: Cliente):
-    if cliente.tipo == Cliente.Tipo.BUFFET:
-        return None
-
-    bruto = (request.POST.get("cliente_mapa") or "").strip()
-    if not bruto.isdigit():
-        return None
-
-    mapa = ClienteMapa.objects.filter(pk=int(bruto)).first()
-    if not mapa:
-        return None
-
-    ocupado = Cliente.objects.filter(cliente_mapa=mapa)
-    if cliente.pk:
-        ocupado = ocupado.exclude(pk=cliente.pk)
-    if ocupado.exists():
-        raise ErroDeFormulario(
-            "Esse cliente do mapa já está ligado a outro cadastro interno."
-        )
-    return mapa.pk
-
-
 def salvar_endereco(request, cliente: Cliente) -> EnderecoCliente | None:
-    """Guarda o endereço principal, quando a tela mandou algum campo.
+    """Guarda o endereço do estabelecimento, quando a tela mandou algum campo.
+
+    É UM ENDEREÇO SÓ, e é ele que serve para tudo: entrega, montagem e o
+    alfinete no mapa do site. Ter um "endereço do mapa" separado era
+    exatamente o que fazia a vitrine mostrar a rua antiga enquanto a
+    proposta saía com a nova.
 
     Endereço é opcional de propósito: orçamento de balcão fecha sem ele, e
     exigir CEP na pressa faz a pessoa inventar número para conseguir salvar.
@@ -167,13 +178,18 @@ def salvar_endereco(request, cliente: Cliente) -> EnderecoCliente | None:
     campos = {
         "cep": texto(request, "cep", limite=18),
         "endereco": texto(request, "endereco", limite=120),
-        "numero": texto(request, "numero", limite=5),
+        "numero": texto(request, "numero", limite=10),
+        "complemento": texto(request, "complemento", limite=60),
         "bairro": texto(request, "bairro", limite=50),
-        "cidade": texto(request, "cidade", limite=25),
+        "cidade": texto(request, "cidade", limite=60),
         "estado": texto(request, "estado", limite=20),
+        "pais": texto(request, "pais", limite=60) or "Brasil",
     }
+    # "Brasil" é o padrão do campo; sozinho, não é sinal de que alguém
+    # preencheu endereço nenhum.
+    tem_algum = any(v for k, v in campos.items() if k != "pais")
 
-    if not any(campos.values()):
+    if not tem_algum:
         return None
 
     # O CEP digitado já resolve rua, bairro, cidade e UF no servidor. O
@@ -190,7 +206,7 @@ def salvar_endereco(request, cliente: Cliente) -> EnderecoCliente | None:
             campos["cep"] = dados_cep["cep"]
             campos["endereco"] = (campos["endereco"] or dados_cep["rua"])[:120]
             campos["bairro"] = (campos["bairro"] or dados_cep["bairro"])[:50]
-            campos["cidade"] = (campos["cidade"] or dados_cep["cidade"])[:25]
+            campos["cidade"] = (campos["cidade"] or dados_cep["cidade"])[:60]
             campos["estado"] = (campos["estado"] or dados_cep["estado"])[:20]
 
     if not campos["endereco"] or not campos["cidade"]:
@@ -206,6 +222,7 @@ def salvar_endereco(request, cliente: Cliente) -> EnderecoCliente | None:
         endereco.bairro,
         endereco.cidade,
         endereco.estado,
+        endereco.pais,
     )
     for campo, valor in campos.items():
         setattr(endereco, campo, valor)
@@ -225,12 +242,17 @@ def salvar_endereco(request, cliente: Cliente) -> EnderecoCliente | None:
             raise ErroDeFormulario("As coordenadas do endereço estão fora da faixa válida.")
         endereco.latitude = latitude_decimal
         endereco.longitude = longitude_decimal
-    elif recebeu_coordenadas or endereco_anterior != tuple(campos.values()):
+        endereco.precisao = EnderecoCliente.Precisao.MANUAL
+    elif recebeu_coordenadas or endereco_anterior != (
+        campos["cep"], campos["endereco"], campos["numero"],
+        campos["bairro"], campos["cidade"], campos["estado"], campos["pais"],
+    ):
         # Um novo CEP sem coordenada não pode herdar o ponto do endereço
         # anterior. Ele permanece pendente até uma fonte rápida ou uma
         # pessoa informar o local correto.
         endereco.latitude = None
         endereco.longitude = None
+        endereco.precisao = ""
     endereco.save()
 
     return endereco
@@ -254,15 +276,20 @@ def consultar_cep(cep: str) -> dict:
     return dados
 
 
-def sincronizar_cliente_no_mapa(cliente: Cliente):
-    """Publica no mapa o cliente de uma proposta aprovada.
+def publicar_no_mapa(cliente: Cliente):
+    """Põe no mapa do site o cliente de uma proposta aprovada.
 
-    Buffets já possuem um paralelo próprio: ``Cliente.estabelecimento``
-    aponta para o parceiro exibido na área pública. Criar também um pino de
-    cliente para o mesmo buffet duplicaria a empresa no site.
+    Antes esta função COPIAVA o cadastro para uma segunda tabela, a do
+    site, e o trabalho todo era manter as duas cópias parecidas. Não há
+    mais duas: publicar virou ligar uma chave no próprio cliente.
 
-    A relação OneToOne torna a operação idempotente: aprovar de novo ou
-    editar o orçamento atualiza o mesmo pino, nunca cria cópias.
+    Buffets ficam de fora. Eles já têm um paralelo próprio na área
+    pública -- ``Cliente.estabelecimento`` aponta para o parceiro exibido
+    em "Nossos Parceiros" --, e um alfinete de cliente para o mesmo buffet
+    o mostraria duas vezes no site.
+
+    Sem endereço utilizável não há o que desenhar, e marcar assim mesmo só
+    encheria a lista de "no mapa" de cadastros que o mapa ignora.
     """
     if not cliente or cliente.eh_buffet:
         return None
@@ -271,56 +298,11 @@ def sincronizar_cliente_no_mapa(cliente: Cliente):
     if not endereco or not (endereco.cep or endereco.cidade):
         return None
 
-    mapa = cliente.cliente_mapa or ClienteMapa()
-    endereco_anterior = (
-        mapa.cep,
-        mapa.rua,
-        mapa.numero,
-        mapa.bairro,
-        mapa.cidade,
-        mapa.estado,
-    )
-    endereco_novo = (
-        endereco.cep or None,
-        endereco.endereco or None,
-        endereco.numero or None,
-        endereco.bairro or None,
-        endereco.cidade or None,
-        (endereco.estado or "")[:2].upper() or None,
-    )
+    if not cliente.publicar_no_mapa:
+        cliente.publicar_no_mapa = True
+        cliente.save(update_fields=["publicar_no_mapa", "telefone_digitos", "atualizado"])
 
-    mapa.descricao_cliente = cliente.nome_cliente
-    (
-        mapa.cep,
-        mapa.rua,
-        mapa.numero,
-        mapa.bairro,
-        mapa.cidade,
-        mapa.estado,
-    ) = endereco_novo
-    mapa.pais = "Brasil"
-    mapa.ativo = True
-    mapa.exibir_no_mapa = True
-
-    # Endereço alterado precisa de um novo ponto. Se o endereço interno já
-    # tiver coordenadas confiáveis, elas são reaproveitadas e nenhuma
-    # consulta de geocodificação é feita.
-    if endereco_anterior != endereco_novo:
-        mapa.latitude = endereco.latitude
-        mapa.longitude = endereco.longitude
-        mapa.precisao_local = "manual" if endereco.latitude and endereco.longitude else ""
-
-    # Nunca faça geocodificação externa dentro da gravação do cliente. O
-    # CEP já tentou trazer coordenadas enquanto o formulário era preenchido;
-    # se a fonte estava fora, o cadastro fica pendente e pode ser completado
-    # depois, sem ocupar todas as threads do Render e causar 502.
-    mapa.save(geocodificar=False)
-
-    if cliente.cliente_mapa_id != mapa.pk:
-        cliente.cliente_mapa = mapa
-        cliente.save(update_fields=["cliente_mapa", "telefone_digitos", "atualizado"])
-
-    return mapa
+    return endereco
 
 
 def opcao_de_busca(cliente: Cliente) -> dict:

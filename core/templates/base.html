@@ -2812,9 +2812,9 @@
 
           <div class="ls-clientes-logos">
               {% for cliente in clientes_rodape %}
-                <div class="ls-cliente-logo" title="{{ cliente.descricao_cliente }}">
-                    <img src="{{ cliente.logo_cliente.url }}"
-                         alt="Logo {{ cliente.descricao_cliente }}"
+                <div class="ls-cliente-logo" title="{{ cliente.nome_cliente }}">
+                    <img src="{{ cliente.logo.url }}"
+                         alt="Logo {{ cliente.nome_cliente }}"
                          loading="lazy" decoding="async">
                 </div>
               {% endfor %}

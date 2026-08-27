@@ -308,8 +308,13 @@ a:hover{color:#FFD79A}
 .ls-page-hero-actions .btn{min-height:42px;padding-inline:16px}
 
 /* METRICS */
+/* A faixa de números se ajusta à quantidade de cartões, e não a quatro.
+   Com quatro, dá quatro colunas como antes; com cinco -- que é o caso de
+   Clientes, desde que o mapa entrou na conta --, dá cinco, em vez de
+   deixar o último sozinho numa segunda linha. */
 .ls-metrics{
-  display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:18px;
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(208px,1fr));
+  gap:12px;margin-bottom:18px;
 }
 .ls-metric-card{
   position:relative;min-height:104px;overflow:hidden;padding:14px 16px;
@@ -1096,6 +1101,93 @@ body.modal-open .ls-abas{display:none!important}
   /* com as abas, o botão de menu do topo vira redundante */
   .ls-mobile-menu{display:none}
 }
+
+/* ======================================================================
+   CAMPO DE FOTO — uma peça só para o painel inteiro
+
+   Era o pedaço mais desencontrado das telas: numa o `input type=file`
+   aparecia cru, com o botão cinza do sistema; noutra, uma área tracejada
+   branca de tema claro; noutra, um botão azul dentro de um cartão. Três
+   desenhos para a mesma pergunta -- "qual imagem?".
+
+   Agora é sempre a mesma coisa: um retângulo tracejado que aceita clique
+   e arraste, com a miniatura dentro dele quando já há foto.
+   ====================================================================== */
+.ls-foto{
+  position:relative;
+  min-height:150px;
+  padding:16px;
+  display:grid;
+  grid-template-columns:96px minmax(0,1fr);
+  align-items:center;
+  gap:16px;
+  border:1.5px dashed #7a6540;
+  border-radius:16px;
+  background:rgba(242,169,59,.045);
+  transition:.16s ease;
+}
+.ls-foto:hover,
+.ls-foto:focus-within,
+.ls-foto.arrastando{
+  border-color:var(--acento);
+  background:rgba(242,169,59,.1);
+}
+.ls-foto-miniatura{
+  width:96px;height:96px;
+  display:grid;place-items:center;overflow:hidden;
+  border:1px solid var(--line);border-radius:13px;
+  background:#1A1610;
+  color:var(--muted-2);font-size:1.6rem;
+}
+.ls-foto-miniatura img{
+  width:100%;height:100%;padding:5px;
+  object-fit:contain;
+  display:none;
+}
+.ls-foto.tem-imagem .ls-foto-miniatura img{display:block}
+.ls-foto.tem-imagem .ls-foto-miniatura i,
+.ls-foto.tem-imagem .ls-foto-miniatura svg{display:none}
+.ls-foto-copy{min-width:0}
+.ls-foto-copy strong{
+  display:block;color:var(--text);font-size:.9rem;font-weight:900;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.ls-foto-copy span{
+  display:block;margin-top:4px;color:var(--muted);
+  font-size:.76rem;line-height:1.45;
+}
+.ls-foto-acoes{margin-top:11px;display:flex;flex-wrap:wrap;gap:8px}
+.ls-foto-escolher{
+  position:relative;overflow:hidden;
+  min-height:42px;padding:0 15px;
+  display:inline-flex;align-items:center;gap:8px;
+  border:1px solid rgba(242,169,59,.5);border-radius:11px;
+  color:#ffd591;background:rgba(242,169,59,.12);
+  font-size:.8rem;font-weight:850;cursor:pointer;
+}
+.ls-foto-escolher:hover{color:#2A1B05;background:var(--acento);border-color:var(--acento)}
+/* O `input` de verdade fica por cima e transparente: o clique e o
+   arraste caem nele, e o desenho é todo nosso. Esconder com `display:none`
+   tiraria o arraste junto. */
+.ls-foto-escolher input[type="file"]{
+  position:absolute;inset:0;width:100%;height:100%;
+  opacity:0;cursor:pointer;
+}
+.ls-foto-limpar{
+  min-height:42px;padding:0 13px;
+  display:inline-flex;align-items:center;gap:7px;
+  border:1px solid rgba(255,122,107,.3);border-radius:11px;
+  color:#FF9AAA;background:rgba(255,122,107,.08);
+  font-size:.8rem;font-weight:850;cursor:pointer;
+}
+.ls-foto-limpar:hover{color:#3A0E08;background:var(--red)}
+
+@media (max-width:560px){
+  .ls-foto{grid-template-columns:1fr;justify-items:center;text-align:center}
+  .ls-foto-copy strong{white-space:normal}
+  .ls-foto-acoes{justify-content:center}
+}
+
 
 /* ======================================================================
    CAMADA DE CONSISTÊNCIA

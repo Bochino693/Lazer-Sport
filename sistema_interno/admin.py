@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.utils.html import format_html
 from .models import Colaborador, Material, TipoMaterial, Gerente
 
 
@@ -45,15 +46,70 @@ from .models import (
 class EnderecoClienteInline(admin.StackedInline):
     model = EnderecoCliente
     extra = 1
+    fields = (
+        ("cep", "numero"),
+        ("endereco", "complemento"),
+        ("bairro", "cidade", "estado"),
+        "pais",
+        ("latitude", "longitude", "precisao"),
+    )
+
 
 @admin.register(Cliente)
 class ClienteAdmin(admin.ModelAdmin):
+    """O cadastro único: painel e mapa do site na mesma ficha."""
+
     list_display = (
-        'nome_cliente', 'tipo', 'telefone', 'email', 'parceiro', 'cliente_mapa', 'criacao',
+        "nome_cliente", "tipo", "telefone", "email",
+        "parceiro", "publicar_no_mapa", "alfinete", "ativo", "criacao",
     )
-    list_filter = ('tipo',)
-    search_fields = ('nome_cliente', 'email', 'telefone')
+    list_filter = ("tipo", "ativo", "publicar_no_mapa")
+    search_fields = ("nome_cliente", "email", "telefone", "telefone_digitos", "documento")
     inlines = [EnderecoClienteInline]
+    fieldsets = (
+        (None, {
+            "fields": ("nome_cliente", "tipo", "documento", "ativo"),
+        }),
+        ("Contato", {
+            "fields": ("telefone", "email"),
+        }),
+        ("Vínculos", {
+            "fields": ("parceiro", "estabelecimento"),
+        }),
+        ("No site", {
+            "fields": ("publicar_no_mapa", "logo", "site_cliente"),
+            "description": (
+                "O alfinete do mapa sai do endereço do estabelecimento, logo "
+                "abaixo. Sem coordenada, o cliente fica marcado para o mapa "
+                "mas não é desenhado -- a lista mostra isso na coluna Alfinete."
+            ),
+        }),
+        ("Observações", {
+            "fields": ("observacoes",),
+        }),
+    )
+
+    @admin.display(description="Alfinete")
+    def alfinete(self, obj):
+        """Diz, na lista, quais pontos são o endereço e quais são só a região.
+
+        Sem esta coluna não havia como saber: um alfinete no centro da
+        cidade e um alfinete na porta do cliente apareciam exatamente
+        iguais no cadastro.
+        """
+        endereco = obj.endereco_principal
+        if not endereco or not endereco.tem_local:
+            return format_html('<span style="color:#b91c1c">sem ponto</span>')
+
+        rotulos = {
+            EnderecoCliente.Precisao.EXATO: ("#15803d", "no endereço"),
+            EnderecoCliente.Precisao.MANUAL: ("#15803d", "à mão"),
+            EnderecoCliente.Precisao.RUA: ("#a16207", "meio da rua"),
+            EnderecoCliente.Precisao.BAIRRO: ("#b45309", "só o bairro"),
+            EnderecoCliente.Precisao.CIDADE: ("#b91c1c", "só a cidade"),
+        }
+        cor, texto = rotulos.get(endereco.precisao, ("#6b7280", "não conferido"))
+        return format_html('<span style="color:{}">{}</span>', cor, texto)
 
 @admin.register(Setores)
 class SetoresAdmin(admin.ModelAdmin):

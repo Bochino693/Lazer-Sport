@@ -1498,11 +1498,11 @@
     </div>
 
     <div class="clients-results-line">
-      <span><strong id="visibleClientCount">{{ clientes|length }}</strong> cliente(s) exibido(s)</span>
+      <span><strong id="visibleClientCount">{{ fichas|length }}</strong> cliente(s) exibido(s)</span>
       <span>Atualização instantânea dos filtros</span>
     </div>
 
-    {% if clientes %}
+    {% if fichas %}
       <div class="clients-table-wrap">
         <table class="clients-table">
           <thead>
@@ -1514,25 +1514,27 @@
             </tr>
           </thead>
           <tbody id="clientsTableBody">
-            {% for cliente in clientes %}
+            {% for ficha in fichas %}
+              {% with cliente=ficha.obj endereco=ficha.endereco %}
               <tr
                 data-client-id="{{ cliente.id }}"
-                data-client-name="{{ cliente.descricao_cliente|default:''|lower }}"
-                data-client-location="{{ cliente.cidade|default:''|lower }} {{ cliente.estado|default:''|lower }} {{ cliente.pais|default:'Brasil'|lower }}"
+                data-client-name="{{ cliente.nome_cliente|default:''|lower }}"
+                data-client-location="{{ endereco.cidade|default:''|lower }} {{ endereco.estado|default:''|lower }} {{ endereco.pais|default:'Brasil'|lower }}"
                 data-active="{% if cliente.ativo %}true{% else %}false{% endif %}"
-                data-published="{% if cliente.ativo and cliente.exibir_no_mapa and cliente.latitude and cliente.longitude %}true{% else %}false{% endif %}"
-                data-located="{% if cliente.latitude and cliente.longitude %}true{% else %}false{% endif %}">
+                data-published="{% if ficha.no_mapa %}true{% else %}false{% endif %}"
+                data-located="{% if endereco.tem_local %}true{% else %}false{% endif %}">
                 <td>
                   <div class="client-identity">
                     <div class="client-logo">
-                      {% if cliente.logo_cliente %}
-                        <img src="{{ cliente.logo_cliente.url }}" alt="Logo de {{ cliente.descricao_cliente }}">
+                      {% if cliente.logo %}
+                        <img src="{{ cliente.logo.url }}" alt="Logo de {{ cliente.nome_cliente }}">
                       {% else %}
-                        {{ cliente.descricao_cliente|default:"C"|slice:":1"|upper }}
+                        {{ cliente.nome_cliente|default:"C"|slice:":1"|upper }}
                       {% endif %}
                     </div>
                     <div>
-                      <strong class="client-name">{{ cliente.descricao_cliente }}</strong>
+                      <strong class="client-name">{{ cliente.nome_cliente }}</strong>
+                      <span class="client-kind">{{ cliente.get_tipo_display }}</span>
                       {% if cliente.site_cliente %}
                         <a class="client-site" href="{{ cliente.site_cliente }}" target="_blank" rel="noopener">
                           {{ cliente.site_cliente }}
@@ -1546,13 +1548,13 @@
                 <td>
                   <div class="client-location">
                     <strong>
-                      {% if cliente.cidade %}
-                        {{ cliente.cidade }}{% if cliente.estado %}/{{ cliente.estado }}{% endif %}
+                      {% if endereco.cidade %}
+                        {{ endereco.cidade }}{% if endereco.estado %}/{{ endereco.estado }}{% endif %}
                       {% else %}
                         Cidade não informada
                       {% endif %}
                     </strong>
-                    <span>{{ cliente.pais|default:"Brasil" }}{% if cliente.cep %} · CEP {{ cliente.cep }}{% endif %}</span>
+                    <span>{{ endereco.pais|default:"Brasil" }}{% if endereco.cep %} · CEP {{ endereco.cep }}{% endif %}</span>
                   </div>
                 </td>
                 <td>
@@ -1563,8 +1565,8 @@
                       <span class="client-status is-neutral"><i class="client-status-dot"></i>Inativo</span>
                     {% endif %}
 
-                    {% if cliente.latitude and cliente.longitude %}
-                      {% if cliente.exibir_no_mapa and cliente.ativo %}
+                    {% if endereco.tem_local %}
+                      {% if ficha.no_mapa %}
                         <span class="client-status is-info"><i class="client-status-dot"></i>No mapa</span>
                       {% else %}
                         <span class="client-status is-warning"><i class="client-status-dot"></i>Oculto</span>
@@ -1576,7 +1578,7 @@
                 </td>
                 <td>
                   <div class="client-actions">
-                    <button type="button" class="client-action" data-edit-client="{{ cliente.id }}" title="Editar cliente" aria-label="Editar {{ cliente.descricao_cliente }}">
+                    <button type="button" class="client-action" data-edit-client="{{ cliente.id }}" title="Editar cliente" aria-label="Editar {{ cliente.nome_cliente }}">
                       <svg><use href="#client-i-edit"/></svg>
                     </button>
 
@@ -1584,7 +1586,7 @@
                       {% csrf_token %}
                       <input type="hidden" name="action" value="recalcular">
                       <input type="hidden" name="id" value="{{ cliente.id }}">
-                      <button type="submit" class="client-action" title="Recalcular localização" aria-label="Recalcular localização de {{ cliente.descricao_cliente }}">
+                      <button type="submit" class="client-action" title="Recalcular localização" aria-label="Recalcular localização de {{ cliente.nome_cliente }}">
                         <svg><use href="#client-i-refresh"/></svg>
                       </button>
                     </form>
@@ -1593,14 +1595,15 @@
                       type="button"
                       class="client-action is-danger"
                       data-delete-client="{{ cliente.id }}"
-                      data-delete-name="{{ cliente.descricao_cliente }}"
+                      data-delete-name="{{ cliente.nome_cliente }}"
                       title="Excluir cliente"
-                      aria-label="Excluir {{ cliente.descricao_cliente }}">
+                      aria-label="Excluir {{ cliente.nome_cliente }}">
                       <svg><use href="#client-i-trash"/></svg>
                     </button>
                   </div>
                 </td>
               </tr>
+              {% endwith %}
             {% endfor %}
           </tbody>
         </table>
@@ -1615,7 +1618,7 @@
       <div class="clients-empty">
         <span class="clients-empty-icon"><svg><use href="#i-map-pin"/></svg></span>
         <h3>Comece sua rede de clientes</h3>
-        <p>Cadastre o primeiro estabelecimento para começar a construir a presença da Lazer &amp; Sport no mapa.</p>
+        <p>Cadastre o primeiro cliente aqui ou pela aba Clientes -- é o mesmo cadastro, e todo ele pode ir ao mapa.</p>
       </div>
     {% endif %}
   </section>
@@ -1652,11 +1655,33 @@
           <div class="client-form-grid">
             <div class="client-field is-full">
               <label for="clientName">Nome do cliente <small>Obrigatório</small></label>
-              <input id="clientName" name="descricao_cliente" type="text" placeholder="Ex.: Buffet Alegria" required maxlength="160">
+              <input id="clientName" name="nome_cliente" type="text" placeholder="Ex.: Buffet Alegria" required maxlength="90">
+            </div>
+
+            {% comment %}
+              É o mesmo cadastro da aba Clientes: o tipo diz se o brinquedo
+              vai para uma casa, um salão ou uma escola -- e é isso que quem
+              monta a rota lê antes de tudo.
+            {% endcomment %}
+            <div class="client-field">
+              <label for="clientKind">Tipo de cadastro</label>
+              <select id="clientKind" name="tipo">
+                {% for valor, rotulo in tipos %}<option value="{{ valor }}">{{ rotulo }}</option>{% endfor %}
+              </select>
+            </div>
+
+            <div class="client-field">
+              <label for="clientPhone">Telefone / WhatsApp <small>Telefone ou e-mail</small></label>
+              <input id="clientPhone" name="telefone" type="text" inputmode="tel" maxlength="24" placeholder="(11) 99999-9999">
             </div>
 
             <div class="client-field is-full">
-              <label>Logo do cliente <small id="clientLogoRequirement">Obrigatória no cadastro</small></label>
+              <label for="clientEmail">E-mail <small>Telefone ou e-mail</small></label>
+              <input id="clientEmail" name="email" type="email" maxlength="150" placeholder="contato@empresa.com.br">
+            </div>
+
+            <div class="client-field is-full">
+              <label>Logo do cliente <small id="clientLogoRequirement">Opcional</small></label>
               <div class="client-logo-upload">
                 <span id="clientLogoPreview" class="client-logo-preview">
                   <svg><use href="#client-i-image"/></svg>
@@ -1668,7 +1693,7 @@
                   <label class="client-file-button">
                     <svg><use href="#client-i-upload"/></svg>
                     Selecionar arquivo
-                    <input id="clientLogo" name="logo_cliente" type="file" accept="image/png,image/jpeg,image/webp">
+                    <input id="clientLogo" name="logo" type="file" accept="image/png,image/jpeg,image/webp">
                   </label>
                 </span>
               </div>
@@ -1718,7 +1743,7 @@
           <div class="client-form-grid">
             <div class="client-field is-third">
               <label for="clientNumber">Número <small>Preencha manualmente</small></label>
-              <input id="clientNumber" name="numero" type="text" autocomplete="address-line2" placeholder="Ex.: 104 ou S/N" maxlength="20">
+              <input id="clientNumber" name="numero" type="text" autocomplete="address-line2" placeholder="Ex.: 104 ou S/N" maxlength="10">
             </div>
             <div class="client-field" style="grid-column: span 8;">
               <label for="clientCountry">País</label>
@@ -1726,7 +1751,7 @@
             </div>
             <div class="client-field is-full">
               <label for="clientStreet">Rua</label>
-              <input id="clientStreet" name="rua" type="text" autocomplete="address-line1" placeholder="Será preenchida pelo CEP">
+              <input id="clientStreet" name="endereco" type="text" autocomplete="address-line1" placeholder="Será preenchida pelo CEP">
             </div>
             <div class="client-field">
               <label for="clientDistrict">Bairro</label>
@@ -1754,6 +1779,7 @@
 
           <div class="client-toggle-grid">
             <label class="client-toggle">
+              <input type="hidden" name="ativo" value="">
               <input id="clientActive" name="ativo" type="checkbox" checked>
               <span class="client-toggle-control"></span>
               <span class="client-toggle-copy">
@@ -1763,11 +1789,12 @@
             </label>
 
             <label class="client-toggle">
-              <input id="clientPublished" name="exibir_no_mapa" type="checkbox" checked>
+              <input type="hidden" name="publicar_no_mapa" value="">
+              <input id="clientPublished" name="publicar_no_mapa" type="checkbox" checked>
               <span class="client-toggle-control"></span>
               <span class="client-toggle-copy">
                 <strong>Exibir no mapa</strong>
-                <span>Publica o cliente no site.</span>
+                <span>Publica o alfinete deste cliente na página inicial.</span>
               </span>
             </label>
 
@@ -2066,23 +2093,24 @@
     document.getElementById('clientModalSubtitle').textContent = client
       ? 'Atualize os dados e a publicação deste estabelecimento.'
       : 'Adicione um novo estabelecimento à rede Lazer & Sport.';
-    document.getElementById('clientLogoRequirement').textContent = client
-      ? 'Opcional ao editar'
-      : 'Obrigatória no cadastro';
-    clientLogo.required = !client;
+    document.getElementById('clientLogoRequirement').textContent = 'Opcional';
+    clientLogo.required = false;
 
     if (client) {
-      setValue('clientName', client.descricao_cliente);
+      setValue('clientName', client.nome_cliente);
+      setValue('clientKind', client.tipo || 'comercial');
+      setValue('clientPhone', client.telefone);
+      setValue('clientEmail', client.email);
       setValue('clientSite', client.site_cliente);
       setValue('clientCep', client.cep);
       setValue('clientNumber', client.numero);
       setValue('clientCountry', client.pais || 'Brasil');
-      setValue('clientStreet', client.rua);
+      setValue('clientStreet', client.endereco);
       setValue('clientDistrict', client.bairro);
       setValue('clientCity', client.cidade);
       setValue('clientState', client.estado);
       document.getElementById('clientActive').checked = Boolean(client.ativo);
-      document.getElementById('clientPublished').checked = Boolean(client.exibir_no_mapa);
+      document.getElementById('clientPublished').checked = Boolean(client.publicar_no_mapa);
       logoFileName.textContent = 'Manter logo atual ou selecionar outra';
       if (client.logo_url) {
         logoPreviewImage.src = client.logo_url;
@@ -2091,6 +2119,7 @@
       setManualAddressMode(!client.cep, false);
     } else {
       setValue('clientCountry', 'Brasil');
+      setValue('clientKind', 'comercial');
       document.getElementById('clientActive').checked = true;
       document.getElementById('clientPublished').checked = true;
       setManualAddressMode(false, false);

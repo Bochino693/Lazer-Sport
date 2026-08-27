@@ -146,24 +146,47 @@
   background:rgba(242,169,59,.13)!important;
 }
 
-/* ---- o que conclui ---- */
+/* ---- o que conclui ----
+
+   Verde, e não âmbar. É a cor que o botão de concluir já tem em Estoque,
+   Clientes, Orçamentos e Produção (`.btn-success`), e a regra desta folha
+   é seguir o painel, não inventar um terceiro dialeto. O âmbar é do
+   ambiente -- menu, foco, destaque -- e da única chamada grande da tela
+   inicial; usá-lo também aqui apagaria essa diferença. */
 .gestao-integrada .ls-content button[type="submit"],
 .gestao-integrada .ls-content [class*="primary"],
 .gestao-integrada .ls-content [class*="salvar"],
 .gestao-integrada .ls-content [class*="-save"]{
-  border-color:rgba(255,211,132,.42)!important;
-  color:#211605!important;
-  background:linear-gradient(135deg,#FFD17F,#E8A83E)!important;
-  box-shadow:0 12px 28px rgba(196,132,32,.22)!important;
+  border-color:#52D5A1!important;
+  color:#061B13!important;
+  background:linear-gradient(135deg,#5CE2AD,#46CF98)!important;
+  box-shadow:0 12px 28px rgba(70,207,152,.2)!important;
 }
 .gestao-integrada .ls-content button[type="submit"]:hover,
 .gestao-integrada .ls-content [class*="primary"]:hover,
 .gestao-integrada .ls-content [class*="salvar"]:hover,
 .gestao-integrada .ls-content [class*="-save"]:hover{
-  color:#170E02!important;
-  background:linear-gradient(135deg,#FFDA94,#F2B44B)!important;
+  color:#04120C!important;
+  background:linear-gradient(135deg,#6DEBBA,#54DBA5)!important;
   transform:translateY(-1px);
 }
+
+/* Ação de linha é ÍCONE, não confirmação. "Recalcular localização" é um
+   `<button type=submit>` dentro de um formulariozinho da própria linha, e
+   pela regra acima nascia verde -- do tamanho e do peso de um "Salvar",
+   repetido em toda linha da tabela. */
+.gestao-integrada .ls-content [class*="-action"]:not([class*="-actions"]){
+  min-width:40px;padding:0 10px!important;
+  border-color:var(--line)!important;
+  color:var(--text-2)!important;
+  background:rgba(255,255,255,.045)!important;
+  box-shadow:none!important;
+}
+.gestao-integrada .ls-content [class*="-action"]:not([class*="-actions"]):hover{
+  border-color:#7a6540!important;color:#fff!important;
+  background:rgba(242,169,59,.13)!important;
+}
+.gestao-integrada .ls-content [class*="-action-form"]{display:contents}
 
 /* ---- o que destrói ---- */
 .gestao-integrada .ls-content [class*="danger"],
@@ -182,6 +205,28 @@
 .gestao-integrada .ls-content [class*="remover"]:hover,
 .gestao-integrada .ls-content .remove:hover{
   color:#3A0E08!important;background:var(--red)!important;border-color:var(--red)!important;
+}
+
+/* Botão que mora DENTRO de um campo -- o "x" que limpa a busca, o fechar
+   de uma janela -- não é uma pastilha: é um ícone. Com o corpo de botão de
+   formulário, o "x" da busca virava uma pílula do tamanho do próprio
+   campo. */
+.gestao-integrada .ls-content label button,
+.gestao-integrada .ls-content [class*="-clear"],
+.gestao-integrada .ls-content [class*="-close"]{
+  min-height:0;width:auto;padding:4px!important;
+  border:0!important;border-radius:9px!important;
+  color:var(--muted)!important;background:none!important;
+  box-shadow:none!important;
+}
+.gestao-integrada .ls-content label button:hover,
+.gestao-integrada .ls-content [class*="-clear"]:hover,
+.gestao-integrada .ls-content [class*="-close"]:hover{
+  color:var(--text)!important;background:rgba(255,255,255,.07)!important;
+}
+/* O fechar do cabeçalho da janela continua sendo um alvo de dedo. */
+.gestao-integrada .ls-content [class*="modal-close"]{
+  min-height:40px;width:auto;padding:8px 12px!important;
 }
 
 /* ---- discreto ---- */
@@ -234,93 +279,15 @@
 
 
 /* ----------------------------------------------------------------------
-   CAMPO DE FOTO — uma peça só para o painel inteiro
+   CAMPO DE FOTO — adaptação da marcação antiga
 
-   Era o pedaço mais desencontrado das telas herdadas: numa página o
-   `input type=file` aparecia cru, com o botão cinza do sistema; noutra,
-   uma área tracejada branca; noutra, um botão azul dentro de um cartão.
-   Três desenhos para a mesma pergunta -- "qual imagem?".
-
-   Agora é sempre a mesma coisa: um retângulo tracejado que aceita clique
-   e arraste, com a miniatura dentro dele quando já há foto. Vale tanto
-   para a marcação nova (`.ls-foto`) quanto para a antiga, que é
-   reaproveitada por adaptação logo abaixo.
+   O componente em si (`.ls-foto`) mora no interno_modern.css: é do painel
+   inteiro, e a aba Clientes usa o mesmo. Aqui ficam só os adaptadores das
+   marcações que cada tela herdada inventou para a mesma pergunta -- "qual
+   imagem?". Numa página o `input type=file` aparecia cru, com o botão
+   cinza do sistema; noutra, uma área tracejada branca; noutra, um botão
+   azul dentro de um cartão.
    ---------------------------------------------------------------------- */
-.ls-foto{
-  position:relative;
-  min-height:150px;
-  padding:16px;
-  display:grid;
-  grid-template-columns:96px minmax(0,1fr);
-  align-items:center;
-  gap:16px;
-  border:1.5px dashed #7a6540;
-  border-radius:16px;
-  background:rgba(242,169,59,.045);
-  transition:.16s ease;
-}
-.ls-foto:hover,
-.ls-foto:focus-within,
-.ls-foto.arrastando{
-  border-color:var(--acento);
-  background:rgba(242,169,59,.1);
-}
-.ls-foto-miniatura{
-  width:96px;height:96px;
-  display:grid;place-items:center;overflow:hidden;
-  border:1px solid var(--line);border-radius:13px;
-  background:#1A1610;
-  color:var(--muted-2);font-size:1.6rem;
-}
-.ls-foto-miniatura img{
-  width:100%;height:100%;padding:5px;
-  object-fit:contain;
-  display:none;
-}
-.ls-foto.tem-imagem .ls-foto-miniatura img{display:block}
-.ls-foto.tem-imagem .ls-foto-miniatura i,
-.ls-foto.tem-imagem .ls-foto-miniatura svg{display:none}
-.ls-foto-copy{min-width:0}
-.ls-foto-copy strong{
-  display:block;color:var(--text);font-size:.9rem;font-weight:900;
-  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
-}
-.ls-foto-copy span{
-  display:block;margin-top:4px;color:var(--muted);
-  font-size:.76rem;line-height:1.45;
-}
-.ls-foto-acoes{margin-top:11px;display:flex;flex-wrap:wrap;gap:8px}
-.ls-foto-escolher{
-  position:relative;overflow:hidden;
-  min-height:42px;padding:0 15px;
-  display:inline-flex;align-items:center;gap:8px;
-  border:1px solid rgba(242,169,59,.5);border-radius:11px;
-  color:#ffd591;background:rgba(242,169,59,.12);
-  font-size:.8rem;font-weight:850;cursor:pointer;
-}
-.ls-foto-escolher:hover{color:#2A1B05;background:var(--acento);border-color:var(--acento)}
-/* O `input` de verdade fica por cima e transparente: o clique e o
-   arraste caem nele, e o desenho é todo nosso. Esconder com `display:none`
-   tiraria o arraste junto. */
-.ls-foto-escolher input[type="file"]{
-  position:absolute;inset:0;width:100%;height:100%;
-  opacity:0;cursor:pointer;
-}
-.ls-foto-limpar{
-  min-height:42px;padding:0 13px;
-  display:inline-flex;align-items:center;gap:7px;
-  border:1px solid rgba(255,122,107,.3);border-radius:11px;
-  color:#FF9AAA;background:rgba(255,122,107,.08);
-  font-size:.8rem;font-weight:850;cursor:pointer;
-}
-.ls-foto-limpar:hover{color:#3A0E08;background:var(--red)}
-
-@media (max-width:560px){
-  .ls-foto{grid-template-columns:1fr;justify-items:center;text-align:center}
-  .ls-foto-copy strong{white-space:normal}
-  .ls-foto-acoes{justify-content:center}
-}
-
 /* ---- adaptação da marcação antiga ---- */
 
 /* `input type=file` solto, sem embrulho nenhum: o botão cinza do sistema
@@ -490,9 +457,7 @@
   flex:1 1 auto;min-height:0;padding:20px;
   overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;
 }
-.gestao-integrada .ls-content [class*="modal-close"]{
-  width:40px;min-height:40px;padding:0!important;border-radius:11px!important;
-}
+
 
 @media (max-width:900px){
   .gestao-integrada .ls-content .modal-content,

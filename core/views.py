@@ -16,7 +16,18 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from .models import Brinquedos, ImagemBrinquedo, CategoriasBrinquedos, Projetos, Eventos, ClientePerfil, Combos, Cupom, Promocoes, \
     TagsBrinquedos, ImagensSite, BrinquedosProjeto, Estabelecimentos, Manutencao, ManutencaoImagem, \
     BrinquedoClick, ComboClick, PromocaoClick, CategoriaClick, PecasReposicao, CategoriaPeca, \
-    ImagemProjetoBrinquedo, ImagemEvento, Clientes, EnderecoEmpresa
+    ImagemProjetoBrinquedo, ImagemEvento, EnderecoEmpresa
+# O cadastro de cliente mora no sistema interno -- é lá que ele nasce, e a
+# vitrine só lê. Havia um segundo cadastro aqui, só para o mapa; ver a
+# migração sistema_interno/0020.
+from sistema_interno.models import Cliente, EnderecoCliente
+from sistema_interno import clientes as clientes_svc
+# Apelidado de propósito: este módulo define, mais abaixo, uma classe
+# `ErroDeFormulario` sua. Sem o apelido, a de baixo sobrescreve a
+# importada no escopo do módulo, e o `except` do cadastro de cliente
+# passa a esperar uma exceção que nunca é levantada -- a validação
+# vira erro 500 em vez de mensagem na tela.
+from sistema_interno.utils import ErroDeFormulario as ErroDeCadastroCliente
 from django.templatetags.static import static
 
 # Ciclo carrinho -> pedido reservado -> pedido pago.
@@ -283,38 +294,36 @@ class HomeView(View):
             .order_by("nome")
         )
 
-        # Clientes com localização cadastrada, para o mapa da seção "Clientes"
-        clientes_com_mapa = list(
-            Clientes.objects
+        # Alfinetes da seção "Clientes". Saem do cadastro do painel: o
+        # endereço que aparece aqui é o MESMO que vai na proposta e na
+        # ordem de entrega, e não uma cópia que envelhece sozinha.
+        enderecos_no_mapa = (
+            EnderecoCliente.objects
             .filter(
-                ativo=True,
-                exibir_no_mapa=True,
+                cliente__ativo=True,
+                cliente__publicar_no_mapa=True,
                 latitude__isnull=False,
                 longitude__isnull=False,
             )
+            .select_related("cliente")
             .only(
-                "descricao_cliente",
-                "cidade",
-                "estado",
-                "pais",
-                "latitude",
-                "longitude",
-                "site_cliente",
+                "cidade", "estado", "pais", "latitude", "longitude",
+                "cliente__nome_cliente", "cliente__site_cliente",
             )
         )
 
         clientes_mapa = [
             {
                 "tipo": "cliente",
-                "nome": c.descricao_cliente or "Cliente Lazer & Sport",
-                "cidade": c.cidade or "",
-                "estado": c.estado or "",
-                "pais": c.pais or "Brasil",
-                "lat": float(c.latitude),
-                "lng": float(c.longitude),
-                "site": c.site_cliente or "",
+                "nome": e.cliente.nome_cliente or "Cliente Lazer & Sport",
+                "cidade": e.cidade or "",
+                "estado": e.estado or "",
+                "pais": e.pais or "Brasil",
+                "lat": float(e.latitude),
+                "lng": float(e.longitude),
+                "site": e.cliente.site_cliente or "",
             }
-            for c in clientes_com_mapa
+            for e in enderecos_no_mapa
         ]
 
         # Pino especial da fábrica. EnderecoEmpresa continua editável pelo
@@ -1646,150 +1655,172 @@ class AdminOnlyMixin(View):
 
 
 class ClienteAdminView(AdminOnlyMixin, View):
-    """
-    Tela de admin pra cadastrar/editar os Clientes que aparecem no mapa
-    da home. Criação e edição pelo mesmo modal. A geolocalização
-    (latitude/longitude) é sempre automática -- calculada a partir do
-    CEP (Brasil) ou cidade/país (fora do Brasil) no Clientes.save().
+    """Quem da carteira de clientes aparece no mapa da página inicial.
 
-    Diferença importante em relação a editar direto pelo /system/: aqui,
-    se o CEP/cidade/rua de um cliente que já existe for alterado, a
-    geolocalização é refeita automaticamente na hora (limpa lat/long
-    antes de salvar) -- não precisa lembrar de limpar os campos na mão
-    toda vez que o endereço mudar.
+    NÃO É UM SEGUNDO CADASTRO. Já foi: havia uma tabela de clientes só
+    para o mapa, e o mesmo buffet precisava ser digitado aqui e na aba
+    Clientes, sem nada que obrigasse as duas fichas a concordarem. Esta
+    tela agora abre o MESMO cadastro da aba Clientes, com as perguntas que
+    só interessam à vitrine -- logo, Instagram, e se o alfinete aparece.
+
+    Por isso ela grava pelos mesmos serviços que a aba Clientes
+    (`sistema_interno.clientes`): quem cadastra por aqui está sujeito às
+    mesmas regras de nome repetido, contato obrigatório e endereço.
     """
+
     template_name = "gestao/clientes_adm.html"
 
     def get(self, request):
-        clientes = Clientes.objects.all().order_by("-criacao")
+        clientes = list(
+            Cliente.objects
+            .prefetch_related(
+                Prefetch("enderecos", queryset=EnderecoCliente.objects.order_by("id"))
+            )
+            .order_by("-criacao", "-id")
+        )
 
-        # Dados pro modal de edição preencher os campos via JS -- vai
-        # via json_script (mais seguro que interpolar direto no HTML).
-        clientes_dados = [
+        fichas = [
             {
-                "id": c.id,
-                "descricao_cliente": c.descricao_cliente or "",
-                "cep": c.cep or "",
-                "rua": c.rua or "",
-                "numero": c.numero or "",
-                "bairro": c.bairro or "",
-                "cidade": c.cidade or "",
-                "estado": c.estado or "",
-                "pais": c.pais or "Brasil",
-                "site_cliente": c.site_cliente or "",
-                "logo_url": c.logo_cliente.url if c.logo_cliente else "",
-                "ativo": c.ativo,
-                "exibir_no_mapa": c.exibir_no_mapa,
+                "obj": cliente,
+                "endereco": cliente.endereco_principal,
+                "no_mapa": cliente.no_mapa,
             }
-            for c in clientes
+            for cliente in clientes
         ]
 
+        # Dados do modal via json_script -- mais seguro que interpolar no
+        # HTML, e é o mesmo formato que a aba Clientes usa.
+        dados = []
+        for cliente in clientes:
+            endereco = cliente.endereco_principal
+            dados.append({
+                "id": cliente.id,
+                "nome_cliente": cliente.nome_cliente,
+                "tipo": cliente.tipo,
+                "telefone": cliente.telefone or "",
+                "email": cliente.email or "",
+                "cep": endereco.cep if endereco else "",
+                "endereco": endereco.endereco if endereco else "",
+                "numero": endereco.numero if endereco else "",
+                "bairro": endereco.bairro if endereco else "",
+                "cidade": endereco.cidade if endereco else "",
+                "estado": endereco.estado if endereco else "",
+                "pais": (endereco.pais if endereco else "") or "Brasil",
+                "site_cliente": cliente.site_cliente or "",
+                "logo_url": cliente.logo.url if cliente.logo else "",
+                "ativo": cliente.ativo,
+                "publicar_no_mapa": cliente.publicar_no_mapa,
+            })
+
         return render(request, self.template_name, {
-            "clientes": clientes,
-            "clientes_dados": clientes_dados,
+            "fichas": fichas,
+            "tipos": Cliente.Tipo.choices,
+            "clientes_dados": dados,
+            "total_clientes": len(clientes),
+            "total_ativos": sum(1 for c in clientes if c.ativo),
+            "total_no_mapa": sum(1 for f in fichas if f["no_mapa"]),
+            "total_localizados": sum(
+                1 for f in fichas if f["endereco"] and f["endereco"].tem_local
+            ),
         })
 
     def post(self, request):
-        action = request.POST.get("action", "save")
+        acao = request.POST.get("action", "save")
 
-        if action == "delete":
-            cliente = get_object_or_404(Clientes, pk=request.POST.get("id"))
-            nome = cliente.descricao_cliente or "Cliente"
-            frase_esperada = f"CONFIRMAR EXCLUSÃO {nome}"
-            frase_informada = request.POST.get("confirmacao_exclusao", "").strip()
+        if acao == "delete":
+            return self._excluir(request)
+        if acao == "recalcular":
+            return self._recalcular(request)
+        return self._salvar(request)
 
-            if frase_informada != frase_esperada:
-                messages.error(
-                    request,
-                    "Exclusão cancelada: o texto de confirmação não corresponde "
-                    "ao nome do cliente."
-                )
-                return redirect("clientes_admin")
+    # ------------------------------------------------------------------
+    def _salvar(self, request):
+        cliente_id = (request.POST.get("id") or "").strip()
+        cliente = get_object_or_404(Cliente, pk=cliente_id) if cliente_id else None
 
-            cliente.delete()
-            messages.success(request, f"Cliente '{nome}' excluído com sucesso.")
+        try:
+            salvo = clientes_svc.salvar_cliente(request, cliente)
+            endereco = clientes_svc.salvar_endereco(request, salvo)
+        except ErroDeCadastroCliente as erro:
+            messages.error(request, str(erro))
             return redirect("clientes_admin")
 
-        if action == "recalcular":
-            cliente = get_object_or_404(Clientes, pk=request.POST.get("id"))
-            cliente.latitude = None
-            cliente.longitude = None
-            cliente.save()
+        # A busca de coordenada é uma consulta a serviço de fora. Fica FORA
+        # da gravação: se o Nominatim estiver lento, o cadastro que a pessoa
+        # acabou de digitar já está salvo, e só o alfinete fica pendente.
+        if endereco and not endereco.tem_local and endereco.localizar():
+            endereco.save(update_fields=["latitude", "longitude", "precisao"])
 
-            if cliente.latitude and cliente.longitude:
-                messages.success(
-                    request,
-                    f"'{cliente.descricao_cliente}': localização recalculada -- "
-                    f"{cliente.latitude}, {cliente.longitude}."
-                )
-            else:
-                messages.warning(
-                    request,
-                    f"'{cliente.descricao_cliente}': não foi possível localizar "
-                    f"automaticamente. Confira o CEP/cidade cadastrados."
-                )
+        if salvo.publicar_no_mapa and not salvo.no_mapa:
+            messages.warning(
+                request,
+                f"“{salvo.nome_cliente}” foi salvo, mas ainda não tem um ponto "
+                "no mapa: confira o CEP ou a cidade, ou informe latitude e "
+                "longitude à mão pelo cadastro."
+            )
+        else:
+            messages.success(request, f"“{salvo.nome_cliente}” salvo.")
+
+        return redirect("clientes_admin")
+
+    def _recalcular(self, request):
+        cliente = get_object_or_404(Cliente, pk=request.POST.get("id"))
+        endereco = cliente.endereco_principal
+
+        if not endereco:
+            messages.error(
+                request,
+                f"“{cliente.nome_cliente}” ainda não tem endereço para localizar."
+            )
             return redirect("clientes_admin")
 
-        cliente_id = request.POST.get("id")
-        cliente = get_object_or_404(Clientes, pk=cliente_id) if cliente_id else Clientes()
+        # Zerar antes é o que diferencia "recalcular" de "manter": a busca
+        # respeita a coordenada existente de propósito, para não desfazer um
+        # ajuste feito à mão sem alguém pedir.
+        endereco.latitude = None
+        endereco.longitude = None
+        endereco.precisao = ""
+        endereco.localizar()
+        endereco.save(update_fields=["latitude", "longitude", "precisao"])
 
-        descricao = request.POST.get("descricao_cliente", "").strip()
-        if not descricao:
-            messages.error(request, "Preencha o nome do cliente.")
-            return redirect("clientes_admin")
-
-        logo = request.FILES.get("logo_cliente")
-        if not logo and not cliente.pk:
-            messages.error(request, "A logo é obrigatória pra criar um cliente novo.")
-            return redirect("clientes_admin")
-
-        # Guarda o endereço ANTES de sobrescrever, pra comparar depois
-        # e saber se precisa geocodificar de novo.
-        campos_endereco = ["cep", "rua", "numero", "bairro", "cidade", "estado", "pais"]
-        endereco_antigo = {campo: getattr(cliente, campo) for campo in campos_endereco}
-
-        cliente.descricao_cliente = descricao
-        if logo:
-            cliente.logo_cliente = logo
-
-        cliente.cep = request.POST.get("cep", "").strip()
-        cliente.rua = request.POST.get("rua", "").strip()
-        cliente.numero = request.POST.get("numero", "").strip()
-        cliente.bairro = request.POST.get("bairro", "").strip()
-        cliente.cidade = request.POST.get("cidade", "").strip()
-        cliente.estado = request.POST.get("estado", "").strip().upper()
-        cliente.pais = request.POST.get("pais", "").strip() or "Brasil"
-        cliente.site_cliente = request.POST.get("site_cliente", "").strip()
-        cliente.exibir_no_mapa = request.POST.get("exibir_no_mapa") == "on"
-        cliente.ativo = request.POST.get("ativo") == "on"
-
-        endereco_mudou = any(
-            (getattr(cliente, campo) or "") != (endereco_antigo[campo] or "")
-            for campo in campos_endereco
-        )
-        forcar_geocode = request.POST.get("forcar_geocode") == "on"
-
-        if endereco_mudou or forcar_geocode:
-            cliente.latitude = None
-            cliente.longitude = None
-
-        cliente.save()
-
-        if cliente.latitude and cliente.longitude:
+        if endereco.tem_local:
             messages.success(
                 request,
-                f"'{cliente.descricao_cliente}' salvo! Localização encontrada: "
-                f"{cliente.latitude}, {cliente.longitude} -- já aparece no mapa."
+                f"“{cliente.nome_cliente}”: localização refeita -- "
+                f"{endereco.latitude}, {endereco.longitude}."
             )
         else:
             messages.warning(
                 request,
-                f"'{cliente.descricao_cliente}' foi salvo, mas NÃO foi possível "
-                f"localizar automaticamente pelo CEP/cidade informado. Confira se "
-                f"o CEP está certo, ou preencha latitude/longitude manualmente "
-                f"editando este cliente novamente."
+                f"“{cliente.nome_cliente}”: não foi possível localizar "
+                "automaticamente. Confira o CEP e a cidade."
             )
+        return redirect("clientes_admin")
 
+    def _excluir(self, request):
+        cliente = get_object_or_404(Cliente, pk=request.POST.get("id"))
+        nome = cliente.nome_cliente or "Cliente"
+
+        if request.POST.get("confirmacao_exclusao", "").strip() != f"CONFIRMAR EXCLUSÃO {nome}":
+            messages.error(
+                request,
+                "Exclusão cancelada: o texto de confirmação não corresponde "
+                "ao nome do cliente."
+            )
+            return redirect("clientes_admin")
+
+        # O cadastro é o mesmo do painel: apagar levaria junto o histórico
+        # de propostas. Tirar do mapa é o que quase sempre se quer aqui.
+        if cliente.orcamentos.exists():
+            messages.error(
+                request,
+                f"“{nome}” tem orçamento no histórico e não pode ser excluído. "
+                "Para sumir do site, desmarque “Exibir no mapa”."
+            )
+            return redirect("clientes_admin")
+
+        cliente.delete()
+        messages.success(request, f"Cliente “{nome}” excluído.")
         return redirect("clientes_admin")
 
 
