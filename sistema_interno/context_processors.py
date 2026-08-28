@@ -1,42 +1,145 @@
-# sistem_interno/context_processors.py
+"""O que toda página do painel recebe sem pedir.
 
-# Importação direta dos modelos do app 'core'
-from core.models import Venda, Pedido, Manutencao
+Antes este arquivo contava vendas, pedidos, manutenções e produção com
+regras escritas aqui dentro, e a home recontava estoque crítico com outra
+regra. Agora quem sabe o que é pendência é `avisos.py`, e aqui só se
+traduz aquilo para o que os templates usam.
+
+Os `count_*` continuam existindo porque as bolinhas do menu lateral são
+montadas com eles em base_inner.html — e o painel /adm também usa
+count_manutencao. São derivados dos MESMOS avisos, e não de consultas
+próprias: enquanto forem a mesma conta, o número na bolinha e o número na
+central não podem divergir.
+
+POR QUE TUDO É PREGUIÇOSO. Este é um context processor global: roda em
+toda página do site, não só no painel. A versão antiga disparava quatro
+COUNT para qualquer usuário da equipe navegando na loja, e a central de
+avisos precisa de mais. Embrulhado em SimpleLazyObject, nada é consultado
+enquanto o template não pedir o valor — e a loja nunca pede. O cálculo em
+si acontece uma vez só por requisição, por mais chaves que sejam lidas.
+"""
+
+from django.conf import settings
+from django.core.cache import cache
+from django.utils.functional import SimpleLazyObject
+
+from .avisos import coletar
+from .permissoes import capacidades, faz_parte_da_equipe
+
+#: Estado de quem não é da equipe. O template nunca encontra variável
+#: faltando, e nenhuma consulta é feita para chegar aqui.
+VAZIO = {
+    "avisos": [],
+    "avisos_urgentes": 0,
+    "total_avisos": 0,
+    "count_vendas": 0,
+    "count_pedidos": 0,
+    "count_manutencao": 0,
+    "count_producao": 0,
+    "count_orcamentos": 0,
+    "count_ordens_servico": 0,
+    "count_clientes_incompletos": 0,
+    "eh_gestor_interno": False,
+    "permissoes_interno": {},
+}
+
+
+def _apurar(usuario):
+    """Roda as consultas e monta tudo que os templates podem pedir."""
+    avisos = coletar(usuario)
+    por_chave = {aviso.chave: aviso.quantidade for aviso in avisos}
+
+    return {
+        "avisos": avisos,
+        "avisos_urgentes": sum(1 for a in avisos if a.urgente),
+        "total_avisos": len(avisos),
+
+        # As bolinhas do menu. Zero quando não há aviso daquela chave —
+        # que é o mesmo que dizer "nada pendente aqui".
+        "count_vendas": por_chave.get("vendas", 0),
+        "count_pedidos": por_chave.get("pedidos", 0),
+        "count_manutencao": por_chave.get("manutencoes", 0),
+        "count_producao": por_chave.get("producao", 0),
+        "count_orcamentos": (
+            por_chave.get("orcamentos_vencidos", 0)
+            + por_chave.get("orcamentos_vencendo", 0)
+            + por_chave.get("orcamentos_aprovados", 0)
+        ),
+        "count_ordens_servico": por_chave.get("ordens_servico", 0),
+        "count_clientes_incompletos": por_chave.get("clientes_incompletos", 0),
+    }
+
+
+def _apurar_com_cache(usuario):
+    """Reaproveita os contadores durante a troca rápida entre telas.
+
+    A central custa vários COUNT no banco remoto e antes repetia todos em
+    cada clique do menu. Um intervalo curto mantém o aviso operacional vivo,
+    mas faz uma sequência Clientes → Orçamentos → Produção pagar a conta uma
+    vez só.
+    """
+    try:
+        ttl = max(5, int(getattr(settings, "INTERNO_AVISOS_CACHE_TTL", 20)))
+    except (TypeError, ValueError):
+        ttl = 20
+
+    chave = _chave_avisos(usuario)
+    apurado = cache.get(chave)
+    if apurado is None:
+        apurado = _apurar(usuario)
+        cache.set(chave, apurado, ttl)
+    return apurado
+
+
+def invalidar_avisos(usuario):
+    """Faz a próxima tela refletir imediatamente uma ação operacional."""
+    if getattr(usuario, "pk", None):
+        cache.delete(_chave_avisos(usuario))
+
+
+def _chave_avisos(usuario):
+    # O instante de criação diferencia uma conta real de outra que reutilize
+    # o mesmo id após limpeza/importação do banco — e também impede que o
+    # cache local sobreviva entre casos isolados da suíte de testes.
+    criado = getattr(usuario, "date_joined", None)
+    versao = int(criado.timestamp() * 1_000_000) if criado else 0
+    return f"interno:avisos:v2:{usuario.pk}:{versao}"
 
 
 def fab_counts(request):
-    """
-    Retorna contagens globais para os FABs do painel administrativo.
-    """
-    # Retorna vazio se não estiver logado ou não for da equipe (staff)
-    if not request.user.is_authenticated or not request.user.is_staff:
-        return {
-            "count_vendas": 0,
-            "count_pedidos": 0,
-            "count_manutencao": 0,
-        }
+    """Avisos do painel + as contagens que os menus usam."""
+    usuario = getattr(request, "user", None)
 
-    # 1. Vendas não confirmadas
-    # (Ajuste o filtro se sua lógica de "venda pendente" for diferente)
-    count_vendas = Venda.objects.filter(confirmado=False).count()
+    if usuario is None or not usuario.is_authenticated:
+        return dict(VAZIO)
 
-    # 2. Pedidos ativos (Tudo que não foi finalizado nem cancelado)
-    count_pedidos = Pedido.objects.exclude(
-        status__in=['finalizado', 'cancelado']
-    ).count()
+    if not faz_parte_da_equipe(usuario):
+        return dict(VAZIO)
 
-    # 3. Manutenções que precisam de atenção
-    # Sugestão: Pega 'P' (Pendente) e 'A' (Em Andamento/Aprovado)
-    # Se quiser só pendente, deixe apenas ['P']
-    count_manutencao = Manutencao.objects.filter(status__in=['P', 'A']).count()
+    acesso = capacidades(usuario)
 
-    return {
-        "count_vendas": count_vendas,
-        "count_pedidos": count_pedidos,
-        "count_manutencao": count_manutencao,
+    # Um único cálculo compartilhado por todas as chaves: o SimpleLazyObject
+    # de fora memoriza o resultado, e os de dentro apenas leem dele.
+    apurado = SimpleLazyObject(lambda: _apurar_com_cache(usuario))
 
-        # Opcional: booleanos para facilitar a lógica no template
-        "tem_vendas_pendentes": count_vendas > 0,
-        "tem_pedidos_ativos": count_pedidos > 0,
-        "tem_manutencao_pendente": count_manutencao > 0,
+    def campo(chave):
+        return SimpleLazyObject(lambda: apurado[chave])
+
+    contexto = {
+        chave: campo(chave)
+        for chave in (
+            "avisos",
+            "avisos_urgentes",
+            "total_avisos",
+            "count_vendas",
+            "count_pedidos",
+            "count_manutencao",
+            "count_producao",
+            "count_orcamentos",
+            "count_ordens_servico",
+            "count_clientes_incompletos",
+        )
     }
+    contexto["eh_gestor_interno"] = acesso["gestao"]
+    contexto["permissoes_interno"] = acesso
+    return contexto

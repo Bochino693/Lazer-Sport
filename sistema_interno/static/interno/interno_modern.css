@@ -1,0 +1,2392 @@
+/* ======================================================================
+   PAINEL INTERNO — identidade de console de operação.
+
+   POR QUE NÃO É AZUL. O /adm do site e este painel eram os dois
+   azul-escuro com barra lateral à esquerda, e quem trabalha nos dois no
+   mesmo dia se perdia: dava para começar a mexer no cadastro da vitrine
+   achando que estava na produção. Cor é o jeito mais rápido de o olho
+   saber onde está, antes de ler qualquer título.
+
+   Então o /adm fica com o azul do site, e aqui é grafite quente com
+   âmbar — leitura de console de chão de fábrica, que é onde este painel
+   é usado. Não é enfeite: é o que separa dois lugares parecidos.
+
+   OS NOMES DAS VARIÁVEIS SÃO HISTÓRICOS. --blue virou o âmbar e --cyan
+   virou o teal. Ficaram assim porque são citados em umas duzentas linhas
+   deste arquivo e nos templates; renomear tudo seria uma troca grande
+   sem ganho nenhum de comportamento. Os apelidos semânticos abaixo
+   (--acento, --acento-2, --apoio) são os nomes bons, e é por eles que o
+   código novo deve pedir a cor.
+   ====================================================================== */
+:root{
+  /* fundos: grafite quente, e não azul-noite */
+  --bg-0:#13100B;
+  --bg-1:#181410;
+  --bg-2:#1E1913;
+  --panel:#231D16;
+  --panel-2:#2B241B;
+  --panel-3:#342B20;
+  --panel-soft:#1A1610;
+  --sidebar:#0D0B08;
+  --sidebar-2:#17120B;
+  --line:#3F3527;
+  --line-soft:#2C251B;
+
+  /* texto em creme, não em azul-claro */
+  --text:#FCF8F1;
+  --text-2:#E7DDCB;
+  --muted:#B3A38C;
+  --muted-2:#8B7B65;
+
+  /* acentos */
+  --acento:#F2A93B;        /* âmbar: a cor de ação do painel */
+  --acento-2:#D98E22;
+  --apoio:#3DD9C0;         /* teal: confirmação e destaque frio */
+
+  --blue:var(--acento);    /* nomes históricos, ver o bloco acima */
+  --blue-2:var(--acento-2);
+  --cyan:var(--apoio);
+
+  --green:#5FD68A;
+  --yellow:#FFC94D;
+  --red:#FF7A6B;
+  --violet:#C9A2FF;
+
+  --radius-xl:24px;
+  --radius-lg:18px;
+  --radius-md:13px;
+  --shadow:0 24px 70px rgba(0,0,0,.42);
+  --shadow-soft:0 12px 34px rgba(0,0,0,.28);
+  --sidebar-w:304px;
+  /* Largura da lateral encolhida em tablet: cabe o ícone e o alvo de
+     toque, e nada mais. */
+  --sidebar-rail:84px;
+  --topbar-h:60px;
+}
+
+/* ======================================================================
+   CENTRAL DE TRABALHO
+   A home interna usa linguagem de aplicativo: leitura em camadas, alvos
+   grandes para toque e uma fila de decisoes no lugar de graficos decorativos.
+   ====================================================================== */
+.app-welcome{margin:2px 0 18px;display:flex;align-items:center;justify-content:space-between;gap:24px}
+.app-welcome h1{margin:3px 0 3px;color:#fff;font-size:clamp(1.65rem,3vw,2.35rem);font-weight:900;letter-spacing:-.045em}
+.app-welcome p{margin:0;color:var(--muted);font-size:.93rem}
+.app-eyebrow{display:block;color:var(--acento);font-size:.68rem;font-weight:950;letter-spacing:.14em;text-transform:uppercase}
+.app-primary-action{min-width:250px;min-height:72px;padding:12px 18px;display:flex;align-items:center;gap:14px;border:1px solid rgba(255,211,132,.42);border-radius:20px;color:#211605!important;background:linear-gradient(135deg,#ffd17f,#e8a83e);box-shadow:0 16px 36px rgba(196,132,32,.24);text-decoration:none;transition:.18s ease}
+.app-primary-action>i{width:42px;height:42px;display:grid;place-items:center;border-radius:14px;background:rgba(255,255,255,.35);font-size:1.25rem}
+.app-primary-action strong,.app-primary-action small{display:block}.app-primary-action strong{font-size:.96rem;font-weight:950}.app-primary-action small{margin-top:2px;color:#664414;font-size:.74rem;font-weight:750}
+.app-primary-action:hover{color:#170e02!important;transform:translateY(-2px);box-shadow:0 20px 44px rgba(196,132,32,.32)}
+
+.app-glance{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:18px}
+.app-glance-card{min-height:116px;padding:16px;display:grid;grid-template-columns:46px minmax(0,1fr);gap:12px;align-items:center;position:relative;overflow:hidden;border:1px solid var(--line);border-radius:22px;color:inherit!important;background:linear-gradient(160deg,#2a2219,#1b1711);box-shadow:var(--shadow-soft);text-decoration:none;transition:.18s ease}
+.app-glance-card:hover{border-color:color-mix(in srgb,var(--card-color) 45%,transparent);transform:translateY(-2px)}
+.app-glance-card::after{content:"";position:absolute;width:120px;height:120px;right:-55px;top:-55px;border-radius:50%;background:color-mix(in srgb,var(--card-color) 12%,transparent)}
+.app-glance-card.coral{--card-color:#ff8f73}.app-glance-card.blue{--card-color:#70a8ff}.app-glance-card.violet{--card-color:#b39aff}.app-glance-card.mint{--card-color:#59ddb2}
+.app-glance-icon{width:46px;height:46px;display:grid;place-items:center;border-radius:15px;color:var(--card-color);background:color-mix(in srgb,var(--card-color) 12%,transparent);font-size:1.1rem}
+.app-glance-card strong,.app-glance-card small{display:block}.app-glance-card strong{color:#fff;font-size:1.7rem;font-weight:950;line-height:1}.app-glance-card small{margin-top:5px;color:#b7aea2;font-size:.78rem;font-weight:800}
+.app-glance-card em{grid-column:1/-1;width:max-content;max-width:100%;padding:4px 8px;border-radius:999px;color:var(--card-color);background:color-mix(in srgb,var(--card-color) 9%,transparent);font-size:.68rem;font-style:normal;font-weight:900}
+
+.app-workspace{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(320px,.55fr);gap:16px;margin-bottom:16px}
+.app-focus-panel,.app-start-panel,.app-pipeline,.app-stock-strip{border:1px solid var(--line);border-radius:22px;background:linear-gradient(180deg,#241e17,#19150f);box-shadow:var(--shadow-soft)}
+.app-section-head{min-height:74px;padding:16px 18px;display:flex;align-items:center;justify-content:space-between;gap:14px;border-bottom:1px solid var(--line-soft)}
+.app-section-head h2{margin:3px 0 0;color:#fff;font-size:1.08rem;font-weight:950}.app-section-head>a{color:#f5c879;font-size:.77rem;font-weight:900;text-decoration:none}.app-section-head.compact{min-height:68px}
+.app-count{min-width:32px;height:32px;padding:0 9px;display:grid;place-items:center;border-radius:999px;color:#ffce78;background:rgba(242,169,59,.12);font-size:.76rem;font-weight:950}
+.app-task-list{padding:6px 16px 12px}
+.app-task{min-height:76px;padding:12px 4px;display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:13px;align-items:center;border-bottom:1px solid var(--line-soft);color:inherit!important;text-decoration:none}
+.app-task:last-child{border-bottom:0}.app-task-icon{width:44px;height:44px;display:grid;place-items:center;border-radius:14px;color:#f6c16e;background:rgba(242,169,59,.1)}
+.app-task.critico .app-task-icon{color:#ff8292;background:rgba(255,113,132,.1)}.app-task.atencao .app-task-icon{color:#f5c273;background:rgba(242,187,100,.1)}
+.app-task-copy strong,.app-task-copy small{display:block}.app-task-copy strong{color:#f8f4ee;font-size:.88rem;font-weight:900}.app-task-copy small{margin-top:4px;color:#a99f92;font-size:.76rem;line-height:1.4}
+.app-task-action{color:#d8c29e;font-size:.72rem;font-weight:900;white-space:nowrap}.app-task:hover .app-task-action{color:#ffd48b}.app-task:hover .app-task-copy strong{color:#fff}
+.app-all-clear{min-height:170px;padding:30px;display:flex;align-items:center;justify-content:center;gap:15px;text-align:left}.app-all-clear>span{width:52px;height:52px;display:grid;place-items:center;border-radius:17px;color:#59ddb2;background:rgba(89,221,178,.1);font-size:1.4rem}.app-all-clear strong,.app-all-clear small{display:block}.app-all-clear strong{color:#fff}.app-all-clear small{margin-top:4px;color:var(--muted);font-size:.78rem}
+.app-start-grid{padding:12px;display:grid;grid-template-columns:1fr 1fr;gap:9px}.app-start-grid>a{min-height:100px;padding:14px;display:flex;flex-direction:column;justify-content:space-between;border:1px solid var(--line-soft);border-radius:16px;color:inherit!important;background:rgba(255,255,255,.018);text-decoration:none;transition:.16s ease}.app-start-grid>a:hover{border-color:#765e37;background:rgba(242,169,59,.07);transform:translateY(-1px)}.app-start-grid i{color:#efb961;font-size:1.22rem}.app-start-grid strong,.app-start-grid small{display:block}.app-start-grid strong{color:#f8f4ed;font-size:.8rem;font-weight:900}.app-start-grid small{margin-top:3px;color:#958b7e;font-size:.68rem;line-height:1.3}
+
+.app-pipelines{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-bottom:16px}.app-pipeline{overflow:hidden}.app-mini-list{padding:4px 14px 10px}.app-mini-list>a{min-height:66px;padding:10px 2px;display:flex;align-items:center;justify-content:space-between;gap:10px;border-bottom:1px solid var(--line-soft);color:inherit!important;text-decoration:none}.app-mini-list>a:last-child{border-bottom:0}.app-mini-main{min-width:0}.app-mini-main strong,.app-mini-main small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.app-mini-main strong{color:#f7f3ed;font-size:.8rem;font-weight:900}.app-mini-main small{margin-top:4px;color:#9e9488;font-size:.7rem}.app-state{padding:5px 8px;border-radius:999px;color:#b8aea1;background:rgba(255,255,255,.05);font-size:.63rem;font-weight:950;white-space:nowrap}.app-state.info{color:#7db5ff;background:rgba(82,145,255,.1)}.app-state.warning{color:#f5c273;background:rgba(242,187,100,.1)}.app-state.danger{color:#ff8998;background:rgba(255,113,132,.1)}.app-mini-empty{padding:28px 8px;color:#958c80;font-size:.76rem;text-align:center}.app-progress-ring{--p:calc(var(--progress)*1%);width:42px;height:42px;display:grid;place-items:center;border-radius:50%;color:#eee4d4;background:radial-gradient(circle,#201a13 57%,transparent 59%),conic-gradient(#b39aff var(--p),rgba(255,255,255,.08) 0);font-size:.62rem;font-weight:950}
+.app-stock-strip{min-height:86px;padding:15px 18px;display:flex;align-items:center;justify-content:space-between;gap:18px}.app-stock-strip strong,.app-stock-strip small{display:block}.app-stock-strip strong{margin-top:2px;color:#f8f4ed;font-size:.94rem}.app-stock-strip small{margin-top:3px;color:#9c9286;font-size:.72rem}.app-stock-strip>a{min-height:42px;padding:0 14px;display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:13px;color:#f3c476;text-decoration:none;font-size:.76rem;font-weight:900;white-space:nowrap}
+
+@media (max-width:1180px){.app-glance{grid-template-columns:1fr 1fr}.app-pipelines{grid-template-columns:1fr 1fr}.app-pipeline:last-child{grid-column:1/-1}}
+@media (max-width:820px){.app-welcome{align-items:stretch;flex-direction:column}.app-primary-action{min-width:0}.app-workspace{grid-template-columns:1fr}.app-pipelines{grid-template-columns:1fr}.app-pipeline:last-child{grid-column:auto}}
+@media (max-width:560px){.app-glance{grid-template-columns:1fr}.app-glance-card{min-height:92px}.app-start-grid{grid-template-columns:1fr 1fr}.app-task{grid-template-columns:42px minmax(0,1fr)}.app-task-action{grid-column:2}.app-stock-strip{align-items:flex-start;flex-direction:column}.app-stock-strip>a{width:100%;justify-content:center}}
+
+*{box-sizing:border-box}
+html{font-size:16px;scroll-behavior:smooth}
+body.ls-body{
+  margin:0!important;
+  min-height:100vh;
+  color:var(--text)!important;
+  background:
+    radial-gradient(circle at 8% -5%,rgba(242,169,59,.13),transparent 34rem),
+    radial-gradient(circle at 100% 28%,rgba(61,217,192,.05),transparent 28rem),
+    linear-gradient(180deg,var(--bg-0),#15110C 55%,#100D09)!important;
+  font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:1rem;
+  line-height:1.55;
+  -webkit-font-smoothing:antialiased;
+}
+a{color:#F5C070}
+a:hover{color:#FFD79A}
+
+/* SHELL */
+.ls-shell{min-height:100vh}
+.ls-sidebar{
+  position:fixed;inset:0 auto 0 0;width:var(--sidebar-w);z-index:1045;
+  display:flex;flex-direction:column;overflow:hidden;
+  background:
+    radial-gradient(circle at 20% 0,rgba(242,169,59,.16),transparent 24rem),
+    linear-gradient(180deg,var(--sidebar),var(--sidebar-2));
+  border-right:1px solid rgba(219,187,124,.14);
+  box-shadow:20px 0 60px rgba(0,0,0,.25);
+}
+.ls-brand{
+  min-height:104px;padding:20px 20px 18px;display:flex;align-items:center;gap:14px;
+  color:#fff!important;text-decoration:none;border-bottom:1px solid rgba(179,163,140,.11);
+}
+.ls-brand-logo{
+  width:56px;height:56px;flex:0 0 56px;display:grid;place-items:center;overflow:hidden;
+  border-radius:17px;background:#fff;box-shadow:0 12px 30px rgba(0,0,0,.34);
+}
+.ls-brand-logo img{width:100%;height:100%;padding:5px;object-fit:contain}
+.ls-brand-text{min-width:0}
+.ls-brand-text strong,.ls-brand-text small{display:block}
+.ls-brand-text strong{font-size:1.08rem;font-weight:900;letter-spacing:-.015em}
+.ls-brand-text small{margin-top:4px;color:#a79b8d;font-size:.74rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+
+.ls-nav{flex:1;overflow-y:auto;padding:20px 14px 18px}
+.ls-nav::-webkit-scrollbar{width:8px}
+.ls-nav::-webkit-scrollbar-thumb{background:rgba(179,163,140,.19);border-radius:999px}
+.ls-nav-section{margin-bottom:25px}
+.ls-nav-caption{
+  display:block;padding:0 12px 9px;color:#897d6e;font-size:.71rem;font-weight:900;
+  letter-spacing:.13em;text-transform:uppercase;
+}
+/* O QUE É NOME E O QUE É DESENHO.
+
+   `--ls-rotulo` manda em tudo que é TEXTO ESCRITO do menu: some no
+   trilho, volta com a lateral aberta. Ícone e contador ficam de fora de
+   propósito.
+
+   Ficar de fora não é detalhe: os dois são caixas `grid`, e quem
+   centraliza o desenho dentro delas é o `place-items`. As regras antigas
+   diziam `.ls-sidebar.expandida .ls-nav-item>span{display:block}` -- o
+   `>span` pega o ícone junto, troca o `grid` por `block`, e o desenho
+   escorrega para o canto de cima da caixa. Era esse o ícone torto: só
+   aparecia com a lateral ABERTA, e só no computador e no iPad, porque no
+   celular a regra vive dentro de `min-width:761px` e nunca chegava a
+   valer. Com uma variável no lugar de uma regra por elemento, não há
+   mais briga de especificidade para remendar. */
+.ls-sidebar{--ls-rotulo:block}
+.ls-brand-text,
+.ls-nav-caption,
+.ls-user-info,
+.ls-logout>span,
+.ls-nav-item>span:not(.ls-nav-icon):not(.ls-nav-count){display:var(--ls-rotulo)}
+
+.ls-nav-item{
+  position:relative;
+  min-height:54px;margin:4px 0;padding:0 13px;display:flex;align-items:center;gap:12px;
+  border:1px solid transparent;border-radius:14px;color:#bcb2a5!important;text-decoration:none;
+  font-size:.94rem;font-weight:800;transition:.18s ease;
+}
+/* O corte do nome comprido é do NOME, não do item: `overflow:hidden` no
+   item inteiro decepava o balãozinho com o título, que nasce fora dele. */
+.ls-nav-item>span:not(.ls-nav-icon):not(.ls-nav-count){
+  min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.25;
+}
+.ls-nav-item:hover{
+  color:#fff!important;border-color:rgba(242,169,59,.12);
+  background:rgba(255,255,255,.05);transform:translateX(2px);
+}
+.ls-nav-item.active{
+  color:#fff!important;border-color:rgba(255,208,126,.32);
+  background:linear-gradient(135deg,rgba(222,169,78,.96),rgba(163,122,52,.92));
+  box-shadow:0 12px 30px rgba(139,101,36,.28);
+}
+.ls-nav-icon{
+  width:34px;height:34px;flex:0 0 34px;display:grid;place-items:center;border-radius:10px;
+  color:#a6998a;background:rgba(255,255,255,.035);font-size:1.02rem;line-height:1;
+}
+.ls-nav-item:hover .ls-nav-icon,.ls-nav-item.active .ls-nav-icon{color:#fff;background:rgba(255,255,255,.09)}
+
+/* Contador com a lateral aberta: pastilha no fim da linha, alinhada com
+   o nome. `tabular-nums` para 9 e 11 ocuparem a mesma largura e a coluna
+   de números não dançar de um item para o outro. */
+.ls-nav-count{
+  margin-left:auto;min-width:26px;height:24px;padding:0 8px;
+  display:grid;place-items:center;flex:0 0 auto;
+  border:1px solid rgba(255,255,255,.13);border-radius:999px;color:#fff9ee;
+  background:rgba(255,255,255,.08);
+  font-size:.72rem;font-weight:900;line-height:1;font-variant-numeric:tabular-nums;
+}
+
+.ls-sidebar-footer{padding:14px;border-top:1px solid rgba(179,163,140,.11);background:rgba(0,0,0,.08)}
+.ls-user-card{
+  padding:12px;display:grid;grid-template-columns:46px minmax(0,1fr);gap:11px;align-items:center;
+  border:1px solid rgba(179,163,140,.11);border-radius:15px;background:rgba(255,255,255,.042);
+}
+.ls-user-card{text-decoration:none;color:inherit}
+.ls-user-card:hover{color:inherit;border-color:rgba(255,207,125,.34);background:rgba(255,255,255,.09)}
+.ls-user-avatar{
+  width:46px;height:46px;display:grid;place-items:center;border-radius:13px;
+  color:#F6E7CF;background:rgba(242,169,59,.16);border:1px solid rgba(242,169,59,.22);
+  font-size:1rem;font-weight:900;
+}
+.ls-user-info{min-width:0}
+.ls-user-info strong,.ls-user-info small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ls-user-info strong{color:#fcfaf6;font-size:.88rem;font-weight:900}
+.ls-user-info small{margin-top:3px;color:#a4988a;font-size:.72rem}
+.ls-logout{
+  width:100%;min-height:47px;margin-top:10px;display:flex;align-items:center;justify-content:center;gap:9px;
+  border:1px solid rgba(255,113,132,.23);border-radius:12px;color:#ff9eac;
+  background:rgba(255,113,132,.065);font-size:.84rem;font-weight:900;
+}
+.ls-logout:hover{color:#ffd4da;background:rgba(255,113,132,.12)}
+
+.ls-main{min-height:100vh;margin-left:var(--sidebar-w)}
+.ls-topbar{
+  height:var(--topbar-h);position:sticky;top:0;z-index:1030;padding:0 34px;
+  display:flex;align-items:center;gap:16px;
+  background:rgba(29,21,8,.90);backdrop-filter:blur(18px);
+  border-bottom:1px solid rgba(242,169,59,.11);box-shadow:0 8px 28px rgba(0,0,0,.12);
+}
+.ls-mobile-menu{
+  width:46px;height:46px;display:none;place-items:center;border:1px solid var(--line);border-radius:12px;
+  color:var(--text);background:var(--panel);font-size:1.3rem;
+}
+.ls-topbar-copy{min-width:0;flex:1}
+.ls-topbar-copy strong,.ls-topbar-copy span{display:block}
+.ls-topbar-copy strong{font-size:1.01rem;font-weight:900}
+.ls-topbar-copy span{margin-top:3px;color:#a19587;font-size:.77rem}
+.ls-topbar-side{display:flex;align-items:center;gap:10px}
+.ls-security-pill,.ls-user-pill{
+  min-height:40px;padding:0 13px;display:inline-flex;align-items:center;gap:8px;
+  border:1px solid var(--line);border-radius:999px;color:#d0c8bf;background:rgba(51,39,17,.8);
+  font-size:.78rem;font-weight:850;
+}
+.ls-security-pill i,.ls-user-pill i{color:#ffcf7d}
+.ls-content{width:100%;max-width:1740px;margin:0 auto;padding:22px 26px 34px}
+.ls-mobile-overlay{display:none;position:fixed;inset:0;z-index:1040;background:rgba(13,9,2,.75);backdrop-filter:blur(3px)}
+
+/* PAGE HERO */
+/* ----------------------------------------------------------------------
+   CABEÇALHO DE TELA — antes era um banner, agora é uma barra.
+
+   Era um bloco de 28px de recuo com título de até 2.65rem sobre
+   gradiente, um em cada tela. Isso é linguagem de SITE: a home do
+   lazersport.com.br tem um assim, e o /adm também. Num aplicativo de
+   trabalho, esse bloco empurra o conteúdo útil para baixo da dobra e
+   repete em toda tela uma informação que a barra lateral já dá.
+
+   Aqui virou uma linha: título, contagem e ações no mesmo eixo, com
+   filete embaixo em vez de caixa. Sem template nenhum ser mexido -- as
+   treze telas usam as mesmas classes, então a forma muda em todas de
+   uma vez.
+   ---------------------------------------------------------------------- */
+.ls-page-hero{
+  position:relative;margin:0 0 18px;padding:0 0 16px;
+  display:flex;align-items:flex-end;justify-content:space-between;gap:18px;
+  flex-wrap:wrap;border:0;border-bottom:1px solid var(--line);
+  background:none;box-shadow:none;border-radius:0;
+}
+.ls-page-hero::after{content:none}
+.ls-page-hero-copy{min-width:0;flex:1 1 320px}
+.ls-page-hero-copy,.ls-page-hero-actions{position:relative;z-index:1}
+.ls-page-kicker{
+  display:block;margin-bottom:3px;color:var(--acento);font-size:.68rem;font-weight:900;
+  letter-spacing:.14em;text-transform:uppercase;
+}
+.ls-page-hero h1{
+  margin:0;color:#fff;font-size:1.45rem;font-weight:800;letter-spacing:-.02em;
+  line-height:1.2;
+}
+/* A frase explicativa vira apoio: continua no HTML para quem chega pela
+   primeira vez e para leitor de tela, mas não ocupa mais três linhas no
+   topo de cada visita. */
+.ls-page-hero p{
+  max-width:70ch;margin:5px 0 0;color:var(--muted);font-size:.86rem;line-height:1.5;
+}
+.ls-page-hero-actions{display:flex;gap:9px;flex-wrap:wrap;align-items:center}
+.ls-page-hero-actions .btn{min-height:42px;padding-inline:16px}
+
+/* METRICS */
+/* A faixa de números se ajusta à quantidade de cartões, e não a quatro.
+   Com quatro, dá quatro colunas como antes; com cinco -- que é o caso de
+   Clientes, desde que o mapa entrou na conta --, dá cinco, em vez de
+   deixar o último sozinho numa segunda linha. */
+.ls-metrics{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(208px,1fr));
+  gap:12px;margin-bottom:18px;
+}
+.ls-metric-card{
+  position:relative;min-height:104px;overflow:hidden;padding:14px 16px;
+  border:1px solid var(--line);border-radius:20px;background:linear-gradient(180deg,#392b13,#2f2410);
+  box-shadow:var(--shadow-soft);
+}
+.ls-metric-card::before{
+  content:"";position:absolute;inset:0 auto 0 0;width:4px;background:var(--metric,#F2A93B);
+}
+.ls-metric-card::after{
+  content:"";position:absolute;width:122px;height:122px;right:-44px;top:-48px;border-radius:50%;
+  background:var(--metric-bg,rgba(242,169,59,.10));
+}
+.ls-metric-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.ls-metric-label{
+  color:#bbb2a6;font-size:.68rem;font-weight:900;letter-spacing:.09em;text-transform:uppercase;
+  line-height:1.3;
+}
+.ls-metric-icon{
+  width:34px;height:34px;display:grid;place-items:center;border-radius:11px;color:var(--metric,#F2A93B);
+  background:var(--metric-bg,rgba(242,169,59,.10));font-size:.95rem;
+}
+.ls-metric-value{
+  display:block;margin-top:10px;color:#fff;font-size:1.6rem;font-weight:900;line-height:1.05;letter-spacing:-.03em;
+}
+.ls-metric-note{display:block;margin-top:4px;color:#a89c8e;font-size:.76rem;line-height:1.35}
+.ls-metric-card.blue{--metric:#F5BA5E;--metric-bg:rgba(242,169,59,.11)}
+.ls-metric-card.green{--metric:#55dda8;--metric-bg:rgba(72,214,158,.10)}
+.ls-metric-card.yellow{--metric:#f5c273;--metric-bg:rgba(242,187,100,.10)}
+.ls-metric-card.red{--metric:#ff8091;--metric-bg:rgba(255,113,132,.10)}
+.ls-metric-card.violet{--metric:#b6a3ff;--metric-bg:rgba(169,146,255,.10)}
+.ls-metric-card.cyan{--metric:#5FE0CC;--metric-bg:rgba(61,217,192,.10)}
+
+/* PANELS */
+.ls-layout-main{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(350px,.55fr);gap:17px}
+.ls-grid-2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:17px}
+.ls-grid-3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:17px}
+.ls-panel,.ls-data-panel,.ls-filter-panel,.ls-action-tile{
+  border:1px solid var(--line);border-radius:20px;background:linear-gradient(180deg,#231D16,#1A1610);
+  box-shadow:var(--shadow-soft);
+}
+.ls-panel,.ls-data-panel{overflow:hidden}
+.ls-panel-header,.ls-data-header{
+  min-height:74px;padding:16px 20px;display:flex;align-items:center;justify-content:space-between;gap:14px;
+  border-bottom:1px solid var(--line-soft);background:rgba(255,255,255,.015);
+}
+.ls-panel-header h2,.ls-data-header h2{
+  margin:0;color:#fbf8f3;font-size:1.02rem;font-weight:950;
+}
+.ls-panel-header p,.ls-data-header p{
+  margin:4px 0 0;color:#a99e91;font-size:.81rem;
+}
+.ls-panel-body{padding:20px}
+.ls-panel-link{color:#ffd58c;font-size:.82rem;font-weight:900;text-decoration:none}
+.ls-panel-link:hover{color:#ffe5b8}
+.ls-filter-panel{margin-bottom:17px;padding:19px 20px}
+.ls-data-body{padding:0}
+.ls-empty{
+  padding:48px 20px;color:#a69c8f;text-align:center;font-size:.92rem;
+}
+.ls-empty i{display:block;margin-bottom:11px;color:#887b6b;font-size:1.85rem}
+
+/* QUICK ACTIONS */
+.ls-action-tile{
+  padding:18px;display:flex;align-items:center;gap:14px;color:inherit!important;text-decoration:none;
+  transition:.18s ease;
+}
+.ls-action-tile:hover{
+  border-color:#856a3a;background:linear-gradient(180deg,#443315,#3a2b11);transform:translateY(-1px);
+}
+.ls-action-icon{
+  width:48px;height:48px;flex:0 0 48px;display:grid;place-items:center;border-radius:14px;
+  color:#F0B968;background:rgba(242,169,59,.12);font-size:1.15rem;
+}
+.ls-action-copy{min-width:0}
+.ls-action-copy strong,.ls-action-copy span{display:block}
+.ls-action-copy strong{color:#fbf8f4;font-size:.92rem;font-weight:900}
+.ls-action-copy span{margin-top:4px;color:#a89e91;font-size:.79rem}
+
+/* PRIORITY / LIST */
+.ls-priority-item{
+  min-height:72px;padding:13px 0;display:grid;grid-template-columns:42px minmax(0,1fr) auto;gap:12px;align-items:center;
+  border-bottom:1px solid var(--line-soft);
+}
+.ls-priority-item:last-child{border-bottom:0}
+.ls-priority-icon{
+  width:42px;height:42px;display:grid;place-items:center;border-radius:12px;
+  color:#ff8998;background:rgba(255,113,132,.10);
+}
+.ls-priority-copy strong,.ls-priority-copy span{display:block}
+.ls-priority-copy strong{color:#fbf8f3;font-size:.91rem;font-weight:900}
+.ls-priority-copy span{margin-top:3px;color:#a5998b;font-size:.78rem}
+.ls-priority-value{text-align:right}
+.ls-priority-value strong{display:block;color:#ff8b9b;font-size:1rem;font-weight:950}
+.ls-priority-value span{display:block;margin-top:2px;color:#9b8f80;font-size:.72rem}
+
+/* PROGRESS */
+.ls-progress-row{margin-bottom:18px}
+.ls-progress-row:last-child{margin-bottom:0}
+.ls-progress-meta{margin-bottom:8px;display:flex;align-items:flex-end;justify-content:space-between;gap:12px}
+.ls-progress-name strong,.ls-progress-name span{display:block}
+.ls-progress-name strong{color:#faf6ee;font-size:.9rem;font-weight:900}
+.ls-progress-name span{margin-top:3px;color:#a29688;font-size:.76rem}
+.ls-progress-value{color:#f0e9dc;font-size:.86rem;font-weight:900}
+.ls-progress-track{height:11px;overflow:hidden;border-radius:999px;background:#22190a}
+.ls-progress-bar{height:100%;border-radius:999px;background:linear-gradient(90deg,#F2A93B,#3DD9C0)}
+
+/* TABLES */
+.table-responsive{border-radius:0}
+.ls-table,.table{
+  width:100%;margin:0!important;border-collapse:separate;border-spacing:0;
+  color:var(--text-2)!important;background:transparent!important;
+  --bs-table-bg:transparent!important;--bs-table-color:var(--text-2)!important;
+  --bs-table-hover-bg:rgba(242,169,59,.055)!important;--bs-table-hover-color:#fff!important;
+}
+.ls-table thead th,.table thead th,.table-dark th,.table-dark td{
+  padding:14px 15px!important;border:0!important;border-bottom:1px solid var(--line)!important;
+  color:#c1b8ac!important;background:#241b0b!important;
+  font-size:.75rem!important;font-weight:950!important;letter-spacing:.075em!important;text-transform:uppercase;
+  white-space:nowrap;
+}
+.ls-table tbody td,.table tbody td{
+  padding:15px!important;border:0!important;border-bottom:1px solid var(--line-soft)!important;
+  color:#ebe3d5!important;background:transparent!important;font-size:.92rem!important;line-height:1.5;vertical-align:middle;
+}
+.ls-table tbody tr:hover td,.table tbody tr:hover td{color:#fff!important;background:rgba(242,169,59,.055)!important}
+.ls-table tbody tr:last-child td,.table tbody tr:last-child td{border-bottom:0!important}
+.ls-table strong,.table strong,.material-nome{color:#fcf9f5!important;font-size:.94rem!important;font-weight:900!important}
+.material-sub,.ls-subtext,.table .text-muted,.ls-muted{color:#a79b8d!important;font-size:.8rem!important}
+.ls-money,.valor-total,.saldo-final{color:#faf5ed!important;font-weight:900!important;font-variant-numeric:tabular-nums}
+.ls-number{font-weight:900;font-variant-numeric:tabular-nums}
+.ls-actions{min-width:244px;white-space:nowrap}
+.ls-actions .btn{margin:2px}
+
+/* STATUS */
+.badge,.ls-status{
+  min-height:31px;padding:6px 10px!important;display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  border-radius:999px!important;font-size:.74rem!important;font-weight:950!important;line-height:1!important;
+}
+.ls-status::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+.bg-success,.ls-status.success{
+  color:#7ce7bc!important;border:1px solid rgba(72,214,158,.23)!important;background:rgba(72,214,158,.10)!important;
+}
+.bg-danger,.ls-status.danger{
+  color:#ff9aaa!important;border:1px solid rgba(255,113,132,.23)!important;background:rgba(255,113,132,.10)!important;
+}
+.bg-warning,.ls-status.warning{
+  color:#ffd18d!important;border:1px solid rgba(242,187,100,.23)!important;background:rgba(242,187,100,.10)!important;
+}
+.bg-secondary,.ls-status.neutral{
+  color:#cec6bd!important;border:1px solid rgba(179,163,140,.18)!important;background:rgba(179,163,140,.08)!important;
+}
+.ls-status.info{
+  color:#7FE6D5!important;border:1px solid rgba(61,217,192,.23)!important;background:rgba(61,217,192,.09)!important;
+}
+
+/* BUTTONS */
+.btn{
+  min-height:44px;padding:.63rem .96rem!important;border-radius:11px!important;
+  font-size:.86rem!important;font-weight:900!important;line-height:1.2!important;box-shadow:none!important;
+}
+.btn-sm{min-height:38px;padding:.48rem .72rem!important;font-size:.79rem!important}
+.btn-primary,.btn-dark{
+  color:#fff!important;border-color:#D98E22!important;background:linear-gradient(135deg,#F2A93B,#D98E22)!important;
+}
+.btn-primary:hover,.btn-dark:hover{border-color:#ffcf7c!important;background:linear-gradient(135deg,#ffcd77,#ebb75c)!important}
+.btn-success{
+  color:#061b13!important;border-color:#52d5a1!important;background:linear-gradient(135deg,#5ce2ad,#46cf98)!important;
+}
+.btn-danger{color:#fff!important;border-color:#e96174!important;background:#db5268!important}
+.btn-outline-secondary{
+  color:#ddd3c2!important;border-color:#695634!important;background:#231D16!important;
+}
+.btn-outline-secondary:hover{color:#fff!important;border-color:#947c52!important;background:#453418!important}
+/* O outline-primary do Bootstrap continua azul e destoava do painel
+   inteiro -- era o botao de enviar proposta, bem no meio da tela. */
+.btn-outline-primary{
+  color:var(--acento)!important;border-color:rgba(242,169,59,.45)!important;
+  background:rgba(242,169,59,.08)!important;
+}
+.btn-outline-primary:hover{
+  color:#2A1B05!important;border-color:var(--acento)!important;
+  background:linear-gradient(135deg,var(--acento),var(--acento-2))!important;
+}
+/* Sucesso segue o teal do painel, e nao o verde do Bootstrap. */
+.btn-outline-success{
+  color:var(--apoio)!important;border-color:rgba(61,217,192,.42)!important;
+  background:rgba(61,217,192,.08)!important;
+}
+.btn-outline-success:hover{
+  color:#05231E!important;border-color:var(--apoio)!important;
+  background:var(--apoio)!important;
+}
+.btn-outline-danger{
+  color:#ffa0ae!important;border-color:rgba(255,113,132,.34)!important;background:rgba(255,113,132,.035)!important;
+}
+.btn-outline-danger:hover{color:#fff!important;background:rgba(255,113,132,.13)!important}
+
+/* FORMS */
+.form-label{
+  margin-bottom:7px!important;color:#dbd5cd!important;font-size:.84rem!important;font-weight:900!important;
+}
+.form-control,.form-select,.input-group-text{
+  min-height:49px!important;border-color:#655231!important;border-radius:11px!important;
+  color:#faf6ee!important;background:#261c0b!important;font-size:.92rem!important;box-shadow:none!important;
+}
+.form-control::placeholder{color:#8f8171!important;opacity:1}
+.form-control:focus,.form-select:focus{
+  border-color:#f1c16d!important;background:#30240f!important;
+  box-shadow:0 0 0 3px rgba(242,169,59,.12)!important;
+}
+.form-select{color-scheme:dark}
+.form-select option{color:#faf6ee;background:#261c0b}
+.input-group-text{color:#bcb3a7!important}
+textarea.form-control{min-height:100px!important}
+.form-text,.small,small{color:#a5998b!important;font-size:.8rem!important}
+.form-check-label{color:#dbd5cd!important;font-size:.88rem}
+.form-check-input{border-color:#73603e!important;background-color:#261c0b!important}
+.form-check-input:checked{border-color:#F2A93B!important;background-color:#F2A93B!important}
+
+/* TABS */
+.ls-tabs,.nav-tabs{
+  gap:8px;margin-bottom:17px!important;padding:6px;border:1px solid var(--line)!important;
+  border-radius:15px;background:#261c0b;
+}
+.ls-tabs .nav-link,.nav-tabs .nav-link{
+  min-height:43px;padding:0 16px!important;border:1px solid transparent!important;border-radius:10px!important;
+  color:#b2a89b!important;background:transparent!important;font-size:.86rem!important;font-weight:900!important;
+}
+.ls-tabs .nav-link.active,.nav-tabs .nav-link.active{
+  color:#fff!important;border-color:rgba(242,169,59,.23)!important;background:rgba(242,169,59,.16)!important;
+}
+
+/* MODALS */
+.modal-backdrop.show{opacity:.74!important}
+.modal-content{
+  overflow:hidden;border:1px solid #6b5632!important;border-radius:20px!important;color:var(--text)!important;
+  background:#312510!important;box-shadow:0 36px 100px rgba(0,0,0,.52)!important;
+}
+.modal-header,.modal-footer{
+  padding:17px 20px!important;border-color:#503f22!important;background:#261c0b!important;
+}
+.modal-body{padding:22px!important;color:#efe8db!important;background:#231D16!important;font-size:.92rem}
+.modal-title{color:#fcfaf6!important;font-size:1.04rem!important;font-weight:950!important}
+.btn-close{filter:invert(1) grayscale(1) brightness(1.9)}
+.alert{border-radius:12px!important;font-size:.86rem!important}
+.alert-danger{
+  color:#ffc2cc!important;border:1px solid rgba(255,113,132,.24)!important;background:rgba(255,113,132,.09)!important;
+}
+
+/* LEGACY BOOTSTRAP / PAGE CSS NEUTRALIZATION */
+.card{
+  border:1px solid var(--line)!important;border-radius:20px!important;color:var(--text)!important;
+  background:linear-gradient(180deg,#231D16,#1A1610)!important;box-shadow:var(--shadow-soft)!important;
+}
+.card-body{padding:20px!important}
+.estoque-kpi,.cadastro-kpi,.mov-kpi,.dash-kpi,.filtro-card{
+  border:1px solid var(--line)!important;background:linear-gradient(180deg,#392b13,#2f2410)!important;
+}
+.estoque-kpi .valor,.cadastro-kpi .valor,.mov-kpi .valor,.dash-kpi .valor{
+  color:#fff!important;font-size:1.8rem!important;font-weight:950!important;
+}
+.estoque-kpi .rotulo,.cadastro-kpi .rotulo,.mov-kpi .rotulo,.dash-kpi .rotulo{
+  color:#bbb2a6!important;font-size:.76rem!important;font-weight:950!important;
+}
+.text-muted{color:#a79c8f!important}
+.text-dark{color:#fbf8f3!important}
+.text-success{color:#6ce0b0!important}
+.text-danger{color:#ff8f9e!important}
+.text-warning{color:#ffd08b!important}
+.container-fluid{color:var(--text)!important}
+.dashboard-wrapper{
+  max-width:none!important;margin:0!important;padding:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;
+}
+.chart-card{
+  border:1px solid var(--line)!important;color:var(--text)!important;background:var(--panel)!important;box-shadow:var(--shadow-soft)!important;
+}
+.linha-inativa{opacity:.55!important}
+/* O RODAPÉ DA LOJA NÃO ENTRA NO PAINEL -- MAS SÓ ELE.
+
+   Esta regra era `footer{display:none!important}`, para o dia em que uma
+   tela da loja fosse aberta por dentro do painel e trouxesse o rodapé
+   público junto. Só que ela some com TODO elemento `<footer>`, e as telas
+   de gestão herdadas do /adm põem as ações das janelas exatamente ali:
+   "Salvar cliente", "Salvar brinquedo", "Excluir". O resultado é que
+   nenhuma dessas janelas tinha como ser concluída -- abria o cadastro,
+   preenchia tudo e não havia botão nenhum no fim.
+
+   Agora o alvo é o rodapé da loja pelo nome (`.ls-footer`), e mais nada. */
+.ls-footer,.fab-container{display:none!important}
+
+/* MOBILE TABLE CARDS */
+@media(max-width:768px){
+  .tabela-estoque thead{display:none}
+  .tabela-estoque,.tabela-estoque tbody,.tabela-estoque tr,.tabela-estoque td{display:block;width:100%}
+  .tabela-estoque tr{
+    margin-bottom:12px;padding:12px 14px;border:1px solid var(--line)!important;border-radius:16px!important;
+    background:linear-gradient(180deg,#2B241B,#1A1610)!important;box-shadow:var(--shadow-soft);
+  }
+  .tabela-estoque td{
+    padding:8px 2px!important;border:0!important;color:#E7DDCB!important;background:transparent!important;
+  }
+  .tabela-estoque td::before{
+    content:attr(data-rotulo) ": ";color:#B3A38C!important;font-size:.73rem!important;font-weight:950!important;text-transform:uppercase;
+  }
+  .tabela-estoque td.sem-rotulo::before{content:""}
+}
+
+/* RESPONSIVE */
+@media(max-width:1180px){
+  .ls-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .ls-layout-main{grid-template-columns:1fr}
+  .ls-grid-3{grid-template-columns:1fr 1fr}
+}
+@media(max-width:960px){
+  .ls-sidebar{transform:translateX(-102%);transition:transform .22s ease}
+  .ls-sidebar.open{transform:translateX(0)}
+  .ls-main{margin-left:0}
+  .ls-mobile-menu{display:grid}
+  .ls-mobile-overlay.open{display:block}
+  .ls-content{padding:26px 20px 34px}
+}
+@media(max-width:720px){
+  .ls-topbar{height:68px;padding:0 14px}
+  .ls-topbar-copy span,.ls-security-pill{display:none}
+  .ls-content{padding:20px 12px 30px}
+  .ls-page-hero{padding:22px;align-items:stretch;flex-direction:column}
+  /* `flex:1 1 320px` no bloco de texto foi escrito para a linha: 320px de
+     LARGURA mínima. Empilhado, o mesmo valor vira 320px de ALTURA, e
+     abria um vão vazio do tamanho de meia tela entre o título e o botão
+     -- justamente no celular, onde a tela é toda dela. */
+  .ls-page-hero-copy{flex:0 1 auto}
+  .ls-page-hero h1{font-size:1.85rem}
+  .ls-page-hero p{font-size:.94rem}
+  .ls-page-hero-actions{width:100%}
+  .ls-page-hero-actions>*{flex:1 1 140px}
+  .ls-metrics{grid-template-columns:1fr 1fr;gap:11px}
+  .ls-metric-card{min-height:138px;padding:17px}
+  .ls-metric-value{font-size:1.55rem}
+  .ls-grid-2,.ls-grid-3{grid-template-columns:1fr}
+  .ls-panel-header,.ls-data-header{align-items:flex-start;flex-direction:column}
+  .btn{min-height:46px;font-size:.88rem!important}
+  .form-control,.form-select,.input-group-text{min-height:50px!important;font-size:1rem!important}
+  .nav-tabs{overflow-x:auto;flex-wrap:nowrap}
+}
+@media(max-width:470px){
+  .ls-metrics{grid-template-columns:1fr}
+  .ls-sidebar{width:min(89vw,320px)}
+  .ls-user-pill span{max-width:84px;overflow:hidden;text-overflow:ellipsis}
+}
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}
+}
+
+/* ======================================================================
+   GRÁFICOS DO FINANCEIRO
+   Desenhados com CSS e SVG a partir de números calculados no servidor:
+   a tela abre pronta, sem esperar biblioteca de gráfico nenhuma.
+   ====================================================================== */
+
+.ls-delta{
+  margin-left:6px;padding:2px 7px;border-radius:999px;
+  font-size:.72rem;font-weight:950;white-space:nowrap;
+}
+.ls-delta.up{color:#7ce7bc;background:rgba(72,214,158,.12)}
+.ls-delta.down{color:#ff9aaa;background:rgba(255,113,132,.12)}
+
+.ls-dot{
+  width:9px;height:9px;flex:0 0 9px;border-radius:50%;display:inline-block;
+}
+.ls-dot.receita{background:#55dda8}
+.ls-dot.saida{background:#ff8091}
+
+.ls-chart-legend{
+  display:flex;gap:16px;color:#B3A38C;font-size:.78rem;font-weight:800;white-space:nowrap;
+}
+.ls-chart-legend span{display:inline-flex;align-items:center;gap:7px}
+
+.ls-chart-foot{
+  margin-top:14px;padding-top:12px;display:flex;flex-wrap:wrap;gap:6px 20px;
+  justify-content:space-between;border-top:1px solid var(--line-soft);
+  color:#a69c8f;font-size:.79rem;font-weight:700;
+}
+
+/* ---- barras mês a mês ---- */
+.ls-bars{
+  --ls-bars-h:210px;
+  --ls-bars-label:26px;
+  height:var(--ls-bars-h);display:flex;align-items:flex-end;gap:10px;
+}
+.ls-bar-col{
+  flex:1 1 0;min-width:0;height:100%;
+  display:flex;flex-direction:column;justify-content:flex-end;gap:8px;
+}
+.ls-bar-pair{
+  /* Altura explícita, não `flex:1`: a barra é dimensionada em porcentagem e
+     o navegador só resolve porcentagem contra um pai de altura definida —
+     com flex-basis:0 as barras colapsavam para o min-height. */
+  height:calc(var(--ls-bars-h) - var(--ls-bars-label));
+  display:flex;align-items:flex-end;justify-content:center;gap:3px;
+}
+.ls-bar{
+  width:44%;max-width:18px;
+  /* Mês sem valor mantém um traço de 3px: o eixo continua completo e a
+     coluna não desaparece da leitura. */
+  min-height:3px;
+  border-radius:5px 5px 2px 2px;
+  transition:filter .18s ease;
+}
+.ls-bar.receita{background:linear-gradient(180deg,#6ceabc,#33ab7e)}
+.ls-bar.saida{background:linear-gradient(180deg,#ff9aaa,#d8546a)}
+.ls-bar-col:hover .ls-bar{filter:brightness(1.18)}
+.ls-bar-label{
+  color:#a39789;font-size:.72rem;font-weight:900;text-align:center;
+  text-transform:uppercase;letter-spacing:.04em;
+}
+
+/* ---- linha do resultado ---- */
+.ls-line-chart{
+  width:100%;height:170px;display:block;overflow:visible;
+}
+.ls-line-labels{
+  margin-top:8px;display:flex;justify-content:space-between;
+  color:#a39789;font-size:.7rem;font-weight:900;text-transform:uppercase;
+}
+.ls-line-labels span{flex:1 1 0;min-width:0;text-align:center}
+
+/* ---- rosca das categorias ---- */
+.ls-donut-wrap{
+  display:grid;grid-template-columns:150px minmax(0,1fr);align-items:center;gap:22px;
+}
+.ls-donut{
+  width:150px;height:150px;
+  /* -90° coloca o início da primeira fatia no topo do círculo. */
+  transform:rotate(-90deg);
+}
+.ls-donut circle{transition:opacity .18s ease}
+.ls-donut-legend{list-style:none;margin:0;padding:0;display:grid;gap:11px}
+.ls-donut-legend li{
+  display:grid;grid-template-columns:9px minmax(0,1fr) auto auto;align-items:center;gap:10px;
+  font-size:.84rem;
+}
+.ls-donut-name{color:#efe7d8;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ls-donut-value{color:#faf5ed;font-weight:900;font-variant-numeric:tabular-nums}
+.ls-donut-pct{color:#a69c8f;font-weight:800;min-width:44px;text-align:right}
+
+@media (max-width:1180px){
+  .ls-donut-wrap{grid-template-columns:1fr;justify-items:center}
+  .ls-donut-legend{width:100%}
+}
+
+/* Painéis do financeiro não devem esticar para a altura do vizinho: o
+   gráfico ficava com um vão morto embaixo do desenho. */
+.ls-grid-start{align-items:start}
+
+@media (max-width:640px){
+  .ls-bars{--ls-bars-h:170px;gap:5px}
+  .ls-bar-label{font-size:.62rem}
+  .ls-chart-legend{font-size:.72rem;gap:10px}
+}
+
+@media (prefers-reduced-motion:reduce){
+  .ls-bar,.ls-donut circle{transition:none}
+}
+
+/* ======================================================================
+   MONTAGEM DE ORÇAMENTO E FICHA TÉCNICA
+   ====================================================================== */
+
+.ls-itens-table td{vertical-align:middle}
+.ls-itens-table .form-control-sm,.ls-itens-table .form-select-sm{min-height:38px}
+
+.ls-orcamento-total{
+  margin-top:18px;margin-left:auto;padding:16px 18px;max-width:360px;
+  border:1px solid var(--line);border-radius:16px;background:rgba(255,255,255,.02);
+  display:grid;gap:9px;
+}
+
+/* Orçamentos e O.S.: a própria métrica é o filtro. Os links usam o
+   mesmo componente visual das outras telas, inclusive fonte, brilho e cor. */
+.ls-budget-card-filters{margin-bottom:14px}
+.ls-budget-filter-card{
+  color:inherit!important;text-decoration:none;cursor:pointer;
+  transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease;
+}
+.ls-budget-filter-card:hover{
+  color:inherit!important;transform:translateY(-2px);
+  border-color:color-mix(in srgb,var(--metric,#F2A93B) 62%,var(--line));
+}
+.ls-budget-filter-card.active{
+  border-color:var(--metric,#F2A93B);
+  box-shadow:0 0 0 1px color-mix(in srgb,var(--metric,#F2A93B) 36%,transparent),var(--shadow-soft);
+}
+.ls-budget-filter-card.active::before{width:6px}
+.ls-budget-filter-card.active .ls-metric-note{color:var(--metric,#F2A93B);font-weight:900}
+.ls-budget-money-strip{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:1px;margin-bottom:18px;
+  background:var(--line);border:1px solid var(--line);border-radius:16px;overflow:hidden;
+  box-shadow:var(--shadow-soft);
+}
+.ls-budget-money-strip>div{
+  min-width:0;padding:13px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;
+  background:linear-gradient(180deg,#2B241B,#211B15);
+}
+.ls-budget-money-strip span{font-size:.75rem;color:var(--muted)}
+.ls-budget-money-strip strong{font-size:1rem;color:#fff;white-space:nowrap}
+.ls-budget-money-strip .success strong{color:#67e2ad}
+.ls-budget-money-strip .warning strong{color:#ffd17a}
+.ls-budget-search{width:min(100%,390px)}
+.ls-body .ls-load-progress{
+  background:linear-gradient(90deg,var(--acento-2),var(--acento) 58%,var(--apoio));
+  box-shadow:0 0 13px rgba(242,169,59,.58);
+}
+.ls-soft-enter .ls-content{animation:ls-soft-enter .24s ease both}
+@keyframes ls-soft-enter{from{opacity:.45;transform:translateY(4px)}to{opacity:1;transform:none}}
+@media(max-width:900px){.ls-budget-money-strip{grid-template-columns:1fr 1fr}}
+@media(max-width:560px){
+  .ls-budget-card-filters{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .ls-budget-filter-card{min-height:112px;padding:13px}
+  .ls-budget-money-strip{grid-template-columns:1fr}
+  .ls-budget-money-strip>div{padding:11px 13px}.ls-budget-search{width:100%}
+}
+@media(prefers-reduced-motion:reduce){.ls-soft-enter .ls-content{animation:none}}
+.ls-orcamento-total > div{
+  display:flex;align-items:center;justify-content:space-between;gap:16px;
+  color:#c5bcb0;font-size:.86rem;font-weight:800;
+}
+.ls-orcamento-total strong{color:#faf5ed;font-variant-numeric:tabular-nums}
+.ls-orcamento-final{
+  margin-top:3px;padding-top:11px;border-top:1px solid var(--line-soft);
+  color:#efe7d8!important;font-size:1rem!important;
+}
+/* O total não quebra entre o "R$" e o número: lido de relance, "R$"
+   numa linha e "1.308,66" na outra parecem dois valores. */
+.ls-orcamento-final strong{
+  color:#7ce7bc!important;font-size:1.24rem;white-space:nowrap;
+}
+
+/* ---- capacidade de produção ---- */
+.ls-capacidade{
+  display:flex;align-items:center;gap:10px;
+}
+.ls-capacidade-valor{
+  min-width:44px;padding:5px 10px;border-radius:10px;
+  font-size:1.02rem;font-weight:950;font-variant-numeric:tabular-nums;text-align:center;
+}
+.ls-capacidade-valor.ok{color:#7ce7bc;background:rgba(72,214,158,.12)}
+.ls-capacidade-valor.zero{color:#ff9aaa;background:rgba(255,113,132,.12)}
+.ls-capacidade-valor.vazio{color:#cec6bd;background:rgba(179,163,140,.09)}
+.ls-capacidade-nota{color:#a69c8f;font-size:.76rem;line-height:1.35}
+
+/* ---- lista de materiais dentro do card/modal ---- */
+.ls-ficha-linha{
+  display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:12px;
+  padding:9px 0;border-bottom:1px solid var(--line-soft);
+}
+.ls-ficha-linha:last-child{border-bottom:0}
+.ls-ficha-nome{color:#efe7d8;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ls-ficha-qtd{color:#B3A38C;font-size:.83rem;font-weight:800;font-variant-numeric:tabular-nums}
+
+@media (max-width:720px){
+  .ls-orcamento-total{max-width:none}
+}
+
+/* ======================================================================
+   CENTRAL DE AVISOS
+   O painel avisa em vez de esperar que alguém procure. Fica na barra do
+   topo porque é o único ponto que existe em toda tela.
+   ====================================================================== */
+.ls-avisos{position:relative}
+.ls-avisos-botao{
+  position:relative;display:grid;place-items:center;
+  /* 46px é o alvo mínimo de toque com dedo no tablet; abaixo disso a
+     pessoa erra e abre o menu ao lado. */
+  width:46px;height:46px;border-radius:14px;cursor:pointer;
+  color:var(--text-2);background:rgba(242,169,59,.10);
+  border:1px solid rgba(242,169,59,.22);font-size:1.15rem;
+  transition:background .18s ease,border-color .18s ease,transform .12s ease;
+}
+.ls-avisos-botao:hover{background:rgba(242,169,59,.18);border-color:rgba(242,169,59,.4)}
+.ls-avisos-botao:active{transform:scale(.95)}
+/* O anel do selo é recorte: ele imita a cor da barra do topo para o
+   número parecer descolado do botão. Estava pedindo `--bg-1`, que é o
+   fundo da PÁGINA -- um tom diferente do da barra, e a diferença lia
+   como um halo fora de lugar em volta do número. */
+.ls-avisos-selo{
+  position:absolute;top:-4px;right:-4px;min-width:20px;height:20px;padding:0 6px;
+  display:grid;place-items:center;border-radius:999px;
+  font-size:.68rem;font-weight:900;line-height:1;font-variant-numeric:tabular-nums;
+  color:#2A1B05;background:var(--acento);
+  border:2px solid #1d1508;box-shadow:0 4px 12px rgba(242,169,59,.45);
+}
+.ls-avisos-selo.urgente{
+  background:var(--red);color:#3A0E08;box-shadow:0 4px 12px rgba(255,122,107,.5);
+  /* pulsa só quando há coisa crítica: pulsar sempre vira ruído e a
+     pessoa para de enxergar. */
+  animation:ls-pulsa 2.4s ease-in-out infinite;
+}
+@keyframes ls-pulsa{
+  0%,100%{transform:scale(1)}
+  50%{transform:scale(1.14)}
+}
+
+.ls-avisos-painel{
+  position:absolute;top:calc(100% + 12px);right:0;width:min(94vw,388px);
+  z-index:1200;padding:8px;border-radius:var(--radius-lg);
+  background:linear-gradient(180deg,var(--panel-2),var(--panel));
+  border:1px solid var(--line);box-shadow:var(--shadow);
+  max-height:min(70vh,540px);overflow-y:auto;
+  /* fechado por padrão; o hidden é trocado no script do base */
+  transform-origin:top right;
+  animation:ls-abre .18s cubic-bezier(.16,.84,.44,1);
+}
+@keyframes ls-abre{from{opacity:0;transform:scale(.96) translateY(-6px)}}
+.ls-avisos-painel[hidden]{display:none}
+.ls-avisos-topo{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:10px 12px 12px;color:var(--muted);font-size:.75rem;
+  font-weight:800;letter-spacing:.8px;text-transform:uppercase;
+}
+.ls-aviso{
+  display:flex;gap:12px;align-items:flex-start;padding:12px;
+  border-radius:var(--radius-md);color:var(--text)!important;
+  text-decoration:none!important;transition:background .16s ease;
+}
+.ls-aviso:hover{background:rgba(255,255,255,.05)}
+.ls-aviso+.ls-aviso{margin-top:2px}
+.ls-aviso-icone{
+  flex:0 0 38px;width:38px;height:38px;display:grid;place-items:center;
+  border-radius:12px;font-size:1.05rem;
+}
+.ls-aviso-corpo{flex:1;min-width:0}
+.ls-aviso-titulo{
+  display:flex;align-items:baseline;gap:7px;font-weight:800;font-size:.93rem;
+}
+.ls-aviso-quantidade{
+  font-size:.78rem;font-weight:900;padding:1px 8px;border-radius:999px;
+  background:rgba(255,255,255,.09);color:var(--text-2);
+}
+.ls-aviso-detalhe{font-size:.8rem;color:var(--muted);line-height:1.4;margin-top:2px}
+
+.ls-aviso.critico .ls-aviso-icone{background:rgba(255,122,107,.15);color:var(--red)}
+.ls-aviso.atencao .ls-aviso-icone{background:rgba(255,201,77,.15);color:var(--yellow)}
+.ls-aviso.novidade .ls-aviso-icone{background:rgba(95,214,138,.15);color:var(--green)}
+.ls-aviso.info .ls-aviso-icone{background:rgba(61,217,192,.13);color:var(--apoio)}
+.ls-aviso.critico .ls-aviso-quantidade{background:rgba(255,122,107,.2);color:var(--red)}
+.ls-aviso.atencao .ls-aviso-quantidade{background:rgba(255,201,77,.2);color:var(--yellow)}
+
+.ls-avisos-vazio{
+  padding:26px 14px;text-align:center;color:var(--muted);font-size:.88rem;
+}
+.ls-avisos-vazio i{display:block;font-size:1.7rem;margin-bottom:8px;color:var(--green)}
+
+/* Os mesmos avisos, abertos na visão geral. No tablet a pessoa não vai
+   caçar o sininho: chegando na home, o que importa já está na tela. */
+.ls-avisos-mural{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(272px,1fr));
+  gap:12px;margin-bottom:22px;
+}
+.ls-avisos-mural .ls-aviso{
+  background:linear-gradient(180deg,var(--panel-2),var(--panel));
+  border:1px solid var(--line);
+}
+.ls-avisos-mural .ls-aviso.critico{border-color:rgba(255,122,107,.4)}
+.ls-avisos-mural .ls-aviso.atencao{border-color:rgba(255,201,77,.34)}
+
+/* ======================================================================
+   MARCADOR DE AMBIENTE
+   Diz em voz alta em qual dos dois painéis a pessoa está.
+   ====================================================================== */
+.ls-ambiente{
+  display:inline-flex;align-items:center;gap:7px;padding:5px 11px;
+  border-radius:999px;font-size:.68rem;font-weight:900;letter-spacing:1.1px;
+  text-transform:uppercase;white-space:nowrap;
+  color:#2A1B05;background:linear-gradient(135deg,var(--acento),var(--acento-2));
+  box-shadow:0 6px 18px rgba(242,169,59,.28);
+}
+
+/* ======================================================================
+   TRILHO E ABAS — a forma que separa este aplicativo do /adm
+
+   O /adm do site tem menu lateral escrito, sempre aberto: é a linguagem
+   de um painel web, e faz sentido lá, onde se entra de vez em quando
+   para mexer na vitrine. Aqui é o contrário -- a pessoa passa o dia
+   nesta tela, sabe onde ficam as coisas, e cada pixel do menu é pixel
+   que falta para a tabela.
+
+   Então a lateral nasce trilho, em TODA largura, e abre por botão quando
+   alguém quiser os nomes. Em tela estreita ela some de vez e a navegação
+   vai para a base, onde o polegar chega.
+   ====================================================================== */
+@media (min-width:761px){
+  .ls-sidebar{
+    --ls-rotulo:none;
+    width:var(--sidebar-rail);transform:none;overflow:visible;
+    transition:width .2s cubic-bezier(.16,.84,.44,1);
+  }
+  .ls-main{margin-left:var(--sidebar-rail);transition:margin-left .2s cubic-bezier(.16,.84,.44,1)}
+  .ls-mobile-menu{display:none}
+
+  .ls-brand{justify-content:center;padding:14px 8px;min-height:70px}
+  .ls-brand-logo{width:42px;height:42px;flex:0 0 42px;border-radius:13px}
+
+  .ls-nav{padding-inline:8px}
+  .ls-nav-item{justify-content:center;padding:0;min-height:48px}
+
+  /* Contador no trilho: selo no canto do ícone, com anel da cor da
+     lateral para o número não encostar no desenho. Antes era a mesma
+     pastilha de 28px da lateral aberta, jogada em `top:5px;right:10px`:
+     num item de 48px ela cobria metade do ícone e escapava para fora do
+     alinhamento de todos os outros. */
+  .ls-nav-count{
+    position:absolute;top:4px;right:calc(50% - 23px);
+    margin:0;min-width:19px;height:19px;padding:0 5px;
+    border:2px solid var(--sidebar);
+    color:#2A1B05;background:var(--acento);
+    font-size:.63rem;
+  }
+
+  /* O nome aparece ao lado quando o dedo ou o ponteiro para em cima --
+     é como se confere um ícone que ainda não se reconhece. */
+  .ls-nav-item::after{
+    content:attr(data-titulo);position:absolute;left:calc(100% + 10px);
+    padding:7px 12px;border-radius:10px;white-space:nowrap;
+    background:var(--panel-3);border:1px solid var(--line);
+    color:var(--text);font-size:.82rem;font-weight:700;
+    opacity:0;pointer-events:none;transform:translateX(-6px);
+    transition:opacity .16s ease,transform .16s ease;z-index:1300;
+    box-shadow:var(--shadow-soft);
+  }
+  .ls-nav-item:hover::after,.ls-nav-item:focus-visible::after{opacity:1;transform:none}
+
+  /* O cartão da pessoa é uma grade de duas colunas: avatar e nome. Some
+     o nome, mas a coluna dele continua reservada, e o avatar ficava
+     empurrado para a esquerda -- fora do prumo dos ícones logo acima.
+     No trilho a grade tem UMA coluna. */
+  .ls-sidebar-footer{padding:10px 8px}
+  .ls-user-card{grid-template-columns:46px;justify-content:center;padding:9px}
+  .ls-logout{justify-content:center}
+
+  /* ---- aberta: volta a mostrar os nomes ---- */
+  .ls-sidebar.expandida{--ls-rotulo:block;width:var(--sidebar-w)}
+  .ls-sidebar.expandida ~ .ls-main,
+  .ls-shell:has(.ls-sidebar.expandida) .ls-main{margin-left:var(--sidebar-w)}
+  .ls-sidebar.expandida .ls-nav-item{justify-content:flex-start;padding:0 14px;gap:12px}
+  .ls-sidebar.expandida .ls-nav-item::after{content:none}
+  .ls-sidebar.expandida .ls-brand{justify-content:flex-start;padding:18px 18px 16px}
+  .ls-sidebar.expandida .ls-sidebar-footer{padding:14px}
+  .ls-sidebar.expandida .ls-user-card{
+    grid-template-columns:46px minmax(0,1fr);justify-content:flex-start;padding:11px;
+  }
+  .ls-sidebar.expandida .ls-logout{justify-content:center}
+  .ls-sidebar.expandida .ls-rail-toggle i{transform:rotate(180deg)}
+
+  /* Voltou a ser a pastilha do fim da linha: o `position:absolute` do
+     trilho precisa ser desfeito por inteiro, senão o número fica preso
+     sobre o ícone mesmo com a lateral aberta. */
+  .ls-sidebar.expandida .ls-nav-count{
+    position:static;margin-left:auto;
+    min-width:26px;height:24px;padding:0 8px;
+    border:1px solid rgba(255,255,255,.13);
+    color:#fff9ee;background:rgba(255,255,255,.08);
+    font-size:.72rem;
+  }
+}
+
+/* Botão de abrir e fechar o trilho. Fica na borda, na altura do olho. */
+.ls-rail-toggle{
+  position:absolute;top:26px;right:-13px;z-index:1400;
+  width:26px;height:26px;display:none;place-items:center;
+  border-radius:50%;cursor:pointer;font-size:.7rem;
+  color:#2A1B05;background:var(--acento);border:2px solid var(--bg-0);
+  box-shadow:0 4px 12px rgba(0,0,0,.4);
+}
+.ls-rail-toggle i{transition:transform .2s ease}
+@media (min-width:761px){ .ls-rail-toggle{display:grid} }
+
+/* ======================================================================
+   ABAS DE BAIXO — celular e tablet em pé
+   ====================================================================== */
+.ls-abas{display:none}
+
+/* JANELA ABERTA, ABAS FORA.
+
+   As abas são `position:fixed` no rodapé com z-index 1100 -- acima do
+   modal do Bootstrap, que é 1055. Com uma janela aberta elas ficavam POR
+   CIMA do rodapé dela: o toque em "Salvar" caía na aba, não no botão, e
+   não havia como salvar nem cancelar num aparelho estreito.
+
+   Esconder é melhor do que só baixar o z-index: com a janela aberta as
+   abas não levam a lugar nenhum mesmo (o Bootstrap trava a rolagem da
+   página atrás), e ainda devolvem 58px de altura para o formulário. */
+body.modal-open .ls-abas{display:none!important}
+
+@media (max-width:760px){
+  .ls-abas{
+    position:fixed;left:0;right:0;bottom:0;z-index:1100;
+    display:grid;grid-auto-flow:column;grid-auto-columns:1fr;
+    background:linear-gradient(180deg,rgba(30,25,19,.97),rgba(13,11,8,.99));
+    border-top:1px solid var(--line);
+    backdrop-filter:blur(14px);
+    /* respeita a faixa do gesto de voltar do aparelho */
+    padding-bottom:env(safe-area-inset-bottom,0);
+  }
+  .ls-aba{
+    position:relative;display:flex;flex-direction:column;align-items:center;
+    justify-content:center;gap:3px;min-height:58px;padding:7px 4px;
+    background:none;border:0;cursor:pointer;
+    color:var(--muted);text-decoration:none!important;
+    font-size:.66rem;font-weight:800;letter-spacing:.02em;
+  }
+  .ls-aba i{font-size:1.22rem;line-height:1}
+  .ls-aba.ativa{color:var(--acento)}
+  .ls-aba.ativa::before{
+    content:"";position:absolute;top:0;left:22%;right:22%;height:3px;
+    border-radius:0 0 4px 4px;background:var(--acento);
+  }
+  /* O selo mora no canto de cima do ÍCONE, e não num ponto fixo da aba.
+     Em `top:5px` ele flutuava acima do desenho, e a distância mudava de
+     aba para aba conforme o rótulo: quatro números na mesma barra, cada
+     um numa altura. O anel na cor da barra é o que impede o número de
+     encostar no traço do ícone. */
+  .ls-aba-selo{
+    position:absolute;top:6px;right:calc(50% - 25px);
+    min-width:18px;height:18px;padding:0 5px;
+    display:grid;place-items:center;border-radius:999px;
+    border:2px solid #14110c;
+    font-size:.62rem;font-weight:900;line-height:1;font-variant-numeric:tabular-nums;
+    color:#2A1B05;background:var(--acento);
+  }
+  .ls-aba-selo.urgente{background:var(--red);color:#3A0E08}
+
+  /* o conteúdo não pode terminar embaixo das abas */
+  .ls-content{padding-bottom:86px}
+  /* com as abas, o botão de menu do topo vira redundante */
+  .ls-mobile-menu{display:none}
+}
+
+/* Escolher arquivo: o mesmo retângulo tracejado, mesmo sem miniatura.
+
+   `.ls-foto` serve para UMA imagem, com prévia. Onde a tela pede várias
+   de uma vez (as fotos de uma etapa de produção, por exemplo), não há
+   miniatura única para mostrar -- mas o campo continua sendo o mesmo
+   convite. O que não podia ficar era o botão cinza do sistema no meio de
+   um formulário âmbar. */
+input[type="file"].form-control,
+.ls-content input[type="file"]{
+  min-height:52px;
+  padding:11px 14px!important;
+  border:1.5px dashed #7a6540!important;
+  border-radius:12px!important;
+  color:var(--muted)!important;
+  background:rgba(242,169,59,.045)!important;
+  font-size:.85rem;
+  cursor:pointer;
+}
+input[type="file"].form-control:hover,
+.ls-content input[type="file"]:hover{
+  border-color:var(--acento)!important;background:rgba(242,169,59,.1)!important;
+}
+input[type="file"]::file-selector-button{
+  margin-right:12px;
+  min-height:34px;padding:0 14px;
+  border:1px solid rgba(242,169,59,.5);border-radius:9px;
+  color:#ffd591;background:rgba(242,169,59,.14);
+  font-family:inherit;font-size:.79rem;font-weight:850;
+  cursor:pointer;
+}
+input[type="file"]::file-selector-button:hover{color:#2A1B05;background:var(--acento)}
+
+/* Lista de escolha múltipla não é menu suspenso: não leva a seta, e
+   precisa de altura para mostrar mais de uma linha. Com a seta desenhada
+   por cima, ela parecia um campo que abre -- e não abre. */
+select[multiple],
+select[size]:not([size="1"]){
+  min-height:150px!important;
+  padding-right:14px!important;
+  background-image:none!important;
+  cursor:default;
+}
+select[multiple] option{padding:7px 10px;border-radius:8px}
+
+/* ======================================================================
+   CAMPO DE FOTO — uma peça só para o painel inteiro
+
+   Era o pedaço mais desencontrado das telas: numa o `input type=file`
+   aparecia cru, com o botão cinza do sistema; noutra, uma área tracejada
+   branca de tema claro; noutra, um botão azul dentro de um cartão. Três
+   desenhos para a mesma pergunta -- "qual imagem?".
+
+   Agora é sempre a mesma coisa: um retângulo tracejado que aceita clique
+   e arraste, com a miniatura dentro dele quando já há foto.
+   ====================================================================== */
+.ls-foto{
+  position:relative;
+  min-height:150px;
+  padding:16px;
+  display:grid;
+  grid-template-columns:96px minmax(0,1fr);
+  align-items:center;
+  gap:16px;
+  border:1.5px dashed #7a6540;
+  border-radius:16px;
+  background:rgba(242,169,59,.045);
+  transition:.16s ease;
+}
+.ls-foto:hover,
+.ls-foto:focus-within,
+.ls-foto.arrastando{
+  border-color:var(--acento);
+  background:rgba(242,169,59,.1);
+}
+.ls-foto-miniatura{
+  width:96px;height:96px;
+  display:grid;place-items:center;overflow:hidden;
+  border:1px solid var(--line);border-radius:13px;
+  background:#1A1610;
+  color:var(--muted-2);font-size:1.6rem;
+}
+.ls-foto-miniatura img{
+  width:100%;height:100%;padding:5px;
+  object-fit:contain;
+  display:none;
+}
+.ls-foto.tem-imagem .ls-foto-miniatura img{display:block}
+.ls-foto.tem-imagem .ls-foto-miniatura i,
+.ls-foto.tem-imagem .ls-foto-miniatura svg{display:none}
+.ls-foto-copy{min-width:0}
+.ls-foto-copy strong{
+  display:block;color:var(--text);font-size:.9rem;font-weight:900;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.ls-foto-copy span{
+  display:block;margin-top:4px;color:var(--muted);
+  font-size:.76rem;line-height:1.45;
+}
+.ls-foto-acoes{margin-top:11px;display:flex;flex-wrap:wrap;gap:8px}
+.ls-foto-escolher{
+  position:relative;overflow:hidden;
+  min-height:42px;padding:0 15px;
+  display:inline-flex;align-items:center;gap:8px;
+  border:1px solid rgba(242,169,59,.5);border-radius:11px;
+  color:#ffd591;background:rgba(242,169,59,.12);
+  font-size:.8rem;font-weight:850;cursor:pointer;
+}
+.ls-foto-escolher:hover{color:#2A1B05;background:var(--acento);border-color:var(--acento)}
+/* O `input` de verdade fica por cima e transparente: o clique e o
+   arraste caem nele, e o desenho é todo nosso. Esconder com `display:none`
+   tiraria o arraste junto. */
+.ls-foto-escolher input[type="file"]{
+  position:absolute;inset:0;width:100%;height:100%;
+  opacity:0;cursor:pointer;
+}
+.ls-foto-limpar{
+  min-height:42px;padding:0 13px;
+  display:inline-flex;align-items:center;gap:7px;
+  border:1px solid rgba(255,122,107,.3);border-radius:11px;
+  color:#FF9AAA;background:rgba(255,122,107,.08);
+  font-size:.8rem;font-weight:850;cursor:pointer;
+}
+.ls-foto-limpar:hover{color:#3A0E08;background:var(--red)}
+
+@media (max-width:560px){
+  .ls-foto{grid-template-columns:1fr;justify-items:center;text-align:center}
+  .ls-foto-copy strong{white-space:normal}
+  .ls-foto-acoes{justify-content:center}
+}
+
+/* Setorização de propostas e avaliação mensal. */
+.ls-block-review{min-width:190px;display:grid;gap:6px;justify-items:start}.ls-block-review .ls-status{max-width:100%;white-space:normal;line-height:1.25}.ls-budget-block-title{padding:12px 14px;border:1px solid var(--line);border-radius:13px;display:flex;align-items:center;gap:11px;background:#211c16}.ls-budget-block-title>i{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;color:#f5c070;background:rgba(242,169,59,.12)}.ls-budget-block-title span,.ls-budget-block-title strong,.ls-budget-block-title small{display:block}.ls-budget-block-title strong{color:#fff}.ls-budget-block-title small{margin-top:2px;color:#aa9c89}.ls-budget-block-title.financeiro>i{color:#73dfb0;background:rgba(72,214,158,.11)}
+.ls-period-filter{width:min(330px,100%)}.ls-sector-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.ls-sector-card{padding:18px;border:1px solid var(--line);border-radius:18px;background:linear-gradient(155deg,#2b241b,#1a1610);box-shadow:var(--shadow-soft)}.ls-sector-card.avaliado{border-color:rgba(72,214,158,.25)}.ls-sector-card-head{display:grid;grid-template-columns:46px minmax(0,1fr) auto;align-items:center;gap:11px}.ls-sector-icon{width:46px;height:46px;border-radius:13px;display:grid;place-items:center;color:#f5c070;background:rgba(242,169,59,.12);font-size:1.15rem}.ls-sector-card h2{margin:0;color:#fff;font-size:1rem}.ls-sector-card-head p{margin:3px 0 0;color:#aa9c89;font-size:.72rem}.ls-sector-score{min-width:52px;height:52px;border-radius:50%;display:grid;place-items:center;color:#13100b;background:#73dfb0;font-size:1.05rem;font-weight:950;line-height:1}.ls-sector-score small{font-size:.58rem}.ls-sector-score.pequeno{width:38px;min-width:38px;height:38px;font-size:.8rem}.ls-sector-comment{min-height:48px;margin:15px 0 5px;color:#c6bbae;font-size:.8rem;line-height:1.5}.ls-sector-comment.vazio{color:#8f8271}.ls-score-options{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}.ls-score-options label{margin:0;cursor:pointer}.ls-score-options input{position:absolute;opacity:0;pointer-events:none}.ls-score-options span{height:48px;border:1px solid var(--line);border-radius:11px;display:grid;place-items:center;color:#c6bbae;background:#211c16;font-weight:950}.ls-score-options small{min-height:17px;margin-top:4px;display:block;color:#8f8271;font-size:.61rem;text-align:center}.ls-score-options input:checked+span{border-color:#73dfb0;color:#13100b;background:#73dfb0;box-shadow:0 0 0 3px rgba(72,214,158,.12)}
+@media(max-width:1050px){.ls-sector-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:700px){.ls-sector-grid{grid-template-columns:1fr}.ls-period-filter{width:100%}.ls-commercial-table tbody td[data-rotulo="Revisão dos blocos"]{grid-column:1/-1}.ls-score-options{gap:5px}.ls-score-options span{height:44px}}
+
+
+/* ======================================================================
+   CAMADA DE CONSISTÊNCIA
+
+   Fica no fim para neutralizar CSS antigo das telas sem transformar cada
+   template em uma exceção. Foco é âmbar (nunca o contorno preto padrão),
+   superfícies usam a mesma borda e controles formam uma peça única.
+   ====================================================================== */
+:where(a,button,input,select,textarea,[tabindex]):focus{outline:none!important}
+:where(a,button,input,select,textarea,[tabindex]):focus-visible{
+  outline:2px solid var(--acento)!important;
+  outline-offset:3px!important;
+}
+
+.ls-card,.ls-panel,.ls-data-panel,.ls-filter-panel,.card,
+.app-glance-card,.app-focus-panel,.app-start-panel,.app-pipeline,.app-stock-strip{
+  border-color:var(--line)!important;
+  box-shadow:0 12px 32px rgba(0,0,0,.22)!important;
+}
+
+.ls-sidebar.expandida .ls-nav-item{color:#e9dfd0!important}
+.ls-sidebar.expandida .ls-nav-item.active{color:#fff!important}
+.ls-sidebar.expandida .ls-nav-caption{color:#b9a992!important}
+
+.form-control,.form-select,.ls-busca-campo{
+  border:1px solid #75603b!important;
+  background-color:#241c11!important;
+}
+.form-control::placeholder,.ls-busca-entrada::placeholder{color:#b3a58f!important;opacity:1}
+.input-group>.form-control,.input-group>.form-select{border-radius:0!important}
+.input-group>.input-group-text:first-child{border-radius:11px 0 0 11px!important;border-right:0!important}
+.input-group>.btn:last-child{border-radius:0 11px 11px 0!important}
+.input-group>.form-control:last-child{border-radius:0 11px 11px 0!important}
+
+.btn-primary,.btn-dark{color:#261704!important}
+.btn-primary i,.btn-dark i{color:inherit!important}
+.btn:disabled{opacity:.55!important;filter:saturate(.6)}
+
+.ls-busca-painel{border-color:#725d3a;background:#2a2115;box-shadow:0 24px 54px rgba(0,0,0,.52)}
+.ls-busca-item{color:#e7ddcb}
+.ls-busca-item small{color:#b8aa96!important}
+.ls-busca-item:hover,.ls-busca-item.marcado{color:#fff;background:#43331b}
+.ls-busca-criar{
+  min-height:52px!important;margin-top:6px!important;padding:10px 12px!important;
+  border:1px solid rgba(242,169,59,.42)!important;border-radius:11px!important;
+  color:#ffd28a!important;background:rgba(242,169,59,.10)!important;
+  font-weight:900!important;
+}
+.ls-busca-criar:hover,.ls-busca-criar:focus-visible{
+  color:#241605!important;background:var(--acento)!important;border-color:var(--acento)!important;
+}
+
+.modal-dialog{padding:10px}
+.modal-content{border-color:#755e37!important}
+.modal-body .row{--bs-gutter-y:1rem}
+.modal-footer{gap:9px;flex-wrap:wrap}
+.modal-footer .btn{min-width:132px}
+@media(max-width:560px){
+  .modal-dialog{margin:0;padding:8px}
+  .modal-content{max-height:calc(var(--ls-vh) - 16px);border-radius:17px!important}
+  .modal-body{padding:17px!important}
+  .modal-footer .btn{flex:1 1 140px}
+}
+
+/* Tablet e telas médias: duas colunas leem melhor que quatro. */
+@media (min-width:761px) and (max-width:1180px){
+  .ls-grid-3{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .ls-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .btn{min-height:46px}
+  .form-control,.form-select{min-height:48px}
+}
+
+/* No tablet a linha explicativa do cabeçalho sai. Ela ajuda quem abre a
+   tela pela primeira vez, e atrapalha quem abre a mesma tela quarenta
+   vezes por dia -- que é o caso de quem usa isto na bancada. Continua no
+   HTML, então leitor de tela e desktop seguem tendo. */
+@media (max-width:1180px){
+  .ls-page-hero p{display:none}
+  .ls-page-hero{padding-bottom:12px;margin-bottom:14px}
+}
+
+
+/* Barra do topo em tela estreita: só o nome da tela e o sino.
+
+   O selo "Gestão interna" e o nome de usuário saem -- com as abas
+   embaixo, quem está no aplicativo já sabe onde está, e no celular o
+   espaço do topo é do título. O sino fica porque é o único caminho para
+   os avisos ali. */
+@media (max-width:760px){
+  .ls-ambiente,
+  .ls-user-pill{display:none}
+  .ls-topbar{padding:0 12px;gap:10px}
+  .ls-topbar-copy strong{font-size:1rem;line-height:1.2}
+  .ls-topbar-side{gap:8px}
+}
+
+
+/* ======================================================================
+   BUSCA — o campo de escolher coisa (ls-busca.js)
+
+   Alvo de 48px por linha porque é usado em tablet, com o dedo, em pé na
+   bancada. O painel flutua sobre o formulário em vez de empurrar o
+   conteúdo: empurrar move o botão que a pessoa já estava mirando.
+   ====================================================================== */
+.ls-busca{position:relative;width:100%}
+
+.ls-busca-campo{
+  position:relative;display:flex;align-items:center;gap:9px;
+  min-height:48px;padding:0 12px;
+  border:1px solid var(--line);border-radius:var(--radius-md);
+  background:var(--panel-soft);
+  transition:border-color .15s ease,box-shadow .15s ease,background .15s ease;
+}
+.ls-busca.aberta .ls-busca-campo,
+.ls-busca-campo:focus-within{
+  border-color:rgba(242,169,59,.55);
+  background:var(--panel-2);
+  box-shadow:0 0 0 3px rgba(242,169,59,.14);
+}
+.ls-busca.preenchida .ls-busca-campo{border-color:rgba(61,217,192,.4)}
+
+.ls-busca-lupa{flex:0 0 auto;color:var(--muted-2);font-size:.92rem}
+.ls-busca.preenchida .ls-busca-lupa{color:var(--apoio)}
+
+.ls-busca-entrada{
+  flex:1;min-width:0;height:44px;padding:0;
+  border:0;outline:0;background:transparent;
+  color:var(--text);font-size:.92rem;font-weight:600;
+}
+.ls-busca-entrada::placeholder{color:var(--muted-2);font-weight:500}
+
+.ls-busca-limpar{
+  flex:0 0 auto;width:32px;height:32px;
+  display:grid;place-items:center;
+  border:0;border-radius:9px;
+  color:var(--muted);background:rgba(255,255,255,.06);
+  font-size:.72rem;cursor:pointer;
+}
+.ls-busca-limpar:hover{color:var(--text);background:rgba(255,255,255,.12)}
+/* O botão nasce com o atributo hidden, e `display:grid` acima venceria a
+   regra do navegador: sem isto, o X de limpar aparecia em campo vazio. */
+.ls-busca-limpar[hidden]{display:none}
+
+.ls-busca-painel{
+  /* z-index acima do modal do Bootstrap (1055): aberto, o painel vive no
+     <body> e precisa ficar por cima de tudo. */
+  position:absolute;z-index:2000;top:calc(100% + 6px);left:0;right:0;
+  max-height:min(58vh,420px);overflow-y:auto;
+  padding:6px;
+  border:1px solid var(--line);border-radius:var(--radius-md);
+  background:var(--panel);
+  box-shadow:var(--shadow);
+}
+.ls-busca-painel::-webkit-scrollbar{width:9px}
+.ls-busca-painel::-webkit-scrollbar-thumb{background:rgba(179,163,140,.22);border-radius:999px}
+
+.ls-busca-grupo{
+  display:block;padding:11px 10px 5px;
+  color:var(--muted-2);font-size:.66rem;font-weight:900;
+  letter-spacing:.12em;text-transform:uppercase;
+}
+
+.ls-busca-item{
+  width:100%;min-height:48px;padding:8px 11px;
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  border:0;border-radius:11px;
+  color:var(--text-2);background:transparent;
+  font:inherit;text-align:left;cursor:pointer;
+}
+.ls-busca-item:hover,.ls-busca-item.marcado{background:rgba(255,255,255,.07);color:var(--text)}
+.ls-busca-item.escolhido{background:rgba(61,217,192,.12);color:#fff}
+.ls-busca-item-corpo{min-width:0;display:flex;flex-direction:column;gap:2px}
+.ls-busca-item-foto{
+  width:46px;height:46px;flex:0 0 46px;overflow:hidden;
+  display:grid;place-items:center;border:1px solid rgba(179,163,140,.2);
+  border-radius:11px;background:#18130d;color:var(--muted-2);
+}
+.ls-busca-item-foto img{width:100%;height:100%;display:block;object-fit:cover}
+.ls-busca-item-foto.sem-foto{font-size:1rem}
+.ls-busca-item-nome{font-size:.9rem;font-weight:750;line-height:1.25}
+.ls-busca-item-detalhe{color:var(--muted);font-size:.74rem;font-weight:600}
+.ls-busca-item-direita{
+  flex:0 0 auto;color:var(--acento);
+  font-size:.83rem;font-weight:900;white-space:nowrap;
+}
+
+.ls-busca-vazio{margin:0;padding:22px 12px;color:var(--muted-2);font-size:.82rem;text-align:center}
+
+.ls-busca-criar{
+  width:100%;min-height:48px;margin-top:4px;
+  display:flex;align-items:center;gap:9px;
+  padding:0 12px;
+  border:1px dashed rgba(242,169,59,.45);border-radius:11px;
+  color:var(--acento);background:rgba(242,169,59,.08);
+  font-size:.83rem;font-weight:850;text-align:left;cursor:pointer;
+}
+.ls-busca-criar:hover{color:#1f1608;background:var(--acento)}
+.ls-busca-criar span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* Dentro da tabela de itens do orçamento o campo encosta nas bordas da
+   célula: a linha já é estreita, e cada pixel conta. */
+.ls-itens-table .ls-busca-campo{min-height:44px;padding:0 9px}
+.ls-itens-table .ls-busca-entrada{height:40px;font-size:.86rem}
+
+/* Toque: em tablet e celular tudo cresce um pouco. Não é preferência --
+   é a diferença entre acertar e errar o alvo com luva de trabalho. */
+@media (pointer:coarse){
+  .ls-busca-campo{min-height:52px}
+  .ls-busca-entrada{height:48px;font-size:1rem}
+  .ls-busca-item{min-height:54px}
+  .ls-busca-item-foto{width:50px;height:50px;flex-basis:50px}
+  .ls-busca-item-nome{font-size:.95rem}
+}
+
+
+/* ======================================================================
+   TOQUE — o painel é usado em tablet, em pé, na bancada
+
+   Não é preferência de gosto: com o aparelho na mão e a outra mão
+   ocupada, alvo pequeno é toque errado, e toque errado em tela de
+   cadastro é dado perdido. As medidas abaixo valem em qualquer aparelho
+   de toque, inclusive tablet grande, que pelo tamanho da tela cairia nas
+   regras de desktop.
+
+   O tamanho de fonte 16px nos campos tem um motivo específico: abaixo
+   disso o Safari do iPad dá zoom sozinho ao focar o campo, e a pessoa
+   perde o formulário de vista no meio da digitação.
+   ====================================================================== */
+@media (pointer:coarse){
+  .btn{min-height:48px;padding-inline:18px}
+  .btn-sm{min-height:44px;padding-inline:14px}
+
+  .form-control,.form-select{min-height:52px;font-size:16px}
+  textarea.form-control{min-height:120px;line-height:1.6}
+
+  .form-check-input{width:1.35em;height:1.35em;margin-top:.15em}
+  .form-check-label{padding-left:4px;font-size:.95rem}
+  .form-label{font-size:.86rem;font-weight:750}
+  .form-text{font-size:.8rem;line-height:1.5}
+
+  /* Botão de ação dentro da tabela: quadrado de dedo, não de mouse. */
+  .ls-acoes .btn,
+  .guide-actions .btn{min-width:46px;min-height:46px}
+  .ls-acoes{gap:8px}
+
+  .ls-table td,.ls-table th{padding-block:14px}
+
+  /* O rodapé do modal fica colado embaixo: em formulário longo, o
+     "Salvar" desaparecia acima da dobra e a pessoa fechava a tela
+     achando que não dava para gravar. */
+  .modal-dialog-scrollable .modal-footer{
+    position:sticky;bottom:0;z-index:2;
+    background:var(--panel);
+    box-shadow:0 -10px 24px rgba(0,0,0,.28);
+  }
+  .modal-footer .btn{flex:1 1 46%;min-height:52px;font-weight:800}
+}
+
+/* Celular e tablet em pé: o modal encosta na base da tela e vira folha,
+   com o topo arredondado. É o gesto que o aplicativo do telefone tem e
+   o painel web não tinha. */
+@media (max-width:900px){
+  .modal-dialog{margin:0;align-items:flex-end;min-height:100%}
+  .modal-content{
+    border-radius:22px 22px 0 0;
+    max-height:96dvh;
+  }
+  .modal-body{padding-inline:16px}
+  .modal-footer{padding-inline:16px}
+}
+
+
+/* ======================================================================
+   CORREÇÕES DE ACABAMENTO
+
+   Achadas abrindo o painel no navegador, em tamanho de tablet. Ficam no
+   fim do arquivo de propósito: são consertos sobre regras que já existem
+   acima, e ler daqui é ler o que mudou e por quê.
+   ====================================================================== */
+
+/* 1. O SELECT DA LISTA DE ORÇAMENTO E OS CAMPOS COMPOSTOS.
+
+      Os consertos do menu lateral que moravam aqui subiram para o bloco
+      do trilho: eles não eram acabamento, eram a regra de quando o nome
+      aparece, e valia lê-la junto com o resto do menu.
+      ------------------------------------------------------------------ */
+
+/* 2. SELECT SEM SETA.
+      `background:` (atalho) apagava a seta que o Bootstrap desenha em
+      `background-image`. Resultado: o campo parecia um texto comum e
+      ninguém percebia que dava para escolher. Aqui a cor volta a ser só
+      `background-color` e a seta é desenhada de novo, em âmbar. */
+.form-select{
+  background-color:#261c0b!important;
+  background-image:url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23F2A93B' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e")!important;
+  background-repeat:no-repeat!important;
+  background-position:right 14px center!important;
+  background-size:15px 12px!important;
+  padding-right:40px!important;
+  cursor:pointer;
+}
+.form-select:focus{background-color:#30240f!important}
+
+/* 3. O "R$" SOLTO AO LADO DO CAMPO.
+      No input-group os dois pedaços vinham com raio próprio e pareciam
+      duas caixas encostadas. Agora formam um campo só. */
+.input-group{flex-wrap:nowrap}
+.input-group>.input-group-text{
+  border-right:0!important;
+  border-radius:11px 0 0 11px!important;
+  padding-inline:13px!important;
+  font-weight:800!important;
+}
+.input-group>.form-control{
+  border-left:0!important;
+  border-radius:0 11px 11px 0!important;
+}
+.input-group:focus-within>.input-group-text{border-color:#f1c16d!important}
+
+/* 4. A COLUNA DA DESCRIÇÃO ESPREMIDA.
+      Na linha do orçamento a descrição é o que o cliente lê na proposta,
+      e sobrava para ela um campo de dois dedos. As larguras agora saem do
+      CSS, e não de porcentagens espalhadas no HTML. */
+.ls-itens-table{table-layout:fixed;width:100%}
+.ls-itens-table th:nth-child(1),
+.ls-itens-table td:nth-child(1){width:30%}
+.ls-itens-table th:nth-child(2),
+.ls-itens-table td:nth-child(2){width:auto}
+.ls-itens-table th:nth-child(3),
+.ls-itens-table td:nth-child(3){width:88px}
+.ls-itens-table th:nth-child(4),
+.ls-itens-table td:nth-child(4){width:130px}
+.ls-itens-table th:nth-child(5),
+.ls-itens-table td:nth-child(5){width:118px}
+.ls-itens-table th:nth-child(6),
+.ls-itens-table td:nth-child(6){width:56px}
+.ls-itens-table td{padding-inline:7px}
+.ls-itens-table .ls-busca,
+.ls-itens-table .form-control{min-width:0}
+
+/* Abaixo de ~1100px a linha vira cartão.
+
+   A proposta tem seis campos por item. Espremidos em uma linha dentro do
+   modal, a descrição -- que é o texto que o cliente lê -- sobrava com
+   dois dedos de largura. Empilhado, cada campo recebe a linha inteira, o
+   rótulo vem do `data-rotulo` e some a rolagem lateral, que no tablet é o
+   gesto mais fácil de errar. */
+@media (max-width:1100px){
+  .ls-itens-table{table-layout:auto}
+  .ls-itens-table thead{display:none}
+  .ls-itens-table,
+  .ls-itens-table tbody,
+  .ls-itens-table tr,
+  .ls-itens-table td{display:block;width:auto}
+  .ls-itens-table tr{
+    position:relative;
+    margin-bottom:12px;padding:13px 13px 9px;
+    border:1px solid var(--line);border-radius:15px;
+    background:rgba(255,255,255,.025);
+  }
+  /* As larguras fixas de coluna são de tabela; em cartão cada campo
+     ocupa a linha. Repetir o :nth-child aqui é o que desempata com as
+     regras de largura definidas acima. */
+  .ls-itens-table td:nth-child(1),
+  .ls-itens-table td:nth-child(2){width:100%}
+  /* Quantidade e valor andam juntos na cabeça de quem digita: ficam lado
+     a lado, e a linha inteira sobra para o que é texto. */
+  .ls-itens-table td:nth-child(3),
+  .ls-itens-table td:nth-child(4){
+    display:inline-block;width:calc(50% - 5px);vertical-align:top;
+  }
+  .ls-itens-table td:nth-child(3){margin-right:8px}
+  .ls-itens-table td:nth-child(3) .form-control,
+  .ls-itens-table td:nth-child(4) .form-control{text-align:right}
+  .ls-itens-table td{padding:0 0 10px}
+  .ls-itens-table td::before{
+    content:attr(data-rotulo);
+    display:block;margin-bottom:5px;
+    color:var(--muted-2);font-size:.68rem;font-weight:900;
+    letter-spacing:.08em;text-transform:uppercase;
+  }
+  /* Subtotal e remover dividem a última linha do cartão. */
+  .ls-itens-table td:nth-child(5){
+    display:inline-block;width:auto;padding-bottom:0;
+  }
+  .ls-itens-table td:nth-child(6){
+    position:absolute;top:10px;right:10px;padding:0;
+  }
+  .ls-itens-table td:nth-child(6)::before{content:""}
+  .ls-itens-table td:nth-child(1){padding-right:52px}
+}
+
+/* 5. CONTRASTE.
+      Texto de apoio, dica de campo e placeholder estavam apagados demais
+      para uma tela lida sob luz de galpão, muitas vezes com o tablet
+      inclinado. Todos sobem de tom; nenhum vira branco, para o olho
+      continuar sabendo o que é principal e o que é apoio. */
+:root{
+  --muted:#C4B6A0;
+  --muted-2:#A2917A;
+}
+.form-control::placeholder{color:#9d8f7c!important}
+.form-text,.small,small{color:#bcae9d!important}
+.text-muted{color:#bcae9d!important}
+.ls-busca-entrada::placeholder{color:#9d8f7c}
+.ls-busca-item-detalhe{color:#bcae9d}
+.ls-busca-grupo{color:#a2917a}
+
+/* Borda de campo um pouco mais presente: em fundo escuro, borda fraca
+   faz o campo desaparecer e a pessoa não sabe onde tocar. */
+.form-control,.form-select,.input-group-text{border-color:#7a6540!important}
+.ls-busca-campo{border-color:#7a6540}
+
+/* 6. O CAMPO DE BUSCA E O RESTO DO FORMULÁRIO PRECISAM PARECER IRMÃOS.
+      Alturas e raios batendo, para a linha do formulário não ficar
+      serrilhada. */
+.ls-busca-campo{
+  min-height:49px;
+  border-radius:11px;
+  background:#261c0b;
+}
+.ls-busca-entrada{height:45px;font-size:.92rem}
+.ls-busca.aberta .ls-busca-campo,
+.ls-busca-campo:focus-within{background:#30240f}
+.ls-busca-painel{border-color:#7a6540;background:#2a2010}
+.ls-busca-item:hover,.ls-busca-item.marcado{background:rgba(242,169,59,.14)}
+
+/* 7. O BOTÃO DE CADASTRAR NA HORA.
+      É a saída para quando o cadastro não existe: precisa parecer um
+      convite, e não um aviso de erro no rodapé da lista. */
+.ls-busca-criar{
+  min-height:50px;
+  border-style:solid;
+  border-color:rgba(242,169,59,.5);
+  color:#ffd591;
+  background:rgba(242,169,59,.12);
+  font-size:.85rem;
+}
+.ls-busca-criar:hover{color:#2A1B05;background:var(--acento);border-color:var(--acento)}
+
+/* 8. MODAL: cabeçalho e rodapé com peso, corpo com respiro. */
+.modal-content{border-color:#5f4e30!important;background:#241b0d!important}
+.modal-header,.modal-footer{border-color:rgba(179,163,140,.2)!important;background:#2b2110!important}
+.modal-title{font-weight:900!important;letter-spacing:-.02em}
+.modal-body{padding:20px!important}
+.modal-body hr{border-color:rgba(179,163,140,.22)!important;opacity:1!important}
+
+/* A busca é um campo inteiro, não um input curto solto dentro da coluna. */
+#orcamentoClienteBox,.ls-busca,.ls-busca-campo,.ls-busca-entrada{
+  width:100%!important;max-width:none!important;
+}
+.ls-cliente-resumo{
+  margin-top:9px;padding:10px 12px;border:1px solid rgba(93,211,169,.38);
+  border-radius:11px;background:rgba(39,122,94,.12);color:#d9f7eb;
+  line-height:1.35
+}
+.ls-cliente-resumo strong{display:block;font-size:.76rem;color:#75e0b9;margin-bottom:3px}
+.ls-cliente-resumo span{display:block;font-size:.76rem;color:#cec5b9;overflow-wrap:anywhere}
+[data-mascara="moeda"],input[type="number"]{font-variant-numeric:tabular-nums}
+input[type="number"]{-moz-appearance:textfield}
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+.ls-busca{display:block!important;min-width:0}
+.ls-busca-campo{display:flex!important;padding-inline:14px!important}
+.ls-busca-entrada{flex:1 1 auto!important;min-width:0!important;padding:0!important}
+.ls-busca-lupa{display:inline-grid!important;place-items:center;width:20px}
+
+/* Formulários e ações do modal seguem uma grade regular. */
+#modalOrcamento .modal-body>.row>[class*="col-"]{display:flex;min-width:0;flex-direction:column}
+#modalOrcamento .form-control,
+#modalOrcamento .form-select,
+#modalOrcamento .ls-busca-campo,
+#modalOrcamento .input-group{width:100%!important}
+#modalOrcamento .form-text{display:block;margin-top:7px;line-height:1.45}
+#modalOrcamento .input-group{flex-wrap:nowrap}
+#modalOrcamento .input-group-text{flex:0 0 auto}
+#modalOrcamento .input-group>.form-control{min-width:0}
+#modalOrcamento .modal-footer{align-items:center;justify-content:flex-end}
+
+
+/* ======================================================================
+   RESPONSIVIDADE FINAL — ícones, modais e formulários compostos
+   ====================================================================== */
+
+/* A fonte de ícones herda line-height de botões e títulos. No desktop isso
+   deslocava alguns desenhos para baixo e outros para fora do quadrado. */
+.bi{
+  display:inline-block;
+  line-height:1;
+  vertical-align:-.125em;
+}
+.btn>.bi,
+.ls-nav-icon>.bi,
+.ls-metric-icon>.bi,
+.ls-aviso-icone>.bi{
+  width:1em;height:1em;
+  display:inline-grid;
+  place-items:center;
+  line-height:1;
+  vertical-align:0;
+  flex:0 0 auto;
+}
+.ls-nav-icon,.ls-metric-icon,.ls-aviso-icone{position:relative;z-index:1}
+.ls-actions .btn,.ls-acoes .btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  vertical-align:middle;
+}
+
+/* Um único dono da rolagem: o corpo. Cabeçalho e ações ficam sempre
+   acessíveis, inclusive em tablet deitado (pouca altura útil). */
+/* A ALTURA ÚTIL DA JANELA.
+
+   `--ls-vh` é a altura que o usuário realmente vê, escrita pelo
+   painel.js a partir do visualViewport. É diferente de 100dvh quando o
+   teclado do tablet está aberto: dvh ignora o teclado, e era por isso
+   que "Salvar" e "Cancelar" ficavam escondidos atrás dele. O fallback
+   cobre o primeiro instante da página e o navegador sem a API. */
+:root{--ls-vh:100dvh}
+/* A camada da janela também respeita a área visível: centralizar
+   dentro da tela inteira, com o teclado aberto, empurraria a janela
+   curta para trás do teclado mesmo tendo espaço de sobra. */
+.modal{padding:0!important;height:var(--ls-vh);overscroll-behavior:contain}
+.modal-dialog{
+  width:calc(100% - 24px);
+  margin:12px auto!important;
+  padding:0!important;
+}
+.modal-dialog-scrollable{height:calc(var(--ls-vh) - 24px)}
+.modal-dialog-scrollable .modal-content,
+.modal-content{
+  max-height:calc(var(--ls-vh) - 24px)!important;
+  display:flex;
+  flex-direction:column;
+  overflow:hidden!important;
+}
+.modal-header,.modal-footer{flex:0 0 auto}
+.modal-body{
+  flex:1 1 auto;
+  min-height:0;
+  overflow-x:hidden!important;
+  overflow-y:auto!important;
+  overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+}
+.modal-footer{
+  position:sticky;bottom:0;z-index:5;
+  box-shadow:0 -12px 28px rgba(0,0,0,.3);
+}
+.modal-open{overflow:hidden!important;padding-right:0!important}
+.modal .row>[class*="col-"]{min-width:0}
+.modal .form-control,.modal .form-select,.modal .input-group{max-width:100%;min-width:0}
+.modal .input-group>.form-control{min-width:0}
+.ls-modal-kicker{
+  display:block;margin-bottom:3px;color:var(--acento);
+  font-size:.66rem;font-weight:950;letter-spacing:.11em;text-transform:uppercase;
+}
+.ls-cep-status{
+  min-height:22px;display:inline-flex;align-items:center;gap:6px;
+  color:var(--muted-2);font-size:.76rem;font-weight:800;
+}
+.ls-cep-status.sucesso{color:#72e6b7}
+.ls-cep-status.erro{color:#ff9aaa}
+.ls-cep-status.carregando{color:#ffd18d}
+.ls-cep-status.carregando::before{
+  content:"";width:12px;height:12px;border:2px solid currentColor;
+  border-right-color:transparent;border-radius:50%;animation:ls-gira .7s linear infinite;
+}
+@keyframes ls-gira{to{transform:rotate(360deg)}}
+.ls-map-linked{color:#72e6b7;font-weight:800;white-space:nowrap}
+
+@media (max-width:900px){
+  .modal{overflow:hidden!important}
+  .modal-dialog,
+  .modal-dialog.modal-sm,
+  .modal-dialog.modal-lg,
+  .modal-dialog.modal-xl{
+    width:100%;max-width:none;height:var(--ls-vh);min-height:var(--ls-vh);
+    margin:0!important;padding:0!important;display:flex;align-items:flex-end;
+  }
+  .modal-content,
+  .modal-dialog-scrollable .modal-content{
+    width:100%;max-height:var(--ls-vh)!important;
+    border-width:1px 0 0!important;border-radius:22px 22px 0 0!important;
+  }
+  .modal-header{padding:15px 16px!important}
+  .modal-body{padding:16px!important}
+  .modal-footer{
+    padding:12px 16px calc(12px + env(safe-area-inset-bottom))!important;
+  }
+  .modal-footer .btn{flex:1 1 180px;min-width:0}
+  .ls-modal-inline-actions{width:100%}
+  .ls-modal-inline-actions .btn{flex:1 1 150px}
+}
+
+@media (max-width:560px){
+  .modal-content,
+  .modal-dialog-scrollable .modal-content{border-radius:16px 16px 0 0!important}
+  .modal-body{padding:14px!important}
+  .modal-footer{display:grid!important;grid-template-columns:1fr 1fr;gap:8px!important}
+  .modal-footer .btn{width:100%;min-width:0!important;margin:0!important}
+  .modal-footer .btn:only-child{grid-column:1/-1}
+  .modal-footer .btn:last-child:nth-child(odd){grid-column:1/-1}
+  .ls-modal-inline-actions{display:grid!important;grid-template-columns:1fr!important}
+  .ls-modal-inline-actions .btn{width:100%}
+
+  /* WhatsApp/e-mail: o botão não espreme o campo para fora do modal. */
+  #modalLink .input-group{display:grid;grid-template-columns:46px minmax(0,1fr);gap:0}
+  #modalLink .input-group>.input-group-text{grid-column:1;border-radius:11px 0 0 11px!important}
+  #modalLink .input-group>.form-control{grid-column:2;border-radius:0 11px 11px 0!important}
+  #modalLink .input-group>.btn{grid-column:1/-1;margin-top:8px;border-radius:11px!important}
+}
+
+/* Tablet deitado pode ter só 600px de altura; usa a tela inteira mesmo
+   tendo largura de desktop. */
+@media (max-height:680px){
+  .modal-dialog,
+  .modal-dialog.modal-lg,
+  .modal-dialog.modal-xl{
+    height:var(--ls-vh);min-height:var(--ls-vh);margin:0 auto!important;
+  }
+  .modal-content,.modal-dialog-scrollable .modal-content{
+    max-height:var(--ls-vh)!important;border-radius:0!important;
+  }
+}
+
+
+/* Histórico de tentativas de envio, dentro do modal da proposta.
+
+   Existe para responder "o cliente disse que não recebeu": mostra o
+   canal, para onde foi, quando, quem mandou e -- quando falhou -- o que
+   o servidor respondeu. */
+.ls-envios{border-top:1px solid var(--line-soft);padding-top:14px}
+.ls-envios h6{color:var(--text-2);font-size:.82rem;font-weight:900}
+.ls-envios-lista{margin:0;padding:0;list-style:none;display:grid;gap:8px}
+.ls-envios-lista li{
+  padding:10px 12px;border-radius:11px;
+  border-left:3px solid var(--green);
+  background:rgba(255,255,255,.03);
+  color:var(--text-2);font-size:.78rem;line-height:1.45;
+}
+.ls-envios-lista li.falhou{border-left-color:var(--red);background:rgba(255,122,107,.07)}
+.ls-envios-lista li span{display:block;margin-top:2px;color:var(--muted);font-size:.72rem}
+.ls-envios-lista li em{display:block;margin-top:4px;color:#ffb3a8;font-size:.72rem;font-style:normal}
+
+/* Estado do envio de e-mail, na tela da conta. */
+.ls-envio-estado{
+  padding:14px 16px;border-radius:14px;
+  border:1px solid var(--line);background:rgba(255,255,255,.03);
+  display:grid;gap:5px;
+}
+.ls-envio-estado strong{color:var(--text);font-size:.88rem}
+.ls-envio-estado span{color:var(--muted);font-size:.79rem;line-height:1.5}
+.ls-envio-estado code{
+  padding:1px 6px;border-radius:6px;
+  background:rgba(255,255,255,.07);color:var(--acento);font-size:.76rem;
+}
+.ls-envio-estado.ok{border-color:rgba(95,214,138,.35);background:rgba(95,214,138,.07)}
+.ls-envio-estado.ok strong{color:#8fe6ae}
+.ls-envio-estado.parado{border-color:rgba(255,201,77,.35);background:rgba(255,201,77,.07)}
+.ls-envio-estado.parado strong{color:#ffd77a}
+
+
+/* ====================================================================
+   DESCONTO INTELIGENTE, no formulário do orçamento.
+
+   Fechar venda é conversa: "dá dez por cento?", "deixa em mil e
+   duzentos?". O botão da esquerda troca reais por porcentagem, os atalhos
+   resolvem os pedidos mais comuns num toque, e a linha de baixo diz em voz
+   alta o que o desconto significa nas duas moedas. O campo enviado ao
+   servidor continua em reais.
+   ==================================================================== */
+.ls-unidade{
+  min-width:56px;font-weight:950;
+  color:var(--acento)!important;
+  border-color:#6b5a3c!important;
+  background:rgba(242,169,59,.09)!important;
+}
+.ls-unidade:hover,.ls-unidade:focus{
+  color:#1b1409!important;background:var(--acento)!important;
+}
+
+.ls-desconto-atalhos{
+  margin-top:8px;display:flex;flex-wrap:wrap;gap:6px;
+}
+.ls-chip{
+  min-height:34px;padding:5px 11px;
+  display:inline-flex;align-items:center;gap:5px;
+  border:1px solid var(--line-soft);border-radius:999px;
+  color:var(--text-2);background:rgba(255,255,255,.035);
+  font-size:.74rem;font-weight:800;line-height:1;
+  transition:.15s ease;
+}
+.ls-chip:hover{
+  border-color:#7a6640;color:#fff;background:rgba(242,169,59,.13);
+}
+.ls-chip-zerar{color:var(--muted-2)}
+.ls-chip-zerar:hover{color:#ffb3bf;border-color:#7a4450;background:rgba(255,113,132,.1)}
+
+#descontoExplicacao{
+  display:block;min-height:20px;margin-top:6px;
+  color:var(--green);font-size:.74rem;font-weight:700;
+}
+
+/* Tablet: alvo de toque maior e atalhos em linha rolável, para não
+   empurrar o resto do formulário para baixo. */
+@media (max-width:900px){
+  .ls-chip{min-height:40px;padding:7px 14px;font-size:.78rem}
+  .ls-desconto-atalhos{flex-wrap:nowrap;overflow-x:auto;padding-bottom:2px}
+  .ls-desconto-atalhos::-webkit-scrollbar{display:none}
+}
+
+
+/* ====================================================================
+   COMERCIAL — ações e exclusões em desktop, tablet e celular.
+
+   No desktop as ações ficam em uma linha previsível. No tablet deitado
+   viram ícones com alvos de toque grandes. Abaixo de 900px, cada registro
+   vira cartão: não existe rolagem horizontal nem coluna de ação escondida.
+   ==================================================================== */
+.ls-commercial-actions{min-width:300px;white-space:normal}
+.ls-row-actions{
+  display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:6px;
+}
+.ls-row-actions .btn{margin:0!important;white-space:nowrap}
+.ls-clientes-table .ls-action-label{display:none}
+
+@media (min-width:901px) and (max-width:1180px){
+  .ls-commercial-actions{min-width:142px}
+  .ls-orcamentos-table .ls-action-label{display:none}
+  .ls-row-actions .btn{
+    width:46px;min-width:46px;min-height:46px;padding:0!important;
+  }
+}
+
+@media (max-width:900px){
+  .ls-commercial-table-wrap{overflow:visible!important}
+  .ls-commercial-table,
+  .ls-commercial-table tbody{display:block;width:100%}
+  .ls-commercial-table thead{display:none}
+  .ls-commercial-table tbody tr{
+    width:100%;margin:0 0 12px;padding:14px;
+    display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 14px;
+    border:1px solid var(--line)!important;border-radius:17px;
+    background:linear-gradient(180deg,#2b241b,#1a1610)!important;
+    box-shadow:var(--shadow-soft);
+  }
+  .ls-commercial-table tbody tr:last-child{margin-bottom:0}
+  .ls-commercial-table tbody td{
+    min-width:0;padding:10px 2px!important;display:block;
+    border:0!important;border-bottom:1px solid var(--line-soft)!important;
+    text-align:left!important;background:transparent!important;
+  }
+  .ls-commercial-table tbody td::before{
+    content:attr(data-rotulo);margin-bottom:5px;display:block;
+    color:#aa9c89;font-size:.67rem;font-weight:950;
+    letter-spacing:.075em;line-height:1.2;text-transform:uppercase;
+  }
+  .ls-commercial-table tbody td[data-rotulo="Cliente"],
+  .ls-commercial-table tbody td[data-rotulo="Situação"],
+  .ls-commercial-table tbody td[data-rotulo="Ações"],
+  .ls-commercial-table tbody td[colspan]{grid-column:1/-1}
+  .ls-commercial-table tbody td[data-rotulo="Ações"]{
+    margin-top:4px;padding-top:13px!important;border-bottom:0!important;
+  }
+  .ls-clientes-table tbody td[data-rotulo="Contato"],
+  .ls-clientes-table tbody td[data-rotulo="Vínculo"],
+  .ls-clientes-table tbody td[data-rotulo="Onde fica"]{grid-column:1/-1}
+  .ls-commercial-table tbody td[colspan]::before{content:"";display:none}
+  .ls-commercial-table .ls-row-actions{
+    display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;
+  }
+  .ls-commercial-table .ls-row-actions .btn{
+    width:100%;min-width:0;min-height:48px;margin:0!important;padding-inline:10px!important;
+  }
+  .ls-commercial-table .ls-action-label,
+  .ls-clientes-table .ls-action-label{display:inline}
+  .ls-commercial-table .ls-row-actions .btn-outline-danger{grid-column:1/-1}
+}
+
+@media (max-width:430px){
+  .ls-commercial-table tbody tr{padding:12px;gap:0 10px}
+  .ls-commercial-table .ls-row-actions{grid-template-columns:1fr}
+  .ls-commercial-table .ls-row-actions .btn-outline-danger{grid-column:auto}
+}
+
+
+/* A confirmação tem largura suficiente para explicar o risco no PC e vira
+   uma folha na base nos aparelhos estreitos, pelo contrato geral de modal. */
+.ls-delete-modal .modal-dialog{max-width:520px}
+.ls-delete-modal .modal-header{align-items:flex-start}
+.ls-delete-warning{
+  padding:16px;display:grid;grid-template-columns:42px minmax(0,1fr);gap:12px;
+  border:1px solid rgba(255,113,132,.28);border-radius:14px;
+  background:rgba(255,113,132,.08);
+}
+.ls-delete-warning-icon{
+  width:42px;height:42px;display:grid;place-items:center;border-radius:12px;
+  color:#ff9aaa;background:rgba(255,113,132,.12);font-size:1.15rem;
+}
+.ls-delete-warning strong{display:block;color:#fff;font-size:.98rem;font-weight:950}
+.ls-delete-warning p{margin:5px 0 0;color:#c6bbae;font-size:.82rem;line-height:1.5}
+.ls-confirm-word{
+  padding:3px 7px;border:1px solid rgba(255,113,132,.28);border-radius:6px;
+  color:#ffabb7;background:rgba(255,113,132,.08);
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.9em;
+  letter-spacing:.055em;
+}
+.ls-confirm-input{
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace!important;
+  font-weight:900!important;letter-spacing:.075em;
+}
+.ls-confirm-input.is-valid{
+  border-color:#48d69e!important;
+  box-shadow:0 0 0 3px rgba(72,214,158,.12)!important;
+}
+
+@media (max-width:560px){
+  .ls-delete-warning{grid-template-columns:36px minmax(0,1fr);padding:13px;gap:10px}
+  .ls-delete-warning-icon{width:36px;height:36px;border-radius:10px}
+  .ls-delete-modal .modal-footer{grid-template-columns:1fr}
+  .ls-delete-modal .modal-footer .btn{grid-column:1!important}
+}
+
+/* ======================================================================
+   PAGINAÇÃO
+   ----------------------------------------------------------------------
+   Clientes e Orçamentos vêm por página. O rodapé da lista precisa dizer
+   três coisas de uma olhada: onde estou, quanto tem no total, e para onde
+   dá para ir. Sem o total, "Próxima" vira um botão de fé.
+   ====================================================================== */
+.ls-paginacao{
+  display:flex;flex-wrap:wrap;align-items:center;justify-content:center;
+  gap:10px 14px;margin:18px 0 4px;padding:12px 14px;
+  border-top:1px solid var(--ls-linha,rgba(255,255,255,.08));
+}
+.ls-paginacao > span{
+  font-size:.86rem;font-weight:600;letter-spacing:.01em;
+  color:var(--ls-texto-2,rgba(255,255,255,.62));
+  text-align:center;
+}
+.ls-paginacao .btn{
+  min-height:38px;padding-inline:16px;font-weight:700;white-space:nowrap;
+}
+
+/* No celular os dois botões dividem a linha e a contagem fica em cima:
+   polegar não acerta link de 12px encostado no outro. */
+@media (max-width:560px){
+  .ls-paginacao{
+    display:grid;grid-template-columns:1fr 1fr;gap:10px;
+  }
+  .ls-paginacao > span{grid-column:1 / -1;order:-1}
+  .ls-paginacao .btn{width:100%}
+}
+
+/* ======================================================================
+   O QUE ACABOU DE MUDAR
+   ----------------------------------------------------------------------
+   A situação de uma proposta muda sozinha na tela quando o cliente
+   responde. Sem um sinal, a mudança acontece fora do canto para onde a
+   pessoa estava olhando e ninguém percebe. Uma piscada curta e uma vez
+   só: chamar atenção é o objetivo, incomodar não é.
+   ====================================================================== */
+@keyframes ls-mudou{
+  from{background:rgba(80,180,255,.20)}
+  to{background:transparent}
+}
+.ls-mudou > td, .ls-mudou{animation:ls-mudou 2.2s ease-out 1}
+
+@media (prefers-reduced-motion:reduce){
+  .ls-mudou > td, .ls-mudou{animation:none;background:rgba(80,180,255,.10)}
+}
+
+/* ======================================================================
+   AVISO NO CELULAR — o pé da central de avisos
+   ====================================================================== */
+.ls-avisos-aparelho{
+  border-top:1px solid var(--ls-linha,rgba(255,255,255,.08));
+  padding:12px 14px 14px;
+}
+.ls-avisos-aparelho-botao{
+  display:flex;align-items:center;gap:10px;width:100%;
+  min-height:44px;padding:10px 12px;
+  border:1px solid var(--ls-linha,rgba(255,255,255,.12));border-radius:12px;
+  background:transparent;color:inherit;
+  font-size:.9rem;font-weight:700;text-align:left;cursor:pointer;
+}
+.ls-avisos-aparelho-botao:hover:not(:disabled){
+  border-color:rgba(120,190,255,.45);background:rgba(120,190,255,.08);
+}
+.ls-avisos-aparelho-botao:disabled{opacity:.62;cursor:default}
+.ls-avisos-aparelho-botao i{font-size:1.15rem;flex:none}
+/* Ligado tem cor própria: a pessoa precisa saber, de relance, se este
+   aparelho vai tocar ou não. */
+.ls-avisos-aparelho-botao.ligado{
+  border-color:rgba(72,214,158,.5);background:rgba(72,214,158,.10);
+  color:#7ff0c0;
+}
+.ls-avisos-aparelho-nota{
+  margin:9px 2px 0;font-size:.78rem;line-height:1.45;
+  color:var(--ls-texto-2,rgba(255,255,255,.6));
+}
+
+/* ======================================================================
+   ACABAMENTO COMERCIAL V19 — orçamento, clientes e O.S.
+   ====================================================================== */
+.ls-commercial-body .ls-content{
+  width:100%;max-width:1520px;margin-inline:auto;padding-inline:clamp(14px,2.2vw,30px);
+}
+.ls-commercial-body .ls-page-hero,
+.ls-commercial-body .ls-metrics,
+.ls-commercial-body .ls-budget-money-strip,
+.ls-commercial-body .ls-filter-panel,
+.ls-commercial-body .ls-data-panel{margin-inline:auto;width:100%}
+
+/* Select fixo: seta, estados e opções pertencem ao mesmo sistema visual.
+   O componente LSBusca mantém seu próprio painel e não é afetado. */
+.form-select:not([multiple]){
+  border-color:#735f3b!important;
+  background-color:#241c10!important;
+  background-image:url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23F2A93B' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m3 6 5 5 5-5'/%3e%3c/svg%3e")!important;
+  background-position:right 12px center!important;background-size:14px 11px!important;
+  padding-right:38px!important;box-shadow:inset 0 1px rgba(255,255,255,.025)!important;
+}
+.form-select:not([multiple]):hover{border-color:#a17d42!important;background-color:#2c2111!important}
+.form-select:not([multiple]):focus{border-color:var(--acento)!important;box-shadow:0 0 0 3px rgba(242,169,59,.14)!important}
+.form-select option{padding:9px 12px;color:#fbf6ed;background:#241c10}
+
+.ls-compact-form .row{--bs-gutter-x:.78rem;--bs-gutter-y:.72rem}
+.ls-compact-form .form-label{margin-bottom:4px!important;font-size:.76rem!important;letter-spacing:.01em}
+.ls-compact-form .form-text{margin-top:4px!important;font-size:.7rem!important;line-height:1.25!important}
+.ls-compact-form .form-control,
+.ls-compact-form .form-select,
+.ls-compact-form .input-group-text,
+.ls-compact-form .ls-busca-campo{min-height:42px!important;font-size:.86rem!important}
+.ls-compact-form .ls-busca-entrada{height:40px!important;font-size:.86rem!important}
+.ls-compact-form textarea.form-control{min-height:66px!important;padding-block:9px!important}
+.ls-compact-form hr{margin-block:15px!important}
+.ls-compact-form .ls-budget-block-title{min-height:48px;margin-bottom:0;padding:9px 12px}
+.ls-compact-form .ls-budget-block-title small{font-size:.69rem}
+.ls-compact-form .ls-cliente-resumo{margin-top:6px;padding:8px 10px}
+.ls-compact-form input[type="date"],
+.ls-compact-form input[type="datetime-local"]{font-variant-numeric:tabular-nums}
+
+.ls-route-actions{display:flex!important;flex-wrap:wrap;align-items:center;gap:6px;margin-top:7px}
+.ls-route-link,.ls-distance-chip{
+  min-height:27px;padding:5px 8px;display:inline-flex!important;align-items:center;gap:5px;
+  border:1px solid rgba(255,255,255,.12);border-radius:8px;
+  font-size:.69rem!important;font-weight:900;text-decoration:none!important;white-space:nowrap;
+}
+.ls-distance-chip{color:#ffd38d;background:rgba(242,169,59,.09);border-color:rgba(242,169,59,.27)}
+.ls-route-link.maps{color:#87c8ff;background:rgba(73,155,255,.09);border-color:rgba(73,155,255,.28)}
+.ls-route-link.waze{color:#75e5d4;background:rgba(61,217,192,.09);border-color:rgba(61,217,192,.28)}
+.ls-route-link:hover{filter:brightness(1.22);transform:translateY(-1px)}
+.ls-address-line{display:block;max-width:340px;overflow-wrap:anywhere}
+.ls-incomplete-chip{
+  width:max-content;max-width:100%;margin-top:6px;padding:5px 8px;display:flex;align-items:center;gap:5px;
+  border:1px solid rgba(255,128,145,.27);border-radius:8px;color:#ff9dac;background:rgba(255,113,132,.08);
+  font-size:.69rem;font-weight:850;line-height:1.25;
+}
+.ls-clientes-table th:nth-child(4),.ls-clientes-table td:nth-child(4){min-width:245px}
+
+/* Cards clicáveis têm o mesmo foco visível dos controles do formulário. */
+a.ls-metric-card{color:inherit}
+a.ls-metric-card:focus-visible{outline:3px solid rgba(242,169,59,.4);outline-offset:3px}
+a.ls-metric-card.active{border-color:var(--metric);box-shadow:0 0 0 2px rgba(242,169,59,.2),var(--shadow-soft)}
+
+@media (min-width:1181px){
+  .ls-budget-card-filters{grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}
+  .ls-budget-filter-card{min-height:104px;padding:13px 14px}
+}
+
+/* Tablet em retrato: três cards por linha e formulário em grade de 12
+   colunas. O Bootstrap mantém cada col-md-* na mesma linha planejada. */
+@media (min-width:761px) and (max-width:980px){
+  .ls-commercial-body .ls-content{padding:14px 16px 26px}
+  .ls-commercial-body .ls-metrics,
+  .ls-commercial-body .ls-budget-card-filters{grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+  .ls-commercial-body .ls-metric-card{min-height:88px;padding:10px 11px}
+  .ls-commercial-body .ls-metric-value{margin-top:6px;font-size:1.32rem}
+  .ls-commercial-body .ls-metric-note{font-size:.67rem}
+  .ls-commercial-body .ls-budget-money-strip{grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+  .ls-commercial-body .ls-budget-money-strip>div{min-height:66px;padding:10px}
+  .ls-commercial-body .ls-budget-money-strip strong{font-size:.94rem}
+  .ls-compact-form{padding:13px!important}
+  .ls-compact-form .row{--bs-gutter-x:.62rem;--bs-gutter-y:.58rem}
+  .ls-compact-form .form-control,
+  .ls-compact-form .form-select,
+  .ls-compact-form .input-group-text,
+  .ls-compact-form .ls-busca-campo{min-height:40px!important}
+  .ls-compact-form .ls-busca-entrada{height:38px!important}
+  .ls-compact-form .ls-budget-block-title small{display:none}
+}
+
+@media (min-width:981px) and (max-width:1180px){
+  .ls-commercial-body .ls-metrics,
+  .ls-commercial-body .ls-budget-card-filters{grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+  .ls-commercial-body .ls-metric-card{min-height:96px;padding:12px}
+}
+
+@media (max-width:760px){
+  .ls-commercial-body .ls-content{padding-inline:11px}
+  .ls-route-actions{gap:5px}
+  .ls-route-link,.ls-distance-chip{min-height:30px}
+}
+
+/* ======================================================================
+   ACABAMENTO COMERCIAL V20 — envio, datas e selects previsíveis
+   ====================================================================== */
+.form-select:not([multiple]){
+  -webkit-appearance:none!important;appearance:none!important;
+  transition:border-color .16s ease,box-shadow .16s ease!important;
+}
+/* Em telas por toque o estado :hover pode ficar preso depois que a lista
+   fecha. O fundo não muda mais; só mouse de verdade recebe realce de borda. */
+.form-select:not([multiple]):hover{background-color:#241c10!important}
+@media (hover:hover) and (pointer:fine){
+  .form-select:not([multiple]):hover{border-color:#a17d42!important}
+}
+@media (hover:none), (pointer:coarse){
+  .form-select:not([multiple]):hover{border-color:#735f3b!important;box-shadow:none!important}
+}
+
+.ls-date-shortcuts{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+.ls-date-shortcuts .ls-chip{min-height:27px;padding:4px 8px;font-size:.67rem}
+
+.ls-share-preview{
+  display:grid;grid-template-columns:46px minmax(0,1fr) auto;align-items:center;gap:12px;
+  margin:12px 0 16px;padding:13px 14px;border:1px solid rgba(95,137,255,.24);
+  border-radius:15px;background:linear-gradient(135deg,rgba(44,86,185,.14),rgba(226,26,44,.05));
+}
+.ls-share-preview-mark{
+  width:46px;height:46px;display:grid;place-items:center;border-radius:13px;
+  color:#9fc3ff;background:rgba(53,104,218,.18);font-size:1.25rem;
+}
+.ls-share-preview-copy{display:grid;gap:2px;min-width:0}
+.ls-share-preview-copy>span{color:#8fa7ca;font-size:.66rem;font-weight:850;letter-spacing:.65px;text-transform:uppercase}
+.ls-share-preview-copy>strong{color:#fff;font-size:.88rem;line-height:1.25;overflow-wrap:anywhere}
+.ls-share-preview-copy>small{color:rgba(255,255,255,.6);font-size:.72rem;line-height:1.3}
+.ls-message-preview{border:1px solid rgba(255,255,255,.1);border-radius:12px;overflow:hidden;background:rgba(0,0,0,.12)}
+.ls-message-preview summary{padding:10px 12px;color:#a9bee1;font-size:.75rem;font-weight:800;cursor:pointer;list-style:none}
+.ls-message-preview summary::-webkit-details-marker{display:none}
+.ls-message-preview[open] summary{border-bottom:1px solid rgba(255,255,255,.08)}
+.ls-message-preview pre{
+  max-height:220px;margin:0;padding:12px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;
+  color:#e8edf8;background:rgba(5,9,18,.3);font:500 .75rem/1.55 Manrope,system-ui,sans-serif;
+}
+#modalLink .alert{font-size:.78rem;line-height:1.45}
+
+@media (min-width:761px) and (max-width:980px){
+  #modalLink .modal-dialog,#modalEnviarOS .modal-dialog{max-width:calc(100vw - 28px);margin-inline:auto}
+  #modalLink .modal-body,#modalEnviarOS .modal-body{padding:14px}
+  #modalLink .row,#modalEnviarOS .row{--bs-gutter-y:.65rem}
+  .ls-share-preview{margin-top:8px;padding:10px 11px}
+}
+@media (max-width:575px){
+  .ls-share-preview{grid-template-columns:40px minmax(0,1fr);gap:9px}
+  .ls-share-preview-mark{width:40px;height:40px}
+  .ls-share-preview>a{grid-column:1/-1;width:100%}
+  .ls-date-shortcuts .ls-chip{flex:1 1 auto}
+  #modalEnviarOS .input-group{display:grid;grid-template-columns:46px minmax(0,1fr)}
+  #modalEnviarOS .input-group>.input-group-text{grid-column:1;border-radius:11px 0 0 11px!important}
+  #modalEnviarOS .input-group>.form-control{grid-column:2;border-radius:0 11px 11px 0!important}
+  #modalEnviarOS .input-group>.btn{grid-column:1/-1;margin-top:8px;border-radius:11px!important}
+}
+
+/* ======================================================================
+   IDENTIDADE DA O.S. V21 — operacional azul, sem perder o tema interno
+   ====================================================================== */
+.ls-os-body{
+  --os-blue:#4f91ff;--os-cyan:#48c8e8;--os-line:rgba(92,154,255,.28);
+  --os-panel:rgba(23,52,92,.46);
+}
+.ls-os-body .ls-page-hero{
+  border-color:var(--os-line)!important;
+  background:
+    radial-gradient(circle at 86% 20%,rgba(72,200,232,.13),transparent 34%),
+    linear-gradient(135deg,rgba(26,58,105,.72),rgba(18,28,45,.92))!important;
+}
+.ls-os-body .ls-page-kicker{color:#83d9f2!important}
+.ls-os-body .ls-page-hero h1{color:#f4f8ff!important;text-shadow:0 0 28px rgba(79,145,255,.17)}
+.ls-os-body .ls-page-hero-copy p{color:#afc7e8!important}
+.ls-os-body .ls-data-panel{border-color:var(--os-line)!important;box-shadow:0 18px 45px rgba(0,24,66,.2)!important}
+.ls-os-body .ls-data-header{background:linear-gradient(135deg,rgba(25,55,95,.46),rgba(18,24,35,.7))!important}
+.ls-os-body .ls-commercial-table thead th{color:#a9caff!important;border-bottom-color:rgba(92,154,255,.35)!important}
+.ls-os-body .ls-budget-money-strip>div{border-color:rgba(92,154,255,.22)!important;background:linear-gradient(145deg,rgba(28,60,103,.54),rgba(25,30,40,.82))!important}
+.ls-os-body .ls-budget-money-strip span{color:#9eb8da!important}
+.ls-os-body .ls-budget-money-strip strong{color:#eaf3ff!important}
+.ls-os-body .ls-metric-card{border-color:rgba(92,154,255,.2)}
+.ls-os-body .ls-metric-card.active{border-color:var(--os-blue)!important;box-shadow:0 0 0 2px rgba(79,145,255,.2),var(--shadow-soft)!important}
+.ls-os-body .ls-distance-chip{color:#9ddcff;background:rgba(72,170,255,.1);border-color:rgba(72,170,255,.3)}
+#modalOS .modal-content,#modalEnviarOS .modal-content{border-color:rgba(92,154,255,.34)!important}
+#modalOS .modal-header,#modalEnviarOS .modal-header{background:linear-gradient(135deg,rgba(30,67,116,.78),rgba(20,31,49,.96))!important;border-bottom-color:rgba(92,154,255,.24)!important}
+#modalOS .ls-modal-kicker,#modalEnviarOS .ls-modal-kicker{color:#7cd8f4!important}
+#modalOS .ls-budget-block-title{
+  border-color:rgba(92,154,255,.26)!important;
+  background:linear-gradient(135deg,rgba(35,82,143,.34),rgba(27,39,59,.6))!important;
+}
+#modalOS .ls-budget-block-title>i{color:#73b7ff!important;background:rgba(70,145,255,.13)!important}
+#modalOS .ls-budget-block-title strong{color:#edf5ff!important}
+#modalOS .ls-budget-block-title small{color:#9eb8da!important}
+#modalEnviarOS .ls-share-preview{border-color:rgba(92,154,255,.32);background:linear-gradient(135deg,rgba(35,82,143,.28),rgba(28,41,64,.72))}
+#modalEnviarOS .ls-share-preview-mark{color:#8cdcf3;background:rgba(53,133,218,.22)}

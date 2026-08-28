@@ -1,10 +1,676 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-</head>
-<body>
+{% extends "base_inner.html" %}
+{% load interno_extras %}
 
-</body>
-</html>
+{% block title %}Clientes | Lazer & Sport{% endblock %}
+{% block top_title %}Clientes{% endblock %}
+{% block body_class %}ls-clientes-body ls-commercial-body{% endblock %}
+
+{% block content %}
+<section class="ls-page-hero">
+  <div class="ls-page-hero-copy">
+    <span class="ls-page-kicker">Relacionamento</span>
+    <h1>Clientes</h1>
+    <p>
+      Um cadastro só para quem compra, aluga e chama manutenção — e é este
+      mesmo cadastro que vai ao mapa da página inicial. O buffet parceiro
+      entra na lista marcado como parceiro, e os clientes que chegam por
+      ele ficam ligados ao nome dele.
+    </p>
+  </div>
+  <div class="ls-page-hero-actions">
+    <button type="button" class="btn btn-success" id="novoCliente">
+      <i class="bi bi-person-plus me-1"></i> Novo cliente
+    </button>
+  </div>
+</section>
+
+<section class="ls-metrics">
+  <article class="ls-metric-card blue">
+    <div class="ls-metric-head">
+      <span class="ls-metric-label">Cadastrados</span>
+      <span class="ls-metric-icon"><i class="bi bi-people"></i></span>
+    </div>
+    <strong class="ls-metric-value">{{ total_clientes }}</strong>
+    <span class="ls-metric-note">Pessoas, empresas e buffets</span>
+  </article>
+
+  <article class="ls-metric-card green">
+    <div class="ls-metric-head">
+      <span class="ls-metric-label">Buffets parceiros</span>
+      <span class="ls-metric-icon"><i class="bi bi-shop"></i></span>
+    </div>
+    <strong class="ls-metric-value">{{ total_buffets }}</strong>
+    <span class="ls-metric-note">Trazem festa e revendem o serviço</span>
+  </article>
+
+  <article class="ls-metric-card yellow">
+    <div class="ls-metric-head">
+      <span class="ls-metric-label">Vieram por parceiro</span>
+      <span class="ls-metric-icon"><i class="bi bi-diagram-2"></i></span>
+    </div>
+    <strong class="ls-metric-value">{{ total_vinculados }}</strong>
+    <span class="ls-metric-note">Clientes ligados a um buffet</span>
+  </article>
+
+  <article class="ls-metric-card red">
+    <div class="ls-metric-head">
+      <span class="ls-metric-label">Sem contato</span>
+      <span class="ls-metric-icon"><i class="bi bi-telephone-x"></i></span>
+    </div>
+    <strong class="ls-metric-value">{{ total_sem_contato }}</strong>
+    <span class="ls-metric-note">Cadastro que ninguém consegue usar</span>
+  </article>
+
+  <a class="ls-metric-card yellow text-decoration-none {% if apenas_incompletos %}active{% endif %}"
+     href="{% if apenas_incompletos %}{% url 'clientes_inner' %}{% else %}?incompletos=1{% endif %}">
+    <div class="ls-metric-head">
+      <span class="ls-metric-label">Cadastros incompletos</span>
+      <span class="ls-metric-icon"><i class="bi bi-person-exclamation"></i></span>
+    </div>
+    <strong class="ls-metric-value">{{ total_incompletos }}</strong>
+    <span class="ls-metric-note">Sem contato, documento ou endereço</span>
+  </a>
+
+  <article class="ls-metric-card blue">
+    <div class="ls-metric-head">
+      <span class="ls-metric-label">No mapa do site</span>
+      <span class="ls-metric-icon"><i class="bi bi-geo-alt"></i></span>
+    </div>
+    <strong class="ls-metric-value">{{ total_no_mapa }}</strong>
+    <span class="ls-metric-note">Alfinetes na página inicial</span>
+  </article>
+</section>
+
+<section class="ls-filter-panel">
+  <form method="get" class="row g-3 align-items-end">
+    {% if apenas_incompletos %}<input type="hidden" name="incompletos" value="1">{% endif %}
+    <div class="col-12 col-lg-5">
+      <label class="form-label" for="filtroBusca">Buscar cliente</label>
+      <input id="filtroBusca" name="q" value="{{ busca }}" class="form-control"
+             placeholder="Nome, telefone, e-mail, CPF/CNPJ ou buffet">
+    </div>
+    <div class="col-6 col-lg-2">
+      <label class="form-label" for="filtroTipo">Tipo</label>
+      <select id="filtroTipo" name="tipo" class="form-select">
+        <option value="">Todos</option>
+        {% for valor, rotulo in tipos %}
+          <option value="{{ valor }}" {% if tipo_ativo == valor %}selected{% endif %}>{{ rotulo }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-6 col-lg-3">
+      <label class="form-label" for="filtroParceiro">Buffet</label>
+      <select id="filtroParceiro" name="parceiro" class="form-select">
+        <option value="">Todos</option>
+        {% for buffet in buffets %}
+          <option value="{{ buffet.id }}" {% if parceiro_ativo == buffet.id|stringformat:"s" %}selected{% endif %}>{{ buffet.nome_cliente }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-12 col-lg-2 d-grid">
+      <button type="submit" class="btn btn-primary"><i class="bi bi-funnel me-1"></i> Filtrar</button>
+    </div>
+  </form>
+</section>
+
+<section class="ls-data-panel">
+  <div class="ls-data-header">
+    <div>
+      <h2>Quem já passou pela Lazer &amp; Sport</h2>
+      <p>O valor mostrado é a soma das propostas aprovadas deste cliente.</p>
+    </div>
+  </div>
+
+  <div class="ls-data-body">
+    <div class="table-responsive ls-commercial-table-wrap">
+      <table class="ls-table ls-commercial-table ls-clientes-table">
+        <thead>
+          <tr>
+            <th>Cliente</th>
+            <th>Contato</th>
+            <th>Vínculo</th>
+            <th>Onde fica</th>
+            <th class="text-end">Propostas</th>
+            <th class="text-end">Aprovado</th>
+            <th class="text-end">Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for ficha in fichas %}
+            {% with cliente=ficha.obj %}
+            <tr>
+              <td data-rotulo="Cliente">
+                <span class="material-nome">{{ cliente.nome_cliente }}</span>
+                <span class="material-sub d-block">
+                  {% if cliente.eh_buffet %}
+                    <span class="ls-status info">Buffet parceiro</span>
+                  {% else %}
+                    {{ cliente.get_tipo_display }}
+                    {% if cliente.no_mapa %}
+                      · <span class="ls-map-linked"><i class="bi bi-geo-alt-fill"></i> no mapa</span>
+                    {% elif cliente.publicar_no_mapa %}
+                      · <span class="ls-status warning">no mapa, sem local</span>
+                    {% endif %}
+                  {% endif %}
+                  {% if cliente.documento %} · {{ cliente.documento }}{% endif %}
+                </span>
+                {% if ficha.pendencias %}
+                  <span class="ls-incomplete-chip"><i class="bi bi-exclamation-circle"></i> Falta {{ ficha.pendencias|join:", " }}</span>
+                {% endif %}
+              </td>
+
+              <td data-rotulo="Contato">
+                {% if cliente.telefone %}
+                  <a class="ls-link" href="https://wa.me/55{{ cliente.telefone|cut:" "|cut:"("|cut:")"|cut:"-" }}"
+                     target="_blank" rel="noopener">
+                    <i class="bi bi-whatsapp me-1"></i>{{ cliente.telefone }}
+                  </a>
+                {% endif %}
+                {% if cliente.email %}
+                  <span class="material-sub d-block">{{ cliente.email }}</span>
+                {% endif %}
+                {% if not cliente.telefone and not cliente.email %}
+                  <span class="ls-status warning">Sem contato</span>
+                {% endif %}
+              </td>
+
+              <td data-rotulo="Vínculo">
+                {% if cliente.eh_buffet %}
+                  {{ cliente.clientes_do_buffet }} cliente{{ cliente.clientes_do_buffet|pluralize }} pelo parceiro
+                  {% if cliente.estabelecimento %}
+                    <span class="material-sub d-block">No site: {{ cliente.estabelecimento.nome_estabelecimento }}</span>
+                  {% endif %}
+                {% elif cliente.parceiro %}
+                  <i class="bi bi-diagram-2 me-1"></i>{{ cliente.parceiro.nome_cliente }}
+                {% else %}
+                  <span class="text-muted">Direto</span>
+                {% endif %}
+              </td>
+
+              <td data-rotulo="Onde fica">
+                {% if ficha.endereco %}
+                  <strong class="ls-address-line">{{ ficha.endereco.endereco }}{% if ficha.endereco.numero %}, {{ ficha.endereco.numero }}{% endif %}</strong>
+                  <span class="material-sub d-block">
+                    {% if ficha.endereco.bairro %}{{ ficha.endereco.bairro }} · {% endif %}{{ ficha.endereco.cidade }}{% if ficha.endereco.estado %}/{{ ficha.endereco.estado }}{% endif %}{% if ficha.endereco.cep %} · CEP {{ ficha.endereco.cep }}{% endif %}
+                  </span>
+                  <span class="ls-route-actions">
+                    {% if ficha.rota.distancia_km != None %}<span class="ls-distance-chip" title="Estimativa em linha reta"><i class="bi bi-signpost-split"></i> ≈ {{ ficha.rota.distancia_km|stringformat:".1f" }} km</span>{% endif %}
+                    {% if ficha.rota.google_maps_url %}<a href="{{ ficha.rota.google_maps_url }}" target="_blank" rel="noopener" class="ls-route-link maps" title="Calcular rota no Google Maps"><i class="bi bi-map"></i> Maps</a>{% endif %}
+                    {% if ficha.rota.waze_url %}<a href="{{ ficha.rota.waze_url }}" target="_blank" rel="noopener" class="ls-route-link waze" title="Calcular rota no Waze"><i class="bi bi-navigation"></i> Waze</a>{% endif %}
+                  </span>
+                {% else %}
+                  <span class="ls-status warning">Sem endereço</span>
+                {% endif %}
+              </td>
+
+              <td data-rotulo="Propostas" class="text-end">
+                {{ ficha.orcamentos }}
+                <span class="material-sub d-block">
+                  {{ ficha.abertos }} em aberto · {{ ficha.aprovados }} fechada{{ ficha.aprovados|pluralize }}
+                </span>
+              </td>
+
+              <td data-rotulo="Aprovado" class="text-end">
+                <span class="ls-money">R$ {{ ficha.total_aprovado|moeda }}</span>
+              </td>
+
+              <td data-rotulo="Ações" class="ls-commercial-actions text-end">
+                <div class="ls-acoes ls-row-actions">
+                  <button type="button" class="btn btn-sm btn-outline-secondary"
+                          data-editar="{{ cliente.id }}" aria-label="Editar {{ cliente.nome_cliente }}"
+                          title="Editar cliente">
+                    <i class="bi bi-pencil"></i><span class="ls-action-label">Editar</span>
+                  </button>
+                  <a class="btn btn-sm btn-outline-primary"
+                     href="{% url 'orcamentos_inner' %}?q={{ cliente.nome_cliente|urlencode }}"
+                     aria-label="Ver propostas de {{ cliente.nome_cliente }}" title="Ver propostas">
+                    <i class="bi bi-file-earmark-text"></i><span class="ls-action-label">Propostas</span>
+                  </a>
+                  {% if permissoes_interno.excluir_clientes %}
+                  <button type="button" class="btn btn-sm btn-outline-danger"
+                          data-excluir="{{ cliente.id }}" data-nome="{{ cliente.nome_cliente }}"
+                          aria-label="Excluir {{ cliente.nome_cliente }}" title="Excluir cliente">
+                    <i class="bi bi-trash"></i><span class="ls-action-label">Excluir</span>
+                  </button>
+                  {% endif %}
+                </div>
+              </td>
+            </tr>
+            {% endwith %}
+          {% empty %}
+            <tr>
+              <td colspan="7">
+                <div class="ls-empty">
+                  <i class="bi bi-people"></i>
+                  {% if busca or tipo_ativo or parceiro_ativo %}
+                    Nenhum cliente com esses filtros.
+                  {% else %}
+                    Ainda não há cliente cadastrado. Comece pelo botão “Novo cliente”.
+                  {% endif %}
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if page_obj.has_other_pages %}
+      <nav class="ls-paginacao" aria-label="Páginas">
+        {% if page_obj.has_previous %}
+          <a class="btn btn-sm btn-outline-secondary"
+             href="?page={{ page_obj.previous_page_number }}&q={{ busca|urlencode }}&tipo={{ tipo_ativo }}&parceiro={{ parceiro_ativo }}{% if apenas_incompletos %}&incompletos=1{% endif %}">Anterior</a>
+        {% endif %}
+        <span>Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
+        {% if page_obj.has_next %}
+          <a class="btn btn-sm btn-outline-secondary"
+             href="?page={{ page_obj.next_page_number }}&q={{ busca|urlencode }}&tipo={{ tipo_ativo }}&parceiro={{ parceiro_ativo }}{% if apenas_incompletos %}&incompletos=1{% endif %}">Próxima</a>
+        {% endif %}
+      </nav>
+    {% endif %}
+  </div>
+</section>
+
+<!-- ================= MODAL: cadastro ================= -->
+<div class="modal fade" id="modalCliente" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <form class="modal-content" id="formCliente" method="post" enctype="multipart/form-data"
+            action="{% url 'clientes_inner' %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="save">
+      <input type="hidden" name="id" id="clienteId">
+      <input type="hidden" name="latitude" id="clienteLatitude">
+      <input type="hidden" name="longitude" id="clienteLongitude">
+
+      <div class="modal-header">
+        <h5 class="modal-title" id="clienteTitulo">Novo cliente</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+
+      <div class="modal-body ls-compact-form">
+        <div class="alert alert-danger d-none" id="clienteErro"></div>
+
+        <div class="row g-3">
+          <div class="col-12 col-md-6">
+            <label class="form-label" for="clienteNome">Nome</label>
+            <input class="form-control" id="clienteNome" name="nome_cliente"
+                   data-rotulo="nome" maxlength="90" required
+                   placeholder="Nome da pessoa, da empresa ou do buffet">
+          </div>
+
+          <div class="col-6 col-md-3">
+            <label class="form-label" for="clienteTipo">Tipo de cadastro</label>
+            <select class="form-select" id="clienteTipo" name="tipo">
+              {% for valor, rotulo in tipos %}<option value="{{ valor }}">{{ rotulo }}</option>{% endfor %}
+            </select>
+          </div>
+
+          <div class="col-6 col-md-3">
+            <label class="form-label" for="clienteTelefone">Telefone / WhatsApp</label>
+            <input class="form-control" id="clienteTelefone" name="telefone"
+                   inputmode="tel" maxlength="24" placeholder="(11) 99999-9999" data-mascara="telefone">
+          </div>
+
+          <div class="col-12 col-md-5">
+            <label class="form-label" for="clienteEmail">E-mail</label>
+            <input type="email" class="form-control" id="clienteEmail" name="email"
+                   maxlength="150" placeholder="cliente@empresa.com.br">
+          </div>
+
+          <div class="col-6 col-md-3">
+            <label class="form-label" for="clienteDocumento">CPF ou CNPJ</label>
+            <input class="form-control" id="clienteDocumento" name="documento"
+                   maxlength="20" placeholder="Opcional" data-mascara="documento" inputmode="numeric">
+          </div>
+
+          <div class="col-12 col-md-4" id="blocoParceiro">
+            <label class="form-label" for="clienteParceiroBusca">Veio por qual buffet?</label>
+            <div id="clienteParceiroBox"></div>
+            <span class="form-text">Deixe vazio quando o cliente chegou direto.</span>
+          </div>
+
+          <div class="col-12" id="blocoEstabelecimento" hidden>
+            <label class="form-label" for="clienteEstabelecimentoBusca">Parceiro publicado no site</label>
+            <div id="clienteEstabelecimentoBox"></div>
+            <span class="form-text">Busque e ligue este buffet ao card que aparece em “Nossos Parceiros”.</span>
+          </div>
+        </div>
+
+        <hr class="my-4">
+
+        <div class="d-flex align-items-center justify-content-between gap-2 mb-2 flex-wrap">
+          <div>
+            <h6 class="mb-1">Endereço do estabelecimento</h6>
+            <p class="text-muted small mb-0">
+              Um só, e serve para tudo: entrega, montagem e o alfinete no mapa
+              do site. Proposta aprovada publica o cliente sozinha.
+            </p>
+          </div>
+          <span class="ls-cep-status" id="clienteCepStatus" aria-live="polite"></span>
+        </div>
+
+        <div class="row g-3">
+          <div class="col-5 col-md-2">
+            <label class="form-label" for="clienteCep">CEP</label>
+            <input class="form-control" id="clienteCep" name="cep" maxlength="18" inputmode="numeric" data-mascara="cep">
+          </div>
+          <div class="col-12 col-md-6">
+            <label class="form-label" for="clienteEndereco">Rua</label>
+            <input class="form-control" id="clienteEndereco" name="endereco" maxlength="120">
+          </div>
+          <div class="col-3 col-md-2">
+            <label class="form-label" for="clienteNumero">Número</label>
+            <input class="form-control" id="clienteNumero" name="numero" maxlength="10"
+                   placeholder="104 ou S/N">
+          </div>
+          <div class="col-12 col-md-2">
+            <label class="form-label" for="clienteComplemento">Complemento</label>
+            <input class="form-control" id="clienteComplemento" name="complemento" maxlength="60"
+                   placeholder="Bloco, sala, referência">
+          </div>
+          <div class="col-12 col-md-3">
+            <label class="form-label" for="clienteBairro">Bairro</label>
+            <input class="form-control" id="clienteBairro" name="bairro" maxlength="50">
+          </div>
+          <div class="col-8 col-md-4">
+            <label class="form-label" for="clienteCidade">Cidade</label>
+            <input class="form-control" id="clienteCidade" name="cidade" maxlength="60">
+          </div>
+          <div class="col-4 col-md-2">
+            <label class="form-label" for="clienteEstado">Estado</label>
+            <input class="form-control" id="clienteEstado" name="estado" maxlength="20" placeholder="SP">
+          </div>
+          <div class="col-12 col-md-3">
+            <label class="form-label" for="clientePais">País</label>
+            <input class="form-control" id="clientePais" name="pais" maxlength="60" value="Brasil">
+            <span class="form-text">Cliente fora do Brasil não tem CEP: preencha cidade, estado e país.</span>
+          </div>
+        </div>
+
+        <hr class="my-4">
+
+        {% comment %}
+          O QUE O SITE MOSTRA DESTE CLIENTE.
+
+          Não é um cadastro à parte -- é a parte deste cadastro que fica
+          visível para quem não é da casa. Antes havia uma segunda ficha,
+          só para o mapa, e as duas divergiam: a vitrine mostrava a rua
+          antiga enquanto a proposta saía com a nova.
+        {% endcomment %}
+        <div class="d-flex align-items-center justify-content-between gap-2 mb-2 flex-wrap"
+             id="blocoPublicacao">
+          <div>
+            <h6 class="mb-1">No site</h6>
+            <p class="text-muted small mb-0">
+              O alfinete sai do endereço acima. Sem localização, o cliente fica
+              marcado mas não é desenhado no mapa.
+            </p>
+          </div>
+        </div>
+
+        <div class="row g-3" id="camposPublicacao">
+          <div class="col-12 col-md-6">
+            <label class="form-label" for="clienteSite">Instagram ou site</label>
+            <input type="url" class="form-control" id="clienteSite" name="site_cliente"
+                   maxlength="200" placeholder="https://instagram.com/cliente">
+            <span class="form-text">Vira o link “Visitar Instagram” no balão do mapa.</span>
+          </div>
+
+          <div class="col-12 col-md-6">
+            <label class="form-label" for="clienteLogo">Logo</label>
+            <div class="ls-foto" id="clienteLogoCampo">
+              <span class="ls-foto-miniatura">
+                <i class="bi bi-image"></i>
+                <img id="clienteLogoPreview" src="" alt="">
+              </span>
+              <span class="ls-foto-copy">
+                <strong id="clienteLogoNome">Escolha uma imagem</strong>
+                <span>PNG, JPG ou WEBP — de preferência com fundo transparente.</span>
+                <span class="ls-foto-acoes">
+                  <label class="ls-foto-escolher">
+                    <i class="bi bi-upload"></i> Selecionar
+                    <input type="file" id="clienteLogo" name="logo"
+                           accept="image/png,image/jpeg,image/webp">
+                  </label>
+                  <button type="button" class="ls-foto-limpar" id="clienteLogoLimpar" hidden>
+                    <i class="bi bi-trash"></i> Remover
+                  </button>
+                </span>
+              </span>
+            </div>
+            <input type="hidden" name="remover_logo" id="clienteRemoverLogo" value="">
+          </div>
+
+          <div class="col-12">
+            <div class="form-check form-switch">
+              {% comment %}
+                Caixa desmarcada não é enviada pelo navegador. O campo
+                escondido de mesmo nome garante que "desmarquei" chegue
+                como resposta, e não como silêncio -- que é indistinguível
+                de "esta tela não pergunta isso".
+              {% endcomment %}
+              <input type="hidden" name="publicar_no_mapa" value="">
+              <input class="form-check-input" type="checkbox" role="switch"
+                     id="clientePublicar" name="publicar_no_mapa" value="1">
+              <label class="form-check-label" for="clientePublicar">
+                Mostrar este cliente no mapa da página inicial
+              </label>
+            </div>
+            <span class="form-text" id="clientePublicarAviso"></span>
+          </div>
+        </div>
+
+        <div class="mt-3">
+          <label class="form-label" for="clienteObservacoes">Observações</label>
+          <textarea class="form-control" id="clienteObservacoes" name="observacoes" rows="2"
+                    placeholder="Preferências, combinados, o que a equipe precisa lembrar"></textarea>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-success">Salvar cliente</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ================= MODAL: excluir ================= -->
+{% if permissoes_interno.excluir_clientes %}
+{% url 'clientes_inner' as exclusao_url %}
+{% include "includes/modal_confirmar_exclusao.html" with exclusao_url=exclusao_url exclusao_titulo="Excluir cliente" exclusao_aviso="O cadastro e seus endereços serão apagados. Clientes com propostas ou vínculos comerciais continuam protegidos pelo servidor." %}
+{% endif %}
+
+{{ clientes_dados|json_script:"clientesDados" }}
+{{ opcoes_buffets|json_script:"opcoesBuffets" }}
+{{ opcoes_estabelecimentos|json_script:"opcoesEstabelecimentos" }}
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  "use strict";
+
+  var clientes = JSON.parse(
+    document.getElementById("clientesDados").textContent || "[]"
+  );
+  var opcoesBuffets = JSON.parse(
+    document.getElementById("opcoesBuffets").textContent || "[]"
+  );
+  var opcoesEstabelecimentos = JSON.parse(document.getElementById("opcoesEstabelecimentos").textContent || "[]");
+
+  /* O buffet responsável é escolhido pela busca do painel: em fábrica com
+     dezenas de parceiros, rolar lista no tablet é o que faz a pessoa
+     desistir e deixar o campo vazio. */
+  var buscaParceiro = LSBusca.criar({
+    nome: "parceiro",
+    opcoes: opcoesBuffets,
+    placeholder: "Buscar buffet parceiro...",
+    rotuloAcessivel: "Buffet responsável"
+  });
+  buscaParceiro.entrada.id = "clienteParceiroBusca";
+  document.getElementById("clienteParceiroBox").appendChild(buscaParceiro.elemento);
+
+  var buscaEstabelecimento = LSBusca.criar({
+    nome: "estabelecimento",
+    opcoes: opcoesEstabelecimentos,
+    placeholder: "Buscar parceiro publicado...",
+    rotuloAcessivel: "Parceiro publicado no site"
+  });
+  buscaEstabelecimento.entrada.id = "clienteEstabelecimentoBusca";
+  document.getElementById("clienteEstabelecimentoBox").appendChild(buscaEstabelecimento.elemento);
+
+  var campoTipo = document.getElementById("clienteTipo");
+  var blocoParceiro = document.getElementById("blocoParceiro");
+  var blocoEstabelecimento = document.getElementById("blocoEstabelecimento");
+  var blocoPublicacao = document.getElementById("blocoPublicacao");
+  var camposPublicacao = document.getElementById("camposPublicacao");
+  var campoPublicar = document.getElementById("clientePublicar");
+  var avisoPublicar = document.getElementById("clientePublicarAviso");
+
+  /* Buffet não vem por buffet: no lugar do campo de parceiro, ele ganha o
+     de vínculo com o card do site. Um campo de cada vez evita a pergunta
+     "então este aqui eu preencho?" para quem está aprendendo a tela. */
+  /* Buffet tem o paralelo dele na área pública -- o card de "Nossos
+     Parceiros" --, e um alfinete de cliente para o mesmo buffet o
+     mostraria duas vezes no site. Então, para buffet, a pergunta do mapa
+     nem aparece. */
+  function ajustarPorTipo() {
+    var ehBuffet = campoTipo.value === "buffet";
+    blocoParceiro.hidden = ehBuffet;
+    blocoEstabelecimento.hidden = !ehBuffet;
+    blocoPublicacao.hidden = ehBuffet;
+    camposPublicacao.hidden = ehBuffet;
+    if (ehBuffet) campoPublicar.checked = false;
+  }
+
+  campoTipo.addEventListener("change", ajustarPorTipo);
+
+  /* Campo de foto: a mesma peça do resto do painel. O input de verdade
+     fica transparente por cima do botão, então clique e arraste caem nele
+     e o desenho continua sendo nosso. */
+  var campoLogo = document.getElementById("clienteLogo");
+  var caixaLogo = document.getElementById("clienteLogoCampo");
+  var previaLogo = document.getElementById("clienteLogoPreview");
+  var nomeLogo = document.getElementById("clienteLogoNome");
+  var limparLogo = document.getElementById("clienteLogoLimpar");
+  var removerLogo = document.getElementById("clienteRemoverLogo");
+
+  function mostrarLogo(url, rotulo) {
+    var tem = Boolean(url);
+    caixaLogo.classList.toggle("tem-imagem", tem);
+    previaLogo.src = url || "";
+    nomeLogo.textContent = rotulo;
+    limparLogo.hidden = !tem;
+  }
+
+  campoLogo.addEventListener("change", function () {
+    var arquivo = campoLogo.files && campoLogo.files[0];
+    if (!arquivo) return;
+    removerLogo.value = "";
+    mostrarLogo(URL.createObjectURL(arquivo), arquivo.name);
+  });
+
+  limparLogo.addEventListener("click", function () {
+    campoLogo.value = "";
+    removerLogo.value = "1";
+    mostrarLogo("", "Escolha uma imagem");
+  });
+
+  ["dragenter", "dragover"].forEach(function (evento) {
+    caixaLogo.addEventListener(evento, function (e) {
+      e.preventDefault();
+      caixaLogo.classList.add("arrastando");
+    });
+  });
+  ["dragleave", "drop"].forEach(function (evento) {
+    caixaLogo.addEventListener(evento, function () {
+      caixaLogo.classList.remove("arrastando");
+    });
+  });
+
+  function achar(id) {
+    return clientes.filter(function (c) {
+      return Number(c.id) === Number(id);
+    })[0];
+  }
+
+  function abrir(id) {
+    var cliente = id ? achar(id) : null;
+    var form = document.getElementById("formCliente");
+
+    form.reset();
+    Painel.erro("clienteErro", "");
+    Painel.valor("clienteId", cliente ? cliente.id : "");
+
+    document.getElementById("clienteTitulo").textContent = cliente
+      ? "Editar cliente"
+      : "Novo cliente";
+
+    var ids = {
+      nome_cliente: "clienteNome", telefone: "clienteTelefone",
+      email: "clienteEmail", documento: "clienteDocumento",
+      observacoes: "clienteObservacoes", cep: "clienteCep",
+      endereco: "clienteEndereco", numero: "clienteNumero",
+      complemento: "clienteComplemento", bairro: "clienteBairro",
+      cidade: "clienteCidade", estado: "clienteEstado",
+      latitude: "clienteLatitude", longitude: "clienteLongitude",
+      site_cliente: "clienteSite"
+    };
+
+    Object.keys(ids).forEach(function (campo) {
+      Painel.valor(ids[campo], cliente ? cliente[campo] : "");
+    });
+    Painel.valor("clientePais", (cliente && cliente.pais) || "Brasil");
+
+    campoPublicar.checked = Boolean(cliente && cliente.publicar_no_mapa);
+    removerLogo.value = "";
+    campoLogo.value = "";
+    mostrarLogo(
+      cliente ? cliente.logo_url : "",
+      cliente && cliente.logo_url ? "Trocar a logo" : "Escolha uma imagem"
+    );
+    avisoPublicar.textContent =
+      cliente && cliente.publicar_no_mapa && !cliente.no_mapa
+        ? "Marcado, mas ainda sem localização: confira o CEP ou a cidade."
+        : "";
+
+    campoTipo.value = cliente ? cliente.tipo : "residencial";
+    buscaEstabelecimento.definirValor(cliente ? cliente.estabelecimento : "", false);
+    buscaParceiro.definirValor(cliente ? cliente.parceiro : "", false);
+
+    ajustarPorTipo();
+    Painel.abrir("modalCliente");
+  }
+
+  Painel.ligarCep({
+    url: "{% url 'consultar_cep_inner' %}",
+    cep: "clienteCep",
+    status: "clienteCepStatus",
+    campos: {
+      rua: "clienteEndereco",
+      bairro: "clienteBairro",
+      cidade: "clienteCidade",
+      estado: "clienteEstado"
+    },
+    coordenadas: {
+      latitude: "clienteLatitude",
+      longitude: "clienteLongitude"
+    }
+  });
+
+  document.getElementById("novoCliente").addEventListener("click", function () {
+    abrir(null);
+  });
+
+  document.querySelectorAll("[data-editar]").forEach(function (botao) {
+    botao.addEventListener("click", function () {
+      abrir(botao.dataset.editar);
+    });
+  });
+
+  Painel.ligar({ form: "formCliente", erro: "clienteErro" });
+  Painel.ligarExclusao();
+});
+</script>
+{% endblock %}

@@ -1,0 +1,2432 @@
+{% extends "base_inner.html" %}
+{% load interno_extras %}
+
+{% block title %}Orçamentos | Lazer & Sport{% endblock %}
+{% block top_title %}Orçamentos{% endblock %}
+{% block body_class %}ls-orcamentos-body ls-commercial-body{% endblock %}
+
+{% block content %}
+<section class="ls-page-hero">
+  <div class="ls-page-hero-copy">
+    <span class="ls-page-kicker">Proposta comercial</span>
+    <h1>Orçamentos</h1>
+    <p>Monte a proposta item a item, acompanhe o que foi enviado e veja quanto está aprovado.</p>
+  </div>
+  <div class="ls-page-hero-actions">
+    {% if permissoes_interno.financeiro %}
+    <a href="{% url 'financeiro_inner' %}" class="btn btn-outline-secondary">
+      <i class="bi bi-graph-up-arrow me-1"></i> Financeiro
+    </a>
+    {% endif %}
+    {% if pode_criar_orcamento %}<button type="button" class="btn btn-success" id="novoOrcamento">
+      <i class="bi bi-plus-lg me-1"></i> Novo orçamento
+    </button>{% endif %}
+  </div>
+</section>
+
+<section class="ls-metrics ls-budget-card-filters" aria-label="Filtrar orçamentos por fase">
+  {% for chave, rotulo, quantidade, icone in cards %}
+    <a class="ls-metric-card ls-budget-filter-card {% if chave == 'aprovados' or chave == 'pagos' %}green{% elif chave == 'recusados' or chave == 'expirados' %}red{% elif chave == 'negociacao' or chave == 'substituidos' %}violet{% elif chave == 'aguardando' or chave == 'a_receber' %}yellow{% else %}blue{% endif %} {% if filtro_ativo == chave %}active{% endif %}"
+       href="?filtro={{ chave }}{% if busca %}&q={{ busca|urlencode }}{% endif %}"
+       aria-current="{% if filtro_ativo == chave %}page{% else %}false{% endif %}">
+      <div class="ls-metric-head">
+        <span class="ls-metric-label">{{ rotulo }}</span>
+        <span class="ls-metric-icon"><i class="bi {{ icone }}"></i></span>
+      </div>
+      <strong class="ls-metric-value">{{ quantidade }}</strong>
+      <span class="ls-metric-note">{% if filtro_ativo == chave %}Filtro ativo{% else %}Toque para filtrar{% endif %}</span>
+    </a>
+  {% endfor %}
+</section>
+
+<section class="ls-budget-money-strip">
+  <div><span>Em propostas abertas</span><strong>R$ {{ total_em_aberto|moeda }}</strong></div>
+  <div><span>Aprovado</span><strong>R$ {{ total_aprovado|moeda }}</strong></div>
+  <div class="success"><span>Recebido</span><strong>R$ {{ total_recebido|moeda }}</strong></div>
+  <div class="warning"><span>A receber</span><strong>R$ {{ total_a_receber|moeda }}</strong></div>
+</section>
+
+<section class="ls-data-panel">
+  <div class="ls-data-header">
+    <div>
+      <h2>Propostas</h2>
+      <p>Enviada não é sobrescrita: use Refazer para criar outra versão.</p>
+    </div>
+    <form method="get" class="ls-budget-search">
+      <input type="hidden" name="filtro" value="{{ filtro_ativo }}">
+      <div class="input-group">
+        <input name="q" value="{{ busca }}" class="form-control"
+               placeholder="Cliente, número, item ou contato" aria-label="Buscar orçamentos">
+        <button class="btn btn-primary" type="submit"><i class="bi bi-search"></i></button>
+      </div>
+    </form>
+  </div>
+
+  <div class="ls-data-body">
+    <div class="table-responsive ls-commercial-table-wrap">
+      <table class="ls-table ls-commercial-table ls-orcamentos-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Cliente</th>
+            <th>Origem</th>
+            <th class="text-end">Itens</th>
+            <th class="text-end">Total</th>
+            <th>Pagamento</th>
+            <th>Validade</th>
+            <th>Situação</th>
+            <th>Revisão dos blocos</th>
+            <th class="text-end">Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for orcamento in orcamentos %}
+            <tr>
+              <td data-rotulo="#">
+                <span class="ls-number">{{ orcamento.id }}</span>
+                <span class="material-sub d-block">versão {{ orcamento.versao }}</span>
+              </td>
+              <td data-rotulo="Cliente">
+                <span class="material-nome">{{ orcamento.destinatario }}</span>
+                {% if orcamento.contato %}
+                  <span class="material-sub d-block">{{ orcamento.contato }}</span>
+                {% endif %}
+                {% if orcamento.responsavel %}
+                  <span class="material-sub d-block">
+                    {{ orcamento.responsavel.get_full_name|default:orcamento.responsavel.username }}
+                  </span>
+                {% endif %}
+              </td>
+              <td data-rotulo="Origem">
+                <span class="ls-origin-badge {{ orcamento.origem }}">
+                  <i class="bi {% if orcamento.origem == 'ambulante' %}bi-geo-alt-fill{% else %}bi-building{% endif %}"></i>
+                  {{ orcamento.get_origem_display }}
+                </span>
+              </td>
+              <td data-rotulo="Itens" class="text-end">{{ orcamento.itens.count }}</td>
+              <td data-rotulo="Total" class="text-end">
+                <span class="ls-money">R$ {{ orcamento.total|moeda }}</span>
+              </td>
+              <td data-rotulo="Pagamento">
+                <span class="ls-status {% if orcamento.status_pagamento == 'pago' %}success{% elif orcamento.status_pagamento == 'parcial' %}warning{% else %}neutral{% endif %}">
+                  {{ orcamento.get_status_pagamento_display }}
+                </span>
+                {% if orcamento.valor_pago %}<span class="material-sub d-block mt-1">R$ {{ orcamento.valor_pago|moeda }} recebido</span>{% endif %}
+              </td>
+              <td data-rotulo="Validade">
+                {% if orcamento.validade %}
+                  {{ orcamento.validade|date:"d/m/Y" }}
+                  {% if orcamento.vencido %}<span class="ls-status danger d-block mt-1">Vencido</span>{% endif %}
+                {% else %}
+                  <span class="text-muted">Sem prazo</span>
+                {% endif %}
+              </td>
+              {% comment %}
+                data-situacao: a célula que o painel repinta sozinho
+                quando o cliente responde pela página pública. Sem isso a
+                mudança só aparecia ao recarregar -- e como a sessão dura
+                o dia inteiro, na prática só ao sair e entrar de novo.
+              {% endcomment %}
+              <td data-rotulo="Situação" data-situacao="{{ orcamento.id }}">
+                <span class="ls-status
+                  {% if orcamento.status == 'aprovado' %}success
+                  {% elif orcamento.status == 'recusado' %}danger
+                  {% elif orcamento.status == 'aguardando_resposta' %}info
+                  {% elif orcamento.status == 'em_negociacao' %}warning
+                  {% elif orcamento.status == 'expirado' %}warning
+                  {% else %}neutral{% endif %}" data-situacao-selo>
+                  {{ orcamento.get_status_display }}
+                </span>
+                <span class="material-sub d-block mt-1" data-situacao-nota
+                      {% if not orcamento.respondido_em and not orcamento.enviado_em %}hidden{% endif %}>
+                  {% if orcamento.respondido_em %}
+                    {{ orcamento.respondido_por|default:"cliente" }} ·
+                    {{ orcamento.respondido_em|date:"d/m H:i" }}
+                  {% elif orcamento.enviado_em %}
+                    enviado {{ orcamento.enviado_em|date:"d/m" }}
+                  {% endif %}
+                </span>
+              </td>
+              <td data-rotulo="Revisão dos blocos">
+                <div class="ls-block-review">
+                  <span class="ls-status {% if orcamento.bloco_comercial.status == 'aprovado' %}success{% elif orcamento.bloco_comercial.status == 'ajustes' %}danger{% else %}warning{% endif %}"
+                        title="{{ orcamento.bloco_comercial.observacao|default:'Aguardando avaliação' }}">
+                    Comercial: {{ orcamento.bloco_comercial.get_status_display|default:"Pendente" }}
+                  </span>
+                  <span class="ls-status {% if orcamento.bloco_financeiro.status == 'aprovado' %}success{% elif orcamento.bloco_financeiro.status == 'ajustes' %}danger{% else %}warning{% endif %}"
+                        title="{{ orcamento.bloco_financeiro.observacao|default:'Aguardando avaliação' }}">
+                    Financeiro: {{ orcamento.bloco_financeiro.get_status_display|default:"Pendente" }}
+                  </span>
+                </div>
+              </td>
+              <td data-rotulo="Ações" class="ls-actions ls-commercial-actions text-end">
+                <div class="ls-row-actions">
+                <a class="btn btn-sm btn-outline-primary"
+                   href="{% url 'orcamento_previa_inner' orcamento.id %}"
+                   target="_blank" rel="noopener"
+                   aria-label="Abrir prévia do orçamento {{ orcamento.id }}"
+                   title="Conferir o documento sem alterar a situação">
+                  <i class="bi bi-eye"></i><span class="ls-action-label">Prévia</span>
+                </a>
+                <button type="button" class="btn btn-sm btn-outline-secondary"
+                        data-editar="{{ orcamento.id }}"
+                        aria-label="{% if orcamento.pode_editar %}Editar{% else %}Consultar{% endif %} orçamento {{ orcamento.id }}"
+                        title="{% if orcamento.pode_editar %}Editar rascunho{% else %}Consultar versão preservada{% endif %}">
+                  <i class="bi {% if orcamento.pode_editar %}bi-pencil{% else %}bi-search{% endif %}"></i><span class="ls-action-label">{% if orcamento.pode_editar %}Editar{% else %}Ver{% endif %}</span>
+                </button>
+                {% if pode_editar_comercial %}<button type="button" class="btn btn-sm btn-outline-primary"
+                        data-enviar="{{ orcamento.id }}"
+                        data-orcamento-id="{{ orcamento.id }}"
+                        data-nome="{{ orcamento.destinatario }}"
+                        data-whatsapp="{{ orcamento.whatsapp_destinatario }}"
+                        data-email="{{ orcamento.email_destinatario }}"
+                        data-link="{{ orcamento.link_publico }}"
+                        data-mensagem="{{ orcamento.mensagem_whatsapp }}"
+                        data-previa="{% url 'orcamento_previa_inner' orcamento.id %}"
+                        data-total="R$ {{ orcamento.total|moeda }}"
+                        data-validade="{% if orcamento.validade %}{{ orcamento.validade|date:'d/m/Y' }}{% endif %}"
+                        value="{{ orcamento.id }}"
+                        aria-label="Enviar orçamento {{ orcamento.id }}"
+                        title="Gerar o link da proposta para mandar ao cliente">
+                  <i class="bi bi-send"></i>
+                  <span class="ls-action-label">{% if orcamento.enviado_em %}Link{% else %}Enviar{% endif %}</span>
+                </button>{% endif %}
+                {% if pode_editar_comercial and not orcamento.pode_editar and orcamento.status != 'substituido' and not orcamento.orcamento_refeito and not orcamento.ordem_servico %}
+                <form method="post" class="d-inline" action="{% url 'orcamentos_inner' %}">
+                  {% csrf_token %}<input type="hidden" name="action" value="refazer"><input type="hidden" name="id" value="{{ orcamento.id }}">
+                  <button class="btn btn-sm btn-outline-warning" type="submit" title="Criar nova versão para negociar">
+                    <i class="bi bi-arrow-repeat"></i><span class="ls-action-label">Refazer</span>
+                  </button>
+                </form>
+                {% endif %}
+                {% if pode_editar_financeiro and orcamento.status == 'aprovado' %}
+                <button type="button" class="btn btn-sm btn-outline-success"
+                        data-pagamento="{{ orcamento.id }}" data-total="{{ orcamento.total }}"
+                        data-pago="{{ orcamento.valor_pago }}" data-nome="#{{ orcamento.id }} — {{ orcamento.destinatario }}"
+                        title="Registrar valor recebido">
+                  <i class="bi bi-cash-coin"></i><span class="ls-action-label">Pagamento</span>
+                </button>
+                {% endif %}
+                {% if pode_ordens_servico and orcamento.status == 'aprovado' %}
+                <form method="post" class="d-inline" action="{% url 'orcamentos_inner' %}">
+                  {% csrf_token %}<input type="hidden" name="action" value="gerar_ordem_servico"><input type="hidden" name="id" value="{{ orcamento.id }}">
+                  <button class="btn btn-sm btn-outline-primary" type="submit" title="Liberar execução na Ordem de Serviço">
+                    <i class="bi bi-clipboard2-check"></i><span class="ls-action-label">Gerar O.S.</span>
+                  </button>
+                </form>
+                {% endif %}
+                {% if pode_editar_comercial and not orcamento.ordem_servico %}<button type="button" class="btn btn-sm btn-outline-secondary"
+                        data-situacao="{{ orcamento.id }}"
+                        data-nome="#{{ orcamento.id }} — {{ orcamento.destinatario }}"
+                        data-status="{{ orcamento.status }}"
+                        aria-label="Alterar situação do orçamento {{ orcamento.id }}" title="Alterar situação">
+                  <i class="bi bi-flag"></i><span class="ls-action-label">Situação</span>
+                </button>{% endif %}
+                {% if pode_avaliar_blocos %}<button type="button" class="btn btn-sm btn-outline-warning"
+                        data-avaliar="{{ orcamento.id }}"
+                        data-nome="#{{ orcamento.id }} — {{ orcamento.destinatario }}"
+                        aria-label="Avaliar blocos do orçamento {{ orcamento.id }}" title="Avaliar blocos">
+                  <i class="bi bi-clipboard-check"></i><span class="ls-action-label">Avaliar</span>
+                </button>{% endif %}
+                {% if orcamento.pode_excluir %}
+                <button type="button" class="btn btn-sm btn-outline-danger"
+                        data-excluir="{{ orcamento.id }}"
+                        data-nome="Orçamento #{{ orcamento.id }} — {{ orcamento.destinatario }}"
+                        aria-label="Excluir orçamento {{ orcamento.id }}" title="Excluir rascunho">
+                  <i class="bi bi-trash"></i><span class="ls-action-label">Excluir</span>
+                </button>
+                {% endif %}
+                </div>
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="10">
+                <div class="ls-empty">
+                  <i class="bi bi-file-earmark-text"></i>
+                  Nenhum orçamento encontrado. Comece criando o primeiro.
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if page_obj.has_other_pages %}
+      {% comment %}
+        A tela não era paginada, e cada linha carrega muito: os itens, o
+        texto pronto do WhatsApp e a proposta inteira em JSON para o modal
+        de edição. Com algumas centenas de propostas isso virava megabytes
+        de HTML, e no servidor a resposta estourava o tempo do gunicorn --
+        o 502 ao abrir Orçamentos. Os números do topo continuam somando o
+        filtro inteiro; só a lista é que vem por página.
+      {% endcomment %}
+      <nav class="ls-paginacao" aria-label="Páginas">
+        {% if page_obj.has_previous %}
+          <a class="btn btn-sm btn-outline-secondary"
+             href="?page={{ page_obj.previous_page_number }}&q={{ busca|urlencode }}&filtro={{ filtro_ativo }}">Anterior</a>
+        {% endif %}
+        <span>
+          Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
+          · {{ page_obj.paginator.count }} proposta{{ page_obj.paginator.count|pluralize }}
+        </span>
+        {% if page_obj.has_next %}
+          <a class="btn btn-sm btn-outline-secondary"
+             href="?page={{ page_obj.next_page_number }}&q={{ busca|urlencode }}&filtro={{ filtro_ativo }}">Próxima</a>
+        {% endif %}
+      </nav>
+    {% endif %}
+  </div>
+</section>
+
+<!-- ================= MODAL: montar orçamento ================= -->
+<div class="modal fade" id="modalOrcamento" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <form class="modal-content" id="formOrcamento" method="post" action="{% url 'orcamentos_inner' %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="save">
+      <input type="hidden" name="id" id="orcamentoId">
+      <input type="hidden" name="itens" id="orcamentoItens">
+
+      <div class="modal-header">
+        <h5 class="modal-title" id="orcamentoTitulo">Novo orçamento</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+
+      <div class="modal-body ls-compact-form">
+        <div id="orcamentoErro" class="alert alert-danger d-none" role="alert"></div>
+
+        <div class="row g-3">
+          <div class="col-12"><div class="ls-budget-block-title comercial"><i class="bi bi-people-fill"></i><span><strong>Bloco Comercial</strong><small>Cliente, atendimento, validade, entrega e itens.</small></span></div></div>
+          <div class="col-12 col-md-5">
+            <label class="form-label" for="orcamentoClienteBusca">Cliente cadastrado</label>
+            {% comment %}
+              O campo é montado pelo ls-busca.js: digita o nome, acha na hora
+              e cadastra dali mesmo quando o cliente ainda não existe.
+            {% endcomment %}
+            <div id="orcamentoClienteBox"></div>
+            <span class="form-text">Digite para buscar. Sem cadastro? Use o nome do destinatário ao lado.</span>
+            <div class="ls-cliente-resumo" id="orcamentoClienteResumo" hidden></div>
+          </div>
+
+          <div class="col-12 col-md-4">
+            <label class="form-label" for="orcamentoNome">Nome do destinatário</label>
+            <input class="form-control" id="orcamentoNome" name="nome_cliente" maxlength="120"
+                   placeholder="Usado quando não há cadastro">
+          </div>
+
+          <div class="col-12 col-md-3">
+            <label class="form-label" for="orcamentoContato">Referência de contato</label>
+            <input class="form-control" id="orcamentoContato" name="contato" maxlength="120"
+                   placeholder="Empresa, evento ou observação">
+          </div>
+
+          <div class="col-12 col-md-3">
+            <label class="form-label" for="orcamentoWhatsapp"><i class="bi bi-whatsapp text-success me-1"></i>WhatsApp</label>
+            <input class="form-control" id="orcamentoWhatsapp" name="whatsapp_cliente" maxlength="24"
+                   inputmode="tel" autocomplete="tel" data-mascara="telefone"
+                   placeholder="(11) 99999-9999">
+          </div>
+
+          <div class="col-12 col-md-5">
+            <label class="form-label" for="orcamentoEmail"><i class="bi bi-envelope me-1"></i>E-mail</label>
+            <input type="email" class="form-control" id="orcamentoEmail" name="email_cliente" maxlength="254"
+                   autocomplete="email" placeholder="cliente@empresa.com.br">
+          </div>
+
+          <div class="col-12 col-md-4">
+            <label class="form-label" for="orcamentoStatus">Situação</label>
+            <select class="form-select" id="orcamentoStatus" disabled>
+              {% for valor, rotulo in status_opcoes %}<option value="{{ valor }}">{{ rotulo }}</option>{% endfor %}
+            </select>
+            <span class="form-text">A fase muda pelo envio ou pela resposta; não é edição manual.</span>
+          </div>
+
+          <div class="col-12 col-md-7">
+            <label class="form-label">Origem comercial</label>
+            <div class="ls-origin-field" id="orcamentoOrigem"
+                 data-nova="{{ origem_nova }}" data-nova-rotulo="{{ origem_nova_rotulo }}">
+              <span class="ls-origin-badge {{ origem_nova }}" id="orcamentoOrigemBadge">
+                <i class="bi {% if origem_nova == 'ambulante' %}bi-geo-alt-fill{% else %}bi-building{% endif %}"></i>
+                <span id="orcamentoOrigemTexto">{{ origem_nova_rotulo }}</span>
+              </span>
+              <small>Definida automaticamente pela função de quem criou.</small>
+            </div>
+          </div>
+
+          <div class="col-12 col-md-5">
+            <label class="form-label" for="orcamentoValidade">Válido até</label>
+            <input type="date" class="form-control" id="orcamentoValidade" name="validade">
+            <div class="ls-date-shortcuts" aria-label="Atalhos de validade">
+              <button type="button" class="ls-chip" data-validade-dias="7">7 dias</button>
+              <button type="button" class="ls-chip" data-validade-dias="15">15 dias</button>
+              <button type="button" class="ls-chip" data-validade-dias="30">30 dias</button>
+              <button type="button" class="ls-chip ls-chip-zerar" data-validade-limpar>Sem prazo</button>
+            </div>
+          </div>
+
+          <div class="col-12"><div class="ls-budget-block-title financeiro"><i class="bi bi-cash-stack"></i><span><strong>Bloco Financeiro</strong><small>Frete, desconto e condições de pagamento.</small></span></div></div>
+
+          <div class="col-12 col-md-3">
+            <label class="form-label" for="orcamentoFrete">Frete</label>
+            <div class="input-group">
+              <span class="input-group-text">R$</span>
+              <input class="form-control ls-recalcula" id="orcamentoFrete" name="frete"
+                     inputmode="decimal" data-mascara="moeda" autocomplete="off"
+                     placeholder="0,00">
+            </div>
+          </div>
+
+          {% comment %}
+            DESCONTO EM REAIS OU EM PORCENTAGEM.
+
+            No telefone o cliente pede "dá dez por cento?", e quem monta a
+            proposta tinha de abrir a calculadora, fazer a conta do
+            subtotal e digitar o resultado -- errando quando um item
+            mudava depois. Aqui o botão troca a unidade: em "%", o valor
+            digitado acompanha o subtotal sozinho. O campo enviado ao
+            servidor continua sendo reais, então nada muda do outro lado.
+          {% endcomment %}
+          <div class="col-12 col-md-3">
+            <label class="form-label" for="orcamentoDesconto">Desconto</label>
+            <div class="input-group">
+              <button class="btn btn-outline-secondary ls-unidade" type="button"
+                      id="descontoUnidade" data-modo="valor"
+                      title="Trocar entre reais e porcentagem"
+                      aria-label="Trocar entre reais e porcentagem">R$</button>
+              <input class="form-control ls-recalcula" id="orcamentoDesconto"
+                     inputmode="decimal" data-mascara="moeda" autocomplete="off"
+                     placeholder="0,00">
+            </div>
+            <input type="hidden" id="orcamentoDescontoValor" name="desconto">
+            <div class="ls-desconto-atalhos">
+              <button type="button" class="ls-chip" data-desconto-pct="5">5%</button>
+              <button type="button" class="ls-chip" data-desconto-pct="10">10%</button>
+              <button type="button" class="ls-chip" data-desconto-pct="15">15%</button>
+              <button type="button" class="ls-chip" id="descontoRedondo"
+                      title="Baixar o total até a dezena mais próxima">
+                <i class="bi bi-magic"></i> Arredondar
+              </button>
+              <button type="button" class="ls-chip ls-chip-zerar" id="descontoZerar">Zerar</button>
+            </div>
+            <span class="form-text" id="descontoExplicacao"></span>
+          </div>
+
+          <div class="col-12 col-md-3">
+            <label class="form-label" for="orcamentoPagamento">Forma de pagamento</label>
+            <input class="form-control" id="orcamentoPagamento" name="forma_pagamento"
+                   maxlength="120" placeholder="Ex.: Pix ou 50% na entrada e 50% na entrega">
+          </div>
+
+          <div class="col-12 col-md-3">
+            <label class="form-label" for="orcamentoEnvio">Forma de envio</label>
+            <input class="form-control" id="orcamentoEnvio" name="forma_envio"
+                   maxlength="120" placeholder="Ex.: retirada, transportadora ou entrega própria">
+          </div>
+        </div>
+
+        <hr class="my-4">
+
+        <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+          <div>
+            <h6 class="mb-1">Itens da proposta</h6>
+            <span class="text-muted small">
+              Escolha do catálogo do site. Não está lá? Cadastre na hora.
+            </span>
+          </div>
+          <div class="d-flex gap-2 flex-wrap ls-modal-inline-actions">
+            <button type="button" class="btn btn-sm btn-outline-success" id="novoBrinquedo">
+              <i class="bi bi-plus-circle me-1"></i> Novo brinquedo
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-primary" id="novaPeca">
+              <i class="bi bi-plus-circle me-1"></i> Nova peça
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="addItem">
+              <i class="bi bi-plus-lg me-1"></i> Adicionar item
+            </button>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="ls-table ls-itens-table">
+            <thead>
+              <tr>
+                <th style="width: 28%">Item</th>
+                <th>Descrição</th>
+                <th style="width: 12%" class="text-end">Qtd.</th>
+                <th style="width: 17%" class="text-end">Valor unit.</th>
+                <th style="width: 15%" class="text-end">Subtotal</th>
+                <th style="width: 6%"></th>
+              </tr>
+            </thead>
+            <tbody id="itensCorpo"></tbody>
+          </table>
+        </div>
+
+        <div class="ls-orcamento-total">
+          <div><span>Subtotal dos itens</span><strong id="resumoSubtotal">R$ 0,00</strong></div>
+          <div><span>Frete</span><strong id="resumoFrete">R$ 0,00</strong></div>
+          <div><span>Desconto</span><strong id="resumoDesconto">− R$ 0,00</strong></div>
+          <div class="ls-orcamento-final"><span>Total do orçamento</span><strong id="resumoTotal">R$ 0,00</strong></div>
+        </div>
+
+        <div class="mt-3">
+          <label class="form-label" for="orcamentoObs">Observações</label>
+          <textarea class="form-control" id="orcamentoObs" name="observacoes" rows="2"
+                    placeholder="Prazo de entrega, condições de pagamento, garantia..."></textarea>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-success" id="salvarOrcamento">Salvar orçamento</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ================= MODAL: brinquedo novo, sem sair daqui ================= -->
+{% comment %}
+Cadastro mínimo de propósito: nome, valor e categoria. Foto e texto de
+  venda são trabalho de quem cuida da vitrine, e exigir isso aqui faria a
+  pessoa desistir e digitar o item à mão -- que é justamente o que este
+  modal existe para evitar. O brinquedo nasce fora da loja.
+{% endcomment %}
+<div class="modal fade" id="modalBrinquedoNovo" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <form class="modal-content" id="formBrinquedoNovo" method="post"
+          action="{% url 'orcamentos_inner' %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="brinquedo_novo">
+
+      <div class="modal-header">
+        <h5 class="modal-title">Novo brinquedo no catálogo</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+
+      <div class="modal-body">
+        <div class="alert alert-danger d-none" id="brinquedoNovoErro"></div>
+
+        <p class="text-muted small">
+          Entra no catálogo do site e já fica disponível na linha do orçamento.
+          Não aparece na loja até alguém publicar com foto e descrição.
+        </p>
+
+        <div class="mb-3">
+          <label class="form-label" for="brinquedoNovoNome">Nome</label>
+          <input class="form-control" id="brinquedoNovoNome" name="nome"
+                 data-rotulo="nome" maxlength="150" required
+                 placeholder="Piscina de bolinhas 3x3">
+        </div>
+
+        <div class="row g-3">
+          <div class="col-sm-6">
+            <label class="form-label" for="brinquedoNovoValor">Valor</label>
+            <input class="form-control" id="brinquedoNovoValor" name="valor"
+                   inputmode="decimal" data-mascara="moeda" autocomplete="off"
+                   placeholder="0,00">
+          </div>
+          <div class="col-sm-6">
+            <label class="form-label" for="brinquedoNovoVoltz">Voltagem</label>
+            <input class="form-control" id="brinquedoNovoVoltz" name="voltz"
+                   maxlength="10" placeholder="110, 220, bivolt...">
+          </div>
+        </div>
+
+        <div class="mt-3">
+          <label class="form-label" for="brinquedoNovoCategoria">Categoria</label>
+          <select class="form-select" id="brinquedoNovoCategoria" name="categoria">
+            <option value="">Sem categoria</option>
+            {% for c in categorias %}
+              <option value="{{ c.id }}">{{ c.nome_categoria }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="mt-3">
+          <label class="form-label" for="brinquedoNovoDescricao">Descrição</label>
+          <textarea class="form-control" id="brinquedoNovoDescricao" name="descricao"
+                    rows="2" placeholder="Medidas, o que acompanha, público..."></textarea>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-success">Cadastrar e usar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ================= MODAL: peça nova, sem sair daqui ================= -->
+<div class="modal fade" id="modalPecaNova" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <form class="modal-content" id="formPecaNova" method="post"
+          action="{% url 'orcamentos_inner' %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="peca_nova">
+
+      <div class="modal-header">
+        <div>
+          <span class="ls-modal-kicker">Peças de reposição</span>
+          <h5 class="modal-title">Cadastrar e usar uma nova peça</h5>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+
+      <div class="modal-body">
+        <div class="alert alert-danger d-none" id="pecaNovaErro"></div>
+        <p class="text-muted small">
+          A peça fica salva no catálogo da loja e entra nesta proposta sem perder o que já foi digitado.
+        </p>
+
+        <div class="row g-3">
+          <div class="col-12 col-md-7">
+            <label class="form-label" for="pecaNovaNome">Nome da peça</label>
+            <input class="form-control" id="pecaNovaNome" name="nome"
+                   data-rotulo="nome da peça" maxlength="120" required
+                   placeholder="Ex.: Lona de salto 3,05 m">
+          </div>
+          <div class="col-12 col-md-5">
+            <label class="form-label" for="pecaNovaCategoria">Categoria</label>
+            <select class="form-select" id="pecaNovaCategoria" name="categoria">
+              <option value="">Sem categoria</option>
+              {% for c in categorias_peca %}
+                <option value="{{ c.id }}">{{ c.nome_categoria_peca }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-12 col-sm-6">
+            <label class="form-label" for="pecaNovaVenda">Preço de venda</label>
+            <div class="input-group">
+              <span class="input-group-text">R$</span>
+              <input class="form-control" id="pecaNovaVenda" name="preco_venda"
+                     inputmode="decimal" data-mascara="moeda" autocomplete="off"
+                     placeholder="0,00">
+            </div>
+          </div>
+          <div class="col-12 col-sm-6">
+            <label class="form-label" for="pecaNovaFornecedor">Custo do fornecedor</label>
+            <div class="input-group">
+              <span class="input-group-text">R$</span>
+              <input class="form-control" id="pecaNovaFornecedor" name="preco_fornecedor"
+                     inputmode="decimal" data-mascara="moeda" autocomplete="off"
+                     placeholder="0,00">
+            </div>
+          </div>
+          <div class="col-12">
+            <label class="form-label" for="pecaNovaDescricao">Descrição</label>
+            <textarea class="form-control" id="pecaNovaDescricao" name="descricao" rows="3"
+                      placeholder="Aplicação, medidas, compatibilidade e o que acompanha"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-success">Cadastrar e usar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ================= MODAL: cliente novo na hora ================= -->
+{% comment %}
+  Quase todo orçamento nasce de quem ligou pela primeira vez. Obrigar a sair
+  para a tela de clientes e voltar perderia a proposta pela metade.
+{% endcomment %}
+<div class="modal fade" id="modalClienteNovo" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <form class="modal-content" id="formClienteNovo" method="post"
+          action="{% url 'orcamentos_inner' %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="cliente_novo">
+      <input type="hidden" name="latitude" id="clienteNovoLatitude">
+      <input type="hidden" name="longitude" id="clienteNovoLongitude">
+
+      <div class="modal-header">
+        <h5 class="modal-title">Novo cliente</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+
+      <div class="modal-body">
+        <div class="alert alert-danger d-none" id="clienteNovoErro"></div>
+
+        <p class="text-muted small">
+          O cadastro fica salvo na aba Clientes e já entra neste orçamento.
+        </p>
+
+        <div class="row g-3">
+          <div class="col-12 col-md-7">
+            <label class="form-label" for="clienteNovoNome">Nome</label>
+            <input class="form-control" id="clienteNovoNome" name="nome_cliente"
+                   data-rotulo="nome" maxlength="90" required
+                   placeholder="Nome da pessoa, da empresa ou do buffet">
+          </div>
+          <div class="col-12 col-md-5">
+            <label class="form-label" for="clienteNovoTipo">Tipo</label>
+            <select class="form-select" id="clienteNovoTipo" name="tipo">
+              {% for valor, rotulo in tipos_cliente %}
+                <option value="{{ valor }}">{{ rotulo }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-12 col-md-6">
+            <label class="form-label" for="clienteNovoTelefone">Telefone / WhatsApp</label>
+            <input class="form-control" id="clienteNovoTelefone" name="telefone"
+                   inputmode="tel" maxlength="24" data-mascara="telefone"
+                   placeholder="(11) 99999-9999">
+          </div>
+          <div class="col-12 col-md-6">
+            <label class="form-label" for="clienteNovoEmail">E-mail</label>
+            <input type="email" class="form-control" id="clienteNovoEmail" name="email"
+                   maxlength="150" placeholder="cliente@empresa.com.br">
+          </div>
+          <div class="col-12 col-md-5">
+            <label class="form-label" for="clienteNovoDocumento">CPF ou CNPJ</label>
+            <input class="form-control" id="clienteNovoDocumento" name="documento"
+                   inputmode="numeric" maxlength="20" data-mascara="documento"
+                   placeholder="Opcional">
+          </div>
+          <div class="col-12 col-md-7" id="clienteNovoBlocoParceiro">
+            <label class="form-label" for="clienteNovoParceiro">Veio por qual buffet?</label>
+            <select class="form-select" id="clienteNovoParceiro" name="parceiro">
+              <option value="">Nenhum / veio direto</option>
+              {% for buffet in buffets %}
+                <option value="{{ buffet.id }}">{{ buffet.nome_cliente }}</option>
+              {% endfor %}
+            </select>
+            <span class="form-text">Mantém o histórico da festa ligado ao parceiro.</span>
+          </div>
+          <div class="col-12" id="clienteNovoBlocoEstabelecimento" hidden>
+            <label class="form-label" for="clienteNovoEstabelecimento">Buffet já publicado no site</label>
+            <select class="form-select" id="clienteNovoEstabelecimento" name="estabelecimento">
+              <option value="">Ainda não publicado</option>
+              {% for e in estabelecimentos %}
+                <option value="{{ e.id }}">{{ e.nome_estabelecimento }}</option>
+              {% endfor %}
+            </select>
+            <span class="form-text">Este é o paralelo do buffet na área pública de parceiros.</span>
+          </div>
+        </div>
+
+        <hr class="my-4">
+        <div class="d-flex align-items-center justify-content-between gap-2 mb-2 flex-wrap">
+          <div>
+            <h6 class="mb-1">Endereço principal</h6>
+            <span class="text-muted small">Ao aprovar a proposta, este endereço publica o cliente no mapa.</span>
+          </div>
+          <span class="ls-cep-status" id="clienteNovoCepStatus" aria-live="polite"></span>
+        </div>
+        <div class="row g-3">
+          <div class="col-12 col-sm-4">
+            <label class="form-label" for="clienteNovoCep">CEP</label>
+            <input class="form-control" id="clienteNovoCep" name="cep" maxlength="18"
+                   inputmode="numeric" autocomplete="postal-code" data-mascara="cep"
+                   placeholder="00000-000">
+          </div>
+          <div class="col-12 col-sm-8">
+            <label class="form-label" for="clienteNovoEndereco">Rua</label>
+            <input class="form-control" id="clienteNovoEndereco" name="endereco" maxlength="120">
+          </div>
+          <div class="col-5 col-sm-3">
+            <label class="form-label" for="clienteNovoNumero">Número</label>
+            <input class="form-control" id="clienteNovoNumero" name="numero" maxlength="5">
+          </div>
+          <div class="col-7 col-sm-4">
+            <label class="form-label" for="clienteNovoBairro">Bairro</label>
+            <input class="form-control" id="clienteNovoBairro" name="bairro" maxlength="50">
+          </div>
+          <div class="col-8 col-sm-3">
+            <label class="form-label" for="clienteNovoCidade">Cidade</label>
+            <input class="form-control" id="clienteNovoCidade" name="cidade" maxlength="25">
+          </div>
+          <div class="col-4 col-sm-2">
+            <label class="form-label" for="clienteNovoEstado">UF</label>
+            <input class="form-control" id="clienteNovoEstado" name="estado" maxlength="2" placeholder="SP">
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-success">Cadastrar e usar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ================= MODAL: link da proposta ================= -->
+<div class="modal fade" id="modalLink" tabindex="-1" aria-hidden="true">
+  {% comment %}
+    scrollable + centered: com o histórico de envios embaixo, a janela
+    passava da altura do tablet e as últimas tentativas ficavam fora da
+    tela, sem barra de rolagem nenhuma -- a janela "não enquadrava".
+    Assim o corpo rola por dentro e o cabeçalho fica sempre visível.
+  {% endcomment %}
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Enviar proposta</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-danger d-none" id="linkErro"></div>
+        <div class="alert alert-success d-none" id="linkSucesso" role="status"></div>
+        <p class="text-muted small mb-2">Escolha como compartilhar com <strong id="linkCliente"></strong>. O cliente abre uma página Lazer &amp; Sport com todos os detalhes e responde por ali.</p>
+        <input type="hidden" id="linkOrcamentoId">
+        <section class="ls-share-preview" aria-label="Prévia do compartilhamento">
+          <div class="ls-share-preview-mark"><i class="bi bi-file-earmark-check"></i></div>
+          <div class="ls-share-preview-copy">
+            <span>Proposta Lazer &amp; Sport</span>
+            <strong id="linkPreviaTitulo">Documento pronto para o cliente</strong>
+            <small id="linkPreviaResumo">Itens, fotos, condições e resposta on-line.</small>
+          </div>
+          <a class="btn btn-sm btn-outline-primary" id="linkPreviaCard" href="#" target="_blank" rel="noopener" hidden>
+            <i class="bi bi-eye me-1"></i> Conferir
+          </a>
+        </section>
+        <div class="row g-3 mb-3">
+          <div class="col-12">
+            <label class="form-label" for="linkWhatsapp">WhatsApp do cliente</label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="bi bi-whatsapp text-success"></i></span>
+              <input class="form-control" id="linkWhatsapp" inputmode="tel"
+                     data-mascara="telefone" placeholder="(11) 99999-9999">
+              <button class="btn btn-success" type="button" id="linkEnviarWhatsapp">Abrir WhatsApp</button>
+            </div>
+          </div>
+          <div class="col-12">
+            <label class="form-label" for="linkEmail">E-mail do cliente</label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="bi bi-envelope"></i></span>
+              <input type="email" class="form-control" id="linkEmail" placeholder="cliente@empresa.com.br">
+              <button class="btn btn-primary" type="button" id="linkEnviarEmail"
+                      {% if not email_configurado %}disabled{% endif %}>Enviar</button>
+            </div>
+            {% if not email_configurado %}
+              {% comment %}
+                Dizer ANTES de tentar. O gestor apertava "Enviar", via uma
+                mensagem genérica e ficava achando que a proposta tinha
+                saído -- o cliente é que sabia que não chegou.
+              {% endcomment %}
+              <div class="alert alert-warning mt-2 mb-0 py-2 px-3 small" role="status">
+                <i class="bi bi-exclamation-triangle me-1"></i>
+                O envio por e-mail ainda não está ligado nesta hospedagem.
+                Use o WhatsApp ou copie o link. Para ligar, veja
+                <strong>docs/CONFIGURAR_EMAIL.md</strong> — faltam
+                <code>EMAIL_HOST_USER</code> e <code>EMAIL_HOST_PASSWORD</code>.
+                <span class="d-block mt-1">{{ email_diagnostico }}</span>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+
+        {% comment %}
+          O WhatsApp abre a conversa com a mensagem pronta; quem aperta
+          "enviar" é uma pessoa. Dizer isso aqui evita a dúvida mais comum
+          do comercial -- "mandei ou não mandei?".
+        {% endcomment %}
+        <p class="text-muted small mb-3">
+          <i class="bi bi-info-circle me-1"></i>
+          O botão do WhatsApp abre a conversa com a proposta escrita.
+          Confirme o envio dentro do WhatsApp para o cliente receber.
+        </p>
+        <details class="ls-message-preview mb-3">
+          <summary><i class="bi bi-chat-left-text me-1"></i> Ver mensagem que será enviada</summary>
+          <pre id="linkMensagemPrevia"></pre>
+        </details>
+        <label class="form-label" for="linkCampo">Ou compartilhe o link</label>
+        <div class="input-group">
+          <input class="form-control" id="linkCampo" readonly>
+          <button class="btn btn-outline-secondary" type="button" id="linkCopiar">
+            <i class="bi bi-clipboard"></i> Copiar
+          </button>
+        </div>
+        <div class="d-flex flex-wrap gap-2 mt-3">
+          <a class="btn btn-sm btn-outline-primary" id="linkAbrir"
+             href="#" target="_blank" rel="noopener" hidden>
+            <i class="bi bi-box-arrow-up-right"></i> Abrir página pública
+          </a>
+          <a class="btn btn-sm btn-outline-secondary" id="linkPreviaInterna"
+             href="#" target="_blank" rel="noopener" hidden>
+            <i class="bi bi-eye"></i> Abrir prévia interna
+          </a>
+        </div>
+
+        {% comment %}
+          Saída para quando o navegador bloqueia a janela do WhatsApp: um
+          botão que a pessoa toca, com o gesto dela, e a conversa abre.
+        {% endcomment %}
+        {% comment %}
+          data-whatsapp-web: este botão é DE PROPÓSITO a versão web. É a
+          saída para quando o aplicativo instalado não abriu -- mandá-lo
+          de volta para o aplicativo faria dele um botão que não faz nada.
+        {% endcomment %}
+        <a class="btn btn-success w-100 mt-3" id="linkWhatsappAtalho"
+           href="#" target="_blank" rel="noopener" data-whatsapp-web hidden>
+          <i class="bi bi-whatsapp me-1"></i> Abrir conversa no WhatsApp
+        </a>
+
+        <section class="ls-envios mt-4" id="linkEnvios" hidden>
+          <h6 class="mb-2"><i class="bi bi-clock-history me-1"></i> Tentativas de envio</h6>
+          <ul class="ls-envios-lista" id="linkEnviosLista"></ul>
+        </section>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= MODAL: mudar situação ================= -->
+<div class="modal fade" id="modalSituacao" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <form class="modal-content" id="formSituacao" method="post" action="{% url 'orcamentos_inner' %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="status">
+      <input type="hidden" name="id" id="situacaoId">
+      <div class="modal-header">
+        <h5 class="modal-title">Mudar situação</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body">
+        <div id="situacaoErro" class="alert alert-danger d-none" role="alert"></div>
+        <p class="mb-3"><strong id="situacaoNome"></strong></p>
+        <label class="form-label" for="situacaoStatus">Nova situação</label>
+        <select class="form-select" id="situacaoStatus" name="status">
+          {% for valor, rotulo in status_opcoes %}
+            {% if valor == 'aprovado' or valor == 'recusado' or valor == 'expirado' or valor == 'em_negociacao' %}
+              <option value="{{ valor }}">{{ rotulo }}</option>
+            {% endif %}
+          {% endfor %}
+        </select>
+        <label class="form-label mt-3" for="situacaoMotivo">Motivo ou observação</label>
+        <textarea class="form-control" id="situacaoMotivo" name="motivo" rows="3"
+                  placeholder="Ex.: cliente pediu desconto e troca de um item"></textarea>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-primary">Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ================= MODAL: registrar pagamento ================= -->
+<div class="modal fade" id="modalPagamento" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <form class="modal-content" id="formPagamento" method="post" action="{% url 'orcamentos_inner' %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="pagamento">
+      <input type="hidden" name="id" id="pagamentoId">
+      <div class="modal-header">
+        <div><span class="ls-modal-kicker">Financeiro</span><h5 class="modal-title" id="pagamentoNome">Registrar pagamento</h5></div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body">
+        <div id="pagamentoErro" class="alert alert-danger d-none"></div>
+        <div class="alert alert-light border" id="pagamentoResumo"></div>
+        <label class="form-label" for="pagamentoValor">Valor total recebido até agora</label>
+        <div class="input-group mb-3"><span class="input-group-text">R$</span><input class="form-control" id="pagamentoValor" name="valor_pago" inputmode="decimal" data-mascara="moeda" required></div>
+        <label class="form-label" for="pagamentoObservacao">Observação</label>
+        <input class="form-control" id="pagamentoObservacao" name="observacao_pagamento" maxlength="240" placeholder="Ex.: sinal via Pix em 27/08">
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-success"><i class="bi bi-check2-circle me-1"></i> Atualizar pagamento</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% if pode_avaliar_blocos %}
+<!-- ================ MODAL: avaliação setorizada ================= -->
+<div class="modal fade" id="modalAvaliacaoBloco" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <form class="modal-content" id="formAvaliacaoBloco" method="post" action="{% url 'orcamentos_inner' %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="avaliar_bloco">
+      <input type="hidden" name="id" id="avaliacaoOrcamentoId">
+      <div class="modal-header">
+        <div>
+          <span class="ls-modal-kicker">Avaliação do superadministrador</span>
+          <h5 class="modal-title" id="avaliacaoOrcamentoNome">Avaliar orçamento</h5>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body">
+        <div id="avaliacaoBlocoErro" class="alert alert-danger d-none" role="alert"></div>
+        <div class="row g-3">
+          <div class="col-12 col-sm-6">
+            <label class="form-label" for="avaliacaoBloco">Bloco responsável</label>
+            <select class="form-select" id="avaliacaoBloco" name="bloco" required>
+              {% for valor, rotulo in blocos_opcoes %}<option value="{{ valor }}">{{ rotulo }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="col-12 col-sm-6">
+            <label class="form-label" for="avaliacaoStatus">Decisão</label>
+            <select class="form-select" id="avaliacaoStatus" name="status" required>
+              {% for valor, rotulo in avaliacao_status_opcoes %}<option value="{{ valor }}">{{ rotulo }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="col-12">
+            <label class="form-label" for="avaliacaoObservacao">Parecer</label>
+            <textarea class="form-control" id="avaliacaoObservacao" name="observacao" rows="4"
+                      placeholder="Obrigatório quando houver ajustes; opcional na aprovação."></textarea>
+            <div class="form-text" id="avaliacaoAtual"></div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-warning"><i class="bi bi-clipboard-check me-1"></i> Registrar avaliação</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endif %}
+
+<!-- ================= MODAL: excluir ================= -->
+{% url 'orcamentos_inner' as exclusao_url %}
+{% include "includes/modal_confirmar_exclusao.html" with exclusao_url=exclusao_url exclusao_titulo="Excluir orçamento" exclusao_aviso="O rascunho e todos os itens serão apagados. Propostas enviadas, respondidas ou expiradas permanecem no histórico comercial." %}
+
+{{ orcamentos_dados|json_script:"orcamentosDados" }}
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  "use strict";
+
+  var orcamentos = JSON.parse(
+    document.getElementById("orcamentosDados").textContent || "[]"
+  );
+
+  var corpo = document.getElementById("itensCorpo");
+  var podeEditarComercial = {{ pode_editar_comercial|yesno:"true,false" }};
+  var podeEditarFinanceiro = {{ pode_editar_financeiro|yesno:"true,false" }};
+  var endpointEnvio = "{% url 'orcamentos_inner' %}";
+
+  /* Datas de validade trabalham no calendário local do aparelho. Usar
+     toISOString aqui empurrava a data um dia para trás em alguns fusos. */
+  document.querySelectorAll("[data-validade-dias]").forEach(function (botao) {
+    botao.addEventListener("click", function () {
+      var campo = document.getElementById("orcamentoValidade");
+      var dia = new Date();
+      dia.setHours(12, 0, 0, 0);
+      dia.setDate(dia.getDate() + Number(botao.dataset.validadeDias || 0));
+      campo.value = Painel.datas.paraDataLocal(dia);
+      campo.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+  });
+  document.querySelector("[data-validade-limpar]")?.addEventListener("click", function () {
+    document.getElementById("orcamentoValidade").value = "";
+  });
+
+  /* ------------------------------------------------------------------
+     O seletor de item
+
+     Era um <select> com trezentos brinquedos dentro. No tablet isso abre
+     uma roleta que não aceita digitar: para achar "Cama elástica" a
+     pessoa rolava a lista inteira na frente do cliente.
+
+     Agora é o campo de busca do painel (ls-busca.js): digita, filtra sem
+     acento, mostra o preço ao lado do nome e traz "cadastrar na hora"
+     quando o item ainda não existe.
+
+     O valor continua sendo "b:12" (brinquedo), "p:5" (produção) ou
+     "r:8" (reposição). O prefixo é
+     desmontado no envio, em `antes`.
+     ------------------------------------------------------------------ */
+  /* ------------------------------------------------------------------
+     O campo de cliente
+
+     Mesma história do seletor de item: era uma lista rolante. Agora
+     digita o nome e acha; e se o cliente ainda não existe, cadastra sem
+     sair do orçamento -- o caso mais comum de todos, porque quase todo
+     orçamento nasce de alguém que ligou pela primeira vez.
+     ------------------------------------------------------------------ */
+  var endpointClientes = "{% url 'buscar_clientes_orcamento' %}";
+  var cacheBuscaClientes = new Map();
+
+  function buscarClientes(termo) {
+    var chave = LSBusca.semAcento(termo || "");
+    if (cacheBuscaClientes.has(chave)) return cacheBuscaClientes.get(chave);
+
+    var armazenamento = "ls:orcamento:clientes:" + chave;
+    try {
+      var bruto = sessionStorage.getItem(armazenamento);
+      var salvo = bruto ? JSON.parse(bruto) : null;
+      if (salvo && Date.now() - salvo.em < 5 * 60 * 1000) {
+        var pronto = Promise.resolve(salvo.opcoes || []);
+        cacheBuscaClientes.set(chave, pronto);
+        return pronto;
+      }
+    } catch (e) {}
+
+    var pedido = fetch(endpointClientes + "?q=" + encodeURIComponent(termo || ""), {
+      credentials: "same-origin",
+      headers: { "X-Requested-With": "XMLHttpRequest" },
+      cache: "no-store"
+    }).then(function (resposta) {
+      return resposta.json().catch(function () { return null; }).then(function (json) {
+        if (!resposta.ok || !json || json.status !== "sucesso") {
+          throw new Error("Não foi possível buscar os clientes.");
+        }
+        try {
+          sessionStorage.setItem(armazenamento, JSON.stringify({
+            em: Date.now(), opcoes: json.opcoes || []
+          }));
+        } catch (e) {}
+        return json.opcoes || [];
+      });
+    }).catch(function (erro) {
+      cacheBuscaClientes.delete(chave);
+      throw erro;
+    });
+
+    cacheBuscaClientes.set(chave, pedido);
+    return pedido;
+  }
+
+  function aplicarClienteNoOrcamento(opcao, forcar) {
+    var resumo = document.getElementById("orcamentoClienteResumo");
+    var nome = document.getElementById("orcamentoNome");
+    var whatsapp = document.getElementById("orcamentoWhatsapp");
+    var email = document.getElementById("orcamentoEmail");
+
+    resumo.innerHTML = "";
+    resumo.hidden = !opcao;
+    if (!opcao) return;
+
+    if (forcar || !nome.value.trim()) nome.value = opcao.rotulo || "";
+    if (forcar || !whatsapp.value.trim()) whatsapp.value = opcao.whatsapp || "";
+    if (forcar || !email.value.trim()) email.value = opcao.email || "";
+    Painel.aplicarMascaras(document.getElementById("formOrcamento"));
+
+    var titulo = document.createElement("strong");
+    titulo.textContent = "Cadastro vinculado";
+    resumo.appendChild(titulo);
+
+    var partes = [];
+    if (opcao.documento) partes.push(opcao.documento);
+    if (opcao.whatsapp) partes.push(opcao.whatsapp);
+    if (opcao.email) partes.push(opcao.email);
+    if (opcao.endereco) {
+      var endereco = [
+        [opcao.endereco.rua, opcao.endereco.numero].filter(Boolean).join(", "),
+        opcao.endereco.bairro,
+        [opcao.endereco.cidade, opcao.endereco.estado].filter(Boolean).join("/")
+      ].filter(Boolean).join(" · ");
+      if (endereco) partes.push(endereco);
+    }
+
+    var detalhe = document.createElement("span");
+    detalhe.textContent = partes.length ? partes.join(" · ") : "Dados básicos carregados";
+    resumo.appendChild(detalhe);
+  }
+
+  var buscaCliente = LSBusca.criar({
+    nome: "cliente",
+    opcoes: [],
+    placeholder: "Buscar cliente cadastrado...",
+    rotuloAcessivel: "Cliente cadastrado",
+    minimoBusca: 2,
+    carregar: buscarClientes,
+    criar: {
+      rotulo: "Cadastrar cliente",
+      aoClicar: function (digitado) {
+        abrirCadastroDeCliente(digitado);
+      }
+    },
+    aoEscolher: function (opcao) {
+      /* Escolha explícita significa usar a ficha atual. Assim telefone e
+         e-mail antigos no modal não vencem o cadastro central. Ao apenas
+         reabrir uma proposta preservada, o snapshot continua intacto. */
+      aplicarClienteNoOrcamento(opcao, true);
+    }
+  });
+
+  buscaCliente.entrada.id = "orcamentoClienteBusca";
+  document.getElementById("orcamentoClienteBox").appendChild(buscaCliente.elemento);
+  buscaCliente.entrada.disabled = !podeEditarComercial;
+
+  var endpointItens = "{% url 'buscar_itens_orcamento' %}";
+  var cacheBuscaItens = new Map();
+  var opcoesNovas = [];
+  var cacheBuscaValidade = 5 * 60 * 1000;
+
+  function chaveDaBusca(termo) {
+    return LSBusca.semAcento(termo || "");
+  }
+
+  function mesclarNovos(opcoes, termo) {
+    var chave = chaveDaBusca(termo);
+    var resultado = (opcoes || []).slice();
+    var vistos = new Set(resultado.map(function (o) { return String(o.valor); }));
+
+    opcoesNovas.forEach(function (opcao) {
+      if (vistos.has(String(opcao.valor))) return;
+      if (chave && chaveDaBusca(opcao.rotulo + " " + (opcao.detalhe || "")).indexOf(chave) < 0) return;
+      resultado.unshift(opcao);
+    });
+    return resultado;
+  }
+
+  function buscarItens(termo) {
+    var chave = chaveDaBusca(termo);
+    if (cacheBuscaItens.has(chave)) return cacheBuscaItens.get(chave);
+
+    var armazenamento = "ls:orcamento:itens:" + chave;
+    try {
+      var bruto = sessionStorage.getItem(armazenamento);
+      var salvo = bruto ? JSON.parse(bruto) : null;
+      if (salvo && Date.now() - salvo.em < cacheBuscaValidade) {
+        var pronto = Promise.resolve(mesclarNovos(salvo.opcoes, termo));
+        cacheBuscaItens.set(chave, pronto);
+        return pronto;
+      }
+    } catch (e) {
+      /* Sem armazenamento no modo privado: a memória da página ainda vale. */
+    }
+
+    var pedido = fetch(endpointItens + "?q=" + encodeURIComponent(termo || ""), {
+      credentials: "same-origin",
+      headers: { "X-Requested-With": "XMLHttpRequest" },
+      cache: "no-store"
+    })
+      .then(function (resposta) {
+        return resposta.json().catch(function () { return null; }).then(function (json) {
+          if (!resposta.ok || !json || json.status !== "sucesso") {
+            throw new Error("Não foi possível buscar os itens.");
+          }
+          try {
+            sessionStorage.setItem(armazenamento, JSON.stringify({
+              em: Date.now(), opcoes: json.opcoes || []
+            }));
+          } catch (e) {}
+          return mesclarNovos(json.opcoes || [], termo);
+        });
+      })
+      .catch(function (erro) {
+        cacheBuscaItens.delete(chave);
+        throw erro;
+      });
+
+    cacheBuscaItens.set(chave, pedido);
+    return pedido;
+  }
+
+  /* Cada linha tem a sua busca; a lista de opções é a mesma para todas,
+     então cadastrar um brinquedo novo precisa alcançar as já abertas. */
+  var buscasDeItem = [];
+
+  function criarBuscaDeItem(linha) {
+    var busca = LSBusca.criar({
+      opcoes: opcoesNovas,
+      placeholder: "Buscar brinquedo, peça ou produto...",
+      rotuloAcessivel: "Item da proposta",
+      classe: "ls-busca-item-orcamento",
+      exibirImagem: true,
+      minimoBusca: 2,
+      carregar: buscarItens,
+      criar: {
+        rotulo: "Cadastrar brinquedo",
+        aoClicar: function (digitado) {
+          abrirCadastroDeBrinquedo(linha, digitado);
+        }
+      },
+      aoEscolher: function (opcao) {
+        preencherLinha(linha, opcao);
+      }
+    });
+
+    buscasDeItem.push(busca);
+    return busca;
+  }
+
+  /* Escolher um item preenche descrição e preço, mas nunca sobrescreve o
+     que já foi ajustado à mão: o desconto combinado com o cliente vale
+     mais que a tabela. */
+  function preencherLinha(linha, opcao) {
+    var descricao = linha.querySelector(".ls-item-descricao");
+    var valor = linha.querySelector(".ls-item-valor");
+
+    if (opcao) {
+      if (!descricao.value.trim()) descricao.value = opcao.rotulo;
+      if (!paraNumero(valor.value) && opcao.preco) valor.value = opcao.preco;
+    }
+
+    recalcular();
+  }
+
+  /* Acrescenta um brinquedo recém-cadastrado à lista de todas as buscas
+     já na tela: quem cadastrou está com três linhas abertas e esperaria
+     achar o item em qualquer uma delas. */
+  function registrarNoCatalogo(b) {
+    var opcao = {
+      valor: "b:" + b.id,
+      rotulo: b.nome,
+      grupo: "Catálogo do site",
+      detalhe: "Brinquedo do catálogo",
+      valorDireita: b.valor ? "R$ " + b.valor : "sob consulta",
+      preco: b.valor || ""
+    };
+
+    opcoesNovas.push(opcao);
+    cacheBuscaItens.clear();
+    buscasDeItem.forEach(function (busca) {
+      busca.adicionarOpcao(opcao, false);
+    });
+
+    return opcao;
+  }
+
+  function registrarPeca(p) {
+    var opcao = {
+      valor: "r:" + p.id,
+      rotulo: p.nome,
+      grupo: "Peças de reposição",
+      detalhe: "Peça da loja",
+      valorDireita: p.valor ? "R$ " + p.valor : "sem preço",
+      preco: p.valor || ""
+    };
+
+    opcoesNovas.push(opcao);
+    cacheBuscaItens.clear();
+    buscasDeItem.forEach(function (busca) {
+      busca.adicionarOpcao(opcao, false);
+    });
+    return opcao;
+  }
+
+  /* ------------------------------------------------------------------
+     Números
+     O painel inteiro digita no formato brasileiro; a conta é feita em
+     ponto e só a exibição volta para vírgula.
+     ------------------------------------------------------------------ */
+  function paraNumero(texto) {
+    var limpo = String(texto || "").trim().replace(/[R$\s]/g, "");
+    if (!limpo) return 0;
+
+    if (limpo.indexOf(",") >= 0) {
+      limpo = limpo.replace(/\./g, "").replace(",", ".");
+    }
+
+    var numero = parseFloat(limpo);
+    return isNaN(numero) ? 0 : numero;
+  }
+
+  function moeda(valor) {
+    return "R$ " + valor.toLocaleString("pt-BR", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+  }
+
+  /* ------------------------------------------------------------------
+     Linhas de item
+     ------------------------------------------------------------------ */
+  function novaLinha(item) {
+    var tr = document.createElement("tr");
+    tr.className = "ls-item-linha";
+    tr.innerHTML =
+      '<td data-rotulo="Item"></td>' +
+      '<td data-rotulo="Descrição"><input class="form-control form-control-sm ls-item-descricao" maxlength="180" placeholder="Descrição que vai na proposta"></td>' +
+      '<td data-rotulo="Qtd."><input type="number" class="form-control form-control-sm text-end ls-item-quantidade" inputmode="numeric" min="1" max="100000" step="1" value="1"></td>' +
+      '<td data-rotulo="Valor unit."><input class="form-control form-control-sm text-end ls-item-valor" inputmode="decimal" data-mascara="moeda" autocomplete="off" placeholder="0,00"></td>' +
+      '<td data-rotulo="Subtotal" class="text-end"><span class="ls-money ls-item-subtotal">R$ 0,00</span></td>' +
+      '<td class="text-end"><button type="button" class="btn btn-sm btn-outline-danger ls-item-remover" aria-label="Remover item"><i class="bi bi-x-lg"></i></button></td>';
+
+    corpo.appendChild(tr);
+    Painel.aplicarMascaras(tr);
+
+    /* A busca da linha nasce junto e fica guardada no próprio <tr>:
+       remover a linha leva o componente embora, sem sobra. */
+    var busca = criarBuscaDeItem(tr);
+    tr.firstElementChild.appendChild(busca.elemento);
+    tr.buscaItem = busca;
+    busca.entrada.disabled = !podeEditarComercial;
+
+    if (item) {
+      if (item.opcao) busca.adicionarOpcao(item.opcao, false);
+      /* O item guardado tem um dos dois vínculos; a busca junta os dois
+         num valor só. Brinquedo primeiro, que é a origem padrão.
+         `false` no segundo argumento: repor o que já estava salvo não é
+         escolha nova e não pode reescrever descrição nem preço. */
+      if (item.brinquedo) {
+        busca.definirValor("b:" + item.brinquedo, false);
+      } else if (item.produto) {
+        busca.definirValor("p:" + item.produto, false);
+      } else if (item.peca) {
+        busca.definirValor("r:" + item.peca, false);
+      }
+
+      tr.querySelector(".ls-item-descricao").value = item.descricao || "";
+      tr.querySelector(".ls-item-quantidade").value = item.quantidade || 1;
+      tr.querySelector(".ls-item-valor").value = item.valor_unitario || "";
+    }
+
+    recalcular();
+    return tr;
+  }
+
+  corpo.addEventListener("input", recalcular);
+
+  corpo.addEventListener("click", function (evento) {
+    var botao = evento.target.closest(".ls-item-remover");
+    if (!botao) return;
+
+    var linha = botao.closest("tr");
+    var indice = buscasDeItem.indexOf(linha.buscaItem);
+    if (indice >= 0) buscasDeItem.splice(indice, 1);
+
+    /* Fecha a busca antes de tirar a linha: com o painel aberto ele está
+       no <body>, e remover só o <tr> deixaria a lista órfã na tela. */
+    if (linha.buscaItem) linha.buscaItem.destruir();
+    linha.remove();
+    recalcular();
+  });
+
+  document.getElementById("addItem").addEventListener("click", function () {
+    novaLinha(null).querySelector(".ls-item-descricao").focus();
+  });
+
+  document.querySelectorAll(".ls-recalcula").forEach(function (campo) {
+    campo.addEventListener("input", recalcular);
+  });
+
+  /* ------------------------------------------------------------------
+     Desconto: em reais ou em porcentagem do subtotal
+
+     Quem fecha a venda pensa em "dez por cento", não em "cento e vinte e
+     oito reais". O botão da esquerda troca a unidade; o campo escondido
+     `desconto` continua saindo em reais, porque é o que o servidor
+     guarda e o que a proposta mostra ao cliente.
+     ------------------------------------------------------------------ */
+  var campoDesconto = document.getElementById("orcamentoDesconto");
+  var descontoEmReais = document.getElementById("orcamentoDescontoValor");
+  var botaoUnidade = document.getElementById("descontoUnidade");
+  var explicacao = document.getElementById("descontoExplicacao");
+
+  function modoPorcentagem() {
+    return botaoUnidade.dataset.modo === "porcentagem";
+  }
+
+  function trocarUnidade(modo, manterValor) {
+    var subtotal = somaDosItens();
+    var reais = descontoAtual(subtotal);
+
+    botaoUnidade.dataset.modo = modo;
+    botaoUnidade.textContent = modo === "porcentagem" ? "%" : "R$";
+    campoDesconto.dataset.mascara = modo === "porcentagem" ? "percentual" : "moeda";
+    campoDesconto.placeholder = modo === "porcentagem" ? "0,00" : "0,00";
+
+    if (manterValor === false) return;
+
+    /* Trocar a unidade não muda o desconto, só como ele é escrito: dez
+       por cento de mil continua sendo cem reais nos dois modos. */
+    if (!reais) {
+      campoDesconto.value = "";       // sem desconto o campo fica vazio,
+      return;                          // não "0,00" pedindo para ser apagado
+    }
+
+    if (modo === "porcentagem") {
+      campoDesconto.value = subtotal > 0
+        ? Painel.mascarar("percentual", String(Math.round((reais / subtotal) * 10000)))
+        : "";
+    } else {
+      campoDesconto.value = moedaSimples(reais);
+    }
+  }
+
+  function somaDosItens() {
+    var subtotal = 0;
+    corpo.querySelectorAll("tr").forEach(function (linha) {
+      var quantidade = parseInt(linha.querySelector(".ls-item-quantidade").value, 10) || 0;
+      subtotal += quantidade * paraNumero(linha.querySelector(".ls-item-valor").value);
+    });
+    return subtotal;
+  }
+
+  function descontoAtual(subtotal) {
+    var digitado = paraNumero(campoDesconto.value);
+    if (!modoPorcentagem()) return digitado;
+    return Math.round(subtotal * (digitado / 100) * 100) / 100;
+  }
+
+  function moedaSimples(numero) {
+    return numero.toLocaleString("pt-BR", {
+      minimumFractionDigits: 2, maximumFractionDigits: 2
+    });
+  }
+
+  botaoUnidade.addEventListener("click", function () {
+    trocarUnidade(modoPorcentagem() ? "valor" : "porcentagem", true);
+    recalcular();
+    campoDesconto.focus();
+  });
+
+  document.querySelectorAll("[data-desconto-pct]").forEach(function (chip) {
+    chip.addEventListener("click", function () {
+      trocarUnidade("porcentagem", false);
+      campoDesconto.value = Painel.mascarar(
+        "percentual", String(Number(chip.dataset.descontoPct) * 100)
+      );
+      recalcular();
+    });
+  });
+
+  /* ARREDONDAR: o desconto que faz o total virar número redondo.
+     "R$ 1.287,40" vira "R$ 1.250,00" -- número que se fala no telefone e
+     se lembra depois de desligar.
+
+     O passo acompanha o tamanho da proposta: dezena numa venda pequena,
+     centena numa grande. Arredondar dez mil reais para a dezena seria
+     um desconto de dez reais, que ninguém percebe. */
+  function passoDeArredondamento(bruto) {
+    if (bruto < 1000) return 10;
+    if (bruto < 10000) return 50;
+    return 100;
+  }
+
+  document.getElementById("descontoRedondo").addEventListener("click", function () {
+    var subtotal = somaDosItens();
+    var frete = paraNumero(document.getElementById("orcamentoFrete").value);
+    var bruto = Math.round((subtotal + frete) * 100) / 100;
+    if (bruto <= 0) return;
+
+    trocarUnidade("valor", false);
+
+    var passo = passoDeArredondamento(bruto);
+    var alvo = Math.floor(bruto / passo) * passo;
+
+    /* Total já redondo não vira desconto: arredondar não é sinônimo de
+       "dar mais um pouco". Quem quer descer mais usa os atalhos de
+       porcentagem, que dizem exatamente quanto estão dando. */
+    if (alvo === bruto) {
+      campoDesconto.value = "";
+      recalcular();
+      explicacao.textContent = "O total já é redondo: R$ " + moedaSimples(bruto) + ".";
+      return;
+    }
+
+    campoDesconto.value = moedaSimples(bruto - alvo);
+    recalcular();
+  });
+
+  document.getElementById("descontoZerar").addEventListener("click", function () {
+    campoDesconto.value = "";
+    recalcular();
+  });
+
+  /* ------------------------------------------------------------------
+     Totais
+     ------------------------------------------------------------------ */
+  function recalcular() {
+    var subtotal = 0;
+
+    corpo.querySelectorAll("tr").forEach(function (linha) {
+      var quantidade = parseInt(linha.querySelector(".ls-item-quantidade").value, 10) || 0;
+      var unitario = paraNumero(linha.querySelector(".ls-item-valor").value);
+      var parcial = quantidade * unitario;
+
+      linha.querySelector(".ls-item-subtotal").textContent = moeda(parcial);
+      subtotal += parcial;
+    });
+
+    var frete = paraNumero(document.getElementById("orcamentoFrete").value);
+    var desconto = Math.min(descontoAtual(subtotal), subtotal + frete);
+    var total = Math.max(subtotal + frete - desconto, 0);
+
+    /* O servidor recebe reais, sempre -- inclusive quando a tela está em
+       porcentagem. */
+    descontoEmReais.value = desconto > 0 ? moedaSimples(desconto) : "";
+
+    document.getElementById("resumoSubtotal").textContent = moeda(subtotal);
+    document.getElementById("resumoFrete").textContent = moeda(frete);
+    document.getElementById("resumoDesconto").textContent = "− " + moeda(desconto);
+    document.getElementById("resumoTotal").textContent = moeda(total);
+
+    if (!desconto) {
+      explicacao.textContent = "";
+    } else if (modoPorcentagem()) {
+      explicacao.textContent =
+        paraNumero(campoDesconto.value) + "% do subtotal = " + moeda(desconto);
+    } else if (subtotal > 0) {
+      explicacao.textContent =
+        moeda(desconto) + " = " +
+        (Math.round((desconto / subtotal) * 1000) / 10) + "% do subtotal";
+    } else {
+      explicacao.textContent = "";
+    }
+  }
+
+  /* ------------------------------------------------------------------
+     Abertura do modal
+     ------------------------------------------------------------------ */
+  function achar(id) {
+    return orcamentos.filter(function (o) {
+      return Number(o.id) === Number(id);
+    })[0];
+  }
+
+  function mostrarOrigem(orcamento) {
+    var campo = document.getElementById("orcamentoOrigem");
+    var badge = document.getElementById("orcamentoOrigemBadge");
+    var texto = document.getElementById("orcamentoOrigemTexto");
+    var origem = orcamento ? orcamento.origem : campo.dataset.nova;
+    var rotulo = orcamento ? orcamento.origem_rotulo : campo.dataset.novaRotulo;
+    var icone = badge.querySelector("i");
+
+    badge.className = "ls-origin-badge " + origem;
+    texto.textContent = rotulo;
+    icone.className = "bi " + (
+      origem === "ambulante" ? "bi-geo-alt-fill" : "bi-building"
+    );
+  }
+
+  function abrir(id) {
+    var form = document.getElementById("formOrcamento");
+    var orcamento = id ? achar(id) : null;
+
+    form.reset();
+    corpo.innerHTML = "";
+    trocarUnidade("valor", false);
+    campoDesconto.value = "";
+    explicacao.textContent = "";
+    Painel.erro("orcamentoErro", "");
+    Painel.valor("orcamentoId", orcamento ? orcamento.id : "");
+
+    document.getElementById("orcamentoTitulo").textContent = orcamento
+      ? "Orçamento #" + orcamento.id + " · versão " + orcamento.versao
+      : "Novo orçamento";
+    mostrarOrigem(orcamento);
+
+    if (orcamento && orcamento.cliente_opcao) {
+      buscaCliente.adicionarOpcao(orcamento.cliente_opcao, false);
+    }
+    buscaCliente.definirValor(orcamento ? orcamento.cliente : "", false);
+    aplicarClienteNoOrcamento(
+      orcamento ? orcamento.cliente_opcao : null,
+      false
+    );
+
+    if (orcamento) {
+      Painel.valor("orcamentoNome", orcamento.nome_cliente);
+      Painel.valor("orcamentoContato", orcamento.contato);
+      Painel.valor("orcamentoWhatsapp", orcamento.whatsapp_cliente);
+      Painel.valor("orcamentoEmail", orcamento.email_cliente);
+      Painel.valor("orcamentoStatus", orcamento.status);
+      Painel.valor("orcamentoValidade", orcamento.validade);
+      Painel.valor("orcamentoFrete", orcamento.frete);
+      trocarUnidade("valor", false);
+      Painel.valor("orcamentoDesconto", orcamento.desconto);
+      Painel.valor("orcamentoPagamento", orcamento.forma_pagamento);
+      Painel.valor("orcamentoEnvio", orcamento.forma_envio);
+      Painel.valor("orcamentoObs", orcamento.observacoes);
+      orcamento.itens.forEach(novaLinha);
+    }
+
+    if (!corpo.children.length) novaLinha(null);
+
+    recalcular();
+    aplicarPermissoesEdicao(!orcamento || orcamento.pode_editar);
+    Painel.abrir("modalOrcamento");
+  }
+
+  function aplicarPermissoesEdicao(mutavel) {
+    [
+      "orcamentoNome", "orcamentoContato", "orcamentoWhatsapp",
+      "orcamentoEmail", "orcamentoStatus", "orcamentoValidade",
+      "orcamentoEnvio", "orcamentoObs", "addItem", "novoBrinquedo", "novaPeca"
+    ].forEach(function (id) {
+      var campo = document.getElementById(id);
+      if (campo) campo.disabled = !mutavel || !podeEditarComercial;
+    });
+    [
+      "orcamentoFrete", "orcamentoDesconto", "descontoUnidade",
+      "descontoRedondo", "descontoZerar", "orcamentoPagamento"
+    ].forEach(function (id) {
+      var campo = document.getElementById(id);
+      if (campo) campo.disabled = !mutavel || !podeEditarFinanceiro;
+    });
+    document.querySelectorAll("[data-desconto-pct]").forEach(function (campo) {
+      campo.disabled = !mutavel || !podeEditarFinanceiro;
+    });
+    corpo.querySelectorAll("input, button").forEach(function (campo) {
+      campo.disabled = !mutavel || !podeEditarComercial;
+    });
+    buscasDeItem.forEach(function (busca) {
+      busca.entrada.disabled = !mutavel || !podeEditarComercial;
+    });
+    var salvar = document.getElementById("salvarOrcamento");
+    if (salvar) salvar.hidden = !mutavel;
+  }
+
+  var botaoNovoOrcamento = document.getElementById("novoOrcamento");
+  if (botaoNovoOrcamento) botaoNovoOrcamento.addEventListener("click", function () {
+    abrir(null);
+  });
+
+  /* A central de trabalho chega com ?novo=1. O toque em "Novo orçamento"
+     termina a acao aqui, ja com a primeira linha pronta, em vez de apenas
+     despejar a pessoa numa lista e obrigar um segundo toque. */
+  if (botaoNovoOrcamento && new URLSearchParams(window.location.search).get("novo") === "1") {
+    abrir(null);
+  }
+
+  document.querySelectorAll("[data-editar]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      abrir(b.dataset.editar);
+    });
+  });
+
+  /* ------------------------------------------------------------------
+     Envio
+     ------------------------------------------------------------------ */
+  Painel.ligar({
+    form: "formOrcamento",
+    erro: "orcamentoErro",
+    antes: function () {
+      var itens = [];
+      var vazio = false;
+
+      corpo.querySelectorAll("tr").forEach(function (linha) {
+        var descricao = linha.querySelector(".ls-item-descricao").value.trim();
+        var quantidade = parseInt(linha.querySelector(".ls-item-quantidade").value, 10) || 0;
+        var valor = linha.querySelector(".ls-item-valor").value.trim();
+
+        /* Linha totalmente em branco é descartada em silêncio: sobra do
+           botão "adicionar item" clicado sem preencher. */
+        if (!descricao && !valor && quantidade <= 1) return;
+
+        if (!descricao) {
+          vazio = true;
+          return;
+        }
+
+        /* Desmonta b:/p:/r: nas três referências possíveis. Mandar mais
+           de uma preenchida criaria um item que o
+           próprio modelo recusa (ItemOrcamento.clean). */
+        var escolha = linha.buscaItem ? linha.buscaItem.valor() : "";
+        var origem = escolha.slice(0, 2);
+        var referencia = escolha.slice(2);
+
+        itens.push({
+          descricao: descricao,
+          brinquedo: origem === "b:" ? referencia : "",
+          produto: origem === "p:" ? referencia : "",
+          peca: origem === "r:" ? referencia : "",
+          quantidade: quantidade,
+          valor_unitario: valor || "0"
+        });
+      });
+
+      if (vazio) return "Há item sem descrição. Preencha ou remova a linha.";
+      if (!itens.length) return "Adicione pelo menos um item ao orçamento.";
+
+      document.getElementById("orcamentoItens").value = JSON.stringify(itens);
+      return null;
+    }
+  });
+
+  /* ------------------------------------------------------------------
+     Situação e exclusão
+     ------------------------------------------------------------------ */
+  document.querySelectorAll("[data-situacao]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      Painel.erro("situacaoErro", "");
+      Painel.valor("situacaoId", b.dataset.situacao);
+      Painel.valor("situacaoStatus", b.dataset.status);
+      Painel.valor("situacaoMotivo", "");
+      document.getElementById("situacaoNome").textContent = b.dataset.nome;
+      Painel.abrir("modalSituacao");
+    });
+  });
+
+  Painel.ligar({ form: "formSituacao", erro: "situacaoErro" });
+
+  document.querySelectorAll("[data-pagamento]").forEach(function (botao) {
+    botao.addEventListener("click", function () {
+      Painel.erro("pagamentoErro", "");
+      Painel.valor("pagamentoId", botao.dataset.pagamento);
+      Painel.valor("pagamentoValor", botao.dataset.pago || "0");
+      Painel.valor("pagamentoObservacao", "");
+      document.getElementById("pagamentoNome").textContent = botao.dataset.nome;
+      document.getElementById("pagamentoResumo").textContent =
+        "Total da proposta: " + moeda(paraNumero(botao.dataset.total || "0"));
+      Painel.abrir("modalPagamento");
+    });
+  });
+  Painel.ligar({ form: "formPagamento", erro: "pagamentoErro" });
+
+  var formAvaliacao = document.getElementById("formAvaliacaoBloco");
+  if (formAvaliacao) {
+    function atualizarAvaliacaoAtual() {
+      var orcamento = achar(document.getElementById("avaliacaoOrcamentoId").value);
+      var bloco = document.getElementById("avaliacaoBloco").value;
+      var atual = orcamento && orcamento["bloco_" + bloco];
+      document.getElementById("avaliacaoAtual").textContent = atual
+        ? "Situação atual: " + atual.rotulo + (atual.observacao ? " — " + atual.observacao : "")
+        : "Situação atual: pendente";
+    }
+
+    document.querySelectorAll("[data-avaliar]").forEach(function (botao) {
+      botao.addEventListener("click", function () {
+        formAvaliacao.reset();
+        Painel.erro("avaliacaoBlocoErro", "");
+        Painel.valor("avaliacaoOrcamentoId", botao.dataset.avaliar);
+        document.getElementById("avaliacaoOrcamentoNome").textContent = botao.dataset.nome;
+        atualizarAvaliacaoAtual();
+        Painel.abrir("modalAvaliacaoBloco");
+      });
+    });
+    document.getElementById("avaliacaoBloco").addEventListener("change", atualizarAvaliacaoAtual);
+    Painel.ligar({ form: "formAvaliacaoBloco", erro: "avaliacaoBlocoErro" });
+  }
+
+  Painel.ligarExclusao();
+
+  /* ------------------------------------------------------------------
+     Cadastrar brinquedo sem sair do orçamento
+
+     `depois` em vez do recarregamento padrão do Painel.ligar: recarregar
+     aqui jogaria fora o orçamento meio montado, que é exatamente o que
+     este atalho existe para não fazer.
+     ------------------------------------------------------------------ */
+  var linhaEsperando = null;
+
+  /* Abre o cadastro de brinquedo já com o nome que a pessoa digitou na
+     busca: quem procurou "Piscina de bolinhas 3m" e não achou não vai
+     querer digitar o mesmo nome de novo. */
+  function abrirCadastroDeBrinquedo(linha, nomeDigitado) {
+    linhaEsperando = linha || null;
+
+    var form = document.getElementById("formBrinquedoNovo");
+    form.reset();
+    if (nomeDigitado) {
+      document.getElementById("brinquedoNovoNome").value = nomeDigitado;
+    }
+
+    Painel.erro("brinquedoNovoErro", "");
+    Painel.abrirFilho("modalBrinquedoNovo", "modalOrcamento");
+  }
+
+  document.getElementById("novoBrinquedo").addEventListener("click", function () {
+    /* Se a última linha ainda está sem item escolhido, é nela que o novo
+       brinquedo entra assim que for cadastrado. */
+    var linhas = corpo.querySelectorAll("tr");
+    var ultima = linhas[linhas.length - 1];
+    abrirCadastroDeBrinquedo(
+      ultima && ultima.buscaItem && !ultima.buscaItem.valor() ? ultima : null,
+      ""
+    );
+  });
+
+  Painel.ligar({
+    form: "formBrinquedoNovo",
+    erro: "brinquedoNovoErro",
+    depois: function (json) {
+      registrarNoCatalogo(json.brinquedo);
+
+      var alvo = linhaEsperando || novaLinha(null);
+      alvo.buscaItem.definirValor("b:" + json.brinquedo.id, false);
+
+      var descricao = alvo.querySelector(".ls-item-descricao");
+      if (!descricao.value.trim()) descricao.value = json.brinquedo.nome;
+
+      var valor = alvo.querySelector(".ls-item-valor");
+      if (!paraNumero(valor.value) && json.brinquedo.valor) {
+        valor.value = json.brinquedo.valor;
+      }
+
+      linhaEsperando = null;
+      recalcular();
+      Painel.fechar("modalBrinquedoNovo");
+      descricao.focus();
+    }
+  });
+
+  /* ------------------------------------------------------------------
+     Cadastrar peça de reposição sem perder a proposta
+     ------------------------------------------------------------------ */
+  function abrirCadastroDePeca(linha, nomeDigitado) {
+    linhaEsperando = linha || null;
+    var form = document.getElementById("formPecaNova");
+    form.reset();
+    if (nomeDigitado) document.getElementById("pecaNovaNome").value = nomeDigitado;
+    Painel.erro("pecaNovaErro", "");
+    Painel.abrirFilho("modalPecaNova", "modalOrcamento");
+  }
+
+  document.getElementById("novaPeca").addEventListener("click", function () {
+    var linhas = corpo.querySelectorAll("tr");
+    var ultima = linhas[linhas.length - 1];
+    abrirCadastroDePeca(
+      ultima && ultima.buscaItem && !ultima.buscaItem.valor() ? ultima : null,
+      ""
+    );
+  });
+
+  Painel.ligar({
+    form: "formPecaNova",
+    erro: "pecaNovaErro",
+    depois: function (json) {
+      registrarPeca(json.peca);
+      var alvo = linhaEsperando || novaLinha(null);
+      alvo.buscaItem.definirValor("r:" + json.peca.id, false);
+
+      var descricao = alvo.querySelector(".ls-item-descricao");
+      if (!descricao.value.trim()) descricao.value = json.peca.nome;
+      var valor = alvo.querySelector(".ls-item-valor");
+      if (!paraNumero(valor.value) && json.peca.valor) valor.value = json.peca.valor;
+
+      linhaEsperando = null;
+      recalcular();
+      Painel.fechar("modalPecaNova");
+      descricao.focus();
+    }
+  });
+
+  /* ------------------------------------------------------------------
+     Cadastrar cliente sem sair do orçamento
+     ------------------------------------------------------------------ */
+  var clienteNovoTipo = document.getElementById("clienteNovoTipo");
+  var clienteNovoParceiro = document.getElementById("clienteNovoBlocoParceiro");
+  var clienteNovoEstabelecimento = document.getElementById("clienteNovoBlocoEstabelecimento");
+
+  function ajustarClienteNovoPorTipo() {
+    var buffet = clienteNovoTipo.value === "buffet";
+    clienteNovoParceiro.hidden = buffet;
+    clienteNovoEstabelecimento.hidden = !buffet;
+  }
+  clienteNovoTipo.addEventListener("change", ajustarClienteNovoPorTipo);
+
+  function abrirCadastroDeCliente(nomeDigitado) {
+    var form = document.getElementById("formClienteNovo");
+    form.reset();
+    if (nomeDigitado) {
+      document.getElementById("clienteNovoNome").value = nomeDigitado;
+    }
+    Painel.erro("clienteNovoErro", "");
+    ajustarClienteNovoPorTipo();
+    Painel.abrirFilho("modalClienteNovo", "modalOrcamento");
+  }
+
+  Painel.ligarCep({
+    url: "{% url 'consultar_cep_inner' %}",
+    cep: "clienteNovoCep",
+    status: "clienteNovoCepStatus",
+    campos: {
+      rua: "clienteNovoEndereco",
+      bairro: "clienteNovoBairro",
+      cidade: "clienteNovoCidade",
+      estado: "clienteNovoEstado"
+    },
+    coordenadas: {
+      latitude: "clienteNovoLatitude",
+      longitude: "clienteNovoLongitude"
+    }
+  });
+
+  Painel.ligar({
+    form: "formClienteNovo",
+    erro: "clienteNovoErro",
+    depois: function (json) {
+      cacheBuscaClientes.clear();
+      try {
+        sessionStorage.removeItem("ls:orcamento:clientes:");
+        sessionStorage.removeItem(
+          "ls:orcamento:clientes:" + LSBusca.semAcento(json.cliente.rotulo || "")
+        );
+      } catch (e) {}
+      buscaCliente.adicionarOpcao(json.cliente, false);
+      buscaCliente.definirValor(json.cliente.valor, false);
+      /* Cadastro recém-gravado vence os textos soltos que estavam no
+         orçamento: nome, telefone e e-mail passam a refletir exatamente
+         a pessoa que acabou de ser salva. */
+      aplicarClienteNoOrcamento(json.cliente, true);
+
+      Painel.fechar("modalClienteNovo");
+    }
+  });
+
+  /* ------------------------------------------------------------------
+     Link da proposta
+
+     O endereço é montado pelo servidor -- daqui não dá para saber o
+     domínio público, porque o painel responde no subdomínio interno.
+     ------------------------------------------------------------------ */
+  var campoLink = document.getElementById("linkCampo");
+  var linkAbrir = document.getElementById("linkAbrir");
+
+  /* Histórico de tentativas.
+
+     "O cliente disse que não recebeu" era impossível de responder: não
+     havia onde olhar. Agora a última tentativa aparece aqui, com canal,
+     destino, hora e -- quando falhou -- o motivo que o servidor devolveu. */
+  /* O atalho fica visível depois de gerar a conversa: serve de saída
+     quando o navegador bloqueou a janela, e de "abrir de novo" quando a
+     pessoa fechou sem querer. */
+  function mostrarAtalhoWhatsapp(url, jaAbriu) {
+    var atalho = document.getElementById("linkWhatsappAtalho");
+    if (!atalho || !url) return;
+
+    atalho.href = url;
+    atalho.hidden = false;
+    atalho.innerHTML = jaAbriu
+      ? '<i class="bi bi-whatsapp me-1"></i> Abrir a conversa de novo'
+      : '<i class="bi bi-whatsapp me-1"></i> Abrir conversa no WhatsApp';
+  }
+
+  function desenharEnvios(envios) {
+    var caixa = document.getElementById("linkEnvios");
+    var lista = document.getElementById("linkEnviosLista");
+    if (!caixa || !lista) return;
+
+    lista.innerHTML = "";
+    if (!envios || !envios.length) {
+      caixa.hidden = true;
+      return;
+    }
+
+    envios.forEach(function (envio) {
+      var item = document.createElement("li");
+      item.className = envio.sucesso ? "ok" : "falhou";
+      item.innerHTML =
+        '<strong>' + envio.canal + "</strong>" +
+        (envio.destino ? " · " + envio.destino : "") +
+        '<span>' + envio.quando + (envio.por ? " · " + envio.por : "") + "</span>" +
+        (envio.detalhe ? '<em>' + envio.detalhe + "</em>" : "");
+      lista.appendChild(item);
+    });
+
+    caixa.hidden = false;
+  }
+  var linkPrevia = document.getElementById("linkPreviaInterna");
+  var linkCopiar = document.getElementById("linkCopiar");
+
+  /* A PROPOSTA ABERTA NO MOMENTO.
+
+     Link, mensagem e conversa chegam prontos do servidor, escritos nos
+     atributos do próprio botão "Enviar". O modal não precisa pedir nada
+     para mostrar tudo: abre já preenchido.
+
+     Isso não é um detalhe de desempenho, é o que faz a tela funcionar. Na
+     versão anterior o modal só sabia o link depois de um POST; qualquer
+     tropeço nessa ida deixava "Link indisponível" e o botão do WhatsApp
+     girando para sempre, num orçamento perfeitamente pronto. Agora o POST
+     virou registro: acontece por trás, e se falhar ninguém fica sem
+     mandar a proposta. */
+  var propostaAtual = { link: "", mensagem: "", previa: "", total: "", validade: "" };
+
+  function avisarEnvio(texto, tipo) {
+    var sucesso = document.getElementById("linkSucesso");
+    Painel.erro("linkErro", tipo === "erro" ? texto : "");
+    if (sucesso) {
+      sucesso.textContent = tipo === "sucesso" ? texto : "";
+      sucesso.classList.toggle("d-none", tipo !== "sucesso" || !texto);
+    }
+  }
+
+  function atualizarPrevia() {
+    var titulo = document.getElementById("linkPreviaTitulo");
+    var resumo = document.getElementById("linkPreviaResumo");
+    var texto = document.getElementById("linkMensagemPrevia");
+    var id = document.getElementById("linkOrcamentoId").value;
+    if (titulo) titulo.textContent = "Proposta nº " + id + " · " + (propostaAtual.total || "valor calculado");
+    if (resumo) resumo.textContent = propostaAtual.validade
+      ? "Válida até " + propostaAtual.validade + " · resposta on-line"
+      : "Itens, fotos, condições e resposta on-line";
+    if (texto) texto.textContent = propostaAtual.mensagem || "Preparando mensagem…";
+  }
+
+  function montarConversa(telefone, mensagem) {
+    /* Mesma regra do servidor (conversa_whatsapp), aqui para a conversa
+       abrir no mesmo toque em que a pessoa pede -- sem esperar resposta
+       nenhuma, que é quando o navegador bloqueia a janela.
+
+       Este é o endereço da versão WEB: o que se copia e o que fica no
+       botão verde de reserva. Quem escolhe entre o aplicativo instalado
+       e ele é `Painel.whatsapp.abrir`. */
+    return Painel.whatsapp.web(telefone, mensagem);
+  }
+
+  function mostrarLink(link, previa) {
+    if (!link) return;
+    propostaAtual.link = link;
+    campoLink.value = link;
+    campoLink.placeholder = "";
+    linkAbrir.href = link;
+    linkAbrir.hidden = false;
+    if (previa) propostaAtual.previa = previa;
+    linkPrevia.href = propostaAtual.previa || "#";
+    linkPrevia.hidden = !propostaAtual.previa;
+    var card = document.getElementById("linkPreviaCard");
+    if (card) {
+      card.href = propostaAtual.previa || link;
+      card.hidden = !(propostaAtual.previa || link);
+    }
+    linkCopiar.disabled = false;
+    atualizarPrevia();
+  }
+
+  function corpoDoEnvio(canal, chave, valor) {
+    var dados = new FormData();
+    dados.set("action", "enviar");
+    dados.set("id", document.getElementById("linkOrcamentoId").value.trim());
+    if (canal) dados.set("canal", canal);
+    if (chave) dados.set(chave, valor || "");
+    dados.set(
+      "csrfmiddlewaretoken",
+      document.querySelector("[name=csrfmiddlewaretoken]").value
+    );
+    return dados;
+  }
+
+  function pedirAoServidor(dados) {
+    return fetch(endpointEnvio, {
+      method: "POST",
+      body: dados,
+      headers: { "X-Requested-With": "XMLHttpRequest" },
+      credentials: "same-origin"
+    })
+      .then(function (r) {
+        return r.text().then(function (texto) {
+          var json = null;
+          try { json = texto ? JSON.parse(texto) : null; } catch (e) {}
+          if (!r.ok || !json || json.status !== "sucesso") {
+            if (r.status === 403) throw new Error("Sua sessão ou permissão de envio expirou. Entre novamente e tente de novo.");
+            throw new Error((json && json.msg) || "O servidor não confirmou o envio (HTTP " + r.status + ").");
+          }
+          return json;
+        });
+      })
+      .then(function (json) {
+        if (!json || json.status !== "sucesso") {
+          throw new Error((json && json.msg) || "Não foi possível enviar a proposta.");
+        }
+        return json;
+      });
+  }
+
+  document.querySelectorAll("[data-enviar]").forEach(function (botao) {
+    botao.addEventListener("click", function () {
+      var id = String(
+        botao.dataset.orcamentoId || botao.dataset.enviar || botao.value || ""
+      ).trim();
+      var atual = id ? achar(id) : null;
+
+      document.getElementById("linkCliente").textContent =
+        botao.dataset.nome || (atual && atual.nome_cliente) || "cliente";
+      document.getElementById("linkOrcamentoId").value = id;
+      document.getElementById("linkWhatsapp").value =
+        botao.dataset.whatsapp || (atual && atual.whatsapp_cliente) || "";
+      document.getElementById("linkEmail").value =
+        botao.dataset.email || (atual && atual.email_cliente) || "";
+      Painel.aplicarMascaras(document.getElementById("modalLink"));
+
+      propostaAtual = {
+        link: botao.dataset.link || "",
+        mensagem: botao.dataset.mensagem || "",
+        previa: botao.dataset.previa || "",
+        total: botao.dataset.total || "",
+        validade: botao.dataset.validade || ""
+      };
+
+      campoLink.value = "";
+      campoLink.placeholder = "Gerando link seguro…";
+      linkAbrir.hidden = true;
+      linkPrevia.hidden = true;
+      linkCopiar.disabled = true;
+      var atalhoWpp = document.getElementById("linkWhatsappAtalho");
+      if (atalhoWpp) atalhoWpp.hidden = true;
+      Painel.erro("linkErro", "");
+      avisarEnvio("", "");
+      atualizarPrevia();
+      Painel.abrir("modalLink");
+
+      /* O link já veio com a página: aparece antes de qualquer rede. */
+      if (propostaAtual.link) {
+        mostrarLink(propostaAtual.link, propostaAtual.previa);
+      }
+
+      if (!/^\d+$/.test(id)) {
+        if (!propostaAtual.link) {
+          campoLink.placeholder = "Link indisponível";
+          Painel.erro(
+            "linkErro",
+            "Não consegui identificar o orçamento. Recarregue a página e tente novamente."
+          );
+        }
+        return;
+      }
+
+      /* Daqui para baixo é só confirmação e histórico. Se falhar, a tela
+         continua utilizável: o link está na mão e o WhatsApp abre. */
+      pedirAoServidor(corpoDoEnvio("preparar", null, null))
+        .then(function (json) {
+          document.getElementById("linkCliente").textContent =
+            json.destinatario || botao.dataset.nome || "cliente";
+          if (json.whatsapp) document.getElementById("linkWhatsapp").value = json.whatsapp;
+          if (json.email) document.getElementById("linkEmail").value = json.email;
+          Painel.aplicarMascaras(document.getElementById("modalLink"));
+          if (json.mensagem) propostaAtual.mensagem = json.mensagem;
+          mostrarLink(json.link, json.preview_url);
+          desenharEnvios(json.envios);
+        })
+        .catch(function (erro) {
+          campoLink.value = propostaAtual.link || "";
+          campoLink.placeholder = propostaAtual.link ? "" : "Link indisponível";
+          avisarEnvio(erro.message, "erro");
+        });
+    });
+  });
+
+  document.getElementById("linkEnviarWhatsapp").addEventListener("click", function () {
+    /* A CONVERSA ABRE AGORA, NESTE TOQUE.
+     *
+     * Antes o botão esperava o servidor para saber o endereço, e nesse
+     * meio-tempo duas coisas davam errado: o navegador bloqueava a janela
+     * (abrir fora do gesto da pessoa é pop-up) e, quando o POST demorava
+     * ou falhava, o botão ficava "calculando proposta" sem fim. Tudo o
+     * que a conversa precisa -- número e mensagem -- já está aqui. */
+    var campo = document.getElementById("linkWhatsapp");
+    var telefone = campo.value.trim();
+    var mensagem = propostaAtual.mensagem;
+
+    if (!mensagem && propostaAtual.link) {
+      mensagem =
+        "Olá! Sua proposta Lazer & Sport está pronta: " + propostaAtual.link;
+    }
+    if (!mensagem) {
+      document.getElementById("linkErro").className = "alert alert-danger";
+      Painel.erro(
+        "linkErro",
+        "A proposta ainda não tem link. Recarregue a página e toque em Enviar novamente."
+      );
+      return;
+    }
+
+    var url = montarConversa(telefone, mensagem);
+    if (!url) {
+      document.getElementById("linkErro").className = "alert alert-danger";
+      Painel.erro("linkErro", "Informe o WhatsApp do cliente com DDD.");
+      campo.focus();
+      return;
+    }
+
+    /* O WhatsApp que abre é o de QUEM ESTÁ LOGADO no aparelho: a proposta
+       sai do número do atendente, como qualquer mensagem dele.
+
+       No computador quem abre é o APLICATIVO INSTALADO, não o WhatsApp
+       Web -- outra aba com QR code atrasa cada envio. Se o aplicativo não
+       estiver instalado o sistema simplesmente ignora o pedido, sem
+       avisar ninguém; por isso o botão verde para a versão web fica
+       sempre visível logo abaixo. */
+    var saida = Painel.whatsapp.abrir(telefone, mensagem);
+
+    mostrarAtalhoWhatsapp(url, saida.motivo !== "aplicativo" && saida.ok);
+    avisarEnvio(
+      saida.motivo === "aplicativo"
+        ? "Pedimos ao WhatsApp instalado no seu computador para abrir a " +
+          "conversa com a proposta escrita. Não abriu? Use o botão verde " +
+          "aqui embaixo, que vai pela versão web."
+        : saida.ok
+          ? "A conversa abriu no seu WhatsApp com a proposta escrita. " +
+            "Confirme o envio por lá para o cliente receber."
+          : "O navegador bloqueou a janela. Use o botão verde " +
+            "“Abrir conversa no WhatsApp” aqui embaixo.",
+      saida.ok ? "sucesso" : "erro"
+    );
+
+    /* O registro vai por trás: marca o orçamento como enviado e guarda a
+       tentativa. A conversa já está aberta, então nada disso segura o
+       trabalho de ninguém. */
+    pedirAoServidor(corpoDoEnvio("whatsapp", "whatsapp", telefone))
+      .then(function (json) {
+        if (json.mensagem) propostaAtual.mensagem = json.mensagem;
+        mostrarLink(json.link, json.preview_url);
+        desenharEnvios(json.envios);
+        avisarEnvio(
+          "A proposta foi liberada e registrada. Agora confirme o envio dentro do WhatsApp.",
+          "sucesso"
+        );
+      })
+      .catch(function (erro) {
+        avisarEnvio(
+          "A conversa abriu, mas o sistema não conseguiu liberar/registrar a página: " +
+          erro.message + " Não confirme o envio no WhatsApp até tentar novamente.",
+          "erro"
+        );
+      });
+  });
+
+  document.getElementById("linkEnviarEmail").addEventListener("click", function () {
+    /* O e-mail é o único canal que depende mesmo do servidor: quem manda
+       a mensagem é a hospedagem, não o aparelho. Por isso aqui -- e só
+       aqui -- o botão espera a resposta e mostra o erro do provedor. */
+    var botao = this;
+    var campo = document.getElementById("linkEmail");
+    var original = botao.innerHTML;
+
+    Painel.erro("linkErro", "");
+    if (!/^\d+$/.test(document.getElementById("linkOrcamentoId").value.trim())) {
+      document.getElementById("linkErro").className = "alert alert-danger";
+      Painel.erro(
+        "linkErro",
+        "O orçamento não foi identificado. Feche esta janela e toque em Enviar novamente."
+      );
+      return;
+    }
+
+    botao.disabled = true;
+    botao.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Enviando';
+
+    pedirAoServidor(corpoDoEnvio("email", "email", campo.value.trim()))
+      .then(function (json) {
+        if (json.mensagem) propostaAtual.mensagem = json.mensagem;
+        mostrarLink(json.link, json.preview_url);
+        desenharEnvios(json.envios);
+        botao.innerHTML = '<i class="bi bi-check-lg me-1"></i> Enviado';
+        avisarEnvio("E-mail enviado e registrado com sucesso.", "sucesso");
+        setTimeout(function () { botao.innerHTML = original; }, 2400);
+      })
+      .catch(function (erro) {
+        avisarEnvio(erro.message, "erro");
+        botao.innerHTML = original;
+      })
+      .finally(function () { botao.disabled = false; });
+  });
+
+  document.getElementById("linkCopiar").addEventListener("click", function () {
+    if (!campoLink.value) return;
+
+    var botao = this;
+    function avisar() {
+      botao.innerHTML = '<i class="bi bi-check-lg"></i> Copiado';
+      setTimeout(function () {
+        botao.innerHTML = '<i class="bi bi-clipboard"></i> Copiar';
+      }, 1800);
+      pedirAoServidor(corpoDoEnvio("link", null, null))
+        .then(function (json) {
+          desenharEnvios(json.envios);
+          avisarEnvio("Link copiado e proposta liberada para o cliente.", "sucesso");
+        })
+        .catch(function (erro) {
+          avisarEnvio(
+            "O link foi copiado, mas a página não foi liberada pelo servidor: " + erro.message,
+            "erro"
+          );
+        });
+    }
+
+    /* navigator.clipboard só existe em contexto seguro; no tablet da
+       fábrica, acessando por http, ele simplesmente não está lá. O
+       select+execCommand é o caminho que sobra. */
+    function copiarLegado() {
+      campoLink.removeAttribute("readonly");
+      campoLink.select();
+      campoLink.setSelectionRange(0, 99999);
+      var copiou = document.execCommand("copy");
+      campoLink.setAttribute("readonly", "readonly");
+      if (copiou) avisar();
+      else avisarEnvio("Não consegui copiar automaticamente. Selecione o link e copie manualmente.", "erro");
+    }
+
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(campoLink.value).then(avisar).catch(copiarLegado);
+    } else {
+      copiarLegado();
+    }
+  });
+});
+
+/* ======================================================================
+   A SITUAÇÃO DA PROPOSTA, AO VIVO
+   ----------------------------------------------------------------------
+   O cliente aprova ou recusa pela página pública, e quem está no painel
+   via a mudança só ao recarregar. Como a sessão dura o dia inteiro, na
+   prática isso queria dizer "só depois de sair e entrar de novo" -- e um
+   "aprovado" que demora meia hora para aparecer é um cliente esperando
+   meia hora por um retorno que já podia ter saído.
+
+   Pergunta só a situação das linhas que estão na tela, só com a aba
+   visível, e só mexe no que realmente mudou. Uma linha que muda pisca uma
+   vez: sem isso a mudança acontece fora do canto onde a pessoa olhava.
+   ====================================================================== */
+(function () {
+  var ROTA = "{% url 'estados_orcamentos' %}";
+  var INTERVALO = 30000;
+
+  function celulas() {
+    return Array.prototype.slice.call(
+      document.querySelectorAll("[data-situacao]")
+    );
+  }
+
+  function pintar(celula, estado) {
+    var selo = celula.querySelector("[data-situacao-selo]");
+    var nota = celula.querySelector("[data-situacao-nota]");
+    if (!selo) return false;
+
+    var rotuloAtual = selo.textContent.trim();
+    if (rotuloAtual === estado.rotulo) return false;
+
+    selo.className = "ls-status " + (estado.cor || "neutral");
+    selo.textContent = estado.rotulo;
+
+    if (nota) {
+      var texto = estado.respondido_em
+        ? (estado.respondido_por || "cliente") + " · " + estado.respondido_em
+        : (estado.enviado_em ? "enviado " + estado.enviado_em : "");
+      nota.textContent = texto;
+      nota.hidden = !texto;
+    }
+
+    var linha = celula.closest("tr") || celula;
+    linha.classList.remove("ls-mudou");
+    /* Reiniciar a animação exige uma leitura de layout entre remover e
+       pôr de volta -- sem isso o navegador não vê mudança nenhuma. */
+    void linha.offsetWidth;
+    linha.classList.add("ls-mudou");
+    return true;
+  }
+
+  function conferir() {
+    var alvos = celulas();
+    if (!alvos.length) return;
+
+    var ids = alvos.map(function (c) { return c.getAttribute("data-situacao"); });
+    fetch(ROTA + "?ids=" + encodeURIComponent(ids.join(",")), {
+      headers: { "X-Requested-With": "XMLHttpRequest" },
+      credentials: "same-origin",
+      cache: "no-store",
+    })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (dados) {
+        if (!dados || !dados.orcamentos) return;
+        var mudou = 0;
+        alvos.forEach(function (celula) {
+          var estado = dados.orcamentos[celula.getAttribute("data-situacao")];
+          if (estado && pintar(celula, estado)) mudou += 1;
+        });
+        /* Se alguma proposta mudou, as bolinhas do menu mudaram junto. */
+        if (mudou && window.Painel && Painel.avisos) Painel.avisos.agora();
+      })
+      .catch(function () {
+        /* Rede oscilando não vira alarme: o próximo ciclo tenta de novo. */
+      });
+  }
+
+  setInterval(function () {
+    if (document.visibilityState === "visible") conferir();
+  }, INTERVALO);
+
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState === "visible") conferir();
+  });
+})();
+</script>
+{% endblock %}

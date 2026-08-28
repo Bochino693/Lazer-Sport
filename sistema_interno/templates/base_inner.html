@@ -1,526 +1,551 @@
 {% load static %}
-
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-    <meta charset="UTF-8">
-    <title>{% block title %}Lazer & Sport Gestão | Home{% endblock %}</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
 
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-  <!--<link rel="icon" type="image/png" href="{% static 'images/spencertransportes-logo.png' %}" /> -->
+  <link rel="icon" type="image/png" href="{% static 'images/lgooo.png' %}?v=2">
+  <link rel="shortcut icon" type="image/png" href="{% static 'images/lgooo.png' %}?v=2">
 
-    <style>
-       body {
-      background-color: #f8f9fa;
-      overflow-x: hidden;
-    }
+  {% comment %}
+    APLICATIVO DE VERDADE NO TABLET.
 
+    Com o manifesto e o service worker, o navegador oferece "instalar" e o
+    painel passa a abrir em tela cheia, com ícone próprio, sem barra de
+    endereço. É a diferença entre um site que a fábrica acessa e um
+    aplicativo que a fábrica abre -- e some com o toque acidental no
+    endereço, que tirava a pessoa do meio de um cadastro.
 
+    O service worker precisa vir da raiz do subdomínio para valer para o
+    painel inteiro; por isso é uma view, e não um arquivo estático.
+  {% endcomment %}
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="theme-color" content="#13100B">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="L&amp;S Gestão">
+  <link rel="apple-touch-icon" href="{% static 'interno/app-icone-192.png' %}">
 
-  :root {
-    --primary: #28a745;
-    --primary-hover: #218838;
-    --dark-main: #1e272e;
-    --dark-secondary: #212529;
-    --bg-light: #f4f6f8;
-    --text-light: #f8f9fa;
-    --text-muted: #adb5bd;
-  }
+  <title>{% block title %}Gestão Interna | Lazer & Sport{% endblock %}</title>
 
-  body {
-    background-color: var(--bg-light);
-    overflow-x: hidden;
-  }
+  {% comment %}
+    BOOTSTRAP E ÍCONES SAEM DO PRÓPRIO SERVIDOR, NÃO DE CDN.
 
-  /* NAVBAR */
-  .navbar {
-    background-color: var(--dark-main) !important;
-  }
+    Vinham de cdn.jsdelivr.net. Quando o CDN não responde -- wi-fi ruim
+    no galpão, DNS travado, operadora bloqueando --, o JavaScript do
+    Bootstrap não carrega e TODOS os modais do painel param: cadastrar
+    cliente, montar orçamento, abrir etapa. A tela abre e não faz nada,
+    que é o pior tipo de falha, porque parece defeito do sistema.
 
-  .navbar-brand {
-    font-weight: 600;
-    letter-spacing: 0.5px;
-  }
+    Servidos daqui, o painel só depende do servidor que ele já precisa
+    alcançar para existir. Os arquivos são as versões oficiais 5.3.3 e
+    1.11.3, sem alteração.
+  {% endcomment %}
+  <link href="{% static 'interno/vendor/bootstrap.min.css' %}" rel="stylesheet">
+  <link href="{% static 'interno/vendor/bootstrap-icons.min.css' %}" rel="stylesheet">
 
-  /* SIDEBAR */
-  .sidebar {
-    position: fixed;
-    top: 0;
-    left: -260px;
-    width: 260px;
-    height: 100%;
-    background: var(--dark-secondary);
-    color: var(--text-light);
-    transition: left 0.3s ease;
-    z-index: 1040;
-    display: flex;
-    flex-direction: column;
-    padding-top: 70px;
-  }
+  {% block extra_css %}{% endblock %}
+  <link href="{% static 'interno/interno_modern.css' %}?v=19" rel="stylesheet">
 
-  .sidebar.show {
-    left: 0;
-  }
-
-  .sidebar h6 {
-    padding: 0.75rem 1.25rem;
-    text-transform: uppercase;
-    font-size: 0.75rem;
-    color: var(--text-muted);
-    letter-spacing: 1px;
-  }
-
-  .sidebar .nav-link {
-    color: var(--text-light);
-    font-weight: 500;
-    padding: 0.7rem 1.25rem;
-    border-radius: 6px;
-    transition: all 0.3s ease;
-  }
-
-  .sidebar .nav-link:hover {
-    background-color: #0d6efd;
-    color: #fff;
-  }
-
-  /* ACCORDION */
-  .accordion-item {
-    background-color: transparent;
-  }
-
-  .sidebar .accordion-button {
-    background: transparent;
-    color: var(--text-light);
-    font-weight: 500;
-    padding: 0.75rem 1.25rem;
-    border: none;
-    box-shadow: none;
-  }
-
-  .sidebar .accordion-button:not(.collapsed) {
-    background: #0d6efd;
-    color: #fff;
-  }
-
-  .sidebar .accordion-button::after {
-    filter: invert(1);
-  }
-
-  .sidebar .accordion-body {
-    padding: 0;
-    background-color: rgba(255,255,255,0.02);
-  }
-
-  .sidebar .accordion-body a {
-    padding-left: 2.5rem;
-    font-size: 0.9rem;
-  }
-
-  /* OVERLAY */
-  .sidebar-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.6);
-    display: none;
-    z-index: 1030;
-  }
-
-  .sidebar-overlay.show {
-    display: block;
-  }
-
-  /* MAIN */
-  main {
-    margin-top: 70px;
-    padding: 1.5rem;
-  }
-
-  /* FOOTER */
-  footer {
-    background-color: var(--dark-main);
-  }
-
-  footer h5 {
-    font-weight: 500;
-  }
-
-  footer p {
-    color: var(--text-muted);
-    font-size: 0.9rem;
-  }
-
-  /* BOTÕES */
-  .btn-outline-light:hover {
-    background-color: var(--primary);
-    border-color: var(--primary);
-  }
-
-  .btn-success {
-    background-color: var(--primary);
-    border-color: var(--primary);
-  }
-
-  .btn-success:hover {
-    background-color: var(--primary-hover);
-    border-color: var(--primary-hover);
-  }
-
-/* Container dos FABs */
-/* Container dos FABs */
-.fab-container {
-    position: fixed;
-    bottom: 30px;
-    right: 30px;
-    display: flex;
-    flex-direction: column;
-    gap: 25px; /* aumenta o espaçamento entre FABs */
-    z-index: 1050;
-}
-
-/* FAB Base */
-.fab {
-    width: 80px; /* maior para caber texto */
-    height: 80px;
-    border-radius: 50%;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    color: #fff;
-    text-decoration: none;
-    position: relative;
-    box-shadow: 0 8px 20px rgba(0,0,0,0.3);
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-    cursor: pointer;
-    font-family: 'Segoe UI', sans-serif;
-    padding: 5px;
-}
-
-/* Cores específicas */
-.fab-green { background-color: #28a745; }
-.fab-blue { background-color: #007bff; }
-.fab-orange { background-color: #fd7e14; }
-
-/* Hover moderno */
-.fab:hover {
-    transform: scale(1.2) rotate(-3deg);
-    box-shadow: 0 12px 25px rgba(0,0,0,0.4);
-}
-
-/* Ícone grande */
-.fab-icon {
-    font-size: 30px;
-    line-height: 1;
-}
-
-/* Label descritiva abaixo do ícone */
-.fab-label {
-    font-size: 0.75rem;
-    margin-top: 6px;
-    text-align: center;
-    line-height: 1.2;
-    word-wrap: break-word;
-    max-width: 70px; /* limitar largura para quebrar linha */
-}
-
-/* Badge de notificação */
-/* Badge de notificação ajustado */
-.fab-badge {
-    position: absolute;
-    top: 2px;
-    right: 2px;
-    background-color: #dc3545; /* Vermelho vibrante */
-    color: #fff;
-    font-size: 0.75rem;
-    font-weight: 700;
-
-    /* Mantém o círculo perfeito */
-    min-width: 22px;
-    height: 22px;
-    padding: 0 4px;
-    border-radius: 50px; /* Arredondado nas bordas */
-
-    /* Centralização total do número */
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    /* Estética */
-    border: 2px solid #fff; /* Borda branca para destacar do botão */
-    box-shadow: 0 3px 8px rgba(0,0,0,0.4);
-    z-index: 2;
-    pointer-events: none;
-}
-
-/* Tooltip melhorado */
-.fab[title]:hover::after {
-    content: attr(title);
-    position: absolute;
-    top: -40px;
-    right: 50%;
-    transform: translateX(50%);
-    background-color: rgba(0,0,0,0.9);
-    color: #fff;
-    padding: 6px 12px;
-    font-size: 0.75rem;
-    border-radius: 6px;
-    white-space: normal; /* permite quebra de linha */
-    text-align: center;
-    max-width: 200px; /* largura máxima do tooltip */
-    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
-    pointer-events: none;
-    opacity: 1;
-    z-index: 2000;
-}
-
-
-/* Animação opcional: pulso discreto se houver notificação */
-@keyframes pulse-badge {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.1); }
-    100% { transform: scale(1); }
-}
-
-.fab-badge {
-    animation: pulse-badge 2s infinite ease-in-out;
-}
-
-</style>
-
+  <!-- Barra de carregamento no topo, compartilhada com o painel /adm. -->
+  <link rel="stylesheet" href="{% static 'site/ls-page-loader.css' %}?v=2">
+  <script src="{% static 'site/ls-page-loader.js' %}?v=2" defer></script>
+  {# Troca telas e filtros sem uma segunda requisição; cache só durante a aba. #}
+  <script src="{% static 'interno/ls-soft-navigation.js' %}?v=1" defer></script>
 </head>
-<body>
-
-
-{% if not user.is_authenticated or not user.is_staff and not user.gerente %}
-<script>
-    window.location.href = "{% url 'login_inner' %}";
-</script>
-{% endif %}
-
-<!-- Header / Navbar -->
-<nav class="navbar navbar-dark bg-dark fixed-top shadow">
-  <div class="container-fluid">
-    <button class="btn btn-outline-light me-3" id="menu-toggle">
-      ☰
+<body class="ls-body {% block body_class %}{% endblock %}" data-avisos="{% url 'avisos_estado' %}" data-aparelho="{% url 'avisos_aparelho' %}">
+<svg width="0" height="0" aria-hidden="true" focusable="false" style="position:absolute">
+  <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></symbol>
+  <symbol id="i-map-pin" viewBox="0 0 24 24"><path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+</svg>
+<div class="ls-shell">
+  <aside class="ls-sidebar" id="sidebarMenu">
+    {% comment %}
+      A lateral nasce como TRILHO de ícones e só abre quando alguém pede.
+      É a diferença de forma entre este aplicativo e o /adm do site, que
+      tem menu escrito sempre aberto: aqui a tela inteira é para o
+      trabalho, e o menu é ferramenta, não vitrine. A escolha fica
+      guardada no aparelho — quem prefere com nome não precisa reabrir a
+      cada visita.
+    {% endcomment %}
+    <button type="button" class="ls-rail-toggle" id="railToggle"
+            aria-label="Expandir menu" title="Expandir menu">
+      <i class="bi bi-chevron-right"></i>
     </button>
-    <a class="navbar-brand d-flex align-items-center" href="/">
-      <img src="{% static 'images/logoofi.png' %}" alt="Logo Lazer" width="90" class="me-2">
-      GESTÃO LAZER & SPORT
+
+    <a class="ls-brand" href="{% url 'home_inner' %}">
+      <span class="ls-brand-logo">
+        <img src="{% static 'images/logoofi.png' %}" alt="Lazer & Sport">
+      </span>
+      <span class="ls-brand-text">
+        <strong>Lazer & Sport</strong>
+        <small>Gestão interna · fábrica</small>
+      </span>
     </a>
-  </div>
-</nav>
 
+    <nav class="ls-nav" aria-label="Navegação principal">
+      {% if permissoes_interno.gestao %}
+      <div class="ls-nav-section">
+        <span class="ls-nav-caption">Painel</span>
+        <a data-titulo="Visão geral" class="ls-nav-item {% if request.resolver_match.url_name == 'home_inner' %}active{% endif %}" href="{% url 'home_inner' %}">
+          <span class="ls-nav-icon"><i class="bi bi-grid-fill"></i></span>
+          <span>Visão geral</span>
+        </a>
+        <a data-titulo="Indicadores" class="ls-nav-item {% if request.resolver_match.url_name == 'dashboard_estoque' %}active{% endif %}" href="{% url 'dashboard_estoque' %}">
+          <span class="ls-nav-icon"><i class="bi bi-activity"></i></span>
+          <span>Indicadores</span>
+        </a>
+      </div>
+      {% endif %}
 
-<!-- Sidebar (drawer) -->
-<div class="sidebar" id="sidebarMenu">
-  <h6>Navegação</h6>
+      {% if permissoes_interno.estoque %}
+      <div class="ls-nav-section">
+        <span class="ls-nav-caption">Estoque</span>
+        <a data-titulo="Estoque" class="ls-nav-item {% if request.resolver_match.url_name == 'stock' or request.resolver_match.url_name == 'estoque_inner' %}active{% endif %}" href="{% url 'stock' %}">
+          <span class="ls-nav-icon"><i class="bi bi-box-seam-fill"></i></span>
+          <span>Estoque</span>
+        </a>
+        <a data-titulo="Materiais" class="ls-nav-item {% if request.resolver_match.url_name == 'materiais_inner' %}active{% endif %}" href="{% url 'materiais_inner' %}">
+          <span class="ls-nav-icon"><i class="bi bi-tools"></i></span>
+          <span>Materiais</span>
+        </a>
+        <a data-titulo="Movimentações" class="ls-nav-item {% if request.resolver_match.url_name == 'movimentacoes_inner' %}active{% endif %}" href="{% url 'movimentacoes_inner' %}">
+          <span class="ls-nav-icon"><i class="bi bi-arrow-left-right"></i></span>
+          <span>Movimentações</span>
+        </a>
+      </div>
+      {% endif %}
 
-  <div class="accordion" id="accordionExample">
+      {% if permissoes_interno.producao %}
+      <div class="ls-nav-section">
+        <span class="ls-nav-caption">Produção</span>
+        <a data-titulo="Acompanhamento" class="ls-nav-item {% if request.resolver_match.url_name == 'minha_producao' or request.resolver_match.url_name == 'producao_ordem_detalhe' %}active{% endif %}" href="{% url 'minha_producao' %}">
+          <span class="ls-nav-icon"><i class="bi bi-list-check"></i></span>
+          <span>Acompanhamento</span>
+          <span class="ls-nav-count" data-selo="count_producao" {% if not count_producao %}hidden{% endif %}>{{ count_producao }}</span>
+        </a>
+        <a data-titulo="Produtos e ficha técnica" class="ls-nav-item {% if request.resolver_match.url_name == 'produtos_producao' %}active{% endif %}" href="{% url 'produtos_producao' %}">
+          <span class="ls-nav-icon"><i class="bi bi-diagram-3-fill"></i></span>
+          <span>Produtos e ficha técnica</span>
+        </a>
+        <a data-titulo="Guias das etapas" class="ls-nav-item {% if request.resolver_match.url_name == 'guias_producao' %}active{% endif %}" href="{% url 'guias_producao' %}">
+          <span class="ls-nav-icon"><i class="bi bi-journal-richtext"></i></span>
+          <span>Guias das etapas</span>
+        </a>
+        <a data-titulo="Ordens de produção" class="ls-nav-item {% if request.resolver_match.url_name == 'ordens_producao' %}active{% endif %}" href="{% url 'ordens_producao' %}">
+          <span class="ls-nav-icon"><i class="bi bi-hammer"></i></span>
+          <span>Ordens de produção</span>
+        </a>
+      </div>
+      {% endif %}
 
-    <!-- Tópico 1 -->
-   <!-- Tópico 1 -->
-<div class="accordion-item bg-dark border-0">
-  <h2 class="accordion-header">
-    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#topic1Collapse" aria-expanded="false">
-      📊 Estatísticas Gerais
-    </button>
-  </h2>
-  <div id="topic1Collapse" class="accordion-collapse collapse">
-    <div class="accordion-body">
-      <ul class="nav flex-column">
-        <li class="nav-item"><a class="nav-link" href="{% url 'home_inner' %}">Dash boards/Relatórios gráficos</a></li>
-        <li class="nav-item"><a class="nav-link" href="#">Brinquedos mais acessados</a></li>
-        <li class="nav-item"><a class="nav-link" href="#">Ranking de Linhas por Percentual Médio</a></li>
-      </ul>
-    </div>
-  </div>
-</div>
-
-<!-- Tópico 2 -->
-<div class="accordion-item bg-dark border-0">
-  <h2 class="accordion-header">
-    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#topic2Collapse" aria-expanded="false">
-      🔩 Estoque de Materiais
-    </button>
-  </h2>
-  <div id="topic2Collapse" class="accordion-collapse collapse">
-    <div class="accordion-body">
-      <ul class="nav flex-column">
-        <li class="nav-item"><a class="nav-link" href="#">Dashboards do Estoque</a></li>
-        <li class="nav-item"><a class="nav-link" href="{% url 'stock' %}">Gerenciar Estoque de Materiais</a></li>
-        <li class="nav-item"><a class="nav-link" href="#">Saídas de Estoque</a></li>
-        <li class="nav-item"><a class="nav-link" href="#">Compras para o Estoque</a></li>
-      </ul>
-    </div>
-  </div>
-</div>
-
-<!-- Tópico 3 -->
-<div class="accordion-item bg-dark border-0">
-  <h2 class="accordion-header">
-    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#topic3Collapse" aria-expanded="false">
-      🏭 Escala e Produção
-    </button>
-  </h2>
-  <div id="topic3Collapse" class="accordion-collapse collapse">
-    <div class="accordion-body">
-      <ul class="nav flex-column">
-        <li class="nav-item"><a class="nav-link" href="#">Dashboards de Produção</a></li>
-        <li class="nav-item"><a class="nav-link" href="#">Brinquedos á Fazer</a></li>
-        <li class="nav-item"><a class="nav-link" href="#">Estatística de Produção</a></li>
-        <li class="nav-item"><a class="nav-link" href="#">Opção 3</a></li>
-      </ul>
-    </div>
-  </div>
-</div>
-
-<!-- Tópico 4 -->
-<div class="accordion-item bg-dark border-0">
-  <h2 class="accordion-header">
-    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#topic4Collapse" aria-expanded="false">
-      📁 Vendas
-    </button>
-  </h2>
-  <div id="topic4Collapse" class="accordion-collapse collapse" data-bs-parent="#accordionExample">
-    <div class="accordion-body">
-      <ul class="nav flex-column">
-        <li class="nav-item"><a class="nav-link" href="#">Dashboards de Vendas</a></li>
-        <li class="nav-item"><a class="nav-link" href="#">Registro de Venda</a></li>
-        <li class="nav-item"><a class="nav-link" href="#">Relatório de Vendas</a></li>
-        <li class="nav-item"><a class="nav-link" href="#">Opção 3</a></li>
-      </ul>
-    </div>
-  </div>
-</div>
-
-<!-- Tópico 5 -->
-<div class="accordion-item bg-dark border-0">
-  <h2 class="accordion-header">
-    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#topic5Collapse" aria-expanded="false">
-      🔧 Administração
-    </button>
-  </h2>
-  <div id="topic5Collapse" class="accordion-collapse collapse" data-bs-parent="#accordionExample">
-    <div class="accordion-body">
-      <ul class="nav flex-column">
-        <li class="nav-item"><a class="nav-link" href="#">Relatório de Despesas</a></li>
-        <li class="nav-item"><a class="nav-link" href="#">Relatório Financeiros</a></li>
-        <li class="nav-item"><a class="nav-link" href="#">Opção 3</a></li>
-      </ul>
-    </div>
-  </div>
-</div>
-
-<!-- Tópico 6 -->
-<div class="accordion-item bg-dark border-0">
-  <h2 class="accordion-header">
-    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#topic6Collapse" aria-expanded="false">
-      🛠 Configurações do Sistema
-    </button>
-  </h2>
-  <div id="topic6Collapse" class="accordion-collapse collapse" data-bs-parent="#accordionExample">
-    <div class="accordion-body">
-      <ul class="nav flex-column">
-        <li class="nav-item"><a class="nav-link" href="#">Opção 1</a></li>
-        <li class="nav-item"><a class="nav-link" href="#">Opção 2</a></li>
-        <li class="nav-item"><a class="nav-link" href="#">Opção 3</a></li>
-      </ul>
-    </div>
-  </div>
-</div>
-
-</div> <!-- Fim accordion -->
-
-  <div class="logout mt-auto">
-    {% if user.is_authenticated %}
-      <form method="post" action="{% url 'logout_inner' %}">
-          {% csrf_token %}
-          <button type="submit" class="btn btn-danger w-100">🚪 Logout</button>
-      </form>
-    {% else %}
-      <a href="{% url 'login_inner' %}" class="btn btn-success w-100">🔑 Login</a>
-    {% endif %}
-  </div>
-
-</div>
-
-
-<!-- Overlay -->
-<div class="sidebar-overlay" id="sidebarOverlay"></div>
-
-<!-- Conteúdo principal -->
-<main>
-  {% block content %}
-  {% endblock %}
-
-  {% block grafico %}
-  {% endblock %}
-</main>
-
-
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<!-- Footer -->
-<footer class="bg-dark text-white text-center py-4 mt-4">
-  <div class="container">
-    <h5 class="mb-2">Parceria de:</h5>
-    <div class="d-flex justify-content-center align-items-center gap-4 mb-3 flex-wrap">
-      <img src="{% static 'images/spencertransportes-logo.png' %}" alt="Logo Spencer" width="180">
-      <img src="{% static 'images/logo-sun.png' %}" alt="Logo Parceiro" width="210">
-    </div>
-    <p class="mb-0">&copy; 2025 Velox Spencer. Todos os direitos reservados.</p>
-  </div>
-</footer>
-
-<script>
-  const menuToggle = document.getElementById('menu-toggle');
-  const sidebar = document.getElementById('sidebarMenu');
-  const overlay = document.getElementById('sidebarOverlay');
-
-  menuToggle.addEventListener('click', () => {
-    sidebar.classList.toggle('show');
-    overlay.classList.toggle('show');
-  });
-
-  overlay.addEventListener('click', () => {
-    sidebar.classList.remove('show');
-    overlay.classList.remove('show');
-  });
-</script>
-
-<!-- Floating Action Buttons Modernos -->
-<div class="fab-container">
-
-    <!-- Registro rápido de vendas -->
-    <a href="{% url 'vendas_inner' %}" class="fab fab-green" title="Registrar rapidamente uma venda">
-        <div class="fab-icon">🛒</div>
-        <div class="fab-label">Venda Rápida</div>
-        {% if count_vendas > 0 %}
-            <span class="fab-badge">{{ count_vendas }}</span>
+      {% if permissoes_interno.clientes or permissoes_interno.orcamentos or permissoes_interno.financeiro or permissoes_interno.vendas_financeiro or permissoes_interno.pedidos %}
+      <div class="ls-nav-section">
+        <span class="ls-nav-caption">Comercial</span>
+        {% if permissoes_interno.clientes %}
+        <a data-titulo="Clientes" class="ls-nav-item {% if request.resolver_match.url_name == 'clientes_inner' %}active{% endif %}" href="{% url 'clientes_inner' %}">
+          <span class="ls-nav-icon"><i class="bi bi-people-fill"></i></span>
+          <span>Clientes</span>
+          <span class="ls-nav-count" data-selo="count_clientes_incompletos" {% if not count_clientes_incompletos %}hidden{% endif %}>{{ count_clientes_incompletos }}</span>
+        </a>
         {% endif %}
+        {% if permissoes_interno.financeiro %}
+        <a data-titulo="Financeiro" class="ls-nav-item {% if request.resolver_match.url_name == 'financeiro_inner' %}active{% endif %}" href="{% url 'financeiro_inner' %}">
+          <span class="ls-nav-icon"><i class="bi bi-graph-up-arrow"></i></span>
+          <span>Financeiro</span>
+        </a>
+        {% endif %}
+        {% if permissoes_interno.vendas_financeiro %}
+        <a data-titulo="Vendas" class="ls-nav-item {% if request.resolver_match.url_name == 'vendas_inner' %}active{% endif %}" href="{% url 'vendas_inner' %}">
+          <span class="ls-nav-icon"><i class="bi bi-receipt-cutoff"></i></span>
+          <span>Vendas</span>
+          <span class="ls-nav-count" data-selo="count_vendas" {% if not count_vendas %}hidden{% endif %}>{{ count_vendas }}</span>
+        </a>
+        {% endif %}
+        {% if permissoes_interno.pedidos %}
+        <a data-titulo="Pedidos" class="ls-nav-item {% if request.resolver_match.url_name == 'pedidos_inner' %}active{% endif %}" href="{% url 'pedidos_inner' %}">
+          <span class="ls-nav-icon"><i class="bi bi-box2-heart-fill"></i></span>
+          <span>Pedidos</span>
+          <span class="ls-nav-count" data-selo="count_pedidos" {% if not count_pedidos %}hidden{% endif %}>{{ count_pedidos }}</span>
+        </a>
+        {% endif %}
+        {% if permissoes_interno.orcamentos %}
+        <a data-titulo="Orçamentos" class="ls-nav-item {% if request.resolver_match.url_name == 'orcamentos_inner' %}active{% endif %}" href="{% url 'orcamentos_inner' %}">
+          <span class="ls-nav-icon"><i class="bi bi-file-earmark-text-fill"></i></span>
+          <span>Orçamentos</span>
+          <span class="ls-nav-count" data-selo="count_orcamentos" {% if not count_orcamentos %}hidden{% endif %}>{{ count_orcamentos }}</span>
+        </a>
+        {% endif %}
+        {% if permissoes_interno.gestao %}
+        <a data-titulo="Clientes no mapa" class="ls-nav-item {% if request.resolver_match.url_name == 'clientes_admin' %}active{% endif %}" href="{% url 'clientes_admin' %}">
+          <span class="ls-nav-icon"><i class="bi bi-geo-alt-fill"></i></span>
+          <span>Clientes no mapa</span>
+        </a>
+        {% endif %}
+      </div>
+      {% endif %}
+
+      {% if permissoes_interno.manutencoes or permissoes_interno.ordens_servico %}
+      <div class="ls-nav-section">
+        <span class="ls-nav-caption">Operação</span>
+        {% if permissoes_interno.ordens_servico %}
+        <a data-titulo="Ordens de Serviço" class="ls-nav-item {% if request.resolver_match.url_name == 'ordens_servico_inner' or request.resolver_match.url_name == 'ordem_servico_previa_inner' %}active{% endif %}" href="{% url 'ordens_servico_inner' %}">
+          <span class="ls-nav-icon"><i class="bi bi-clipboard2-check-fill"></i></span>
+          <span>Ordens de Serviço</span>
+          <span class="ls-nav-count" data-selo="count_ordens_servico" {% if not count_ordens_servico %}hidden{% endif %}>{{ count_ordens_servico }}</span>
+        </a>
+        {% endif %}
+        {% if permissoes_interno.manutencoes %}
+        <a data-titulo="Manutenções" class="ls-nav-item {% if request.resolver_match.url_name == 'manutencao_inner' %}active{% endif %}" href="{% url 'manutencao_inner' %}">
+          <span class="ls-nav-icon"><i class="bi bi-wrench-adjustable-circle-fill"></i></span>
+          <span>Manutenções</span>
+        </a>
+        {% endif %}
+      </div>
+      {% endif %}
+
+      {% if permissoes_interno.site %}
+      <div class="ls-nav-section">
+        <span class="ls-nav-caption">Site e aplicativo</span>
+        <a data-titulo="Brinquedos do site" class="ls-nav-item {% if request.resolver_match.url_name == 'brinquedos_admin' %}active{% endif %}" href="{% url 'brinquedos_admin' %}">
+          <span class="ls-nav-icon"><i class="bi bi-controller"></i></span><span>Brinquedos</span>
+        </a>
+        <a data-titulo="Peças de reposição" class="ls-nav-item {% if request.resolver_match.url_name == 'pecas_admin' %}active{% endif %}" href="{% url 'pecas_admin' %}">
+          <span class="ls-nav-icon"><i class="bi bi-wrench-adjustable"></i></span><span>Peças de reposição</span>
+        </a>
+        <a data-titulo="Combos" class="ls-nav-item {% if request.resolver_match.url_name == 'combos_admin' %}active{% endif %}" href="{% url 'combos_admin' %}">
+          <span class="ls-nav-icon"><i class="bi bi-box2-heart-fill"></i></span><span>Combos</span>
+        </a>
+        <a data-titulo="Promoções" class="ls-nav-item {% if request.resolver_match.url_name == 'promocoes_admin' %}active{% endif %}" href="{% url 'promocoes_admin' %}">
+          <span class="ls-nav-icon"><i class="bi bi-tags-fill"></i></span><span>Promoções</span>
+        </a>
+        <a data-titulo="Banners" class="ls-nav-item {% if request.resolver_match.url_name == 'banner_adm' %}active{% endif %}" href="{% url 'banner_adm' %}">
+          <span class="ls-nav-icon"><i class="bi bi-images"></i></span><span>Banners</span>
+        </a>
+        <a data-titulo="Eventos" class="ls-nav-item {% if request.resolver_match.url_name == 'eventos_admin' %}active{% endif %}" href="{% url 'eventos_admin' %}">
+          <span class="ls-nav-icon"><i class="bi bi-calendar2-event-fill"></i></span><span>Eventos</span>
+        </a>
+        <a data-titulo="Projetos" class="ls-nav-item {% if request.resolver_match.url_name == 'projetos_admin' %}active{% endif %}" href="{% url 'projetos_admin' %}">
+          <span class="ls-nav-icon"><i class="bi bi-folder-fill"></i></span><span>Projetos</span>
+        </a>
+        <a data-titulo="Cupons" class="ls-nav-item {% if request.resolver_match.url_name == 'cupons_admin' %}active{% endif %}" href="{% url 'cupons_admin' %}">
+          <span class="ls-nav-icon"><i class="bi bi-ticket-perforated-fill"></i></span><span>Cupons</span>
+        </a>
+        <a data-titulo="Curtidas e desejos" class="ls-nav-item {% if request.resolver_match.url_name == 'engajamento_admin' %}active{% endif %}" href="{% url 'engajamento_admin' %}">
+          <span class="ls-nav-icon"><i class="bi bi-heart-fill"></i></span><span>Curtidas e desejos</span>
+        </a>
+        <a data-titulo="Indicadores do site" class="ls-nav-item {% if request.resolver_match.url_name == 'dashboards' %}active{% endif %}" href="{% url 'dashboards' %}">
+          <span class="ls-nav-icon"><i class="bi bi-bar-chart-fill"></i></span><span>Indicadores do site</span>
+        </a>
+        <a data-titulo="Abrir a loja" class="ls-nav-item" href="{% url 'home' %}" target="_blank" rel="noopener">
+          <span class="ls-nav-icon"><i class="bi bi-box-arrow-up-right"></i></span><span>Abrir a loja</span>
+        </a>
+      </div>
+      {% endif %}
+
+      {% if permissoes_interno.usuarios %}
+      <div class="ls-nav-section">
+        <span class="ls-nav-caption">Administração</span>
+        <a data-titulo="Equipe e acessos" class="ls-nav-item {% if request.resolver_match.url_name == 'usuarios_equipe' %}active{% endif %}" href="{% url 'usuarios_equipe' %}">
+          <span class="ls-nav-icon"><i class="bi bi-shield-lock-fill"></i></span><span>Equipe e acessos</span>
+        </a>
+        <a data-titulo="Avaliação dos setores" class="ls-nav-item {% if request.resolver_match.url_name == 'avaliacao_setores' %}active{% endif %}" href="{% url 'avaliacao_setores' %}">
+          <span class="ls-nav-icon"><i class="bi bi-clipboard-data-fill"></i></span><span>Avaliação dos setores</span>
+        </a>
+        <a data-titulo="Contas de clientes" class="ls-nav-item {% if request.resolver_match.url_name == 'clients' %}active{% endif %}" href="{% url 'clients' %}">
+          <span class="ls-nav-icon"><i class="bi bi-person-vcard-fill"></i></span><span>Contas de clientes</span>
+        </a>
+      </div>
+      {% endif %}
+    </nav>
+
+    <div class="ls-sidebar-footer">
+      <a class="ls-user-card" href="{% url 'minha_conta_inner' %}" title="Gerenciar minha conta">
+        <span class="ls-user-avatar">{{ user.first_name|default:user.username|first|upper }}</span>
+        <span class="ls-user-info">
+          <strong>{{ user.get_full_name|default:user.username }}</strong>
+          <small><i class="bi bi-gear me-1"></i>{% if user.is_superuser %}Superadministrador{% else %}Acesso por função{% endif %}</small>
+        </span>
+      </a>
+
+      <form method="post" action="{% url 'logout_inner' %}">
+        {% csrf_token %}
+        {% comment %}
+          O rótulo vai num span porque no trilho do tablet ele é
+          escondido por CSS, e nó de texto solto não se esconde: o
+          "Encerrar sessão" vazava para fora dos 84px da lateral.
+        {% endcomment %}
+        <button class="ls-logout" type="submit" title="Encerrar sessão">
+          <i class="bi bi-box-arrow-right"></i>
+          <span>Encerrar sessão</span>
+        </button>
+      </form>
+    </div>
+  </aside>
+
+  <div class="ls-mobile-overlay" id="sidebarOverlay"></div>
+
+  {% comment %}
+    ABAS DE BAIXO — só aparecem em tela estreita (celular e tablet em pé).
+    É o gesto que separa um aplicativo de um painel web: o polegar alcança
+    a base da tela, e o alto não. Nem o site nem o /adm têm isto, então é
+    também o sinal mais rápido de "estou no aplicativo da fábrica".
+
+    Quatro destinos e o menu. Quatro porque cinco alvos de 25% de largura
+    já ficam menores que o dedo.
+  {% endcomment %}
+  <nav class="ls-abas" aria-label="Atalhos">
+    <a class="ls-aba {% if request.resolver_match.url_name == 'home_inner' %}ativa{% endif %}"
+       href="{% url 'home_inner' %}">
+      <i class="bi bi-grid-fill"></i><span>Início</span>
     </a>
 
-<a href="{% url 'pedidos_inner' %}" class="fab fab-blue" title="Visualizar pedidos do site não finalizados">
-    <div class="fab-icon">📦</div>
-    <div class="fab-label">Pedidos Site</div>
-
-    {% if tem_pedidos_ativos %}
-        <span class="fab-badge">{{ count_pedidos }}</span>
+    {% if permissoes_interno.orcamentos %}
+      <a class="ls-aba {% if request.resolver_match.url_name == 'orcamentos_inner' %}ativa{% endif %}"
+         href="{% url 'orcamentos_inner' %}">
+        <i class="bi bi-file-earmark-text-fill"></i><span>Orçamentos</span>
+        <span class="ls-aba-selo" data-selo="count_orcamentos" {% if not count_orcamentos %}hidden{% endif %}>{{ count_orcamentos }}</span>
+      </a>
+      <a class="ls-aba {% if request.resolver_match.url_name == 'stock' or request.resolver_match.url_name == 'estoque_inner' %}ativa{% endif %}"
+         href="{% url 'stock' %}">
+        <i class="bi bi-box-seam-fill"></i><span>Estoque</span>
+      </a>
+    {% elif permissoes_interno.producao %}
+      <a class="ls-aba {% if request.resolver_match.url_name == 'minha_producao' %}ativa{% endif %}"
+         href="{% url 'minha_producao' %}">
+        <i class="bi bi-list-check"></i><span>Produção</span>
+        <span class="ls-aba-selo" data-selo="count_producao" {% if not count_producao %}hidden{% endif %}>{{ count_producao }}</span>
+      </a>
+      <a class="ls-aba {% if request.resolver_match.url_name == 'stock' %}ativa{% endif %}"
+         href="{% url 'stock' %}">
+        <i class="bi bi-box-seam-fill"></i><span>Estoque</span>
+      </a>
+    {% elif permissoes_interno.site %}
+      <a class="ls-aba {% if request.resolver_match.url_name == 'brinquedos_admin' %}ativa{% endif %}" href="{% url 'brinquedos_admin' %}">
+        <i class="bi bi-controller"></i><span>Catálogo</span>
+      </a>
+      <a class="ls-aba {% if request.resolver_match.url_name == 'banner_adm' %}ativa{% endif %}" href="{% url 'banner_adm' %}">
+        <i class="bi bi-images"></i><span>Banners</span>
+      </a>
     {% endif %}
-</a>
 
+    <button type="button" class="ls-aba" id="abaMenu">
+      <i class="bi bi-list"></i><span>Menu</span>
+      <span class="ls-aba-selo urgente" data-selo="urgentes" {% if not avisos_urgentes %}hidden{% endif %}>{{ avisos_urgentes }}</span>
+    </button>
+  </nav>
 
-<a href="{% url 'manutencao_inner' %}" class="fab fab-orange" title="Ver manutenções pendentes">
-    <div class="fab-icon">🔧</div>
-    <div class="fab-label">Manutenção</div>
+  <section class="ls-main">
+    <header class="ls-topbar">
+      <button class="ls-mobile-menu" id="menuToggle" type="button" aria-label="Abrir menu">
+        <i class="bi bi-list"></i>
+      </button>
 
-    {% if tem_manutencao_pendente %}
-        <span class="fab-badge">{{ count_manutencao }}</span>
-    {% endif %}
-</a>
+      <div class="ls-topbar-copy">
+        <strong>{% block top_title %}Painel interno{% endblock %}</strong>
+        <span>Operação Lazer &amp; Sport</span>
+      </div>
 
+      <div class="ls-topbar-side">
+        {% comment %}
+Dito em voz alta: este NÃO é o /adm do site. Quem trabalha nos
+           dois no mesmo dia precisa saber onde está antes de clicar.
+{% endcomment %}
+        <span class="ls-ambiente"><i class="bi bi-cone-striped"></i> Gestão interna</span>
+
+        <!-- ===================== central de avisos ===================== -->
+        <div class="ls-avisos">
+          <button type="button" class="ls-avisos-botao" id="avisosBotao"
+                  aria-haspopup="true" aria-expanded="false"
+                  aria-label="Avisos do painel">
+            <i class="bi bi-bell-fill"></i>
+            <span class="ls-avisos-selo {% if avisos_urgentes %}urgente{% endif %}"
+                  data-selo="total" {% if not total_avisos %}hidden{% endif %}>{{ total_avisos }}</span>
+          </button>
+
+          <div class="ls-avisos-painel" id="avisosPainel" hidden>
+            <div class="ls-avisos-topo">
+              <span>O que precisa de você</span>
+              <span data-selo="urgentes-texto" {% if not avisos_urgentes %}hidden{% endif %}>{{ avisos_urgentes }} urgente{{ avisos_urgentes|pluralize }}</span>
+            </div>
+
+            <div id="avisosLista">
+            {% for aviso in avisos %}
+              <a class="ls-aviso {{ aviso.nivel }}" href="{{ aviso.url }}">
+                <span class="ls-aviso-icone"><i class="bi {{ aviso.icone }}"></i></span>
+                <span class="ls-aviso-corpo">
+                  <span class="ls-aviso-titulo">
+                    {{ aviso.titulo }}
+                    <span class="ls-aviso-quantidade">{{ aviso.quantidade }}</span>
+                  </span>
+                  <span class="ls-aviso-detalhe">{{ aviso.detalhe }}</span>
+                </span>
+              </a>
+            {% empty %}
+              <div class="ls-avisos-vazio">
+                <i class="bi bi-check2-circle"></i>
+                Nada pendente agora.
+              </div>
+            {% endfor %}
+            </div>
+
+            {% comment %}
+              AVISO NO CELULAR.
+
+              Quem está na estrada montando um brinquedo não tem o painel
+              aberto, e para essa pessoa o aviso só existe se o telefone
+              tocar. O bloco fica escondido até o JavaScript descobrir se
+              este aparelho pode: sem chave configurada na hospedagem, e
+              no iPhone que ainda não adicionou o painel à tela de início,
+              ele não aparece -- botão que não faz nada é pior que botão
+              nenhum.
+            {% endcomment %}
+            <div class="ls-avisos-aparelho" id="avisosAparelho" hidden>
+              <button type="button" class="ls-avisos-aparelho-botao" id="avisosAparelhoBotao">
+                <i class="bi bi-phone-vibrate"></i>
+                <span id="avisosAparelhoRotulo">Avisar no meu celular</span>
+              </button>
+              <p class="ls-avisos-aparelho-nota" id="avisosAparelhoNota" hidden></p>
+            </div>
+          </div>
+        </div>
+
+        <a class="ls-user-pill text-decoration-none" href="{% url 'minha_conta_inner' %}">
+          <i class="bi bi-person-circle"></i>
+          <span>{{ user.get_full_name|default:user.username }}</span>
+        </a>
+      </div>
+    </header>
+
+    <main class="ls-content">
+      {% if messages %}
+        <div class="mb-3" aria-live="polite">
+          {% for message in messages %}
+            <div class="alert {% if message.tags == 'error' %}alert-danger{% elif message.tags == 'success' %}alert-success{% else %}alert-info{% endif %} mb-2">
+              {{ message }}
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+      {% block content %}{% endblock %}
+      {% block grafico %}{% endblock %}
+    </main>
+  </section>
 </div>
 
+<script src="{% static 'interno/vendor/bootstrap.bundle.min.js' %}"></script>
+<script src="{% static 'interno/painel.js' %}?v=9"></script>
+{% comment %}
+  Campo de busca do painel (catálogo, clientes, colaboradores). Carrega
+  em toda tela porque o mesmo componente é usado em orçamento, produção e
+  cadastro -- e porque um arquivo em cache vale mais que três pedidos.
+{% endcomment %}
+<script src="{% static 'interno/ls-busca.js' %}?v=3"></script>
+<script>
+(function () {
+  const sidebar = document.getElementById("sidebarMenu");
+  const overlay = document.getElementById("sidebarOverlay");
+  const toggle = document.getElementById("menuToggle");
+
+  function closeSidebar() {
+    sidebar?.classList.remove("open");
+    overlay?.classList.remove("open");
+  }
+
+  toggle?.addEventListener("click", function () {
+    sidebar?.classList.toggle("open");
+    overlay?.classList.toggle("open");
+  });
+
+  overlay?.addEventListener("click", closeSidebar);
+  document.addEventListener("keydown", function (event) {
+    if (event.key === "Escape") closeSidebar();
+  });
+
+  /* ---------------------------------------------------------------
+     Central de avisos
+     --------------------------------------------------------------- */
+  const avisosBotao = document.getElementById("avisosBotao");
+  const avisosPainel = document.getElementById("avisosPainel");
+
+  function fecharAvisos() {
+    if (!avisosPainel) return;
+    avisosPainel.hidden = true;
+    avisosBotao?.setAttribute("aria-expanded", "false");
+  }
+
+  avisosBotao?.addEventListener("click", function (evento) {
+    evento.stopPropagation();
+    const abrindo = avisosPainel.hidden;
+    avisosPainel.hidden = !abrindo;
+    avisosBotao.setAttribute("aria-expanded", String(abrindo));
+  });
+
+  /* Toque fora fecha. No tablet não há Esc à mão, e um painel que fica
+     aberto por cima do conteúdo atrapalha mais do que ajuda. */
+  document.addEventListener("click", function (evento) {
+    if (!avisosPainel || avisosPainel.hidden) return;
+    if (evento.target.closest(".ls-avisos")) return;
+    fecharAvisos();
+  });
+
+  document.addEventListener("keydown", function (event) {
+    if (event.key === "Escape") fecharAvisos();
+  });
+
+  /* ---------------------------------------------------------------
+     Trilho: encolhido por padrão, e a escolha fica no aparelho.
+     --------------------------------------------------------------- */
+  const CHAVE = "ls-menu-aberto";
+  const railToggle = document.getElementById("railToggle");
+
+  function aplicarTrilho(aberto) {
+    sidebar?.classList.toggle("expandida", aberto);
+    railToggle?.setAttribute("aria-label", aberto ? "Encolher menu" : "Expandir menu");
+    railToggle?.setAttribute("title", aberto ? "Encolher menu" : "Expandir menu");
+  }
+
+  /* try/catch porque em navegador com armazenamento bloqueado o acesso
+     ao localStorage LEVANTA, e derrubaria o resto deste script junto --
+     inclusive o menu do celular. */
+  let aberto = false;
+  try { aberto = localStorage.getItem(CHAVE) === "1"; } catch (e) {}
+  aplicarTrilho(aberto);
+
+  railToggle?.addEventListener("click", function () {
+    aberto = !sidebar.classList.contains("expandida");
+    aplicarTrilho(aberto);
+    try { localStorage.setItem(CHAVE, aberto ? "1" : "0"); } catch (e) {}
+  });
+
+  /* ---------------------------------------------------------------
+     Instalação no tablet
+
+     O registro fica dentro de try/catch e preso a HTTPS/localhost: em
+     acesso por http comum o navegador recusa o service worker, e uma
+     exceção aqui derrubaria o menu junto.
+     --------------------------------------------------------------- */
+  if ("serviceWorker" in navigator && window.isSecureContext) {
+    window.addEventListener("load", function () {
+      navigator.serviceWorker.register("/sw.js").catch(function () {
+        /* Sem service worker o painel continua inteiro: ele só deixa de
+           ser oferecido como aplicativo para instalar. */
+      });
+    });
+  }
+
+  /* A aba "Menu" abre a mesma gaveta do botão do topo. */
+  document.getElementById("abaMenu")?.addEventListener("click", function (evento) {
+    evento.stopPropagation();
+    sidebar?.classList.add("open");
+    overlay?.classList.add("open");
+  });
+})();
+</script>
+{% block scripts %}{% endblock %}
 </body>
 </html>
-

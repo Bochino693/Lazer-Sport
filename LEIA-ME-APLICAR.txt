@@ -1,0 +1,217 @@
+PACOTE INCREMENTAL V4 — DOCUMENTOS, IDENTIDADE, ENVIOS E O.S. AZUL
+Lazer & Sport
+======================================================================
+
+COMO APLICAR
+
+1. Faça uma cópia de segurança do projeto.
+2. Abra a pasta do projeto onde está o arquivo manage.py.
+3. Extraia este ZIP diretamente nessa pasta.
+4. Confirme "Substituir todos os arquivos".
+5. Execute:
+
+   py manage.py check
+   py manage.py collectstatic --noinput
+
+   Em Linux/macOS, troque "py" por "python".
+
+6. Reinicie o servidor/aplicação.
+
+Este pacote NÃO cria migração e NÃO adiciona dependência Python ou JavaScript.
+
+
+O QUE FOI CORRIGIDO
+
+IDENTIDADE VISUAL E APROVEITAMENTO DE ESPAÇO — V4
+- A página pública da O.S. foi redesenhada como documento técnico azul e
+  branco, com vermelho somente nos destaques da marca.
+- Logo, número, datas, responsável, situação, prioridade e pagamento foram
+  reposicionados em um cabeçalho compacto inspirado na referência fornecida.
+- Cliente, CPF/CNPJ, contatos e endereço agora usam ícones alinhados e linhas
+  curtas, sem cartões altos para informações pequenas.
+- Equipamento, técnico, agendamento e garantia ficam juntos em um resumo de
+  quatro blocos; em celular passam para duas ou uma coluna.
+- Atendimento, fotos, itens, total, pagamento e confirmação usam a mesma
+  hierarquia azul. Impressão A4 e tablet em retrato receberam regras próprias.
+- A tela interna e os modais da O.S. ganharam painéis e bordas azuladas para
+  distinguir a operação sem abandonar o tema grafite do sistema.
+
+DADOS DA EMPRESA E PAGAMENTO — V4
+- Nome exibido: Fábrica de brinquedos Lazer Sport.
+- CNPJ exibido: 54.486.908/0001-86.
+- Nome e CNPJ aparecem no orçamento público, O.S. pública, rodapés, e-mails e
+  versões em texto das mensagens.
+- O orçamento recebeu ícones junto aos dados de emissão e do cliente.
+- Quando o documento entra na área de pagamento, os dados do Banco C6/Pix e
+  Santander fornecidos aparecem agrupados com o QR Code e o saldo.
+- Os valores padrão podem ser substituídos na hospedagem por EMPRESA_NOME,
+  EMPRESA_RAZAO_SOCIAL, EMPRESA_CNPJ, EMPRESA_PIX_CELULAR,
+  EMPRESA_PIX_CNPJ, EMPRESA_SANTANDER_AGENCIA e EMPRESA_SANTANDER_CONTA.
+
+ENVIO DE ORÇAMENTOS
+- Corrigida a falha que impedia o e-mail: o backend referenciava o template
+  emails/orcamento_enviado.html, mas esse arquivo não existia no repositório.
+- O endereço do POST agora é explícito; troca suave de telas não faz o envio
+  cair por engano na URL atualmente visível.
+- Abrir o modal apenas prepara a proposta. O orçamento só é marcado como
+  enviado quando o e-mail sai, o WhatsApp é aberto ou o link é copiado.
+- Falhas de sessão, permissão, resposta HTML e SMTP deixam de ficar silenciosas.
+- A mensagem do WhatsApp ganhou resumo, total com milhar, validade, chamada
+  para aprovação/ajustes e texto mais natural.
+- O e-mail ganhou documento visual responsivo, resumo dos itens, total e botão
+  direto para a página de aprovação.
+- O modal mostra uma prévia do documento e permite conferir a mensagem antes
+  de enviá-la.
+
+ENVIO DE ORDENS DE SERVIÇO
+- O dropdown de canal foi removido. Como nos orçamentos, WhatsApp e e-mail
+  ficam visíveis, cada um com o próprio botão Enviar.
+- Link público, prévia interna, mensagem pronta, histórico e retorno de erro
+  aparecem na mesma janela.
+- O e-mail da O.S. também ganhou layout visual e botão para abrir o documento.
+- A mensagem do WhatsApp inclui equipamento, situação, total, agendamento e
+  acesso à página com fotos e confirmação do cliente.
+
+DATAS, HORÁRIOS E DROPDOWNS
+- Datas preenchidas pelo JavaScript usam os componentes locais do aparelho e
+  não passam mais por UTC, evitando voltar um dia ou deslocar algumas horas.
+- A agenda da O.S. mostra o fuso do aparelho e atalhos Agora, +1 hora e
+  Amanhã 09:00; garantia e validade ganharam atalhos compactos.
+- O servidor valida datetime-local e data de calendário com mensagens claras.
+- Selects fixos não mudam mais o fundo no hover; em telas por toque, o hover
+  preso foi neutralizado. Foco de teclado e seta do tema foram mantidos.
+
+PRÉVIA DO CLIENTE
+- A proposta pública mostra data e hora da última atualização.
+- Valores do cartão de compartilhamento usam R$ 4.666,33.
+- O cliente pode imprimir ou salvar a proposta em PDF por um botão próprio.
+- A apresentação de e-mail, WhatsApp, prévia interna e página pública agora
+  usa o mesmo vocabulário visual e comercial.
+
+ACABAMENTO, CENTRALIZAÇÃO E TABLET EM RETRATO
+- Orçamentos, Clientes e O.S. usam o mesmo eixo central e as mesmas margens.
+- Cards compactos aproveitam três colunas no tablet em retrato.
+- Modais reorganizam campos curtos e longos numa grade de 12 colunas.
+- CEP, número, UF, tipo, status, prioridade e valores não desperdiçam uma
+  linha inteira; textos e endereços recebem mais espaço.
+- Inputs continuam com área de toque confortável, mas perderam altura e
+  espaçamento excessivos dentro dos modais.
+- Selects fixos ganharam seta, borda, hover e foco no tema grafite/âmbar.
+  As buscas de objetos continuam usando LSBusca e não foram descaracterizadas.
+
+CLIENTES, ENDEREÇOS E ROTAS
+- A lista mostra rua, número, bairro, cidade/UF e CEP.
+- Google Maps recebe a fábrica como origem e o cliente como destino.
+- Waze abre o destino no aplicativo ou na web, conforme o aparelho.
+- Quando fábrica e cliente têm latitude/longitude, a lista mostra a distância
+  aproximada em linha reta. O roteador calcula a distância real pelas vias.
+- A O.S. mostra os mesmos atalhos na lista e no resumo do cliente escolhido.
+- Se o endereço da O.S. for alterado manualmente, a rota usa o texto salvo e
+  não reaproveita coordenadas possivelmente incorretas do cadastro.
+
+CADASTROS INCOMPLETOS E AVISOS DINÂMICOS
+- Cliente ativo sem contato, CPF/CNPJ ou endereço entra no card de pendências.
+- A central de avisos e o selo do menu Clientes mostram essa pendência.
+- O aviso abre Clientes já filtrado nos cadastros que precisam de correção.
+- Uma notificação nova recebida com o painel aberto emite um toque curto,
+  gerado no próprio navegador e sem baixar arquivo de áudio.
+- O primeiro estado carregado não toca; o som acontece só quando uma contagem
+  cresce depois disso e somente após a primeira interação exigida pelo navegador.
+
+PREENCHIMENTO E DINHEIRO
+- Escolher explicitamente um cliente no orçamento substitui nome, WhatsApp e
+  e-mail pelos dados atuais do cadastro; apenas reabrir uma versão preservada
+  continua respeitando o snapshot original.
+- Escolher cliente na O.S. também atualiza contato e endereço.
+- Totais e resumos dinâmicos usam o padrão completo R$ 4.666,33.
+
+CARDS DE ORÇAMENTOS E ORDENS DE SERVIÇO
+- Os filtros usam o mesmo componente visual dos cards corretos do painel.
+- Fonte, ícone, brilho, cores semânticas e efeito de elevação foram preservados.
+- O card ativo fica claramente marcado.
+- O layout volta a se adaptar a computador, tablet e celular.
+- A faixa financeira deixou de usar o tema branco que quebrava a identidade
+  grafite/âmbar do painel.
+
+FILTROS, CARREGAMENTO E TROCA DE TELAS
+- Links internos e formulários GET passam por navegação suave.
+- Filtro, busca e paginação não exigem recarregamento nativo da página.
+- A barra superior aparece imediatamente durante a espera e usa as cores do
+  painel interno.
+- A tela anterior continua visível enquanto a próxima resposta chega.
+- HTML recente fica em cache curto no sessionStorage.
+- O cache é limitado a sete telas, expira rapidamente e é apagado ao enviar
+  formulários que alteram dados.
+- O cache não sobrevive ao fechamento da aba, evitando deixar a carteira de
+  clientes disponível para o próximo usuário de um tablet compartilhado.
+- Passar o ponteiro ou focar um link antecipa somente a tela que a pessoa
+  demonstra intenção de abrir; nenhuma varredura baixa o menu inteiro.
+
+ORDEM DE SERVIÇO
+- "Cliente cadastrado" virou busca digitável.
+- A busca aceita nome, telefone, CPF/CNPJ e buffet parceiro.
+- Todos os clientes já vêm no HTML da tela: digitar e escolher não cria uma
+  nova requisição.
+- Ao escolher o cliente, a O.S. preenche nome, contato, WhatsApp, e-mail e
+  endereço completo.
+- O telefone passa pelo mesmo formatador/máscara usado no restante do painel.
+- Ao editar uma O.S., o cliente vinculado e seu resumo voltam selecionados.
+- Escolher um chamado de manutenção continua preenchendo equipamento, cliente,
+  telefone, e-mail, defeito e endereço.
+- A página HTML pública mostra automaticamente as fotos que já pertencem ao
+  chamado de manutenção vinculado.
+- As fotos abrem em tamanho completo, carregam sob demanda e aparecem também
+  na prévia interna.
+- Continuam disponíveis confirmação de ciência/recebimento pelo cliente,
+  impressão/salvamento em PDF e pagamento por Pix quando configurado.
+
+
+OBSERVAÇÃO SOBRE AS FOTOS
+
+As fotos não são duplicadas. Para aparecerem na O.S.:
+
+1. o chamado de manutenção precisa ter imagens;
+2. a O.S. precisa estar vinculada a esse chamado.
+
+A página do cliente lê as imagens diretamente do chamado original.
+
+
+ARQUIVOS INCLUÍDOS
+
+core/
+  email_utils.py
+  templates/orcamento_publico.html
+  templates/ordem_servico_publica.html
+  views_orcamento.py
+  views_ordem_servico.py
+
+sistema_interno/
+  avisos.py
+  completude_clientes.py              (novo)
+  context_processors.py
+  rotas.py                             (novo)
+  static/interno/painel.js
+  static/interno/interno_modern.css
+  static/interno/ls-soft-navigation.js   (novo)
+  templates/base_inner.html
+  templates/clientes_inner.html
+  templates/emails/orcamento_enviado.html       (novo)
+  templates/emails/ordem_servico_enviada.html   (novo)
+  templates/orcamentos_inner.html
+  templates/ordens_servico_inner.html
+  views_avisos.py
+  views_clientes.py
+  views_gestao.py
+  views_ordens_servico.py
+
+
+VALIDAÇÕES EXECUTADAS ANTES DE GERAR O ZIP
+
+- Sintaxe do novo JavaScript com node --check.
+- Sintaxe dos arquivos Python por compilação em memória (sem gerar .pyc).
+- Sintaxe dos scripts inline das três telas alteradas.
+- Balanceamento dos blocos Django if/for/block/comment/with.
+- Conferência dos vínculos entre template, contexto e arquivo estático.
+
+A suíte completa do Django deve ser executada dentro do projeto, pois este ZIP
+é incremental e não contém banco, settings nem dependências do repositório.
