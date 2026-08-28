@@ -8,7 +8,7 @@
     <tr><td style="padding:30px 34px 18px;">
       <div style="color:#e21a2c;font-size:12px;font-weight:800;letter-spacing:1.3px;text-transform:uppercase;">Documento de atendimento</div>
       <h1 style="margin:7px 0 5px;color:#071d68;font-size:28px;">{{ ordem.numero_documento }}</h1>
-      <p style="margin:0;color:#64748b;font-size:14px;">Lazer &amp; Sport Brinquedos</p>
+      <p style="margin:0;color:#64748b;font-size:14px;">{{ empresa_nome }} · CNPJ {{ empresa_cnpj }}</p>
     </td></tr>
     <tr><td style="padding:0 34px 28px;">
       <p style="font-size:16px;line-height:1.6;">Olá, <strong>{{ ordem.destinatario }}</strong>.</p>
@@ -24,7 +24,7 @@
       <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center"><tr><td bgcolor="#0f9d58" style="border-radius:14px;"><a href="{{ link }}" target="_blank" style="display:inline-block;padding:16px 28px;color:#fff;text-decoration:none;font-size:16px;font-weight:800;">Abrir Ordem de Serviço</a></td></tr></table>
       <p style="margin:20px 0 0;text-align:center;color:#7c8ca5;font-size:12px;line-height:1.55;">Se o botão não abrir, copie:<br><a href="{{ link }}" style="color:#071d68;word-break:break-all;">{{ link }}</a></p>
     </td></tr>
-    <tr><td style="padding:20px;background:#071d68;color:#dbe4ff;text-align:center;font-size:12px;">Responda este e-mail se precisar falar com nossa equipe.</td></tr>
+    <tr><td style="padding:20px;background:#071d68;color:#dbe4ff;text-align:center;font-size:12px;">Responda este e-mail se precisar falar com nossa equipe.<br>{{ empresa_nome }} · CNPJ {{ empresa_cnpj }}</td></tr>
   </table>
 </td></tr></table>
 </body></html>

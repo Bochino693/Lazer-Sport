@@ -1,4 +1,4 @@
-PACOTE INCREMENTAL V3 — ENVIOS, PRÉVIAS, DATAS, ORÇAMENTOS E O.S.
+PACOTE INCREMENTAL V4 — DOCUMENTOS, IDENTIDADE, ENVIOS E O.S. AZUL
 Lazer & Sport
 ======================================================================
 
@@ -21,6 +21,32 @@ Este pacote NÃO cria migração e NÃO adiciona dependência Python ou JavaScri
 
 
 O QUE FOI CORRIGIDO
+
+IDENTIDADE VISUAL E APROVEITAMENTO DE ESPAÇO — V4
+- A página pública da O.S. foi redesenhada como documento técnico azul e
+  branco, com vermelho somente nos destaques da marca.
+- Logo, número, datas, responsável, situação, prioridade e pagamento foram
+  reposicionados em um cabeçalho compacto inspirado na referência fornecida.
+- Cliente, CPF/CNPJ, contatos e endereço agora usam ícones alinhados e linhas
+  curtas, sem cartões altos para informações pequenas.
+- Equipamento, técnico, agendamento e garantia ficam juntos em um resumo de
+  quatro blocos; em celular passam para duas ou uma coluna.
+- Atendimento, fotos, itens, total, pagamento e confirmação usam a mesma
+  hierarquia azul. Impressão A4 e tablet em retrato receberam regras próprias.
+- A tela interna e os modais da O.S. ganharam painéis e bordas azuladas para
+  distinguir a operação sem abandonar o tema grafite do sistema.
+
+DADOS DA EMPRESA E PAGAMENTO — V4
+- Nome exibido: Fábrica de brinquedos Lazer Sport.
+- CNPJ exibido: 54.486.908/0001-86.
+- Nome e CNPJ aparecem no orçamento público, O.S. pública, rodapés, e-mails e
+  versões em texto das mensagens.
+- O orçamento recebeu ícones junto aos dados de emissão e do cliente.
+- Quando o documento entra na área de pagamento, os dados do Banco C6/Pix e
+  Santander fornecidos aparecem agrupados com o QR Code e o saldo.
+- Os valores padrão podem ser substituídos na hospedagem por EMPRESA_NOME,
+  EMPRESA_RAZAO_SOCIAL, EMPRESA_CNPJ, EMPRESA_PIX_CELULAR,
+  EMPRESA_PIX_CNPJ, EMPRESA_SANTANDER_AGENCIA e EMPRESA_SANTANDER_CONTA.
 
 ENVIO DE ORÇAMENTOS
 - Corrigida a falha que impedia o e-mail: o backend referenciava o template

@@ -18,6 +18,45 @@ from email.utils import formataddr, parseaddr
 from django.conf import settings
 
 
+NOME_EMPRESA_PADRAO = "Fábrica de brinquedos Lazer Sport"
+CNPJ_EMPRESA_PADRAO = "54.486.908/0001-86"
+
+
+def nome_empresa() -> str:
+    """Nome jurídico/comercial exibido nos documentos do cliente."""
+    return (
+        getattr(settings, "EMPRESA_RAZAO_SOCIAL", "")
+        or getattr(settings, "EMPRESA_NOME", "")
+        or NOME_EMPRESA_PADRAO
+    ).strip()
+
+
+def cnpj_empresa() -> str:
+    """CNPJ configurável, com o cadastro informado como padrão seguro."""
+    return (
+        getattr(settings, "EMPRESA_CNPJ", "")
+        or CNPJ_EMPRESA_PADRAO
+    ).strip()
+
+
+def dados_bancarios_empresa() -> dict[str, str]:
+    """Dados exibidos apenas nas áreas de pagamento dos documentos."""
+    return {
+        "pix_celular": (
+            getattr(settings, "EMPRESA_PIX_CELULAR", "") or "11 96763-7589"
+        ).strip(),
+        "pix_cnpj": (
+            getattr(settings, "EMPRESA_PIX_CNPJ", "") or cnpj_empresa()
+        ).strip(),
+        "santander_agencia": (
+            getattr(settings, "EMPRESA_SANTANDER_AGENCIA", "") or "0563"
+        ).strip(),
+        "santander_conta": (
+            getattr(settings, "EMPRESA_SANTANDER_CONTA", "") or "13.006139-1"
+        ).strip(),
+    }
+
+
 def remetente() -> str:
     """Endereço que assina o envio, no formato 'Nome <e-mail>'."""
     configurado = (getattr(settings, "DEFAULT_FROM_EMAIL", "") or "").strip()

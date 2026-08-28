@@ -24,7 +24,14 @@ from django.utils import timezone
 from django.utils.dateparse import parse_date, parse_datetime
 from django.views.generic import View
 
-from core.email_utils import diagnostico_smtp, remetente, responder_para, smtp_configurado
+from core.email_utils import (
+    cnpj_empresa,
+    diagnostico_smtp,
+    nome_empresa,
+    remetente,
+    responder_para,
+    smtp_configurado,
+)
 from core.models import Manutencao
 
 from . import clientes as svc_clientes
@@ -484,7 +491,7 @@ class OrdensServicoInnerView(
                 f"Olá, {ordem.destinatario}.\n\n"
                 f"A {ordem.numero_documento} está disponível em {link}.\n\n"
                 "Você pode consultar, imprimir e confirmar o recebimento pelo link.\n\n"
-                "Lazer & Sport Brinquedos"
+                f"{nome_empresa()}\nCNPJ {cnpj_empresa()}"
             )
             html = render(
                 request,
@@ -494,6 +501,8 @@ class OrdensServicoInnerView(
                     "itens": ordem.itens.all(),
                     "link": link,
                     "total_formatado": _moeda_br(ordem.total),
+                    "empresa_nome": nome_empresa(),
+                    "empresa_cnpj": cnpj_empresa(),
                 },
             ).content.decode()
             email_msg = EmailMultiAlternatives(
@@ -590,6 +599,7 @@ class OrdensServicoInnerView(
             link,
             "",
             "Se precisar, responda esta mensagem. 😊",
+            f"{nome_empresa()} · CNPJ {cnpj_empresa()}",
         ])
         return "\n".join(linhas)
 

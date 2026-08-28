@@ -31,6 +31,7 @@ from django.views.decorators.http import require_http_methods
 from django.views.generic import View
 
 from core.models import EnderecoEmpresa
+from core.email_utils import cnpj_empresa, dados_bancarios_empresa, nome_empresa
 from sistema_interno.models import Orcamento
 from sistema_interno.pix import dados_pix
 from sistema_interno.utils import endereco_do_site
@@ -125,6 +126,9 @@ def contexto_orcamento(orcamento, *, previsualizacao=False, request=None):
         "imagem_previa": imagem_previa,
         "endereco_publico": endereco_publico,
         "empresa": empresa,
+        "empresa_nome": nome_empresa(),
+        "empresa_cnpj": cnpj_empresa(),
+        "dados_bancarios": dados_bancarios_empresa(),
         # O CONTATO DA PROPOSTA É O DA EMPRESA, não o de quem montou.
         #
         # A ordem aqui é deliberada: a configuração da hospedagem manda,
@@ -260,4 +264,3 @@ class OrcamentoPublicoView(View):
 orcamento_publico = require_http_methods(["GET", "POST"])(
     OrcamentoPublicoView.as_view()
 )
-

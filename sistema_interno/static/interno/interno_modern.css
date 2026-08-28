@@ -2352,3 +2352,41 @@ a.ls-metric-card.active{border-color:var(--metric);box-shadow:0 0 0 2px rgba(242
   #modalEnviarOS .input-group>.form-control{grid-column:2;border-radius:0 11px 11px 0!important}
   #modalEnviarOS .input-group>.btn{grid-column:1/-1;margin-top:8px;border-radius:11px!important}
 }
+
+/* ======================================================================
+   IDENTIDADE DA O.S. V21 — operacional azul, sem perder o tema interno
+   ====================================================================== */
+.ls-os-body{
+  --os-blue:#4f91ff;--os-cyan:#48c8e8;--os-line:rgba(92,154,255,.28);
+  --os-panel:rgba(23,52,92,.46);
+}
+.ls-os-body .ls-page-hero{
+  border-color:var(--os-line)!important;
+  background:
+    radial-gradient(circle at 86% 20%,rgba(72,200,232,.13),transparent 34%),
+    linear-gradient(135deg,rgba(26,58,105,.72),rgba(18,28,45,.92))!important;
+}
+.ls-os-body .ls-page-kicker{color:#83d9f2!important}
+.ls-os-body .ls-page-hero h1{color:#f4f8ff!important;text-shadow:0 0 28px rgba(79,145,255,.17)}
+.ls-os-body .ls-page-hero-copy p{color:#afc7e8!important}
+.ls-os-body .ls-data-panel{border-color:var(--os-line)!important;box-shadow:0 18px 45px rgba(0,24,66,.2)!important}
+.ls-os-body .ls-data-header{background:linear-gradient(135deg,rgba(25,55,95,.46),rgba(18,24,35,.7))!important}
+.ls-os-body .ls-commercial-table thead th{color:#a9caff!important;border-bottom-color:rgba(92,154,255,.35)!important}
+.ls-os-body .ls-budget-money-strip>div{border-color:rgba(92,154,255,.22)!important;background:linear-gradient(145deg,rgba(28,60,103,.54),rgba(25,30,40,.82))!important}
+.ls-os-body .ls-budget-money-strip span{color:#9eb8da!important}
+.ls-os-body .ls-budget-money-strip strong{color:#eaf3ff!important}
+.ls-os-body .ls-metric-card{border-color:rgba(92,154,255,.2)}
+.ls-os-body .ls-metric-card.active{border-color:var(--os-blue)!important;box-shadow:0 0 0 2px rgba(79,145,255,.2),var(--shadow-soft)!important}
+.ls-os-body .ls-distance-chip{color:#9ddcff;background:rgba(72,170,255,.1);border-color:rgba(72,170,255,.3)}
+#modalOS .modal-content,#modalEnviarOS .modal-content{border-color:rgba(92,154,255,.34)!important}
+#modalOS .modal-header,#modalEnviarOS .modal-header{background:linear-gradient(135deg,rgba(30,67,116,.78),rgba(20,31,49,.96))!important;border-bottom-color:rgba(92,154,255,.24)!important}
+#modalOS .ls-modal-kicker,#modalEnviarOS .ls-modal-kicker{color:#7cd8f4!important}
+#modalOS .ls-budget-block-title{
+  border-color:rgba(92,154,255,.26)!important;
+  background:linear-gradient(135deg,rgba(35,82,143,.34),rgba(27,39,59,.6))!important;
+}
+#modalOS .ls-budget-block-title>i{color:#73b7ff!important;background:rgba(70,145,255,.13)!important}
+#modalOS .ls-budget-block-title strong{color:#edf5ff!important}
+#modalOS .ls-budget-block-title small{color:#9eb8da!important}
+#modalEnviarOS .ls-share-preview{border-color:rgba(92,154,255,.32);background:linear-gradient(135deg,rgba(35,82,143,.28),rgba(28,41,64,.72))}
+#modalEnviarOS .ls-share-preview-mark{color:#8cdcf3;background:rgba(53,133,218,.22)}
