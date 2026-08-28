@@ -33,7 +33,6 @@ from django.views.generic import View
 from core.models import EnderecoEmpresa
 from core.email_utils import cnpj_empresa, dados_bancarios_empresa, nome_empresa
 from sistema_interno.models import Orcamento
-from sistema_interno.pix import dados_pix
 from sistema_interno.utils import endereco_do_site
 
 
@@ -162,11 +161,6 @@ def contexto_orcamento(orcamento, *, previsualizacao=False, request=None):
         ),
         "hoje": timezone.localdate(),
     }
-    contexto.update(dados_pix(orcamento) if orcamento.status == Orcamento.Status.APROVADO else {
-        "pix_configurado": False,
-        "pix_copia_cola": "",
-        "pix_qr": "",
-    })
     return contexto
 
 

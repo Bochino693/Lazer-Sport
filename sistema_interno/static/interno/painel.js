@@ -1270,12 +1270,99 @@
     });
   }
 
+  /* Mantém só as duas ações mais úteis à vista e recolhe as demais em um
+     menu nativo. Os próprios nós (inclusive <form>, CSRF e listeners) são
+     movidos, não clonados, portanto nenhuma regra de negócio se perde. */
+  Painel.organizarAcoesTabelas = function (raiz) {
+    var escopo = raiz || document;
+
+    /* Telas mais antigas já identificam a célula como `ls-actions`, mas
+       ainda não possuem o agrupador novo. Normalizamos esse contrato aqui
+       para que o ganho alcance a área interna inteira de forma gradual. */
+    escopo.querySelectorAll(".ls-actions, .ls-commercial-actions").forEach(function (celula) {
+      var grupoExistente = Array.prototype.find.call(celula.children, function (filho) {
+        return filho.classList.contains("ls-row-actions");
+      });
+      if (grupoExistente) return;
+      if (celula.querySelectorAll("a, button, form").length < 2) return;
+
+      if (celula.children.length === 1 && celula.firstElementChild) {
+        celula.firstElementChild.classList.add("ls-row-actions");
+        return;
+      }
+      var agrupador = document.createElement("div");
+      agrupador.className = "ls-row-actions";
+      while (celula.firstChild) agrupador.appendChild(celula.firstChild);
+      celula.appendChild(agrupador);
+    });
+
+    escopo.querySelectorAll(".ls-row-actions").forEach(function (grupo) {
+      if (grupo.dataset.lsActionsReady === "1") return;
+
+      var filhos = Array.prototype.filter.call(grupo.children, function (filho) {
+        return !filho.classList.contains("ls-action-overflow");
+      });
+      if (filhos.length <= 3) {
+        grupo.dataset.lsActionsReady = "1";
+        return;
+      }
+
+      var principais = [];
+      function priorizar(seletor) {
+        var encontrado = filhos.find(function (filho) {
+          return filho.matches(seletor) || filho.querySelector(seletor);
+        });
+        if (encontrado && principais.indexOf(encontrado) === -1) principais.push(encontrado);
+      }
+
+      priorizar("[data-editar], [data-editar-os]");
+      priorizar("[data-enviar], [data-enviar-os]");
+      filhos.forEach(function (filho) {
+        if (principais.length < 2 && principais.indexOf(filho) === -1) principais.push(filho);
+      });
+
+      var detalhes = document.createElement("details");
+      detalhes.className = "ls-action-overflow";
+      var resumo = document.createElement("summary");
+      resumo.className = "btn btn-sm btn-outline-secondary";
+      resumo.setAttribute("aria-label", "Mostrar outras ações");
+      resumo.innerHTML = '<i class="bi bi-three-dots" aria-hidden="true"></i><span class="ls-action-label">Mais</span>';
+      var menu = document.createElement("div");
+      menu.className = "ls-action-overflow-menu";
+
+      filhos.filter(function (filho) {
+        return principais.indexOf(filho) === -1;
+      }).forEach(function (filho) {
+        var acao = filho.matches("a,button") ? filho : filho.querySelector("a,button");
+        if (acao && !acao.querySelector(".ls-action-label")) {
+          var rotulo = acao.getAttribute("data-label") || acao.getAttribute("title") || acao.getAttribute("aria-label");
+          if (!rotulo && acao.matches("[data-excluir], [data-excluir-os]")) rotulo = "Excluir";
+          if (!rotulo) rotulo = "Ação";
+          var texto = document.createElement("span");
+          texto.className = "ls-action-label";
+          texto.textContent = rotulo;
+          acao.appendChild(texto);
+        }
+        menu.appendChild(filho);
+      });
+
+      menu.addEventListener("click", function (evento) {
+        if (evento.target.closest("a, button")) detalhes.removeAttribute("open");
+      });
+      detalhes.appendChild(resumo);
+      detalhes.appendChild(menu);
+      grupo.appendChild(detalhes);
+      grupo.dataset.lsActionsReady = "1";
+    });
+  };
+
   global.Painel = Painel;
   document.addEventListener("DOMContentLoaded", function () {
     ligarAvisosAoVivo();
     ligarAvisoNoCelular();
     Painel.aplicarMascaras(document);
     Painel.acomodarTextos(document);
+    Painel.organizarAcoesTabelas(document);
     ligarMedidaDeTela();
     document.querySelectorAll(".modal").forEach(normalizarJanela);
   });

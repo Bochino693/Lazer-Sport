@@ -2390,3 +2390,132 @@ a.ls-metric-card.active{border-color:var(--metric);box-shadow:0 0 0 2px rgba(242
 #modalOS .ls-budget-block-title small{color:#9eb8da!important}
 #modalEnviarOS .ls-share-preview{border-color:rgba(92,154,255,.32);background:linear-gradient(135deg,rgba(35,82,143,.28),rgba(28,41,64,.72))}
 #modalEnviarOS .ls-share-preview-mark{color:#8cdcf3;background:rgba(53,133,218,.22)}
+
+/* ======================================================================
+   TABELAS E AÇÕES V22 — contrato canônico responsivo
+
+   Duas ações de trabalho permanecem visíveis; as secundárias entram em
+   "Mais" pelo painel.js. A partir de 1100px a tabela vira cartões para
+   não comprimir conteúdo em notebook pequeno ou tablet na horizontal.
+   ====================================================================== */
+.table-responsive{
+  max-width:100%;overflow-x:auto!important;overflow-y:visible;
+  scrollbar-gutter:stable;-webkit-overflow-scrolling:touch;
+}
+.ls-commercial-table{width:100%;table-layout:auto}
+.ls-commercial-table th,.ls-commercial-table td{
+  padding:10px 9px!important;font-size:.82rem;vertical-align:middle;
+}
+.ls-commercial-table td{overflow-wrap:anywhere}
+.ls-commercial-table td[data-rotulo="Valor"],
+.ls-commercial-table td[data-rotulo="Total"],
+.ls-commercial-table td[data-rotulo="Situação"]{white-space:nowrap}
+.ls-actions,.ls-commercial-actions{
+  width:132px!important;min-width:132px!important;white-space:normal!important;
+}
+.ls-row-actions{
+  display:flex!important;align-items:center;justify-content:flex-end;
+  flex-wrap:wrap;gap:5px;
+}
+.ls-row-actions>.btn,.ls-row-actions>form>.btn,.ls-row-actions>.ls-action-overflow>summary{
+  width:36px!important;min-width:36px!important;height:36px;min-height:36px!important;
+  margin:0!important;padding:0!important;display:inline-flex;align-items:center;
+  justify-content:center;gap:6px;white-space:nowrap;
+}
+.ls-row-actions>.btn .ls-action-label,
+.ls-row-actions>form>.btn .ls-action-label,
+.ls-action-overflow>summary .ls-action-label{display:none!important}
+.ls-action-overflow{min-width:0;margin:0;flex:0 0 auto}
+.ls-action-overflow>summary{list-style:none;cursor:pointer}
+.ls-action-overflow>summary::-webkit-details-marker{display:none}
+.ls-action-overflow[open]{flex:1 0 100%}
+.ls-action-overflow[open]>summary{
+  width:100%!important;color:#dce8ff!important;border-color:rgba(122,163,235,.42)!important;
+  background:rgba(68,112,193,.16)!important;
+}
+.ls-action-overflow[open]>summary .ls-action-label{display:inline!important}
+.ls-action-overflow-menu{
+  display:grid;grid-template-columns:1fr;gap:5px;width:100%;padding-top:6px;
+}
+.ls-action-overflow-menu>form{width:100%!important;margin:0!important;display:block!important}
+.ls-action-overflow-menu>.btn,.ls-action-overflow-menu>form>.btn{
+  width:100%!important;min-width:0!important;min-height:38px!important;margin:0!important;
+  padding:7px 10px!important;display:flex!important;align-items:center;justify-content:flex-start;
+  gap:7px;white-space:normal!important;text-align:left;line-height:1.2;
+}
+.ls-action-overflow-menu .ls-action-label{display:inline!important}
+.ls-next-action{
+  display:flex;align-items:center;gap:5px;margin-top:6px;padding:5px 7px;
+  width:max-content;max-width:100%;border:1px solid rgba(68,181,132,.28);border-radius:8px;
+  color:#8ee4bd;background:rgba(32,145,98,.09);font-size:.65rem;font-weight:800;
+  line-height:1.25;white-space:normal;
+}
+
+@media (min-width:1101px){
+  .ls-commercial-table th:last-child,.ls-commercial-table td:last-child{
+    position:sticky;right:0;z-index:2;box-shadow:-10px 0 18px -16px rgba(0,0,0,.9);
+  }
+  .ls-commercial-table th:last-child{z-index:3;background:#211a11!important}
+  .ls-commercial-table td:last-child{background:#18140f!important}
+  .ls-commercial-table tbody tr:hover td:last-child{background:#211b13!important}
+}
+
+@media (max-width:1100px){
+  .ls-commercial-table-wrap{overflow:visible!important}
+  .ls-commercial-table,.ls-commercial-table tbody{display:block;width:100%}
+  .ls-commercial-table thead{display:none}
+  .ls-commercial-table tbody tr{
+    width:100%;margin:0 0 12px;padding:13px;display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));gap:0 13px;
+    border:1px solid var(--line)!important;border-radius:16px;
+    background:linear-gradient(180deg,#2b241b,#1a1610)!important;
+    box-shadow:var(--shadow-soft);
+  }
+  .ls-commercial-table tbody tr:last-child{margin-bottom:0}
+  .ls-commercial-table tbody td{
+    min-width:0;padding:9px 2px!important;display:block;white-space:normal!important;
+    border:0!important;border-bottom:1px solid var(--line-soft)!important;
+    text-align:left!important;background:transparent!important;
+  }
+  .ls-commercial-table tbody td::before{
+    content:attr(data-rotulo);margin-bottom:4px;display:block;color:#aa9c89;
+    font-size:.65rem;font-weight:950;letter-spacing:.075em;line-height:1.2;text-transform:uppercase;
+  }
+  .ls-commercial-table tbody td[data-rotulo="Cliente"],
+  .ls-commercial-table tbody td[data-rotulo="Situação"],
+  .ls-commercial-table tbody td[data-rotulo="Ações"],
+  .ls-commercial-table tbody td[colspan]{grid-column:1/-1}
+  .ls-commercial-table tbody td[data-rotulo="Ações"]{
+    margin-top:3px;padding-top:12px!important;border-bottom:0!important;
+  }
+  .ls-clientes-table tbody td[data-rotulo="Contato"],
+  .ls-clientes-table tbody td[data-rotulo="Vínculo"],
+  .ls-clientes-table tbody td[data-rotulo="Onde fica"]{grid-column:1/-1}
+  .ls-commercial-table tbody td[colspan]::before{content:"";display:none}
+  .ls-actions,.ls-commercial-actions{width:auto!important;min-width:0!important}
+  .ls-commercial-table .ls-row-actions{
+    display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;
+  }
+  .ls-commercial-table .ls-row-actions>.btn,
+  .ls-commercial-table .ls-row-actions>form>.btn{
+    width:100%!important;min-width:0!important;min-height:44px!important;height:auto;
+    padding:8px 9px!important;
+  }
+  .ls-commercial-table .ls-row-actions>.btn .ls-action-label,
+  .ls-commercial-table .ls-row-actions>form>.btn .ls-action-label{display:inline!important}
+  .ls-commercial-table .ls-action-overflow{grid-column:1/-1;width:100%}
+  .ls-commercial-table .ls-action-overflow>summary{
+    width:100%!important;min-width:0!important;min-height:42px!important;height:auto;
+    padding:8px 10px!important;
+  }
+  .ls-commercial-table .ls-action-overflow>summary .ls-action-label{display:inline!important}
+  .ls-commercial-table .ls-action-overflow-menu{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+  .ls-commercial-table .ls-action-overflow-menu>.btn,
+  .ls-commercial-table .ls-action-overflow-menu>form>.btn{min-height:44px!important}
+}
+
+@media (max-width:430px){
+  .ls-commercial-table tbody tr{padding:11px;gap:0 9px}
+  .ls-commercial-table .ls-row-actions,
+  .ls-commercial-table .ls-action-overflow-menu{grid-template-columns:1fr}
+}

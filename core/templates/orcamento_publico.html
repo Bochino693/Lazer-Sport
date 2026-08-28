@@ -260,13 +260,13 @@ body{
 .gaveta>div{overflow:hidden}
 
 /* Pix aparece só depois da aprovação definitiva. */
-.pix-box{display:grid;grid-template-columns:170px 1fr;gap:22px;align-items:center}
-.pix-qr{width:170px;height:170px;padding:8px;background:#fff;border:1px solid var(--linha);border-radius:16px}
-.pix-qr img{display:block;width:100%;height:100%}
-.pix-copy{display:flex;gap:8px;margin-top:12px}
-.pix-copy input{min-width:0;flex:1;padding:12px;border:1px solid var(--linha-forte);border-radius:12px;background:#F7F9FC;color:var(--tinta-2)}
-.pix-copy button{border:0;border-radius:12px;padding:0 16px;background:var(--marca);color:#fff;font-weight:800;cursor:pointer}
-.bank-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:20px}
+.contact-human{display:grid;grid-template-columns:46px minmax(0,1fr);gap:13px;align-items:start;padding:16px;border:1px solid #b9d8ca;border-radius:16px;background:#f1fbf6}
+.contact-human>i{width:46px;height:46px;display:grid;place-items:center;border-radius:13px;background:#d9f3e5;color:#087346;font-size:1.15rem}
+.contact-human strong{display:block;margin-bottom:4px;color:#075c3a}.contact-human p{margin:0;color:#356353;font-size:.86rem;line-height:1.55}
+.contact-actions{grid-column:2;display:flex;flex-wrap:wrap;gap:8px;margin-top:2px}
+.contact-actions a{display:inline-flex;align-items:center;gap:6px;min-height:39px;padding:8px 12px;border:1px solid #b9d8ca;border-radius:11px;color:#075c3a;background:#fff;font-size:.78rem;font-weight:800;text-decoration:none}
+.bank-note{margin:0 0 13px;padding:10px 12px;border-left:3px solid var(--marca);border-radius:0 9px 9px 0;background:#f3f6fb;color:var(--tinta-2);font-size:.8rem;line-height:1.5}
+.bank-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .bank-card{display:grid;grid-template-columns:42px 1fr;gap:11px;align-items:start;padding:15px;border:1px solid var(--linha);border-radius:15px;background:#f8faff}
 .bank-icon{width:42px;height:42px;display:grid;place-items:center;border-radius:12px;background:var(--marca);color:#fff;font-size:1.1rem}
 .bank-card.santander .bank-icon{background:var(--vermelho)}
@@ -337,8 +337,7 @@ body{
   .item-valor{grid-column:1/-1;justify-content:flex-end;background:#f6f8fc;border-top:1px solid var(--linha)!important}
   .item-valor::before{content:"Total ";font-size:.72rem;color:var(--tinta-3);margin-right:6px}
   .comercial-grid{grid-template-columns:1fr}.comercial-item{padding:16px 17px}
-  .pix-box{grid-template-columns:1fr;text-align:center}.pix-qr{margin:auto}
-  .pix-copy{flex-direction:column}.pix-copy button{min-height:48px}
+  .contact-human{grid-template-columns:40px minmax(0,1fr);padding:13px}.contact-human>i{width:40px;height:40px}.contact-actions{grid-column:1/-1}.contact-actions a{flex:1 1 auto;justify-content:center}
   .bank-grid{grid-template-columns:1fr}
   .documento-acoes{align-items:stretch}.documento-acoes button{width:100%}
 }
@@ -580,7 +579,7 @@ body{
   {% if not previsualizacao and orcamento.status == 'aprovado' %}
     <section class="bloco entra" style="--i:3">
       <div class="bloco-titulo">
-        <h2>Pagamento</h2>
+        <h2>Próximo passo</h2>
         <span>{{ orcamento.get_status_pagamento_display }}</span>
       </div>
       {% if orcamento.status_pagamento == 'pago' %}
@@ -588,39 +587,20 @@ body{
           <span class="faixa-icone">✓</span>
           <span><strong>Pagamento registrado.</strong> Valor recebido: R$ {{ orcamento.valor_pago|moeda }}.</span>
         </div>
-      {% elif pix_configurado %}
-        <div class="pix-box">
-          <div class="pix-qr"><img src="{{ pix_qr }}" alt="QR Code Pix do orçamento"></div>
+      {% else %}
+        <div class="contact-human">
+          <i class="bi bi-headset" aria-hidden="true"></i>
           <div>
-            <h3 style="margin:0 0 6px">Pague o saldo de R$ {{ orcamento.saldo_pagamento|moeda }} por Pix</h3>
-            <p style="margin:0;color:var(--tinta-2)">Escaneie o QR Code ou copie o código abaixo no aplicativo do seu banco.</p>
-            <div class="pix-copy">
-              <input id="pixCopiaCola" value="{{ pix_copia_cola }}" readonly aria-label="Pix Copia e Cola">
-              <button type="button" id="copiarPix">Copiar Pix</button>
-            </div>
+            <strong>Proposta aprovada — vamos confirmar os detalhes com você.</strong>
+            <p>Nossa equipe entrará em contato para alinhar prazo, entrega e pagamento. Esta página não gera cobrança automática.</p>
+          </div>
+          <div class="contact-actions" aria-label="Canais de atendimento">
+            {% if whatsapp_empresa %}<a href="https://wa.me/{{ whatsapp_empresa }}" target="_blank" rel="noopener"><i class="bi bi-whatsapp"></i> WhatsApp</a>{% endif %}
+            {% if telefone_empresa %}<a href="tel:{{ telefone_empresa }}"><i class="bi bi-telephone"></i> Ligar</a>{% endif %}
+            {% if email_empresa %}<a href="mailto:{{ email_empresa }}"><i class="bi bi-envelope"></i> E-mail</a>{% endif %}
           </div>
         </div>
-      {% else %}
-        <p style="margin:0;color:var(--tinta-2)">Combine os dados de pagamento com nossa equipe.</p>
       {% endif %}
-      <div class="bank-grid" aria-label="Dados bancários da empresa">
-        <div class="bank-card">
-          <span class="bank-icon"><i class="bi bi-qr-code"></i></span>
-          <span>
-            <strong>Pix · Banco C6</strong>
-            <span>Celular: {{ dados_bancarios.pix_celular }}</span>
-            <span>CNPJ: {{ dados_bancarios.pix_cnpj }}</span>
-          </span>
-        </div>
-        <div class="bank-card santander">
-          <span class="bank-icon"><i class="bi bi-bank"></i></span>
-          <span>
-            <strong>Banco Santander</strong>
-            <span>Agência: {{ dados_bancarios.santander_agencia }}</span>
-            <span>Conta corrente: {{ dados_bancarios.santander_conta }}</span>
-          </span>
-        </div>
-      </div>
     </section>
   {% endif %}
 
@@ -636,6 +616,32 @@ body{
     <div class="comercial-item">
       <span>Forma de envio</span>
       <strong>{{ orcamento.forma_envio|default:"A combinar" }}</strong>
+    </div>
+  </section>
+
+  <section class="bloco entra" style="--i:3">
+    <div class="bloco-titulo">
+      <h2>Dados bancários da empresa</h2>
+      <span>{{ empresa_nome }}</span>
+    </div>
+    <p class="bank-note">Antes de efetuar qualquer pagamento, confirme as condições e o valor com nossa equipe.</p>
+    <div class="bank-grid" aria-label="Dados bancários da empresa">
+      <div class="bank-card">
+        <span class="bank-icon"><i class="bi bi-phone"></i></span>
+        <span>
+          <strong>Pix · Banco C6</strong>
+          <span>Celular: {{ dados_bancarios.pix_celular }}</span>
+          <span>CNPJ: {{ dados_bancarios.pix_cnpj }}</span>
+        </span>
+      </div>
+      <div class="bank-card santander">
+        <span class="bank-icon"><i class="bi bi-bank"></i></span>
+        <span>
+          <strong>Banco Santander</strong>
+          <span>Agência: {{ dados_bancarios.santander_agencia }}</span>
+          <span>Conta corrente: {{ dados_bancarios.santander_conta }}</span>
+        </span>
+      </div>
     </div>
   </section>
 
@@ -790,21 +796,6 @@ body{
   if (botaoImprimir) botaoImprimir.addEventListener("click", function () { window.print(); });
 })();
 
-(function () {
-  var botao = document.getElementById("copiarPix");
-  var campo = document.getElementById("pixCopiaCola");
-  if (!botao || !campo) return;
-  botao.addEventListener("click", async function () {
-    try {
-      await navigator.clipboard.writeText(campo.value);
-    } catch (erro) {
-      campo.select();
-      document.execCommand("copy");
-    }
-    botao.textContent = "Pix copiado ✓";
-    setTimeout(function () { botao.textContent = "Copiar Pix"; }, 2200);
-  });
-})();
 </script>
 </body>
 </html>

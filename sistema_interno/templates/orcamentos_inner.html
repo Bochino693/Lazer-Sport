@@ -146,6 +146,9 @@
                     enviado {{ orcamento.enviado_em|date:"d/m" }}
                   {% endif %}
                 </span>
+                {% if orcamento.status == 'aprovado' and orcamento.status_pagamento != 'pago' %}
+                  <span class="ls-next-action"><i class="bi bi-telephone-outbound"></i> Próximo passo: contatar cliente</span>
+                {% endif %}
               </td>
               <td data-rotulo="Revisão dos blocos">
                 <div class="ls-block-review">
@@ -2370,6 +2373,17 @@ document.addEventListener("DOMContentLoaded", function () {
     var selo = celula.querySelector("[data-situacao-selo]");
     var nota = celula.querySelector("[data-situacao-nota]");
     if (!selo) return false;
+
+    var proxima = celula.querySelector(".ls-next-action");
+    var deveContatar = estado.status === "aprovado" && estado.status_pagamento !== "pago";
+    if (deveContatar && !proxima) {
+      proxima = document.createElement("span");
+      proxima.className = "ls-next-action";
+      proxima.innerHTML = '<i class="bi bi-telephone-outbound"></i> Próximo passo: contatar cliente';
+      celula.appendChild(proxima);
+    } else if (!deveContatar && proxima) {
+      proxima.remove();
+    }
 
     var rotuloAtual = selo.textContent.trim();
     if (rotuloAtual === estado.rotulo) return false;

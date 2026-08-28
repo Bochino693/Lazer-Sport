@@ -20,6 +20,7 @@ from django.core.mail import EmailMultiAlternatives
 
 from core.email_utils import (
     cnpj_empresa,
+    dados_bancarios_empresa,
     diagnostico_smtp,
     nome_empresa,
     remetente,
@@ -1203,6 +1204,7 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
                 "total_formatado": moeda_br(orcamento.total),
                 "empresa_nome": nome_empresa(),
                 "empresa_cnpj": cnpj_empresa(),
+                "dados_bancarios": dados_bancarios_empresa(),
             }
             html = render(request, "emails/orcamento_enviado.html", contexto).content.decode()
             texto_email = (
@@ -1763,13 +1765,14 @@ class EstadoOrcamentosView(OrcamentoInternoRequiredMixin, View):
             request.user, Orcamento.objects.filter(pk__in=ids)
         ).only(
             "id", "status", "validade", "respondido_em", "respondido_por",
-            "enviado_em",
+            "enviado_em", "status_pagamento",
         )
 
         estados = {}
         for orcamento in consulta:
             estados[str(orcamento.pk)] = {
                 "status": orcamento.status,
+                "status_pagamento": orcamento.status_pagamento,
                 "rotulo": orcamento.get_status_display(),
                 "cor": self.COR.get(orcamento.status, "neutral"),
                 "vencido": orcamento.vencido,
