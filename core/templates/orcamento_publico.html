@@ -231,6 +231,12 @@ body{
   outline:none;border-color:var(--marca);box-shadow:0 0 0 4px rgba(42,47,196,.13);
 }
 .campo textarea{resize:vertical;min-height:84px}
+.aceite-box{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.5fr);gap:14px;align-items:end;margin:0 0 18px;padding:15px;border:1px solid #c8d6ee;border-radius:16px;background:#f5f8fd}
+.aceite-box .campo{margin:0}.aceite-confirmacao{display:flex;gap:10px;align-items:flex-start;color:var(--tinta-2);font-size:.8rem;line-height:1.45}
+.aceite-confirmacao input{width:18px;height:18px;flex:0 0 auto;margin-top:1px;accent-color:var(--marca)}
+.aceite-nota{grid-column:1/-1;margin:0!important;color:var(--tinta-3)!important;font-size:.74rem!important}
+.certificado{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 18px;margin:18px auto 0;max-width:650px;padding:15px;border:1px dashed #9fb4d7;border-radius:14px;background:#fff;text-align:left}
+.certificado span{font-size:.75rem;color:var(--tinta-3);overflow-wrap:anywhere}.certificado strong{display:block;color:var(--tinta);font-size:.83rem;margin-top:2px}
 .botoes{display:flex;gap:12px;flex-wrap:wrap;margin-top:4px}
 .btn{
   flex:1 1 200px;min-height:56px;padding:15px 22px;border:0;border-radius:16px;
@@ -308,6 +314,8 @@ body{
   .capa-meta{border-left:0;border-top:2px solid #d5deef;padding:22px 0 0}
   .item-cabecalho,.item{grid-template-columns:minmax(220px,1fr) 82px 126px 126px}
   .dados-grid{grid-template-columns:1fr}
+  .aceite-box{grid-template-columns:1fr}
+  .certificado{grid-template-columns:1fr}
 }
 /* Tablet em retrato ainda comporta as duas metades do cabeçalho. Manter
    logo e metadados lado a lado economiza uma dobra inteira da tela. */
@@ -678,8 +686,23 @@ body{
         <label class="campo">
           <span>Seu nome</span>
           <input type="text" name="nome" id="campoNome" maxlength="120"
-                 autocomplete="name" placeholder="Quem está respondendo?" required>
+                 autocomplete="name" placeholder="Quem está respondendo?"
+                 value="{{ nome_tentado|default:'' }}" required>
         </label>
+
+        <div class="aceite-box" id="blocoAceite">
+          <label class="campo">
+            <span>CPF ou CNPJ de quem aprova</span>
+            <input type="text" name="documento_assinante" id="campoDocumentoAssinante"
+                   maxlength="20" inputmode="text" autocapitalize="characters"
+                   placeholder="Usado somente no aceite" value="{{ documento_tentado|default:'' }}">
+          </label>
+          <label class="aceite-confirmacao">
+            <input type="checkbox" name="consentimento_aceite" id="campoConsentimentoAceite" value="1" {% if consentimento_tentado %}checked{% endif %}>
+            <span>Ao escolher “Aprovar proposta”, confirmo que li esta versão e concordo com seus itens, valores e condições.</span>
+          </label>
+          <p class="aceite-nota">Estes campos só são exigidos para aprovação. O comprovante registra data, versão e integridade do documento, sem exibir seu CPF/CNPJ completo.</p>
+        </div>
 
         <div class="gaveta" id="gavetaMotivo">
           <div>
@@ -715,6 +738,14 @@ body{
           {{ orcamento.respondido_em|date:"d/m/Y \à\s H:i" }}
           {% if orcamento.respondido_por %} · {{ orcamento.respondido_por }}{% endif %}
         </p>
+        {% if aceite %}
+          <div class="certificado" aria-label="Comprovante do aceite eletrônico">
+            <span>Comprovante<strong>{{ aceite.codigo_publico }}</strong></span>
+            <span>Assinante<strong>{{ aceite.assinante_nome }} · {{ aceite_documento_mascarado }}</strong></span>
+            <span>Registrado em<strong>{{ aceite.assinado_em|date:"d/m/Y \à\s H:i" }}</strong></span>
+            <span>Integridade da proposta<strong>{{ aceite.proposta_hash|slice:":16" }}…</strong></span>
+          </div>
+        {% endif %}
       </div>
     </section>
   {% endif %}
@@ -744,7 +775,27 @@ body{
   var campoDecisao = document.getElementById("campoDecisao");
   var gaveta = document.getElementById("gavetaMotivo");
   var nome = document.getElementById("campoNome");
+  var documento = document.getElementById("campoDocumentoAssinante");
+  var consentimento = document.getElementById("campoConsentimentoAceite");
   var enviando = false;
+
+  function formatarDocumento(valor) {
+    var limpo = String(valor || "").toUpperCase().replace(/[^0-9A-Z]/g, "").slice(0, 14);
+    var cnpj = /[A-Z]/.test(limpo) || limpo.length > 11;
+    if (!cnpj) return limpo
+      .replace(/^(\d{3})(\d)/, "$1.$2")
+      .replace(/^(\d{3})\.(\d{3})(\d)/, "$1.$2.$3")
+      .replace(/\.(\d{3})(\d)/, ".$1-$2");
+    var base = limpo.slice(0, 12), dv = limpo.slice(12).replace(/\D/g, "");
+    var texto = base.slice(0, 2);
+    if (base.length > 2) texto += "." + base.slice(2, 5);
+    if (base.length > 5) texto += "." + base.slice(5, 8);
+    if (base.length > 8) texto += "/" + base.slice(8, 12);
+    return texto + (dv ? "-" + dv : "");
+  }
+  if (documento) documento.addEventListener("input", function () {
+    documento.value = formatarDocumento(documento.value);
+  });
 
   // Os dois botões enviam o MESMO formulário; quem diferencia é o campo
   // escondido. Assim o navegador continua validando o nome pelo required
@@ -757,6 +808,14 @@ body{
 
     var decisao = botao.getAttribute("data-decisao");
     campoDecisao.value = decisao;
+
+    if (decisao === "aprovar" && (!documento.value.trim() || !consentimento.checked)) {
+      evento.preventDefault();
+      var alvo = !documento.value.trim() ? documento : consentimento;
+      alvo.focus();
+      document.getElementById("blocoAceite").scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
 
     // Recusar abre o campo do motivo. Se ainda estava fechado, este
     // clique só abre: pedir o porquê antes de registrar a recusa é o que

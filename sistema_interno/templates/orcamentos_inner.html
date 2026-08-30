@@ -686,10 +686,25 @@ Cadastro mínimo de propósito: nome, valor e categoria. Foto e texto de
             <input type="email" class="form-control" id="clienteNovoEmail" name="email"
                    maxlength="150" placeholder="cliente@empresa.com.br">
           </div>
+          <div class="col-12 col-md-6">
+            <label class="form-label" for="clienteNovoCanalTelefone">Uso do número</label>
+            <select class="form-select" id="clienteNovoCanalTelefone" name="canal_telefone">
+              <option value="nao_confirmado">Ainda não confirmado</option>
+              <option value="whatsapp">WhatsApp confirmado</option>
+              <option value="telefone">Telefone, sem WhatsApp</option>
+            </select>
+          </div>
+          <div class="col-12 col-md-6 align-self-end">
+            <label class="form-check ls-inline-check mb-1">
+              <input class="form-check-input" type="checkbox" name="confirmar_telefone_sem_whatsapp" value="1">
+              <span class="form-check-label">Salvar mesmo sem confirmar WhatsApp</span>
+            </label>
+            <span class="form-text">Enquanto não confirmar, o número não será usado para envio automático.</span>
+          </div>
           <div class="col-12 col-md-5">
             <label class="form-label" for="clienteNovoDocumento">CPF ou CNPJ</label>
             <input class="form-control" id="clienteNovoDocumento" name="documento"
-                   inputmode="numeric" maxlength="20" data-mascara="documento"
+                   inputmode="text" autocapitalize="characters" maxlength="20" data-mascara="documento"
                    placeholder="Opcional">
           </div>
           <div class="col-12 col-md-7" id="clienteNovoBlocoParceiro">

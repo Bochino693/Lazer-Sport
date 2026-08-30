@@ -9,9 +9,13 @@ def filtro_incompletos():
         (Q(telefone="") | Q(telefone__isnull=True))
         & (Q(email="") | Q(email__isnull=True))
     )
-    sem_documento = Q(documento="") | Q(documento__isnull=True)
+    sem_documento_valido = (
+        Q(documento="")
+        | Q(documento__isnull=True)
+        | Q(documento_valido=False)
+    )
     sem_endereco = Q(enderecos__isnull=True)
-    return sem_contato | sem_documento | sem_endereco
+    return sem_contato | sem_documento_valido | sem_endereco
 
 
 def pendencias_do_cliente(cliente):
@@ -21,6 +25,13 @@ def pendencias_do_cliente(cliente):
         pendencias.append("contato")
     if not cliente.documento:
         pendencias.append("CPF/CNPJ")
+    elif not cliente.documento_valido:
+        pendencias.append("CPF/CNPJ inválido")
+    if (
+        cliente.telefone
+        and cliente.canal_telefone == cliente.CanalTelefone.NAO_CONFIRMADO
+    ):
+        pendencias.append("WhatsApp não confirmado")
     if not cliente.endereco_principal:
         pendencias.append("endereço")
     return pendencias

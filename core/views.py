@@ -1646,6 +1646,7 @@ class ClienteAdminView(AdminOnlyMixin, View):
                 "nome_cliente": cliente.nome_cliente,
                 "tipo": cliente.tipo,
                 "telefone": cliente.telefone or "",
+                "canal_telefone": cliente.canal_telefone,
                 "email": cliente.email or "",
                 "cep": endereco.cep if endereco else "",
                 "endereco": endereco.endereco if endereco else "",

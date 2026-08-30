@@ -1,1 +1,2 @@
 web: gunicorn lazer.wsgi:application --bind 0.0.0.0:$PORT --worker-class gthread --workers 2 --threads 2 --preload --timeout 45 --graceful-timeout 30 --keep-alive 5 --max-requests 800 --max-requests-jitter 100 --access-logfile - --error-logfile -
+worker: python manage.py observar_pendencias --intervalo 60

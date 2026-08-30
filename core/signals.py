@@ -22,6 +22,7 @@ from .models import (
     ImagemPeca,
     ImagemProjetoBrinquedo,
     ImagensSite,
+    Pedido,
     PecasReposicao,
     Projetos,
     Promocoes,
@@ -33,6 +34,21 @@ def criar_perfil_cliente(sender, instance, created, **kwargs):
     if created:
         # cria perfil com telefone vazio (ou default)
         ClientePerfil.objects.get_or_create(user=instance, defaults={'telefone': ''})
+
+
+@receiver(post_save, sender=Pedido, dispatch_uid="core.pedido.avisar_superusuarios")
+def avisar_superusuarios_de_novo_pedido(sender, instance, created, **kwargs):
+    """O pedido só dispara depois do commit; rollback nunca gera alarme falso."""
+    if not created:
+        return
+    pedido_id = instance.pk
+
+    def avisar():
+        from sistema_interno.notificacoes import avisar_novo_pedido_id
+
+        avisar_novo_pedido_id(pedido_id)
+
+    transaction.on_commit(avisar)
 
 
 def _invalidar_home(sender, **kwargs):

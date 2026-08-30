@@ -111,8 +111,11 @@
       var finalUrl = urlSegura(resposta.url);
       if (!finalUrl) throw new Error("A navegação saiu do painel.");
 
+      var controleCache = (resposta.headers.get("cache-control") || "").toLowerCase();
+      var cachePermitido = controleCache.indexOf("no-store") === -1
+        && resposta.headers.get("x-ls-no-store") !== "1";
       return resposta.text().then(function (html) {
-        if (finalUrl.pathname.indexOf("/login/inner/") === -1) {
+        if (cachePermitido && finalUrl.pathname.indexOf("/login/inner/") === -1) {
           guardar(finalUrl, html);
           if (finalUrl.href !== url.href) guardar(url, html);
         }
@@ -143,6 +146,9 @@
       window.history.replaceState({ lsSoftNavigation: true }, "", url.href);
     }
 
+    if (window.Painel && window.Painel.prepararNavegacao) {
+      window.Painel.prepararNavegacao();
+    }
     document.open();
     document.write(html);
     document.close();
@@ -221,6 +227,7 @@
   });
 
   function agendarPrefetch(link, evento) {
+    if (document.querySelector(".modal.show")) return;
     var url = linkNavegavel(link, evento);
     if (!url || recuperar(url) || emVoo.has(url.href)) return;
     window.clearTimeout(prefetchTimer);
@@ -258,4 +265,3 @@
     go: function (url) { navegar(url, "push"); }
   };
 })(window, document);
-

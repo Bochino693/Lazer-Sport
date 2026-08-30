@@ -10,6 +10,43 @@
 
   var Painel = {};
 
+  function haModalVisivel() {
+    return Boolean(document.querySelector(".modal.show"));
+  }
+
+  function limparEstadoDoCorpo() {
+    if (haModalVisivel()) return;
+    document.querySelectorAll(".modal-backdrop").forEach(function (fundo) {
+      fundo.remove();
+    });
+    document.body.classList.remove("modal-open");
+    document.body.style.removeProperty("overflow");
+    document.body.style.removeProperty("padding-right");
+  }
+
+  Painel.limparModais = function (imediato) {
+    document.querySelectorAll(".modal").forEach(function (elemento) {
+      var instancia = global.bootstrap && global.bootstrap.Modal
+        ? global.bootstrap.Modal.getInstance(elemento)
+        : null;
+      if (instancia && !imediato) {
+        instancia.hide();
+        return;
+      }
+      if (instancia) instancia.dispose();
+      elemento.classList.remove("show");
+      elemento.style.display = "none";
+      elemento.setAttribute("aria-hidden", "true");
+      elemento.removeAttribute("aria-modal");
+      elemento.removeAttribute("role");
+    });
+    limparEstadoDoCorpo();
+  };
+
+  Painel.prepararNavegacao = function () {
+    Painel.limparModais(true);
+  };
+
   Painel.modal = function (id) {
     var el = document.getElementById(id);
     if (!el) {
@@ -35,9 +72,25 @@
   };
 
   Painel.fechar = function (id) {
+    var elemento = document.getElementById(id);
     var m = Painel.modal(id);
     if (m) {
       m.hide();
+      /* CSS interrompido, navegação suave ou WebView antigo podem impedir
+       * o evento final do Bootstrap. O fallback fecha só a janela pedida e
+       * devolve o scroll; normalmente não faz nada porque hidden já chegou. */
+      global.setTimeout(function () {
+        if (!elemento || !elemento.classList.contains("show")) {
+          limparEstadoDoCorpo();
+          return;
+        }
+        elemento.classList.remove("show");
+        elemento.style.display = "none";
+        elemento.setAttribute("aria-hidden", "true");
+        elemento.removeAttribute("aria-modal");
+        elemento.dispatchEvent(new Event("hidden.bs.modal", { bubbles: true }));
+        limparEstadoDoCorpo();
+      }, 480);
     }
   };
 
@@ -84,6 +137,12 @@
     }
   };
 
+  document.addEventListener("hidden.bs.modal", function () {
+    global.setTimeout(limparEstadoDoCorpo, 0);
+  });
+
+  global.addEventListener("pageshow", limparEstadoDoCorpo);
+
   /* Máscaras do aplicativo interno.
    *
    * type="number" é bom para quantidade inteira, mas ruim para dinheiro
@@ -126,18 +185,27 @@
     },
 
     documento: function (valor) {
-      var numero = digitos(valor, 14);
-      if (numero.length <= 11) {
-        return numero
+      var documento = String(valor || "")
+        .toUpperCase()
+        .replace(/[^0-9A-Z]/g, "")
+        .slice(0, 14);
+      var ehCnpj = /[A-Z]/.test(documento) || documento.length > 11;
+      if (!ehCnpj) {
+        return documento
           .replace(/^(\d{3})(\d)/, "$1.$2")
           .replace(/^(\d{3})\.(\d{3})(\d)/, "$1.$2.$3")
           .replace(/\.(\d{3})(\d)/, ".$1-$2");
       }
-      return numero
-        .replace(/^(\d{2})(\d)/, "$1.$2")
-        .replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3")
-        .replace(/\.(\d{3})(\d)/, ".$1/$2")
-        .replace(/(\d{4})(\d)/, "$1-$2");
+      var base = documento.slice(0, 12);
+      var dv = documento.slice(12).replace(/\D/g, "");
+      var partes = [];
+      if (base.slice(0, 2)) partes.push(base.slice(0, 2));
+      var formatado = partes[0] || "";
+      if (base.length > 2) formatado += "." + base.slice(2, 5);
+      if (base.length > 5) formatado += "." + base.slice(5, 8);
+      if (base.length > 8) formatado += "/" + base.slice(8, 12);
+      if (dv) formatado += "-" + dv;
+      return formatado;
     },
 
     /* DINHEIRO SE DIGITA DA DIREITA PARA A ESQUERDA.

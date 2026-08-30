@@ -758,7 +758,9 @@
   }
 
   .client-field input[type="text"],
-  .client-field input[type="url"] {
+  .client-field input[type="url"],
+  .client-field input[type="email"],
+  .client-field select {
     width: 100%;
     height: 43px;
     padding: 0 12px;
@@ -778,6 +780,33 @@
   .client-field input:focus {
     border-color: rgba(122, 101, 64, .58);
     box-shadow: 0 0 0 3px rgba(242, 169, 59, .11);
+  }
+
+  .client-field select {
+    appearance: none;
+    padding-right: 36px;
+    background-image: linear-gradient(45deg, transparent 50%, #C4B6A0 50%), linear-gradient(135deg, #C4B6A0 50%, transparent 50%);
+    background-position: calc(100% - 17px) 18px, calc(100% - 12px) 18px;
+    background-size: 5px 5px, 5px 5px;
+    background-repeat: no-repeat;
+  }
+
+  .client-field label.client-check {
+    min-height: 38px;
+    margin: 0;
+    padding: 9px 11px;
+    justify-content: flex-start;
+    border: 1px solid rgba(44, 37, 27, .16);
+    border-radius: 11px;
+    background: rgba(26, 22, 16, .72);
+    cursor: pointer;
+  }
+
+  .client-check input {
+    width: 17px;
+    height: 17px;
+    flex: 0 0 auto;
+    accent-color: #F2A93B;
   }
 
   .client-address-panel {
@@ -1676,6 +1705,22 @@
               <input id="clientPhone" name="telefone" type="text" inputmode="tel" maxlength="24" placeholder="(11) 99999-9999">
             </div>
 
+            <div class="client-field">
+              <label for="clientPhoneChannel">Uso do número</label>
+              <select id="clientPhoneChannel" name="canal_telefone">
+                <option value="nao_confirmado">Ainda não confirmado</option>
+                <option value="whatsapp">WhatsApp confirmado</option>
+                <option value="telefone">Telefone, sem WhatsApp</option>
+              </select>
+            </div>
+
+            <div class="client-field is-full">
+              <label class="client-check">
+                <input id="clientPhoneUnconfirmed" name="confirmar_telefone_sem_whatsapp" type="checkbox" value="1">
+                <span>Salvar mesmo sem confirmar WhatsApp</span>
+              </label>
+            </div>
+
             <div class="client-field is-full">
               <label for="clientEmail">E-mail <small>Telefone ou e-mail</small></label>
               <input id="clientEmail" name="email" type="email" maxlength="150" placeholder="contato@empresa.com.br">
@@ -2101,6 +2146,9 @@
       setValue('clientName', client.nome_cliente);
       setValue('clientKind', client.tipo || 'comercial');
       setValue('clientPhone', client.telefone);
+      setValue('clientPhoneChannel', client.canal_telefone || 'nao_confirmado');
+      document.getElementById('clientPhoneUnconfirmed').checked =
+        client.canal_telefone === 'nao_confirmado';
       setValue('clientEmail', client.email);
       setValue('clientSite', client.site_cliente);
       setValue('clientCep', client.cep);
@@ -2121,6 +2169,7 @@
     } else {
       setValue('clientCountry', 'Brasil');
       setValue('clientKind', 'comercial');
+      setValue('clientPhoneChannel', 'nao_confirmado');
       document.getElementById('clientActive').checked = true;
       document.getElementById('clientPublished').checked = true;
       setManualAddressMode(false, false);

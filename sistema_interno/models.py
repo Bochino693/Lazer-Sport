@@ -1,4 +1,5 @@
 import secrets
+import uuid
 from decimal import Decimal
 
 from django.conf import settings
@@ -86,6 +87,11 @@ class Cliente(Prime):
         ESCOLA = "escola", "Escola"
         ORGAO = "orgao", "Órgão público"
 
+    class CanalTelefone(models.TextChoices):
+        WHATSAPP = "whatsapp", "WhatsApp confirmado"
+        TELEFONE = "telefone", "Telefone, sem WhatsApp"
+        NAO_CONFIRMADO = "nao_confirmado", "Ainda não confirmado"
+
     nome_cliente = models.CharField("Nome", max_length=90)
     tipo = models.CharField(
         "Tipo de cadastro",
@@ -99,6 +105,19 @@ class Cliente(Prime):
         max_length=20,
         blank=True,
         help_text="Usado na nota e no contrato. Pode ficar em branco.",
+    )
+    documento_chave = models.CharField(
+        max_length=14,
+        blank=True,
+        db_index=True,
+        editable=False,
+        help_text="CPF/CNPJ normalizado, usado apenas para evitar duplicidades.",
+    )
+    documento_valido = models.BooleanField(
+        default=False,
+        db_index=True,
+        editable=False,
+        help_text="Confere formato e dígitos verificadores; não consulta a Receita.",
     )
     # Era max_length=14 -- não cabia "(11) 99999-9999", que tem 15. O
     # cadastro pelo painel quebrava justamente no celular com máscara.
@@ -114,6 +133,13 @@ class Cliente(Prime):
         blank=True,
         db_index=True,
         editable=False,
+    )
+    canal_telefone = models.CharField(
+        "Uso do número",
+        max_length=16,
+        choices=CanalTelefone.choices,
+        default=CanalTelefone.NAO_CONFIRMADO,
+        help_text="Evita tratar um telefone comum como WhatsApp sem confirmação.",
     )
     email = models.CharField(max_length=150, null=True, blank=True)
 
@@ -206,9 +232,20 @@ class Cliente(Prime):
         )
 
     def save(self, *args, **kwargs):
-        import re as _re
+        from .validacoes import chave_documento, documento_valido, somente_digitos
 
-        self.telefone_digitos = _re.sub(r"\D", "", self.telefone or "")
+        self.telefone_digitos = somente_digitos(self.telefone)
+        self.documento_chave = chave_documento(self.documento)
+        self.documento_valido = documento_valido(self.documento)
+
+        campos = kwargs.get("update_fields")
+        if campos is not None:
+            campos = set(campos)
+            if "telefone" in campos:
+                campos.add("telefone_digitos")
+            if "documento" in campos:
+                campos.update(("documento_chave", "documento_valido"))
+            kwargs["update_fields"] = list(campos)
 
         # Buffet não vira alfinete de cliente: ele já tem o card dele em
         # "Nossos Parceiros", e as duas coisas juntas o mostrariam duas
@@ -1538,7 +1575,12 @@ class Orcamento(Prime):
         """Canal explícito, com compatibilidade para propostas antigas."""
         if self.whatsapp_cliente:
             return self.whatsapp_cliente
-        if self.cliente_id and self.cliente and self.cliente.telefone:
+        if (
+            self.cliente_id
+            and self.cliente
+            and self.cliente.telefone
+            and self.cliente.canal_telefone == Cliente.CanalTelefone.WHATSAPP
+        ):
             return self.cliente.telefone
         return self.contato if "@" not in (self.contato or "") else ""
 
@@ -1720,6 +1762,44 @@ class Orcamento(Prime):
         verbose_name = "Orçamento"
         verbose_name_plural = "Orçamentos"
         ordering = ("-criacao", "-id")
+
+
+class AceiteOrcamento(models.Model):
+    """Comprovante imutável do aceite eletrônico de uma proposta.
+
+    Não guarda IP nem navegador em texto. Essas informações são
+    transformadas em HMAC no momento do aceite: continuam úteis para
+    demonstrar que duas respostas vieram do mesmo contexto, sem criar um
+    cadastro paralelo de dados pessoais sensíveis.
+    """
+
+    orcamento = models.OneToOneField(
+        Orcamento,
+        on_delete=models.PROTECT,
+        related_name="aceite_eletronico",
+    )
+    codigo_publico = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    assinante_nome = models.CharField(max_length=120)
+    assinante_documento = models.CharField(max_length=14)
+    consentimento = models.BooleanField(default=True)
+    proposta_hash = models.CharField(max_length=64)
+    ip_hash = models.CharField(max_length=64)
+    navegador_hash = models.CharField(max_length=64)
+    termos_versao = models.CharField(max_length=20, default="2026-08")
+    assinado_em = models.DateTimeField(auto_now_add=True)
+
+    def save(self, *args, **kwargs):
+        if self.pk and type(self).objects.filter(pk=self.pk).exists():
+            raise ValueError("O comprovante de aceite é imutável.")
+        return super().save(*args, **kwargs)
+
+    class Meta:
+        verbose_name = "Aceite eletrônico de orçamento"
+        verbose_name_plural = "Aceites eletrônicos de orçamentos"
+        ordering = ("-assinado_em",)
+
+    def __str__(self):
+        return f"Aceite {self.codigo_publico}"
 
 
 class AvaliacaoBlocoOrcamento(Prime):
@@ -2355,3 +2435,30 @@ class InscricaoPush(Prime):
 
     def __str__(self):
         return f"{self.usuario} · {self.aparelho or 'aparelho'}"
+
+
+class EstadoNotificacao(Prime):
+    """Memória do observador para não repetir o mesmo e-mail urgente."""
+
+    usuario = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="estados_notificacao",
+    )
+    chave = models.CharField(max_length=80)
+    assinatura = models.CharField(max_length=64, blank=True)
+    quantidade = models.PositiveIntegerField(default=0)
+    email_enviado_em = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = "Estado de notificação"
+        verbose_name_plural = "Estados de notificações"
+        constraints = [
+            models.UniqueConstraint(
+                fields=("usuario", "chave"),
+                name="notificacao_usuario_chave_unica",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.usuario} · {self.chave}"

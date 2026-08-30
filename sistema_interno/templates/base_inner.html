@@ -54,7 +54,7 @@
   <link rel="stylesheet" href="{% static 'site/ls-page-loader.css' %}?v=2">
   <script src="{% static 'site/ls-page-loader.js' %}?v=2" defer></script>
   {# Troca telas e filtros sem uma segunda requisição; cache só durante a aba. #}
-  <script src="{% static 'interno/ls-soft-navigation.js' %}?v=1" defer></script>
+  <script src="{% static 'interno/ls-soft-navigation.js' %}?v=2" defer></script>
 </head>
 <body class="ls-body {% block body_class %}{% endblock %}" data-avisos="{% url 'avisos_estado' %}" data-aparelho="{% url 'avisos_aparelho' %}">
 <svg width="0" height="0" aria-hidden="true" focusable="false" style="position:absolute">
@@ -438,7 +438,7 @@ Dito em voz alta: este NÃO é o /adm do site. Quem trabalha nos
 </div>
 
 <script src="{% static 'interno/vendor/bootstrap.bundle.min.js' %}"></script>
-<script src="{% static 'interno/painel.js' %}?v=9"></script>
+<script src="{% static 'interno/painel.js' %}?v=10"></script>
 {% comment %}
   Campo de busca do painel (catálogo, clientes, colaboradores). Carrega
   em toda tela porque o mesmo componente é usado em orçamento, produção e

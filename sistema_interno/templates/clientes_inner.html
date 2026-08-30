@@ -311,6 +311,23 @@
                    inputmode="tel" maxlength="24" placeholder="(11) 99999-9999" data-mascara="telefone">
           </div>
 
+          <div class="col-6 col-md-3">
+            <label class="form-label" for="clienteCanalTelefone">Uso do número</label>
+            <select class="form-select" id="clienteCanalTelefone" name="canal_telefone">
+              <option value="nao_confirmado">Ainda não confirmado</option>
+              <option value="whatsapp">WhatsApp confirmado</option>
+              <option value="telefone">Telefone, sem WhatsApp</option>
+            </select>
+          </div>
+
+          <div class="col-12 col-md-6 align-self-end" id="clienteConfirmacaoCanal">
+            <label class="form-check ls-inline-check mb-1">
+              <input class="form-check-input" type="checkbox" name="confirmar_telefone_sem_whatsapp" value="1" id="clienteSalvarSemWhatsApp">
+              <span class="form-check-label">Salvar mesmo sem confirmar WhatsApp</span>
+            </label>
+            <span class="form-text">O sistema não enviará proposta por WhatsApp até a confirmação.</span>
+          </div>
+
           <div class="col-12 col-md-5">
             <label class="form-label" for="clienteEmail">E-mail</label>
             <input type="email" class="form-control" id="clienteEmail" name="email"
@@ -320,7 +337,8 @@
           <div class="col-6 col-md-3">
             <label class="form-label" for="clienteDocumento">CPF ou CNPJ</label>
             <input class="form-control" id="clienteDocumento" name="documento"
-                   maxlength="20" placeholder="Opcional" data-mascara="documento" inputmode="numeric">
+                   maxlength="20" placeholder="Opcional" data-mascara="documento"
+                   inputmode="text" autocapitalize="characters">
           </div>
 
           <div class="col-12 col-md-4" id="blocoParceiro">
@@ -615,7 +633,7 @@ document.addEventListener("DOMContentLoaded", function () {
       complemento: "clienteComplemento", bairro: "clienteBairro",
       cidade: "clienteCidade", estado: "clienteEstado",
       latitude: "clienteLatitude", longitude: "clienteLongitude",
-      site_cliente: "clienteSite"
+      site_cliente: "clienteSite", canal_telefone: "clienteCanalTelefone"
     };
 
     Object.keys(ids).forEach(function (campo) {
@@ -636,6 +654,9 @@ document.addEventListener("DOMContentLoaded", function () {
         : "";
 
     campoTipo.value = cliente ? cliente.tipo : "residencial";
+    document.getElementById("clienteSalvarSemWhatsApp").checked = Boolean(
+      cliente && cliente.canal_telefone === "nao_confirmado"
+    );
     buscaEstabelecimento.definirValor(cliente ? cliente.estabelecimento : "", false);
     buscaParceiro.definirValor(cliente ? cliente.parceiro : "", false);
 

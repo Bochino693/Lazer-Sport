@@ -20,7 +20,13 @@ from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
-from sistema_interno.models import Cliente, EnderecoCliente, ItemOrcamento, Orcamento
+from sistema_interno.models import (
+    AceiteOrcamento,
+    Cliente,
+    EnderecoCliente,
+    ItemOrcamento,
+    Orcamento,
+)
 
 from .models import Brinquedos, CategoriasBrinquedos
 
@@ -59,6 +65,16 @@ class OrcamentoPublicoTests(TestCase):
     def url(self, orcamento=None):
         alvo = orcamento or self.orcamento
         return reverse("orcamento_publico", args=[alvo.token])
+
+    def aprovar(self, nome="Fulano", **extras):
+        dados = {
+            "decisao": "aprovar",
+            "nome": nome,
+            "documento_assinante": "529.982.247-25",
+            "consentimento_aceite": "1",
+        }
+        dados.update(extras)
+        return self.client.post(self.url(), dados)
 
     # ------------------------------------------------------------ leitura
     def test_pagina_mostra_itens_e_total(self):
@@ -245,16 +261,27 @@ class OrcamentoPublicoTests(TestCase):
 
     # ----------------------------------------------------------- resposta
     def test_aprovar_registra_nome_e_muda_situacao(self):
-        resposta = self.client.post(
-            self.url(),
-            {"decisao": "aprovar", "nome": "Fulano de Tal"},
-        )
+        resposta = self.aprovar("Fulano de Tal")
 
         self.assertEqual(resposta.status_code, 302)
         self.orcamento.refresh_from_db()
         self.assertEqual(self.orcamento.status, Orcamento.Status.APROVADO)
         self.assertEqual(self.orcamento.respondido_por, "Fulano de Tal")
         self.assertIsNotNone(self.orcamento.respondido_em)
+        aceite = AceiteOrcamento.objects.get(orcamento=self.orcamento)
+        self.assertEqual(aceite.assinante_documento, "52998224725")
+        self.assertEqual(len(aceite.proposta_hash), 64)
+
+    def test_aprovacao_exige_documento_valido_e_consentimento(self):
+        resposta = self.client.post(self.url(), {
+            "decisao": "aprovar",
+            "nome": "Fulano",
+            "documento_assinante": "111.111.111-11",
+        })
+        self.assertEqual(resposta.status_code, 400)
+        self.assertFalse(AceiteOrcamento.objects.exists())
+        self.orcamento.refresh_from_db()
+        self.assertEqual(self.orcamento.status, Orcamento.Status.AGUARDANDO_RESPOSTA)
 
     def test_aprovacao_do_cliente_publica_o_cadastro_no_mapa(self):
         """Aprovar a proposta liga a chave do mapa no próprio cliente.
@@ -278,10 +305,7 @@ class OrcamentoPublicoTests(TestCase):
         self.orcamento.cliente = cliente
         self.orcamento.save(update_fields=["cliente"])
 
-        self.client.post(
-            self.url(),
-            {"decisao": "aprovar", "nome": "Responsável do colégio"},
-        )
+        self.aprovar("Responsável do colégio")
 
         cliente.refresh_from_db()
         self.assertTrue(cliente.publicar_no_mapa)
@@ -309,10 +333,7 @@ class OrcamentoPublicoTests(TestCase):
         self.orcamento.motivo_recusa = "sobra de uma recusa anterior"
         self.orcamento.save(update_fields=["motivo_recusa"])
 
-        self.client.post(
-            self.url(),
-            {"decisao": "aprovar", "nome": "Fulano", "motivo": "qualquer coisa"},
-        )
+        self.aprovar("Fulano", motivo="qualquer coisa")
 
         self.orcamento.refresh_from_db()
         self.assertEqual(self.orcamento.motivo_recusa, "")
@@ -336,7 +357,7 @@ class OrcamentoPublicoTests(TestCase):
 
     def test_resposta_e_definitiva(self):
         """Aprovada, a proposta não vira recusada por um segundo clique."""
-        self.client.post(self.url(), {"decisao": "aprovar", "nome": "Fulano"})
+        self.aprovar()
         self.client.post(self.url(), {"decisao": "recusar", "nome": "Fulano"})
 
         self.orcamento.refresh_from_db()
@@ -346,7 +367,7 @@ class OrcamentoPublicoTests(TestCase):
         self.orcamento.validade = timezone.localdate() - timedelta(days=1)
         self.orcamento.save(update_fields=["validade"])
 
-        self.client.post(self.url(), {"decisao": "aprovar", "nome": "Fulano"})
+        self.aprovar()
 
         self.orcamento.refresh_from_db()
         self.assertEqual(self.orcamento.status, Orcamento.Status.AGUARDANDO_RESPOSTA)
@@ -363,11 +384,13 @@ class OrcamentoPublicoTests(TestCase):
         self.assertContains(resposta, "validade desta proposta terminou")
 
     def test_pagina_respondida_nao_mostra_botao(self):
-        self.client.post(self.url(), {"decisao": "aprovar", "nome": "Fulano"})
+        self.aprovar()
 
         resposta = self.client.get(self.url())
 
         self.assertContains(resposta, "Resposta registrada")
+        self.assertContains(resposta, "Comprovante")
+        self.assertContains(resposta, "529.***.***-25")
         self.assertNotContains(resposta, "Aprovar proposta")
 
     def test_pagina_nao_e_indexada(self):
