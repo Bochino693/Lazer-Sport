@@ -48,7 +48,7 @@
   <link href="{% static 'interno/vendor/bootstrap-icons.min.css' %}" rel="stylesheet">
 
   {% block extra_css %}{% endblock %}
-  <link href="{% static 'interno/interno_modern.css' %}?v=19" rel="stylesheet">
+  <link href="{% static 'interno/interno_modern.css' %}?v=23" rel="stylesheet">
 
   <!-- Barra de carregamento no topo, compartilhada com o painel /adm. -->
   <link rel="stylesheet" href="{% static 'site/ls-page-loader.css' %}?v=2">
@@ -234,6 +234,9 @@
         </a>
         <a data-titulo="Cupons" class="ls-nav-item {% if request.resolver_match.url_name == 'cupons_admin' %}active{% endif %}" href="{% url 'cupons_admin' %}">
           <span class="ls-nav-icon"><i class="bi bi-ticket-perforated-fill"></i></span><span>Cupons</span>
+        </a>
+        <a data-titulo="Campanhas" class="ls-nav-item {% if request.resolver_match.url_name == 'campanhas_inner' or request.resolver_match.url_name == 'campanha_detalhe' %}active{% endif %}" href="{% url 'campanhas_inner' %}">
+          <span class="ls-nav-icon"><i class="bi bi-megaphone-fill"></i></span><span>Campanhas</span>
         </a>
         <a data-titulo="Curtidas e desejos" class="ls-nav-item {% if request.resolver_match.url_name == 'engajamento_admin' %}active{% endif %}" href="{% url 'engajamento_admin' %}">
           <span class="ls-nav-icon"><i class="bi bi-heart-fill"></i></span><span>Curtidas e desejos</span>
@@ -438,7 +441,7 @@ Dito em voz alta: este NÃO é o /adm do site. Quem trabalha nos
 </div>
 
 <script src="{% static 'interno/vendor/bootstrap.bundle.min.js' %}"></script>
-<script src="{% static 'interno/painel.js' %}?v=10"></script>
+<script src="{% static 'interno/painel.js' %}?v=11"></script>
 {% comment %}
   Campo de busca do painel (catálogo, clientes, colaboradores). Carrega
   em toda tela porque o mesmo componente é usado em orçamento, produção e

@@ -2462,3 +2462,223 @@ class EstadoNotificacao(Prime):
 
     def __str__(self):
         return f"{self.usuario} · {self.chave}"
+
+
+# ======================================================================
+# CAMPANHAS DE PROMOÇÕES, COMBOS E CUPONS
+# ======================================================================
+class CampanhaDivulgacao(Prime):
+    """Uma divulgação preparada no painel, com conteúdo congelado.
+
+    A campanha guarda uma cópia do título, texto, imagem e destino. Assim
+    o histórico continua inteligível mesmo se a promoção for editada ou
+    removida depois. As FKs servem para navegação interna; o cliente recebe
+    somente o ``token`` público, nunca o id sequencial do cadastro.
+    """
+
+    class Tipo(models.TextChoices):
+        PROMOCAO = "promocao", "Promoção"
+        COMBO = "combo", "Combo"
+        CUPOM = "cupom", "Cupom"
+
+    class Status(models.TextChoices):
+        FILA = "fila", "Na fila"
+        EM_ANDAMENTO = "andamento", "Em andamento"
+        CONCLUIDA = "concluida", "Concluída"
+        PARCIAL = "parcial", "Concluída com falhas"
+        FALHA = "falha", "Falhou"
+        CANCELADA = "cancelada", "Cancelada"
+
+    class Segmento(models.TextChoices):
+        TODOS = "todos", "Todos os clientes ativos"
+        RESIDENCIAL = "residencial", "Clientes residenciais"
+        COMERCIAL = "comercial", "Empresas e comércios"
+        BUFFET = "buffet", "Buffets parceiros"
+        CONDOMINIO = "condominio", "Condomínios"
+        ESCOLA = "escola", "Escolas"
+        ORGAO = "orgao", "Órgãos públicos"
+
+    token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    tipo = models.CharField(max_length=12, choices=Tipo.choices, db_index=True)
+    status = models.CharField(
+        max_length=12,
+        choices=Status.choices,
+        default=Status.FILA,
+        db_index=True,
+    )
+    segmento = models.CharField(
+        max_length=14,
+        choices=Segmento.choices,
+        default=Segmento.TODOS,
+    )
+    promocao = models.ForeignKey(
+        "core.Promocoes",
+        on_delete=models.SET_NULL,
+        related_name="campanhas_divulgacao",
+        null=True,
+        blank=True,
+    )
+    combo = models.ForeignKey(
+        "core.Combos",
+        on_delete=models.SET_NULL,
+        related_name="campanhas_divulgacao",
+        null=True,
+        blank=True,
+    )
+    cupom = models.ForeignKey(
+        "core.Cupom",
+        on_delete=models.SET_NULL,
+        related_name="campanhas_divulgacao",
+        null=True,
+        blank=True,
+    )
+    titulo = models.CharField(max_length=140)
+    mensagem = models.TextField(max_length=1200)
+    imagem_url = models.URLField(max_length=700, blank=True)
+    destino_url = models.URLField(max_length=700, blank=True)
+    codigo_cupom = models.CharField(max_length=20, blank=True)
+    canal_email = models.BooleanField(default=False)
+    canal_whatsapp = models.BooleanField(default=False)
+    total_destinatarios = models.PositiveIntegerField(default=0)
+    total_enviados = models.PositiveIntegerField(default=0)
+    total_falhas = models.PositiveIntegerField(default=0)
+    responsavel = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name="campanhas_divulgacao",
+        null=True,
+        blank=True,
+    )
+
+    @property
+    def caminho_publico(self):
+        from django.urls import reverse
+
+        return reverse(
+            "campanha_publica",
+            args=[self.token],
+            urlconf=settings.ROOT_URLCONF,
+        )
+
+    @property
+    def progresso_percentual(self):
+        if not self.total_destinatarios:
+            return 0
+        encerrados = self.total_enviados + self.total_falhas
+        return min(100, round(encerrados * 100 / self.total_destinatarios))
+
+    def recalcular(self, salvar=True):
+        """Deriva contadores e estado das entregas; nunca soma na mão."""
+        entregas = self.entregas.all()
+        total = entregas.count()
+        enviados = entregas.filter(status=EntregaCampanha.Status.ENVIADO).count()
+        falhas = entregas.filter(status=EntregaCampanha.Status.FALHOU).count()
+        abertos = entregas.filter(status__in=(
+            EntregaCampanha.Status.PENDENTE,
+            EntregaCampanha.Status.PROCESSANDO,
+            EntregaCampanha.Status.AGUARDANDO_ACAO,
+        )).exists()
+
+        if self.status != self.Status.CANCELADA:
+            if not total:
+                estado = self.Status.FALHA
+            elif abertos:
+                estado = self.Status.EM_ANDAMENTO
+            elif falhas:
+                estado = self.Status.PARCIAL if enviados else self.Status.FALHA
+            else:
+                estado = self.Status.CONCLUIDA
+            self.status = estado
+        self.total_destinatarios = total
+        self.total_enviados = enviados
+        self.total_falhas = falhas
+        if salvar:
+            self.save(update_fields=(
+                "status", "total_destinatarios", "total_enviados",
+                "total_falhas", "atualizado",
+            ))
+        return self
+
+    class Meta:
+        verbose_name = "Campanha de divulgação"
+        verbose_name_plural = "Campanhas de divulgação"
+        ordering = ("-criacao", "-id")
+        indexes = [
+            models.Index(fields=("status", "criacao"), name="campanha_status_data_idx"),
+        ]
+
+    def __str__(self):
+        return f"{self.get_tipo_display()} · {self.titulo}"
+
+
+class EntregaCampanha(Prime):
+    """Um canal para um destinatário, com endereço congelado e deduplicado."""
+
+    class Canal(models.TextChoices):
+        EMAIL = "email", "E-mail"
+        WHATSAPP = "whatsapp", "WhatsApp"
+
+    class Status(models.TextChoices):
+        PENDENTE = "pendente", "Pendente"
+        PROCESSANDO = "processando", "Processando"
+        AGUARDANDO_ACAO = "aguardando", "Aguardando envio no WhatsApp"
+        ENVIADO = "enviado", "Enviado"
+        FALHOU = "falhou", "Falhou"
+        IGNORADO = "ignorado", "Ignorado"
+
+    token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    campanha = models.ForeignKey(
+        CampanhaDivulgacao,
+        on_delete=models.CASCADE,
+        related_name="entregas",
+    )
+    cliente = models.ForeignKey(
+        Cliente,
+        on_delete=models.SET_NULL,
+        related_name="entregas_campanha",
+        null=True,
+        blank=True,
+    )
+    canal = models.CharField(max_length=10, choices=Canal.choices, db_index=True)
+    nome_destinatario = models.CharField(max_length=120)
+    destino = models.CharField(max_length=254)
+    destino_chave = models.CharField(max_length=64, editable=False)
+    status = models.CharField(
+        max_length=12,
+        choices=Status.choices,
+        default=Status.PENDENTE,
+        db_index=True,
+    )
+    tentativas = models.PositiveSmallIntegerField(default=0)
+    proxima_tentativa_em = models.DateTimeField(null=True, blank=True, db_index=True)
+    processando_desde = models.DateTimeField(null=True, blank=True)
+    enviado_em = models.DateTimeField(null=True, blank=True)
+    erro = models.CharField(max_length=300, blank=True)
+
+    def save(self, *args, **kwargs):
+        if not self.destino_chave:
+            import hashlib
+
+            normalizado = (self.destino or "").strip().casefold()
+            self.destino_chave = hashlib.sha256(normalizado.encode("utf-8")).hexdigest()
+        super().save(*args, **kwargs)
+
+    class Meta:
+        verbose_name = "Entrega de campanha"
+        verbose_name_plural = "Entregas de campanhas"
+        ordering = ("canal", "nome_destinatario", "id")
+        constraints = [
+            models.UniqueConstraint(
+                fields=("campanha", "canal", "destino_chave"),
+                name="campanha_canal_destino_unico",
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=("canal", "status", "proxima_tentativa_em"),
+                name="entrega_fila_canal_idx",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.campanha} · {self.get_canal_display()} · {self.nome_destinatario}"

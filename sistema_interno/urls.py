@@ -37,6 +37,13 @@ from .views_app import manifesto, service_worker
 from .views_avisos import EstadoAvisosView, InscricaoPushView
 from .views_acessos import AvaliacaoSetoresInnerView, UsuariosEquipeInnerView
 from .views_clientes import ClientesInnerView, ConsultaCepInnerView
+from .views_campanhas import (
+    AcionarWhatsAppCampanhaView,
+    CampanhaDetalheView,
+    CampanhasInnerView,
+    CriarCampanhaView,
+    PrepararCampanhaView,
+)
 from .views_gestao import (
     AtualizarEtapaProducaoView,
     BuscaClientesOrcamentoView,
@@ -95,6 +102,19 @@ urlpatterns = [
     path('site/eventos/', por_funcoes(EventoAdminView, CRIACAO), name='eventos_admin'),
     path('site/projetos/', por_funcoes(ProjetoAdminView, CRIACAO), name='projetos_admin'),
     path('site/cupons/', por_funcoes(CupomAdminView, CRIACAO, GESTAO), name='cupons_admin'),
+    path('site/campanhas/', CampanhasInnerView.as_view(), name='campanhas_inner'),
+    path('site/campanhas/preparar/', PrepararCampanhaView.as_view(), name='campanha_preparar'),
+    path('site/campanhas/criar/', CriarCampanhaView.as_view(), name='campanha_criar'),
+    path(
+        'site/campanhas/<uuid:token>/',
+        CampanhaDetalheView.as_view(),
+        name='campanha_detalhe',
+    ),
+    path(
+        'site/campanhas/<uuid:token>/whatsapp/<uuid:entrega_token>/',
+        AcionarWhatsAppCampanhaView.as_view(),
+        name='campanha_whatsapp',
+    ),
     path('site/pecas/', por_funcoes(PecaAdminView, CRIACAO), name='pecas_admin'),
     path('site/banners/', por_funcoes(BannerAdminView, CRIACAO), name='banner_adm'),
     path(

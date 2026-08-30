@@ -12,6 +12,7 @@ from django.db import close_old_connections
 from django.utils import timezone
 
 from sistema_interno.avisos import coletar
+from sistema_interno.campanhas import processar_emails_pendentes
 from sistema_interno.models import EstadoNotificacao
 from sistema_interno.notificacoes import enviar_pendencias_urgentes
 
@@ -51,6 +52,18 @@ class Command(BaseCommand):
         self.stdout.write("Observador de pendências encerrado.")
 
     def _executar_ciclo(self):
+        # A mesma sentinela leve processa a outbox comercial. O clique que
+        # cria uma campanha nunca espera SMTP e uma oscilação do provedor
+        # não derruba a central de avisos.
+        try:
+            processar_emails_pendentes(limite=20)
+        except Exception:
+            # A outbox e os avisos urgentes compartilham o processo, não o
+            # destino: falha num e-mail comercial não pode atrasar pedido,
+            # estoque ou cliente incompleto.
+            log.exception("Falha ao processar a fila de campanhas.")
+            close_old_connections()
+
         Usuario = get_user_model()
         usuarios = Usuario.objects.filter(is_active=True).filter(
             is_staff=True

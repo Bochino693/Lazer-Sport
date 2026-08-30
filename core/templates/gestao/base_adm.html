@@ -12,6 +12,7 @@
 
 {% block extra_css %}
   <link rel="stylesheet" href="{% static 'interno/gestao_integrada.css' %}?v=7">
+  <link rel="stylesheet" href="{% static 'interno/campanhas.css' %}?v=1">
 {% endblock %}
 
 {% block content %}
@@ -22,4 +23,9 @@
       <p>Catálogo, campanhas e conteúdo público no mesmo aplicativo da empresa.</p>
     </div>
   </section>
+{% endblock %}
+
+{% block scripts %}
+  {{ block.super }}
+  <script src="{% static 'interno/campanhas.js' %}?v=1" defer></script>
 {% endblock %}

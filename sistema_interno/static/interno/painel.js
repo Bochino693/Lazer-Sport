@@ -1338,9 +1338,10 @@
     });
   }
 
-  /* Mantém só as duas ações mais úteis à vista e recolhe as demais em um
-     menu nativo. Os próprios nós (inclusive <form>, CSRF e listeners) são
-     movidos, não clonados, portanto nenhuma regra de negócio se perde. */
+  /* Um único botão por registro abre um painel flutuante. O painel usa
+     position:fixed e, por isso, não aumenta a altura da linha nem fica
+     recortado pelo scroll da tabela. Os nós originais (forms, CSRF e
+     listeners) são apenas reorganizados: nenhuma ação é clonada. */
   Painel.organizarAcoesTabelas = function (raiz) {
     var escopo = raiz || document;
 
@@ -1368,60 +1369,161 @@
       if (grupo.dataset.lsActionsReady === "1") return;
 
       var filhos = Array.prototype.filter.call(grupo.children, function (filho) {
-        return !filho.classList.contains("ls-action-overflow");
+        return !filho.classList.contains("ls-action-fab");
       });
-      if (filhos.length <= 3) {
+      if (filhos.length < 2) {
         grupo.dataset.lsActionsReady = "1";
         return;
       }
 
-      var principais = [];
-      function priorizar(seletor) {
-        var encontrado = filhos.find(function (filho) {
-          return filho.matches(seletor) || filho.querySelector(seletor);
-        });
-        if (encontrado && principais.indexOf(encontrado) === -1) principais.push(encontrado);
+      Painel._sequenciaAcoes = (Painel._sequenciaAcoes || 0) + 1;
+      var instancia = String(Painel._sequenciaAcoes);
+      var envoltorio = document.createElement("div");
+      envoltorio.className = "ls-action-fab";
+
+      var gatilho = document.createElement("button");
+      gatilho.type = "button";
+      gatilho.className = "ls-action-fab-trigger";
+      gatilho.setAttribute("aria-label", "Abrir ações deste registro");
+      gatilho.setAttribute("aria-expanded", "false");
+      gatilho.setAttribute("aria-controls", "ls-action-menu-" + instancia);
+      gatilho.innerHTML = '<i class="bi bi-three-dots-vertical" aria-hidden="true"></i>';
+
+      var menu = document.createElement("div");
+      menu.id = "ls-action-menu-" + instancia;
+      menu.className = "ls-action-fab-menu";
+      menu.setAttribute("role", "menu");
+      menu.setAttribute("aria-hidden", "true");
+      menu.innerHTML = '<div class="ls-action-fab-head"><span>Ações</span><small>Escolha o que deseja fazer</small></div>';
+
+      function rotuloDaAcao(acao) {
+        var rotulo = acao.getAttribute("data-label") || acao.getAttribute("title") || acao.getAttribute("aria-label");
+        if (rotulo) return rotulo;
+        if (acao.matches("[data-editar], [data-editar-os]")) return "Editar";
+        if (acao.matches("[data-enviar], [data-enviar-os]")) return "Enviar";
+        if (acao.matches("[data-excluir], [data-excluir-os]")) return "Excluir";
+        return (acao.textContent || "Ação").trim() || "Ação";
       }
 
-      priorizar("[data-editar], [data-editar-os]");
-      priorizar("[data-enviar], [data-enviar-os]");
       filhos.forEach(function (filho) {
-        if (principais.length < 2 && principais.indexOf(filho) === -1) principais.push(filho);
-      });
-
-      var detalhes = document.createElement("details");
-      detalhes.className = "ls-action-overflow";
-      var resumo = document.createElement("summary");
-      resumo.className = "btn btn-sm btn-outline-secondary";
-      resumo.setAttribute("aria-label", "Mostrar outras ações");
-      resumo.innerHTML = '<i class="bi bi-three-dots" aria-hidden="true"></i><span class="ls-action-label">Mais</span>';
-      var menu = document.createElement("div");
-      menu.className = "ls-action-overflow-menu";
-
-      filhos.filter(function (filho) {
-        return principais.indexOf(filho) === -1;
-      }).forEach(function (filho) {
         var acao = filho.matches("a,button") ? filho : filho.querySelector("a,button");
-        if (acao && !acao.querySelector(".ls-action-label")) {
-          var rotulo = acao.getAttribute("data-label") || acao.getAttribute("title") || acao.getAttribute("aria-label");
-          if (!rotulo && acao.matches("[data-excluir], [data-excluir-os]")) rotulo = "Excluir";
-          if (!rotulo) rotulo = "Ação";
-          var texto = document.createElement("span");
-          texto.className = "ls-action-label";
-          texto.textContent = rotulo;
-          acao.appendChild(texto);
+        if (acao) {
+          var rotulo = rotuloDaAcao(acao);
+          acao.classList.add("ls-action-fab-item");
+          acao.setAttribute("role", "menuitem");
+          if (!acao.getAttribute("aria-label")) acao.setAttribute("aria-label", rotulo);
+          if (!acao.querySelector(".ls-action-label")) {
+            var spanExistente = Array.prototype.find.call(acao.children, function (no) {
+              return no.tagName === "SPAN" && !no.classList.contains("spinner-border");
+            });
+            if (spanExistente) {
+              spanExistente.classList.add("ls-action-label");
+            } else {
+              var textosDiretos = Array.prototype.filter.call(acao.childNodes, function (no) {
+                return no.nodeType === 3 && no.textContent.trim();
+              });
+              var texto = document.createElement("span");
+              texto.className = "ls-action-label";
+              texto.textContent = textosDiretos.length
+                ? textosDiretos.map(function (no) { return no.textContent.trim(); }).join(" ")
+                : rotulo;
+              textosDiretos.forEach(function (no) { no.remove(); });
+              acao.appendChild(texto);
+            }
+          }
         }
         menu.appendChild(filho);
       });
 
-      menu.addEventListener("click", function (evento) {
-        if (evento.target.closest("a, button")) detalhes.removeAttribute("open");
+      function posicionar() {
+        if (!envoltorio.classList.contains("is-open")) return;
+        var ancora = gatilho.getBoundingClientRect();
+        var caixa = menu.getBoundingClientRect();
+        var margem = 10;
+        var esquerda = Math.min(
+          Math.max(margem, ancora.right - caixa.width),
+          global.innerWidth - caixa.width - margem
+        );
+        var topo = ancora.bottom + 8;
+        if (topo + caixa.height > global.innerHeight - margem) {
+          topo = Math.max(margem, ancora.top - caixa.height - 8);
+          menu.classList.add("abre-acima");
+        } else {
+          menu.classList.remove("abre-acima");
+        }
+        menu.style.left = Math.round(esquerda) + "px";
+        menu.style.top = Math.round(topo) + "px";
+      }
+
+      function fechar(devolverFoco) {
+        if (!envoltorio.classList.contains("is-open")) return;
+        envoltorio.classList.remove("is-open");
+        gatilho.setAttribute("aria-expanded", "false");
+        menu.setAttribute("aria-hidden", "true");
+        menu.style.removeProperty("left");
+        menu.style.removeProperty("top");
+        if (Painel._acoesAbertas === envoltorio) Painel._acoesAbertas = null;
+        if (devolverFoco) gatilho.focus({ preventScroll: true });
+      }
+
+      function abrir() {
+        if (Painel._acoesAbertas && Painel._acoesAbertas !== envoltorio) {
+          Painel._acoesAbertas._lsFechar(false);
+        }
+        envoltorio.classList.add("is-open");
+        gatilho.setAttribute("aria-expanded", "true");
+        menu.setAttribute("aria-hidden", "false");
+        Painel._acoesAbertas = envoltorio;
+        global.requestAnimationFrame(posicionar);
+      }
+
+      envoltorio._lsFechar = fechar;
+      envoltorio._lsPosicionar = posicionar;
+      gatilho.addEventListener("click", function () {
+        if (envoltorio.classList.contains("is-open")) fechar(false);
+        else abrir();
       });
-      detalhes.appendChild(resumo);
-      detalhes.appendChild(menu);
-      grupo.appendChild(detalhes);
+      menu.addEventListener("click", function (evento) {
+        if (evento.target.closest("a, button")) fechar(false);
+      });
+      menu.addEventListener("keydown", function (evento) {
+        var itens = Array.prototype.slice.call(menu.querySelectorAll("a:not([disabled]),button:not([disabled])"));
+        var atual = itens.indexOf(document.activeElement);
+        if (evento.key === "Escape") {
+          evento.preventDefault();
+          fechar(true);
+        } else if (evento.key === "ArrowDown" && itens.length) {
+          evento.preventDefault();
+          itens[(atual + 1 + itens.length) % itens.length].focus();
+        } else if (evento.key === "ArrowUp" && itens.length) {
+          evento.preventDefault();
+          itens[(atual - 1 + itens.length) % itens.length].focus();
+        }
+      });
+
+      envoltorio.appendChild(gatilho);
+      envoltorio.appendChild(menu);
+      grupo.appendChild(envoltorio);
       grupo.dataset.lsActionsReady = "1";
     });
+
+    if (!Painel._acoesGlobaisLigadas) {
+      document.addEventListener("pointerdown", function (evento) {
+        if (Painel._acoesAbertas && !Painel._acoesAbertas.contains(evento.target)) {
+          Painel._acoesAbertas._lsFechar(false);
+        }
+      });
+      document.addEventListener("keydown", function (evento) {
+        if (evento.key === "Escape" && Painel._acoesAbertas) Painel._acoesAbertas._lsFechar(true);
+      });
+      global.addEventListener("resize", function () {
+        if (Painel._acoesAbertas) Painel._acoesAbertas._lsPosicionar();
+      }, { passive: true });
+      document.addEventListener("scroll", function () {
+        if (Painel._acoesAbertas) Painel._acoesAbertas._lsPosicionar();
+      }, true);
+      Painel._acoesGlobaisLigadas = true;
+    }
   };
 
   global.Painel = Painel;

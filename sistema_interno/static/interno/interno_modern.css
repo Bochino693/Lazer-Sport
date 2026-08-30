@@ -2392,58 +2392,106 @@ a.ls-metric-card.active{border-color:var(--metric);box-shadow:0 0 0 2px rgba(242
 #modalEnviarOS .ls-share-preview-mark{color:#8cdcf3;background:rgba(53,133,218,.22)}
 
 /* ======================================================================
-   TABELAS E AÇÕES V22 — contrato canônico responsivo
+   TABELAS E AÇÕES V23 — linhas compactas + menu flutuante
 
-   Duas ações de trabalho permanecem visíveis; as secundárias entram em
-   "Mais" pelo painel.js. A partir de 1100px a tabela vira cartões para
-   não comprimir conteúdo em notebook pequeno ou tablet na horizontal.
+   A coluna de ações ocupa apenas 58px e nunca cresce. Todas as operações
+   ficam em um popover fixo à janela, portanto não alteram a linha e não
+   são recortadas pelo scroll horizontal. Tablet conserva a leitura em
+   colunas; somente o celular transforma cada registro em cartão.
    ====================================================================== */
 .table-responsive{
   max-width:100%;overflow-x:auto!important;overflow-y:visible;
   scrollbar-gutter:stable;-webkit-overflow-scrolling:touch;
 }
-.ls-commercial-table{width:100%;table-layout:auto}
+.ls-commercial-table{width:100%;table-layout:auto;border-collapse:separate;border-spacing:0}
 .ls-commercial-table th,.ls-commercial-table td{
-  padding:10px 9px!important;font-size:.82rem;vertical-align:middle;
+  padding:9px 8px!important;font-size:.79rem;vertical-align:middle;
 }
-.ls-commercial-table td{overflow-wrap:anywhere}
+.ls-commercial-table th{
+  white-space:nowrap;font-size:.69rem;letter-spacing:.045em;text-align:center;
+}
+.ls-commercial-table th:first-child,.ls-commercial-table td:first-child{text-align:left}
+.ls-commercial-table td{overflow-wrap:normal;word-break:normal}
+.ls-commercial-table tbody tr{transition:background .16s ease}
+.ls-commercial-table td[data-rotulo="Nº"],
+.ls-commercial-table td[data-rotulo="OS"],
+.ls-commercial-table td[data-rotulo="Valor"],
+.ls-commercial-table td[data-rotulo="Total"],
+.ls-commercial-table td[data-rotulo="Situação"],
+.ls-commercial-table td[data-rotulo="Pagamento"],
+.ls-commercial-table td[data-rotulo="Data"],
+.ls-commercial-table td[data-rotulo="Validade"]{text-align:center;white-space:nowrap}
+.ls-commercial-table td[data-rotulo="Cliente"],
+.ls-commercial-table td[data-rotulo="Contato"],
+.ls-commercial-table td[data-rotulo="Vínculo"]{max-width:250px}
+.ls-commercial-table td[data-rotulo="Cliente"] strong,
+.ls-commercial-table td[data-rotulo="Contato"] strong{
+  display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
 .ls-commercial-table td[data-rotulo="Valor"],
 .ls-commercial-table td[data-rotulo="Total"],
 .ls-commercial-table td[data-rotulo="Situação"]{white-space:nowrap}
 .ls-actions,.ls-commercial-actions{
-  width:132px!important;min-width:132px!important;white-space:normal!important;
+  width:58px!important;min-width:58px!important;text-align:center!important;white-space:nowrap!important;
 }
 .ls-row-actions{
-  display:flex!important;align-items:center;justify-content:flex-end;
-  flex-wrap:wrap;gap:5px;
+  position:relative;display:flex!important;align-items:center;justify-content:center!important;
+  flex-wrap:nowrap!important;gap:0;
 }
-.ls-row-actions>.btn,.ls-row-actions>form>.btn,.ls-row-actions>.ls-action-overflow>summary{
-  width:36px!important;min-width:36px!important;height:36px;min-height:36px!important;
-  margin:0!important;padding:0!important;display:inline-flex;align-items:center;
-  justify-content:center;gap:6px;white-space:nowrap;
+.ls-action-fab{position:relative;display:inline-grid;place-items:center}
+.ls-action-fab-trigger{
+  width:38px;height:38px;min-width:38px!important;min-height:38px!important;padding:0!important;
+  display:grid;place-items:center;border:1px solid rgba(242,169,59,.34);border-radius:13px;
+  color:#f7d598;background:linear-gradient(145deg,rgba(242,169,59,.15),rgba(54,43,26,.7));
+  box-shadow:0 8px 20px rgba(0,0,0,.2);cursor:pointer;transition:.16s ease;
 }
-.ls-row-actions>.btn .ls-action-label,
-.ls-row-actions>form>.btn .ls-action-label,
-.ls-action-overflow>summary .ls-action-label{display:none!important}
-.ls-action-overflow{min-width:0;margin:0;flex:0 0 auto}
-.ls-action-overflow>summary{list-style:none;cursor:pointer}
-.ls-action-overflow>summary::-webkit-details-marker{display:none}
-.ls-action-overflow[open]{flex:1 0 100%}
-.ls-action-overflow[open]>summary{
-  width:100%!important;color:#dce8ff!important;border-color:rgba(122,163,235,.42)!important;
-  background:rgba(68,112,193,.16)!important;
+.ls-action-fab-trigger:hover,.ls-action-fab-trigger:focus-visible,
+.ls-action-fab.is-open .ls-action-fab-trigger{
+  color:#1e170c;border-color:#f2a93b;background:#f2a93b;
+  box-shadow:0 0 0 4px rgba(242,169,59,.14),0 12px 24px rgba(0,0,0,.28);
+  transform:translateY(-1px);
 }
-.ls-action-overflow[open]>summary .ls-action-label{display:inline!important}
-.ls-action-overflow-menu{
-  display:grid;grid-template-columns:1fr;gap:5px;width:100%;padding-top:6px;
+.ls-action-fab-trigger i{font-size:1.05rem;line-height:1}
+.ls-action-fab-menu{
+  position:fixed;z-index:2105;width:min(292px,calc(100vw - 20px));max-height:min(440px,calc(100dvh - 20px));
+  padding:8px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;overflow:auto;
+  border:1px solid rgba(242,169,59,.3);border-radius:17px;
+  background:linear-gradient(155deg,rgba(37,30,21,.985),rgba(20,17,13,.99));
+  box-shadow:0 24px 65px rgba(0,0,0,.52),0 0 0 1px rgba(255,255,255,.025);
+  opacity:0;visibility:hidden;pointer-events:none;transform:translateY(-5px) scale(.975);
+  transform-origin:top right;transition:opacity .14s ease,transform .14s ease,visibility .14s;
 }
-.ls-action-overflow-menu>form{width:100%!important;margin:0!important;display:block!important}
-.ls-action-overflow-menu>.btn,.ls-action-overflow-menu>form>.btn{
-  width:100%!important;min-width:0!important;min-height:38px!important;margin:0!important;
-  padding:7px 10px!important;display:flex!important;align-items:center;justify-content:flex-start;
-  gap:7px;white-space:normal!important;text-align:left;line-height:1.2;
+.ls-action-fab-menu.abre-acima{transform-origin:bottom right;transform:translateY(5px) scale(.975)}
+.ls-action-fab.is-open .ls-action-fab-menu{
+  opacity:1;visibility:visible;pointer-events:auto;transform:translateY(0) scale(1);
 }
-.ls-action-overflow-menu .ls-action-label{display:inline!important}
+.ls-action-fab-head{
+  grid-column:1/-1;padding:6px 7px 8px;display:flex;align-items:baseline;justify-content:space-between;
+  gap:10px;border-bottom:1px solid rgba(255,255,255,.08);
+}
+.ls-action-fab-head span{color:#fff6e6;font-size:.79rem;font-weight:900;letter-spacing:.03em}
+.ls-action-fab-head small{color:#9f927e;font-size:.62rem;font-weight:700}
+.ls-action-fab-menu>form{width:100%!important;margin:0!important;display:block!important}
+.ls-action-fab-menu>.btn,.ls-action-fab-menu>form>.btn,
+.ls-action-fab-menu>a,.ls-action-fab-menu>button{
+  width:100%!important;min-width:0!important;min-height:43px!important;height:auto!important;margin:0!important;
+  padding:8px 10px!important;display:flex!important;align-items:center;justify-content:flex-start!important;
+  gap:8px;border:1px solid rgba(255,255,255,.09)!important;border-radius:11px!important;
+  color:#e9dfcf!important;background:rgba(255,255,255,.045)!important;
+  box-shadow:none!important;white-space:normal!important;text-align:left!important;font-size:.7rem!important;
+  font-weight:800!important;line-height:1.15;transition:.14s ease;
+}
+.ls-action-fab-menu>.btn:hover,.ls-action-fab-menu>form>.btn:hover,
+.ls-action-fab-menu>a:hover,.ls-action-fab-menu>button:hover{
+  color:#fff8ec!important;border-color:rgba(242,169,59,.32)!important;background:rgba(242,169,59,.12)!important;
+  transform:translateY(-1px);
+}
+.ls-action-fab-menu .btn-outline-danger,.ls-action-fab-menu [data-excluir],
+.ls-action-fab-menu [data-excluir-os]{color:#ff9baa!important;border-color:rgba(255,113,132,.2)!important}
+.ls-action-fab-menu .btn-outline-danger:hover,.ls-action-fab-menu [data-excluir]:hover,
+.ls-action-fab-menu [data-excluir-os]:hover{background:rgba(255,113,132,.11)!important;border-color:rgba(255,113,132,.4)!important}
+.ls-action-fab-menu .ls-action-label{display:inline!important;min-width:0}
+.ls-action-fab-menu i{width:17px;flex:0 0 17px;text-align:center;font-size:.91rem}
 .ls-next-action{
   display:flex;align-items:center;gap:5px;margin-top:6px;padding:5px 7px;
   width:max-content;max-width:100%;border:1px solid rgba(68,181,132,.28);border-radius:8px;
@@ -2451,7 +2499,11 @@ a.ls-metric-card.active{border-color:var(--metric);box-shadow:0 0 0 2px rgba(242
   line-height:1.25;white-space:normal;
 }
 
-@media (min-width:1101px){
+@media (min-width:721px){
+  .ls-commercial-table{min-width:760px}
+  .ls-orcamentos-table{min-width:980px}
+  .ls-clientes-table{min-width:900px}
+  .ls-os-body .ls-commercial-table{min-width:1040px}
   .ls-commercial-table th:last-child,.ls-commercial-table td:last-child{
     position:sticky;right:0;z-index:2;box-shadow:-10px 0 18px -16px rgba(0,0,0,.9);
   }
@@ -2460,12 +2512,13 @@ a.ls-metric-card.active{border-color:var(--metric);box-shadow:0 0 0 2px rgba(242
   .ls-commercial-table tbody tr:hover td:last-child{background:#211b13!important}
 }
 
-@media (max-width:1100px){
+@media (max-width:720px){
   .ls-commercial-table-wrap{overflow:visible!important}
   .ls-commercial-table,.ls-commercial-table tbody{display:block;width:100%}
+  .ls-commercial-table{min-width:0}
   .ls-commercial-table thead{display:none}
   .ls-commercial-table tbody tr{
-    width:100%;margin:0 0 12px;padding:13px;display:grid;
+    position:relative;width:100%;margin:0 0 11px;padding:11px 58px 11px 11px;display:grid;
     grid-template-columns:repeat(2,minmax(0,1fr));gap:0 13px;
     border:1px solid var(--line)!important;border-radius:16px;
     background:linear-gradient(180deg,#2b241b,#1a1610)!important;
@@ -2473,7 +2526,7 @@ a.ls-metric-card.active{border-color:var(--metric);box-shadow:0 0 0 2px rgba(242
   }
   .ls-commercial-table tbody tr:last-child{margin-bottom:0}
   .ls-commercial-table tbody td{
-    min-width:0;padding:9px 2px!important;display:block;white-space:normal!important;
+    min-width:0;max-width:none!important;padding:8px 2px!important;display:block;white-space:normal!important;
     border:0!important;border-bottom:1px solid var(--line-soft)!important;
     text-align:left!important;background:transparent!important;
   }
@@ -2483,39 +2536,24 @@ a.ls-metric-card.active{border-color:var(--metric);box-shadow:0 0 0 2px rgba(242
   }
   .ls-commercial-table tbody td[data-rotulo="Cliente"],
   .ls-commercial-table tbody td[data-rotulo="Situação"],
-  .ls-commercial-table tbody td[data-rotulo="Ações"],
   .ls-commercial-table tbody td[colspan]{grid-column:1/-1}
   .ls-commercial-table tbody td[data-rotulo="Ações"]{
-    margin-top:3px;padding-top:12px!important;border-bottom:0!important;
+    position:absolute!important;top:10px;right:10px;z-index:4;width:40px!important;min-width:40px!important;
+    margin:0;padding:0!important;border:0!important;background:transparent!important;box-shadow:none!important;
   }
+  .ls-commercial-table tbody td[data-rotulo="Ações"]::before{content:"";display:none}
   .ls-clientes-table tbody td[data-rotulo="Contato"],
   .ls-clientes-table tbody td[data-rotulo="Vínculo"],
   .ls-clientes-table tbody td[data-rotulo="Onde fica"]{grid-column:1/-1}
   .ls-commercial-table tbody td[colspan]::before{content:"";display:none}
-  .ls-actions,.ls-commercial-actions{width:auto!important;min-width:0!important}
-  .ls-commercial-table .ls-row-actions{
-    display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;
-  }
-  .ls-commercial-table .ls-row-actions>.btn,
-  .ls-commercial-table .ls-row-actions>form>.btn{
-    width:100%!important;min-width:0!important;min-height:44px!important;height:auto;
-    padding:8px 9px!important;
-  }
-  .ls-commercial-table .ls-row-actions>.btn .ls-action-label,
-  .ls-commercial-table .ls-row-actions>form>.btn .ls-action-label{display:inline!important}
-  .ls-commercial-table .ls-action-overflow{grid-column:1/-1;width:100%}
-  .ls-commercial-table .ls-action-overflow>summary{
-    width:100%!important;min-width:0!important;min-height:42px!important;height:auto;
-    padding:8px 10px!important;
-  }
-  .ls-commercial-table .ls-action-overflow>summary .ls-action-label{display:inline!important}
-  .ls-commercial-table .ls-action-overflow-menu{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
-  .ls-commercial-table .ls-action-overflow-menu>.btn,
-  .ls-commercial-table .ls-action-overflow-menu>form>.btn{min-height:44px!important}
+  .ls-actions,.ls-commercial-actions{width:40px!important;min-width:40px!important}
+  .ls-commercial-table .ls-row-actions{display:flex!important;justify-content:center!important}
+  .ls-commercial-table td[data-rotulo="Cliente"] strong,
+  .ls-commercial-table td[data-rotulo="Contato"] strong{white-space:normal;overflow:visible;text-overflow:clip}
 }
 
 @media (max-width:430px){
-  .ls-commercial-table tbody tr{padding:11px;gap:0 9px}
-  .ls-commercial-table .ls-row-actions,
-  .ls-commercial-table .ls-action-overflow-menu{grid-template-columns:1fr}
+  .ls-commercial-table tbody tr{padding:10px 54px 10px 10px;gap:0 9px}
+  .ls-action-fab-menu{grid-template-columns:1fr;width:min(270px,calc(100vw - 16px));padding:7px}
+  .ls-action-fab-head small{display:none}
 }

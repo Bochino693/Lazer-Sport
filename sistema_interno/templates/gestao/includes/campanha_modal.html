@@ -1,0 +1,100 @@
+{% load static %}
+<div
+  class="ls-campaign-modal"
+  id="lsCampaignModal"
+  aria-hidden="true"
+  data-preparar-url="{% url 'campanha_preparar' %}"
+  data-criar-url="{% url 'campanha_criar' %}"
+>
+  <button class="ls-campaign-backdrop" type="button" data-campanha-fechar aria-label="Fechar"></button>
+  <section class="ls-campaign-dialog" role="dialog" aria-modal="true" aria-labelledby="lsCampaignTitle">
+    <header class="ls-campaign-header">
+      <span class="ls-campaign-mark"><i class="bi bi-megaphone-fill"></i></span>
+      <div>
+        <small>DIVULGAÇÃO COM HISTÓRICO</small>
+        <h2 id="lsCampaignTitle">Criar campanha</h2>
+        <p id="lsCampaignSubtitle">Escolha o público, revise e confirme.</p>
+      </div>
+      <button type="button" class="ls-campaign-close" data-campanha-fechar aria-label="Fechar"><i class="bi bi-x-lg"></i></button>
+    </header>
+
+    <div class="ls-campaign-steps" aria-label="Etapas da campanha">
+      <span class="is-active"><b>1</b>Público</span><i></i>
+      <span><b>2</b>Mensagem</span><i></i>
+      <span><b>3</b>Fila</span>
+    </div>
+
+    <form id="lsCampaignForm" class="ls-campaign-form">
+      {% csrf_token %}
+      <input type="hidden" name="tipo" id="lsCampaignType">
+      <input type="hidden" name="objeto" id="lsCampaignObject">
+
+      <div class="ls-campaign-body">
+        <div class="ls-campaign-grid">
+          <fieldset class="ls-campaign-fieldset">
+            <legend>Canais</legend>
+            <label class="ls-campaign-choice">
+              <input type="checkbox" name="email" value="1" checked>
+              <span><i class="bi bi-envelope-fill"></i><b>E-mail</b><small>Entra na fila segura</small></span>
+            </label>
+            <label class="ls-campaign-choice">
+              <input type="checkbox" name="whatsapp" value="1" checked>
+              <span><i class="bi bi-whatsapp"></i><b>WhatsApp</b><small>Envio assistido, conversa a conversa</small></span>
+            </label>
+          </fieldset>
+
+          <label class="ls-campaign-field">
+            <span>Quem deve receber</span>
+            <select name="segmento" id="lsCampaignSegment">
+              <option value="todos">Todos os clientes ativos</option>
+              <option value="residencial">Clientes residenciais</option>
+              <option value="comercial">Empresas e comércios</option>
+              <option value="buffet">Buffets parceiros</option>
+              <option value="condominio">Condomínios</option>
+              <option value="escola">Escolas</option>
+              <option value="orgao">Órgãos públicos</option>
+            </select>
+            <small>Só entram contatos válidos; WhatsApp precisa estar confirmado no cliente.</small>
+          </label>
+        </div>
+
+        <div class="ls-campaign-copy-grid">
+          <label class="ls-campaign-field">
+            <span>Assunto / título</span>
+            <input name="titulo" id="lsCampaignSubject" maxlength="140" required>
+          </label>
+          <label class="ls-campaign-field ls-campaign-field-full">
+            <span>Mensagem para o cliente</span>
+            <textarea name="mensagem" id="lsCampaignMessage" maxlength="1200" rows="4" required></textarea>
+            <small><span id="lsCampaignCharacters">0</span>/1200 · o nome e o link seguro são acrescentados automaticamente.</small>
+          </label>
+        </div>
+
+        <section class="ls-campaign-preview" aria-live="polite">
+          <div class="ls-campaign-preview-copy">
+            <small>PRÉVIA DA SELEÇÃO</small>
+            <strong id="lsCampaignPreviewTitle">Preparando público…</strong>
+            <p id="lsCampaignPreviewText">A contagem considera o cadastro atual e não cria nenhum envio.</p>
+          </div>
+          <div class="ls-campaign-counts">
+            <span><i class="bi bi-envelope"></i><b id="lsCampaignEmailCount">—</b><small>e-mails</small></span>
+            <span><i class="bi bi-whatsapp"></i><b id="lsCampaignWhatsappCount">—</b><small>WhatsApps</small></span>
+            <span><i class="bi bi-person-exclamation"></i><b id="lsCampaignIgnoredCount">—</b><small>sem canal</small></span>
+          </div>
+        </section>
+
+        <div class="ls-campaign-feedback" id="lsCampaignFeedback" hidden></div>
+      </div>
+
+      <footer class="ls-campaign-footer">
+        <a href="{% url 'campanhas_inner' %}" class="ls-campaign-history"><i class="bi bi-clock-history"></i> Histórico</a>
+        <div>
+          <button type="button" class="ls-campaign-secondary" data-campanha-fechar>Cancelar</button>
+          <button type="submit" class="ls-campaign-submit" id="lsCampaignSubmit">
+            <i class="bi bi-send-fill"></i><span>Criar fila de envios</span>
+          </button>
+        </div>
+      </footer>
+    </form>
+  </section>
+</div>

@@ -775,6 +775,16 @@
                     </div>
                     <div class="promo-actions">
                         <button
+                            class="ls-campaign-card-button"
+                            type="button"
+                            data-campanha-tipo="promocao"
+                            data-campanha-objeto="{{ promo.id }}"
+                            data-campanha-titulo="{{ promo.descricao|escape }}"
+                            {% if not promo.ativo %}disabled title="Ative a promoção para divulgar"{% endif %}
+                        >
+                            <i class="bi bi-megaphone-fill"></i> Divulgar aos clientes
+                        </button>
+                        <button
                             class="promo-secondary-btn"
                             type="button"
                             data-open-edit
@@ -802,6 +812,8 @@
         {% endfor %}
     </section>
 </main>
+
+{% include "gestao/includes/campanha_modal.html" %}
 
 <div class="promo-modal" id="promotionModal" aria-hidden="true">
     <div class="promo-modal-backdrop" data-close-modal></div>
