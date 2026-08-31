@@ -845,6 +845,21 @@ textarea.form-control{min-height:100px!important}
 .ls-budget-money-strip .success strong{color:#67e2ad}
 .ls-budget-money-strip .warning strong{color:#ffd17a}
 .ls-budget-search{width:min(100%,390px)}
+
+/* Aviso de exclusão que passa por cima de uma proteção.
+
+   Vermelho seria o mesmo tom de todo o resto da janela, que já é de
+   perigo. Este bloco precisa dizer outra coisa: não "cuidado, é
+   permanente" (isso a janela inteira já diz), e sim "você está fazendo
+   algo que as regras normalmente não deixam, e vai ficar o seu nome
+   nisso". Âmbar, que no painel é a cor de atenção e de ação. */
+.ls-delete-forcada{
+  margin-top:16px;padding:13px 15px;display:flex;gap:11px;align-items:flex-start;
+  border:1px solid rgba(242,169,59,.34);border-radius:13px;
+  background:rgba(242,169,59,.09);color:#F5DFB6;font-size:.82rem;line-height:1.5;
+}
+.ls-delete-forcada>i{color:var(--acento);font-size:1.05rem;line-height:1.4}
+.ls-delete-forcada strong{display:block;margin-bottom:2px;color:#FFE3B0}
 .ls-body .ls-load-progress{
   background:linear-gradient(90deg,var(--acento-2),var(--acento) 58%,var(--apoio));
   box-shadow:0 0 13px rgba(242,169,59,.58);

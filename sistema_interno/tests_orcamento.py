@@ -607,20 +607,37 @@ class OrcamentoInternoTests(TestCase):
         self.assertFalse(Orcamento.objects.filter(pk=proprio.pk).exists())
         self.assertTrue(Orcamento.objects.filter(pk=alheio.pk).exists())
 
-    def test_propostas_fora_do_rascunho_ficam_no_historico(self):
-        protegidos = [
+    ESTADOS_DE_HISTORICO = (
+        Orcamento.Status.AGUARDANDO_RESPOSTA,
+        Orcamento.Status.APROVADO,
+        Orcamento.Status.RECUSADO,
+        Orcamento.Status.EXPIRADO,
+    )
+
+    def _propostas_de_historico(self, responsavel=None):
+        return [
             Orcamento.objects.create(
                 nome_cliente=f"Histórico {status}",
                 status=status,
-                responsavel=self.gestor,
+                responsavel=responsavel or self.gestor,
             )
-            for status in (
-                Orcamento.Status.AGUARDANDO_RESPOSTA,
-                Orcamento.Status.APROVADO,
-                Orcamento.Status.RECUSADO,
-                Orcamento.Status.EXPIRADO,
-            )
+            for status in self.ESTADOS_DE_HISTORICO
         ]
+
+    def test_propostas_fora_do_rascunho_ficam_no_historico(self):
+        """A regra do dia a dia: proposta enviada não some da linha do tempo.
+
+        Conferida com quem a regra protege -- uma pessoa do Comercial. O
+        superusuário tem a palavra final e é o teste seguinte; se este
+        rodasse com ele, mediria a exceção achando que media a regra.
+        """
+        comercial = User.objects.create_user(
+            username="vendas-hist", password="x", email="c@example.com",
+        )
+        atribuir_funcoes(comercial, ["vendas"])
+        self.client.force_login(comercial)
+
+        protegidos = self._propostas_de_historico(responsavel=comercial)
 
         pagina = self.client.get(self.URL, HTTP_HOST="interno.testserver")
         for orcamento in protegidos:
@@ -638,6 +655,103 @@ class OrcamentoInternoTests(TestCase):
                 self.assertTrue(
                     Orcamento.objects.filter(pk=orcamento.pk).exists()
                 )
+
+    def test_o_superusuario_apaga_o_que_a_regra_protege_e_fica_registrado(self):
+        """Quem responde pela empresa precisa poder limpar um erro.
+
+        Sem isso, cadastro errado ficava para sempre ou alguém ia mexer no
+        banco por fora -- que é o caminho onde as coisas somem sem ninguém
+        saber. O registro é a outra metade: histórico apagado em silêncio
+        é pior do que histórico errado.
+        """
+        from .models import ExclusaoRegistrada
+
+        protegidos = self._propostas_de_historico()
+        pagina = self.client.get(self.URL, HTTP_HOST="interno.testserver")
+
+        for orcamento in protegidos:
+            with self.subTest(status=orcamento.status):
+                # O botão aparece, e avisa que ali se passa por cima.
+                self.assertContains(pagina, f'data-excluir="{orcamento.id}"')
+
+                resposta = self.post({
+                    "action": "delete",
+                    "id": orcamento.id,
+                    "confirmacao_exclusao": "CONFIRMAR",
+                    "motivo_exclusao": "duplicado no cadastro",
+                })
+
+                self.assertEqual(resposta.status_code, 200)
+                self.assertFalse(
+                    Orcamento.objects.filter(pk=orcamento.pk).exists()
+                )
+
+                rastro = ExclusaoRegistrada.objects.get(
+                    identificacao__startswith=f"#{orcamento.pk} —"
+                )
+                self.assertTrue(rastro.forcada)
+                self.assertEqual(rastro.autor, self.gestor)
+                self.assertEqual(rastro.motivo, "duplicado no cadastro")
+                self.assertIn("Situação:", rastro.resumo)
+
+    def test_o_rascunho_apagado_pela_regra_normal_nao_conta_como_forcado(self):
+        """`forcada` separa "apagou rascunho" de "apagou histórico".
+
+        Se marcasse tudo, o registro perderia a utilidade: ninguém
+        procuraria a exclusão que importa no meio de centenas de rotina.
+        """
+        from .models import ExclusaoRegistrada
+
+        rascunho = Orcamento.objects.create(
+            nome_cliente="Rascunho comum", responsavel=self.gestor,
+        )
+
+        self.post({
+            "action": "delete",
+            "id": rascunho.pk,
+            "confirmacao_exclusao": "CONFIRMAR",
+        })
+
+        rastro = ExclusaoRegistrada.objects.get(
+            identificacao__startswith=f"#{rascunho.pk} —"
+        )
+        self.assertFalse(rastro.forcada)
+
+    def test_a_proposta_com_aceite_eletronico_tambem_cede_ao_superusuario(self):
+        """`on_delete=PROTECT` fazia a exclusão levantar em vez de acontecer.
+
+        O aceite eletrônico protege o orçamento. Para o superusuário a
+        corrente é desmontada -- e o registro diz o que foi junto, porque
+        é justamente o que ninguém lembraria depois.
+        """
+        from .models import AceiteOrcamento, ExclusaoRegistrada
+
+        orcamento = self._orcamento_com_item()
+        orcamento.marcar_enviado()
+        AceiteOrcamento.objects.create(
+            orcamento=orcamento,
+            assinante_nome="Ana Cliente",
+            assinante_documento="52998224725",
+            proposta_hash="x" * 64,
+            ip_hash="y" * 64,
+            navegador_hash="z" * 64,
+        )
+
+        resposta = self.post({
+            "action": "delete",
+            "id": orcamento.pk,
+            "confirmacao_exclusao": "CONFIRMAR",
+        })
+
+        self.assertEqual(resposta.status_code, 200)
+        self.assertFalse(Orcamento.objects.filter(pk=orcamento.pk).exists())
+        self.assertFalse(AceiteOrcamento.objects.exists())
+
+        rastro = ExclusaoRegistrada.objects.get(
+            identificacao__startswith=f"#{orcamento.pk} —"
+        )
+        self.assertIn("Removidos junto por dependência", rastro.resumo)
+        self.assertIn("AceiteOrcamento", rastro.resumo)
 
     def test_enviar_devolve_o_link_do_site_publico(self):
         orcamento = self._orcamento_com_item()

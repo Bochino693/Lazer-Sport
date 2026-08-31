@@ -2774,3 +2774,65 @@ class EntregaCampanha(Prime):
 
     def __str__(self):
         return f"{self.campanha} · {self.get_canal_display()} · {self.nome_destinatario}"
+
+
+class ExclusaoRegistrada(models.Model):
+    """Quem apagou o quê, quando, e por quê.
+
+    POR QUE ISTO EXISTE. O superusuário passou a poder excluir qualquer
+    coisa do sistema -- inclusive proposta enviada, O.S. concluída e
+    pedido pago, que as regras normais protegem justamente por serem
+    histórico. É a decisão certa: quem responde pela empresa precisa poder
+    limpar um registro errado sem depender de ninguém.
+
+    Só que histórico apagado em silêncio é pior do que histórico errado.
+    Daqui a seis meses, "onde foi parar a proposta 412?" não pode ser uma
+    pergunta sem resposta. Então a exclusão continua liberada, e passa a
+    deixar rastro: o que era, quem apagou, quando, e o motivo escrito na
+    hora.
+
+    O rastro guarda TEXTO, não chave estrangeira. Uma referência ao objeto
+    apagado não sobrevive ao apagamento; o resumo, sim.
+    """
+
+    quando = models.DateTimeField(auto_now_add=True, db_index=True)
+    autor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="exclusoes_registradas",
+        help_text="Fica nulo se a conta for removida depois; o nome abaixo permanece.",
+    )
+    autor_nome = models.CharField(max_length=150)
+
+    tipo = models.CharField(
+        max_length=60,
+        db_index=True,
+        help_text="Modelo do objeto apagado, em linguagem de gente: Orçamento, O.S.…",
+    )
+    identificacao = models.CharField(
+        max_length=200,
+        help_text="Como o objeto era chamado na tela: '#412 — Buffet Alegria'.",
+    )
+    resumo = models.TextField(
+        blank=True,
+        help_text="O que ele continha, para o caso de alguém precisar reconstituir.",
+    )
+    motivo = models.CharField(
+        max_length=240,
+        blank=True,
+        help_text="O que a pessoa escreveu ao confirmar.",
+    )
+    #: Verdadeiro quando as regras normais teriam recusado a exclusão e
+    #: ela só aconteceu porque quem pediu é superusuário. É o que separa
+    #: "apagou um rascunho" de "apagou um documento que já foi ao cliente".
+    forcada = models.BooleanField(default=False, db_index=True)
+
+    class Meta:
+        verbose_name = "Exclusão registrada"
+        verbose_name_plural = "Exclusões registradas"
+        ordering = ("-quando", "-id")
+
+    def __str__(self):
+        marca = " (forçada)" if self.forcada else ""
+        return f"{self.tipo} {self.identificacao}{marca}"

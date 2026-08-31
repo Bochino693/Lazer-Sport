@@ -42,6 +42,7 @@ from .models import (
     ItemOrdemServico,
     OrdemServico,
 )
+from .exclusoes import forcando, pode_excluir, remover
 from .permissoes import capacidades
 from .rotas import dados_rota, origem_empresa, texto_endereco
 from .utils import (
@@ -505,19 +506,50 @@ class OrdensServicoInnerView(
         )
 
     def acao_delete(self, request):
-        if not capacidades(request.user)["ordens_servico_editar"]:
+        superusuario = bool(getattr(request.user, "is_superuser", False))
+        if not capacidades(request.user)["ordens_servico_editar"] and not superusuario:
             return self.erro(request, "Você não pode excluir esta O.S.", status=403)
+
         ordem = get_object_or_404(OrdemServico, pk=request.POST.get("id"))
-        if ordem.status != OrdemServico.Status.RASCUNHO or ordem.enviada_em:
+
+        # Rascunho nunca enviado some sem cerimônia; o resto é histórico
+        # operacional e fica. Menos para quem responde pela empresa: ali a
+        # exclusão passa, e passa registrada. Ver `exclusoes.py`.
+        regra = (
+            ordem.status == OrdemServico.Status.RASCUNHO
+            and not ordem.enviada_em
+        )
+        if not pode_excluir(request.user, regra):
             return self.erro(
                 request,
                 "Somente rascunhos nunca enviados podem ser excluídos.",
                 status=403,
             )
+
         exigir_confirmacao_exclusao(request)
         numero = ordem.numero_documento
-        ordem.delete()
-        return self.sucesso(request, f"{numero} removida.")
+        forcada = forcando(request.user, regra)
+
+        arrastados = remover(
+            ordem,
+            autor=request.user,
+            tipo="Ordem de Serviço",
+            identificacao=f"{numero} — {ordem.destinatario}",
+            resumo=(
+                f"Situação: {ordem.get_status_display()}. "
+                f"Equipamento: {ordem.equipamento or '—'}. "
+                f"{ordem.itens.count()} item(ns). Total: R$ {ordem.total}."
+            ),
+            motivo=texto(request, "motivo_exclusao", limite=240),
+            forcada=forcada,
+        )
+
+        recado = f"{numero} removida."
+        if forcada:
+            recado += " Não era um rascunho: a exclusão ficou registrada."
+        if arrastados:
+            recado += f" Levou junto: {', '.join(arrastados)}."
+        return self.sucesso(request, recado)
 
     def acao_enviar(self, request):
         if not capacidades(request.user)["ordens_servico_editar"]:

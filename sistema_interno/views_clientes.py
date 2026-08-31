@@ -36,9 +36,10 @@ from core.models import Estabelecimentos
 from . import clientes as svc
 from .completude_clientes import filtro_incompletos, pendencias_do_cliente
 from .models import Cliente, EnderecoCliente, Orcamento
+from .exclusoes import forcando, remover
 from .permissoes import pode_excluir_cliente
 from .rotas import dados_rota, origem_empresa
-from .utils import ErroDeFormulario, exigir_confirmacao_exclusao
+from .utils import ErroDeFormulario, exigir_confirmacao_exclusao, texto
 from .views import GestorInternoRequiredMixin, RespostaJSONMixin
 
 
@@ -204,6 +205,15 @@ class ClientesInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
         abertos = [o for o in orcamentos if o.status in Orcamento.EM_ABERTO]
 
         endereco = cliente.endereco_principal
+
+        # Cliente com histórico é protegido pelas regras normais: apagar
+        # deixaria propostas já enviadas sem cliente vinculado. O
+        # superusuário passa por cima, mas a janela de confirmação precisa
+        # dizer isso antes -- ver `data-protegido` no template.
+        cliente.tem_historico = bool(orcamentos) or bool(
+            getattr(cliente, "clientes_do_buffet", 0)
+        )
+
         return {
             "obj": cliente,
             "endereco": endereco,
@@ -289,7 +299,8 @@ class ClientesInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
         )
 
     def acao_delete(self, request):
-        if not pode_excluir_cliente(request.user):
+        superusuario = bool(getattr(request.user, "is_superuser", False))
+        if not pode_excluir_cliente(request.user) and not superusuario:
             return self.erro(
                 request,
                 "Somente a equipe de Gestão pode excluir clientes.",
@@ -300,22 +311,53 @@ class ClientesInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
         exigir_confirmacao_exclusao(request)
 
         # Apagar levaria junto o vínculo dos orçamentos (SET_NULL) e o
-        # histórico do cliente sumiria da proposta já enviada.
-        if cliente.orcamentos.exists():
-            raise ErroDeFormulario(
-                f"“{cliente.nome_cliente}” tem orçamento no histórico e não "
-                "pode ser excluído. Corrija o cadastro em vez de apagar."
-            )
+        # histórico do cliente sumiria da proposta já enviada. Vale para
+        # todo mundo -- menos para quem responde pela empresa, que precisa
+        # poder desfazer um cadastro duplicado sem mexer no banco por
+        # fora. Nesse caso a exclusão fica registrada. Ver `exclusoes.py`.
+        orcamentos = cliente.orcamentos.count()
+        atendidos = cliente.clientes_atendidos.count()
+        limpo = not orcamentos and not atendidos
 
-        if cliente.clientes_atendidos.exists():
+        if not limpo and not superusuario:
+            if orcamentos:
+                raise ErroDeFormulario(
+                    f"“{cliente.nome_cliente}” tem orçamento no histórico e "
+                    "não pode ser excluído. Corrija o cadastro em vez de "
+                    "apagar."
+                )
             raise ErroDeFormulario(
                 f"“{cliente.nome_cliente}” é o buffet responsável por outros "
                 "clientes. Troque o buffet deles antes de excluir."
             )
 
         nome = cliente.nome_cliente
-        cliente.delete()
-        return self.sucesso(request, f"Cliente “{nome}” excluído.")
+        forcada = forcando(request.user, limpo)
+
+        remover(
+            cliente,
+            autor=request.user,
+            tipo="Cliente",
+            identificacao=nome,
+            resumo=(
+                f"Documento: {cliente.documento or '—'}. "
+                f"Telefone: {cliente.telefone or '—'}. "
+                f"{orcamentos} orçamento(s) no histórico, "
+                f"{atendidos} cliente(s) atendido(s)."
+            ),
+            motivo=texto(request, "motivo_exclusao", limite=240),
+            forcada=forcada,
+        )
+
+        recado = f"Cliente “{nome}” excluído."
+        if forcada and orcamentos:
+            recado += (
+                f" Ele tinha {orcamentos} orçamento(s) no histórico, que"
+                " ficaram sem cliente vinculado. A exclusão foi registrada."
+            )
+        elif forcada:
+            recado += " A exclusão foi registrada."
+        return self.sucesso(request, recado)
 
 
 class ConsultaCepInnerView(GestorInternoRequiredMixin, View):

@@ -455,7 +455,21 @@ class ClientesInternoTests(TestCase):
         self.assertEqual(self.buffet.telefone, "(11) 3333-0000")
 
     # -------------------------------------------------------- exclusão
+    def _como_gestao(self):
+        """A regra do dia a dia é conferida com quem ela protege.
+
+        O superusuário passa por cima dela de propósito, e é o teste mais
+        abaixo. Medir a regra com ele seria medir a exceção.
+        """
+        pessoa = User.objects.create_user(
+            username="gestao-clientes", password="x", email="g2@example.com",
+        )
+        atribuir_funcoes(pessoa, ["gestao"])
+        self.client.force_login(pessoa)
+        return pessoa
+
     def test_cliente_com_proposta_nao_e_apagado(self):
+        self._como_gestao()
         Orcamento.objects.create(
             cliente=self.buffet,
             nome_cliente="Buffet Alegria",
@@ -471,6 +485,7 @@ class ClientesInternoTests(TestCase):
         self.assertTrue(Cliente.objects.filter(pk=self.buffet.pk).exists())
 
     def test_buffet_com_clientes_nao_e_apagado(self):
+        self._como_gestao()
         Cliente.objects.create(
             nome_cliente="Atendido",
             telefone="(11) 91111-2222",
@@ -485,6 +500,35 @@ class ClientesInternoTests(TestCase):
 
         self.assertEqual(resposta.status_code, 400)
         self.assertTrue(Cliente.objects.filter(pk=self.buffet.pk).exists())
+
+    def test_o_superusuario_apaga_cliente_com_historico_e_fica_registrado(self):
+        """Cadastro duplicado precisa ter conserto sem mexer no banco.
+
+        As propostas ficam sem cliente vinculado (SET_NULL) -- e é isso
+        que a mensagem de retorno diz, com o número, porque quem apagou
+        precisa saber o que aconteceu do outro lado.
+        """
+        from .models import ExclusaoRegistrada
+
+        Orcamento.objects.create(
+            cliente=self.buffet, nome_cliente="Buffet Alegria",
+        )
+
+        resposta = self.post({
+            "action": "delete",
+            "id": self.buffet.id,
+            "confirmacao_exclusao": "CONFIRMAR",
+            "motivo_exclusao": "cadastro duplicado",
+        })
+
+        self.assertEqual(resposta.status_code, 200)
+        self.assertFalse(Cliente.objects.filter(pk=self.buffet.pk).exists())
+        self.assertIn("1 orçamento", resposta.json()["msg"])
+
+        rastro = ExclusaoRegistrada.objects.get(tipo="Cliente")
+        self.assertTrue(rastro.forcada)
+        self.assertEqual(rastro.motivo, "cadastro duplicado")
+        self.assertIn("1 orçamento(s) no histórico", rastro.resumo)
 
     def test_cliente_sem_historico_e_apagado(self):
         solto = Cliente.objects.create(

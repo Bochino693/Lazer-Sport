@@ -249,7 +249,10 @@
                 <button type="button" class="btn btn-sm btn-outline-danger"
                         data-excluir="{{ orcamento.id }}"
                         data-nome="Orçamento #{{ orcamento.id }} — {{ orcamento.destinatario }}"
-                        aria-label="Excluir orçamento {{ orcamento.id }}" title="Excluir rascunho">
+                        {% if orcamento.protegida %}data-protegido="1"
+                        data-protegido-motivo="Esta proposta está como {{ orcamento.get_status_display|lower }} e faz parte do histórico comercial. Você pode excluir mesmo assim, e a exclusão vai ficar registrada com o seu nome."{% endif %}
+                        aria-label="Excluir orçamento {{ orcamento.id }}"
+                        title="{% if orcamento.protegida %}Excluir mesmo protegida (fica registrado){% else %}Excluir rascunho{% endif %}">
                   <i class="bi bi-trash"></i><span class="ls-action-label">Excluir</span>
                 </button>
                 {% endif %}

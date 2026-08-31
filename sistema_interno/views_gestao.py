@@ -82,6 +82,7 @@ from .models import (
     ProdutoInterno,
     Setores,
 )
+from .exclusoes import forcando, pode_excluir, remover
 from .permissoes import (
     capacidades,
     limitar_orcamentos,
@@ -416,6 +417,14 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
                 request.user,
                 orcamento,
             )
+            # O superusuário enxerga o botão em qualquer proposta: ele
+            # tem a palavra final. `protegida` diz à janela de confirmação
+            # que ali a exclusão passa POR CIMA de uma regra, e que vai
+            # ficar registrada -- apagar histórico não pode ter a mesma
+            # cara de apagar um rascunho.
+            orcamento.protegida = not orcamento.pode_excluir
+            if not orcamento.pode_excluir and request.user.is_superuser:
+                orcamento.pode_excluir = True
 
         buffets = list(
             Cliente.objects.filter(tipo=Cliente.Tipo.BUFFET).order_by("nome_cliente")
@@ -1149,7 +1158,14 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
 
     def acao_delete(self, request):
         orcamento = self._orcamento_do_usuario(request, request.POST.get("id"))
-        if not pode_excluir_orcamento(request.user, orcamento):
+
+        # A regra normal protege o histórico comercial: proposta enviada,
+        # respondida ou expirada não some da linha do tempo. Ela continua
+        # valendo para todo mundo -- menos para quem responde pela
+        # empresa, que precisa poder limpar um registro errado sem mexer
+        # no banco por fora. Ver `exclusoes.py`.
+        regra = pode_excluir_orcamento(request.user, orcamento)
+        if not pode_excluir(request.user, regra):
             return self.erro(
                 request,
                 (
@@ -1161,8 +1177,28 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
 
         exigir_confirmacao_exclusao(request)
         numero = orcamento.pk
-        orcamento.delete()
-        return self.sucesso(request, f"Orçamento #{numero} removido.")
+        forcada = forcando(request.user, regra)
+        itens = orcamento.itens.count()
+
+        arrastados = remover(
+            orcamento,
+            autor=request.user,
+            tipo="Orçamento",
+            identificacao=f"#{numero} — {orcamento.destinatario}",
+            resumo=(
+                f"Situação: {orcamento.get_status_display()}. "
+                f"{itens} item(ns). Total: R$ {orcamento.total}."
+            ),
+            motivo=texto(request, "motivo_exclusao", limite=240),
+            forcada=forcada,
+        )
+
+        recado = f"Orçamento #{numero} removido."
+        if forcada:
+            recado += " Não era um rascunho: a exclusão ficou registrada."
+        if arrastados:
+            recado += f" Levou junto: {', '.join(arrastados)}."
+        return self.sucesso(request, recado)
 
     # ------------------------------------------------ enviar ao cliente
     def acao_enviar(self, request):
