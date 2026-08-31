@@ -1,4 +1,4 @@
-PACOTE INCREMENTAL V3 — ENVIOS, PRÉVIAS, DATAS, ORÇAMENTOS E O.S.
+PACOTE INCREMENTAL V5 — TABELAS, AÇÕES E FLUXO COMERCIAL
 Lazer & Sport
 ======================================================================
 
@@ -21,6 +21,56 @@ Este pacote NÃO cria migração e NÃO adiciona dependência Python ou JavaScri
 
 
 O QUE FOI CORRIGIDO
+
+TABELAS E AÇÕES RESPONSIVAS — V5
+- As tabelas comerciais usam células mais compactas no computador e passam a
+  cartões antes de o tablet ou notebook pequeno começar a cortar conteúdo.
+- Cada registro mantém somente as duas ações principais à vista. As ações
+  secundárias entram no botão "Mais", preservando formulários, permissões,
+  confirmações e eventos já existentes.
+- Em computador os botões diretos usam ícones e dicas; em tablet e celular os
+  textos reaparecem e os alvos de toque ocupam toda a largura disponível.
+- A coluna de ações fica acessível ao rolar tabelas largas e não força mais as
+  outras colunas a quebrar palavras, valores ou situações.
+- Orçamentos, Clientes e O.S. agora compartilham as mesmas classes de ação e o
+  mesmo comportamento responsivo.
+
+ORÇAMENTO, CONTATO E DADOS BANCÁRIOS — V5
+- O orçamento não gera QR Code nem cobrança automática.
+- Depois da aprovação, o documento informa que a equipe entrará em contato
+  para confirmar prazo, entrega e pagamento, com atalhos de atendimento.
+- O painel interno destaca "Próximo passo: contatar cliente" nas propostas
+  aprovadas que ainda não foram pagas.
+- Banco C6/Pix e Santander ficam visíveis na proposta e no e-mail, sempre com
+  o aviso para confirmar condições e valor antes do pagamento.
+- A lógica e os estilos antigos de QR Code foram removidos do orçamento para
+  evitar estados divergentes entre backend, template e comunicação comercial.
+
+IDENTIDADE VISUAL E APROVEITAMENTO DE ESPAÇO — V4
+- A página pública da O.S. foi redesenhada como documento técnico azul e
+  branco, com vermelho somente nos destaques da marca.
+- Logo, número, datas, responsável, situação, prioridade e pagamento foram
+  reposicionados em um cabeçalho compacto inspirado na referência fornecida.
+- Cliente, CPF/CNPJ, contatos e endereço agora usam ícones alinhados e linhas
+  curtas, sem cartões altos para informações pequenas.
+- Equipamento, técnico, agendamento e garantia ficam juntos em um resumo de
+  quatro blocos; em celular passam para duas ou uma coluna.
+- Atendimento, fotos, itens, total, pagamento e confirmação usam a mesma
+  hierarquia azul. Impressão A4 e tablet em retrato receberam regras próprias.
+- A tela interna e os modais da O.S. ganharam painéis e bordas azuladas para
+  distinguir a operação sem abandonar o tema grafite do sistema.
+
+DADOS DA EMPRESA E PAGAMENTO — V4
+- Nome exibido: Fábrica de brinquedos Lazer Sport.
+- CNPJ exibido: 54.486.908/0001-86.
+- Nome e CNPJ aparecem no orçamento público, O.S. pública, rodapés, e-mails e
+  versões em texto das mensagens.
+- O orçamento recebeu ícones junto aos dados de emissão e do cliente.
+- Os dados do Banco C6/Pix e Santander aparecem agrupados; na V5 passaram a
+  ficar sempre visíveis e sem QR Code ou cobrança automática no orçamento.
+- Os valores padrão podem ser substituídos na hospedagem por EMPRESA_NOME,
+  EMPRESA_RAZAO_SOCIAL, EMPRESA_CNPJ, EMPRESA_PIX_CELULAR,
+  EMPRESA_PIX_CNPJ, EMPRESA_SANTANDER_AGENCIA e EMPRESA_SANTANDER_CONTA.
 
 ENVIO DE ORÇAMENTOS
 - Corrigida a falha que impedia o e-mail: o backend referenciava o template
@@ -183,9 +233,11 @@ VALIDAÇÕES EXECUTADAS ANTES DE GERAR O ZIP
 
 - Sintaxe do novo JavaScript com node --check.
 - Sintaxe dos arquivos Python por compilação em memória (sem gerar .pyc).
-- Sintaxe dos scripts inline das três telas alteradas.
+- Sintaxe dos scripts inline das quatro telas alteradas.
 - Balanceamento dos blocos Django if/for/block/comment/with.
 - Conferência dos vínculos entre template, contexto e arquivo estático.
+- Conferência de que a proposta não mantém variável, CSS ou script de QR Code.
+- Balanceamento das chaves do CSS responsivo canônico.
 
 A suíte completa do Django deve ser executada dentro do projeto, pois este ZIP
 é incremental e não contém banco, settings nem dependências do repositório.

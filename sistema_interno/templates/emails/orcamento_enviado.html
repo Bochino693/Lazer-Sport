@@ -20,7 +20,7 @@
             <td style="padding:32px 34px 22px;">
               <div style="font-size:12px;line-height:1.4;font-weight:800;letter-spacing:1.4px;text-transform:uppercase;color:#e21a2c;">Proposta comercial</div>
               <h1 style="margin:6px 0 10px;color:#071d68;font-size:30px;line-height:1.15;">Lazer &amp; Sport</h1>
-              <p style="margin:0;color:#5f6c80;font-size:14px;line-height:1.6;">Brinquedos · Cenografia · Parques</p>
+              <p style="margin:0;color:#5f6c80;font-size:14px;line-height:1.6;">{{ empresa_nome }} · CNPJ {{ empresa_cnpj }}<br>Brinquedos · Cenografia · Parques</p>
             </td>
           </tr>
           <tr>
@@ -50,6 +50,19 @@
                 </tr>
               </table>
 
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:0 0 24px;border:1px solid #dfe6f1;border-radius:16px;background:#f8faff;">
+                <tr>
+                  <td colspan="2" style="padding:15px 18px 8px;color:#071d68;font-size:14px;font-weight:800;">Dados bancários da empresa</td>
+                </tr>
+                <tr>
+                  <td style="padding:8px 18px 14px;color:#334155;font-size:13px;line-height:1.55;"><strong>Pix · Banco C6</strong><br>Celular: {{ dados_bancarios.pix_celular }}<br>CNPJ: {{ dados_bancarios.pix_cnpj }}</td>
+                  <td style="padding:8px 18px 14px;color:#334155;font-size:13px;line-height:1.55;"><strong>Banco Santander</strong><br>Agência: {{ dados_bancarios.santander_agencia }}<br>Conta corrente: {{ dados_bancarios.santander_conta }}</td>
+                </tr>
+                <tr>
+                  <td colspan="2" style="padding:10px 18px;border-top:1px solid #e3e9f2;color:#64748b;font-size:11px;line-height:1.5;">Confirme as condições e o valor com nossa equipe antes de efetuar qualquer pagamento. Não enviamos cobrança automática por esta proposta.</td>
+                </tr>
+              </table>
+
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin:0 auto 22px;">
                 <tr>
                   <td align="center" bgcolor="#0f9d58" style="border-radius:14px;">
@@ -62,7 +75,7 @@
             </td>
           </tr>
           <tr>
-            <td style="padding:20px 34px;background:#071d68;color:#dbe4ff;text-align:center;font-size:12px;line-height:1.6;">Você pode responder diretamente a este e-mail se precisar falar com nossa equipe.<br><strong style="color:#ffffff;">Lazer &amp; Sport Brinquedos</strong></td>
+            <td style="padding:20px 34px;background:#071d68;color:#dbe4ff;text-align:center;font-size:12px;line-height:1.6;">Você pode responder diretamente a este e-mail se precisar falar com nossa equipe.<br><strong style="color:#ffffff;">{{ empresa_nome }}</strong> · CNPJ {{ empresa_cnpj }}</td>
           </tr>
         </table>
       </td>

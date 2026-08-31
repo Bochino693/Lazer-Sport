@@ -9,6 +9,7 @@ from django.views.decorators.http import require_http_methods
 from django.views.generic import View
 
 from core.models import EnderecoEmpresa
+from core.email_utils import cnpj_empresa, dados_bancarios_empresa, nome_empresa
 from sistema_interno.models import OrdemServico
 from sistema_interno.pix import dados_pix
 
@@ -45,6 +46,9 @@ def contexto_ordem(ordem, *, previsualizacao=False, request=None):
             if ordem.manutencao_id else []
         ),
         "empresa": empresa,
+        "empresa_nome": nome_empresa(),
+        "empresa_cnpj": cnpj_empresa(),
+        "dados_bancarios": dados_bancarios_empresa(),
         "responsavel_nome": responsavel,
         "tecnico_nome": tecnico,
         "previsualizacao": previsualizacao,
@@ -53,7 +57,10 @@ def contexto_ordem(ordem, *, previsualizacao=False, request=None):
             and bool(ordem.enviada_em)
             and not ordem.cliente_ciente
         ),
-        "telefone_empresa": getattr(settings, "EMPRESA_TELEFONE", ""),
+        "telefone_empresa": (
+            getattr(settings, "EMPRESA_TELEFONE", "")
+            or (empresa.telefone if empresa else "")
+        ),
         "whatsapp_empresa": getattr(settings, "EMPRESA_WHATSAPP", ""),
         "email_empresa": getattr(settings, "EMPRESA_EMAIL", ""),
         "instagram_empresa": getattr(settings, "EMPRESA_INSTAGRAM", ""),
@@ -101,4 +108,3 @@ class OrdemServicoPublicaView(View):
 ordem_servico_publica = require_http_methods(["GET", "POST"])(
     OrdemServicoPublicaView.as_view()
 )
-
