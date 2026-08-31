@@ -2014,6 +2014,19 @@ input[type="number"]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0
 .ls-row-actions .btn{margin:0!important;white-space:nowrap}
 .ls-clientes-table .ls-action-label{display:none}
 
+/* O RÓTULO DE "ENVIAR" NÃO SOME EM LARGURA NENHUMA.
+
+   As telas médias escondem o texto das ações e deixam só o ícone, para
+   caber mais coluna. Para editar ou ver, tudo bem: o pior que acontece é
+   a pessoa abrir e fechar. Enviar é diferente -- manda documento para
+   cliente, e não tem desfazer. Um botão sem nome ali depende de o ícone
+   ter carregado e de a pessoa lembrar o que ele significa; quando a
+   fonte dos ícones falha, vira um símbolo qualquer sem nome nenhum.
+
+   Este botão paga a largura e continua escrito. */
+[data-enviar] .ls-action-label,
+[data-enviar-os] .ls-action-label{display:inline!important}
+
 @media (min-width:901px) and (max-width:1180px){
   .ls-commercial-actions{min-width:142px}
   .ls-orcamentos-table .ls-action-label{display:none}

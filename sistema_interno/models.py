@@ -1,5 +1,6 @@
 import secrets
 import uuid
+from datetime import timedelta
 from decimal import Decimal
 
 from django.conf import settings
@@ -1490,7 +1491,15 @@ class Orcamento(Prime):
             "Preenchida automaticamente pela função de quem criou a proposta."
         ),
     )
-    validade = models.DateField(null=True, blank=True)
+    validade = models.DateField(
+        "Válido até",
+        null=True,
+        blank=True,
+        help_text=(
+            "Proposta nova nasce com 5 dias. Data anterior a hoje não é "
+            "aceita: seria enviar ao cliente um documento já vencido."
+        ),
+    )
     desconto = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))
     frete = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))
     forma_pagamento = models.CharField(
@@ -1606,6 +1615,20 @@ class Orcamento(Prime):
         liquido = bruto - (self.desconto or Decimal("0.00"))
         # Desconto maior que o total viraria um orçamento negativo.
         return max(liquido, Decimal("0.00")).quantize(Decimal("0.01"))
+
+    #: Prazo com que uma proposta nova nasce, em dias corridos.
+    #:
+    #: Cinco dias é uma decisão comercial, não um número técnico: é o
+    #: prazo que a fábrica consegue segurar preço de material e agenda de
+    #: montagem. Antes o campo vinha vazio, e proposta sem prazo não entra
+    #: na fila de cobrança da central de avisos -- ela ficava esperando
+    #: uma resposta que ninguém ia cobrar. Quem precisar de outro prazo
+    #: troca no campo; quem não pensar no assunto sai com um prazo válido.
+    DIAS_DE_VALIDADE_PADRAO = 5
+
+    @classmethod
+    def validade_padrao(cls):
+        return timezone.localdate() + timedelta(days=cls.DIAS_DE_VALIDADE_PADRAO)
 
     @property
     def vencido(self):

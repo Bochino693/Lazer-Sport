@@ -421,10 +421,39 @@
     },
 
     aprimorar: function (raiz) {
-      (raiz || document).querySelectorAll('input[type="datetime-local"]').forEach(function (campo) {
+      var escopo = raiz || document;
+
+      escopo.querySelectorAll('input[type="datetime-local"]').forEach(function (campo) {
         if (!campo.step || campo.step === "60") campo.step = "300";
         campo.setAttribute("title", "Horário local do aparelho · " + Painel.datas.fusoDoAparelho());
       });
+
+      /* CAMPO QUE NÃO OLHA PARA TRÁS.
+
+         `data-nao-passado` põe o piso do calendário em hoje. Não substitui
+         a conferência do servidor -- atributo de HTML qualquer um tira --,
+         mas muda o momento em que a pessoa descobre o problema: o
+         calendário simplesmente não deixa escolher o dia errado, em vez de
+         aceitar, mandar, e devolver um erro depois de tudo preenchido.
+
+         O piso é recalculado a cada montagem de tela porque o painel fica
+         aberto a semana inteira na bancada: com o valor preso na abertura,
+         na terça-feira ele ainda estaria travando na segunda. */
+      escopo.querySelectorAll("[data-nao-passado]").forEach(function (campo) {
+        var agora = new Date();
+        campo.min = campo.type === "datetime-local"
+          ? Painel.datas.paraDataHoraLocal(agora)
+          : Painel.datas.paraDataLocal(agora);
+      });
+    },
+
+    /* Hoje + N dias, no calendário do próprio aparelho.
+       O meio-dia evita que horário de verão empurre a data um dia. */
+    emDias: function (dias) {
+      var dia = new Date();
+      dia.setHours(12, 0, 0, 0);
+      dia.setDate(dia.getDate() + (Number(dias) || 0));
+      return Painel.datas.paraDataLocal(dia);
     }
   };
 

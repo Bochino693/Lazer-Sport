@@ -427,6 +427,11 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
                 ("pagos", "Pagos", resumo_cards["quantidade_pago"], "bi-cash-coin"),
             ),
             "status_opcoes": Orcamento.Status.choices,
+            # O prazo padrão vem do modelo, não escrito de novo no
+            # template: o atalho da tela, o texto de ajuda e o valor que o
+            # servidor aplica quando o campo chega vazio são o mesmo
+            # número, e mudá-lo é mexer num lugar só.
+            "validade_padrao_dias": Orcamento.DIAS_DE_VALIDADE_PADRAO,
             "origem_ativa": origem,
             "origem_opcoes": Orcamento.Origem.choices,
             "origem_nova": origem_padrao_orcamento(request.user),
@@ -649,6 +654,40 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
             pk=pk,
         )
 
+    @staticmethod
+    def _validade(request, *, novo):
+        """Até quando a proposta vale -- nunca para trás, nunca vazia por esquecimento.
+
+        DUAS REGRAS, E CADA UMA RESOLVE UM PROBLEMA DIFERENTE.
+
+        1. Proposta nova sem prazo escolhido nasce com cinco dias. Antes o
+           campo vinha vazio, e proposta sem prazo não entra na fila de
+           cobrança da central de avisos: ficava parada esperando uma
+           resposta que ninguém ia cobrar. Quem quiser outro prazo escreve
+           no campo, e quem quiser mesmo sem prazo tem o botão "Sem prazo"
+           -- a diferença é que agora isso é uma ESCOLHA, e não um
+           esquecimento.
+
+        2. Data já passada é recusada. Um orçamento com validade de ontem
+           sai da fábrica vencido: o cliente abre a página e lê "proposta
+           expirada" num documento que acabou de receber. A tela já evita
+           (o campo tem `min` de hoje e o atalho de 5 dias), mas a tela é
+           sugestão -- quem decide é aqui, que é o único caminho por onde
+           os dados entram.
+        """
+        escolhida = data(request.POST.get("validade"), "Validade")
+
+        if escolhida is None:
+            return Orcamento.validade_padrao() if novo else None
+
+        if escolhida < timezone.localdate():
+            raise ErroDeFormulario(
+                "A validade não pode ser anterior a hoje: a proposta sairia "
+                "vencida. Use o atalho de "
+                f"{Orcamento.DIAS_DE_VALIDADE_PADRAO} dias ou escolha outra data."
+            )
+        return escolhida
+
     def acao_save(self, request):
         orcamento_id = request.POST.get("id")
         acesso = capacidades(request.user)
@@ -701,7 +740,7 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
             # Situação não é campo de edição: rascunho vira aguardando
             # resposta ao enviar; decisão e negociação têm ações próprias.
             orcamento.status = Orcamento.Status.RASCUNHO
-            orcamento.validade = data(request.POST.get("validade"), "Validade")
+            orcamento.validade = self._validade(request, novo=novo)
             orcamento.forma_envio = texto(request, "forma_envio", limite=120)
             orcamento.observacoes = texto(request, "observacoes")
 
