@@ -252,10 +252,10 @@
                   versão nova, com o preço de hoje.
                 {% endcomment %}
                 {% if pode_editar_comercial and orcamento.pode_refazer %}
-                <form method="post" class="d-inline" action="{% url 'orcamentos_inner' %}">
+                <form method="post" class="d-inline" action="{% url 'orcamentos_inner' %}" data-refazer>
                   {% csrf_token %}<input type="hidden" name="action" value="refazer"><input type="hidden" name="id" value="{{ orcamento.id }}">
-                  <button class="btn btn-sm btn-outline-warning" type="submit" title="Criar nova versão para negociar">
-                    <i class="bi bi-arrow-repeat"></i><span class="ls-action-label">Refazer</span>
+                  <button class="btn btn-sm btn-outline-warning" type="submit" title="Criar outra proposta sem alterar esta">
+                    <i class="bi bi-file-earmark-plus"></i><span class="ls-action-label">Nova proposta</span>
                   </button>
                 </form>
                 {% endif %}
@@ -1843,13 +1843,34 @@ LSTela.pronto(function () {
   /* A central de trabalho chega com ?novo=1. O toque em "Novo orçamento"
      termina a acao aqui, ja com a primeira linha pronta, em vez de apenas
      despejar a pessoa numa lista e obrigar um segundo toque. */
-  if (botaoNovoOrcamento && new URLSearchParams(window.location.search).get("novo") === "1") {
+  var parametrosIniciais = new URLSearchParams(window.location.search);
+  if (parametrosIniciais.get("editar")) {
+    abrir(parametrosIniciais.get("editar"));
+  } else if (botaoNovoOrcamento && parametrosIniciais.get("novo") === "1") {
     abrir(null);
   }
 
   document.querySelectorAll("[data-editar]").forEach(function (b) {
     b.addEventListener("click", function () {
       abrir(b.dataset.editar);
+    });
+  });
+
+  /* Refazer não devolve o registro antigo ao rascunho. O servidor cria
+     outra proposta e esta tela abre exatamente o novo id para edição. */
+  document.querySelectorAll("form[data-refazer]").forEach(function (form) {
+    form.addEventListener("submit", function (evento) {
+      evento.preventDefault();
+      var botao = form.querySelector('[type="submit"]');
+      if (botao) botao.disabled = true;
+      Painel.enviar(form).then(function (json) {
+        window.location.assign(
+          window.location.pathname + "?editar=" + encodeURIComponent(json.id)
+        );
+      }).catch(function (erro) {
+        if (botao) botao.disabled = false;
+        window.alert(erro.message);
+      });
     });
   });
 

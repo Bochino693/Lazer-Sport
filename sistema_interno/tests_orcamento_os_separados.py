@@ -94,6 +94,16 @@ class OrcamentoEOrdemServicoSeparadosTests(TestCase):
         self.assertEqual(nova.itens.get().descricao, "Revisão do brinquedo")
         self.assertNotEqual(nova.token, anterior.token)
 
+        from pathlib import Path
+
+        template = (
+            Path(__file__).resolve().parent
+            / "templates" / "orcamentos_inner.html"
+        ).read_text(encoding="utf-8")
+        self.assertIn("data-refazer", template)
+        self.assertIn("Nova proposta", template)
+        self.assertIn('?editar=" + encodeURIComponent(json.id)', template)
+
     def test_cards_filtram_por_fase_sem_select_horizontal(self):
         negociacao = self.criar_orcamento(Orcamento.Status.EM_NEGOCIACAO)
         aprovado = self.criar_orcamento(Orcamento.Status.APROVADO)
@@ -227,6 +237,8 @@ class OrcamentoEOrdemServicoSeparadosTests(TestCase):
             "status": OrdemServico.Status.EM_EXECUCAO,
             "prioridade": OrdemServico.Prioridade.ALTA,
             "equipamento": "Tobogã inflável",
+            "frete": "40,00",
+            "desconto": "15,00",
             "itens": json.dumps([{
                 "tipo": ItemOrdemServico.Tipo.SERVICO,
                 "descricao": "Troca de costura",
@@ -237,7 +249,10 @@ class OrcamentoEOrdemServicoSeparadosTests(TestCase):
 
         self.assertEqual(resposta.status_code, 200)
         ordem = OrdemServico.objects.get(pk=resposta.json()["id"])
-        self.assertEqual(ordem.total, Decimal("250.00"))
+        self.assertEqual(ordem.subtotal, Decimal("250.00"))
+        self.assertEqual(ordem.frete, Decimal("40.00"))
+        self.assertEqual(ordem.desconto, Decimal("15.00"))
+        self.assertEqual(ordem.total, Decimal("275.00"))
         self.assertIsNotNone(ordem.iniciada_em)
         self.assertIsNone(ordem.orcamento_id)
 
@@ -314,6 +329,49 @@ class OrcamentoEOrdemServicoSeparadosTests(TestCase):
         self.assertEqual(orcamento.status_pagamento, Orcamento.StatusPagamento.PENDENTE)
         self.assertEqual(orcamento.valor_pago, Decimal("0.00"))
 
+    def test_os_paga_esconde_acao_e_servidor_nao_recebe_de_novo(self):
+        ordem = OrdemServico.objects.create(
+            nome_cliente="Cliente quitado",
+            equipamento="Cama elástica",
+            status=OrdemServico.Status.CONCLUIDA,
+        )
+        ItemOrdemServico.objects.create(
+            ordem=ordem,
+            descricao="Manutenção",
+            quantidade=1,
+            valor_unitario=Decimal("300.00"),
+        )
+        ordem.registrar_pagamento(Decimal("300.00"), "Pix")
+
+        html = self.client.get(
+            "/ordens-servico/", HTTP_HOST="interno.testserver",
+        ).content.decode()
+        self.assertNotIn(f'data-pagamento-os="{ordem.pk}"', html)
+        self.assertIn("R$ 300,00 recebido", html)
+
+        resposta = self.post_interno("/ordens-servico/", {
+            "action": "pagamento",
+            "id": ordem.pk,
+            "valor_pago": "300,00",
+        })
+        self.assertEqual(resposta.status_code, 400)
+
+    def test_frete_e_desconto_da_os_ficam_abaixo_dos_itens(self):
+        from pathlib import Path
+
+        template = (
+            Path(__file__).resolve().parent
+            / "templates" / "ordens_servico_inner.html"
+        ).read_text(encoding="utf-8")
+
+        itens = template.index('id="itensOSCorpo"')
+        frete = template.index('id="osFrete"')
+        desconto = template.index('id="osDesconto"')
+        total = template.index('id="osTotal"')
+        self.assertLess(itens, frete)
+        self.assertLess(frete, desconto)
+        self.assertLess(desconto, total)
+
     def test_o_superusuario_apaga_os_concluida_e_o_registro_guarda_o_que_era(self):
         """A O.S. concluída é histórico operacional -- e histórico erra.
 
@@ -379,4 +437,3 @@ class OrcamentoEOrdemServicoSeparadosTests(TestCase):
 
         self.assertEqual(resposta.status_code, 403)
         self.assertTrue(OrdemServico.objects.filter(pk=ordem.pk).exists())
-

@@ -2935,7 +2935,7 @@ button.ls-incomplete-chip:focus-visible{outline:3px solid rgba(255,128,145,.35);
 /* ---------------------------------------------------------- o papel */
 .ls-folha-etiquetas{
   display:grid;gap:10px;padding:14px;
-  border:1px solid var(--line);border-radius:16px;background:#5B5348;
+  border:1px solid var(--line);border-radius:16px;background:#171310;
 }
 .ls-folha-etiquetas.a5{grid-template-columns:1fr}
 .ls-folha-etiquetas.a6{grid-template-columns:1fr 1fr}
@@ -2944,14 +2944,17 @@ button.ls-incomplete-chip:focus-visible{outline:3px solid rgba(255,128,145,.35);
 .ls-etiqueta{
   display:flex;flex-direction:column;gap:10px;
   padding:16px 18px;background:#fff;color:#171310;
-  border:2px solid #171310;border-radius:6px;
+  border:4px solid #171310;border-radius:6px;
   font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
 }
-.ls-etiqueta-topo{display:flex;align-items:center;gap:11px;border-bottom:2px solid #171310;padding-bottom:9px}
+.ls-etiqueta-topo{
+  display:flex;align-items:center;gap:11px;padding:9px 11px;
+  border:2px solid #171310;border-radius:5px;background:#F2A93B;color:#171310;
+}
 .ls-etiqueta-logo{width:44px;height:44px;flex:0 0 44px;object-fit:contain}
 .ls-etiqueta-empresa{flex:1 1 auto;min-width:0;display:flex;flex-direction:column}
 .ls-etiqueta-empresa strong{font-size:.95rem;line-height:1.2}
-.ls-etiqueta-empresa small{font-size:.62rem;color:#4A423A;line-height:1.35}
+.ls-etiqueta-empresa small{font-size:.62rem;color:#171310;line-height:1.35;font-weight:750}
 .ls-etiqueta-volume{
   flex:0 0 auto;text-align:center;padding:5px 10px;
   border:2px solid #171310;border-radius:6px;
@@ -2976,11 +2979,11 @@ button.ls-incomplete-chip:focus-visible{outline:3px solid rgba(255,128,145,.35);
 
 .ls-etiqueta-destino{
   flex:1 1 auto;min-height:0;padding:10px 12px;
-  border:2px dashed #171310;border-radius:6px;
+  border:3px solid #171310;border-radius:6px;
 }
 .ls-etiqueta-destino>span{
   display:block;font-size:.58rem;font-weight:900;
-  letter-spacing:.1em;text-transform:uppercase;color:#4A423A;
+  letter-spacing:.1em;text-transform:uppercase;color:#171310;
 }
 .ls-etiqueta-destino strong{display:block;margin-top:2px;font-size:1.3rem;line-height:1.2}
 .ls-etiqueta-destino p{margin:5px 0 0;font-size:.8rem;line-height:1.4}
@@ -2988,12 +2991,13 @@ button.ls-incomplete-chip:focus-visible{outline:3px solid rgba(255,128,145,.35);
 
 .ls-etiqueta-rodape{
   display:flex;flex-wrap:wrap;gap:4px 18px;
-  border-top:1px solid #B9AE9C;padding-top:8px;font-size:.72rem;
+  border-top:3px solid #171310;padding-top:8px;font-size:.72rem;
+  color:#171310;font-weight:750;
 }
 .ls-etiqueta-rodape span{display:flex;flex-direction:column;min-width:0}
 .ls-etiqueta-rodape small{
   font-size:.53rem;font-weight:900;letter-spacing:.08em;
-  text-transform:uppercase;color:#6B6055;
+  text-transform:uppercase;color:#171310;
 }
 .ls-etiqueta-origem{margin-left:auto;text-align:right}
 
@@ -3009,7 +3013,8 @@ button.ls-incomplete-chip:focus-visible{outline:3px solid rgba(255,128,145,.35);
 .ls-folha-etiquetas.a6 .ls-etiqueta-logo{width:32px;height:32px;flex-basis:32px}
 
 /* Economizar tinta: some o preenchido, fica o traço. */
-.ls-folha-etiquetas.sem-fundo .ls-etiqueta-selo.principal{background:#fff;color:#171310}
+.ls-folha-etiquetas.sem-fundo .ls-etiqueta-selo.principal,
+.ls-folha-etiquetas.sem-fundo .ls-etiqueta-topo{background:#fff;color:#171310}
 
 /* ------------------------------------------------- na impressora
    O painel inteiro sai de cena: menu, topo, formulário e a moldura da

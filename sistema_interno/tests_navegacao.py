@@ -190,6 +190,20 @@ class ScriptDeTelaNaoEsperaDOMContentLoadedTests(SimpleTestCase):
         self.assertNotIn("document.open", codigo)
         self.assertIn("garantirFolhas", codigo)
 
+    def test_resposta_antiga_nao_substitui_clique_mais_novo(self):
+        """Rede lenta não pode fazer a tela anterior chegar por último."""
+        navegacao = (
+            Path(__file__).resolve().parent
+            / "static" / "interno" / "ls-soft-navigation.js"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("versao !== navegacao", navegacao)
+        self.assertIn(
+            "trocarDocumento(cache, alvo, modoHistorico || \"push\", minhaNavegacao)",
+            navegacao,
+        )
+        self.assertIn("aplicarTela(novoDoc, url, modoHistorico, versao)", navegacao)
+
 
 class IdentidadeVisualTests(SimpleTestCase):
     """Cor é o que diz ao olho em que lugar do sistema se está.

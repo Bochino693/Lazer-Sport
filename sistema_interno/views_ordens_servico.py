@@ -404,6 +404,8 @@ class OrdensServicoInnerView(
             "servico_executado": ordem.servico_executado,
             "observacoes": ordem.observacoes,
             "forma_pagamento": ordem.forma_pagamento,
+            "frete": f"{ordem.frete:.2f}".replace(".", ","),
+            "desconto": f"{ordem.desconto:.2f}".replace(".", ","),
             "status_pagamento": ordem.status_pagamento,
             "valor_pago": f"{ordem.valor_pago:.2f}".replace(".", ","),
             "link_publico": getattr(ordem, "link_publico", ""),
@@ -461,6 +463,16 @@ class OrdensServicoInnerView(
         ordem.servico_executado = texto(request, "servico_executado")
         ordem.observacoes = texto(request, "observacoes")
         ordem.forma_pagamento = texto(request, "forma_pagamento", limite=120)
+        ordem.frete = decimal_br(
+            request.POST.get("frete") or "0", "Frete",
+            limite=Decimal("9999999999.99"),
+        )
+        ordem.desconto = decimal_br(
+            request.POST.get("desconto") or "0", "Desconto",
+            limite=Decimal("9999999999.99"),
+        )
+        if ordem.frete < 0 or ordem.desconto < 0:
+            raise ErroDeFormulario("Frete e desconto não podem ser negativos.")
 
         tipo = (request.POST.get("tipo") or "").strip()
         status = (request.POST.get("status") or "").strip()
@@ -537,6 +549,11 @@ class OrdensServicoInnerView(
         if not capacidades(request.user)["ordens_servico_pagamento"]:
             return self.erro(request, "Somente Financeiro ou Gestão registra pagamentos.", status=403)
         ordem = get_object_or_404(OrdemServico, pk=request.POST.get("id"))
+        if not ordem.pode_receber_pagamento:
+            return self.erro(
+                request,
+                "Esta O.S. já está paga, foi cancelada ou não tem saldo para receber.",
+            )
         valor = decimal_br(
             request.POST.get("valor_pago"), "Valor pago",
             obrigatorio=True, limite=Decimal("9999999999.99"),

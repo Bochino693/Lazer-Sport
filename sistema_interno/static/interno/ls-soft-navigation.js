@@ -409,7 +409,11 @@
        id logo em seguida. */
   }
 
-  function aplicarTela(novoDoc, url, modoHistorico) {
+  function aplicarTela(novoDoc, url, modoHistorico, versao) {
+    /* Uma troca antiga nunca pode ganhar de um clique mais novo. A folha
+       pode ter demorado a carregar ou a View Transition pode ter adiado o
+       callback; em ambos os casos, só a navegação mais recente escreve. */
+    if (versao !== navegacao) return false;
     var destino = nucleo(novoDoc);
     var atual = nucleo(document);
     if (!destino || !atual) return false;
@@ -471,7 +475,8 @@
     return true;
   }
 
-  function trocarDocumento(html, url, modoHistorico) {
+  function trocarDocumento(html, url, modoHistorico, versao) {
+    if (versao !== navegacao) return;
     var novoDoc;
     try {
       novoDoc = new DOMParser().parseFromString(html, "text/html");
@@ -491,11 +496,12 @@
        que está na tela é a tela ANTERIOR, inteira e estilizada -- e não
        um esqueleto sem estilo. */
     garantirFolhas(novoDoc).then(function () {
-      if (!trocarComTransicao(novoDoc, url, modoHistorico)) {
+      if (versao !== navegacao) return;
+      if (!trocarComTransicao(novoDoc, url, modoHistorico, versao)) {
         window.location.assign(url.href);
       }
     }).catch(function () {
-      window.location.assign(url.href);
+      if (versao === navegacao) window.location.assign(url.href);
     });
   }
 
@@ -520,12 +526,13 @@
      aqui é obrigatório para a tela funcionar; é só a diferença entre
      trocar e trocar bem.
      ====================================================================== */
-  function trocarComTransicao(novoDoc, url, modoHistorico) {
+  function trocarComTransicao(novoDoc, url, modoHistorico, versao) {
+    if (versao !== navegacao) return true;
     if (
       !document.startViewTransition
       || window.matchMedia("(prefers-reduced-motion: reduce)").matches
     ) {
-      return aplicarTela(novoDoc, url, modoHistorico);
+      return aplicarTela(novoDoc, url, modoHistorico, versao);
     }
 
     /* O retorno do callback é assíncrono -- ele roda depois de o
@@ -536,12 +543,13 @@
        que acontecer a tela não pode simplesmente ficar parada. */
     try {
       document.startViewTransition(function () {
-        if (!aplicarTela(novoDoc, url, modoHistorico)) {
+        if (versao !== navegacao) return;
+        if (!aplicarTela(novoDoc, url, modoHistorico, versao)) {
           window.location.assign(url.href);
         }
       });
     } catch (erro) {
-      return aplicarTela(novoDoc, url, modoHistorico);
+      return aplicarTela(novoDoc, url, modoHistorico, versao);
     }
     return true;
   }
@@ -558,13 +566,15 @@
 
     var cache = recuperar(alvo);
     if (cache) {
-      trocarDocumento(cache, alvo, modoHistorico || "push");
+      trocarDocumento(cache, alvo, modoHistorico || "push", minhaNavegacao);
       return;
     }
 
     buscar(alvo).then(function (resultado) {
       if (minhaNavegacao !== navegacao) return;
-      trocarDocumento(resultado.html, resultado.url, modoHistorico || "push");
+      trocarDocumento(
+        resultado.html, resultado.url, modoHistorico || "push", minhaNavegacao
+      );
     }).catch(function () {
       if (minhaNavegacao !== navegacao) return;
       mostrarFalha(alvo);

@@ -124,6 +124,22 @@ class EtiquetasTests(TestCase):
         # descarta fundo por padrão.
         self.assertIn("print-color-adjust:exact", impressao)
 
+    def test_o_papel_usa_preto_e_ambar_sem_cinza_apagado(self):
+        """Texto cinza no papel branco some no galpão e na impressão."""
+        from pathlib import Path
+
+        folha = (
+            Path(__file__).resolve().parent
+            / "static" / "interno" / "interno_modern.css"
+        ).read_text(encoding="utf-8")
+        etiqueta = folha[folha.index("/* ---------------------------------------------------------- o papel */"):]
+        etiqueta = etiqueta[:etiqueta.index("@media print")]
+
+        self.assertIn("background:#F2A93B", etiqueta)
+        self.assertIn("border:4px solid #171310", etiqueta)
+        for cinza in ("#4A423A", "#6B6055", "#B9AE9C"):
+            self.assertNotIn(cinza, etiqueta)
+
     def test_a_tela_esta_no_menu(self):
         """Tela que não está no menu é tela que ninguém acha."""
         self.assertIn(

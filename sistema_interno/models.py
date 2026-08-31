@@ -2313,6 +2313,12 @@ class OrdemServico(Prime):
     servico_executado = models.TextField(blank=True)
     observacoes = models.TextField(blank=True)
     forma_pagamento = models.CharField(max_length=120, blank=True)
+    frete = models.DecimalField(
+        max_digits=12, decimal_places=2, default=Decimal("0.00")
+    )
+    desconto = models.DecimalField(
+        max_digits=12, decimal_places=2, default=Decimal("0.00")
+    )
     status_pagamento = models.CharField(
         max_length=12,
         choices=StatusPagamento.choices,
@@ -2394,11 +2400,31 @@ class OrdemServico(Prime):
         return ""
 
     @property
-    def total(self):
+    def subtotal(self):
         return sum(
             (item.subtotal for item in self.itens.all()),
             Decimal("0.00"),
         ).quantize(Decimal("0.01"))
+
+    @property
+    def total(self):
+        bruto = self.subtotal + (self.frete or Decimal("0.00"))
+        liquido = bruto - (self.desconto or Decimal("0.00"))
+        return max(liquido, Decimal("0.00")).quantize(Decimal("0.01"))
+
+    @property
+    def pode_receber_pagamento(self):
+        """A cobrança só aparece enquanto ainda existe saldo válido."""
+        return (
+            self.pk
+            and self.status != self.Status.CANCELADA
+            and self.status_pagamento != self.StatusPagamento.PAGO
+            and self.total > Decimal("0.00")
+        )
+
+    @property
+    def quitado(self):
+        return self.status_pagamento == self.StatusPagamento.PAGO
 
     @property
     def saldo_pagamento(self):

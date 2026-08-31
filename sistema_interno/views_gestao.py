@@ -1084,7 +1084,7 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
 
         return self.sucesso(
             request,
-            f"Versão {nova.versao} criada. Ajuste os itens ou descontos e envie novamente.",
+            f"Nova proposta #{nova.pk} criada sem alterar a anterior. Ajuste e envie quando estiver pronta.",
             id=nova.pk,
         )
 
