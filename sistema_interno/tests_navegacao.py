@@ -133,6 +133,44 @@ class ScriptDeTelaNaoEsperaDOMContentLoadedTests(SimpleTestCase):
             "valendo em todas as seguintes:\n  " + "\n  ".join(desmarcados),
         )
 
+    def test_a_navegacao_suave_e_registrada_antes_da_barra_de_carregamento(self):
+        """Ouvinte de bolha roda na ordem em que foi registrado.
+
+        Os dois escutam clique no documento. A navegação suave chama
+        `preventDefault` nos links do painel, e é isso que diz à barra que
+        não haverá troca de página para acompanhar. Se a barra for
+        registrada primeiro, ela decide antes de saber -- e volta a piscar
+        a cada clique, que é a "sensação de carregamento" numa troca que
+        não carrega nada.
+        """
+        base = (TEMPLATES / "base_inner.html").read_text(encoding="utf-8")
+
+        posicao_navegacao = base.index("ls-soft-navigation.js")
+        posicao_barra = base.index("ls-page-loader.js")
+
+        self.assertLess(
+            posicao_navegacao, posicao_barra,
+            "ls-soft-navigation.js precisa vir antes de ls-page-loader.js "
+            "no <head>: script defer executa na ordem do documento, e o "
+            "primeiro a executar é o primeiro a escutar o clique.",
+        )
+
+    def test_a_barra_de_carregamento_respeita_o_clique_ja_tratado(self):
+        """A barra some do caminho de quem trata o clique por fetch.
+
+        O comentário do arquivo sempre disse que era assim -- os ouvintes
+        ficam na bolha justamente para enxergar o `preventDefault` --, mas
+        a conferência existia só no envio de formulário, não no clique.
+        """
+        barra = (
+            RAIZ_CORE / "static" / "site" / "ls-page-loader.js"
+        ).read_text(encoding="utf-8")
+
+        trecho = barra[barra.index('addEventListener("click"'):]
+        trecho = trecho[:trecho.index("addEventListener(\"submit\"")]
+
+        self.assertIn("evento.defaultPrevented", trecho)
+
     def test_a_troca_de_tela_nao_reescreve_o_documento(self):
         """Reescrever o documento é a origem do instante sem estilo.
 

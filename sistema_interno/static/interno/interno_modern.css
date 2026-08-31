@@ -828,8 +828,29 @@ textarea.form-control{min-height:100px!important}
   background:linear-gradient(90deg,var(--acento-2),var(--acento) 58%,var(--apoio));
   box-shadow:0 0 13px rgba(242,169,59,.58);
 }
-.ls-soft-enter .ls-content{animation:ls-soft-enter .24s ease both}
-@keyframes ls-soft-enter{from{opacity:.45;transform:translateY(4px)}to{opacity:1;transform:none}}
+/* ======================================================================
+   A PASSAGEM DE UMA TELA PARA A OUTRA
+
+   Aqui havia uma animação de entrada: o conteúdo nascia com 45% de
+   opacidade e subia quatro pixels. Ela era do tempo em que trocar de tela
+   remontava o documento inteiro, e mostrava exatamente o que não se quer
+   mostrar -- a tela nova CHEGANDO. Quem olhava via o carregamento, não a
+   troca.
+
+   Agora quem faz a passagem é o navegador, por `startViewTransition`: ele
+   fotografa a tela antes, deixa a troca acontecer sem nada visível, e
+   dissolve uma foto na outra. Em momento nenhum se vê o meio do caminho.
+
+   180ms é curto de propósito. Passagem que se percebe como animação vira
+   espera; esta é só o bastante para o olho entender que uma tela virou a
+   outra, e some antes de alguém reparar nela.
+   ====================================================================== */
+::view-transition-old(root),
+::view-transition-new(root){animation-duration:.18s;animation-timing-function:ease}
+@media(prefers-reduced-motion:reduce){
+  ::view-transition-old(root),
+  ::view-transition-new(root){animation:none}
+}
 @media(max-width:900px){.ls-budget-money-strip{grid-template-columns:1fr 1fr}}
 @media(max-width:560px){
   .ls-budget-card-filters{grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -837,7 +858,6 @@ textarea.form-control{min-height:100px!important}
   .ls-budget-money-strip{grid-template-columns:1fr}
   .ls-budget-money-strip>div{padding:11px 13px}.ls-budget-search{width:100%}
 }
-@media(prefers-reduced-motion:reduce){.ls-soft-enter .ls-content{animation:none}}
 .ls-orcamento-total > div{
   display:flex;align-items:center;justify-content:space-between;gap:16px;
   color:#c5bcb0;font-size:.86rem;font-weight:800;
