@@ -2014,6 +2014,21 @@ input[type="number"]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0
 .ls-row-actions .btn{margin:0!important;white-space:nowrap}
 .ls-clientes-table .ls-action-label{display:none}
 
+/* Linha secundária dentro de uma célula: cidade abaixo do nome do
+   cliente, "e mais 2" abaixo da lista de itens. Menor e mais apagada,
+   para a leitura pegar o principal primeiro. */
+.ls-sub{display:block;margin-top:2px;color:var(--muted-2);font-size:.68rem;font-weight:700}
+
+/* Item de pedido dentro da célula. Vira uma pilha de etiquetas em vez de
+   uma frase corrida: com três itens, a frase corrida estourava a coluna
+   e empurrava o total para fora da tela no tablet. */
+.ls-chip-lista{
+  display:inline-flex;align-items:center;margin:2px 4px 2px 0;padding:3px 8px;
+  border:1px solid var(--line-soft);border-radius:999px;
+  background:var(--panel-soft);color:var(--text-2);
+  font-size:.68rem;font-weight:750;white-space:nowrap;
+}
+
 /* O RÓTULO DE "ENVIAR" NÃO SOME EM LARGURA NENHUMA.
 
    As telas médias escondem o texto das ações e deixam só o ícone, para
