@@ -461,6 +461,56 @@ botão: botão que falha ao ser tocado ensina a não tocar em botão nenhum.
 dele que este aplicativo se distingue. `tests_navegacao.py` lista os
 tons do painel antigo e reprova qualquer um de volta.
 
+**A ação só aparece quando cabe naquela situação.** A lista trazia os
+mesmos botões em toda linha, e cada um falhava de um jeito diferente
+quando não cabia: "Enviar" numa proposta vencida gerava o link de uma
+página que anuncia "proposta expirada"; "Registrar pagamento" numa
+proposta quitada abria uma janela pedindo um valor que já estava lá.
+Botão que não cabe não é neutro — ele ensina a duvidar dos outros.
+Pergunte ao modelo (`pode_enviar`, `pode_receber_pagamento`, `quitado`,
+`pode_refazer`) e **repita a regra no servidor**: a tela é sugestão, a
+regra é onde os dados entram.
+
+**Filtro de lista não vai ao servidor.** O servidor manda, junto da
+página, um índice enxuto (`busca_local.montar_indice`) e
+`ls-filtro-local.js` procura nele — sem rede, sem recarregar e sem mexer
+na URL. Duas coisas são obrigatórias: **o índice cobre o filtro inteiro,
+não a página desenhada** (senão a tela responde "nada encontrado" sobre
+um registro da página 2), e **os campos do índice são os mesmos que a
+busca do servidor percorre** (se divergirem, digitar e apertar "Trazer
+todos" dão respostas diferentes, e ninguém confia em nenhuma das duas).
+As linhas apenas somem e voltam: nada reescreve a tabela, então os
+ouvintes já pendurados nos botões continuam valendo.
+
+**Janela que mostra parte do cadastro precisa de regra própria.**
+`salvar_cliente` lê o formulário inteiro, e está certo para a edição:
+campo ausente ali significa "o usuário apagou". Numa janela de três
+campos, essa mesma leitura apaga o telefone de quem só veio informar o
+CPF. Para isso existe `completar_cadastro`, onde cada campo é opcional e
+só grava quando veio preenchido — com as mesmas validações da edição.
+E lembre: **caixa desmarcada não viaja no POST**, então "não" e "nem
+perguntamos" chegam iguais; mande um marcador escondido junto quando a
+diferença importar.
+
+**Nenhuma tela pede arquivo que não existe.** Indicadores pedia um
+`Chart.min.js` que nunca esteve no repositório, e o site pedia oito
+imagens de reserva que também não. Nada disso dava erro: a página abria,
+respondia 200, e simplesmente não mostrava o que devia — a falha mais
+difícil de achar olhando, porque quem usa supõe que não há dado.
+`tests_estaticos.py` percorre todo `{% static %}` do projeto, e
+`tests_urls.py` abre cada rota saindo da própria lista de URLs, de modo
+que rota nova entra na varredura sozinha.
+
+**Nada de CDN.** O painel roda na estrada, instalado como aplicativo:
+Bootstrap, os ícones e a fonte já são servidos daqui. Um gráfico de uma
+série cabe em SVG escrito à mão; não vale trazer biblioteca para isso.
+
+**Impresso: altura mínima, nunca fixa.** Com `height`, um endereço de
+quatro linhas empurra o rodapé para fora da moldura e o papel sai
+cortado justamente na parte que explica o documento. E impressora
+descarta fundo por padrão — se a cor carrega significado (a faixa do
+aviso de frágil), marque `print-color-adjust:exact`.
+
 ---
 
 ## 10. Checklist da tela nova
@@ -489,3 +539,12 @@ tons do painel antigo e reprova qualquer um de volta.
 - [ ] Exclusão por `exclusoes.remover()` (ver 9.2).
 - [ ] Lista aberta com 3 e com 25 registros: a conta de consultas não
       pode crescer (ver 9.2).
+- [ ] Cada ação de linha perguntou ao modelo se cabe naquela situação — e
+      o servidor repete a regra (ver 9.2).
+- [ ] Busca da lista com índice local: `data-filtro-alvo` na caixa,
+      `data-registro` na linha, e o índice cobrindo o filtro inteiro
+      (ver 9.2).
+- [ ] Nenhum `{% static %}` apontando para arquivo que não existe, e
+      nenhuma biblioteca de fora (ver 9.2).
+- [ ] Se imprime: altura mínima em vez de fixa, e
+      `print-color-adjust:exact` onde a cor significa algo (ver 9.2).
