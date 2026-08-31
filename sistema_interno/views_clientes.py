@@ -321,6 +321,36 @@ class ClientesInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
             mapa_publicado=salvo.no_mapa,
         )
 
+    def acao_completar(self, request):
+        """Preenche o que faltava, sem abrir o cadastro inteiro.
+
+        A lista já dizia "Falta contato, endereço" -- mas o único caminho
+        para resolver era "Editar", que abre o formulário completo e
+        espalha os três campos vazios no meio de vinte preenchidos. Quem
+        estava com o cliente no telefone procurava onde digitar.
+        """
+        cliente = get_object_or_404(Cliente, pk=request.POST.get("id"))
+
+        svc.completar_cadastro(request, cliente)
+        svc.salvar_endereco(request, cliente)
+        cliente.refresh_from_db()
+
+        # O que ainda falta volta junto: é com isso que a linha atualiza
+        # (ou apaga) o aviso sem recarregar a tela.
+        faltando = pendencias_do_cliente(cliente)
+        return self.sucesso(
+            request,
+            (
+                f"Cadastro de “{cliente.nome_cliente}” completo."
+                if not faltando
+                else f"“{cliente.nome_cliente}” atualizado. Ainda falta: "
+                     + ", ".join(faltando) + "."
+            ),
+            id=cliente.id,
+            pendencias=faltando,
+            resumo=svc.opcao_de_busca(cliente),
+        )
+
     def acao_delete(self, request):
         superusuario = bool(getattr(request.user, "is_superuser", False))
         if not pode_excluir_cliente(request.user) and not superusuario:

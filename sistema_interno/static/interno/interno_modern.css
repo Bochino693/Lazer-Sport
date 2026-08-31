@@ -2850,3 +2850,52 @@ body.modal-open .ls-nav-recovery{display:none!important}
 @media(max-width:520px){
   .ls-filtro-recado.fora .btn{margin-left:0;width:100%}
 }
+
+/* O AVISO DE CADASTRO INCOMPLETO VIROU BOTÃO.
+
+   Ele dizia o que faltava e parava aí; resolver era abrir o formulário
+   inteiro e caçar os campos vazios. Agora o próprio aviso abre a janela
+   que pergunta só o que falta -- e precisa parecer clicável, sem virar
+   mais um botão brigando com os da coluna de ações. */
+button.ls-incomplete-chip{
+  cursor:pointer;text-align:left;font-family:inherit;
+  align-items:flex-start;
+  transition:border-color .15s ease,background .15s ease;
+}
+/* O texto precisa da própria caixa: solto, o flex o quebra palavra a
+   palavra e a etiqueta "Completar" cai no meio da frase. */
+button.ls-incomplete-chip>i{flex:0 0 auto;margin-top:1px}
+.ls-incomplete-texto{flex:1 1 auto;min-width:0}
+button.ls-incomplete-chip:hover,
+button.ls-incomplete-chip:focus-visible{
+  border-color:rgba(255,128,145,.55);
+  background:rgba(255,113,132,.16);
+}
+button.ls-incomplete-chip:focus-visible{outline:3px solid rgba(255,128,145,.35);outline-offset:2px}
+.ls-incomplete-cta{
+  flex:0 0 auto;margin-left:2px;padding:2px 7px;border-radius:99px;
+  background:rgba(255,157,172,.18);color:#ffd4db;
+  font-size:.63rem;font-weight:900;letter-spacing:.03em;text-transform:uppercase;
+  white-space:nowrap;
+}
+
+/* Os blocos da janela de completar. Cada um aparece só quando aquele
+   pedaço do cadastro está faltando, então eles precisam se separar
+   sozinhos: sem moldura, dois blocos abertos viram um formulário só. */
+.ls-completar-resumo{
+  margin:0 0 14px;padding:11px 14px;
+  border:1px dashed var(--line);border-radius:12px;
+  color:var(--muted);font-size:.85rem;font-weight:600;
+}
+.ls-completar-bloco{
+  margin-bottom:16px;padding:15px 16px;
+  border:1px solid var(--line);border-radius:15px;
+  background:linear-gradient(180deg,var(--panel-2),var(--panel-soft));
+}
+.ls-completar-bloco:last-child{margin-bottom:0}
+.ls-completar-bloco>h6{
+  margin:0 0 12px;display:flex;align-items:center;gap:7px;
+  color:var(--text);font-size:.8rem;font-weight:900;
+  letter-spacing:.03em;text-transform:uppercase;
+}
+.ls-completar-bloco>h6 i{color:var(--metric)}
