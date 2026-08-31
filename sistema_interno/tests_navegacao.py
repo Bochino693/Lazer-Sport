@@ -21,6 +21,7 @@ from django.test import SimpleTestCase, TestCase, override_settings
 
 
 TEMPLATES = Path(__file__).resolve().parent / "templates"
+RAIZ_CORE = Path(__file__).resolve().parent.parent / "core"
 
 
 @override_settings(ALLOWED_HOSTS=["interno.testserver", "testserver"])
@@ -95,6 +96,41 @@ class ScriptDeTelaNaoEsperaDOMContentLoadedTests(SimpleTestCase):
             "acontece de novo quando a tela é trocada sem recarregar a "
             "página, e o script nunca roda. Troque por LSTela.pronto():\n  "
             + "\n  ".join(culpados),
+        )
+
+    def test_folha_de_tela_se_declara_como_tal(self):
+        """`extra_css` sem `data-ls-tela` gruda no painel para sempre.
+
+        As folhas do painel valem em toda tela e ficam. As de uma tela só
+        precisam sair quando a tela sai -- e a marca é como a troca sabe a
+        diferença. Sem ela, o CSS do catálogo do site entrava na primeira
+        tela de /site/ e continuava valendo em cima da lista de orçamentos
+        e da produção pelo resto da sessão: a tela certa, com as regras de
+        outra. É uma das caras de "o CSS bugou quando troquei de tela".
+        """
+        marcados = re.compile(
+            r"""<link[^>]*rel=["']stylesheet["'][^>]*>""", re.I
+        )
+        desmarcados = []
+
+        for pasta in (TEMPLATES, RAIZ_CORE / "templates"):
+            for arquivo in sorted(pasta.rglob("*.html")):
+                texto = arquivo.read_text(encoding="utf-8")
+                bloco = re.search(
+                    r"{% block extra_css %}(.*?){% endblock %}", texto, re.S
+                )
+                if not bloco:
+                    continue
+                for folha in marcados.findall(bloco.group(1)):
+                    if "data-ls-tela" not in folha:
+                        desmarcados.append(f"{arquivo.name}: {folha.strip()}")
+
+        self.assertEqual(
+            desmarcados,
+            [],
+            "Folha de estilo em extra_css sem data-ls-tela. Ela entraria "
+            "no <head> na primeira tela que a pedisse e continuaria "
+            "valendo em todas as seguintes:\n  " + "\n  ".join(desmarcados),
         )
 
     def test_a_troca_de_tela_nao_reescreve_o_documento(self):

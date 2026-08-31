@@ -265,11 +265,31 @@
     var cabeca = document.head;
     var espera = [];
 
-    /* A comparação é entre endereços JÁ RESOLVIDOS, e isso importa: no
+    /* O QUE A TELA NOVA PEDE, E SÓ ISSO.
+
+       As folhas do painel (as do `base_inner`) ficam para sempre: são as
+       mesmas em toda tela. As de TELA vêm marcadas com `data-ls-tela`, e
+       essas entram e saem junto com a tela que as pediu.
+
+       Sem a saída, a folha do catálogo do site entrava na primeira tela
+       de /site/ e continuava valendo em cima da lista de orçamentos e da
+       produção pelo resto da sessão -- a tela certa, com as regras de
+       outra. É uma das caras de "o CSS bugou quando troquei de tela".
+
+       A comparação é entre endereços JÁ RESOLVIDOS, e isso importa: no
        HTML o atributo é relativo ("/static/..."), enquanto a propriedade
-       `.href` devolve o endereço absoluto. Procurar pelo atributo com o
-       valor absoluto nunca casa -- e a cada troca de tela o painel
-       reanexava as MESMAS quatro folhas, dobrando a lista do `<head>`. */
+       `.href` devolve o absoluto. Comparar um com o outro nunca casa --
+       e a cada troca o painel reanexava as MESMAS folhas, dobrando a
+       lista do `<head>`. */
+    var pedidas = {};
+    novoDoc.head.querySelectorAll('link[rel="stylesheet"]').forEach(function (folha) {
+      if (folha.href) pedidas[folha.href] = true;
+    });
+
+    cabeca.querySelectorAll('link[rel="stylesheet"][data-ls-tela]').forEach(function (folha) {
+      if (!pedidas[folha.href]) folha.remove();
+    });
+
     var jaTem = {};
     cabeca.querySelectorAll('link[rel="stylesheet"]').forEach(function (folha) {
       if (folha.href) jaTem[folha.href] = true;

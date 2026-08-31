@@ -5,7 +5,9 @@
 
 {% block extra_css %}
 {{ block.super }}
-<link rel="stylesheet"
+{# data-ls-tela: uma biblioteca de ícones inteira só desta tela. Sem a
+   marca ela ficaria carregada em todas as telas seguintes da sessão. #}
+<link rel="stylesheet" data-ls-tela="1"
       href="{% static 'vendor/fontawesome/css/all.min.css' %}?v=1">
 
 <style>
