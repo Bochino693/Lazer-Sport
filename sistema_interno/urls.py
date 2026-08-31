@@ -24,6 +24,7 @@ from .views import (
     DashboardEstoqueView,
     EstoqueInnerView,
     HomeInnerView,
+    LembrarClienteView,
     LoginInternoView,
     LogoutInnerView,
     MinhaContaView,
@@ -89,6 +90,12 @@ def por_funcoes(view_class, *funcoes, somente_super=False):
 
 urlpatterns = [
     path('', HomeInnerView.as_view(), name='home_inner'),
+    # O atalho da fila de urgências: lembrar o cliente sem sair da tela.
+    path(
+        'orcamentos/<int:pk>/lembrar/',
+        LembrarClienteView.as_view(),
+        name='lembrar_cliente',
+    ),
 
     # ---------------- estoque de materiais ----------------
     path('stock/', EstoqueInnerView.as_view(), name='stock'),

@@ -93,11 +93,52 @@
 .app-section-head h2{margin:3px 0 0;color:#fff;font-size:1.08rem;font-weight:950}.app-section-head>a{color:#f5c879;font-size:.77rem;font-weight:900;text-decoration:none}.app-section-head.compact{min-height:68px}
 .app-count{min-width:32px;height:32px;padding:0 9px;display:grid;place-items:center;border-radius:999px;color:#ffce78;background:rgba(242,169,59,.12);font-size:.76rem;font-weight:950}
 .app-task-list{padding:6px 16px 12px}
-.app-task{min-height:76px;padding:12px 4px;display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:13px;align-items:center;border-bottom:1px solid var(--line-soft);color:inherit!important;text-decoration:none}
+/* A LINHA DEIXOU DE SER UM LINK E VIROU UM CONTÊINER.
+
+   Cada urgência tinha um destino só: abrir a tela. Agora a que TEM como
+   ser resolvida traz um botão junto, e botão dentro de link é HTML
+   inválido -- o navegador desmonta a marcação e o resultado é
+   imprevisível. Então a linha virou um `div`, o link virou o alvo de
+   dentro (`.app-task-alvo`, que ocupa o espaço todo) e o botão fica ao
+   lado dele. Para quem usa não muda nada: o corpo da linha continua
+   clicável inteiro. */
+.app-task{
+  min-height:76px;display:flex;align-items:center;gap:10px;
+  border-bottom:1px solid var(--line-soft);
+}
+.app-task-alvo{
+  min-width:0;flex:1;padding:12px 4px;display:grid;
+  grid-template-columns:44px minmax(0,1fr) auto;gap:13px;align-items:center;
+  color:inherit!important;text-decoration:none;
+}
+/* O atalho: a mesma cor de ação do painel, e tamanho de dedo -- é o
+   botão que se aperta com pressa, no tablet, no meio do galpão. */
+.app-task-atalho{
+  min-height:42px;flex:0 0 auto;padding:0 14px;
+  display:inline-flex;align-items:center;gap:7px;
+  border:1px solid rgba(242,169,59,.32);border-radius:12px;
+  color:#ffd48b;background:rgba(242,169,59,.1);
+  font:inherit;font-size:.72rem;font-weight:900;cursor:pointer;transition:.16s ease;
+}
+.app-task-atalho:hover:not(:disabled){background:rgba(242,169,59,.18);border-color:rgba(242,169,59,.5)}
+.app-task-atalho:disabled{cursor:wait;opacity:.75}
+.app-task-atalho.feito{
+  color:#8FE9B6;border-color:rgba(95,214,138,.4);background:rgba(95,214,138,.12);
+  opacity:1;cursor:default;
+}
+.app-task-atalho.falhou{
+  color:#FFB4A8;border-color:rgba(255,122,107,.42);background:rgba(255,122,107,.12);
+}
+/* No celular o botão desce para a própria linha: lado a lado com o
+   texto, ele espremeria o nome do cliente até virar reticências. */
+@media(max-width:620px){
+  .app-task{align-items:stretch;flex-direction:column;gap:0;padding-bottom:12px}
+  .app-task-atalho{width:100%;justify-content:center;margin-top:2px}
+}
 .app-task:last-child{border-bottom:0}.app-task-icon{width:44px;height:44px;display:grid;place-items:center;border-radius:14px;color:#f6c16e;background:rgba(242,169,59,.1)}
 .app-task.critico .app-task-icon{color:#ff8292;background:rgba(255,113,132,.1)}.app-task.atencao .app-task-icon{color:#f5c273;background:rgba(242,187,100,.1)}
 .app-task-copy strong,.app-task-copy small{display:block}.app-task-copy strong{color:#f8f4ee;font-size:.88rem;font-weight:900}.app-task-copy small{margin-top:4px;color:#a99f92;font-size:.76rem;line-height:1.4}
-.app-task-action{color:#d8c29e;font-size:.72rem;font-weight:900;white-space:nowrap}.app-task:hover .app-task-action{color:#ffd48b}.app-task:hover .app-task-copy strong{color:#fff}
+.app-task-action{color:#d8c29e;font-size:.72rem;font-weight:900;white-space:nowrap}.app-task-alvo:hover .app-task-action{color:#ffd48b}.app-task-alvo:hover .app-task-copy strong{color:#fff}
 .app-all-clear{min-height:170px;padding:30px;display:flex;align-items:center;justify-content:center;gap:15px;text-align:left}.app-all-clear>span{width:52px;height:52px;display:grid;place-items:center;border-radius:17px;color:#59ddb2;background:rgba(89,221,178,.1);font-size:1.4rem}.app-all-clear strong,.app-all-clear small{display:block}.app-all-clear strong{color:#fff}.app-all-clear small{margin-top:4px;color:var(--muted);font-size:.78rem}
 .app-start-grid{padding:12px;display:grid;grid-template-columns:1fr 1fr;gap:9px}.app-start-grid>a{min-height:100px;padding:14px;display:flex;flex-direction:column;justify-content:space-between;border:1px solid var(--line-soft);border-radius:16px;color:inherit!important;background:rgba(255,255,255,.018);text-decoration:none;transition:.16s ease}.app-start-grid>a:hover{border-color:#765e37;background:rgba(242,169,59,.07);transform:translateY(-1px)}.app-start-grid i{color:#efb961;font-size:1.22rem}.app-start-grid strong,.app-start-grid small{display:block}.app-start-grid strong{color:#f8f4ed;font-size:.8rem;font-weight:900}.app-start-grid small{margin-top:3px;color:#958b7e;font-size:.68rem;line-height:1.3}
 

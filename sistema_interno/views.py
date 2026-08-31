@@ -449,6 +449,81 @@ class MinhaContaView(InternoRequiredMixin, View):
 # ======================================================================
 # HOME
 # ======================================================================
+class LembrarClienteView(InternoRequiredMixin, View):
+    """O atalho da fila de urgências: um clique lembra o cliente.
+
+    O aviso "esta proposta vence em 2 dias" era só um aviso. Para agir, a
+    pessoa abria a tela de Orçamentos, achava a linha, abria a janela de
+    envio, conferia o telefone e mandava -- cinco passos para a única
+    coisa que a urgência pedia. Na prática o item era lido, adiado, e a
+    proposta vencia.
+
+    Reaproveita `notificacoes_cliente.lembrar_validade`, que é o mesmo
+    lembrete que o observador manda sozinho. Duas portas para a mesma
+    ação, e não duas ações parecidas: o registro, o texto e a regra de
+    "uma vez por proposta" são os mesmos, tenha vindo do relógio ou do
+    dedo de alguém.
+    """
+
+    def post(self, request, pk):
+        from core.email_utils import smtp_configurado
+
+        from .notificacoes_cliente import lembrar_validade
+        from .permissoes import limitar_orcamentos
+
+        orcamento = get_object_or_404(
+            limitar_orcamentos(request.user, Orcamento.objects.all()), pk=pk,
+        )
+
+        if orcamento.status != Orcamento.Status.AGUARDANDO_RESPOSTA:
+            return JsonResponse({
+                "status": "erro",
+                "msg": (
+                    "Esta proposta não está aguardando resposta: não há o "
+                    "que lembrar."
+                ),
+            }, status=400)
+
+        if not (orcamento.email_destinatario or "").strip():
+            return JsonResponse({
+                "status": "erro",
+                "msg": (
+                    "O cliente não tem e-mail no cadastro. Abra a proposta "
+                    "para mandar pelo WhatsApp."
+                ),
+            }, status=400)
+
+        # HOSPEDAGEM SEM E-MAIL NÃO É FALHA TEMPORÁRIA.
+        #
+        # Sem esta conferência, a recusa saía como 5xx -- e a camada de
+        # resiliência transforma 5xx em "a conexão oscilou, tente de
+        # novo". A pessoa tentaria a vida inteira: não há o que oscilar,
+        # falta configuração. Dizer isso, com o caminho que funciona
+        # agora, é a única resposta útil.
+        if not smtp_configurado():
+            return JsonResponse({
+                "status": "erro",
+                "msg": (
+                    "O envio por e-mail não está ligado nesta hospedagem. "
+                    "Abra a proposta e mande pelo WhatsApp."
+                ),
+            }, status=400)
+
+        if lembrar_validade(orcamento, request=request):
+            return JsonResponse({
+                "status": "sucesso",
+                "msg": f"Lembrete enviado para {orcamento.email_destinatario}.",
+            })
+
+        return JsonResponse({
+            "status": "erro",
+            "msg": (
+                "Não consegui enviar agora. O motivo ficou registrado no "
+                "histórico de envios da proposta."
+            ),
+        }, status=502)
+
+
 class HomeInnerView(InternoRequiredMixin, View):
     def get(self, request):
         if not tem_funcao(request.user, GESTAO):
@@ -508,9 +583,24 @@ class HomeInnerView(InternoRequiredMixin, View):
             .order_by("prevista_para", "criacao")
         )
 
+        # ====================================================================
+        # A FILA DE URGÊNCIAS RESOLVE, E NÃO SÓ APONTA
+        #
+        # Cada item daqui levava para uma tela. Chegando lá, a pessoa ainda
+        # tinha de achar a linha, abrir a janela de envio, conferir o
+        # telefone e mandar -- cinco passos para fazer a única coisa que a
+        # urgência pedia. Na prática o item era lido, adiado, e a proposta
+        # vencia.
+        #
+        # Agora quem tem um caminho óbvio traz o BOTÃO junto. Lembrar o
+        # cliente de uma proposta a vencer é um clique, sem sair da tela.
+        # Onde não há caminho óbvio (uma produção bloqueada precisa de
+        # decisão humana), o item continua levando para onde se decide.
+        # ====================================================================
         fila_trabalho = []
         for orcamento in orcamentos_vencendo[:3]:
             dias = orcamento.dias_para_vencer
+            tem_email = bool((orcamento.email_destinatario or "").strip())
             fila_trabalho.append({
                 "nivel": "critico" if dias < 0 else "atencao",
                 "icone": "bi-file-earmark-text",
@@ -523,6 +613,19 @@ class HomeInnerView(InternoRequiredMixin, View):
                 ),
                 "url": f"{reverse('orcamentos_inner', urlconf='sistema_interno.urls')}?q={orcamento.pk}",
                 "acao": "Abrir proposta",
+                # Só oferece o atalho quando ele tem como funcionar:
+                # proposta ainda no prazo e cliente com e-mail no cadastro.
+                # Botão que falha ao ser tocado ensina a não tocar em
+                # botão nenhum.
+                "atalho": (
+                    {
+                        "tipo": "lembrar",
+                        "id": orcamento.pk,
+                        "rotulo": "Lembrar cliente",
+                        "icone": "bi-send",
+                    }
+                    if dias >= 0 and tem_email else None
+                ),
             })
         for manutencao in manutencoes_abertas[:3]:
             fila_trabalho.append({
