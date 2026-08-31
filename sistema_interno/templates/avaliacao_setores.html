@@ -111,7 +111,7 @@
 
 {% block scripts %}
 <script>
-document.addEventListener("DOMContentLoaded", function () {
+LSTela.pronto(function () {
   document.querySelectorAll("[data-avaliar-setor]").forEach(function (botao) {
     botao.addEventListener("click", function () {
       var form = document.getElementById("formAvaliacaoSetor");

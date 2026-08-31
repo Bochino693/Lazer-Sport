@@ -43,9 +43,60 @@
     limparEstadoDoCorpo();
   };
 
+  /* ====================================================================
+     O QUE A TELA DEIXA FORA DELA MESMA
+
+     Três coisas do painel nascem penduradas no `<body>`, e não dentro da
+     área de conteúdo: o menu flutuante de ações das tabelas, o painel de
+     resultados da busca e o aviso de falha de rede. Todos usam
+     `position:fixed` de propósito -- dentro da tabela ficariam cortados
+     pelo scroll e empurrariam a altura da linha.
+
+     Isso tem um preço na troca de tela: como a troca substitui a área de
+     conteúdo, o botão que abre cada menu morre junto, mas o MENU não --
+     ele fica órfão no corpo da página. Sem esta limpeza, voltar duas
+     vezes à mesma lista deixava sete botões "Editar" para três
+     orçamentos, e o primeiro da fila pertencia a uma tela que já não
+     existia: clicar nele não fazia nada.
+
+     Quem sai apaga o que pendurou. É por isso que esta função existe e é
+     chamada imediatamente antes de a área de conteúdo ser trocada.
+     ==================================================================== */
+  Painel.limparPendurados = function () {
+    document.querySelectorAll(
+      "body > .ls-action-fab-menu, body > .ls-busca-painel, body > #lsNavRecovery"
+    ).forEach(function (solto) { solto.remove(); });
+    Painel._acoesAbertas = null;
+  };
+
   Painel.prepararNavegacao = function () {
     Painel.fecharAcoesFlutuantes(false);
     Painel.limparModais(true);
+    Painel.limparPendurados();
+    /* Os ouvintes de aviso registrados pela TELA que está saindo apontam
+       para elementos que vão deixar de existir. Guardá-los seria segurar
+       a tela velha na memória e chamar função sobre nó solto a cada
+       atualização. Os do próprio painel não passam por aqui. */
+    Painel.avisos.esquecerOuvintes();
+  };
+
+  /* ====================================================================
+     MONTAGEM DE UMA TELA
+
+     Tudo o que precisa acontecer para uma tela recém-chegada funcionar:
+     máscara nos campos, textarea que cresce, ações de tabela agrupadas e
+     janelas com o rodapé no lugar. Fica separado do que se liga UMA vez
+     por aba (relógio dos avisos, medida do teclado) porque a navegação
+     suave troca a tela sem recarregar a página: chamar de novo o que é
+     de tela é obrigatório, e chamar de novo o que é de aba duplicaria
+     relógio e ouvinte a cada clique no menu.
+     ==================================================================== */
+  Painel.montarTela = function (raiz) {
+    var alvo = raiz || document;
+    Painel.aplicarMascaras(alvo);
+    Painel.acomodarTextos(alvo);
+    Painel.organizarAcoesTabelas(alvo);
+    alvo.querySelectorAll(".modal").forEach(normalizarJanela);
   };
 
   Painel.fecharAcoesFlutuantes = function (devolverFoco) {
@@ -755,8 +806,14 @@
     document.documentElement.style.setProperty("--ls-vh", Math.round(altura) + "px");
   }
 
+  var medidaLigada = false;
+
   function ligarMedidaDeTela() {
     medirTela();
+    /* Os ouvintes abaixo são de janela, não de tela: sobrevivem à troca
+       e não podem ser registrados de novo a cada navegação. */
+    if (medidaLigada) return;
+    medidaLigada = true;
     if (global.visualViewport) {
       global.visualViewport.addEventListener("resize", medirTela);
       global.visualViewport.addEventListener("scroll", medirTela);
@@ -953,6 +1010,7 @@
     assinatura: null,
     relogio: null,
     parado: false,
+    ligado: false,
     ouvintes: [],
     inicializado: false,
     quantidades: {},
@@ -1122,6 +1180,11 @@
       if (typeof fn === "function") avisos.ouvintes.push(fn);
     },
 
+    /* Chamado antes de trocar de tela: ver `Painel.prepararNavegacao`. */
+    esquecerOuvintes: function () {
+      avisos.ouvintes.length = 0;
+    },
+
     parar: function () {
       avisos.parado = true;
       if (avisos.relogio) global.clearInterval(avisos.relogio);
@@ -1130,8 +1193,14 @@
   };
 
   function ligarAvisosAoVivo() {
+    /* Uma vez por aba. Com a navegação suave esta função é alcançada a
+       cada tela; sem a trava, cada troca somava mais um setInterval e o
+       painel passava a perguntar o estado várias vezes por segundo. */
+    if (avisos.ligado) return;
+
     var sino = document.querySelector('[data-selo="total"]');
     if (!sino) return;  /* Fora do painel (ou sem equipe): nada a fazer. */
+    avisos.ligado = true;
 
     /* A rota vem do HTML (que a montou com {% url %}), e não escrita à
        mão aqui: quem manda no endereço é o urls.py. */
@@ -1544,15 +1613,26 @@
   };
 
   global.Painel = Painel;
-  document.addEventListener("DOMContentLoaded", function () {
+
+  /* O que roda a cada tela que chega -- inclusive as que chegam por
+     navegação suave, sem recarregar a página. As três primeiras chamadas
+     têm trava própria e só valem na primeira vez. */
+  Painel.iniciar = function () {
     ligarAvisosAoVivo();
     ligarAvisoNoCelular();
-    Painel.aplicarMascaras(document);
-    Painel.acomodarTextos(document);
-    Painel.organizarAcoesTabelas(document);
     ligarMedidaDeTela();
-    document.querySelectorAll(".modal").forEach(normalizarJanela);
-  });
+    Painel.montarTela(document);
+  };
+
+  /* `readyState` em vez de esperar o evento: numa troca de tela o
+     documento já está pronto e o DOMContentLoaded não acontece de novo.
+     Assim o mesmo arquivo serve para a primeira abertura e para as
+     seguintes, sem o painel depender de qual das duas foi. */
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", Painel.iniciar);
+  } else {
+    Painel.iniciar();
+  }
 
   /* Janelas criadas depois (ou trocadas por JavaScript) entram no mesmo
      contrato no momento em que aparecem. */

@@ -189,7 +189,7 @@
 
 {% block scripts %}
 <script>
-document.addEventListener("DOMContentLoaded", function () {
+LSTela.pronto(function () {
   "use strict";
   var ordens = JSON.parse(document.getElementById("ordensServicoDados").textContent || "[]");
   var clientes = JSON.parse(document.getElementById("clientesOSDados").textContent || "[]");
