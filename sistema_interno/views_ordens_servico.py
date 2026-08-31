@@ -404,6 +404,8 @@ class OrdensServicoInnerView(
             "servico_executado": ordem.servico_executado,
             "observacoes": ordem.observacoes,
             "forma_pagamento": ordem.forma_pagamento,
+            "frete": f"{ordem.frete:.2f}".replace(".", ","),
+            "desconto": f"{ordem.desconto:.2f}".replace(".", ","),
             "status_pagamento": ordem.status_pagamento,
             "valor_pago": f"{ordem.valor_pago:.2f}".replace(".", ","),
             "link_publico": getattr(ordem, "link_publico", ""),
@@ -461,6 +463,20 @@ class OrdensServicoInnerView(
         ordem.servico_executado = texto(request, "servico_executado")
         ordem.observacoes = texto(request, "observacoes")
         ordem.forma_pagamento = texto(request, "forma_pagamento", limite=120)
+
+        # Deslocamento e abatimento entram no total pela mesma conta do
+        # orçamento. Ausentes no POST valem zero -- e não "apague o que
+        # estava lá" --, porque só a janela de edição manda os dois.
+        if "frete" in request.POST:
+            ordem.frete = decimal_br(
+                request.POST.get("frete"), "Deslocamento / frete",
+                limite=Decimal("9999999999.99"),
+            ) or Decimal("0.00")
+        if "desconto" in request.POST:
+            ordem.desconto = decimal_br(
+                request.POST.get("desconto"), "Desconto",
+                limite=Decimal("9999999999.99"),
+            ) or Decimal("0.00")
 
         tipo = (request.POST.get("tipo") or "").strip()
         status = (request.POST.get("status") or "").strip()
@@ -537,6 +553,29 @@ class OrdensServicoInnerView(
         if not capacidades(request.user)["ordens_servico_pagamento"]:
             return self.erro(request, "Somente Financeiro ou Gestão registra pagamentos.", status=403)
         ordem = get_object_or_404(OrdemServico, pk=request.POST.get("id"))
+
+        # A TELA É SUGESTÃO; A REGRA É AQUI, QUE É POR ONDE OS DADOS
+        # ENTRAM. A linha da O.S. quitada não mostra mais o botão, mas
+        # aba antiga, atalho guardado e POST à mão continuam chegando --
+        # e um segundo pagamento sobre um documento já quitado é dinheiro
+        # registrado duas vezes.
+        if not ordem.pode_receber_pagamento:
+            if ordem.quitado:
+                raise ErroDeFormulario(
+                    f"{ordem.numero_documento} já está paga: "
+                    f"R$ {ordem.valor_pago} recebidos. Para corrigir o "
+                    "valor, use o estorno."
+                )
+            if ordem.status == OrdemServico.Status.CANCELADA:
+                raise ErroDeFormulario(
+                    f"{ordem.numero_documento} foi cancelada e não recebe "
+                    "pagamento: o serviço não aconteceu."
+                )
+            raise ErroDeFormulario(
+                f"{ordem.numero_documento} ainda não tem itens, então não "
+                "há valor a cobrar. Lance o serviço e as peças primeiro."
+            )
+
         valor = decimal_br(
             request.POST.get("valor_pago"), "Valor pago",
             obrigatorio=True, limite=Decimal("9999999999.99"),

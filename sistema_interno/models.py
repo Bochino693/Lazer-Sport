@@ -1708,25 +1708,23 @@ class Orcamento(Prime):
 
     @property
     def pode_refazer(self):
-        """Vale criar uma versão nova a partir desta?
+        """Vale abrir uma proposta nova a partir desta?
 
-        Só o que já saiu do rascunho e ainda não foi substituído. É o
-        caminho da proposta vencida, da recusada e da que voltou para
-        negociação.
+        Vale para tudo que já saiu do rascunho -- rascunho se edita, não
+        se duplica. É o caminho da vencida, da recusada, da que voltou
+        para negociação e também da PAGA: fechado um serviço, o pedido
+        seguinte do mesmo cliente costuma nascer daquela mesma lista de
+        itens.
 
-        A QUITADA FICA DE FORA. Refazer marca a atual como substituída,
-        e substituir um documento contra o qual o dinheiro já entrou é
-        apagar o papel que justifica o valor recebido. Se o cliente quer
-        outra coisa depois de pagar, isso é uma proposta nova -- não uma
-        versão desta.
+        AS TRÊS TRAVAS QUE HAVIA AQUI CAÍRAM COM O QUE AS CAUSAVA. Elas
+        existiam porque a ação SUBSTITUÍA a proposta de origem: só cabia
+        uma refeita (o vínculo era um-para-um), a já substituída não podia
+        gerar outra, e a paga não podia ser tocada -- substituí-la
+        apagaria o documento contra o qual o dinheiro entrou. Nada disso
+        acontece mais: a origem fica intacta, então dela pode nascer
+        quantas propostas o cliente pedir.
         """
-        return (
-            self.pk
-            and not self.pode_editar
-            and not self.quitado
-            and self.status != self.Status.SUBSTITUIDO
-            and not hasattr(self, "orcamento_refeito")
-        )
+        return bool(self.pk) and not self.pode_editar
 
     @property
     def dias_para_vencer(self):
@@ -2312,6 +2310,27 @@ class OrdemServico(Prime):
     diagnostico = models.TextField(blank=True)
     servico_executado = models.TextField(blank=True)
     observacoes = models.TextField(blank=True)
+    # ------------------------------------------------------------------
+    # O QUE MUDA O PREÇO DEPOIS DOS ITENS
+    #
+    # A O.S. cobrava só a soma dos itens, e o total saía errado nos dois
+    # casos mais comuns do atendimento: o deslocamento até o cliente --
+    # que existe em toda visita e não é peça nem mão de obra -- e o
+    # abatimento dado na hora para fechar. Sem lugar para eles, ou o
+    # técnico embutia o frete no preço de uma peça (e o documento passava
+    # a mentir sobre o que custou o quê), ou o desconto ficava fora do
+    # papel e só na conversa.
+    #
+    # São os mesmos dois campos do orçamento, com o mesmo significado, e
+    # entram no total pela mesma conta. Ver `total`.
+    # ------------------------------------------------------------------
+    frete = models.DecimalField(
+        "Deslocamento / frete",
+        max_digits=12, decimal_places=2, default=Decimal("0.00"),
+    )
+    desconto = models.DecimalField(
+        max_digits=12, decimal_places=2, default=Decimal("0.00"),
+    )
     forma_pagamento = models.CharField(max_length=120, blank=True)
     status_pagamento = models.CharField(
         max_length=12,
@@ -2394,11 +2413,27 @@ class OrdemServico(Prime):
         return ""
 
     @property
-    def total(self):
+    def subtotal_itens(self):
         return sum(
             (item.subtotal for item in self.itens.all()),
             Decimal("0.00"),
         ).quantize(Decimal("0.01"))
+
+    @property
+    def total(self):
+        """Itens + deslocamento − desconto, nunca abaixo de zero.
+
+        Mesma conta do orçamento, e o piso em zero existe pela mesma
+        razão: um desconto digitado maior que a soma produziria um total
+        negativo, e o documento passaria a dizer que a empresa deve ao
+        cliente.
+        """
+        bruto = (
+            self.subtotal_itens
+            + (self.frete or Decimal("0.00"))
+            - (self.desconto or Decimal("0.00"))
+        )
+        return max(bruto, Decimal("0.00")).quantize(Decimal("0.01"))
 
     @property
     def saldo_pagamento(self):
@@ -2406,6 +2441,49 @@ class OrdemServico(Prime):
             self.total - (self.valor_pago or Decimal("0.00")),
             Decimal("0.00"),
         ).quantize(Decimal("0.01"))
+
+    # ------------------------------------------------------------------
+    # O QUE CABE FAZER NESTA O.S. AGORA
+    #
+    # Mesma pergunta que o orçamento responde, e pela mesma razão: a lista
+    # trazia os mesmos botões em toda linha. "Pagamento" numa O.S. já
+    # quitada abria uma janela pedindo um valor que já estava lá, e a
+    # leitura de quem via era "será que não registrou?" -- então
+    # registrava de novo. Botão que não cabe não é neutro: ele ensina a
+    # duvidar dos outros.
+    # ------------------------------------------------------------------
+    @property
+    def quitado(self):
+        return self.status_pagamento == self.StatusPagamento.PAGO
+
+    @property
+    def pode_receber_pagamento(self):
+        """Ainda há o que receber por este serviço?
+
+        Cancelada não cobra: o serviço não aconteceu. Sem total também
+        não -- uma O.S. sem item é uma O.S. que ainda não sabe quanto
+        custa, e abrir a janela de pagamento nela só produz um valor
+        solto, sem documento que o explique.
+        """
+        if self.status == self.Status.CANCELADA:
+            return False
+        if self.quitado:
+            return False
+        return self.total > Decimal("0.00")
+
+    @property
+    def pode_enviar(self):
+        """Ainda faz sentido mandar (ou remandar) esta O.S. ao cliente?
+
+        Aqui o rascunho ENTRA, ao contrário do orçamento. É o envio que
+        publica a O.S.: `marcar_enviada` promove o rascunho a "aguardando
+        ciência" no mesmo ato. Tirar o botão do rascunho fecharia a única
+        porta que leva a O.S. até o cliente.
+
+        Cancelada fica de fora: mandar anunciaria ao cliente um serviço
+        que não vai acontecer.
+        """
+        return self.status != self.Status.CANCELADA
 
     @property
     def numero_documento(self):

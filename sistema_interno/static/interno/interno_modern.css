@@ -2719,16 +2719,10 @@ body.modal-open .ls-action-fab-menu{display:none!important}
 .promo-card,.combo-card,.cup-card,.project-card,.adm-card{
   content-visibility:auto;contain-intrinsic-size:auto 410px;
 }
-.ls-nav-recovery{
-  position:fixed;z-index:1045;right:14px;bottom:14px;width:min(440px,calc(100vw - 28px));
-  padding:12px;display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:10px;
-  border:1px solid rgba(83,171,237,.42);border-radius:15px;color:#e9f5ff;
-  background:rgba(21,36,52,.97);box-shadow:0 20px 60px rgba(0,0,0,.42);
-}
-.ls-nav-recovery div{display:grid;gap:2px}.ls-nav-recovery strong{font-size:.82rem}.ls-nav-recovery span{color:#aabed0;font-size:.69rem}
-.ls-nav-recovery button{min-height:36px;padding:7px 10px;border:1px solid rgba(105,185,242,.3);border-radius:10px;color:#eef8ff;background:rgba(53,139,202,.2);font-size:.69rem;font-weight:800}
-.ls-nav-recovery button[data-close]{width:34px;padding:0;color:#9eb0c1;background:transparent;font-size:1.05rem}
-body.modal-open .ls-nav-recovery{display:none!important}
+/* O painel "A conexão oscilou -- tentar novamente" morava aqui, e era
+   azul: os últimos tons do /adm antigo dentro deste aplicativo. Quando a
+   busca da tela falha, quem navega agora é o navegador -- ver
+   `ls-soft-navigation.js`. Sem painel, sem azul. */
 .ls-action-fab-head{
   grid-column:1/-1;padding:6px 7px 8px;display:flex;align-items:baseline;justify-content:space-between;
   gap:10px;border-bottom:1px solid rgba(255,255,255,.08);
@@ -2820,7 +2814,6 @@ body.modal-open .ls-nav-recovery{display:none!important}
   .ls-commercial-table tbody tr{padding:10px 54px 10px 10px;gap:0 9px}
   .ls-action-fab-menu{grid-template-columns:1fr;width:min(270px,calc(100vw - 16px));padding:7px}
   .ls-action-fab-head small{display:none}
-  .ls-nav-recovery{grid-template-columns:1fr auto}.ls-nav-recovery div{grid-column:1/-1}.ls-nav-recovery button[data-retry]{width:100%}
 }
 
 /* O RECADO DO FILTRO INSTANTÂNEO.

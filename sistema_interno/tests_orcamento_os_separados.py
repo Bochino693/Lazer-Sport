@@ -87,10 +87,19 @@ class OrcamentoEOrdemServicoSeparadosTests(TestCase):
         nova = Orcamento.objects.get(pk=resposta.json()["id"])
         anterior.refresh_from_db()
 
-        self.assertEqual(anterior.status, Orcamento.Status.SUBSTITUIDO)
+        # A PROPOSTA NOVA É INDEPENDENTE, E A ANTERIOR CONTINUA INTEIRA.
+        #
+        # Antes a origem virava "substituída" -- morria -- e a nova nascia
+        # como "versão 2" encadeada. Na lista, a leitura era "a proposta
+        # voltou para rascunho", e não "existe uma proposta nova".
+        # O cliente pediu ajustes, então ela está em negociação -- e
+        # continua em negociação depois de abrir a nova.
+        self.assertEqual(anterior.status, Orcamento.Status.EM_NEGOCIACAO)
         self.assertEqual(nova.status, Orcamento.Status.RASCUNHO)
-        self.assertEqual(nova.versao, 2)
-        self.assertEqual(nova.orcamento_anterior, anterior)
+        self.assertEqual(nova.versao, 1)
+        self.assertIsNone(nova.orcamento_anterior)
+        self.assertNotEqual(nova.pk, anterior.pk)
+        # Os itens vêm copiados: ninguém redigita a lista.
         self.assertEqual(nova.itens.get().descricao, "Revisão do brinquedo")
         self.assertNotEqual(nova.token, anterior.token)
 
@@ -177,8 +186,15 @@ class OrcamentoEOrdemServicoSeparadosTests(TestCase):
         self.assertEqual(orcamento.valor_pago, Decimal("450.00"))
         self.assertEqual(ordem.valor_pago, Decimal("100.00"))
 
-    def test_proposta_com_os_ligada_nao_e_refeita(self):
-        """Refazer criaria uma segunda versão para um trabalho já liberado."""
+    def test_proposta_com_os_ligada_pode_gerar_outra_proposta(self):
+        """A trava caiu junto com o que a causava.
+
+        Ela existia porque refazer SUBSTITUÍA a origem: uma proposta que
+        já liberou trabalho não podia morrer. Agora a origem fica intacta
+        -- e abrir outra proposta para o mesmo cliente, partindo daquela
+        lista de itens, é justamente o que se faz depois de um serviço
+        entregue.
+        """
         orcamento = self.criar_orcamento()
         OrdemServico.objects.create(
             orcamento=orcamento, nome_cliente=orcamento.nome_cliente,
@@ -189,8 +205,11 @@ class OrcamentoEOrdemServicoSeparadosTests(TestCase):
             "action": "refazer", "id": orcamento.pk,
         })
 
-        self.assertEqual(refazer.status_code, 400)
-        self.assertFalse(hasattr(orcamento, "orcamento_refeito"))
+        self.assertEqual(refazer.status_code, 200)
+        orcamento.refresh_from_db()
+        # A O.S. continua pendurada na proposta que a originou.
+        self.assertTrue(hasattr(orcamento, "ordem_servico"))
+        self.assertNotEqual(orcamento.status, Orcamento.Status.SUBSTITUIDO)
 
     def test_a_os_percorre_o_proprio_ciclo_ate_a_ciencia_do_cliente(self):
         orcamento = self.criar_orcamento()

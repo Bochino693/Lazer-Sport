@@ -16,7 +16,11 @@
   var prefetchTimer = null;
   var prefetchsExecutados = 0;
   var LIMITE_PREFETCH = 6;
-  var TIMEOUT_REDE = 12000;
+  /* Passado esse prazo, quem espera melhor é o navegador: ele mostra a
+     própria barra de progresso e a própria tela de erro. Doze segundos
+     parados, sem nada na tela mudando, era a versão do usuário de "a
+     troca de tela falhou". */
+  var TIMEOUT_REDE = 6000;
 
   function urlSegura(valor) {
     try {
@@ -99,6 +103,13 @@
     return new Promise(function (resolver) { window.setTimeout(resolver, ms); });
   }
 
+  /* SÓ SE REPETE O QUE UMA SEGUNDA TENTATIVA RESOLVE.
+
+     Estes códigos dizem "estou ocupado, tente de novo" -- 420ms depois
+     costuma passar. Erro de rede e estouro de prazo NÃO entram aqui: se
+     a rede está ruim, repetir só faz a pessoa esperar duas vezes antes
+     de nada acontecer. Nesse caso quem assume é o navegador, que sabe
+     esperar melhor e tem tela própria para dizer que não deu. */
   function podeTentarNovamente(status) {
     return status === 408 || status === 429 || status === 502 || status === 503 || status === 504;
   }
@@ -142,14 +153,9 @@
         return { html: html, url: finalUrl };
       });
     }).catch(function (erro) {
-      if (
-        tentativa === 0
-        && !erro.lsTentativaFinal
-        && (!erro.status || podeTentarNovamente(erro.status))
-      ) {
+      if (tentativa === 0 && erro.status && podeTentarNovamente(erro.status)) {
         return esperar(420).then(function () { return requisitar(url, 1); });
       }
-      if (tentativa > 0) erro.lsTentativaFinal = true;
       throw erro;
     }).finally(function () {
       if (timer) window.clearTimeout(timer);
@@ -211,27 +217,32 @@
     if (window.LSLoader && window.LSLoader.hide) window.LSLoader.hide();
   }
 
-  function mostrarFalha(url) {
-    esconderLoader();
-    var anterior = document.getElementById("lsNavRecovery");
-    if (anterior) anterior.remove();
+  /* ======================================================================
+     QUANDO A BUSCA NÃO DÁ, QUEM NAVEGA É O NAVEGADOR
 
-    var painel = document.createElement("div");
-    painel.id = "lsNavRecovery";
-    painel.className = "ls-nav-recovery";
-    painel.setAttribute("role", "alert");
-    painel.innerHTML = (
-      '<div><strong>A conexão oscilou</strong>' +
-      '<span>A tela atual foi preservada e nada foi reenviado.</span></div>' +
-      '<button type="button" data-retry> tentar novamente</button>' +
-      '<button type="button" data-close aria-label="Fechar aviso">×</button>'
-    );
-    painel.querySelector("[data-retry]").addEventListener("click", function () {
-      painel.remove();
-      navegar(url, "push");
-    });
-    painel.querySelector("[data-close]").addEventListener("click", function () { painel.remove(); });
-    document.body.appendChild(painel);
+     Aqui existia um painel: "A conexão oscilou -- tentar novamente". Ele
+     parecia cuidadoso e era um beco sem saída. A tela pedida não vinha, a
+     anterior continuava no lugar, e a pessoa que clicou num item do menu
+     ficava com a obrigação de clicar outra vez. Do lado de quem usa, isso
+     não é "a conexão oscilou": é "a troca de tela falhou".
+
+     E falhava de três jeitos diferentes, todos verificáveis: rede caindo,
+     servidor devolvendo 500, e -- o pior -- resposta demorando mais que o
+     prazo, caso em que não aparecia nem o painel. O clique simplesmente
+     não fazia nada.
+
+     A navegação suave é um ATALHO por cima do clique num link. Quando o
+     atalho não dá, o certo é fazer o que aconteceria sem ele: navegar de
+     verdade. O navegador tem barra de progresso, sabe esperar melhor que
+     este arquivo e, se realmente não houver rede, mostra a própria tela
+     de erro -- que a pessoa reconhece e sabe o que fazer com ela.
+
+     Assim o clique sempre leva a algum lugar. Pode demorar, pode dar
+     offline, mas nunca fica parado no mesmo canto pedindo uma segunda
+     tentativa.
+     ====================================================================== */
+  function entregarAoNavegador(url) {
+    window.location.assign(url.href || String(url));
   }
 
   /* ======================================================================
@@ -471,7 +482,7 @@
     return true;
   }
 
-  function trocarDocumento(html, url, modoHistorico) {
+  function trocarDocumento(html, url, modoHistorico, minhaNavegacao) {
     var novoDoc;
     try {
       novoDoc = new DOMParser().parseFromString(html, "text/html");
@@ -491,11 +502,15 @@
        que está na tela é a tela ANTERIOR, inteira e estilizada -- e não
        um esqueleto sem estilo. */
     garantirFolhas(novoDoc).then(function () {
+      /* Chegou tarde: outra tela já foi pedida e é dela a vez. Sair sem
+         desenhar e sem esconder a barra -- a barra agora é da outra. */
+      if (minhaNavegacao !== undefined && minhaNavegacao !== navegacao) return;
       if (!trocarComTransicao(novoDoc, url, modoHistorico)) {
-        window.location.assign(url.href);
+        entregarAoNavegador(url);
       }
     }).catch(function () {
-      window.location.assign(url.href);
+      if (minhaNavegacao !== undefined && minhaNavegacao !== navegacao) return;
+      entregarAoNavegador(url);
     });
   }
 
@@ -528,21 +543,54 @@
       return aplicarTela(novoDoc, url, modoHistorico);
     }
 
-    /* O retorno do callback é assíncrono -- ele roda depois de o
-       navegador fotografar a tela --, então a falha é tratada lá dentro,
-       e não pelo valor devolvido aqui. Na prática ela não acontece:
-       `trocarDocumento` já conferiu que as duas telas existem antes de
-       chegar aqui. O caminho fica escrito mesmo assim, porque o dia em
-       que acontecer a tela não pode simplesmente ficar parada. */
-    try {
-      document.startViewTransition(function () {
-        if (!aplicarTela(novoDoc, url, modoHistorico)) {
-          window.location.assign(url.href);
-        }
-      });
-    } catch (erro) {
+    /* A TRANSIÇÃO É ENFEITE; DESENHAR NÃO É.
+
+       `startViewTransition` devolve na hora e chama o callback depois --
+       quando o navegador terminou de fotografar a tela. Entre uma coisa
+       e outra o navegador pode DESISTIR da transição: outra transição
+       começou, a aba foi para o fundo, a animação foi cortada. Se a
+       desistência levar o callback junto, a tela nova nunca é desenhada:
+       a barra some, a anterior fica, e o clique não fez nada. É o defeito
+       mais difícil de reproduzir e o mais fácil de encontrar clicando
+       depressa num tablet.
+
+       Então o desenho não fica pendurado só no callback. `desenhou`
+       registra se ele aconteceu, e as promessas da transição -- que
+       resolvem ou rejeitam de qualquer maneira -- servem de rede: se
+       passaram por lá e nada foi desenhado, desenha-se agora, sem
+       animação. Enfeite que falha custa o enfeite, nunca a navegação. */
+    var desenhou = false;
+
+    function desenhar() {
+      if (desenhou) return true;
+      desenhou = true;
       return aplicarTela(novoDoc, url, modoHistorico);
     }
+
+    function garantirDesenho() {
+      if (desenhou) return;
+      if (!desenhar()) entregarAoNavegador(url);
+    }
+
+    var transicao;
+    try {
+      transicao = document.startViewTransition(function () {
+        if (!desenhar()) entregarAoNavegador(url);
+      });
+    } catch (erro) {
+      return desenhar();
+    }
+
+    if (transicao) {
+      if (transicao.updateCallbackDone) {
+        transicao.updateCallbackDone.then(garantirDesenho, garantirDesenho);
+      }
+      if (transicao.finished) transicao.finished.then(garantirDesenho, garantirDesenho);
+    }
+    /* E uma última rede, para o navegador que devolve uma transição sem
+       nenhuma dessas promessas: passado o tempo de qualquer animação, ou
+       a tela já trocou ou ela troca agora. */
+    window.setTimeout(garantirDesenho, 1200);
     return true;
   }
 
@@ -556,18 +604,28 @@
     var minhaNavegacao = ++navegacao;
     mostrarLoader("Carregando " + (alvo.pathname === window.location.pathname ? "resultados…" : "a tela…"));
 
+    /* A SEQUÊNCIA ACOMPANHA A TROCA ATÉ O FIM, E NÃO SÓ ATÉ A RESPOSTA.
+
+       Ela era conferida só depois do `fetch`. Só que a troca não termina
+       ali: depois vem a espera pela folha de estilo da tela nova, que
+       pode levar segundos. Duas telas pedidas em seguida entravam as
+       duas nessa espera, e quem terminasse por último desenhava -- que
+       podia ser a PRIMEIRA. O clique mais recente perdia para o antigo.
+
+       O caminho do cache nem conferia: por vir da memória, parecia
+       instantâneo, mas ele também espera folha antes de desenhar. */
     var cache = recuperar(alvo);
     if (cache) {
-      trocarDocumento(cache, alvo, modoHistorico || "push");
+      trocarDocumento(cache, alvo, modoHistorico || "push", minhaNavegacao);
       return;
     }
 
     buscar(alvo).then(function (resultado) {
       if (minhaNavegacao !== navegacao) return;
-      trocarDocumento(resultado.html, resultado.url, modoHistorico || "push");
+      trocarDocumento(resultado.html, resultado.url, modoHistorico || "push", minhaNavegacao);
     }).catch(function () {
       if (minhaNavegacao !== navegacao) return;
-      mostrarFalha(alvo);
+      entregarAoNavegador(alvo);
     });
   }
 

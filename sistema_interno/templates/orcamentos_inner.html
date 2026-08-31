@@ -50,7 +50,7 @@
   <div class="ls-data-header">
     <div>
       <h2>Propostas</h2>
-      <p>Enviada não é sobrescrita: use Refazer para criar outra versão.</p>
+      <p>Enviada não é sobrescrita: abra uma proposta nova a partir dela.</p>
     </div>
     {% comment %}
       A BUSCA NÃO VAI MAIS AO SERVIDOR A CADA PALAVRA.
@@ -244,18 +244,26 @@
                   <span class="ls-action-label">{% if orcamento.enviado_em %}Link do orçamento{% else %}Enviar orçamento{% endif %}</span>
                 </button>{% endif %}
                 {% comment %}
-                  REFAZER É O CAMINHO DA PROPOSTA VENCIDA.
+                  ABRIR OUTRA PROPOSTA A PARTIR DESTA.
 
-                  Ela não gera mais link -- o link levaria a uma página
-                  que anuncia "proposta expirada", e mandar isso ao
-                  cliente é pior do que não mandar nada. Aqui se cria a
-                  versão nova, com o preço de hoje.
+                  É o caminho da vencida -- que não gera mais link, porque
+                  o link levaria a uma página anunciando "proposta
+                  expirada" --, da recusada, da que voltou para negociação
+                  e também da já paga, quando o cliente volta e o pedido
+                  novo nasce da mesma lista de itens.
+
+                  O botão dizia "Refazer", e refazer era o que ele fazia:
+                  matava esta e criava uma "versão 2" no lugar. Agora ele
+                  não toca nesta -- copia os itens para uma proposta nova,
+                  com número próprio e prazo de hoje. O rótulo mudou junto,
+                  porque "refazer" descrevia a ação antiga.
                 {% endcomment %}
                 {% if pode_editar_comercial and orcamento.pode_refazer %}
                 <form method="post" class="d-inline" action="{% url 'orcamentos_inner' %}">
                   {% csrf_token %}<input type="hidden" name="action" value="refazer"><input type="hidden" name="id" value="{{ orcamento.id }}">
-                  <button class="btn btn-sm btn-outline-warning" type="submit" title="Criar nova versão para negociar">
-                    <i class="bi bi-arrow-repeat"></i><span class="ls-action-label">Refazer</span>
+                  <button class="btn btn-sm btn-outline-warning" type="submit"
+                          title="Abrir uma proposta nova com os itens desta. Esta continua como está.">
+                    <i class="bi bi-files"></i><span class="ls-action-label">Nova a partir desta</span>
                   </button>
                 </form>
                 {% endif %}

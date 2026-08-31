@@ -1011,56 +1011,60 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
         )
 
     def acao_refazer(self, request):
-        """Clona a proposta para negociar sem apagar a versão enviada."""
+        """Abre uma proposta NOVA a partir desta, sem mexer nesta.
+
+        ANTES ISTO VERSIONAVA, E ERA OUTRA COISA. A proposta velha era
+        marcada como "substituída" -- ou seja, morria -- e nascia no lugar
+        dela uma "versão 2" encadeada, em rascunho. Quem olhava a lista
+        via a proposta sumir do estado em que estava e reaparecer como
+        rascunho do mesmo cliente: a leitura era "voltou para rascunho", e
+        não "existe uma proposta nova".
+
+        O encadeamento ainda cobrava caro por isso. Só cabia UMA refeita
+        por proposta, porque o vínculo é um-para-um. A paga não podia ser
+        refeita de jeito nenhum -- substituí-la apagaria o documento
+        contra o qual o dinheiro entrou. E o histórico da negociação, que
+        é justamente o que se quer guardar, ficava com um documento a
+        menos a cada rodada.
+
+        Agora nasce uma proposta INDEPENDENTE: número próprio, versão 1,
+        prazo contado de hoje, com os itens já copiados para ninguém
+        redigitar nada. A anterior continua exatamente como estava --
+        expirada, recusada ou paga --, porque o que aconteceu com ela
+        aconteceu.
+        """
         if not capacidades(request.user)["orcamentos_editar_comercial"]:
             return self.erro(
-                request, "Somente o Comercial pode refazer uma proposta.", status=403,
+                request,
+                "Somente o Comercial pode abrir uma proposta.",
+                status=403,
             )
 
-        anterior = self._orcamento_do_usuario(request, request.POST.get("id"))
-        if anterior.status == Orcamento.Status.RASCUNHO:
-            raise ErroDeFormulario("Este orçamento ainda é rascunho e pode ser editado.")
-        if hasattr(anterior, "ordem_servico"):
+        origem = self._orcamento_do_usuario(request, request.POST.get("id"))
+        if origem.status == Orcamento.Status.RASCUNHO:
             raise ErroDeFormulario(
-                "Esta proposta já originou uma O.S. e não pode ganhar outra "
-                "versão. Os dois históricos permanecem congelados e separados."
-            )
-        if anterior.quitado:
-            # Refazer marca a atual como SUBSTITUIDO. Contra esta aqui o
-            # dinheiro já entrou: substituí-la apagaria o documento que
-            # explica o valor recebido. Quem quer outra coisa depois de
-            # pagar está pedindo uma proposta nova, não outra versão.
-            raise ErroDeFormulario(
-                "Esta proposta já está paga e não ganha outra versão: "
-                "o pagamento recebido precisa continuar apontando para "
-                "ela. Para o que vier depois, abra uma proposta nova."
-            )
-        if hasattr(anterior, "orcamento_refeito"):
-            nova = anterior.orcamento_refeito
-            return self.sucesso(
-                request,
-                f"A versão {nova.versao} desta proposta já existe.",
-                id=nova.pk,
+                "Este orçamento ainda é rascunho: edite-o em vez de abrir outro."
             )
 
         with transaction.atomic():
-            anterior = Orcamento.objects.select_for_update().get(pk=anterior.pk)
             nova = Orcamento.objects.create(
-                cliente=anterior.cliente,
-                nome_cliente=anterior.nome_cliente,
-                contato=anterior.contato,
-                whatsapp_cliente=anterior.whatsapp_cliente,
-                email_cliente=anterior.email_cliente,
-                origem=anterior.origem,
-                validade=anterior.validade,
-                desconto=anterior.desconto,
-                frete=anterior.frete,
-                forma_pagamento=anterior.forma_pagamento,
-                forma_envio=anterior.forma_envio,
-                observacoes=anterior.observacoes,
+                cliente=origem.cliente,
+                nome_cliente=origem.nome_cliente,
+                contato=origem.contato,
+                whatsapp_cliente=origem.whatsapp_cliente,
+                email_cliente=origem.email_cliente,
+                origem=origem.origem,
+                # O PRAZO É CONTADO DE HOJE. Copiar a validade da anterior
+                # traria a data vencida junto -- e o caso mais comum de
+                # abrir outra proposta é justamente a primeira ter
+                # expirado. A nova nasceria vencida.
+                validade=Orcamento.validade_padrao(),
+                desconto=origem.desconto,
+                frete=origem.frete,
+                forma_pagamento=origem.forma_pagamento,
+                forma_envio=origem.forma_envio,
+                observacoes=origem.observacoes,
                 responsavel=request.user,
-                orcamento_anterior=anterior,
-                versao=anterior.versao + 1,
                 status=Orcamento.Status.RASCUNHO,
             )
             ItemOrcamento.objects.bulk_create([
@@ -1073,18 +1077,17 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
                     quantidade=item.quantidade,
                     valor_unitario=item.valor_unitario,
                 )
-                for item in anterior.itens.select_related(
+                for item in origem.itens.select_related(
                     "brinquedo", "produto", "peca"
                 )
             ])
-            anterior.status = Orcamento.Status.SUBSTITUIDO
-            anterior.save(update_fields=["status", "atualizado"])
             self._reabrir_bloco(nova, AvaliacaoBlocoOrcamento.Bloco.COMERCIAL)
             self._reabrir_bloco(nova, AvaliacaoBlocoOrcamento.Bloco.FINANCEIRO)
 
         return self.sucesso(
             request,
-            f"Versão {nova.versao} criada. Ajuste os itens ou descontos e envie novamente.",
+            f"Proposta #{nova.pk} aberta com os itens da #{origem.pk}. "
+            f"A #{origem.pk} continua como estava.",
             id=nova.pk,
         )
 

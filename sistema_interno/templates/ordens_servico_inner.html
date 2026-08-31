@@ -84,15 +84,41 @@
             <td data-rotulo="Situação"><span class="ls-status {% if ordem.status == 'concluida' %}success{% elif ordem.status == 'cancelada' %}neutral{% elif ordem.status == 'aguardando_peca' %}warning{% elif ordem.status == 'em_execucao' or ordem.status == 'aguardando_resposta' %}info{% else %}neutral{% endif %}">{{ ordem.get_status_display }}</span>{% if ordem.cliente_ciente %}<span class="material-sub d-block mt-1">cliente ciente ✓</span>{% endif %}</td>
             <td data-rotulo="Agenda">{% if ordem.agendada_para %}{{ ordem.agendada_para|date:"d/m/Y H:i" }}{% else %}<span class="text-muted">Não agendada</span>{% endif %}</td>
             <td data-rotulo="Total" class="text-end"><strong class="ls-money">R$ {{ ordem.total|moeda }}</strong></td>
-            <td data-rotulo="Pagamento"><span class="ls-status {% if ordem.status_pagamento == 'pago' %}success{% elif ordem.status_pagamento == 'parcial' %}warning{% else %}neutral{% endif %}">{{ ordem.get_status_pagamento_display }}</span>{% if ordem.valor_pago %}<span class="material-sub d-block mt-1">R$ {{ ordem.valor_pago|moeda }}</span>{% endif %}</td>
+            {% comment %}
+              A COLUNA DIZ A SITUAÇÃO POR EXTENSO, IGUAL À DO ORÇAMENTO.
+
+              Ela mostrava só o rótulo do estado e, embaixo, o valor pago
+              -- sem dizer quanto ainda falta, que é o número que a pessoa
+              está procurando ali. Quitada agora se anuncia como quitada,
+              e sem botão de pagamento ao lado.
+            {% endcomment %}
+            <td data-rotulo="Pagamento">
+              {% if ordem.quitado %}
+                <span class="ls-pago"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> Pago</span>
+                <span class="material-sub d-block mt-1">R$ {{ ordem.valor_pago|moeda }} recebido</span>
+              {% elif ordem.status_pagamento == 'parcial' %}
+                <span class="ls-status warning">Pagamento parcial</span>
+                <span class="material-sub d-block mt-1">
+                  R$ {{ ordem.valor_pago|moeda }} de R$ {{ ordem.total|moeda }} ·
+                  <strong>faltam R$ {{ ordem.saldo_pagamento|moeda }}</strong>
+                </span>
+              {% elif ordem.status_pagamento == 'estornado' %}
+                <span class="ls-status danger">Estornado</span>
+              {% elif ordem.pode_receber_pagamento %}
+                <span class="ls-status neutral">A receber</span>
+                <span class="material-sub d-block mt-1">R$ {{ ordem.total|moeda }}</span>
+              {% else %}
+                <span class="text-muted">—</span>
+              {% endif %}
+            </td>
             <td data-rotulo="Técnico">{% if ordem.tecnico %}{{ ordem.tecnico.get_full_name|default:ordem.tecnico.username }}{% else %}<span class="text-muted">A definir</span>{% endif %}</td>
             <td data-rotulo="Ações" class="ls-actions ls-commercial-actions text-end"><div class="ls-row-actions">
               <a class="btn btn-sm btn-outline-primary" href="{% url 'ordem_servico_previa_inner' ordem.id %}" target="_blank" rel="noopener" title="Visualizar e imprimir"><i class="bi bi-printer"></i><span class="ls-action-label">Imprimir</span></a>
-              {% if pode_editar %}<button class="btn btn-sm btn-outline-secondary" type="button" data-editar-os="{{ ordem.id }}"><i class="bi bi-pencil"></i><span class="ls-action-label">Editar</span></button>
-              <button class="btn btn-sm btn-outline-primary" type="button" data-enviar-os="{{ ordem.id }}" data-nome="{{ ordem.destinatario }}" data-whatsapp="{{ ordem.whatsapp_destinatario }}" data-email="{{ ordem.email_destinatario }}"
+              {% if pode_editar %}<button class="btn btn-sm btn-outline-secondary" type="button" data-editar-os="{{ ordem.id }}"><i class="bi bi-pencil"></i><span class="ls-action-label">Editar</span></button>{% endif %}
+              {% if pode_editar and ordem.pode_enviar %}<button class="btn btn-sm btn-outline-primary" type="button" data-enviar-os="{{ ordem.id }}" data-nome="{{ ordem.destinatario }}" data-whatsapp="{{ ordem.whatsapp_destinatario }}" data-email="{{ ordem.email_destinatario }}"
                       aria-label="Enviar a O.S. {{ ordem.numero_documento }}"
                       title="Gerar o link da O.S. para mandar ao cliente"><i class="bi bi-send" aria-hidden="true"></i><span class="ls-action-label">Enviar O.S.</span></button>{% endif %}
-              {% if pode_pagamento %}<button class="btn btn-sm btn-outline-success" type="button" data-pagamento-os="{{ ordem.id }}" data-nome="{{ ordem.numero_documento }} — {{ ordem.destinatario }}" data-total="{{ ordem.total }}" data-pago="{{ ordem.valor_pago }}"><i class="bi bi-cash-coin"></i><span class="ls-action-label">Pagamento</span></button>{% endif %}
+              {% if pode_pagamento and ordem.pode_receber_pagamento %}<button class="btn btn-sm btn-outline-success" type="button" data-pagamento-os="{{ ordem.id }}" data-nome="{{ ordem.numero_documento }} — {{ ordem.destinatario }}" data-total="{{ ordem.total }}" data-pago="{{ ordem.valor_pago }}" title="Registrar o total recebido até agora"><i class="bi bi-cash-coin"></i><span class="ls-action-label">{% if ordem.status_pagamento == 'parcial' %}Completar pagamento{% else %}Registrar pagamento{% endif %}</span></button>{% endif %}
               {% if pode_editar and ordem.status == 'rascunho' and not ordem.enviada_em %}<button class="btn btn-sm btn-outline-danger" type="button" data-excluir="{{ ordem.id }}" data-nome="{{ ordem.numero_documento }} — {{ ordem.destinatario }}" aria-label="Excluir {{ ordem.numero_documento }}" title="Excluir rascunho"><i class="bi bi-trash"></i><span class="ls-action-label">Excluir</span></button>
               {% elif user.is_superuser %}{# Palavra final do superusuário: excluir O.S. que já saiu do rascunho. Fica registrado. #}<button class="btn btn-sm btn-outline-danger" type="button" data-excluir="{{ ordem.id }}" data-nome="{{ ordem.numero_documento }} — {{ ordem.destinatario }}" data-protegido="1" data-protegido-motivo="Esta O.S. está como {{ ordem.get_status_display|lower }} e faz parte do histórico operacional. Você pode excluir mesmo assim, e a exclusão vai ficar registrada com o seu nome." aria-label="Excluir {{ ordem.numero_documento }}" title="Excluir mesmo protegida (fica registrado)"><i class="bi bi-trash"></i><span class="ls-action-label">Excluir</span></button>{% endif %}
             </div></td>
@@ -161,8 +187,71 @@
     </div>
     <hr class="my-4"><div class="d-flex justify-content-between align-items-center mb-3"><div><h6 class="mb-1">Serviços, peças e materiais</h6><span class="text-muted small">Valores ficam registrados para cobrança e pagamento.</span></div><button class="btn btn-sm btn-outline-primary" type="button" id="adicionarItemOS"><i class="bi bi-plus-lg me-1"></i>Adicionar item</button></div>
     <div class="table-responsive"><table class="ls-table"><thead><tr><th>Tipo</th><th>Descrição</th><th class="text-end">Quantidade</th><th class="text-end">Valor unit.</th><th class="text-end">Subtotal</th><th></th></tr></thead><tbody id="itensOSCorpo"></tbody></table></div>
-    <div class="ls-orcamento-total"><div class="ls-orcamento-final"><span>Total da O.S.</span><strong id="osTotal">R$ 0,00</strong></div></div>
-    <div class="row g-3 mt-1"><div class="col-md-6"><label class="form-label" for="osFormaPagamento">Forma de pagamento</label><input class="form-control" id="osFormaPagamento" name="forma_pagamento" maxlength="120" placeholder="Ex.: Pix"></div><div class="col-md-6"><label class="form-label" for="osObservacoes">Observações e recomendações</label><textarea class="form-control" id="osObservacoes" name="observacoes" rows="2"></textarea></div></div>
+    {% comment %}
+      O BLOCO DO DINHEIRO VEM DEPOIS DOS ITENS, PORQUE DEPENDE DELES.
+
+      A O.S. cobrava só a soma dos itens, e o total saía errado nos dois
+      casos mais comuns do atendimento: o deslocamento até o cliente --
+      que existe em toda visita e não é peça nem mão de obra -- e o
+      abatimento dado na hora para fechar. Sem lugar para eles, ou o
+      técnico embutia o frete no preço de uma peça (e o documento passava
+      a mentir sobre o que custou o quê), ou o desconto ficava fora do
+      papel e só na conversa.
+
+      Aqui embaixo, e não lá em cima: quem preenche só sabe quanto dar de
+      desconto depois de ver a soma dos itens.
+    {% endcomment %}
+    <hr class="my-4">
+
+    <div class="row g-3">
+      <div class="col-12">
+        <div class="ls-budget-block-title financeiro">
+          <i class="bi bi-cash-stack" aria-hidden="true"></i>
+          <span><strong>Bloco Financeiro</strong><small>Deslocamento, desconto e condições de pagamento.</small></span>
+        </div>
+      </div>
+
+      <div class="col-12 col-md-3">
+        <label class="form-label" for="osFrete">Deslocamento / frete</label>
+        <div class="input-group">
+          <span class="input-group-text">R$</span>
+          <input class="form-control ls-recalcula-os" id="osFrete" name="frete"
+                 inputmode="decimal" data-mascara="moeda" autocomplete="off" placeholder="0,00">
+        </div>
+      </div>
+
+      <div class="col-12 col-md-3">
+        <label class="form-label" for="osDesconto">Desconto</label>
+        <div class="input-group">
+          <span class="input-group-text">R$</span>
+          <input class="form-control ls-recalcula-os" id="osDesconto" name="desconto"
+                 inputmode="decimal" data-mascara="moeda" autocomplete="off" placeholder="0,00">
+        </div>
+        <div class="ls-desconto-atalhos">
+          <button type="button" class="ls-chip" data-desconto-os-pct="5">5%</button>
+          <button type="button" class="ls-chip" data-desconto-os-pct="10">10%</button>
+          <button type="button" class="ls-chip ls-chip-zerar" data-desconto-os-zerar>Zerar</button>
+        </div>
+      </div>
+
+      <div class="col-12 col-md-3">
+        <label class="form-label" for="osFormaPagamento">Forma de pagamento</label>
+        <input class="form-control" id="osFormaPagamento" name="forma_pagamento"
+               maxlength="120" placeholder="Ex.: Pix ou 50% na entrega">
+      </div>
+
+      <div class="col-12 col-md-3">
+        <label class="form-label" for="osObservacoes">Observações e recomendações</label>
+        <textarea class="form-control" id="osObservacoes" name="observacoes" rows="2"></textarea>
+      </div>
+    </div>
+
+    <div class="ls-orcamento-total">
+      <div><span>Subtotal dos itens</span><strong id="osSubtotal">R$ 0,00</strong></div>
+      <div><span>Deslocamento</span><strong id="osResumoFrete">R$ 0,00</strong></div>
+      <div><span>Desconto</span><strong id="osResumoDesconto">− R$ 0,00</strong></div>
+      <div class="ls-orcamento-final"><span>Total da O.S.</span><strong id="osTotal">R$ 0,00</strong></div>
+    </div>
   </div>
   <div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancelar</button><button class="btn btn-success" type="submit">Salvar O.S.</button></div>
 </form></div></div>
@@ -361,9 +450,62 @@ LSTela.pronto(function () {
   buscaClienteOS.entrada.id="osClienteBusca";
   document.getElementById("osClienteBox").appendChild(buscaClienteOS.elemento);
 
-  function recalcular(){var total=0;corpo.querySelectorAll("tr").forEach(function(l){var q=numero(l.querySelector("[data-qtd]").value),v=numero(l.querySelector("[data-valor]").value);var sub=q*v;total+=sub;l.querySelector("[data-subtotal]").textContent=moeda(sub);});document.getElementById("osTotal").textContent=moeda(total);}
+  /* A CONTA É A MESMA DO ORÇAMENTO: itens + deslocamento − desconto.
+
+     E o piso em zero existe pela mesma razão: um desconto digitado maior
+     que a soma produziria um total negativo, e o documento passaria a
+     dizer que a empresa deve ao cliente. O servidor repete a conta em
+     `OrdemServico.total` -- esta aqui é só para quem está preenchendo
+     ver o resultado enquanto digita. */
+  function subtotalDosItens() {
+    var soma = 0;
+    corpo.querySelectorAll("tr").forEach(function (linha) {
+      var q = numero(linha.querySelector("[data-qtd]").value);
+      var v = numero(linha.querySelector("[data-valor]").value);
+      var sub = q * v;
+      soma += sub;
+      linha.querySelector("[data-subtotal]").textContent = moeda(sub);
+    });
+    return soma;
+  }
+
+  function recalcular() {
+    var subtotal = subtotalDosItens();
+    var frete = numero(document.getElementById("osFrete").value);
+    var desconto = numero(document.getElementById("osDesconto").value);
+    var total = Math.max(0, subtotal + frete - desconto);
+
+    document.getElementById("osSubtotal").textContent = moeda(subtotal);
+    document.getElementById("osResumoFrete").textContent = moeda(frete);
+    document.getElementById("osResumoDesconto").textContent = "− " + moeda(desconto);
+    document.getElementById("osTotal").textContent = moeda(total);
+  }
+
+  document.querySelectorAll(".ls-recalcula-os").forEach(function (campo) {
+    campo.addEventListener("input", recalcular);
+  });
+
+  /* O desconto em porcentagem acompanha o subtotal + deslocamento: no
+     atendimento o cliente pede "tira dez por cento", e fazer a conta na
+     calculadora é onde se erra um dígito. */
+  document.querySelectorAll("[data-desconto-os-pct]").forEach(function (ficha) {
+    ficha.addEventListener("click", function () {
+      var base = subtotalDosItens() + numero(document.getElementById("osFrete").value);
+      var pct = parseFloat(ficha.dataset.descontoOsPct) || 0;
+      document.getElementById("osDesconto").value =
+        (base * pct / 100).toFixed(2).replace(".", ",");
+      recalcular();
+    });
+  });
+  var zerarDesconto = document.querySelector("[data-desconto-os-zerar]");
+  if (zerarDesconto) {
+    zerarDesconto.addEventListener("click", function () {
+      document.getElementById("osDesconto").value = "";
+      recalcular();
+    });
+  }
   function linha(item){item=item||{tipo:"servico",descricao:"",quantidade:"1,00",valor_unitario:"0,00"};var tr=document.createElement("tr");var opcoes=tiposItem.map(function(t){return '<option value="'+t.value+'"'+(t.value===item.tipo?' selected':'')+'>'+t.label+'</option>';}).join("");tr.innerHTML='<td><select class="form-select form-select-sm" data-tipo>'+opcoes+'</select></td><td><input class="form-control form-control-sm" data-descricao maxlength="200" value="'+String(item.descricao||"").replace(/&/g,"&amp;").replace(/"/g,"&quot;")+'"></td><td><input class="form-control form-control-sm text-end" data-qtd inputmode="decimal" value="'+item.quantidade+'"></td><td><input class="form-control form-control-sm text-end" data-valor inputmode="decimal" value="'+item.valor_unitario+'"></td><td class="text-end" data-subtotal>R$ 0,00</td><td><button class="btn btn-sm btn-outline-danger" type="button" data-remover><i class="bi bi-x-lg"></i></button></td>';tr.addEventListener("input",recalcular);tr.querySelector("[data-remover]").addEventListener("click",function(){tr.remove();if(!corpo.children.length)linha();recalcular();});corpo.appendChild(tr);recalcular();}
-  function abrir(id){var o=id?achar(id):null;document.getElementById("formOS").reset();buscaClienteOS.definirValor("",false);resumoCliente(null);corpo.innerHTML="";valor("osId",o?o.id:"");document.getElementById("osTitulo").textContent=o?"Editar "+("OS-"+String(o.id).padStart(5,"0")):"Nova Ordem de Serviço";["manutencao","nome_cliente","contato","whatsapp_cliente","email_cliente","endereco_servico","tipo","status","prioridade","equipamento","numero_serie","agendada_para","garantia_ate","tecnico","defeito_relatado","diagnostico","servico_executado","forma_pagamento","observacoes"].forEach(function(chave){var mapa={manutencao:"osManutencao",nome_cliente:"osNome",contato:"osContato",whatsapp_cliente:"osWhatsapp",email_cliente:"osEmail",endereco_servico:"osEndereco",tipo:"osTipo",status:"osStatus",prioridade:"osPrioridade",equipamento:"osEquipamento",numero_serie:"osSerie",agendada_para:"osAgenda",garantia_ate:"osGarantia",tecnico:"osTecnico",defeito_relatado:"osDefeito",diagnostico:"osDiagnostico",servico_executado:"osExecutado",forma_pagamento:"osFormaPagamento",observacoes:"osObservacoes"};valor(mapa[chave],o?o[chave]:"");});buscaClienteOS.definirValor(o?o.cliente:"",false);if(o&&o.cliente){resumoCliente(clientes.find(function(c){return String(c.valor)===String(o.cliente);})||null);}(o&&o.itens.length?o.itens:[null]).forEach(linha);Painel.erro("osErro","");Painel.abrir("modalOS");}
+  function abrir(id){var o=id?achar(id):null;document.getElementById("formOS").reset();buscaClienteOS.definirValor("",false);resumoCliente(null);corpo.innerHTML="";valor("osId",o?o.id:"");document.getElementById("osTitulo").textContent=o?"Editar "+("OS-"+String(o.id).padStart(5,"0")):"Nova Ordem de Serviço";["manutencao","nome_cliente","contato","whatsapp_cliente","email_cliente","endereco_servico","tipo","status","prioridade","equipamento","numero_serie","agendada_para","garantia_ate","tecnico","defeito_relatado","diagnostico","servico_executado","forma_pagamento","frete","desconto","observacoes"].forEach(function(chave){var mapa={manutencao:"osManutencao",nome_cliente:"osNome",contato:"osContato",whatsapp_cliente:"osWhatsapp",email_cliente:"osEmail",endereco_servico:"osEndereco",tipo:"osTipo",status:"osStatus",prioridade:"osPrioridade",equipamento:"osEquipamento",numero_serie:"osSerie",agendada_para:"osAgenda",garantia_ate:"osGarantia",tecnico:"osTecnico",defeito_relatado:"osDefeito",diagnostico:"osDiagnostico",servico_executado:"osExecutado",forma_pagamento:"osFormaPagamento",frete:"osFrete",desconto:"osDesconto",observacoes:"osObservacoes"};valor(mapa[chave],o?o[chave]:"");});buscaClienteOS.definirValor(o?o.cliente:"",false);if(o&&o.cliente){resumoCliente(clientes.find(function(c){return String(c.valor)===String(o.cliente);})||null);}(o&&o.itens.length?o.itens:[null]).forEach(linha);Painel.erro("osErro","");Painel.abrir("modalOS");}
   document.getElementById("novaOS")?.addEventListener("click",function(){abrir(null);});document.querySelectorAll("[data-editar-os]").forEach(function(b){b.addEventListener("click",function(){abrir(b.dataset.editarOs);});});document.getElementById("adicionarItemOS")?.addEventListener("click",function(){linha();});
   document.getElementById("osManutencao")?.addEventListener("change",function(){var op=this.selectedOptions[0];if(!op||!op.value)return;buscaClienteOS.definirValor("",false);resumoCliente(null);valor("osEquipamento",op.dataset.equipamento);valor("osNome",op.dataset.nome);valor("osWhatsapp",op.dataset.whatsapp);valor("osEmail",op.dataset.email);valor("osDefeito",op.dataset.defeito);valor("osEndereco",op.dataset.endereco);valor("osTipo","manutencao");});
   Painel.ligar({form:"formOS",erro:"osErro",antes:function(){var itens=[];corpo.querySelectorAll("tr").forEach(function(l){itens.push({tipo:l.querySelector("[data-tipo]").value,descricao:l.querySelector("[data-descricao]").value,quantidade:l.querySelector("[data-qtd]").value,valor_unitario:l.querySelector("[data-valor]").value});});document.getElementById("osItens").value=JSON.stringify(itens);}});

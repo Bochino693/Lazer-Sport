@@ -99,23 +99,28 @@ class AcoesConformeASituacaoTests(TestCase):
 
                 self.assertFalse(Orcamento.objects.get().pode_enviar)
 
-    def test_substituida_nao_e_reenviada_nem_refeita(self):
+    def test_substituida_nao_e_reenviada_mas_ainda_gera_outra(self):
         self.proposta(status=Orcamento.Status.SUBSTITUIDO)
 
         orcamento = Orcamento.objects.get()
+        # Reenviar não: quem substituiu já está no lugar dela.
         self.assertFalse(orcamento.pode_enviar)
-        self.assertFalse(orcamento.pode_refazer)
+        # Abrir outra a partir dela, sim -- nada é destruído no caminho.
+        self.assertTrue(orcamento.pode_refazer)
 
-    def test_quitada_nao_e_refeita(self):
-        """Refazer substitui a atual -- e o dinheiro entrou contra ela."""
-        self.proposta(status=Orcamento.Status.APROVADO, pago="500.00")
+    def test_a_quitada_gera_outra_proposta_sem_ser_tocada(self):
+        """A trava caiu junto com o que a causava.
 
-        quitada = Orcamento.objects.get()
-        self.assertTrue(quitada.quitado)
-        self.assertFalse(quitada.pode_refazer)
-
-    def test_o_servidor_recusa_refazer_uma_proposta_paga(self):
+        Refazer substituía a proposta de origem, e substituir um
+        documento contra o qual o dinheiro entrou é apagar o papel que
+        explica o valor recebido. Agora a origem fica intacta -- e o
+        pedido seguinte de um cliente que acabou de pagar costuma nascer
+        exatamente daquela lista de itens.
+        """
         quitada = self.proposta(status=Orcamento.Status.APROVADO, pago="500.00")
+
+        self.assertTrue(quitada.quitado)
+        self.assertTrue(quitada.pode_refazer)
 
         resposta = self.client.post(
             "/orcamentos/",
@@ -124,10 +129,57 @@ class AcoesConformeASituacaoTests(TestCase):
             HTTP_X_REQUESTED_WITH="XMLHttpRequest",
         )
 
-        self.assertEqual(resposta.status_code, 400)
+        self.assertEqual(resposta.status_code, 200)
         quitada.refresh_from_db()
+        # Nada mudou na paga: status, pagamento e itens continuam de pé.
         self.assertEqual(quitada.status, Orcamento.Status.APROVADO)
-        self.assertFalse(hasattr(quitada, "orcamento_refeito"))
+        self.assertEqual(quitada.valor_pago, Decimal("500.00"))
+
+        nova = Orcamento.objects.get(pk=resposta.json()["id"])
+        self.assertEqual(nova.status, Orcamento.Status.RASCUNHO)
+        self.assertEqual(nova.versao, 1)
+        self.assertIsNone(nova.orcamento_anterior)
+        self.assertEqual(nova.valor_pago, Decimal("0.00"))
+
+    def test_a_mesma_proposta_gera_quantas_forem_precisas(self):
+        """O vínculo era um-para-um: só cabia uma refeita por proposta."""
+        origem = self.proposta(status=Orcamento.Status.RECUSADO)
+
+        criadas = set()
+        for _ in range(3):
+            resposta = self.client.post(
+                "/orcamentos/",
+                {"action": "refazer", "id": origem.pk},
+                HTTP_HOST="interno.testserver",
+                HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+            )
+            self.assertEqual(resposta.status_code, 200)
+            criadas.add(resposta.json()["id"])
+
+        self.assertEqual(len(criadas), 3)
+        origem.refresh_from_db()
+        self.assertEqual(origem.status, Orcamento.Status.RECUSADO)
+
+    def test_a_proposta_nova_nasce_com_prazo_de_hoje(self):
+        """Copiar a validade traria a data vencida junto.
+
+        O caso mais comum de abrir outra proposta é a primeira ter
+        expirado -- e a nova nasceria expirada também.
+        """
+        vencida = self.proposta(
+            status=Orcamento.Status.AGUARDANDO_RESPOSTA, dias=-10,
+        )
+
+        resposta = self.client.post(
+            "/orcamentos/",
+            {"action": "refazer", "id": vencida.pk},
+            HTTP_HOST="interno.testserver",
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        nova = Orcamento.objects.get(pk=resposta.json()["id"])
+        self.assertFalse(nova.vencido)
+        self.assertEqual(nova.validade, Orcamento.validade_padrao())
 
     # ------------------------------------------------------ pagamento
     def test_aprovada_sem_pagamento_mostra_o_botao(self):
