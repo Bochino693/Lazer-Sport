@@ -10,22 +10,72 @@ Notificar alguém sobre um orçamento que ela não tem permissão de ver
 seria vazar o nome do cliente e o valor da proposta pela tela de bloqueio
 do celular -- onde a notificação aparece mesmo sem desbloquear.
 
-CUSTO. O envio é feito na mesma requisição de quem agiu, e é por isso que
-tudo aqui engole a própria falha: um serviço de push fora do ar não pode
-derrubar o salvamento de um orçamento. Se um dia houver fila, é este
-módulo que muda -- as telas continuam chamando `avisar_*`.
+CUSTO. Respostas do cliente disparam o push imediatamente; novo pedido usa
+uma thread curta para o SMTP não segurar o checkout. Em ambos os casos a
+falha é isolada: um serviço de aviso fora do ar não pode desfazer a ação
+principal. Se um dia houver fila externa, é este módulo que muda -- as
+telas continuam chamando `avisar_*`.
 """
 
+import hashlib
+import hmac
 import logging
+import threading
 
+from django.conf import settings
 from django.contrib.auth.models import User
+from django.core.mail import EmailMultiAlternatives
+from django.db import close_old_connections
+from django.utils.html import escape
 from django.utils import timezone
+
+from core.email_utils import remetente, responder_para, smtp_configurado
 
 from . import push
 from .models import InscricaoPush
 from .permissoes import FINANCEIRO, GESTAO, PRODUCAO, VENDAS, tem_funcao
 
 log = logging.getLogger(__name__)
+
+
+def _marca(chave):
+    """Identificador estável do aviso sem revelar uma chave do banco."""
+    return hmac.new(
+        settings.SECRET_KEY.encode("utf-8"),
+        str(chave).encode("utf-8"),
+        hashlib.sha256,
+    ).hexdigest()[:24]
+
+
+def _url_interna(caminho):
+    return (getattr(settings, "INTERNO_BASE_URL", "") or "").rstrip("/") + caminho
+
+
+def _enviar_email_individual(usuario, *, assunto, titulo, introducao, linhas, url):
+    if not usuario.email or not smtp_configurado():
+        return False
+    lista = "".join(f"<li>{escape(str(linha))}</li>" for linha in linhas)
+    html = f"""
+    <div style="font-family:Arial,sans-serif;max-width:640px;margin:auto;color:#17213a">
+      <div style="border-radius:16px 16px 0 0;background:#0b347a;color:white;padding:22px">
+        <strong style="font-size:20px">{escape(titulo)}</strong>
+      </div>
+      <div style="border:1px solid #dce5f4;border-top:0;border-radius:0 0 16px 16px;padding:22px">
+        <p>{escape(introducao)}</p><ul>{lista}</ul>
+        <p><a href="{escape(url)}" style="display:inline-block;padding:12px 18px;border-radius:10px;background:#0b347a;color:white;text-decoration:none;font-weight:bold">Abrir painel interno</a></p>
+        <small>Mensagem automática da Fábrica de brinquedos Lazer Sport.</small>
+      </div>
+    </div>"""
+    texto = titulo + "\n\n" + introducao + "\n" + "\n".join(f"- {x}" for x in linhas) + f"\n\n{url}"
+    mensagem = EmailMultiAlternatives(
+        subject=assunto,
+        body=texto,
+        from_email=remetente(),
+        to=[usuario.email],
+        reply_to=responder_para(),
+    )
+    mensagem.attach_alternative(html, "text/html")
+    return bool(mensagem.send(fail_silently=False))
 
 
 def _entregar(usuarios, dados):
@@ -89,25 +139,23 @@ def avisar_resposta_do_cliente(orcamento):
     """
     aprovado = orcamento.status == orcamento.Status.APROVADO
     negociacao = orcamento.status == orcamento.Status.EM_NEGOCIACAO
-    quem = orcamento.respondido_por or "O cliente"
-
     if negociacao:
-        titulo = f"Ajuste pedido na proposta nº {orcamento.pk}"
+        titulo = "Cliente pediu ajuste em uma proposta"
         urgente = True
     elif aprovado:
-        titulo = f"Proposta nº {orcamento.pk} aprovada"
+        titulo = "Uma proposta foi aprovada"
         urgente = True
     else:
-        titulo = f"Proposta nº {orcamento.pk} recusada"
+        titulo = "Uma proposta foi recusada"
         urgente = False
 
     return _entregar(
         _quem_cuida_de_orcamento(orcamento),
         {
             "titulo": titulo,
-            "corpo": f"{quem} respondeu · {orcamento.destinatario}",
-            "url": "/orcamentos/?q=" + str(orcamento.pk),
-            "marca": f"orcamento-{orcamento.pk}",
+            "corpo": "Abra o painel para consultar a resposta com segurança.",
+            "url": "/orcamentos/",
+            "marca": _marca(f"orcamento:{orcamento.pk}:{orcamento.status}"),
             # Aprovação vibra; recusa não. Uma vibração para cada coisa
             # que acontece no dia treina a pessoa a ignorar todas.
             "urgente": urgente,
@@ -132,13 +180,82 @@ def avisar_ciencia_ordem_servico(ordem):
     return _entregar(
         pessoas.values(),
         {
-            "titulo": f"{ordem.numero_documento} confirmada",
-            "corpo": (
-                f"{ordem.cliente_ciente_por or 'Cliente'} confirmou · "
-                f"{ordem.destinatario}"
-            ),
-            "url": "/ordens-servico/?q=" + str(ordem.pk),
-            "marca": f"ordem-servico-{ordem.pk}",
+            "titulo": "Cliente confirmou uma ordem de serviço",
+            "corpo": "Abra o painel para consultar o comprovante.",
+            "url": "/ordens-servico/",
+            "marca": _marca(f"ordem-servico:{ordem.pk}:confirmada"),
             "urgente": False,
         },
     )
+
+
+def enviar_pendencias_urgentes(usuario, avisos):
+    """Resumo individual usado pelo observador; levanta erro para poder repetir."""
+    linhas = [f"{aviso.titulo}: {aviso.quantidade} — {aviso.detalhe}" for aviso in avisos]
+    if not linhas:
+        return False
+    return _enviar_email_individual(
+        usuario,
+        assunto="Pendências urgentes no painel Lazer & Sport",
+        titulo="Há pendências que precisam de atenção",
+        introducao="O observador identificou uma mudança nas pendências urgentes da sua área.",
+        linhas=linhas,
+        url=_url_interna("/"),
+    )
+
+
+def _avisar_novo_pedido_agora(pedido_id):
+    from core.models import Pedido
+
+    try:
+        pedido = Pedido.objects.filter(pk=pedido_id).first()
+        if not pedido:
+            return False
+        superusuarios = list(User.objects.filter(is_active=True, is_superuser=True))
+        _entregar(
+            superusuarios,
+            {
+                "titulo": "Novo pedido recebido",
+                "corpo": "Abra o painel para conferir pagamento, itens e entrega.",
+                "url": "/pedidos/inner/",
+                "marca": _marca(f"pedido:{pedido.pk}:novo"),
+                "urgente": True,
+            },
+        )
+        total = pedido.total_final if pedido.total_final is not None else pedido.total_liquido
+        linhas = ["Um novo pedido entrou na operação."]
+        if total is not None:
+            linhas.append(f"Valor informado: R$ {total:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+        enviados = 0
+        for usuario in superusuarios:
+            try:
+                enviados += int(_enviar_email_individual(
+                    usuario,
+                    assunto="Novo pedido recebido — Lazer & Sport",
+                    titulo="Novo pedido recebido",
+                    introducao="Confira os dados no painel interno antes de iniciar a separação.",
+                    linhas=linhas,
+                    url=_url_interna("/pedidos/inner/"),
+                ))
+            except Exception:
+                log.exception("Falha ao enviar aviso de novo pedido ao usuário %s", usuario.pk)
+        return enviados
+    except Exception:
+        log.exception("Falha ao notificar novo pedido.")
+        return False
+    finally:
+        close_old_connections()
+
+
+def avisar_novo_pedido_id(pedido_id, *, bloqueante=False):
+    """Sempre sinaliza superusuários, sem segurar a criação do pedido no SMTP."""
+    if bloqueante:
+        return _avisar_novo_pedido_agora(pedido_id)
+    thread = threading.Thread(
+        target=_avisar_novo_pedido_agora,
+        args=(pedido_id,),
+        name="aviso-novo-pedido",
+        daemon=True,
+    )
+    thread.start()
+    return True

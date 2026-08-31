@@ -171,6 +171,7 @@ MIDDLEWARE = [
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "core.middleware.SubdomainURLMiddleware",
+    "core.middleware.InternalResponseRecoveryMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "allauth.account.middleware.AccountMiddleware",
@@ -250,6 +251,14 @@ DATABASES = {
 # permite rodar a suíte local com um banco SQLite descartável, sem mudar o banco
 # usado em produção.
 if DATABASES["default"]["ENGINE"] == "django.db.backends.postgresql":
+    try:
+        DB_STATEMENT_TIMEOUT_MS = max(
+            3000,
+            int(os.getenv("DB_STATEMENT_TIMEOUT_MS", "12000")),
+        )
+    except ValueError:
+        DB_STATEMENT_TIMEOUT_MS = 12000
+
     DATABASES["default"]["DISABLE_SERVER_SIDE_CURSORS"] = True
     DATABASES["default"].setdefault("OPTIONS", {}).update({
         # Falha rápido e deixa outro worker atender quando o pool remoto não
@@ -259,6 +268,13 @@ if DATABASES["default"]["ENGINE"] == "django.db.backends.postgresql":
         "keepalives_idle": 30,
         "keepalives_interval": 10,
         "keepalives_count": 3,
+        # Uma consulta travada termina antes do timeout do Gunicorn. Assim
+        # sobra um worker para entregar a tela de recuperação em vez de o
+        # proxy encerrar a conexão como 502 sem explicação.
+        "options": (
+            f"-c statement_timeout={DB_STATEMENT_TIMEOUT_MS} "
+            "-c idle_in_transaction_session_timeout=15000"
+        ),
     })
 
 

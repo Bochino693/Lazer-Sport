@@ -582,6 +582,16 @@
         </div>
 
         <div class="cup-card-actions">
+          <button
+            class="ls-campaign-card-button"
+            type="button"
+            data-campanha-tipo="cupom"
+            data-campanha-objeto="{{ cupom.id }}"
+            data-campanha-titulo="Cupom {{ cupom.codigo }}"
+            {% if not cupom.ativo or not cupom.todos_usuarios %}disabled title="Somente cupons ativos e liberados para todos podem ser divulgados em massa"{% endif %}
+          >
+            <i class="bi bi-megaphone-fill"></i> Divulgar aos clientes
+          </button>
           <button class="cup-secondary-button" type="button" data-open-edit>
             <svg><use href="#cup-i-edit"/></svg> Editar
           </button>
@@ -598,7 +608,10 @@
       </div>
     {% endfor %}
   </section>
+  {% include "includes/paginacao.html" with pagina=pagina query_sem_pagina=query_sem_pagina %}
 </div>
+
+{% include "gestao/includes/campanha_modal.html" %}
 
 <!-- Modal: criar / editar cupom -->
 <div class="cup-modal" id="couponModal" aria-hidden="true">

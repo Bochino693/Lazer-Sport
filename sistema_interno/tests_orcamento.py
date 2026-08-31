@@ -309,6 +309,7 @@ class OrcamentoInternoTests(TestCase):
         cliente = Cliente.objects.create(
             nome_cliente="Escola Girassol",
             telefone="(11) 95555-4444",
+            canal_telefone=Cliente.CanalTelefone.WHATSAPP,
         )
 
         pagina = self.client.get(self.URL, HTTP_HOST="interno.testserver")
@@ -663,6 +664,7 @@ class OrcamentoInternoTests(TestCase):
         cliente = Cliente.objects.create(
             nome_cliente="Leandro Almeida",
             telefone="(11) 95388-7201",
+            canal_telefone=Cliente.CanalTelefone.WHATSAPP,
             email="leandro@example.com",
         )
         orcamento = self._orcamento_com_item()
@@ -683,6 +685,7 @@ class OrcamentoInternoTests(TestCase):
         cliente = Cliente.objects.create(
             nome_cliente="Leandro Almeida",
             telefone="(11) 95388-7201",
+            canal_telefone=Cliente.CanalTelefone.WHATSAPP,
             email="leandro@example.com",
         )
         orcamento = self._orcamento_com_item()

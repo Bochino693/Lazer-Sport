@@ -14,7 +14,7 @@
 <section class="ls-metrics">
   <article class="ls-metric-card violet">
     <div class="ls-metric-head"><span class="ls-metric-label">Pedidos registrados</span><span class="ls-metric-icon"><i class="bi bi-box2"></i></span></div>
-    <strong class="ls-metric-value">{{ pedidos|length }}</strong>
+    <strong class="ls-metric-value">{{ total_registros }}</strong>
     <span class="ls-metric-note">Registros disponíveis na central</span>
   </article>
 </section>
@@ -22,21 +22,21 @@
 <section class="ls-data-panel">
   <div class="ls-data-header"><div><h2>Fila de pedidos</h2><p>Descrição, situação e data de criação.</p></div></div>
   <div class="ls-data-body">
-    <div class="table-responsive">
-      <table class="ls-table">
+    <div class="table-responsive ls-commercial-table-wrap">
+      <table class="ls-table ls-commercial-table">
         <thead><tr><th>ID</th><th>Pedido</th><th>Status</th><th>Criado em</th></tr></thead>
         <tbody>
           {% for pedido in pedidos %}
             <tr>
-              <td><strong>#{{ pedido.id }}</strong></td>
-              <td><strong>{{ pedido.descricao_pedido }}</strong></td>
-              <td>
+              <td data-rotulo="Nº"><strong>#{{ pedido.id }}</strong></td>
+              <td data-rotulo="Pedido"><strong>{{ pedido.descricao_pedido }}</strong></td>
+              <td data-rotulo="Situação">
                 {% if pedido.status == "concluido" %}<span class="ls-status success">{{ pedido.get_status_display }}</span>
                 {% elif pedido.status == "cancelado" %}<span class="ls-status danger">{{ pedido.get_status_display }}</span>
                 {% elif pedido.status == "andamento" %}<span class="ls-status info">{{ pedido.get_status_display }}</span>
                 {% else %}<span class="ls-status warning">{{ pedido.get_status_display }}</span>{% endif %}
               </td>
-              <td>{{ pedido.criacao|date:"d/m/Y H:i"|default:"—" }}</td>
+              <td data-rotulo="Data">{{ pedido.criacao|date:"d/m/Y H:i"|default:"—" }}</td>
             </tr>
           {% empty %}
             <tr><td colspan="4"><div class="ls-empty"><i class="bi bi-box2"></i>Nenhum pedido na central.</div></td></tr>
@@ -44,6 +44,7 @@
         </tbody>
       </table>
     </div>
+    {% include "includes/paginacao.html" with pagina=page_obj %}
   </div>
 </section>
 {% endblock %}

@@ -834,6 +834,7 @@
                             src="{{ combo.imagem_combo.url }}"
                             alt="{{ combo.descricao }}"
                             loading="lazy"
+                            decoding="async"
                         >
                     {% else %}
                         <div class="combo-placeholder" aria-hidden="true">🎁</div>
@@ -857,6 +858,16 @@
                         R$ {{ combo.valor_combo|floatformat:2 }}
                     </div>
                     <div class="combo-actions">
+                        <button
+                            class="ls-campaign-card-button"
+                            type="button"
+                            data-campanha-tipo="combo"
+                            data-campanha-objeto="{{ combo.id }}"
+                            data-campanha-titulo="{{ combo.descricao|escape }}"
+                            {% if not combo.ativo %}disabled title="Ative o combo para divulgar"{% endif %}
+                        >
+                            <i class="bi bi-megaphone-fill"></i> Divulgar aos clientes
+                        </button>
                         <a
                             class="combo-secondary-btn"
                             href="{% url 'combo' combo.id %}"
@@ -892,7 +903,10 @@
             </div>
         {% endfor %}
     </section>
+    {% include "includes/paginacao.html" with pagina=pagina query_sem_pagina=query_sem_pagina %}
 </main>
+
+{% include "gestao/includes/campanha_modal.html" %}
 
 <div class="combo-modal" id="comboModal" aria-hidden="true">
     <div class="combo-modal-backdrop" data-close-combo></div>

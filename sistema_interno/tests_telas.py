@@ -206,12 +206,14 @@ class AplicativoInstalavelTests(TestCase):
         self.assertIn("javascript", resposta["Content-Type"])
         self.assertIn("fetch", resposta.content.decode())
 
-    def test_service_worker_nao_guarda_resposta_em_cache(self):
-        """Painel de operação com cache mostra número velho sem avisar."""
+    def test_service_worker_guarda_so_arquivos_estaticos(self):
+        """Cache local poupa banda sem guardar orçamento ou estoque velho."""
         corpo = self.abrir("/sw.js").content.decode()
 
-        self.assertNotIn("caches.open", corpo)
-        self.assertNotIn("cache.put", corpo)
+        self.assertIn('url.pathname.indexOf("/static/")', corpo)
+        self.assertIn("caches.open(CACHE_ESTATICO)", corpo)
+        self.assertIn("cache.put(pedido, copia)", corpo)
+        self.assertNotIn("cache.put('/orcamentos/", corpo)
 
     def test_pagina_do_painel_aponta_para_o_manifesto(self):
         gestor = User.objects.create_superuser(

@@ -19,7 +19,10 @@ from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
 
 from core.email_utils import (
+    cnpj_empresa,
+    dados_bancarios_empresa,
     diagnostico_smtp,
+    nome_empresa,
     remetente,
     responder_para,
     smtp_configurado,
@@ -1199,6 +1202,9 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
                 "itens": orcamento.itens.all(),
                 "link": link,
                 "total_formatado": moeda_br(orcamento.total),
+                "empresa_nome": nome_empresa(),
+                "empresa_cnpj": cnpj_empresa(),
+                "dados_bancarios": dados_bancarios_empresa(),
             }
             html = render(request, "emails/orcamento_enviado.html", contexto).content.decode()
             texto_email = (
@@ -1209,7 +1215,7 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
                 "e registrar sua aprovação ou pedido de ajustes:\n"
                 f"{link}\n\n"
                 "Se precisar, basta responder a este e-mail.\n\n"
-                "Equipe Lazer & Sport Brinquedos"
+                f"{nome_empresa()}\nCNPJ {cnpj_empresa()}"
             )
             if not smtp_configurado():
                 self.registrar_envio(
@@ -1429,7 +1435,7 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
         linhas = [
             f"Olá, {orcamento.destinatario}! 👋",
             "",
-            f"Preparamos sua *proposta Lazer & Sport nº {orcamento.pk}*.",
+            f"Aqui é da Lazer & Sport. Preparamos sua *proposta nº {orcamento.pk}*.",
             "",
             "*Resumo*",
         ]
@@ -1463,6 +1469,7 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
             link,
             "",
             "Se tiver qualquer dúvida, responda esta mensagem. 😊",
+            f"{nome_empresa()} · CNPJ {cnpj_empresa()}",
         ])
 
         return "\n".join(linhas)
@@ -1758,13 +1765,14 @@ class EstadoOrcamentosView(OrcamentoInternoRequiredMixin, View):
             request.user, Orcamento.objects.filter(pk__in=ids)
         ).only(
             "id", "status", "validade", "respondido_em", "respondido_por",
-            "enviado_em",
+            "enviado_em", "status_pagamento",
         )
 
         estados = {}
         for orcamento in consulta:
             estados[str(orcamento.pk)] = {
                 "status": orcamento.status,
+                "status_pagamento": orcamento.status_pagamento,
                 "rotulo": orcamento.get_status_display(),
                 "cor": self.COR.get(orcamento.status, "neutral"),
                 "vencido": orcamento.vencido,

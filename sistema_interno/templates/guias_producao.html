@@ -77,7 +77,7 @@
             <div class="guide-gallery">
               {% for foto in etapa.imagens.all %}
                 <figure class="guide-image">
-                  <img src="{{ foto.imagem.url }}" alt="{{ foto.legenda|default:etapa.titulo }}" loading="lazy">
+                  <img src="{{ foto.imagem.url }}" alt="{{ foto.legenda|default:etapa.titulo }}" loading="lazy" decoding="async">
                   {% if foto.legenda %}<figcaption>{{ foto.legenda }}</figcaption>{% endif %}
                   <button type="button" data-excluir-imagem="{{ foto.id }}" aria-label="Remover imagem"><i class="bi bi-x-lg"></i></button>
                 </figure>

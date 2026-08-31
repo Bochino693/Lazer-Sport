@@ -23,6 +23,8 @@ sustenta isso:
 import logging
 
 from django.conf import settings
+from django.core.exceptions import ObjectDoesNotExist
+from django.db import transaction
 from django.templatetags.static import static
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
@@ -31,29 +33,33 @@ from django.views.decorators.http import require_http_methods
 from django.views.generic import View
 
 from core.models import EnderecoEmpresa
+from core.email_utils import cnpj_empresa, dados_bancarios_empresa, nome_empresa
 from sistema_interno.models import Orcamento
-from sistema_interno.pix import dados_pix
+from sistema_interno.assinaturas import criar_aceite, documento_mascarado
+from sistema_interno.validacoes import documento_valido, tipo_documento
 from sistema_interno.utils import endereco_do_site
 
 
-def carregar_orcamento_exibicao(**filtros):
+def carregar_orcamento_exibicao(*, bloquear=False, **filtros):
     """Busca a proposta pelo token, já com o que a página desenha.
 
     prefetch dos itens e do brinquedo de cada item: sem isso a página faz
     uma consulta por linha só para mostrar a foto, que é justamente o que
     mais aparece num orçamento grande.
     """
-    return get_object_or_404(
+    consulta = (
         Orcamento.objects
-        .select_related("cliente", "responsavel")
+        .select_related("cliente", "responsavel", "aceite_eletronico")
         .prefetch_related(
             "cliente__enderecos",
             "itens__brinquedo",
             "itens__produto",
             "itens__peca__imagem_peca_reposicao",
-        ),
-        **filtros,
+        )
     )
+    if bloquear:
+        consulta = consulta.select_for_update()
+    return get_object_or_404(consulta, **filtros)
 
 
 def _carregar(token):
@@ -119,12 +125,20 @@ def contexto_orcamento(orcamento, *, previsualizacao=False, request=None):
     elif request is not None and not imagem_previa.startswith("http"):
         imagem_previa = request.build_absolute_uri(imagem_previa)
 
+    try:
+        aceite = orcamento.aceite_eletronico
+    except ObjectDoesNotExist:
+        aceite = None
+
     contexto = {
         "orcamento": orcamento,
         "itens": itens,
         "imagem_previa": imagem_previa,
         "endereco_publico": endereco_publico,
         "empresa": empresa,
+        "empresa_nome": nome_empresa(),
+        "empresa_cnpj": cnpj_empresa(),
+        "dados_bancarios": dados_bancarios_empresa(),
         # O CONTATO DA PROPOSTA É O DA EMPRESA, não o de quem montou.
         #
         # A ordem aqui é deliberada: a configuração da hospedagem manda,
@@ -146,6 +160,8 @@ def contexto_orcamento(orcamento, *, previsualizacao=False, request=None):
         "total": orcamento.total,
         "vencido": orcamento.vencido,
         "respondido": orcamento.respondido,
+        "aceite": aceite,
+        "aceite_documento_mascarado": documento_mascarado(aceite),
         "dias_para_vencer": orcamento.dias_para_vencer,
         # A proposta só aceita resposta enquanto está viva: já respondida
         # vira comprovante, vencida precisa de nova validade dada pela
@@ -158,11 +174,6 @@ def contexto_orcamento(orcamento, *, previsualizacao=False, request=None):
         ),
         "hoje": timezone.localdate(),
     }
-    contexto.update(dados_pix(orcamento) if orcamento.status == Orcamento.Status.APROVADO else {
-        "pix_configurado": False,
-        "pix_copia_cola": "",
-        "pix_qr": "",
-    })
     return contexto
 
 
@@ -188,47 +199,75 @@ class OrcamentoPublicoView(View):
         )
 
     def post(self, request, token):
-        orcamento = _carregar(token)
+        with transaction.atomic():
+            # Trava só esta proposta. Duas abas podem clicar juntas, mas
+            # apenas a primeira grava; a outra reencontra a resposta pronta.
+            orcamento = carregar_orcamento_exibicao(token=token, bloquear=True)
 
-        contexto = contexto_orcamento(orcamento, request=request)
-        if not contexto["pode_responder"]:
-            # Chegou tarde: alguém respondeu em outra aba, ou a validade
-            # passou entre carregar e clicar. Redireciona para a própria
-            # página, que já vai explicar a situação.
-            return redirect("orcamento_publico", token=token)
+            contexto = contexto_orcamento(orcamento, request=request)
+            if not contexto["pode_responder"]:
+                return redirect("orcamento_publico", token=token)
 
-        decisao = (request.POST.get("decisao") or "").strip()
-        if decisao not in ("aprovar", "ajustes", "recusar"):
-            contexto["erro"] = "Escolha aprovar, pedir ajustes ou recusar a proposta."
-            return render(request, self.template_name, contexto, status=400)
+            decisao = (request.POST.get("decisao") or "").strip()
+            if decisao not in ("aprovar", "ajustes", "recusar"):
+                contexto["erro"] = "Escolha aprovar, pedir ajustes ou recusar a proposta."
+                return render(request, self.template_name, contexto, status=400)
 
-        nome = (request.POST.get("nome") or "").strip()
-        if not nome:
-            contexto["erro"] = "Escreva seu nome para registrar a resposta."
-            contexto["decisao_tentada"] = decisao
-            return render(request, self.template_name, contexto, status=400)
-
-        if decisao == "ajustes":
-            orcamento.status = Orcamento.Status.EM_NEGOCIACAO
-            orcamento.respondido_em = timezone.now()
-            orcamento.respondido_por = nome[:120]
-            orcamento.motivo_negociacao = (
-                request.POST.get("motivo") or ""
+            nome = (request.POST.get("nome") or "").strip()
+            contexto["nome_tentado"] = nome
+            contexto["documento_tentado"] = (
+                request.POST.get("documento_assinante") or ""
             ).strip()
-            if not orcamento.motivo_negociacao:
-                contexto["erro"] = "Conte o que precisa mudar para prepararmos outra versão."
+            contexto["consentimento_tentado"] = (
+                request.POST.get("consentimento_aceite") or ""
+            ) in ("1", "on")
+            if not nome:
+                contexto["erro"] = "Escreva seu nome para registrar a resposta."
                 contexto["decisao_tentada"] = decisao
                 return render(request, self.template_name, contexto, status=400)
-            orcamento.save(update_fields=[
-                "status", "respondido_em", "respondido_por",
-                "motivo_negociacao", "atualizado",
-            ])
-        else:
-            orcamento.registrar_resposta(
-                aprovado=decisao == "aprovar",
-                nome=nome,
-                motivo=request.POST.get("motivo") or "",
-            )
+
+            if decisao == "aprovar":
+                documento = (request.POST.get("documento_assinante") or "").strip()
+                if not documento_valido(documento):
+                    contexto["erro"] = (
+                        f"{tipo_documento(documento).capitalize()} inválido. "
+                        "Confira os caracteres e os dígitos verificadores."
+                    )
+                    contexto["decisao_tentada"] = decisao
+                    return render(request, self.template_name, contexto, status=400)
+                if (request.POST.get("consentimento_aceite") or "") not in ("1", "on"):
+                    contexto["erro"] = "Marque a confirmação para aprovar eletronicamente."
+                    contexto["decisao_tentada"] = decisao
+                    return render(request, self.template_name, contexto, status=400)
+
+            if decisao == "ajustes":
+                orcamento.status = Orcamento.Status.EM_NEGOCIACAO
+                orcamento.respondido_em = timezone.now()
+                orcamento.respondido_por = nome[:120]
+                orcamento.motivo_negociacao = (
+                    request.POST.get("motivo") or ""
+                ).strip()
+                if not orcamento.motivo_negociacao:
+                    contexto["erro"] = "Conte o que precisa mudar para prepararmos outra versão."
+                    contexto["decisao_tentada"] = decisao
+                    return render(request, self.template_name, contexto, status=400)
+                orcamento.save(update_fields=[
+                    "status", "respondido_em", "respondido_por",
+                    "motivo_negociacao", "atualizado",
+                ])
+            else:
+                orcamento.registrar_resposta(
+                    aprovado=decisao == "aprovar",
+                    nome=nome,
+                    motivo=request.POST.get("motivo") or "",
+                )
+                if decisao == "aprovar":
+                    criar_aceite(
+                        orcamento,
+                        request,
+                        nome=nome,
+                        documento=request.POST.get("documento_assinante") or "",
+                    )
 
         # O TELEFONE DA EQUIPE TOCA AGORA.
         #
@@ -260,4 +299,3 @@ class OrcamentoPublicoView(View):
 orcamento_publico = require_http_methods(["GET", "POST"])(
     OrcamentoPublicoView.as_view()
 )
-

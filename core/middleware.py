@@ -23,6 +23,7 @@ class RequestTimingMiddleware:
     def __call__(self, request):
         inicio = time.perf_counter()
         request_id = request.headers.get("X-Request-ID") or uuid.uuid4().hex[:12]
+        request.ls_request_id = request_id
         try:
             response = self.get_response(request)
         except Exception:
@@ -78,6 +79,34 @@ class SubdomainURLMiddleware:
             request.is_interno = True
 
         return self.get_response(request)
+
+
+class InternalResponseRecoveryMiddleware:
+    """Transforma falhas opacas do painel em uma resposta recuperável.
+
+    Não mascara erros do site público nem tenta repetir gravações. Respostas
+    transitórias do painel ganham uma tela autossuficiente e um Retry-After;
+    chamadas JavaScript recebem JSON para manter a tela que já estava aberta.
+    """
+
+    STATUS_TRANSITORIOS = (500, 502, 504)
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        response = self.get_response(request)
+        if (
+            getattr(request, "is_interno", False)
+            and response.status_code in self.STATUS_TRANSITORIOS
+        ):
+            from sistema_interno.resiliencia import resposta_temporaria
+
+            return resposta_temporaria(
+                request,
+                motivo=f"upstream-{response.status_code}",
+            )
+        return response
 
 
 class TelefoneObrigatorioMiddleware:

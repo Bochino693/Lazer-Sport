@@ -10,6 +10,7 @@ from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
+from django.core.paginator import Paginator
 from django.core.validators import validate_email
 from django.db import IntegrityError, transaction
 from django.db.models import Count, DecimalField, F, Q, Sum, Value
@@ -1083,20 +1084,40 @@ class DashboardEstoqueView(EstoqueInternoRequiredMixin, View):
 # ======================================================================
 class VendasView(FinanceiroInternoRequiredMixin, View):
     def get(self, request):
+        pagina = Paginator(
+            CentralVendas.objects.order_by("-id"),
+            30,
+        ).get_page(request.GET.get("page"))
         return render(request, "vendas_inner.html", {
-            "vendas": CentralVendas.objects.all(),
+            "vendas": pagina.object_list,
+            "page_obj": pagina,
+            "total_registros": pagina.paginator.count,
         })
 
 
 class PedidosView(FinanceiroInternoRequiredMixin, View):
     def get(self, request):
+        pagina = Paginator(
+            CentralPedidos.objects.order_by("-criacao", "-id"),
+            30,
+        ).get_page(request.GET.get("page"))
         return render(request, "pedidos_inner.html", {
-            "pedidos": CentralPedidos.objects.all(),
+            "pedidos": pagina.object_list,
+            "page_obj": pagina,
+            "total_registros": pagina.paginator.count,
         })
 
 
 class ManutencaoInnerView(ManutencaoInternoRequiredMixin, View):
     def get(self, request):
+        pagina = Paginator(
+            Manutencao.objects
+            .select_related("usuario__user", "brinquedo")
+            .order_by("-criado_em", "-id"),
+            30,
+        ).get_page(request.GET.get("page"))
         return render(request, "manutencao_inner.html", {
-            "manutencoes": Manutencao.objects.all(),
+            "manutencoes": pagina.object_list,
+            "page_obj": pagina,
+            "total_registros": pagina.paginator.count,
         })

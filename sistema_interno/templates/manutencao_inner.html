@@ -14,7 +14,7 @@
 <section class="ls-metrics">
   <article class="ls-metric-card yellow">
     <div class="ls-metric-head"><span class="ls-metric-label">Solicitações encontradas</span><span class="ls-metric-icon"><i class="bi bi-wrench-adjustable"></i></span></div>
-    <strong class="ls-metric-value">{{ manutencoes|length }}</strong>
+    <strong class="ls-metric-value">{{ total_registros }}</strong>
     <span class="ls-metric-note">Registros disponíveis para acompanhamento</span>
   </article>
 </section>
@@ -22,15 +22,15 @@
 <section class="ls-data-panel">
   <div class="ls-data-header"><div><h2>Solicitações de manutenção</h2><p>Dados necessários para triagem e acompanhamento operacional.</p></div></div>
   <div class="ls-data-body">
-    <div class="table-responsive">
-      <table class="ls-table">
+    <div class="table-responsive ls-commercial-table-wrap">
+      <table class="ls-table ls-commercial-table">
         <thead><tr><th>ID</th><th>Equipamento</th><th>Status</th><th>Local</th><th>Contato</th><th>Aberta em</th><th class="text-end">Ação</th></tr></thead>
         <tbody>
           {% for m in manutencoes %}
             <tr>
-              <td><strong>#{{ m.id }}</strong></td>
-              <td><strong>{{ m.nome_equipamento }}</strong><span class="d-block ls-subtext">{{ m.descricao|truncatechars:90 }}</span></td>
-              <td>
+              <td data-rotulo="Nº"><strong>#{{ m.id }}</strong></td>
+              <td data-rotulo="Equipamento"><strong>{{ m.nome_equipamento }}</strong><span class="d-block ls-subtext">{{ m.descricao|truncatechars:90 }}</span></td>
+              <td data-rotulo="Situação">
                 {% comment %}
                   Chamado cancelado caía no `else` e saía com o selo de
                   "info", que é teal -- a mesma família do concluído. Numa
@@ -42,10 +42,10 @@
                 {% elif m.status == "X" %}<span class="ls-status neutral">{{ m.get_status_display }}</span>
                 {% else %}<span class="ls-status info">{{ m.get_status_display }}</span>{% endif %}
               </td>
-              <td>{{ m.cidade|default:"—" }}{% if m.estado %}/{{ m.estado }}{% endif %}</td>
-              <td>{{ m.telefone_contato|default:"—" }}</td>
-              <td>{{ m.criado_em|date:"d/m/Y H:i" }}</td>
-              <td class="text-end"><a class="btn btn-sm btn-outline-primary" href="{% url 'ordens_servico_inner' %}?novo=1&manutencao={{ m.id }}"><i class="bi bi-clipboard2-plus me-1"></i>Gerar O.S.</a></td>
+              <td data-rotulo="Local">{{ m.cidade|default:"—" }}{% if m.estado %}/{{ m.estado }}{% endif %}</td>
+              <td data-rotulo="Contato">{{ m.telefone_contato|default:"—" }}</td>
+              <td data-rotulo="Data">{{ m.criado_em|date:"d/m/Y H:i" }}</td>
+              <td data-rotulo="Ações" class="text-end"><a class="btn btn-sm btn-outline-primary" href="{% url 'ordens_servico_inner' %}?novo=1&manutencao={{ m.id }}"><i class="bi bi-clipboard2-plus me-1"></i>Gerar O.S.</a></td>
             </tr>
           {% empty %}
             <tr><td colspan="7"><div class="ls-empty"><i class="bi bi-wrench"></i>Nenhuma manutenção registrada.</div></td></tr>
@@ -53,6 +53,7 @@
         </tbody>
       </table>
     </div>
+    {% include "includes/paginacao.html" with pagina=page_obj %}
   </div>
 </section>
 {% endblock %}

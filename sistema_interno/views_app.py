@@ -10,10 +10,10 @@ subdomínio interno:
   mesmo é servido. Em /static/interno/sw.js ele não controlaria nada, e o
   navegador não considera o painel instalável.
 
-O service worker aqui é deliberadamente burro: ele repassa tudo para a
-rede. Guardar resposta em cache num painel de operação daria tela velha
-com número velho -- que é pior do que uma tela que não abre, porque o
-usuário não percebe.
+O service worker nunca guarda páginas nem respostas operacionais. Somente
+arquivos sob /static/ entram no cache local do aparelho; assim CSS, ícones e
+JavaScript não gastam banda repetidamente, mas números e cadastros continuam
+sempre vindo da rede.
 """
 
 from django.http import HttpResponse, JsonResponse
@@ -82,23 +82,56 @@ def manifesto(request):
 
 SERVICE_WORKER = """/* Service worker do painel interno.
 
-Repassa tudo para a rede, de propósito: painel de operação com resposta
-guardada em cache mostra número velho sem avisar, e ninguém confere um
-dado que a tela apresenta como atual.
-
-Ele existe para o navegador considerar o painel instalável -- e para que
-um dia, se for preciso, haja onde colocar uma fila de envio offline.
+Páginas e APIs são sempre da rede. Somente /static/ usa cache local: são
+CSS, JavaScript, fontes e ícones versionados, nunca orçamento, estoque ou
+cadastro. Isso poupa banda sem apresentar dado operacional antigo.
 */
+var CACHE_ESTATICO = "ls-static-v2";
+
 self.addEventListener("install", function () {
   self.skipWaiting();
 });
 
 self.addEventListener("activate", function (evento) {
-  evento.waitUntil(self.clients.claim());
+  evento.waitUntil(
+    caches.keys().then(function (chaves) {
+      return Promise.all(chaves.map(function (chave) {
+        if (chave.indexOf("ls-static-") === 0 && chave !== CACHE_ESTATICO) {
+          return caches.delete(chave);
+        }
+      }));
+    }).then(function () { return self.clients.claim(); })
+  );
 });
 
 self.addEventListener("fetch", function (evento) {
-  evento.respondWith(fetch(evento.request));
+  var pedido = evento.request;
+  if (pedido.method !== "GET") return;
+
+  var url = new URL(pedido.url);
+  if (url.origin !== self.location.origin || url.pathname.indexOf("/static/") !== 0) {
+    return;
+  }
+
+  function buscarEGuardar() {
+    return fetch(pedido).then(function (resposta) {
+      if (resposta.ok) {
+        var copia = resposta.clone();
+        caches.open(CACHE_ESTATICO).then(function (cache) {
+          cache.put(pedido, copia);
+        });
+      }
+      return resposta;
+    });
+  }
+
+  evento.respondWith(
+    caches.match(pedido).then(function (guardado) {
+      if (!guardado) return buscarEGuardar();
+      evento.waitUntil(buscarEGuardar().catch(function () {}));
+      return guardado;
+    })
+  );
 });
 
 /* ----------------------------------------------------------------------

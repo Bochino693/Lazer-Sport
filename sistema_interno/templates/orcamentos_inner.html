@@ -146,6 +146,9 @@
                     enviado {{ orcamento.enviado_em|date:"d/m" }}
                   {% endif %}
                 </span>
+                {% if orcamento.status == 'aprovado' and orcamento.status_pagamento != 'pago' %}
+                  <span class="ls-next-action"><i class="bi bi-telephone-outbound"></i> Próximo passo: contatar cliente</span>
+                {% endif %}
               </td>
               <td data-rotulo="Revisão dos blocos">
                 <div class="ls-block-review">
@@ -683,10 +686,25 @@ Cadastro mínimo de propósito: nome, valor e categoria. Foto e texto de
             <input type="email" class="form-control" id="clienteNovoEmail" name="email"
                    maxlength="150" placeholder="cliente@empresa.com.br">
           </div>
+          <div class="col-12 col-md-6">
+            <label class="form-label" for="clienteNovoCanalTelefone">Uso do número</label>
+            <select class="form-select" id="clienteNovoCanalTelefone" name="canal_telefone">
+              <option value="nao_confirmado">Ainda não confirmado</option>
+              <option value="whatsapp">WhatsApp confirmado</option>
+              <option value="telefone">Telefone, sem WhatsApp</option>
+            </select>
+          </div>
+          <div class="col-12 col-md-6 align-self-end">
+            <label class="form-check ls-inline-check mb-1">
+              <input class="form-check-input" type="checkbox" name="confirmar_telefone_sem_whatsapp" value="1">
+              <span class="form-check-label">Salvar mesmo sem confirmar WhatsApp</span>
+            </label>
+            <span class="form-text">Enquanto não confirmar, o número não será usado para envio automático.</span>
+          </div>
           <div class="col-12 col-md-5">
             <label class="form-label" for="clienteNovoDocumento">CPF ou CNPJ</label>
             <input class="form-control" id="clienteNovoDocumento" name="documento"
-                   inputmode="numeric" maxlength="20" data-mascara="documento"
+                   inputmode="text" autocapitalize="characters" maxlength="20" data-mascara="documento"
                    placeholder="Opcional">
           </div>
           <div class="col-12 col-md-7" id="clienteNovoBlocoParceiro">
@@ -2370,6 +2388,17 @@ document.addEventListener("DOMContentLoaded", function () {
     var selo = celula.querySelector("[data-situacao-selo]");
     var nota = celula.querySelector("[data-situacao-nota]");
     if (!selo) return false;
+
+    var proxima = celula.querySelector(".ls-next-action");
+    var deveContatar = estado.status === "aprovado" && estado.status_pagamento !== "pago";
+    if (deveContatar && !proxima) {
+      proxima = document.createElement("span");
+      proxima.className = "ls-next-action";
+      proxima.innerHTML = '<i class="bi bi-telephone-outbound"></i> Próximo passo: contatar cliente';
+      celula.appendChild(proxima);
+    } else if (!deveContatar && proxima) {
+      proxima.remove();
+    }
 
     var rotuloAtual = selo.textContent.trim();
     if (rotuloAtual === estado.rotulo) return false;

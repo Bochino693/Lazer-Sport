@@ -1,0 +1,11 @@
+{% if pagina.has_other_pages %}
+<nav class="ls-paginacao" aria-label="Paginação">
+  {% if pagina.has_previous %}
+    <a class="btn btn-sm btn-outline-secondary" href="?{% if query_sem_pagina %}{{ query_sem_pagina }}&amp;{% endif %}page={{ pagina.previous_page_number }}">Anterior</a>
+  {% endif %}
+  <span>Página {{ pagina.number }} de {{ pagina.paginator.num_pages }} · {{ pagina.paginator.count }} registro{{ pagina.paginator.count|pluralize }}</span>
+  {% if pagina.has_next %}
+    <a class="btn btn-sm btn-outline-secondary" href="?{% if query_sem_pagina %}{{ query_sem_pagina }}&amp;{% endif %}page={{ pagina.next_page_number }}">Próxima</a>
+  {% endif %}
+</nav>
+{% endif %}

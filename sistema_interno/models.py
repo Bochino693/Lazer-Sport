@@ -1,4 +1,5 @@
 import secrets
+import uuid
 from decimal import Decimal
 
 from django.conf import settings
@@ -86,6 +87,11 @@ class Cliente(Prime):
         ESCOLA = "escola", "Escola"
         ORGAO = "orgao", "Órgão público"
 
+    class CanalTelefone(models.TextChoices):
+        WHATSAPP = "whatsapp", "WhatsApp confirmado"
+        TELEFONE = "telefone", "Telefone, sem WhatsApp"
+        NAO_CONFIRMADO = "nao_confirmado", "Ainda não confirmado"
+
     nome_cliente = models.CharField("Nome", max_length=90)
     tipo = models.CharField(
         "Tipo de cadastro",
@@ -99,6 +105,19 @@ class Cliente(Prime):
         max_length=20,
         blank=True,
         help_text="Usado na nota e no contrato. Pode ficar em branco.",
+    )
+    documento_chave = models.CharField(
+        max_length=14,
+        blank=True,
+        db_index=True,
+        editable=False,
+        help_text="CPF/CNPJ normalizado, usado apenas para evitar duplicidades.",
+    )
+    documento_valido = models.BooleanField(
+        default=False,
+        db_index=True,
+        editable=False,
+        help_text="Confere formato e dígitos verificadores; não consulta a Receita.",
     )
     # Era max_length=14 -- não cabia "(11) 99999-9999", que tem 15. O
     # cadastro pelo painel quebrava justamente no celular com máscara.
@@ -114,6 +133,13 @@ class Cliente(Prime):
         blank=True,
         db_index=True,
         editable=False,
+    )
+    canal_telefone = models.CharField(
+        "Uso do número",
+        max_length=16,
+        choices=CanalTelefone.choices,
+        default=CanalTelefone.NAO_CONFIRMADO,
+        help_text="Evita tratar um telefone comum como WhatsApp sem confirmação.",
     )
     email = models.CharField(max_length=150, null=True, blank=True)
 
@@ -206,9 +232,20 @@ class Cliente(Prime):
         )
 
     def save(self, *args, **kwargs):
-        import re as _re
+        from .validacoes import chave_documento, documento_valido, somente_digitos
 
-        self.telefone_digitos = _re.sub(r"\D", "", self.telefone or "")
+        self.telefone_digitos = somente_digitos(self.telefone)
+        self.documento_chave = chave_documento(self.documento)
+        self.documento_valido = documento_valido(self.documento)
+
+        campos = kwargs.get("update_fields")
+        if campos is not None:
+            campos = set(campos)
+            if "telefone" in campos:
+                campos.add("telefone_digitos")
+            if "documento" in campos:
+                campos.update(("documento_chave", "documento_valido"))
+            kwargs["update_fields"] = list(campos)
 
         # Buffet não vira alfinete de cliente: ele já tem o card dele em
         # "Nossos Parceiros", e as duas coisas juntas o mostrariam duas
@@ -1538,7 +1575,12 @@ class Orcamento(Prime):
         """Canal explícito, com compatibilidade para propostas antigas."""
         if self.whatsapp_cliente:
             return self.whatsapp_cliente
-        if self.cliente_id and self.cliente and self.cliente.telefone:
+        if (
+            self.cliente_id
+            and self.cliente
+            and self.cliente.telefone
+            and self.cliente.canal_telefone == Cliente.CanalTelefone.WHATSAPP
+        ):
             return self.cliente.telefone
         return self.contato if "@" not in (self.contato or "") else ""
 
@@ -1720,6 +1762,50 @@ class Orcamento(Prime):
         verbose_name = "Orçamento"
         verbose_name_plural = "Orçamentos"
         ordering = ("-criacao", "-id")
+        indexes = [
+            models.Index(
+                fields=("status", "validade"),
+                name="orc_status_validade_idx",
+            ),
+        ]
+
+
+class AceiteOrcamento(models.Model):
+    """Comprovante imutável do aceite eletrônico de uma proposta.
+
+    Não guarda IP nem navegador em texto. Essas informações são
+    transformadas em HMAC no momento do aceite: continuam úteis para
+    demonstrar que duas respostas vieram do mesmo contexto, sem criar um
+    cadastro paralelo de dados pessoais sensíveis.
+    """
+
+    orcamento = models.OneToOneField(
+        Orcamento,
+        on_delete=models.PROTECT,
+        related_name="aceite_eletronico",
+    )
+    codigo_publico = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    assinante_nome = models.CharField(max_length=120)
+    assinante_documento = models.CharField(max_length=14)
+    consentimento = models.BooleanField(default=True)
+    proposta_hash = models.CharField(max_length=64)
+    ip_hash = models.CharField(max_length=64)
+    navegador_hash = models.CharField(max_length=64)
+    termos_versao = models.CharField(max_length=20, default="2026-08")
+    assinado_em = models.DateTimeField(auto_now_add=True)
+
+    def save(self, *args, **kwargs):
+        if self.pk and type(self).objects.filter(pk=self.pk).exists():
+            raise ValueError("O comprovante de aceite é imutável.")
+        return super().save(*args, **kwargs)
+
+    class Meta:
+        verbose_name = "Aceite eletrônico de orçamento"
+        verbose_name_plural = "Aceites eletrônicos de orçamentos"
+        ordering = ("-assinado_em",)
+
+    def __str__(self):
+        return f"Aceite {self.codigo_publico}"
 
 
 class AvaliacaoBlocoOrcamento(Prime):
@@ -2355,3 +2441,250 @@ class InscricaoPush(Prime):
 
     def __str__(self):
         return f"{self.usuario} · {self.aparelho or 'aparelho'}"
+
+
+class EstadoNotificacao(Prime):
+    """Memória do observador para não repetir o mesmo e-mail urgente."""
+
+    usuario = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="estados_notificacao",
+    )
+    chave = models.CharField(max_length=80)
+    assinatura = models.CharField(max_length=64, blank=True)
+    quantidade = models.PositiveIntegerField(default=0)
+    email_enviado_em = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = "Estado de notificação"
+        verbose_name_plural = "Estados de notificações"
+        constraints = [
+            models.UniqueConstraint(
+                fields=("usuario", "chave"),
+                name="notificacao_usuario_chave_unica",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.usuario} · {self.chave}"
+
+
+# ======================================================================
+# CAMPANHAS DE PROMOÇÕES, COMBOS E CUPONS
+# ======================================================================
+class CampanhaDivulgacao(Prime):
+    """Uma divulgação preparada no painel, com conteúdo congelado.
+
+    A campanha guarda uma cópia do título, texto, imagem e destino. Assim
+    o histórico continua inteligível mesmo se a promoção for editada ou
+    removida depois. As FKs servem para navegação interna; o cliente recebe
+    somente o ``token`` público, nunca o id sequencial do cadastro.
+    """
+
+    class Tipo(models.TextChoices):
+        PROMOCAO = "promocao", "Promoção"
+        COMBO = "combo", "Combo"
+        CUPOM = "cupom", "Cupom"
+
+    class Status(models.TextChoices):
+        FILA = "fila", "Na fila"
+        EM_ANDAMENTO = "andamento", "Em andamento"
+        CONCLUIDA = "concluida", "Concluída"
+        PARCIAL = "parcial", "Concluída com falhas"
+        FALHA = "falha", "Falhou"
+        CANCELADA = "cancelada", "Cancelada"
+
+    class Segmento(models.TextChoices):
+        TODOS = "todos", "Todos os clientes ativos"
+        RESIDENCIAL = "residencial", "Clientes residenciais"
+        COMERCIAL = "comercial", "Empresas e comércios"
+        BUFFET = "buffet", "Buffets parceiros"
+        CONDOMINIO = "condominio", "Condomínios"
+        ESCOLA = "escola", "Escolas"
+        ORGAO = "orgao", "Órgãos públicos"
+
+    token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    tipo = models.CharField(max_length=12, choices=Tipo.choices, db_index=True)
+    status = models.CharField(
+        max_length=12,
+        choices=Status.choices,
+        default=Status.FILA,
+        db_index=True,
+    )
+    segmento = models.CharField(
+        max_length=14,
+        choices=Segmento.choices,
+        default=Segmento.TODOS,
+    )
+    promocao = models.ForeignKey(
+        "core.Promocoes",
+        on_delete=models.SET_NULL,
+        related_name="campanhas_divulgacao",
+        null=True,
+        blank=True,
+    )
+    combo = models.ForeignKey(
+        "core.Combos",
+        on_delete=models.SET_NULL,
+        related_name="campanhas_divulgacao",
+        null=True,
+        blank=True,
+    )
+    cupom = models.ForeignKey(
+        "core.Cupom",
+        on_delete=models.SET_NULL,
+        related_name="campanhas_divulgacao",
+        null=True,
+        blank=True,
+    )
+    titulo = models.CharField(max_length=140)
+    mensagem = models.TextField(max_length=1200)
+    imagem_url = models.URLField(max_length=700, blank=True)
+    destino_url = models.URLField(max_length=700, blank=True)
+    codigo_cupom = models.CharField(max_length=20, blank=True)
+    canal_email = models.BooleanField(default=False)
+    canal_whatsapp = models.BooleanField(default=False)
+    total_destinatarios = models.PositiveIntegerField(default=0)
+    total_enviados = models.PositiveIntegerField(default=0)
+    total_falhas = models.PositiveIntegerField(default=0)
+    responsavel = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name="campanhas_divulgacao",
+        null=True,
+        blank=True,
+    )
+
+    @property
+    def caminho_publico(self):
+        from django.urls import reverse
+
+        return reverse(
+            "campanha_publica",
+            args=[self.token],
+            urlconf=settings.ROOT_URLCONF,
+        )
+
+    @property
+    def progresso_percentual(self):
+        if not self.total_destinatarios:
+            return 0
+        encerrados = self.total_enviados + self.total_falhas
+        return min(100, round(encerrados * 100 / self.total_destinatarios))
+
+    def recalcular(self, salvar=True):
+        """Deriva contadores e estado das entregas; nunca soma na mão."""
+        entregas = self.entregas.all()
+        total = entregas.count()
+        enviados = entregas.filter(status=EntregaCampanha.Status.ENVIADO).count()
+        falhas = entregas.filter(status=EntregaCampanha.Status.FALHOU).count()
+        abertos = entregas.filter(status__in=(
+            EntregaCampanha.Status.PENDENTE,
+            EntregaCampanha.Status.PROCESSANDO,
+            EntregaCampanha.Status.AGUARDANDO_ACAO,
+        )).exists()
+
+        if self.status != self.Status.CANCELADA:
+            if not total:
+                estado = self.Status.FALHA
+            elif abertos:
+                estado = self.Status.EM_ANDAMENTO
+            elif falhas:
+                estado = self.Status.PARCIAL if enviados else self.Status.FALHA
+            else:
+                estado = self.Status.CONCLUIDA
+            self.status = estado
+        self.total_destinatarios = total
+        self.total_enviados = enviados
+        self.total_falhas = falhas
+        if salvar:
+            self.save(update_fields=(
+                "status", "total_destinatarios", "total_enviados",
+                "total_falhas", "atualizado",
+            ))
+        return self
+
+    class Meta:
+        verbose_name = "Campanha de divulgação"
+        verbose_name_plural = "Campanhas de divulgação"
+        ordering = ("-criacao", "-id")
+        indexes = [
+            models.Index(fields=("status", "criacao"), name="campanha_status_data_idx"),
+        ]
+
+    def __str__(self):
+        return f"{self.get_tipo_display()} · {self.titulo}"
+
+
+class EntregaCampanha(Prime):
+    """Um canal para um destinatário, com endereço congelado e deduplicado."""
+
+    class Canal(models.TextChoices):
+        EMAIL = "email", "E-mail"
+        WHATSAPP = "whatsapp", "WhatsApp"
+
+    class Status(models.TextChoices):
+        PENDENTE = "pendente", "Pendente"
+        PROCESSANDO = "processando", "Processando"
+        AGUARDANDO_ACAO = "aguardando", "Aguardando envio no WhatsApp"
+        ENVIADO = "enviado", "Enviado"
+        FALHOU = "falhou", "Falhou"
+        IGNORADO = "ignorado", "Ignorado"
+
+    token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    campanha = models.ForeignKey(
+        CampanhaDivulgacao,
+        on_delete=models.CASCADE,
+        related_name="entregas",
+    )
+    cliente = models.ForeignKey(
+        Cliente,
+        on_delete=models.SET_NULL,
+        related_name="entregas_campanha",
+        null=True,
+        blank=True,
+    )
+    canal = models.CharField(max_length=10, choices=Canal.choices, db_index=True)
+    nome_destinatario = models.CharField(max_length=120)
+    destino = models.CharField(max_length=254)
+    destino_chave = models.CharField(max_length=64, editable=False)
+    status = models.CharField(
+        max_length=12,
+        choices=Status.choices,
+        default=Status.PENDENTE,
+        db_index=True,
+    )
+    tentativas = models.PositiveSmallIntegerField(default=0)
+    proxima_tentativa_em = models.DateTimeField(null=True, blank=True, db_index=True)
+    processando_desde = models.DateTimeField(null=True, blank=True)
+    enviado_em = models.DateTimeField(null=True, blank=True)
+    erro = models.CharField(max_length=300, blank=True)
+
+    def save(self, *args, **kwargs):
+        if not self.destino_chave:
+            import hashlib
+
+            normalizado = (self.destino or "").strip().casefold()
+            self.destino_chave = hashlib.sha256(normalizado.encode("utf-8")).hexdigest()
+        super().save(*args, **kwargs)
+
+    class Meta:
+        verbose_name = "Entrega de campanha"
+        verbose_name_plural = "Entregas de campanhas"
+        ordering = ("canal", "nome_destinatario", "id")
+        constraints = [
+            models.UniqueConstraint(
+                fields=("campanha", "canal", "destino_chave"),
+                name="campanha_canal_destino_unico",
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=("canal", "status", "proxima_tentativa_em"),
+                name="entrega_fila_canal_idx",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.campanha} · {self.get_canal_display()} · {self.nome_destinatario}"

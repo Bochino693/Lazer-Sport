@@ -16,7 +16,17 @@ from __future__ import annotations
 from decimal import Decimal
 
 from django.core.paginator import Paginator
-from django.db.models import Count, Prefetch, Q
+from django.db.models import (
+    Count,
+    DecimalField,
+    ExpressionWrapper,
+    F,
+    Prefetch,
+    Q,
+    Sum,
+    Value,
+)
+from django.db.models.functions import Coalesce, Greatest
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.views.generic import View
@@ -57,10 +67,7 @@ class ClientesInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
                     "enderecos",
                     queryset=EnderecoCliente.objects.order_by("id"),
                 ),
-                Prefetch(
-                    "orcamentos",
-                    queryset=Orcamento.objects.prefetch_related("itens"),
-                ),
+                Prefetch("orcamentos", queryset=self._orcamentos_resumidos()),
             )
             .annotate(
                 clientes_do_buffet=Count("clientes_atendidos", distinct=True),
@@ -155,6 +162,33 @@ class ClientesInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
         return render(request, self.template_name, contexto)
 
     @staticmethod
+    def _orcamentos_resumidos():
+        """Uma linha agregada por proposta; não baixa cada item para a lista."""
+        dinheiro = DecimalField(max_digits=14, decimal_places=2)
+        linha = ExpressionWrapper(
+            F("itens__quantidade") * F("itens__valor_unitario"),
+            output_field=dinheiro,
+        )
+        return (
+            Orcamento.objects
+            .only("id", "cliente_id", "status", "criacao", "desconto", "frete")
+            .annotate(
+                _subtotal_calculado=Coalesce(
+                    Sum(linha), Value(ZERO), output_field=dinheiro
+                )
+            )
+            .annotate(
+                _total_calculado=Greatest(
+                    ExpressionWrapper(
+                        F("_subtotal_calculado") + F("frete") - F("desconto"),
+                        output_field=dinheiro,
+                    ),
+                    Value(ZERO),
+                )
+            )
+        )
+
+    @staticmethod
     def ficha(cliente: Cliente, origem: dict) -> dict:
         """O que a lista mostra de cada cliente, já somado.
 
@@ -178,7 +212,10 @@ class ClientesInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
             "orcamentos": len(orcamentos),
             "aprovados": len(aprovados),
             "abertos": len(abertos),
-            "total_aprovado": sum((o.total for o in aprovados), ZERO),
+            "total_aprovado": sum(
+                (getattr(o, "_total_calculado", ZERO) for o in aprovados),
+                ZERO,
+            ),
             "ultimo": max(
                 (o.criacao for o in orcamentos if o.criacao),
                 default=None,
@@ -196,6 +233,7 @@ class ClientesInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
             "tipo": cliente.tipo,
             "documento": cliente.documento,
             "telefone": cliente.telefone,
+            "canal_telefone": cliente.canal_telefone,
             "email": cliente.email or "",
             "parceiro": str(cliente.parceiro_id or ""),
             "estabelecimento": str(cliente.estabelecimento_id or ""),

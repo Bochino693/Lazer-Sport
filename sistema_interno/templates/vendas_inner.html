@@ -14,7 +14,7 @@
 <section class="ls-metrics">
   <article class="ls-metric-card blue">
     <div class="ls-metric-head"><span class="ls-metric-label">Registros encontrados</span><span class="ls-metric-icon"><i class="bi bi-receipt"></i></span></div>
-    <strong class="ls-metric-value">{{ vendas|length }}</strong>
+    <strong class="ls-metric-value">{{ total_registros }}</strong>
     <span class="ls-metric-note">Vendas disponíveis nesta central</span>
   </article>
 </section>
@@ -22,20 +22,20 @@
 <section class="ls-data-panel">
   <div class="ls-data-header"><div><h2>Registros de venda</h2><p>Origem, identificação e atualização dos registros comerciais.</p></div></div>
   <div class="ls-data-body">
-    <div class="table-responsive">
-      <table class="ls-table">
+    <div class="table-responsive ls-commercial-table-wrap">
+      <table class="ls-table ls-commercial-table">
         <thead><tr><th>ID</th><th>Origem</th><th>Registro</th><th>Atualização</th></tr></thead>
         <tbody>
           {% for venda in vendas %}
             <tr>
-              <td><strong>#{{ venda.id }}</strong></td>
-              <td>
+              <td data-rotulo="Nº"><strong>#{{ venda.id }}</strong></td>
+              <td data-rotulo="Origem">
                 {% if venda.origem == "site" %}<span class="ls-status info">Site</span>
                 {% elif venda.origem == "interno" %}<span class="ls-status success">Interno</span>
                 {% else %}<span class="ls-status neutral">{{ venda.origem|default:"—" }}</span>{% endif %}
               </td>
-              <td>{{ venda }}</td>
-              <td>{{ venda.atualizado|date:"d/m/Y H:i"|default:"—" }}</td>
+              <td data-rotulo="Registro">{{ venda }}</td>
+              <td data-rotulo="Data">{{ venda.atualizado|date:"d/m/Y H:i"|default:"—" }}</td>
             </tr>
           {% empty %}
             <tr><td colspan="4"><div class="ls-empty"><i class="bi bi-receipt"></i>Nenhuma venda registrada.</div></td></tr>
@@ -43,6 +43,7 @@
         </tbody>
       </table>
     </div>
+    {% include "includes/paginacao.html" with pagina=page_obj %}
   </div>
 </section>
 {% endblock %}

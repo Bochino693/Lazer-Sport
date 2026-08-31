@@ -748,12 +748,14 @@
                             src="{{ promo.imagem_promocao.url }}"
                             alt="{{ promo.descricao }}"
                             loading="lazy"
+                            decoding="async"
                         >
                     {% elif promo.brinquedos.imagem_brinquedo %}
                         <img
                             src="{{ promo.brinquedos.imagem_brinquedo.url }}"
                             alt="{{ promo.brinquedos.nome_brinquedo }}"
                             loading="lazy"
+                            decoding="async"
                         >
                     {% else %}
                         <div class="promo-placeholder" aria-hidden="true">🏷️</div>
@@ -774,6 +776,16 @@
                         R$ {{ promo.preco_promocao|floatformat:2 }}
                     </div>
                     <div class="promo-actions">
+                        <button
+                            class="ls-campaign-card-button"
+                            type="button"
+                            data-campanha-tipo="promocao"
+                            data-campanha-objeto="{{ promo.id }}"
+                            data-campanha-titulo="{{ promo.descricao|escape }}"
+                            {% if not promo.ativo %}disabled title="Ative a promoção para divulgar"{% endif %}
+                        >
+                            <i class="bi bi-megaphone-fill"></i> Divulgar aos clientes
+                        </button>
                         <button
                             class="promo-secondary-btn"
                             type="button"
@@ -801,7 +813,10 @@
             </div>
         {% endfor %}
     </section>
+    {% include "includes/paginacao.html" with pagina=pagina query_sem_pagina=query_sem_pagina %}
 </main>
+
+{% include "gestao/includes/campanha_modal.html" %}
 
 <div class="promo-modal" id="promotionModal" aria-hidden="true">
     <div class="promo-modal-backdrop" data-close-modal></div>

@@ -10,6 +10,50 @@
 
   var Painel = {};
 
+  function haModalVisivel() {
+    return Boolean(document.querySelector(".modal.show"));
+  }
+
+  function limparEstadoDoCorpo() {
+    if (haModalVisivel()) return;
+    document.querySelectorAll(".modal-backdrop").forEach(function (fundo) {
+      fundo.remove();
+    });
+    document.body.classList.remove("modal-open");
+    document.body.style.removeProperty("overflow");
+    document.body.style.removeProperty("padding-right");
+  }
+
+  Painel.limparModais = function (imediato) {
+    document.querySelectorAll(".modal").forEach(function (elemento) {
+      var instancia = global.bootstrap && global.bootstrap.Modal
+        ? global.bootstrap.Modal.getInstance(elemento)
+        : null;
+      if (instancia && !imediato) {
+        instancia.hide();
+        return;
+      }
+      if (instancia) instancia.dispose();
+      elemento.classList.remove("show");
+      elemento.style.display = "none";
+      elemento.setAttribute("aria-hidden", "true");
+      elemento.removeAttribute("aria-modal");
+      elemento.removeAttribute("role");
+    });
+    limparEstadoDoCorpo();
+  };
+
+  Painel.prepararNavegacao = function () {
+    Painel.fecharAcoesFlutuantes(false);
+    Painel.limparModais(true);
+  };
+
+  Painel.fecharAcoesFlutuantes = function (devolverFoco) {
+    if (Painel._acoesAbertas && Painel._acoesAbertas._lsFechar) {
+      Painel._acoesAbertas._lsFechar(Boolean(devolverFoco));
+    }
+  };
+
   Painel.modal = function (id) {
     var el = document.getElementById(id);
     if (!el) {
@@ -35,9 +79,25 @@
   };
 
   Painel.fechar = function (id) {
+    var elemento = document.getElementById(id);
     var m = Painel.modal(id);
     if (m) {
       m.hide();
+      /* CSS interrompido, navegação suave ou WebView antigo podem impedir
+       * o evento final do Bootstrap. O fallback fecha só a janela pedida e
+       * devolve o scroll; normalmente não faz nada porque hidden já chegou. */
+      global.setTimeout(function () {
+        if (!elemento || !elemento.classList.contains("show")) {
+          limparEstadoDoCorpo();
+          return;
+        }
+        elemento.classList.remove("show");
+        elemento.style.display = "none";
+        elemento.setAttribute("aria-hidden", "true");
+        elemento.removeAttribute("aria-modal");
+        elemento.dispatchEvent(new Event("hidden.bs.modal", { bubbles: true }));
+        limparEstadoDoCorpo();
+      }, 480);
     }
   };
 
@@ -84,6 +144,12 @@
     }
   };
 
+  document.addEventListener("hidden.bs.modal", function () {
+    global.setTimeout(limparEstadoDoCorpo, 0);
+  });
+
+  global.addEventListener("pageshow", limparEstadoDoCorpo);
+
   /* Máscaras do aplicativo interno.
    *
    * type="number" é bom para quantidade inteira, mas ruim para dinheiro
@@ -126,18 +192,27 @@
     },
 
     documento: function (valor) {
-      var numero = digitos(valor, 14);
-      if (numero.length <= 11) {
-        return numero
+      var documento = String(valor || "")
+        .toUpperCase()
+        .replace(/[^0-9A-Z]/g, "")
+        .slice(0, 14);
+      var ehCnpj = /[A-Z]/.test(documento) || documento.length > 11;
+      if (!ehCnpj) {
+        return documento
           .replace(/^(\d{3})(\d)/, "$1.$2")
           .replace(/^(\d{3})\.(\d{3})(\d)/, "$1.$2.$3")
           .replace(/\.(\d{3})(\d)/, ".$1-$2");
       }
-      return numero
-        .replace(/^(\d{2})(\d)/, "$1.$2")
-        .replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3")
-        .replace(/\.(\d{3})(\d)/, ".$1/$2")
-        .replace(/(\d{4})(\d)/, "$1-$2");
+      var base = documento.slice(0, 12);
+      var dv = documento.slice(12).replace(/\D/g, "");
+      var partes = [];
+      if (base.slice(0, 2)) partes.push(base.slice(0, 2));
+      var formatado = partes[0] || "";
+      if (base.length > 2) formatado += "." + base.slice(2, 5);
+      if (base.length > 5) formatado += "." + base.slice(5, 8);
+      if (base.length > 8) formatado += "/" + base.slice(8, 12);
+      if (dv) formatado += "-" + dv;
+      return formatado;
     },
 
     /* DINHEIRO SE DIGITA DA DIREITA PARA A ESQUERDA.
@@ -1270,12 +1345,211 @@
     });
   }
 
+  /* Um único botão por registro abre um painel flutuante. O painel usa
+     position:fixed e, por isso, não aumenta a altura da linha nem fica
+     recortado pelo scroll da tabela. Os nós originais (forms, CSRF e
+     listeners) são apenas reorganizados: nenhuma ação é clonada. */
+  Painel.organizarAcoesTabelas = function (raiz) {
+    var escopo = raiz || document;
+
+    /* Telas mais antigas já identificam a célula como `ls-actions`, mas
+       ainda não possuem o agrupador novo. Normalizamos esse contrato aqui
+       para que o ganho alcance a área interna inteira de forma gradual. */
+    escopo.querySelectorAll(".ls-actions, .ls-commercial-actions").forEach(function (celula) {
+      var grupoExistente = Array.prototype.find.call(celula.children, function (filho) {
+        return filho.classList.contains("ls-row-actions");
+      });
+      if (grupoExistente) return;
+      if (celula.querySelectorAll("a, button, form").length < 2) return;
+
+      if (celula.children.length === 1 && celula.firstElementChild) {
+        celula.firstElementChild.classList.add("ls-row-actions");
+        return;
+      }
+      var agrupador = document.createElement("div");
+      agrupador.className = "ls-row-actions";
+      while (celula.firstChild) agrupador.appendChild(celula.firstChild);
+      celula.appendChild(agrupador);
+    });
+
+    escopo.querySelectorAll(".ls-row-actions").forEach(function (grupo) {
+      if (grupo.dataset.lsActionsReady === "1") return;
+
+      var filhos = Array.prototype.filter.call(grupo.children, function (filho) {
+        return !filho.classList.contains("ls-action-fab");
+      });
+      if (filhos.length < 2) {
+        grupo.dataset.lsActionsReady = "1";
+        return;
+      }
+
+      Painel._sequenciaAcoes = (Painel._sequenciaAcoes || 0) + 1;
+      var instancia = String(Painel._sequenciaAcoes);
+      var envoltorio = document.createElement("div");
+      envoltorio.className = "ls-action-fab";
+
+      var gatilho = document.createElement("button");
+      gatilho.type = "button";
+      gatilho.className = "ls-action-fab-trigger";
+      gatilho.setAttribute("aria-label", "Abrir ações deste registro");
+      gatilho.setAttribute("aria-expanded", "false");
+      gatilho.setAttribute("aria-controls", "ls-action-menu-" + instancia);
+      gatilho.innerHTML = '<i class="bi bi-three-dots-vertical" aria-hidden="true"></i>';
+
+      var menu = document.createElement("div");
+      menu.id = "ls-action-menu-" + instancia;
+      menu.className = "ls-action-fab-menu";
+      menu.setAttribute("role", "menu");
+      menu.setAttribute("aria-hidden", "true");
+      menu.hidden = true;
+      menu.innerHTML = '<div class="ls-action-fab-head"><span>Ações</span><small>Escolha o que deseja fazer</small></div>';
+
+      function rotuloDaAcao(acao) {
+        var rotulo = acao.getAttribute("data-label") || acao.getAttribute("title") || acao.getAttribute("aria-label");
+        if (rotulo) return rotulo;
+        if (acao.matches("[data-editar], [data-editar-os]")) return "Editar";
+        if (acao.matches("[data-enviar], [data-enviar-os]")) return "Enviar";
+        if (acao.matches("[data-excluir], [data-excluir-os]")) return "Excluir";
+        return (acao.textContent || "Ação").trim() || "Ação";
+      }
+
+      filhos.forEach(function (filho) {
+        var acao = filho.matches("a,button") ? filho : filho.querySelector("a,button");
+        if (acao) {
+          var rotulo = rotuloDaAcao(acao);
+          acao.classList.add("ls-action-fab-item");
+          acao.setAttribute("role", "menuitem");
+          if (!acao.getAttribute("aria-label")) acao.setAttribute("aria-label", rotulo);
+          if (!acao.querySelector(".ls-action-label")) {
+            var spanExistente = Array.prototype.find.call(acao.children, function (no) {
+              return no.tagName === "SPAN" && !no.classList.contains("spinner-border");
+            });
+            if (spanExistente) {
+              spanExistente.classList.add("ls-action-label");
+            } else {
+              var textosDiretos = Array.prototype.filter.call(acao.childNodes, function (no) {
+                return no.nodeType === 3 && no.textContent.trim();
+              });
+              var texto = document.createElement("span");
+              texto.className = "ls-action-label";
+              texto.textContent = textosDiretos.length
+                ? textosDiretos.map(function (no) { return no.textContent.trim(); }).join(" ")
+                : rotulo;
+              textosDiretos.forEach(function (no) { no.remove(); });
+              acao.appendChild(texto);
+            }
+          }
+        }
+        menu.appendChild(filho);
+      });
+
+      function posicionar() {
+        if (!envoltorio.classList.contains("is-open")) return;
+        var ancora = gatilho.getBoundingClientRect();
+        var caixa = menu.getBoundingClientRect();
+        var margem = 10;
+        var esquerda = Math.min(
+          Math.max(margem, ancora.right - caixa.width),
+          global.innerWidth - caixa.width - margem
+        );
+        var topo = ancora.bottom + 8;
+        if (topo + caixa.height > global.innerHeight - margem) {
+          topo = Math.max(margem, ancora.top - caixa.height - 8);
+          menu.classList.add("abre-acima");
+        } else {
+          menu.classList.remove("abre-acima");
+        }
+        menu.style.left = Math.round(esquerda) + "px";
+        menu.style.top = Math.round(topo) + "px";
+      }
+
+      function fechar(devolverFoco) {
+        if (!envoltorio.classList.contains("is-open")) return;
+        envoltorio.classList.remove("is-open");
+        menu.classList.remove("is-open");
+        gatilho.setAttribute("aria-expanded", "false");
+        menu.setAttribute("aria-hidden", "true");
+        menu.hidden = true;
+        menu.style.removeProperty("left");
+        menu.style.removeProperty("top");
+        if (Painel._acoesAbertas === envoltorio) Painel._acoesAbertas = null;
+        if (devolverFoco) gatilho.focus({ preventScroll: true });
+      }
+
+      function abrir() {
+        if (Painel._acoesAbertas && Painel._acoesAbertas !== envoltorio) {
+          Painel._acoesAbertas._lsFechar(false);
+        }
+        /* O menu vive diretamente no body. Assim nenhum overflow, transform
+           ou contain da tabela consegue recortá-lo no PC, tablet ou celular. */
+        menu.hidden = false;
+        envoltorio.classList.add("is-open");
+        menu.classList.add("is-open");
+        gatilho.setAttribute("aria-expanded", "true");
+        menu.setAttribute("aria-hidden", "false");
+        Painel._acoesAbertas = envoltorio;
+        global.requestAnimationFrame(posicionar);
+      }
+
+      envoltorio._lsFechar = fechar;
+      envoltorio._lsPosicionar = posicionar;
+      envoltorio._lsMenu = menu;
+      gatilho.addEventListener("click", function () {
+        if (envoltorio.classList.contains("is-open")) fechar(false);
+        else abrir();
+      });
+      menu.addEventListener("click", function (evento) {
+        if (evento.target.closest("a, button")) fechar(false);
+      });
+      menu.addEventListener("keydown", function (evento) {
+        var itens = Array.prototype.slice.call(menu.querySelectorAll("a:not([disabled]),button:not([disabled])"));
+        var atual = itens.indexOf(document.activeElement);
+        if (evento.key === "Escape") {
+          evento.preventDefault();
+          fechar(true);
+        } else if (evento.key === "ArrowDown" && itens.length) {
+          evento.preventDefault();
+          itens[(atual + 1 + itens.length) % itens.length].focus();
+        } else if (evento.key === "ArrowUp" && itens.length) {
+          evento.preventDefault();
+          itens[(atual - 1 + itens.length) % itens.length].focus();
+        }
+      });
+
+      envoltorio.appendChild(gatilho);
+      grupo.appendChild(envoltorio);
+      document.body.appendChild(menu);
+      grupo.dataset.lsActionsReady = "1";
+    });
+
+    if (!Painel._acoesGlobaisLigadas) {
+      document.addEventListener("pointerdown", function (evento) {
+        var abertas = Painel._acoesAbertas;
+        var clicouNoMenu = abertas && abertas._lsMenu && abertas._lsMenu.contains(evento.target);
+        if (abertas && !abertas.contains(evento.target) && !clicouNoMenu) {
+          Painel._acoesAbertas._lsFechar(false);
+        }
+      });
+      document.addEventListener("keydown", function (evento) {
+        if (evento.key === "Escape" && Painel._acoesAbertas) Painel._acoesAbertas._lsFechar(true);
+      });
+      global.addEventListener("resize", function () {
+        if (Painel._acoesAbertas) Painel._acoesAbertas._lsPosicionar();
+      }, { passive: true });
+      document.addEventListener("scroll", function () {
+        if (Painel._acoesAbertas) Painel._acoesAbertas._lsPosicionar();
+      }, true);
+      Painel._acoesGlobaisLigadas = true;
+    }
+  };
+
   global.Painel = Painel;
   document.addEventListener("DOMContentLoaded", function () {
     ligarAvisosAoVivo();
     ligarAvisoNoCelular();
     Painel.aplicarMascaras(document);
     Painel.acomodarTextos(document);
+    Painel.organizarAcoesTabelas(document);
     ligarMedidaDeTela();
     document.querySelectorAll(".modal").forEach(normalizarJanela);
   });
@@ -1283,6 +1557,7 @@
   /* Janelas criadas depois (ou trocadas por JavaScript) entram no mesmo
      contrato no momento em que aparecem. */
   document.addEventListener("show.bs.modal", function (evento) {
+    Painel.fecharAcoesFlutuantes(false);
     normalizarJanela(evento.target);
     medirTela();
   });

@@ -1505,7 +1505,7 @@ class SobreView(View):
 
     def get(self, request):
         context = {
-            'brinquedos': Brinquedos.object.all()
+            'brinquedos': Brinquedos.objects.all()
         }
         return render(request, 'home_inner.html', context)
 
@@ -1646,6 +1646,7 @@ class ClienteAdminView(AdminOnlyMixin, View):
                 "nome_cliente": cliente.nome_cliente,
                 "tipo": cliente.tipo,
                 "telefone": cliente.telefone or "",
+                "canal_telefone": cliente.canal_telefone,
                 "email": cliente.email or "",
                 "cep": endereco.cep if endereco else "",
                 "endereco": endereco.endereco if endereco else "",
@@ -1820,9 +1821,14 @@ class PromocaoAdminView(AdminOnlyMixin, View):
 
     def get(self, request, *args, **kwargs):
         todas = Promocoes.objects.all()
+        pagina = Paginator(self.get_queryset(), 24).get_page(request.GET.get("page"))
+        query = request.GET.copy()
+        query.pop("page", None)
 
         context = {
-            "promocoes": self.get_queryset(),
+            "promocoes": pagina.object_list,
+            "pagina": pagina,
+            "query_sem_pagina": query.urlencode(),
             "brinquedos": (
                 Brinquedos.objects
                 .all()
@@ -1965,6 +1971,9 @@ class CupomAdminView(AdminOnlyMixin, View):
         )
         if busca:
             cupons = cupons.filter(codigo__icontains=busca)
+        pagina = Paginator(cupons, 24).get_page(request.GET.get("page"))
+        query = request.GET.copy()
+        query.pop("page", None)
 
         # Os três números do topo. A tela sempre os desenhou; a view nunca
         # os mandou, e o resultado eram três caixas de resumo vazias --
@@ -1975,7 +1984,9 @@ class CupomAdminView(AdminOnlyMixin, View):
         total_ativos = Cupom.objects.filter(ativo=True).count()
 
         return render(request, self.template_name, {
-            "cupons": cupons,
+            "cupons": pagina.object_list,
+            "pagina": pagina,
+            "query_sem_pagina": query.urlencode(),
             "busca": busca,
             "total_cupons": total_cupons,
             "total_ativos": total_ativos,
@@ -6147,9 +6158,14 @@ class ComboAdminView(AdminOnlyMixin, View):
 
     def get(self, request, *args, **kwargs):
         todos = Combos.objects.all()
+        pagina = Paginator(self.get_queryset(), 24).get_page(request.GET.get("page"))
+        query = request.GET.copy()
+        query.pop("page", None)
 
         context = {
-            "combos": self.get_queryset(),
+            "combos": pagina.object_list,
+            "pagina": pagina,
+            "query_sem_pagina": query.urlencode(),
             "brinquedos": (
                 Brinquedos.objects
                 .filter(ativo=True)

@@ -1641,7 +1641,7 @@ body.mnt-locked{overflow:hidden}
                             data-src="{{ img.imagem.url }}"
                             data-caption="{{ m.protocolo }} — foto {{ forloop.counter }}"
                             aria-label="Ampliar foto {{ forloop.counter }}">
-                        <img src="{{ img.imagem.url }}" alt="Foto da manutenção {{ m.protocolo }}" loading="lazy">
+                        <img src="{{ img.imagem.url }}" alt="Foto da manutenção {{ m.protocolo }}" loading="lazy" decoding="async">
                         {% if forloop.last and m.total_imagens > 3 %}
                         <span class="mnt-thumb-more">+{{ m.total_imagens|add:"-3" }}</span>
                         {% endif %}
@@ -1898,7 +1898,7 @@ body.mnt-locked{overflow:hidden}
                                         data-lightbox
                                         data-src="{{ img.imagem.url }}"
                                         data-caption="{{ m.protocolo }} — foto {{ forloop.counter }} de {{ m.total_imagens }}">
-                                    <img src="{{ img.imagem.url }}" alt="{{ m.protocolo }} — foto {{ forloop.counter }}" loading="lazy">
+                                    <img src="{{ img.imagem.url }}" alt="{{ m.protocolo }} — foto {{ forloop.counter }}" loading="lazy" decoding="async">
                                 </button>
                                 {% endfor %}
                             </div>

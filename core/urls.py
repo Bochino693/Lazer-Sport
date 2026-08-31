@@ -11,6 +11,7 @@ from .views_favoritos import (
 from .views_gestao_produtos import EngajamentoAdminView, PecaAdminView
 from .views_orcamento import orcamento_publico
 from .views_ordem_servico import ordem_servico_publica
+from sistema_interno.views_campanhas import CampanhaPublicaDestinoView, CampanhaPublicaView
 from .views_redirects import redirecionar_interno
 from .sitemaps import (
     PaginasEstaticasSitemap,
@@ -139,6 +140,16 @@ urlpatterns = [
     ),
     path("combo/<int:pk>", ComboInfoView.as_view(), name="combo"),
     path("promocao/<int:pk>", PromocaoInfoView.as_view(), name="promocao"),
+    path(
+        "divulgacao/<uuid:token>/",
+        CampanhaPublicaView.as_view(),
+        name="campanha_publica",
+    ),
+    path(
+        "divulgacao/<uuid:token>/visitar/",
+        CampanhaPublicaDestinoView.as_view(),
+        name="campanha_publica_destino",
+    ),
     path(
         "estabelecimentos/<int:pk>/",
         EstabelecimentoInfoView.as_view(),

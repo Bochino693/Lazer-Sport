@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="pt-BR">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;background:#f4f2ee;font-family:Arial,sans-serif;color:#1d2530">
+  <div style="max-width:640px;margin:0 auto;padding:24px 12px">
+    <div style="overflow:hidden;border:1px solid #e3ddd2;border-radius:22px;background:#fff;box-shadow:0 18px 48px rgba(19,29,45,.09)">
+      <div style="padding:26px 30px;background:linear-gradient(135deg,#071c4d,#123d84);color:#fff">
+        <div style="font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#9ed7ff">Lazer &amp; Sport</div>
+        <h1 style="margin:8px 0 0;font-size:26px;line-height:1.15">{{ campanha.titulo }}</h1>
+      </div>
+      {% if campanha.imagem_url %}
+        <img src="{{ campanha.imagem_url }}" alt="" style="width:100%;max-height:320px;display:block;object-fit:cover">
+      {% endif %}
+      <div style="padding:30px">
+        <p style="margin:0 0 12px;font-size:16px">Olá, <strong>{{ entrega.nome_destinatario }}</strong>!</p>
+        <p style="margin:0;color:#465263;font-size:16px;line-height:1.65">{{ campanha.mensagem }}</p>
+        {% if campanha.codigo_cupom %}
+          <div style="margin:22px 0;padding:16px;text-align:center;border:1px dashed #d49b32;border-radius:14px;background:#fff8e8">
+            <small style="display:block;color:#79633d;font-weight:700;text-transform:uppercase">Seu cupom</small>
+            <strong style="display:block;margin-top:4px;font-size:25px;letter-spacing:.08em;color:#9b6500">{{ campanha.codigo_cupom }}</strong>
+          </div>
+        {% endif %}
+        <p style="margin:24px 0 0;text-align:center">
+          <a href="{{ url_publica }}" style="display:inline-block;padding:14px 24px;border-radius:12px;background:#e3182d;color:#fff;text-decoration:none;font-weight:800">Ver oferta completa</a>
+        </p>
+      </div>
+      <div style="padding:20px 30px;border-top:1px solid #ece8e1;background:#faf9f7;color:#6d7580;font-size:12px;line-height:1.55">
+        <strong style="color:#1d2530">Fábrica de brinquedos Lazer Sport</strong><br>
+        CNPJ: 54.486.908/0001-86<br><br>
+        Você recebeu esta mensagem porque seu contato consta no cadastro comercial da Lazer &amp; Sport. Para não receber novas divulgações, responda solicitando a remoção.
+      </div>
+    </div>
+  </div>
+</body>
+</html>

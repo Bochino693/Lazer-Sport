@@ -9,9 +9,10 @@ por aqui.
 
 from __future__ import annotations
 
-import re
 from decimal import Decimal, InvalidOperation
 
+from django.core.exceptions import ValidationError
+from django.core.validators import validate_email
 from django.db.models import Q
 
 from core.models import Estabelecimentos
@@ -19,10 +20,17 @@ from core.utils import buscar_coordenadas_cep_rapido, buscar_dados_cep
 
 from .models import Cliente, EnderecoCliente
 from .utils import ErroDeFormulario, texto
+from .validacoes import (
+    chave_documento,
+    documento_valido,
+    somente_digitos,
+    telefone_valido,
+    tipo_documento,
+)
 
 
 def so_digitos(valor: str) -> str:
-    return re.sub(r"\D", "", valor or "")
+    return somente_digitos(valor)
 
 
 def normalizar_tipo(valor: str) -> str:
@@ -65,13 +73,58 @@ def salvar_cliente(request, cliente: Cliente | None = None) -> Cliente:
             "Informe ao menos um contato: telefone/WhatsApp ou e-mail."
         )
 
-    if telefone and len(so_digitos(telefone)) < 10:
+    if telefone and not telefone_valido(telefone):
         raise ErroDeFormulario(
             "Telefone incompleto: informe DDD e número, como (11) 99999-9999."
         )
 
-    if email and "@" not in email:
-        raise ErroDeFormulario("E-mail inválido.")
+    if email:
+        try:
+            validate_email(email)
+        except ValidationError as exc:
+            raise ErroDeFormulario("E-mail inválido.") from exc
+
+    documento = texto(request, "documento", limite=20)
+    if documento and not documento_valido(documento):
+        raise ErroDeFormulario(
+            f"{tipo_documento(documento)} inválido: confira os caracteres e "
+            "os dígitos verificadores."
+        )
+
+    chave = chave_documento(documento)
+    if chave:
+        mesmo_documento = Cliente.objects.filter(documento_chave=chave)
+        if not novo:
+            mesmo_documento = mesmo_documento.exclude(pk=cliente.pk)
+        if mesmo_documento.exists():
+            raise ErroDeFormulario(
+                "Este CPF/CNPJ já está ligado a outro cliente. Abra o cadastro "
+                "existente para não dividir o histórico."
+            )
+
+    canal_informado = "canal_telefone" in request.POST
+    canal = (request.POST.get("canal_telefone") or "").strip()
+    if canal not in Cliente.CanalTelefone.values:
+        canal = (
+            cliente.canal_telefone
+            if cliente.pk and cliente.canal_telefone in Cliente.CanalTelefone.values
+            # Aba antiga, aberta antes da atualização: o campo anterior se
+            # chamava explicitamente "Telefone / WhatsApp". Preservar essa
+            # leitura evita perder um cadastro no meio do atendimento.
+            else Cliente.CanalTelefone.WHATSAPP
+        )
+    if not canal_informado and telefone:
+        canal = Cliente.CanalTelefone.WHATSAPP
+    if not telefone:
+        canal = Cliente.CanalTelefone.NAO_CONFIRMADO
+    elif (
+        canal == Cliente.CanalTelefone.NAO_CONFIRMADO
+        and not marcado(request, "confirmar_telefone_sem_whatsapp")
+    ):
+        raise ErroDeFormulario(
+            "Confirme se este número tem WhatsApp. Se ainda não souber, marque "
+            "“salvar mesmo sem confirmar”; o sistema não o usará como WhatsApp."
+        )
 
     # Nome repetido quase sempre é a mesma pessoa cadastrada duas vezes,
     # e cada duplicata parte o histórico dela em dois.
@@ -86,9 +139,10 @@ def salvar_cliente(request, cliente: Cliente | None = None) -> Cliente:
 
     cliente.nome_cliente = nome
     cliente.telefone = telefone
+    cliente.canal_telefone = canal
     cliente.email = email
     cliente.tipo = normalizar_tipo(request.POST.get("tipo"))
-    cliente.documento = texto(request, "documento", limite=20)
+    cliente.documento = documento
     cliente.observacoes = texto(request, "observacoes")
 
     cliente.parceiro = _buffet_escolhido(request, cliente)
@@ -324,7 +378,13 @@ def opcao_de_busca(cliente: Cliente) -> dict:
             if cliente.tipo == Cliente.Tipo.BUFFET
             else "Clientes"
         ),
-        "whatsapp": cliente.telefone or "",
+        "whatsapp": (
+            cliente.telefone
+            if cliente.canal_telefone == Cliente.CanalTelefone.WHATSAPP
+            else ""
+        ),
+        "telefone": cliente.telefone or "",
+        "canal_telefone": cliente.canal_telefone,
         "email": cliente.email or "",
         "documento": cliente.documento or "",
         "tipo": cliente.tipo,

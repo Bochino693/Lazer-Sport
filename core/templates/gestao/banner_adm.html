@@ -490,7 +490,7 @@ button:disabled {
                 <div class="banner-wrapper">
                     <div class="banner-card">
                         {% if banner.imagem %}
-                            <img src="{{ banner.imagem.url }}" alt="Banner">
+                            <img src="{{ banner.imagem.url }}" alt="Banner" loading="lazy" decoding="async">
                         {% else %}
                             <div class="no-image">Sem imagem</div>
                         {% endif %}

@@ -6,7 +6,7 @@
 (function (window, document) {
   "use strict";
 
-  var PREFIXO = "ls:nav:v1:";
+  var PREFIXO = "ls:nav:v2:";
   var INDICE = PREFIXO + "index";
   var ENTRADA = PREFIXO + "entrada";
   var LIMITE = 7;
@@ -15,6 +15,9 @@
   var emVoo = new Map();
   var navegacao = 0;
   var prefetchTimer = null;
+  var prefetchsExecutados = 0;
+  var LIMITE_PREFETCH = 2;
+  var TIMEOUT_REDE = 12000;
 
   function urlSegura(valor) {
     try {
@@ -93,32 +96,72 @@
     removerChave(INDICE);
   }
 
-  function buscar(url) {
-    var id = url.href;
-    if (emVoo.has(id)) return emVoo.get(id);
+  function esperar(ms) {
+    return new Promise(function (resolver) { window.setTimeout(resolver, ms); });
+  }
 
-    var pedido = window.fetch(id, {
+  function podeTentarNovamente(status) {
+    return status === 408 || status === 429 || status === 502 || status === 503 || status === 504;
+  }
+
+  function requisitar(url, tentativa) {
+    var controlador = "AbortController" in window ? new AbortController() : null;
+    var timer = controlador ? window.setTimeout(function () { controlador.abort(); }, TIMEOUT_REDE) : null;
+
+    return window.fetch(url.href, {
       method: "GET",
       credentials: "same-origin",
       headers: { "X-Requested-With": "LS-Soft-Navigation" },
-      cache: "default"
+      cache: "default",
+      signal: controlador ? controlador.signal : undefined
     }).then(function (resposta) {
+      if (tentativa === 0 && podeTentarNovamente(resposta.status)) {
+        return esperar(420).then(function () { return requisitar(url, 1); });
+      }
+
       var tipo = resposta.headers.get("content-type") || "";
       if (!resposta.ok || tipo.indexOf("text/html") === -1) {
-        throw new Error("Resposta incompatível com navegação suave.");
+        var erro = new Error("Resposta incompatível com navegação suave.");
+        erro.status = resposta.status;
+        throw erro;
       }
 
       var finalUrl = urlSegura(resposta.url);
       if (!finalUrl) throw new Error("A navegação saiu do painel.");
 
+      var controleCache = (resposta.headers.get("cache-control") || "").toLowerCase();
+      var cachePermitido = controleCache.indexOf("no-store") === -1
+        && resposta.headers.get("x-ls-no-store") !== "1";
       return resposta.text().then(function (html) {
-        if (finalUrl.pathname.indexOf("/login/inner/") === -1) {
+        if (cachePermitido && finalUrl.pathname.indexOf("/login/inner/") === -1) {
           guardar(finalUrl, html);
-          if (finalUrl.href !== url.href) guardar(url, html);
+          if (
+            finalUrl.href !== url.href
+            && finalUrl.searchParams.get("recuperado") !== "pagina"
+          ) guardar(url, html);
         }
         return { html: html, url: finalUrl };
       });
+    }).catch(function (erro) {
+      if (
+        tentativa === 0
+        && !erro.lsTentativaFinal
+        && (!erro.status || podeTentarNovamente(erro.status))
+      ) {
+        return esperar(420).then(function () { return requisitar(url, 1); });
+      }
+      if (tentativa > 0) erro.lsTentativaFinal = true;
+      throw erro;
     }).finally(function () {
+      if (timer) window.clearTimeout(timer);
+    });
+  }
+
+  function buscar(url) {
+    var id = url.href;
+    if (emVoo.has(id)) return emVoo.get(id);
+
+    var pedido = requisitar(url, 0).finally(function () {
       emVoo.delete(id);
     });
 
@@ -132,6 +175,33 @@
     }
   }
 
+  function esconderLoader() {
+    if (window.LSLoader && window.LSLoader.hide) window.LSLoader.hide();
+  }
+
+  function mostrarFalha(url) {
+    esconderLoader();
+    var anterior = document.getElementById("lsNavRecovery");
+    if (anterior) anterior.remove();
+
+    var painel = document.createElement("div");
+    painel.id = "lsNavRecovery";
+    painel.className = "ls-nav-recovery";
+    painel.setAttribute("role", "alert");
+    painel.innerHTML = (
+      '<div><strong>A conexão oscilou</strong>' +
+      '<span>A tela atual foi preservada e nada foi reenviado.</span></div>' +
+      '<button type="button" data-retry> tentar novamente</button>' +
+      '<button type="button" data-close aria-label="Fechar aviso">×</button>'
+    );
+    painel.querySelector("[data-retry]").addEventListener("click", function () {
+      painel.remove();
+      navegar(url, "push");
+    });
+    painel.querySelector("[data-close]").addEventListener("click", function () { painel.remove(); });
+    document.body.appendChild(painel);
+  }
+
   function trocarDocumento(html, url, modoHistorico) {
     try {
       window.sessionStorage.setItem(ENTRADA, "1");
@@ -143,6 +213,9 @@
       window.history.replaceState({ lsSoftNavigation: true }, "", url.href);
     }
 
+    if (window.Painel && window.Painel.prepararNavegacao) {
+      window.Painel.prepararNavegacao();
+    }
     document.open();
     document.write(html);
     document.close();
@@ -169,7 +242,7 @@
       trocarDocumento(resultado.html, resultado.url, modoHistorico || "push");
     }).catch(function () {
       if (minhaNavegacao !== navegacao) return;
-      window.location.assign(alvo.href);
+      mostrarFalha(alvo);
     });
   }
 
@@ -221,12 +294,17 @@
   });
 
   function agendarPrefetch(link, evento) {
+    if (document.querySelector(".modal.show")) return;
+    if (document.visibilityState !== "visible" || prefetchsExecutados >= LIMITE_PREFETCH) return;
+    var conexao = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+    if (conexao && (conexao.saveData || /(^|-)2g$/.test(conexao.effectiveType || ""))) return;
     var url = linkNavegavel(link, evento);
     if (!url || recuperar(url) || emVoo.has(url.href)) return;
     window.clearTimeout(prefetchTimer);
     prefetchTimer = window.setTimeout(function () {
+      prefetchsExecutados += 1;
       buscar(url).catch(function () {});
-    }, 140);
+    }, 360);
   }
 
   document.addEventListener("pointerover", function (evento) {
@@ -258,4 +336,3 @@
     go: function (url) { navegar(url, "push"); }
   };
 })(window, document);
-
