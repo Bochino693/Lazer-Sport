@@ -108,7 +108,6 @@
 
     var lista = document.createElement("div");
     lista.className = "ls-busca-lista";
-    painel.appendChild(lista);
 
     var rodape = null;
     if (config.criar) {
@@ -119,6 +118,10 @@
         '<i class="bi bi-plus-circle"></i><span></span>';
       painel.appendChild(rodape);
     }
+    /* Cadastrar é uma saída imediata quando a busca não encontra o que a
+       pessoa quer. No rodapé ele ficava escondido depois de dezenas de
+       clientes ou brinquedos; no topo aparece antes dos resultados. */
+    painel.appendChild(lista);
 
     raiz.appendChild(guardado);
     raiz.appendChild(campo);

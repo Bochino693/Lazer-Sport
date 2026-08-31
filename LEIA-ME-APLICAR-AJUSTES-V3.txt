@@ -1,0 +1,80 @@
+LAZER & SPORT — AJUSTES V3
+========================================
+
+Este ZIP é cumulativo. Ele contém os ajustes anteriores de Orçamentos,
+Ordens de Serviço, navegação e Render, além dos refinamentos de orçamento
+desta entrega.
+
+COMO APLICAR
+------------
+1. Faça uma cópia de segurança da pasta atual do projeto.
+2. Extraia este ZIP.
+3. Copie todo o conteúdo extraído para a RAIZ do projeto Lazer-Sport.
+4. Quando o Windows perguntar, confirme "Substituir os arquivos no destino".
+5. Não apague a pasta .git, o arquivo .env, o banco local nem a pasta media.
+
+DEPOIS DE SOBREPOR
+------------------
+Abra o terminal na raiz do projeto e execute, com o ambiente virtual ativo:
+
+python manage.py migrate
+python manage.py collectstatic --noinput
+python manage.py check
+
+Depois envie ao GitHub normalmente. O Render deve iniciar um novo deploy.
+
+NO PAINEL DO RENDER
+-------------------
+No serviço WEB, confira uma vez:
+
+- Runtime: Python 3
+- Health Check Path: /healthz/
+- Start Command: vazio para usar o Procfile, ou igual à linha web do Procfile
+
+Não altere as variáveis SECRET_KEY e SUPABASE_DATABASE_URL.
+
+NOVOS REFINAMENTOS DE ORÇAMENTO
+-------------------------------
+- "Enviar orçamento" agora publica e devolve imediatamente o link copiável.
+- O WhatsApp continua usando a mesma mensagem e o mesmo link público.
+- "Cadastrar cliente" aparece antes dos resultados da busca.
+- "Cadastrar brinquedo" e os demais cadastros de item também aparecem no topo.
+- O filtro "Todos" mostra somente as versões atuais.
+- Propostas substituídas ficam somente no filtro "Versões anteriores".
+- Os cards de filtro atualizam o conteúdo sem criar query na URL visível.
+- A coluna e os cartões usam o rótulo "ID", sem a cerquilha (#).
+- No tablet, os cartões usam três colunas centralizadas e alinhadas.
+- No celular, os cartões mantêm duas colunas e os blocos largos ocupam a linha.
+- No computador, a tabela usa a largura disponível sem corte horizontal.
+- O campo de busca fica centralizado e aproveita melhor a largura no tablet.
+- A edição de proposta aprovada mostra Total, Já recebido e Falta receber.
+- O pagamento pode ser aberto de dentro do próprio orçamento.
+- Proposta quitada mostra "Pago" e não oferece outra ação de pagamento.
+- Os valores recebidos continuam alimentando o resumo financeiro existente.
+
+AJUSTES CUMULATIVOS MANTIDOS
+----------------------------
+- Lista de O.S. usa toda a largura no computador.
+- Tablet recebe cards de O.S. alinhados; celular recebe duas colunas.
+- O menu fecha ao tocar na rota e também ao concluir a troca de tela.
+- A navegação suave tem fallback para a navegação normal.
+- Orçamento e O.S. usam impressão A4 compacta.
+- Falha ao gerar QR Pix não derruba a prévia da O.S.
+- Render usa Gunicorn ajustado, health check e Python fixado.
+- Frete e desconto da O.S. permanecem abaixo dos itens.
+- Refazer orçamento cria uma nova proposta e preserva a anterior.
+- O.S. paga não mostra ação de registrar pagamento novamente.
+
+SE APARECER 502 NOVAMENTE
+-------------------------
+Consulte docs/RENDER_502.md. Procure nos Logs do Render pelo Rndr-Id mostrado
+na página de erro. Se /system/ e /healthz/ caírem juntos, é o processo do
+serviço, e não uma rota específica de Orçamento ou O.S.
+
+VALIDAÇÃO REALIZADA
+-------------------
+- 374 testes do sistema interno: OK
+- 72 testes direcionados de orçamento/situação: OK
+- python manage.py check: OK
+- makemigrations --check --dry-run: nenhuma migração ausente
+- git diff --check: OK

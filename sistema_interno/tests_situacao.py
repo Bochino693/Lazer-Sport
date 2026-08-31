@@ -106,6 +106,21 @@ class AcoesConformeASituacaoTests(TestCase):
         self.assertFalse(orcamento.pode_enviar)
         self.assertFalse(orcamento.pode_refazer)
 
+    def test_todos_mostra_somente_versao_atual(self):
+        anterior = self.proposta(status=Orcamento.Status.SUBSTITUIDO)
+        atual = self.proposta(status=Orcamento.Status.RASCUNHO)
+
+        todos = self.lista()
+        self.assertNotIn(f'data-registro="{anterior.pk}"', todos)
+        self.assertIn(f'data-registro="{atual.pk}"', todos)
+
+        historico = self.client.get(
+            "/orcamentos/", {"filtro": "substituidos"},
+            HTTP_HOST="interno.testserver",
+        ).content.decode()
+        self.assertIn(f'data-registro="{anterior.pk}"', historico)
+        self.assertNotIn(f'data-registro="{atual.pk}"', historico)
+
     def test_quitada_nao_e_refeita(self):
         """Refazer substitui a atual -- e o dinheiro entrou contra ela."""
         self.proposta(status=Orcamento.Status.APROVADO, pago="500.00")
@@ -136,6 +151,19 @@ class AcoesConformeASituacaoTests(TestCase):
         aprovada = Orcamento.objects.get()
         self.assertTrue(aprovada.pode_receber_pagamento)
         self.assertIn(self.botao_pagamento(aprovada), self.lista())
+
+    def test_edicao_do_orcamento_traz_resumo_e_abertura_do_pagamento(self):
+        aprovada = self.proposta(
+            status=Orcamento.Status.APROVADO, pago="200.00",
+        )
+
+        html = self.lista()
+        self.assertIn('id="orcamentoPagamentoResumo"', html)
+        self.assertIn('id="abrirPagamentoOrcamento"', html)
+        self.assertIn('"pode_receber_pagamento": true', html)
+        self.assertIn('"valor_pago": "200,00"', html)
+        self.assertIn('"saldo_pagamento": "300,00"', html)
+        self.assertIn(f'"id": {aprovada.pk}', html)
 
     def test_parcial_convida_a_completar(self):
         self.proposta(status=Orcamento.Status.APROVADO, pago="200.00")
@@ -201,6 +229,48 @@ class QuadroDePagamentoTests(TestCase):
                 texto = (raiz / nome).read_text(encoding="utf-8")
                 self.assertNotIn("alert-light", texto)
                 self.assertIn("ls-pagamento-quadro", texto)
+
+
+class RefinamentosDaListaDeOrcamentosTests(TestCase):
+    def test_id_substitui_a_cerquilha(self):
+        from pathlib import Path
+
+        texto = (
+            Path(__file__).resolve().parent / "templates" / "orcamentos_inner.html"
+        ).read_text(encoding="utf-8")
+        self.assertIn("<th>ID</th>", texto)
+        self.assertIn('data-rotulo="ID"', texto)
+        self.assertNotIn("<th>#</th>", texto)
+
+    def test_filtro_atualiza_a_lista_sem_alterar_a_url_visivel(self):
+        from pathlib import Path
+
+        raiz = Path(__file__).resolve().parent
+        tela = (raiz / "templates" / "orcamentos_inner.html").read_text(encoding="utf-8")
+        navegacao = (raiz / "static" / "interno" / "ls-soft-navigation.js").read_text(encoding="utf-8")
+        self.assertIn("data-orcamento-filtro", tela)
+        self.assertIn("LSNavigation.silent(card.href)", tela)
+        self.assertIn('silent: function (url) { navegar(url, "none"); }', navegacao)
+
+    def test_cadastrar_fica_antes_da_lista_de_resultados(self):
+        from pathlib import Path
+
+        busca = (
+            Path(__file__).resolve().parent / "static" / "interno" / "ls-busca.js"
+        ).read_text(encoding="utf-8")
+        criar = busca.index("painel.appendChild(rodape)")
+        resultados = busca.index("painel.appendChild(lista)")
+        self.assertLess(criar, resultados)
+
+    def test_tablet_usa_grade_centralizada_de_tres_colunas(self):
+        from pathlib import Path
+
+        css = (
+            Path(__file__).resolve().parent / "static" / "interno" / "interno_modern.css"
+        ).read_text(encoding="utf-8")
+        self.assertIn("ORÇAMENTOS — LARGURA ÚTIL NO PC", css)
+        self.assertIn(".ls-orcamentos-table tbody{max-width:860px;margin-inline:auto}", css)
+        self.assertIn("grid-template-columns:repeat(3,minmax(0,1fr))!important", css)
 
 
 class OrdemDeLeituraDoModalTests(TestCase):

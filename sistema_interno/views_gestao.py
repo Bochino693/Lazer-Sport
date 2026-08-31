@@ -247,6 +247,9 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
 
         return com_total.aggregate(
             quantidade=Count("pk", distinct=True),
+            quantidade_atual=Count(
+                "pk", filter=~substituido, distinct=True,
+            ),
             total_aprovado=Coalesce(Sum("_total", filter=aprovado), zero),
             total_em_aberto=Coalesce(Sum("_total", filter=em_aberto), zero),
             quantidade_aprovado=Count("pk", filter=aprovado, distinct=True),
@@ -356,7 +359,10 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
         resumo_cards = self.resumo_do_filtro(orcamentos)
 
         filtros_cards = {
-            "todos": Q(),
+            # "Todos" mostra as propostas vigentes. Versões substituídas
+            # continuam disponíveis, mas somente no filtro dedicado; misturar
+            # as duas fazia a mesma negociação parecer vários orçamentos.
+            "todos": ~Q(status=Orcamento.Status.SUBSTITUIDO),
             "rascunhos": Q(status=Orcamento.Status.RASCUNHO),
             "aguardando": Q(status=Orcamento.Status.AGUARDANDO_RESPOSTA),
             "negociacao": Q(status=Orcamento.Status.EM_NEGOCIACAO),
@@ -467,7 +473,7 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
             "busca": busca,
             "filtro_ativo": filtro_card,
             "cards": (
-                ("todos", "Todos", resumo_cards["quantidade"], "bi-grid"),
+                ("todos", "Todos", resumo_cards["quantidade_atual"], "bi-grid"),
                 ("rascunhos", "Rascunhos", resumo_cards["quantidade_rascunho"], "bi-pencil-square"),
                 ("aguardando", "Aguardando resposta", resumo_cards["quantidade_aguardando"], "bi-hourglass-split"),
                 ("negociacao", "Em negociação", resumo_cards["quantidade_negociacao"], "bi-arrow-repeat"),
@@ -568,6 +574,9 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
             "motivo_negociacao": orcamento.motivo_negociacao,
             "status_pagamento": orcamento.status_pagamento,
             "valor_pago": f"{orcamento.valor_pago:.2f}".replace(".", ","),
+            "saldo_pagamento": f"{orcamento.saldo_pagamento:.2f}".replace(".", ","),
+            "total": f"{orcamento.total:.2f}".replace(".", ","),
+            "pode_receber_pagamento": orcamento.pode_receber_pagamento,
             "origem": orcamento.origem,
             "origem_rotulo": orcamento.get_origem_display(),
             "bloco_comercial": OrcamentosInnerView.serializar_avaliacao(
@@ -1254,18 +1263,16 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
         if canal not in ("preparar", "link", "whatsapp", "email"):
             raise ErroDeFormulario("Escolha WhatsApp, e-mail ou copiar link.")
 
-        # ABRIR A JANELA NÃO CRIA O LINK; ENVIAR CRIA.
-        #
-        # "preparar" é só abrir a janela para conferir -- não muda status
-        # nem histórico, de propósito. Enquanto a proposta é rascunho, a
-        # página do cliente responde 404, e era esse endereço que a janela
-        # mostrava no botão "Abrir página pública": quem conferia antes de
-        # mandar levava uma página de erro e concluía que o sistema tinha
-        # quebrado.
-        #
-        # Nos canais que enviam de verdade o link vale, porque o envio
-        # tira a proposta do rascunho antes de responder.
-        link_visivel = link if (canal != "preparar" or orcamento.publicado) else ""
+        # O toque em "Enviar orçamento" precisa entregar um link que já
+        # funcione. Antes, `preparar` devolvia uma string vazia para rascunho:
+        # a janela abria, mas copiar era impossível. Publicar aqui tira a
+        # proposta do rascunho sem inventar um envio por WhatsApp/e-mail; o
+        # histórico de canal continua sendo registrado somente quando a
+        # pessoa realmente escolhe um deles.
+        if canal == "preparar":
+            orcamento.marcar_enviado()
+
+        link_visivel = link
         mensagem = self.mensagem_da_proposta(orcamento, link)
 
         extras = {
@@ -1286,10 +1293,9 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
             ),
         }
 
-        # Abrir o modal é somente consultar a proposta. A versão anterior
-        # registrava um "envio por link" e mudava o orçamento para enviado
-        # só porque o operador abriu a janela — antes de copiar ou mandar
-        # qualquer coisa. Preparar agora não altera status nem histórico.
+        # Preparar publica o endereço, mas não registra um canal de envio:
+        # abrir a janela não significa que WhatsApp, e-mail ou cópia foram
+        # realmente usados.
         if canal == "preparar":
             extras["envios"] = self.historico_de_envio(orcamento)
             extras["email_configurado"] = smtp_configurado()

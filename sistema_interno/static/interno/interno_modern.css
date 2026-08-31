@@ -2661,6 +2661,7 @@ a.ls-metric-card.active{border-color:var(--metric);box-shadow:0 0 0 2px rgba(242
 .ls-commercial-table tbody tr{transition:background .16s ease}
 .ls-commercial-table td[data-rotulo="Nº"],
 .ls-commercial-table td[data-rotulo="OS"],
+.ls-commercial-table td[data-rotulo="ID"],
 .ls-commercial-table td[data-rotulo="Valor"],
 .ls-commercial-table td[data-rotulo="Total"],
 .ls-commercial-table td[data-rotulo="Situação"],
@@ -2883,6 +2884,132 @@ body.modal-open .ls-action-fab-menu{display:none!important}
   .ls-os-tabela tbody td[data-rotulo="Cliente / equipamento"],
   .ls-os-tabela tbody td[data-rotulo="Situação"],
   .ls-os-tabela tbody td[data-rotulo="Pagamento"]{grid-column:1/-1}
+}
+
+/* ======================================================================
+   ORÇAMENTOS — LARGURA ÚTIL NO PC E CARDS EQUILIBRADOS NO TABLET
+
+   A lista genérica jogava o cliente numa linha inteira e deixava quase
+   todos os outros campos presos à esquerda. Aqui cada faixa tem uma
+   grade própria: tabela completa no computador, três colunas centradas
+   no tablet e duas no telefone.
+   ====================================================================== */
+@media (min-width:901px){
+  .ls-orcamentos-body .table-responsive{overflow-x:visible!important}
+  .ls-orcamentos-table{
+    min-width:0!important;width:100%!important;table-layout:fixed!important;
+  }
+  .ls-orcamentos-table th,.ls-orcamentos-table td{padding-inline:5px!important}
+  .ls-orcamentos-table th:nth-child(1){width:6%}
+  .ls-orcamentos-table th:nth-child(2){width:18%}
+  .ls-orcamentos-table th:nth-child(3){width:10%}
+  .ls-orcamentos-table th:nth-child(4){width:6%}
+  .ls-orcamentos-table th:nth-child(5){width:10%}
+  .ls-orcamentos-table th:nth-child(6){width:12%}
+  .ls-orcamentos-table th:nth-child(7){width:8%}
+  .ls-orcamentos-table th:nth-child(8){width:10%}
+  .ls-orcamentos-table th:nth-child(9){width:14%}
+  .ls-orcamentos-table th:nth-child(10){width:58px}
+  .ls-orcamentos-table td{white-space:normal!important;overflow-wrap:anywhere!important}
+  .ls-orcamentos-table td[data-rotulo="Total"]{white-space:nowrap!important}
+  .ls-orcamentos-table td[data-rotulo="Cliente"] .material-nome{
+    display:block;white-space:normal;overflow:visible;text-overflow:clip;
+  }
+}
+
+@media (min-width:601px) and (max-width:900px){
+  .ls-orcamentos-body .ls-data-header{
+    align-items:center!important;text-align:center!important;
+  }
+  .ls-orcamentos-body .ls-data-header>div{width:100%}
+  .ls-orcamentos-body .ls-budget-search{
+    width:min(100%,640px)!important;margin-inline:auto!important;
+  }
+  .ls-orcamentos-body .ls-commercial-table-wrap,
+  .ls-orcamentos-body .table-responsive{overflow:visible!important}
+  .ls-orcamentos-table,.ls-orcamentos-table tbody{
+    display:block!important;width:100%!important;min-width:0!important;
+  }
+  .ls-orcamentos-table thead{display:none!important}
+  .ls-orcamentos-table tbody{max-width:860px;margin-inline:auto}
+  .ls-orcamentos-table tbody tr{
+    position:relative;display:grid!important;
+    grid-template-columns:repeat(3,minmax(0,1fr))!important;
+    gap:0 16px!important;width:100%;margin:0 0 13px!important;
+    padding:15px 64px 13px 15px!important;
+    border:1px solid rgba(242,169,59,.24)!important;border-radius:18px!important;
+    background:linear-gradient(145deg,rgba(62,47,26,.64),#19150f 72%)!important;
+  }
+  .ls-orcamentos-table tbody td{
+    display:block!important;min-width:0!important;max-width:none!important;
+    padding:9px 3px!important;border:0!important;
+    border-bottom:1px solid var(--line-soft)!important;
+    text-align:center!important;white-space:normal!important;background:transparent!important;
+  }
+  .ls-orcamentos-table tbody td::before{
+    content:attr(data-rotulo);display:block;margin-bottom:5px;
+    color:#f1bd69;font-size:.65rem;font-weight:950;
+    letter-spacing:.08em;line-height:1.2;text-align:center;text-transform:uppercase;
+  }
+  .ls-orcamentos-table tbody td[data-rotulo="Cliente"]{grid-column:2/4!important}
+  .ls-orcamentos-table tbody td[data-rotulo="Revisão dos blocos"]{grid-column:1/-1!important}
+  .ls-orcamentos-table tbody td[data-rotulo="Ações"]{
+    position:absolute!important;top:12px;right:12px;z-index:4;
+    width:40px!important;min-width:40px!important;padding:0!important;
+    border:0!important;background:transparent!important;box-shadow:none!important;
+  }
+  .ls-orcamentos-table tbody td[data-rotulo="Ações"]::before{display:none;content:""}
+  .ls-orcamentos-table .ls-origin-badge{justify-content:center;margin-inline:auto}
+  .ls-orcamentos-table .ls-block-review{justify-content:center}
+  .ls-orcamentos-table .material-nome{display:block;text-align:center}
+}
+
+@media (max-width:600px){
+  .ls-orcamentos-body .ls-data-header{text-align:center!important}
+  .ls-orcamentos-body .ls-data-header>div,
+  .ls-orcamentos-body .ls-budget-search{width:100%!important;margin-inline:auto!important}
+  .ls-orcamentos-table tbody td{text-align:center!important}
+  .ls-orcamentos-table tbody td::before{text-align:center}
+  .ls-orcamentos-table tbody td[data-rotulo="Revisão dos blocos"]{grid-column:1/-1}
+  .ls-orcamentos-table .ls-origin-badge{justify-content:center;margin-inline:auto}
+  .ls-orcamentos-table .ls-block-review{justify-content:center}
+}
+
+/* A ação de cadastrar fica antes dos resultados de cliente/brinquedo. */
+.ls-busca-criar{margin:0 0 6px!important}
+
+/* Resumo de pagamento dentro da edição da proposta. */
+.ls-orcamento-pagamento{
+  margin-top:16px;padding:15px;
+  border:1px solid rgba(61,217,192,.28);border-radius:15px;
+  background:linear-gradient(145deg,rgba(31,98,82,.18),rgba(29,24,17,.82));
+}
+.ls-orcamento-pagamento[hidden]{display:none!important}
+.ls-orcamento-pagamento-titulo{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;
+}
+.ls-orcamento-pagamento-titulo span{color:#f8ead2;font-weight:900}
+.ls-orcamento-pagamento-titulo i{margin-right:6px;color:#69dfbb}
+.ls-orcamento-pagamento-titulo>strong{
+  padding:5px 9px;border-radius:999px;color:#ffd17c;background:rgba(242,169,59,.13);
+  font-size:.72rem;text-transform:uppercase;
+}
+.ls-orcamento-pagamento-valores{
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin-bottom:12px;
+}
+.ls-orcamento-pagamento-valores>div{
+  padding:10px;border:1px solid rgba(255,255,255,.08);border-radius:11px;
+  background:rgba(0,0,0,.16);text-align:center;
+}
+.ls-orcamento-pagamento-valores span{display:block;color:#c7b99f;font-size:.68rem;font-weight:800}
+.ls-orcamento-pagamento-valores strong{display:block;margin-top:3px;color:#fff4df;font-size:.95rem}
+.ls-orcamento-pagamento.quitado{border-color:rgba(61,217,192,.5)}
+.ls-orcamento-pagamento.quitado .ls-orcamento-pagamento-titulo>strong{
+  color:#8ff2d2;background:rgba(61,217,192,.13);
+}
+@media(max-width:520px){
+  .ls-orcamento-pagamento-valores{grid-template-columns:1fr}
+  .ls-orcamento-pagamento .btn{width:100%}
 }
 
 /* O RECADO DO FILTRO INSTANTÂNEO.

@@ -714,6 +714,10 @@
 
   window.LSNavigation = {
     clear: limpar,
-    go: function (url) { navegar(url, "push"); }
+    go: function (url) { navegar(url, "push"); },
+    /* Atualiza somente o conteúdo. Filtros instantâneos não precisam
+       transformar cada escolha em outra URL visível ou outra etapa do
+       botão Voltar. */
+    silent: function (url) { navegar(url, "none"); }
   };
 })(window, document);

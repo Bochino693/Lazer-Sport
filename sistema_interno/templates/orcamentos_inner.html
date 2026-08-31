@@ -28,6 +28,7 @@
   {% for chave, rotulo, quantidade, icone in cards %}
     <a class="ls-metric-card ls-budget-filter-card {% if chave == 'aprovados' or chave == 'pagos' %}green{% elif chave == 'recusados' or chave == 'expirados' %}red{% elif chave == 'negociacao' or chave == 'substituidos' %}violet{% elif chave == 'aguardando' or chave == 'a_receber' %}yellow{% else %}blue{% endif %} {% if filtro_ativo == chave %}active{% endif %}"
        href="?filtro={{ chave }}{% if busca %}&q={{ busca|urlencode }}{% endif %}"
+       data-orcamento-filtro="{{ chave }}"
        aria-current="{% if filtro_ativo == chave %}page{% else %}false{% endif %}">
       <div class="ls-metric-head">
         <span class="ls-metric-label">{{ rotulo }}</span>
@@ -81,7 +82,7 @@
       <table class="ls-table ls-commercial-table ls-orcamentos-table">
         <thead>
           <tr>
-            <th>#</th>
+            <th>ID</th>
             <th>Cliente</th>
             <th>Origem</th>
             <th class="text-end">Itens</th>
@@ -96,7 +97,7 @@
         <tbody>
           {% for orcamento in orcamentos %}
             <tr data-registro="{{ orcamento.id }}">
-              <td data-rotulo="#">
+              <td data-rotulo="ID">
                 <span class="ls-number">{{ orcamento.id }}</span>
                 <span class="material-sub d-block">versão {{ orcamento.versao }}</span>
               </td>
@@ -262,7 +263,7 @@
                 {% if pode_editar_financeiro and orcamento.pode_receber_pagamento %}
                 <button type="button" class="btn btn-sm btn-outline-success"
                         data-pagamento="{{ orcamento.id }}" data-total="{{ orcamento.total }}"
-                        data-pago="{{ orcamento.valor_pago }}" data-nome="#{{ orcamento.id }} — {{ orcamento.destinatario }}"
+                        data-pago="{{ orcamento.valor_pago }}" data-nome="Orçamento ID {{ orcamento.id }} — {{ orcamento.destinatario }}"
                         title="Registrar o total recebido até agora">
                   <i class="bi bi-cash-coin"></i><span class="ls-action-label">{% if orcamento.status_pagamento == 'parcial' %}Completar pagamento{% else %}Registrar pagamento{% endif %}</span>
                 </button>
@@ -284,21 +285,21 @@
                 {% endcomment %}
                 {% if pode_editar_comercial and not orcamento.ordem_servico %}<button type="button" class="btn btn-sm btn-outline-secondary"
                         data-situacao="{{ orcamento.id }}"
-                        data-nome="#{{ orcamento.id }} — {{ orcamento.destinatario }}"
+                        data-nome="Orçamento ID {{ orcamento.id }} — {{ orcamento.destinatario }}"
                         data-status="{{ orcamento.status }}"
                         aria-label="Alterar situação do orçamento {{ orcamento.id }}" title="Alterar situação">
                   <i class="bi bi-flag"></i><span class="ls-action-label">Situação</span>
                 </button>{% endif %}
                 {% if pode_avaliar_blocos %}<button type="button" class="btn btn-sm btn-outline-warning"
                         data-avaliar="{{ orcamento.id }}"
-                        data-nome="#{{ orcamento.id }} — {{ orcamento.destinatario }}"
+                        data-nome="Orçamento ID {{ orcamento.id }} — {{ orcamento.destinatario }}"
                         aria-label="Avaliar blocos do orçamento {{ orcamento.id }}" title="Avaliar blocos">
                   <i class="bi bi-clipboard-check"></i><span class="ls-action-label">Avaliar</span>
                 </button>{% endif %}
                 {% if orcamento.pode_excluir %}
                 <button type="button" class="btn btn-sm btn-outline-danger"
                         data-excluir="{{ orcamento.id }}"
-                        data-nome="Orçamento #{{ orcamento.id }} — {{ orcamento.destinatario }}"
+                        data-nome="Orçamento ID {{ orcamento.id }} — {{ orcamento.destinatario }}"
                         {% if orcamento.protegida %}data-protegido="1"
                         data-protegido-motivo="Esta proposta está como {{ orcamento.get_status_display|lower }} e faz parte do histórico comercial. Você pode excluir mesmo assim, e a exclusão vai ficar registrada com o seu nome."{% endif %}
                         aria-label="Excluir orçamento {{ orcamento.id }}"
@@ -565,6 +566,31 @@
           <div><span>Desconto</span><strong id="resumoDesconto">− R$ 0,00</strong></div>
           <div class="ls-orcamento-final"><span>Total do orçamento</span><strong id="resumoTotal">R$ 0,00</strong></div>
         </div>
+
+        {% comment %}
+          O PAGAMENTO TAMBÉM PRECISA ESTAR NO PRÓPRIO ORÇAMENTO.
+
+          A ação já existia na lista, escondida dentro do menu de três
+          pontos. Aqui a proposta aprovada mostra imediatamente quanto já
+          entrou e quanto falta; o botão abre a mesma rotina financeira,
+          sem criar uma segunda fonte de valores.
+        {% endcomment %}
+        <section class="ls-orcamento-pagamento" id="orcamentoPagamentoResumo" hidden
+                 aria-label="Pagamento do orçamento" aria-live="polite">
+          <div class="ls-orcamento-pagamento-titulo">
+            <span><i class="bi bi-cash-coin" aria-hidden="true"></i> Pagamento da proposta</span>
+            <strong id="orcamentoPagamentoSituacao">Pendente</strong>
+          </div>
+          <div class="ls-orcamento-pagamento-valores">
+            <div><span>Total</span><strong id="orcamentoPagamentoTotal">R$ 0,00</strong></div>
+            <div><span>Já recebido</span><strong id="orcamentoPagamentoRecebido">R$ 0,00</strong></div>
+            <div><span>Falta receber</span><strong id="orcamentoPagamentoFalta">R$ 0,00</strong></div>
+          </div>
+          <button type="button" class="btn btn-outline-success" id="abrirPagamentoOrcamento">
+            <i class="bi bi-wallet2 me-1" aria-hidden="true"></i>
+            <span id="abrirPagamentoOrcamentoTexto">Registrar pagamento</span>
+          </button>
+        </section>
 
         <div class="mt-3">
           <label class="form-label" for="orcamentoObs">Observações</label>
@@ -1161,6 +1187,23 @@ LSTela.pronto(function () {
   var podeEditarComercial = {{ pode_editar_comercial|yesno:"true,false" }};
   var podeEditarFinanceiro = {{ pode_editar_financeiro|yesno:"true,false" }};
   var endpointEnvio = "{% url 'orcamentos_inner' %}";
+  var orcamentoEmEdicao = null;
+
+  /* Os cards filtram o conteúdo sem transformar cada toque em outra URL.
+     O href permanece como saída acessível quando o JavaScript não está
+     disponível. */
+  document.querySelectorAll("[data-orcamento-filtro]").forEach(function (card) {
+    card.addEventListener("click", function (evento) {
+      if (
+        evento.button !== 0 || evento.metaKey || evento.ctrlKey
+        || evento.shiftKey || evento.altKey
+      ) return;
+      if (!window.LSNavigation || !window.LSNavigation.silent) return;
+      evento.preventDefault();
+      evento.stopPropagation();
+      window.LSNavigation.silent(card.href);
+    });
+  });
 
   /* Datas de validade trabalham no calendário local do aparelho. Usar
      toISOString aqui empurrava a data um dia para trás em alguns fusos --
@@ -1720,6 +1763,38 @@ LSTela.pronto(function () {
     } else {
       explicacao.textContent = "";
     }
+
+    atualizarPagamentoDoOrcamento();
+  }
+
+  function atualizarPagamentoDoOrcamento() {
+    var painel = document.getElementById("orcamentoPagamentoResumo");
+    if (!painel) return;
+
+    var orcamento = orcamentoEmEdicao;
+    var mostrar = Boolean(
+      podeEditarFinanceiro && orcamento && orcamento.status === "aprovado"
+    );
+    painel.hidden = !mostrar;
+    if (!mostrar) return;
+
+    var total = paraNumero(orcamento.total || "0");
+    var recebido = paraNumero(orcamento.valor_pago || "0");
+    var falta = Math.max(total - recebido, 0);
+    var quitado = orcamento.status_pagamento === "pago" || (total > 0 && recebido >= total);
+    var parcial = recebido > 0 && !quitado;
+
+    document.getElementById("orcamentoPagamentoTotal").textContent = moeda(total);
+    document.getElementById("orcamentoPagamentoRecebido").textContent = moeda(recebido);
+    document.getElementById("orcamentoPagamentoFalta").textContent = quitado ? "Quitado" : moeda(falta);
+    document.getElementById("orcamentoPagamentoSituacao").textContent = quitado
+      ? "Pago" : parcial ? "Parcial" : "Pendente";
+    painel.classList.toggle("quitado", quitado);
+
+    var botao = document.getElementById("abrirPagamentoOrcamento");
+    botao.hidden = !orcamento.pode_receber_pagamento;
+    document.getElementById("abrirPagamentoOrcamentoTexto").textContent = parcial
+      ? "Completar pagamento" : "Registrar pagamento";
   }
 
   /* ------------------------------------------------------------------
@@ -1749,6 +1824,7 @@ LSTela.pronto(function () {
   function abrir(id) {
     var form = document.getElementById("formOrcamento");
     var orcamento = id ? achar(id) : null;
+    orcamentoEmEdicao = orcamento;
 
     form.reset();
     corpo.innerHTML = "";
@@ -1759,7 +1835,7 @@ LSTela.pronto(function () {
     Painel.valor("orcamentoId", orcamento ? orcamento.id : "");
 
     document.getElementById("orcamentoTitulo").textContent = orcamento
-      ? "Orçamento #" + orcamento.id + " · versão " + orcamento.versao
+      ? "Orçamento ID " + orcamento.id + " · versão " + orcamento.versao
       : "Novo orçamento";
     mostrarOrigem(orcamento);
 
@@ -1950,6 +2026,16 @@ LSTela.pronto(function () {
      ------------------------------------------------------------------ */
   var pagamentoTotalAtual = 0;
 
+  function prepararPagamento(id, nome, total, pago) {
+    Painel.erro("pagamentoErro", "");
+    Painel.valor("pagamentoId", id);
+    Painel.valor("pagamentoValor", pago || "0");
+    Painel.valor("pagamentoObservacao", "");
+    document.getElementById("pagamentoNome").textContent = nome;
+    pagamentoTotalAtual = paraNumero(total || "0");
+    desenharQuadroDePagamento();
+  }
+
   function desenharQuadroDePagamento() {
     var recebido = paraNumero(document.getElementById("pagamentoValor").value || "0");
     var falta = Math.max(pagamentoTotalAtual - recebido, 0);
@@ -1979,15 +2065,24 @@ LSTela.pronto(function () {
 
   document.querySelectorAll("[data-pagamento]").forEach(function (botao) {
     botao.addEventListener("click", function () {
-      Painel.erro("pagamentoErro", "");
-      Painel.valor("pagamentoId", botao.dataset.pagamento);
-      Painel.valor("pagamentoValor", botao.dataset.pago || "0");
-      Painel.valor("pagamentoObservacao", "");
-      document.getElementById("pagamentoNome").textContent = botao.dataset.nome;
-      pagamentoTotalAtual = paraNumero(botao.dataset.total || "0");
-      desenharQuadroDePagamento();
+      prepararPagamento(
+        botao.dataset.pagamento, botao.dataset.nome,
+        botao.dataset.total, botao.dataset.pago
+      );
       Painel.abrir("modalPagamento");
     });
+  });
+
+  document.getElementById("abrirPagamentoOrcamento")?.addEventListener("click", function () {
+    var orcamento = orcamentoEmEdicao;
+    if (!orcamento || !orcamento.pode_receber_pagamento) return;
+    prepararPagamento(
+      orcamento.id,
+      "Orçamento ID " + orcamento.id + " — " + (orcamento.nome_cliente || "cliente"),
+      orcamento.total,
+      orcamento.valor_pago
+    );
+    Painel.abrirFilho("modalPagamento", "modalOrcamento");
   });
   Painel.ligar({ form: "formPagamento", erro: "pagamentoErro" });
 

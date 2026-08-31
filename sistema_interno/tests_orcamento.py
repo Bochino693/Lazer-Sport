@@ -909,8 +909,8 @@ class OrcamentoInternoTests(TestCase):
             "A prévia interna tem de continuar à mão: é ela que abre rascunho.",
         )
 
-    def test_abrir_a_janela_de_envio_nao_inventa_link_para_rascunho(self):
-        """`preparar` só abre a janela -- não publica nada, então não há link."""
+    def test_abrir_envio_publica_e_devolve_link_copiavel(self):
+        """O botão Enviar precisa abrir a janela com um link que funcione."""
         rascunho = self._orcamento_com_item()
 
         resposta = self.post({
@@ -919,10 +919,14 @@ class OrcamentoInternoTests(TestCase):
 
         self.assertEqual(resposta.status_code, 200)
         dados = resposta.json()
-        self.assertEqual(dados["link"], "")
+        self.assertIn(rascunho.token, dados["link"])
         self.assertIn(f"/orcamentos/{rascunho.pk}/previa/", dados["preview_url"])
         rascunho.refresh_from_db()
-        self.assertEqual(rascunho.status, Orcamento.Status.RASCUNHO)
+        self.assertEqual(rascunho.status, Orcamento.Status.AGUARDANDO_RESPOSTA)
+        self.assertTrue(rascunho.enviado_em)
+        # Preparar cria o endereço, mas não finge que WhatsApp, e-mail ou
+        # cópia foram usados antes da escolha do operador.
+        self.assertFalse(rascunho.envios.exists())
 
     def test_depois_de_enviada_o_link_aparece(self):
         enviada = self._orcamento_com_item()
