@@ -888,6 +888,64 @@ textarea.form-control{min-height:100px!important}
 .ls-budget-search{width:min(100%,390px)}
 
 /* ======================================================================
+   PAGAMENTO — O QUADRO QUE DIZ QUANTO FALTA
+
+   As duas janelas de pagamento (orçamento e O.S.) mostravam o resumo
+   dentro de um `alert alert-light` do Bootstrap: fundo branco, dentro de
+   um painel escuro. Não era descuido de cor -- era uma classe do
+   Bootstrap que o tema da casa nunca cobriu, e o "total a pagar", que é
+   o número mais importante da janela, saía branco no branco.
+
+   O que se lê aqui é sempre a mesma pergunta, e nesta ordem: quanto é o
+   total, quanto já entrou, quanto FALTA. O que falta é o maior e o
+   colorido, porque é o que decide se a conversa com o cliente termina
+   hoje. Quitado, o quadro inteiro vira verde e o que falta some -- não há
+   por que mostrar "R$ 0,00 restantes".
+   ====================================================================== */
+.ls-pagamento-quadro{
+  margin-bottom:16px;padding:15px 16px;
+  border:1px solid var(--line);border-radius:15px;
+  background:linear-gradient(180deg,var(--panel-2),var(--panel-soft));
+}
+.ls-pagamento-linhas{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+.ls-pagamento-linhas>div{min-width:0;display:flex;flex-direction:column;gap:2px}
+.ls-pagamento-linhas span{color:var(--muted);font-size:.68rem;font-weight:800;letter-spacing:.02em}
+.ls-pagamento-linhas strong{color:var(--text);font-size:.98rem;font-variant-numeric:tabular-nums}
+.ls-pagamento-falta{
+  margin-top:12px;padding-top:12px;border-top:1px solid var(--line-soft);
+  display:flex;align-items:baseline;justify-content:space-between;gap:12px;
+}
+.ls-pagamento-falta span{color:var(--muted);font-size:.74rem;font-weight:800}
+.ls-pagamento-falta strong{
+  color:#FFC94D;font-size:1.5rem;letter-spacing:-.02em;
+  font-variant-numeric:tabular-nums;white-space:nowrap;
+}
+.ls-pagamento-quadro.quitado{
+  border-color:rgba(95,214,138,.34);
+  background:linear-gradient(180deg,rgba(95,214,138,.11),rgba(43,36,27,.6));
+}
+.ls-pagamento-quadro.quitado .ls-pagamento-falta strong{color:#8FE9B6;font-size:1.15rem}
+@media(max-width:430px){
+  .ls-pagamento-linhas{grid-template-columns:1fr}
+  .ls-pagamento-falta{align-items:flex-start;flex-direction:column;gap:2px}
+}
+
+/* Atalhos de valor: no balcão o caso comum é "recebi tudo". Digitar o
+   total à mão para dizer isso é trabalho que o botão faz melhor -- e sem
+   errar um dígito. */
+.ls-pagamento-atalhos{display:flex;gap:7px;flex-wrap:wrap;margin:9px 0 3px}
+.ls-pagamento-atalhos .ls-chip{cursor:pointer}
+
+/* A etiqueta de quitado na lista. Some do meio das outras situações: o
+   visto e o verde dizem antes de a pessoa ler. */
+.ls-pago{
+  display:inline-flex;align-items:center;gap:6px;padding:5px 10px;
+  border:1px solid rgba(95,214,138,.32);border-radius:999px;
+  background:rgba(95,214,138,.12);color:#8FE9B6;
+  font-size:.7rem;font-weight:900;white-space:nowrap;
+}
+
+/* ======================================================================
    HISTÓRICO DO CLIENTE
 
    Três telas respondiam pedaços da mesma pergunta ("o que já fizemos

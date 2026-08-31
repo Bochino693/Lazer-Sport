@@ -1666,6 +1666,69 @@ class Orcamento(Prime):
         return self.status != self.Status.RASCUNHO
 
     @property
+    def pode_enviar(self):
+        """Ainda faz sentido mandar (ou remandar) esta proposta ao cliente?
+
+        VENCIDA NÃO GERA MAIS LINK. O link leva a uma página que anuncia
+        "proposta expirada": mandar isso ao cliente é pior do que não
+        mandar nada -- e a equipe fazia, porque o botão continuava lá
+        igual ao das propostas vivas. Para uma proposta que passou do
+        prazo o caminho é `Refazer`, que cria a versão nova com o preço
+        de hoje.
+
+        Substituída e respondida também saem: a primeira foi trocada por
+        outra versão, e a segunda o cliente já respondeu -- reenviar
+        pediria uma decisão que já foi tomada.
+        """
+        if self.vencido:
+            return False
+        return self.status in (
+            self.Status.RASCUNHO,
+            self.Status.AGUARDANDO_RESPOSTA,
+            self.Status.EM_NEGOCIACAO,
+        )
+
+    @property
+    def pode_receber_pagamento(self):
+        """Falta dinheiro a registrar nesta proposta?
+
+        Proposta quitada não mostra "Pagamento". O botão continuava ali
+        depois de paga, e apertar abria uma janela pedindo um valor que
+        já estava lá -- a leitura era "será que não registrou?". Quitada,
+        o que a tela tem de fazer é DIZER que está quitada.
+        """
+        return (
+            self.status == self.Status.APROVADO
+            and self.status_pagamento != self.StatusPagamento.PAGO
+        )
+
+    @property
+    def quitado(self):
+        return self.status_pagamento == self.StatusPagamento.PAGO
+
+    @property
+    def pode_refazer(self):
+        """Vale criar uma versão nova a partir desta?
+
+        Só o que já saiu do rascunho e ainda não foi substituído. É o
+        caminho da proposta vencida, da recusada e da que voltou para
+        negociação.
+
+        A QUITADA FICA DE FORA. Refazer marca a atual como substituída,
+        e substituir um documento contra o qual o dinheiro já entrou é
+        apagar o papel que justifica o valor recebido. Se o cliente quer
+        outra coisa depois de pagar, isso é uma proposta nova -- não uma
+        versão desta.
+        """
+        return (
+            self.pk
+            and not self.pode_editar
+            and not self.quitado
+            and self.status != self.Status.SUBSTITUIDO
+            and not hasattr(self, "orcamento_refeito")
+        )
+
+    @property
     def dias_para_vencer(self):
         """Quantos dias faltam para a validade. Negativo já passou.
 

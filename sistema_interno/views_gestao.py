@@ -993,6 +993,16 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
                 "Esta proposta já originou uma O.S. e não pode ganhar outra "
                 "versão. Os dois históricos permanecem congelados e separados."
             )
+        if anterior.quitado:
+            # Refazer marca a atual como SUBSTITUIDO. Contra esta aqui o
+            # dinheiro já entrou: substituí-la apagaria o documento que
+            # explica o valor recebido. Quem quer outra coisa depois de
+            # pagar está pedindo uma proposta nova, não outra versão.
+            raise ErroDeFormulario(
+                "Esta proposta já está paga e não ganha outra versão: "
+                "o pagamento recebido precisa continuar apontando para "
+                "ela. Para o que vier depois, abra uma proposta nova."
+            )
         if hasattr(anterior, "orcamento_refeito"):
             nova = anterior.orcamento_refeito
             return self.sucesso(
@@ -1075,48 +1085,33 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
         )
 
     def acao_gerar_ordem_servico(self, request):
-        """Libera a execução somente a partir da proposta aprovada."""
-        if not capacidades(request.user)["ordens_servico"]:
-            return self.erro(request, "Você não tem acesso às ordens de serviço.", status=403)
-        orcamento = self._orcamento_do_usuario(request, request.POST.get("id"))
-        if orcamento.status != Orcamento.Status.APROVADO:
-            raise ErroDeFormulario(
-                "A Ordem de Serviço só pode ser gerada após a aprovação definitiva."
-            )
-        if hasattr(orcamento, "ordem_servico"):
-            ordem = orcamento.ordem_servico
-        else:
-            with transaction.atomic():
-                ordem = OrdemServico.objects.create(
-                    orcamento=orcamento,
-                    cliente=orcamento.cliente,
-                    nome_cliente=orcamento.nome_cliente,
-                    contato=orcamento.contato,
-                    whatsapp_cliente=orcamento.whatsapp_destinatario,
-                    email_cliente=orcamento.email_destinatario,
-                    tipo=OrdemServico.Tipo.INSTALACAO,
-                    equipamento=", ".join(
-                        item.descricao for item in orcamento.itens.all()[:4]
-                    )[:180] or "Serviço conforme proposta",
-                    forma_pagamento=orcamento.forma_pagamento,
-                    responsavel=request.user,
-                )
-                ItemOrdemServico.objects.bulk_create([
-                    ItemOrdemServico(
-                        ordem=ordem,
-                        tipo=ItemOrdemServico.Tipo.OUTRO,
-                        descricao=item.descricao,
-                        quantidade=Decimal(item.quantidade),
-                        valor_unitario=item.valor_unitario,
-                    )
-                    for item in orcamento.itens.all()
-                ])
-        return self.sucesso(
+        """Não gera mais -- e diz onde a O.S. nasce agora.
+
+        POR QUE SAIU. A O.S. criada a partir da proposta nascia pela
+        metade: tipo "instalação" chutado, equipamento montado colando a
+        descrição dos quatro primeiros itens, sem defeito relatado, sem
+        técnico e sem agenda. Alguém tinha de abrir e refazer tudo -- e
+        quem não abria deixava esse documento seguir para o cliente.
+
+        Orçamento é negociação; O.S. é execução. Elas se encontram no
+        cliente, não no botão: a O.S. nasce onde tem contexto, que é o
+        chamado de manutenção (equipamento, defeito e endereço já
+        preenchidos) ou a abertura direta.
+
+        A ação continua existindo, e responde. Sumir dela devolveria
+        "ação desconhecida" para quem tivesse a tela velha aberta numa
+        aba -- e "ação desconhecida" não ensina nada.
+        """
+        return self.erro(
             request,
-            f"{ordem.numero_documento} pronta para completar e enviar.",
-            id=ordem.pk,
-            url=reverse("ordens_servico_inner", urlconf="sistema_interno.urls")
-            + f"?q={ordem.pk}",
+            (
+                "A Ordem de Serviço não é mais gerada a partir do "
+                "orçamento: ela nascia sem equipamento, sem defeito e sem "
+                "agenda, e alguém tinha de refazer tudo. Abra a O.S. pelo "
+                "chamado de manutenção, que já traz esses dados, ou crie "
+                "uma nova em Ordens de Serviço."
+            ),
+            status=400,
         )
 
     def acao_avaliar_bloco(self, request):
