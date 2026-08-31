@@ -176,6 +176,19 @@
     document.addEventListener("click", function (evento) {
         var link = evento.target.closest ? evento.target.closest("a[href]") : null;
         if (!link) return;
+
+        /* Quem já tratou o clique não vai trocar de página, e a barra
+           ficaria correndo por cima de uma tela que continua ali.
+           
+           O comentário acima sempre disse que era para ser assim -- os
+           ouvintes ficam na bolha justamente para enxergar o
+           preventDefault de quem trata por fetch --, mas a conferência
+           existia só no envio de formulário, não no clique. Resultado: no
+           painel interno, onde a troca de tela é por fetch, a barra
+           aparecia e sumia a cada clique. Era a "sensação de
+           carregamento" numa troca que não carrega nada. */
+        if (evento.defaultPrevented) return;
+
         if (!ehNavegacaoInterna(link, evento)) return;
 
         agendar(link.dataset.loaderMsg || "Carregando a página…");

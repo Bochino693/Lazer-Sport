@@ -1,62 +1,102 @@
-{% extends "base_error.html" %}
-{% load static %}
+{% comment %}
+  PÁGINA DE 404 QUE NÃO PODE FALHAR.
 
+  Esta página existia e nunca apareceu para ninguém. Ela estendia
+  `base_error.html`, que usa `{% static %}` sem ter carregado a
+  biblioteca -- erro de template, que estoura na hora de desenhar. O
+  `erro_404` engolia a exceção e devolvia o texto de emergência: um <h1>
+  preto no branco, sem estilo e sem saída, escrito para nunca acontecer.
+  Era o que o cliente via ao abrir um link de proposta vencida.
 
-{% block title %}404 - Página não encontrada{% endblock %}
+  A lição está no formato desta página agora: ela não depende de NADA.
+  Sem `extends`, sem `{% static %}`, sem folha de estilo externa, sem
+  imagem. Só HTML e CSS escritos aqui dentro. Uma página de erro que
+  precisa que outra coisa funcione é uma página de erro que falha
+  justamente quando é chamada.
 
-{% block content %}
-
+  Os dois botões existem porque quem chega aqui vem de dois lugares
+  diferentes: um cliente com o link de uma proposta, e alguém da equipe
+  com um endereço antigo do painel.
+{% endcomment %}<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#13100B">
+<title>Página não encontrada | Lazer &amp; Sport</title>
 <style>
-    .container-404 {
-    text-align: center;
-    padding: 80px 20px;
-}
-
-.container-404 img {
-    max-width: 240px;
-    margin-bottom: 24px;
-}
-
-.container-404 h1 {
-    font-size: 72px;
-    color: var(--cor-primaria);
-}
-
-.container-404 p {
-    color: var(--cor-texto);
-    margin-bottom: 24px;
-}
-
-.btn-voltar {
-    padding: 12px 24px;
-    background-color: var(--cor-primaria);
-    color: #fff;
-    text-decoration: none;
-    border-radius: 6px;
-}
-
-.btn-voltar:hover {
-    opacity: 0.9;
-}
-
-
-
+  :root{color-scheme:dark}
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;display:grid;place-items:center;padding:24px;
+    background:#13100B;color:#FCF8F1;
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+    line-height:1.55;
+  }
+  .caixa{
+    width:min(560px,100%);padding:34px 30px;text-align:center;
+    border:1px solid #3F3527;border-radius:22px;background:#1E1913;
+    box-shadow:0 24px 70px rgba(0,0,0,.42);
+  }
+  .marca{
+    width:56px;height:56px;margin:0 auto 18px;display:grid;place-items:center;
+    border-radius:17px;background:linear-gradient(135deg,#F2A93B,#D98E22);
+    color:#211605;font-size:1.6rem;font-weight:900;
+  }
+  h1{margin:0;font-size:1.35rem;letter-spacing:-.02em}
+  .codigo{
+    display:inline-block;margin-bottom:12px;padding:4px 11px;border-radius:999px;
+    background:rgba(242,169,59,.13);color:#F2A93B;
+    font-size:.68rem;font-weight:900;letter-spacing:.12em;
+  }
+  p{margin:12px auto 0;max-width:44ch;color:#B3A38C;font-size:.92rem}
+  .motivos{
+    margin:20px 0 0;padding:14px 16px;text-align:left;
+    border-left:3px solid #3F3527;border-radius:0 12px 12px 0;
+    background:#181410;color:#B3A38C;font-size:.84rem;
+  }
+  .motivos strong{display:block;margin-bottom:6px;color:#E7DDCB;font-size:.78rem}
+  .motivos ul{margin:0;padding-left:18px}
+  .motivos li+li{margin-top:4px}
+  .acoes{margin-top:22px;display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+  a.botao{
+    min-height:46px;padding:0 20px;display:inline-flex;align-items:center;
+    border-radius:13px;text-decoration:none;font-size:.86rem;font-weight:800;
+  }
+  a.principal{background:linear-gradient(135deg,#F2A93B,#D98E22);color:#211605}
+  a.secundario{border:1px solid #3F3527;color:#E7DDCB}
+  a.botao:hover{opacity:.9}
+  @media(max-width:420px){
+    .caixa{padding:26px 20px}
+    .acoes{flex-direction:column}
+    a.botao{justify-content:center}
+  }
 </style>
+</head>
+<body>
+<main class="caixa">
+  <div class="marca" aria-hidden="true">LS</div>
+  <span class="codigo">ERRO 404</span>
+  <h1>Esta página não está aqui</h1>
+  <p>O endereço não existe, mudou de lugar, ou o documento que ele abria
+     ainda não foi liberado.</p>
 
+  <div class="motivos">
+    <strong>O que costuma ser</strong>
+    <ul>
+      <li>O link de uma proposta ou ordem de serviço que ainda não foi
+          enviada — ela só abre depois que a equipe libera.</li>
+      <li>Um endereço antigo, de antes de a página mudar de lugar.</li>
+      <li>Um pedaço do link que se perdeu ao copiar e colar.</li>
+    </ul>
+  </div>
 
-<div class="container-404">
-    <!-- 🖼️ Imagem estática do mascote -->
-    <img src="{% static 'img/mascote.png' %}" alt="Mascote do site">
-
-    <h1>404</h1>
-
-    <p>
-        A pesquisa não foi sucedida.<br>
-        Não encontramos o que você estava procurando.
-    </p>
-
-    <a href="/" class="btn-voltar">
-        Voltar para a página inicial
-    </a>
-</div>
-{% endblock %}
+  <div class="acoes">
+    <a class="botao principal" href="/">Ir para o site</a>
+    <a class="botao secundario" href="https://wa.me/5511960563135">Falar com a gente</a>
+  </div>
+</main>
+</body>
+</html>

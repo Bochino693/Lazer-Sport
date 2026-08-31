@@ -8,7 +8,6 @@
 
   var PREFIXO = "ls:nav:v2:";
   var INDICE = PREFIXO + "index";
-  var ENTRADA = PREFIXO + "entrada";
   var LIMITE = 7;
   var TTL_TELA = 90000;
   var TTL_FILTRO = 30000;
@@ -16,7 +15,7 @@
   var navegacao = 0;
   var prefetchTimer = null;
   var prefetchsExecutados = 0;
-  var LIMITE_PREFETCH = 2;
+  var LIMITE_PREFETCH = 6;
   var TIMEOUT_REDE = 12000;
 
   function urlSegura(valor) {
@@ -169,13 +168,46 @@
     return pedido;
   }
 
+  /* ======================================================================
+     A BARRA DE CARREGAMENTO SÓ APARECE SE HOUVER ESPERA DE VERDADE.
+
+     Ela aparecia a cada clique. Como a troca de tela normalmente termina
+     em pouco mais de cem milissegundos, o que se via era um risco
+     atravessando o topo e sumindo -- e é isso que dá a sensação de
+     "carregando" numa troca que, para o usuário, deveria ser só a tela
+     nova aparecendo.
+
+     Diferente de uma navegação de verdade, aqui NADA se perde enquanto a
+     espera dura: a tela anterior continua inteira e clicável. Uma barra
+     que informa o que ninguém está esperando é ruído.
+
+     Então ela é agendada, não mostrada. Se a tela nova chegar antes do
+     prazo -- que é o caso comum, e sempre o caso quando a página já está
+     no cache da aba --, o agendamento é cancelado e ninguém vê nada. Se
+     demorar, aí sim a barra entra, porque aí sim há uma espera.
+     ====================================================================== */
+  var ESPERA_ATE_AVISAR = 400;
+  var loaderAgendado = null;
+
   function mostrarLoader(mensagem) {
-    if (window.LSLoader && window.LSLoader.show) {
-      window.LSLoader.show(mensagem || "Carregando…");
+    cancelarLoader();
+    loaderAgendado = window.setTimeout(function () {
+      loaderAgendado = null;
+      if (window.LSLoader && window.LSLoader.show) {
+        window.LSLoader.show(mensagem || "Carregando…");
+      }
+    }, ESPERA_ATE_AVISAR);
+  }
+
+  function cancelarLoader() {
+    if (loaderAgendado) {
+      window.clearTimeout(loaderAgendado);
+      loaderAgendado = null;
     }
   }
 
   function esconderLoader() {
+    cancelarLoader();
     if (window.LSLoader && window.LSLoader.hide) window.LSLoader.hide();
   }
 
@@ -455,20 +487,63 @@
       return;
     }
 
-    try {
-      window.sessionStorage.setItem(ENTRADA, "1");
-    } catch (erro) {}
-
     /* O CSS ANTES DO HTML. Enquanto a folha da tela nova não chegou, o
        que está na tela é a tela ANTERIOR, inteira e estilizada -- e não
        um esqueleto sem estilo. */
     garantirFolhas(novoDoc).then(function () {
-      if (!aplicarTela(novoDoc, url, modoHistorico)) {
+      if (!trocarComTransicao(novoDoc, url, modoHistorico)) {
         window.location.assign(url.href);
       }
     }).catch(function () {
       window.location.assign(url.href);
     });
+  }
+
+  /* ======================================================================
+     A TROCA NÃO PODE PARECER UM SOBRESSALTO
+
+     Substituir a área de conteúdo é instantâneo, e instantâneo demais tem
+     um problema próprio: a tela pisca de um assunto para outro sem nada
+     que ligue os dois, e o olho registra isso como falha, não como
+     navegação. Havia uma animação de entrada para suavizar, mas ela era
+     do tempo do `document.write`: nascia com o conteúdo em 45% de
+     opacidade, ou seja, mostrava a tela nova CHEGANDO -- exatamente o que
+     não se quer ver.
+
+     `startViewTransition` resolve pelo caminho certo: o navegador
+     fotografa a tela antes, deixa a troca acontecer sem nada na tela, e
+     faz a passagem entre as duas fotos. Quem olha vê uma tela virar a
+     outra, e em momento nenhum vê o meio do caminho.
+
+     Onde a API não existe (Safari mais antigo, Firefox), a troca é
+     direta -- que é o comportamento de antes e continua correto. Nada
+     aqui é obrigatório para a tela funcionar; é só a diferença entre
+     trocar e trocar bem.
+     ====================================================================== */
+  function trocarComTransicao(novoDoc, url, modoHistorico) {
+    if (
+      !document.startViewTransition
+      || window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    ) {
+      return aplicarTela(novoDoc, url, modoHistorico);
+    }
+
+    /* O retorno do callback é assíncrono -- ele roda depois de o
+       navegador fotografar a tela --, então a falha é tratada lá dentro,
+       e não pelo valor devolvido aqui. Na prática ela não acontece:
+       `trocarDocumento` já conferiu que as duas telas existem antes de
+       chegar aqui. O caminho fica escrito mesmo assim, porque o dia em
+       que acontecer a tela não pode simplesmente ficar parada. */
+    try {
+      document.startViewTransition(function () {
+        if (!aplicarTela(novoDoc, url, modoHistorico)) {
+          window.location.assign(url.href);
+        }
+      });
+    } catch (erro) {
+      return aplicarTela(novoDoc, url, modoHistorico);
+    }
+    return true;
   }
 
   function navegar(url, modoHistorico) {
@@ -543,43 +618,92 @@
     navegar(url, "push");
   });
 
-  function agendarPrefetch(link, evento) {
-    if (document.querySelector(".modal.show")) return;
-    if (document.visibilityState !== "visible" || prefetchsExecutados >= LIMITE_PREFETCH) return;
+  /* ======================================================================
+     BUSCAR A TELA ANTES DE ALGUÉM PEDIR
+
+     A troca só é imperceptível quando não há nada a esperar no momento do
+     clique. Buscar a tela enquanto o dedo ainda está a caminho é o que
+     transforma "clicou e carregou" em "clicou e apareceu".
+
+     A cota era de DUAS buscas por aba, para a sessão inteira. Depois da
+     segunda, todo clique voltava a esperar a rede -- e como o painel fica
+     aberto o dia todo na bancada, isso significa que a antecipação valia
+     nos dois primeiros cliques da manhã e em mais nenhum. Agora a cota se
+     renova por minuto: protege de disparar dezenas de pedidos quando
+     alguém passa o dedo pelo menu, sem desligar a antecipação para o
+     resto do dia.
+
+     Dois momentos disparam, e são diferentes de propósito:
+
+       * PASSAR POR CIMA espera 90ms. O dedo cruzando o menu passa por
+         cinco itens; a intenção só existe quando ele para em um.
+       * ENCOSTAR (`pointerdown`) dispara na hora. Entre encostar e
+         soltar existem uns 100ms de graça no toque, e é neles que a tela
+         chega -- é o que faz a navegação parecer instantânea no tablet.
+     ====================================================================== */
+  var JANELA_DA_COTA = 60000;
+  var cotaAberta = 0;
+
+  function podeAntecipar() {
+    if (document.querySelector(".modal.show")) return false;
+    if (document.visibilityState !== "visible") return false;
+
     var conexao = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
-    if (conexao && (conexao.saveData || /(^|-)2g$/.test(conexao.effectiveType || ""))) return;
+    if (conexao && (conexao.saveData || /(^|-)2g$/.test(conexao.effectiveType || ""))) {
+      /* Economia de dados ou 2G: quem está nessa condição paga por
+         megabyte ou espera por ele. Buscar o que talvez não seja aberto
+         é justamente o que não se deve fazer. */
+      return false;
+    }
+
+    var agora = Date.now();
+    if (agora - cotaAberta > JANELA_DA_COTA) {
+      cotaAberta = agora;
+      prefetchsExecutados = 0;
+    }
+    return prefetchsExecutados < LIMITE_PREFETCH;
+  }
+
+  function anteciparTela(url) {
+    if (!url || recuperar(url) || emVoo.has(url.href)) return;
+    prefetchsExecutados += 1;
+    buscar(url).catch(function () {});
+  }
+
+  function agendarPrefetch(link, evento, atraso) {
+    if (!podeAntecipar()) return;
     var url = linkNavegavel(link, evento);
     if (!url || recuperar(url) || emVoo.has(url.href)) return;
+
     window.clearTimeout(prefetchTimer);
+    if (!atraso) {
+      anteciparTela(url);
+      return;
+    }
     prefetchTimer = window.setTimeout(function () {
-      prefetchsExecutados += 1;
-      buscar(url).catch(function () {});
-    }, 360);
+      anteciparTela(url);
+    }, atraso);
   }
 
   document.addEventListener("pointerover", function (evento) {
     var link = evento.target.closest ? evento.target.closest("a[href]") : null;
-    if (link) agendarPrefetch(link, evento);
+    if (link) agendarPrefetch(link, evento, 90);
   });
+
+  /* Encostar já é intenção: aqui não se espera. */
+  document.addEventListener("pointerdown", function (evento) {
+    var link = evento.target.closest ? evento.target.closest("a[href]") : null;
+    if (link) agendarPrefetch(link, evento, 0);
+  }, { passive: true });
 
   document.addEventListener("focusin", function (evento) {
     var link = evento.target.closest ? evento.target.closest("a[href]") : null;
-    if (link) agendarPrefetch(link, evento);
+    if (link) agendarPrefetch(link, evento, 90);
   });
 
   window.addEventListener("popstate", function () {
     navegar(window.location.href, "none");
   });
-
-  try {
-    if (window.sessionStorage.getItem(ENTRADA) === "1") {
-      window.sessionStorage.removeItem(ENTRADA);
-      document.documentElement.classList.add("ls-soft-enter");
-      window.setTimeout(function () {
-        document.documentElement.classList.remove("ls-soft-enter");
-      }, 320);
-    }
-  } catch (erro) {}
 
   window.LSNavigation = {
     clear: limpar,

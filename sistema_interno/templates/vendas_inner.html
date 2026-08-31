@@ -1,44 +1,81 @@
 {% extends "base_inner.html" %}
+{% load interno_extras %}
 {% block title %}Vendas | Lazer & Sport{% endblock %}
-{% block top_title %}Central de vendas{% endblock %}
+{% block top_title %}Vendas da loja{% endblock %}
+{% block body_class %}ls-commercial-body{% endblock %}
 
 {% block content %}
+{% comment %}
+  Mesma correção da tela de Pedidos: a bolinha do menu conta as vendas
+  da loja que ainda não foram confirmadas (`core.Venda`), e esta tela
+  listava `CentralVendas`, tabela interna antiga e vazia. O número do
+  menu e o conteúdo da tela nunca falavam da mesma coisa.
+{% endcomment %}
 <section class="ls-page-hero">
   <div class="ls-page-hero-copy">
-    <span class="ls-page-kicker">Operação comercial</span>
+    <span class="ls-page-kicker">Loja · financeiro</span>
     <h1>Vendas</h1>
-    <p>Centralize os registros comerciais e identifique rapidamente a origem de cada venda disponível no sistema.</p>
+    <p>Cada venda nasce de um pedido finalizado. A bolinha do menu conta as que ainda esperam confirmação.</p>
   </div>
 </section>
 
 <section class="ls-metrics">
-  <article class="ls-metric-card blue">
-    <div class="ls-metric-head"><span class="ls-metric-label">Registros encontrados</span><span class="ls-metric-icon"><i class="bi bi-receipt"></i></span></div>
-    <strong class="ls-metric-value">{{ total_registros }}</strong>
-    <span class="ls-metric-note">Vendas disponíveis nesta central</span>
-  </article>
+  {% for chave, rotulo, valor, icone, cor, nota in cartoes %}
+    <a class="ls-metric-card ls-budget-filter-card {{ cor }} {% if filtro_ativo == chave %}active{% endif %}"
+       href="?filtro={{ chave }}"
+       aria-current="{% if filtro_ativo == chave %}page{% else %}false{% endif %}">
+      <div class="ls-metric-head">
+        <span class="ls-metric-label">{{ rotulo }}</span>
+        <span class="ls-metric-icon"><i class="bi {{ icone }}"></i></span>
+      </div>
+      <strong class="ls-metric-value">{{ valor }}</strong>
+      <span class="ls-metric-note">{% if filtro_ativo == chave %}Filtro ativo{% else %}{{ nota }}{% endif %}</span>
+    </a>
+  {% endfor %}
+</section>
+
+<section class="ls-budget-money-strip">
+  <div class="success"><span>Recebido e confirmado</span><strong>R$ {{ valor_confirmado|moeda }}</strong></div>
 </section>
 
 <section class="ls-data-panel">
-  <div class="ls-data-header"><div><h2>Registros de venda</h2><p>Origem, identificação e atualização dos registros comerciais.</p></div></div>
+  <div class="ls-data-header">
+    <div>
+      <h2>Registros de venda</h2>
+      <p>Pedido de origem, cliente, valor e forma de pagamento.</p>
+    </div>
+  </div>
   <div class="ls-data-body">
     <div class="table-responsive ls-commercial-table-wrap">
       <table class="ls-table ls-commercial-table">
-        <thead><tr><th>ID</th><th>Origem</th><th>Registro</th><th>Atualização</th></tr></thead>
+        <thead>
+          <tr><th>#</th><th>Pedido</th><th>Cliente</th><th class="text-end">Valor</th><th>Pagamento</th><th>Situação</th><th>Data</th></tr>
+        </thead>
         <tbody>
           {% for venda in vendas %}
             <tr>
               <td data-rotulo="Nº"><strong>#{{ venda.id }}</strong></td>
-              <td data-rotulo="Origem">
-                {% if venda.origem == "site" %}<span class="ls-status info">Site</span>
-                {% elif venda.origem == "interno" %}<span class="ls-status success">Interno</span>
-                {% else %}<span class="ls-status neutral">{{ venda.origem|default:"—" }}</span>{% endif %}
+              <td data-rotulo="Pedido">{% if venda.pedido_id %}<strong>#{{ venda.pedido_id }}</strong>{% else %}<span class="text-muted">—</span>{% endif %}</td>
+              <td data-rotulo="Cliente">{% firstof venda.pedido.cliente.user.get_full_name venda.pedido.cliente.user.username "Cliente do site" %}</td>
+              <td data-rotulo="Valor" class="text-end"><strong>R$ {{ venda.valor_pago|moeda }}</strong></td>
+              <td data-rotulo="Pagamento">{{ venda.get_forma_pagamento_display|default:"—" }}</td>
+              <td data-rotulo="Situação">
+                {% if venda.confirmado %}<span class="ls-status success">Confirmada</span>
+                {% else %}<span class="ls-status warning">Aguardando confirmação</span>{% endif %}
               </td>
-              <td data-rotulo="Registro">{{ venda }}</td>
-              <td data-rotulo="Data">{{ venda.atualizado|date:"d/m/Y H:i"|default:"—" }}</td>
+              <td data-rotulo="Data">{{ venda.criacao|date:"d/m/Y H:i"|default:"—" }}</td>
             </tr>
           {% empty %}
-            <tr><td colspan="4"><div class="ls-empty"><i class="bi bi-receipt"></i>Nenhuma venda registrada.</div></td></tr>
+            <tr><td colspan="7">
+              <div class="ls-empty">
+                <i class="bi bi-receipt"></i>
+                {% if filtro_ativo == "a_confirmar" %}
+                  Nenhuma venda esperando confirmação. Está tudo em dia.
+                {% else %}
+                  Nenhuma venda nesta situação.
+                {% endif %}
+              </div>
+            </td></tr>
           {% endfor %}
         </tbody>
       </table>

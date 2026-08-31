@@ -226,10 +226,13 @@
                      aria-label="Ver propostas de {{ cliente.nome_cliente }}" title="Ver propostas">
                     <i class="bi bi-file-earmark-text"></i><span class="ls-action-label">Propostas</span>
                   </a>
-                  {% if permissoes_interno.excluir_clientes %}
+                  {% if permissoes_interno.excluir_clientes or user.is_superuser %}
                   <button type="button" class="btn btn-sm btn-outline-danger"
                           data-excluir="{{ cliente.id }}" data-nome="{{ cliente.nome_cliente }}"
-                          aria-label="Excluir {{ cliente.nome_cliente }}" title="Excluir cliente">
+                          {% if cliente.tem_historico %}data-protegido="1"
+                          data-protegido-motivo="Este cliente tem orçamento no histórico. Excluir deixa essas propostas sem cliente vinculado. Você pode excluir mesmo assim, e a exclusão vai ficar registrada com o seu nome."{% endif %}
+                          aria-label="Excluir {{ cliente.nome_cliente }}"
+                          title="{% if cliente.tem_historico %}Excluir mesmo com histórico (fica registrado){% else %}Excluir cliente{% endif %}">
                     <i class="bi bi-trash"></i><span class="ls-action-label">Excluir</span>
                   </button>
                   {% endif %}

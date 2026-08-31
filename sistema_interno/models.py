@@ -1639,6 +1639,22 @@ class Orcamento(Prime):
         )
 
     @property
+    def publicado(self):
+        """A página do cliente já existe para esta proposta?
+
+        A view pública recusa rascunho com 404 -- de propósito: enquanto a
+        equipe monta a proposta, quem tiver o link não deve ver nada. O
+        problema é que o painel entregava o endereço mesmo assim, e a
+        janela de envio já abria com o botão "Abrir" apontando para ele.
+        Quem conferia antes de enviar levava uma página de erro no rosto,
+        e a leitura óbvia era "o sistema quebrou".
+
+        Esta propriedade é a MESMA regra da view pública, dita num lugar
+        só. Quem for mostrar o link pergunta aqui primeiro.
+        """
+        return self.status != self.Status.RASCUNHO
+
+    @property
     def dias_para_vencer(self):
         """Quantos dias faltam para a validade. Negativo já passou.
 
@@ -2333,6 +2349,15 @@ class OrdemServico(Prime):
         )
 
     @property
+    def publicado(self):
+        """Mesma pergunta do orçamento, mesma resposta: ver `Orcamento.publicado`.
+
+        A view pública da O.S. recusa com 404 enquanto `enviada_em` for
+        nula. O painel só mostra o link depois disso.
+        """
+        return bool(self.enviada_em)
+
+    @property
     def cliente_ciente(self):
         return bool(self.cliente_ciente_em)
 
@@ -2749,3 +2774,65 @@ class EntregaCampanha(Prime):
 
     def __str__(self):
         return f"{self.campanha} · {self.get_canal_display()} · {self.nome_destinatario}"
+
+
+class ExclusaoRegistrada(models.Model):
+    """Quem apagou o quê, quando, e por quê.
+
+    POR QUE ISTO EXISTE. O superusuário passou a poder excluir qualquer
+    coisa do sistema -- inclusive proposta enviada, O.S. concluída e
+    pedido pago, que as regras normais protegem justamente por serem
+    histórico. É a decisão certa: quem responde pela empresa precisa poder
+    limpar um registro errado sem depender de ninguém.
+
+    Só que histórico apagado em silêncio é pior do que histórico errado.
+    Daqui a seis meses, "onde foi parar a proposta 412?" não pode ser uma
+    pergunta sem resposta. Então a exclusão continua liberada, e passa a
+    deixar rastro: o que era, quem apagou, quando, e o motivo escrito na
+    hora.
+
+    O rastro guarda TEXTO, não chave estrangeira. Uma referência ao objeto
+    apagado não sobrevive ao apagamento; o resumo, sim.
+    """
+
+    quando = models.DateTimeField(auto_now_add=True, db_index=True)
+    autor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="exclusoes_registradas",
+        help_text="Fica nulo se a conta for removida depois; o nome abaixo permanece.",
+    )
+    autor_nome = models.CharField(max_length=150)
+
+    tipo = models.CharField(
+        max_length=60,
+        db_index=True,
+        help_text="Modelo do objeto apagado, em linguagem de gente: Orçamento, O.S.…",
+    )
+    identificacao = models.CharField(
+        max_length=200,
+        help_text="Como o objeto era chamado na tela: '#412 — Buffet Alegria'.",
+    )
+    resumo = models.TextField(
+        blank=True,
+        help_text="O que ele continha, para o caso de alguém precisar reconstituir.",
+    )
+    motivo = models.CharField(
+        max_length=240,
+        blank=True,
+        help_text="O que a pessoa escreveu ao confirmar.",
+    )
+    #: Verdadeiro quando as regras normais teriam recusado a exclusão e
+    #: ela só aconteceu porque quem pediu é superusuário. É o que separa
+    #: "apagou um rascunho" de "apagou um documento que já foi ao cliente".
+    forcada = models.BooleanField(default=False, db_index=True)
+
+    class Meta:
+        verbose_name = "Exclusão registrada"
+        verbose_name_plural = "Exclusões registradas"
+        ordering = ("-quando", "-id")
+
+    def __str__(self):
+        marca = " (forçada)" if self.forcada else ""
+        return f"{self.tipo} {self.identificacao}{marca}"

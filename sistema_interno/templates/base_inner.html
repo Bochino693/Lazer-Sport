@@ -183,13 +183,25 @@
     ficaria com uma cara ao abrir direto e outra ao chegar pelo menu.
   {% endcomment %}
   {% block extra_css %}{% endblock %}
-  <link id="lsFolhaBase" href="{% static 'interno/interno_modern.css' %}?v=25" rel="stylesheet">
+  <link id="lsFolhaBase" href="{% static 'interno/interno_modern.css' %}?v=27" rel="stylesheet">
 
+  {% comment %}
+    A ORDEM DESTES DOIS ARQUIVOS IMPORTA.
+
+    Os dois escutam clique no documento, na fase de bolha, e ouvinte de
+    bolha roda na ordem em que foi registrado. Como script `defer` executa
+    na ordem do documento, quem vem primeiro aqui escuta primeiro.
+
+    A navegação suave precisa vir antes: ela chama `preventDefault` nos
+    links do painel, e é isso que diz à barra de carregamento que não
+    haverá troca de página nenhuma para acompanhar. Invertidos, a barra
+    decide antes de saber, e volta a piscar a cada clique.
+  {% endcomment %}
+  {# Troca telas e filtros sem uma segunda requisição; cache só durante a aba. #}
+  <script src="{% static 'interno/ls-soft-navigation.js' %}?v=5" defer></script>
   <!-- Barra de carregamento no topo, compartilhada com o painel /adm. -->
   <link rel="stylesheet" href="{% static 'site/ls-page-loader.css' %}?v=2">
-  <script src="{% static 'site/ls-page-loader.js' %}?v=2" defer></script>
-  {# Troca telas e filtros sem uma segunda requisição; cache só durante a aba. #}
-  <script src="{% static 'interno/ls-soft-navigation.js' %}?v=4" defer></script>
+  <script src="{% static 'site/ls-page-loader.js' %}?v=3" defer></script>
 </head>
 <body class="ls-body {% block body_class %}{% endblock %}" data-avisos="{% url 'avisos_estado' %}" data-aparelho="{% url 'avisos_aparelho' %}">
 <svg width="0" height="0" aria-hidden="true" focusable="false" style="position:absolute">

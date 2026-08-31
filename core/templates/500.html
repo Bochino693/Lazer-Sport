@@ -1,140 +1,87 @@
-{% load static %}
-<!DOCTYPE html>
+{% comment %}
+  PÁGINA DE 500 QUE NÃO PODE FALHAR — mesma regra da 404.
+
+  Ela linkava `css/base.css`, que não existe em lugar nenhum do projeto,
+  e uma imagem de mascote por `{% static %}`. Página de erro que depende
+  de arquivo externo é página de erro que falha justamente quando é
+  chamada: se o servidor está com problema, a última coisa em que se pode
+  confiar é que ele vá servir mais dois arquivos.
+
+  Sem `extends`, sem `{% static %}`, sem folha externa, sem imagem.
+{% endcomment %}<!DOCTYPE html>
 <html lang="pt-br">
 <head>
-    <meta charset="UTF-8">
-    <title>Erro no servidor</title>
-
-    <!-- CSS base do site -->
-    <link rel="stylesheet" href="{% static 'css/base.css' %}">
-
-    <style>
-        :root {
-            --azul: #0d47a1;
-            --vermelho: #d32f2f;
-            --branco: #ffffff;
-        }
-
-        body {
-            margin: 0;
-            font-family: 'Segoe UI', sans-serif;
-            background: linear-gradient(135deg, var(--azul), var(--vermelho));
-        }
-
-        .erro-wrapper {
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-        }
-
-        .erro-card {
-            background: var(--branco);
-            border-radius: 24px;
-            padding: 50px 40px;
-            max-width: 420px;
-            width: 100%;
-            text-align: center;
-            box-shadow: 0 25px 50px rgba(0,0,0,0.3);
-            animation: fadeUp 0.9s ease;
-        }
-
-        .erro-mascote {
-            max-width: 200px;
-            margin-bottom: 24px;
-            animation: float 3s ease-in-out infinite;
-            background: #ffffff;
-            border-radius: 16px;
-            padding: 10px;
-        }
-
-        .erro-titulo {
-            font-size: 26px;
-            color: var(--azul);
-            margin-bottom: 12px;
-            font-weight: 700;
-        }
-
-        .erro-texto {
-            color: #444;
-            margin-bottom: 32px;
-            line-height: 1.6;
-        }
-
-        .btn-erro {
-            display: inline-block;
-            padding: 14px 34px;
-            background: linear-gradient(135deg, var(--azul), var(--vermelho));
-            color: #fff;
-            text-decoration: none;
-            border-radius: 30px;
-            font-weight: 600;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
-
-        .btn-erro:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 15px 30px rgba(0,0,0,0.25);
-        }
-
-        /* ===== ANIMAÇÕES ===== */
-
-        @keyframes fadeUp {
-            from {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        @keyframes float {
-            0% {
-                transform: translateY(0);
-            }
-            50% {
-                transform: translateY(-12px);
-            }
-            100% {
-                transform: translateY(0);
-            }
-        }
-
-        /* ===== MOBILE ===== */
-        @media (max-width: 480px) {
-            .erro-card {
-                padding: 40px 25px;
-            }
-
-            .erro-titulo {
-                font-size: 22px;
-            }
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#13100B">
+<title>Erro no servidor | Lazer &amp; Sport</title>
+<style>
+  :root{color-scheme:dark}
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;display:grid;place-items:center;padding:24px;
+    background:#13100B;color:#FCF8F1;
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+    line-height:1.55;
+  }
+  .caixa{
+    width:min(560px,100%);padding:34px 30px;text-align:center;
+    border:1px solid #3F3527;border-radius:22px;background:#1E1913;
+    box-shadow:0 24px 70px rgba(0,0,0,.42);
+  }
+  .marca{
+    width:56px;height:56px;margin:0 auto 18px;display:grid;place-items:center;
+    border-radius:17px;background:linear-gradient(135deg,#FF7A6B,#D95422);
+    color:#2B0F09;font-size:1.6rem;font-weight:900;
+  }
+  .codigo{
+    display:inline-block;margin-bottom:12px;padding:4px 11px;border-radius:999px;
+    background:rgba(255,122,107,.14);color:#FF9B8E;
+    font-size:.68rem;font-weight:900;letter-spacing:.12em;
+  }
+  h1{margin:0;font-size:1.35rem;letter-spacing:-.02em}
+  p{margin:12px auto 0;max-width:44ch;color:#B3A38C;font-size:.92rem}
+  .nota{
+    margin:20px 0 0;padding:14px 16px;text-align:left;
+    border-left:3px solid #3F3527;border-radius:0 12px 12px 0;
+    background:#181410;color:#B3A38C;font-size:.84rem;
+  }
+  .nota strong{display:block;margin-bottom:6px;color:#E7DDCB;font-size:.78rem}
+  .acoes{margin-top:22px;display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+  a.botao,button.botao{
+    min-height:46px;padding:0 20px;display:inline-flex;align-items:center;
+    border:0;border-radius:13px;text-decoration:none;
+    font:inherit;font-size:.86rem;font-weight:800;cursor:pointer;
+  }
+  a.principal,button.principal{background:linear-gradient(135deg,#F2A93B,#D98E22);color:#211605}
+  a.secundario{border:1px solid #3F3527;color:#E7DDCB;background:none}
+  .botao:hover{opacity:.9}
+  @media(max-width:420px){
+    .caixa{padding:26px 20px}
+    .acoes{flex-direction:column}
+    .botao{justify-content:center}
+  }
+</style>
 </head>
 <body>
-<div class="erro-wrapper">
-    <div class="erro-card">
+<main class="caixa">
+  <div class="marca" aria-hidden="true">LS</div>
+  <span class="codigo">ERRO 500</span>
+  <h1>O servidor tropeçou</h1>
+  <p>Não foi você. Alguma coisa falhou do nosso lado ao montar esta página.</p>
 
-        <div class="mascote-wrapper">
-            <img src="{% static 'images/not_found.png' %}" alt="Mascote" class="erro-mascote">
-        </div>
+  <div class="nota">
+    <strong>Nada do que você digitou se perdeu por causa disto</strong>
+    Se você estava preenchendo alguma coisa, volte e confira antes de
+    refazer: o que já tinha sido salvo continua salvo.
+  </div>
 
-        <h1 class="erro-titulo">Algo deu errado 😕</h1>
-
-        <p class="erro-texto">
-            Ocorreu um erro inesperado no servidor.<br>
-            Nossa equipe já foi notificada e está trabalhando para resolver.
-        </p>
-
-        <a href="/" class="btn-erro">
-            Voltar para a página inicial
-        </a>
-    </div>
-</div>
-
+  <div class="acoes">
+    <button class="botao principal" type="button" onclick="location.reload()">Tentar de novo</button>
+    <a class="botao secundario" href="/">Ir para o início</a>
+  </div>
+</main>
 </body>
 </html>

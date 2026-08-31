@@ -24,7 +24,46 @@
           </div>
         </div>
 
-        <label class="form-label mt-4" for="excluirConfirmacao">
+        {% comment %}
+          O AVISO DE EXCLUSÃO FORÇADA.
+
+          Some para quase todo mundo: as regras normais só deixam apagar
+          o que é seguro apagar, e nesses casos não há o que avisar. Ele
+          aparece para o superusuário sobre um registro que as regras
+          protegem -- proposta já enviada, O.S. concluída, cliente com
+          histórico. Aí a pessoa precisa saber que está passando por
+          cima de uma proteção, e não fazendo uma exclusão comum.
+
+          O JavaScript da tela liga isso pelo atributo `data-protegido`
+          do botão que abriu a janela.
+        {% endcomment %}
+        <div class="ls-delete-forcada" id="excluirForcada" hidden>
+          <i class="bi bi-shield-exclamation" aria-hidden="true"></i>
+          <div>
+            <strong>Isto não é um rascunho.</strong>
+            <span id="excluirForcadaDetalhe">
+              As regras normais protegem este registro por ele já fazer
+              parte do histórico. Você pode excluir mesmo assim, e a
+              exclusão vai ficar registrada com o seu nome.
+            </span>
+          </div>
+        </div>
+
+        {% comment %}
+          O motivo é opcional de propósito. Campo obrigatório em janela de
+          confirmação vira "asdf" -- e "asdf" no registro é pior do que
+          campo vazio, porque parece explicação. Quem quiser explicar,
+          explica; quem não quiser, o registro guarda o resto de qualquer
+          jeito: o quê, quem e quando.
+        {% endcomment %}
+        <label class="form-label mt-4" for="excluirMotivo">
+          Motivo <span class="text-muted fw-normal">(opcional, fica no registro)</span>
+        </label>
+        <input class="form-control" id="excluirMotivo" name="motivo_exclusao"
+               type="text" maxlength="240" autocomplete="off"
+               placeholder="Ex.: cadastro duplicado, teste feito em produção">
+
+        <label class="form-label mt-3" for="excluirConfirmacao">
           Para confirmar, digite <span class="ls-confirm-word">CONFIRMAR</span>
         </label>
         <input class="form-control ls-confirm-input" id="excluirConfirmacao"

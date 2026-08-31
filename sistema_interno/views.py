@@ -1082,29 +1082,107 @@ class DashboardEstoqueView(EstoqueInternoRequiredMixin, View):
 # ======================================================================
 # TELAS EXISTENTES
 # ======================================================================
+# ======================================================================
+# PEDIDOS E VENDAS DA LOJA
+# ======================================================================
+# O SELO CONTAVA UMA TABELA E A TELA MOSTRAVA OUTRA.
+#
+# A bolinha do menu sempre contou `core.Pedido` -- o pedido que o cliente
+# faz no site, que é o que a palavra "pedido" significa para quem usa o
+# painel. Estas duas telas, porém, listavam `CentralPedidos` e
+# `CentralVendas`, tabelas internas de uma época anterior que nunca
+# receberam uma linha sequer.
+#
+# O resultado era o pior tipo de defeito: o menu dizia "6 pedidos", a
+# pessoa clicava e encontrava "Nenhum pedido na central". Nada estava
+# quebrado a ponto de dar erro -- só não era o mesmo assunto. E como as
+# duas fontes nunca se cruzavam, nenhum teste percebia.
+#
+# Agora as telas leem a MESMA tabela que o selo conta. `tests_pedidos.py`
+# compara os dois números e reprova se voltarem a divergir.
 class VendasView(FinanceiroInternoRequiredMixin, View):
+    POR_PAGINA = 30
+
     def get(self, request):
-        pagina = Paginator(
-            CentralVendas.objects.order_by("-id"),
-            30,
-        ).get_page(request.GET.get("page"))
+        consulta = (
+            Venda.objects
+            .select_related("pedido", "pedido__cliente__user")
+            .order_by("-criacao", "-id")
+        )
+        # Abre no que a bolinha conta, como em Pedidos: quem entra aqui
+        # quer ver o que ainda espera confirmação, não o histórico.
+        filtro = (request.GET.get("filtro") or "a_confirmar").strip()
+        if filtro == "a_confirmar":
+            consulta = consulta.filter(confirmado=False)
+        elif filtro == "confirmadas":
+            consulta = consulta.filter(confirmado=True)
+
+        pagina = Paginator(consulta, self.POR_PAGINA).get_page(
+            request.GET.get("page")
+        )
         return render(request, "vendas_inner.html", {
             "vendas": pagina.object_list,
             "page_obj": pagina,
             "total_registros": pagina.paginator.count,
+            "filtro_ativo": filtro,
+            "valor_confirmado": Venda.objects.filter(confirmado=True).aggregate(
+                soma=Sum("valor_pago"),
+            )["soma"] or Decimal("0.00"),
+            "cartoes": (
+                ("a_confirmar", "A confirmar",
+                 Venda.objects.filter(confirmado=False).count(),
+                 "bi-hourglass-split", "yellow", "É o que a bolinha conta"),
+                ("confirmadas", "Confirmadas",
+                 Venda.objects.filter(confirmado=True).count(),
+                 "bi-check2-circle", "green", "Toque para filtrar"),
+                ("todas", "Tudo", Venda.objects.count(),
+                 "bi-list-ul", "blue", "Toque para filtrar"),
+            ),
         })
 
 
 class PedidosView(FinanceiroInternoRequiredMixin, View):
+    POR_PAGINA = 30
+
+    #: Mesma definição de "em aberto" que a central de avisos usa para
+    #: contar. Duas listas para o mesmo conceito acabam divergindo, e foi
+    #: exatamente o que aconteceu aqui.
+    ENCERRADOS = ("finalizado", "cancelado")
+
     def get(self, request):
-        pagina = Paginator(
-            CentralPedidos.objects.order_by("-criacao", "-id"),
-            30,
-        ).get_page(request.GET.get("page"))
+        consulta = (
+            Pedido.objects
+            .select_related("cliente__user")
+            .prefetch_related("itens")
+            .order_by("-criacao", "-id")
+        )
+        filtro = (request.GET.get("filtro") or "abertos").strip()
+        if filtro == "abertos":
+            consulta = consulta.exclude(status__in=self.ENCERRADOS)
+        elif filtro == "finalizados":
+            consulta = consulta.filter(status="finalizado")
+        elif filtro == "cancelados":
+            consulta = consulta.filter(status="cancelado")
+
+        pagina = Paginator(consulta, self.POR_PAGINA).get_page(
+            request.GET.get("page")
+        )
+        abertos = Pedido.objects.exclude(status__in=self.ENCERRADOS).count()
         return render(request, "pedidos_inner.html", {
             "pedidos": pagina.object_list,
             "page_obj": pagina,
             "total_registros": pagina.paginator.count,
+            "filtro_ativo": filtro,
+            "cartoes": (
+                ("abertos", "Em aberto", abertos, "bi-hourglass-split", "yellow"),
+                ("finalizados", "Finalizados",
+                 Pedido.objects.filter(status="finalizado").count(),
+                 "bi-check2-circle", "green"),
+                ("cancelados", "Cancelados",
+                 Pedido.objects.filter(status="cancelado").count(),
+                 "bi-x-circle", "red"),
+                ("todos", "Tudo", Pedido.objects.count(), "bi-list-ul", "blue"),
+            ),
         })
 
 

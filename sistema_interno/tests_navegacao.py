@@ -133,6 +133,44 @@ class ScriptDeTelaNaoEsperaDOMContentLoadedTests(SimpleTestCase):
             "valendo em todas as seguintes:\n  " + "\n  ".join(desmarcados),
         )
 
+    def test_a_navegacao_suave_e_registrada_antes_da_barra_de_carregamento(self):
+        """Ouvinte de bolha roda na ordem em que foi registrado.
+
+        Os dois escutam clique no documento. A navegação suave chama
+        `preventDefault` nos links do painel, e é isso que diz à barra que
+        não haverá troca de página para acompanhar. Se a barra for
+        registrada primeiro, ela decide antes de saber -- e volta a piscar
+        a cada clique, que é a "sensação de carregamento" numa troca que
+        não carrega nada.
+        """
+        base = (TEMPLATES / "base_inner.html").read_text(encoding="utf-8")
+
+        posicao_navegacao = base.index("ls-soft-navigation.js")
+        posicao_barra = base.index("ls-page-loader.js")
+
+        self.assertLess(
+            posicao_navegacao, posicao_barra,
+            "ls-soft-navigation.js precisa vir antes de ls-page-loader.js "
+            "no <head>: script defer executa na ordem do documento, e o "
+            "primeiro a executar é o primeiro a escutar o clique.",
+        )
+
+    def test_a_barra_de_carregamento_respeita_o_clique_ja_tratado(self):
+        """A barra some do caminho de quem trata o clique por fetch.
+
+        O comentário do arquivo sempre disse que era assim -- os ouvintes
+        ficam na bolha justamente para enxergar o `preventDefault` --, mas
+        a conferência existia só no envio de formulário, não no clique.
+        """
+        barra = (
+            RAIZ_CORE / "static" / "site" / "ls-page-loader.js"
+        ).read_text(encoding="utf-8")
+
+        trecho = barra[barra.index('addEventListener("click"'):]
+        trecho = trecho[:trecho.index("addEventListener(\"submit\"")]
+
+        self.assertIn("evento.defaultPrevented", trecho)
+
     def test_a_troca_de_tela_nao_reescreve_o_documento(self):
         """Reescrever o documento é a origem do instante sem estilo.
 
@@ -151,3 +189,64 @@ class ScriptDeTelaNaoEsperaDOMContentLoadedTests(SimpleTestCase):
         self.assertNotIn("document.write", codigo)
         self.assertNotIn("document.open", codigo)
         self.assertIn("garantirFolhas", codigo)
+
+
+class IdentidadeVisualTests(SimpleTestCase):
+    """Cor é o que diz ao olho em que lugar do sistema se está.
+
+    O aplicativo da fábrica é grafite e âmbar, e isso não é gosto: o /adm
+    do site é azul, e quem trabalha nos dois no mesmo dia precisa saber
+    onde está antes de ler qualquer título. Telas que nasceram no painel
+    antigo trouxeram o azul junto -- as campanhas, e o documento da O.S.
+    que o cliente recebe, azul de ponta a ponta ao lado de uma proposta
+    comercial que já era cinza-ardósia.
+
+    Estes são os azuis daquele painel. Nenhum deles volta.
+    """
+
+    #: Os tons exatos do /adm que vazaram para o aplicativo.
+    AZUIS_DO_PAINEL_ANTIGO = (
+        "#08266e", "#0d3a91", "#1666c5", "#20a6d8",
+        "#edf5ff", "#c9d9ef", "#e8eef8",
+        "72,170,255", "31,115,191", "22,71,128",
+    )
+
+    def _sem_comentarios(self, texto):
+        sem = re.sub(r"{% comment %}.*?{% endcomment %}", "", texto, flags=re.S)
+        return re.sub(r"/\*.*?\*/", "", sem, flags=re.S)
+
+    def test_o_aplicativo_nao_tem_azul_do_painel_antigo(self):
+        alvos = [
+            *sorted(TEMPLATES.rglob("*.html")),
+            *sorted((TEMPLATES.parent / "static" / "interno").rglob("*.css")),
+        ]
+        encontrados = []
+
+        for arquivo in alvos:
+            if "vendor" in arquivo.parts:
+                continue
+            conteudo = self._sem_comentarios(
+                arquivo.read_text(encoding="utf-8")
+            ).lower()
+            for azul in self.AZUIS_DO_PAINEL_ANTIGO:
+                if azul in conteudo:
+                    encontrados.append(f"{arquivo.name}: {azul}")
+
+        self.assertEqual(
+            encontrados, [],
+            "Azul do painel antigo no aplicativo da fábrica:\n  "
+            + "\n  ".join(encontrados),
+        )
+
+    def test_o_documento_da_os_usa_a_mesma_tinta_da_proposta(self):
+        """Os dois documentos do cliente têm de parecer da mesma empresa."""
+        documento = (
+            RAIZ_CORE / "templates" / "ordem_servico_publica.html"
+        ).read_text(encoding="utf-8")
+
+        for azul in self.AZUIS_DO_PAINEL_ANTIGO:
+            with self.subTest(cor=azul):
+                self.assertNotIn(azul, self._sem_comentarios(documento).lower())
+
+        # E o acento passou a ser o âmbar da marca.
+        self.assertIn("--blue:#B45309", documento)

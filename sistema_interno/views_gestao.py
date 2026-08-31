@@ -82,6 +82,7 @@ from .models import (
     ProdutoInterno,
     Setores,
 )
+from .exclusoes import forcando, pode_excluir, remover
 from .permissoes import (
     capacidades,
     limitar_orcamentos,
@@ -391,10 +392,22 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
                     orcamento.bloco_financeiro,
                 )
             )
-            orcamento.link_publico = f"{base_publica}{orcamento.caminho_publico}"
-            orcamento.mensagem_whatsapp = self.mensagem_da_proposta(
-                orcamento,
-                orcamento.link_publico,
+            # O LINK SÓ EXISTE DEPOIS DE A PROPOSTA SAIR DO RASCUNHO.
+            #
+            # A página do cliente recusa rascunho com 404. Entregar o
+            # endereço mesmo assim fazia a janela de envio abrir já com o
+            # botão "Abrir" apontando para uma página de erro -- e quem
+            # conferia antes de mandar concluía que o sistema tinha
+            # quebrado. Vazio aqui, a janela mostra "Gerando link seguro…"
+            # e o próprio envio devolve o endereço quando ele passa a
+            # valer.
+            orcamento.link_publico = (
+                f"{base_publica}{orcamento.caminho_publico}"
+                if orcamento.publicado else ""
+            )
+            orcamento.mensagem_whatsapp = (
+                self.mensagem_da_proposta(orcamento, orcamento.link_publico)
+                if orcamento.link_publico else ""
             )
             orcamento.conversa_url = self.conversa_whatsapp(
                 orcamento.whatsapp_destinatario,
@@ -404,6 +417,14 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
                 request.user,
                 orcamento,
             )
+            # O superusuário enxerga o botão em qualquer proposta: ele
+            # tem a palavra final. `protegida` diz à janela de confirmação
+            # que ali a exclusão passa POR CIMA de uma regra, e que vai
+            # ficar registrada -- apagar histórico não pode ter a mesma
+            # cara de apagar um rascunho.
+            orcamento.protegida = not orcamento.pode_excluir
+            if not orcamento.pode_excluir and request.user.is_superuser:
+                orcamento.pode_excluir = True
 
         buffets = list(
             Cliente.objects.filter(tipo=Cliente.Tipo.BUFFET).order_by("nome_cliente")
@@ -1137,7 +1158,14 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
 
     def acao_delete(self, request):
         orcamento = self._orcamento_do_usuario(request, request.POST.get("id"))
-        if not pode_excluir_orcamento(request.user, orcamento):
+
+        # A regra normal protege o histórico comercial: proposta enviada,
+        # respondida ou expirada não some da linha do tempo. Ela continua
+        # valendo para todo mundo -- menos para quem responde pela
+        # empresa, que precisa poder limpar um registro errado sem mexer
+        # no banco por fora. Ver `exclusoes.py`.
+        regra = pode_excluir_orcamento(request.user, orcamento)
+        if not pode_excluir(request.user, regra):
             return self.erro(
                 request,
                 (
@@ -1149,8 +1177,28 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
 
         exigir_confirmacao_exclusao(request)
         numero = orcamento.pk
-        orcamento.delete()
-        return self.sucesso(request, f"Orçamento #{numero} removido.")
+        forcada = forcando(request.user, regra)
+        itens = orcamento.itens.count()
+
+        arrastados = remover(
+            orcamento,
+            autor=request.user,
+            tipo="Orçamento",
+            identificacao=f"#{numero} — {orcamento.destinatario}",
+            resumo=(
+                f"Situação: {orcamento.get_status_display()}. "
+                f"{itens} item(ns). Total: R$ {orcamento.total}."
+            ),
+            motivo=texto(request, "motivo_exclusao", limite=240),
+            forcada=forcada,
+        )
+
+        recado = f"Orçamento #{numero} removido."
+        if forcada:
+            recado += " Não era um rascunho: a exclusão ficou registrada."
+        if arrastados:
+            recado += f" Levou junto: {', '.join(arrastados)}."
+        return self.sucesso(request, recado)
 
     # ------------------------------------------------ enviar ao cliente
     def acao_enviar(self, request):
@@ -1179,10 +1227,22 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
         if canal not in ("preparar", "link", "whatsapp", "email"):
             raise ErroDeFormulario("Escolha WhatsApp, e-mail ou copiar link.")
 
+        # ABRIR A JANELA NÃO CRIA O LINK; ENVIAR CRIA.
+        #
+        # "preparar" é só abrir a janela para conferir -- não muda status
+        # nem histórico, de propósito. Enquanto a proposta é rascunho, a
+        # página do cliente responde 404, e era esse endereço que a janela
+        # mostrava no botão "Abrir página pública": quem conferia antes de
+        # mandar levava uma página de erro e concluía que o sistema tinha
+        # quebrado.
+        #
+        # Nos canais que enviam de verdade o link vale, porque o envio
+        # tira a proposta do rascunho antes de responder.
+        link_visivel = link if (canal != "preparar" or orcamento.publicado) else ""
         mensagem = self.mensagem_da_proposta(orcamento, link)
 
         extras = {
-            "link": link,
+            "link": link_visivel,
             "mensagem": mensagem,
             # O modal não tenta adivinhar os dados olhando uma cópia antiga
             # no JavaScript. O cadastro vinculado é a fonte padrão; os

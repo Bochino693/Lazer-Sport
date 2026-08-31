@@ -789,6 +789,24 @@
         Painel.erro(erroId, "");
         if (id) id.value = gatilho.dataset.excluir || "";
         if (nome) nome.textContent = gatilho.dataset.nome || "Registro selecionado";
+
+        /* EXCLUSÃO COMUM OU EXCLUSÃO POR CIMA DA REGRA?
+
+           O botão diz, pelo `data-protegido`, se aquele registro é dos
+           que as regras normais protegem -- proposta já enviada, O.S.
+           concluída, cliente com histórico. Nesse caso o superusuário
+           continua podendo excluir, mas precisa saber que está passando
+           por cima de uma proteção e que isso vai ficar registrado com o
+           nome dele. Sem o aviso, apagar histórico teria a mesma cara de
+           apagar um rascunho -- e é justamente o que não pode. */
+        var forcada = document.getElementById("excluirForcada");
+        if (forcada) {
+          forcada.hidden = gatilho.dataset.protegido !== "1";
+          var detalhe = gatilho.dataset.protegidoMotivo;
+          var vao = document.getElementById("excluirForcadaDetalhe");
+          if (detalhe && vao) vao.textContent = detalhe;
+        }
+
         atualizarConfirmacao();
         Painel.abrir(modalId);
 

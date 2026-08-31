@@ -70,7 +70,8 @@
                       aria-label="Enviar a O.S. {{ ordem.numero_documento }}"
                       title="Gerar o link da O.S. para mandar ao cliente"><i class="bi bi-send" aria-hidden="true"></i><span class="ls-action-label">Enviar O.S.</span></button>{% endif %}
               {% if pode_pagamento %}<button class="btn btn-sm btn-outline-success" type="button" data-pagamento-os="{{ ordem.id }}" data-nome="{{ ordem.numero_documento }} — {{ ordem.destinatario }}" data-total="{{ ordem.total }}" data-pago="{{ ordem.valor_pago }}"><i class="bi bi-cash-coin"></i><span class="ls-action-label">Pagamento</span></button>{% endif %}
-              {% if pode_editar and ordem.status == 'rascunho' and not ordem.enviada_em %}<button class="btn btn-sm btn-outline-danger" type="button" data-excluir="{{ ordem.id }}" data-nome="{{ ordem.numero_documento }} — {{ ordem.destinatario }}" aria-label="Excluir {{ ordem.numero_documento }}" title="Excluir rascunho"><i class="bi bi-trash"></i><span class="ls-action-label">Excluir</span></button>{% endif %}
+              {% if pode_editar and ordem.status == 'rascunho' and not ordem.enviada_em %}<button class="btn btn-sm btn-outline-danger" type="button" data-excluir="{{ ordem.id }}" data-nome="{{ ordem.numero_documento }} — {{ ordem.destinatario }}" aria-label="Excluir {{ ordem.numero_documento }}" title="Excluir rascunho"><i class="bi bi-trash"></i><span class="ls-action-label">Excluir</span></button>
+              {% elif user.is_superuser %}{# Palavra final do superusuário: excluir O.S. que já saiu do rascunho. Fica registrado. #}<button class="btn btn-sm btn-outline-danger" type="button" data-excluir="{{ ordem.id }}" data-nome="{{ ordem.numero_documento }} — {{ ordem.destinatario }}" data-protegido="1" data-protegido-motivo="Esta O.S. está como {{ ordem.get_status_display|lower }} e faz parte do histórico operacional. Você pode excluir mesmo assim, e a exclusão vai ficar registrada com o seu nome." aria-label="Excluir {{ ordem.numero_documento }}" title="Excluir mesmo protegida (fica registrado)"><i class="bi bi-trash"></i><span class="ls-action-label">Excluir</span></button>{% endif %}
             </div></td>
           </tr>
         {% empty %}<tr><td colspan="9"><div class="ls-empty"><i class="bi bi-clipboard2-check"></i>Nenhuma Ordem de Serviço encontrada.</div></td></tr>{% endfor %}
@@ -171,6 +172,17 @@
         <p class="text-muted small mt-3 mb-2"><i class="bi bi-info-circle me-1"></i>No WhatsApp, confirme o envio dentro da conversa que será aberta.</p>
         <label class="form-label" for="envioOSLink">Ou compartilhe o link</label>
         <div class="input-group"><input class="form-control" id="envioOSLink" readonly><button class="btn btn-outline-primary" type="button" id="copiarLinkOS"><i class="bi bi-clipboard me-1"></i>Copiar</button></div>
+        {% comment %}
+          Mesma regra do orçamento: a página do cliente recusa uma O.S.
+          que ainda não foi enviada, então o link só aparece depois do
+          envio. "Conferir", ali em cima, abre a prévia interna, que é da
+          equipe e mostra a O.S. em qualquer situação.
+        {% endcomment %}
+        <p class="form-text mb-0" id="envioOSAindaNao" hidden>
+          <i class="bi bi-info-circle me-1"></i>
+          O link do cliente nasce no envio. Para conferir agora, use
+          <strong>Conferir</strong> aqui em cima.
+        </p>
         <details class="ls-message-preview mt-3"><summary><i class="bi bi-chat-left-text me-1"></i> Ver mensagem do WhatsApp</summary><pre id="envioOSMensagem"></pre></details>
         <section class="ls-envios mt-4"><h6 class="mb-2"><i class="bi bi-clock-history me-1"></i>Histórico de envios desta O.S.</h6><ul class="ls-envios-lista" id="enviosOSLista"></ul></section>
       </div>
@@ -309,18 +321,47 @@ LSTela.pronto(function () {
 
   var osEnvioAtual=null;
   function avisoOS(texto,tipo){Painel.erro("envioOSErro",tipo==="erro"?texto:"");var ok=document.getElementById("envioOSSucesso");ok.textContent=tipo==="sucesso"?texto:"";ok.classList.toggle("d-none",tipo!=="sucesso"||!texto);}
+  /* O LINK DO CLIENTE NASCE NO ENVIO -- E O BOTÃO CONTINUA SERVINDO.
+
+     A página do cliente recusa uma O.S. que ainda não foi enviada. Antes
+     o painel mostrava o endereço assim mesmo, e quem clicava levava um
+     404. Mas apenas esconder o botão tiraria um caminho de trabalho: no
+     balcão, "copiar link" É a forma de liberar a O.S. e mandar por outro
+     aplicativo.
+
+     Então o botão fica, e diz o que vai fazer. Sem link ainda, ele
+     libera a O.S. e traz o endereço; com o link já na mão, copia. */
+  function definirLinkOS(link){
+    valor("envioOSLink", link || "");
+    var campo=document.getElementById("envioOSLink");
+    if(campo) campo.placeholder = link ? "" : "Ainda não enviada";
+    var copiar=document.getElementById("copiarLinkOS");
+    if(copiar){
+      copiar.disabled=false;
+      copiar.innerHTML = link
+        ? '<i class="bi bi-clipboard me-1"></i>Copiar'
+        : '<i class="bi bi-link-45deg me-1"></i>Gerar link';
+    }
+    var aviso=document.getElementById("envioOSAindaNao");
+    if(aviso) aviso.hidden = Boolean(link);
+  }
+
   function dadosEnvioOS(canal,chave,conteudo){var form=document.getElementById("formEnviarOS"),dados=new FormData(form);dados.set("action","enviar");dados.set("canal",canal);if(chave)dados.set(chave,conteudo||"");return dados;}
   async function requisitarEnvioOS(canal,chave,conteudo){var form=document.getElementById("formEnviarOS"),resposta=await fetch(form.getAttribute("action"),{method:"POST",body:dadosEnvioOS(canal,chave,conteudo),headers:{"X-Requested-With":"XMLHttpRequest"},credentials:"same-origin"});var bruto=await resposta.text(),json=null;try{json=bruto?JSON.parse(bruto):null;}catch(e){}if(!resposta.ok||!json||json.status!=="sucesso")throw new Error((json&&json.msg)||"O servidor não confirmou o envio (HTTP "+resposta.status+").");return json;}
-  function atualizarEnvioOS(json){if(json.link)valor("envioOSLink",json.link);if(json.mensagem){osEnvioAtual.mensagem_whatsapp=json.mensagem;document.getElementById("envioOSMensagem").textContent=json.mensagem;}if(json.whatsapp)valor("envioOSWhatsapp",json.whatsapp);if(json.email)valor("envioOSEmail",json.email);if(json.envios)desenharEnviosOS(json.envios);}
+  function atualizarEnvioOS(json){if(json.link)definirLinkOS(json.link);if(json.mensagem){osEnvioAtual.mensagem_whatsapp=json.mensagem;document.getElementById("envioOSMensagem").textContent=json.mensagem;}if(json.whatsapp)valor("envioOSWhatsapp",json.whatsapp);if(json.email)valor("envioOSEmail",json.email);if(json.envios)desenharEnviosOS(json.envios);}
 
-  document.querySelectorAll("[data-enviar-os]").forEach(function(b){b.addEventListener("click",function(){osEnvioAtual=achar(b.dataset.enviarOs)||{};valor("envioOSId",b.dataset.enviarOs);valor("envioOSWhatsapp",b.dataset.whatsapp||osEnvioAtual.whatsapp_cliente);valor("envioOSEmail",b.dataset.email||osEnvioAtual.email_cliente);valor("envioOSLink",osEnvioAtual.link_publico||"");document.getElementById("envioOSTitulo").textContent="Enviar O.S. para "+b.dataset.nome;document.getElementById("envioOSResumo").textContent="OS-"+String(b.dataset.enviarOs).padStart(5,"0")+" · "+(osEnvioAtual.equipamento||"atendimento");document.getElementById("envioOSMensagem").textContent=osEnvioAtual.mensagem_whatsapp||"Mensagem pronta após salvar a O.S.";document.getElementById("envioOSPrevia").href=osEnvioAtual.preview_url||osEnvioAtual.link_publico||"#";desenharEnviosOS(osEnvioAtual.envios||[]);avisoOS("","");Painel.abrir("modalEnviarOS");});});
+  document.querySelectorAll("[data-enviar-os]").forEach(function(b){b.addEventListener("click",function(){osEnvioAtual=achar(b.dataset.enviarOs)||{};valor("envioOSId",b.dataset.enviarOs);valor("envioOSWhatsapp",b.dataset.whatsapp||osEnvioAtual.whatsapp_cliente);valor("envioOSEmail",b.dataset.email||osEnvioAtual.email_cliente);definirLinkOS(osEnvioAtual.link_publico||"");document.getElementById("envioOSTitulo").textContent="Enviar O.S. para "+b.dataset.nome;document.getElementById("envioOSResumo").textContent="OS-"+String(b.dataset.enviarOs).padStart(5,"0")+" · "+(osEnvioAtual.equipamento||"atendimento");document.getElementById("envioOSMensagem").textContent=osEnvioAtual.mensagem_whatsapp||"Mensagem pronta após salvar a O.S.";document.getElementById("envioOSPrevia").href=osEnvioAtual.preview_url||osEnvioAtual.link_publico||"#";desenharEnviosOS(osEnvioAtual.envios||[]);avisoOS("","");Painel.abrir("modalEnviarOS");});});
   document.getElementById("formEnviarOS")?.addEventListener("submit",function(e){e.preventDefault();});
 
   document.getElementById("enviarOSWhatsapp")?.addEventListener("click",function(){var telefone=document.getElementById("envioOSWhatsapp").value.trim(),mensagem=(osEnvioAtual&&osEnvioAtual.mensagem_whatsapp)||"";if(!Painel.whatsapp.web(telefone,mensagem)){avisoOS("Informe o WhatsApp do cliente com DDD.","erro");return;}var saida=Painel.whatsapp.abrir(telefone,mensagem);avisoOS(saida.ok?"A conversa foi aberta. Confirme o envio dentro do WhatsApp.":"O navegador bloqueou a conversa; tente novamente.",saida.ok?"sucesso":"erro");requisitarEnvioOS("whatsapp","whatsapp",telefone).then(function(json){atualizarEnvioOS(json);avisoOS("O.S. liberada e registrada. Confirme o envio dentro do WhatsApp.","sucesso");}).catch(function(erro){avisoOS("A conversa abriu, mas a O.S. não foi liberada pelo servidor: "+erro.message,"erro");});});
 
   document.getElementById("enviarOSEmail")?.addEventListener("click",async function(){var botao=this,email=document.getElementById("envioOSEmail").value.trim(),rotulo=botao.innerHTML;avisoOS("","");botao.disabled=true;botao.innerHTML='<span class="spinner-border spinner-border-sm me-1"></span>Enviando';try{var json=await requisitarEnvioOS("email","email",email);atualizarEnvioOS(json);avisoOS("E-mail enviado e registrado com sucesso.","sucesso");botao.innerHTML='<i class="bi bi-check-lg me-1"></i>Enviado';setTimeout(function(){botao.innerHTML=rotulo;botao.disabled=false;},2200);}catch(erro){avisoOS(erro.message,"erro");botao.innerHTML=rotulo;botao.disabled=false;}});
 
-  document.getElementById("copiarLinkOS")?.addEventListener("click",function(){var botao=this,campo=document.getElementById("envioOSLink");if(!campo.value)return;function sucesso(){botao.innerHTML='<i class="bi bi-check-lg me-1"></i>Copiado';requisitarEnvioOS("link").then(function(json){atualizarEnvioOS(json);avisoOS("Link copiado e O.S. liberada para o cliente.","sucesso");}).catch(function(erro){avisoOS("O link foi copiado, mas a O.S. não foi liberada: "+erro.message,"erro");});}function legado(){campo.removeAttribute("readonly");campo.select();var ok=document.execCommand("copy");campo.setAttribute("readonly","readonly");if(ok)sucesso();else avisoOS("Selecione e copie o link manualmente.","erro");}if(navigator.clipboard&&window.isSecureContext)navigator.clipboard.writeText(campo.value).then(sucesso).catch(legado);else legado();});
+  document.getElementById("copiarLinkOS")?.addEventListener("click",function(){var botao=this,campo=document.getElementById("envioOSLink");
+    /* Sem link ainda: libera a O.S., recebe o endereço e só então copia.
+       Um clique resolve as duas coisas, que é o que a pessoa queria. */
+    if(!campo.value){botao.disabled=true;requisitarEnvioOS("link").then(function(json){atualizarEnvioOS(json);botao.disabled=false;avisoOS("O.S. liberada. O link já pode ser enviado ao cliente.","sucesso");if(campo.value&&navigator.clipboard&&window.isSecureContext){navigator.clipboard.writeText(campo.value).catch(function(){});}}).catch(function(erro){botao.disabled=false;avisoOS(erro.message,"erro");});return;}
+    function sucesso(){botao.innerHTML='<i class="bi bi-check-lg me-1"></i>Copiado';requisitarEnvioOS("link").then(function(json){atualizarEnvioOS(json);avisoOS("Link copiado e O.S. liberada para o cliente.","sucesso");}).catch(function(erro){avisoOS("O link foi copiado, mas a O.S. não foi liberada: "+erro.message,"erro");});}function legado(){campo.removeAttribute("readonly");campo.select();var ok=document.execCommand("copy");campo.setAttribute("readonly","readonly");if(ok)sucesso();else avisoOS("Selecione e copie o link manualmente.","erro");}if(navigator.clipboard&&window.isSecureContext)navigator.clipboard.writeText(campo.value).then(sucesso).catch(legado);else legado();});
   document.querySelectorAll("[data-pagamento-os]").forEach(function(b){b.addEventListener("click",function(){valor("pagamentoOSId",b.dataset.pagamentoOs);valor("pagamentoOSValor",b.dataset.pago||"0");valor("pagamentoOSObs","");document.getElementById("pagamentoOSTitulo").textContent=b.dataset.nome;document.getElementById("pagamentoOSResumo").textContent="Total da O.S.: "+moeda(numero(b.dataset.total));Painel.erro("pagamentoOSErro","");Painel.abrir("modalPagamentoOS");});});Painel.ligar({form:"formPagamentoOS",erro:"pagamentoOSErro"});Painel.ligarExclusao();
 
   var params=new URLSearchParams(location.search);if(params.get("novo")==="1"&&document.getElementById("novaOS")){abrir(null);if(params.get("manutencao")){valor("osManutencao",params.get("manutencao"));document.getElementById("osManutencao").dispatchEvent(new Event("change"));}}

@@ -1,45 +1,97 @@
 {% extends "base_inner.html" %}
-{% block title %}Pedidos Internos | Lazer & Sport{% endblock %}
-{% block top_title %}Central de pedidos{% endblock %}
+{% load interno_extras %}
+{% block title %}Pedidos da loja | Lazer & Sport{% endblock %}
+{% block top_title %}Pedidos da loja{% endblock %}
+{% block body_class %}ls-commercial-body{% endblock %}
 
 {% block content %}
+{% comment %}
+  ESTA TELA MOSTRA O QUE A BOLINHA DO MENU CONTA.
+
+  Antes não mostrava. A bolinha contava o pedido que o cliente faz no
+  site (`core.Pedido`) e a tela listava `CentralPedidos`, uma tabela
+  interna antiga que nunca recebeu uma linha. O menu dizia "6 pedidos", a
+  pessoa clicava e lia "Nenhum pedido na central" -- e não havia erro
+  nenhum na tela, só não era o mesmo assunto.
+
+  Os cartões abaixo filtram, e o primeiro já vem ativo: quem abre esta
+  tela quer ver o que está em aberto, não o histórico inteiro.
+{% endcomment %}
 <section class="ls-page-hero">
   <div class="ls-page-hero-copy">
-    <span class="ls-page-kicker">Acompanhamento operacional</span>
-    <h1>Pedidos internos</h1>
-    <p>Acompanhe a fila de pedidos e identifique o estado atual de cada solicitação registrada na operação interna.</p>
+    <span class="ls-page-kicker">Loja · acompanhamento</span>
+    <h1>Pedidos da loja</h1>
+    <p>O que os clientes pediram pelo site. A bolinha do menu conta exatamente esta fila.</p>
   </div>
 </section>
 
 <section class="ls-metrics">
-  <article class="ls-metric-card violet">
-    <div class="ls-metric-head"><span class="ls-metric-label">Pedidos registrados</span><span class="ls-metric-icon"><i class="bi bi-box2"></i></span></div>
-    <strong class="ls-metric-value">{{ total_registros }}</strong>
-    <span class="ls-metric-note">Registros disponíveis na central</span>
-  </article>
+  {% for chave, rotulo, quantidade, icone, cor in cartoes %}
+    <a class="ls-metric-card ls-budget-filter-card {{ cor }} {% if filtro_ativo == chave %}active{% endif %}"
+       href="?filtro={{ chave }}"
+       aria-current="{% if filtro_ativo == chave %}page{% else %}false{% endif %}">
+      <div class="ls-metric-head">
+        <span class="ls-metric-label">{{ rotulo }}</span>
+        <span class="ls-metric-icon"><i class="bi {{ icone }}"></i></span>
+      </div>
+      <strong class="ls-metric-value">{{ quantidade }}</strong>
+      <span class="ls-metric-note">{% if filtro_ativo == chave %}Filtro ativo{% else %}Toque para filtrar{% endif %}</span>
+    </a>
+  {% endfor %}
 </section>
 
 <section class="ls-data-panel">
-  <div class="ls-data-header"><div><h2>Fila de pedidos</h2><p>Descrição, situação e data de criação.</p></div></div>
+  <div class="ls-data-header">
+    <div>
+      <h2>Fila de pedidos</h2>
+      <p>Cliente, itens, valor e situação — na ordem de chegada.</p>
+    </div>
+  </div>
   <div class="ls-data-body">
     <div class="table-responsive ls-commercial-table-wrap">
       <table class="ls-table ls-commercial-table">
-        <thead><tr><th>ID</th><th>Pedido</th><th>Status</th><th>Criado em</th></tr></thead>
+        <thead>
+          <tr>
+            <th>#</th><th>Cliente</th><th>Itens</th>
+            <th class="text-end">Total</th><th>Entrega</th><th>Situação</th><th>Feito em</th>
+          </tr>
+        </thead>
         <tbody>
           {% for pedido in pedidos %}
             <tr>
               <td data-rotulo="Nº"><strong>#{{ pedido.id }}</strong></td>
-              <td data-rotulo="Pedido"><strong>{{ pedido.descricao_pedido }}</strong></td>
+              <td data-rotulo="Cliente">
+                <strong>{% firstof pedido.cliente.user.get_full_name pedido.cliente.user.username "Cliente do site" %}</strong>
+                {% if pedido.cidade %}<span class="ls-sub">{{ pedido.cidade }}{% if pedido.estado %}/{{ pedido.estado }}{% endif %}</span>{% endif %}
+              </td>
+              <td data-rotulo="Itens">
+                {% for item in pedido.itens.all|slice:":3" %}
+                  <span class="ls-chip-lista">{{ item.quantidade }}× {{ item.nome_item }}</span>
+                {% empty %}<span class="text-muted">—</span>{% endfor %}
+                {% if pedido.itens.all|length > 3 %}<span class="ls-sub">e mais {{ pedido.itens.all|length|add:"-3" }}</span>{% endif %}
+              </td>
+              {# `Pedido.save()` recalcula total_final (líquido + frete) a cada gravação. #}
+              <td data-rotulo="Total" class="text-end"><strong>R$ {{ pedido.total_final|moeda }}</strong></td>
+              <td data-rotulo="Entrega">{{ pedido.get_tipo_envio_display|default:"—" }}</td>
               <td data-rotulo="Situação">
-                {% if pedido.status == "concluido" %}<span class="ls-status success">{{ pedido.get_status_display }}</span>
+                {% if pedido.status == "finalizado" %}<span class="ls-status success">{{ pedido.get_status_display }}</span>
                 {% elif pedido.status == "cancelado" %}<span class="ls-status danger">{{ pedido.get_status_display }}</span>
-                {% elif pedido.status == "andamento" %}<span class="ls-status info">{{ pedido.get_status_display }}</span>
-                {% else %}<span class="ls-status warning">{{ pedido.get_status_display }}</span>{% endif %}
+                {% elif pedido.status == "aguardando_pagamento" %}<span class="ls-status warning">{{ pedido.get_status_display }}</span>
+                {% else %}<span class="ls-status info">{{ pedido.get_status_display }}</span>{% endif %}
               </td>
               <td data-rotulo="Data">{{ pedido.criacao|date:"d/m/Y H:i"|default:"—" }}</td>
             </tr>
           {% empty %}
-            <tr><td colspan="4"><div class="ls-empty"><i class="bi bi-box2"></i>Nenhum pedido na central.</div></td></tr>
+            <tr><td colspan="7">
+              <div class="ls-empty">
+                <i class="bi bi-box2"></i>
+                {% if filtro_ativo == "abertos" %}
+                  Nenhum pedido em aberto. Tudo o que entrou já foi finalizado ou cancelado.
+                {% else %}
+                  Nenhum pedido nesta situação.
+                {% endif %}
+              </div>
+            </td></tr>
           {% endfor %}
         </tbody>
       </table>

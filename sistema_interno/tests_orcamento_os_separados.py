@@ -248,3 +248,70 @@ class OrcamentoEOrdemServicoSeparadosTests(TestCase):
         self.assertEqual(ordem.valor_pago, Decimal("150.00"))
         self.assertEqual(orcamento.status_pagamento, Orcamento.StatusPagamento.PENDENTE)
         self.assertEqual(orcamento.valor_pago, Decimal("0.00"))
+
+    def test_o_superusuario_apaga_os_concluida_e_o_registro_guarda_o_que_era(self):
+        """A O.S. concluída é histórico operacional -- e histórico erra.
+
+        Quem responde pela empresa precisa poder tirar do caminho uma O.S.
+        lançada errado sem depender de ninguém. O que não pode é isso
+        acontecer em silêncio: daqui a seis meses, "onde foi parar a
+        OS-00007?" precisa ter resposta.
+        """
+        from .models import ExclusaoRegistrada
+
+        ordem = OrdemServico.objects.create(
+            nome_cliente="Cliente técnico",
+            equipamento="Cama elástica",
+            status=OrdemServico.Status.CONCLUIDA,
+            responsavel=self.gestor,
+        )
+        ItemOrdemServico.objects.create(
+            ordem=ordem, tipo=ItemOrdemServico.Tipo.PECA,
+            descricao="Lona de salto", quantidade=1,
+            valor_unitario=Decimal("380.00"),
+        )
+        numero = ordem.numero_documento
+
+        resposta = self.post_interno("/ordens-servico/", {
+            "action": "delete",
+            "id": ordem.pk,
+            "confirmacao_exclusao": "CONFIRMAR",
+            "motivo_exclusao": "lançada na O.S. errada",
+        })
+
+        self.assertEqual(resposta.status_code, 200)
+        self.assertFalse(OrdemServico.objects.filter(pk=ordem.pk).exists())
+
+        rastro = ExclusaoRegistrada.objects.get(tipo="Ordem de Serviço")
+        self.assertIn(numero, rastro.identificacao)
+        self.assertTrue(rastro.forcada)
+        self.assertEqual(rastro.motivo, "lançada na O.S. errada")
+        self.assertIn("Cama elástica", rastro.resumo)
+        self.assertIn("380", rastro.resumo)
+
+    def test_quem_nao_e_superusuario_continua_sem_apagar_os_concluida(self):
+        from django.contrib.auth.models import User
+
+        from .permissoes import atribuir_funcoes
+
+        producao = User.objects.create_user(
+            username="montador-x", password="x", email="m@example.com",
+        )
+        atribuir_funcoes(producao, ["producao"])
+        self.client.force_login(producao)
+
+        ordem = OrdemServico.objects.create(
+            nome_cliente="Cliente técnico",
+            equipamento="Cama elástica",
+            status=OrdemServico.Status.CONCLUIDA,
+        )
+
+        resposta = self.post_interno("/ordens-servico/", {
+            "action": "delete",
+            "id": ordem.pk,
+            "confirmacao_exclusao": "CONFIRMAR",
+        })
+
+        self.assertEqual(resposta.status_code, 403)
+        self.assertTrue(OrdemServico.objects.filter(pk=ordem.pk).exists())
+
