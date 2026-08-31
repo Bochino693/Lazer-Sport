@@ -183,7 +183,7 @@
     ficaria com uma cara ao abrir direto e outra ao chegar pelo menu.
   {% endcomment %}
   {% block extra_css %}{% endblock %}
-  <link id="lsFolhaBase" href="{% static 'interno/interno_modern.css' %}?v=34" rel="stylesheet">
+  <link id="lsFolhaBase" href="{% static 'interno/interno_modern.css' %}?v=35" rel="stylesheet">
 
   {% comment %}
     A ORDEM DESTES DOIS ARQUIVOS IMPORTA.
@@ -198,7 +198,7 @@
     decide antes de saber, e volta a piscar a cada clique.
   {% endcomment %}
   {# Troca telas e filtros sem uma segunda requisição; cache só durante a aba. #}
-  <script src="{% static 'interno/ls-soft-navigation.js' %}?v=5" defer></script>
+  <script src="{% static 'interno/ls-soft-navigation.js' %}?v=6" defer></script>
   <!-- Barra de carregamento no topo, compartilhada com o painel /adm. -->
   <link rel="stylesheet" href="{% static 'site/ls-page-loader.css' %}?v=2">
   <script src="{% static 'site/ls-page-loader.js' %}?v=3" defer></script>

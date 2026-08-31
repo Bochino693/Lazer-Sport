@@ -9,9 +9,11 @@ webhook confiável neste sistema.
 
 import base64
 import io
+import logging
 import re
 import unicodedata
 from decimal import Decimal
+from functools import lru_cache
 
 import qrcode
 from django.conf import settings
@@ -63,18 +65,38 @@ def gerar_payload(*, valor, referencia):
     return payload + _crc16(payload)
 
 
+@lru_cache(maxsize=128)
+def _qr_base64(payload):
+    """O mesmo documento não redesenha a mesma imagem a cada prévia."""
+    imagem = qrcode.make(payload)
+    arquivo = io.BytesIO()
+    imagem.save(arquivo, format="PNG")
+    return base64.b64encode(arquivo.getvalue()).decode("ascii")
+
+
 def dados_pix(documento):
     """Retorna payload e imagem pronta para um orçamento ou uma O.S."""
     valor = getattr(documento, "saldo_pagamento", Decimal("0.00"))
     referencia = getattr(documento, "numero_documento", str(documento.pk))
-    payload = gerar_payload(valor=valor, referencia=referencia)
+    try:
+        payload = gerar_payload(valor=valor, referencia=referencia)
+    except Exception:
+        logging.getLogger(__name__).exception(
+            "Falha ao montar payload Pix do documento %s", referencia,
+        )
+        payload = ""
     if not payload:
         return {"pix_configurado": False, "pix_copia_cola": "", "pix_qr": ""}
 
-    imagem = qrcode.make(payload)
-    arquivo = io.BytesIO()
-    imagem.save(arquivo, format="PNG")
-    qr = base64.b64encode(arquivo.getvalue()).decode("ascii")
+    try:
+        qr = _qr_base64(payload)
+    except Exception:
+        # O QR ajuda, mas nunca pode transformar uma prévia inteira em 500
+        # (que o proxy apresenta para a equipe como Bad Gateway).
+        logging.getLogger(__name__).exception(
+            "Falha ao gerar QR Pix do documento %s", referencia,
+        )
+        return {"pix_configurado": False, "pix_copia_cola": "", "pix_qr": ""}
     return {
         "pix_configurado": True,
         "pix_copia_cola": payload,

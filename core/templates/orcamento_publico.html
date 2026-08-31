@@ -352,14 +352,41 @@ body{
 
 /* ---------------------------------------------------------- impressão */
 @media print{
-  body{background:#fff}
-  .envelope{max-width:none;padding:0}
-  .decisao,.rodape .nao-imprime,.previa-bar,.documento-acoes{display:none}
-  .capa{box-shadow:none;border-radius:0;
-    /* impressora costuma descartar fundo; o texto precisa sobreviver */
-    -webkit-print-color-adjust:exact;print-color-adjust:exact}
-  .bloco{box-shadow:none;border-radius:0;break-inside:avoid}
+  @page{size:A4 portrait;margin:4mm}
+  html,body{width:202mm;min-height:0;background:#fff;font-size:8px;line-height:1.22}
+  .envelope{width:202mm;max-width:none;margin:0;padding:0}
+  .decisao,.rodape .nao-imprime,.previa-bar,.documento-acoes{display:none!important}
   .entra{animation:none;opacity:1;transform:none}
+  .capa{
+    grid-template-columns:48mm 1fr;gap:5mm;
+    padding:9mm 4mm 3mm;border-radius:3mm 3mm 0 0;box-shadow:none;
+    -webkit-print-color-adjust:exact;print-color-adjust:exact;
+  }
+  .capa::before{height:6mm}.capa-logo{width:42mm}.capa-marca p{margin-top:2mm;font-size:6.5pt}
+  .empresa-identidade{margin-top:2mm;padding:1.6mm 2mm;border-left-width:1mm}
+  .empresa-identidade strong{font-size:7pt}.empresa-identidade span{font-size:6pt}
+  .capa-meta{padding-left:4mm}.capa-kicker{font-size:6pt}.capa h1{margin:1mm 0 2mm;font-size:19pt;letter-spacing:-.4mm}
+  .capa h1::after{width:14mm;height:1mm;margin-top:1.5mm}
+  .meta-lista{grid-template-columns:1fr 1fr;gap:1mm 3mm}.meta-linha{grid-template-columns:21mm 1fr;gap:1mm}
+  .meta-linha dt{font-size:5.8pt}.meta-linha dd{font-size:6.3pt}.capa-linha{gap:1mm;margin-top:2mm}.selo{padding:1mm 1.8mm;font-size:5.8pt}
+  .cliente-bloco{padding:2.5mm 4mm;margin-bottom:2mm;border-radius:0 0 3mm 3mm;box-shadow:none}
+  .secao-legenda{margin-bottom:1.5mm;font-size:6.3pt}.dados-grid{gap:1mm 4mm}.dado{grid-template-columns:20mm 1fr;gap:1mm;font-size:6.3pt}.dado b{font-size:5.8pt}
+  .faixa{gap:2mm;padding:2mm 3mm;margin-bottom:2mm;border-radius:2mm;font-size:6.3pt}.faixa-icone{font-size:8pt}
+  .bloco{padding:2.5mm 3mm;margin-bottom:2mm;border-radius:2mm;box-shadow:none;break-inside:auto}
+  .bloco-titulo{gap:2mm;margin-bottom:1.5mm}.bloco-titulo h2{font-size:7.4pt}.bloco-titulo span{font-size:5.8pt}
+  .item-cabecalho,.item{grid-template-columns:minmax(60mm,1fr) 20mm 29mm 29mm}
+  .item-cabecalho span{padding:1.2mm 1.5mm;font-size:5.2pt}.item>span{padding:1.2mm 1.5mm}
+  .item-descricao{gap:2mm}.item-foto{width:9mm;height:9mm;flex-basis:9mm;border-radius:1.5mm}
+  .item-nome{font-size:6.4pt}.item-medidas{font-size:5.5pt}.item-quantidade,.item-unitario,.item-valor{font-size:6pt}
+  .soma{margin-top:1.5mm;padding-top:1.5mm}.soma-linha{padding:.5mm 0;font-size:6.2pt}
+  .soma-total{margin-top:1mm;padding-top:1mm}.soma-total span{font-size:6.4pt}.soma-total strong{font-size:11pt}
+  .comercial-grid{margin-bottom:2mm;border-radius:2mm;box-shadow:none}.comercial-item{padding:2mm 2.5mm}
+  .comercial-item span{margin-bottom:.7mm;font-size:5.2pt}.comercial-item strong{font-size:6.5pt}.comercial-item.total strong{font-size:8pt}
+  .bank-note{margin-bottom:1.5mm;padding:1.5mm 2mm;font-size:5.7pt}.bank-grid{gap:2mm}
+  .bank-card{grid-template-columns:7mm 1fr;gap:1.5mm;padding:1.5mm 2mm;border-radius:1.5mm}
+  .bank-icon{width:7mm;height:7mm;font-size:7pt}.bank-card strong{margin-bottom:.5mm;font-size:6pt}.bank-card span{font-size:5.4pt;line-height:1.3}
+  .rodape{margin-top:2mm;font-size:5.5pt;line-height:1.35}
+  .capa,.item-cabecalho,.selo,.faixa,.bank-icon{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 }
 </style>
 </head>

@@ -2719,16 +2719,6 @@ body.modal-open .ls-action-fab-menu{display:none!important}
 .promo-card,.combo-card,.cup-card,.project-card,.adm-card{
   content-visibility:auto;contain-intrinsic-size:auto 410px;
 }
-.ls-nav-recovery{
-  position:fixed;z-index:1045;right:14px;bottom:14px;width:min(440px,calc(100vw - 28px));
-  padding:12px;display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:10px;
-  border:1px solid rgba(83,171,237,.42);border-radius:15px;color:#e9f5ff;
-  background:rgba(21,36,52,.97);box-shadow:0 20px 60px rgba(0,0,0,.42);
-}
-.ls-nav-recovery div{display:grid;gap:2px}.ls-nav-recovery strong{font-size:.82rem}.ls-nav-recovery span{color:#aabed0;font-size:.69rem}
-.ls-nav-recovery button{min-height:36px;padding:7px 10px;border:1px solid rgba(105,185,242,.3);border-radius:10px;color:#eef8ff;background:rgba(53,139,202,.2);font-size:.69rem;font-weight:800}
-.ls-nav-recovery button[data-close]{width:34px;padding:0;color:#9eb0c1;background:transparent;font-size:1.05rem}
-body.modal-open .ls-nav-recovery{display:none!important}
 .ls-action-fab-head{
   grid-column:1/-1;padding:6px 7px 8px;display:flex;align-items:baseline;justify-content:space-between;
   gap:10px;border-bottom:1px solid rgba(255,255,255,.08);
@@ -2820,7 +2810,79 @@ body.modal-open .ls-nav-recovery{display:none!important}
   .ls-commercial-table tbody tr{padding:10px 54px 10px 10px;gap:0 9px}
   .ls-action-fab-menu{grid-template-columns:1fr;width:min(270px,calc(100vw - 16px));padding:7px}
   .ls-action-fab-head small{display:none}
-  .ls-nav-recovery{grid-template-columns:1fr auto}.ls-nav-recovery div{grid-column:1/-1}.ls-nav-recovery button[data-retry]{width:100%}
+}
+
+/* ======================================================================
+   LISTA DE O.S. — UMA REGRA POR FAIXA, SEM CSS DE TABELA E CARD BRIGANDO
+
+   No computador as nove colunas usam toda a largura disponível, sem a
+   largura mínima de 1040px que criava uma segunda tela horizontal. No
+   tablet o registro vira um card de três colunas, sempre na mesma ordem;
+   no celular ele cai para duas. A ação continua fixa no canto e não
+   desloca nenhum dado.
+   ====================================================================== */
+@media (min-width:901px){
+  .ls-os-body .table-responsive{overflow-x:visible!important}
+  .ls-os-body .ls-os-tabela{
+    min-width:0!important;width:100%!important;table-layout:fixed!important;
+  }
+  .ls-os-tabela th,.ls-os-tabela td{padding-inline:6px!important}
+  .ls-os-tabela th:nth-child(1){width:8%}
+  .ls-os-tabela th:nth-child(2){width:22%}
+  .ls-os-tabela th:nth-child(3){width:9%}
+  .ls-os-tabela th:nth-child(4){width:11%}
+  .ls-os-tabela th:nth-child(5){width:12%}
+  .ls-os-tabela th:nth-child(6){width:9%}
+  .ls-os-tabela th:nth-child(7){width:12%}
+  .ls-os-tabela th:nth-child(8){width:10%}
+  .ls-os-tabela th:nth-child(9){width:58px}
+  .ls-os-tabela td{white-space:normal!important;overflow-wrap:anywhere!important}
+  .ls-os-tabela td[data-rotulo="Total"]{white-space:nowrap!important}
+  .ls-os-tabela td[data-rotulo="Cliente / equipamento"] strong{
+    display:block;white-space:normal;overflow:visible;text-overflow:clip;
+  }
+}
+
+@media (min-width:601px) and (max-width:900px){
+  .ls-os-body .ls-commercial-table-wrap,
+  .ls-os-body .table-responsive{overflow:visible!important}
+  .ls-os-tabela,.ls-os-tabela tbody{display:block!important;width:100%!important;min-width:0!important}
+  .ls-os-tabela thead{display:none!important}
+  .ls-os-tabela tbody tr{
+    position:relative;display:grid!important;
+    grid-template-columns:repeat(3,minmax(0,1fr))!important;
+    gap:0 16px!important;width:100%;margin:0 0 12px!important;
+    padding:14px 64px 12px 14px!important;
+    border:1px solid var(--os-linha)!important;border-radius:17px!important;
+    background:linear-gradient(145deg,rgba(30,58,54,.42),#19150f 72%)!important;
+  }
+  .ls-os-tabela tbody td{
+    display:block!important;min-width:0!important;max-width:none!important;
+    padding:9px 2px!important;border:0!important;
+    border-bottom:1px solid var(--line-soft)!important;
+    text-align:left!important;white-space:normal!important;background:transparent!important;
+  }
+  .ls-os-tabela tbody td::before{
+    content:attr(data-rotulo);display:block;margin-bottom:4px;
+    color:#8fdfd2;font-size:.64rem;font-weight:950;
+    letter-spacing:.075em;line-height:1.2;text-transform:uppercase;
+  }
+  .ls-os-tabela tbody td[data-rotulo="Cliente / equipamento"]{grid-column:2/4}
+  .ls-os-tabela tbody td[data-rotulo="Ações"]{
+    position:absolute!important;top:12px;right:12px;z-index:4;
+    width:40px!important;min-width:40px!important;padding:0!important;
+    border:0!important;background:transparent!important;box-shadow:none!important;
+  }
+  .ls-os-tabela tbody td[data-rotulo="Ações"]::before{display:none;content:""}
+  .ls-os-tabela tbody td[data-rotulo="Cliente / equipamento"] strong{
+    white-space:normal;overflow:visible;text-overflow:clip;
+  }
+}
+
+@media (max-width:600px){
+  .ls-os-tabela tbody td[data-rotulo="Cliente / equipamento"],
+  .ls-os-tabela tbody td[data-rotulo="Situação"],
+  .ls-os-tabela tbody td[data-rotulo="Pagamento"]{grid-column:1/-1}
 }
 
 /* O RECADO DO FILTRO INSTANTÂNEO.

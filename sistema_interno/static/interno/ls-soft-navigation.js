@@ -211,27 +211,14 @@
     if (window.LSLoader && window.LSLoader.hide) window.LSLoader.hide();
   }
 
-  function mostrarFalha(url) {
-    esconderLoader();
-    var anterior = document.getElementById("lsNavRecovery");
-    if (anterior) anterior.remove();
-
-    var painel = document.createElement("div");
-    painel.id = "lsNavRecovery";
-    painel.className = "ls-nav-recovery";
-    painel.setAttribute("role", "alert");
-    painel.innerHTML = (
-      '<div><strong>A conexão oscilou</strong>' +
-      '<span>A tela atual foi preservada e nada foi reenviado.</span></div>' +
-      '<button type="button" data-retry> tentar novamente</button>' +
-      '<button type="button" data-close aria-label="Fechar aviso">×</button>'
-    );
-    painel.querySelector("[data-retry]").addEventListener("click", function () {
-      painel.remove();
-      navegar(url, "push");
-    });
-    painel.querySelector("[data-close]").addEventListener("click", function () { painel.remove(); });
-    document.body.appendChild(painel);
+  function fecharMenuMovel() {
+    var sidebar = document.getElementById("sidebarMenu");
+    var overlay = document.getElementById("sidebarOverlay");
+    var toggle = document.getElementById("menuToggle");
+    if (sidebar) sidebar.classList.remove("open");
+    if (overlay) overlay.classList.remove("open");
+    if (toggle) toggle.setAttribute("aria-expanded", "false");
+    document.body.classList.remove("menu-open");
   }
 
   /* ======================================================================
@@ -445,6 +432,7 @@
 
     atual.replaceWith(document.importNode(destino, true));
     sincronizarMenu(novoDoc);
+    fecharMenuMovel();
 
     /* A ORDEM AQUI COPIA A DE UMA ABERTURA NORMAL: primeiro o painel
        monta a tela (máscara, textarea, ações de tabela), depois roda o
@@ -562,6 +550,10 @@
     }
 
     var minhaNavegacao = ++navegacao;
+    /* A gaveta nunca acompanha a pessoa para a tela seguinte. Fechá-la
+       já no toque também deixa o conteúdo anterior disponível durante
+       os poucos milissegundos em que a próxima tela está chegando. */
+    fecharMenuMovel();
     mostrarLoader("Carregando " + (alvo.pathname === window.location.pathname ? "resultados…" : "a tela…"));
 
     var cache = recuperar(alvo);
@@ -577,7 +569,12 @@
       );
     }).catch(function () {
       if (minhaNavegacao !== navegacao) return;
-      mostrarFalha(alvo);
+      /* A navegação suave é uma melhoria, nunca uma porta obrigatória.
+         Depois das tentativas automáticas, entrega a URL ao navegador:
+         ele reaproveita toda a pilha normal de rede e evita deixar a
+         pessoa presa num aviso azul criado pelo próprio painel. */
+      esconderLoader();
+      window.location.assign(alvo.href);
     });
   }
 

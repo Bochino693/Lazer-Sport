@@ -60,7 +60,47 @@
 @media(max-width:700px){.cover{grid-template-columns:1fr;gap:18px}.brand{align-items:center}.brand img{width:min(100%,285px)}.company{width:100%}.title{padding:19px 0 0;border-left:0;border-top:2px solid var(--blue-line)}.quick-grid{grid-template-columns:1fr 1fr}}
 @media(max-width:590px){.document{padding:10px 8px 38px}.cover{padding:38px 16px 18px;border-radius:18px 18px 7px 7px}.title h1{font-size:2.15rem}.meta-row{grid-template-columns:21px 105px 1fr}.client{padding:16px 14px}.client-grid{grid-template-columns:1fr;gap:7px}.client-row.wide{grid-column:auto}.client-row{grid-template-columns:20px 82px 1fr}.quick-grid{gap:6px}.quick{grid-template-columns:31px 1fr;padding:9px}.quick i{width:31px;height:31px}.block{padding:16px 13px}.service-grid{grid-template-columns:1fr}.service-card.full{grid-column:auto}.gallery{grid-template-columns:1fr 1fr}.items th:first-child,.items td:first-child{display:none}.items th,.items td{padding:8px 7px}.items th{font-size:.57rem}.items td{font-size:.7rem}.total-row{justify-content:space-between}.pix{grid-template-columns:1fr;text-align:center}.pix>img{margin:auto}.copy{flex-direction:column}.copy button{min-height:42px}.bank-grid{grid-template-columns:1fr}.tools{align-items:stretch;flex-direction:column}.tools button{width:100%}.footer-contact{gap:8px 14px}}
 @media(max-width:380px){.quick-grid{grid-template-columns:1fr}.gallery{grid-template-columns:1fr}.meta-row{grid-template-columns:20px 96px 1fr}}
-@media print{@page{size:A4;margin:9mm}body{background:#fff}.document{width:100%;padding:0}.preview,.tools,.confirm,.screen-only{display:none!important}.cover,.client,.block,.quick{box-shadow:none}.cover{padding:34px 22px 18px}.client{padding:15px 18px}.quick-grid{gap:5px}.quick{padding:7px 8px}.block{padding:14px 15px;margin-bottom:8px;break-inside:avoid}.service-card{padding:8px}.gallery{grid-template-columns:repeat(4,1fr)}.footer,.cover,.items th,.badge,.quick i,.service-icon{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+@media print{
+  @page{size:A4 portrait;margin:4mm}
+  html,body{width:202mm;min-height:0;background:#fff;font-size:8px;line-height:1.22}
+  .document{width:202mm;max-width:none;margin:0;padding:0}
+  .preview,.tools,.confirm,.screen-only{display:none!important}
+  .cover,.client,.block,.quick{box-shadow:none}
+  .cover{
+    grid-template-columns:48mm 1fr;gap:5mm;
+    padding:9mm 4mm 3mm;border-radius:3mm 3mm 0 0;
+  }
+  .cover::before{height:6mm}
+  .brand img{width:42mm}.company{margin-top:2mm;padding:1.6mm 2mm}
+  .company strong{font-size:7.5pt}.company span{font-size:6.5pt}
+  .title{padding-left:4mm}.kicker{font-size:6pt}.title h1{margin:1mm 0 2mm;font-size:19pt;letter-spacing:-.4mm}
+  .title h1::after{width:14mm;height:1mm;margin-top:1.5mm}
+  .meta{grid-template-columns:1fr 1fr;gap:0 3mm}.meta-row{grid-template-columns:4mm 20mm 1fr;gap:1mm;padding:.7mm 0}
+  .meta-row i{font-size:7pt}.meta-row dt{font-size:6pt}.meta-row dd{font-size:6.5pt}
+  .badges{gap:1mm;margin-top:2mm}.badge{padding:1mm 1.7mm;font-size:5.8pt}
+  .client{padding:2.5mm 4mm;margin-bottom:2mm;border-radius:0 0 3mm 3mm}
+  .section-title{margin-bottom:1.5mm;font-size:6.4pt}.client-grid{gap:1mm 4mm}
+  .client-row{grid-template-columns:3mm 18mm 1fr;gap:1mm;font-size:6.4pt}.client-row b{font-size:5.8pt}
+  .notice{grid-template-columns:7mm 1fr;gap:2mm;margin-bottom:2mm;padding:2mm 3mm;border-radius:2mm}
+  .notice-icon{width:7mm;height:7mm}.notice strong{font-size:6.6pt}.notice span{font-size:6.1pt}
+  .quick-grid{gap:1.5mm;margin-bottom:2mm}.quick{grid-template-columns:6mm 1fr;gap:1.5mm;padding:1.5mm 2mm;border-radius:2mm}
+  .quick i{width:6mm;height:6mm;font-size:7pt}.quick span{font-size:5pt}.quick strong{font-size:6.1pt}
+  .block{padding:2.2mm 3mm;margin-bottom:2mm;border-radius:2mm;break-inside:auto}
+  .block-head{gap:2mm;margin-bottom:1.5mm}.block-head h2{font-size:7.2pt}.block-head>span{font-size:5.8pt}
+  .service-grid{grid-template-columns:1fr 1fr;gap:1.2mm}.service-card.full{grid-column:auto}
+  .service-card{grid-template-columns:5mm 1fr;gap:1.2mm;padding:1.5mm 2mm;border-radius:1.5mm}
+  .service-icon{width:5mm;height:5mm;font-size:6pt}.service-card b{font-size:5.2pt}.service-card p{font-size:6pt;line-height:1.25}
+  .gallery{grid-template-columns:repeat(6,1fr);gap:1mm}.gallery img{height:16mm;aspect-ratio:auto}.gallery a::after{display:none}
+  .items-wrap{border-radius:1.5mm}.items th,.items td{padding:1.2mm 1.5mm}.items th{font-size:5.2pt}.items td{font-size:6pt}
+  .payment-line{margin-top:1mm;font-size:5.8pt}.total-row{gap:3mm;margin-top:1.5mm;padding-top:1.5mm}
+  .total-row span{font-size:6.2pt}.total-row strong{font-size:11pt}
+  .pix{grid-template-columns:22mm 1fr;gap:3mm}.pix>img{width:22mm;height:22mm;padding:1mm}
+  .pix h3{font-size:7pt}.pix p{margin-bottom:1mm;font-size:5.8pt}.copy input{padding:1.5mm;font-size:5pt}.copy button{display:none}
+  .bank-grid{gap:2mm;margin-top:2mm}.bank-card{grid-template-columns:6mm 1fr;gap:1.5mm;padding:1.5mm 2mm}
+  .bank-card>i{width:6mm;height:6mm}.bank-card strong{font-size:5.8pt}.bank-card span{font-size:5.2pt}
+  .footer{border-radius:2mm;font-size:5.5pt;line-height:1.3}.footer-main{padding:1.5mm 2mm}.footer-contact{padding:1mm 2mm;gap:3mm}
+  .footer,.cover,.items th,.badge,.quick i,.service-icon{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
 </style>
 </head>
 <body><main class="document">

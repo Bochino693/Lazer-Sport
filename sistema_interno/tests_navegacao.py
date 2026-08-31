@@ -204,6 +204,38 @@ class ScriptDeTelaNaoEsperaDOMContentLoadedTests(SimpleTestCase):
         )
         self.assertIn("aplicarTela(novoDoc, url, modoHistorico, versao)", navegacao)
 
+    def test_troca_fecha_gaveta_e_falha_volta_para_navegacao_normal(self):
+        """Menu e fetch são acessórios; nenhum deles pode prender a tela."""
+        navegacao = (
+            Path(__file__).resolve().parent
+            / "static" / "interno" / "ls-soft-navigation.js"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("function fecharMenuMovel()", navegacao)
+        self.assertIn('sidebar.classList.remove("open")', navegacao)
+        self.assertIn('overlay.classList.remove("open")', navegacao)
+        self.assertIn("window.location.assign(alvo.href)", navegacao)
+        self.assertNotIn("lsNavRecovery", navegacao)
+
+    def test_os_tem_tabela_no_pc_e_card_ordenado_no_tablet(self):
+        folha = (
+            Path(__file__).resolve().parent
+            / "static" / "interno" / "interno_modern.css"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("@media (min-width:901px)", folha)
+        self.assertIn(".ls-os-body .ls-os-tabela", folha)
+        self.assertIn("min-width:0!important;width:100%!important;table-layout:fixed!important", folha)
+        self.assertIn("@media (min-width:601px) and (max-width:900px)", folha)
+        self.assertIn("grid-template-columns:repeat(3,minmax(0,1fr))!important", folha)
+
+    def test_documentos_usam_folha_a4_compacta(self):
+        for nome in ("orcamento_publico.html", "ordem_servico_publica.html"):
+            with self.subTest(documento=nome):
+                documento = (RAIZ_CORE / "templates" / nome).read_text(encoding="utf-8")
+                self.assertIn("@page{size:A4 portrait;margin:4mm}", documento)
+                self.assertIn("width:202mm", documento)
+
 
 class IdentidadeVisualTests(SimpleTestCase):
     """Cor é o que diz ao olho em que lugar do sistema se está.

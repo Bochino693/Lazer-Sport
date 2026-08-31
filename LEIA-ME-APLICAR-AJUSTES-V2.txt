@@ -1,0 +1,64 @@
+LAZER & SPORT — AJUSTES V2
+========================================
+
+Este ZIP é cumulativo. Ele contém os ajustes anteriores de Orçamentos e
+Ordens de Serviço e também as correções de layout, navegação, impressão e
+estabilidade do Render solicitadas agora.
+
+COMO APLICAR
+------------
+1. Faça uma cópia de segurança da pasta atual do projeto.
+2. Extraia este ZIP.
+3. Copie todo o conteúdo extraído para a RAIZ do projeto Lazer-Sport.
+4. Quando o Windows perguntar, confirme "Substituir os arquivos no destino".
+5. Não apague a pasta .git, o arquivo .env, o banco local nem a pasta media.
+
+DEPOIS DE SOBREPOR
+------------------
+Abra o terminal na raiz do projeto e execute, com o ambiente virtual ativo:
+
+python manage.py migrate
+python manage.py collectstatic --noinput
+python manage.py check
+
+Depois envie ao GitHub normalmente. O Render deve iniciar um novo deploy.
+
+NO PAINEL DO RENDER
+-------------------
+No serviço WEB, confira uma vez:
+
+- Runtime: Python 3
+- Health Check Path: /healthz/
+- Start Command: vazio para usar o Procfile, ou igual à linha web do Procfile
+
+Não altere as variáveis SECRET_KEY e SUPABASE_DATABASE_URL.
+
+O QUE FOI CORRIGIDO NESTE PACOTE
+--------------------------------
+- Lista de O.S. usa toda a largura no computador, sem tabela cortada.
+- Tablet recebe cards de três colunas alinhados; celular recebe duas colunas.
+- O menu fecha ao tocar na rota e também ao concluir a troca de tela.
+- A navegação suave nunca prende a pessoa num pop-up azul; se ela falhar,
+  o navegador assume a rota normal automaticamente.
+- Respostas antigas de rede não substituem a tela mais recente.
+- Orçamento e O.S. usam impressão A4 compacta, pensada para uma folha.
+- Falha ao gerar QR Pix não derruba mais a prévia da O.S.
+- Render usa processo Gunicorn mais leve, timeout maior, health check barato
+  e Python 3.12 fixado para evitar mudanças inesperadas do ambiente.
+- Frete e desconto da O.S. continuam abaixo dos itens.
+- Refazer orçamento cria uma nova proposta e preserva a versão anterior.
+- O.S. paga não mostra ação de registrar pagamento novamente.
+
+SE APARECER 502 NOVAMENTE
+-------------------------
+Consulte docs/RENDER_502.md. Procure nos Logs do Render pelo Rndr-Id mostrado
+na página de erro. Se /system/ e /healthz/ caírem juntos, é o processo do
+serviço, e não uma rota específica de Orçamento ou O.S.
+
+VALIDAÇÃO REALIZADA
+-------------------
+- 38 testes direcionados: OK
+- python manage.py check: OK
+- makemigrations --check --dry-run: nenhuma migração ausente
+- sintaxe do JavaScript: OK
+- git diff --check: OK

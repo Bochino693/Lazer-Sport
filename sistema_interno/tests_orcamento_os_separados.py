@@ -2,6 +2,7 @@
 
 import json
 from decimal import Decimal
+from unittest.mock import patch
 
 from django.contrib.auth.models import User
 from django.test import TestCase, override_settings
@@ -300,6 +301,32 @@ class OrcamentoEOrdemServicoSeparadosTests(TestCase):
         self.assertEqual(resposta.status_code, 302)
         ordem.refresh_from_db()
         self.assertEqual(ordem.cliente_ciente_por, "Carlos Cliente")
+
+    def test_previa_da_os_continua_abrindo_se_o_qr_pix_falhar(self):
+        ordem = OrdemServico.objects.create(
+            nome_cliente="Cliente da prévia",
+            equipamento="Tobogã",
+            responsavel=self.gestor,
+        )
+        ItemOrdemServico.objects.create(
+            ordem=ordem,
+            descricao="Reparo",
+            quantidade=1,
+            valor_unitario=Decimal("125.00"),
+        )
+
+        from .pix import _qr_base64
+        _qr_base64.cache_clear()
+        with patch("sistema_interno.pix.qrcode.make", side_effect=RuntimeError("QR indisponível")):
+            with self.assertLogs("sistema_interno.pix", level="ERROR"):
+                resposta = self.client.get(
+                    f"/ordens-servico/{ordem.pk}/previa/",
+                    HTTP_HOST="interno.testserver",
+                )
+
+        self.assertEqual(resposta.status_code, 200)
+        self.assertContains(resposta, ordem.numero_documento)
+        self.assertNotContains(resposta, "data:image/png;base64,")
 
     def test_pagamentos_permanecem_em_historicos_separados(self):
         orcamento = self.criar_orcamento()

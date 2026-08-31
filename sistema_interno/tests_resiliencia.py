@@ -1,4 +1,6 @@
 import json
+from pathlib import Path
+from unittest.mock import patch
 
 from django.http import HttpResponse
 from django.test import RequestFactory, SimpleTestCase, override_settings
@@ -70,3 +72,25 @@ class ResilienciaPainelTests(SimpleTestCase):
         request_publico = self.factory.get("/loja/")
         request_publico.is_interno = False
         self.assertEqual(middleware(request_publico).status_code, 502)
+
+    def test_processo_web_e_compativel_com_instancia_pequena_do_render(self):
+        raiz = Path(__file__).resolve().parent.parent
+        procfile = (raiz / "Procfile").read_text(encoding="utf-8")
+        python = (raiz / ".python-version").read_text(encoding="utf-8").strip()
+
+        web = procfile.splitlines()[0]
+        self.assertIn("--bind 0.0.0.0:$PORT", web)
+        self.assertIn("--workers 1", web)
+        self.assertIn("--threads 4", web)
+        self.assertIn("--timeout 90", web)
+        self.assertNotIn("--preload", web)
+        self.assertEqual(python, "3.12")
+
+    def test_health_check_do_render_nao_toca_no_banco(self):
+        with patch(
+            "django.db.backends.utils.CursorWrapper.execute",
+            side_effect=AssertionError("health check tentou consultar o banco"),
+        ):
+            resposta = self.client.get("/healthz/")
+        self.assertEqual(resposta.status_code, 200)
+        self.assertEqual(resposta.content, b"ok")
