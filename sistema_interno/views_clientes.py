@@ -29,6 +29,8 @@ from django.db.models import (
 from django.db.models.functions import Coalesce, Greatest
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render
+from django.urls import reverse
+from django.utils import timezone
 from django.views.generic import View
 
 from core.models import Estabelecimentos
@@ -37,10 +39,14 @@ from . import clientes as svc
 from .completude_clientes import filtro_incompletos, pendencias_do_cliente
 from .models import Cliente, EnderecoCliente, Orcamento
 from .exclusoes import forcando, remover
-from .permissoes import pode_excluir_cliente
+from .permissoes import limitar_orcamentos, pode_excluir_cliente
 from .rotas import dados_rota, origem_empresa
 from .utils import ErroDeFormulario, exigir_confirmacao_exclusao, texto
-from .views import GestorInternoRequiredMixin, RespostaJSONMixin
+from .views import (
+    GestorInternoRequiredMixin,
+    InternoRequiredMixin,
+    RespostaJSONMixin,
+)
 
 
 ZERO = Decimal("0.00")
@@ -358,6 +364,108 @@ class ClientesInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
         elif forcada:
             recado += " A exclusão foi registrada."
         return self.sucesso(request, recado)
+
+
+class DossieClienteView(InternoRequiredMixin, View):
+    """Tudo o que a empresa já fez com este cliente, num lugar só.
+
+    POR QUE ISTO FALTAVA. Cliente, orçamento e O.S. viviam em três telas
+    que não se olhavam. Para responder "o que já vendemos para o Buffet
+    Alegria?" era preciso abrir Orçamentos, filtrar pelo nome, abrir
+    Ordens de Serviço, filtrar de novo, e somar de cabeça -- na frente do
+    cliente, no telefone. O sistema tinha a informação e não a juntava.
+
+    Junto vem o que dá para FAZER a partir daí: mandar uma promoção ou um
+    combo para esta pessoa. A divulgação nasceu em massa ("todos os
+    buffets"), mas a conversa comercial de verdade é um a um -- o
+    atendente está olhando a ficha de quem acabou de ligar. Sem isto, a
+    única saída era disparar para o segmento inteiro ou copiar o texto na
+    mão, que é como a mensagem sai sem registro nenhum.
+
+    Devolve JSON: a lista de clientes é grande, e carregar o histórico de
+    todos junto com ela seria pagar por dezenas de consultas que ninguém
+    vai olhar. O painel busca quando alguém abre a ficha.
+    """
+
+    #: O suficiente para reconhecer o padrão do cliente sem virar
+    #: relatório. Quem precisa do histórico inteiro tem a tela de
+    #: Orçamentos, com filtro e paginação.
+    LIMITE = 10
+
+    def get(self, request, pk):
+        cliente = get_object_or_404(Cliente, pk=pk)
+
+        orcamentos = list(
+            limitar_orcamentos(request.user, cliente.orcamentos.all())
+            .prefetch_related("itens")
+            .order_by("-criacao", "-id")[:self.LIMITE]
+        )
+        ordens = list(
+            cliente.ordens_servico
+            .prefetch_related("itens")
+            .order_by("-criacao", "-id")[:self.LIMITE]
+        )
+
+        aprovados = [
+            o for o in orcamentos if o.status == Orcamento.Status.APROVADO
+        ]
+
+        return JsonResponse({
+            "status": "sucesso",
+            "cliente": {
+                "id": cliente.pk,
+                "nome": cliente.nome_cliente,
+                "email": cliente.email or "",
+                "telefone": cliente.telefone or "",
+                "whatsapp_confirmado": (
+                    cliente.canal_telefone == Cliente.CanalTelefone.WHATSAPP
+                ),
+                "tipo": cliente.get_tipo_display(),
+            },
+            "resumo": {
+                "orcamentos": cliente.orcamentos.count(),
+                "aprovados": len(aprovados),
+                "ordens": cliente.ordens_servico.count(),
+                "total_aprovado": f"{sum((o.total for o in aprovados), ZERO):.2f}",
+            },
+            "orcamentos": [
+                {
+                    "id": o.pk,
+                    "situacao": o.get_status_display(),
+                    "estado": o.status,
+                    "total": f"{o.total:.2f}",
+                    "criado": timezone.localtime(o.criacao).strftime("%d/%m/%Y")
+                    if o.criacao else "",
+                    "validade": o.validade.strftime("%d/%m/%Y") if o.validade else "",
+                    "vencido": o.vencido,
+                    "itens": o.itens.count(),
+                    "previa": reverse(
+                        "orcamento_previa_inner", args=[o.pk],
+                        urlconf="sistema_interno.urls",
+                    ),
+                }
+                for o in orcamentos
+            ],
+            "ordens": [
+                {
+                    "id": ordem.pk,
+                    "numero": ordem.numero_documento,
+                    "situacao": ordem.get_status_display(),
+                    "estado": ordem.status,
+                    "equipamento": ordem.equipamento or "",
+                    "total": f"{ordem.total:.2f}",
+                    "agendada": (
+                        timezone.localtime(ordem.agendada_para).strftime("%d/%m/%Y %H:%M")
+                        if ordem.agendada_para else ""
+                    ),
+                    "previa": reverse(
+                        "ordem_servico_previa_inner", args=[ordem.pk],
+                        urlconf="sistema_interno.urls",
+                    ),
+                }
+                for ordem in ordens
+            ],
+        })
 
 
 class ConsultaCepInnerView(GestorInternoRequiredMixin, View):

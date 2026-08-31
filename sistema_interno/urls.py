@@ -36,12 +36,17 @@ from .views import (
 from .views_app import manifesto, service_worker
 from .views_avisos import EstadoAvisosView, InscricaoPushView
 from .views_acessos import AvaliacaoSetoresInnerView, UsuariosEquipeInnerView
-from .views_clientes import ClientesInnerView, ConsultaCepInnerView
+from .views_clientes import (
+    ClientesInnerView,
+    ConsultaCepInnerView,
+    DossieClienteView,
+)
 from .views_campanhas import (
     AcionarWhatsAppCampanhaView,
     CampanhaDetalheView,
     CampanhasInnerView,
     CriarCampanhaView,
+    OfertasDisponiveisView,
     PrepararCampanhaView,
 )
 from .views_gestao import (
@@ -107,6 +112,7 @@ urlpatterns = [
     path('site/projetos/', por_funcoes(ProjetoAdminView, CRIACAO), name='projetos_admin'),
     path('site/cupons/', por_funcoes(CupomAdminView, CRIACAO, GESTAO), name='cupons_admin'),
     path('site/campanhas/', CampanhasInnerView.as_view(), name='campanhas_inner'),
+    path('site/campanhas/ofertas/', OfertasDisponiveisView.as_view(), name='campanha_ofertas'),
     path('site/campanhas/preparar/', PrepararCampanhaView.as_view(), name='campanha_preparar'),
     path('site/campanhas/criar/', CriarCampanhaView.as_view(), name='campanha_criar'),
     path(
@@ -151,6 +157,14 @@ urlpatterns = [
 
     # ---------------- clientes ----------------
     path('clientes/', ClientesInnerView.as_view(), name='clientes_inner'),
+    # O histórico do cliente é buscado quando alguém abre a ficha, e não
+    # junto da lista: carregar orçamentos e O.S. de todos seria pagar por
+    # dezenas de consultas que ninguém vai olhar.
+    path(
+        'clientes/<int:pk>/dossie/',
+        DossieClienteView.as_view(),
+        name='dossie_cliente',
+    ),
     path(
         'clientes/consultar-cep/',
         ConsultaCepInnerView.as_view(),
