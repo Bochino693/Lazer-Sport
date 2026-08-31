@@ -189,10 +189,24 @@
                         data-total="R$ {{ orcamento.total|moeda }}"
                         data-validade="{% if orcamento.validade %}{{ orcamento.validade|date:'d/m/Y' }}{% endif %}"
                         value="{{ orcamento.id }}"
-                        aria-label="Enviar orçamento {{ orcamento.id }}"
-                        title="Gerar o link da proposta para mandar ao cliente">
-                  <i class="bi bi-send"></i>
-                  <span class="ls-action-label">{% if orcamento.enviado_em %}Link{% else %}Enviar{% endif %}</span>
+                        aria-label="{% if orcamento.enviado_em %}Abrir o link do orçamento{% else %}Enviar o orçamento{% endif %} {{ orcamento.id }}"
+                        title="{% if orcamento.enviado_em %}Abrir de novo o link já gerado desta proposta{% else %}Gerar o link da proposta para mandar ao cliente{% endif %}">
+                  {% comment %}
+                    O RÓTULO DIZ O QUE O BOTÃO MANDA.
+
+                    Era só "Enviar", e em telas médias o CSS escondia até
+                    essa palavra: sobrava o ícone sozinho. Quando a fonte
+                    dos ícones não carregava, o desenho virava um símbolo
+                    qualquer do aparelho -- e o botão que manda proposta
+                    para cliente passava a ser um quadradinho sem nome.
+
+                    Escrito por extenso, o botão continua legível sem
+                    ícone, sem cor e sem quem já conhece a tela. `bi-send`
+                    fica marcado como enfeite (`aria-hidden`) porque quem
+                    diz o que é, agora, é o texto.
+                  {% endcomment %}
+                  <i class="bi bi-send" aria-hidden="true"></i>
+                  <span class="ls-action-label">{% if orcamento.enviado_em %}Link do orçamento{% else %}Enviar orçamento{% endif %}</span>
                 </button>{% endif %}
                 {% if pode_editar_comercial and not orcamento.pode_editar and orcamento.status != 'substituido' and not orcamento.orcamento_refeito and not orcamento.ordem_servico %}
                 <form method="post" class="d-inline" action="{% url 'orcamentos_inner' %}">
@@ -360,13 +374,23 @@
 
           <div class="col-12 col-md-5">
             <label class="form-label" for="orcamentoValidade">Válido até</label>
-            <input type="date" class="form-control" id="orcamentoValidade" name="validade">
+            {% comment %}
+              `data-nao-passado` põe o piso do calendário em hoje. Proposta
+              com validade de ontem sai da fábrica vencida: o cliente abre a
+              página e lê "proposta expirada" num documento que acabou de
+              receber. Quem confere de verdade é o servidor -- atributo de
+              HTML qualquer um tira --, mas aqui o erro deixa de acontecer
+              em vez de ser explicado depois de tudo preenchido.
+            {% endcomment %}
+            <input type="date" class="form-control" id="orcamentoValidade" name="validade"
+                   data-nao-passado>
             <div class="ls-date-shortcuts" aria-label="Atalhos de validade">
-              <button type="button" class="ls-chip" data-validade-dias="7">7 dias</button>
+              <button type="button" class="ls-chip" data-validade-dias="{{ validade_padrao_dias }}">{{ validade_padrao_dias }} dias</button>
               <button type="button" class="ls-chip" data-validade-dias="15">15 dias</button>
               <button type="button" class="ls-chip" data-validade-dias="30">30 dias</button>
               <button type="button" class="ls-chip ls-chip-zerar" data-validade-limpar>Sem prazo</button>
             </div>
+            <span class="form-text">Proposta nova já nasce com {{ validade_padrao_dias }} dias.</span>
           </div>
 
           <div class="col-12"><div class="ls-budget-block-title financeiro"><i class="bi bi-cash-stack"></i><span><strong>Bloco Financeiro</strong><small>Frete, desconto e condições de pagamento.</small></span></div></div>
@@ -821,7 +845,7 @@ Cadastro mínimo de propósito: nome, valor e categoria. Foto e texto de
               <span class="input-group-text"><i class="bi bi-envelope"></i></span>
               <input type="email" class="form-control" id="linkEmail" placeholder="cliente@empresa.com.br">
               <button class="btn btn-primary" type="button" id="linkEnviarEmail"
-                      {% if not email_configurado %}disabled{% endif %}>Enviar</button>
+                      {% if not email_configurado %}disabled{% endif %}>Enviar orçamento</button>
             </div>
             {% if not email_configurado %}
               {% comment %}
@@ -1013,7 +1037,7 @@ Cadastro mínimo de propósito: nome, valor e categoria. Foto e texto de
 
 {% block scripts %}
 <script>
-document.addEventListener("DOMContentLoaded", function () {
+LSTela.pronto(function () {
   "use strict";
 
   var orcamentos = JSON.parse(
@@ -1026,15 +1050,20 @@ document.addEventListener("DOMContentLoaded", function () {
   var endpointEnvio = "{% url 'orcamentos_inner' %}";
 
   /* Datas de validade trabalham no calendário local do aparelho. Usar
-     toISOString aqui empurrava a data um dia para trás em alguns fusos. */
+     toISOString aqui empurrava a data um dia para trás em alguns fusos --
+     por isso `Painel.datas.emDias`, e não conta com milissegundos. */
+  var VALIDADE_PADRAO_DIAS = {{ validade_padrao_dias }};
+
+  function definirValidade(dias) {
+    var campo = document.getElementById("orcamentoValidade");
+    if (!campo) return;
+    campo.value = Painel.datas.emDias(dias);
+    campo.dispatchEvent(new Event("change", { bubbles: true }));
+  }
+
   document.querySelectorAll("[data-validade-dias]").forEach(function (botao) {
     botao.addEventListener("click", function () {
-      var campo = document.getElementById("orcamentoValidade");
-      var dia = new Date();
-      dia.setHours(12, 0, 0, 0);
-      dia.setDate(dia.getDate() + Number(botao.dataset.validadeDias || 0));
-      campo.value = Painel.datas.paraDataLocal(dia);
-      campo.dispatchEvent(new Event("change", { bubbles: true }));
+      definirValidade(botao.dataset.validadeDias);
     });
   });
   document.querySelector("[data-validade-limpar]")?.addEventListener("click", function () {
@@ -1647,6 +1676,17 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     if (!corpo.children.length) novaLinha(null);
+
+    /* PROPOSTA NOVA NASCE COM PRAZO.
+
+       O campo vinha vazio, e proposta sem prazo não entra na fila de
+       cobrança da central de avisos: ficava parada esperando uma resposta
+       que ninguém ia cobrar. Quem quiser outro prazo troca no campo, e
+       quem quiser mesmo sem prazo tem o botão "Sem prazo" -- a diferença é
+       que agora isso é uma escolha, e não um esquecimento. O servidor
+       aplica o mesmo prazo quando o campo chega vazio numa proposta nova,
+       então o valor é o mesmo por qualquer caminho. */
+    if (!orcamento) definirValidade(VALIDADE_PADRAO_DIAS);
 
     recalcular();
     aplicarPermissoesEdicao(!orcamento || orcamento.pode_editar);

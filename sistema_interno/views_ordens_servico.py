@@ -86,6 +86,71 @@ def _data_calendario(valor, rotulo):
     return resultado
 
 
+def _agendar(ordem, request, status):
+    """Lê agendamento e garantia sem deixar marcar serviço para ontem.
+
+    O CUIDADO AQUI NÃO É "DATA NO PASSADO É ERRADA". Metade das O.S. da
+    fábrica é digitada DEPOIS do atendimento: o técnico foi ontem, o
+    serviço acabou, e alguém registra hoje. Recusar data passada nesse
+    caso impediria de fechar a O.S. do trabalho que já foi feito.
+
+    O que não pode existir é O.S. que ainda VAI acontecer marcada para um
+    dia que já passou. Ninguém vai. Ela some da agenda de amanhã, não
+    aparece em atraso em lugar nenhum, e o cliente fica esperando.
+
+    Por isso a recusa vale só quando as duas coisas são verdade ao mesmo
+    tempo: a data mudou agora (O.S. antiga continua salvando com a data
+    que sempre teve) E a O.S. está num estado de trabalho por fazer.
+
+    A garantia é mais simples: garantia que terminou antes de ser escrita
+    não protege ninguém, então só é recusada quando muda para trás.
+    """
+    agendada = _data_hora(request.POST.get("agendada_para"), "Agendamento")
+    garantia = _data_calendario(request.POST.get("garantia_ate"), "Garantia")
+
+    # O campo do navegador não tem segundos, e `_data_hora` zera o que
+    # sobra. Uma O.S. gravada pelo sistema TEM segundos: comparar os dois
+    # crus dava "mudou" para uma agenda que ninguém tocou, e editar a
+    # observação de uma O.S. antiga passava a exigir remarcar o serviço.
+    agenda_atual = (
+        ordem.agendada_para.replace(second=0, microsecond=0)
+        if ordem.agendada_para else None
+    )
+
+    por_fazer = status in (
+        OrdemServico.Status.RASCUNHO,
+        OrdemServico.Status.AGUARDANDO_RESPOSTA,
+        OrdemServico.Status.ABERTA,
+        OrdemServico.Status.AGENDADA,
+    )
+
+    if (
+        agendada
+        and por_fazer
+        and agendada != agenda_atual
+        and agendada < timezone.now()
+    ):
+        raise ErroDeFormulario(
+            "O agendamento está no passado. Uma O.S. que ainda vai "
+            "acontecer não pode ser marcada para um dia que já passou — "
+            "escolha uma data de hoje em diante, ou registre a situação "
+            "como Em execução ou Concluída se o serviço já foi feito."
+        )
+
+    if (
+        garantia
+        and garantia != ordem.garantia_ate
+        and garantia < timezone.localdate()
+    ):
+        raise ErroDeFormulario(
+            "A garantia terminaria antes de hoje. Escolha uma data de hoje "
+            "em diante ou deixe o campo em branco."
+        )
+
+    ordem.agendada_para = agendada
+    ordem.garantia_ate = garantia
+
+
 def _moeda_br(valor):
     numero = Decimal(valor or 0).quantize(Decimal("0.01"))
     return f"{numero:,.2f}".replace(",", "_").replace(".", ",").replace("_", ".")
@@ -355,10 +420,7 @@ class OrdensServicoInnerView(
         ordem.tipo = tipo
         ordem.status = status
         ordem.prioridade = prioridade
-        ordem.agendada_para = _data_hora(request.POST.get("agendada_para"), "Agendamento")
-        ordem.garantia_ate = _data_calendario(
-            request.POST.get("garantia_ate"), "Garantia"
-        )
+        _agendar(ordem, request, status)
         from django.contrib.auth.models import User
         ordem.tecnico = User.objects.filter(pk=tecnico_id).first() if tecnico_id.isdigit() else None
         if not ordem.pk:

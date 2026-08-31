@@ -202,10 +202,189 @@
     document.body.appendChild(painel);
   }
 
-  function trocarDocumento(html, url, modoHistorico) {
-    try {
-      window.sessionStorage.setItem(ENTRADA, "1");
-    } catch (erro) {}
+  /* ======================================================================
+     A TROCA DE TELA
+
+     ANTES ERA `document.write`, E ERA A ORIGEM DOS DOIS DEFEITOS QUE MAIS
+     APARECIAM NO TABLET.
+
+     `document.open()` + `document.write()` joga fora o documento inteiro e
+     manda o navegador analisar tudo de novo -- inclusive o `<head>`. As
+     folhas de estilo voltam para a fila de download e a fonte dos ícones
+     junto. Existe, então, uma janela de tempo em que o HTML novo já está
+     na tela e o CSS ainda não chegou:
+
+       * o logotipo aparece no tamanho original do arquivo, ocupando a
+         tela ("a imagem gigante");
+       * `<i class="bi bi-send">` cai na fonte do sistema, e o ponto de
+         código da Bootstrap Icons (\f6c0, área de uso privado) vira o que
+         quer que o aparelho tenha ali -- em vários Android, um emoji
+         antigo. É o coelho no botão de enviar.
+
+     Nada disso era aleatório: era sempre a mesma janela, e ela abre por
+     mais tempo quanto pior estiver a rede -- que é a condição normal do
+     galpão.
+
+     AGORA SE TROCA SÓ O QUE MUDA. O cabeçalho, o menu e a barra de cima
+     continuam os mesmos nós, com os mesmos ouvintes e o mesmo CSS já
+     aplicado; troca-se o conteúdo da tela, o título, a classe do corpo e
+     os destaques do menu. O CSS da tela nova é carregado ANTES da troca,
+     nunca depois: se ele não chegar, a tela velha continua inteira e o
+     aviso de conexão aparece. Não existe mais o instante sem estilo.
+     ====================================================================== */
+  var FOLHA_BASE = "lsFolhaBase";
+  var CAIXA_SCRIPTS = "lsTelaScripts";
+  var TEMPO_FOLHA = 6000;
+
+  function nucleo(doc) {
+    return doc.querySelector(".ls-content");
+  }
+
+  function esperarFolha(link) {
+    return new Promise(function (resolver) {
+      var pronto = false;
+      function terminar() {
+        if (pronto) return;
+        pronto = true;
+        resolver();
+      }
+      link.addEventListener("load", terminar);
+      /* Erro também resolve: uma folha a menos deixa a tela feia, e
+         travar a navegação por causa dela deixaria a tela ausente. */
+      link.addEventListener("error", terminar);
+      window.setTimeout(terminar, TEMPO_FOLHA);
+    });
+  }
+
+  /* As folhas da tela nova entram no MESMO ponto do `<head>` em que o
+     servidor as escreveu: antes da folha do painel, que precisa continuar
+     tendo a última palavra. Anexar no fim inverteria a cascata e a tela
+     abriria com a cor errada. */
+  function garantirFolhas(novoDoc) {
+    var ancora = document.getElementById(FOLHA_BASE);
+    var cabeca = document.head;
+    var espera = [];
+
+    /* O QUE A TELA NOVA PEDE, E SÓ ISSO.
+
+       As folhas do painel (as do `base_inner`) ficam para sempre: são as
+       mesmas em toda tela. As de TELA vêm marcadas com `data-ls-tela`, e
+       essas entram e saem junto com a tela que as pediu.
+
+       Sem a saída, a folha do catálogo do site entrava na primeira tela
+       de /site/ e continuava valendo em cima da lista de orçamentos e da
+       produção pelo resto da sessão -- a tela certa, com as regras de
+       outra. É uma das caras de "o CSS bugou quando troquei de tela".
+
+       A comparação é entre endereços JÁ RESOLVIDOS, e isso importa: no
+       HTML o atributo é relativo ("/static/..."), enquanto a propriedade
+       `.href` devolve o absoluto. Comparar um com o outro nunca casa --
+       e a cada troca o painel reanexava as MESMAS folhas, dobrando a
+       lista do `<head>`. */
+    var pedidas = {};
+    novoDoc.head.querySelectorAll('link[rel="stylesheet"]').forEach(function (folha) {
+      if (folha.href) pedidas[folha.href] = true;
+    });
+
+    cabeca.querySelectorAll('link[rel="stylesheet"][data-ls-tela]').forEach(function (folha) {
+      if (!pedidas[folha.href]) folha.remove();
+    });
+
+    var jaTem = {};
+    cabeca.querySelectorAll('link[rel="stylesheet"]').forEach(function (folha) {
+      if (folha.href) jaTem[folha.href] = true;
+    });
+
+    novoDoc.head.querySelectorAll('link[rel="stylesheet"]').forEach(function (folha) {
+      var href = folha.href;
+      if (!href || jaTem[href]) return;
+      jaTem[href] = true;
+
+      var copia = document.createElement("link");
+      copia.rel = "stylesheet";
+      copia.href = href;
+      copia.setAttribute("data-ls-tela", "1");
+      espera.push(esperarFolha(copia));
+      cabeca.insertBefore(copia, ancora || null);
+    });
+
+    /* O `<style>` de tela (o bloco extra_css) é sempre da tela que está
+       saindo: some com ela e volta escrito pela que chega. */
+    cabeca.querySelectorAll("style[data-ls-tela]").forEach(function (velho) {
+      velho.remove();
+    });
+    novoDoc.head.querySelectorAll("style:not([data-ls-base])").forEach(function (estilo) {
+      var copia = document.createElement("style");
+      copia.textContent = estilo.textContent;
+      copia.setAttribute("data-ls-tela", "1");
+      cabeca.insertBefore(copia, ancora || null);
+    });
+
+    return espera.length ? Promise.all(espera) : Promise.resolve();
+  }
+
+  /* O menu é o mesmo nó do início ao fim da sessão -- é o que evita o
+     piscar da lateral a cada clique. O que muda é qual item está aceso e
+     quantos itens cada bolinha conta; isso vem copiado da tela nova, que
+     o servidor acabou de desenhar com os números de agora. */
+  function sincronizarMenu(novoDoc) {
+    [".ls-nav-item", ".ls-aba"].forEach(function (seletor) {
+      var atuais = document.querySelectorAll(seletor);
+      var novos = novoDoc.querySelectorAll(seletor);
+      if (atuais.length !== novos.length) return;  /* Permissão mudou: deixa como está. */
+      atuais.forEach(function (item, indice) {
+        item.className = novos[indice].className;
+        var marca = novos[indice].getAttribute("aria-current");
+        if (marca) item.setAttribute("aria-current", marca);
+        else item.removeAttribute("aria-current");
+      });
+    });
+
+    document.querySelectorAll("[data-selo]").forEach(function (selo) {
+      var origem = novoDoc.querySelector(
+        '[data-selo="' + selo.getAttribute("data-selo") + '"]'
+      );
+      if (!origem) return;
+      selo.textContent = origem.textContent;
+      selo.hidden = origem.hidden;
+    });
+  }
+
+  /* Script trocado por innerHTML não roda: o navegador ignora `<script>`
+     inserido como texto. Cada um é recriado como elemento novo para que o
+     navegador o execute -- é isto que faz a tela que chega ganhar o seu
+     JavaScript, papel que antes era do `document.write`. */
+  function trocarScripts(novoDoc) {
+    var caixa = document.getElementById(CAIXA_SCRIPTS);
+    var nova = novoDoc.getElementById(CAIXA_SCRIPTS);
+    if (!caixa) return;
+
+    caixa.textContent = "";
+    if (!nova) return;
+
+    nova.querySelectorAll("script").forEach(function (original) {
+      var copia = document.createElement("script");
+      for (var i = 0; i < original.attributes.length; i += 1) {
+        var atributo = original.attributes[i];
+        copia.setAttribute(atributo.name, atributo.value);
+      }
+      copia.textContent = original.textContent;
+      caixa.appendChild(copia);
+    });
+
+    /* Os dados de tela viajam em <script type="application/json">, que
+       não executa nada: entram junto porque o script da tela os lê pelo
+       id logo em seguida. */
+  }
+
+  function aplicarTela(novoDoc, url, modoHistorico) {
+    var destino = nucleo(novoDoc);
+    var atual = nucleo(document);
+    if (!destino || !atual) return false;
+
+    if (window.Painel && window.Painel.prepararNavegacao) {
+      window.Painel.prepararNavegacao();
+    }
 
     if (modoHistorico === "push") {
       window.history.pushState({ lsSoftNavigation: true }, "", url.href);
@@ -213,12 +392,83 @@
       window.history.replaceState({ lsSoftNavigation: true }, "", url.href);
     }
 
-    if (window.Painel && window.Painel.prepararNavegacao) {
-      window.Painel.prepararNavegacao();
+    document.title = novoDoc.title || document.title;
+
+    /* A classe do corpo é o que diz ao CSS qual tela está aberta
+       (ls-orcamentos-body, ls-os-body...). Sem copiar, a tela nova abria
+       com as regras de largura da tela anterior -- tabela espremida,
+       botão fora do lugar. `modal-open` fica de fora: quem cuida dela é
+       `prepararNavegacao`, que acabou de rodar. */
+    var classeAberta = document.body.classList.contains("modal-open");
+    document.body.className = novoDoc.body.className;
+    if (classeAberta) document.body.classList.add("modal-open");
+
+    var titulo = document.querySelector(".ls-topbar-copy strong");
+    var tituloNovo = novoDoc.querySelector(".ls-topbar-copy strong");
+    if (titulo && tituloNovo) titulo.textContent = tituloNovo.textContent;
+
+    atual.replaceWith(document.importNode(destino, true));
+    sincronizarMenu(novoDoc);
+
+    /* A ORDEM AQUI COPIA A DE UMA ABERTURA NORMAL: primeiro o painel
+       monta a tela (máscara, textarea, ações de tabela), depois roda o
+       script da tela. Numa página carregada do zero é isso que acontece,
+       porque `painel.js` vem antes do bloco de scripts no corpo. Trocar
+       a ordem aqui faria a mesma tela se comportar de um jeito ao abrir
+       direto e de outro ao chegar pelo menu -- a pior espécie de defeito,
+       porque não se reproduz quando se vai procurar. */
+    if (window.Painel && window.Painel.montarTela) {
+      window.Painel.montarTela(document);
     }
-    document.open();
-    document.write(html);
-    document.close();
+    trocarScripts(novoDoc);
+
+    /* Tela nova começa do começo. Sem isto, quem estava no rodapé de uma
+       lista longa abria a próxima tela no meio dela. */
+    window.scrollTo(0, 0);
+
+    /* Quem navega pelo teclado ou por leitor de tela precisa saber que a
+       página mudou: sem mover o foco, o leitor continua anunciando a tela
+       anterior e o Tab volta do começo do menu. */
+    var conteudo = nucleo(document);
+    if (conteudo) {
+      conteudo.setAttribute("tabindex", "-1");
+      conteudo.focus({ preventScroll: true });
+    }
+
+    esconderLoader();
+    return true;
+  }
+
+  function trocarDocumento(html, url, modoHistorico) {
+    var novoDoc;
+    try {
+      novoDoc = new DOMParser().parseFromString(html, "text/html");
+    } catch (erro) {
+      novoDoc = null;
+    }
+
+    /* Fora do contrato do painel -- login, sessão encerrada, tela de
+       recuperação -- a navegação de verdade é a resposta certa: essas
+       páginas têm cabeçalho próprio e não cabem dentro desta. */
+    if (!novoDoc || !nucleo(novoDoc) || !nucleo(document)) {
+      window.location.assign(url.href);
+      return;
+    }
+
+    try {
+      window.sessionStorage.setItem(ENTRADA, "1");
+    } catch (erro) {}
+
+    /* O CSS ANTES DO HTML. Enquanto a folha da tela nova não chegou, o
+       que está na tela é a tela ANTERIOR, inteira e estilizada -- e não
+       um esqueleto sem estilo. */
+    garantirFolhas(novoDoc).then(function () {
+      if (!aplicarTela(novoDoc, url, modoHistorico)) {
+        window.location.assign(url.href);
+      }
+    }).catch(function () {
+      window.location.assign(url.href);
+    });
   }
 
   function navegar(url, modoHistorico) {

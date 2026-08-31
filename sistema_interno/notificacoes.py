@@ -139,14 +139,22 @@ def avisar_resposta_do_cliente(orcamento):
     """
     aprovado = orcamento.status == orcamento.Status.APROVADO
     negociacao = orcamento.status == orcamento.Status.EM_NEGOCIACAO
+    # O NÚMERO VAI NO TÍTULO; O NOME E O VALOR, NÃO.
+    #
+    # A notificação aparece na tela de bloqueio, sem desbloquear: quem
+    # estiver perto do aparelho lê. Nome do cliente e valor da proposta
+    # ficam do outro lado do login. O número não diz nada a quem está de
+    # fora e é tudo para quem está dentro -- sem ele, três respostas na
+    # mesma tarde viram três avisos idênticos, e quem está na estrada
+    # abre o painel só para descobrir qual delas foi.
     if negociacao:
-        titulo = "Cliente pediu ajuste em uma proposta"
+        titulo = f"Proposta #{orcamento.pk}: cliente pediu ajuste"
         urgente = True
     elif aprovado:
-        titulo = "Uma proposta foi aprovada"
+        titulo = f"Proposta #{orcamento.pk} aprovada"
         urgente = True
     else:
-        titulo = "Uma proposta foi recusada"
+        titulo = f"Proposta #{orcamento.pk} recusada"
         urgente = False
 
     return _entregar(

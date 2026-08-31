@@ -352,6 +352,69 @@ gestor, envolva o link em `{% if eh_gestor_interno %}`.
 
 ---
 
+## 9.1. A tela troca sem recarregar a página — o que isso cobra de você
+
+Clicar no menu **não recarrega a página**. `ls-soft-navigation.js` busca a
+tela nova, garante o CSS dela e troca só a área de conteúdo; o menu, a
+barra de cima e as folhas do painel continuam sendo os mesmos nós, com os
+mesmos ouvintes.
+
+Isso é o que acabou com a tela sem estilo por um instante — a que fazia o
+logotipo aparecer do tamanho do arquivo e o ícone do botão de enviar virar
+um símbolo qualquer do aparelho. Antes a troca era `document.write`, que
+jogava o documento fora e remontava tudo, o `<head>` junto.
+
+Em troca, três combinados. Todos têm teste em `tests_navegacao.py`, e
+quebrar qualquer um só aparece no navegador **depois do segundo clique** —
+que é onde ninguém testa à mão.
+
+**1. Script de tela usa `LSTela.pronto()`, nunca `DOMContentLoaded`.**
+
+```html
+{% block scripts %}
+<script>
+LSTela.pronto(function () {
+  "use strict";
+  ...
+});
+</script>
+{% endblock %}
+```
+
+`DOMContentLoaded` acontece uma vez por *página*, e a página não recarrega:
+da segunda tela em diante o evento não vem mais, e o script nunca roda. Os
+botões aparecem e nenhum deles faz nada.
+
+**2. Folha de estilo em `extra_css` leva `data-ls-tela="1"`.**
+
+```html
+{% block extra_css %}
+<link rel="stylesheet" data-ls-tela="1" href="{% static 'interno/minha_tela.css' %}?v=1">
+{% endblock %}
+```
+
+É a marca que diz "esta folha é desta tela". Sem ela, a folha entra no
+`<head>` na primeira vez que a tela abrir e continua valendo em todas as
+seguintes — a tela certa, com as regras de outra. `<style>` escrito dentro
+de `extra_css` não precisa de marca; dentro de `{% block content %}`,
+menos ainda, porque sai junto com o conteúdo.
+
+**3. O que a tela pendura no `<body>` ela tem de saber desfazer.**
+
+Menu flutuante de ações, painel de busca e afins vivem fora da área
+trocada, por causa do `position:fixed`. `Painel.limparPendurados()` apaga
+os do painel antes de cada troca; se a sua tela pendurar algo próprio no
+`<body>`, ele precisa entrar nessa limpeza — senão sobra órfão na tela
+seguinte, e o primeiro da fila passa a ser um botão de uma tela que já não
+existe.
+
+E uma consequência boa de graça: como a área de conteúdo é recriada,
+`Painel.montarTela()` roda de novo a cada tela. Máscara de campo, textarea
+que cresce e agrupamento de ações de tabela já vêm prontos — você não
+chama nada.
+
+---
+
 ## 10. Checklist da tela nova
 
 - [ ] Estende `base_inner.html` e preenche `top_title`.
@@ -369,3 +432,7 @@ gestor, envolva o link em `{% if eh_gestor_interno %}`.
       várias) — nunca pelo botão cru do navegador.
 - [ ] Botão de concluir verde, de filtrar âmbar, de excluir vermelho.
 - [ ] Caixa de marcar acompanhada do campo escondido de mesmo nome.
+- [ ] Script da tela dentro de `LSTela.pronto()` (ver 9.1).
+- [ ] Folha em `extra_css` marcada com `data-ls-tela="1"` (ver 9.1).
+- [ ] Data que olha para a frente com `data-nao-passado` no campo — e a
+      conferência repetida na view, que é por onde os dados entram.

@@ -243,7 +243,7 @@
 
 {% block scripts %}
 <script>
-document.addEventListener("DOMContentLoaded",function(){
+LSTela.pronto(function(){
   "use strict";
   const dados=JSON.parse(document.getElementById("etapasGuiaData")?.textContent||"[]");
   const porId=Object.fromEntries(dados.map(item=>[String(item.id),item]));

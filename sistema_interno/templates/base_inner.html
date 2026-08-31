@@ -47,14 +47,149 @@
   <link href="{% static 'interno/vendor/bootstrap.min.css' %}" rel="stylesheet">
   <link href="{% static 'interno/vendor/bootstrap-icons.min.css' %}" rel="stylesheet">
 
+  {% comment %}
+    A FONTE DOS ÍCONES SAI NA FRENTE.
+
+    O navegador só descobre que precisa dela depois de baixar e ler o CSS
+    da Bootstrap Icons -- duas viagens em série antes de o primeiro ícone
+    existir. Com o `preload` as duas viagens acontecem juntas. Numa rede
+    de galpão isso é a diferença entre o ícone aparecer com a tela e
+    aparecer alguns segundos depois dela.
+
+    `crossorigin` é obrigatório mesmo sendo do nosso próprio servidor:
+    fonte é sempre buscada em modo anônimo, e sem o atributo o navegador
+    trata o arquivo pré-carregado como outro pedido e baixa duas vezes.
+  {% endcomment %}
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+        href="{% static 'interno/vendor/fonts/bootstrap-icons.woff2' %}?dd67030699838ea613ee6dbda90effa6">
+
+  {% comment %}
+    ================================================================
+    O MÍNIMO PARA A TELA NUNCA APARECER SEM ESTILO
+    ================================================================
+    Escrito aqui dentro, e não num arquivo: enquanto qualquer folha de
+    estilo estiver a caminho, este bloco já está valendo, porque chegou
+    junto com o HTML. É a rede de segurança para a primeira abertura em
+    rede ruim -- a mesma que fazia o logotipo aparecer do tamanho do
+    arquivo e ocupar a tela inteira antes de o CSS chegar.
+
+    São três regras, e cada uma existe por um defeito visto:
+
+      1. imagem nunca passa da largura de quem a contém. `logoofi.png`
+         tem quase mil pixels; sem esta linha, ele abre com quase mil
+         pixels.
+      2. o quadro do logotipo já nasce com o tamanho final, então nada
+         em volta pula de lugar quando a imagem termina de baixar.
+      3. o corpo já nasce com a cor do painel. Sem isso a primeira
+         pintura é branca e a tela dá um flash de luz na cara de quem
+         trabalha num galpão -- e depois escurece.
+  {% endcomment %}
+  <style data-ls-base="1">
+    html{background:#13100B}
+    body.ls-body{margin:0;background:#13100B;color:#FCF8F1}
+    img,svg,video{max-width:100%}
+    img{height:auto}
+    .ls-brand-logo{width:44px;height:44px;flex:0 0 44px;overflow:hidden}
+    .ls-brand-logo img{width:100%;height:100%;padding:5px;object-fit:contain}
+    /* QUANDO A FONTE DOS ÍCONES NÃO CHEGA.
+
+       Os pontos de código da Bootstrap Icons ficam na área de uso
+       privado do Unicode. Sem a fonte, o navegador desenha esses pontos
+       com o que o aparelho tiver ali -- e vários Android guardam emojis
+       antigos nessa faixa. É de onde saiu o coelho no botão de enviar.
+
+       A classe só é posta quando a fonte realmente falhou (ver o script
+       logo abaixo). Aí o ícone vira espaço vazio: ao lado de um botão
+       que manda documento para cliente, um desenho errado é pior do que
+       desenho nenhum -- e o rótulo escrito continua ali, dizendo o que o
+       botão faz. */
+    html.ls-sem-icones .bi::before,
+    html.ls-sem-icones [class^="bi-"]::before,
+    html.ls-sem-icones [class*=" bi-"]::before{content:"\200B"!important}
+  </style>
+
+  {% comment %}
+    ================================================================
+    QUANDO O SCRIPT DE UMA TELA PODE COMEÇAR
+    ================================================================
+    `DOMContentLoaded` acontece UMA VEZ por página carregada. O painel
+    troca de tela sem recarregar a página, então da segunda tela em
+    diante esse evento não acontece mais -- e um script que o esperasse
+    ficaria esperando para sempre. Foi assim que, depois de trocar de
+    tela, os botões da lista deixavam de abrir a janela de edição: o
+    HTML estava lá, o Bootstrap estava lá, e o script da tela nunca
+    havia rodado.
+
+    `LSTela.pronto(fn)` resolve os dois casos com a mesma linha: na
+    primeira abertura espera o documento terminar; nas telas seguintes o
+    documento já está pronto e a função roda na hora.
+
+    Fica aqui, num script comum e no alto do `<head>`, porque precisa
+    existir antes de qualquer script de tela -- que roda durante a
+    leitura do corpo, antes dos arquivos marcados com `defer`.
+  {% endcomment %}
+  <script>
+    window.LSTela = {
+      pronto: function (fn) {
+        if (typeof fn !== "function") return;
+        if (document.readyState === "loading") {
+          document.addEventListener("DOMContentLoaded", fn);
+        } else {
+          fn();
+        }
+      }
+    };
+  </script>
+
+  <script>
+    /* A fonte dos ícones carregou? A resposta muda o que se desenha.
+
+       `document.fonts.load` devolve a lista de fontes que casaram; lista
+       vazia é fonte ausente. O prazo de 5s existe porque a promessa pode
+       nunca resolver em navegador antigo, e o painel não pode ficar
+       esperando por isso. Navegador sem a API cai no `catch` e segue
+       mostrando os ícones -- que é o comportamento de antes.
+
+       Sem try/catch aqui um navegador com a API pela metade derrubaria o
+       resto do `<head>`. */
+    (function () {
+      try {
+        if (!document.fonts || !document.fonts.load) return;
+        var prazo = new Promise(function (resolver) {
+          setTimeout(function () { resolver(null); }, 5000);
+        });
+        Promise.race([document.fonts.load('1rem bootstrap-icons', '\uF6C0'), prazo])
+          .then(function (encontradas) {
+            if (!encontradas || !encontradas.length) {
+              document.documentElement.classList.add('ls-sem-icones');
+            }
+          })
+          .catch(function () {});
+      } catch (erro) {}
+    })();
+  </script>
+
+  {% comment %}
+    O CSS DE TELA VEM ANTES DA FOLHA DO PAINEL, E ISSO É CONTRATO.
+
+    A folha do painel precisa ter a última palavra: é ela que define cor,
+    medida e forma de tudo. O bloco `extra_css` de cada tela entra acima
+    dela de propósito.
+
+    O `id` da folha do painel não é enfeite: `ls-soft-navigation.js` usa
+    esse ponto como âncora ao trocar de tela, para inserir o CSS da tela
+    que chega exatamente aqui. Sem a âncora, o estilo de tela entraria no
+    fim do `<head>` e passaria a ganhar da folha do painel -- a mesma tela
+    ficaria com uma cara ao abrir direto e outra ao chegar pelo menu.
+  {% endcomment %}
   {% block extra_css %}{% endblock %}
-  <link href="{% static 'interno/interno_modern.css' %}?v=24" rel="stylesheet">
+  <link id="lsFolhaBase" href="{% static 'interno/interno_modern.css' %}?v=25" rel="stylesheet">
 
   <!-- Barra de carregamento no topo, compartilhada com o painel /adm. -->
   <link rel="stylesheet" href="{% static 'site/ls-page-loader.css' %}?v=2">
   <script src="{% static 'site/ls-page-loader.js' %}?v=2" defer></script>
   {# Troca telas e filtros sem uma segunda requisição; cache só durante a aba. #}
-  <script src="{% static 'interno/ls-soft-navigation.js' %}?v=3" defer></script>
+  <script src="{% static 'interno/ls-soft-navigation.js' %}?v=4" defer></script>
 </head>
 <body class="ls-body {% block body_class %}{% endblock %}" data-avisos="{% url 'avisos_estado' %}" data-aparelho="{% url 'avisos_aparelho' %}">
 <svg width="0" height="0" aria-hidden="true" focusable="false" style="position:absolute">
@@ -446,7 +581,7 @@ Dito em voz alta: este NÃO é o /adm do site. Quem trabalha nos
 </div>
 
 <script src="{% static 'interno/vendor/bootstrap.bundle.min.js' %}"></script>
-<script src="{% static 'interno/painel.js' %}?v=12"></script>
+<script src="{% static 'interno/painel.js' %}?v=13"></script>
 {% comment %}
   Campo de busca do painel (catálogo, clientes, colaboradores). Carrega
   em toda tela porque o mesmo componente é usado em orçamento, produção e
@@ -554,6 +689,15 @@ Dito em voz alta: este NÃO é o /adm do site. Quem trabalha nos
   });
 })();
 </script>
-{% block scripts %}{% endblock %}
+{% comment %}
+  O JavaScript DA TELA fica dentro desta caixa, e não solto no corpo.
+
+  Ao trocar de tela sem recarregar a página, `ls-soft-navigation.js`
+  esvazia esta caixa e recria, um a um, os `<script>` da tela que chega --
+  script inserido como texto o navegador não executa. A caixa é o que
+  separa "script desta tela", que morre com ela, de "script do painel",
+  que atravessa a sessão inteira.
+{% endcomment %}
+<div id="lsTelaScripts">{% block scripts %}{% endblock %}</div>
 </body>
 </html>

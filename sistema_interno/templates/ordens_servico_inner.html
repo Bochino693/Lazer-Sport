@@ -66,7 +66,9 @@
             <td data-rotulo="Ações" class="ls-actions ls-commercial-actions text-end"><div class="ls-row-actions">
               <a class="btn btn-sm btn-outline-primary" href="{% url 'ordem_servico_previa_inner' ordem.id %}" target="_blank" rel="noopener" title="Visualizar e imprimir"><i class="bi bi-printer"></i><span class="ls-action-label">Imprimir</span></a>
               {% if pode_editar %}<button class="btn btn-sm btn-outline-secondary" type="button" data-editar-os="{{ ordem.id }}"><i class="bi bi-pencil"></i><span class="ls-action-label">Editar</span></button>
-              <button class="btn btn-sm btn-outline-primary" type="button" data-enviar-os="{{ ordem.id }}" data-nome="{{ ordem.destinatario }}" data-whatsapp="{{ ordem.whatsapp_destinatario }}" data-email="{{ ordem.email_destinatario }}"><i class="bi bi-send"></i><span class="ls-action-label">Enviar</span></button>{% endif %}
+              <button class="btn btn-sm btn-outline-primary" type="button" data-enviar-os="{{ ordem.id }}" data-nome="{{ ordem.destinatario }}" data-whatsapp="{{ ordem.whatsapp_destinatario }}" data-email="{{ ordem.email_destinatario }}"
+                      aria-label="Enviar a O.S. {{ ordem.numero_documento }}"
+                      title="Gerar o link da O.S. para mandar ao cliente"><i class="bi bi-send" aria-hidden="true"></i><span class="ls-action-label">Enviar O.S.</span></button>{% endif %}
               {% if pode_pagamento %}<button class="btn btn-sm btn-outline-success" type="button" data-pagamento-os="{{ ordem.id }}" data-nome="{{ ordem.numero_documento }} — {{ ordem.destinatario }}" data-total="{{ ordem.total }}" data-pago="{{ ordem.valor_pago }}"><i class="bi bi-cash-coin"></i><span class="ls-action-label">Pagamento</span></button>{% endif %}
               {% if pode_editar and ordem.status == 'rascunho' and not ordem.enviada_em %}<button class="btn btn-sm btn-outline-danger" type="button" data-excluir="{{ ordem.id }}" data-nome="{{ ordem.numero_documento }} — {{ ordem.destinatario }}" aria-label="Excluir {{ ordem.numero_documento }}" title="Excluir rascunho"><i class="bi bi-trash"></i><span class="ls-action-label">Excluir</span></button>{% endif %}
             </div></td>
@@ -108,7 +110,9 @@
       <div class="col-md-4"><label class="form-label" for="osSerie">Número de série / patrimônio</label><input class="form-control" id="osSerie" name="numero_serie" maxlength="80"></div>
       <div class="col-md-6">
         <label class="form-label" for="osAgenda">Agendada para</label>
-        <input class="form-control" id="osAgenda" name="agendada_para" type="datetime-local" step="300">
+        {# Agenda no passado só é aceita em O.S. já em execução ou concluída; ver `_agendar` na view. #}
+        <input class="form-control" id="osAgenda" name="agendada_para" type="datetime-local" step="300"
+               data-nao-passado>
         <div class="ls-date-shortcuts">
           <button type="button" class="ls-chip" data-agenda="agora">Agora</button>
           <button type="button" class="ls-chip" data-agenda="1h">+1 hora</button>
@@ -119,7 +123,7 @@
       </div>
       <div class="col-md-6">
         <label class="form-label" for="osGarantia">Garantia até</label>
-        <input class="form-control" id="osGarantia" name="garantia_ate" type="date">
+        <input class="form-control" id="osGarantia" name="garantia_ate" type="date" data-nao-passado>
         <div class="ls-date-shortcuts">
           <button type="button" class="ls-chip" data-garantia-dias="30">30 dias</button>
           <button type="button" class="ls-chip" data-garantia-dias="90">90 dias</button>
@@ -156,11 +160,11 @@
         <div class="row g-3">
           <div class="col-12">
             <label class="form-label" for="envioOSWhatsapp">WhatsApp do cliente</label>
-            <div class="input-group"><span class="input-group-text"><i class="bi bi-whatsapp text-success"></i></span><input class="form-control" id="envioOSWhatsapp" name="whatsapp" data-mascara="telefone" inputmode="tel"><button class="btn btn-success" id="enviarOSWhatsapp" type="button">Enviar</button></div>
+            <div class="input-group"><span class="input-group-text"><i class="bi bi-whatsapp text-success"></i></span><input class="form-control" id="envioOSWhatsapp" name="whatsapp" data-mascara="telefone" inputmode="tel"><button class="btn btn-success" id="enviarOSWhatsapp" type="button">Abrir WhatsApp</button></div>
           </div>
           <div class="col-12">
             <label class="form-label" for="envioOSEmail">E-mail do cliente</label>
-            <div class="input-group"><span class="input-group-text"><i class="bi bi-envelope"></i></span><input class="form-control" id="envioOSEmail" name="email" type="email"><button class="btn btn-primary" id="enviarOSEmail" type="button" {% if not email_configurado %}disabled{% endif %}>Enviar</button></div>
+            <div class="input-group"><span class="input-group-text"><i class="bi bi-envelope"></i></span><input class="form-control" id="envioOSEmail" name="email" type="email"><button class="btn btn-primary" id="enviarOSEmail" type="button" {% if not email_configurado %}disabled{% endif %}>Enviar O.S.</button></div>
             {% if not email_configurado %}<div class="alert alert-warning mt-2 mb-0 py-2 px-3 small"><i class="bi bi-exclamation-triangle me-1"></i>{{ email_diagnostico }} Use WhatsApp ou copie o link.</div>{% endif %}
           </div>
         </div>
@@ -189,7 +193,7 @@
 
 {% block scripts %}
 <script>
-document.addEventListener("DOMContentLoaded", function () {
+LSTela.pronto(function () {
   "use strict";
   var ordens = JSON.parse(document.getElementById("ordensServicoDados").textContent || "[]");
   var clientes = JSON.parse(document.getElementById("clientesOSDados").textContent || "[]");

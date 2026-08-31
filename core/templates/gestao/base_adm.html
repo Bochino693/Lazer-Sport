@@ -10,9 +10,20 @@
 {% block title %}Gestão do site | Lazer &amp; Sport{% endblock %}
 {% block top_title %}{% block page_heading %}Gestão do site e aplicativo{% endblock %}{% endblock %}
 
+{% comment %}
+  `data-ls-tela` marca estas folhas como DESTA TELA, e não do painel.
+
+  Sem a marca elas entram no <head> na primeira tela de site que abrir e
+  não saem mais: a navegação suave não recarrega a página, e o CSS de
+  catálogo continuaria valendo depois, em cima da lista de orçamentos ou
+  da produção. É uma das formas de "o CSS bugar quando troco de tela" --
+  a tela certa, com regras de outra.
+
+  Toda folha escrita em `extra_css` precisa da marca. Há teste que cobra.
+{% endcomment %}
 {% block extra_css %}
-  <link rel="stylesheet" href="{% static 'interno/gestao_integrada.css' %}?v=7">
-  <link rel="stylesheet" href="{% static 'interno/campanhas.css' %}?v=1">
+  <link rel="stylesheet" data-ls-tela="1" href="{% static 'interno/gestao_integrada.css' %}?v=7">
+  <link rel="stylesheet" data-ls-tela="1" href="{% static 'interno/campanhas.css' %}?v=1">
 {% endblock %}
 
 {% block content %}
