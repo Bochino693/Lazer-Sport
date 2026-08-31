@@ -11,6 +11,20 @@
     <span class="ls-page-kicker">Execução e assistência técnica</span>
     <h1>Ordens de Serviço</h1>
     <p>Registre manutenção, instalação, revisão e serviços prestados sem misturar execução com proposta comercial.</p>
+    {% comment %}
+      DUAS PORTAS, E ESTÁ ESCRITO QUAIS SÃO.
+
+      A O.S. já foi gerada a partir do orçamento aprovado, e nascia pela
+      metade: sem equipamento de verdade, sem defeito relatado, sem
+      agenda. Esse caminho saiu. Quem procurar por ele precisa achar aqui
+      a resposta de para onde ir -- senão conclui que a função sumiu.
+    {% endcomment %}
+    <p class="ls-page-hero-nota">
+      <i class="bi bi-info-circle me-1" aria-hidden="true"></i>
+      Uma O.S. nasce de um <strong>chamado de manutenção</strong>, que já
+      traz equipamento, defeito e endereço, ou de uma <strong>nova O.S.</strong>
+      para atendimento direto. Ela não é mais gerada a partir do orçamento.
+    </p>
   </div>
   <div class="ls-page-hero-actions">
     <a class="btn btn-outline-secondary" href="{% url 'manutencao_inner' %}"><i class="bi bi-inbox me-1"></i> Chamados</a>
@@ -43,18 +57,27 @@
 <section class="ls-data-panel">
   <div class="ls-data-header">
     <div><h2>Serviços registrados</h2><p>A O.S. enviada continua editável para registrar o andamento real do trabalho.</p></div>
-    <form method="get" class="ls-budget-search">
+    {% comment %}
+      A busca procura no índice que veio junto da página -- sem ida ao
+      servidor, sem recarregar a tela e sem mexer na URL. Ver
+      `ls-filtro-local.js`. O formulário fica porque é ele que traz o que
+      está fora desta página, quando faz falta.
+    {% endcomment %}
+    <form method="get" class="ls-budget-search" data-filtro-alvo=".ls-os-tabela tbody"
+          data-filtro-indice="indiceOrdens" data-filtro-nome="Ordem de Serviço"
+          data-filtro-nome-plural="Ordens de Serviço" data-filtro-genero="f">
       <input type="hidden" name="filtro" value="{{ filtro_ativo }}">
-      <div class="input-group"><input class="form-control" name="q" value="{{ busca }}" placeholder="O.S., cliente, equipamento ou defeito"><button class="btn btn-primary"><i class="bi bi-search"></i></button></div>
+      <div class="input-group"><input class="form-control" name="q" type="search" autocomplete="off" value="{{ busca }}" placeholder="O.S., cliente, equipamento ou defeito"><button class="btn btn-primary" type="submit" aria-label="Buscar"><i class="bi bi-search"></i></button></div>
     </form>
+    {{ indice_busca|json_script:"indiceOrdens" }}
   </div>
   <div class="ls-data-body">
     <div class="table-responsive">
-      <table class="ls-table ls-commercial-table">
+      <table class="ls-table ls-commercial-table ls-os-tabela">
         <thead><tr><th>O.S.</th><th>Cliente / equipamento</th><th>Tipo</th><th>Situação</th><th>Agenda</th><th class="text-end">Total</th><th>Pagamento</th><th>Técnico</th><th class="text-end">Ações</th></tr></thead>
         <tbody>
         {% for ordem in ordens %}
-          <tr>
+          <tr data-registro="{{ ordem.id }}">
             <td data-rotulo="O.S."><strong>{{ ordem.numero_documento }}</strong>{% if ordem.orcamento_id %}<span class="material-sub d-block">proposta #{{ ordem.orcamento_id }}</span>{% endif %}</td>
             <td data-rotulo="Cliente / equipamento"><strong>{{ ordem.destinatario }}</strong><span class="material-sub d-block">{{ ordem.equipamento }}</span>{% if ordem.numero_serie %}<span class="material-sub d-block">Série: {{ ordem.numero_serie }}</span>{% endif %}{% if ordem.rota.google_maps_url or ordem.rota.waze_url %}<span class="ls-route-actions">{% if ordem.rota.distancia_km != None %}<span class="ls-distance-chip" title="Estimativa em linha reta"><i class="bi bi-signpost-split"></i> ≈ {{ ordem.rota.distancia_km|stringformat:".1f" }} km</span>{% endif %}{% if ordem.rota.google_maps_url %}<a href="{{ ordem.rota.google_maps_url }}" target="_blank" rel="noopener" class="ls-route-link maps" title="Rota no Google Maps"><i class="bi bi-map"></i> Maps</a>{% endif %}{% if ordem.rota.waze_url %}<a href="{{ ordem.rota.waze_url }}" target="_blank" rel="noopener" class="ls-route-link waze" title="Rota no Waze"><i class="bi bi-navigation"></i> Waze</a>{% endif %}</span>{% endif %}</td>
             <td data-rotulo="Tipo">{{ ordem.get_tipo_display }}{% if ordem.prioridade == 'urgente' or ordem.prioridade == 'alta' %}<span class="ls-status danger d-block mt-1">{{ ordem.get_prioridade_display }}</span>{% endif %}</td>
@@ -74,7 +97,7 @@
               {% elif user.is_superuser %}{# Palavra final do superusuário: excluir O.S. que já saiu do rascunho. Fica registrado. #}<button class="btn btn-sm btn-outline-danger" type="button" data-excluir="{{ ordem.id }}" data-nome="{{ ordem.numero_documento }} — {{ ordem.destinatario }}" data-protegido="1" data-protegido-motivo="Esta O.S. está como {{ ordem.get_status_display|lower }} e faz parte do histórico operacional. Você pode excluir mesmo assim, e a exclusão vai ficar registrada com o seu nome." aria-label="Excluir {{ ordem.numero_documento }}" title="Excluir mesmo protegida (fica registrado)"><i class="bi bi-trash"></i><span class="ls-action-label">Excluir</span></button>{% endif %}
             </div></td>
           </tr>
-        {% empty %}<tr><td colspan="9"><div class="ls-empty"><i class="bi bi-clipboard2-check"></i>Nenhuma Ordem de Serviço encontrada.</div></td></tr>{% endfor %}
+        {% empty %}<tr data-lista-vazia><td colspan="9"><div class="ls-empty"><i class="bi bi-clipboard2-check"></i>Nenhuma Ordem de Serviço encontrada.</div></td></tr>{% endfor %}
         </tbody>
       </table>
     </div>
@@ -193,7 +216,35 @@
 
 <!-- Pagamento -->
 <div class="modal fade" id="modalPagamentoOS" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><form class="modal-content" id="formPagamentoOS" method="post" action="{% url 'ordens_servico_inner' %}">
-  {% csrf_token %}<input type="hidden" name="action" value="pagamento"><input type="hidden" name="id" id="pagamentoOSId"><div class="modal-header"><div><span class="ls-modal-kicker">Financeiro</span><h5 class="modal-title" id="pagamentoOSTitulo">Pagamento</h5></div><button class="btn-close" type="button" data-bs-dismiss="modal"></button></div><div class="modal-body"><div id="pagamentoOSErro" class="alert alert-danger d-none"></div><div class="alert alert-light border" id="pagamentoOSResumo"></div><label class="form-label" for="pagamentoOSValor">Valor total recebido até agora</label><div class="input-group mb-3"><span class="input-group-text">R$</span><input class="form-control" id="pagamentoOSValor" name="valor_pago" data-mascara="moeda" required></div><label class="form-label" for="pagamentoOSObs">Observação</label><input class="form-control" id="pagamentoOSObs" name="observacao_pagamento" maxlength="240"></div><div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancelar</button><button class="btn btn-success" type="submit">Atualizar pagamento</button></div>
+  {% csrf_token %}<input type="hidden" name="action" value="pagamento"><input type="hidden" name="id" id="pagamentoOSId"><div class="modal-header"><div><span class="ls-modal-kicker">Financeiro</span><h5 class="modal-title" id="pagamentoOSTitulo">Pagamento</h5></div><button class="btn-close" type="button" data-bs-dismiss="modal"></button></div><div class="modal-body">
+  <div id="pagamentoOSErro" class="alert alert-danger d-none"></div>
+  {% comment %}
+    Era um alerta claro do Bootstrap: fundo branco dentro do painel
+    escuro, com o total a pagar sumindo no branco. Mesmo quadro da janela
+    de pagamento do orçamento -- as duas respondem a mesma pergunta, e
+    agora respondem do mesmo jeito.
+  {% endcomment %}
+  <div class="ls-pagamento-quadro" id="pagamentoOSQuadro">
+    <div class="ls-pagamento-linhas">
+      <div><span>Total da O.S.</span><strong id="pagamentoOSTotal">R$ 0,00</strong></div>
+      <div><span>Já recebido</span><strong id="pagamentoOSRecebido">R$ 0,00</strong></div>
+    </div>
+    <div class="ls-pagamento-falta">
+      <span id="pagamentoOSFaltaRotulo">Falta receber</span>
+      <strong id="pagamentoOSFalta">R$ 0,00</strong>
+    </div>
+  </div>
+  <label class="form-label" for="pagamentoOSValor">Valor total recebido até agora</label>
+  <div class="input-group"><span class="input-group-text">R$</span><input class="form-control" id="pagamentoOSValor" name="valor_pago" inputmode="decimal" data-mascara="moeda" required></div>
+  <span class="form-text">Some tudo o que já entrou, e não só a parcela de hoje.</span>
+  <div class="ls-pagamento-atalhos" aria-label="Atalhos de valor">
+    <button type="button" class="ls-chip" data-pagamento-os-atalho="tudo">Recebi tudo</button>
+    <button type="button" class="ls-chip" data-pagamento-os-atalho="metade">Metade</button>
+    <button type="button" class="ls-chip ls-chip-zerar" data-pagamento-os-atalho="zerar">Nada ainda</button>
+  </div>
+  <label class="form-label mt-3" for="pagamentoOSObs">Observação</label>
+  <input class="form-control" id="pagamentoOSObs" name="observacao_pagamento" maxlength="240" placeholder="Ex.: entrada em dinheiro na entrega">
+</div><div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancelar</button><button class="btn btn-success" type="submit">Atualizar pagamento</button></div>
 </form></div></div>
 
 {% url 'ordens_servico_inner' as exclusao_url %}
@@ -362,7 +413,34 @@ LSTela.pronto(function () {
        Um clique resolve as duas coisas, que é o que a pessoa queria. */
     if(!campo.value){botao.disabled=true;requisitarEnvioOS("link").then(function(json){atualizarEnvioOS(json);botao.disabled=false;avisoOS("O.S. liberada. O link já pode ser enviado ao cliente.","sucesso");if(campo.value&&navigator.clipboard&&window.isSecureContext){navigator.clipboard.writeText(campo.value).catch(function(){});}}).catch(function(erro){botao.disabled=false;avisoOS(erro.message,"erro");});return;}
     function sucesso(){botao.innerHTML='<i class="bi bi-check-lg me-1"></i>Copiado';requisitarEnvioOS("link").then(function(json){atualizarEnvioOS(json);avisoOS("Link copiado e O.S. liberada para o cliente.","sucesso");}).catch(function(erro){avisoOS("O link foi copiado, mas a O.S. não foi liberada: "+erro.message,"erro");});}function legado(){campo.removeAttribute("readonly");campo.select();var ok=document.execCommand("copy");campo.setAttribute("readonly","readonly");if(ok)sucesso();else avisoOS("Selecione e copie o link manualmente.","erro");}if(navigator.clipboard&&window.isSecureContext)navigator.clipboard.writeText(campo.value).then(sucesso).catch(legado);else legado();});
-  document.querySelectorAll("[data-pagamento-os]").forEach(function(b){b.addEventListener("click",function(){valor("pagamentoOSId",b.dataset.pagamentoOs);valor("pagamentoOSValor",b.dataset.pago||"0");valor("pagamentoOSObs","");document.getElementById("pagamentoOSTitulo").textContent=b.dataset.nome;document.getElementById("pagamentoOSResumo").textContent="Total da O.S.: "+moeda(numero(b.dataset.total));Painel.erro("pagamentoOSErro","");Painel.abrir("modalPagamentoOS");});});Painel.ligar({form:"formPagamentoOS",erro:"pagamentoOSErro"});Painel.ligarExclusao();
+  
+  /* O quadro acompanha o que está sendo digitado: quem registra um valor
+     parcial vê o que sobra sem fazer a conta de cabeça -- e é essa conta
+     que decide se a cobrança continua hoje. */
+  var totalOSAtual = 0;
+
+  function desenharQuadroOS(){
+    var recebido = numero(document.getElementById("pagamentoOSValor").value || "0");
+    var falta = Math.max(totalOSAtual - recebido, 0);
+    var quitado = recebido >= totalOSAtual && totalOSAtual > 0;
+    document.getElementById("pagamentoOSTotal").textContent = moeda(totalOSAtual);
+    document.getElementById("pagamentoOSRecebido").textContent = moeda(recebido);
+    document.getElementById("pagamentoOSQuadro").classList.toggle("quitado", quitado);
+    document.getElementById("pagamentoOSFaltaRotulo").textContent = quitado ? "Situação" : "Falta receber";
+    document.getElementById("pagamentoOSFalta").textContent = quitado ? "Quitado" : moeda(falta);
+  }
+
+  document.getElementById("pagamentoOSValor")?.addEventListener("input", desenharQuadroOS);
+  document.querySelectorAll("[data-pagamento-os-atalho]").forEach(function(chip){
+    chip.addEventListener("click", function(){
+      var quanto = chip.dataset.pagamentoOsAtalho;
+      var v = quanto === "tudo" ? totalOSAtual : quanto === "metade" ? totalOSAtual/2 : 0;
+      valor("pagamentoOSValor", v.toFixed(2).replace(".", ","));
+      desenharQuadroOS();
+    });
+  });
+
+  document.querySelectorAll("[data-pagamento-os]").forEach(function(b){b.addEventListener("click",function(){valor("pagamentoOSId",b.dataset.pagamentoOs);valor("pagamentoOSValor",b.dataset.pago||"0");valor("pagamentoOSObs","");document.getElementById("pagamentoOSTitulo").textContent=b.dataset.nome;totalOSAtual=numero(b.dataset.total);desenharQuadroOS();Painel.erro("pagamentoOSErro","");Painel.abrir("modalPagamentoOS");});});Painel.ligar({form:"formPagamentoOS",erro:"pagamentoOSErro"});Painel.ligarExclusao();
 
   var params=new URLSearchParams(location.search);if(params.get("novo")==="1"&&document.getElementById("novaOS")){abrir(null);if(params.get("manutencao")){valor("osManutencao",params.get("manutencao"));document.getElementById("osManutencao").dispatchEvent(new Event("change"));}}
 });

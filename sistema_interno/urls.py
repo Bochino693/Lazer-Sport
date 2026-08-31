@@ -37,6 +37,7 @@ from .views import (
 from .views_app import manifesto, service_worker
 from .views_avisos import EstadoAvisosView, InscricaoPushView
 from .views_acessos import AvaliacaoSetoresInnerView, UsuariosEquipeInnerView
+from .views_etiquetas import EtiquetasInnerView
 from .views_clientes import (
     ClientesInnerView,
     ConsultaCepInnerView,
@@ -177,6 +178,11 @@ urlpatterns = [
         ConsultaCepInnerView.as_view(),
         name='consultar_cep_inner',
     ),
+
+    # ---------------- expedição ----------------
+    # Etiqueta é papel: a tela monta, manda para a impressora e acabou.
+    # Nada é gravado. Ver `views_etiquetas.py`.
+    path('etiquetas/', EtiquetasInnerView.as_view(), name='etiquetas_inner'),
 
     # ---------------- orçamentos ----------------
     path('orcamentos/', OrcamentosInnerView.as_view(), name='orcamentos_inner'),

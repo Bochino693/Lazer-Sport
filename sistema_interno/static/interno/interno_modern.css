@@ -888,6 +888,64 @@ textarea.form-control{min-height:100px!important}
 .ls-budget-search{width:min(100%,390px)}
 
 /* ======================================================================
+   PAGAMENTO — O QUADRO QUE DIZ QUANTO FALTA
+
+   As duas janelas de pagamento (orçamento e O.S.) mostravam o resumo
+   dentro de um `alert alert-light` do Bootstrap: fundo branco, dentro de
+   um painel escuro. Não era descuido de cor -- era uma classe do
+   Bootstrap que o tema da casa nunca cobriu, e o "total a pagar", que é
+   o número mais importante da janela, saía branco no branco.
+
+   O que se lê aqui é sempre a mesma pergunta, e nesta ordem: quanto é o
+   total, quanto já entrou, quanto FALTA. O que falta é o maior e o
+   colorido, porque é o que decide se a conversa com o cliente termina
+   hoje. Quitado, o quadro inteiro vira verde e o que falta some -- não há
+   por que mostrar "R$ 0,00 restantes".
+   ====================================================================== */
+.ls-pagamento-quadro{
+  margin-bottom:16px;padding:15px 16px;
+  border:1px solid var(--line);border-radius:15px;
+  background:linear-gradient(180deg,var(--panel-2),var(--panel-soft));
+}
+.ls-pagamento-linhas{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+.ls-pagamento-linhas>div{min-width:0;display:flex;flex-direction:column;gap:2px}
+.ls-pagamento-linhas span{color:var(--muted);font-size:.68rem;font-weight:800;letter-spacing:.02em}
+.ls-pagamento-linhas strong{color:var(--text);font-size:.98rem;font-variant-numeric:tabular-nums}
+.ls-pagamento-falta{
+  margin-top:12px;padding-top:12px;border-top:1px solid var(--line-soft);
+  display:flex;align-items:baseline;justify-content:space-between;gap:12px;
+}
+.ls-pagamento-falta span{color:var(--muted);font-size:.74rem;font-weight:800}
+.ls-pagamento-falta strong{
+  color:#FFC94D;font-size:1.5rem;letter-spacing:-.02em;
+  font-variant-numeric:tabular-nums;white-space:nowrap;
+}
+.ls-pagamento-quadro.quitado{
+  border-color:rgba(95,214,138,.34);
+  background:linear-gradient(180deg,rgba(95,214,138,.11),rgba(43,36,27,.6));
+}
+.ls-pagamento-quadro.quitado .ls-pagamento-falta strong{color:#8FE9B6;font-size:1.15rem}
+@media(max-width:430px){
+  .ls-pagamento-linhas{grid-template-columns:1fr}
+  .ls-pagamento-falta{align-items:flex-start;flex-direction:column;gap:2px}
+}
+
+/* Atalhos de valor: no balcão o caso comum é "recebi tudo". Digitar o
+   total à mão para dizer isso é trabalho que o botão faz melhor -- e sem
+   errar um dígito. */
+.ls-pagamento-atalhos{display:flex;gap:7px;flex-wrap:wrap;margin:9px 0 3px}
+.ls-pagamento-atalhos .ls-chip{cursor:pointer}
+
+/* A etiqueta de quitado na lista. Some do meio das outras situações: o
+   visto e o verde dizem antes de a pessoa ler. */
+.ls-pago{
+  display:inline-flex;align-items:center;gap:6px;padding:5px 10px;
+  border:1px solid rgba(95,214,138,.32);border-radius:999px;
+  background:rgba(95,214,138,.12);color:#8FE9B6;
+  font-size:.7rem;font-weight:900;white-space:nowrap;
+}
+
+/* ======================================================================
    HISTÓRICO DO CLIENTE
 
    Três telas respondiam pedaços da mesma pergunta ("o que já fizemos
@@ -2763,4 +2821,228 @@ body.modal-open .ls-nav-recovery{display:none!important}
   .ls-action-fab-menu{grid-template-columns:1fr;width:min(270px,calc(100vw - 16px));padding:7px}
   .ls-action-fab-head small{display:none}
   .ls-nav-recovery{grid-template-columns:1fr auto}.ls-nav-recovery div{grid-column:1/-1}.ls-nav-recovery button[data-retry]{width:100%}
+}
+
+/* O RECADO DO FILTRO INSTANTÂNEO.
+
+   Ele responde três coisas diferentes e precisa parecer três coisas
+   diferentes: quantos apareceram, que não apareceu nenhum, e -- o caso
+   que só existe porque a lista vem por página -- que há registros
+   combinando fora do que está desenhado. */
+.ls-filtro-recado{
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  margin:12px 2px 0;padding:11px 14px;
+  border:1px solid var(--line);border-radius:13px;
+  background:var(--panel-2);color:var(--muted);
+  font-size:.85rem;font-weight:600;
+}
+.ls-filtro-recado strong{color:var(--text);font-variant-numeric:tabular-nums}
+.ls-filtro-recado i{color:var(--muted)}
+.ls-filtro-recado.vazio{
+  border-style:dashed;
+  background:transparent;
+}
+.ls-filtro-recado.fora{
+  border-color:rgba(255,201,77,.34);
+  background:linear-gradient(180deg,rgba(255,201,77,.10),rgba(43,36,27,.55));
+}
+.ls-filtro-recado.fora .btn{margin-left:auto}
+@media(max-width:520px){
+  .ls-filtro-recado.fora .btn{margin-left:0;width:100%}
+}
+
+/* O AVISO DE CADASTRO INCOMPLETO VIROU BOTÃO.
+
+   Ele dizia o que faltava e parava aí; resolver era abrir o formulário
+   inteiro e caçar os campos vazios. Agora o próprio aviso abre a janela
+   que pergunta só o que falta -- e precisa parecer clicável, sem virar
+   mais um botão brigando com os da coluna de ações. */
+button.ls-incomplete-chip{
+  cursor:pointer;text-align:left;font-family:inherit;
+  align-items:flex-start;
+  transition:border-color .15s ease,background .15s ease;
+}
+/* O texto precisa da própria caixa: solto, o flex o quebra palavra a
+   palavra e a etiqueta "Completar" cai no meio da frase. */
+button.ls-incomplete-chip>i{flex:0 0 auto;margin-top:1px}
+.ls-incomplete-texto{flex:1 1 auto;min-width:0}
+button.ls-incomplete-chip:hover,
+button.ls-incomplete-chip:focus-visible{
+  border-color:rgba(255,128,145,.55);
+  background:rgba(255,113,132,.16);
+}
+button.ls-incomplete-chip:focus-visible{outline:3px solid rgba(255,128,145,.35);outline-offset:2px}
+.ls-incomplete-cta{
+  flex:0 0 auto;margin-left:2px;padding:2px 7px;border-radius:99px;
+  background:rgba(255,157,172,.18);color:#ffd4db;
+  font-size:.63rem;font-weight:900;letter-spacing:.03em;text-transform:uppercase;
+  white-space:nowrap;
+}
+
+/* Os blocos da janela de completar. Cada um aparece só quando aquele
+   pedaço do cadastro está faltando, então eles precisam se separar
+   sozinhos: sem moldura, dois blocos abertos viram um formulário só. */
+.ls-completar-resumo{
+  margin:0 0 14px;padding:11px 14px;
+  border:1px dashed var(--line);border-radius:12px;
+  color:var(--muted);font-size:.85rem;font-weight:600;
+}
+.ls-completar-bloco{
+  margin-bottom:16px;padding:15px 16px;
+  border:1px solid var(--line);border-radius:15px;
+  background:linear-gradient(180deg,var(--panel-2),var(--panel-soft));
+}
+.ls-completar-bloco:last-child{margin-bottom:0}
+.ls-completar-bloco>h6{
+  margin:0 0 12px;display:flex;align-items:center;gap:7px;
+  color:var(--text);font-size:.8rem;font-weight:900;
+  letter-spacing:.03em;text-transform:uppercase;
+}
+.ls-completar-bloco>h6 i{color:var(--metric)}
+
+/* ==========================================================
+   ETIQUETAS DE TRANSPORTE
+   ==========================================================
+   A tela tem duas metades com públicos diferentes: a esquerda é do
+   painel (escura, como o resto da casa) e a direita é PAPEL -- branca,
+   porque é assim que ela vai sair da impressora. Mostrar a prévia no
+   tema escuro pouparia contraste na tela e mentiria sobre a impressão. */
+.ls-etiquetas-tela{
+  display:grid;grid-template-columns:minmax(320px,400px) 1fr;
+  gap:18px;align-items:start;
+}
+@media(max-width:1100px){.ls-etiquetas-tela{grid-template-columns:1fr}}
+
+.ls-etiquetas-form .ls-completar-bloco:last-child{margin-bottom:0}
+
+.ls-etiqueta-avisos{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+@media(max-width:520px){.ls-etiqueta-avisos{grid-template-columns:1fr}}
+.ls-etiqueta-aviso,.ls-etiqueta-tamanho{
+  display:flex;align-items:center;gap:9px;cursor:pointer;
+  padding:10px 12px;border:1px solid var(--line);border-radius:12px;
+  color:var(--muted);font-size:.8rem;font-weight:700;
+  transition:border-color .15s ease,background .15s ease,color .15s ease;
+}
+.ls-etiqueta-aviso:has(input:checked),
+.ls-etiqueta-tamanho:has(input:checked){
+  border-color:rgba(242,169,59,.5);background:rgba(242,169,59,.10);color:var(--text);
+}
+.ls-etiqueta-aviso input,.ls-etiqueta-tamanho input{accent-color:var(--metric);flex:0 0 auto}
+.ls-etiqueta-tamanhos{display:grid;gap:8px}
+.ls-etiqueta-tamanho span{display:flex;flex-direction:column;gap:1px}
+.ls-etiqueta-tamanho small{color:var(--muted);font-weight:600}
+
+/* ---------------------------------------------------------- o papel */
+.ls-folha-etiquetas{
+  display:grid;gap:10px;padding:14px;
+  border:1px solid var(--line);border-radius:16px;background:#5B5348;
+}
+.ls-folha-etiquetas.a5{grid-template-columns:1fr}
+.ls-folha-etiquetas.a6{grid-template-columns:1fr 1fr}
+@media(max-width:700px){.ls-folha-etiquetas.a6{grid-template-columns:1fr}}
+
+.ls-etiqueta{
+  display:flex;flex-direction:column;gap:10px;
+  padding:16px 18px;background:#fff;color:#171310;
+  border:2px solid #171310;border-radius:6px;
+  font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+.ls-etiqueta-topo{display:flex;align-items:center;gap:11px;border-bottom:2px solid #171310;padding-bottom:9px}
+.ls-etiqueta-logo{width:44px;height:44px;flex:0 0 44px;object-fit:contain}
+.ls-etiqueta-empresa{flex:1 1 auto;min-width:0;display:flex;flex-direction:column}
+.ls-etiqueta-empresa strong{font-size:.95rem;line-height:1.2}
+.ls-etiqueta-empresa small{font-size:.62rem;color:#4A423A;line-height:1.35}
+.ls-etiqueta-volume{
+  flex:0 0 auto;text-align:center;padding:5px 10px;
+  border:2px solid #171310;border-radius:6px;
+}
+.ls-etiqueta-volume small{display:block;font-size:.53rem;letter-spacing:.06em;text-transform:uppercase}
+.ls-etiqueta-volume strong{font-size:1.15rem;line-height:1;font-variant-numeric:tabular-nums}
+
+/* O aviso é o que se lê de longe: no galpão, quem carrega a caixa olha
+   um segundo. O primeiro escolhido ganha a faixa preta; os outros
+   acompanham menores, sem disputar com ele. */
+.ls-etiqueta-selos{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.ls-etiqueta-selo{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:4px 9px;border:2px solid #171310;border-radius:5px;
+  font-size:.68rem;font-weight:900;letter-spacing:.04em;text-transform:uppercase;
+}
+.ls-etiqueta-selo.principal{
+  padding:7px 14px;font-size:1.05rem;letter-spacing:.09em;
+  background:#171310;color:#fff;
+}
+.ls-etiqueta-selo.principal i{font-size:1.15rem}
+
+.ls-etiqueta-destino{
+  flex:1 1 auto;min-height:0;padding:10px 12px;
+  border:2px dashed #171310;border-radius:6px;
+}
+.ls-etiqueta-destino>span{
+  display:block;font-size:.58rem;font-weight:900;
+  letter-spacing:.1em;text-transform:uppercase;color:#4A423A;
+}
+.ls-etiqueta-destino strong{display:block;margin-top:2px;font-size:1.3rem;line-height:1.2}
+.ls-etiqueta-destino p{margin:5px 0 0;font-size:.8rem;line-height:1.4}
+.ls-etiqueta-contato{font-weight:800}
+
+.ls-etiqueta-rodape{
+  display:flex;flex-wrap:wrap;gap:4px 18px;
+  border-top:1px solid #B9AE9C;padding-top:8px;font-size:.72rem;
+}
+.ls-etiqueta-rodape span{display:flex;flex-direction:column;min-width:0}
+.ls-etiqueta-rodape small{
+  font-size:.53rem;font-weight:900;letter-spacing:.08em;
+  text-transform:uppercase;color:#6B6055;
+}
+.ls-etiqueta-origem{margin-left:auto;text-align:right}
+
+/* A folha em A6 aperta tudo: quatro por página é volume pequeno. */
+.ls-folha-etiquetas.a6 .ls-etiqueta{padding:10px 11px;gap:6px}
+.ls-folha-etiquetas.a6 .ls-etiqueta-selo.principal{padding:4px 9px;font-size:.8rem}
+.ls-folha-etiquetas.a6 .ls-etiqueta-selo{font-size:.58rem;padding:3px 7px}
+.ls-folha-etiquetas.a6 .ls-etiqueta-destino{padding:7px 9px}
+.ls-folha-etiquetas.a6 .ls-etiqueta-destino strong{font-size:1.02rem}
+.ls-folha-etiquetas.a6 .ls-etiqueta-destino p{font-size:.7rem}
+.ls-folha-etiquetas.a6 .ls-etiqueta-empresa strong{font-size:.8rem}
+.ls-folha-etiquetas.a6 .ls-etiqueta-rodape{font-size:.62rem;gap:3px 12px}
+.ls-folha-etiquetas.a6 .ls-etiqueta-logo{width:32px;height:32px;flex-basis:32px}
+
+/* Economizar tinta: some o preenchido, fica o traço. */
+.ls-folha-etiquetas.sem-fundo .ls-etiqueta-selo.principal{background:#fff;color:#171310}
+
+/* ------------------------------------------------- na impressora
+   O painel inteiro sai de cena: menu, topo, formulário e a moldura da
+   prévia. Sobram as etiquetas, no tamanho de papel que foi escolhido.
+   `print-color-adjust:exact` existe porque a faixa preta do aviso é o
+   que se lê de longe -- e impressora, por padrão, descarta fundo. */
+@media print{
+  @page{size:A4;margin:8mm}
+  body.ls-body{background:#fff}
+  .ls-sidebar,.ls-topbar,.ls-page-head,.ls-data-header,
+  .ls-etiquetas-form,.nao-imprime,.ls-page-loader,
+  .ls-action-fab,.ls-action-fab-menu{display:none!important}
+  .ls-etiquetas-tela{display:block}
+  .ls-shell,.ls-main,.ls-content{display:block!important;margin:0!important;padding:0!important}
+  .ls-folha-etiquetas{
+    display:grid;gap:0;padding:0;border:0;border-radius:0;background:#fff;
+  }
+  .ls-etiqueta{
+    box-sizing:border-box;
+    break-inside:avoid;page-break-inside:avoid;
+    border-radius:0;margin:0;
+    -webkit-print-color-adjust:exact;print-color-adjust:exact;
+  }
+  /* ALTURA MÍNIMA, E NÃO ALTURA FIXA.
+
+     Com `height`, um endereço de quatro linhas empurrava o rodapé --
+     conteúdo, referência e remetente -- para fora da moldura, e a
+     etiqueta saía da impressora cortada justamente na parte que diz o
+     que tem dentro da caixa. Com `min-height` o tamanho continua sendo
+     duas por folha em A5 e quatro em A6 no caso normal; quando não cabe,
+     a etiqueta cresce e empurra a seguinte para a próxima página. Papel
+     a mais é barato; etiqueta cortada volta como carga extraviada. */
+  .ls-folha-etiquetas.a5 .ls-etiqueta{min-height:132mm}
+  .ls-folha-etiquetas.a6 .ls-etiqueta{min-height:64mm}
+  .ls-folha-etiquetas.a6{grid-template-columns:1fr 1fr}
 }

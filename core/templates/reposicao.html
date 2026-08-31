@@ -200,7 +200,7 @@
                   {% if img and img.imagem %}
                     <img src="{{ img.imagem.url }}" alt="{{ peca.nome }}">
                   {% else %}
-                    <img src="{% static 'img/placeholder.png' %}" alt="Sem imagem">
+                    <img src="{% static 'images/sem-imagem.svg' %}" alt="Sem imagem">
                   {% endif %}
                 {% endwith %}
 

@@ -81,12 +81,23 @@
   </article>
 </section>
 
+{{ indice_busca|json_script:"indiceClientes" }}
 <section class="ls-filter-panel">
-  <form method="get" class="row g-3 align-items-end">
+  {% comment %}
+    A busca do nome procura no índice que veio junto da página: sem ida ao
+    servidor e sem recarregar a tela. Os outros campos (tipo, parceiro)
+    continuam sendo do servidor -- eles mudam o conjunto, não filtram
+    dentro do que já está aqui.
+  {% endcomment %}
+  <form method="get" class="row g-3 align-items-end"
+        data-filtro-alvo=".ls-clientes-table tbody"
+        data-filtro-indice="indiceClientes" data-filtro-nome="cliente"
+        data-filtro-nome-plural="clientes">
     {% if apenas_incompletos %}<input type="hidden" name="incompletos" value="1">{% endif %}
     <div class="col-12 col-lg-5">
       <label class="form-label" for="filtroBusca">Buscar cliente</label>
-      <input id="filtroBusca" name="q" value="{{ busca }}" class="form-control"
+      <input id="filtroBusca" name="q" type="search" autocomplete="off"
+             value="{{ busca }}" class="form-control"
              placeholder="Nome, telefone, e-mail, CPF/CNPJ ou buffet">
     </div>
     <div class="col-6 col-lg-2">
@@ -138,7 +149,7 @@
         <tbody>
           {% for ficha in fichas %}
             {% with cliente=ficha.obj %}
-            <tr>
+            <tr data-registro="{{ cliente.id }}">
               <td data-rotulo="Cliente">
                 <span class="material-nome">{{ cliente.nome_cliente }}</span>
                 <span class="material-sub d-block">
@@ -154,8 +165,26 @@
                   {% endif %}
                   {% if cliente.documento %} · {{ cliente.documento }}{% endif %}
                 </span>
+                {% comment %}
+                  O AVISO PASSOU A SER O CAMINHO.
+
+                  Ele dizia "Falta contato, endereço" e parava aí: para
+                  resolver, era "Editar" -- o formulário inteiro, com os
+                  dois campos vazios perdidos no meio de vinte
+                  preenchidos. Quem estava com o cliente no telefone
+                  procurava onde digitar. Agora o próprio aviso abre uma
+                  janela que pergunta só o que falta.
+                {% endcomment %}
                 {% if ficha.pendencias %}
-                  <span class="ls-incomplete-chip"><i class="bi bi-exclamation-circle"></i> Falta {{ ficha.pendencias|join:", " }}</span>
+                  <button type="button" class="ls-incomplete-chip"
+                          data-completar="{{ cliente.id }}"
+                          data-nome="{{ cliente.nome_cliente }}"
+                          data-pendencias="{{ ficha.pendencias|join:"|" }}"
+                          title="Preencher o que falta no cadastro de {{ cliente.nome_cliente }}">
+                    <i class="bi bi-exclamation-circle" aria-hidden="true"></i>
+                    <span class="ls-incomplete-texto">Falta {{ ficha.pendencias|join:", " }}</span>
+                    <span class="ls-incomplete-cta">Completar</span>
+                  </button>
                 {% endif %}
               </td>
 
@@ -251,7 +280,7 @@
             </tr>
             {% endwith %}
           {% empty %}
-            <tr>
+            <tr data-lista-vazia>
               <td colspan="7">
                 <div class="ls-empty">
                   <i class="bi bi-people"></i>
@@ -283,6 +312,131 @@
     {% endif %}
   </div>
 </section>
+
+<!-- ================= MODAL: completar o que falta ================= -->
+{% comment %}
+  UMA JANELA QUE PERGUNTA SÓ O QUE FALTA.
+
+  Não é o formulário de cadastro escondendo campos: é outro caminho, com
+  outra regra no servidor (`acao_completar`). A diferença importa. O
+  formulário de edição lê o POST inteiro, então um campo ausente vale
+  como "apague o que estava lá" -- correto quando a tela mostra o
+  cadastro todo, desastroso quando ela mostra três campos. Aqui cada
+  campo só é gravado se veio preenchido.
+
+  Os blocos aparecem conforme a falta de cada cliente: quem só não tem
+  CPF vê um campo, não um formulário.
+{% endcomment %}
+<div class="modal fade" id="modalCompletar" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+    <form class="modal-content" id="formCompletar" method="post" action="{% url 'clientes_inner' %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="completar">
+      <input type="hidden" name="id" id="completarId">
+
+      <div class="modal-header">
+        <div>
+          <span class="ls-modal-kicker">Cadastro</span>
+          <h5 class="modal-title" id="completarTitulo">Completar cadastro</h5>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+
+      <div class="modal-body ls-compact-form">
+        <div id="completarErro" class="alert alert-danger d-none"></div>
+
+        <p class="ls-completar-resumo" id="completarResumo"></p>
+
+        <section class="ls-completar-bloco" id="completarBlocoContato" hidden>
+          <h6><i class="bi bi-telephone" aria-hidden="true"></i> Contato</h6>
+          <div class="row g-3">
+            <div class="col-12 col-md-6">
+              <label class="form-label" for="completarTelefone">Telefone / WhatsApp</label>
+              <input class="form-control" id="completarTelefone" name="telefone"
+                     data-mascara="telefone" inputmode="tel" maxlength="24"
+                     autocomplete="off" placeholder="(11) 99999-9999">
+              {% comment %}
+                Caixa desmarcada não chega ao servidor -- e "não chegou"
+                seria indistinguível de "esta janela nem perguntou". Sem
+                o marcador abaixo, desmarcar nunca confirmaria o
+                WhatsApp, e a pendência voltaria eternamente.
+              {% endcomment %}
+              <input type="hidden" name="canal_telefone_perguntado" value="1">
+              <div class="form-check mt-2">
+                <input class="form-check-input" type="checkbox" value="nao_confirmado"
+                       name="canal_telefone" id="completarSemWhats">
+                <label class="form-check-label" for="completarSemWhats">
+                  Este número não tem WhatsApp (ou ainda não sei)
+                </label>
+              </div>
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="form-label" for="completarEmail">E-mail</label>
+              <input class="form-control" id="completarEmail" name="email" type="email"
+                     maxlength="150" autocomplete="off" placeholder="cliente@exemplo.com">
+            </div>
+          </div>
+          <span class="form-text">Um dos dois basta para o cadastro sair da lista de pendentes.</span>
+        </section>
+
+        <section class="ls-completar-bloco" id="completarBlocoDocumento" hidden>
+          <h6><i class="bi bi-person-vcard" aria-hidden="true"></i> CPF / CNPJ</h6>
+          <label class="form-label visually-hidden" for="completarDocumento">CPF ou CNPJ</label>
+          <input class="form-control" id="completarDocumento" name="documento"
+                 data-mascara="documento" inputmode="numeric" maxlength="20"
+                 autocomplete="off" placeholder="000.000.000-00 ou 00.000.000/0000-00">
+          <span class="form-text">Confirmado pelos dígitos verificadores antes de gravar.</span>
+        </section>
+
+        <section class="ls-completar-bloco" id="completarBlocoEndereco" hidden>
+          <h6><i class="bi bi-geo-alt" aria-hidden="true"></i> Endereço</h6>
+          <div class="row g-3">
+            <div class="col-12 col-md-4">
+              <label class="form-label" for="completarCep">CEP</label>
+              <input class="form-control" id="completarCep" name="cep"
+                     data-mascara="cep" inputmode="numeric" maxlength="18" autocomplete="off">
+              <span class="form-text" id="completarCepStatus"></span>
+            </div>
+            <div class="col-12 col-md-8">
+              <label class="form-label" for="completarEndereco">Rua</label>
+              <input class="form-control" id="completarEndereco" name="endereco" maxlength="120">
+            </div>
+            <div class="col-6 col-md-3">
+              <label class="form-label" for="completarNumero">Número</label>
+              <input class="form-control" id="completarNumero" name="numero" maxlength="10">
+            </div>
+            <div class="col-6 col-md-4">
+              <label class="form-label" for="completarComplemento">Complemento</label>
+              <input class="form-control" id="completarComplemento" name="complemento" maxlength="60">
+            </div>
+            <div class="col-12 col-md-5">
+              <label class="form-label" for="completarBairro">Bairro</label>
+              <input class="form-control" id="completarBairro" name="bairro" maxlength="50">
+            </div>
+            <div class="col-12 col-md-8">
+              <label class="form-label" for="completarCidade">Cidade</label>
+              <input class="form-control" id="completarCidade" name="cidade" maxlength="60">
+            </div>
+            <div class="col-12 col-md-4">
+              <label class="form-label" for="completarEstado">UF</label>
+              <input class="form-control" id="completarEstado" name="estado" maxlength="20">
+            </div>
+          </div>
+          <input type="hidden" name="latitude" id="completarLatitude">
+          <input type="hidden" name="longitude" id="completarLongitude">
+          <span class="form-text">O CEP preenche rua, bairro, cidade e UF sozinho.</span>
+        </section>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-primary">
+          <i class="bi bi-check2-circle me-1" aria-hidden="true"></i> Salvar o que falta
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
 
 <!-- ================= MODAL: cadastro ================= -->
 <div class="modal fade" id="modalCliente" tabindex="-1" aria-hidden="true">
@@ -1002,6 +1156,119 @@ LSTela.pronto(function () {
   });
 
   Painel.ligar({ form: "formCliente", erro: "clienteErro" });
+
+  /* ---------------------------------------------------------------
+     COMPLETAR O QUE FALTA
+
+     A janela mostra só os blocos que o cliente ainda não tem. Os
+     rótulos vêm prontos do servidor (`pendencias_do_cliente`), então a
+     tela não redescobre a regra -- ela obedece à mesma.
+     --------------------------------------------------------------- */
+  var blocos = {
+    contato: document.getElementById("completarBlocoContato"),
+    documento: document.getElementById("completarBlocoDocumento"),
+    endereco: document.getElementById("completarBlocoEndereco"),
+  };
+
+  function grupoDaPendencia(rotulo) {
+    if (rotulo.indexOf("contato") === 0) return "contato";
+    if (rotulo.indexOf("CPF") === 0) return "documento";
+    if (rotulo.indexOf("endereço") === 0) return "endereco";
+    // "WhatsApp não confirmado": o número existe, o que falta é dizer
+    // se é WhatsApp -- e isso se responde no bloco de contato.
+    if (rotulo.indexOf("WhatsApp") === 0) return "contato";
+    return null;
+  }
+
+  function abrirCompletar(botao) {
+    var faltas = (botao.dataset.pendencias || "").split("|").filter(Boolean);
+    var cliente = achar(botao.dataset.completar) || null;
+
+    document.getElementById("completarId").value = botao.dataset.completar;
+    document.getElementById("completarTitulo").textContent =
+      "Completar: " + (botao.dataset.nome || "cliente");
+    document.getElementById("completarResumo").textContent = faltas.length
+      ? "Falta " + faltas.join(", ") + ". Preencha o que tiver agora; o resto pode vir depois."
+      : "Confira os dados deste cadastro.";
+    Painel.erro("completarErro", "");
+
+    Object.keys(blocos).forEach(function (chave) {
+      if (blocos[chave]) blocos[chave].hidden = true;
+    });
+    faltas.forEach(function (rotulo) {
+      var grupo = grupoDaPendencia(rotulo);
+      if (grupo && blocos[grupo]) blocos[grupo].hidden = false;
+    });
+
+    /* O que o cadastro JÁ tem entra preenchido: o telefone certo de quem
+       só não informou o CPF não pode chegar vazio a um POST que grava. */
+    document.getElementById("completarTelefone").value = cliente ? cliente.telefone : "";
+    document.getElementById("completarEmail").value = cliente ? cliente.email : "";
+    document.getElementById("completarDocumento").value = cliente ? cliente.documento : "";
+    /* A CAIXA NASCE DESMARCADA QUANDO A PENDÊNCIA É JUSTAMENTE ESSA.
+
+       Marcada, ela já responderia "não tem WhatsApp" -- a pergunta que
+       esta janela existe para fazer. Quem só não confirmou ainda vê o
+       campo em branco e confirma salvando. Só quem declarou antes que o
+       número não tem WhatsApp reabre com a caixa marcada. */
+    document.getElementById("completarSemWhats").checked = Boolean(
+      cliente && cliente.canal_telefone === "telefone"
+    );
+    ["Cep", "Endereco", "Numero", "Complemento", "Bairro", "Cidade", "Estado"]
+      .forEach(function (campo) {
+        var alvo = document.getElementById("completar" + campo);
+        if (alvo) alvo.value = cliente ? (cliente[campo.toLowerCase()] || "") : "";
+      });
+    document.getElementById("completarCepStatus").textContent = "";
+
+    Painel.aplicarMascaras(document.getElementById("modalCompletar"));
+    Painel.abrir("modalCompletar");
+  }
+
+  document.querySelectorAll("[data-completar]").forEach(function (botao) {
+    botao.addEventListener("click", function () { abrirCompletar(botao); });
+  });
+
+  Painel.ligarCep({
+    url: "{% url 'consultar_cep_inner' %}",
+    cep: "completarCep",
+    status: "completarCepStatus",
+    campos: {
+      rua: "completarEndereco",
+      bairro: "completarBairro",
+      cidade: "completarCidade",
+      estado: "completarEstado"
+    },
+    coordenadas: {
+      latitude: "completarLatitude",
+      longitude: "completarLongitude"
+    }
+  });
+
+  Painel.ligar({
+    form: "formCompletar",
+    erro: "completarErro",
+    depois: function (json) {
+      /* SEM RECARREGAR A TELA. Quem completa três cadastros seguidos
+         perderia a rolagem e a busca a cada um. O servidor devolve o que
+         ainda falta, e a linha se atualiza com isso. */
+      var chip = document.querySelector('[data-completar="' + json.id + '"]');
+      var faltando = json.pendencias || [];
+      if (chip) {
+        if (!faltando.length) {
+          chip.remove();
+        } else {
+          chip.dataset.pendencias = faltando.join("|");
+          chip.innerHTML =
+            '<i class="bi bi-exclamation-circle" aria-hidden="true"></i>' +
+            '<span class="ls-incomplete-texto">Falta ' + faltando.join(", ") + "</span>" +
+            '<span class="ls-incomplete-cta">Completar</span>';
+        }
+      }
+      Painel.fechar("modalCompletar");
+    },
+  });
+
   Painel.ligarExclusao();
 });
 </script>

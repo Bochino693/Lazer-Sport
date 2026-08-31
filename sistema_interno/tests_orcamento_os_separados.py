@@ -111,47 +111,112 @@ class OrcamentoEOrdemServicoSeparadosTests(TestCase):
         self.assertContains(resposta, "ls-budget-filter-card")
         self.assertNotContains(resposta, 'name="status" multiple')
 
-    def test_ordem_gerada_nao_herda_pagamento_do_orcamento(self):
+    def test_o_orcamento_nao_gera_mais_ordem_de_servico(self):
+        """Ela nascia pela metade, e alguém tinha de refazer tudo.
+
+        Tipo "instalação" chutado, equipamento montado colando a
+        descrição dos quatro primeiros itens, sem defeito relatado, sem
+        técnico e sem agenda. Quem não abria para corrigir deixava esse
+        documento seguir para o cliente.
+
+        A ação continua respondendo, de propósito: sumir dela devolveria
+        "ação desconhecida" para quem tivesse a tela velha aberta numa
+        aba, e "ação desconhecida" não ensina o caminho novo.
+        """
         orcamento = self.criar_orcamento()
-        orcamento.registrar_pagamento(Decimal("450.00"), "Quitado na proposta")
 
         resposta = self.post_interno("/orcamentos/", {
             "action": "gerar_ordem_servico",
             "id": orcamento.pk,
         })
 
-        self.assertEqual(resposta.status_code, 200)
-        ordem = OrdemServico.objects.get(pk=resposta.json()["id"])
-        self.assertEqual(ordem.orcamento, orcamento)
+        self.assertEqual(resposta.status_code, 400)
+        recado = resposta.json()["msg"]
+        self.assertIn("chamado de manutenção", recado)
+        self.assertIn("Ordens de Serviço", recado)
+        self.assertFalse(OrdemServico.objects.exists())
+
+    def test_a_tela_diz_de_onde_a_os_nasce_agora(self):
+        resposta = self.client.get(
+            "/ordens-servico/", HTTP_HOST="interno.testserver",
+        )
+
+        self.assertContains(resposta, "chamado de manutenção")
+        self.assertNotContains(resposta, "Gerar O.S.")
+
+    def test_o_pagamento_da_os_e_o_do_orcamento_nao_se_misturam(self):
+        """Dois documentos, dois caixas.
+
+        A O.S. ligada a um orçamento não herda o que a proposta recebeu, e
+        receber na O.S. não mexe no que a proposta registrou. Eram dois
+        números com o mesmo nome em telas diferentes; misturá-los faria o
+        relatório de recebimento contar a mesma entrada duas vezes.
+        """
+        orcamento = self.criar_orcamento()
+        orcamento.registrar_pagamento(Decimal("450.00"), "Quitado na proposta")
+
+        ordem = OrdemServico.objects.create(
+            orcamento=orcamento,
+            cliente=orcamento.cliente,
+            nome_cliente=orcamento.nome_cliente,
+            equipamento="Brinquedo da proposta",
+            responsavel=self.gestor,
+        )
+        ItemOrdemServico.objects.create(
+            ordem=ordem, tipo=ItemOrdemServico.Tipo.SERVICO,
+            descricao="Montagem", quantidade=1, valor_unitario=Decimal("450.00"),
+        )
+
         self.assertEqual(ordem.status_pagamento, OrdemServico.StatusPagamento.PENDENTE)
         self.assertEqual(ordem.valor_pago, Decimal("0.00"))
-        self.assertEqual(ordem.itens.get().descricao, "Revisão do brinquedo")
-
-        refazer = self.post_interno("/orcamentos/", {
-            "action": "refazer",
-            "id": orcamento.pk,
-        })
-        self.assertEqual(refazer.status_code, 400)
-        self.assertFalse(hasattr(orcamento, "orcamento_refeito"))
 
         ordem.registrar_pagamento(Decimal("100.00"), "Entrada da O.S.")
         orcamento.refresh_from_db()
+
         self.assertEqual(orcamento.status_pagamento, Orcamento.StatusPagamento.PAGO)
         self.assertEqual(orcamento.valor_pago, Decimal("450.00"))
+        self.assertEqual(ordem.valor_pago, Decimal("100.00"))
+
+    def test_proposta_com_os_ligada_nao_e_refeita(self):
+        """Refazer criaria uma segunda versão para um trabalho já liberado."""
+        orcamento = self.criar_orcamento()
+        OrdemServico.objects.create(
+            orcamento=orcamento, nome_cliente=orcamento.nome_cliente,
+            equipamento="Brinquedo", responsavel=self.gestor,
+        )
+
+        refazer = self.post_interno("/orcamentos/", {
+            "action": "refazer", "id": orcamento.pk,
+        })
+
+        self.assertEqual(refazer.status_code, 400)
+        self.assertFalse(hasattr(orcamento, "orcamento_refeito"))
+
+    def test_a_os_percorre_o_proprio_ciclo_ate_a_ciencia_do_cliente(self):
+        orcamento = self.criar_orcamento()
+        ordem = OrdemServico.objects.create(
+            orcamento=orcamento, nome_cliente=orcamento.nome_cliente,
+            equipamento="Brinquedo", responsavel=self.gestor,
+        )
+        ItemOrdemServico.objects.create(
+            ordem=ordem, tipo=ItemOrdemServico.Tipo.SERVICO,
+            descricao="Montagem", quantidade=1, valor_unitario=Decimal("450.00"),
+        )
 
         envio = self.post_interno("/ordens-servico/", {
-            "action": "enviar",
-            "id": ordem.pk,
-            "canal": "link",
+            "action": "enviar", "id": ordem.pk, "canal": "link",
         })
         self.assertEqual(envio.status_code, 200)
+
         ordem.refresh_from_db()
-        self.assertEqual(
-            ordem.status, OrdemServico.Status.AGUARDANDO_RESPOSTA
-        )
+        self.assertEqual(ordem.status, OrdemServico.Status.AGUARDANDO_RESPOSTA)
+
         self.client.post(ordem.caminho_publico, {"nome": "Ana Cliente"})
         ordem.refresh_from_db()
+        orcamento.refresh_from_db()
+
         self.assertEqual(ordem.status, OrdemServico.Status.ABERTA)
+        # A resposta do cliente na O.S. não mexe na situação da proposta.
         self.assertEqual(orcamento.status, Orcamento.Status.APROVADO)
 
     def test_ordem_direta_salva_itens_e_tem_cards_proprios(self):

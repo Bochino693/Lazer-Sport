@@ -218,6 +218,75 @@ def _estabelecimento_escolhido(request, cliente):
     return estabelecimento_id
 
 
+def completar_cadastro(request, cliente: Cliente) -> Cliente:
+    """Preenche SÓ o que estava faltando, sem tocar no resto.
+
+    `salvar_cliente` lê o formulário inteiro: é o certo para a janela de
+    edição, que mostra o cadastro todo. Aqui não serve. A janela de
+    completar mostra apenas os campos vazios, então um `salvar_cliente`
+    apagaria o telefone de quem só veio informar o CPF -- o campo não
+    apareceu na tela, chegaria vazio, e vazio venceria o que estava
+    guardado.
+
+    Por isso cada campo aqui é opcional e só é gravado quando veio com
+    conteúdo. As regras de validade são as mesmas da edição: um documento
+    inválido não fica menos inválido por ter entrado por outra porta.
+    """
+    telefone = texto(request, "telefone", limite=24)
+    email = texto(request, "email", limite=150)
+    documento = texto(request, "documento", limite=20)
+
+    if telefone:
+        if not telefone_valido(telefone):
+            raise ErroDeFormulario(
+                "Telefone incompleto: informe DDD e número, como (11) 99999-9999."
+            )
+        cliente.telefone = telefone
+        canal = (request.POST.get("canal_telefone") or "").strip()
+        if canal in Cliente.CanalTelefone.values:
+            cliente.canal_telefone = canal
+        elif marcado(request, "canal_telefone_perguntado"):
+            # A JANELA PERGUNTOU E A CAIXA VOLTOU DESMARCADA.
+            #
+            # Caixa desmarcada não viaja no POST, então sem este marcador
+            # "sem resposta" e "não perguntamos" chegariam iguais -- e
+            # "WhatsApp não confirmado" seria uma pendência que ninguém
+            # conseguiria resolver, porque desmarcar não valia como
+            # confirmação.
+            cliente.canal_telefone = Cliente.CanalTelefone.WHATSAPP
+
+    if email:
+        try:
+            validate_email(email)
+        except ValidationError as exc:
+            raise ErroDeFormulario("E-mail inválido.") from exc
+        cliente.email = email
+
+    if documento:
+        if not documento_valido(documento):
+            raise ErroDeFormulario(
+                f"{tipo_documento(documento)} inválido: confira os caracteres "
+                "e os dígitos verificadores."
+            )
+        chave = chave_documento(documento)
+        if chave and Cliente.objects.filter(
+            documento_chave=chave
+        ).exclude(pk=cliente.pk).exists():
+            raise ErroDeFormulario(
+                "Este CPF/CNPJ já está ligado a outro cliente. Abra o "
+                "cadastro existente para não dividir o histórico."
+            )
+        cliente.documento = documento
+
+    if not cliente.telefone and not cliente.email:
+        raise ErroDeFormulario(
+            "Informe ao menos um contato: telefone/WhatsApp ou e-mail."
+        )
+
+    cliente.save()
+    return cliente
+
+
 def salvar_endereco(request, cliente: Cliente) -> EnderecoCliente | None:
     """Guarda o endereço do estabelecimento, quando a tela mandou algum campo.
 

@@ -52,14 +52,28 @@
       <h2>Propostas</h2>
       <p>Enviada não é sobrescrita: use Refazer para criar outra versão.</p>
     </div>
-    <form method="get" class="ls-budget-search">
+    {% comment %}
+      A BUSCA NÃO VAI MAIS AO SERVIDOR A CADA PALAVRA.
+
+      Era um GET: digitar só valia depois da lupa, e a tela inteira
+      recarregava -- desenho, modais e rolagem voltando do zero. Agora o
+      servidor manda junto um índice enxuto de TODAS as propostas do
+      filtro, e quem procura é o próprio aparelho, letra a letra, sem
+      rede e sem mexer na URL. O formulário continua aqui porque é ele
+      que busca o que está fora desta página, quando faz falta.
+    {% endcomment %}
+    <form method="get" class="ls-budget-search" data-filtro-alvo=".ls-orcamentos-table tbody"
+          data-filtro-indice="indiceOrcamentos" data-filtro-nome="proposta"
+          data-filtro-nome-plural="propostas" data-filtro-genero="f">
       <input type="hidden" name="filtro" value="{{ filtro_ativo }}">
       <div class="input-group">
-        <input name="q" value="{{ busca }}" class="form-control"
-               placeholder="Cliente, número, item ou contato" aria-label="Buscar orçamentos">
-        <button class="btn btn-primary" type="submit"><i class="bi bi-search"></i></button>
+        <input name="q" type="search" value="{{ busca }}" class="form-control"
+               placeholder="Cliente, número, item ou contato" aria-label="Buscar orçamentos"
+               autocomplete="off">
+        <button class="btn btn-primary" type="submit" aria-label="Buscar"><i class="bi bi-search"></i></button>
       </div>
     </form>
+    {{ indice_busca|json_script:"indiceOrcamentos" }}
   </div>
 
   <div class="ls-data-body">
@@ -81,7 +95,7 @@
         </thead>
         <tbody>
           {% for orcamento in orcamentos %}
-            <tr>
+            <tr data-registro="{{ orcamento.id }}">
               <td data-rotulo="#">
                 <span class="ls-number">{{ orcamento.id }}</span>
                 <span class="material-sub d-block">versão {{ orcamento.versao }}</span>
@@ -107,11 +121,32 @@
               <td data-rotulo="Total" class="text-end">
                 <span class="ls-money">R$ {{ orcamento.total|moeda }}</span>
               </td>
+              {% comment %}
+                O QUITADO PRECISA SER ÓBVIO À DISTÂNCIA.
+
+                A etiqueta dizia "Pago" no mesmo tamanho e peso de
+                "Pendente", e ao lado o botão "Pagamento" continuava
+                aparecendo -- quem batia o olho não sabia se tinha
+                registrado. Agora quitado ganha o visto e o valor
+                recebido; parcial mostra quanto ainda falta, que é a
+                informação que a pessoa procura ali.
+              {% endcomment %}
               <td data-rotulo="Pagamento">
-                <span class="ls-status {% if orcamento.status_pagamento == 'pago' %}success{% elif orcamento.status_pagamento == 'parcial' %}warning{% else %}neutral{% endif %}">
-                  {{ orcamento.get_status_pagamento_display }}
-                </span>
-                {% if orcamento.valor_pago %}<span class="material-sub d-block mt-1">R$ {{ orcamento.valor_pago|moeda }} recebido</span>{% endif %}
+                {% if orcamento.quitado %}
+                  <span class="ls-pago"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> Pago</span>
+                  <span class="material-sub d-block mt-1">R$ {{ orcamento.valor_pago|moeda }} recebido</span>
+                {% elif orcamento.status_pagamento == 'parcial' %}
+                  <span class="ls-status warning">Pagamento parcial</span>
+                  <span class="material-sub d-block mt-1">
+                    R$ {{ orcamento.valor_pago|moeda }} de R$ {{ orcamento.total|moeda }} ·
+                    <strong>faltam R$ {{ orcamento.saldo_pagamento|moeda }}</strong>
+                  </span>
+                {% elif orcamento.status == 'aprovado' %}
+                  <span class="ls-status neutral">A receber</span>
+                  <span class="material-sub d-block mt-1">R$ {{ orcamento.total|moeda }}</span>
+                {% else %}
+                  <span class="text-muted">—</span>
+                {% endif %}
               </td>
               <td data-rotulo="Validade">
                 {% if orcamento.validade %}
@@ -177,7 +212,7 @@
                         title="{% if orcamento.pode_editar %}Editar rascunho{% else %}Consultar versão preservada{% endif %}">
                   <i class="bi {% if orcamento.pode_editar %}bi-pencil{% else %}bi-search{% endif %}"></i><span class="ls-action-label">{% if orcamento.pode_editar %}Editar{% else %}Ver{% endif %}</span>
                 </button>
-                {% if pode_editar_comercial %}<button type="button" class="btn btn-sm btn-outline-primary"
+                {% if pode_editar_comercial and orcamento.pode_enviar %}<button type="button" class="btn btn-sm btn-outline-primary"
                         data-enviar="{{ orcamento.id }}"
                         data-orcamento-id="{{ orcamento.id }}"
                         data-nome="{{ orcamento.destinatario }}"
@@ -208,7 +243,15 @@
                   <i class="bi bi-send" aria-hidden="true"></i>
                   <span class="ls-action-label">{% if orcamento.enviado_em %}Link do orçamento{% else %}Enviar orçamento{% endif %}</span>
                 </button>{% endif %}
-                {% if pode_editar_comercial and not orcamento.pode_editar and orcamento.status != 'substituido' and not orcamento.orcamento_refeito and not orcamento.ordem_servico %}
+                {% comment %}
+                  REFAZER É O CAMINHO DA PROPOSTA VENCIDA.
+
+                  Ela não gera mais link -- o link levaria a uma página
+                  que anuncia "proposta expirada", e mandar isso ao
+                  cliente é pior do que não mandar nada. Aqui se cria a
+                  versão nova, com o preço de hoje.
+                {% endcomment %}
+                {% if pode_editar_comercial and orcamento.pode_refazer %}
                 <form method="post" class="d-inline" action="{% url 'orcamentos_inner' %}">
                   {% csrf_token %}<input type="hidden" name="action" value="refazer"><input type="hidden" name="id" value="{{ orcamento.id }}">
                   <button class="btn btn-sm btn-outline-warning" type="submit" title="Criar nova versão para negociar">
@@ -216,22 +259,29 @@
                   </button>
                 </form>
                 {% endif %}
-                {% if pode_editar_financeiro and orcamento.status == 'aprovado' %}
+                {% if pode_editar_financeiro and orcamento.pode_receber_pagamento %}
                 <button type="button" class="btn btn-sm btn-outline-success"
                         data-pagamento="{{ orcamento.id }}" data-total="{{ orcamento.total }}"
                         data-pago="{{ orcamento.valor_pago }}" data-nome="#{{ orcamento.id }} — {{ orcamento.destinatario }}"
-                        title="Registrar valor recebido">
-                  <i class="bi bi-cash-coin"></i><span class="ls-action-label">Pagamento</span>
+                        title="Registrar o total recebido até agora">
+                  <i class="bi bi-cash-coin"></i><span class="ls-action-label">{% if orcamento.status_pagamento == 'parcial' %}Completar pagamento{% else %}Registrar pagamento{% endif %}</span>
                 </button>
                 {% endif %}
-                {% if pode_ordens_servico and orcamento.status == 'aprovado' %}
-                <form method="post" class="d-inline" action="{% url 'orcamentos_inner' %}">
-                  {% csrf_token %}<input type="hidden" name="action" value="gerar_ordem_servico"><input type="hidden" name="id" value="{{ orcamento.id }}">
-                  <button class="btn btn-sm btn-outline-primary" type="submit" title="Liberar execução na Ordem de Serviço">
-                    <i class="bi bi-clipboard2-check"></i><span class="ls-action-label">Gerar O.S.</span>
-                  </button>
-                </form>
-                {% endif %}
+                {% comment %}
+                  O ORÇAMENTO NÃO GERA MAIS ORDEM DE SERVIÇO.
+
+                  Gerava, e o resultado era uma O.S. pela metade: tipo
+                  "instalação" chutado, equipamento montado colando a
+                  descrição dos quatro primeiros itens, sem defeito
+                  relatado, sem técnico e sem agenda. Alguém tinha de
+                  abrir e refazer tudo -- e quem não abria deixava esse
+                  documento seguir para o cliente.
+
+                  A O.S. nasce onde ela tem contexto: do chamado de
+                  manutenção, que traz equipamento, defeito e endereço, ou
+                  aberta na mão para atendimento direto. As duas portas
+                  estão na tela de Ordens de Serviço.
+                {% endcomment %}
                 {% if pode_editar_comercial and not orcamento.ordem_servico %}<button type="button" class="btn btn-sm btn-outline-secondary"
                         data-situacao="{{ orcamento.id }}"
                         data-nome="#{{ orcamento.id }} — {{ orcamento.destinatario }}"
@@ -260,7 +310,7 @@
               </td>
             </tr>
           {% empty %}
-            <tr>
+            <tr data-lista-vazia>
               <td colspan="10">
                 <div class="ls-empty">
                   <i class="bi bi-file-earmark-text"></i>
@@ -396,6 +446,59 @@
             <span class="form-text">Proposta nova já nasce com {{ validade_padrao_dias }} dias.</span>
           </div>
 
+        </div>
+
+        <hr class="my-4">
+
+        <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+          <div>
+            <h6 class="mb-1">Itens da proposta</h6>
+            <span class="text-muted small">
+              Escolha do catálogo do site. Não está lá? Cadastre na hora.
+            </span>
+          </div>
+          <div class="d-flex gap-2 flex-wrap ls-modal-inline-actions">
+            <button type="button" class="btn btn-sm btn-outline-success" id="novoBrinquedo">
+              <i class="bi bi-plus-circle me-1"></i> Novo brinquedo
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-primary" id="novaPeca">
+              <i class="bi bi-plus-circle me-1"></i> Nova peça
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="addItem">
+              <i class="bi bi-plus-lg me-1"></i> Adicionar item
+            </button>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="ls-table ls-itens-table">
+            <thead>
+              <tr>
+                <th style="width: 28%">Item</th>
+                <th>Descrição</th>
+                <th style="width: 12%" class="text-end">Qtd.</th>
+                <th style="width: 17%" class="text-end">Valor unit.</th>
+                <th style="width: 15%" class="text-end">Subtotal</th>
+                <th style="width: 6%"></th>
+              </tr>
+            </thead>
+            <tbody id="itensCorpo"></tbody>
+          </table>
+        </div>
+
+        {% comment %}
+          O BLOCO DO DINHEIRO VEM DEPOIS DOS ITENS, PORQUE DEPENDE DELES.
+
+          Estava antes: pedia frete e desconto de uma proposta que ainda
+          não tinha um único item. O desconto em "%" mostrava dez por
+          cento de zero, e quem preenchia na ordem da tela tinha de
+          voltar lá em cima depois de montar a lista. Agora a leitura
+          desce na ordem em que a conta acontece: quem é o cliente, o que
+          ele leva, quanto isso muda o preço, e só então o total.
+        {% endcomment %}
+        <hr class="my-4">
+
+        <div class="row g-3">
           <div class="col-12"><div class="ls-budget-block-title financeiro"><i class="bi bi-cash-stack"></i><span><strong>Bloco Financeiro</strong><small>Frete, desconto e condições de pagamento.</small></span></div></div>
 
           <div class="col-12 col-md-3">
@@ -454,44 +557,6 @@
             <input class="form-control" id="orcamentoEnvio" name="forma_envio"
                    maxlength="120" placeholder="Ex.: retirada, transportadora ou entrega própria">
           </div>
-        </div>
-
-        <hr class="my-4">
-
-        <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
-          <div>
-            <h6 class="mb-1">Itens da proposta</h6>
-            <span class="text-muted small">
-              Escolha do catálogo do site. Não está lá? Cadastre na hora.
-            </span>
-          </div>
-          <div class="d-flex gap-2 flex-wrap ls-modal-inline-actions">
-            <button type="button" class="btn btn-sm btn-outline-success" id="novoBrinquedo">
-              <i class="bi bi-plus-circle me-1"></i> Novo brinquedo
-            </button>
-            <button type="button" class="btn btn-sm btn-outline-primary" id="novaPeca">
-              <i class="bi bi-plus-circle me-1"></i> Nova peça
-            </button>
-            <button type="button" class="btn btn-sm btn-outline-secondary" id="addItem">
-              <i class="bi bi-plus-lg me-1"></i> Adicionar item
-            </button>
-          </div>
-        </div>
-
-        <div class="table-responsive">
-          <table class="ls-table ls-itens-table">
-            <thead>
-              <tr>
-                <th style="width: 28%">Item</th>
-                <th>Descrição</th>
-                <th style="width: 12%" class="text-end">Qtd.</th>
-                <th style="width: 17%" class="text-end">Valor unit.</th>
-                <th style="width: 15%" class="text-end">Subtotal</th>
-                <th style="width: 6%"></th>
-              </tr>
-            </thead>
-            <tbody id="itensCorpo"></tbody>
-          </table>
         </div>
 
         <div class="ls-orcamento-total">
@@ -983,10 +1048,42 @@ Cadastro mínimo de propósito: nome, valor e categoria. Foto e texto de
       </div>
       <div class="modal-body">
         <div id="pagamentoErro" class="alert alert-danger d-none"></div>
-        <div class="alert alert-light border" id="pagamentoResumo"></div>
-        <label class="form-label" for="pagamentoValor">Valor total recebido até agora</label>
-        <div class="input-group mb-3"><span class="input-group-text">R$</span><input class="form-control" id="pagamentoValor" name="valor_pago" inputmode="decimal" data-mascara="moeda" required></div>
-        <label class="form-label" for="pagamentoObservacao">Observação</label>
+
+        {% comment %}
+          O RESUMO ERA UM ALERTA CLARO DO BOOTSTRAP: fundo branco num painel
+          escuro, com o total sumindo no branco. Agora é o quadro da casa,
+          e ele responde na ordem em que a pergunta é feita: quanto é o
+          total, quanto já entrou, quanto FALTA.
+        {% endcomment %}
+        <div class="ls-pagamento-quadro" id="pagamentoQuadro">
+          <div class="ls-pagamento-linhas">
+            <div><span>Total da proposta</span><strong id="pagamentoTotal">R$ 0,00</strong></div>
+            <div><span>Já recebido</span><strong id="pagamentoRecebido">R$ 0,00</strong></div>
+          </div>
+          <div class="ls-pagamento-falta">
+            <span id="pagamentoFaltaRotulo">Falta receber</span>
+            <strong id="pagamentoFalta">R$ 0,00</strong>
+          </div>
+        </div>
+
+        <label class="form-label" for="pagamentoValor">
+          Valor total recebido até agora
+        </label>
+        <div class="input-group"><span class="input-group-text">R$</span><input class="form-control" id="pagamentoValor" name="valor_pago" inputmode="decimal" data-mascara="moeda" required></div>
+        {% comment %}
+          É o TOTAL acumulado, não a parcela desta vez -- e a frase abaixo
+          existe porque a leitura natural do campo é a outra. Quem digita
+          a parcela apaga o que já tinha entrado, e o relatório passa a
+          mentir. Os atalhos ao lado resolvem o caso comum sem digitar.
+        {% endcomment %}
+        <span class="form-text">Some tudo o que já entrou, e não só a parcela de hoje.</span>
+        <div class="ls-pagamento-atalhos" aria-label="Atalhos de valor">
+          <button type="button" class="ls-chip" data-pagamento-atalho="tudo">Recebi tudo</button>
+          <button type="button" class="ls-chip" data-pagamento-atalho="metade">Metade</button>
+          <button type="button" class="ls-chip ls-chip-zerar" data-pagamento-atalho="zerar">Nada ainda</button>
+        </div>
+
+        <label class="form-label mt-3" for="pagamentoObservacao">Observação</label>
         <input class="form-control" id="pagamentoObservacao" name="observacao_pagamento" maxlength="240" placeholder="Ex.: sinal via Pix em 27/08">
       </div>
       <div class="modal-footer">
@@ -1821,6 +1918,44 @@ LSTela.pronto(function () {
 
   Painel.ligar({ form: "formSituacao", erro: "situacaoErro" });
 
+  /* ------------------------------------------------------------------
+     O QUADRO DE PAGAMENTO ACOMPANHA O QUE ESTÁ SENDO DIGITADO
+
+     Antes o resumo era estático: dizia o total e mais nada. Quem
+     registrava um valor parcial não via o que sobrava sem fazer a conta
+     de cabeça -- e é essa conta que decide se a cobrança continua hoje.
+     Agora o "falta receber" muda a cada tecla, e quando o valor cobre o
+     total o quadro inteiro vira verde antes mesmo de salvar.
+     ------------------------------------------------------------------ */
+  var pagamentoTotalAtual = 0;
+
+  function desenharQuadroDePagamento() {
+    var recebido = paraNumero(document.getElementById("pagamentoValor").value || "0");
+    var falta = Math.max(pagamentoTotalAtual - recebido, 0);
+    var quitado = recebido >= pagamentoTotalAtual && pagamentoTotalAtual > 0;
+
+    document.getElementById("pagamentoTotal").textContent = moeda(pagamentoTotalAtual);
+    document.getElementById("pagamentoRecebido").textContent = moeda(recebido);
+    document.getElementById("pagamentoQuadro").classList.toggle("quitado", quitado);
+    document.getElementById("pagamentoFaltaRotulo").textContent =
+      quitado ? "Situação" : "Falta receber";
+    document.getElementById("pagamentoFalta").textContent =
+      quitado ? "Quitado" : moeda(falta);
+  }
+
+  document.getElementById("pagamentoValor")?.addEventListener("input", desenharQuadroDePagamento);
+
+  document.querySelectorAll("[data-pagamento-atalho]").forEach(function (chip) {
+    chip.addEventListener("click", function () {
+      var quanto = chip.dataset.pagamentoAtalho;
+      var valor = quanto === "tudo" ? pagamentoTotalAtual
+        : quanto === "metade" ? pagamentoTotalAtual / 2
+        : 0;
+      Painel.valor("pagamentoValor", valor.toFixed(2).replace(".", ","));
+      desenharQuadroDePagamento();
+    });
+  });
+
   document.querySelectorAll("[data-pagamento]").forEach(function (botao) {
     botao.addEventListener("click", function () {
       Painel.erro("pagamentoErro", "");
@@ -1828,8 +1963,8 @@ LSTela.pronto(function () {
       Painel.valor("pagamentoValor", botao.dataset.pago || "0");
       Painel.valor("pagamentoObservacao", "");
       document.getElementById("pagamentoNome").textContent = botao.dataset.nome;
-      document.getElementById("pagamentoResumo").textContent =
-        "Total da proposta: " + moeda(paraNumero(botao.dataset.total || "0"));
+      pagamentoTotalAtual = paraNumero(botao.dataset.total || "0");
+      desenharQuadroDePagamento();
       Painel.abrir("modalPagamento");
     });
   });

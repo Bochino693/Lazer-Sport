@@ -28,7 +28,7 @@
                 {% if projeto.brinquedo_projetado.imagens_brinquedo_projeto.first %}
                 <img src="{{ projeto.brinquedo_projetado.imagens_brinquedo_projeto.first.imagem.url }}">
                 {% else %}
-                <img src="{% static 'images/default.jpg' %}">
+                <img src="{% static 'images/sem-imagem.svg' %}">
                 {% endif %}
             </div>
 
