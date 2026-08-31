@@ -1,55 +1,15 @@
-import re
+"""Aceite eletrônico, validação de documento e observador de notificação.
+
+Só esquema. O preenchimento das colunas novas mora na 0032: dados e
+esquema no mesmo arquivo estouram no Postgres com 'pending trigger
+events', e o SQLite dos testes não reproduz.
+"""
+
 import uuid
 
 import django.db.models.deletion
 from django.conf import settings
 from django.db import migrations, models
-
-
-def _digito(valores, pesos):
-    resto = sum(valor * peso for valor, peso in zip(valores, pesos)) % 11
-    return 0 if resto < 2 else 11 - resto
-
-
-def _documento_valido(valor):
-    chave = re.sub(r"[^0-9A-Z]", "", (valor or "").upper())[:14]
-    if len(chave) == 11 and chave.isdigit():
-        if len(set(chave)) == 1:
-            return False
-        base = [int(c) for c in chave[:9]]
-        d1 = _digito(base, range(10, 1, -1))
-        d2 = _digito(base + [d1], range(11, 1, -1))
-        return chave[-2:] == f"{d1}{d2}"
-    if len(chave) != 14 or not re.fullmatch(r"[0-9A-Z]{12}[0-9]{2}", chave):
-        return False
-    base = [ord(c) - 48 for c in chave[:12]]
-    d1 = _digito(base, (5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2))
-    d2 = _digito(base + [d1], (6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2))
-    return chave[-2:] == f"{d1}{d2}"
-
-
-def preencher_clientes(apps, schema_editor):
-    Cliente = apps.get_model("sistema_interno", "Cliente")
-    lote = []
-    for cliente in Cliente.objects.all().iterator(chunk_size=500):
-        cliente.documento_chave = re.sub(
-            r"[^0-9A-Z]", "", (cliente.documento or "").upper()
-        )[:14]
-        cliente.documento_valido = _documento_valido(cliente.documento)
-        if cliente.telefone:
-            # Compatibilidade: antes todo campo era rotulado WhatsApp e as
-            # propostas existentes dependem dessa interpretação.
-            cliente.canal_telefone = "whatsapp"
-        lote.append(cliente)
-        if len(lote) == 500:
-            Cliente.objects.bulk_update(
-                lote, ("documento_chave", "documento_valido", "canal_telefone")
-            )
-            lote = []
-    if lote:
-        Cliente.objects.bulk_update(
-            lote, ("documento_chave", "documento_valido", "canal_telefone")
-        )
 
 
 class Migration(migrations.Migration):
@@ -154,5 +114,4 @@ class Migration(migrations.Migration):
                 name="notificacao_usuario_chave_unica",
             ),
         ),
-        migrations.RunPython(preencher_clientes, migrations.RunPython.noop),
     ]

@@ -107,7 +107,8 @@ class OrcamentoEOrdemServicoSeparadosTests(TestCase):
         ids = [orcamento.pk for orcamento in resposta.context["orcamentos"]]
         self.assertEqual(ids, [negociacao.pk])
         self.assertNotIn(aprovado.pk, ids)
-        self.assertContains(resposta, "ls-budget-filter-card active")
+        self.assertContains(resposta, 'aria-current="page"', count=1)
+        self.assertContains(resposta, "ls-budget-filter-card")
         self.assertNotContains(resposta, 'name="status" multiple')
 
     def test_ordem_gerada_nao_herda_pagamento_do_orcamento(self):
@@ -210,7 +211,7 @@ class OrcamentoEOrdemServicoSeparadosTests(TestCase):
 
         pagina = self.client.get(ordem.caminho_publico)
         self.assertEqual(pagina.status_code, 200)
-        self.assertContains(pagina, "Imprimir / salvar em PDF")
+        self.assertContains(pagina, "Imprimir ou salvar em PDF")
         self.assertContains(pagina, "Copiar Pix")
         self.assertContains(pagina, "Confirmar recebimento")
         self.assertContains(pagina, "data:image/png;base64,")

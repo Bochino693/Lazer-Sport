@@ -52,3 +52,26 @@ cloudinary.config(
     api_secret=CLOUDINARY_STORAGE["API_SECRET"],
     secure=True,
 )
+
+
+# ============================================================
+# O PAINEL INTERNO MORA NUM SUBDOMÍNIO -- INCLUSIVE NOS TESTES
+# ============================================================
+# `SubdomainURLMiddleware` só resolve as rotas internas quando o host
+# começa com "interno.", então todo teste do painel pede a página com
+# HTTP_HOST="interno.testserver". O cliente de teste do Django libera
+# "testserver" sozinho, mas não o subdomínio: sem esta linha, a resposta
+# volta 400 (DisallowedHost) em HTML, e o teste falha dizendo
+# "400 != 403" ou "Content-Type não é application/json" -- mensagem que
+# não tem nada a ver com o que se está testando.
+#
+# Ficava resolvido caso a caso, com @override_settings em cada classe.
+# Quem escrevia a classe seguinte esquecia, e a falha voltava disfarçada
+# de bug de permissão. Aqui vale para a suíte inteira.
+#
+# A lista de produção continua valendo (os testes do cartão público
+# pedem a página por "lazersport.onrender.com"); aqui só se acrescenta
+# o que o cliente de teste usa.
+for _host_de_teste in ("testserver", "interno.testserver", ".testserver"):
+    if _host_de_teste not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append(_host_de_teste)

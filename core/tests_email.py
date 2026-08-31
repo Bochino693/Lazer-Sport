@@ -22,11 +22,11 @@ class RemetenteTests(TestCase):
     def test_remetente_leva_o_nome_da_empresa(self):
         self.assertEqual(remetente(), "Lazer & Sport <contato@lazer.com>")
 
-    @override_settings(EMAIL_RESPOSTA="vendas@lazersport.com.br")
+    @override_settings(EMAIL_RESPOSTA="vendas@lazersport.com.br", ORCAMENTO_EMAIL="")
     def test_resposta_padrao_vem_do_ambiente(self):
         self.assertEqual(responder_para(), ["vendas@lazersport.com.br"])
 
-    @override_settings(EMAIL_RESPOSTA="vendas@lazersport.com.br")
+    @override_settings(EMAIL_RESPOSTA="vendas@lazersport.com.br", ORCAMENTO_EMAIL="")
     def test_quem_envia_recebe_a_resposta_na_frente(self):
         atendente = User.objects.create_user(
             username="marina",
@@ -39,11 +39,28 @@ class RemetenteTests(TestCase):
             ["marina@lazersport.com.br", "vendas@lazersport.com.br"],
         )
 
-    @override_settings(EMAIL_RESPOSTA="")
+    @override_settings(EMAIL_RESPOSTA="", ORCAMENTO_EMAIL="")
     def test_sem_configuracao_nao_inventa_endereco(self):
         self.assertEqual(responder_para(), [])
 
-    @override_settings(EMAIL_RESPOSTA="")
+    @override_settings(EMAIL_RESPOSTA="", ORCAMENTO_EMAIL="orcamento@lazersport.com.br")
+    def test_o_comercial_e_a_ultima_rede_de_seguranca(self):
+        """Sem EMAIL_RESPOSTA, a resposta ainda cai no comercial.
+
+        `ORCAMENTO_EMAIL` existe justamente para a proposta nunca sair com
+        um Reply-To vazio: sem ele, "responder" volta para a conta técnica
+        do SMTP, que ninguém lê.
+        """
+        self.assertEqual(responder_para(), ["orcamento@lazersport.com.br"])
+
+    @override_settings(
+        EMAIL_RESPOSTA="vendas@lazersport.com.br",
+        ORCAMENTO_EMAIL="vendas@lazersport.com.br",
+    )
+    def test_o_mesmo_endereco_nao_entra_duas_vezes(self):
+        self.assertEqual(responder_para(), ["vendas@lazersport.com.br"])
+
+    @override_settings(EMAIL_RESPOSTA="", ORCAMENTO_EMAIL="")
     def test_usuario_sem_email_nao_vira_reply_to(self):
         sem_email = User.objects.create_user(
             username="sem-email",

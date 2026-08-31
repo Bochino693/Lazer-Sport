@@ -266,8 +266,12 @@ class AvisoDaRespostaTests(TestCase):
         _, aviso = enviados[0]
         self.assertIn(str(self.orcamento.pk), aviso["titulo"])
         self.assertIn("aprovada", aviso["titulo"])
-        self.assertIn("Ana", aviso["corpo"])
         self.assertIn("/orcamentos/", aviso["url"])
+        # O aviso aparece na tela de bloqueio: o número identifica a
+        # proposta para quem é da equipe, e nome e valor ficam do outro
+        # lado do login.
+        self.assertNotIn("Ana", aviso["titulo"] + aviso["corpo"])
+        self.assertNotIn("Festa da Ana", aviso["titulo"] + aviso["corpo"])
         # Aprovação vibra; recusa não. Uma vibração para cada coisa que
         # acontece no dia treina a pessoa a ignorar todas.
         self.assertTrue(aviso["urgente"])
@@ -316,7 +320,12 @@ class AvisoDaRespostaTests(TestCase):
             with patch.object(push, "enviar", side_effect=RuntimeError("boom")):
                 resposta = self.client.post(
                     self.orcamento.caminho_publico,
-                    {"decisao": "aprovar", "nome": "Ana"},
+                    {
+                        "decisao": "aprovar",
+                        "nome": "Ana",
+                        "documento_assinante": "529.982.247-25",
+                        "consentimento_aceite": "1",
+                    },
                 )
 
         self.assertEqual(resposta.status_code, 302)
