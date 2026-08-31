@@ -81,12 +81,23 @@
   </article>
 </section>
 
+{{ indice_busca|json_script:"indiceClientes" }}
 <section class="ls-filter-panel">
-  <form method="get" class="row g-3 align-items-end">
+  {% comment %}
+    A busca do nome procura no índice que veio junto da página: sem ida ao
+    servidor e sem recarregar a tela. Os outros campos (tipo, parceiro)
+    continuam sendo do servidor -- eles mudam o conjunto, não filtram
+    dentro do que já está aqui.
+  {% endcomment %}
+  <form method="get" class="row g-3 align-items-end"
+        data-filtro-alvo=".ls-clientes-table tbody"
+        data-filtro-indice="indiceClientes" data-filtro-nome="cliente"
+        data-filtro-nome-plural="clientes">
     {% if apenas_incompletos %}<input type="hidden" name="incompletos" value="1">{% endif %}
     <div class="col-12 col-lg-5">
       <label class="form-label" for="filtroBusca">Buscar cliente</label>
-      <input id="filtroBusca" name="q" value="{{ busca }}" class="form-control"
+      <input id="filtroBusca" name="q" type="search" autocomplete="off"
+             value="{{ busca }}" class="form-control"
              placeholder="Nome, telefone, e-mail, CPF/CNPJ ou buffet">
     </div>
     <div class="col-6 col-lg-2">
@@ -138,7 +149,7 @@
         <tbody>
           {% for ficha in fichas %}
             {% with cliente=ficha.obj %}
-            <tr>
+            <tr data-registro="{{ cliente.id }}">
               <td data-rotulo="Cliente">
                 <span class="material-nome">{{ cliente.nome_cliente }}</span>
                 <span class="material-sub d-block">
@@ -251,7 +262,7 @@
             </tr>
             {% endwith %}
           {% empty %}
-            <tr>
+            <tr data-lista-vazia>
               <td colspan="7">
                 <div class="ls-empty">
                   <i class="bi bi-people"></i>

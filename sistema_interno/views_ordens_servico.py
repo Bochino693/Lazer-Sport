@@ -8,6 +8,7 @@ um como substituto do outro.
 import json
 import logging
 import re
+from collections import defaultdict
 from decimal import Decimal
 from urllib.parse import quote
 
@@ -34,6 +35,7 @@ from core.email_utils import (
 )
 from core.models import Manutencao
 
+from .busca_local import montar_indice
 from . import clientes as svc_clientes
 from .models import (
     Cliente,
@@ -164,6 +166,41 @@ class OrdensServicoInnerView(
     ACOES_SEM_TRANSACAO = ("enviar",)
     POR_PAGINA = 25
 
+    def indice_de_busca(self, consulta):
+        """Os mesmos campos que a busca do servidor percorre.
+
+        Se divergirem, a pessoa vê um resultado ao digitar e outro ao
+        apertar "Trazer todos", e passa a não confiar em nenhum dos dois.
+        """
+        base = list(
+            consulta.values_list(
+                "pk", "criacao", "nome_cliente", "cliente__nome_cliente",
+                "equipamento", "numero_serie", "defeito_relatado",
+                "servico_executado",
+            )
+        )
+        itens = defaultdict(list)
+        for ordem_id, descricao in ItemOrdemServico.objects.filter(
+            ordem_id__in=[linha[0] for linha in base]
+        ).values_list("ordem_id", "descricao"):
+            itens[ordem_id].append(descricao)
+
+        def numero(pk, criacao):
+            # Mesmo texto de `OrdemServico.numero_documento`: quem procura
+            # digita o que está na tela, não a chave do banco.
+            ano = criacao.year if criacao else timezone.localdate().year
+            return "OS-%05d/%s" % (pk, ano)
+
+        return montar_indice(
+            (
+                linha[0],
+                [numero(linha[0], linha[1]), str(linha[0])]
+                + list(linha[2:])
+                + itens.get(linha[0], []),
+            )
+            for linha in base
+        )
+
     def get(self, request):
         busca = (request.GET.get("q") or "").strip()
         filtro = (request.GET.get("filtro") or "todos").strip()
@@ -239,6 +276,12 @@ class OrdensServicoInnerView(
             recebido=Sum("valor_pago"),
         )
         consulta = consulta.filter(filtros[filtro])
+
+        # O índice cobre o filtro inteiro; a página é só o que se desenha.
+        # É o que permite ao navegador dizer "existe, mas está na página
+        # seguinte" em vez de responder "nada encontrado".
+        indice_busca = self.indice_de_busca(consulta)
+
         pagina = Paginator(consulta, self.POR_PAGINA).get_page(request.GET.get("page"))
         ordens = list(pagina.object_list)
 
@@ -293,6 +336,7 @@ class OrdensServicoInnerView(
             "ordens": ordens,
             "ordens_dados": [self.serializar(ordem) for ordem in ordens],
             "page_obj": pagina,
+            "indice_busca": indice_busca,
             "busca": busca,
             "filtro_ativo": filtro,
             "cards": (

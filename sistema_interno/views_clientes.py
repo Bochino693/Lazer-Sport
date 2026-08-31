@@ -37,6 +37,7 @@ from core.models import Estabelecimentos
 
 from . import clientes as svc
 from .completude_clientes import filtro_incompletos, pendencias_do_cliente
+from .busca_local import montar_indice
 from .models import Cliente, EnderecoCliente, Orcamento
 from .exclusoes import forcando, remover
 from .permissoes import limitar_orcamentos, pode_excluir_cliente
@@ -93,6 +94,21 @@ class ClientesInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
         if apenas_incompletos:
             consulta = consulta.filter(filtro_incompletos()).distinct()
 
+        # O índice cobre o filtro inteiro; a página é só o que se desenha.
+        # É por ele que o navegador filtra sem ir ao servidor, e é ele que
+        # sabe dizer quando o cliente procurado está em outra página.
+        indice_busca = montar_indice(
+            (
+                pk,
+                [nome, telefone, telefone_digitos, email, documento, parceiro],
+            )
+            for pk, nome, telefone, telefone_digitos, email, documento, parceiro
+            in consulta.values_list(
+                "pk", "nome_cliente", "telefone", "telefone_digitos", "email",
+                "documento", "parceiro__nome_cliente",
+            )
+        )
+
         pagina = Paginator(consulta, self.POR_PAGINA).get_page(
             request.GET.get("page")
         )
@@ -132,6 +148,7 @@ class ClientesInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
         contexto = {
             "fichas": fichas,
             "page_obj": pagina,
+            "indice_busca": indice_busca,
             "busca": busca,
             "tipo_ativo": tipo,
             "parceiro_ativo": parceiro,

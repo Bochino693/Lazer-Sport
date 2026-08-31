@@ -201,3 +201,31 @@ class QuadroDePagamentoTests(TestCase):
                 texto = (raiz / nome).read_text(encoding="utf-8")
                 self.assertNotIn("alert-light", texto)
                 self.assertIn("ls-pagamento-quadro", texto)
+
+
+class OrdemDeLeituraDoModalTests(TestCase):
+    """O bloco do dinheiro vinha antes dos itens que ele soma.
+
+    Quem monta a proposta preenchia frete e desconto de um documento que
+    ainda não tinha um único item -- e o desconto em "%" mostrava dez por
+    cento de zero. Ou se preenchia fora da ordem da tela, ou se voltava
+    lá em cima depois de montar a lista.
+    """
+
+    def test_o_financeiro_vem_depois_dos_itens(self):
+        from pathlib import Path
+
+        modal = (
+            Path(__file__).resolve().parent / "templates" / "orcamentos_inner.html"
+        ).read_text(encoding="utf-8")
+
+        comercial = modal.index("Bloco Comercial")
+        itens = modal.index("Itens da proposta")
+        financeiro = modal.index("Bloco Financeiro")
+        total = modal.index('id="resumoTotal"')
+
+        # A leitura desce na ordem em que a conta acontece: quem é o
+        # cliente, o que ele leva, quanto isso muda o preço, e o total.
+        self.assertLess(comercial, itens)
+        self.assertLess(itens, financeiro)
+        self.assertLess(financeiro, total)

@@ -183,7 +183,7 @@
     ficaria com uma cara ao abrir direto e outra ao chegar pelo menu.
   {% endcomment %}
   {% block extra_css %}{% endblock %}
-  <link id="lsFolhaBase" href="{% static 'interno/interno_modern.css' %}?v=29" rel="stylesheet">
+  <link id="lsFolhaBase" href="{% static 'interno/interno_modern.css' %}?v=30" rel="stylesheet">
 
   {% comment %}
     A ORDEM DESTES DOIS ARQUIVOS IMPORTA.
@@ -600,6 +600,12 @@ Dito em voz alta: este NÃO é o /adm do site. Quem trabalha nos
   cadastro -- e porque um arquivo em cache vale mais que três pedidos.
 {% endcomment %}
 <script src="{% static 'interno/ls-busca.js' %}?v=3"></script>
+{% comment %}
+  Filtro instantâneo das listas: procura no índice que o servidor manda
+  junto da página, sem ida ao servidor e sem mexer na URL. Também mora
+  aqui porque as três telas de lista usam o mesmo módulo.
+{% endcomment %}
+<script src="{% static 'interno/ls-filtro-local.js' %}?v=1"></script>
 <script>
 (function () {
   const sidebar = document.getElementById("sidebarMenu");

@@ -97,6 +97,11 @@
     Painel.acomodarTextos(alvo);
     Painel.organizarAcoesTabelas(alvo);
     alvo.querySelectorAll(".modal").forEach(normalizarJanela);
+    /* O filtro instantâneo das listas entra aqui, e não por conta
+       própria: o módulo é carregado uma vez e a tela troca muitas. Sem
+       este ponto, o campo de busca da segunda tela em diante voltaria a
+       recarregar a página. */
+    if (global.LSFiltroLocal) global.LSFiltroLocal.ligar(alvo);
   };
 
   Painel.fecharAcoesFlutuantes = function (devolverFoco) {

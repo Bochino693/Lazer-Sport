@@ -2822,3 +2822,31 @@ body.modal-open .ls-nav-recovery{display:none!important}
   .ls-action-fab-head small{display:none}
   .ls-nav-recovery{grid-template-columns:1fr auto}.ls-nav-recovery div{grid-column:1/-1}.ls-nav-recovery button[data-retry]{width:100%}
 }
+
+/* O RECADO DO FILTRO INSTANTÂNEO.
+
+   Ele responde três coisas diferentes e precisa parecer três coisas
+   diferentes: quantos apareceram, que não apareceu nenhum, e -- o caso
+   que só existe porque a lista vem por página -- que há registros
+   combinando fora do que está desenhado. */
+.ls-filtro-recado{
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  margin:12px 2px 0;padding:11px 14px;
+  border:1px solid var(--line);border-radius:13px;
+  background:var(--panel-2);color:var(--muted);
+  font-size:.85rem;font-weight:600;
+}
+.ls-filtro-recado strong{color:var(--text);font-variant-numeric:tabular-nums}
+.ls-filtro-recado i{color:var(--muted)}
+.ls-filtro-recado.vazio{
+  border-style:dashed;
+  background:transparent;
+}
+.ls-filtro-recado.fora{
+  border-color:rgba(255,201,77,.34);
+  background:linear-gradient(180deg,rgba(255,201,77,.10),rgba(43,36,27,.55));
+}
+.ls-filtro-recado.fora .btn{margin-left:auto}
+@media(max-width:520px){
+  .ls-filtro-recado.fora .btn{margin-left:0;width:100%}
+}

@@ -52,14 +52,28 @@
       <h2>Propostas</h2>
       <p>Enviada não é sobrescrita: use Refazer para criar outra versão.</p>
     </div>
-    <form method="get" class="ls-budget-search">
+    {% comment %}
+      A BUSCA NÃO VAI MAIS AO SERVIDOR A CADA PALAVRA.
+
+      Era um GET: digitar só valia depois da lupa, e a tela inteira
+      recarregava -- desenho, modais e rolagem voltando do zero. Agora o
+      servidor manda junto um índice enxuto de TODAS as propostas do
+      filtro, e quem procura é o próprio aparelho, letra a letra, sem
+      rede e sem mexer na URL. O formulário continua aqui porque é ele
+      que busca o que está fora desta página, quando faz falta.
+    {% endcomment %}
+    <form method="get" class="ls-budget-search" data-filtro-alvo=".ls-orcamentos-table tbody"
+          data-filtro-indice="indiceOrcamentos" data-filtro-nome="proposta"
+          data-filtro-nome-plural="propostas" data-filtro-genero="f">
       <input type="hidden" name="filtro" value="{{ filtro_ativo }}">
       <div class="input-group">
-        <input name="q" value="{{ busca }}" class="form-control"
-               placeholder="Cliente, número, item ou contato" aria-label="Buscar orçamentos">
-        <button class="btn btn-primary" type="submit"><i class="bi bi-search"></i></button>
+        <input name="q" type="search" value="{{ busca }}" class="form-control"
+               placeholder="Cliente, número, item ou contato" aria-label="Buscar orçamentos"
+               autocomplete="off">
+        <button class="btn btn-primary" type="submit" aria-label="Buscar"><i class="bi bi-search"></i></button>
       </div>
     </form>
+    {{ indice_busca|json_script:"indiceOrcamentos" }}
   </div>
 
   <div class="ls-data-body">
@@ -81,7 +95,7 @@
         </thead>
         <tbody>
           {% for orcamento in orcamentos %}
-            <tr>
+            <tr data-registro="{{ orcamento.id }}">
               <td data-rotulo="#">
                 <span class="ls-number">{{ orcamento.id }}</span>
                 <span class="material-sub d-block">versão {{ orcamento.versao }}</span>
@@ -296,7 +310,7 @@
               </td>
             </tr>
           {% empty %}
-            <tr>
+            <tr data-lista-vazia>
               <td colspan="10">
                 <div class="ls-empty">
                   <i class="bi bi-file-earmark-text"></i>
@@ -432,6 +446,59 @@
             <span class="form-text">Proposta nova já nasce com {{ validade_padrao_dias }} dias.</span>
           </div>
 
+        </div>
+
+        <hr class="my-4">
+
+        <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+          <div>
+            <h6 class="mb-1">Itens da proposta</h6>
+            <span class="text-muted small">
+              Escolha do catálogo do site. Não está lá? Cadastre na hora.
+            </span>
+          </div>
+          <div class="d-flex gap-2 flex-wrap ls-modal-inline-actions">
+            <button type="button" class="btn btn-sm btn-outline-success" id="novoBrinquedo">
+              <i class="bi bi-plus-circle me-1"></i> Novo brinquedo
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-primary" id="novaPeca">
+              <i class="bi bi-plus-circle me-1"></i> Nova peça
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="addItem">
+              <i class="bi bi-plus-lg me-1"></i> Adicionar item
+            </button>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="ls-table ls-itens-table">
+            <thead>
+              <tr>
+                <th style="width: 28%">Item</th>
+                <th>Descrição</th>
+                <th style="width: 12%" class="text-end">Qtd.</th>
+                <th style="width: 17%" class="text-end">Valor unit.</th>
+                <th style="width: 15%" class="text-end">Subtotal</th>
+                <th style="width: 6%"></th>
+              </tr>
+            </thead>
+            <tbody id="itensCorpo"></tbody>
+          </table>
+        </div>
+
+        {% comment %}
+          O BLOCO DO DINHEIRO VEM DEPOIS DOS ITENS, PORQUE DEPENDE DELES.
+
+          Estava antes: pedia frete e desconto de uma proposta que ainda
+          não tinha um único item. O desconto em "%" mostrava dez por
+          cento de zero, e quem preenchia na ordem da tela tinha de
+          voltar lá em cima depois de montar a lista. Agora a leitura
+          desce na ordem em que a conta acontece: quem é o cliente, o que
+          ele leva, quanto isso muda o preço, e só então o total.
+        {% endcomment %}
+        <hr class="my-4">
+
+        <div class="row g-3">
           <div class="col-12"><div class="ls-budget-block-title financeiro"><i class="bi bi-cash-stack"></i><span><strong>Bloco Financeiro</strong><small>Frete, desconto e condições de pagamento.</small></span></div></div>
 
           <div class="col-12 col-md-3">
@@ -490,44 +557,6 @@
             <input class="form-control" id="orcamentoEnvio" name="forma_envio"
                    maxlength="120" placeholder="Ex.: retirada, transportadora ou entrega própria">
           </div>
-        </div>
-
-        <hr class="my-4">
-
-        <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
-          <div>
-            <h6 class="mb-1">Itens da proposta</h6>
-            <span class="text-muted small">
-              Escolha do catálogo do site. Não está lá? Cadastre na hora.
-            </span>
-          </div>
-          <div class="d-flex gap-2 flex-wrap ls-modal-inline-actions">
-            <button type="button" class="btn btn-sm btn-outline-success" id="novoBrinquedo">
-              <i class="bi bi-plus-circle me-1"></i> Novo brinquedo
-            </button>
-            <button type="button" class="btn btn-sm btn-outline-primary" id="novaPeca">
-              <i class="bi bi-plus-circle me-1"></i> Nova peça
-            </button>
-            <button type="button" class="btn btn-sm btn-outline-secondary" id="addItem">
-              <i class="bi bi-plus-lg me-1"></i> Adicionar item
-            </button>
-          </div>
-        </div>
-
-        <div class="table-responsive">
-          <table class="ls-table ls-itens-table">
-            <thead>
-              <tr>
-                <th style="width: 28%">Item</th>
-                <th>Descrição</th>
-                <th style="width: 12%" class="text-end">Qtd.</th>
-                <th style="width: 17%" class="text-end">Valor unit.</th>
-                <th style="width: 15%" class="text-end">Subtotal</th>
-                <th style="width: 6%"></th>
-              </tr>
-            </thead>
-            <tbody id="itensCorpo"></tbody>
-          </table>
         </div>
 
         <div class="ls-orcamento-total">

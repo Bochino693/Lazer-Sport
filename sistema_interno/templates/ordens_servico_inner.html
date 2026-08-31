@@ -57,18 +57,27 @@
 <section class="ls-data-panel">
   <div class="ls-data-header">
     <div><h2>Serviços registrados</h2><p>A O.S. enviada continua editável para registrar o andamento real do trabalho.</p></div>
-    <form method="get" class="ls-budget-search">
+    {% comment %}
+      A busca procura no índice que veio junto da página -- sem ida ao
+      servidor, sem recarregar a tela e sem mexer na URL. Ver
+      `ls-filtro-local.js`. O formulário fica porque é ele que traz o que
+      está fora desta página, quando faz falta.
+    {% endcomment %}
+    <form method="get" class="ls-budget-search" data-filtro-alvo=".ls-os-tabela tbody"
+          data-filtro-indice="indiceOrdens" data-filtro-nome="Ordem de Serviço"
+          data-filtro-nome-plural="Ordens de Serviço" data-filtro-genero="f">
       <input type="hidden" name="filtro" value="{{ filtro_ativo }}">
-      <div class="input-group"><input class="form-control" name="q" value="{{ busca }}" placeholder="O.S., cliente, equipamento ou defeito"><button class="btn btn-primary"><i class="bi bi-search"></i></button></div>
+      <div class="input-group"><input class="form-control" name="q" type="search" autocomplete="off" value="{{ busca }}" placeholder="O.S., cliente, equipamento ou defeito"><button class="btn btn-primary" type="submit" aria-label="Buscar"><i class="bi bi-search"></i></button></div>
     </form>
+    {{ indice_busca|json_script:"indiceOrdens" }}
   </div>
   <div class="ls-data-body">
     <div class="table-responsive">
-      <table class="ls-table ls-commercial-table">
+      <table class="ls-table ls-commercial-table ls-os-tabela">
         <thead><tr><th>O.S.</th><th>Cliente / equipamento</th><th>Tipo</th><th>Situação</th><th>Agenda</th><th class="text-end">Total</th><th>Pagamento</th><th>Técnico</th><th class="text-end">Ações</th></tr></thead>
         <tbody>
         {% for ordem in ordens %}
-          <tr>
+          <tr data-registro="{{ ordem.id }}">
             <td data-rotulo="O.S."><strong>{{ ordem.numero_documento }}</strong>{% if ordem.orcamento_id %}<span class="material-sub d-block">proposta #{{ ordem.orcamento_id }}</span>{% endif %}</td>
             <td data-rotulo="Cliente / equipamento"><strong>{{ ordem.destinatario }}</strong><span class="material-sub d-block">{{ ordem.equipamento }}</span>{% if ordem.numero_serie %}<span class="material-sub d-block">Série: {{ ordem.numero_serie }}</span>{% endif %}{% if ordem.rota.google_maps_url or ordem.rota.waze_url %}<span class="ls-route-actions">{% if ordem.rota.distancia_km != None %}<span class="ls-distance-chip" title="Estimativa em linha reta"><i class="bi bi-signpost-split"></i> ≈ {{ ordem.rota.distancia_km|stringformat:".1f" }} km</span>{% endif %}{% if ordem.rota.google_maps_url %}<a href="{{ ordem.rota.google_maps_url }}" target="_blank" rel="noopener" class="ls-route-link maps" title="Rota no Google Maps"><i class="bi bi-map"></i> Maps</a>{% endif %}{% if ordem.rota.waze_url %}<a href="{{ ordem.rota.waze_url }}" target="_blank" rel="noopener" class="ls-route-link waze" title="Rota no Waze"><i class="bi bi-navigation"></i> Waze</a>{% endif %}</span>{% endif %}</td>
             <td data-rotulo="Tipo">{{ ordem.get_tipo_display }}{% if ordem.prioridade == 'urgente' or ordem.prioridade == 'alta' %}<span class="ls-status danger d-block mt-1">{{ ordem.get_prioridade_display }}</span>{% endif %}</td>
@@ -88,7 +97,7 @@
               {% elif user.is_superuser %}{# Palavra final do superusuário: excluir O.S. que já saiu do rascunho. Fica registrado. #}<button class="btn btn-sm btn-outline-danger" type="button" data-excluir="{{ ordem.id }}" data-nome="{{ ordem.numero_documento }} — {{ ordem.destinatario }}" data-protegido="1" data-protegido-motivo="Esta O.S. está como {{ ordem.get_status_display|lower }} e faz parte do histórico operacional. Você pode excluir mesmo assim, e a exclusão vai ficar registrada com o seu nome." aria-label="Excluir {{ ordem.numero_documento }}" title="Excluir mesmo protegida (fica registrado)"><i class="bi bi-trash"></i><span class="ls-action-label">Excluir</span></button>{% endif %}
             </div></td>
           </tr>
-        {% empty %}<tr><td colspan="9"><div class="ls-empty"><i class="bi bi-clipboard2-check"></i>Nenhuma Ordem de Serviço encontrada.</div></td></tr>{% endfor %}
+        {% empty %}<tr data-lista-vazia><td colspan="9"><div class="ls-empty"><i class="bi bi-clipboard2-check"></i>Nenhuma Ordem de Serviço encontrada.</div></td></tr>{% endfor %}
         </tbody>
       </table>
     </div>

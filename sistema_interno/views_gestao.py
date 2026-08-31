@@ -10,6 +10,7 @@ import json
 import logging
 import re
 import unicodedata
+from collections import defaultdict
 from datetime import timedelta
 from decimal import Decimal
 from urllib.parse import quote
@@ -60,6 +61,7 @@ from core.models import (
     PecasReposicao,
 )
 
+from .busca_local import montar_indice
 from . import clientes as svc_clientes
 from . import etapas_padrao
 from . import financeiro as fin
@@ -281,6 +283,30 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
             ),
         )
 
+    def indice_de_busca(self, consulta):
+        """Os mesmos campos que a busca do servidor percorre.
+
+        Se as duas listas divergirem, a pessoa vê um resultado ao digitar
+        e outro ao apertar "Trazer todos" -- e passa a não confiar em
+        nenhum dos dois.
+        """
+        base = list(
+            consulta.values_list("pk", "nome_cliente", "cliente__nome_cliente",
+                                 "contato", "observacoes")
+        )
+        # Os itens vêm numa consulta só, e não uma por proposta.
+        itens = defaultdict(list)
+        for orcamento_id, descricao in ItemOrcamento.objects.filter(
+            orcamento_id__in=[linha[0] for linha in base]
+        ).values_list("orcamento_id", "descricao"):
+            itens[orcamento_id].append(descricao)
+
+        return montar_indice(
+            (pk, [str(pk), nome, nome_cadastro, contato, observacoes]
+                 + itens.get(pk, []))
+            for pk, nome, nome_cadastro, contato, observacoes in base
+        )
+
     def get(self, request):
         busca = (request.GET.get("q") or "").strip()
         filtro_card = (request.GET.get("filtro") or "todos").strip()
@@ -349,6 +375,11 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
 
         # O RESUMO SAI DO FILTRO INTEIRO, a página é só o que se desenha.
         resumo = self.resumo_do_filtro(orcamentos)
+
+        # O ÍNDICE TAMBÉM SAI DO FILTRO INTEIRO. A tela desenha 25 linhas,
+        # mas quem digita procura entre todas: sem isto o navegador diria
+        # "nada encontrado" sobre uma proposta que existe na página 2.
+        indice_busca = self.indice_de_busca(orcamentos)
 
         hoje = timezone.localdate()
         vencendo = list(
@@ -472,6 +503,7 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
             "categorias_peca": CategoriaPeca.objects.order_by("nome_categoria_peca"),
             "hoje": timezone.localdate(),
             "page_obj": pagina,
+            "indice_busca": indice_busca,
             "total_orcamentos": resumo["quantidade"],
             "total_aprovado": resumo["total_aprovado"],
             "total_em_aberto": resumo["total_em_aberto"],
