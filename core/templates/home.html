@@ -3435,7 +3435,7 @@ main.content-section {
     </div>
 
     <img
-      src="{% static 'images/image.png' %}"
+      src="{% static 'images/sem-imagem.svg' %}"
       alt="Celebrashow 2026 - Lazer & Sport"
       class="popup-img-celebra"
     >
@@ -3585,7 +3585,7 @@ main.content-section {
                      loading="lazy"
                      decoding="async">
               {% else %}
-                <img src="{% static 'images/default_categoria.jpg' %}"
+                <img src="{% static 'images/sem-imagem.svg' %}"
                      alt="{{ categoria.nome_categoria }}"
                      loading="lazy"
                      decoding="async">
@@ -3669,10 +3669,10 @@ main.content-section {
                    loading="lazy" decoding="async">
             {% else %}
               <img class="oferta-card-media-bg"
-                   src="{% static 'images/default_promocao.jpg' %}" alt="" aria-hidden="true"
+                   src="{% static 'images/sem-imagem.svg' %}" alt="" aria-hidden="true"
                    loading="lazy" decoding="async">
               <img class="oferta-card-produto"
-                   src="{% static 'images/default_promocao.jpg' %}" alt="Promoção sem imagem"
+                   src="{% static 'images/sem-imagem.svg' %}" alt="Promoção sem imagem"
                    loading="lazy" decoding="async">
             {% endif %}
           </div>
@@ -3819,7 +3819,7 @@ main.content-section {
                   >
                 {% else %}
                   <img
-                    src="{% static 'img/placeholder-produto.png' %}"
+                    src="{% static 'images/sem-imagem.svg' %}"
                     alt="{{ brinquedo.nome_brinquedo }}"
                     loading="lazy"
                     decoding="async"
@@ -4038,7 +4038,7 @@ main.content-section {
                    loading="lazy"
                    decoding="async">
             {% else %}
-              <img src="{% static 'img/placeholder-produto.png' %}"
+              <img src="{% static 'images/sem-imagem.svg' %}"
                    alt="{{ peca.nome }}"
                    loading="lazy"
                    decoding="async">
@@ -4166,10 +4166,10 @@ main.content-section {
                    loading="lazy" decoding="async">
             {% else %}
               <img class="oferta-card-media-bg"
-                   src="{% static 'images/default_combo.jpg' %}" alt="" aria-hidden="true"
+                   src="{% static 'images/sem-imagem.svg' %}" alt="" aria-hidden="true"
                    loading="lazy" decoding="async">
               <img class="oferta-card-produto"
-                   src="{% static 'images/default_combo.jpg' %}" alt="Combo sem imagem"
+                   src="{% static 'images/sem-imagem.svg' %}" alt="Combo sem imagem"
                    loading="lazy" decoding="async">
             {% endif %}
           </div>
@@ -4422,7 +4422,7 @@ main.content-section {
                     <img src="{{ est.imagem_estabelecimento.url }}"
                          alt="{{ est.nome_estabelecimento }}" loading="lazy" decoding="async">
                 {% else %}
-                    <img src="{% static 'images/default_estabelecimento.jpg' %}"
+                    <img src="{% static 'images/sem-imagem.svg' %}"
                          alt="Sem imagem" loading="lazy" decoding="async">
                 {% endif %}
                 <span class="evento-ver-mais">Ver detalhes <i class="fa-solid fa-arrow-right"></i></span>
@@ -4472,7 +4472,7 @@ main.content-section {
                 {% if imagem_evento %}
                     <img src="{{ imagem_evento.imagem.url }}" alt="{{ evento.titulo }}" loading="lazy" decoding="async">
                 {% else %}
-                    <img src="{% static 'images/default.jpg' %}" alt="Sem imagem" loading="lazy" decoding="async">
+                    <img src="{% static 'images/sem-imagem.svg' %}" alt="Sem imagem" loading="lazy" decoding="async">
                 {% endif %}
             {% endwith %}
             <span class="evento-ver-mais">Ver galeria <i class="fa-solid fa-arrow-right"></i></span>
@@ -4580,11 +4580,11 @@ main.content-section {
                         {% if imagem_projeto %}
                             <img src="{{ imagem_projeto.imagem.url }}" alt="{{ projeto.titulo }}" loading="lazy" decoding="async">
                         {% else %}
-                            <img src="{% static 'images/default.jpg' %}" alt="{{ projeto.titulo }}" loading="lazy" decoding="async">
+                            <img src="{% static 'images/sem-imagem.svg' %}" alt="{{ projeto.titulo }}" loading="lazy" decoding="async">
                         {% endif %}
                     {% endwith %}
                 {% else %}
-                    <img src="{% static 'images/default.jpg' %}" alt="{{ projeto.titulo }}" loading="lazy" decoding="async">
+                    <img src="{% static 'images/sem-imagem.svg' %}" alt="{{ projeto.titulo }}" loading="lazy" decoding="async">
                 {% endif %}
                 <span class="evento-ver-mais">Ver galeria <i class="fa-solid fa-arrow-right"></i></span>
             </div>

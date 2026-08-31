@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  O LUGAR DA FOTO QUE NÃO EXISTE.
+
+  Eram oito arquivos diferentes (default.jpg, default_combo.jpg,
+  placeholder.png...) e nenhum deles estava no repositório: onde faltava
+  foto, o site mostrava o ícone de imagem quebrada do navegador. Um só
+  arquivo, em SVG, resolve os oito casos, pesa menos de 1 KB e não perde
+  nitidez em nenhum tamanho de cartão.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 480"
+     preserveAspectRatio="xMidYMid slice" role="img"
+     aria-label="Sem imagem disponível">
+  <defs>
+    <linearGradient id="fundo" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#231D16"/>
+      <stop offset="1" stop-color="#1A1610"/>
+    </linearGradient>
+  </defs>
+  <rect width="640" height="480" fill="url(#fundo)"/>
+  <g fill="none" stroke="#6B5B45" stroke-width="9"
+     stroke-linecap="round" stroke-linejoin="round">
+    <rect x="212" y="164" width="216" height="164" rx="18"/>
+    <circle cx="264" cy="214" r="19"/>
+    <path d="M222 300l58-58 45 45 38-33 55 46"/>
+  </g>
+  <text x="320" y="386" text-anchor="middle" fill="#8E7C61"
+        font-family="system-ui, -apple-system, Segoe UI, Roboto, sans-serif"
+        font-size="30" font-weight="700" letter-spacing="1">Sem imagem</text>
+</svg>

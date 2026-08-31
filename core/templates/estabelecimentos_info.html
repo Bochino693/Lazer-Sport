@@ -570,7 +570,7 @@
                     <figcaption class="est-slide-legenda">{{ brinquedo.nome_brinquedo }}</figcaption>
                 </figure>
             {% empty %}
-                <img src="{% static 'images/default_categoria.jpg' %}" class="est-media-fg" alt="Brinquedos Lazer e Sport">
+                <img src="{% static 'images/sem-imagem.svg' %}" class="est-media-fg" alt="Brinquedos Lazer e Sport">
             {% endfor %}
         </div>
 
@@ -606,7 +606,7 @@
                 <img src="{{ est.imagem_estabelecimento.url }}" class="est-media-fg"
                      alt="{{ est.nome_estabelecimento }}" loading="lazy">
             {% else %}
-                <img src="{% static 'images/default_estabelecimento.jpg' %}" class="est-media-fg"
+                <img src="{% static 'images/sem-imagem.svg' %}" class="est-media-fg"
                      alt="{{ est.nome_estabelecimento }}" loading="lazy">
             {% endif %}
         </div>
