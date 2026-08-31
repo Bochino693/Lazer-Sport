@@ -755,8 +755,12 @@ class OrcamentoInternoTests(TestCase):
         quando esse pedido tropeçava -- bastou uma tabela de histórico
         ainda não migrada no servidor --, aparecia "Link indisponível"
         num orçamento que estava perfeito.
+
+        Vale para proposta JÁ ENVIADA, que é quando existe o que
+        compartilhar. Rascunho é o teste seguinte.
         """
         orcamento = self._orcamento_com_item()
+        orcamento.marcar_enviado()
 
         resposta = self.client.get(self.URL, HTTP_HOST="interno.testserver")
         html = resposta.content.decode()
@@ -766,6 +770,55 @@ class OrcamentoInternoTests(TestCase):
         self.assertIn("data-mensagem=", html)
         # A mensagem levada ao WhatsApp traz o essencial da proposta.
         self.assertIn("Aqui é da Lazer &amp; Sport", html)
+
+    def test_rascunho_nao_entrega_o_link_do_cliente(self):
+        """A página do cliente recusa rascunho; o painel não pode oferecê-la.
+
+        O endereço vinha pronto no botão desde sempre, e a janela de envio
+        abria já com "Abrir página pública" apontando para ele. Quem
+        conferia a proposta ANTES de mandar levava um 404 no rosto -- e a
+        leitura óbvia era que o sistema tinha quebrado.
+
+        Para conferir antes de enviar existe a prévia interna, que é do
+        painel e abre rascunho. Ela continua no botão.
+        """
+        rascunho = self._orcamento_com_item()
+        self.assertFalse(rascunho.publicado)
+
+        html = self.client.get(
+            self.URL, HTTP_HOST="interno.testserver",
+        ).content.decode()
+
+        self.assertNotIn(rascunho.token, html)
+        self.assertIn(
+            f"/orcamentos/{rascunho.pk}/previa/", html,
+            "A prévia interna tem de continuar à mão: é ela que abre rascunho.",
+        )
+
+    def test_abrir_a_janela_de_envio_nao_inventa_link_para_rascunho(self):
+        """`preparar` só abre a janela -- não publica nada, então não há link."""
+        rascunho = self._orcamento_com_item()
+
+        resposta = self.post({
+            "action": "enviar", "id": rascunho.pk, "canal": "preparar",
+        })
+
+        self.assertEqual(resposta.status_code, 200)
+        dados = resposta.json()
+        self.assertEqual(dados["link"], "")
+        self.assertIn(f"/orcamentos/{rascunho.pk}/previa/", dados["preview_url"])
+        rascunho.refresh_from_db()
+        self.assertEqual(rascunho.status, Orcamento.Status.RASCUNHO)
+
+    def test_depois_de_enviada_o_link_aparece(self):
+        enviada = self._orcamento_com_item()
+        enviada.marcar_enviado()
+
+        dados = self.post({
+            "action": "enviar", "id": enviada.pk, "canal": "preparar",
+        }).json()
+
+        self.assertIn(enviada.token, dados["link"])
 
     def test_mensagem_da_proposta_tem_itens_total_e_link(self):
         from sistema_interno.views_gestao import OrcamentosInnerView

@@ -1639,6 +1639,22 @@ class Orcamento(Prime):
         )
 
     @property
+    def publicado(self):
+        """A página do cliente já existe para esta proposta?
+
+        A view pública recusa rascunho com 404 -- de propósito: enquanto a
+        equipe monta a proposta, quem tiver o link não deve ver nada. O
+        problema é que o painel entregava o endereço mesmo assim, e a
+        janela de envio já abria com o botão "Abrir" apontando para ele.
+        Quem conferia antes de enviar levava uma página de erro no rosto,
+        e a leitura óbvia era "o sistema quebrou".
+
+        Esta propriedade é a MESMA regra da view pública, dita num lugar
+        só. Quem for mostrar o link pergunta aqui primeiro.
+        """
+        return self.status != self.Status.RASCUNHO
+
+    @property
     def dias_para_vencer(self):
         """Quantos dias faltam para a validade. Negativo já passou.
 
@@ -2331,6 +2347,15 @@ class OrdemServico(Prime):
             args=[self.token],
             urlconf=settings.ROOT_URLCONF,
         )
+
+    @property
+    def publicado(self):
+        """Mesma pergunta do orçamento, mesma resposta: ver `Orcamento.publicado`.
+
+        A view pública da O.S. recusa com 404 enquanto `enviada_em` for
+        nula. O painel só mostra o link depois disso.
+        """
+        return bool(self.enviada_em)
 
     @property
     def cliente_ciente(self):

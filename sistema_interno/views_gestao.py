@@ -391,10 +391,22 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
                     orcamento.bloco_financeiro,
                 )
             )
-            orcamento.link_publico = f"{base_publica}{orcamento.caminho_publico}"
-            orcamento.mensagem_whatsapp = self.mensagem_da_proposta(
-                orcamento,
-                orcamento.link_publico,
+            # O LINK SÓ EXISTE DEPOIS DE A PROPOSTA SAIR DO RASCUNHO.
+            #
+            # A página do cliente recusa rascunho com 404. Entregar o
+            # endereço mesmo assim fazia a janela de envio abrir já com o
+            # botão "Abrir" apontando para uma página de erro -- e quem
+            # conferia antes de mandar concluía que o sistema tinha
+            # quebrado. Vazio aqui, a janela mostra "Gerando link seguro…"
+            # e o próprio envio devolve o endereço quando ele passa a
+            # valer.
+            orcamento.link_publico = (
+                f"{base_publica}{orcamento.caminho_publico}"
+                if orcamento.publicado else ""
+            )
+            orcamento.mensagem_whatsapp = (
+                self.mensagem_da_proposta(orcamento, orcamento.link_publico)
+                if orcamento.link_publico else ""
             )
             orcamento.conversa_url = self.conversa_whatsapp(
                 orcamento.whatsapp_destinatario,
@@ -1179,10 +1191,22 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
         if canal not in ("preparar", "link", "whatsapp", "email"):
             raise ErroDeFormulario("Escolha WhatsApp, e-mail ou copiar link.")
 
+        # ABRIR A JANELA NÃO CRIA O LINK; ENVIAR CRIA.
+        #
+        # "preparar" é só abrir a janela para conferir -- não muda status
+        # nem histórico, de propósito. Enquanto a proposta é rascunho, a
+        # página do cliente responde 404, e era esse endereço que a janela
+        # mostrava no botão "Abrir página pública": quem conferia antes de
+        # mandar levava uma página de erro e concluía que o sistema tinha
+        # quebrado.
+        #
+        # Nos canais que enviam de verdade o link vale, porque o envio
+        # tira a proposta do rascunho antes de responder.
+        link_visivel = link if (canal != "preparar" or orcamento.publicado) else ""
         mensagem = self.mensagem_da_proposta(orcamento, link)
 
         extras = {
-            "link": link,
+            "link": link_visivel,
             "mensagem": mensagem,
             # O modal não tenta adivinhar os dados olhando uma cópia antiga
             # no JavaScript. O cadastro vinculado é a fonte padrão; os

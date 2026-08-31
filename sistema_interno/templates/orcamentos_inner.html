@@ -886,6 +886,19 @@ Cadastro mínimo de propósito: nome, valor e categoria. Foto e texto de
             <i class="bi bi-clipboard"></i> Copiar
           </button>
         </div>
+        {% comment %}
+          Enquanto a proposta é rascunho, a página do cliente ainda não
+          existe -- ela recusa rascunho de propósito. Antes o painel
+          entregava o endereço assim mesmo e o botão "Abrir página
+          pública" levava a um 404. Agora o espaço explica o que falta,
+          e a prévia interna (que abre rascunho, porque é da equipe)
+          continua ali ao lado, que é o que a pessoa queria conferir.
+        {% endcomment %}
+        <p class="form-text mb-0" id="linkAindaNao" hidden>
+          <i class="bi bi-info-circle me-1"></i>
+          O link do cliente nasce no envio. Para conferir o documento
+          agora, use a <strong>prévia interna</strong>.
+        </p>
         <div class="d-flex flex-wrap gap-2 mt-3">
           <a class="btn btn-sm btn-outline-primary" id="linkAbrir"
              href="#" target="_blank" rel="noopener" hidden>
@@ -2112,20 +2125,43 @@ LSTela.pronto(function () {
   }
 
   function mostrarLink(link, previa) {
-    if (!link) return;
+    if (previa) propostaAtual.previa = previa;
+
+    /* A PRÉVIA INTERNA APARECE SEMPRE; O LINK DO CLIENTE, SÓ QUANDO EXISTE.
+
+       São dois endereços diferentes e é isso que se confundia. A prévia
+       mora no painel, atende só quem está logado e abre rascunho -- é a
+       tela para conferir o documento antes de mandar. O link do cliente
+       mora no site e recusa rascunho com 404.
+
+       Antes os dois apareciam juntos desde a abertura da janela, e quem
+       clicava no de fora, antes de enviar, levava uma página de erro. */
+    linkPrevia.href = propostaAtual.previa || "#";
+    linkPrevia.hidden = !propostaAtual.previa;
+
+    var card = document.getElementById("linkPreviaCard");
+    if (card) {
+      card.href = propostaAtual.previa || link || "#";
+      card.hidden = !(propostaAtual.previa || link);
+    }
+
+    var aviso = document.getElementById("linkAindaNao");
+    if (aviso) aviso.hidden = Boolean(link);
+
+    if (!link) {
+      campoLink.value = "";
+      campoLink.placeholder = "O link nasce no envio";
+      linkAbrir.hidden = true;
+      linkCopiar.disabled = true;
+      atualizarPrevia();
+      return;
+    }
+
     propostaAtual.link = link;
     campoLink.value = link;
     campoLink.placeholder = "";
     linkAbrir.href = link;
     linkAbrir.hidden = false;
-    if (previa) propostaAtual.previa = previa;
-    linkPrevia.href = propostaAtual.previa || "#";
-    linkPrevia.hidden = !propostaAtual.previa;
-    var card = document.getElementById("linkPreviaCard");
-    if (card) {
-      card.href = propostaAtual.previa || link;
-      card.hidden = !(propostaAtual.previa || link);
-    }
     linkCopiar.disabled = false;
     atualizarPrevia();
   }
@@ -2205,10 +2241,10 @@ LSTela.pronto(function () {
       atualizarPrevia();
       Painel.abrir("modalLink");
 
-      /* O link já veio com a página: aparece antes de qualquer rede. */
-      if (propostaAtual.link) {
-        mostrarLink(propostaAtual.link, propostaAtual.previa);
-      }
+      /* Proposta já enviada traz o link com a página e ele aparece antes
+         de qualquer rede. Rascunho não tem link -- e `mostrarLink` diz
+         isso na tela em vez de deixar um botão apontando para o vazio. */
+      mostrarLink(propostaAtual.link, propostaAtual.previa);
 
       if (!/^\d+$/.test(id)) {
         if (!propostaAtual.link) {

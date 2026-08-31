@@ -244,8 +244,17 @@ class OrdensServicoInnerView(
         base_publica = endereco_do_site(request)
         origem = origem_empresa()
         for ordem in ordens:
-            ordem.link_publico = f"{base_publica}{ordem.caminho_publico}"
-            ordem.mensagem_whatsapp = self.mensagem(ordem, ordem.link_publico)
+            # Mesma regra do orçamento: a página do cliente recusa uma
+            # O.S. que ainda não foi enviada, então o painel não mostra o
+            # endereço dela. Ver `OrdemServico.publicado`.
+            ordem.link_publico = (
+                f"{base_publica}{ordem.caminho_publico}"
+                if ordem.publicado else ""
+            )
+            ordem.mensagem_whatsapp = (
+                self.mensagem(ordem, ordem.link_publico)
+                if ordem.link_publico else ""
+            )
             ordem.whatsapp_url = self.conversa_whatsapp(
                 ordem.whatsapp_destinatario, ordem.mensagem_whatsapp
             )
