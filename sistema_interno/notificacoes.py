@@ -1,4 +1,19 @@
-"""Quem recebe qual aviso no celular, e com que texto.
+"""Quem da EQUIPE recebe qual aviso no celular, e com que texto.
+
+DOIS PÚBLICOS, DOIS ARQUIVOS. Este cuida de quem trabalha aqui dentro; o
+cliente é atendido por `notificacoes_cliente.py`. A separação não é
+arrumação: o objetivo de cada aviso é diferente, e o texto vai atrás.
+
+  * Para a EQUIPE, o aviso diz "isto precisa da sua ação" -- e chega por
+    push no aparelho, porque o painel está instalado e a pessoa pode
+    estar na estrada, longe da bancada.
+  * Para o CLIENTE, o aviso diz "a decisão é sua, e o prazo está
+    acabando" -- e chega por e-mail, porque ele não instala nada nem se
+    inscreve em nada.
+
+Um texto só para os dois vira ou uma cobrança para o cliente ou um
+recado ameno para a equipe.
+
 
 Separado de `push.py` de propósito: lá mora o transporte (cifrar,
 assinar, entregar), aqui mora a REGRA -- quem precisa saber de quê. São
@@ -161,7 +176,13 @@ def avisar_resposta_do_cliente(orcamento):
         _quem_cuida_de_orcamento(orcamento),
         {
             "titulo": titulo,
-            "corpo": "Abra o painel para consultar a resposta com segurança.",
+            "corpo": (
+                "Confirme a data com o cliente e gere a O.S."
+                if aprovado else
+                "Veja o que ele pediu e prepare a nova versão."
+                if negociacao else
+                "Vale registrar o motivo antes de arquivar."
+            ),
             "url": "/orcamentos/",
             "marca": _marca(f"orcamento:{orcamento.pk}:{orcamento.status}"),
             # Aprovação vibra; recusa não. Uma vibração para cada coisa
@@ -188,8 +209,8 @@ def avisar_ciencia_ordem_servico(ordem):
     return _entregar(
         pessoas.values(),
         {
-            "titulo": "Cliente confirmou uma ordem de serviço",
-            "corpo": "Abra o painel para consultar o comprovante.",
+            "titulo": f"O.S. {ordem.numero_documento} confirmada pelo cliente",
+            "corpo": "Serviço aceito. Falta fechar o pagamento.",
             "url": "/ordens-servico/",
             "marca": _marca(f"ordem-servico:{ordem.pk}:confirmada"),
             "urgente": False,

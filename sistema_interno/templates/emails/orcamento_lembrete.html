@@ -1,0 +1,87 @@
+{% load interno_extras %}<!doctype html>
+{% comment %}
+  LEMBRETE DE PROPOSTA A VENCER — a versão do CLIENTE.
+
+  A equipe já era avisada de que a proposta ia vencer; o cliente, não.
+  Ou seja: o sistema sabia que a data ia passar, avisava quem não podia
+  decidir, e ficava calado com quem podia. A proposta expirava, e o
+  motivo mais comum não era "o cliente não quis" — era "o cliente
+  esqueceu".
+
+  O TOM É OUTRO, e por isso é outro arquivo. O aviso da equipe diz "isto
+  precisa da sua ação"; este diz "o seu prazo está acabando, e a decisão
+  é sua". Um lembra de cobrar, o outro lembra de responder. Misturar os
+  dois num texto só produziria uma cobrança para o cliente ou um recado
+  ameno para a equipe.
+{% endcomment %}
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Sua proposta Lazer &amp; Sport vence {{ prazo_texto }}</title>
+</head>
+<body style="margin:0;padding:0;background:#eef0f4;color:#0F172A;font-family:Arial,Helvetica,sans-serif;">
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;">
+    Proposta nº {{ orcamento.pk }} · R$ {{ total_formatado }} · válida {{ prazo_texto }}.
+  </div>
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#eef0f4;">
+    <tr><td align="center" style="padding:28px 12px;">
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"
+             style="max-width:640px;background:#ffffff;border:1px solid #E2E5EA;border-radius:22px;overflow:hidden;box-shadow:0 16px 44px rgba(15,23,42,.09);">
+        <tr><td style="height:10px;background:linear-gradient(90deg,#1F2937 0 67%,#E21A2C 67% 100%);font-size:0;line-height:0;">&nbsp;</td></tr>
+
+        <tr><td style="padding:30px 32px 8px;">
+          <div style="font-size:12px;font-weight:800;letter-spacing:1.3px;text-transform:uppercase;color:#B45309;">
+            {% if dias_restantes <= 0 %}Último dia{% else %}Lembrete{% endif %}
+          </div>
+          <h1 style="margin:6px 0 10px;color:#1F2937;font-size:26px;line-height:1.2;">
+            {% if dias_restantes <= 0 %}Sua proposta vence hoje{% else %}Sua proposta vence {{ prazo_texto }}{% endif %}
+          </h1>
+          <p style="margin:0;color:#64748B;font-size:14px;line-height:1.6;">
+            {{ empresa_nome }} · CNPJ {{ empresa_cnpj }}
+          </p>
+        </td></tr>
+
+        <tr><td style="padding:14px 32px 6px;">
+          <p style="margin:0 0 14px;font-size:16px;line-height:1.6;">Olá, <strong>{{ orcamento.destinatario }}</strong>.</p>
+          <p style="margin:0 0 20px;color:#475569;font-size:15px;line-height:1.65;">
+            Sua proposta nº <strong>{{ orcamento.pk }}</strong> continua valendo{% if validade_texto %} até <strong>{{ validade_texto }}</strong>{% endif %}.
+            Se ainda fizer sentido, é só abrir e responder — leva um minuto.
+            Precisa de mais prazo ou quer mudar alguma coisa? Responda este
+            e-mail que a gente ajusta.
+          </p>
+
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"
+                 style="margin:0 0 22px;border:1px solid #E2E5EA;border-radius:16px;background:#FBFAF8;">
+            <tr>
+              <td style="padding:16px 18px;color:#64748B;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;">Total da proposta</td>
+              <td align="right" style="padding:16px 18px;color:#1F2937;font-size:19px;font-weight:800;white-space:nowrap;">R$ {{ total_formatado }}</td>
+            </tr>
+          </table>
+
+          <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:0 0 24px;">
+            <tr><td align="center" bgcolor="#B45309" style="border-radius:13px;">
+              <a href="{{ link }}"
+                 style="display:inline-block;padding:15px 30px;color:#ffffff;font-size:16px;font-weight:800;text-decoration:none;">
+                Ver a proposta e responder
+              </a>
+            </td></tr>
+          </table>
+
+          <p style="margin:0 0 8px;color:#94A3B8;font-size:12px;line-height:1.6;">
+            Se o botão não abrir, copie este endereço:<br>
+            <span style="color:#64748B;word-break:break-all;">{{ link }}</span>
+          </p>
+        </td></tr>
+
+        <tr><td style="padding:18px 32px 28px;border-top:1px solid #EEF0F4;">
+          <p style="margin:0;color:#94A3B8;font-size:12px;line-height:1.6;">
+            Você recebeu este lembrete porque pediu um orçamento à Lazer &amp; Sport.
+            Não quer mais receber? É só responder dizendo — a gente para.
+          </p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>
