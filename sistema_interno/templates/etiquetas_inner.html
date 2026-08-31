@@ -1,0 +1,292 @@
+{% extends "base_inner.html" %}
+{% load static %}
+{% block title %}Etiquetas de transporte | Lazer & Sport{% endblock %}
+{% block top_title %}Etiquetas de transporte{% endblock %}
+
+{% block content %}
+<section class="ls-page-head">
+  <div>
+    <span class="ls-eyebrow">Expedição</span>
+    <h1>Etiquetas de frágil</h1>
+    <p>
+      Monte a etiqueta, confira ao lado e mande para a impressora.
+      Nada é gravado: a etiqueta é papel.
+    </p>
+  </div>
+  <button type="button" class="btn btn-primary" id="imprimirEtiquetas">
+    <i class="bi bi-printer" aria-hidden="true"></i> Imprimir
+  </button>
+</section>
+
+{{ opcoes_clientes|json_script:"opcoesClientesEtiqueta" }}
+{{ empresa|json_script:"empresaEtiqueta" }}
+
+<div class="ls-etiquetas-tela">
+
+  <!-- ------------------------------------------------ o que vai na etiqueta -->
+  <section class="ls-data-panel ls-etiquetas-form nao-imprime">
+    <div class="ls-data-header"><div><h2>O que vai na etiqueta</h2></div></div>
+    <div class="ls-data-body ls-compact-form">
+
+      <div class="ls-completar-bloco">
+        <h6><i class="bi bi-person" aria-hidden="true"></i> Destinatário</h6>
+        {% comment %}
+          CLIENTE CADASTRADO OU NOME DIGITADO NA HORA.
+
+          Exigir cadastro aqui seria mandar quem está fechando a caixa
+          abrir outra tela, criar um cliente e voltar -- e o caminhão não
+          espera por isso. Escolher da lista traz o endereço junto;
+          digitar resolve a entrega avulsa.
+        {% endcomment %}
+        <label class="form-label" for="etiquetaClienteBusca">Cliente cadastrado</label>
+        <div id="etiquetaClienteBox"></div>
+        <span class="form-text">Traz o endereço do cadastro junto. Deixe vazio para digitar abaixo.</span>
+
+        <div class="mt-3">
+          <label class="form-label" for="etiquetaNome">Nome no papel</label>
+          <input class="form-control" id="etiquetaNome" maxlength="70"
+                 autocomplete="off" placeholder="Ex.: Buffet Alegria">
+        </div>
+        <div class="mt-3">
+          <label class="form-label" for="etiquetaEndereco">Endereço de entrega</label>
+          <textarea class="form-control" id="etiquetaEndereco" rows="2" maxlength="220"
+                    placeholder="Rua, número, bairro, cidade/UF e CEP"></textarea>
+        </div>
+        <div class="mt-3">
+          <label class="form-label" for="etiquetaContato">Contato no destino</label>
+          <input class="form-control" id="etiquetaContato" maxlength="60"
+                 autocomplete="off" placeholder="Telefone de quem recebe">
+        </div>
+      </div>
+
+      <div class="ls-completar-bloco">
+        <h6><i class="bi bi-box-seam" aria-hidden="true"></i> A carga</h6>
+        <div class="row g-3">
+          <div class="col-12">
+            <label class="form-label" for="etiquetaConteudo">Conteúdo</label>
+            <input class="form-control" id="etiquetaConteudo" maxlength="80"
+                   autocomplete="off" placeholder="Ex.: Cama elástica 3m — lona e molas">
+          </div>
+          <div class="col-6">
+            <label class="form-label" for="etiquetaVolumes">Quantos volumes</label>
+            <input class="form-control" id="etiquetaVolumes" type="number"
+                   min="1" max="60" value="1" inputmode="numeric">
+            <span class="form-text">Sai uma etiqueta por volume, numerada.</span>
+          </div>
+          <div class="col-6">
+            <label class="form-label" for="etiquetaReferencia">Referência</label>
+            <input class="form-control" id="etiquetaReferencia" maxlength="30"
+                   autocomplete="off" placeholder="O.S. ou proposta">
+          </div>
+        </div>
+      </div>
+
+      <div class="ls-completar-bloco">
+        <h6><i class="bi bi-exclamation-triangle" aria-hidden="true"></i> Avisos de manuseio</h6>
+        {% comment %}
+          Etiqueta com sete selos não é lida: quem carrega olha um segundo
+          e decide. Por isso os avisos são poucos, e cada um muda alguma
+          coisa no que a pessoa faz com o volume.
+        {% endcomment %}
+        <div class="ls-etiqueta-avisos">
+          {% for aviso in avisos %}
+            <label class="ls-etiqueta-aviso">
+              <input type="checkbox" data-aviso="{{ aviso.chave }}"
+                     data-rotulo="{{ aviso.rotulo }}" data-icone="{{ aviso.icone }}"
+                     {% if aviso.padrao %}checked{% endif %}>
+              <span><i class="bi {{ aviso.icone }}" aria-hidden="true"></i> {{ aviso.rotulo }}</span>
+            </label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="ls-completar-bloco">
+        <h6><i class="bi bi-printer" aria-hidden="true"></i> Papel</h6>
+        <div class="ls-etiqueta-tamanhos">
+          <label class="ls-etiqueta-tamanho">
+            <input type="radio" name="tamanho" value="a5" checked>
+            <span><strong>Meia folha (A5)</strong><small>2 por página · caixa grande</small></span>
+          </label>
+          <label class="ls-etiqueta-tamanho">
+            <input type="radio" name="tamanho" value="a6">
+            <span><strong>Um quarto (A6)</strong><small>4 por página · volume menor</small></span>
+          </label>
+        </div>
+        <div class="form-check mt-3">
+          <input class="form-check-input" type="checkbox" id="etiquetaSemFundo">
+          <label class="form-check-label" for="etiquetaSemFundo">
+            Economizar tinta (sem fundo colorido)
+          </label>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- --------------------------------------------------------- a impressão -->
+  <section class="ls-etiquetas-previa">
+    <div class="ls-data-header nao-imprime">
+      <div>
+        <h2>Como vai sair</h2>
+        <p id="etiquetaContagem">1 etiqueta</p>
+      </div>
+    </div>
+    <div class="ls-folha-etiquetas a5" id="folhaEtiquetas"></div>
+  </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+LSTela.pronto(function () {
+  "use strict";
+
+  var clientes = JSON.parse(
+    document.getElementById("opcoesClientesEtiqueta").textContent || "[]"
+  );
+  /* A identidade da empresa vem como dado, e não interpolada dentro das
+     aspas do JavaScript. `escapejs` transformaria "(11) 96056-3135" em
+     "\u002811\u0029 96056\u002D3135": o navegador entende, mas quem lê
+     o HTML (e quem escreve teste) não reconhece mais o telefone. */
+  var empresa = JSON.parse(
+    document.getElementById("empresaEtiqueta").textContent || "{}"
+  );
+  var folha = document.getElementById("folhaEtiquetas");
+  var contagem = document.getElementById("etiquetaContagem");
+
+  function texto(id) {
+    var campo = document.getElementById(id);
+    return campo ? campo.value.trim() : "";
+  }
+
+  function escapar(valor) {
+    var caixa = document.createElement("span");
+    caixa.textContent = valor == null ? "" : String(valor);
+    return caixa.innerHTML;
+  }
+
+  /* O cliente escolhido preenche nome, endereço e contato -- mas não
+     tranca nenhum dos três: quem despacha às vezes manda para o depósito
+     do cliente, e não para o endereço do cadastro. */
+  var buscaCliente = LSBusca.criar({
+    nome: "cliente",
+    opcoes: clientes,
+    placeholder: "Buscar cliente cadastrado...",
+    rotuloAcessivel: "Cliente cadastrado",
+    aoEscolher: function (opcao) {
+      if (!opcao) return;
+      var escolhido = clientes.filter(function (c) { return c.valor === opcao.valor; })[0];
+      if (!escolhido) return;
+      document.getElementById("etiquetaNome").value = escolhido.rotulo || "";
+      document.getElementById("etiquetaContato").value =
+        escolhido.telefone || escolhido.whatsapp || "";
+      var e = escolhido.endereco;
+      document.getElementById("etiquetaEndereco").value = e
+        ? [
+            [e.rua, e.numero].filter(Boolean).join(", "),
+            e.bairro,
+            [e.cidade, e.estado].filter(Boolean).join("/"),
+            e.cep ? "CEP " + e.cep : "",
+          ].filter(Boolean).join(" · ")
+        : "";
+      desenhar();
+    },
+  });
+  buscaCliente.entrada.id = "etiquetaClienteBusca";
+  document.getElementById("etiquetaClienteBox").appendChild(buscaCliente.elemento);
+
+  function avisosEscolhidos() {
+    return Array.prototype.map.call(
+      document.querySelectorAll("[data-aviso]:checked"),
+      function (caixa) {
+        return { rotulo: caixa.dataset.rotulo, icone: caixa.dataset.icone };
+      }
+    );
+  }
+
+  function umaEtiqueta(indice, total, dados) {
+    var selos = dados.avisos.map(function (aviso, posicao) {
+      // O primeiro aviso é o que se lê de longe; os outros acompanham.
+      return posicao === 0
+        ? '<span class="ls-etiqueta-selo principal"><i class="bi ' +
+          escapar(aviso.icone) + '" aria-hidden="true"></i>' +
+          escapar(aviso.rotulo) + "</span>"
+        : '<span class="ls-etiqueta-selo"><i class="bi ' +
+          escapar(aviso.icone) + '" aria-hidden="true"></i>' +
+          escapar(aviso.rotulo) + "</span>";
+    }).join("");
+
+    return (
+      '<article class="ls-etiqueta">' +
+        '<header class="ls-etiqueta-topo">' +
+          '<img class="ls-etiqueta-logo" src="{% static "images/logoofi.png" %}" alt="">' +
+          '<div class="ls-etiqueta-empresa">' +
+            "<strong>" + escapar(empresa.nome) + "</strong>" +
+            (empresa.endereco ? "<small>" + escapar(empresa.endereco) + "</small>" : "") +
+            "<small>" + escapar(empresa.telefone) +
+              (empresa.cnpj ? " · CNPJ " + escapar(empresa.cnpj) : "") + "</small>" +
+          "</div>" +
+          (total > 1
+            ? '<span class="ls-etiqueta-volume"><small>Volume</small><strong>' +
+              (indice + 1) + "/" + total + "</strong></span>"
+            : "") +
+        "</header>" +
+        (selos ? '<div class="ls-etiqueta-selos">' + selos + "</div>" : "") +
+        '<div class="ls-etiqueta-destino">' +
+          "<span>Entregar a</span>" +
+          "<strong>" + escapar(dados.nome || "—") + "</strong>" +
+          (dados.endereco ? "<p>" + escapar(dados.endereco) + "</p>" : "") +
+          (dados.contato ? '<p class="ls-etiqueta-contato"><i class="bi bi-telephone" aria-hidden="true"></i> ' +
+            escapar(dados.contato) + "</p>" : "") +
+        "</div>" +
+        '<footer class="ls-etiqueta-rodape">' +
+          (dados.conteudo
+            ? "<span><small>Conteúdo</small>" + escapar(dados.conteudo) + "</span>"
+            : "") +
+          (dados.referencia
+            ? "<span><small>Referência</small>" + escapar(dados.referencia) + "</span>"
+            : "") +
+          '<span class="ls-etiqueta-origem"><small>Remetente</small>' +
+            escapar(empresa.nome) + "</span>" +
+        "</footer>" +
+      "</article>"
+    );
+  }
+
+  function desenhar() {
+    var total = Math.min(60, Math.max(1, parseInt(texto("etiquetaVolumes"), 10) || 1));
+    var dados = {
+      nome: texto("etiquetaNome"),
+      endereco: texto("etiquetaEndereco"),
+      contato: texto("etiquetaContato"),
+      conteudo: texto("etiquetaConteudo"),
+      referencia: texto("etiquetaReferencia"),
+      avisos: avisosEscolhidos(),
+    };
+
+    var pedacos = [];
+    for (var i = 0; i < total; i++) pedacos.push(umaEtiqueta(i, total, dados));
+    folha.innerHTML = pedacos.join("");
+
+    var tamanho = document.querySelector("[name='tamanho']:checked").value;
+    folha.className = "ls-folha-etiquetas " + tamanho +
+      (document.getElementById("etiquetaSemFundo").checked ? " sem-fundo" : "");
+
+    contagem.textContent = total === 1 ? "1 etiqueta" : total + " etiquetas";
+  }
+
+  document.querySelectorAll(
+    ".ls-etiquetas-form input, .ls-etiquetas-form textarea"
+  ).forEach(function (campo) {
+    campo.addEventListener("input", desenhar);
+    campo.addEventListener("change", desenhar);
+  });
+
+  document.getElementById("imprimirEtiquetas").addEventListener("click", function () {
+    window.print();
+  });
+
+  desenhar();
+});
+</script>
+{% endblock %}

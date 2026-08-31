@@ -2899,3 +2899,150 @@ button.ls-incomplete-chip:focus-visible{outline:3px solid rgba(255,128,145,.35);
   letter-spacing:.03em;text-transform:uppercase;
 }
 .ls-completar-bloco>h6 i{color:var(--metric)}
+
+/* ==========================================================
+   ETIQUETAS DE TRANSPORTE
+   ==========================================================
+   A tela tem duas metades com públicos diferentes: a esquerda é do
+   painel (escura, como o resto da casa) e a direita é PAPEL -- branca,
+   porque é assim que ela vai sair da impressora. Mostrar a prévia no
+   tema escuro pouparia contraste na tela e mentiria sobre a impressão. */
+.ls-etiquetas-tela{
+  display:grid;grid-template-columns:minmax(320px,400px) 1fr;
+  gap:18px;align-items:start;
+}
+@media(max-width:1100px){.ls-etiquetas-tela{grid-template-columns:1fr}}
+
+.ls-etiquetas-form .ls-completar-bloco:last-child{margin-bottom:0}
+
+.ls-etiqueta-avisos{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+@media(max-width:520px){.ls-etiqueta-avisos{grid-template-columns:1fr}}
+.ls-etiqueta-aviso,.ls-etiqueta-tamanho{
+  display:flex;align-items:center;gap:9px;cursor:pointer;
+  padding:10px 12px;border:1px solid var(--line);border-radius:12px;
+  color:var(--muted);font-size:.8rem;font-weight:700;
+  transition:border-color .15s ease,background .15s ease,color .15s ease;
+}
+.ls-etiqueta-aviso:has(input:checked),
+.ls-etiqueta-tamanho:has(input:checked){
+  border-color:rgba(242,169,59,.5);background:rgba(242,169,59,.10);color:var(--text);
+}
+.ls-etiqueta-aviso input,.ls-etiqueta-tamanho input{accent-color:var(--metric);flex:0 0 auto}
+.ls-etiqueta-tamanhos{display:grid;gap:8px}
+.ls-etiqueta-tamanho span{display:flex;flex-direction:column;gap:1px}
+.ls-etiqueta-tamanho small{color:var(--muted);font-weight:600}
+
+/* ---------------------------------------------------------- o papel */
+.ls-folha-etiquetas{
+  display:grid;gap:10px;padding:14px;
+  border:1px solid var(--line);border-radius:16px;background:#5B5348;
+}
+.ls-folha-etiquetas.a5{grid-template-columns:1fr}
+.ls-folha-etiquetas.a6{grid-template-columns:1fr 1fr}
+@media(max-width:700px){.ls-folha-etiquetas.a6{grid-template-columns:1fr}}
+
+.ls-etiqueta{
+  display:flex;flex-direction:column;gap:10px;
+  padding:16px 18px;background:#fff;color:#171310;
+  border:2px solid #171310;border-radius:6px;
+  font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+.ls-etiqueta-topo{display:flex;align-items:center;gap:11px;border-bottom:2px solid #171310;padding-bottom:9px}
+.ls-etiqueta-logo{width:44px;height:44px;flex:0 0 44px;object-fit:contain}
+.ls-etiqueta-empresa{flex:1 1 auto;min-width:0;display:flex;flex-direction:column}
+.ls-etiqueta-empresa strong{font-size:.95rem;line-height:1.2}
+.ls-etiqueta-empresa small{font-size:.62rem;color:#4A423A;line-height:1.35}
+.ls-etiqueta-volume{
+  flex:0 0 auto;text-align:center;padding:5px 10px;
+  border:2px solid #171310;border-radius:6px;
+}
+.ls-etiqueta-volume small{display:block;font-size:.53rem;letter-spacing:.06em;text-transform:uppercase}
+.ls-etiqueta-volume strong{font-size:1.15rem;line-height:1;font-variant-numeric:tabular-nums}
+
+/* O aviso é o que se lê de longe: no galpão, quem carrega a caixa olha
+   um segundo. O primeiro escolhido ganha a faixa preta; os outros
+   acompanham menores, sem disputar com ele. */
+.ls-etiqueta-selos{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.ls-etiqueta-selo{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:4px 9px;border:2px solid #171310;border-radius:5px;
+  font-size:.68rem;font-weight:900;letter-spacing:.04em;text-transform:uppercase;
+}
+.ls-etiqueta-selo.principal{
+  padding:7px 14px;font-size:1.05rem;letter-spacing:.09em;
+  background:#171310;color:#fff;
+}
+.ls-etiqueta-selo.principal i{font-size:1.15rem}
+
+.ls-etiqueta-destino{
+  flex:1 1 auto;min-height:0;padding:10px 12px;
+  border:2px dashed #171310;border-radius:6px;
+}
+.ls-etiqueta-destino>span{
+  display:block;font-size:.58rem;font-weight:900;
+  letter-spacing:.1em;text-transform:uppercase;color:#4A423A;
+}
+.ls-etiqueta-destino strong{display:block;margin-top:2px;font-size:1.3rem;line-height:1.2}
+.ls-etiqueta-destino p{margin:5px 0 0;font-size:.8rem;line-height:1.4}
+.ls-etiqueta-contato{font-weight:800}
+
+.ls-etiqueta-rodape{
+  display:flex;flex-wrap:wrap;gap:4px 18px;
+  border-top:1px solid #B9AE9C;padding-top:8px;font-size:.72rem;
+}
+.ls-etiqueta-rodape span{display:flex;flex-direction:column;min-width:0}
+.ls-etiqueta-rodape small{
+  font-size:.53rem;font-weight:900;letter-spacing:.08em;
+  text-transform:uppercase;color:#6B6055;
+}
+.ls-etiqueta-origem{margin-left:auto;text-align:right}
+
+/* A folha em A6 aperta tudo: quatro por página é volume pequeno. */
+.ls-folha-etiquetas.a6 .ls-etiqueta{padding:10px 11px;gap:6px}
+.ls-folha-etiquetas.a6 .ls-etiqueta-selo.principal{padding:4px 9px;font-size:.8rem}
+.ls-folha-etiquetas.a6 .ls-etiqueta-selo{font-size:.58rem;padding:3px 7px}
+.ls-folha-etiquetas.a6 .ls-etiqueta-destino{padding:7px 9px}
+.ls-folha-etiquetas.a6 .ls-etiqueta-destino strong{font-size:1.02rem}
+.ls-folha-etiquetas.a6 .ls-etiqueta-destino p{font-size:.7rem}
+.ls-folha-etiquetas.a6 .ls-etiqueta-empresa strong{font-size:.8rem}
+.ls-folha-etiquetas.a6 .ls-etiqueta-rodape{font-size:.62rem;gap:3px 12px}
+.ls-folha-etiquetas.a6 .ls-etiqueta-logo{width:32px;height:32px;flex-basis:32px}
+
+/* Economizar tinta: some o preenchido, fica o traço. */
+.ls-folha-etiquetas.sem-fundo .ls-etiqueta-selo.principal{background:#fff;color:#171310}
+
+/* ------------------------------------------------- na impressora
+   O painel inteiro sai de cena: menu, topo, formulário e a moldura da
+   prévia. Sobram as etiquetas, no tamanho de papel que foi escolhido.
+   `print-color-adjust:exact` existe porque a faixa preta do aviso é o
+   que se lê de longe -- e impressora, por padrão, descarta fundo. */
+@media print{
+  @page{size:A4;margin:8mm}
+  body.ls-body{background:#fff}
+  .ls-sidebar,.ls-topbar,.ls-page-head,.ls-data-header,
+  .ls-etiquetas-form,.nao-imprime,.ls-page-loader,
+  .ls-action-fab,.ls-action-fab-menu{display:none!important}
+  .ls-etiquetas-tela{display:block}
+  .ls-shell,.ls-main,.ls-content{display:block!important;margin:0!important;padding:0!important}
+  .ls-folha-etiquetas{
+    display:grid;gap:0;padding:0;border:0;border-radius:0;background:#fff;
+  }
+  .ls-etiqueta{
+    box-sizing:border-box;
+    break-inside:avoid;page-break-inside:avoid;
+    border-radius:0;margin:0;
+    -webkit-print-color-adjust:exact;print-color-adjust:exact;
+  }
+  /* ALTURA MÍNIMA, E NÃO ALTURA FIXA.
+
+     Com `height`, um endereço de quatro linhas empurrava o rodapé --
+     conteúdo, referência e remetente -- para fora da moldura, e a
+     etiqueta saía da impressora cortada justamente na parte que diz o
+     que tem dentro da caixa. Com `min-height` o tamanho continua sendo
+     duas por folha em A5 e quatro em A6 no caso normal; quando não cabe,
+     a etiqueta cresce e empurra a seguinte para a próxima página. Papel
+     a mais é barato; etiqueta cortada volta como carga extraviada. */
+  .ls-folha-etiquetas.a5 .ls-etiqueta{min-height:132mm}
+  .ls-folha-etiquetas.a6 .ls-etiqueta{min-height:64mm}
+  .ls-folha-etiquetas.a6{grid-template-columns:1fr 1fr}
+}

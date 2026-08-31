@@ -183,7 +183,7 @@
     ficaria com uma cara ao abrir direto e outra ao chegar pelo menu.
   {% endcomment %}
   {% block extra_css %}{% endblock %}
-  <link id="lsFolhaBase" href="{% static 'interno/interno_modern.css' %}?v=32" rel="stylesheet">
+  <link id="lsFolhaBase" href="{% static 'interno/interno_modern.css' %}?v=34" rel="stylesheet">
 
   {% comment %}
     A ORDEM DESTES DOIS ARQUIVOS IMPORTA.
@@ -352,6 +352,15 @@
           <span>Manutenções</span>
         </a>
         {% endif %}
+        {% comment %}
+          A etiqueta é da expedição, e a expedição é operação: fica ao
+          lado das O.S. porque é ali que quem fecha a caixa já está.
+          Sem função exigida -- quem embala nem sempre é quem vende.
+        {% endcomment %}
+        <a data-titulo="Etiquetas de transporte" class="ls-nav-item {% if request.resolver_match.url_name == 'etiquetas_inner' %}active{% endif %}" href="{% url 'etiquetas_inner' %}">
+          <span class="ls-nav-icon"><i class="bi bi-upc-scan"></i></span>
+          <span>Etiquetas</span>
+        </a>
       </div>
       {% endif %}
 
