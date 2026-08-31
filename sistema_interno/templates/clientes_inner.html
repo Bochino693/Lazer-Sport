@@ -221,11 +221,21 @@
                           title="Editar cliente">
                     <i class="bi bi-pencil"></i><span class="ls-action-label">Editar</span>
                   </button>
-                  <a class="btn btn-sm btn-outline-primary"
-                     href="{% url 'orcamentos_inner' %}?q={{ cliente.nome_cliente|urlencode }}"
-                     aria-label="Ver propostas de {{ cliente.nome_cliente }}" title="Ver propostas">
-                    <i class="bi bi-file-earmark-text"></i><span class="ls-action-label">Propostas</span>
-                  </a>
+                  {% comment %}
+                    "Propostas" levava para a tela de Orçamentos filtrada
+                    pelo nome -- o que responde metade da pergunta. A outra
+                    metade (as O.S. deste cliente, o que já foi aprovado, o
+                    que está para vencer) morava numa terceira tela, e
+                    ninguém junta três telas de cabeça na frente do cliente
+                    no telefone. O histórico agora abre aqui, inteiro.
+                  {% endcomment %}
+                  <button type="button" class="btn btn-sm btn-outline-primary"
+                          data-dossie="{{ cliente.id }}"
+                          data-nome="{{ cliente.nome_cliente }}"
+                          aria-label="Ver histórico de {{ cliente.nome_cliente }}"
+                          title="Orçamentos, O.S. e ofertas deste cliente">
+                    <i class="bi bi-clock-history"></i><span class="ls-action-label">Histórico</span>
+                  </button>
                   {% if permissoes_interno.excluir_clientes or user.is_superuser %}
                   <button type="button" class="btn btn-sm btn-outline-danger"
                           data-excluir="{{ cliente.id }}" data-nome="{{ cliente.nome_cliente }}"
@@ -505,11 +515,309 @@
 {{ clientes_dados|json_script:"clientesDados" }}
 {{ opcoes_buffets|json_script:"opcoesBuffets" }}
 {{ opcoes_estabelecimentos|json_script:"opcoesEstabelecimentos" }}
+
+{% comment %}
+  O HISTÓRICO DO CLIENTE — a mesma pergunta que se fazia em três telas.
+
+  A janela busca por rede ao abrir, e não junto da lista: carregar
+  orçamentos e O.S. de todos os clientes da página seria pagar por
+  dezenas de consultas que quase ninguém vai olhar.
+{% endcomment %}
+<div class="modal fade" id="modalDossie" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div>
+          <span class="ls-modal-kicker">Histórico do cliente</span>
+          <h5 class="modal-title" id="dossieTitulo">Cliente</h5>
+        </div>
+        <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-danger d-none" id="dossieErro" role="alert"></div>
+
+        <section class="ls-dossie-resumo" id="dossieResumo" hidden>
+          <div><span>Orçamentos</span><strong id="dossieQtdOrcamentos">0</strong></div>
+          <div><span>Aprovados</span><strong id="dossieQtdAprovados">0</strong></div>
+          <div><span>Ordens de Serviço</span><strong id="dossieQtdOrdens">0</strong></div>
+          <div class="success"><span>Total aprovado</span><strong id="dossieTotal">R$ 0,00</strong></div>
+        </section>
+
+        <section class="ls-dossie-bloco">
+          <h6><i class="bi bi-file-earmark-text me-1"></i>Orçamentos</h6>
+          <div id="dossieOrcamentos"><p class="text-muted small mb-0">Carregando…</p></div>
+        </section>
+
+        <section class="ls-dossie-bloco">
+          <h6><i class="bi bi-clipboard2-check me-1"></i>Ordens de Serviço</h6>
+          <div id="dossieOrdens"><p class="text-muted small mb-0">Carregando…</p></div>
+        </section>
+
+        {% comment %}
+          MANDAR UMA OFERTA PARA ESTA PESSOA.
+
+          A divulgação nasceu em massa ("todos os buffets parceiros"), mas
+          a conversa comercial de verdade é um a um: o atendente está
+          olhando a ficha de quem acabou de ligar. Sem isto, a saída era
+          disparar para o segmento inteiro ou copiar o texto na mão -- e
+          mensagem copiada na mão não deixa registro nenhum.
+
+          Passa pelo mesmo caminho da campanha: mesma validação de canal,
+          mesma fila, mesmo histórico. Envio individual é uma campanha de
+          um destinatário só, não um atalho por fora.
+        {% endcomment %}
+        {% if permissoes_interno.site %}
+        <section class="ls-dossie-bloco" id="dossieOfertaBloco">
+          <h6><i class="bi bi-megaphone me-1"></i>Mandar uma oferta para este cliente</h6>
+          <div class="row g-2 align-items-end">
+            <div class="col-12 col-sm-4">
+              <label class="form-label" for="dossieOfertaTipo">Tipo</label>
+              <select class="form-select" id="dossieOfertaTipo">
+                <option value="promocao">Promoção</option>
+                <option value="combo">Combo</option>
+                <option value="cupom">Cupom</option>
+              </select>
+            </div>
+            <div class="col-12 col-sm-8">
+              <label class="form-label" for="dossieOfertaObjeto">Qual</label>
+              <select class="form-select" id="dossieOfertaObjeto">
+                <option value="">Escolha o tipo primeiro</option>
+              </select>
+            </div>
+            <div class="col-12">
+              <div class="form-check form-check-inline">
+                <input class="form-check-input" type="checkbox" id="dossieOfertaEmail" checked>
+                <label class="form-check-label" for="dossieOfertaEmail">E-mail</label>
+              </div>
+              <div class="form-check form-check-inline">
+                <input class="form-check-input" type="checkbox" id="dossieOfertaWhatsapp" checked>
+                <label class="form-check-label" for="dossieOfertaWhatsapp">WhatsApp</label>
+              </div>
+              <button class="btn btn-primary btn-sm ms-2" type="button" id="dossieOfertaEnviar">
+                <i class="bi bi-send me-1"></i>Enviar oferta
+              </button>
+            </div>
+          </div>
+          <div class="alert alert-success d-none mt-2 mb-0" id="dossieOfertaOk" role="status"></div>
+          <div class="alert alert-danger d-none mt-2 mb-0" id="dossieOfertaErro" role="alert"></div>
+        </section>
+        {% endif %}
+      </div>
+      <div class="modal-footer">
+        <a class="btn btn-outline-primary" id="dossieNovoOrcamento" href="#">
+          <i class="bi bi-plus-lg me-1"></i>Novo orçamento para ele
+        </a>
+        <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Fechar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 {% endblock %}
 
 {% block scripts %}
 <script>
 LSTela.pronto(function () {
+  "use strict";
+
+  /* ====================================================================
+     O HISTÓRICO DO CLIENTE
+
+     Busca ao abrir, e não junto da lista: carregar orçamentos e O.S. de
+     todos os clientes da página seria pagar por dezenas de consultas que
+     quase ninguém vai olhar. Quem abre a ficha, paga por ela.
+     ==================================================================== */
+  var dossieAtual = null;
+
+  function moedaBR(valor) {
+    var numero = Number(valor || 0);
+    return "R$ " + numero.toLocaleString("pt-BR", {
+      minimumFractionDigits: 2, maximumFractionDigits: 2,
+    });
+  }
+
+  function escapar(texto) {
+    var caixa = document.createElement("span");
+    caixa.textContent = texto == null ? "" : String(texto);
+    return caixa.innerHTML;
+  }
+
+  function corDaSituacao(estado) {
+    if (estado === "aprovado" || estado === "concluida") return "success";
+    if (estado === "recusado" || estado === "cancelada") return "danger";
+    if (estado === "rascunho" || estado === "substituido") return "neutral";
+    return "info";
+  }
+
+  function linhasDeOrcamento(itens) {
+    if (!itens.length) {
+      return '<p class="text-muted small mb-0">Nenhum orçamento para este cliente ainda.</p>';
+    }
+    return '<ul class="ls-dossie-lista">' + itens.map(function (o) {
+      return (
+        '<li>' +
+        '<span class="ls-dossie-id">#' + escapar(o.id) + '</span>' +
+        '<span class="ls-dossie-corpo">' +
+          '<span class="ls-status ' + corDaSituacao(o.estado) + '">' + escapar(o.situacao) + '</span>' +
+          '<small>' + escapar(o.criado) + (o.validade ? ' · vale até ' + escapar(o.validade) : '') +
+          (o.vencido ? ' · <b>vencido</b>' : '') + ' · ' + escapar(o.itens) + ' item(ns)</small>' +
+        '</span>' +
+        '<strong>' + moedaBR(o.total) + '</strong>' +
+        '<a class="btn btn-sm btn-outline-secondary" href="' + escapar(o.previa) + '" target="_blank" rel="noopener">Ver</a>' +
+        '</li>'
+      );
+    }).join("") + '</ul>';
+  }
+
+  function linhasDeOrdem(itens) {
+    if (!itens.length) {
+      return '<p class="text-muted small mb-0">Nenhuma ordem de serviço para este cliente ainda.</p>';
+    }
+    return '<ul class="ls-dossie-lista">' + itens.map(function (s) {
+      return (
+        '<li>' +
+        '<span class="ls-dossie-id">' + escapar(s.numero) + '</span>' +
+        '<span class="ls-dossie-corpo">' +
+          '<span class="ls-status ' + corDaSituacao(s.estado) + '">' + escapar(s.situacao) + '</span>' +
+          '<small>' + escapar(s.equipamento || "—") +
+          (s.agendada ? ' · ' + escapar(s.agendada) : '') + '</small>' +
+        '</span>' +
+        '<strong>' + moedaBR(s.total) + '</strong>' +
+        '<a class="btn btn-sm btn-outline-secondary" href="' + escapar(s.previa) + '" target="_blank" rel="noopener">Ver</a>' +
+        '</li>'
+      );
+    }).join("") + '</ul>';
+  }
+
+  function abrirDossie(id, nome) {
+    dossieAtual = { id: id, nome: nome };
+    document.getElementById("dossieTitulo").textContent = nome || "Cliente";
+    document.getElementById("dossieResumo").hidden = true;
+    document.getElementById("dossieOrcamentos").innerHTML =
+      '<p class="text-muted small mb-0">Carregando…</p>';
+    document.getElementById("dossieOrdens").innerHTML =
+      '<p class="text-muted small mb-0">Carregando…</p>';
+    Painel.erro("dossieErro", "");
+    var novo = document.getElementById("dossieNovoOrcamento");
+    if (novo) novo.href = "{% url 'orcamentos_inner' %}?novo=1&cliente=" + encodeURIComponent(id);
+    Painel.abrir("modalDossie");
+
+    fetch("/clientes/" + encodeURIComponent(id) + "/dossie/", {
+      headers: { "X-Requested-With": "XMLHttpRequest" },
+      credentials: "same-origin",
+    })
+      .then(function (r) { return r.ok ? r.json() : Promise.reject(r); })
+      .then(function (dados) {
+        var resumo = document.getElementById("dossieResumo");
+        document.getElementById("dossieQtdOrcamentos").textContent = dados.resumo.orcamentos;
+        document.getElementById("dossieQtdAprovados").textContent = dados.resumo.aprovados;
+        document.getElementById("dossieQtdOrdens").textContent = dados.resumo.ordens;
+        document.getElementById("dossieTotal").textContent = moedaBR(dados.resumo.total_aprovado);
+        resumo.hidden = false;
+
+        document.getElementById("dossieOrcamentos").innerHTML =
+          linhasDeOrcamento(dados.orcamentos || []);
+        document.getElementById("dossieOrdens").innerHTML =
+          linhasDeOrdem(dados.ordens || []);
+
+        /* Canal sem cadastro não pode vir marcado: o envio falharia com
+           uma mensagem que a pessoa só leria depois de tentar. */
+        var email = document.getElementById("dossieOfertaEmail");
+        var zap = document.getElementById("dossieOfertaWhatsapp");
+        if (email) { email.disabled = !dados.cliente.email; email.checked = !!dados.cliente.email; }
+        if (zap) {
+          zap.disabled = !dados.cliente.whatsapp_confirmado;
+          zap.checked = !!dados.cliente.whatsapp_confirmado;
+        }
+      })
+      .catch(function () {
+        Painel.erro("dossieErro", "Não consegui carregar o histórico. Tente de novo.");
+        document.getElementById("dossieOrcamentos").innerHTML = "";
+        document.getElementById("dossieOrdens").innerHTML = "";
+      });
+  }
+
+  document.querySelectorAll("[data-dossie]").forEach(function (botao) {
+    botao.addEventListener("click", function () {
+      abrirDossie(botao.dataset.dossie, botao.dataset.nome);
+    });
+  });
+
+  /* ------------------------------------------------- mandar uma oferta */
+  var tipoOferta = document.getElementById("dossieOfertaTipo");
+  var objetoOferta = document.getElementById("dossieOfertaObjeto");
+
+  function carregarOfertas() {
+    if (!tipoOferta || !objetoOferta) return;
+    objetoOferta.innerHTML = '<option value="">Carregando…</option>';
+    fetch("{% url 'campanha_ofertas' %}?tipo=" + encodeURIComponent(tipoOferta.value), {
+      headers: { "X-Requested-With": "XMLHttpRequest" },
+      credentials: "same-origin",
+    })
+      .then(function (r) { return r.ok ? r.json() : Promise.reject(r); })
+      .then(function (dados) {
+        var itens = dados.itens || [];
+        objetoOferta.innerHTML = itens.length
+          ? itens.map(function (i) {
+              return '<option value="' + escapar(i.id) + '">' + escapar(i.rotulo) + '</option>';
+            }).join("")
+          : '<option value="">Nenhuma opção ativa</option>';
+      })
+      .catch(function () {
+        objetoOferta.innerHTML = '<option value="">Não consegui carregar</option>';
+      });
+  }
+
+  if (tipoOferta) {
+    tipoOferta.addEventListener("change", carregarOfertas);
+    carregarOfertas();
+  }
+
+  document.getElementById("dossieOfertaEnviar")?.addEventListener("click", function () {
+    var botao = this;
+    var ok = document.getElementById("dossieOfertaOk");
+    var erro = document.getElementById("dossieOfertaErro");
+    ok.classList.add("d-none");
+    erro.classList.add("d-none");
+
+    if (!dossieAtual || !objetoOferta.value) {
+      erro.textContent = "Escolha a oferta que vai ser enviada.";
+      erro.classList.remove("d-none");
+      return;
+    }
+
+    var dados = new FormData();
+    dados.set("tipo", tipoOferta.value);
+    dados.set("objeto", objetoOferta.value);
+    dados.set("cliente", dossieAtual.id);
+    dados.set("email", document.getElementById("dossieOfertaEmail").checked ? "1" : "0");
+    dados.set("whatsapp", document.getElementById("dossieOfertaWhatsapp").checked ? "1" : "0");
+    dados.set("csrfmiddlewaretoken", "{{ csrf_token }}");
+
+    botao.disabled = true;
+    fetch("{% url 'campanha_criar' %}", {
+      method: "POST", body: dados, credentials: "same-origin",
+      headers: { "X-Requested-With": "XMLHttpRequest" },
+    })
+      .then(function (r) { return r.json().then(function (j) { return { r: r, j: j }; }); })
+      .then(function (saida) {
+        botao.disabled = false;
+        if (!saida.r.ok) {
+          erro.textContent = saida.j.msg || "Não consegui enviar a oferta.";
+          erro.classList.remove("d-none");
+          return;
+        }
+        ok.innerHTML = (saida.j.msg || "Oferta enviada.") +
+          ' <a href="' + escapar(saida.j.detalhe) + '">Acompanhar</a>';
+        ok.classList.remove("d-none");
+      })
+      .catch(function () {
+        botao.disabled = false;
+        erro.textContent = "A rede oscilou. Tente de novo.";
+        erro.classList.remove("d-none");
+      });
+  });
+
   "use strict";
 
   var clientes = JSON.parse(

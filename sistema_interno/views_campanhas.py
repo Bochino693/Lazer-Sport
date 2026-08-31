@@ -26,6 +26,57 @@ def _sim(valor):
     return str(valor or "").strip().lower() in {"1", "true", "on", "sim"}
 
 
+class OfertasDisponiveisView(CriacaoInternoRequiredMixin, View):
+    """As ofertas ativas, para escolher uma na ficha do cliente.
+
+    A tela de campanhas dispara a partir do cartão da própria oferta, no
+    catálogo -- ali o id já está na mão. Na ficha do cliente o caminho é o
+    inverso: sabe-se para QUEM mandar e falta escolher O QUÊ. Daí esta
+    lista.
+
+    Só o que está ativo entra: oferecer ao atendente uma promoção
+    desligada é deixá-lo escolher algo que a criação da campanha vai
+    recusar depois, com o cliente esperando do outro lado da linha.
+    """
+
+    def get(self, request):
+        from core.models import Combos, Cupom, Promocoes
+
+        tipo = (request.GET.get("tipo") or "").strip()
+
+        if tipo == CampanhaDivulgacao.Tipo.PROMOCAO:
+            itens = [
+                {"id": o.pk, "rotulo": o.descricao}
+                for o in Promocoes.objects.filter(ativo=True).order_by("descricao")[:100]
+            ]
+        elif tipo == CampanhaDivulgacao.Tipo.COMBO:
+            itens = [
+                {"id": o.pk, "rotulo": o.descricao}
+                for o in Combos.objects.filter(ativo=True).order_by("descricao")[:100]
+            ]
+        elif tipo == CampanhaDivulgacao.Tipo.CUPOM:
+            # `todos_usuarios=False` é cupom exclusivo de contas
+            # escolhidas, e a criação da campanha recusa. Oferecê-lo aqui
+            # seria deixar o atendente escolher algo que vai falhar
+            # depois, com o cliente esperando na linha.
+            itens = [
+                {
+                    "id": o.pk,
+                    "rotulo": f"{o.codigo} — {o.desconto_percentual:.0f}% de desconto",
+                }
+                for o in Cupom.objects.filter(
+                    ativo=True, todos_usuarios=True,
+                ).order_by("codigo")[:100]
+            ]
+        else:
+            return JsonResponse(
+                {"status": "erro", "msg": "Escolha promoção, combo ou cupom."},
+                status=400,
+            )
+
+        return JsonResponse({"status": "sucesso", "itens": itens})
+
+
 class PrepararCampanhaView(CriacaoInternoRequiredMixin, View):
     """Prévia e contagem antes de qualquer gravação ou envio."""
 
@@ -37,7 +88,10 @@ class PrepararCampanhaView(CriacaoInternoRequiredMixin, View):
         whatsapp = _sim(request.GET.get("whatsapp", "1"))
         try:
             conteudo = conteudo_do_objeto(tipo, objeto_id)
-            linhas, ignorados = destinatarios(segmento, email=email, whatsapp=whatsapp)
+            linhas, ignorados = destinatarios(
+                segmento, email=email, whatsapp=whatsapp,
+                cliente_id=(request.GET.get("cliente") or "").strip() or None,
+            )
         except ErroCampanha as erro:
             return JsonResponse({"status": "erro", "msg": str(erro)}, status=400)
         canais = {
@@ -70,6 +124,7 @@ class CriarCampanhaView(CriacaoInternoRequiredMixin, View):
                 titulo=request.POST.get("titulo", ""),
                 mensagem=request.POST.get("mensagem", ""),
                 usuario=request.user,
+                cliente_id=(request.POST.get("cliente") or "").strip() or None,
             )
         except ErroCampanha as erro:
             return JsonResponse({"status": "erro", "msg": str(erro)}, status=400)

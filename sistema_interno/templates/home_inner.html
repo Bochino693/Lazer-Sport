@@ -15,7 +15,27 @@
   <a href="{% url 'ordens_servico_inner' %}" class="app-glance-card mint"><span class="app-glance-icon"><i class="bi bi-clipboard2-check"></i></span><span><strong>{{ total_ordens_servico_abertas }}</strong><small>ordens de serviço abertas</small></span><em>execução e atendimento</em></a>
 </section>
 <section class="app-workspace">
-  <article class="app-focus-panel"><header class="app-section-head"><div><span class="app-eyebrow">Prioridade do dia</span><h2>O que precisa de você</h2></div>{% if fila_trabalho %}<span class="app-count">{{ fila_trabalho|length }}</span>{% endif %}</header><div class="app-task-list">{% for tarefa in fila_trabalho %}<a class="app-task {{ tarefa.nivel }}" href="{{ tarefa.url }}"><span class="app-task-icon"><i class="bi {{ tarefa.icone }}"></i></span><span class="app-task-copy"><strong>{{ tarefa.titulo }}</strong><small>{{ tarefa.detalhe }}</small></span><span class="app-task-action">{{ tarefa.acao }} <i class="bi bi-chevron-right"></i></span></a>{% empty %}<div class="app-all-clear"><span><i class="bi bi-check2"></i></span><div><strong>Tudo em ordem por aqui</strong><small>Não há prazos críticos nem bloqueios esperando decisão.</small></div></div>{% endfor %}</div></article>
+  <article class="app-focus-panel"><header class="app-section-head"><div><span class="app-eyebrow">Prioridade do dia</span><h2>O que precisa de você</h2></div>{% if fila_trabalho %}<span class="app-count">{{ fila_trabalho|length }}</span>{% endif %}</header><div class="app-task-list">{% for tarefa in fila_trabalho %}
+  {% comment %}
+    O item que TEM como ser resolvido daqui traz o botão junto; o que
+    depende de decisão humana continua sendo um link para onde se decide.
+    Os dois convivem na mesma lista porque a urgência é a mesma -- o que
+    muda é se existe um caminho óbvio ou não.
+  {% endcomment %}
+  <div class="app-task {{ tarefa.nivel }}{% if tarefa.atalho %} tem-atalho{% endif %}">
+    <a class="app-task-alvo" href="{{ tarefa.url }}">
+      <span class="app-task-icon"><i class="bi {{ tarefa.icone }}"></i></span>
+      <span class="app-task-copy"><strong>{{ tarefa.titulo }}</strong><small>{{ tarefa.detalhe }}</small></span>
+      <span class="app-task-action">{{ tarefa.acao }} <i class="bi bi-chevron-right"></i></span>
+    </a>
+    {% if tarefa.atalho %}
+    <button type="button" class="app-task-atalho"
+            data-atalho="{{ tarefa.atalho.tipo }}" data-id="{{ tarefa.atalho.id }}">
+      <i class="bi {{ tarefa.atalho.icone }}"></i><span>{{ tarefa.atalho.rotulo }}</span>
+    </button>
+    {% endif %}
+  </div>
+{% empty %}<div class="app-all-clear"><span><i class="bi bi-check2"></i></span><div><strong>Tudo em ordem por aqui</strong><small>Não há prazos críticos nem bloqueios esperando decisão.</small></div></div>{% endfor %}</div></article>
   <aside class="app-start-panel"><header class="app-section-head"><div><span class="app-eyebrow">Começar</span><h2>Ações rápidas</h2></div></header><div class="app-start-grid"><a href="{% url 'orcamentos_inner' %}?novo=1"><i class="bi bi-file-earmark-plus"></i><span><strong>Criar proposta</strong><small>Orçar com o catálogo</small></span></a><a href="{% url 'ordens_servico_inner' %}?novo=1"><i class="bi bi-clipboard2-plus"></i><span><strong>Abrir Ordem de Serviço</strong><small>Manutenção ou serviço prestado</small></span></a><a href="{% url 'ordens_producao' %}"><i class="bi bi-play-circle"></i><span><strong>Planejar produção</strong><small>Abrir uma nova ordem</small></span></a><a href="{% url 'stock' %}"><i class="bi bi-arrow-left-right"></i><span><strong>Movimentar estoque</strong><small>Entrada, saída ou ajuste</small></span></a><a href="{% url 'manutencao_inner' %}"><i class="bi bi-wrench"></i><span><strong>Atender manutenção</strong><small>Ver chamados abertos</small></span></a><a href="{% url 'clientes_inner' %}"><i class="bi bi-person-plus"></i><span><strong>Cadastrar cliente</strong><small>Pessoa, empresa ou buffet</small></span></a><a href="{% url 'guias_producao' %}"><i class="bi bi-journal-richtext"></i><span><strong>Escrever manual</strong><small>Etapas de um brinquedo</small></span></a></div></aside>
 </section>
 <section class="app-pipelines">
@@ -24,4 +44,54 @@
   <article class="app-pipeline"><header class="app-section-head compact"><div><span class="app-eyebrow">Atendimento</span><h2>Manutenções</h2></div><a href="{% url 'manutencao_inner' %}">Abrir fila</a></header><div class="app-mini-list">{% for manutencao in manutencoes_abertas %}<a href="{% url 'manutencao_inner' %}"><span class="app-mini-main"><strong>{{ manutencao.nome_equipamento }}</strong><small>{{ manutencao.cidade|default:"Local não informado" }} · aberto {{ manutencao.criado_em|timesince }}</small></span><span class="app-state {% if manutencao.status == 'P' %}warning{% else %}info{% endif %}">{{ manutencao.get_status_display }}</span></a>{% empty %}<div class="app-mini-empty">Nenhuma manutenção aberta.</div>{% endfor %}</div></article>
 </section>
 <section class="app-stock-strip"><div><span class="app-eyebrow">Estoque</span><strong>{{ total_criticos }} item{{ total_criticos|pluralize }} para repor</strong><small>{{ total_pecas|numero }} unidades guardadas · R$ {{ valor_investido|moeda }} investidos</small></div><a href="{% url 'stock' %}">Abrir estoque <i class="bi bi-arrow-right"></i></a></section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+LSTela.pronto(function () {
+  "use strict";
+
+  /* O ATALHO RESOLVE AQUI MESMO.
+
+     Sem sair da tela, e com o resultado dito no próprio botão: quem
+     clicou precisa saber se saiu ou não, e voltar para a lista só para
+     descobrir isso desfaria o atalho. */
+  document.querySelectorAll("[data-atalho='lembrar']").forEach(function (botao) {
+    botao.addEventListener("click", function () {
+      var rotulo = botao.innerHTML;
+      botao.disabled = true;
+      botao.innerHTML = '<span class="spinner-border spinner-border-sm"></span><span>Enviando</span>';
+
+      var dados = new FormData();
+      dados.set("csrfmiddlewaretoken", "{{ csrf_token }}");
+
+      fetch("/orcamentos/" + encodeURIComponent(botao.dataset.id) + "/lembrar/", {
+        method: "POST", body: dados, credentials: "same-origin",
+        headers: { "X-Requested-With": "XMLHttpRequest" },
+      })
+        .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+        .then(function (saida) {
+          if (saida.ok) {
+            botao.classList.add("feito");
+            botao.innerHTML = '<i class="bi bi-check-lg"></i><span>Lembrete enviado</span>';
+            return;
+          }
+          botao.classList.add("falhou");
+          botao.innerHTML = '<i class="bi bi-exclamation-triangle"></i><span>Não saiu</span>';
+          botao.title = saida.j.msg || "";
+          window.setTimeout(function () {
+            botao.classList.remove("falhou");
+            botao.innerHTML = rotulo;
+            botao.disabled = false;
+          }, 4000);
+        })
+        .catch(function () {
+          botao.classList.remove("falhou");
+          botao.innerHTML = rotulo;
+          botao.disabled = false;
+        });
+    });
+  });
+});
+</script>
 {% endblock %}

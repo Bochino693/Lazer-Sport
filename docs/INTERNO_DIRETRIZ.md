@@ -415,6 +415,54 @@ chama nada.
 
 ---
 
+## 9.2. Regras que valem em qualquer tela
+
+**Link público só existe depois de o documento sair do rascunho.** A
+página do cliente recusa rascunho com 404, de propósito. Pergunte a
+`Orcamento.publicado` / `OrdemServico.publicado` antes de mostrar
+endereço — foi entregar o link cedo demais que fazia o gestor levar um
+404 ao conferir a proposta antes de mandar. Para conferir antes de
+enviar existe a prévia interna, que é do painel e abre rascunho.
+
+**A bolinha do menu e a tela têm de contar a mesma coisa.** A tela de
+Pedidos listava uma tabela e o selo contava outra: o menu dizia "6
+pedidos" sobre uma tela vazia. Nada dava erro, e nenhum teste percebia
+porque as duas fontes nunca se cruzavam. Quando criar um contador, cruze
+os dois num teste.
+
+**Excluir: a regra da tela decide, o superusuário tem a última palavra.**
+Use `exclusoes.pode_excluir()` e `exclusoes.remover()`. A exclusão que
+passa por cima de uma proteção fica registrada em `ExclusaoRegistrada`,
+e o botão avisa antes com `data-protegido="1"` — apagar histórico não
+pode ter a mesma cara de apagar um rascunho.
+
+**Aviso para a equipe e aviso para o cliente são arquivos diferentes.**
+`notificacoes.py` diz "isto precisa da sua ação" e vai por push;
+`notificacoes_cliente.py` diz "a decisão é sua" e vai por e-mail. Um
+texto para os dois vira ou cobrança ao cliente ou recado ameno à equipe.
+
+**Nada de consulta por linha.** Duas armadilhas já custaram 26 idas ao
+banco numa página de 25:
+
+- `.first()` numa propriedade que o template toca (vira ORDER BY +
+  LIMIT 1 e ignora o prefetch — use `all()[0]`);
+- `.select_related()` sobre relação que a view já traz por prefetch
+  (monta consulta nova e joga o cache fora).
+
+`tests_desempenho.py` abre cada lista com 3 e com 25 registros e reprova
+se a conta crescer.
+
+**Urgência com caminho óbvio traz o botão junto.** Item de fila que só
+aponta é item que se lê, se adia e vence. Se o atalho não tem como
+funcionar naquele caso (falta e-mail, prazo já passou), não mostre o
+botão: botão que falha ao ser tocado ensina a não tocar em botão nenhum.
+
+**Cor: grafite e âmbar, teal para execução.** O /adm do site é azul, e é
+dele que este aplicativo se distingue. `tests_navegacao.py` lista os
+tons do painel antigo e reprova qualquer um de volta.
+
+---
+
 ## 10. Checklist da tela nova
 
 - [ ] Estende `base_inner.html` e preenche `top_title`.
@@ -436,3 +484,8 @@ chama nada.
 - [ ] Folha em `extra_css` marcada com `data-ls-tela="1"` (ver 9.1).
 - [ ] Data que olha para a frente com `data-nao-passado` no campo — e a
       conferência repetida na view, que é por onde os dados entram.
+- [ ] Link público só depois de `publicado` (ver 9.2).
+- [ ] Contador novo cruzado com a tela num teste (ver 9.2).
+- [ ] Exclusão por `exclusoes.remover()` (ver 9.2).
+- [ ] Lista aberta com 3 e com 25 registros: a conta de consultas não
+      pode crescer (ver 9.2).

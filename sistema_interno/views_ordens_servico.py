@@ -674,7 +674,14 @@ class OrdensServicoInnerView(
                     envio.responsavel.get_full_name()
                     or envio.responsavel.username
                 ) if envio.responsavel else "",
-            } for envio in ordem.envios.select_related("responsavel")[:limite]]
+            # `select_related` AQUI DERRUBAVA O PREFETCH DA TELA.
+            #
+            # A lista já busca `envios__responsavel` de uma vez. Repetir o
+            # select_related monta uma consulta nova e joga o cache fora:
+            # eram 26 idas ao banco numa página de 25 O.S., uma por linha,
+            # para buscar o que já estava na memória. `all()` usa o cache;
+            # o corte acontece em Python, sobre uma lista curta.
+            } for envio in list(ordem.envios.all())[:limite]]
         except Exception:
             logging.getLogger(__name__).exception(
                 "Falha ao ler histórico de envio da O.S. %s", ordem.pk

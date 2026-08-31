@@ -158,11 +158,28 @@ def _whatsapp_valido(cliente):
     return numero if len(numero) in (12, 13) and numero.startswith("55") else ""
 
 
-def destinatarios(segmento, *, email, whatsapp):
-    """Entrega snapshots únicos e contabiliza cadastros sem canal útil."""
+def destinatarios(segmento, *, email, whatsapp, cliente_id=None):
+    """Entrega snapshots únicos e contabiliza cadastros sem canal útil.
+
+    `cliente_id` restringe a UM cliente. A divulgação nasceu em massa --
+    "todos os buffets parceiros" --, mas a conversa comercial de verdade
+    é um a um: o atendente está olhando a ficha de alguém que ligou e
+    quer mandar aquela promoção para AQUELA pessoa. Sem isso, a única
+    saída era disparar para o segmento inteiro ou copiar o texto na mão.
+
+    O caminho é o mesmo dos dois jeitos, de propósito: mesma validação de
+    canal, mesmo registro de entrega, mesmo histórico. Um envio
+    individual é uma campanha de um destinatário só, e não um atalho por
+    fora que ninguém depois consegue auditar.
+    """
     vistos = set()
     saida = []
-    clientes = list(_clientes_do_segmento(segmento))
+    if cliente_id:
+        clientes = list(
+            Cliente.objects.filter(pk=cliente_id, ativo=True)
+        )
+    else:
+        clientes = list(_clientes_do_segmento(segmento))
     for cliente in clientes:
         canais = []
         if email:
@@ -184,7 +201,10 @@ def destinatarios(segmento, *, email, whatsapp):
 
 
 @transaction.atomic
-def criar_campanha(*, tipo, objeto_id, segmento, email, whatsapp, titulo, mensagem, usuario):
+def criar_campanha(
+    *, tipo, objeto_id, segmento, email, whatsapp, titulo, mensagem, usuario,
+    cliente_id=None,
+):
     if not email and not whatsapp:
         raise ErroCampanha("Escolha e-mail, WhatsApp ou os dois canais.")
     conteudo = conteudo_do_objeto(tipo, objeto_id)
@@ -193,9 +213,15 @@ def criar_campanha(*, tipo, objeto_id, segmento, email, whatsapp, titulo, mensag
     if len(titulo) < 3 or len(mensagem) < 12:
         raise ErroCampanha("Revise o título e a mensagem antes de criar a campanha.")
 
-    linhas, ignorados = destinatarios(segmento, email=email, whatsapp=whatsapp)
+    linhas, ignorados = destinatarios(
+        segmento, email=email, whatsapp=whatsapp, cliente_id=cliente_id,
+    )
     if not linhas:
-        raise ErroCampanha("Nenhum cliente ativo possui os canais escolhidos e confirmados.")
+        raise ErroCampanha(
+            "Este cliente não tem e-mail nem WhatsApp confirmado no cadastro."
+            if cliente_id else
+            "Nenhum cliente ativo possui os canais escolhidos e confirmados."
+        )
 
     campanha = CampanhaDivulgacao.objects.create(
         tipo=tipo,

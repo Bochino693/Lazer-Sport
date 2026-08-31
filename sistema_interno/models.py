@@ -217,8 +217,19 @@ class Cliente(Prime):
         um só, de propósito: dois endereços "principais" é como o
         cadastro antigo passava a mostrar coisas diferentes em telas
         diferentes.
+
+        `all()[0]` EM VEZ DE `first()`, e a diferença é de desempenho.
+        `first()` monta uma consulta nova (ORDER BY + LIMIT 1) e por isso
+        ignora o prefetch que a tela já pagou: na lista de orçamentos
+        eram 26 idas ao banco numa página de 25 linhas, uma por linha.
+        `all()` devolve o cache do prefetch quando ele existe, e a lista
+        de endereços de um cliente tem uma ou duas linhas -- indexar isso
+        em memória é de graça.
+
+        Sem prefetch o comportamento é o mesmo de antes: uma consulta.
         """
-        return self.enderecos.first()
+        enderecos = self.enderecos.all()
+        return enderecos[0] if enderecos else None
 
     @property
     def no_mapa(self) -> bool:
