@@ -2925,7 +2925,21 @@ button.ls-incomplete-chip:focus-visible{outline:3px solid rgba(255,128,145,.35);
 .ls-etiqueta-tamanho span{display:flex;flex-direction:column;gap:1px}
 .ls-etiqueta-tamanho small{color:var(--muted);font-weight:600}
 
-/* ---------------------------------------------------------- o papel */
+/* ---------------------------------------------------------- o papel
+
+   A PRIMEIRA VERSÃO ERA CINZA SOBRE BRANCO, E ISSO NÃO É ESTILO: É
+   DEFEITO. Etiqueta de transporte não é lida numa tela a 40 cm -- é lida
+   de pé, a um metro da caixa, na luz do galpão, e muitas vezes numa
+   impressora que já está no fim do toner. Todo cinza que parecia
+   discreto no navegador desaparecia ali. A empresa, o rótulo "entregar
+   a", o conteúdo e a referência ficavam ilegíveis, e sobrava uma
+   etiqueta que só dizia "FRÁGIL".
+
+   Agora não há cinza nenhum. São três tintas, e cada uma tem função:
+   preto para tudo que se lê, grafite cheio na faixa de cima (a marca da
+   casa, que identifica a caixa de longe) e âmbar para o único dado que
+   precisa saltar dentro dessa faixa. Hierarquia se faz com tamanho e
+   peso, não baixando o contraste do que é secundário. */
 .ls-folha-etiquetas{
   display:grid;gap:10px;padding:14px;
   border:1px solid var(--line);border-radius:16px;background:#5B5348;
@@ -2935,74 +2949,117 @@ button.ls-incomplete-chip:focus-visible{outline:3px solid rgba(255,128,145,.35);
 @media(max-width:700px){.ls-folha-etiquetas.a6{grid-template-columns:1fr}}
 
 .ls-etiqueta{
-  display:flex;flex-direction:column;gap:10px;
-  padding:16px 18px;background:#fff;color:#171310;
-  border:2px solid #171310;border-radius:6px;
+  display:flex;flex-direction:column;
+  background:#fff;color:#000;
+  border:3px solid #000;border-radius:4px;
   font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  overflow:hidden;
 }
-.ls-etiqueta-topo{display:flex;align-items:center;gap:11px;border-bottom:2px solid #171310;padding-bottom:9px}
-.ls-etiqueta-logo{width:44px;height:44px;flex:0 0 44px;object-fit:contain}
-.ls-etiqueta-empresa{flex:1 1 auto;min-width:0;display:flex;flex-direction:column}
-.ls-etiqueta-empresa strong{font-size:.95rem;line-height:1.2}
-.ls-etiqueta-empresa small{font-size:.62rem;color:#4A423A;line-height:1.35}
-.ls-etiqueta-volume{
-  flex:0 0 auto;text-align:center;padding:5px 10px;
-  border:2px solid #171310;border-radius:6px;
-}
-.ls-etiqueta-volume small{display:block;font-size:.53rem;letter-spacing:.06em;text-transform:uppercase}
-.ls-etiqueta-volume strong{font-size:1.15rem;line-height:1;font-variant-numeric:tabular-nums}
 
-/* O aviso é o que se lê de longe: no galpão, quem carrega a caixa olha
-   um segundo. O primeiro escolhido ganha a faixa preta; os outros
-   acompanham menores, sem disputar com ele. */
-.ls-etiqueta-selos{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+/* A FAIXA DA CASA. Grafite cheio, do jeito que o painel é: quem procura
+   as caixas da Lazer & Sport na doca acha por ela antes de ler qualquer
+   palavra.
+
+   O `!important` nas cores de `small` daqui para baixo não é preguiça: a
+   folha do painel tem um `.form-text,.small,small{color:#bcae9d
+   !important}` que vale para a área interna inteira, e faz sentido lá --
+   tudo é escuro, e cinza claro é o texto secundário. A etiqueta é a
+   única coisa branca do sistema, papel de verdade, e sem vencer aquela
+   regra ela sai com o remetente e o conteúdo em cinza sobre branco:
+   exatamente o que não se lê no galpão. */
+.ls-etiqueta-topo{
+  display:flex;align-items:center;gap:11px;
+  padding:11px 14px;background:#13100B;color:#fff;
+}
+.ls-etiqueta-logo{
+  width:46px;height:46px;flex:0 0 46px;object-fit:contain;
+  background:#fff;border-radius:5px;padding:3px;
+}
+.ls-etiqueta-empresa{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:1px}
+.ls-etiqueta-empresa strong{font-size:1rem;line-height:1.15;letter-spacing:.01em}
+.ls-etiqueta-empresa small{font-size:.68rem;font-weight:600;line-height:1.3;color:#F5E9D6!important}
+/* O telefone é o dado que resolve uma caixa perdida: é dele o âmbar. */
+.ls-etiqueta-empresa small:last-child{color:#FFC94D!important;font-weight:800}
+.ls-etiqueta-volume{
+  flex:0 0 auto;text-align:center;padding:5px 11px;
+  border:2px solid #FFC94D;border-radius:5px;color:#FFC94D;
+}
+.ls-etiqueta-volume small{display:block;font-size:.54rem;font-weight:900;letter-spacing:.09em;text-transform:uppercase;color:inherit!important}
+.ls-etiqueta-volume strong{font-size:1.25rem;line-height:1.05;font-variant-numeric:tabular-nums}
+
+.ls-etiqueta-corpo{
+  flex:1 1 auto;min-height:0;
+  display:flex;flex-direction:column;gap:11px;
+  padding:13px 14px;
+}
+
+/* O aviso é o que se lê de longe. O primeiro escolhido ocupa a linha
+   inteira em caixa preta; os outros acompanham em moldura, menores, sem
+   disputar com ele. */
+.ls-etiqueta-selos{display:flex;flex-wrap:wrap;gap:6px;align-items:stretch}
 .ls-etiqueta-selo{
   display:inline-flex;align-items:center;gap:5px;
-  padding:4px 9px;border:2px solid #171310;border-radius:5px;
-  font-size:.68rem;font-weight:900;letter-spacing:.04em;text-transform:uppercase;
+  padding:5px 10px;border:2px solid #000;border-radius:4px;
+  color:#000;font-size:.72rem;font-weight:900;
+  letter-spacing:.05em;text-transform:uppercase;
 }
 .ls-etiqueta-selo.principal{
-  padding:7px 14px;font-size:1.05rem;letter-spacing:.09em;
-  background:#171310;color:#fff;
+  flex:1 1 100%;justify-content:center;
+  padding:9px 14px;font-size:1.35rem;letter-spacing:.16em;
+  background:#000;color:#fff;border-color:#000;
 }
-.ls-etiqueta-selo.principal i{font-size:1.15rem}
+.ls-etiqueta-selo.principal i{font-size:1.4rem}
 
 .ls-etiqueta-destino{
-  flex:1 1 auto;min-height:0;padding:10px 12px;
-  border:2px dashed #171310;border-radius:6px;
+  flex:1 1 auto;min-height:0;padding:11px 13px;
+  border:3px solid #000;border-radius:4px;
 }
 .ls-etiqueta-destino>span{
-  display:block;font-size:.58rem;font-weight:900;
-  letter-spacing:.1em;text-transform:uppercase;color:#4A423A;
+  display:block;font-size:.62rem;font-weight:900;
+  letter-spacing:.14em;text-transform:uppercase;color:#000;
 }
-.ls-etiqueta-destino strong{display:block;margin-top:2px;font-size:1.3rem;line-height:1.2}
-.ls-etiqueta-destino p{margin:5px 0 0;font-size:.8rem;line-height:1.4}
-.ls-etiqueta-contato{font-weight:800}
+.ls-etiqueta-destino strong{
+  display:block;margin-top:3px;font-size:1.5rem;line-height:1.15;
+}
+.ls-etiqueta-destino p{margin:6px 0 0;font-size:.88rem;font-weight:600;line-height:1.4;color:#000}
+.ls-etiqueta-contato{font-weight:900;font-size:.95rem!important}
 
 .ls-etiqueta-rodape{
-  display:flex;flex-wrap:wrap;gap:4px 18px;
-  border-top:1px solid #B9AE9C;padding-top:8px;font-size:.72rem;
+  display:flex;flex-wrap:wrap;gap:6px 20px;
+  border-top:2px solid #000;padding-top:9px;font-size:.8rem;font-weight:700;
 }
 .ls-etiqueta-rodape span{display:flex;flex-direction:column;min-width:0}
 .ls-etiqueta-rodape small{
-  font-size:.53rem;font-weight:900;letter-spacing:.08em;
-  text-transform:uppercase;color:#6B6055;
+  font-size:.56rem;font-weight:900;letter-spacing:.1em;
+  text-transform:uppercase;color:#000!important;
 }
 .ls-etiqueta-origem{margin-left:auto;text-align:right}
 
-/* A folha em A6 aperta tudo: quatro por página é volume pequeno. */
-.ls-folha-etiquetas.a6 .ls-etiqueta{padding:10px 11px;gap:6px}
-.ls-folha-etiquetas.a6 .ls-etiqueta-selo.principal{padding:4px 9px;font-size:.8rem}
-.ls-folha-etiquetas.a6 .ls-etiqueta-selo{font-size:.58rem;padding:3px 7px}
-.ls-folha-etiquetas.a6 .ls-etiqueta-destino{padding:7px 9px}
-.ls-folha-etiquetas.a6 .ls-etiqueta-destino strong{font-size:1.02rem}
-.ls-folha-etiquetas.a6 .ls-etiqueta-destino p{font-size:.7rem}
-.ls-folha-etiquetas.a6 .ls-etiqueta-empresa strong{font-size:.8rem}
-.ls-folha-etiquetas.a6 .ls-etiqueta-rodape{font-size:.62rem;gap:3px 12px}
-.ls-folha-etiquetas.a6 .ls-etiqueta-logo{width:32px;height:32px;flex-basis:32px}
+/* A folha em A6 aperta tudo: quatro por página é volume pequeno, e o que
+   encolhe é o tamanho -- nunca o contraste. */
+.ls-folha-etiquetas.a6 .ls-etiqueta-topo{padding:8px 10px;gap:8px}
+.ls-folha-etiquetas.a6 .ls-etiqueta-corpo{padding:10px;gap:8px}
+.ls-folha-etiquetas.a6 .ls-etiqueta-selo.principal{padding:6px 10px;font-size:1rem;letter-spacing:.12em}
+.ls-folha-etiquetas.a6 .ls-etiqueta-selo{font-size:.6rem;padding:3px 7px}
+.ls-folha-etiquetas.a6 .ls-etiqueta-destino{padding:8px 10px}
+.ls-folha-etiquetas.a6 .ls-etiqueta-destino strong{font-size:1.15rem}
+.ls-folha-etiquetas.a6 .ls-etiqueta-destino p{font-size:.75rem}
+.ls-folha-etiquetas.a6 .ls-etiqueta-empresa strong{font-size:.82rem}
+.ls-folha-etiquetas.a6 .ls-etiqueta-empresa small{font-size:.58rem}
+.ls-folha-etiquetas.a6 .ls-etiqueta-rodape{font-size:.66rem;gap:3px 12px}
+.ls-folha-etiquetas.a6 .ls-etiqueta-logo{width:34px;height:34px;flex-basis:34px}
 
-/* Economizar tinta: some o preenchido, fica o traço. */
-.ls-folha-etiquetas.sem-fundo .ls-etiqueta-selo.principal{background:#fff;color:#171310}
+/* ECONOMIZAR TINTA TROCA O PREENCHIDO PELO TRAÇO, E SÓ.
+
+   O contraste continua o mesmo: preto sobre branco em vez de branco
+   sobre preto. O que não pode acontecer aqui é virar cinza -- economia
+   de toner não vale uma etiqueta que ninguém lê. */
+.ls-folha-etiquetas.sem-fundo .ls-etiqueta-topo{background:#fff;color:#000;border-bottom:3px solid #000}
+.ls-folha-etiquetas.sem-fundo .ls-etiqueta-empresa small{color:#000!important}
+.ls-folha-etiquetas.sem-fundo .ls-etiqueta-empresa small:last-child{color:#000!important}
+.ls-folha-etiquetas.sem-fundo .ls-etiqueta-volume{border-color:#000;color:#000}
+.ls-folha-etiquetas.sem-fundo .ls-etiqueta-logo{padding:0}
+.ls-folha-etiquetas.sem-fundo .ls-etiqueta-selo.principal{background:#fff;color:#000}
 
 /* ------------------------------------------------- na impressora
    O painel inteiro sai de cena: menu, topo, formulário e a moldura da

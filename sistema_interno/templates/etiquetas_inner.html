@@ -231,6 +231,10 @@ LSTela.pronto(function () {
               (indice + 1) + "/" + total + "</strong></span>"
             : "") +
         "</header>" +
+        /* O corpo é um bloco à parte porque a faixa de cima agora sangra
+           até a borda: sem ele, o preenchimento do conteúdo empurraria o
+           grafite para dentro e a faixa deixaria de ser faixa. */
+        '<div class="ls-etiqueta-corpo">' +
         (selos ? '<div class="ls-etiqueta-selos">' + selos + "</div>" : "") +
         '<div class="ls-etiqueta-destino">' +
           "<span>Entregar a</span>" +
@@ -249,6 +253,7 @@ LSTela.pronto(function () {
           '<span class="ls-etiqueta-origem"><small>Remetente</small>' +
             escapar(empresa.nome) + "</span>" +
         "</footer>" +
+        "</div>" +
       "</article>"
     );
   }

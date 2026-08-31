@@ -124,6 +124,85 @@ class EtiquetasTests(TestCase):
         # descarta fundo por padrão.
         self.assertIn("print-color-adjust:exact", impressao)
 
+    def test_nao_ha_cinza_no_papel(self):
+        """Etiqueta não é lida numa tela a 40 cm.
+
+        É lida de pé, a um metro da caixa, na luz do galpão, e muitas
+        vezes numa impressora no fim do toner. Todo cinza que parecia
+        discreto no navegador desaparecia ali: a empresa, o rótulo
+        "entregar a", o conteúdo e a referência sumiam, e sobrava uma
+        etiqueta que só dizia "FRÁGIL".
+
+        Hierarquia aqui se faz com tamanho e peso. Baixar o contraste do
+        que é secundário é o que apaga a etiqueta inteira.
+        """
+        import re
+        from pathlib import Path
+
+        folha = (
+            Path(__file__).resolve().parent
+            / "static" / "interno" / "interno_modern.css"
+        ).read_text(encoding="utf-8")
+
+        inicio = folha.index("/* ---------------------------------------------------------- o papel")
+        bloco = folha[inicio:folha.index("@media print", inicio)]
+        # Fora os comentários: eles citam cores para contar a história.
+        bloco = re.sub(r"/\*.*?\*/", "", bloco, flags=re.S)
+
+        # Só a TINTA. O fundo da folha na tela (a mesa sob as etiquetas)
+        # é escuro de propósito e não vai para o papel: a regra de
+        # impressão o troca por branco.
+        cinzas = []
+        for cor in re.findall(r"color:\s*#([0-9A-Fa-f]{6})", bloco):
+            r, v, a = (int(cor[i:i + 2], 16) for i in (0, 2, 4))
+            proximo = max(r, v, a) - min(r, v, a) < 34
+            meio = 90 < r < 215
+            if proximo and meio:
+                cinzas.append("#" + cor)
+
+        self.assertEqual(
+            cinzas, [],
+            "Cinza médio no papel da etiqueta: " + ", ".join(cinzas),
+        )
+
+    def test_a_faixa_da_casa_identifica_a_caixa_de_longe(self):
+        """Antes de ler qualquer palavra, se acha a caixa pela faixa."""
+        from pathlib import Path
+
+        folha = (
+            Path(__file__).resolve().parent
+            / "static" / "interno" / "interno_modern.css"
+        ).read_text(encoding="utf-8")
+
+        inicio = folha.index(".ls-etiqueta-topo{")
+        faixa = folha[inicio:folha.index("}", inicio)]
+
+        # O grafite do painel, cheio -- não uma variação clara dele.
+        self.assertIn("#13100B", faixa)
+        self.assertIn("color:#fff", faixa)
+
+    def test_economizar_tinta_troca_o_preenchido_pelo_traco_e_so(self):
+        """Economia de toner não vale uma etiqueta que ninguém lê."""
+        from pathlib import Path
+
+        folha = (
+            Path(__file__).resolve().parent
+            / "static" / "interno" / "interno_modern.css"
+        ).read_text(encoding="utf-8")
+
+        economia = [
+            linha for linha in folha.splitlines()
+            if ".ls-folha-etiquetas.sem-fundo" in linha
+        ]
+        self.assertTrue(economia, "o modo de economia de tinta sumiu")
+        for linha in economia:
+            with self.subTest(regra=linha.strip()[:60]):
+                # Só preto e branco: nenhuma cor intermediária.
+                for cor in ("#000", "#fff"):
+                    pass
+                self.assertNotIn("#bcae9d", linha)
+                self.assertNotIn("var(--muted)", linha)
+
     def test_a_tela_esta_no_menu(self):
         """Tela que não está no menu é tela que ninguém acha."""
         self.assertIn(

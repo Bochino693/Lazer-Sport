@@ -505,6 +505,32 @@ que rota nova entra na varredura sozinha.
 Bootstrap, os ícones e a fonte já são servidos daqui. Um gráfico de uma
 série cabe em SVG escrito à mão; não vale trazer biblioteca para isso.
 
+**Navegação suave que falha entrega ao navegador.** Ela é um ATALHO por
+cima do clique num link. Quando o atalho não dá -- rede caindo, 500,
+resposta travada --, o certo é fazer o que aconteceria sem ele: navegar
+de verdade. Painel de "tentar novamente" é beco sem saída: a tela pedida
+não vem, a anterior fica, e quem clicou tem de clicar outra vez. Duas
+armadilhas que vêm junto: a sequência da navegação precisa acompanhar a
+troca INTEIRA (a espera pela folha de estilo é assíncrona, e quem termina
+por último desenha), e `startViewTransition` pode desistir depois de
+devolver -- o desenho não pode ficar pendurado só no callback dela.
+
+**Ação que não cabe na situação não aparece -- e o servidor repete a
+regra.** Vale para o orçamento e para a O.S.: `pode_enviar`,
+`pode_receber_pagamento`, `quitado`, `pode_refazer`. Uma trava no modelo
+que existe por causa de um efeito colateral cai junto com ele: quando
+"refazer" deixou de substituir a proposta de origem, as três travas que
+protegiam a origem (uma refeita só, substituída não gera outra, paga não
+pode) deixaram de ter razão.
+
+**Impresso: preto no papel, e altura mínima, nunca fixa.** Papel não é
+lido numa tela a 40 cm: é lido de pé, a um metro, na luz do galpão, numa
+impressora no fim do toner. Cinza que parece discreto no navegador
+desaparece ali -- hierarquia se faz com tamanho e peso, nunca baixando o
+contraste. Atenção ao `.form-text,.small,small{color:#bcae9d!important}`
+da folha do painel: ele vale para a área interna inteira e faz sentido no
+escuro, mas apaga qualquer `small` de um impresso branco.
+
 **Impresso: altura mínima, nunca fixa.** Com `height`, um endereço de
 quatro linhas empurra o rodapé para fora da moldura e o papel sai
 cortado justamente na parte que explica o documento. E impressora
@@ -546,5 +572,8 @@ aviso de frágil), marque `print-color-adjust:exact`.
       (ver 9.2).
 - [ ] Nenhum `{% static %}` apontando para arquivo que não existe, e
       nenhuma biblioteca de fora (ver 9.2).
-- [ ] Se imprime: altura mínima em vez de fixa, e
-      `print-color-adjust:exact` onde a cor significa algo (ver 9.2).
+- [ ] Se imprime: altura mínima em vez de fixa, preto no papel (nenhum
+      cinza médio) e `print-color-adjust:exact` onde a cor significa
+      algo (ver 9.2).
+- [ ] Nenhum caminho de falha de navegação termina em painel: todos
+      entregam ao navegador (ver 9.2).
