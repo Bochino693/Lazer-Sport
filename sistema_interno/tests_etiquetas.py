@@ -40,6 +40,13 @@ class EtiquetasTests(TestCase):
         inicio = html.index(marca) + len(marca)
         return json.loads(html[inicio:html.index("</script>", inicio)])
 
+    def propostas(self, html=None):
+        """As propostas aprovadas que viajaram para a tela, como dado."""
+        html = html if html is not None else self.tela()
+        marca = '<script id="opcoesPropostasEtiqueta" type="application/json">'
+        inicio = html.index(marca) + len(marca)
+        return json.loads(html[inicio:html.index("</script>", inicio)])
+
     def test_a_etiqueta_diz_de_onde_a_caixa_veio(self):
         """Se algo se perder, é para a empresa que ligam."""
         html = self.tela()
@@ -167,6 +174,43 @@ class EtiquetasTests(TestCase):
             with self.subTest(cor=cor):
                 self.assertNotIn(cor, etiqueta)
 
+    def test_o_miudo_do_papel_vence_o_cinza_global_do_painel(self):
+        """A regra de cor da etiqueta perdia sem `!important`, e era isso.
+
+        O painel pinta TODO texto miúdo do aplicativo de cinza quente
+        com `.form-text,.small,small{color:...!important}`. Faz sentido
+        lá: `small` no painel é sempre legenda sobre fundo escuro.
+
+        Mas a etiqueta é branca, é papel, e mora dentro do painel. Ela
+        herdava esse cinza no telefone da empresa, no CNPJ, no número do
+        volume e nos rótulos do rodapé -- e as regras de cor da etiqueta,
+        que diziam `#000` sem `!important`, perdiam para um `!important`
+        escrito centenas de linhas acima. Não era disputa de ordem: cor
+        sem `!important` contra cor com `!important` perde sempre, e o
+        `#000` da etiqueta era decorativo.
+
+        Este teste existe porque olhar o CSS da etiqueta não mostrava
+        nada de errado: só o navegador mostrava.
+        """
+        from pathlib import Path
+
+        folha = (
+            Path(__file__).resolve().parent
+            / "static" / "interno" / "interno_modern.css"
+        ).read_text(encoding="utf-8")
+
+        # A regra global continua lá -- é ela que torna o `!important`
+        # da etiqueta obrigatório. Se um dia sair, este teste avisa que a
+        # muleta pode sair junto.
+        self.assertIn(".form-text,.small,small{color:#bcae9d!important}", folha)
+
+        # E a etiqueta reivindica o preto de volta, com a mesma força.
+        self.assertIn(
+            ".ls-etiqueta small,\n.ls-etiqueta .form-text,\n"
+            ".ls-etiqueta .small{color:#000!important}",
+            folha,
+        )
+
     def test_nenhuma_letra_do_papel_desce_abaixo_do_que_o_laser_imprime(self):
         """Abaixo de ~.6rem a impressora come a letra, e o rótulo some."""
         import re
@@ -178,30 +222,102 @@ class EtiquetasTests(TestCase):
                     "corpo miúdo demais para sair legível da impressora",
                 )
 
-    def test_a_etiqueta_rapida_e_a_primeira_escolha(self):
-        """A caixa que não é de pedido nenhum não deve pedir dados de pedido.
+    def test_as_tres_origens_da_etiqueta(self):
+        """Três situações reais do galpão, e cada uma começa de um lugar.
 
-        Conteúdo, número de volume e referência de O.S. só existem
-        quando há pedido. Deixá-los na frente de quem despacha uma troca
-        em garantia é ensinar a pular campo -- e quem pula campo pula o
-        endereço junto.
+        A PROPOSTA APROVADA é de onde sai quase toda caixa: tudo o que a
+        etiqueta precisa já foi digitado uma vez na venda, e redigitar
+        com o caminhão esperando é a chance de errar o endereço -- erro
+        que só aparece quando a carga volta.
+
+        O CLIENTE resolve a troca em garantia e a peça que ele veio
+        buscar. DO ZERO existe porque exigir cadastro antes de imprimir
+        mandaria quem fecha a caixa abrir outra tela e voltar.
         """
         html = self.tela()
 
-        self.assertIn('name="modo" value="rapida" checked', html)
-        self.assertIn('name="modo" value="completa"', html)
-        # O bloco da carga nasce escondido: quem abre a tela vê nome,
-        # endereço e nada mais.
-        self.assertIn("data-so-completa hidden", html)
+        self.assertIn('name="origem" value="proposta" checked', html)
+        self.assertIn('name="origem" value="cliente"', html)
+        self.assertIn('name="origem" value="zero"', html)
+        # Cartão, e não `select`: num select fechado só uma das três
+        # aparece, e quem não sabe das outras nunca abre a lista.
+        self.assertIn("ls-cartoes-escolha", html)
 
-    def test_a_rapida_nao_imprime_o_que_ela_escondeu(self):
-        """Campo oculto que ainda vai ao papel é pior do que campo visível."""
+    def test_a_proposta_aprovada_traz_a_etiqueta_pronta(self):
+        """Endereço redigitado com o caminhão esperando é endereço errado."""
+        from decimal import Decimal
+
+        from .models import ItemOrcamento, Orcamento
+
+        proposta = Orcamento.objects.create(
+            nome_cliente="Buffet Alegria",
+            whatsapp_cliente="(11) 99999-1111",
+            status=Orcamento.Status.APROVADO,
+        )
+        ItemOrcamento.objects.create(
+            orcamento=proposta, descricao="Cama elástica 3,05 m",
+            quantidade=Decimal("1.00"), valor_unitario=Decimal("2500.00"),
+        )
+        ItemOrcamento.objects.create(
+            orcamento=proposta, descricao="Piscina de bolinhas",
+            quantidade=Decimal("1.00"), valor_unitario=Decimal("900.00"),
+        )
+
+        opcoes = self.propostas()
+        self.assertEqual(len(opcoes), 1)
+        escolhida = opcoes[0]
+        self.assertEqual(escolhida["nome"], "Buffet Alegria")
+        self.assertEqual(escolhida["contato"], "(11) 99999-1111")
+        self.assertEqual(escolhida["referencia"], f"Proposta #{proposta.pk}")
+        # O conteúdo é a lista, e não o primeiro item: quem abre a caixa
+        # no destino confere contra o que está escrito.
+        self.assertIn("Cama elástica 3,05 m", escolhida["conteudo"])
+        self.assertIn("Piscina de bolinhas", escolhida["conteudo"])
+        # Um volume por item é o palpite certo na maioria das cargas.
+        self.assertEqual(escolhida["volumes"], 2)
+
+    def test_a_versao_substituida_nao_vira_etiqueta(self):
+        """Ela descreve a carga que foi trocada por outra."""
+        from .models import Orcamento
+
+        Orcamento.objects.create(
+            nome_cliente="Proposta velha",
+            status=Orcamento.Status.SUBSTITUIDO,
+        )
+        Orcamento.objects.create(
+            nome_cliente="Rascunho",
+            status=Orcamento.Status.RASCUNHO,
+        )
+        self.assertEqual(self.propostas(), [])
+
+    def test_a_carga_e_opcional_e_parece_opcional(self):
+        """Metade dos campos em branco ensina quem preenche a pular campo.
+
+        Conteúdo, volume e referência só existem quando há pedido. Na
+        caixa avulsa eles ficariam vazios -- e quem pula campo pula o
+        endereço junto. Fechado, o essencial é o que se vê.
+        """
         html = self.tela()
 
-        self.assertIn("conteudo: rapida ? \"\" : texto(\"etiquetaConteudo\")", html)
-        self.assertIn("referencia: rapida ? \"\" : texto(\"etiquetaReferencia\")", html)
-        # Sem carga descrita, não há por que numerar volume.
-        self.assertIn("var total = rapida", html)
+        self.assertIn('<details class="ls-completar-bloco ls-etiqueta-carga"', html)
+        self.assertIn("opcional", html)
+        # Sem `open`: nasce fechada. A proposta é que a abre, pelo JS,
+        # depois de escrever conteúdo e volumes lá dentro.
+        self.assertIn('id="etiquetaCarga"', html)
+        self.assertNotIn('id="etiquetaCarga" open', html)
+
+    def test_o_papel_segue_o_que_foi_preenchido(self):
+        """Não há modo a escolher: campo em branco não imprime.
+
+        A etiqueta sem conteúdo, sem volume e sem referência é a da caixa
+        avulsa, e nela o endereço é o documento -- então sai grande.
+        """
+        html = self.tela()
+
+        self.assertIn(
+            'enxuta: !conteudo && !referencia && total === 1', html,
+        )
+        self.assertIn('dados.enxuta ? " enxuta" : ""', html)
 
     def test_a_tela_esta_no_menu(self):
         """Tela que não está no menu é tela que ninguém acha."""

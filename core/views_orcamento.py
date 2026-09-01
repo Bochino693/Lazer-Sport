@@ -32,6 +32,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 from django.views.generic import View
 
+from .impressao import densidade, peso_do_documento
 from core.models import EnderecoEmpresa
 from core.email_utils import cnpj_empresa, dados_bancarios_empresa, nome_empresa
 from sistema_interno.models import Orcamento
@@ -133,6 +134,16 @@ def contexto_orcamento(orcamento, *, previsualizacao=False, request=None):
     contexto = {
         "orcamento": orcamento,
         "itens": itens,
+        # QUÃO APERTADA A FOLHA PRECISA SAIR. Ver `core/impressao.py`.
+        #
+        # O peso conta o documento inteiro, e não só os itens: uma
+        # proposta de três itens com uma página de observações ocupa mais
+        # folha do que uma de dez itens secos.
+        "densidade_folha": densidade(peso_do_documento(
+            itens=len(itens),
+            textos=(orcamento.observacoes,),
+            com_pagamento=True,
+        )),
         "imagem_previa": imagem_previa,
         "endereco_publico": endereco_publico,
         "empresa": empresa,

@@ -229,12 +229,93 @@ class ScriptDeTelaNaoEsperaDOMContentLoadedTests(SimpleTestCase):
         self.assertIn("@media (min-width:601px) and (max-width:900px)", folha)
         self.assertIn("grid-template-columns:repeat(3,minmax(0,1fr))!important", folha)
 
-    def test_documentos_usam_folha_a4_compacta(self):
+    def test_documentos_ocupam_a_folha_a4_inteira(self):
+        """Uma folha só continua sendo a regra -- vazia deixou de ser.
+
+        Para garantir que nunca virasse a página, os dois documentos
+        tinham sido encolhidos até caber a maior proposta imaginável:
+        corpo de 8px, rótulos de 5,2pt, recuos de 1,2mm. Funcionava, e o
+        preço era que TODA proposta pagava pelo tamanho da maior -- o
+        cliente recebia uma A4 com o documento espremido no terço de
+        cima e quase metade da folha em branco.
+
+        Agora a folha é uma coluna com a altura útil da A4: o rodapé
+        prende no pé e os quadros dividem a sobra entre si.
+        """
         for nome in ("orcamento_publico.html", "ordem_servico_publica.html"):
             with self.subTest(documento=nome):
                 documento = (RAIZ_CORE / "templates" / nome).read_text(encoding="utf-8")
-                self.assertIn("@page{size:A4 portrait;margin:4mm}", documento)
-                self.assertIn("width:202mm", documento)
+                self.assertIn("@page{size:A4 portrait;margin:9mm}", documento)
+                self.assertIn("width:192mm", documento)
+                # A coluna que preenche a folha, e o rodapé no pé dela.
+                self.assertIn("min-height:277mm", documento)
+                self.assertIn("margin-top:auto", documento)
+                # O tamanho antigo não volta.
+                self.assertNotIn("font-size:8px", documento)
+
+    def test_nenhuma_letra_impressa_desce_abaixo_do_que_o_papel_aguenta(self):
+        """5,2pt não se lê em papel, e a laser come a letra fina."""
+        import re
+
+        for nome in ("orcamento_publico.html", "ordem_servico_publica.html"):
+            with self.subTest(documento=nome):
+                documento = (RAIZ_CORE / "templates" / nome).read_text(encoding="utf-8")
+                impressao = documento[documento.index("@media print"):]
+                impressao = re.sub(r"/\*.*?\*/", " ", impressao, flags=re.S)
+
+                for tamanho in re.findall(r"font-size:([\d.]+)pt", impressao):
+                    with self.subTest(tamanho=tamanho):
+                        self.assertGreaterEqual(float(tamanho), 6.6)
+
+    def test_a_densidade_da_folha_e_decidida_no_servidor(self):
+        """`:nth-of-type` conta por TIPO de elemento, e não por classe.
+
+        No orçamento as linhas de item são `div` no meio de outras `div`
+        -- o título do bloco, o cabeçalho da tabela. "O nono div" não é
+        "o nono item", e a regra quebraria em silêncio na próxima `div`
+        acrescentada antes da lista.
+        """
+        from core.impressao import densidade, peso_do_documento
+
+        self.assertEqual(densidade(0), "folha-solta")
+        self.assertEqual(densidade(10), "folha-solta")
+        self.assertEqual(densidade(11), "folha-densa")
+        self.assertEqual(densidade(18), "folha-densa")
+        self.assertEqual(densidade(19), "folha-apertada")
+        self.assertEqual(densidade(200), "folha-apertada")
+
+        # O PESO É DO DOCUMENTO INTEIRO, E NÃO DA TABELA.
+        #
+        # Uma O.S. de quatro itens com um diagnóstico longo, fotos e o
+        # quadro do Pix ocupa mais folha do que uma de doze itens secos.
+        # Contar só linhas de tabela acertaria a segunda e erraria a
+        # primeira -- e errar aqui é entregar um documento cortado ou uma
+        # folha pela metade.
+        self.assertEqual(peso_do_documento(itens=4), 4)
+        self.assertGreater(
+            peso_do_documento(itens=4, textos=("x" * 400,), com_pagamento=True),
+            peso_do_documento(itens=12),
+        )
+        # Texto vazio não pesa; nem `None`, que é o que vem de um campo
+        # em branco no banco.
+        self.assertEqual(peso_do_documento(itens=2, textos=("", "   ", None)), 2)
+        # Fotos entram pela faixa que ocupam: para a folha tanto faz se
+        # o que a encheu foi tabela ou imagem.
+        self.assertGreater(
+            peso_do_documento(itens=2, fotos=6), peso_do_documento(itens=2),
+        )
+        # Nada de contagem de tipo sobrando nas REGRAS. Os comentários
+        # citam `nth-of-type` de propósito, para explicar por que ele não
+        # serve aqui -- procurar no arquivo inteiro acusaria a explicação
+        # da correção como se fosse a falha.
+        import re
+
+        for nome in ("orcamento_publico.html", "ordem_servico_publica.html"):
+            with self.subTest(documento=nome):
+                documento = (RAIZ_CORE / "templates" / nome).read_text(encoding="utf-8")
+                self.assertIn('class="{{ densidade_folha }}"', documento)
+                regras = re.sub(r"/\*.*?\*/", " ", documento, flags=re.S)
+                self.assertNotIn("nth-of-type", regras)
 
 
 class IdentidadeVisualTests(SimpleTestCase):
