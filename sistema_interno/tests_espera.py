@@ -91,6 +91,16 @@ class AcordarAntesDeAgirTests(SimpleTestCase):
         """
         self.assertIn('fetch("/pronto/?painel=1"', self.painel())
 
+    def test_get_recente_elimina_despertar_redundante_antes_do_post(self):
+        painel = self.painel()
+        navegacao = (
+            RAIZ / "static" / "interno" / "ls-soft-navigation.js"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("marcarSucesso: function ()", painel)
+        self.assertIn("Painel.rede.marcarSucesso();", painel)
+        self.assertIn("window.Painel.rede.marcarSucesso();", navegacao)
+
     def test_a_espera_cabe_numa_partida_a_frio(self):
         """Eram ~2 segundos: o bastante para uma oscilação de rede, e
         muito pouco para o caso que motivou tudo isto.

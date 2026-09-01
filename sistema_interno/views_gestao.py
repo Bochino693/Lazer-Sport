@@ -846,8 +846,17 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
                 ),
                 status=409,
             )
-        comercial_antes = self._assinatura_comercial(orcamento) if orcamento.pk else None
-        financeiro_antes = self._assinatura_financeira(orcamento) if orcamento.pk else None
+        # Cada assinatura toca o banco. Ler a parte comercial para um
+        # usuário que só altera o financeiro fazia duas consultas aos itens
+        # sem qualquer possibilidade de mudar esse bloco.
+        comercial_antes = (
+            self._assinatura_comercial(orcamento)
+            if orcamento.pk and acesso["orcamentos_editar_comercial"] else None
+        )
+        financeiro_antes = (
+            self._assinatura_financeira(orcamento)
+            if orcamento.pk and acesso["orcamentos_editar_financeiro"] else None
+        )
 
         if acesso["orcamentos_editar_comercial"]:
             cliente_id = (request.POST.get("cliente") or "").strip()
@@ -895,15 +904,44 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
             orcamento.origem = origem_padrao_orcamento(request.user)
 
         orcamento.save()
+        itens_gravados = None
         if acesso["orcamentos_editar_comercial"]:
-            self._gravar_itens(orcamento, request.POST.get("itens"))
+            itens_gravados = self._gravar_itens(
+                orcamento, request.POST.get("itens"),
+            )
 
-        comercial_mudou = novo or comercial_antes != self._assinatura_comercial(orcamento)
-        financeiro_mudou = novo or financeiro_antes != self._assinatura_financeira(orcamento)
+        comercial_mudou = novo or (
+            acesso["orcamentos_editar_comercial"]
+            and comercial_antes != self._assinatura_comercial(
+                orcamento, itens=itens_gravados,
+            )
+        )
+        financeiro_mudou = novo or (
+            acesso["orcamentos_editar_financeiro"]
+            and financeiro_antes != self._assinatura_financeira(orcamento)
+        )
+        blocos_reabertos = []
         if comercial_mudou:
-            self._reabrir_bloco(orcamento, AvaliacaoBlocoOrcamento.Bloco.COMERCIAL)
+            blocos_reabertos.append(AvaliacaoBlocoOrcamento.Bloco.COMERCIAL)
         if financeiro_mudou:
-            self._reabrir_bloco(orcamento, AvaliacaoBlocoOrcamento.Bloco.FINANCEIRO)
+            blocos_reabertos.append(AvaliacaoBlocoOrcamento.Bloco.FINANCEIRO)
+
+        if novo:
+            # A proposta nova sempre nasce com os dois blocos pendentes.
+            # Duas chamadas a update_or_create faziam SELECT + INSERT para
+            # cada bloco; o banco remoto recebia quatro viagens para gravar
+            # duas linhas conhecidas de antemão.
+            AvaliacaoBlocoOrcamento.objects.bulk_create([
+                AvaliacaoBlocoOrcamento(
+                    orcamento=orcamento,
+                    bloco=bloco,
+                    status=AvaliacaoBlocoOrcamento.Status.PENDENTE,
+                )
+                for bloco in blocos_reabertos
+            ])
+        else:
+            for bloco in blocos_reabertos:
+                self._reabrir_bloco(orcamento, bloco)
 
         registrar_atividade_orcamento(
             orcamento,
@@ -930,20 +968,29 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
         )
 
     @staticmethod
-    def _assinatura_comercial(orcamento):
+    def _assinatura_comercial(orcamento, itens=None):
         if not orcamento.pk:
             return None
-        itens = tuple(
-            orcamento.itens.order_by("id").values_list(
-                "descricao", "brinquedo_id", "produto_id", "peca_id",
-                "quantidade", "valor_unitario",
+        if itens is None:
+            assinatura_itens = tuple(
+                orcamento.itens.order_by("id").values_list(
+                    "descricao", "brinquedo_id", "produto_id", "peca_id",
+                    "quantidade", "valor_unitario",
+                )
             )
-        )
+        else:
+            assinatura_itens = tuple(
+                (
+                    item.descricao, item.brinquedo_id, item.produto_id,
+                    item.peca_id, item.quantidade, item.valor_unitario,
+                )
+                for item in itens
+            )
         return (
             orcamento.cliente_id, orcamento.nome_cliente, orcamento.contato,
             orcamento.whatsapp_cliente, orcamento.email_cliente,
             orcamento.status, orcamento.validade, orcamento.forma_envio,
-            orcamento.observacoes, itens,
+            orcamento.observacoes, assinatura_itens,
         )
 
     @staticmethod
@@ -990,6 +1037,32 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
         if len(linhas) > 60:
             raise ErroDeFormulario("Um orçamento aceita no máximo 60 itens.")
 
+        # Catálogo em lote. Antes cada linha fazia até três SELECTs
+        # sequenciais (brinquedo, produto e peça). No PostgreSQL remoto o
+        # custo era a latência da rede multiplicada pela quantidade de
+        # itens; agora são no máximo três consultas para a lista inteira.
+        ids_brinquedos = {
+            int(str(linha.get("brinquedo") or "").strip())
+            for linha in linhas
+            if isinstance(linha, dict)
+            and str(linha.get("brinquedo") or "").strip().isdigit()
+        }
+        ids_produtos = {
+            int(str(linha.get("produto") or "").strip())
+            for linha in linhas
+            if isinstance(linha, dict)
+            and str(linha.get("produto") or "").strip().isdigit()
+        }
+        ids_pecas = {
+            int(str(linha.get("peca") or "").strip())
+            for linha in linhas
+            if isinstance(linha, dict)
+            and str(linha.get("peca") or "").strip().isdigit()
+        }
+        brinquedos = Brinquedos.objects.in_bulk(ids_brinquedos)
+        produtos = ProdutoInterno.objects.in_bulk(ids_produtos)
+        pecas = PecasReposicao.objects.in_bulk(ids_pecas)
+
         novos = []
         for posicao, linha in enumerate(linhas, start=1):
             if not isinstance(linha, dict):
@@ -1018,26 +1091,17 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
             # ignorado -- catálogo, produção e reposição são origens
             # exclusivas (ver ItemOrcamento.clean).
             brinquedo_id = str(linha.get("brinquedo") or "").strip()
-            brinquedo = (
-                Brinquedos.objects.filter(pk=brinquedo_id).first()
-                if brinquedo_id.isdigit() else None
-            )
+            brinquedo = brinquedos.get(int(brinquedo_id)) if brinquedo_id.isdigit() else None
 
             produto = None
             peca = None
             if brinquedo is None:
                 produto_id = str(linha.get("produto") or "").strip()
-                produto = (
-                    ProdutoInterno.objects.filter(pk=produto_id).first()
-                    if produto_id.isdigit() else None
-                )
+                produto = produtos.get(int(produto_id)) if produto_id.isdigit() else None
 
             if brinquedo is None and produto is None:
                 peca_id = str(linha.get("peca") or "").strip()
-                peca = (
-                    PecasReposicao.objects.filter(pk=peca_id).first()
-                    if peca_id.isdigit() else None
-                )
+                peca = pecas.get(int(peca_id)) if peca_id.isdigit() else None
 
             novos.append(ItemOrcamento(
                 orcamento=orcamento,
@@ -1051,6 +1115,13 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
 
         orcamento.itens.all().delete()
         ItemOrcamento.objects.bulk_create(novos)
+        # A resposta mostra o total imediatamente. Reaproveitar os objetos
+        # que acabaram de ser gravados evita buscá-los novamente só para
+        # somar o mesmo conteúdo.
+        cache_relacoes = getattr(orcamento, "_prefetched_objects_cache", {})
+        cache_relacoes["itens"] = novos
+        orcamento._prefetched_objects_cache = cache_relacoes
+        return novos
 
     def acao_status(self, request):
         if not capacidades(request.user)["orcamentos_editar_comercial"]:

@@ -729,6 +729,13 @@
   Painel.rede = {
     acordar: acordarServidor,
 
+    /* Navegação e central de avisos também atravessam o Django e o banco.
+       Se uma delas acabou de responder, esperar outro /pronto/ antes de
+       salvar seria uma viagem redundante pela rede. */
+    marcarSucesso: function () {
+      redeUltimoSucesso = Date.now();
+    },
+
     /* POST único: o preflight GET pode repetir; a gravação nunca. */
     post: function (destino, opcoes) {
       /* NÃO RECUSAR A GRAVAÇÃO PORQUE O DESPERTAR FALHOU.
@@ -817,7 +824,7 @@
    *
    * opcoes: { form, erro, action, antes, depois, rotuloCarregando }
    * - antes: devolve string com um erro de validacao para barrar o envio
-   * - depois: recebe o JSON; por padrao recarrega a pagina
+   * - depois: recebe o JSON; por padrão atualiza somente a tela
    */
   Painel.ligar = function (opcoes) {
     var form = document.getElementById(opcoes.form);
@@ -873,7 +880,16 @@
             opcoes.depois(json);
             travar(false);
           } else {
-            global.location.reload();
+            /* A gravação já terminou. Fecha a janela imediatamente para
+               que o clique pareça concluído e atualiza só o conteúdo;
+               recarregar o documento inteiro repetia CSS, scripts e menu. */
+            var modal = form.closest(".modal");
+            if (modal && modal.id) Painel.fechar(modal.id);
+            if (typeof global.LSAtualizarTela === "function") {
+              global.LSAtualizarTela();
+            } else {
+              global.location.reload();
+            }
           }
         })
         .catch(function (err) {
@@ -1439,6 +1455,7 @@
           return null;
         }
         if (!resposta.ok) return null;
+        Painel.rede.marcarSucesso();
         return resposta.json();
       })
       .then(function (dados) {

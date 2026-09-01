@@ -621,14 +621,37 @@ Dito em voz alta: este NÃO é o /adm do site. Quem trabalha nos
   const overlay = document.getElementById("sidebarOverlay");
   const toggle = document.getElementById("menuToggle");
 
+  function menuCompacto() {
+    return window.matchMedia && window.matchMedia("(max-width:1100px)").matches;
+  }
+
   function closeSidebar() {
     sidebar?.classList.remove("open");
     overlay?.classList.remove("open");
+    toggle?.setAttribute("aria-expanded", "false");
+    document.body.classList.remove("menu-open");
+
+    /* Entre 761 e 1100 px o menu é o trilho expandido, e não a gaveta.
+       Remover só `.open` não fazia nada nessa faixa. No tablet os dois
+       modos precisam fechar juntos ao escolher outra tela. */
+    if (menuCompacto()) {
+      sidebar?.classList.remove("expandida");
+      aberto = false;
+      try { localStorage.setItem(CHAVE, "0"); } catch (e) {}
+      railToggle?.setAttribute("aria-label", "Expandir menu");
+      railToggle?.setAttribute("title", "Expandir menu");
+    }
   }
 
+  window.LSFecharMenuTablet = closeSidebar;
+
   toggle?.addEventListener("click", function () {
-    sidebar?.classList.toggle("open");
-    overlay?.classList.toggle("open");
+    const abrindo = !sidebar?.classList.contains("open");
+    if (!abrindo) { closeSidebar(); return; }
+    sidebar?.classList.add("open");
+    overlay?.classList.add("open");
+    toggle?.setAttribute("aria-expanded", "true");
+    document.body.classList.add("menu-open");
   });
 
   overlay?.addEventListener("click", closeSidebar);
@@ -687,6 +710,7 @@ Dito em voz alta: este NÃO é o /adm do site. Quem trabalha nos
      inclusive o menu do celular. */
   let aberto = false;
   try { aberto = localStorage.getItem(CHAVE) === "1"; } catch (e) {}
+  if (menuCompacto()) aberto = false;
   aplicarTrilho(aberto);
 
   railToggle?.addEventListener("click", function () {
@@ -714,9 +738,24 @@ Dito em voz alta: este NÃO é o /adm do site. Quem trabalha nos
   /* A aba "Menu" abre a mesma gaveta do botão do topo. */
   document.getElementById("abaMenu")?.addEventListener("click", function (evento) {
     evento.stopPropagation();
+    if (window.matchMedia("(min-width:761px) and (max-width:1100px)").matches) {
+      aberto = true;
+      aplicarTrilho(true);
+      return;
+    }
     sidebar?.classList.add("open");
     overlay?.classList.add("open");
+    toggle?.setAttribute("aria-expanded", "true");
+    document.body.classList.add("menu-open");
   });
+
+  /* Fecha no próprio toque, antes da requisição. Captura roda antes do
+     controlador da navegação suave. */
+  document.addEventListener("click", function (evento) {
+    if (evento.target.closest("#sidebarMenu a[href], .ls-abas a[href]")) {
+      closeSidebar();
+    }
+  }, true);
 })();
 </script>
 {% comment %}

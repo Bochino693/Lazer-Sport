@@ -19,10 +19,15 @@ quem reintroduzir um `.first()` numa propriedade de linha vai reprovar
 aqui, e não seis meses depois, num servidor lento.
 """
 
+import json
 from decimal import Decimal
 
 from django.contrib.auth.models import User
+from django.db import connection
 from django.test import TestCase, override_settings
+from django.test.utils import CaptureQueriesContext
+
+from core.models import PecasReposicao
 
 from .models import (
     Cliente,
@@ -178,3 +183,80 @@ class EnderecoPrincipalUsaOPrefetchTests(TestCase):
         sozinho = Cliente.objects.create(nome_cliente="Sem endereço")
 
         self.assertIsNone(sozinho.endereco_principal)
+
+
+@override_settings(ALLOWED_HOSTS=["interno.testserver", "testserver"])
+class GravacoesNaoConsultamCatalogoPorItemTests(TestCase):
+    """Salvar vinte linhas não pode fazer vinte viagens ao banco remoto."""
+
+    FOLGA = 2
+
+    def setUp(self):
+        self.gestor = User.objects.create_superuser(
+            username="gestor-gravacao", password="x", email="save@example.com",
+        )
+        self.client.force_login(self.gestor)
+        self.peca = PecasReposicao.objects.create(
+            nome="Bucha de teste", descricao_peca="Reposição",
+            preco_venda=Decimal("12.00"), ativo=False,
+        )
+
+    def medir(self, rota, dados):
+        with CaptureQueriesContext(connection) as consultas:
+            resposta = self.client.post(
+                rota,
+                dados,
+                HTTP_HOST="interno.testserver",
+                HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+            )
+        self.assertEqual(resposta.status_code, 200, resposta.content)
+        return len(consultas)
+
+    def itens_orcamento(self, quantidade):
+        return json.dumps([
+            {
+                "descricao": f"Bucha {indice}",
+                "peca": str(self.peca.pk),
+                "quantidade": "1",
+                "valor_unitario": "12,00",
+            }
+            for indice in range(quantidade)
+        ])
+
+    def itens_os(self, quantidade):
+        return json.dumps([
+            {
+                "tipo": "peca",
+                "descricao": f"Bucha {indice}",
+                "peca": str(self.peca.pk),
+                "quantidade": "1",
+                "valor_unitario": "12,00",
+            }
+            for indice in range(quantidade)
+        ])
+
+    def test_orcamento_resolve_catalogo_em_lote(self):
+        uma = self.medir("/orcamentos/", {
+            "action": "save", "nome_cliente": "Uma linha",
+            "itens": self.itens_orcamento(1),
+        })
+        vinte = self.medir("/orcamentos/", {
+            "action": "save", "nome_cliente": "Vinte linhas",
+            "itens": self.itens_orcamento(20),
+        })
+
+        self.assertLessEqual(vinte, uma + self.FOLGA)
+
+    def test_os_resolve_pecas_em_lote(self):
+        base = {
+            "action": "save", "tipo": "manutencao",
+            "status": "rascunho", "prioridade": "normal",
+        }
+        uma = self.medir("/ordens-servico/", {
+            **base, "equipamento": "Uma linha", "itens": self.itens_os(1),
+        })
+        vinte = self.medir("/ordens-servico/", {
+            **base, "equipamento": "Vinte linhas", "itens": self.itens_os(20),
+        })
+
+        self.assertLessEqual(vinte, uma + self.FOLGA)

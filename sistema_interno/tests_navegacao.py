@@ -214,12 +214,33 @@ class ScriptDeTelaNaoEsperaDOMContentLoadedTests(SimpleTestCase):
         self.assertIn("function fecharMenuMovel()", navegacao)
         self.assertIn('sidebar.classList.remove("open")', navegacao)
         self.assertIn('overlay.classList.remove("open")', navegacao)
+        self.assertIn("window.LSFecharMenuTablet()", navegacao)
+
+        base = (
+            Path(__file__).resolve().parent / "templates" / "base_inner.html"
+        ).read_text(encoding="utf-8")
+        self.assertIn('sidebar?.classList.remove("expandida")', base)
+        self.assertIn(
+            'evento.target.closest("#sidebarMenu a[href], .ls-abas a[href]")',
+            base,
+        )
+        self.assertIn('}, true);', base)
         self.assertIn("MAX_TENTATIVAS_REDE = 4", navegacao)
         self.assertIn("mostrarRecuperacao(alvo", navegacao)
         self.assertIn("erro.lsTransitorio", navegacao)
         self.assertIn("lsNavRecovery", navegacao)
         # Login, permissão e rota inválida continuam exigindo documento novo.
         self.assertIn("window.location.assign(alvo.href)", navegacao)
+
+    def test_salvar_atualiza_so_o_conteudo_em_vez_do_documento_inteiro(self):
+        raiz = Path(__file__).resolve().parent / "static" / "interno"
+        navegacao = (raiz / "ls-soft-navigation.js").read_text(encoding="utf-8")
+        painel = (raiz / "painel.js").read_text(encoding="utf-8")
+
+        self.assertIn("window.LSAtualizarTela = function ()", navegacao)
+        self.assertIn('navegar(window.location.href, "replace")', navegacao)
+        self.assertIn('var modal = form.closest(".modal")', painel)
+        self.assertIn('global.LSAtualizarTela()', painel)
 
     def test_os_tem_tabela_no_pc_e_card_ordenado_no_tablet(self):
         folha = (

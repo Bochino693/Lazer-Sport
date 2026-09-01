@@ -774,6 +774,18 @@ class OrdensServicoInnerView(
         if len(linhas) > 80:
             raise ErroDeFormulario("Uma O.S. aceita no máximo 80 itens.")
 
+        # Uma consulta para todas as peças da O.S. A versão anterior fazia
+        # um SELECT por linha; em banco remoto, dez peças eram dez viagens
+        # de rede antes de o bulk_create sequer começar.
+        ids_pecas = {
+            int(str(linha.get("peca") or "").strip())
+            for linha in linhas
+            if isinstance(linha, dict)
+            and (linha.get("tipo") or "").strip() == ItemOrdemServico.Tipo.PECA
+            and str(linha.get("peca") or "").strip().isdigit()
+        }
+        pecas = PecasReposicao.objects.in_bulk(ids_pecas)
+
         itens = []
         for indice, linha in enumerate(linhas, 1):
             tipo = (linha.get("tipo") or "").strip()
@@ -807,11 +819,9 @@ class OrdensServicoInnerView(
             # manutenção, os dois valem aqui.
             peca_id = str(linha.get("peca") or "").strip()
             peca = (
-                PecasReposicao.objects.filter(pk=peca_id).first()
-                if (
-                    tipo == ItemOrdemServico.Tipo.PECA
-                    and peca_id.isdigit()
-                ) else None
+                pecas.get(int(peca_id))
+                if tipo == ItemOrdemServico.Tipo.PECA and peca_id.isdigit()
+                else None
             )
             quantidade = inteiro(
                 str(linha.get("quantidade") or ""),
@@ -833,6 +843,9 @@ class OrdensServicoInnerView(
             ))
         ordem.itens.all().delete()
         ItemOrdemServico.objects.bulk_create(itens)
+        cache_relacoes = getattr(ordem, "_prefetched_objects_cache", {})
+        cache_relacoes["itens"] = itens
+        ordem._prefetched_objects_cache = cache_relacoes
 
     def acao_pagamento(self, request):
         if not capacidades(request.user)["ordens_servico_pagamento"]:

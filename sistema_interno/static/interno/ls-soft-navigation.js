@@ -144,6 +144,13 @@
       var finalUrl = urlSegura(resposta.url);
       if (!finalUrl) throw new Error("A navegação saiu do painel.");
 
+      /* A resposta acabou de atravessar Django e banco. O próximo POST
+         não precisa esperar outro GET em /pronto/ para provar a mesma
+         conexão. */
+      if (window.Painel && window.Painel.rede) {
+        window.Painel.rede.marcarSucesso();
+      }
+
       var controleCache = (resposta.headers.get("cache-control") || "").toLowerCase();
       var cachePermitido = controleCache.indexOf("no-store") === -1
         && resposta.headers.get("x-ls-no-store") !== "1";
@@ -269,6 +276,10 @@
   }
 
   function fecharMenuMovel() {
+    if (typeof window.LSFecharMenuTablet === "function") {
+      window.LSFecharMenuTablet();
+      return;
+    }
     var sidebar = document.getElementById("sidebarMenu");
     var overlay = document.getElementById("sidebarOverlay");
     var toggle = document.getElementById("menuToggle");
@@ -640,6 +651,14 @@
       window.location.assign(alvo.href);
     });
   }
+
+  /* POST confirmado não precisa recarregar cabeçalho, menu, fontes e
+     scripts globais. Limpa o HTML antigo do cache e busca somente o miolo
+     atual, preservando a recuperação de conexão da navegação suave. */
+  window.LSAtualizarTela = function () {
+    limpar();
+    navegar(window.location.href, "replace");
+  };
 
   function linkNavegavel(link, evento) {
     if (!link || evento.defaultPrevented) return null;
