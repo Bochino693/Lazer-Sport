@@ -47,3 +47,86 @@ def numero(valor):
         return "0"
 
     return number_format(int(convertido), force_grouping=True)
+
+
+# ======================================================================
+# A VERSÃO DO ESTÁTICO SAI DO ARQUIVO, E NÃO DA MEMÓRIA DE QUEM EDITA
+# ======================================================================
+# O QUE ACONTECEU. A folha do painel era pedida como
+# `{% static 'interno/interno_modern.css' %}?v=35` -- um número digitado
+# à mão. Quem mexia no CSS precisava lembrar de trocá-lo. Uma rodada
+# inteira de correções de cor foi para produção com o `v=35` intacto, e
+# durante 24 horas (o `max-age` do WhiteNoise) todo navegador que já
+# tinha aberto o painel continuou usando a folha velha.
+#
+# O sintoma é cruel de diagnosticar: o HTML é sempre novo, porque página
+# não se cacheia; só o CSS fica para trás. A tela mostra a marcação nova
+# com o estilo antigo, e a leitura óbvia é "a correção não funcionou" --
+# quando ela nunca chegou.
+#
+# Aqui a versão é a impressão digital do conteúdo. Mudou o arquivo,
+# mudou a URL, o navegador busca de novo; não mudou, ele reaproveita o
+# que tem. Não há número para lembrar, então não há número para
+# esquecer.
+
+import hashlib
+from pathlib import Path
+
+from django.conf import settings
+from django.contrib.staticfiles import finders
+from django.templatetags.static import static
+
+#: Hash por caminho. Em produção os arquivos não mudam enquanto o
+#: processo vive, então calcular uma vez é o certo -- e ler o CSS inteiro
+#: a cada requisição de página seria caro à toa.
+_IMPRESSOES = {}
+
+
+def _caminho_no_disco(caminho):
+    """Onde este estático está agora: no app (dev) ou no STATIC_ROOT (prod).
+
+    `finders` só enxerga os diretórios de origem, e é o que vale em
+    desenvolvimento. Em produção o `collectstatic` já juntou tudo no
+    STATIC_ROOT, e é de lá que o WhiteNoise serve.
+    """
+    achado = finders.find(caminho)
+    if achado:
+        return Path(achado)
+
+    raiz = getattr(settings, "STATIC_ROOT", None)
+    if raiz:
+        candidato = Path(raiz) / caminho
+        if candidato.is_file():
+            return candidato
+    return None
+
+
+def _impressao_digital(caminho):
+    arquivo = _caminho_no_disco(caminho)
+    if arquivo is None:
+        # Estático que não existe não pode derrubar a página inteira: sem
+        # versão, o navegador ainda carrega o arquivo (ou toma 404 nele
+        # sozinho), e o resto da tela continua de pé.
+        return ""
+
+    # Em desenvolvimento o arquivo muda debaixo do processo, então a
+    # chave carrega o mtime: salvar o CSS e recarregar precisa bastar.
+    chave = (caminho, arquivo.stat().st_mtime_ns) if settings.DEBUG else caminho
+    if chave not in _IMPRESSOES:
+        _IMPRESSOES[chave] = hashlib.sha256(
+            arquivo.read_bytes()
+        ).hexdigest()[:10]
+    return _IMPRESSOES[chave]
+
+
+@register.simple_tag
+def estatico(caminho):
+    """Como `{% static %}`, com uma versão que acompanha o conteúdo.
+
+    Use no lugar de `{% static '...' %}?v=N` para qualquer CSS ou JS do
+    painel. O `?v=` continua existindo na URL -- é ele que faz o
+    navegador buscar de novo --, só não é mais digitado por ninguém.
+    """
+    endereco = static(caminho)
+    versao = _impressao_digital(caminho)
+    return f"{endereco}?v={versao}" if versao else endereco

@@ -1,4 +1,4 @@
-{% load static %}
+{% load static interno_extras %}
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
@@ -6,8 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="dark">
 
-  <link rel="icon" type="image/png" href="{% static 'images/lgooo.png' %}?v=2">
-  <link rel="shortcut icon" type="image/png" href="{% static 'images/lgooo.png' %}?v=2">
+  <link rel="icon" type="image/png" href="{% estatico 'images/lgooo.png' %}">
+  <link rel="shortcut icon" type="image/png" href="{% estatico 'images/lgooo.png' %}">
 
   {% comment %}
     APLICATIVO DE VERDADE NO TABLET.
@@ -183,7 +183,7 @@
     ficaria com uma cara ao abrir direto e outra ao chegar pelo menu.
   {% endcomment %}
   {% block extra_css %}{% endblock %}
-  <link id="lsFolhaBase" href="{% static 'interno/interno_modern.css' %}?v=35" rel="stylesheet">
+  <link id="lsFolhaBase" href="{% estatico 'interno/interno_modern.css' %}" rel="stylesheet">
 
   {% comment %}
     A ORDEM DESTES DOIS ARQUIVOS IMPORTA.
@@ -198,10 +198,10 @@
     decide antes de saber, e volta a piscar a cada clique.
   {% endcomment %}
   {# Troca telas e filtros sem uma segunda requisição; cache só durante a aba. #}
-  <script src="{% static 'interno/ls-soft-navigation.js' %}?v=6" defer></script>
+  <script src="{% estatico 'interno/ls-soft-navigation.js' %}" defer></script>
   <!-- Barra de carregamento no topo, compartilhada com o painel /adm. -->
-  <link rel="stylesheet" href="{% static 'site/ls-page-loader.css' %}?v=2">
-  <script src="{% static 'site/ls-page-loader.js' %}?v=3" defer></script>
+  <link rel="stylesheet" href="{% estatico 'site/ls-page-loader.css' %}">
+  <script src="{% estatico 'site/ls-page-loader.js' %}" defer></script>
 </head>
 <body class="ls-body {% block body_class %}{% endblock %}" data-avisos="{% url 'avisos_estado' %}" data-aparelho="{% url 'avisos_aparelho' %}">
 <svg width="0" height="0" aria-hidden="true" focusable="false" style="position:absolute">
@@ -602,19 +602,19 @@ Dito em voz alta: este NÃO é o /adm do site. Quem trabalha nos
 </div>
 
 <script src="{% static 'interno/vendor/bootstrap.bundle.min.js' %}"></script>
-<script src="{% static 'interno/painel.js' %}?v=13"></script>
+<script src="{% estatico 'interno/painel.js' %}"></script>
 {% comment %}
   Campo de busca do painel (catálogo, clientes, colaboradores). Carrega
   em toda tela porque o mesmo componente é usado em orçamento, produção e
   cadastro -- e porque um arquivo em cache vale mais que três pedidos.
 {% endcomment %}
-<script src="{% static 'interno/ls-busca.js' %}?v=3"></script>
+<script src="{% estatico 'interno/ls-busca.js' %}"></script>
 {% comment %}
   Filtro instantâneo das listas: procura no índice que o servidor manda
   junto da página, sem ida ao servidor e sem mexer na URL. Também mora
   aqui porque as três telas de lista usam o mesmo módulo.
 {% endcomment %}
-<script src="{% static 'interno/ls-filtro-local.js' %}?v=1"></script>
+<script src="{% estatico 'interno/ls-filtro-local.js' %}"></script>
 <script>
 (function () {
   const sidebar = document.getElementById("sidebarMenu");

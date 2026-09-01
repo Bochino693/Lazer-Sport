@@ -174,24 +174,52 @@ class EtiquetasTests(TestCase):
             with self.subTest(cor=cor):
                 self.assertNotIn(cor, etiqueta)
 
-    def test_o_miudo_do_papel_vence_o_cinza_global_do_painel(self):
-        """A regra de cor da etiqueta perdia sem `!important`, e era isso.
+    def test_o_cinza_do_miudo_e_padrao_e_nao_lei(self):
+        """A herança que fazia toda correção de cor parecer não funcionar.
 
-        O painel pinta TODO texto miúdo do aplicativo de cinza quente
-        com `.form-text,.small,small{color:...!important}`. Faz sentido
-        lá: `small` no painel é sempre legenda sobre fundo escuro.
+        O painel tinha DUAS regras globais `.form-text,.small,small{...}`
+        com `!important` na cor e no tamanho. `small` é um seletor de
+        elemento: com `!important` ele ganha de qualquer regra de
+        componente que não use `!important` também -- inclusive das que
+        têm especificidade maior, como `.app-primary-action small` e
+        `.ls-etiqueta-empresa small`.
 
-        Mas a etiqueta é branca, é papel, e mora dentro do painel. Ela
-        herdava esse cinza no telefone da empresa, no CNPJ, no número do
-        volume e nos rótulos do rodapé -- e as regras de cor da etiqueta,
-        que diziam `#000` sem `!important`, perdiam para um `!important`
-        escrito centenas de linhas acima. Não era disputa de ordem: cor
-        sem `!important` contra cor com `!important` perde sempre, e o
-        `#000` da etiqueta era decorativo.
+        O efeito era invisível no código e óbvio na tela. A legenda do
+        botão âmbar da central media 1,28 de contraste; o telefone e o
+        CNPJ da etiqueta saíam cinza no papel branco, na tela e na
+        impressão. Quem corrigia escrevia a cor certa no componente,
+        recarregava, via o cinza de novo e concluía que tinha errado a
+        cor -- quando a cor nunca chegava a ser aplicada.
 
-        Este teste existe porque olhar o CSS da etiqueta não mostrava
-        nada de errado: só o navegador mostrava.
+        O `!important` também nunca foi necessário: esta folha carrega
+        depois do Bootstrap, então em especificidade igual já vence pela
+        ordem.
         """
+        import re
+        from pathlib import Path
+
+        folha = (
+            Path(__file__).resolve().parent
+            / "static" / "interno" / "interno_modern.css"
+        ).read_text(encoding="utf-8")
+        regras = re.sub(r"/\*.*?\*/", " ", folha, flags=re.S)
+
+        for regra in re.findall(r"[^{}]*\bsmall\s*\{[^}]*\}", regras):
+            seletor, corpo = regra.split("{", 1)
+            # Só as regras GLOBAIS: as que atingem `small` solto, sem
+            # componente na frente. Um componente pode usar `!important`
+            # quando precisa (e alguns precisam, contra o Bootstrap).
+            if not re.search(r"(^|,)\s*small\s*$", seletor.strip()):
+                continue
+            with self.subTest(seletor=seletor.strip()):
+                self.assertNotIn(
+                    "!important", corpo,
+                    "regra global de `small` com !important: ela sobrescreve "
+                    "a cor de todo componente do painel",
+                )
+
+    def test_o_miudo_da_etiqueta_e_tinta_preta(self):
+        """O papel é branco e mora dentro de um painel escuro."""
         from pathlib import Path
 
         folha = (
@@ -199,15 +227,9 @@ class EtiquetasTests(TestCase):
             / "static" / "interno" / "interno_modern.css"
         ).read_text(encoding="utf-8")
 
-        # A regra global continua lá -- é ela que torna o `!important`
-        # da etiqueta obrigatório. Se um dia sair, este teste avisa que a
-        # muleta pode sair junto.
-        self.assertIn(".form-text,.small,small{color:#bcae9d!important}", folha)
-
-        # E a etiqueta reivindica o preto de volta, com a mesma força.
         self.assertIn(
             ".ls-etiqueta small,\n.ls-etiqueta .form-text,\n"
-            ".ls-etiqueta .small{color:#000!important}",
+            ".ls-etiqueta .small{color:#000}",
             folha,
         )
 

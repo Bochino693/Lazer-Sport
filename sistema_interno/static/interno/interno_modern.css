@@ -594,7 +594,27 @@ a:hover{color:#FFD79A}
 .form-select option{color:#faf6ee;background:#261c0b}
 .input-group-text{color:#bcb3a7!important}
 textarea.form-control{min-height:100px!important}
-.form-text,.small,small{color:#a5998b!important;font-size:.8rem!important}
+/* O CINZA DO MIÚDO É UM PADRÃO, E NÃO UMA LEI.
+
+   Esta regra e a irmã dela (mais abaixo, junto dos placeholders) eram
+   `!important` nas duas propriedades. `small` é um seletor de ELEMENTO:
+   `!important` nele ganha de qualquer regra de componente que não use
+   `!important` também -- incluindo `.app-primary-action small` e
+   `.ls-etiqueta-empresa small`, que têm especificidade maior e mesmo
+   assim perdiam.
+
+   O efeito era invisível no código e óbvio na tela: a legenda do botão
+   âmbar da central saía cinza sobre âmbar (1,28 de contraste), e o
+   telefone e o CNPJ da etiqueta saíam cinza no papel branco. Quem
+   corrigia escrevia a cor certa no componente, recarregava, via o cinza
+   de novo e concluía que tinha errado a cor -- quando a cor nunca tinha
+   sido aplicada.
+
+   O `!important` também não era necessário: esta folha carrega DEPOIS do
+   Bootstrap, então em especificidade igual ela já vence pela ordem. Sem
+   ele, o padrão continua valendo em todo `small` solto do painel, e
+   qualquer componente que precise de outra cor simplesmente a escreve. */
+.form-text,.small,small{color:#a5998b;font-size:.8rem}
 .form-check-label{color:#dbd5cd!important;font-size:.88rem}
 .form-check-input{border-color:#73603e!important;background-color:#261c0b!important}
 .form-check-input:checked{border-color:#F2A93B!important;background-color:#F2A93B!important}
@@ -1915,7 +1935,8 @@ select[multiple] option{padding:7px 10px;border-radius:8px}
   --muted-2:#A2917A;
 }
 .form-control::placeholder{color:#9d8f7c!important}
-.form-text,.small,small{color:#bcae9d!important}
+/* Mesma regra do bloco de formulários, mesmo motivo: padrão, não lei. */
+.form-text,.small,small{color:#bcae9d}
 .text-muted{color:#bcae9d!important}
 .ls-busca-entrada::placeholder{color:#9d8f7c}
 .ls-busca-item-detalhe{color:#bcae9d}
@@ -3568,27 +3589,13 @@ button.ls-incomplete-chip:focus-visible{outline:3px solid rgba(255,128,145,.35);
 .ls-folha-etiquetas.a6 .ls-etiqueta-rodape{font-size:.68rem;gap:3px 12px}
 .ls-folha-etiquetas.a6 .ls-etiqueta-logo{width:32px;height:32px;flex-basis:32px}
 
-/* O PAPEL NÃO É CROMO DE PAINEL, E PRECISA DIZER ISSO EM VOZ ALTA.
-
-   O painel tem uma regra global -- `.form-text,.small,small{color:...
-   !important}` -- que pinta TODO texto miúdo do aplicativo de cinza
-   quente. Faz sentido lá: `small` no painel é sempre legenda sobre fundo
-   escuro. Mas a etiqueta é branca, é papel, e mora dentro do painel: ela
-   herdava esse cinza no telefone da empresa, no CNPJ, no número do
-   volume e nos rótulos do rodapé.
-
-   Era exatamente isto que sobrava de cinza depois de a faixa âmbar sair:
-   as regras de cor da etiqueta diziam `#000`, e perdiam para um
-   `!important` escrito centenas de linhas acima. Uma cor sem
-   `!important` contra outra com `!important` não é uma disputa de
-   ordem -- ela perde sempre, e o `#000` daqui era decorativo.
-
-   Esta regra é o `!important` de volta, uma vez só, no lugar certo: DENTRO
-   da etiqueta, todo texto é tinta preta, porque é isso que a impressora
-   vai colocar no papel. */
+/* O papel é branco e mora dentro de um painel escuro: aqui o miúdo é
+   tinta preta, e não o cinza de legenda do resto do aplicativo. Desde
+   que o `!important` saiu da regra global de `small`, estas linhas
+   vencem sozinhas pela especificidade. */
 .ls-etiqueta small,
 .ls-etiqueta .form-text,
-.ls-etiqueta .small{color:#000!important}
+.ls-etiqueta .small{color:#000}
 
 /* Economizar tinta: some o único chapado que restou, fica o traço. O
    resto da etiqueta já era contorno preto sobre branco. */

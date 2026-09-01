@@ -16,7 +16,7 @@ import re
 from pathlib import Path
 
 from django.contrib.staticfiles import finders
-from django.test import TestCase
+from django.test import SimpleTestCase, TestCase
 
 
 RAIZ = Path(__file__).resolve().parent.parent
@@ -68,3 +68,59 @@ class ArquivosEstaticosExistemTests(TestCase):
         # Ele desenha o próprio SVG, e some sem barulho quando não há dado.
         self.assertIn("dashboardSalesChart", painel)
         self.assertIn("lsVendasFundo", painel)
+
+
+class VersaoDoEstaticoTests(SimpleTestCase):
+    """A versão do CSS sai do arquivo, e não da memória de quem edita.
+
+    O QUE ACONTECEU. A folha do painel era pedida como
+    `{% static 'interno/interno_modern.css' %}?v=35` -- um número
+    digitado à mão. Uma rodada inteira de correções de cor foi para
+    produção com o `v=35` intacto, e durante 24 horas (o `max-age` do
+    WhiteNoise) todo navegador que já tinha aberto o painel continuou
+    usando a folha velha.
+
+    O sintoma é cruel: o HTML é sempre novo, porque página não se
+    cacheia; só o CSS fica para trás. A tela mostra a marcação nova com
+    o estilo antigo, e a leitura é "a correção não funcionou" -- quando
+    ela nunca chegou. Foi exatamente o que aconteceu com o cinza da
+    etiqueta, duas vezes.
+    """
+
+    def test_nenhum_estatico_do_painel_carrega_versao_digitada_a_mao(self):
+        import re
+
+        base = (
+            Path(__file__).resolve().parent
+            / "templates" / "base_inner.html"
+        ).read_text(encoding="utf-8")
+
+        restos = re.findall(r"\{%\s*static[^%]*%\}\?v=\d+", base)
+        self.assertEqual(
+            restos, [],
+            "versão digitada à mão: mude o arquivo e esqueça o número, e a "
+            "correção não chega ao navegador por 24 horas",
+        )
+
+    def test_a_versao_muda_quando_o_arquivo_muda(self):
+        """É isso que faz o navegador buscar de novo."""
+        from sistema_interno.templatetags.interno_extras import estatico
+
+        endereco = estatico("interno/interno_modern.css")
+        self.assertIn("?v=", endereco)
+
+        versao = endereco.split("?v=")[1]
+        self.assertTrue(versao, "sem versão, o cache velho vence")
+        # A mesma folha responde a mesma versão: o navegador só rebusca
+        # quando o conteúdo muda de verdade.
+        self.assertEqual(endereco, estatico("interno/interno_modern.css"))
+        # E arquivos diferentes têm versões diferentes.
+        self.assertNotEqual(
+            versao, estatico("interno/painel.js").split("?v=")[1],
+        )
+
+    def test_estatico_que_nao_existe_nao_derruba_a_pagina(self):
+        """Sem versão o navegador ainda carrega; sem página, ninguém trabalha."""
+        from sistema_interno.templatetags.interno_extras import estatico
+
+        self.assertNotIn("?v=", estatico("interno/nao-existe-mesmo.css"))
