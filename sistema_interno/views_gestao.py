@@ -1885,7 +1885,49 @@ class BuscaItensOrdemServicoView(
     mão de obra. Sobram as duas origens que se consomem.
     """
 
-    ORIGENS = ("pecas", "produtos")
+    # A O.S. cobra peça da loja e item de manutenção. Os dois vivem em
+    # PecasReposicao e se distinguem por `uso`; ProdutoInterno é ficha de
+    # produção, não peça consumida no atendimento.
+    ORIGENS = ("pecas",)
+
+    def get(self, request):
+        """Busca curta e estável, sem depender das outras origens do orçamento.
+
+        A O.S. abre este endpoint ao focar o campo, antes mesmo de a pessoa
+        digitar. Por isso a consulta vazia também precisa ser barata e válida.
+        """
+        termo = (request.GET.get("q") or "").strip()[:80]
+        pecas = PecasReposicao.objects.prefetch_related(
+            "imagem_peca_reposicao",
+        )
+
+        if termo:
+            pecas = (
+                pecas.filter(
+                    Q(nome__icontains=termo)
+                    | Q(descricao_peca__icontains=termo)
+                    | Q(categoria_peca__nome_categoria_peca__icontains=termo)
+                )
+                .annotate(_prioridade=self._prioridade("nome", termo))
+                .order_by("_prioridade", "nome")
+                .distinct()
+            )
+        else:
+            pecas = pecas.order_by("nome")
+
+        limite = self.LIMITE_POR_ORIGEM * 4
+        opcoes = [
+            OrcamentosInnerView.opcao_peca(peca)
+            for peca in pecas[:limite]
+        ]
+        resposta = JsonResponse({
+            "status": "sucesso",
+            "opcoes": opcoes,
+            "termo": termo,
+            "limite": len(opcoes),
+        })
+        resposta["Cache-Control"] = "private, max-age=60"
+        return resposta
 
 
 class EstadoOrcamentosView(OrcamentoInternoRequiredMixin, View):
@@ -2788,3 +2830,4 @@ class AtualizarEtapaProducaoView(ProducaoInternoRequiredMixin, View):
             messages.error(request, str(exc))
 
         return redirect("producao_ordem_detalhe", pk=ordem.pk)
+

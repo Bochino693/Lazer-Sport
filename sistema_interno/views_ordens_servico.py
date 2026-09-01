@@ -414,6 +414,38 @@ class OrdensServicoInnerView(
             ],
             "prioridades": OrdemServico.Prioridade.choices,
             "item_tipos": ItemOrdemServico.Tipo.choices,
+            # Reserva local da busca de peças. A tela já conseguiu abrir,
+            # então esta consulta simples também conseguiu; se a chamada
+            # assíncrona cair, o técnico continua trabalhando sem perder a O.S.
+            "itens_os_fallback": [
+                {
+                    "valor": f"r:{peca.pk}",
+                    "rotulo": peca.nome,
+                    "grupo": (
+                        "Itens de manutenção"
+                        if peca.uso == PecasReposicao.Uso.MANUTENCAO
+                        else "Peças de reposição"
+                    ),
+                    "detalhe": (
+                        peca.descricao_peca
+                        or (
+                            "Item de manutenção"
+                            if peca.uso == PecasReposicao.Uso.MANUTENCAO
+                            else "Peça da loja"
+                        )
+                    )[:90],
+                    "valorDireita": (
+                        f"R$ {peca.preco_venda:.2f}".replace(".", ",")
+                        if peca.preco_venda is not None else "sem preço"
+                    ),
+                    "preco": (
+                        f"{peca.preco_venda:.2f}".replace(".", ",")
+                        if peca.preco_venda is not None else ""
+                    ),
+                    "imagem": "",
+                }
+                for peca in PecasReposicao.objects.all().order_by("nome")
+            ],
             "email_configurado": smtp_configurado(),
             "email_diagnostico": diagnostico_smtp(),
             "pode_editar": acesso["ordens_servico_editar"],
@@ -699,6 +731,16 @@ class OrdensServicoInnerView(
         if status == OrdemServico.Status.CONCLUIDA and not ordem.concluida_em:
             ordem.concluida_em = timezone.now()
         ordem.save()
+        # NÚMERO DE SÉRIE NÃO PODE SER UMA ADIVINHAÇÃO OBRIGATÓRIA.
+        #
+        # Se o equipamento tiver etiqueta do fabricante, a equipe pode
+        # digitá-la. Quando não tiver -- brinquedo antigo, fabricação
+        # própria ou patrimônio sem plaqueta -- a própria O.S. ganha uma
+        # identificação interna estável. O id só existe depois do primeiro
+        # save, por isso o preenchimento acontece aqui.
+        if not ordem.numero_serie:
+            ordem.numero_serie = f"LS-PAT-{ordem.pk:06d}"
+            ordem.save(update_fields=["numero_serie", "atualizado"])
         self._gravar_itens(ordem, request.POST.get("itens"))
 
         return self.sucesso(

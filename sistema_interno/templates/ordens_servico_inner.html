@@ -93,7 +93,7 @@
         {% for ordem in ordens %}
           <tr data-registro="{{ ordem.id }}">
             <td data-rotulo="O.S."><strong>{{ ordem.numero_documento }}</strong>{% if ordem.versao > 1 %}<span class="ls-versao-chip" title="Esta é a versão {{ ordem.versao }} desta O.S.">v{{ ordem.versao }}</span>{% endif %}{% if ordem.orcamento_id %}<span class="material-sub d-block">proposta #{{ ordem.orcamento_id }}</span>{% endif %}{% if ordem.ordem_anterior_id %}<span class="material-sub d-block">refeita da {{ ordem.ordem_anterior.numero_documento }}</span>{% endif %}</td>
-            <td data-rotulo="Cliente / equipamento"><strong>{{ ordem.destinatario }}</strong><span class="material-sub d-block">{{ ordem.equipamento }}</span>{% if ordem.numero_serie %}<span class="material-sub d-block">Série: {{ ordem.numero_serie }}</span>{% endif %}{% if ordem.rota.google_maps_url or ordem.rota.waze_url %}<span class="ls-route-actions">{% if ordem.rota.distancia_km != None %}<span class="ls-distance-chip" title="Estimativa em linha reta"><i class="bi bi-signpost-split"></i> ≈ {{ ordem.rota.distancia_km|stringformat:".1f" }} km</span>{% endif %}{% if ordem.rota.google_maps_url %}<a href="{{ ordem.rota.google_maps_url }}" target="_blank" rel="noopener" class="ls-route-link maps" title="Rota no Google Maps"><i class="bi bi-map"></i> Maps</a>{% endif %}{% if ordem.rota.waze_url %}<a href="{{ ordem.rota.waze_url }}" target="_blank" rel="noopener" class="ls-route-link waze" title="Rota no Waze"><i class="bi bi-navigation"></i> Waze</a>{% endif %}</span>{% endif %}</td>
+            <td data-rotulo="Cliente / equipamento"><strong>{{ ordem.destinatario }}</strong><span class="material-sub d-block">{{ ordem.equipamento }}</span>{% if ordem.numero_serie %}<span class="material-sub d-block">Identificação: {{ ordem.numero_serie }}</span>{% endif %}{% if ordem.rota.google_maps_url or ordem.rota.waze_url %}<span class="ls-route-actions">{% if ordem.rota.distancia_km != None %}<span class="ls-distance-chip" title="Estimativa em linha reta"><i class="bi bi-signpost-split"></i> ≈ {{ ordem.rota.distancia_km|stringformat:".1f" }} km</span>{% endif %}{% if ordem.rota.google_maps_url %}<a href="{{ ordem.rota.google_maps_url }}" target="_blank" rel="noopener" class="ls-route-link maps" title="Rota no Google Maps"><i class="bi bi-map"></i> Maps</a>{% endif %}{% if ordem.rota.waze_url %}<a href="{{ ordem.rota.waze_url }}" target="_blank" rel="noopener" class="ls-route-link waze" title="Rota no Waze"><i class="bi bi-navigation"></i> Waze</a>{% endif %}</span>{% endif %}</td>
             <td data-rotulo="Tipo">{{ ordem.get_tipo_display }}{% if ordem.prioridade == 'urgente' or ordem.prioridade == 'alta' %}<span class="ls-status danger d-block mt-1">{{ ordem.get_prioridade_display }}</span>{% endif %}</td>
             <td data-rotulo="Situação"><span class="ls-status {% if ordem.status == 'concluida' %}success{% elif ordem.status == 'cancelada' or ordem.status == 'substituida' %}neutral{% elif ordem.status == 'aguardando_peca' %}warning{% elif ordem.status == 'em_execucao' or ordem.status == 'aguardando_resposta' %}info{% else %}neutral{% endif %}">{{ ordem.get_status_display }}</span>{% if ordem.cliente_ciente %}<span class="material-sub d-block mt-1">cliente ciente ✓</span>{% endif %}{% if ordem.arquivada and ordem.ordem_refeita %}<span class="material-sub d-block mt-1">virou a {{ ordem.ordem_refeita.numero_documento }}</span>{% endif %}</td>
             <td data-rotulo="Agenda">{% if ordem.agendada_para %}{{ ordem.agendada_para|date:"d/m/Y H:i" }}{% else %}<span class="text-muted">Não agendada</span>{% endif %}</td>
@@ -209,7 +209,7 @@
       <div class="col-md-3"><label class="form-label" for="osTipo">Tipo</label><select class="form-select" id="osTipo" name="tipo">{% for v,r in tipos %}<option value="{{ v }}">{{ r }}</option>{% endfor %}</select></div>
       <div class="col-md-4"><label class="form-label" for="osStatus">Situação</label><select class="form-select" id="osStatus" name="status">{% for v,r in status_opcoes %}<option value="{{ v }}">{{ r }}</option>{% endfor %}</select><span class="form-text">Ela decide o que a O.S. já tem para contar.</span></div>
       <div class="col-md-2"><label class="form-label" for="osPrioridade">Prioridade</label><select class="form-select" id="osPrioridade" name="prioridade">{% for v,r in prioridades %}<option value="{{ v }}">{{ r }}</option>{% endfor %}</select></div>
-      <div class="col-md-3"><label class="form-label" for="osSerie">Nº de série / patrimônio</label><input class="form-control" id="osSerie" name="numero_serie" maxlength="80"></div>
+      <div class="col-md-3"><label class="form-label" for="osSerie">Identificação / série</label><input class="form-control" id="osSerie" name="numero_serie" maxlength="80" placeholder="Automática ao salvar"><span class="form-text">Se houver uma etiqueta do fabricante, digite o número. Se não houver, o sistema cria um código interno.</span></div>
       <div class="col-12"><label class="form-label" for="osEquipamento">Equipamento</label><input class="form-control" id="osEquipamento" name="equipamento" maxlength="180" required></div>
       <div class="col-12"><label class="form-label" for="osDefeito">Defeito relatado / solicitação</label><textarea class="form-control" id="osDefeito" name="defeito_relatado" rows="3" placeholder="O que o cliente contou. Com as palavras dele, se possível."></textarea></div>
 
@@ -497,6 +497,7 @@
 {{ ordens_dados|json_script:"ordensServicoDados" }}
 {{ empresa_localizacao|json_script:"empresaLocalizacaoDados" }}
 {{ etapas_por_situacao|json_script:"etapasPorSituacao" }}
+{{ itens_os_fallback|json_script:"itensOSFallbackDados" }}
 {% endblock %}
 
 {% block scripts %}
@@ -507,6 +508,7 @@ LSTela.pronto(function () {
   var clientes = JSON.parse(document.getElementById("clientesOSDados").textContent || "[]");
   var empresa = JSON.parse(document.getElementById("empresaLocalizacaoDados").textContent || "{}");
   var etapasPorSituacao = JSON.parse(document.getElementById("etapasPorSituacao").textContent || "{}");
+  var itensOSFallback = JSON.parse(document.getElementById("itensOSFallbackDados").textContent || "[]");
   var corpo = document.getElementById("itensOSCorpo");
   var tiposItem = [{% for v,r in item_tipos %}{value:"{{ v }}", label:"{{ r|escapejs }}"},{% endfor %}];
 
@@ -626,24 +628,53 @@ LSTela.pronto(function () {
   var buscasDeItemOS=[];
   var opcoesNovasOS=[];
   var linhaDoCadastro=null;
+  function filtrarItensLocaisOS(termo){
+    var chave=LSBusca.semAcento(termo||"");
+    return itensOSFallback.filter(function(opcao){
+      if(!chave)return true;
+      return LSBusca.semAcento(
+        (opcao.rotulo||"")+" "+(opcao.detalhe||"")+" "+(opcao.grupo||"")
+      ).indexOf(chave)>=0;
+    });
+  }
+
+  function mesclarItensOS(){
+    var vistos=new Map(),saida=[];
+    Array.prototype.slice.call(arguments).forEach(function(lista){
+      (lista||[]).forEach(function(opcao){
+        var chave=String(opcao&&opcao.valor||"");
+        if(!chave||vistos.has(chave))return;
+        vistos.set(chave,true);saida.push(opcao);
+      });
+    });
+    return saida;
+  }
+
   function buscarItensOS(termo){
     var chave=LSBusca.semAcento(termo||"");
     if(cacheItensOS.has(chave))return cacheItensOS.get(chave);
     var pedido=fetch(endpointItensOS+"?q="+encodeURIComponent(termo||""),{
       credentials:"same-origin",
-      headers:{"X-Requested-With":"XMLHttpRequest"},
+      headers:{"X-Requested-With":"XMLHttpRequest","Accept":"application/json"},
       cache:"no-store"
     }).then(function(resposta){
       return resposta.json().catch(function(){return null;}).then(function(json){
         if(!resposta.ok||!json||json.status!=="sucesso"){
-          throw new Error("Não foi possível buscar as peças.");
+          throw new Error("A busca remota não respondeu.");
         }
-        /* As peças cadastradas agora ainda não estão no índice do
-           servidor; elas entram na frente do resultado até a próxima
-           busca ir buscar tudo de novo. */
-        return opcoesNovasOS.concat(json.opcoes||[]);
+        /* O servidor traz os resultados mais relevantes; a reserva local
+           completa o que faltar e também cobre versões antigas da rota. */
+        return mesclarItensOS(
+          opcoesNovasOS,json.opcoes||[],filtrarItensLocaisOS(termo)
+        );
       });
-    }).catch(function(erro){cacheItensOS.delete(chave);throw erro;});
+    }).catch(function(){
+      /* A O.S. nunca fica sem catálogo por causa de uma requisição.
+         A próxima tentativa pode consultar o servidor novamente, mas esta
+         já responde com as peças que vieram junto com a página. */
+      cacheItensOS.delete(chave);
+      return mesclarItensOS(opcoesNovasOS,filtrarItensLocaisOS(termo));
+    });
     cacheItensOS.set(chave,pedido);
     return pedido;
   }

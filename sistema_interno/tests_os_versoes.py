@@ -69,6 +69,36 @@ class RefazerOrdemServicoTests(TestCase):
         })
 
     # ------------------------------------------------------ o caminho feliz
+    def test_identificacao_do_equipamento_nasce_automatica_se_ficar_vazia(self):
+        resposta = self.post({
+            "action": "save",
+            "equipamento": "Brinquedo antigo sem plaqueta",
+            "tipo": "manutencao",
+            "status": "rascunho",
+            "prioridade": "normal",
+            "numero_serie": "",
+            "itens": "[]",
+        })
+
+        self.assertEqual(resposta.status_code, 200)
+        ordem = OrdemServico.objects.get(pk=resposta.json()["id"])
+        self.assertEqual(ordem.numero_serie, f"LS-PAT-{ordem.pk:06d}")
+
+    def test_numero_real_da_etiqueta_do_fabricante_e_preservado(self):
+        resposta = self.post({
+            "action": "save",
+            "equipamento": "Simulador",
+            "tipo": "manutencao",
+            "status": "rascunho",
+            "prioridade": "normal",
+            "numero_serie": "FAB-2024-9981",
+            "itens": "[]",
+        })
+
+        self.assertEqual(resposta.status_code, 200)
+        ordem = OrdemServico.objects.get(pk=resposta.json()["id"])
+        self.assertEqual(ordem.numero_serie, "FAB-2024-9981")
+
     def test_refazer_congela_a_anterior_e_abre_a_seguinte(self):
         """O papel que o cliente leu continua existindo, inteiro."""
         ordem = self.criar_ordem()
@@ -437,6 +467,48 @@ class ItemDeManutencaoTests(TestCase):
             [o["grupo"] for o in opcoes if o["rotulo"] == "Bucha de manutenção"],
             ["Itens de manutenção"],
         )
+
+
+    def test_a_busca_vazia_tambem_devolve_pecas_e_manutencao(self):
+        """O campo consulta antes da primeira letra; foco não pode virar erro."""
+        loja = PecasReposicao.objects.create(
+            nome="Mola galvanizada", descricao_peca="Reposição",
+            uso=PecasReposicao.Uso.LOJA, ativo=True,
+        )
+        manutencao = PecasReposicao.objects.create(
+            nome="Hora técnica", descricao_peca="Oficina",
+            uso=PecasReposicao.Uso.MANUTENCAO, ativo=False,
+        )
+
+        resposta = self.client.get(
+            "/ordens-servico/itens/buscar/",
+            HTTP_HOST="interno.testserver",
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(resposta.status_code, 200)
+        opcoes = {opcao["valor"]: opcao for opcao in resposta.json()["opcoes"]}
+        self.assertEqual(opcoes[f"r:{loja.pk}"]["grupo"], "Peças de reposição")
+        self.assertEqual(opcoes[f"r:{manutencao.pk}"]["grupo"], "Itens de manutenção")
+
+    def test_a_tela_leva_catalogo_local_para_nao_depender_da_requisicao(self):
+        """Se a rede falhar, a O.S. ainda encontra exatamente o mesmo item."""
+        peca = PecasReposicao.objects.create(
+            nome="Retentor reserva", descricao_peca="Oficina",
+            uso=PecasReposicao.Uso.MANUTENCAO, ativo=False,
+            preco_venda=Decimal("48.00"),
+        )
+
+        resposta = self.client.get(
+            "/ordens-servico/", HTTP_HOST="interno.testserver",
+        )
+
+        opcoes = resposta.context["itens_os_fallback"]
+        self.assertEqual(
+            [opcao["valor"] for opcao in opcoes if opcao["rotulo"] == peca.nome],
+            [f"r:{peca.pk}"],
+        )
+        self.assertContains(resposta, 'id="itensOSFallbackDados"')
 
 
 @override_settings(ALLOWED_HOSTS=["interno.testserver", "testserver"])
