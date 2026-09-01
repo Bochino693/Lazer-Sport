@@ -85,11 +85,9 @@
             <th>ID</th>
             <th>Cliente</th>
             <th>Origem</th>
-            <th class="text-end">Itens</th>
-            <th class="text-end">Total</th>
+            <th>Proposta</th>
             <th>Pagamento</th>
-            <th>Validade</th>
-            <th>Situação</th>
+            <th>Acompanhamento</th>
             <th>Revisão dos blocos</th>
             <th class="text-end">Ações</th>
           </tr>
@@ -125,9 +123,13 @@
                   {{ orcamento.get_origem_display }}
                 </span>
               </td>
-              <td data-rotulo="Itens" class="text-end">{{ orcamento.itens.count }}</td>
-              <td data-rotulo="Total" class="text-end">
+              <td data-rotulo="Proposta">
+                {% with quantidade_itens=orcamento.itens.count %}
                 <span class="ls-money">R$ {{ orcamento.total|moeda }}</span>
+                <span class="material-sub d-block mt-1">
+                  {{ quantidade_itens }} {% if quantidade_itens == 1 %}item{% else %}itens{% endif %}
+                </span>
+                {% endwith %}
               </td>
               {% comment %}
                 O QUITADO PRECISA SER ÓBVIO À DISTÂNCIA.
@@ -156,21 +158,13 @@
                   <span class="text-muted">—</span>
                 {% endif %}
               </td>
-              <td data-rotulo="Validade">
-                {% if orcamento.validade %}
-                  {{ orcamento.validade|date:"d/m/Y" }}
-                  {% if orcamento.vencido %}<span class="ls-status danger d-block mt-1">Vencido</span>{% endif %}
-                {% else %}
-                  <span class="text-muted">Sem prazo</span>
-                {% endif %}
-              </td>
               {% comment %}
                 data-situacao: a célula que o painel repinta sozinho
                 quando o cliente responde pela página pública. Sem isso a
                 mudança só aparecia ao recarregar -- e como a sessão dura
                 o dia inteiro, na prática só ao sair e entrar de novo.
               {% endcomment %}
-              <td data-rotulo="Situação" data-situacao="{{ orcamento.id }}">
+              <td data-rotulo="Acompanhamento" data-situacao="{{ orcamento.id }}">
                 <div class="ls-situacao-card ls-situacao-orcamento">
                   <span class="ls-status
                     {% if orcamento.status == 'aprovado' %}success
@@ -180,6 +174,15 @@
                     {% elif orcamento.status == 'expirado' %}warning
                     {% else %}neutral{% endif %}" data-situacao-selo>
                     {{ orcamento.get_status_display }}
+                  </span>
+                  <span class="ls-situacao-validade {% if orcamento.vencido %}vencida{% endif %}">
+                    <i class="bi {% if orcamento.vencido %}bi-calendar-x{% else %}bi-calendar3{% endif %}" aria-hidden="true"></i>
+                    {% if orcamento.validade %}
+                      {% if orcamento.vencido %}Venceu em{% else %}Válida até{% endif %}
+                      {{ orcamento.validade|date:"d/m/Y" }}
+                    {% else %}
+                      Sem prazo de validade
+                    {% endif %}
                   </span>
                   <span class="material-sub" data-situacao-nota
                         {% if not orcamento.respondido_em and not orcamento.enviado_em %}hidden{% endif %}>
@@ -197,13 +200,15 @@
               </td>
               <td data-rotulo="Revisão dos blocos">
                 <div class="ls-block-review">
-                  <span class="ls-status {% if orcamento.bloco_comercial.status == 'aprovado' %}success{% elif orcamento.bloco_comercial.status == 'ajustes' %}danger{% else %}warning{% endif %}"
+                  <span class="ls-review-item {% if orcamento.bloco_comercial.status == 'aprovado' %}success{% elif orcamento.bloco_comercial.status == 'ajustes' %}danger{% else %}warning{% endif %}"
                         title="{{ orcamento.bloco_comercial.observacao|default:'Aguardando avaliação' }}">
-                    Comercial: {{ orcamento.bloco_comercial.get_status_display|default:"Pendente" }}
+                    <span class="ls-review-label"><i class="bi bi-people" aria-hidden="true"></i> Comercial</span>
+                    <strong>{{ orcamento.bloco_comercial.get_status_display|default:"Pendente" }}</strong>
                   </span>
-                  <span class="ls-status {% if orcamento.bloco_financeiro.status == 'aprovado' %}success{% elif orcamento.bloco_financeiro.status == 'ajustes' %}danger{% else %}warning{% endif %}"
+                  <span class="ls-review-item {% if orcamento.bloco_financeiro.status == 'aprovado' %}success{% elif orcamento.bloco_financeiro.status == 'ajustes' %}danger{% else %}warning{% endif %}"
                         title="{{ orcamento.bloco_financeiro.observacao|default:'Aguardando avaliação' }}">
-                    Financeiro: {{ orcamento.bloco_financeiro.get_status_display|default:"Pendente" }}
+                    <span class="ls-review-label"><i class="bi bi-cash-coin" aria-hidden="true"></i> Financeiro</span>
+                    <strong>{{ orcamento.bloco_financeiro.get_status_display|default:"Pendente" }}</strong>
                   </span>
                 </div>
               </td>
@@ -321,7 +326,7 @@
             </tr>
           {% empty %}
             <tr data-lista-vazia>
-              <td colspan="10">
+              <td colspan="8">
                 <div class="ls-empty">
                   <i class="bi bi-file-earmark-text"></i>
                   Nenhum orçamento encontrado. Comece criando o primeiro.

@@ -351,6 +351,10 @@
       entrar numa cobrança sem ninguém notar.
     {% endcomment %}
     <div class="d-flex justify-content-between align-items-center mb-3"><div><h6 class="mb-1">Serviços, peças e materiais</h6><span class="text-muted small">Busque no catálogo ou escreva a linha. Valores ficam registrados para cobrança e pagamento.</span></div><button class="btn btn-sm btn-outline-primary" type="button" id="adicionarItemOS"><i class="bi bi-plus-lg me-1"></i>Adicionar item</button></div>
+    <p class="ls-os-itens-ajuda mb-2">
+      <i class="bi bi-info-circle" aria-hidden="true"></i>
+      Peça ou material usa catálogo e descrição. Serviço, deslocamento e outros mostram somente os campos necessários.
+    </p>
     <div class="table-responsive"><table class="ls-table ls-os-itens"><thead><tr><th>Tipo</th><th>Peça ou item</th><th>Descrição</th><th class="text-end">Quantidade</th><th class="text-end">Valor unit.</th><th class="text-end">Subtotal</th><th></th></tr></thead><tbody id="itensOSCorpo"></tbody></table></div>
     <div class="row g-3 mt-2 ls-os-ajustes-financeiros">
       <div class="col-12"><div class="ls-budget-block-title financeiro"><i class="bi bi-cash-stack"></i><span><strong>Ajustes do total</strong><small>Frete e desconto vêm depois dos itens porque alteram a soma deles.</small></span></div></div>
@@ -1159,17 +1163,26 @@ LSTela.pronto(function () {
   function ajustarLinhaPorTipo(tr){
     var tipo = tr.querySelector("[data-tipo]").value;
     var comCatalogo = TIPOS_COM_CATALOGO.indexOf(tipo) >= 0;
-    var celula = tr.querySelector("[data-catalogo]");
+    var tipoAnterior = tr.dataset.tipoAnterior || tipo;
+    var tinhaCatalogo = TIPOS_COM_CATALOGO.indexOf(tipoAnterior) >= 0;
+    var celulaTipo = tr.querySelector("[data-tipo-celula]");
+    var celulaCatalogo = tr.querySelector("[data-catalogo]");
+    var celulaDescricao = tr.querySelector("[data-descricao-celula]");
     var descricao = tr.querySelector("[data-descricao]");
 
-    celula.hidden = !comCatalogo;
-    if (!comCatalogo && tr.buscaItem) tr.buscaItem.definirValor("", false);
+    celulaCatalogo.hidden = !comCatalogo;
+    celulaDescricao.hidden = !comCatalogo;
+    celulaTipo.colSpan = comCatalogo ? 1 : 3;
+    tr.classList.toggle("ls-os-item-simples", !comCatalogo);
 
-    /* Sem catálogo, a descrição vira opcional e o campo diz isso: em
-       branco, o servidor grava o próprio rótulo do tipo. */
-    descricao.placeholder = comCatalogo
-      ? "Qual peça ou material"
-      : "Opcional — detalhe o que foi feito";
+    /* Ao sair de peça/material, retire apenas os dados exclusivos do
+       catálogo. Na abertura inicial não apagamos nada que veio salvo. */
+    if (tipoAnterior !== tipo && tinhaCatalogo !== comCatalogo && !comCatalogo) {
+      if (tr.buscaItem) tr.buscaItem.definirValor("", false);
+      descricao.value = "";
+    }
+    descricao.placeholder = "Qual peça ou material";
+    tr.dataset.tipoAnterior = tipo;
   }
 
   function linha(item){
@@ -1179,9 +1192,9 @@ LSTela.pronto(function () {
       return '<option value="'+t.value+'"'+(t.value===item.tipo?' selected':'')+'>'+t.label+'</option>';
     }).join("");
     tr.innerHTML =
-      '<td data-rotulo="Tipo"><select class="form-select form-select-sm" data-tipo>'+opcoes+'</select></td>' +
+      '<td data-rotulo="Tipo" data-tipo-celula><select class="form-select form-select-sm" data-tipo>'+opcoes+'</select></td>' +
       '<td data-rotulo="Peça ou item" data-catalogo></td>' +
-      '<td data-rotulo="Descrição"><input class="form-control form-control-sm" data-descricao maxlength="200" value="'+String(item.descricao||"").replace(/&/g,"&amp;").replace(/"/g,"&quot;")+'"></td>' +
+      '<td data-rotulo="Descrição" data-descricao-celula><input class="form-control form-control-sm" data-descricao maxlength="200" value="'+String(item.descricao||"").replace(/&/g,"&amp;").replace(/"/g,"&quot;")+'"></td>' +
       '<td data-rotulo="Quantidade"><input class="form-control form-control-sm text-end" data-qtd inputmode="decimal" value="'+item.quantidade+'"></td>' +
       '<td data-rotulo="Valor unit."><input class="form-control form-control-sm text-end" data-valor inputmode="decimal" value="'+item.valor_unitario+'"></td>' +
       '<td class="text-end" data-rotulo="Subtotal" data-subtotal>R$ 0,00</td>' +

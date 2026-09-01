@@ -2132,6 +2132,76 @@ class EnvioOrcamento(Prime):
         return f"#{self.orcamento_id} · {self.get_canal_display()} · {estado}"
 
 
+class AtividadeOrcamento(Prime):
+    """Movimentação comercial que precisa aparecer aos outros usuários.
+
+    A proposta em si guarda o estado atual; esta tabela guarda o acontecimento.
+    Sem esse rastro, dois usuários com o painel aberto enxergam apenas números
+    agregados e a criação de um rascunho não muda aviso nenhum. O autor fica
+    registrado para que o próprio trabalho não volte como uma notificação para
+    quem acabou de executá-lo.
+    """
+
+    class Tipo(models.TextChoices):
+        CRIADO = "criado", "criou"
+        ALTERADO = "alterado", "alterou"
+        SITUACAO = "situacao", "mudou a situação de"
+        REFEITO = "refeito", "criou uma nova versão de"
+        PAGAMENTO = "pagamento", "atualizou o pagamento de"
+        AVALIACAO = "avaliacao", "avaliou"
+        ENVIADO = "enviado", "preparou o envio de"
+
+    orcamento = models.ForeignKey(
+        Orcamento,
+        on_delete=models.SET_NULL,
+        related_name="atividades",
+        null=True,
+        blank=True,
+    )
+    orcamento_numero = models.PositiveIntegerField(db_index=True)
+    cliente = models.CharField(max_length=120, blank=True)
+    autor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name="atividades_orcamento",
+        null=True,
+        blank=True,
+    )
+    autor_nome = models.CharField(max_length=150)
+    tipo = models.CharField(max_length=16, choices=Tipo.choices, db_index=True)
+    resumo = models.CharField(max_length=240, blank=True)
+
+    @classmethod
+    def registrar(cls, orcamento, autor, tipo, resumo=""):
+        """Cria um evento curto, suficiente para o sino explicar a mudança."""
+        nome = "Sistema"
+        if getattr(autor, "is_authenticated", False):
+            nome = autor.get_full_name() or autor.get_username()
+        return cls.objects.create(
+            orcamento=orcamento,
+            orcamento_numero=orcamento.pk,
+            cliente=orcamento.destinatario[:120],
+            autor=autor if getattr(autor, "is_authenticated", False) else None,
+            autor_nome=nome[:150],
+            tipo=tipo,
+            resumo=(resumo or "")[:240],
+        )
+
+    class Meta:
+        verbose_name = "Atividade de orçamento"
+        verbose_name_plural = "Atividades de orçamentos"
+        ordering = ("-criacao", "-id")
+        indexes = [
+            models.Index(
+                fields=("orcamento", "-id"),
+                name="atividade_orcamento_idx",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.autor_nome} {self.get_tipo_display()} #{self.orcamento_numero}"
+
+
 class ItemOrcamento(Prime):
     orcamento = models.ForeignKey(
         Orcamento,

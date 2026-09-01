@@ -30,7 +30,8 @@ from django.http import JsonResponse
 from django.views.generic import View
 
 from . import push
-from .context_processors import _apurar_com_cache
+from .avisos import marcar_atividades_lidas, versao_atividades
+from .context_processors import _apurar_com_cache, invalidar_avisos
 from .models import InscricaoPush
 from .permissoes import faz_parte_da_equipe
 
@@ -54,7 +55,11 @@ class EstadoAvisosView(View):
         if not faz_parte_da_equipe(usuario):
             return JsonResponse({"erro": "sem_acesso"}, status=403)
 
-        apurado = _apurar_com_cache(usuario)
+        # O id mais recente vem do banco e atravessa todos os workers do
+        # servidor. Se outro usuário mexeu num orçamento, a chave muda e
+        # este painel não fica preso aos vinte segundos do cache antigo.
+        revisao = versao_atividades()
+        apurado = _apurar_com_cache(usuario, revisao)
 
         contagens = {
             chave: apurado[chave]
@@ -69,6 +74,9 @@ class EstadoAvisosView(View):
             )
         }
         corpo = {
+            # O POST de leitura devolve exatamente esta versão. Assim um
+            # evento que nasça durante o clique nunca some sem ser exibido.
+            "atividade_ate": revisao,
             "contagens": contagens,
             "urgentes": apurado["avisos_urgentes"],
             "total": apurado["total_avisos"],
@@ -93,6 +101,23 @@ class EstadoAvisosView(View):
         # guardá-la e servir o painel de um colega.
         resposta["Cache-Control"] = "no-store, private"
         return resposta
+
+    def post(self, request):
+        """Abrir o sino confirma somente as movimentações já exibidas."""
+        usuario = getattr(request, "user", None)
+        if not getattr(usuario, "is_authenticated", False):
+            return JsonResponse({"erro": "sessao"}, status=401)
+        if not faz_parte_da_equipe(usuario):
+            return JsonResponse({"erro": "sem_acesso"}, status=403)
+        if (request.POST.get("acao") or "") != "ler_atividades":
+            return JsonResponse({"erro": "acao"}, status=400)
+
+        lido_ate = marcar_atividades_lidas(
+            usuario,
+            request.POST.get("atividade_ate"),
+        )
+        invalidar_avisos(usuario, versao_atividades())
+        return JsonResponse({"status": "sucesso", "lido_ate": lido_ate})
 
 
 class InscricaoPushView(View):

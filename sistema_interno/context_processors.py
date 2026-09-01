@@ -51,8 +51,11 @@ def _apurar(usuario):
 
     return {
         "avisos": avisos,
-        "avisos_urgentes": sum(1 for a in avisos if a.urgente),
-        "total_avisos": len(avisos),
+        # O sino representa ocorrências, não categorias. Três propostas
+        # vencidas formam uma linha na central, mas continuam sendo três
+        # coisas que exigem atenção — por isso a soma das quantidades.
+        "avisos_urgentes": sum(a.quantidade for a in avisos if a.urgente),
+        "total_avisos": sum(a.quantidade for a in avisos),
 
         # As bolinhas do menu. Zero quando não há aviso daquela chave —
         # que é o mesmo que dizer "nada pendente aqui".
@@ -64,13 +67,14 @@ def _apurar(usuario):
             por_chave.get("orcamentos_vencidos", 0)
             + por_chave.get("orcamentos_vencendo", 0)
             + por_chave.get("orcamentos_aprovados", 0)
+            + por_chave.get("orcamentos_atividade", 0)
         ),
         "count_ordens_servico": por_chave.get("ordens_servico", 0),
         "count_clientes_incompletos": por_chave.get("clientes_incompletos", 0),
     }
 
 
-def _apurar_com_cache(usuario):
+def _apurar_com_cache(usuario, versao_atividade=None):
     """Reaproveita os contadores durante a troca rápida entre telas.
 
     A central custa vários COUNT no banco remoto e antes repetia todos em
@@ -83,7 +87,7 @@ def _apurar_com_cache(usuario):
     except (TypeError, ValueError):
         ttl = 20
 
-    chave = _chave_avisos(usuario)
+    chave = _chave_avisos(usuario, versao_atividade)
     apurado = cache.get(chave)
     if apurado is None:
         apurado = _apurar(usuario)
@@ -91,19 +95,33 @@ def _apurar_com_cache(usuario):
     return apurado
 
 
-def invalidar_avisos(usuario):
-    """Faz a próxima tela refletir imediatamente uma ação operacional."""
+def invalidar_avisos(usuario, versao_atividade=None):
+    """Faz qualquer variante do cache refletir uma ação operacional.
+
+    A geração entra em todas as chaves do usuário. Só apagar a chave base
+    deixava viva a variante usada pelo endpoint em tempo real.
+    """
     if getattr(usuario, "pk", None):
-        cache.delete(_chave_avisos(usuario))
+        chave = _chave_geracao(usuario)
+        try:
+            cache.incr(chave)
+        except ValueError:
+            cache.set(chave, 1, None)
 
 
-def _chave_avisos(usuario):
+def _chave_avisos(usuario, versao_atividade=None):
     # O instante de criação diferencia uma conta real de outra que reutilize
     # o mesmo id após limpeza/importação do banco — e também impede que o
     # cache local sobreviva entre casos isolados da suíte de testes.
     criado = getattr(usuario, "date_joined", None)
     versao = int(criado.timestamp() * 1_000_000) if criado else 0
-    return f"interno:avisos:v2:{usuario.pk}:{versao}"
+    atividade = f":a{int(versao_atividade)}" if versao_atividade is not None else ""
+    geracao = cache.get(_chave_geracao(usuario), 0) or 0
+    return f"interno:avisos:v3:{usuario.pk}:{versao}:g{geracao}{atividade}"
+
+
+def _chave_geracao(usuario):
+    return f"interno:avisos:geracao:{usuario.pk}"
 
 
 def fab_counts(request):

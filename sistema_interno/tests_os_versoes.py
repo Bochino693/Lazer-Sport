@@ -125,6 +125,15 @@ class RefazerOrdemServicoTests(TestCase):
         self.assertIn('action" value="cliente_novo"', html)
         self.assertIn('rotulo:"Cadastrar cliente"', html)
 
+    def test_linha_simples_esconde_campos_exclusivos_de_peca_sem_desalinhar(self):
+        html = self.tela()
+        self.assertIn("celulaCatalogo.hidden = !comCatalogo", html)
+        self.assertIn("celulaDescricao.hidden = !comCatalogo", html)
+        self.assertIn("celulaTipo.colSpan = comCatalogo ? 1 : 3", html)
+        self.assertIn('tr.classList.toggle("ls-os-item-simples"', html)
+        self.assertIn("data-tipo-celula", html)
+        self.assertIn("data-descricao-celula", html)
+
     def test_cadastros_filhos_nao_alteram_os_outros_modais_da_os(self):
         html = self.tela()
         for modal_id in (

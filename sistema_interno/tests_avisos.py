@@ -14,7 +14,7 @@ from django.contrib.auth.models import User
 from django.db import connection
 from django.template import Context, Template
 from django.test.utils import CaptureQueriesContext
-from django.test import RequestFactory, TestCase
+from django.test import RequestFactory, TestCase, override_settings
 from django.utils import timezone
 
 from core.models import Manutencao, Pedido
@@ -23,6 +23,7 @@ from . import avisos as mod
 from .context_processors import fab_counts
 from .permissoes import atribuir_funcoes
 from .models import (
+    AtividadeOrcamento,
     Colaborador,
     EstoqueMaterial,
     Material,
@@ -63,6 +64,22 @@ class ColetaDeAvisosTests(TestCase):
         chaves = self.chaves()
         self.assertIn("orcamentos_vencidos", chaves)
         self.assertIn("orcamentos_vencendo", chaves)
+
+    def test_sino_soma_ocorrencias_e_nao_apenas_tipos(self):
+        """Três vencidos são três atenções, mesmo ocupando uma linha."""
+        for numero in range(3):
+            Orcamento.objects.create(
+                nome_cliente=f"Vencido {numero}",
+                status=Orcamento.Status.AGUARDANDO_RESPOSTA,
+                validade=self.hoje - timedelta(days=1),
+            )
+
+        from .context_processors import _apurar
+
+        apurado = _apurar(self.gestor)
+        self.assertEqual(apurado["total_avisos"], 3)
+        self.assertEqual(apurado["avisos_urgentes"], 3)
+        self.assertEqual(apurado["count_orcamentos"], 3)
 
     def test_orcamento_ja_respondido_nao_cobra_validade(self):
         Orcamento.objects.create(
@@ -318,6 +335,7 @@ class CustoDoContextProcessorTests(TestCase):
             self.assertEqual(modelo.render(Context(segundo)), "1 1")
 
 
+@override_settings(ALLOWED_HOSTS=["interno.testserver", "testserver"])
 class EstadoAoVivoTests(TestCase):
     """As bolinhas e a situação da proposta se atualizam sem recarregar.
 
@@ -385,6 +403,115 @@ class EstadoAoVivoTests(TestCase):
         invalidar_avisos(self.gestor)
 
         self.assertNotEqual(self.pedir().json()["assinatura"], primeira)
+
+    def test_atividade_de_outro_usuario_entra_sem_recarregar_a_pagina(self):
+        """O id do evento fura o cache curto mesmo entre workers distintos."""
+        primeira = self.pedir().json()["assinatura"]
+        colega = User.objects.create_superuser(
+            username="colega", password="x", email="colega@example.com",
+        )
+        orcamento = Orcamento.objects.create(
+            nome_cliente="Cliente novo",
+            responsavel=colega,
+        )
+        AtividadeOrcamento.registrar(
+            orcamento,
+            colega,
+            AtividadeOrcamento.Tipo.CRIADO,
+        )
+
+        dados = self.pedir().json()
+        atividade = next(
+            aviso for aviso in dados["avisos"]
+            if aviso["chave"] == "orcamentos_atividade"
+        )
+        self.assertNotEqual(dados["assinatura"], primeira)
+        self.assertEqual(atividade["quantidade"], 1)
+        self.assertEqual(dados["contagens"]["count_orcamentos"], 1)
+        self.assertIn("colega", atividade["detalhe"])
+
+    def test_abrir_o_sino_marca_so_as_atividades_como_lidas(self):
+        colega = User.objects.create_superuser(
+            username="colega2", password="x", email="colega2@example.com",
+        )
+        orcamento = Orcamento.objects.create(nome_cliente="Leitura")
+        AtividadeOrcamento.registrar(
+            orcamento,
+            colega,
+            AtividadeOrcamento.Tipo.ALTERADO,
+        )
+        self.assertTrue(any(
+            aviso["chave"] == "orcamentos_atividade"
+            for aviso in self.pedir().json()["avisos"]
+        ))
+
+        atividade_ate = self.pedir().json()["atividade_ate"]
+        resposta = self.client.post(
+            self.URL,
+            {"acao": "ler_atividades", "atividade_ate": atividade_ate},
+            HTTP_HOST="interno.testserver",
+        )
+        self.assertEqual(resposta.status_code, 200)
+        self.assertFalse(any(
+            aviso["chave"] == "orcamentos_atividade"
+            for aviso in self.pedir().json()["avisos"]
+        ))
+
+    def test_clique_no_sino_nao_apaga_evento_que_chegou_depois_do_pulso(self):
+        colega = User.objects.create_superuser(
+            username="colega-race", password="x", email="race@example.com",
+        )
+        primeiro = Orcamento.objects.create(nome_cliente="Primeiro")
+        AtividadeOrcamento.registrar(
+            primeiro, colega, AtividadeOrcamento.Tipo.CRIADO,
+        )
+        atividade_ate = self.pedir().json()["atividade_ate"]
+
+        segundo = Orcamento.objects.create(nome_cliente="Chegou no clique")
+        AtividadeOrcamento.registrar(
+            segundo, colega, AtividadeOrcamento.Tipo.CRIADO,
+        )
+        resposta = self.client.post(
+            self.URL,
+            {"acao": "ler_atividades", "atividade_ate": atividade_ate},
+            HTTP_HOST="interno.testserver",
+        )
+
+        self.assertEqual(resposta.status_code, 200)
+        atividade = next(
+            aviso for aviso in self.pedir().json()["avisos"]
+            if aviso["chave"] == "orcamentos_atividade"
+        )
+        self.assertEqual(atividade["quantidade"], 1)
+        self.assertIn("Chegou no clique", atividade["detalhe"])
+
+    def test_o_proprio_usuario_nao_recebe_som_por_sua_acao(self):
+        orcamento = Orcamento.objects.create(nome_cliente="Meu trabalho")
+        AtividadeOrcamento.registrar(
+            orcamento,
+            self.gestor,
+            AtividadeOrcamento.Tipo.CRIADO,
+        )
+        self.assertFalse(any(
+            aviso["chave"] == "orcamentos_atividade"
+            for aviso in self.pedir().json()["avisos"]
+        ))
+
+    def test_painel_consulta_rapido_e_tem_toque_de_tres_notas(self):
+        from pathlib import Path
+
+        painel = Path("sistema_interno/static/interno/painel.js").read_text(
+            encoding="utf-8"
+        )
+        base = Path("sistema_interno/templates/base_inner.html").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("intervalo: 12000", painel)
+        self.assertIn("659.25", painel)
+        self.assertIn("783.99", painel)
+        self.assertIn("987.77", painel)
+        self.assertIn("lerAtividades", painel)
+        self.assertIn("Painel.avisos.lerAtividades()", base)
 
     def test_sessao_caida_devolve_401_para_a_tela_parar_de_perguntar(self):
         """403 faria o JavaScript insistir contra uma tela de login."""

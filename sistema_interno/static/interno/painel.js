@@ -1342,14 +1342,17 @@
      ==================================================================== */
   var avisos = {
     endereco: "",
-    intervalo: 30000,
+    intervalo: 12000,
     assinatura: null,
     relogio: null,
     parado: false,
     ligado: false,
+    lendo: false,
     ouvintes: [],
     inicializado: false,
     quantidades: {},
+    ultimoSomEm: 0,
+    atividadeAte: 0,
   };
 
   /* Som curto gerado pelo próprio navegador: não baixa MP3, funciona
@@ -1373,19 +1376,35 @@
   function tocarSomDeAviso() {
     var audio = prepararSom();
     if (!audio || audio.state !== "running") return;
+    var agora = Date.now();
+    if (agora - avisos.ultimoSomEm < 1800) return;
+    avisos.ultimoSomEm = agora;
+
     var inicio = audio.currentTime;
-    [0, 0.13].forEach(function (atraso, indice) {
+    /* Três notas ascendentes, curtas e suaves: perceptíveis na bancada
+       sem parecer alarme de erro ou depender de arquivo externo. */
+    [
+      { atraso: 0, frequencia: 659.25, volume: 0.055 },
+      { atraso: 0.10, frequencia: 783.99, volume: 0.065 },
+      { atraso: 0.22, frequencia: 987.77, volume: 0.075 },
+    ].forEach(function (nota, indice) {
       var oscilador = audio.createOscillator();
       var ganho = audio.createGain();
-      oscilador.type = "sine";
-      oscilador.frequency.value = indice ? 880 : 660;
-      ganho.gain.setValueAtTime(0.0001, inicio + atraso);
-      ganho.gain.exponentialRampToValueAtTime(0.09, inicio + atraso + 0.012);
-      ganho.gain.exponentialRampToValueAtTime(0.0001, inicio + atraso + 0.11);
+      oscilador.type = indice === 2 ? "triangle" : "sine";
+      oscilador.frequency.value = nota.frequencia;
+      ganho.gain.setValueAtTime(0.0001, inicio + nota.atraso);
+      ganho.gain.exponentialRampToValueAtTime(
+        nota.volume,
+        inicio + nota.atraso + 0.016
+      );
+      ganho.gain.exponentialRampToValueAtTime(
+        0.0001,
+        inicio + nota.atraso + 0.18
+      );
       oscilador.connect(ganho);
       ganho.connect(audio.destination);
-      oscilador.start(inicio + atraso);
-      oscilador.stop(inicio + atraso + 0.12);
+      oscilador.start(inicio + nota.atraso);
+      oscilador.stop(inicio + nota.atraso + 0.19);
     });
   }
 
@@ -1484,6 +1503,7 @@
       })
       .then(function (dados) {
         if (!dados) return null;
+        avisos.atividadeAte = Number(dados.atividade_ate) || 0;
         if (dados.assinatura && dados.assinatura === avisos.assinatura) {
           /* Nada mudou: não se mexe no DOM. Redesenhar à toa faria a
              central piscar debaixo do dedo de quem está lendo. */
@@ -1514,6 +1534,40 @@
        responder. */
     aoMudar: function (fn) {
       if (typeof fn === "function") avisos.ouvintes.push(fn);
+    },
+
+    /* Abrir o sino confirma somente as movimentações de colegas que já
+       estavam visíveis. Pendências reais (vencido, estoque, pagamento...)
+       permanecem até serem resolvidas. */
+    lerAtividades: function () {
+      if (avisos.lendo || !avisos.endereco) return Promise.resolve(null);
+      avisos.lendo = true;
+      var dados = new FormData();
+      dados.set("acao", "ler_atividades");
+      dados.set("atividade_ate", String(avisos.atividadeAte || 0));
+      var campo = document.querySelector("[name=csrfmiddlewaretoken]");
+      if (campo) dados.set("csrfmiddlewaretoken", campo.value);
+
+      return fetch(avisos.endereco, {
+        method: "POST",
+        body: dados,
+        headers: {
+          "X-Requested-With": "XMLHttpRequest",
+          "X-CSRFToken": campo ? campo.value : "",
+        },
+        credentials: "same-origin",
+        cache: "no-store",
+      }).then(function (resposta) {
+        if (!resposta.ok) return null;
+        /* A leitura já foi gravada; busca de novo para o número sumir no
+           mesmo clique, sem deixar o usuário esperando o próximo pulso. */
+        avisos.assinatura = null;
+        return buscarAvisos();
+      }).catch(function () {
+        return null;
+      }).finally(function () {
+        avisos.lendo = false;
+      });
     },
 
     /* Chamado antes de trocar de tela: ver `Painel.prepararNavegacao`. */

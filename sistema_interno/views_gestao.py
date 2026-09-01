@@ -66,6 +66,7 @@ from . import clientes as svc_clientes
 from . import etapas_padrao
 from . import financeiro as fin
 from .models import (
+    AtividadeOrcamento,
     Cliente,
     Colaborador,
     EnvioOrcamento,
@@ -117,6 +118,28 @@ def moeda_br(valor):
     """Dinheiro para mensagens fora dos templates: 4666.33 -> 4.666,33."""
     numero = Decimal(valor or ZERO).quantize(Decimal("0.01"))
     return f"{numero:,.2f}".replace(",", "_").replace(".", ",").replace("_", ".")
+
+
+def registrar_atividade_orcamento(orcamento, request, tipo, resumo=""):
+    """Notifica os colegas sem transformar o histórico em ponto de falha.
+
+    Se uma implantação ainda não executou a migration nova, salvar a proposta
+    continua funcionando e o erro fica explícito no log. Depois do migrate, o
+    mesmo caminho passa a alimentar o sino normalmente.
+    """
+    try:
+        return AtividadeOrcamento.registrar(
+            orcamento,
+            request.user,
+            tipo,
+            resumo=resumo,
+        )
+    except Exception:
+        logging.getLogger(__name__).exception(
+            "Não consegui registrar a atividade do orçamento %s",
+            getattr(orcamento, "pk", None),
+        )
+        return None
 
 
 # ======================================================================
@@ -882,6 +905,15 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
         if financeiro_mudou:
             self._reabrir_bloco(orcamento, AvaliacaoBlocoOrcamento.Bloco.FINANCEIRO)
 
+        registrar_atividade_orcamento(
+            orcamento,
+            request,
+            (
+                AtividadeOrcamento.Tipo.CRIADO
+                if novo else AtividadeOrcamento.Tipo.ALTERADO
+            ),
+        )
+
         mapa = orcamento.sincronizar_cliente_aprovado()
 
         complemento = ""
@@ -1053,6 +1085,12 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
 
         orcamento.status = status
         orcamento.save(update_fields=["status", "motivo_negociacao", "atualizado"])
+        registrar_atividade_orcamento(
+            orcamento,
+            request,
+            AtividadeOrcamento.Tipo.SITUACAO,
+            resumo=orcamento.get_status_display(),
+        )
         mapa = orcamento.sincronizar_cliente_aprovado()
 
         complemento = ""
@@ -1138,6 +1176,12 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
             anterior.save(update_fields=["status", "atualizado"])
             self._reabrir_bloco(nova, AvaliacaoBlocoOrcamento.Bloco.COMERCIAL)
             self._reabrir_bloco(nova, AvaliacaoBlocoOrcamento.Bloco.FINANCEIRO)
+            registrar_atividade_orcamento(
+                nova,
+                request,
+                AtividadeOrcamento.Tipo.REFEITO,
+                resumo=f"Versão {nova.versao} da proposta #{anterior.pk}",
+            )
 
         return self.sucesso(
             request,
@@ -1163,6 +1207,12 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
         )
         orcamento.registrar_pagamento(
             valor, texto(request, "observacao_pagamento", limite=240),
+        )
+        registrar_atividade_orcamento(
+            orcamento,
+            request,
+            AtividadeOrcamento.Tipo.PAGAMENTO,
+            resumo=orcamento.get_status_pagamento_display(),
         )
         return self.sucesso(
             request,
@@ -1233,6 +1283,15 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
                 "avaliador": request.user,
                 "avaliado_em": timezone.now(),
             },
+        )
+        registrar_atividade_orcamento(
+            orcamento,
+            request,
+            AtividadeOrcamento.Tipo.AVALIACAO,
+            resumo=(
+                f"{avaliacao.get_bloco_display()}: "
+                f"{avaliacao.get_status_display()}"
+            ),
         )
         return self.sucesso(
             request,
@@ -1463,6 +1522,14 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
             extras.get("email") if canal == "email" else (
                 orcamento.whatsapp_destinatario if canal == "whatsapp" else ""
             ),
+        )
+        registrar_atividade_orcamento(
+            orcamento,
+            request,
+            AtividadeOrcamento.Tipo.ENVIADO,
+            resumo=("E-mail" if canal == "email" else (
+                "WhatsApp" if canal == "whatsapp" else "Link"
+            )),
         )
 
         # Se o operador editou um canal neste mesmo pedido, devolvemos o
@@ -2836,4 +2903,3 @@ class AtualizarEtapaProducaoView(ProducaoInternoRequiredMixin, View):
             messages.error(request, str(exc))
 
         return redirect("producao_ordem_detalhe", pk=ordem.pk)
-

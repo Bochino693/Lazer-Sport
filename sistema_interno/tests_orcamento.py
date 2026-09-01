@@ -19,6 +19,7 @@ from django.utils import timezone
 from core.models import Brinquedos, CategoriaPeca, CategoriasBrinquedos, PecasReposicao
 
 from .models import (
+    AtividadeOrcamento,
     AvaliacaoBlocoOrcamento,
     Cliente,
     ItemOrcamento,
@@ -356,6 +357,39 @@ class OrcamentoInternoTests(TestCase):
         self.assertEqual(item.brinquedo, self.brinquedo)
         self.assertIsNone(item.produto)
         self.assertEqual(item.subtotal, Decimal("560.00"))
+
+    def test_salvar_orcamento_registra_novidade_para_os_colegas(self):
+        resposta = self.post({
+            "action": "save",
+            "nome_cliente": "Cliente compartilhado",
+            "itens": (
+                '[{"descricao":"Cama elástica","brinquedo":"%s",'
+                '"quantidade":"1","valor_unitario":"280,00"}]'
+                % self.brinquedo.id
+            ),
+        })
+
+        self.assertEqual(resposta.status_code, 200)
+        atividade = AtividadeOrcamento.objects.get()
+        self.assertEqual(atividade.autor, self.gestor)
+        self.assertEqual(atividade.tipo, AtividadeOrcamento.Tipo.CRIADO)
+        self.assertEqual(atividade.cliente, "Cliente compartilhado")
+
+    def test_tabela_do_pc_agrupa_dados_sem_esmagar_data_e_revisao(self):
+        from pathlib import Path
+
+        template = Path(
+            "sistema_interno/templates/orcamentos_inner.html"
+        ).read_text(encoding="utf-8")
+        css = Path(
+            "sistema_interno/static/interno/interno_modern.css"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("<th>Proposta</th>", template)
+        self.assertIn("<th>Acompanhamento</th>", template)
+        self.assertIn('class="ls-review-item', template)
+        self.assertIn("grid-template-columns:repeat(2,minmax(0,1fr))", css)
+        self.assertIn("white-space:nowrap", css)
 
     def test_salva_valores_e_condicoes_no_formato_brasileiro(self):
         resposta = self.post({

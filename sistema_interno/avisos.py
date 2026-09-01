@@ -20,13 +20,22 @@ inteira para filtrar na memória. A mesma regra escrita como
 from dataclasses import dataclass
 from datetime import timedelta
 
+from django.db import DatabaseError
 from django.urls import reverse
 from django.utils import timezone
 
 from core.models import Manutencao, Pedido, Venda
 
 from .completude_clientes import filtro_incompletos
-from .models import Cliente, EstoqueMaterial, Orcamento, OrdemProducao, OrdemServico
+from .models import (
+    AtividadeOrcamento,
+    Cliente,
+    EstadoNotificacao,
+    EstoqueMaterial,
+    Orcamento,
+    OrdemProducao,
+    OrdemServico,
+)
 from .permissoes import GESTAO, capacidades, limitar_orcamentos, tem_funcao
 
 #: Rotas do painel. Passado na mão porque um pedido que chegue por fora
@@ -42,6 +51,11 @@ DIAS_PARA_COBRAR = 3
 #: Janela do que conta como "acabou de acontecer" nas respostas de
 #: cliente. Uma semana cobre quem passou o fim de semana fora.
 DIAS_DE_NOVIDADE = 7
+
+# A mesma tabela que memoriza observadores de e-mail guarda até qual evento
+# comercial cada usuário já abriu no sino. É estado de notificação, não uma
+# segunda cópia do orçamento.
+CHAVE_ATIVIDADE_LIDA = "orcamentos_atividade_lida"
 
 
 @dataclass(frozen=True)
@@ -161,6 +175,112 @@ def _respostas_de_cliente(user, agora):
         ))
 
     return avisos
+
+
+def versao_atividades():
+    """Último evento global; uma consulta mínima invalida caches entre workers."""
+    try:
+        return (
+            AtividadeOrcamento.objects.order_by("-id")
+            .values_list("id", flat=True)
+            .first()
+            or 0
+        )
+    except DatabaseError:
+        # Implantação entre o reinício e o migrate: o sino antigo continua
+        # funcionando, e uma tabela nova nunca derruba o painel com 502.
+        return 0
+
+
+def _atividades_orcamento(user):
+    """O que OUTRA pessoa fez e este usuário ainda não abriu no sino."""
+    try:
+        estado = EstadoNotificacao.objects.filter(
+            usuario=user,
+            chave=CHAVE_ATIVIDADE_LIDA,
+        ).only("quantidade").first()
+        ultimo_lido = estado.quantidade if estado else 0
+
+        # A permissão da lista também limita a notificação. Um vendedor não
+        # descobre pelo sino uma proposta que a própria tela esconderia dele.
+        visiveis = limitar_orcamentos(
+            user,
+            Orcamento.objects.all(),
+        ).values("pk")
+        pendentes = (
+            AtividadeOrcamento.objects
+            .filter(pk__gt=ultimo_lido, orcamento_id__in=visiveis)
+            .exclude(autor=user)
+        )
+        total = pendentes.count()
+    except DatabaseError:
+        return []
+    if not total:
+        return []
+
+    ultima = pendentes.order_by("-id").first()
+    acao = {
+        AtividadeOrcamento.Tipo.CRIADO: "criou o orçamento",
+        AtividadeOrcamento.Tipo.ALTERADO: "alterou o orçamento",
+        AtividadeOrcamento.Tipo.SITUACAO: "mudou a situação do orçamento",
+        AtividadeOrcamento.Tipo.REFEITO: "criou uma nova versão do orçamento",
+        AtividadeOrcamento.Tipo.PAGAMENTO: "atualizou o pagamento do orçamento",
+        AtividadeOrcamento.Tipo.AVALIACAO: "avaliou o orçamento",
+        AtividadeOrcamento.Tipo.ENVIADO: "preparou o envio do orçamento",
+    }.get(ultima.tipo, "alterou o orçamento")
+    detalhe = (
+        f"{ultima.autor_nome} {acao} "
+        f"#{ultima.orcamento_numero} — {ultima.cliente}."
+    )
+    if ultima.resumo:
+        detalhe += f" {ultima.resumo}."
+    if total > 1:
+        restantes = total - 1
+        detalhe += (
+            f" Há mais {restantes} "
+            f"{'movimentação' if restantes == 1 else 'movimentações'} "
+            "desde sua última leitura."
+        )
+
+    return [Aviso(
+        chave="orcamentos_atividade",
+        titulo=(
+            "Nova movimentação em orçamento"
+            if total == 1 else "Novas movimentações em orçamentos"
+        ),
+        detalhe=detalhe,
+        quantidade=total,
+        url=reverse("orcamentos_inner", urlconf=URLCONF),
+        nivel="novidade",
+        icone="bi-bell-fill",
+    )]
+
+
+def marcar_atividades_lidas(user, ate=None):
+    """Avança a leitura somente até a versão que o navegador já recebeu.
+
+    Uma movimentação pode nascer entre o último pulso e o clique no sino.
+    Sem o limite ``ate``, ela seria marcada como lida antes de aparecer.
+    """
+    try:
+        atividades = AtividadeOrcamento.objects.exclude(autor=user)
+        if ate is not None:
+            atividades = atividades.filter(pk__lte=max(0, int(ate)))
+        ultimo = (
+            atividades
+            .order_by("-id")
+            .values_list("id", flat=True)
+            .first()
+            or 0
+        )
+        EstadoNotificacao.objects.update_or_create(
+            usuario=user,
+            chave=CHAVE_ATIVIDADE_LIDA,
+            defaults={"quantidade": ultimo},
+        )
+        return ultimo
+    except (DatabaseError, TypeError, ValueError):
+        return 0
 
 
 def _operacao(acesso):
@@ -308,6 +428,7 @@ def coletar(user):
     avisos = []
 
     if acesso["orcamentos"]:
+        avisos += _atividades_orcamento(user)
         avisos += _orcamentos(user, hoje)
         avisos += _respostas_de_cliente(user, timezone.now())
 

@@ -653,6 +653,9 @@ Dito em voz alta: este NÃO é o /adm do site. Quem trabalha nos
     const abrindo = avisosPainel.hidden;
     avisosPainel.hidden = !abrindo;
     avisosBotao.setAttribute("aria-expanded", String(abrindo));
+    if (abrindo && window.Painel?.avisos?.lerAtividades) {
+      Painel.avisos.lerAtividades();
+    }
   });
 
   /* Toque fora fecha. No tablet não há Esc à mão, e um painel que fica
