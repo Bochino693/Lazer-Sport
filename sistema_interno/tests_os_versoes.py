@@ -144,6 +144,9 @@ class RefazerOrdemServicoTests(TestCase):
         self.assertIn('abrirModalAcaoOS("modalEnviarOS")', html)
         self.assertIn('abrirModalAcaoOS("modalPagamentoOS")', html)
         self.assertIn('abrirModalAcaoOS("modalRefazerOS")', html)
+        self.assertIn('abrirModalAcaoOS("modalExcluir")', html)
+        self.assertIn("[data-excluir-os]", html)
+        self.assertIn("evento.stopPropagation()", html)
         self.assertNotIn(
             'document.querySelectorAll("[data-enviar-os]").forEach', html,
         )

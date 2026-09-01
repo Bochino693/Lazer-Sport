@@ -1,0 +1,32 @@
+LAZER & SPORT — CORREÇÃO V10
+Enviar e Excluir O.S. abrem antes de preparar os dados
+
+IMPORTANTE
+Este pacote é cumulativo e substitui a V9. O controlador global painel.js
+permanece exatamente igual ao original do repositório.
+
+CORREÇÕES DESTA VERSÃO
+1. Enviar O.S. abre o modal imediatamente, antes de ler os dados da linha.
+2. Se faltar algum dado, o modal permanece aberto e mostra um aviso interno.
+3. Excluir O.S. agora pertence ao controlador direto das ações da O.S.
+4. A janela de exclusão abre antes de preparar nome, proteção e confirmação.
+5. O clique antigo é interrompido para não executar dois controladores.
+6. Excluir ganhou data-excluir-os e não interfere em outras telas do sistema.
+7. Editar, Refazer e Pagamento continuam no controlador direto da V9.
+8. Cliente e peça continuam isolados dentro da O.S.
+
+COMO APLICAR
+1. Extraia este ZIP na raiz do projeto, onde está manage.py.
+2. Autorize a substituição de todos os seis arquivos.
+3. Execute: python manage.py check
+4. Reinicie o serviço web e os workers, se houver.
+5. Faça Ctrl+F5. No aplicativo instalado, feche-o totalmente e abra novamente.
+
+BANCO DE DADOS
+Não há migration nova.
+
+TESTE RÁPIDO
+1. Em uma O.S. que permita envio, abra Ações e clique em Enviar O.S.
+2. A janela deve aparecer imediatamente, mesmo se algum contato estiver vazio.
+3. Em um rascunho, clique em Excluir.
+4. A confirmação deve abrir com a O.S. selecionada e o botão ainda bloqueado.

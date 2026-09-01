@@ -193,8 +193,8 @@
                       aria-label="Refazer a O.S. {{ ordem.numero_documento }}"
                       title="Criar a versão seguinte sem apagar esta"><i class="bi bi-file-earmark-plus"></i><span class="ls-action-label">Refazer O.S.</span></button>{% endif %}{% endif %}
               {% if pode_pagamento and ordem.pode_receber_pagamento %}<button class="btn btn-sm btn-outline-success" type="button" data-pagamento-os="{{ ordem.id }}" data-nome="{{ ordem.numero_documento }} — {{ ordem.destinatario }}" data-total="{{ ordem.total }}" data-pago="{{ ordem.valor_pago }}"><i class="bi bi-cash-coin"></i><span class="ls-action-label">{% if ordem.status_pagamento == 'parcial' %}Completar pagamento{% else %}Registrar pagamento{% endif %}</span></button>{% endif %}
-              {% if pode_editar and ordem.status == 'rascunho' and not ordem.enviada_em %}<button class="btn btn-sm btn-outline-danger" type="button" data-excluir="{{ ordem.id }}" data-nome="{{ ordem.numero_documento }} — {{ ordem.destinatario }}" aria-label="Excluir {{ ordem.numero_documento }}" title="Excluir rascunho"><i class="bi bi-trash"></i><span class="ls-action-label">Excluir</span></button>
-              {% elif user.is_superuser %}{# Palavra final do superusuário: excluir O.S. que já saiu do rascunho. Fica registrado. #}<button class="btn btn-sm btn-outline-danger" type="button" data-excluir="{{ ordem.id }}" data-nome="{{ ordem.numero_documento }} — {{ ordem.destinatario }}" data-protegido="1" data-protegido-motivo="Esta O.S. está como {{ ordem.get_status_display|lower }} e faz parte do histórico operacional. Você pode excluir mesmo assim, e a exclusão vai ficar registrada com o seu nome." aria-label="Excluir {{ ordem.numero_documento }}" title="Excluir mesmo protegida (fica registrado)"><i class="bi bi-trash"></i><span class="ls-action-label">Excluir</span></button>{% endif %}
+              {% if pode_editar and ordem.status == 'rascunho' and not ordem.enviada_em %}<button class="btn btn-sm btn-outline-danger" type="button" data-excluir="{{ ordem.id }}" data-excluir-os data-nome="{{ ordem.numero_documento }} — {{ ordem.destinatario }}" aria-label="Excluir {{ ordem.numero_documento }}" title="Excluir rascunho"><i class="bi bi-trash"></i><span class="ls-action-label">Excluir</span></button>
+              {% elif user.is_superuser %}{# Palavra final do superusuário: excluir O.S. que já saiu do rascunho. Fica registrado. #}<button class="btn btn-sm btn-outline-danger" type="button" data-excluir="{{ ordem.id }}" data-excluir-os data-nome="{{ ordem.numero_documento }} — {{ ordem.destinatario }}" data-protegido="1" data-protegido-motivo="Esta O.S. está como {{ ordem.get_status_display|lower }} e faz parte do histórico operacional. Você pode excluir mesmo assim, e a exclusão vai ficar registrada com o seu nome." aria-label="Excluir {{ ordem.numero_documento }}" title="Excluir mesmo protegida (fica registrado)"><i class="bi bi-trash"></i><span class="ls-action-label">Excluir</span></button>{% endif %}
             </div></td>
           </tr>
         {% empty %}<tr data-lista-vazia><td colspan="9"><div class="ls-empty"><i class="bi bi-clipboard2-check"></i>Nenhuma Ordem de Serviço encontrada.</div></td></tr>{% endfor %}
@@ -663,9 +663,11 @@ LSTela.pronto(function () {
 
   function executarAcaoOS(evento){
     var botao=evento.target.closest&&evento.target.closest(
-      "[data-editar-os],[data-refazer-os],[data-enviar-os],[data-pagamento-os]"
+      "[data-editar-os],[data-refazer-os],[data-enviar-os],[data-pagamento-os],[data-excluir-os]"
     );
     if(!botao)return;
+    evento.preventDefault();
+    evento.stopPropagation();
     Painel.fecharAcoesFlutuantes(false);
 
     if(botao.hasAttribute("data-editar-os")){
@@ -684,23 +686,49 @@ LSTela.pronto(function () {
     }
 
     if(botao.hasAttribute("data-enviar-os")){
-      osEnvioAtual=achar(botao.dataset.enviarOs)||{};
-      valor("envioOSId",botao.dataset.enviarOs);
-      valor("envioOSWhatsapp",botao.dataset.whatsapp||osEnvioAtual.whatsapp_cliente);
-      valor("envioOSEmail",botao.dataset.email||osEnvioAtual.email_cliente);
-      definirLinkOS(osEnvioAtual.link_publico||"");
-      document.getElementById("envioOSTitulo").textContent=
-        "Enviar O.S. para "+(botao.dataset.nome||"cliente");
-      document.getElementById("envioOSResumo").textContent=
-        "OS-"+String(botao.dataset.enviarOs).padStart(5,"0")+" · "+
-        (osEnvioAtual.equipamento||"atendimento");
-      document.getElementById("envioOSMensagem").textContent=
-        osEnvioAtual.mensagem_whatsapp||"Mensagem pronta após salvar a O.S.";
-      document.getElementById("envioOSPrevia").href=
-        osEnvioAtual.preview_url||osEnvioAtual.link_publico||"#";
-      desenharEnviosOS(osEnvioAtual.envios||[]);
-      avisoOS("","");
       abrirModalAcaoOS("modalEnviarOS");
+      try{
+        osEnvioAtual=achar(botao.dataset.enviarOs)||{};
+        valor("envioOSId",botao.dataset.enviarOs);
+        valor("envioOSWhatsapp",botao.dataset.whatsapp||osEnvioAtual.whatsapp_cliente);
+        valor("envioOSEmail",botao.dataset.email||osEnvioAtual.email_cliente);
+        definirLinkOS(osEnvioAtual.link_publico||"");
+        document.getElementById("envioOSTitulo").textContent=
+          "Enviar O.S. para "+(botao.dataset.nome||"cliente");
+        document.getElementById("envioOSResumo").textContent=
+          "OS-"+String(botao.dataset.enviarOs).padStart(5,"0")+" · "+
+          (osEnvioAtual.equipamento||"atendimento");
+        document.getElementById("envioOSMensagem").textContent=
+          osEnvioAtual.mensagem_whatsapp||"Mensagem pronta após salvar a O.S.";
+        document.getElementById("envioOSPrevia").href=
+          osEnvioAtual.preview_url||osEnvioAtual.link_publico||"#";
+        desenharEnviosOS(osEnvioAtual.envios||[]);
+        avisoOS("","");
+      }catch(erro){
+        Painel.erro("envioOSErro","A janela abriu, mas algum dado da O.S. não pôde ser carregado. Feche, atualize a tela e tente novamente.");
+      }
+      return;
+    }
+
+    if(botao.hasAttribute("data-excluir-os")){
+      /* Abre PRIMEIRO. Preparar textos nunca mais pode impedir a janela. */
+      abrirModalAcaoOS("modalExcluir");
+      var formExcluir=document.getElementById("formExcluir");
+      if(formExcluir)formExcluir.reset();
+      Painel.erro("excluirErro","");
+      valor("excluirId",botao.dataset.excluir||"");
+      var excluirNome=document.getElementById("excluirNome");
+      if(excluirNome)excluirNome.textContent=botao.dataset.nome||"O.S. selecionada";
+      var forcada=document.getElementById("excluirForcada");
+      if(forcada)forcada.hidden=botao.dataset.protegido!=="1";
+      var detalheForcada=document.getElementById("excluirForcadaDetalhe");
+      if(detalheForcada&&botao.dataset.protegidoMotivo){
+        detalheForcada.textContent=botao.dataset.protegidoMotivo;
+      }
+      var confirmar=document.getElementById("excluirConfirmacao");
+      if(confirmar){confirmar.value="";confirmar.classList.remove("is-valid","is-invalid");}
+      var excluirEnviar=document.getElementById("excluirEnviar");
+      if(excluirEnviar)excluirEnviar.disabled=true;
       return;
     }
 
