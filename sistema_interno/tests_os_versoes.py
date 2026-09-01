@@ -118,11 +118,12 @@ class RefazerOrdemServicoTests(TestCase):
             nome_cliente="Cliente atendido na oficina",
         ).exists())
 
-    def test_tela_oferece_cliente_novo_dentro_da_os(self):
+    def test_tela_oferece_um_unico_caminho_para_cliente_novo(self):
         html = self.tela()
-        self.assertIn('id="novoClienteOS"', html)
+        self.assertNotIn('id="novoClienteOS"', html)
         self.assertIn('id="modalClienteNovoOS"', html)
         self.assertIn('action" value="cliente_novo"', html)
+        self.assertIn('rotulo:"Cadastrar cliente"', html)
 
     def test_refazer_congela_a_anterior_e_abre_a_seguinte(self):
         """O papel que o cliente leu continua existindo, inteiro."""

@@ -5,6 +5,37 @@
 {% block top_title %}Ordens de Serviço{% endblock %}
 {% block body_class %}ls-os-body ls-commercial-body{% endblock %}
 
+{% block extra_css %}
+<style>
+  /* Cabeçalho operacional: menos bloco verde, mais superfície do app. */
+  .ls-os-body .ls-page-hero{
+    isolation:isolate;overflow:hidden;
+    padding:clamp(18px,2vw,26px)!important;
+    border:1px solid rgba(127,230,213,.2)!important;
+    border-radius:24px 24px 24px 9px!important;
+    background:
+      linear-gradient(118deg,rgba(24,27,23,.98),rgba(29,34,29,.93) 68%,rgba(26,44,39,.88))!important;
+    box-shadow:0 16px 34px rgba(0,0,0,.22),inset 0 1px rgba(255,255,255,.035)!important;
+  }
+  .ls-os-body .ls-page-hero::after{
+    content:""!important;display:block!important;position:absolute;z-index:0;
+    width:260px;height:260px;right:-105px;top:-145px;border-radius:50%;
+    background:radial-gradient(circle,rgba(61,217,192,.18),rgba(61,217,192,0) 70%);
+    pointer-events:none;
+  }
+  .ls-os-body .ls-page-hero-nota{
+    display:inline-flex;align-items:flex-start;gap:4px;max-width:590px;
+    margin-top:12px!important;padding:10px 13px!important;
+    border:1px solid rgba(127,230,213,.22);border-radius:14px 14px 14px 5px;
+    background:rgba(61,217,192,.055)!important;color:#d8e4e1!important;
+  }
+  @media (max-width:760px){
+    .ls-os-body .ls-page-hero{border-radius:20px 20px 20px 7px!important}
+    .ls-os-body .ls-page-hero-nota{display:flex;max-width:none}
+  }
+</style>
+{% endblock %}
+
 {% block content %}
 <section class="ls-page-hero">
   <div class="ls-page-hero-copy">
@@ -172,10 +203,7 @@
     <div class="row g-3">
       <div class="col-12"><div class="ls-budget-block-title comercial"><i class="bi bi-person-vcard"></i><span><strong>Cliente e origem</strong><small>A O.S. pode nascer de uma proposta aprovada, de um chamado ou de atendimento direto.</small></span></div></div>
       <div class="col-md-5">
-        <div class="d-flex align-items-center justify-content-between gap-2">
-          <label class="form-label mb-1" for="osClienteBusca">Cliente cadastrado</label>
-          {% if pode_editar %}<button class="btn btn-sm btn-outline-success mb-1" type="button" id="novoClienteOS"><i class="bi bi-person-plus me-1"></i>Cadastrar agora</button>{% endif %}
-        </div>
+        <label class="form-label" for="osClienteBusca">Cliente cadastrado</label>
         <div id="osClienteBox"></div>
         <span class="form-text">Busque uma ficha existente. Se não encontrar, cadastre aqui sem perder a O.S.</span>
         <div class="ls-cliente-resumo" id="osClienteResumo" hidden></div>
@@ -694,10 +722,6 @@ LSTela.pronto(function () {
     if(status)status.textContent="";
     Painel.abrirFilho("modalClienteNovoOS","modalOS");
   }
-
-  document.getElementById("novoClienteOS")?.addEventListener("click",function(){
-    abrirCadastroDeClienteOS(buscaClienteOS.entrada.value||"");
-  });
 
   Painel.ligarCep({
     url:"{% url 'consultar_cep_inner' %}",

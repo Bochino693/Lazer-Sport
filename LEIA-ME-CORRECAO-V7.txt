@@ -1,0 +1,35 @@
+LAZER & SPORT — CORREÇÃO V7
+Modal empilhado de verdade e acabamento da tela de O.S.
+
+BASE
+Pacote cumulativo sobre a correção anterior. Inclui busca de peças e itens de
+manutenção, identificação automática, cadastro rápido de cliente e este ajuste
+definitivo da pilha de modais.
+
+O QUE MUDA NESTA VERSÃO
+1. A O.S. permanece visível por baixo durante o cadastro de cliente ou peça.
+2. O cadastro-filho abre imediatamente acima, sem aguardar o fechamento da O.S.
+3. Cada modal-filho recebe fundo e nível visual próprios.
+4. Ao fechar o filho, foco, rolagem e preenchimento continuam na mesma O.S.
+5. O cliente recém-criado é selecionado e pré-preenchido na O.S.
+6. Foi removido o botão duplicado “Cadastrar agora”.
+7. A busca oferece um único “Cadastrar cliente” quando não encontra a ficha.
+8. O cabeçalho verde quadrado virou uma superfície escura, arredondada e leve.
+
+COMO APLICAR
+1. Faça uma cópia da pasta atual do sistema.
+2. Extraia este ZIP na raiz do projeto, onde está manage.py.
+3. Autorize a substituição dos arquivos existentes.
+4. Execute: python manage.py check
+5. Reinicie o serviço web e os workers, se houver.
+6. Faça Ctrl+F5. Em aplicativo instalado, feche-o por completo e abra novamente.
+
+BANCO DE DADOS
+Não há migration nova.
+
+TESTE RÁPIDO
+1. Abra Nova O.S. e digite um cliente inexistente.
+2. Clique uma vez em Cadastrar cliente.
+3. Confirme que o cadastro abriu acima e a O.S. permaneceu visível por baixo.
+4. Salve: o cadastro fecha, a O.S. continua aberta e o cliente fica selecionado.
+5. Repita com uma peça/item e confirme o mesmo comportamento.
