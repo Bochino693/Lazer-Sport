@@ -2601,29 +2601,116 @@ a.ls-metric-card.active{border-color:var(--metric);box-shadow:0 0 0 2px rgba(242
    destaque frio" no resto do painel. A O.S. se distingue do orçamento
    sem sair de casa.
    ====================================================================== */
+/* AS COORDENADAS DA TELA, EM UM LUGAR SÓ.
+
+   Antes cada regra desta seção repetia `rgba(61,217,192,...)` com uma
+   opacidade diferente -- vinte e poucas vezes, sem que nenhuma delas
+   soubesse das outras. Mexer no tom da casa significava caçar vinte
+   linhas e acertar vinte opacidades na mão, e o que saía disso era o que
+   estava na tela: contornos quase invisíveis em uns lugares e berrantes
+   em outros, texto de rótulo lavado, cartões com o mesmo cinza de fundo
+   do painel atrás deles.
+
+   Agora o tom mora aqui. `--os-tinta` é o texto de rótulo, e subiu de
+   #8FDFD2 para um teal claro que passa em contraste sobre o grafite;
+   `--os-linha` e `--os-linha-forte` separam o contorno de repouso do
+   contorno que marca escolha; `--os-verniz` é o brilho que dá relevo
+   sem virar cor chapada. */
 .ls-os-body{
-  --os-acento:var(--apoio);
-  --os-linha:rgba(61,217,192,.26);
-  --os-painel:rgba(28,58,54,.4);
+  --os-acento:#3DD9C0;
+  --os-acento-2:#22B39D;
+  --os-tinta:#A8EFE2;
+  --os-tinta-2:#6FCFC0;
+  --os-linha:rgba(61,217,192,.22);
+  --os-linha-forte:rgba(61,217,192,.46);
+  --os-verniz:rgba(61,217,192,.09);
+  --os-painel:linear-gradient(150deg,rgba(30,62,58,.42),rgba(25,21,15,.92));
+  --os-painel-alto:linear-gradient(150deg,rgba(38,78,72,.5),rgba(27,23,17,.95));
 }
 .ls-os-body .ls-page-hero{
-  border-color:var(--os-linha)!important;
+  border-color:var(--os-linha-forte)!important;
   background:
-    radial-gradient(circle at 86% 20%,rgba(61,217,192,.11),transparent 34%),
-    linear-gradient(135deg,rgba(30,58,54,.62),rgba(24,20,16,.94))!important;
+    radial-gradient(circle at 88% 12%,rgba(61,217,192,.15),transparent 42%),
+    radial-gradient(circle at 4% 96%,rgba(61,217,192,.07),transparent 38%),
+    linear-gradient(135deg,rgba(30,62,58,.66),rgba(24,20,16,.96))!important;
 }
-.ls-os-body .ls-page-kicker{color:#7FE6D5!important}
-.ls-os-body .ls-page-hero h1{color:var(--text)!important;text-shadow:0 0 28px rgba(61,217,192,.14)}
-.ls-os-body .ls-page-hero-copy p{color:var(--muted)!important}
-.ls-os-body .ls-data-panel{border-color:var(--os-linha)!important;box-shadow:0 18px 45px rgba(0,0,0,.28)!important}
-.ls-os-body .ls-data-header{background:linear-gradient(135deg,rgba(30,58,54,.4),rgba(24,20,16,.7))!important}
-.ls-os-body .ls-commercial-table thead th{color:#8FDFD2!important;border-bottom-color:rgba(61,217,192,.3)!important}
-.ls-os-body .ls-budget-money-strip>div{border-color:rgba(61,217,192,.2)!important;background:linear-gradient(145deg,rgba(30,58,54,.46),rgba(26,22,17,.84))!important}
-.ls-os-body .ls-budget-money-strip span{color:var(--muted)!important}
+.ls-os-body .ls-page-kicker{color:var(--os-tinta)!important}
+.ls-os-body .ls-page-hero h1{color:var(--text)!important;text-shadow:0 0 30px rgba(61,217,192,.18)}
+.ls-os-body .ls-page-hero-copy p{color:var(--text-2)!important}
+.ls-os-body .ls-page-hero-nota{
+  margin-top:11px;padding:9px 12px;border-radius:12px;
+  border:1px solid var(--os-linha);background:var(--os-verniz);
+  color:var(--text-2)!important;font-size:.79rem;line-height:1.5;
+}
+.ls-os-body .ls-page-hero-nota i{color:var(--os-tinta)}
+.ls-os-body .ls-data-panel{
+  border-color:var(--os-linha)!important;
+  box-shadow:0 20px 50px rgba(0,0,0,.32)!important;
+}
+.ls-os-body .ls-data-header{
+  background:linear-gradient(135deg,rgba(30,62,58,.44),rgba(24,20,16,.72))!important;
+  border-bottom:1px solid var(--os-linha)!important;
+}
+.ls-os-body .ls-data-header p{color:var(--text-2)!important}
+.ls-os-body .ls-commercial-table thead th{
+  color:var(--os-tinta)!important;border-bottom-color:var(--os-linha-forte)!important;
+}
+.ls-os-body .ls-budget-money-strip>div{
+  border-color:var(--os-linha)!important;background:var(--os-painel)!important;
+}
+.ls-os-body .ls-budget-money-strip span{color:var(--text-2)!important}
 .ls-os-body .ls-budget-money-strip strong{color:var(--text)!important}
-.ls-os-body .ls-metric-card{border-color:rgba(61,217,192,.18)}
-.ls-os-body .ls-metric-card.active{border-color:var(--os-acento)!important;box-shadow:0 0 0 2px rgba(61,217,192,.2),var(--shadow-soft)!important}
-.ls-os-body .ls-distance-chip{color:#8FDFD2;background:rgba(61,217,192,.1);border-color:rgba(61,217,192,.28)}
+.ls-os-body .ls-metric-card{border-color:var(--os-linha)}
+.ls-os-body .ls-metric-card.active{
+  border-color:var(--os-acento)!important;
+  box-shadow:0 0 0 2px rgba(61,217,192,.24),var(--shadow-soft)!important;
+}
+.ls-os-body .ls-distance-chip{
+  color:var(--os-tinta);background:var(--os-verniz);border-color:var(--os-linha-forte);
+}
+.ls-os-body .material-sub,.ls-os-body .ls-sub{color:var(--os-tinta-2)}
+
+/* A VERSÃO NÃO PODE SER MAIS UMA LINHA CINZA SOB O NÚMERO.
+
+   Duas O.S. do mesmo equipamento, com totais diferentes, só se
+   distinguem pela versão -- e ela estava escrita no mesmo cinza miúdo do
+   resto dos detalhes. Aqui ela é uma marca ao lado do número: quem bate
+   o olho na lista vê primeiro que aquela linha tem histórico. */
+.ls-versao-chip{
+  display:inline-block;margin-left:6px;padding:2px 7px;
+  border:1px solid var(--os-linha-forte);border-radius:999px;
+  background:var(--os-verniz);color:var(--os-tinta);
+  font-size:.66rem;font-weight:900;letter-spacing:.03em;
+  font-variant-numeric:tabular-nums;vertical-align:middle;
+}
+
+/* Linha da versão congelada: presente, e claramente fora da fila. Não
+   escondida -- é nela que se confere o que tinha sido combinado antes --
+   mas sem disputar atenção com o trabalho que ainda existe. */
+.ls-os-tabela tbody tr:has(.ls-status.neutral) .ls-versao-chip{
+  border-color:var(--line);background:transparent;color:var(--muted);
+}
+
+/* A linha da O.S. dentro da janela: a busca do catálogo é o campo mais
+   largo depois da descrição, e as duas precisam caber juntas. */
+.ls-os-itens td[data-catalogo]{min-width:190px}
+.ls-os-itens th:first-child,.ls-os-itens td:first-child{min-width:132px}
+@media(max-width:820px){
+  .ls-os-itens,.ls-os-itens tbody,.ls-os-itens tr,.ls-os-itens td{display:block;width:100%}
+  .ls-os-itens thead{display:none}
+  .ls-os-itens tbody tr{
+    margin-bottom:11px;padding:12px;border:1px solid var(--os-linha);
+    border-radius:14px;background:var(--os-painel);
+  }
+  .ls-os-itens tbody td{padding:5px 0!important;border:0!important}
+  .ls-os-itens tbody td::before{
+    content:attr(data-rotulo);display:block;margin-bottom:4px;
+    color:var(--os-tinta);font-size:.65rem;font-weight:900;
+    letter-spacing:.07em;text-transform:uppercase;
+  }
+  .ls-os-itens tbody td:last-child::before{content:"";display:none}
+  .ls-os-itens tbody td:last-child .btn{width:100%;min-height:44px}
+}
 #modalOS .modal-content,#modalEnviarOS .modal-content{border-color:rgba(61,217,192,.3)!important}
 #modalOS .modal-header,#modalEnviarOS .modal-header{background:linear-gradient(135deg,rgba(30,58,54,.7),rgba(24,20,16,.96))!important;border-bottom-color:rgba(61,217,192,.22)!important}
 #modalOS .ls-modal-kicker,#modalEnviarOS .ls-modal-kicker{color:#7FE6D5!important}
@@ -2821,6 +2908,13 @@ body.modal-open .ls-action-fab-menu{display:none!important}
    tablet o registro vira um card de três colunas, sempre na mesma ordem;
    no celular ele cai para duas. A ação continua fixa no canto e não
    desloca nenhum dado.
+
+   O QUE MUDOU NESTA RODADA. O tablet ficou igual ao do orçamento, que já
+   tinha resolvido o mesmo problema: cabeçalho e busca centrados e com
+   largura útil, os cards presos a uma coluna central em vez de esticados
+   de borda a borda, e o conteúdo de cada célula alinhado ao rótulo em
+   cima dele. Espalhado na largura inteira, o card de tablet obrigava a
+   varrer 900px com os olhos para ligar "Total" ao número embaixo.
    ====================================================================== */
 @media (min-width:901px){
   .ls-os-body .table-responsive{overflow-x:visible!important}
@@ -2842,33 +2936,57 @@ body.modal-open .ls-action-fab-menu{display:none!important}
   .ls-os-tabela td[data-rotulo="Cliente / equipamento"] strong{
     display:block;white-space:normal;overflow:visible;text-overflow:clip;
   }
+  /* A LINHA GANHA UMA MARCA DE SITUAÇÃO NA BORDA.
+     Em nove colunas, a coluna "Situação" fica no meio da linha e some
+     na varredura. A faixa da esquerda diz o estado antes de a leitura
+     chegar lá -- e some no hover, para não competir com a linha ativa. */
+  .ls-os-tabela tbody tr{position:relative}
+  .ls-os-tabela tbody tr>td:first-child{
+    border-left:3px solid transparent;padding-left:9px!important;
+  }
+  .ls-os-tabela tbody tr:has(.ls-status.success)>td:first-child{border-left-color:rgba(95,214,138,.6)}
+  .ls-os-tabela tbody tr:has(.ls-status.warning)>td:first-child{border-left-color:rgba(255,201,77,.6)}
+  .ls-os-tabela tbody tr:has(.ls-status.info)>td:first-child{border-left-color:rgba(61,217,192,.6)}
+  .ls-os-tabela tbody tr:has(.ls-status.danger)>td:first-child{border-left-color:rgba(255,122,107,.6)}
+  .ls-os-tabela tbody tr:hover{background:var(--os-verniz)}
 }
 
 @media (min-width:601px) and (max-width:900px){
+  /* Cabeçalho e busca centrados, com largura útil: esticada de borda a
+     borda a caixa de busca virava uma faixa de 900px para dez letras. */
+  .ls-os-body .ls-data-header{
+    align-items:center!important;text-align:center!important;
+  }
+  .ls-os-body .ls-data-header>div{width:100%}
+  .ls-os-body .ls-budget-search{
+    width:min(100%,640px)!important;margin-inline:auto!important;
+  }
   .ls-os-body .ls-commercial-table-wrap,
   .ls-os-body .table-responsive{overflow:visible!important}
   .ls-os-tabela,.ls-os-tabela tbody{display:block!important;width:100%!important;min-width:0!important}
   .ls-os-tabela thead{display:none!important}
+  .ls-os-tabela tbody{max-width:860px;margin-inline:auto}
   .ls-os-tabela tbody tr{
     position:relative;display:grid!important;
     grid-template-columns:repeat(3,minmax(0,1fr))!important;
-    gap:0 16px!important;width:100%;margin:0 0 12px!important;
-    padding:14px 64px 12px 14px!important;
-    border:1px solid var(--os-linha)!important;border-radius:17px!important;
-    background:linear-gradient(145deg,rgba(30,58,54,.42),#19150f 72%)!important;
+    gap:0 16px!important;width:100%;margin:0 0 13px!important;
+    padding:15px 64px 13px 15px!important;
+    border:1px solid var(--os-linha-forte)!important;border-radius:18px!important;
+    background:var(--os-painel)!important;
+    box-shadow:var(--shadow-soft);
   }
   .ls-os-tabela tbody td{
     display:block!important;min-width:0!important;max-width:none!important;
-    padding:9px 2px!important;border:0!important;
+    padding:9px 3px!important;border:0!important;
     border-bottom:1px solid var(--line-soft)!important;
-    text-align:left!important;white-space:normal!important;background:transparent!important;
+    text-align:center!important;white-space:normal!important;background:transparent!important;
   }
   .ls-os-tabela tbody td::before{
-    content:attr(data-rotulo);display:block;margin-bottom:4px;
-    color:#8fdfd2;font-size:.64rem;font-weight:950;
-    letter-spacing:.075em;line-height:1.2;text-transform:uppercase;
+    content:attr(data-rotulo);display:block;margin-bottom:5px;
+    color:var(--os-tinta);font-size:.65rem;font-weight:950;
+    letter-spacing:.08em;line-height:1.2;text-align:center;text-transform:uppercase;
   }
-  .ls-os-tabela tbody td[data-rotulo="Cliente / equipamento"]{grid-column:2/4}
+  .ls-os-tabela tbody td[data-rotulo="Cliente / equipamento"]{grid-column:2/4!important}
   .ls-os-tabela tbody td[data-rotulo="Ações"]{
     position:absolute!important;top:12px;right:12px;z-index:4;
     width:40px!important;min-width:40px!important;padding:0!important;
@@ -2878,12 +2996,21 @@ body.modal-open .ls-action-fab-menu{display:none!important}
   .ls-os-tabela tbody td[data-rotulo="Cliente / equipamento"] strong{
     white-space:normal;overflow:visible;text-overflow:clip;
   }
+  .ls-os-tabela .ls-route-actions,.ls-os-tabela .ls-row-actions{justify-content:center}
+  .ls-os-tabela .ls-status,.ls-os-tabela .ls-pago{margin-inline:auto}
 }
 
 @media (max-width:600px){
+  .ls-os-body .ls-data-header{text-align:center!important}
+  .ls-os-body .ls-data-header>div,
+  .ls-os-body .ls-budget-search{width:100%!important;margin-inline:auto!important}
+  .ls-os-tabela tbody td{text-align:center!important}
+  .ls-os-tabela tbody td::before{text-align:center}
   .ls-os-tabela tbody td[data-rotulo="Cliente / equipamento"],
   .ls-os-tabela tbody td[data-rotulo="Situação"],
   .ls-os-tabela tbody td[data-rotulo="Pagamento"]{grid-column:1/-1}
+  .ls-os-tabela .ls-route-actions{justify-content:center}
+  .ls-os-tabela .ls-status,.ls-os-tabela .ls-pago{margin-inline:auto}
 }
 
 /* ======================================================================
@@ -2973,6 +3100,63 @@ body.modal-open .ls-action-fab-menu{display:none!important}
   .ls-orcamentos-table tbody td[data-rotulo="Revisão dos blocos"]{grid-column:1/-1}
   .ls-orcamentos-table .ls-origin-badge{justify-content:center;margin-inline:auto}
   .ls-orcamentos-table .ls-block-review{justify-content:center}
+}
+
+/* ======================================================================
+   HISTÓRICO DE VERSÕES — dentro do documento, e não na lista
+
+   A lista esconde as versões substituídas de propósito: juntas, a mesma
+   negociação parece três orçamentos e quem varre a fila conta errado.
+   Escondido da lista não pode ser escondido do sistema, então a corrente
+   inteira mora aqui, dentro da versão atual -- fechada, porque quem abre
+   a proposta quer a proposta, e a um clique de distância quando o
+   cliente liga perguntando por que o preço mudou.
+   ====================================================================== */
+.ls-versoes{
+  margin-bottom:16px;border:1px solid var(--line);border-radius:14px;
+  background:var(--panel-soft);
+}
+.ls-versoes[hidden]{display:none!important}
+.ls-versoes>summary{
+  display:flex;align-items:center;gap:9px;cursor:pointer;
+  padding:11px 14px;color:var(--text-2);font-size:.82rem;font-weight:800;
+  list-style:none;
+}
+.ls-versoes>summary::-webkit-details-marker{display:none}
+.ls-versoes>summary i{color:var(--acento)}
+.ls-versoes>summary::after{
+  content:"▾";margin-left:auto;color:var(--muted);transition:transform .15s ease;
+}
+.ls-versoes[open]>summary::after{transform:rotate(180deg)}
+.ls-versoes[open]>summary{border-bottom:1px solid var(--line-soft)}
+.ls-versoes-lista{margin:0;padding:10px 14px 14px;list-style:none;display:grid;gap:9px}
+.ls-versoes-lista li{
+  display:flex;flex-wrap:wrap;align-items:center;gap:4px 12px;
+  padding:10px 12px;border:1px solid var(--line-soft);border-radius:12px;
+  background:rgba(0,0,0,.16);
+}
+.ls-versoes-lista strong{color:var(--text);font-size:.82rem;font-variant-numeric:tabular-nums}
+.ls-versoes-lista span{color:var(--text-2);font-size:.75rem;font-weight:700}
+/* O motivo ocupa a linha inteira: é frase, e não etiqueta. */
+.ls-versoes-lista em{
+  flex:1 0 100%;color:var(--muted);font-size:.73rem;font-style:normal;line-height:1.45;
+}
+.ls-versoes-lista .btn{margin-left:auto}
+/* A versão que está aberta se distingue sem precisar de rótulo. */
+.ls-versoes-lista li.atual{
+  border-color:rgba(242,169,59,.45);background:rgba(242,169,59,.09);
+}
+.ls-versoes-lista li.atual strong::after{
+  content:" · nesta tela";color:var(--acento);font-size:.7rem;font-weight:800;
+}
+.ls-os-body .ls-versoes>summary i{color:var(--os-tinta)}
+.ls-os-body .ls-versoes-lista li.atual{
+  border-color:var(--os-linha-forte);background:var(--os-verniz);
+}
+.ls-os-body .ls-versoes-lista li.atual strong::after{color:var(--os-tinta)}
+@media(max-width:520px){
+  .ls-versoes-lista li{flex-direction:column;align-items:flex-start}
+  .ls-versoes-lista .btn{margin-left:0;width:100%}
 }
 
 /* A ação de cadastrar fica antes dos resultados de cliente/brinquedo. */

@@ -55,6 +55,7 @@ from .views_gestao import (
     AtualizarEtapaProducaoView,
     BuscaClientesOrcamentoView,
     BuscaItensOrcamentoView,
+    BuscaItensOrdemServicoView,
     EstadoOrcamentosView,
     FinanceiroInnerView,
     GuiasProducaoView,
@@ -195,6 +196,12 @@ urlpatterns = [
         'orcamentos/itens/buscar/',
         BuscaItensOrcamentoView.as_view(),
         name='buscar_itens_orcamento',
+    ),
+    # A mesma busca, para quem monta a O.S. sem ter acesso a propostas.
+    path(
+        'ordens-servico/itens/buscar/',
+        BuscaItensOrdemServicoView.as_view(),
+        name='buscar_itens_ordem_servico',
     ),
     path(
         'orcamentos/clientes/buscar/',

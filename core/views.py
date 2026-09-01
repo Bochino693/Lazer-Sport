@@ -244,11 +244,8 @@ class HomeView(View):
         from .models import ImagemPeca
 
         ids_com_imagem = list(
-            PecasReposicao.objects
-            .filter(
-                ativo=True,
-                imagem_peca_reposicao__isnull=False,
-            )
+            PecasReposicao.da_vitrine()
+            .filter(imagem_peca_reposicao__isnull=False)
             .values_list("id", flat=True)
             .distinct()
         )
@@ -264,11 +261,8 @@ class HomeView(View):
 
         pecas_preview = (
             list(
-                PecasReposicao.objects
-                .filter(
-                    ativo=True,
-                    id__in=ids_amostra,
-                )
+                PecasReposicao.da_vitrine()
+                .filter(id__in=ids_amostra)
                 .prefetch_related(
                     Prefetch(
                         "imagem_peca_reposicao",
@@ -287,8 +281,7 @@ class HomeView(View):
         # paginação de 9 por página já é feita no JS
         # (inicializarPecasClientSide), então manda a lista completa.
         pecas_todas = list(
-            PecasReposicao.objects
-            .filter(ativo=True)
+            PecasReposicao.da_vitrine()
             .prefetch_related(
                 "imagem_peca_reposicao",
                 "categoria_peca",
@@ -413,9 +406,14 @@ class ReposicaoView(View):
 
     def get(self, request):
         categorias_peca = CategoriaPeca.objects.all()
+        # A LISTA DA VITRINE NÃO MOSTRAVA SÓ O QUE ESTÁ NA VITRINE.
+        #
+        # Era `.all()`: peça desativada aparecia para o visitante junto
+        # com as vendáveis, e a criada às pressas dentro de um orçamento
+        # entrava aqui no mesmo instante. Agora a regra é a de
+        # `da_vitrine` -- ativa, e da loja.
         pecas = list(
-            PecasReposicao.objects
-            .all()
+            PecasReposicao.da_vitrine()
             .prefetch_related("imagem_peca_reposicao")
         )
 
@@ -445,13 +443,15 @@ class ReposicaoView(View):
 
 class ReposicaoDetalheView(View):
     def get(self, request, pk):
+        # Item de manutenção não tem página de produto: ele não foi
+        # cadastrado para ser vendido, e a página anunciaria um preço de
+        # custo interno como se fosse oferta ao público.
         peca = get_object_or_404(
-            PecasReposicao.objects.prefetch_related(
+            PecasReposicao.da_vitrine().prefetch_related(
                 "imagem_peca_reposicao",
                 "categoria_peca",
             ),
             pk=pk,
-            ativo=True,
         )
         imagens = list(peca.imagens_ordenadas)
 
@@ -1329,8 +1329,7 @@ class LojaView(View):
         itens = []
 
         pecas = (
-            PecasReposicao.objects
-            .filter(ativo=True)
+            PecasReposicao.da_vitrine()
             .prefetch_related('imagem_peca_reposicao', 'categoria_peca')
         )
         for peca in pecas:
@@ -6405,8 +6404,7 @@ class SearchView(View):
                 )
 
             pecas = (
-                PecasReposicao.objects
-                .filter(ativo=True)
+                PecasReposicao.da_vitrine()
                 .prefetch_related("categoria_peca", "imagem_peca_reposicao")
             )
 
