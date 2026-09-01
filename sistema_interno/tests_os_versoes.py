@@ -137,6 +137,20 @@ class RefazerOrdemServicoTests(TestCase):
         self.assertNotIn('Painel.abrirFilho("modalClienteNovoOS"', html)
         self.assertNotIn('Painel.abrirFilho("modalPecaOS"', html)
 
+    def test_acoes_da_lista_usam_controlador_direto_e_unico(self):
+        html = self.tela()
+        self.assertIn("function executarAcaoOS(evento)", html)
+        self.assertIn('document.addEventListener("click",executarAcaoOS,true)', html)
+        self.assertIn('abrirModalAcaoOS("modalEnviarOS")', html)
+        self.assertIn('abrirModalAcaoOS("modalPagamentoOS")', html)
+        self.assertIn('abrirModalAcaoOS("modalRefazerOS")', html)
+        self.assertNotIn(
+            'document.querySelectorAll("[data-enviar-os]").forEach', html,
+        )
+        self.assertNotIn(
+            'document.querySelectorAll("[data-pagamento-os]").forEach', html,
+        )
+
     def test_refazer_congela_a_anterior_e_abre_a_seguinte(self):
         """O papel que o cliente leu continua existindo, inteiro."""
         ordem = self.criar_ordem()

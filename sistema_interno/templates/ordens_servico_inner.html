@@ -635,6 +635,92 @@ LSTela.pronto(function () {
   var tiposItem = [{% for v,r in item_tipos %}{value:"{{ v }}", label:"{{ r|escapejs }}"},{% endfor %}];
 
   /* ---------------------------------------------------------------
+     Ações da lista: um controlador único, ligado antes do restante.
+
+     Os botões são movidos para um menu flutuante pelo Painel. Um listener
+     preso a cada botão era frágil na navegação suave: se a montagem da tela
+     parasse no meio, o menu ainda reagia ao clique, mas Enviar/Pagamento/
+     Refazer nunca recebiam a função. A delegação na fase de captura executa
+     a ação antes de o menu flutuante fechar e substitui ouvintes dispersos.
+     --------------------------------------------------------------- */
+  function abrirModalAcaoOS(id){
+    var elemento=document.getElementById(id);
+    if(!elemento)return;
+    Painel.fecharAcoesFlutuantes(false);
+    Painel.abrir(id);
+    /* `show()` adiciona a classe no mesmo ciclo. Se uma instância antiga
+       ficou travada em transição, recria somente ESTE modal e tenta uma vez. */
+    window.requestAnimationFrame(function(){
+      if(elemento.classList.contains("show"))return;
+      var antiga=window.bootstrap&&bootstrap.Modal.getInstance(elemento);
+      if(antiga)antiga.dispose();
+      elemento.classList.remove("show");
+      elemento.style.display="none";
+      elemento.setAttribute("aria-hidden","true");
+      bootstrap.Modal.getOrCreateInstance(elemento).show();
+    });
+  }
+
+  function executarAcaoOS(evento){
+    var botao=evento.target.closest&&evento.target.closest(
+      "[data-editar-os],[data-refazer-os],[data-enviar-os],[data-pagamento-os]"
+    );
+    if(!botao)return;
+    Painel.fecharAcoesFlutuantes(false);
+
+    if(botao.hasAttribute("data-editar-os")){
+      abrir(botao.dataset.editarOs);
+      return;
+    }
+
+    if(botao.hasAttribute("data-refazer-os")){
+      valor("refazerOSId",botao.dataset.refazerOs);
+      document.getElementById("refazerOSTitulo").textContent=
+        "Refazer "+(botao.dataset.nome||"O.S.");
+      valor("refazerOSMotivo","");
+      Painel.erro("refazerOSErro","");
+      abrirModalAcaoOS("modalRefazerOS");
+      return;
+    }
+
+    if(botao.hasAttribute("data-enviar-os")){
+      osEnvioAtual=achar(botao.dataset.enviarOs)||{};
+      valor("envioOSId",botao.dataset.enviarOs);
+      valor("envioOSWhatsapp",botao.dataset.whatsapp||osEnvioAtual.whatsapp_cliente);
+      valor("envioOSEmail",botao.dataset.email||osEnvioAtual.email_cliente);
+      definirLinkOS(osEnvioAtual.link_publico||"");
+      document.getElementById("envioOSTitulo").textContent=
+        "Enviar O.S. para "+(botao.dataset.nome||"cliente");
+      document.getElementById("envioOSResumo").textContent=
+        "OS-"+String(botao.dataset.enviarOs).padStart(5,"0")+" · "+
+        (osEnvioAtual.equipamento||"atendimento");
+      document.getElementById("envioOSMensagem").textContent=
+        osEnvioAtual.mensagem_whatsapp||"Mensagem pronta após salvar a O.S.";
+      document.getElementById("envioOSPrevia").href=
+        osEnvioAtual.preview_url||osEnvioAtual.link_publico||"#";
+      desenharEnviosOS(osEnvioAtual.envios||[]);
+      avisoOS("","");
+      abrirModalAcaoOS("modalEnviarOS");
+      return;
+    }
+
+    valor("pagamentoOSId",botao.dataset.pagamentoOs);
+    valor("pagamentoOSValor",botao.dataset.pago||"0");
+    valor("pagamentoOSObs","");
+    document.getElementById("pagamentoOSTitulo").textContent=botao.dataset.nome||"Pagamento";
+    totalOSAtual=numero(botao.dataset.total);
+    desenharQuadroOS();
+    Painel.erro("pagamentoOSErro","");
+    abrirModalAcaoOS("modalPagamentoOS");
+  }
+
+  if(window._lsAcaoOSAnterior){
+    document.removeEventListener("click",window._lsAcaoOSAnterior,true);
+  }
+  window._lsAcaoOSAnterior=executarAcaoOS;
+  document.addEventListener("click",executarAcaoOS,true);
+
+  /* ---------------------------------------------------------------
      Camadas auxiliares exclusivas da O.S.
 
      Não passam pelo Bootstrap Modal: são anexadas DENTRO da própria O.S.,
@@ -1098,7 +1184,7 @@ LSTela.pronto(function () {
         +(o.motivo_refacao?"Motivo da troca: "+o.motivo_refacao:"");
     }
   }
-  document.getElementById("novaOS")?.addEventListener("click",function(){abrir(null);});document.querySelectorAll("[data-editar-os]").forEach(function(b){b.addEventListener("click",function(){abrir(b.dataset.editarOs);});});document.getElementById("adicionarItemOS")?.addEventListener("click",function(){linha();});
+  document.getElementById("novaOS")?.addEventListener("click",function(){abrir(null);});document.getElementById("adicionarItemOS")?.addEventListener("click",function(){linha();});
   /* OS BLOCOS SEGUEM A SITUAÇÃO.
 
      Uma etapa aparece quando a situação escolhida já chegou nela -- a
@@ -1198,16 +1284,6 @@ LSTela.pronto(function () {
     }
   });
 
-  document.querySelectorAll("[data-refazer-os]").forEach(function(b){
-    b.addEventListener("click",function(){
-      valor("refazerOSId",b.dataset.refazerOs);
-      document.getElementById("refazerOSTitulo").textContent=
-        "Refazer "+(b.dataset.nome||"O.S.");
-      valor("refazerOSMotivo","");
-      Painel.erro("refazerOSErro","");
-      Painel.abrir("modalRefazerOS");
-    });
-  });
   Painel.ligar({form:"formRefazerOS",erro:"refazerOSErro"});
 
   ["osFrete","osDesconto"].forEach(function(id){document.getElementById(id)?.addEventListener("input",recalcular);});
@@ -1263,7 +1339,6 @@ LSTela.pronto(function () {
   async function requisitarEnvioOS(canal,chave,conteudo){var form=document.getElementById("formEnviarOS"),resposta=await fetch(form.getAttribute("action"),{method:"POST",body:dadosEnvioOS(canal,chave,conteudo),headers:{"X-Requested-With":"XMLHttpRequest"},credentials:"same-origin"});var bruto=await resposta.text(),json=null;try{json=bruto?JSON.parse(bruto):null;}catch(e){}if(!resposta.ok||!json||json.status!=="sucesso")throw new Error((json&&json.msg)||"O servidor não confirmou o envio (HTTP "+resposta.status+").");return json;}
   function atualizarEnvioOS(json){if(json.link)definirLinkOS(json.link);if(json.mensagem){osEnvioAtual.mensagem_whatsapp=json.mensagem;document.getElementById("envioOSMensagem").textContent=json.mensagem;}if(json.whatsapp)valor("envioOSWhatsapp",json.whatsapp);if(json.email)valor("envioOSEmail",json.email);if(json.envios)desenharEnviosOS(json.envios);}
 
-  document.querySelectorAll("[data-enviar-os]").forEach(function(b){b.addEventListener("click",function(){osEnvioAtual=achar(b.dataset.enviarOs)||{};valor("envioOSId",b.dataset.enviarOs);valor("envioOSWhatsapp",b.dataset.whatsapp||osEnvioAtual.whatsapp_cliente);valor("envioOSEmail",b.dataset.email||osEnvioAtual.email_cliente);definirLinkOS(osEnvioAtual.link_publico||"");document.getElementById("envioOSTitulo").textContent="Enviar O.S. para "+b.dataset.nome;document.getElementById("envioOSResumo").textContent="OS-"+String(b.dataset.enviarOs).padStart(5,"0")+" · "+(osEnvioAtual.equipamento||"atendimento");document.getElementById("envioOSMensagem").textContent=osEnvioAtual.mensagem_whatsapp||"Mensagem pronta após salvar a O.S.";document.getElementById("envioOSPrevia").href=osEnvioAtual.preview_url||osEnvioAtual.link_publico||"#";desenharEnviosOS(osEnvioAtual.envios||[]);avisoOS("","");Painel.abrir("modalEnviarOS");});});
   document.getElementById("formEnviarOS")?.addEventListener("submit",function(e){e.preventDefault();});
 
   document.getElementById("enviarOSWhatsapp")?.addEventListener("click",function(){var telefone=document.getElementById("envioOSWhatsapp").value.trim(),mensagem=(osEnvioAtual&&osEnvioAtual.mensagem_whatsapp)||"";if(!Painel.whatsapp.web(telefone,mensagem)){avisoOS("Informe o WhatsApp do cliente com DDD.","erro");return;}var saida=Painel.whatsapp.abrir(telefone,mensagem);avisoOS(saida.ok?"A conversa foi aberta. Confirme o envio dentro do WhatsApp.":"O navegador bloqueou a conversa; tente novamente.",saida.ok?"sucesso":"erro");requisitarEnvioOS("whatsapp","whatsapp",telefone).then(function(json){atualizarEnvioOS(json);avisoOS("O.S. liberada e registrada. Confirme o envio dentro do WhatsApp.","sucesso");}).catch(function(erro){avisoOS("A conversa abriu, mas a O.S. não foi liberada pelo servidor: "+erro.message,"erro");});});
@@ -1302,7 +1377,7 @@ LSTela.pronto(function () {
     });
   });
 
-  document.querySelectorAll("[data-pagamento-os]").forEach(function(b){b.addEventListener("click",function(){valor("pagamentoOSId",b.dataset.pagamentoOs);valor("pagamentoOSValor",b.dataset.pago||"0");valor("pagamentoOSObs","");document.getElementById("pagamentoOSTitulo").textContent=b.dataset.nome;totalOSAtual=numero(b.dataset.total);desenharQuadroOS();Painel.erro("pagamentoOSErro","");Painel.abrir("modalPagamentoOS");});});Painel.ligar({form:"formPagamentoOS",erro:"pagamentoOSErro"});Painel.ligarExclusao();
+  Painel.ligar({form:"formPagamentoOS",erro:"pagamentoOSErro"});Painel.ligarExclusao();
 
   var params=new URLSearchParams(location.search);if(params.get("novo")==="1"&&document.getElementById("novaOS")){abrir(null);if(params.get("manutencao")){valor("osManutencao",params.get("manutencao"));document.getElementById("osManutencao").dispatchEvent(new Event("change"));}}
 });
