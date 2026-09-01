@@ -1022,6 +1022,26 @@ Cadastro mínimo de propósito: nome, valor e categoria. Foto e texto de
           web e serve para repetir o gesto quando o navegador bloqueou a
           primeira nova aba.
         {% endcomment %}
+
+        {% comment %}
+          O ATALHO QUE NÃO RECARREGA O WHATSAPP.
+
+          Trocar de cliente pelo endereço `/send?phone=` é navegação de
+          documento: o WhatsApp Web é um aplicativo de página única e cai
+          inteiro, subindo de novo a cada envio. Não há como trocar a
+          conversa por dentro -- a página é de outro domínio.
+
+          Este botão faz o contrário: a mensagem vai para a área de
+          transferência e a aba do WhatsApp vem para a frente, já
+          carregada. Quem escolhe a conversa DENTRO do WhatsApp não paga
+          carregamento nenhum, porque nada saiu da página. Custa procurar
+          o contato; economiza a espera inteira.
+        {% endcomment %}
+        <button type="button" class="btn btn-outline-success w-100 mt-2" id="copiarMensagemWhatsapp">
+          <i class="bi bi-clipboard-check me-1"></i>
+          Copiar mensagem e ir ao WhatsApp <small>(sem recarregar)</small>
+        </button>
+
         <a class="btn btn-success w-100 mt-3" id="linkWhatsappAtalho"
            href="#" target="_blank" rel="noopener" data-whatsapp-web hidden>
           <i class="bi bi-whatsapp me-1"></i> Abrir conversa no WhatsApp
@@ -2382,6 +2402,48 @@ LSTela.pronto(function () {
     if (texto) texto.textContent = propostaAtual.mensagem || "Preparando mensagem…";
   }
 
+  /* Cada caminho tem uma explicação diferente, porque o que aconteceu é
+     diferente -- e a pessoa precisa saber se deve olhar a aba, o
+     programa, ou esperar. Ver `Painel.whatsapp.abrir`. */
+  document.getElementById("copiarMensagemWhatsapp")?.addEventListener("click", function () {
+    var mensagem = propostaAtual.mensagem || "";
+    if (!mensagem) {
+      avisarEnvio("A mensagem ainda não está pronta. Aguarde um instante.", "erro");
+      return;
+    }
+    Painel.whatsapp.copiar(mensagem).then(function (copiou) {
+      avisarEnvio(
+        copiou
+          ? "Mensagem copiada e WhatsApp trazido para a frente. Escolha a "
+            + "conversa por lá e cole com Ctrl+V \u2014 sem recarregar nada."
+          : "Não consegui copiar automaticamente. Selecione o texto da "
+            + "mensagem aqui embaixo e copie com Ctrl+C.",
+        copiou ? "sucesso" : "erro"
+      );
+    });
+  });
+
+  function recadoDoWhatsapp(saida) {
+    if (!saida.ok) {
+      return "O navegador bloqueou a aba do WhatsApp. Permita pop-ups " +
+             "para este endereço e tente de novo.";
+    }
+    if (saida.motivo === "aplicativo") {
+      return "A conversa abriu no WhatsApp do computador, sem recarregar " +
+             "nada. Confirme o envio por lá.";
+    }
+    if (saida.motivo === "mesma-conversa") {
+      return "Esta conversa já estava aberta: o WhatsApp veio para a " +
+             "frente sem recarregar. Confirme o envio por lá.";
+    }
+    if (saida.motivo === "sondando") {
+      return "Procurando o WhatsApp instalado neste computador. Se não " +
+             "houver, a aba do WhatsApp Web abre em seguida.";
+    }
+    return "A conversa abriu no WhatsApp Web com a mensagem escrita. " +
+           "Confirme o envio por lá para o cliente receber.";
+  }
+
   function montarConversa(telefone, mensagem) {
     /* Mesma regra do servidor (conversa_whatsapp), aqui para a conversa
        abrir no mesmo toque em que a pessoa pede -- sem esperar resposta
@@ -2586,16 +2648,7 @@ LSTela.pronto(function () {
     var saida = Painel.whatsapp.abrir(telefone, mensagem);
 
     mostrarAtalhoWhatsapp(url, saida.ok);
-    avisarEnvio(
-      saida.ok
-        ? (saida.reutilizada
-          ? "A aba já aberta do WhatsApp foi atualizada para este cliente. "
-          : "A conversa abriu no WhatsApp Web com a proposta escrita. ") +
-          "Confirme o envio por lá para o cliente receber."
-        : "O navegador bloqueou a nova aba. Use o botão verde " +
-          "“Abrir conversa no WhatsApp” aqui embaixo.",
-      saida.ok ? "sucesso" : "erro"
-    );
+    avisarEnvio(recadoDoWhatsapp(saida), saida.ok ? "sucesso" : "erro");
 
     /* O registro vai por trás: marca o orçamento como enviado e guarda a
        tentativa. A conversa já está aberta, então nada disso segura o
