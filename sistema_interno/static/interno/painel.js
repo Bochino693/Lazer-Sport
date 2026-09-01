@@ -297,6 +297,30 @@
       return agrupar(inteiros) + "," + resto;
     },
 
+    /* Valor monetário digitado por inteiro.
+     *
+     * Algumas tabelas, como os itens da O.S., são preenchidas a partir
+     * de uma cotação: quem escreve 400 quer registrar quatrocentos reais,
+     * não R$ 4,00. Este modo deixa a parte inteira exatamente como foi
+     * digitada, aceita a vírgula opcional e entrega a formatação completa
+     * no blur. O placeholder continua ensinando o formato sem virar valor. */
+    "moeda-valor": function (valor) {
+      var texto = String(valor || "").replace(/[^\d.,]/g, "");
+      if (!texto) return "";
+
+      var ultimaVirgula = texto.lastIndexOf(",");
+      var ultimoPonto = texto.lastIndexOf(".");
+      var separador = Math.max(ultimaVirgula, ultimoPonto);
+
+      if (separador < 0) return digitos(texto, 13);
+
+      /* Em valor colado, pontos anteriores ao último separador são apenas
+         agrupadores: R$ 1.234,56 vira 1234,56. */
+      var inteiros = texto.slice(0, separador).replace(/\D/g, "") || "0";
+      var centavos = texto.slice(separador + 1).replace(/\D/g, "").slice(0, 2);
+      return inteiros.slice(0, 13) + "," + centavos;
+    },
+
     /* Metragem: mesma digitação da direita para a esquerda, em metros.
      * 350 vira 3,50 -- e não 350 metros de brinquedo. */
     medida: function (valor) {
@@ -352,13 +376,12 @@
    * aqui conserta os dois de uma vez, porque toda tela do painel enche
    * modal por esta função.
    */
-  /* Os tipos que se digitam da direita para a esquerda. Um valor que já
-   * existe (vindo do servidor, ou preenchido por JavaScript) é um NÚMERO,
-   * não uma sequência de teclas: "80" ali significa oitenta reais, e
-   * passá-lo pela máscara de digitação o transformaria em 0,80. Por isso
-   * valor existente entra por `moedaFinal`, e só o que a pessoa digita
-   * passa pela máscara. */
-  var TIPOS_NUMERICOS = ["moeda", "medida", "percentual"];
+  /* Tipos numéricos recebem normalização final ao sair do campo. Um valor
+   * que já existe (vindo do servidor ou preenchido por JavaScript) é um
+   * NÚMERO, não uma sequência de teclas: "80" significa oitenta reais.
+   * Por isso o valor existente entra por `moedaFinal`; durante a digitação,
+   * cada tipo mantém o comportamento adequado ao seu contexto. */
+  var TIPOS_NUMERICOS = ["moeda", "moeda-valor", "medida", "percentual"];
 
   function ehNumerico(tipo) {
     return TIPOS_NUMERICOS.indexOf(tipo) >= 0;
@@ -489,8 +512,7 @@
 
       campo.addEventListener("input", function () {
         campo.value = Painel.mascarar(tipo, campo.value);
-        /* O cursor vai para o fim: em campo que se preenche da direita
-           para a esquerda é onde a próxima tecla entra. */
+        /* O cursor vai para o fim, onde a próxima tecla deve entrar. */
         if (ehNumerico(tipo) && campo.setSelectionRange) {
           try {
             campo.setSelectionRange(campo.value.length, campo.value.length);

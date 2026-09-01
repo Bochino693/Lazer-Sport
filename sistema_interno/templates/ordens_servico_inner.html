@@ -1193,7 +1193,9 @@ LSTela.pronto(function () {
   }
 
   function linha(item){
-    item = item || {tipo:"servico", descricao:"", quantidade:"1", valor_unitario:"0,00"};
+    /* O zero é apenas orientação visual. Se ele vier no value, digitar 400
+       anexa os dígitos ao zero existente e produz um preço incorreto. */
+    item = item || {tipo:"servico", descricao:"", quantidade:"1", valor_unitario:""};
     var tr = document.createElement("tr");
     var opcoes = tiposItem.map(function(t){
       return '<option value="'+t.value+'"'+(t.value===item.tipo?' selected':'')+'>'+t.label+'</option>';
@@ -1203,7 +1205,7 @@ LSTela.pronto(function () {
       '<td data-rotulo="Peça ou item" data-catalogo></td>' +
       '<td data-rotulo="Descrição" data-descricao-celula><input class="form-control form-control-sm" data-descricao maxlength="200" value="'+String(item.descricao||"").replace(/&/g,"&amp;").replace(/"/g,"&quot;")+'"></td>' +
       '<td data-rotulo="Quantidade"><input type="number" class="form-control form-control-sm text-end" data-qtd inputmode="numeric" min="1" max="99999999" step="1" required value="'+item.quantidade+'"></td>' +
-      '<td data-rotulo="Valor unit."><div class="input-group input-group-sm ls-os-valor-campo"><span class="input-group-text">R$</span><input class="form-control form-control-sm text-end" data-valor data-mascara="moeda" inputmode="decimal" autocomplete="off" placeholder="0,00" value="'+item.valor_unitario+'"></div></td>' +
+      '<td data-rotulo="Valor unit."><div class="input-group input-group-sm ls-os-valor-campo"><span class="input-group-text">R$</span><input class="form-control form-control-sm text-end" data-valor data-mascara="moeda-valor" inputmode="decimal" autocomplete="off" placeholder="0,00" value="'+item.valor_unitario+'"></div></td>' +
       '<td class="text-end" data-rotulo="Subtotal" data-subtotal>R$ 0,00</td>' +
       '<td><button class="btn btn-sm btn-outline-danger" type="button" data-remover aria-label="Remover linha"><i class="bi bi-x-lg"></i></button></td>';
 
@@ -1239,9 +1241,8 @@ LSTela.pronto(function () {
       tr.remove(); recalcular();
     });
     corpo.appendChild(tr);
-    /* A linha nasceu depois da montagem da página. Sem esta chamada, o
-       valor unitário ficava fora da máscara global: digitar 4, 40 e 400
-       aparecia como 4, 40 e 400 e alterava a soma para R$ 400,00. */
+    /* A linha nasce depois da montagem da página e precisa receber também
+       a máscara de valor completo: digitar 400 representa R$ 400,00. */
     Painel.aplicarMascaras(tr);
     ajustarLinhaPorTipo(tr);
     recalcular();}

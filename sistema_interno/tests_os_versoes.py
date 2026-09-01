@@ -169,22 +169,30 @@ class RefazerOrdemServicoTests(TestCase):
         self.assertEqual(fracionada.status_code, 400)
         self.assertIn("número inteiro", fracionada.json()["msg"])
 
-    def test_valor_da_linha_dinamica_recebe_mascara_e_recalcula_em_centavos(self):
-        """4, 40 e 400 precisam aparecer como 0,04, 0,40 e 4,00.
-
-        A máscara compartilhada já fazia essa progressão. O erro era a
-        linha da O.S. nascer por JavaScript depois da montagem da tela e
-        nunca ser entregue ao formatador.
-        """
+    def test_valor_novo_vem_vazio_e_digitacao_representa_valor_inteiro(self):
+        """O placeholder orienta, mas 400 digitado significa R$ 400,00."""
         html = self.tela()
 
         self.assertIn(
-            'data-valor data-mascara="moeda" inputmode="decimal"', html,
+            'valor_unitario:""', html,
         )
+        self.assertIn(
+            'data-valor data-mascara="moeda-valor" inputmode="decimal"', html,
+        )
+        self.assertIn('placeholder="0,00"', html)
         self.assertIn('class="input-group input-group-sm ls-os-valor-campo"', html)
         self.assertIn('Painel.aplicarMascaras(tr);', html)
-        # O cálculo escuta o evento que sai do campo já mascarado.
+        # O cálculo escuta o valor completo enquanto ele é digitado.
         self.assertIn('tr.addEventListener("input", recalcular)', html)
+
+        painel = (
+            Path(__file__).resolve().parent
+            / "static" / "interno" / "painel.js"
+        ).read_text(encoding="utf-8")
+        self.assertIn('"moeda-valor": function (valor)', painel)
+        self.assertIn(
+            '["moeda", "moeda-valor", "medida", "percentual"]', painel,
+        )
 
     def test_linha_de_servico_nunca_guarda_peca_escondida(self):
         peca = PecasReposicao.objects.create(
