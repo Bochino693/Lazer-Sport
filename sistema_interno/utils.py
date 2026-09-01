@@ -1,5 +1,6 @@
 """Helpers de formulário do sistema interno."""
 
+import re
 from decimal import Decimal, InvalidOperation
 from urllib.parse import urlsplit, urlunsplit
 
@@ -96,10 +97,23 @@ def inteiro(valor, rotulo, obrigatorio=False, minimo=0, maximo=None):
             raise ErroDeFormulario(f"Informe {rotulo}.")
         return None
 
+    normalizado = bruto.replace(" ", "").replace(" ", "")
+    # Em pt-BR, 1.000 pode significar mil. Fora desse formato exato, o
+    # ponto é separador decimal e precisa ser validado como tal; removê-lo
+    # às cegas transformava 1.5 em 15.
+    if re.fullmatch(r"\d{1,3}(?:\.\d{3})+", normalizado):
+        normalizado = normalizado.replace(".", "")
+    elif "," in normalizado:
+        normalizado = normalizado.replace(".", "").replace(",", ".")
+
     try:
-        numero = int(Decimal(bruto.replace(".", "").replace(",", ".")))
+        decimal = Decimal(normalizado)
     except (InvalidOperation, ValueError):
         raise ErroDeFormulario(f"{rotulo}: informe um número inteiro.")
+
+    if not decimal.is_finite() or decimal != decimal.to_integral_value():
+        raise ErroDeFormulario(f"{rotulo}: informe um número inteiro.")
+    numero = int(decimal)
 
     if numero < minimo:
         raise ErroDeFormulario(f"{rotulo}: o mínimo é {minimo}.")

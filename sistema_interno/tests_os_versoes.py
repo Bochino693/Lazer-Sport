@@ -9,6 +9,7 @@ montou.
 """
 
 from decimal import Decimal
+from pathlib import Path
 
 from django.contrib.auth.models import User
 from django.test import TestCase, override_settings
@@ -127,12 +128,62 @@ class RefazerOrdemServicoTests(TestCase):
 
     def test_linha_simples_esconde_campos_exclusivos_de_peca_sem_desalinhar(self):
         html = self.tela()
+        css = Path(
+            "sistema_interno/static/interno/interno_modern.css"
+        ).read_text(encoding="utf-8")
         self.assertIn("celulaCatalogo.hidden = !comCatalogo", html)
         self.assertIn("celulaDescricao.hidden = !comCatalogo", html)
         self.assertIn("celulaTipo.colSpan = comCatalogo ? 1 : 3", html)
         self.assertIn('tr.classList.toggle("ls-os-item-simples"', html)
         self.assertIn("data-tipo-celula", html)
         self.assertIn("data-descricao-celula", html)
+        self.assertIn("tr.ls-os-item-simples", css)
+        self.assertIn("content:attr(data-rotulo)", css)
+        self.assertIn(".ls-os-itens thead{display:none}", css)
+
+    def test_quantidade_da_os_e_inteira_na_tela_no_servidor_e_no_banco(self):
+        html = self.tela()
+        self.assertIn('type="number" class="form-control form-control-sm text-end" data-qtd', html)
+        self.assertIn('inputmode="numeric" min="1" max="99999999" step="1"', html)
+        self.assertEqual(
+            ItemOrdemServico._meta.get_field("quantidade").get_internal_type(),
+            "PositiveIntegerField",
+        )
+
+        resposta = self.post({
+            "action": "save", "equipamento": "Fliperama",
+            "tipo": "manutencao", "status": "rascunho", "prioridade": "normal",
+            "itens": '[{"tipo":"servico","descricao":"",'
+                     '"quantidade":"3","valor_unitario":"40,00"}]',
+        })
+        self.assertEqual(resposta.status_code, 200)
+        item = ItemOrdemServico.objects.get(ordem_id=resposta.json()["id"])
+        self.assertEqual(item.quantidade, 3)
+
+        fracionada = self.post({
+            "action": "save", "equipamento": "Fliperama",
+            "tipo": "manutencao", "status": "rascunho", "prioridade": "normal",
+            "itens": '[{"tipo":"servico","descricao":"",'
+                     '"quantidade":"1,5","valor_unitario":"40,00"}]',
+        })
+        self.assertEqual(fracionada.status_code, 400)
+        self.assertIn("número inteiro", fracionada.json()["msg"])
+
+    def test_linha_de_servico_nunca_guarda_peca_escondida(self):
+        peca = PecasReposicao.objects.create(
+            nome="Motor", descricao_peca="Reposição",
+            uso=PecasReposicao.Uso.MANUTENCAO, ativo=False,
+            preco_venda=Decimal("180.00"),
+        )
+        resposta = self.post({
+            "action": "save", "equipamento": "Fliperama",
+            "tipo": "manutencao", "status": "rascunho", "prioridade": "normal",
+            "itens": '[{"tipo":"servico","peca":"%d","descricao":"",'
+                     '"quantidade":"1","valor_unitario":"180,00"}]' % peca.pk,
+        })
+        self.assertEqual(resposta.status_code, 200)
+        item = ItemOrdemServico.objects.get(ordem_id=resposta.json()["id"])
+        self.assertIsNone(item.peca_id)
 
     def test_cadastros_filhos_nao_alteram_os_outros_modais_da_os(self):
         html = self.tela()

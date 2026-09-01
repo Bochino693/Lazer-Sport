@@ -1076,25 +1076,17 @@
 
      Não dá para trocar a conversa por dentro: a página é de outro
      domínio e nenhum script daqui alcança o que acontece lá. Então a
-     saída não é um truque, são três caminhos que evitam a navegação:
+     saída não é um truque, são dois caminhos previsíveis:
 
      1. MESMO CLIENTE, NENHUMA NAVEGAÇÃO. Reenviar para quem já está
         aberto só traz a aba para a frente. Antes isso recarregava o
         WhatsApp inteiro para chegar exatamente onde já estava.
 
-     2. APLICATIVO INSTALADO NUNCA RECARREGA. O programa do computador já
-        está rodando: `whatsapp://send` faz ele trocar de conversa na
-        hora, sem subir nada. O problema histórico era que ele falha em
-        silêncio quando não está instalado -- então aqui a primeira vez
-        SONDA: dispara o protocolo e observa se o navegador perdeu o
-        foco. Perdeu, o programa atendeu; não perdeu em 1,2s, não existe,
-        e a web entra no lugar. O resultado fica guardado naquela
-        máquina, e a sondagem não se repete.
-
-     3. CLIENTE DIFERENTE, SEM APLICATIVO. Aí a navegação é inevitável --
-        mas só se a pessoa quiser a conversa aberta automaticamente. Quem
-        preferir pode copiar a mensagem e trocar a conversa DENTRO do
-        WhatsApp, que é instantâneo porque acontece sem sair da página.
+     2. CLIENTE DIFERENTE. Abrir automaticamente a conversa navega a aba
+        Web nomeada. Quem quer evitar esse carregamento copia a mensagem
+        e troca a conversa DENTRO do WhatsApp, que é instantâneo porque
+        acontece sem sair da página. No computador não sondamos protocolo
+        nativo: ele pode falhar em silêncio e perder a ativação do clique.
         Ver `Painel.whatsapp.copiar`.
      ==================================================================== */
   function numeroComDdi(telefone) {
@@ -1123,7 +1115,6 @@
      porque a aba sobrevive ao recarregamento do painel, e sem isso o
      primeiro envio depois de um F5 recarregaria o WhatsApp à toa. */
   var CHAVE_CONVERSA = "ls:whatsapp:conversa";
-  var CHAVE_CAMINHO = "ls:whatsapp:caminho";
 
   function guardado(chave) {
     try { return global.localStorage.getItem(chave) || ""; } catch (e) { return ""; }
@@ -1141,12 +1132,9 @@
     if (abaWhatsappWeb && !abaWhatsappWeb.closed) {
       try { abaWhatsappWeb.focus(); return true; } catch (e) {}
     }
-    /* Sem referência viva (o painel recarregou), o nome da aba ainda a
-       encontra: abrir "" no mesmo nome foca sem navegar. */
-    try {
-      var aba = global.open("", NOME_ABA_WHATSAPP);
-      if (aba) { abaWhatsappWeb = aba; aba.focus(); return true; }
-    } catch (e) {}
+    /* Nunca tente recuperar uma referência com window.open("", nome).
+       Quando a aba não existe, isso cria about:blank -- exatamente a
+       página vazia que aparecia no botão Copiar mensagem. */
     return false;
   }
 
@@ -1159,34 +1147,6 @@
       try { aba.focus(); } catch (e) {}
     }
     return aba;
-  }
-
-  /* UMA SONDAGEM POR VEZ, E ELA VALE PELO ÚLTIMO PEDIDO.
-
-     A sondagem leva 1,2s para decidir. Sem esta trava, dois cliques
-     nesse intervalo -- um duplo-clique, ou dois clientes em sequência --
-     começavam duas sondagens e abriam duas navegações, que é exatamente
-     o recarregamento que se quer evitar. Enquanto uma está em curso, os
-     pedidos seguintes só atualizam o alvo; quem decide é a primeira. */
-  var sondagemEmCurso = false;
-  var alvoDaSondagem = null;
-
-  /* Dispara o aplicativo e observa se o navegador perdeu o foco. Só é
-     chamada uma vez por máquina: o resultado fica guardado. */
-  function sondarAplicativo(endereco, aoDecidir) {
-    var atendeu = false;
-    function marcar() { atendeu = true; }
-
-    global.addEventListener("blur", marcar, { once: true });
-    document.addEventListener("visibilitychange", marcar, { once: true });
-
-    try { global.location.href = endereco; } catch (e) {}
-
-    global.setTimeout(function () {
-      global.removeEventListener("blur", marcar);
-      document.removeEventListener("visibilitychange", marcar);
-      aoDecidir(atendeu || document.hidden || !document.hasFocus());
-    }, 1200);
   }
 
   Painel.whatsapp = {
@@ -1203,22 +1163,14 @@
         + encodeURIComponent(mensagem || "");
     },
 
-    app: function (telefone, mensagem) {
-      var digitos = numeroComDdi(telefone);
-      if (!digitos) return "";
-      return "whatsapp://send?phone=" + digitos
-        + "&text=" + encodeURIComponent(mensagem || "");
-    },
-
     noCelular: noCelular,
     alvo: alvoWhatsapp,
-    caminho: function () { return guardado(CHAVE_CAMINHO); },
 
     /* O atalho sem recarregar: a mensagem vai para a área de
        transferência e a aba do WhatsApp vem para a frente. Quem troca a
        conversa por dentro do WhatsApp não paga o carregamento, porque
        nada saiu da página. */
-    copiar: function (mensagem) {
+    copiar: function (mensagem, telefone) {
       var texto = String(mensagem || "");
       var entregue = Promise.resolve(false);
       try {
@@ -1228,9 +1180,22 @@
           }).catch(function () { return false; });
         }
       } catch (e) {}
+
+      /* Abrir/focar precisa acontecer no mesmo ciclo do clique. Dentro do
+         .then da área de transferência vários navegadores já consideram
+         pop-up tardio e bloqueiam. Se ainda não existe referência viva,
+         abre uma URL REAL; nunca uma string vazia/about:blank. */
+      var abriu = focarAba();
+      if (!abriu) {
+        var destino = noCelular()
+          ? this.web(telefone, "")
+          : "https://web.whatsapp.com/";
+        var aba = navegarAba(destino || "https://web.whatsapp.com/");
+        abriu = Boolean(aba);
+      }
+
       return entregue.then(function (ok) {
-        focarAba();
-        return ok;
+        return { copiou: ok, abriu: abriu };
       });
     },
 
@@ -1248,42 +1213,17 @@
       }
 
       var digitos = numeroComDdi(telefone);
-      var caminho = guardado(CHAVE_CAMINHO);
-
-      /* 2. O aplicativo troca de conversa sem subir nada. */
-      if (caminho === "aplicativo") {
-        try { global.location.href = this.app(telefone, mensagem); } catch (e) {}
-        guardar(CHAVE_CONVERSA, digitos);
-        return { ok: true, motivo: "aplicativo", web: web };
-      }
 
       /* 1. Mesmo cliente: a conversa já está aberta ali. Navegar de novo
             recarregaria o WhatsApp inteiro para chegar onde já está. */
       var mesmaConversa = digitos && guardado(CHAVE_CONVERSA) === digitos;
-      if (caminho === "web" && mesmaConversa && focarAba()) {
+      if (mesmaConversa && focarAba()) {
         return { ok: true, motivo: "mesma-conversa", web: web, semRecarregar: true };
       }
 
-      /* Primeira vez nesta máquina: descobre se há aplicativo. A web
-         entra em seguida se ninguém atender -- ainda dentro da janela de
-         ativação do clique, então não é bloqueada como pop-up. */
-      if (!caminho) {
-        alvoDaSondagem = { web: web, digitos: digitos };
-        if (sondagemEmCurso) {
-          return { ok: true, motivo: "sondando", web: web };
-        }
-        sondagemEmCurso = true;
-        sondarAplicativo(this.app(telefone, mensagem), function (temApp) {
-          sondagemEmCurso = false;
-          guardar(CHAVE_CAMINHO, temApp ? "aplicativo" : "web");
-          var alvo = alvoDaSondagem || { web: web, digitos: digitos };
-          alvoDaSondagem = null;
-          guardar(CHAVE_CONVERSA, alvo.digitos);
-          if (!temApp) navegarAba(alvo.web);
-        });
-        return { ok: true, motivo: "sondando", web: web };
-      }
-
+      /* No computador o contrato é WhatsApp Web. A navegação ocorre já
+         dentro do clique, numa única aba nomeada, sem sondagem de protocolo
+         que possa falhar em silêncio ou deixar uma página vazia. */
       guardar(CHAVE_CONVERSA, digitos);
       var novaAba = navegarAba(web);
       return {

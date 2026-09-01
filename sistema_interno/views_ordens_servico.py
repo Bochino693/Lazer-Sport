@@ -53,6 +53,7 @@ from .utils import (
     decimal_br,
     endereco_do_site,
     exigir_confirmacao_exclusao,
+    inteiro,
     texto,
 )
 from .views import OrdemServicoInternoRequiredMixin, RespostaJSONMixin
@@ -631,7 +632,7 @@ class OrdensServicoInnerView(
                     OrcamentosInnerView.opcao_peca(item.peca)
                     if item.peca_id and item.peca else None
                 ),
-                "quantidade": f"{item.quantidade:.2f}".replace(".", ","),
+                "quantidade": str(item.quantidade),
                 "valor_unitario": f"{item.valor_unitario:.2f}".replace(".", ","),
             } for item in ordem.itens.all()],
         }
@@ -807,20 +808,21 @@ class OrdensServicoInnerView(
             peca_id = str(linha.get("peca") or "").strip()
             peca = (
                 PecasReposicao.objects.filter(pk=peca_id).first()
-                if peca_id.isdigit() else None
+                if (
+                    tipo == ItemOrdemServico.Tipo.PECA
+                    and peca_id.isdigit()
+                ) else None
             )
-            quantidade = decimal_br(
+            quantidade = inteiro(
                 str(linha.get("quantidade") or ""),
                 f"Item {indice}: quantidade", obrigatorio=True,
-                limite=Decimal("99999999.99"),
+                minimo=1, maximo=99999999,
             )
             valor = decimal_br(
                 str(linha.get("valor_unitario") or ""),
                 f"Item {indice}: valor", obrigatorio=True,
                 limite=Decimal("9999999999.99"),
             )
-            if quantidade <= 0:
-                raise ErroDeFormulario(f"Item {indice}: quantidade deve ser maior que zero.")
             itens.append(ItemOrdemServico(
                 ordem=ordem,
                 tipo=tipo,

@@ -3017,18 +3017,19 @@ body.modal-open .ls-action-fab-menu{display:none!important}
     min-width:0!important;width:100%!important;table-layout:fixed!important;
   }
   .ls-os-tabela th,.ls-os-tabela td{padding-inline:6px!important}
-  .ls-os-tabela th:nth-child(1){width:8%}
+  .ls-os-tabela th:nth-child(1){width:10%}
   .ls-os-tabela th:nth-child(2){width:22%}
-  .ls-os-tabela th:nth-child(3){width:9%}
-  .ls-os-tabela th:nth-child(4){width:11%}
-  .ls-os-tabela th:nth-child(5){width:12%}
+  .ls-os-tabela th:nth-child(3){width:8%}
+  .ls-os-tabela th:nth-child(4){width:14%}
+  .ls-os-tabela th:nth-child(5){width:11%}
   .ls-os-tabela th:nth-child(6){width:9%}
   .ls-os-tabela th:nth-child(7){width:12%}
-  .ls-os-tabela th:nth-child(8){width:10%}
+  .ls-os-tabela th:nth-child(8){width:8%}
   .ls-os-tabela th:nth-child(9){width:58px}
   /* Mesmo motivo da tabela de propostas: ver o comentário lá. */
   .ls-os-tabela td{white-space:normal!important;overflow-wrap:break-word!important}
   .ls-os-tabela td[data-rotulo="Total"]{white-space:nowrap!important}
+  .ls-os-tabela td[data-rotulo="O.S."]{white-space:nowrap!important;overflow-wrap:normal!important}
   .ls-os-tabela td[data-rotulo="Cliente / equipamento"] strong{
     display:block;white-space:normal;overflow:visible;text-overflow:clip;
   }
@@ -3319,6 +3320,19 @@ body.modal-open .ls-action-fab-menu{display:none!important}
   border-color:rgba(61,217,192,.16);
   background:linear-gradient(155deg,rgba(61,217,192,.07),rgba(0,0,0,.12));
 }
+
+/* Na lista da O.S. o estado já tem a própria cor. A segunda caixa verde
+   em volta do selo criava um fundo torto e parecia ocupar outra coluna. */
+.ls-os-tabela .ls-situacao-card{
+  width:100%;max-width:170px;margin-inline:auto;padding:0!important;
+  border:0!important;border-radius:0!important;background:transparent!important;
+  box-shadow:none!important;
+}
+.ls-os-tabela .ls-situacao-card .ls-status{
+  width:100%;min-height:38px;padding:7px 10px!important;
+  justify-content:center;text-align:center;border-radius:999px;
+  white-space:normal!important;line-height:1.15!important;
+}
 .ls-orcamentos-table .ls-block-review{width:100%;min-width:0;justify-items:stretch}
 .ls-orcamentos-table .ls-block-review .ls-status{
   width:100%;height:auto;min-height:34px;white-space:normal!important;line-height:1.2!important;
@@ -3396,14 +3410,11 @@ body.modal-open .ls-action-fab-menu{display:none!important}
   .ls-review-item{align-items:center;text-align:center}
 }
 
-/* Na O.S., serviço/mão de obra, deslocamento e "outro" não têm vínculo
-   com catálogo. As duas células exclusivas de peça somem e Tipo ocupa a
-   largura delas, sem deslocar Quantidade, Valor e Subtotal dos títulos. */
+/* O editor de itens muda de estrutura conforme o tipo. Cabeçalho fixo de
+   tabela não consegue representar ao mesmo tempo uma peça com catálogo e
+   um serviço sem esses campos; cada linha passa a nomear os próprios
+   campos e usa uma grade adequada ao seu tipo. */
 .ls-os-itens td[hidden]{display:none!important}
-.ls-os-itens tbody tr.ls-os-item-simples td[data-tipo-celula]{text-align:left}
-.ls-os-itens tbody tr.ls-os-item-simples td[data-tipo-celula] .form-select{
-  width:min(100%,420px);margin:0;
-}
 .ls-os-itens-ajuda{
   display:flex;align-items:flex-start;gap:8px;color:#cabda8;
   font-size:.76rem;line-height:1.4;
@@ -3411,17 +3422,36 @@ body.modal-open .ls-action-fab-menu{display:none!important}
 .ls-os-itens-ajuda i{flex:0 0 auto;margin-top:1px;color:#55d7b7}
 
 @media (min-width:769px){
-  .ls-os-itens{width:100%;table-layout:fixed}
-  .ls-os-itens th:nth-child(1){width:18%}
-  .ls-os-itens th:nth-child(2){width:22%}
-  .ls-os-itens th:nth-child(3){width:20%}
-  .ls-os-itens th:nth-child(4){width:14%}
-  .ls-os-itens th:nth-child(5){width:14%}
-  .ls-os-itens th:nth-child(6){width:12%}
-  .ls-os-itens th:nth-child(7){width:48px}
-  .ls-os-itens td[data-rotulo="Quantidade"],
-  .ls-os-itens td[data-rotulo="Valor unit."],
-  .ls-os-itens td[data-rotulo="Subtotal"]{white-space:nowrap}
+  .ls-os-itens,.ls-os-itens tbody{display:block;width:100%}
+  .ls-os-itens thead{display:none}
+  .ls-os-itens tbody{display:grid;gap:10px}
+  .ls-os-itens tbody tr{
+    display:grid;grid-template-columns:minmax(150px,1.1fr) minmax(190px,1.5fr)
+      minmax(170px,1.35fr) 110px 130px 120px 48px;
+    align-items:end;gap:9px;padding:11px;
+    border:1px solid rgba(239,166,43,.18);border-radius:14px;
+    background:linear-gradient(145deg,rgba(45,35,20,.56),rgba(24,21,17,.72));
+  }
+  .ls-os-itens tbody tr.ls-os-item-simples{
+    grid-template-columns:minmax(240px,2fr) 110px 140px 125px 48px;
+  }
+  .ls-os-itens tbody td{
+    min-width:0!important;padding:0!important;border:0!important;
+    display:flex;flex-direction:column;justify-content:flex-end;gap:6px;
+  }
+  .ls-os-itens tbody td::before{
+    content:attr(data-rotulo);display:block;color:#d8cbb7;
+    font-size:.62rem;font-weight:900;letter-spacing:.08em;line-height:1.15;
+    text-transform:uppercase;text-align:left;
+  }
+  .ls-os-itens tbody td:last-child::before{content:"Remover";font-size:.54rem;text-align:center}
+  .ls-os-itens tbody td[data-rotulo="Subtotal"]{
+    min-height:58px;align-items:flex-end;justify-content:flex-end;
+    padding-bottom:9px!important;white-space:nowrap;font-weight:900;
+  }
+  .ls-os-itens tbody td[data-rotulo="Subtotal"]::before{align-self:stretch;text-align:right}
+  .ls-os-itens tbody td:last-child .btn{width:48px;height:40px}
+  .ls-os-itens tbody tr.ls-os-item-simples td[data-tipo-celula] .form-select{width:100%;margin:0}
 }
 
 /* A ação de cadastrar fica antes dos resultados de cliente/brinquedo. */

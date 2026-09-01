@@ -2845,11 +2845,7 @@ class ItemOrdemServico(Prime):
         help_text="Peça da loja ou item de manutenção que originou a linha.",
     )
     descricao = models.CharField(max_length=200)
-    quantidade = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        default=Decimal("1.00"),
-    )
+    quantidade = models.PositiveIntegerField(default=1)
     valor_unitario = models.DecimalField(
         max_digits=12,
         decimal_places=2,

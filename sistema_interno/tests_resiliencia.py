@@ -3,6 +3,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from django.http import HttpResponse
+from django.db import OperationalError
 from django.test import RequestFactory, SimpleTestCase, override_settings
 
 from core.middleware import InternalResponseRecoveryMiddleware
@@ -72,6 +73,28 @@ class ResilienciaPainelTests(SimpleTestCase):
         request_publico = self.factory.get("/loja/")
         request_publico.is_interno = False
         self.assertEqual(middleware(request_publico).status_code, 502)
+
+    @patch("core.middleware.close_old_connections")
+    def test_conexao_do_banco_quebrada_fecha_e_volta_com_recuperacao(
+        self, fechar_conexoes,
+    ):
+        middleware = InternalResponseRecoveryMiddleware(lambda _request: None)
+        request = self.factory.get(
+            "/ordens-servico/",
+            HTTP_X_REQUESTED_WITH="LS-Soft-Navigation",
+        )
+        request.is_interno = True
+        request.ls_request_id = "banco123"
+
+        resposta = middleware.process_exception(
+            request,
+            OperationalError("conexão encerrada pelo servidor"),
+        )
+
+        fechar_conexoes.assert_called_once_with()
+        self.assertEqual(resposta.status_code, 503)
+        self.assertEqual(resposta["X-LS-Recovery"], "banco-remoto")
+        self.assertEqual(json.loads(resposta.content)["request_id"], "banco123")
 
     def test_processo_web_e_compativel_com_instancia_pequena_do_render(self):
         raiz = Path(__file__).resolve().parent.parent

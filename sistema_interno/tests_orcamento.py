@@ -891,8 +891,8 @@ class OrcamentoInternoTests(TestCase):
         "carregando as mensagens" que aparecia a cada cliente.
 
         Não dá para trocar a conversa por dentro: a página é de outro
-        domínio. Então o que existe são três caminhos que evitam a
-        navegação, e este teste guarda os três.
+        domínio. Então o caminho confiável no PC é uma única aba Web;
+        copiar a mensagem permite trocar o cliente por dentro dela.
         """
         from pathlib import Path
 
@@ -904,17 +904,15 @@ class OrcamentoInternoTests(TestCase):
         self.assertIn("motivo: \"mesma-conversa\"", painel)
         self.assertIn("function focarAba()", painel)
 
-        # 2. O aplicativo instalado troca de conversa sem subir nada. Ele
-        #    tinha sido removido por falhar em silêncio quando não existe;
-        #    voltou COM a sondagem que faltava -- dispara e observa se o
-        #    navegador perdeu o foco, uma vez só por máquina.
-        self.assertIn("whatsapp://send?phone=", painel)
-        self.assertIn("function sondarAplicativo(", painel)
-        self.assertIn('guardar(CHAVE_CAMINHO, temApp ? "aplicativo" : "web")', painel)
-
-        # 3. E o atalho sem recarregar: copiar a mensagem e trocar a
+        # 2. O atalho sem recarregar: copiar a mensagem e trocar a
         #    conversa dentro do WhatsApp, que não sai da página.
-        self.assertIn("copiar: function (mensagem)", painel)
+        self.assertIn("copiar: function (mensagem, telefone)", painel)
+        self.assertIn('"https://web.whatsapp.com/"', painel)
+
+        # Nunca se cria uma aba vazia para tentar encontrar a anterior.
+        # Se ela não existe, o destino precisa ser uma URL real.
+        self.assertNotIn('global.open("", NOME_ABA_WHATSAPP)', painel)
+        self.assertNotIn("whatsapp://send?phone=", painel)
 
         # A aba continua sendo uma só, com nome estável.
         self.assertIn('var NOME_ABA_WHATSAPP = "ls-whatsapp-web"', painel)
@@ -922,13 +920,8 @@ class OrcamentoInternoTests(TestCase):
         # No celular, wa.me continua levando ao aplicativo.
         self.assertIn('"https://wa.me/" + digitos', painel)
 
-    def test_a_conversa_aberta_e_lembrada_entre_recarregamentos(self):
-        """A aba sobrevive ao F5 do painel; a memória precisa sobreviver junto.
-
-        Sem isso, o primeiro envio depois de recarregar o painel
-        recarregaria o WhatsApp à toa -- para chegar exatamente na
-        conversa que já estava aberta.
-        """
+    def test_a_conversa_aberta_e_lembrada_sem_guardar_caminho_nativo(self):
+        """O cliente é lembrado, mas o PC sempre usa WhatsApp Web."""
         from pathlib import Path
 
         painel = Path(
@@ -936,7 +929,7 @@ class OrcamentoInternoTests(TestCase):
         ).read_text(encoding="utf-8")
 
         self.assertIn('var CHAVE_CONVERSA = "ls:whatsapp:conversa"', painel)
-        self.assertIn('var CHAVE_CAMINHO = "ls:whatsapp:caminho"', painel)
+        self.assertNotIn("CHAVE_CAMINHO", painel)
         # `localStorage` lança em janela anônima; nada disso pode derrubar
         # um envio.
         for funcao in ("function guardado(chave)", "function guardar(chave, valor)"):

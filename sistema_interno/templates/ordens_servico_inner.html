@@ -1175,9 +1175,10 @@ LSTela.pronto(function () {
     celulaTipo.colSpan = comCatalogo ? 1 : 3;
     tr.classList.toggle("ls-os-item-simples", !comCatalogo);
 
-    /* Ao sair de peça/material, retire apenas os dados exclusivos do
-       catálogo. Na abertura inicial não apagamos nada que veio salvo. */
-    if (tipoAnterior !== tipo && tinhaCatalogo !== comCatalogo && !comCatalogo) {
+    /* Trocar entre peça e cobrança simples troca também o significado da
+       linha. Limpar os campos exclusivos evita que uma peça antiga siga
+       escondida dentro de uma linha de serviço (ou o contrário). */
+    if (tipoAnterior !== tipo && tinhaCatalogo !== comCatalogo) {
       if (tr.buscaItem) tr.buscaItem.definirValor("", false);
       descricao.value = "";
     }
@@ -1186,7 +1187,7 @@ LSTela.pronto(function () {
   }
 
   function linha(item){
-    item = item || {tipo:"servico", descricao:"", quantidade:"1,00", valor_unitario:"0,00"};
+    item = item || {tipo:"servico", descricao:"", quantidade:"1", valor_unitario:"0,00"};
     var tr = document.createElement("tr");
     var opcoes = tiposItem.map(function(t){
       return '<option value="'+t.value+'"'+(t.value===item.tipo?' selected':'')+'>'+t.label+'</option>';
@@ -1195,7 +1196,7 @@ LSTela.pronto(function () {
       '<td data-rotulo="Tipo" data-tipo-celula><select class="form-select form-select-sm" data-tipo>'+opcoes+'</select></td>' +
       '<td data-rotulo="Peça ou item" data-catalogo></td>' +
       '<td data-rotulo="Descrição" data-descricao-celula><input class="form-control form-control-sm" data-descricao maxlength="200" value="'+String(item.descricao||"").replace(/&/g,"&amp;").replace(/"/g,"&quot;")+'"></td>' +
-      '<td data-rotulo="Quantidade"><input class="form-control form-control-sm text-end" data-qtd inputmode="decimal" value="'+item.quantidade+'"></td>' +
+      '<td data-rotulo="Quantidade"><input type="number" class="form-control form-control-sm text-end" data-qtd inputmode="numeric" min="1" max="99999999" step="1" required value="'+item.quantidade+'"></td>' +
       '<td data-rotulo="Valor unit."><input class="form-control form-control-sm text-end" data-valor inputmode="decimal" value="'+item.valor_unitario+'"></td>' +
       '<td class="text-end" data-rotulo="Subtotal" data-subtotal>R$ 0,00</td>' +
       '<td><button class="btn btn-sm btn-outline-danger" type="button" data-remover aria-label="Remover linha"><i class="bi bi-x-lg"></i></button></td>';
@@ -1494,12 +1495,15 @@ LSTela.pronto(function () {
   document.getElementById("copiarMensagemOS")?.addEventListener("click",function(){
     var mensagem=(osEnvioAtual&&osEnvioAtual.mensagem_whatsapp)||"";
     if(!mensagem){avisoOS("A mensagem ainda não está pronta. Aguarde um instante.","erro");return;}
-    Painel.whatsapp.copiar(mensagem).then(function(copiou){
+    var telefone=document.getElementById("envioOSWhatsapp").value.trim();
+    Painel.whatsapp.copiar(mensagem,telefone).then(function(resultado){
       avisoOS(
-        copiou
-          ? "Mensagem copiada e WhatsApp trazido para a frente. Escolha a conversa por lá e cole com Ctrl+V \u2014 sem recarregar nada."
-          : "Não consegui copiar automaticamente. Abra a mensagem aqui embaixo e copie com Ctrl+C.",
-        copiou?"sucesso":"erro");
+        resultado.copiou && resultado.abriu
+          ? "Mensagem copiada e WhatsApp aberto corretamente. Escolha a conversa por lá e cole com Ctrl+V."
+          : resultado.copiou
+            ? "Mensagem copiada. O navegador bloqueou a aba; abra o WhatsApp e cole com Ctrl+V."
+            : "Não consegui copiar automaticamente. Abra a mensagem aqui embaixo e copie com Ctrl+C.",
+        resultado.copiou?"sucesso":"erro");
     });
   });
 
@@ -1508,17 +1512,9 @@ LSTela.pronto(function () {
       return "O navegador bloqueou a aba do WhatsApp. Permita pop-ups " +
              "para este endereço e tente de novo.";
     }
-    if (saida.motivo === "aplicativo") {
-      return "A conversa abriu no WhatsApp do computador, sem recarregar " +
-             "nada. Confirme o envio por lá.";
-    }
     if (saida.motivo === "mesma-conversa") {
       return "Esta conversa já estava aberta: o WhatsApp veio para a " +
              "frente sem recarregar. Confirme o envio por lá.";
-    }
-    if (saida.motivo === "sondando") {
-      return "Procurando o WhatsApp instalado neste computador. Se não " +
-             "houver, a aba do WhatsApp Web abre em seguida.";
     }
     return "A conversa abriu no WhatsApp Web com a mensagem escrita. " +
            "Confirme o envio por lá para o cliente receber.";

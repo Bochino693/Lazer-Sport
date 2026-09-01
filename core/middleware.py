@@ -3,6 +3,7 @@ import os
 import time
 import uuid
 
+from django.db import InterfaceError, OperationalError, close_old_connections
 from django.shortcuts import redirect
 from django.urls import reverse
 
@@ -89,7 +90,7 @@ class InternalResponseRecoveryMiddleware:
     chamadas JavaScript recebem JSON para manter a tela que já estava aberta.
     """
 
-    STATUS_TRANSITORIOS = (500, 502, 504)
+    STATUS_TRANSITORIOS = (500, 502, 503, 504)
 
     def __init__(self, get_response):
         self.get_response = get_response
@@ -107,6 +108,31 @@ class InternalResponseRecoveryMiddleware:
                 motivo=f"upstream-{response.status_code}",
             )
         return response
+
+    def process_exception(self, request, exception):
+        """Conexão remota quebrada vira recuperação, nunca página 500/502.
+
+        Não repetimos a operação: um POST pode ter sido confirmado pelo
+        banco antes de a conexão cair. Fechamos a conexão inutilizável para
+        a próxima requisição nascer limpa e devolvemos uma resposta curta,
+        sem context processors que dependam do mesmo banco.
+        """
+        if not getattr(request, "is_interno", False):
+            return None
+        if not isinstance(exception, (OperationalError, InterfaceError)):
+            return None
+
+        close_old_connections()
+        logger_performance.warning(
+            "database_connection_recovered id=%s method=%s path=%s error=%s",
+            getattr(request, "ls_request_id", ""),
+            request.method,
+            request.path,
+            exception.__class__.__name__,
+        )
+        from sistema_interno.resiliencia import resposta_temporaria
+
+        return resposta_temporaria(request, motivo="banco-remoto")
 
 
 class TelefoneObrigatorioMiddleware:

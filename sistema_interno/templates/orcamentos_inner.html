@@ -2416,14 +2416,18 @@ LSTela.pronto(function () {
       avisarEnvio("A mensagem ainda não está pronta. Aguarde um instante.", "erro");
       return;
     }
-    Painel.whatsapp.copiar(mensagem).then(function (copiou) {
+    var telefone = document.getElementById("linkWhatsapp").value.trim();
+    Painel.whatsapp.copiar(mensagem, telefone).then(function (resultado) {
       avisarEnvio(
-        copiou
-          ? "Mensagem copiada e WhatsApp trazido para a frente. Escolha a "
-            + "conversa por lá e cole com Ctrl+V \u2014 sem recarregar nada."
+        resultado.copiou && resultado.abriu
+          ? "Mensagem copiada e WhatsApp aberto corretamente. Escolha a "
+            + "conversa por lá e cole com Ctrl+V."
+          : resultado.copiou
+            ? "Mensagem copiada. O navegador bloqueou a aba; abra o "
+              + "WhatsApp e cole com Ctrl+V."
           : "Não consegui copiar automaticamente. Selecione o texto da "
             + "mensagem aqui embaixo e copie com Ctrl+C.",
-        copiou ? "sucesso" : "erro"
+        resultado.copiou ? "sucesso" : "erro"
       );
     });
   });
@@ -2433,17 +2437,9 @@ LSTela.pronto(function () {
       return "O navegador bloqueou a aba do WhatsApp. Permita pop-ups " +
              "para este endereço e tente de novo.";
     }
-    if (saida.motivo === "aplicativo") {
-      return "A conversa abriu no WhatsApp do computador, sem recarregar " +
-             "nada. Confirme o envio por lá.";
-    }
     if (saida.motivo === "mesma-conversa") {
       return "Esta conversa já estava aberta: o WhatsApp veio para a " +
              "frente sem recarregar. Confirme o envio por lá.";
-    }
-    if (saida.motivo === "sondando") {
-      return "Procurando o WhatsApp instalado neste computador. Se não " +
-             "houver, a aba do WhatsApp Web abre em seguida.";
     }
     return "A conversa abriu no WhatsApp Web com a mensagem escrita. " +
            "Confirme o envio por lá para o cliente receber.";
