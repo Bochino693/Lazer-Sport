@@ -43,7 +43,13 @@ from .home_cache import (
 
 import mimetypes
 from pathlib import Path
-from django.http import FileResponse, Http404, HttpResponse, HttpResponseNotModified
+from django.http import (
+    FileResponse,
+    Http404,
+    HttpResponse,
+    HttpResponseNotModified,
+    JsonResponse,
+)
 from django.conf import settings
 from django.utils.http import http_date
 from random import shuffle, sample
@@ -108,8 +114,46 @@ def erro_500(request):
 
 
 def healthz(request):
-    """Health check barato para o Render, sem consultas ao banco ou APIs."""
+    """Health check barato para o Render, sem consultas ao banco ou APIs.
+
+    NÃO CONSULTA O BANCO DE PROPÓSITO. Este é o endereço que a hospedagem
+    usa para decidir se a instância está viva: se ele dependesse do
+    Supabase, uma oscilação do banco derrubaria o processo web inteiro --
+    e um processo derrubado não volta mais rápido por isso.
+    """
     return HttpResponse("ok", content_type="text/plain")
+
+
+def pronto(request):
+    """Acorda a instância E a conexão com o banco. É o que o painel chama.
+
+    POR QUE NÃO SERVE O `healthz`. Ele responde sem tocar no banco, então
+    acorda o processo web e mais nada. Só que o primeiro clique de quem
+    volta ao painel vai consultar o banco, e é aí que mora a outra
+    metade da espera: abrir conexão nova com o Supabase custa segundos.
+    Acordar só o processo trocaria uma espera longa por uma espera média.
+
+    Aqui a ida ao banco é um `SELECT 1` -- não lê tabela, não abre
+    transação, não depende de migração aplicada. O bastante para a
+    conexão existir e estar quente quando o clique de verdade chegar.
+
+    Aberto sem login de propósito: ele é chamado justamente quando a
+    sessão pode ter caído, e nada do que ele responde depende de quem
+    perguntou.
+    """
+    from django.db import connection
+
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1")
+            cursor.fetchone()
+        banco = True
+    except Exception:
+        # O processo está de pé mesmo que o banco não esteja, e essa
+        # distinção é o que o painel usa para explicar a espera.
+        banco = False
+
+    return JsonResponse({"ok": True, "banco": banco})
 
 
 class HomeView(View):

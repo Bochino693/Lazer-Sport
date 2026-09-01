@@ -78,6 +78,7 @@ from .views import (
     ReposicaoView,
     ReposicaoDetalheView,
     healthz,
+    pronto,
     robots_txt,
     ComboAdminView,
     SearchView,
@@ -111,6 +112,9 @@ sitemaps = {
 
 urlpatterns = [
     path("healthz/", healthz, name="healthz"),
+    # O painel chama este para acordar processo E banco antes de agir.
+    # Ver `core.views.pronto`.
+    path("pronto/", pronto, name="pronto"),
     path("robots.txt", robots_txt, name="robots_txt"),
     path("sitemap.xml", sitemap, {"sitemaps": sitemaps}, name="sitemap"),
 

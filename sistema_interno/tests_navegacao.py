@@ -223,11 +223,21 @@ class ScriptDeTelaNaoEsperaDOMContentLoadedTests(SimpleTestCase):
             / "static" / "interno" / "interno_modern.css"
         ).read_text(encoding="utf-8")
 
-        self.assertIn("@media (min-width:901px)", folha)
+        # A TABELA CHEIA SÓ A PARTIR DE 1200px.
+        #
+        # Ela começava em 901px, e entre 901 e 1180 não cabia: medido no
+        # Chromium, faltavam até 90px numa célula e 67px num cabeçalho.
+        # O que se via era uma tabela com as palavras cortadas ao meio.
+        # Abaixo disso, o cartão -- que mostra tudo inteiro.
+        self.assertIn("@media (min-width:1200px)", folha)
         self.assertIn(".ls-os-body .ls-os-tabela", folha)
         self.assertIn("min-width:0!important;width:100%!important;table-layout:fixed!important", folha)
-        self.assertIn("@media (min-width:601px) and (max-width:900px)", folha)
+        self.assertIn("@media (min-width:601px) and (max-width:1199px)", folha)
         self.assertIn("grid-template-columns:repeat(3,minmax(0,1fr))!important", folha)
+
+        # E o cabeçalho pode quebrar linha: era `nowrap`, e "Revisão dos
+        # blocos" não tinha como caber sem cortar.
+        self.assertIn("white-space:normal;font-size:.69rem", folha)
 
     def test_documentos_ocupam_a_folha_a4_inteira(self):
         """Uma folha só continua sendo a regra -- vazia deixou de ser.

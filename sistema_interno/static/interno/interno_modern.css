@@ -1529,7 +1529,20 @@ select[multiple] option{padding:7px 10px;border-radius:8px}
 }
 
 /* Setorização de propostas e avaliação mensal. */
-.ls-block-review{min-width:190px;display:grid;gap:6px;justify-items:start}.ls-block-review .ls-status{max-width:100%;white-space:normal;line-height:1.25}.ls-budget-block-title{padding:12px 14px;border:1px solid var(--line);border-radius:13px;display:flex;align-items:center;gap:11px;background:#211c16}.ls-budget-block-title>i{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;color:#f5c070;background:rgba(242,169,59,.12)}.ls-budget-block-title span,.ls-budget-block-title strong,.ls-budget-block-title small{display:block}.ls-budget-block-title strong{color:#fff}.ls-budget-block-title small{margin-top:2px;color:#aa9c89}.ls-budget-block-title.financeiro>i{color:#73dfb0;background:rgba(72,214,158,.11)}
+/* A REVISÃO CABE NA COLUNA QUE TEM, E NÃO NA QUE QUERIA TER.
+
+   Era `min-width:190px` numa coluna de 14% -- que num monitor de 1440
+   dá 161px. A caixa se recusava a encolher e transbordava 24px para
+   fora da célula, cortando "Financeiro: Pendente" no meio. Numa tabela
+   de largura fixa, quem manda é a coluna: `min-width:0` deixa a caixa
+   aceitar isso, e as etiquetas dentro dela já sabem quebrar linha. */
+/* As duas revisões dividem a coluna em vez de empilhar de ponta a
+   ponta: "Comercial: Pendente" e "Financeiro: Pendente" são curtas e
+   simétricas, e lado a lado cabem em duas linhas em vez de quatro. */
+.ls-block-review{min-width:0;display:grid;gap:5px;justify-items:stretch}
+.ls-block-review .ls-status{
+  justify-content:center;padding-inline:7px;font-size:.66rem;
+}.ls-block-review .ls-status{max-width:100%;white-space:normal;line-height:1.25}.ls-budget-block-title{padding:12px 14px;border:1px solid var(--line);border-radius:13px;display:flex;align-items:center;gap:11px;background:#211c16}.ls-budget-block-title>i{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;color:#f5c070;background:rgba(242,169,59,.12)}.ls-budget-block-title span,.ls-budget-block-title strong,.ls-budget-block-title small{display:block}.ls-budget-block-title strong{color:#fff}.ls-budget-block-title small{margin-top:2px;color:#aa9c89}.ls-budget-block-title.financeiro>i{color:#73dfb0;background:rgba(72,214,158,.11)}
 .ls-period-filter{width:min(330px,100%)}.ls-sector-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.ls-sector-card{padding:18px;border:1px solid var(--line);border-radius:18px;background:linear-gradient(155deg,#2b241b,#1a1610);box-shadow:var(--shadow-soft)}.ls-sector-card.avaliado{border-color:rgba(72,214,158,.25)}.ls-sector-card-head{display:grid;grid-template-columns:46px minmax(0,1fr) auto;align-items:center;gap:11px}.ls-sector-icon{width:46px;height:46px;border-radius:13px;display:grid;place-items:center;color:#f5c070;background:rgba(242,169,59,.12);font-size:1.15rem}.ls-sector-card h2{margin:0;color:#fff;font-size:1rem}.ls-sector-card-head p{margin:3px 0 0;color:#aa9c89;font-size:.72rem}.ls-sector-score{min-width:52px;height:52px;border-radius:50%;display:grid;place-items:center;color:#13100b;background:#73dfb0;font-size:1.05rem;font-weight:950;line-height:1}.ls-sector-score small{font-size:.58rem}.ls-sector-score.pequeno{width:38px;min-width:38px;height:38px;font-size:.8rem}.ls-sector-comment{min-height:48px;margin:15px 0 5px;color:#c6bbae;font-size:.8rem;line-height:1.5}.ls-sector-comment.vazio{color:#8f8271}.ls-score-options{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}.ls-score-options label{margin:0;cursor:pointer}.ls-score-options input{position:absolute;opacity:0;pointer-events:none}.ls-score-options span{height:48px;border:1px solid var(--line);border-radius:11px;display:grid;place-items:center;color:#c6bbae;background:#211c16;font-weight:950}.ls-score-options small{min-height:17px;margin-top:4px;display:block;color:#8f8271;font-size:.61rem;text-align:center}.ls-score-options input:checked+span{border-color:#73dfb0;color:#13100b;background:#73dfb0;box-shadow:0 0 0 3px rgba(72,214,158,.12)}
 @media(max-width:1050px){.ls-sector-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:700px){.ls-sector-grid{grid-template-columns:1fr}.ls-period-filter{width:100%}.ls-commercial-table tbody td[data-rotulo="Revisão dos blocos"]{grid-column:1/-1}.ls-score-options{gap:5px}.ls-score-options span{height:44px}}
 
@@ -2302,7 +2315,7 @@ input[type="number"]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0
 [data-enviar] .ls-action-label,
 [data-enviar-os] .ls-action-label{display:inline!important}
 
-@media (min-width:901px) and (max-width:1180px){
+@media (min-width:1200px) and (max-width:1420px){
   .ls-commercial-actions{min-width:142px}
   .ls-orcamentos-table .ls-action-label{display:none}
   .ls-row-actions .btn{
@@ -2310,7 +2323,7 @@ input[type="number"]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0
   }
 }
 
-@media (max-width:900px){
+@media (max-width:1199px){
   .ls-commercial-table-wrap{overflow:visible!important}
   .ls-commercial-table,
   .ls-commercial-table tbody{display:block;width:100%}
@@ -2736,12 +2749,18 @@ a.ls-metric-card.active{border-color:var(--metric);box-shadow:0 0 0 2px rgba(242
    distinguem pela versão -- e ela estava escrita no mesmo cinza miúdo do
    resto dos detalhes. Aqui ela é uma marca ao lado do número: quem bate
    o olho na lista vê primeiro que aquela linha tem histórico. */
+/* O selo de versão nasceu na O.S. e serve às duas listas. A cor vem do
+   contexto: teal na O.S., âmbar na proposta -- cada tela tem a sua, e o
+   selo não pode ser o único elemento fora do tom. */
 .ls-versao-chip{
   display:inline-block;margin-left:6px;padding:2px 7px;
-  border:1px solid var(--os-linha-forte);border-radius:999px;
-  background:var(--os-verniz);color:var(--os-tinta);
+  border:1px solid rgba(242,169,59,.45);border-radius:999px;
+  background:rgba(242,169,59,.12);color:#f3c476;
   font-size:.66rem;font-weight:900;letter-spacing:.03em;
   font-variant-numeric:tabular-nums;vertical-align:middle;
+}
+.ls-os-body .ls-versao-chip{
+  border-color:var(--os-linha-forte);background:var(--os-verniz);color:var(--os-tinta);
 }
 
 /* Linha da versão congelada: presente, e claramente fora da fila. Não
@@ -2800,8 +2819,16 @@ a.ls-metric-card.active{border-color:var(--metric);box-shadow:0 0 0 2px rgba(242
 .ls-commercial-table th,.ls-commercial-table td{
   padding:9px 8px!important;font-size:.79rem;vertical-align:middle;
 }
+/* O CABEÇALHO QUEBRA LINHA.
+
+   Ele era `nowrap`: "Revisão dos blocos" e "Cliente / equipamento" não
+   tinham como caber na coluna que a tabela lhes dava, e simplesmente
+   saíam cortados -- medido, faltavam 67px. Título de coluna é de uma a
+   três palavras; deixá-lo ocupar duas linhas custa alguns pixels de
+   altura no cabeçalho e devolve a palavra inteira. */
 .ls-commercial-table th{
-  white-space:nowrap;font-size:.69rem;letter-spacing:.045em;text-align:center;
+  white-space:normal;font-size:.69rem;letter-spacing:.045em;text-align:center;
+  line-height:1.25;overflow-wrap:break-word;
 }
 .ls-commercial-table th:first-child,.ls-commercial-table td:first-child{text-align:left}
 .ls-commercial-table td{overflow-wrap:normal;word-break:normal}
@@ -2894,12 +2921,20 @@ body.modal-open .ls-action-fab-menu{display:none!important}
 .ls-action-fab-menu [data-excluir-os]:hover{background:rgba(255,113,132,.11)!important;border-color:rgba(255,113,132,.4)!important}
 .ls-action-fab-menu .ls-action-label{display:inline!important;min-width:0}
 .ls-action-fab-menu i{width:17px;flex:0 0 17px;text-align:center;font-size:.91rem}
+/* O PRÓXIMO PASSO É UMA NOTA, E NÃO UM SEGUNDO CARTÃO.
+
+   Ele era uma caixa com borda e fundo, do mesmo peso visual da etiqueta
+   de situação logo acima -- e numa coluna estreita virava três linhas
+   dentro de um retângulo, empurrando a altura da linha inteira. São duas
+   informações de importância diferente: a situação é o estado, o próximo
+   passo é o conselho. Como nota discreta, ele cabe em uma ou duas linhas
+   e para de competir com o estado. */
 .ls-next-action{
-  display:flex;align-items:center;gap:5px;margin-top:6px;padding:5px 7px;
-  width:max-content;max-width:100%;border:1px solid rgba(68,181,132,.28);border-radius:8px;
-  color:#8ee4bd;background:rgba(32,145,98,.09);font-size:.65rem;font-weight:800;
-  line-height:1.25;white-space:normal;
+  display:block;margin-top:5px;padding:0;border:0;background:none;
+  color:#8ee4bd;font-size:.66rem;font-weight:750;line-height:1.35;
+  white-space:normal;overflow-wrap:anywhere;
 }
+.ls-next-action i{margin-right:4px}
 
 @media (min-width:721px){
   .ls-commercial-table{min-width:760px}
@@ -2976,7 +3011,7 @@ body.modal-open .ls-action-fab-menu{display:none!important}
    cima dele. Espalhado na largura inteira, o card de tablet obrigava a
    varrer 900px com os olhos para ligar "Total" ao número embaixo.
    ====================================================================== */
-@media (min-width:901px){
+@media (min-width:1200px){
   .ls-os-body .table-responsive{overflow-x:visible!important}
   .ls-os-body .ls-os-tabela{
     min-width:0!important;width:100%!important;table-layout:fixed!important;
@@ -2991,7 +3026,8 @@ body.modal-open .ls-action-fab-menu{display:none!important}
   .ls-os-tabela th:nth-child(7){width:12%}
   .ls-os-tabela th:nth-child(8){width:10%}
   .ls-os-tabela th:nth-child(9){width:58px}
-  .ls-os-tabela td{white-space:normal!important;overflow-wrap:anywhere!important}
+  /* Mesmo motivo da tabela de propostas: ver o comentário lá. */
+  .ls-os-tabela td{white-space:normal!important;overflow-wrap:break-word!important}
   .ls-os-tabela td[data-rotulo="Total"]{white-space:nowrap!important}
   .ls-os-tabela td[data-rotulo="Cliente / equipamento"] strong{
     display:block;white-space:normal;overflow:visible;text-overflow:clip;
@@ -3011,7 +3047,7 @@ body.modal-open .ls-action-fab-menu{display:none!important}
   .ls-os-tabela tbody tr:hover{background:var(--os-verniz)}
 }
 
-@media (min-width:601px) and (max-width:900px){
+@media (min-width:601px) and (max-width:1199px){
   /* Cabeçalho e busca centrados, com largura útil: esticada de borda a
      borda a caixa de busca virava uma faixa de 900px para dez letras. */
   .ls-os-body .ls-data-header{
@@ -3081,30 +3117,53 @@ body.modal-open .ls-action-fab-menu{display:none!important}
    grade própria: tabela completa no computador, três colunas centradas
    no tablet e duas no telefone.
    ====================================================================== */
-@media (min-width:901px){
+@media (min-width:1200px){
   .ls-orcamentos-body .table-responsive{overflow-x:visible!important}
   .ls-orcamentos-table{
     min-width:0!important;width:100%!important;table-layout:fixed!important;
   }
   .ls-orcamentos-table th,.ls-orcamentos-table td{padding-inline:5px!important}
-  .ls-orcamentos-table th:nth-child(1){width:6%}
-  .ls-orcamentos-table th:nth-child(2){width:18%}
+  /* AS LARGURAS SEGUEM O QUE CADA COLUNA CARREGA.
+
+     Estavam distribuídas por igual entre colunas muito desiguais:
+     "Itens" ganhava 6% para escrever um número de um dígito, enquanto
+     "Situação" -- que tem etiqueta, próximo passo e às vezes duas linhas
+     -- ganhava os mesmos 10% e quebrava tudo em três. O que se lia era
+     uma coluna de palavras picadas ao lado de uma coluna com espaço
+     sobrando.
+
+     Agora o número curto ocupa o que um número curto ocupa, e a folga
+     vai para as duas colunas que carregam texto de verdade. */
+  .ls-orcamentos-table th:nth-child(1){width:5%}
+  .ls-orcamentos-table th:nth-child(2){width:16%}
+  /* "Atendimento interno" são duas palavras longas: com menos que isto
+     a coluna quebra a primeira ao meio. */
   .ls-orcamentos-table th:nth-child(3){width:10%}
-  .ls-orcamentos-table th:nth-child(4){width:6%}
-  .ls-orcamentos-table th:nth-child(5){width:10%}
-  .ls-orcamentos-table th:nth-child(6){width:12%}
-  .ls-orcamentos-table th:nth-child(7){width:8%}
-  .ls-orcamentos-table th:nth-child(8){width:10%}
+  /* 5%, e não 4%: o conteúdo é um número de um dígito, mas o TÍTULO da
+     coluna é a palavra "Itens", e é ela que define o mínimo. */
+  .ls-orcamentos-table th:nth-child(4){width:5%}
+  .ls-orcamentos-table th:nth-child(5){width:9%}
+  .ls-orcamentos-table th:nth-child(6){width:10%}
+  .ls-orcamentos-table th:nth-child(7){width:7%}
+  .ls-orcamentos-table th:nth-child(8){width:16%}
   .ls-orcamentos-table th:nth-child(9){width:14%}
-  .ls-orcamentos-table th:nth-child(10){width:58px}
-  .ls-orcamentos-table td{white-space:normal!important;overflow-wrap:anywhere!important}
+  .ls-orcamentos-table th:nth-child(10){width:56px}
+  /* `break-word`, e não `anywhere`.
+
+     `anywhere` autoriza a quebra em QUALQUER letra, e o navegador usa
+     essa autorização mesmo quando a palavra caberia na linha seguinte:
+     "Atendimento interno" virava "Atendime / nto / interno", e
+     "versão 1" virava "vers / ão 1". Ler isso é pior do que rolar a
+     tabela. `break-word` quebra entre palavras primeiro e só parte uma
+     palavra quando ela sozinha não cabe na coluna. */
+  .ls-orcamentos-table td{white-space:normal!important;overflow-wrap:break-word!important}
   .ls-orcamentos-table td[data-rotulo="Total"]{white-space:nowrap!important}
   .ls-orcamentos-table td[data-rotulo="Cliente"] .material-nome{
     display:block;white-space:normal;overflow:visible;text-overflow:clip;
   }
 }
 
-@media (min-width:601px) and (max-width:900px){
+@media (min-width:601px) and (max-width:1199px){
   .ls-orcamentos-body .ls-data-header{
     align-items:center!important;text-align:center!important;
   }
@@ -3231,6 +3290,28 @@ body.modal-open .ls-action-fab-menu{display:none!important}
   font-size:.79rem;line-height:1.5;
 }
 .ls-etapa-aviso[hidden]{display:none!important}
+
+/* POR ONDE ABRIR O WHATSAPP, NESTE COMPUTADOR.
+
+   Duas opções e nada mais: um seletor discreto no pé da janela de envio,
+   que só existe no computador -- no celular `wa.me` já leva ao
+   aplicativo e não há escolha a fazer. */
+.ls-whatsapp-preferencia{
+  display:flex;flex-wrap:wrap;align-items:center;gap:6px 16px;
+  margin:0;padding:10px 12px;
+  border:1px solid var(--line);border-radius:12px;background:var(--panel-soft);
+}
+.ls-whatsapp-preferencia[hidden]{display:none!important}
+.ls-whatsapp-preferencia>legend{
+  float:none;width:auto;margin:0 8px 0 0;padding:0;
+  color:var(--text-2);font-size:.72rem;font-weight:800;
+}
+.ls-whatsapp-preferencia label{
+  display:inline-flex;align-items:center;gap:6px;margin:0;cursor:pointer;
+  color:var(--text-2);font-size:.78rem;font-weight:700;
+}
+.ls-whatsapp-preferencia input{accent-color:var(--acento);margin:0}
+.ls-whatsapp-preferencia label:has(input:checked){color:var(--text)}
 
 /* A ação de cadastrar fica antes dos resultados de cliente/brinquedo. */
 .ls-busca-criar{margin:0 0 6px!important}

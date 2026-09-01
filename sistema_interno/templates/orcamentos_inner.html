@@ -97,9 +97,16 @@
         <tbody>
           {% for orcamento in orcamentos %}
             <tr data-registro="{{ orcamento.id }}">
+              {% comment %}
+                "versão 1" embaixo de todo número era duas coisas ruins de
+                uma vez: quebrava em "vers / ão 1" na coluna estreita, e
+                anunciava um histórico que a maioria das propostas não
+                tem. A O.S. já resolvia assim -- só a partir da segunda
+                versão existe versão para mostrar, e ela vira um selo ao
+                lado do número, onde se lê de relance.
+              {% endcomment %}
               <td data-rotulo="ID">
-                <span class="ls-number">{{ orcamento.id }}</span>
-                <span class="material-sub d-block">versão {{ orcamento.versao }}</span>
+                <span class="ls-number">{{ orcamento.id }}</span>{% if orcamento.versao > 1 %}<span class="ls-versao-chip" title="Esta é a versão {{ orcamento.versao }} desta proposta">v{{ orcamento.versao }}</span>{% endif %}
               </td>
               <td data-rotulo="Cliente">
                 <span class="material-nome">{{ orcamento.destinatario }}</span>
@@ -1056,13 +1063,28 @@ Cadastro mínimo de propósito: nome, valor e categoria. Foto e texto de
         {% endcomment %}
         {% comment %}
           data-whatsapp-web: este botão é DE PROPÓSITO a versão web. É a
-          saída para quando o aplicativo instalado não abriu -- mandá-lo
-          de volta para o aplicativo faria dele um botão que não faz nada.
+          saída para quando a janela foi bloqueada ou o aplicativo não
+          abriu -- mandá-lo de volta ao aplicativo faria dele um botão
+          que não faz nada.
         {% endcomment %}
         <a class="btn btn-success w-100 mt-3" id="linkWhatsappAtalho"
            href="#" target="_blank" rel="noopener" data-whatsapp-web hidden>
           <i class="bi bi-whatsapp me-1"></i> Abrir conversa no WhatsApp
         </a>
+
+        {% comment %}
+          NESTE COMPUTADOR, ABRIR POR ONDE.
+
+          Só aparece no computador: no celular `wa.me` já leva ao
+          aplicativo e não há escolha a fazer. A preferência é da
+          MÁQUINA, e não da conta -- a mesma pessoa no computador do
+          escritório e no do galpão pode querer coisas diferentes.
+        {% endcomment %}
+        <fieldset class="ls-whatsapp-preferencia mt-3" id="whatsappPreferencia" hidden>
+          <legend>Neste computador, abrir por</legend>
+          <label><input type="radio" name="whatsapp_por" value="web" checked> WhatsApp Web</label>
+          <label><input type="radio" name="whatsapp_por" value="aplicativo"> Aplicativo instalado</label>
+        </fieldset>
 
         <section class="ls-envios mt-4" id="linkEnvios" hidden>
           <h6 class="mb-2"><i class="bi bi-clock-history me-1"></i> Tentativas de envio</h6>
@@ -2481,6 +2503,23 @@ LSTela.pronto(function () {
     if (texto) texto.textContent = propostaAtual.mensagem || "Preparando mensagem…";
   }
 
+  /* A escolha de "abrir por" vive no navegador, e só no computador.
+     Ligar aqui, e não na abertura do modal, garante que ela já esteja
+     certa antes do primeiro clique de envio. */
+  (function ligarPreferenciaWhatsapp() {
+    var caixa = document.getElementById("whatsappPreferencia");
+    if (!caixa || Painel.whatsapp.noCelular()) return;
+
+    caixa.hidden = false;
+    var atual = Painel.whatsapp.preferencia();
+    caixa.querySelectorAll("[name='whatsapp_por']").forEach(function (opcao) {
+      opcao.checked = opcao.value === atual;
+      opcao.addEventListener("change", function () {
+        if (opcao.checked) Painel.whatsapp.definirPreferencia(opcao.value);
+      });
+    });
+  })();
+
   function montarConversa(telefone, mensagem) {
     /* Mesma regra do servidor (conversa_whatsapp), aqui para a conversa
        abrir no mesmo toque em que a pessoa pede -- sem esperar resposta
@@ -2682,21 +2721,20 @@ LSTela.pronto(function () {
     /* O WhatsApp que abre é o de QUEM ESTÁ LOGADO no aparelho: a proposta
        sai do número do atendente, como qualquer mensagem dele.
 
-       No computador quem abre é o APLICATIVO INSTALADO, não o WhatsApp
-       Web -- outra aba com QR code atrasa cada envio. Se o aplicativo não
-       estiver instalado o sistema simplesmente ignora o pedido, sem
-       avisar ninguém; por isso o botão verde para a versão web fica
-       sempre visível logo abaixo. */
+       No computador a conversa abre no WHATSAPP WEB deste navegador --
+       onde quem atende já está logado. O aplicativo instalado continua
+       disponível para quem o prefere, e a escolha fica guardada naquele
+       computador. Ver `Painel.whatsapp`. */
     var saida = Painel.whatsapp.abrir(telefone, mensagem);
 
-    mostrarAtalhoWhatsapp(url, saida.motivo !== "aplicativo" && saida.ok);
+    mostrarAtalhoWhatsapp(url, !saida.ok || saida.motivo === "aplicativo");
     avisarEnvio(
       saida.motivo === "aplicativo"
-        ? "Pedimos ao WhatsApp instalado no seu computador para abrir a " +
-          "conversa com a proposta escrita. Não abriu? Use o botão verde " +
-          "aqui embaixo, que vai pela versão web."
+        ? "Pedimos ao WhatsApp instalado neste computador para abrir a " +
+          "conversa com a proposta escrita. Não abriu? Troque para o " +
+          "WhatsApp Web aqui embaixo."
         : saida.ok
-          ? "A conversa abriu no seu WhatsApp com a proposta escrita. " +
+          ? "A conversa abriu no WhatsApp Web com a proposta escrita. " +
             "Confirme o envio por lá para o cliente receber."
           : "O navegador bloqueou a janela. Use o botão verde " +
             "“Abrir conversa no WhatsApp” aqui embaixo.",

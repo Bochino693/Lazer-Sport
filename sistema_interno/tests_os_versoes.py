@@ -542,7 +542,7 @@ class DesenhoDaListaDeOrdensTests(TestCase):
         """Esticado de borda a borda, o card obriga a varrer 900px com os olhos."""
         folha = self.folha()
         faixa = folha[folha.index(
-            "@media (min-width:601px) and (max-width:900px){\n  /* Cabeçalho"
+            "@media (min-width:601px) and (max-width:1199px){\n  /* Cabeçalho"
         ):]
         faixa = faixa[:faixa.index("@media (max-width:600px)")]
 

@@ -318,6 +318,21 @@
             {% if not email_configurado %}<div class="alert alert-warning mt-2 mb-0 py-2 px-3 small"><i class="bi bi-exclamation-triangle me-1"></i>{{ email_diagnostico }} Use WhatsApp ou copie o link.</div>{% endif %}
           </div>
         </div>
+        <a class="btn btn-success w-100 mt-3" id="linkWhatsappAtalhoOS"
+           href="#" target="_blank" rel="noopener" data-whatsapp-web hidden>
+          <i class="bi bi-whatsapp me-1"></i> Abrir conversa no WhatsApp
+        </a>
+
+        {% comment %}
+          Mesma escolha da tela de propostas, e a mesma preferência: ela é
+          do computador, e o painel inteiro a compartilha.
+        {% endcomment %}
+        <fieldset class="ls-whatsapp-preferencia mt-3" id="whatsappPreferenciaOS" hidden>
+          <legend>Neste computador, abrir por</legend>
+          <label><input type="radio" name="whatsapp_por_os" value="web" checked> WhatsApp Web</label>
+          <label><input type="radio" name="whatsapp_por_os" value="aplicativo"> Aplicativo instalado</label>
+        </fieldset>
+
         <p class="text-muted small mt-3 mb-2"><i class="bi bi-info-circle me-1"></i>No WhatsApp, confirme o envio dentro da conversa que será aberta.</p>
         <label class="form-label" for="envioOSLink">Ou compartilhe o link</label>
         <div class="input-group"><input class="form-control" id="envioOSLink" readonly><button class="btn btn-outline-primary" type="button" id="copiarLinkOS"><i class="bi bi-clipboard me-1"></i>Copiar</button></div>
@@ -1008,7 +1023,61 @@ LSTela.pronto(function () {
   document.querySelectorAll("[data-enviar-os]").forEach(function(b){b.addEventListener("click",function(){osEnvioAtual=achar(b.dataset.enviarOs)||{};valor("envioOSId",b.dataset.enviarOs);valor("envioOSWhatsapp",b.dataset.whatsapp||osEnvioAtual.whatsapp_cliente);valor("envioOSEmail",b.dataset.email||osEnvioAtual.email_cliente);definirLinkOS(osEnvioAtual.link_publico||"");document.getElementById("envioOSTitulo").textContent="Enviar O.S. para "+b.dataset.nome;document.getElementById("envioOSResumo").textContent="OS-"+String(b.dataset.enviarOs).padStart(5,"0")+" · "+(osEnvioAtual.equipamento||"atendimento");document.getElementById("envioOSMensagem").textContent=osEnvioAtual.mensagem_whatsapp||"Mensagem pronta após salvar a O.S.";document.getElementById("envioOSPrevia").href=osEnvioAtual.preview_url||osEnvioAtual.link_publico||"#";desenharEnviosOS(osEnvioAtual.envios||[]);avisoOS("","");Painel.abrir("modalEnviarOS");});});
   document.getElementById("formEnviarOS")?.addEventListener("submit",function(e){e.preventDefault();});
 
-  document.getElementById("enviarOSWhatsapp")?.addEventListener("click",function(){var telefone=document.getElementById("envioOSWhatsapp").value.trim(),mensagem=(osEnvioAtual&&osEnvioAtual.mensagem_whatsapp)||"";if(!Painel.whatsapp.web(telefone,mensagem)){avisoOS("Informe o WhatsApp do cliente com DDD.","erro");return;}var saida=Painel.whatsapp.abrir(telefone,mensagem);avisoOS(saida.ok?"A conversa foi aberta. Confirme o envio dentro do WhatsApp.":"O navegador bloqueou a conversa; tente novamente.",saida.ok?"sucesso":"erro");requisitarEnvioOS("whatsapp","whatsapp",telefone).then(function(json){atualizarEnvioOS(json);avisoOS("O.S. liberada e registrada. Confirme o envio dentro do WhatsApp.","sucesso");}).catch(function(erro){avisoOS("A conversa abriu, mas a O.S. não foi liberada pelo servidor: "+erro.message,"erro");});});
+  /* A escolha de "abrir por" vive no navegador, e só no computador --
+     no celular `wa.me` já leva ao aplicativo e não há escolha a fazer.
+     Mesma preferência da tela de propostas: é da MÁQUINA, e o painel
+     inteiro a compartilha. Ver `Painel.whatsapp`. */
+  (function ligarPreferenciaWhatsappOS(){
+    var caixa=document.getElementById("whatsappPreferenciaOS");
+    if(!caixa||Painel.whatsapp.noCelular())return;
+    caixa.hidden=false;
+    var atual=Painel.whatsapp.preferencia();
+    caixa.querySelectorAll("[name='whatsapp_por_os']").forEach(function(opcao){
+      opcao.checked=opcao.value===atual;
+      opcao.addEventListener("change",function(){
+        if(opcao.checked)Painel.whatsapp.definirPreferencia(opcao.value);
+      });
+    });
+  })();
+
+  document.getElementById("enviarOSWhatsapp")?.addEventListener("click",function(){
+    var telefone=document.getElementById("envioOSWhatsapp").value.trim(),
+        mensagem=(osEnvioAtual&&osEnvioAtual.mensagem_whatsapp)||"";
+    if(!Painel.whatsapp.web(telefone,mensagem)){
+      avisoOS("Informe o WhatsApp do cliente com DDD.","erro");
+      return;
+    }
+
+    /* Abrir PRIMEIRO, dentro do gesto do clique: fora dele o navegador
+       trata a janela como pop-up e bloqueia. O registro no servidor vem
+       depois, porque ele é assíncrono e perderia o gesto. */
+    var saida=Painel.whatsapp.abrir(telefone,mensagem);
+
+    /* O atalho verde aparece quando a conversa NÃO abriu sozinha -- ou
+       porque a janela foi bloqueada, ou porque o pedido foi para o
+       aplicativo instalado, que não avisa quando não existe. */
+    var atalho=document.getElementById("linkWhatsappAtalhoOS");
+    if(atalho){
+      atalho.href=saida.web||"#";
+      atalho.hidden=saida.ok&&saida.motivo!=="aplicativo";
+    }
+
+    avisoOS(
+      saida.motivo==="aplicativo"
+        ? "Pedimos ao WhatsApp instalado neste computador para abrir a conversa. Não abriu? Troque para o WhatsApp Web aqui embaixo."
+        : saida.ok
+          ? "A conversa abriu no WhatsApp Web. Confirme o envio por lá para o cliente receber."
+          : "O navegador bloqueou a janela. Use o botão verde aqui embaixo.",
+      saida.ok?"sucesso":"erro"
+    );
+
+    requisitarEnvioOS("whatsapp","whatsapp",telefone).then(function(json){
+      atualizarEnvioOS(json);
+      avisoOS("O.S. liberada e registrada. Confirme o envio dentro do WhatsApp.","sucesso");
+    }).catch(function(erro){
+      avisoOS("A conversa abriu, mas a O.S. não foi liberada pelo servidor: "+erro.message,"erro");
+    });
+  });
 
   document.getElementById("enviarOSEmail")?.addEventListener("click",async function(){var botao=this,email=document.getElementById("envioOSEmail").value.trim(),rotulo=botao.innerHTML;avisoOS("","");botao.disabled=true;botao.innerHTML='<span class="spinner-border spinner-border-sm me-1"></span>Enviando';try{var json=await requisitarEnvioOS("email","email",email);atualizarEnvioOS(json);avisoOS("E-mail enviado e registrado com sucesso.","sucesso");botao.innerHTML='<i class="bi bi-check-lg me-1"></i>Enviado';setTimeout(function(){botao.innerHTML=rotulo;botao.disabled=false;},2200);}catch(erro){avisoOS(erro.message,"erro");botao.innerHTML=rotulo;botao.disabled=false;}});
 
