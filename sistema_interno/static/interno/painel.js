@@ -637,6 +637,103 @@
     });
   };
 
+  /* ====================================================================
+     SERVIDOR PRONTO DEPOIS DE MUITO TEMPO SEM USO
+
+     A hospedagem pode suspender o processo ou encerrar uma conexão ociosa.
+     Repetir automaticamente um POST seria perigoso (dois pagamentos, duas
+     versões, duas exclusões). A estratégia segura é acordar o servidor com
+     GET /healthz/ ANTES da gravação e enviar o POST uma única vez.
+
+     Enquanto o painel estiver aberto e visível, um pulso barato mantém o
+     processo pronto. Ao voltar para uma aba antiga, o pulso começa antes do
+     primeiro clique e todas as gravações compartilham a mesma promessa.
+     ==================================================================== */
+  var redeUltimoSucesso = Date.now();
+  var redeAcordando = null;
+  var REDE_OCIOSA_MS = 2 * 60 * 1000;
+  var REDE_PULSO_MS = 4 * 60 * 1000;
+
+  function esperarRede(ms) {
+    return new Promise(function (resolver) { global.setTimeout(resolver, ms); });
+  }
+
+  function pulsoDoServidor(tentativa) {
+    var controlador = global.AbortController ? new AbortController() : null;
+    var timer = controlador
+      ? global.setTimeout(function () { controlador.abort(); }, 9000)
+      : null;
+
+    return fetch("/healthz/?painel=1", {
+      method: "GET",
+      credentials: "same-origin",
+      cache: "no-store",
+      headers: { "X-Requested-With": "XMLHttpRequest" },
+      signal: controlador ? controlador.signal : undefined,
+    }).then(function (resposta) {
+      if (!resposta.ok) throw new Error("health-" + resposta.status);
+      redeUltimoSucesso = Date.now();
+      return true;
+    }).catch(function (erro) {
+      if (tentativa < 2) {
+        return esperarRede(tentativa ? 1400 : 500).then(function () {
+          return pulsoDoServidor(tentativa + 1);
+        });
+      }
+      throw erro;
+    }).finally(function () {
+      if (timer) global.clearTimeout(timer);
+    });
+  }
+
+  function acordarServidor(forcar) {
+    if (!forcar && Date.now() - redeUltimoSucesso < REDE_OCIOSA_MS) {
+      return Promise.resolve(true);
+    }
+    if (redeAcordando) return redeAcordando;
+
+    redeAcordando = pulsoDoServidor(0).finally(function () {
+      redeAcordando = null;
+    });
+    return redeAcordando;
+  }
+
+  Painel.rede = {
+    acordar: acordarServidor,
+
+    /* POST único: o preflight GET pode repetir; a gravação nunca. */
+    post: function (destino, opcoes) {
+      return acordarServidor(false).catch(function () {
+        throw new Error(
+          "O servidor ainda está retomando a conexão. Nada foi enviado; tente novamente em instantes."
+        );
+      }).then(function () {
+        return fetch(destino, opcoes).then(function (resposta) {
+          if (resposta.ok) redeUltimoSucesso = Date.now();
+          return resposta;
+        });
+      });
+    },
+  };
+
+  /* Mantém a instância pronta somente enquanto o painel está realmente em
+     uso. Aba escondida não gera tráfego; ao voltar, acorda imediatamente. */
+  global.setInterval(function () {
+    if (document.visibilityState === "visible") acordarServidor(true).catch(function () {});
+  }, REDE_PULSO_MS);
+
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState === "visible") acordarServidor(false).catch(function () {});
+  });
+  global.addEventListener("pageshow", function () {
+    acordarServidor(false).catch(function () {});
+  });
+  document.addEventListener("pointerdown", function () {
+    if (Date.now() - redeUltimoSucesso >= REDE_OCIOSA_MS) {
+      acordarServidor(false).catch(function () {});
+    }
+  }, { capture: true, passive: true });
+
   Painel.enviar = function (form, extras) {
     var dados = new FormData(form);
 
@@ -649,7 +746,7 @@
     // input em vez da URL -- o POST ia parar em /stock/[object HTMLInputElement].
     var destino = form.getAttribute("action") || global.location.pathname;
 
-    return fetch(destino, {
+    return Painel.rede.post(destino, {
       method: "POST",
       body: dados,
       headers: { "X-Requested-With": "XMLHttpRequest" },
@@ -928,20 +1025,13 @@
   };
 
   /* ====================================================================
-     WHATSAPP: O APLICATIVO INSTALADO PRIMEIRO, A WEB SÓ SE PRECISAR
+     WHATSAPP: WEB NO COMPUTADOR, APLICATIVO NO CELULAR
      --------------------------------------------------------------------
-     No computador, `wa.me` abre o WhatsApp Web -- outra aba, outro QR
-     code, e a mensagem demora. Quem atende tem o aplicativo instalado, e
-     é nele que a conversa deve abrir.
-
-     O caminho é o esquema `whatsapp://`, que o Windows e o macOS
-     entregam ao aplicativo. Ele tem um porém: se o aplicativo NÃO estiver
-     instalado, o navegador não avisa nada -- simplesmente não acontece
-     nada. Por isso o atalho verde para a versão web continua aparecendo
-     sempre, e o texto ao lado diz o que fazer se nada abrir.
-
-     No celular ninguém tem esse problema: `wa.me` já leva ao aplicativo,
-     e é o caminho que o próprio WhatsApp recomenda. Não se mexe.
+     O protocolo `whatsapp://` depende do programa instalado e não informa
+     ao navegador se falhou. No computador isso parecia um botão parado.
+     A versão web é previsível: abre em outra aba, usa a sessão já conectada
+     do atendente e mantém o painel intacto. No celular, `wa.me` continua
+     levando ao aplicativo.
      ==================================================================== */
   function numeroComDdi(telefone) {
     var digitos = String(telefone || "").replace(/\D/g, "");
@@ -963,22 +1053,15 @@
   Painel.whatsapp = {
     numero: numeroComDdi,
 
-    /* Endereço da versão web -- o que se copia, se guarda e serve de
-       atalho de reserva. */
+    /* No PC vai explicitamente ao WhatsApp Web; no celular conserva wa.me. */
     web: function (telefone, mensagem) {
       var digitos = numeroComDdi(telefone);
       if (!digitos) return "";
-      return "https://wa.me/" + digitos + "?text=" + encodeURIComponent(mensagem || "");
-    },
-
-    /* Endereço do aplicativo instalado. */
-    app: function (telefone, mensagem) {
-      var digitos = numeroComDdi(telefone);
-      if (!digitos) return "";
-      return (
-        "whatsapp://send?phone=" + digitos +
-        "&text=" + encodeURIComponent(mensagem || "")
-      );
+      var base = noCelular()
+        ? "https://wa.me/" + digitos
+        : "https://web.whatsapp.com/send?phone=" + digitos;
+      return base + (noCelular() ? "?text=" : "&text=")
+        + encodeURIComponent(mensagem || "");
     },
 
     noCelular: noCelular,
@@ -990,33 +1073,13 @@
       var web = this.web(telefone, mensagem);
       if (!web) return { ok: false, motivo: "numero", web: "" };
 
-      if (noCelular()) {
-        var aba = window.open(web, "_blank");
-        if (aba) { try { aba.opener = null; } catch (e) {} }
-        return { ok: !!aba, motivo: aba ? "web" : "bloqueado", web: web };
-      }
-
-      /* No computador: pede o aplicativo. Navegar a própria página para
-         um esquema que o sistema conhece não troca a página -- o
-         navegador entrega ao aplicativo e fica onde está. Se ninguém
-         responder pelo esquema, também não acontece nada, e é para isso
-         que o atalho verde existe. */
-      try {
-        window.location.href = this.app(telefone, mensagem);
-        return { ok: true, motivo: "aplicativo", web: web };
-      } catch (e) {
-        var reserva = window.open(web, "_blank");
-        if (reserva) { try { reserva.opener = null; } catch (e2) {} }
-        return { ok: !!reserva, motivo: reserva ? "web" : "bloqueado", web: web };
-      }
+      var aba = window.open(web, "_blank");
+      if (aba) { try { aba.opener = null; } catch (e) {} }
+      return { ok: !!aba, motivo: aba ? "web" : "bloqueado", web: web };
     },
   };
 
-  /* Todo link "wa.me" do painel segue a mesma regra, sem cada tela ter de
-     lembrar disso: no computador vai para o aplicativo instalado. O link
-     continua sendo wa.me no HTML -- é o que se copia, o que funciona sem
-     JavaScript e o que serve de reserva. Quem quiser mesmo a versão web
-     (o botão verde de "não abriu?") marca `data-whatsapp-web`. */
+  /* Links antigos em wa.me também entram na Web no computador. */
   document.addEventListener("click", function (evento) {
     var link = evento.target.closest
       ? evento.target.closest('a[href^="https://wa.me/"]')
@@ -1029,9 +1092,12 @@
     if (!telefone) return;
 
     evento.preventDefault();
-    window.location.href =
-      "whatsapp://send?phone=" + telefone +
-      "&text=" + encodeURIComponent(endereco.searchParams.get("text") || "");
+    var destino = Painel.whatsapp.web(
+      telefone,
+      endereco.searchParams.get("text") || ""
+    );
+    var aba = window.open(destino, "_blank");
+    if (aba) { try { aba.opener = null; } catch (e) {} }
   });
 
   /* ====================================================================

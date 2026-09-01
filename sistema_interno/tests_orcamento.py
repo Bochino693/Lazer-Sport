@@ -470,6 +470,7 @@ class OrcamentoInternoTests(TestCase):
         self.post({"action": "brinquedo_novo", "nome": "Touro mecânico"})
 
         novo = Brinquedos.objects.get(nome_brinquedo="Touro mecânico")
+        self.assertFalse(novo.ativo)
         self.assertFalse(novo.exibir_na_loja)
 
     def test_nao_duplica_brinquedo_existente(self):
@@ -504,6 +505,7 @@ class OrcamentoInternoTests(TestCase):
         peca = PecasReposicao.objects.get(nome="Rede de proteção")
         self.assertEqual(resposta.json()["peca"]["id"], peca.id)
         self.assertEqual(peca.preco_venda, Decimal("89.90"))
+        self.assertFalse(peca.ativo)
         self.assertIn(categoria, peca.categoria_peca.all())
 
     # -------------------------------------------------------- envio
@@ -845,22 +847,30 @@ class OrcamentoInternoTests(TestCase):
         # dele um botão que não faz nada.
         self.assertContains(resposta, "data-whatsapp-web")
 
-    def test_no_computador_a_conversa_abre_no_aplicativo_instalado(self):
-        """`wa.me` no PC abre o WhatsApp Web -- outra aba, outro QR code.
-
-        Quem atende tem o aplicativo instalado, e é nele que a conversa
-        deve abrir: cada envio pelo Web custa segundos que se somam num
-        dia de propostas.
-        """
+    def test_no_computador_a_conversa_abre_no_whatsapp_web(self):
+        """O PC não depende de protocolo ou aplicativo instalado."""
         from pathlib import Path
 
         painel = Path(
             "sistema_interno/static/interno/painel.js"
         ).read_text(encoding="utf-8")
 
-        self.assertIn("whatsapp://send?phone=", painel)
-        # E no celular ninguém mexe: wa.me já leva ao aplicativo.
-        self.assertIn("if (noCelular()) return;", painel)
+        self.assertIn("https://web.whatsapp.com/send?phone=", painel)
+        self.assertNotIn("whatsapp://send?phone=", painel)
+        self.assertIn('var aba = window.open(web, "_blank")', painel)
+        # No celular, wa.me continua levando ao aplicativo.
+        self.assertIn('"https://wa.me/" + digitos', painel)
+
+    def test_gravacao_acorda_o_servidor_sem_repetir_post(self):
+        from pathlib import Path
+
+        painel = Path(
+            "sistema_interno/static/interno/painel.js"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn('fetch("/healthz/?painel=1"', painel)
+        self.assertIn("Painel.rede.post(destino", painel)
+        self.assertIn("POST único", painel)
 
     def test_link_e_mensagem_ja_vem_prontos_no_botao_enviar(self):
         """A tela não depende de rede para mostrar o que compartilhar.
