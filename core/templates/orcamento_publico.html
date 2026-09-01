@@ -352,45 +352,193 @@ body{
 
 /* ---------------------------------------------------------- impressão */
 @media print{
-  @page{size:A4 portrait;margin:4mm}
-  html,body{width:202mm;min-height:0;background:#fff;font-size:8px;line-height:1.22}
-  .envelope{width:202mm;max-width:none;margin:0;padding:0}
+  /* ====================================================================
+     A FOLHA INTEIRA, E UMA FOLHA SÓ. (Mesma decisão da O.S.)
+
+     Para garantir que a proposta nunca virasse a página, tudo aqui tinha
+     sido encolhido até caber com folga enorme: corpo de 8px, rótulos de
+     5,6.6pt, recuos de 1,1.6mm. Funcionava -- e o cliente recebia uma A4 com
+     a proposta espremida no terço de cima e quase metade da folha em
+     branco. Num documento que decide uma compra de dezenas de milhares
+     de reais, isso não passa despercebido.
+
+     Espremer não é a única forma de garantir uma página:
+
+     1. O TAMANHO É DE DOCUMENTO. Os corpos subiram cerca de 40% -- o
+        menor texto de 5,6.6pt para 7,6.6pt, o corrido de 6,6.6pt para 8,6.6pt.
+        6.6pt é o piso do que se lê sem esforço em papel.
+
+     2. O ENVELOPE PREENCHE A FOLHA. Coluna flex na altura útil da A4,
+        com os quadros dividindo a sobra: a folga vira respiro dentro dos
+        blocos, e não uma faixa vazia embaixo do rodapé.
+
+     3. A DENSIDADE RESPONDE AO CONTEÚDO. `:has()` conta as linhas de
+        item e aperta em degraus quando a proposta cresce, em vez de
+        deixar todas pagarem o preço da maior.
+     ==================================================================== */
+  @page{size:A4 portrait;margin:9mm}
+  html,body{width:192mm;min-height:0;background:#fff;font-size:9.5pt;line-height:1.35}
   .decisao,.rodape .nao-imprime,.previa-bar,.documento-acoes{display:none!important}
   .entra{animation:none;opacity:1;transform:none}
+
+  /* `min-height` e não `height`: se a proposta passar da folha ela
+     continua fluindo, e nunca é cortada -- uma proposta truncada perde o
+     valor total, que é pior do que uma segunda página. */
+  .envelope{
+    width:192mm;max-width:none;margin:0;padding:0;
+    display:flex;flex-direction:column;min-height:277mm;
+  }
+  .envelope>.bloco{flex:1 1 auto;display:flex;flex-direction:column}
+  .envelope>.rodape{margin-top:auto;flex:0 0 auto}
+  .envelope>.capa,.envelope>.cliente-bloco,
+  .envelope>.faixa,.envelope>.comercial-grid{flex:0 0 auto}
+
   .capa{
-    grid-template-columns:48mm 1fr;gap:5mm;
-    padding:9mm 4mm 3mm;border-radius:3mm 3mm 0 0;box-shadow:none;
+    grid-template-columns:44.8mm 1fr;gap:5.6mm;
+    padding:8.8mm 4.8mm 4mm;border-radius:2.4mm 2.4mm 0 0;box-shadow:none;
     -webkit-print-color-adjust:exact;print-color-adjust:exact;
   }
-  .capa::before{height:6mm}.capa-logo{width:42mm}.capa-marca p{margin-top:2mm;font-size:6.5pt}
-  .empresa-identidade{margin-top:2mm;padding:1.6mm 2mm;border-left-width:1mm}
-  .empresa-identidade strong{font-size:7pt}.empresa-identidade span{font-size:6pt}
-  .capa-meta{padding-left:4mm}.capa-kicker{font-size:6pt}.capa h1{margin:1mm 0 2mm;font-size:19pt;letter-spacing:-.4mm}
-  .capa h1::after{width:14mm;height:1mm;margin-top:1.5mm}
-  .meta-lista{grid-template-columns:1fr 1fr;gap:1mm 3mm}.meta-linha{grid-template-columns:21mm 1fr;gap:1mm}
-  .meta-linha dt{font-size:5.8pt}.meta-linha dd{font-size:6.3pt}.capa-linha{gap:1mm;margin-top:2mm}.selo{padding:1mm 1.8mm;font-size:5.8pt}
-  .cliente-bloco{padding:2.5mm 4mm;margin-bottom:2mm;border-radius:0 0 3mm 3mm;box-shadow:none}
-  .secao-legenda{margin-bottom:1.5mm;font-size:6.3pt}.dados-grid{gap:1mm 4mm}.dado{grid-template-columns:20mm 1fr;gap:1mm;font-size:6.3pt}.dado b{font-size:5.8pt}
-  .faixa{gap:2mm;padding:2mm 3mm;margin-bottom:2mm;border-radius:2mm;font-size:6.3pt}.faixa-icone{font-size:8pt}
-  .bloco{padding:2.5mm 3mm;margin-bottom:2mm;border-radius:2mm;box-shadow:none;break-inside:auto}
-  .bloco-titulo{gap:2mm;margin-bottom:1.5mm}.bloco-titulo h2{font-size:7.4pt}.bloco-titulo span{font-size:5.8pt}
-  .item-cabecalho,.item{grid-template-columns:minmax(60mm,1fr) 20mm 29mm 29mm}
-  .item-cabecalho span{padding:1.2mm 1.5mm;font-size:5.2pt}.item>span{padding:1.2mm 1.5mm}
-  .item-descricao{gap:2mm}.item-foto{width:9mm;height:9mm;flex-basis:9mm;border-radius:1.5mm}
-  .item-nome{font-size:6.4pt}.item-medidas{font-size:5.5pt}.item-quantidade,.item-unitario,.item-valor{font-size:6pt}
-  .soma{margin-top:1.5mm;padding-top:1.5mm}.soma-linha{padding:.5mm 0;font-size:6.2pt}
-  .soma-total{margin-top:1mm;padding-top:1mm}.soma-total span{font-size:6.4pt}.soma-total strong{font-size:11pt}
-  .comercial-grid{margin-bottom:2mm;border-radius:2mm;box-shadow:none}.comercial-item{padding:2mm 2.5mm}
-  .comercial-item span{margin-bottom:.7mm;font-size:5.2pt}.comercial-item strong{font-size:6.5pt}.comercial-item.total strong{font-size:8pt}
-  .bank-note{margin-bottom:1.5mm;padding:1.5mm 2mm;font-size:5.7pt}.bank-grid{gap:2mm}
-  .bank-card{grid-template-columns:7mm 1fr;gap:1.5mm;padding:1.5mm 2mm;border-radius:1.5mm}
-  .bank-icon{width:7mm;height:7mm;font-size:7pt}.bank-card strong{margin-bottom:.5mm;font-size:6pt}.bank-card span{font-size:5.4pt;line-height:1.3}
-  .rodape{margin-top:2mm;font-size:5.5pt;line-height:1.35}
+  .capa::before{height:5.6mm}.capa-logo{width:40mm}.capa-marca p{margin-top:2.4mm;font-size:7.6pt}
+  .empresa-identidade{margin-top:2.4mm;padding:1.9mm 2.4mm;border-left-width:1mm}
+  .empresa-identidade strong{font-size:8.9pt}.empresa-identidade span{font-size:7.6pt}
+  .capa-meta{padding-left:4.8mm}.capa-kicker{font-size:7.6pt}
+  .capa h1{margin:1.2mm 0 2.4mm;font-size:24.7pt;letter-spacing:-0.3mm}
+  .capa h1::after{width:15.2mm;height:1mm;margin-top:1.6mm}
+  .meta-lista{grid-template-columns:1fr 1fr;gap:1.3mm 4mm}
+  .meta-linha{grid-template-columns:21.6mm 1fr;gap:1.2mm}
+  .meta-linha dt{font-size:7.2pt}.meta-linha dd{font-size:8pt}
+  .capa-linha{gap:1.2mm;margin-top:2.4mm}.selo{padding:1.1mm 1.9mm;font-size:7pt}
+
+  .cliente-bloco{padding:3.2mm 4.8mm;margin-bottom:2.4mm;border-radius:0 0 2.4mm 2.4mm;box-shadow:none}
+  .secao-legenda{margin-bottom:1.9mm;font-size:7.8pt}.dados-grid{gap:1.3mm 4.8mm}
+  .dado{grid-template-columns:20.8mm 1fr;gap:1.2mm;font-size:8pt}.dado b{font-size:7pt}
+
+  .faixa{gap:2.4mm;padding:2.4mm 3.2mm;margin-bottom:2.4mm;border-radius:2mm;font-size:8pt}
+  .faixa-icone{font-size:10.4pt}
+
+  .bloco{padding:3.2mm 4mm;margin-bottom:2.4mm;border-radius:2mm;box-shadow:none;break-inside:avoid}
+  .bloco-titulo{gap:2.4mm;margin-bottom:2.1mm}
+  .bloco-titulo h2{font-size:9.5pt}.bloco-titulo span{font-size:7.2pt}
+
+  .item-cabecalho,.item{grid-template-columns:minmax(44.8mm,1fr) 16mm 24mm 24mm}
+  .item-cabecalho span{padding:1.8mm 1.9mm;font-size:7pt}.item>span{padding:1.9mm}
+  /* A LISTA DE ITENS É QUEM ESTICA.
+
+     É o quadro que naturalmente varia -- uma proposta tem dois itens,
+     outra tem doze -- então é ele que absorve a sobra da folha, em vez
+     de empilhar tudo no topo e deixar a folga embaixo do rodapé. As
+     linhas são filhas diretas do bloco (não há embrulho em volta
+     delas), então são elas mesmas que crescem, dividindo a sobra em
+     partes iguais. `align-items:center` mantém o texto no meio da linha
+     alta em vez de colado no topo dela. */
+  .bloco>.item{flex:1 1 auto;align-items:center}
+  .item-descricao{gap:2.4mm}.item-foto{width:10.4mm;height:10.4mm;flex-basis:10.4mm;border-radius:1.6mm}
+  .item-nome{font-size:8.4pt}.item-medidas{font-size:7pt}
+  .item-quantidade,.item-unitario,.item-valor{font-size:8pt}
+
+  .soma{margin-top:2.4mm;padding-top:2.1mm}.soma-linha{padding:0.8mm 0;font-size:8.2pt}
+  .soma-total{margin-top:1.6mm;padding-top:1.6mm}.soma-total span{font-size:8.5pt}
+  .soma-total strong{font-size:16.1pt}
+
+  .comercial-grid{margin-bottom:2.4mm;border-radius:2mm;box-shadow:none}
+  .comercial-item{padding:2.7mm 3.2mm}
+  .comercial-item span{margin-bottom:1mm;font-size:6.8pt}
+  .comercial-item strong{font-size:8.4pt}.comercial-item.total strong{font-size:11.4pt}
+
+  .bank-note{margin-bottom:1.9mm;padding:1.9mm 2.4mm;font-size:7.4pt}.bank-grid{gap:2.4mm}
+  .bank-card{grid-template-columns:8mm 1fr;gap:1.9mm;padding:2.1mm 2.4mm;border-radius:1.6mm}
+  .bank-icon{width:8mm;height:8mm;font-size:8.5pt}
+  .bank-card strong{margin-bottom:0.7mm;font-size:7.8pt}.bank-card span{font-size:7pt;line-height:1.45}
+
+  .rodape{margin-top:2.4mm;font-size:7.2pt;line-height:1.5}
   .capa,.item-cabecalho,.selo,.faixa,.bank-icon{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+
+  /* ------------------------------------------------ os degraus de densidade
+
+     Uma proposta de dois itens e uma de vinte não cabem no mesmo
+     tamanho, e fazer todas caberem no tamanho da maior é o que produzia
+     a folha vazia. A classe vem do servidor, que pesou o documento --
+     ver `core/impressao.py`. Contar aqui em CSS com `:nth-of-type`
+     contaria por TIPO de elemento e não por classe: as linhas de item
+     são `div` no meio de outras `div` (o título do bloco, o cabeçalho da
+     tabela), e "o nono div" não é "o nono item".
+
+     Cada degrau tira de onde sobra, e nesta ordem: primeiro o enfeite (a
+     altura da capa, o tamanho do título, a foto do item), depois o
+     respiro, e só por último o corpo do texto. O valor total é a última
+     coisa a encolher -- é o número pelo qual a proposta existe.
+
+     Abaixo de 6,6pt não se desce. Uma proposta de trinta itens
+     honestamente não cabe numa folha, e forçá-la a caber a 4pt
+     entregaria um papel ilegível em vez de dois legíveis. */
+  .folha-densa .capa{padding:5mm 4mm 2.5mm;gap:4mm;grid-template-columns:42mm 1fr}
+  .folha-densa .capa::before{height:3.5mm}
+  .folha-densa .capa-logo{width:38mm}
+  .folha-densa .capa h1{font-size:17pt;margin:.8mm 0 1.4mm}
+  .folha-densa .capa h1::after{width:11mm;height:.8mm;margin-top:1mm}
+  .folha-densa .capa-marca p{margin-top:1.4mm}
+  .folha-densa .empresa-identidade{margin-top:1.4mm;padding:1.2mm 1.8mm}
+  .folha-densa .meta-lista{gap:.8mm 4mm}
+  .folha-densa .capa-linha{margin-top:1.4mm}
+  .folha-densa .cliente-bloco{padding:2mm 4mm;margin-bottom:1.6mm}
+  .folha-densa .dados-grid{gap:.8mm 4mm}
+  .folha-densa .faixa{padding:1.6mm 2.4mm;margin-bottom:1.6mm}
+  .folha-densa .bloco{padding:2mm 3mm;margin-bottom:1.6mm}
+  .folha-densa .bloco-titulo{margin-bottom:1.2mm}
+  .folha-densa .item>span{padding:1.2mm}
+  .folha-densa .item-foto{width:7mm;height:7mm;flex-basis:7mm}
+  .folha-densa .item-nome{font-size:7.4pt}
+  .folha-densa .soma{margin-top:1.6mm;padding-top:1.4mm}
+  .folha-densa .soma-linha{padding:.5mm 0}
+  .folha-densa .comercial-item{padding:1.8mm 2.4mm}
+  .folha-densa .bank-note{margin-bottom:1.4mm;padding:1.4mm 2mm}
+  .folha-densa .bank-card{padding:1.4mm 2mm}
+  .folha-densa .rodape{margin-top:1.6mm}
+
+  /* O último degrau. Aqui já não há enfeite para tirar: a foto do item
+     some -- ela ilustra a linha, e o nome e o valor é que são o
+     documento -- e o texto desce ao piso de 6,6pt. */
+  .folha-apertada .capa{padding:4mm 3.4mm 2mm;gap:3.4mm;grid-template-columns:36mm 1fr}
+  .folha-apertada .capa::before{height:3mm}
+  .folha-apertada .capa-logo{width:33mm}
+  .folha-apertada .capa h1{font-size:15pt;margin:.6mm 0 1.2mm}
+  .folha-apertada .capa h1::after{display:none}
+  .folha-apertada .capa-marca p{margin-top:1.2mm;font-size:6.6pt}
+  .folha-apertada .empresa-identidade{margin-top:1.2mm;padding:1mm 1.5mm}
+  .folha-apertada .empresa-identidade strong{font-size:7.8pt}
+  .folha-apertada .empresa-identidade span{font-size:6.6pt}
+  .folha-apertada .meta-lista{gap:.5mm 3.4mm}
+  .folha-apertada .meta-linha dt{font-size:6.6pt}
+  .folha-apertada .meta-linha dd{font-size:7pt}
+  .folha-apertada .capa-linha{margin-top:1.2mm}
+  .folha-apertada .selo{padding:.7mm 1.4mm;font-size:6.6pt}
+  .folha-apertada .cliente-bloco{padding:1.6mm 3.4mm;margin-bottom:1.2mm}
+  .folha-apertada .dados-grid{gap:.5mm 3.4mm}
+  .folha-apertada .dado{font-size:7pt}
+  .folha-apertada .faixa{padding:1.2mm 2mm;margin-bottom:1.2mm;font-size:7pt}
+  .folha-apertada .bloco{padding:1.6mm 2.4mm;margin-bottom:1.2mm}
+  .folha-apertada .bloco-titulo{margin-bottom:1mm}
+  .folha-apertada .item>span{padding:.8mm 1.2mm}
+  .folha-apertada .item-foto{display:none}
+  .folha-apertada .item-descricao{gap:0}
+  .folha-apertada .item-nome{font-size:6.8pt}
+  .folha-apertada .item-medidas{font-size:6.6pt}
+  .folha-apertada .item-cabecalho span{font-size:6.6pt;padding:1mm}
+  .folha-apertada .item-quantidade,
+  .folha-apertada .item-unitario,
+  .folha-apertada .item-valor{font-size:6.8pt}
+  .folha-apertada .soma{margin-top:1.2mm;padding-top:1.2mm}
+  .folha-apertada .soma-linha{padding:.3mm 0;font-size:7pt}
+  .folha-apertada .soma-total strong{font-size:12.5pt}
+  .folha-apertada .comercial-item{padding:1.4mm 2mm}
+  .folha-apertada .bank-note{margin-bottom:1.1mm;padding:1.1mm 1.6mm}
+  .folha-apertada .bank-card{padding:1.1mm 1.6mm}
+  .folha-apertada .bank-icon{width:7mm;height:7mm}
+  .folha-apertada .rodape{margin-top:1.2mm}
 }
 </style>
 </head>
-<body>
+<body class="{{ densidade_folha }}">
 
 <div class="envelope">
 

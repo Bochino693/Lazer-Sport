@@ -61,49 +61,212 @@
 @media(max-width:590px){.document{padding:10px 8px 38px}.cover{padding:38px 16px 18px;border-radius:18px 18px 7px 7px}.title h1{font-size:2.15rem}.meta-row{grid-template-columns:21px 105px 1fr}.client{padding:16px 14px}.client-grid{grid-template-columns:1fr;gap:7px}.client-row.wide{grid-column:auto}.client-row{grid-template-columns:20px 82px 1fr}.quick-grid{gap:6px}.quick{grid-template-columns:31px 1fr;padding:9px}.quick i{width:31px;height:31px}.block{padding:16px 13px}.service-grid{grid-template-columns:1fr}.service-card.full{grid-column:auto}.gallery{grid-template-columns:1fr 1fr}.items th:first-child,.items td:first-child{display:none}.items th,.items td{padding:8px 7px}.items th{font-size:.57rem}.items td{font-size:.7rem}.total-row{justify-content:space-between}.pix{grid-template-columns:1fr;text-align:center}.pix>img{margin:auto}.copy{flex-direction:column}.copy button{min-height:42px}.bank-grid{grid-template-columns:1fr}.tools{align-items:stretch;flex-direction:column}.tools button{width:100%}.footer-contact{gap:8px 14px}}
 @media(max-width:380px){.quick-grid{grid-template-columns:1fr}.gallery{grid-template-columns:1fr}.meta-row{grid-template-columns:20px 96px 1fr}}
 @media print{
-  @page{size:A4 portrait;margin:4mm}
-  html,body{width:202mm;min-height:0;background:#fff;font-size:8px;line-height:1.22}
-  .document{width:202mm;max-width:none;margin:0;padding:0}
+  /* ====================================================================
+     A FOLHA INTEIRA, E UMA FOLHA SÓ.
+
+     O PROBLEMA. Para garantir que a O.S. nunca virasse a página, tudo
+     aqui tinha sido encolhido até caber com folga enorme: corpo de 8px,
+     rótulos de 5,6.6pt, recuos de 1,4mm. Funcionava -- e o resultado era
+     uma A4 com o documento espremido no terço de cima e 40% da folha em
+     branco embaixo. O cliente recebia um papel que parece rascunho, e
+     quem lê de perto precisa dos óculos para achar o valor total.
+
+     Espremer o conteúdo não é a única forma de garantir uma página. As
+     três coisas abaixo garantem juntas, e usam a folha:
+
+     1. O TAMANHO É DE DOCUMENTO, E NÃO DE NOTA DE RODAPÉ. Os corpos
+        subiram cerca de 40%: o menor texto passou de 5,6.6pt para 7,6.6pt,
+        e o texto corrido de 6.6pt para 8,6.6pt. 6.6pt é o piso do que se lê
+        sem esforço em papel; abaixo disso a impressora a laser come a
+        letra fina.
+
+     2. A PÁGINA É UMA COLUNA QUE PREENCHE. `.document` vira uma coluna
+        flex com a altura útil da folha, e os blocos crescem para dividir
+        a sobra entre si. A folga deixa de ser um buraco embaixo do
+        rodapé e vira respiro dentro dos quadros -- que é o que um
+        documento impresso bem montado tem.
+
+     3. A DENSIDADE RESPONDE AO CONTEÚDO. Uma O.S. de dois itens e uma
+        de vinte não cabem no mesmo tamanho. `:has()` conta as linhas da
+        tabela e aperta o documento em degraus quando ele cresce, em vez
+        de deixar todas as O.S. pagarem o preço da maior.
+     ==================================================================== */
+  @page{size:A4 portrait;margin:9mm}
+  html,body{width:192mm;min-height:0;background:#fff;font-size:9.5pt;line-height:1.35}
   .preview,.tools,.confirm,.screen-only{display:none!important}
   .cover,.client,.block,.quick{box-shadow:none}
-  .cover{
-    grid-template-columns:48mm 1fr;gap:5mm;
-    padding:9mm 4mm 3mm;border-radius:3mm 3mm 0 0;
+
+  /* A coluna da folha. `min-height` e não `height`: se o conteúdo passar
+     da página ele continua fluindo para a seguinte, e nunca é cortado --
+     uma O.S. truncada perde o total, que é pior do que uma segunda
+     folha. */
+  .document{
+    width:192mm;max-width:none;margin:0;padding:0;
+    display:flex;flex-direction:column;min-height:277mm;
   }
-  .cover::before{height:6mm}
-  .brand img{width:42mm}.company{margin-top:2mm;padding:1.6mm 2mm}
-  .company strong{font-size:7.5pt}.company span{font-size:6.5pt}
-  .title{padding-left:4mm}.kicker{font-size:6pt}.title h1{margin:1mm 0 2mm;font-size:19pt;letter-spacing:-.4mm}
-  .title h1::after{width:14mm;height:1mm;margin-top:1.5mm}
-  .meta{grid-template-columns:1fr 1fr;gap:0 3mm}.meta-row{grid-template-columns:4mm 20mm 1fr;gap:1mm;padding:.7mm 0}
-  .meta-row i{font-size:7pt}.meta-row dt{font-size:6pt}.meta-row dd{font-size:6.5pt}
-  .badges{gap:1mm;margin-top:2mm}.badge{padding:1mm 1.7mm;font-size:5.8pt}
-  .client{padding:2.5mm 4mm;margin-bottom:2mm;border-radius:0 0 3mm 3mm}
-  .section-title{margin-bottom:1.5mm;font-size:6.4pt}.client-grid{gap:1mm 4mm}
-  .client-row{grid-template-columns:3mm 18mm 1fr;gap:1mm;font-size:6.4pt}.client-row b{font-size:5.8pt}
-  .notice{grid-template-columns:7mm 1fr;gap:2mm;margin-bottom:2mm;padding:2mm 3mm;border-radius:2mm}
-  .notice-icon{width:7mm;height:7mm}.notice strong{font-size:6.6pt}.notice span{font-size:6.1pt}
-  .quick-grid{gap:1.5mm;margin-bottom:2mm}.quick{grid-template-columns:6mm 1fr;gap:1.5mm;padding:1.5mm 2mm;border-radius:2mm}
-  .quick i{width:6mm;height:6mm;font-size:7pt}.quick span{font-size:5pt}.quick strong{font-size:6.1pt}
-  .block{padding:2.2mm 3mm;margin-bottom:2mm;border-radius:2mm;break-inside:auto}
-  .block-head{gap:2mm;margin-bottom:1.5mm}.block-head h2{font-size:7.2pt}.block-head>span{font-size:5.8pt}
-  .service-grid{grid-template-columns:1fr 1fr;gap:1.2mm}.service-card.full{grid-column:auto}
-  .service-card{grid-template-columns:5mm 1fr;gap:1.2mm;padding:1.5mm 2mm;border-radius:1.5mm}
-  .service-icon{width:5mm;height:5mm;font-size:6pt}.service-card b{font-size:5.2pt}.service-card p{font-size:6pt;line-height:1.25}
-  .gallery{grid-template-columns:repeat(6,1fr);gap:1mm}.gallery img{height:16mm;aspect-ratio:auto}.gallery a::after{display:none}
-  .items-wrap{border-radius:1.5mm}.items th,.items td{padding:1.2mm 1.5mm}.items th{font-size:5.2pt}.items td{font-size:6pt}
-  .payment-line{margin-top:1mm;font-size:5.8pt}.total-row{gap:3mm;margin-top:1.5mm;padding-top:1.5mm}
-  .total-row span{font-size:6.2pt}.total-row strong{font-size:11pt}
-  .pix{grid-template-columns:22mm 1fr;gap:3mm}.pix>img{width:22mm;height:22mm;padding:1mm}
-  .pix h3{font-size:7pt}.pix p{margin-bottom:1mm;font-size:5.8pt}.copy input{padding:1.5mm;font-size:5pt}.copy button{display:none}
-  .bank-grid{gap:2mm;margin-top:2mm}.bank-card{grid-template-columns:6mm 1fr;gap:1.5mm;padding:1.5mm 2mm}
-  .bank-card>i{width:6mm;height:6mm}.bank-card strong{font-size:5.8pt}.bank-card span{font-size:5.2pt}
-  .footer{border-radius:2mm;font-size:5.5pt;line-height:1.3}.footer-main{padding:1.5mm 2mm}.footer-contact{padding:1mm 2mm;gap:3mm}
+  /* Os quadros dividem a sobra entre si. `flex-shrink:0` para que a
+     divisão nunca vire compressão quando o conteúdo é grande. */
+  .document>.block{flex:1 1 auto}
+  .document>.footer{margin-top:auto;flex:0 0 auto}
+  .document>.cover,.document>.client,
+  .document>.notice,.document>.quick-grid{flex:0 0 auto}
+
+  .cover{
+    grid-template-columns:38.4mm 1fr;gap:4mm;
+    padding:6.4mm 4mm 2.8mm;border-radius:2.4mm 2.4mm 0 0;
+  }
+  .cover::before{height:4mm}
+  .brand img{width:35.2mm}.company{margin-top:1.6mm;padding:1.4mm 1.9mm}
+  .company strong{font-size:9.1pt}.company span{font-size:7.6pt}
+  .title{padding-left:4.8mm}.kicker{font-size:7.6pt}
+  .title h1{margin:0.8mm 0 1.6mm;font-size:19.9pt;letter-spacing:-0.3mm}
+  .title h1::after{width:12mm;height:0.8mm;margin-top:1.1mm}
+  .meta{grid-template-columns:1fr 1fr;gap:0 4mm}
+  .meta-row{grid-template-columns:4mm 19.2mm 1fr;gap:1.2mm;padding:0.6mm 0}
+  .meta-row i{font-size:8.5pt}.meta-row dt{font-size:7.2pt}.meta-row dd{font-size:8pt}
+  .badges{gap:1.2mm;margin-top:1.6mm}.badge{padding:0.8mm 1.6mm;font-size:6.8pt}
+
+  .client{padding:2.4mm 4mm;margin-bottom:1.8mm;border-radius:0 0 2.4mm 2.4mm}
+  .section-title{margin-bottom:1.4mm;font-size:7.6pt}.client-grid{gap:0.8mm 4mm}
+  .client-row{grid-template-columns:3.2mm 19.2mm 1fr;gap:1.2mm;font-size:8pt}
+  .client-row b{font-size:7pt}
+
+  .notice{grid-template-columns:6.4mm 1fr;gap:1.9mm;margin-bottom:1.8mm;padding:1.8mm 2.4mm;border-radius:2mm}
+  .notice-icon{width:6.4mm;height:6.4mm}.notice strong{font-size:8.2pt}.notice span{font-size:7.6pt}
+
+  .quick-grid{gap:1.6mm;margin-bottom:1.8mm}
+  .quick{grid-template-columns:5.6mm 1fr;gap:1.6mm;padding:1.6mm 1.9mm;border-radius:2mm}
+  .quick i{width:5.6mm;height:5.6mm;font-size:7.6pt}
+  .quick span{font-size:6.6pt}.quick strong{font-size:8.2pt}
+
+  .block{
+    padding:2.4mm 3.2mm;margin-bottom:1.8mm;border-radius:2mm;
+    display:flex;flex-direction:column;break-inside:avoid;
+  }
+  .block-head{gap:2.4mm;margin-bottom:1.4mm}
+  .block-head h2{font-size:9.5pt}.block-head>span{font-size:7.2pt}
+  /* O miolo do quadro é o que estica: a sobra da folha vira respiro
+     entre os cartões, e não uma faixa vazia embaixo do último. */
+  .service-grid{grid-template-columns:1fr 1fr;gap:1.6mm;flex:1 1 auto;align-content:stretch}
+  /* DOIS POR LINHA, E NÃO UM.
+
+     Defeito, diagnóstico, serviço executado e observações são quatro
+     campos curtos. Empilhados em coluna única eles comiam 64mm -- quase
+     um terço da folha -- para escrever quatro frases, e a metade direita
+     da página ficava vazia ao lado deles. Lado a lado ocupam metade
+     disso, e o texto não encolhe: quando um dos dois campos é longo, a
+     linha do grid cresce e o vizinho acompanha.
+
+     Na tela eles continuam em coluna única -- ali a folha não acaba, e
+     ler texto corrido em meia largura no celular é pior. */
+  .service-card.full{grid-column:auto}
+  .service-card{grid-template-columns:4.8mm 1fr;gap:1.6mm;padding:1.6mm 1.9mm;border-radius:1.6mm;align-items:center}
+  .service-icon{width:4.8mm;height:4.8mm;font-size:7pt}
+  .service-card b{font-size:6.8pt}.service-card p{font-size:7.8pt;line-height:1.35}
+
+  .gallery{grid-template-columns:repeat(6,1fr);gap:1.3mm}
+  .gallery img{height:15.2mm;aspect-ratio:auto}.gallery a::after{display:none}
+
+  .items-wrap{border-radius:1.6mm}
+  .items th,.items td{padding:1.3mm 1.6mm}
+  .items th{font-size:7pt}.items td{font-size:8.2pt}
+  .payment-line{margin-top:1.6mm;font-size:7.6pt}
+  .total-row{gap:4mm;margin-top:1.6mm;padding-top:1.6mm}
+  .total-row span{font-size:8.2pt}.total-row strong{font-size:14.2pt}
+
+  .pix{grid-template-columns:19.2mm 1fr;gap:3.2mm}.pix>img{width:19.2mm;height:19.2mm;padding:0.8mm}
+  .pix h3{font-size:8.7pt}.pix p{margin-bottom:1.1mm;font-size:7.4pt}
+  .copy input{padding:1.4mm;font-size:6.8pt}.copy button{display:none}
+  .bank-grid{gap:1.9mm;margin-top:1.8mm}.bank-card{grid-template-columns:5.6mm 1fr;gap:1.6mm;padding:1.6mm 1.9mm}
+  .bank-card>i{width:5.6mm;height:5.6mm}.bank-card strong{font-size:7.6pt}.bank-card span{font-size:7pt}
+
+  .footer{border-radius:2mm;font-size:7pt;line-height:1.4}
+  .footer-main{padding:1.6mm 2.4mm}.footer-contact{padding:1.3mm 2.4mm;gap:4mm}
   .footer,.cover,.items th,.badge,.quick i,.service-icon{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+
+  /* ------------------------------------------------ os degraus de densidade
+
+     Uma O.S. de dois itens e uma de vinte não cabem no mesmo tamanho, e
+     fazer todas caberem no tamanho da maior é o que produzia a folha
+     vazia. A classe vem do servidor, que pesou o documento -- ver
+     `core/impressao.py`. Contar aqui em CSS com `:nth-of-type` contaria
+     por TIPO de elemento e não por classe, e a regra quebraria em
+     silêncio na próxima `div` acrescentada antes da lista.
+
+     Cada degrau tira de onde sobra, e nesta ordem: primeiro o enfeite (a
+     altura da capa, o tamanho do título, a foto do item), depois o
+     respiro (recuos e margens), e só por último o corpo do texto. O
+     endereço e o total são as últimas coisas a encolher, porque são as
+     que alguém realmente precisa ler.
+
+     Abaixo de 6,6pt não se desce. Uma O.S. de trinta itens COM quatro
+     campos de texto longos e fotos honestamente não cabe numa folha, e
+     forçá-la a caber a 4pt entregaria um papel ilegível em vez de dois
+     legíveis. Nesse caso ela vira duas páginas -- nunca um documento
+     cortado, que perderia o total. */
+  .folha-densa .cover{padding:5mm 4mm 2.5mm;gap:4mm;grid-template-columns:42mm 1fr}
+  .folha-densa .cover::before{height:3.5mm}
+  .folha-densa .brand img{width:38mm}
+  .folha-densa .title h1{font-size:17pt;margin:.8mm 0 1.4mm}
+  .folha-densa .title h1::after{width:11mm;height:.8mm;margin-top:1mm}
+  .folha-densa .company{margin-top:1.4mm;padding:1.2mm 1.8mm}
+  .folha-densa .meta-row{padding:.4mm 0}
+  .folha-densa .badges{margin-top:1.4mm}
+  .folha-densa .client{padding:2mm 4mm;margin-bottom:1.6mm}
+  .folha-densa .notice{padding:1.6mm 2.4mm;margin-bottom:1.6mm}
+  .folha-densa .quick-grid{margin-bottom:1.6mm}
+  .folha-densa .quick{padding:1.4mm 2mm}
+  .folha-densa .block{padding:2mm 3mm;margin-bottom:1.6mm}
+  .folha-densa .block-head{margin-bottom:1.2mm}
+  .folha-densa .service-card{padding:1.4mm 2mm}
+  .folha-densa .service-card p{font-size:7.4pt;line-height:1.28}
+  .folha-densa .items th,.folha-densa .items td{padding:1mm 1.6mm}
+  .folha-densa .items td{font-size:7.6pt}
+  .folha-densa .gallery img{height:14mm}
+  .folha-densa .pix{grid-template-columns:19mm 1fr;gap:3mm}
+  .folha-densa .pix>img{width:19mm;height:19mm}
+  .folha-densa .bank-card{padding:1.4mm 2mm}
+  .folha-densa .total-row{margin-top:1.4mm;padding-top:1.4mm}
+  .folha-densa .footer-main{padding:1.4mm 2.4mm}
+  .folha-densa .footer-contact{padding:1.1mm 2.4mm}
+
+  /* O último degrau. Aqui já não há enfeite para tirar: some a foto do
+     item, a galeria vira faixa e o texto desce ao piso de 6,6pt. */
+  .folha-apertada .cover{padding:4mm 3.4mm 2mm;gap:3.4mm;grid-template-columns:36mm 1fr}
+  .folha-apertada .cover::before{height:3mm}
+  .folha-apertada .brand img{width:33mm}
+  .folha-apertada .title h1{font-size:15pt;margin:.6mm 0 1.2mm}
+  .folha-apertada .title h1::after{display:none}
+  .folha-apertada .company{margin-top:1.2mm;padding:1mm 1.5mm}
+  .folha-apertada .company strong{font-size:8pt}.folha-apertada .company span{font-size:6.8pt}
+  .folha-apertada .meta-row{padding:.2mm 0}
+  .folha-apertada .meta-row dt{font-size:6.6pt}.folha-apertada .meta-row dd{font-size:7pt}
+  .folha-apertada .badges{margin-top:1.2mm}.folha-apertada .badge{padding:.7mm 1.4mm;font-size:6.6pt}
+  .folha-apertada .client{padding:1.6mm 3.4mm;margin-bottom:1.2mm}
+  .folha-apertada .client-row{font-size:7pt}
+  .folha-apertada .notice{padding:1.2mm 2mm;margin-bottom:1.2mm}
+  .folha-apertada .quick-grid{margin-bottom:1.2mm;gap:1.4mm}
+  .folha-apertada .quick{padding:1.1mm 1.6mm}
+  .folha-apertada .quick strong{font-size:7pt}
+  .folha-apertada .block{padding:1.6mm 2.4mm;margin-bottom:1.2mm}
+  .folha-apertada .block-head{margin-bottom:1mm}
+  .folha-apertada .service-card{padding:1.1mm 1.6mm}
+  .folha-apertada .service-card p{font-size:6.8pt;line-height:1.25}
+  .folha-apertada .items th,.folha-apertada .items td{padding:.7mm 1.2mm}
+  .folha-apertada .items td{font-size:6.8pt}
+  .folha-apertada .items th{font-size:6.6pt}
+  .folha-apertada .gallery img{height:11mm}
+  .folha-apertada .pix{grid-template-columns:16mm 1fr;gap:2.4mm}
+  .folha-apertada .pix>img{width:16mm;height:16mm}
+  .folha-apertada .bank-card{padding:1.1mm 1.6mm}
+  .folha-apertada .total-row{margin-top:1.2mm;padding-top:1.2mm}
+  .folha-apertada .total-row strong{font-size:12.5pt}
+  .folha-apertada .footer-main{padding:1.1mm 2mm}
+  .folha-apertada .footer-contact{padding:.9mm 2mm}
 }
 </style>
 </head>
-<body><main class="document">
+<body class="{{ densidade_folha }}"><main class="document">
 {% if previsualizacao %}<div class="preview"><i class="bi bi-eye"></i> Prévia interna · a confirmação do cliente fica desativada</div>{% endif %}
 <header class="cover"><div class="brand"><img src="{% static 'images/logoofi.png' %}" alt="Lazer &amp; Sport"><div class="company"><strong>{{ empresa_nome }}</strong><span>CNPJ: {{ empresa_cnpj }}</span></div></div><div class="title"><span class="kicker">Documento técnico</span><h1>Ordem de Serviço</h1><dl class="meta"><div class="meta-row"><i class="bi bi-file-earmark-check"></i><dt>Número</dt><dd>{{ ordem.numero_documento }}</dd></div><div class="meta-row"><i class="bi bi-calendar3"></i><dt>Emissão</dt><dd>{{ ordem.criacao|date:"d/m/Y" }}</dd></div><div class="meta-row"><i class="bi bi-clock-history"></i><dt>Atualização</dt><dd>{{ ordem.atualizado|date:"d/m/Y \à\s H:i" }}</dd></div><div class="meta-row"><i class="bi bi-wrench-adjustable"></i><dt>Tipo</dt><dd>{{ ordem.get_tipo_display }}</dd></div><div class="meta-row"><i class="bi bi-person-badge"></i><dt>Responsável</dt><dd>{{ responsavel_nome }}</dd></div>{% if ordem.orcamento_id %}<div class="meta-row"><i class="bi bi-receipt"></i><dt>Proposta</dt><dd>#{{ ordem.orcamento_id }} · versão {{ ordem.orcamento.versao }}</dd></div>{% endif %}</dl><div class="badges"><span class="badge {% if ordem.status == 'concluida' %}green{% elif ordem.status == 'aguardando_peca' %}amber{% endif %}"><i class="bi bi-circle-fill"></i>{{ ordem.get_status_display }}</span><span class="badge"><i class="bi bi-flag"></i>{{ ordem.get_prioridade_display }}</span><span class="badge {% if ordem.status_pagamento == 'pago' %}green{% else %}amber{% endif %}"><i class="bi bi-wallet2"></i>{{ ordem.get_status_pagamento_display }}</span></div></div></header>
 <section class="client"><h2 class="section-title"><i class="bi bi-person-vcard"></i>Cliente e local do atendimento</h2><div class="client-grid"><div class="client-row"><i class="bi bi-person"></i><b>Cliente</b><span>{{ ordem.destinatario }}</span></div>{% if ordem.contato %}<div class="client-row"><i class="bi bi-building"></i><b>Contato local</b><span>{{ ordem.contato }}</span></div>{% endif %}{% if ordem.cliente and ordem.cliente.documento %}<div class="client-row"><i class="bi bi-card-text"></i><b>CPF/CNPJ</b><span>{{ ordem.cliente.documento }}</span></div>{% endif %}{% if ordem.whatsapp_destinatario %}<div class="client-row"><i class="bi bi-whatsapp"></i><b>WhatsApp</b><span>{{ ordem.whatsapp_destinatario }}</span></div>{% endif %}{% if ordem.email_destinatario %}<div class="client-row"><i class="bi bi-envelope"></i><b>E-mail</b><span>{{ ordem.email_destinatario }}</span></div>{% endif %}{% if ordem.endereco_servico %}<div class="client-row wide"><i class="bi bi-geo-alt"></i><b>Endereço</b><span>{{ ordem.endereco_servico }}</span></div>{% endif %}</div></section>

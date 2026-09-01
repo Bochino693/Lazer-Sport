@@ -75,7 +75,15 @@
 .app-eyebrow{display:block;color:var(--acento);font-size:.68rem;font-weight:950;letter-spacing:.14em;text-transform:uppercase}
 .app-primary-action{min-width:250px;min-height:72px;padding:12px 18px;display:flex;align-items:center;gap:14px;border:1px solid rgba(255,211,132,.42);border-radius:20px;color:#211605!important;background:linear-gradient(135deg,#ffd17f,#e8a83e);box-shadow:0 16px 36px rgba(196,132,32,.24);text-decoration:none;transition:.18s ease}
 .app-primary-action>i{width:42px;height:42px;display:grid;place-items:center;border-radius:14px;background:rgba(255,255,255,.35);font-size:1.25rem}
-.app-primary-action strong,.app-primary-action small{display:block}.app-primary-action strong{font-size:.96rem;font-weight:950}.app-primary-action small{margin-top:2px;color:#664414;font-size:.74rem;font-weight:750}
+.app-primary-action strong,.app-primary-action small{display:block}.app-primary-action strong{font-size:.96rem;font-weight:950}
+/* A LINHA DE BAIXO ESTAVA APAGADA EM CIMA DO ÂMBAR.
+
+   Era #664414 sobre o gradiente âmbar: 4,2 de contraste, abaixo do
+   mínimo, e o efeito na tela era um texto que parecia desativado dentro
+   do único botão de ação da página. O reflexo de "texto secundário é
+   mais claro que o principal" não vale sobre fundo claro -- ali,
+   secundário tem de ser MAIS ESCURO, não mais lavado. */
+.app-primary-action small{margin-top:2px;color:#3E2A07;font-size:.75rem;font-weight:850}
 .app-primary-action:hover{color:#170e02!important;transform:translateY(-2px);box-shadow:0 20px 44px rgba(196,132,32,.32)}
 
 .app-glance{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:18px}
@@ -84,7 +92,22 @@
 .app-glance-card::after{content:"";position:absolute;width:120px;height:120px;right:-55px;top:-55px;border-radius:50%;background:color-mix(in srgb,var(--card-color) 12%,transparent)}
 .app-glance-card.coral{--card-color:#ff8f73}.app-glance-card.blue{--card-color:#70a8ff}.app-glance-card.violet{--card-color:#b39aff}.app-glance-card.mint{--card-color:#59ddb2}
 .app-glance-icon{width:46px;height:46px;display:grid;place-items:center;border-radius:15px;color:var(--card-color);background:color-mix(in srgb,var(--card-color) 12%,transparent);font-size:1.1rem}
-.app-glance-card strong,.app-glance-card small{display:block}.app-glance-card strong{color:#fff;font-size:1.7rem;font-weight:950;line-height:1}.app-glance-card small{margin-top:5px;color:#b7aea2;font-size:.78rem;font-weight:800}
+.app-glance-card strong,.app-glance-card small{display:block}.app-glance-card strong{color:#fff;font-size:1.7rem;font-weight:950;line-height:1}
+/* O RÓTULO PERTENCE AO CARD, E NÃO AO CINZA GERAL DO PAINEL.
+
+   Era #b7aea2 -- o cinza de texto secundário da casa -- nos quatro
+   cards. Passa em contraste, mas não combina com nada: cada card tem
+   uma cor própria (coral, azul, violeta, menta) no ícone, no halo e na
+   etiqueta de baixo, e no meio disso a única linha de texto explicativo
+   era cinza de outro lugar. O número em branco e a etiqueta colorida
+   pareciam de um card, e a legenda de outro.
+
+   Agora a legenda é a cor do card clareada: continua legível sobre o
+   grafite e passa a fazer parte do conjunto. */
+.app-glance-card small{
+  margin-top:5px;font-size:.78rem;font-weight:800;
+  color:color-mix(in srgb,var(--card-color) 42%,#F2EADE);
+}
 .app-glance-card em{grid-column:1/-1;width:max-content;max-width:100%;padding:4px 8px;border-radius:999px;color:var(--card-color);background:color-mix(in srgb,var(--card-color) 9%,transparent);font-size:.68rem;font-style:normal;font-weight:900}
 
 .app-workspace{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(320px,.55fr);gap:16px;margin-bottom:16px}

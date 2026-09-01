@@ -8,6 +8,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_http_methods
 from django.views.generic import View
 
+from .impressao import densidade, peso_do_documento
 from core.models import EnderecoEmpresa
 from core.email_utils import cnpj_empresa, dados_bancarios_empresa, nome_empresa
 from sistema_interno.models import OrdemServico
@@ -38,13 +39,33 @@ def contexto_ordem(ordem, *, previsualizacao=False, request=None):
     if ordem.tecnico_id:
         tecnico = ordem.tecnico.get_full_name().strip() or ordem.tecnico.username
 
+    itens = list(ordem.itens.all())
+    fotos = list(ordem.manutencao.imagens.all()) if ordem.manutencao_id else []
     contexto = {
         "ordem": ordem,
-        "itens": list(ordem.itens.all()),
-        "fotos": (
-            list(ordem.manutencao.imagens.all())
-            if ordem.manutencao_id else []
-        ),
+        "itens": itens,
+        # QUÃO APERTADA A FOLHA PRECISA SAIR. Ver `core/impressao.py`.
+        #
+        # O peso conta o documento inteiro, e não só os itens: uma O.S.
+        # de quatro itens com um diagnóstico de dez linhas, seis fotos e
+        # o quadro do Pix ocupa mais folha do que uma de doze itens
+        # secos. Contar só a tabela acertaria a segunda e erraria a
+        # primeira.
+        "densidade_folha": densidade(peso_do_documento(
+            itens=len(itens),
+            textos=(
+                ordem.defeito_relatado,
+                ordem.diagnostico,
+                ordem.servico_executado,
+                ordem.observacoes,
+                ordem.endereco_servico,
+            ),
+            fotos=len(fotos),
+            com_pagamento=(
+                ordem.status_pagamento != ordem.StatusPagamento.PAGO
+            ),
+        )),
+        "fotos": fotos,
         "empresa": empresa,
         "empresa_nome": nome_empresa(),
         "empresa_cnpj": cnpj_empresa(),
