@@ -52,6 +52,27 @@
     box-shadow:0 28px 80px rgba(0,0,0,.58)!important;
   }
   .ls-os-child-layer .modal-body{overflow-y:auto;overscroll-behavior:contain}
+
+  /*
+     MODAIS DE AÇÃO ACIMA DO FUNDO DO BOOTSTRAP.
+
+     O fundo do Bootstrap é anexado diretamente ao <body>. Já as janelas
+     desta tela nascem dentro de .ls-content. Em navegadores que criam uma
+     camada própria para o conteúdo (principalmente WebView/tablet), o
+     z-index do modal não consegue ultrapassar o fundo: a tela escurece,
+     mas a janela fica escondida atrás dela.
+
+     O JavaScript move somente a janela que está abrindo para o <body> e
+     marca o fundo correspondente. Os !important são intencionais: esta
+     regra precisa ganhar tanto do Bootstrap quanto da folha global.
+  */
+  body>.modal.ls-os-action-modal{
+    position:fixed!important;inset:0!important;z-index:2100!important;
+  }
+  body>.modal.ls-os-action-modal.show{
+    display:block!important;opacity:1!important;visibility:visible!important;
+  }
+  body>.modal-backdrop.ls-os-action-backdrop{z-index:2090!important}
   @media (max-width:575px){
     .ls-os-child-layer{padding:6px;align-items:end}
     .ls-os-child-layer .modal-content{max-height:calc(100dvh - 12px);border-radius:17px 17px 10px 10px!important}
@@ -643,22 +664,89 @@ LSTela.pronto(function () {
      Refazer nunca recebiam a função. A delegação na fase de captura executa
      a ação antes de o menu flutuante fechar e substitui ouvintes dispersos.
      --------------------------------------------------------------- */
+  function devolverModalAcaoOS(elemento){
+    if(!elemento)return;
+    var origem=elemento._lsOSOrigem;
+    elemento.classList.remove("ls-os-action-modal");
+    elemento.style.removeProperty("z-index");
+    if(!origem)return;
+
+    elemento._lsOSOrigem=null;
+    elemento._lsOSFechamentoLigado=false;
+    if(!origem.pai||!origem.pai.isConnected){
+      elemento.remove();
+      return;
+    }
+    if(origem.proximo&&origem.proximo.parentNode===origem.pai){
+      origem.pai.insertBefore(elemento,origem.proximo);
+    }else{
+      origem.pai.appendChild(elemento);
+    }
+  }
+
+  function marcarFundoModalAcaoOS(){
+    var fundos=document.querySelectorAll("body>.modal-backdrop");
+    if(fundos.length)fundos[fundos.length-1].classList.add("ls-os-action-backdrop");
+  }
+
+  function elevarModalAcaoOS(elemento){
+    if(elemento.parentNode!==document.body){
+      elemento._lsOSOrigem={pai:elemento.parentNode,proximo:elemento.nextSibling};
+      document.body.appendChild(elemento);
+    }
+    elemento.classList.add("ls-os-action-modal");
+
+    if(!elemento._lsOSFechamentoLigado){
+      elemento._lsOSFechamentoLigado=true;
+      elemento.addEventListener("hidden.bs.modal",function aoFecharAcaoOS(){
+        elemento.removeEventListener("hidden.bs.modal",aoFecharAcaoOS);
+        devolverModalAcaoOS(elemento);
+      });
+    }
+  }
+
+  /* A navegação suave substitui .ls-content sem recarregar a página. Se
+     alguém sair por Voltar/Avançar enquanto a janela está aberta, ela
+     precisa retornar ao conteúdo ANTES da substituição, para não ficar
+     órfã no body. O gancho global é instalado uma vez e usa sempre o
+     restaurador da tela atual. */
+  window._lsRestaurarModaisAcaoOS=function(){
+    document.querySelectorAll("body>.modal.ls-os-action-modal").forEach(devolverModalAcaoOS);
+  };
+  if(!Painel._lsPreparaModaisAcaoOS){
+    var prepararNavegacaoOriginal=Painel.prepararNavegacao;
+    Painel.prepararNavegacao=function(){
+      var restaurar=window._lsRestaurarModaisAcaoOS;
+      window._lsRestaurarModaisAcaoOS=null;
+      if(restaurar)restaurar();
+      return prepararNavegacaoOriginal.apply(Painel,arguments);
+    };
+    Painel._lsPreparaModaisAcaoOS=true;
+  }
+
   function abrirModalAcaoOS(id){
     var elemento=document.getElementById(id);
-    if(!elemento)return;
+    if(!elemento||!window.bootstrap||!bootstrap.Modal)return;
     Painel.fecharAcoesFlutuantes(false);
-    Painel.abrir(id);
-    /* `show()` adiciona a classe no mesmo ciclo. Se uma instância antiga
-       ficou travada em transição, recria somente ESTE modal e tenta uma vez. */
-    window.requestAnimationFrame(function(){
-      if(elemento.classList.contains("show"))return;
-      var antiga=window.bootstrap&&bootstrap.Modal.getInstance(elemento);
-      if(antiga)antiga.dispose();
-      elemento.classList.remove("show");
-      elemento.style.display="none";
-      elemento.setAttribute("aria-hidden","true");
-      bootstrap.Modal.getOrCreateInstance(elemento).show();
-    });
+
+    elevarModalAcaoOS(elemento);
+    Painel.aplicarMascaras(elemento);
+
+    /* Uma instância presa na transição antiga pode conservar a tela escura
+       sem desenhar o diálogo. A ação sempre nasce de uma instância limpa e
+       sem `fade`: show() conclui no mesmo ciclo, inclusive no WebView. */
+    var antiga=bootstrap.Modal.getInstance(elemento);
+    if(antiga)antiga.dispose();
+    elemento.classList.remove("fade","show");
+    elemento.style.display="none";
+    elemento.setAttribute("aria-hidden","true");
+    elemento.removeAttribute("aria-modal");
+    elemento.removeAttribute("role");
+
+    var instancia=new bootstrap.Modal(elemento,{backdrop:true,keyboard:true,focus:true});
+    instancia.show();
+    marcarFundoModalAcaoOS();
+    window.requestAnimationFrame(marcarFundoModalAcaoOS);
   }
 
   function executarAcaoOS(evento){

@@ -154,6 +154,21 @@ class RefazerOrdemServicoTests(TestCase):
             'document.querySelectorAll("[data-pagamento-os]").forEach', html,
         )
 
+    def test_modal_de_acao_sobe_acima_do_fundo_e_volta_ao_fechar(self):
+        """O backdrop no body nunca pode esconder a janela da O.S."""
+        html = self.tela()
+
+        self.assertIn("function elevarModalAcaoOS(elemento)", html)
+        self.assertIn("document.body.appendChild(elemento)", html)
+        self.assertIn('elemento.classList.remove("fade","show")', html)
+        self.assertIn("z-index:2100!important", html)
+        self.assertIn("z-index:2090!important", html)
+        self.assertIn(
+            'elemento.addEventListener("hidden.bs.modal"', html,
+        )
+        self.assertIn("devolverModalAcaoOS(elemento)", html)
+        self.assertIn("Painel._lsPreparaModaisAcaoOS", html)
+
     def test_refazer_congela_a_anterior_e_abre_a_seguinte(self):
         """O papel que o cliente leu continua existindo, inteiro."""
         ordem = self.criar_ordem()

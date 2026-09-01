@@ -1,0 +1,40 @@
+LAZER & SPORT — CORREÇÃO V11
+Modais de ação da O.S. sempre visíveis acima do fundo
+
+IMPORTANTE
+Este pacote é cumulativo e substitui a V10. Ele já contém todas as
+correções anteriores da O.S. O painel.js incluído continua exatamente
+igual ao arquivo original do repositório.
+
+CAUSA CORRIGIDA
+O clique de Enviar ou Excluir estava funcionando: o Bootstrap criava o
+fundo escuro. Porém, em alguns navegadores e WebViews, a janela permanecia
+dentro da camada de conteúdo e ficava atrás desse fundo.
+
+CORREÇÕES DESTA VERSÃO
+1. Enviar, Excluir, Pagamento e Refazer sobem temporariamente para o body.
+2. O modal usa z-index 2100 e o fundo correspondente usa z-index 2090.
+3. A abertura não depende mais da transição fade, que podia ficar presa.
+4. Cada abertura descarta somente uma instância antiga daquele modal.
+5. Ao fechar, o modal volta exatamente ao lugar original no conteúdo.
+6. Antes da navegação suave, qualquer modal elevado é restaurado, evitando
+   janela órfã, fundo preso ou erro ao trocar de tela.
+7. As funções de enviar e excluir e os demais modais da O.S. permanecem
+   com seus dados e comportamentos anteriores.
+
+COMO APLICAR
+1. Extraia este ZIP na raiz do projeto, onde está manage.py.
+2. Autorize a substituição de todos os seis arquivos.
+3. Execute: python manage.py check
+4. Reinicie o serviço web e os workers, se houver.
+5. Faça Ctrl+F5. No aplicativo instalado, feche-o totalmente e abra de novo.
+
+BANCO DE DADOS
+Não há migration nova.
+
+TESTE RÁPIDO
+1. Abra Ordens de Serviço e, nas ações de uma O.S., clique em Enviar O.S.
+2. A janela deve aparecer por cima do fundo escuro, no mesmo clique.
+3. Feche e abra Excluir em um rascunho.
+4. A confirmação deve aparecer e exigir a palavra CONFIRMAR.
+5. Feche a janela e mude de tela; não deve sobrar fundo escuro.
