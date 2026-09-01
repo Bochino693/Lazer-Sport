@@ -430,6 +430,77 @@ class EstadoAoVivoTests(TestCase):
         self.assertEqual(dados["contagens"]["count_orcamentos"], 1)
         self.assertIn("colega", atividade["detalhe"])
 
+    def test_contador_usa_negociacoes_e_nao_versoes_ou_movimentacoes(self):
+        """Thiago v1/v2 + Ana v1 + Marcelo v1/v2/v3 = três."""
+        colega = User.objects.create_superuser(
+            username="colega-versoes", password="x", email="v@example.com",
+        )
+
+        def cadeia(nome, quantidade):
+            anterior = None
+            for versao in range(1, quantidade + 1):
+                if anterior:
+                    anterior.status = Orcamento.Status.SUBSTITUIDO
+                    anterior.save(update_fields=["status"])
+                atual = Orcamento.objects.create(
+                    nome_cliente=nome,
+                    responsavel=colega,
+                    orcamento_anterior=anterior,
+                    versao=versao,
+                )
+                AtividadeOrcamento.registrar(
+                    atual,
+                    colega,
+                    (
+                        AtividadeOrcamento.Tipo.CRIADO
+                        if versao == 1 else AtividadeOrcamento.Tipo.REFEITO
+                    ),
+                )
+                anterior = atual
+            # Duas alterações na versão atual continuam sendo uma proposta.
+            AtividadeOrcamento.registrar(
+                anterior, colega, AtividadeOrcamento.Tipo.ALTERADO,
+            )
+
+        cadeia("Thiago", 2)
+        cadeia("Ana", 1)
+        cadeia("Marcelo", 3)
+
+        dados = self.pedir().json()
+        atividade = next(
+            aviso for aviso in dados["avisos"]
+            if aviso["chave"] == "orcamentos_atividade"
+        )
+        self.assertEqual(atividade["quantidade"], 3)
+        self.assertEqual(dados["contagens"]["count_orcamentos"], 3)
+        self.assertEqual(dados["total"], 3)
+
+    def test_mesmo_orcamento_com_dois_motivos_ocupa_uma_bolinha(self):
+        colega = User.objects.create_superuser(
+            username="colega-motivos", password="x", email="m@example.com",
+        )
+        orcamento = Orcamento.objects.create(
+            nome_cliente="Vencido e alterado",
+            responsavel=colega,
+            status=Orcamento.Status.AGUARDANDO_RESPOSTA,
+            validade=timezone.localdate() - timedelta(days=1),
+        )
+        AtividadeOrcamento.registrar(
+            orcamento, colega, AtividadeOrcamento.Tipo.ALTERADO,
+        )
+
+        dados = self.pedir().json()
+        self.assertEqual(dados["contagens"]["count_orcamentos"], 1)
+        self.assertEqual(dados["total"], 1)
+        self.assertTrue(any(
+            aviso["chave"] == "orcamentos_vencidos"
+            for aviso in dados["avisos"]
+        ))
+        self.assertTrue(any(
+            aviso["chave"] == "orcamentos_atividade"
+            for aviso in dados["avisos"]
+        ))
+
     def test_abrir_o_sino_marca_so_as_atividades_como_lidas(self):
         colega = User.objects.create_superuser(
             username="colega2", password="x", email="colega2@example.com",

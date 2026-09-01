@@ -48,14 +48,29 @@ def _apurar(usuario):
     """Roda as consultas e monta tudo que os templates podem pedir."""
     avisos = coletar(usuario)
     por_chave = {aviso.chave: aviso.quantidade for aviso in avisos}
+    orcamentos_notificados = frozenset().union(*(
+        aviso.orcamentos for aviso in avisos if aviso.orcamentos
+    ))
+    sem_orcamento = [aviso for aviso in avisos if not aviso.orcamentos]
+    orcamentos_urgentes = frozenset().union(*(
+        aviso.orcamentos
+        for aviso in avisos
+        if aviso.orcamentos and aviso.urgente
+    ))
 
     return {
         "avisos": avisos,
-        # O sino representa ocorrências, não categorias. Três propostas
-        # vencidas formam uma linha na central, mas continuam sendo três
-        # coisas que exigem atenção — por isso a soma das quantidades.
-        "avisos_urgentes": sum(a.quantidade for a in avisos if a.urgente),
-        "total_avisos": sum(a.quantidade for a in avisos),
+        # Uma negociação conta uma vez. Validade, resposta, atividade e
+        # versões continuam explicadas em linhas separadas na central, mas
+        # não podem fazer a mesma proposta ocupar duas bolinhas no sino.
+        "avisos_urgentes": (
+            len(orcamentos_urgentes)
+            + sum(a.quantidade for a in sem_orcamento if a.urgente)
+        ),
+        "total_avisos": (
+            len(orcamentos_notificados)
+            + sum(a.quantidade for a in sem_orcamento)
+        ),
 
         # As bolinhas do menu. Zero quando não há aviso daquela chave —
         # que é o mesmo que dizer "nada pendente aqui".
@@ -63,12 +78,7 @@ def _apurar(usuario):
         "count_pedidos": por_chave.get("pedidos", 0),
         "count_manutencao": por_chave.get("manutencoes", 0),
         "count_producao": por_chave.get("producao", 0),
-        "count_orcamentos": (
-            por_chave.get("orcamentos_vencidos", 0)
-            + por_chave.get("orcamentos_vencendo", 0)
-            + por_chave.get("orcamentos_aprovados", 0)
-            + por_chave.get("orcamentos_atividade", 0)
-        ),
+        "count_orcamentos": len(orcamentos_notificados),
         "count_ordens_servico": por_chave.get("ordens_servico", 0),
         "count_clientes_incompletos": por_chave.get("clientes_incompletos", 0),
     }
@@ -117,7 +127,7 @@ def _chave_avisos(usuario, versao_atividade=None):
     versao = int(criado.timestamp() * 1_000_000) if criado else 0
     atividade = f":a{int(versao_atividade)}" if versao_atividade is not None else ""
     geracao = cache.get(_chave_geracao(usuario), 0) or 0
-    return f"interno:avisos:v3:{usuario.pk}:{versao}:g{geracao}{atividade}"
+    return f"interno:avisos:v4:{usuario.pk}:{versao}:g{geracao}{atividade}"
 
 
 def _chave_geracao(usuario):

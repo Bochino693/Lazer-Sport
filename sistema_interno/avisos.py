@@ -74,6 +74,10 @@ class Aviso:
     url: str
     nivel: str
     icone: str
+    # Identidades das NEGOCIAÇÕES cobertas pelo aviso. Cada número é a
+    # primeira versão da cadeia, portanto v1, v2 e v3 compartilham a mesma
+    # referência. Vazio nos avisos que não pertencem a Orçamentos.
+    orcamentos: frozenset = frozenset()
 
     @property
     def urgente(self):
@@ -90,6 +94,45 @@ def eh_gestor(user):
     return tem_funcao(user, GESTAO)
 
 
+def _grupos_de_versoes(orcamento_ids):
+    """Transforma ids de versões em ids de negociações distintas.
+
+    Não se pode usar apenas ``distinct(orcamento_id)`` nas atividades:
+    refazer cria outro orçamento no banco. O elo ``orcamento_anterior``
+    diz que os dois registros são versões do mesmo documento. A busca dos
+    pais é feita em lotes por nível, evitando uma consulta para cada evento.
+    """
+    originais = {int(pk) for pk in orcamento_ids if pk}
+    if not originais:
+        return frozenset()
+
+    pais = {}
+    fronteira = set(originais)
+    # Cinquenta também é o limite defensivo usado por cadeia_de_versoes.
+    for _ in range(50):
+        if not fronteira:
+            break
+        pares = Orcamento.objects.filter(pk__in=fronteira).values_list(
+            "pk", "orcamento_anterior_id",
+        )
+        proxima = set()
+        for pk, pai in pares:
+            pais[pk] = pai
+            if pai and pai not in pais:
+                proxima.add(pai)
+        fronteira = proxima
+
+    grupos = set()
+    for original in originais:
+        atual = original
+        vistos = set()
+        while pais.get(atual) and atual not in vistos and len(vistos) < 50:
+            vistos.add(atual)
+            atual = pais[atual]
+        grupos.add(atual)
+    return frozenset(grupos)
+
+
 def _orcamentos(user, hoje):
     """Vencidos e a vencer. Duas consultas, dois avisos diferentes.
 
@@ -102,34 +145,40 @@ def _orcamentos(user, hoje):
         Orcamento.objects.filter(status__in=Orcamento.EM_ABERTO),
     )
 
-    vencidos = abertos.filter(validade__lt=hoje).count()
-    a_vencer = abertos.filter(
+    vencidos = _grupos_de_versoes(
+        abertos.filter(validade__lt=hoje).values_list("pk", flat=True)
+    )
+    a_vencer = _grupos_de_versoes(abertos.filter(
         validade__gte=hoje,
         validade__lte=hoje + timedelta(days=DIAS_PARA_COBRAR),
-    ).count()
+    ).values_list("pk", flat=True))
 
     avisos = []
 
     if vencidos:
+        quantidade = len(vencidos)
         avisos.append(Aviso(
             chave="orcamentos_vencidos",
-            titulo="Orçamento vencido" if vencidos == 1 else "Orçamentos vencidos",
+            titulo="Orçamento vencido" if quantidade == 1 else "Orçamentos vencidos",
             detalhe="Passou da validade sem resposta do cliente.",
-            quantidade=vencidos,
+            quantidade=quantidade,
             url=reverse("orcamentos_inner", urlconf=URLCONF),
             nivel="critico",
             icone="bi-calendar-x",
+            orcamentos=vencidos,
         ))
 
     if a_vencer:
+        quantidade = len(a_vencer)
         avisos.append(Aviso(
             chave="orcamentos_vencendo",
-            titulo="Orçamento a vencer" if a_vencer == 1 else "Orçamentos a vencer",
+            titulo="Orçamento a vencer" if quantidade == 1 else "Orçamentos a vencer",
             detalhe=f"Vence em até {DIAS_PARA_COBRAR} dias. Dá tempo de ligar.",
-            quantidade=a_vencer,
+            quantidade=quantidade,
             url=reverse("orcamentos_inner", urlconf=URLCONF),
             nivel="atencao",
             icone="bi-hourglass-split",
+            orcamentos=a_vencer,
         ))
 
     return avisos
@@ -147,31 +196,41 @@ def _respostas_de_cliente(user, agora):
         Orcamento.objects.filter(respondido_em__gte=desde),
     )
 
-    aprovados = respondidos.filter(status=Orcamento.Status.APROVADO).count()
-    recusados = respondidos.filter(status=Orcamento.Status.RECUSADO).count()
+    aprovados = _grupos_de_versoes(
+        respondidos.filter(status=Orcamento.Status.APROVADO)
+        .values_list("pk", flat=True)
+    )
+    recusados = _grupos_de_versoes(
+        respondidos.filter(status=Orcamento.Status.RECUSADO)
+        .values_list("pk", flat=True)
+    )
 
     avisos = []
 
     if aprovados:
+        quantidade = len(aprovados)
         avisos.append(Aviso(
             chave="orcamentos_aprovados",
-            titulo="Proposta aprovada" if aprovados == 1 else "Propostas aprovadas",
+            titulo="Proposta aprovada" if quantidade == 1 else "Propostas aprovadas",
             detalhe="O cliente aprovou. Combine data e montagem.",
-            quantidade=aprovados,
+            quantidade=quantidade,
             url=reverse("orcamentos_inner", urlconf=URLCONF) + "?filtro=aprovados",
             nivel="novidade",
             icone="bi-patch-check",
+            orcamentos=aprovados,
         ))
 
     if recusados:
+        quantidade = len(recusados)
         avisos.append(Aviso(
             chave="orcamentos_recusados",
-            titulo="Proposta recusada" if recusados == 1 else "Propostas recusadas",
+            titulo="Proposta recusada" if quantidade == 1 else "Propostas recusadas",
             detalhe="Vale ler o motivo antes de refazer.",
-            quantidade=recusados,
+            quantidade=quantidade,
             url=reverse("orcamentos_inner", urlconf=URLCONF) + "?filtro=recusados",
             nivel="info",
             icone="bi-emoji-frown",
+            orcamentos=recusados,
         ))
 
     return avisos
@@ -212,7 +271,10 @@ def _atividades_orcamento(user):
             .filter(pk__gt=ultimo_lido, orcamento_id__in=visiveis)
             .exclude(autor=user)
         )
-        total = pendentes.count()
+        grupos = _grupos_de_versoes(
+            pendentes.values_list("orcamento_id", flat=True).distinct()
+        )
+        total = len(grupos)
     except DatabaseError:
         return []
     if not total:
@@ -238,7 +300,7 @@ def _atividades_orcamento(user):
         restantes = total - 1
         detalhe += (
             f" Há mais {restantes} "
-            f"{'movimentação' if restantes == 1 else 'movimentações'} "
+            f"{'orçamento' if restantes == 1 else 'orçamentos'} "
             "desde sua última leitura."
         )
 
@@ -253,6 +315,7 @@ def _atividades_orcamento(user):
         url=reverse("orcamentos_inner", urlconf=URLCONF),
         nivel="novidade",
         icone="bi-bell-fill",
+        orcamentos=grupos,
     )]
 
 
