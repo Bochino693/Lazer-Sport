@@ -72,13 +72,15 @@ def _apurar(usuario):
             + sum(a.quantidade for a in sem_orcamento)
         ),
 
-        # As bolinhas do menu. Zero quando não há aviso daquela chave —
-        # que é o mesmo que dizer "nada pendente aqui".
+        # As bolinhas do menu. Em Orçamentos, o número é a fila comercial
+        # ainda não finalizada, e não somente os casos vencidos, próximos
+        # do vencimento ou alterados por um colega. Aprovação, recusa,
+        # expiração e versões substituídas saem dessa fila.
         "count_vendas": por_chave.get("vendas", 0),
         "count_pedidos": por_chave.get("pedidos", 0),
         "count_manutencao": por_chave.get("manutencoes", 0),
         "count_producao": por_chave.get("producao", 0),
-        "count_orcamentos": len(orcamentos_notificados),
+        "count_orcamentos": por_chave.get("orcamentos_em_aberto", 0),
         "count_ordens_servico": por_chave.get("ordens_servico", 0),
         "count_clientes_incompletos": por_chave.get("clientes_incompletos", 0),
     }

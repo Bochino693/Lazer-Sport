@@ -134,17 +134,25 @@ def _grupos_de_versoes(orcamento_ids):
 
 
 def _orcamentos(user, hoje):
-    """Vencidos e a vencer. Duas consultas, dois avisos diferentes.
+    """Pendências comerciais, vencidas e a vencer.
 
-    Vencido é perda: a proposta morreu sem resposta. A vencer ainda dá
-    para salvar com um telefonema. Juntar os dois num número só apagaria
-    justamente a diferença que faz alguém agir.
+    A bolinha de Orçamentos representa a fila inteira ainda não finalizada:
+    rascunho, aguardando resposta e negociação. Validade decide a urgência,
+    não se a proposta existe na fila. Por isso uma proposta válida por mais
+    de três dias também precisa entrar no número do menu.
+
+    Vencido é perda; a vencer ainda dá para salvar com um telefonema. Esses
+    dois motivos continuam separados na central, mas a mesma negociação
+    ocupa uma única unidade no total, inclusive quando já foi refeita.
     """
     abertos = limitar_orcamentos(
         user,
         Orcamento.objects.filter(status__in=Orcamento.EM_ABERTO),
     )
 
+    em_aberto = _grupos_de_versoes(
+        abertos.values_list("pk", flat=True)
+    )
     vencidos = _grupos_de_versoes(
         abertos.filter(validade__lt=hoje).values_list("pk", flat=True)
     )
@@ -154,6 +162,25 @@ def _orcamentos(user, hoje):
     ).values_list("pk", flat=True))
 
     avisos = []
+
+    if em_aberto:
+        quantidade = len(em_aberto)
+        avisos.append(Aviso(
+            chave="orcamentos_em_aberto",
+            titulo=(
+                "Proposta em aberto"
+                if quantidade == 1 else "Propostas em aberto"
+            ),
+            detalhe=(
+                "Rascunhos, propostas aguardando resposta e negociações "
+                "ainda precisam de acompanhamento."
+            ),
+            quantidade=quantidade,
+            url=reverse("orcamentos_inner", urlconf=URLCONF),
+            nivel="info",
+            icone="bi-file-earmark-text",
+            orcamentos=em_aberto,
+        ))
 
     if vencidos:
         quantidade = len(vencidos)

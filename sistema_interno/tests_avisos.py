@@ -81,6 +81,57 @@ class ColetaDeAvisosTests(TestCase):
         self.assertEqual(apurado["avisos_urgentes"], 3)
         self.assertEqual(apurado["count_orcamentos"], 3)
 
+    def test_numero_do_menu_conta_toda_proposta_nao_finalizada(self):
+        """Validade distante ou ausente não pode esconder trabalho aberto."""
+        estados_em_aberto = (
+            Orcamento.Status.RASCUNHO,
+            Orcamento.Status.AGUARDANDO_RESPOSTA,
+            Orcamento.Status.EM_NEGOCIACAO,
+        )
+        for indice, status in enumerate(estados_em_aberto):
+            Orcamento.objects.create(
+                nome_cliente=f"Pendente {indice}",
+                status=status,
+                # Fora da janela de três dias de cobrança de validade.
+                validade=(self.hoje + timedelta(days=30)) if indice else None,
+            )
+
+        for status in (
+            Orcamento.Status.APROVADO,
+            Orcamento.Status.RECUSADO,
+            Orcamento.Status.EXPIRADO,
+            Orcamento.Status.SUBSTITUIDO,
+        ):
+            Orcamento.objects.create(
+                nome_cliente=f"Finalizado {status}", status=status,
+            )
+
+        from .context_processors import _apurar
+
+        apurado = _apurar(self.gestor)
+        aviso = next(
+            item for item in apurado["avisos"]
+            if item.chave == "orcamentos_em_aberto"
+        )
+        self.assertEqual(aviso.quantidade, 3)
+        self.assertEqual(apurado["count_orcamentos"], 3)
+
+    def test_numero_do_menu_conta_so_a_versao_atual(self):
+        anterior = Orcamento.objects.create(
+            nome_cliente="Cliente com duas versões",
+            status=Orcamento.Status.SUBSTITUIDO,
+        )
+        Orcamento.objects.create(
+            nome_cliente="Cliente com duas versões",
+            status=Orcamento.Status.RASCUNHO,
+            orcamento_anterior=anterior,
+            versao=2,
+        )
+
+        from .context_processors import _apurar
+
+        self.assertEqual(_apurar(self.gestor)["count_orcamentos"], 1)
+
     def test_orcamento_ja_respondido_nao_cobra_validade(self):
         Orcamento.objects.create(
             nome_cliente="Fechado",
