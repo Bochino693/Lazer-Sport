@@ -9,10 +9,10 @@
     <span class="ls-eyebrow">Expedição</span>
     <h1>Etiquetas de transporte</h1>
     <p>
-      Escolha cliente, confira ao lado e mande para a impressora. A
-      <strong>etiqueta rápida</strong> resolve a caixa que não é de
-      pedido nenhum; a completa acrescenta carga e referência.
-      Nada é gravado: a etiqueta é papel.
+      A etiqueta nasce de uma <strong>proposta aprovada</strong>, de um
+      <strong>cliente</strong> ou <strong>do zero</strong> — e o que vier
+      preenchido continua editável. Confira ao lado e mande para a
+      impressora. Nada é gravado: a etiqueta é papel.
     </p>
   </div>
   <button type="button" class="btn btn-primary" id="imprimirEtiquetas">
@@ -21,6 +21,7 @@
 </section>
 
 {{ opcoes_clientes|json_script:"opcoesClientesEtiqueta" }}
+{{ opcoes_propostas|json_script:"opcoesPropostasEtiqueta" }}
 {{ empresa|json_script:"empresaEtiqueta" }}
 
 <div class="ls-etiquetas-tela">
@@ -31,44 +32,74 @@
     <div class="ls-data-body ls-compact-form">
 
       {% comment %}
-        A ESCAPA RÁPIDA VEM ANTES DOS CAMPOS.
+        DE ONDE ESTA ETIQUETA VEM.
 
-        A maior parte das caixas que sai daqui não pertence a pedido
-        nenhum: é a peça que o cliente veio buscar, a troca em garantia,
-        o volume que pega carona em outra entrega. Para essas, conteúdo,
-        número de volume e referência de O.S. são campos que só existem
-        para ficar em branco -- e formulário com metade dos campos vazios
-        ensina quem preenche a pular campo, o endereço junto.
+        Três origens, porque são três situações reais do galpão e cada
+        uma começa de um lugar diferente:
 
-        Na rápida sobra o que a caixa precisa dizer: para quem vai, para
-        onde vai, e de quem ela veio.
+        A PROPOSTA APROVADA é de onde sai quase toda caixa. Tudo o que a
+        etiqueta precisa já foi digitado uma vez na venda -- para quem
+        vai, para onde, o que tem dentro, quantos volumes. Redigitar isso
+        com o caminhão esperando é a chance de errar o endereço, e o erro
+        só aparece quando a carga volta.
+
+        O CLIENTE resolve o que não tem proposta: a troca em garantia, a
+        peça que o cliente veio buscar, o volume que pega carona em outra
+        entrega. Traz nome, endereço e contato do cadastro.
+
+        DO ZERO é para quando não há nem uma coisa nem outra -- e não
+        pode exigir cadastro antes, porque o caminhão não espera por
+        isso.
+
+        Nenhuma das três TRAVA nada: o que vem preenchido continua
+        editável, porque quem despacha às vezes manda para o depósito do
+        cliente, e não para o endereço do cadastro.
       {% endcomment %}
-      <div class="ls-etiqueta-modos" role="radiogroup" aria-label="Tipo de etiqueta">
-        <label class="ls-etiqueta-modo">
-          <input type="radio" name="modo" value="rapida" checked>
-          <span><strong>Etiqueta rápida</strong><small>Cliente, endereço e a empresa. Para a caixa que não é de nenhum pedido.</small></span>
-        </label>
-        <label class="ls-etiqueta-modo">
-          <input type="radio" name="modo" value="completa">
-          <span><strong>Etiqueta completa</strong><small>Acrescenta conteúdo, volumes e a referência da O.S. ou proposta.</small></span>
-        </label>
-      </div>
+      <fieldset class="ls-etiqueta-origens">
+        <legend>De onde vem esta etiqueta</legend>
+        <div class="ls-cartoes-escolha" role="radiogroup" aria-label="Origem da etiqueta">
+          <label class="ls-cartao-escolha">
+            <input type="radio" name="origem" value="proposta" checked>
+            <span>
+              <i class="bi bi-file-earmark-check" aria-hidden="true"></i>
+              <strong>De uma proposta aprovada</strong>
+              <small>Traz cliente, endereço, conteúdo e volumes.</small>
+            </span>
+          </label>
+          <label class="ls-cartao-escolha">
+            <input type="radio" name="origem" value="cliente">
+            <span>
+              <i class="bi bi-person-vcard" aria-hidden="true"></i>
+              <strong>De um cliente</strong>
+              <small>Traz nome, endereço e contato do cadastro.</small>
+            </span>
+          </label>
+          <label class="ls-cartao-escolha">
+            <input type="radio" name="origem" value="zero">
+            <span>
+              <i class="bi bi-pencil" aria-hidden="true"></i>
+              <strong>Do zero</strong>
+              <small>Sem cadastro nenhum. Digite e imprima.</small>
+            </span>
+          </label>
+        </div>
+
+        <div class="ls-etiqueta-fonte" data-fonte="proposta">
+          <label class="form-label" for="etiquetaPropostaBusca">Proposta aprovada</label>
+          <div id="etiquetaPropostaBox"></div>
+          <span class="form-text">Busque por número, cliente ou item. Tudo abaixo continua editável.</span>
+        </div>
+
+        <div class="ls-etiqueta-fonte" data-fonte="cliente" hidden>
+          <label class="form-label" for="etiquetaClienteBusca">Cliente cadastrado</label>
+          <div id="etiquetaClienteBox"></div>
+          <span class="form-text">Traz o endereço do cadastro junto.</span>
+        </div>
+      </fieldset>
 
       <div class="ls-completar-bloco">
         <h6><i class="bi bi-person" aria-hidden="true"></i> Destinatário</h6>
-        {% comment %}
-          CLIENTE CADASTRADO OU NOME DIGITADO NA HORA.
-
-          Exigir cadastro aqui seria mandar quem está fechando a caixa
-          abrir outra tela, criar um cliente e voltar -- e o caminhão não
-          espera por isso. Escolher da lista traz o endereço junto;
-          digitar resolve a entrega avulsa.
-        {% endcomment %}
-        <label class="form-label" for="etiquetaClienteBusca">Cliente cadastrado</label>
-        <div id="etiquetaClienteBox"></div>
-        <span class="form-text">Traz o endereço do cadastro junto. Deixe vazio para digitar abaixo.</span>
-
-        <div class="mt-3">
+        <div class="mt-0">
           <label class="form-label" for="etiquetaNome">Nome no papel</label>
           <input class="form-control" id="etiquetaNome" maxlength="70"
                  autocomplete="off" placeholder="Ex.: Buffet Alegria">
@@ -85,8 +116,18 @@
         </div>
       </div>
 
-      <div class="ls-completar-bloco" data-so-completa hidden>
-        <h6><i class="bi bi-box-seam" aria-hidden="true"></i> A carga</h6>
+      {% comment %}
+        A CARGA É OPCIONAL, E PARECE OPCIONAL.
+
+        Conteúdo, número de volume e referência só existem quando há
+        pedido. Na maior parte das caixas eles ficariam em branco -- e um
+        formulário com metade dos campos vazios ensina quem preenche a
+        pular campo, o endereço junto. Fechado, o essencial é o que se vê;
+        aberto, está tudo a um clique. Quando a proposta preenche, ele
+        abre sozinho, para ninguém imprimir sem conferir o que veio.
+      {% endcomment %}
+      <details class="ls-completar-bloco ls-etiqueta-carga" id="etiquetaCarga">
+        <summary><i class="bi bi-box-seam" aria-hidden="true"></i> Carga e referência <span>opcional</span></summary>
         <div class="row g-3">
           <div class="col-12">
             <label class="form-label" for="etiquetaConteudo">Conteúdo</label>
@@ -105,7 +146,7 @@
                    autocomplete="off" placeholder="O.S. ou proposta">
           </div>
         </div>
-      </div>
+      </details>
 
       <div class="ls-completar-bloco">
         <h6><i class="bi bi-exclamation-triangle" aria-hidden="true"></i> Avisos de manuseio</h6>
@@ -170,6 +211,9 @@ LSTela.pronto(function () {
   var clientes = JSON.parse(
     document.getElementById("opcoesClientesEtiqueta").textContent || "[]"
   );
+  var propostas = JSON.parse(
+    document.getElementById("opcoesPropostasEtiqueta").textContent || "[]"
+  );
   /* A identidade da empresa vem como dado, e não interpolada dentro das
      aspas do JavaScript. `escapejs` transformaria "(11) 96056-3135" em
      "\u002811\u0029 96056\u002D3135": o navegador entende, mas quem lê
@@ -191,9 +235,50 @@ LSTela.pronto(function () {
     return caixa.innerHTML;
   }
 
-  /* O cliente escolhido preenche nome, endereço e contato -- mas não
-     tranca nenhum dos três: quem despacha às vezes manda para o depósito
-     do cliente, e não para o endereço do cadastro. */
+  function preencher(id, valor) {
+    var campo = document.getElementById(id);
+    if (campo) campo.value = valor || "";
+  }
+
+  function enderecoDoCliente(cliente) {
+    var e = cliente && cliente.endereco;
+    if (!e) return "";
+    return [
+      [e.rua, e.numero].filter(Boolean).join(", "),
+      e.bairro,
+      [e.cidade, e.estado].filter(Boolean).join("/"),
+      e.cep ? "CEP " + e.cep : "",
+    ].filter(Boolean).join(" · ");
+  }
+
+  /* O que a origem traz NÃO TRANCA NADA: quem despacha às vezes manda
+     para o depósito do cliente, e não para o endereço do cadastro. Por
+     isso os campos continuam abertos depois de preenchidos. */
+  var buscaProposta = LSBusca.criar({
+    nome: "proposta",
+    opcoes: propostas,
+    placeholder: "Buscar proposta aprovada...",
+    rotuloAcessivel: "Proposta aprovada",
+    aoEscolher: function (opcao) {
+      if (!opcao) return;
+      var p = propostas.filter(function (o) { return o.valor === opcao.valor; })[0];
+      if (!p) return;
+      preencher("etiquetaNome", p.nome);
+      preencher("etiquetaContato", p.contato);
+      preencher("etiquetaEndereco", p.endereco);
+      preencher("etiquetaConteudo", p.conteudo);
+      preencher("etiquetaReferencia", p.referencia);
+      preencher("etiquetaVolumes", p.volumes);
+      /* Abre a carga junto: a proposta acabou de escrever conteúdo,
+         volumes e referência ali dentro, e imprimir sem ver o que veio é
+         como despachar uma caixa sem olhar o que tem nela. */
+      document.getElementById("etiquetaCarga").open = true;
+      desenhar();
+    },
+  });
+  buscaProposta.entrada.id = "etiquetaPropostaBusca";
+  document.getElementById("etiquetaPropostaBox").appendChild(buscaProposta.elemento);
+
   var buscaCliente = LSBusca.criar({
     nome: "cliente",
     opcoes: clientes,
@@ -201,25 +286,39 @@ LSTela.pronto(function () {
     rotuloAcessivel: "Cliente cadastrado",
     aoEscolher: function (opcao) {
       if (!opcao) return;
-      var escolhido = clientes.filter(function (c) { return c.valor === opcao.valor; })[0];
-      if (!escolhido) return;
-      document.getElementById("etiquetaNome").value = escolhido.rotulo || "";
-      document.getElementById("etiquetaContato").value =
-        escolhido.telefone || escolhido.whatsapp || "";
-      var e = escolhido.endereco;
-      document.getElementById("etiquetaEndereco").value = e
-        ? [
-            [e.rua, e.numero].filter(Boolean).join(", "),
-            e.bairro,
-            [e.cidade, e.estado].filter(Boolean).join("/"),
-            e.cep ? "CEP " + e.cep : "",
-          ].filter(Boolean).join(" · ")
-        : "";
+      var c = clientes.filter(function (o) { return o.valor === opcao.valor; })[0];
+      if (!c) return;
+      preencher("etiquetaNome", c.rotulo);
+      preencher("etiquetaContato", c.telefone || c.whatsapp);
+      preencher("etiquetaEndereco", enderecoDoCliente(c));
       desenhar();
     },
   });
   buscaCliente.entrada.id = "etiquetaClienteBusca";
   document.getElementById("etiquetaClienteBox").appendChild(buscaCliente.elemento);
+
+  /* TROCAR DE ORIGEM NÃO APAGA O QUE JÁ FOI DIGITADO.
+
+     Quem começou pela proposta e percebeu que aquela caixa é outra coisa
+     troca para "do zero" e continua de onde estava, corrigindo o que
+     precisa. Limpar aqui faria a troca custar o trabalho todo, e o
+     caminhão não espera por isso. A origem escolhe de onde PUXAR, e não
+     o que apagar. */
+  function origemEscolhida() {
+    var marcada = document.querySelector("[name='origem']:checked");
+    return marcada ? marcada.value : "proposta";
+  }
+
+  function aplicarOrigem() {
+    var origem = origemEscolhida();
+    document.querySelectorAll("[data-fonte]").forEach(function (caixa) {
+      caixa.hidden = caixa.dataset.fonte !== origem;
+    });
+  }
+  document.querySelectorAll("[name='origem']").forEach(function (opcao) {
+    opcao.addEventListener("change", aplicarOrigem);
+  });
+  aplicarOrigem();
 
   function avisosEscolhidos() {
     return Array.prototype.map.call(
@@ -228,11 +327,6 @@ LSTela.pronto(function () {
         return { rotulo: caixa.dataset.rotulo, icone: caixa.dataset.icone };
       }
     );
-  }
-
-  function modoRapido() {
-    var escolhido = document.querySelector("[name='modo']:checked");
-    return !escolhido || escolhido.value === "rapida";
   }
 
   function umaEtiqueta(indice, total, dados) {
@@ -248,7 +342,7 @@ LSTela.pronto(function () {
     }).join("");
 
     return (
-      '<article class="ls-etiqueta' + (dados.rapida ? " rapida" : "") + '">' +
+      '<article class="ls-etiqueta' + (dados.enxuta ? " enxuta" : "") + '">' +
         '<header class="ls-etiqueta-topo">' +
           '<img class="ls-etiqueta-logo" src="{% static "images/logoofi.png" %}" alt="">' +
           '<div class="ls-etiqueta-empresa">' +
@@ -290,25 +384,21 @@ LSTela.pronto(function () {
   }
 
   function desenhar() {
-    /* NA RÁPIDA, O QUE ESTÁ ESCONDIDO NÃO IMPRIME.
+    /* O QUE ESTÁ EM BRANCO NÃO IMPRIME, E O QUE SOBRA CRESCE.
 
-       Os campos da carga continuam no formulário -- só ocultos --, então
-       um conteúdo digitado antes de trocar de modo ainda está lá. Se
-       fosse para o papel, a etiqueta rápida sairia falando de uma carga
-       que quem a escolheu já tinha decidido não descrever. O modo não
-       esvazia os campos (voltar para a completa devolve o que foi
-       digitado); ele decide o que vai ao papel. */
-    var rapida = modoRapido();
-    var total = rapida
-      ? 1
-      : Math.min(60, Math.max(1, parseInt(texto("etiquetaVolumes"), 10) || 1));
+       Sem conteúdo, volume e referência -- que é o caso da caixa avulsa
+       -- o que resta na etiqueta é para onde ela vai, então vai grande.
+       Não há modo a escolher: o papel segue o que foi preenchido. */
+    var conteudo = texto("etiquetaConteudo");
+    var referencia = texto("etiquetaReferencia");
+    var total = Math.min(60, Math.max(1, parseInt(texto("etiquetaVolumes"), 10) || 1));
     var dados = {
-      rapida: rapida,
+      enxuta: !conteudo && !referencia && total === 1,
       nome: texto("etiquetaNome"),
       endereco: texto("etiquetaEndereco"),
       contato: texto("etiquetaContato"),
-      conteudo: rapida ? "" : texto("etiquetaConteudo"),
-      referencia: rapida ? "" : texto("etiquetaReferencia"),
+      conteudo: conteudo,
+      referencia: referencia,
       avisos: avisosEscolhidos(),
     };
 
@@ -329,19 +419,6 @@ LSTela.pronto(function () {
     campo.addEventListener("input", desenhar);
     campo.addEventListener("change", desenhar);
   });
-
-  /* Trocar de modo esconde ou mostra os campos da carga. A escolha do
-     modo já dispara `desenhar` pelo ouvinte acima. */
-  function aplicarModo() {
-    var rapida = modoRapido();
-    document.querySelectorAll("[data-so-completa]").forEach(function (bloco) {
-      bloco.hidden = rapida;
-    });
-  }
-  document.querySelectorAll("[name='modo']").forEach(function (opcao) {
-    opcao.addEventListener("change", aplicarModo);
-  });
-  aplicarModo();
 
   document.getElementById("imprimirEtiquetas").addEventListener("click", function () {
     window.print();

@@ -3304,42 +3304,130 @@ button.ls-incomplete-chip:focus-visible{outline:3px solid rgba(255,128,145,.35);
    porque é assim que ela vai sair da impressora. Mostrar a prévia no
    tema escuro pouparia contraste na tela e mentiria sobre a impressão. */
 .ls-etiquetas-tela{
-  display:grid;grid-template-columns:minmax(320px,400px) 1fr;
+  display:grid;grid-template-columns:minmax(360px,440px) minmax(0,1fr);
   gap:18px;align-items:start;
 }
-@media(max-width:1100px){.ls-etiquetas-tela{grid-template-columns:1fr}}
+/* A PRÉVIA ACOMPANHA QUEM PREENCHE.
+
+   O formulário é mais alto que a etiqueta, e sem isto a prévia saía da
+   tela assim que se rolava até os avisos de manuseio -- justamente
+   quando o que se acabou de marcar muda o desenho do papel. Presa no
+   topo, cada campo preenchido aparece no papel na mesma rolagem.
+
+   `max-height` com rolagem própria: com muitos volumes a folha tem
+   dezenas de etiquetas, e sem o limite a coluna grudada ficaria mais
+   alta que a janela -- o fim dela nunca apareceria. */
+@media(min-width:1101px){
+  .ls-etiquetas-previa{
+    position:sticky;top:calc(var(--topbar-h) + 12px);
+    max-height:calc(var(--ls-vh) - var(--topbar-h) - 28px);
+    display:flex;flex-direction:column;
+  }
+  .ls-etiquetas-previa .ls-folha-etiquetas{overflow:auto;min-height:0}
+}
+/* No tablet e no celular a prévia vai para baixo do formulário, e não
+   para o lado: em 700px de largura, duas colunas deixariam a etiqueta
+   com 300px -- estreita demais para mostrar como ela vai sair. */
+@media(max-width:1100px){
+  .ls-etiquetas-tela{grid-template-columns:1fr}
+  .ls-etiquetas-previa{position:static;max-height:none}
+}
 
 .ls-etiquetas-form .ls-completar-bloco:last-child{margin-bottom:0}
 
-/* A ESCAPA RÁPIDA FICA ANTES DE TUDO.
+/* ==========================================================
+   CARTÃO DE ESCOLHA — quando as opções têm peso igual
+   ==========================================================
+   Um `select` fechado mostra uma opção e esconde as outras: quem não
+   sabe que existem nunca abre a lista para descobrir. Quando as opções
+   são poucas, mudam o que a tela faz em seguida e precisam ser
+   comparadas entre si, elas ficam abertas, lado a lado, com uma linha
+   dizendo o que cada uma significa.
 
-   A maior parte das caixas que sai daqui não pertence a pedido nenhum:
-   é a peça que o cliente veio buscar, a troca em garantia, o volume que
-   vai junto na viagem de outra entrega. Para essas, conteúdo, número de
-   volume e referência de O.S. são campos que existem só para serem
-   deixados em branco -- e um formulário com metade dos campos vazios
-   ensina quem preenche a pular campo, inclusive o endereço.
-
-   Então a escolha vem primeiro, e a rápida é a primeira das duas: nome,
-   endereço e a empresa, que é o que a caixa precisa dizer. */
-.ls-etiqueta-modos{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:16px}
-@media(max-width:520px){.ls-etiqueta-modos{grid-template-columns:1fr}}
-.ls-etiqueta-modo{
-  display:flex;align-items:flex-start;gap:10px;cursor:pointer;
+   Serve às três origens da etiqueta e à escolha entre item de manutenção
+   e peça da loja no cadastro rápido -- dois lugares com a mesma
+   pergunta: "qual destes três/dois caminhos é o seu?". */
+.ls-cartoes-escolha{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:9px}
+@media(max-width:900px){.ls-cartoes-escolha{grid-template-columns:1fr}}
+.ls-cartao-escolha{
+  position:relative;display:block;cursor:pointer;
   padding:12px 13px;border:1px solid var(--line);border-radius:14px;
-  background:var(--panel-soft);color:var(--text-2);
-  font-size:.82rem;font-weight:800;
-  transition:border-color .15s ease,background .15s ease,color .15s ease;
+  background:var(--panel);
+  transition:border-color .15s ease,background .15s ease,box-shadow .15s ease;
 }
-.ls-etiqueta-modo:has(input:checked){
-  border-color:var(--acento);background:rgba(242,169,59,.13);color:var(--text);
-  box-shadow:0 0 0 1px rgba(242,169,59,.25);
+/* O rádio some da vista mas continua no foco do teclado e do leitor de
+   tela: quem navega por Tab precisa achar todas as opções. */
+.ls-cartao-escolha input{position:absolute;opacity:0;width:0;height:0}
+.ls-cartao-escolha span{display:flex;flex-direction:column;gap:3px;min-width:0}
+.ls-cartao-escolha i{color:var(--muted-2);font-size:1.15rem;transition:color .15s ease}
+.ls-cartao-escolha strong{color:var(--text);font-size:.84rem;font-weight:900;line-height:1.25}
+.ls-cartao-escolha small{color:var(--text-2);font-size:.72rem;font-weight:650;line-height:1.4}
+.ls-cartao-escolha:has(input:checked){
+  border-color:var(--acento);background:rgba(242,169,59,.12);
+  box-shadow:0 0 0 1px rgba(242,169,59,.3);
 }
-.ls-etiqueta-modo input{accent-color:var(--acento);flex:0 0 auto;margin-top:3px}
-.ls-etiqueta-modo span{display:flex;flex-direction:column;gap:2px;min-width:0}
-.ls-etiqueta-modo small{color:var(--text-2);font-size:.71rem;font-weight:650;line-height:1.35}
-.ls-etiqueta-modo:has(input:checked) small{color:var(--text-2)}
-.ls-etiquetas-form [data-so-completa][hidden]{display:none!important}
+.ls-cartao-escolha:has(input:checked) i{color:var(--acento)}
+.ls-cartao-escolha:has(input:focus-visible){outline:2px solid var(--acento);outline-offset:2px}
+
+/* AS TRÊS PORTAS FICAM ANTES DOS CAMPOS.
+
+   São três situações reais do galpão, e cada uma começa de um lugar
+   diferente: a proposta aprovada (de onde sai quase toda caixa e onde
+   tudo já foi digitado uma vez), o cliente cadastrado (a troca em
+   garantia, a peça que o cliente veio buscar) e o zero (quando não há
+   nem uma coisa nem outra, e não dá para exigir cadastro com o caminhão
+   esperando).
+
+   Cartão, e não `select`: os três são escolhas de peso igual, e num
+   `select` fechado só uma delas é visível -- quem não sabe que existem
+   as outras duas nunca abre a lista para descobrir. */
+.ls-etiqueta-origens{
+  margin:0 0 18px;padding:14px;border:1px solid var(--line);
+  border-radius:16px;background:var(--panel-soft);
+}
+.ls-etiqueta-origens>legend{
+  float:none;width:auto;margin:0 0 10px;padding:0;
+  color:var(--text);font-size:.82rem;font-weight:900;
+}
+/* O campo da origem escolhida. Só um aparece por vez -- dois campos de
+   busca abertos ao mesmo tempo perguntariam duas coisas para uma
+   etiqueta só. */
+/* AS TRÊS EM COLUNA, E NÃO LADO A LADO.
+
+   O formulário da etiqueta é uma coluna estreita (440px no computador),
+   e três cartões lado a lado ali dariam 130px cada -- a linha que
+   explica o que a origem faz quebraria em quatro pedaços, e o auto-fit
+   ainda embolava dois em cima e um embaixo. Empilhadas, as três são
+   igualmente legíveis e a comparação entre elas é uma leitura de cima
+   para baixo, que é como se lê uma lista de três. */
+.ls-etiqueta-origens .ls-cartoes-escolha{grid-template-columns:1fr}
+
+.ls-etiqueta-fonte{margin-top:13px}
+.ls-etiqueta-fonte[hidden]{display:none!important}
+
+/* A CARGA É OPCIONAL, E PARECE OPCIONAL.
+
+   Conteúdo, volume e referência só existem quando há pedido; na maior
+   parte das caixas eles ficariam em branco, e formulário com metade dos
+   campos vazios ensina quem preenche a pular campo -- o endereço junto.
+   Fechado, o essencial é o que se vê. */
+.ls-etiqueta-carga{padding:0;overflow:hidden}
+.ls-etiqueta-carga>summary{
+  display:flex;align-items:center;gap:9px;cursor:pointer;list-style:none;
+  padding:13px 14px;color:var(--text);font-size:.82rem;font-weight:800;
+}
+.ls-etiqueta-carga>summary::-webkit-details-marker{display:none}
+.ls-etiqueta-carga>summary>i{color:var(--acento)}
+.ls-etiqueta-carga>summary>span{
+  padding:2px 8px;border:1px solid var(--line);border-radius:999px;
+  color:var(--text-2);font-size:.66rem;font-weight:800;text-transform:uppercase;
+}
+.ls-etiqueta-carga>summary::after{
+  content:"▾";margin-left:auto;color:var(--text-2);transition:transform .15s ease;
+}
+.ls-etiqueta-carga[open]>summary::after{transform:rotate(180deg)}
+.ls-etiqueta-carga[open]>summary{border-bottom:1px solid var(--line-soft)}
+.ls-etiqueta-carga>.row{padding:14px}
 
 .ls-etiqueta-avisos{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 @media(max-width:520px){.ls-etiqueta-avisos{grid-template-columns:1fr}}
@@ -3443,13 +3531,15 @@ button.ls-incomplete-chip:focus-visible{outline:3px solid rgba(255,128,145,.35);
 .ls-etiqueta-destino p{margin:6px 0 0;font-size:.86rem;line-height:1.4;color:#000;font-weight:600}
 .ls-etiqueta-contato{font-weight:800}
 
-/* NA ETIQUETA RÁPIDA O ENDEREÇO É O DOCUMENTO.
+/* NA ETIQUETA ENXUTA O ENDEREÇO É O DOCUMENTO.
 
-   Sem conteúdo, sem volume e sem referência, o que sobra na caixa é para
-   onde ela vai -- então vai grande. É a mesma moldura, com o texto no
-   tamanho que se lê de pé, ao lado da pilha. */
-.ls-etiqueta.rapida .ls-etiqueta-destino strong{font-size:1.7rem}
-.ls-etiqueta.rapida .ls-etiqueta-destino p{font-size:1rem;font-weight:700}
+   Sem conteúdo, sem volume e sem referência -- que é o caso da caixa
+   avulsa --, o que sobra é para onde ela vai, então vai grande. É a
+   mesma moldura, com o texto no tamanho que se lê de pé, ao lado da
+   pilha. Não é um modo que se escolhe: o papel segue o que foi
+   preenchido. */
+.ls-etiqueta.enxuta .ls-etiqueta-destino strong{font-size:1.7rem}
+.ls-etiqueta.enxuta .ls-etiqueta-destino p{font-size:1rem;font-weight:700}
 
 .ls-etiqueta-rodape{
   display:flex;flex-wrap:wrap;gap:4px 18px;
@@ -3471,12 +3561,34 @@ button.ls-incomplete-chip:focus-visible{outline:3px solid rgba(255,128,145,.35);
 .ls-folha-etiquetas.a6 .ls-etiqueta-destino{padding:7px 9px}
 .ls-folha-etiquetas.a6 .ls-etiqueta-destino strong{font-size:1.1rem}
 .ls-folha-etiquetas.a6 .ls-etiqueta-destino p{font-size:.76rem}
-.ls-folha-etiquetas.a6 .ls-etiqueta.rapida .ls-etiqueta-destino strong{font-size:1.3rem}
-.ls-folha-etiquetas.a6 .ls-etiqueta.rapida .ls-etiqueta-destino p{font-size:.88rem}
+.ls-folha-etiquetas.a6 .ls-etiqueta.enxuta .ls-etiqueta-destino strong{font-size:1.3rem}
+.ls-folha-etiquetas.a6 .ls-etiqueta.enxuta .ls-etiqueta-destino p{font-size:.88rem}
 .ls-folha-etiquetas.a6 .ls-etiqueta-empresa strong{font-size:.86rem}
 .ls-folha-etiquetas.a6 .ls-etiqueta-empresa small{font-size:.64rem}
 .ls-folha-etiquetas.a6 .ls-etiqueta-rodape{font-size:.68rem;gap:3px 12px}
 .ls-folha-etiquetas.a6 .ls-etiqueta-logo{width:32px;height:32px;flex-basis:32px}
+
+/* O PAPEL NÃO É CROMO DE PAINEL, E PRECISA DIZER ISSO EM VOZ ALTA.
+
+   O painel tem uma regra global -- `.form-text,.small,small{color:...
+   !important}` -- que pinta TODO texto miúdo do aplicativo de cinza
+   quente. Faz sentido lá: `small` no painel é sempre legenda sobre fundo
+   escuro. Mas a etiqueta é branca, é papel, e mora dentro do painel: ela
+   herdava esse cinza no telefone da empresa, no CNPJ, no número do
+   volume e nos rótulos do rodapé.
+
+   Era exatamente isto que sobrava de cinza depois de a faixa âmbar sair:
+   as regras de cor da etiqueta diziam `#000`, e perdiam para um
+   `!important` escrito centenas de linhas acima. Uma cor sem
+   `!important` contra outra com `!important` não é uma disputa de
+   ordem -- ela perde sempre, e o `#000` daqui era decorativo.
+
+   Esta regra é o `!important` de volta, uma vez só, no lugar certo: DENTRO
+   da etiqueta, todo texto é tinta preta, porque é isso que a impressora
+   vai colocar no papel. */
+.ls-etiqueta small,
+.ls-etiqueta .form-text,
+.ls-etiqueta .small{color:#000!important}
 
 /* Economizar tinta: some o único chapado que restou, fica o traço. O
    resto da etiqueta já era contorno preto sobre branco. */

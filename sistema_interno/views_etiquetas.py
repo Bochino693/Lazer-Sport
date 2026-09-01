@@ -20,6 +20,7 @@ ninguém faz.
 """
 
 from django.conf import settings
+from django.db.models import Prefetch
 from django.shortcuts import render
 from django.views.generic import View
 
@@ -27,7 +28,7 @@ from core.email_utils import cnpj_empresa, nome_empresa
 from core.models import EnderecoEmpresa
 
 from . import clientes as svc
-from .models import Cliente
+from .models import Cliente, EnderecoCliente, Orcamento
 from .rotas import texto_endereco
 from .views import InternoRequiredMixin
 
@@ -50,10 +51,58 @@ def identidade_da_empresa() -> dict:
     }
 
 
+def etiqueta_do_orcamento(orcamento) -> dict:
+    """A proposta aprovada vira uma etiqueta pronta.
+
+    POR QUE ESTA É A PRIMEIRA DAS TRÊS PORTAS.
+
+    A caixa que sai daqui quase sempre é de uma venda fechada, e tudo o
+    que a etiqueta precisa já foi digitado uma vez na proposta: para quem
+    vai, para onde, o que tem dentro e quantos volumes. Redigitar isso na
+    hora de despachar é a chance de errar o endereço com o caminhão
+    esperando -- e o erro só aparece quando a carga volta.
+
+    Aqui a proposta traz tudo, e nada fica travado: quem despacha ainda
+    corrige o que precisar antes de imprimir. É o mesmo princípio do
+    cliente cadastrado, um passo antes.
+    """
+    itens = list(orcamento.itens.all())
+    endereco = (
+        orcamento.cliente.endereco_principal
+        if orcamento.cliente_id and orcamento.cliente else None
+    )
+    return {
+        "valor": str(orcamento.pk),
+        "rotulo": f"#{orcamento.pk} · {orcamento.destinatario}",
+        "detalhe": (
+            f"{len(itens)} item(ns) · aprovado"
+            + (f" · {orcamento.contato}" if orcamento.contato else "")
+        ),
+        "grupo": "Propostas aprovadas",
+        "nome": orcamento.destinatario,
+        "contato": orcamento.whatsapp_destinatario,
+        "endereco": texto_endereco(endereco),
+        # O conteúdo é a lista de itens, e não o primeiro deles: quem
+        # abre a caixa no destino confere contra o que está escrito.
+        "conteudo": " · ".join(item.descricao for item in itens)[:80],
+        # Um volume por item é o palpite certo na maioria das cargas, e
+        # é editável. Zero itens não existe numa proposta aprovada, mas
+        # `max` evita uma etiqueta de zero volumes se existir.
+        "volumes": max(len(itens), 1),
+        "referencia": f"Proposta #{orcamento.pk}",
+    }
+
+
 class EtiquetasInnerView(InternoRequiredMixin, View):
     """Monta e imprime etiquetas de frágil; nada é salvo."""
 
     template_name = "etiquetas_inner.html"
+
+    #: Quantas propostas aprovadas viajam para a tela. O campo é uma
+    #: busca, e não uma lista para rolar: mandar o histórico inteiro
+    #: encheria a página de propostas de dois anos atrás, cujas caixas
+    #: saíram há muito tempo.
+    PROPOSTAS_NA_TELA = 120
 
     #: Os avisos que fazem sentido para o que esta fábrica despacha.
     #
@@ -77,6 +126,25 @@ class EtiquetasInnerView(InternoRequiredMixin, View):
             .order_by("nome_cliente", "id")
         )
 
+        # A PROPOSTA APROVADA É DE ONDE VEM QUASE TODA CAIXA.
+        #
+        # Aprovada e não substituída: uma versão antiga traz o endereço
+        # e os itens que foram trocados por outros, e a etiqueta sairia
+        # descrevendo uma carga que não é a que está sendo despachada.
+        propostas = (
+            Orcamento.objects
+            .filter(status=Orcamento.Status.APROVADO)
+            .select_related("cliente")
+            .prefetch_related(
+                "itens",
+                Prefetch(
+                    "cliente__enderecos",
+                    queryset=EnderecoCliente.objects.order_by("id"),
+                ),
+            )
+            .order_by("-atualizado", "-id")[:self.PROPOSTAS_NA_TELA]
+        )
+
         return render(request, self.template_name, {
             "empresa": identidade_da_empresa(),
             "avisos": [
@@ -86,4 +154,7 @@ class EtiquetasInnerView(InternoRequiredMixin, View):
             # O cliente sai da lista OU é digitado na hora: a etiqueta de
             # uma entrega avulsa não pode exigir cadastro antes.
             "opcoes_clientes": [svc.opcao_de_busca(c) for c in clientes],
+            "opcoes_propostas": [
+                etiqueta_do_orcamento(o) for o in propostas
+            ],
         })
