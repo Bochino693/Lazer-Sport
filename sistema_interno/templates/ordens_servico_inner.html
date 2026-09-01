@@ -172,9 +172,12 @@
     <div class="row g-3">
       <div class="col-12"><div class="ls-budget-block-title comercial"><i class="bi bi-person-vcard"></i><span><strong>Cliente e origem</strong><small>A O.S. pode nascer de uma proposta aprovada, de um chamado ou de atendimento direto.</small></span></div></div>
       <div class="col-md-5">
-        <label class="form-label" for="osClienteBusca">Cliente cadastrado</label>
+        <div class="d-flex align-items-center justify-content-between gap-2">
+          <label class="form-label mb-1" for="osClienteBusca">Cliente cadastrado</label>
+          {% if pode_editar %}<button class="btn btn-sm btn-outline-success mb-1" type="button" id="novoClienteOS"><i class="bi bi-person-plus me-1"></i>Cadastrar agora</button>{% endif %}
+        </div>
         <div id="osClienteBox"></div>
-        <span class="form-text">Digite nome, telefone, documento ou buffet. Os dados são preenchidos automaticamente.</span>
+        <span class="form-text">Busque uma ficha existente. Se não encontrar, cadastre aqui sem perder a O.S.</span>
         <div class="ls-cliente-resumo" id="osClienteResumo" hidden></div>
       </div>
       <div class="col-md-4"><label class="form-label" for="osManutencao">Chamado de manutenção</label><select class="form-select" id="osManutencao" name="manutencao"><option value="">Atendimento direto</option>{% for m in manutencoes %}<option value="{{ m.id }}" data-equipamento="{{ m.nome_equipamento }}" data-nome="{{ m.usuario.nome_completo|default:m.usuario.user.username }}" data-whatsapp="{{ m.telefone_contato|default:m.usuario.telefone }}" data-email="{{ m.usuario.user.email }}" data-defeito="{{ m.descricao }}" data-endereco="{{ m.endereco|default:'' }}{% if m.numero %}, {{ m.numero }}{% endif %} · {{ m.cidade|default:'' }}/{{ m.estado|default:'' }}">MAN-{{ m.id|stringformat:'05d' }} · {{ m.nome_equipamento }} · {{ m.usuario.nome_completo|default:m.usuario.user.username }}</option>{% endfor %}</select></div>
@@ -372,6 +375,74 @@
   <input class="form-control" id="pagamentoOSObs" name="observacao_pagamento" maxlength="240" placeholder="Ex.: entrada em dinheiro na entrega">
 </div><div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancelar</button><button class="btn btn-success" type="submit">Atualizar pagamento</button></div>
 </form></div></div>
+
+<!-- Cliente novo sem abandonar a O.S. em montagem. -->
+<div class="modal fade" id="modalClienteNovoOS" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <form class="modal-content" id="formClienteNovoOS" method="post" action="{% url 'ordens_servico_inner' %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="cliente_novo">
+      <input type="hidden" name="latitude" id="clienteNovoOSLatitude">
+      <input type="hidden" name="longitude" id="clienteNovoOSLongitude">
+      <div class="modal-header">
+        <div><span class="ls-modal-kicker">Sem sair da O.S.</span><h5 class="modal-title">Cadastrar cliente</h5></div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-danger d-none" id="clienteNovoOSErro"></div>
+        <p class="text-muted small mb-3">A ficha fica salva em Clientes e volta selecionada nesta O.S. automaticamente.</p>
+        <div class="row g-3">
+          <div class="col-12 col-md-7">
+            <label class="form-label" for="clienteNovoOSNome">Nome</label>
+            <input class="form-control" id="clienteNovoOSNome" name="nome_cliente" maxlength="90" required data-rotulo="nome do cliente" placeholder="Pessoa, empresa ou buffet">
+          </div>
+          <div class="col-12 col-md-5">
+            <label class="form-label" for="clienteNovoOSTipo">Tipo</label>
+            <select class="form-select" id="clienteNovoOSTipo" name="tipo">{% for valor, rotulo in tipos_cliente %}<option value="{{ valor }}">{{ rotulo }}</option>{% endfor %}</select>
+          </div>
+          <div class="col-12 col-md-6">
+            <label class="form-label" for="clienteNovoOSTelefone">Telefone / WhatsApp</label>
+            <input class="form-control" id="clienteNovoOSTelefone" name="telefone" inputmode="tel" maxlength="24" data-mascara="telefone" placeholder="(11) 99999-9999">
+          </div>
+          <div class="col-12 col-md-6">
+            <label class="form-label" for="clienteNovoOSEmail">E-mail</label>
+            <input class="form-control" id="clienteNovoOSEmail" name="email" type="email" maxlength="150" placeholder="cliente@empresa.com.br">
+          </div>
+          <div class="col-12 col-md-6">
+            <label class="form-label" for="clienteNovoOSCanal">Uso do número</label>
+            <select class="form-select" id="clienteNovoOSCanal" name="canal_telefone">
+              <option value="whatsapp">WhatsApp confirmado</option>
+              <option value="telefone">Telefone, sem WhatsApp</option>
+              <option value="nao_confirmado">Ainda não confirmado</option>
+            </select>
+          </div>
+          <div class="col-12 col-md-6 align-self-end">
+            <label class="form-check ls-inline-check mb-1"><input class="form-check-input" type="checkbox" name="confirmar_telefone_sem_whatsapp" value="1"><span class="form-check-label">Salvar mesmo sem confirmar WhatsApp</span></label>
+            <span class="form-text">Informe pelo menos telefone ou e-mail.</span>
+          </div>
+        </div>
+
+        <hr class="my-4">
+        <div class="d-flex align-items-center justify-content-between gap-2 mb-2 flex-wrap">
+          <div><h6 class="mb-1">Endereço principal</h6><span class="text-muted small">Opcional agora; quando preenchido, entra também no endereço do serviço.</span></div>
+          <span class="ls-cep-status" id="clienteNovoOSCepStatus" aria-live="polite"></span>
+        </div>
+        <div class="row g-3">
+          <div class="col-12 col-sm-4"><label class="form-label" for="clienteNovoOSCep">CEP</label><input class="form-control" id="clienteNovoOSCep" name="cep" maxlength="18" inputmode="numeric" autocomplete="postal-code" data-mascara="cep" placeholder="00000-000"></div>
+          <div class="col-12 col-sm-8"><label class="form-label" for="clienteNovoOSEndereco">Rua</label><input class="form-control" id="clienteNovoOSEndereco" name="endereco" maxlength="120"></div>
+          <div class="col-5 col-sm-3"><label class="form-label" for="clienteNovoOSNumero">Número</label><input class="form-control" id="clienteNovoOSNumero" name="numero" maxlength="10"></div>
+          <div class="col-7 col-sm-4"><label class="form-label" for="clienteNovoOSBairro">Bairro</label><input class="form-control" id="clienteNovoOSBairro" name="bairro" maxlength="50"></div>
+          <div class="col-8 col-sm-3"><label class="form-label" for="clienteNovoOSCidade">Cidade</label><input class="form-control" id="clienteNovoOSCidade" name="cidade" maxlength="60"></div>
+          <div class="col-4 col-sm-2"><label class="form-label" for="clienteNovoOSEstado">UF</label><input class="form-control" id="clienteNovoOSEstado" name="estado" maxlength="2" placeholder="SP"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-success">Cadastrar e usar</button>
+      </div>
+    </form>
+  </div>
+</div>
 
 {% comment %}
   CADASTRAR A PEÇA SEM LARGAR A O.S. PELA METADE.
@@ -604,10 +675,60 @@ LSTela.pronto(function () {
     opcoes:clientes,
     placeholder:"Buscar cliente cadastrado...",
     rotuloAcessivel:"Cliente cadastrado",
+    {% if pode_editar %}criar:{
+      rotulo:"Cadastrar cliente",
+      aoClicar:function(digitado){abrirCadastroDeClienteOS(digitado);}
+    },{% endif %}
     aoEscolher:preencherCliente
   });
   buscaClienteOS.entrada.id="osClienteBusca";
   document.getElementById("osClienteBox").appendChild(buscaClienteOS.elemento);
+
+  function abrirCadastroDeClienteOS(nomeDigitado){
+    var form=document.getElementById("formClienteNovoOS");
+    if(!form)return;
+    form.reset();
+    if(nomeDigitado)valor("clienteNovoOSNome",nomeDigitado);
+    Painel.erro("clienteNovoOSErro","");
+    var status=document.getElementById("clienteNovoOSCepStatus");
+    if(status)status.textContent="";
+    Painel.abrirFilho("modalClienteNovoOS","modalOS");
+  }
+
+  document.getElementById("novoClienteOS")?.addEventListener("click",function(){
+    abrirCadastroDeClienteOS(buscaClienteOS.entrada.value||"");
+  });
+
+  Painel.ligarCep({
+    url:"{% url 'consultar_cep_inner' %}",
+    cep:"clienteNovoOSCep",
+    status:"clienteNovoOSCepStatus",
+    campos:{
+      rua:"clienteNovoOSEndereco",
+      bairro:"clienteNovoOSBairro",
+      cidade:"clienteNovoOSCidade",
+      estado:"clienteNovoOSEstado"
+    },
+    coordenadas:{
+      latitude:"clienteNovoOSLatitude",
+      longitude:"clienteNovoOSLongitude"
+    }
+  });
+
+  Painel.ligar({
+    form:"formClienteNovoOS",
+    erro:"clienteNovoOSErro",
+    depois:function(json){
+      var opcao=json&&json.cliente;
+      if(!opcao)return;
+      clientes=clientes.filter(function(cliente){return String(cliente.valor)!==String(opcao.valor);});
+      clientes.push(opcao);
+      buscaClienteOS.adicionarOpcao(opcao,false);
+      buscaClienteOS.definirValor(opcao.valor,false);
+      preencherCliente(opcao);
+      Painel.fechar("modalClienteNovoOS");
+    }
+  });
 
   function recalcular(){var subtotal=0;corpo.querySelectorAll("tr").forEach(function(l){var q=numero(l.querySelector("[data-qtd]").value),v=numero(l.querySelector("[data-valor]").value);var sub=q*v;subtotal+=sub;l.querySelector("[data-subtotal]").textContent=moeda(sub);});var frete=numero(document.getElementById("osFrete").value),desconto=Math.min(numero(document.getElementById("osDesconto").value),subtotal+frete),total=Math.max(subtotal+frete-desconto,0);document.getElementById("osSubtotal").textContent=moeda(subtotal);document.getElementById("osResumoFrete").textContent=moeda(frete);document.getElementById("osResumoDesconto").textContent="− "+moeda(desconto);document.getElementById("osTotal").textContent=moeda(total);}
   /* ------------------------------------------------------------------
@@ -1048,7 +1169,7 @@ LSTela.pronto(function () {
        Um clique resolve as duas coisas, que é o que a pessoa queria. */
     if(!campo.value){botao.disabled=true;requisitarEnvioOS("link").then(function(json){atualizarEnvioOS(json);botao.disabled=false;avisoOS("O.S. liberada. O link já pode ser enviado ao cliente.","sucesso");if(campo.value&&navigator.clipboard&&window.isSecureContext){navigator.clipboard.writeText(campo.value).catch(function(){});}}).catch(function(erro){botao.disabled=false;avisoOS(erro.message,"erro");});return;}
     function sucesso(){botao.innerHTML='<i class="bi bi-check-lg me-1"></i>Copiado';requisitarEnvioOS("link").then(function(json){atualizarEnvioOS(json);avisoOS("Link copiado e O.S. liberada para o cliente.","sucesso");}).catch(function(erro){avisoOS("O link foi copiado, mas a O.S. não foi liberada: "+erro.message,"erro");});}function legado(){campo.removeAttribute("readonly");campo.select();var ok=document.execCommand("copy");campo.setAttribute("readonly","readonly");if(ok)sucesso();else avisoOS("Selecione e copie o link manualmente.","erro");}if(navigator.clipboard&&window.isSecureContext)navigator.clipboard.writeText(campo.value).then(sucesso).catch(legado);else legado();});
-  
+
   /* O quadro acompanha o que está sendo digitado: quem registra um valor
      parcial vê o que sobra sem fazer a conta de cabeça -- e é essa conta
      que decide se a cobrança continua hoje. */

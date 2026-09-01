@@ -15,7 +15,7 @@ from django.test import TestCase, override_settings
 
 from core.models import PecasReposicao
 
-from .models import ItemOrdemServico, Orcamento, OrdemServico
+from .models import Cliente, ItemOrdemServico, Orcamento, OrdemServico
 
 
 @override_settings(
@@ -98,6 +98,31 @@ class RefazerOrdemServicoTests(TestCase):
         self.assertEqual(resposta.status_code, 200)
         ordem = OrdemServico.objects.get(pk=resposta.json()["id"])
         self.assertEqual(ordem.numero_serie, "FAB-2024-9981")
+
+    def test_cadastra_cliente_sem_sair_da_ordem_de_servico(self):
+        resposta = self.post({
+            "action": "cliente_novo",
+            "nome_cliente": "Cliente atendido na oficina",
+            "telefone": "(11) 97777-1234",
+            "canal_telefone": "whatsapp",
+            "cep": "",
+        })
+
+        self.assertEqual(resposta.status_code, 200)
+        dados = resposta.json()
+        self.assertEqual(dados["status"], "sucesso")
+        self.assertEqual(
+            dados["cliente"]["rotulo"], "Cliente atendido na oficina",
+        )
+        self.assertTrue(Cliente.objects.filter(
+            nome_cliente="Cliente atendido na oficina",
+        ).exists())
+
+    def test_tela_oferece_cliente_novo_dentro_da_os(self):
+        html = self.tela()
+        self.assertIn('id="novoClienteOS"', html)
+        self.assertIn('id="modalClienteNovoOS"', html)
+        self.assertIn('action" value="cliente_novo"', html)
 
     def test_refazer_congela_a_anterior_e_abre_a_seguinte(self):
         """O papel que o cliente leu continua existindo, inteiro."""

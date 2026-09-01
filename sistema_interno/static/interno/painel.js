@@ -9,6 +9,21 @@
   "use strict";
 
   var Painel = {};
+  var trocasDeModal = Object.create(null);
+  var numeroDaTrocaDeModal = 0;
+
+  function cancelarTrocaDeModal(chave) {
+    var troca = trocasDeModal[chave];
+    if (!troca) return;
+    troca.cancelada = true;
+    troca.paiEl.removeEventListener("hidden.bs.modal", troca.mostrarFilho);
+    troca.filhoEl.removeEventListener("hidden.bs.modal", troca.restaurarPai);
+    delete trocasDeModal[chave];
+  }
+
+  function cancelarTodasAsTrocasDeModal() {
+    Object.keys(trocasDeModal).forEach(cancelarTrocaDeModal);
+  }
 
   function haModalVisivel() {
     return Boolean(document.querySelector(".modal.show"));
@@ -25,6 +40,9 @@
   }
 
   Painel.limparModais = function (imediato) {
+    /* Navegar enquanto um cadastro-filho fecha não pode deixar um ouvinte
+       antigo reabrir a janela da tela que acabou de sair. */
+    cancelarTodasAsTrocasDeModal();
     document.querySelectorAll(".modal").forEach(function (elemento) {
       var instancia = global.bootstrap && global.bootstrap.Modal
         ? global.bootstrap.Modal.getInstance(elemento)
@@ -143,7 +161,12 @@
        * o evento final do Bootstrap. O fallback fecha só a janela pedida e
        * devolve o scroll; normalmente não faz nada porque hidden já chegou. */
       global.setTimeout(function () {
-        if (!elemento || !elemento.classList.contains("show")) {
+        var aindaOcupaATela = elemento && (
+          elemento.classList.contains("show")
+          || elemento.style.display === "block"
+          || elemento.getAttribute("aria-modal") === "true"
+        );
+        if (!aindaOcupaATela) {
           limparEstadoDoCorpo();
           return;
         }
@@ -172,19 +195,75 @@
 
     var filho = Painel.modal(filhoId);
     var pai = Painel.modal(paiId);
+    var chave = filhoId + "::" + paiId;
 
-    function mostrarFilho() {
-      filhoEl.addEventListener("hidden.bs.modal", function restaurarPai() {
-        global.setTimeout(function () { pai.show(); }, 0);
-      }, { once: true });
-      filho.show();
+    /* Um segundo clique, ou a mesma tela montada outra vez por navegação
+       suave, invalida a troca anterior. Sem isso o hidden antigo reabria
+       o pai depois que o novo filho já estava visível: os dois modais
+       ficavam empilhados, com duas sombras e scroll travado. */
+    Object.keys(trocasDeModal).forEach(function (existente) {
+      var anterior = trocasDeModal[existente];
+      if (anterior.filhoEl === filhoEl || anterior.paiEl === paiEl) {
+        cancelarTrocaDeModal(existente);
+      }
+    });
+
+    var troca = {
+      numero: ++numeroDaTrocaDeModal,
+      cancelada: false,
+      filhoEl: filhoEl,
+      paiEl: paiEl,
+      mostrarFilho: null,
+      restaurarPai: null
+    };
+    trocasDeModal[chave] = troca;
+
+    function finalizarTroca() {
+      if (trocasDeModal[chave] !== troca) return;
+      paiEl.removeEventListener("hidden.bs.modal", troca.mostrarFilho);
+      filhoEl.removeEventListener("hidden.bs.modal", troca.restaurarPai);
+      delete trocasDeModal[chave];
     }
 
-    if (paiEl.classList.contains("show")) {
-      paiEl.addEventListener("hidden.bs.modal", mostrarFilho, { once: true });
-      pai.hide();
+    troca.mostrarFilho = function () {
+      paiEl.removeEventListener("hidden.bs.modal", troca.mostrarFilho);
+      if (troca.cancelada || trocasDeModal[chave] !== troca) return;
+      if (!paiEl.isConnected || !filhoEl.isConnected) {
+        finalizarTroca();
+        return;
+      }
+      Painel.aplicarMascaras(filhoEl);
+      filho.show();
+    };
+
+    troca.restaurarPai = function () {
+      if (troca.cancelada || trocasDeModal[chave] !== troca) return;
+      finalizarTroca();
+      global.setTimeout(function () {
+        if (!paiEl.isConnected || !filhoEl.isConnected) return;
+        /* Nunca abra o pai por cima de outra janela que tenha sido aberta
+           enquanto o filho fechava. O próximo gesto do usuário decide a
+           janela ativa; um evento atrasado não decide por ele. */
+        var visivel = document.querySelector(".modal.show");
+        if (visivel && visivel !== paiEl) return;
+        if (!paiEl.classList.contains("show")) pai.show();
+      }, 0);
+    };
+
+    filhoEl.addEventListener("hidden.bs.modal", troca.restaurarPai);
+
+    /* Durante a animação de fechamento a classe `show` já saiu, mas a
+       janela ainda ocupa a tela (`display:block`). Esperar o hidden real
+       impede o filho de nascer por cima dela. Painel.fechar também tem o
+       fallback para WebViews que engolem o fim da animação. */
+    var paiAindaOcupaATela = paiEl.classList.contains("show")
+      || paiEl.style.display === "block"
+      || paiEl.getAttribute("aria-modal") === "true";
+    if (paiAindaOcupaATela) {
+      paiEl.addEventListener("hidden.bs.modal", troca.mostrarFilho);
+      Painel.fechar(paiId);
     } else {
-      mostrarFilho();
+      troca.mostrarFilho();
     }
   };
 

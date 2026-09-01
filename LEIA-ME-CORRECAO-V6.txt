@@ -1,0 +1,36 @@
+LAZER & SPORT — CORREÇÃO V6
+Cadastro de cliente dentro da O.S. e troca segura de modais
+
+BASE
+Arquivos preparados sobre a versão atual da branch principal do repositório.
+Este pacote é cumulativo: inclui também as correções da V5 para busca de
+peças/itens de manutenção e identificação automática do equipamento.
+
+O QUE MUDA
+1. A busca de cliente da nova O.S. tem o botão “Cadastrar agora”.
+2. Quando a busca não encontra alguém, também oferece “Cadastrar cliente”.
+3. O cadastro rápido aceita nome, contato e endereço sem sair da O.S.
+4. O cliente recém-criado volta selecionado e preenche os dados da O.S.
+5. Abrir peça/item fecha a O.S. apenas durante o cadastro-filho.
+6. Ao concluir ou cancelar, volta somente a O.S. que estava sendo montada.
+7. Eventos antigos de modal são cancelados; duas janelas não ficam empilhadas.
+8. Trocar de tela cancela restaurações pendentes de modal.
+
+COMO APLICAR
+1. Faça uma cópia da pasta atual do sistema.
+2. Extraia este ZIP na raiz do projeto, onde está manage.py.
+3. Autorize a substituição dos arquivos existentes.
+4. Execute: python manage.py check
+5. Reinicie o serviço web e os workers, se houver.
+6. No navegador, use Ctrl+F5 (ou limpe os dados do site no tablet/celular).
+
+BANCO DE DADOS
+Não há migration nova neste pacote.
+
+TESTE RÁPIDO
+1. Abra Nova Ordem de Serviço.
+2. Digite um nome inexistente em Cliente cadastrado.
+3. Clique em Cadastrar cliente, preencha telefone ou e-mail e salve.
+4. Confirme que a O.S. voltou sozinha e o cliente ficou selecionado.
+5. Em um item, cadastre uma nova peça, cancele e repita salvando.
+6. Em nenhum passo devem aparecer a O.S. e o cadastro-filho ao mesmo tempo.

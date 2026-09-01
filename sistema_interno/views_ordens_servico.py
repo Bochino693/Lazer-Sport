@@ -380,6 +380,7 @@ class OrdensServicoInnerView(
             "total_a_receber": financeiro["a_receber"],
             "total_concluido": financeiro["concluido"],
             "clientes_dados": clientes_dados,
+            "tipos_cliente": Cliente.Tipo.choices,
             "empresa_localizacao": origem,
             "manutencoes": (
                 Manutencao.objects
@@ -919,6 +920,28 @@ class OrdensServicoInnerView(
         peca = svc_pecas.cadastrar(request)
         return self.sucesso(
             request, svc_pecas.recado(peca), peca=svc_pecas.resumo(peca),
+        )
+
+    def acao_cliente_novo(self, request):
+        """Cadastra e devolve o cliente sem abandonar a O.S. em montagem.
+
+        O cadastro usa exatamente as regras da aba Clientes e do orçamento.
+        Assim o atalho da Produção não cria uma ficha incompleta nem uma
+        segunda versão do mesmo cliente.
+        """
+        if not capacidades(request.user)["ordens_servico_editar"]:
+            return self.erro(
+                request,
+                "Somente Produção ou Gestão cadastra cliente por esta O.S.",
+                status=403,
+            )
+
+        cliente = svc_clientes.salvar_cliente(request)
+        svc_clientes.salvar_endereco(request, cliente)
+        return self.sucesso(
+            request,
+            f"“{cliente.nome_cliente}” foi cadastrado e selecionado na O.S.",
+            cliente=svc_clientes.opcao_de_busca(cliente),
         )
 
     def acao_refazer(self, request):
