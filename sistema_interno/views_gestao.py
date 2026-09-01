@@ -85,6 +85,7 @@ from .models import (
     Setores,
 )
 from .exclusoes import forcando, pode_excluir, remover
+from . import pecas as svc_pecas
 from .permissoes import (
     capacidades,
     limitar_orcamentos,
@@ -1548,101 +1549,19 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
 
     # --------------------------- cadastrar peça sem sair do orçamento
     def acao_peca_nova(self, request):
-        """Cria a peça e a devolve para a linha atual -- FORA da vitrine.
+        """Cria a peça e devolve-a para a linha atual. Ver `pecas.cadastrar`.
 
-        O QUE NASCE AQUI NÃO VAI PARA O SITE.
-
-        Nascia. A peça era criada com `ativo=True`, que é o padrão da
-        tabela, e no mesmo segundo passava a ser anunciada na loja: sem
-        foto, sem descrição de verdade, com um nome digitado às pressas
-        no meio de uma negociação e um preço que valia para aquele
-        cliente. Ninguém escolheu publicar aquilo -- foi só o efeito
-        colateral de precisar cobrar um item.
-
-        Agora nasce desligada. Publicar continua sendo uma decisão, e ela
-        é tomada na tela de produtos, por quem cuida da vitrine, depois
-        de a peça ter foto e texto. Enquanto isso a peça já serve para o
-        que foi criada: entrar nesta linha e ser cobrada.
-
-        E `uso` decide o que ela é. Item de manutenção é o caso comum
-        daqui -- a bucha que só serve num modelo, a hora de solda, o
-        retentor que a loja não vende -- e ele nunca vai à vitrine, nem
-        se alguém o ativar. Peça da loja é a que um dia será anunciada, e
-        aí só falta o cadastro completo. As duas servem igualmente numa
-        linha de orçamento ou de O.S.: é essa a versatilidade.
+        A regra mora em `sistema_interno/pecas.py` porque a Ordem de
+        Serviço faz exatamente a mesma coisa: se "nasce fora da vitrine"
+        valesse só num dos dois caminhos, o outro voltaria a publicar
+        peça no site sem ninguém pedir. Aqui fica só quem pode.
         """
         if not capacidades(request.user)["orcamentos_editar_comercial"]:
             return self.erro(request, "Cadastro de item pertence ao Comercial.", status=403)
-        nome = texto(
-            request,
-            "nome",
-            obrigatorio=True,
-            rotulo="o nome da peça",
-            limite=120,
-        )
 
-        if PecasReposicao.objects.filter(nome__iexact=nome).exists():
-            raise ErroDeFormulario(
-                f"Já existe uma peça chamada “{nome}”. Procure na lista."
-            )
-
-        uso = (request.POST.get("uso") or "").strip()
-        if uso not in PecasReposicao.Uso.values:
-            # O caminho de dentro do documento é, quase sempre, o item
-            # que a loja não vende. Quem quer o outro escolhe.
-            uso = PecasReposicao.Uso.MANUTENCAO
-
-        preco_venda = decimal_br(
-            request.POST.get("preco_venda"),
-            "Preço de venda",
-            limite=Decimal("9999999.99"),
-        )
-        preco_fornecedor = decimal_br(
-            request.POST.get("preco_fornecedor"),
-            "Preço do fornecedor",
-            limite=Decimal("9999999.99"),
-        )
-
-        peca = PecasReposicao.objects.create(
-            nome=nome,
-            uso=uso,
-            ativo=False,
-            descricao_peca=texto(request, "descricao", limite=999) or nome,
-            preco_venda=preco_venda,
-            preco_fornecedor=preco_fornecedor,
-        )
-
-        categoria_id = (request.POST.get("categoria") or "").strip()
-        if categoria_id.isdigit():
-            categoria = CategoriaPeca.objects.filter(pk=categoria_id).first()
-            if categoria:
-                peca.categoria_peca.add(categoria)
-
-        de_manutencao = peca.uso == PecasReposicao.Uso.MANUTENCAO
-        recado = (
-            f"“{peca.nome}” entrou como item de manutenção e já pode ser "
-            f"usado aqui. Ele não vai para o site."
-            if de_manutencao else
-            f"“{peca.nome}” entrou nas peças de reposição e já pode ser "
-            f"usada aqui. Para anunciá-la no site, publique-a em Produtos."
-        )
-
+        peca = svc_pecas.cadastrar(request)
         return self.sucesso(
-            request,
-            recado,
-            peca={
-                "id": peca.id,
-                "nome": peca.nome,
-                "uso": peca.uso,
-                "grupo": (
-                    "Itens de manutenção" if de_manutencao
-                    else "Peças de reposição"
-                ),
-                "valor": (
-                    f"{peca.preco_venda:.2f}".replace(".", ",")
-                    if peca.preco_venda is not None else ""
-                ),
-            },
+            request, svc_pecas.recado(peca), peca=svc_pecas.resumo(peca),
         )
 
 

@@ -2284,6 +2284,61 @@ class OrdemServico(Prime):
     #: primeira. Ver `OrdensServicoInnerView.get`.
     ARQUIVADAS = (Status.SUBSTITUIDA,)
 
+    # ================================================================
+    # AS ETAPAS: O QUE SE SABE, E QUANDO
+    # ================================================================
+    # O FORMULÁRIO PEDIA TUDO NO PRIMEIRO SEGUNDO. Abrir uma O.S. de um
+    # chamado que acabou de entrar mostrava, lado a lado, "defeito
+    # relatado" e "serviço executado" -- e ninguém executou nada ainda.
+    # Também pedia diagnóstico técnico antes de o técnico ver o
+    # equipamento, e exigia ao menos um item antes de alguém saber que
+    # peça vai ser usada.
+    #
+    # O efeito não é só feio. Campo que aparece antes da hora ensina duas
+    # coisas erradas: que ele é opcional (porque fica em branco toda vez)
+    # e que o formulário não sabe o que está fazendo. E quem preenche
+    # alguma coisa ali para "não deixar vazio" está inventando: um
+    # diagnóstico escrito antes da visita é um palpite que vai para o
+    # documento do cliente com cara de laudo.
+    #
+    # Uma O.S. tem quatro momentos, e cada informação nasce em um deles.
+    # A situação diz em qual a O.S. está -- é a mesma regra que já
+    # governa as ações da lista, agora governando também os campos.
+    class Etapa(models.TextChoices):
+        ABERTURA = "abertura", "Abertura do chamado"
+        AGENDA = "agenda", "Agendamento"
+        EXECUCAO = "execucao", "Execução"
+        ENTREGA = "entrega", "Entrega e cobrança"
+
+    #: Ordem em que as etapas acontecem. Uma etapa "já chegou" quando a
+    #: etapa da situação atual é ela ou uma posterior.
+    SEQUENCIA_DE_ETAPAS = (
+        Etapa.ABERTURA,
+        Etapa.AGENDA,
+        Etapa.EXECUCAO,
+        Etapa.ENTREGA,
+    )
+
+    #: Até onde cada situação chegou.
+    #
+    #: CANCELADA fica em EXECUÇÃO, e não em ENTREGA: cancelar não entrega
+    #: nada, mas o motivo do cancelamento quase sempre é o que se
+    #: descobriu ao olhar o equipamento -- e esse texto é o diagnóstico.
+    #:
+    #: SUBSTITUÍDA fica em ENTREGA porque ela é histórico congelado: tudo
+    #: o que ela chegou a ter precisa continuar visível ao ser aberta.
+    ETAPA_DA_SITUACAO = {
+        Status.RASCUNHO: Etapa.ABERTURA,
+        Status.AGUARDANDO_RESPOSTA: Etapa.ABERTURA,
+        Status.ABERTA: Etapa.ABERTURA,
+        Status.AGENDADA: Etapa.AGENDA,
+        Status.EM_EXECUCAO: Etapa.EXECUCAO,
+        Status.AGUARDANDO_PECA: Etapa.EXECUCAO,
+        Status.CANCELADA: Etapa.EXECUCAO,
+        Status.CONCLUIDA: Etapa.ENTREGA,
+        Status.SUBSTITUIDA: Etapa.ENTREGA,
+    }
+
     cliente = models.ForeignKey(
         Cliente,
         on_delete=models.SET_NULL,
@@ -2488,6 +2543,30 @@ class OrdemServico(Prime):
     def arquivada(self):
         """Versão congelada: existe no histórico, e não na fila de trabalho."""
         return self.status in self.ARQUIVADAS
+
+    @property
+    def etapa(self):
+        """Até onde esta O.S. chegou. Ver `ETAPA_DA_SITUACAO`."""
+        return self.ETAPA_DA_SITUACAO.get(self.status, self.Etapa.ABERTURA)
+
+    @classmethod
+    def etapa_alcancada(cls, situacao, etapa):
+        """A O.S. nesta situação já passou por esta etapa?
+
+        É o que decide se um bloco de campos aparece. `abertura` sempre
+        aparece; `execucao` só a partir de "Em execução".
+        """
+        atual = cls.ETAPA_DA_SITUACAO.get(situacao, cls.Etapa.ABERTURA)
+        sequencia = list(cls.SEQUENCIA_DE_ETAPAS)
+        try:
+            return sequencia.index(atual) >= sequencia.index(etapa)
+        except ValueError:
+            return True
+
+    @property
+    def registra_execucao(self):
+        """Já dá para falar de diagnóstico e de peça consumida?"""
+        return self.etapa_alcancada(self.status, self.Etapa.EXECUCAO)
 
     @property
     def pode_editar(self):

@@ -177,6 +177,9 @@ class AgendamentoDaOrdemDeServicoTests(TestCase):
         resposta = self.salvar(
             status=OrdemServico.Status.CONCLUIDA,
             agendada_para=self.momento(-1),
+            # Concluir exige dizer o que foi feito -- e uma O.S. que o
+            # técnico executou ontem obviamente tem essa resposta.
+            servico_executado="Troca da lona e reaperto das molas.",
         )
 
         self.assertEqual(resposta.status_code, 200)

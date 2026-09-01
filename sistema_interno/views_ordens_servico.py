@@ -33,7 +33,7 @@ from core.email_utils import (
     responder_para,
     smtp_configurado,
 )
-from core.models import Manutencao, PecasReposicao
+from core.models import CategoriaPeca, Manutencao, PecasReposicao
 
 from .busca_local import montar_indice
 from . import clientes as svc_clientes
@@ -45,6 +45,7 @@ from .models import (
     OrdemServico,
 )
 from .exclusoes import forcando, pode_excluir, remover
+from . import pecas as svc_pecas
 from .permissoes import capacidades
 from .rotas import dados_rota, origem_empresa, texto_endereco
 from .utils import (
@@ -387,7 +388,19 @@ class OrdensServicoInnerView(
                 .order_by("criado_em")[:100]
             ),
             "tecnicos": self._tecnicos(),
+            "categorias_peca": CategoriaPeca.objects.order_by("nome_categoria_peca"),
             "tipos": OrdemServico.Tipo.choices,
+            # Que etapa cada situação já alcançou. É o que faz o
+            # formulário revelar o bloco de execução só quando existe
+            # execução para relatar. Ver `OrdemServico.Etapa`.
+            "etapas_por_situacao": {
+                valor: [
+                    etapa
+                    for etapa in OrdemServico.SEQUENCIA_DE_ETAPAS
+                    if OrdemServico.etapa_alcancada(valor, etapa)
+                ]
+                for valor, _ in OrdemServico.Status.choices
+            },
             # SUBSTITUÍDA NÃO É UMA SITUAÇÃO QUE SE ESCOLHE.
             #
             # Ela é o efeito de refazer, e só. Oferecê-la no seletor
@@ -656,6 +669,23 @@ class OrdensServicoInnerView(
             )
         if prioridade not in OrdemServico.Prioridade.values:
             raise ErroDeFormulario("Escolha uma prioridade válida.")
+        # NÃO SE CONCLUI SEM DIZER O QUE FOI FEITO.
+        #
+        # É a contrapartida de não perguntar cedo demais. "Serviço
+        # executado" saiu da abertura porque lá ninguém sabe a resposta;
+        # na conclusão, ele é a resposta -- é o que o cliente lê para
+        # entender pelo que está pagando, e o que a garantia cobre.
+        # Concluída em branco vira, meses depois, uma O.S. que ninguém
+        # sabe explicar.
+        if (
+            status == OrdemServico.Status.CONCLUIDA
+            and not texto(request, "servico_executado")
+        ):
+            raise ErroDeFormulario(
+                "Para concluir, escreva o serviço executado: é o que o "
+                "cliente lê para saber pelo que está pagando."
+            )
+
         ordem.tipo = tipo
         ordem.status = status
         ordem.prioridade = prioridade
@@ -683,8 +713,20 @@ class OrdensServicoInnerView(
             linhas = json.loads(bruto or "[]")
         except (TypeError, ValueError):
             raise ErroDeFormulario("Não consegui ler os itens da O.S.")
-        if not isinstance(linhas, list) or not linhas:
-            raise ErroDeFormulario("Adicione ao menos um serviço, peça ou material.")
+        # ITEM NÃO É EXIGIDO PARA SALVAR.
+        #
+        # Era: toda O.S. precisava de ao menos uma linha antes de gravar.
+        # Mas um chamado que acabou de entrar não tem item nenhum -- não
+        # se sabe que peça vai ser usada antes de o técnico abrir o
+        # equipamento. A exigência obrigava quem abria a inventar uma
+        # linha de R$ 0,00 só para conseguir salvar, e essa linha
+        # inventada ia junto para o documento do cliente.
+        #
+        # Há também o serviço em garantia, que se conclui legitimamente
+        # sem cobrar nada. Uma O.S. sem item é um fato do trabalho, e não
+        # um erro de preenchimento.
+        if not isinstance(linhas, list):
+            raise ErroDeFormulario("Não consegui ler os itens da O.S.")
         if len(linhas) > 80:
             raise ErroDeFormulario("Uma O.S. aceita no máximo 80 itens.")
 
@@ -694,8 +736,26 @@ class OrdensServicoInnerView(
             descricao = (linha.get("descricao") or "").strip()
             if tipo not in ItemOrdemServico.Tipo.values:
                 raise ErroDeFormulario(f"Item {indice}: tipo inválido.")
+
+            # A DESCRIÇÃO SÓ É OBRIGATÓRIA ONDE ELA DIZ ALGO NOVO.
+            #
+            # "Serviço / mão de obra" já é a descrição de si mesmo: pedir
+            # que alguém escreva "mão de obra" na linha do tipo "mão de
+            # obra" é pedir para repetir o rótulo. O mesmo vale para
+            # deslocamento. Nesses casos o que falta saber é o valor, e
+            # é só isso que a linha pergunta.
+            #
+            # Peça é outra história: "peça" não identifica peça nenhuma.
+            # Ali a descrição é o que vai no documento e o que o cliente
+            # confere ao receber, então continua obrigatória -- e vem
+            # pronta quando a linha sai do catálogo.
             if not descricao:
-                raise ErroDeFormulario(f"Item {indice}: informe a descrição.")
+                if tipo == ItemOrdemServico.Tipo.PECA:
+                    raise ErroDeFormulario(
+                        f"Item {indice}: diga qual peça ou material. "
+                        f"Escolha no catálogo ou escreva o nome."
+                    )
+                descricao = ItemOrdemServico.Tipo(tipo).label
 
             # O vínculo com o catálogo é opcional: "recolar a emenda da
             # lona" é o serviço daquele dia e não tem cadastro nenhum.
@@ -795,6 +855,29 @@ class OrdensServicoInnerView(
         if arrastados:
             recado += f" Levou junto: {', '.join(arrastados)}."
         return self.sucesso(request, recado)
+
+    def acao_peca_nova(self, request):
+        """Cadastrar a peça sem largar a O.S. pela metade.
+
+        O técnico está com o equipamento aberto na frente dele e descobre
+        que precisa cobrar um retentor que ninguém cadastrou. Mandá-lo
+        abrir a tela de produtos, cadastrar e voltar significa perder a
+        O.S. -- e, na prática, significa escrever "retentor" na descrição
+        e seguir, o que deixa a peça fora de qualquer controle de
+        estoque e de preço.
+
+        Mesma regra do orçamento, mesmo código: ver `pecas.cadastrar`. O
+        que muda é quem pode -- ali é do Comercial, aqui da Produção.
+        """
+        if not capacidades(request.user)["ordens_servico_editar"]:
+            return self.erro(
+                request, "Somente Produção ou Gestão cadastra item aqui.", status=403,
+            )
+
+        peca = svc_pecas.cadastrar(request)
+        return self.sucesso(
+            request, svc_pecas.recado(peca), peca=svc_pecas.resumo(peca),
+        )
 
     def acao_refazer(self, request):
         """Cria a versão seguinte e congela esta -- mesmo esquema da proposta.
@@ -934,8 +1017,15 @@ class OrdensServicoInnerView(
             OrdemServico.objects.prefetch_related("itens"),
             pk=request.POST.get("id"),
         )
-        if not ordem.itens.exists():
-            raise ErroDeFormulario("Adicione ao menos um item antes de enviar.")
+        # SEM ITEM TAMBÉM SE ENVIA.
+        #
+        # A regra antiga exigia ao menos uma linha para mandar a O.S. ao
+        # cliente. Isso barrava dois casos legítimos: o chamado agendado
+        # que se manda para o cliente confirmar dia e hora (ainda não há
+        # peça nenhuma), e o atendimento em garantia, que se conclui sem
+        # cobrar. O documento desses dois diz o que precisa dizer --
+        # equipamento, defeito, agenda, o que foi feito -- e o total sai
+        # zerado, que é a informação correta.
         if not ordem.pode_enviar:
             # AS AÇÕES SÃO EM CIMA DA SITUAÇÃO. Mandar ao cliente a O.S.
             # de um serviço cancelado, ou a versão que já foi trocada por

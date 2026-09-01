@@ -184,14 +184,40 @@
       <div class="col-md-5"><label class="form-label" for="osEmail">E-mail</label><input class="form-control" id="osEmail" name="email_cliente" type="email" maxlength="254"></div>
       <div class="col-12"><label class="form-label" for="osEndereco">Endereço do serviço</label><input class="form-control" id="osEndereco" name="endereco_servico" maxlength="320"></div>
 
-      <div class="col-12"><div class="ls-budget-block-title financeiro"><i class="bi bi-wrench-adjustable"></i><span><strong>Atendimento técnico</strong><small>Problema, diagnóstico, execução, técnico e garantia.</small></span></div></div>
-      <div class="col-md-2"><label class="form-label" for="osTipo">Tipo</label><select class="form-select" id="osTipo" name="tipo">{% for v,r in tipos %}<option value="{{ v }}">{{ r }}</option>{% endfor %}</select></div>
-      <div class="col-md-3"><label class="form-label" for="osStatus">Situação</label><select class="form-select" id="osStatus" name="status">{% for v,r in status_opcoes %}<option value="{{ v }}">{{ r }}</option>{% endfor %}</select></div>
+      {% comment %}
+        OS CAMPOS SEGUEM A SITUAÇÃO, COMO AS AÇÕES JÁ SEGUIAM.
+
+        Abrir uma O.S. de um chamado recém-entrado mostrava, lado a lado,
+        "defeito relatado" e "serviço executado" -- e ninguém executou
+        nada ainda. Pedia diagnóstico antes de o técnico ver o
+        equipamento, e exigia um item antes de alguém saber que peça
+        seria usada.
+
+        Campo que aparece antes da hora ensina duas coisas erradas: que
+        ele é opcional, porque fica em branco toda vez, e que o
+        formulário não sabe o que está fazendo. Pior: quem escreve algo
+        ali para "não deixar vazio" está inventando -- e um diagnóstico
+        escrito antes da visita vai para o documento do cliente com cara
+        de laudo.
+
+        Agora cada bloco pertence a uma etapa, e a etapa vem da situação
+        escolhida ali em cima. Quem registra um atendimento que já
+        aconteceu escolhe "Concluída" e vê tudo; quem abre um chamado vê
+        o chamado. Ver `OrdemServico.Etapa`.
+      {% endcomment %}
+      <div class="col-12"><div class="ls-budget-block-title financeiro"><i class="bi bi-wrench-adjustable"></i><span><strong>O chamado</strong><small>O que o cliente pediu, e em que equipamento. É o que se sabe ao abrir.</small></span></div></div>
+      <div class="col-md-3"><label class="form-label" for="osTipo">Tipo</label><select class="form-select" id="osTipo" name="tipo">{% for v,r in tipos %}<option value="{{ v }}">{{ r }}</option>{% endfor %}</select></div>
+      <div class="col-md-4"><label class="form-label" for="osStatus">Situação</label><select class="form-select" id="osStatus" name="status">{% for v,r in status_opcoes %}<option value="{{ v }}">{{ r }}</option>{% endfor %}</select><span class="form-text">Ela decide o que a O.S. já tem para contar.</span></div>
       <div class="col-md-2"><label class="form-label" for="osPrioridade">Prioridade</label><select class="form-select" id="osPrioridade" name="prioridade">{% for v,r in prioridades %}<option value="{{ v }}">{{ r }}</option>{% endfor %}</select></div>
-      <div class="col-md-5"><label class="form-label" for="osTecnico">Técnico</label><select class="form-select" id="osTecnico" name="tecnico"><option value="">A definir</option>{% for t in tecnicos %}<option value="{{ t.id }}">{{ t.get_full_name|default:t.username }}</option>{% endfor %}</select></div>
-      <div class="col-md-8"><label class="form-label" for="osEquipamento">Equipamento</label><input class="form-control" id="osEquipamento" name="equipamento" maxlength="180" required></div>
-      <div class="col-md-4"><label class="form-label" for="osSerie">Número de série / patrimônio</label><input class="form-control" id="osSerie" name="numero_serie" maxlength="80"></div>
-      <div class="col-md-6">
+      <div class="col-md-3"><label class="form-label" for="osSerie">Nº de série / patrimônio</label><input class="form-control" id="osSerie" name="numero_serie" maxlength="80"></div>
+      <div class="col-12"><label class="form-label" for="osEquipamento">Equipamento</label><input class="form-control" id="osEquipamento" name="equipamento" maxlength="180" required></div>
+      <div class="col-12"><label class="form-label" for="osDefeito">Defeito relatado / solicitação</label><textarea class="form-control" id="osDefeito" name="defeito_relatado" rows="3" placeholder="O que o cliente contou. Com as palavras dele, se possível."></textarea></div>
+
+      <div class="col-12" data-etapa="agenda">
+        <div class="ls-budget-block-title comercial"><i class="bi bi-calendar2-check"></i><span><strong>Agendamento</strong><small>Quem vai, e quando.</small></span></div>
+      </div>
+      <div class="col-md-6" data-etapa="agenda"><label class="form-label" for="osTecnico">Técnico</label><select class="form-select" id="osTecnico" name="tecnico"><option value="">A definir</option>{% for t in tecnicos %}<option value="{{ t.id }}">{{ t.get_full_name|default:t.username }}</option>{% endfor %}</select></div>
+      <div class="col-md-6" data-etapa="agenda">
         <label class="form-label" for="osAgenda">Agendada para</label>
         {# Agenda no passado só é aceita em O.S. já em execução ou concluída; ver `_agendar` na view. #}
         <input class="form-control" id="osAgenda" name="agendada_para" type="datetime-local" step="300"
@@ -204,7 +230,17 @@
         </div>
         <span class="form-text" id="osAgendaFuso"></span>
       </div>
-      <div class="col-md-6">
+
+      <div class="col-12" data-etapa="execucao">
+        <div class="ls-budget-block-title financeiro"><i class="bi bi-search"></i><span><strong>O que o técnico encontrou</strong><small>Só existe depois de alguém abrir o equipamento.</small></span></div>
+      </div>
+      <div class="col-12" data-etapa="execucao"><label class="form-label" for="osDiagnostico">Diagnóstico técnico</label><textarea class="form-control" id="osDiagnostico" name="diagnostico" rows="3" placeholder="A causa, e não o sintoma. Ex.: emenda da lona vencida por fadiga."></textarea></div>
+
+      <div class="col-12" data-etapa="entrega">
+        <div class="ls-budget-block-title comercial"><i class="bi bi-check2-square"></i><span><strong>O que foi feito</strong><small>O cliente lê isto para saber pelo que está pagando.</small></span></div>
+      </div>
+      <div class="col-12" data-etapa="entrega"><label class="form-label" for="osExecutado">Serviço executado</label><textarea class="form-control" id="osExecutado" name="servico_executado" rows="3" placeholder="O que foi trocado, ajustado ou substituído."></textarea></div>
+      <div class="col-md-6" data-etapa="entrega">
         <label class="form-label" for="osGarantia">Garantia até</label>
         <input class="form-control" id="osGarantia" name="garantia_ate" type="date" data-nao-passado>
         <div class="ls-date-shortcuts">
@@ -214,10 +250,15 @@
           <button type="button" class="ls-chip ls-chip-zerar" data-garantia-limpar>Sem garantia</button>
         </div>
       </div>
-      <div class="col-md-6"><label class="form-label" for="osDefeito">Defeito relatado / solicitação</label><textarea class="form-control" id="osDefeito" name="defeito_relatado" rows="3"></textarea></div>
-      <div class="col-md-6"><label class="form-label" for="osDiagnostico">Diagnóstico técnico</label><textarea class="form-control" id="osDiagnostico" name="diagnostico" rows="3"></textarea></div>
-      <div class="col-12"><label class="form-label" for="osExecutado">Serviço executado</label><textarea class="form-control" id="osExecutado" name="servico_executado" rows="3"></textarea></div>
-    </div>
+
+      {% comment %}
+        O aviso que substitui os blocos escondidos. Sem ele, quem conhecia
+        a tela antiga procuraria "serviço executado" e concluiria que a
+        função sumiu.
+      {% endcomment %}
+      <div class="col-12">
+        <p class="ls-etapa-aviso" id="osEtapaAviso" hidden></p>
+      </div>
     <hr class="my-4">
     {% comment %}
       A LINHA PODE VIR DO CATÁLOGO -- OU DE LUGAR NENHUM.
@@ -247,7 +288,7 @@
       <div><span>Desconto</span><strong id="osResumoDesconto">− R$ 0,00</strong></div>
       <div class="ls-orcamento-final"><span>Total da O.S.</span><strong id="osTotal">R$ 0,00</strong></div>
     </div>
-    <div class="row g-3 mt-1"><div class="col-md-6"><label class="form-label" for="osFormaPagamento">Forma de pagamento</label><input class="form-control" id="osFormaPagamento" name="forma_pagamento" maxlength="120" placeholder="Ex.: Pix"></div><div class="col-md-6"><label class="form-label" for="osObservacoes">Observações e recomendações</label><textarea class="form-control" id="osObservacoes" name="observacoes" rows="2"></textarea></div></div>
+    <div class="row g-3 mt-1"><div class="col-md-6"><label class="form-label" for="osFormaPagamento">Forma de pagamento</label><input class="form-control" id="osFormaPagamento" name="forma_pagamento" maxlength="120" placeholder="Ex.: Pix"></div><div class="col-md-6"><label class="form-label" for="osObservacoes">Observações e recomendações</label><textarea class="form-control" id="osObservacoes" name="observacoes" rows="2" placeholder="O que o cliente precisa saber daqui para frente."></textarea></div></div>
   </div>
   <div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Fechar</button><button class="btn btn-success" type="submit" id="salvarOS">Salvar O.S.</button></div>
 </form></div></div>
@@ -332,6 +373,84 @@
 </div><div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancelar</button><button class="btn btn-success" type="submit">Atualizar pagamento</button></div>
 </form></div></div>
 
+{% comment %}
+  CADASTRAR A PEÇA SEM LARGAR A O.S. PELA METADE.
+
+  O técnico está com o equipamento aberto e descobre que precisa cobrar
+  um retentor que ninguém cadastrou. Mandá-lo abrir a tela de produtos e
+  voltar significa perder a O.S. -- e, na prática, significa escrever
+  "retentor" na descrição e seguir, o que deixa a peça fora de qualquer
+  controle de estoque e de preço.
+
+  Mesma janela e mesma regra do orçamento: o que nasce aqui NÃO vai para
+  a vitrine do site.
+{% endcomment %}
+<div class="modal fade" id="modalPecaOS" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <form class="modal-content" id="formPecaOS" method="post" action="{% url 'ordens_servico_inner' %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="peca_nova">
+      <div class="modal-header">
+        <div><span class="ls-modal-kicker">Peças e itens</span><h5 class="modal-title">Cadastrar e usar nesta O.S.</h5></div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-danger d-none" id="pecaOSErro"></div>
+        <p class="text-muted small mb-2">
+          Entra nesta linha na hora, sem perder o que já foi digitado. Ela
+          <strong>não vai para o site</strong>: publicar continua sendo uma
+          decisão da tela de Produtos.
+        </p>
+        <div class="ls-cartoes-escolha mb-1" role="radiogroup" aria-label="Para que serve esta peça">
+          <label class="ls-cartao-escolha">
+            <input type="radio" name="uso" value="manutencao" checked>
+            <span><strong>Item de manutenção</strong><small>Serve a O.S. e orçamentos. Nunca entra na vitrine.</small></span>
+          </label>
+          <label class="ls-cartao-escolha">
+            <input type="radio" name="uso" value="loja">
+            <span><strong>Peça da loja</strong><small>Um dia será anunciada. Publique-a em Produtos quando tiver foto.</small></span>
+          </label>
+        </div>
+        <div class="row g-3">
+          <div class="col-12 col-md-7">
+            <label class="form-label" for="pecaOSNome">Nome da peça</label>
+            <input class="form-control" id="pecaOSNome" name="nome" data-rotulo="nome da peça"
+                   maxlength="120" required placeholder="Ex.: Retentor do motor 2019">
+          </div>
+          <div class="col-12 col-md-5">
+            <label class="form-label" for="pecaOSCategoria">Categoria</label>
+            <select class="form-select" id="pecaOSCategoria" name="categoria">
+              <option value="">Sem categoria</option>
+              {% for c in categorias_peca %}<option value="{{ c.id }}">{{ c.nome_categoria_peca }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="col-12 col-sm-6">
+            <label class="form-label" for="pecaOSVenda">Preço de venda</label>
+            <div class="input-group"><span class="input-group-text">R$</span>
+              <input class="form-control" id="pecaOSVenda" name="preco_venda" inputmode="decimal"
+                     data-mascara="moeda" autocomplete="off" placeholder="0,00"></div>
+          </div>
+          <div class="col-12 col-sm-6">
+            <label class="form-label" for="pecaOSFornecedor">Custo do fornecedor</label>
+            <div class="input-group"><span class="input-group-text">R$</span>
+              <input class="form-control" id="pecaOSFornecedor" name="preco_fornecedor" inputmode="decimal"
+                     data-mascara="moeda" autocomplete="off" placeholder="0,00"></div>
+          </div>
+          <div class="col-12">
+            <label class="form-label" for="pecaOSDescricao">Descrição</label>
+            <textarea class="form-control" id="pecaOSDescricao" name="descricao" rows="2"
+                      placeholder="Aplicação, medidas, compatibilidade"></textarea>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-success">Cadastrar e usar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <!-- Refazer: a versão seguinte, com o motivo escrito. -->
 <div class="modal fade" id="modalRefazerOS" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
@@ -377,6 +496,7 @@
 {{ clientes_dados|json_script:"clientesOSDados" }}
 {{ ordens_dados|json_script:"ordensServicoDados" }}
 {{ empresa_localizacao|json_script:"empresaLocalizacaoDados" }}
+{{ etapas_por_situacao|json_script:"etapasPorSituacao" }}
 {% endblock %}
 
 {% block scripts %}
@@ -386,6 +506,7 @@ LSTela.pronto(function () {
   var ordens = JSON.parse(document.getElementById("ordensServicoDados").textContent || "[]");
   var clientes = JSON.parse(document.getElementById("clientesOSDados").textContent || "[]");
   var empresa = JSON.parse(document.getElementById("empresaLocalizacaoDados").textContent || "{}");
+  var etapasPorSituacao = JSON.parse(document.getElementById("etapasPorSituacao").textContent || "{}");
   var corpo = document.getElementById("itensOSCorpo");
   var tiposItem = [{% for v,r in item_tipos %}{value:"{{ v }}", label:"{{ r|escapejs }}"},{% endfor %}];
 
@@ -500,6 +621,11 @@ LSTela.pronto(function () {
      ------------------------------------------------------------------ */
   var endpointItensOS="{% url 'buscar_itens_ordem_servico' %}";
   var cacheItensOS=new Map();
+  /* Cada linha tem a sua busca, mas o catálogo é o mesmo para todas:
+     cadastrar uma peça precisa alcançar as linhas já abertas. */
+  var buscasDeItemOS=[];
+  var opcoesNovasOS=[];
+  var linhaDoCadastro=null;
   function buscarItensOS(termo){
     var chave=LSBusca.semAcento(termo||"");
     if(cacheItensOS.has(chave))return cacheItensOS.get(chave);
@@ -512,7 +638,10 @@ LSTela.pronto(function () {
         if(!resposta.ok||!json||json.status!=="sucesso"){
           throw new Error("Não foi possível buscar as peças.");
         }
-        return json.opcoes||[];
+        /* As peças cadastradas agora ainda não estão no índice do
+           servidor; elas entram na frente do resultado até a próxima
+           busca ir buscar tudo de novo. */
+        return opcoesNovasOS.concat(json.opcoes||[]);
       });
     }).catch(function(erro){cacheItensOS.delete(chave);throw erro;});
     cacheItensOS.set(chave,pedido);
@@ -531,32 +660,105 @@ LSTela.pronto(function () {
     recalcular();
   }
 
-  function linha(item){item=item||{tipo:"servico",descricao:"",quantidade:"1,00",valor_unitario:"0,00"};var tr=document.createElement("tr");var opcoes=tiposItem.map(function(t){return '<option value="'+t.value+'"'+(t.value===item.tipo?' selected':'')+'>'+t.label+'</option>';}).join("");tr.innerHTML='<td data-rotulo="Tipo"><select class="form-select form-select-sm" data-tipo>'+opcoes+'</select></td><td data-rotulo="Peça ou item" data-catalogo></td><td data-rotulo="Descrição"><input class="form-control form-control-sm" data-descricao maxlength="200" placeholder="O que sai impresso na O.S." value="'+String(item.descricao||"").replace(/&/g,"&amp;").replace(/"/g,"&quot;")+'"></td><td data-rotulo="Quantidade"><input class="form-control form-control-sm text-end" data-qtd inputmode="decimal" value="'+item.quantidade+'"></td><td data-rotulo="Valor unit."><input class="form-control form-control-sm text-end" data-valor inputmode="decimal" value="'+item.valor_unitario+'"></td><td class="text-end" data-rotulo="Subtotal" data-subtotal>R$ 0,00</td><td><button class="btn btn-sm btn-outline-danger" type="button" data-remover><i class="bi bi-x-lg"></i></button></td>';
+  /* O QUE CADA TIPO DE LINHA PRECISA SABER É DIFERENTE.
 
-    var busca=LSBusca.criar({
+     "Serviço / mão de obra" já é a descrição de si mesmo -- pedir que
+     alguém escreva "mão de obra" na linha do tipo "mão de obra" é pedir
+     para repetir o rótulo, e abrir um catálogo ali é oferecer uma busca
+     que nunca vai achar nada, porque mão de obra não está em catálogo
+     nenhum. O mesmo vale para deslocamento e para "outro": o que falta
+     saber é o valor.
+
+     Peça é o oposto: "peça" não identifica peça nenhuma. Ali a descrição
+     é o que vai no documento e o que o cliente confere ao receber -- e é
+     onde o catálogo serve, trazendo nome e preço prontos, ou deixando
+     cadastrar na hora o que ainda não existe.
+
+     Por isso a coluna do catálogo aparece e some conforme o tipo, em vez
+     de ficar ali vazia em três de quatro linhas. */
+  var TIPOS_COM_CATALOGO = ["peca"];
+
+  function ajustarLinhaPorTipo(tr){
+    var tipo = tr.querySelector("[data-tipo]").value;
+    var comCatalogo = TIPOS_COM_CATALOGO.indexOf(tipo) >= 0;
+    var celula = tr.querySelector("[data-catalogo]");
+    var descricao = tr.querySelector("[data-descricao]");
+
+    celula.hidden = !comCatalogo;
+    if (!comCatalogo && tr.buscaItem) tr.buscaItem.definirValor("", false);
+
+    /* Sem catálogo, a descrição vira opcional e o campo diz isso: em
+       branco, o servidor grava o próprio rótulo do tipo. */
+    descricao.placeholder = comCatalogo
+      ? "Qual peça ou material"
+      : "Opcional — detalhe o que foi feito";
+  }
+
+  function linha(item){
+    item = item || {tipo:"servico", descricao:"", quantidade:"1,00", valor_unitario:"0,00"};
+    var tr = document.createElement("tr");
+    var opcoes = tiposItem.map(function(t){
+      return '<option value="'+t.value+'"'+(t.value===item.tipo?' selected':'')+'>'+t.label+'</option>';
+    }).join("");
+    tr.innerHTML =
+      '<td data-rotulo="Tipo"><select class="form-select form-select-sm" data-tipo>'+opcoes+'</select></td>' +
+      '<td data-rotulo="Peça ou item" data-catalogo></td>' +
+      '<td data-rotulo="Descrição"><input class="form-control form-control-sm" data-descricao maxlength="200" value="'+String(item.descricao||"").replace(/&/g,"&amp;").replace(/"/g,"&quot;")+'"></td>' +
+      '<td data-rotulo="Quantidade"><input class="form-control form-control-sm text-end" data-qtd inputmode="decimal" value="'+item.quantidade+'"></td>' +
+      '<td data-rotulo="Valor unit."><input class="form-control form-control-sm text-end" data-valor inputmode="decimal" value="'+item.valor_unitario+'"></td>' +
+      '<td class="text-end" data-rotulo="Subtotal" data-subtotal>R$ 0,00</td>' +
+      '<td><button class="btn btn-sm btn-outline-danger" type="button" data-remover aria-label="Remover linha"><i class="bi bi-x-lg"></i></button></td>';
+
+    var busca = LSBusca.criar({
       placeholder:"Buscar peça ou item...",
       rotuloAcessivel:"Peça ou item de manutenção",
       classe:"ls-busca-item-orcamento",
       exibirImagem:true,
       minimoBusca:2,
       carregar:buscarItensOS,
-      aoEscolher:function(opcao){preencherLinhaOS(tr,opcao);}
+      criar:{
+        rotulo:"Cadastrar peça ou item",
+        aoClicar:function(digitado){ abrirCadastroDePecaOS(tr, digitado); }
+      },
+      aoEscolher:function(opcao){ preencherLinhaOS(tr, opcao); }
     });
     tr.querySelector("[data-catalogo]").appendChild(busca.elemento);
-    tr.buscaItem=busca;
+    tr.buscaItem = busca;
+    buscasDeItemOS.push(busca);
     /* `false` no segundo argumento: repor o vínculo que já estava salvo
        não é escolha nova e não pode reescrever descrição nem preço. */
-    if(item.opcao)busca.adicionarOpcao(item.opcao,false);
-    if(item.peca)busca.definirValor("r:"+item.peca,false);
+    if(item.opcao) busca.adicionarOpcao(item.opcao, false);
+    if(item.peca) busca.definirValor("r:"+item.peca, false);
 
-    tr.addEventListener("input",recalcular);
-    tr.querySelector("[data-remover]").addEventListener("click",function(){
+    tr.addEventListener("input", recalcular);
+    tr.querySelector("[data-tipo]").addEventListener("change", function(){ ajustarLinhaPorTipo(tr); });
+    tr.querySelector("[data-remover]").addEventListener("click", function(){
       /* Fecha a busca antes de tirar a linha: com o painel aberto ele
          está no <body>, e remover só o <tr> deixaria a lista órfã. */
-      if(tr.buscaItem&&tr.buscaItem.destruir)tr.buscaItem.destruir();
-      tr.remove();if(!corpo.children.length)linha();recalcular();
+      if(tr.buscaItem && tr.buscaItem.destruir) tr.buscaItem.destruir();
+      var i = buscasDeItemOS.indexOf(tr.buscaItem);
+      if(i >= 0) buscasDeItemOS.splice(i, 1);
+      tr.remove(); recalcular();
     });
-    corpo.appendChild(tr);recalcular();}
+    corpo.appendChild(tr);
+    ajustarLinhaPorTipo(tr);
+    recalcular();}
+  /* O QUE UMA O.S. NOVA JÁ SABE DE SI.
+
+     Abrir a janela zerava TODO campo, inclusive os três seletores -- e
+     `value=""` num `<select>` não casa com opção nenhuma, então Tipo,
+     Situação e Prioridade abriam em branco. Visualmente parecia um campo
+     não preenchido; na prática, salvar levava um "escolha um tipo
+     válido" sobre algo que ninguém tinha desmarcado.
+
+     Estes são os mesmos padrões que o modelo usa quando a O.S. nasce
+     pelo banco, e não uma segunda opinião da tela. */
+  var PADRAO_NOVA = {
+    tipo: "manutencao",
+    status: "rascunho",
+    prioridade: "normal"
+  };
+
   /* Limpar a tabela pela raiz deixaria as buscas órfãs: com o modal
      aberto o painel de cada uma mora no <body>, e apagar só o <tbody>
      tira a linha da tela mas não a lista suspensa. */
@@ -565,8 +767,9 @@ LSTela.pronto(function () {
       if(l.buscaItem&&l.buscaItem.destruir)l.buscaItem.destruir();
     });
     corpo.innerHTML="";
+    buscasDeItemOS.length = 0;
   }
-  function abrir(id){var o=id?achar(id):null;document.getElementById("formOS").reset();buscaClienteOS.definirValor("",false);resumoCliente(null);limparItens();valor("osId",o?o.id:"");document.getElementById("osTitulo").textContent=o?"Editar "+("OS-"+String(o.id).padStart(5,"0")):"Nova Ordem de Serviço";["manutencao","nome_cliente","contato","whatsapp_cliente","email_cliente","endereco_servico","tipo","status","prioridade","equipamento","numero_serie","agendada_para","garantia_ate","tecnico","defeito_relatado","diagnostico","servico_executado","frete","desconto","forma_pagamento","observacoes"].forEach(function(chave){var mapa={manutencao:"osManutencao",nome_cliente:"osNome",contato:"osContato",whatsapp_cliente:"osWhatsapp",email_cliente:"osEmail",endereco_servico:"osEndereco",tipo:"osTipo",status:"osStatus",prioridade:"osPrioridade",equipamento:"osEquipamento",numero_serie:"osSerie",agendada_para:"osAgenda",garantia_ate:"osGarantia",tecnico:"osTecnico",defeito_relatado:"osDefeito",diagnostico:"osDiagnostico",servico_executado:"osExecutado",frete:"osFrete",desconto:"osDesconto",forma_pagamento:"osFormaPagamento",observacoes:"osObservacoes"};valor(mapa[chave],o?o[chave]:"");});buscaClienteOS.definirValor(o?o.cliente:"",false);if(o&&o.cliente){resumoCliente(clientes.find(function(c){return String(c.valor)===String(o.cliente);})||null);}(o&&o.itens.length?o.itens:[null]).forEach(linha);recalcular();desenharVersoesOS(o);aplicarSomenteLeitura(o);Painel.erro("osErro","");Painel.abrir("modalOS");}
+  function abrir(id){var o=id?achar(id):null;document.getElementById("formOS").reset();buscaClienteOS.definirValor("",false);resumoCliente(null);limparItens();valor("osId",o?o.id:"");document.getElementById("osTitulo").textContent=o?"Editar "+("OS-"+String(o.id).padStart(5,"0")):"Nova Ordem de Serviço";["manutencao","nome_cliente","contato","whatsapp_cliente","email_cliente","endereco_servico","tipo","status","prioridade","equipamento","numero_serie","agendada_para","garantia_ate","tecnico","defeito_relatado","diagnostico","servico_executado","frete","desconto","forma_pagamento","observacoes"].forEach(function(chave){var mapa={manutencao:"osManutencao",nome_cliente:"osNome",contato:"osContato",whatsapp_cliente:"osWhatsapp",email_cliente:"osEmail",endereco_servico:"osEndereco",tipo:"osTipo",status:"osStatus",prioridade:"osPrioridade",equipamento:"osEquipamento",numero_serie:"osSerie",agendada_para:"osAgenda",garantia_ate:"osGarantia",tecnico:"osTecnico",defeito_relatado:"osDefeito",diagnostico:"osDiagnostico",servico_executado:"osExecutado",frete:"osFrete",desconto:"osDesconto",forma_pagamento:"osFormaPagamento",observacoes:"osObservacoes"};valor(mapa[chave],o?o[chave]:(PADRAO_NOVA[chave]||""));});buscaClienteOS.definirValor(o?o.cliente:"",false);if(o&&o.cliente){resumoCliente(clientes.find(function(c){return String(c.valor)===String(o.cliente);})||null);}(o&&o.itens.length?o.itens:[null]).forEach(linha);recalcular();aplicarEtapas();desenharVersoesOS(o);aplicarSomenteLeitura(o);Painel.erro("osErro","");Painel.abrir("modalOS");}
 
   /* A corrente de versões desta O.S. Cada uma abre na PRÉVIA: a
      substituída não está na lista da página -- é por isso que ela
@@ -638,6 +841,105 @@ LSTela.pronto(function () {
     }
   }
   document.getElementById("novaOS")?.addEventListener("click",function(){abrir(null);});document.querySelectorAll("[data-editar-os]").forEach(function(b){b.addEventListener("click",function(){abrir(b.dataset.editarOs);});});document.getElementById("adicionarItemOS")?.addEventListener("click",function(){linha();});
+  /* OS BLOCOS SEGUEM A SITUAÇÃO.
+
+     Uma etapa aparece quando a situação escolhida já chegou nela -- a
+     mesma tabela que o servidor usa (`OrdemServico.ETAPA_DA_SITUACAO`),
+     mandada para cá como dado para as duas nunca discordarem.
+
+     O que fica escondido NÃO é apagado: quem escreveu um diagnóstico e
+     depois voltou a situação para "Aberta" não perde o texto, e ele
+     volta a aparecer quando a situação avançar de novo. Esconder é sobre
+     o que se pergunta agora, não sobre o que já foi respondido. */
+  /* Um rótulo curto por etapa, e nenhum deles com "e" dentro: a frase
+     junta a lista com vírgulas e um "e" final, e um rótulo composto
+     produziria "o diagnóstico e o serviço executado e a garantia". */
+  var ETAPA_ROTULO = {
+    agenda: "o agendamento",
+    execucao: "o diagnóstico",
+    entrega: "o serviço executado"
+  };
+
+  function aplicarEtapas(){
+    var situacao = document.getElementById("osStatus").value;
+    var alcancadas = etapasPorSituacao[situacao] || ["abertura"];
+    var faltando = [];
+
+    document.querySelectorAll("[data-etapa]").forEach(function(bloco){
+      var etapa = bloco.dataset.etapa;
+      var mostra = alcancadas.indexOf(etapa) >= 0;
+      bloco.hidden = !mostra;
+      if (!mostra && ETAPA_ROTULO[etapa] && faltando.indexOf(ETAPA_ROTULO[etapa]) < 0) {
+        faltando.push(ETAPA_ROTULO[etapa]);
+      }
+    });
+
+    var aviso = document.getElementById("osEtapaAviso");
+    aviso.hidden = !faltando.length;
+    if (faltando.length) {
+      /* "a e b e c" sai de um `join(" e ")` e lê como erro de digitação.
+         Lista se separa por vírgula, com "e" só antes do último. */
+      var lista = faltando.length > 1
+        ? faltando.slice(0, -1).join(", ") + " e " + faltando[faltando.length - 1]
+        : faltando[0];
+      var rotulo = document.getElementById("osStatus").selectedOptions[0];
+      aviso.textContent =
+        "Em “" + (rotulo ? rotulo.textContent.trim() : situacao) + "”, "
+        + lista + " ainda não " + (faltando.length > 1 ? "existem" : "existe")
+        + ". Avance a situação e os campos aparecem aqui.";
+    }
+  }
+  document.getElementById("osStatus")?.addEventListener("change", aplicarEtapas);
+
+  /* Cadastrar peça sem largar a O.S.: a janela abre por cima da O.S.,
+     e ao voltar a peça já está escolhida na linha que pediu. */
+  function abrirCadastroDePecaOS(tr, nomeDigitado){
+    linhaDoCadastro = tr;
+    document.getElementById("formPecaOS").reset();
+    if(nomeDigitado) valor("pecaOSNome", nomeDigitado);
+    Painel.erro("pecaOSErro","");
+    Painel.abrirFilho("modalPecaOS","modalOS");
+  }
+
+  Painel.ligar({
+    form:"formPecaOS", erro:"pecaOSErro",
+    /* `depois` é o gancho de sucesso do Painel. Sem ele a página
+       recarregaria -- e recarregar aqui jogaria fora a O.S. em edição,
+       que é exatamente o que esta janela existe para evitar. */
+    depois:function(json){
+      var p = json && json.peca;
+      if(!p){ Painel.fechar("modalPecaOS"); return; }
+
+      var opcao = {
+        valor:"r:"+p.id, rotulo:p.nome, grupo:p.grupo,
+        detalhe: p.uso === "manutencao" ? "Item de manutenção" : "Peça da loja",
+        valorDireita: p.valor ? "R$ "+p.valor : "sem preço",
+        preco: p.valor || ""
+      };
+      /* A peça acabou de nascer e ainda não está no índice do servidor.
+         Ela entra na memória da página e em todas as buscas já abertas:
+         quem cadastrou pode ter três linhas na tela e esperaria achá-la
+         em qualquer uma. */
+      opcoesNovasOS.push(opcao);
+      cacheItensOS.clear();
+      buscasDeItemOS.forEach(function(b){ b.adicionarOpcao(opcao,false); });
+
+      var alvo = linhaDoCadastro;
+      if(!alvo){ linha(); alvo = corpo.lastElementChild; }
+      if(alvo && alvo.buscaItem){
+        /* Peça só cabe em linha de peça. Quem cadastrou uma peça está
+           cobrando uma peça, mesmo que a linha tenha nascido "serviço". */
+        var tipo = alvo.querySelector("[data-tipo]");
+        if(tipo && tipo.value !== "peca"){ tipo.value = "peca"; ajustarLinhaPorTipo(alvo); }
+        alvo.buscaItem.adicionarOpcao(opcao,false);
+        alvo.buscaItem.definirValor("r:"+p.id,false);
+        preencherLinhaOS(alvo, opcao);
+      }
+      linhaDoCadastro = null;
+      Painel.fechar("modalPecaOS");
+    }
+  });
+
   document.querySelectorAll("[data-refazer-os]").forEach(function(b){
     b.addEventListener("click",function(){
       valor("refazerOSId",b.dataset.refazerOs);
