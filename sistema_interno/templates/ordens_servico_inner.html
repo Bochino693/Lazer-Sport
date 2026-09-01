@@ -47,11 +47,25 @@
   {% endfor %}
 </section>
 
+{% comment %}
+  A FAIXA DO TOPO PRECISA RESPONDER ALGUMA COISA.
+
+  Três das quatro caixas diziam "Documento: Operacional", "Orçamento:
+  Negociação separada" e "Impressão: A4 e PDF". São frases verdadeiras e
+  completamente inúteis: não mudam, não respondem nada e ninguém as lê
+  duas vezes -- ocupando, no topo da tela, o lugar onde a tela de
+  propostas mostra quatro valores que mudam todo dia.
+
+  Agora respondem o que se pergunta ao chegar: quanto está preso em
+  serviço que ainda não acabou, quanto já foi entregue, quanto falta
+  receber e quanto entrou. Versões substituídas ficam fora dos quatro:
+  somá-las contaria o mesmo serviço duas vezes.
+{% endcomment %}
 <section class="ls-budget-money-strip">
-  <div class="success"><span>Total recebido nas O.S.</span><strong>R$ {{ total_recebido|moeda }}</strong></div>
-  <div><span>Documento</span><strong>Operacional</strong></div>
-  <div><span>Orçamento</span><strong>Negociação separada</strong></div>
-  <div><span>Impressão</span><strong>A4 e PDF</strong></div>
+  <div><span>Em serviço aberto</span><strong>R$ {{ total_em_servico|moeda }}</strong></div>
+  <div><span>Concluído</span><strong>R$ {{ total_concluido|moeda }}</strong></div>
+  <div class="warning"><span>A receber</span><strong>R$ {{ total_a_receber|moeda }}</strong></div>
+  <div class="success"><span>Recebido</span><strong>R$ {{ total_recebido|moeda }}</strong></div>
 </section>
 
 <section class="ls-data-panel">

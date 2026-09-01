@@ -218,6 +218,60 @@ class RefazerOrdemServicoTests(TestCase):
         ).context
         self.assertEqual(contexto["total_recebido"] or Decimal("0.00"), Decimal("0.00"))
 
+    def test_a_faixa_do_topo_responde_com_numero(self):
+        """Três das quatro caixas eram frase fixa no lugar de valor.
+
+        "Documento: Operacional", "Orçamento: Negociação separada" e
+        "Impressão: A4 e PDF" são verdadeiras e inúteis: não mudam, não
+        respondem nada, e ocupavam o topo da tela.
+        """
+        aberta = self.criar_ordem(status=OrdemServico.Status.ABERTA)
+        aberta.registrar_pagamento(Decimal("150.00"))
+        concluida = self.criar_ordem(status=OrdemServico.Status.CONCLUIDA)
+
+        contexto = self.client.get(
+            "/ordens-servico/", HTTP_HOST="interno.testserver",
+        ).context
+
+        # Cada O.S. de teste tem um item de R$ 450,00.
+        self.assertEqual(contexto["total_em_servico"], Decimal("450.00"))
+        self.assertEqual(contexto["total_concluido"], Decimal("450.00"))
+        self.assertEqual(contexto["total_recebido"], Decimal("150.00"))
+        # Falta R$ 300,00 da aberta e R$ 450,00 da concluída.
+        self.assertEqual(contexto["total_a_receber"], Decimal("750.00"))
+        self.assertEqual(concluida.status, OrdemServico.Status.CONCLUIDA)
+
+    def test_o_a_receber_nao_deixa_uma_o_s_paga_a_mais_abater_as_outras(self):
+        """Subtrair somas faria a entrada dobrada de um perdoar a dívida de outro."""
+        devedora = self.criar_ordem()
+        adiantada = self.criar_ordem()
+        # Mais do que o total: entrada dobrada, troco pendente.
+        adiantada.valor_pago = Decimal("900.00")
+        adiantada.status_pagamento = OrdemServico.StatusPagamento.PARCIAL
+        adiantada.save(update_fields=["valor_pago", "status_pagamento"])
+
+        contexto = self.client.get(
+            "/ordens-servico/", HTTP_HOST="interno.testserver",
+        ).context
+
+        # Só o que a devedora deve. A adiantada contribui com zero, e
+        # não com −450.
+        self.assertEqual(contexto["total_a_receber"], Decimal("450.00"))
+        self.assertEqual(devedora.saldo_pagamento, Decimal("450.00"))
+
+    def test_a_faixa_do_topo_ignora_a_versao_congelada(self):
+        """Somá-la contaria o mesmo serviço duas vezes."""
+        ordem = self.criar_ordem()
+        self.refazer(ordem)
+
+        contexto = self.client.get(
+            "/ordens-servico/", HTTP_HOST="interno.testserver",
+        ).context
+        # Sobrou só a versão nova, que nasce rascunho: rascunho não está
+        # em serviço aberto nem entra no que há para receber.
+        self.assertEqual(contexto["total_em_servico"], Decimal("0.00"))
+        self.assertEqual(contexto["total_a_receber"], Decimal("0.00"))
+
     def test_a_corrente_de_versoes_viaja_com_a_o_s(self):
         """Escondida da lista não pode ser escondida do sistema."""
         ordem = self.criar_ordem()

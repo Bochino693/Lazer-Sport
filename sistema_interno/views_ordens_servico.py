@@ -292,12 +292,7 @@ class OrdensServicoInnerView(
             ),
             substituidas=Count("pk", filter=arquivadas),
         )
-        financeiro = base_cards.aggregate(
-            # Sem `~arquivadas` a faixa somava o recebido da versão
-            # congelada junto com o da que está valendo, e o total do
-            # topo ficava maior do que a soma da própria lista.
-            recebido=Sum("valor_pago", filter=~arquivadas),
-        )
+        financeiro = self.dinheiro_do_topo(base_cards, arquivadas)
         consulta = consulta.filter(filtros[filtro])
 
         # O índice cobre o filtro inteiro; a página é só o que se desenha.
@@ -374,7 +369,10 @@ class OrdensServicoInnerView(
                 ("pagas", "Pagas", contagens["pagas"], "bi-cash-coin"),
                 ("substituidas", "Versões anteriores", contagens["substituidas"], "bi-clock-history"),
             ),
-            "total_recebido": financeiro["recebido"] or Decimal("0.00"),
+            "total_recebido": financeiro["recebido"],
+            "total_em_servico": financeiro["em_servico"],
+            "total_a_receber": financeiro["a_receber"],
+            "total_concluido": financeiro["concluido"],
             "clientes_dados": clientes_dados,
             "empresa_localizacao": origem,
             "manutencoes": (
@@ -403,6 +401,92 @@ class OrdensServicoInnerView(
             "pode_editar": acesso["ordens_servico_editar"],
             "pode_pagamento": acesso["ordens_servico_pagamento"],
         })
+
+    @staticmethod
+    def dinheiro_do_topo(consulta, arquivadas):
+        """Os quatro números da faixa de valores.
+
+        O QUE ESTAVA ALI ANTES NÃO ERA NÚMERO.
+
+        Três das quatro caixas diziam "Documento: Operacional",
+        "Orçamento: Negociação separada" e "Impressão: A4 e PDF". São
+        frases verdadeiras e completamente inúteis: não mudam, não
+        respondem nada e ninguém as lê duas vezes. Ocupavam, no topo da
+        tela, exatamente o lugar onde a tela de propostas mostra quatro
+        valores que mudam todo dia.
+
+        Agora respondem o que se pergunta ao chegar: quanto já entrou,
+        quanto está preso em serviço que ainda não acabou, quanto falta
+        receber do que já foi entregue, e quanto o mês fechou.
+
+        POR QUE DUAS CONSULTAS, E NÃO UMA. O total de uma O.S. é a soma
+        dos itens mais frete menos desconto -- e a soma dos itens vem de
+        outra tabela. Somar tudo num `aggregate` só significaria juntar
+        `valor_pago` (uma linha por O.S.) com um JOIN de itens (várias
+        linhas por O.S.) na mesma consulta: cada pagamento seria contado
+        uma vez por item da ordem. São grandezas de cardinalidade
+        diferente, então são duas consultas.
+        """
+        from django.db.models import DecimalField, F, Value
+        from django.db.models.functions import Coalesce
+
+        zero = Decimal("0.00")
+        vivas = consulta.filter(~arquivadas)
+
+        recebido = vivas.aggregate(total=Sum("valor_pago"))["total"] or zero
+
+        # O bruto de cada O.S., linha a linha. `distinct` não cabe aqui
+        # -- a soma é sobre os itens, e dois itens de mesmo valor na
+        # mesma ordem são duas cobranças, não uma repetição.
+        bruto = Coalesce(
+            Sum(F("itens__quantidade") * F("itens__valor_unitario")),
+            Value(zero),
+            output_field=DecimalField(max_digits=14, decimal_places=2),
+        )
+        por_ordem = vivas.annotate(bruto_itens=bruto).annotate(
+            valor=F("bruto_itens") + F("frete") - F("desconto")
+        )
+
+        em_servico = por_ordem.filter(
+            status__in=OrdemServico.ABERTAS
+        ).aggregate(total=Sum("valor"))["total"] or zero
+
+        # A RECEBER É SALDO, E SALDO NÃO É NEGATIVO.
+        #
+        # Uma O.S. em que entrou mais do que o total (entrada dobrada,
+        # troco pendente) não pode abater o que os outros clientes ainda
+        # devem -- e é isso que uma subtração de somas faria. Por isso o
+        # `max` é por linha, e a soma vem depois.
+        #
+        # `values` em vez de `only`: a consulta que desenha as linhas
+        # carrega `select_related` e prefetches de que esta conta não
+        # precisa, e adiar campos por cima daquilo o Django recusa.
+        # Pedindo só as duas colunas, nada disso entra na conta.
+        a_receber = sum(
+            (
+                max(linha["valor"] - (linha["valor_pago"] or zero), zero)
+                for linha in por_ordem.exclude(
+                    status__in=(
+                        OrdemServico.Status.RASCUNHO,
+                        OrdemServico.Status.CANCELADA,
+                    )
+                ).exclude(
+                    status_pagamento=OrdemServico.StatusPagamento.PAGO
+                ).values("valor", "valor_pago")
+            ),
+            zero,
+        )
+
+        concluido = por_ordem.filter(
+            status=OrdemServico.Status.CONCLUIDA
+        ).aggregate(total=Sum("valor"))["total"] or zero
+
+        return {
+            "recebido": recebido,
+            "em_servico": em_servico,
+            "a_receber": a_receber,
+            "concluido": concluido,
+        }
 
     @staticmethod
     def _tecnicos():
