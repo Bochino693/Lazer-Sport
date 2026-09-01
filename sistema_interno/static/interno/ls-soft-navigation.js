@@ -17,6 +17,8 @@
   var prefetchsExecutados = 0;
   var LIMITE_PREFETCH = 6;
   var TIMEOUT_REDE = 12000;
+  var MAX_TENTATIVAS_REDE = 4;
+  var ATRASOS_REDE = [0, 450, 1200, 2600];
 
   function urlSegura(valor) {
     try {
@@ -100,7 +102,16 @@
   }
 
   function podeTentarNovamente(status) {
-    return status === 408 || status === 429 || status === 502 || status === 503 || status === 504;
+    return status === 408 || status === 429 || status === 500
+      || status === 502 || status === 503 || status === 504;
+  }
+
+  function atrasoDaTentativa(tentativa, resposta) {
+    var cabecalho = resposta && resposta.headers
+      ? Number(resposta.headers.get("retry-after"))
+      : 0;
+    if (cabecalho > 0 && cabecalho <= 10) return cabecalho * 1000;
+    return ATRASOS_REDE[Math.min(tentativa + 1, ATRASOS_REDE.length - 1)];
   }
 
   function requisitar(url, tentativa) {
@@ -114,8 +125,13 @@
       cache: "default",
       signal: controlador ? controlador.signal : undefined
     }).then(function (resposta) {
-      if (tentativa === 0 && podeTentarNovamente(resposta.status)) {
-        return esperar(420).then(function () { return requisitar(url, 1); });
+      if (
+        tentativa < MAX_TENTATIVAS_REDE - 1
+        && podeTentarNovamente(resposta.status)
+      ) {
+        return esperar(atrasoDaTentativa(tentativa, resposta)).then(function () {
+          return requisitar(url, tentativa + 1);
+        });
       }
 
       var tipo = resposta.headers.get("content-type") || "";
@@ -143,13 +159,16 @@
       });
     }).catch(function (erro) {
       if (
-        tentativa === 0
+        tentativa < MAX_TENTATIVAS_REDE - 1
         && !erro.lsTentativaFinal
         && (!erro.status || podeTentarNovamente(erro.status))
       ) {
-        return esperar(420).then(function () { return requisitar(url, 1); });
+        return esperar(atrasoDaTentativa(tentativa)).then(function () {
+          return requisitar(url, tentativa + 1);
+        });
       }
-      if (tentativa > 0) erro.lsTentativaFinal = true;
+      erro.lsTentativaFinal = true;
+      erro.lsTransitorio = !erro.status || podeTentarNovamente(erro.status);
       throw erro;
     }).finally(function () {
       if (timer) window.clearTimeout(timer);
@@ -209,6 +228,44 @@
   function esconderLoader() {
     cancelarLoader();
     if (window.LSLoader && window.LSLoader.hide) window.LSLoader.hide();
+  }
+
+  var recuperacaoTimer = null;
+
+  function esconderRecuperacao() {
+    if (recuperacaoTimer) window.clearTimeout(recuperacaoTimer);
+    recuperacaoTimer = null;
+    var aviso = document.getElementById("lsNavRecovery");
+    if (aviso) aviso.remove();
+  }
+
+  function mostrarRecuperacao(url, modoHistorico) {
+    esconderLoader();
+    esconderRecuperacao();
+
+    var aviso = document.createElement("div");
+    aviso.id = "lsNavRecovery";
+    aviso.className = "ls-nav-recovery";
+    aviso.setAttribute("role", "status");
+    aviso.innerHTML =
+      '<span class="ls-nav-recovery-icon"><i class="bi bi-arrow-repeat"></i></span>' +
+      '<span class="ls-nav-recovery-copy"><strong>Servidor retomando</strong>' +
+      '<small>A tela atual continua segura. Tentaremos novamente sem abrir uma página 502.</small></span>' +
+      '<button type="button" class="btn btn-sm btn-warning">Tentar agora</button>';
+    document.body.appendChild(aviso);
+
+    aviso.querySelector("button").addEventListener("click", function () {
+      navegar(url, modoHistorico || "push");
+    });
+
+    /* Uma instância adormecida costuma voltar sozinha. A tentativa
+       automática só acontece com a aba visível e rede disponível; sem
+       isso o aviso permanece, sem martelar o servidor. */
+    recuperacaoTimer = window.setTimeout(function () {
+      recuperacaoTimer = null;
+      if (document.visibilityState !== "visible" || navigator.onLine === false) return;
+      navegar(url, modoHistorico || "push");
+    }, 3500);
   }
 
   function fecharMenuMovel() {
@@ -550,6 +607,7 @@
     }
 
     var minhaNavegacao = ++navegacao;
+    esconderRecuperacao();
     /* A gaveta nunca acompanha a pessoa para a tela seguinte. Fechá-la
        já no toque também deixa o conteúdo anterior disponível durante
        os poucos milissegundos em que a próxima tela está chegando. */
@@ -567,12 +625,17 @@
       trocarDocumento(
         resultado.html, resultado.url, modoHistorico || "push", minhaNavegacao
       );
-    }).catch(function () {
+    }).catch(function (erro) {
       if (minhaNavegacao !== navegacao) return;
-      /* A navegação suave é uma melhoria, nunca uma porta obrigatória.
-         Depois das tentativas automáticas, entrega a URL ao navegador:
-         ele reaproveita toda a pilha normal de rede e evita deixar a
-         pessoa presa num aviso azul criado pelo próprio painel. */
+      /* Em falha transitória, navegar a página inteira entregaria o
+         operador diretamente ao 502 do proxy e apagaria a tela boa que
+         ainda está aberta. Mantemos o painel e continuamos tentando.
+         Respostas definitivas (login, permissão, rota inválida) seguem
+         pela navegação normal, pois exigem outro documento. */
+      if (erro && erro.lsTransitorio) {
+        mostrarRecuperacao(alvo, modoHistorico || "push");
+        return;
+      }
       esconderLoader();
       window.location.assign(alvo.href);
     });

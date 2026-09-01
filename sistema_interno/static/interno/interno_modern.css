@@ -3313,6 +3313,64 @@ body.modal-open .ls-action-fab-menu{display:none!important}
 .ls-whatsapp-preferencia input{accent-color:var(--acento);margin:0}
 .ls-whatsapp-preferencia label:has(input:checked){color:var(--text)}
 
+
+/* Situação é um bloco de leitura, não uma etiqueta espremida. O selo,
+   a data e o próximo passo passam a ocupar a mesma largura e quebram só
+   entre palavras, tanto em propostas quanto em O.S. */
+.ls-situacao-card{
+  width:100%;min-width:0;padding:7px;display:grid;justify-items:stretch;gap:6px;
+  border:1px solid rgba(255,255,255,.075);border-radius:12px;
+  background:linear-gradient(155deg,rgba(255,255,255,.045),rgba(0,0,0,.12));
+  text-align:center;
+}
+.ls-situacao-card .ls-status{
+  width:100%;max-width:100%;height:auto;min-height:34px;
+  padding:7px 9px!important;white-space:normal!important;
+  overflow-wrap:normal;word-break:normal;line-height:1.2!important;text-align:center;
+}
+.ls-situacao-card .ls-status::before{flex:0 0 7px}
+.ls-situacao-card .material-sub{
+  display:block!important;margin:0!important;color:#c1b5a3!important;
+  white-space:normal!important;line-height:1.35!important;text-align:center;
+}
+.ls-situacao-card .ls-next-action{
+  width:100%;margin:0;justify-content:center;padding:6px 7px;
+}
+.ls-os-body .ls-situacao-card{
+  border-color:rgba(61,217,192,.16);
+  background:linear-gradient(155deg,rgba(61,217,192,.07),rgba(0,0,0,.12));
+}
+.ls-orcamentos-table .ls-block-review{width:100%;min-width:0;justify-items:stretch}
+.ls-orcamentos-table .ls-block-review .ls-status{
+  width:100%;height:auto;min-height:34px;white-space:normal!important;line-height:1.2!important;
+}
+
+/* Falha transitória não derruba a tela boa nem leva ao HTML 502 do proxy.
+   O aviso é âmbar, compacto e fica fora da área de conteúdo substituível. */
+.ls-nav-recovery{
+  position:fixed;left:50%;bottom:max(18px,env(safe-area-inset-bottom));z-index:2400;
+  width:min(680px,calc(100vw - 24px));padding:12px 13px;
+  display:grid;grid-template-columns:42px minmax(0,1fr) auto;align-items:center;gap:11px;
+  border:1px solid rgba(242,169,59,.55);border-radius:16px;
+  color:#f7ead5;background:linear-gradient(145deg,rgba(58,43,18,.985),rgba(27,22,15,.99));
+  box-shadow:0 22px 60px rgba(0,0,0,.55);transform:translateX(-50%);
+}
+.ls-nav-recovery-icon{
+  width:42px;height:42px;display:grid;place-items:center;border-radius:12px;
+  color:#ffd17d;background:rgba(242,169,59,.14);font-size:1.05rem;
+}
+.ls-nav-recovery-icon i{animation:ls-gira 1.1s linear infinite}
+.ls-nav-recovery-copy strong,.ls-nav-recovery-copy small{display:block}
+.ls-nav-recovery-copy strong{color:#fff5e4;font-size:.88rem;font-weight:950}
+.ls-nav-recovery-copy small{margin-top:2px;color:#c9baa2;font-size:.72rem;line-height:1.35}
+.ls-nav-recovery .btn{white-space:nowrap}
+
+@media(max-width:620px){
+  .ls-nav-recovery{grid-template-columns:38px minmax(0,1fr);bottom:12px}
+  .ls-nav-recovery-icon{width:38px;height:38px}
+  .ls-nav-recovery .btn{grid-column:1/-1;width:100%}
+}
+
 /* A ação de cadastrar fica antes dos resultados de cliente/brinquedo. */
 .ls-busca-criar{margin:0 0 6px!important}
 

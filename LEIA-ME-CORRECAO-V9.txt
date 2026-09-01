@@ -1,0 +1,32 @@
+LAZER & SPORT — CORREÇÃO V9
+Ações da lista de O.S. executadas diretamente
+
+IMPORTANTE
+Este pacote é cumulativo e substitui a V8. O controlador global painel.js
+continua exatamente igual ao original do repositório.
+
+O QUE MUDA NESTA VERSÃO
+1. Editar, Refazer, Enviar e Pagamento usam um controlador único de cliques.
+2. O controlador é ligado no início da tela, antes da montagem dos itens.
+3. A ação executa antes de o menu flutuante de três pontos ser fechado.
+4. Cada clique preenche os campos necessários e abre o modal correspondente.
+5. Se uma instância antiga estiver travada, somente aquele modal é recriado.
+6. Ouvintes antigos da navegação suave são removidos para não duplicar ações.
+7. Exclusão permanece no controlador original, com confirmação obrigatória.
+8. Cliente e peça continuam isolados dentro da O.S., sem afetar outras janelas.
+
+COMO APLICAR
+1. Extraia este ZIP na raiz do projeto, onde está manage.py.
+2. Autorize a substituição de todos os seis arquivos.
+3. Execute: python manage.py check
+4. Reinicie o serviço web e os workers, se houver.
+5. Faça Ctrl+F5. No aplicativo instalado, feche-o totalmente e abra novamente.
+
+BANCO DE DADOS
+Não há migration nova.
+
+TESTE RÁPIDO
+1. Abra o menu de ações de uma O.S.
+2. Teste Editar/Ver, Enviar, Pagamento e Refazer, conforme a situação permitir.
+3. Cada botão deve abrir sua janela imediatamente, já com os dados da O.S.
+4. Feche cada janela e confirme que a lista continua utilizável.

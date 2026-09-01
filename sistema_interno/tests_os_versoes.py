@@ -15,7 +15,7 @@ from django.test import TestCase, override_settings
 
 from core.models import PecasReposicao
 
-from .models import ItemOrdemServico, Orcamento, OrdemServico
+from .models import Cliente, ItemOrdemServico, Orcamento, OrdemServico
 
 
 @override_settings(
@@ -69,6 +69,106 @@ class RefazerOrdemServicoTests(TestCase):
         })
 
     # ------------------------------------------------------ o caminho feliz
+    def test_identificacao_do_equipamento_nasce_automatica_se_ficar_vazia(self):
+        resposta = self.post({
+            "action": "save",
+            "equipamento": "Brinquedo antigo sem plaqueta",
+            "tipo": "manutencao",
+            "status": "rascunho",
+            "prioridade": "normal",
+            "numero_serie": "",
+            "itens": "[]",
+        })
+
+        self.assertEqual(resposta.status_code, 200)
+        ordem = OrdemServico.objects.get(pk=resposta.json()["id"])
+        self.assertEqual(ordem.numero_serie, f"LS-PAT-{ordem.pk:06d}")
+
+    def test_numero_real_da_etiqueta_do_fabricante_e_preservado(self):
+        resposta = self.post({
+            "action": "save",
+            "equipamento": "Simulador",
+            "tipo": "manutencao",
+            "status": "rascunho",
+            "prioridade": "normal",
+            "numero_serie": "FAB-2024-9981",
+            "itens": "[]",
+        })
+
+        self.assertEqual(resposta.status_code, 200)
+        ordem = OrdemServico.objects.get(pk=resposta.json()["id"])
+        self.assertEqual(ordem.numero_serie, "FAB-2024-9981")
+
+    def test_cadastra_cliente_sem_sair_da_ordem_de_servico(self):
+        resposta = self.post({
+            "action": "cliente_novo",
+            "nome_cliente": "Cliente atendido na oficina",
+            "telefone": "(11) 97777-1234",
+            "canal_telefone": "whatsapp",
+            "cep": "",
+        })
+
+        self.assertEqual(resposta.status_code, 200)
+        dados = resposta.json()
+        self.assertEqual(dados["status"], "sucesso")
+        self.assertEqual(
+            dados["cliente"]["rotulo"], "Cliente atendido na oficina",
+        )
+        self.assertTrue(Cliente.objects.filter(
+            nome_cliente="Cliente atendido na oficina",
+        ).exists())
+
+    def test_tela_oferece_um_unico_caminho_para_cliente_novo(self):
+        html = self.tela()
+        self.assertNotIn('id="novoClienteOS"', html)
+        self.assertIn('id="modalClienteNovoOS"', html)
+        self.assertIn('action" value="cliente_novo"', html)
+        self.assertIn('rotulo:"Cadastrar cliente"', html)
+
+    def test_cadastros_filhos_nao_alteram_os_outros_modais_da_os(self):
+        html = self.tela()
+        for modal_id in (
+            "modalOS", "modalEnviarOS", "modalPagamentoOS", "modalRefazerOS",
+        ):
+            self.assertIn(f'class="modal fade" id="{modal_id}"', html)
+
+        self.assertIn('class="ls-os-child-layer" id="modalClienteNovoOS"', html)
+        self.assertIn('class="ls-os-child-layer" id="modalPecaOS"', html)
+        self.assertNotIn('Painel.abrirFilho("modalClienteNovoOS"', html)
+        self.assertNotIn('Painel.abrirFilho("modalPecaOS"', html)
+
+    def test_acoes_da_lista_usam_controlador_direto_e_unico(self):
+        html = self.tela()
+        self.assertIn("function executarAcaoOS(evento)", html)
+        self.assertIn('document.addEventListener("click",executarAcaoOS,true)', html)
+        self.assertIn('abrirModalAcaoOS("modalEnviarOS")', html)
+        self.assertIn('abrirModalAcaoOS("modalPagamentoOS")', html)
+        self.assertIn('abrirModalAcaoOS("modalRefazerOS")', html)
+        self.assertIn('abrirModalAcaoOS("modalExcluir")', html)
+        self.assertIn("[data-excluir-os]", html)
+        self.assertIn("evento.stopPropagation()", html)
+        self.assertNotIn(
+            'document.querySelectorAll("[data-enviar-os]").forEach', html,
+        )
+        self.assertNotIn(
+            'document.querySelectorAll("[data-pagamento-os]").forEach', html,
+        )
+
+    def test_modal_de_acao_sobe_acima_do_fundo_e_volta_ao_fechar(self):
+        """O backdrop no body nunca pode esconder a janela da O.S."""
+        html = self.tela()
+
+        self.assertIn("function elevarModalAcaoOS(elemento)", html)
+        self.assertIn("document.body.appendChild(elemento)", html)
+        self.assertIn('elemento.classList.remove("fade","show")', html)
+        self.assertIn("z-index:2100!important", html)
+        self.assertIn("z-index:2090!important", html)
+        self.assertIn(
+            'elemento.addEventListener("hidden.bs.modal"', html,
+        )
+        self.assertIn("devolverModalAcaoOS(elemento)", html)
+        self.assertIn("Painel._lsPreparaModaisAcaoOS", html)
+
     def test_refazer_congela_a_anterior_e_abre_a_seguinte(self):
         """O papel que o cliente leu continua existindo, inteiro."""
         ordem = self.criar_ordem()
@@ -437,6 +537,48 @@ class ItemDeManutencaoTests(TestCase):
             [o["grupo"] for o in opcoes if o["rotulo"] == "Bucha de manutenção"],
             ["Itens de manutenção"],
         )
+
+
+    def test_a_busca_vazia_tambem_devolve_pecas_e_manutencao(self):
+        """O campo consulta antes da primeira letra; foco não pode virar erro."""
+        loja = PecasReposicao.objects.create(
+            nome="Mola galvanizada", descricao_peca="Reposição",
+            uso=PecasReposicao.Uso.LOJA, ativo=True,
+        )
+        manutencao = PecasReposicao.objects.create(
+            nome="Hora técnica", descricao_peca="Oficina",
+            uso=PecasReposicao.Uso.MANUTENCAO, ativo=False,
+        )
+
+        resposta = self.client.get(
+            "/ordens-servico/itens/buscar/",
+            HTTP_HOST="interno.testserver",
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(resposta.status_code, 200)
+        opcoes = {opcao["valor"]: opcao for opcao in resposta.json()["opcoes"]}
+        self.assertEqual(opcoes[f"r:{loja.pk}"]["grupo"], "Peças de reposição")
+        self.assertEqual(opcoes[f"r:{manutencao.pk}"]["grupo"], "Itens de manutenção")
+
+    def test_a_tela_leva_catalogo_local_para_nao_depender_da_requisicao(self):
+        """Se a rede falhar, a O.S. ainda encontra exatamente o mesmo item."""
+        peca = PecasReposicao.objects.create(
+            nome="Retentor reserva", descricao_peca="Oficina",
+            uso=PecasReposicao.Uso.MANUTENCAO, ativo=False,
+            preco_venda=Decimal("48.00"),
+        )
+
+        resposta = self.client.get(
+            "/ordens-servico/", HTTP_HOST="interno.testserver",
+        )
+
+        opcoes = resposta.context["itens_os_fallback"]
+        self.assertEqual(
+            [opcao["valor"] for opcao in opcoes if opcao["rotulo"] == peca.nome],
+            [f"r:{peca.pk}"],
+        )
+        self.assertContains(resposta, 'id="itensOSFallbackDados"')
 
 
 @override_settings(ALLOWED_HOSTS=["interno.testserver", "testserver"])

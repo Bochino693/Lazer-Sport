@@ -368,9 +368,13 @@ class JanelasDoPainelTests(TestCase):
             if altura and int(altura.group(1)) > 1055:
                 acima_do_modal.append(seletor.split()[-1])
 
-        # Hoje só as abas -- e elas já somem com a janela aberta.
+        # As abas somem com a janela aberta. O aviso de reconexão NÃO
+        # some, e é de propósito: ele avisa que a conexão caiu, e o
+        # momento em que isso mais importa é exatamente com um modal
+        # aberto -- é ali que alguém está tentando gravar. Escondê-lo
+        # deixaria a pessoa olhando um botão travado sem explicação.
         self.assertEqual(
-            sorted(set(acima_do_modal)), [".ls-abas"],
+            sorted(set(acima_do_modal)), [".ls-abas", ".ls-nav-recovery"],
             "elemento fixo acima do modal sem sumir com body.modal-open: "
             f"{sorted(set(acima_do_modal))}",
         )

@@ -1,0 +1,40 @@
+LAZER & SPORT — CORREÇÃO V13
+Uma única aba do WhatsApp para todos os clientes
+
+IMPORTANTE
+Este pacote é cumulativo e substitui a V12. Ele mantém as correções de
+estabilidade, situações, modais e ações da O.S. já entregues anteriormente.
+
+O QUE MUDOU NO WHATSAPP
+1. No computador, o sistema passa a usar uma única aba identificada do
+   WhatsApp Web para propostas e ordens de serviço.
+2. Ao enviar para outro cliente, o navegador reaproveita essa aba, troca a
+   conversa e a traz para a frente. Não abre outra cópia do WhatsApp.
+3. A aba continua sendo encontrada mesmo depois de recarregar o painel,
+   enquanto permanecer aberta no mesmo navegador.
+4. O botão de reserva para pop-up bloqueado usa a mesma aba fixa no PC.
+5. Links antigos de wa.me dentro do painel também entram nessa aba única.
+6. No celular, o comportamento não mudou: wa.me abre o aplicativo.
+
+POR QUE ESTA ABORDAGEM
+O painel não pode controlar a tela interna do WhatsApp Web, pois ela pertence
+a outro domínio. A solução segura é manter uma só sessão/aba e navegar nela
+até o cliente escolhido. O WhatsApp ainda precisa carregar a conversa daquele
+cliente, mas não cria outra instância, outra sessão nem acumula novas abas.
+
+COMO APLICAR
+1. Extraia este ZIP na raiz do projeto, onde está manage.py.
+2. Autorize a substituição de todos os doze arquivos.
+3. Execute: python manage.py check
+4. Reinicie o serviço web e os workers.
+5. Faça Ctrl+F5. No aplicativo instalado, feche-o totalmente e abra de novo.
+
+BANCO DE DADOS
+Não há migration nova.
+
+TESTE RÁPIDO
+1. No computador, abra uma proposta e use Enviar > WhatsApp.
+2. Volte ao painel e envie uma O.S. ou proposta de outro cliente.
+3. O navegador deve trazer a MESMA aba do WhatsApp para a frente e mudar a
+   conversa; nenhuma segunda aba do WhatsApp deve aparecer.
+4. No celular, confirme que o aplicativo continua abrindo normalmente.

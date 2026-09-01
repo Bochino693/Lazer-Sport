@@ -1,0 +1,52 @@
+LAZER & SPORT — CORREÇÃO V12
+Estabilidade após inatividade, WhatsApp Web e situações legíveis
+
+IMPORTANTE
+Este pacote é cumulativo e substitui a V11. Ele contém também as correções
+anteriores da O.S., inclusive os modais de Enviar e Excluir.
+
+ESTABILIDADE E VELOCIDADE
+1. Enquanto o painel estiver aberto e visível, um pulso leve em /healthz/
+   mantém o processo da hospedagem pronto sem consultar o banco.
+2. Ao voltar para uma aba antiga, o servidor começa a retomar antes do
+   primeiro clique.
+3. Antes de qualquer POST, o painel confirma o servidor com um GET seguro.
+4. O POST é enviado uma única vez: pagamentos, versões e exclusões nunca
+   são duplicados por uma repetição automática.
+5. Navegações GET tentam novamente até quatro vezes em 500/502/503/504,
+   timeout e oscilação de rede.
+6. Se a falha continuar, a tela atual permanece inteira e o painel tenta
+   novamente; ele não entrega o usuário à página 502 do Render.
+7. Login expirado, falta de permissão e rota inválida continuam usando a
+   navegação normal, pois não são falhas temporárias.
+
+WHATSAPP
+1. No computador, propostas e O.S. abrem diretamente o WhatsApp Web em
+   uma nova aba, com telefone e mensagem preenchidos.
+2. A conversa abre no clique, sem aguardar a resposta do servidor.
+3. No celular, wa.me continua abrindo o aplicativo normalmente.
+4. Se o navegador bloquear a aba, o botão de reserva permanece disponível.
+
+SITUAÇÕES DE PROPOSTAS E O.S.
+1. Situação, data e próximo passo agora formam um bloco organizado.
+2. As etiquetas ocupam a largura disponível e quebram entre palavras.
+3. As colunas de situação ganharam mais espaço no computador.
+4. A revisão Comercial/Financeiro deixou de impor largura que cortava texto.
+5. O mesmo bloco se adapta aos cards de tablet e celular.
+
+COMO APLICAR
+1. Extraia este ZIP na raiz do projeto, onde está manage.py.
+2. Autorize a substituição de todos os doze arquivos.
+3. Execute: python manage.py check
+4. Reinicie o serviço web e os workers.
+5. Faça Ctrl+F5. No aplicativo instalado, feche-o totalmente e abra de novo.
+
+BANCO DE DADOS
+Não há migration nova.
+
+TESTE RÁPIDO
+1. Deixe o painel aberto alguns minutos e volte a navegar pelo menu.
+2. Em uma proposta, use Enviar > Abrir WhatsApp: no PC deve abrir a Web.
+3. Repita em uma O.S.
+4. Confira as colunas Situação das duas listas em computador e tablet.
+5. Simule rede lenta: a tela atual deve permanecer, sem abrir o HTML 502.

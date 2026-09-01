@@ -171,27 +171,29 @@
                 o dia inteiro, na prática só ao sair e entrar de novo.
               {% endcomment %}
               <td data-rotulo="Situação" data-situacao="{{ orcamento.id }}">
-                <span class="ls-status
-                  {% if orcamento.status == 'aprovado' %}success
-                  {% elif orcamento.status == 'recusado' %}danger
-                  {% elif orcamento.status == 'aguardando_resposta' %}info
-                  {% elif orcamento.status == 'em_negociacao' %}warning
-                  {% elif orcamento.status == 'expirado' %}warning
-                  {% else %}neutral{% endif %}" data-situacao-selo>
-                  {{ orcamento.get_status_display }}
-                </span>
-                <span class="material-sub d-block mt-1" data-situacao-nota
-                      {% if not orcamento.respondido_em and not orcamento.enviado_em %}hidden{% endif %}>
-                  {% if orcamento.respondido_em %}
-                    {{ orcamento.respondido_por|default:"cliente" }} ·
-                    {{ orcamento.respondido_em|date:"d/m H:i" }}
-                  {% elif orcamento.enviado_em %}
-                    enviado {{ orcamento.enviado_em|date:"d/m" }}
+                <div class="ls-situacao-card ls-situacao-orcamento">
+                  <span class="ls-status
+                    {% if orcamento.status == 'aprovado' %}success
+                    {% elif orcamento.status == 'recusado' %}danger
+                    {% elif orcamento.status == 'aguardando_resposta' %}info
+                    {% elif orcamento.status == 'em_negociacao' %}warning
+                    {% elif orcamento.status == 'expirado' %}warning
+                    {% else %}neutral{% endif %}" data-situacao-selo>
+                    {{ orcamento.get_status_display }}
+                  </span>
+                  <span class="material-sub" data-situacao-nota
+                        {% if not orcamento.respondido_em and not orcamento.enviado_em %}hidden{% endif %}>
+                    {% if orcamento.respondido_em %}
+                      {{ orcamento.respondido_por|default:"cliente" }} ·
+                      {{ orcamento.respondido_em|date:"d/m H:i" }}
+                    {% elif orcamento.enviado_em %}
+                      enviado {{ orcamento.enviado_em|date:"d/m" }}
+                    {% endif %}
+                  </span>
+                  {% if orcamento.status == 'aprovado' and orcamento.status_pagamento != 'pago' %}
+                    <span class="ls-next-action"><i class="bi bi-telephone-outbound"></i> Próximo passo: contatar cliente</span>
                   {% endif %}
-                </span>
-                {% if orcamento.status == 'aprovado' and orcamento.status_pagamento != 'pago' %}
-                  <span class="ls-next-action"><i class="bi bi-telephone-outbound"></i> Próximo passo: contatar cliente</span>
-                {% endif %}
+                </div>
               </td>
               <td data-rotulo="Revisão dos blocos">
                 <div class="ls-block-review">
@@ -374,27 +376,6 @@
 
       <div class="modal-body ls-compact-form">
         <div id="orcamentoErro" class="alert alert-danger d-none" role="alert"></div>
-
-        {% comment %}
-          O HISTÓRICO DE VERSÕES FICA AQUI, E NÃO NA LISTA.
-
-          Na lista as versões substituídas continuam escondidas: juntas,
-          a mesma negociação parece três orçamentos, e quem varre a fila
-          de trabalho passa a contar errado. Mas sumir da lista não pode
-          ser sumir do sistema -- quando o cliente liga perguntando por
-          que o preço mudou, é aqui dentro que se responde.
-
-          Fechado por padrão: quem abre a proposta quer a proposta. O
-          resumo diz quantas versões existem, e abrir mostra a corrente
-          inteira, com o total de cada uma e o motivo anotado na troca.
-        {% endcomment %}
-        <details class="ls-versoes" id="orcamentoVersoes" hidden>
-          <summary>
-            <i class="bi bi-clock-history" aria-hidden="true"></i>
-            <span id="orcamentoVersoesResumo">Histórico de versões</span>
-          </summary>
-          <ol class="ls-versoes-lista" id="orcamentoVersoesLista"></ol>
-        </details>
 
         <div class="row g-3">
           <div class="col-12"><div class="ls-budget-block-title comercial"><i class="bi bi-people-fill"></i><span><strong>Bloco Comercial</strong><small>Cliente, atendimento, validade, entrega e itens.</small></span></div></div>
@@ -726,34 +707,9 @@ Cadastro mínimo de propósito: nome, valor e categoria. Foto e texto de
 
       <div class="modal-body">
         <div class="alert alert-danger d-none" id="pecaNovaErro"></div>
-        {% comment %}
-          O QUE NASCE AQUI NÃO É ANÚNCIO.
-
-          Era. A peça criada no meio de uma negociação ia para a vitrine
-          do site no mesmo segundo -- sem foto, com um nome digitado às
-          pressas e um preço combinado com aquele cliente. Ninguém
-          escolheu publicar aquilo; foi só o efeito de precisar cobrar um
-          item.
-
-          Agora nasce desligada, e a escolha abaixo diz o que ela é. As
-          duas servem igualmente nesta linha; a diferença é o destino.
-        {% endcomment %}
-        <p class="text-muted small mb-2">
-          A peça entra nesta proposta na hora, sem perder o que já foi
-          digitado. Ela <strong>não vai para o site</strong>: publicar
-          continua sendo uma decisão da tela de Produtos.
+        <p class="text-muted small">
+          A peça fica salva no catálogo da loja e entra nesta proposta sem perder o que já foi digitado.
         </p>
-
-        <div class="ls-cartoes-escolha mb-1" role="radiogroup" aria-label="Para que serve esta peça">
-          <label class="ls-cartao-escolha">
-            <input type="radio" name="uso" value="manutencao" checked>
-            <span><strong>Item de manutenção</strong><small>Serve a orçamentos e O.S. Nunca entra na vitrine.</small></span>
-          </label>
-          <label class="ls-cartao-escolha">
-            <input type="radio" name="uso" value="loja">
-            <span><strong>Peça da loja</strong><small>Um dia será anunciada. Publique-a em Produtos quando tiver foto e texto.</small></span>
-          </label>
-        </div>
 
         <div class="row g-3">
           <div class="col-12 col-md-7">
@@ -1062,29 +1018,14 @@ Cadastro mínimo de propósito: nome, valor e categoria. Foto e texto de
           botão que a pessoa toca, com o gesto dela, e a conversa abre.
         {% endcomment %}
         {% comment %}
-          data-whatsapp-web: este botão é DE PROPÓSITO a versão web. É a
-          saída para quando a janela foi bloqueada ou o aplicativo não
-          abriu -- mandá-lo de volta ao aplicativo faria dele um botão
-          que não faz nada.
+          data-whatsapp-web: este botão conserva explicitamente a conversa
+          web e serve para repetir o gesto quando o navegador bloqueou a
+          primeira nova aba.
         {% endcomment %}
         <a class="btn btn-success w-100 mt-3" id="linkWhatsappAtalho"
            href="#" target="_blank" rel="noopener" data-whatsapp-web hidden>
           <i class="bi bi-whatsapp me-1"></i> Abrir conversa no WhatsApp
         </a>
-
-        {% comment %}
-          NESTE COMPUTADOR, ABRIR POR ONDE.
-
-          Só aparece no computador: no celular `wa.me` já leva ao
-          aplicativo e não há escolha a fazer. A preferência é da
-          MÁQUINA, e não da conta -- a mesma pessoa no computador do
-          escritório e no do galpão pode querer coisas diferentes.
-        {% endcomment %}
-        <fieldset class="ls-whatsapp-preferencia mt-3" id="whatsappPreferencia" hidden>
-          <legend>Neste computador, abrir por</legend>
-          <label><input type="radio" name="whatsapp_por" value="web" checked> WhatsApp Web</label>
-          <label><input type="radio" name="whatsapp_por" value="aplicativo"> Aplicativo instalado</label>
-        </fieldset>
 
         <section class="ls-envios mt-4" id="linkEnvios" hidden>
           <h6 class="mb-2"><i class="bi bi-clock-history me-1"></i> Tentativas de envio</h6>
@@ -1554,15 +1495,11 @@ LSTela.pronto(function () {
   }
 
   function registrarPeca(p) {
-    /* Grupo e detalhe vêm do servidor: é ele que decidiu se a peça é da
-       loja ou de manutenção, e a lista precisa separar as duas do mesmo
-       jeito que a busca do catálogo separa. */
-    var manutencao = p.uso === "manutencao";
     var opcao = {
       valor: "r:" + p.id,
       rotulo: p.nome,
-      grupo: p.grupo || (manutencao ? "Itens de manutenção" : "Peças de reposição"),
-      detalhe: manutencao ? "Item de manutenção" : "Peça da loja",
+      grupo: "Peças de reposição",
+      detalhe: "Peça da loja",
       valorDireita: p.valor ? "R$ " + p.valor : "sem preço",
       preco: p.valor || ""
     };
@@ -1950,72 +1887,8 @@ LSTela.pronto(function () {
     if (!orcamento) definirValidade(VALIDADE_PADRAO_DIAS);
 
     recalcular();
-    desenharVersoes(orcamento);
     aplicarPermissoesEdicao(!orcamento || orcamento.pode_editar);
     Painel.abrir("modalOrcamento");
-  }
-
-  /* AS VERSÕES ANTERIORES, DENTRO DA PROPOSTA ATUAL.
-
-     Na lista elas continuam escondidas -- juntas, a mesma negociação
-     parece três orçamentos. Aqui elas voltam a existir: cada versão com
-     o seu total e a sua situação, e um botão para abrir a que interessa.
-     Proposta sem histórico não mostra o bloco: escrever "1 versão" em
-     toda proposta sugere uma corrente que a maioria não tem. */
-  function desenharVersoes(orcamento) {
-    var caixa = document.getElementById("orcamentoVersoes");
-    var lista = document.getElementById("orcamentoVersoesLista");
-    var versoes = (orcamento && orcamento.versoes) || [];
-
-    lista.innerHTML = "";
-    caixa.open = false;
-    caixa.hidden = versoes.length < 2;
-    if (caixa.hidden) return;
-
-    document.getElementById("orcamentoVersoesResumo").textContent =
-      versoes.length + " versões desta negociação";
-
-    versoes.forEach(function (v) {
-      var item = document.createElement("li");
-      if (v.atual) item.className = "atual";
-
-      var titulo = document.createElement("strong");
-      titulo.textContent = "Versão " + v.versao + " · ID " + v.id;
-
-      var linha = document.createElement("span");
-      linha.textContent = v.rotulo + " · R$ " + v.total +
-        (v.quando ? " · " + v.quando : "");
-
-      item.appendChild(titulo);
-      item.appendChild(linha);
-
-      if (v.motivo) {
-        var motivo = document.createElement("em");
-        motivo.textContent = v.motivo;
-        item.appendChild(motivo);
-      }
-
-      /* A versão atual não ganha botão: ela já está aberta na tela.
-
-         As outras abrem na PRÉVIA, e não neste modal. A substituída não
-         está na lista da página -- é por isso que ela precisa aparecer
-         aqui --, então pedir ao modal que a reabrisse pelo id não
-         acharia nada e desenharia um formulário em branco como se fosse
-         proposta nova. A prévia lê do servidor e serve a qualquer
-         versão, que é exatamente o que se quer de um documento
-         congelado: ler, não editar. */
-      if (!v.atual && v.previa) {
-        var ir = document.createElement("a");
-        ir.className = "btn btn-sm btn-outline-secondary";
-        ir.href = v.previa;
-        ir.target = "_blank";
-        ir.rel = "noopener";
-        ir.textContent = "Ver esta versão";
-        item.appendChild(ir);
-      }
-
-      lista.appendChild(item);
-    });
   }
 
   function aplicarPermissoesEdicao(mutavel) {
@@ -2435,6 +2308,12 @@ LSTela.pronto(function () {
     if (!atalho || !url) return;
 
     atalho.href = url;
+    /* No PC o fallback obedece à mesma aba única do envio principal.
+       `noopener` faz o navegador tratar um alvo nomeado como nova janela,
+       por isso ele só permanece no celular, onde o alvo é `_blank`. */
+    atalho.target = Painel.whatsapp.alvo();
+    if (Painel.whatsapp.noCelular()) atalho.rel = "noopener";
+    else atalho.removeAttribute("rel");
     atalho.hidden = false;
     atalho.innerHTML = jaAbriu
       ? '<i class="bi bi-whatsapp me-1"></i> Abrir a conversa de novo'
@@ -2503,31 +2382,13 @@ LSTela.pronto(function () {
     if (texto) texto.textContent = propostaAtual.mensagem || "Preparando mensagem…";
   }
 
-  /* A escolha de "abrir por" vive no navegador, e só no computador.
-     Ligar aqui, e não na abertura do modal, garante que ela já esteja
-     certa antes do primeiro clique de envio. */
-  (function ligarPreferenciaWhatsapp() {
-    var caixa = document.getElementById("whatsappPreferencia");
-    if (!caixa || Painel.whatsapp.noCelular()) return;
-
-    caixa.hidden = false;
-    var atual = Painel.whatsapp.preferencia();
-    caixa.querySelectorAll("[name='whatsapp_por']").forEach(function (opcao) {
-      opcao.checked = opcao.value === atual;
-      opcao.addEventListener("change", function () {
-        if (opcao.checked) Painel.whatsapp.definirPreferencia(opcao.value);
-      });
-    });
-  })();
-
   function montarConversa(telefone, mensagem) {
     /* Mesma regra do servidor (conversa_whatsapp), aqui para a conversa
        abrir no mesmo toque em que a pessoa pede -- sem esperar resposta
        nenhuma, que é quando o navegador bloqueia a janela.
 
-       Este é o endereço da versão WEB: o que se copia e o que fica no
-       botão verde de reserva. Quem escolhe entre o aplicativo instalado
-       e ele é `Painel.whatsapp.abrir`. */
+       Este é o endereço de conversa: WhatsApp Web no computador e wa.me
+       no celular. `Painel.whatsapp.abrir` abre no mesmo gesto. */
     return Painel.whatsapp.web(telefone, mensagem);
   }
 
@@ -2587,7 +2448,7 @@ LSTela.pronto(function () {
   }
 
   function pedirAoServidor(dados) {
-    return fetch(endpointEnvio, {
+    return Painel.rede.post(endpointEnvio, {
       method: "POST",
       body: dados,
       headers: { "X-Requested-With": "XMLHttpRequest" },
@@ -2718,26 +2579,21 @@ LSTela.pronto(function () {
       return;
     }
 
-    /* O WhatsApp que abre é o de QUEM ESTÁ LOGADO no aparelho: a proposta
-       sai do número do atendente, como qualquer mensagem dele.
-
-       No computador a conversa abre no WHATSAPP WEB deste navegador --
-       onde quem atende já está logado. O aplicativo instalado continua
-       disponível para quem o prefere, e a escolha fica guardada naquele
-       computador. Ver `Painel.whatsapp`. */
+    /* O WhatsApp que abre é o de QUEM ESTÁ LOGADO no aparelho: no PC,
+       abre ou reaproveita uma única aba do WhatsApp Web; no celular, abre
+       o aplicativo. O painel permanece nesta aba e não espera o servidor
+       para criar a conversa. */
     var saida = Painel.whatsapp.abrir(telefone, mensagem);
 
-    mostrarAtalhoWhatsapp(url, !saida.ok || saida.motivo === "aplicativo");
+    mostrarAtalhoWhatsapp(url, saida.ok);
     avisarEnvio(
-      saida.motivo === "aplicativo"
-        ? "Pedimos ao WhatsApp instalado neste computador para abrir a " +
-          "conversa com a proposta escrita. Não abriu? Troque para o " +
-          "WhatsApp Web aqui embaixo."
-        : saida.ok
-          ? "A conversa abriu no WhatsApp Web com a proposta escrita. " +
-            "Confirme o envio por lá para o cliente receber."
-          : "O navegador bloqueou a janela. Use o botão verde " +
-            "“Abrir conversa no WhatsApp” aqui embaixo.",
+      saida.ok
+        ? (saida.reutilizada
+          ? "A aba já aberta do WhatsApp foi atualizada para este cliente. "
+          : "A conversa abriu no WhatsApp Web com a proposta escrita. ") +
+          "Confirme o envio por lá para o cliente receber."
+        : "O navegador bloqueou a nova aba. Use o botão verde " +
+          "“Abrir conversa no WhatsApp” aqui embaixo.",
       saida.ok ? "sucesso" : "erro"
     );
 
@@ -2872,12 +2728,13 @@ LSTela.pronto(function () {
     if (!selo) return false;
 
     var proxima = celula.querySelector(".ls-next-action");
+    var destinoSituacao = celula.querySelector(".ls-situacao-card") || celula;
     var deveContatar = estado.status === "aprovado" && estado.status_pagamento !== "pago";
     if (deveContatar && !proxima) {
       proxima = document.createElement("span");
       proxima.className = "ls-next-action";
       proxima.innerHTML = '<i class="bi bi-telephone-outbound"></i> Próximo passo: contatar cliente';
-      celula.appendChild(proxima);
+      destinoSituacao.appendChild(proxima);
     } else if (!deveContatar && proxima) {
       proxima.remove();
     }

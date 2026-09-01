@@ -380,6 +380,7 @@ class OrdensServicoInnerView(
             "total_a_receber": financeiro["a_receber"],
             "total_concluido": financeiro["concluido"],
             "clientes_dados": clientes_dados,
+            "tipos_cliente": Cliente.Tipo.choices,
             "empresa_localizacao": origem,
             "manutencoes": (
                 Manutencao.objects
@@ -414,6 +415,38 @@ class OrdensServicoInnerView(
             ],
             "prioridades": OrdemServico.Prioridade.choices,
             "item_tipos": ItemOrdemServico.Tipo.choices,
+            # Reserva local da busca de peças. A tela já conseguiu abrir,
+            # então esta consulta simples também conseguiu; se a chamada
+            # assíncrona cair, o técnico continua trabalhando sem perder a O.S.
+            "itens_os_fallback": [
+                {
+                    "valor": f"r:{peca.pk}",
+                    "rotulo": peca.nome,
+                    "grupo": (
+                        "Itens de manutenção"
+                        if peca.uso == PecasReposicao.Uso.MANUTENCAO
+                        else "Peças de reposição"
+                    ),
+                    "detalhe": (
+                        peca.descricao_peca
+                        or (
+                            "Item de manutenção"
+                            if peca.uso == PecasReposicao.Uso.MANUTENCAO
+                            else "Peça da loja"
+                        )
+                    )[:90],
+                    "valorDireita": (
+                        f"R$ {peca.preco_venda:.2f}".replace(".", ",")
+                        if peca.preco_venda is not None else "sem preço"
+                    ),
+                    "preco": (
+                        f"{peca.preco_venda:.2f}".replace(".", ",")
+                        if peca.preco_venda is not None else ""
+                    ),
+                    "imagem": "",
+                }
+                for peca in PecasReposicao.objects.all().order_by("nome")
+            ],
             "email_configurado": smtp_configurado(),
             "email_diagnostico": diagnostico_smtp(),
             "pode_editar": acesso["ordens_servico_editar"],
@@ -699,6 +732,16 @@ class OrdensServicoInnerView(
         if status == OrdemServico.Status.CONCLUIDA and not ordem.concluida_em:
             ordem.concluida_em = timezone.now()
         ordem.save()
+        # NÚMERO DE SÉRIE NÃO PODE SER UMA ADIVINHAÇÃO OBRIGATÓRIA.
+        #
+        # Se o equipamento tiver etiqueta do fabricante, a equipe pode
+        # digitá-la. Quando não tiver -- brinquedo antigo, fabricação
+        # própria ou patrimônio sem plaqueta -- a própria O.S. ganha uma
+        # identificação interna estável. O id só existe depois do primeiro
+        # save, por isso o preenchimento acontece aqui.
+        if not ordem.numero_serie:
+            ordem.numero_serie = f"LS-PAT-{ordem.pk:06d}"
+            ordem.save(update_fields=["numero_serie", "atualizado"])
         self._gravar_itens(ordem, request.POST.get("itens"))
 
         return self.sucesso(
@@ -877,6 +920,28 @@ class OrdensServicoInnerView(
         peca = svc_pecas.cadastrar(request)
         return self.sucesso(
             request, svc_pecas.recado(peca), peca=svc_pecas.resumo(peca),
+        )
+
+    def acao_cliente_novo(self, request):
+        """Cadastra e devolve o cliente sem abandonar a O.S. em montagem.
+
+        O cadastro usa exatamente as regras da aba Clientes e do orçamento.
+        Assim o atalho da Produção não cria uma ficha incompleta nem uma
+        segunda versão do mesmo cliente.
+        """
+        if not capacidades(request.user)["ordens_servico_editar"]:
+            return self.erro(
+                request,
+                "Somente Produção ou Gestão cadastra cliente por esta O.S.",
+                status=403,
+            )
+
+        cliente = svc_clientes.salvar_cliente(request)
+        svc_clientes.salvar_endereco(request, cliente)
+        return self.sucesso(
+            request,
+            f"“{cliente.nome_cliente}” foi cadastrado e selecionado na O.S.",
+            cliente=svc_clientes.opcao_de_busca(cliente),
         )
 
     def acao_refazer(self, request):

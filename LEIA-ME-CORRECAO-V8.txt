@@ -1,0 +1,36 @@
+LAZER & SPORT — CORREÇÃO V8
+Restauração completa dos modais da O.S.
+
+IMPORTANTE
+Este pacote substitui a V7 e restaura o controlador global de modais exatamente
+ao arquivo original do repositório. A correção de cliente/peça ficou isolada na
+tela de Ordem de Serviço e não altera mais nenhuma outra janela do sistema.
+
+O QUE FOI CORRIGIDO
+1. Editar/Nova O.S. volta a usar o modal Bootstrap original.
+2. Enviar O.S. volta a usar o modal Bootstrap original.
+3. Pagamento volta a usar o modal Bootstrap original.
+4. Refazer, exclusão e demais janelas mantêm o comportamento original.
+5. Cliente e peça não usam mais Painel.abrirFilho.
+6. Cliente/peça abrem em uma camada interna da O.S., preservando tudo digitado.
+7. Ao salvar cliente, ele fica cadastrado, selecionado e pré-preenchido na O.S.
+8. Continua existindo apenas um caminho “Cadastrar cliente” na busca.
+9. O acabamento arredondado e mais escuro do cabeçalho foi mantido.
+
+COMO APLICAR
+1. Faça uma cópia da pasta atual do sistema.
+2. Extraia este ZIP na raiz do projeto, onde está manage.py.
+3. Autorize a substituição de todos os seis arquivos.
+4. Execute: python manage.py check
+5. Reinicie o serviço web e os workers, se houver.
+6. Faça Ctrl+F5. Em aplicativo instalado, feche-o totalmente e abra novamente.
+
+BANCO DE DADOS
+Não há migration nova.
+
+TESTE RÁPIDO
+1. Abra e feche Nova O.S., Enviar, Pagamento e Refazer.
+2. Abra Nova O.S., procure um cliente inexistente e use Cadastrar cliente.
+3. Confirme que a camada abre acima sem fechar a O.S.
+4. Salve e confirme que a O.S. continua aberta com o novo cliente selecionado.
+5. Repita cadastrando uma peça ou item de manutenção.

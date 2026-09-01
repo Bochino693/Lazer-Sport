@@ -1,0 +1,53 @@
+LAZER & SPORT — CORREÇÃO V5 DA BUSCA DA O.S.
+=============================================
+
+Esta correção foi preparada sobre a versão atual da branch main do GitHub
+(commit e26e9904c08ce1621eee19073ba9f5ba5ebc6b03).
+
+O ZIP contém somente os quatro arquivos alterados. Ele não inclui banco de
+dados, .env, uploads ou credenciais e não precisa de nova migração.
+
+COMO APLICAR
+------------
+
+1. Feche o servidor local e faça uma cópia de segurança do projeto.
+2. Extraia o ZIP na raiz onde fica manage.py.
+3. Confirme a substituição dos arquivos existentes.
+4. Execute:
+
+       python manage.py check
+
+5. Inicie o servidor e faça Ctrl+F5 no navegador.
+
+O QUE FOI CORRIGIDO
+-------------------
+
+- A busca da O.S. agora consulta somente o catálogo necessário: peças de
+  reposição e itens de manutenção.
+- A consulta vazia, feita quando o campo recebe foco, também responde com os
+  itens disponíveis.
+- A tela leva uma cópia local segura do catálogo. Se a requisição remota
+  falhar, o seletor continua buscando normalmente sem exibir “Não consegui
+  buscar agora”.
+- Resultados locais e remotos são unidos sem duplicar itens.
+- Peça de loja e item de manutenção continuam separados pelo grupo correto.
+- O campo “Nº de série / patrimônio” virou “Identificação / série”.
+- Se a identificação ficar vazia, o sistema gera automaticamente um código
+  interno no formato LS-PAT-000123 ao salvar.
+- Se for informado o número real da etiqueta do fabricante, ele é preservado.
+
+ARQUIVOS ALTERADOS
+------------------
+
+- sistema_interno/views_gestao.py
+- sistema_interno/views_ordens_servico.py
+- sistema_interno/templates/ordens_servico_inner.html
+- sistema_interno/tests_os_versoes.py
+
+VALIDAÇÃO
+---------
+
+- Os três arquivos Python foram validados pelo analisador sintático.
+- O JavaScript renderizado na tela de O.S. passou na verificação de sintaxe.
+- Foram acrescentados testes para busca vazia, catálogo local de reserva,
+  identificação automática e preservação do número real.

@@ -638,107 +638,140 @@
   };
 
   /* ====================================================================
-     ACORDAR ANTES DE AGIR
-     --------------------------------------------------------------------
-     O QUE ACONTECIA. A hospedagem desliga a instância depois de alguns
-     minutos sem nenhuma requisição. O painel tem um pulso -- a central de
-     avisos pergunta de 30 em 30 segundos --, mas ele só bate com a ABA
-     VISÍVEL. Painel aberto numa aba de fundo, ou com a tela bloqueada, é
-     painel sem pulso: a instância dorme.
+     SERVIDOR PRONTO DEPOIS DE MUITO TEMPO SEM USO
 
-     Aí a pessoa volta, clica em "Salvar", e esse clique é quem paga a
-     conta de acordar tudo -- processo web e conexão com o banco. São
-     dezenas de segundos. Passando de 90, o gunicorn mata o worker e o
-     que volta é 502. Quando não passa, o botão fica travado tempo demais
-     e quem está na tela clica de novo.
+     A hospedagem pode suspender o processo ou encerrar uma conexão ociosa.
+     Repetir automaticamente um POST seria perigoso (dois pagamentos, duas
+     versões, duas exclusões). A estratégia segura é acordar o servidor com
+     GET /healthz/ ANTES da gravação e enviar o POST uma única vez.
 
-     POR QUE NÃO BASTA REPETIR O ENVIO. Um POST não pode ser repetido às
-     cegas: ele pode ter chegado e sido gravado, e a resposta é que se
-     perdeu. Repetir cria a segunda proposta, o segundo pagamento.
-
-     Então a ordem se inverte: primeiro um GET -- que é seguro repetir
-     quantas vezes precisar -- até o servidor responder; só depois o POST,
-     já com tudo quente. A espera continua existindo, mas ela acontece
-     ANTES da ação, com aviso na tela, em vez de virar erro depois.
+     Enquanto o painel estiver aberto e visível, um pulso barato mantém o
+     processo pronto. Ao voltar para uma aba antiga, o pulso começa antes do
+     primeiro clique e todas as gravações compartilham a mesma promessa.
      ==================================================================== */
-  var conexao = {
-    /* Quando o servidor confirmou que está de pé pela última vez. */
-    ultimoContato: Date.now(),
+  var redeUltimoSucesso = Date.now();
+  var redeAcordando = null;
+  var REDE_OCIOSA_MS = 2 * 60 * 1000;
+  var REDE_PULSO_MS = 4 * 60 * 1000;
 
-    /* Depois de tanto tempo sem contato, a instância pode ter dormido.
-       A hospedagem desliga por volta dos 15 minutos; 4 é folgado o
-       bastante para não acordar à toa e curto o bastante para nunca
-       deixar um POST pagar a conta. */
-    limiteOcioso: 4 * 60 * 1000,
+  /* Somadas, dão pouco mais de quarenta segundos -- a faixa em que uma
+     instância suspensa costuma voltar. */
+  var ESPERAS_DO_PULSO = [600, 1400, 3000, 5000, 8000, 11000, 12000];
 
-    /* Uma partida a frio leva dezenas de segundos. As esperas crescem
-       para não martelar um servidor que ainda está subindo, e param em
-       12s para o total caber na paciência de quem está na tela. */
-    esperas: [800, 1800, 3500, 6000, 9000, 12000, 12000, 12000],
+  function esperarRede(ms) {
+    return new Promise(function (resolver) { global.setTimeout(resolver, ms); });
+  }
 
-    despertando: null,
+  function pulsoDoServidor(tentativa) {
+    var controlador = global.AbortController ? new AbortController() : null;
+    var timer = controlador
+      ? global.setTimeout(function () { controlador.abort(); }, 9000)
+      : null;
 
-    registrar: function () { this.ultimoContato = Date.now(); },
+    /* `/pronto/`, e não `/healthz/`.
 
-    ocioso: function () {
-      return Date.now() - this.ultimoContato > this.limiteOcioso;
-    },
+       O `healthz` responde sem tocar o banco -- é o health check da
+       hospedagem, e ele PRECISA ser assim: se dependesse do Supabase,
+       uma oscilação do banco passaria a derrubar o processo web inteiro.
 
-    /* Bate no endereço que acorda processo e banco. Devolve sempre uma
-       promessa que RESOLVE: se nem assim o servidor respondeu, quem
-       chamou segue mesmo assim -- barrar a ação transformaria uma espera
-       em uma parede. */
-    despertar: function () {
-      var eu = this;
-      if (eu.despertando) return eu.despertando;
+       Só que acordar apenas o processo resolve metade do problema. O
+       primeiro clique de quem volta ao painel vai consultar o banco, e
+       abrir conexão nova com o Supabase custa segundos -- trocaríamos
+       uma espera longa por uma espera média. `/pronto/` faz um
+       `SELECT 1`: o bastante para a conexão existir e estar quente
+       quando a gravação de verdade chegar. Ver `core.views.pronto`. */
+    return fetch("/pronto/?painel=1", {
+      method: "GET",
+      credentials: "same-origin",
+      cache: "no-store",
+      headers: { "X-Requested-With": "XMLHttpRequest" },
+      signal: controlador ? controlador.signal : undefined,
+    }).then(function (resposta) {
+      if (!resposta.ok) throw new Error("health-" + resposta.status);
+      redeUltimoSucesso = Date.now();
+      return true;
+    }).catch(function (erro) {
+      /* A ESPERA PRECISA CABER NUMA PARTIDA A FRIO.
 
-      eu.despertando = new Promise(function (resolver) {
-        var passo = 0;
+         Eram três tentativas somando cerca de dois segundos -- o
+         suficiente para uma oscilação de rede, e muito pouco para o
+         caso que motivou tudo isto: a instância suspensa leva de vinte a
+         sessenta segundos para voltar. Desistindo aos dois segundos, o
+         painel decidia que o servidor não vinha justamente enquanto ele
+         estava subindo.
 
-        function tentar() {
-          var controlador = "AbortController" in global ? new AbortController() : null;
-          var relogio = controlador
-            ? global.setTimeout(function () { controlador.abort(); }, 15000)
-            : null;
+         As esperas crescem para não martelar um servidor que ainda está
+         de pé sobre um joelho, e param em doze segundos para o total
+         caber na paciência de quem está olhando a tela. */
+      if (tentativa < ESPERAS_DO_PULSO.length) {
+        return esperarRede(ESPERAS_DO_PULSO[tentativa]).then(function () {
+          return pulsoDoServidor(tentativa + 1);
+        });
+      }
+      throw erro;
+    }).finally(function () {
+      if (timer) global.clearTimeout(timer);
+    });
+  }
 
-          global.fetch("/pronto/", {
-            method: "GET",
-            credentials: "same-origin",
-            cache: "no-store",
-            headers: { "X-Requested-With": "XMLHttpRequest" },
-            signal: controlador ? controlador.signal : undefined
-          }).then(function (resposta) {
-            if (relogio) global.clearTimeout(relogio);
-            if (!resposta.ok) throw new Error("ainda subindo");
-            eu.registrar();
-            resolver(true);
-          }).catch(function () {
-            if (relogio) global.clearTimeout(relogio);
-            if (passo >= eu.esperas.length) { resolver(false); return; }
-            global.setTimeout(tentar, eu.esperas[passo++]);
-          });
-        }
+  function acordarServidor(forcar) {
+    if (!forcar && Date.now() - redeUltimoSucesso < REDE_OCIOSA_MS) {
+      return Promise.resolve(true);
+    }
+    if (redeAcordando) return redeAcordando;
 
-        tentar();
-      }).then(function (ok) {
-        eu.despertando = null;
-        return ok;
+    redeAcordando = pulsoDoServidor(0).finally(function () {
+      redeAcordando = null;
+    });
+    return redeAcordando;
+  }
+
+  Painel.rede = {
+    acordar: acordarServidor,
+
+    /* POST único: o preflight GET pode repetir; a gravação nunca. */
+    post: function (destino, opcoes) {
+      /* NÃO RECUSAR A GRAVAÇÃO PORQUE O DESPERTAR FALHOU.
+
+         Recusar era a escolha segura enquanto a espera era de dois
+         segundos: nesse prazo, "não respondeu" quase sempre significava
+         mesmo "está fora". Agora que a espera cobre uma partida a frio
+         inteira, desistir depois dela e ainda barrar o envio troca uma
+         espera por uma parede -- e a pessoa que esperou quarenta
+         segundos recebe "tente de novo" sem nada ter sido tentado.
+
+         Além disso, o despertar falhar não prova que o servidor está
+         fora: pode ser só aquele endereço. O POST sai uma vez, como
+         sempre saiu, e se o servidor realmente não estiver lá ele falha
+         com o erro de verdade, que é o que a tela precisa mostrar. */
+      return acordarServidor(false).catch(function () {
+        return false;
+      }).then(function () {
+        return fetch(destino, opcoes).then(function (resposta) {
+          if (resposta.ok) redeUltimoSucesso = Date.now();
+          return resposta;
+        });
       });
-
-      return eu.despertando;
     },
   };
 
-  Painel.conexao = conexao;
+  /* Mantém a instância pronta somente enquanto o painel está realmente em
+     uso. Aba escondida não gera tráfego; ao voltar, acorda imediatamente. */
+  global.setInterval(function () {
+    if (document.visibilityState === "visible") acordarServidor(true).catch(function () {});
+  }, REDE_PULSO_MS);
 
-  /* Voltar para a aba é o momento de acordar, e não o do primeiro
-     clique: assim a espera acontece enquanto a pessoa ainda está lendo a
-     tela, e o clique seguinte já encontra tudo pronto. */
   document.addEventListener("visibilitychange", function () {
-    if (document.visibilityState === "visible" && conexao.ocioso()) {
-      conexao.despertar();
-    }
+    if (document.visibilityState === "visible") acordarServidor(false).catch(function () {});
   });
+  global.addEventListener("pageshow", function () {
+    acordarServidor(false).catch(function () {});
+  });
+  document.addEventListener("pointerdown", function () {
+    if (Date.now() - redeUltimoSucesso >= REDE_OCIOSA_MS) {
+      acordarServidor(false).catch(function () {});
+    }
+  }, { capture: true, passive: true });
 
   Painel.enviar = function (form, extras) {
     var dados = new FormData(form);
@@ -752,21 +785,12 @@
     // input em vez da URL -- o POST ia parar em /stock/[object HTMLInputElement].
     var destino = form.getAttribute("action") || global.location.pathname;
 
-    /* Ocioso demais: acorda primeiro, com um GET seguro de repetir, e só
-       então manda o POST. Ver o bloco "ACORDAR ANTES DE AGIR". */
-    var pronto = conexao.ocioso()
-      ? conexao.despertar()
-      : Promise.resolve(true);
-
-    return pronto.then(function () {
-      return fetch(destino, {
-        method: "POST",
-        body: dados,
-        headers: { "X-Requested-With": "XMLHttpRequest" },
-        credentials: "same-origin"
-      });
+    return Painel.rede.post(destino, {
+      method: "POST",
+      body: dados,
+      headers: { "X-Requested-With": "XMLHttpRequest" },
+      credentials: "same-origin"
     }).then(function (resposta) {
-      conexao.registrar();
       return resposta
         .json()
         .catch(function () {
@@ -804,14 +828,12 @@
     var botao = form.querySelector('[type="submit"]');
     var rotulo = botao ? botao.textContent : "";
 
-    function travar(on, texto) {
+    function travar(on) {
       if (!botao) {
         return;
       }
       botao.disabled = on;
-      botao.textContent = on
-        ? (texto || opcoes.rotuloCarregando || "Salvando...")
-        : rotulo;
+      botao.textContent = on ? (opcoes.rotuloCarregando || "Salvando...") : rotulo;
     }
 
     // A validacao nativa nao bubbla e o balaozinho some quando o modal
@@ -843,14 +865,7 @@
         }
       }
 
-      /* DIZER O QUE ESTÁ ACONTECENDO ENQUANTO ACONTECE.
-
-         Depois de muito tempo parado, o envio começa acordando o
-         servidor, e isso pode levar dezenas de segundos. Um botão
-         escrito "Salvando..." por trinta segundos parece travado, e quem
-         está na tela clica de novo. "Reconectando..." é a verdade, e
-         explica a demora sem assustar. */
-      travar(true, Painel.conexao.ocioso() ? "Reconectando..." : null);
+      travar(true);
 
       Painel.enviar(form, opcoes.action ? { action: opcoes.action } : null)
         .then(function (json) {
@@ -1049,33 +1064,15 @@
   };
 
   /* ====================================================================
-     WHATSAPP: NO COMPUTADOR, A VERSÃO WEB É O CAMINHO
+     WHATSAPP: WEB NO COMPUTADOR, APLICATIVO NO CELULAR
      --------------------------------------------------------------------
-     ERA O CONTRÁRIO, E ERA UMA APOSTA. O computador chamava o esquema
-     `whatsapp://`, contando com o aplicativo instalado. O problema está
-     escrito na natureza desse esquema: se o aplicativo NÃO existe, o
-     navegador não avisa nada -- não dá erro, não abre janela, não
-     acontece nada. Quem clicava ficava olhando a tela esperando uma
-     conversa que nunca ia abrir, e só descobria o botão de reserva se
-     lesse o parágrafo embaixo.
-
-     E a aposta é ruim na máquina onde ela mais importa: no computador da
-     empresa quem atende já está com o WhatsApp Web logado na aba ao
-     lado. Mandar para o aplicativo é pedir para instalar e parear um
-     programa que a pessoa não usa, para fazer o que a aba já faz.
-
-     Agora o padrão do computador é `web.whatsapp.com/send`, que cai
-     direto na conversa daquela sessão -- e não `wa.me`, que no
-     computador mostra antes uma página intermediária perguntando se você
-     quer o aplicativo. Uma aba, uma conversa, a mensagem escrita.
-
-     Quem TEM o aplicativo e o prefere troca uma vez, e a escolha fica
-     guardada naquele computador. É preferência de máquina, não de conta:
-     o mesmo usuário no computador do escritório e no do galpão pode
-     querer coisas diferentes, e é o navegador que sabe qual é qual.
-
-     No celular nada muda: `wa.me` já leva ao aplicativo, e é o caminho
-     que o próprio WhatsApp recomenda.
+     O protocolo `whatsapp://` depende do programa instalado e não informa
+     ao navegador se falhou. No computador isso parecia um botão parado.
+     A versão web é previsível: usa UMA aba identificada do WhatsApp, mantém
+     a sessão já conectada do atendente e conserva o painel intacto. Nos
+     próximos clientes essa mesma aba é atualizada e trazida para a frente;
+     não nasce uma cópia do WhatsApp a cada envio. No celular, `wa.me`
+     continua levando ao aplicativo.
      ==================================================================== */
   function numeroComDdi(telefone) {
     var digitos = String(telefone || "").replace(/\D/g, "");
@@ -1094,69 +1091,33 @@
     );
   }
 
-  /* Onde guardar a escolha do computador. `localStorage` pode lançar
-     (janela anônima, cookies bloqueados), e uma preferência de conforto
-     não pode derrubar o envio: qualquer falha volta ao padrão. */
-  var CHAVE_PREFERENCIA = "ls:whatsapp:computador";
+  /* Um nome estável faz o próprio navegador encontrar a aba mesmo depois
+     de o painel ser recarregado. A referência acelera o caso comum; o nome
+     resolve também o caso em que a referência JavaScript foi perdida. */
+  var NOME_ABA_WHATSAPP = "ls-whatsapp-web";
+  var abaWhatsappWeb = null;
 
-  function preferenciaDoComputador() {
-    try {
-      var salvo = global.localStorage.getItem(CHAVE_PREFERENCIA);
-      return salvo === "aplicativo" ? "aplicativo" : "web";
-    } catch (e) {
-      return "web";
-    }
-  }
-
-  function guardarPreferencia(valor) {
-    try {
-      global.localStorage.setItem(
-        CHAVE_PREFERENCIA, valor === "aplicativo" ? "aplicativo" : "web"
-      );
-    } catch (e) {
-      /* Sem armazenamento, vale o padrão a cada vez. */
-    }
-    return preferenciaDoComputador();
+  function alvoWhatsapp() {
+    return noCelular() ? "_blank" : NOME_ABA_WHATSAPP;
   }
 
   Painel.whatsapp = {
     numero: numeroComDdi,
 
-    /* `wa.me`: o endereço curto que se copia, se guarda e se manda por
-       fora. No celular ele abre o aplicativo direto. */
+    /* No PC vai explicitamente ao WhatsApp Web; no celular conserva wa.me. */
     web: function (telefone, mensagem) {
       var digitos = numeroComDdi(telefone);
       if (!digitos) return "";
-      return "https://wa.me/" + digitos + "?text=" + encodeURIComponent(mensagem || "");
-    },
-
-    /* O WhatsApp Web daquele navegador, direto na conversa.
-
-       Não é `wa.me`: no computador o wa.me mostra antes uma página
-       perguntando se você quer abrir o aplicativo, e é mais um clique
-       entre quem atende e o cliente. */
-    navegador: function (telefone, mensagem) {
-      var digitos = numeroComDdi(telefone);
-      if (!digitos) return "";
-      return (
-        "https://web.whatsapp.com/send?phone=" + digitos +
-        "&text=" + encodeURIComponent(mensagem || "")
-      );
-    },
-
-    /* O aplicativo instalado. */
-    app: function (telefone, mensagem) {
-      var digitos = numeroComDdi(telefone);
-      if (!digitos) return "";
-      return (
-        "whatsapp://send?phone=" + digitos +
-        "&text=" + encodeURIComponent(mensagem || "")
-      );
+      var base = noCelular()
+        ? "https://wa.me/" + digitos
+        : "https://web.whatsapp.com/send?phone=" + digitos;
+      return base + (noCelular() ? "?text=" : "&text=")
+        + encodeURIComponent(mensagem || "");
     },
 
     noCelular: noCelular,
-    preferencia: preferenciaDoComputador,
-    definirPreferencia: guardarPreferencia,
+
+    alvo: alvoWhatsapp,
 
     /* Abre a conversa e devolve o que aconteceu, para a tela explicar.
        Precisa ser chamado DENTRO do clique: fora do gesto da pessoa o
@@ -1165,45 +1126,31 @@
       var web = this.web(telefone, mensagem);
       if (!web) return { ok: false, motivo: "numero", web: "" };
 
-      if (noCelular()) {
-        var aba = window.open(web, "_blank");
-        if (aba) { try { aba.opener = null; } catch (e) {} }
-        return { ok: !!aba, motivo: aba ? "web" : "bloqueado", web: web };
-      }
+      var celular = noCelular();
+      var reutilizada = !celular && abaWhatsappWeb && !abaWhatsappWeb.closed;
+      var aba = window.open(web, alvoWhatsapp());
 
-      /* NO COMPUTADOR, O APLICATIVO SÓ SE ALGUÉM PEDIR.
-
-         Navegar a própria página para `whatsapp://` não troca a página: o
-         sistema entrega ao aplicativo e o navegador fica onde está. Mas
-         quando o aplicativo não existe também não acontece nada, e não
-         há como o JavaScript saber a diferença -- por isso isto não é
-         mais o padrão, e sim a escolha de quem sabe que o tem. */
-      if (preferenciaDoComputador() === "aplicativo") {
-        try {
-          window.location.href = this.app(telefone, mensagem);
-          return { ok: true, motivo: "aplicativo", web: web };
-        } catch (e) {
-          /* Cai para a web, logo abaixo. */
+      if (aba) {
+        if (celular) {
+          try { aba.opener = null; } catch (e) {}
+        } else {
+          abaWhatsappWeb = aba;
         }
+        /* Alguns navegadores navegam a aba nomeada, mas deixam o painel
+           por cima. O foco torna a troca de cliente imediatamente visível. */
+        try { aba.focus(); } catch (e) {}
       }
 
-      var alvo = this.navegador(telefone, mensagem);
-      var janela = window.open(alvo, "_blank");
-      if (janela) { try { janela.opener = null; } catch (e) {} }
       return {
-        ok: !!janela,
-        motivo: janela ? "navegador" : "bloqueado",
+        ok: !!aba,
+        motivo: aba ? (reutilizada ? "reutilizada" : "web") : "bloqueado",
         web: web,
-        navegador: alvo,
+        reutilizada: reutilizada,
       };
     },
   };
 
-  /* Todo link "wa.me" do painel segue a mesma regra, sem cada tela ter de
-     lembrar disso: no computador vai para o aplicativo instalado. O link
-     continua sendo wa.me no HTML -- é o que se copia, o que funciona sem
-     JavaScript e o que serve de reserva. Quem quiser mesmo a versão web
-     (o botão verde de "não abriu?") marca `data-whatsapp-web`. */
+  /* Links antigos em wa.me também entram na Web no computador. */
   document.addEventListener("click", function (evento) {
     var link = evento.target.closest
       ? evento.target.closest('a[href^="https://wa.me/"]')
@@ -1216,9 +1163,15 @@
     if (!telefone) return;
 
     evento.preventDefault();
-    window.location.href =
-      "whatsapp://send?phone=" + telefone +
-      "&text=" + encodeURIComponent(endereco.searchParams.get("text") || "");
+    var destino = Painel.whatsapp.web(
+      telefone,
+      endereco.searchParams.get("text") || ""
+    );
+    var aba = window.open(destino, alvoWhatsapp());
+    if (aba) {
+      abaWhatsappWeb = aba;
+      try { aba.focus(); } catch (e) {}
+    }
   });
 
   /* ====================================================================
@@ -1383,10 +1336,6 @@
           return null;
         }
         if (!resposta.ok) return null;
-        /* O pulso da central é o que mantém a instância acordada
-           enquanto alguém está com o painel na frente. Marcar o contato
-           aqui é o que evita `Painel.enviar` acordar à toa. */
-        conexao.registrar();
         return resposta.json();
       })
       .then(function (dados) {

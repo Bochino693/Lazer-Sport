@@ -75,55 +75,56 @@ class AcordarAntesDeAgirTests(SimpleTestCase):
         """
         painel = self.painel()
 
-        self.assertIn('var pronto = conexao.ocioso()', painel)
-        self.assertIn("? conexao.despertar()", painel)
-        # E a repetição mora no despertar, não no envio.
-        despertar = painel[painel.index("despertar: function ()"):]
-        despertar = despertar[:despertar.index("Painel.conexao = conexao;")]
-        self.assertIn("global.setTimeout(tentar, eu.esperas[passo++])", despertar)
-        self.assertIn('method: "GET"', despertar)
+        self.assertIn("POST único", painel)
+        self.assertIn("Painel.rede.post(destino", painel)
 
-    def test_desistir_de_acordar_nao_barra_a_acao(self):
-        """Barrar transformaria uma espera em uma parede.
+        pulso = painel[painel.index("function pulsoDoServidor("):]
+        pulso = pulso[:pulso.index("function acordarServidor(")]
+        self.assertIn('method: "GET"', pulso)
+        self.assertIn("pulsoDoServidor(tentativa + 1)", pulso)
 
-        Se nem depois de tudo o servidor respondeu, o envio sai assim
-        mesmo: pode ser que só o endereço de acordar esteja indisponível.
+    def test_acorda_o_banco_e_nao_so_o_processo(self):
+        """Acordar só o processo troca uma espera longa por uma média.
+
+        O primeiro clique de quem volta ao painel vai consultar o banco,
+        e abrir conexão nova com o Supabase custa segundos.
+        """
+        self.assertIn('fetch("/pronto/?painel=1"', self.painel())
+
+    def test_a_espera_cabe_numa_partida_a_frio(self):
+        """Eram ~2 segundos: o bastante para uma oscilação de rede, e
+        muito pouco para o caso que motivou tudo isto.
+
+        Uma instância suspensa leva de vinte a sessenta segundos para
+        voltar. Desistindo aos dois, o painel decidia que o servidor não
+        vinha justamente enquanto ele estava subindo.
         """
         painel = self.painel()
-        despertar = painel[painel.index("despertar: function ()"):]
-        despertar = despertar[:despertar.index("Painel.conexao = conexao;")]
-
-        # Todos os caminhos resolvem; nenhum rejeita.
-        self.assertIn("resolver(false)", despertar)
-        self.assertNotIn("rejeitar", despertar)
-
-    def test_a_espera_cresce_e_para_de_crescer(self):
-        """Martelar um servidor que está subindo o faz subir mais devagar.
-
-        E esperar para sempre é pior que falhar: o teto existe para a
-        soma caber na paciência de quem está na tela.
-        """
-        painel = self.painel()
-        self.assertIn("esperas: [800, 1800, 3500, 6000, 9000, 12000, 12000, 12000]", painel)
-
-    def test_o_pulso_da_central_conta_como_contato(self):
-        """Sem isto, um painel em uso acordaria à toa a cada envio."""
         self.assertIn(
-            "conexao.registrar();\n        return resposta.json();", self.painel(),
-        )
-
-    def test_voltar_para_a_aba_acorda_antes_do_clique(self):
-        """Assim a espera acontece enquanto a pessoa ainda lê a tela."""
-        painel = self.painel()
-        self.assertIn(
-            'if (document.visibilityState === "visible" && conexao.ocioso()) {',
+            "var ESPERAS_DO_PULSO = [600, 1400, 3000, 5000, 8000, 11000, 12000];",
             painel,
         )
+        # Somadas, passam de quarenta segundos.
+        soma = 600 + 1400 + 3000 + 5000 + 8000 + 11000 + 12000
+        self.assertGreater(soma, 40000)
 
-    def test_o_botao_diz_reconectando_e_nao_salvando(self):
-        """"Salvando..." por trinta segundos parece travado, e quem está
-        na tela clica de novo."""
-        self.assertIn(
-            'travar(true, Painel.conexao.ocioso() ? "Reconectando..." : null);',
-            self.painel(),
-        )
+    def test_desistir_de_acordar_nao_barra_a_gravacao(self):
+        """Barrar transformaria uma espera em uma parede.
+
+        Recusar fazia sentido enquanto a espera era de dois segundos.
+        Agora que ela cobre uma partida a frio inteira, desistir depois
+        dela e ainda barrar o envio entrega "tente de novo" a quem
+        esperou quarenta segundos sem nada ter sido tentado.
+        """
+        painel = self.painel()
+        post = painel[painel.index("post: function (destino, opcoes)"):]
+        post = post[:post.index("/* Mantém a instância pronta")]
+
+        self.assertIn("return false;", post)
+        self.assertNotIn("Nada foi enviado", post)
+
+    def test_o_pulso_so_bate_com_a_aba_visivel(self):
+        """Aba escondida não gera tráfego; ao voltar, acorda na hora."""
+        painel = self.painel()
+        self.assertIn('if (document.visibilityState === "visible") acordarServidor(true)', painel)
+        self.assertIn('document.addEventListener("visibilitychange"', painel)
