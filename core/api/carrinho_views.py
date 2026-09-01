@@ -173,7 +173,16 @@ class SincronizarCarrinhoAPI(APIView):
         for (tipo, objeto_id), quantidade in agrupados.items():
             modelo = MODELOS_POR_TIPO[tipo]
 
-            if not modelo.objects.filter(pk=objeto_id).exists():
+            # Peça de manutenção não entra em carrinho: ela existe para
+            # a O.S. e para o orçamento, com preço de custo interno, e
+            # nunca chegou a ser oferecida a ninguém. Ver
+            # `PecasReposicao.da_vitrine`.
+            existe = (
+                PecasReposicao.da_vitrine().filter(pk=objeto_id).exists()
+                if modelo is PecasReposicao
+                else modelo.objects.filter(pk=objeto_id).exists()
+            )
+            if not existe:
                 ignorados += 1
                 continue
 

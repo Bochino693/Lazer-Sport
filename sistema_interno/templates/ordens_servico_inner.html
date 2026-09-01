@@ -47,11 +47,25 @@
   {% endfor %}
 </section>
 
+{% comment %}
+  A FAIXA DO TOPO PRECISA RESPONDER ALGUMA COISA.
+
+  Três das quatro caixas diziam "Documento: Operacional", "Orçamento:
+  Negociação separada" e "Impressão: A4 e PDF". São frases verdadeiras e
+  completamente inúteis: não mudam, não respondem nada e ninguém as lê
+  duas vezes -- ocupando, no topo da tela, o lugar onde a tela de
+  propostas mostra quatro valores que mudam todo dia.
+
+  Agora respondem o que se pergunta ao chegar: quanto está preso em
+  serviço que ainda não acabou, quanto já foi entregue, quanto falta
+  receber e quanto entrou. Versões substituídas ficam fora dos quatro:
+  somá-las contaria o mesmo serviço duas vezes.
+{% endcomment %}
 <section class="ls-budget-money-strip">
-  <div class="success"><span>Total recebido nas O.S.</span><strong>R$ {{ total_recebido|moeda }}</strong></div>
-  <div><span>Documento</span><strong>Operacional</strong></div>
-  <div><span>Orçamento</span><strong>Negociação separada</strong></div>
-  <div><span>Impressão</span><strong>A4 e PDF</strong></div>
+  <div><span>Em serviço aberto</span><strong>R$ {{ total_em_servico|moeda }}</strong></div>
+  <div><span>Concluído</span><strong>R$ {{ total_concluido|moeda }}</strong></div>
+  <div class="warning"><span>A receber</span><strong>R$ {{ total_a_receber|moeda }}</strong></div>
+  <div class="success"><span>Recebido</span><strong>R$ {{ total_recebido|moeda }}</strong></div>
 </section>
 
 <section class="ls-data-panel">
@@ -78,20 +92,52 @@
         <tbody>
         {% for ordem in ordens %}
           <tr data-registro="{{ ordem.id }}">
-            <td data-rotulo="O.S."><strong>{{ ordem.numero_documento }}</strong>{% if ordem.orcamento_id %}<span class="material-sub d-block">proposta #{{ ordem.orcamento_id }}</span>{% endif %}</td>
+            <td data-rotulo="O.S."><strong>{{ ordem.numero_documento }}</strong>{% if ordem.versao > 1 %}<span class="ls-versao-chip" title="Esta é a versão {{ ordem.versao }} desta O.S.">v{{ ordem.versao }}</span>{% endif %}{% if ordem.orcamento_id %}<span class="material-sub d-block">proposta #{{ ordem.orcamento_id }}</span>{% endif %}{% if ordem.ordem_anterior_id %}<span class="material-sub d-block">refeita da {{ ordem.ordem_anterior.numero_documento }}</span>{% endif %}</td>
             <td data-rotulo="Cliente / equipamento"><strong>{{ ordem.destinatario }}</strong><span class="material-sub d-block">{{ ordem.equipamento }}</span>{% if ordem.numero_serie %}<span class="material-sub d-block">Série: {{ ordem.numero_serie }}</span>{% endif %}{% if ordem.rota.google_maps_url or ordem.rota.waze_url %}<span class="ls-route-actions">{% if ordem.rota.distancia_km != None %}<span class="ls-distance-chip" title="Estimativa em linha reta"><i class="bi bi-signpost-split"></i> ≈ {{ ordem.rota.distancia_km|stringformat:".1f" }} km</span>{% endif %}{% if ordem.rota.google_maps_url %}<a href="{{ ordem.rota.google_maps_url }}" target="_blank" rel="noopener" class="ls-route-link maps" title="Rota no Google Maps"><i class="bi bi-map"></i> Maps</a>{% endif %}{% if ordem.rota.waze_url %}<a href="{{ ordem.rota.waze_url }}" target="_blank" rel="noopener" class="ls-route-link waze" title="Rota no Waze"><i class="bi bi-navigation"></i> Waze</a>{% endif %}</span>{% endif %}</td>
             <td data-rotulo="Tipo">{{ ordem.get_tipo_display }}{% if ordem.prioridade == 'urgente' or ordem.prioridade == 'alta' %}<span class="ls-status danger d-block mt-1">{{ ordem.get_prioridade_display }}</span>{% endif %}</td>
-            <td data-rotulo="Situação"><span class="ls-status {% if ordem.status == 'concluida' %}success{% elif ordem.status == 'cancelada' %}neutral{% elif ordem.status == 'aguardando_peca' %}warning{% elif ordem.status == 'em_execucao' or ordem.status == 'aguardando_resposta' %}info{% else %}neutral{% endif %}">{{ ordem.get_status_display }}</span>{% if ordem.cliente_ciente %}<span class="material-sub d-block mt-1">cliente ciente ✓</span>{% endif %}</td>
+            <td data-rotulo="Situação"><span class="ls-status {% if ordem.status == 'concluida' %}success{% elif ordem.status == 'cancelada' or ordem.status == 'substituida' %}neutral{% elif ordem.status == 'aguardando_peca' %}warning{% elif ordem.status == 'em_execucao' or ordem.status == 'aguardando_resposta' %}info{% else %}neutral{% endif %}">{{ ordem.get_status_display }}</span>{% if ordem.cliente_ciente %}<span class="material-sub d-block mt-1">cliente ciente ✓</span>{% endif %}{% if ordem.arquivada and ordem.ordem_refeita %}<span class="material-sub d-block mt-1">virou a {{ ordem.ordem_refeita.numero_documento }}</span>{% endif %}</td>
             <td data-rotulo="Agenda">{% if ordem.agendada_para %}{{ ordem.agendada_para|date:"d/m/Y H:i" }}{% else %}<span class="text-muted">Não agendada</span>{% endif %}</td>
             <td data-rotulo="Total" class="text-end"><strong class="ls-money">R$ {{ ordem.total|moeda }}</strong></td>
             <td data-rotulo="Pagamento">{% if ordem.quitado %}<span class="ls-pago"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> Pago</span><span class="material-sub d-block mt-1">R$ {{ ordem.valor_pago|moeda }} recebido</span>{% elif ordem.status_pagamento == 'parcial' %}<span class="ls-status warning">Pagamento parcial</span><span class="material-sub d-block mt-1">faltam <strong>R$ {{ ordem.saldo_pagamento|moeda }}</strong></span>{% else %}<span class="ls-status neutral">{{ ordem.get_status_pagamento_display }}</span>{% endif %}</td>
             <td data-rotulo="Técnico">{% if ordem.tecnico %}{{ ordem.tecnico.get_full_name|default:ordem.tecnico.username }}{% else %}<span class="text-muted">A definir</span>{% endif %}</td>
             <td data-rotulo="Ações" class="ls-actions ls-commercial-actions text-end"><div class="ls-row-actions">
+              {% comment %}
+                AS AÇÕES SÃO EM CIMA DA SITUAÇÃO -- a mesma regra que a
+                proposta já segue.
+
+                Antes toda linha oferecia tudo: editar uma versão que o
+                cliente já leu, enviar de novo um serviço cancelado,
+                cobrar contra o documento que foi trocado por outro. O
+                botão aceso é uma promessa; quando ele leva a um erro,
+                quem trabalha aprende a desconfiar de todos.
+
+                O que cada situação permite está dito no modelo --
+                `pode_editar`, `pode_enviar`, `pode_refazer`,
+                `pode_receber_pagamento` -- e a tela pergunta lá.
+              {% endcomment %}
               <a class="btn btn-sm btn-outline-primary" href="{% url 'ordem_servico_previa_inner' ordem.id %}" target="_blank" rel="noopener" title="Visualizar e imprimir"><i class="bi bi-printer"></i><span class="ls-action-label">Imprimir</span></a>
-              {% if pode_editar %}<button class="btn btn-sm btn-outline-secondary" type="button" data-editar-os="{{ ordem.id }}"><i class="bi bi-pencil"></i><span class="ls-action-label">Editar</span></button>
-              <button class="btn btn-sm btn-outline-primary" type="button" data-enviar-os="{{ ordem.id }}" data-nome="{{ ordem.destinatario }}" data-whatsapp="{{ ordem.whatsapp_destinatario }}" data-email="{{ ordem.email_destinatario }}"
+              {% if pode_editar %}<button class="btn btn-sm btn-outline-secondary" type="button" data-editar-os="{{ ordem.id }}"
+                      aria-label="{% if ordem.pode_editar %}Editar{% else %}Consultar{% endif %} a O.S. {{ ordem.numero_documento }}"
+                      title="{% if ordem.pode_editar %}Editar a O.S.{% else %}Consultar a versão congelada{% endif %}"><i class="bi {% if ordem.pode_editar %}bi-pencil{% else %}bi-search{% endif %}"></i><span class="ls-action-label">{% if ordem.pode_editar %}Editar{% else %}Ver{% endif %}</span></button>
+              {% if ordem.pode_enviar %}<button class="btn btn-sm btn-outline-primary" type="button" data-enviar-os="{{ ordem.id }}" data-nome="{{ ordem.destinatario }}" data-whatsapp="{{ ordem.whatsapp_destinatario }}" data-email="{{ ordem.email_destinatario }}"
                       aria-label="Enviar a O.S. {{ ordem.numero_documento }}"
                       title="Gerar o link da O.S. para mandar ao cliente"><i class="bi bi-send" aria-hidden="true"></i><span class="ls-action-label">Enviar O.S.</span></button>{% endif %}
+              {% comment %}
+                REFAZER É O CAMINHO DO DIAGNÓSTICO QUE MUDOU.
+
+                A O.S. que o cliente leu e assinou como ciente é o
+                registro do que foi combinado naquele dia. Ao abrir o
+                equipamento o técnico descobre outra coisa -- era o
+                motor, não a lona -- e reescrever por cima apagava o
+                papel que explica o valor cobrado. Aqui nasce a versão
+                seguinte, e a anterior fica congelada e consultável.
+              {% endcomment %}
+              {% if ordem.pode_refazer %}<button class="btn btn-sm btn-outline-warning" type="button"
+                      data-refazer-os="{{ ordem.id }}"
+                      data-nome="{{ ordem.numero_documento }} — {{ ordem.destinatario }}"
+                      data-versao="{{ ordem.versao }}"
+                      aria-label="Refazer a O.S. {{ ordem.numero_documento }}"
+                      title="Criar a versão seguinte sem apagar esta"><i class="bi bi-file-earmark-plus"></i><span class="ls-action-label">Refazer O.S.</span></button>{% endif %}{% endif %}
               {% if pode_pagamento and ordem.pode_receber_pagamento %}<button class="btn btn-sm btn-outline-success" type="button" data-pagamento-os="{{ ordem.id }}" data-nome="{{ ordem.numero_documento }} — {{ ordem.destinatario }}" data-total="{{ ordem.total }}" data-pago="{{ ordem.valor_pago }}"><i class="bi bi-cash-coin"></i><span class="ls-action-label">{% if ordem.status_pagamento == 'parcial' %}Completar pagamento{% else %}Registrar pagamento{% endif %}</span></button>{% endif %}
               {% if pode_editar and ordem.status == 'rascunho' and not ordem.enviada_em %}<button class="btn btn-sm btn-outline-danger" type="button" data-excluir="{{ ordem.id }}" data-nome="{{ ordem.numero_documento }} — {{ ordem.destinatario }}" aria-label="Excluir {{ ordem.numero_documento }}" title="Excluir rascunho"><i class="bi bi-trash"></i><span class="ls-action-label">Excluir</span></button>
               {% elif user.is_superuser %}{# Palavra final do superusuário: excluir O.S. que já saiu do rascunho. Fica registrado. #}<button class="btn btn-sm btn-outline-danger" type="button" data-excluir="{{ ordem.id }}" data-nome="{{ ordem.numero_documento }} — {{ ordem.destinatario }}" data-protegido="1" data-protegido-motivo="Esta O.S. está como {{ ordem.get_status_display|lower }} e faz parte do histórico operacional. Você pode excluir mesmo assim, e a exclusão vai ficar registrada com o seu nome." aria-label="Excluir {{ ordem.numero_documento }}" title="Excluir mesmo protegida (fica registrado)"><i class="bi bi-trash"></i><span class="ls-action-label">Excluir</span></button>{% endif %}
@@ -110,6 +156,19 @@
   {% csrf_token %}<input type="hidden" name="action" value="save"><input type="hidden" name="id" id="osId"><input type="hidden" name="itens" id="osItens">
   <div class="modal-header"><div><span class="ls-modal-kicker">Execução operacional</span><h5 class="modal-title" id="osTitulo">Nova Ordem de Serviço</h5></div><button class="btn-close" type="button" data-bs-dismiss="modal"></button></div>
   <div class="modal-body ls-compact-form"><div id="osErro" class="alert alert-danger d-none"></div>
+    <div id="osCongelada" class="alert alert-warning" role="status" hidden></div>
+    {% comment %}
+      As versões desta O.S., pelo mesmo motivo da proposta: a lista as
+      esconde para não contar o mesmo serviço duas vezes, e escondido da
+      lista não pode ser escondido do sistema. Fechado por padrão.
+    {% endcomment %}
+    <details class="ls-versoes" id="osVersoes" hidden>
+      <summary>
+        <i class="bi bi-clock-history" aria-hidden="true"></i>
+        <span id="osVersoesResumo">Histórico de versões</span>
+      </summary>
+      <ol class="ls-versoes-lista" id="osVersoesLista"></ol>
+    </details>
     <div class="row g-3">
       <div class="col-12"><div class="ls-budget-block-title comercial"><i class="bi bi-person-vcard"></i><span><strong>Cliente e origem</strong><small>A O.S. pode nascer de uma proposta aprovada, de um chamado ou de atendimento direto.</small></span></div></div>
       <div class="col-md-5">
@@ -159,8 +218,24 @@
       <div class="col-md-6"><label class="form-label" for="osDiagnostico">Diagnóstico técnico</label><textarea class="form-control" id="osDiagnostico" name="diagnostico" rows="3"></textarea></div>
       <div class="col-12"><label class="form-label" for="osExecutado">Serviço executado</label><textarea class="form-control" id="osExecutado" name="servico_executado" rows="3"></textarea></div>
     </div>
-    <hr class="my-4"><div class="d-flex justify-content-between align-items-center mb-3"><div><h6 class="mb-1">Serviços, peças e materiais</h6><span class="text-muted small">Valores ficam registrados para cobrança e pagamento.</span></div><button class="btn btn-sm btn-outline-primary" type="button" id="adicionarItemOS"><i class="bi bi-plus-lg me-1"></i>Adicionar item</button></div>
-    <div class="table-responsive"><table class="ls-table"><thead><tr><th>Tipo</th><th>Descrição</th><th class="text-end">Quantidade</th><th class="text-end">Valor unit.</th><th class="text-end">Subtotal</th><th></th></tr></thead><tbody id="itensOSCorpo"></tbody></table></div>
+    <hr class="my-4">
+    {% comment %}
+      A LINHA PODE VIR DO CATÁLOGO -- OU DE LUGAR NENHUM.
+
+      Metade do que entra numa O.S. não é item cadastrado: "recolar a
+      emenda da lona" é o serviço daquele dia, e exigir cadastro para
+      isso encheria a tabela de peças de frases. A outra metade É item:
+      a bucha, o retentor, a peça que a loja vende. Essa precisa apontar
+      para o cadastro, para o preço vir certo e para a O.S. saber depois
+      o que consumiu.
+
+      Por isso a busca preenche, e não obriga: escolher traz descrição e
+      preço; digitar direto continua valendo. Peça da loja e item de
+      manutenção aparecem em grupos separados, para custo interno não
+      entrar numa cobrança sem ninguém notar.
+    {% endcomment %}
+    <div class="d-flex justify-content-between align-items-center mb-3"><div><h6 class="mb-1">Serviços, peças e materiais</h6><span class="text-muted small">Busque no catálogo ou escreva a linha. Valores ficam registrados para cobrança e pagamento.</span></div><button class="btn btn-sm btn-outline-primary" type="button" id="adicionarItemOS"><i class="bi bi-plus-lg me-1"></i>Adicionar item</button></div>
+    <div class="table-responsive"><table class="ls-table ls-os-itens"><thead><tr><th>Tipo</th><th>Peça ou item</th><th>Descrição</th><th class="text-end">Quantidade</th><th class="text-end">Valor unit.</th><th class="text-end">Subtotal</th><th></th></tr></thead><tbody id="itensOSCorpo"></tbody></table></div>
     <div class="row g-3 mt-2 ls-os-ajustes-financeiros">
       <div class="col-12"><div class="ls-budget-block-title financeiro"><i class="bi bi-cash-stack"></i><span><strong>Ajustes do total</strong><small>Frete e desconto vêm depois dos itens porque alteram a soma deles.</small></span></div></div>
       <div class="col-12 col-md-3"><label class="form-label" for="osFrete">Frete</label><div class="input-group"><span class="input-group-text">R$</span><input class="form-control" id="osFrete" name="frete" inputmode="decimal" data-mascara="moeda" placeholder="0,00"></div></div>
@@ -174,7 +249,7 @@
     </div>
     <div class="row g-3 mt-1"><div class="col-md-6"><label class="form-label" for="osFormaPagamento">Forma de pagamento</label><input class="form-control" id="osFormaPagamento" name="forma_pagamento" maxlength="120" placeholder="Ex.: Pix"></div><div class="col-md-6"><label class="form-label" for="osObservacoes">Observações e recomendações</label><textarea class="form-control" id="osObservacoes" name="observacoes" rows="2"></textarea></div></div>
   </div>
-  <div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancelar</button><button class="btn btn-success" type="submit">Salvar O.S.</button></div>
+  <div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Fechar</button><button class="btn btn-success" type="submit" id="salvarOS">Salvar O.S.</button></div>
 </form></div></div>
 
 <!-- Envio: os mesmos dois caminhos diretos usados nos orçamentos. -->
@@ -256,6 +331,46 @@
   <input class="form-control" id="pagamentoOSObs" name="observacao_pagamento" maxlength="240" placeholder="Ex.: entrada em dinheiro na entrega">
 </div><div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancelar</button><button class="btn btn-success" type="submit">Atualizar pagamento</button></div>
 </form></div></div>
+
+<!-- Refazer: a versão seguinte, com o motivo escrito. -->
+<div class="modal fade" id="modalRefazerOS" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <form class="modal-content" id="formRefazerOS" method="post" action="{% url 'ordens_servico_inner' %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="refazer">
+      <input type="hidden" name="id" id="refazerOSId">
+      <div class="modal-header">
+        <div><span class="ls-modal-kicker">Histórico de execução</span><h5 class="modal-title" id="refazerOSTitulo">Refazer O.S.</h5></div>
+        <button class="btn-close" type="button" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div id="refazerOSErro" class="alert alert-danger d-none"></div>
+        <p class="text-muted small mb-3">
+          A O.S. atual fica <strong>congelada e consultável</strong> — ela é o
+          papel que o cliente leu. A versão nova nasce rascunho, com os mesmos
+          itens, para você ajustar e enviar.
+        </p>
+        {% comment %}
+          O MOTIVO É OBRIGATÓRIO, E NÃO É BUROCRACIA.
+
+          Meses depois, duas O.S. do mesmo equipamento com totais
+          diferentes e sem uma linha explicando a troca são um problema
+          que ninguém sabe responder -- nem para o cliente que reclama do
+          preço, nem para quem confere o financeiro.
+        {% endcomment %}
+        <label class="form-label" for="refazerOSMotivo">O que mudou?</label>
+        <textarea class="form-control" id="refazerOSMotivo" name="motivo_refacao" rows="3"
+                  maxlength="600" required
+                  placeholder="Ex.: ao abrir, o defeito era o motor e não a lona — troca a peça e o valor"></textarea>
+        <span class="form-text">Fica gravado nas duas versões e explica a diferença de valor.</span>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancelar</button>
+        <button class="btn btn-warning" type="submit">Criar a versão nova</button>
+      </div>
+    </form>
+  </div>
+</div>
 
 {% url 'ordens_servico_inner' as exclusao_url %}
 {% include "includes/modal_confirmar_exclusao.html" with exclusao_url=exclusao_url exclusao_titulo="Excluir Ordem de Serviço" exclusao_aviso="Somente rascunhos nunca enviados podem ser excluídos. O histórico operacional permanece preservado." %}
@@ -372,12 +487,188 @@ LSTela.pronto(function () {
   document.getElementById("osClienteBox").appendChild(buscaClienteOS.elemento);
 
   function recalcular(){var subtotal=0;corpo.querySelectorAll("tr").forEach(function(l){var q=numero(l.querySelector("[data-qtd]").value),v=numero(l.querySelector("[data-valor]").value);var sub=q*v;subtotal+=sub;l.querySelector("[data-subtotal]").textContent=moeda(sub);});var frete=numero(document.getElementById("osFrete").value),desconto=Math.min(numero(document.getElementById("osDesconto").value),subtotal+frete),total=Math.max(subtotal+frete-desconto,0);document.getElementById("osSubtotal").textContent=moeda(subtotal);document.getElementById("osResumoFrete").textContent=moeda(frete);document.getElementById("osResumoDesconto").textContent="− "+moeda(desconto);document.getElementById("osTotal").textContent=moeda(total);}
-  function linha(item){item=item||{tipo:"servico",descricao:"",quantidade:"1,00",valor_unitario:"0,00"};var tr=document.createElement("tr");var opcoes=tiposItem.map(function(t){return '<option value="'+t.value+'"'+(t.value===item.tipo?' selected':'')+'>'+t.label+'</option>';}).join("");tr.innerHTML='<td><select class="form-select form-select-sm" data-tipo>'+opcoes+'</select></td><td><input class="form-control form-control-sm" data-descricao maxlength="200" value="'+String(item.descricao||"").replace(/&/g,"&amp;").replace(/"/g,"&quot;")+'"></td><td><input class="form-control form-control-sm text-end" data-qtd inputmode="decimal" value="'+item.quantidade+'"></td><td><input class="form-control form-control-sm text-end" data-valor inputmode="decimal" value="'+item.valor_unitario+'"></td><td class="text-end" data-subtotal>R$ 0,00</td><td><button class="btn btn-sm btn-outline-danger" type="button" data-remover><i class="bi bi-x-lg"></i></button></td>';tr.addEventListener("input",recalcular);tr.querySelector("[data-remover]").addEventListener("click",function(){tr.remove();if(!corpo.children.length)linha();recalcular();});corpo.appendChild(tr);recalcular();}
-  function abrir(id){var o=id?achar(id):null;document.getElementById("formOS").reset();buscaClienteOS.definirValor("",false);resumoCliente(null);corpo.innerHTML="";valor("osId",o?o.id:"");document.getElementById("osTitulo").textContent=o?"Editar "+("OS-"+String(o.id).padStart(5,"0")):"Nova Ordem de Serviço";["manutencao","nome_cliente","contato","whatsapp_cliente","email_cliente","endereco_servico","tipo","status","prioridade","equipamento","numero_serie","agendada_para","garantia_ate","tecnico","defeito_relatado","diagnostico","servico_executado","frete","desconto","forma_pagamento","observacoes"].forEach(function(chave){var mapa={manutencao:"osManutencao",nome_cliente:"osNome",contato:"osContato",whatsapp_cliente:"osWhatsapp",email_cliente:"osEmail",endereco_servico:"osEndereco",tipo:"osTipo",status:"osStatus",prioridade:"osPrioridade",equipamento:"osEquipamento",numero_serie:"osSerie",agendada_para:"osAgenda",garantia_ate:"osGarantia",tecnico:"osTecnico",defeito_relatado:"osDefeito",diagnostico:"osDiagnostico",servico_executado:"osExecutado",frete:"osFrete",desconto:"osDesconto",forma_pagamento:"osFormaPagamento",observacoes:"osObservacoes"};valor(mapa[chave],o?o[chave]:"");});buscaClienteOS.definirValor(o?o.cliente:"",false);if(o&&o.cliente){resumoCliente(clientes.find(function(c){return String(c.valor)===String(o.cliente);})||null);}(o&&o.itens.length?o.itens:[null]).forEach(linha);recalcular();Painel.erro("osErro","");Painel.abrir("modalOS");}
+  /* ------------------------------------------------------------------
+     O catálogo dentro da linha da O.S.
+
+     A busca é a mesma do orçamento, por outra rota: aquela é do
+     Comercial e esta é da Produção, e apontar a linha da O.S. para a
+     rota do orçamento daria 403 justamente para o técnico que está
+     montando o serviço. Ver `BuscaItensOrdemServicoView`.
+
+     O cache é por termo e vale a sessão: quem monta uma O.S. digita as
+     mesmas três letras em cada linha nova.
+     ------------------------------------------------------------------ */
+  var endpointItensOS="{% url 'buscar_itens_ordem_servico' %}";
+  var cacheItensOS=new Map();
+  function buscarItensOS(termo){
+    var chave=LSBusca.semAcento(termo||"");
+    if(cacheItensOS.has(chave))return cacheItensOS.get(chave);
+    var pedido=fetch(endpointItensOS+"?q="+encodeURIComponent(termo||""),{
+      credentials:"same-origin",
+      headers:{"X-Requested-With":"XMLHttpRequest"},
+      cache:"no-store"
+    }).then(function(resposta){
+      return resposta.json().catch(function(){return null;}).then(function(json){
+        if(!resposta.ok||!json||json.status!=="sucesso"){
+          throw new Error("Não foi possível buscar as peças.");
+        }
+        return json.opcoes||[];
+      });
+    }).catch(function(erro){cacheItensOS.delete(chave);throw erro;});
+    cacheItensOS.set(chave,pedido);
+    return pedido;
+  }
+
+  /* Escolher a peça preenche descrição e preço, mas nunca sobrescreve o
+     que já foi ajustado à mão: o valor combinado no atendimento vale
+     mais que a tabela. */
+  function preencherLinhaOS(tr,opcao){
+    if(opcao){
+      var d=tr.querySelector("[data-descricao]"),v=tr.querySelector("[data-valor]");
+      if(!d.value.trim())d.value=opcao.rotulo;
+      if(!numero(v.value)&&opcao.preco)v.value=opcao.preco;
+    }
+    recalcular();
+  }
+
+  function linha(item){item=item||{tipo:"servico",descricao:"",quantidade:"1,00",valor_unitario:"0,00"};var tr=document.createElement("tr");var opcoes=tiposItem.map(function(t){return '<option value="'+t.value+'"'+(t.value===item.tipo?' selected':'')+'>'+t.label+'</option>';}).join("");tr.innerHTML='<td data-rotulo="Tipo"><select class="form-select form-select-sm" data-tipo>'+opcoes+'</select></td><td data-rotulo="Peça ou item" data-catalogo></td><td data-rotulo="Descrição"><input class="form-control form-control-sm" data-descricao maxlength="200" placeholder="O que sai impresso na O.S." value="'+String(item.descricao||"").replace(/&/g,"&amp;").replace(/"/g,"&quot;")+'"></td><td data-rotulo="Quantidade"><input class="form-control form-control-sm text-end" data-qtd inputmode="decimal" value="'+item.quantidade+'"></td><td data-rotulo="Valor unit."><input class="form-control form-control-sm text-end" data-valor inputmode="decimal" value="'+item.valor_unitario+'"></td><td class="text-end" data-rotulo="Subtotal" data-subtotal>R$ 0,00</td><td><button class="btn btn-sm btn-outline-danger" type="button" data-remover><i class="bi bi-x-lg"></i></button></td>';
+
+    var busca=LSBusca.criar({
+      placeholder:"Buscar peça ou item...",
+      rotuloAcessivel:"Peça ou item de manutenção",
+      classe:"ls-busca-item-orcamento",
+      exibirImagem:true,
+      minimoBusca:2,
+      carregar:buscarItensOS,
+      aoEscolher:function(opcao){preencherLinhaOS(tr,opcao);}
+    });
+    tr.querySelector("[data-catalogo]").appendChild(busca.elemento);
+    tr.buscaItem=busca;
+    /* `false` no segundo argumento: repor o vínculo que já estava salvo
+       não é escolha nova e não pode reescrever descrição nem preço. */
+    if(item.opcao)busca.adicionarOpcao(item.opcao,false);
+    if(item.peca)busca.definirValor("r:"+item.peca,false);
+
+    tr.addEventListener("input",recalcular);
+    tr.querySelector("[data-remover]").addEventListener("click",function(){
+      /* Fecha a busca antes de tirar a linha: com o painel aberto ele
+         está no <body>, e remover só o <tr> deixaria a lista órfã. */
+      if(tr.buscaItem&&tr.buscaItem.destruir)tr.buscaItem.destruir();
+      tr.remove();if(!corpo.children.length)linha();recalcular();
+    });
+    corpo.appendChild(tr);recalcular();}
+  /* Limpar a tabela pela raiz deixaria as buscas órfãs: com o modal
+     aberto o painel de cada uma mora no <body>, e apagar só o <tbody>
+     tira a linha da tela mas não a lista suspensa. */
+  function limparItens(){
+    corpo.querySelectorAll("tr").forEach(function(l){
+      if(l.buscaItem&&l.buscaItem.destruir)l.buscaItem.destruir();
+    });
+    corpo.innerHTML="";
+  }
+  function abrir(id){var o=id?achar(id):null;document.getElementById("formOS").reset();buscaClienteOS.definirValor("",false);resumoCliente(null);limparItens();valor("osId",o?o.id:"");document.getElementById("osTitulo").textContent=o?"Editar "+("OS-"+String(o.id).padStart(5,"0")):"Nova Ordem de Serviço";["manutencao","nome_cliente","contato","whatsapp_cliente","email_cliente","endereco_servico","tipo","status","prioridade","equipamento","numero_serie","agendada_para","garantia_ate","tecnico","defeito_relatado","diagnostico","servico_executado","frete","desconto","forma_pagamento","observacoes"].forEach(function(chave){var mapa={manutencao:"osManutencao",nome_cliente:"osNome",contato:"osContato",whatsapp_cliente:"osWhatsapp",email_cliente:"osEmail",endereco_servico:"osEndereco",tipo:"osTipo",status:"osStatus",prioridade:"osPrioridade",equipamento:"osEquipamento",numero_serie:"osSerie",agendada_para:"osAgenda",garantia_ate:"osGarantia",tecnico:"osTecnico",defeito_relatado:"osDefeito",diagnostico:"osDiagnostico",servico_executado:"osExecutado",frete:"osFrete",desconto:"osDesconto",forma_pagamento:"osFormaPagamento",observacoes:"osObservacoes"};valor(mapa[chave],o?o[chave]:"");});buscaClienteOS.definirValor(o?o.cliente:"",false);if(o&&o.cliente){resumoCliente(clientes.find(function(c){return String(c.valor)===String(o.cliente);})||null);}(o&&o.itens.length?o.itens:[null]).forEach(linha);recalcular();desenharVersoesOS(o);aplicarSomenteLeitura(o);Painel.erro("osErro","");Painel.abrir("modalOS");}
+
+  /* A corrente de versões desta O.S. Cada uma abre na PRÉVIA: a
+     substituída não está na lista da página -- é por isso que ela
+     precisa aparecer aqui --, e pedir a este modal que a reabrisse pelo
+     id não acharia nada e desenharia um formulário em branco como se
+     fosse O.S. nova. */
+  function desenharVersoesOS(o){
+    var caixa=document.getElementById("osVersoes");
+    var lista=document.getElementById("osVersoesLista");
+    var versoes=(o&&o.versoes)||[];
+
+    lista.innerHTML="";caixa.open=false;
+    caixa.hidden=versoes.length<2;
+    if(caixa.hidden)return;
+
+    document.getElementById("osVersoesResumo").textContent=
+      versoes.length+" versões desta O.S.";
+
+    versoes.forEach(function(v){
+      var item=document.createElement("li");
+      if(v.atual)item.className="atual";
+
+      var titulo=document.createElement("strong");
+      titulo.textContent="Versão "+v.versao+" · "+v.numero;
+      var linha=document.createElement("span");
+      linha.textContent=v.rotulo+" · R$ "+v.total+(v.quando?" · "+v.quando:"");
+      item.appendChild(titulo);item.appendChild(linha);
+
+      if(v.motivo){
+        var motivo=document.createElement("em");
+        motivo.textContent=v.motivo;
+        item.appendChild(motivo);
+      }
+      if(!v.atual&&v.previa){
+        var ir=document.createElement("a");
+        ir.className="btn btn-sm btn-outline-secondary";
+        ir.href=v.previa;ir.target="_blank";ir.rel="noopener";
+        ir.textContent="Ver esta versão";
+        item.appendChild(ir);
+      }
+      lista.appendChild(item);
+    });
+  }
+
+  /* A VERSÃO SUBSTITUÍDA ABRE PARA CONSULTA, E DIZ ISSO.
+
+     Ela é o papel que o cliente leu; reescrevê-la apagaria a explicação
+     do valor que foi cobrado. Mas ela precisa continuar sendo aberta --
+     é justamente nela que se confere o que tinha sido combinado antes.
+     Então abre inteira, travada, com o botão de salvar fora do caminho e
+     um recado dizendo por quê. Sem isso, quem clicasse em salvar levaria
+     um erro do servidor sem entender o que fez de errado. */
+  function aplicarSomenteLeitura(o){
+    var travado=!!(o&&o.pode_editar===false);
+    var corpoModal=document.querySelector("#modalOS .modal-body");
+    corpoModal.querySelectorAll("input,select,textarea,button[data-remover]")
+      .forEach(function(campo){campo.disabled=travado;});
+    corpo.querySelectorAll("tr").forEach(function(l){
+      if(l.buscaItem)l.buscaItem.entrada.disabled=travado;
+    });
+    document.getElementById("adicionarItemOS").disabled=travado;
+    document.getElementById("salvarOS").hidden=travado;
+    var aviso=document.getElementById("osCongelada");
+    aviso.hidden=!travado;
+    if(travado){
+      aviso.textContent="Esta é a versão "+(o.versao||1)+", substituída por "
+        +"outra e mantida como está: ela é o documento que o cliente leu. "
+        +(o.motivo_refacao?"Motivo da troca: "+o.motivo_refacao:"");
+    }
+  }
   document.getElementById("novaOS")?.addEventListener("click",function(){abrir(null);});document.querySelectorAll("[data-editar-os]").forEach(function(b){b.addEventListener("click",function(){abrir(b.dataset.editarOs);});});document.getElementById("adicionarItemOS")?.addEventListener("click",function(){linha();});
+  document.querySelectorAll("[data-refazer-os]").forEach(function(b){
+    b.addEventListener("click",function(){
+      valor("refazerOSId",b.dataset.refazerOs);
+      document.getElementById("refazerOSTitulo").textContent=
+        "Refazer "+(b.dataset.nome||"O.S.");
+      valor("refazerOSMotivo","");
+      Painel.erro("refazerOSErro","");
+      Painel.abrir("modalRefazerOS");
+    });
+  });
+  Painel.ligar({form:"formRefazerOS",erro:"refazerOSErro"});
+
   ["osFrete","osDesconto"].forEach(function(id){document.getElementById(id)?.addEventListener("input",recalcular);});
   document.getElementById("osManutencao")?.addEventListener("change",function(){var op=this.selectedOptions[0];if(!op||!op.value)return;buscaClienteOS.definirValor("",false);resumoCliente(null);valor("osEquipamento",op.dataset.equipamento);valor("osNome",op.dataset.nome);valor("osWhatsapp",op.dataset.whatsapp);valor("osEmail",op.dataset.email);valor("osDefeito",op.dataset.defeito);valor("osEndereco",op.dataset.endereco);valor("osTipo","manutencao");});
-  Painel.ligar({form:"formOS",erro:"osErro",antes:function(){var itens=[];corpo.querySelectorAll("tr").forEach(function(l){itens.push({tipo:l.querySelector("[data-tipo]").value,descricao:l.querySelector("[data-descricao]").value,quantidade:l.querySelector("[data-qtd]").value,valor_unitario:l.querySelector("[data-valor]").value});});document.getElementById("osItens").value=JSON.stringify(itens);}});
+  Painel.ligar({form:"formOS",erro:"osErro",antes:function(){
+    var itens=[];
+    corpo.querySelectorAll("tr").forEach(function(l){
+      /* A busca devolve "r:12"; o servidor espera só o número. Nenhuma
+         outra origem chega aqui: a rota da O.S. só oferece peça e
+         produto, e o produto entra pela descrição. */
+      var escolha=l.buscaItem?l.buscaItem.valor():"";
+      itens.push({
+        tipo:l.querySelector("[data-tipo]").value,
+        peca:escolha.slice(0,2)==="r:"?escolha.slice(2):"",
+        descricao:l.querySelector("[data-descricao]").value,
+        quantidade:l.querySelector("[data-qtd]").value,
+        valor_unitario:l.querySelector("[data-valor]").value
+      });
+    });
+    document.getElementById("osItens").value=JSON.stringify(itens);
+  }});
 
   function desenharEnviosOS(envios){var lista=document.getElementById("enviosOSLista");lista.innerHTML="";(envios||[]).forEach(function(e){var li=document.createElement("li");li.className=e.sucesso?"ok":"falhou";var forte=document.createElement("strong");forte.textContent=e.canal+(e.destino?" · "+e.destino:"");var quando=document.createElement("span");quando.textContent=e.quando+(e.por?" · "+e.por:"");li.appendChild(forte);li.appendChild(quando);if(e.detalhe){var detalhe=document.createElement("em");detalhe.textContent=e.detalhe;li.appendChild(detalhe);}lista.appendChild(li);});if(!lista.children.length){var vazio=document.createElement("li"),span=document.createElement("span");span.textContent="Nenhum envio registrado nesta O.S.";vazio.appendChild(span);lista.appendChild(vazio);}}
 

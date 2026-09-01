@@ -518,7 +518,43 @@ class CategoriaPeca(Prime):
 
 
 class PecasReposicao(Prime):
+    """Peça que a casa vende -- e, agora, também a que ela só consome.
+
+    DUAS COISAS DIFERENTES MORAVAM NA MESMA TABELA COM O MESMO DESTINO.
+
+    A vitrine de reposição é uma lista de compra: o cliente vê a peça,
+    o preço e a foto. Mas quem monta um orçamento ou uma O.S. precisa
+    cobrar coisas que não são vitrine nenhuma -- um retentor específico,
+    a bucha que só serve naquele modelo de 2019, a hora de solda. Isso
+    era cadastrado aqui do mesmo jeito, com `ativo=True`, e ia direto
+    para o site: a loja passou a anunciar peça sem foto, sem descrição
+    de verdade e às vezes sem estoque, criada às pressas no meio de uma
+    proposta.
+
+    `uso` separa as duas. Item de manutenção existe para ser usado nos
+    documentos internos e nunca aparece na vitrine, mesmo ativo. Peça da
+    loja continua sendo o que sempre foi -- e as duas servem igualmente
+    para uma linha de orçamento ou de O.S.: essa é a versatilidade que
+    faltava, e é por isso que a separação é um campo, e não uma tabela
+    nova.
+    """
+
+    class Uso(models.TextChoices):
+        LOJA = "loja", "Peça da loja"
+        MANUTENCAO = "manutencao", "Item de manutenção"
+
     nome = models.CharField(max_length=120)
+    uso = models.CharField(
+        "Onde esta peça é usada",
+        max_length=12,
+        choices=Uso.choices,
+        default=Uso.LOJA,
+        db_index=True,
+        help_text=(
+            "Item de manutenção serve a orçamentos e O.S. e nunca entra "
+            "na vitrine do site, mesmo estando ativo."
+        ),
+    )
     categoria_peca = models.ManyToManyField(
         CategoriaPeca,
         related_name='pecas',
@@ -544,6 +580,25 @@ class PecasReposicao(Prime):
 
     def __str__(self):
         return self.nome
+
+    @classmethod
+    def da_vitrine(cls):
+        """As peças que o site pode mostrar. A regra mora aqui, e só aqui.
+
+        Eram sete consultas espalhadas pelo site repetindo
+        `filter(ativo=True)` -- e uma delas, a própria lista de
+        reposição, não filtrava nada e mostrava até o que estava
+        desativado. Uma regra de vitrine copiada em sete lugares é uma
+        regra que ainda não vale em pelo menos um.
+
+        Item de manutenção fica de fora mesmo ativo: ele não foi
+        cadastrado para ser vendido a ninguém.
+        """
+        return cls.objects.filter(ativo=True, uso=cls.Uso.LOJA)
+
+    @property
+    def de_manutencao(self):
+        return self.uso == self.Uso.MANUTENCAO
 
     # ⭐ helper profissional (mantido)
     @property

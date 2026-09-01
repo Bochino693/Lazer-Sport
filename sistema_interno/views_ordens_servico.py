@@ -33,7 +33,7 @@ from core.email_utils import (
     responder_para,
     smtp_configurado,
 )
-from core.models import Manutencao
+from core.models import Manutencao, PecasReposicao
 
 from .busca_local import montar_indice
 from . import clientes as svc_clientes
@@ -210,6 +210,11 @@ class OrdensServicoInnerView(
             .select_related(
                 "cliente", "orcamento", "manutencao__usuario__user",
                 "tecnico", "responsavel",
+                # A linha imprime "refeita da OS-00041" e "virou a
+                # OS-00043" quando existem. Sem estes dois, cada O.S. com
+                # histórico custava duas consultas extras só para
+                # escrever o número da vizinha.
+                "ordem_anterior", "ordem_refeita",
             )
             .prefetch_related(
                 "itens",
@@ -240,10 +245,19 @@ class OrdensServicoInnerView(
             & ~Q(status__in=(
                 OrdemServico.Status.RASCUNHO,
                 OrdemServico.Status.CANCELADA,
+                OrdemServico.Status.SUBSTITUIDA,
             ))
         )
+        # A VERSÃO SUBSTITUÍDA NÃO APARECE DE PRIMEIRA.
+        #
+        # Ela continua inteira, e continua achável -- o cartão "Versões
+        # anteriores" é o caminho, e a busca por número acha as duas.
+        # O que ela não faz é dividir a lista de trabalho com a versão
+        # que está valendo: duas linhas do mesmo serviço, com totais
+        # diferentes, é como alguém cobra duas vezes.
+        arquivadas = Q(status__in=OrdemServico.ARQUIVADAS)
         filtros = {
-            "todos": Q(),
+            "todos": ~arquivadas,
             "abertas": Q(status__in=OrdemServico.ABERTAS),
             "aguardando": Q(status=OrdemServico.Status.AGUARDANDO_RESPOSTA),
             "agendadas": Q(status=OrdemServico.Status.AGENDADA),
@@ -251,14 +265,18 @@ class OrdensServicoInnerView(
             "pecas": Q(status=OrdemServico.Status.AGUARDANDO_PECA),
             "concluidas": Q(status=OrdemServico.Status.CONCLUIDA),
             "a_receber": a_receber,
-            "pagas": Q(status_pagamento=OrdemServico.StatusPagamento.PAGO),
+            "pagas": (
+                Q(status_pagamento=OrdemServico.StatusPagamento.PAGO)
+                & ~arquivadas
+            ),
+            "substituidas": arquivadas,
         }
         if filtro not in filtros:
             filtro = "todos"
 
         base_cards = consulta
         contagens = base_cards.aggregate(
-            todos=Count("pk"),
+            todos=Count("pk", filter=~arquivadas),
             abertas=Count("pk", filter=Q(status__in=OrdemServico.ABERTAS)),
             aguardando=Count(
                 "pk", filter=Q(status=OrdemServico.Status.AGUARDANDO_RESPOSTA)
@@ -270,11 +288,16 @@ class OrdensServicoInnerView(
             a_receber=Count(
                 "pk", filter=a_receber
             ),
-            pagas=Count("pk", filter=Q(status_pagamento=OrdemServico.StatusPagamento.PAGO)),
+            pagas=Count(
+                "pk",
+                filter=(
+                    Q(status_pagamento=OrdemServico.StatusPagamento.PAGO)
+                    & ~arquivadas
+                ),
+            ),
+            substituidas=Count("pk", filter=arquivadas),
         )
-        financeiro = base_cards.aggregate(
-            recebido=Sum("valor_pago"),
-        )
+        financeiro = self.dinheiro_do_topo(base_cards, arquivadas)
         consulta = consulta.filter(filtros[filtro])
 
         # O índice cobre o filtro inteiro; a página é só o que se desenha.
@@ -349,8 +372,12 @@ class OrdensServicoInnerView(
                 ("concluidas", "Concluídas", contagens["concluidas"], "bi-check2-circle"),
                 ("a_receber", "A receber", contagens["a_receber"], "bi-wallet2"),
                 ("pagas", "Pagas", contagens["pagas"], "bi-cash-coin"),
+                ("substituidas", "Versões anteriores", contagens["substituidas"], "bi-clock-history"),
             ),
-            "total_recebido": financeiro["recebido"] or Decimal("0.00"),
+            "total_recebido": financeiro["recebido"],
+            "total_em_servico": financeiro["em_servico"],
+            "total_a_receber": financeiro["a_receber"],
+            "total_concluido": financeiro["concluido"],
             "clientes_dados": clientes_dados,
             "empresa_localizacao": origem,
             "manutencoes": (
@@ -361,7 +388,17 @@ class OrdensServicoInnerView(
             ),
             "tecnicos": self._tecnicos(),
             "tipos": OrdemServico.Tipo.choices,
-            "status_opcoes": OrdemServico.Status.choices,
+            # SUBSTITUÍDA NÃO É UMA SITUAÇÃO QUE SE ESCOLHE.
+            #
+            # Ela é o efeito de refazer, e só. Oferecê-la no seletor
+            # deixaria alguém congelar uma O.S. sem criar a versão que a
+            # substitui -- um documento fora da lista, sem sucessor, e
+            # sem caminho de volta.
+            "status_opcoes": [
+                (valor, rotulo)
+                for valor, rotulo in OrdemServico.Status.choices
+                if valor != OrdemServico.Status.SUBSTITUIDA
+            ],
             "prioridades": OrdemServico.Prioridade.choices,
             "item_tipos": ItemOrdemServico.Tipo.choices,
             "email_configurado": smtp_configurado(),
@@ -369,6 +406,92 @@ class OrdensServicoInnerView(
             "pode_editar": acesso["ordens_servico_editar"],
             "pode_pagamento": acesso["ordens_servico_pagamento"],
         })
+
+    @staticmethod
+    def dinheiro_do_topo(consulta, arquivadas):
+        """Os quatro números da faixa de valores.
+
+        O QUE ESTAVA ALI ANTES NÃO ERA NÚMERO.
+
+        Três das quatro caixas diziam "Documento: Operacional",
+        "Orçamento: Negociação separada" e "Impressão: A4 e PDF". São
+        frases verdadeiras e completamente inúteis: não mudam, não
+        respondem nada e ninguém as lê duas vezes. Ocupavam, no topo da
+        tela, exatamente o lugar onde a tela de propostas mostra quatro
+        valores que mudam todo dia.
+
+        Agora respondem o que se pergunta ao chegar: quanto já entrou,
+        quanto está preso em serviço que ainda não acabou, quanto falta
+        receber do que já foi entregue, e quanto o mês fechou.
+
+        POR QUE DUAS CONSULTAS, E NÃO UMA. O total de uma O.S. é a soma
+        dos itens mais frete menos desconto -- e a soma dos itens vem de
+        outra tabela. Somar tudo num `aggregate` só significaria juntar
+        `valor_pago` (uma linha por O.S.) com um JOIN de itens (várias
+        linhas por O.S.) na mesma consulta: cada pagamento seria contado
+        uma vez por item da ordem. São grandezas de cardinalidade
+        diferente, então são duas consultas.
+        """
+        from django.db.models import DecimalField, F, Value
+        from django.db.models.functions import Coalesce
+
+        zero = Decimal("0.00")
+        vivas = consulta.filter(~arquivadas)
+
+        recebido = vivas.aggregate(total=Sum("valor_pago"))["total"] or zero
+
+        # O bruto de cada O.S., linha a linha. `distinct` não cabe aqui
+        # -- a soma é sobre os itens, e dois itens de mesmo valor na
+        # mesma ordem são duas cobranças, não uma repetição.
+        bruto = Coalesce(
+            Sum(F("itens__quantidade") * F("itens__valor_unitario")),
+            Value(zero),
+            output_field=DecimalField(max_digits=14, decimal_places=2),
+        )
+        por_ordem = vivas.annotate(bruto_itens=bruto).annotate(
+            valor=F("bruto_itens") + F("frete") - F("desconto")
+        )
+
+        em_servico = por_ordem.filter(
+            status__in=OrdemServico.ABERTAS
+        ).aggregate(total=Sum("valor"))["total"] or zero
+
+        # A RECEBER É SALDO, E SALDO NÃO É NEGATIVO.
+        #
+        # Uma O.S. em que entrou mais do que o total (entrada dobrada,
+        # troco pendente) não pode abater o que os outros clientes ainda
+        # devem -- e é isso que uma subtração de somas faria. Por isso o
+        # `max` é por linha, e a soma vem depois.
+        #
+        # `values` em vez de `only`: a consulta que desenha as linhas
+        # carrega `select_related` e prefetches de que esta conta não
+        # precisa, e adiar campos por cima daquilo o Django recusa.
+        # Pedindo só as duas colunas, nada disso entra na conta.
+        a_receber = sum(
+            (
+                max(linha["valor"] - (linha["valor_pago"] or zero), zero)
+                for linha in por_ordem.exclude(
+                    status__in=(
+                        OrdemServico.Status.RASCUNHO,
+                        OrdemServico.Status.CANCELADA,
+                    )
+                ).exclude(
+                    status_pagamento=OrdemServico.StatusPagamento.PAGO
+                ).values("valor", "valor_pago")
+            ),
+            zero,
+        )
+
+        concluido = por_ordem.filter(
+            status=OrdemServico.Status.CONCLUIDA
+        ).aggregate(total=Sum("valor"))["total"] or zero
+
+        return {
+            "recebido": recebido,
+            "em_servico": em_servico,
+            "a_receber": a_receber,
+            "concluido": concluido,
+        }
 
     @staticmethod
     def _tecnicos():
@@ -384,6 +507,12 @@ class OrdensServicoInnerView(
 
     @staticmethod
     def serializar(ordem):
+        # Importado aqui, e não no topo: `views_gestao` já importa deste
+        # módulo, e subir a dependência fecharia o ciclo na carga do app.
+        # O que se aproveita é a montagem da opção do catálogo, para a
+        # linha da O.S. mostrar a peça exatamente como o orçamento mostra.
+        from .views_gestao import OrcamentosInnerView
+
         return {
             "id": ordem.pk,
             "cliente": ordem.cliente_id or "",
@@ -421,9 +550,41 @@ class OrdensServicoInnerView(
             "garantia_ate": ordem.garantia_ate.isoformat() if ordem.garantia_ate else "",
             "tecnico": ordem.tecnico_id or "",
             "envios": OrdensServicoInnerView.historico_envios(ordem),
+            "versao": ordem.versao,
+            "motivo_refacao": ordem.motivo_refacao,
+            "pode_editar": ordem.pode_editar,
+            # As versões viajam com a O.S., e não na lista -- mesma regra
+            # da proposta. A prévia é o caminho de cada uma: a
+            # substituída não está na lista da página, então reabri-la
+            # pelo id nesta tela não acharia nada.
+            "versoes": [
+                {
+                    "id": v.pk,
+                    "versao": v.versao,
+                    "numero": v.numero_documento,
+                    "rotulo": v.get_status_display(),
+                    "total": f"{v.total:.2f}".replace(".", ","),
+                    "quando": (
+                        timezone.localtime(v.criacao).strftime("%d/%m/%Y")
+                        if v.criacao else ""
+                    ),
+                    "motivo": v.motivo_refacao,
+                    "atual": v.pk == ordem.pk,
+                    "previa": reverse(
+                        "ordem_servico_previa_inner", args=[v.pk],
+                        urlconf="sistema_interno.urls",
+                    ),
+                }
+                for v in ordem.cadeia_de_versoes()
+            ] if ordem.versao > 1 or ordem.ordem_anterior_id else [],
             "itens": [{
                 "tipo": item.tipo,
                 "descricao": item.descricao,
+                "peca": item.peca_id or "",
+                "opcao": (
+                    OrcamentosInnerView.opcao_peca(item.peca)
+                    if item.peca_id and item.peca else None
+                ),
                 "quantidade": f"{item.quantidade:.2f}".replace(".", ","),
                 "valor_unitario": f"{item.valor_unitario:.2f}".replace(".", ","),
             } for item in ordem.itens.all()],
@@ -435,6 +596,13 @@ class OrdensServicoInnerView(
 
         ordem_id = (request.POST.get("id") or "").strip()
         ordem = get_object_or_404(OrdemServico, pk=ordem_id) if ordem_id else OrdemServico()
+        if not ordem.pode_editar:
+            # Editar a versão que o cliente leu apagaria o papel que ele
+            # tem na mão. O que se edita é a versão que está valendo.
+            raise ErroDeFormulario(
+                "Esta versão foi substituída e permanece somente no "
+                "histórico. Edite a versão que está valendo."
+            )
 
         cliente_id = (request.POST.get("cliente") or "").strip()
         manutencao_id = (request.POST.get("manutencao") or "").strip()
@@ -481,6 +649,11 @@ class OrdensServicoInnerView(
             raise ErroDeFormulario("Escolha um tipo de serviço válido.")
         if status not in OrdemServico.Status.values:
             raise ErroDeFormulario("Escolha uma situação válida.")
+        if status == OrdemServico.Status.SUBSTITUIDA:
+            raise ErroDeFormulario(
+                "“Substituída” não se escolhe: ela é o resultado de "
+                "refazer a O.S., que cria a versão nova no mesmo passo."
+            )
         if prioridade not in OrdemServico.Prioridade.values:
             raise ErroDeFormulario("Escolha uma prioridade válida.")
         ordem.tipo = tipo
@@ -523,6 +696,16 @@ class OrdensServicoInnerView(
                 raise ErroDeFormulario(f"Item {indice}: tipo inválido.")
             if not descricao:
                 raise ErroDeFormulario(f"Item {indice}: informe a descrição.")
+
+            # O vínculo com o catálogo é opcional: "recolar a emenda da
+            # lona" é o serviço daquele dia e não tem cadastro nenhum.
+            # Quando vem, vem da busca -- peça da loja ou item de
+            # manutenção, os dois valem aqui.
+            peca_id = str(linha.get("peca") or "").strip()
+            peca = (
+                PecasReposicao.objects.filter(pk=peca_id).first()
+                if peca_id.isdigit() else None
+            )
             quantidade = decimal_br(
                 str(linha.get("quantidade") or ""),
                 f"Item {indice}: quantidade", obrigatorio=True,
@@ -538,6 +721,7 @@ class OrdensServicoInnerView(
             itens.append(ItemOrdemServico(
                 ordem=ordem,
                 tipo=tipo,
+                peca=peca,
                 descricao=descricao[:200],
                 quantidade=quantidade,
                 valor_unitario=valor,
@@ -612,6 +796,137 @@ class OrdensServicoInnerView(
             recado += f" Levou junto: {', '.join(arrastados)}."
         return self.sucesso(request, recado)
 
+    def acao_refazer(self, request):
+        """Cria a versão seguinte e congela esta -- mesmo esquema da proposta.
+
+        POR QUE UMA O.S. PRECISA DE VERSÃO.
+
+        A O.S. que o cliente leu e assinou como ciente é o registro do
+        que foi combinado naquele dia: qual defeito, qual peça, quanto.
+        Ao abrir o equipamento o técnico descobre outra coisa -- era o
+        motor, não a lona -- e o caminho era reescrever a O.S. por cima.
+        O papel que o cliente tinha na mão deixava de existir, e com ele
+        a explicação do valor cobrado. Quando o cliente reclamava do
+        preço, não havia como mostrar o que tinha sido combinado antes.
+
+        Aqui a anterior fica inteira e congelada, e a nova nasce
+        rascunho, com os mesmos itens, para ser ajustada e enviada. O
+        motivo é obrigatório: uma versão sem motivo, meses depois, é uma
+        segunda O.S. que ninguém sabe explicar.
+        """
+        if not capacidades(request.user)["ordens_servico_editar"]:
+            return self.erro(
+                request, "Somente Produção ou Gestão refaz uma O.S.", status=403,
+            )
+
+        anterior = get_object_or_404(OrdemServico, pk=request.POST.get("id"))
+
+        if anterior.status == OrdemServico.Status.RASCUNHO:
+            raise ErroDeFormulario(
+                "Esta O.S. ainda é rascunho e pode ser editada no lugar."
+            )
+        if hasattr(anterior, "ordem_refeita"):
+            # O SEGUNDO CLIQUE NÃO É ERRO, É O MESMO PEDIDO.
+            #
+            # Esta verificação vem antes da de "substituída" de
+            # propósito: refazer já deixou a anterior nesse estado, e
+            # recusar aqui transformaria o clique repetido -- rede lenta,
+            # dedo duplo -- num erro vermelho para quem já tinha
+            # conseguido o que queria. Devolve a versão que existe.
+            nova = anterior.ordem_refeita
+            return self.sucesso(
+                request,
+                f"A versão {nova.versao} desta O.S. já existe.",
+                id=nova.pk,
+            )
+        if anterior.status == OrdemServico.Status.SUBSTITUIDA:
+            raise ErroDeFormulario(
+                "Esta versão já foi substituída. Refaça a que está valendo."
+            )
+        if anterior.status == OrdemServico.Status.CANCELADA:
+            raise ErroDeFormulario(
+                "Uma O.S. cancelada não ganha outra versão: ela não foi "
+                "trocada, foi encerrada. Abra uma O.S. nova."
+            )
+        if anterior.quitado:
+            raise ErroDeFormulario(
+                "Esta O.S. já está paga e não ganha outra versão: o "
+                "pagamento recebido precisa continuar apontando para ela. "
+                "Para o que vier depois, abra uma O.S. nova."
+            )
+
+        motivo = texto(
+            request,
+            "motivo_refacao",
+            obrigatorio=True,
+            rotulo="o motivo da nova versão",
+            limite=600,
+        )
+
+        with transaction.atomic():
+            anterior = OrdemServico.objects.select_for_update().get(pk=anterior.pk)
+            nova = OrdemServico.objects.create(
+                cliente=anterior.cliente,
+                # A PROPOSTA NÃO ACOMPANHA. O vínculo é um-para-um: uma
+                # proposta aprovada liberou UMA execução, e apontar as
+                # duas versões para ela quebraria a unicidade além de
+                # sugerir que a mesma venda gerou dois serviços. Quem
+                # quiser a origem comercial a encontra pela versão
+                # anterior, que continua inteira.
+                orcamento=None,
+                manutencao=anterior.manutencao,
+                nome_cliente=anterior.nome_cliente,
+                contato=anterior.contato,
+                whatsapp_cliente=anterior.whatsapp_cliente,
+                email_cliente=anterior.email_cliente,
+                endereco_servico=anterior.endereco_servico,
+                tipo=anterior.tipo,
+                # Nasce rascunho: a versão nova ainda vai ser ajustada, e
+                # até ser enviada ela não é documento de cliente nenhum.
+                status=OrdemServico.Status.RASCUNHO,
+                prioridade=anterior.prioridade,
+                equipamento=anterior.equipamento,
+                numero_serie=anterior.numero_serie,
+                defeito_relatado=anterior.defeito_relatado,
+                diagnostico=anterior.diagnostico,
+                servico_executado=anterior.servico_executado,
+                observacoes=anterior.observacoes,
+                forma_pagamento=anterior.forma_pagamento,
+                frete=anterior.frete,
+                desconto=anterior.desconto,
+                agendada_para=anterior.agendada_para,
+                garantia_ate=anterior.garantia_ate,
+                tecnico=anterior.tecnico,
+                responsavel=request.user,
+                ordem_anterior=anterior,
+                versao=anterior.versao + 1,
+                motivo_refacao=motivo,
+            )
+            ItemOrdemServico.objects.bulk_create([
+                ItemOrdemServico(
+                    ordem=nova,
+                    tipo=item.tipo,
+                    peca=item.peca,
+                    descricao=item.descricao,
+                    quantidade=item.quantidade,
+                    valor_unitario=item.valor_unitario,
+                )
+                for item in anterior.itens.select_related("peca")
+            ])
+            # O valor recebido NÃO acompanha. Ele responde ao documento
+            # contra o qual entrou, que é o anterior; copiá-lo aqui faria
+            # a mesma entrada aparecer duas vezes no financeiro.
+            anterior.status = OrdemServico.Status.SUBSTITUIDA
+            anterior.save(update_fields=["status", "atualizado"])
+
+        return self.sucesso(
+            request,
+            f"{nova.numero_com_versao} criada a partir de "
+            f"{anterior.numero_documento}, que ficou congelada no "
+            f"histórico. Ajuste e envie quando estiver pronta.",
+            id=nova.pk,
+        )
+
     def acao_enviar(self, request):
         if not capacidades(request.user)["ordens_servico_editar"]:
             return self.erro(request, "Você não pode enviar esta O.S.", status=403)
@@ -621,6 +936,15 @@ class OrdensServicoInnerView(
         )
         if not ordem.itens.exists():
             raise ErroDeFormulario("Adicione ao menos um item antes de enviar.")
+        if not ordem.pode_enviar:
+            # AS AÇÕES SÃO EM CIMA DA SITUAÇÃO. Mandar ao cliente a O.S.
+            # de um serviço cancelado, ou a versão que já foi trocada por
+            # outra, é pedir decisão sobre um papel que não vale mais.
+            raise ErroDeFormulario(
+                "Esta O.S. está como "
+                f"{ordem.get_status_display().lower()} e não vai mais ao "
+                "cliente. Envie a versão que está valendo."
+            )
         canal = (request.POST.get("canal") or "link").strip()
         if canal not in EnvioOrdemServico.Canal.values:
             raise ErroDeFormulario("Escolha WhatsApp, e-mail ou copiar link.")

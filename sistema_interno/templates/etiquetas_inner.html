@@ -7,9 +7,11 @@
 <section class="ls-page-head">
   <div>
     <span class="ls-eyebrow">Expedição</span>
-    <h1>Etiquetas de frágil</h1>
+    <h1>Etiquetas de transporte</h1>
     <p>
-      Monte a etiqueta, confira ao lado e mande para a impressora.
+      Escolha cliente, confira ao lado e mande para a impressora. A
+      <strong>etiqueta rápida</strong> resolve a caixa que não é de
+      pedido nenhum; a completa acrescenta carga e referência.
       Nada é gravado: a etiqueta é papel.
     </p>
   </div>
@@ -27,6 +29,30 @@
   <section class="ls-data-panel ls-etiquetas-form nao-imprime">
     <div class="ls-data-header"><div><h2>O que vai na etiqueta</h2></div></div>
     <div class="ls-data-body ls-compact-form">
+
+      {% comment %}
+        A ESCAPA RÁPIDA VEM ANTES DOS CAMPOS.
+
+        A maior parte das caixas que sai daqui não pertence a pedido
+        nenhum: é a peça que o cliente veio buscar, a troca em garantia,
+        o volume que pega carona em outra entrega. Para essas, conteúdo,
+        número de volume e referência de O.S. são campos que só existem
+        para ficar em branco -- e formulário com metade dos campos vazios
+        ensina quem preenche a pular campo, o endereço junto.
+
+        Na rápida sobra o que a caixa precisa dizer: para quem vai, para
+        onde vai, e de quem ela veio.
+      {% endcomment %}
+      <div class="ls-etiqueta-modos" role="radiogroup" aria-label="Tipo de etiqueta">
+        <label class="ls-etiqueta-modo">
+          <input type="radio" name="modo" value="rapida" checked>
+          <span><strong>Etiqueta rápida</strong><small>Cliente, endereço e a empresa. Para a caixa que não é de nenhum pedido.</small></span>
+        </label>
+        <label class="ls-etiqueta-modo">
+          <input type="radio" name="modo" value="completa">
+          <span><strong>Etiqueta completa</strong><small>Acrescenta conteúdo, volumes e a referência da O.S. ou proposta.</small></span>
+        </label>
+      </div>
 
       <div class="ls-completar-bloco">
         <h6><i class="bi bi-person" aria-hidden="true"></i> Destinatário</h6>
@@ -59,7 +85,7 @@
         </div>
       </div>
 
-      <div class="ls-completar-bloco">
+      <div class="ls-completar-bloco" data-so-completa hidden>
         <h6><i class="bi bi-box-seam" aria-hidden="true"></i> A carga</h6>
         <div class="row g-3">
           <div class="col-12">
@@ -115,7 +141,7 @@
         <div class="form-check mt-3">
           <input class="form-check-input" type="checkbox" id="etiquetaSemFundo">
           <label class="form-check-label" for="etiquetaSemFundo">
-            Economizar tinta (sem fundo colorido)
+            Economizar tinta (sem a faixa preta do aviso)
           </label>
         </div>
       </div>
@@ -204,6 +230,11 @@ LSTela.pronto(function () {
     );
   }
 
+  function modoRapido() {
+    var escolhido = document.querySelector("[name='modo']:checked");
+    return !escolhido || escolhido.value === "rapida";
+  }
+
   function umaEtiqueta(indice, total, dados) {
     var selos = dados.avisos.map(function (aviso, posicao) {
       // O primeiro aviso é o que se lê de longe; os outros acompanham.
@@ -217,7 +248,7 @@ LSTela.pronto(function () {
     }).join("");
 
     return (
-      '<article class="ls-etiqueta">' +
+      '<article class="ls-etiqueta' + (dados.rapida ? " rapida" : "") + '">' +
         '<header class="ls-etiqueta-topo">' +
           '<img class="ls-etiqueta-logo" src="{% static "images/logoofi.png" %}" alt="">' +
           '<div class="ls-etiqueta-empresa">' +
@@ -246,21 +277,38 @@ LSTela.pronto(function () {
           (dados.referencia
             ? "<span><small>Referência</small>" + escapar(dados.referencia) + "</span>"
             : "") +
+          /* O remetente é a última coisa que a etiqueta diz, e a que faz
+             a caixa extraviada voltar: telefone junto, porque quem acha
+             o volume no galpão errado liga, não escreve. */
           '<span class="ls-etiqueta-origem"><small>Remetente</small>' +
-            escapar(empresa.nome) + "</span>" +
+            escapar(empresa.nome) +
+            (empresa.telefone ? " · " + escapar(empresa.telefone) : "") +
+          "</span>" +
         "</footer>" +
       "</article>"
     );
   }
 
   function desenhar() {
-    var total = Math.min(60, Math.max(1, parseInt(texto("etiquetaVolumes"), 10) || 1));
+    /* NA RÁPIDA, O QUE ESTÁ ESCONDIDO NÃO IMPRIME.
+
+       Os campos da carga continuam no formulário -- só ocultos --, então
+       um conteúdo digitado antes de trocar de modo ainda está lá. Se
+       fosse para o papel, a etiqueta rápida sairia falando de uma carga
+       que quem a escolheu já tinha decidido não descrever. O modo não
+       esvazia os campos (voltar para a completa devolve o que foi
+       digitado); ele decide o que vai ao papel. */
+    var rapida = modoRapido();
+    var total = rapida
+      ? 1
+      : Math.min(60, Math.max(1, parseInt(texto("etiquetaVolumes"), 10) || 1));
     var dados = {
+      rapida: rapida,
       nome: texto("etiquetaNome"),
       endereco: texto("etiquetaEndereco"),
       contato: texto("etiquetaContato"),
-      conteudo: texto("etiquetaConteudo"),
-      referencia: texto("etiquetaReferencia"),
+      conteudo: rapida ? "" : texto("etiquetaConteudo"),
+      referencia: rapida ? "" : texto("etiquetaReferencia"),
       avisos: avisosEscolhidos(),
     };
 
@@ -281,6 +329,19 @@ LSTela.pronto(function () {
     campo.addEventListener("input", desenhar);
     campo.addEventListener("change", desenhar);
   });
+
+  /* Trocar de modo esconde ou mostra os campos da carga. A escolha do
+     modo já dispara `desenhar` pelo ouvinte acima. */
+  function aplicarModo() {
+    var rapida = modoRapido();
+    document.querySelectorAll("[data-so-completa]").forEach(function (bloco) {
+      bloco.hidden = rapida;
+    });
+  }
+  document.querySelectorAll("[name='modo']").forEach(function (opcao) {
+    opcao.addEventListener("change", aplicarModo);
+  });
+  aplicarModo();
 
   document.getElementById("imprimirEtiquetas").addEventListener("click", function () {
     window.print();

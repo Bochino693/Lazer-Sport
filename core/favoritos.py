@@ -107,13 +107,22 @@ def normalizar_tipo(valor: str | None) -> str:
 
 
 def buscar_produto(tipo_produto: str, produto_id):
-    """Devolve o brinquedo ou a peça ativa, ou levanta ProdutoInvalido."""
+    """Devolve o brinquedo ou a peça da vitrine, ou levanta ProdutoInvalido."""
     modelo = MODELOS_POR_PRODUTO.get((tipo_produto or "").strip().lower())
     if modelo is None:
         raise ProdutoInvalido(f"Produto desconhecido: {tipo_produto!r}")
 
+    # Para peça, `ativo` não é mais a pergunta toda: item de manutenção
+    # fica fora da vitrine mesmo ativo, e o que não está na vitrine não
+    # tem como ser curtido -- ninguém chegou a vê-lo. Ver
+    # `PecasReposicao.da_vitrine`.
+    consulta = (
+        PecasReposicao.da_vitrine()
+        if modelo is PecasReposicao
+        else modelo.objects.filter(ativo=True)
+    )
     try:
-        return modelo.objects.get(pk=produto_id, ativo=True)
+        return consulta.get(pk=produto_id)
     except (modelo.DoesNotExist, ValueError, TypeError) as erro:
         raise ProdutoInvalido("Produto não encontrado.") from erro
 

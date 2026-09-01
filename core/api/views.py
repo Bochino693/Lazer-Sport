@@ -198,8 +198,7 @@ class PecaListAPI(generics.ListAPIView):
 
     def get_queryset(self):
         qs = (
-            PecasReposicao.objects
-            .filter(ativo=True)
+            PecasReposicao.da_vitrine()
             .prefetch_related("imagem_peca_reposicao")
             .annotate(total_curtidas=ANOTACAO_CURTIDAS)
             .order_by("nome")
@@ -222,8 +221,7 @@ class PecaDetalheAPI(generics.RetrieveAPIView):
 
     def get_queryset(self):
         return (
-            PecasReposicao.objects
-            .filter(ativo=True)
+            PecasReposicao.da_vitrine()
             .prefetch_related("imagem_peca_reposicao")
             .annotate(total_curtidas=ANOTACAO_CURTIDAS)
         )

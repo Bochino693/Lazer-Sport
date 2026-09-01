@@ -1762,6 +1762,32 @@ class Orcamento(Prime):
             atual = atual.orcamento_anterior
         return atual.pk
 
+    def cadeia_de_versoes(self):
+        """Todas as versões desta negociação, da primeira à atual.
+
+        O HISTÓRICO EXISTIA E NÃO APARECIA EM LUGAR NENHUM.
+
+        `orcamento_anterior` já ligava uma versão à outra desde que
+        Refazer foi criado, mas nada na tela lia essa corrente. Na lista,
+        as substituídas estão escondidas de propósito -- misturar as duas
+        faz a mesma negociação parecer três orçamentos. O efeito
+        colateral era que elas sumiam por inteiro: quem abria a proposta
+        atual não tinha como ver o que foi oferecido antes, nem por quê,
+        justamente quando o cliente liga perguntando pelo preço antigo.
+
+        Aqui a corrente é percorrida para trás até a primeira versão e
+        devolvida em ordem. O limite existe porque isto é uma sequência
+        de consultas, uma por elo: uma negociação com dez idas e vindas é
+        muito; com cinquenta, é dado corrompido, e não histórico.
+        """
+        cadeia = []
+        atual = self
+        while atual and len(cadeia) < 50:
+            cadeia.append(atual)
+            atual = atual.orcamento_anterior if atual.orcamento_anterior_id else None
+        cadeia.reverse()
+        return cadeia
+
     @property
     def caminho_publico(self):
         """Caminho da página do cliente, sem domínio.
@@ -2233,6 +2259,7 @@ class OrdemServico(Prime):
         AGUARDANDO_PECA = "aguardando_peca", "Aguardando peça"
         CONCLUIDA = "concluida", "Concluída"
         CANCELADA = "cancelada", "Cancelada"
+        SUBSTITUIDA = "substituida", "Substituída por nova versão"
 
     class Prioridade(models.TextChoices):
         BAIXA = "baixa", "Baixa"
@@ -2253,6 +2280,9 @@ class OrdemServico(Prime):
         Status.EM_EXECUCAO,
         Status.AGUARDANDO_PECA,
     )
+    #: Situações em que a O.S. já saiu de cena e a lista não a mostra de
+    #: primeira. Ver `OrdensServicoInnerView.get`.
+    ARQUIVADAS = (Status.SUBSTITUIDA,)
 
     cliente = models.ForeignKey(
         Cliente,
@@ -2364,6 +2394,31 @@ class OrdemServico(Prime):
     cliente_ciente_em = models.DateTimeField(null=True, blank=True)
     cliente_ciente_por = models.CharField(max_length=120, blank=True)
 
+    # ---------------- histórico de execução ----------------
+    # MESMO ESQUEMA DA PROPOSTA, PELO MESMO MOTIVO.
+    #
+    # A O.S. que o cliente já leu e assinou como ciente é o registro do
+    # que foi combinado naquele dia: qual defeito, qual peça, quanto. Ao
+    # abrir o equipamento o técnico descobre outra coisa -- era o motor,
+    # não a lona -- e alguém precisava reescrever a O.S. por cima. O
+    # papel que o cliente tinha na mão deixava de existir, e com ele a
+    # explicação do valor que estava sendo cobrado.
+    #
+    # Refazer cria a versão seguinte e congela esta como SUBSTITUIDA. As
+    # duas continuam consultáveis; só a atual aparece na lista.
+    ordem_anterior = models.OneToOneField(
+        "self",
+        on_delete=models.SET_NULL,
+        related_name="ordem_refeita",
+        null=True,
+        blank=True,
+    )
+    versao = models.PositiveIntegerField(default=1)
+    motivo_refacao = models.TextField(
+        blank=True,
+        help_text="O que mudou em relação à versão anterior desta O.S.",
+    )
+
     @property
     def destinatario(self):
         if self.cliente_id and self.cliente:
@@ -2414,12 +2469,74 @@ class OrdemServico(Prime):
 
     @property
     def pode_receber_pagamento(self):
-        """A cobrança só aparece enquanto ainda existe saldo válido."""
+        """A cobrança só aparece enquanto ainda existe saldo válido.
+
+        Substituída também sai: o dinheiro desta execução responde à
+        versão que está valendo, e não à que foi congelada.
+        """
         return (
             self.pk
-            and self.status != self.Status.CANCELADA
+            and self.status not in (
+                self.Status.CANCELADA,
+                self.Status.SUBSTITUIDA,
+            )
             and self.status_pagamento != self.StatusPagamento.PAGO
             and self.total > Decimal("0.00")
+        )
+
+    @property
+    def arquivada(self):
+        """Versão congelada: existe no histórico, e não na fila de trabalho."""
+        return self.status in self.ARQUIVADAS
+
+    @property
+    def pode_editar(self):
+        """Uma versão substituída não volta a ser editável.
+
+        Editar a versão que o cliente leu apagaria o papel que ele tem na
+        mão. O que se edita é sempre a versão que está valendo.
+        """
+        return not self.arquivada
+
+    @property
+    def pode_enviar(self):
+        """Ainda faz sentido mandar (ou remandar) esta O.S. ao cliente?
+
+        AS AÇÕES SÃO EM CIMA DA SITUAÇÃO -- a mesma regra da proposta.
+
+        O botão de enviar ficava aceso em qualquer linha, cancelada e
+        substituída incluídas. Mandar ao cliente o documento de um
+        serviço que foi cancelado, ou a versão que já foi trocada por
+        outra, é pedir que ele tome uma decisão sobre um papel que não
+        vale mais.
+        """
+        return not self.arquivada and self.status != self.Status.CANCELADA
+
+    @property
+    def pode_refazer(self):
+        """Vale criar uma versão nova a partir desta?
+
+        Só o que já saiu do rascunho -- rascunho ainda se edita no lugar,
+        e criar versão dele seria criar histórico de um papel que nunca
+        saiu da mesa.
+
+        A QUITADA FICA DE FORA, como na proposta: refazer congela a
+        atual, e congelar o documento contra o qual o dinheiro entrou é
+        apagar o que justifica o valor recebido. Depois de paga, o que
+        vier é uma O.S. nova.
+
+        A cancelada também: ela não foi trocada por outra versão, foi
+        encerrada. Recomeçar dali é abrir outra O.S.
+        """
+        return bool(
+            self.pk
+            and self.status not in (
+                self.Status.RASCUNHO,
+                self.Status.CANCELADA,
+                self.Status.SUBSTITUIDA,
+            )
+            and not self.quitado
+            and not hasattr(self, "ordem_refeita")
         )
 
     @property
@@ -2456,6 +2573,34 @@ class OrdemServico(Prime):
         nula. O painel só mostra o link depois disso.
         """
         return bool(self.enviada_em)
+
+    def cadeia_de_versoes(self):
+        """Todas as versões desta O.S., da primeira à atual.
+
+        Mesma corrente e mesmo motivo do orçamento (ver
+        `Orcamento.cadeia_de_versoes`): a lista esconde as substituídas
+        para não contar o mesmo serviço duas vezes, e escondido da lista
+        não pode ser escondido do sistema. O limite é o mesmo -- uma
+        O.S. com dez versões é muito; com cinquenta, é dado corrompido.
+        """
+        cadeia = []
+        atual = self
+        while atual and len(cadeia) < 50:
+            cadeia.append(atual)
+            atual = atual.ordem_anterior if atual.ordem_anterior_id else None
+        cadeia.reverse()
+        return cadeia
+
+    @property
+    def numero_com_versao(self):
+        """`OS-00042/2026` na primeira versão, `... · v3` a partir da segunda.
+
+        A versão só aparece quando existe: escrever "v1" em toda O.S.
+        sugere um histórico que a maioria delas não tem.
+        """
+        if self.versao <= 1:
+            return self.numero_documento
+        return f"{self.numero_documento} · v{self.versao}"
 
     @property
     def cliente_ciente(self):
@@ -2528,6 +2673,27 @@ class ItemOrdemServico(Prime):
         max_length=14,
         choices=Tipo.choices,
         default=Tipo.SERVICO,
+    )
+    # A LINHA PODE VIR DO CATÁLOGO -- OU NÃO VIR DE LUGAR NENHUM.
+    #
+    # Metade do que entra numa O.S. não é item cadastrado: "trocar a lona
+    # e recolar a emenda" é o serviço daquele dia, escrito à mão, e
+    # obrigar um cadastro para ele encheria a tabela de peças de frases.
+    # A outra metade É item: a bucha, o retentor, a peça de reposição que
+    # a loja vende. Essa deve apontar para o cadastro, para o preço vir
+    # certo e para a O.S. saber depois o que consumiu.
+    #
+    # Por isso o vínculo é opcional dos dois lados: `descricao` sempre
+    # existe (é o que sai impresso), `peca` existe quando há de onde
+    # puxar. É a versatilidade pedida -- item de manutenção ou peça
+    # normal, na mesma linha.
+    peca = models.ForeignKey(
+        "core.PecasReposicao",
+        on_delete=models.SET_NULL,
+        related_name="itens_ordem_servico",
+        null=True,
+        blank=True,
+        help_text="Peça da loja ou item de manutenção que originou a linha.",
     )
     descricao = models.CharField(max_length=200)
     quantidade = models.DecimalField(

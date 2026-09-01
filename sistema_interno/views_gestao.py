@@ -104,6 +104,7 @@ from .views import (
     FinanceiroInternoRequiredMixin,
     InternoRequiredMixin,
     OrcamentoInternoRequiredMixin,
+    OrdemServicoInternoRequiredMixin,
     ProducaoInternoRequiredMixin,
     RespostaJSONMixin,
 )
@@ -571,6 +572,42 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
             "pode_editar": orcamento.pode_editar,
             "versao": orcamento.versao,
             "orcamento_anterior": orcamento.orcamento_anterior_id or "",
+            # AS VERSÕES ANTERIORES VIAJAM COM A PROPOSTA, E NÃO NA LISTA.
+            #
+            # Na lista elas continuam fora do "todos": misturadas, a
+            # mesma negociação parece três orçamentos. Mas sumir da lista
+            # não é sumir -- quando o cliente liga perguntando do preço
+            # antigo, é aqui dentro que se responde. Só a corrente vem:
+            # número, versão, situação, total e data, que é o suficiente
+            # para achar e abrir a que interessa.
+            "versoes": [
+                {
+                    "id": versao.pk,
+                    "versao": versao.versao,
+                    "status": versao.status,
+                    "rotulo": versao.get_status_display(),
+                    "total": f"{versao.total:.2f}".replace(".", ","),
+                    "quando": (
+                        timezone.localtime(versao.criacao).strftime("%d/%m/%Y")
+                        if versao.criacao else ""
+                    ),
+                    "motivo": versao.motivo_negociacao,
+                    "atual": versao.pk == orcamento.pk,
+                    # A PRÉVIA, E NÃO O MODAL.
+                    #
+                    # A versão substituída não está na lista da página --
+                    # é justamente por isso que ela precisa aparecer
+                    # aqui. Mandar o modal reabri-la pelo id acharia
+                    # nada e desenharia um formulário em branco como se
+                    # fosse proposta nova. A prévia lê do servidor e
+                    # serve a qualquer versão, em qualquer situação.
+                    "previa": reverse(
+                        "orcamento_previa_inner", args=[versao.pk],
+                        urlconf="sistema_interno.urls",
+                    ),
+                }
+                for versao in orcamento.cadeia_de_versoes()
+            ] if orcamento.versao > 1 or orcamento.orcamento_anterior_id else [],
             "motivo_negociacao": orcamento.motivo_negociacao,
             "status_pagamento": orcamento.status_pagamento,
             "valor_pago": f"{orcamento.valor_pago:.2f}".replace(".", ","),
@@ -682,11 +719,21 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
     @classmethod
     def opcao_peca(cls, peca):
         imagem = peca.imagem_principal
+        de_manutencao = peca.uso == PecasReposicao.Uso.MANUTENCAO
         return {
             "valor": f"r:{peca.id}",
             "rotulo": peca.nome,
-            "grupo": "Peças de reposição",
-            "detalhe": (peca.descricao_peca or "Peça da loja")[:90],
+            # O grupo é o que separa, na lista, o que a loja vende do que
+            # a oficina consome. Sem ele os dois viram a mesma linha, e o
+            # custo interno entra numa proposta sem ninguém notar.
+            "grupo": (
+                "Itens de manutenção" if de_manutencao
+                else "Peças de reposição"
+            ),
+            "detalhe": (
+                peca.descricao_peca
+                or ("Item de manutenção" if de_manutencao else "Peça da loja")
+            )[:90],
             "valorDireita": (
                 f"R$ {peca.preco_venda:.2f}".replace(".", ",")
                 if peca.preco_venda is not None else "sem preço"
@@ -1501,7 +1548,29 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
 
     # --------------------------- cadastrar peça sem sair do orçamento
     def acao_peca_nova(self, request):
-        """Cria uma peça real da loja e devolve-a para a linha atual."""
+        """Cria a peça e a devolve para a linha atual -- FORA da vitrine.
+
+        O QUE NASCE AQUI NÃO VAI PARA O SITE.
+
+        Nascia. A peça era criada com `ativo=True`, que é o padrão da
+        tabela, e no mesmo segundo passava a ser anunciada na loja: sem
+        foto, sem descrição de verdade, com um nome digitado às pressas
+        no meio de uma negociação e um preço que valia para aquele
+        cliente. Ninguém escolheu publicar aquilo -- foi só o efeito
+        colateral de precisar cobrar um item.
+
+        Agora nasce desligada. Publicar continua sendo uma decisão, e ela
+        é tomada na tela de produtos, por quem cuida da vitrine, depois
+        de a peça ter foto e texto. Enquanto isso a peça já serve para o
+        que foi criada: entrar nesta linha e ser cobrada.
+
+        E `uso` decide o que ela é. Item de manutenção é o caso comum
+        daqui -- a bucha que só serve num modelo, a hora de solda, o
+        retentor que a loja não vende -- e ele nunca vai à vitrine, nem
+        se alguém o ativar. Peça da loja é a que um dia será anunciada, e
+        aí só falta o cadastro completo. As duas servem igualmente numa
+        linha de orçamento ou de O.S.: é essa a versatilidade.
+        """
         if not capacidades(request.user)["orcamentos_editar_comercial"]:
             return self.erro(request, "Cadastro de item pertence ao Comercial.", status=403)
         nome = texto(
@@ -1517,6 +1586,12 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
                 f"Já existe uma peça chamada “{nome}”. Procure na lista."
             )
 
+        uso = (request.POST.get("uso") or "").strip()
+        if uso not in PecasReposicao.Uso.values:
+            # O caminho de dentro do documento é, quase sempre, o item
+            # que a loja não vende. Quem quer o outro escolhe.
+            uso = PecasReposicao.Uso.MANUTENCAO
+
         preco_venda = decimal_br(
             request.POST.get("preco_venda"),
             "Preço de venda",
@@ -1530,6 +1605,8 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
 
         peca = PecasReposicao.objects.create(
             nome=nome,
+            uso=uso,
+            ativo=False,
             descricao_peca=texto(request, "descricao", limite=999) or nome,
             preco_venda=preco_venda,
             preco_fornecedor=preco_fornecedor,
@@ -1541,12 +1618,26 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
             if categoria:
                 peca.categoria_peca.add(categoria)
 
+        de_manutencao = peca.uso == PecasReposicao.Uso.MANUTENCAO
+        recado = (
+            f"“{peca.nome}” entrou como item de manutenção e já pode ser "
+            f"usado aqui. Ele não vai para o site."
+            if de_manutencao else
+            f"“{peca.nome}” entrou nas peças de reposição e já pode ser "
+            f"usada aqui. Para anunciá-la no site, publique-a em Produtos."
+        )
+
         return self.sucesso(
             request,
-            f"“{peca.nome}” entrou nas peças de reposição.",
+            recado,
             peca={
                 "id": peca.id,
                 "nome": peca.nome,
+                "uso": peca.uso,
+                "grupo": (
+                    "Itens de manutenção" if de_manutencao
+                    else "Peças de reposição"
+                ),
                 "valor": (
                     f"{peca.preco_venda:.2f}".replace(".", ",")
                     if peca.preco_venda is not None else ""
@@ -1740,6 +1831,10 @@ class BuscaItensOrcamentoView(OrcamentoInternoRequiredMixin, View):
 
     LIMITE_POR_ORIGEM = 8
 
+    #: O que esta busca oferece. A O.S. usa a mesma máquina com uma lista
+    #: menor -- ver `BuscaItensOrdemServicoView`.
+    ORIGENS = ("brinquedos", "pecas", "produtos")
+
     @staticmethod
     def _prioridade(campo, termo):
         return Case(
@@ -1775,10 +1870,18 @@ class BuscaItensOrcamentoView(OrcamentoInternoRequiredMixin, View):
 
         brinquedos = Brinquedos.objects.all()
         produtos = ProdutoInterno.objects.filter(ativo=True).select_related("brinquedo")
-        pecas = (
-            PecasReposicao.objects.filter(ativo=True)
-            .prefetch_related("imagem_peca_reposicao")
-        )
+        # AQUI DENTRO, `ativo` NÃO É O FILTRO CERTO.
+        #
+        # `ativo` responde "está anunciada no site?". Quem monta um
+        # documento não está perguntando isso: está perguntando o que
+        # pode cobrar. Filtrar por `ativo` escondia justamente os itens
+        # de manutenção -- que nascem desligados de propósito -- de quem
+        # acabou de cadastrá-los para usar na linha seguinte.
+        #
+        # O que o painel oferece é tudo o que dá para cobrar: peça da
+        # loja e item de manutenção, separados por grupo, para ninguém
+        # colocar custo interno numa proposta sem perceber.
+        pecas = PecasReposicao.objects.prefetch_related("imagem_peca_reposicao")
 
         if termo:
             padrao = self._padrao_sem_acento(termo)
@@ -1824,19 +1927,16 @@ class BuscaItensOrcamentoView(OrcamentoInternoRequiredMixin, View):
                 _uso=Count("itens_orcamento")
             ).order_by("-_uso", "nome")
 
+        monta = {
+            "brinquedos": (brinquedos, OrcamentosInnerView.opcao_brinquedo),
+            "pecas": (pecas, OrcamentosInnerView.opcao_peca),
+            "produtos": (produtos, OrcamentosInnerView.opcao_produto),
+        }
         opcoes = [
-            *[
-                OrcamentosInnerView.opcao_brinquedo(obj)
-                for obj in brinquedos[:limite]
-            ],
-            *[
-                OrcamentosInnerView.opcao_peca(obj)
-                for obj in pecas[:limite]
-            ],
-            *[
-                OrcamentosInnerView.opcao_produto(obj)
-                for obj in produtos[:limite]
-            ],
+            opcao(obj)
+            for origem in self.ORIGENS
+            for obj in monta[origem][0][:limite]
+            for opcao in (monta[origem][1],)
         ]
 
         resposta = JsonResponse({
@@ -1847,6 +1947,26 @@ class BuscaItensOrcamentoView(OrcamentoInternoRequiredMixin, View):
         })
         resposta["Cache-Control"] = "private, max-age=60"
         return resposta
+
+
+class BuscaItensOrdemServicoView(
+    OrdemServicoInternoRequiredMixin, BuscaItensOrcamentoView
+):
+    """A mesma busca, para quem monta a O.S. -- e sem passar pelo orçamento.
+
+    POR QUE NÃO REAPROVEITAR A ROTA DO ORÇAMENTO DIRETO.
+
+    Ela é do Comercial e do Financeiro; a O.S. é da Produção. Quem faz
+    manutenção não tem (e não devia ter) acesso à tela de propostas, e
+    apontar a linha da O.S. para aquela rota daria 403 justamente para o
+    técnico que está montando o serviço.
+
+    A lista também é menor de propósito. Um brinquedo inteiro não é linha
+    de ordem de serviço: o que se cobra ali é peça, item de manutenção e
+    mão de obra. Sobram as duas origens que se consomem.
+    """
+
+    ORIGENS = ("pecas", "produtos")
 
 
 class EstadoOrcamentosView(OrcamentoInternoRequiredMixin, View):

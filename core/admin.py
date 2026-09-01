@@ -182,6 +182,7 @@ class CategoriaPecaAdmin(admin.ModelAdmin):
 class PecasReposicaoAdmin(admin.ModelAdmin):
     list_display = (
         "ativo",
+        "uso",
         "id",
         "nome",
         "preco_venda",
@@ -198,6 +199,9 @@ class PecasReposicaoAdmin(admin.ModelAdmin):
 
     list_filter = (
         "ativo",          # ⭐ filtro por ativo/inativo
+        # Item de manutenção não vai à vitrine nem estando ativo, então
+        # "ativo" sozinho não responde mais "o que o site mostra?".
+        "uso",
         "categoria_peca",
     )
 
@@ -207,7 +211,12 @@ class PecasReposicaoAdmin(admin.ModelAdmin):
 
     fieldsets = (
         ("Status", {
-            "fields": ("ativo",)  # ⭐ campo agora aparece no formulário
+            "fields": ("ativo", "uso"),
+            "description": (
+                "A vitrine do site mostra só o que está ativo E é peça da "
+                "loja. Item de manutenção serve a orçamentos e O.S. e "
+                "nunca é anunciado, mesmo ativo."
+            ),
         }),
 
         ("Informações da Peça", {
