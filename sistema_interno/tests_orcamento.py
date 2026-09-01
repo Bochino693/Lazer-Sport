@@ -841,6 +841,7 @@ class OrcamentoInternoTests(TestCase):
         # "calculando" e a janela ser bloqueada.
         self.assertContains(resposta, "function montarConversa(")
         self.assertContains(resposta, "Painel.whatsapp.abrir(telefone, mensagem)")
+        self.assertContains(resposta, "Painel.whatsapp.alvo()")
 
         # O botão verde é DE PROPÓSITO a versão web: é a saída de quem não
         # tem o aplicativo instalado. Mandá-lo de volta ao aplicativo faria
@@ -848,7 +849,7 @@ class OrcamentoInternoTests(TestCase):
         self.assertContains(resposta, "data-whatsapp-web")
 
     def test_no_computador_a_conversa_abre_no_whatsapp_web(self):
-        """O PC não depende de protocolo ou aplicativo instalado."""
+        """O PC usa a Web e reaproveita a mesma aba entre clientes."""
         from pathlib import Path
 
         painel = Path(
@@ -857,7 +858,11 @@ class OrcamentoInternoTests(TestCase):
 
         self.assertIn("https://web.whatsapp.com/send?phone=", painel)
         self.assertNotIn("whatsapp://send?phone=", painel)
-        self.assertIn('var aba = window.open(web, "_blank")', painel)
+        self.assertIn('var NOME_ABA_WHATSAPP = "ls-whatsapp-web"', painel)
+        self.assertIn("var aba = window.open(web, alvoWhatsapp())", painel)
+        self.assertNotIn('window.open(web, "_blank")', painel)
+        self.assertIn("abaWhatsappWeb = aba", painel)
+        self.assertIn("aba.focus()", painel)
         # No celular, wa.me continua levando ao aplicativo.
         self.assertIn('"https://wa.me/" + digitos', painel)
 

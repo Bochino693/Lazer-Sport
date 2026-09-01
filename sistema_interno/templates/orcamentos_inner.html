@@ -2301,6 +2301,12 @@ LSTela.pronto(function () {
     if (!atalho || !url) return;
 
     atalho.href = url;
+    /* No PC o fallback obedece à mesma aba única do envio principal.
+       `noopener` faz o navegador tratar um alvo nomeado como nova janela,
+       por isso ele só permanece no celular, onde o alvo é `_blank`. */
+    atalho.target = Painel.whatsapp.alvo();
+    if (Painel.whatsapp.noCelular()) atalho.rel = "noopener";
+    else atalho.removeAttribute("rel");
     atalho.hidden = false;
     atalho.innerHTML = jaAbriu
       ? '<i class="bi bi-whatsapp me-1"></i> Abrir a conversa de novo'
@@ -2567,15 +2573,17 @@ LSTela.pronto(function () {
     }
 
     /* O WhatsApp que abre é o de QUEM ESTÁ LOGADO no aparelho: no PC,
-       abre diretamente o WhatsApp Web em outra aba; no celular, abre o
-       aplicativo. O painel permanece nesta aba e não espera o servidor
+       abre ou reaproveita uma única aba do WhatsApp Web; no celular, abre
+       o aplicativo. O painel permanece nesta aba e não espera o servidor
        para criar a conversa. */
     var saida = Painel.whatsapp.abrir(telefone, mensagem);
 
     mostrarAtalhoWhatsapp(url, saida.ok);
     avisarEnvio(
       saida.ok
-        ? "A conversa abriu no WhatsApp Web com a proposta escrita. " +
+        ? (saida.reutilizada
+          ? "A aba já aberta do WhatsApp foi atualizada para este cliente. "
+          : "A conversa abriu no WhatsApp Web com a proposta escrita. ") +
           "Confirme o envio por lá para o cliente receber."
         : "O navegador bloqueou a nova aba. Use o botão verde " +
           "“Abrir conversa no WhatsApp” aqui embaixo.",

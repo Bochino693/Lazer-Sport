@@ -1029,9 +1029,11 @@
      --------------------------------------------------------------------
      O protocolo `whatsapp://` depende do programa instalado e não informa
      ao navegador se falhou. No computador isso parecia um botão parado.
-     A versão web é previsível: abre em outra aba, usa a sessão já conectada
-     do atendente e mantém o painel intacto. No celular, `wa.me` continua
-     levando ao aplicativo.
+     A versão web é previsível: usa UMA aba identificada do WhatsApp, mantém
+     a sessão já conectada do atendente e conserva o painel intacto. Nos
+     próximos clientes essa mesma aba é atualizada e trazida para a frente;
+     não nasce uma cópia do WhatsApp a cada envio. No celular, `wa.me`
+     continua levando ao aplicativo.
      ==================================================================== */
   function numeroComDdi(telefone) {
     var digitos = String(telefone || "").replace(/\D/g, "");
@@ -1050,6 +1052,16 @@
     );
   }
 
+  /* Um nome estável faz o próprio navegador encontrar a aba mesmo depois
+     de o painel ser recarregado. A referência acelera o caso comum; o nome
+     resolve também o caso em que a referência JavaScript foi perdida. */
+  var NOME_ABA_WHATSAPP = "ls-whatsapp-web";
+  var abaWhatsappWeb = null;
+
+  function alvoWhatsapp() {
+    return noCelular() ? "_blank" : NOME_ABA_WHATSAPP;
+  }
+
   Painel.whatsapp = {
     numero: numeroComDdi,
 
@@ -1066,6 +1078,8 @@
 
     noCelular: noCelular,
 
+    alvo: alvoWhatsapp,
+
     /* Abre a conversa e devolve o que aconteceu, para a tela explicar.
        Precisa ser chamado DENTRO do clique: fora do gesto da pessoa o
        navegador trata como pop-up e bloqueia. */
@@ -1073,9 +1087,27 @@
       var web = this.web(telefone, mensagem);
       if (!web) return { ok: false, motivo: "numero", web: "" };
 
-      var aba = window.open(web, "_blank");
-      if (aba) { try { aba.opener = null; } catch (e) {} }
-      return { ok: !!aba, motivo: aba ? "web" : "bloqueado", web: web };
+      var celular = noCelular();
+      var reutilizada = !celular && abaWhatsappWeb && !abaWhatsappWeb.closed;
+      var aba = window.open(web, alvoWhatsapp());
+
+      if (aba) {
+        if (celular) {
+          try { aba.opener = null; } catch (e) {}
+        } else {
+          abaWhatsappWeb = aba;
+        }
+        /* Alguns navegadores navegam a aba nomeada, mas deixam o painel
+           por cima. O foco torna a troca de cliente imediatamente visível. */
+        try { aba.focus(); } catch (e) {}
+      }
+
+      return {
+        ok: !!aba,
+        motivo: aba ? (reutilizada ? "reutilizada" : "web") : "bloqueado",
+        web: web,
+        reutilizada: reutilizada,
+      };
     },
   };
 
@@ -1096,8 +1128,11 @@
       telefone,
       endereco.searchParams.get("text") || ""
     );
-    var aba = window.open(destino, "_blank");
-    if (aba) { try { aba.opener = null; } catch (e) {} }
+    var aba = window.open(destino, alvoWhatsapp());
+    if (aba) {
+      abaWhatsappWeb = aba;
+      try { aba.focus(); } catch (e) {}
+    }
   });
 
   /* ====================================================================
