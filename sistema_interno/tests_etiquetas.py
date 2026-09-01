@@ -124,21 +124,84 @@ class EtiquetasTests(TestCase):
         # descarta fundo por padrão.
         self.assertIn("print-color-adjust:exact", impressao)
 
-    def test_o_papel_usa_preto_e_ambar_sem_cinza_apagado(self):
-        """Texto cinza no papel branco some no galpão e na impressão."""
+    def papel(self):
+        """As DECLARAÇÕES de CSS que descrevem a etiqueta impressa.
+
+        Os comentários saem antes de devolver. Eles citam de propósito as
+        cores que foram embora ("saía com âmbar", "#171310 que o olho lê
+        como cinza"), e um teste que procurasse a cor no arquivo inteiro
+        acusaria a explicação da correção como se fosse a falha.
+        """
+        import re
         from pathlib import Path
 
         folha = (
             Path(__file__).resolve().parent
             / "static" / "interno" / "interno_modern.css"
         ).read_text(encoding="utf-8")
-        etiqueta = folha[folha.index("/* ---------------------------------------------------------- o papel */"):]
+        etiqueta = folha[folha.index("/* ------------------------------------------"
+                                     "---------------- o papel"):]
         etiqueta = etiqueta[:etiqueta.index("@media print")]
+        return re.sub(r"/\*.*?\*/", " ", etiqueta, flags=re.S)
 
-        self.assertIn("background:#F2A93B", etiqueta)
-        self.assertIn("border:4px solid #171310", etiqueta)
-        for cinza in ("#4A423A", "#6B6055", "#B9AE9C"):
-            self.assertNotIn(cinza, etiqueta)
+    def test_o_papel_e_preto_no_branco_e_mais_nada(self):
+        """Cor e marrom-quase-preto saem lavados na impressora do galpão.
+
+        A etiqueta tinha faixa âmbar no topo e os rótulos miúdos em
+        #171310 -- um marrom que o olho lê como cinza. Laser de galpão
+        trabalha em meio-tom com toner no fim: cor vira chapado cinza e
+        texto pequeno em marrom sai apagado, justamente nas linhas que
+        dizem para onde a caixa vai.
+
+        A única tinta agora é #000 sobre #fff.
+        """
+        etiqueta = self.papel()
+
+        self.assertIn("border:4px solid #000", etiqueta)
+        self.assertIn("background:#fff", etiqueta)
+        # O único chapado preto é a faixa do aviso principal -- o que se
+        # lê de longe. O topo é moldura, para o logotipo não sumir nela.
+        self.assertIn("background:#000;color:#fff", etiqueta)
+
+        for cor in ("#F2A93B", "#171310", "#4A423A", "#6B6055", "#B9AE9C"):
+            with self.subTest(cor=cor):
+                self.assertNotIn(cor, etiqueta)
+
+    def test_nenhuma_letra_do_papel_desce_abaixo_do_que_o_laser_imprime(self):
+        """Abaixo de ~.6rem a impressora come a letra, e o rótulo some."""
+        import re
+
+        for tamanho in re.findall(r"font-size:\.(\d+)rem", self.papel()):
+            with self.subTest(tamanho=tamanho):
+                self.assertGreaterEqual(
+                    int(tamanho.ljust(2, "0")), 62,
+                    "corpo miúdo demais para sair legível da impressora",
+                )
+
+    def test_a_etiqueta_rapida_e_a_primeira_escolha(self):
+        """A caixa que não é de pedido nenhum não deve pedir dados de pedido.
+
+        Conteúdo, número de volume e referência de O.S. só existem
+        quando há pedido. Deixá-los na frente de quem despacha uma troca
+        em garantia é ensinar a pular campo -- e quem pula campo pula o
+        endereço junto.
+        """
+        html = self.tela()
+
+        self.assertIn('name="modo" value="rapida" checked', html)
+        self.assertIn('name="modo" value="completa"', html)
+        # O bloco da carga nasce escondido: quem abre a tela vê nome,
+        # endereço e nada mais.
+        self.assertIn("data-so-completa hidden", html)
+
+    def test_a_rapida_nao_imprime_o_que_ela_escondeu(self):
+        """Campo oculto que ainda vai ao papel é pior do que campo visível."""
+        html = self.tela()
+
+        self.assertIn("conteudo: rapida ? \"\" : texto(\"etiquetaConteudo\")", html)
+        self.assertIn("referencia: rapida ? \"\" : texto(\"etiquetaReferencia\")", html)
+        # Sem carga descrita, não há por que numerar volume.
+        self.assertIn("var total = rapida", html)
 
     def test_a_tela_esta_no_menu(self):
         """Tela que não está no menu é tela que ninguém acha."""

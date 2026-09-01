@@ -3104,27 +3104,81 @@ button.ls-incomplete-chip:focus-visible{outline:3px solid rgba(255,128,145,.35);
 
 .ls-etiquetas-form .ls-completar-bloco:last-child{margin-bottom:0}
 
+/* A ESCAPA RÁPIDA FICA ANTES DE TUDO.
+
+   A maior parte das caixas que sai daqui não pertence a pedido nenhum:
+   é a peça que o cliente veio buscar, a troca em garantia, o volume que
+   vai junto na viagem de outra entrega. Para essas, conteúdo, número de
+   volume e referência de O.S. são campos que existem só para serem
+   deixados em branco -- e um formulário com metade dos campos vazios
+   ensina quem preenche a pular campo, inclusive o endereço.
+
+   Então a escolha vem primeiro, e a rápida é a primeira das duas: nome,
+   endereço e a empresa, que é o que a caixa precisa dizer. */
+.ls-etiqueta-modos{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:16px}
+@media(max-width:520px){.ls-etiqueta-modos{grid-template-columns:1fr}}
+.ls-etiqueta-modo{
+  display:flex;align-items:flex-start;gap:10px;cursor:pointer;
+  padding:12px 13px;border:1px solid var(--line);border-radius:14px;
+  background:var(--panel-soft);color:var(--text-2);
+  font-size:.82rem;font-weight:800;
+  transition:border-color .15s ease,background .15s ease,color .15s ease;
+}
+.ls-etiqueta-modo:has(input:checked){
+  border-color:var(--acento);background:rgba(242,169,59,.13);color:var(--text);
+  box-shadow:0 0 0 1px rgba(242,169,59,.25);
+}
+.ls-etiqueta-modo input{accent-color:var(--acento);flex:0 0 auto;margin-top:3px}
+.ls-etiqueta-modo span{display:flex;flex-direction:column;gap:2px;min-width:0}
+.ls-etiqueta-modo small{color:var(--text-2);font-size:.71rem;font-weight:650;line-height:1.35}
+.ls-etiqueta-modo:has(input:checked) small{color:var(--text-2)}
+.ls-etiquetas-form [data-so-completa][hidden]{display:none!important}
+
 .ls-etiqueta-avisos{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 @media(max-width:520px){.ls-etiqueta-avisos{grid-template-columns:1fr}}
+/* O RÓTULO NÃO MARCADO TAMBÉM PRECISA SER LIDO.
+
+   Estes rótulos ficavam em `--muted` -- o cinza de texto secundário do
+   painel. Mas aqui eles não são secundários: são a lista inteira de
+   opções, e quem lê está escolhendo entre elas. Em cinza, a opção não
+   marcada parecia desativada, e a leitura era "só dá para usar a que já
+   veio marcada". Agora o não marcado é texto normal; o marcado ganha
+   âmbar e fundo. A diferença entre os dois é a marca, e não o brilho. */
 .ls-etiqueta-aviso,.ls-etiqueta-tamanho{
   display:flex;align-items:center;gap:9px;cursor:pointer;
   padding:10px 12px;border:1px solid var(--line);border-radius:12px;
-  color:var(--muted);font-size:.8rem;font-weight:700;
+  color:var(--text-2);font-size:.8rem;font-weight:700;
   transition:border-color .15s ease,background .15s ease,color .15s ease;
 }
 .ls-etiqueta-aviso:has(input:checked),
 .ls-etiqueta-tamanho:has(input:checked){
   border-color:rgba(242,169,59,.5);background:rgba(242,169,59,.10);color:var(--text);
 }
-.ls-etiqueta-aviso input,.ls-etiqueta-tamanho input{accent-color:var(--metric);flex:0 0 auto}
+.ls-etiqueta-aviso input,.ls-etiqueta-tamanho input{accent-color:var(--acento);flex:0 0 auto}
 .ls-etiqueta-tamanhos{display:grid;gap:8px}
 .ls-etiqueta-tamanho span{display:flex;flex-direction:column;gap:1px}
-.ls-etiqueta-tamanho small{color:var(--muted);font-weight:600}
+.ls-etiqueta-tamanho small{color:var(--text-2);font-weight:650}
+.ls-etiquetas-form .form-text{color:var(--text-2)}
 
-/* ---------------------------------------------------------- o papel */
+/* ---------------------------------------------------------- o papel
+
+   PRETO NO BRANCO, E SÓ.
+
+   A etiqueta saía com âmbar na faixa do topo e com os rótulos miúdos num
+   marrom escuro (#171310) que o olho lê como cinza. No monitor passava;
+   no papel não. Impressora de galpão é laser preta, quase sempre com
+   toner no fim, e trabalha em meio-tom: cor vira chapado cinza e texto
+   pequeno em marrom sai lavado. Quem confere a caixa no meio da carga
+   estava lendo o endereço aos pedaços.
+
+   Aqui a única tinta é #000 sobre #fff. Nada de cor, nada de cinza,
+   nada de marrom "quase preto": preto de verdade imprime igual em
+   qualquer impressora e sobrevive à cópia, à fita e à chuva no ombro do
+   caminhão. Os corpos miúdos também subiram -- o menor texto da etiqueta
+   é .66rem, e não .53rem. */
 .ls-folha-etiquetas{
   display:grid;gap:10px;padding:14px;
-  border:1px solid var(--line);border-radius:16px;background:#171310;
+  border:1px solid var(--line);border-radius:16px;background:#0B0906;
 }
 .ls-folha-etiquetas.a5{grid-template-columns:1fr}
 .ls-folha-etiquetas.a6{grid-template-columns:1fr 1fr}
@@ -3132,78 +3186,94 @@ button.ls-incomplete-chip:focus-visible{outline:3px solid rgba(255,128,145,.35);
 
 .ls-etiqueta{
   display:flex;flex-direction:column;gap:10px;
-  padding:16px 18px;background:#fff;color:#171310;
-  border:4px solid #171310;border-radius:6px;
+  padding:16px 18px;background:#fff;color:#000;
+  border:4px solid #000;border-radius:4px;
   font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
 }
+/* O topo é MOLDURA, e não faixa preenchida: o logotipo é uma imagem
+   comum e sobre chapado preto ele desaparece. Traço grosso separa tão
+   bem quanto fundo, e não gasta toner. */
 .ls-etiqueta-topo{
   display:flex;align-items:center;gap:11px;padding:9px 11px;
-  border:2px solid #171310;border-radius:5px;background:#F2A93B;color:#171310;
+  border:2px solid #000;border-radius:4px;background:#fff;color:#000;
 }
 .ls-etiqueta-logo{width:44px;height:44px;flex:0 0 44px;object-fit:contain}
 .ls-etiqueta-empresa{flex:1 1 auto;min-width:0;display:flex;flex-direction:column}
-.ls-etiqueta-empresa strong{font-size:.95rem;line-height:1.2}
-.ls-etiqueta-empresa small{font-size:.62rem;color:#171310;line-height:1.35;font-weight:750}
+.ls-etiqueta-empresa strong{font-size:1rem;line-height:1.2;color:#000}
+.ls-etiqueta-empresa small{font-size:.7rem;color:#000;line-height:1.35;font-weight:700}
 .ls-etiqueta-volume{
-  flex:0 0 auto;text-align:center;padding:5px 10px;
-  border:2px solid #171310;border-radius:6px;
+  flex:0 0 auto;text-align:center;padding:5px 10px;color:#000;
+  border:2px solid #000;border-radius:4px;
 }
-.ls-etiqueta-volume small{display:block;font-size:.53rem;letter-spacing:.06em;text-transform:uppercase}
-.ls-etiqueta-volume strong{font-size:1.15rem;line-height:1;font-variant-numeric:tabular-nums}
+.ls-etiqueta-volume small{display:block;font-size:.62rem;letter-spacing:.06em;text-transform:uppercase}
+.ls-etiqueta-volume strong{font-size:1.2rem;line-height:1;font-variant-numeric:tabular-nums}
 
 /* O aviso é o que se lê de longe: no galpão, quem carrega a caixa olha
-   um segundo. O primeiro escolhido ganha a faixa preta; os outros
-   acompanham menores, sem disputar com ele. */
+   um segundo. O primeiro escolhido ganha a faixa preta -- o único
+   chapado da etiqueta, e por isso o que salta; os outros acompanham
+   menores, contornados, sem disputar com ele. */
 .ls-etiqueta-selos{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 .ls-etiqueta-selo{
-  display:inline-flex;align-items:center;gap:5px;
-  padding:4px 9px;border:2px solid #171310;border-radius:5px;
-  font-size:.68rem;font-weight:900;letter-spacing:.04em;text-transform:uppercase;
+  display:inline-flex;align-items:center;gap:5px;color:#000;background:#fff;
+  padding:4px 9px;border:2px solid #000;border-radius:4px;
+  font-size:.72rem;font-weight:900;letter-spacing:.04em;text-transform:uppercase;
 }
 .ls-etiqueta-selo.principal{
-  padding:7px 14px;font-size:1.05rem;letter-spacing:.09em;
-  background:#171310;color:#fff;
+  padding:7px 14px;font-size:1.1rem;letter-spacing:.09em;
+  background:#000;color:#fff;border-color:#000;
 }
-.ls-etiqueta-selo.principal i{font-size:1.15rem}
+.ls-etiqueta-selo.principal i{font-size:1.2rem}
 
 .ls-etiqueta-destino{
-  flex:1 1 auto;min-height:0;padding:10px 12px;
-  border:3px solid #171310;border-radius:6px;
+  flex:1 1 auto;min-height:0;padding:10px 12px;color:#000;
+  border:3px solid #000;border-radius:4px;
 }
 .ls-etiqueta-destino>span{
-  display:block;font-size:.58rem;font-weight:900;
-  letter-spacing:.1em;text-transform:uppercase;color:#171310;
+  display:block;font-size:.66rem;font-weight:900;
+  letter-spacing:.1em;text-transform:uppercase;color:#000;
 }
-.ls-etiqueta-destino strong{display:block;margin-top:2px;font-size:1.3rem;line-height:1.2}
-.ls-etiqueta-destino p{margin:5px 0 0;font-size:.8rem;line-height:1.4}
+.ls-etiqueta-destino strong{display:block;margin-top:3px;font-size:1.35rem;line-height:1.2;color:#000}
+.ls-etiqueta-destino p{margin:6px 0 0;font-size:.86rem;line-height:1.4;color:#000;font-weight:600}
 .ls-etiqueta-contato{font-weight:800}
+
+/* NA ETIQUETA RÁPIDA O ENDEREÇO É O DOCUMENTO.
+
+   Sem conteúdo, sem volume e sem referência, o que sobra na caixa é para
+   onde ela vai -- então vai grande. É a mesma moldura, com o texto no
+   tamanho que se lê de pé, ao lado da pilha. */
+.ls-etiqueta.rapida .ls-etiqueta-destino strong{font-size:1.7rem}
+.ls-etiqueta.rapida .ls-etiqueta-destino p{font-size:1rem;font-weight:700}
 
 .ls-etiqueta-rodape{
   display:flex;flex-wrap:wrap;gap:4px 18px;
-  border-top:3px solid #171310;padding-top:8px;font-size:.72rem;
-  color:#171310;font-weight:750;
+  border-top:3px solid #000;padding-top:8px;font-size:.78rem;
+  color:#000;font-weight:700;
 }
 .ls-etiqueta-rodape span{display:flex;flex-direction:column;min-width:0}
 .ls-etiqueta-rodape small{
-  font-size:.53rem;font-weight:900;letter-spacing:.08em;
-  text-transform:uppercase;color:#171310;
+  font-size:.62rem;font-weight:900;letter-spacing:.08em;
+  text-transform:uppercase;color:#000;
 }
 .ls-etiqueta-origem{margin-left:auto;text-align:right}
 
-/* A folha em A6 aperta tudo: quatro por página é volume pequeno. */
+/* A folha em A6 aperta tudo: quatro por página é volume pequeno. O piso
+   continua sendo .62rem -- abaixo disso o laser come a letra. */
 .ls-folha-etiquetas.a6 .ls-etiqueta{padding:10px 11px;gap:6px}
-.ls-folha-etiquetas.a6 .ls-etiqueta-selo.principal{padding:4px 9px;font-size:.8rem}
-.ls-folha-etiquetas.a6 .ls-etiqueta-selo{font-size:.58rem;padding:3px 7px}
+.ls-folha-etiquetas.a6 .ls-etiqueta-selo.principal{padding:4px 9px;font-size:.85rem}
+.ls-folha-etiquetas.a6 .ls-etiqueta-selo{font-size:.64rem;padding:3px 7px}
 .ls-folha-etiquetas.a6 .ls-etiqueta-destino{padding:7px 9px}
-.ls-folha-etiquetas.a6 .ls-etiqueta-destino strong{font-size:1.02rem}
-.ls-folha-etiquetas.a6 .ls-etiqueta-destino p{font-size:.7rem}
-.ls-folha-etiquetas.a6 .ls-etiqueta-empresa strong{font-size:.8rem}
-.ls-folha-etiquetas.a6 .ls-etiqueta-rodape{font-size:.62rem;gap:3px 12px}
+.ls-folha-etiquetas.a6 .ls-etiqueta-destino strong{font-size:1.1rem}
+.ls-folha-etiquetas.a6 .ls-etiqueta-destino p{font-size:.76rem}
+.ls-folha-etiquetas.a6 .ls-etiqueta.rapida .ls-etiqueta-destino strong{font-size:1.3rem}
+.ls-folha-etiquetas.a6 .ls-etiqueta.rapida .ls-etiqueta-destino p{font-size:.88rem}
+.ls-folha-etiquetas.a6 .ls-etiqueta-empresa strong{font-size:.86rem}
+.ls-folha-etiquetas.a6 .ls-etiqueta-empresa small{font-size:.64rem}
+.ls-folha-etiquetas.a6 .ls-etiqueta-rodape{font-size:.68rem;gap:3px 12px}
 .ls-folha-etiquetas.a6 .ls-etiqueta-logo{width:32px;height:32px;flex-basis:32px}
 
-/* Economizar tinta: some o preenchido, fica o traço. */
-.ls-folha-etiquetas.sem-fundo .ls-etiqueta-selo.principal,
-.ls-folha-etiquetas.sem-fundo .ls-etiqueta-topo{background:#fff;color:#171310}
+/* Economizar tinta: some o único chapado que restou, fica o traço. O
+   resto da etiqueta já era contorno preto sobre branco. */
+.ls-folha-etiquetas.sem-fundo .ls-etiqueta-selo.principal{background:#fff;color:#000}
 
 /* ------------------------------------------------- na impressora
    O painel inteiro sai de cena: menu, topo, formulário e a moldura da
