@@ -457,9 +457,18 @@
    o mesmo comportamento das janelas do aplicativo: cabeçalho e rodapé
    fixos, corpo rolando por dentro, e no celular a folha subindo da base.
    ---------------------------------------------------------------------- */
-.gestao-integrada .ls-content [class*="modal-backdrop"],
 .gestao-integrada .ls-content .modal{
   z-index:1600;
+  background:rgba(9,7,4,.72)!important;
+  backdrop-filter:blur(6px);
+}
+
+/* Nos modais escritos à mão, o backdrop e o cartão são irmãos dentro da
+   janela. Dar o z-index da JANELA ao backdrop fazia o ofuscado cobrir o
+   formulário inteiro. A janela define a camada global; dentro dela, o
+   fundo fica em 0 e o conteúdo em 1. */
+.gestao-integrada .ls-content [class*="modal-backdrop"]{
+  z-index:0;
   background:rgba(9,7,4,.72)!important;
   backdrop-filter:blur(6px);
 }
@@ -469,6 +478,8 @@
 .gestao-integrada .ls-content .modal-box,
 .gestao-integrada .ls-content [class*="modal-dialog"],
 .gestao-integrada .ls-content [class*="modal-card"]{
+  position:relative;
+  z-index:1;
   display:flex;flex-direction:column;
   max-height:min(92dvh,940px);
   overflow:hidden!important;

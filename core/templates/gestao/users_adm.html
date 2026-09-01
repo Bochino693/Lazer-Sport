@@ -430,6 +430,7 @@
     position: fixed;
     inset: 0;
     z-index: 3300;
+    isolation: isolate;
     display: grid;
     padding: 20px;
     place-items: center;
@@ -444,13 +445,14 @@
   .usr-modal-backdrop {
     position: absolute;
     inset: 0;
+    z-index: 0;
     background: rgba(19, 16, 11, .8);
     backdrop-filter: blur(6px);
   }
 
   .usr-modal-card {
     position: relative;
-    z-index: 1;
+    z-index: 2;
     width: min(100%, 560px);
     max-height: min(92dvh, 720px);
     display: flex;
@@ -466,6 +468,12 @@
 
   .usr-modal.is-open .usr-modal-card { transform: translateY(0) scale(1); }
   .usr-modal-card.is-small { width: min(100%, 440px); max-height: none; }
+
+  /* A folha geral das telas antigas também reconhece nomes contendo
+     "modal-backdrop". Esta regra mais específica mantém a ordem correta
+     mesmo se uma versão antiga daquela folha ainda estiver no cache. */
+  .gestao-integrada .ls-content .usr-modal > .usr-modal-backdrop { z-index: 0; }
+  .gestao-integrada .ls-content .usr-modal > .usr-modal-card { z-index: 2; }
 
   .usr-modal-header {
     flex: 0 0 auto;

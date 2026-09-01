@@ -21,6 +21,7 @@ from dataclasses import dataclass
 from datetime import timedelta
 
 from django.db import DatabaseError
+from django.db.models import Count, Max
 from django.urls import reverse
 from django.utils import timezone
 
@@ -278,6 +279,25 @@ def versao_atividades():
         return 0
 
 
+def versao_ordens_servico():
+    """Revisão barata da fila de O.S. para invalidar caches entre usuários.
+
+    O total detecta exclusões; o instante detecta criação e alteração. Isso
+    evita criar outra tabela só para o relógio e continua funcionando entre
+    os vários workers do Render, porque a fonte é o próprio PostgreSQL.
+    """
+    try:
+        estado = OrdemServico.objects.aggregate(
+            total=Count("pk"),
+            ultima=Max("atualizado"),
+        )
+        ultima = estado["ultima"]
+        micros = int(ultima.timestamp() * 1_000_000) if ultima else 0
+        return f'{estado["total"] or 0}-{micros}'
+    except DatabaseError:
+        return "0-0"
+
+
 def _atividades_orcamento(user):
     """O que OUTRA pessoa fez e este usuário ainda não abriu no sino."""
     try:
@@ -419,12 +439,20 @@ def _operacao(acesso):
             ))
 
     if acesso["ordens_servico"]:
-        ordens = OrdemServico.objects.filter(status__in=OrdemServico.ABERTAS).count()
+        ordens = OrdemServico.objects.filter(
+            status__in=OrdemServico.PENDENTES,
+            # Se houver dado legado inconsistente, somente a ponta atual da
+            # cadeia ocupa a bolinha; v1/v2/v3 nunca viram três serviços.
+            ordem_refeita__isnull=True,
+        ).count()
         if ordens:
             avisos.append(Aviso(
                 chave="ordens_servico",
-                titulo="O.S. em aberto" if ordens == 1 else "Ordens de Serviço em aberto",
-                detalhe="Execução, agenda ou peça ainda pendente.",
+                titulo=(
+                    "O.S. não finalizada"
+                    if ordens == 1 else "Ordens de Serviço não finalizadas"
+                ),
+                detalhe="Rascunho, ciência, execução, agenda ou peça ainda pendente.",
                 quantidade=ordens,
                 url=reverse("ordens_servico_inner", urlconf=URLCONF),
                 nivel="atencao",

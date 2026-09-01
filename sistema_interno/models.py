@@ -2312,6 +2312,9 @@ class OrdemServico(Prime):
         Status.EM_EXECUCAO,
         Status.AGUARDANDO_PECA,
     )
+    #: Fila mostrada no número do menu. Rascunho também é trabalho ainda
+    #: não finalizado; concluída, cancelada e substituída já saíram dela.
+    PENDENTES = (Status.RASCUNHO,) + ABERTAS
     #: Situações em que a O.S. já saiu de cena e a lista não a mostra de
     #: primeira. Ver `OrdensServicoInnerView.get`.
     ARQUIVADAS = (Status.SUBSTITUIDA,)

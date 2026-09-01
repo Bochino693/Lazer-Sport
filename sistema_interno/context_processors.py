@@ -19,6 +19,8 @@ enquanto o template não pedir o valor — e a loja nunca pede. O cálculo em
 si acontece uma vez só por requisição, por mais chaves que sejam lidas.
 """
 
+import hashlib
+
 from django.conf import settings
 from django.core.cache import cache
 from django.utils.functional import SimpleLazyObject
@@ -127,7 +129,14 @@ def _chave_avisos(usuario, versao_atividade=None):
     # cache local sobreviva entre casos isolados da suíte de testes.
     criado = getattr(usuario, "date_joined", None)
     versao = int(criado.timestamp() * 1_000_000) if criado else 0
-    atividade = f":a{int(versao_atividade)}" if versao_atividade is not None else ""
+    atividade = ""
+    if versao_atividade is not None:
+        # A revisão combina atividade comercial e estado das O.S. Hash
+        # curto mantém a chave válida em qualquer backend de cache.
+        token = hashlib.sha1(
+            str(versao_atividade).encode("utf-8")
+        ).hexdigest()[:16]
+        atividade = f":a{token}"
     geracao = cache.get(_chave_geracao(usuario), 0) or 0
     return f"interno:avisos:v4:{usuario.pk}:{versao}:g{geracao}{atividade}"
 

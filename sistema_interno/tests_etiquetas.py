@@ -124,7 +124,13 @@ class EtiquetasTests(TestCase):
         ).read_text(encoding="utf-8")
 
         impressao = folha[folha.index("@media print"):]
-        for fora in (".ls-sidebar", ".ls-topbar", ".ls-etiquetas-form"):
+        for fora in (
+            ".ls-sidebar",
+            ".ls-topbar",
+            ".ls-etiquetas-form",
+            ".ls-abas",
+            ".ls-mobile-overlay",
+        ):
             with self.subTest(elemento=fora):
                 self.assertIn(fora, impressao)
         # A faixa preta do aviso é o que se lê de longe, e impressora

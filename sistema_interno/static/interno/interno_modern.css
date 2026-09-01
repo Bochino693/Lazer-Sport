@@ -3866,7 +3866,8 @@ button.ls-incomplete-chip:focus-visible{outline:3px solid rgba(255,128,145,.35);
   body.ls-body{background:#fff}
   .ls-sidebar,.ls-topbar,.ls-page-head,.ls-data-header,
   .ls-etiquetas-form,.nao-imprime,.ls-page-loader,
-  .ls-action-fab,.ls-action-fab-menu{display:none!important}
+  .ls-action-fab,.ls-action-fab-menu,.ls-abas,
+  .ls-mobile-overlay{display:none!important}
   .ls-etiquetas-tela{display:block}
   .ls-shell,.ls-main,.ls-content{display:block!important;margin:0!important;padding:0!important}
   .ls-folha-etiquetas{

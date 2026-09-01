@@ -30,7 +30,11 @@ from django.http import JsonResponse
 from django.views.generic import View
 
 from . import push
-from .avisos import marcar_atividades_lidas, versao_atividades
+from .avisos import (
+    marcar_atividades_lidas,
+    versao_atividades,
+    versao_ordens_servico,
+)
 from .context_processors import _apurar_com_cache, invalidar_avisos
 from .models import InscricaoPush
 from .permissoes import faz_parte_da_equipe
@@ -59,7 +63,11 @@ class EstadoAvisosView(View):
         # servidor. Se outro usuário mexeu num orçamento, a chave muda e
         # este painel não fica preso aos vinte segundos do cache antigo.
         revisao = versao_atividades()
-        apurado = _apurar_com_cache(usuario, revisao)
+        revisao_os = versao_ordens_servico()
+        apurado = _apurar_com_cache(
+            usuario,
+            f"orcamentos:{revisao}:os:{revisao_os}",
+        )
 
         contagens = {
             chave: apurado[chave]

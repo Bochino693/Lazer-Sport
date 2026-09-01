@@ -29,6 +29,7 @@ from .models import (
     Material,
     Orcamento,
     OrdemProducao,
+    OrdemServico,
     ProdutoInterno,
     TipoMaterial,
 )
@@ -131,6 +132,60 @@ class ColetaDeAvisosTests(TestCase):
         from .context_processors import _apurar
 
         self.assertEqual(_apurar(self.gestor)["count_orcamentos"], 1)
+
+    # ------------------------------------------------ ordens de serviço
+    def test_numero_da_os_conta_todo_servico_nao_finalizado(self):
+        for status in (
+            OrdemServico.Status.RASCUNHO,
+            OrdemServico.Status.AGUARDANDO_RESPOSTA,
+            OrdemServico.Status.ABERTA,
+            OrdemServico.Status.AGENDADA,
+            OrdemServico.Status.EM_EXECUCAO,
+            OrdemServico.Status.AGUARDANDO_PECA,
+        ):
+            OrdemServico.objects.create(
+                nome_cliente=f"Pendente {status}",
+                equipamento="Brinquedo",
+                status=status,
+            )
+        for status in (
+            OrdemServico.Status.CONCLUIDA,
+            OrdemServico.Status.CANCELADA,
+            OrdemServico.Status.SUBSTITUIDA,
+        ):
+            OrdemServico.objects.create(
+                nome_cliente=f"Finalizada {status}",
+                equipamento="Brinquedo",
+                status=status,
+            )
+
+        from .context_processors import _apurar
+
+        apurado = _apurar(self.gestor)
+        aviso = next(
+            item for item in apurado["avisos"]
+            if item.chave == "ordens_servico"
+        )
+        self.assertEqual(aviso.quantidade, 6)
+        self.assertEqual(apurado["count_ordens_servico"], 6)
+
+    def test_numero_da_os_conta_so_a_versao_atual(self):
+        anterior = OrdemServico.objects.create(
+            nome_cliente="Cliente com duas versões",
+            equipamento="Brinquedo",
+            status=OrdemServico.Status.SUBSTITUIDA,
+        )
+        OrdemServico.objects.create(
+            nome_cliente="Cliente com duas versões",
+            equipamento="Brinquedo",
+            status=OrdemServico.Status.RASCUNHO,
+            ordem_anterior=anterior,
+            versao=2,
+        )
+
+        from .context_processors import _apurar
+
+        self.assertEqual(_apurar(self.gestor)["count_ordens_servico"], 1)
 
     def test_orcamento_ja_respondido_nao_cobra_validade(self):
         Orcamento.objects.create(
@@ -480,6 +535,28 @@ class EstadoAoVivoTests(TestCase):
         self.assertEqual(atividade["quantidade"], 1)
         self.assertEqual(dados["contagens"]["count_orcamentos"], 1)
         self.assertIn("colega", atividade["detalhe"])
+
+    def test_nova_os_atualiza_o_numero_sem_recarregar_a_pagina(self):
+        primeira = self.pedir().json()
+        self.assertEqual(
+            primeira["contagens"]["count_ordens_servico"], 0,
+        )
+
+        ordem = OrdemServico.objects.create(
+            nome_cliente="Nova O.S. de outro atendimento",
+            equipamento="Brinquedão",
+            status=OrdemServico.Status.RASCUNHO,
+        )
+        segunda = self.pedir().json()
+
+        self.assertNotEqual(segunda["assinatura"], primeira["assinatura"])
+        self.assertEqual(segunda["contagens"]["count_ordens_servico"], 1)
+
+        ordem.status = OrdemServico.Status.CONCLUIDA
+        ordem.save(update_fields=("status", "atualizado"))
+        terceira = self.pedir().json()
+        self.assertNotEqual(terceira["assinatura"], segunda["assinatura"])
+        self.assertEqual(terceira["contagens"]["count_ordens_servico"], 0)
 
     def test_contador_usa_negociacoes_e_nao_versoes_ou_movimentacoes(self):
         """Thiago v1/v2 + Ana v1 + Marcelo v1/v2/v3 = três."""

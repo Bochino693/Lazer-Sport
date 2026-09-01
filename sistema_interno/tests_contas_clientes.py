@@ -1,5 +1,8 @@
 """Contas de clientes: modais e ações administrativas sensíveis."""
 
+from pathlib import Path
+
+from django.conf import settings
 from django.contrib.auth.models import User
 from django.test import TestCase, override_settings
 
@@ -52,6 +55,34 @@ class ContasClientesTests(TestCase):
         self.assertContains(resposta, "LSTela.pronto(function ()")
         self.assertContains(resposta, "data-open-status")
         self.assertContains(resposta, "data-open-offer")
+
+    def test_ofuscado_fica_atras_do_cartao_do_modal(self):
+        raiz = Path(settings.BASE_DIR)
+        template = (raiz / "core/templates/gestao/users_adm.html").read_text(
+            encoding="utf-8"
+        )
+        integrado = (
+            raiz / "sistema_interno/static/interno/gestao_integrada.css"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("isolation: isolate", template)
+        self.assertIn(
+            ".usr-modal > .usr-modal-backdrop { z-index: 0; }",
+            template,
+        )
+        self.assertIn(
+            ".usr-modal > .usr-modal-card { z-index: 2; }",
+            template,
+        )
+        self.assertNotIn(
+            '.ls-content [class*="modal-backdrop"],\n'
+            ".gestao-integrada .ls-content .modal",
+            integrado,
+        )
+        bloco_fundo = integrado.split(
+            '.gestao-integrada .ls-content [class*="modal-backdrop"]{', 1
+        )[1].split("}", 1)[0]
+        self.assertIn("z-index:0", bloco_fundo)
 
     def test_inativacao_exige_confirmacao_e_e_idempotente(self):
         sem_confirmacao = self.enviar({
@@ -168,4 +199,3 @@ class ContasClientesTests(TestCase):
         self.assertEqual(resposta.status_code, 400)
         self.assertEqual(resposta.json()["status"], "erro")
         self.assertFalse(CampanhaDivulgacao.objects.exists())
-
