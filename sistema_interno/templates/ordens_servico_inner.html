@@ -33,6 +33,29 @@
     .ls-os-body .ls-page-hero{border-radius:20px 20px 20px 7px!important}
     .ls-os-body .ls-page-hero-nota{display:flex;max-width:none}
   }
+
+  /* Cadastros auxiliares pertencem à O.S., mas não são modais Bootstrap.
+     Assim pagamento, envio, edição e refação continuam usando o fluxo
+     original, enquanto cliente/peça aparecem acima sem fechar o formulário. */
+  .ls-os-child-layer[hidden]{display:none!important}
+  .ls-os-child-layer{
+    position:fixed;inset:0;z-index:1095;display:grid;place-items:center;
+    padding:clamp(10px,2vw,24px);overflow:auto;
+    background:rgba(6,8,7,.72);backdrop-filter:blur(3px);
+  }
+  .ls-os-child-layer .modal-dialog{
+    width:min(860px,100%);max-width:none;margin:auto;pointer-events:auto;
+  }
+  .ls-os-child-layer .modal-content{
+    max-height:calc(100dvh - clamp(20px,4vw,48px));overflow:hidden;
+    border:1px solid rgba(127,230,213,.3)!important;border-radius:18px!important;
+    box-shadow:0 28px 80px rgba(0,0,0,.58)!important;
+  }
+  .ls-os-child-layer .modal-body{overflow-y:auto;overscroll-behavior:contain}
+  @media (max-width:575px){
+    .ls-os-child-layer{padding:6px;align-items:end}
+    .ls-os-child-layer .modal-content{max-height:calc(100dvh - 12px);border-radius:17px 17px 10px 10px!important}
+  }
 </style>
 {% endblock %}
 
@@ -405,7 +428,7 @@
 </form></div></div>
 
 <!-- Cliente novo sem abandonar a O.S. em montagem. -->
-<div class="modal fade" id="modalClienteNovoOS" tabindex="-1" aria-hidden="true">
+<div class="ls-os-child-layer" id="modalClienteNovoOS" tabindex="-1" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="clienteNovoOSTitulo" hidden>
   <div class="modal-dialog modal-lg modal-dialog-scrollable">
     <form class="modal-content" id="formClienteNovoOS" method="post" action="{% url 'ordens_servico_inner' %}">
       {% csrf_token %}
@@ -413,8 +436,8 @@
       <input type="hidden" name="latitude" id="clienteNovoOSLatitude">
       <input type="hidden" name="longitude" id="clienteNovoOSLongitude">
       <div class="modal-header">
-        <div><span class="ls-modal-kicker">Sem sair da O.S.</span><h5 class="modal-title">Cadastrar cliente</h5></div>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+        <div><span class="ls-modal-kicker">Sem sair da O.S.</span><h5 class="modal-title" id="clienteNovoOSTitulo">Cadastrar cliente</h5></div>
+        <button type="button" class="btn-close" data-fechar-filho-os aria-label="Fechar"></button>
       </div>
       <div class="modal-body">
         <div class="alert alert-danger d-none" id="clienteNovoOSErro"></div>
@@ -465,7 +488,7 @@
         </div>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-outline-secondary" data-fechar-filho-os>Cancelar</button>
         <button type="submit" class="btn btn-success">Cadastrar e usar</button>
       </div>
     </form>
@@ -484,14 +507,14 @@
   Mesma janela e mesma regra do orçamento: o que nasce aqui NÃO vai para
   a vitrine do site.
 {% endcomment %}
-<div class="modal fade" id="modalPecaOS" tabindex="-1" aria-hidden="true">
+<div class="ls-os-child-layer" id="modalPecaOS" tabindex="-1" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="pecaOSTitulo" hidden>
   <div class="modal-dialog modal-lg modal-dialog-scrollable">
     <form class="modal-content" id="formPecaOS" method="post" action="{% url 'ordens_servico_inner' %}">
       {% csrf_token %}
       <input type="hidden" name="action" value="peca_nova">
       <div class="modal-header">
-        <div><span class="ls-modal-kicker">Peças e itens</span><h5 class="modal-title">Cadastrar e usar nesta O.S.</h5></div>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+        <div><span class="ls-modal-kicker">Peças e itens</span><h5 class="modal-title" id="pecaOSTitulo">Cadastrar e usar nesta O.S.</h5></div>
+        <button type="button" class="btn-close" data-fechar-filho-os aria-label="Fechar"></button>
       </div>
       <div class="modal-body">
         <div class="alert alert-danger d-none" id="pecaOSErro"></div>
@@ -543,7 +566,7 @@
         </div>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-outline-secondary" data-fechar-filho-os>Cancelar</button>
         <button type="submit" class="btn btn-success">Cadastrar e usar</button>
       </div>
     </form>
@@ -610,6 +633,65 @@ LSTela.pronto(function () {
   var itensOSFallback = JSON.parse(document.getElementById("itensOSFallbackDados").textContent || "[]");
   var corpo = document.getElementById("itensOSCorpo");
   var tiposItem = [{% for v,r in item_tipos %}{value:"{{ v }}", label:"{{ r|escapejs }}"},{% endfor %}];
+
+  /* ---------------------------------------------------------------
+     Camadas auxiliares exclusivas da O.S.
+
+     Não passam pelo Bootstrap Modal: são anexadas DENTRO da própria O.S.,
+     portanto o foco continua pertencendo ao modal pai e nada precisa ser
+     fechado/reaberto. Os outros modais da tela continuam intocados.
+     --------------------------------------------------------------- */
+  var modalOSRaiz=document.getElementById("modalOS");
+  var idsFilhosOS=["modalClienteNovoOS","modalPecaOS"];
+
+  function fecharFilhoOS(id,devolverFoco){
+    var camada=document.getElementById(id);
+    if(!camada||camada.hidden)return;
+    camada.hidden=true;
+    camada.setAttribute("aria-hidden","true");
+    var retorno=camada._lsRetornoFoco;
+    camada._lsRetornoFoco=null;
+    if(devolverFoco!==false&&retorno&&retorno.isConnected){
+      window.requestAnimationFrame(function(){retorno.focus();});
+    }
+  }
+
+  function abrirFilhoOS(id){
+    var camada=document.getElementById(id);
+    if(!camada||!modalOSRaiz)return;
+    idsFilhosOS.forEach(function(outro){if(outro!==id)fecharFilhoOS(outro,false);});
+    camada._lsRetornoFoco=document.activeElement;
+    camada.hidden=false;
+    camada.setAttribute("aria-hidden","false");
+    Painel.aplicarMascaras(camada);
+    window.requestAnimationFrame(function(){
+      var primeiro=camada.querySelector("input:not([type=hidden]):not([disabled]),select:not([disabled]),textarea:not([disabled]),button:not([disabled])");
+      if(primeiro)primeiro.focus();
+    });
+  }
+
+  idsFilhosOS.forEach(function(id){
+    var camada=document.getElementById(id);
+    if(!camada||!modalOSRaiz)return;
+    /* Dentro do modal pai, o foco do Bootstrap reconhece a camada como
+       parte da O.S.; fora dele, tentaria puxar o cursor de volta. */
+    modalOSRaiz.appendChild(camada);
+    camada.querySelectorAll("[data-fechar-filho-os]").forEach(function(botao){
+      botao.addEventListener("click",function(){fecharFilhoOS(id,true);});
+    });
+    camada.addEventListener("click",function(evento){
+      if(evento.target===camada)fecharFilhoOS(id,true);
+    });
+    camada.addEventListener("keydown",function(evento){
+      if(evento.key!=="Escape")return;
+      evento.preventDefault();
+      evento.stopPropagation();
+      fecharFilhoOS(id,true);
+    });
+  });
+  modalOSRaiz?.addEventListener("hidden.bs.modal",function(){
+    idsFilhosOS.forEach(function(id){fecharFilhoOS(id,false);});
+  });
 
   document.getElementById("osAgendaFuso").textContent =
     "Horário local do aparelho · " + Painel.datas.fusoDoAparelho();
@@ -720,7 +802,7 @@ LSTela.pronto(function () {
     Painel.erro("clienteNovoOSErro","");
     var status=document.getElementById("clienteNovoOSCepStatus");
     if(status)status.textContent="";
-    Painel.abrirFilho("modalClienteNovoOS","modalOS");
+    abrirFilhoOS("modalClienteNovoOS");
   }
 
   Painel.ligarCep({
@@ -750,7 +832,7 @@ LSTela.pronto(function () {
       buscaClienteOS.adicionarOpcao(opcao,false);
       buscaClienteOS.definirValor(opcao.valor,false);
       preencherCliente(opcao);
-      Painel.fechar("modalClienteNovoOS");
+      fecharFilhoOS("modalClienteNovoOS",true);
     }
   });
 
@@ -1074,7 +1156,7 @@ LSTela.pronto(function () {
     document.getElementById("formPecaOS").reset();
     if(nomeDigitado) valor("pecaOSNome", nomeDigitado);
     Painel.erro("pecaOSErro","");
-    Painel.abrirFilho("modalPecaOS","modalOS");
+    abrirFilhoOS("modalPecaOS");
   }
 
   Painel.ligar({
@@ -1084,7 +1166,7 @@ LSTela.pronto(function () {
        que é exatamente o que esta janela existe para evitar. */
     depois:function(json){
       var p = json && json.peca;
-      if(!p){ Painel.fechar("modalPecaOS"); return; }
+      if(!p){ fecharFilhoOS("modalPecaOS",true); return; }
 
       var opcao = {
         valor:"r:"+p.id, rotulo:p.nome, grupo:p.grupo,
@@ -1112,7 +1194,7 @@ LSTela.pronto(function () {
         preencherLinhaOS(alvo, opcao);
       }
       linhaDoCadastro = null;
-      Painel.fechar("modalPecaOS");
+      fecharFilhoOS("modalPecaOS",true);
     }
   });
 

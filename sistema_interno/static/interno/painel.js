@@ -9,24 +9,6 @@
   "use strict";
 
   var Painel = {};
-  var trocasDeModal = Object.create(null);
-  var numeroDaTrocaDeModal = 0;
-
-  function cancelarTrocaDeModal(chave) {
-    var troca = trocasDeModal[chave];
-    if (!troca) return;
-    troca.cancelada = true;
-    troca.filhoEl.removeEventListener("shown.bs.modal", troca.aoMostrar);
-    troca.filhoEl.removeEventListener("hidden.bs.modal", troca.aoFechar);
-    if (troca.fundo && troca.fundo.isConnected) troca.fundo.remove();
-    troca.filhoEl.style.removeProperty("z-index");
-    troca.filhoEl.removeAttribute("data-ls-modal-filho");
-    delete trocasDeModal[chave];
-  }
-
-  function cancelarTodasAsTrocasDeModal() {
-    Object.keys(trocasDeModal).forEach(cancelarTrocaDeModal);
-  }
 
   function haModalVisivel() {
     return Boolean(document.querySelector(".modal.show"));
@@ -43,9 +25,6 @@
   }
 
   Painel.limparModais = function (imediato) {
-    /* Navegar enquanto um cadastro-filho fecha não pode deixar um ouvinte
-       antigo reabrir a janela da tela que acabou de sair. */
-    cancelarTodasAsTrocasDeModal();
     document.querySelectorAll(".modal").forEach(function (elemento) {
       var instancia = global.bootstrap && global.bootstrap.Modal
         ? global.bootstrap.Modal.getInstance(elemento)
@@ -164,12 +143,7 @@
        * o evento final do Bootstrap. O fallback fecha só a janela pedida e
        * devolve o scroll; normalmente não faz nada porque hidden já chegou. */
       global.setTimeout(function () {
-        var aindaOcupaATela = elemento && (
-          elemento.classList.contains("show")
-          || elemento.style.display === "block"
-          || elemento.getAttribute("aria-modal") === "true"
-        );
-        if (!aindaOcupaATela) {
+        if (!elemento || !elemento.classList.contains("show")) {
           limparEstadoDoCorpo();
           return;
         }
@@ -183,13 +157,11 @@
     }
   };
 
-  /* Cliente, brinquedo e peça são cadastros-filhos do documento em edição.
-   *
-   * O pai fica visível por baixo. Além de deixar claro onde a pessoa vai
-   * voltar, isso elimina a janela em branco causada por esperar a animação
-   * de fechamento do pai em WebViews e navegadores mais lentos. A pilha é
-   * explícita: filho e fundo recebem níveis acima do pai, e o foco do pai
-   * fica suspenso somente enquanto o filho está ativo. */
+  /* Bootstrap não suporta dois modais abertos ao mesmo tempo. Cliente,
+   * brinquedo e peça são cadastros-filhos do orçamento: esconder o pai
+   * antes de abrir o filho evita duas barras de rolagem, backdrop preso e
+   * formulário cortado no iPad. Ao fechar o filho, a proposta volta com
+   * tudo o que já estava digitado. */
   Painel.abrirFilho = function (filhoId, paiId) {
     var filhoEl = document.getElementById(filhoId);
     var paiEl = document.getElementById(paiId);
@@ -197,89 +169,23 @@
       Painel.abrir(filhoId);
       return;
     }
-    if (filhoEl.classList.contains("show")) {
-      var campoAtivo = filhoEl.querySelector("input:not([type=hidden]),select,textarea,button");
-      if (campoAtivo) campoAtivo.focus();
-      return;
-    }
 
     var filho = Painel.modal(filhoId);
     var pai = Painel.modal(paiId);
-    var chave = filhoId + "::" + paiId;
 
-    /* Um segundo clique, ou a tela montada outra vez, invalida a pilha
-       anterior. O clique atual sempre é a única fonte da janela ativa. */
-    Object.keys(trocasDeModal).forEach(function (existente) {
-      var anterior = trocasDeModal[existente];
-      if (anterior.filhoEl === filhoEl || anterior.paiEl === paiEl) {
-        cancelarTrocaDeModal(existente);
-      }
-    });
-
-    var troca = {
-      numero: ++numeroDaTrocaDeModal,
-      cancelada: false,
-      filhoEl: filhoEl,
-      paiEl: paiEl,
-      fundo: null,
-      aoMostrar: null,
-      aoFechar: null
-    };
-    trocasDeModal[chave] = troca;
-
-    function finalizarTroca() {
-      if (trocasDeModal[chave] !== troca) return;
-      filhoEl.removeEventListener("shown.bs.modal", troca.aoMostrar);
-      filhoEl.removeEventListener("hidden.bs.modal", troca.aoFechar);
-      if (troca.fundo && troca.fundo.isConnected) troca.fundo.remove();
-      filhoEl.style.removeProperty("z-index");
-      filhoEl.removeAttribute("data-ls-modal-filho");
-      delete trocasDeModal[chave];
+    function mostrarFilho() {
+      filhoEl.addEventListener("hidden.bs.modal", function restaurarPai() {
+        global.setTimeout(function () { pai.show(); }, 0);
+      }, { once: true });
+      filho.show();
     }
 
-    troca.aoMostrar = function () {
-      if (troca.cancelada || trocasDeModal[chave] !== troca) return;
-      var fundos = document.querySelectorAll(".modal-backdrop");
-      troca.fundo = fundos.length ? fundos[fundos.length - 1] : null;
-      if (troca.fundo) {
-        troca.fundo.setAttribute("data-ls-fundo-filho", filhoId);
-        troca.fundo.style.zIndex = String(Number(filhoEl.style.zIndex) - 5);
-      }
-    };
-
-    troca.aoFechar = function () {
-      if (troca.cancelada || trocasDeModal[chave] !== troca) return;
-      finalizarTroca();
-      if (!paiEl.isConnected || !paiEl.classList.contains("show")) return;
-      /* O Bootstrap remove modal-open ao fechar qualquer modal. Como o pai
-         continua aberto, o scroll precisa continuar travado nele. */
-      document.body.classList.add("modal-open");
-      paiEl.removeAttribute("aria-hidden");
-      paiEl.setAttribute("aria-modal", "true");
-      if (pai._focustrap && pai._focustrap.activate) pai._focustrap.activate();
-      if (pai.handleUpdate) pai.handleUpdate();
-    };
-
-    filhoEl.addEventListener("shown.bs.modal", troca.aoMostrar);
-    filhoEl.addEventListener("hidden.bs.modal", troca.aoFechar);
-
-    if (!paiEl.classList.contains("show")) {
-      finalizarTroca();
-      Painel.abrir(filhoId);
-      return;
+    if (paiEl.classList.contains("show")) {
+      paiEl.addEventListener("hidden.bs.modal", mostrarFilho, { once: true });
+      pai.hide();
+    } else {
+      mostrarFilho();
     }
-
-    if (pai._focustrap && pai._focustrap.deactivate) pai._focustrap.deactivate();
-    paiEl.setAttribute("aria-hidden", "true");
-    paiEl.removeAttribute("aria-modal");
-    filhoEl.setAttribute("data-ls-modal-filho", paiId);
-    filhoEl.style.zIndex = String(1075 + (numeroDaTrocaDeModal % 10) * 20);
-    Painel.aplicarMascaras(filhoEl);
-    filho.show();
-    /* O Bootstrap cria o backdrop de forma síncrona. Ajustá-lo agora evita
-       até o breve lampejo em que ele ficaria atrás do modal pai. O evento
-       shown repete a conferência ao fim da animação. */
-    troca.aoMostrar();
   };
 
   Painel.erro = function (id, texto) {

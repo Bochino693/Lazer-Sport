@@ -125,6 +125,18 @@ class RefazerOrdemServicoTests(TestCase):
         self.assertIn('action" value="cliente_novo"', html)
         self.assertIn('rotulo:"Cadastrar cliente"', html)
 
+    def test_cadastros_filhos_nao_alteram_os_outros_modais_da_os(self):
+        html = self.tela()
+        for modal_id in (
+            "modalOS", "modalEnviarOS", "modalPagamentoOS", "modalRefazerOS",
+        ):
+            self.assertIn(f'class="modal fade" id="{modal_id}"', html)
+
+        self.assertIn('class="ls-os-child-layer" id="modalClienteNovoOS"', html)
+        self.assertIn('class="ls-os-child-layer" id="modalPecaOS"', html)
+        self.assertNotIn('Painel.abrirFilho("modalClienteNovoOS"', html)
+        self.assertNotIn('Painel.abrirFilho("modalPecaOS"', html)
+
     def test_refazer_congela_a_anterior_e_abre_a_seguinte(self):
         """O papel que o cliente leu continua existindo, inteiro."""
         ordem = self.criar_ordem()
