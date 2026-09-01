@@ -210,6 +210,11 @@ class OrdensServicoInnerView(
             .select_related(
                 "cliente", "orcamento", "manutencao__usuario__user",
                 "tecnico", "responsavel",
+                # A linha imprime "refeita da OS-00041" e "virou a
+                # OS-00043" quando existem. Sem estes dois, cada O.S. com
+                # histórico custava duas consultas extras só para
+                # escrever o número da vizinha.
+                "ordem_anterior", "ordem_refeita",
             )
             .prefetch_related(
                 "itens",
@@ -862,6 +867,12 @@ class OrdensServicoInnerView(
             anterior = OrdemServico.objects.select_for_update().get(pk=anterior.pk)
             nova = OrdemServico.objects.create(
                 cliente=anterior.cliente,
+                # A PROPOSTA NÃO ACOMPANHA. O vínculo é um-para-um: uma
+                # proposta aprovada liberou UMA execução, e apontar as
+                # duas versões para ela quebraria a unicidade além de
+                # sugerir que a mesma venda gerou dois serviços. Quem
+                # quiser a origem comercial a encontra pela versão
+                # anterior, que continua inteira.
                 orcamento=None,
                 manutencao=anterior.manutencao,
                 nome_cliente=anterior.nome_cliente,
