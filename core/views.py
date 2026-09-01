@@ -3955,6 +3955,38 @@ class UserAdminView(AdminOnlyMixin, View):
             inativos=Count("id", filter=Q(is_active=False)),
         )
 
+        # A escolha da oferta viaja junto da tela. O modal abre completo e
+        # instantâneo, mesmo depois de navegação suave; não há um segundo GET
+        # para descobrir combos, promoções ou cupons enquanto o cliente espera.
+        agora = timezone.now()
+        ofertas_contas = {
+            "promocao": [
+                {"id": item.pk, "rotulo": item.descricao}
+                for item in Promocoes.objects.filter(ativo=True)
+                .order_by("descricao")[:100]
+            ],
+            "combo": [
+                {"id": item.pk, "rotulo": item.descricao}
+                for item in Combos.objects.filter(ativo=True)
+                .order_by("descricao")[:100]
+            ],
+            "cupom": [
+                {
+                    "id": item.pk,
+                    "rotulo": (
+                        f"{item.codigo} — {item.desconto_percentual:.0f}%"
+                        + (" · público" if item.todos_usuarios else " · exclusivo")
+                    ),
+                }
+                for item in Cupom.objects.filter(ativo=True)
+                .filter(
+                    Q(data_expiracao__isnull=True)
+                    | Q(data_expiracao__gt=agora)
+                )
+                .order_by("codigo")[:100]
+            ],
+        }
+
         return render(request, self.template_name, {
             "usuarios": usuarios,
             "busca": busca,
@@ -3963,6 +3995,7 @@ class UserAdminView(AdminOnlyMixin, View):
             "total_admins": contagem["admins"],
             "total_clientes": contagem["total"] - contagem["admins"],
             "total_inativos": contagem["inativos"],
+            "ofertas_contas": ofertas_contas,
         })
 
     @transaction.atomic
@@ -3971,15 +4004,85 @@ class UserAdminView(AdminOnlyMixin, View):
         usuario_id = request.POST.get("usuario_id")
         usuario = get_object_or_404(User, pk=usuario_id) if usuario_id else None
 
+        if acao == "oferta":
+            if not usuario or usuario.is_staff or not usuario.is_active:
+                return JsonResponse({
+                    "status": "erro",
+                    "msg": "A oferta só pode ser enviada para uma conta de cliente ativa.",
+                }, status=400)
+
+            from sistema_interno.campanhas import (
+                ErroCampanha,
+                criar_campanha_para_conta,
+            )
+
+            try:
+                campanha = criar_campanha_para_conta(
+                    tipo=(request.POST.get("tipo") or "").strip(),
+                    objeto_id=(request.POST.get("objeto") or "").strip(),
+                    email=request.POST.get("email") == "1",
+                    whatsapp=request.POST.get("whatsapp") == "1",
+                    usuario=request.user,
+                    conta_id=usuario.pk,
+                )
+            except ErroCampanha as erro:
+                return JsonResponse({
+                    "status": "erro", "msg": str(erro),
+                }, status=400)
+
+            return JsonResponse({
+                "status": "sucesso",
+                "msg": "Oferta preparada para " + " e ".join([
+                    texto for ativo, texto in (
+                        (campanha.canal_email, "envio por e-mail"),
+                        (campanha.canal_whatsapp, "confirmação no WhatsApp"),
+                    ) if ativo
+                ]) + ".",
+                "detalhe": reverse(
+                    "campanha_detalhe", args=[campanha.token]
+                ),
+                "total": campanha.total_destinatarios,
+            }, status=201)
+
         if acao in {"alternar", "excluir"}:
             if not usuario or usuario.is_superuser or usuario == request.user:
                 messages.error(request, "Esse usuário é protegido e não pode ser alterado.")
                 return redirect("clients")
             if acao == "alternar":
-                usuario.is_active = not usuario.is_active
+                novo_status = (request.POST.get("novo_status") or "").strip()
+                if novo_status not in {"0", "1"}:
+                    messages.error(request, "Escolha o novo status da conta.")
+                    return redirect("clients")
+                vai_ativar = novo_status == "1"
+                confirmacao = (request.POST.get("confirmacao") or "").strip().upper()
+                esperada = "ATIVAR" if vai_ativar else "INATIVAR"
+                if confirmacao != esperada:
+                    messages.error(
+                        request,
+                        f"Confirme a ação pelo botão {esperada} da janela.",
+                    )
+                    return redirect("clients")
+
+                # Estado desejado, não inversão: repetir o mesmo POST por
+                # engano nunca reativa uma conta que seria inativada.
+                usuario.is_active = vai_ativar
                 usuario.save(update_fields=["is_active"])
-                messages.success(request, "Status do usuário atualizado.")
+                messages.success(
+                    request,
+                    "Conta reativada com sucesso."
+                    if vai_ativar else
+                    "Conta inativada. O login foi bloqueado e o histórico preservado.",
+                )
             else:
+                confirmacao = (
+                    request.POST.get("confirmacao_exclusao") or ""
+                ).strip().upper()
+                if confirmacao != "EXCLUIR":
+                    messages.error(
+                        request,
+                        "Digite EXCLUIR na janela para confirmar a remoção.",
+                    )
+                    return redirect("clients")
                 usuario.delete()
                 messages.success(request, "Usuário excluído com sucesso.")
             return redirect("clients")

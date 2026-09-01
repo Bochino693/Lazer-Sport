@@ -13,6 +13,7 @@ from datetime import timedelta
 from urllib.parse import urljoin
 
 from django.conf import settings
+from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.core.mail import EmailMultiAlternatives
 from django.core.validators import validate_email
@@ -23,7 +24,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from core.email_utils import remetente, responder_para, smtp_configurado
-from core.models import Combos, Cupom, Promocoes
+from core.models import ClientePerfil, Combos, Cupom, Promocoes
 
 from .models import CampanhaDivulgacao, Cliente, EntregaCampanha
 from .validacoes import somente_digitos, telefone_valido
@@ -63,7 +64,7 @@ def _moeda(valor):
     return f"{valor:,.2f}".replace(",", "_").replace(".", ",").replace("_", ".")
 
 
-def conteudo_do_objeto(tipo, objeto_id):
+def conteudo_do_objeto(tipo, objeto_id, *, perfil_cupom=None):
     """Transforma os três modelos do catálogo em um contrato único."""
     if tipo == CampanhaDivulgacao.Tipo.PROMOCAO:
         objeto = Promocoes.objects.select_related("brinquedos").filter(pk=objeto_id).first()
@@ -106,10 +107,13 @@ def conteudo_do_objeto(tipo, objeto_id):
             raise ErroCampanha("Cupom não encontrado.")
         if not objeto.ativo:
             raise ErroCampanha("Ative o cupom antes de divulgá-lo.")
-        if not objeto.todos_usuarios:
+        if not objeto.todos_usuarios and not (
+            perfil_cupom
+            and objeto.cliente.filter(pk=perfil_cupom.pk).exists()
+        ):
             raise ErroCampanha(
                 "Este cupom é exclusivo de contas selecionadas. Para não enviá-lo "
-                "ao público errado, divulgue apenas cupons liberados para todos."
+                "ao público errado, escolha primeiro a conta que poderá usá-lo."
             )
         desconto = f"{objeto.desconto_percentual:.2f}".replace(".", ",")
         titulo = f"Cupom {objeto.codigo}"
@@ -259,6 +263,139 @@ def criar_campanha(
     EntregaCampanha.objects.bulk_create(entregas, batch_size=500)
     campanha.recalcular()
     campanha.ignorados_sem_canal = ignorados
+    return campanha
+
+
+def _whatsapp_da_conta(perfil):
+    """Telefone da conta no formato aceito pelo WhatsApp.
+
+    ``ClientePerfil`` é o cadastro público, anterior ao cadastro comercial
+    do painel, e não possui o campo de confirmação de canal. Nesta tela o
+    superusuário escolhe conscientemente usar o telefone como WhatsApp; ainda
+    assim o formato é validado antes de criar qualquer entrega.
+    """
+    if not perfil or not telefone_valido(perfil.telefone):
+        return ""
+    numero = somente_digitos(perfil.telefone)
+    if len(numero) in (10, 11):
+        numero = "55" + numero
+    return numero if len(numero) in (12, 13) and numero.startswith("55") else ""
+
+
+@transaction.atomic
+def criar_campanha_para_conta(
+    *, tipo, objeto_id, email, whatsapp, usuario, conta_id,
+):
+    """Envia uma oferta para uma conta pública sem inventar outro fluxo.
+
+    A entrega usa a mesma campanha, fila de e-mail, página por token e
+    acompanhamento já usados pela carteira comercial. A diferença é apenas
+    a origem do destinatário: aqui ele é ``auth.User``/``ClientePerfil``, não
+    ``sistema_interno.Cliente``.
+
+    Cupom exclusivo é ligado ao perfil dentro da mesma transação. Se o
+    destinatário não tiver canal válido, tudo volta atrás e o cupom não fica
+    liberado por uma tentativa que nunca pôde ser enviada.
+    """
+    if not email and not whatsapp:
+        raise ErroCampanha("Escolha e-mail, WhatsApp ou os dois canais.")
+
+    User = get_user_model()
+    conta = (
+        User.objects.select_related("perfil")
+        .filter(pk=conta_id, is_active=True, is_staff=False)
+        .first()
+    )
+    if not conta:
+        raise ErroCampanha(
+            "A oferta só pode ser enviada para uma conta de cliente ativa."
+        )
+
+    perfil, _ = ClientePerfil.objects.get_or_create(user=conta)
+
+    # Cupom pessoal precisa pertencer à conta antes de a mensagem sair.
+    # A transação impede a liberação sem entrega em caso de validação.
+    if tipo == CampanhaDivulgacao.Tipo.CUPOM:
+        cupom = Cupom.objects.filter(pk=objeto_id).first()
+        if cupom and not cupom.todos_usuarios:
+            cupom.cliente.add(perfil)
+
+    conteudo = conteudo_do_objeto(
+        tipo, objeto_id, perfil_cupom=perfil,
+    )
+    nome = (
+        (perfil.nome_completo or "").strip()
+        or conta.get_full_name().strip()
+        or conta.username
+    )
+
+    canais = []
+    if email:
+        endereco = _email_valido(conta.email)
+        if endereco:
+            canais.append((EntregaCampanha.Canal.EMAIL, endereco))
+    if whatsapp:
+        numero = _whatsapp_da_conta(perfil)
+        if numero:
+            canais.append((EntregaCampanha.Canal.WHATSAPP, numero))
+    if not canais:
+        raise ErroCampanha(
+            "Esta conta não possui e-mail ou telefone válido nos canais escolhidos."
+        )
+
+    tem_email = any(
+        canal == EntregaCampanha.Canal.EMAIL for canal, _destino in canais
+    )
+    tem_whatsapp = any(
+        canal == EntregaCampanha.Canal.WHATSAPP for canal, _destino in canais
+    )
+
+    campanha = CampanhaDivulgacao.objects.create(
+        tipo=tipo,
+        segmento=CampanhaDivulgacao.Segmento.TODOS,
+        titulo=conteudo.titulo,
+        mensagem=conteudo.mensagem,
+        imagem_url=conteudo.imagem_url,
+        destino_url=conteudo.destino_url,
+        codigo_cupom=conteudo.codigo_cupom,
+        # Os indicadores refletem entregas realmente criadas. Um e-mail
+        # apenas preenchido, mas inválido, não pode aparecer no histórico
+        # como canal preparado.
+        canal_email=tem_email,
+        canal_whatsapp=tem_whatsapp,
+        responsavel=usuario,
+        promocao=(
+            conteudo.objeto
+            if tipo == CampanhaDivulgacao.Tipo.PROMOCAO else None
+        ),
+        combo=(
+            conteudo.objeto
+            if tipo == CampanhaDivulgacao.Tipo.COMBO else None
+        ),
+        cupom=(
+            conteudo.objeto
+            if tipo == CampanhaDivulgacao.Tipo.CUPOM else None
+        ),
+    )
+    EntregaCampanha.objects.bulk_create([
+        EntregaCampanha(
+            campanha=campanha,
+            cliente=None,
+            canal=canal,
+            nome_destinatario=nome,
+            destino=destino,
+            destino_chave=hashlib.sha256(
+                destino.strip().casefold().encode("utf-8")
+            ).hexdigest(),
+            status=(
+                EntregaCampanha.Status.PENDENTE
+                if canal == EntregaCampanha.Canal.EMAIL
+                else EntregaCampanha.Status.AGUARDANDO_ACAO
+            ),
+        )
+        for canal, destino in canais
+    ])
+    campanha.recalcular()
     return campanha
 
 

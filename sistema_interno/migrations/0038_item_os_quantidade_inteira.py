@@ -1,6 +1,6 @@
 from decimal import Decimal, ROUND_HALF_UP
 
-from django.db import migrations, models
+from django.db import migrations
 
 
 def normalizar_quantidades(apps, schema_editor):
@@ -33,9 +33,4 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.RunPython(normalizar_quantidades, migrations.RunPython.noop),
-        migrations.AlterField(
-            model_name="itemordemservico",
-            name="quantidade",
-            field=models.PositiveIntegerField(default=1),
-        ),
     ]
