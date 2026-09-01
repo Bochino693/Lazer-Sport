@@ -3452,6 +3452,10 @@ body.modal-open .ls-action-fab-menu{display:none!important}
   .ls-os-itens tbody td[data-rotulo="Subtotal"]::before{align-self:stretch;text-align:right}
   .ls-os-itens tbody td:last-child .btn{width:48px;height:40px}
   .ls-os-itens tbody tr.ls-os-item-simples td[data-tipo-celula] .form-select{width:100%;margin:0}
+  .ls-os-itens .ls-os-valor-campo{width:100%;flex-wrap:nowrap}
+  .ls-os-itens .ls-os-valor-campo .input-group-text{
+    min-width:38px;justify-content:center;padding-inline:8px;font-weight:900;
+  }
 }
 
 /* A ação de cadastrar fica antes dos resultados de cliente/brinquedo. */

@@ -1137,7 +1137,13 @@ LSTela.pronto(function () {
     if(opcao){
       var d=tr.querySelector("[data-descricao]"),v=tr.querySelector("[data-valor]");
       if(!d.value.trim())d.value=opcao.rotulo;
-      if(!numero(v.value)&&opcao.preco)v.value=opcao.preco;
+      if(!numero(v.value)&&opcao.preco){
+        v.value=opcao.preco;
+        /* O preço do catálogo já é um valor, não uma sequência de
+           teclas. Reaplicar normaliza 40 para 40,00 sem transformá-lo
+           em 0,40. */
+        Painel.aplicarMascaras(tr);
+      }
     }
     recalcular();
   }
@@ -1197,7 +1203,7 @@ LSTela.pronto(function () {
       '<td data-rotulo="Peça ou item" data-catalogo></td>' +
       '<td data-rotulo="Descrição" data-descricao-celula><input class="form-control form-control-sm" data-descricao maxlength="200" value="'+String(item.descricao||"").replace(/&/g,"&amp;").replace(/"/g,"&quot;")+'"></td>' +
       '<td data-rotulo="Quantidade"><input type="number" class="form-control form-control-sm text-end" data-qtd inputmode="numeric" min="1" max="99999999" step="1" required value="'+item.quantidade+'"></td>' +
-      '<td data-rotulo="Valor unit."><input class="form-control form-control-sm text-end" data-valor inputmode="decimal" value="'+item.valor_unitario+'"></td>' +
+      '<td data-rotulo="Valor unit."><div class="input-group input-group-sm ls-os-valor-campo"><span class="input-group-text">R$</span><input class="form-control form-control-sm text-end" data-valor data-mascara="moeda" inputmode="decimal" autocomplete="off" placeholder="0,00" value="'+item.valor_unitario+'"></div></td>' +
       '<td class="text-end" data-rotulo="Subtotal" data-subtotal>R$ 0,00</td>' +
       '<td><button class="btn btn-sm btn-outline-danger" type="button" data-remover aria-label="Remover linha"><i class="bi bi-x-lg"></i></button></td>';
 
@@ -1233,6 +1239,10 @@ LSTela.pronto(function () {
       tr.remove(); recalcular();
     });
     corpo.appendChild(tr);
+    /* A linha nasceu depois da montagem da página. Sem esta chamada, o
+       valor unitário ficava fora da máscara global: digitar 4, 40 e 400
+       aparecia como 4, 40 e 400 e alterava a soma para R$ 400,00. */
+    Painel.aplicarMascaras(tr);
     ajustarLinhaPorTipo(tr);
     recalcular();}
   /* O QUE UMA O.S. NOVA JÁ SABE DE SI.

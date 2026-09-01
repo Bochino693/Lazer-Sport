@@ -9,6 +9,7 @@ que o usuário veria.
 import json
 from datetime import timedelta
 from decimal import Decimal
+from pathlib import Path
 from urllib.parse import urlsplit
 
 from django.contrib.auth.models import User
@@ -420,6 +421,11 @@ class OrcamentoInternoTests(TestCase):
         self.assertContains(resposta, 'data-mascara="telefone"')
         self.assertContains(resposta, 'data-mascara="moeda"')
         self.assertContains(resposta, 'type="number" class="form-control form-control-sm text-end ls-item-quantidade"')
+
+    def test_aceite_eletronico_tem_uma_unica_classe_de_modelo(self):
+        """Duas declarações registravam o modelo duas vezes no Django."""
+        codigo = Path("sistema_interno/models.py").read_text(encoding="utf-8")
+        self.assertEqual(codigo.count("class AceiteOrcamento(models.Model):"), 1)
 
     def test_linha_com_catalogo_e_producao_fica_so_com_o_catalogo(self):
         """São origens exclusivas: gravar as duas criaria item inválido."""

@@ -169,6 +169,23 @@ class RefazerOrdemServicoTests(TestCase):
         self.assertEqual(fracionada.status_code, 400)
         self.assertIn("número inteiro", fracionada.json()["msg"])
 
+    def test_valor_da_linha_dinamica_recebe_mascara_e_recalcula_em_centavos(self):
+        """4, 40 e 400 precisam aparecer como 0,04, 0,40 e 4,00.
+
+        A máscara compartilhada já fazia essa progressão. O erro era a
+        linha da O.S. nascer por JavaScript depois da montagem da tela e
+        nunca ser entregue ao formatador.
+        """
+        html = self.tela()
+
+        self.assertIn(
+            'data-valor data-mascara="moeda" inputmode="decimal"', html,
+        )
+        self.assertIn('class="input-group input-group-sm ls-os-valor-campo"', html)
+        self.assertIn('Painel.aplicarMascaras(tr);', html)
+        # O cálculo escuta o evento que sai do campo já mascarado.
+        self.assertIn('tr.addEventListener("input", recalcular)', html)
+
     def test_linha_de_servico_nunca_guarda_peca_escondida(self):
         peca = PecasReposicao.objects.create(
             nome="Motor", descricao_peca="Reposição",

@@ -1947,44 +1947,6 @@ class AceiteOrcamento(models.Model):
         return f"Aceite {self.codigo_publico}"
 
 
-class AceiteOrcamento(models.Model):
-    """Comprovante imutável do aceite eletrônico de uma proposta.
-
-    Não guarda IP nem navegador em texto. Essas informações são
-    transformadas em HMAC no momento do aceite: continuam úteis para
-    demonstrar que duas respostas vieram do mesmo contexto, sem criar um
-    cadastro paralelo de dados pessoais sensíveis.
-    """
-
-    orcamento = models.OneToOneField(
-        Orcamento,
-        on_delete=models.PROTECT,
-        related_name="aceite_eletronico",
-    )
-    codigo_publico = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
-    assinante_nome = models.CharField(max_length=120)
-    assinante_documento = models.CharField(max_length=14)
-    consentimento = models.BooleanField(default=True)
-    proposta_hash = models.CharField(max_length=64)
-    ip_hash = models.CharField(max_length=64)
-    navegador_hash = models.CharField(max_length=64)
-    termos_versao = models.CharField(max_length=20, default="2026-08")
-    assinado_em = models.DateTimeField(auto_now_add=True)
-
-    def save(self, *args, **kwargs):
-        if self.pk and type(self).objects.filter(pk=self.pk).exists():
-            raise ValueError("O comprovante de aceite é imutável.")
-        return super().save(*args, **kwargs)
-
-    class Meta:
-        verbose_name = "Aceite eletrônico de orçamento"
-        verbose_name_plural = "Aceites eletrônicos de orçamentos"
-        ordering = ("-assinado_em",)
-
-    def __str__(self):
-        return f"Aceite {self.codigo_publico}"
-
-
 class AvaliacaoBlocoOrcamento(Prime):
     """Decisão do superadministrador sobre cada responsabilidade da proposta."""
 
