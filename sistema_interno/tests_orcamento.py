@@ -379,8 +379,9 @@ class OrcamentoInternoTests(TestCase):
     def test_tabela_do_pc_agrupa_dados_sem_esmagar_data_e_revisao(self):
         from pathlib import Path
 
+        # A tabela mora no pedaço que o filtro troca (`fragmento.py`).
         template = Path(
-            "sistema_interno/templates/orcamentos_inner.html"
+            "sistema_interno/templates/partes/orcamentos_lista.html"
         ).read_text(encoding="utf-8")
         css = Path(
             "sistema_interno/static/interno/interno_modern.css"

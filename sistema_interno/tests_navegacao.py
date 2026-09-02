@@ -198,11 +198,21 @@ class ScriptDeTelaNaoEsperaDOMContentLoadedTests(SimpleTestCase):
         ).read_text(encoding="utf-8")
 
         self.assertIn("versao !== navegacao", navegacao)
+        # O que veio do cache da aba entra pelo mesmo caminho do que
+        # veio da rede -- e esse caminho carrega a versão do clique.
+        self.assertIn("var cache = recuperar(alvo, soAsPartes);", navegacao)
         self.assertIn(
-            "trocarDocumento(cache, alvo, modoHistorico || \"push\", minhaNavegacao)",
+            "if (cache && aplicar(cache, alvo, soAsPartes)) return Promise.resolve();",
             navegacao,
         )
         self.assertIn("aplicarTela(novoDoc, url, modoHistorico, versao)", navegacao)
+        # A troca por trechos obedece à mesma regra: uma resposta antiga
+        # não pode reescrever a lista de um clique mais novo.
+        self.assertIn(
+            "function trocarPartes(html, url, modoHistorico, versao) {\n"
+            "    if (versao !== navegacao) return false;",
+            navegacao,
+        )
 
     def test_troca_fecha_gaveta_e_502_preserva_a_tela_atual(self):
         """Falha transitória não pode jogar o operador na página do proxy."""
@@ -249,7 +259,17 @@ class ScriptDeTelaNaoEsperaDOMContentLoadedTests(SimpleTestCase):
         painel = (raiz / "painel.js").read_text(encoding="utf-8")
 
         self.assertIn("window.LSAtualizarTela = function ()", navegacao)
-        self.assertIn('navegar(window.location.href, "replace")', navegacao)
+        # DEPOIS DE GRAVAR, A TELA VEM INTEIRA.
+        #
+        # O caminho rápido do filtro troca só os trechos da lista, e isso
+        # é certo enquanto nada MAIS muda. Gravar muda: um cliente novo
+        # cadastrado dentro do modal, um chamado que virou O.S. Esses
+        # dados vivem fora dos trechos, e receber só os trechos deixaria
+        # o formulário com a lista de ontem.
+        self.assertIn(
+            'navegar(window.location.href, "replace", { inteira: true })',
+            navegacao,
+        )
         self.assertIn('var modal = form.closest(".modal")', painel)
         self.assertIn('global.LSAtualizarTela()', painel)
 

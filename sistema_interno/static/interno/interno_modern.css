@@ -608,7 +608,18 @@ a:hover{color:var(--acento-claro)}
 .ls-brand-text strong{font-size:1.08rem;font-weight:900;letter-spacing:-.015em}
 .ls-brand-text small{margin-top:4px;color:var(--muted);font-size:.74rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
 
-.ls-nav{flex:1;overflow-y:auto;padding:20px 14px 18px}
+/* POR QUE `overflow-x` PRECISA ESTAR ESCRITO AQUI.
+
+   `overflow-y:auto` sozinho não deixa o outro eixo em `visible`: o CSS
+   proíbe a mistura e promove `overflow-x` a `auto` calado. A partir daí
+   qualquer filho largo vira barra de rolagem -- e o balãozinho do nome,
+   que nasce em `left:calc(100% + 10px)`, é exatamente um filho largo.
+   Resultado no trilho: 83px de menu com 283px de área rolável, dava para
+   arrastar o menu fechado para o lado e encontrar o vazio.
+
+   `clip` corta sem criar rolagem. É o único valor que diz "não
+   transborda para fora, e também não vira barra". */
+.ls-nav{flex:1;overflow-y:auto;overflow-x:clip;padding:20px 14px 18px}
 .ls-nav::-webkit-scrollbar{width:8px}
 .ls-nav::-webkit-scrollbar-thumb{background:rgba(var(--muted-rgb),.19);border-radius:999px}
 .ls-nav-section{margin-bottom:25px}
@@ -1677,18 +1688,6 @@ textarea.form-control{min-height:100px!important}
     font-size:.63rem;
   }
 
-  /* O nome aparece ao lado quando o dedo ou o ponteiro para em cima --
-     é como se confere um ícone que ainda não se reconhece. */
-  .ls-nav-item::after{
-    content:attr(data-titulo);position:absolute;left:calc(100% + 10px);
-    padding:7px 12px;border-radius:10px;white-space:nowrap;
-    background:var(--panel-3);border:1px solid var(--line);
-    color:var(--text);font-size:.82rem;font-weight:700;
-    opacity:0;pointer-events:none;transform:translateX(-6px);
-    transition:opacity .16s ease,transform .16s ease;z-index:1300;
-    box-shadow:var(--shadow-soft);
-  }
-  .ls-nav-item:hover::after,.ls-nav-item:focus-visible::after{opacity:1;transform:none}
 
   /* O cartão da pessoa é uma grade de duas colunas: avatar e nome. Some
      o nome, mas a coluna dele continua reservada, e o avatar ficava
@@ -1703,7 +1702,6 @@ textarea.form-control{min-height:100px!important}
   .ls-sidebar.expandida ~ .ls-main,
   .ls-shell:has(.ls-sidebar.expandida) .ls-main{margin-left:var(--sidebar-w)}
   .ls-sidebar.expandida .ls-nav-item{justify-content:flex-start;padding:0 14px;gap:12px}
-  .ls-sidebar.expandida .ls-nav-item::after{content:none}
   .ls-sidebar.expandida .ls-brand{justify-content:flex-start;padding:18px 18px 16px}
   .ls-sidebar.expandida .ls-sidebar-footer{padding:14px}
   .ls-sidebar.expandida .ls-user-card{
@@ -1723,6 +1721,28 @@ textarea.form-control{min-height:100px!important}
     font-size:.72rem;
   }
 }
+
+/* O NOME DO ÍCONE, QUANDO O TRILHO ESTÁ FECHADO.
+
+   Era um `::after` dentro do próprio item. Não dava: o item mora no
+   `.ls-nav`, o `.ls-nav` rola, e quem rola corta o que sai da caixa --
+   então o balão nascia a dez pixels do lado de fora e era aparado
+   inteiro. Ninguém nunca viu esse nome; o que se via era a barra de
+   rolagem que ele criava.
+
+   Agora é UM elemento, filho do `<body>`, preso à janela (`fixed`).
+   Fora de qualquer caixa que rola, não há o que cortar, e a posição
+   vertical vem do item apontado -- ver `ls-trilho.js`. */
+.ls-dica-trilho{
+  position:fixed;top:0;left:0;z-index:1300;
+  padding:7px 12px;border-radius:10px;white-space:nowrap;
+  background:var(--panel-3);border:1px solid var(--line);
+  color:var(--text);font-size:.82rem;font-weight:700;
+  box-shadow:var(--shadow-soft);
+  opacity:0;pointer-events:none;transform:translateX(-6px);
+  transition:opacity .16s ease,transform .16s ease;
+}
+.ls-dica-trilho.visivel{opacity:1;transform:none}
 
 /* Botão de abrir e fechar o trilho. Fica na borda, na altura do olho. */
 .ls-rail-toggle{

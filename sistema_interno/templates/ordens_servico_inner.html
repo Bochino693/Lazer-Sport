@@ -134,124 +134,7 @@
   </div>
 </section>
 
-<section class="ls-metrics ls-budget-card-filters" aria-label="Filtrar ordens por fase">
-  {% for chave, rotulo, quantidade, icone in cards %}
-    <a class="ls-metric-card ls-budget-filter-card {% if chave == 'concluidas' or chave == 'pagas' %}green{% elif chave == 'aguardando' or chave == 'pecas' or chave == 'a_receber' %}yellow{% elif chave == 'execucao' %}cyan{% else %}blue{% endif %} {% if filtro_ativo == chave %}active{% endif %}"
-       href="?filtro={{ chave }}{% if busca %}&q={{ busca|urlencode }}{% endif %}"
-       aria-current="{% if filtro_ativo == chave %}page{% else %}false{% endif %}">
-      <div class="ls-metric-head">
-        <span class="ls-metric-label">{{ rotulo }}</span>
-        <span class="ls-metric-icon"><i class="bi {{ icone }}"></i></span>
-      </div>
-      <strong class="ls-metric-value">{{ quantidade }}</strong>
-      <span class="ls-metric-note">{% if filtro_ativo == chave %}Filtro ativo{% else %}Toque para filtrar{% endif %}</span>
-    </a>
-  {% endfor %}
-</section>
-
-{% comment %}
-  A FAIXA DO TOPO PRECISA RESPONDER ALGUMA COISA.
-
-  Três das quatro caixas diziam "Documento: Operacional", "Orçamento:
-  Negociação separada" e "Impressão: A4 e PDF". São frases verdadeiras e
-  completamente inúteis: não mudam, não respondem nada e ninguém as lê
-  duas vezes -- ocupando, no topo da tela, o lugar onde a tela de
-  propostas mostra quatro valores que mudam todo dia.
-
-  Agora respondem o que se pergunta ao chegar: quanto está preso em
-  serviço que ainda não acabou, quanto já foi entregue, quanto falta
-  receber e quanto entrou. Versões substituídas ficam fora dos quatro:
-  somá-las contaria o mesmo serviço duas vezes.
-{% endcomment %}
-<section class="ls-budget-money-strip">
-  <div><span>Em serviço aberto</span><strong>R$ {{ total_em_servico|moeda }}</strong></div>
-  <div><span>Concluído</span><strong>R$ {{ total_concluido|moeda }}</strong></div>
-  <div class="warning"><span>A receber</span><strong>R$ {{ total_a_receber|moeda }}</strong></div>
-  <div class="success"><span>Recebido</span><strong>R$ {{ total_recebido|moeda }}</strong></div>
-</section>
-
-<section class="ls-data-panel">
-  <div class="ls-data-header">
-    <div><h2>Serviços registrados</h2><p>A O.S. enviada continua editável para registrar o andamento real do trabalho.</p></div>
-    {% comment %}
-      A busca procura no índice que veio junto da página -- sem ida ao
-      servidor, sem recarregar a tela e sem mexer na URL. Ver
-      `ls-filtro-local.js`. O formulário fica porque é ele que traz o que
-      está fora desta página, quando faz falta.
-    {% endcomment %}
-    <form method="get" class="ls-budget-search" data-filtro-alvo=".ls-os-tabela tbody"
-          data-filtro-indice="indiceOrdens" data-filtro-nome="Ordem de Serviço"
-          data-filtro-nome-plural="Ordens de Serviço" data-filtro-genero="f">
-      <input type="hidden" name="filtro" value="{{ filtro_ativo }}">
-      <div class="input-group"><input class="form-control" name="q" type="search" autocomplete="off" value="{{ busca }}" placeholder="O.S., cliente, equipamento ou defeito"><button class="btn btn-primary" type="submit" aria-label="Buscar"><i class="bi bi-search"></i></button></div>
-    </form>
-    {{ indice_busca|json_script:"indiceOrdens" }}
-  </div>
-  <div class="ls-data-body">
-    <div class="table-responsive">
-      <table class="ls-table ls-commercial-table ls-os-tabela">
-        <thead><tr><th>O.S.</th><th>Cliente / equipamento</th><th>Tipo</th><th>Situação</th><th>Agenda</th><th class="text-end">Total</th><th>Pagamento</th><th>Técnico</th><th class="text-end">Ações</th></tr></thead>
-        <tbody>
-        {% for ordem in ordens %}
-          <tr data-registro="{{ ordem.id }}">
-            <td data-rotulo="O.S."><strong>{{ ordem.numero_documento }}</strong>{% if ordem.versao > 1 %}<span class="ls-versao-chip" title="Esta é a versão {{ ordem.versao }} desta O.S.">v{{ ordem.versao }}</span>{% endif %}{% if ordem.orcamento_id %}<span class="material-sub d-block">proposta #{{ ordem.orcamento_id }}</span>{% endif %}{% if ordem.ordem_anterior_id %}<span class="material-sub d-block">refeita da {{ ordem.ordem_anterior.numero_documento }}</span>{% endif %}</td>
-            <td data-rotulo="Cliente / equipamento"><strong>{{ ordem.destinatario }}</strong><span class="material-sub d-block">{{ ordem.equipamento }}</span>{% if ordem.numero_serie %}<span class="material-sub d-block">Identificação: {{ ordem.numero_serie }}</span>{% endif %}{% if ordem.rota.google_maps_url or ordem.rota.waze_url %}<span class="ls-route-actions">{% if ordem.rota.distancia_km != None %}<span class="ls-distance-chip" title="Estimativa em linha reta"><i class="bi bi-signpost-split"></i> ≈ {{ ordem.rota.distancia_km|stringformat:".1f" }} km</span>{% endif %}{% if ordem.rota.google_maps_url %}<a href="{{ ordem.rota.google_maps_url }}" target="_blank" rel="noopener" class="ls-route-link maps" title="Rota no Google Maps"><i class="bi bi-map"></i> Maps</a>{% endif %}{% if ordem.rota.waze_url %}<a href="{{ ordem.rota.waze_url }}" target="_blank" rel="noopener" class="ls-route-link waze" title="Rota no Waze"><i class="bi bi-navigation"></i> Waze</a>{% endif %}</span>{% endif %}</td>
-            <td data-rotulo="Tipo">{{ ordem.get_tipo_display }}{% if ordem.prioridade == 'urgente' or ordem.prioridade == 'alta' %}<span class="ls-status danger d-block mt-1">{{ ordem.get_prioridade_display }}</span>{% endif %}</td>
-            <td data-rotulo="Situação"><div class="ls-situacao-card ls-situacao-os"><span class="ls-status {% if ordem.status == 'concluida' %}success{% elif ordem.status == 'cancelada' or ordem.status == 'substituida' %}neutral{% elif ordem.status == 'aguardando_peca' %}warning{% elif ordem.status == 'em_execucao' or ordem.status == 'aguardando_resposta' %}info{% else %}neutral{% endif %}">{{ ordem.get_status_display }}</span>{% if ordem.cliente_ciente %}<span class="material-sub">cliente ciente ✓</span>{% endif %}{% if ordem.arquivada and ordem.ordem_refeita %}<span class="material-sub">virou a {{ ordem.ordem_refeita.numero_documento }}</span>{% endif %}</div></td>
-            <td data-rotulo="Agenda">{% if ordem.agendada_para %}{{ ordem.agendada_para|date:"d/m/Y H:i" }}{% else %}<span class="text-muted">Não agendada</span>{% endif %}</td>
-            <td data-rotulo="Total" class="text-end"><strong class="ls-money">R$ {{ ordem.total|moeda }}</strong></td>
-            <td data-rotulo="Pagamento">{% if ordem.quitado %}<span class="ls-pago"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> Pago</span><span class="material-sub d-block mt-1">R$ {{ ordem.valor_pago|moeda }} recebido</span>{% elif ordem.status_pagamento == 'parcial' %}<span class="ls-status warning">Pagamento parcial</span><span class="material-sub d-block mt-1">faltam <strong>R$ {{ ordem.saldo_pagamento|moeda }}</strong></span>{% else %}<span class="ls-status neutral">{{ ordem.get_status_pagamento_display }}</span>{% endif %}</td>
-            <td data-rotulo="Técnico">{% if ordem.tecnico %}{{ ordem.tecnico.get_full_name|default:ordem.tecnico.username }}{% else %}<span class="text-muted">A definir</span>{% endif %}</td>
-            <td data-rotulo="Ações" class="ls-actions ls-commercial-actions text-end"><div class="ls-row-actions">
-              {% comment %}
-                AS AÇÕES SÃO EM CIMA DA SITUAÇÃO -- a mesma regra que a
-                proposta já segue.
-
-                Antes toda linha oferecia tudo: editar uma versão que o
-                cliente já leu, enviar de novo um serviço cancelado,
-                cobrar contra o documento que foi trocado por outro. O
-                botão aceso é uma promessa; quando ele leva a um erro,
-                quem trabalha aprende a desconfiar de todos.
-
-                O que cada situação permite está dito no modelo --
-                `pode_editar`, `pode_enviar`, `pode_refazer`,
-                `pode_receber_pagamento` -- e a tela pergunta lá.
-              {% endcomment %}
-              <a class="btn btn-sm btn-outline-primary" href="{% url 'ordem_servico_previa_inner' ordem.id %}" target="_blank" rel="noopener" title="Visualizar e imprimir"><i class="bi bi-printer"></i><span class="ls-action-label">Imprimir</span></a>
-              {% if pode_editar %}<button class="btn btn-sm btn-outline-secondary" type="button" data-editar-os="{{ ordem.id }}"
-                      aria-label="{% if ordem.pode_editar %}Editar{% else %}Consultar{% endif %} a O.S. {{ ordem.numero_documento }}"
-                      title="{% if ordem.pode_editar %}Editar a O.S.{% else %}Consultar a versão congelada{% endif %}"><i class="bi {% if ordem.pode_editar %}bi-pencil{% else %}bi-search{% endif %}"></i><span class="ls-action-label">{% if ordem.pode_editar %}Editar{% else %}Ver{% endif %}</span></button>
-              {% if ordem.pode_enviar %}<button class="btn btn-sm btn-outline-primary" type="button" data-enviar-os="{{ ordem.id }}" data-nome="{{ ordem.destinatario }}" data-whatsapp="{{ ordem.whatsapp_destinatario }}" data-email="{{ ordem.email_destinatario }}"
-                      aria-label="Enviar a O.S. {{ ordem.numero_documento }}"
-                      title="Gerar o link da O.S. para mandar ao cliente"><i class="bi bi-send" aria-hidden="true"></i><span class="ls-action-label">Enviar O.S.</span></button>{% endif %}
-              {% comment %}
-                REFAZER É O CAMINHO DO DIAGNÓSTICO QUE MUDOU.
-
-                A O.S. que o cliente leu e assinou como ciente é o
-                registro do que foi combinado naquele dia. Ao abrir o
-                equipamento o técnico descobre outra coisa -- era o
-                motor, não a lona -- e reescrever por cima apagava o
-                papel que explica o valor cobrado. Aqui nasce a versão
-                seguinte, e a anterior fica congelada e consultável.
-              {% endcomment %}
-              {% if ordem.pode_refazer %}<button class="btn btn-sm btn-outline-warning" type="button"
-                      data-refazer-os="{{ ordem.id }}"
-                      data-nome="{{ ordem.numero_documento }} — {{ ordem.destinatario }}"
-                      data-versao="{{ ordem.versao }}"
-                      aria-label="Refazer a O.S. {{ ordem.numero_documento }}"
-                      title="Criar a versão seguinte sem apagar esta"><i class="bi bi-file-earmark-plus"></i><span class="ls-action-label">Refazer O.S.</span></button>{% endif %}{% endif %}
-              {% if pode_pagamento and ordem.pode_receber_pagamento %}<button class="btn btn-sm btn-outline-success" type="button" data-pagamento-os="{{ ordem.id }}" data-nome="{{ ordem.numero_documento }} — {{ ordem.destinatario }}" data-total="{{ ordem.total }}" data-pago="{{ ordem.valor_pago }}"><i class="bi bi-cash-coin"></i><span class="ls-action-label">{% if ordem.status_pagamento == 'parcial' %}Completar pagamento{% else %}Registrar pagamento{% endif %}</span></button>{% endif %}
-              {% if pode_editar and ordem.status == 'rascunho' and not ordem.enviada_em %}<button class="btn btn-sm btn-outline-danger" type="button" data-excluir="{{ ordem.id }}" data-excluir-os data-nome="{{ ordem.numero_documento }} — {{ ordem.destinatario }}" aria-label="Excluir {{ ordem.numero_documento }}" title="Excluir rascunho"><i class="bi bi-trash"></i><span class="ls-action-label">Excluir</span></button>
-              {% elif user.is_superuser %}{# Palavra final do superusuário: excluir O.S. que já saiu do rascunho. Fica registrado. #}<button class="btn btn-sm btn-outline-danger" type="button" data-excluir="{{ ordem.id }}" data-excluir-os data-nome="{{ ordem.numero_documento }} — {{ ordem.destinatario }}" data-protegido="1" data-protegido-motivo="Esta O.S. está como {{ ordem.get_status_display|lower }} e faz parte do histórico operacional. Você pode excluir mesmo assim, e a exclusão vai ficar registrada com o seu nome." aria-label="Excluir {{ ordem.numero_documento }}" title="Excluir mesmo protegida (fica registrado)"><i class="bi bi-trash"></i><span class="ls-action-label">Excluir</span></button>{% endif %}
-            </div></td>
-          </tr>
-        {% empty %}<tr data-lista-vazia><td colspan="9"><div class="ls-empty"><i class="bi bi-clipboard2-check"></i>Nenhuma Ordem de Serviço encontrada.</div></td></tr>{% endfor %}
-        </tbody>
-      </table>
-    </div>
-    {% if page_obj.has_other_pages %}<nav class="ls-paginacao">{% if page_obj.has_previous %}<a class="btn btn-sm btn-outline-secondary" href="?page={{ page_obj.previous_page_number }}&filtro={{ filtro_ativo }}&q={{ busca|urlencode }}">Anterior</a>{% endif %}<span>Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>{% if page_obj.has_next %}<a class="btn btn-sm btn-outline-secondary" href="?page={{ page_obj.next_page_number }}&filtro={{ filtro_ativo }}&q={{ busca|urlencode }}">Próxima</a>{% endif %}</nav>{% endif %}
-  </div>
-</section>
+{% include "partes/os_lista.html" %}
 
 <!-- Montagem da O.S. -->
 <div class="modal fade" id="modalOS" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-xl modal-dialog-scrollable"><form class="modal-content" id="formOS" method="post" action="{% url 'ordens_servico_inner' %}">
@@ -686,7 +569,6 @@
 {% url 'ordens_servico_inner' as exclusao_url %}
 {% include "includes/modal_confirmar_exclusao.html" with exclusao_url=exclusao_url exclusao_titulo="Excluir Ordem de Serviço" exclusao_aviso="Somente rascunhos nunca enviados podem ser excluídos. O histórico operacional permanece preservado." %}
 {{ clientes_dados|json_script:"clientesOSDados" }}
-{{ ordens_dados|json_script:"ordensServicoDados" }}
 {{ empresa_localizacao|json_script:"empresaLocalizacaoDados" }}
 {{ etapas_por_situacao|json_script:"etapasPorSituacao" }}
 {{ itens_os_fallback|json_script:"itensOSFallbackDados" }}
@@ -697,7 +579,33 @@
 <script>
 LSTela.pronto(function () {
   "use strict";
-  var ordens = JSON.parse(document.getElementById("ordensServicoDados").textContent || "[]");
+  /* AS LINHAS DA TELA MUDAM SEM A TELA MUDAR.
+
+     Trocar o filtro passou a substituir só os trechos da lista (ver
+     `ls-soft-navigation.js`), e um deles é justamente este JSON. Uma
+     variável lida uma vez, no início, guardaria as linhas do filtro
+     ANTERIOR -- e abrir para editar a terceira linha de "Aguardando
+     peça" traria a terceira linha de "Todas".
+
+     A memória é presa ao NÓ, não ao conteúdo: quando o trecho é
+     substituído, o elemento é outro, a comparação falha e o JSON é lido
+     de novo. Sem evento para disparar e sem nada para lembrar de chamar.
+     Enquanto o nó for o mesmo, não se analisa nada duas vezes. */
+  var _noDeOrdens = null;
+  var _dadosOrdens = [];
+
+  function ordensAtuais() {
+    var no = document.getElementById("ordensServicoDados");
+    if (no !== _noDeOrdens) {
+      _noDeOrdens = no;
+      try {
+        _dadosOrdens = JSON.parse(no ? no.textContent : "[]") || [];
+      } catch (erro) {
+        _dadosOrdens = [];
+      }
+    }
+    return _dadosOrdens;
+  }
   var clientes = JSON.parse(document.getElementById("clientesOSDados").textContent || "[]");
   var empresa = JSON.parse(document.getElementById("empresaLocalizacaoDados").textContent || "{}");
   var etapasPorSituacao = JSON.parse(document.getElementById("etapasPorSituacao").textContent || "{}");
@@ -973,7 +881,7 @@ LSTela.pronto(function () {
     document.getElementById("osGarantia").value = "";
   });
 
-  function achar(id){return ordens.find(function(o){return Number(o.id)===Number(id);});}
+  function achar(id){return ordensAtuais().find(function(o){return Number(o.id)===Number(id);});}
   function numero(valor){var s=String(valor||"").replace(/[^\d,.-]/g,"");if(s.indexOf(",")>=0)s=s.replace(/\./g,"").replace(",",".");return Number(s)||0;}
   function moeda(v){return Number(v||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"});}
   function valor(id,v){Painel.valor(id,v);}

@@ -259,12 +259,16 @@ class EsperaDoDespertarTests(SimpleTestCase):
         navegacao = self.ler("ls-soft-navigation.js")
 
         # O pedido sabe se é de fundo, e o aviso respeita isso.
-        self.assertIn("function requisitar(url, tentativa, silencioso)", navegacao)
+        self.assertIn(
+            "function requisitar(url, tentativa, silencioso, pedaco)", navegacao
+        )
         self.assertIn("if (tentativa > 0 && !silencioso) escalarLoader(tentativa);", navegacao)
         # O silêncio atravessa as repetições, senão a segunda volta a falar.
-        self.assertEqual(navegacao.count("requisitar(url, tentativa + 1, silencioso)"), 2)
+        self.assertEqual(
+            navegacao.count("requisitar(url, tentativa + 1, silencioso, pedaco)"), 2
+        )
         # E a antecipação pede calada.
-        self.assertIn("buscar(url, true)", navegacao)
+        self.assertIn("buscar(url, true, pedaco)", navegacao)
 
     def test_a_tarja_nunca_sobrevive_a_propria_causa(self):
         """Ela informa uma espera; se a espera acaba, ela tem de sair.

@@ -224,33 +224,74 @@ class QuadroDePagamentoTests(TestCase):
         from pathlib import Path
 
         raiz = Path(__file__).resolve().parent / "templates"
+        # A janela de pagamento é da tela; a lista é o pedaço que o
+        # filtro troca. O alerta branco não pode aparecer em nenhum dos
+        # dois, mas o quadro só existe onde a janela mora.
         for nome in ("orcamentos_inner.html", "ordens_servico_inner.html"):
-            with self.subTest(tela=nome):
+            with self.subTest(janela=nome):
                 texto = (raiz / nome).read_text(encoding="utf-8")
                 self.assertNotIn("alert-light", texto)
                 self.assertIn("ls-pagamento-quadro", texto)
+
+        for nome in ("partes/orcamentos_lista.html", "partes/os_lista.html"):
+            with self.subTest(lista=nome):
+                self.assertNotIn(
+                    "alert-light", (raiz / nome).read_text(encoding="utf-8")
+                )
 
 
 class RefinamentosDaListaDeOrcamentosTests(TestCase):
     def test_id_substitui_a_cerquilha(self):
         from pathlib import Path
 
+        # A tabela mora no pedaço que o filtro troca, não na tela.
         texto = (
-            Path(__file__).resolve().parent / "templates" / "orcamentos_inner.html"
+            Path(__file__).resolve().parent
+            / "templates" / "partes" / "orcamentos_lista.html"
         ).read_text(encoding="utf-8")
         self.assertIn("<th>ID</th>", texto)
         self.assertIn('data-rotulo="ID"', texto)
         self.assertNotIn("<th>#</th>", texto)
 
-    def test_filtro_atualiza_a_lista_sem_alterar_a_url_visivel(self):
+    def test_o_filtro_escolhido_fica_escrito_na_url(self):
+        """O cartão de filtro é um link, e um link muda o endereço.
+
+        ANTES ELE NÃO MUDAVA, E ISSO CUSTAVA CARO.
+
+        Havia um ouvinte por cartão que trocava a lista "em silêncio",
+        sem tocar na URL. A razão era boa no seu tempo: cada troca de
+        filtro baixava a tela inteira, e encher o histórico de telas
+        inteiras era pior. Só que o preço aparecia todo dia --
+        recarregar voltava para "Todos", mandar o endereço para alguém
+        mandava sem o filtro, e o botão Voltar saía da tela em vez de
+        desfazer a escolha. Pior: a tela de Ordens de Serviço nunca teve
+        esse ouvinte, e as duas se comportavam de jeitos diferentes na
+        mesma situação.
+
+        Com a troca por trechos (ver `fragmento.py`), o argumento caiu:
+        o clique no cartão já não baixa a tela, baixa a lista. Então o
+        cartão voltou a ser um link comum.
+        """
         from pathlib import Path
 
         raiz = Path(__file__).resolve().parent
         tela = (raiz / "templates" / "orcamentos_inner.html").read_text(encoding="utf-8")
-        navegacao = (raiz / "static" / "interno" / "ls-soft-navigation.js").read_text(encoding="utf-8")
-        self.assertIn("data-orcamento-filtro", tela)
-        self.assertIn("LSNavigation.silent(card.href)", tela)
-        self.assertIn('silent: function (url) { navegar(url, "none"); }', navegacao)
+        lista = (
+            raiz / "templates" / "partes" / "orcamentos_lista.html"
+        ).read_text(encoding="utf-8")
+        navegacao = (
+            raiz / "static" / "interno" / "ls-soft-navigation.js"
+        ).read_text(encoding="utf-8")
+
+        # O cartão é um link, com o filtro no endereço.
+        self.assertIn('href="?filtro={{ chave }}', lista)
+        # E não tem mais tratamento próprio nenhum.
+        self.assertNotIn("LSNavigation.silent(card.href)", tela)
+
+        # Quem cuida dele é a navegação suave -- que, no mesmo caminho,
+        # troca só os trechos marcados em vez da tela toda.
+        self.assertIn("function ehTrocaDeLista(alvo)", navegacao)
+        self.assertIn('X-LS-Fragmento"] = "lista"', navegacao)
 
     def test_cadastrar_fica_antes_da_lista_de_resultados(self):
         from pathlib import Path

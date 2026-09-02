@@ -24,352 +24,7 @@
   </div>
 </section>
 
-<section class="ls-metrics ls-budget-card-filters" aria-label="Filtrar orçamentos por fase">
-  {% for chave, rotulo, quantidade, icone in cards %}
-    <a class="ls-metric-card ls-budget-filter-card {% if chave == 'aprovados' or chave == 'pagos' %}green{% elif chave == 'recusados' or chave == 'expirados' %}red{% elif chave == 'negociacao' or chave == 'substituidos' %}violet{% elif chave == 'aguardando' or chave == 'a_receber' %}yellow{% else %}blue{% endif %} {% if filtro_ativo == chave %}active{% endif %}"
-       href="?filtro={{ chave }}{% if busca %}&q={{ busca|urlencode }}{% endif %}"
-       data-orcamento-filtro="{{ chave }}"
-       aria-current="{% if filtro_ativo == chave %}page{% else %}false{% endif %}">
-      <div class="ls-metric-head">
-        <span class="ls-metric-label">{{ rotulo }}</span>
-        <span class="ls-metric-icon"><i class="bi {{ icone }}"></i></span>
-      </div>
-      <strong class="ls-metric-value">{{ quantidade }}</strong>
-      <span class="ls-metric-note">{% if filtro_ativo == chave %}Filtro ativo{% else %}Toque para filtrar{% endif %}</span>
-    </a>
-  {% endfor %}
-</section>
-
-<section class="ls-budget-money-strip">
-  <div><span>Em propostas abertas</span><strong>R$ {{ total_em_aberto|moeda }}</strong></div>
-  <div><span>Aprovado</span><strong>R$ {{ total_aprovado|moeda }}</strong></div>
-  <div class="success"><span>Recebido</span><strong>R$ {{ total_recebido|moeda }}</strong></div>
-  <div class="warning"><span>A receber</span><strong>R$ {{ total_a_receber|moeda }}</strong></div>
-</section>
-
-<section class="ls-data-panel">
-  <div class="ls-data-header">
-    <div>
-      <h2>Propostas</h2>
-      <p>Enviada não é sobrescrita: use Refazer para criar outra versão.</p>
-    </div>
-    {% comment %}
-      A BUSCA NÃO VAI MAIS AO SERVIDOR A CADA PALAVRA.
-
-      Era um GET: digitar só valia depois da lupa, e a tela inteira
-      recarregava -- desenho, modais e rolagem voltando do zero. Agora o
-      servidor manda junto um índice enxuto de TODAS as propostas do
-      filtro, e quem procura é o próprio aparelho, letra a letra, sem
-      rede e sem mexer na URL. O formulário continua aqui porque é ele
-      que busca o que está fora desta página, quando faz falta.
-    {% endcomment %}
-    <form method="get" class="ls-budget-search" data-filtro-alvo=".ls-orcamentos-table tbody"
-          data-filtro-indice="indiceOrcamentos" data-filtro-nome="proposta"
-          data-filtro-nome-plural="propostas" data-filtro-genero="f">
-      <input type="hidden" name="filtro" value="{{ filtro_ativo }}">
-      <div class="input-group">
-        <input name="q" type="search" value="{{ busca }}" class="form-control"
-               placeholder="Cliente, número, item ou contato" aria-label="Buscar orçamentos"
-               autocomplete="off">
-        <button class="btn btn-primary" type="submit" aria-label="Buscar"><i class="bi bi-search"></i></button>
-      </div>
-    </form>
-    {{ indice_busca|json_script:"indiceOrcamentos" }}
-  </div>
-
-  <div class="ls-data-body">
-    <div class="table-responsive ls-commercial-table-wrap">
-      <table class="ls-table ls-commercial-table ls-orcamentos-table">
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Cliente</th>
-            <th>Origem</th>
-            <th>Proposta</th>
-            <th>Pagamento</th>
-            <th>Acompanhamento</th>
-            <th>Revisão dos blocos</th>
-            <th class="text-end">Ações</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for orcamento in orcamentos %}
-            <tr data-registro="{{ orcamento.id }}">
-              {% comment %}
-                "versão 1" embaixo de todo número era duas coisas ruins de
-                uma vez: quebrava em "vers / ão 1" na coluna estreita, e
-                anunciava um histórico que a maioria das propostas não
-                tem. A O.S. já resolvia assim -- só a partir da segunda
-                versão existe versão para mostrar, e ela vira um selo ao
-                lado do número, onde se lê de relance.
-              {% endcomment %}
-              <td data-rotulo="ID">
-                <span class="ls-number">{{ orcamento.id }}</span>{% if orcamento.versao > 1 %}<span class="ls-versao-chip" title="Esta é a versão {{ orcamento.versao }} desta proposta">v{{ orcamento.versao }}</span>{% endif %}
-              </td>
-              <td data-rotulo="Cliente">
-                <span class="material-nome">{{ orcamento.destinatario }}</span>
-                {% if orcamento.contato %}
-                  <span class="material-sub d-block">{{ orcamento.contato }}</span>
-                {% endif %}
-                {% if orcamento.responsavel %}
-                  <span class="material-sub d-block">
-                    {{ orcamento.responsavel.get_full_name|default:orcamento.responsavel.username }}
-                  </span>
-                {% endif %}
-              </td>
-              <td data-rotulo="Origem">
-                <span class="ls-origin-badge {{ orcamento.origem }}">
-                  <i class="bi {% if orcamento.origem == 'ambulante' %}bi-geo-alt-fill{% else %}bi-building{% endif %}"></i>
-                  {{ orcamento.get_origem_display }}
-                </span>
-              </td>
-              <td data-rotulo="Proposta">
-                {% with quantidade_itens=orcamento.itens.count %}
-                <span class="ls-money">R$ {{ orcamento.total|moeda }}</span>
-                <span class="material-sub d-block mt-1">
-                  {{ quantidade_itens }} {% if quantidade_itens == 1 %}item{% else %}itens{% endif %}
-                </span>
-                {% endwith %}
-              </td>
-              {% comment %}
-                O QUITADO PRECISA SER ÓBVIO À DISTÂNCIA.
-
-                A etiqueta dizia "Pago" no mesmo tamanho e peso de
-                "Pendente", e ao lado o botão "Pagamento" continuava
-                aparecendo -- quem batia o olho não sabia se tinha
-                registrado. Agora quitado ganha o visto e o valor
-                recebido; parcial mostra quanto ainda falta, que é a
-                informação que a pessoa procura ali.
-              {% endcomment %}
-              <td data-rotulo="Pagamento">
-                {% if orcamento.quitado %}
-                  <span class="ls-pago"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> Pago</span>
-                  <span class="material-sub d-block mt-1">R$ {{ orcamento.valor_pago|moeda }} recebido</span>
-                {% elif orcamento.status_pagamento == 'parcial' %}
-                  <span class="ls-status warning">Pagamento parcial</span>
-                  <span class="material-sub d-block mt-1">
-                    R$ {{ orcamento.valor_pago|moeda }} de R$ {{ orcamento.total|moeda }} ·
-                    <strong>faltam R$ {{ orcamento.saldo_pagamento|moeda }}</strong>
-                  </span>
-                {% elif orcamento.status == 'aprovado' %}
-                  <span class="ls-status neutral">A receber</span>
-                  <span class="material-sub d-block mt-1">R$ {{ orcamento.total|moeda }}</span>
-                {% else %}
-                  <span class="text-muted">—</span>
-                {% endif %}
-              </td>
-              {% comment %}
-                data-situacao: a célula que o painel repinta sozinho
-                quando o cliente responde pela página pública. Sem isso a
-                mudança só aparecia ao recarregar -- e como a sessão dura
-                o dia inteiro, na prática só ao sair e entrar de novo.
-              {% endcomment %}
-              <td data-rotulo="Acompanhamento" data-situacao="{{ orcamento.id }}">
-                <div class="ls-situacao-card ls-situacao-orcamento">
-                  <span class="ls-status
-                    {% if orcamento.status == 'aprovado' %}success
-                    {% elif orcamento.status == 'recusado' %}danger
-                    {% elif orcamento.status == 'aguardando_resposta' %}info
-                    {% elif orcamento.status == 'em_negociacao' %}warning
-                    {% elif orcamento.status == 'expirado' %}warning
-                    {% else %}neutral{% endif %}" data-situacao-selo>
-                    {{ orcamento.get_status_display }}
-                  </span>
-                  <span class="ls-situacao-validade {% if orcamento.vencido %}vencida{% endif %}">
-                    <i class="bi {% if orcamento.vencido %}bi-calendar-x{% else %}bi-calendar3{% endif %}" aria-hidden="true"></i>
-                    {% if orcamento.validade %}
-                      {% if orcamento.vencido %}Venceu em{% else %}Válida até{% endif %}
-                      {{ orcamento.validade|date:"d/m/Y" }}
-                    {% else %}
-                      Sem prazo de validade
-                    {% endif %}
-                  </span>
-                  <span class="material-sub" data-situacao-nota
-                        {% if not orcamento.respondido_em and not orcamento.enviado_em %}hidden{% endif %}>
-                    {% if orcamento.respondido_em %}
-                      {{ orcamento.respondido_por|default:"cliente" }} ·
-                      {{ orcamento.respondido_em|date:"d/m H:i" }}
-                    {% elif orcamento.enviado_em %}
-                      enviado {{ orcamento.enviado_em|date:"d/m" }}
-                    {% endif %}
-                  </span>
-                  {% if orcamento.status == 'aprovado' and orcamento.status_pagamento != 'pago' %}
-                    <span class="ls-next-action"><i class="bi bi-telephone-outbound"></i> Próximo passo: contatar cliente</span>
-                  {% endif %}
-                </div>
-              </td>
-              <td data-rotulo="Revisão dos blocos">
-                <div class="ls-block-review">
-                  <span class="ls-review-item {% if orcamento.bloco_comercial.status == 'aprovado' %}success{% elif orcamento.bloco_comercial.status == 'ajustes' %}danger{% else %}warning{% endif %}"
-                        title="{{ orcamento.bloco_comercial.observacao|default:'Aguardando avaliação' }}">
-                    <span class="ls-review-label"><i class="bi bi-people" aria-hidden="true"></i> Comercial</span>
-                    <strong>{{ orcamento.bloco_comercial.get_status_display|default:"Pendente" }}</strong>
-                  </span>
-                  <span class="ls-review-item {% if orcamento.bloco_financeiro.status == 'aprovado' %}success{% elif orcamento.bloco_financeiro.status == 'ajustes' %}danger{% else %}warning{% endif %}"
-                        title="{{ orcamento.bloco_financeiro.observacao|default:'Aguardando avaliação' }}">
-                    <span class="ls-review-label"><i class="bi bi-cash-coin" aria-hidden="true"></i> Financeiro</span>
-                    <strong>{{ orcamento.bloco_financeiro.get_status_display|default:"Pendente" }}</strong>
-                  </span>
-                </div>
-              </td>
-              <td data-rotulo="Ações" class="ls-actions ls-commercial-actions text-end">
-                <div class="ls-row-actions">
-                <a class="btn btn-sm btn-outline-primary"
-                   href="{% url 'orcamento_previa_inner' orcamento.id %}"
-                   target="_blank" rel="noopener"
-                   aria-label="Abrir prévia do orçamento {{ orcamento.id }}"
-                   title="Conferir o documento sem alterar a situação">
-                  <i class="bi bi-eye"></i><span class="ls-action-label">Prévia</span>
-                </a>
-                <button type="button" class="btn btn-sm btn-outline-secondary"
-                        data-editar="{{ orcamento.id }}"
-                        aria-label="{% if orcamento.pode_editar %}Editar{% else %}Consultar{% endif %} orçamento {{ orcamento.id }}"
-                        title="{% if orcamento.pode_editar %}Editar rascunho{% else %}Consultar versão preservada{% endif %}">
-                  <i class="bi {% if orcamento.pode_editar %}bi-pencil{% else %}bi-search{% endif %}"></i><span class="ls-action-label">{% if orcamento.pode_editar %}Editar{% else %}Ver{% endif %}</span>
-                </button>
-                {% if pode_editar_comercial and orcamento.pode_enviar %}<button type="button" class="btn btn-sm btn-outline-primary"
-                        data-enviar="{{ orcamento.id }}"
-                        data-orcamento-id="{{ orcamento.id }}"
-                        data-nome="{{ orcamento.destinatario }}"
-                        data-whatsapp="{{ orcamento.whatsapp_destinatario }}"
-                        data-email="{{ orcamento.email_destinatario }}"
-                        data-link="{{ orcamento.link_publico }}"
-                        data-mensagem="{{ orcamento.mensagem_whatsapp }}"
-                        data-previa="{% url 'orcamento_previa_inner' orcamento.id %}"
-                        data-total="R$ {{ orcamento.total|moeda }}"
-                        data-validade="{% if orcamento.validade %}{{ orcamento.validade|date:'d/m/Y' }}{% endif %}"
-                        value="{{ orcamento.id }}"
-                        aria-label="{% if orcamento.enviado_em %}Abrir o link do orçamento{% else %}Enviar o orçamento{% endif %} {{ orcamento.id }}"
-                        title="{% if orcamento.enviado_em %}Abrir de novo o link já gerado desta proposta{% else %}Gerar o link da proposta para mandar ao cliente{% endif %}">
-                  {% comment %}
-                    O RÓTULO DIZ O QUE O BOTÃO MANDA.
-
-                    Era só "Enviar", e em telas médias o CSS escondia até
-                    essa palavra: sobrava o ícone sozinho. Quando a fonte
-                    dos ícones não carregava, o desenho virava um símbolo
-                    qualquer do aparelho -- e o botão que manda proposta
-                    para cliente passava a ser um quadradinho sem nome.
-
-                    Escrito por extenso, o botão continua legível sem
-                    ícone, sem cor e sem quem já conhece a tela. `bi-send`
-                    fica marcado como enfeite (`aria-hidden`) porque quem
-                    diz o que é, agora, é o texto.
-                  {% endcomment %}
-                  <i class="bi bi-send" aria-hidden="true"></i>
-                  <span class="ls-action-label">{% if orcamento.enviado_em %}Link do orçamento{% else %}Enviar orçamento{% endif %}</span>
-                </button>{% endif %}
-                {% comment %}
-                  REFAZER É O CAMINHO DA PROPOSTA VENCIDA.
-
-                  Ela não gera mais link -- o link levaria a uma página
-                  que anuncia "proposta expirada", e mandar isso ao
-                  cliente é pior do que não mandar nada. Aqui se cria a
-                  versão nova, com o preço de hoje.
-                {% endcomment %}
-                {% if pode_editar_comercial and orcamento.pode_refazer %}
-                <button class="btn btn-sm btn-outline-warning" type="button"
-                        data-refazer="{{ orcamento.id }}"
-                        data-nome="{{ orcamento.destinatario }}"
-                        data-versao="{{ orcamento.versao }}"
-                        data-situacao-texto="{{ orcamento.get_status_display }}"
-                        data-motivo="{{ orcamento.motivo_da_proxima_versao }}"
-                        data-quem="{{ orcamento.respondido_por }}"
-                        data-recusada="{% if orcamento.recusada %}1{% else %}0{% endif %}"
-                        data-vencida="{% if orcamento.vencido %}1{% else %}0{% endif %}"
-                        title="Criar a versão seguinte sem alterar esta">
-                  <i class="bi bi-file-earmark-plus"></i><span class="ls-action-label">Nova proposta</span>
-                </button>
-                {% endif %}
-                {% if pode_editar_financeiro and orcamento.pode_receber_pagamento %}
-                <button type="button" class="btn btn-sm btn-outline-success"
-                        data-pagamento="{{ orcamento.id }}" data-total="{{ orcamento.total }}"
-                        data-pago="{{ orcamento.valor_pago }}" data-nome="Orçamento ID {{ orcamento.id }} — {{ orcamento.destinatario }}"
-                        title="Registrar o total recebido até agora">
-                  <i class="bi bi-cash-coin"></i><span class="ls-action-label">{% if orcamento.status_pagamento == 'parcial' %}Completar pagamento{% else %}Registrar pagamento{% endif %}</span>
-                </button>
-                {% endif %}
-                {% comment %}
-                  O ORÇAMENTO NÃO GERA MAIS ORDEM DE SERVIÇO.
-
-                  Gerava, e o resultado era uma O.S. pela metade: tipo
-                  "instalação" chutado, equipamento montado colando a
-                  descrição dos quatro primeiros itens, sem defeito
-                  relatado, sem técnico e sem agenda. Alguém tinha de
-                  abrir e refazer tudo -- e quem não abria deixava esse
-                  documento seguir para o cliente.
-
-                  A O.S. nasce onde ela tem contexto: do chamado de
-                  manutenção, que traz equipamento, defeito e endereço, ou
-                  aberta na mão para atendimento direto. As duas portas
-                  estão na tela de Ordens de Serviço.
-                {% endcomment %}
-                {% if pode_editar_comercial and not orcamento.ordem_servico %}<button type="button" class="btn btn-sm btn-outline-secondary"
-                        data-situacao="{{ orcamento.id }}"
-                        data-nome="Orçamento ID {{ orcamento.id }} — {{ orcamento.destinatario }}"
-                        data-status="{{ orcamento.status }}"
-                        aria-label="Alterar situação do orçamento {{ orcamento.id }}" title="Alterar situação">
-                  <i class="bi bi-flag"></i><span class="ls-action-label">Situação</span>
-                </button>{% endif %}
-                {% if pode_avaliar_blocos %}<button type="button" class="btn btn-sm btn-outline-warning"
-                        data-avaliar="{{ orcamento.id }}"
-                        data-nome="Orçamento ID {{ orcamento.id }} — {{ orcamento.destinatario }}"
-                        aria-label="Avaliar blocos do orçamento {{ orcamento.id }}" title="Avaliar blocos">
-                  <i class="bi bi-clipboard-check"></i><span class="ls-action-label">Avaliar</span>
-                </button>{% endif %}
-                {% if orcamento.pode_excluir %}
-                <button type="button" class="btn btn-sm btn-outline-danger"
-                        data-excluir="{{ orcamento.id }}"
-                        data-nome="Orçamento ID {{ orcamento.id }} — {{ orcamento.destinatario }}"
-                        {% if orcamento.protegida %}data-protegido="1"
-                        data-protegido-motivo="Esta proposta está como {{ orcamento.get_status_display|lower }} e faz parte do histórico comercial. Você pode excluir mesmo assim, e a exclusão vai ficar registrada com o seu nome."{% endif %}
-                        aria-label="Excluir orçamento {{ orcamento.id }}"
-                        title="{% if orcamento.protegida %}Excluir mesmo protegida (fica registrado){% else %}Excluir rascunho{% endif %}">
-                  <i class="bi bi-trash"></i><span class="ls-action-label">Excluir</span>
-                </button>
-                {% endif %}
-                </div>
-              </td>
-            </tr>
-          {% empty %}
-            <tr data-lista-vazia>
-              <td colspan="8">
-                <div class="ls-empty">
-                  <i class="bi bi-file-earmark-text"></i>
-                  Nenhum orçamento encontrado. Comece criando o primeiro.
-                </div>
-              </td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-
-    {% if page_obj.has_other_pages %}
-      {% comment %}
-        A tela não era paginada, e cada linha carrega muito: os itens, o
-        texto pronto do WhatsApp e a proposta inteira em JSON para o modal
-        de edição. Com algumas centenas de propostas isso virava megabytes
-        de HTML, e no servidor a resposta estourava o tempo do gunicorn --
-        o 502 ao abrir Orçamentos. Os números do topo continuam somando o
-        filtro inteiro; só a lista é que vem por página.
-      {% endcomment %}
-      <nav class="ls-paginacao" aria-label="Páginas">
-        {% if page_obj.has_previous %}
-          <a class="btn btn-sm btn-outline-secondary"
-             href="?page={{ page_obj.previous_page_number }}&q={{ busca|urlencode }}&filtro={{ filtro_ativo }}">Anterior</a>
-        {% endif %}
-        <span>
-          Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
-          · {{ page_obj.paginator.count }} proposta{{ page_obj.paginator.count|pluralize }}
-        </span>
-        {% if page_obj.has_next %}
-          <a class="btn btn-sm btn-outline-secondary"
-             href="?page={{ page_obj.next_page_number }}&q={{ busca|urlencode }}&filtro={{ filtro_ativo }}">Próxima</a>
-        {% endif %}
-      </nav>
-    {% endif %}
-  </div>
-</section>
+{% include "partes/orcamentos_lista.html" %}
 
 <!-- ================= MODAL: montar orçamento ================= -->
 <div class="modal fade" id="modalOrcamento" tabindex="-1" aria-hidden="true">
@@ -1280,7 +935,6 @@ Cadastro mínimo de propósito: nome, valor e categoria. Foto e texto de
 {% url 'orcamentos_inner' as exclusao_url %}
 {% include "includes/modal_confirmar_exclusao.html" with exclusao_url=exclusao_url exclusao_titulo="Excluir orçamento" exclusao_aviso="O rascunho e todos os itens serão apagados. Propostas enviadas, respondidas ou expiradas permanecem no histórico comercial." %}
 
-{{ orcamentos_dados|json_script:"orcamentosDados" }}
 {% endblock %}
 
 {% block scripts %}
@@ -1288,9 +942,33 @@ Cadastro mínimo de propósito: nome, valor e categoria. Foto e texto de
 LSTela.pronto(function () {
   "use strict";
 
-  var orcamentos = JSON.parse(
-    document.getElementById("orcamentosDados").textContent || "[]"
-  );
+  /* AS LINHAS DA TELA MUDAM SEM A TELA MUDAR.
+
+     Trocar o filtro passou a substituir só os trechos da lista (ver
+     `ls-soft-navigation.js`), e um deles é justamente este JSON. Uma
+     variável lida uma vez, no início, guardaria as linhas do filtro
+     ANTERIOR -- e abrir para editar a terceira linha de "Aguardando
+     peça" traria a terceira linha de "Todas".
+
+     A memória é presa ao NÓ, não ao conteúdo: quando o trecho é
+     substituído, o elemento é outro, a comparação falha e o JSON é lido
+     de novo. Sem evento para disparar e sem nada para lembrar de chamar.
+     Enquanto o nó for o mesmo, não se analisa nada duas vezes. */
+  var _noDeOrcamentos = null;
+  var _dadosOrcamentos = [];
+
+  function orcamentosAtuais() {
+    var no = document.getElementById("orcamentosDados");
+    if (no !== _noDeOrcamentos) {
+      _noDeOrcamentos = no;
+      try {
+        _dadosOrcamentos = JSON.parse(no ? no.textContent : "[]") || [];
+      } catch (erro) {
+        _dadosOrcamentos = [];
+      }
+    }
+    return _dadosOrcamentos;
+  }
 
   var corpo = document.getElementById("itensCorpo");
   var podeEditarComercial = {{ pode_editar_comercial|yesno:"true,false" }};
@@ -1298,21 +976,24 @@ LSTela.pronto(function () {
   var endpointEnvio = "{% url 'orcamentos_inner' %}";
   var orcamentoEmEdicao = null;
 
-  /* Os cards filtram o conteúdo sem transformar cada toque em outra URL.
-     O href permanece como saída acessível quando o JavaScript não está
-     disponível. */
-  document.querySelectorAll("[data-orcamento-filtro]").forEach(function (card) {
-    card.addEventListener("click", function (evento) {
-      if (
-        evento.button !== 0 || evento.metaKey || evento.ctrlKey
-        || evento.shiftKey || evento.altKey
-      ) return;
-      if (!window.LSNavigation || !window.LSNavigation.silent) return;
-      evento.preventDefault();
-      evento.stopPropagation();
-      window.LSNavigation.silent(card.href);
-    });
-  });
+  /* OS CARTÕES DE FILTRO NÃO PRECISAM DE TRATAMENTO PRÓPRIO.
+
+     Aqui havia um ouvinte por cartão que trocava a lista "em silêncio":
+     sem mexer na URL, sem entrar no histórico. A intenção era boa -- não
+     encher o botão Voltar --, mas o preço apareceu inteiro:
+
+       * recarregar a página voltava para "Todos", porque o filtro
+         escolhido não estava escrito em lugar nenhum;
+       * mandar a tela para alguém mandava a tela sem o filtro;
+       * o Voltar saía da tela em vez de desfazer a escolha;
+       * e a tela de Ordens de Serviço, que nunca teve esse ouvinte,
+         se comportava de outro jeito na mesma situação.
+
+     Desde a troca por trechos (ver `ls-soft-navigation.js`) o argumento
+     que sustentava tudo isso -- "mudar a URL custa uma tela inteira" --
+     deixou de valer: o clique no cartão já não baixa a tela, baixa a
+     lista. Então ele volta a ser o que sempre foi, um link. A navegação
+     suave cuida dele como cuida de qualquer outro. */
 
   /* Datas de validade trabalham no calendário local do aparelho. Usar
      toISOString aqui empurrava a data um dia para trás em alguns fusos --
@@ -1910,7 +1591,7 @@ LSTela.pronto(function () {
      Abertura do modal
      ------------------------------------------------------------------ */
   function achar(id) {
-    return orcamentos.filter(function (o) {
+    return orcamentosAtuais().filter(function (o) {
       return Number(o.id) === Number(id);
     })[0];
   }

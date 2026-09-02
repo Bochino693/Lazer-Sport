@@ -37,6 +37,7 @@ from core.models import CategoriaPeca, Manutencao, PecasReposicao
 
 from .busca_local import montar_indice
 from . import clientes as svc_clientes
+from . import fragmento
 from .models import (
     Cliente,
     EnderecoCliente,
@@ -258,6 +259,17 @@ class OrdensServicoInnerView(
         busca = (request.GET.get("q") or "").strip()
         filtro = (request.GET.get("filtro") or "todos").strip()
 
+        # TROCAR O FILTRO NÃO PRECISA REMONTAR O FORMULÁRIO.
+        #
+        # Baixar menos foi metade do problema; a outra metade é o
+        # servidor deixar de PRODUZIR o que ninguém vai receber. Quando o
+        # pedido é só a lista, ficam de fora: os 300 clientes do
+        # autocompletar (com os endereços de cada um), os chamados de
+        # manutenção que o formulário copia, o catálogo de peças da
+        # reserva local e a checagem de SMTP. Nada disso aparece na
+        # tabela -- e cada um custa consulta, serialização ou rede.
+        so_a_lista = fragmento.pediu_lista(request)
+
         consulta = (
             OrdemServico.objects
             .select_related(
@@ -393,19 +405,21 @@ class OrdensServicoInnerView(
                 origem=origem,
             )
 
-        clientes = (
-            Cliente.objects
-            .select_related("parceiro")
-            .prefetch_related(Prefetch(
-                "enderecos",
-                queryset=EnderecoCliente.objects.order_by("id"),
-            ))
-            .order_by("nome_cliente")
-        )
-        clientes_dados = [
-            svc_clientes.opcao_de_busca(cliente)
-            for cliente in clientes
-        ]
+        clientes_dados = []
+        if not so_a_lista:
+            clientes = (
+                Cliente.objects
+                .select_related("parceiro")
+                .prefetch_related(Prefetch(
+                    "enderecos",
+                    queryset=EnderecoCliente.objects.order_by("id"),
+                ))
+                .order_by("nome_cliente")
+            )
+            clientes_dados = [
+                svc_clientes.opcao_de_busca(cliente)
+                for cliente in clientes
+            ]
 
         # ------------------------------------------------------------------
         # CHAMADOS DE MANUTENÇÃO QUE O FORMULÁRIO PODE COPIAR
@@ -415,44 +429,48 @@ class OrdensServicoInnerView(
         # esse chamado precisa existir na lista mesmo que já esteja
         # concluído ou fora da janela dos 100 -- senão o formulário abre
         # vazio e a promessa de poupar digitação não se cumpre.
-        manutencoes = list(
-            Manutencao.objects
-            .filter(status__in=("P", "A"))
-            .select_related("brinquedo", "usuario__user")
-            .order_by("criado_em")[:100]
-        )
+        manutencoes = []
+        manutencoes_dados = {}
         manutencao_pedida = 0
-        pedido = (request.GET.get("manutencao") or "").strip()
-        if pedido.isdigit():
-            manutencao_pedida = int(pedido)
-            if not any(m.id == manutencao_pedida for m in manutencoes):
-                extra = (
-                    Manutencao.objects
-                    .select_related("brinquedo", "usuario__user")
-                    .filter(pk=manutencao_pedida)
-                    .first()
-                )
-                if extra:
-                    manutencoes.insert(0, extra)
-                else:
-                    manutencao_pedida = 0
+        if not so_a_lista:
+            manutencoes = list(
+                Manutencao.objects
+                .filter(status__in=("P", "A"))
+                .select_related("brinquedo", "usuario__user")
+                .order_by("criado_em")[:100]
+            )
+            pedido = (request.GET.get("manutencao") or "").strip()
+            if pedido.isdigit():
+                manutencao_pedida = int(pedido)
+                if not any(m.id == manutencao_pedida for m in manutencoes):
+                    extra = (
+                        Manutencao.objects
+                        .select_related("brinquedo", "usuario__user")
+                        .filter(pk=manutencao_pedida)
+                        .first()
+                    )
+                    if extra:
+                        manutencoes.insert(0, extra)
+                    else:
+                        manutencao_pedida = 0
 
-        # Um chamado já atendido continua podendo virar outra O.S. (uma
-        # segunda visita é comum), mas quem escolhe precisa saber disso
-        # antes de clicar -- e não depois de gerar a segunda.
-        com_os = set(
-            OrdemServico.objects
-            .filter(manutencao_id__in=[m.id for m in manutencoes])
-            .exclude(status=OrdemServico.Status.SUBSTITUIDA)
-            .values_list("manutencao_id", flat=True)
-        )
-        manutencoes_dados = {
-            str(m.id): espelho_da_manutencao(m, m.id in com_os)
-            for m in manutencoes
-        }
+            # Um chamado já atendido continua podendo virar outra O.S.
+            # (uma segunda visita é comum), mas quem escolhe precisa
+            # saber disso antes de clicar -- e não depois de gerar a
+            # segunda.
+            com_os = set(
+                OrdemServico.objects
+                .filter(manutencao_id__in=[m.id for m in manutencoes])
+                .exclude(status=OrdemServico.Status.SUBSTITUIDA)
+                .values_list("manutencao_id", flat=True)
+            )
+            manutencoes_dados = {
+                str(m.id): espelho_da_manutencao(m, m.id in com_os)
+                for m in manutencoes
+            }
 
         acesso = capacidades(request.user)
-        return render(request, "ordens_servico_inner.html", {
+        contexto = {
             "ordens": ordens,
             "ordens_dados": [self.serializar(ordem) for ordem in ordens],
             "page_obj": pagina,
@@ -513,7 +531,7 @@ class OrdensServicoInnerView(
             # Reserva local da busca de peças. A tela já conseguiu abrir,
             # então esta consulta simples também conseguiu; se a chamada
             # assíncrona cair, o técnico continua trabalhando sem perder a O.S.
-            "itens_os_fallback": [
+            "itens_os_fallback": [] if so_a_lista else [
                 {
                     "valor": f"r:{peca.pk}",
                     "rotulo": peca.nome,
@@ -542,11 +560,17 @@ class OrdensServicoInnerView(
                 }
                 for peca in PecasReposicao.objects.all().order_by("nome")
             ],
-            "email_configurado": smtp_configurado(),
-            "email_diagnostico": diagnostico_smtp(),
+            # A checagem de SMTP fala com a configuração de e-mail. É
+            # barata, mas não é grátis, e a tabela não a usa.
+            "email_configurado": so_a_lista or smtp_configurado(),
+            "email_diagnostico": None if so_a_lista else diagnostico_smtp(),
             "pode_editar": acesso["ordens_servico_editar"],
             "pode_pagamento": acesso["ordens_servico_pagamento"],
-        })
+        }
+        return fragmento.responder(
+            request, "ordens_servico_inner.html",
+            "partes/os_lista.html", contexto,
+        )
 
     @staticmethod
     def dinheiro_do_topo(consulta, arquivadas):

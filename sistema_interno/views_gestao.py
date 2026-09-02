@@ -64,6 +64,7 @@ from core.models import (
 from .busca_local import montar_indice
 from . import clientes as svc_clientes
 from . import etapas_padrao
+from . import fragmento
 from . import financeiro as fin
 from .models import (
     AtividadeOrcamento,
@@ -488,7 +489,16 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
             if not orcamento.pode_excluir and request.user.is_superuser:
                 orcamento.pode_excluir = True
 
-        buffets = list(
+        # TROCAR O FILTRO NÃO PRECISA REMONTAR O FORMULÁRIO.
+        #
+        # Quando o pedido é só a lista (ver `fragmento.py`), o que o
+        # modal de montar orçamento consome fica de fora: a lista de
+        # buffets, a contagem do catálogo -- três `COUNT` em tabelas
+        # diferentes -- e a checagem de SMTP. A tabela não usa nada
+        # disso, e cada item custa consulta ou configuração lida.
+        so_a_lista = fragmento.pediu_lista(request)
+
+        buffets = [] if so_a_lista else list(
             Cliente.objects.filter(tipo=Cliente.Tipo.BUFFET).order_by("nome_cliente")
         )
 
@@ -525,7 +535,7 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
             # oferecia ProdutoInterno -- o que a fábrica monta --, e quem
             # orça aluguel de brinquedo tinha de digitar tudo à mão, com
             # nome e preço fora do que está publicado no site.
-            "total_itens_disponiveis": (
+            "total_itens_disponiveis": 0 if so_a_lista else (
                 Brinquedos.objects.count()
                 + ProdutoInterno.objects.filter(ativo=True).count()
                 + PecasReposicao.objects.filter(ativo=True).count()
@@ -551,8 +561,8 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
             "tipos_cliente": Cliente.Tipo.choices,
             # O gestor precisa saber ANTES de tentar que o e-mail não sai
             # daqui: sem isso, "enviei e não chegou" vira mistério.
-            "email_configurado": smtp_configurado(),
-            "email_diagnostico": diagnostico_smtp(),
+            "email_configurado": so_a_lista or smtp_configurado(),
+            "email_diagnostico": None if so_a_lista else diagnostico_smtp(),
             "buffets": buffets,
             "estabelecimentos": Estabelecimentos.objects.order_by(
                 "nome_estabelecimento"
@@ -576,7 +586,10 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
                 (AvaliacaoBlocoOrcamento.Status.AJUSTES, "Solicitar ajustes"),
             ),
         }
-        return render(request, "orcamentos_inner.html", ctx)
+        return fragmento.responder(
+            request, "orcamentos_inner.html",
+            "partes/orcamentos_lista.html", ctx,
+        )
 
     @staticmethod
     def serializar(orcamento):

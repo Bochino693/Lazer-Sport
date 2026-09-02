@@ -232,6 +232,8 @@
   {% endcomment %}
   {# Troca telas e filtros sem uma segunda requisição; cache só durante a aba. #}
   <script src="{% estatico 'interno/ls-soft-navigation.js' %}" defer></script>
+  {# O nome do ícone quando o menu está fechado: fora do menu, para não ser cortado. #}
+  <script src="{% estatico 'interno/ls-trilho.js' %}" defer></script>
   <!-- Barra de carregamento no topo, compartilhada com o painel /adm. -->
   <link rel="stylesheet" href="{% estatico 'site/ls-page-loader.css' %}">
   <script src="{% estatico 'site/ls-page-loader.js' %}" defer></script>
@@ -271,11 +273,11 @@
       {% if permissoes_interno.gestao %}
       <div class="ls-nav-section">
         <span class="ls-nav-caption">Painel</span>
-        <a data-titulo="Visão geral" class="ls-nav-item {% if request.resolver_match.url_name == 'home_inner' %}active{% endif %}" href="{% url 'home_inner' %}">
+        <a data-titulo="Visão geral" aria-label="Visão geral" class="ls-nav-item {% if request.resolver_match.url_name == 'home_inner' %}active{% endif %}" href="{% url 'home_inner' %}">
           <span class="ls-nav-icon"><i class="bi bi-grid-fill"></i></span>
           <span>Visão geral</span>
         </a>
-        <a data-titulo="Indicadores" class="ls-nav-item {% if request.resolver_match.url_name == 'dashboard_estoque' %}active{% endif %}" href="{% url 'dashboard_estoque' %}">
+        <a data-titulo="Indicadores" aria-label="Indicadores" class="ls-nav-item {% if request.resolver_match.url_name == 'dashboard_estoque' %}active{% endif %}" href="{% url 'dashboard_estoque' %}">
           <span class="ls-nav-icon"><i class="bi bi-activity"></i></span>
           <span>Indicadores</span>
         </a>
@@ -285,15 +287,15 @@
       {% if permissoes_interno.estoque %}
       <div class="ls-nav-section">
         <span class="ls-nav-caption">Estoque</span>
-        <a data-titulo="Estoque" class="ls-nav-item {% if request.resolver_match.url_name == 'stock' or request.resolver_match.url_name == 'estoque_inner' %}active{% endif %}" href="{% url 'stock' %}">
+        <a data-titulo="Estoque" aria-label="Estoque" class="ls-nav-item {% if request.resolver_match.url_name == 'stock' or request.resolver_match.url_name == 'estoque_inner' %}active{% endif %}" href="{% url 'stock' %}">
           <span class="ls-nav-icon"><i class="bi bi-box-seam-fill"></i></span>
           <span>Estoque</span>
         </a>
-        <a data-titulo="Materiais" class="ls-nav-item {% if request.resolver_match.url_name == 'materiais_inner' %}active{% endif %}" href="{% url 'materiais_inner' %}">
+        <a data-titulo="Materiais" aria-label="Materiais" class="ls-nav-item {% if request.resolver_match.url_name == 'materiais_inner' %}active{% endif %}" href="{% url 'materiais_inner' %}">
           <span class="ls-nav-icon"><i class="bi bi-tools"></i></span>
           <span>Materiais</span>
         </a>
-        <a data-titulo="Movimentações" class="ls-nav-item {% if request.resolver_match.url_name == 'movimentacoes_inner' %}active{% endif %}" href="{% url 'movimentacoes_inner' %}">
+        <a data-titulo="Movimentações" aria-label="Movimentações" class="ls-nav-item {% if request.resolver_match.url_name == 'movimentacoes_inner' %}active{% endif %}" href="{% url 'movimentacoes_inner' %}">
           <span class="ls-nav-icon"><i class="bi bi-arrow-left-right"></i></span>
           <span>Movimentações</span>
         </a>
@@ -303,20 +305,20 @@
       {% if permissoes_interno.producao %}
       <div class="ls-nav-section">
         <span class="ls-nav-caption">Produção</span>
-        <a data-titulo="Acompanhamento" class="ls-nav-item {% if request.resolver_match.url_name == 'minha_producao' or request.resolver_match.url_name == 'producao_ordem_detalhe' %}active{% endif %}" href="{% url 'minha_producao' %}">
+        <a data-titulo="Acompanhamento" aria-label="Acompanhamento" class="ls-nav-item {% if request.resolver_match.url_name == 'minha_producao' or request.resolver_match.url_name == 'producao_ordem_detalhe' %}active{% endif %}" href="{% url 'minha_producao' %}">
           <span class="ls-nav-icon"><i class="bi bi-list-check"></i></span>
           <span>Acompanhamento</span>
           <span class="ls-nav-count" data-selo="count_producao" {% if not count_producao %}hidden{% endif %}>{{ count_producao }}</span>
         </a>
-        <a data-titulo="Produtos e ficha técnica" class="ls-nav-item {% if request.resolver_match.url_name == 'produtos_producao' %}active{% endif %}" href="{% url 'produtos_producao' %}">
+        <a data-titulo="Produtos e ficha técnica" aria-label="Produtos e ficha técnica" class="ls-nav-item {% if request.resolver_match.url_name == 'produtos_producao' %}active{% endif %}" href="{% url 'produtos_producao' %}">
           <span class="ls-nav-icon"><i class="bi bi-diagram-3-fill"></i></span>
           <span>Produtos e ficha técnica</span>
         </a>
-        <a data-titulo="Guias das etapas" class="ls-nav-item {% if request.resolver_match.url_name == 'guias_producao' %}active{% endif %}" href="{% url 'guias_producao' %}">
+        <a data-titulo="Guias das etapas" aria-label="Guias das etapas" class="ls-nav-item {% if request.resolver_match.url_name == 'guias_producao' %}active{% endif %}" href="{% url 'guias_producao' %}">
           <span class="ls-nav-icon"><i class="bi bi-journal-richtext"></i></span>
           <span>Guias das etapas</span>
         </a>
-        <a data-titulo="Ordens de produção" class="ls-nav-item {% if request.resolver_match.url_name == 'ordens_producao' %}active{% endif %}" href="{% url 'ordens_producao' %}">
+        <a data-titulo="Ordens de produção" aria-label="Ordens de produção" class="ls-nav-item {% if request.resolver_match.url_name == 'ordens_producao' %}active{% endif %}" href="{% url 'ordens_producao' %}">
           <span class="ls-nav-icon"><i class="bi bi-hammer"></i></span>
           <span>Ordens de produção</span>
         </a>
@@ -327,41 +329,41 @@
       <div class="ls-nav-section">
         <span class="ls-nav-caption">Comercial</span>
         {% if permissoes_interno.clientes %}
-        <a data-titulo="Clientes" class="ls-nav-item {% if request.resolver_match.url_name == 'clientes_inner' %}active{% endif %}" href="{% url 'clientes_inner' %}">
+        <a data-titulo="Clientes" aria-label="Clientes" class="ls-nav-item {% if request.resolver_match.url_name == 'clientes_inner' %}active{% endif %}" href="{% url 'clientes_inner' %}">
           <span class="ls-nav-icon"><i class="bi bi-people-fill"></i></span>
           <span>Clientes</span>
           <span class="ls-nav-count" data-selo="count_clientes_incompletos" {% if not count_clientes_incompletos %}hidden{% endif %}>{{ count_clientes_incompletos }}</span>
         </a>
         {% endif %}
         {% if permissoes_interno.financeiro %}
-        <a data-titulo="Financeiro" class="ls-nav-item {% if request.resolver_match.url_name == 'financeiro_inner' %}active{% endif %}" href="{% url 'financeiro_inner' %}">
+        <a data-titulo="Financeiro" aria-label="Financeiro" class="ls-nav-item {% if request.resolver_match.url_name == 'financeiro_inner' %}active{% endif %}" href="{% url 'financeiro_inner' %}">
           <span class="ls-nav-icon"><i class="bi bi-graph-up-arrow"></i></span>
           <span>Financeiro</span>
         </a>
         {% endif %}
         {% if permissoes_interno.vendas_financeiro %}
-        <a data-titulo="Vendas" class="ls-nav-item {% if request.resolver_match.url_name == 'vendas_inner' %}active{% endif %}" href="{% url 'vendas_inner' %}">
+        <a data-titulo="Vendas" aria-label="Vendas" class="ls-nav-item {% if request.resolver_match.url_name == 'vendas_inner' %}active{% endif %}" href="{% url 'vendas_inner' %}">
           <span class="ls-nav-icon"><i class="bi bi-receipt-cutoff"></i></span>
           <span>Vendas</span>
           <span class="ls-nav-count" data-selo="count_vendas" {% if not count_vendas %}hidden{% endif %}>{{ count_vendas }}</span>
         </a>
         {% endif %}
         {% if permissoes_interno.pedidos %}
-        <a data-titulo="Pedidos" class="ls-nav-item {% if request.resolver_match.url_name == 'pedidos_inner' %}active{% endif %}" href="{% url 'pedidos_inner' %}">
+        <a data-titulo="Pedidos" aria-label="Pedidos" class="ls-nav-item {% if request.resolver_match.url_name == 'pedidos_inner' %}active{% endif %}" href="{% url 'pedidos_inner' %}">
           <span class="ls-nav-icon"><i class="bi bi-box2-heart-fill"></i></span>
           <span>Pedidos</span>
           <span class="ls-nav-count" data-selo="count_pedidos" {% if not count_pedidos %}hidden{% endif %}>{{ count_pedidos }}</span>
         </a>
         {% endif %}
         {% if permissoes_interno.orcamentos %}
-        <a data-titulo="Orçamentos" class="ls-nav-item {% if request.resolver_match.url_name == 'orcamentos_inner' %}active{% endif %}" href="{% url 'orcamentos_inner' %}">
+        <a data-titulo="Orçamentos" aria-label="Orçamentos" class="ls-nav-item {% if request.resolver_match.url_name == 'orcamentos_inner' %}active{% endif %}" href="{% url 'orcamentos_inner' %}">
           <span class="ls-nav-icon"><i class="bi bi-file-earmark-text-fill"></i></span>
           <span>Orçamentos</span>
           <span class="ls-nav-count" data-selo="count_orcamentos" {% if not count_orcamentos %}hidden{% endif %}>{{ count_orcamentos }}</span>
         </a>
         {% endif %}
         {% if permissoes_interno.gestao %}
-        <a data-titulo="Clientes no mapa" class="ls-nav-item {% if request.resolver_match.url_name == 'clientes_admin' %}active{% endif %}" href="{% url 'clientes_admin' %}">
+        <a data-titulo="Clientes no mapa" aria-label="Clientes no mapa" class="ls-nav-item {% if request.resolver_match.url_name == 'clientes_admin' %}active{% endif %}" href="{% url 'clientes_admin' %}">
           <span class="ls-nav-icon"><i class="bi bi-geo-alt-fill"></i></span>
           <span>Clientes no mapa</span>
         </a>
@@ -373,14 +375,14 @@
       <div class="ls-nav-section">
         <span class="ls-nav-caption">Operação</span>
         {% if permissoes_interno.ordens_servico %}
-        <a data-titulo="Ordens de Serviço" class="ls-nav-item {% if request.resolver_match.url_name == 'ordens_servico_inner' or request.resolver_match.url_name == 'ordem_servico_previa_inner' %}active{% endif %}" href="{% url 'ordens_servico_inner' %}">
+        <a data-titulo="Ordens de Serviço" aria-label="Ordens de Serviço" class="ls-nav-item {% if request.resolver_match.url_name == 'ordens_servico_inner' or request.resolver_match.url_name == 'ordem_servico_previa_inner' %}active{% endif %}" href="{% url 'ordens_servico_inner' %}">
           <span class="ls-nav-icon"><i class="bi bi-clipboard2-check-fill"></i></span>
           <span>Ordens de Serviço</span>
           <span class="ls-nav-count" data-selo="count_ordens_servico" {% if not count_ordens_servico %}hidden{% endif %}>{{ count_ordens_servico }}</span>
         </a>
         {% endif %}
         {% if permissoes_interno.manutencoes %}
-        <a data-titulo="Manutenções" class="ls-nav-item {% if request.resolver_match.url_name == 'manutencao_inner' %}active{% endif %}" href="{% url 'manutencao_inner' %}">
+        <a data-titulo="Manutenções" aria-label="Manutenções" class="ls-nav-item {% if request.resolver_match.url_name == 'manutencao_inner' %}active{% endif %}" href="{% url 'manutencao_inner' %}">
           <span class="ls-nav-icon"><i class="bi bi-wrench-adjustable-circle-fill"></i></span>
           <span>Manutenções</span>
         </a>
@@ -390,7 +392,7 @@
           lado das O.S. porque é ali que quem fecha a caixa já está.
           Sem função exigida -- quem embala nem sempre é quem vende.
         {% endcomment %}
-        <a data-titulo="Etiquetas de transporte" class="ls-nav-item {% if request.resolver_match.url_name == 'etiquetas_inner' %}active{% endif %}" href="{% url 'etiquetas_inner' %}">
+        <a data-titulo="Etiquetas de transporte" aria-label="Etiquetas de transporte" class="ls-nav-item {% if request.resolver_match.url_name == 'etiquetas_inner' %}active{% endif %}" href="{% url 'etiquetas_inner' %}">
           <span class="ls-nav-icon"><i class="bi bi-upc-scan"></i></span>
           <span>Etiquetas</span>
         </a>
@@ -400,40 +402,40 @@
       {% if permissoes_interno.site %}
       <div class="ls-nav-section">
         <span class="ls-nav-caption">Site e aplicativo</span>
-        <a data-titulo="Brinquedos do site" class="ls-nav-item {% if request.resolver_match.url_name == 'brinquedos_admin' %}active{% endif %}" href="{% url 'brinquedos_admin' %}">
+        <a data-titulo="Brinquedos do site" aria-label="Brinquedos do site" class="ls-nav-item {% if request.resolver_match.url_name == 'brinquedos_admin' %}active{% endif %}" href="{% url 'brinquedos_admin' %}">
           <span class="ls-nav-icon"><i class="bi bi-controller"></i></span><span>Brinquedos</span>
         </a>
-        <a data-titulo="Peças de reposição" class="ls-nav-item {% if request.resolver_match.url_name == 'pecas_admin' %}active{% endif %}" href="{% url 'pecas_admin' %}">
+        <a data-titulo="Peças de reposição" aria-label="Peças de reposição" class="ls-nav-item {% if request.resolver_match.url_name == 'pecas_admin' %}active{% endif %}" href="{% url 'pecas_admin' %}">
           <span class="ls-nav-icon"><i class="bi bi-wrench-adjustable"></i></span><span>Peças de reposição</span>
         </a>
-        <a data-titulo="Combos" class="ls-nav-item {% if request.resolver_match.url_name == 'combos_admin' %}active{% endif %}" href="{% url 'combos_admin' %}">
+        <a data-titulo="Combos" aria-label="Combos" class="ls-nav-item {% if request.resolver_match.url_name == 'combos_admin' %}active{% endif %}" href="{% url 'combos_admin' %}">
           <span class="ls-nav-icon"><i class="bi bi-box2-heart-fill"></i></span><span>Combos</span>
         </a>
-        <a data-titulo="Promoções" class="ls-nav-item {% if request.resolver_match.url_name == 'promocoes_admin' %}active{% endif %}" href="{% url 'promocoes_admin' %}">
+        <a data-titulo="Promoções" aria-label="Promoções" class="ls-nav-item {% if request.resolver_match.url_name == 'promocoes_admin' %}active{% endif %}" href="{% url 'promocoes_admin' %}">
           <span class="ls-nav-icon"><i class="bi bi-tags-fill"></i></span><span>Promoções</span>
         </a>
-        <a data-titulo="Banners" class="ls-nav-item {% if request.resolver_match.url_name == 'banner_adm' %}active{% endif %}" href="{% url 'banner_adm' %}">
+        <a data-titulo="Banners" aria-label="Banners" class="ls-nav-item {% if request.resolver_match.url_name == 'banner_adm' %}active{% endif %}" href="{% url 'banner_adm' %}">
           <span class="ls-nav-icon"><i class="bi bi-images"></i></span><span>Banners</span>
         </a>
-        <a data-titulo="Eventos" class="ls-nav-item {% if request.resolver_match.url_name == 'eventos_admin' %}active{% endif %}" href="{% url 'eventos_admin' %}">
+        <a data-titulo="Eventos" aria-label="Eventos" class="ls-nav-item {% if request.resolver_match.url_name == 'eventos_admin' %}active{% endif %}" href="{% url 'eventos_admin' %}">
           <span class="ls-nav-icon"><i class="bi bi-calendar2-event-fill"></i></span><span>Eventos</span>
         </a>
-        <a data-titulo="Projetos" class="ls-nav-item {% if request.resolver_match.url_name == 'projetos_admin' %}active{% endif %}" href="{% url 'projetos_admin' %}">
+        <a data-titulo="Projetos" aria-label="Projetos" class="ls-nav-item {% if request.resolver_match.url_name == 'projetos_admin' %}active{% endif %}" href="{% url 'projetos_admin' %}">
           <span class="ls-nav-icon"><i class="bi bi-folder-fill"></i></span><span>Projetos</span>
         </a>
-        <a data-titulo="Cupons" class="ls-nav-item {% if request.resolver_match.url_name == 'cupons_admin' %}active{% endif %}" href="{% url 'cupons_admin' %}">
+        <a data-titulo="Cupons" aria-label="Cupons" class="ls-nav-item {% if request.resolver_match.url_name == 'cupons_admin' %}active{% endif %}" href="{% url 'cupons_admin' %}">
           <span class="ls-nav-icon"><i class="bi bi-ticket-perforated-fill"></i></span><span>Cupons</span>
         </a>
-        <a data-titulo="Campanhas" class="ls-nav-item {% if request.resolver_match.url_name == 'campanhas_inner' or request.resolver_match.url_name == 'campanha_detalhe' %}active{% endif %}" href="{% url 'campanhas_inner' %}">
+        <a data-titulo="Campanhas" aria-label="Campanhas" class="ls-nav-item {% if request.resolver_match.url_name == 'campanhas_inner' or request.resolver_match.url_name == 'campanha_detalhe' %}active{% endif %}" href="{% url 'campanhas_inner' %}">
           <span class="ls-nav-icon"><i class="bi bi-megaphone-fill"></i></span><span>Campanhas</span>
         </a>
-        <a data-titulo="Curtidas e desejos" class="ls-nav-item {% if request.resolver_match.url_name == 'engajamento_admin' %}active{% endif %}" href="{% url 'engajamento_admin' %}">
+        <a data-titulo="Curtidas e desejos" aria-label="Curtidas e desejos" class="ls-nav-item {% if request.resolver_match.url_name == 'engajamento_admin' %}active{% endif %}" href="{% url 'engajamento_admin' %}">
           <span class="ls-nav-icon"><i class="bi bi-heart-fill"></i></span><span>Curtidas e desejos</span>
         </a>
-        <a data-titulo="Indicadores do site" class="ls-nav-item {% if request.resolver_match.url_name == 'dashboards' %}active{% endif %}" href="{% url 'dashboards' %}">
+        <a data-titulo="Indicadores do site" aria-label="Indicadores do site" class="ls-nav-item {% if request.resolver_match.url_name == 'dashboards' %}active{% endif %}" href="{% url 'dashboards' %}">
           <span class="ls-nav-icon"><i class="bi bi-bar-chart-fill"></i></span><span>Indicadores do site</span>
         </a>
-        <a data-titulo="Abrir a loja" class="ls-nav-item" href="{% url 'home' %}" target="_blank" rel="noopener">
+        <a data-titulo="Abrir a loja" aria-label="Abrir a loja" class="ls-nav-item" href="{% url 'home' %}" target="_blank" rel="noopener">
           <span class="ls-nav-icon"><i class="bi bi-box-arrow-up-right"></i></span><span>Abrir a loja</span>
         </a>
       </div>
@@ -442,13 +444,13 @@
       {% if permissoes_interno.usuarios %}
       <div class="ls-nav-section">
         <span class="ls-nav-caption">Administração</span>
-        <a data-titulo="Equipe e acessos" class="ls-nav-item {% if request.resolver_match.url_name == 'usuarios_equipe' %}active{% endif %}" href="{% url 'usuarios_equipe' %}">
+        <a data-titulo="Equipe e acessos" aria-label="Equipe e acessos" class="ls-nav-item {% if request.resolver_match.url_name == 'usuarios_equipe' %}active{% endif %}" href="{% url 'usuarios_equipe' %}">
           <span class="ls-nav-icon"><i class="bi bi-shield-lock-fill"></i></span><span>Equipe e acessos</span>
         </a>
-        <a data-titulo="Avaliação dos setores" class="ls-nav-item {% if request.resolver_match.url_name == 'avaliacao_setores' %}active{% endif %}" href="{% url 'avaliacao_setores' %}">
+        <a data-titulo="Avaliação dos setores" aria-label="Avaliação dos setores" class="ls-nav-item {% if request.resolver_match.url_name == 'avaliacao_setores' %}active{% endif %}" href="{% url 'avaliacao_setores' %}">
           <span class="ls-nav-icon"><i class="bi bi-clipboard-data-fill"></i></span><span>Avaliação dos setores</span>
         </a>
-        <a data-titulo="Contas de clientes" class="ls-nav-item {% if request.resolver_match.url_name == 'clients' %}active{% endif %}" href="{% url 'clients' %}">
+        <a data-titulo="Contas de clientes" aria-label="Contas de clientes" class="ls-nav-item {% if request.resolver_match.url_name == 'clients' %}active{% endif %}" href="{% url 'clients' %}">
           <span class="ls-nav-icon"><i class="bi bi-person-vcard-fill"></i></span><span>Contas de clientes</span>
         </a>
       </div>
