@@ -1719,14 +1719,64 @@ class Orcamento(Prime):
         apagar o papel que justifica o valor recebido. Se o cliente quer
         outra coisa depois de pagar, isso é uma proposta nova -- não uma
         versão desta.
+
+        A QUE JÁ VIROU O.S. TAMBÉM FICA DE FORA, e por isto o servidor
+        conferia à parte: a proposta que liberou execução fica congelada
+        junto com ela. Agora a regra inteira mora aqui, e a tela e o
+        servidor perguntam à mesma propriedade -- era possível esconder o
+        botão e ainda assim aceitar o POST.
         """
-        return (
+        return bool(
             self.pk
             and not self.pode_editar
             and not self.quitado
             and self.status != self.Status.SUBSTITUIDO
             and not hasattr(self, "orcamento_refeito")
+            and not hasattr(self, "ordem_servico")
         )
+
+    @property
+    def recusada(self):
+        """O cliente disse não -- pela página dele ou pelo telefone.
+
+        As duas recusas valem o mesmo: em ambas existe uma negociação
+        viva que precisa de outra proposta. O que mudava era a qualidade
+        do registro -- a recusa pelo site guardava motivo, autor e
+        instante; a verbal guardava só o carimbo "Recusado". Ver
+        `registrar_recusa`.
+        """
+        return self.status == self.Status.RECUSADO
+
+    @property
+    def motivo_da_proxima_versao(self):
+        """O que a versão seguinte precisa resolver, em uma frase.
+
+        Refazer criava um rascunho limpo, sem memória nenhuma do que o
+        cliente tinha objetado. Quem ajustava o preço abria a proposta
+        nova sem saber se o problema era preço, prazo ou escopo -- e ia
+        perguntar de novo ao colega, ou ao cliente.
+        """
+        return (self.motivo_recusa or self.motivo_negociacao or "").strip()
+
+    def registrar_recusa(self, motivo="", por="", quando=None):
+        """Carimba a recusa com motivo, autor e instante.
+
+        A recusa que chega pela página do cliente já preenchia os três.
+        A verbal -- que é a mais comum, porque o cliente responde por
+        telefone ou no balcão -- só mudava o status: a proposta ficava
+        "Recusada" sem dizer por quem nem por quê, e a versão seguinte
+        nascia às cegas. Os dois caminhos passam por aqui.
+        """
+        self.status = self.Status.RECUSADO
+        if motivo:
+            self.motivo_recusa = motivo
+        if por:
+            self.respondido_por = por
+        self.respondido_em = quando or timezone.now()
+        self.save(update_fields=[
+            "status", "motivo_recusa", "respondido_por",
+            "respondido_em", "atualizado",
+        ])
 
     @property
     def dias_para_vencer(self):
@@ -2318,6 +2368,15 @@ class OrdemServico(Prime):
     #: Situações em que a O.S. já saiu de cena e a lista não a mostra de
     #: primeira. Ver `OrdensServicoInnerView.get`.
     ARQUIVADAS = (Status.SUBSTITUIDA,)
+    #: O serviço ainda não começou: a data marcada é promessa, e não
+    #: histórico. É nestas situações que a agenda vencida invalida o
+    #: documento. Ver `agenda_vencida`.
+    AGUARDANDO_A_DATA = (
+        Status.RASCUNHO,
+        Status.AGUARDANDO_RESPOSTA,
+        Status.ABERTA,
+        Status.AGENDADA,
+    )
 
     # ================================================================
     # AS ETAPAS: O QUE SE SABE, E QUANDO
@@ -2613,6 +2672,27 @@ class OrdemServico(Prime):
         return not self.arquivada
 
     @property
+    def agenda_vencida(self):
+        """A data marcada já passou e o serviço não andou?
+
+        É a validade da O.S. O orçamento tem "Válido até"; a O.S. tem o
+        compromisso de data, e é ele que envelhece. Uma O.S. marcada para
+        a terça passada, ainda parada em "Agendada", é um documento que
+        promete ao cliente um dia que não existe mais.
+
+        Só conta enquanto o serviço não andou. Depois de entrar em
+        execução ou de concluir, a data agendada vira histórico do que
+        aconteceu, e histórico não vence -- reenviar o documento de um
+        serviço já feito é legítimo, e acontece toda vez que o cliente
+        pede a segunda via.
+        """
+        if not self.agendada_para:
+            return False
+        if self.status not in self.AGUARDANDO_A_DATA:
+            return False
+        return self.agendada_para < timezone.now()
+
+    @property
     def pode_enviar(self):
         """Ainda faz sentido mandar (ou remandar) esta O.S. ao cliente?
 
@@ -2623,8 +2703,36 @@ class OrdemServico(Prime):
         serviço que foi cancelado, ou a versão que já foi trocada por
         outra, é pedir que ele tome uma decisão sobre um papel que não
         vale mais.
+
+        A AGENDA VENCIDA ENTRA NA MESMA REGRA. O orçamento já não sai
+        depois de vencido, porque o cliente abriria uma página anunciando
+        "proposta expirada". A O.S. parada numa data que passou tem o
+        mesmo defeito, só que pior: o papel não avisa que está velho --
+        ele afirma um compromisso. Reagende, e o botão volta.
         """
-        return not self.arquivada and self.status != self.Status.CANCELADA
+        return (
+            not self.arquivada
+            and self.status != self.Status.CANCELADA
+            and not self.agenda_vencida
+        )
+
+    @property
+    def motivo_de_nao_enviar(self):
+        """Por que o botão de enviar não está aí. Em uma frase.
+
+        Botão que some sem explicação vira chamado para o suporte: quem
+        usa conclui que a tela quebrou, não que a regra mudou.
+        """
+        if self.arquivada:
+            return "Esta versão foi substituída; envie a versão que está valendo."
+        if self.status == self.Status.CANCELADA:
+            return "O.S. cancelada não é enviada ao cliente."
+        if self.agenda_vencida:
+            return (
+                "A data agendada já passou e o serviço não andou. "
+                "Reagende antes de enviar."
+            )
+        return ''
 
     @property
     def pode_refazer(self):

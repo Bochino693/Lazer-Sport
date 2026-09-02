@@ -1151,16 +1151,54 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
                 "histórico comercial. Atualize somente a Ordem de Serviço."
             )
 
-        if status == Orcamento.Status.EM_NEGOCIACAO:
-            orcamento.motivo_negociacao = texto(request, "motivo")
+        # O MOTIVO DA RECUSA É OBRIGATÓRIO, E NO SERVIDOR.
+        #
+        # A tela marca o campo como `required`, mas isso é conveniência do
+        # navegador. Sem a regra aqui, uma recusa registrada de outra
+        # forma -- POST repetido, aba antiga -- continuaria entrando muda,
+        # e a versão seguinte nasceria sem saber o que corrigir. É o único
+        # dado que só existe se alguém escrever na hora: uma semana depois
+        # ninguém lembra o que o cliente falou ao telefone.
+        motivo = texto(
+            request,
+            "motivo",
+            obrigatorio=status == Orcamento.Status.RECUSADO,
+            rotulo="o motivo da recusa",
+            limite=600,
+        )
 
-        orcamento.status = status
-        orcamento.save(update_fields=["status", "motivo_negociacao", "atualizado"])
+        if status == Orcamento.Status.EM_NEGOCIACAO:
+            orcamento.motivo_negociacao = motivo
+
+        if status == Orcamento.Status.RECUSADO:
+            # RECUSA VERBAL VALE O MESMO QUE A RECUSA PELO SITE.
+            #
+            # O cliente que responde pelo telefone ou no balcão é a
+            # maioria. Essa recusa mudava só o carimbo: a proposta ficava
+            # "Recusada" sem motivo, sem autor e sem instante -- enquanto
+            # a recusa feita na página do cliente guardava os três. Dois
+            # registros de qualidade diferente para o mesmo fato, e a
+            # versão seguinte nascendo sem saber o que corrigir.
+            orcamento.registrar_recusa(
+                motivo=motivo,
+                por=(
+                    request.user.get_full_name() or request.user.username
+                ) + " (informado pela equipe)",
+            )
+        else:
+            orcamento.status = status
+            orcamento.save(update_fields=[
+                "status", "motivo_negociacao", "atualizado",
+            ])
+
         registrar_atividade_orcamento(
             orcamento,
             request,
             AtividadeOrcamento.Tipo.SITUACAO,
-            resumo=orcamento.get_status_display(),
+            resumo=(
+                f"{orcamento.get_status_display()} — {motivo}"
+                if motivo else orcamento.get_status_display()
+            ),
         )
         mapa = orcamento.sincronizar_cliente_aprovado()
 
@@ -1177,30 +1215,41 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
         )
 
     def acao_refazer(self, request):
-        """Clona a proposta para negociar sem apagar a versão enviada."""
+        """Cria a versão seguinte quando o cliente não aceitou a proposta.
+
+        ESTE É O CAMINHO DA RECUSA -- e das duas recusas.
+
+        O cliente diz não pela página dele ou diz não pelo telefone. Nos
+        dois casos a negociação continua viva e o que falta é outra
+        proposta; o que não se faz é editar a que ele já leu, porque isso
+        apagaria o papel que está na mão dele.
+
+        TRÊS COISAS QUE FALTAVAM AQUI.
+
+        1. A VALIDADE VINHA COPIADA DA ANTERIOR. Refazer é o caminho
+           oficial da proposta vencida -- e a versão nova nascia com a
+           MESMA data vencida. Ou seja: o remédio saía com o defeito da
+           doença, e o botão de enviar já vinha apagado na proposta
+           recém-criada, sem nenhuma explicação na tela. Agora a versão
+           nova nasce com prazo novo a contar de hoje.
+
+        2. O MOTIVO NÃO ATRAVESSAVA. Quem ajustava o preço abria um
+           rascunho limpo, sem saber se o cliente tinha reclamado de
+           preço, de prazo ou de escopo. O motivo da recusa (ou da
+           negociação) entra na versão nova, junto com o que a equipe
+           escrever ao refazer.
+
+        3. AS REGRAS ESTAVAM EM DOIS LUGARES. A tela perguntava a
+           `pode_refazer`; o servidor reimplementava um subconjunto à
+           mão. Divergiram: o servidor não barrava a substituída. Agora
+           os dois perguntam à mesma propriedade.
+        """
         if not capacidades(request.user)["orcamentos_editar_comercial"]:
             return self.erro(
                 request, "Somente o Comercial pode refazer uma proposta.", status=403,
             )
 
         anterior = self._orcamento_do_usuario(request, request.POST.get("id"))
-        if anterior.status == Orcamento.Status.RASCUNHO:
-            raise ErroDeFormulario("Este orçamento ainda é rascunho e pode ser editado.")
-        if hasattr(anterior, "ordem_servico"):
-            raise ErroDeFormulario(
-                "Esta proposta já originou uma O.S. e não pode ganhar outra "
-                "versão. Os dois históricos permanecem congelados e separados."
-            )
-        if anterior.quitado:
-            # Refazer marca a atual como SUBSTITUIDO. Contra esta aqui o
-            # dinheiro já entrou: substituí-la apagaria o documento que
-            # explica o valor recebido. Quem quer outra coisa depois de
-            # pagar está pedindo uma proposta nova, não outra versão.
-            raise ErroDeFormulario(
-                "Esta proposta já está paga e não ganha outra versão: "
-                "o pagamento recebido precisa continuar apontando para "
-                "ela. Para o que vier depois, abra uma proposta nova."
-            )
         if hasattr(anterior, "orcamento_refeito"):
             nova = anterior.orcamento_refeito
             return self.sucesso(
@@ -1208,6 +1257,15 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
                 f"A versão {nova.versao} desta proposta já existe.",
                 id=nova.pk,
             )
+        if not anterior.pode_refazer:
+            raise ErroDeFormulario(self._porque_nao_refazer(anterior))
+
+        motivo = texto(request, "motivo", limite=600)
+        heranca = anterior.motivo_da_proxima_versao
+        if motivo and heranca and motivo != heranca:
+            motivo = f"{heranca}\n\n{motivo}"
+        elif not motivo:
+            motivo = heranca
 
         with transaction.atomic():
             anterior = Orcamento.objects.select_for_update().get(pk=anterior.pk)
@@ -1218,12 +1276,14 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
                 whatsapp_cliente=anterior.whatsapp_cliente,
                 email_cliente=anterior.email_cliente,
                 origem=anterior.origem,
-                validade=anterior.validade,
+                # PRAZO NOVO, E NÃO O DA ANTERIOR. Ver o item 1 acima.
+                validade=Orcamento.validade_padrao(),
                 desconto=anterior.desconto,
                 frete=anterior.frete,
                 forma_pagamento=anterior.forma_pagamento,
                 forma_envio=anterior.forma_envio,
                 observacoes=anterior.observacoes,
+                motivo_negociacao=motivo,
                 responsavel=request.user,
                 orcamento_anterior=anterior,
                 versao=anterior.versao + 1,
@@ -1251,14 +1311,53 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
                 nova,
                 request,
                 AtividadeOrcamento.Tipo.REFEITO,
-                resumo=f"Versão {nova.versao} da proposta #{anterior.pk}",
+                resumo=(
+                    f"Versão {nova.versao} da proposta #{anterior.pk}"
+                    + (f" — {motivo.splitlines()[0]}" if motivo else "")
+                ),
             )
 
+        prazo = nova.validade.strftime("%d/%m/%Y") if nova.validade else ""
         return self.sucesso(
             request,
-            f"Nova proposta #{nova.pk} criada sem alterar a anterior. Ajuste e envie quando estiver pronta.",
+            f"Versão {nova.versao} criada como proposta #{nova.pk}, com prazo "
+            f"novo até {prazo}. A anterior fica no histórico, intacta. "
+            "Ajuste os valores e envie."
+            + (" O motivo do cliente foi copiado para a nova versão." if motivo else ""),
             id=nova.pk,
         )
+
+    @staticmethod
+    def _porque_nao_refazer(orcamento):
+        """A recusa explica o motivo, em vez de dizer só que não pode.
+
+        Cada um destes casos tem uma saída diferente, e quem está na tela
+        precisa saber qual é a dele -- senão tenta de novo, ou desiste de
+        registrar o que o cliente falou.
+        """
+        if orcamento.pode_editar:
+            return (
+                "Esta proposta ainda é rascunho: edite-a no lugar, que é o "
+                "que ela ainda permite. Refazer serve para o que o cliente "
+                "já leu."
+            )
+        if orcamento.quitado:
+            return (
+                "Esta proposta já está paga e não ganha outra versão: o "
+                "pagamento recebido precisa continuar apontando para ela. "
+                "Para o que vier depois, abra uma proposta nova."
+            )
+        if hasattr(orcamento, "ordem_servico"):
+            return (
+                "Esta proposta já originou uma O.S. e não pode ganhar outra "
+                "versão. Os dois históricos permanecem congelados e separados."
+            )
+        if orcamento.status == Orcamento.Status.SUBSTITUIDO:
+            return (
+                "Esta versão já foi substituída. Refaça a partir da versão "
+                "que está valendo."
+            )
+        return "Esta proposta não aceita uma nova versão."
 
     def acao_pagamento(self, request):
         if not capacidades(request.user)["orcamentos_editar_financeiro"]:
@@ -1433,6 +1532,32 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
         if not orcamento.itens.exists():
             raise ErroDeFormulario(
                 "Este orçamento não tem itens. Adicione ao menos um antes de enviar."
+            )
+
+        # A VALIDADE VALE NO SERVIDOR, E NÃO SÓ NA TELA.
+        #
+        # A lista já escondia o botão de propostas vencidas, respondidas e
+        # substituídas -- mas era só isso: esconder. Uma aba aberta desde
+        # ontem, o histórico do navegador ou um POST repetido continuavam
+        # publicando o link de uma proposta que o cliente abriria vendo
+        # "proposta expirada". Esconder um botão é conveniência; a regra
+        # tem de estar onde a gravação acontece.
+        if not orcamento.pode_enviar:
+            if orcamento.vencido:
+                raise ErroDeFormulario(
+                    f"A proposta #{orcamento.pk} venceu em "
+                    f"{orcamento.validade.strftime('%d/%m/%Y')} e o link levaria o "
+                    "cliente a uma página de proposta expirada. Use "
+                    "‘Nova proposta’ para criar a versão com o preço de hoje."
+                )
+            if orcamento.status == Orcamento.Status.SUBSTITUIDO:
+                raise ErroDeFormulario(
+                    "Esta versão foi substituída por outra. Envie a versão "
+                    "que está valendo."
+                )
+            raise ErroDeFormulario(
+                "O cliente já respondeu a esta proposta. Reenviá-la pediria "
+                "de novo uma decisão que já foi tomada."
             )
 
         link = f"{endereco_do_site(request)}{orcamento.caminho_publico}"

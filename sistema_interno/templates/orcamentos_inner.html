@@ -267,12 +267,18 @@
                   versão nova, com o preço de hoje.
                 {% endcomment %}
                 {% if pode_editar_comercial and orcamento.pode_refazer %}
-                <form method="post" class="d-inline" action="{% url 'orcamentos_inner' %}" data-refazer>
-                  {% csrf_token %}<input type="hidden" name="action" value="refazer"><input type="hidden" name="id" value="{{ orcamento.id }}">
-                  <button class="btn btn-sm btn-outline-warning" type="submit" title="Criar outra proposta sem alterar esta">
-                    <i class="bi bi-file-earmark-plus"></i><span class="ls-action-label">Nova proposta</span>
-                  </button>
-                </form>
+                <button class="btn btn-sm btn-outline-warning" type="button"
+                        data-refazer="{{ orcamento.id }}"
+                        data-nome="{{ orcamento.destinatario }}"
+                        data-versao="{{ orcamento.versao }}"
+                        data-situacao-texto="{{ orcamento.get_status_display }}"
+                        data-motivo="{{ orcamento.motivo_da_proxima_versao }}"
+                        data-quem="{{ orcamento.respondido_por }}"
+                        data-recusada="{% if orcamento.recusada %}1{% else %}0{% endif %}"
+                        data-vencida="{% if orcamento.vencido %}1{% else %}0{% endif %}"
+                        title="Criar a versão seguinte sem alterar esta">
+                  <i class="bi bi-file-earmark-plus"></i><span class="ls-action-label">Nova proposta</span>
+                </button>
                 {% endif %}
                 {% if pode_editar_financeiro and orcamento.pode_receber_pagamento %}
                 <button type="button" class="btn btn-sm btn-outline-success"
@@ -1083,13 +1089,82 @@ Cadastro mínimo de propósito: nome, valor e categoria. Foto e texto de
             {% endif %}
           {% endfor %}
         </select>
-        <label class="form-label mt-3" for="situacaoMotivo">Motivo ou observação</label>
-        <textarea class="form-control" id="situacaoMotivo" name="motivo" rows="3"
+        <label class="form-label mt-3" for="situacaoMotivo" id="situacaoMotivoRotulo">Motivo ou observação</label>
+        <textarea class="form-control" id="situacaoMotivo" name="motivo" rows="3" maxlength="600"
+                  data-rotulo="o motivo"
                   placeholder="Ex.: cliente pediu desconto e troca de um item"></textarea>
+        {% comment %}
+          A RECUSA VERBAL PRECISA DO MOTIVO TANTO QUANTO A OUTRA.
+
+          O cliente que responde por telefone ou no balcão é a maioria.
+          Essa recusa entrava só como carimbo: a proposta virava
+          "Recusada" sem dizer por quê -- e a versão seguinte, que é o
+          caminho natural dali, nascia sem saber o que corrigir. A recusa
+          feita na página do cliente sempre guardou o motivo; as duas
+          passam a valer o mesmo.
+        {% endcomment %}
+        <div class="ls-refazer-nota" id="situacaoDica" hidden>
+          <i class="bi bi-arrow-repeat" aria-hidden="true"></i>
+          <span id="situacaoDicaTexto"></span>
+        </div>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
         <button type="submit" class="btn btn-primary">Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ================= MODAL: nova versão da proposta ================= -->
+{% comment %}
+  REFAZER É O QUE SE FAZ QUANDO O CLIENTE NÃO ACEITA.
+
+  Era um botão que submetia direto: um toque, e um rascunho novo
+  aparecia. Funcionava, mas não ajudava -- a versão nova nascia sem
+  memória do que tinha sido recusado, e quem ia mexer no preço abria a
+  tela sem saber se o problema era preço, prazo ou escopo.
+
+  Esta janela existe para carregar essa informação de uma versão para a
+  outra: mostra o que o cliente objetou (venha do site ou do telefone) e
+  pede, em uma linha, o que muda desta vez. As duas frases entram na
+  proposta nova e ficam no histórico.
+{% endcomment %}
+<div class="modal fade" id="modalRefazer" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <form class="modal-content" id="formRefazer" method="post" action="{% url 'orcamentos_inner' %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="refazer">
+      <input type="hidden" name="id" id="refazerId">
+      <div class="modal-header">
+        <div>
+          <span class="ls-modal-kicker">Negociação</span>
+          <h5 class="modal-title" id="refazerTitulo">Nova versão da proposta</h5>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body">
+        <div id="refazerErro" class="alert alert-danger d-none" role="alert"></div>
+        <p class="mb-2"><strong id="refazerNome"></strong></p>
+        <div class="ls-refazer-contexto" id="refazerContexto" hidden></div>
+        <label class="form-label mt-3" for="refazerMotivo">O que muda nesta versão</label>
+        <textarea class="form-control" id="refazerMotivo" name="motivo" rows="3"
+                  maxlength="600"
+                  placeholder="Ex.: desconto de 10% e retirada do item de transporte"></textarea>
+        <span class="form-text">
+          Fica no histórico e abre a proposta nova já explicada. Quem
+          retomar a negociação daqui a duas semanas lê isto primeiro.
+        </span>
+        <p class="ls-refazer-nota">
+          <i class="bi bi-shield-check" aria-hidden="true"></i>
+          A proposta atual não muda: ela fica no histórico como o que o
+          cliente leu. A nova nasce rascunho, com prazo novo a contar de
+          hoje, e com os mesmos itens para você ajustar.
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-warning">Criar a nova versão</button>
       </div>
     </form>
   </div>
@@ -1966,22 +2041,85 @@ LSTela.pronto(function () {
     });
   });
 
-  /* Refazer não devolve o registro antigo ao rascunho. O servidor cria
-     outra proposta e esta tela abre exatamente o novo id para edição. */
-  document.querySelectorAll("form[data-refazer]").forEach(function (form) {
-    form.addEventListener("submit", function (evento) {
-      evento.preventDefault();
-      var botao = form.querySelector('[type="submit"]');
-      if (botao) botao.disabled = true;
-      Painel.enviar(form).then(function (json) {
-        window.location.assign(
-          window.location.pathname + "?editar=" + encodeURIComponent(json.id)
-        );
-      }).catch(function (erro) {
-        if (botao) botao.disabled = false;
-        window.alert(erro.message);
-      });
+  /* ------------------------------------------------------------------
+     NOVA VERSÃO DA PROPOSTA
+
+     Refazer não devolve o registro antigo ao rascunho: o servidor cria
+     outra proposta e esta tela abre exatamente o novo id para edição.
+
+     A janela existe para o motivo atravessar. Ela mostra o que o cliente
+     objetou -- pela página dele ou pelo telefone, os dois chegam no mesmo
+     campo -- e pede o que muda desta vez.
+     ------------------------------------------------------------------ */
+  var refazerContexto = document.getElementById("refazerContexto");
+
+  function pintarContextoRefazer(dados) {
+    if (!refazerContexto) return;
+    var linhas = [];
+
+    if (dados.recusada === "1") {
+      linhas.push(
+        '<span class="ls-refazer-marca recusa">' +
+        '<i class="bi bi-x-circle" aria-hidden="true"></i> O cliente recusou</span>'
+      );
+    } else if (dados.vencida === "1") {
+      linhas.push(
+        '<span class="ls-refazer-marca vencida">' +
+        '<i class="bi bi-calendar-x" aria-hidden="true"></i> Proposta vencida</span>'
+      );
+    } else if (dados.situacaoTexto) {
+      linhas.push('<span class="ls-refazer-marca">' + dados.situacaoTexto + "</span>");
+    }
+
+    if (dados.motivo) {
+      linhas.push(
+        "<strong>O que o cliente disse</strong>" +
+        "<em>" + dados.motivo.replace(/&/g, "&amp;").replace(/</g, "&lt;") + "</em>"
+      );
+    } else if (dados.recusada === "1") {
+      /* Recusa sem motivo é a recusa antiga, de antes de o campo existir
+         -- ou alguém que pulou o campo. Dizer isso é melhor do que um
+         espaço vazio, porque orienta a perguntar antes de refazer. */
+      linhas.push(
+        "<strong>Sem motivo registrado</strong>" +
+        "<em>Vale confirmar com quem falou com o cliente antes de mexer no preço.</em>"
+      );
+    }
+
+    if (dados.quem) {
+      linhas.push('<span class="ls-refazer-quem">Respondido por ' + dados.quem + "</span>");
+    }
+
+    refazerContexto.innerHTML = linhas.join("");
+    refazerContexto.hidden = linhas.length === 0;
+  }
+
+  document.querySelectorAll("[data-refazer]").forEach(function (botao) {
+    botao.addEventListener("click", function () {
+      Painel.erro("refazerErro", "");
+      Painel.valor("refazerId", botao.dataset.refazer);
+      Painel.valor("refazerMotivo", "");
+      document.getElementById("refazerNome").textContent = botao.dataset.nome || "";
+      document.getElementById("refazerTitulo").textContent =
+        "Versão " + (parseInt(botao.dataset.versao, 10) + 1 || 2) + " da proposta";
+      pintarContextoRefazer(botao.dataset);
+      Painel.abrir("modalRefazer");
     });
+  });
+
+  Painel.ligar({
+    form: "formRefazer",
+    erro: "refazerErro",
+    rotuloCarregando: "Criando a versão…",
+    depois: function (json) {
+      Painel.fechar("modalRefazer");
+      /* Abre a versão nova já em edição: refazer só termina quando os
+         valores são ajustados, e deixar a pessoa procurando o rascunho
+         na lista era mandá-la fazer o trabalho do sistema. */
+      window.location.assign(
+        window.location.pathname + "?editar=" + encodeURIComponent(json.id)
+      );
+    },
   });
 
   /* ------------------------------------------------------------------
@@ -2036,6 +2174,49 @@ LSTela.pronto(function () {
   /* ------------------------------------------------------------------
      Situação e exclusão
      ------------------------------------------------------------------ */
+  var situacaoStatus = document.getElementById("situacaoStatus");
+  var situacaoMotivo = document.getElementById("situacaoMotivo");
+  var situacaoRotulo = document.getElementById("situacaoMotivoRotulo");
+  var situacaoDica = document.getElementById("situacaoDica");
+  var situacaoDicaTexto = document.getElementById("situacaoDicaTexto");
+
+  /* O campo de motivo muda de peso conforme a situação escolhida.
+
+     Em "Recusado" ele é obrigatório: é a única chance de registrar o que
+     o cliente falou, e é dele que a versão seguinte vai partir. Nas
+     outras continua opcional, porque ali é observação. */
+  function ajustarMotivoDaSituacao() {
+    if (!situacaoStatus || !situacaoMotivo) return;
+    var escolha = situacaoStatus.value;
+    var recusa = escolha === "recusado";
+
+    situacaoMotivo.required = recusa;
+    situacaoMotivo.placeholder = recusa
+      ? "O que o cliente falou: preço, prazo, escopo, comprou de outro…"
+      : "Ex.: cliente pediu desconto e troca de um item";
+    if (situacaoRotulo) {
+      situacaoRotulo.textContent = recusa
+        ? "Por que o cliente recusou"
+        : "Motivo ou observação";
+    }
+
+    if (!situacaoDica) return;
+    if (recusa) {
+      situacaoDicaTexto.textContent =
+        "Depois de registrar, use “Nova proposta” na mesma linha: a versão "
+        + "seguinte já nasce com este motivo e com prazo novo.";
+      situacaoDica.hidden = false;
+    } else if (escolha === "expirado") {
+      situacaoDicaTexto.textContent =
+        "Proposta expirada não gera mais link. O caminho é “Nova proposta”.";
+      situacaoDica.hidden = false;
+    } else {
+      situacaoDica.hidden = true;
+    }
+  }
+
+  situacaoStatus?.addEventListener("change", ajustarMotivoDaSituacao);
+
   document.querySelectorAll("[data-situacao]").forEach(function (b) {
     b.addEventListener("click", function () {
       Painel.erro("situacaoErro", "");
@@ -2043,6 +2224,7 @@ LSTela.pronto(function () {
       Painel.valor("situacaoStatus", b.dataset.status);
       Painel.valor("situacaoMotivo", "");
       document.getElementById("situacaoNome").textContent = b.dataset.nome;
+      ajustarMotivoDaSituacao();
       Painel.abrir("modalSituacao");
     });
   });

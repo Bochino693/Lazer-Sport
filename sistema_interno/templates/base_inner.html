@@ -4,7 +4,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="color-scheme" content="dark">
+  {# `color-scheme` real vem de cada tema no CSS; aqui só o palpite inicial. #}
+  <meta name="color-scheme" content="dark light">
 
   <link rel="icon" type="image/png" href="{% estatico 'images/lgooo.png' %}">
   <link rel="shortcut icon" type="image/png" href="{% estatico 'images/lgooo.png' %}">
@@ -22,7 +23,8 @@
     painel inteiro; por isso é uma view, e não um arquivo estático.
   {% endcomment %}
   <link rel="manifest" href="/manifest.webmanifest">
-  <meta name="theme-color" content="#13100B">
+  {# A barra do aparelho acompanha o tema; o script abaixo a reescreve. #}
+  <meta name="theme-color" content="#13100B" id="lsTemaCorBarra">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -128,6 +130,37 @@
     existir antes de qualquer script de tela -- que roda durante a
     leitura do corpo, antes dos arquivos marcados com `defer`.
   {% endcomment %}
+  {% comment %}
+    O TEMA É DECIDIDO ANTES DO PRIMEIRO PIXEL.
+
+    Este script é o único do painel que precisa ser síncrono e ficar no
+    alto do `<head>`, antes de qualquer folha de estilo. Se ele rodasse
+    depois -- ou com `defer` --, o navegador desenharia a tela inteira no
+    tema padrão e só então trocaria: um lampejo branco na cara de quem
+    escolheu escuro, toda vez que abre uma tela. É o defeito mais fácil
+    de introduzir e o mais difícil de ignorar depois.
+
+    São três escolhas, e a terceira não é um tema: `eclipse` é um tema,
+    `sistema` seria seguir o aparelho. Aqui o eclipse é tema de verdade,
+    com paleta própria -- ver o cabeçalho de `interno_modern.css`.
+
+    O try/catch existe porque `localStorage` LEVANTA em navegador com
+    armazenamento bloqueado, e uma exceção aqui derrubaria o resto do
+    `<head>` -- inclusive o menu.
+  {% endcomment %}
+  <script>
+    (function () {
+      var TEMAS = ["lua", "sol", "eclipse"];
+      var escolhido = "lua";
+      try {
+        var guardado = localStorage.getItem("ls-tema");
+        if (TEMAS.indexOf(guardado) !== -1) escolhido = guardado;
+      } catch (erro) {}
+      document.documentElement.setAttribute("data-tema", escolhido);
+      window.LSTema = { atual: escolhido, lista: TEMAS };
+    })();
+  </script>
+
   <script>
     window.LSTela = {
       pronto: function (fn) {
@@ -516,6 +549,33 @@ Dito em voz alta: este NÃO é o /adm do site. Quem trabalha nos
 {% endcomment %}
         <span class="ls-ambiente"><i class="bi bi-cone-striped"></i> Gestão interna</span>
 
+        {% comment %}
+          SOL, LUA E ECLIPSE — três botões, e não um que alterna.
+
+          Um botão que cicla obriga a passar pelo tema errado para chegar
+          ao que se quer, e não diz em que tema você está sem que você
+          decore o desenho do ícone. Três alvos lado a lado dizem as duas
+          coisas de uma vez: onde estou (o aceso) e para onde posso ir.
+
+          `aria-pressed` é o que faz o leitor de tela anunciar qual está
+          valendo -- num grupo de três ícones sem texto, é a única
+          informação que existe para quem não vê o realce.
+        {% endcomment %}
+        <div class="ls-tema" role="group" aria-label="Tema do painel">
+          <button type="button" class="ls-tema-botao" data-tema-escolha="sol"
+                  aria-pressed="false" title="Sol — claro" aria-label="Tema claro">
+            <i class="bi bi-brightness-high-fill" aria-hidden="true"></i>
+          </button>
+          <button type="button" class="ls-tema-botao" data-tema-escolha="eclipse"
+                  aria-pressed="false" title="Eclipse — meio-termo" aria-label="Tema eclipse">
+            <i class="bi bi-circle-half" aria-hidden="true"></i>
+          </button>
+          <button type="button" class="ls-tema-botao" data-tema-escolha="lua"
+                  aria-pressed="false" title="Lua — escuro" aria-label="Tema escuro">
+            <i class="bi bi-moon-stars-fill" aria-hidden="true"></i>
+          </button>
+        </div>
+
         <!-- ===================== central de avisos ===================== -->
         <div class="ls-avisos">
           <button type="button" class="ls-avisos-botao" id="avisosBotao"
@@ -657,6 +717,48 @@ Dito em voz alta: este NÃO é o /adm do site. Quem trabalha nos
   overlay?.addEventListener("click", closeSidebar);
   document.addEventListener("keydown", function (event) {
     if (event.key === "Escape") closeSidebar();
+  });
+
+  /* ---------------------------------------------------------------
+     Sol, lua e eclipse
+
+     O tema já foi aplicado no `<head>`, antes do primeiro pixel. Aqui
+     só se liga o botão e se guarda a escolha -- e se avisa a barra do
+     aparelho, que fica fora do documento e não acompanha CSS.
+     --------------------------------------------------------------- */
+  var COR_DA_BARRA = { lua: "#13100B", sol: "#F4EEE2", eclipse: "#3A342C" };
+
+  function pintarTema(tema) {
+    document.documentElement.setAttribute("data-tema", tema);
+    document.querySelectorAll("[data-tema-escolha]").forEach(function (botao) {
+      var aceso = botao.dataset.temaEscolha === tema;
+      botao.classList.toggle("ativo", aceso);
+      botao.setAttribute("aria-pressed", String(aceso));
+    });
+    var barra = document.getElementById("lsTemaCorBarra");
+    if (barra) barra.setAttribute("content", COR_DA_BARRA[tema] || COR_DA_BARRA.lua);
+    if (window.LSTema) window.LSTema.atual = tema;
+  }
+
+  pintarTema(
+    document.documentElement.getAttribute("data-tema") || "lua"
+  );
+
+  document.querySelectorAll("[data-tema-escolha]").forEach(function (botao) {
+    botao.addEventListener("click", function () {
+      var tema = botao.dataset.temaEscolha;
+      pintarTema(tema);
+      try { localStorage.setItem("ls-tema", tema); } catch (erro) {}
+      /* A confirmação existe porque a troca de tema é grande e imediata:
+         sem uma palavra, quem toca por engano não sabe o que aconteceu
+         nem como voltar. */
+      if (window.Painel && Painel.aviso) {
+        Painel.aviso(
+          { sol: "Tema claro", eclipse: "Tema eclipse", lua: "Tema escuro" }[tema],
+          "ok"
+        );
+      }
+    });
   });
 
   /* ---------------------------------------------------------------
