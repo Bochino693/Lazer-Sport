@@ -242,6 +242,65 @@ class EsperaDoDespertarTests(SimpleTestCase):
         self.assertIn("var PRAZOS_DO_PULSO = [6000, 50000];", painel)
         self.assertIn("PRAZOS_DO_PULSO[Math.min(tentativa,", painel)
 
+    def test_a_busca_de_fundo_nao_fala_com_a_tela(self):
+        """Era o defeito que a fábrica viu: 351 segundos sobre tela pronta.
+
+        A antecipação -- o `prefetch` que dispara quando o dedo encosta
+        num link -- usava o mesmo caminho da navegação de verdade. Quando
+        ela demorava, e ela demora justamente porque busca a tela que
+        ainda não está em lugar nenhum, a segunda tentativa acendia
+        "Servidor acordando…" por cima de uma tela carregada e
+        funcionando.
+
+        E ninguém apagava: `esconderLoader` só roda quando uma navegação
+        termina, e não havia navegação nenhuma. A tarja ficava contando
+        segundos para sempre.
+        """
+        navegacao = self.ler("ls-soft-navigation.js")
+
+        # O pedido sabe se é de fundo, e o aviso respeita isso.
+        self.assertIn("function requisitar(url, tentativa, silencioso)", navegacao)
+        self.assertIn("if (tentativa > 0 && !silencioso) escalarLoader(tentativa);", navegacao)
+        # O silêncio atravessa as repetições, senão a segunda volta a falar.
+        self.assertEqual(navegacao.count("requisitar(url, tentativa + 1, silencioso)"), 2)
+        # E a antecipação pede calada.
+        self.assertIn("buscar(url, true)", navegacao)
+
+    def test_a_tarja_nunca_sobrevive_a_propria_causa(self):
+        """Ela informa uma espera; se a espera acaba, ela tem de sair.
+
+        Qualquer caminho que a mostre e não a esconda a deixaria presa na
+        tela. O teto é a rede de segurança: passou da maior espera
+        legítima, ou a resposta chegou por outro caminho, ou ela não vem
+        mais -- e nos dois casos a tarja está mentindo.
+        """
+        painel = self.ler("painel.js")
+
+        self.assertIn("var TETO_DA_TARJA = 70000;", painel)
+        self.assertIn("tetoOcupado = global.setTimeout(Painel.pronto, TETO_DA_TARJA)", painel)
+        # E `pronto` desarma o teto, senão ele apagaria a tarja seguinte.
+        pronto = painel[painel.index("Painel.pronto = function ()"):]
+        self.assertIn("clearTimeout(tetoOcupado)", pronto[:400])
+
+    def test_so_anuncia_o_despertar_que_tem_alguem_esperando(self):
+        """O despertar acontece em quatro momentos; um só tem gente parada.
+
+        O pulso de quatro em quatro minutos, a volta para a aba e o toque
+        depois de um tempo parado são aquecimento por precaução. Enquanto
+        todos anunciavam, um aquecimento que falhasse escrevia "Servidor
+        acordando…" numa tela que estava perfeita -- aviso de espera para
+        quem não estava esperando nada.
+        """
+        painel = self.ler("painel.js")
+
+        self.assertIn("function acordarServidor(forcar, anunciar)", painel)
+        self.assertIn("if (anunciar && anunciar()) avisarEspera", painel)
+        # A gravação é a única que pede para falar.
+        self.assertEqual(painel.count("acordarServidor(false, true)"), 1)
+        # Os aquecimentos por precaução continuam mudos.
+        self.assertEqual(painel.count("acordarServidor(true).catch"), 1)
+        self.assertEqual(painel.count("acordarServidor(false).catch"), 3)
+
     def test_a_espera_diz_quanto_costuma_levar(self):
         """Sem isso, quem está olhando toca de novo.
 

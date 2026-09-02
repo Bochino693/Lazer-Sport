@@ -135,12 +135,27 @@
     return ATRASOS_REDE[Math.min(tentativa + 1, ATRASOS_REDE.length - 1)];
   }
 
-  function requisitar(url, tentativa) {
+  /* BUSCA DE FUNDO NÃO FALA COM A TELA.
+
+     Este era o defeito: a antecipação (o `prefetch` que dispara quando o
+     dedo encosta num link) usava o MESMO caminho da navegação de
+     verdade. Se ela demorasse -- e ela demora, porque é justamente a
+     tela que ainda não está em lugar nenhum --, a segunda tentativa
+     chamava `escalarLoader` e a tarja "Servidor acordando…" nascia por
+     cima de uma tela que já estava carregada e funcionando.
+
+     Pior: como ninguém navegou, ninguém chamava `esconderLoader`. A
+     tarja ficava lá, contando segundos, para sempre. Foi o que a fábrica
+     viu marcando 351 segundos sobre uma tela pronta.
+
+     Agora quem pede de fundo pede em silêncio. A tarja pertence à
+     navegação que a pessoa realmente iniciou. */
+  function requisitar(url, tentativa, silencioso) {
     var controlador = "AbortController" in window ? new AbortController() : null;
     /* A primeira é sondagem; da segunda em diante é espera de despertar. */
     var prazo = tentativa === 0 ? TIMEOUT_REDE : TIMEOUT_REDE_DESPERTAR;
     var timer = controlador ? window.setTimeout(function () { controlador.abort(); }, prazo) : null;
-    if (tentativa > 0) escalarLoader(tentativa);
+    if (tentativa > 0 && !silencioso) escalarLoader(tentativa);
 
     return window.fetch(url.href, {
       method: "GET",
@@ -154,7 +169,7 @@
         && podeTentarNovamente(resposta.status)
       ) {
         return esperar(atrasoDaTentativa(tentativa, resposta)).then(function () {
-          return requisitar(url, tentativa + 1);
+          return requisitar(url, tentativa + 1, silencioso);
         });
       }
 
@@ -195,7 +210,7 @@
         && (!erro.status || podeTentarNovamente(erro.status))
       ) {
         return esperar(atrasoDaTentativa(tentativa)).then(function () {
-          return requisitar(url, tentativa + 1);
+          return requisitar(url, tentativa + 1, silencioso);
         });
       }
       erro.lsTentativaFinal = true;
@@ -206,11 +221,11 @@
     });
   }
 
-  function buscar(url) {
+  function buscar(url, silencioso) {
     var id = url.href;
     if (emVoo.has(id)) return emVoo.get(id);
 
-    var pedido = requisitar(url, 0).finally(function () {
+    var pedido = requisitar(url, 0, silencioso).finally(function () {
       emVoo.delete(id);
     });
 
@@ -823,7 +838,8 @@
   function anteciparTela(url) {
     if (!url || recuperar(url) || emVoo.has(url.href)) return;
     prefetchsExecutados += 1;
-    buscar(url).catch(function () {});
+    /* `true`: de fundo, e portanto mudo. Ver `requisitar`. */
+    buscar(url, true).catch(function () {});
   }
 
   function agendarPrefetch(link, evento, atraso) {
