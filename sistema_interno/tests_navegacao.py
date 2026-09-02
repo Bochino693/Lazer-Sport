@@ -209,7 +209,7 @@ class ScriptDeTelaNaoEsperaDOMContentLoadedTests(SimpleTestCase):
         # A troca por trechos obedece à mesma regra: uma resposta antiga
         # não pode reescrever a lista de um clique mais novo.
         self.assertIn(
-            "function trocarPartes(html, url, modoHistorico, versao) {\n"
+            "function trocarPartes(html, url, modoHistorico, versao, opcoes) {\n"
             "    if (versao !== navegacao) return false;",
             navegacao,
         )
@@ -258,20 +258,15 @@ class ScriptDeTelaNaoEsperaDOMContentLoadedTests(SimpleTestCase):
         navegacao = (raiz / "ls-soft-navigation.js").read_text(encoding="utf-8")
         painel = (raiz / "painel.js").read_text(encoding="utf-8")
 
-        self.assertIn("window.LSAtualizarTela = function ()", navegacao)
-        # DEPOIS DE GRAVAR, A TELA VEM INTEIRA.
-        #
-        # O caminho rápido do filtro troca só os trechos da lista, e isso
-        # é certo enquanto nada MAIS muda. Gravar muda: um cliente novo
-        # cadastrado dentro do modal, um chamado que virou O.S. Esses
-        # dados vivem fora dos trechos, e receber só os trechos deixaria
-        # o formulário com a lista de ontem.
+        self.assertIn("window.LSAtualizarTela = function (opcoes)", navegacao)
+        # Atualização completa continua padrão. Só formulários cujos
+        # dados auxiliares já foram atualizados optam por partes.
         self.assertIn(
-            'navegar(window.location.href, "replace", { inteira: true })',
+            'navegar(window.location.href, "replace", { inteira: !(opcoes && opcoes.partes) })',
             navegacao,
         )
         self.assertIn('var modal = form.closest(".modal")', painel)
-        self.assertIn('global.LSAtualizarTela()', painel)
+        self.assertIn('global.LSAtualizarTela({ partes: opcoes.partes === true })', painel)
 
     def test_os_tem_tabela_no_pc_e_card_ordenado_no_tablet(self):
         folha = (

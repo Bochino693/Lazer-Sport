@@ -9,6 +9,18 @@
   "use strict";
 
   var Painel = {};
+  var cliquesDaTela = [];
+
+  // A tabela troca de nós ao filtrar; o menu de ações vive no body.
+  // Delegar no documento atende ambos e a navegação descarta os ouvintes.
+  Painel.aoClicar = function (seletor, tratar) {
+    function ouvir(evento) {
+      var alvo = evento.target.closest ? evento.target.closest(seletor) : null;
+      if (alvo && !alvo.disabled) tratar(alvo, evento);
+    }
+    document.addEventListener("click", ouvir);
+    cliquesDaTela.push(ouvir);
+  };
 
   function haModalVisivel() {
     return Boolean(document.querySelector(".modal.show"));
@@ -70,6 +82,10 @@
   };
 
   Painel.prepararNavegacao = function () {
+    cliquesDaTela.forEach(function (ouvir) {
+      document.removeEventListener("click", ouvir);
+    });
+    cliquesDaTela = [];
     Painel.fecharAcoesFlutuantes(false);
     Painel.limparModais(true);
     Painel.limparPendurados();
@@ -93,6 +109,7 @@
      ==================================================================== */
   Painel.montarTela = function (raiz) {
     var alvo = raiz || document;
+    if (avisos && avisos.ultimoEstado) desenharAvisos(avisos.ultimoEstado);
     Painel.aplicarMascaras(alvo);
     Painel.acomodarTextos(alvo);
     Painel.organizarAcoesTabelas(alvo);
@@ -109,6 +126,12 @@
       Painel._acoesAbertas._lsFechar(Boolean(devolverFoco));
     }
   };
+
+  ["show", "shown", "hide", "hidden"].forEach(function (estado) {
+    document.addEventListener(estado + ".bs.modal", function (evento) {
+      if (evento.target.matches(".modal")) evento.target.dataset.lsModalEstado = estado;
+    }, true);
+  });
 
   Painel.modal = function (id) {
     var el = document.getElementById(id);
@@ -131,19 +154,42 @@
     var elemento = document.getElementById(id);
     if (elemento) Painel.aplicarMascaras(elemento);
 
-    m.show();
+    if (elemento.dataset.lsModalEstado === "hide" || elemento._lsFechamentoPendente) {
+      elemento.addEventListener("hidden.bs.modal", function () { m.show(); }, { once: true });
+    } else {
+      m.show();
+    }
   };
 
   Painel.fechar = function (id) {
     var elemento = document.getElementById(id);
     var m = Painel.modal(id);
     if (m) {
+      if (!elemento.classList.contains("show")
+          && elemento.dataset.lsModalEstado !== "show"
+          && elemento.dataset.lsModalEstado !== "hide") {
+        limparEstadoDoCorpo();
+        return;
+      }
+      elemento._lsFechamentoPendente = true;
+      var finalizado = false;
+      var fallback = null;
+      function fecharAoTerminarAbertura() { m.hide(); }
+      elemento.addEventListener("shown.bs.modal", fecharAoTerminarAbertura, { once: true });
+      elemento.addEventListener("hidden.bs.modal", function () {
+        finalizado = true;
+        elemento._lsFechamentoPendente = false;
+        elemento.removeEventListener("shown.bs.modal", fecharAoTerminarAbertura);
+        if (fallback) global.clearTimeout(fallback);
+      }, { once: true });
       m.hide();
       /* CSS interrompido, navegação suave ou WebView antigo podem impedir
        * o evento final do Bootstrap. O fallback fecha só a janela pedida e
        * devolve o scroll; normalmente não faz nada porque hidden já chegou. */
-      global.setTimeout(function () {
+      fallback = global.setTimeout(function () {
+        if (finalizado) return;
         if (!elemento || !elemento.classList.contains("show")) {
+          if (elemento) elemento._lsFechamentoPendente = false;
           limparEstadoDoCorpo();
           return;
         }
@@ -181,7 +227,13 @@
     }
 
     if (paiEl.classList.contains("show")) {
-      paiEl.addEventListener("hidden.bs.modal", mostrarFilho, { once: true });
+      // Bootstrap ignora hide durante a animação de abertura.
+      function esconderPai() { pai.hide(); }
+      paiEl.addEventListener("shown.bs.modal", esconderPai, { once: true });
+      paiEl.addEventListener("hidden.bs.modal", function () {
+        paiEl.removeEventListener("shown.bs.modal", esconderPai);
+        mostrarFilho();
+      }, { once: true });
       pai.hide();
     } else {
       mostrarFilho();
@@ -809,26 +861,11 @@
 
     /* POST único: o preflight GET pode repetir; a gravação nunca. */
     post: function (destino, opcoes) {
-      /* NÃO RECUSAR A GRAVAÇÃO PORQUE O DESPERTAR FALHOU.
-
-         Recusar era a escolha segura enquanto a espera era de dois
-         segundos: nesse prazo, "não respondeu" quase sempre significava
-         mesmo "está fora". Agora que a espera cobre uma partida a frio
-         inteira, desistir depois dela e ainda barrar o envio troca uma
-         espera por uma parede -- e a pessoa que esperou quarenta
-         segundos recebe "tente de novo" sem nada ter sido tentado.
-
-         Além disso, o despertar falhar não prova que o servidor está
-         fora: pode ser só aquele endereço. O POST sai uma vez, como
-         sempre saiu, e se o servidor realmente não estiver lá ele falha
-         com o erro de verdade, que é o que a tela precisa mostrar. */
-      return acordarServidor(false, true).catch(function () {
-        return false;
-      }).then(function () {
-        return fetch(destino, opcoes).then(function (resposta) {
-          if (resposta.ok) redeUltimoSucesso = Date.now();
-          return resposta;
-        });
+      // Uma gravação não espera o GET de aquecimento. O próprio POST
+      // acorda o servidor e nunca é repetido automaticamente.
+      return fetch(destino, opcoes).then(function (resposta) {
+        if (resposta.ok) redeUltimoSucesso = Date.now();
+        return resposta;
       });
     },
   };
@@ -1001,7 +1038,7 @@
              que virou produção, um orçamento que saiu. Perguntar aqui faz
              a bolinha acompanhar a ação de quem está na tela, sem esperar
              o próximo intervalo. */
-          if (Painel.avisos) Painel.avisos.agora();
+          Painel.confirmarGravacao();
           return json;
         });
     });
@@ -1021,8 +1058,10 @@
 
     var botao = form.querySelector('[type="submit"]');
     var rotulo = botao ? botao.textContent : "";
+    var enviando = false;
 
     function travar(on) {
+      enviando = on;
       if (!botao) {
         return;
       }
@@ -1049,6 +1088,7 @@
 
     form.addEventListener("submit", function (e) {
       e.preventDefault();
+      if (enviando) return;
       Painel.erro(opcoes.erro, "");
 
       if (opcoes.antes) {
@@ -1085,10 +1125,11 @@
 
             var atualizacao =
               typeof global.LSAtualizarTela === "function"
-                ? global.LSAtualizarTela()
+                ? global.LSAtualizarTela({ partes: opcoes.partes === true })
                 : null;
 
             function encerrar() {
+              travar(false);
               Painel.pronto();
               Painel.aviso(opcoes.mensagemPronta || "Salvo.", "ok");
             }
@@ -1153,8 +1194,7 @@
 
     if (campo) campo.addEventListener("input", atualizarConfirmacao);
 
-    document.querySelectorAll(opcoes.gatilho || "[data-excluir]").forEach(function (gatilho) {
-      gatilho.addEventListener("click", function () {
+    Painel.aoClicar(opcoes.gatilho || "[data-excluir]", function (gatilho) {
         form.reset();
         Painel.erro(erroId, "");
         if (id) id.value = gatilho.dataset.excluir || "";
@@ -1185,7 +1225,6 @@
         if (campo && global.matchMedia("(min-width: 901px)").matches) {
           global.setTimeout(function () { campo.focus(); }, 180);
         }
-      });
     });
 
     Painel.ligar({
@@ -1522,20 +1561,42 @@
     quantidades: {},
     ultimoSomEm: 0,
     atividadeAte: 0,
+    emVoo: null, repetir: false, ultimoEstado: null, etag: null,
+    falhas: 0, proximaTentativa: 0, silenciarProxima: false,
   };
 
   /* Som curto gerado pelo próprio navegador: não baixa MP3, funciona
      offline e não cria mais uma requisição. Navegadores só liberam áudio
      depois do primeiro toque/clique; até lá a central continua visual. */
   var contextoDeAudio = null;
+  var somLigado = true;
+  try { somLigado = global.localStorage.getItem("ls-som") !== "nao"; } catch (e) {}
+  function pintarControleSom() {
+    var botao = document.getElementById("lsSom");
+    if (!botao) return;
+    botao.setAttribute("aria-pressed", String(somLigado));
+    botao.title = somLigado ? "Silenciar sons" : "Ativar sons";
+    botao.setAttribute("aria-label", botao.title);
+    botao.innerHTML = '<i class="bi ' + (somLigado ? "bi-volume-up-fill" : "bi-volume-mute-fill") + '" aria-hidden="true"></i>';
+  }
+  document.addEventListener("click", function (evento) {
+    if (!evento.target.closest("#lsSom")) return;
+    somLigado = !somLigado;
+    try { global.localStorage.setItem("ls-som", somLigado ? "sim" : "nao"); } catch (e) {}
+    if (somLigado) prepararSom();
+    pintarControleSom();
+  });
 
   function prepararSom() {
-    if (contextoDeAudio) return contextoDeAudio;
+    if (contextoDeAudio) {
+      if (contextoDeAudio.state === "suspended") contextoDeAudio.resume().catch(function () {});
+      return contextoDeAudio;
+    }
     var Construtor = global.AudioContext || global.webkitAudioContext;
     if (!Construtor) return null;
     try {
       contextoDeAudio = new Construtor();
-      if (contextoDeAudio.state === "suspended") contextoDeAudio.resume();
+      if (contextoDeAudio.state === "suspended") contextoDeAudio.resume().catch(function () {});
     } catch (e) {
       contextoDeAudio = null;
     }
@@ -1543,6 +1604,7 @@
   }
 
   function tocarSomDeAviso() {
+    if (!somLigado) return;
     var audio = prepararSom();
     if (!audio || audio.state !== "running") return;
     var agora = Date.now();
@@ -1596,7 +1658,7 @@
     if (!elemento) return;
     var numero = Number(quantidade) || 0;
     elemento.textContent = numero;
-    elemento.hidden = numero === 0;
+    elemento.hidden = numero === 0 && elemento.dataset.mostrarZero !== "1";
   }
 
   function desenharAvisos(dados) {
@@ -1652,52 +1714,104 @@
     }).join("");
   }
 
-  function buscarAvisos() {
-    if (avisos.parado) return Promise.resolve(null);
-
-    return fetch(avisos.endereco, {
-      headers: { "X-Requested-With": "XMLHttpRequest" },
-      credentials: "same-origin",
-      cache: "no-store",
-    })
-      .then(function (resposta) {
-        if (resposta.status === 401 || resposta.status === 403) {
-          /* Sessão caída ou conta sem painel: parar é a resposta certa.
-             Insistir só encheria o log do servidor. */
-          avisos.parado = true;
-          return null;
-        }
-        if (!resposta.ok) return null;
-        Painel.rede.marcarSucesso();
-        return resposta.json();
-      })
-      .then(function (dados) {
-        if (!dados) return null;
-        avisos.atividadeAte = Number(dados.atividade_ate) || 0;
-        if (dados.assinatura && dados.assinatura === avisos.assinatura) {
-          /* Nada mudou: não se mexe no DOM. Redesenhar à toa faria a
-             central piscar debaixo do dedo de quem está lendo. */
-          return dados;
-        }
-        var avisoNovo = houveAvisoNovo(dados);
-        avisos.assinatura = dados.assinatura || null;
-        desenharAvisos(dados);
-        if (avisoNovo && document.visibilityState === "visible") tocarSomDeAviso();
-        avisos.ouvintes.forEach(function (fn) {
-          try { fn(dados); } catch (e) {}
-        });
-        return dados;
-      })
-      .catch(function () {
-        /* Rede oscilando não é motivo para alarme na tela: o próximo
-           intervalo tenta de novo. */
-        return null;
-      });
+  function mostrarEstadoDaSincronia(texto) {
+    var estado = document.getElementById("lsSincroniaEstado");
+    if (estado) { estado.textContent = texto || ""; estado.hidden = !texto; }
   }
+
+  function buscarAvisos(forcar) {
+    if (avisos.parado || !avisos.endereco) return Promise.resolve(null);
+    if (avisos.emVoo) {
+      if (forcar) avisos.repetir = true;
+      return avisos.emVoo;
+    }
+    if (!forcar && Date.now() < avisos.proximaTentativa) return Promise.resolve(null);
+    var controle = new AbortController();
+    var prazo = global.setTimeout(function () { controle.abort(); }, 12000);
+    var headers = { "X-Requested-With": "XMLHttpRequest" };
+    if (avisos.etag && !forcar) headers["If-None-Match"] = avisos.etag;
+    avisos.emVoo = fetch(avisos.endereco, {
+      headers: headers, credentials: "same-origin", cache: "no-store", signal: controle.signal,
+    }).then(function (resposta) {
+      if (resposta.status === 401 || resposta.status === 403) {
+        avisos.parado = true;
+        mostrarEstadoDaSincronia("Entre novamente para atualizar os avisos.");
+        return null;
+      }
+      if (!resposta.ok && resposta.status !== 304) throw new Error("Avisos indisponíveis");
+      Painel.rede.marcarSucesso();
+      avisos.falhas = 0;
+      avisos.proximaTentativa = 0;
+      mostrarEstadoDaSincronia("");
+      if (resposta.status === 304) return avisos.ultimoEstado;
+      avisos.etag = resposta.headers.get("ETag");
+      return resposta.json();
+    }).then(function (dados) {
+      // Uma gravação durante o GET exige uma leitura posterior à gravação.
+      if (!dados || avisos.repetir) return null;
+      avisos.atividadeAte = Number(dados.atividade_ate) || 0;
+      avisos.ultimoEstado = dados;
+      var mudou = dados.assinatura !== avisos.assinatura;
+      if (mudou && avisos.assinatura && global.LSNavigation) global.LSNavigation.clear();
+      var novo = houveAvisoNovo(dados);
+      avisos.assinatura = dados.assinatura || null;
+      if (mudou) desenharAvisos(dados);
+      if (novo && !avisos.silenciarProxima && document.visibilityState === "visible") tocarSomDeAviso();
+      avisos.silenciarProxima = false;
+      if (mudou) avisos.ouvintes.forEach(function (fn) { try { fn(dados); } catch (e) {} });
+      document.dispatchEvent(new CustomEvent("ls:estado", { detail: dados }));
+      return dados;
+    }).catch(function () {
+      mostrarEstadoDaSincronia("Não foi possível atualizar os números. Tentando novamente…");
+      avisos.falhas += 1;
+      avisos.proximaTentativa = Date.now() + Math.min(60000, 3000 * Math.pow(2, avisos.falhas));
+      return null;
+    }).finally(function () {
+      global.clearTimeout(prazo);
+      avisos.emVoo = null;
+      if (avisos.repetir) {
+        avisos.repetir = false;
+        return buscarAvisos(true);
+      }
+    });
+    return avisos.emVoo;
+  }
+
+  var canalSincronia = null;
+  try {
+    if (global.BroadcastChannel) {
+      canalSincronia = new global.BroadcastChannel("ls-painel-atualizado");
+      canalSincronia.onmessage = function () {
+        if (global.LSNavigation) global.LSNavigation.clear();
+        if (document.visibilityState === "visible") buscarAvisos(true);
+      };
+    }
+  } catch (e) {}
+
+  Painel.confirmarGravacao = function () {
+    if (global.LSNavigation) global.LSNavigation.clear();
+    avisos.silenciarProxima = true;
+    // Duas notas curtas confirmam apenas uma resposta de sucesso.
+    var audio = somLigado ? prepararSom() : null;
+    if (audio && audio.state === "running") {
+      [523.25, 783.99].forEach(function (hz, i) {
+        var nota = audio.createOscillator(), ganho = audio.createGain();
+        var inicio = audio.currentTime + i * 0.08;
+        nota.frequency.value = hz;
+        ganho.gain.setValueAtTime(0.035, inicio);
+        ganho.gain.exponentialRampToValueAtTime(0.0001, inicio + 0.12);
+        nota.connect(ganho); ganho.connect(audio.destination);
+        nota.start(inicio); nota.stop(inicio + 0.13);
+      });
+    }
+    buscarAvisos(true);
+    if (canalSincronia) canalSincronia.postMessage({ mudou: true });
+  };
 
   Painel.avisos = {
     /* Pede uma atualização imediata. Quem acabou de salvar chama isto. */
-    agora: buscarAvisos,
+    agora: function () { return buscarAvisos(true); },
+    estado: function () { return avisos.ultimoEstado; },
 
     /* Avisa quando o estado muda -- a lista de orçamentos usa para
        repintar o status de uma proposta que o cliente acabou de
@@ -1732,7 +1846,8 @@
         /* A leitura já foi gravada; busca de novo para o número sumir no
            mesmo clique, sem deixar o usuário esperando o próximo pulso. */
         avisos.assinatura = null;
-        return buscarAvisos();
+        avisos.etag = null;
+        return buscarAvisos(true);
       }).catch(function () {
         return null;
       }).finally(function () {
@@ -1768,8 +1883,11 @@
     if (!avisos.endereco) return;
 
     ["pointerdown", "keydown"].forEach(function (evento) {
-      document.addEventListener(evento, prepararSom, { once: true, passive: true });
+      document.addEventListener(evento, prepararSom, { passive: true });
     });
+
+    pintarControleSom();
+    global.addEventListener("online", function () { buscarAvisos(true); });
 
     /* A assinatura do que já está na tela: assim a primeira resposta não
        redesenha uma central que já está certa. */

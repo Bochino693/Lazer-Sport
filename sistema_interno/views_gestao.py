@@ -65,6 +65,7 @@ from .busca_local import montar_indice
 from . import clientes as svc_clientes
 from . import etapas_padrao
 from . import fragmento
+from .sincronia import revisao_modulo
 from . import financeiro as fin
 from .models import (
     AtividadeOrcamento,
@@ -337,6 +338,7 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
         )
 
     def get(self, request):
+        revisao_lista = revisao_modulo(request.user, "orcamentos")
         busca = (request.GET.get("q") or "").strip()
         filtro_card = (request.GET.get("filtro") or "todos").strip()
         origem = (request.GET.get("origem") or "").strip()
@@ -586,6 +588,7 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
                 (AvaliacaoBlocoOrcamento.Status.AJUSTES, "Solicitar ajustes"),
             ),
         }
+        ctx["revisao_lista"] = revisao_lista
         return fragmento.responder(
             request, "orcamentos_inner.html",
             "partes/orcamentos_lista.html", ctx,
@@ -596,6 +599,7 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
         """Payload que o modal usa para reabrir um orçamento já salvo."""
         return {
             "id": orcamento.id,
+            "revisao": orcamento.atualizado.isoformat() if orcamento.atualizado else "",
             "cliente": orcamento.cliente_id or "",
             "cliente_opcao": (
                 svc_clientes.opcao_de_busca(orcamento.cliente)
@@ -846,9 +850,13 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
             )
 
         orcamento = (
-            self._orcamento_do_usuario(request, orcamento_id)
+            get_object_or_404(limitar_orcamentos(request.user, Orcamento.objects.select_for_update()), pk=orcamento_id)
             if orcamento_id else Orcamento()
         )
+        if orcamento.pk and "revisao" in request.POST:
+            atual = orcamento.atualizado.isoformat() if orcamento.atualizado else ""
+            if request.POST["revisao"] != atual:
+                return self.erro(request, "Este orçamento mudou em outro atendimento. Seus campos continuam aqui; confira a versão atual antes de salvar novamente.", status=409)
         if orcamento.pk and not orcamento.pode_editar:
             return self.erro(
                 request,
@@ -1269,6 +1277,7 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
                 request,
                 f"A versão {nova.versao} desta proposta já existe.",
                 id=nova.pk,
+                orcamento=self.serializar(nova),
             )
         if not anterior.pode_refazer:
             raise ErroDeFormulario(self._porque_nao_refazer(anterior))
@@ -1338,6 +1347,11 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
             "Ajuste os valores e envie."
             + (" O motivo do cliente foi copiado para a nova versão." if motivo else ""),
             id=nova.pk,
+            orcamento=self.serializar(
+                Orcamento.objects.select_related("cliente").prefetch_related(
+                    "itens__brinquedo", "itens__produto", "itens__peca",
+                ).get(pk=nova.pk)
+            ),
         )
 
     @staticmethod

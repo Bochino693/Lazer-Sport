@@ -232,6 +232,7 @@
   {% endcomment %}
   {# Troca telas e filtros sem uma segunda requisição; cache só durante a aba. #}
   <script src="{% estatico 'interno/ls-soft-navigation.js' %}" defer></script>
+  <script src="{% estatico 'interno/ls-sincronia.js' %}" defer></script>
   {# O nome do ícone quando o menu está fechado: fora do menu, para não ser cortado. #}
   <script src="{% estatico 'interno/ls-trilho.js' %}" defer></script>
   <!-- Barra de carregamento no topo, compartilhada com o painel /adm. -->
@@ -308,7 +309,7 @@
         <a data-titulo="Acompanhamento" aria-label="Acompanhamento" class="ls-nav-item {% if request.resolver_match.url_name == 'minha_producao' or request.resolver_match.url_name == 'producao_ordem_detalhe' %}active{% endif %}" href="{% url 'minha_producao' %}">
           <span class="ls-nav-icon"><i class="bi bi-list-check"></i></span>
           <span>Acompanhamento</span>
-          <span class="ls-nav-count" data-selo="count_producao" {% if not count_producao %}hidden{% endif %}>{{ count_producao }}</span>
+          <span class="ls-nav-count" data-selo="count_producao" hidden>0</span>
         </a>
         <a data-titulo="Produtos e ficha técnica" aria-label="Produtos e ficha técnica" class="ls-nav-item {% if request.resolver_match.url_name == 'produtos_producao' %}active{% endif %}" href="{% url 'produtos_producao' %}">
           <span class="ls-nav-icon"><i class="bi bi-diagram-3-fill"></i></span>
@@ -332,7 +333,7 @@
         <a data-titulo="Clientes" aria-label="Clientes" class="ls-nav-item {% if request.resolver_match.url_name == 'clientes_inner' %}active{% endif %}" href="{% url 'clientes_inner' %}">
           <span class="ls-nav-icon"><i class="bi bi-people-fill"></i></span>
           <span>Clientes</span>
-          <span class="ls-nav-count" data-selo="count_clientes_incompletos" {% if not count_clientes_incompletos %}hidden{% endif %}>{{ count_clientes_incompletos }}</span>
+          <span class="ls-nav-count" data-selo="count_clientes_incompletos" hidden>0</span>
         </a>
         {% endif %}
         {% if permissoes_interno.financeiro %}
@@ -345,21 +346,21 @@
         <a data-titulo="Vendas" aria-label="Vendas" class="ls-nav-item {% if request.resolver_match.url_name == 'vendas_inner' %}active{% endif %}" href="{% url 'vendas_inner' %}">
           <span class="ls-nav-icon"><i class="bi bi-receipt-cutoff"></i></span>
           <span>Vendas</span>
-          <span class="ls-nav-count" data-selo="count_vendas" {% if not count_vendas %}hidden{% endif %}>{{ count_vendas }}</span>
+          <span class="ls-nav-count" data-selo="count_vendas" hidden>0</span>
         </a>
         {% endif %}
         {% if permissoes_interno.pedidos %}
         <a data-titulo="Pedidos" aria-label="Pedidos" class="ls-nav-item {% if request.resolver_match.url_name == 'pedidos_inner' %}active{% endif %}" href="{% url 'pedidos_inner' %}">
           <span class="ls-nav-icon"><i class="bi bi-box2-heart-fill"></i></span>
           <span>Pedidos</span>
-          <span class="ls-nav-count" data-selo="count_pedidos" {% if not count_pedidos %}hidden{% endif %}>{{ count_pedidos }}</span>
+          <span class="ls-nav-count" data-selo="count_pedidos" hidden>0</span>
         </a>
         {% endif %}
         {% if permissoes_interno.orcamentos %}
         <a data-titulo="Orçamentos" aria-label="Orçamentos" class="ls-nav-item {% if request.resolver_match.url_name == 'orcamentos_inner' %}active{% endif %}" href="{% url 'orcamentos_inner' %}">
           <span class="ls-nav-icon"><i class="bi bi-file-earmark-text-fill"></i></span>
           <span>Orçamentos</span>
-          <span class="ls-nav-count" data-selo="count_orcamentos" {% if not count_orcamentos %}hidden{% endif %}>{{ count_orcamentos }}</span>
+          <span class="ls-nav-count" data-selo="count_orcamentos" data-mostrar-zero="1" title="Em aberto">…</span>
         </a>
         {% endif %}
         {% if permissoes_interno.gestao %}
@@ -378,13 +379,14 @@
         <a data-titulo="Ordens de Serviço" aria-label="Ordens de Serviço" class="ls-nav-item {% if request.resolver_match.url_name == 'ordens_servico_inner' or request.resolver_match.url_name == 'ordem_servico_previa_inner' %}active{% endif %}" href="{% url 'ordens_servico_inner' %}">
           <span class="ls-nav-icon"><i class="bi bi-clipboard2-check-fill"></i></span>
           <span>Ordens de Serviço</span>
-          <span class="ls-nav-count" data-selo="count_ordens_servico" {% if not count_ordens_servico %}hidden{% endif %}>{{ count_ordens_servico }}</span>
+          <span class="ls-nav-count" data-selo="count_ordens_servico" data-mostrar-zero="1" title="Em aberto">…</span>
         </a>
         {% endif %}
         {% if permissoes_interno.manutencoes %}
         <a data-titulo="Manutenções" aria-label="Manutenções" class="ls-nav-item {% if request.resolver_match.url_name == 'manutencao_inner' %}active{% endif %}" href="{% url 'manutencao_inner' %}">
           <span class="ls-nav-icon"><i class="bi bi-wrench-adjustable-circle-fill"></i></span>
           <span>Manutenções</span>
+          <span class="ls-nav-count" data-selo="count_manutencao" data-mostrar-zero="1" title="Manutenções abertas">…</span>
         </a>
         {% endif %}
         {% comment %}
@@ -502,7 +504,7 @@
       <a class="ls-aba {% if request.resolver_match.url_name == 'orcamentos_inner' %}ativa{% endif %}"
          href="{% url 'orcamentos_inner' %}">
         <i class="bi bi-file-earmark-text-fill"></i><span>Orçamentos</span>
-        <span class="ls-aba-selo" data-selo="count_orcamentos" {% if not count_orcamentos %}hidden{% endif %}>{{ count_orcamentos }}</span>
+        <span class="ls-aba-selo" data-selo="count_orcamentos" data-mostrar-zero="1" title="Em aberto">…</span>
       </a>
       <a class="ls-aba {% if request.resolver_match.url_name == 'stock' or request.resolver_match.url_name == 'estoque_inner' %}ativa{% endif %}"
          href="{% url 'stock' %}">
@@ -512,7 +514,7 @@
       <a class="ls-aba {% if request.resolver_match.url_name == 'minha_producao' %}ativa{% endif %}"
          href="{% url 'minha_producao' %}">
         <i class="bi bi-list-check"></i><span>Produção</span>
-        <span class="ls-aba-selo" data-selo="count_producao" {% if not count_producao %}hidden{% endif %}>{{ count_producao }}</span>
+        <span class="ls-aba-selo" data-selo="count_producao" hidden>0</span>
       </a>
       <a class="ls-aba {% if request.resolver_match.url_name == 'stock' %}ativa{% endif %}"
          href="{% url 'stock' %}">
@@ -529,7 +531,7 @@
 
     <button type="button" class="ls-aba" id="abaMenu">
       <i class="bi bi-list"></i><span>Menu</span>
-      <span class="ls-aba-selo urgente" data-selo="urgentes" {% if not avisos_urgentes %}hidden{% endif %}>{{ avisos_urgentes }}</span>
+      <span class="ls-aba-selo urgente" data-selo="urgentes" hidden>0</span>
     </button>
   </nav>
 
@@ -578,40 +580,29 @@ Dito em voz alta: este NÃO é o /adm do site. Quem trabalha nos
           </button>
         </div>
 
+        <button type="button" class="ls-tema-botao" id="lsSom" aria-pressed="true"
+                title="Silenciar sons" aria-label="Silenciar sons">
+          <i class="bi bi-volume-up-fill" aria-hidden="true"></i>
+        </button>
         <!-- ===================== central de avisos ===================== -->
         <div class="ls-avisos">
           <button type="button" class="ls-avisos-botao" id="avisosBotao"
                   aria-haspopup="true" aria-expanded="false"
                   aria-label="Avisos do painel">
             <i class="bi bi-bell-fill"></i>
-            <span class="ls-avisos-selo {% if avisos_urgentes %}urgente{% endif %}"
-                  data-selo="total" {% if not total_avisos %}hidden{% endif %}>{{ total_avisos }}</span>
+            <span class="ls-avisos-selo"
+                  data-selo="total" hidden>0</span>
           </button>
 
           <div class="ls-avisos-painel" id="avisosPainel" hidden>
             <div class="ls-avisos-topo">
               <span>O que precisa de você</span>
-              <span data-selo="urgentes-texto" {% if not avisos_urgentes %}hidden{% endif %}>{{ avisos_urgentes }} urgente{{ avisos_urgentes|pluralize }}</span>
+              <span data-selo="urgentes-texto" hidden>0 urgentes</span>
             </div>
 
+            <p id="lsSincroniaEstado" class="ls-subtext" role="status" hidden></p>
             <div id="avisosLista">
-            {% for aviso in avisos %}
-              <a class="ls-aviso {{ aviso.nivel }}" href="{{ aviso.url }}">
-                <span class="ls-aviso-icone"><i class="bi {{ aviso.icone }}"></i></span>
-                <span class="ls-aviso-corpo">
-                  <span class="ls-aviso-titulo">
-                    {{ aviso.titulo }}
-                    <span class="ls-aviso-quantidade">{{ aviso.quantidade }}</span>
-                  </span>
-                  <span class="ls-aviso-detalhe">{{ aviso.detalhe }}</span>
-                </span>
-              </a>
-            {% empty %}
-              <div class="ls-avisos-vazio">
-                <i class="bi bi-check2-circle"></i>
-                Nada pendente agora.
-              </div>
-            {% endfor %}
+            <div class="ls-avisos-vazio" role="status">Atualizando avisos…</div>
             </div>
 
             {% comment %}

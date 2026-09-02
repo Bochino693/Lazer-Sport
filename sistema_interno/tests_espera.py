@@ -125,18 +125,13 @@ class AcordarAntesDeAgirTests(SimpleTestCase):
         self.assertGreaterEqual(max(6000, 50000), 40000)
 
     def test_desistir_de_acordar_nao_barra_a_gravacao(self):
-        """Barrar transformaria uma espera em uma parede.
-
-        Recusar fazia sentido enquanto a espera era de dois segundos.
-        Agora que ela cobre uma partida a frio inteira, desistir depois
-        dela e ainda barrar o envio entrega "tente de novo" a quem
-        esperou quarenta segundos sem nada ter sido tentado.
-        """
+        """O POST é único e independente do GET de aquecimento."""
         painel = self.painel()
         post = painel[painel.index("post: function (destino, opcoes)"):]
         post = post[:post.index("/* Mantém a instância pronta")]
 
-        self.assertIn("return false;", post)
+        self.assertNotIn("acordarServidor(", post)
+        self.assertEqual(post.count("fetch(destino, opcoes)"), 1)
         self.assertNotIn("Nada foi enviado", post)
 
     def test_a_espera_avisa_em_vez_de_ficar_muda(self):

@@ -26,14 +26,14 @@ muda, a tela não redesenha nada.
 import hashlib
 import json
 
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.views.generic import View
 
 from . import push
+from .sincronia import revisoes
 from .avisos import (
     marcar_atividades_lidas,
     versao_atividades,
-    versao_ordens_servico,
 )
 from .context_processors import _apurar_com_cache, invalidar_avisos
 from .models import InscricaoPush
@@ -63,10 +63,11 @@ class EstadoAvisosView(View):
         # servidor. Se outro usuário mexeu num orçamento, a chave muda e
         # este painel não fica preso aos vinte segundos do cache antigo.
         revisao = versao_atividades()
-        revisao_os = versao_ordens_servico()
+        revisoes_telas = revisoes(usuario)
+        revisao_os = revisoes_telas.get("ordens_servico", "")
         apurado = _apurar_com_cache(
             usuario,
-            f"orcamentos:{revisao}:os:{revisao_os}",
+            f"orcamentos:{revisao}:os:{revisao_os}:{revisoes_telas}",
         )
 
         contagens = {
@@ -85,6 +86,7 @@ class EstadoAvisosView(View):
             # O POST de leitura devolve exatamente esta versão. Assim um
             # evento que nasça durante o clique nunca some sem ser exibido.
             "atividade_ate": revisao,
+            "revisoes": revisoes_telas,
             "contagens": contagens,
             "urgentes": apurado["avisos_urgentes"],
             "total": apurado["total_avisos"],
@@ -104,7 +106,12 @@ class EstadoAvisosView(View):
         }
         corpo["assinatura"] = assinatura_do_estado(corpo)
 
-        resposta = JsonResponse(corpo)
+        etag = '"' + corpo['assinatura'] + '"'
+        if request.headers.get('If-None-Match') == etag:
+            resposta = HttpResponse(status=304)
+        else:
+            resposta = JsonResponse(corpo)
+        resposta['ETag'] = etag
         # Resposta de usuário, curta e pessoal: nenhum intermediário pode
         # guardá-la e servir o painel de um colega.
         resposta["Cache-Control"] = "no-store, private"

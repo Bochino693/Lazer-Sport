@@ -103,7 +103,7 @@ class OrcamentoEOrdemServicoSeparadosTests(TestCase):
         ).read_text(encoding="utf-8")
         self.assertIn("data-refazer", template)
         self.assertIn("Nova proposta", template)
-        self.assertIn('?editar=" + encodeURIComponent(json.id)', template)
+        self.assertIn('abrir(json.id, json.orcamento)', template)
 
     def test_cards_filtram_por_fase_sem_select_horizontal(self):
         negociacao = self.criar_orcamento(Orcamento.Status.EM_NEGOCIACAO)

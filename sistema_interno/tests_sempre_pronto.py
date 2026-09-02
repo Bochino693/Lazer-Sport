@@ -299,8 +299,8 @@ class EsperaDoDespertarTests(SimpleTestCase):
 
         self.assertIn("function acordarServidor(forcar, anunciar)", painel)
         self.assertIn("if (anunciar && anunciar()) avisarEspera", painel)
-        # A gravação é a única que pede para falar.
-        self.assertEqual(painel.count("acordarServidor(false, true)"), 1)
+        # O POST sai diretamente: nenhum aquecimento segura a gravação.
+        self.assertEqual(painel.count("acordarServidor(false, true)"), 0)
         # Os aquecimentos por precaução continuam mudos.
         self.assertEqual(painel.count("acordarServidor(true).catch"), 1)
         self.assertEqual(painel.count("acordarServidor(false).catch"), 3)

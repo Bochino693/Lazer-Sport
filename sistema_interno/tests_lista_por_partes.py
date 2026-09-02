@@ -181,11 +181,11 @@ class ContratoDaTrocaPorPartesTests(TestCase):
         self.assertIn("var pedaco = ehTrocaDeLista(url);", trecho)
         self.assertIn("buscar(url, true, pedaco)", trecho)
 
-    def test_depois_de_gravar_a_tela_vem_inteira(self):
-        """Gravar muda coisas que não estão nos trechos."""
+    def test_depois_de_gravar_partes_exige_opcao_explicita(self):
+        """Só quem mantém os dados auxiliares atualizados opta por partes."""
         codigo = self.navegacao()
         self.assertIn(
-            'navegar(window.location.href, "replace", { inteira: true })', codigo,
+            'navegar(window.location.href, "replace", { inteira: !(opcoes && opcoes.partes) })', codigo,
         )
         self.assertIn("!(opcoes && opcoes.inteira) && ehTrocaDeLista(alvo)", codigo)
 

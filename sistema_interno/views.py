@@ -1291,14 +1291,18 @@ class PedidosView(FinanceiroInternoRequiredMixin, View):
 
 class ManutencaoInnerView(ManutencaoInternoRequiredMixin, View):
     def get(self, request):
+        from . import fragmento
+        from .sincronia import revisao_modulo
+        revisao_lista = revisao_modulo(request.user, "manutencoes")
         pagina = Paginator(
             Manutencao.objects
             .select_related("usuario__user", "brinquedo")
             .order_by("-criado_em", "-id"),
             30,
         ).get_page(request.GET.get("page"))
-        return render(request, "manutencao_inner.html", {
+        return fragmento.responder(request, "manutencao_inner.html", "partes/manutencoes_lista.html", {
             "manutencoes": pagina.object_list,
             "page_obj": pagina,
             "total_registros": pagina.paginator.count,
+            "revisao_lista": revisao_lista,
         })

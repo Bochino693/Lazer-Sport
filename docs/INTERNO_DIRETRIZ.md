@@ -548,3 +548,69 @@ aviso de frágil), marque `print-color-adjust:exact`.
       nenhuma biblioteca de fora (ver 9.2).
 - [ ] Se imprime: altura mínima em vez de fixa, e
       `print-color-adjust:exact` onde a cor significa algo (ver 9.2).
+
+
+## 9.3. Ações depois de filtrar e cadastros dentro de modais
+
+Em tabelas substituídas por fragmentos, use `Painel.aoClicar(seletor, fn)`.
+Os menus ficam no `body`; os ouvintes precisam atender os novos botões e
+ser descartados na troca de tela. Não religue o formulário inteiro ao filtrar.
+
+`Painel.ligar({partes: true, ...})` atualiza somente a lista após salvar.
+Use apenas quando os dados auxiliares dos modais já são mantidos pela tela;
+nas demais telas, a atualização completa continua sendo o padrão.
+
+O POST de refazer orçamento devolve `orcamento` com os dados completos do
+editor. O frontend abre esses dados diretamente e preserva o motivo da
+negociação. Não precisa baixar outra página para editar itens e preços.
+
+A gravação sai uma vez, sem esperar pelo GET de aquecimento. A resposta
+bem-sucedida invalida o cache da navegação, inclusive pedidos anteriores
+que ainda estavam em voo.
+
+O teste `tests_refazer_editor` cobre alterações nos itens e preços e a
+preservação da proposta anterior. Com Node e `jsdom` disponível em
+`NODE_PATH`, também executa `tests_js/modais.cjs`: filtros, clique duplo,
+refazer e cadastro filho com retorno ao orçamento. O teste de DOM usa
+respostas simuladas geradas pelo Django; não substitui a conferência
+visual em navegador.
+
+
+## 9.4. Contadores, sons e alterações entre atendentes
+
+Os números do menu e a central de avisos chegam por `/avisos/estado/`;
+a moldura da página não força as consultas do context processor. Orçamentos,
+O.S. e Manutenções mostram a quantidade em aberto, inclusive zero. O sino
+continua mostrando ocorrências que precisam de atenção, com sua própria regra.
+
+`sincronia.py` calcula revisões dos módulos permitidos ao usuário. A revisão
+combina quantidade, último identificador, data de atualização e distribuição
+de situações; ela invalida o cache dos avisos entre workers e atendentes.
+Uma resposta sem mudanças usa ETag/304. Há um único GET de avisos em voo por
+aba; uma gravação durante a leitura agenda uma nova leitura após a primeira.
+Falhas mantêm os últimos números, aplicam espera progressiva e permitem
+retomada ao voltar a conexão. Abas ocultas não fazem consultas periódicas.
+
+`ls-sincronia.js` compara a revisão da lista com o estado recebido. Atualiza
+cartões e totais; com modal, busca não confirmada ou campo em foco, deixa a
+lista e seus formulários intactos. A lista pendente é atualizada após liberar
+a edição. Isso usa fragmentos e não altera a rolagem nem o histórico de URLs.
+A navegação descarta respostas de uma rota ou de um clique anterior.
+
+A atualização local é solicitada imediatamente após gravar. Outras abas do
+mesmo navegador recebem um sinal sem dados por BroadcastChannel; outros
+aparelhos consultam o estado a cada 12 segundos enquanto visíveis. Não é
+uma conexão WebSocket e uma falha de rede pode ampliar esse intervalo.
+
+O sucesso de uma gravação toca duas notas; novidade no sino usa três.
+O botão de volume permite silenciar. A permissão de áudio depende de um
+primeiro toque/tecla no navegador; a operação funciona mesmo sem áudio.
+POSTs próprios de envio devem chamar `Painel.confirmarGravacao()` somente
+após confirmar sucesso no JSON, assim como `Painel.enviar` já faz.
+
+Os formulários de Orçamento e O.S. enviam `revisao` com o instante de atualização
+que abriram. O servidor trava a linha ao salvar e rejeita com 409 uma versão
+que mudou durante a edição, preservando os campos no modal. Chamadas antigas
+sem esse campo continuam compatíveis; não oferecem essa proteção adicional.
+Não se deve copiar automaticamente valores sobre um registro alterado por
+outra pessoa.

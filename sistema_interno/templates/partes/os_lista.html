@@ -16,7 +16,7 @@
   deixa o cabeçalho, os modais e o script da tela de pé -- eles não mudam
   quando o filtro muda.
 {% endcomment %}
-<section class="ls-metrics ls-budget-card-filters" data-ls-parte="cartoes" aria-label="Filtrar ordens por fase">
+<section class="ls-metrics ls-budget-card-filters" data-ls-parte="cartoes" data-ls-sincronia="ordens_servico" data-ls-revisao="{{ revisao_lista }}" aria-label="Filtrar ordens por fase">
   {% for chave, rotulo, quantidade, icone in cards %}
     <a class="ls-metric-card ls-budget-filter-card {% if chave == 'concluidas' or chave == 'pagas' %}green{% elif chave == 'aguardando' or chave == 'pecas' or chave == 'a_receber' %}yellow{% elif chave == 'execucao' %}cyan{% else %}blue{% endif %} {% if filtro_ativo == chave %}active{% endif %}"
        href="?filtro={{ chave }}{% if busca %}&q={{ busca|urlencode }}{% endif %}"

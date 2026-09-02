@@ -38,6 +38,7 @@ from core.models import CategoriaPeca, Manutencao, PecasReposicao
 from .busca_local import montar_indice
 from . import clientes as svc_clientes
 from . import fragmento
+from .sincronia import revisao_modulo
 from .models import (
     Cliente,
     EnderecoCliente,
@@ -256,6 +257,7 @@ class OrdensServicoInnerView(
         )
 
     def get(self, request):
+        revisao_lista = revisao_modulo(request.user, "ordens_servico")
         busca = (request.GET.get("q") or "").strip()
         filtro = (request.GET.get("filtro") or "todos").strip()
 
@@ -567,6 +569,7 @@ class OrdensServicoInnerView(
             "pode_editar": acesso["ordens_servico_editar"],
             "pode_pagamento": acesso["ordens_servico_pagamento"],
         }
+        contexto["revisao_lista"] = revisao_lista
         return fragmento.responder(
             request, "ordens_servico_inner.html",
             "partes/os_lista.html", contexto,
@@ -680,6 +683,7 @@ class OrdensServicoInnerView(
 
         return {
             "id": ordem.pk,
+            "revisao": ordem.atualizado.isoformat() if ordem.atualizado else "",
             "cliente": ordem.cliente_id or "",
             "manutencao": ordem.manutencao_id or "",
             "orcamento": ordem.orcamento_id or "",
@@ -760,7 +764,11 @@ class OrdensServicoInnerView(
             return self.erro(request, "Somente Produção ou Gestão edita a O.S.", status=403)
 
         ordem_id = (request.POST.get("id") or "").strip()
-        ordem = get_object_or_404(OrdemServico, pk=ordem_id) if ordem_id else OrdemServico()
+        ordem = get_object_or_404(OrdemServico.objects.select_for_update(), pk=ordem_id) if ordem_id else OrdemServico()
+        if ordem.pk and "revisao" in request.POST:
+            atual = ordem.atualizado.isoformat() if ordem.atualizado else ""
+            if request.POST["revisao"] != atual:
+                return self.erro(request, "Esta O.S. mudou em outro atendimento. Seus campos continuam aqui; confira a versão atual antes de salvar novamente.", status=409)
         if not ordem.pode_editar:
             # Editar a versão que o cliente leu apagaria o papel que ele
             # tem na mão. O que se edita é a versão que está valendo.

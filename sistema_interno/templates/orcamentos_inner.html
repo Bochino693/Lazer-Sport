@@ -33,6 +33,7 @@
       {% csrf_token %}
       <input type="hidden" name="action" value="save">
       <input type="hidden" name="id" id="orcamentoId">
+      <input type="hidden" name="revisao" id="orcamentoRevisao">
       <input type="hidden" name="itens" id="orcamentoItens">
 
       <div class="modal-header">
@@ -42,6 +43,7 @@
 
       <div class="modal-body ls-compact-form">
         <div id="orcamentoErro" class="alert alert-danger d-none" role="alert"></div>
+        <div id="orcamentoContexto" class="ls-refazer-nota" hidden></div>
 
         <div class="row g-3">
           <div class="col-12"><div class="ls-budget-block-title comercial"><i class="bi bi-people-fill"></i><span><strong>Bloco Comercial</strong><small>Cliente, atendimento, validade, entrega e itens.</small></span></div></div>
@@ -1611,10 +1613,14 @@ LSTela.pronto(function () {
     );
   }
 
-  function abrir(id) {
+  function abrir(id, dados) {
     var form = document.getElementById("formOrcamento");
-    var orcamento = id ? achar(id) : null;
+    var orcamento = dados || (id ? achar(id) : null);
     orcamentoEmEdicao = orcamento;
+    var contexto = document.getElementById("orcamentoContexto");
+    contexto.hidden = !(orcamento && orcamento.motivo_negociacao);
+    contexto.textContent = orcamento && orcamento.motivo_negociacao
+      ? "Pedido do cliente: " + orcamento.motivo_negociacao : "";
 
     form.reset();
     corpo.innerHTML = "";
@@ -1623,6 +1629,7 @@ LSTela.pronto(function () {
     explicacao.textContent = "";
     Painel.erro("orcamentoErro", "");
     Painel.valor("orcamentoId", orcamento ? orcamento.id : "");
+    Painel.valor("orcamentoRevisao", orcamento ? orcamento.revisao : "");
 
     document.getElementById("orcamentoTitulo").textContent = orcamento
       ? "Orçamento ID " + orcamento.id + " · versão " + orcamento.versao
@@ -1716,91 +1723,38 @@ LSTela.pronto(function () {
     abrir(null);
   }
 
-  document.querySelectorAll("[data-editar]").forEach(function (b) {
-    b.addEventListener("click", function () {
+  Painel.aoClicar("[data-editar]", function (b) {
       abrir(b.dataset.editar);
-    });
   });
 
-  /* ------------------------------------------------------------------
-     NOVA VERSÃO DA PROPOSTA
-
-     Refazer não devolve o registro antigo ao rascunho: o servidor cria
-     outra proposta e esta tela abre exatamente o novo id para edição.
-
-     A janela existe para o motivo atravessar. Ela mostra o que o cliente
-     objetou -- pela página dele ou pelo telefone, os dois chegam no mesmo
-     campo -- e pede o que muda desta vez.
-     ------------------------------------------------------------------ */
-  var refazerContexto = document.getElementById("refazerContexto");
-
-  function pintarContextoRefazer(dados) {
-    if (!refazerContexto) return;
-    var linhas = [];
-
-    if (dados.recusada === "1") {
-      linhas.push(
-        '<span class="ls-refazer-marca recusa">' +
-        '<i class="bi bi-x-circle" aria-hidden="true"></i> O cliente recusou</span>'
-      );
-    } else if (dados.vencida === "1") {
-      linhas.push(
-        '<span class="ls-refazer-marca vencida">' +
-        '<i class="bi bi-calendar-x" aria-hidden="true"></i> Proposta vencida</span>'
-      );
-    } else if (dados.situacaoTexto) {
-      linhas.push('<span class="ls-refazer-marca">' + dados.situacaoTexto + "</span>");
-    }
-
-    if (dados.motivo) {
-      linhas.push(
-        "<strong>O que o cliente disse</strong>" +
-        "<em>" + dados.motivo.replace(/&/g, "&amp;").replace(/</g, "&lt;") + "</em>"
-      );
-    } else if (dados.recusada === "1") {
-      /* Recusa sem motivo é a recusa antiga, de antes de o campo existir
-         -- ou alguém que pulou o campo. Dizer isso é melhor do que um
-         espaço vazio, porque orienta a perguntar antes de refazer. */
-      linhas.push(
-        "<strong>Sem motivo registrado</strong>" +
-        "<em>Vale confirmar com quem falou com o cliente antes de mexer no preço.</em>"
-      );
-    }
-
-    if (dados.quem) {
-      linhas.push('<span class="ls-refazer-quem">Respondido por ' + dados.quem + "</span>");
-    }
-
-    refazerContexto.innerHTML = linhas.join("");
-    refazerContexto.hidden = linhas.length === 0;
-  }
-
-  document.querySelectorAll("[data-refazer]").forEach(function (botao) {
-    botao.addEventListener("click", function () {
-      Painel.erro("refazerErro", "");
-      Painel.valor("refazerId", botao.dataset.refazer);
-      Painel.valor("refazerMotivo", "");
-      document.getElementById("refazerNome").textContent = botao.dataset.nome || "";
-      document.getElementById("refazerTitulo").textContent =
-        "Versão " + (parseInt(botao.dataset.versao, 10) + 1 || 2) + " da proposta";
-      pintarContextoRefazer(botao.dataset);
-      Painel.abrir("modalRefazer");
-    });
+  // A nova versão chega no POST com todos os dados de edição.
+  // O motivo já registrado acompanha os itens e preços no formulário.
+  Painel.aoClicar("[data-refazer]", function (botao) {
+    Painel.valor("refazerId", botao.dataset.refazer);
+    Painel.valor("refazerMotivo", "");
+    botao.disabled = true;
+    Painel.ocupado("Preparando itens e preços…");
+    Painel.enviar(document.getElementById("formRefazer"))
+      .then(function (json) {
+        abrir(json.id, json.orcamento);
+      })
+      .catch(function (erro) {
+        Painel.erro("refazerErro", erro.message);
+        Painel.abrir("modalRefazer");
+      })
+      .finally(function () {
+        botao.disabled = false;
+        Painel.pronto();
+      });
   });
 
   Painel.ligar({
     form: "formRefazer",
     erro: "refazerErro",
-    rotuloCarregando: "Criando a versão…",
     depois: function (json) {
       Painel.fechar("modalRefazer");
-      /* Abre a versão nova já em edição: refazer só termina quando os
-         valores são ajustados, e deixar a pessoa procurando o rascunho
-         na lista era mandá-la fazer o trabalho do sistema. */
-      window.location.assign(
-        window.location.pathname + "?editar=" + encodeURIComponent(json.id)
-      );
-    },
+      abrir(json.id, json.orcamento);
+    }
   });
 
   /* ------------------------------------------------------------------
@@ -1808,6 +1762,7 @@ LSTela.pronto(function () {
      ------------------------------------------------------------------ */
   Painel.ligar({
     form: "formOrcamento",
+    partes: true,
     erro: "orcamentoErro",
     antes: function () {
       var itens = [];
@@ -1898,8 +1853,7 @@ LSTela.pronto(function () {
 
   situacaoStatus?.addEventListener("change", ajustarMotivoDaSituacao);
 
-  document.querySelectorAll("[data-situacao]").forEach(function (b) {
-    b.addEventListener("click", function () {
+  Painel.aoClicar("[data-situacao]", function (b) {
       Painel.erro("situacaoErro", "");
       Painel.valor("situacaoId", b.dataset.situacao);
       Painel.valor("situacaoStatus", b.dataset.status);
@@ -1907,10 +1861,9 @@ LSTela.pronto(function () {
       document.getElementById("situacaoNome").textContent = b.dataset.nome;
       ajustarMotivoDaSituacao();
       Painel.abrir("modalSituacao");
-    });
   });
 
-  Painel.ligar({ form: "formSituacao", erro: "situacaoErro" });
+  Painel.ligar({ form: "formSituacao", erro: "situacaoErro", partes: true });
 
   /* ------------------------------------------------------------------
      O QUADRO DE PAGAMENTO ACOMPANHA O QUE ESTÁ SENDO DIGITADO
@@ -1960,14 +1913,12 @@ LSTela.pronto(function () {
     });
   });
 
-  document.querySelectorAll("[data-pagamento]").forEach(function (botao) {
-    botao.addEventListener("click", function () {
+  Painel.aoClicar("[data-pagamento]", function (botao) {
       prepararPagamento(
         botao.dataset.pagamento, botao.dataset.nome,
         botao.dataset.total, botao.dataset.pago
       );
       Painel.abrir("modalPagamento");
-    });
   });
 
   document.getElementById("abrirPagamentoOrcamento")?.addEventListener("click", function () {
@@ -1994,15 +1945,13 @@ LSTela.pronto(function () {
         : "Situação atual: pendente";
     }
 
-    document.querySelectorAll("[data-avaliar]").forEach(function (botao) {
-      botao.addEventListener("click", function () {
+    Painel.aoClicar("[data-avaliar]", function (botao) {
         formAvaliacao.reset();
         Painel.erro("avaliacaoBlocoErro", "");
         Painel.valor("avaliacaoOrcamentoId", botao.dataset.avaliar);
         document.getElementById("avaliacaoOrcamentoNome").textContent = botao.dataset.nome;
         atualizarAvaliacaoAtual();
         Painel.abrir("modalAvaliacaoBloco");
-      });
     });
     document.getElementById("avaliacaoBloco").addEventListener("change", atualizarAvaliacaoAtual);
     Painel.ligar({ form: "formAvaliacaoBloco", erro: "avaliacaoBlocoErro" });
@@ -2041,7 +1990,9 @@ LSTela.pronto(function () {
     var linhas = corpo.querySelectorAll("tr");
     var ultima = linhas[linhas.length - 1];
     abrirCadastroDeBrinquedo(
-      ultima && ultima.buscaItem && !ultima.buscaItem.valor() ? ultima : null,
+      ultima && ultima.buscaItem && !ultima.buscaItem.valor()
+        && !ultima.querySelector(".ls-item-descricao").value.trim()
+        && !paraNumero(ultima.querySelector(".ls-item-valor").value) ? ultima : null,
       ""
     );
   });
@@ -2086,7 +2037,9 @@ LSTela.pronto(function () {
     var linhas = corpo.querySelectorAll("tr");
     var ultima = linhas[linhas.length - 1];
     abrirCadastroDePeca(
-      ultima && ultima.buscaItem && !ultima.buscaItem.valor() ? ultima : null,
+      ultima && ultima.buscaItem && !ultima.buscaItem.valor()
+        && !ultima.querySelector(".ls-item-descricao").value.trim()
+        && !paraNumero(ultima.querySelector(".ls-item-valor").value) ? ultima : null,
       ""
     );
   });
@@ -2395,12 +2348,12 @@ LSTela.pronto(function () {
         if (!json || json.status !== "sucesso") {
           throw new Error((json && json.msg) || "Não foi possível enviar a proposta.");
         }
+        Painel.confirmarGravacao();
         return json;
       });
   }
 
-  document.querySelectorAll("[data-enviar]").forEach(function (botao) {
-    botao.addEventListener("click", function () {
+  Painel.aoClicar("[data-enviar]", function (botao) {
       var id = String(
         botao.dataset.orcamentoId || botao.dataset.enviar || botao.value || ""
       ).trim();
@@ -2469,7 +2422,6 @@ LSTela.pronto(function () {
           campoLink.placeholder = propostaAtual.link ? "" : "Link indisponível";
           avisarEnvio(erro.message, "erro");
         });
-    });
   });
 
   document.getElementById("linkEnviarWhatsapp").addEventListener("click", function () {
@@ -2616,102 +2568,6 @@ LSTela.pronto(function () {
   });
 });
 
-/* ======================================================================
-   A SITUAÇÃO DA PROPOSTA, AO VIVO
-   ----------------------------------------------------------------------
-   O cliente aprova ou recusa pela página pública, e quem está no painel
-   via a mudança só ao recarregar. Como a sessão dura o dia inteiro, na
-   prática isso queria dizer "só depois de sair e entrar de novo" -- e um
-   "aprovado" que demora meia hora para aparecer é um cliente esperando
-   meia hora por um retorno que já podia ter saído.
-
-   Pergunta só a situação das linhas que estão na tela, só com a aba
-   visível, e só mexe no que realmente mudou. Uma linha que muda pisca uma
-   vez: sem isso a mudança acontece fora do canto onde a pessoa olhava.
-   ====================================================================== */
-(function () {
-  var ROTA = "{% url 'estados_orcamentos' %}";
-  var INTERVALO = 30000;
-
-  function celulas() {
-    return Array.prototype.slice.call(
-      document.querySelectorAll("[data-situacao]")
-    );
-  }
-
-  function pintar(celula, estado) {
-    var selo = celula.querySelector("[data-situacao-selo]");
-    var nota = celula.querySelector("[data-situacao-nota]");
-    if (!selo) return false;
-
-    var proxima = celula.querySelector(".ls-next-action");
-    var destinoSituacao = celula.querySelector(".ls-situacao-card") || celula;
-    var deveContatar = estado.status === "aprovado" && estado.status_pagamento !== "pago";
-    if (deveContatar && !proxima) {
-      proxima = document.createElement("span");
-      proxima.className = "ls-next-action";
-      proxima.innerHTML = '<i class="bi bi-telephone-outbound"></i> Próximo passo: contatar cliente';
-      destinoSituacao.appendChild(proxima);
-    } else if (!deveContatar && proxima) {
-      proxima.remove();
-    }
-
-    var rotuloAtual = selo.textContent.trim();
-    if (rotuloAtual === estado.rotulo) return false;
-
-    selo.className = "ls-status " + (estado.cor || "neutral");
-    selo.textContent = estado.rotulo;
-
-    if (nota) {
-      var texto = estado.respondido_em
-        ? (estado.respondido_por || "cliente") + " · " + estado.respondido_em
-        : (estado.enviado_em ? "enviado " + estado.enviado_em : "");
-      nota.textContent = texto;
-      nota.hidden = !texto;
-    }
-
-    var linha = celula.closest("tr") || celula;
-    linha.classList.remove("ls-mudou");
-    /* Reiniciar a animação exige uma leitura de layout entre remover e
-       pôr de volta -- sem isso o navegador não vê mudança nenhuma. */
-    void linha.offsetWidth;
-    linha.classList.add("ls-mudou");
-    return true;
-  }
-
-  function conferir() {
-    var alvos = celulas();
-    if (!alvos.length) return;
-
-    var ids = alvos.map(function (c) { return c.getAttribute("data-situacao"); });
-    fetch(ROTA + "?ids=" + encodeURIComponent(ids.join(",")), {
-      headers: { "X-Requested-With": "XMLHttpRequest" },
-      credentials: "same-origin",
-      cache: "no-store",
-    })
-      .then(function (r) { return r.ok ? r.json() : null; })
-      .then(function (dados) {
-        if (!dados || !dados.orcamentos) return;
-        var mudou = 0;
-        alvos.forEach(function (celula) {
-          var estado = dados.orcamentos[celula.getAttribute("data-situacao")];
-          if (estado && pintar(celula, estado)) mudou += 1;
-        });
-        /* Se alguma proposta mudou, as bolinhas do menu mudaram junto. */
-        if (mudou && window.Painel && Painel.avisos) Painel.avisos.agora();
-      })
-      .catch(function () {
-        /* Rede oscilando não vira alarme: o próximo ciclo tenta de novo. */
-      });
-  }
-
-  setInterval(function () {
-    if (document.visibilityState === "visible") conferir();
-  }, INTERVALO);
-
-  document.addEventListener("visibilitychange", function () {
-    if (document.visibilityState === "visible") conferir();
-  });
-})();
+// A lista e os contadores são atualizados pelo sincronizador comum.
 </script>
 {% endblock %}

@@ -9,7 +9,7 @@
   eram a lista de clientes, o script da tela e os modais -- que não mudam
   quando o filtro muda. Este arquivo é o recorte do que muda.
 {% endcomment %}
-<section class="ls-metrics ls-budget-card-filters" data-ls-parte="cartoes" aria-label="Filtrar orçamentos por fase">
+<section class="ls-metrics ls-budget-card-filters" data-ls-parte="cartoes" data-ls-sincronia="orcamentos" data-ls-revisao="{{ revisao_lista }}" aria-label="Filtrar orçamentos por fase">
   {% for chave, rotulo, quantidade, icone in cards %}
     <a class="ls-metric-card ls-budget-filter-card {% if chave == 'aprovados' or chave == 'pagos' %}green{% elif chave == 'recusados' or chave == 'expirados' %}red{% elif chave == 'negociacao' or chave == 'substituidos' %}violet{% elif chave == 'aguardando' or chave == 'a_receber' %}yellow{% else %}blue{% endif %} {% if filtro_ativo == chave %}active{% endif %}"
        href="?filtro={{ chave }}{% if busca %}&q={{ busca|urlencode }}{% endif %}"
