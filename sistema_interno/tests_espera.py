@@ -177,7 +177,7 @@ class AcordarAntesDeAgirTests(SimpleTestCase):
         # navegação precisa devolver promessa.
         self.assertIn("atualizacao.then(encerrar, encerrar)", painel)
         self.assertIn("return navegar(window.location.href", navegacao)
-        self.assertIn("return buscar(alvo).then(", navegacao)
+        self.assertIn("return buscar(alvo, false, soAsPartes).then(", navegacao)
 
     def test_o_pulso_so_bate_com_a_aba_visivel(self):
         """Aba escondida não gera tráfego; ao voltar, acorda na hora."""

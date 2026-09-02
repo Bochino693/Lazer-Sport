@@ -50,8 +50,11 @@
     }
   }
 
-  function chave(url) {
-    return PREFIXO + url.href;
+  /* Duas respostas possíveis para o mesmo endereço -- a tela inteira e
+     só o pedaço da lista -- precisam de duas gavetas. Guardadas na
+     mesma, um clique no menu serviria o pedaço no lugar da tela. */
+  function chave(url, pedaco) {
+    return PREFIXO + (pedaco ? "parte:" : "") + url.href;
   }
 
   function lerIndice() {
@@ -74,9 +77,9 @@
     try { window.sessionStorage.removeItem(item); } catch (erro) {}
   }
 
-  function guardar(url, html) {
+  function guardar(url, html, pedaco) {
     if (!html || html.length > 850000) return;
-    var item = chave(url);
+    var item = chave(url, pedaco);
     try {
       window.sessionStorage.setItem(item, JSON.stringify({
         em: Date.now(),
@@ -99,12 +102,12 @@
       : TTL_TELA;
   }
 
-  function recuperar(url) {
+  function recuperar(url, pedaco) {
     try {
-      var bruto = window.sessionStorage.getItem(chave(url));
+      var bruto = window.sessionStorage.getItem(chave(url, pedaco));
       var salvo = bruto ? JSON.parse(bruto) : null;
       if (!salvo || !salvo.html || Date.now() - salvo.em > ttl(url)) {
-        removerChave(chave(url));
+        removerChave(chave(url, pedaco));
         return null;
       }
       return salvo.html;
@@ -150,17 +153,22 @@
 
      Agora quem pede de fundo pede em silêncio. A tarja pertence à
      navegação que a pessoa realmente iniciou. */
-  function requisitar(url, tentativa, silencioso) {
+  function requisitar(url, tentativa, silencioso, pedaco) {
     var controlador = "AbortController" in window ? new AbortController() : null;
     /* A primeira é sondagem; da segunda em diante é espera de despertar. */
     var prazo = tentativa === 0 ? TIMEOUT_REDE : TIMEOUT_REDE_DESPERTAR;
     var timer = controlador ? window.setTimeout(function () { controlador.abort(); }, prazo) : null;
     if (tentativa > 0 && !silencioso) escalarLoader(tentativa);
 
+    var cabecalhos = { "X-Requested-With": "LS-Soft-Navigation" };
+    /* Ver `sistema_interno/fragmento.py`: com este cabeçalho o servidor
+       devolve os quatro trechos que o filtro troca, e não a tela inteira. */
+    if (pedaco) cabecalhos["X-LS-Fragmento"] = "lista";
+
     return window.fetch(url.href, {
       method: "GET",
       credentials: "same-origin",
-      headers: { "X-Requested-With": "LS-Soft-Navigation" },
+      headers: cabecalhos,
       cache: "default",
       signal: controlador ? controlador.signal : undefined
     }).then(function (resposta) {
@@ -169,7 +177,7 @@
         && podeTentarNovamente(resposta.status)
       ) {
         return esperar(atrasoDaTentativa(tentativa, resposta)).then(function () {
-          return requisitar(url, tentativa + 1, silencioso);
+          return requisitar(url, tentativa + 1, silencioso, pedaco);
         });
       }
 
@@ -193,15 +201,21 @@
       var controleCache = (resposta.headers.get("cache-control") || "").toLowerCase();
       var cachePermitido = controleCache.indexOf("no-store") === -1
         && resposta.headers.get("x-ls-no-store") !== "1";
+      /* O servidor confirma o que mandou. Sem esta conferência, uma
+         resposta de login (que ignora o cabeçalho e devolve a página
+         inteira) seria tratada como pedaço, não acharia trecho nenhum
+         para trocar, e a tela ficaria parada sem dizer por quê. */
+      var veioPedaco = resposta.headers.get("X-LS-Fragmento") === "lista";
+
       return resposta.text().then(function (html) {
         if (cachePermitido && finalUrl.pathname.indexOf("/login/inner/") === -1) {
-          guardar(finalUrl, html);
+          guardar(finalUrl, html, veioPedaco);
           if (
             finalUrl.href !== url.href
             && finalUrl.searchParams.get("recuperado") !== "pagina"
-          ) guardar(url, html);
+          ) guardar(url, html, veioPedaco);
         }
-        return { html: html, url: finalUrl };
+        return { html: html, url: finalUrl, pedaco: veioPedaco };
       });
     }).catch(function (erro) {
       if (
@@ -210,7 +224,7 @@
         && (!erro.status || podeTentarNovamente(erro.status))
       ) {
         return esperar(atrasoDaTentativa(tentativa)).then(function () {
-          return requisitar(url, tentativa + 1, silencioso);
+          return requisitar(url, tentativa + 1, silencioso, pedaco);
         });
       }
       erro.lsTentativaFinal = true;
@@ -221,11 +235,11 @@
     });
   }
 
-  function buscar(url, silencioso) {
-    var id = url.href;
+  function buscar(url, silencioso, pedaco) {
+    var id = (pedaco ? "parte:" : "") + url.href;
     if (emVoo.has(id)) return emVoo.get(id);
 
-    var pedido = requisitar(url, 0, silencioso).finally(function () {
+    var pedido = requisitar(url, 0, silencioso, pedaco).finally(function () {
       emVoo.delete(id);
     });
 
@@ -638,6 +652,94 @@
   }
 
   /* ======================================================================
+     TROCAR SÓ A LISTA
+
+     UM CLIQUE NUM CARTÃO DE FILTRO NÃO É UMA TELA NOVA.
+
+     Era tratado como se fosse. "Aguardando peça" baixava 380 KB,
+     "Todas" baixava outros 380 KB, e o navegador montava um documento
+     inteiro no `DOMParser` para depois substituir todo o `.ls-content`
+     -- com os modais, os scripts da tela e a lista de 300 clientes que
+     alimenta o autocompletar. Nada disso muda quando o filtro muda.
+
+     Medido, na tela de Ordens de Serviço com 600 registros: dos 380 KB,
+     207 eram trecho idêntico ao que já estava na tela.
+
+     Agora o servidor devolve quatro trechos -- os cartões, a faixa de
+     dinheiro, o painel da lista e o JSON das linhas -- e cada um
+     substitui o seu pelo nome em `data-ls-parte`. O resto do documento
+     nem toma conhecimento: os modais continuam montados, o script da
+     tela continua rodando, os ouvintes continuam pendurados.
+
+     REGRA DE OURO: OU TROCA TUDO, OU NÃO TROCA NADA. Se qualquer trecho
+     que veio não tiver correspondente aqui, esta função desiste e
+     devolve `false` -- e quem chamou refaz o pedido pela tela inteira.
+     Meia troca deixaria a tabela de um filtro sob os cartões de outro,
+     que é pior do que a espera que estamos tentando evitar.
+     ====================================================================== */
+  var ATRIBUTO_PARTE = "data-ls-parte";
+
+  function temPartes(doc) {
+    return !!(doc || document).querySelector("[" + ATRIBUTO_PARTE + "]");
+  }
+
+  /* Mesmo caminho, outra consulta: é filtro, página ou busca da MESMA
+     tela. Caminho diferente é tela diferente, e aí não há trecho para
+     aproveitar -- vai inteira. */
+  function ehTrocaDeLista(alvo) {
+    return alvo.pathname === window.location.pathname && temPartes(document);
+  }
+
+  function trocarPartes(html, url, modoHistorico, versao) {
+    if (versao !== navegacao) return false;
+
+    var novoDoc;
+    try {
+      novoDoc = new DOMParser().parseFromString(html, "text/html");
+    } catch (erro) {
+      return false;
+    }
+
+    var chegando = novoDoc.querySelectorAll("[" + ATRIBUTO_PARTE + "]");
+    if (!chegando.length) return false;
+
+    var pares = [];
+    for (var i = 0; i < chegando.length; i += 1) {
+      var nome = chegando[i].getAttribute(ATRIBUTO_PARTE);
+      var aqui = document.querySelector(
+        "[" + ATRIBUTO_PARTE + '="' + nome + '"]'
+      );
+      if (!aqui) return false;
+      pares.push([aqui, chegando[i]]);
+    }
+
+    if (modoHistorico === "push") {
+      window.history.pushState({ lsSoftNavigation: true }, "", url.href);
+    } else if (modoHistorico === "replace") {
+      window.history.replaceState({ lsSoftNavigation: true }, "", url.href);
+    }
+
+    pares.forEach(function (par) {
+      var novo = document.importNode(par[1], true);
+      par[0].replaceWith(novo);
+      /* Montagem SÓ do que chegou. `montarTela(document)` percorreria os
+         modais de novo -- e eles já foram montados quando a tela abriu.
+         Passar duas vezes pelo mesmo campo é máscara em dobro. */
+      if (window.Painel && window.Painel.montarTela) {
+        window.Painel.montarTela(novo);
+      }
+    });
+
+    /* A lista mudou debaixo de quem estava lendo a anterior. Voltar ao
+       topo é o mesmo que a tela inteira faz, e pelo mesmo motivo: os
+       cartões de filtro ficam lá em cima, e é para eles que o olho vai
+       depois de escolher um. */
+    window.scrollTo(0, 0);
+    esconderLoader();
+    return true;
+  }
+
+  /* ======================================================================
      A TROCA NÃO PODE PARECER UM SOBRESSALTO
 
      Substituir a área de conteúdo é instantâneo, e instantâneo demais tem
@@ -692,7 +794,7 @@
      lista nova está de fato na tela, para só então tirar a tarja de
      "atualizando". Antes esta função não devolvia nada e a tarja tinha
      de sair no chute, por tempo. */
-  function navegar(url, modoHistorico) {
+  function navegar(url, modoHistorico, opcoes) {
     var alvo = urlSegura(url);
     if (!alvo) {
       window.location.assign(String(url));
@@ -707,17 +809,38 @@
     fecharMenuMovel();
     mostrarLoader("Carregando " + (alvo.pathname === window.location.pathname ? "resultados…" : "a tela…"));
 
-    var cache = recuperar(alvo);
-    if (cache) {
-      trocarDocumento(cache, alvo, modoHistorico || "push", minhaNavegacao);
-      return Promise.resolve();
+    /* Filtro, página e busca da mesma tela pedem só os trechos que
+       mudam. Depois de GRAVAR, não: um cliente novo cadastrado dentro do
+       modal, um chamado que acabou de virar O.S. -- essas mudanças estão
+       fora dos trechos, e a tela precisa vir inteira. Quem grava passa
+       `inteira: true`. Ver `LSAtualizarTela`. */
+    var soAsPartes = !(opcoes && opcoes.inteira) && ehTrocaDeLista(alvo);
+    var modo = modoHistorico || "push";
+
+    function aplicar(html, urlFinal, veioPedaco) {
+      if (veioPedaco) {
+        if (trocarPartes(html, urlFinal, modo, minhaNavegacao)) return true;
+        /* O pedaço não serviu para esta tela (outro caminho, permissão
+           mudada, HTML inesperado). Não insistir: pedir inteira é o
+           caminho que sempre funciona. */
+        removerChave(chave(urlFinal, true));
+        return false;
+      }
+      trocarDocumento(html, urlFinal, modo, minhaNavegacao);
+      return true;
     }
 
-    return buscar(alvo).then(function (resultado) {
+    var cache = recuperar(alvo, soAsPartes);
+    if (cache && aplicar(cache, alvo, soAsPartes)) return Promise.resolve();
+
+    return buscar(alvo, false, soAsPartes).then(function (resultado) {
       if (minhaNavegacao !== navegacao) return;
-      trocarDocumento(
-        resultado.html, resultado.url, modoHistorico || "push", minhaNavegacao
-      );
+      if (aplicar(resultado.html, resultado.url, resultado.pedaco)) return;
+      /* Segunda e última tentativa, agora pela tela inteira. */
+      return buscar(alvo, false, false).then(function (completo) {
+        if (minhaNavegacao !== navegacao) return;
+        trocarDocumento(completo.html, completo.url, modo, minhaNavegacao);
+      });
     }).catch(function (erro) {
       if (minhaNavegacao !== navegacao) return;
       /* Em falha transitória, navegar a página inteira entregaria o
@@ -739,7 +862,7 @@
      atual, preservando a recuperação de conexão da navegação suave. */
   window.LSAtualizarTela = function () {
     limpar();
-    return navegar(window.location.href, "replace");
+    return navegar(window.location.href, "replace", { inteira: true });
   };
 
   function linkNavegavel(link, evento) {
@@ -836,16 +959,22 @@
   }
 
   function anteciparTela(url) {
-    if (!url || recuperar(url) || emVoo.has(url.href)) return;
+    /* Antecipa no MESMO formato em que a navegação vai pedir: buscar a
+       tela inteira para depois trocar só os trechos guardaria a resposta
+       na gaveta errada, e o clique pagaria a rede de novo. */
+    var pedaco = ehTrocaDeLista(url);
+    if (!url || recuperar(url, pedaco) || emVoo.has((pedaco ? "parte:" : "") + url.href)) return;
     prefetchsExecutados += 1;
     /* `true`: de fundo, e portanto mudo. Ver `requisitar`. */
-    buscar(url, true).catch(function () {});
+    buscar(url, true, pedaco).catch(function () {});
   }
 
   function agendarPrefetch(link, evento, atraso) {
     if (!podeAntecipar()) return;
     var url = linkNavegavel(link, evento);
-    if (!url || recuperar(url) || emVoo.has(url.href)) return;
+    if (!url) return;
+    var pedaco = ehTrocaDeLista(url);
+    if (recuperar(url, pedaco) || emVoo.has((pedaco ? "parte:" : "") + url.href)) return;
 
     window.clearTimeout(prefetchTimer);
     if (!atraso) {
@@ -879,7 +1008,10 @@
 
   window.LSNavigation = {
     clear: limpar,
-    go: function (url) { navegar(url, "push"); },
+    /* `opcoes.inteira` força a tela completa mesmo onde a troca por
+       trechos serviria. Quem grava precisa disso (ver `LSAtualizarTela`),
+       e é também o que permite comparar os dois caminhos ao medir. */
+    go: function (url, opcoes) { return navegar(url, "push", opcoes); },
     /* Atualiza somente o conteúdo. Filtros instantâneos não precisam
        transformar cada escolha em outra URL visível ou outra etapa do
        botão Voltar. */
