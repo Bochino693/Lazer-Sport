@@ -1,0 +1,37 @@
+CORREÇÃO DOS MODAIS E PROPOSTAS — LAZER SPORT
+
+Base: main, commit cda50af65b338270d0304e26dd1fad9590f22c3b.
+
+Inclui:
+- Botões de editar, refazer, enviar, situação, pagamento, avaliação e exclusão funcionando após filtrar.
+- Refazer abre diretamente a versão nova com itens, quantidades, preços, frete e desconto editáveis.
+- A proposta anterior mantém seus itens e valores; é marcada como substituída, conforme a regra existente.
+- Cadastro de brinquedo/peça preserva a proposta em edição e não reutiliza linha avulsa preenchida.
+- Correção de transições e temporizadores dos modais pai/filho.
+- Gravação única sem GET de aquecimento; limpeza do cache ao salvar.
+- Atualização parcial da lista após salvar orçamento e mudar situação.
+
+APLICAR
+1. Extraia este ZIP e copie correcao-modais.patch para a pasta do repositório Lazer-Sport.
+2. Abra o PowerShell nessa pasta e execute:
+
+   git apply --check .\correcao-modais.patch
+
+3. Somente se a verificação terminar sem erros, execute:
+
+   git apply .\correcao-modais.patch
+
+O primeiro comando não altera arquivos. Se indicar conflito, não force: a versão local difere da base e é necessário ajustar o patch.
+O patch não envia mudanças ao GitHub e não publica o site.
+
+VALIDAÇÃO
+730 testes Django/DOM passaram; após a última proteção do fechamento, os 3 testes do editor foram repetidos com sucesso.
+Testes usam SQLite isolado. Chamadas externas de requests foram desativadas na suíte.
+O teste DOM usa jsdom e respostas simuladas produzidas pelo Django; inclui filtros, envio duplo, refazer e cadastro filho preservando preços.
+A conferência visual em navegador e a medição em produção não foram realizadas: o navegador remoto não acessou o servidor local.
+
+Testes normais: python manage.py test --settings=lazer.settings_test --noinput
+Para incluir o teste de DOM: instale jsdom em um diretório temporário e configure NODE_PATH apontando para seu node_modules.
+A suíte existente contém testes que podem consultar serviços externos; use mocks de requests.sessions.Session.request ao executar a suíte completa sem rede.
+
+O envio ao GitHub foi recusado pela integração por falta de permissão de escrita (HTTP 403).

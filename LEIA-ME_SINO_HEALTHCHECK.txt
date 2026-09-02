@@ -1,0 +1,19 @@
+ATUALIZAÇÃO COMPLEMENTAR — SOM DO SINO E HEALTH CHECK
+
+Aplicar sobre a versão de sincronização já enviada ao GitHub.
+1. Na pasta do projeto, guarde uma cópia dos arquivos e extraia este ZIP substituindo os existentes.
+2. Execute python TESTAR_ATUALIZACAO.py. Se houver erro, não publique; envie o resultado.
+3. Execute:
+git add -- core/healthcheck.py core/test_healthcheck.py lazer/wsgi.py sistema_interno/static/interno/painel.js sistema_interno/templates/base_inner.html sistema_interno/tests_js/sincronia.cjs TESTAR_ATUALIZACAO.py
+git commit -m "Restringe som ao sino e simplifica health check"
+git push origin main
+4. No Render, Settings > Health Checks: Health Check Path = /healthz/
+5. O Start Command precisa usar lazer.wsgi:application (o Procfile atual já usa).
+6. O build deve executar python manage.py collectstatic --noinput. Aguarde o deploy Live e recarregue as abas com Ctrl+F5.
+
+Som: removido o botão de silenciar e a preferência antiga. Som apenas quando aumenta uma categoria de avisos do sino após a leitura inicial. Salvar, abrir modais, filtrar e atualizar números não produzem som por conta própria. Se uma ação realmente gerar aviso novo no sino, esse aviso pode tocar. O navegador/sistema operacional ainda controla volume, permissão de áudio e liberação após interação.
+
+Saúde: /healthz/ (GET/HEAD) passa pelo mesmo worker, mas responde antes de sessões, autenticação, rotas e consultas Django. /pronto/ mantém sua verificação do banco. Isso reduz dependências da sonda, mas NÃO reserva uma thread nem impede falhas por todas as threads ocupadas, memória esgotada, CPU, rede ou indisponibilidade do provedor. Não desativamos o health check nem repetimos gravações automaticamente.
+
+O evento de 02/09 às 15:25 informa timeout e recuperação; não prova a causa. Para fechar o diagnóstico, verificar logs próximos ao evento (WORKER TIMEOUT, Out of memory, slow_request), CPU/memória e o Health Check Path atual. Não há garantia absoluta de zero 502 e esta entrega não altera configurações da conta Render.
+Referência: https://render.com/docs/health-checks

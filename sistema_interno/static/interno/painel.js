@@ -1562,31 +1562,13 @@
     ultimoSomEm: 0,
     atividadeAte: 0,
     emVoo: null, repetir: false, ultimoEstado: null, etag: null,
-    falhas: 0, proximaTentativa: 0, silenciarProxima: false,
+    falhas: 0, proximaTentativa: 0,
   };
 
   /* Som curto gerado pelo próprio navegador: não baixa MP3, funciona
      offline e não cria mais uma requisição. Navegadores só liberam áudio
      depois do primeiro toque/clique; até lá a central continua visual. */
   var contextoDeAudio = null;
-  var somLigado = true;
-  try { somLigado = global.localStorage.getItem("ls-som") !== "nao"; } catch (e) {}
-  function pintarControleSom() {
-    var botao = document.getElementById("lsSom");
-    if (!botao) return;
-    botao.setAttribute("aria-pressed", String(somLigado));
-    botao.title = somLigado ? "Silenciar sons" : "Ativar sons";
-    botao.setAttribute("aria-label", botao.title);
-    botao.innerHTML = '<i class="bi ' + (somLigado ? "bi-volume-up-fill" : "bi-volume-mute-fill") + '" aria-hidden="true"></i>';
-  }
-  document.addEventListener("click", function (evento) {
-    if (!evento.target.closest("#lsSom")) return;
-    somLigado = !somLigado;
-    try { global.localStorage.setItem("ls-som", somLigado ? "sim" : "nao"); } catch (e) {}
-    if (somLigado) prepararSom();
-    pintarControleSom();
-  });
-
   function prepararSom() {
     if (contextoDeAudio) {
       if (contextoDeAudio.state === "suspended") contextoDeAudio.resume().catch(function () {});
@@ -1604,7 +1586,6 @@
   }
 
   function tocarSomDeAviso() {
-    if (!somLigado) return;
     var audio = prepararSom();
     if (!audio || audio.state !== "running") return;
     var agora = Date.now();
@@ -1756,8 +1737,7 @@
       var novo = houveAvisoNovo(dados);
       avisos.assinatura = dados.assinatura || null;
       if (mudou) desenharAvisos(dados);
-      if (novo && !avisos.silenciarProxima && document.visibilityState === "visible") tocarSomDeAviso();
-      avisos.silenciarProxima = false;
+      if (novo && document.visibilityState === "visible") tocarSomDeAviso();
       if (mudou) avisos.ouvintes.forEach(function (fn) { try { fn(dados); } catch (e) {} });
       document.dispatchEvent(new CustomEvent("ls:estado", { detail: dados }));
       return dados;
@@ -1790,20 +1770,7 @@
 
   Painel.confirmarGravacao = function () {
     if (global.LSNavigation) global.LSNavigation.clear();
-    avisos.silenciarProxima = true;
-    // Duas notas curtas confirmam apenas uma resposta de sucesso.
-    var audio = somLigado ? prepararSom() : null;
-    if (audio && audio.state === "running") {
-      [523.25, 783.99].forEach(function (hz, i) {
-        var nota = audio.createOscillator(), ganho = audio.createGain();
-        var inicio = audio.currentTime + i * 0.08;
-        nota.frequency.value = hz;
-        ganho.gain.setValueAtTime(0.035, inicio);
-        ganho.gain.exponentialRampToValueAtTime(0.0001, inicio + 0.12);
-        nota.connect(ganho); ganho.connect(audio.destination);
-        nota.start(inicio); nota.stop(inicio + 0.13);
-      });
-    }
+    // Gravar atualiza o estado; apenas novos avisos do sino geram áudio.
     buscarAvisos(true);
     if (canalSincronia) canalSincronia.postMessage({ mudou: true });
   };
@@ -1886,7 +1853,6 @@
       document.addEventListener(evento, prepararSom, { passive: true });
     });
 
-    pintarControleSom();
     global.addEventListener("online", function () { buscarAvisos(true); });
 
     /* A assinatura do que já está na tela: assim a primeira resposta não

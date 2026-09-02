@@ -1,0 +1,67 @@
+LAZER SPORT — ARQUIVOS COMPLETOS PARA SUBSTITUIR
+
+Este ZIP contém arquivos completos. Não é um patch.
+Inclui todas as correções da etapa anterior e as atualizações de sincronização.
+Base do projeto: main cda50af65b338270d0304e26dd1fad9590f22c3b.
+
+COMO APLICAR
+1. Faça uma cópia da pasta atual do projeto.
+2. Extraia o ZIP.
+3. Copie as pastas sistema_interno e docs para a raiz do projeto Lazer-Sport,
+   no mesmo nível de manage.py. Mescle as pastas e substitua os arquivos existentes.
+   Copie também os arquivos NOVOS: eles são necessários para o funcionamento.
+4. Opcionalmente, copie TESTAR_ATUALIZACAO.py para a raiz e execute:
+
+   python TESTAR_ATUALIZACAO.py
+
+   É necessário ter as dependências do requirements.txt instaladas. O teste
+   usa SQLite isolado e bloqueia chamadas externas feitas com requests.
+   Os testes de DOM são opcionais e usam Node + jsdom disponível em NODE_PATH;
+   não é necessário instalar jsdom para o site funcionar.
+5. Atualize os estáticos:
+
+   python manage.py collectstatic --noinput
+
+6. Reinicie a aplicação. Se estiver no Render, envie os arquivos ao repositório
+   e faça o deploy com a coleta de estáticos. Recarregue as abas já abertas.
+
+Esta atualização não cria migrations. Não contém banco de dados, .env nem
+credenciais. A aplicação ao site e o deploy ainda dependem de você substituir
+os arquivos; a integração GitHub recusou escrita nesta sessão.
+
+O QUE MUDOU
+- Modais de Orçamentos continuam funcionando após filtros e mudanças de página.
+- Refazer abre a nova versão com itens, quantidades, preços, frete e desconto.
+- Cadastro de brinquedo/peça mantém os valores digitados e não substitui uma linha
+  avulsa já preenchida. Corrigidas as transições e o retorno ao modal principal.
+- Salvar envia uma única gravação e não espera o GET de aquecimento do servidor.
+- Orçamentos, O.S. e Manutenções têm atualização automática dos cartões, totais e listas.
+- Menu mostra quantidades EM ABERTO dos três módulos, inclusive zero. O sino mantém
+  sua própria contagem de avisos; não é a mesma definição de número.
+- Os números do menu/sino carregam de forma assíncrona, sem segurar a abertura da página.
+- Ao editar, números podem atualizar; a lista e o formulário são preservados até
+  encerrar a edição. Filtros e rolagem são mantidos durante atualização de fundo.
+- Duas notas confirmam gravação bem-sucedida; três notas indicam novos avisos.
+  Há botão para silenciar. O navegador libera áudio após o primeiro clique/tecla.
+- Uma alteração feita por outro atendente não é sobrescrita silenciosamente:
+  orçamento/O.S. com revisão antiga recebem aviso e mantêm os campos do formulário.
+- Cache invalidado ao gravar, GETs sem sobreposição, respostas antigas descartadas,
+  espera progressiva em falhas de rede e retomada ao reconectar.
+
+SINCRONIZAÇÃO
+A atualização é solicitada logo após salvar. Abas do mesmo navegador recebem um
+sinal por BroadcastChannel quando disponível. Outros aparelhos consultam a cada
+12 segundos enquanto a aba está visível; com falha de rede há espera maior.
+Não é WebSocket e não foi medida a latência da hospedagem em produção.
+Os formulários atualizados enviam a revisão para proteger a edição simultânea;
+chamadas antigas sem revisão permanecem compatíveis, sem essa proteção adicional.
+
+VALIDAÇÃO
+A suíte completa executou 737 testes com sucesso. Também foram verificados em DOM
+simulado: filtros, edição, refazer, cadastro filho, preservação de preços, números
+assíncronos, ausência de GETs sobrepostos e controle de sons.
+O navegador remoto não acessou o servidor local; a conferência visual em produção
+permanece necessária. Testes usam dados sintéticos e não o banco da empresa.
+
+ARQUIVOS
+A lista de arquivos e seus SHA-256 está em MANIFESTO_SHA256.txt.
