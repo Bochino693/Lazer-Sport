@@ -713,7 +713,7 @@
     return new Promise(function (resolver) { global.setTimeout(resolver, ms); });
   }
 
-  function pulsoDoServidor(tentativa) {
+  function pulsoDoServidor(tentativa, anunciar) {
     var controlador = global.AbortController ? new AbortController() : null;
     var prazo = PRAZOS_DO_PULSO[Math.min(tentativa, PRAZOS_DO_PULSO.length - 1)];
     var timer = controlador
@@ -747,26 +747,52 @@
          o que se ganha esperando aqui é nada, e o que se perde é tempo
          da paciência de quem está olhando a tela. */
       if (tentativa < ESPERAS_DO_PULSO.length) {
-        avisarEspera("acordando", tentativa);
+        if (anunciar && anunciar()) avisarEspera("acordando", tentativa);
         return esperarRede(ESPERAS_DO_PULSO[tentativa]).then(function () {
-          return pulsoDoServidor(tentativa + 1);
+          return pulsoDoServidor(tentativa + 1, anunciar);
         });
       }
-      avisarEspera("desistiu", tentativa);
+      if (anunciar && anunciar()) avisarEspera("desistiu", tentativa);
       throw erro;
     }).finally(function () {
       if (timer) global.clearTimeout(timer);
     });
   }
 
-  function acordarServidor(forcar) {
+  /* SÓ FALA QUEM TEM ALGUÉM ESPERANDO.
+
+     O despertar acontece em quatro momentos, e só um deles tem uma
+     pessoa parada olhando: a gravação. Os outros três -- o pulso de
+     quatro em quatro minutos, a volta para a aba, e o toque depois de um
+     tempo parado -- são aquecimento especulativo, feito por precaução,
+     sem ninguém esperando por eles.
+
+     Enquanto todos anunciavam, um aquecimento que falhasse escrevia
+     "Servidor acordando…" numa tela que já estava carregada e
+     funcionando. A pessoa via um aviso de espera sem estar esperando por
+     nada -- e sem nada para fazer a respeito.
+
+     Agora a regra é: quem foi chamado por uma ação da pessoa fala; quem
+     foi chamado por precaução, cala. */
+  var anuncioPendente = false;
+
+  function acordarServidor(forcar, anunciar) {
     if (!forcar && Date.now() - redeUltimoSucesso < REDE_OCIOSA_MS) {
       return Promise.resolve(true);
     }
-    if (redeAcordando) return redeAcordando;
+    if (redeAcordando) {
+      /* Uma gravação que chega no meio de um aquecimento mudo passa a
+         ter alguém esperando: daí em diante ele fala. */
+      if (anunciar) anuncioPendente = true;
+      return redeAcordando;
+    }
 
-    redeAcordando = pulsoDoServidor(0).finally(function () {
+    anuncioPendente = Boolean(anunciar);
+    redeAcordando = pulsoDoServidor(0, function () {
+      return anuncioPendente;
+    }).finally(function () {
       redeAcordando = null;
+      anuncioPendente = false;
     });
     return redeAcordando;
   }
@@ -796,7 +822,7 @@
          fora: pode ser só aquele endereço. O POST sai uma vez, como
          sempre saiu, e se o servidor realmente não estiver lá ele falha
          com o erro de verdade, que é o que a tela precisa mostrar. */
-      return acordarServidor(false).catch(function () {
+      return acordarServidor(false, true).catch(function () {
         return false;
       }).then(function () {
         return fetch(destino, opcoes).then(function (resposta) {
@@ -844,8 +870,23 @@
      ====================================================================== */
   var caixaOcupado = null;
   var relogioOcupado = null;
+  var tetoOcupado = null;
   var inicioOcupado = 0;
   var textoOcupado = "";
+
+  /* TETO DE VIDA DA TARJA.
+
+     Ela informa uma espera; se a espera acaba sem ninguém avisar, ela
+     tem de sair sozinha. Sem isso, qualquer caminho que a mostre e não
+     a esconda a deixa presa na tela contando segundos -- foi o que
+     aconteceu com a busca de fundo, que a acendia e nunca a apagava
+     porque ninguém tinha navegado.
+
+     Setenta segundos: um pouco mais que a maior espera legítima (a
+     sondagem de 8s mais a janela de despertar de 50s). Passou disso,
+     ou a resposta chegou por outro caminho, ou ela não vem mais -- e nos
+     dois casos a tarja está mentindo. */
+  var TETO_DA_TARJA = 70000;
 
   function montarOcupado() {
     if (caixaOcupado && document.body.contains(caixaOcupado)) return caixaOcupado;
@@ -881,12 +922,19 @@
       var segundos = Math.round((Date.now() - inicioOcupado) / 1000);
       pintarOcupado(segundos >= 5 ? " (" + segundos + "s)" : "");
     }, 1000);
+
+    if (tetoOcupado) global.clearTimeout(tetoOcupado);
+    tetoOcupado = global.setTimeout(Painel.pronto, TETO_DA_TARJA);
   };
 
   Painel.pronto = function () {
     if (relogioOcupado) {
       global.clearInterval(relogioOcupado);
       relogioOcupado = null;
+    }
+    if (tetoOcupado) {
+      global.clearTimeout(tetoOcupado);
+      tetoOcupado = null;
     }
     if (caixaOcupado) caixaOcupado.classList.remove("aparece");
     if (global.LSLoader && global.LSLoader.hide) global.LSLoader.hide();

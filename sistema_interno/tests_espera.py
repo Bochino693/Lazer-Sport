@@ -81,7 +81,9 @@ class AcordarAntesDeAgirTests(SimpleTestCase):
         pulso = painel[painel.index("function pulsoDoServidor("):]
         pulso = pulso[:pulso.index("function acordarServidor(")]
         self.assertIn('method: "GET"', pulso)
-        self.assertIn("pulsoDoServidor(tentativa + 1)", pulso)
+        # A repetição carrega junto quem tem direito de falar na tela:
+        # aquecimento por precaução é mudo, gravação anuncia.
+        self.assertIn("pulsoDoServidor(tentativa + 1, anunciar)", pulso)
 
     def test_acorda_o_banco_e_nao_so_o_processo(self):
         """Acordar só o processo troca uma espera longa por uma média.
