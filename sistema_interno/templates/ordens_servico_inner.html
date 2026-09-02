@@ -11,16 +11,16 @@
   .ls-os-body .ls-page-hero{
     isolation:isolate;overflow:hidden;
     padding:clamp(18px,2vw,26px)!important;
-    border:1px solid rgba(127,230,213,.2)!important;
+    border:1px solid rgba(var(--apoio-rgb),.2)!important;
     border-radius:24px 24px 24px 9px!important;
     background:
       linear-gradient(118deg,rgba(24,27,23,.98),rgba(29,34,29,.93) 68%,rgba(26,44,39,.88))!important;
-    box-shadow:0 16px 34px rgba(0,0,0,.22),inset 0 1px rgba(255,255,255,.035)!important;
+    box-shadow:0 16px 34px rgba(var(--sombra-rgb),calc(.22 * var(--sombra-forca))),inset 0 1px rgba(var(--verniz-rgb),.035)!important;
   }
   .ls-os-body .ls-page-hero::after{
     content:""!important;display:block!important;position:absolute;z-index:0;
     width:260px;height:260px;right:-105px;top:-145px;border-radius:50%;
-    background:radial-gradient(circle,rgba(61,217,192,.18),rgba(61,217,192,0) 70%);
+    background:radial-gradient(circle,rgba(var(--apoio-rgb),.18),rgba(var(--apoio-rgb),0) 70%);
     pointer-events:none;
   }
   /* PARÁGRAFO É PARÁGRAFO, NÃO CAIXA FLEX.
@@ -38,8 +38,8 @@
   .ls-os-body .ls-page-hero-nota{
     display:block;max-width:590px;
     margin-top:12px!important;padding:10px 13px!important;
-    border:1px solid rgba(127,230,213,.22);border-radius:14px 14px 14px 5px;
-    background:rgba(61,217,192,.055)!important;color:#d8e4e1!important;
+    border:1px solid rgba(var(--apoio-rgb),.22);border-radius:14px 14px 14px 5px;
+    background:rgba(var(--apoio-rgb),.055)!important;color:var(--text-2)!important;
   }
   .ls-os-body .ls-page-hero-nota i{vertical-align:-1px}
 
@@ -50,12 +50,12 @@
      tinha digitado, e acaba conferindo tudo de novo. */
   .ls-espelho-chamado{
     margin-top:6px;padding:8px 10px;border-radius:10px;
-    border:1px solid rgba(127,230,213,.26);background:rgba(61,217,192,.07);
-    color:#cfe1de;font-size:.72rem;font-weight:700;line-height:1.45;
+    border:1px solid rgba(var(--apoio-rgb),.26);background:rgba(var(--apoio-rgb),.07);
+    color:var(--text-2);font-size:.72rem;font-weight:700;line-height:1.45;
   }
   .ls-espelho-chamado[hidden]{display:none!important}
-  .ls-espelho-chamado strong{color:#7fe6d5}
-  .ls-espelho-alerta{color:#ffc94d}
+  .ls-espelho-chamado strong{color:var(--apoio-claro)}
+  .ls-espelho-alerta{color:var(--yellow-texto)}
   @media (max-width:760px){
     .ls-os-body .ls-page-hero{border-radius:20px 20px 20px 7px!important}
     .ls-os-body .ls-page-hero-nota{max-width:none}
@@ -75,8 +75,8 @@
   }
   .ls-os-child-layer .modal-content{
     max-height:calc(100dvh - clamp(20px,4vw,48px));overflow:hidden;
-    border:1px solid rgba(127,230,213,.3)!important;border-radius:18px!important;
-    box-shadow:0 28px 80px rgba(0,0,0,.58)!important;
+    border:1px solid rgba(var(--apoio-rgb),.3)!important;border-radius:18px!important;
+    box-shadow:0 28px 80px rgba(var(--sombra-rgb),calc(.58 * var(--sombra-forca)))!important;
   }
   .ls-os-child-layer .modal-body{overflow-y:auto;overscroll-behavior:contain}
 

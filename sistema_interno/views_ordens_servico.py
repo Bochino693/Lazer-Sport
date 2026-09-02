@@ -1151,7 +1151,20 @@ class OrdensServicoInnerView(
                 forma_pagamento=anterior.forma_pagamento,
                 frete=anterior.frete,
                 desconto=anterior.desconto,
-                agendada_para=anterior.agendada_para,
+                # AGENDA VENCIDA NÃO ACOMPANHA A VERSÃO NOVA.
+                #
+                # Refazer é justamente o caminho de quando a data passou.
+                # Copiada, a versão nova nascia prometendo um dia que já
+                # foi -- e, pela regra de envio, nascia sem poder ser
+                # enviada. Vazia, o campo pede a data nova, que é o que
+                # falta mesmo. Agenda futura continua vindo junto: ali
+                # ela ainda é o combinado.
+                agendada_para=(
+                    anterior.agendada_para
+                    if anterior.agendada_para
+                    and anterior.agendada_para >= timezone.now()
+                    else None
+                ),
                 garantia_ate=anterior.garantia_ate,
                 tecnico=anterior.tecnico,
                 responsavel=request.user,
@@ -1202,13 +1215,11 @@ class OrdensServicoInnerView(
         # zerado, que é a informação correta.
         if not ordem.pode_enviar:
             # AS AÇÕES SÃO EM CIMA DA SITUAÇÃO. Mandar ao cliente a O.S.
-            # de um serviço cancelado, ou a versão que já foi trocada por
-            # outra, é pedir decisão sobre um papel que não vale mais.
-            raise ErroDeFormulario(
-                "Esta O.S. está como "
-                f"{ordem.get_status_display().lower()} e não vai mais ao "
-                "cliente. Envie a versão que está valendo."
-            )
+            # de um serviço cancelado, a versão que já foi trocada por
+            # outra, ou uma agenda que já passou é pedir decisão sobre um
+            # papel que não vale mais. Cada caso tem uma saída diferente,
+            # e o recado diz qual é. Ver `OrdemServico.pode_enviar`.
+            raise ErroDeFormulario(ordem.motivo_de_nao_enviar)
         canal = (request.POST.get("canal") or "link").strip()
         if canal not in EnvioOrdemServico.Canal.values:
             raise ErroDeFormulario("Escolha WhatsApp, e-mail ou copiar link.")

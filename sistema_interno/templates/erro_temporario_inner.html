@@ -5,6 +5,22 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="color-scheme" content="dark">
   <title>Conexão em recuperação | Lazer &amp; Sport</title>
+  {% comment %}
+    ESTA PÁGINA NÃO USA OS TOKENS DE TEMA, E ISSO É DELIBERADO.
+
+    Ela é a tela de recuperação: aparece justamente quando o banco não
+    responde ou a conexão caiu. Todo o estilo dela mora aqui dentro, sem
+    nenhuma folha externa, porque uma página de erro que depende de outro
+    arquivo carregar é uma página de erro que às vezes não aparece.
+
+    Isso a deixa fora do sol/lua/eclipse -- e está certo assim. Quem cai
+    aqui não está escolhendo tema, está esperando o sistema voltar; e o
+    azul dela é diferente do painel de propósito, para não parecer uma
+    tela do painel que quebrou.
+
+    Se um dia estas cores forem trocadas por `var(--...)`, a página passa
+    a abrir sem cor nenhuma. Ver `tests_temas.py`.
+  {% endcomment %}
   <style>
     :root{color-scheme:dark;font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif}
     *{box-sizing:border-box}body{min-height:100vh;margin:0;padding:22px;display:grid;place-items:center;color:#f7efe2;background:radial-gradient(circle at 15% 10%,#263a55 0,transparent 36%),#111723}
