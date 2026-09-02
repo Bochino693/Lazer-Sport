@@ -226,16 +226,24 @@ if not SUPABASE_DATABASE_URL:
         "(ao lado do manage.py) com SUPABASE_DATABASE_URL=postgresql://..."
     )
 
-# O processo persistente do Render pode reaproveitar conexões. Isso evita um
-# novo handshake TLS com o Supabase em cada consulta sem manter conexões por
-# tempo demais. O valor ainda pode ser ajustado pela variável de ambiente.
+# REAPROVEITAR A CONEXÃO É A ECONOMIA MAIS BARATA QUE EXISTE AQUI.
+#
+# Sem isso, CADA requisição abre uma conexão nova com o Supabase: DNS,
+# TCP e handshake TLS antes da primeira consulta. Numa tela do painel que
+# faz vinte consultas, isso não é um detalhe -- é a diferença entre a
+# tela abrir em um segundo e abrir em três.
+#
+# O padrão dependia de a variável `RENDER` valer exatamente "true".
+# Qualquer outra hospedagem, ou o mesmo Render sem essa variável, caía em
+# zero e pagava o handshake em toda requisição -- em silêncio, porque o
+# sintoma é só "o sistema está lento". Agora quem decide é o ambiente:
+# produção reaproveita, desenvolvimento não (para o `runserver` não
+# segurar conexão entre reinícios).
+_CONN_MAX_AGE_PADRAO = "60" if (IS_RENDER or ENVIRONMENT == "production") else "0"
 try:
-    DB_CONN_MAX_AGE = max(
-        0,
-        int(os.getenv("DB_CONN_MAX_AGE", "60" if IS_RENDER else "0")),
-    )
+    DB_CONN_MAX_AGE = max(0, int(os.getenv("DB_CONN_MAX_AGE", _CONN_MAX_AGE_PADRAO)))
 except ValueError:
-    DB_CONN_MAX_AGE = 60 if IS_RENDER else 0
+    DB_CONN_MAX_AGE = int(_CONN_MAX_AGE_PADRAO)
 
 DATABASES = {
     "default": dj_database_url.parse(
@@ -516,6 +524,46 @@ except ValueError:
     WHITENOISE_MAX_AGE = 86400
 
 
+# ------------------------------------------------------------------
+# O QUE O NAVEGADOR NÃO PRECISA PERGUNTAR DE NOVO
+# ------------------------------------------------------------------
+# Todo CSS e JS do painel sai por `{% estatico %}`, que põe na URL um
+# `?v=` calculado a partir do CONTEÚDO do arquivo (ver
+# `sistema_interno/templatetags/interno_extras.py`). Mudou o arquivo,
+# muda a URL: são endereços diferentes, e o navegador busca o novo
+# sozinho.
+#
+# Com um dia de validade, porém, o navegador ainda perguntava "mudou?"
+# uma vez por dia para CADA arquivo -- e no painel são sete, somando mais
+# de 600 KB. Numa rede de celular são sete idas e voltas antes de a tela
+# começar a desenhar, justamente na primeira abertura do dia, que é
+# quando a pessoa mais sente a demora.
+#
+# `immutable` encerra a pergunta: o conteúdo daquele endereço não muda
+# nunca, porque um conteúdo diferente tem outro endereço.
+#
+# A lista é fechada de propósito. Só entram os arquivos que os modelos
+# SEMPRE pedem com `?v=`. Ícone, logotipo e imagem continuam com a
+# validade normal: se um deles for trocado no lugar, a troca aparece.
+_ESTATICOS_VERSIONADOS = (
+    "interno/",   # CSS e JS do painel (interno_modern, painel, ls-*)
+    "site/",      # CSS e JS do site (ls-page-loader e afins)
+)
+_EXTENSOES_VERSIONADAS = (".css", ".js", ".woff", ".woff2")
+
+
+def _estatico_imutavel(path, url):
+    """Verdadeiro para os arquivos que só são pedidos com `?v=` na URL."""
+    if not url.endswith(_EXTENSOES_VERSIONADAS):
+        return False
+    caminho = url.split("/static/", 1)[-1]
+    return caminho.startswith(_ESTATICOS_VERSIONADOS) or "/vendor/" in caminho
+
+
+if os.getenv("STATIC_IMMUTABLE", "1").strip().lower() in ("1", "true", "yes", "on"):
+    WHITENOISE_IMMUTABLE_FILE_TEST = _estatico_imutavel
+
+
 # ============================================================
 # DJANGO REST FRAMEWORK
 # ============================================================
@@ -689,13 +737,19 @@ CACHES = {
     }
 }
 
+# A central de avisos custa vários COUNT no banco remoto, e o menu do
+# painel a consulta em TODA tela. Vinte segundos cobria dois cliques; uma
+# sequência normal de trabalho -- Clientes, Orçamentos, O.S., Produção --
+# pagava a conta duas ou três vezes. Quarenta e cinco segundos cobre a
+# sequência inteira. Não atrasa o aviso de uma ação da própria pessoa:
+# gravar invalida a chave na hora (ver `invalidar_avisos`).
 try:
     INTERNO_AVISOS_CACHE_TTL = max(
         5,
-        int(os.getenv("INTERNO_AVISOS_CACHE_TTL", "20")),
+        int(os.getenv("INTERNO_AVISOS_CACHE_TTL", "45")),
     )
 except ValueError:
-    INTERNO_AVISOS_CACHE_TTL = 20
+    INTERNO_AVISOS_CACHE_TTL = 45
 
 INTERNO_BASE_URL = os.getenv(
     "INTERNO_BASE_URL",

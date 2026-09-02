@@ -161,6 +161,57 @@ def _moeda_br(valor):
     return f"{numero:,.2f}".replace(",", "_").replace(".", ",").replace("_", ".")
 
 
+def espelho_da_manutencao(manutencao, ja_tem_os=False):
+    """Tudo que o chamado já sabe, no formato que o formulário da O.S. usa.
+
+    POR QUE ISTO EXISTE NO SERVIDOR, E NÃO NO `data-` DA <option>.
+
+    O espelho morava em atributos da opção do <select>. Isso amarrava a
+    cópia à existência da opção: chamado já concluído, cancelado, ou
+    simplesmente fora dos 100 mais antigos que a tela carrega, e o link
+    "Gerar O.S." abria o formulário VAZIO -- sem aviso, sem erro, sem
+    nada. Quem clicou digitava tudo de novo achando que o sistema nunca
+    tinha prometido copiar.
+
+    Aqui o painel recebe o espelho pronto de cada chamado que ele pode
+    abrir, e o chamado pedido pela URL entra na lista mesmo quando não
+    caberia nela. Também é aqui que o endereço vira uma linha só, com
+    bairro e CEP -- que era o que faltava para o técnico não ter de abrir
+    o chamado noutra aba para saber onde é.
+    """
+    perfil = manutencao.usuario
+    usuario = getattr(perfil, "user", None)
+    nome = (
+        (getattr(perfil, "nome_completo", "") or "").strip()
+        or (getattr(usuario, "get_full_name", lambda: "")() or "").strip()
+        or (getattr(usuario, "username", "") or "").strip()
+    )
+    telefone = (
+        (manutencao.telefone_contato or "").strip()
+        or (getattr(perfil, "telefone", "") or "").strip()
+    )
+    return {
+        "id": manutencao.id,
+        "codigo": "MAN-%05d" % manutencao.id,
+        "equipamento": manutencao.nome_equipamento,
+        "nome_cliente": nome,
+        # Quem abriu o chamado é o responsável no local até que se diga
+        # outra coisa: é o nome para quem o técnico pergunta ao chegar.
+        "contato": nome,
+        "whatsapp_cliente": telefone,
+        "email_cliente": (getattr(usuario, "email", "") or "").strip(),
+        "defeito_relatado": (manutencao.descricao or "").strip(),
+        "endereco_servico": texto_endereco(manutencao),
+        "cidade": (manutencao.cidade or "").strip(),
+        "estado": (manutencao.estado or "").strip(),
+        "situacao": manutencao.get_status_display(),
+        "aberto_em": timezone.localtime(manutencao.criado_em).strftime(
+            "%d/%m/%Y %H:%M"
+        ) if manutencao.criado_em else "",
+        "ja_tem_os": bool(ja_tem_os),
+    }
+
+
 class OrdensServicoInnerView(
     RespostaJSONMixin, OrdemServicoInternoRequiredMixin, View
 ):
@@ -356,6 +407,50 @@ class OrdensServicoInnerView(
             for cliente in clientes
         ]
 
+        # ------------------------------------------------------------------
+        # CHAMADOS DE MANUTENÇÃO QUE O FORMULÁRIO PODE COPIAR
+        # ------------------------------------------------------------------
+        # A fila normal é a dos chamados em aberto. Mas o link "Gerar O.S."
+        # da central de manutenções aponta para UM chamado específico, e
+        # esse chamado precisa existir na lista mesmo que já esteja
+        # concluído ou fora da janela dos 100 -- senão o formulário abre
+        # vazio e a promessa de poupar digitação não se cumpre.
+        manutencoes = list(
+            Manutencao.objects
+            .filter(status__in=("P", "A"))
+            .select_related("brinquedo", "usuario__user")
+            .order_by("criado_em")[:100]
+        )
+        manutencao_pedida = 0
+        pedido = (request.GET.get("manutencao") or "").strip()
+        if pedido.isdigit():
+            manutencao_pedida = int(pedido)
+            if not any(m.id == manutencao_pedida for m in manutencoes):
+                extra = (
+                    Manutencao.objects
+                    .select_related("brinquedo", "usuario__user")
+                    .filter(pk=manutencao_pedida)
+                    .first()
+                )
+                if extra:
+                    manutencoes.insert(0, extra)
+                else:
+                    manutencao_pedida = 0
+
+        # Um chamado já atendido continua podendo virar outra O.S. (uma
+        # segunda visita é comum), mas quem escolhe precisa saber disso
+        # antes de clicar -- e não depois de gerar a segunda.
+        com_os = set(
+            OrdemServico.objects
+            .filter(manutencao_id__in=[m.id for m in manutencoes])
+            .exclude(status=OrdemServico.Status.SUBSTITUIDA)
+            .values_list("manutencao_id", flat=True)
+        )
+        manutencoes_dados = {
+            str(m.id): espelho_da_manutencao(m, m.id in com_os)
+            for m in manutencoes
+        }
+
         acesso = capacidades(request.user)
         return render(request, "ordens_servico_inner.html", {
             "ordens": ordens,
@@ -383,12 +478,11 @@ class OrdensServicoInnerView(
             "clientes_dados": clientes_dados,
             "tipos_cliente": Cliente.Tipo.choices,
             "empresa_localizacao": origem,
-            "manutencoes": (
-                Manutencao.objects
-                .filter(status__in=("P", "A"))
-                .select_related("brinquedo", "usuario__user")
-                .order_by("criado_em")[:100]
-            ),
+            "manutencoes": manutencoes,
+            # O espelho de cada chamado, pronto para o formulário copiar.
+            # Ver `espelho_da_manutencao`.
+            "manutencoes_dados": manutencoes_dados,
+            "manutencao_pedida": manutencao_pedida,
             "tecnicos": self._tecnicos(),
             "categorias_peca": CategoriaPeca.objects.order_by("nome_categoria_peca"),
             "tipos": OrdemServico.Tipo.choices,

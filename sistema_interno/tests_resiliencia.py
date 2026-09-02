@@ -97,17 +97,104 @@ class ResilienciaPainelTests(SimpleTestCase):
         self.assertEqual(json.loads(resposta.content)["request_id"], "banco123")
 
     def test_processo_web_e_compativel_com_instancia_pequena_do_render(self):
+        """Os mesmos limites de antes, agora lidos de onde eles moram.
+
+        Eram onze parâmetros escritos na linha do Procfile. Passaram para
+        `gunicorn.conf.py`, que é onde dá para explicar cada número e onde
+        a hospedagem pode ajustá-los por variável de ambiente sem publicar
+        código. O que este teste protege continua o mesmo: um processo,
+        sem duplicar a aplicação em memória, com prazo folgado para a
+        partida a frio.
+        """
         raiz = Path(__file__).resolve().parent.parent
         procfile = (raiz / "Procfile").read_text(encoding="utf-8")
         python = (raiz / ".python-version").read_text(encoding="utf-8").strip()
 
         web = procfile.splitlines()[0]
-        self.assertIn("--bind 0.0.0.0:$PORT", web)
-        self.assertIn("--workers 1", web)
-        self.assertIn("--threads 4", web)
-        self.assertIn("--timeout 90", web)
+        self.assertIn("gunicorn lazer.wsgi:application", web)
+        self.assertIn("-c gunicorn.conf.py", web)
         self.assertNotIn("--preload", web)
         self.assertEqual(python, "3.12")
+
+        conf = {}
+        exec(
+            compile(
+                (raiz / "gunicorn.conf.py").read_text(encoding="utf-8"),
+                "gunicorn.conf.py",
+                "exec",
+            ),
+            conf,
+        )
+        self.assertEqual(conf["worker_class"], "gthread")
+        self.assertEqual(conf["workers"], 1)
+        self.assertEqual(conf["timeout"], 90)
+        self.assertTrue(conf["bind"].startswith("0.0.0.0:"))
+        self.assertFalse(conf.get("preload_app", False))
+
+        # Threads sobem sem duplicar a aplicação: é o parâmetro certo para
+        # instância pequena com banco remoto lento, porque enquanto uma
+        # thread espera o Supabase a outra atende.
+        self.assertGreaterEqual(conf["threads"], 4)
+        self.assertLessEqual(conf["threads"], 16)
+
+        # RECICLAR O ÚNICO WORKER É DERRUBAR O SITE.
+        #
+        # Era `--max-requests 600`: a cada 600 requisições o único
+        # processo era morto e refeito, e tudo que chegava enquanto o
+        # Django subia esperava a partida inteira -- o que estourava o
+        # prazo do proxy e voltava como 502 sem explicação.
+        self.assertEqual(conf["max_requests"], 0)
+
+    def test_css_e_js_versionados_nao_sao_perguntados_de_novo(self):
+        """Sete arquivos, 600 KB, uma pergunta por dia cada um.
+
+        Todo CSS e JS do painel sai por `{% estatico %}`, que põe na URL
+        um `?v=` calculado do CONTEÚDO: mudou o arquivo, mudou o
+        endereço. Mesmo assim eles vinham com validade de um dia, então
+        uma vez por dia o navegador perguntava "mudou?" para cada um --
+        sete idas e voltas antes de a tela começar a desenhar, na
+        primeira abertura do dia, que é quando a demora mais aparece.
+
+        Ícone e imagem ficam de fora de propósito: eles podem ser
+        trocados no lugar, e uma validade de dez anos esconderia a troca.
+        """
+        from django.conf import settings
+
+        imutavel = settings.WHITENOISE_IMMUTABLE_FILE_TEST
+
+        for url in (
+            "/static/interno/interno_modern.css",
+            "/static/interno/painel.js",
+            "/static/interno/ls-soft-navigation.js",
+            "/static/site/ls-page-loader.css",
+            "/static/interno/vendor/bootstrap.min.css",
+            "/static/interno/vendor/fonts/bootstrap-icons.woff2",
+        ):
+            self.assertTrue(imutavel("/disco" + url, url), url)
+
+        for url in (
+            "/static/interno/app-icone-192.png",
+            "/static/images/logoofi.png",
+            "/static/app/lazersport.apk",
+        ):
+            self.assertFalse(imutavel("/disco" + url, url), url)
+
+    def test_o_painel_pede_os_estaticos_sempre_com_versao(self):
+        """A validade de dez anos só é segura assim.
+
+        Um `{% static %}` sem `?v=` num CSS ou JS marcado como imutável
+        prenderia o navegador na versão velha por dez anos.
+        """
+        raiz = Path(__file__).resolve().parent
+        base = (raiz / "templates" / "base_inner.html").read_text(encoding="utf-8")
+
+        import re
+
+        for pedido in re.findall(r"\{%\s*static\s+'([^']+)'\s*%\}", base):
+            self.assertFalse(
+                pedido.endswith((".css", ".js")),
+                f"{pedido} sai por static sem versão; use estatico",
+            )
 
     def test_health_check_do_render_nao_toca_no_banco(self):
         with patch(

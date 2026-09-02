@@ -225,7 +225,16 @@ class ScriptDeTelaNaoEsperaDOMContentLoadedTests(SimpleTestCase):
             base,
         )
         self.assertIn('}, true);', base)
-        self.assertIn("MAX_TENTATIVAS_REDE = 4", navegacao)
+        # TRÊS TENTATIVAS, E A ÚLTIMA É A QUE ESPERA MAIS.
+        #
+        # Eram quatro de doze segundos: até 52 segundos por troca de tela,
+        # e sem nada escrito na tela durante quase todo esse tempo. Duas
+        # trocas numa instância fria davam a espera de minutos que a
+        # fábrica descreveu. Continua havendo repetição -- que é o que
+        # este teste protege --, agora com teto menor e com aviso.
+        self.assertIn("MAX_TENTATIVAS_REDE = 3", navegacao)
+        self.assertIn("TIMEOUT_REDE_ULTIMA", navegacao)
+        self.assertIn("function escalarLoader(", navegacao)
         self.assertIn("mostrarRecuperacao(alvo", navegacao)
         self.assertIn("erro.lsTransitorio", navegacao)
         self.assertIn("lsNavRecovery", navegacao)
