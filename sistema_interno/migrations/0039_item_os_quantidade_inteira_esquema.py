@@ -4,12 +4,11 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        # Mantenha aqui a migration 0038 exata que já estava no seu arquivo
-        ('sistema_interno', '0038_auto_...'),
+        ('sistema_interno', '0038_item_os_quantidade_inteira'),
     ]
 
     operations = [
-        # 1. Remove a constraint caso ela já exista no PostgreSQL (evita o erro DuplicateObject)
+        # Remove a constraint se ela já existir para evitar o erro DuplicateObject
         migrations.RunSQL(
             sql="""
             ALTER TABLE sistema_interno_itemordemservico 
@@ -17,7 +16,7 @@ class Migration(migrations.Migration):
             """,
             reverse_sql=migrations.RunSQL.noop,
         ),
-        # 2. Executa a alteração do campo quantidade normalmente
+        # Aplica a alteração do campo quantidade
         migrations.AlterField(
             model_name='itemordemservico',
             name='quantidade',
