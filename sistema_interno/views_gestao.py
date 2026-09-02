@@ -31,6 +31,7 @@ from core.email_utils import (
 from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
 from django.db import transaction
+from core.models import TagsBrinquedos
 from django.core.paginator import Paginator
 from django.db.models import (
     Case,
@@ -543,6 +544,7 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
                 + PecasReposicao.objects.filter(ativo=True).count()
             ),
             "categorias": CategoriasBrinquedos.objects.order_by("nome_categoria"),
+            "tags_catalogo": TagsBrinquedos.objects.order_by("nome_tags"),
             "categorias_peca": CategoriaPeca.objects.order_by("nome_categoria_peca"),
             "hoje": timezone.localdate(),
             "page_obj": pagina,
@@ -1793,6 +1795,8 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
         """
         if not capacidades(request.user)["orcamentos_editar_comercial"]:
             return self.erro(request, "Cadastro de item pertence ao Comercial.", status=403)
+        from . import fotos_catalogo
+        fotos = fotos_catalogo.validar(request, brinquedo=True)
         nome = texto(request, "nome", obrigatorio=True, rotulo="o nome do brinquedo", limite=150)
 
         if Brinquedos.objects.filter(nome_brinquedo__iexact=nome).exists():
@@ -1802,10 +1806,13 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
 
         valor = decimal_br(
             request.POST.get("valor"), "Valor",
-            limite=Decimal("9999999999.99"),
+            limite=Decimal("99999999.99"),
         )
 
+        dimensoes = {campo: decimal_br(request.POST.get(campo), campo, limite=Decimal("9999.99"))
+                     for campo in ("altura_m", "largura_m", "profundidade_m")}
         brinquedo = Brinquedos.objects.create(
+            **dimensoes,
             nome_brinquedo=nome,
             descricao=texto(request, "descricao", limite=999) or nome,
             valor_brinquedo=valor,
@@ -1824,12 +1831,18 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
             exibir_na_loja=False,
         )
 
-        categoria_id = (request.POST.get("categoria") or "").strip()
-        if categoria_id.isdigit():
-            categoria = CategoriasBrinquedos.objects.filter(pk=categoria_id).first()
-            if categoria:
-                brinquedo.categorias_brinquedos.add(categoria)
+        for campo, modelo, relacao in (("categoria", CategoriasBrinquedos, brinquedo.categorias_brinquedos),
+                                        ("tags", TagsBrinquedos, brinquedo.tags),
+                                        ("estabelecimentos", Estabelecimentos, brinquedo.estabelecimentos)):
+            ids = [v for v in request.POST.getlist(campo) if v]
+            if any(not v.isdigit() for v in ids):
+                raise ErroDeFormulario("Seleção de catálogo inválida.")
+            objetos = list(modelo.objects.filter(pk__in=ids))
+            if len(objetos) != len(set(ids)):
+                raise ErroDeFormulario("Uma opção do catálogo não existe mais. Atualize a seleção.")
+            relacao.set(objetos)
 
+        fotos_catalogo.salvar(brinquedo, fotos, brinquedo=True)
         return self.sucesso(
             request,
             f"“{brinquedo.nome_brinquedo}” entrou no catálogo.",

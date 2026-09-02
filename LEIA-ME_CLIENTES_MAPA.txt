@@ -1,0 +1,67 @@
+CLIENTES, MAPA E CADASTRO COMPLETO NO ORÇAMENTO
+
+Esta atualização complementa a versão de sincronização já enviada ao GitHub.
+Os arquivos principais foram comparados à main antes da entrega e correspondem à base usada.
+Não aplica mudanças automaticamente ao Render nem ao banco de dados.
+
+INSTALAÇÃO (há migrações nesta atualização)
+1. Faça backup do código e do banco antes de migrar.
+2. Atualize sua pasta a partir do GitHub antes de extrair este ZIP. Preserve alterações locais.
+3. Extraia na raiz, ao lado de manage.py, substituindo arquivos e copiando TODOS os novos.
+4. Execute: python TESTAR_ATUALIZACAO.py
+   Usa banco SQLite isolado, não o banco da empresa. Node/jsdom é opcional para os testes DOM.
+5. Execute: python manage.py auditar_identidades
+   Esse comando só lê dados. Se houver e-mails ou locais repetidos, ele lista IDs.
+   Pare e revise esses cadastros; não apague nem mescle pessoas automaticamente.
+   O mesmo endereço pode pertencer a clientes diferentes; o conflito é repetir dentro do mesmo cliente.
+6. Se a auditoria estiver limpa, execute: python manage.py migrate
+   A auditoria deve também ocorrer sobre o banco realmente usado pelo Render antes da migração nele.
+7. Envie os arquivos abaixo ao GitHub, com commit/push. Não inclua o ZIP ou credenciais.
+8. No deploy do Render, execute as migrações ANTES de iniciar o código novo e mantenha
+   python manage.py collectstatic --noinput no build. Aguarde Live e recarregue com Ctrl+F5.
+
+COMANDOS PARA ENVIAR (após testar e auditar)
+git add -- TESTAR_ATUALIZACAO.py core/adapters.py core/forms.py core/identidade_email.py core/middleware.py core/signals.py core/templates/gestao/clientes_adm.html core/tests_orcamento.py core/views.py docs/INTERNO_DIRETRIZ.md sistema_interno/clientes.py sistema_interno/fotos_catalogo.py sistema_interno/management/commands/auditar_identidades.py sistema_interno/migrations/0040_estabelecimento_do_cliente.py sistema_interno/migrations/0041_identidade_email.py sistema_interno/migrations/0042_email_global.py sistema_interno/migrations/0043_endereco_sem_duplicata.py sistema_interno/migrations/0044_endereco_unico_esquema.py sistema_interno/models.py sistema_interno/pecas.py sistema_interno/templates/clientes_inner.html sistema_interno/templates/orcamentos_inner.html sistema_interno/tests_cadastro_integrado.py sistema_interno/tests_campanhas.py sistema_interno/tests_clientes.py sistema_interno/tests_js/clientes_mapa.cjs sistema_interno/views.py sistema_interno/views_clientes.py sistema_interno/views_gestao.py
+git commit -m "Integra cadastro de clientes, mapa, identidade e fotos no orçamento"
+git push origin main
+
+O QUE FOI IMPLEMENTADO
+- Ações de editar/excluir no mapa funcionam com o menu movido pelo painel e navegação suave.
+- Gravação via AJAX com bloqueio de duplo envio, erro dentro do formulário e preservação do rascunho.
+- Cliente é o responsável. Seu negócio opcional tem nome e CNPJ próprios na ficha;
+  logo e endereço são reutilizados, sem copiar ou depender de core.Estabelecimentos.
+- Vínculos antigos com parceiros públicos são preservados como legado; dados novos não usam esse vínculo.
+- Busca por responsável, estabelecimento e CNPJ.
+- Proposta aguardando resposta, em negociação ou aprovada inclui automaticamente no mapa.
+  Rascunhos, recusadas, expiradas e substituídas não incluem. Marcação manual inclui mesmo sem proposta.
+  Cliente deve estar ativo e ter coordenadas. Latitude/longitude zero são válidas.
+  Desmarcar a opção manual não vence uma proposta ativa; arquivar o cliente retira a publicação.
+- Um ponto por cliente, a partir do endereço principal; nome público do estabelecimento e logo no mapa.
+- Mudanças em cliente, endereço e proposta invalidam o cache público após commit.
+- Falha no recálculo mantém a localização anterior.
+- E-mail normalizado é reservado no banco entre clientes, usuários e aliases de login.
+  Perfis da mesma conta não criam pessoas distintas. Contas e aliases do mesmo usuário podem compartilhar
+  o e-mail; outro cliente/usuário não pode. Inclui gravações diretas e em lote.
+- Cópias históricas do contato em documentos comerciais permanecem intactas.
+- A futura associação de Cliente a User NÃO é feita automaticamente por igualdade de e-mail.
+  Se já existem duas fichas com o mesmo e-mail, a auditoria pede revisão antes da migração.
+- Endereço repetido no mesmo cliente e CNPJ de estabelecimento repetido têm restrições no banco.
+- Brinquedo novo no orçamento: fotos frente/verso/laterais, descrição, preço, voltagem,
+  dimensões, categorias múltiplas, tags e indicações. Foto principal sincronizada com campo legado.
+- Peça nova: fotos frente/traseira/laterais/detalhe/outra, descrição, venda, custo,
+  categorias múltiplas e uso loja/manutenção. Retorno à proposta sem perder os itens preenchidos.
+- Prévias das fotos; validação do conteúdo de imagem, até 5 MB cada e 16 MB total.
+  Uma falha de upload desfaz o cadastro SQL e tenta remover apenas os arquivos daquela tentativa.
+  Os itens nascem fora da publicação pública, preservando a decisão de publicar no catálogo.
+
+VALIDAÇÃO
+752 testes automatizados passaram, incluindo 12 testes de integração desta etapa.
+Ações do mapa verificadas com o HTML real em DOM simulado (JSDOM).
+Os gatilhos de e-mail também foram executados no motor PostgreSQL via PGlite com casos de
+conflito entre tabelas, aliases, atualização e liberação de endereços.
+Não houve acesso ao banco real nem validação visual no navegador da hospedagem.
+A suíte completa usou SQLite; o teste PostgreSQL foi específico para os gatilhos de identidade.
+
+REFERÊNCIAS TÉCNICAS
+https://www.postgresql.org/docs/current/sql-insert.html
+https://docs.djangoproject.com/en/5.2/topics/http/file-uploads/

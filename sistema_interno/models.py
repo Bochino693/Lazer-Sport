@@ -169,6 +169,9 @@ class Cliente(Prime):
         verbose_name="Parceiro publicado no site",
         help_text="Liga este cadastro ao parceiro que aparece no site.",
     )
+    nome_estabelecimento = models.CharField("Nome do estabelecimento do cliente", max_length=150, blank=True)
+    cnpj_estabelecimento = models.CharField("CNPJ do estabelecimento", max_length=14, blank=True, db_index=True)
+
     observacoes = models.TextField("Observações", blank=True)
 
     # ------------------------------------------------------------------
@@ -232,11 +235,21 @@ class Cliente(Prime):
         return enderecos[0] if enderecos else None
 
     @property
+    def publicacao_mapa(self):
+        if self.publicar_no_mapa:
+            return True
+        if hasattr(self, "_proposta_mapa"):
+            return self._proposta_mapa
+        return self.orcamentos.filter(
+            status__in=("aguardando_resposta", "em_negociacao", "aprovado")
+        ).exists() if self.pk else False
+
+    @property
     def no_mapa(self) -> bool:
         """Está de fato desenhado no mapa, e não só marcado para estar."""
         endereco = self.endereco_principal
         return bool(
-            self.publicar_no_mapa
+            self.publicacao_mapa
             and self.ativo
             and endereco
             and endereco.latitude is not None
@@ -259,17 +272,6 @@ class Cliente(Prime):
                 campos.update(("documento_chave", "documento_valido"))
             kwargs["update_fields"] = list(campos)
 
-        # Buffet não vira alfinete de cliente: ele já tem o card dele em
-        # "Nossos Parceiros", e as duas coisas juntas o mostrariam duas
-        # vezes no mesmo site. A tela esconde a pergunta para buffet, mas a
-        # regra mora aqui -- senão bastava mudar o tipo de um cliente já
-        # publicado para o site passar a repeti-lo.
-        if self.tipo == self.Tipo.BUFFET and self.publicar_no_mapa:
-            self.publicar_no_mapa = False
-            campos = kwargs.get("update_fields")
-            if campos is not None and "publicar_no_mapa" not in campos:
-                kwargs["update_fields"] = list(campos) + ["publicar_no_mapa"]
-
         super().save(*args, **kwargs)
 
     def __str__(self):
@@ -279,6 +281,9 @@ class Cliente(Prime):
         verbose_name = "Cliente"
         verbose_name_plural = "Clientes"
         ordering = ("nome_cliente",)
+        constraints = [models.UniqueConstraint(fields=["cnpj_estabelecimento"],
+            condition=~models.Q(cnpj_estabelecimento=""), name="cliente_cnpj_negocio_unico")]
+
 
 
 class EnderecoCliente(Prime):
@@ -376,6 +381,12 @@ class EnderecoCliente(Prime):
         return self.endereco
 
     class Meta:
+        constraints = [models.UniqueConstraint(
+            models.F("cliente"),
+            *[models.functions.Lower(models.functions.Trim(models.F(campo)))
+              for campo in ("endereco", "numero", "complemento", "cidade", "estado", "pais")],
+            name="endereco_cliente_local_unico",
+        )]
         verbose_name = "Endereço do Cliente"
         verbose_name_plural = "Endereços dos Clientes"
 
@@ -3320,3 +3331,9 @@ class ExclusaoRegistrada(models.Model):
     def __str__(self):
         marca = " (forçada)" if self.forcada else ""
         return f"{self.tipo} {self.identificacao}{marca}"
+
+
+class EmailIdentidade(models.Model):
+    """Reserva transacional de e-mail, mantida pelos gatilhos do banco."""
+    email = models.CharField(max_length=254, primary_key=True)
+    titular = models.CharField(max_length=64)

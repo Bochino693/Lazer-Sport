@@ -329,9 +329,9 @@ class ClientesInternoTests(TestCase):
         cliente.refresh_from_db()
         # Publicar virou ligar uma chave no próprio cliente: não existe
         # mais uma segunda ficha para o mapa conferir.
-        self.assertTrue(cliente.publicar_no_mapa)
+        self.assertTrue(cliente.publicacao_mapa)
         self.assertEqual(cliente.endereco_principal.cidade, "São Paulo")
-        self.assertEqual(Cliente.objects.filter(publicar_no_mapa=True).count(), 1)
+        self.assertFalse(cliente.publicar_no_mapa)  # aprovação não altera a marcação manual
 
     def test_cliente_marcado_sem_coordenada_nao_conta_como_no_mapa(self):
         """"Marcado para o mapa" e "desenhado no mapa" são coisas diferentes.
@@ -830,7 +830,7 @@ class ClientesNoMapaTests(TestCase):
 
 
 @override_settings(ALLOWED_HOSTS=["interno.testserver", "testserver"])
-class BuffetForaDoMapaTests(TestCase):
+class BuffetNoMapaTests(TestCase):
     """Buffet tem o card dele em "Nossos Parceiros" e não vira alfinete.
 
     Os dois juntos o mostrariam duas vezes no mesmo site. A tela esconde a
@@ -838,7 +838,7 @@ class BuffetForaDoMapaTests(TestCase):
     o tipo de um cliente já publicado para o site passar a repeti-lo.
     """
 
-    def test_virar_buffet_tira_o_cliente_do_mapa(self):
+    def test_virar_buffet_preserva_publicacao_manual(self):
         cliente = Cliente.objects.create(
             nome_cliente="Espaço Festa",
             tipo=Cliente.Tipo.COMERCIAL,
@@ -850,7 +850,7 @@ class BuffetForaDoMapaTests(TestCase):
         cliente.save()
 
         cliente.refresh_from_db()
-        self.assertFalse(cliente.publicar_no_mapa)
+        self.assertTrue(cliente.publicar_no_mapa)
 
     def test_a_regra_vale_mesmo_com_update_fields(self):
         """Gravação parcial não pode escapar da regra."""
@@ -866,4 +866,4 @@ class BuffetForaDoMapaTests(TestCase):
         cliente.save(update_fields=["telefone", "telefone_digitos"])
 
         cliente.refresh_from_db()
-        self.assertFalse(cliente.publicar_no_mapa)
+        self.assertTrue(cliente.publicar_no_mapa)

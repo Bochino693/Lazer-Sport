@@ -68,7 +68,7 @@ class ClientesInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
         apenas_incompletos = (request.GET.get("incompletos") or "") == "1"
 
         consulta = (
-            Cliente.objects
+            svc.com_publicacao_mapa()
             .select_related("parceiro", "estabelecimento")
             .prefetch_related(
                 Prefetch(
@@ -100,12 +100,12 @@ class ClientesInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
         indice_busca = montar_indice(
             (
                 pk,
-                [nome, telefone, telefone_digitos, email, documento, parceiro],
+                [nome, telefone, telefone_digitos, email, documento, parceiro, negocio, cnpj],
             )
-            for pk, nome, telefone, telefone_digitos, email, documento, parceiro
+            for pk, nome, telefone, telefone_digitos, email, documento, parceiro, negocio, cnpj
             in consulta.values_list(
                 "pk", "nome_cliente", "telefone", "telefone_digitos", "email",
-                "documento", "parceiro__nome_cliente",
+                "documento", "parceiro__nome_cliente", "nome_estabelecimento", "cnpj_estabelecimento",
             )
         )
 
@@ -119,7 +119,7 @@ class ClientesInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
         origem = origem_empresa()
         fichas = [self.ficha(cliente, origem) for cliente in pagina.object_list]
 
-        todos = Cliente.objects.all()
+        todos = svc.com_publicacao_mapa()
         buffets = list(
             todos.filter(tipo=Cliente.Tipo.BUFFET).order_by("nome_cliente")
         )
@@ -133,7 +133,7 @@ class ClientesInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
                 & (Q(email="") | Q(email__isnull=True)),
                 distinct=True,
             ),
-            no_mapa=Count("id", filter=Q(publicar_no_mapa=True, ativo=True), distinct=True),
+            no_mapa=Count("id", filter=(Q(publicar_no_mapa=True) | Q(_proposta_mapa=True)) & Q(ativo=True, enderecos__latitude__isnull=False, enderecos__longitude__isnull=False), distinct=True),
             incompletos=Count("id", filter=filtro_incompletos(), distinct=True),
         )
 
@@ -265,6 +265,9 @@ class ClientesInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
             "nome_cliente": cliente.nome_cliente,
             "tipo": cliente.tipo,
             "documento": cliente.documento,
+            "nome_estabelecimento": cliente.nome_estabelecimento,
+            "cnpj_estabelecimento": cliente.cnpj_estabelecimento,
+            "publicacao_automatica": bool(getattr(cliente, "_proposta_mapa", False)),
             "telefone": cliente.telefone,
             "canal_telefone": cliente.canal_telefone,
             "email": cliente.email or "",
@@ -279,8 +282,8 @@ class ClientesInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
             "cidade": endereco.cidade if endereco else "",
             "estado": endereco.estado if endereco else "",
             "pais": (endereco.pais if endereco else "") or "Brasil",
-            "latitude": str(endereco.latitude or "") if endereco else "",
-            "longitude": str(endereco.longitude or "") if endereco else "",
+            "latitude": str(endereco.latitude) if endereco and endereco.latitude is not None else "",
+            "longitude": str(endereco.longitude) if endereco and endereco.longitude is not None else "",
             # O que o site mostra deste cliente.
             "publicar_no_mapa": cliente.publicar_no_mapa,
             "site_cliente": cliente.site_cliente or "",

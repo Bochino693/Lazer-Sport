@@ -292,8 +292,8 @@ Cadastro mínimo de propósito: nome, valor e categoria. Foto e texto de
   modal existe para evitar. O brinquedo nasce fora da loja.
 {% endcomment %}
 <div class="modal fade" id="modalBrinquedoNovo" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog">
-    <form class="modal-content" id="formBrinquedoNovo" method="post"
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <form class="modal-content" id="formBrinquedoNovo" method="post" enctype="multipart/form-data"
           action="{% url 'orcamentos_inner' %}">
       {% csrf_token %}
       <input type="hidden" name="action" value="brinquedo_novo">
@@ -334,7 +334,7 @@ Cadastro mínimo de propósito: nome, valor e categoria. Foto e texto de
 
         <div class="mt-3">
           <label class="form-label" for="brinquedoNovoCategoria">Categoria</label>
-          <select class="form-select" id="brinquedoNovoCategoria" name="categoria">
+          <select class="form-select" id="brinquedoNovoCategoria" name="categoria" multiple>
             <option value="">Sem categoria</option>
             {% for c in categorias %}
               <option value="{{ c.id }}">{{ c.nome_categoria }}</option>
@@ -347,6 +347,14 @@ Cadastro mínimo de propósito: nome, valor e categoria. Foto e texto de
           <textarea class="form-control" id="brinquedoNovoDescricao" name="descricao"
                     rows="2" placeholder="Medidas, o que acompanha, público..."></textarea>
         </div>
+<fieldset class="mt-3"><legend class="h6">Ficha e fotos do produto</legend><p class="small text-muted">Até 5 MB por foto e 16 MB no total. As fotos ficam no cadastro e acompanham o item.</p><label class="form-label">Altura (m)<input class="form-control" name="altura_m" inputmode="decimal"></label>
+<label class="form-label">Largura (m)<input class="form-control" name="largura_m" inputmode="decimal"></label>
+<label class="form-label">Profundidade (m)<input class="form-control" name="profundidade_m" inputmode="decimal"></label>
+<label class="form-label d-block">Foto — Frente<input class="form-control" type="file" name="foto_perfil" accept="image/*"></label>
+<label class="form-label d-block">Foto — Verso<input class="form-control" type="file" name="foto_verso" accept="image/*"></label>
+<label class="form-label d-block">Foto — Lado direito<input class="form-control" type="file" name="foto_lado_direito" accept="image/*"></label>
+<label class="form-label d-block">Foto — Lado esquerdo<input class="form-control" type="file" name="foto_lado_esquerdo" accept="image/*"></label>
+</fieldset>
       </div>
 
       <div class="modal-footer">
@@ -360,7 +368,7 @@ Cadastro mínimo de propósito: nome, valor e categoria. Foto e texto de
 <!-- ================= MODAL: peça nova, sem sair daqui ================= -->
 <div class="modal fade" id="modalPecaNova" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-scrollable">
-    <form class="modal-content" id="formPecaNova" method="post"
+    <form class="modal-content" id="formPecaNova" method="post" enctype="multipart/form-data"
           action="{% url 'orcamentos_inner' %}">
       {% csrf_token %}
       <input type="hidden" name="action" value="peca_nova">
@@ -388,7 +396,7 @@ Cadastro mínimo de propósito: nome, valor e categoria. Foto e texto de
           </div>
           <div class="col-12 col-md-5">
             <label class="form-label" for="pecaNovaCategoria">Categoria</label>
-            <select class="form-select" id="pecaNovaCategoria" name="categoria">
+            <select class="form-select" id="pecaNovaCategoria" name="categoria" multiple>
               <option value="">Sem categoria</option>
               {% for c in categorias_peca %}
                 <option value="{{ c.id }}">{{ c.nome_categoria_peca }}</option>
@@ -419,6 +427,14 @@ Cadastro mínimo de propósito: nome, valor e categoria. Foto e texto de
                       placeholder="Aplicação, medidas, compatibilidade e o que acompanha"></textarea>
           </div>
         </div>
+<fieldset class="mt-3"><legend class="h6">Ficha e fotos do produto</legend><p class="small text-muted">Até 5 MB por foto e 16 MB no total. As fotos ficam no cadastro e acompanham o item.</p><label class="form-label">Uso<select class="form-select" name="uso"><option value="manutencao">Item de manutenção</option><option value="loja">Peça de reposição</option></select></label>
+<label class="form-label d-block">Foto — Frente<input class="form-control" type="file" name="foto_frente" accept="image/*"></label>
+<label class="form-label d-block">Foto — Traseira<input class="form-control" type="file" name="foto_tras" accept="image/*"></label>
+<label class="form-label d-block">Foto — Lado direito<input class="form-control" type="file" name="foto_lado_direito" accept="image/*"></label>
+<label class="form-label d-block">Foto — Lado esquerdo<input class="form-control" type="file" name="foto_lado_esquerdo" accept="image/*"></label>
+<label class="form-label d-block">Foto — Detalhe<input class="form-control" type="file" name="foto_detalhe" accept="image/*"></label>
+<label class="form-label d-block">Foto — Outra foto<input class="form-control" type="file" name="foto_outro" accept="image/*"></label>
+</fieldset>
       </div>
 
       <div class="modal-footer">
@@ -513,14 +529,10 @@ Cadastro mínimo de propósito: nome, valor e categoria. Foto e texto de
             <span class="form-text">Mantém o histórico da festa ligado ao parceiro.</span>
           </div>
           <div class="col-12" id="clienteNovoBlocoEstabelecimento" hidden>
-            <label class="form-label" for="clienteNovoEstabelecimento">Buffet já publicado no site</label>
-            <select class="form-select" id="clienteNovoEstabelecimento" name="estabelecimento">
-              <option value="">Ainda não publicado</option>
-              {% for e in estabelecimentos %}
-                <option value="{{ e.id }}">{{ e.nome_estabelecimento }}</option>
-              {% endfor %}
-            </select>
-            <span class="form-text">Este é o paralelo do buffet na área pública de parceiros.</span>
+            <label class="form-label">Nome do estabelecimento do cliente</label>
+            <input class="form-control" name="nome_estabelecimento" maxlength="150">
+            <label class="form-label">CNPJ do estabelecimento</label>
+            <input class="form-control" name="cnpj_estabelecimento" maxlength="18">
           </div>
         </div>
 
@@ -942,6 +954,32 @@ Cadastro mínimo de propósito: nome, valor e categoria. Foto e texto de
 {% block scripts %}
 <script>
 LSTela.pronto(function () {
+  document.querySelectorAll('#formBrinquedoNovo, #formPecaNova').forEach(function(form) {
+    form.addEventListener('reset', function() {
+      form.querySelectorAll('img[data-preview]').forEach(function(img) { img.remove(); });
+      form.querySelectorAll('input[type="file"]').forEach(function(input) { input.setCustomValidity(''); });
+    });
+  });
+  document.querySelectorAll('#formBrinquedoNovo input[type="file"], #formPecaNova input[type="file"]').forEach(function(input) {
+    input.addEventListener('change', function() {
+      var preview = input.parentElement.querySelector('img[data-preview]');
+      if (preview) preview.remove();
+      var arquivo=input.files[0];
+      input.setCustomValidity('');
+      if (!arquivo || !arquivo.type.startsWith('image/')) return;
+      if (arquivo.size > 5 * 1024 * 1024) { input.setCustomValidity('Use uma foto de até 5 MB.'); input.reportValidity(); return; }
+      input.setCustomValidity('');
+      var leitor=new FileReader();
+      leitor.onload=function() {
+        if (!input.isConnected || input.files[0] !== arquivo) return;
+        var imagem=document.createElement('img'); imagem.dataset.preview='1'; imagem.alt='Prévia da foto selecionada'; imagem.src=leitor.result;
+        imagem.style.cssText='max-width:160px;max-height:120px;object-fit:contain;margin-top:8px';
+        input.parentElement.appendChild(imagem);
+      };
+      leitor.readAsDataURL(arquivo);
+    });
+  });
+
   "use strict";
 
   /* AS LINHAS DA TELA MUDAM SEM A TELA MUDAR.
@@ -2074,7 +2112,7 @@ LSTela.pronto(function () {
   function ajustarClienteNovoPorTipo() {
     var buffet = clienteNovoTipo.value === "buffet";
     clienteNovoParceiro.hidden = buffet;
-    clienteNovoEstabelecimento.hidden = !buffet;
+    clienteNovoEstabelecimento.hidden = false;
   }
   clienteNovoTipo.addEventListener("change", ajustarClienteNovoPorTipo);
 

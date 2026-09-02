@@ -13,7 +13,8 @@ from decimal import Decimal, InvalidOperation
 
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
-from django.db.models import Q
+from django.db import transaction
+from django.db.models import Q, Exists, OuterRef
 
 from core.models import Estabelecimentos
 from core.utils import buscar_coordenadas_cep_rapido, buscar_dados_cep
@@ -50,6 +51,7 @@ def marcado(request, campo: str) -> bool:
     return (request.POST.get(campo) or "").strip().lower() in ("1", "on", "true")
 
 
+@transaction.atomic
 def salvar_cliente(request, cliente: Cliente | None = None) -> Cliente:
     """Grava um cliente novo ou atualiza o que veio.
 
@@ -58,7 +60,7 @@ def salvar_cliente(request, cliente: Cliente | None = None) -> Cliente:
     e é o tipo de linha morta que enche a lista e some com a busca.
     """
     novo = cliente is None
-    cliente = cliente or Cliente()
+    cliente = Cliente.objects.select_for_update().get(pk=cliente.pk) if cliente and cliente.pk else Cliente()
 
     nome = texto(
         request, "nome_cliente",
@@ -66,7 +68,7 @@ def salvar_cliente(request, cliente: Cliente | None = None) -> Cliente:
     )
 
     telefone = texto(request, "telefone", limite=24)
-    email = texto(request, "email", limite=150)
+    email = texto(request, "email", limite=150).strip().lower()
 
     if not telefone and not email:
         raise ErroDeFormulario(
@@ -137,6 +139,18 @@ def salvar_cliente(request, cliente: Cliente | None = None) -> Cliente:
             "de criar outro."
         )
 
+    from core.identidade_email import validar_email_unico
+    validar_email_unico(email, cliente_id=cliente.pk)
+    if "nome_estabelecimento" in request.POST:
+        cliente.nome_estabelecimento = texto(request, "nome_estabelecimento", limite=150)
+    if "cnpj_estabelecimento" in request.POST:
+        cnpj = somente_digitos(request.POST.get("cnpj_estabelecimento", ""))
+        if cnpj and (len(cnpj) != 14 or not documento_valido(cnpj)):
+            raise ErroDeFormulario("CNPJ do estabelecimento inválido.")
+        if cnpj and Cliente.objects.filter(Q(cnpj_estabelecimento=cnpj) | Q(documento_chave=cnpj)).exclude(pk=cliente.pk).exists():
+            raise ErroDeFormulario("Este estabelecimento já pertence a outro cadastro de cliente.")
+        cliente.cnpj_estabelecimento = cnpj
+
     cliente.nome_cliente = nome
     cliente.telefone = telefone
     cliente.canal_telefone = canal
@@ -146,10 +160,8 @@ def salvar_cliente(request, cliente: Cliente | None = None) -> Cliente:
     cliente.observacoes = texto(request, "observacoes")
 
     cliente.parceiro = _buffet_escolhido(request, cliente)
-    cliente.estabelecimento_id = (
-        _estabelecimento_escolhido(request, cliente)
-        if cliente.tipo == Cliente.Tipo.BUFFET else None
-    )
+    # O vínculo antigo com core.Estabelecimentos é legado, não é o negócio do cliente.
+    # Preservá-lo evita alterar os parceiros públicos já existentes.
 
     # ------------------------------------------------------------------
     # O que o site mostra deste cliente.
@@ -167,6 +179,13 @@ def salvar_cliente(request, cliente: Cliente | None = None) -> Cliente:
 
     logo = request.FILES.get("logo")
     if logo:
+        from django import forms
+        if logo.size > 5 * 1024 * 1024:
+            raise ErroDeFormulario("A logo deve ter até 5 MB.")
+        try:
+            logo = forms.ImageField().clean(logo)
+        except ValidationError as exc:
+            raise ErroDeFormulario("A logo precisa ser uma imagem válida.") from exc
         cliente.logo = logo
     elif marcado(request, "remover_logo"):
         cliente.logo = None
@@ -233,7 +252,7 @@ def completar_cadastro(request, cliente: Cliente) -> Cliente:
     inválido não fica menos inválido por ter entrado por outra porta.
     """
     telefone = texto(request, "telefone", limite=24)
-    email = texto(request, "email", limite=150)
+    email = texto(request, "email", limite=150).strip().lower()
     documento = texto(request, "documento", limite=20)
 
     if telefone:
@@ -260,6 +279,8 @@ def completar_cadastro(request, cliente: Cliente) -> Cliente:
             validate_email(email)
         except ValidationError as exc:
             raise ErroDeFormulario("E-mail inválido.") from exc
+        from core.identidade_email import validar_email_unico
+        validar_email_unico(email, cliente_id=cliente.pk)
         cliente.email = email
 
     if documento:
@@ -287,6 +308,7 @@ def completar_cadastro(request, cliente: Cliente) -> Cliente:
     return cliente
 
 
+@transaction.atomic
 def salvar_endereco(request, cliente: Cliente) -> EnderecoCliente | None:
     """Guarda o endereço do estabelecimento, quando a tela mandou algum campo.
 
@@ -337,7 +359,8 @@ def salvar_endereco(request, cliente: Cliente) -> EnderecoCliente | None:
             "Para guardar o endereço, informe pelo menos a rua e a cidade."
         )
 
-    endereco = cliente.enderecos.first() or EnderecoCliente(cliente=cliente)
+    Cliente.objects.select_for_update().get(pk=cliente.pk)
+    endereco = cliente.enderecos.order_by("id").first() or EnderecoCliente(cliente=cliente)
     endereco_anterior = (
         endereco.cep,
         endereco.endereco,
@@ -361,6 +384,8 @@ def salvar_endereco(request, cliente: Cliente) -> EnderecoCliente | None:
             longitude_decimal = Decimal(longitude)
         except InvalidOperation as exc:
             raise ErroDeFormulario("As coordenadas do endereço são inválidas.") from exc
+        if not latitude_decimal.is_finite() or not longitude_decimal.is_finite():
+            raise ErroDeFormulario("As coordenadas do endereço são inválidas.")
         if not (-90 <= latitude_decimal <= 90 and -180 <= longitude_decimal <= 180):
             raise ErroDeFormulario("As coordenadas do endereço estão fora da faixa válida.")
         endereco.latitude = latitude_decimal
@@ -414,16 +439,12 @@ def publicar_no_mapa(cliente: Cliente):
     Sem endereço utilizável não há o que desenhar, e marcar assim mesmo só
     encheria a lista de "no mapa" de cadastros que o mapa ignora.
     """
-    if not cliente or cliente.eh_buffet:
+    if not cliente:
         return None
 
     endereco = cliente.endereco_principal
     if not endereco or not (endereco.cep or endereco.cidade):
         return None
-
-    if not cliente.publicar_no_mapa:
-        cliente.publicar_no_mapa = True
-        cliente.save(update_fields=["publicar_no_mapa", "telefone_digitos", "atualizado"])
 
     return endereco
 
@@ -435,6 +456,8 @@ def opcao_de_busca(cliente: Cliente) -> dict:
         detalhe += f" · {cliente.parceiro.nome_cliente}"
     elif cliente.telefone:
         detalhe += f" · {cliente.telefone}"
+    if cliente.nome_estabelecimento:
+        detalhe += f" · {cliente.nome_estabelecimento}"
 
     endereco = cliente.endereco_principal
 
@@ -481,6 +504,8 @@ def buscar(consulta, termo: str):
 
     filtro = (
         Q(nome_cliente__icontains=termo)
+        | Q(nome_estabelecimento__icontains=termo)
+        | Q(cnpj_estabelecimento__icontains=termo)
         | Q(telefone__icontains=termo)
         | Q(email__icontains=termo)
         | Q(documento__icontains=termo)
@@ -494,3 +519,12 @@ def buscar(consulta, termo: str):
         filtro |= Q(telefone_digitos__contains=digitos)
 
     return consulta.filter(filtro).distinct()
+
+
+def com_publicacao_mapa(consulta=None):
+    from .models import Orcamento
+    consulta = consulta if consulta is not None else Cliente.objects.all()
+    return consulta.annotate(_proposta_mapa=Exists(Orcamento.objects.filter(
+        cliente_id=OuterRef("pk"),
+        status__in=("aguardando_resposta", "em_negociacao", "aprovado"),
+    )))

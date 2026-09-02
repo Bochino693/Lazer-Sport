@@ -1,3 +1,4 @@
+from django.db.models import Subquery, OuterRef
 from django.utils.decorators import method_decorator
 from django.views.generic import View
 from django.contrib.auth.models import User
@@ -340,21 +341,25 @@ class HomeView(View):
             EnderecoCliente.objects
             .filter(
                 cliente__ativo=True,
-                cliente__publicar_no_mapa=True,
+                cliente_id__in=clientes_svc.com_publicacao_mapa().filter(
+                    Q(publicar_no_mapa=True) | Q(_proposta_mapa=True)
+                ).values("pk"),
+                pk=Subquery(EnderecoCliente.objects.filter(cliente_id=OuterRef("cliente_id")).order_by("id").values("pk")[:1]),
                 latitude__isnull=False,
                 longitude__isnull=False,
             )
             .select_related("cliente")
             .only(
                 "cidade", "estado", "pais", "latitude", "longitude",
-                "cliente__nome_cliente", "cliente__site_cliente",
+                "cliente__nome_cliente", "cliente__nome_estabelecimento", "cliente__site_cliente", "cliente__logo",
             )
         )
 
         clientes_mapa = [
             {
                 "tipo": "cliente",
-                "nome": e.cliente.nome_cliente or "Cliente Lazer & Sport",
+                "nome": e.cliente.nome_estabelecimento or e.cliente.nome_cliente or "Cliente Lazer & Sport",
+                "logo": e.cliente.logo.url if e.cliente.logo else "",
                 "cidade": e.cidade or "",
                 "estado": e.estado or "",
                 "pais": e.pais or "Brasil",
@@ -1663,7 +1668,7 @@ class ClienteAdminView(AdminOnlyMixin, View):
 
     def get(self, request):
         clientes = list(
-            Cliente.objects
+            clientes_svc.com_publicacao_mapa()
             .prefetch_related(
                 Prefetch("enderecos", queryset=EnderecoCliente.objects.order_by("id"))
             )
@@ -1681,28 +1686,8 @@ class ClienteAdminView(AdminOnlyMixin, View):
 
         # Dados do modal via json_script -- mais seguro que interpolar no
         # HTML, e é o mesmo formato que a aba Clientes usa.
-        dados = []
-        for cliente in clientes:
-            endereco = cliente.endereco_principal
-            dados.append({
-                "id": cliente.id,
-                "nome_cliente": cliente.nome_cliente,
-                "tipo": cliente.tipo,
-                "telefone": cliente.telefone or "",
-                "canal_telefone": cliente.canal_telefone,
-                "email": cliente.email or "",
-                "cep": endereco.cep if endereco else "",
-                "endereco": endereco.endereco if endereco else "",
-                "numero": endereco.numero if endereco else "",
-                "bairro": endereco.bairro if endereco else "",
-                "cidade": endereco.cidade if endereco else "",
-                "estado": endereco.estado if endereco else "",
-                "pais": (endereco.pais if endereco else "") or "Brasil",
-                "site_cliente": cliente.site_cliente or "",
-                "logo_url": cliente.logo.url if cliente.logo else "",
-                "ativo": cliente.ativo,
-                "publicar_no_mapa": cliente.publicar_no_mapa,
-            })
+        from sistema_interno.views_clientes import ClientesInnerView
+        dados = [ClientesInnerView.serializar(cliente) for cliente in clientes]
 
         return render(request, self.template_name, {
             "fichas": fichas,
@@ -1717,13 +1702,29 @@ class ClienteAdminView(AdminOnlyMixin, View):
         })
 
     def post(self, request):
+        from django.db import IntegrityError
         acao = request.POST.get("action", "save")
-
-        if acao == "delete":
-            return self._excluir(request)
-        if acao == "recalcular":
-            return self._recalcular(request)
-        return self._salvar(request)
+        try:
+            if acao == "delete":
+                resposta = self._excluir(request)
+            elif acao == "recalcular":
+                resposta = self._recalcular(request)
+            elif acao == "save":
+                resposta = self._salvar(request)
+            else:
+                return JsonResponse({"status": "erro", "msg": "Ação inválida."}, status=400)
+        except IntegrityError:
+            if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                return JsonResponse({"status": "erro", "msg": "E-mail, CNPJ ou endereço já cadastrado. Confira o registro existente."}, status=409)
+            messages.error(request, "E-mail, CNPJ ou endereço já cadastrado.")
+            return redirect("clientes_admin")
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            recados = list(messages.get_messages(request))
+            erros = [str(m) for m in recados if m.level >= messages.ERROR]
+            return JsonResponse({"status": "erro" if erros else "sucesso",
+                                 "msg": " ".join(erros or [str(m) for m in recados])},
+                                status=400 if erros else 200)
+        return resposta
 
     # ------------------------------------------------------------------
     def _salvar(self, request):
@@ -1731,8 +1732,9 @@ class ClienteAdminView(AdminOnlyMixin, View):
         cliente = get_object_or_404(Cliente, pk=cliente_id) if cliente_id else None
 
         try:
-            salvo = clientes_svc.salvar_cliente(request, cliente)
-            endereco = clientes_svc.salvar_endereco(request, salvo)
+            with transaction.atomic():
+                salvo = clientes_svc.salvar_cliente(request, cliente)
+                endereco = clientes_svc.salvar_endereco(request, salvo)
         except ErroDeCadastroCliente as erro:
             messages.error(request, str(erro))
             return redirect("clientes_admin")
@@ -1740,9 +1742,6 @@ class ClienteAdminView(AdminOnlyMixin, View):
         # A busca de coordenada é uma consulta a serviço de fora. Fica FORA
         # da gravação: se o Nominatim estiver lento, o cadastro que a pessoa
         # acabou de digitar já está salvo, e só o alfinete fica pendente.
-        if endereco and not endereco.tem_local and endereco.localizar():
-            endereco.save(update_fields=["latitude", "longitude", "precisao"])
-
         if salvo.publicar_no_mapa and not salvo.no_mapa:
             messages.warning(
                 request,
@@ -1766,16 +1765,16 @@ class ClienteAdminView(AdminOnlyMixin, View):
             )
             return redirect("clientes_admin")
 
-        # Zerar antes é o que diferencia "recalcular" de "manter": a busca
-        # respeita a coordenada existente de propósito, para não desfazer um
-        # ajuste feito à mão sem alguém pedir.
-        endereco.latitude = None
-        endereco.longitude = None
+        anterior = (endereco.latitude, endereco.longitude, endereco.precisao)
+        endereco.latitude = endereco.longitude = None
         endereco.precisao = ""
-        endereco.localizar()
-        endereco.save(update_fields=["latitude", "longitude", "precisao"])
+        localizado = endereco.localizar()
+        if localizado:
+            endereco.save(update_fields=["latitude", "longitude", "precisao"])
+        else:
+            endereco.latitude, endereco.longitude, endereco.precisao = anterior
 
-        if endereco.tem_local:
+        if localizado:
             messages.success(
                 request,
                 f"“{cliente.nome_cliente}”: localização refeita -- "
@@ -4102,6 +4101,12 @@ class UserAdminView(AdminOnlyMixin, View):
             return redirect("clients")
         if email and User.objects.filter(email__iexact=email).exclude(pk=getattr(usuario, "pk", None)).exists():
             messages.error(request, "Esse e-mail já está em uso.")
+            return redirect("clients")
+        from core.identidade_email import validar_email_unico
+        try:
+            validar_email_unico(email, usuario_id=getattr(usuario, "pk", None))
+        except ErroDeCadastroCliente as exc:
+            messages.error(request, str(exc))
             return redirect("clients")
         if not usuario and not senha:
             messages.error(request, "Informe uma senha para o novo usuário.")

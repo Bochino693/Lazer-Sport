@@ -47,6 +47,8 @@ def cadastrar(request):
     -- a bucha que só serve num modelo, a hora de solda, o retentor que a
     loja não vende -- e ele nunca vai à vitrine, nem se alguém o ativar.
     """
+    from . import fotos_catalogo
+    fotos = fotos_catalogo.validar(request)
     nome = texto(
         request, "nome", obrigatorio=True, rotulo="o nome da peça", limite=120,
     )
@@ -77,12 +79,15 @@ def cadastrar(request):
         ),
     )
 
-    categoria_id = (request.POST.get("categoria") or "").strip()
-    if categoria_id.isdigit():
-        categoria = CategoriaPeca.objects.filter(pk=categoria_id).first()
-        if categoria:
-            peca.categoria_peca.add(categoria)
+    ids = [v for v in request.POST.getlist("categoria") if v]
+    if any(not v.isdigit() for v in ids):
+        raise ErroDeFormulario("Categoria inválida.")
+    categorias = list(CategoriaPeca.objects.filter(pk__in=ids))
+    if len(categorias) != len(set(ids)):
+        raise ErroDeFormulario("Uma categoria não existe mais. Atualize a seleção.")
+    peca.categoria_peca.set(categorias)
 
+    fotos_catalogo.salvar(peca, fotos)
     return peca
 
 

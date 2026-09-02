@@ -151,7 +151,7 @@
             {% with cliente=ficha.obj %}
             <tr data-registro="{{ cliente.id }}">
               <td data-rotulo="Cliente">
-                <span class="material-nome">{{ cliente.nome_cliente }}</span>
+                <span class="material-nome">{{ cliente.nome_cliente }}</span>{% if cliente.nome_estabelecimento %}<span class="material-sub d-block">{{ cliente.nome_estabelecimento }}{% if cliente.cnpj_estabelecimento %} · {{ cliente.cnpj_estabelecimento }}{% endif %}</span>{% endif %}
                 <span class="material-sub d-block">
                   {% if cliente.eh_buffet %}
                     <span class="ls-status info">Buffet parceiro</span>
@@ -515,9 +515,10 @@
           </div>
 
           <div class="col-12" id="blocoEstabelecimento" hidden>
-            <label class="form-label" for="clienteEstabelecimentoBusca">Parceiro publicado no site</label>
-            <div id="clienteEstabelecimentoBox"></div>
-            <span class="form-text">Busque e ligue este buffet ao card que aparece em “Nossos Parceiros”.</span>
+            <label class="form-label" for="clienteNegocio">Nome do estabelecimento do cliente</label>
+            <input class="form-control" name="nome_estabelecimento" id="clienteNegocio" maxlength="150">
+            <label class="form-label" for="clienteCnpjNegocio">CNPJ do estabelecimento</label>
+            <input class="form-control" name="cnpj_estabelecimento" id="clienteCnpjNegocio" maxlength="18">
           </div>
         </div>
 
@@ -528,7 +529,7 @@
             <h6 class="mb-1">Endereço do estabelecimento</h6>
             <p class="text-muted small mb-0">
               Um só, e serve para tudo: entrega, montagem e o alfinete no mapa
-              do site. Proposta aprovada publica o cliente sozinha.
+              do site. Proposta aguardando resposta, em negociação ou aprovada inclui o cliente no mapa.
             </p>
           </div>
           <span class="ls-cep-status" id="clienteCepStatus" aria-live="polite"></span>
@@ -638,7 +639,7 @@
               <input class="form-check-input" type="checkbox" role="switch"
                      id="clientePublicar" name="publicar_no_mapa" value="1">
               <label class="form-check-label" for="clientePublicar">
-                Mostrar este cliente no mapa da página inicial
+                Mostrar no mapa mesmo sem proposta ativa
               </label>
             </div>
             <span class="form-text" id="clientePublicarAviso"></span>
@@ -994,15 +995,6 @@ LSTela.pronto(function () {
   buscaParceiro.entrada.id = "clienteParceiroBusca";
   document.getElementById("clienteParceiroBox").appendChild(buscaParceiro.elemento);
 
-  var buscaEstabelecimento = LSBusca.criar({
-    nome: "estabelecimento",
-    opcoes: opcoesEstabelecimentos,
-    placeholder: "Buscar parceiro publicado...",
-    rotuloAcessivel: "Parceiro publicado no site"
-  });
-  buscaEstabelecimento.entrada.id = "clienteEstabelecimentoBusca";
-  document.getElementById("clienteEstabelecimentoBox").appendChild(buscaEstabelecimento.elemento);
-
   var campoTipo = document.getElementById("clienteTipo");
   var blocoParceiro = document.getElementById("blocoParceiro");
   var blocoEstabelecimento = document.getElementById("blocoEstabelecimento");
@@ -1021,10 +1013,10 @@ LSTela.pronto(function () {
   function ajustarPorTipo() {
     var ehBuffet = campoTipo.value === "buffet";
     blocoParceiro.hidden = ehBuffet;
-    blocoEstabelecimento.hidden = !ehBuffet;
-    blocoPublicacao.hidden = ehBuffet;
-    camposPublicacao.hidden = ehBuffet;
-    if (ehBuffet) campoPublicar.checked = false;
+    blocoEstabelecimento.hidden = false;
+    blocoPublicacao.hidden = false;
+    camposPublicacao.hidden = false;
+
   }
 
   campoTipo.addEventListener("change", ajustarPorTipo);
@@ -1091,6 +1083,7 @@ LSTela.pronto(function () {
       : "Novo cliente";
 
     var ids = {
+      nome_estabelecimento: "clienteNegocio", cnpj_estabelecimento: "clienteCnpjNegocio",
       nome_cliente: "clienteNome", telefone: "clienteTelefone",
       email: "clienteEmail", documento: "clienteDocumento",
       observacoes: "clienteObservacoes", cep: "clienteCep",
@@ -1122,7 +1115,6 @@ LSTela.pronto(function () {
     document.getElementById("clienteSalvarSemWhatsApp").checked = Boolean(
       cliente && cliente.canal_telefone === "nao_confirmado"
     );
-    buscaEstabelecimento.definirValor(cliente ? cliente.estabelecimento : "", false);
     buscaParceiro.definirValor(cliente ? cliente.parceiro : "", false);
 
     ajustarPorTipo();

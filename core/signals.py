@@ -153,3 +153,11 @@ def adotar_favoritos_do_dispositivo(sender, request, user, **kwargs):
     from .favoritos import chave_dispositivo, migrar_dispositivo_para_conta
 
     migrar_dispositivo_para_conta(user, chave_dispositivo(request))
+
+
+# O mapa é parte do contexto público cacheado: refletir cadastro, local e proposta.
+from sistema_interno.models import EnderecoCliente as _EnderecoDoCliente, Orcamento as _PropostaDoCliente
+for _modelo in (_ClienteDoPainel, _EnderecoDoCliente, _PropostaDoCliente):
+    for _sinal, _evento in ((post_save, "save"), (post_delete, "delete")):
+        _sinal.connect(_invalidar_home, sender=_modelo, weak=False,
+                       dispatch_uid=f"core.mapa.{_evento}.{_modelo._meta.label_lower}")

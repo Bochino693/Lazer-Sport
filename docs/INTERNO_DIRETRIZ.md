@@ -614,3 +614,41 @@ que mudou durante a edição, preservando os campos no modal. Chamadas antigas
 sem esse campo continuam compatíveis; não oferecem essa proteção adicional.
 Não se deve copiar automaticamente valores sobre um registro alterado por
 outra pessoa.
+
+
+## 9.5. Cliente, estabelecimento e identidade
+
+O responsável fica em `nome_cliente`. O negócio opcional possui
+`nome_estabelecimento` e `cnpj_estabelecimento` no mesmo cadastro; logo e
+endereço pertencem a essa ficha. O antigo FK `estabelecimento` do core é
+legado e não é selecionado nos novos formulários. Não copiar dados entre
+as duas áreas nem interpretar `parceiro` como proprietário: ele representa
+indicação/comercial.
+
+A publicação manual é `publicar_no_mapa`. A inclusão automática é uma
+leitura das propostas aguardando resposta, em negociação ou aprovadas;
+rascunho, recusa, expiração e versão substituída não qualificam. Buffet
+pode aparecer. Exige cliente ativo e coordenadas; zero é coordenada válida.
+O mapa usa apenas o endereço principal para evitar alfinetes repetidos.
+Desmarcar a opção manual não vence uma proposta ativa; arquivar o cliente
+retira a publicação. Não alterar a marcação manual quando a proposta muda.
+
+E-mail não vazio é reservado entre Cliente, User e EmailAddress por
+triggers e índice único em EmailIdentidade. User e seus próprios aliases
+podem compartilhar a reserva; pessoas distintas não. Não inclui cópias
+históricas em propostas: elas preservam o documento comercial. A associação
+Cliente–User ainda não foi implantada e nunca deve acontecer só pela
+igualdade de e-mail. A auditoria aponta dados antigos conflitantes sem
+mesclar nem apagar; resolver antes de migrar.
+
+Local repetido no mesmo cliente é bloqueado por constraint. Clientes
+independentes podem ocupar o mesmo endereço. Formulários do mapa enviam
+todos os campos preservados, salvam cliente/endereço numa transação e
+mantêm a janela aberta em erro. Recalcular não apaga coordenadas quando a
+consulta falha. Ações dos menus usam delegação e o ciclo LSTela.pronto.
+
+Criar brinquedo/peça no orçamento inclui fotos reais nas galerias dos
+modelos do catálogo, categorias, descrição, preços e, para brinquedos,
+voltagem, dimensões e tags. Publicar no site permanece uma decisão da
+área de catálogo. Validar imagens antes de gravar; até 5 MB por foto e
+16 MB no conjunto. A seleção volta ao orçamento sem perder seu rascunho.

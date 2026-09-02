@@ -52,6 +52,16 @@ class RequestTimingMiddleware:
             )
         return response
 
+    def process_exception(self, request, exception):
+        from django.db import IntegrityError
+        from django.http import JsonResponse, HttpResponse
+        if isinstance(exception, IntegrityError) and "ls_email_duplicado" in str(exception):
+            mensagem = "Este e-mail já pertence a outro cadastro. Volte ao formulário e utilize o registro existente."
+            if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                return JsonResponse({"status": "erro", "msg": mensagem}, status=409)
+            return HttpResponse(mensagem, status=409, content_type="text/plain; charset=utf-8")
+        return None
+
 
 class SubdomainURLMiddleware:
     #: Endereços que existem igual em qualquer host. Fora desta lista, um

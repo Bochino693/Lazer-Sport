@@ -308,7 +308,7 @@ class OrcamentoPublicoTests(TestCase):
         self.aprovar("Responsável do colégio")
 
         cliente.refresh_from_db()
-        self.assertTrue(cliente.publicar_no_mapa)
+        self.assertTrue(cliente.publicacao_mapa)
         self.assertEqual(cliente.endereco_principal.cidade, "São Paulo")
 
     def test_recusar_guarda_o_motivo(self):

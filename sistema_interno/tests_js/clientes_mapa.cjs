@@ -1,0 +1,18 @@
+const {JSDOM}=require('jsdom'),fs=require('fs'),path=require('path'),assert=require('assert/strict');
+const html=fs.readFileSync(0,'utf8');
+const dom=new JSDOM(html,{url:'http://interno.testserver/site/clientes-mapa/',runScripts:'outside-only',pretendToBeVisual:true});
+const w=dom.window,d=w.document;
+w.matchMedia=()=>({matches:false,addEventListener(){}});w.fetch=async()=>new Response('{}',{status:200});
+w.LSTela={pronto:fn=>fn()};
+w.eval(fs.readFileSync(path.join(__dirname,'../static/interno/painel.js'),'utf8'));
+const script=[...d.scripts].find(s=>s.textContent.includes('const clientsDataNode'));
+w.eval(script.textContent);
+const edit=d.querySelector('[data-edit-client]');d.body.appendChild(edit);edit.click();
+assert(d.querySelector('#clientFormModal').classList.contains('is-open'),'editar após mover menu');
+assert.equal(d.querySelector('#clientName').value,'Cliente para editar');
+d.querySelector('#closeClientModal').click();
+const del=d.querySelector('[data-delete-client]');d.body.appendChild(del);del.click();
+assert(d.querySelector('#deleteClientModal').classList.contains('is-open'),'exclusão após mover menu');
+d.querySelector('#cancelDeleteClient').click();
+assert(!d.querySelector('#deleteClientModal').classList.contains('is-open'));
+console.log('OK: editar, excluir e fechar no menu do mapa.');w.close();

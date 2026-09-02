@@ -56,12 +56,14 @@ class CampanhasTests(TestCase):
         return criar_campanha(**dados)
 
     def test_fila_deduplica_e_so_usa_whatsapp_confirmado(self):
-        Cliente.objects.create(
-            nome_cliente="Cadastro repetido",
-            email="CLIENTE@example.com",
-            telefone="(11) 98888-0000",
-            canal_telefone=Cliente.CanalTelefone.NAO_CONFIRMADO,
-        )
+        from django.db import IntegrityError, transaction
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            Cliente.objects.create(
+                nome_cliente="Cadastro repetido",
+                email="CLIENTE@example.com",
+                telefone="(11) 98888-0000",
+                canal_telefone=Cliente.CanalTelefone.NAO_CONFIRMADO,
+            )
         campanha = self.criar()
 
         self.assertEqual(

@@ -1548,7 +1548,7 @@
               {% with cliente=ficha.obj endereco=ficha.endereco %}
               <tr
                 data-client-id="{{ cliente.id }}"
-                data-client-name="{{ cliente.nome_cliente|default:''|lower }}"
+                data-client-name="{{ cliente.nome_cliente|default:''|lower }} {{ cliente.nome_estabelecimento|lower }} {{ cliente.cnpj_estabelecimento }}"
                 data-client-location="{{ endereco.cidade|default:''|lower }} {{ endereco.estado|default:''|lower }} {{ endereco.pais|default:'Brasil'|lower }}"
                 data-active="{% if cliente.ativo %}true{% else %}false{% endif %}"
                 data-published="{% if ficha.no_mapa %}true{% else %}false{% endif %}"
@@ -1563,7 +1563,7 @@
                       {% endif %}
                     </div>
                     <div>
-                      <strong class="client-name">{{ cliente.nome_cliente }}</strong>
+                      <strong class="client-name">{{ cliente.nome_cliente }}</strong>{% if cliente.nome_estabelecimento %}<small>{{ cliente.nome_estabelecimento }}</small>{% endif %}
                       <span class="client-kind">{{ cliente.get_tipo_display }}</span>
                       {% if cliente.site_cliente %}
                         <a class="client-site" href="{{ cliente.site_cliente }}" target="_blank" rel="noopener">
@@ -1660,6 +1660,9 @@
       {% csrf_token %}
       <input type="hidden" name="action" value="save">
       <input type="hidden" name="id" id="clientId" value="">
+      <input type="hidden" name="observacoes" id="clientObservacoes">
+      <input type="hidden" name="parceiro" id="clientParceiro">
+      <input type="hidden" name="complemento" id="clientComplemento">
 
       <header class="client-modal-header">
         <div class="client-modal-heading">
@@ -1683,6 +1686,11 @@
           </div>
 
           <div class="client-form-grid">
+            <div class="client-field"><label for="clientBusiness">Nome do estabelecimento</label><input id="clientBusiness" name="nome_estabelecimento" maxlength="150"></div>
+            <div class="client-field"><label for="clientCnpj">CNPJ do estabelecimento</label><input id="clientCnpj" name="cnpj_estabelecimento" maxlength="18"></div>
+            <div class="client-field"><label for="clientDocument">CPF/CNPJ do responsável</label><input id="clientDocument" name="documento" maxlength="20"></div>
+            <div class="client-field"><label for="clientLatitude">Latitude</label><input id="clientLatitude" name="latitude" inputmode="decimal"></div>
+            <div class="client-field"><label for="clientLongitude">Longitude</label><input id="clientLongitude" name="longitude" inputmode="decimal"></div>
             <div class="client-field is-full">
               <label for="clientName">Nome do cliente <small>Obrigatório</small></label>
               <input id="clientName" name="nome_cliente" type="text" placeholder="Ex.: Buffet Alegria" required maxlength="90">
@@ -1839,19 +1847,12 @@
               <input id="clientPublished" name="publicar_no_mapa" type="checkbox" checked>
               <span class="client-toggle-control"></span>
               <span class="client-toggle-copy">
-                <strong>Exibir no mapa</strong>
-                <span>Publica o alfinete deste cliente na página inicial.</span>
+                <strong>Exibir no mapa manualmente</strong>
+                <span>Publica mesmo sem proposta ativa. Propostas aguardando resposta, em negociação ou aprovadas incluem automaticamente clientes ativos com localização.</span>
               </span>
             </label>
 
-            <label class="client-toggle">
-              <input id="clientForceGeocode" name="forcar_geocode" type="checkbox">
-              <span class="client-toggle-control"></span>
-              <span class="client-toggle-copy">
-                <strong>Recalcular posição</strong>
-                <span>Refaz a geolocalização ao salvar.</span>
-              </span>
-            </label>
+
           </div>
         </section>
       </div>
@@ -1915,7 +1916,7 @@
 {{ clientes_dados|json_script:"clientsAdminData" }}
 
 <script>
-(function () {
+LSTela.pronto(function () {
   const clientsDataNode = document.getElementById('clientsAdminData');
   const clientsData = clientsDataNode ? JSON.parse(clientsDataNode.textContent) : [];
   const rows = Array.from(document.querySelectorAll('[data-client-id]'));
@@ -2076,19 +2077,22 @@
     setCepStatus('Consultando o CEP e preenchendo o endereço…', 'loading');
 
     try {
-      const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`, {
+      const response = await fetch(`{% url "consultar_cep_inner" %}?cep=${encodeURIComponent(cep)}`, {
         headers: { 'Accept': 'application/json' }
       });
 
       if (!response.ok) throw new Error('Falha na consulta');
-      const data = await response.json();
+      const payload = await response.json();
+      const data = payload.endereco || payload.dados || payload;
       if (requestId !== cepRequestSequence) return;
       if (data.erro) throw new Error('CEP não encontrado');
 
-      setValue('clientStreet', data.logradouro);
+      setValue('clientStreet', data.rua || data.logradouro);
       setValue('clientDistrict', data.bairro);
-      setValue('clientCity', data.localidade);
-      setValue('clientState', data.uf);
+      setValue('clientCity', data.cidade || data.localidade);
+      setValue('clientState', data.estado || data.uf);
+      setValue('clientLatitude', data.latitude == null ? '' : data.latitude);
+      setValue('clientLongitude', data.longitude == null ? '' : data.longitude);
       setValue('clientCountry', 'Brasil');
 
       clearAddressHighlight();
@@ -2144,6 +2148,7 @@
 
     if (client) {
       setValue('clientName', client.nome_cliente);
+      ['Business:nome_estabelecimento', 'Cnpj:cnpj_estabelecimento', 'Document:documento', 'Observacoes:observacoes', 'Parceiro:parceiro', 'Complemento:complemento', 'Latitude:latitude', 'Longitude:longitude'].forEach(function(pair) { const parts=pair.split(':'); setValue('client'+parts[0],client[parts[1]]); });
       setValue('clientKind', client.tipo || 'comercial');
       setValue('clientPhone', client.telefone);
       setValue('clientPhoneChannel', client.canal_telefone || 'nao_confirmado');
@@ -2175,7 +2180,6 @@
       setManualAddressMode(false, false);
     }
 
-    document.getElementById('clientForceGeocode').checked = false;
     document.querySelector('#clientFormModal .client-modal-body').scrollTop = 0;
     setModalOpen(formModal, true, trigger);
     window.setTimeout(() => document.getElementById('clientName').focus(), 80);
@@ -2235,19 +2239,30 @@
     });
   }
 
-  document.querySelectorAll('[data-edit-client]').forEach(button => {
-    button.addEventListener('click', function () {
-      openClientForm(button.dataset.editClient, button);
-    });
+  Painel.aoClicar('[data-edit-client]', function(button, event) {
+    openClientForm(button.dataset.editClient, button);
+  });
+  Painel.aoClicar('[data-delete-client]', function(button, event) {
+    openDeleteConfirmation(button.dataset.deleteClient, button.dataset.deleteName, button);
   });
 
-  document.querySelectorAll('[data-delete-client]').forEach(button => {
-    button.addEventListener('click', function () {
-      openDeleteConfirmation(
-        button.dataset.deleteClient,
-        button.dataset.deleteName,
-        button
-      );
+  document.querySelectorAll('#clientForm, #deleteClientModal form, .clients-table form').forEach(function(form) {
+    let enviando = false;
+    form.addEventListener('submit', async function(event) {
+      event.preventDefault();
+      if (enviando) return;
+      enviando = true;
+      const button = form.querySelector('[type="submit"]');
+      if (button) button.disabled = true;
+      let erro = form.querySelector('[data-erro-envio]');
+      if (!erro) { erro = document.createElement('p'); erro.dataset.erroEnvio='1'; erro.setAttribute('role','alert'); erro.className='alert alert-danger'; form.appendChild(erro); }
+      erro.hidden=true;
+      try {
+        await Painel.enviar(form);
+        closeClientForm(); closeDeleteConfirmation();
+        await LSAtualizarTela();
+      } catch (e) { erro.textContent=e.message; erro.hidden=false; }
+      finally { enviando=false; if(button) button.disabled=false; }
     });
   });
 
@@ -2335,14 +2350,25 @@
     event.target.value = event.target.value.replace(/[^a-zA-Z]/g, '').toUpperCase().slice(0, 2);
   });
 
-  document.addEventListener('keydown', function (event) {
+  function tecladoDoMapa(event) {
     if (event.key !== 'Escape') return;
     if (deleteModal.classList.contains('is-open')) {
       closeDeleteConfirmation();
     } else if (formModal.classList.contains('is-open')) {
       closeClientForm();
     }
-  });
-})();
+  }
+  document.addEventListener('keydown', tecladoDoMapa);
+  function limparAoNavegar() {
+    if (formModal.isConnected) return;
+    document.removeEventListener('keydown', tecladoDoMapa);
+    document.removeEventListener('ls:tela', limparAoNavegar);
+    clearTimeout(cepLookupTimer);
+    cepRequestSequence++;
+    document.body.classList.remove('client-modal-open');
+  }
+  document.addEventListener('ls:tela', limparAoNavegar);
+
+});
 </script>
 {% endblock %}
