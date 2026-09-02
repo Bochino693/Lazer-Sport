@@ -16,22 +16,30 @@
   var prefetchTimer = null;
   var prefetchsExecutados = 0;
   var LIMITE_PREFETCH = 6;
-  /* QUATRO TENTATIVAS DE DOZE SEGUNDOS ERAM ATÉ 52 SEGUNDOS POR TELA.
+  /* UMA SONDAGEM CURTA, DEPOIS UMA ESPERA LONGA -- E SÓ.
 
-     Sem nada escrito na tela durante a maior parte disso. Duas trocas de
-     tela numa instância fria chegavam perto de dois minutos só aqui, e
-     era o outro pedaço da queixa "mudei duas telas, demorou três
-     minutos".
+     Eram quatro tentativas de doze segundos: até 52 segundos por tela,
+     quase todos em silêncio. Pior que o tempo era o formato. Repetir
+     tentativas curtas contra uma instância que está ACORDANDO é o pior
+     dos mundos: cada `abort` joga fora o pedido que já estava na fila do
+     servidor e recomeça do zero, e a instância que ia responder no
+     segundo 40 nunca chega a responder.
 
-     Três tentativas, e a última é a que espera mais: a primeira falha em
-     8 segundos, e quem sobreviveu à segunda ganha os 14 da terceira, que
-     é a faixa em que uma instância suspensa costuma voltar. O teto caiu
-     de 52 para cerca de 34 segundos -- e agora com aviso na tela desde o
-     começo (ver ESPERA_ATE_AVISAR). */
+     Duas tentativas, com propósitos diferentes:
+
+       1ª, 8 segundos -- a sondagem. Cobre lentidão normal de rede. Se
+          falhar, o servidor não está só lento: está fora ou subindo.
+       2ª, 50 segundos -- a espera. É a faixa em que uma instância
+          suspensa volta. UM pedido, aberto, que é atendido no instante
+          em que o processo sobe.
+
+     O teto passou de 52 para 58 segundos, mas o que importa é que agora
+     ele TERMINA com a tela carregada em vez de terminar em desistência.
+     E a tarja diz o que está acontecendo desde o primeiro segundo. */
   var TIMEOUT_REDE = 8000;
-  var TIMEOUT_REDE_ULTIMA = 14000;
-  var MAX_TENTATIVAS_REDE = 3;
-  var ATRASOS_REDE = [0, 400, 1100];
+  var TIMEOUT_REDE_DESPERTAR = 50000;
+  var MAX_TENTATIVAS_REDE = 2;
+  var ATRASOS_REDE = [0, 400];
 
   function urlSegura(valor) {
     try {
@@ -129,7 +137,8 @@
 
   function requisitar(url, tentativa) {
     var controlador = "AbortController" in window ? new AbortController() : null;
-    var prazo = tentativa >= MAX_TENTATIVAS_REDE - 1 ? TIMEOUT_REDE_ULTIMA : TIMEOUT_REDE;
+    /* A primeira é sondagem; da segunda em diante é espera de despertar. */
+    var prazo = tentativa === 0 ? TIMEOUT_REDE : TIMEOUT_REDE_DESPERTAR;
     var timer = controlador ? window.setTimeout(function () { controlador.abort(); }, prazo) : null;
     if (tentativa > 0) escalarLoader(tentativa);
 
@@ -260,9 +269,12 @@
      tela, é o servidor voltando. Dizer isso evita o toque repetido, que
      só põe mais uma requisição na fila de um servidor que já está lento. */
   function escalarLoader(tentativa) {
+    /* A primeira sondagem falhou: isso não é rede lenta, é servidor
+       subindo. Dizer quanto isso costuma levar é o que impede o toque
+       repetido -- que cancela o pedido em curso e recomeça a conta. */
     loaderMensagem = tentativa >= 2
       ? "O servidor está demorando. Ainda tentando…"
-      : "Servidor acordando…";
+      : "Servidor acordando (até 1 minuto na primeira vez)…";
     if (window.LSLoader && window.LSLoader.show) window.LSLoader.show(loaderMensagem);
     if (window.Painel && window.Painel.ocupado) window.Painel.ocupado(loaderMensagem);
   }

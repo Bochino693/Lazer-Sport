@@ -110,13 +110,17 @@ class AcordarAntesDeAgirTests(SimpleTestCase):
         vinha justamente enquanto ele estava subindo.
         """
         painel = self.painel()
-        self.assertIn(
-            "var ESPERAS_DO_PULSO = [600, 1400, 3000, 5000, 8000, 11000, 12000];",
-            painel,
-        )
-        # Somadas, passam de quarenta segundos.
-        soma = 600 + 1400 + 3000 + 5000 + 8000 + 11000 + 12000
-        self.assertGreater(soma, 40000)
+
+        # UMA SONDAGEM CURTA, DEPOIS UMA ESPERA LONGA.
+        #
+        # A duração total já cabia numa partida a frio; o formato é que
+        # não. Sete tentativas curtas contra uma instância que está
+        # subindo são sete `abort`, e cada um joga fora o pedido que já
+        # estava na fila -- a resposta que vinha no segundo 40 nunca
+        # chegava. Uma sondagem de 6s separa "rede lenta" de "servidor
+        # fora"; a espera de 50s cobre a volta inteira num pedido só.
+        self.assertIn("var PRAZOS_DO_PULSO = [6000, 50000];", painel)
+        self.assertGreaterEqual(max(6000, 50000), 40000)
 
     def test_desistir_de_acordar_nao_barra_a_gravacao(self):
         """Barrar transformaria uma espera em uma parede.
