@@ -676,9 +676,34 @@
   var REDE_OCIOSA_MS = 2 * 60 * 1000;
   var REDE_PULSO_MS = 4 * 60 * 1000;
 
-  /* Somadas, dão pouco mais de quarenta segundos -- a faixa em que uma
-     instância suspensa costuma voltar. */
+  /* A ESPERA CONTINUA CABENDO NUMA PARTIDA A FRIO -- E AGORA ELA FALA.
+
+     Somadas, estas esperas passam de quarenta segundos, que é a faixa em
+     que uma instância suspensa volta. Encurtá-las traria de volta o
+     defeito que elas resolveram: o painel decidindo que o servidor não
+     vem justamente enquanto ele está subindo.
+
+     O que estava errado não era a duração -- era o SILÊNCIO. Quarenta
+     segundos de tela parada, sem uma palavra, são indistinguíveis de um
+     sistema travado, e é isso que faz a pessoa tocar de novo e de novo.
+     Agora cada tentativa avisa quem estiver ouvindo (`aoEsperarRede`), e
+     a tarja do painel troca "Salvando…" por "Servidor acordando…" com o
+     contador de segundos ao lado. A espera é a mesma; a incerteza é que
+     acabou. */
   var ESPERAS_DO_PULSO = [600, 1400, 3000, 5000, 8000, 11000, 12000];
+  var ouvintesDePulso = [];
+
+  /* Quem quiser mostrar "acordando o servidor" na tela se inscreve aqui.
+     Vale para qualquer espera de rede do painel, não só para a gravação. */
+  Painel.aoEsperarRede = function (fn) {
+    if (typeof fn === "function") ouvintesDePulso.push(fn);
+  };
+
+  function avisarEspera(estado, decorridoMs) {
+    ouvintesDePulso.forEach(function (fn) {
+      try { fn(estado, decorridoMs); } catch (e) {}
+    });
+  }
 
   function esperarRede(ms) {
     return new Promise(function (resolver) { global.setTimeout(resolver, ms); });
@@ -726,10 +751,12 @@
          de pé sobre um joelho, e param em doze segundos para o total
          caber na paciência de quem está olhando a tela. */
       if (tentativa < ESPERAS_DO_PULSO.length) {
+        avisarEspera("acordando", tentativa);
         return esperarRede(ESPERAS_DO_PULSO[tentativa]).then(function () {
           return pulsoDoServidor(tentativa + 1);
         });
       }
+      avisarEspera("desistiu", tentativa);
       throw erro;
     }).finally(function () {
       if (timer) global.clearTimeout(timer);
@@ -801,6 +828,100 @@
       acordarServidor(false).catch(function () {});
     }
   }, { capture: true, passive: true });
+
+  /* ======================================================================
+     "ESTÁ ACONTECENDO ALGUMA COISA" — o que faltava em salvar e excluir
+
+     Gravar mostrava só o rótulo do botão virando "Salvando…", dentro de
+     uma janela que fecha logo em seguida; depois disso a tela ficava
+     parada enquanto a lista era rebuscada. Em rede de galpão ou com a
+     instância voltando do sono isso é meio minuto sem nada na tela --
+     e meio minuto sem resposta é indistinguível de travamento. Quem
+     estava usando clicava de novo.
+
+     Esta é a camada que faltava: uma tarja fixa, no alto e no centro,
+     que diz o que está sendo feito e permanece até o fim do ciclo
+     inteiro -- gravação MAIS a atualização da lista. Ela também se
+     inscreve nas esperas de rede, então "Salvando…" vira "Servidor
+     acordando… (12s)" quando é isso que está acontecendo, em vez de
+     continuar mentindo que ainda está gravando.
+     ====================================================================== */
+  var caixaOcupado = null;
+  var relogioOcupado = null;
+  var inicioOcupado = 0;
+  var textoOcupado = "";
+
+  function montarOcupado() {
+    if (caixaOcupado && document.body.contains(caixaOcupado)) return caixaOcupado;
+    caixaOcupado = document.createElement("div");
+    caixaOcupado.className = "ls-ocupado";
+    caixaOcupado.setAttribute("role", "status");
+    caixaOcupado.setAttribute("aria-live", "polite");
+    caixaOcupado.innerHTML =
+      '<span class="ls-ocupado-giro" aria-hidden="true"></span>' +
+      '<span class="ls-ocupado-texto"></span>';
+    document.body.appendChild(caixaOcupado);
+    return caixaOcupado;
+  }
+
+  function pintarOcupado(sufixo) {
+    if (!caixaOcupado) return;
+    caixaOcupado.querySelector(".ls-ocupado-texto").textContent =
+      textoOcupado + (sufixo || "");
+  }
+
+  /* Mostra a tarja. Enquanto ela estiver de pé, o relógio acrescenta os
+     segundos decorridos depois do quinto -- antes disso a conta na tela
+     só chamaria atenção para uma espera que já terminou. */
+  Painel.ocupado = function (mensagem) {
+    montarOcupado();
+    textoOcupado = mensagem || "Salvando…";
+    inicioOcupado = Date.now();
+    pintarOcupado("");
+    caixaOcupado.classList.add("aparece");
+
+    if (relogioOcupado) global.clearInterval(relogioOcupado);
+    relogioOcupado = global.setInterval(function () {
+      var segundos = Math.round((Date.now() - inicioOcupado) / 1000);
+      pintarOcupado(segundos >= 5 ? " (" + segundos + "s)" : "");
+    }, 1000);
+  };
+
+  Painel.pronto = function () {
+    if (relogioOcupado) {
+      global.clearInterval(relogioOcupado);
+      relogioOcupado = null;
+    }
+    if (caixaOcupado) caixaOcupado.classList.remove("aparece");
+    if (global.LSLoader && global.LSLoader.hide) global.LSLoader.hide();
+  };
+
+  /* Confirmação curta do que acabou de acontecer. Sem ela, uma gravação
+     bem-sucedida e uma janela que fecha sozinha por engano têm a mesma
+     aparência. */
+  Painel.aviso = function (mensagem, tipo) {
+    if (!mensagem) return;
+    var tarja = document.createElement("div");
+    tarja.className = "ls-tarja" + (tipo ? " " + tipo : "");
+    tarja.setAttribute("role", "status");
+    tarja.textContent = mensagem;
+    document.body.appendChild(tarja);
+    global.requestAnimationFrame(function () { tarja.classList.add("aparece"); });
+    global.setTimeout(function () {
+      tarja.classList.remove("aparece");
+      global.setTimeout(function () { tarja.remove(); }, 260);
+    }, 2600);
+  };
+
+  /* A espera de rede reescreve a tarja: quem está olhando passa a saber
+     que a demora é o servidor voltando, e não a gravação emperrada. */
+  Painel.aoEsperarRede(function (estado) {
+    if (!caixaOcupado || !caixaOcupado.classList.contains("aparece")) return;
+    if (estado === "acordando") {
+      textoOcupado = "Servidor acordando…";
+      pintarOcupado("");
+    }
+  });
 
   Painel.enviar = function (form, extras) {
     var dados = new FormData(form);
@@ -895,26 +1016,52 @@
       }
 
       travar(true);
+      /* A tarja cobre o CICLO INTEIRO -- gravar e depois rebuscar a
+         lista. Antes, a janela fechava assim que o POST voltava e a
+         atualização acontecia em silêncio: a tela antiga continuava na
+         frente, com os dados antigos, e parecia que nada tinha sido
+         salvo. */
+      Painel.ocupado(opcoes.rotuloCarregando || "Salvando…");
 
       Painel.enviar(form, opcoes.action ? { action: opcoes.action } : null)
         .then(function (json) {
           if (opcoes.depois) {
             opcoes.depois(json);
             travar(false);
+            Painel.pronto();
+            Painel.aviso(opcoes.mensagemPronta || "Salvo.", "ok");
           } else {
             /* A gravação já terminou. Fecha a janela imediatamente para
                que o clique pareça concluído e atualiza só o conteúdo;
                recarregar o documento inteiro repetia CSS, scripts e menu. */
             var modal = form.closest(".modal");
             if (modal && modal.id) Painel.fechar(modal.id);
-            if (typeof global.LSAtualizarTela === "function") {
-              global.LSAtualizarTela();
+            textoOcupado = "Atualizando a lista…";
+            pintarOcupado("");
+
+            var atualizacao =
+              typeof global.LSAtualizarTela === "function"
+                ? global.LSAtualizarTela()
+                : null;
+
+            function encerrar() {
+              Painel.pronto();
+              Painel.aviso(opcoes.mensagemPronta || "Salvo.", "ok");
+            }
+
+            if (atualizacao && typeof atualizacao.then === "function") {
+              atualizacao.then(encerrar, encerrar);
+            } else if (typeof global.LSAtualizarTela === "function") {
+              /* Versão antiga do módulo de navegação, que não devolve
+                 promessa: a tarja sai por tempo, e não por evento. */
+              global.setTimeout(encerrar, 1200);
             } else {
               global.location.reload();
             }
           }
         })
         .catch(function (err) {
+          Painel.pronto();
           Painel.erro(opcoes.erro, err.message);
           travar(false);
         });

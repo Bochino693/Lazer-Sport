@@ -16,9 +16,22 @@
   var prefetchTimer = null;
   var prefetchsExecutados = 0;
   var LIMITE_PREFETCH = 6;
-  var TIMEOUT_REDE = 12000;
-  var MAX_TENTATIVAS_REDE = 4;
-  var ATRASOS_REDE = [0, 450, 1200, 2600];
+  /* QUATRO TENTATIVAS DE DOZE SEGUNDOS ERAM ATÉ 52 SEGUNDOS POR TELA.
+
+     Sem nada escrito na tela durante a maior parte disso. Duas trocas de
+     tela numa instância fria chegavam perto de dois minutos só aqui, e
+     era o outro pedaço da queixa "mudei duas telas, demorou três
+     minutos".
+
+     Três tentativas, e a última é a que espera mais: a primeira falha em
+     8 segundos, e quem sobreviveu à segunda ganha os 14 da terceira, que
+     é a faixa em que uma instância suspensa costuma voltar. O teto caiu
+     de 52 para cerca de 34 segundos -- e agora com aviso na tela desde o
+     começo (ver ESPERA_ATE_AVISAR). */
+  var TIMEOUT_REDE = 8000;
+  var TIMEOUT_REDE_ULTIMA = 14000;
+  var MAX_TENTATIVAS_REDE = 3;
+  var ATRASOS_REDE = [0, 400, 1100];
 
   function urlSegura(valor) {
     try {
@@ -116,7 +129,9 @@
 
   function requisitar(url, tentativa) {
     var controlador = "AbortController" in window ? new AbortController() : null;
-    var timer = controlador ? window.setTimeout(function () { controlador.abort(); }, TIMEOUT_REDE) : null;
+    var prazo = tentativa >= MAX_TENTATIVAS_REDE - 1 ? TIMEOUT_REDE_ULTIMA : TIMEOUT_REDE;
+    var timer = controlador ? window.setTimeout(function () { controlador.abort(); }, prazo) : null;
+    if (tentativa > 0) escalarLoader(tentativa);
 
     return window.fetch(url.href, {
       method: "GET",
@@ -214,15 +229,42 @@
      ====================================================================== */
   var ESPERA_ATE_AVISAR = 400;
   var loaderAgendado = null;
+  var loaderMensagem = "";
+
+  /* Passado este prazo a troca deixou de ser instantânea e virou espera.
+     Aí não basta a barra fina de 3px no topo: no celular ela some no
+     recorte da tela, e quem está olhando conclui que o toque não pegou.
+     A tarja diz, em palavras, o que está acontecendo. */
+  var ESPERA_ATE_EXPLICAR = 1400;
+  var explicarAgendado = null;
 
   function mostrarLoader(mensagem) {
     cancelarLoader();
+    loaderMensagem = mensagem || "Carregando…";
     loaderAgendado = window.setTimeout(function () {
       loaderAgendado = null;
       if (window.LSLoader && window.LSLoader.show) {
-        window.LSLoader.show(mensagem || "Carregando…");
+        window.LSLoader.show(loaderMensagem);
       }
     }, ESPERA_ATE_AVISAR);
+
+    explicarAgendado = window.setTimeout(function () {
+      explicarAgendado = null;
+      if (window.Painel && window.Painel.ocupado) {
+        window.Painel.ocupado(loaderMensagem);
+      }
+    }, ESPERA_ATE_EXPLICAR);
+  }
+
+  /* A partir da segunda tentativa a espera tem nome: não é lentidão da
+     tela, é o servidor voltando. Dizer isso evita o toque repetido, que
+     só põe mais uma requisição na fila de um servidor que já está lento. */
+  function escalarLoader(tentativa) {
+    loaderMensagem = tentativa >= 2
+      ? "O servidor está demorando. Ainda tentando…"
+      : "Servidor acordando…";
+    if (window.LSLoader && window.LSLoader.show) window.LSLoader.show(loaderMensagem);
+    if (window.Painel && window.Painel.ocupado) window.Painel.ocupado(loaderMensagem);
   }
 
   function cancelarLoader() {
@@ -230,11 +272,18 @@
       window.clearTimeout(loaderAgendado);
       loaderAgendado = null;
     }
+    if (explicarAgendado) {
+      window.clearTimeout(explicarAgendado);
+      explicarAgendado = null;
+    }
   }
 
   function esconderLoader() {
     cancelarLoader();
     if (window.LSLoader && window.LSLoader.hide) window.LSLoader.hide();
+    /* A tarja explicativa sai junto: ela existe por causa da espera, e a
+       espera acabou. */
+    if (window.Painel && window.Painel.pronto) window.Painel.pronto();
   }
 
   var recuperacaoTimer = null;
@@ -610,11 +659,17 @@
     return true;
   }
 
+  /* DEVOLVE PROMESSA.
+
+     Quem chama `LSAtualizarTela` depois de gravar precisa saber quando a
+     lista nova está de fato na tela, para só então tirar a tarja de
+     "atualizando". Antes esta função não devolvia nada e a tarja tinha
+     de sair no chute, por tempo. */
   function navegar(url, modoHistorico) {
     var alvo = urlSegura(url);
     if (!alvo) {
       window.location.assign(String(url));
-      return;
+      return Promise.resolve();
     }
 
     var minhaNavegacao = ++navegacao;
@@ -628,10 +683,10 @@
     var cache = recuperar(alvo);
     if (cache) {
       trocarDocumento(cache, alvo, modoHistorico || "push", minhaNavegacao);
-      return;
+      return Promise.resolve();
     }
 
-    buscar(alvo).then(function (resultado) {
+    return buscar(alvo).then(function (resultado) {
       if (minhaNavegacao !== navegacao) return;
       trocarDocumento(
         resultado.html, resultado.url, modoHistorico || "push", minhaNavegacao
@@ -657,7 +712,7 @@
      atual, preservando a recuperação de conexão da navegação suave. */
   window.LSAtualizarTela = function () {
     limpar();
-    navegar(window.location.href, "replace");
+    return navegar(window.location.href, "replace");
   };
 
   function linkNavegavel(link, evento) {

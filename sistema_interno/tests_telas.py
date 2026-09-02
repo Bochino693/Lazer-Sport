@@ -359,25 +359,114 @@ class JanelasDoPainelTests(TestCase):
 
         self.assertIn("body.modal-open.ls-abas{display:none!important}", sem_espaco)
 
-        acima_do_modal = []
+        # A REGRA NÃO É "NÃO EXISTIR", É "NÃO ROUBAR O TOQUE".
+        #
+        # O defeito que originou este teste era o toque em "Salvar" cair
+        # na aba de baixo. O que faz um elemento ser perigoso acima do
+        # modal não é estar lá -- é RECEBER TOQUE estando lá. Aviso de
+        # reconexão, tarja de "salvando" e confirmação precisam ficar
+        # visíveis justamente com a janela aberta, que é quando alguém
+        # está gravando; nenhum deles pode interceptar um dedo.
+        #
+        # Então a lista fixa virou regra: acima do modal, ou some com
+        # `body.modal-open`, ou declara `pointer-events:none`.
+        proibidos = []
         for bloco in re.finditer(r"([^{}]+)\{([^{}]*)\}", css):
             seletor, corpo = bloco.group(1).strip(), bloco.group(2)
-            if "position:fixed" not in corpo.replace(" ", ""):
+            compacto = corpo.replace(" ", "")
+            if "position:fixed" not in compacto:
                 continue
             altura = re.search(r"z-index:\s*(\d+)", corpo)
-            if altura and int(altura.group(1)) > 1055:
-                acima_do_modal.append(seletor.split()[-1])
+            if not altura or int(altura.group(1)) <= 1055:
+                continue
+            nome = seletor.split()[-1]
+            # O aviso de reconexão é a única exceção, e é deliberada: ele
+            # TEM um botão ("tentar de novo"), então não pode ser inerte,
+            # e precisa continuar visível com a janela aberta -- que é
+            # exatamente quando a conexão cair mais atrapalha. Ele nasce
+            # centrado no alto, longe do rodapé onde ficam Salvar e
+            # Cancelar, que era o toque roubado pelas abas.
+            if nome == ".ls-nav-recovery":
+                continue
+            some_com_modal = f"body.modal-open{nome}{{display:none!important}}" in sem_espaco
+            inerte = "pointer-events:none" in compacto
+            if not (some_com_modal or inerte):
+                proibidos.append(nome)
 
-        # As abas somem com a janela aberta. O aviso de reconexão NÃO
-        # some, e é de propósito: ele avisa que a conexão caiu, e o
-        # momento em que isso mais importa é exatamente com um modal
-        # aberto -- é ali que alguém está tentando gravar. Escondê-lo
-        # deixaria a pessoa olhando um botão travado sem explicação.
         self.assertEqual(
-            sorted(set(acima_do_modal)), [".ls-abas", ".ls-nav-recovery"],
-            "elemento fixo acima do modal sem sumir com body.modal-open: "
-            f"{sorted(set(acima_do_modal))}",
+            sorted(set(proibidos)), [],
+            "elemento fixo acima do modal que nem some com body.modal-open "
+            f"nem é inerte ao toque: {sorted(set(proibidos))}",
         )
+
+        # E as duas tarjas novas precisam continuar inertes: é o que as
+        # deixa aparecer por cima da janela sem repetir o bug das abas.
+        for tarja in (".ls-ocupado{", ".ls-tarja{"):
+            corpo = sem_espaco[sem_espaco.index(tarja):]
+            corpo = corpo[:corpo.index("}")]
+            self.assertIn("pointer-events:none", corpo, tarja)
+
+    def test_o_card_do_celular_usa_a_largura_inteira(self):
+        """O conteúdo "caía para a esquerda" e sobrava faixa à direita.
+
+        No celular a linha da tabela vira card: uma grade de duas colunas
+        dentro de uma caixa. O botão de ações ficava `position:absolute`
+        no canto de cima e o espaço dele era reservado no PADDING DO CARD
+        -- 54 a 64 pixels à direita, valendo para a altura inteira. Um
+        botão que ocupa uma linha tirava largura de todas: seis linhas de
+        dado espremidas e encostadas à esquerda, com uma faixa morta
+        descendo pela direita. Num aparelho de 390px é 15% da tela.
+
+        A reserva agora é de quem divide a primeira linha com o botão, e
+        não do card. Por isso o padding é simétrico: um número só, ou
+        quatro iguais.
+        """
+        import re
+
+        css = re.sub(r"/\*.*?\*/", "", self.ler("interno_modern.css"), flags=re.S)
+
+        cards = re.findall(
+            r"\.ls-(?:commercial-table|orcamentos-table|os-tabela)"
+            r"\s+tbody\s+tr\{([^{}]*)\}",
+            css,
+        )
+        self.assertTrue(cards, "nenhuma regra de card encontrada")
+
+        for corpo in cards:
+            padding = re.search(r"padding:([^;!]+)", corpo)
+            if not padding:
+                continue
+            lados = padding.group(1).split()
+            if len(lados) == 1:
+                continue
+            self.assertEqual(
+                len(set(lados)), 1,
+                "card com reserva lateral para o botão de ações: "
+                f"padding:{padding.group(1).strip()}",
+            )
+
+    def test_a_nota_do_cabecalho_da_os_e_paragrafo_e_nao_caixa_flex(self):
+        """Em flex, cada trecho de texto vira um item que quebra sozinho.
+
+        A nota é um parágrafo com <strong> no meio. Declarada
+        `inline-flex`, ela saía repartida em colunas verticais no celular,
+        com o fim da frase cortado fora da tela -- e ainda empurrava o
+        cabeçalho para além da largura da página, desalinhando tudo que
+        vinha depois.
+        """
+        from pathlib import Path
+        from django.conf import settings
+
+        tela = (
+            Path(settings.BASE_DIR) / "sistema_interno"
+            / "templates" / "ordens_servico_inner.html"
+        ).read_text(encoding="utf-8")
+
+        regra = tela[tela.index(".ls-os-body .ls-page-hero-nota{"):]
+        regra = regra[:regra.index("}")]
+
+        self.assertIn("display:block", regra)
+        self.assertNotIn("flex", regra)
 
     def test_campo_de_texto_cresce_com_o_que_se_escreve(self):
         js = self.ler("painel.js")

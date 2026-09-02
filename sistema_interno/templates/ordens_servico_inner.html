@@ -23,15 +23,42 @@
     background:radial-gradient(circle,rgba(61,217,192,.18),rgba(61,217,192,0) 70%);
     pointer-events:none;
   }
+  /* PARÁGRAFO É PARÁGRAFO, NÃO CAIXA FLEX.
+
+     Estava `display:inline-flex`. Um parágrafo de texto corrido com
+     <strong> no meio vira, em flex, uma fileira de itens: cada trecho de
+     texto e cada negrito viram um item que quebra linha por conta
+     própria. No celular a frase saía repartida em colunas verticais
+     desalinhadas, com o fim dela cortado fora da tela -- e ainda
+     empurrava o cabeçalho inteiro para além da largura da página,
+     desalinhando tudo que vinha depois.
+
+     O ícone já é inline e já tem o espaçamento do `me-1`; não havia nada
+     que o flex estivesse resolvendo aqui. */
   .ls-os-body .ls-page-hero-nota{
-    display:inline-flex;align-items:flex-start;gap:4px;max-width:590px;
+    display:block;max-width:590px;
     margin-top:12px!important;padding:10px 13px!important;
     border:1px solid rgba(127,230,213,.22);border-radius:14px 14px 14px 5px;
     background:rgba(61,217,192,.055)!important;color:#d8e4e1!important;
   }
+  .ls-os-body .ls-page-hero-nota i{vertical-align:-1px}
+
+  /* O QUE FOI COPIADO DO CHAMADO, ESCRITO NA TELA.
+
+     Copiar em silêncio tem o mesmo defeito de não copiar: quem abre a
+     O.S. não sabe se aqueles campos vieram do chamado ou se alguém já
+     tinha digitado, e acaba conferindo tudo de novo. */
+  .ls-espelho-chamado{
+    margin-top:6px;padding:8px 10px;border-radius:10px;
+    border:1px solid rgba(127,230,213,.26);background:rgba(61,217,192,.07);
+    color:#cfe1de;font-size:.72rem;font-weight:700;line-height:1.45;
+  }
+  .ls-espelho-chamado[hidden]{display:none!important}
+  .ls-espelho-chamado strong{color:#7fe6d5}
+  .ls-espelho-alerta{color:#ffc94d}
   @media (max-width:760px){
     .ls-os-body .ls-page-hero{border-radius:20px 20px 20px 7px!important}
-    .ls-os-body .ls-page-hero-nota{display:flex;max-width:none}
+    .ls-os-body .ls-page-hero-nota{max-width:none}
   }
 
   /* Cadastros auxiliares pertencem à O.S., mas não são modais Bootstrap.
@@ -252,7 +279,7 @@
         <span class="form-text">Busque uma ficha existente. Se não encontrar, cadastre aqui sem perder a O.S.</span>
         <div class="ls-cliente-resumo" id="osClienteResumo" hidden></div>
       </div>
-      <div class="col-md-4"><label class="form-label" for="osManutencao">Chamado de manutenção</label><select class="form-select" id="osManutencao" name="manutencao"><option value="">Atendimento direto</option>{% for m in manutencoes %}<option value="{{ m.id }}" data-equipamento="{{ m.nome_equipamento }}" data-nome="{{ m.usuario.nome_completo|default:m.usuario.user.username }}" data-whatsapp="{{ m.telefone_contato|default:m.usuario.telefone }}" data-email="{{ m.usuario.user.email }}" data-defeito="{{ m.descricao }}" data-endereco="{{ m.endereco|default:'' }}{% if m.numero %}, {{ m.numero }}{% endif %} · {{ m.cidade|default:'' }}/{{ m.estado|default:'' }}">MAN-{{ m.id|stringformat:'05d' }} · {{ m.nome_equipamento }} · {{ m.usuario.nome_completo|default:m.usuario.user.username }}</option>{% endfor %}</select></div>
+      <div class="col-md-4"><label class="form-label" for="osManutencao">Chamado de manutenção</label><select class="form-select" id="osManutencao" name="manutencao"><option value="">Atendimento direto</option>{% for m in manutencoes %}<option value="{{ m.id }}">MAN-{{ m.id|stringformat:'05d' }} · {{ m.nome_equipamento }} · {{ m.usuario.nome_completo|default:m.usuario.user.username }}</option>{% endfor %}</select><div class="ls-espelho-chamado" id="osEspelhoChamado" hidden role="status"></div></div>
       <div class="col-md-3"><label class="form-label" for="osNome">Nome do destinatário</label><input class="form-control" id="osNome" name="nome_cliente" maxlength="120"></div>
       <div class="col-md-4"><label class="form-label" for="osContato">Contato / responsável local</label><input class="form-control" id="osContato" name="contato" maxlength="120"></div>
       <div class="col-md-3"><label class="form-label" for="osWhatsapp">WhatsApp</label><input class="form-control" id="osWhatsapp" name="whatsapp_cliente" data-mascara="telefone" maxlength="24"></div>
@@ -663,6 +690,7 @@
 {{ empresa_localizacao|json_script:"empresaLocalizacaoDados" }}
 {{ etapas_por_situacao|json_script:"etapasPorSituacao" }}
 {{ itens_os_fallback|json_script:"itensOSFallbackDados" }}
+{{ manutencoes_dados|json_script:"manutencoesDados" }}
 {% endblock %}
 
 {% block scripts %}
@@ -1272,7 +1300,7 @@ LSTela.pronto(function () {
     corpo.innerHTML="";
     buscasDeItemOS.length = 0;
   }
-  function abrir(id){var o=id?achar(id):null;document.getElementById("formOS").reset();buscaClienteOS.definirValor("",false);resumoCliente(null);limparItens();valor("osId",o?o.id:"");document.getElementById("osTitulo").textContent=o?"Editar "+("OS-"+String(o.id).padStart(5,"0")):"Nova Ordem de Serviço";["manutencao","nome_cliente","contato","whatsapp_cliente","email_cliente","endereco_servico","tipo","status","prioridade","equipamento","numero_serie","agendada_para","garantia_ate","tecnico","defeito_relatado","diagnostico","servico_executado","frete","desconto","forma_pagamento","observacoes"].forEach(function(chave){var mapa={manutencao:"osManutencao",nome_cliente:"osNome",contato:"osContato",whatsapp_cliente:"osWhatsapp",email_cliente:"osEmail",endereco_servico:"osEndereco",tipo:"osTipo",status:"osStatus",prioridade:"osPrioridade",equipamento:"osEquipamento",numero_serie:"osSerie",agendada_para:"osAgenda",garantia_ate:"osGarantia",tecnico:"osTecnico",defeito_relatado:"osDefeito",diagnostico:"osDiagnostico",servico_executado:"osExecutado",frete:"osFrete",desconto:"osDesconto",forma_pagamento:"osFormaPagamento",observacoes:"osObservacoes"};valor(mapa[chave],o?o[chave]:(PADRAO_NOVA[chave]||""));});buscaClienteOS.definirValor(o?o.cliente:"",false);if(o&&o.cliente){resumoCliente(clientes.find(function(c){return String(c.valor)===String(o.cliente);})||null);}(o&&o.itens.length?o.itens:[null]).forEach(linha);recalcular();aplicarEtapas();desenharVersoesOS(o);aplicarSomenteLeitura(o);Painel.erro("osErro","");Painel.abrir("modalOS");}
+  function abrir(id){var o=id?achar(id):null;document.getElementById("formOS").reset();buscaClienteOS.definirValor("",false);resumoCliente(null);limparItens();valor("osId",o?o.id:"");document.getElementById("osTitulo").textContent=o?"Editar "+("OS-"+String(o.id).padStart(5,"0")):"Nova Ordem de Serviço";["manutencao","nome_cliente","contato","whatsapp_cliente","email_cliente","endereco_servico","tipo","status","prioridade","equipamento","numero_serie","agendada_para","garantia_ate","tecnico","defeito_relatado","diagnostico","servico_executado","frete","desconto","forma_pagamento","observacoes"].forEach(function(chave){var mapa={manutencao:"osManutencao",nome_cliente:"osNome",contato:"osContato",whatsapp_cliente:"osWhatsapp",email_cliente:"osEmail",endereco_servico:"osEndereco",tipo:"osTipo",status:"osStatus",prioridade:"osPrioridade",equipamento:"osEquipamento",numero_serie:"osSerie",agendada_para:"osAgenda",garantia_ate:"osGarantia",tecnico:"osTecnico",defeito_relatado:"osDefeito",diagnostico:"osDiagnostico",servico_executado:"osExecutado",frete:"osFrete",desconto:"osDesconto",forma_pagamento:"osFormaPagamento",observacoes:"osObservacoes"};valor(mapa[chave],o?o[chave]:(PADRAO_NOVA[chave]||""));});buscaClienteOS.definirValor(o?o.cliente:"",false);if(o&&o.cliente){resumoCliente(clientes.find(function(c){return String(c.valor)===String(o.cliente);})||null);}(o&&o.itens.length?o.itens:[null]).forEach(linha);recalcular();aplicarEtapas();desenharVersoesOS(o);aplicarSomenteLeitura(o);Painel.erro("osErro","");contarEspelho(null);Painel.abrir("modalOS");}
 
   /* A corrente de versões desta O.S. Cada uma abre na PRÉVIA: a
      substituída não está na lista da página -- é por isso que ela
@@ -1446,7 +1474,84 @@ LSTela.pronto(function () {
   Painel.ligar({form:"formRefazerOS",erro:"refazerOSErro"});
 
   ["osFrete","osDesconto"].forEach(function(id){document.getElementById(id)?.addEventListener("input",recalcular);});
-  document.getElementById("osManutencao")?.addEventListener("change",function(){var op=this.selectedOptions[0];if(!op||!op.value)return;buscaClienteOS.definirValor("",false);resumoCliente(null);valor("osEquipamento",op.dataset.equipamento);valor("osNome",op.dataset.nome);valor("osWhatsapp",op.dataset.whatsapp);valor("osEmail",op.dataset.email);valor("osDefeito",op.dataset.defeito);valor("osEndereco",op.dataset.endereco);valor("osTipo","manutencao");});
+  /* ====================================================================
+     O CHAMADO ENTRA INTEIRO NA O.S.
+
+     Escolher um chamado -- pelo campo, ou pelo botão que abre a O.S. na
+     central de manutenções -- copia para o formulário TUDO que o chamado
+     já sabe: equipamento, defeito com as palavras do cliente, nome,
+     WhatsApp, e-mail e o endereço completo, já com bairro e CEP. Quem
+     abre a O.S. confere e completa; não redigita.
+
+     Antes a cópia saía dos `data-` da <option>. Chamado fora da lista
+     (concluído, cancelado, ou além dos cem carregados) abria o
+     formulário em branco calado. Agora o espelho vem do servidor por
+     `manutencoesDados`, e o chamado pedido pela URL sempre está lá.
+     ==================================================================== */
+  var MANUTENCOES = (function(){
+    try { return JSON.parse(document.getElementById("manutencoesDados").textContent); }
+    catch (e) { return {}; }
+  })();
+
+  var espelhoAviso = document.getElementById("osEspelhoChamado");
+
+  function contarEspelho(dados){
+    if (!espelhoAviso) return;
+    if (!dados) { espelhoAviso.hidden = true; espelhoAviso.textContent = ""; return; }
+    var linhas = [];
+    linhas.push('<strong>' + dados.codigo + '</strong> copiado para esta O.S.');
+    var trazidos = [];
+    if (dados.equipamento) trazidos.push("equipamento");
+    if (dados.defeito_relatado) trazidos.push("defeito");
+    if (dados.endereco_servico) trazidos.push("endereço");
+    if (dados.whatsapp_cliente) trazidos.push("WhatsApp");
+    if (dados.email_cliente) trazidos.push("e-mail");
+    if (trazidos.length) linhas.push("Veio com " + trazidos.join(", ") + ".");
+    if (dados.aberto_em) linhas.push("Aberto em " + dados.aberto_em + " · " + dados.situacao + ".");
+    if (dados.ja_tem_os) {
+      linhas.push('<span class="ls-espelho-alerta">Este chamado já tem O.S. Confira antes de abrir outra.</span>');
+    }
+    espelhoAviso.innerHTML = linhas.join("<br>");
+    espelhoAviso.hidden = false;
+  }
+
+  /* `false` no segundo parâmetro: campo que a pessoa já preencheu não é
+     sobrescrito quando ela troca o chamado no meio do cadastro. Na
+     abertura vinda da central o formulário está limpo, então tudo entra. */
+  function espelharChamado(id, sobrescrever){
+    var dados = MANUTENCOES[String(id)];
+    if (!dados) { contarEspelho(null); return false; }
+
+    buscaClienteOS.definirValor("", false);
+    resumoCliente(null);
+
+    [["osEquipamento","equipamento"],
+     ["osNome","nome_cliente"],
+     ["osContato","contato"],
+     ["osWhatsapp","whatsapp_cliente"],
+     ["osEmail","email_cliente"],
+     ["osDefeito","defeito_relatado"],
+     ["osEndereco","endereco_servico"]].forEach(function(par){
+      var campo = document.getElementById(par[0]);
+      if (!campo) return;
+      var texto = dados[par[1]] || "";
+      if (!texto) return;
+      if (!sobrescrever && String(campo.value || "").trim()) return;
+      valor(par[0], texto);
+    });
+
+    valor("osTipo", "manutencao");
+    /* A máscara do telefone só roda no que já estava na tela; o número
+       copiado precisa passar por ela também. */
+    if (Painel.aplicarMascaras) Painel.aplicarMascaras(document.getElementById("formOS"));
+    contarEspelho(dados);
+    return true;
+  }
+
+  document.getElementById("osManutencao")?.addEventListener("change", function(){
+    if (!this.value) { contarEspelho(null); return; }
+    espelharChamado(this.value, true);
+  });
   Painel.ligar({form:"formOS",erro:"osErro",antes:function(){
     var itens=[];
     corpo.querySelectorAll("tr").forEach(function(l){
@@ -1569,7 +1674,44 @@ LSTela.pronto(function () {
 
   Painel.ligar({form:"formPagamentoOS",erro:"pagamentoOSErro"});Painel.ligarExclusao();
 
-  var params=new URLSearchParams(location.search);if(params.get("novo")==="1"&&document.getElementById("novaOS")){abrir(null);if(params.get("manutencao")){valor("osManutencao",params.get("manutencao"));document.getElementById("osManutencao").dispatchEvent(new Event("change"));}}
+  /* Chegou pelo botão da central de manutenções: abre a janela já com
+     o chamado escolhido e todos os campos dele preenchidos. */
+  var params = new URLSearchParams(location.search);
+  if (params.get("novo") === "1" && document.getElementById("novaOS")) {
+    abrir(null);
+    var chamado = params.get("manutencao");
+    if (chamado) {
+      valor("osManutencao", chamado);
+      var seletor = document.getElementById("osManutencao");
+      if (seletor.value !== String(chamado)) {
+        /* O chamado não está entre as opções -- não deveria acontecer,
+           porque o servidor insere o pedido pela URL, mas se acontecer é
+           melhor copiar os dados do que abrir a janela vazia. */
+        seletor.value = "";
+      }
+      if (!espelharChamado(chamado, true) && espelhoAviso) {
+        espelhoAviso.innerHTML =
+          "Não encontrei o chamado <strong>#" + chamado +
+          "</strong> para copiar. Preencha a O.S. normalmente.";
+        espelhoAviso.hidden = false;
+      }
+    }
+
+    /* O PEDIDO JÁ FOI ATENDIDO: SAI DA URL.
+
+       `?novo=1` é uma ordem de abrir a janela, não um endereço de tela.
+       Deixá-lo ali fazia a lista, ao ser rebuscada depois de gravar,
+       reabrir uma O.S. nova e vazia por cima do que acabara de ser
+       salvo -- e o mesmo acontecia ao recarregar a página ou voltar
+       pelo histórico. Limpo aqui, a janela abre uma vez, que é o que o
+       clique na central de manutenções pediu. */
+    try {
+      var limpa = new URL(location.href);
+      limpa.searchParams.delete("novo");
+      limpa.searchParams.delete("manutencao");
+      history.replaceState(history.state, "", limpa.pathname + limpa.search + limpa.hash);
+    } catch (e) {}
+  }
 });
 </script>
 {% endblock %}

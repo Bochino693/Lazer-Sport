@@ -133,6 +133,46 @@ class AcordarAntesDeAgirTests(SimpleTestCase):
         self.assertIn("return false;", post)
         self.assertNotIn("Nada foi enviado", post)
 
+    def test_a_espera_avisa_em_vez_de_ficar_muda(self):
+        """Quarenta segundos de tela parada parecem sistema travado.
+
+        A duração da espera não era o defeito -- ela cobre uma partida a
+        frio de propósito. O defeito era o silêncio: quem estava olhando
+        não tinha como distinguir "o servidor está voltando" de "isto
+        aqui não funciona mais", e tocava de novo, pondo outra requisição
+        na fila de um servidor que já estava lento.
+        """
+        painel = self.painel()
+
+        self.assertIn("Painel.aoEsperarRede = function", painel)
+        self.assertIn('avisarEspera("acordando", tentativa)', painel)
+        self.assertIn('textoOcupado = "Servidor acordando…"', painel)
+
+    def test_gravar_mostra_o_ciclo_inteiro_e_confirma_no_fim(self):
+        """Salvar e depois rebuscar a lista é UMA espera, para quem olha.
+
+        A janela fechava assim que o POST voltava e a atualização
+        acontecia em silêncio: a tela antiga continuava na frente, com os
+        dados antigos. Parecia que nada tinha sido salvo -- e no celular,
+        onde a barra de 3px do topo some no recorte da tela, não havia
+        nenhum outro sinal.
+        """
+        painel = self.painel()
+        navegacao = (
+            RAIZ / "static" / "interno" / "ls-soft-navigation.js"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("Painel.ocupado = function", painel)
+        self.assertIn("Painel.pronto = function", painel)
+        self.assertIn("Painel.aviso = function", painel)
+        self.assertIn('textoOcupado = "Atualizando a lista…"', painel)
+
+        # A tarja só sai quando a lista nova chega -- e para isso a
+        # navegação precisa devolver promessa.
+        self.assertIn("atualizacao.then(encerrar, encerrar)", painel)
+        self.assertIn("return navegar(window.location.href", navegacao)
+        self.assertIn("return buscar(alvo).then(", navegacao)
+
     def test_o_pulso_so_bate_com_a_aba_visivel(self):
         """Aba escondida não gera tráfego; ao voltar, acorda na hora."""
         painel = self.painel()
