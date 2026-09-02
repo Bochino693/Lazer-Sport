@@ -54,6 +54,9 @@ class RequestTimingMiddleware:
 
 
 class SubdomainURLMiddleware:
+    #: Endereços que existem igual em qualquer host. Fora desta lista, um
+    #: pedido para `interno.` só encontra o que `sistema_interno/urls.py`
+    #: define -- e o que não estiver lá volta 404.
     ROTAS_GLOBAIS = (
         "/static/",
         "/media/",
@@ -61,6 +64,23 @@ class SubdomainURLMiddleware:
         "/system/",
         "/accounts/",
         "/healthz/",
+        # `/pronto/` FALTAVA AQUI, E ISSO CUSTAVA CARO.
+        #
+        # Ele é quem acorda o processo E a conexão do banco antes de uma
+        # gravação, e é chamado pelo navegador de quem está usando o
+        # PAINEL -- ou seja, sempre pelo subdomínio `interno.`. Só que
+        # ele mora em `core/urls.py`, e no subdomínio o urlconf é outro:
+        # toda chamada voltava 404.
+        #
+        # O painel lê 404 como "o servidor não respondeu", então ele
+        # concluía que a instância estava dormindo em TODA gravação feita
+        # depois de dois minutos parado -- e pagava a escada de espera
+        # inteira antes de mandar o POST, com o servidor de pé o tempo
+        # todo. A tarja "Servidor acordando…" aparecia com o servidor
+        # acordado.
+        #
+        # Ver `core.views.pronto` e `docs/RENDER_502.md`.
+        "/pronto/",
         "/robots.txt",
     )
 

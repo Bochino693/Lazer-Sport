@@ -5,10 +5,22 @@ como **Health Check Path** do serviço web no Render.
 
 ## Dois endereços, dois trabalhos
 
-| Endereço    | Quem chama            | Toca o banco? |
-|-------------|-----------------------|---------------|
-| `/healthz/` | o Render              | não           |
-| `/pronto/`  | o painel, no navegador| sim (`SELECT 1`) |
+| Endereço    | Quem chama                          | Toca o banco?    |
+|-------------|-------------------------------------|------------------|
+| `/healthz/` | o Render                            | não              |
+| `/pronto/`  | o painel no navegador, e a batida do próprio servidor | sim (`SELECT 1`) |
+
+> **`/pronto/` não respondia no subdomínio, e isso custava caro.** Ele
+> mora em `core/urls.py`, mas o painel atende por `interno.`, onde o
+> `SubdomainURLMiddleware` troca o urlconf — e ele não estava na lista de
+> rotas globais. Toda chamada voltava **404**.
+>
+> O estrago não era um endereço quebrado. O painel lê 404 como "o
+> servidor não respondeu", então concluía que a instância estava dormindo
+> em **toda gravação feita depois de dois minutos parado**, e pagava a
+> escada de espera inteira antes de mandar o POST — com o servidor de pé
+> o tempo todo. A tarja "Servidor acordando…" aparecia com o servidor
+> acordado. Corrigido em `core/middleware.py`.
 
 `/healthz/` **não pode** tocar o banco: ele é o que decide se a instância
 está viva, e uma oscilação do Supabase passaria a derrubar o processo web
@@ -74,16 +86,84 @@ processos, a reciclagem de um deixa de ser a queda do site.
 > um worker sem esse efeito, configure um cache compartilhado (Redis)
 > antes.
 
-### O que ainda depende do plano, e não do código
+## A instância não pode dormir
 
-A partida a frio é do plano de hospedagem. No plano gratuito o Render
-suspende a instância depois de alguns minutos sem requisição, e a volta
-leva de vinte a sessenta segundos. Nenhuma configuração deste repositório
-encurta isso — o painel só passou a **avisar** enquanto acontece, em vez
-de ficar mudo (tarja "Servidor acordando…" com contador de segundos).
+Este é o item que mais pesa na percepção de lentidão, e o único que não
+tem nada a ver com o código do painel.
 
-Se abrir o aplicativo e trocar de tela continua levando minutos, a ordem
-de investigação é:
+O Render suspende um serviço web gratuito depois de **15 minutos sem
+requisição de entrada**. Voltar custa de vinte a sessenta segundos: o
+contêiner sobe, o Python importa Django, allauth e cloudinary, e só então
+a primeira requisição começa a ser atendida. Medido neste projeto, o
+Django sobe em menos de um segundo — o resto é a hospedagem.
+
+Para quem usa, a diferença é grosseira: a mesma tela abre em meio segundo
+com a instância de pé e leva quase um minuto com ela voltando do sono.
+
+### O que o código faz a respeito
+
+`core/sempre_pronto.py` sobe uma thread que bate em `/pronto/`, pelo
+endereço público, a cada 4 minutos. Isso resolve as duas metades do
+problema de uma vez:
+
+- **É tráfego de entrada**, e é ausência de tráfego de entrada que decide
+  a suspensão. Enquanto a batida existir, a instância não dorme.
+- **Aquece a conexão do banco.** `/pronto/` faz um `SELECT 1` e chega
+  pela rede, ou seja, cai numa das threads que atendem requisição — que é
+  onde a conexão precisa estar quente. O pooler do Supabase encerra
+  conexão ociosa, e sem isto a primeira tela depois de uma pausa paga DNS,
+  TCP e TLS antes de ler a primeira linha. Isso vale **mesmo numa
+  instância paga**, que não dorme.
+
+Roda no processo web e também no `worker` do Procfile — dois processos
+batendo é redundância barata.
+
+| Variável | Padrão | Para quê |
+|---|---|---|
+| `SEMPRE_PRONTO` | ligado em produção | `0` desliga |
+| `SEMPRE_PRONTO_INTERVALO` | `240` (segundos) | Cabe com folga nos 15 minutos |
+| `SEMPRE_PRONTO_URL` | vazio | Só se o painel atende num domínio diferente do publicado |
+
+Nos logs, procure `sempre_pronto`. Uma linha `sempre_pronto acordou
+duration_ms=…` significa que a batida encontrou a instância dormindo —
+se ela aparecer, o intervalo está frouxo demais para o seu plano.
+
+### O que isto NÃO resolve
+
+Nada disso encurta a partida a frio de um **deploy**, nem a de uma
+instância que já estava dormindo quando o processo subiu. Também não é
+substituto para o plano certo: a solução suportada, sem contorno nenhum,
+é uma instância paga, que não é suspensa. O que está aqui é o melhor que
+o código consegue fazer sozinho.
+
+Duas alternativas, se preferir não depender do próprio processo:
+
+1. **Render Cron Job** (plano pago) chamando `curl -sS
+   https://interno.lazersport.com.br/pronto/` a cada 5 minutos.
+2. **Um pinger externo gratuito** (UptimeRobot, cron-job.org) no mesmo
+   endereço, no mesmo intervalo. É o caminho mais confiável no plano
+   gratuito, porque não depende de o processo estar de pé para começar.
+
+### Enquanto ela ainda estiver acordando
+
+O painel deixou de martelar o servidor com tentativas curtas. Uma
+sondagem de 8 segundos separa "rede lenta" de "servidor subindo"; a
+partir daí é **um pedido só, com 50 segundos de janela**, atendido no
+instante em que o processo sobe.
+
+O formato antigo — quatro tentativas de doze segundos — era pior que o
+tempo que gastava: cada estouro de prazo é um `abort`, e cada `abort`
+joga fora o pedido que já estava na fila do servidor. A instância que ia
+responder no segundo 40 nunca chegava a responder.
+
+E a tela diz o que está acontecendo desde o primeiro segundo: tarja
+"Servidor acordando (até 1 minuto na primeira vez)…" com contador. Sem
+isso, quem está olhando toca de novo — e o toque cancela justamente o
+pedido que ia ser respondido.
+
+### Ordem de investigação
+
+Se abrir o aplicativo e trocar de tela continua levando minutos:
 
 1. **A instância estava dormindo?** Nos logs, a primeira requisição depois
    de um período parado leva dezenas de segundos. Se for isso, a correção

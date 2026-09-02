@@ -756,6 +756,43 @@ INTERNO_BASE_URL = os.getenv(
     "https://interno.lazersport.com.br",
 ).strip().rstrip("/")
 
+
+# ============================================================
+# A INSTÂNCIA NÃO DORME
+# ============================================================
+# A hospedagem suspende o processo depois de alguns minutos sem
+# requisição, e voltar custa de vinte a sessenta segundos. Não é
+# lentidão do código: a mesma tela que abre em meio segundo com a
+# instância de pé leva quase um minuto com ela voltando do sono -- e,
+# quando a espera passa do prazo do proxy, vira 502.
+#
+# Uma batida periódica no próprio endereço público é tráfego de entrada,
+# e é isso que a hospedagem conta para decidir se o processo está em uso.
+# O mesmo ciclo mantém a conexão do Supabase quente, o que vale mesmo
+# numa instância que não dorme: o pooler encerra conexão ociosa, e a tela
+# seguinte pagaria o aperto de mão TLS inteiro.
+#
+# Ligado em produção; desligável por `SEMPRE_PRONTO=0`. Ver
+# `core/sempre_pronto.py` e `docs/RENDER_502.md`.
+SEMPRE_PRONTO = os.getenv(
+    "SEMPRE_PRONTO",
+    "1" if ENVIRONMENT == "production" else "0",
+).strip().lower() in ("1", "true", "yes", "on")
+
+# Quatro minutos. A suspensão costuma acontecer com quinze de silêncio;
+# o intervalo cabe com folga mesmo se uma batida falhar.
+try:
+    SEMPRE_PRONTO_INTERVALO = max(
+        60, int(os.getenv("SEMPRE_PRONTO_INTERVALO", "240")),
+    )
+except ValueError:
+    SEMPRE_PRONTO_INTERVALO = 240
+
+# Endereço que a batida usa. Vazio: cai em INTERNO_BASE_URL e depois em
+# SITE_URL. Só precisa ser preenchido quando o painel atende num domínio
+# diferente do que a hospedagem publica.
+SEMPRE_PRONTO_URL = os.getenv("SEMPRE_PRONTO_URL", "").strip()
+
 # A Home usa somente dados públicos nesse cache. Carrinho, usuário e mensagens
 # continuam fora dele. Como saves no catálogo invalidam a chave na hora, um TTL
 # maior reduz consultas e tráfego no Supabase sem atrasar atualizações do admin.

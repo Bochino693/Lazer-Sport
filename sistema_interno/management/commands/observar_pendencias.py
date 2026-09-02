@@ -38,6 +38,14 @@ class Command(BaseCommand):
         signal.signal(signal.SIGINT, encerrar)
         intervalo = max(30, int(options["intervalo"]))
 
+        # O worker também bate no endereço público. Dois processos batendo
+        # é redundância barata: se o web cair e voltar, ou se a thread
+        # dele morrer por qualquer motivo, o worker continua segurando a
+        # instância de pé. Ver `core/sempre_pronto.py`.
+        from core import sempre_pronto
+
+        sempre_pronto.ligar()
+
         self.stdout.write("Observador de pendências iniciado.")
         while not parar.is_set():
             try:

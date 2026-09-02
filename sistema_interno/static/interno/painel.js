@@ -676,21 +676,25 @@
   var REDE_OCIOSA_MS = 2 * 60 * 1000;
   var REDE_PULSO_MS = 4 * 60 * 1000;
 
-  /* A ESPERA CONTINUA CABENDO NUMA PARTIDA A FRIO -- E AGORA ELA FALA.
+  /* UMA SONDAGEM CURTA, DEPOIS UMA ESPERA LONGA.
 
-     Somadas, estas esperas passam de quarenta segundos, que é a faixa em
-     que uma instância suspensa volta. Encurtá-las traria de volta o
-     defeito que elas resolveram: o painel decidindo que o servidor não
-     vem justamente enquanto ele está subindo.
+     Eram sete tentativas de nove segundos cada, com pausas crescentes
+     entre elas. A duração total estava certa -- cobria uma partida a
+     frio --, mas o FORMATO estava errado: cada tentativa que estoura o
+     prazo é um `abort`, e cada `abort` joga fora o pedido que já estava
+     na fila do servidor. Contra uma instância que está subindo, isso
+     significa recomeçar a conta sete vezes e nunca receber a resposta
+     que estava a caminho.
 
-     O que estava errado não era a duração -- era o SILÊNCIO. Quarenta
-     segundos de tela parada, sem uma palavra, são indistinguíveis de um
-     sistema travado, e é isso que faz a pessoa tocar de novo e de novo.
-     Agora cada tentativa avisa quem estiver ouvindo (`aoEsperarRede`), e
-     a tarja do painel troca "Salvando…" por "Servidor acordando…" com o
-     contador de segundos ao lado. A espera é a mesma; a incerteza é que
-     acabou. */
-  var ESPERAS_DO_PULSO = [600, 1400, 3000, 5000, 8000, 11000, 12000];
+     Agora são duas, com trabalhos diferentes: a primeira sonda em seis
+     segundos (rede lenta, servidor de pé), e a segunda espera cinquenta
+     -- UM pedido, aberto, atendido no instante em que o processo sobe.
+
+     E as duas avisam. Quarenta segundos de tela parada sem uma palavra
+     são indistinguíveis de um sistema travado, e é isso que faz a pessoa
+     tocar de novo -- cancelando justamente o pedido que ia responder. */
+  var PRAZOS_DO_PULSO = [6000, 50000];
+  var ESPERAS_DO_PULSO = [500];
   var ouvintesDePulso = [];
 
   /* Quem quiser mostrar "acordando o servidor" na tela se inscreve aqui.
@@ -711,8 +715,9 @@
 
   function pulsoDoServidor(tentativa) {
     var controlador = global.AbortController ? new AbortController() : null;
+    var prazo = PRAZOS_DO_PULSO[Math.min(tentativa, PRAZOS_DO_PULSO.length - 1)];
     var timer = controlador
-      ? global.setTimeout(function () { controlador.abort(); }, 9000)
+      ? global.setTimeout(function () { controlador.abort(); }, prazo)
       : null;
 
     /* `/pronto/`, e não `/healthz/`.
@@ -738,18 +743,9 @@
       redeUltimoSucesso = Date.now();
       return true;
     }).catch(function (erro) {
-      /* A ESPERA PRECISA CABER NUMA PARTIDA A FRIO.
-
-         Eram três tentativas somando cerca de dois segundos -- o
-         suficiente para uma oscilação de rede, e muito pouco para o
-         caso que motivou tudo isto: a instância suspensa leva de vinte a
-         sessenta segundos para voltar. Desistindo aos dois segundos, o
-         painel decidia que o servidor não vinha justamente enquanto ele
-         estava subindo.
-
-         As esperas crescem para não martelar um servidor que ainda está
-         de pé sobre um joelho, e param em doze segundos para o total
-         caber na paciência de quem está olhando a tela. */
+      /* A pausa entre a sondagem e a espera longa é curta de propósito:
+         o que se ganha esperando aqui é nada, e o que se perde é tempo
+         da paciência de quem está olhando a tela. */
       if (tentativa < ESPERAS_DO_PULSO.length) {
         avisarEspera("acordando", tentativa);
         return esperarRede(ESPERAS_DO_PULSO[tentativa]).then(function () {

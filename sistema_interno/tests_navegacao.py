@@ -225,15 +225,17 @@ class ScriptDeTelaNaoEsperaDOMContentLoadedTests(SimpleTestCase):
             base,
         )
         self.assertIn('}, true);', base)
-        # TRÊS TENTATIVAS, E A ÚLTIMA É A QUE ESPERA MAIS.
+        # UMA SONDAGEM CURTA, DEPOIS UMA ESPERA LONGA.
         #
-        # Eram quatro de doze segundos: até 52 segundos por troca de tela,
-        # e sem nada escrito na tela durante quase todo esse tempo. Duas
-        # trocas numa instância fria davam a espera de minutos que a
-        # fábrica descreveu. Continua havendo repetição -- que é o que
-        # este teste protege --, agora com teto menor e com aviso.
-        self.assertIn("MAX_TENTATIVAS_REDE = 3", navegacao)
-        self.assertIn("TIMEOUT_REDE_ULTIMA", navegacao)
+        # Eram quatro tentativas de doze segundos. Pior que o tempo era o
+        # formato: repetir tentativas curtas contra uma instância que está
+        # ACORDANDO joga fora, a cada `abort`, o pedido que já estava na
+        # fila do servidor -- e a instância que ia responder no segundo 40
+        # nunca chega a responder. Continua havendo repetição, que é o que
+        # este teste protege, agora no formato que termina com a tela
+        # carregada em vez de terminar em desistência.
+        self.assertIn("MAX_TENTATIVAS_REDE = 2", navegacao)
+        self.assertIn("TIMEOUT_REDE_DESPERTAR", navegacao)
         self.assertIn("function escalarLoader(", navegacao)
         self.assertIn("mostrarRecuperacao(alvo", navegacao)
         self.assertIn("erro.lsTransitorio", navegacao)
