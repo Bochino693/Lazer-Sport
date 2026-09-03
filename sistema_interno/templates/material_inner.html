@@ -12,6 +12,7 @@
     <p>Organize os cadastros que alimentam o estoque: materiais, tipos, unidades de medida e fornecedores.</p>
   </div>
   <div class="ls-page-hero-actions">
+    <button type="button" class="btn btn-outline-secondary" id="preverCodigos">Padronizar códigos existentes</button>
     <a href="{% url 'stock' %}" class="btn btn-outline-secondary">
       <i class="bi bi-box-seam me-1"></i> Ir para o estoque
     </a>
@@ -73,15 +74,15 @@
 
     <section class="ls-data-panel">
       <div class="ls-data-header">
-        <div><h2>Materiais cadastrados</h2><p>Dados de identificação, tipo, unidade e posição financeira.</p></div>
+        <div><h2>Materiais cadastrados</h2><p>Identificação, foto, tipo e unidade. Compras e valores ficam no estoque.</p></div>
       </div>
       <div class="ls-data-body">
         <div class="table-responsive">
-          <table class="ls-table">
+          <table class="ls-table ls-materiais-table">
             <thead>
               <tr>
                 <th>Material</th><th>Tipo</th><th>Unidade</th>
-                <th class="text-end">Em estoque</th><th class="text-end">Investido</th>
+                <th class="text-end">Em estoque</th>
                 <th class="text-end">Ações</th>
               </tr>
             </thead>
@@ -89,34 +90,47 @@
               {% for m in materiais %}
                 <tr class="{% if not m.ativo %}linha-inativa{% endif %}">
                   <td>
+                    <div class="ls-material-identidade">
+                    <span class="ls-material-miniatura">
+                      {% if m.foto_miniatura %}<img src="{{ m.foto_miniatura.url }}" alt="{{ m.nome_material }}" width="64" height="64" loading="lazy" decoding="async">{% else %}<i class="bi bi-image" aria-hidden="true"></i>{% endif %}
+                    </span><div>
                     <strong>{{ m.nome_material }}</strong>
                     {% if not m.ativo %}<span class="ls-status neutral ms-1">Inativo</span>{% endif %}
                     <span class="d-block ls-subtext">
                       {% if m.codigo_interno %}{{ m.codigo_interno }} · {% endif %}{{ m.descricao|default:"Sem descrição" }}
                     </span>
+                    </div></div>
                   </td>
                   <td>{{ m.tipo_material|default:"—" }}</td>
                   <td>{{ m.get_unidade_display }}</td>
                   <td class="text-end ls-number">{{ m.quantidade_total }}</td>
-                  <td class="text-end ls-money">R$ {{ m.valor_total|moeda }}</td>
                   <td class="text-end ls-actions">
                     <button type="button" class="btn btn-sm btn-outline-secondary" data-editar-material="{{ m.id }}">
-                      <i class="bi bi-pencil"></i> Editar
+                      <i class="bi bi-pencil"></i> Editar dados e foto
                     </button>
+                    <a class="btn btn-sm btn-outline-secondary" href="{% url 'stock' %}?q={{ m.codigo_interno|default:m.nome_material|urlencode }}"><i class="bi bi-box-seam"></i> Consultar estoque</a>
+                    <a class="btn btn-sm btn-outline-secondary" href="{% url 'movimentacoes_inner' %}?q={{ m.codigo_interno|default:m.nome_material|urlencode }}"><i class="bi bi-clock-history"></i> Ver movimentações</a>
                     <button type="button" class="btn btn-sm btn-outline-danger"
-                            data-excluir-material="{{ m.id }}" data-nome="{{ m.nome_material }}">
-                      <i class="bi bi-trash3"></i>
+                            data-excluir-material="{{ m.id }}" data-nome="{{ m.nome_material }}" title="Excluir material">
+                      <i class="bi bi-trash3"></i> Excluir material
                     </button>
                   </td>
                 </tr>
               {% empty %}
-                <tr><td colspan="6"><div class="ls-empty"><i class="bi bi-tools"></i>Nenhum material cadastrado.</div></td></tr>
+                <tr><td colspan="5"><div class="ls-empty"><i class="bi bi-tools"></i>Nenhum material cadastrado.</div></td></tr>
               {% endfor %}
             </tbody>
           </table>
         </div>
       </div>
     </section>
+    {% if pagina.paginator.num_pages > 1 %}
+    <nav class="d-flex flex-wrap align-items-center gap-3 my-3" aria-label="Páginas de materiais">
+      {% if pagina.has_previous %}<a class="btn btn-outline-secondary" href="?q={{ busca|urlencode }}&amp;page={{ pagina.previous_page_number }}">Anterior</a>{% endif %}
+      <span>Página {{ pagina.number }} de {{ pagina.paginator.num_pages }} · 30 materiais por página</span>
+      {% if pagina.has_next %}<a class="btn btn-outline-secondary" href="?q={{ busca|urlencode }}&amp;page={{ pagina.next_page_number }}">Próxima</a>{% endif %}
+    </nav>
+    {% endif %}
   </div>
 
   <div class="tab-pane fade" id="abaTipos">
@@ -128,13 +142,13 @@
       <div class="ls-data-header"><div><h2>Tipos de material</h2><p>Classificações usadas para organizar os cadastros.</p></div></div>
       <div class="ls-data-body">
         <div class="table-responsive">
-          <table class="ls-table">
+          <table class="ls-table ls-tipos-table">
             <thead><tr><th>Tipo</th><th class="text-end">Materiais</th><th class="text-end">Ações</th></tr></thead>
             <tbody>
               {% for t in tipos %}
                 <tr>
-                  <td><strong>{{ t.descricao }}</strong></td>
-                  <td class="text-end ls-number">{{ t.material.count }}</td>
+                  <td><strong>{{ t.descricao }}</strong><small class="d-block ls-subtext">{{ t.prefixo }}-0001, {{ t.prefixo }}-0002…</small></td>
+                  <td class="text-end ls-number">{{ t.total_itens }}</td>
                   <td class="text-end">
                     <button type="button" class="btn btn-sm btn-outline-secondary"
                             data-editar-tipo="{{ t.id }}" data-descricao="{{ t.descricao }}">
@@ -161,7 +175,7 @@
       <div class="ls-data-header"><div><h2>Fornecedores</h2><p>Contatos e parceiros vinculados às compras do estoque.</p></div></div>
       <div class="ls-data-body">
         <div class="table-responsive">
-          <table class="ls-table">
+          <table class="ls-table ls-fornecedores-table">
             <thead>
               <tr><th>Fornecedor</th><th>Contato</th><th>CNPJ / CPF</th><th class="text-end">Itens</th><th class="text-end">Ações</th></tr>
             </thead>
@@ -177,7 +191,7 @@
                     {% if f.email %}<span class="d-block ls-subtext">{{ f.email }}</span>{% endif %}
                   </td>
                   <td>{{ f.cnpj|default:"—" }}</td>
-                  <td class="text-end ls-number">{{ f.estoques.count }}</td>
+                  <td class="text-end ls-number">{{ f.total_itens }}</td>
                   <td class="text-end ls-actions">
                     <button type="button" class="btn btn-sm btn-outline-secondary" data-editar-fornecedor="{{ f.id }}">
                       <i class="bi bi-pencil"></i> Editar
@@ -199,9 +213,26 @@
   </div>
 </div>
 
+<div class="modal fade" id="modalCodigos" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <form class="modal-content" id="formCodigos" method="post" action="{% url 'materiais_inner' %}">
+      {% csrf_token %}<input type="hidden" name="action" value="padronizar_codigos">
+      <div class="modal-header"><h5 class="modal-title">Padronizar códigos</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button></div>
+      <div class="modal-body">
+        <p>IDs, fotos e vínculos permanecem. Códigos anteriores ficam no histórico e continuam disponíveis na busca. Etiquetas antigas poderão precisar de reimpressão.</p>
+        <div id="codigosErro" class="alert alert-danger d-none" role="alert"></div>
+        <p id="codigosResumo"></p>
+        <table class="ls-table"><thead><tr><th>Material</th><th>Atual</th><th>Novo</th></tr></thead><tbody id="codigosPrevia"></tbody></table>
+        <label class="form-label mt-3">Digite PADRONIZAR para aplicar<input class="form-control" name="confirmacao" required pattern="PADRONIZAR" autocomplete="off"></label>
+        <small>A sequência é recalculada ao confirmar caso outro cadastro seja salvo nesse intervalo.</small>
+      </div>
+      <div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button><button class="btn btn-success" type="submit">Aplicar códigos</button></div>
+    </form>
+  </div>
+</div>
 <div class="modal fade" id="modalMaterial" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-scrollable">
-    <form class="modal-content" id="formMaterial" method="post" action="{% url 'materiais_inner' %}">
+    <form class="modal-content" id="formMaterial" method="post" enctype="multipart/form-data" action="{% url 'materiais_inner' %}">
       {% csrf_token %}
       <input type="hidden" name="action" value="save_material">
       <input type="hidden" name="id" id="materialId">
@@ -212,13 +243,15 @@
       <div class="modal-body">
         <div id="materialErro" class="alert alert-danger d-none" role="alert"></div>
         <div class="row g-3">
+          <div class="col-12">{% include "partials/material_foto.html" %}</div>
           <div class="col-12 col-md-8">
             <label class="form-label" for="materialNome">Nome *</label>
             <input class="form-control" id="materialNome" name="nome_material" data-rotulo="nome" maxlength="90" required>
           </div>
           <div class="col-12 col-md-4">
             <label class="form-label" for="materialCodigo">Código interno</label>
-            <input class="form-control" id="materialCodigo" name="codigo_interno" maxlength="30">
+            <input class="form-control" id="materialCodigo" name="codigo_interno" maxlength="30" readonly placeholder="Gerado ao salvar">
+            <small class="ls-subtext">Sequência por tipo. O código permanece estável após o cadastro.</small>
           </div>
           <div class="col-12">
             <label class="form-label" for="materialDescricao">Descrição</label>
@@ -362,6 +395,28 @@ LSTela.pronto(function () {
   "use strict";
 
   var materiais = JSON.parse(document.getElementById("materiaisDados").textContent || "[]");
+  document.getElementById("preverCodigos").addEventListener("click", function () {
+    var botao = this, form = document.getElementById("formCodigos");
+    botao.disabled = true;
+    form.reset();
+    Painel.erro("codigosErro", "");
+    Painel.enviar(form, {action: "prever_codigos"}).then(function (json) {
+      if (json.status !== "sucesso") throw new Error(json.msg || "Não foi possível calcular a prévia.");
+      var tabela = document.getElementById("codigosPrevia");
+      tabela.replaceChildren();
+      (json.alteracoes || []).forEach(function (item) {
+        var linha = document.createElement("tr");
+        [item.nome, item.anterior || "Sem código", item.novo].forEach(function (texto) {
+          var celula = document.createElement("td"); celula.textContent = texto; linha.appendChild(celula);
+        });
+        tabela.appendChild(linha);
+      });
+      document.getElementById("codigosResumo").textContent = json.alteracoes.length + " materiais serão atualizados.";
+      Painel.abrir("modalCodigos");
+    }).catch(function (erro) { Painel.aviso(erro.message, "erro"); }).finally(function () { botao.disabled = false; });
+  });
+  Painel.ligar({form: "formCodigos", erro: "codigosErro"});
+  var fotoMaterial = Painel.fotoMaterial(document.getElementById("formMaterial"));
   var fornecedores = JSON.parse(document.getElementById("fornecedoresDados").textContent || "[]");
 
   function achar(lista, id) {
@@ -375,6 +430,7 @@ LSTela.pronto(function () {
     var m = id ? achar(materiais, id) : null;
 
     form.reset();
+    fotoMaterial(m ? m.foto_url : "");
     Painel.erro("materialErro", "");
     Painel.valor("materialId", m ? m.id : "");
     document.getElementById("materialTitulo").textContent = m ? "Editar material" : "Novo material";

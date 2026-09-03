@@ -157,7 +157,11 @@
       {% for aparelho in ultimos_aparelhos %}
         <li>
           <i class="bi {% if aparelho.plataforma == 'ios' %}bi-apple{% elif aparelho.plataforma == 'android' %}bi-android2{% else %}bi-globe{% endif %} me-1"></i>
-          {{ aparelho.usuario.get_full_name|default:aparelho.usuario.username|default:"Visitante" }}
+          {% if aparelho.usuario %}
+            {{ aparelho.usuario.get_full_name|default:aparelho.usuario.username }}
+          {% else %}
+            Visitante
+          {% endif %}
           · {{ aparelho.criacao|date:"d/m" }}
         </li>
       {% empty %}

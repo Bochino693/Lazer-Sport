@@ -1,0 +1,25 @@
+LAZER & SPORT - V9 - MENUS COMPACTOS E ACOES DE MATERIAIS
+
+Aplique sobre a V8. Faca backup/commit antes e copie sistema_interno/
+para a raiz do projeto, substituindo os arquivos correspondentes.
+Publique pelo Git como de costume, incluindo collectstatic no deploy.
+Feche abas antigas e reabra, ou use Ctrl+Shift+R. Sem nova migracao.
+
+Menu lateral: titulos clicaveis, uma secao aberta por vez. A secao da
+tela atual inicia aberta. No trilho reduzido, icones continuam acessiveis.
+Sem JavaScript os links originais permanecem disponiveis.
+
+Acoes: dropdown vertical compacto, em vez de grade de grandes cartoes.
+Materiais: editar dados/foto, consultar estoque, consultar movimentacoes,
+excluir com a confirmacao existente. As consultas preenchem a busca pelo
+codigo do material (nome quando nao ha codigo). Sao buscas textuais.
+A busca de movimentacoes passa a reconhecer o codigo do material.
+Compras, saidas e ajustes continuam na tela de estoque, respeitando local,
+quantidade, fornecedor e custo; nenhum lancamento automatico foi criado.
+
+Testes: suite Django e teste JavaScript de secoes (requer jsdom).
+NODE_PATH=caminho/node_modules node sistema_interno/tests_js/menu_secoes.cjs
+
+Conferir apos deploy: menu lateral aberto/reduzido, celular, dropdown
+de materiais, edicao, buscas e cancelamento da exclusao. A inspecao
+visual em navegador nao estava disponivel neste ambiente.

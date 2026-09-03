@@ -1,0 +1,38 @@
+ATUALIZACAO LAZER SPORT - ECONOMIA DE BANDA, TEMAS E SOM
+
+Pacote parcial: 8 arquivos de codigo completos, com as pastas originais.
+Base do projeto: e72ba8c2808d6a1f8ae633163216caeedd64a14b
+Alteracoes: 7278a765f9bbca3de6ed30f847097f592dc4d350
+
+COMO APLICAR
+1. Faca uma copia de seguranca dos arquivos que serao substituidos.
+2. Extraia o ZIP na raiz do projeto Lazer-Sport, onde fica manage.py.
+3. Mescle as pastas core, lazer e sistema_interno. Substitua apenas os
+   arquivos correspondentes. Nao apague as pastas inteiras.
+4. core/tests_bandwidth.py e novo: acrescente esse arquivo.
+5. Se voce alterou esses mesmos arquivos depois da base acima, compare as
+   versoes antes de substituir, para nao perder alteracoes mais recentes.
+6. Teste no seu ambiente virtual:
+   python manage.py test --settings=lazer.settings_test
+7. Revise com git diff e envie normalmente ao seu GitHub.
+
+Nao inclui .env, banco de dados, credenciais, midias nem a pasta .git.
+Nao ha migracoes novas neste pacote. O deploy precisa executar collectstatic
+para atualizar os arquivos CSS/JS, como no fluxo habitual do projeto.
+
+RENDER
+Se STATIC_CACHE_MAX_AGE ja estiver configurada no Render, ela prevalece sobre
+o novo padrao. Para usar 30 dias, defina STATIC_CACHE_MAX_AGE=2592000.
+BANDWIDTH_LOG_MIN_BYTES e opcional; o padrao e 262144 bytes (256 KiB).
+Os registros large_response identificam respostas grandes, nao constituem
+uma contabilizacao completa do trafego nem incluem saidas para outros servicos.
+
+AVISOS
+A consulta periodica passou de 12 para 60 segundos. Alteracoes de terceiros
+podem levar ate o proximo ciclo para aparecer. Salvar localmente e voltar a
+aba continuam solicitando atualizacao. O aumento do som depende tambem do
+volume do aparelho e da liberacao de audio pelo navegador apos interacao.
+
+VALIDACAO JA REALIZADA
+815 testes executados: sem falhas, 3 ignorados.
+As alteracoes ainda nao foram publicadas no GitHub nem implantadas no Render.

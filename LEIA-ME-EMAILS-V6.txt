@@ -1,0 +1,82 @@
+LAZER & SPORT — LOGO NOS E-MAILS AUTOMÁTICOS V6
+
+Atualização complementar ao projeto com os pacotes anteriores aplicados.
+Não apague pastas: mescle e substitua somente os arquivos incluídos.
+
+O QUE MUDA
+Todo envio que usa o backend padrão de e-mail do Django recebe um cabeçalho
+com a logo de core/static/images/logoofi.png. Isso abrange os caminhos de
+envio do projeto: orçamentos, pedidos, manutenção, ordens de serviço,
+campanhas, avisos internos, e-mails de teste e os fluxos de autenticação
+que usam esse backend. Novos envios por esse mesmo caminho também herdam
+a marca sem repetir o código em cada tela.
+
+O conteúdo original é preservado. E-mails só de texto ganham uma alternativa
+HTML, com URLs clicáveis e caracteres escapados. A versão em texto continua
+disponível para leitores que não exibem HTML.
+
+LOGO INCORPORADA, SEM BUSCA EXTERNA
+- Usa exatamente a arte de logoofi.png; não redesenha nem troca a marca.
+- Gera em memória uma versão PNG proporcional com até 320 x 240 px.
+- Exibe com 160 px de largura, mantendo a proporção.
+- Versão atual: 40.247 bytes antes da codificação de transporte do e-mail.
+- Incorpora via Content-ID/multipart related: não faz requisição ao site
+  quando o destinatário abre a mensagem.
+- O arquivo original permanece intacto. A versão leve é reaproveitada
+  em memória entre envios; reinicie a aplicação se substituir a logo.
+- PDFs e demais anexos, remetente, destinatários, cópias ocultas, Reply-To,
+  assunto e links existentes são preservados.
+- Se o arquivo estiver ausente ou inválido, registra erro no log e usa o
+  nome da empresa, sem impedir o envio de mensagens críticas.
+
+INSTALAÇÃO
+1. Faça um commit/cópia dos arquivos atuais.
+2. Extraia o ZIP na raiz do projeto, onde está manage.py.
+3. Confira que core/static/images/logoofi.png continua no projeto.
+   A imagem não foi incluída no ZIP porque já existe no repositório.
+4. Suba ao Git e aguarde o deploy/reinício do serviço.
+
+Não há migração nova de banco nesta versão. Não há credencial nem alteração
+de conta Hostinger/DNS. O SMTP continua usando suas variáveis atuais:
+EMAIL_HOST, EMAIL_PORT, EMAIL_HOST_USER, EMAIL_HOST_PASSWORD e TLS/SSL.
+
+Se você fez alterações próprias em lazer/settings.py depois da versão
+anterior, preserve-as e aplique somente estas linhas no bloco de e-mail:
+
+EMAIL_BACKEND = "core.email_backend.EmailBackend"
+EMAIL_TRANSPORT_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+
+O primeiro aplica a marca; o segundo realiza o envio SMTP já configurado.
+Não aponte EMAIL_TRANSPORT_BACKEND para core.email_backend.EmailBackend.
+Backends explicitamente escolhidos por um código externo, ignorando a
+configuração padrão, não passam por essa camada.
+
+COMO CONFERIR
+Após o deploy, use o teste de e-mail de Minha conta enviando para você mesmo.
+Confira a logo no cabeçalho, o link e a resposta. Depois confira um orçamento
+com PDF em uma caixa de teste. Não dispare campanhas só para testar a logo.
+
+VALIDAÇÃO REALIZADA
+849 testes na suíte Django; nenhuma falha e 3 ignorados pelo ambiente.
+Testes específicos verificam logo CID e estrutura MIME, texto/HTML, links,
+destinatários/Reply-To, PDF, reenvio sem duplicação e diagnóstico SMTP.
+Todos os testes de envio usaram caixa em memória, sem conexão SMTP real.
+Renderização em Gmail/Outlook e entrega pela Hostinger precisam ser
+conferidas após o deploy. Alguns leitores podem bloquear imagens ou mostrar
+apenas texto; a exibição final depende do programa do destinatário.
+
+LIMITES DESTA ALTERAÇÃO
+É a logo DENTRO da mensagem. Não muda a bolinha/foto do remetente, BIMI,
+assinatura do webmail Hostinger ou e-mails antigos já enviados.
+Mensagens escritas manualmente no webmail continuam usando a assinatura
+configurada lá, não os modelos do sistema.
+
+ARQUIVOS INCLUÍDOS
+core/email_backend.py
+core/email_branding.py
+core/email_utils.py
+core/tests_email_branding.py
+lazer/settings.py
+lazer/settings_test.py
+
+Nenhum e-mail real foi enviado e nenhuma publicação foi feita nesta execução.

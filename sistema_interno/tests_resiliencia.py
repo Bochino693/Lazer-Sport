@@ -14,11 +14,11 @@ class ResilienciaPainelTests(SimpleTestCase):
     def setUp(self):
         self.factory = RequestFactory()
 
-    def test_link_antigo_html_volta_ao_painel(self):
+    def test_link_antigo_html_oferece_volta_sem_redirecionar(self):
         request = self.factory.get("/rota-antiga/")
         resposta = pagina_interna_nao_encontrada(request)
-        self.assertEqual(resposta.status_code, 302)
-        self.assertEqual(resposta.url, "/?recuperado=pagina")
+        self.assertContains(resposta, "Voltar ao painel", status_code=404)
+        self.assertEqual(resposta["X-LS-Retryable"], "0")
 
     def test_link_antigo_ajax_nao_finge_que_gravou(self):
         request = self.factory.post(
@@ -56,11 +56,36 @@ class ResilienciaPainelTests(SimpleTestCase):
             "/rota-interna-que-nao-existe/",
             HTTP_HOST="interno.testserver",
         )
-        self.assertRedirects(
-            resposta,
-            "/?recuperado=pagina",
-            fetch_redirect_response=False,
-        )
+        self.assertEqual(resposta.status_code, 404)
+
+    @override_settings(DEBUG=False, SITE_URL="https://www.lazersport.com.br")
+    def test_link_publico_preserva_pagina_e_filtros(self):
+        request = self.factory.get("/loja/?busca=arduino")
+        resposta = pagina_interna_nao_encontrada(request)
+        self.assertEqual(resposta.url, "https://www.lazersport.com.br/loja/?busca=arduino")
+        self.assertEqual(resposta["Cache-Control"], "no-store")
+
+    def test_post_publico_nao_e_transferido(self):
+        resposta = pagina_interna_nao_encontrada(self.factory.post("/loja/"))
+        self.assertEqual(resposta.status_code, 404)
+
+    @override_settings(DEBUG=False, SITE_URL="https://www.lazersport.com.br")
+    def test_ponte_loja_nao_abre_home(self):
+        from .views_site import LinkSitePublicoView
+        resposta = LinkSitePublicoView().get(self.factory.get("/abrir-site/loja/"), tipo="loja")
+        self.assertEqual(resposta.url, "https://www.lazersport.com.br/loja/")
+
+    def test_erro_aplicacao_nao_vira_falha_transitoria(self):
+        from .resiliencia import erro_interno
+        request = self.factory.get("/clientes/")
+        request.is_interno = True
+        resposta = InternalResponseRecoveryMiddleware(erro_interno)(request)
+        self.assertEqual(resposta.status_code, 500)
+        self.assertEqual(resposta["X-LS-Retryable"], "0")
+
+    def test_contador_pedidos_visivel_inclusive_zero_sem_bloquear_renderizacao(self):
+        base = (Path(__file__).parent / "templates/base_inner.html").read_text()
+        self.assertIn('data-selo="count_pedidos" data-mostrar-zero="1" title="Pedidos em aberto">…</span>', base)
 
     def test_middleware_converte_falha_do_proxy_sem_mascarar_site_publico(self):
         middleware = InternalResponseRecoveryMiddleware(

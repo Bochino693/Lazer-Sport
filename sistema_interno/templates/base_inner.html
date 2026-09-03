@@ -1,6 +1,6 @@
 {% load static interno_extras %}
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-br" data-ls-navigation="document">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -367,7 +367,7 @@
         <a data-titulo="Pedidos" aria-label="Pedidos" class="ls-nav-item {% if request.resolver_match.url_name == 'pedidos_inner' %}active{% endif %}" href="{% url 'pedidos_inner' %}">
           <span class="ls-nav-icon"><i class="bi bi-box2-heart-fill"></i></span>
           <span>Pedidos</span>
-          <span class="ls-nav-count" data-selo="count_pedidos" hidden>0</span>
+          <span class="ls-nav-count" data-selo="count_pedidos" data-mostrar-zero="1" title="Pedidos em aberto">…</span>
         </a>
         {% endif %}
         {% if permissoes_interno.orcamentos %}
@@ -470,7 +470,7 @@
       <div class="ls-nav-section">
         <span class="ls-nav-caption">Loja</span>
         <a data-titulo="Abrir a loja" aria-label="Abrir a loja"
-           class="ls-nav-item" href="{% url 'home' %}" target="_blank" rel="noopener">
+           class="ls-nav-item" href="{% url 'abrir_loja' %}" data-no-soft-nav="true" target="_blank" rel="noopener">
           <span class="ls-nav-icon"><i class="bi bi-box-arrow-up-right"></i></span><span>Abrir a loja</span>
         </a>
       </div>
@@ -586,16 +586,10 @@ Dito em voz alta: este NÃO é o /adm do site. Quem trabalha nos
         <span class="ls-ambiente"><i class="bi bi-cone-striped"></i> Gestão interna</span>
 
         {% comment %}
-          SOL, LUA E ECLIPSE — três botões, e não um que alterna.
-
-          Um botão que cicla obriga a passar pelo tema errado para chegar
-          ao que se quer, e não diz em que tema você está sem que você
-          decore o desenho do ícone. Três alvos lado a lado dizem as duas
-          coisas de uma vez: onde estou (o aceso) e para onde posso ir.
-
-          `aria-pressed` é o que faz o leitor de tela anunciar qual está
-          valendo -- num grupo de três ícones sem texto, é a única
-          informação que existe para quem não vê o realce.
+          APARÊNCIA — um gatilho no topo, três escolhas nomeadas no painel.
+          A opção atual aparece no gatilho e em aria-pressed. As miniaturas
+          antecipam a paleta sem alterar o tema no hover. Tab navega pelas
+          opções; Escape fecha e devolve o foco. Não depende de requisições.
         {% endcomment %}
         {% comment %}
           OS TRÊS DESENHOS SÃO FEITOS AQUI, E NÃO PEDIDOS À FONTE DE ÍCONES.
@@ -611,35 +605,70 @@ Dito em voz alta: este NÃO é o /adm do site. Quem trabalha nos
           mesmo tamanho. Misturar desenho da fonte com desenho da casa
           fica visível na hora, na diferença de traço.
 
-          `currentColor` em tudo: quem manda na cor é o botão, e é assim
-          que o ícone aceso fica com a tinta do acento sem regra extra.
+          Contornos seguem currentColor; degradês ilustram os astros sem
+          rosto. As miniaturas têm cores fixas para representar o destino.
         {% endcomment %}
-        <div class="ls-tema" role="group" aria-label="Tema do painel">
+        <div class="ls-tema" id="lsAparencia">
+          <button type="button" class="ls-tema-gatilho" id="lsAparenciaBotao" aria-expanded="false" aria-controls="lsAparenciaPainel" aria-label="Aparência: escolher tema">
+            <span id="lsTemaIconeAtual" aria-hidden="true"></span>
+            <span class="ls-tema-gatilho-texto">Aparência<small id="lsTemaAtual">Escuro</small></span>
+            <i class="bi bi-chevron-down" aria-hidden="true"></i>
+          </button>
+          <div class="ls-tema-painel" id="lsAparenciaPainel" hidden>
+            <strong>Aparência do painel</strong>
+            <p>Escolha o conforto da sua tela.</p>
+            <div class="ls-tema-opcoes" role="group" aria-label="Tema do painel">
           <button type="button" class="ls-tema-botao" data-tema-escolha="sol"
                   aria-pressed="false" title="Sol — claro" aria-label="Tema claro">
-            <svg class="ls-tema-icone" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
-              <path d="M14.36 7.56Q12.39 4.11 13.62 0.99Q14.52 4.06 17.64 7.56ZM10.36 9.51Q6.93 7.51 6.43 4.19Q8.75 6.40 13.20 7.87ZM7.87 13.20Q3.90 13.18 1.81 10.55Q4.92 11.31 9.51 10.36ZM7.56 17.64Q4.11 19.61 0.99 18.38Q4.06 17.48 7.56 14.36ZM9.51 21.64Q7.51 25.07 4.19 25.57Q6.40 23.25 7.87 18.80ZM13.20 24.13Q13.18 28.10 10.55 30.19Q11.31 27.08 10.36 22.49ZM17.64 24.44Q19.61 27.89 18.38 31.01Q17.48 27.94 14.36 24.44ZM21.64 22.49Q25.07 24.49 25.57 27.81Q23.25 25.60 18.80 24.13ZM24.13 18.80Q28.10 18.82 30.19 21.45Q27.08 20.69 22.49 21.64ZM24.44 14.36Q27.89 12.39 31.01 13.62Q27.94 14.52 24.44 17.64ZM22.49 10.36Q24.49 6.93 27.81 6.43Q25.60 8.75 24.13 13.20ZM18.80 7.87Q18.82 3.90 21.45 1.81Q20.69 4.92 21.64 9.51Z" fill="currentColor"/>
-              <circle cx="16" cy="16" r="8.6" fill="currentColor"/>
+            <svg class="ls-tema-icone" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <defs><radialGradient id="lsSolGrad"><stop offset="0" stop-color="#fff4a8"/><stop offset=".55" stop-color="#ffd23f"/><stop offset="1" stop-color="#ff9f1c"/></radialGradient></defs>
+              <g stroke="currentColor" stroke-width="1.65" stroke-linecap="round">
+                <path d="M12 1.7v2.1M12 20.2v2.1M1.7 12h2.1M20.2 12h2.1"/>
+                <path d="M4.7 4.7l1.5 1.5M17.8 17.8l1.5 1.5M19.3 4.7l-1.5 1.5M6.2 17.8l-1.5 1.5"/>
+              </g>
+              <circle cx="12" cy="12" r="6.25" fill="url(#lsSolGrad)" stroke="currentColor" stroke-width="1.1"/>
+              <circle cx="12" cy="12" r="4.8" fill="none" stroke="#fff4a8" stroke-width=".55" opacity=".8"/>
+              <path d="M8.1 8.5a5.2 5.2 0 0 1 5.7-1.4" fill="none" stroke="#fff9da" stroke-width="1" stroke-linecap="round"/>
+              <g stroke="#f6b544" stroke-width=".65" stroke-linecap="round"><path d="M8 2.5l.7 1.7M16 2.5l-.7 1.7M2.5 8l1.7.7M2.5 16l1.7-.7M8 21.5l.7-1.7M16 21.5l-.7-1.7M21.5 8l-1.7.7M21.5 16l-1.7-.7"/></g>
             </svg>
+            <span class="ls-tema-texto"><strong>Sol · Claro</strong><small>Fundo claro e tons quentes</small></span>
+            <span class="ls-tema-amostra" aria-hidden="true"><svg viewBox="0 0 48 32"><rect width="48" height="32" rx="5" fill="#F4EEE2"/><rect x="4" y="4" width="8" height="24" rx="2" fill="#d8cdbb"/><rect x="16" y="5" width="27" height="5" rx="2" fill="#b8750a"/><rect x="16" y="14" width="27" height="13" rx="2" fill="#fffaf0"/></svg></span>
+            <i class="bi bi-check-circle-fill ls-tema-check" aria-hidden="true"></i>
           </button>
           <button type="button" class="ls-tema-botao" data-tema-escolha="eclipse"
                   aria-pressed="false" title="Eclipse — meio-termo" aria-label="Tema eclipse">
-            <svg class="ls-tema-icone" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
-              <!-- as mesmas chamas do sol, o rosto dele menor, e a lua por cima -->
-              <path d="M14.36 7.56Q12.39 4.11 13.62 0.99Q14.52 4.06 17.64 7.56ZM10.36 9.51Q6.93 7.51 6.43 4.19Q8.75 6.40 13.20 7.87ZM7.87 13.20Q3.90 13.18 1.81 10.55Q4.92 11.31 9.51 10.36ZM7.56 17.64Q4.11 19.61 0.99 18.38Q4.06 17.48 7.56 14.36ZM9.51 21.64Q7.51 25.07 4.19 25.57Q6.40 23.25 7.87 18.80ZM13.20 24.13Q13.18 28.10 10.55 30.19Q11.31 27.08 10.36 22.49ZM17.64 24.44Q19.61 27.89 18.38 31.01Q17.48 27.94 14.36 24.44ZM21.64 22.49Q25.07 24.49 25.57 27.81Q23.25 25.60 18.80 24.13ZM24.13 18.80Q28.10 18.82 30.19 21.45Q27.08 20.69 22.49 21.64ZM24.44 14.36Q27.89 12.39 31.01 13.62Q27.94 14.52 24.44 17.64ZM22.49 10.36Q24.49 6.93 27.81 6.43Q25.60 8.75 24.13 13.20ZM18.80 7.87Q18.82 3.90 21.45 1.81Q20.69 4.92 21.64 9.51Z" fill="currentColor"/>
-              <circle cx="12.9" cy="16" r="4.7" fill="currentColor"/>
-              <path d="M13.50 7.77A8.6 8.6 0 1 1 13.50 24.23A8.6 8.6 0 0 0 13.50 7.77Z" fill="currentColor"/>
+            <svg class="ls-tema-icone" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <defs><linearGradient id="lsEclipseGrad" x1="0" x2="1"><stop stop-color="#ffbe2e"/><stop offset=".48" stop-color="#ffdf72"/><stop offset=".52" stop-color="#d9e0ee"/><stop offset="1" stop-color="#7b86a8"/></linearGradient></defs>
+              <g stroke="currentColor" stroke-width="1.35" stroke-linecap="round">
+                <path d="M12 1.2v2M12 20.8v2M1.2 12h2M20.8 12h2M4.3 4.3l1.5 1.5M18.2 18.2l1.5 1.5M19.7 4.3l-1.5 1.5M5.8 18.2l-1.5 1.5"/>
+              </g>
+              <circle cx="12" cy="12" r="7.3" fill="url(#lsEclipseGrad)" stroke="currentColor" stroke-width="1.15"/>
+              <path d="M12 4.7a7.3 7.3 0 0 1 0 14.6" fill="none" stroke="currentColor" stroke-width=".9" opacity=".65"/>
+              <circle cx="16.3" cy="8.2" r="1.15" fill="currentColor" opacity=".24"/>
+              <circle cx="17.3" cy="13.5" r=".8" fill="currentColor" opacity=".24"/>
+              <path d="M13 4.8C21 6 21 18 13 19.2C17 16 17 8 13 4.8Z" fill="#dee5f2" opacity=".8"/>
             </svg>
+            <span class="ls-tema-texto"><strong>Eclipse · Suave</strong><small>Equilíbrio entre claro e escuro</small></span>
+            <span class="ls-tema-amostra" aria-hidden="true"><svg viewBox="0 0 48 32"><rect width="48" height="32" rx="5" fill="#3A342C"/><rect x="4" y="4" width="8" height="24" rx="2" fill="#26221c"/><rect x="16" y="5" width="27" height="5" rx="2" fill="#edb34d"/><rect x="16" y="14" width="27" height="13" rx="2" fill="#51493e"/></svg></span>
+            <i class="bi bi-check-circle-fill ls-tema-check" aria-hidden="true"></i>
           </button>
           <button type="button" class="ls-tema-botao" data-tema-escolha="lua"
                   aria-pressed="false" title="Lua — escuro" aria-label="Tema escuro">
-            <svg class="ls-tema-icone" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
-              <path d="M12.16 6.33A10.4 10.4 0 1 1 12.16 25.67A10.0 10.0 0 0 0 12.16 6.33Z" fill="currentColor"/>
-              <!-- a estrelinha: é o que separa a lua de uma vírgula gorda -->
-              <path d="M25.4 4.2l.95 2.35 2.35.95-2.35.95-.95 2.35-.95-2.35-2.35-.95 2.35-.95z"
-                    fill="currentColor"/>
+            <svg class="ls-tema-icone" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <defs><linearGradient id="lsLuaGrad" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f7f3df"/><stop offset=".55" stop-color="#b8c1d8"/><stop offset="1" stop-color="#7380a2"/></linearGradient></defs>
+              <path d="M18.8 16.2A8.2 8.2 0 0 1 8.1 5.6a8.4 8.4 0 1 0 10.7 10.6z" fill="url(#lsLuaGrad)" stroke="currentColor" stroke-width="1.1"/>
+              <circle cx="8.1" cy="14.1" r="1.25" fill="currentColor" opacity=".22"/>
+              <circle cx="11.8" cy="17.1" r=".85" fill="currentColor" opacity=".22"/>
+              <circle cx="6.6" cy="17.5" r=".62" fill="currentColor" opacity=".22"/>
+              <path d="M18.1 3.1l.65 1.55 1.55.65-1.55.65-.65 1.55-.65-1.55-1.55-.65 1.55-.65zM21 10l.35.85.85.35-.85.35-.35.85-.35-.85-.85-.35.85-.35z" fill="currentColor"/>
             </svg>
+            <span class="ls-tema-texto"><strong>Lua · Escuro</strong><small>Fundo profundo e luz discreta</small></span>
+            <span class="ls-tema-amostra" aria-hidden="true"><svg viewBox="0 0 48 32"><rect width="48" height="32" rx="5" fill="#13100B"/><rect x="4" y="4" width="8" height="24" rx="2" fill="#292218"/><rect x="16" y="5" width="27" height="5" rx="2" fill="#f6b544"/><rect x="16" y="14" width="27" height="13" rx="2" fill="#30291f"/></svg></span>
+            <i class="bi bi-check-circle-fill ls-tema-check" aria-hidden="true"></i>
           </button>
+            </div>
+            <small class="ls-tema-nota">Sua escolha fica salva neste aparelho.</small>
+          </div>
         </div>
 
         <!-- ===================== central de avisos ===================== -->
@@ -778,6 +807,35 @@ Dito em voz alta: este NÃO é o /adm do site. Quem trabalha nos
      aparelho, que fica fora do documento e não acompanha CSS.
      --------------------------------------------------------------- */
   var COR_DA_BARRA = { lua: "#13100B", sol: "#F4EEE2", eclipse: "#3A342C" };
+  var aparenciaBotao = document.getElementById("lsAparenciaBotao");
+  var aparenciaPainel = document.getElementById("lsAparenciaPainel");
+  function fecharAparencia(devolverFoco) {
+    aparenciaPainel.hidden = true;
+    aparenciaBotao.setAttribute("aria-expanded", "false");
+    if (devolverFoco) aparenciaBotao.focus();
+  }
+  aparenciaBotao.addEventListener("click", function () {
+    var abrir = aparenciaPainel.hidden;
+    aparenciaPainel.hidden = !abrir;
+    aparenciaBotao.setAttribute("aria-expanded", String(abrir));
+    if (abrir) {
+      if (window.LSFecharAvisos) window.LSFecharAvisos();
+      var selecionado = aparenciaPainel.querySelector('.ativo') || aparenciaPainel.querySelector('[data-tema-escolha]');
+      if (selecionado) selecionado.focus();
+    }
+  });
+  document.addEventListener("click", function (evento) {
+    if (!evento.target.closest("#lsAparencia")) fecharAparencia(false);
+  });
+  document.addEventListener("keydown", function (evento) {
+    if (evento.key === "Escape" && !aparenciaPainel.hidden) {
+      evento.preventDefault();
+      fecharAparencia(true);
+    }
+  });
+  document.addEventListener("focusin", function (evento) {
+    if (!evento.target.closest("#lsAparencia")) fecharAparencia(false);
+  });
 
   function pintarTema(tema) {
     document.documentElement.setAttribute("data-tema", tema);
@@ -785,10 +843,27 @@ Dito em voz alta: este NÃO é o /adm do site. Quem trabalha nos
       var aceso = botao.dataset.temaEscolha === tema;
       botao.classList.toggle("ativo", aceso);
       botao.setAttribute("aria-pressed", String(aceso));
+      if (aceso) {
+        var icone = botao.querySelector(".ls-tema-icone").cloneNode(true);
+        // IDs exclusivos: os degradês do topo não dependem do menu oculto.
+        icone.querySelectorAll("[id]").forEach(function (definicao) {
+          var anterior = definicao.id;
+          definicao.id = anterior + "Topo";
+          icone.querySelectorAll("[fill]").forEach(function (parte) {
+            if (parte.getAttribute("fill") === "url(#" + anterior + ")") {
+              parte.setAttribute("fill", "url(#" + definicao.id + ")");
+            }
+          });
+        });
+        document.getElementById("lsTemaIconeAtual").replaceChildren(icone);
+      }
     });
     var barra = document.getElementById("lsTemaCorBarra");
     if (barra) barra.setAttribute("content", COR_DA_BARRA[tema] || COR_DA_BARRA.lua);
     if (window.LSTema) window.LSTema.atual = tema;
+    var nome = { sol: "Claro", eclipse: "Suave", lua: "Escuro" }[tema] || "Escuro";
+    document.getElementById("lsTemaAtual").textContent = nome;
+    aparenciaBotao.setAttribute("aria-label", "Aparência: " + nome + ". Escolher tema");
   }
 
   pintarTema(
@@ -800,13 +875,14 @@ Dito em voz alta: este NÃO é o /adm do site. Quem trabalha nos
       var tema = botao.dataset.temaEscolha;
       pintarTema(tema);
       try { localStorage.setItem("ls-tema", tema); } catch (erro) {}
+      fecharAparencia(true);
       /* A confirmação existe porque a troca de tema é grande e imediata:
          sem uma palavra, quem toca por engano não sabe o que aconteceu
          nem como voltar. */
       if (window.Painel && Painel.aviso) {
         Painel.aviso(
           { sol: "Tema claro", eclipse: "Tema eclipse", lua: "Tema escuro" }[tema],
-          "ok"
+          "tema", tema
         );
       }
     });

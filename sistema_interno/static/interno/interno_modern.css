@@ -60,6 +60,7 @@
    ---------------------------------------------------------------------- */
 :root,
 :root[data-tema="lua"]{
+  --astro:173,193,255;--astro-bg:#141b2f;--astro-text:#d5e0ff;--astro-esq:#adc1ff;--astro-dir:#adc1ff;
   color-scheme:dark;
 
   /* superfícies: grafite quente, e não azul-noite */
@@ -202,6 +203,7 @@
    e ilegível na mesa.
    ---------------------------------------------------------------------- */
 :root[data-tema="sol"]{
+  --astro:255,190,66;--astro-bg:#211a10;--astro-text:#ffda80;--astro-esq:#ffbe42;--astro-dir:#ffbe42;
   color-scheme:light;
 
   --bg-0:#F4EEE2;
@@ -330,6 +332,7 @@
    demais no galpão.
    ---------------------------------------------------------------------- */
 :root[data-tema="eclipse"]{
+  --astro:197,161,240;--astro-bg:linear-gradient(115deg,#30251a,#282139);--astro-text:#f0dcff;--astro-esq:#f4bf62;--astro-dir:#c5a1f0;
   color-scheme:dark;
 
   /* O MEIO-TERMO É DE SUPERFÍCIE, NÃO DE TINTA.
@@ -3065,7 +3068,7 @@ input[type="number"]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0
   border:1px solid rgba(var(--red-rgb),.27);border-radius:8px;color:var(--red-claro);background:rgba(var(--red-rgb),.08);
   font-size:.69rem;font-weight:850;line-height:1.25;
 }
-.ls-clientes-table th:nth-child(4),.ls-clientes-table td:nth-child(4){min-width:245px}
+/* A largura do endereço é definida pelo perfil de colunas, não pelo texto. */
 
 /* Cards clicáveis têm o mesmo foco visível dos controles do formulário. */
 a.ls-metric-card{color:inherit}
@@ -3377,11 +3380,11 @@ a.ls-metric-card.active{border-color:var(--metric);box-shadow:0 0 0 2px rgba(var
    três palavras; deixá-lo ocupar duas linhas custa alguns pixels de
    altura no cabeçalho e devolve a palavra inteira. */
 .ls-commercial-table th{
-  white-space:normal;font-size:.69rem;letter-spacing:.045em;text-align:center;
+  white-space:normal!important;font-size:.69rem;letter-spacing:.045em;text-align:center;
   line-height:1.25;overflow-wrap:break-word;
 }
 .ls-commercial-table th:first-child,.ls-commercial-table td:first-child{text-align:left}
-.ls-commercial-table td{overflow-wrap:normal;word-break:normal}
+.ls-commercial-table td{overflow-wrap:anywhere;word-break:normal}
 .ls-commercial-table tbody tr{transition:background .16s ease}
 .ls-commercial-table td[data-rotulo="Nº"],
 .ls-commercial-table td[data-rotulo="OS"],
@@ -3489,7 +3492,27 @@ body.modal-open .ls-action-fab-menu{display:none!important}
 @media (min-width:721px){
   .ls-commercial-table{min-width:760px}
   .ls-orcamentos-table{min-width:980px}
-  .ls-clientes-table{min-width:900px}
+  .ls-clientes-table{min-width:900px;table-layout:fixed}
+  /* 58px para ações; o restante distribuído conforme o conteúdo.
+     Não deixar e-mail ou endereço redefinir a largura de toda a tabela. */
+  .ls-clientes-table .ls-col-cliente{width:calc(24% - 13.92px)}
+  .ls-clientes-table .ls-col-contato{width:calc(19% - 11.02px)}
+  .ls-clientes-table .ls-col-vinculo{width:calc(11% - 6.38px)}
+  .ls-clientes-table .ls-col-endereco{width:calc(23% - 13.34px)}
+  .ls-clientes-table .ls-col-propostas{width:calc(9% - 5.22px)}
+  .ls-clientes-table .ls-col-aprovado{width:calc(14% - 8.12px)}
+  .ls-clientes-table .ls-col-acoes{width:58px}
+  .ls-clientes-table th,.ls-clientes-table td{min-width:0;max-width:none;text-align:left;vertical-align:top}
+  .ls-table.ls-clientes-table th,.ls-table.ls-clientes-table td{padding:12px 9px!important}
+  .ls-clientes-table th{vertical-align:middle}
+  .ls-clientes-table td[data-rotulo="Propostas"],.ls-clientes-table th:nth-child(5){text-align:center!important}
+  .ls-clientes-table td[data-rotulo="Aprovado"],.ls-clientes-table th:nth-child(6){text-align:right!important}
+  .ls-clientes-table th:last-child{width:58px;text-align:center!important}
+  .ls-clientes-table .ls-money{font-variant-numeric:tabular-nums;white-space:normal;overflow-wrap:anywhere}
+  .ls-clientes-table .material-nome,.ls-clientes-table .material-sub,
+  .ls-clientes-table .ls-address-line{max-width:none;white-space:normal;overflow-wrap:anywhere}
+  .ls-clientes-table .ls-incomplete-chip{flex-wrap:wrap;min-width:0}
+  .ls-clientes-table .ls-incomplete-texto{min-width:0;flex:1 1 90px}
   .ls-os-body .ls-commercial-table{min-width:1040px}
   .ls-commercial-table th:last-child,.ls-commercial-table td:last-child{
     position:sticky;right:0;z-index:2;box-shadow:-10px 0 18px -16px rgba(var(--sombra-rgb),calc(.9 * var(--sombra-forca)));
@@ -3499,7 +3522,44 @@ body.modal-open .ls-action-fab-menu{display:none!important}
   .ls-commercial-table tbody tr:hover td:last-child{background:var(--bg-2)!important}
 }
 
+/* Perfis próprios: tabelas de sete colunas não têm todas a mesma estrutura.
+   Pedidos e vendas terminam em data, não em botão de ações fixo. */
+@media (min-width:721px){
+  .ls-pedidos-table,.ls-vendas-table{table-layout:fixed;min-width:900px}
+  .ls-pedidos-table th:nth-child(1),.ls-vendas-table th:nth-child(1){width:6%}
+  .ls-pedidos-table th:nth-child(2){width:23%;text-align:left}
+  .ls-pedidos-table th:nth-child(3){width:22%;text-align:left}
+  .ls-pedidos-table th:nth-child(4){width:14%}
+  .ls-pedidos-table th:nth-child(5){width:11%;text-align:left}
+  .ls-pedidos-table th:nth-child(6){width:12%}
+  .ls-pedidos-table th:nth-child(7){width:12%}
+  .ls-vendas-table th:nth-child(2){width:8%;text-align:left}
+  .ls-vendas-table th:nth-child(3){width:26%;text-align:left}
+  .ls-vendas-table th:nth-child(4){width:16%}
+  .ls-vendas-table th:nth-child(5){width:15%}
+  .ls-vendas-table th:nth-child(6){width:15%}
+  .ls-vendas-table th:nth-child(7){width:14%}
+  .ls-pedidos-table th:last-child,.ls-pedidos-table td:last-child,
+  .ls-vendas-table th:last-child,.ls-vendas-table td:last-child{position:static;box-shadow:none}
+  .ls-pedidos-table td,.ls-vendas-table td{white-space:normal!important;overflow-wrap:anywhere;vertical-align:top}
+  .ls-pedidos-table .material-nome,.ls-vendas-table .material-nome{white-space:normal;overflow-wrap:anywhere}
+  .ls-pedidos-table td.text-end,.ls-vendas-table td.text-end{font-variant-numeric:tabular-nums}
+}
+.ls-materiais-table,.ls-fornecedores-table,.ls-tipos-table{table-layout:fixed}
+.ls-materiais-table,.ls-fornecedores-table{min-width:760px}
+.ls-tipos-table{min-width:400px}
+.ls-materiais-table th:first-child,.ls-fornecedores-table th:first-child{width:36%}
+.ls-materiais-table th:nth-child(2),.ls-fornecedores-table th:nth-child(2){width:26%}
+.ls-materiais-table th:nth-child(3),.ls-fornecedores-table th:nth-child(3){width:20%}
+.ls-materiais-table th:last-child,.ls-fornecedores-table th:last-child,.ls-tipos-table th:last-child{width:64px;text-align:center!important}
+.ls-tipos-table th:nth-child(2){width:110px}
+.ls-materiais-table td,.ls-fornecedores-table td,.ls-tipos-table td{overflow-wrap:anywhere;white-space:normal;vertical-align:top}
+.ls-materiais-table th,.ls-fornecedores-table th,.ls-tipos-table th{white-space:normal!important}
+
 @media (max-width:720px){
+  .ls-clientes-table colgroup{display:none}
+  .ls-clientes-table td{min-width:0}
+  .ls-clientes-table .material-nome,.ls-clientes-table .material-sub{white-space:normal;overflow-wrap:anywhere}
   .ls-commercial-table-wrap{overflow:visible!important}
   .ls-commercial-table,.ls-commercial-table tbody{display:block;width:100%}
   .ls-commercial-table{min-width:0}
@@ -3945,7 +4005,7 @@ body.modal-open .ls-action-fab-menu{display:none!important}
   width:42px;height:42px;display:grid;place-items:center;border-radius:12px;
   color:var(--acento-claro);background:rgba(var(--acento-rgb),.14);font-size:1.05rem;
 }
-.ls-nav-recovery-icon i{animation:ls-gira 1.1s linear infinite}
+.ls-nav-recovery-icon i{animation:none}
 .ls-nav-recovery-copy strong,.ls-nav-recovery-copy small{display:block}
 .ls-nav-recovery-copy strong{color:var(--acento-claro);font-size:.88rem;font-weight:950}
 .ls-nav-recovery-copy small{margin-top:2px;color:var(--text-2);font-size:.72rem;line-height:1.35}
@@ -4374,6 +4434,18 @@ button.ls-incomplete-chip:focus-visible{outline:3px solid rgba(var(--red-rgb),.3
 .ls-tarja.aparece{opacity:1;transform:translate(-50%,0)}
 .ls-tarja.ok{border-color:rgba(var(--green-rgb),.45);color:var(--green-claro)}
 .ls-tarja.erro{border-color:rgba(var(--red-rgb),.45);color:var(--red-claro)}
+.ls-tarja-tema{display:flex;align-items:center;gap:12px;background:var(--astro-bg);color:var(--astro-text);border-color:rgba(var(--astro),.75);border-left-color:var(--astro-esq);border-right-color:var(--astro-dir);box-shadow:0 0 22px rgba(var(--astro),.24),inset 0 0 14px rgba(var(--astro),.08),0 12px 32px rgba(var(--sombra-rgb),.33)}
+.ls-tarja-tema .ls-tema-icone{flex:none;filter:drop-shadow(0 0 5px rgba(var(--astro),.4))}
+.ls-material-identidade{display:flex;align-items:center;gap:14px;min-width:0}
+.ls-material-identidade>div{min-width:0;overflow-wrap:anywhere}
+.ls-material-miniatura{width:64px;height:64px;flex:none;border:1px solid var(--line);border-radius:15px;background:var(--panel-soft);display:grid;place-items:center;overflow:hidden;color:var(--muted)}
+.ls-material-miniatura img{width:100%;height:100%;object-fit:contain;padding:5px;transform:none!important}
+.ls-foto-editor{display:grid;grid-template-columns:160px minmax(0,1fr);gap:18px;align-items:center;padding:16px;border:1px solid var(--line);border-radius:18px;background:var(--panel-soft)}
+.ls-foto-previa{height:160px;border-radius:12px;border:1px dashed var(--line);display:grid;place-items:center;overflow:hidden;background:var(--panel);color:var(--muted)}
+.ls-foto-previa img{width:100%;height:100%;max-height:160px;object-fit:contain;padding:8px;transform:none!important;cursor:default}
+.ls-foto-previa img[hidden],.ls-foto-previa span[hidden]{display:none}
+.ls-foto-editor small{display:block;margin:8px 0;color:var(--muted)}
+@media(max-width:480px){.ls-foto-editor{grid-template-columns:1fr}.ls-foto-previa{height:150px}}
 
 /* Com as abas de baixo no celular, a confirmação não pode nascer por
    cima delas -- ela ficaria metade escondida atrás da barra. */
@@ -4448,38 +4520,53 @@ button.ls-incomplete-chip:focus-visible{outline:3px solid rgba(var(--red-rgb),.3
    e é o mesmo aparelho.
    ====================================================================== */
 .ls-tema{
-  display:inline-flex;align-items:center;gap:2px;
-  padding:3px;border:1px solid var(--line);border-radius:999px;
-  background:var(--panel-soft);
+  position:relative;flex-shrink:0;
 }
+.ls-tema-gatilho{display:flex;align-items:center;gap:9px;min-height:44px;padding:6px 12px;border:1px solid var(--line);border-radius:13px;background:var(--panel-soft);color:var(--text);font:inherit;font-size:.76rem;cursor:pointer;text-align:left}
+.ls-tema-gatilho>i:first-child{font-size:1.15rem;color:var(--acento-texto)}
+.ls-tema-gatilho small{display:block;color:var(--muted);font-size:.65rem}
+.ls-tema-gatilho>i:last-child{font-size:.65rem;transition:transform .16s}
+.ls-tema-gatilho[aria-expanded="true"]>i:last-child{transform:rotate(180deg)}
+.ls-tema-painel{position:absolute;right:0;top:calc(100% + 10px);z-index:1100;width:360px;max-width:calc(100vw - 24px);padding:17px;border:1px solid var(--line-forte);border-radius:20px;background:var(--panel);color:var(--text);box-shadow:0 18px 48px rgba(var(--sombra-rgb),calc(.4 * var(--sombra-forca)))}
+.ls-tema-painel[hidden]{display:none}
+.ls-tema-painel>strong{font-size:.94rem}
+.ls-tema-painel>p{margin:4px 0 14px;color:var(--muted);font-size:.76rem}
+.ls-tema-opcoes{display:grid;gap:8px}
 .ls-tema-botao{
-  width:32px;height:32px;display:grid;place-items:center;
-  border:0;border-radius:999px;cursor:pointer;
-  color:var(--muted);background:transparent;
-  font-size:.92rem;line-height:1;
+  width:100%;min-height:76px;padding:10px;display:grid;grid-template-columns:32px minmax(0,1fr) 42px 15px;align-items:center;gap:9px;
+  border:1px solid var(--line);border-radius:13px;cursor:pointer;
+  color:var(--text-2);background:var(--panel-soft);text-align:left;
+  font:inherit;line-height:1.3;
   transition:color .16s ease,background .16s ease,transform .16s ease;
 }
 /* Os três desenhos são SVG escritos no template (ver `base_inner.html`).
    Aqui só o tamanho: a cor vem de `currentColor`, então o ícone aceso
    acompanha o botão sem uma regra por estado. */
-.ls-tema-icone{width:1.05em;height:1.05em;display:block}
+.ls-tema-icone{width:30px;height:30px;display:block;overflow:visible}
+.ls-tema-texto strong{display:block;font-size:.78rem;color:var(--text)}
+.ls-tema-texto small{display:block;margin-top:4px;font-size:.66rem;color:var(--muted);font-weight:400}
+.ls-tema-amostra svg{display:block;width:42px;height:28px}
+.ls-tema-check{visibility:hidden;color:var(--acento-texto);font-size:.85rem}
+.ls-tema-botao.ativo .ls-tema-check{visibility:visible}
+.ls-tema-nota{display:block;margin-top:13px;color:var(--muted);font-size:.66rem}
 .ls-tema-botao:hover{color:var(--text-2);background:rgba(var(--verniz-rgb),.07)}
-.ls-tema-botao:focus-visible{
+.ls-tema-botao:focus-visible,.ls-tema-gatilho:focus-visible{
   outline:3px solid rgba(var(--acento-rgb),.45);outline-offset:2px;
 }
 .ls-tema-botao.ativo{
-  color:var(--tinta);background:var(--acento);
-  box-shadow:0 3px 10px rgba(var(--acento-rgb),.34);
+  color:var(--acento-texto);background:rgba(var(--acento-rgb),.09);border-color:var(--acento-texto);
+  box-shadow:inset 0 0 0 1px rgba(var(--acento-rgb),.15);
 }
 @media (max-width:720px){
-  .ls-tema-botao{width:30px;height:30px;font-size:.86rem}
+  .ls-tema-gatilho{width:44px;height:44px;padding:0;justify-content:center}
+  .ls-tema-gatilho>.ls-tema-gatilho-texto,.ls-tema-gatilho>i:last-child{display:none}
+  .ls-tema-painel{position:fixed;top:calc(var(--topbar-h) + 8px);right:12px;width:360px;max-height:calc(var(--ls-vh) - var(--topbar-h) - 32px);overflow-y:auto}
 }
-/* Numa tela muito estreita a barra do topo já disputa espaço com o
-   título e o sino. O eclipse sai primeiro por ser o meio-termo: quem o
-   escolheu continua nele, e a troca completa segue disponível assim que
-   houver largura. */
+/* As três escolhas continuam disponíveis mesmo em telas de 320px. */
 @media (max-width:380px){
-  .ls-tema-botao[data-tema-escolha="eclipse"]{display:none}
+  .ls-tema-painel{padding:13px}
+  .ls-tema-botao{grid-template-columns:28px minmax(0,1fr) 36px 15px;gap:6px}
+  .ls-tema-amostra svg{width:36px}
 }
 
 /* ---------------------------------------------------------- o papel
@@ -4644,3 +4731,31 @@ button.ls-incomplete-chip:focus-visible{outline:3px solid rgba(var(--red-rgb),.3
   .ls-folha-etiquetas.a6{grid-template-columns:1fr 1fr}
 }
 
+/* V9: navegação por seções e ações em lista, sem cartões dentro do menu. */
+.ls-nav-section[data-acordeao="1"]{margin-bottom:6px}
+.ls-nav-section-toggle{
+  width:100%;position:relative;border:0;border-radius:8px;background:transparent;
+  text-align:left;font-family:inherit;cursor:pointer;min-height:40px;
+  padding:11px 30px 11px 12px;
+}
+.ls-nav-section-toggle::after{content:"›";position:absolute;right:13px;top:8px;font-size:19px;transition:transform .15s}
+.ls-nav-section-toggle[aria-expanded="true"]::after{transform:rotate(90deg)}
+.ls-nav-section-toggle:hover{background:rgba(var(--acento-rgb),.08)}
+.ls-nav-section-toggle:focus-visible{outline:2px solid var(--acento);outline-offset:-2px}
+.ls-nav-links[hidden]{display:none!important}
+.ls-nav-links .ls-nav-item{min-height:43px;margin:2px 0;font-size:.85rem;border-radius:10px}
+/* No trilho de ícones os títulos ficam ocultos: manter atalhos acessíveis. */
+@media(min-width:761px){
+  .ls-sidebar:not(.expandida) .ls-nav-links[hidden]{display:block!important}
+}
+.ls-action-fab-menu{width:min(248px,calc(100vw - 20px));padding:6px;border-radius:12px;gap:2px;grid-template-columns:1fr}
+.ls-action-fab-menu.is-open{grid-template-columns:1fr}
+.ls-action-fab-head{padding:7px 9px;margin-bottom:3px}
+.ls-action-fab-menu>.btn,.ls-action-fab-menu>form>.btn,
+.ls-action-fab-menu>a,.ls-action-fab-menu>button{
+  min-height:37px!important;padding:8px 10px!important;border:0!important;
+  border-radius:7px!important;background:transparent!important;font-size:.77rem!important;
+}
+.ls-action-fab-menu .btn:hover,.ls-action-fab-menu .btn:focus-visible{
+  background:rgba(var(--acento-rgb),.12)!important;transform:none;
+}

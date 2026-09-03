@@ -102,11 +102,11 @@
           <tr>
             <th>Material</th>
             <th>Local</th>
-            <th>Fornecedor</th>
+            <th>Fornecedor de referência</th>
             <th class="text-end">Qtd.</th>
             <th class="text-end">Mín.</th>
-            <th class="text-end">Valor unitário</th>
-            <th class="text-end">Investido</th>
+            <th class="text-end">Custo médio</th>
+            <th class="text-end">Valor em estoque</th>
             <th>Situação</th>
             <th class="text-end">Ações</th>
           </tr>
@@ -132,8 +132,8 @@
               </td>
               <td data-rotulo="Quantidade" class="text-end ls-number">{{ estoque.quantidade }}</td>
               <td data-rotulo="Mínimo" class="text-end ls-muted">{{ estoque.estoque_minimo }}</td>
-              <td data-rotulo="Valor unitário" class="text-end ls-money">R$ {{ estoque.preco_fornecedor|moeda }}</td>
-              <td data-rotulo="Investido" class="text-end ls-money">R$ {{ estoque.valor_total|moeda }}</td>
+              <td data-rotulo="Custo médio" class="text-end ls-money">R$ {{ estoque.preco_fornecedor|moeda }}</td>
+              <td data-rotulo="Valor em estoque" class="text-end ls-money">R$ {{ estoque.valor_total|moeda }}{% if estoque.custo_estimado %}<small class="d-block ls-subtext">Inclui saldo anterior estimado</small>{% endif %}</td>
               <td data-rotulo="Situação">
                 {% if estoque.situacao == "critico" %}
                   <span class="ls-status danger">{{ estoque.situacao_label }}</span>
@@ -221,7 +221,7 @@
           </div>
 
           <div class="col-6 col-md-4">
-            <label class="form-label" for="itemPreco">Valor pago por unidade *</label>
+            <label class="form-label" for="itemPreco">Preço inicial / custo médio *</label>
             <div class="input-group">
               <span class="input-group-text">R$</span>
               <input class="form-control" id="itemPreco" name="preco_fornecedor"
@@ -311,7 +311,16 @@
               <span class="input-group-text">R$</span>
               <input class="form-control" id="movimentoValor" name="valor_unitario" inputmode="decimal" data-mascara="moeda">
             </div>
-            <div class="form-text">Numa entrada, vira o novo valor de referência.</div>
+            <div class="form-text">Obrigatório na compra, inclusive se zero. Saídas e ajustes usam o custo médio do saldo.</div>
+          </div>
+
+          <div class="col-12 col-md-6">
+            <label class="form-label" for="movimentoFornecedor">Fornecedor desta compra</label>
+            <select class="form-select" id="movimentoFornecedor" name="fornecedor"><option value="">Não informado</option>{% for f in fornecedores %}<option value="{{ f.id }}">{{ f.nome }}</option>{% endfor %}</select>
+          </div>
+          <div class="col-12 col-md-6">
+            <label class="form-label" for="movimentoDataCompra">Data da compra</label>
+            <input class="form-control" type="date" id="movimentoDataCompra" name="data_compra">
           </div>
 
           <div class="col-12 col-md-6">
@@ -343,7 +352,7 @@
 {% endcomment %}
 <div class="modal fade" id="modalMaterialRapido" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-scrollable">
-    <form class="modal-content" id="formMaterialRapido" method="post" action="{% url 'stock' %}">
+    <form class="modal-content" id="formMaterialRapido" method="post" enctype="multipart/form-data" action="{% url 'stock' %}">
       {% csrf_token %}
       <input type="hidden" name="action" value="save_material">
       <div class="modal-header">
@@ -355,6 +364,7 @@
       </div>
       <div class="modal-body">
         <div id="materialRapidoErro" class="alert alert-danger d-none" role="alert"></div>
+        {% include "partials/material_foto.html" %}
         <p class="text-muted small">
           Entra no cadastro de materiais e já fica escolhido nesta linha,
           sem perder o que você digitou.
@@ -367,7 +377,7 @@
           </div>
           <div class="col-12 col-md-4">
             <label class="form-label" for="materialRapidoCodigo">Código interno</label>
-            <input class="form-control" id="materialRapidoCodigo" name="codigo_interno" maxlength="30">
+            <input class="form-control" id="materialRapidoCodigo" name="codigo_interno" maxlength="30" readonly placeholder="Gerado ao salvar">
           </div>
           <div class="col-12">
             <label class="form-label" for="materialRapidoDescricao">Descrição</label>
@@ -548,8 +558,9 @@ LSTela.pronto(function () {
 
     var campoQtd = document.getElementById("itemQuantidade");
     campoQtd.disabled = !!item;
+    document.getElementById("itemPreco").readOnly = !!item;
     document.getElementById("itemQuantidadeAviso").textContent = item
-      ? "Use o botão Movimentar para alterar o saldo e manter o histórico."
+      ? "Use Movimentar → Entrada para cada compra com seu próprio preço, fornecedor e nota. O custo médio é automático."
       : "Depois do cadastro, a quantidade só muda por entrada ou saída.";
 
     if (item) {
@@ -600,9 +611,11 @@ LSTela.pronto(function () {
     return campo;
   }
 
+  var fotoMaterialRapido = Painel.fotoMaterial(document.getElementById("formMaterialRapido"));
   document.getElementById("novoMaterialRapido").addEventListener("click", function () {
     var form = document.getElementById("formMaterialRapido");
     form.reset();
+    fotoMaterialRapido("");
     document.getElementById("materialRapidoAtivo").checked = true;
     Painel.erro("materialRapidoErro", "");
     Painel.abrirFilho("modalMaterialRapido", "modalItem");
@@ -661,11 +674,18 @@ LSTela.pronto(function () {
       document.getElementById("movimentoNome").textContent = b.dataset.nome;
       document.getElementById("movimentoSaldo").textContent = b.dataset.saldo;
       document.getElementById("movimentoQuantidade").dataset.saldo = b.dataset.saldo;
+      document.getElementById("movimentoTipo").dispatchEvent(new Event("change"));
       Painel.abrir("modalMovimento");
     });
   });
 
   document.getElementById("movimentoTipo").addEventListener("change", function (e) {
+    var compra = e.target.value === "entrada";
+    document.getElementById("movimentoValor").disabled = !compra;
+    document.getElementById("movimentoValor").required = compra;
+    document.getElementById("movimentoFornecedor").disabled = !compra;
+    document.getElementById("movimentoDataCompra").disabled = !compra;
+    document.getElementById("movimentoMotivo").required = e.target.value === "ajuste";
     document.getElementById("movimentoAjuda").textContent =
       e.target.value === "ajuste"
         ? "A quantidade informada passa a ser o saldo, sem somar nem descontar."

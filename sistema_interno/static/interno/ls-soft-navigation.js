@@ -5,6 +5,14 @@
  */
 (function (window, document) {
   "use strict";
+  // Módulos Django têm ciclos de scripts próprios: entre páginas, o browser
+  // monta o documento inteiro. AJAX fica restrito aos filtros da mesma tela.
+  var documentoNormal = document.documentElement.dataset.lsNavigation === "document";
+  var caminhoDocumento = window.location.pathname;
+  function exigeDocumento(url) {
+    return /^\/(abrir-site|accounts|login|logout|system)(\/|$)/.test(url.pathname)
+      || (documentoNormal && url.pathname !== caminhoDocumento);
+  }
 
   var PREFIXO = "ls:nav:v2:";
   var INDICE = PREFIXO + "index";
@@ -14,6 +22,7 @@
   var emVoo = new Map();
   var geracaoCache = 0;
   var navegacao = 0;
+  var navegacaoPendente = false;
   var prefetchTimer = null;
   var prefetchsExecutados = 0;
   var LIMITE_PREFETCH = 3;
@@ -129,7 +138,7 @@
   }
 
   function podeTentarNovamente(status) {
-    return status === 408 || status === 429 || status === 500
+    return status === 408 || status === 429
       || status === 502 || status === 503 || status === 504;
   }
 
@@ -156,13 +165,18 @@
 
      Agora quem pede de fundo pede em silêncio. A tarja pertence à
      navegação que a pessoa realmente iniciou. */
-  function requisitar(url, tentativa, silencioso, pedaco) {
+  function requisitar(url, tentativa, silencioso, pedaco, versao) {
+    if (!silencioso && versao !== navegacao) {
+      var cancelado = new Error("Navegação substituída por outro clique.");
+      cancelado.lsCancelada = true;
+      return Promise.reject(cancelado);
+    }
     var geracaoDoPedido = geracaoCache;
     var controlador = "AbortController" in window ? new AbortController() : null;
     /* A primeira é sondagem; da segunda em diante é espera de despertar. */
     var prazo = tentativa === 0 ? TIMEOUT_REDE : TIMEOUT_REDE_DESPERTAR;
     var timer = controlador ? window.setTimeout(function () { controlador.abort(); }, prazo) : null;
-    if (tentativa > 0 && !silencioso) escalarLoader(tentativa);
+    if (tentativa > 0 && !silencioso && versao === navegacao && navegacaoPendente) escalarLoader(tentativa);
 
     var cabecalhos = { "X-Requested-With": "LS-Soft-Navigation" };
     /* Ver `sistema_interno/fragmento.py`: com este cabeçalho o servidor
@@ -181,7 +195,7 @@
         && podeTentarNovamente(resposta.status)
       ) {
         return esperar(atrasoDaTentativa(tentativa, resposta)).then(function () {
-          return requisitar(url, tentativa + 1, silencioso, pedaco);
+          return requisitar(url, tentativa + 1, silencioso, pedaco, versao);
         });
       }
 
@@ -222,13 +236,14 @@
         return { html: html, url: finalUrl, pedaco: veioPedaco };
       });
     }).catch(function (erro) {
+      if (erro.lsCancelada) throw erro;
       if (
         tentativa < MAX_TENTATIVAS_REDE - 1
         && !erro.lsTentativaFinal
         && (!erro.status || podeTentarNovamente(erro.status))
       ) {
         return esperar(atrasoDaTentativa(tentativa)).then(function () {
-          return requisitar(url, tentativa + 1, silencioso, pedaco);
+          return requisitar(url, tentativa + 1, silencioso, pedaco, versao);
         });
       }
       erro.lsTentativaFinal = true;
@@ -240,10 +255,10 @@
   }
 
   function buscar(url, silencioso, pedaco) {
-    var id = (pedaco ? "parte:" : "") + url.href;
+    var id = (silencioso ? "fundo:" : "nav:" + navegacao + ":") + (pedaco ? "parte:" : "") + url.href;
     if (emVoo.has(id)) return emVoo.get(id);
 
-    var pedido = requisitar(url, 0, silencioso, pedaco).finally(function () {
+    var pedido = requisitar(url, 0, silencioso, pedaco, navegacao).finally(function () {
       if (emVoo.get(id) === pedido) emVoo.delete(id);
     });
 
@@ -282,6 +297,7 @@
 
   function mostrarLoader(mensagem) {
     cancelarLoader();
+    navegacaoPendente = true;
     loaderMensagem = mensagem || "Carregando…";
     loaderAgendado = window.setTimeout(function () {
       loaderAgendado = null;
@@ -306,8 +322,8 @@
        subindo. Dizer quanto isso costuma levar é o que impede o toque
        repetido -- que cancela o pedido em curso e recomeça a conta. */
     loaderMensagem = tentativa >= 2
-      ? "O servidor está demorando. Ainda tentando…"
-      : "Servidor acordando (até 1 minuto na primeira vez)…";
+      ? "A resposta está demorando…"
+      : "Aguardando resposta da conexão…";
     if (window.LSLoader && window.LSLoader.show) window.LSLoader.show(loaderMensagem);
     if (window.Painel && window.Painel.ocupado) window.Painel.ocupado(loaderMensagem);
   }
@@ -324,6 +340,7 @@
   }
 
   function esconderLoader() {
+    navegacaoPendente = false;
     cancelarLoader();
     if (window.LSLoader && window.LSLoader.hide) window.LSLoader.hide();
     /* A tarja explicativa sai junto: ela existe por causa da espera, e a
@@ -349,24 +366,18 @@
     aviso.className = "ls-nav-recovery";
     aviso.setAttribute("role", "status");
     aviso.innerHTML =
-      '<span class="ls-nav-recovery-icon"><i class="bi bi-arrow-repeat"></i></span>' +
-      '<span class="ls-nav-recovery-copy"><strong>Servidor retomando</strong>' +
-      '<small>A tela atual continua segura. Tentaremos novamente sem abrir uma página 502.</small></span>' +
-      '<button type="button" class="btn btn-sm btn-warning">Tentar agora</button>';
+      '<span class="ls-nav-recovery-icon"><i class="bi bi-exclamation-circle"></i></span>' +
+      '<span class="ls-nav-recovery-copy"><strong>Não foi possível abrir a tela</strong>' +
+      '<small>A tentativa terminou. A tela atual foi preservada; você pode tentar novamente.</small></span>' +
+      '<button type="button" class="btn btn-sm btn-warning">Tentar novamente</button>';
     document.body.appendChild(aviso);
 
     aviso.querySelector("button").addEventListener("click", function () {
       navegar(url, modoHistorico || "push");
     });
 
-    /* Uma instância adormecida costuma voltar sozinha. A tentativa
-       automática só acontece com a aba visível e rede disponível; sem
-       isso o aviso permanece, sem martelar o servidor. */
-    recuperacaoTimer = window.setTimeout(function () {
-      recuperacaoTimer = null;
-      if (document.visibilityState !== "visible" || navigator.onLine === false) return;
-      navegar(url, modoHistorico || "push");
-    }, 3500);
+    // As duas tentativas de rede já terminaram. Só um novo clique reinicia;
+    // agendar navegar aqui reiniciava o contador e criava um loop infinito.
   }
 
   function fecharMenuMovel() {
@@ -623,6 +634,7 @@
     }
 
     esconderLoader();
+    esconderRecuperacao();
     return true;
   }
 
@@ -646,9 +658,11 @@
     /* O CSS ANTES DO HTML. Enquanto a folha da tela nova não chegou, o
        que está na tela é a tela ANTERIOR, inteira e estilizada -- e não
        um esqueleto sem estilo. */
-    garantirFolhas(novoDoc).then(function () {
+    return garantirFolhas(novoDoc).then(function () {
       if (versao !== navegacao) return;
-      if (!trocarComTransicao(novoDoc, url, modoHistorico, versao)) {
+      // Resolver somente depois de montar o DOM. ViewTransition adiava a
+      // montagem e deixava quem chamou acreditar que a troca já terminou.
+      if (!aplicarTela(novoDoc, url, modoHistorico, versao)) {
         window.location.assign(url.href);
       }
     }).catch(function () {
@@ -812,8 +826,13 @@
      de sair no chute, por tempo. */
   function navegar(url, modoHistorico, opcoes) {
     var alvo = urlSegura(url);
-    if (!alvo) {
-      window.location.assign(String(url));
+    if (!alvo || exigeDocumento(alvo)) {
+      var destino = new URL(String(url), window.location.href);
+      if (!/^https?:$/.test(destino.protocol)) return Promise.resolve();
+      ++navegacao;
+      esconderRecuperacao();
+      esconderLoader();
+      window.location.assign(destino.href);
       return Promise.resolve();
     }
 
@@ -842,22 +861,27 @@
         removerChave(chave(urlFinal, true));
         return false;
       }
-      trocarDocumento(html, urlFinal, modo, minhaNavegacao);
-      return true;
+      return Promise.resolve(trocarDocumento(html, urlFinal, modo, minhaNavegacao)).then(function () { return true; });
     }
 
     var cache = recuperar(alvo, soAsPartes);
-    if (cache && aplicar(cache, alvo, soAsPartes)) return Promise.resolve();
-
+    function carregar() {
     return buscar(alvo, false, soAsPartes).then(function (resultado) {
       if (minhaNavegacao !== navegacao) return;
-      if (aplicar(resultado.html, resultado.url, resultado.pedaco)) return;
+      return Promise.resolve(aplicar(resultado.html, resultado.url, resultado.pedaco)).then(function (aplicado) {
+      if (aplicado || minhaNavegacao !== navegacao) return;
       /* Segunda e última tentativa, agora pela tela inteira. */
       return buscar(alvo, false, false).then(function (completo) {
         if (minhaNavegacao !== navegacao) return;
-        trocarDocumento(completo.html, completo.url, modo, minhaNavegacao);
+        return trocarDocumento(completo.html, completo.url, modo, minhaNavegacao);
       });
-    }).catch(function (erro) {
+      });
+    });
+    }
+    var operacao = cache
+      ? Promise.resolve().then(function () { return aplicar(cache, alvo, soAsPartes); }).then(function (aplicado) { if (!aplicado) return carregar(); })
+      : carregar();
+    return operacao.catch(function (erro) {
       if (minhaNavegacao !== navegacao) return;
       /* Em falha transitória, navegar a página inteira entregaria o
          operador diretamente ao 502 do proxy e apagaria a tela boa que
@@ -870,6 +894,8 @@
       }
       esconderLoader();
       window.location.assign(alvo.href);
+    }).finally(function () {
+      if (minhaNavegacao === navegacao) esconderLoader();
     });
   }
 
@@ -885,7 +911,7 @@
     if (!link || evento.defaultPrevented) return null;
     if (evento.type === "click" && evento.button !== 0) return null;
     if (evento.metaKey || evento.ctrlKey || evento.shiftKey || evento.altKey) return null;
-    if (link.hasAttribute("download") || link.target === "_blank") return null;
+    if (link.hasAttribute("download") || (link.target && link.target !== "_self")) return null;
     if (link.dataset.noSoftNav === "true" || link.dataset.bsToggle) return null;
 
     var href = link.getAttribute("href") || "";
@@ -894,7 +920,7 @@
     }
 
     var url = urlSegura(link.href);
-    if (!url) return null;
+    if (!url || exigeDocumento(url)) return null;
     if (url.pathname === window.location.pathname && url.search === window.location.search && url.hash) {
       return null;
     }
@@ -921,7 +947,7 @@
     if (evento.defaultPrevented || form.dataset.noSoftNav === "true") return;
 
     var url = urlSegura(form.action || window.location.href);
-    if (!url) return;
+    if (!url || exigeDocumento(url) || (form.target && form.target !== "_self")) return;
     url.search = new URLSearchParams(new FormData(form)).toString();
 
     evento.preventDefault();
@@ -1048,7 +1074,18 @@
   });
 
   window.addEventListener("popstate", function () {
+    if (documentoNormal && window.location.pathname !== caminhoDocumento) {
+      window.location.reload();
+      return;
+    }
     navegar(window.location.href, "none");
+  });
+  window.addEventListener("pageshow", function (evento) {
+    if (evento.persisted) {
+      ++navegacao;
+      esconderRecuperacao();
+      esconderLoader();
+    }
   });
 
   var revalidacao = null;

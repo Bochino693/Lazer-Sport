@@ -112,12 +112,50 @@
      de tela é obrigatório, e chamar de novo o que é de aba duplicaria
      relógio e ouvinte a cada clique no menu.
      ==================================================================== */
+  Painel.organizarSecoesMenu = function () {
+    var secoes = document.querySelectorAll('.ls-nav > .ls-nav-section');
+    secoes.forEach(function (secao, indice) {
+      if (secao.dataset.acordeao === '1') return;
+      var titulo = secao.querySelector('.ls-nav-caption');
+      if (!titulo) return;
+      secao.dataset.acordeao = '1';
+      var botao = document.createElement('button');
+      botao.type = 'button';
+      botao.className = 'ls-nav-caption ls-nav-section-toggle';
+      botao.textContent = titulo.textContent;
+      var links = document.createElement('div');
+      links.className = 'ls-nav-links';
+      links.id = 'ls-nav-grupo-' + indice;
+      botao.setAttribute('aria-controls', links.id);
+      titulo.replaceWith(botao);
+      Array.from(secao.children).forEach(function (filho) {
+        if (filho !== botao) links.appendChild(filho);
+      });
+      secao.appendChild(links);
+      function mudar(aberto) {
+        links.hidden = !aberto;
+        botao.setAttribute('aria-expanded', String(aberto));
+      }
+      mudar(Boolean(links.querySelector('.active')));
+      botao.addEventListener('click', function () {
+        var abrir = links.hidden;
+        secoes.forEach(function (outra) {
+          var grupo = outra.querySelector('.ls-nav-links');
+          var controle = outra.querySelector('.ls-nav-section-toggle');
+          if (grupo && controle) { grupo.hidden = true; controle.setAttribute('aria-expanded', 'false'); }
+        });
+        mudar(abrir);
+      });
+    });
+  };
+
   Painel.montarTela = function (raiz) {
     var alvo = raiz || document;
     if (avisos && avisos.ultimoEstado) desenharAvisos(avisos.ultimoEstado);
     Painel.aplicarMascaras(alvo);
     Painel.acomodarTextos(alvo);
     Painel.organizarAcoesTabelas(alvo);
+    Painel.organizarSecoesMenu();
     alvo.querySelectorAll(".modal").forEach(normalizarJanela);
     /* O filtro instantâneo das listas entra aqui, e não por conta
        própria: o módulo é carregado uma vez e a tela troca muitas. Sem
@@ -985,12 +1023,31 @@
   /* Confirmação curta do que acabou de acontecer. Sem ela, uma gravação
      bem-sucedida e uma janela que fecha sozinha por engano têm a mesma
      aparência. */
-  Painel.aviso = function (mensagem, tipo) {
+  Painel.aviso = function (mensagem, tipo, tema) {
     if (!mensagem) return;
     var tarja = document.createElement("div");
     tarja.className = "ls-tarja" + (tipo ? " " + tipo : "");
     tarja.setAttribute("role", "status");
     tarja.textContent = mensagem;
+    if (["sol", "lua", "eclipse"].indexOf(tema) !== -1) {
+      document.querySelectorAll(".ls-tarja-tema").forEach(function (anterior) { anterior.remove(); });
+      tarja.className = "ls-tarja ls-tarja-tema";
+      tarja.dataset.temaAviso = tema;
+      var origem = document.querySelector("#lsTemaIconeAtual svg");
+      if (origem) {
+        var icone = origem.cloneNode(true);
+        icone.querySelectorAll("[id]").forEach(function (definicao) {
+          var anterior = definicao.id;
+          definicao.id = anterior + "Aviso";
+          icone.querySelectorAll("[fill]").forEach(function (parte) {
+            if (parte.getAttribute("fill") === "url(#" + anterior + ")") {
+              parte.setAttribute("fill", "url(#" + definicao.id + ")");
+            }
+          });
+        });
+        tarja.prepend(icone);
+      }
+    }
     document.body.appendChild(tarja);
     global.requestAnimationFrame(function () { tarja.classList.add("aparece"); });
     global.setTimeout(function () {
@@ -1008,6 +1065,55 @@
       pintarOcupado("");
     }
   });
+
+  Painel.fotoMaterial = function (form) {
+    var editor = form.querySelector("[data-foto-editor]");
+    var campo = editor.querySelector("[data-foto-input]");
+    var previa = editor.querySelector("[data-foto-previa]");
+    var vazio = editor.querySelector("[data-foto-vazia]");
+    var remover = editor.querySelector("[data-foto-remover]");
+    var erro = editor.querySelector("[data-foto-erro]");
+    var objeto = null, original = "";
+    function limparObjeto() {
+      if (objeto) URL.revokeObjectURL(objeto);
+      objeto = null;
+    }
+    function mostrar(url) {
+      previa.hidden = !url;
+      vazio.hidden = !!url;
+      if (url) previa.src = url; else previa.removeAttribute("src");
+    }
+    campo.addEventListener("change", function () {
+      limparObjeto();
+      erro.textContent = "";
+      var arquivo = campo.files[0];
+      if (!arquivo) { mostrar(remover.checked ? "" : original); return; }
+      if (arquivo.size > 5 * 1024 * 1024 || !/^image\/(jpeg|png|webp)$/.test(arquivo.type)) {
+        erro.textContent = "Escolha JPG, PNG ou WebP de até 5 MB.";
+        campo.value = "";
+        mostrar(remover.checked ? "" : original);
+        return;
+      }
+      remover.checked = false;
+      objeto = URL.createObjectURL(arquivo);
+      mostrar(objeto);
+    });
+    remover.addEventListener("change", function () {
+      limparObjeto(); campo.value = "";
+      mostrar(remover.checked ? "" : original);
+    });
+    previa.addEventListener("error", function () {
+      erro.textContent = "Não foi possível exibir esta foto.";
+      mostrar("");
+    });
+    var modal = form.closest(".modal");
+    if (modal) modal.addEventListener("hidden.bs.modal", function () { limparObjeto(); mostrar(""); });
+    return function (url) {
+      limparObjeto(); original = url || "";
+      campo.value = ""; remover.checked = false; erro.textContent = "";
+      mostrar(original);
+    };
+  };
 
   Painel.enviar = function (form, extras) {
     var dados = new FormData(form);
@@ -1555,6 +1661,13 @@
      ==================================================================== */
   var avisos = {
     endereco: "",
+    /* O PASSO DE QUEM ESTÁ TRABALHANDO.
+       Um painel parado não precisa perguntar cinco vezes por minuto --
+       e não pergunta: passados três minutos sem toque, `passoDoRelogio`
+       leva este número a um minuto sozinho (e a dois com a economia de
+       dados ligada). Este aqui é o passo de quem está com a mão na tela,
+       e é ele que decide quanto tempo leva entre um colega salvar e o
+       sino tocar aqui. Um minuto seria tarde demais para isso. */
     intervalo: 12000,
     assinatura: null,
     relogio: null,
@@ -2403,14 +2516,14 @@
       menu.setAttribute("role", "menu");
       menu.setAttribute("aria-hidden", "true");
       menu.hidden = true;
-      menu.innerHTML = '<div class="ls-action-fab-head"><span>Ações</span><small>Escolha o que deseja fazer</small></div>';
+      menu.innerHTML = '<div class="ls-action-fab-head"><span>Ações</span></div>';
 
       function rotuloDaAcao(acao) {
         var rotulo = acao.getAttribute("data-label") || acao.getAttribute("title") || acao.getAttribute("aria-label");
         if (rotulo) return rotulo;
         if (acao.matches("[data-editar], [data-editar-os]")) return "Editar";
         if (acao.matches("[data-enviar], [data-enviar-os]")) return "Enviar";
-        if (acao.matches("[data-excluir], [data-excluir-os]")) return "Excluir";
+        if (acao.matches("[data-excluir], [data-excluir-os], [data-excluir-material], [data-excluir-tipo], [data-excluir-fornecedor]")) return "Excluir";
         return (acao.textContent || "Ação").trim() || "Ação";
       }
 

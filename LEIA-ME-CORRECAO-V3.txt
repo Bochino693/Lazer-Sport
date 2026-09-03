@@ -1,0 +1,43 @@
+LAZER & SPORT — CORREÇÃO COMPLEMENTAR V3
+
+Aplicar sobre o projeto que já recebeu o pacote Aparência/Navegação V2.
+Não é o projeto completo. Não substitua nem apague a pasta inteira.
+
+INSTALAÇÃO
+1. Faça uma cópia dos arquivos atuais ou um commit de backup.
+2. Extraia este ZIP na raiz do projeto (onde está manage.py), mesclando
+   as pastas e substituindo somente os cinco arquivos incluídos.
+3. Suba as alterações ao Git e aguarde o deploy/reinício da aplicação.
+4. Execute a etapa habitual de collectstatic da sua hospedagem para o CSS.
+5. Recarregue o navegador e abra Avisos do aplicativo.
+
+O QUE MUDA
+- Corrige a renderização da tela quando há aparelho de visitante sem conta.
+  O erro foi reproduzido em teste: lookup de username sobre usuário nulo.
+  Agora aparece Visitante, sem derrubar a página.
+- Busca os usuários dos aparelhos junto da consulta principal.
+- O topo mostra apenas o SVG do tema escolhido: sol, lua ou eclipse.
+  Os três temas continuam no menu Aparência. Funciona também no layout móvel.
+- Acrescenta testes para visitantes, usuários sem nome completo e abertura
+  via AJAX seguida de criação/edição de rascunho sem enviar notificações.
+
+ARQUIVOS
+sistema_interno/templates/avisos_app.html
+sistema_interno/views_avisos_app.py
+sistema_interno/tests_avisos_app.py
+sistema_interno/templates/base_inner.html
+sistema_interno/static/interno/interno_modern.css
+
+Não altera banco, credenciais, permissões ou cadastro dos aparelhos.
+Não requer nova migration. Não envia nenhuma notificação.
+A tela permite preparar rascunhos sem configurar o envio push.
+A implementação existente é Web Push; este pacote não implementa
+integração de aplicativo nativo com APNs/FCM.
+
+VALIDAÇÃO APÓS O DEPLOY
+- Abra Avisos do aplicativo e crie/edite um rascunho.
+- Troque entre os três temas: confira um único ícone no topo.
+- Recarregue a página para conferir a preferência salva.
+Se ainda falhar, envie o log do servidor do horário do clique, sem chaves
+ou credenciais. A causa foi confirmada localmente; não acessamos os logs
+de produção para excluir outras falhas da hospedagem.

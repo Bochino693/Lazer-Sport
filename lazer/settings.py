@@ -165,6 +165,7 @@ SITE_ID = 1
 # ============================================================
 MIDDLEWARE = [
     "core.middleware.RequestTimingMiddleware",
+    "core.middleware.BandwidthEconomyMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.middleware.gzip.GZipMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
@@ -524,9 +525,13 @@ WHITENOISE_SKIP_COMPRESS_EXTENSIONS = (
     "aab",
 )
 try:
-    WHITENOISE_MAX_AGE = max(60, int(os.getenv("STATIC_CACHE_MAX_AGE", "86400")))
+    # Imagens, logotipos e ícones do site mudam pouco. Um dia fazia cada
+    # navegador baixá-los novamente durante o mês; 30 dias mantém a troca
+    # eventual segura e corta as repetições que aparecem como HTTP Responses
+    # no Render. CSS/JS versionados continuam `immutable` por um ano.
+    WHITENOISE_MAX_AGE = max(3600, int(os.getenv("STATIC_CACHE_MAX_AGE", "2592000")))
 except ValueError:
-    WHITENOISE_MAX_AGE = 86400
+    WHITENOISE_MAX_AGE = 2592000
 
 
 # ------------------------------------------------------------------
@@ -683,7 +688,8 @@ MP_PUBLIC_KEY = _credencial_mp("MP_PUBLIC_KEY")
 # Qualquer outro provedor SMTP (Brevo, Mailgun, Resend, Zoho, etc.)
 # funciona trocando EMAIL_HOST/EMAIL_PORT e as credenciais.
 # ============================================================
-EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_BACKEND = "core.email_backend.EmailBackend"
+EMAIL_TRANSPORT_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_HOST = os.getenv("EMAIL_HOST", "smtp.gmail.com").strip()
 EMAIL_PORT = int(os.getenv("EMAIL_PORT", "587").strip() or "587")
 EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "true").strip().lower() == "true"
@@ -758,6 +764,11 @@ LOGGING = {
         "lazer.performance": {
             "handlers": ["console"],
             "level": "INFO",
+            "propagate": False,
+        },
+        "lazer.bandwidth": {
+            "handlers": ["console"],
+            "level": "WARNING",
             "propagate": False,
         },
     },

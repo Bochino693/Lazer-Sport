@@ -1,0 +1,7 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{{ titulo }} · Lazer &amp; Sport</title></head>
+<body style="margin:0;background:#17130f;color:#f8eddb;font:16px/1.6 Arial,sans-serif">
+<main style="max-width:620px;margin:10vh auto;padding:28px">
+  <p>Lazer &amp; Sport · Gestão interna</p><h1>{{ titulo }}</h1><p>{{ mensagem }}</p>
+  {% if request_id %}<p>Referência: <strong>{{ request_id }}</strong></p>{% endif %}
+  <a href="{{ inicio }}" style="display:inline-block;padding:12px 20px;background:#ffc34d;color:#17130f;border-radius:10px;text-decoration:none">Voltar ao painel</a>
+</main></body></html>

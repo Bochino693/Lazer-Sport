@@ -208,7 +208,7 @@ class ScriptDeTelaNaoEsperaDOMContentLoadedTests(SimpleTestCase):
         # veio da rede -- e esse caminho carrega a versão do clique.
         self.assertIn("var cache = recuperar(alvo, soAsPartes);", navegacao)
         self.assertIn(
-            "if (cache && aplicar(cache, alvo, soAsPartes)) return Promise.resolve();",
+            "Promise.resolve().then(function () { return aplicar(cache, alvo, soAsPartes); })",
             navegacao,
         )
         self.assertIn("aplicarTela(novoDoc, url, modoHistorico, versao)", navegacao)
@@ -293,7 +293,7 @@ class ScriptDeTelaNaoEsperaDOMContentLoadedTests(SimpleTestCase):
 
         # E o cabeçalho pode quebrar linha: era `nowrap`, e "Revisão dos
         # blocos" não tinha como caber sem cortar.
-        self.assertIn("white-space:normal;font-size:.69rem", folha)
+        self.assertIn("white-space:normal!important;font-size:.69rem", folha)
         self.assertIn("grid-template-columns:repeat(3,minmax(0,1fr))!important", folha)
         self.assertIn(".ls-situacao-card", folha)
         self.assertIn("white-space:normal!important", folha)

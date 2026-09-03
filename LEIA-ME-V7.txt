@@ -1,0 +1,46 @@
+LAZER & SPORT - V7 - NAVEGACAO E CONTADOR DE PEDIDOS
+
+Complemento da versao V6. Aplique sobre o projeto com os pacotes anteriores.
+Nao substitui as migracoes de materiais/estoque entregues nas versoes anteriores.
+
+COMO APLICAR
+1. Guarde uma copia ou commit do projeto atual.
+2. Extraia as pastas core/ e sistema_interno/ na raiz do projeto,
+   substituindo os arquivos correspondentes e acrescentando os novos.
+3. Envie ao Git e publique pelo fluxo habitual.
+4. Execute collectstatic no deploy, como de costume.
+5. Feche as abas antigas do interno e abra novamente. Se necessario,
+   atualize com Ctrl+Shift+R para carregar o novo JavaScript.
+
+Este pacote nao exige migracao de banco nem alteracao de credenciais.
+
+CORRECOES
+- Abrir a loja usa /abrir-site/loja/ e encaminha para /loja/ no site publico.
+- Troca entre modulos usa navegacao normal do navegador, sem misturar
+  scripts e conteudo de telas diferentes. Filtros da mesma tela continuam
+  assincronos; a sincronizacao de listas foi preservada.
+- Pontes para o site publico e autenticacao nao usam busca antecipada/AJAX.
+- Links publicos reconhecidos abertos no host interno preservam caminho
+  e parametros ao redirecionar ao site publico. POST nao e transferido.
+- Retorno pelo historico limpa avisos de falha antigos.
+- Erros reais 500 nao viram reconexao automatica. Enderecos inexistentes
+  mostram 404 com acesso ao painel, sem redirecionamento silencioso para home.
+- Pedidos mostra a quantidade em aberto, excluindo finalizados e cancelados.
+  O contador reutiliza os avisos existentes e mostra zero quando vazio.
+  Enquanto a consulta inicial nao chega, mostra reticencias, nao um zero falso.
+
+VALIDACAO LOCAL
+python manage.py test --settings=lazer.settings_test --noinput
+Teste JavaScript adicional incluido em check-v7.cjs.
+Requer Node.js e jsdom. Ajuste o caminho de origem no script para seu projeto.
+
+CONFERIR APOS PUBLICAR
+Entrar no interno; abrir Materiais, Avisos do aplicativo e Pedidos; usar
+Abrir a loja (deve abrir /loja/); voltar a aba interna; testar voltar/avancar;
+testar filtro e paginacao; conferir quantidade de pedidos em aberto.
+
+LIMITES
+Testado localmente, sem acesso aos logs ou a sessao da hospedagem.
+Este pacote nao elimina indisponibilidade de rede, banco ou servidor.
+Se houver erro real, guarde horario, URL e referencia mostrada na tela para
+localizar a excecao nos logs. Nenhum formulario e reenviado automaticamente.

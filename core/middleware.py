@@ -2,6 +2,7 @@ import logging
 import os
 import time
 import uuid
+from urllib.parse import urlencode
 
 from django.db import InterfaceError, OperationalError, close_old_connections
 from django.shortcuts import redirect
@@ -9,6 +10,81 @@ from django.urls import reverse
 
 
 logger_performance = logging.getLogger("lazer.performance")
+logger_bandwidth = logging.getLogger("lazer.bandwidth")
+
+
+class BandwidthEconomyMiddleware:
+    """Reduz respostas inúteis e deixa o consumo de bytes auditável.
+
+    O antigo WordPress criou milhares de combinações ``filter_cat`` que
+    crawlers continuam visitando. O catálogo atual não usa esse parâmetro:
+    responder a página HTML completa para cada combinação apenas transfere
+    bytes. A URL é consolidada em ``/loja/`` preservando apenas parâmetros
+    conhecidos do catálogo.
+
+    Respostas grandes também são registradas com o tamanho e a rota. Assim o
+    painel do Render deixa de ser um total sem explicação e o log mostra o
+    próximo alvo real de otimização.
+    """
+
+    PARAMETROS_CATALOGO = {
+        "q", "categoria", "voltagem", "disponibilidade", "ordenar",
+        "preco_min", "preco_max", "page",
+    }
+    LIMITE_LOG_PADRAO = 256 * 1024
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+        try:
+            self.limite_log = max(
+                16 * 1024,
+                int(os.getenv("BANDWIDTH_LOG_MIN_BYTES", self.LIMITE_LOG_PADRAO)),
+            )
+        except (TypeError, ValueError):
+            self.limite_log = self.LIMITE_LOG_PADRAO
+
+    def __call__(self, request):
+        resposta_curta = self._consolidar_filtro_legado(request)
+        response = resposta_curta or self.get_response(request)
+        self._registrar_resposta_grande(request, response)
+        return response
+
+    def _consolidar_filtro_legado(self, request):
+        if request.method not in ("GET", "HEAD") or "filter_cat" not in request.GET:
+            return None
+        host = request.get_host().split(":", 1)[0].lower()
+        if host.startswith("interno.") or request.path.startswith("/api/"):
+            return None
+
+        from django.http import HttpResponsePermanentRedirect
+
+        pares = []
+        for chave in self.PARAMETROS_CATALOGO:
+            for valor in request.GET.getlist(chave):
+                if valor:
+                    pares.append((chave, valor[:120]))
+        destino = "/loja/"
+        if pares:
+            destino += "?" + urlencode(pares)
+        response = HttpResponsePermanentRedirect(destino)
+        response["Cache-Control"] = "public, max-age=86400"
+        response["X-Robots-Tag"] = "noindex, follow"
+        return response
+
+    def _registrar_resposta_grande(self, request, response):
+        try:
+            tamanho = int(response.get("Content-Length") or 0)
+        except (TypeError, ValueError):
+            tamanho = 0
+        if tamanho >= self.limite_log:
+            logger_bandwidth.warning(
+                "large_response bytes=%s status=%s method=%s path=%s user_agent=%s",
+                tamanho,
+                response.status_code,
+                request.method,
+                request.path,
+                (request.headers.get("User-Agent") or "-")[:160],
+            )
 
 
 class RequestTimingMiddleware:
@@ -134,7 +210,7 @@ class InternalResponseRecoveryMiddleware:
     chamadas JavaScript recebem JSON para manter a tela que já estava aberta.
     """
 
-    STATUS_TRANSITORIOS = (500, 502, 503, 504)
+    STATUS_TRANSITORIOS = (502, 503, 504)
 
     def __init__(self, get_response):
         self.get_response = get_response

@@ -116,14 +116,14 @@
   </article>
 
   <article class="ls-panel">
-    <div class="ls-panel-header"><div><h2>Valor por fornecedor</h2><p>Concentração financeira pela origem do material.</p></div></div>
+    <div class="ls-panel-header"><div><h2>Compras por fornecedor</h2><p>Valores históricos das entradas, não o saldo atual. Fornecedores antigos desconhecidos permanecem sem identificação.</p></div></div>
     <div class="table-responsive">
       <table class="ls-table">
         <thead><tr><th>Fornecedor</th><th class="text-end">Itens</th><th class="text-end">Valor</th></tr></thead>
         <tbody>
           {% for linha in por_fornecedor %}
             <tr>
-              <td><strong>{{ linha.fornecedor__nome|default:"Sem fornecedor" }}</strong></td>
+              <td><strong>{{ linha.fornecedor_nome|default:"Não registrado na compra" }}</strong></td>
               <td class="text-end ls-number">{{ linha.itens }}</td>
               <td class="text-end ls-money">R$ {{ linha.valor|moeda }}</td>
             </tr>

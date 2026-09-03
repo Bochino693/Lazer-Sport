@@ -56,7 +56,7 @@ ZERO = Value(Decimal("0.00"), output_field=DecimalField(max_digits=14, decimal_p
 # quantidade * preço pago: o total investido no que está guardado.
 VALOR_EM_ESTOQUE = Coalesce(
     Sum(
-        F("quantidade") * F("preco_fornecedor"),
+        F("saldo_valor"),
         output_field=DecimalField(max_digits=14, decimal_places=2),
     ),
     ZERO,
@@ -734,7 +734,7 @@ class CadastrosDeEstoqueMixin:
             obrigatorio=True, rotulo="o nome do material", limite=90,
         )
         material.descricao = texto(request, "descricao", limite=150)
-        material.codigo_interno = texto(request, "codigo_interno", limite=30)
+        # O cliente não escolhe nem sobrescreve o identificador do estoque.
         material.unidade = (
             request.POST.get("unidade") or Material.Unidade.UNIDADE
         )
@@ -748,6 +748,12 @@ class CadastrosDeEstoqueMixin:
             if tipo_id.isdigit() else None
         )
         material.ativo = request.POST.get("ativo") == "on"
+        if request.FILES.get("foto"):
+            from .fotos_materiais import preparar_foto
+            material.foto, material.foto_miniatura = preparar_foto(request.FILES["foto"])
+        elif request.POST.get("remover_foto") == "on":
+            material.foto = ""
+            material.foto_miniatura = ""
         material.save()
 
         return self.sucesso(
@@ -758,10 +764,14 @@ class CadastrosDeEstoqueMixin:
             # precisa ver o item aparecer JÁ ESCOLHIDO na linha, sem
             # recarregar a tela e perder o resto do formulário.
             nome=material.nome_material,
+            codigo_interno=material.codigo_interno,
         )
 
     def acao_delete_material(self, request):
         material = get_object_or_404(Material, pk=request.POST.get("id"))
+
+        if material.historico_codigos.exists():
+            raise ErroDeFormulario("Este material possui histórico de códigos. Desative-o para preservar suas referências.")
 
         if material.estoque.exists():
             raise ErroDeFormulario(
@@ -905,22 +915,26 @@ class EstoqueInnerView(
     def acao_save(self, request):
         estoque_id = request.POST.get("id")
         estoque = (
-            get_object_or_404(EstoqueMaterial, pk=estoque_id)
+            get_object_or_404(EstoqueMaterial.objects.select_for_update(), pk=estoque_id)
             if estoque_id else EstoqueMaterial()
         )
 
         material_id = texto(request, "material", obrigatorio=True, rotulo="o material")
+        if estoque.pk and str(estoque.material_id) != material_id:
+            raise ErroDeFormulario("Não é possível trocar o material de um saldo existente. Cadastre outro local de estoque.")
         estoque.material = get_object_or_404(Material, pk=material_id)
         estoque.descricao_local = texto(
             request, "descricao_local",
             obrigatorio=True, rotulo="o local de guarda", limite=90,
         )
-        estoque.preco_fornecedor = decimal_br(
+        preco_informado = decimal_br(
             request.POST.get("preco_fornecedor"),
             "Valor pago por unidade",
             obrigatorio=True,
             limite=Decimal("9999999999.99"),
         )
+        if not estoque.pk:
+            estoque.preco_fornecedor = preco_informado
         estoque.estoque_minimo = inteiro(
             request.POST.get("estoque_minimo"), "Quantidade mínima",
         ) or 0
@@ -936,20 +950,22 @@ class EstoqueInnerView(
 
         # A quantidade inicial só é aceita no cadastro. Depois disso ela
         # muda por movimento, para o histórico não ficar com buraco.
+        quantidade_inicial = 0
         if not estoque.pk:
-            estoque.quantidade = inteiro(
+            quantidade_inicial = inteiro(
                 request.POST.get("quantidade"), "Quantidade", minimo=0,
             ) or 0
+            estoque.quantidade = 0
+            estoque.saldo_valor = Decimal("0.00")
 
         estoque.save()
 
-        if not estoque_id and estoque.quantidade:
-            MovimentoEstoque.objects.create(
-                estoque=estoque,
-                tipo=MovimentoEstoque.Tipo.ENTRADA,
-                quantidade=estoque.quantidade,
-                quantidade_resultante=estoque.quantidade,
+        if not estoque_id and quantidade_inicial:
+            MovimentoEstoque.registrar(
+                estoque, MovimentoEstoque.Tipo.ENTRADA, quantidade_inicial,
                 valor_unitario=estoque.preco_fornecedor,
+                fornecedor=estoque.fornecedor,
+                data_compra=estoque.comprado_em or timezone.localdate(),
                 documento=estoque.nota_fiscal,
                 motivo="Cadastro inicial do item",
                 responsavel=request.user,
@@ -983,22 +999,15 @@ class EstoqueInnerView(
             limite=Decimal("9999999999.99"),
         )
 
-        if tipo == MovimentoEstoque.Tipo.AJUSTE and quantidade == 0:
-            # registrar() recusa zero; o ajuste para zero é legítimo.
-            movimento = MovimentoEstoque.objects.create(
-                estoque=estoque, tipo=tipo, quantidade=0,
-                quantidade_resultante=0, valor_unitario=valor,
-                documento=texto(request, "documento", limite=60),
-                motivo=texto(request, "motivo", limite=150),
-                responsavel=request.user,
-            )
-            EstoqueMaterial.objects.filter(pk=estoque.pk).update(quantidade=0)
-        else:
-            movimento = MovimentoEstoque.registrar(
+        fornecedor_id = request.POST.get("fornecedor")
+        fornecedor = get_object_or_404(Fornecedor, pk=fornecedor_id) if fornecedor_id else None
+        movimento = MovimentoEstoque.registrar(
                 estoque,
                 tipo,
                 quantidade,
                 valor_unitario=valor,
+                fornecedor=fornecedor,
+                data_compra=data(request.POST.get("data_compra"), "Data da compra") or timezone.localdate(),
                 documento=texto(request, "documento", limite=60),
                 motivo=texto(request, "motivo", limite=150),
                 responsavel=request.user,
@@ -1014,7 +1023,9 @@ class EstoqueInnerView(
         )
 
     def acao_delete(self, request):
-        estoque = get_object_or_404(EstoqueMaterial, pk=request.POST.get("id"))
+        estoque = get_object_or_404(EstoqueMaterial.objects.select_for_update(), pk=request.POST.get("id"))
+        if estoque.quantidade or estoque.movimentos.exists():
+            raise ErroDeFormulario("Este local possui saldo ou histórico. Use os movimentos para ajustar o saldo; o histórico financeiro deve ser preservado.")
         nome = str(estoque)
         estoque.delete()
         return self.sucesso(request, f"{nome} removido do estoque.")
@@ -1028,39 +1039,57 @@ class MateriaisInnerView(
 ):
     rota_padrao = "materiais_inner"
 
+    def acao_prever_codigos(self, request):
+        from .codigos_materiais import padronizar_codigos
+        alteracoes = padronizar_codigos()
+        return self.sucesso(request, "Prévia sem alterações.", alteracoes=alteracoes)
+
+    def acao_padronizar_codigos(self, request):
+        if request.POST.get("confirmacao") != "PADRONIZAR":
+            raise ErroDeFormulario("Digite PADRONIZAR para confirmar.")
+        from .codigos_materiais import padronizar_codigos
+        alteracoes = padronizar_codigos(aplicar=True)
+        return self.sucesso(request, f"{len(alteracoes)} códigos padronizados. Códigos anteriores preservados no histórico.")
+
     def get(self, request):
         busca = (request.GET.get("q") or "").strip()
 
         materiais = (
             Material.objects
             .select_related("tipo_material")
-            .prefetch_related("estoque", "brinquedos_associados")
+            .prefetch_related("estoque")
         )
 
         if busca:
             materiais = materiais.filter(
                 Q(nome_material__icontains=busca)
                 | Q(codigo_interno__icontains=busca)
+                | Q(historico_codigos__anterior__icontains=busca)
                 | Q(descricao__icontains=busca)
-            )
+            ).distinct()
 
-        materiais = list(materiais)
+        pagina = Paginator(materiais.order_by("nome_material", "pk"), 30).get_page(request.GET.get("page"))
+        materiais = list(pagina.object_list)
+        tipos = list(TipoMaterial.objects.annotate(total_itens=Count("material")).order_by("descricao"))
+        fornecedores = list(Fornecedor.objects.annotate(total_itens=Count("estoques")))
 
         ctx = {
             "materiais": materiais,
-            "tipos": TipoMaterial.objects.all().order_by("descricao"),
-            "fornecedores": Fornecedor.objects.all(),
+            "tipos": tipos,
+            "fornecedores": fornecedores,
+            "pagina": pagina,
             "busca": busca,
             "unidades": Material.Unidade.choices,
-            "total_materiais": len(materiais),
-            "total_tipos": TipoMaterial.objects.count(),
-            "total_fornecedores": Fornecedor.objects.filter(ativo=True).count(),
+            "total_materiais": pagina.paginator.count,
+            "total_tipos": len(tipos),
+            "total_fornecedores": sum(f.ativo for f in fornecedores),
             "materiais_dados": [
                 {
                     "id": m.id,
                     "nome_material": m.nome_material,
                     "descricao": m.descricao or "",
                     "codigo_interno": m.codigo_interno,
+                    "foto_url": m.foto.url if m.foto else "",
                     "unidade": m.unidade,
                     "tipo_material": m.tipo_material_id or "",
                     "ativo": m.ativo,
@@ -1069,7 +1098,7 @@ class MateriaisInnerView(
             ],
             "tipos_dados": [
                 {"id": t.id, "descricao": t.descricao}
-                for t in TipoMaterial.objects.all().order_by("descricao")
+                for t in tipos
             ],
             "fornecedores_dados": [
                 {
@@ -1082,7 +1111,7 @@ class MateriaisInnerView(
                     "observacoes": f.observacoes,
                     "ativo": f.ativo,
                 }
-                for f in Fornecedor.objects.all()
+                for f in fornecedores
             ],
         }
         return render(request, "material_inner.html", ctx)
@@ -1115,6 +1144,7 @@ class MovimentacoesInnerView(EstoqueInternoRequiredMixin, View):
         if busca:
             movimentos = movimentos.filter(
                 Q(estoque__material__nome_material__icontains=busca)
+                | Q(estoque__material__codigo_interno__icontains=busca)
                 | Q(estoque__descricao_local__icontains=busca)
                 | Q(documento__icontains=busca)
                 | Q(motivo__icontains=busca)
@@ -1125,25 +1155,40 @@ class MovimentacoesInnerView(EstoqueInternoRequiredMixin, View):
         if ate:
             movimentos = movimentos.filter(ocorrido_em__date__lte=ate)
 
-        movimentos = list(movimentos[:400])
-
-        entradas = [m for m in movimentos if m.tipo == MovimentoEstoque.Tipo.ENTRADA]
-        saidas = [m for m in movimentos if m.tipo == MovimentoEstoque.Tipo.SAIDA]
+        totais = movimentos.aggregate(
+            registros=Count("pk"),
+            entradas=Count("pk", filter=Q(tipo="entrada")),
+            saidas=Count("pk", filter=Q(tipo="saida")),
+            comprado=Sum(F("quantidade") * F("valor_unitario"), filter=Q(tipo="entrada"), output_field=DecimalField(max_digits=22, decimal_places=2)),
+            consumido=Sum("variacao_valor", filter=Q(tipo="saida")),
+            ajustes=Sum("variacao_valor", filter=Q(tipo="ajuste")),
+            sem_custo=Count("pk", filter=Q(tipo__in=["saida", "ajuste"], variacao_valor__isnull=True)),
+            sem_preco=Count("pk", filter=Q(tipo="entrada", valor_unitario__isnull=True)),
+            estimados=Count("pk", filter=Q(custo_estimado=True)),
+        )
+        pagina = Paginator(movimentos, 50).get_page(request.GET.get("page"))
+        movimentos = list(pagina.object_list)
+        filtros = request.GET.copy()
+        filtros.pop("page", None)
 
         ctx = {
             "movimentos": movimentos,
+            "pagina": pagina,
+            "filtros_url": filtros.urlencode(),
             "tipos": MovimentoEstoque.Tipo.choices,
             "tipo_ativo": tipo,
             "busca": busca,
             "desde": desde.isoformat() if desde else "",
             "ate": ate.isoformat() if ate else "",
-            "total_movimentos": len(movimentos),
-            "total_entradas": len(entradas),
-            "total_saidas": len(saidas),
-            "valor_comprado": sum(
-                (m.valor_total or Decimal("0.00") for m in entradas),
-                Decimal("0.00"),
-            ),
+            "total_movimentos": totais["registros"],
+            "total_entradas": totais["entradas"],
+            "total_saidas": totais["saidas"],
+            "valor_comprado": totais["comprado"] or Decimal("0.00"),
+            "custo_saidas": -(totais["consumido"] or Decimal("0.00")),
+            "valor_ajustes": totais["ajustes"] or Decimal("0.00"),
+            "sem_custo": totais["sem_custo"],
+            "sem_preco": totais["sem_preco"],
+            "estimados": totais["estimados"],
         }
         return render(request, "saidas_estoque.html", ctx)
 
@@ -1180,9 +1225,9 @@ class DashboardEstoqueView(EstoqueInternoRequiredMixin, View):
             linha["percentual"] = f"{fatia:.1f}"
 
         por_fornecedor = (
-            EstoqueMaterial.objects
-            .values("fornecedor__nome")
-            .annotate(valor=VALOR_EM_ESTOQUE, itens=Count("id"))
+            MovimentoEstoque.objects.filter(tipo=MovimentoEstoque.Tipo.ENTRADA)
+            .values("fornecedor_nome")
+            .annotate(valor=Sum(F("quantidade") * F("valor_unitario"), output_field=DecimalField(max_digits=22, decimal_places=2)), itens=Count("id"))
             .order_by("-valor")[:8]
         )
 

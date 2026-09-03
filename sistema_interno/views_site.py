@@ -4,6 +4,7 @@ from django.http import HttpResponseRedirect
 from django.views import View
 
 from .views import InternoRequiredMixin
+from .utils import endereco_do_site
 
 
 def host_publico(request) -> str:
@@ -18,6 +19,7 @@ class LinkSitePublicoView(InternoRequiredMixin, View):
     """Abre uma página pública sem depender do urlconf do subdomínio."""
 
     def get(self, request, pk=None, tipo="home"):
-        caminho = f"/combo/{pk}" if tipo == "combo" and pk else "/"
-        esquema = "https" if request.is_secure() else "http"
-        return HttpResponseRedirect(f"{esquema}://{host_publico(request)}{caminho}")
+        caminho = f"/combo/{pk}" if tipo == "combo" and pk else "/loja/" if tipo == "loja" else "/"
+        resposta = HttpResponseRedirect(endereco_do_site(request).rstrip("/") + caminho)
+        resposta["Cache-Control"] = "no-store"
+        return resposta
