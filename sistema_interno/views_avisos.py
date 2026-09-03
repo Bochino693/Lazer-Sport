@@ -30,7 +30,7 @@ from django.http import JsonResponse, HttpResponse
 from django.views.generic import View
 
 from . import push
-from .sincronia import revisoes
+from .sincronia import revisoes_em_cache
 from .avisos import (
     avisos_ja_vistos,
     guardar_avisos_vistos,
@@ -61,16 +61,18 @@ class EstadoAvisosView(View):
         if not faz_parte_da_equipe(usuario):
             return JsonResponse({"erro": "sem_acesso"}, status=403)
 
-        # O id mais recente vem do banco e atravessa todos os workers do
-        # servidor. Se outro usuário mexeu num orçamento, a chave muda e
-        # este painel não fica preso aos vinte segundos do cache antigo.
+        # QUEM DIZ SE MUDOU É O BANCO, PARA TODO MUNDO AO MESMO TEMPO.
+        #
+        # A chave do cache já carrega o pulso (ver `pulso.py`), então esta
+        # resposta não precisa mais montar uma revisão própria para
+        # invalidá-la -- e não deve: a revisão de tela custa três agregados
+        # e era paga em todo pulso de toda aba, inclusive nos que não
+        # tinham nada a dizer. Ela continua no corpo, porque as listas a
+        # usam para saber se precisam se redesenhar, mas agora vem
+        # carimbada pelo próprio pulso e só é refeita quando ele muda.
         revisao = versao_atividades()
-        revisoes_telas = revisoes(usuario)
-        revisao_os = revisoes_telas.get("ordens_servico", "")
-        apurado = _apurar_com_cache(
-            usuario,
-            f"orcamentos:{revisao}:os:{revisao_os}:{revisoes_telas}",
-        )
+        revisoes_telas = revisoes_em_cache(usuario)
+        apurado = _apurar_com_cache(usuario)
 
         contagens = {
             chave: apurado[chave]

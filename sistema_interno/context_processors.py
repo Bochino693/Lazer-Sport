@@ -27,6 +27,7 @@ from django.utils.functional import SimpleLazyObject
 
 from .avisos import coletar
 from .permissoes import capacidades, faz_parte_da_equipe
+from .pulso import agora as pulso_agora
 
 #: Estado de quem não é da equipe. O template nunca encontra variável
 #: faltando, e nenhuma consulta é feita para chegar aqui.
@@ -95,6 +96,19 @@ def _apurar_com_cache(usuario, versao_atividade=None):
     cada clique do menu. Um intervalo curto mantém o aviso operacional vivo,
     mas faz uma sequência Clientes → Orçamentos → Produção pagar a conta uma
     vez só.
+
+    QUEM DECIDE SE O GUARDADO AINDA VALE É O BANCO, e não o relógio. A
+    chave carrega o pulso -- um resumo de tudo que o sino conta, lido do
+    único lugar que todos os workers enxergam igual. Enquanto ninguém
+    mexer em nada, a chave é a mesma e o cache responde. Assim que
+    QUALQUER pessoa cadastrar, alterar ou apagar qualquer coisa, a chave
+    muda para todo mundo ao mesmo tempo, e o próximo pulso de cada painel
+    aberto já traz o número novo. Ver `pulso.py`.
+
+    O prazo continua existindo, mas mudou de papel: era ele que decidia a
+    frescura -- e por isso o aviso de um colega demorava até 45 segundos
+    para aparecer, no worker de cada um. Agora ele só impede que uma
+    fotografia velha ocupe memória para sempre.
     """
     try:
         ttl = max(5, int(getattr(settings, "INTERNO_AVISOS_CACHE_TTL", 20)))
@@ -138,7 +152,17 @@ def _chave_avisos(usuario, versao_atividade=None):
         ).hexdigest()[:16]
         atividade = f":a{token}"
     geracao = cache.get(_chave_geracao(usuario), 0) or 0
-    return f"interno:avisos:v4:{usuario.pk}:{versao}:g{geracao}{atividade}"
+    # O PULSO ENTRA NA CHAVE DE TODA VARIANTE.
+    #
+    # `geracao` é por usuário e vive na memória de UM worker: só limpava o
+    # cache de quem gravou, e só no processo que atendeu a gravação. Ela
+    # fica -- resolve o caso de quem acabou de salvar e recarrega na hora
+    # --, mas quem garante que os colegas vejam é o pulso, que vem do
+    # banco e vale para todos.
+    return (
+        f"interno:avisos:v5:{usuario.pk}:{versao}:"
+        f"g{geracao}:p{pulso_agora()}{atividade}"
+    )
 
 
 def _chave_geracao(usuario):
@@ -159,6 +183,14 @@ def fab_counts(request):
 
     # Um único cálculo compartilhado por todas as chaves: o SimpleLazyObject
     # de fora memoriza o resultado, e os de dentro apenas leem dele.
+    # A MESMA CHAVE DO ENDEREÇO DE AVISOS, e não uma variante só do HTML.
+    #
+    # A página era desenhada com uma chave e atualizada com outra: duas
+    # fotografias independentes do mesmo número, cada uma com o seu prazo.
+    # Hoje as bolinhas do painel são preenchidas pelo JavaScript e a
+    # diferença não aparecia ali, mas continuava de pé para qualquer tela
+    # que imprimisse o número direto. Agora as duas entradas nascem do
+    # mesmo pulso e não têm como divergir.
     apurado = SimpleLazyObject(lambda: _apurar_com_cache(usuario))
 
     def campo(chave):
