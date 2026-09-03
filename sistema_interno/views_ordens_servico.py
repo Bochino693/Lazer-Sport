@@ -53,6 +53,7 @@ from .rotas import dados_rota, origem_empresa, texto_endereco
 from .utils import (
     ErroDeFormulario,
     decimal_br,
+    destino_de_retorno,
     endereco_do_site,
     exigir_confirmacao_exclusao,
     inteiro,
@@ -1420,8 +1421,13 @@ class OrdemServicoPreviaInnerView(OrdemServicoInternoRequiredMixin, View):
         from core.views_ordem_servico import carregar_ordem, contexto_ordem
 
         ordem = carregar_ordem(pk=pk)
-        return render(
+        contexto = contexto_ordem(ordem, previsualizacao=True, request=request)
+        # Mesma história da prévia do orçamento: a aba nova não tem
+        # "voltar" do navegador, e o painel mora em outro subdomínio. Ver
+        # `destino_de_retorno`.
+        contexto["voltar_url"] = destino_de_retorno(
             request,
-            "ordem_servico_publica.html",
-            contexto_ordem(ordem, previsualizacao=True, request=request),
+            request.GET.get("voltar"),
+            padrao=reverse("ordens_servico_inner", urlconf="sistema_interno.urls"),
         )
+        return render(request, "ordem_servico_publica.html", contexto)

@@ -2288,14 +2288,75 @@ class ItemOrcamento(Prime):
         Item de produção e linha escrita à mão não têm foto, e a página
         precisa saber disso para desenhar o lugar da imagem de outro jeito
         em vez de deixar um buraco.
+
+        DUAS GAVETAS PARA A FOTO DO BRINQUEDO, e é preciso olhar as duas.
+        `imagem_brinquedo` é o campo antigo; a galeria tipada
+        (`imagem_perfil`) é onde o cadastro rápido guarda. Um brinquedo
+        criado de dentro do orçamento com foto de VERSO -- e sem a de
+        frente -- não preenchia o campo antigo, e a proposta saía sem
+        imagem embora o cadastro tivesse fotos.
         """
-        if self.brinquedo_id and self.brinquedo and self.brinquedo.imagem_brinquedo:
-            return self.brinquedo.imagem_brinquedo
+        if self.brinquedo_id and self.brinquedo:
+            if self.brinquedo.imagem_brinquedo:
+                return self.brinquedo.imagem_brinquedo
+            capa = self.brinquedo.imagem_perfil
+            if capa and getattr(capa, "imagem", None):
+                return capa.imagem
+            # `.all()` e a ordenação em Python de propósito: a página do
+            # cliente traz as fotos por prefetch, e um `order_by` aqui
+            # ignoraria esse cache -- uma consulta por linha da proposta,
+            # que é exatamente o que o prefetch existe para evitar.
+            fotos = sorted(
+                self.brinquedo.imagens_brinquedo.all(),
+                key=lambda foto: (foto.ordem or 0, foto.id),
+            )
+            for foto in fotos:
+                if foto.imagem:
+                    return foto.imagem
         if self.peca_id and self.peca:
             imagem = self.peca.imagem_principal
             if imagem and imagem.imagem:
                 return imagem.imagem
         return None
+
+    @property
+    def ficha(self):
+        """As linhas de detalhe que o documento imprime abaixo do nome.
+
+        POR QUE ELAS VÊM DO CADASTRO, e não da descrição digitada. A
+        linha da proposta tem 180 caracteres e é o texto comercial ("2
+        dias de locação, montagem inclusa"). Medida, voltagem e o que o
+        brinquedo é continuam no catálogo -- e era exatamente isso que
+        sumia na impressão: o cliente recebia "Piscina de bolinhas" sem
+        saber o tamanho da piscina.
+
+        Só entra o que EXISTE no cadastro. Item escrito à mão não ganha
+        linha nenhuma, e a proposta continua com a cara de sempre.
+        """
+        origem = self.brinquedo or self.peca or self.produto
+        if origem is None:
+            return []
+
+        linhas = []
+        descricao = (
+            getattr(origem, "descricao", "")
+            or getattr(origem, "descricao_peca", "")
+            or ""
+        ).strip()
+        # A descrição do catálogo repetindo a linha da proposta seria
+        # ruído: o cliente leria a mesma frase duas vezes.
+        if descricao and descricao.strip().lower() != (self.descricao or "").strip().lower():
+            linhas.append(descricao)
+
+        medidas = getattr(origem, "dimensoes_m", None)
+        if medidas:
+            linhas.append(medidas)
+
+        voltagem = (getattr(origem, "voltz", "") or "").strip()
+        if voltagem:
+            linhas.append(f"Voltagem: {voltagem}")
+
+        return linhas
 
     def clean(self):
         from django.core.exceptions import ValidationError

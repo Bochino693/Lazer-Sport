@@ -3102,6 +3102,28 @@ a.ls-metric-card.active{border-color:var(--metric);box-shadow:0 0 0 2px rgba(var
 /* A mesma caixa, agora escrevível. O tipo monoespaçado ficou de fora de
    propósito: o que se lê aqui é o recado que o cliente vai receber, e
    ele precisa parecer com o que chega no WhatsApp. */
+/* A FICHA DO CADASTRO RÁPIDO.
+
+   Medidas, etiquetas e fotos ficam em blocos com nome, e não numa
+   sequência de campos soltos: quem cadastra no meio de uma proposta
+   precisa ver, de relance, o que ainda falta -- porque é isso que sai
+   (ou deixa de sair) na proposta impressa. */
+.ls-ficha-cadastro{
+  padding:14px 15px 16px;border:1px solid rgba(var(--verniz-rgb),.1);
+  border-radius:14px;background:rgba(var(--sombra-rgb),calc(.1 * var(--sombra-forca)));
+}
+.ls-ficha-cadastro>legend{
+  float:none;width:auto;padding:0 0 2px;
+  color:var(--acento-claro);font-size:.74rem;font-weight:900;
+  letter-spacing:.7px;text-transform:uppercase;
+}
+.ls-ficha-nota{margin:0 0 12px;color:var(--muted);font-size:.76rem;line-height:1.45}
+.ls-ficha-capa{
+  margin-left:6px;padding:1px 7px;border-radius:999px;
+  background:rgba(var(--acento-rgb),.16);color:var(--acento-claro);
+  font-size:.6rem;font-weight:900;letter-spacing:.5px;text-transform:uppercase;
+}
+
 .ls-message-editor{padding:10px 12px 12px;background:rgba(var(--sidebar-rgb),.3)}
 .ls-message-editor textarea{
   min-height:150px;resize:vertical;white-space:pre-wrap;

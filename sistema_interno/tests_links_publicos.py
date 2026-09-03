@@ -134,6 +134,47 @@ class LinkPublicoSoExisteDepoisDoEnvioTests(TestCase):
                 )
                 self.assertEqual(resposta.status_code, 200)
 
+    def test_a_previa_oferece_a_volta_para_a_tela_de_onde_veio(self):
+        """A aba nova não tem "voltar" do navegador: o botão é a saída."""
+        rascunho = self.orcamento()
+        ordem = self.ordem()
+
+        casos = (
+            (f"/orcamentos/{rascunho.pk}/previa/", "/orcamentos/", "/orcamentos/?pagina=2"),
+            (f"/ordens-servico/{ordem.pk}/previa/", "/ordens-servico/", "/ordens-servico/?q=lona"),
+        )
+        for caminho, padrao, veio_de in casos:
+            with self.subTest(caminho=caminho):
+                html = self.client.get(
+                    caminho, {"voltar": veio_de}, HTTP_HOST="interno.testserver",
+                ).content.decode()
+                self.assertIn(f'href="{veio_de}"', html)
+
+                # Sem o parâmetro, a volta é para a lista de onde a
+                # prévia sempre sai.
+                html = self.client.get(
+                    caminho, HTTP_HOST="interno.testserver",
+                ).content.decode()
+                self.assertIn(f'href="{padrao}"', html)
+
+    def test_a_previa_recusa_uma_volta_para_fora_de_casa(self):
+        """`?voltar=` vem da URL, e URL é entrada de fora.
+
+        Sem a conferência, um link plantado faria o painel desenhar um
+        botão "Voltar ao painel" que leva para outro domínio -- começo
+        de uma tela de login falsa. Ver `destino_de_retorno`.
+        """
+        rascunho = self.orcamento()
+
+        html = self.client.get(
+            f"/orcamentos/{rascunho.pk}/previa/",
+            {"voltar": "https://site-de-fora.example/entrar/"},
+            HTTP_HOST="interno.testserver",
+        ).content.decode()
+
+        self.assertNotIn("site-de-fora.example", html)
+        self.assertIn('href="/orcamentos/"', html)
+
 
 class PaginasDeErroNaoPodemFalharTests(TestCase):
     """A página de erro que depende de outra coisa falha quando é chamada.

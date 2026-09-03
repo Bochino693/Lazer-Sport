@@ -17,7 +17,14 @@ from django.core import mail
 from django.test import TestCase, override_settings
 from django.utils import timezone
 
-from core.models import Brinquedos, CategoriaPeca, CategoriasBrinquedos, PecasReposicao
+from core.models import (
+    Brinquedos,
+    CategoriaPeca,
+    CategoriasBrinquedos,
+    Estabelecimentos,
+    PecasReposicao,
+    TagsBrinquedos,
+)
 
 from .models import (
     AtividadeOrcamento,
@@ -505,6 +512,79 @@ class OrcamentoInternoTests(TestCase):
         self.assertEqual(dados["brinquedo"]["valor"], "340,00")
         self.assertEqual(novo.valor_brinquedo, Decimal("340.00"))
         self.assertIn(self.categoria, novo.categorias_brinquedos.all())
+
+    def test_cadastro_rapido_guarda_a_ficha_que_a_proposta_imprime(self):
+        """Medida, voltagem e etiqueta entram pelo modal, e não depois.
+
+        O que falta no cadastro falta na proposta impressa: o cliente
+        recebia "Piscina de bolinhas" sem saber o tamanho da piscina.
+        """
+        etiqueta = TagsBrinquedos.objects.create(nome_tags="Aniversário")
+        estabelecimento = Estabelecimentos.objects.create(
+            nome_estabelecimento="Buffet Central",
+        )
+
+        dados = self.post({
+            "action": "brinquedo_novo",
+            "nome": "Piscina de bolinhas 3x3",
+            "valor": "340,00",
+            "descricao": "Piscina 3x3 com 4.000 bolinhas",
+            "voltz": "bivolt",
+            "altura_m": "2,00",
+            "largura_m": "3,00",
+            "profundidade_m": "3,00",
+            "categoria": self.categoria.id,
+            "tags": etiqueta.id,
+            "estabelecimentos": estabelecimento.id,
+        }).json()
+
+        novo = Brinquedos.objects.get(nome_brinquedo="Piscina de bolinhas 3x3")
+        self.assertEqual(novo.altura_m, Decimal("2.00"))
+        self.assertEqual(novo.largura_m, Decimal("3.00"))
+        self.assertEqual(novo.profundidade_m, Decimal("3.00"))
+        self.assertEqual(novo.voltz, "bivolt")
+        self.assertIn(etiqueta, novo.tags.all())
+        self.assertIn(estabelecimento, novo.estabelecimentos.all())
+        # A linha da proposta reconhece o item pela legenda, não só pelo nome.
+        self.assertEqual(dados["brinquedo"]["detalhe"], "Piscina 3x3 com 4.000 bolinhas")
+        self.assertIn("2.00", dados["brinquedo"]["medidas"])
+
+    def test_a_proposta_imprime_a_ficha_do_cadastro(self):
+        """A linha comercial não cabe a ficha, e a ficha não pode sumir."""
+        orcamento = Orcamento.objects.create(nome_cliente="Festa da Ana")
+        item = ItemOrcamento.objects.create(
+            orcamento=orcamento,
+            descricao="2 dias de locação, montagem inclusa",
+            brinquedo=self.brinquedo,
+            quantidade=1,
+            valor_unitario=Decimal("280.00"),
+        )
+        self.brinquedo.altura_m = Decimal("2.00")
+        self.brinquedo.largura_m = Decimal("3.00")
+        self.brinquedo.profundidade_m = Decimal("3.00")
+        self.brinquedo.save()
+
+        ficha = ItemOrcamento.objects.get(pk=item.pk).ficha
+        self.assertIn("Cama elástica 3m", ficha)
+        self.assertIn("Voltagem: 110", ficha)
+        self.assertTrue(any("2.00" in linha for linha in ficha))
+
+        html = self.client.get(
+            f"/orcamentos/{orcamento.pk}/previa/", HTTP_HOST="interno.testserver",
+        ).content.decode()
+        for linha in ficha:
+            self.assertIn(linha, html)
+
+    def test_linha_escrita_a_mao_nao_ganha_ficha_nenhuma(self):
+        """Sem cadastro por trás não há o que imprimir -- e nada é inventado."""
+        orcamento = Orcamento.objects.create(nome_cliente="Festa da Ana")
+        item = ItemOrcamento.objects.create(
+            orcamento=orcamento, descricao="Frete até Osasco",
+            quantidade=1, valor_unitario=Decimal("120.00"),
+        )
+
+        self.assertEqual(item.ficha, [])
+        self.assertIsNone(item.imagem)
 
     def test_brinquedo_novo_nasce_fora_da_vitrine(self):
         """Publicar é decisão de quem cuida do site, com foto e texto."""

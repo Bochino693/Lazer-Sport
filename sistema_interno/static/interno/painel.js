@@ -2340,4 +2340,39 @@
     /* Espera o teclado terminar de subir antes de medir. */
     setTimeout(function () { trazerCampoParaVista(campo); }, 320);
   });
+
+  /* ====================================================================
+     A PRÉVIA LEVA JUNTO DE ONDE VEIO
+
+     As prévias de orçamento e de O.S. abrem em outra aba -- e o painel
+     mora num subdomínio (`interno.`) diferente do site. Quem terminava
+     de conferir o documento ficava sem caminho de volta: o botão do
+     navegador não serve numa aba recém-aberta, e fechar não devolve a
+     tela em que a pessoa estava.
+
+     O endereço da tela atual entra no link no momento do toque, e não
+     escrito no HTML: a lista tem filtro, página e busca na URL, e o que
+     interessa é voltar para o que a pessoa estava vendo -- inclusive
+     quando a tela chegou por navegação suave, em que o servidor nem
+     sabe onde ela parou. O servidor confere o endereço antes de
+     desenhar o botão (ver `destino_de_retorno`, em utils.py).
+     ==================================================================== */
+  ["click", "auxclick"].forEach(function (evento) {
+    document.addEventListener(evento, function (toque) {
+      var link = toque.target.closest ? toque.target.closest("a[href]") : null;
+      if (!link) return;
+
+      var destino;
+      try {
+        destino = new URL(link.getAttribute("href") || "", global.location.href);
+      } catch (erro) {
+        return;
+      }
+      if (destino.origin !== global.location.origin) return;
+      if (!/\/previa\/$/.test(destino.pathname)) return;
+
+      destino.searchParams.set("voltar", global.location.href);
+      link.setAttribute("href", destino.href);
+    }, true);
+  });
 })(window);

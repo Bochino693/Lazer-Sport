@@ -71,11 +71,22 @@ body{
 }
 .envelope{max-width:980px;margin:0 auto;padding:24px 16px 72px}
 .previa-bar{
-  position:sticky;top:10px;z-index:20;margin:0 auto 12px;padding:11px 16px;
+  position:sticky;top:10px;z-index:20;margin:0 auto 12px;padding:9px 12px 9px 10px;
   max-width:760px;border-radius:999px;background:#111827;color:#fff;
   box-shadow:0 12px 32px rgba(15,23,42,.22);text-align:center;
-  font-size:.82rem;font-weight:750;letter-spacing:.1px
+  font-size:.82rem;font-weight:750;letter-spacing:.1px;
+  display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap
 }
+/* O "Voltar" é o único botão desta barra, e precisa parecer botão: a
+   pessoa está numa aba que nasceu aqui e o navegador não tem para onde
+   voltar. */
+.previa-bar .previa-voltar{
+  display:inline-flex;align-items:center;gap:6px;flex:none;
+  padding:7px 14px;border-radius:999px;
+  background:rgba(255,255,255,.14);color:#fff;text-decoration:none;
+  font-weight:800;transition:background .15s ease
+}
+.previa-bar .previa-voltar:hover{background:rgba(255,255,255,.26)}
 
 /* ---------------------------------------------------------- entrada */
 /* Tudo entra escalonado, de baixo para cima. O atraso é dado por
@@ -169,14 +180,26 @@ body{
 .item>span:first-child{border-left:0}
 .item-descricao{gap:12px;min-width:0}
 .item-foto{
-  width:58px;height:58px;flex:0 0 58px;border-radius:12px;overflow:hidden;background:var(--marca-clara);
+  /* 76 px, e não 58: com a foto inteira no quadro, o brinquedo aparece
+     menor do que aparecia recortado. O tamanho da folha impressa não
+     muda -- as regras de `@media print` mandam ali. */
+  width:76px;height:76px;flex:0 0 76px;border-radius:12px;overflow:hidden;
+  /* Fundo claro em vez do tom da marca: com a foto INTEIRA aparecendo,
+     sobra moldura em volta, e ela não pode competir com o brinquedo. */
+  background:#fff;
   display:grid;place-items:center;border:1px solid var(--linha);
 }
-.item-foto img{width:100%;height:100%;object-fit:cover}
+/* A FOTO INTEIRA, NÃO UM PEDAÇO DELA.
+   Era `cover`: o quadro pegava o meio da imagem e cortava o resto. Num
+   selo de 58 px isso vira um close numa lona colorida -- o cliente lia
+   "piscina de bolinhas" e via uma mancha azul. `contain` mostra o
+   brinquedo ou a peça por completo, que é o que a foto está ali para
+   fazer. */
+.item-foto img{width:100%;height:100%;object-fit:contain;padding:3px}
 .item-foto .sem-foto{font-size:1.4rem;color:#93A2C4}
 .item-nome{font-weight:700;font-size:.99rem;letter-spacing:-.2px}
 .item-texto{display:block;min-width:0}.item-conta{font-size:.8rem;color:var(--tinta-2);margin-top:3px}
-.item-medidas{font-size:.78rem;color:var(--tinta-3);margin-top:2px}
+.item-medidas{display:block;font-size:.78rem;color:var(--tinta-3);margin-top:2px}
 .item-quantidade{justify-content:center;font-weight:750;color:var(--tinta-2)}
 .item-unitario,.item-valor{justify-content:flex-end;font-weight:750;white-space:nowrap;text-align:right}
 .item-valor{font-size:1rem;color:var(--marca)}
@@ -543,8 +566,22 @@ body{
 <div class="envelope">
 
   {% if previsualizacao %}
+    {% comment %}
+      A BARRA DA PRÉVIA TAMBÉM É A SAÍDA.
+
+      O documento abre em outra aba e o painel mora em outro subdomínio:
+      quem terminava de conferir ficava sem caminho de volta -- o botão
+      do navegador não serve numa aba recém-aberta. O endereço vem
+      conferido do servidor (`destino_de_retorno`); no pior caso é a
+      lista de onde a prévia saiu.
+    {% endcomment %}
     <div class="previa-bar">
-      Prévia interna · nenhum cliente pode responder por esta tela
+      {% if voltar_url %}
+        <a class="previa-voltar" href="{{ voltar_url }}">
+          <i class="bi bi-arrow-left"></i> Voltar ao painel
+        </a>
+      {% endif %}
+      <span>Prévia interna · nenhum cliente pode responder por esta tela</span>
     </div>
   {% endif %}
 
@@ -722,9 +759,16 @@ body{
           </span>
           <span class="item-texto">
             <span class="item-nome">{{ item.descricao }}</span>
-            {% if item.brinquedo and item.brinquedo.dimensoes_m %}
-              <span class="item-medidas">{{ item.brinquedo.dimensoes_m }}</span>
-            {% endif %}
+            {% comment %}
+              O que o cadastro sabe do item entra aqui: descrição,
+              medidas e voltagem. Antes só a medida do brinquedo
+              aparecia, e mesmo ela sumia quando a linha era de peça --
+              o cliente recebia um nome solto e perguntava por telefone
+              o que a proposta já deveria dizer. Ver `ItemOrcamento.ficha`.
+            {% endcomment %}
+            {% for linha in item.ficha %}
+              <span class="item-medidas">{{ linha }}</span>
+            {% endfor %}
           </span>
         </span>
         <span class="item-quantidade">{{ item.quantidade }}</span>

@@ -100,6 +100,7 @@ from .utils import (
     ErroDeFormulario,
     data,
     decimal_br,
+    destino_de_retorno,
     endereco_do_site,
     exigir_confirmacao_exclusao,
     inteiro,
@@ -1889,6 +1890,11 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
                     f"{brinquedo.valor_brinquedo:.2f}".replace(".", ",")
                     if brinquedo.valor_brinquedo is not None else ""
                 ),
+                # A ficha volta junto para a linha da proposta mostrar o
+                # mesmo que a busca mostraria: quem acabou de cadastrar
+                # precisa reconhecer o item na lista, não só o nome.
+                "detalhe": (brinquedo.descricao or "Brinquedo do catálogo")[:90],
+                "medidas": brinquedo.dimensoes_m or "",
             },
         )
 
@@ -2081,6 +2087,18 @@ class OrcamentoPreviaInnerView(OrcamentoInternoRequiredMixin, View):
         orcamento = carregar_orcamento_exibicao(pk=pk)
         contexto = contexto_orcamento(
             orcamento, previsualizacao=True, request=request
+        )
+        # O CAMINHO DE VOLTA.
+        #
+        # A prévia abre em outra aba, e o painel vive noutro subdomínio:
+        # quem terminava de conferir o documento não tinha para onde ir.
+        # O painel manda de onde veio em `?voltar=`; sem isso, a volta é
+        # para a lista de propostas, que é de onde a prévia sempre sai.
+        # A conferência do endereço mora em `destino_de_retorno`.
+        contexto["voltar_url"] = destino_de_retorno(
+            request,
+            request.GET.get("voltar"),
+            padrao=reverse("orcamentos_inner", urlconf="sistema_interno.urls"),
         )
         return render(request, "orcamento_publico.html", contexto)
 

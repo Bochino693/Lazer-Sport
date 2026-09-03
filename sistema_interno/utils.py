@@ -136,6 +136,46 @@ def data(valor, rotulo):
         raise ErroDeFormulario(f"{rotulo}: informe uma data válida.")
 
 
+def destino_de_retorno(request, bruto, padrao=""):
+    """O endereço para onde o botão "Voltar" leva, conferido antes de usar.
+
+    POR QUE ISTO EXISTE. A prévia de um orçamento ou de uma O.S. abre em
+    outra aba, e às vezes em outro subdomínio: quem conferia o documento
+    ficava sem caminho de volta -- o "voltar" do navegador não serve numa
+    aba que nasceu ali, e fechar leva a pessoa para lugar nenhum. Quem
+    abriu a prévia manda junto de onde veio (`?voltar=`), e é isso que o
+    botão usa.
+
+    UM ENDEREÇO QUE VEIO DA URL É ENTRADA DE FORA. Sem esta conferência,
+    bastaria um link com `?voltar=https://algum-site/` para o painel
+    exibir um botão "Voltar ao painel" que leva para fora -- o começo de
+    uma página de login falsa. Passam só:
+
+      * caminhos do próprio servidor ("/orcamentos/?pagina=2");
+      * endereços do painel e do site da casa, que são o mesmo domínio
+        com e sem o "interno." na frente.
+
+    Qualquer outra coisa cai no padrão, que é a tela de onde o documento
+    saiu.
+    """
+    from django.utils.http import url_has_allowed_host_and_scheme
+
+    bruto = (bruto or "").strip()
+    if not bruto:
+        return padrao
+
+    permitidos = {request.get_host()}
+    publico = urlsplit(endereco_do_site(request) or "").hostname
+    if publico:
+        permitidos.update({publico, f"interno.{publico}"})
+
+    if url_has_allowed_host_and_scheme(
+        bruto, allowed_hosts=permitidos, require_https=request.is_secure()
+    ):
+        return bruto
+    return padrao
+
+
 def endereco_do_site(request=None):
     """Base http(s)://... do SITE PÚBLICO, visto de dentro do painel.
 
