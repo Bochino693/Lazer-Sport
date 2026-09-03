@@ -734,7 +734,7 @@ class CadastrosDeEstoqueMixin:
             obrigatorio=True, rotulo="o nome do material", limite=90,
         )
         material.descricao = texto(request, "descricao", limite=150)
-        material.codigo_interno = texto(request, "codigo_interno", limite=30)
+        # O cliente não escolhe nem sobrescreve o identificador do estoque.
         material.unidade = (
             request.POST.get("unidade") or Material.Unidade.UNIDADE
         )
@@ -748,6 +748,12 @@ class CadastrosDeEstoqueMixin:
             if tipo_id.isdigit() else None
         )
         material.ativo = request.POST.get("ativo") == "on"
+        if request.FILES.get("foto"):
+            from .fotos_materiais import preparar_foto
+            material.foto, material.foto_miniatura = preparar_foto(request.FILES["foto"])
+        elif request.POST.get("remover_foto") == "on":
+            material.foto = ""
+            material.foto_miniatura = ""
         material.save()
 
         return self.sucesso(
@@ -758,6 +764,7 @@ class CadastrosDeEstoqueMixin:
             # precisa ver o item aparecer JÁ ESCOLHIDO na linha, sem
             # recarregar a tela e perder o resto do formulário.
             nome=material.nome_material,
+            codigo_interno=material.codigo_interno,
         )
 
     def acao_delete_material(self, request):
@@ -1034,7 +1041,7 @@ class MateriaisInnerView(
         materiais = (
             Material.objects
             .select_related("tipo_material")
-            .prefetch_related("estoque", "brinquedos_associados")
+            .prefetch_related("estoque")
         )
 
         if busca:
@@ -1044,23 +1051,28 @@ class MateriaisInnerView(
                 | Q(descricao__icontains=busca)
             )
 
-        materiais = list(materiais)
+        pagina = Paginator(materiais.order_by("nome_material", "pk"), 30).get_page(request.GET.get("page"))
+        materiais = list(pagina.object_list)
+        tipos = list(TipoMaterial.objects.annotate(total_itens=Count("material")).order_by("descricao"))
+        fornecedores = list(Fornecedor.objects.annotate(total_itens=Count("estoques")))
 
         ctx = {
             "materiais": materiais,
-            "tipos": TipoMaterial.objects.all().order_by("descricao"),
-            "fornecedores": Fornecedor.objects.all(),
+            "tipos": tipos,
+            "fornecedores": fornecedores,
+            "pagina": pagina,
             "busca": busca,
             "unidades": Material.Unidade.choices,
-            "total_materiais": len(materiais),
-            "total_tipos": TipoMaterial.objects.count(),
-            "total_fornecedores": Fornecedor.objects.filter(ativo=True).count(),
+            "total_materiais": pagina.paginator.count,
+            "total_tipos": len(tipos),
+            "total_fornecedores": sum(f.ativo for f in fornecedores),
             "materiais_dados": [
                 {
                     "id": m.id,
                     "nome_material": m.nome_material,
                     "descricao": m.descricao or "",
                     "codigo_interno": m.codigo_interno,
+                    "foto_url": m.foto.url if m.foto else "",
                     "unidade": m.unidade,
                     "tipo_material": m.tipo_material_id or "",
                     "ativo": m.ativo,
@@ -1069,7 +1081,7 @@ class MateriaisInnerView(
             ],
             "tipos_dados": [
                 {"id": t.id, "descricao": t.descricao}
-                for t in TipoMaterial.objects.all().order_by("descricao")
+                for t in tipos
             ],
             "fornecedores_dados": [
                 {
@@ -1082,7 +1094,7 @@ class MateriaisInnerView(
                     "observacoes": f.observacoes,
                     "ativo": f.ativo,
                 }
-                for f in Fornecedor.objects.all()
+                for f in fornecedores
             ],
         }
         return render(request, "material_inner.html", ctx)

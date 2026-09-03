@@ -5,7 +5,8 @@ from decimal import Decimal
 
 from django.conf import settings
 from django.core.validators import MaxValueValidator, MinValueValidator
-from django.db import models, transaction
+from django.db import IntegrityError, models, transaction
+from django.utils.text import slugify
 from django.utils import timezone
 
 from core.models import (
@@ -412,8 +413,36 @@ class Fornecedor(Prime):
         ordering = ("nome",)
 
 
+class SequenciaMaterial(models.Model):
+    """Reserva permanente do prefixo; excluir um item não reutiliza seu código."""
+    prefixo = models.CharField(max_length=16, primary_key=True)
+    ultimo = models.PositiveBigIntegerField(default=0)
+
+
 class TipoMaterial(Prime):
     descricao = models.CharField(max_length=120)
+    prefixo = models.CharField(max_length=16, unique=True, null=True, blank=True, editable=False)
+
+    def save(self, *args, **kwargs):
+        if self.prefixo:
+            return super().save(*args, **kwargs)
+        banco = kwargs.get("using") or self._state.db or "default"
+        base = slugify(self.descricao).replace("-", "")[:3] or "tip"
+        # 'mat' é reservado aos materiais sem tipo.
+        indice = 2 if base == "mat" else 1
+        with transaction.atomic(using=banco):
+            while True:
+                prefixo = base if indice == 1 else f"{base}{indice}"
+                try:
+                    with transaction.atomic(using=banco):
+                        SequenciaMaterial.objects.using(banco).create(prefixo=prefixo)
+                    break
+                except IntegrityError:
+                    indice += 1
+            self.prefixo = prefixo
+            if kwargs.get("update_fields"):
+                kwargs["update_fields"] = set(kwargs["update_fields"]) | {"prefixo"}
+            return super().save(*args, **kwargs)
 
     def __str__(self):
         return self.descricao
@@ -441,8 +470,10 @@ class Material(Prime):
         "Código interno",
         max_length=30,
         blank=True,
-        help_text="Código usado na prateleira, na nota ou no catálogo do fornecedor.",
+        help_text="Gerado automaticamente por tipo. Códigos anteriores são preservados.",
     )
+    foto = models.ImageField(upload_to="materiais/fotos/", blank=True)
+    foto_miniatura = models.ImageField(upload_to="materiais/miniaturas/", blank=True, editable=False)
     unidade = models.CharField(
         max_length=5,
         choices=Unidade.choices,
@@ -451,6 +482,25 @@ class Material(Prime):
     tipo_material = models.ForeignKey(TipoMaterial, on_delete=models.SET_NULL, related_name='material', null=True, blank=True)
     brinquedos_associados = models.ManyToManyField(Brinquedos, related_name='materiais', blank=True)
     ativo = models.BooleanField(default=True)
+
+    def save(self, *args, **kwargs):
+        if self.codigo_interno:
+            return super().save(*args, **kwargs)
+        banco = kwargs.get("using") or self._state.db or "default"
+        prefixo = self.tipo_material.prefixo if self.tipo_material_id else "mat"
+        with transaction.atomic(using=banco):
+            SequenciaMaterial.objects.using(banco).get_or_create(prefixo=prefixo)
+            sequencia = SequenciaMaterial.objects.using(banco).select_for_update().get(pk=prefixo)
+            while True:
+                sequencia.ultimo += 1
+                codigo = f"{prefixo}-{sequencia.ultimo:04d}"
+                if not Material.objects.using(banco).filter(codigo_interno__iexact=codigo).exists():
+                    break
+            sequencia.save(using=banco, update_fields=["ultimo"])
+            self.codigo_interno = codigo
+            if kwargs.get("update_fields"):
+                kwargs["update_fields"] = set(kwargs["update_fields"]) | {"codigo_interno"}
+            return super().save(*args, **kwargs)
 
     @property
     def quantidade_total(self):

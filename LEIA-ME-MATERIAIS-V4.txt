@@ -1,0 +1,80 @@
+LAZER & SPORT — MATERIAIS, FOTOS E AVISOS DE TEMA V4
+
+Pacote complementar para o projeto que já recebeu a V3.
+Não é o projeto inteiro. Mescle as pastas; não apague a pasta sistema_interno.
+
+INSTALAÇÃO IMPORTANTE — ESTA VERSÃO TEM MIGRAÇÕES
+1. Faça backup do banco e um commit/cópia dos arquivos atuais.
+2. Extraia o ZIP na raiz do projeto, onde está manage.py. Substitua somente
+   os arquivos incluídos e acrescente os novos.
+3. Suba as alterações ao Git.
+4. Na hospedagem, execute antes de iniciar a aplicação atualizada:
+
+   python manage.py migrate --noinput
+   python manage.py collectstatic --noinput
+
+   Se o deploy já executa esses comandos, confira no log o sucesso das
+   migrations 0049_materiais_codigos_fotos e 0050_preencher_codigos_materiais.
+   Não é necessário rodar makemigrations.
+   Não use --fake nem remova migrations existentes para contornar erros.
+5. Reinicie/aguarde o deploy e recarregue o navegador.
+
+Não basta atualizar os arquivos Python sem migrar o banco: as telas que
+consultam materiais precisam dos campos novos.
+As fotos usam o armazenamento já configurado pelo projeto (Cloudinary em
+produção). Não há mudança de credenciais, serviços ou dependências Python.
+Se já houver migrations 0049/0050 diferentes no seu projeto, não substitua:
+envie-as para conciliar as dependências primeiro.
+
+CÓDIGOS
+- Tipo Arduino -> ard; novos materiais: ard-0001, ard-0002, ard-0003...
+- Prefixo automático pelas três primeiras letras normalizadas do tipo.
+- Tipos com o mesmo início recebem prefixos distintos: ard, ard2 etc.
+- Sem tipo usa mat-0001 etc.; mat fica reservado para essa finalidade.
+- O número é atribuído no servidor no momento de salvar, não no navegador.
+- A sequência é protegida por transação e bloqueio de linha no PostgreSQL.
+- Excluir um material não devolve o número para reutilização.
+- Códigos já preenchidos são preservados, inclusive os antigos manuais.
+  A migração preenche apenas códigos vazios, em ordem de cadastro.
+- Editar/renomear/reclassificar o material não altera seu código, para não
+  invalidar etiquetas e referências existentes. Renomear o tipo também
+  preserva o prefixo. Os novos cadastros seguem o prefixo do tipo escolhido.
+- Códigos legados duplicados não são renumerados por este pacote.
+
+FOTOS E ECONOMIA
+- Foto opcional no cadastro de Materiais e no cadastro rápido do Estoque.
+- Aceita JPG, PNG e WebP de até 5 MB e 20 megapixels.
+- Valida o conteúdo real, corrige orientação e gera WebP sem metadados EXIF.
+- Prévia com até 960 px; miniatura com até 160 px, sem ampliar fotos menores.
+- Lista com miniaturas de carregamento sob demanda; imagem maior só abre
+  no formulário. Prévia local antes de salvar, sem enviar a foto ao selecionar.
+- Imagem inteira em moldura com cantos arredondados, sem corte nem zoom.
+- Editar sem enviar nova foto mantém a atual. A opção Remover foto atual
+  retira a associação do cadastro; arquivos anteriores não são apagados do
+  armazenamento remoto automaticamente por este pacote.
+- Materiais paginados em 30 itens, pesquisa por nome/código/descrição.
+- Contagens de tipos e fornecedores agregadas, sem consulta extra por linha.
+
+AVISO DE TEMA
+- Símbolo do tema escolhido no aviso e no topo.
+- Sol: dourado. Lua: azul-prateado. Eclipse: dourado/lilás.
+- Sem o verde de confirmação genérica na troca de tema.
+- Trocas rápidas substituem o aviso anterior em vez de empilhar pop-ups.
+
+VALIDAÇÃO REALIZADA
+- Suíte Django: 832 testes, sem falhas; 3 ignorados pelo ambiente.
+- Banco de teste SQLite isolado; não foram usadas contas/banco de produção.
+- Testes de sequência, exclusão, códigos legados e preenchimento da migração.
+- Upload válido/inválido, compactação, proporção, remoção, cadastro rápido
+  e paginação. Comportamento JavaScript validado com Node/jsdom.
+- Concorrência em PostgreSQL e aparência em navegador real não foram
+  exercitadas neste ambiente; confirmar no teste de homologação.
+
+CONFERÊNCIA APÓS INSTALAR
+1. Crie um tipo Arduino (ou use o existente), e dois materiais sem código.
+2. Confira os códigos sequenciais gerados; não espere renumeração de legados.
+3. Envie uma foto, reabra a edição, salve sem novo upload e confira a imagem.
+4. Teste o cadastro rápido de material dentro do estoque.
+5. Troque os três temas e confira símbolo, cor e ausência de avisos empilhados.
+
+Não publicado automaticamente e nenhuma notificação enviada a usuários.

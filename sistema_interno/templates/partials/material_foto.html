@@ -1,0 +1,14 @@
+<div class="ls-foto-editor" data-foto-editor>
+  <div class="ls-foto-previa">
+    <img data-foto-previa hidden alt="Pré-visualização do material" decoding="async">
+    <span data-foto-vazia><i class="bi bi-image" aria-hidden="true"></i> Sem foto</span>
+  </div>
+  <div>
+    <label class="form-label">Foto do material
+      <input type="file" class="form-control mt-2" name="foto" accept="image/jpeg,image/png,image/webp" data-foto-input>
+    </label>
+    <small>JPG, PNG ou WebP · até 5 MB. Imagem inteira, sem zoom. Compactada automaticamente ao salvar.</small>
+    <label class="form-check"><input type="checkbox" class="form-check-input" name="remover_foto" data-foto-remover> Remover foto atual</label>
+    <small data-foto-erro role="status"></small>
+  </div>
+</div>

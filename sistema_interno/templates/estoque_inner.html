@@ -343,7 +343,7 @@
 {% endcomment %}
 <div class="modal fade" id="modalMaterialRapido" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-scrollable">
-    <form class="modal-content" id="formMaterialRapido" method="post" action="{% url 'stock' %}">
+    <form class="modal-content" id="formMaterialRapido" method="post" enctype="multipart/form-data" action="{% url 'stock' %}">
       {% csrf_token %}
       <input type="hidden" name="action" value="save_material">
       <div class="modal-header">
@@ -355,6 +355,7 @@
       </div>
       <div class="modal-body">
         <div id="materialRapidoErro" class="alert alert-danger d-none" role="alert"></div>
+        {% include "partials/material_foto.html" %}
         <p class="text-muted small">
           Entra no cadastro de materiais e já fica escolhido nesta linha,
           sem perder o que você digitou.
@@ -367,7 +368,7 @@
           </div>
           <div class="col-12 col-md-4">
             <label class="form-label" for="materialRapidoCodigo">Código interno</label>
-            <input class="form-control" id="materialRapidoCodigo" name="codigo_interno" maxlength="30">
+            <input class="form-control" id="materialRapidoCodigo" name="codigo_interno" maxlength="30" readonly placeholder="Gerado ao salvar">
           </div>
           <div class="col-12">
             <label class="form-label" for="materialRapidoDescricao">Descrição</label>
@@ -600,9 +601,11 @@ LSTela.pronto(function () {
     return campo;
   }
 
+  var fotoMaterialRapido = Painel.fotoMaterial(document.getElementById("formMaterialRapido"));
   document.getElementById("novoMaterialRapido").addEventListener("click", function () {
     var form = document.getElementById("formMaterialRapido");
     form.reset();
+    fotoMaterialRapido("");
     document.getElementById("materialRapidoAtivo").checked = true;
     Painel.erro("materialRapidoErro", "");
     Painel.abrirFilho("modalMaterialRapido", "modalItem");
