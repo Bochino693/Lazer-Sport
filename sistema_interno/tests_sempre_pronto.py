@@ -260,12 +260,12 @@ class EsperaDoDespertarTests(SimpleTestCase):
 
         # O pedido sabe se é de fundo, e o aviso respeita isso.
         self.assertIn(
-            "function requisitar(url, tentativa, silencioso, pedaco)", navegacao
+            "function requisitar(url, tentativa, silencioso, pedaco, versao)", navegacao
         )
-        self.assertIn("if (tentativa > 0 && !silencioso) escalarLoader(tentativa);", navegacao)
+        self.assertIn("if (tentativa > 0 && !silencioso && versao === navegacao && navegacaoPendente) escalarLoader(tentativa);", navegacao)
         # O silêncio atravessa as repetições, senão a segunda volta a falar.
         self.assertEqual(
-            navegacao.count("requisitar(url, tentativa + 1, silencioso, pedaco)"), 2
+            navegacao.count("requisitar(url, tentativa + 1, silencioso, pedaco, versao)"), 2
         )
         # E a antecipação pede calada.
         self.assertIn("buscar(url, true, pedaco)", navegacao)
@@ -312,7 +312,15 @@ class EsperaDoDespertarTests(SimpleTestCase):
         """
         navegacao = self.ler("ls-soft-navigation.js")
 
-        self.assertIn("Servidor acordando (até 1 minuto na primeira vez)", navegacao)
+        self.assertIn("Aguardando resposta da conexão", navegacao)
+
+    def test_recuperacao_nao_reinicia_tentativas_em_loop(self):
+        navegacao = self.ler("ls-soft-navigation.js")
+        bloco = navegacao.split("function mostrarRecuperacao(", 1)[1].split("function fecharMenuMovel(", 1)[0]
+        self.assertNotIn("setTimeout", bloco)
+        self.assertIn("A tentativa terminou", bloco)
+        self.assertIn("versao !== navegacao", navegacao)
+        self.assertIn("return garantirFolhas(novoDoc).then", navegacao)
 
 
 class _SessaoFalsa:

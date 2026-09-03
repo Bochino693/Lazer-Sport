@@ -3936,7 +3936,7 @@ body.modal-open .ls-action-fab-menu{display:none!important}
   width:42px;height:42px;display:grid;place-items:center;border-radius:12px;
   color:var(--acento-claro);background:rgba(var(--acento-rgb),.14);font-size:1.05rem;
 }
-.ls-nav-recovery-icon i{animation:ls-gira 1.1s linear infinite}
+.ls-nav-recovery-icon i{animation:none}
 .ls-nav-recovery-copy strong,.ls-nav-recovery-copy small{display:block}
 .ls-nav-recovery-copy strong{color:var(--acento-claro);font-size:.88rem;font-weight:950}
 .ls-nav-recovery-copy small{margin-top:2px;color:var(--text-2);font-size:.72rem;line-height:1.35}
@@ -4439,38 +4439,53 @@ button.ls-incomplete-chip:focus-visible{outline:3px solid rgba(var(--red-rgb),.3
    e é o mesmo aparelho.
    ====================================================================== */
 .ls-tema{
-  display:inline-flex;align-items:center;gap:2px;
-  padding:3px;border:1px solid var(--line);border-radius:999px;
-  background:var(--panel-soft);
+  position:relative;flex-shrink:0;
 }
+.ls-tema-gatilho{display:flex;align-items:center;gap:9px;min-height:44px;padding:6px 12px;border:1px solid var(--line);border-radius:13px;background:var(--panel-soft);color:var(--text);font:inherit;font-size:.76rem;cursor:pointer;text-align:left}
+.ls-tema-gatilho>i:first-child{font-size:1.15rem;color:var(--acento-texto)}
+.ls-tema-gatilho small{display:block;color:var(--muted);font-size:.65rem}
+.ls-tema-gatilho>i:last-child{font-size:.65rem;transition:transform .16s}
+.ls-tema-gatilho[aria-expanded="true"]>i:last-child{transform:rotate(180deg)}
+.ls-tema-painel{position:absolute;right:0;top:calc(100% + 10px);z-index:1100;width:360px;max-width:calc(100vw - 24px);padding:17px;border:1px solid var(--line-forte);border-radius:20px;background:var(--panel);color:var(--text);box-shadow:0 18px 48px rgba(var(--sombra-rgb),calc(.4 * var(--sombra-forca)))}
+.ls-tema-painel[hidden]{display:none}
+.ls-tema-painel>strong{font-size:.94rem}
+.ls-tema-painel>p{margin:4px 0 14px;color:var(--muted);font-size:.76rem}
+.ls-tema-opcoes{display:grid;gap:8px}
 .ls-tema-botao{
-  width:38px;height:38px;display:grid;place-items:center;
-  border:0;border-radius:999px;cursor:pointer;
-  color:var(--muted);background:transparent;
-  font-size:1rem;line-height:1;
+  width:100%;min-height:76px;padding:10px;display:grid;grid-template-columns:32px minmax(0,1fr) 42px 15px;align-items:center;gap:9px;
+  border:1px solid var(--line);border-radius:13px;cursor:pointer;
+  color:var(--text-2);background:var(--panel-soft);text-align:left;
+  font:inherit;line-height:1.3;
   transition:color .16s ease,background .16s ease,transform .16s ease;
 }
 /* Os três desenhos são SVG escritos no template (ver `base_inner.html`).
    Aqui só o tamanho: a cor vem de `currentColor`, então o ícone aceso
    acompanha o botão sem uma regra por estado. */
-.ls-tema-icone{width:1.45em;height:1.45em;display:block;overflow:visible}
+.ls-tema-icone{width:30px;height:30px;display:block;overflow:visible}
+.ls-tema-texto strong{display:block;font-size:.78rem;color:var(--text)}
+.ls-tema-texto small{display:block;margin-top:4px;font-size:.66rem;color:var(--muted);font-weight:400}
+.ls-tema-amostra svg{display:block;width:42px;height:28px}
+.ls-tema-check{visibility:hidden;color:var(--acento-texto);font-size:.85rem}
+.ls-tema-botao.ativo .ls-tema-check{visibility:visible}
+.ls-tema-nota{display:block;margin-top:13px;color:var(--muted);font-size:.66rem}
 .ls-tema-botao:hover{color:var(--text-2);background:rgba(var(--verniz-rgb),.07)}
-.ls-tema-botao:focus-visible{
+.ls-tema-botao:focus-visible,.ls-tema-gatilho:focus-visible{
   outline:3px solid rgba(var(--acento-rgb),.45);outline-offset:2px;
 }
 .ls-tema-botao.ativo{
-  color:var(--tinta);background:var(--acento);
-  box-shadow:0 3px 12px rgba(var(--acento-rgb),.42),inset 0 1px rgba(var(--verniz-rgb),.28);
+  color:var(--acento-texto);background:rgba(var(--acento-rgb),.09);border-color:var(--acento-texto);
+  box-shadow:inset 0 0 0 1px rgba(var(--acento-rgb),.15);
 }
 @media (max-width:720px){
-  .ls-tema-botao{width:34px;height:34px;font-size:.92rem}
+  .ls-tema-gatilho{width:44px;height:44px;padding:0;justify-content:center}
+  .ls-tema-gatilho>span,.ls-tema-gatilho>i:last-child{display:none}
+  .ls-tema-painel{position:fixed;top:calc(var(--topbar-h) + 8px);right:12px;width:360px;max-height:calc(var(--ls-vh) - var(--topbar-h) - 32px);overflow-y:auto}
 }
-/* Numa tela muito estreita a barra do topo já disputa espaço com o
-   título e o sino. O eclipse sai primeiro por ser o meio-termo: quem o
-   escolheu continua nele, e a troca completa segue disponível assim que
-   houver largura. */
+/* As três escolhas continuam disponíveis mesmo em telas de 320px. */
 @media (max-width:380px){
-  .ls-tema-botao[data-tema-escolha="eclipse"]{display:none}
+  .ls-tema-painel{padding:13px}
+  .ls-tema-botao{grid-template-columns:28px minmax(0,1fr) 36px 15px;gap:6px}
+  .ls-tema-amostra svg{width:36px}
 }
 
 /* ---------------------------------------------------------- o papel

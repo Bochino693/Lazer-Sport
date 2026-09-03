@@ -331,6 +331,17 @@ class TemaAplicadoAntesDoPrimeiroPixelTests(SimpleTestCase):
             self.assertIn(f'data-tema-escolha="{tema}"', base)
         self.assertEqual(base.count('aria-pressed="false"'), 3)
         self.assertIn('role="group"', base)
+    def test_aparencia_tem_seletor_recolhido_e_opcoes_com_nomes(self):
+        base = self.base()
+        self.assertIn('id="lsAparenciaPainel" hidden', base)
+        self.assertIn('aria-controls="lsAparenciaPainel"', base)
+        self.assertIn('id="lsTemaAtual"', base)
+        for nome in ('Sol · Claro', 'Eclipse · Suave', 'Lua · Escuro'):
+            self.assertIn(nome, base)
+        self.assertIn('evento.key === "Escape"', base)
+        self.assertIn('fecharAparencia(true)', base)
+        self.assertNotIn('M8.7 10.2c.8-.7', base)
+
     def test_cada_botao_de_tema_desenha_o_que_promete(self):
         """O do meio é o motivo de os três serem desenhados na casa.
 

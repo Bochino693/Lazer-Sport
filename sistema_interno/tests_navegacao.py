@@ -202,7 +202,7 @@ class ScriptDeTelaNaoEsperaDOMContentLoadedTests(SimpleTestCase):
         # veio da rede -- e esse caminho carrega a versão do clique.
         self.assertIn("var cache = recuperar(alvo, soAsPartes);", navegacao)
         self.assertIn(
-            "if (cache && aplicar(cache, alvo, soAsPartes)) return Promise.resolve();",
+            "Promise.resolve().then(function () { return aplicar(cache, alvo, soAsPartes); })",
             navegacao,
         )
         self.assertIn("aplicarTela(novoDoc, url, modoHistorico, versao)", navegacao)

@@ -1,0 +1,33 @@
+LAZER SPORT - APARENCIA V2
+
+Atualizacao complementar ao ZIP de economia de banda enviado anteriormente.
+Este pacote altera o seletor de temas, a navegacao e seus testes (6 arquivos).
+Nao modifica as correcoes de banda nem o volume de notificacao.
+
+1. Faca backup dos arquivos correspondentes.
+2. Extraia na raiz do projeto, onde fica manage.py.
+3. Mescle a pasta sistema_interno; substitua apenas os arquivos incluidos.
+   Nao apague a pasta inteira.
+4. Se houve outras alteracoes locais nesses arquivos, compare antes de substituir.
+5. Teste com: python manage.py test --settings=lazer.settings_test
+6. Suba ao Git normalmente. O deploy deve executar collectstatic.
+
+NOVO
+- Sol sem olhos, boca ou rosto: 16 raios, aro interno e brilho suave.
+- Lua e Eclipse tambem sem rosto, com detalhes celestes.
+- Um botao Aparencia abre Claro, Suave e Escuro com nomes e miniaturas.
+- Opcao ativa marcada; escolha salva no aparelho.
+- Escape, clique fora e saida do foco fecham o painel.
+- As tres opcoes continuam acessiveis no celular.
+- Sem imagens externas, downloads novos ou chamadas de API.
+
+NAVEGACAO
+- Remove o reinicio automatico das tentativas a cada 3,5 segundos.
+- Apos duas tentativas frustradas, encerra o carregamento e oferece tentativa manual.
+- Respostas antigas nao substituem uma navegacao mais recente nem reativam o loader.
+- A promessa da troca so termina depois da montagem do conteudo.
+- Nao afirma que o servidor esta acordando quando a causa da falha e desconhecida.
+- Falhas reais de rede/servidor ainda podem ocorrer; o pacote impede o loop local.
+
+Nao inclui .env, banco de dados, migracoes nem .git.
+Nao foi publicado automaticamente no GitHub ou Render.
