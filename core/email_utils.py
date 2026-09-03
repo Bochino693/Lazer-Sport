@@ -97,13 +97,20 @@ def responder_para(usuario=None) -> list[str]:
     return candidatos
 
 
+def backend_de_transporte() -> str:
+    backend = getattr(settings, "EMAIL_BACKEND", "")
+    if backend == "core.email_backend.EmailBackend":
+        return getattr(settings, "EMAIL_TRANSPORT_BACKEND", "django.core.mail.backends.smtp.EmailBackend")
+    return backend
+
+
 def smtp_configurado() -> bool:
     """Diz se dá para tentar enviar, sem esperar o timeout do SMTP.
 
     Backend que não é SMTP (console, arquivo, memória nos testes) sempre
     entrega: a checagem de credencial só faz sentido para o SMTP real.
     """
-    backend = getattr(settings, "EMAIL_BACKEND", "")
+    backend = backend_de_transporte()
     if "smtp" not in backend:
         return True
 
@@ -120,7 +127,7 @@ def diagnostico_smtp() -> str:
     envio está disponível e, quando não está, qual grupo de configuração
     falta na hospedagem.
     """
-    backend = getattr(settings, "EMAIL_BACKEND", "")
+    backend = backend_de_transporte()
     if "smtp" not in backend:
         return "Envio de e-mail disponível pelo backend configurado."
     faltam = []

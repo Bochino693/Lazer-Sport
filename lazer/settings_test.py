@@ -32,7 +32,8 @@ DEFAULT_FILE_STORAGE = STORAGES["default"]["BACKEND"]
 PASSWORD_HASHERS = [
     "django.contrib.auth.hashers.MD5PasswordHasher",
 ]
-EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
+EMAIL_BACKEND = "core.email_backend.EmailBackend"
+EMAIL_TRANSPORT_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
 
 # Os campos de imagem apontam para o Cloudinary direto no modelo, então o
 # storage de teste não os alcança: montar a URL exigia cloud_name e o teste

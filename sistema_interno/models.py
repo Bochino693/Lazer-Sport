@@ -524,6 +524,12 @@ class Material(Prime):
         ordering = ("nome_material",)
 
 
+class HistoricoCodigoMaterial(Prime):
+    material = models.ForeignKey(Material, on_delete=models.PROTECT, related_name="historico_codigos")
+    anterior = models.CharField(max_length=30, blank=True)
+    novo = models.CharField(max_length=30)
+
+
 class Colaborador(Prime):
     """Pessoa da fábrica citada na produção, sem conta de acesso.
 
@@ -582,15 +588,22 @@ class EstoqueMaterial(Prime):
     CRITICO = "critico"
 
     descricao_local = models.CharField("Local de guarda", max_length=90)
-    material = models.ForeignKey(Material, on_delete=models.CASCADE, related_name='estoque')
+    material = models.ForeignKey(Material, on_delete=models.PROTECT, related_name='estoque')
     quantidade = models.IntegerField(default=1)
     # max_digits=6 travava o cadastro em R$ 9.999,99, o que não cobre
     # lona, motor, inflável nem compra fechada de fornecedor.
     preco_fornecedor = models.DecimalField(
-        "Valor pago por unidade",
+        "Custo médio por unidade",
         decimal_places=2,
         max_digits=12,
     )
+    saldo_valor = models.DecimalField(max_digits=22, decimal_places=2, null=True, blank=True, editable=False)
+    custo_estimado = models.BooleanField(default=False, editable=False)
+
+    def save(self, *args, **kwargs):
+        if self.saldo_valor is None:
+            self.saldo_valor = (Decimal(str(self.preco_fornecedor or 0)) * max(self.quantidade, 0)).quantize(Decimal("0.01"))
+        return super().save(*args, **kwargs)
     fornecedor = models.ForeignKey(
         Fornecedor,
         on_delete=models.SET_NULL,
@@ -609,6 +622,8 @@ class EstoqueMaterial(Prime):
 
     @property
     def valor_total(self):
+        if self.saldo_valor is not None:
+            return self.saldo_valor
         preco = self.preco_fornecedor or Decimal("0.00")
         return (preco * max(self.quantidade, 0)).quantize(Decimal("0.01"))
 
@@ -656,7 +671,7 @@ class MovimentoEstoque(Prime):
 
     estoque = models.ForeignKey(
         EstoqueMaterial,
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         related_name="movimentos",
     )
     tipo = models.CharField(max_length=10, choices=Tipo.choices, db_index=True)
@@ -683,9 +698,19 @@ class MovimentoEstoque(Prime):
         blank=True,
     )
     ocorrido_em = models.DateTimeField(default=timezone.now, db_index=True)
+    fornecedor = models.ForeignKey(Fornecedor, on_delete=models.SET_NULL, null=True, blank=True, related_name="compras_registradas")
+    fornecedor_nome = models.CharField(max_length=120, blank=True)
+    data_compra = models.DateField(null=True, blank=True)
+    variacao_valor = models.DecimalField(max_digits=22, decimal_places=2, null=True, blank=True, editable=False)
+    saldo_valor_resultante = models.DecimalField(max_digits=22, decimal_places=2, null=True, blank=True, editable=False)
+    custo_estimado = models.BooleanField(default=False, editable=False)
 
     @property
     def valor_total(self):
+        if self.tipo != self.Tipo.ENTRADA:
+            if self.variacao_valor is None:
+                return None  # O histórico antigo não registrava o custo efetivo da baixa.
+            return -self.variacao_valor if self.tipo == self.Tipo.SAIDA else self.variacao_valor
         if self.valor_unitario is None:
             return None
         return (self.valor_unitario * self.quantidade).quantize(Decimal("0.01"))
@@ -698,8 +723,12 @@ class MovimentoEstoque(Prime):
         select_for_update evita que duas baixas simultâneas leiam a
         mesma quantidade e gravem o mesmo resultado.
         """
+        if tipo not in cls.Tipo.values:
+            raise ValueError("Tipo de movimento inválido.")
+        if Decimal(str(quantidade)) != int(quantidade):
+            raise ValueError("Informe uma quantidade inteira.")
         quantidade = int(quantidade)
-        if quantidade <= 0:
+        if quantidade < 0 or (quantidade == 0 and tipo != cls.Tipo.AJUSTE):
             raise ValueError("Informe uma quantidade maior que zero.")
 
         travado = (
@@ -720,16 +749,42 @@ class MovimentoEstoque(Prime):
         else:
             resultante = quantidade
 
+        if resultante < 0 or resultante > 2147483647:
+            raise ValueError("O saldo resultante está fora do limite permitido.")
+
+        saldo_anterior = travado.valor_total
+        medio = saldo_anterior / travado.quantidade if travado.quantidade else Decimal(str(travado.preco_fornecedor))
+        estimado = travado.custo_estimado
+        if tipo == cls.Tipo.ENTRADA:
+            valor = extras.get("valor_unitario")
+            if valor is None:
+                raise ValueError("Informe o preço unitário desta compra, inclusive se for zero.")
+            valor = Decimal(str(valor))
+            if not valor.is_finite() or valor < 0 or valor > Decimal("9999999999.99"):
+                raise ValueError("Preço unitário inválido.")
+            valor = valor.quantize(Decimal("0.01"))
+            extras["valor_unitario"] = valor
+            variacao = (valor * quantidade).quantize(Decimal("0.01"))
+            fornecedor = extras.get("fornecedor")
+            extras["fornecedor_nome"] = fornecedor.nome if fornecedor else ""
+        else:
+            if tipo == cls.Tipo.AJUSTE and not str(extras.get("motivo", "")).strip():
+                raise ValueError("Informe o motivo do ajuste de contagem.")
+            extras["valor_unitario"] = medio.quantize(Decimal("0.01"))
+            variacao = ((resultante - travado.quantidade) * medio).quantize(Decimal("0.01"))
+            extras.pop("fornecedor", None)
+            extras.pop("data_compra", None)
+        # A última baixa zera também os centavos residuais.
+        if resultante == 0:
+            variacao = -saldo_anterior
+        if tipo == cls.Tipo.AJUSTE and resultante > travado.quantidade and not travado.quantidade:
+            estimado = True
         travado.quantidade = resultante
-
-        campos = ["quantidade", "atualizado"]
-        valor_unitario = extras.get("valor_unitario")
-        if tipo == cls.Tipo.ENTRADA and valor_unitario:
-            # A compra mais recente passa a ser o valor de referência.
-            travado.preco_fornecedor = valor_unitario
-            campos.append("preco_fornecedor")
-
-        travado.save(update_fields=campos)
+        travado.saldo_valor = saldo_anterior + variacao
+        travado.preco_fornecedor = (travado.saldo_valor / resultante).quantize(Decimal("0.01")) if resultante else Decimal("0.00")
+        travado.custo_estimado = estimado if resultante else False
+        travado.save(update_fields=["quantidade", "saldo_valor", "preco_fornecedor", "custo_estimado", "atualizado"])
+        extras.update(variacao_valor=variacao, saldo_valor_resultante=travado.saldo_valor, custo_estimado=estimado)
 
         return cls.objects.create(
             estoque=travado,
@@ -989,14 +1044,10 @@ class ItemFichaTecnica(Prime):
 
     @property
     def preco_referencia(self):
-        """Último preço pago; na falta dele, zero em vez de quebrar a tela."""
-        local = (
-            self.material.estoque
-            .exclude(preco_fornecedor=None)
-            .order_by("-atualizado")
-            .first()
-        )
-        return local.preco_fornecedor if local else Decimal("0.00")
+        """Custo médio ponderado dos saldos disponíveis, não a última compra."""
+        locais = list(self.material.estoque.filter(quantidade__gt=0))
+        quantidade = sum(local.quantidade for local in locais)
+        return sum((local.valor_total for local in locais), Decimal("0.00")) / quantidade if quantidade else Decimal("0.00")
 
     @property
     def custo_estimado(self):

@@ -37,9 +37,13 @@
   <article class="ls-metric-card yellow">
     <div class="ls-metric-head"><span class="ls-metric-label">Valor das entradas</span><span class="ls-metric-icon"><i class="bi bi-cash-coin"></i></span></div>
     <strong class="ls-metric-value">R$ {{ valor_comprado|moeda }}</strong>
-    <span class="ls-metric-note">Pago nas entradas listadas</span>
+    <span class="ls-metric-note">Compras registradas nos filtros; não confirma pagamento</span>
   </article>
+  <article class="ls-metric-card"><span class="ls-metric-label">Custo das saídas</span><strong class="ls-metric-value">R$ {{ custo_saidas|moeda }}</strong><span class="ls-metric-note">Custo médio registrado nas baixas</span></article>
+  <article class="ls-metric-card"><span class="ls-metric-label">Variação por ajustes</span><strong class="ls-metric-value">R$ {{ valor_ajustes|moeda }}</strong><span class="ls-metric-note">Não é compra nem pagamento</span></article>
 </section>
+<p class="ls-subtext">Balanço operacional por data de lançamento. Totais incluem todos os registros filtrados; 50 por página. Não é fluxo de caixa, lucro ou balanço contábil.</p>
+{% if sem_custo or estimados or sem_preco %}<div class="alert alert-warning">{{ sem_custo }} movimentos antigos sem custo de baixa/ajuste conhecido; {{ sem_preco }} entradas sem preço; {{ estimados }} movimentos com custo estimado. Totais podem estar incompletos. O histórico não foi inventado.</div>{% endif %}
 
 <section class="ls-filter-panel">
   <form method="get" class="row g-3 align-items-end">
@@ -95,6 +99,7 @@
               <td>
                 <strong>{{ m.estoque.material.nome_material }}</strong>
                 <span class="d-block ls-subtext">{{ m.estoque.descricao_local }}</span>
+                {% if m.tipo == "entrada" %}<span class="d-block ls-subtext">{{ m.fornecedor_nome|default:"Fornecedor não registrado nesta compra" }}{% if m.data_compra %} · Compra: {{ m.data_compra|date:"d/m/Y" }}{% endif %}</span>{% endif %}
               </td>
               <td>
                 {% if m.tipo == "entrada" %}
@@ -106,7 +111,7 @@
                 {% endif %}
               </td>
               <td class="text-end ls-number">
-                {% if m.tipo == "entrada" %}+{% elif m.tipo == "saida" %}−{% endif %}{{ m.quantidade }}
+                {% if m.tipo == "entrada" %}+{% elif m.tipo == "saida" %}−{% else %}Saldo ajustado: {% endif %}{{ m.quantidade }}
               </td>
               <td class="text-end ls-number">{{ m.quantidade_resultante }}</td>
               <td class="text-end">
@@ -129,10 +134,12 @@
       </table>
     </div>
 
-    {% if total_movimentos >= 400 %}
-      <div class="p-3 border-top" style="border-color:var(--line-soft)!important">
-        <span class="ls-subtext">Mostrando os 400 movimentos mais recentes. Use filtros de data para consultar períodos anteriores.</span>
-      </div>
+    {% if pagina.paginator.num_pages > 1 %}
+      <nav class="d-flex flex-wrap gap-3 align-items-center p-3" aria-label="Páginas de movimentações">
+        {% if pagina.has_previous %}<a class="btn btn-outline-secondary" href="?{{ filtros_url }}&amp;page={{ pagina.previous_page_number }}">Anterior</a>{% endif %}
+        <span>Página {{ pagina.number }} de {{ pagina.paginator.num_pages }}</span>
+        {% if pagina.has_next %}<a class="btn btn-outline-secondary" href="?{{ filtros_url }}&amp;page={{ pagina.next_page_number }}">Próxima</a>{% endif %}
+      </nav>
     {% endif %}
   </div>
 </section>

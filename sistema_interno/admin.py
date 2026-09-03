@@ -125,6 +125,13 @@ class FornecedorAdmin(admin.ModelAdmin):
 
 @admin.register(EstoqueMaterial)
 class EstoqueMaterialAdmin(admin.ModelAdmin):
+    def has_add_permission(self, request):
+        return False  # Cadastro e saldo inicial passam pela tela de estoque.
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    readonly_fields = ("material", "quantidade", "preco_fornecedor", "saldo_valor", "custo_estimado")
     list_display = (
         'material', 'descricao_local', 'fornecedor',
         'quantidade', 'estoque_minimo', 'preco_fornecedor',
@@ -138,6 +145,14 @@ class EstoqueMaterialAdmin(admin.ModelAdmin):
 
 @admin.register(MovimentoEstoque)
 class MovimentoEstoqueAdmin(admin.ModelAdmin):
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
     list_display = (
         'ocorrido_em', 'estoque', 'tipo', 'quantidade',
         'quantidade_resultante', 'valor_unitario', 'responsavel',

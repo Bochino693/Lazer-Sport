@@ -660,7 +660,8 @@ MP_PUBLIC_KEY = _credencial_mp("MP_PUBLIC_KEY")
 # Qualquer outro provedor SMTP (Brevo, Mailgun, Resend, Zoho, etc.)
 # funciona trocando EMAIL_HOST/EMAIL_PORT e as credenciais.
 # ============================================================
-EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_BACKEND = "core.email_backend.EmailBackend"
+EMAIL_TRANSPORT_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_HOST = os.getenv("EMAIL_HOST", "smtp.gmail.com").strip()
 EMAIL_PORT = int(os.getenv("EMAIL_PORT", "587").strip() or "587")
 EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "true").strip().lower() == "true"

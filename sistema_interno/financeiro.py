@@ -256,7 +256,7 @@ def indicadores(serie):
     capital = EstoqueMaterial.objects.aggregate(
         total=Coalesce(
             Sum(
-                F("quantidade") * F("preco_fornecedor"),
+                F("saldo_valor"),
                 output_field=DecimalField(max_digits=14, decimal_places=2),
             ),
             Value(ZERO, output_field=DecimalField(max_digits=14, decimal_places=2)),

@@ -1,0 +1,136 @@
+LAZER & SPORT — CÓDIGOS, COMPRAS E CUSTOS DE ESTOQUE V5
+
+Pacote complementar para o projeto com a V4 aplicada.
+Não apague pastas: mescle e substitua somente os arquivos do ZIP.
+
+ANTES DE INSTALAR
+Faça backup do banco e um commit/cópia dos arquivos atuais.
+Se já houver migrations 0051 ou 0052 diferentes no seu projeto, não as
+sobrescreva: é necessário conciliar as dependências antes.
+Não execute alterações enquanto outras pessoas estiverem cadastrando
+materiais, compras ou baixas. Prefira uma janela de manutenção.
+
+INSTALAÇÃO
+1. Extraia na raiz do projeto, onde está manage.py, e suba ao Git.
+2. No deploy, antes de iniciar a aplicação atualizada:
+
+   python manage.py migrate --noinput
+   python manage.py collectstatic --noinput
+
+3. Confira o sucesso de 0051_custos_historico_estoque e
+   0052_saldos_iniciais_custos. Reinicie/aguarde o deploy e recarregue a tela.
+Não use --fake. Não é necessário executar makemigrations.
+Não houve alteração de credenciais, dependências Python ou serviços.
+
+PADRONIZAR OS CÓDIGOS JÁ EXISTENTES
+Na tela Materiais, clique em "Padronizar códigos existentes".
+Confira a prévia (material, código atual, código novo).
+Digite PADRONIZAR e aplique quando estiver de acordo.
+Confira antes se cada material está no tipo correto: Arduino deve estar no
+tipo Arduino para receber o prefixo ard. Sem tipo usa mat.
+
+O processo:
+- Conserva os IDs, fotos e relações com estoque, produção e brinquedos.
+- Mantém códigos já padronizados e únicos; corrige códigos antigos,
+  duplicados e prefixos que não correspondem ao tipo atual.
+- Respeita a sequência e não reaproveita números reservados.
+- Registra o código anterior e o novo em HistoricoCodigoMaterial.
+- A busca da tela Materiais também encontra o código anterior.
+- Pode ser executado novamente: não renumera o que já está correto.
+- Não renumera tudo para forçar uma ordem sem lacunas. A prévia mostra
+  exatamente o plano; se ocorrerem novos cadastros, recalcula ao confirmar.
+- Etiquetas e integrações externas que usam código textual, em vez do ID,
+  podem exigir atualização. Reimprima as etiquetas alteradas.
+
+Alternativa por terminal (a primeira é somente simulação):
+   python manage.py padronizar_codigos_materiais
+   python manage.py padronizar_codigos_materiais --aplicar
+
+MATERIAIS NÃO GUARDAM PREÇO DE COMPRA
+A coluna Investido saiu da tela de Materiais. O cadastro identifica o item:
+nome, código, foto, tipo e unidade. Fornecedores continuam sendo cadastros
+reutilizáveis. Valores e histórico de compra pertencem ao estoque.
+
+COMO REGISTRAR CADA COMPRA
+Estoque -> Movimentar -> Entrada:
+informe quantidade, preço desta compra, fornecedor, data e nota/pedido.
+Preço é obrigatório, inclusive quando for zero. Não se usa silenciosamente
+o preço anterior. Fornecedor pode ficar explicitamente não informado.
+
+Cada entrada conserva seu preço, documento, data da compra, responsável e
+uma cópia do nome do fornecedor. Renomear/excluir o fornecedor não troca a
+identificação histórica já registrada nessa compra.
+O fornecedor no cadastro do local é apenas uma referência operacional;
+o fornecedor de cada compra é o informado no movimento.
+A data da compra é guardada separadamente. Os filtros do relatório atual
+usam a data do lançamento, não a data retroativa da compra.
+
+CUSTO MÉDIO PONDERADO E SALDO
+Exemplo validado: 10 unidades a R$10 + 10 a R$20 = R$300 no estoque,
+20 unidades e custo médio de R$15. Saída de 4 = custo de R$60; saldo R$240.
+
+- A nova compra soma seu valor ao saldo: não reavalia tudo pelo último preço.
+- O valor total do saldo é mantido em centavos; o custo médio mostrado tem
+  duas casas. Os cálculos seguintes usam o saldo exato, não a média arredondada.
+- A última baixa zera os centavos residuais junto da quantidade.
+- Saídas usam o custo médio, inclusive as baixas automáticas da produção.
+- Ajuste informa o novo saldo físico e exige motivo; não é uma compra.
+  Ajustar para zero passa pela mesma transação/trava e zera o valor.
+- Acréscimo por ajuste num saldo vazio tem custo estimado, explicitamente
+  sinalizado; prefira uma entrada com preço conhecido quando for uma compra.
+- A quantidade continua inteira, conforme o modelo atual do sistema.
+- Alterar o formulário do local não altera o preço médio nem a quantidade.
+  Novas compras e correções de contagem devem usar movimentos.
+- Não se pode trocar o material de um local de estoque existente.
+- Locais com saldo ou movimentos não podem ser apagados com seu histórico.
+- No admin, movimentos são apenas consultáveis. O cadastro de novos saldos
+  é feito pela tela de Estoque, para gerar o registro inicial corretamente.
+- A referência de custo da ficha técnica usa a média dos saldos disponíveis
+  de todos os locais, e não o local modificado mais recentemente.
+
+BALANÇO OPERACIONAL E REAPROVEITAMENTO
+Movimentações agora apresenta compras registradas, custos de saída e
+variações de valor por ajustes. Os totais usam TODOS os movimentos dos filtros,
+independentemente da página. A tabela tem 50 linhas por página para economizar
+banda; o histórico anterior continua acessível pela paginação e filtros.
+No dashboard, compras por fornecedor usa o fornecedor histórico de cada
+entrada, não o fornecedor atual de referência do local.
+O indicador de capital em estoque do módulo financeiro passou a usar o mesmo
+saldo valorizado; as baixas e fichas técnicas reutilizam a mesma lógica.
+
+IMPORTANTE SOBRE DADOS ANTIGOS
+A versão anterior não preservava o custo de cada baixa nem o fornecedor de
+cada compra. A migração não inventa esses dados:
+- Inicializa o saldo monetário pelo valor cadastrado (quantidade x preço
+  antigo) e sinaliza como estimado quando existe saldo.
+- Não altera preços/documentos das compras antigas.
+- Não atribui o fornecedor atual a compras antigas sem identificação própria.
+- Saídas/ajustes antigos sem custo registrado aparecem sem esse custo.
+- O relatório sinaliza custos ausentes, entradas sem preço e custos estimados.
+- A estimativa acompanha as baixas até aquele saldo zerar. Para reconstruir
+  valores anteriores com precisão, será necessária conciliação com notas,
+  inventário físico e histórico real. Este pacote não faz essa conciliação.
+
+COMPRA NÃO SIGNIFICA PAGAMENTO
+Este é um balanço operacional de estoque, não um balanço contábil completo,
+fluxo de caixa ou lucro. Nenhuma conta a pagar/despesa foi criada automaticamente,
+para evitar duplicar lançamentos financeiros existentes. A conciliação entre
+compras, pagamentos, parcelas, frete e tributos deve ser uma etapa própria.
+
+TESTES
+Suíte Django: 841 testes, sem falhas; 3 ignorados pelo ambiente.
+Inclui simulação/aplicação repetida dos códigos, códigos duplicados, busca
+antiga, duas compras com preços diferentes, saídas, centavos, ajuste zero,
+preservação do histórico e totais com mais de 400 registros.
+Prévia de códigos e campos contextuais testados com Node/jsdom.
+Testes em SQLite isolado. Concorrência no PostgreSQL e interface em navegador
+real precisam de validação em homologação. Nenhum banco de produção alterado.
+
+CONFERIR APÓS O DEPLOY
+1. Simule a padronização, confira tipos e aplique se a prévia estiver correta.
+2. Em homologação, crie duas compras de teste com preços/fornecedores distintos.
+3. Faça uma saída e confira quantidade, valor e permanência das duas compras.
+4. Consulte os filtros e a paginação de Movimentações.
+5. Confira os avisos de saldo estimado antes de usar dados antigos num relatório.
+
+Não publicado automaticamente e nenhum dado real alterado nesta execução.
