@@ -1,0 +1,28 @@
+LAZER & SPORT - V8 - COLUNAS DAS TABELAS
+
+Complemento da V7. Copie a pasta sistema_interno para a raiz do projeto,
+substituindo os arquivos correspondentes. Preserve uma copia/commit antes.
+Envie ao Git e publique pelo fluxo habitual, incluindo collectstatic.
+Depois atualize o navegador com Ctrl+Shift+R. Nao exige migracao.
+
+Clientes: distribuicao explicita das sete colunas; mais espaco para nome,
+contato e endereco; valores alinhados a direita; propostas ao centro;
+acoes compactas. Textos longos quebram linha sem redefinir toda a tabela.
+Em larguras pequenas, preservados os cards de clientes; tabelas densas
+mantem rolagem horizontal em vez de reduzir o texto ate ficar ilegivel.
+
+Pedidos e vendas: perfis proprios de largura; data deixa de ficar fixa
+como se fosse o botao de acoes. Materiais, tipos e fornecedores recebem
+larguras apropriadas ao conteudo. Identificacao com foto pode encolher.
+Orcamentos e ordens de servico mantem seus perfis especializados.
+Nenhum dado, permissao, consulta ou regra financeira foi alterado.
+
+Validacao: suite Django e contratos de estrutura/largura no codigo.
+Nao foi possivel fazer inspecao visual em navegador neste ambiente.
+Conferir apos publicar em 1366 e 1920px, janela reduzida e celular:
+nomes/e-mails extensos, enderecos completos, valores altos, menu de acoes,
+filtros, paginacao e listas vazias. Em notebook estreito ou zoom alto,
+a rolagem horizontal da tabela e intencional para manter legibilidade.
+
+Teste local:
+python manage.py test --settings=lazer.settings_test --noinput

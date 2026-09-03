@@ -133,17 +133,23 @@
   </div>
 
   <div class="ls-data-body">
-    <div class="table-responsive ls-commercial-table-wrap">
+    <div class="table-responsive ls-commercial-table-wrap" tabindex="0" role="region" aria-label="Lista de clientes; role horizontalmente se necessário">
       <table class="ls-table ls-commercial-table ls-clientes-table">
+        <colgroup>
+          <col class="ls-col-cliente"><col class="ls-col-contato">
+          <col class="ls-col-vinculo"><col class="ls-col-endereco">
+          <col class="ls-col-propostas"><col class="ls-col-aprovado">
+          <col class="ls-col-acoes">
+        </colgroup>
         <thead>
           <tr>
-            <th>Cliente</th>
-            <th>Contato</th>
-            <th>Vínculo</th>
-            <th>Onde fica</th>
-            <th class="text-end">Propostas</th>
-            <th class="text-end">Aprovado</th>
-            <th class="text-end">Ações</th>
+            <th scope="col">Cliente</th>
+            <th scope="col">Contato</th>
+            <th scope="col">Vínculo</th>
+            <th scope="col">Onde fica</th>
+            <th scope="col" class="text-end">Propostas</th>
+            <th scope="col" class="text-end">Aprovado</th>
+            <th scope="col" class="text-end">Ações</th>
           </tr>
         </thead>
         <tbody>

@@ -3059,7 +3059,7 @@ input[type="number"]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0
   border:1px solid rgba(var(--red-rgb),.27);border-radius:8px;color:var(--red-claro);background:rgba(var(--red-rgb),.08);
   font-size:.69rem;font-weight:850;line-height:1.25;
 }
-.ls-clientes-table th:nth-child(4),.ls-clientes-table td:nth-child(4){min-width:245px}
+/* A largura do endereço é definida pelo perfil de colunas, não pelo texto. */
 
 /* Cards clicáveis têm o mesmo foco visível dos controles do formulário. */
 a.ls-metric-card{color:inherit}
@@ -3371,11 +3371,11 @@ a.ls-metric-card.active{border-color:var(--metric);box-shadow:0 0 0 2px rgba(var
    três palavras; deixá-lo ocupar duas linhas custa alguns pixels de
    altura no cabeçalho e devolve a palavra inteira. */
 .ls-commercial-table th{
-  white-space:normal;font-size:.69rem;letter-spacing:.045em;text-align:center;
+  white-space:normal!important;font-size:.69rem;letter-spacing:.045em;text-align:center;
   line-height:1.25;overflow-wrap:break-word;
 }
 .ls-commercial-table th:first-child,.ls-commercial-table td:first-child{text-align:left}
-.ls-commercial-table td{overflow-wrap:normal;word-break:normal}
+.ls-commercial-table td{overflow-wrap:anywhere;word-break:normal}
 .ls-commercial-table tbody tr{transition:background .16s ease}
 .ls-commercial-table td[data-rotulo="Nº"],
 .ls-commercial-table td[data-rotulo="OS"],
@@ -3483,7 +3483,27 @@ body.modal-open .ls-action-fab-menu{display:none!important}
 @media (min-width:721px){
   .ls-commercial-table{min-width:760px}
   .ls-orcamentos-table{min-width:980px}
-  .ls-clientes-table{min-width:900px}
+  .ls-clientes-table{min-width:900px;table-layout:fixed}
+  /* 58px para ações; o restante distribuído conforme o conteúdo.
+     Não deixar e-mail ou endereço redefinir a largura de toda a tabela. */
+  .ls-clientes-table .ls-col-cliente{width:calc(24% - 13.92px)}
+  .ls-clientes-table .ls-col-contato{width:calc(19% - 11.02px)}
+  .ls-clientes-table .ls-col-vinculo{width:calc(11% - 6.38px)}
+  .ls-clientes-table .ls-col-endereco{width:calc(23% - 13.34px)}
+  .ls-clientes-table .ls-col-propostas{width:calc(9% - 5.22px)}
+  .ls-clientes-table .ls-col-aprovado{width:calc(14% - 8.12px)}
+  .ls-clientes-table .ls-col-acoes{width:58px}
+  .ls-clientes-table th,.ls-clientes-table td{min-width:0;max-width:none;text-align:left;vertical-align:top}
+  .ls-table.ls-clientes-table th,.ls-table.ls-clientes-table td{padding:12px 9px!important}
+  .ls-clientes-table th{vertical-align:middle}
+  .ls-clientes-table td[data-rotulo="Propostas"],.ls-clientes-table th:nth-child(5){text-align:center!important}
+  .ls-clientes-table td[data-rotulo="Aprovado"],.ls-clientes-table th:nth-child(6){text-align:right!important}
+  .ls-clientes-table th:last-child{width:58px;text-align:center!important}
+  .ls-clientes-table .ls-money{font-variant-numeric:tabular-nums;white-space:normal;overflow-wrap:anywhere}
+  .ls-clientes-table .material-nome,.ls-clientes-table .material-sub,
+  .ls-clientes-table .ls-address-line{max-width:none;white-space:normal;overflow-wrap:anywhere}
+  .ls-clientes-table .ls-incomplete-chip{flex-wrap:wrap;min-width:0}
+  .ls-clientes-table .ls-incomplete-texto{min-width:0;flex:1 1 90px}
   .ls-os-body .ls-commercial-table{min-width:1040px}
   .ls-commercial-table th:last-child,.ls-commercial-table td:last-child{
     position:sticky;right:0;z-index:2;box-shadow:-10px 0 18px -16px rgba(var(--sombra-rgb),calc(.9 * var(--sombra-forca)));
@@ -3493,7 +3513,44 @@ body.modal-open .ls-action-fab-menu{display:none!important}
   .ls-commercial-table tbody tr:hover td:last-child{background:var(--bg-2)!important}
 }
 
+/* Perfis próprios: tabelas de sete colunas não têm todas a mesma estrutura.
+   Pedidos e vendas terminam em data, não em botão de ações fixo. */
+@media (min-width:721px){
+  .ls-pedidos-table,.ls-vendas-table{table-layout:fixed;min-width:900px}
+  .ls-pedidos-table th:nth-child(1),.ls-vendas-table th:nth-child(1){width:6%}
+  .ls-pedidos-table th:nth-child(2){width:23%;text-align:left}
+  .ls-pedidos-table th:nth-child(3){width:22%;text-align:left}
+  .ls-pedidos-table th:nth-child(4){width:14%}
+  .ls-pedidos-table th:nth-child(5){width:11%;text-align:left}
+  .ls-pedidos-table th:nth-child(6){width:12%}
+  .ls-pedidos-table th:nth-child(7){width:12%}
+  .ls-vendas-table th:nth-child(2){width:8%;text-align:left}
+  .ls-vendas-table th:nth-child(3){width:26%;text-align:left}
+  .ls-vendas-table th:nth-child(4){width:16%}
+  .ls-vendas-table th:nth-child(5){width:15%}
+  .ls-vendas-table th:nth-child(6){width:15%}
+  .ls-vendas-table th:nth-child(7){width:14%}
+  .ls-pedidos-table th:last-child,.ls-pedidos-table td:last-child,
+  .ls-vendas-table th:last-child,.ls-vendas-table td:last-child{position:static;box-shadow:none}
+  .ls-pedidos-table td,.ls-vendas-table td{white-space:normal!important;overflow-wrap:anywhere;vertical-align:top}
+  .ls-pedidos-table .material-nome,.ls-vendas-table .material-nome{white-space:normal;overflow-wrap:anywhere}
+  .ls-pedidos-table td.text-end,.ls-vendas-table td.text-end{font-variant-numeric:tabular-nums}
+}
+.ls-materiais-table,.ls-fornecedores-table,.ls-tipos-table{table-layout:fixed}
+.ls-materiais-table,.ls-fornecedores-table{min-width:760px}
+.ls-tipos-table{min-width:400px}
+.ls-materiais-table th:first-child,.ls-fornecedores-table th:first-child{width:36%}
+.ls-materiais-table th:nth-child(2),.ls-fornecedores-table th:nth-child(2){width:26%}
+.ls-materiais-table th:nth-child(3),.ls-fornecedores-table th:nth-child(3){width:20%}
+.ls-materiais-table th:last-child,.ls-fornecedores-table th:last-child,.ls-tipos-table th:last-child{width:64px;text-align:center!important}
+.ls-tipos-table th:nth-child(2){width:110px}
+.ls-materiais-table td,.ls-fornecedores-table td,.ls-tipos-table td{overflow-wrap:anywhere;white-space:normal;vertical-align:top}
+.ls-materiais-table th,.ls-fornecedores-table th,.ls-tipos-table th{white-space:normal!important}
+
 @media (max-width:720px){
+  .ls-clientes-table colgroup{display:none}
+  .ls-clientes-table td{min-width:0}
+  .ls-clientes-table .material-nome,.ls-clientes-table .material-sub{white-space:normal;overflow-wrap:anywhere}
   .ls-commercial-table-wrap{overflow:visible!important}
   .ls-commercial-table,.ls-commercial-table tbody{display:block;width:100%}
   .ls-commercial-table{min-width:0}
@@ -4370,7 +4427,8 @@ button.ls-incomplete-chip:focus-visible{outline:3px solid rgba(var(--red-rgb),.3
 .ls-tarja.erro{border-color:rgba(var(--red-rgb),.45);color:var(--red-claro)}
 .ls-tarja-tema{display:flex;align-items:center;gap:12px;background:var(--astro-bg);color:var(--astro-text);border-color:rgba(var(--astro),.75);border-left-color:var(--astro-esq);border-right-color:var(--astro-dir);box-shadow:0 0 22px rgba(var(--astro),.24),inset 0 0 14px rgba(var(--astro),.08),0 12px 32px rgba(var(--sombra-rgb),.33)}
 .ls-tarja-tema .ls-tema-icone{flex:none;filter:drop-shadow(0 0 5px rgba(var(--astro),.4))}
-.ls-material-identidade{display:flex;align-items:center;gap:14px;min-width:220px}
+.ls-material-identidade{display:flex;align-items:center;gap:14px;min-width:0}
+.ls-material-identidade>div{min-width:0;overflow-wrap:anywhere}
 .ls-material-miniatura{width:64px;height:64px;flex:none;border:1px solid var(--line);border-radius:15px;background:var(--panel-soft);display:grid;place-items:center;overflow:hidden;color:var(--muted)}
 .ls-material-miniatura img{width:100%;height:100%;object-fit:contain;padding:5px;transform:none!important}
 .ls-foto-editor{display:grid;grid-template-columns:160px minmax(0,1fr);gap:18px;align-items:center;padding:16px;border:1px solid var(--line);border-radius:18px;background:var(--panel-soft)}
