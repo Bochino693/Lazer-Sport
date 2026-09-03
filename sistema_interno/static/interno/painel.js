@@ -1564,7 +1564,16 @@
     ouvintes: [],
     inicializado: false,
     quantidades: {},
+    /* O que o SERVIDOR lembra de já ter anunciado para esta conta. Chega
+       na primeira resposta e é o que faz o sino falar com quem volta.
+       Ver `PREFIXO_VISTO` em avisos.py. */
+    vistos: null,
+    confirmandoVistos: false,
+    relogioDeVistos: null,
     ultimoSomEm: 0,
+    /* Aviso que chegou antes de o navegador liberar áudio. Ver
+       `despertarSom`. */
+    somPendenteAte: 0,
     atividadeAte: 0,
     emVoo: null, repetir: false, ultimoEstado: null, etag: null,
     falhas: 0, proximaTentativa: 0,
@@ -1591,9 +1600,36 @@
     return contextoDeAudio;
   }
 
-  function tocarSomDeAviso() {
+  /* ====================================================================
+     O AVISO QUE CHEGOU ANTES DO PRIMEIRO TOQUE
+
+     Navegador nenhum toca som numa aba que a pessoa ainda não tocou. E é
+     exatamente essa a hora do aviso mais importante: a pessoa acabou de
+     abrir o painel e há uma movimentação nova esperando por ela. O som
+     era simplesmente perdido.
+
+     Agora ele fica guardado e sai no primeiro toque ou tecla -- desde
+     que dentro de um minuto e meio. Passado isso, a novidade já não é
+     novidade e um som do nada só assusta. A animação do sino, essa,
+     acontece na hora: ela não depende de permissão nenhuma.
+     ==================================================================== */
+  var VALIDADE_DO_SOM_ADIADO = 90000;
+
+  function despertarSom() {
     var audio = prepararSom();
     if (!audio || audio.state !== "running") return;
+    if (!avisos.somPendenteAte) return;
+    var vencido = Date.now() > avisos.somPendenteAte;
+    avisos.somPendenteAte = 0;
+    if (!vencido) tocarSomDeAviso();
+  }
+
+  function tocarSomDeAviso() {
+    var audio = prepararSom();
+    if (!audio || audio.state !== "running") {
+      avisos.somPendenteAte = Date.now() + VALIDADE_DO_SOM_ADIADO;
+      return;
+    }
     var agora = Date.now();
     if (agora - avisos.ultimoSomEm < 1800) return;
     avisos.ultimoSomEm = agora;
@@ -1656,19 +1692,97 @@
     voz(1318.51, 0.35, 0.34, 0.55, "sine");
   }
 
+  /* ====================================================================
+     CONTRA O QUE SE COMPARA PARA SABER SE CHEGOU COISA NOVA
+
+     Com o painel aberto, contra o que está na tela: o número era 3,
+     virou 4, tocou. Isso sempre funcionou.
+
+     Na PRIMEIRA resposta depois de abrir o painel, não havia contra o
+     que comparar, e o código simplesmente engolia a diferença -- quem
+     saía com dez pendências e voltava com onze não via nada. Agora a
+     comparação é contra `vistos`: o que o servidor lembra de já ter
+     anunciado para esta conta, guardado no banco e não na aba. Sair,
+     fechar o navegador, voltar no dia seguinte de outro computador: a
+     décima primeira movimentação continua sendo anunciada.
+
+     Servidor antigo, ou resposta sem o campo, cai no comportamento de
+     antes -- calado -- em vez de anunciar tudo de uma vez.
+     ==================================================================== */
   function houveAvisoNovo(dados) {
     var atuais = {};
+    var referencia = avisos.inicializado ? avisos.quantidades : avisos.vistos;
     var novo = false;
     (dados.avisos || []).forEach(function (item) {
       var quantidade = Number(item.quantidade) || 0;
       atuais[item.chave] = quantidade;
-      if (avisos.inicializado && quantidade > (avisos.quantidades[item.chave] || 0)) {
+      if (referencia && quantidade > (referencia[item.chave] || 0)) {
         novo = true;
       }
     });
     avisos.quantidades = atuais;
     if (!avisos.inicializado) avisos.inicializado = true;
     return novo;
+  }
+
+  function mesmasQuantidades(a, b) {
+    if (!a || !b) return false;
+    var chaves = Object.keys(a).concat(Object.keys(b));
+    for (var i = 0; i < chaves.length; i += 1) {
+      if ((a[chaves[i]] || 0) !== (b[chaves[i]] || 0)) return false;
+    }
+    return true;
+  }
+
+  /* ====================================================================
+     "MOSTREI ISTO PARA ELA"
+
+     Quem grava a memória do sino é o painel, e não o GET do servidor:
+     só o navegador sabe se o número chegou de fato a uma tela. Sai um
+     POST curto por MUDANÇA REAL de estado -- não por pulso -- e com um
+     respiro de dois segundos, para uma sequência de gravações rápidas
+     virar uma confirmação só.
+
+     A cópia local é atualizada na hora, antes da resposta: sem isso o
+     pulso seguinte compararia com a memória velha e anunciaria a mesma
+     novidade de novo.
+     ==================================================================== */
+  function confirmarVistos() {
+    if (!avisos.endereco || avisos.parado) return;
+    if (mesmasQuantidades(avisos.vistos, avisos.quantidades)) return;
+
+    var enviar = {};
+    Object.keys(avisos.quantidades).forEach(function (chave) {
+      if (avisos.quantidades[chave] > 0) enviar[chave] = avisos.quantidades[chave];
+    });
+    avisos.vistos = enviar;
+
+    global.clearTimeout(avisos.relogioDeVistos);
+    avisos.relogioDeVistos = global.setTimeout(function () {
+      if (avisos.confirmandoVistos || avisos.parado) return;
+      avisos.confirmandoVistos = true;
+      var corpo = new FormData();
+      corpo.set("acao", "avisos_vistos");
+      corpo.set("vistos", JSON.stringify(avisos.vistos || {}));
+      var campo = document.querySelector("[name=csrfmiddlewaretoken]");
+      if (campo) corpo.set("csrfmiddlewaretoken", campo.value);
+      fetch(avisos.endereco, {
+        method: "POST",
+        body: corpo,
+        headers: {
+          "X-Requested-With": "XMLHttpRequest",
+          "X-CSRFToken": campo ? campo.value : "",
+        },
+        credentials: "same-origin",
+        cache: "no-store",
+      }).catch(function () {
+        /* Falhou: a memória do servidor continua a antiga e o pior que
+           acontece é o sino anunciar de novo na próxima abertura. Nunca
+           o contrário -- perder um aviso seria o erro grave. */
+      }).finally(function () {
+        avisos.confirmandoVistos = false;
+      });
+    }, 2000);
   }
 
   /* ====================================================================
@@ -1684,26 +1798,45 @@
      Chamada ANTES de `desenharAvisos`: é isso que faz a troca acontecer
      com o selo invisível, em vez de o número piscar o valor velho.
      ==================================================================== */
-  function anunciarNoSino() {
+  function anunciarNoSino(chegada) {
     var botao = document.getElementById("avisosBotao");
     if (!botao) return;
+
+    /* CHEGADA: a novidade aconteceu enquanto a pessoa não estava aqui.
+       Se a aba abriu no fundo (link novo, restauração de sessão), o sino
+       espera ela aparecer -- balançar para uma tela que ninguém está
+       olhando é o mesmo que não balançar. */
+    if (chegada && document.visibilityState !== "visible") {
+      document.addEventListener("visibilitychange", function aoAparecer() {
+        if (document.visibilityState !== "visible") return;
+        document.removeEventListener("visibilitychange", aoAparecer);
+        anunciarNoSino(true);
+      });
+      return;
+    }
 
     var selos = document.querySelectorAll('[data-selo="total"]');
     /* Tirar e repor a classe reinicia a animação: sem a leitura de
        `offsetWidth` no meio, o navegador junta as duas mudanças num
        quadro só e o segundo aviso seguido não chacoalha nada. */
     botao.classList.remove("chacoalha");
+    botao.classList.remove("chegada");
     void botao.offsetWidth;
     botao.classList.add("chacoalha");
+    /* Quem volta ao painel não está olhando para o sino: os olhos estão
+       procurando a tela carregar. Uma batida de seis décimos passa
+       despercebida, então na chegada ele bate três vezes. */
+    if (chegada) botao.classList.add("chegada");
     selos.forEach(function (selo) { selo.classList.add("trocando"); });
 
     global.clearTimeout(avisos.relogioDaAnimacao);
     avisos.relogioDaAnimacao = global.setTimeout(function () {
       botao.classList.remove("chacoalha");
+      botao.classList.remove("chegada");
       document.querySelectorAll('[data-selo="total"]').forEach(
         function (selo) { selo.classList.remove("trocando"); }
       );
-    }, 620);
+    }, chegada ? 1900 : 620);
   }
 
   function pintarSelo(elemento, quantidade) {
@@ -1820,11 +1953,24 @@
       avisos.ultimoEstado = dados;
       var mudou = dados.assinatura !== avisos.assinatura;
       if (mudou && avisos.assinatura && global.LSNavigation) global.LSNavigation.clear();
+      /* Esta é a primeira resposta desde que o painel abriu? Então a
+         comparação é contra a memória da conta, e a novidade é uma
+         CHEGADA: aconteceu com a pessoa fora. */
+      var chegada = !avisos.inicializado;
+      if (chegada && dados.vistos) avisos.vistos = dados.vistos;
       var novo = houveAvisoNovo(dados);
       avisos.assinatura = dados.assinatura || null;
-      if (novo) anunciarNoSino();
+      if (novo) anunciarNoSino(chegada);
       if (mudou) desenharAvisos(dados);
-      if (novo && document.visibilityState === "visible") tocarSomDeAviso();
+      if (novo) {
+        /* Aba de fundo não toca som na cara de ninguém -- mas também não
+           perde o aviso: ele fica guardado para o primeiro toque de quem
+           voltar para esta aba. */
+        if (document.visibilityState === "visible") tocarSomDeAviso();
+        else avisos.somPendenteAte = Date.now() + VALIDADE_DO_SOM_ADIADO;
+      }
+      /* Depois de desenhar: a memória guarda o que está NA TELA. */
+      confirmarVistos();
       if (mudou) avisos.ouvintes.forEach(function (fn) { try { fn(dados); } catch (e) {} });
       document.dispatchEvent(new CustomEvent("ls:estado", { detail: dados }));
       return dados;
@@ -1921,6 +2067,8 @@
          outra (ver `bater`). */
       if (avisos.relogio) global.clearTimeout(avisos.relogio);
       avisos.relogio = null;
+      global.clearTimeout(avisos.relogioDeVistos);
+      avisos.relogioDeVistos = null;
     },
   };
 
@@ -1940,7 +2088,7 @@
     if (!avisos.endereco) return;
 
     ["pointerdown", "keydown"].forEach(function (evento) {
-      document.addEventListener(evento, prepararSom, { passive: true });
+      document.addEventListener(evento, despertarSom, { passive: true });
     });
 
     global.addEventListener("online", function () { buscarAvisos(true); });

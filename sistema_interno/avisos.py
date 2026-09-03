@@ -20,7 +20,7 @@ inteira para filtrar na memória. A mesma regra escrita como
 from dataclasses import dataclass
 from datetime import timedelta
 
-from django.db import DatabaseError
+from django.db import DatabaseError, transaction
 from django.db.models import Count, Max
 from django.urls import reverse
 from django.utils import timezone
@@ -57,6 +57,92 @@ DIAS_DE_NOVIDADE = 7
 # comercial cada usuário já abriu no sino. É estado de notificação, não uma
 # segunda cópia do orçamento.
 CHAVE_ATIVIDADE_LIDA = "orcamentos_atividade_lida"
+
+# ----------------------------------------------------------------------
+# A MEMÓRIA DO SINO É DA CONTA, NÃO DA ABA
+#
+# O sino balançava quando um aviso crescia com o painel ABERTO. Quem
+# fechava o sistema com dez pendências e voltava no dia seguinte com onze
+# não via nada: a aba nova começava do zero, guardava "onze" como se
+# sempre tivesse sido onze, e a décima primeira movimentação -- justamente
+# a que aconteceu enquanto a pessoa não estava -- entrava calada.
+#
+# Estas linhas guardam, POR USUÁRIO e no banco, quantos avisos de cada
+# tipo o sino já anunciou para ele. Quem volta e encontra um número maior
+# do que o que lhe foi mostrado recebe a animação na hora, em qualquer
+# aparelho, mesmo depois de trocar de navegador.
+#
+# Aproveita a tabela que já existe (usuário + chave -> quantidade), uma
+# linha por tipo de aviso. Nada de coluna nova, nada de migração.
+# ----------------------------------------------------------------------
+PREFIXO_VISTO = "sino_visto:"
+
+#: Teto defensivo. A central tem uma dúzia de linhas; sem o limite, um
+#: POST forjado encheria a tabela de estado com chaves inventadas.
+MAXIMO_DE_VISTOS = 40
+
+
+def avisos_ja_vistos(user):
+    """Quanto de cada aviso o sino já mostrou a esta pessoa."""
+    if not getattr(user, "pk", None):
+        return {}
+    try:
+        linhas = EstadoNotificacao.objects.filter(
+            usuario=user,
+            chave__startswith=PREFIXO_VISTO,
+        ).values_list("chave", "quantidade")
+        return {
+            chave[len(PREFIXO_VISTO):]: int(quantidade or 0)
+            for chave, quantidade in linhas
+        }
+    except DatabaseError:
+        # Implantação entre o reinício e o migrate: sem memória o sino
+        # volta ao comportamento antigo, que é calado -- nunca a 502.
+        return {}
+
+
+def guardar_avisos_vistos(user, mapa):
+    """Grava o que o painel acabou de mostrar.
+
+    Substitui o conjunto inteiro em vez de só somar: um aviso RESOLVIDO
+    tem de sair da memória, senão, quando o mesmo problema voltar a
+    aparecer com o número antigo, o sino ficaria mudo achando que já tinha
+    avisado.
+    """
+    if not getattr(user, "pk", None):
+        return {}
+
+    limpo = {}
+    for chave, quantidade in list(mapa.items())[:MAXIMO_DE_VISTOS]:
+        chave = str(chave or "").strip()[: 80 - len(PREFIXO_VISTO)]
+        if not chave:
+            continue
+        try:
+            numero = max(0, int(quantidade))
+        except (TypeError, ValueError):
+            continue
+        # Ausente e zero são a mesma coisa; guardar zero seria uma linha
+        # por aviso que a pessoa nem tem.
+        if numero:
+            limpo[chave] = numero
+
+    try:
+        with transaction.atomic():
+            EstadoNotificacao.objects.filter(
+                usuario=user,
+                chave__startswith=PREFIXO_VISTO,
+            ).exclude(
+                chave__in=[PREFIXO_VISTO + chave for chave in limpo]
+            ).delete()
+            for chave, numero in limpo.items():
+                EstadoNotificacao.objects.update_or_create(
+                    usuario=user,
+                    chave=PREFIXO_VISTO + chave,
+                    defaults={"quantidade": numero},
+                )
+    except DatabaseError:
+        return {}
+    return limpo
 
 
 @dataclass(frozen=True)

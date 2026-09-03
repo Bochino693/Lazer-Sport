@@ -1636,6 +1636,15 @@ textarea.form-control{min-height:100px!important}
 .ls-avisos-botao.chacoalha::after{
   animation:ls-onda-forte .62s cubic-bezier(.22,.68,.3,1);
 }
+/* A CHEGADA: a movimentação aconteceu com a pessoa fora do sistema.
+
+   Quem volta ao painel não está olhando para o sino -- está esperando a
+   tela carregar. Uma batida de seis décimos passa despercebida no meio
+   disso, então na chegada ele bate TRÊS vezes. Ver `anunciarNoSino` em
+   painel.js. */
+.ls-avisos-botao.chacoalha.chegada i,
+.ls-avisos-botao.chacoalha.chegada::after{animation-iteration-count:3}
+
 @keyframes ls-onda-forte{
   0%{transform:scale(.96);opacity:1}
   100%{transform:scale(1.9);opacity:0}

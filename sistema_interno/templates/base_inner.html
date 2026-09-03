@@ -642,6 +642,22 @@ Dito em voz alta: este NÃO é o /adm do site. Quem trabalha nos
           </button>
         </div>
 
+        <!-- ===================== central de avisos ===================== -->
+        <div class="ls-avisos">
+          <button type="button" class="ls-avisos-botao" id="avisosBotao"
+                  aria-haspopup="true" aria-expanded="false"
+                  aria-label="Avisos do painel">
+            <i class="bi bi-bell-fill"></i>
+            <span class="ls-avisos-selo"
+                  data-selo="total" hidden>0</span>
+          </button>
+
+          <div class="ls-avisos-painel" id="avisosPainel" hidden>
+            <div class="ls-avisos-topo">
+              <span>O que precisa de você</span>
+              <span data-selo="urgentes-texto" hidden>0 urgentes</span>
+            </div>
+
             <p id="lsSincroniaEstado" class="ls-subtext" role="status" hidden></p>
             <div id="avisosLista">
             <div class="ls-avisos-vazio" role="status">Atualizando avisos…</div>
