@@ -22,15 +22,56 @@ class SincroniaTests(TestCase):
         return self.client.post(path, dados, HTTP_HOST='interno.testserver', HTTP_X_REQUESTED_WITH='XMLHttpRequest')
 
     def test_manutencao_invalida_cache_sem_acao_do_atendente(self):
+        """Um chamado aberto no site aparece no painel sem ninguém pedir."""
         self.assertEqual(self.get().json()['contagens']['count_manutencao'], 0)
         perfil, _ = ClientePerfil.objects.get_or_create(user=self.usuario)
         m = Manutencao.objects.create(usuario=perfil, descricao='Teste de assistência', status='P')
         novo = self.get().json()
         self.assertEqual(novo['contagens']['count_manutencao'], 1)
-        Manutencao.objects.filter(pk=m.pk).update(status='C')
+        # Fechar pelo caminho do sistema (core.views usa `save()`).
+        m.status = 'C'
+        m.save()
         fechado = self.get().json()
         self.assertEqual(fechado['contagens']['count_manutencao'], 0)
         self.assertNotEqual(novo['revisoes']['manutencoes'], fechado['revisoes']['manutencoes'])
+
+    def test_quem_grava_por_fora_precisa_carimbar_a_data(self):
+        """O LIMITE DO PULSO, ESCRITO ONDE ALGUÉM VAI ESBARRAR NELE.
+
+        O sino sabe que algo mudou olhando, por tabela, quantas linhas
+        existem e qual a data mais recente. `QuerySet.update()` não dispara
+        sinal e não mexe em `auto_now`: uma troca de situação feita assim
+        não deixa rastro nenhum no banco, e nem este resumo nem o antigo
+        conseguiriam vê-la antes do próximo pulso.
+
+        Hoje nenhum caminho do sistema faz isso -- situação de manutenção,
+        orçamento e O.S. muda por `save()`. Se um dia precisar de
+        `update()` numa tabela do sino, carimbe a data junto; é uma linha,
+        e sem ela o aviso simplesmente não sai.
+        """
+        from django.utils import timezone
+
+        from .pulso import CHAVE, agora
+
+        def pulso_agora():
+            """Sempre do banco: o resumo guardado tem prazo de segundos."""
+            cache.delete(CHAVE)
+            return agora()
+
+        perfil, _ = ClientePerfil.objects.get_or_create(user=self.usuario)
+        m = Manutencao.objects.create(usuario=perfil, descricao='Chamado', status='P')
+        antes = pulso_agora()
+
+        # Sem carimbo: o banco não guarda vestígio nenhum da mudança.
+        Manutencao.objects.filter(pk=m.pk).update(status='C')
+        self.assertEqual(
+            pulso_agora(), antes,
+            "update sem carimbo não deixa rastro -- e por isso não avisa",
+        )
+
+        # Com carimbo: o resumo muda, e com ele a chave de todo mundo.
+        Manutencao.objects.filter(pk=m.pk).update(atualizada_em=timezone.now())
+        self.assertNotEqual(pulso_agora(), antes)
 
     def test_mudanca_de_preco_ou_descricao_muda_revisao_sem_mudar_contagem(self):
         for modelo, modulo in [(Orcamento, 'orcamentos'), (OrdemServico, 'ordens_servico')]:

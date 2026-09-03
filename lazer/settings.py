@@ -782,11 +782,18 @@ CACHES = {
 }
 
 # A central de avisos custa vários COUNT no banco remoto, e o menu do
-# painel a consulta em TODA tela. Vinte segundos cobria dois cliques; uma
-# sequência normal de trabalho -- Clientes, Orçamentos, O.S., Produção --
-# pagava a conta duas ou três vezes. Quarenta e cinco segundos cobre a
-# sequência inteira. Não atrasa o aviso de uma ação da própria pessoa:
-# gravar invalida a chave na hora (ver `invalidar_avisos`).
+# painel a consulta em TODA tela. Quarenta e cinco segundos cobrem uma
+# sequência inteira de trabalho -- Clientes, Orçamentos, O.S., Produção --
+# pagando a conta uma vez só.
+#
+# ESTE PRAZO NÃO DECIDE MAIS A FRESCURA DO SINO, e essa é a diferença que
+# importa. Ele decidia, e o resultado era o aviso de um colega demorando
+# até quarenta e cinco segundos para aparecer -- no worker de cada pessoa,
+# um por um, porque o cache é memória de processo. Hoje quem decide se o
+# guardado ainda vale é o pulso: um resumo lido do BANCO, que muda para
+# todo mundo no instante em que qualquer um grava qualquer coisa (ver
+# `sistema_interno/pulso.py`). Este número virou só o teto de quanto tempo
+# uma fotografia parada pode ocupar memória.
 try:
     INTERNO_AVISOS_CACHE_TTL = max(
         5,
@@ -794,6 +801,22 @@ try:
     )
 except ValueError:
     INTERNO_AVISOS_CACHE_TTL = 45
+
+# Quantos segundos o pulso do sino vale antes de ser lido do banco de
+# novo. É o atraso máximo entre uma pessoa gravar e o número mudar na tela
+# das OUTRAS -- quem gravou vê na hora, pelo sinal de gravação.
+#
+# Existe para o caso real de cinco painéis abertos sondarem quase no mesmo
+# instante: eles custam uma consulta, e não cinco. Dois segundos ficam
+# abaixo do que alguém percebe olhando a tela. Subir isso é trocar aviso
+# rápido por uma consulta curta a menos, e esse foi um mau negócio uma vez.
+try:
+    INTERNO_PULSO_SEGUNDOS = max(
+        1,
+        int(os.getenv("INTERNO_PULSO_SEGUNDOS", "2")),
+    )
+except ValueError:
+    INTERNO_PULSO_SEGUNDOS = 2
 
 INTERNO_BASE_URL = os.getenv(
     "INTERNO_BASE_URL",

@@ -403,8 +403,13 @@ class CustoDoContextProcessorTests(TestCase):
             mod.coletar(self.gestor)
         de_uma_vez = len(medida)
 
-        # Ler cinco chaves não pode custar cinco apurações.
-        with self.assertNumQueries(de_uma_vez):
+        # Ler cinco chaves não pode custar cinco apurações. A consulta a
+        # mais é o pulso do sino: uma viagem que pergunta ao banco se
+        # alguma coisa mudou, para QUALQUER pessoa. É ela que faz o aviso
+        # de um colega aparecer aqui sem recarregar a página, e ela paga
+        # a si mesma -- sem o pulso, a apuração inteira era refeita por
+        # relógio. Ver `pulso.py`.
+        with self.assertNumQueries(de_uma_vez + 1):
             saida = modelo.render(Context(contexto))
 
         # singular: é um só orçamento vencido no cenário
@@ -713,20 +718,16 @@ class EstadoAoVivoTests(TestCase):
         # o relógio tem dois passos -- curto com a mão na tela, longo
         # depois de três minutos parado -- e é o passo longo que precisa
         # chegar ao minuto. Ver `passoDoRelogio`.
-        passo = int(
-            re.search(r"intervalo:\s*(\d+)", painel).group(1)
-        )
-        multiplicador = int(
-            re.search(r"avisos\.intervalo \* (\d+);", painel).group(1)
-        )
+        passo = int(re.search(r"intervalo:\s*(\d+)", painel).group(1))
+        parado = int(re.search(r"PASSO_PARADO = (\d+);", painel).group(1))
         self.assertGreaterEqual(
-            passo * multiplicador,
+            parado,
             60000,
             "parado, o painel não pode perguntar mais de uma vez por minuto",
         )
         self.assertLessEqual(
             passo,
-            15000,
+            10000,
             "com gente mexendo, o aviso do colega não pode demorar",
         )
         self.assertIn("OCIOSO_APOS", painel)

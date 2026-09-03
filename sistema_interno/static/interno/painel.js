@@ -1662,13 +1662,17 @@
   var avisos = {
     endereco: "",
     /* O PASSO DE QUEM ESTÁ TRABALHANDO.
-       Um painel parado não precisa perguntar cinco vezes por minuto --
-       e não pergunta: passados três minutos sem toque, `passoDoRelogio`
-       leva este número a um minuto sozinho (e a dois com a economia de
-       dados ligada). Este aqui é o passo de quem está com a mão na tela,
-       e é ele que decide quanto tempo leva entre um colega salvar e o
-       sino tocar aqui. Um minuto seria tarde demais para isso. */
-    intervalo: 12000,
+
+       É este número que decide quanto tempo passa entre um colega salvar
+       alguma coisa e o sino tocar aqui. Um painel parado tem passo
+       próprio, mais lento, em `PASSO_PARADO`.
+
+       Uma pergunta que não encontra novidade custa duas consultas curtas
+       e uma resposta de duzentos bytes (304, ver o ETag em
+       views_avisos.py). Oito segundos de espera são baratos; um colega
+       esperando um minuto para descobrir que existe um cliente novo,
+       não. */
+    intervalo: 8000,
     assinatura: null,
     relogio: null,
     parado: false,
@@ -2229,6 +2233,11 @@
        minutos. Ver `ECONOMIA_DE_DADOS` em settings.
        ================================================================== */
     var OCIOSO_APOS = 180000;
+    /* Passo do painel esquecido aberto na bancada: um minuto. Escrito em
+       milissegundos, e não como múltiplo do passo ativo, porque são duas
+       decisões diferentes -- acelerar quem está trabalhando não pode
+       acelerar junto quem não está. Com a economia de dados, dois. */
+    var PASSO_PARADO = 60000;
     var ultimoSinalDeVida = Date.now();
 
     function economiaLigada() {
@@ -2239,7 +2248,7 @@
     function passoDoRelogio() {
       var parado = Date.now() - ultimoSinalDeVida > OCIOSO_APOS;
       if (!parado) return avisos.intervalo;
-      return economiaLigada() ? avisos.intervalo * 10 : avisos.intervalo * 5;
+      return economiaLigada() ? PASSO_PARADO * 2 : PASSO_PARADO;
     }
 
     function bater() {
