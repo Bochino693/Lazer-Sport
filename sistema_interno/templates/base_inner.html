@@ -596,8 +596,8 @@ Dito em voz alta: este NÃO é o /adm do site. Quem trabalha nos
         {% endcomment %}
         <div class="ls-tema" id="lsAparencia">
           <button type="button" class="ls-tema-gatilho" id="lsAparenciaBotao" aria-expanded="false" aria-controls="lsAparenciaPainel" aria-label="Aparência: escolher tema">
-            <i class="bi bi-palette2" aria-hidden="true"></i>
-            <span>Aparência<small id="lsTemaAtual">Escuro</small></span>
+            <span id="lsTemaIconeAtual" aria-hidden="true"></span>
+            <span class="ls-tema-gatilho-texto">Aparência<small id="lsTemaAtual">Escuro</small></span>
             <i class="bi bi-chevron-down" aria-hidden="true"></i>
           </button>
           <div class="ls-tema-painel" id="lsAparenciaPainel" hidden>
@@ -829,6 +829,20 @@ Dito em voz alta: este NÃO é o /adm do site. Quem trabalha nos
       var aceso = botao.dataset.temaEscolha === tema;
       botao.classList.toggle("ativo", aceso);
       botao.setAttribute("aria-pressed", String(aceso));
+      if (aceso) {
+        var icone = botao.querySelector(".ls-tema-icone").cloneNode(true);
+        // IDs exclusivos: os degradês do topo não dependem do menu oculto.
+        icone.querySelectorAll("[id]").forEach(function (definicao) {
+          var anterior = definicao.id;
+          definicao.id = anterior + "Topo";
+          icone.querySelectorAll("[fill]").forEach(function (parte) {
+            if (parte.getAttribute("fill") === "url(#" + anterior + ")") {
+              parte.setAttribute("fill", "url(#" + definicao.id + ")");
+            }
+          });
+        });
+        document.getElementById("lsTemaIconeAtual").replaceChildren(icone);
+      }
     });
     var barra = document.getElementById("lsTemaCorBarra");
     if (barra) barra.setAttribute("content", COR_DA_BARRA[tema] || COR_DA_BARRA.lua);

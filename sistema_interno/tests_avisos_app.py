@@ -223,6 +223,39 @@ class AvisosDoAplicativoTests(TestCase):
         self.assertEqual(endpoints, ["https://push.example/android-cliente"])
 
     # ------------------------------------------------------- acesso
+    def test_pagina_abre_com_aparelho_de_visitante(self):
+        self.aparelho(usuario=None)
+        resposta = self.client.get(self.URL, HTTP_HOST="interno.testserver")
+        self.assertContains(resposta, "Visitante")
+
+    def test_pagina_abre_com_usuario_sem_nome_completo(self):
+        self.aparelho(usuario=self.gestor)
+        resposta = self.client.get(self.URL, HTTP_HOST="interno.testserver")
+        self.assertContains(resposta, self.gestor.username)
+
+    def test_navegacao_ajax_abre_com_visitante_e_permite_editar_rascunho(self):
+        self.aparelho(usuario=None)
+        with patch("sistema_interno.push.configurado", return_value=False), \
+             patch("sistema_interno.push.enviar") as enviar:
+            resposta = self.client.get(
+                self.URL, HTTP_HOST="interno.testserver",
+                HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+            )
+            self.assertContains(resposta, "Visitante")
+            self.assertEqual(self.post({
+                "action": "save", "titulo": "Novidades",
+                "mensagem": "Texto inicial", "publico": "android",
+            }).status_code, 200)
+            aviso = AvisoDoAplicativo.objects.get()
+            self.assertEqual(self.post({
+                "action": "save", "id": aviso.pk, "titulo": "Novidades",
+                "mensagem": "Texto revisado", "publico": "ios",
+            }).status_code, 200)
+            aviso.refresh_from_db()
+            self.assertEqual(aviso.mensagem, "Texto revisado")
+            self.assertEqual(aviso.publico, "ios")
+            enviar.assert_not_called()
+
     def test_producao_nao_manda_recado_para_a_base_de_clientes(self):
         """Quem não tem a função vai para a própria tela, como no resto do painel."""
         tecnico = User.objects.create_user("tecnico-app", password="x")

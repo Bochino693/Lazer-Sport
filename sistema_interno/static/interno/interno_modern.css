@@ -4478,7 +4478,7 @@ button.ls-incomplete-chip:focus-visible{outline:3px solid rgba(var(--red-rgb),.3
 }
 @media (max-width:720px){
   .ls-tema-gatilho{width:44px;height:44px;padding:0;justify-content:center}
-  .ls-tema-gatilho>span,.ls-tema-gatilho>i:last-child{display:none}
+  .ls-tema-gatilho>.ls-tema-gatilho-texto,.ls-tema-gatilho>i:last-child{display:none}
   .ls-tema-painel{position:fixed;top:calc(var(--topbar-h) + 8px);right:12px;width:360px;max-height:calc(var(--ls-vh) - var(--topbar-h) - 32px);overflow-y:auto}
 }
 /* As três escolhas continuam disponíveis mesmo em telas de 320px. */

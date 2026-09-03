@@ -51,7 +51,8 @@ class AvisosDoAplicativoView(RespostaJSONMixin, InternoRequiredMixin, View):
             "push_configurado": push.configurado(),
             "avisos_dados": [self.serializar(a) for a in avisos],
             "ultimos_aparelhos": list(
-                AparelhoDoCliente.objects.order_by("-criacao", "-id")[:12]
+                AparelhoDoCliente.objects.select_related("usuario")
+                .order_by("-criacao", "-id")[:12]
             ),
         })
 
