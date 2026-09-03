@@ -51,6 +51,12 @@
   <link rel="stylesheet" href="{% static 'site/ls-confirmacao.css' %}?v=1">
 {% endif %}
   <script src="{% static 'site/ls-reveal.js' %}?v=3" defer></script>
+{% if not usuario_da_equipe %}
+  <!-- Convite para receber aviso da loja no celular. Ele mesmo decide se
+       aparece: sem push no navegador, ou no iPhone fora da tela de
+       início, a caixa continua escondida. -->
+  <script src="{% static 'site/ls-app-avisos.js' %}?v=1" defer></script>
+{% endif %}
   <script>
     /* Marca a plataforma no <html> antes da primeira pintura. A caixa do
        aplicativo no rodapé muda conforme o aparelho, e decidir isso no
@@ -1672,7 +1678,12 @@
             <span>{{ user.email }}</span>
           </div>
           <a href="{% url 'perfil' %}#perfil-box" role="menuitem">🎯 Meu Perfil</a>
-          <a href="{% url 'lista_desejos' %}#lista-desejos" role="menuitem">⭐ Lista de desejos</a>
+          {% if usuario_da_equipe %}
+            {# Conta de acesso interno não tem lista de desejos: ela tem painel. #}
+            <a href="{{ ls_url_painel|default:'/' }}" role="menuitem">👑 Painel da fábrica</a>
+          {% else %}
+            <a href="{% url 'lista_desejos' %}#lista-desejos" role="menuitem">⭐ Lista de desejos</a>
+          {% endif %}
           <a href="{% url 'logout' %}#logout-box" role="menuitem">🚪 Sair</a>
         </div>
       </div>
@@ -1836,15 +1847,28 @@
 
 <div class="float-stack">
 
-    {% if user.is_authenticated and user.is_staff %}
-    <a href="{% url 'dashboards' %}"
-       id="float-admin-panel"
+    {% comment %}
+      A EQUIPE VÊ O PAINEL; O CLIENTE VÊ A COMPRA.
+
+      Carrinho, lista de desejos e pedidos são do perfil de cliente. Quem
+      entra com conta de acesso interno não compra na própria loja (quem
+      barra de verdade é `LojaSomenteDeClienteMiddleware`), então mostrar
+      os botões seria oferecer três portas que respondem "isto não é seu".
+
+      No lugar deles, a porta que a pessoa realmente quer: o painel. Ela
+      aparece para toda conta interna -- por função, por staff ou por
+      superusuário --, e não só para `is_staff`, que deixava de fora
+      justamente quem tem função de equipe sem acesso ao admin do Django.
+    {% endcomment %}
+    {% if usuario_da_equipe %}
+    <a href="{{ ls_url_painel|default:'/' }}"
+       id="float-painel-interno"
        class="float-btn float-admin-panel"
-       title="Área administrativa"
-       data-tooltip="Área administrativa">
+       title="Painel da fábrica"
+       data-tooltip="Painel da fábrica">
         <i class="fa-solid fa-crown"></i>
     </a>
-    {% endif %}
+    {% else %}
 
     <a href="{% url 'lista_desejos' %}#lista-desejos"
        class="float-btn float-desejos"
@@ -1873,6 +1897,7 @@
             {{ carrinho_total_itens|default:"0" }}
         </span>
     </a>
+    {% endif %}
     {% endif %}
 
     {% if user.is_authenticated and tem_manutencao %}
@@ -2782,6 +2807,36 @@
                     </a>
                 {% endif %}
             </div>
+
+            {% comment %}
+                RECEBER AVISO É O QUE FAZ O APLICATIVO VALER A INSTALAÇÃO.
+
+                Sem isto, a loja só existia para quem resolvia abrir a
+                loja: brinquedo novo entrava no catálogo e ficava
+                esperando alguém lembrar do site. Quem instalou já disse
+                que quer ouvir a gente.
+
+                A caixa nasce escondida e o JavaScript decide se ela
+                aparece -- ver `ls-app-avisos.js`. Botão que não pode
+                funcionar (navegador sem push, iPhone fora da tela de
+                início, hospedagem sem a chave) é pior que botão nenhum.
+
+                Não aparece para a equipe: aviso de loja é conversa com
+                cliente, e quem trabalha aqui já tem o sino do painel.
+            {% endcomment %}
+            {% if not usuario_da_equipe %}
+              <div class="ls-app-avisos" data-app-avisos
+                   data-app-avisos-url="{% url 'inscricao_avisos_app' %}" hidden>
+                  <button type="button" class="ls-app-btn ghost" data-app-avisos-botao hidden>
+                      <i class="fa-solid fa-bell" aria-hidden="true"></i>
+                      <span>
+                          <small>Promoções e novidades</small>
+                          <strong>Receber avisos no celular</strong>
+                      </span>
+                  </button>
+                  <p class="ls-app-note" data-app-avisos-nota hidden></p>
+              </div>
+            {% endif %}
 
             {% if app_android_disponivel %}
                 <span class="ls-app-note ls-app-so ls-app-so-android">

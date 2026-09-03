@@ -28,15 +28,36 @@ def _para_decimal(valor):
 @register.filter
 def moeda(valor):
     """1234567.8 -> 1.234.567,80"""
-    numero = _para_decimal(valor)
-    if numero is None:
-        return "0,00"
+    from core.formatos import dinheiro
 
-    return number_format(
-        numero.quantize(Decimal("0.01")),
-        decimal_pos=2,
-        force_grouping=True,
-    )
+    return dinheiro(valor)
+
+
+@register.filter
+def reais(valor):
+    """1234567.8 -> R$ 1.234.567,80 -- o cifrão junto, uma vez só.
+
+    Existe porque `R$ {{ x|moeda }}` espalhado por cinquenta templates é
+    cinquenta chances de alguém escrever `R$ {{ x }}` sem o filtro -- que
+    foi exatamente o que aconteceu. Com o cifrão dentro, esquecer o
+    filtro apaga o cifrão junto, e o erro salta aos olhos.
+    """
+    from core.formatos import dinheiro
+
+    return dinheiro(valor, prefixo="R$")
+
+
+@register.filter
+def medida(valor, unidade="m"):
+    """2.00 -> 2 m; 2.50 -> 2,5 m. Vazio continua vazio.
+
+    `{{ brinquedo.altura_m|medida }}` ou `{{ peso|medida:"kg" }}`. Ver
+    `core/formatos.py`: os zeros à direita caem de propósito, porque é
+    assim que se lê uma fita métrica.
+    """
+    from core.formatos import medida as _medida
+
+    return _medida(valor, unidade)
 
 
 @register.filter

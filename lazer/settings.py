@@ -177,6 +177,10 @@ MIDDLEWARE = [
     "allauth.account.middleware.AccountMiddleware",
     "core.middleware.TelefoneObrigatorioMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
+    # Depois do MessageMiddleware de propósito: o recado de "isto é do
+    # cliente" é entregue por `messages`, e antes dele a mensagem não
+    # teria onde ser guardada.
+    "core.middleware.LojaSomenteDeClienteMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
@@ -203,6 +207,7 @@ TEMPLATES = [
                 "core.context_processors.app_android",
                 "core.context_processors.confirmacao_pagamento",
                 "core.context_processors.favoritos_context",
+                "core.context_processors.equipe_context",
             ],
         },
     },

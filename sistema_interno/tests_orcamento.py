@@ -547,7 +547,12 @@ class OrcamentoInternoTests(TestCase):
         self.assertIn(estabelecimento, novo.estabelecimentos.all())
         # A linha da proposta reconhece o item pela legenda, não só pelo nome.
         self.assertEqual(dados["brinquedo"]["detalhe"], "Piscina 3x3 com 4.000 bolinhas")
-        self.assertIn("2.00", dados["brinquedo"]["medidas"])
+        # Medida escrita em português, com unidade e sem zero à toa: é
+        # assim que ela vai para o papel do cliente. Ver `core/formatos.py`.
+        self.assertEqual(
+            dados["brinquedo"]["medidas"],
+            "Altura 2 m × Largura 3 m × Profundidade 3 m",
+        )
 
     def test_a_proposta_imprime_a_ficha_do_cadastro(self):
         """A linha comercial não cabe a ficha, e a ficha não pode sumir."""
@@ -567,7 +572,7 @@ class OrcamentoInternoTests(TestCase):
         ficha = ItemOrcamento.objects.get(pk=item.pk).ficha
         self.assertIn("Cama elástica 3m", ficha)
         self.assertIn("Voltagem: 110", ficha)
-        self.assertTrue(any("2.00" in linha for linha in ficha))
+        self.assertIn("Altura 2 m × Largura 3 m × Profundidade 3 m", ficha)
 
         html = self.client.get(
             f"/orcamentos/{orcamento.pk}/previa/", HTTP_HOST="interno.testserver",
