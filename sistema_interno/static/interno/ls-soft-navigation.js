@@ -5,6 +5,14 @@
  */
 (function (window, document) {
   "use strict";
+  // Módulos Django têm ciclos de scripts próprios: entre páginas, o browser
+  // monta o documento inteiro. AJAX fica restrito aos filtros da mesma tela.
+  var documentoNormal = document.documentElement.dataset.lsNavigation === "document";
+  var caminhoDocumento = window.location.pathname;
+  function exigeDocumento(url) {
+    return /^\/(abrir-site|accounts|login|logout|system)(\/|$)/.test(url.pathname)
+      || (documentoNormal && url.pathname !== caminhoDocumento);
+  }
 
   var PREFIXO = "ls:nav:v2:";
   var INDICE = PREFIXO + "index";
@@ -130,7 +138,7 @@
   }
 
   function podeTentarNovamente(status) {
-    return status === 408 || status === 429 || status === 500
+    return status === 408 || status === 429
       || status === 502 || status === 503 || status === 504;
   }
 
@@ -818,8 +826,13 @@
      de sair no chute, por tempo. */
   function navegar(url, modoHistorico, opcoes) {
     var alvo = urlSegura(url);
-    if (!alvo) {
-      window.location.assign(String(url));
+    if (!alvo || exigeDocumento(alvo)) {
+      var destino = new URL(String(url), window.location.href);
+      if (!/^https?:$/.test(destino.protocol)) return Promise.resolve();
+      ++navegacao;
+      esconderRecuperacao();
+      esconderLoader();
+      window.location.assign(destino.href);
       return Promise.resolve();
     }
 
@@ -898,7 +911,7 @@
     if (!link || evento.defaultPrevented) return null;
     if (evento.type === "click" && evento.button !== 0) return null;
     if (evento.metaKey || evento.ctrlKey || evento.shiftKey || evento.altKey) return null;
-    if (link.hasAttribute("download") || link.target === "_blank") return null;
+    if (link.hasAttribute("download") || (link.target && link.target !== "_self")) return null;
     if (link.dataset.noSoftNav === "true" || link.dataset.bsToggle) return null;
 
     var href = link.getAttribute("href") || "";
@@ -907,7 +920,7 @@
     }
 
     var url = urlSegura(link.href);
-    if (!url) return null;
+    if (!url || exigeDocumento(url)) return null;
     if (url.pathname === window.location.pathname && url.search === window.location.search && url.hash) {
       return null;
     }
@@ -934,7 +947,7 @@
     if (evento.defaultPrevented || form.dataset.noSoftNav === "true") return;
 
     var url = urlSegura(form.action || window.location.href);
-    if (!url) return;
+    if (!url || exigeDocumento(url) || (form.target && form.target !== "_self")) return;
     url.search = new URLSearchParams(new FormData(form)).toString();
 
     evento.preventDefault();
@@ -1032,7 +1045,18 @@
   });
 
   window.addEventListener("popstate", function () {
+    if (documentoNormal && window.location.pathname !== caminhoDocumento) {
+      window.location.reload();
+      return;
+    }
     navegar(window.location.href, "none");
+  });
+  window.addEventListener("pageshow", function (evento) {
+    if (evento.persisted) {
+      ++navegacao;
+      esconderRecuperacao();
+      esconderLoader();
+    }
   });
 
   var revalidacao = null;

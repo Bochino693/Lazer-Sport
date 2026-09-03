@@ -158,6 +158,7 @@ urlpatterns = [
     # Nomes usados pelos templates herdados. O destino sai do subdomínio
     # interno, sem misturar a sessão visual do aplicativo com a vitrine.
     path('abrir-site/', LinkSitePublicoView.as_view(), name='home'),
+    path('abrir-site/loja/', LinkSitePublicoView.as_view(), {'tipo': 'loja'}, name='abrir_loja'),
     path('abrir-site/combo/<int:pk>/', LinkSitePublicoView.as_view(), {'tipo': 'combo'}, name='combo'),
 
     # ---------------- aplicativo instalável ----------------

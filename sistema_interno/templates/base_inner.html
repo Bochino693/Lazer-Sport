@@ -1,6 +1,6 @@
 {% load static interno_extras %}
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-br" data-ls-navigation="document">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -353,7 +353,7 @@
         <a data-titulo="Pedidos" aria-label="Pedidos" class="ls-nav-item {% if request.resolver_match.url_name == 'pedidos_inner' %}active{% endif %}" href="{% url 'pedidos_inner' %}">
           <span class="ls-nav-icon"><i class="bi bi-box2-heart-fill"></i></span>
           <span>Pedidos</span>
-          <span class="ls-nav-count" data-selo="count_pedidos" hidden>0</span>
+          <span class="ls-nav-count" data-selo="count_pedidos" data-mostrar-zero="1" title="Pedidos em aberto">…</span>
         </a>
         {% endif %}
         {% if permissoes_interno.orcamentos %}
@@ -456,7 +456,7 @@
       <div class="ls-nav-section">
         <span class="ls-nav-caption">Loja</span>
         <a data-titulo="Abrir a loja" aria-label="Abrir a loja"
-           class="ls-nav-item" href="{% url 'home' %}" target="_blank" rel="noopener">
+           class="ls-nav-item" href="{% url 'abrir_loja' %}" data-no-soft-nav="true" target="_blank" rel="noopener">
           <span class="ls-nav-icon"><i class="bi bi-box-arrow-up-right"></i></span><span>Abrir a loja</span>
         </a>
       </div>

@@ -210,7 +210,7 @@ class InternalResponseRecoveryMiddleware:
     chamadas JavaScript recebem JSON para manter a tela que já estava aberta.
     """
 
-    STATUS_TRANSITORIOS = (500, 502, 503, 504)
+    STATUS_TRANSITORIOS = (502, 503, 504)
 
     def __init__(self, get_response):
         self.get_response = get_response
