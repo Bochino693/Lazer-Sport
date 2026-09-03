@@ -1102,22 +1102,17 @@ textarea.form-control{min-height:100px!important}
    Agora o alvo é o rodapé da loja pelo nome (`.ls-footer`), e mais nada. */
 .ls-footer,.fab-container{display:none!important}
 
-/* MOBILE TABLE CARDS */
-@media(max-width:768px){
-  .tabela-estoque thead{display:none}
-  .tabela-estoque,.tabela-estoque tbody,.tabela-estoque tr,.tabela-estoque td{display:block;width:100%}
-  .tabela-estoque tr{
-    margin-bottom:12px;padding:12px 14px;border:1px solid var(--line)!important;border-radius:16px!important;
-    background:linear-gradient(180deg,var(--panel-2),var(--bg-1))!important;box-shadow:var(--shadow-soft);
-  }
-  .tabela-estoque td{
-    padding:8px 2px!important;border:0!important;color:var(--text-2)!important;background:transparent!important;
-  }
-  .tabela-estoque td::before{
-    content:attr(data-rotulo) ": ";color:var(--muted)!important;font-size:.73rem!important;font-weight:950!important;text-transform:uppercase;
-  }
-  .tabela-estoque td.sem-rotulo::before{content:""}
-}
+/* O EMPILHAMENTO PRÓPRIO DO ESTOQUE FOI EMBORA.
+
+   Ele nasceu antes das fichas de clientes e orçamentos e ficou para
+   trás: cada célula virava uma linha inteira, os números continuavam
+   encostados na direita com meia tela vazia ao lado, e "Ações" ganhava
+   uma faixa só para um botão. Um material ocupava a tela toda.
+
+   Agora a tabela do estoque usa `ls-commercial-table`, o mesmo contrato
+   das outras listas, e diz o que é diferente pelo nome próprio
+   (`.ls-estoque-table`) lá embaixo, junto das demais. Uma ficha só para
+   manter, e o que se ajusta numa tela se ajusta em todas. */
 
 /* RESPONSIVE */
 @media(max-width:1180px){
@@ -2845,8 +2840,18 @@ input[type="number"]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0
   .ls-commercial-table-wrap{overflow:visible!important}
   .ls-commercial-table,
   .ls-commercial-table tbody{display:block;width:100%}
+  /* A LARGURA MÍNIMA É DA TABELA, NÃO DA FICHA.
+
+     `min-width:900px` existe para a tabela de verdade não espremer sete
+     colunas -- e continuava valendo aqui, onde não há mais tabela
+     nenhuma. O resultado era uma ficha de 900px dentro de uma tela de
+     760: a lista inteira arrastava para o lado, e metade de cada cliente
+     ficava fora. */
+  .ls-commercial-table{min-width:0!important;table-layout:auto!important}
   .ls-commercial-table thead{display:none}
+  .ls-commercial-table colgroup{display:none}
   .ls-commercial-table tbody tr{
+    position:relative;
     width:100%;margin:0 0 12px;padding:14px;
     display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 14px;
     border:1px solid var(--line)!important;border-radius:17px;
@@ -2855,9 +2860,9 @@ input[type="number"]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0
   }
   .ls-commercial-table tbody tr:last-child{margin-bottom:0}
   .ls-commercial-table tbody td{
-    min-width:0;padding:10px 2px!important;display:block;
+    min-width:0;max-width:none!important;padding:10px 2px!important;display:block;
     border:0!important;border-bottom:1px solid var(--line-soft)!important;
-    text-align:left!important;background:transparent!important;
+    text-align:left!important;white-space:normal!important;background:transparent!important;
   }
   .ls-commercial-table tbody td::before{
     content:attr(data-rotulo);margin-bottom:5px;display:block;
@@ -2866,14 +2871,37 @@ input[type="number"]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0
   }
   .ls-commercial-table tbody td[data-rotulo="Cliente"],
   .ls-commercial-table tbody td[data-rotulo="Situação"],
-  .ls-commercial-table tbody td[data-rotulo="Ações"],
   .ls-commercial-table tbody td[colspan]{grid-column:1/-1}
+
+  /* AS AÇÕES VÃO PARA O CANTO, COMO EM QUALQUER FICHA.
+
+     Elas ocupavam uma faixa no rodapé, com o rótulo "AÇÕES:" por cima e
+     um único botão redondo embaixo -- quarenta pixels de botão numa
+     linha de cinquenta e cinco. O menu de três pontos é o mesmo; muda o
+     lugar: o canto superior direito, onde ele não empurra nada e é onde
+     a mão procura. É o que a lista de orçamentos já fazia. */
   .ls-commercial-table tbody td[data-rotulo="Ações"]{
-    margin-top:4px;padding-top:13px!important;border-bottom:0!important;
+    position:absolute!important;top:11px;right:11px;z-index:4;
+    width:40px!important;min-width:40px!important;padding:0!important;
+    margin:0!important;border-bottom:0!important;background:transparent!important;
   }
-  .ls-clientes-table tbody td[data-rotulo="Contato"],
-  .ls-clientes-table tbody td[data-rotulo="Vínculo"],
+  .ls-commercial-table tbody td[data-rotulo="Ações"]::before{content:"";display:none}
+  /* A primeira célula da ficha reserva o lugar do botão para o texto não
+     passar por baixo dele. */
+  .ls-commercial-table tbody td[data-rotulo="Cliente"],
+  .ls-estoque-table tbody td[data-rotulo="Material"]{padding-right:46px!important}
+
   .ls-clientes-table tbody td[data-rotulo="Onde fica"]{grid-column:1/-1}
+  /* NA FICHA, TUDO COMEÇA NA MESMA MARGEM.
+
+     "Propostas" é centralizada e "Aprovado" alinhada à direita porque na
+     TABELA são colunas de número, e número se lê pela direita. Dentro da
+     ficha não há coluna nenhuma: cada valor tem o seu rótulo em cima, e
+     um centralizado ao lado de um encostado na direita, logo abaixo de
+     quatro alinhados à esquerda, não parece critério -- parece descuido.
+     Regras de tabela precisam de peso igual para serem desfeitas aqui. */
+  .ls-clientes-table tbody td[data-rotulo="Propostas"],
+  .ls-clientes-table tbody td[data-rotulo="Aprovado"]{text-align:left!important}
   .ls-commercial-table tbody td[colspan]::before{content:"";display:none}
   .ls-commercial-table .ls-row-actions{
     display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;
@@ -2884,12 +2912,35 @@ input[type="number"]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0
   .ls-commercial-table .ls-action-label,
   .ls-clientes-table .ls-action-label{display:inline}
   .ls-commercial-table .ls-row-actions .btn-outline-danger{grid-column:1/-1}
+
+  /* ESTOQUE — o que é uma linha inteira e o que anda em par.
+
+     O nome do material e a situação mandam na ficha e ocupam a largura.
+     Os quatro números andam de dois em dois, e é isso que faz o cartão
+     caber numa tela em vez de virar uma coluna de oito linhas: quantidade
+     ao lado do mínimo (é a comparação que interessa) e custo médio ao
+     lado do valor em estoque (um é a origem do outro). Local e fornecedor
+     fecham o par de cima. */
+  .ls-estoque-table tbody td[data-rotulo="Material"]{grid-column:1/-1}
+  .ls-estoque-table tbody td[data-rotulo="Quantidade"],
+  .ls-estoque-table tbody td[data-rotulo="Mínimo"],
+  .ls-estoque-table tbody td[data-rotulo="Custo médio"],
+  .ls-estoque-table tbody td[data-rotulo="Valor em estoque"]{
+    text-align:left!important;font-variant-numeric:tabular-nums;
+  }
+  .ls-estoque-table tbody td[data-rotulo="Situação"]{
+    border-bottom:0!important;
+  }
 }
 
 @media (max-width:430px){
   .ls-commercial-table tbody tr{padding:12px;gap:0 10px}
   .ls-commercial-table .ls-row-actions{grid-template-columns:1fr}
   .ls-commercial-table .ls-row-actions .btn-outline-danger{grid-column:auto}
+  /* Tela estreita: contato, vínculo e endereço não cabem em meia largura
+     sem quebrar e-mail no meio da palavra. */
+  .ls-clientes-table tbody td[data-rotulo="Contato"],
+  .ls-clientes-table tbody td[data-rotulo="Vínculo"]{grid-column:1/-1}
 }
 
 
@@ -3577,10 +3628,17 @@ body.modal-open .ls-action-fab-menu{display:none!important}
      invisível menor que o card visível -- daí a sensação, correta, de
      que o conteúdo "cai para a esquerda".
 
-     Agora o padding é simétrico e o botão entra na PRÓPRIA grade, na
-     primeira linha e na última coluna. Ele continua exatamente onde
-     estava aos olhos de quem usa, e as outras linhas passam a ter a
-     largura inteira do card. */
+     A correção foi pôr o botão na PRÓPRIA grade, primeira linha, última
+     coluna. Só que a primeira célula da ficha -- Cliente, Material -- é
+     justamente a que ocupa a largura inteira, e duas coisas não cabem na
+     mesma linha: o botão ficava sozinho lá em cima e o nome descia para
+     a linha de baixo, com uma faixa vazia de quarenta pixels entre os
+     dois. Trocou a faixa morta da direita por uma faixa morta em cima.
+
+     Agora o botão volta a flutuar no canto e o espaço reservado é da
+     PRIMEIRA CÉLULA, e não do card: a linha do nome perde 46px, que é
+     onde o botão realmente está, e todas as outras continuam com a
+     largura inteira. É o que a lista de orçamentos já fazia. */
   .ls-commercial-table tbody tr{
     position:relative;width:100%;margin:0 0 11px;padding:11px;display:grid;
     grid-template-columns:repeat(2,minmax(0,1fr));gap:0 13px;
@@ -3602,15 +3660,30 @@ body.modal-open .ls-action-fab-menu{display:none!important}
   .ls-commercial-table tbody td[data-rotulo="Situação"],
   .ls-commercial-table tbody td[colspan]{grid-column:1/-1}
   .ls-commercial-table tbody td[data-rotulo="Ações"]{
-    position:static!important;z-index:4;
-    grid-row:1;grid-column:-2/-1;justify-self:end;align-self:start;
+    position:absolute!important;top:9px;right:9px;z-index:4;
     width:40px!important;min-width:40px!important;
-    margin:0;padding:0!important;border:0!important;background:transparent!important;box-shadow:none!important;
+    margin:0!important;padding:0!important;
+    border:0!important;background:transparent!important;box-shadow:none!important;
   }
   .ls-commercial-table tbody td[data-rotulo="Ações"]::before{content:"";display:none}
+  .ls-commercial-table tbody td[data-rotulo="Cliente"],
+  .ls-estoque-table tbody td[data-rotulo="Material"]{padding-right:46px!important}
   .ls-clientes-table tbody td[data-rotulo="Contato"],
   .ls-clientes-table tbody td[data-rotulo="Vínculo"],
   .ls-clientes-table tbody td[data-rotulo="Onde fica"]{grid-column:1/-1}
+  .ls-clientes-table tbody td[data-rotulo="Propostas"],
+  .ls-clientes-table tbody td[data-rotulo="Aprovado"]{text-align:left!important}
+
+  /* ESTOQUE: o nome e a situação mandam na ficha; os quatro números
+     andam de dois em dois. Ver a mesma regra no bloco de 1199px. */
+  .ls-estoque-table tbody td[data-rotulo="Material"]{grid-column:1/-1}
+  .ls-estoque-table tbody td[data-rotulo="Quantidade"],
+  .ls-estoque-table tbody td[data-rotulo="Mínimo"],
+  .ls-estoque-table tbody td[data-rotulo="Custo médio"],
+  .ls-estoque-table tbody td[data-rotulo="Valor em estoque"]{
+    text-align:left!important;font-variant-numeric:tabular-nums;
+  }
+  .ls-estoque-table tbody td[data-rotulo="Situação"]{border-bottom:0!important}
   .ls-commercial-table tbody td[colspan]::before{content:"";display:none}
   .ls-actions,.ls-commercial-actions{width:40px!important;min-width:40px!important}
   .ls-commercial-table .ls-row-actions{display:flex!important;justify-content:center!important}
@@ -3828,7 +3901,14 @@ body.modal-open .ls-action-fab-menu{display:none!important}
   .ls-orcamentos-table tbody td[data-rotulo="Cliente"]{
     grid-column:2/4!important;padding-right:46px!important;
   }
-  .ls-orcamentos-table tbody td[data-rotulo="Acompanhamento"]{grid-column:1/3!important}
+  /* ACOMPANHAMENTO OCUPA A FICHA INTEIRA.
+
+     Ele pegava duas das três colunas e sobrava a terceira vazia: a
+     tarja verde da situação parava antes da borda direita, desalinhada
+     de "Revisão dos blocos" logo abaixo, que sempre foi largura cheia.
+     Duas caixas centradas em eixos diferentes, uma em cima da outra --
+     é isso que faz o cartão parecer torto. */
+  .ls-orcamentos-table tbody td[data-rotulo="Acompanhamento"]{grid-column:1/-1!important}
   .ls-orcamentos-table tbody td[data-rotulo="Revisão dos blocos"]{grid-column:1/-1!important}
   .ls-orcamentos-table tbody td[data-rotulo="Ações"]{
     position:absolute!important;top:12px;right:12px;z-index:4;
