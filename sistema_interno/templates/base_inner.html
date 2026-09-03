@@ -617,60 +617,30 @@ Dito em voz alta: este NÃO é o /adm do site. Quem trabalha nos
         <div class="ls-tema" role="group" aria-label="Tema do painel">
           <button type="button" class="ls-tema-botao" data-tema-escolha="sol"
                   aria-pressed="false" title="Sol — claro" aria-label="Tema claro">
-            <svg class="ls-tema-icone" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
-              <circle cx="8" cy="8" r="3.4" fill="currentColor"/>
-              <g stroke="currentColor" stroke-width="1.35" stroke-linecap="round">
-                <path d="M8 1.1v1.7M8 13.2v1.7M1.1 8h1.7M13.2 8h1.7"/>
-                <path d="M3.1 3.1l1.2 1.2M11.7 11.7l1.2 1.2M12.9 3.1l-1.2 1.2M4.3 11.7l-1.2 1.2"/>
-              </g>
+            <svg class="ls-tema-icone" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+              <path d="M14.36 7.56Q12.39 4.11 13.62 0.99Q14.52 4.06 17.64 7.56ZM10.36 9.51Q6.93 7.51 6.43 4.19Q8.75 6.40 13.20 7.87ZM7.87 13.20Q3.90 13.18 1.81 10.55Q4.92 11.31 9.51 10.36ZM7.56 17.64Q4.11 19.61 0.99 18.38Q4.06 17.48 7.56 14.36ZM9.51 21.64Q7.51 25.07 4.19 25.57Q6.40 23.25 7.87 18.80ZM13.20 24.13Q13.18 28.10 10.55 30.19Q11.31 27.08 10.36 22.49ZM17.64 24.44Q19.61 27.89 18.38 31.01Q17.48 27.94 14.36 24.44ZM21.64 22.49Q25.07 24.49 25.57 27.81Q23.25 25.60 18.80 24.13ZM24.13 18.80Q28.10 18.82 30.19 21.45Q27.08 20.69 22.49 21.64ZM24.44 14.36Q27.89 12.39 31.01 13.62Q27.94 14.52 24.44 17.64ZM22.49 10.36Q24.49 6.93 27.81 6.43Q25.60 8.75 24.13 13.20ZM18.80 7.87Q18.82 3.90 21.45 1.81Q20.69 4.92 21.64 9.51Z" fill="currentColor"/>
+              <circle cx="16" cy="16" r="8.6" fill="currentColor"/>
             </svg>
           </button>
           <button type="button" class="ls-tema-botao" data-tema-escolha="eclipse"
                   aria-pressed="false" title="Eclipse — meio-termo" aria-label="Tema eclipse">
-            <svg class="ls-tema-icone" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
-              <!-- lado do sol: meia rodela cheia, com os raios do lado dele -->
-              <path d="M8 3.1a4.9 4.9 0 0 0 0 9.8z" fill="currentColor"/>
-              <g stroke="currentColor" stroke-width="1.2" stroke-linecap="round">
-                <path d="M1.2 8h1.5M2.6 3.6l1.1 1.1M2.6 12.4l1.1-1.1M7.999 1.3v1.3M7.999 13.4v1.3"/>
-              </g>
-              <!-- lado da lua: contorno e as crateras dela -->
-              <path d="M8 3.1a4.9 4.9 0 0 1 0 9.8" fill="none"
-                    stroke="currentColor" stroke-width="1.25"/>
-              <circle cx="10.5" cy="6.1" r=".95" fill="currentColor"/>
-              <circle cx="11.5" cy="9.5" r=".68" fill="currentColor"/>
-              <circle cx="9.6" cy="10.9" r=".5" fill="currentColor"/>
+            <svg class="ls-tema-icone" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+              <!-- as mesmas chamas do sol, o rosto dele menor, e a lua por cima -->
+              <path d="M14.36 7.56Q12.39 4.11 13.62 0.99Q14.52 4.06 17.64 7.56ZM10.36 9.51Q6.93 7.51 6.43 4.19Q8.75 6.40 13.20 7.87ZM7.87 13.20Q3.90 13.18 1.81 10.55Q4.92 11.31 9.51 10.36ZM7.56 17.64Q4.11 19.61 0.99 18.38Q4.06 17.48 7.56 14.36ZM9.51 21.64Q7.51 25.07 4.19 25.57Q6.40 23.25 7.87 18.80ZM13.20 24.13Q13.18 28.10 10.55 30.19Q11.31 27.08 10.36 22.49ZM17.64 24.44Q19.61 27.89 18.38 31.01Q17.48 27.94 14.36 24.44ZM21.64 22.49Q25.07 24.49 25.57 27.81Q23.25 25.60 18.80 24.13ZM24.13 18.80Q28.10 18.82 30.19 21.45Q27.08 20.69 22.49 21.64ZM24.44 14.36Q27.89 12.39 31.01 13.62Q27.94 14.52 24.44 17.64ZM22.49 10.36Q24.49 6.93 27.81 6.43Q25.60 8.75 24.13 13.20ZM18.80 7.87Q18.82 3.90 21.45 1.81Q20.69 4.92 21.64 9.51Z" fill="currentColor"/>
+              <circle cx="12.9" cy="16" r="4.7" fill="currentColor"/>
+              <path d="M13.50 7.77A8.6 8.6 0 1 1 13.50 24.23A8.6 8.6 0 0 0 13.50 7.77Z" fill="currentColor"/>
             </svg>
           </button>
           <button type="button" class="ls-tema-botao" data-tema-escolha="lua"
                   aria-pressed="false" title="Lua — escuro" aria-label="Tema escuro">
-            <svg class="ls-tema-icone" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
-              <path d="M13.1 10.4A5.6 5.6 0 0 1 5.9 3.1a5.7 5.7 0 1 0 7.2 7.3z"
-                    fill="currentColor"/>
-              <!-- as crateras, que é o que faz virar lua e não uma vírgula -->
-              <circle cx="7.4" cy="9.2" r=".95" fill="var(--panel-soft)" opacity=".55"/>
-              <circle cx="9.9" cy="11.4" r=".62" fill="var(--panel-soft)" opacity=".55"/>
-              <circle cx="6.2" cy="12" r=".45" fill="var(--panel-soft)" opacity=".55"/>
-              <path d="M12.4 2.2l.45 1.15 1.15.45-1.15.45-.45 1.15-.45-1.15-1.15-.45 1.15-.45z"
+            <svg class="ls-tema-icone" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+              <path d="M12.16 6.33A10.4 10.4 0 1 1 12.16 25.67A10.0 10.0 0 0 0 12.16 6.33Z" fill="currentColor"/>
+              <!-- a estrelinha: é o que separa a lua de uma vírgula gorda -->
+              <path d="M25.4 4.2l.95 2.35 2.35.95-2.35.95-.95 2.35-.95-2.35-2.35-.95 2.35-.95z"
                     fill="currentColor"/>
             </svg>
           </button>
         </div>
-
-        <!-- ===================== central de avisos ===================== -->
-        <div class="ls-avisos">
-          <button type="button" class="ls-avisos-botao" id="avisosBotao"
-                  aria-haspopup="true" aria-expanded="false"
-                  aria-label="Avisos do painel">
-            <i class="bi bi-bell-fill"></i>
-            <span class="ls-avisos-selo"
-                  data-selo="total" hidden>0</span>
-          </button>
-
-          <div class="ls-avisos-painel" id="avisosPainel" hidden>
-            <div class="ls-avisos-topo">
-              <span>O que precisa de você</span>
-              <span data-selo="urgentes-texto" hidden>0 urgentes</span>
-            </div>
 
             <p id="lsSincroniaEstado" class="ls-subtext" role="status" hidden></p>
             <div id="avisosLista">

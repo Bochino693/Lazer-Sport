@@ -1599,31 +1599,61 @@
     avisos.ultimoSomEm = agora;
 
     var inicio = audio.currentTime;
-    /* Três notas ascendentes, curtas e suaves: perceptíveis na bancada
-       sem parecer alarme de erro ou depender de arquivo externo. */
-    [
-      { atraso: 0, frequencia: 659.25, volume: 0.055 },
-      { atraso: 0.10, frequencia: 783.99, volume: 0.065 },
-      { atraso: 0.22, frequencia: 987.77, volume: 0.075 },
-    ].forEach(function (nota, indice) {
+
+    /* ==================================================================
+       ALTO O BASTANTE PARA UM GALPÃO
+
+       O aviso era três senoides de volume 0,055 a 0,075 -- perto do
+       silêncio. Numa sala quieta dava para ouvir; ao lado de uma
+       compressor de ar, de um rádio ligado ou com o tablet na bancada a
+       um metro de distância, não existia. Um aviso que não se ouve é um
+       aviso que não foi dado.
+
+       O que mudou, e por quê:
+
+         * VOLUME quatro vezes maior. Continua longe de assustar --
+           som de aviso, não de alarme;
+         * DUAS VOZES por nota: uma senoide dá o corpo e um triângulo
+           uma oitava acima dá o brilho. É o brilho que atravessa o
+           ruído de fundo, porque ruído de galpão é grave;
+         * NOTAS MAIS LONGAS (0,26s contra 0,18s) e um acorde ao fim.
+           Som curto demais some no meio de qualquer barulho.
+
+       Continua gerado aqui: não baixa arquivo, funciona sem rede e não
+       gasta banda -- que, no mês em que isto foi escrito, era o assunto.
+       ================================================================== */
+    var VOLUME = 0.28;
+
+    function voz(frequencia, atraso, duracao, forca, tipo) {
       var oscilador = audio.createOscillator();
       var ganho = audio.createGain();
-      oscilador.type = indice === 2 ? "triangle" : "sine";
-      oscilador.frequency.value = nota.frequencia;
-      ganho.gain.setValueAtTime(0.0001, inicio + nota.atraso);
-      ganho.gain.exponentialRampToValueAtTime(
-        nota.volume,
-        inicio + nota.atraso + 0.016
-      );
-      ganho.gain.exponentialRampToValueAtTime(
-        0.0001,
-        inicio + nota.atraso + 0.18
-      );
+      oscilador.type = tipo;
+      oscilador.frequency.value = frequencia;
+
+      var em = inicio + atraso;
+      /* Rampa exponencial não pode partir de zero, e a subida em 12ms
+         evita o "clique" de um corte seco. */
+      ganho.gain.setValueAtTime(0.0001, em);
+      ganho.gain.exponentialRampToValueAtTime(VOLUME * forca, em + 0.012);
+      ganho.gain.exponentialRampToValueAtTime(0.0001, em + duracao);
+
       oscilador.connect(ganho);
       ganho.connect(audio.destination);
-      oscilador.start(inicio + nota.atraso);
-      oscilador.stop(inicio + nota.atraso + 0.19);
+      oscilador.start(em);
+      oscilador.stop(em + duracao + 0.02);
+    }
+
+    /* Mi, sol, si -- as três notas subindo, como antes. O acorde no fim
+       é o que faz o aviso soar terminado em vez de interrompido. */
+    [
+      { atraso: 0, frequencia: 659.25, forca: 0.85 },
+      { atraso: 0.11, frequencia: 783.99, forca: 0.95 },
+      { atraso: 0.23, frequencia: 987.77, forca: 1 },
+    ].forEach(function (nota) {
+      voz(nota.frequencia, nota.atraso, 0.26, nota.forca, "sine");
+      voz(nota.frequencia * 2, nota.atraso, 0.20, nota.forca * 0.45, "triangle");
     });
+    voz(1318.51, 0.35, 0.34, 0.55, "sine");
   }
 
   function houveAvisoNovo(dados) {

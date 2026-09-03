@@ -346,20 +346,30 @@ class TemaAplicadoAntesDoPrimeiroPixelTests(SimpleTestCase):
         base = self.base()
         botoes = base.split('data-tema-escolha=')
 
+        # As chamas: doze pétalas curvas em volta do disco, o mesmo
+        # desenho nos dois botões que têm sol. Cada pétala é um `Q`
+        # (curva), e é isso que separa a chama do raio reto.
+        chamas = "M14.36 7.56Q12.39 4.11"
+
         sol = botoes[1]
-        # Oito raios: quatro retos e quatro diagonais, na mesma espessura.
-        self.assertIn("stroke-linecap=\"round\"", sol)
-        self.assertIn("M8 1.1v1.7", sol)
+        self.assertIn(chamas, sol)
+        # E o rosto cheio: o sol sozinho é disco inteiro.
+        self.assertIn('<circle cx="16" cy="16" r="8.6"', sol)
 
         eclipse = botoes[2]
-        # Meia rodela cheia (o sol) + contorno da outra metade (a lua).
-        self.assertIn('d="M8 3.1a4.9 4.9 0 0 0 0 9.8z"', eclipse)
-        self.assertIn('d="M8 3.1a4.9 4.9 0 0 1 0 9.8"', eclipse)
-        # E as crateras, que é o que faz o lado direito virar lua.
-        self.assertGreaterEqual(eclipse.count("<circle"), 3)
+        # As mesmas chamas -- se divergirem, os três botões deixam de
+        # parecer da mesma família, e isso aparece na hora.
+        self.assertIn(chamas, eclipse)
+        # O rosto do sol menor, aberto do lado direito...
+        self.assertIn('<circle cx="12.9" cy="16" r="4.7"', eclipse)
+        # ...e a lua crescente por cima dele, que é o que dá nome ao tema.
+        self.assertIn("M13.50 7.77A8.6 8.6 0 1 1 13.50 24.23", eclipse)
 
         lua = botoes[3]
-        self.assertGreaterEqual(lua.count("<circle"), 3)  # crateras
+        # Crescente sozinha e maior, com a estrelinha ao lado: sem ela, a
+        # forma lida como uma vírgula gorda.
+        self.assertIn("M12.16 6.33A10.4 10.4 0 1 1 12.16 25.67", lua)
+        self.assertIn("M25.4 4.2l.95 2.35", lua)
 
         # Nenhum dos três depende mais da fonte de ícones.
         for classe in ("bi-brightness-high-fill", "bi-circle-half", "bi-moon-stars-fill"):
