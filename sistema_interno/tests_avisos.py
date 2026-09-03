@@ -727,7 +727,7 @@ class EstadoAoVivoTests(TestCase):
         )
         self.assertLessEqual(
             passo,
-            10000,
+            5000,
             "com gente mexendo, o aviso do colega não pode demorar",
         )
         self.assertIn("OCIOSO_APOS", painel)

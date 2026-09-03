@@ -807,16 +807,18 @@ except ValueError:
 # das OUTRAS -- quem gravou vê na hora, pelo sinal de gravação.
 #
 # Existe para o caso real de cinco painéis abertos sondarem quase no mesmo
-# instante: eles custam uma consulta, e não cinco. Dois segundos ficam
-# abaixo do que alguém percebe olhando a tela. Subir isso é trocar aviso
-# rápido por uma consulta curta a menos, e esse foi um mau negócio uma vez.
+# instante: eles custam uma consulta, e não cinco. Um segundo é o piso, e é
+# o que está valendo: o resumo é UMA viagem ao banco com nove somas
+# indexadas, e segurar isso por mais tempo só atrasa o aviso. Subir este
+# número é trocar aviso rápido por uma consulta curta a menos, e esse já
+# foi um mau negócio uma vez.
 try:
     INTERNO_PULSO_SEGUNDOS = max(
         1,
-        int(os.getenv("INTERNO_PULSO_SEGUNDOS", "2")),
+        int(os.getenv("INTERNO_PULSO_SEGUNDOS", "1")),
     )
 except ValueError:
-    INTERNO_PULSO_SEGUNDOS = 2
+    INTERNO_PULSO_SEGUNDOS = 1
 
 INTERNO_BASE_URL = os.getenv(
     "INTERNO_BASE_URL",
