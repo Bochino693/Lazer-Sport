@@ -172,6 +172,31 @@ def manutencao_notificacao(request):
     return {chave: SimpleLazyObject(lambda c=chave: dados[c]) for chave in vazio}
 
 
+def equipe_context(request):
+    """Diz ao site se quem está olhando trabalha aqui.
+
+    O site usa isto para duas coisas opostas e complementares: esconder o
+    que é do cliente (carrinho, lista de desejos, pedidos -- ver
+    `LojaSomenteDeClienteMiddleware`, que é quem de fato barra) e mostrar
+    o caminho de volta para o painel. Um sem o outro deixaria a pessoa
+    numa loja onde nada funciona e sem porta de saída.
+    """
+    from .middleware import e_da_equipe
+    from .views_redirects import _origem_interna
+
+    if getattr(request, "is_interno", False):
+        return {}
+
+    usuario = getattr(request, "user", None)
+    return {
+        "usuario_da_equipe": SimpleLazyObject(lambda: e_da_equipe(usuario)),
+        # O painel mora em outro subdomínio, então `{% url %}` não o
+        # alcança: o endereço é montado a partir do host da vez, que é a
+        # mesma conta que os redirecionamentos antigos já faziam.
+        "ls_url_painel": SimpleLazyObject(lambda: _origem_interna(request) + "/"),
+    }
+
+
 def carrinho_context(request):
     if not request.user.is_authenticated:
         return {

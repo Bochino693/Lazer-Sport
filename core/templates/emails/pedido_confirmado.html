@@ -1,4 +1,4 @@
-{% load static %}<!DOCTYPE html>
+{% load interno_extras static %}<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
@@ -59,7 +59,7 @@
                     </td>
                     <td align="right" style="padding:10px 0; border-bottom:1px solid #eef2f9;
                                              font-size:15px; white-space:nowrap;">
-                      R$ {{ item.subtotal }}
+                      R$ {{ item.subtotal|moeda }}
                     </td>
                   </tr>
                 {% endfor %}

@@ -1,4 +1,5 @@
 {% extends "gestao/base_adm.html" %}
+{% load interno_extras %}
 
 {% block title %}Peças de reposição{% endblock %}
 {% block page_heading %}Peças de Reposição{% endblock %}
@@ -113,12 +114,12 @@
             </div>
           {% endif %}
           <div class="peca-linha">
-            <span>Venda <strong>{% if peca.preco_venda %}R$ {{ peca.preco_venda }}{% else %}—{% endif %}</strong></span>
+            <span>Venda <strong>{% if peca.preco_venda %}R$ {{ peca.preco_venda|moeda }}{% else %}—{% endif %}</strong></span>
             <span class="peca-status {% if peca.ativo %}on{% else %}off{% endif %}">{% if peca.ativo %}No site{% else %}Fora do site{% endif %}</span>
           </div>
           <div class="peca-linha">
-            <span>Fornecedor {% if peca.preco_fornecedor %}R$ {{ peca.preco_fornecedor }}{% else %}—{% endif %}</span>
-            <span>Ganho {% if peca.ganho_potencial %}R$ {{ peca.ganho_potencial }}{% else %}—{% endif %}</span>
+            <span>Fornecedor {% if peca.preco_fornecedor %}R$ {{ peca.preco_fornecedor|moeda }}{% else %}—{% endif %}</span>
+            <span>Ganho {% if peca.ganho_potencial %}R$ {{ peca.ganho_potencial|moeda }}{% else %}—{% endif %}</span>
           </div>
           <div class="peca-linha">
             <span>{{ peca.curtidas }} curtida{{ peca.curtidas|pluralize }}</span>

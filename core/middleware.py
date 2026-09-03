@@ -190,6 +190,12 @@ class TelefoneObrigatorioMiddleware:
         "/media/",
         "/favicon.ico",
         "/system/",
+        # Ligar o aviso no celular não é navegar pela loja: é um pedido
+        # do próprio aparelho, muitas vezes de quem ainda nem completou
+        # o cadastro. Redirecionar isto para "complete o perfil" devolve
+        # HTML no meio de um `fetch` e a inscrição falha calada.
+        "/aplicativo/",
+        "/app-sw.js",
     )
 
     def __init__(self, get_response):
@@ -218,3 +224,97 @@ class TelefoneObrigatorioMiddleware:
             return redirect(f"{reverse('completar_perfil')}#telefone-box")
 
         return self.get_response(request)
+
+
+def e_da_equipe(user) -> bool:
+    """Conta de acesso interno -- por função, por staff ou por superusuário.
+
+    As três perguntas juntas de propósito: uma conta pode ter função de
+    equipe sem `is_staff`, e o superusuário não precisa de função nenhuma
+    para entrar em tudo. Qualquer uma delas basta para dizer "esta pessoa
+    trabalha aqui".
+    """
+    if not getattr(user, "is_authenticated", False):
+        return False
+    if getattr(user, "is_staff", False) or getattr(user, "is_superuser", False):
+        return True
+
+    from sistema_interno.permissoes import faz_parte_da_equipe
+
+    return faz_parte_da_equipe(user)
+
+
+class LojaSomenteDeClienteMiddleware:
+    """Quem trabalha na fábrica não compra na própria loja.
+
+    O QUE ACONTECIA. A conta da equipe é um `auth.User` como qualquer
+    outra, então o site tratava um gerente como trata um cliente:
+    carrinho, lista de desejos e "meus pedidos" apareciam para ele. Isso
+    não é enfeite fora de lugar --
+
+      * um pedido criado por conta interna entra na mesma fila de
+        produção e no mesmo relatório de vendas da loja, e não é de
+        cliente nenhum quando alguém pergunta quem comprou;
+      * lista de desejos e carrinho da equipe se misturam aos indicadores
+        de interesse do site, que existem para dizer o que os CLIENTES
+        querem.
+
+    A compra é do perfil de cliente. Para a equipe o site continua
+    inteiro -- catálogo, peças, projetos, eventos, manutenção --, e a
+    porta de volta é o painel.
+
+    POR QUE MIDDLEWARE, E NÃO UM DECORADOR EM CADA VIEW. São mais de dez
+    endereços entre carrinho, cupom, frete, pagamento e favoritos, e um
+    deles esquecido é uma porta aberta que ninguém percebe. A lista
+    abaixo é a regra inteira, num lugar só, fácil de conferir.
+    """
+
+    #: Tudo o que pertence à compra. Prefixo, porque cada um destes tem
+    #: filhos (`/carrinho/adicionar/...`, `/pagamento/12/`).
+    ROTAS_DE_COMPRA = (
+        "/carrinho/",
+        "/pagamento/",
+        "/meus-pedidos/",
+        "/lista-desejos/",
+        "/favoritos/",
+        "/salvar-cpf-carrinho/",
+        "/calcular-frete/",
+        "/api/pedido/",
+    )
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        if self._pode_passar(request):
+            return self.get_response(request)
+
+        from django.contrib import messages
+        from django.http import JsonResponse
+
+        recado = (
+            "Carrinho, lista de desejos e pedidos são do cliente. Sua conta "
+            "é de acesso interno: use o painel da fábrica."
+        )
+        # Metade destes endereços é chamada por fetch, e um redirecionamento
+        # ali volta como HTML no meio de um JSON.parse -- erro que aparece
+        # na tela como "algo deu errado" e não explica nada.
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest" or (
+            request.content_type and "application/json" in request.content_type
+        ):
+            return JsonResponse({"ok": False, "erro": recado}, status=403)
+
+        messages.info(request, recado)
+        return redirect("home")
+
+    def _pode_passar(self, request):
+        host = request.get_host().split(":", 1)[0].lower()
+        if host.startswith("interno."):
+            return True
+        if not request.path.startswith(self.ROTAS_DE_COMPRA):
+            return True
+
+        user = getattr(request, "user", None)
+        if not user or not user.is_authenticated:
+            return True
+        return not e_da_equipe(user)

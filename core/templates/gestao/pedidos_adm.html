@@ -1,4 +1,5 @@
 {% extends "gestao/base_adm.html" %}
+{% load interno_extras %}
 
 {% block title %}Pedidos{% endblock %}
 {% block page_heading %}Gestão de Pedidos{% endblock %}
@@ -74,8 +75,8 @@
                 {% else %}Cliente removido{% endif %}
               </td>
               <td>{{ pedido.itens.count }} item(ns)</td>
-              <td class="money">R$ {{ pedido.valor_frete|default:"0.00"|floatformat:2 }}</td>
-              <td class="money total">R$ {{ pedido.total_final|default:"0.00"|floatformat:2 }}</td>
+              <td class="money">R$ {{ pedido.valor_frete|moeda }}</td>
+              <td class="money total">R$ {{ pedido.total_final|moeda }}</td>
               <td>{{ pedido.get_forma_pagamento_display|default:"—" }}</td>
               <td>
                 <span class="badge {% if pedido.status == 'aguardando_pagamento' %}waiting{% elif pedido.status == 'pago' or pedido.status == 'finalizado' %}paid{% elif pedido.status == 'em_preparacao' or pedido.status == 'saiu_entrega' %}moving{% elif pedido.status == 'cancelado' %}cancelled{% else %}neutral{% endif %}">
@@ -105,16 +106,16 @@
                 <table><thead><tr><th>Item</th><th>Tipo</th><th>Qtd.</th><th>Unitário</th><th>Subtotal</th></tr></thead>
                 <tbody>
                 {% for item in pedido.itens.all %}
-                  <tr><td>{{ item.nome_item }}</td><td>{{ item.get_tipo_item_display }}</td><td>{{ item.quantidade }}</td><td>R$ {{ item.preco_unitario|floatformat:2 }}</td><td><strong>R$ {{ item.subtotal|floatformat:2 }}</strong></td></tr>
+                  <tr><td>{{ item.nome_item }}</td><td>{{ item.get_tipo_item_display }}</td><td>{{ item.quantidade }}</td><td>R$ {{ item.preco_unitario|moeda }}</td><td><strong>R$ {{ item.subtotal|moeda }}</strong></td></tr>
                 {% empty %}<tr><td colspan="5">Nenhum item registrado.</td></tr>{% endfor %}
                 </tbody></table>
               </div>
               <div class="summary">
-                <div class="sumrow"><span>Bruto</span><strong>R$ {{ pedido.total_bruto|default:"0.00"|floatformat:2 }}</strong></div>
-                <div class="sumrow"><span>Desconto</span><strong>- R$ {{ pedido.valor_desconto|default:"0.00"|floatformat:2 }}</strong></div>
-                <div class="sumrow"><span>Líquido</span><strong>R$ {{ pedido.total_liquido|default:"0.00"|floatformat:2 }}</strong></div>
-                <div class="sumrow"><span>Frete</span><strong>R$ {{ pedido.valor_frete|default:"0.00"|floatformat:2 }}</strong></div>
-                <div class="sumrow final"><span>Total final</span><strong>R$ {{ pedido.total_final|default:"0.00"|floatformat:2 }}</strong></div>
+                <div class="sumrow"><span>Bruto</span><strong>R$ {{ pedido.total_bruto|moeda }}</strong></div>
+                <div class="sumrow"><span>Desconto</span><strong>- R$ {{ pedido.valor_desconto|moeda }}</strong></div>
+                <div class="sumrow"><span>Líquido</span><strong>R$ {{ pedido.total_liquido|moeda }}</strong></div>
+                <div class="sumrow"><span>Frete</span><strong>R$ {{ pedido.valor_frete|moeda }}</strong></div>
+                <div class="sumrow final"><span>Total final</span><strong>R$ {{ pedido.total_final|moeda }}</strong></div>
               </div>
             </template>
           {% endfor %}

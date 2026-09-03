@@ -1694,10 +1694,25 @@
     document.querySelectorAll('[data-selo="urgentes"]').forEach(function (selo) {
       pintarSelo(selo, dados.urgentes);
     });
+    var pendentes = Number(dados.total) || 0;
+    var urgentes = Number(dados.urgentes) || 0;
     document.querySelectorAll('[data-selo="total"]').forEach(function (selo) {
       pintarSelo(selo, dados.total);
-      selo.classList.toggle("urgente", (Number(dados.urgentes) || 0) > 0);
+      selo.classList.toggle("urgente", urgentes > 0);
     });
+
+    /* QUEM CHAMA É O BOTÃO, NÃO O NÚMERO.
+
+       A onda e o clarão do sino são pseudo-elementos do botão (ver
+       `.ls-avisos-botao::before/::after`), e CSS não sabe olhar para o
+       selo que está dentro dele -- `:has()` saberia, mas o tablet da
+       fábrica nem sempre tem. Então quem conta ao botão o que o selo
+       está mostrando é esta linha. */
+    var botao = document.getElementById("avisosBotao");
+    if (botao) {
+      botao.classList.toggle("tem-aviso", pendentes > 0);
+      botao.classList.toggle("urgente", urgentes > 0);
+    }
 
     var texto = document.querySelector('[data-selo="urgentes-texto"]');
     if (texto) {

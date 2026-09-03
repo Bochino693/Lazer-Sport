@@ -36,6 +36,7 @@ from .views import (
 )
 from .views_app import manifesto, service_worker
 from .views_avisos import EstadoAvisosView, InscricaoPushView
+from .views_avisos_app import AvisosDoAplicativoView
 from .views_acessos import AvaliacaoSetoresInnerView, UsuariosEquipeInnerView
 from .views_etiquetas import EtiquetasInnerView
 from .views_clientes import (
@@ -252,6 +253,12 @@ urlpatterns = [
     # O aparelho pede (ou desiste de) receber aviso quando o painel está
     # fechado -- é o único caminho até quem está na estrada.
     path('avisos/aparelho/', InscricaoPushView.as_view(), name='avisos_aparelho'),
+
+    # ---------------- notificações do aplicativo (cliente) ----------------
+    # Outro público, outra tela: aqui a LOJA fala com quem baixou o
+    # aplicativo. Ver `avisos_app.py` para o porquê de as duas listas de
+    # aparelhos serem separadas.
+    path('aplicativo/avisos/', AvisosDoAplicativoView.as_view(), name='avisos_app'),
 
     # ---------------- acesso ----------------
     path('login/inner/', LoginInternoView.as_view(), name='login_inner'),

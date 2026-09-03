@@ -351,15 +351,25 @@ class HomeView(View):
             .select_related("cliente")
             .only(
                 "cidade", "estado", "pais", "latitude", "longitude",
-                "cliente__nome_cliente", "cliente__nome_estabelecimento", "cliente__site_cliente", "cliente__logo",
+                "cliente__nome_cliente", "cliente__nome_estabelecimento", "cliente__site_cliente",
             )
         )
+
+        # O ALFINETE É NOSSO, E POR ISSO A MARCA É A NOSSA.
+        #
+        # Cada pino saía com a logo do cliente, e o mapa virava um mosaico
+        # de marcas de terceiros: quem batia o olho lia "estes são os
+        # logos de várias empresas", quando a frase é outra -- "a Lazer &
+        # Sport atende aqui, aqui e aqui". Um único símbolo repetido é o
+        # que faz o mapa contar essa história; o nome do cliente continua
+        # no cartão que abre no toque.
+        logo_da_casa = static("images/logoofi.png")
 
         clientes_mapa = [
             {
                 "tipo": "cliente",
                 "nome": e.cliente.nome_estabelecimento or e.cliente.nome_cliente or "Cliente Lazer & Sport",
-                "logo": e.cliente.logo.url if e.cliente.logo else "",
+                "logo": logo_da_casa,
                 "cidade": e.cidade or "",
                 "estado": e.estado or "",
                 "pais": e.pais or "Brasil",
@@ -1051,11 +1061,17 @@ class EstabelecimentosListView(ListView):
 class BrinquedosView(View):
     @staticmethod
     def _formatar_decimal_br(valor):
-        """Formata Decimal no padrão 1.234,56, sem depender do locale do SO."""
+        """Formata Decimal no padrão 1.234,56, sem depender do locale do SO.
+
+        A regra mora em `core/formatos.py`. Aqui só o caso do vazio, que
+        é diferente: numa faixa de preço, "" some da tela e "0,00" afirma
+        que existe um brinquedo de graça.
+        """
         if valor is None:
             return ""
-        numero = Decimal(valor).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-        return f"{numero:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+        from .formatos import dinheiro
+
+        return dinheiro(valor)
 
     @staticmethod
     def _decimal_html(valor):

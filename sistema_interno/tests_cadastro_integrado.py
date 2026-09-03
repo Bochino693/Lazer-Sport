@@ -26,6 +26,54 @@ class CadastroIntegradoTests(TestCase):
     def post(self, path, dados):
         return self.client.post(path, dados, HTTP_HOST='interno.testserver', HTTP_X_REQUESTED_WITH='XMLHttpRequest')
 
+    def test_conta_de_acesso_e_perfil_de_cliente_nao_dividem_email(self):
+        """A regra que importa: dois ACESSOS não podem ter o mesmo e-mail.
+
+        O perfil de cliente do site (`core.ClientePerfil`) é uma conta de
+        acesso -- ele nasce grudado num `auth.User`. Então o e-mail de
+        quem entra no painel e o de quem entra na loja disputam a mesma
+        gaveta, e é isso que precisa continuar valendo: dois logins com o
+        mesmo endereço deixariam a recuperação de senha sem saber qual
+        atender.
+
+        O cadastro COMERCIAL de cliente é outra coisa -- não tem login,
+        não recupera senha -- e por isso pode repetir o endereço de uma
+        conta. Ver `core/identidade_email.py`.
+        """
+        from core.models import ClientePerfil
+
+        interno = User.objects.create_user('gerente-interno', email='thiago@example.com')
+
+        # O perfil do site é uma conta: não pode nascer com o mesmo e-mail.
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            User.objects.create_user('cliente-site', email='THIAGO@example.com')
+
+        # E a validação de tela recusa antes de o banco precisar recusar.
+        from core.identidade_email import validar_email_de_usuario
+        from sistema_interno.utils import ErroDeFormulario
+        with self.assertRaises(ErroDeFormulario):
+            validar_email_de_usuario('thiago@example.com')
+
+        # Já o cadastro comercial com o mesmo endereço é o caso normal:
+        # é a mesma pessoa, vista pelo lado de quem recebe orçamento.
+        Cliente.objects.create(nome_cliente='Thiago da festa', email='thiago@example.com')
+
+        # E o perfil de cliente de OUTRO endereço convive sem problema.
+        # O perfil nasce junto da conta, então aqui só se confere que ele
+        # existe -- criar de novo bateria no OneToOne.
+        outro = User.objects.create_user('cliente-site', email='ana@example.com')
+        self.assertTrue(ClientePerfil.objects.filter(user=outro).exists())
+        self.assertEqual(
+            EmailIdentidade.objects.filter(email='thiago@example.com').count(), 2,
+            "uma reserva por escopo: a da conta e a do cadastro comercial",
+        )
+        self.assertTrue(
+            EmailIdentidade.objects.filter(
+                escopo='usuario', email='thiago@example.com',
+                titular=f'u:{interno.pk}',
+            ).exists()
+        )
+
     def test_email_repetido_e_bloqueado_dentro_do_cadastro_e_livre_entre_eles(self):
         """A mesma pessoa pode ser conta E cliente com o mesmo endereço.
 

@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load static %}
+{% load interno_extras static %}
 {% load humanize %}
 {% load cache %}
 
@@ -3881,7 +3881,7 @@ main.content-section {
                   {% if brinquedo.exibir_na_loja %}
                     <span class="produto-preco-label">Preço para compra</span>
                     <strong class="produto-preco">
-                      R$ {{ brinquedo.valor_brinquedo|floatformat:"2g" }}
+                      R$ {{ brinquedo.valor_brinquedo|moeda }}
                     </strong>
                   {% else %}
                     <span class="produto-preco-label">Projeto personalizado</span>
@@ -4071,7 +4071,7 @@ main.content-section {
               <small>Preço da peça</small>
               {% if peca.preco_venda %}
                 <div class="preco money" data-valor="{{ peca.preco_venda }}">
-                  R$ {{ peca.preco_venda }}
+                  R$ {{ peca.preco_venda|moeda }}
                 </div>
               {% else %}
                 <div class="pecas-price-consulta">Consulte a equipe</div>
@@ -4524,7 +4524,7 @@ main.content-section {
                 <h4>{{ b.nome_brinquedo }}</h4>
                 <p>{{ b.descricao|truncatechars:120 }}</p>
                 {% if b.valor_brinquedo %}
-                <span class="preco">R$ {{ b.valor_brinquedo }}</span>
+                <span class="preco">R$ {{ b.valor_brinquedo|moeda }}</span>
                 {% endif %}
             </div>
             {% empty %}
@@ -7690,7 +7690,10 @@ main.content-section {
     // maior que essa largura, então pinos que ficariam colados viram
     // bolha em vez de se sobreporem e esconderem a foto um do outro.
     function criarIconeCliente(c) {
-        const imagemCliente = escapeHTML(c.imagem || c.logo || c.foto || LOGO_CLIENTE_PADRAO);
+        // A marca do pino é sempre a da casa (ver `clientes_mapa`, em
+        // core/views.py): o mapa diz onde a Lazer & Sport atende, e não
+        // quais marcas existem em cada cidade.
+        const imagemCliente = escapeHTML(c.logo || LOGO_CLIENTE_PADRAO);
         return L.divIcon({
             className: 'cliente-marker',
             html: criarPino({
@@ -7720,7 +7723,7 @@ main.content-section {
 
     function criarPopupCliente(c) {
         const nome = escapeHTML(c.nome);
-        const imagemCliente = escapeHTML(c.imagem || c.logo || c.foto || LOGO_CLIENTE_PADRAO);
+        const imagemCliente = escapeHTML(c.logo || LOGO_CLIENTE_PADRAO);
         const logo = `
             <img src="${imagemCliente}"
                  alt="${nome}"

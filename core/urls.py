@@ -9,6 +9,8 @@ from .views_favoritos import (
     meus_favoritos,
 )
 from .views_gestao_produtos import EngajamentoAdminView, PecaAdminView
+from .views_app_avisos import service_worker_do_site
+from sistema_interno.views_avisos_app import InscricaoDoAplicativoView
 from .views_orcamento import orcamento_publico
 from .views_ordem_servico import ordem_servico_publica
 from sistema_interno.views_campanhas import CampanhaPublicaDestinoView, CampanhaPublicaView
@@ -117,6 +119,20 @@ urlpatterns = [
     path("pronto/", pronto, name="pronto"),
     path("robots.txt", robots_txt, name="robots_txt"),
     path("sitemap.xml", sitemap, {"sitemaps": sitemaps}, name="sitemap"),
+
+    # ---------------- avisos no celular do cliente ----------------
+    # O aparelho de quem baixou o aplicativo pede (ou desiste de) receber
+    # aviso da loja. A tela que ESCREVE o aviso mora no painel; aqui só
+    # entra e sai o endereço de entrega. Ver `sistema_interno/avisos_app.py`.
+    path(
+        "aplicativo/avisos/aparelho/",
+        InscricaoDoAplicativoView.as_view(),
+        name="inscricao_avisos_app",
+    ),
+    # O service worker precisa responder na RAIZ: ele só controla o que
+    # está abaixo do caminho em que é servido, e em /static/ não
+    # controlaria página nenhuma -- sem isso, notificação não chega.
+    path("app-sw.js", service_worker_do_site, name="service_worker_site"),
 
     path("", HomeView.as_view(), name="home"),
     path("loja/", LojaView.as_view(), name="loja"),

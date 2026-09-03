@@ -1550,53 +1550,95 @@ textarea.form-control{min-height:100px!important}
 }
 .ls-avisos-botao:hover{background:rgba(var(--acento-rgb),.18);border-color:rgba(var(--acento-rgb),.4)}
 .ls-avisos-botao:active{transform:scale(.95)}
-/* O anel do selo é recorte: ele imita a cor da barra do topo para o
-   número parecer descolado do botão. Estava pedindo `--bg-1`, que é o
-   fundo da PÁGINA -- um tom diferente do da barra, e a diferença lia
-   como um halo fora de lugar em volta do número. */
+
+/* ======================================================================
+   O SINO CHAMA SEM MEXER NO NÚMERO
+
+   A primeira versão esticava o selo. Ficava feio por um motivo simples:
+   o que está escrito ali é a INFORMAÇÃO, e informação que balança o olho
+   não lê -- ele espera parar. Agora quem se move é o entorno.
+
+   Duas peças, as duas atrás do número:
+
+     `::after` -- a onda. Um anel do tamanho do botão que cresce para
+        fora e some, como a onda de uma notificação de celular. Enquanto
+        houver aviso pendente ela repete, devagar.
+     `::before` -- o clarão. Uma auréola parada que respira junto, para
+        o botão continuar chamando mesmo quando a onda está no fim do
+        ciclo (invisível).
+
+   Nenhuma das duas ocupa espaço nem toca no selo: são pseudo-elementos
+   posicionados, e o número fica exatamente onde estava.
+   ====================================================================== */
+.ls-avisos-botao::before,
+.ls-avisos-botao::after{
+  content:"";position:absolute;inset:-1px;border-radius:inherit;
+  pointer-events:none;opacity:0;
+}
+.ls-avisos-botao::before{
+  background:radial-gradient(circle at 50% 50%,rgba(var(--acento-rgb),.42),transparent 68%);
+}
+.ls-avisos-botao::after{border:2px solid rgba(var(--acento-rgb),.65)}
+
+/* `tem-aviso` é posta pelo painel.js quando o selo mostra algo. Uma
+   classe, e não `:has()`, porque o tablet da fábrica não é o navegador
+   mais novo do mundo -- e um sino que não chama é pior que um sino
+   sem enfeite. */
+.ls-avisos-botao.tem-aviso::after{animation:ls-onda 2.8s cubic-bezier(.22,.68,.3,1) infinite}
+.ls-avisos-botao.tem-aviso::before{animation:ls-clarao 2.8s ease-in-out infinite}
+.ls-avisos-botao.tem-aviso{border-color:rgba(var(--acento-rgb),.45)}
+
+.ls-avisos-botao.urgente::after{border-color:rgba(var(--red-rgb),.7);animation-duration:1.7s}
+.ls-avisos-botao.urgente::before{
+  background:radial-gradient(circle at 50% 50%,rgba(var(--red-rgb),.45),transparent 68%);
+  animation-duration:1.7s;
+}
+.ls-avisos-botao.urgente{border-color:rgba(var(--red-rgb),.5)}
+
+@keyframes ls-onda{
+  0%{transform:scale(1);opacity:.85}
+  60%{transform:scale(1.55);opacity:0}
+  100%{transform:scale(1.55);opacity:0}
+}
+@keyframes ls-clarao{
+  0%,100%{opacity:0}
+  50%{opacity:1}
+}
+
+/* O selo NÃO se mexe. Nem escala, nem gira: só troca de conteúdo, e a
+   transição é de opacidade -- ver `.trocando` e `anunciarNoSino`. */
 .ls-avisos-selo{
   position:absolute;top:-4px;right:-4px;min-width:20px;height:20px;padding:0 6px;
   display:grid;place-items:center;border-radius:999px;
   font-size:.68rem;font-weight:900;line-height:1;font-variant-numeric:tabular-nums;
   color:var(--acento-tinta);background:var(--acento);
+  /* O anel do selo é recorte: ele imita a cor da barra do topo para o
+     número parecer descolado do botão. */
   border:2px solid var(--acento-tinta);box-shadow:0 4px 12px rgba(var(--acento-rgb),.45);
-  /* A troca do número (ver `.trocando`) usa esta transição: o selo some,
-     é reescrito escondido e volta com o valor de agora. */
-  transition:opacity .16s ease,transform .16s cubic-bezier(.16,.84,.44,1);
-  /* A PULSAÇÃO PRECISA SER VISTA DO OUTRO LADO DA BANCADA.
-
-     Antes ela era um `scale` de 14% que, num selo de 20 px, mudava três
-     pixels -- na prática, invisível. Agora o que pulsa é um ANEL em
-     volta do número: cresce e some, do jeito que uma notificação de
-     celular faz. O selo em si respira junto, de leve. */
-  animation:ls-pulsa 2.4s ease-in-out infinite;
+  transition:opacity .18s ease;
 }
 .ls-avisos-selo.urgente{
   background:var(--red);color:var(--red-tinta);box-shadow:0 4px 12px rgba(var(--red-rgb),.5);
-  /* Coisa crítica pulsa mais rápido e com anel vermelho: a diferença
-     entre "tem novidade" e "tem novidade que não pode esperar". */
-  animation:ls-pulsa-urgente 1.5s ease-in-out infinite;
 }
-/* O número sumindo enquanto é reescrito. Ver `anunciarNoSino` em
-   painel.js: sem isto o selo trocava de 3 para 4 sem ninguém ver. */
-.ls-avisos-selo.trocando{opacity:0;transform:scale(.3);animation:none}
-@keyframes ls-pulsa{
-  0%,100%{transform:scale(1);box-shadow:0 4px 12px rgba(var(--acento-rgb),.45),0 0 0 0 rgba(var(--acento-rgb),.55)}
-  50%{transform:scale(1.08);box-shadow:0 4px 12px rgba(var(--acento-rgb),.45),0 0 0 7px rgba(var(--acento-rgb),0)}
-}
-@keyframes ls-pulsa-urgente{
-  0%,100%{transform:scale(1);box-shadow:0 4px 12px rgba(var(--red-rgb),.5),0 0 0 0 rgba(var(--red-rgb),.6)}
-  50%{transform:scale(1.14);box-shadow:0 4px 12px rgba(var(--red-rgb),.5),0 0 0 9px rgba(var(--red-rgb),0)}
-}
+/* O número sumindo enquanto é reescrito -- e SÓ sumindo. Ver
+   `anunciarNoSino` em painel.js: o valor troca escondido e volta certo. */
+.ls-avisos-selo.trocando{opacity:0}
 
 /* CHACOALHAR: a chegada de um aviso novo.
 
-   Só o sino balança -- o botão fica parado, porque o selo é filho dele e
-   girar o botão inteiro levaria o número junto, arrastando o que deveria
-   estar sumindo. */
+   O sino balança e o botão solta UMA onda mais forte. O selo fica parado
+   no lugar dele, sumindo e voltando com o número de agora -- é a troca
+   que conta a novidade, não um esticão. */
 .ls-avisos-botao.chacoalha i{
   display:block;transform-origin:50% 12%;
-  animation:ls-sino-chacoalha .6s cubic-bezier(.36,.07,.19,.97);
+  animation:ls-sino-chacoalha .62s cubic-bezier(.36,.07,.19,.97);
+}
+.ls-avisos-botao.chacoalha::after{
+  animation:ls-onda-forte .62s cubic-bezier(.22,.68,.3,1);
+}
+@keyframes ls-onda-forte{
+  0%{transform:scale(.96);opacity:1}
+  100%{transform:scale(1.9);opacity:0}
 }
 @keyframes ls-sino-chacoalha{
   0%,100%{transform:rotate(0)}
@@ -1609,11 +1651,13 @@ textarea.form-control{min-height:100px!important}
 }
 
 /* Quem pediu menos movimento no sistema continua vendo o NÚMERO -- que é
-   a informação -- sem o balanço nem o anel. */
+   a informação -- e a cor da borda, que diz se há coisa urgente. Só o
+   movimento sai. */
 @media (prefers-reduced-motion:reduce){
-  .ls-avisos-selo,.ls-avisos-selo.urgente{animation:none}
+  .ls-avisos-botao::before,.ls-avisos-botao::after{animation:none!important}
+  .ls-avisos-botao.tem-aviso::before{opacity:1}
   .ls-avisos-botao.chacoalha i{animation:none}
-  .ls-avisos-selo.trocando{opacity:1;transform:none}
+  .ls-avisos-selo.trocando{opacity:1}
 }
 
 .ls-avisos-painel{
@@ -4406,6 +4450,10 @@ button.ls-incomplete-chip:focus-visible{outline:3px solid rgba(var(--red-rgb),.3
   font-size:.92rem;line-height:1;
   transition:color .16s ease,background .16s ease,transform .16s ease;
 }
+/* Os três desenhos são SVG escritos no template (ver `base_inner.html`).
+   Aqui só o tamanho: a cor vem de `currentColor`, então o ícone aceso
+   acompanha o botão sem uma regra por estado. */
+.ls-tema-icone{width:1.05em;height:1.05em;display:block}
 .ls-tema-botao:hover{color:var(--text-2);background:rgba(var(--verniz-rgb),.07)}
 .ls-tema-botao:focus-visible{
   outline:3px solid rgba(var(--acento-rgb),.45);outline-offset:2px;

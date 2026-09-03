@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load interno_extras %}
 
 {% block title %}Carrinho de compras | Lazer & Sport{% endblock %}
 
@@ -1673,7 +1674,7 @@ body {
                 <div class="item-linha">
                     <span>Preço</span>
                     <span class="money" data-value="{{ item.preco_unitario|stringformat:'f' }}">
-                        R$ {{ item.preco_unitario|floatformat:2 }}
+                        R$ {{ item.preco_unitario|moeda }}
                     </span>
                 </div>
 
@@ -1690,7 +1691,7 @@ body {
                 <div class="item-linha item-subtotal">
                     <span>Subtotal</span>
                     <span class="money" data-value="{{ item.subtotal|stringformat:'f' }}">
-                        R$ {{ item.subtotal|floatformat:2 }}
+                        R$ {{ item.subtotal|moeda }}
                     </span>
                 </div>
 
@@ -1810,7 +1811,7 @@ body {
                 <span>Produtos</span>
                 <span class="money" id="valor-produtos"
                       data-value="{{ carrinho.total_liquido|stringformat:'f' }}">
-                    R$ {{ carrinho.total_liquido|floatformat:2 }}
+                    R$ {{ carrinho.total_liquido|moeda }}
                 </span>
         </div>
 
@@ -1824,7 +1825,7 @@ body {
             <span>Total do pedido</span>
             <span class="money" id="totalPedido"
                   data-value="{{ carrinho.total_liquido|stringformat:'f' }}">
-                R$ {{ carrinho.total_liquido|floatformat:2 }}
+                R$ {{ carrinho.total_liquido|moeda }}
             </span>
         </div>
 
@@ -1867,7 +1868,7 @@ body {
             <span class="checkout-dock-label">Total do pedido</span>
             <strong class="money" id="subtotalFixo"
                     data-value="{{ carrinho.total_liquido|stringformat:'f' }}">
-                R$ {{ carrinho.total_liquido|floatformat:2 }}
+                R$ {{ carrinho.total_liquido|moeda }}
             </strong>
         </div>
 

@@ -58,11 +58,13 @@ def _moeda(valor):
 
     O filtro `floatformat` do template devolve "2500,00" — vírgula certa,
     mas sem separador de milhar, e um total de quatro dígitos fica ruim de
-    ler num recibo. Formata aqui, uma vez, direto do Decimal.
+    ler num recibo. A regra é a mesma do resto do sistema e mora em
+    `core/formatos.py`: três cópias dela era como o mesmo total aparecia
+    de três jeitos em telas diferentes.
     """
-    if valor is None:
-        return "0,00"
-    return number_format(valor, decimal_pos=2, force_grouping=True)
+    from .formatos import dinheiro
+
+    return dinheiro(valor)
 
 
 def _url_absoluta(caminho):

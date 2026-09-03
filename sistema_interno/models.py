@@ -3085,6 +3085,138 @@ class InscricaoPush(Prime):
         return f"{self.usuario} · {self.aparelho or 'aparelho'}"
 
 
+class AparelhoDoCliente(Prime):
+    """O celular de quem baixou o aplicativo e aceitou receber aviso.
+
+    IRMÃO DE `InscricaoPush`, E DE PROPÓSITO SEPARADO. Aquela é o
+    aparelho da EQUIPE, e o que chega nela é trabalho: orçamento
+    aprovado, estoque no fim, O.S. parada. Esta é o aparelho do CLIENTE,
+    e o que chega é a loja falando com ele: promoção, brinquedo novo,
+    aviso de entrega.
+
+    Misturar as duas numa tabela só pareceria economia e seria um risco
+    de todo dia: um `for aparelho in InscricaoPush.objects.all()` numa
+    campanha mandaria o anúncio de Natal para o telefone do montador --
+    e, pior, um aviso de operação para o cliente. São públicos
+    diferentes, e público diferente é tabela diferente.
+
+    SEM CONTA TAMBÉM VALE. Quem instalou o aplicativo e ainda não criou
+    login é justamente quem mais precisa de um empurrão de volta. Por
+    isso `usuario` aceita vazio: o que identifica o aparelho é o
+    endereço de entrega, não a pessoa.
+    """
+
+    class Plataforma(models.TextChoices):
+        ANDROID = "android", "Android"
+        IOS = "ios", "iPhone"
+        OUTRO = "outro", "Outro aparelho"
+
+    usuario = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name="aparelhos_do_app",
+        null=True,
+        blank=True,
+    )
+    #: O endereço no serviço do fabricante. Ele É a credencial de entrega,
+    #: e é único: dois aparelhos nunca compartilham o mesmo.
+    endpoint = models.CharField(max_length=600, unique=True)
+    p256dh = models.CharField(max_length=200)
+    auth = models.CharField(max_length=100)
+    plataforma = models.CharField(
+        max_length=10,
+        choices=Plataforma.choices,
+        default=Plataforma.OUTRO,
+        db_index=True,
+        help_text="Descoberto pelo próprio aparelho ao se inscrever.",
+    )
+    #: Só para a pessoa se reconhecer, e para a equipe entender a lista.
+    aparelho = models.CharField(max_length=120, blank=True)
+    ultimo_aviso = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = "Aparelho de cliente"
+        verbose_name_plural = "Aparelhos de clientes"
+        ordering = ("-criacao", "-id")
+
+    def __str__(self):
+        dono = self.usuario or "visitante"
+        return f"{dono} · {self.get_plataforma_display()}"
+
+
+class AvisoDoAplicativo(Prime):
+    """A mensagem que a loja manda para o celular de quem baixou o app.
+
+    NASCE RASCUNHO, E ISSO É A FEATURE. Notificação é a única coisa que
+    a empresa escreve e não pode corrigir depois: ela chega no bolso de
+    milhares de pessoas em segundos, e "ops, era 20%, não 200%" não tem
+    conserto. Então o texto é escrito, salvo, relido, editado quantas
+    vezes for preciso -- e só sai quando alguém aperta enviar.
+
+    DEPOIS DE ENVIADO, VIRA HISTÓRICO. O texto de um aviso já entregue
+    não é mais editável: o que está no celular das pessoas não muda, e
+    deixar a linha mudar aqui faria o registro mentir sobre o que foi
+    dito. Para mandar de novo com outra redação existe a cópia.
+    """
+
+    class Publico(models.TextChoices):
+        TODOS = "todos", "Todos os aparelhos"
+        ANDROID = "android", "Somente Android"
+        IOS = "ios", "Somente iPhone"
+
+    class Status(models.TextChoices):
+        RASCUNHO = "rascunho", "Rascunho"
+        ENVIADO = "enviado", "Enviado"
+
+    #: Os limites são os do sistema operacional, não nossos: o Android
+    #: corta o título por volta de 65 caracteres e o corpo por volta de
+    #: 240. Barrar aqui é melhor que deixar o celular cortar a frase no
+    #: meio -- e a tela mostra o contador enquanto se escreve.
+    titulo = models.CharField(max_length=65)
+    mensagem = models.CharField(max_length=240)
+    #: Para onde o toque leva. Vazio abre a loja na página inicial.
+    url = models.CharField(
+        "Endereço ao tocar",
+        max_length=300,
+        blank=True,
+        help_text="Caminho do site, como /loja/ ou /brinquedo/12/.",
+    )
+    publico = models.CharField(
+        max_length=10, choices=Publico.choices, default=Publico.TODOS,
+    )
+    status = models.CharField(
+        max_length=10,
+        choices=Status.choices,
+        default=Status.RASCUNHO,
+        db_index=True,
+    )
+    autor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name="avisos_do_app",
+        null=True,
+        blank=True,
+    )
+    enviado_em = models.DateTimeField(null=True, blank=True)
+    #: O resultado do disparo, guardado porque a pergunta seguinte é
+    #: sempre "chegou em quantos?" -- e sem isto ninguém sabe responder.
+    aparelhos_no_envio = models.PositiveIntegerField(default=0)
+    entregues = models.PositiveIntegerField(default=0)
+    falhas = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        verbose_name = "Aviso do aplicativo"
+        verbose_name_plural = "Avisos do aplicativo"
+        ordering = ("-criacao", "-id")
+
+    def __str__(self):
+        return f"{self.titulo} ({self.get_status_display()})"
+
+    @property
+    def editavel(self):
+        return self.status == self.Status.RASCUNHO
+
+
 class EstadoNotificacao(Prime):
     """Memória do observador para não repetir o mesmo e-mail urgente."""
 

@@ -182,13 +182,29 @@
       <div class="modal-body">
         <div id="itemErro" class="alert alert-danger d-none" role="alert"></div>
         <div class="row g-3">
+          {% comment %}
+            CADASTRAR SEM SAIR DAQUI.
+
+            Este espaço dizia "Material novo? Cadastre em Materiais" --
+            um link que fazia a pessoa abandonar o formulário meio
+            preenchido, cadastrar na outra tela, voltar e digitar tudo de
+            novo. Na prática, quase ninguém fazia isso: escolhia um
+            material parecido que já existia e deixava o estoque errado,
+            que é o defeito mais caro desta tela.
+          {% endcomment %}
           <div class="col-12 col-md-6">
             <label class="form-label" for="itemMaterial">Material *</label>
-            <select class="form-select" id="itemMaterial" name="material" data-rotulo="material" required>
-              <option value="">Selecione</option>
-              {% for m in materiais %}<option value="{{ m.id }}">{{ m.nome_material }}</option>{% endfor %}
-            </select>
-            <div class="form-text">Material novo? Cadastre em <a href="{% url 'materiais_inner' %}">Materiais</a>.</div>
+            <div class="input-group">
+              <select class="form-select" id="itemMaterial" name="material" data-rotulo="material" required>
+                <option value="">Selecione</option>
+                {% for m in materiais %}<option value="{{ m.id }}">{{ m.nome_material }}</option>{% endfor %}
+              </select>
+              <button class="btn btn-outline-success" type="button" id="novoMaterialRapido"
+                      title="Cadastrar um material novo sem sair daqui">
+                <i class="bi bi-plus-lg"></i>
+              </button>
+            </div>
+            <div class="form-text">O material novo entra já escolhido nesta linha.</div>
           </div>
 
           <div class="col-12 col-md-6">
@@ -221,10 +237,17 @@
 
           <div class="col-12 col-md-6">
             <label class="form-label" for="itemFornecedor">Fornecedor</label>
-            <select class="form-select" id="itemFornecedor" name="fornecedor">
-              <option value="">Não informado</option>
-              {% for f in fornecedores %}<option value="{{ f.id }}">{{ f.nome }}</option>{% endfor %}
-            </select>
+            <div class="input-group">
+              <select class="form-select" id="itemFornecedor" name="fornecedor">
+                <option value="">Não informado</option>
+                {% for f in fornecedores %}<option value="{{ f.id }}">{{ f.nome }}</option>{% endfor %}
+              </select>
+              <button class="btn btn-outline-success" type="button" id="novoFornecedorRapido"
+                      title="Cadastrar um fornecedor novo sem sair daqui">
+                <i class="bi bi-plus-lg"></i>
+              </button>
+            </div>
+            <div class="form-text">Quem vendeu esta compra. O preço pago fica no item, não no cadastro.</div>
           </div>
 
           <div class="col-6 col-md-3">
@@ -306,6 +329,166 @@
       <div class="modal-footer">
         <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
         <button type="submit" class="btn btn-primary">Registrar movimento</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ============ MODAL FILHO: material novo, sem sair do lançamento ============ -->
+{% comment %}
+  A ficha é a mesma da tela de Materiais, e as regras também: elas moram
+  em `CadastrosDeEstoqueMixin`, que as duas telas usam. Duas portas para
+  o mesmo cadastro só valem se for o MESMO cadastro -- senão a segunda
+  porta é a que estraga.
+{% endcomment %}
+<div class="modal fade" id="modalMaterialRapido" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <form class="modal-content" id="formMaterialRapido" method="post" action="{% url 'stock' %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="save_material">
+      <div class="modal-header">
+        <div>
+          <span class="ls-modal-kicker">Cadastro de material</span>
+          <h5 class="modal-title">Material novo</h5>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body">
+        <div id="materialRapidoErro" class="alert alert-danger d-none" role="alert"></div>
+        <p class="text-muted small">
+          Entra no cadastro de materiais e já fica escolhido nesta linha,
+          sem perder o que você digitou.
+        </p>
+        <div class="row g-3">
+          <div class="col-12 col-md-8">
+            <label class="form-label" for="materialRapidoNome">Nome *</label>
+            <input class="form-control" id="materialRapidoNome" name="nome_material"
+                   data-rotulo="nome" maxlength="90" required placeholder="Lona PVC 0,45 mm">
+          </div>
+          <div class="col-12 col-md-4">
+            <label class="form-label" for="materialRapidoCodigo">Código interno</label>
+            <input class="form-control" id="materialRapidoCodigo" name="codigo_interno" maxlength="30">
+          </div>
+          <div class="col-12">
+            <label class="form-label" for="materialRapidoDescricao">Descrição</label>
+            <input class="form-control" id="materialRapidoDescricao" name="descricao" maxlength="150"
+                   placeholder="Cor, gramatura, onde é usado">
+          </div>
+          <div class="col-12 col-sm-6">
+            <label class="form-label" for="materialRapidoTipo">Tipo de material</label>
+            <div class="input-group">
+              <select class="form-select" id="materialRapidoTipo" name="tipo_material">
+                <option value="">Sem tipo</option>
+                {% for t in tipos %}<option value="{{ t.id }}">{{ t.descricao }}</option>{% endfor %}
+              </select>
+              <button class="btn btn-outline-success" type="button" id="novoTipoRapido"
+                      title="Cadastrar um tipo novo">
+                <i class="bi bi-plus-lg"></i>
+              </button>
+            </div>
+            <div class="form-text">Lona, motor, elétrica… é por ele que o estoque filtra.</div>
+          </div>
+          <div class="col-12 col-sm-6">
+            <label class="form-label" for="materialRapidoUnidade">Unidade de medida</label>
+            <select class="form-select" id="materialRapidoUnidade" name="unidade">
+              {% for valor, rotulo in unidades %}<option value="{{ valor }}">{{ rotulo }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="col-12">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="materialRapidoAtivo" name="ativo" checked>
+              <label class="form-check-label" for="materialRapidoAtivo">Material em uso</label>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-success">Cadastrar e usar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ============ MODAL NETO: tipo de material ============ -->
+<div class="modal fade" id="modalTipoRapido" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-sm">
+    <form class="modal-content" id="formTipoRapido" method="post" action="{% url 'stock' %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="save_tipo">
+      <div class="modal-header">
+        <h5 class="modal-title">Tipo de material</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body">
+        <div id="tipoRapidoErro" class="alert alert-danger d-none" role="alert"></div>
+        <label class="form-label" for="tipoRapidoDescricao">Nome do tipo *</label>
+        <input class="form-control" id="tipoRapidoDescricao" name="descricao"
+               data-rotulo="nome do tipo" maxlength="120" required
+               placeholder="Lona, motor, elétrica...">
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-success">Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ============ MODAL FILHO: fornecedor novo ============ -->
+<div class="modal fade" id="modalFornecedorRapido" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable">
+    <form class="modal-content" id="formFornecedorRapido" method="post" action="{% url 'stock' %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="save_fornecedor">
+      <div class="modal-header">
+        <div>
+          <span class="ls-modal-kicker">Cadastro de fornecedor</span>
+          <h5 class="modal-title">Fornecedor novo</h5>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body">
+        <div id="fornecedorRapidoErro" class="alert alert-danger d-none" role="alert"></div>
+        <div class="row g-3">
+          <div class="col-12">
+            <label class="form-label" for="fornecedorRapidoNome">Nome *</label>
+            <input class="form-control" id="fornecedorRapidoNome" name="nome"
+                   data-rotulo="nome" maxlength="120" required placeholder="Lonas do Brás">
+          </div>
+          <div class="col-12 col-sm-6">
+            <label class="form-label" for="fornecedorRapidoTelefone">Telefone</label>
+            <input class="form-control" id="fornecedorRapidoTelefone" name="telefone"
+                   maxlength="20" data-mascara="telefone" inputmode="tel">
+          </div>
+          <div class="col-12 col-sm-6">
+            <label class="form-label" for="fornecedorRapidoCnpj">CNPJ / CPF</label>
+            <input class="form-control" id="fornecedorRapidoCnpj" name="cnpj" maxlength="20">
+          </div>
+          <div class="col-12 col-sm-6">
+            <label class="form-label" for="fornecedorRapidoEmail">E-mail</label>
+            <input type="email" class="form-control" id="fornecedorRapidoEmail" name="email" maxlength="150">
+          </div>
+          <div class="col-12 col-sm-6">
+            <label class="form-label" for="fornecedorRapidoSite">Site</label>
+            <input class="form-control" id="fornecedorRapidoSite" name="site" maxlength="200">
+          </div>
+          <div class="col-12">
+            <label class="form-label" for="fornecedorRapidoObs">Observações</label>
+            <textarea class="form-control" id="fornecedorRapidoObs" name="observacoes" rows="2"
+                      placeholder="Prazo de entrega, condição de pagamento, quem atende"></textarea>
+          </div>
+          <div class="col-12">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="fornecedorRapidoAtivo" name="ativo" checked>
+              <label class="form-check-label" for="fornecedorRapidoAtivo">Fornecedor ativo</label>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-success">Cadastrar e usar</button>
       </div>
     </form>
   </div>
@@ -395,6 +578,79 @@ LSTela.pronto(function () {
   });
 
   Painel.ligar({ form: "formItem", erro: "itemErro" });
+
+  /* ------------------------------------------------------------------
+     CADASTRAR SEM SAIR DO LANÇAMENTO
+
+     `depois` em vez do recarregamento padrão do Painel.ligar: recarregar
+     aqui jogaria fora o lançamento meio preenchido, que é exatamente o
+     que estes atalhos existem para não fazer.
+
+     A opção nova entra no <select> por JavaScript e já sai escolhida --
+     é o que faz a pessoa ver que deu certo sem ter de procurar o item
+     numa lista que acabou de crescer.
+     ------------------------------------------------------------------ */
+  function acrescentarOpcao(seletor, valor, rotulo) {
+    var campo = document.getElementById(seletor);
+    var opcao = document.createElement("option");
+    opcao.value = valor;
+    opcao.textContent = rotulo;
+    campo.appendChild(opcao);
+    campo.value = String(valor);
+    return campo;
+  }
+
+  document.getElementById("novoMaterialRapido").addEventListener("click", function () {
+    var form = document.getElementById("formMaterialRapido");
+    form.reset();
+    document.getElementById("materialRapidoAtivo").checked = true;
+    Painel.erro("materialRapidoErro", "");
+    Painel.abrirFilho("modalMaterialRapido", "modalItem");
+  });
+
+  Painel.ligar({
+    form: "formMaterialRapido",
+    erro: "materialRapidoErro",
+    depois: function (json) {
+      acrescentarOpcao("itemMaterial", json.id, json.nome);
+      Painel.fechar("modalMaterialRapido");
+      document.getElementById("itemLocal").focus();
+    }
+  });
+
+  document.getElementById("novoTipoRapido").addEventListener("click", function () {
+    var form = document.getElementById("formTipoRapido");
+    form.reset();
+    Painel.erro("tipoRapidoErro", "");
+    Painel.abrirFilho("modalTipoRapido", "modalMaterialRapido");
+  });
+
+  Painel.ligar({
+    form: "formTipoRapido",
+    erro: "tipoRapidoErro",
+    depois: function (json) {
+      acrescentarOpcao("materialRapidoTipo", json.id, json.nome);
+      Painel.fechar("modalTipoRapido");
+    }
+  });
+
+  document.getElementById("novoFornecedorRapido").addEventListener("click", function () {
+    var form = document.getElementById("formFornecedorRapido");
+    form.reset();
+    document.getElementById("fornecedorRapidoAtivo").checked = true;
+    Painel.erro("fornecedorRapidoErro", "");
+    Painel.aplicarMascaras(document.getElementById("modalFornecedorRapido"));
+    Painel.abrirFilho("modalFornecedorRapido", "modalItem");
+  });
+
+  Painel.ligar({
+    form: "formFornecedorRapido",
+    erro: "fornecedorRapidoErro",
+    depois: function (json) {
+      acrescentarOpcao("itemFornecedor", json.id, json.nome);
+      Painel.fechar("modalFornecedorRapido");
+    }
+  });
 
   document.querySelectorAll("[data-movimentar]").forEach(function (b) {
     b.addEventListener("click", function () {

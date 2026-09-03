@@ -1,0 +1,428 @@
+{% extends "base_inner.html" %}
+{% block title %}Notificações do aplicativo | Lazer &amp; Sport{% endblock %}
+{% block top_title %}Notificações do aplicativo{% endblock %}
+{% block content %}
+<style>
+.avisoapp-page{width:min(100%,1180px);margin:auto}
+.avisoapp-hero{padding:22px;display:flex;align-items:flex-end;justify-content:space-between;gap:18px;border:1px solid var(--line);border-radius:22px;background:linear-gradient(135deg,rgba(var(--panel-rgb),.55),rgba(var(--bg-rgb),.96))}
+.avisoapp-hero h1{margin:5px 0;color:var(--text)}
+.avisoapp-hero p{margin:0;max-width:64ch;color:var(--muted)}
+.avisoapp-metrics{margin:16px 0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.avisoapp-metrics article{padding:16px 17px;border:1px solid var(--line);border-radius:16px;background:var(--panel)}
+.avisoapp-metrics strong{display:block;color:var(--text);font-size:1.5rem;line-height:1.1}
+.avisoapp-metrics span{color:var(--muted-2);font-size:.68rem;font-weight:800;letter-spacing:.5px;text-transform:uppercase}
+.avisoapp-lista{overflow:hidden;border:1px solid var(--line);border-radius:18px;background:var(--panel)}
+.avisoapp-lista table{width:100%;border-collapse:collapse}
+.avisoapp-lista th,.avisoapp-lista td{padding:12px;border-bottom:1px solid var(--line-soft);font-size:.78rem;vertical-align:top}
+.avisoapp-lista th{color:var(--muted);text-align:left;font-size:.65rem;letter-spacing:.5px;text-transform:uppercase}
+.avisoapp-lista tr:last-child td{border-bottom:0}
+.avisoapp-texto strong{display:block;color:var(--text);font-size:.86rem}
+.avisoapp-texto span{display:block;margin-top:3px;color:var(--muted);line-height:1.45}
+.avisoapp-texto code{color:var(--acento-claro);font-size:.7rem}
+.avisoapp-selo{display:inline-flex;padding:5px 9px;border-radius:999px;font-size:.63rem;font-weight:850;letter-spacing:.4px;text-transform:uppercase}
+.avisoapp-selo.rascunho{color:var(--text-2);background:rgba(var(--verniz-rgb),.1)}
+.avisoapp-selo.enviado{color:var(--green-texto);background:rgba(var(--green-rgb),.16)}
+.avisoapp-acoes{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end}
+.avisoapp-vazio{padding:44px;text-align:center;color:var(--muted-2)}
+.avisoapp-vazio i{display:block;font-size:2rem;margin-bottom:10px}
+.avisoapp-previa{margin-top:14px;padding:14px;border:1px solid var(--line);border-radius:16px;background:rgba(var(--sombra-rgb),calc(.12 * var(--sombra-forca)))}
+.avisoapp-previa-caixa{display:flex;gap:11px;align-items:flex-start;padding:12px 13px;border-radius:14px;background:var(--panel-2);box-shadow:var(--shadow)}
+.avisoapp-previa-icone{flex:0 0 34px;width:34px;height:34px;display:grid;place-items:center;border-radius:9px;background:var(--acento);color:var(--acento-tinta);font-size:1rem}
+.avisoapp-previa-corpo{min-width:0}
+.avisoapp-previa-corpo strong{display:block;color:var(--text);font-size:.82rem;overflow-wrap:anywhere}
+.avisoapp-previa-corpo span{display:block;margin-top:2px;color:var(--muted);font-size:.76rem;line-height:1.45;overflow-wrap:anywhere}
+.avisoapp-contador{margin-top:5px;color:var(--muted-2);font-size:.7rem;font-weight:700;text-align:right}
+.avisoapp-contador.cheio{color:var(--yellow-texto)}
+.avisoapp-aparelhos{margin-top:16px;padding:16px 17px;border:1px solid var(--line);border-radius:18px;background:var(--panel)}
+.avisoapp-aparelhos ul{margin:10px 0 0;padding:0;list-style:none;display:flex;flex-wrap:wrap;gap:7px}
+.avisoapp-aparelhos li{padding:6px 10px;border:1px solid var(--line-soft);border-radius:999px;color:var(--text-2);font-size:.7rem;font-weight:700}
+@media(max-width:900px){.avisoapp-metrics{grid-template-columns:1fr 1fr}}
+@media(max-width:760px){.avisoapp-hero{align-items:stretch;flex-direction:column}.avisoapp-lista{overflow-x:auto}.avisoapp-lista table{min-width:700px}}
+</style>
+
+<main class="avisoapp-page">
+  <header class="avisoapp-hero">
+    <div>
+      <span class="ls-eyebrow">FALAR COM QUEM BAIXOU</span>
+      <h1>Notificações do aplicativo</h1>
+      <p>
+        Escreva, releia e só então mande para o celular de quem instalou
+        o aplicativo. O aviso nasce rascunho de propósito: notificação é a
+        única coisa que a loja diz e não consegue corrigir depois.
+      </p>
+    </div>
+    <button type="button" class="btn btn-success" id="novoAviso">
+      <i class="bi bi-plus-lg me-1"></i> Escrever aviso
+    </button>
+  </header>
+
+  {% if not push_configurado %}
+    {% comment %}
+      Dizer ANTES de tentar. Sem a chave da aplicação configurada na
+      hospedagem, o botão "Enviar" existiria só para responder que não dá
+      -- e a leitura óbvia seria "o sistema quebrou".
+    {% endcomment %}
+    <div class="alert alert-warning mt-3 mb-0" role="status">
+      <i class="bi bi-exclamation-triangle me-1"></i>
+      As notificações ainda não estão ligadas nesta hospedagem: falta a
+      chave da aplicação (VAPID). Os rascunhos podem ser escritos, mas
+      nada sai até a configuração existir — veja <strong>docs/APP_PONTOS.md</strong>.
+    </div>
+  {% endif %}
+
+  <section class="avisoapp-metrics">
+    <article><strong>{{ publico.total }}</strong><span>aparelhos avisáveis</span></article>
+    <article><strong>{{ publico.android }}</strong><span>Android</span></article>
+    <article><strong>{{ publico.ios }}</strong><span>iPhone</span></article>
+    <article><strong>{{ publico.outros }}</strong><span>outros</span></article>
+  </section>
+
+  <section class="avisoapp-lista">
+    {% if avisos %}
+      <table>
+        <thead>
+          <tr>
+            <th>Aviso</th><th>Quem recebe</th><th>Situação</th>
+            <th>Entrega</th><th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for aviso in avisos %}
+            <tr>
+              <td class="avisoapp-texto">
+                <strong>{{ aviso.titulo }}</strong>
+                <span>{{ aviso.mensagem }}</span>
+                {% if aviso.url %}<code>{{ aviso.url }}</code>{% endif %}
+              </td>
+              <td>{{ aviso.get_publico_display }}</td>
+              <td>
+                <span class="avisoapp-selo {{ aviso.status }}">{{ aviso.get_status_display }}</span>
+                {% if aviso.enviado_em %}
+                  <div class="ls-subtext">{{ aviso.enviado_em|date:"d/m/Y H:i" }}</div>
+                {% endif %}
+              </td>
+              <td>
+                {% if aviso.status == 'enviado' %}
+                  {{ aviso.entregues }} de {{ aviso.aparelhos_no_envio }}
+                  {% if aviso.falhas %}<div class="ls-subtext">{{ aviso.falhas }} não responderam</div>{% endif %}
+                {% else %}
+                  <span class="ls-subtext">—</span>
+                {% endif %}
+              </td>
+              <td>
+                <div class="avisoapp-acoes">
+                  {% if aviso.editavel %}
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-editar-aviso="{{ aviso.pk }}">
+                      <i class="bi bi-pencil"></i><span class="ls-action-label"> Editar</span>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-primary" data-testar-aviso="{{ aviso.pk }}">
+                      <i class="bi bi-phone"></i><span class="ls-action-label"> Testar</span>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-success" data-enviar-aviso="{{ aviso.pk }}"
+                            data-titulo="{{ aviso.titulo }}" data-publico="{{ aviso.get_publico_display }}"
+                            {% if not push_configurado %}disabled{% endif %}>
+                      <i class="bi bi-send"></i><span class="ls-action-label"> Enviar</span>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-danger" data-excluir-aviso="{{ aviso.pk }}"
+                            data-titulo="{{ aviso.titulo }}">
+                      <i class="bi bi-trash"></i>
+                    </button>
+                  {% else %}
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-duplicar-aviso="{{ aviso.pk }}">
+                      <i class="bi bi-files"></i><span class="ls-action-label"> Duplicar</span>
+                    </button>
+                  {% endif %}
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <div class="avisoapp-vazio">
+        <i class="bi bi-bell"></i>
+        <p>Nenhum aviso escrito ainda. O primeiro pode ser o brinquedo novo da semana.</p>
+      </div>
+    {% endif %}
+  </section>
+
+  <section class="avisoapp-aparelhos">
+    <h2 class="h6 mb-1"><i class="bi bi-phone me-1"></i> Últimos aparelhos que aceitaram</h2>
+    <p class="ls-subtext mb-0">
+      O convite aparece para o cliente na seção <strong>Aplicativo</strong> do site.
+      No iPhone, ele só existe depois de a loja ser adicionada à tela de início — é
+      regra da Apple, não do sistema.
+    </p>
+    <ul>
+      {% for aparelho in ultimos_aparelhos %}
+        <li>
+          <i class="bi {% if aparelho.plataforma == 'ios' %}bi-apple{% elif aparelho.plataforma == 'android' %}bi-android2{% else %}bi-globe{% endif %} me-1"></i>
+          {{ aparelho.usuario.get_full_name|default:aparelho.usuario.username|default:"Visitante" }}
+          · {{ aparelho.criacao|date:"d/m" }}
+        </li>
+      {% empty %}
+        <li>Nenhum aparelho inscrito ainda.</li>
+      {% endfor %}
+    </ul>
+  </section>
+</main>
+
+<!-- ================= MODAL: escrever o aviso ================= -->
+<div class="modal fade" id="modalAviso" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <form class="modal-content" id="formAviso" method="post" action="{% url 'avisos_app' %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="save">
+      <input type="hidden" name="id" id="avisoId">
+      <div class="modal-header">
+        <div>
+          <span class="ls-modal-kicker">Notificação do aplicativo</span>
+          <h5 class="modal-title" id="avisoTitulo">Escrever aviso</h5>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body">
+        <div id="avisoErro" class="alert alert-danger d-none" role="alert"></div>
+
+        <div class="mb-3">
+          <label class="form-label" for="avisoTituloCampo">Título</label>
+          <input class="form-control" id="avisoTituloCampo" name="titulo" data-rotulo="título"
+                 maxlength="65" required placeholder="Chegou o Touro Mecânico">
+          <div class="avisoapp-contador" id="avisoContaTitulo">0/65</div>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label" for="avisoMensagemCampo">Mensagem</label>
+          <textarea class="form-control" id="avisoMensagemCampo" name="mensagem" rows="3"
+                    data-rotulo="mensagem" maxlength="240" required
+                    placeholder="Reserve para o fim de semana e ganhe a montagem."></textarea>
+          <div class="avisoapp-contador" id="avisoContaMensagem">0/240</div>
+        </div>
+
+        <div class="row g-3">
+          <div class="col-12 col-md-7">
+            <label class="form-label" for="avisoUrlCampo">Ao tocar, abrir</label>
+            <input class="form-control" id="avisoUrlCampo" name="url" maxlength="300"
+                   placeholder="/loja/">
+            <div class="form-text">
+              Só caminho de dentro do site. Vazio abre a página inicial.
+            </div>
+          </div>
+          <div class="col-12 col-md-5">
+            <label class="form-label" for="avisoPublicoCampo">Quem recebe</label>
+            <select class="form-select" id="avisoPublicoCampo" name="publico">
+              {% for valor, rotulo in publicos %}<option value="{{ valor }}">{{ rotulo }}</option>{% endfor %}
+            </select>
+          </div>
+        </div>
+
+        {% comment %}
+          A prévia não é enfeite: é o único lugar onde se vê a frase do
+          jeito que ela chega -- curta, sem formatação, com o corte que o
+          celular faz. Ler no campo de texto engana, porque ali cabe tudo.
+        {% endcomment %}
+        <div class="avisoapp-previa">
+          <span class="ls-subtext d-block mb-2">Como chega no celular</span>
+          <div class="avisoapp-previa-caixa">
+            <span class="avisoapp-previa-icone"><i class="bi bi-bell-fill"></i></span>
+            <span class="avisoapp-previa-corpo">
+              <strong id="avisoPreviaTitulo">Título do aviso</strong>
+              <span id="avisoPreviaMensagem">A mensagem aparece aqui.</span>
+            </span>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-success">Salvar rascunho</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ================= MODAL: confirmar o disparo ================= -->
+<div class="modal fade" id="modalEnviarAviso" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <form class="modal-content" id="formEnviarAviso" method="post" action="{% url 'avisos_app' %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="enviar">
+      <input type="hidden" name="id" id="enviarAvisoId">
+      <div class="modal-header">
+        <h5 class="modal-title">Enviar para os celulares</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body">
+        <div id="enviarAvisoErro" class="alert alert-danger d-none" role="alert"></div>
+        <p class="mb-2">
+          <strong id="enviarAvisoTitulo"></strong> vai para
+          <strong id="enviarAvisoPublico"></strong>.
+        </p>
+        <p class="text-muted small mb-0">
+          Depois de sair, a mensagem não muda mais: ela já estará no bolso
+          das pessoas. Se ainda houver dúvida, feche esta janela e use
+          <strong>Testar</strong> — o aviso vai só para os seus aparelhos.
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Rever</button>
+        <button type="submit" class="btn btn-success"><i class="bi bi-send me-1"></i> Enviar agora</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ================= MODAL: excluir rascunho ================= -->
+<div class="modal fade" id="modalExcluirAviso" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-sm">
+    <form class="modal-content" id="formExcluirAviso" method="post" action="{% url 'avisos_app' %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="delete">
+      <input type="hidden" name="id" id="excluirAvisoId">
+      <div class="modal-header">
+        <h5 class="modal-title">Excluir rascunho</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body">
+        <div id="excluirAvisoErro" class="alert alert-danger d-none" role="alert"></div>
+        <p class="mb-0">Excluir <strong id="excluirAvisoNome"></strong>?</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-danger">Excluir</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{{ avisos_dados|json_script:"avisosDados" }}
+{% endblock %}
+
+{% block scripts %}
+<script>
+LSTela.pronto(function () {
+  "use strict";
+
+  var avisos = JSON.parse(document.getElementById("avisosDados").textContent || "[]");
+
+  function achar(id) {
+    return avisos.filter(function (a) { return Number(a.id) === Number(id); })[0];
+  }
+
+  /* A PRÉVIA ACOMPANHA A DIGITAÇÃO.
+
+     O campo de texto cabe tudo; a notificação, não. Ver a frase do jeito
+     que ela chega -- e o contador ficando amarelo perto do limite -- é o
+     que evita o título cortado no meio da palavra. */
+  var campoTitulo = document.getElementById("avisoTituloCampo");
+  var campoMensagem = document.getElementById("avisoMensagemCampo");
+
+  function contar(campo, saida, limite) {
+    var usado = campo.value.length;
+    saida.textContent = usado + "/" + limite;
+    saida.classList.toggle("cheio", usado > limite - 10);
+  }
+
+  function desenharPrevia() {
+    document.getElementById("avisoPreviaTitulo").textContent =
+      campoTitulo.value.trim() || "Título do aviso";
+    document.getElementById("avisoPreviaMensagem").textContent =
+      campoMensagem.value.trim() || "A mensagem aparece aqui.";
+    contar(campoTitulo, document.getElementById("avisoContaTitulo"), 65);
+    contar(campoMensagem, document.getElementById("avisoContaMensagem"), 240);
+  }
+
+  campoTitulo.addEventListener("input", desenharPrevia);
+  campoMensagem.addEventListener("input", desenharPrevia);
+
+  function abrirAviso(id) {
+    var form = document.getElementById("formAviso");
+    var aviso = id ? achar(id) : null;
+
+    form.reset();
+    Painel.erro("avisoErro", "");
+    Painel.valor("avisoId", aviso ? aviso.id : "");
+    document.getElementById("avisoTitulo").textContent =
+      aviso ? "Editar aviso" : "Escrever aviso";
+
+    if (aviso) {
+      Painel.valor("avisoTituloCampo", aviso.titulo);
+      Painel.valor("avisoMensagemCampo", aviso.mensagem);
+      Painel.valor("avisoUrlCampo", aviso.url);
+      Painel.valor("avisoPublicoCampo", aviso.publico);
+    }
+
+    desenharPrevia();
+    Painel.abrir("modalAviso");
+  }
+
+  document.getElementById("novoAviso").addEventListener("click", function () {
+    abrirAviso(null);
+  });
+
+  Painel.aoClicar("[data-editar-aviso]", function (botao) {
+    abrirAviso(botao.dataset.editarAviso);
+  });
+
+  Painel.ligar({ form: "formAviso", erro: "avisoErro" });
+
+  Painel.aoClicar("[data-enviar-aviso]", function (botao) {
+    Painel.erro("enviarAvisoErro", "");
+    Painel.valor("enviarAvisoId", botao.dataset.enviarAviso);
+    document.getElementById("enviarAvisoTitulo").textContent = botao.dataset.titulo || "Este aviso";
+    document.getElementById("enviarAvisoPublico").textContent = botao.dataset.publico || "todos os aparelhos";
+    Painel.abrir("modalEnviarAviso");
+  });
+
+  Painel.ligar({
+    form: "formEnviarAviso",
+    erro: "enviarAvisoErro",
+    rotuloCarregando: "Entregando",
+  });
+
+  Painel.aoClicar("[data-excluir-aviso]", function (botao) {
+    Painel.erro("excluirAvisoErro", "");
+    Painel.valor("excluirAvisoId", botao.dataset.excluirAviso);
+    document.getElementById("excluirAvisoNome").textContent = botao.dataset.titulo || "este rascunho";
+    Painel.abrir("modalExcluirAviso");
+  });
+
+  Painel.ligar({ form: "formExcluirAviso", erro: "excluirAvisoErro" });
+
+  /* Testar e duplicar não têm janela: são um POST e a tela recarrega com
+     o resultado. Pedir confirmação para um teste que vai só para o
+     próprio celular seria uma pergunta sem consequência. */
+  function acaoDireta(acao, id, rotulo) {
+    var dados = new FormData();
+    dados.set("action", acao);
+    dados.set("id", id);
+    dados.set("csrfmiddlewaretoken",
+      document.querySelector("[name=csrfmiddlewaretoken]").value);
+
+    Painel.rede.post("{% url 'avisos_app' %}", {
+      method: "POST",
+      body: dados,
+      headers: { "X-Requested-With": "XMLHttpRequest" },
+      credentials: "same-origin"
+    }).then(function (r) {
+      return r.json().catch(function () { return null; });
+    }).then(function (json) {
+      if (!json || json.status !== "sucesso") {
+        throw new Error((json && json.msg) || "Não foi possível " + rotulo + ".");
+      }
+      Painel.aviso(json.msg, "ok");
+      if (acao !== "testar") window.LSAtualizarTela();
+    }).catch(function (erro) {
+      Painel.aviso(erro.message, "erro");
+    });
+  }
+
+  Painel.aoClicar("[data-testar-aviso]", function (botao) {
+    acaoDireta("testar", botao.dataset.testarAviso, "testar");
+  });
+
+  Painel.aoClicar("[data-duplicar-aviso]", function (botao) {
+    acaoDireta("duplicar", botao.dataset.duplicarAviso, "duplicar");
+  });
+});
+</script>
+{% endblock %}

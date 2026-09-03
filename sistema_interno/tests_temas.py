@@ -331,9 +331,39 @@ class TemaAplicadoAntesDoPrimeiroPixelTests(SimpleTestCase):
             self.assertIn(f'data-tema-escolha="{tema}"', base)
         self.assertEqual(base.count('aria-pressed="false"'), 3)
         self.assertIn('role="group"', base)
-        self.assertIn("bi-brightness-high-fill", base)  # sol
-        self.assertIn("bi-circle-half", base)           # eclipse
-        self.assertIn("bi-moon-stars-fill", base)       # lua
+    def test_cada_botao_de_tema_desenha_o_que_promete(self):
+        """O do meio é o motivo de os três serem desenhados na casa.
+
+        "Eclipse" é sol de um lado e lua do outro, e a fonte de ícones só
+        tinha um círculo metade cheio -- desenho que pode ser contraste,
+        brilho, meia-lua ou nada. Agora o lado do sol tem os raios dele e
+        o lado da lua tem as crateras dela.
+
+        O teste olha a marcação porque é ela que carrega o desenho: SVG
+        escrito no template, com `currentColor`, e não uma classe de
+        fonte que pode não ter chegado.
+        """
+        base = self.base()
+        botoes = base.split('data-tema-escolha=')
+
+        sol = botoes[1]
+        # Oito raios: quatro retos e quatro diagonais, na mesma espessura.
+        self.assertIn("stroke-linecap=\"round\"", sol)
+        self.assertIn("M8 1.1v1.7", sol)
+
+        eclipse = botoes[2]
+        # Meia rodela cheia (o sol) + contorno da outra metade (a lua).
+        self.assertIn('d="M8 3.1a4.9 4.9 0 0 0 0 9.8z"', eclipse)
+        self.assertIn('d="M8 3.1a4.9 4.9 0 0 1 0 9.8"', eclipse)
+        # E as crateras, que é o que faz o lado direito virar lua.
+        self.assertGreaterEqual(eclipse.count("<circle"), 3)
+
+        lua = botoes[3]
+        self.assertGreaterEqual(lua.count("<circle"), 3)  # crateras
+
+        # Nenhum dos três depende mais da fonte de ícones.
+        for classe in ("bi-brightness-high-fill", "bi-circle-half", "bi-moon-stars-fill"):
+            self.assertNotIn(classe, base)
 
     def test_a_barra_do_aparelho_acompanha_o_tema(self):
         """`theme-color` mora fora do documento e não acompanha CSS.

@@ -270,13 +270,16 @@ class Brinquedos(Prime):
 
     @property
     def dimensoes_m(self):
-        if self.altura_m and self.largura_m and self.profundidade_m:
-            return (
-                f"Altura {self.altura_m}m x "
-                f"Largura {self.largura_m}m x "
-                f"Profundidade {self.profundidade_m}m"
-            )
-        return None
+        """"Altura 2 m × Largura 3 m × Profundidade 3 m".
+
+        Saía como "Altura 2.00m x Largura 3.00m": ponto decimal, que em
+        português se lê como separador de milhar, e sem espaço antes da
+        unidade. Isso ia direto para a proposta impressa do cliente. A
+        regra de escrita mora em `core/formatos.py`, com a do dinheiro.
+        """
+        from .formatos import dimensoes
+
+        return dimensoes(self.altura_m, self.largura_m, self.profundidade_m) or None
 
     @property
     def metros_cubicos(self):
@@ -292,18 +295,9 @@ class Brinquedos(Prime):
         if self.metros_cubicos is None:
             return None
 
-        valor = self.metros_cubicos
-        valor_formatado = (
-            f"{valor:,.2f}"
-            .replace(",", "X")
-            .replace(".", ",")
-            .replace("X", ".")
-        )
+        from .formatos import medida
 
-        if valor_formatado.endswith(",00"):
-            valor_formatado = valor_formatado[:-3]
-
-        return f"{valor_formatado} m³"
+        return medida(self.metros_cubicos, "m³")
 
     @property
     def imagens_ordenadas(self):
