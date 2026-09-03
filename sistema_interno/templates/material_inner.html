@@ -106,11 +106,13 @@
                   <td class="text-end ls-number">{{ m.quantidade_total }}</td>
                   <td class="text-end ls-actions">
                     <button type="button" class="btn btn-sm btn-outline-secondary" data-editar-material="{{ m.id }}">
-                      <i class="bi bi-pencil"></i> Editar
+                      <i class="bi bi-pencil"></i> Editar dados e foto
                     </button>
+                    <a class="btn btn-sm btn-outline-secondary" href="{% url 'stock' %}?q={{ m.codigo_interno|default:m.nome_material|urlencode }}"><i class="bi bi-box-seam"></i> Consultar estoque</a>
+                    <a class="btn btn-sm btn-outline-secondary" href="{% url 'movimentacoes_inner' %}?q={{ m.codigo_interno|default:m.nome_material|urlencode }}"><i class="bi bi-clock-history"></i> Ver movimentações</a>
                     <button type="button" class="btn btn-sm btn-outline-danger"
-                            data-excluir-material="{{ m.id }}" data-nome="{{ m.nome_material }}">
-                      <i class="bi bi-trash3"></i>
+                            data-excluir-material="{{ m.id }}" data-nome="{{ m.nome_material }}" title="Excluir material">
+                      <i class="bi bi-trash3"></i> Excluir material
                     </button>
                   </td>
                 </tr>

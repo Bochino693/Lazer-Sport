@@ -287,7 +287,7 @@ class ScriptDeTelaNaoEsperaDOMContentLoadedTests(SimpleTestCase):
 
         # E o cabeçalho pode quebrar linha: era `nowrap`, e "Revisão dos
         # blocos" não tinha como caber sem cortar.
-        self.assertIn("white-space:normal;font-size:.69rem", folha)
+        self.assertIn("white-space:normal!important;font-size:.69rem", folha)
         self.assertIn("grid-template-columns:repeat(3,minmax(0,1fr))!important", folha)
         self.assertIn(".ls-situacao-card", folha)
         self.assertIn("white-space:normal!important", folha)

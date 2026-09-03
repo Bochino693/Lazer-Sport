@@ -1144,6 +1144,7 @@ class MovimentacoesInnerView(EstoqueInternoRequiredMixin, View):
         if busca:
             movimentos = movimentos.filter(
                 Q(estoque__material__nome_material__icontains=busca)
+                | Q(estoque__material__codigo_interno__icontains=busca)
                 | Q(estoque__descricao_local__icontains=busca)
                 | Q(documento__icontains=busca)
                 | Q(motivo__icontains=busca)

@@ -4721,3 +4721,32 @@ button.ls-incomplete-chip:focus-visible{outline:3px solid rgba(var(--red-rgb),.3
   .ls-folha-etiquetas.a6 .ls-etiqueta{min-height:64mm}
   .ls-folha-etiquetas.a6{grid-template-columns:1fr 1fr}
 }
+
+/* V9: navegação por seções e ações em lista, sem cartões dentro do menu. */
+.ls-nav-section[data-acordeao="1"]{margin-bottom:6px}
+.ls-nav-section-toggle{
+  width:100%;position:relative;border:0;border-radius:8px;background:transparent;
+  text-align:left;font-family:inherit;cursor:pointer;min-height:40px;
+  padding:11px 30px 11px 12px;
+}
+.ls-nav-section-toggle::after{content:"›";position:absolute;right:13px;top:8px;font-size:19px;transition:transform .15s}
+.ls-nav-section-toggle[aria-expanded="true"]::after{transform:rotate(90deg)}
+.ls-nav-section-toggle:hover{background:rgba(var(--acento-rgb),.08)}
+.ls-nav-section-toggle:focus-visible{outline:2px solid var(--acento);outline-offset:-2px}
+.ls-nav-links[hidden]{display:none!important}
+.ls-nav-links .ls-nav-item{min-height:43px;margin:2px 0;font-size:.85rem;border-radius:10px}
+/* No trilho de ícones os títulos ficam ocultos: manter atalhos acessíveis. */
+@media(min-width:761px){
+  .ls-sidebar:not(.expandida) .ls-nav-links[hidden]{display:block!important}
+}
+.ls-action-fab-menu{width:min(248px,calc(100vw - 20px));padding:6px;border-radius:12px;gap:2px;grid-template-columns:1fr}
+.ls-action-fab-menu.is-open{grid-template-columns:1fr}
+.ls-action-fab-head{padding:7px 9px;margin-bottom:3px}
+.ls-action-fab-menu>.btn,.ls-action-fab-menu>form>.btn,
+.ls-action-fab-menu>a,.ls-action-fab-menu>button{
+  min-height:37px!important;padding:8px 10px!important;border:0!important;
+  border-radius:7px!important;background:transparent!important;font-size:.77rem!important;
+}
+.ls-action-fab-menu .btn:hover,.ls-action-fab-menu .btn:focus-visible{
+  background:rgba(var(--acento-rgb),.12)!important;transform:none;
+}
