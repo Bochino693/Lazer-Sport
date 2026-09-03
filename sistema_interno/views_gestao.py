@@ -100,6 +100,7 @@ from .utils import (
     ErroDeFormulario,
     data,
     decimal_br,
+    destino_de_retorno,
     endereco_do_site,
     exigir_confirmacao_exclusao,
     inteiro,
@@ -1605,11 +1606,27 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
             orcamento.marcar_enviado()
 
         link_visivel = link
-        mensagem = self.mensagem_da_proposta(orcamento, link)
+        mensagem_padrao = self.mensagem_da_proposta(orcamento, link)
+
+        # A MENSAGEM PODE VIR ESCRITA DA TELA.
+        #
+        # O texto padrão serve a quase toda proposta, mas não a todas:
+        # quem já combinou a data por telefone precisa dizer isso no
+        # recado, e antes fazia isso COPIANDO para o WhatsApp e
+        # reescrevendo por lá -- o sistema registrava um envio com um
+        # texto que ninguém mandou. Agora o modal manda o que está na
+        # caixa. O link continua sendo montado aqui: ele identifica a
+        # proposta e não é assunto de digitação.
+        escrita = texto(request, "mensagem", limite=4000)
+        mensagem = escrita or mensagem_padrao
+        personalizada = bool(escrita) and escrita != mensagem_padrao
 
         extras = {
             "link": link_visivel,
-            "mensagem": mensagem,
+            # O que volta para a tela é sempre o texto do SERVIDOR: é ele
+            # que o botão "Restaurar padrão" repõe. O que a pessoa
+            # escreveu já está na caixa dela.
+            "mensagem": mensagem_padrao,
             # O modal não tenta adivinhar os dados olhando uma cópia antiga
             # no JavaScript. O cadastro vinculado é a fonte padrão; os
             # campos continuam editáveis antes do envio.
@@ -1669,18 +1686,30 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
                 "empresa_nome": nome_empresa(),
                 "empresa_cnpj": cnpj_empresa(),
                 "dados_bancarios": dados_bancarios_empresa(),
+                # O recado escrito na tela abre o e-mail, antes do
+                # resumo automático. Vazio quando ninguém mexeu no texto,
+                # e aí o modelo segue como sempre foi.
+                "recado": escrita if personalizada else "",
             }
             html = render(request, "emails/orcamento_enviado.html", contexto).content.decode()
-            texto_email = (
-                f"Olá, {orcamento.destinatario}.\n\n"
-                f"Preparamos a proposta Lazer & Sport nº {orcamento.pk}, "
-                f"no total de R$ {moeda_br(orcamento.total)}.\n\n"
-                "Abra o endereço abaixo para conferir itens, fotos e condições "
-                "e registrar sua aprovação ou pedido de ajustes:\n"
-                f"{link}\n\n"
-                "Se precisar, basta responder a este e-mail.\n\n"
-                f"{nome_empresa()}\nCNPJ {cnpj_empresa()}"
-            )
+            if personalizada:
+                # O corpo simples é o que a pessoa escreveu, com o link
+                # garantido no fim: mensagem editada que perde o endereço
+                # da proposta deixa o cliente sem para onde ir.
+                texto_email = escrita
+                if link not in texto_email:
+                    texto_email += f"\n\n{link}"
+            else:
+                texto_email = (
+                    f"Olá, {orcamento.destinatario}.\n\n"
+                    f"Preparamos a proposta Lazer & Sport nº {orcamento.pk}, "
+                    f"no total de R$ {moeda_br(orcamento.total)}.\n\n"
+                    "Abra o endereço abaixo para conferir itens, fotos e condições "
+                    "e registrar sua aprovação ou pedido de ajustes:\n"
+                    f"{link}\n\n"
+                    "Se precisar, basta responder a este e-mail.\n\n"
+                    f"{nome_empresa()}\nCNPJ {cnpj_empresa()}"
+                )
             if not smtp_configurado():
                 self.registrar_envio(
                     request, orcamento, canal, email,
@@ -1747,14 +1776,22 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
             extras.get("email") if canal == "email" else (
                 orcamento.whatsapp_destinatario if canal == "whatsapp" else ""
             ),
+            # "O cliente disse que não recebeu" fica mais fácil de
+            # responder sabendo que o recado daquele envio não era o
+            # padrão -- e o texto está no histórico, não na memória de
+            # quem escreveu.
+            detalhe=f"Mensagem escrita à mão: {escrita}" if personalizada else "",
         )
         registrar_atividade_orcamento(
             orcamento,
             request,
             AtividadeOrcamento.Tipo.ENVIADO,
-            resumo=("E-mail" if canal == "email" else (
-                "WhatsApp" if canal == "whatsapp" else "Link"
-            )),
+            resumo=(
+                ("E-mail" if canal == "email" else (
+                    "WhatsApp" if canal == "whatsapp" else "Link"
+                ))
+                + (" · mensagem personalizada" if personalizada else "")
+            ),
         )
 
         # Se o operador editou um canal neste mesmo pedido, devolvemos o
@@ -1853,6 +1890,11 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
                     f"{brinquedo.valor_brinquedo:.2f}".replace(".", ",")
                     if brinquedo.valor_brinquedo is not None else ""
                 ),
+                # A ficha volta junto para a linha da proposta mostrar o
+                # mesmo que a busca mostraria: quem acabou de cadastrar
+                # precisa reconhecer o item na lista, não só o nome.
+                "detalhe": (brinquedo.descricao or "Brinquedo do catálogo")[:90],
+                "medidas": brinquedo.dimensoes_m or "",
             },
         )
 
@@ -2045,6 +2087,18 @@ class OrcamentoPreviaInnerView(OrcamentoInternoRequiredMixin, View):
         orcamento = carregar_orcamento_exibicao(pk=pk)
         contexto = contexto_orcamento(
             orcamento, previsualizacao=True, request=request
+        )
+        # O CAMINHO DE VOLTA.
+        #
+        # A prévia abre em outra aba, e o painel vive noutro subdomínio:
+        # quem terminava de conferir o documento não tinha para onde ir.
+        # O painel manda de onde veio em `?voltar=`; sem isso, a volta é
+        # para a lista de propostas, que é de onde a prévia sempre sai.
+        # A conferência do endereço mora em `destino_de_retorno`.
+        contexto["voltar_url"] = destino_de_retorno(
+            request,
+            request.GET.get("voltar"),
+            padrao=reverse("orcamentos_inner", urlconf="sistema_interno.urls"),
         )
         return render(request, "orcamento_publico.html", contexto)
 

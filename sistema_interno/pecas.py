@@ -99,6 +99,12 @@ def resumo(peca):
         "nome": peca.nome,
         "uso": peca.uso,
         "grupo": "Itens de manutenção" if de_manutencao else "Peças de reposição",
+        # A mesma legenda que a busca mostraria: quem acabou de
+        # cadastrar precisa reconhecer a peça na lista, não só o nome.
+        "detalhe": (
+            peca.descricao_peca
+            or ("Item de manutenção" if de_manutencao else "Peça da loja")
+        )[:90],
         "valor": (
             f"{peca.preco_venda:.2f}".replace(".", ",")
             if peca.preco_venda is not None else ""

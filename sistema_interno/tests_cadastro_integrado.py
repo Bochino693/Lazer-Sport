@@ -26,21 +26,64 @@ class CadastroIntegradoTests(TestCase):
     def post(self, path, dados):
         return self.client.post(path, dados, HTTP_HOST='interno.testserver', HTTP_X_REQUESTED_WITH='XMLHttpRequest')
 
-    def test_email_global_normalizado_e_alias_da_mesma_conta(self):
+    def test_email_repetido_e_bloqueado_dentro_do_cadastro_e_livre_entre_eles(self):
+        """A mesma pessoa pode ser conta E cliente com o mesmo endereço.
+
+        O que continua barrado é a duplicidade dentro do mesmo cadastro:
+        dois clientes com o mesmo contato, ou duas contas com o mesmo
+        e-mail. Ver `core/identidade_email.py`.
+        """
         usuario = User.objects.create_user('titular', email='Titular@Example.com')
         EmailAddress.objects.create(user=usuario, email='titular@example.com')
+
+        # Conta e cliente com o mesmo endereço: caso normal, não conflito.
+        cliente = Cliente.objects.create(
+            nome_cliente='Mesma pessoa', email=' titular@example.com ',
+        )
+        self.assertTrue(
+            EmailIdentidade.objects.filter(
+                escopo='cliente', email='titular@example.com',
+            ).exists()
+        )
+
+        # Dois clientes com o mesmo contato continuam sendo duplicidade.
         with self.assertRaises(IntegrityError), transaction.atomic():
-            Cliente.objects.create(nome_cliente='Outra pessoa', email=' titular@example.com ')
-        cliente = Cliente.objects.create(nome_cliente='Cliente único', email='cliente-unico@example.com')
+            Cliente.objects.create(nome_cliente='Outra pessoa', email='TITULAR@example.com')
+
+        # Duas contas com o mesmo endereço, também.
         with self.assertRaises(IntegrityError), transaction.atomic():
-            User.objects.create_user('nova-conta', email='CLIENTE-UNICO@example.com')
+            User.objects.create_user('nova-conta', email='titular@example.com')
+
+        outro = Cliente.objects.create(
+            nome_cliente='Cliente único', email='cliente-unico@example.com',
+        )
         with self.assertRaises(IntegrityError), transaction.atomic():
-            Cliente.objects.filter(pk=cliente.pk).update(email='titular@example.com')
+            Cliente.objects.filter(pk=outro.pk).update(email='titular@example.com')
+
+        # A reserva da CONTA sobrevive enquanto o alias do allauth existir.
         usuario.email = 'novo-endereco@example.com'
         usuario.save()
-        self.assertTrue(EmailIdentidade.objects.filter(email='titular@example.com').exists())
+        self.assertTrue(
+            EmailIdentidade.objects.filter(
+                escopo='usuario', email='titular@example.com',
+            ).exists()
+        )
         EmailAddress.objects.filter(user=usuario).delete()
-        self.assertFalse(EmailIdentidade.objects.filter(email='titular@example.com').exists())
+        self.assertFalse(
+            EmailIdentidade.objects.filter(
+                escopo='usuario', email='titular@example.com',
+            ).exists()
+        )
+        # A do CLIENTE não foi tocada: são gavetas separadas.
+        self.assertTrue(
+            EmailIdentidade.objects.filter(
+                escopo='cliente', email='titular@example.com',
+            ).exists()
+        )
+        cliente.delete()
+        self.assertFalse(
+            EmailIdentidade.objects.filter(email='titular@example.com').exists()
+        )
 
     def test_endereco_repetido_no_mesmo_cliente_bloqueado_mas_local_compartilhado_permitido(self):
         c = Cliente.objects.create(nome_cliente='Responsável A')
@@ -173,9 +216,21 @@ class CadastroIntegradoTests(TestCase):
         form = ResetPasswordForm(data={"email": self.user.email})
         self.assertTrue(form.is_valid(), form.errors)
 
-    def test_signup_recusa_email_reservado_por_cliente(self):
+    def test_signup_aceita_email_de_cliente_e_recusa_o_de_outra_conta(self):
+        """Cliente virando usuário é o caso normal, não uma duplicidade.
+
+        Quem já está cadastrado como cliente cria a conta dele com o
+        mesmo e-mail -- é a mesma pessoa em dois papéis. O que a conta
+        não pode repetir é o endereço de OUTRA conta, que deixaria a
+        recuperação de senha sem saber qual atender.
+        """
         from core.adapters import AccountAdapter
         from django.core.exceptions import ValidationError
         Cliente.objects.create(nome_cliente="Contato sem conta",email="reservado@example.com")
+        self.assertEqual(
+            AccountAdapter().validate_unique_email("RESERVADO@example.com"),
+            "reservado@example.com",
+        )
+        User.objects.create_user("ja-tem-conta", email="ocupado@example.com")
         with self.assertRaises(ValidationError):
-            AccountAdapter().validate_unique_email("RESERVADO@example.com")
+            AccountAdapter().validate_unique_email("OCUPADO@example.com")

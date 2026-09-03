@@ -10,6 +10,15 @@
           <div style="opacity:.86">Proposta nº {{ orcamento.pk }} para {{ orcamento.destinatario }}</div>
         </td></tr>
         <tr><td style="padding:34px">
+          {% comment %}
+            O recado escrito no painel abre o e-mail, com cara de recado
+            e não de aviso do sistema. Quem editou a mensagem escreveu
+            algo que só vale para este cliente; enterrar isso depois do
+            texto automático seria o mesmo que não ter escrito.
+          {% endcomment %}
+          {% if recado %}
+            <p style="margin:0 0 18px;padding:16px 18px;border-left:3px solid #2a2fc4;border-radius:0 12px 12px 0;background:#f5f7ff;line-height:1.6;white-space:pre-line">{{ recado }}</p>
+          {% endif %}
           <p style="margin:0 0 18px;line-height:1.6">Preparamos uma página exclusiva com os itens, fotos, valores e condições da sua proposta.</p>
           <div style="padding:18px;border-radius:16px;background:#f5f7ff;margin-bottom:22px">
             <span style="color:#64748b">Total da proposta</span><br>

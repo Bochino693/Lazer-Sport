@@ -50,13 +50,13 @@ def sincronizar_perfil(user, nome_completo: str = "") -> ClientePerfil:
 class AccountAdapter(DefaultAccountAdapter):
     def validate_unique_email(self, email):
         from django.core.exceptions import ValidationError
-        from .identidade_email import validar_email_unico
+        from .identidade_email import validar_email_de_usuario
         from sistema_interno.utils import ErroDeFormulario
         email = super().validate_unique_email(email)
         # Cadastro/alteração usa a mesma identidade dos clientes do painel.
         user = getattr(self.request, "user", None)
         try:
-            return validar_email_unico(email, usuario_id=user.pk if user and user.is_authenticated else None)
+            return validar_email_de_usuario(email, usuario_id=user.pk if user and user.is_authenticated else None)
         except ErroDeFormulario as exc:
             raise ValidationError(str(exc)) from exc
 

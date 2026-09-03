@@ -4102,9 +4102,9 @@ class UserAdminView(AdminOnlyMixin, View):
         if email and User.objects.filter(email__iexact=email).exclude(pk=getattr(usuario, "pk", None)).exists():
             messages.error(request, "Esse e-mail já está em uso.")
             return redirect("clients")
-        from core.identidade_email import validar_email_unico
+        from core.identidade_email import validar_email_de_usuario
         try:
-            validar_email_unico(email, usuario_id=getattr(usuario, "pk", None))
+            validar_email_de_usuario(email, usuario_id=getattr(usuario, "pk", None))
         except ErroDeCadastroCliente as exc:
             messages.error(request, str(exc))
             return redirect("clients")

@@ -10,14 +10,21 @@ import json
 from datetime import timedelta
 from decimal import Decimal
 from pathlib import Path
-from urllib.parse import urlsplit
+from urllib.parse import quote, urlsplit
 
 from django.contrib.auth.models import User
 from django.core import mail
 from django.test import TestCase, override_settings
 from django.utils import timezone
 
-from core.models import Brinquedos, CategoriaPeca, CategoriasBrinquedos, PecasReposicao
+from core.models import (
+    Brinquedos,
+    CategoriaPeca,
+    CategoriasBrinquedos,
+    Estabelecimentos,
+    PecasReposicao,
+    TagsBrinquedos,
+)
 
 from .models import (
     AtividadeOrcamento,
@@ -505,6 +512,79 @@ class OrcamentoInternoTests(TestCase):
         self.assertEqual(dados["brinquedo"]["valor"], "340,00")
         self.assertEqual(novo.valor_brinquedo, Decimal("340.00"))
         self.assertIn(self.categoria, novo.categorias_brinquedos.all())
+
+    def test_cadastro_rapido_guarda_a_ficha_que_a_proposta_imprime(self):
+        """Medida, voltagem e etiqueta entram pelo modal, e não depois.
+
+        O que falta no cadastro falta na proposta impressa: o cliente
+        recebia "Piscina de bolinhas" sem saber o tamanho da piscina.
+        """
+        etiqueta = TagsBrinquedos.objects.create(nome_tags="Aniversário")
+        estabelecimento = Estabelecimentos.objects.create(
+            nome_estabelecimento="Buffet Central",
+        )
+
+        dados = self.post({
+            "action": "brinquedo_novo",
+            "nome": "Piscina de bolinhas 3x3",
+            "valor": "340,00",
+            "descricao": "Piscina 3x3 com 4.000 bolinhas",
+            "voltz": "bivolt",
+            "altura_m": "2,00",
+            "largura_m": "3,00",
+            "profundidade_m": "3,00",
+            "categoria": self.categoria.id,
+            "tags": etiqueta.id,
+            "estabelecimentos": estabelecimento.id,
+        }).json()
+
+        novo = Brinquedos.objects.get(nome_brinquedo="Piscina de bolinhas 3x3")
+        self.assertEqual(novo.altura_m, Decimal("2.00"))
+        self.assertEqual(novo.largura_m, Decimal("3.00"))
+        self.assertEqual(novo.profundidade_m, Decimal("3.00"))
+        self.assertEqual(novo.voltz, "bivolt")
+        self.assertIn(etiqueta, novo.tags.all())
+        self.assertIn(estabelecimento, novo.estabelecimentos.all())
+        # A linha da proposta reconhece o item pela legenda, não só pelo nome.
+        self.assertEqual(dados["brinquedo"]["detalhe"], "Piscina 3x3 com 4.000 bolinhas")
+        self.assertIn("2.00", dados["brinquedo"]["medidas"])
+
+    def test_a_proposta_imprime_a_ficha_do_cadastro(self):
+        """A linha comercial não cabe a ficha, e a ficha não pode sumir."""
+        orcamento = Orcamento.objects.create(nome_cliente="Festa da Ana")
+        item = ItemOrcamento.objects.create(
+            orcamento=orcamento,
+            descricao="2 dias de locação, montagem inclusa",
+            brinquedo=self.brinquedo,
+            quantidade=1,
+            valor_unitario=Decimal("280.00"),
+        )
+        self.brinquedo.altura_m = Decimal("2.00")
+        self.brinquedo.largura_m = Decimal("3.00")
+        self.brinquedo.profundidade_m = Decimal("3.00")
+        self.brinquedo.save()
+
+        ficha = ItemOrcamento.objects.get(pk=item.pk).ficha
+        self.assertIn("Cama elástica 3m", ficha)
+        self.assertIn("Voltagem: 110", ficha)
+        self.assertTrue(any("2.00" in linha for linha in ficha))
+
+        html = self.client.get(
+            f"/orcamentos/{orcamento.pk}/previa/", HTTP_HOST="interno.testserver",
+        ).content.decode()
+        for linha in ficha:
+            self.assertIn(linha, html)
+
+    def test_linha_escrita_a_mao_nao_ganha_ficha_nenhuma(self):
+        """Sem cadastro por trás não há o que imprimir -- e nada é inventado."""
+        orcamento = Orcamento.objects.create(nome_cliente="Festa da Ana")
+        item = ItemOrcamento.objects.create(
+            orcamento=orcamento, descricao="Frete até Osasco",
+            quantidade=1, valor_unitario=Decimal("120.00"),
+        )
+
+        self.assertEqual(item.ficha, [])
+        self.assertIsNone(item.imagem)
 
     def test_brinquedo_novo_nasce_fora_da_vitrine(self):
         """Publicar é decisão de quem cuida do site, com foto e texto."""
@@ -1336,6 +1416,56 @@ class RegistroDeEnvioTests(TestCase):
         self.assertGreaterEqual(len(dados["envios"]), 1)
         self.assertIn("canal", dados["envios"][0])
         self.assertIn("email_configurado", dados)
+
+    def test_mensagem_escrita_na_tela_vai_para_a_conversa_e_para_o_email(self):
+        """A caixa do modal manda; o padrão volta para poder ser restaurado."""
+        recado = "Oi Ana! Como combinamos no telefone, a data é 12/07."
+
+        dados = self.post({
+            "action": "enviar",
+            "canal": "whatsapp",
+            "whatsapp": "(11) 99999-8888",
+            "mensagem": recado,
+            "id": self.orcamento.pk,
+        }).json()
+
+        self.assertIn(quote(recado, safe=""), dados["whatsapp_url"])
+        # O que volta é sempre o texto do servidor: é ele que o botão
+        # "Restaurar padrão" repõe na tela.
+        self.assertIn("proposta nº", dados["mensagem"])
+        self.assertNotIn(recado, dados["mensagem"])
+        self.assertIn("mão", self.orcamento.envios.get().detalhe)
+
+    def test_email_leva_a_mensagem_escrita_e_o_link_da_proposta(self):
+        recado = "Ana, segue a proposta revisada com o desconto combinado."
+
+        self.post({
+            "action": "enviar",
+            "canal": "email",
+            "email": "ana@example.com",
+            "mensagem": recado,
+            "id": self.orcamento.pk,
+        })
+
+        self.orcamento.refresh_from_db()
+        enviado = mail.outbox[-1]
+        self.assertIn(recado, enviado.body)
+        # Mensagem editada que perde o endereço deixa o cliente sem para
+        # onde ir: o link entra de volta sozinho.
+        self.assertIn(self.orcamento.token, enviado.body)
+        self.assertIn(recado, enviado.alternatives[0][0])
+
+    def test_sem_edicao_o_email_segue_com_o_texto_padrao(self):
+        self.post({
+            "action": "enviar",
+            "canal": "email",
+            "email": "ana@example.com",
+            "id": self.orcamento.pk,
+        })
+
+        enviado = mail.outbox[-1]
+        self.assertIn("Preparamos a proposta", enviado.body)
+        self.assertEqual(self.orcamento.envios.get().detalhe, "")
 
     def test_conversa_do_whatsapp_vem_pronta_com_o_link(self):
         """A proposta sai do WhatsApp de quem está logado no aparelho."""

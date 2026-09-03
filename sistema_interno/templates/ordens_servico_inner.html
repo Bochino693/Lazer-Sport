@@ -462,7 +462,8 @@
 {% endcomment %}
 <div class="ls-os-child-layer" id="modalPecaOS" tabindex="-1" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="pecaOSTitulo" hidden>
   <div class="modal-dialog modal-lg modal-dialog-scrollable">
-    <form class="modal-content" id="formPecaOS" method="post" action="{% url 'ordens_servico_inner' %}">
+    <form class="modal-content" id="formPecaOS" method="post" enctype="multipart/form-data"
+          action="{% url 'ordens_servico_inner' %}">
       {% csrf_token %}
       <input type="hidden" name="action" value="peca_nova">
       <div class="modal-header">
@@ -517,6 +518,57 @@
                       placeholder="Aplicação, medidas, compatibilidade"></textarea>
           </div>
         </div>
+
+        {% comment %}
+          AS FOTOS FALTAVAM AQUI, E SÓ AQUI.
+
+          A mesma peça cadastrada pelo orçamento guardava as seis
+          posições; cadastrada pela O.S., nenhuma -- a janela não tinha
+          os campos. O cadastro é o mesmo (`sistema_interno/pecas.py`),
+          então a peça nascia pela metade dependendo de qual tela o
+          técnico usou, e a O.S. impressa saía com uma linha de texto no
+          lugar da foto. Cadastro que depende da porta de entrada é
+          cadastro que ninguém confia.
+        {% endcomment %}
+        <fieldset class="ls-ficha-cadastro mt-3">
+          <legend>Fotos da peça</legend>
+          <p class="ls-ficha-nota">
+            A da frente é a capa: é ela que aparece no documento impresso
+            e na lista de itens. Até 5 MB por foto e 16 MB no total.
+          </p>
+          <div class="row g-3">
+            <div class="col-12 col-md-6">
+              <label class="form-label" for="pecaOSFotoFrente">Frente <span class="ls-ficha-capa">capa</span></label>
+              <input class="form-control" type="file" id="pecaOSFotoFrente"
+                     name="foto_frente" accept="image/*">
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="form-label" for="pecaOSFotoTras">Traseira</label>
+              <input class="form-control" type="file" id="pecaOSFotoTras"
+                     name="foto_tras" accept="image/*">
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="form-label" for="pecaOSFotoDireita">Lado direito</label>
+              <input class="form-control" type="file" id="pecaOSFotoDireita"
+                     name="foto_lado_direito" accept="image/*">
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="form-label" for="pecaOSFotoEsquerda">Lado esquerdo</label>
+              <input class="form-control" type="file" id="pecaOSFotoEsquerda"
+                     name="foto_lado_esquerdo" accept="image/*">
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="form-label" for="pecaOSFotoDetalhe">Detalhe</label>
+              <input class="form-control" type="file" id="pecaOSFotoDetalhe"
+                     name="foto_detalhe" accept="image/*">
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="form-label" for="pecaOSFotoOutra">Outra foto</label>
+              <input class="form-control" type="file" id="pecaOSFotoOutra"
+                     name="foto_outro" accept="image/*">
+            </div>
+          </div>
+        </fieldset>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-outline-secondary" data-fechar-filho-os>Cancelar</button>
@@ -1351,7 +1403,7 @@ LSTela.pronto(function () {
 
       var opcao = {
         valor:"r:"+p.id, rotulo:p.nome, grupo:p.grupo,
-        detalhe: p.uso === "manutencao" ? "Item de manutenção" : "Peça da loja",
+        detalhe: p.detalhe || (p.uso === "manutencao" ? "Item de manutenção" : "Peça da loja"),
         valorDireita: p.valor ? "R$ "+p.valor : "sem preço",
         preco: p.valor || ""
       };

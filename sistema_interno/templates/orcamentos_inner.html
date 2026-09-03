@@ -347,14 +347,99 @@ Cadastro mínimo de propósito: nome, valor e categoria. Foto e texto de
           <textarea class="form-control" id="brinquedoNovoDescricao" name="descricao"
                     rows="2" placeholder="Medidas, o que acompanha, público..."></textarea>
         </div>
-<fieldset class="mt-3"><legend class="h6">Ficha e fotos do produto</legend><p class="small text-muted">Até 5 MB por foto e 16 MB no total. As fotos ficam no cadastro e acompanham o item.</p><label class="form-label">Altura (m)<input class="form-control" name="altura_m" inputmode="decimal"></label>
-<label class="form-label">Largura (m)<input class="form-control" name="largura_m" inputmode="decimal"></label>
-<label class="form-label">Profundidade (m)<input class="form-control" name="profundidade_m" inputmode="decimal"></label>
-<label class="form-label d-block">Foto — Frente<input class="form-control" type="file" name="foto_perfil" accept="image/*"></label>
-<label class="form-label d-block">Foto — Verso<input class="form-control" type="file" name="foto_verso" accept="image/*"></label>
-<label class="form-label d-block">Foto — Lado direito<input class="form-control" type="file" name="foto_lado_direito" accept="image/*"></label>
-<label class="form-label d-block">Foto — Lado esquerdo<input class="form-control" type="file" name="foto_lado_esquerdo" accept="image/*"></label>
-</fieldset>
+        {% comment %}
+          A FICHA INTEIRA, AQUI DENTRO.
+
+          O que se cadastra às pressas é o que sai na proposta impressa:
+          medida, voltagem, descrição e foto do item. Faltando qualquer
+          um, o documento chega ao cliente com uma linha de nome solto --
+          e a diferença entre "Piscina de bolinhas" e "Piscina de
+          bolinhas 3x3, 2,00 x 3,00 x 3,00 m, bivolt, com foto" é a
+          diferença entre uma proposta e um bilhete.
+
+          Por isso a ficha não vive numa outra tela: ela é este bloco.
+        {% endcomment %}
+        <fieldset class="ls-ficha-cadastro mt-3">
+          <legend>Medidas do brinquedo</legend>
+          <p class="ls-ficha-nota">
+            Vão impressas na proposta, e é por elas que a montagem sabe se
+            o brinquedo cabe no salão do cliente.
+          </p>
+          <div class="row g-3">
+            <div class="col-6 col-sm-4">
+              <label class="form-label" for="brinquedoNovoAltura">Altura (m)</label>
+              <input class="form-control" id="brinquedoNovoAltura" name="altura_m"
+                     inputmode="decimal" autocomplete="off" placeholder="2,00">
+            </div>
+            <div class="col-6 col-sm-4">
+              <label class="form-label" for="brinquedoNovoLargura">Largura (m)</label>
+              <input class="form-control" id="brinquedoNovoLargura" name="largura_m"
+                     inputmode="decimal" autocomplete="off" placeholder="3,00">
+            </div>
+            <div class="col-6 col-sm-4">
+              <label class="form-label" for="brinquedoNovoProfundidade">Profundidade (m)</label>
+              <input class="form-control" id="brinquedoNovoProfundidade" name="profundidade_m"
+                     inputmode="decimal" autocomplete="off" placeholder="3,00">
+            </div>
+          </div>
+        </fieldset>
+
+        <fieldset class="ls-ficha-cadastro mt-3">
+          <legend>Onde este brinquedo aparece</legend>
+          <p class="ls-ficha-nota">
+            Tudo opcional e mudável depois, na tela de catálogo. O
+            brinquedo nasce fora da vitrine de qualquer jeito.
+          </p>
+          <div class="row g-3">
+            <div class="col-12 col-md-6">
+              <label class="form-label" for="brinquedoNovoTags">Etiquetas</label>
+              <select class="form-select" id="brinquedoNovoTags" name="tags" multiple size="4">
+                {% for t in tags_catalogo %}
+                  <option value="{{ t.id }}">{{ t.nome_tags }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="form-label" for="brinquedoNovoEstabelecimentos">Estabelecimentos</label>
+              <select class="form-select" id="brinquedoNovoEstabelecimentos"
+                      name="estabelecimentos" multiple size="4">
+                {% for e in estabelecimentos %}
+                  <option value="{{ e.id }}">{{ e.nome_estabelecimento }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+        </fieldset>
+
+        <fieldset class="ls-ficha-cadastro mt-3">
+          <legend>Fotos do brinquedo</legend>
+          <p class="ls-ficha-nota">
+            A da frente é a capa: é ela que aparece na proposta do cliente
+            e na lista de itens. Até 5 MB por foto e 16 MB no total.
+          </p>
+          <div class="row g-3">
+            <div class="col-12 col-md-6">
+              <label class="form-label" for="brinquedoNovoFotoPerfil">Frente <span class="ls-ficha-capa">capa</span></label>
+              <input class="form-control" type="file" id="brinquedoNovoFotoPerfil"
+                     name="foto_perfil" accept="image/*">
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="form-label" for="brinquedoNovoFotoVerso">Verso</label>
+              <input class="form-control" type="file" id="brinquedoNovoFotoVerso"
+                     name="foto_verso" accept="image/*">
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="form-label" for="brinquedoNovoFotoDireita">Lado direito</label>
+              <input class="form-control" type="file" id="brinquedoNovoFotoDireita"
+                     name="foto_lado_direito" accept="image/*">
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="form-label" for="brinquedoNovoFotoEsquerda">Lado esquerdo</label>
+              <input class="form-control" type="file" id="brinquedoNovoFotoEsquerda"
+                     name="foto_lado_esquerdo" accept="image/*">
+            </div>
+          </div>
+        </fieldset>
       </div>
 
       <div class="modal-footer">
@@ -427,14 +512,63 @@ Cadastro mínimo de propósito: nome, valor e categoria. Foto e texto de
                       placeholder="Aplicação, medidas, compatibilidade e o que acompanha"></textarea>
           </div>
         </div>
-<fieldset class="mt-3"><legend class="h6">Ficha e fotos do produto</legend><p class="small text-muted">Até 5 MB por foto e 16 MB no total. As fotos ficam no cadastro e acompanham o item.</p><label class="form-label">Uso<select class="form-select" name="uso"><option value="manutencao">Item de manutenção</option><option value="loja">Peça de reposição</option></select></label>
-<label class="form-label d-block">Foto — Frente<input class="form-control" type="file" name="foto_frente" accept="image/*"></label>
-<label class="form-label d-block">Foto — Traseira<input class="form-control" type="file" name="foto_tras" accept="image/*"></label>
-<label class="form-label d-block">Foto — Lado direito<input class="form-control" type="file" name="foto_lado_direito" accept="image/*"></label>
-<label class="form-label d-block">Foto — Lado esquerdo<input class="form-control" type="file" name="foto_lado_esquerdo" accept="image/*"></label>
-<label class="form-label d-block">Foto — Detalhe<input class="form-control" type="file" name="foto_detalhe" accept="image/*"></label>
-<label class="form-label d-block">Foto — Outra foto<input class="form-control" type="file" name="foto_outro" accept="image/*"></label>
-</fieldset>
+        <fieldset class="ls-ficha-cadastro mt-3">
+          <legend>Para que serve esta peça</legend>
+          <p class="ls-ficha-nota">
+            Item de manutenção serve a orçamentos e O.S. e nunca entra na
+            vitrine do site, mesmo ativo.
+          </p>
+          <label class="form-label" for="pecaNovaUso">Uso</label>
+          <select class="form-select" id="pecaNovaUso" name="uso">
+            <option value="manutencao">Item de manutenção</option>
+            <option value="loja">Peça de reposição</option>
+          </select>
+        </fieldset>
+
+        {% comment %}
+          As seis posições do cadastro, e não só a da frente: peça sem
+          foto vira uma linha de texto na proposta impressa, e é
+          justamente na peça que o cliente pergunta "é essa mesmo?".
+        {% endcomment %}
+        <fieldset class="ls-ficha-cadastro mt-3">
+          <legend>Fotos da peça</legend>
+          <p class="ls-ficha-nota">
+            A da frente é a capa: é ela que aparece na proposta e na lista
+            de itens. Até 5 MB por foto e 16 MB no total.
+          </p>
+          <div class="row g-3">
+            <div class="col-12 col-md-6">
+              <label class="form-label" for="pecaNovaFotoFrente">Frente <span class="ls-ficha-capa">capa</span></label>
+              <input class="form-control" type="file" id="pecaNovaFotoFrente"
+                     name="foto_frente" accept="image/*">
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="form-label" for="pecaNovaFotoTras">Traseira</label>
+              <input class="form-control" type="file" id="pecaNovaFotoTras"
+                     name="foto_tras" accept="image/*">
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="form-label" for="pecaNovaFotoDireita">Lado direito</label>
+              <input class="form-control" type="file" id="pecaNovaFotoDireita"
+                     name="foto_lado_direito" accept="image/*">
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="form-label" for="pecaNovaFotoEsquerda">Lado esquerdo</label>
+              <input class="form-control" type="file" id="pecaNovaFotoEsquerda"
+                     name="foto_lado_esquerdo" accept="image/*">
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="form-label" for="pecaNovaFotoDetalhe">Detalhe</label>
+              <input class="form-control" type="file" id="pecaNovaFotoDetalhe"
+                     name="foto_detalhe" accept="image/*">
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="form-label" for="pecaNovaFotoOutra">Outra foto</label>
+              <input class="form-control" type="file" id="pecaNovaFotoOutra"
+                     name="foto_outro" accept="image/*">
+            </div>
+          </div>
+        </fieldset>
       </div>
 
       <div class="modal-footer">
@@ -658,9 +792,31 @@ Cadastro mínimo de propósito: nome, valor e categoria. Foto e texto de
           O botão do WhatsApp abre a conversa com a proposta escrita.
           Confirme o envio dentro do WhatsApp para o cliente receber.
         </p>
-        <details class="ls-message-preview mb-3">
-          <summary><i class="bi bi-chat-left-text me-1"></i> Ver mensagem que será enviada</summary>
-          <pre id="linkMensagemPrevia"></pre>
+        {% comment %}
+          A MENSAGEM É DESTA PROPOSTA, E SÓ DELA.
+
+          Antes o texto era uma prévia de leitura: quem precisava lembrar
+          o cliente de uma combinação ("como falamos, a data é dia 12")
+          copiava para o WhatsApp e reescrevia lá, fora do sistema -- e o
+          registro do envio guardava outra coisa. Agora edita-se aqui
+          dentro. O que for escrito vale para o WhatsApp e para o e-mail
+          desta proposta; nenhuma outra é tocada, e "Restaurar" traz de
+          volta o texto que o servidor monta.
+        {% endcomment %}
+        <details class="ls-message-preview mb-3" id="linkMensagemCaixa">
+          <summary><i class="bi bi-chat-left-text me-1"></i> Ver e editar a mensagem que será enviada</summary>
+          <div class="ls-message-editor">
+            <label class="visually-hidden" for="linkMensagemPrevia">Mensagem enviada ao cliente</label>
+            <textarea id="linkMensagemPrevia" class="form-control" rows="9"
+                      spellcheck="true" maxlength="4000"
+                      placeholder="Preparando mensagem…"></textarea>
+            <div class="ls-message-editor-rodape">
+              <span id="linkMensagemEstado">Texto padrão do sistema.</span>
+              <button type="button" class="btn btn-sm btn-outline-secondary" id="linkMensagemRestaurar" hidden>
+                <i class="bi bi-arrow-counterclockwise me-1"></i> Restaurar padrão
+              </button>
+            </div>
+          </div>
         </details>
         <label class="form-label" for="linkCampo">Ou compartilhe o link</label>
         <div class="input-group">
@@ -1301,7 +1457,7 @@ LSTela.pronto(function () {
       valor: "b:" + b.id,
       rotulo: b.nome,
       grupo: "Catálogo do site",
-      detalhe: "Brinquedo do catálogo",
+      detalhe: b.detalhe || "Brinquedo do catálogo",
       valorDireita: b.valor ? "R$ " + b.valor : "sob consulta",
       preco: b.valor || ""
     };
@@ -1319,8 +1475,8 @@ LSTela.pronto(function () {
     var opcao = {
       valor: "r:" + p.id,
       rotulo: p.nome,
-      grupo: "Peças de reposição",
-      detalhe: "Peça da loja",
+      grupo: p.grupo || "Peças de reposição",
+      detalhe: p.detalhe || "Peça da loja",
       valorDireita: p.valor ? "R$ " + p.valor : "sem preço",
       preco: p.valor || ""
     };
@@ -2238,7 +2394,65 @@ LSTela.pronto(function () {
      girando para sempre, num orçamento perfeitamente pronto. Agora o POST
      virou registro: acontece por trás, e se falhar ninguém fica sem
      mandar a proposta. */
-  var propostaAtual = { link: "", mensagem: "", previa: "", total: "", validade: "" };
+  var propostaAtual = {
+    link: "", mensagem: "", previa: "", total: "", validade: "",
+    /* O texto que o servidor monta, guardado à parte para o botão
+       "Restaurar padrão" ter para onde voltar. */
+    mensagemPadrao: "",
+    /* Verdadeiro depois que alguém digita: daí em diante o servidor não
+       reescreve mais o texto por cima do que foi ajustado à mão. */
+    mensagemEditada: false
+  };
+
+  var campoMensagem = document.getElementById("linkMensagemPrevia");
+  var estadoMensagem = document.getElementById("linkMensagemEstado");
+  var restaurarMensagem = document.getElementById("linkMensagemRestaurar");
+
+  /* O QUE VAI SER ENVIADO É O QUE ESTÁ NA CAIXA.
+
+     Ler do campo, e não da variável, evita a falha clássica desta tela:
+     a pessoa ajusta o texto, aperta o botão e sai a versão anterior
+     porque o `input` ainda não tinha disparado. */
+  function mensagemEscolhida() {
+    var texto = campoMensagem ? campoMensagem.value.trim() : "";
+    return texto || propostaAtual.mensagem || "";
+  }
+
+  function marcarMensagem() {
+    var padrao = (propostaAtual.mensagemPadrao || "").trim();
+    var agora = campoMensagem ? campoMensagem.value.trim() : "";
+    propostaAtual.mensagemEditada = Boolean(agora) && agora !== padrao;
+    propostaAtual.mensagem = agora || padrao;
+    if (estadoMensagem) {
+      estadoMensagem.textContent = propostaAtual.mensagemEditada
+        ? "Texto ajustado por você — é este que vai ao cliente."
+        : "Texto padrão do sistema.";
+    }
+    if (restaurarMensagem) {
+      restaurarMensagem.hidden = !propostaAtual.mensagemEditada || !padrao;
+    }
+  }
+
+  campoMensagem?.addEventListener("input", marcarMensagem);
+
+  restaurarMensagem?.addEventListener("click", function () {
+    if (!campoMensagem) return;
+    campoMensagem.value = propostaAtual.mensagemPadrao || "";
+    marcarMensagem();
+    campoMensagem.focus();
+  });
+
+  /* Guarda o texto do servidor -- e só escreve na caixa se ninguém tiver
+     mexido nela. Um "preparar" que chega depois de a pessoa começar a
+     escrever não pode apagar o que ela escreveu. */
+  function receberMensagemDoServidor(texto) {
+    if (!texto) return;
+    propostaAtual.mensagemPadrao = texto;
+    if (propostaAtual.mensagemEditada) return;
+    propostaAtual.mensagem = texto;
+    if (campoMensagem) campoMensagem.value = texto;
+    marcarMensagem();
+  }
 
   function avisarEnvio(texto, tipo) {
     var sucesso = document.getElementById("linkSucesso");
@@ -2252,20 +2466,20 @@ LSTela.pronto(function () {
   function atualizarPrevia() {
     var titulo = document.getElementById("linkPreviaTitulo");
     var resumo = document.getElementById("linkPreviaResumo");
-    var texto = document.getElementById("linkMensagemPrevia");
     var id = document.getElementById("linkOrcamentoId").value;
     if (titulo) titulo.textContent = "Proposta nº " + id + " · " + (propostaAtual.total || "valor calculado");
     if (resumo) resumo.textContent = propostaAtual.validade
       ? "Válida até " + propostaAtual.validade + " · resposta on-line"
       : "Itens, fotos, condições e resposta on-line";
-    if (texto) texto.textContent = propostaAtual.mensagem || "Preparando mensagem…";
+    /* A caixa da mensagem não entra aqui: quem escreve nela é
+       `receberMensagemDoServidor`, que respeita o que foi editado. */
   }
 
   /* Cada caminho tem uma explicação diferente, porque o que aconteceu é
      diferente -- e a pessoa precisa saber se deve olhar a aba, o
      programa, ou esperar. Ver `Painel.whatsapp.abrir`. */
   document.getElementById("copiarMensagemWhatsapp")?.addEventListener("click", function () {
-    var mensagem = propostaAtual.mensagem || "";
+    var mensagem = mensagemEscolhida();
     if (!mensagem) {
       avisarEnvio("A mensagem ainda não está pronta. Aguarde um instante.", "erro");
       return;
@@ -2357,6 +2571,13 @@ LSTela.pronto(function () {
     dados.set("id", document.getElementById("linkOrcamentoId").value.trim());
     if (canal) dados.set("canal", canal);
     if (chave) dados.set(chave, valor || "");
+    /* O texto ajustado à mão viaja junto: é ele que o e-mail leva e que
+       o histórico de envio registra. Sem isto, o servidor mandaria a
+       versão padrão e a tela mostraria outra -- o pior dos dois mundos.
+       Sem edição, nada é enviado e o servidor monta o texto dele. */
+    if (propostaAtual.mensagemEditada) {
+      dados.set("mensagem", mensagemEscolhida());
+    }
     dados.set(
       "csrfmiddlewaretoken",
       document.querySelector("[name=csrfmiddlewaretoken]").value
@@ -2411,8 +2632,16 @@ LSTela.pronto(function () {
         mensagem: botao.dataset.mensagem || "",
         previa: botao.dataset.previa || "",
         total: botao.dataset.total || "",
-        validade: botao.dataset.validade || ""
+        validade: botao.dataset.validade || "",
+        mensagemPadrao: botao.dataset.mensagem || "",
+        /* Cada proposta abre com o texto dela. Guardar a edição entre
+           aberturas mandaria para o cliente B o recado escrito para o
+           cliente A -- foi por isso que o campo virou "individual". */
+        mensagemEditada: false
       };
+
+      if (campoMensagem) campoMensagem.value = propostaAtual.mensagem || "";
+      marcarMensagem();
 
       campoLink.value = "";
       campoLink.placeholder = "Gerando link seguro…";
@@ -2451,7 +2680,7 @@ LSTela.pronto(function () {
           if (json.whatsapp) document.getElementById("linkWhatsapp").value = json.whatsapp;
           if (json.email) document.getElementById("linkEmail").value = json.email;
           Painel.aplicarMascaras(document.getElementById("modalLink"));
-          if (json.mensagem) propostaAtual.mensagem = json.mensagem;
+          receberMensagemDoServidor(json.mensagem);
           mostrarLink(json.link, json.preview_url);
           desenharEnvios(json.envios);
         })
@@ -2472,7 +2701,7 @@ LSTela.pronto(function () {
      * que a conversa precisa -- número e mensagem -- já está aqui. */
     var campo = document.getElementById("linkWhatsapp");
     var telefone = campo.value.trim();
-    var mensagem = propostaAtual.mensagem;
+    var mensagem = mensagemEscolhida();
 
     if (!mensagem && propostaAtual.link) {
       mensagem =
@@ -2509,7 +2738,7 @@ LSTela.pronto(function () {
        trabalho de ninguém. */
     pedirAoServidor(corpoDoEnvio("whatsapp", "whatsapp", telefone))
       .then(function (json) {
-        if (json.mensagem) propostaAtual.mensagem = json.mensagem;
+        receberMensagemDoServidor(json.mensagem);
         mostrarLink(json.link, json.preview_url);
         desenharEnvios(json.envios);
         avisarEnvio(
@@ -2549,7 +2778,7 @@ LSTela.pronto(function () {
 
     pedirAoServidor(corpoDoEnvio("email", "email", campo.value.trim()))
       .then(function (json) {
-        if (json.mensagem) propostaAtual.mensagem = json.mensagem;
+        receberMensagemDoServidor(json.mensagem);
         mostrarLink(json.link, json.preview_url);
         desenharEnvios(json.envios);
         botao.innerHTML = '<i class="bi bi-check-lg me-1"></i> Enviado';

@@ -54,6 +54,10 @@ def carregar_orcamento_exibicao(*, bloquear=False, **filtros):
         .prefetch_related(
             "cliente__enderecos",
             "itens__brinquedo",
+            # A galeria tipada entra junto: é dela que sai a capa do
+            # brinquedo cadastrado pelo painel (ver `ItemOrcamento.imagem`),
+            # e sem o prefetch a página voltaria a consultar por linha.
+            "itens__brinquedo__imagens_brinquedo",
             "itens__produto",
             "itens__peca__imagem_peca_reposicao",
         )

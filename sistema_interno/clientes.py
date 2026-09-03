@@ -139,8 +139,8 @@ def salvar_cliente(request, cliente: Cliente | None = None) -> Cliente:
             "de criar outro."
         )
 
-    from core.identidade_email import validar_email_unico
-    validar_email_unico(email, cliente_id=cliente.pk)
+    from core.identidade_email import validar_email_de_cliente
+    validar_email_de_cliente(email, cliente_id=cliente.pk)
     if "nome_estabelecimento" in request.POST:
         cliente.nome_estabelecimento = texto(request, "nome_estabelecimento", limite=150)
     if "cnpj_estabelecimento" in request.POST:
@@ -279,8 +279,8 @@ def completar_cadastro(request, cliente: Cliente) -> Cliente:
             validate_email(email)
         except ValidationError as exc:
             raise ErroDeFormulario("E-mail inválido.") from exc
-        from core.identidade_email import validar_email_unico
-        validar_email_unico(email, cliente_id=cliente.pk)
+        from core.identidade_email import validar_email_de_cliente
+        validar_email_de_cliente(email, cliente_id=cliente.pk)
         cliente.email = email
 
     if documento:

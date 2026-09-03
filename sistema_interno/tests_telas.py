@@ -277,6 +277,59 @@ class SemDependenciaDeCDNTests(TestCase):
         )
 
 
+class CadastroRapidoCompletoTests(TestCase):
+    """A janela de cadastro rápido não pode pedir menos que o documento usa.
+
+    O QUE ORIGINOU ISTO. A mesma peça, cadastrada pelo orçamento,
+    guardava as seis fotos do catálogo; cadastrada pela O.S., nenhuma --
+    a janela da O.S. simplesmente não tinha os campos, embora as duas
+    telas chamem o MESMO cadastro (`sistema_interno/pecas.py`). O
+    documento impresso saía com uma linha de texto no lugar da foto, e
+    qual dado sobrava dependia da porta de entrada.
+    """
+
+    #: Os nomes que `fotos_catalogo` lê do formulário. Posição nova no
+    #: cadastro entra aqui, e as duas janelas passam a ser cobradas.
+    FOTOS_DA_PECA = (
+        "foto_frente", "foto_tras", "foto_lado_direito",
+        "foto_lado_esquerdo", "foto_detalhe", "foto_outro",
+    )
+    FOTOS_DO_BRINQUEDO = (
+        "foto_perfil", "foto_verso", "foto_lado_direito", "foto_lado_esquerdo",
+    )
+
+    def setUp(self):
+        self.gestor = User.objects.create_superuser(
+            username="gestor-cadastro", password="x", email="c@example.com",
+        )
+        self.client.force_login(self.gestor)
+
+    def tela(self, caminho):
+        return self.client.get(
+            caminho, HTTP_HOST="interno.testserver",
+        ).content.decode()
+
+    def test_as_duas_janelas_de_peca_pedem_as_mesmas_fotos(self):
+        orcamento = self.tela("/orcamentos/")
+        ordem = self.tela("/ordens-servico/")
+
+        for campo in self.FOTOS_DA_PECA:
+            with self.subTest(campo=campo):
+                self.assertIn(f'name="{campo}"', orcamento)
+                self.assertIn(f'name="{campo}"', ordem)
+
+    def test_a_janela_do_brinquedo_pede_a_ficha_que_a_proposta_imprime(self):
+        html = self.tela("/orcamentos/")
+
+        for campo in ("altura_m", "largura_m", "profundidade_m", "voltz",
+                      "descricao", "categoria", "tags", "estabelecimentos"):
+            with self.subTest(campo=campo):
+                self.assertIn(f'name="{campo}"', html)
+        for campo in self.FOTOS_DO_BRINQUEDO:
+            with self.subTest(campo=campo):
+                self.assertIn(f'name="{campo}"', html)
+
+
 class JanelasDoPainelTests(TestCase):
     """A estrutura das janelas -- o que decide se dá para salvar.
 

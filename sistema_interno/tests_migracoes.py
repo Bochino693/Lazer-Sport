@@ -50,6 +50,14 @@ HERANCA = {
     "core/0103_cupom_data_expiracao_cupom_reutilizavel_and_more",
     "sistema_interno/0011_orcamento_token_resposta_item_brinquedo",
     "sistema_interno/0014_cliente_telefone_digitos",
+    # Esta não grava linha nenhuma: a parte "de dados" é um DDL --
+    # soltar, no PostgreSQL, a checagem antiga de quantidade antes de o
+    # `AlterField` recriá-la. DDL não enfileira gatilho de chave
+    # estrangeira, que é o que este teste protege, e separar as duas
+    # operações faria o `AlterField` rodar de novo num servidor onde a
+    # migração já passou -- justamente o erro de constraint duplicada
+    # que ela existe para evitar.
+    "sistema_interno/0039_item_os_quantidade_inteira_esquema",
 }
 
 RAIZ = Path(__file__).resolve().parent.parent
