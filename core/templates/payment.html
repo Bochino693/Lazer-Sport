@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}
+{% load interno_extras static %}
 
 {% block title %}Pagamento seguro | Lazer & Sport{% endblock %}
 
@@ -834,7 +834,7 @@ body {
             <div class="summary-total-card">
                 <small>Total a pagar</small>
                 <strong class="money-brl" data-value="{{ total_final|stringformat:'f' }}">
-                    R$ {{ total_final|floatformat:2 }}
+                    R$ {{ total_final|moeda }}
                 </strong>
             </div>
 
@@ -844,7 +844,7 @@ body {
                 <div class="summary-item">
                     <span>{{ item.quantidade }}× {{ item.item }}</span>
                     <strong class="money-brl" data-value="{{ item.subtotal|stringformat:'f' }}">
-                        R$ {{ item.subtotal|floatformat:2 }}
+                        R$ {{ item.subtotal|moeda }}
                     </strong>
                 </div>
                 {% endfor %}
@@ -854,7 +854,7 @@ body {
                 <div class="summary-line">
                     <span>Produtos</span>
                     <span class="money-brl" data-value="{{ total_bruto|stringformat:'f' }}">
-                        R$ {{ total_bruto|floatformat:2 }}
+                        R$ {{ total_bruto|moeda }}
                     </span>
                 </div>
                 {% if valor_desconto > 0 %}
@@ -862,7 +862,7 @@ body {
                     <span>Desconto</span>
                     <span>
                         − <span class="money-brl" data-value="{{ valor_desconto|stringformat:'f' }}">
-                            R$ {{ valor_desconto|floatformat:2 }}
+                            R$ {{ valor_desconto|moeda }}
                         </span>
                     </span>
                 </div>
@@ -870,7 +870,7 @@ body {
                 <div class="summary-line">
                     <span>Frete</span>
                     <span class="money-brl" data-value="{{ frete|stringformat:'f' }}">
-                        R$ {{ frete|floatformat:2 }}
+                        R$ {{ frete|moeda }}
                     </span>
                 </div>
             </div>

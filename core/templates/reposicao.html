@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load static %}
+{% load interno_extras static %}
 
 {% block title %}Peças de Reposição | Lazer Sport{% endblock %}
 
@@ -213,7 +213,7 @@
                     </p>
 
                     <div class="preco">
-                        R$ {{ peca.preco_venda|floatformat:2 }}
+                        R$ {{ peca.preco_venda|moeda }}
                     </div>
                 </div>
             </a>

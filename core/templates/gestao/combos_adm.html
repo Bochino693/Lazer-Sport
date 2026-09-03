@@ -1,5 +1,5 @@
 {% extends "gestao/base_adm.html" %}
-{% load l10n %}
+{% load interno_extras l10n %}
 
 {% block title %}Combos{% endblock %}
 
@@ -855,7 +855,7 @@
                         {% endfor %}
                     </ul>
                     <div class="combo-price">
-                        R$ {{ combo.valor_combo|floatformat:2 }}
+                        R$ {{ combo.valor_combo|moeda }}
                     </div>
                     <div class="combo-actions">
                         <button

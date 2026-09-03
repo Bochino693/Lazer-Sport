@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static interno_extras %}
 
 {% block title %}{{ brinquedo.nome_brinquedo }} | Lazer & Sport Brinquedos{% endblock %}
 
@@ -1281,19 +1281,19 @@
                             {% if brinquedo.altura_m %}
                                 <div class="produto-especificacao">
                                     <span>Altura</span>
-                                    <strong>{{ brinquedo.altura_m|floatformat:2 }} m</strong>
+                                    <strong>{{ brinquedo.altura_m|medida }}</strong>
                                 </div>
                             {% endif %}
                             {% if brinquedo.largura_m %}
                                 <div class="produto-especificacao">
                                     <span>Largura</span>
-                                    <strong>{{ brinquedo.largura_m|floatformat:2 }} m</strong>
+                                    <strong>{{ brinquedo.largura_m|medida }}</strong>
                                 </div>
                             {% endif %}
                             {% if brinquedo.profundidade_m %}
                                 <div class="produto-especificacao">
                                     <span>Comprimento</span>
-                                    <strong>{{ brinquedo.profundidade_m|floatformat:2 }} m</strong>
+                                    <strong>{{ brinquedo.profundidade_m|medida }}</strong>
                                 </div>
                             {% endif %}
                         </div>

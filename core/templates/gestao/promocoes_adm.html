@@ -1,5 +1,5 @@
 {% extends "gestao/base_adm.html" %}
-{% load l10n %}
+{% load interno_extras l10n %}
 
 {% block title %}Promoções{% endblock %}
 
@@ -773,7 +773,7 @@
                         <span>{{ promo.brinquedos.nome_brinquedo }}</span>
                     </div>
                     <div class="promo-price">
-                        R$ {{ promo.preco_promocao|floatformat:2 }}
+                        R$ {{ promo.preco_promocao|moeda }}
                     </div>
                     <div class="promo-actions">
                         <button

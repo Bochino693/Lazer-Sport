@@ -1,5 +1,5 @@
 {% extends "gestao/base_adm.html" %}
-{% load humanize %}
+{% load interno_extras humanize %}
 
 {% block content %}
 <style>
@@ -159,7 +159,7 @@
     </div>
     <div class="summary-card">
       <span>VALOR TOTAL</span>
-      <h2>R$ {{ total_valor|floatformat:2 }}</h2>
+      <h2>R$ {{ total_valor|moeda }}</h2>
     </div>
   </div>
 
@@ -191,7 +191,7 @@
         <div><span>Pedido</span><br>#{{ venda.pedido.id }}</div>
         <div><span>CPF</span><br>{{ venda.cpf }}</div>
         <div class="payment">{{ venda.get_forma_pagamento_display }}</div>
-        <div><span>Valor</span><br>R$ {{ venda.valor_pago|floatformat:2 }}</div>
+        <div><span>Valor</span><br>R$ {{ venda.valor_pago|moeda }}</div>
         <div><span>Data</span><br>{{ venda.criacao|date:"d/m/Y H:i" }}</div>
       </div>
     {% empty %}

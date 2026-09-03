@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load static %}
+{% load interno_extras static %}
 
 {% block title %}Loja | Lazer & Sport Brinquedos{% endblock %}
 
@@ -937,11 +937,11 @@
                                     <div class="loja-card-preco-linha">
                                         {% if item.preco_original %}
                                             <span class="loja-card-preco-original">
-                                                R$ {{ item.preco_original|floatformat:"2g" }}
+                                                R$ {{ item.preco_original|moeda }}
                                             </span>
                                         {% endif %}
                                         <strong class="loja-card-preco">
-                                            R$ {{ item.preco|floatformat:"2g" }}
+                                            R$ {{ item.preco|moeda }}
                                         </strong>
                                     </div>
                                     <span class="loja-card-condicao">

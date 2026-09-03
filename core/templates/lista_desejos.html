@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load static %}
+{% load interno_extras static %}
 
 {% block title %}Lista de desejos | Lazer & Sport{% endblock %}
 {% block meta_description %}Os brinquedos e as peças que você guardou na Lazer & Sport.{% endblock %}
@@ -143,7 +143,7 @@
             <div class="desejo-corpo">
               <h3>{{ b.nome_brinquedo }}</h3>
               {% if b.valor_brinquedo %}
-                <span class="preco">R$ {{ b.valor_brinquedo }}</span>
+                <span class="preco">R$ {{ b.valor_brinquedo|moeda }}</span>
               {% else %}
                 <span class="sem-preco">Valor sob consulta</span>
               {% endif %}
@@ -175,7 +175,7 @@
             <div class="desejo-corpo">
               <h3>{{ p.nome }}</h3>
               {% if p.preco_venda %}
-                <span class="preco">R$ {{ p.preco_venda }}</span>
+                <span class="preco">R$ {{ p.preco_venda|moeda }}</span>
               {% else %}
                 <span class="sem-preco">Valor sob consulta</span>
               {% endif %}

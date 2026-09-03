@@ -1061,11 +1061,17 @@ class EstabelecimentosListView(ListView):
 class BrinquedosView(View):
     @staticmethod
     def _formatar_decimal_br(valor):
-        """Formata Decimal no padrão 1.234,56, sem depender do locale do SO."""
+        """Formata Decimal no padrão 1.234,56, sem depender do locale do SO.
+
+        A regra mora em `core/formatos.py`. Aqui só o caso do vazio, que
+        é diferente: numa faixa de preço, "" some da tela e "0,00" afirma
+        que existe um brinquedo de graça.
+        """
         if valor is None:
             return ""
-        numero = Decimal(valor).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-        return f"{numero:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+        from .formatos import dinheiro
+
+        return dinheiro(valor)
 
     @staticmethod
     def _decimal_html(valor):

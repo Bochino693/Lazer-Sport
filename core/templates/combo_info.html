@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}
+{% load interno_extras static %}
 
 {% block title %}Combo de brinquedos | Aproveite os melhores preços {% endblock %}
 
@@ -778,18 +778,18 @@
             <div class="combo-precos">
                 <p>
                     Valor individual dos brinquedos
-                    <span class="total-riscado money">R$ {{ combo.total_original }}</span>
+                    <span class="total-riscado money">R$ {{ combo.total_original|moeda }}</span>
                 </p>
 
                 <p class="combo-price-main">
                     Preço especial do combo
-                    <span class="preco-promo money">R$ {{ combo.valor_combo }}</span>
+                    <span class="preco-promo money">R$ {{ combo.valor_combo|moeda }}</span>
                 </p>
 
                 <div class="combo-saving">
                     <i class="fa-solid fa-piggy-bank" aria-hidden="true"></i>
                     Você economiza
-                    <span class="economia-verde money">R$ {{ combo.economia }}</span>
+                    <span class="economia-verde money">R$ {{ combo.economia|moeda }}</span>
                     <span class="combo-off">{{ combo.porcentagem|floatformat:0 }}% OFF</span>
                 </div>
             </div>

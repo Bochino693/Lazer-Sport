@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}
+{% load interno_extras static %}
 
 {% block title %}{{ promocao.descricao }} | Promoção Lazer & Sport{% endblock %}
 
@@ -474,12 +474,12 @@
             <div class="promo-precos">
                 <div class="promo-price-row">
                     <span>Preço normal</span>
-                    <span class="preco-normal money">R$ {{ promocao.brinquedos.valor_brinquedo }}</span>
+                    <span class="preco-normal money">R$ {{ promocao.brinquedos.valor_brinquedo|moeda }}</span>
                 </div>
 
                 <div class="promo-price-row">
                     <span>Preço promocional</span>
-                    <strong class="preco-promo money">R$ {{ promocao.preco_promocao }}</strong>
+                    <strong class="preco-promo money">R$ {{ promocao.preco_promocao|moeda }}</strong>
                 </div>
 
                 <div class="promo-economia">

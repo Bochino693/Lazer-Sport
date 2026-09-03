@@ -705,7 +705,123 @@ class HomeInnerView(InternoRequiredMixin, View):
 # ======================================================================
 # ESTOQUE DE MATERIAIS
 # ======================================================================
-class EstoqueInnerView(RespostaJSONMixin, EstoqueInternoRequiredMixin, View):
+class CadastrosDeEstoqueMixin:
+    """Material, tipo e fornecedor -- cadastrados de onde forem precisos.
+
+    POR QUE ISTO VIROU UM MIXIN. As três ações moravam só na tela de
+    Materiais, e a tela de Estoque dizia, num texto cinza: "Material
+    novo? Cadastre em Materiais". Na prática, quem estava lançando a
+    compra de uma lona saía do formulário meio preenchido, cadastrava o
+    material na outra tela, voltava e digitava tudo de novo -- ou,
+    muito mais comum, escolhia um material parecido que já existia e
+    deixava o estoque errado.
+
+    O mesmo problema, o mesmo remédio do orçamento: cadastrar sem sair
+    de onde se está. E, como são as MESMAS regras, elas ficam num lugar
+    só: se "material precisa de unidade válida" valesse numa tela e não
+    na outra, a segunda porta seria a que estraga o cadastro.
+    """
+
+    def acao_save_material(self, request):
+        material_id = request.POST.get("id")
+        material = (
+            get_object_or_404(Material, pk=material_id)
+            if material_id else Material()
+        )
+
+        material.nome_material = texto(
+            request, "nome_material",
+            obrigatorio=True, rotulo="o nome do material", limite=90,
+        )
+        material.descricao = texto(request, "descricao", limite=150)
+        material.codigo_interno = texto(request, "codigo_interno", limite=30)
+        material.unidade = (
+            request.POST.get("unidade") or Material.Unidade.UNIDADE
+        )
+
+        if material.unidade not in Material.Unidade.values:
+            raise ErroDeFormulario("Escolha uma unidade de medida válida.")
+
+        tipo_id = (request.POST.get("tipo_material") or "").strip()
+        material.tipo_material = (
+            get_object_or_404(TipoMaterial, pk=tipo_id)
+            if tipo_id.isdigit() else None
+        )
+        material.ativo = request.POST.get("ativo") == "on"
+        material.save()
+
+        return self.sucesso(
+            request,
+            f"Material '{material.nome_material}' salvo.",
+            id=material.pk,
+            # O nome volta porque quem cadastrou de dentro do estoque
+            # precisa ver o item aparecer JÁ ESCOLHIDO na linha, sem
+            # recarregar a tela e perder o resto do formulário.
+            nome=material.nome_material,
+        )
+
+    def acao_delete_material(self, request):
+        material = get_object_or_404(Material, pk=request.POST.get("id"))
+
+        if material.estoque.exists():
+            raise ErroDeFormulario(
+                "Este material ainda tem saldo em estoque. "
+                "Zere os locais de guarda ou desative o material."
+            )
+
+        nome = material.nome_material
+        material.delete()
+        return self.sucesso(request, f"Material '{nome}' excluído.")
+
+    def acao_save_tipo(self, request):
+        tipo_id = request.POST.get("id")
+        tipo = (
+            get_object_or_404(TipoMaterial, pk=tipo_id)
+            if tipo_id else TipoMaterial()
+        )
+        tipo.descricao = texto(
+            request, "descricao",
+            obrigatorio=True, rotulo="o nome do tipo", limite=120,
+        )
+        tipo.save()
+        return self.sucesso(
+            request, f"Tipo '{tipo.descricao}' salvo.",
+            id=tipo.pk, nome=tipo.descricao,
+        )
+
+    def acao_save_fornecedor(self, request):
+        fornecedor_id = request.POST.get("id")
+        fornecedor = (
+            get_object_or_404(Fornecedor, pk=fornecedor_id)
+            if fornecedor_id else Fornecedor()
+        )
+        fornecedor.nome = texto(
+            request, "nome",
+            obrigatorio=True, rotulo="o nome do fornecedor", limite=120,
+        )
+        fornecedor.telefone = texto(request, "telefone", limite=20)
+        fornecedor.email = texto(request, "email", limite=150)
+        fornecedor.cnpj = texto(request, "cnpj", limite=20)
+        fornecedor.site = texto(request, "site", limite=200)
+        fornecedor.observacoes = texto(request, "observacoes")
+        fornecedor.ativo = request.POST.get("ativo") == "on"
+        fornecedor.save()
+
+        return self.sucesso(
+            request, f"Fornecedor '{fornecedor.nome}' salvo.",
+            id=fornecedor.pk, nome=fornecedor.nome,
+        )
+
+    def acao_delete_fornecedor(self, request):
+        fornecedor = get_object_or_404(Fornecedor, pk=request.POST.get("id"))
+        nome = fornecedor.nome
+        fornecedor.delete()
+        return self.sucesso(request, f"Fornecedor '{nome}' excluído.")
+
+
+class EstoqueInnerView(
+    CadastrosDeEstoqueMixin, RespostaJSONMixin, EstoqueInternoRequiredMixin, View,
+):
     rota_padrao = "stock"
 
     def get(self, request):
@@ -750,6 +866,11 @@ class EstoqueInnerView(RespostaJSONMixin, EstoqueInternoRequiredMixin, View):
             "materiais": Material.objects.filter(ativo=True),
             "tipos": TipoMaterial.objects.all().order_by("descricao"),
             "fornecedores": Fornecedor.objects.filter(ativo=True),
+            # A janela de material novo mora aqui dentro (ver
+            # `CadastrosDeEstoqueMixin`), e ela precisa da mesma lista de
+            # unidades da tela de Materiais -- senão o cadastro rápido
+            # nasceria sempre "Unidade" e a lona entraria contada em peça.
+            "unidades": Material.Unidade.choices,
             "busca": busca,
             "tipo_ativo": tipo,
             "fornecedor_ativo": fornecedor,
@@ -902,7 +1023,9 @@ class EstoqueInnerView(RespostaJSONMixin, EstoqueInternoRequiredMixin, View):
 # ======================================================================
 # MATERIAIS, TIPOS E FORNECEDORES
 # ======================================================================
-class MateriaisInnerView(RespostaJSONMixin, EstoqueInternoRequiredMixin, View):
+class MateriaisInnerView(
+    CadastrosDeEstoqueMixin, RespostaJSONMixin, EstoqueInternoRequiredMixin, View,
+):
     rota_padrao = "materiais_inner"
 
     def get(self, request):
@@ -964,97 +1087,6 @@ class MateriaisInnerView(RespostaJSONMixin, EstoqueInternoRequiredMixin, View):
         }
         return render(request, "material_inner.html", ctx)
 
-    def acao_save_material(self, request):
-        material_id = request.POST.get("id")
-        material = (
-            get_object_or_404(Material, pk=material_id)
-            if material_id else Material()
-        )
-
-        material.nome_material = texto(
-            request, "nome_material",
-            obrigatorio=True, rotulo="o nome do material", limite=90,
-        )
-        material.descricao = texto(request, "descricao", limite=150)
-        material.codigo_interno = texto(request, "codigo_interno", limite=30)
-        material.unidade = (
-            request.POST.get("unidade") or Material.Unidade.UNIDADE
-        )
-
-        if material.unidade not in Material.Unidade.values:
-            raise ErroDeFormulario("Escolha uma unidade de medida válida.")
-
-        tipo_id = (request.POST.get("tipo_material") or "").strip()
-        material.tipo_material = (
-            get_object_or_404(TipoMaterial, pk=tipo_id)
-            if tipo_id.isdigit() else None
-        )
-        material.ativo = request.POST.get("ativo") == "on"
-        material.save()
-
-        return self.sucesso(
-            request,
-            f"Material '{material.nome_material}' salvo.",
-            id=material.pk,
-        )
-
-    def acao_delete_material(self, request):
-        material = get_object_or_404(Material, pk=request.POST.get("id"))
-
-        if material.estoque.exists():
-            raise ErroDeFormulario(
-                "Este material ainda tem saldo em estoque. "
-                "Zere os locais de guarda ou desative o material."
-            )
-
-        nome = material.nome_material
-        material.delete()
-        return self.sucesso(request, f"Material '{nome}' excluído.")
-
-    def acao_save_tipo(self, request):
-        tipo_id = request.POST.get("id")
-        tipo = (
-            get_object_or_404(TipoMaterial, pk=tipo_id)
-            if tipo_id else TipoMaterial()
-        )
-        tipo.descricao = texto(
-            request, "descricao",
-            obrigatorio=True, rotulo="o nome do tipo", limite=120,
-        )
-        tipo.save()
-        return self.sucesso(
-            request, f"Tipo '{tipo.descricao}' salvo.",
-            id=tipo.pk, nome=tipo.descricao,
-        )
-
-    def acao_save_fornecedor(self, request):
-        fornecedor_id = request.POST.get("id")
-        fornecedor = (
-            get_object_or_404(Fornecedor, pk=fornecedor_id)
-            if fornecedor_id else Fornecedor()
-        )
-        fornecedor.nome = texto(
-            request, "nome",
-            obrigatorio=True, rotulo="o nome do fornecedor", limite=120,
-        )
-        fornecedor.telefone = texto(request, "telefone", limite=20)
-        fornecedor.email = texto(request, "email", limite=150)
-        fornecedor.cnpj = texto(request, "cnpj", limite=20)
-        fornecedor.site = texto(request, "site", limite=200)
-        fornecedor.observacoes = texto(request, "observacoes")
-        fornecedor.ativo = request.POST.get("ativo") == "on"
-        fornecedor.save()
-
-        return self.sucesso(
-            request, f"Fornecedor '{fornecedor.nome}' salvo.",
-            id=fornecedor.pk, nome=fornecedor.nome,
-        )
-
-    def acao_delete_fornecedor(self, request):
-        fornecedor = get_object_or_404(Fornecedor, pk=request.POST.get("id"))
-        nome = fornecedor.nome
-        fornecedor.delete()
-        return self.sucesso(request, f"Fornecedor '{nome}' excluído.")
 
 
 # ======================================================================

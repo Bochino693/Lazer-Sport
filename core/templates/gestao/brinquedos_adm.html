@@ -1,4 +1,5 @@
 {% extends "gestao/base_adm.html" %}
+{% load interno_extras %}
 
 {% block title %}Brinquedos{% endblock %}
 {% block page_heading %}Gestão de Brinquedos{% endblock %}
@@ -66,7 +67,7 @@ button[disabled],.primary[disabled]{opacity:.6;cursor:progress}
           {% for brinquedo in brinquedos %}
             <tr>
               <td><div class="toy-row"><span class="cover">{% with capa=brinquedo.imagem_catalogo %}{% if capa %}<img src="{{ capa.url }}" alt="{{ brinquedo.nome_brinquedo }}" loading="lazy" decoding="async">{% else %}SEM FOTO{% endif %}{% endwith %}</span><span><strong class="toy-name">{{ brinquedo.nome_brinquedo }}</strong><span class="toy-sub">#{{ brinquedo.id }} · {{ brinquedo.voltz|default:"Sem voltagem" }}</span></span></div></td>
-              <td>{% if brinquedo.valor_brinquedo != None %}<strong>R$ {{ brinquedo.valor_brinquedo }}</strong>{% else %}Sob consulta{% endif %}<br><span class="chip">{% if brinquedo.exibir_na_loja %}Na loja{% else %}Catálogo{% endif %}</span></td>
+              <td>{% if brinquedo.valor_brinquedo != None %}<strong>R$ {{ brinquedo.valor_brinquedo|moeda }}</strong>{% else %}Sob consulta{% endif %}<br><span class="chip">{% if brinquedo.exibir_na_loja %}Na loja{% else %}Catálogo{% endif %}</span></td>
               <td><div class="chips">{% for cat in brinquedo.categorias_brinquedos.all %}<span class="chip">{{ cat.nome_categoria }}</span>{% empty %}<span class="chip">Sem categoria</span>{% endfor %}</div></td>
               <td><div class="actions"><button type="button" class="icon-btn" data-edit="{{ brinquedo.id }}">Editar</button><button type="button" class="icon-btn danger" data-delete="{{ brinquedo.id }}" data-name="{{ brinquedo.nome_brinquedo }}">Excluir</button></div></td>
             </tr>

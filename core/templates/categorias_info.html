@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load static %}
+{% load interno_extras static %}
 
 {% block title %}{{ categoria.nome_categoria }} | Lazer &amp; Sport{% endblock %}
 {% block meta_description %}Explore os brinquedos da categoria {{ categoria.nome_categoria }} da Lazer & Sport, com características técnicas, disponibilidade e acesso aos detalhes de cada produto.{% endblock %}
@@ -1251,7 +1251,7 @@
                                 {% if item.exibir_na_loja and item.valor_brinquedo %}
                                     <span class="arena-product-price">
                                         <small>Disponível na loja</small>
-                                        <strong>R$ {{ item.valor_brinquedo|floatformat:2 }}</strong>
+                                        <strong>R$ {{ item.valor_brinquedo|moeda }}</strong>
                                     </span>
                                 {% else %}
                                     <span class="arena-product-price is-quote">
