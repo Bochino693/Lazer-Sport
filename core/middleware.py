@@ -55,8 +55,22 @@ class RequestTimingMiddleware:
     def process_exception(self, request, exception):
         from django.db import IntegrityError
         from django.http import JsonResponse, HttpResponse
-        if isinstance(exception, IntegrityError) and "ls_email_duplicado" in str(exception):
-            mensagem = "Este e-mail já pertence a outro cadastro. Volte ao formulário e utilize o registro existente."
+        # O gatilho diz em QUAL cadastro o endereço já está (ver a
+        # migração 0045). Cliente e conta de acesso podem repetir o
+        # e-mail entre si -- o que a mensagem precisa explicar é a
+        # duplicidade dentro do mesmo cadastro, que é o que foi barrado.
+        falha = str(exception) if isinstance(exception, IntegrityError) else ""
+        if "ls_email_duplicado" in falha:
+            if "ls_email_duplicado_cliente" in falha:
+                mensagem = (
+                    "Este e-mail já está em outro cadastro de cliente. Volte ao "
+                    "formulário e utilize o registro existente."
+                )
+            else:
+                mensagem = (
+                    "Este e-mail já está em outra conta de acesso. Volte ao "
+                    "formulário e utilize a conta existente."
+                )
             if request.headers.get("X-Requested-With") == "XMLHttpRequest":
                 return JsonResponse({"status": "erro", "msg": mensagem}, status=409)
             return HttpResponse(mensagem, status=409, content_type="text/plain; charset=utf-8")

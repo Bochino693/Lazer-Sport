@@ -89,6 +89,11 @@
     Painel.fecharAcoesFlutuantes(false);
     Painel.limparModais(true);
     Painel.limparPendurados();
+    /* O sino mora na barra do topo, que não é trocada na navegação
+       suave: aberto, ele atravessava a troca e ficava por cima da tela
+       nova. Fechar aqui é o que faz a mudança de tela ser visível.
+       Definido em `base_inner.html`, junto do botão. */
+    if (global.LSFecharAvisos) global.LSFecharAvisos();
     /* Os ouvintes de aviso registrados pela TELA que está saindo apontam
        para elementos que vão deixar de existir. Guardá-los seria segurar
        a tela velha na memória e chamar função sobre nó solto a cada
@@ -1563,6 +1568,7 @@
     atividadeAte: 0,
     emVoo: null, repetir: false, ultimoEstado: null, etag: null,
     falhas: 0, proximaTentativa: 0,
+    relogioDaAnimacao: null,
   };
 
   /* Som curto gerado pelo próprio navegador: não baixa MP3, funciona
@@ -1633,6 +1639,41 @@
     avisos.quantidades = atuais;
     if (!avisos.inicializado) avisos.inicializado = true;
     return novo;
+  }
+
+  /* ====================================================================
+     O SINO SE MEXE QUANDO CHEGA COISA NOVA
+
+     A pulsação sozinha não dava conta: quem está com o painel de avisos
+     ABERTO olha para a lista, e o número no canto trocava de 3 para 4
+     sem nada acontecer na tela -- ninguém percebia que tinha chegado
+     mais uma. Agora o sino chacoalha, o número SOME, é reescrito
+     escondido e volta já atualizado. O movimento é o que conta a
+     novidade; o número volta com a resposta.
+
+     Chamada ANTES de `desenharAvisos`: é isso que faz a troca acontecer
+     com o selo invisível, em vez de o número piscar o valor velho.
+     ==================================================================== */
+  function anunciarNoSino() {
+    var botao = document.getElementById("avisosBotao");
+    if (!botao) return;
+
+    var selos = document.querySelectorAll('[data-selo="total"]');
+    /* Tirar e repor a classe reinicia a animação: sem a leitura de
+       `offsetWidth` no meio, o navegador junta as duas mudanças num
+       quadro só e o segundo aviso seguido não chacoalha nada. */
+    botao.classList.remove("chacoalha");
+    void botao.offsetWidth;
+    botao.classList.add("chacoalha");
+    selos.forEach(function (selo) { selo.classList.add("trocando"); });
+
+    global.clearTimeout(avisos.relogioDaAnimacao);
+    avisos.relogioDaAnimacao = global.setTimeout(function () {
+      botao.classList.remove("chacoalha");
+      document.querySelectorAll('[data-selo="total"]').forEach(
+        function (selo) { selo.classList.remove("trocando"); }
+      );
+    }, 620);
   }
 
   function pintarSelo(elemento, quantidade) {
@@ -1736,6 +1777,7 @@
       if (mudou && avisos.assinatura && global.LSNavigation) global.LSNavigation.clear();
       var novo = houveAvisoNovo(dados);
       avisos.assinatura = dados.assinatura || null;
+      if (novo) anunciarNoSino();
       if (mudou) desenharAvisos(dados);
       if (novo && document.visibilityState === "visible") tocarSomDeAviso();
       if (mudou) avisos.ouvintes.forEach(function (fn) { try { fn(dados); } catch (e) {} });

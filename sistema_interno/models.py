@@ -3334,6 +3334,39 @@ class ExclusaoRegistrada(models.Model):
 
 
 class EmailIdentidade(models.Model):
-    """Reserva transacional de e-mail, mantida pelos gatilhos do banco."""
-    email = models.CharField(max_length=254, primary_key=True)
+    """Reserva transacional de e-mail, mantida pelos gatilhos do banco.
+
+    A reserva é POR ESCOPO, e essa é a regra inteira.
+
+    Cliente e conta de acesso são cadastros diferentes, com vidas
+    diferentes: o dono do buffet tem login para acompanhar as propostas
+    E é o cliente que recebe o orçamento. Exigir endereços distintos nos
+    dois obrigava a inventar um e-mail para a mesma pessoa -- e não
+    protegia nada, porque nenhum caminho do sistema junta cliente e
+    usuário pelo e-mail.
+
+    O que a reserva impede continua sendo o que sempre foi problema:
+    dois CLIENTES com o mesmo contato (duplicidade de cadastro) e duas
+    CONTAS com o mesmo endereço (recuperação de senha ambígua).
+    """
+
+    #: `usuario` cobre auth_user e os aliases do allauth -- são a mesma
+    #: conta. `cliente` cobre o cadastro comercial.
+    class Escopo(models.TextChoices):
+        USUARIO = "usuario", "Conta de acesso"
+        CLIENTE = "cliente", "Cliente"
+
+    escopo = models.CharField(max_length=8, choices=Escopo.choices)
+    email = models.CharField(max_length=254)
     titular = models.CharField(max_length=64)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=("escopo", "email"),
+                name="email_unico_por_escopo",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.email} ({self.get_escopo_display()})"

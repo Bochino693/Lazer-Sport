@@ -342,9 +342,9 @@ class MinhaContaView(InternoRequiredMixin, View):
             messages.error(request, "Este e-mail já está sendo usado por outra conta.")
             return render(request, self.template_name, status=400)
 
-        from core.identidade_email import validar_email_unico
+        from core.identidade_email import validar_email_de_usuario
         try:
-            validar_email_unico(email, usuario_id=user.pk)
+            validar_email_de_usuario(email, usuario_id=user.pk)
         except ErroDeFormulario as exc:
             messages.error(request, str(exc))
             return render(request, self.template_name, status=400)

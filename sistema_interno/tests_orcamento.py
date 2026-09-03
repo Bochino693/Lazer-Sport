@@ -10,7 +10,7 @@ import json
 from datetime import timedelta
 from decimal import Decimal
 from pathlib import Path
-from urllib.parse import urlsplit
+from urllib.parse import quote, urlsplit
 
 from django.contrib.auth.models import User
 from django.core import mail
@@ -1336,6 +1336,56 @@ class RegistroDeEnvioTests(TestCase):
         self.assertGreaterEqual(len(dados["envios"]), 1)
         self.assertIn("canal", dados["envios"][0])
         self.assertIn("email_configurado", dados)
+
+    def test_mensagem_escrita_na_tela_vai_para_a_conversa_e_para_o_email(self):
+        """A caixa do modal manda; o padrão volta para poder ser restaurado."""
+        recado = "Oi Ana! Como combinamos no telefone, a data é 12/07."
+
+        dados = self.post({
+            "action": "enviar",
+            "canal": "whatsapp",
+            "whatsapp": "(11) 99999-8888",
+            "mensagem": recado,
+            "id": self.orcamento.pk,
+        }).json()
+
+        self.assertIn(quote(recado, safe=""), dados["whatsapp_url"])
+        # O que volta é sempre o texto do servidor: é ele que o botão
+        # "Restaurar padrão" repõe na tela.
+        self.assertIn("proposta nº", dados["mensagem"])
+        self.assertNotIn(recado, dados["mensagem"])
+        self.assertIn("mão", self.orcamento.envios.get().detalhe)
+
+    def test_email_leva_a_mensagem_escrita_e_o_link_da_proposta(self):
+        recado = "Ana, segue a proposta revisada com o desconto combinado."
+
+        self.post({
+            "action": "enviar",
+            "canal": "email",
+            "email": "ana@example.com",
+            "mensagem": recado,
+            "id": self.orcamento.pk,
+        })
+
+        self.orcamento.refresh_from_db()
+        enviado = mail.outbox[-1]
+        self.assertIn(recado, enviado.body)
+        # Mensagem editada que perde o endereço deixa o cliente sem para
+        # onde ir: o link entra de volta sozinho.
+        self.assertIn(self.orcamento.token, enviado.body)
+        self.assertIn(recado, enviado.alternatives[0][0])
+
+    def test_sem_edicao_o_email_segue_com_o_texto_padrao(self):
+        self.post({
+            "action": "enviar",
+            "canal": "email",
+            "email": "ana@example.com",
+            "id": self.orcamento.pk,
+        })
+
+        enviado = mail.outbox[-1]
+        self.assertIn("Preparamos a proposta", enviado.body)
+        self.assertEqual(self.orcamento.envios.get().detalhe, "")
 
     def test_conversa_do_whatsapp_vem_pronta_com_o_link(self):
         """A proposta sai do WhatsApp de quem está logado no aparelho."""

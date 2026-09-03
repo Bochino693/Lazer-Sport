@@ -51,10 +51,10 @@ def normalizar_telefone(valor):
 
 class UserForm(forms.ModelForm):
     def clean_email(self):
-        from .identidade_email import validar_email_unico
+        from .identidade_email import validar_email_de_usuario
         from sistema_interno.utils import ErroDeFormulario
         try:
-            return validar_email_unico(self.cleaned_data.get("email"), usuario_id=self.instance.pk)
+            return validar_email_de_usuario(self.cleaned_data.get("email"), usuario_id=self.instance.pk)
         except ErroDeFormulario as exc:
             raise forms.ValidationError(str(exc)) from exc
 
@@ -126,10 +126,10 @@ class CadastroForm(forms.Form):
                 "Faça login ou entre com Google."
             )
 
-        from .identidade_email import validar_email_unico
+        from .identidade_email import validar_email_de_usuario
         from sistema_interno.utils import ErroDeFormulario
         try:
-            return validar_email_unico(email)
+            return validar_email_de_usuario(email)
         except ErroDeFormulario as exc:
             raise forms.ValidationError(str(exc)) from exc
 

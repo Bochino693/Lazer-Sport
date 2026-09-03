@@ -762,6 +762,19 @@ Dito em voz alta: este NÃO é o /adm do site. Quem trabalha nos
     avisosBotao?.setAttribute("aria-expanded", "false");
   }
 
+  /* TROCAR DE TELA FECHA O SINO.
+
+     A navegação suave troca o conteúdo sem recarregar a página, e o
+     painel de avisos vive FORA desse pedaço: ele continuava aberto por
+     cima da tela nova, cobrindo justamente o topo que diria para onde a
+     pessoa foi. Ficava a dúvida de sempre -- "mudou ou não mudou?".
+
+     `Painel.prepararNavegacao` chama isto no instante da troca; o
+     ouvinte de `ls:tela` é a rede de segurança para o caminho que não
+     passa por lá (voltar pelo histórico, por exemplo). */
+  window.LSFecharAvisos = fecharAvisos;
+  document.addEventListener("ls:tela", fecharAvisos);
+
   avisosBotao?.addEventListener("click", function (evento) {
     evento.stopPropagation();
     const abrindo = avisosPainel.hidden;

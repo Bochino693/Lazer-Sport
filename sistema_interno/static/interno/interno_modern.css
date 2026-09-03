@@ -1560,16 +1560,60 @@ textarea.form-control{min-height:100px!important}
   font-size:.68rem;font-weight:900;line-height:1;font-variant-numeric:tabular-nums;
   color:var(--acento-tinta);background:var(--acento);
   border:2px solid var(--acento-tinta);box-shadow:0 4px 12px rgba(var(--acento-rgb),.45);
+  /* A troca do número (ver `.trocando`) usa esta transição: o selo some,
+     é reescrito escondido e volta com o valor de agora. */
+  transition:opacity .16s ease,transform .16s cubic-bezier(.16,.84,.44,1);
+  /* A PULSAÇÃO PRECISA SER VISTA DO OUTRO LADO DA BANCADA.
+
+     Antes ela era um `scale` de 14% que, num selo de 20 px, mudava três
+     pixels -- na prática, invisível. Agora o que pulsa é um ANEL em
+     volta do número: cresce e some, do jeito que uma notificação de
+     celular faz. O selo em si respira junto, de leve. */
+  animation:ls-pulsa 2.4s ease-in-out infinite;
 }
 .ls-avisos-selo.urgente{
   background:var(--red);color:var(--red-tinta);box-shadow:0 4px 12px rgba(var(--red-rgb),.5);
-  /* pulsa só quando há coisa crítica: pulsar sempre vira ruído e a
-     pessoa para de enxergar. */
-  animation:ls-pulsa 2.4s ease-in-out infinite;
+  /* Coisa crítica pulsa mais rápido e com anel vermelho: a diferença
+     entre "tem novidade" e "tem novidade que não pode esperar". */
+  animation:ls-pulsa-urgente 1.5s ease-in-out infinite;
 }
+/* O número sumindo enquanto é reescrito. Ver `anunciarNoSino` em
+   painel.js: sem isto o selo trocava de 3 para 4 sem ninguém ver. */
+.ls-avisos-selo.trocando{opacity:0;transform:scale(.3);animation:none}
 @keyframes ls-pulsa{
-  0%,100%{transform:scale(1)}
-  50%{transform:scale(1.14)}
+  0%,100%{transform:scale(1);box-shadow:0 4px 12px rgba(var(--acento-rgb),.45),0 0 0 0 rgba(var(--acento-rgb),.55)}
+  50%{transform:scale(1.08);box-shadow:0 4px 12px rgba(var(--acento-rgb),.45),0 0 0 7px rgba(var(--acento-rgb),0)}
+}
+@keyframes ls-pulsa-urgente{
+  0%,100%{transform:scale(1);box-shadow:0 4px 12px rgba(var(--red-rgb),.5),0 0 0 0 rgba(var(--red-rgb),.6)}
+  50%{transform:scale(1.14);box-shadow:0 4px 12px rgba(var(--red-rgb),.5),0 0 0 9px rgba(var(--red-rgb),0)}
+}
+
+/* CHACOALHAR: a chegada de um aviso novo.
+
+   Só o sino balança -- o botão fica parado, porque o selo é filho dele e
+   girar o botão inteiro levaria o número junto, arrastando o que deveria
+   estar sumindo. */
+.ls-avisos-botao.chacoalha i{
+  display:block;transform-origin:50% 12%;
+  animation:ls-sino-chacoalha .6s cubic-bezier(.36,.07,.19,.97);
+}
+@keyframes ls-sino-chacoalha{
+  0%,100%{transform:rotate(0)}
+  12%{transform:rotate(-16deg)}
+  26%{transform:rotate(13deg)}
+  40%{transform:rotate(-10deg)}
+  54%{transform:rotate(8deg)}
+  68%{transform:rotate(-5deg)}
+  84%{transform:rotate(2deg)}
+}
+
+/* Quem pediu menos movimento no sistema continua vendo o NÚMERO -- que é
+   a informação -- sem o balanço nem o anel. */
+@media (prefers-reduced-motion:reduce){
+  .ls-avisos-selo,.ls-avisos-selo.urgente{animation:none}
+  .ls-avisos-botao.chacoalha i{animation:none}
+  .ls-avisos-selo.trocando{opacity:1;transform:none}
 }
 
 .ls-avisos-painel{
@@ -3055,6 +3099,19 @@ a.ls-metric-card.active{border-color:var(--metric);box-shadow:0 0 0 2px rgba(var
   max-height:220px;margin:0;padding:12px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;
   color:var(--info-claro);background:rgba(var(--sidebar-rgb),.3);font:500 .75rem/1.55 Manrope,system-ui,sans-serif;
 }
+/* A mesma caixa, agora escrevível. O tipo monoespaçado ficou de fora de
+   propósito: o que se lê aqui é o recado que o cliente vai receber, e
+   ele precisa parecer com o que chega no WhatsApp. */
+.ls-message-editor{padding:10px 12px 12px;background:rgba(var(--sidebar-rgb),.3)}
+.ls-message-editor textarea{
+  min-height:150px;resize:vertical;white-space:pre-wrap;
+  font:500 .78rem/1.55 Manrope,system-ui,sans-serif;
+}
+.ls-message-editor-rodape{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  margin-top:8px;color:var(--muted);font-size:.72rem;font-weight:700;
+}
+.ls-message-editor-rodape button[hidden]{display:none}
 #modalLink .alert{font-size:.78rem;line-height:1.45}
 
 @media (min-width:761px) and (max-width:980px){
