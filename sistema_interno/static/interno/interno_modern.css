@@ -2317,15 +2317,30 @@ select[multiple] option{padding:7px 10px;border-radius:8px}
   .modal-footer .btn{flex:1 1 46%;min-height:52px;font-weight:800}
 }
 
-/* Celular e tablet em pé: o modal encosta na base da tela e vira folha,
-   com o topo arredondado. É o gesto que o aplicativo do telefone tem e
-   o painel web não tinha. */
-@media (max-width:900px){
+/* ONDE A JANELA FICA, POR TAMANHO DE TELA.
+
+   No CELULAR ela encosta na base e vira folha, com o topo arredondado: é
+   o gesto do aplicativo do telefone, e o polegar alcança os botões.
+
+   No TABLET, não. Uma folha de tela inteira para perguntar "apagar este
+   cliente?" é peso demais, e foi tentando fazer as duas coisas ao mesmo
+   tempo que apareceu o defeito: a folha manda largura cheia, mas a
+   confirmação de exclusão tem largura máxima própria (520px) e essa
+   ganhava. Sobrava uma folha de 520px com `margin:0`, colada no canto
+   INFERIOR ESQUERDO de uma tela de 800, com 280px de vazio à direita.
+   Aqui a janela do tablet volta a ser janela: centrada, flutuando, com
+   margem dos dois lados.
+
+   O tablet DEITADO não entra nisso -- ele tem 600px de altura e cai no
+   `@media (max-height:680px)` mais abaixo, que usa a tela toda. */
+@media (max-width:600px){
   .modal-dialog{margin:0;align-items:flex-end;min-height:100%}
   .modal-content{
     border-radius:22px 22px 0 0;
     max-height:96dvh;
   }
+}
+@media (max-width:900px){
   .modal-body{padding-inline:16px}
   .modal-footer{padding-inline:16px}
 }
@@ -2644,13 +2659,20 @@ input[type="number"]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0
 @keyframes ls-gira{to{transform:rotate(360deg)}}
 .ls-map-linked{color:var(--green-texto);font-weight:800;white-space:nowrap}
 
-@media (max-width:900px){
+/* CELULAR -- a folha na base, largura inteira.
+
+   `max-width:none` leva `!important` porque a folha precisa vencer a
+   largura máxima que cada janela define para si (a confirmação de
+   exclusão pede 520px). Sem isso, no celular estreito a folha ficaria
+   menor que a tela e desalinhada -- que é a mesma raiz do defeito do
+   tablet, só que menos visível. */
+@media (max-width:600px){
   .modal{overflow:hidden!important}
   .modal-dialog,
   .modal-dialog.modal-sm,
   .modal-dialog.modal-lg,
   .modal-dialog.modal-xl{
-    width:100%;max-width:none;height:var(--ls-vh);min-height:var(--ls-vh);
+    width:100%;max-width:none!important;height:var(--ls-vh);min-height:var(--ls-vh);
     margin:0!important;padding:0!important;display:flex;align-items:flex-end;
   }
   .modal-content,
@@ -2658,6 +2680,38 @@ input[type="number"]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0
     width:100%;max-height:var(--ls-vh)!important;
     border-width:1px 0 0!important;border-radius:22px 22px 0 0!important;
   }
+}
+
+/* TABLET EM PÉ -- janela centrada, flutuando.
+
+   `margin:auto` nos quatro lados é o que centra a caixa dentro do flex
+   da camada, na horizontal e na vertical. A largura máxima de cada
+   janela continua valendo (é ela que dá 520px à confirmação e 800px ao
+   cadastro), limitada pela tela para sempre sobrar respiro nas bordas. */
+@media (min-width:601px) and (max-width:900px){
+  .modal-dialog,
+  .modal-dialog.modal-sm,
+  .modal-dialog.modal-lg,
+  .modal-dialog.modal-xl{
+    width:calc(100% - 40px);
+    margin:auto!important;padding:0!important;
+    min-height:0;
+  }
+  /* Formulário longo usa a largura que a tela tem. O teto de 500px do
+     Bootstrap vale abaixo de 992px e não distingue uma confirmação de um
+     cadastro inteiro: o cadastro de cliente, que é de duas colunas,
+     ficava com 500px de 760 disponíveis e voltava a empilhar tudo. */
+  .modal-dialog.modal-lg,
+  .modal-dialog.modal-xl{max-width:calc(100% - 40px)}
+  .modal-content,
+  .modal-dialog-scrollable .modal-content{
+    width:100%;max-height:calc(var(--ls-vh) - 40px)!important;
+    border-width:1px!important;border-radius:20px!important;
+  }
+}
+
+/* Espaçamento interno: vale nos dois. */
+@media (max-width:900px){
   .modal-header{padding:15px 16px!important}
   .modal-body{padding:16px!important}
   .modal-footer{

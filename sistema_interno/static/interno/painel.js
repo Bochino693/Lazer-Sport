@@ -1669,10 +1669,15 @@
 
        Uma pergunta que não encontra novidade custa duas consultas curtas
        e uma resposta de duzentos bytes (304, ver o ETag em
-       views_avisos.py). Oito segundos de espera são baratos; um colega
-       esperando um minuto para descobrir que existe um cliente novo,
-       não. */
-    intervalo: 8000,
+       views_avisos.py). Quatro segundos de espera são baratos; um colega
+       esperando para descobrir que existe um cliente novo, não.
+
+       E este passo só é pago por quem está MEXENDO na tela: passados
+       setenta e cinco segundos sem toque, o relógio cai para
+       `PASSO_PARADO`. Foi por isso que dobrar a velocidade aqui não
+       dobrou o tráfego -- o tempo em que a aba fica no passo rápido
+       encurtou junto. */
+    intervalo: 4000,
     assinatura: null,
     relogio: null,
     parado: false,
@@ -2232,7 +2237,13 @@
        Com a economia de dados ligada, o passo lento é o dobro: dois
        minutos. Ver `ECONOMIA_DE_DADOS` em settings.
        ================================================================== */
-    var OCIOSO_APOS = 180000;
+    /* Quanto tempo sem toque, tecla ou rolagem até o painel ser
+       considerado esquecido. Três minutos deixavam uma aba parada
+       perguntando depressa por muito tempo à toa; setenta e cinco
+       segundos são mais que suficientes para a pausa de quem está
+       lendo a tela, e qualquer toque traz o passo rápido de volta na
+       hora, junto com uma pergunta imediata. */
+    var OCIOSO_APOS = 75000;
     /* Passo do painel esquecido aberto na bancada: um minuto. Escrito em
        milissegundos, e não como múltiplo do passo ativo, porque são duas
        decisões diferentes -- acelerar quem está trabalhando não pode
