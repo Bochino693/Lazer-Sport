@@ -427,7 +427,12 @@ class CatalogImageMigrationTests(TestCase):
         self.assertContains(resposta_brinquedo, "1 / 2")
         self.assertContains(resposta_brinquedo, "produto-breadcrumb ls-breadcrumb")
         self.assertContains(resposta_brinquedo, 'id="bread"')
-        self.assertContains(resposta_brinquedo, "#ffe36b")
+        # O amarelo do destaque saiu do HTML junto com o resto do estilo
+        # da página -- era o maior peso de cada visita. A regra é a mesma;
+        # o teste passou a olhar onde ela mora agora.
+        from core.apoio_de_teste import estilo_da_pagina
+
+        self.assertIn("#ffe36b", estilo_da_pagina("brinquedo_info.html"))
         self.assertContains(resposta_brinquedo, 'href="#produto-informacoes"')
         self.assertContains(
             resposta_brinquedo,
@@ -458,7 +463,7 @@ class CatalogImageMigrationTests(TestCase):
         self.assertContains(resposta_peca, "Código LS-P")
         self.assertContains(resposta_peca, "peca-breadcrumb ls-breadcrumb")
         self.assertContains(resposta_peca, 'id="breadcrumb"')
-        self.assertContains(resposta_peca, "#ffc928")
+        self.assertIn("#ffc928", estilo_da_pagina("reposicao_info.html"))
         self.assertContains(resposta_peca, 'href="#peca-informacoes"')
         self.assertContains(
             resposta_peca,

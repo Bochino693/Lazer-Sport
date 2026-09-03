@@ -23,6 +23,12 @@ from django.test import SimpleTestCase, TestCase, override_settings
 TEMPLATES = Path(__file__).resolve().parent / "templates"
 RAIZ_CORE = Path(__file__).resolve().parent.parent / "core"
 
+# O CSS destas páginas saiu de dentro do HTML -- era o maior peso de
+# cada visita. As regras continuam as mesmas; `estilo_da_pagina` junta
+# o template com as folhas que ele liga, para o teste cobrar a REGRA e
+# não o lugar onde ela está escrita.
+from core.apoio_de_teste import estilo_da_pagina  # noqa: E402
+
 
 @override_settings(ALLOWED_HOSTS=["interno.testserver", "testserver"])
 class ContratoDaTrocaDeTelaTests(TestCase):
@@ -303,7 +309,7 @@ class ScriptDeTelaNaoEsperaDOMContentLoadedTests(SimpleTestCase):
         """
         for nome in ("orcamento_publico.html", "ordem_servico_publica.html"):
             with self.subTest(documento=nome):
-                documento = (RAIZ_CORE / "templates" / nome).read_text(encoding="utf-8")
+                documento = estilo_da_pagina(nome)
                 self.assertIn("@page{size:A4 portrait;margin:9mm}", documento)
                 self.assertIn("width:192mm", documento)
                 # A coluna que preenche a folha, e o rodapé no pé dela.
@@ -360,9 +366,7 @@ class IdentidadeVisualTests(SimpleTestCase):
 
     def test_o_documento_da_os_usa_a_mesma_tinta_da_proposta(self):
         """Os dois documentos do cliente têm de parecer da mesma empresa."""
-        documento = (
-            RAIZ_CORE / "templates" / "ordem_servico_publica.html"
-        ).read_text(encoding="utf-8")
+        documento = estilo_da_pagina("ordem_servico_publica.html")
 
         for azul in self.AZUIS_DO_PAINEL_ANTIGO:
             with self.subTest(cor=azul):
