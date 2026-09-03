@@ -349,12 +349,13 @@ class TemaAplicadoAntesDoPrimeiroPixelTests(SimpleTestCase):
         sol = botoes[1]
         # Oito raios: quatro retos e quatro diagonais, na mesma espessura.
         self.assertIn("stroke-linecap=\"round\"", sol)
-        self.assertIn("M8 1.1v1.7", sol)
+        self.assertIn("M12 1.7v2.1", sol)
+        self.assertIn("lsSolGrad", sol)
 
         eclipse = botoes[2]
-        # Meia rodela cheia (o sol) + contorno da outra metade (a lua).
-        self.assertIn('d="M8 3.1a4.9 4.9 0 0 0 0 9.8z"', eclipse)
-        self.assertIn('d="M8 3.1a4.9 4.9 0 0 1 0 9.8"', eclipse)
+        # Um disco unido por degradê + divisão central entre sol e lua.
+        self.assertIn("lsEclipseGrad", eclipse)
+        self.assertIn('d="M12 4.7a7.3 7.3 0 0 1 0 14.6"', eclipse)
         # E as crateras, que é o que faz o lado direito virar lua.
         self.assertGreaterEqual(eclipse.count("<circle"), 3)
 

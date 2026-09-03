@@ -603,41 +603,40 @@ Dito em voz alta: este NÃO é o /adm do site. Quem trabalha nos
         <div class="ls-tema" role="group" aria-label="Tema do painel">
           <button type="button" class="ls-tema-botao" data-tema-escolha="sol"
                   aria-pressed="false" title="Sol — claro" aria-label="Tema claro">
-            <svg class="ls-tema-icone" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
-              <circle cx="8" cy="8" r="3.4" fill="currentColor"/>
-              <g stroke="currentColor" stroke-width="1.35" stroke-linecap="round">
-                <path d="M8 1.1v1.7M8 13.2v1.7M1.1 8h1.7M13.2 8h1.7"/>
-                <path d="M3.1 3.1l1.2 1.2M11.7 11.7l1.2 1.2M12.9 3.1l-1.2 1.2M4.3 11.7l-1.2 1.2"/>
+            <svg class="ls-tema-icone" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <defs><radialGradient id="lsSolGrad"><stop offset="0" stop-color="#fff4a8"/><stop offset=".55" stop-color="#ffd23f"/><stop offset="1" stop-color="#ff9f1c"/></radialGradient></defs>
+              <g stroke="currentColor" stroke-width="1.65" stroke-linecap="round">
+                <path d="M12 1.7v2.1M12 20.2v2.1M1.7 12h2.1M20.2 12h2.1"/>
+                <path d="M4.7 4.7l1.5 1.5M17.8 17.8l1.5 1.5M19.3 4.7l-1.5 1.5M6.2 17.8l-1.5 1.5"/>
               </g>
+              <circle cx="12" cy="12" r="6.25" fill="url(#lsSolGrad)" stroke="currentColor" stroke-width="1.1"/>
+              <path d="M8.7 10.2c.8-.7 1.6-.7 2.3 0M13 10.2c.8-.7 1.6-.7 2.3 0M9.2 14.1c1.8 1.3 3.8 1.3 5.6 0" fill="none" stroke="#6b3c00" stroke-width=".8" stroke-linecap="round"/>
             </svg>
           </button>
           <button type="button" class="ls-tema-botao" data-tema-escolha="eclipse"
                   aria-pressed="false" title="Eclipse — meio-termo" aria-label="Tema eclipse">
-            <svg class="ls-tema-icone" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
-              <!-- lado do sol: meia rodela cheia, com os raios do lado dele -->
-              <path d="M8 3.1a4.9 4.9 0 0 0 0 9.8z" fill="currentColor"/>
-              <g stroke="currentColor" stroke-width="1.2" stroke-linecap="round">
-                <path d="M1.2 8h1.5M2.6 3.6l1.1 1.1M2.6 12.4l1.1-1.1M7.999 1.3v1.3M7.999 13.4v1.3"/>
+            <svg class="ls-tema-icone" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <defs><linearGradient id="lsEclipseGrad" x1="0" x2="1"><stop stop-color="#ffbe2e"/><stop offset=".48" stop-color="#ffdf72"/><stop offset=".52" stop-color="#d9e0ee"/><stop offset="1" stop-color="#7b86a8"/></linearGradient></defs>
+              <g stroke="currentColor" stroke-width="1.35" stroke-linecap="round">
+                <path d="M12 1.2v2M12 20.8v2M1.2 12h2M20.8 12h2M4.3 4.3l1.5 1.5M18.2 18.2l1.5 1.5M19.7 4.3l-1.5 1.5M5.8 18.2l-1.5 1.5"/>
               </g>
-              <!-- lado da lua: contorno e as crateras dela -->
-              <path d="M8 3.1a4.9 4.9 0 0 1 0 9.8" fill="none"
-                    stroke="currentColor" stroke-width="1.25"/>
-              <circle cx="10.5" cy="6.1" r=".95" fill="currentColor"/>
-              <circle cx="11.5" cy="9.5" r=".68" fill="currentColor"/>
-              <circle cx="9.6" cy="10.9" r=".5" fill="currentColor"/>
+              <circle cx="12" cy="12" r="7.3" fill="url(#lsEclipseGrad)" stroke="currentColor" stroke-width="1.15"/>
+              <path d="M12 4.7a7.3 7.3 0 0 1 0 14.6" fill="none" stroke="currentColor" stroke-width=".9" opacity=".65"/>
+              <circle cx="16.3" cy="8.2" r="1.15" fill="currentColor" opacity=".24"/>
+              <circle cx="17.3" cy="13.5" r=".8" fill="currentColor" opacity=".24"/>
+              <path d="M7.8 10.2c.9-.8 1.8-.8 2.6 0M13.5 10.1c.8-.7 1.5-.7 2.2 0M8.6 14.4c1.3.8 2.5.8 3.7 0M13.5 14.2c.7.4 1.3.4 1.9 0" fill="none" stroke="#4a3650" stroke-width=".75" stroke-linecap="round"/>
             </svg>
           </button>
           <button type="button" class="ls-tema-botao" data-tema-escolha="lua"
                   aria-pressed="false" title="Lua — escuro" aria-label="Tema escuro">
-            <svg class="ls-tema-icone" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
-              <path d="M13.1 10.4A5.6 5.6 0 0 1 5.9 3.1a5.7 5.7 0 1 0 7.2 7.3z"
-                    fill="currentColor"/>
-              <!-- as crateras, que é o que faz virar lua e não uma vírgula -->
-              <circle cx="7.4" cy="9.2" r=".95" fill="var(--panel-soft)" opacity=".55"/>
-              <circle cx="9.9" cy="11.4" r=".62" fill="var(--panel-soft)" opacity=".55"/>
-              <circle cx="6.2" cy="12" r=".45" fill="var(--panel-soft)" opacity=".55"/>
-              <path d="M12.4 2.2l.45 1.15 1.15.45-1.15.45-.45 1.15-.45-1.15-1.15-.45 1.15-.45z"
-                    fill="currentColor"/>
+            <svg class="ls-tema-icone" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <defs><linearGradient id="lsLuaGrad" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f7f3df"/><stop offset=".55" stop-color="#b8c1d8"/><stop offset="1" stop-color="#7380a2"/></linearGradient></defs>
+              <path d="M18.8 16.2A8.2 8.2 0 0 1 8.1 5.6a8.4 8.4 0 1 0 10.7 10.6z" fill="url(#lsLuaGrad)" stroke="currentColor" stroke-width="1.1"/>
+              <circle cx="8.1" cy="14.1" r="1.25" fill="currentColor" opacity=".22"/>
+              <circle cx="11.8" cy="17.1" r=".85" fill="currentColor" opacity=".22"/>
+              <circle cx="6.6" cy="17.5" r=".62" fill="currentColor" opacity=".22"/>
+              <path d="M7.8 10.9c.9-.7 1.8-.7 2.6 0M8.6 13.3c.9.6 1.7.6 2.5 0" fill="none" stroke="#44506e" stroke-width=".75" stroke-linecap="round"/>
+              <path d="M18.1 3.1l.65 1.55 1.55.65-1.55.65-.65 1.55-.65-1.55-1.55-.65 1.55-.65zM21 10l.35.85.85.35-.85.35-.35.85-.35-.85-.85-.35.85-.35z" fill="currentColor"/>
             </svg>
           </button>
         </div>

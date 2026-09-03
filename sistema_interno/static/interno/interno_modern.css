@@ -4444,26 +4444,26 @@ button.ls-incomplete-chip:focus-visible{outline:3px solid rgba(var(--red-rgb),.3
   background:var(--panel-soft);
 }
 .ls-tema-botao{
-  width:32px;height:32px;display:grid;place-items:center;
+  width:38px;height:38px;display:grid;place-items:center;
   border:0;border-radius:999px;cursor:pointer;
   color:var(--muted);background:transparent;
-  font-size:.92rem;line-height:1;
+  font-size:1rem;line-height:1;
   transition:color .16s ease,background .16s ease,transform .16s ease;
 }
 /* Os três desenhos são SVG escritos no template (ver `base_inner.html`).
    Aqui só o tamanho: a cor vem de `currentColor`, então o ícone aceso
    acompanha o botão sem uma regra por estado. */
-.ls-tema-icone{width:1.05em;height:1.05em;display:block}
+.ls-tema-icone{width:1.45em;height:1.45em;display:block;overflow:visible}
 .ls-tema-botao:hover{color:var(--text-2);background:rgba(var(--verniz-rgb),.07)}
 .ls-tema-botao:focus-visible{
   outline:3px solid rgba(var(--acento-rgb),.45);outline-offset:2px;
 }
 .ls-tema-botao.ativo{
   color:var(--tinta);background:var(--acento);
-  box-shadow:0 3px 10px rgba(var(--acento-rgb),.34);
+  box-shadow:0 3px 12px rgba(var(--acento-rgb),.42),inset 0 1px rgba(var(--verniz-rgb),.28);
 }
 @media (max-width:720px){
-  .ls-tema-botao{width:30px;height:30px;font-size:.86rem}
+  .ls-tema-botao{width:34px;height:34px;font-size:.92rem}
 }
 /* Numa tela muito estreita a barra do topo já disputa espaço com o
    título e o sino. O eclipse sai primeiro por ser o meio-termo: quem o
@@ -4634,4 +4634,3 @@ button.ls-incomplete-chip:focus-visible{outline:3px solid rgba(var(--red-rgb),.3
   .ls-folha-etiquetas.a6 .ls-etiqueta{min-height:64mm}
   .ls-folha-etiquetas.a6{grid-template-columns:1fr 1fr}
 }
-

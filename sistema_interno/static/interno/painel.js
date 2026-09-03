@@ -1555,7 +1555,10 @@
      ==================================================================== */
   var avisos = {
     endereco: "",
-    intervalo: 12000,
+    /* Um painel parado não precisa perguntar cinco vezes por minuto. Um
+       minuto mantém os números atuais, e toda gravação/retorno à aba ainda
+       força atualização imediata. */
+    intervalo: 60000,
     assinatura: null,
     relogio: null,
     parado: false,
@@ -1599,12 +1602,12 @@
     avisos.ultimoSomEm = agora;
 
     var inicio = audio.currentTime;
-    /* Três notas ascendentes, curtas e suaves: perceptíveis na bancada
-       sem parecer alarme de erro ou depender de arquivo externo. */
+    /* Três notas ascendentes com ganho maior. Continuam curtas para não
+       assustar, mas agora atravessam o ruído normal da fábrica. */
     [
-      { atraso: 0, frequencia: 659.25, volume: 0.055 },
-      { atraso: 0.10, frequencia: 783.99, volume: 0.065 },
-      { atraso: 0.22, frequencia: 987.77, volume: 0.075 },
+      { atraso: 0, frequencia: 659.25, volume: 0.13 },
+      { atraso: 0.11, frequencia: 783.99, volume: 0.16 },
+      { atraso: 0.24, frequencia: 987.77, volume: 0.19 },
     ].forEach(function (nota, indice) {
       var oscilador = audio.createOscillator();
       var ganho = audio.createGain();

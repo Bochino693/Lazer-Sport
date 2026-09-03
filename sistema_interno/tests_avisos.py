@@ -696,7 +696,7 @@ class EstadoAoVivoTests(TestCase):
             for aviso in self.pedir().json()["avisos"]
         ))
 
-    def test_painel_consulta_rapido_e_tem_toque_de_tres_notas(self):
+    def test_painel_economiza_consultas_e_tem_toque_de_tres_notas(self):
         from pathlib import Path
 
         painel = Path("sistema_interno/static/interno/painel.js").read_text(
@@ -705,7 +705,7 @@ class EstadoAoVivoTests(TestCase):
         base = Path("sistema_interno/templates/base_inner.html").read_text(
             encoding="utf-8"
         )
-        self.assertIn("intervalo: 12000", painel)
+        self.assertIn("intervalo: 60000", painel)
         self.assertIn("659.25", painel)
         self.assertIn("783.99", painel)
         self.assertIn("987.77", painel)

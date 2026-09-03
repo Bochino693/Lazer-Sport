@@ -165,6 +165,7 @@ SITE_ID = 1
 # ============================================================
 MIDDLEWARE = [
     "core.middleware.RequestTimingMiddleware",
+    "core.middleware.BandwidthEconomyMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.middleware.gzip.GZipMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
@@ -524,9 +525,13 @@ WHITENOISE_SKIP_COMPRESS_EXTENSIONS = (
     "aab",
 )
 try:
-    WHITENOISE_MAX_AGE = max(60, int(os.getenv("STATIC_CACHE_MAX_AGE", "86400")))
+    # Imagens, logotipos e ícones do site mudam pouco. Um dia fazia cada
+    # navegador baixá-los novamente durante o mês; 30 dias mantém a troca
+    # eventual segura e corta as repetições que aparecem como HTTP Responses
+    # no Render. CSS/JS versionados continuam `immutable` por um ano.
+    WHITENOISE_MAX_AGE = max(3600, int(os.getenv("STATIC_CACHE_MAX_AGE", "2592000")))
 except ValueError:
-    WHITENOISE_MAX_AGE = 86400
+    WHITENOISE_MAX_AGE = 2592000
 
 
 # ------------------------------------------------------------------
@@ -730,6 +735,11 @@ LOGGING = {
         "lazer.performance": {
             "handlers": ["console"],
             "level": "INFO",
+            "propagate": False,
+        },
+        "lazer.bandwidth": {
+            "handlers": ["console"],
+            "level": "WARNING",
             "propagate": False,
         },
     },
