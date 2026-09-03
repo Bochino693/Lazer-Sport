@@ -47,8 +47,11 @@ self.addEventListener("push", function (evento) {
   var titulo = dados.titulo || "Lazer & Sport";
   var opcoes = {
     body: dados.mensagem || "",
-    icon: "/static/images/logoofi.png",
-    badge: "/static/images/logoofi.png",
+    /* 96x96 e 9 KB: a notificação desenha o ícone com 64 pixels de
+       lado, e o logotipo de 1280px seria baixado inteiro no celular de
+       cada pessoa, a cada aviso. */
+    icon: "/static/images/logo-96.png",
+    badge: "/static/images/logo-96.png",
     /* Uma tag por aviso: dois disparos diferentes aparecem como duas
        notificações, e o mesmo aviso reenviado substitui o anterior em vez
        de empilhar. */

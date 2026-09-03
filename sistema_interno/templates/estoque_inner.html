@@ -97,7 +97,21 @@
 
   <div class="ls-data-body">
     <div class="table-responsive">
-      <table class="ls-table tabela-estoque">
+      {% comment %}
+        A MESMA FICHA DE CLIENTES E ORÇAMENTOS, E NÃO UMA SÓ DESTA TELA.
+
+        `tabela-estoque` tinha um empilhamento próprio, escrito antes do
+        resto: no tablet cada célula virava uma linha inteira, os números
+        ficavam encostados na direita com meia tela vazia à esquerda e as
+        ações ganhavam uma faixa só para um botão. Um material ocupava a
+        tela toda.
+
+        Agora ela entra no mesmo contrato das outras listas
+        (`ls-commercial-table`) e só diz o que é diferente pelo nome
+        próprio, `ls-estoque-table`: o que ocupa a linha inteira e o que
+        divide em duas colunas.
+      {% endcomment %}
+      <table class="ls-table ls-commercial-table ls-estoque-table tabela-estoque">
         <thead>
           <tr>
             <th>Material</th>
@@ -143,7 +157,7 @@
                   <span class="ls-status success">{{ estoque.situacao_label }}</span>
                 {% endif %}
               </td>
-              <td data-rotulo="Ações" class="text-end ls-actions">
+              <td data-rotulo="Ações" class="text-end ls-actions ls-commercial-actions">
                 <button type="button" class="btn btn-sm btn-primary"
                         data-movimentar="{{ estoque.id }}"
                         data-nome="{{ estoque.material.nome_material }} — {{ estoque.descricao_local }}"

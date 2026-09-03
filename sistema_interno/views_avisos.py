@@ -32,6 +32,8 @@ from django.views.generic import View
 from . import push
 from .sincronia import revisoes
 from .avisos import (
+    avisos_ja_vistos,
+    guardar_avisos_vistos,
     marcar_atividades_lidas,
     versao_atividades,
 )
@@ -106,6 +108,18 @@ class EstadoAvisosView(View):
         }
         corpo["assinatura"] = assinatura_do_estado(corpo)
 
+        # FORA DA ASSINATURA DE PROPÓSITO.
+        #
+        # `vistos` é o que o sino JÁ anunciou a esta pessoa -- a memória
+        # que faz quem sai com dez e volta com onze receber a animação na
+        # chegada. Ele muda sozinho quando o painel confirma que mostrou,
+        # e se entrasse na assinatura essa confirmação viraria uma
+        # resposta inteira a mais para todo mundo, a cada aviso, sem uma
+        # única contagem diferente dentro dela. O painel lê este campo uma
+        # vez, na primeira resposta depois de abrir; daí em diante compara
+        # com o que ele mesmo já tem na tela.
+        corpo["vistos"] = avisos_ja_vistos(usuario)
+
         etag = '"' + corpo['assinatura'] + '"'
         if request.headers.get('If-None-Match') == etag:
             resposta = HttpResponse(status=304)
@@ -124,7 +138,24 @@ class EstadoAvisosView(View):
             return JsonResponse({"erro": "sessao"}, status=401)
         if not faz_parte_da_equipe(usuario):
             return JsonResponse({"erro": "sem_acesso"}, status=403)
-        if (request.POST.get("acao") or "") != "ler_atividades":
+        acao = request.POST.get("acao") or ""
+
+        if acao == "avisos_vistos":
+            # "Mostrei estes números para a pessoa." Quem manda é o
+            # painel, e não o GET, porque só ele sabe se a animação
+            # realmente aconteceu na tela de alguém.
+            try:
+                mapa = json.loads(request.POST.get("vistos") or "{}")
+            except (TypeError, ValueError):
+                mapa = {}
+            if not isinstance(mapa, dict):
+                mapa = {}
+            return JsonResponse({
+                "status": "sucesso",
+                "vistos": guardar_avisos_vistos(usuario, mapa),
+            })
+
+        if acao != "ler_atividades":
             return JsonResponse({"erro": "acao"}, status=400)
 
         lido_ate = marcar_atividades_lidas(

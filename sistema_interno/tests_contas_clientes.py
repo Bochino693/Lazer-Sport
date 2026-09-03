@@ -52,15 +52,23 @@ class ContasClientesTests(TestCase):
         self.assertContains(resposta, 'id="offerModal"')
         self.assertContains(resposta, 'name="confirmacao_exclusao"')
         self.assertContains(resposta, 'id="accountOffersData"')
-        self.assertContains(resposta, "LSTela.pronto(function ()")
+        # O script da tela saiu do HTML (era peso repetido em cada
+        # abertura), mas continua entrando no ciclo da navegação suave --
+        # é `LSTela.pronto` que faz a tela montar de novo ao voltar.
+        from core.apoio_de_teste import script_da_pagina
+
+        self.assertIn(
+            "LSTela.pronto(function ()", script_da_pagina("gestao/users_adm.html"),
+        )
         self.assertContains(resposta, "data-open-status")
         self.assertContains(resposta, "data-open-offer")
 
     def test_ofuscado_fica_atras_do_cartao_do_modal(self):
         raiz = Path(settings.BASE_DIR)
-        template = (raiz / "core/templates/gestao/users_adm.html").read_text(
-            encoding="utf-8"
-        )
+        from core.apoio_de_teste import estilo_da_pagina
+
+        # O CSS desta tela virou arquivo; a regra de empilhamento é a mesma.
+        template = estilo_da_pagina("gestao/users_adm.html")
         integrado = (
             raiz / "sistema_interno/static/interno/gestao_integrada.css"
         ).read_text(encoding="utf-8")

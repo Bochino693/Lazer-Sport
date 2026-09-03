@@ -574,6 +574,34 @@ if os.getenv("STATIC_IMMUTABLE", "1").strip().lower() in ("1", "true", "yes", "o
     WHITENOISE_IMMUTABLE_FILE_TEST = _estatico_imutavel
 
 
+# ------------------------------------------------------------------
+# ECONOMIA DE DADOS
+# ------------------------------------------------------------------
+# UM INTERRUPTOR, PORQUE A CONTA É MENSAL E O USO NÃO É.
+#
+# A hospedagem cobra por banda no mês. Perto do teto, o que precisa sair
+# primeiro é o que NINGUÉM PEDIU -- e o painel gasta em duas coisas
+# assim:
+#
+#   * a antecipação de tela (o `prefetch`), que baixa a tela inteira
+#     porque o mouse parou em cima de um link. Quando acerta, o clique é
+#     instantâneo; quando erra, foram 100 KB no lixo;
+#   * a sondagem dos avisos, que pergunta ao servidor de tempos em tempos
+#     se algo mudou, mesmo com ninguém tocando na máquina.
+#
+# Ligado, o painel desiste dos dois palpites: antecipação desligada e
+# sondagem mais espaçada. Nada deixa de funcionar -- o clique passa a
+# esperar a rede, e o aviso chega um pouco depois.
+#
+# Fica ligado por padrão porque é o estado seguro: quem tem banda
+# sobrando desliga com ECONOMIA_DE_DADOS=0 e ganha a antecipação de
+# volta. O contrário -- descobrir no fim do mês que passou do limite --
+# não tem como desfazer.
+ECONOMIA_DE_DADOS = os.getenv(
+    "ECONOMIA_DE_DADOS", "1"
+).strip().lower() in ("1", "true", "yes", "on")
+
+
 # ============================================================
 # DJANGO REST FRAMEWORK
 # ============================================================

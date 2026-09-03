@@ -56,9 +56,12 @@ class ArquivosEstaticosExistemTests(TestCase):
 
     def test_o_grafico_de_vendas_nao_depende_de_biblioteca_externa(self):
         """O painel roda na estrada, instalado como aplicativo."""
-        painel = (
-            RAIZ / "core" / "templates" / "gestao" / "dashboard.html"
-        ).read_text(encoding="utf-8")
+        from core.apoio_de_teste import script_da_pagina
+
+        # O JavaScript da tela saiu do HTML -- era peso repetido a cada
+        # abertura. A regra é a mesma: o gráfico continua sendo desenhado
+        # aqui dentro, sem pedir biblioteca a ninguém.
+        painel = script_da_pagina("gestao/dashboard.html")
 
         # O nome ainda aparece no comentário que conta a história; o que
         # não pode voltar é a tag que pedia o arquivo.

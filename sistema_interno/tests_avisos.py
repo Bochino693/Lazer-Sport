@@ -7,6 +7,7 @@ equipe, que é o tipo de problema que ninguém liga a este arquivo meses
 depois.
 """
 
+import re
 from datetime import timedelta
 from decimal import Decimal
 
@@ -705,7 +706,30 @@ class EstadoAoVivoTests(TestCase):
         base = Path("sistema_interno/templates/base_inner.html").read_text(
             encoding="utf-8"
         )
-        self.assertIn("intervalo: 60000", painel)
+        # UM MINUTO QUANDO NINGUÉM ESTÁ MEXENDO -- essa é a regra, e não
+        # um número fixo. Ela era escrita como `intervalo: 60000`, o que
+        # também tornava lento o painel de quem está trabalhando: um
+        # colega salvava e o sino podia levar um minuto para tocar. Agora
+        # o relógio tem dois passos -- curto com a mão na tela, longo
+        # depois de três minutos parado -- e é o passo longo que precisa
+        # chegar ao minuto. Ver `passoDoRelogio`.
+        passo = int(
+            re.search(r"intervalo:\s*(\d+)", painel).group(1)
+        )
+        multiplicador = int(
+            re.search(r"avisos\.intervalo \* (\d+);", painel).group(1)
+        )
+        self.assertGreaterEqual(
+            passo * multiplicador,
+            60000,
+            "parado, o painel não pode perguntar mais de uma vez por minuto",
+        )
+        self.assertLessEqual(
+            passo,
+            15000,
+            "com gente mexendo, o aviso do colega não pode demorar",
+        )
+        self.assertIn("OCIOSO_APOS", painel)
         self.assertIn("659.25", painel)
         self.assertIn("783.99", painel)
         self.assertIn("987.77", painel)
