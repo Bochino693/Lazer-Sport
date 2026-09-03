@@ -1377,8 +1377,8 @@
 </script>
 {{ pontos_mapa|json_script:"dados-clientes-mapa" }}
 {# O mapa de clientes também sai daqui: sem CDN, a seção inteira sumia. #}
-<link rel="stylesheet" href="{% static 'vendor/leaflet/leaflet.css' %}?v=1">
-<script src="{% static 'vendor/leaflet/leaflet.js' %}?v=1"></script>
+<link rel="stylesheet" href="{% estatico 'vendor/leaflet/leaflet.css' %}">
+<script src="{% estatico 'vendor/leaflet/leaflet.js' %}"></script>
 <script>
 (function () {
     const todosPontosBrutos = JSON.parse(document.getElementById('dados-clientes-mapa').textContent);
@@ -1421,7 +1421,9 @@
         }
     }
 
-    const LOGO_CLIENTE_PADRAO = "{% static 'images/logoo.png' %}";
+    /* 96x96 (9 KB). Era o logotipo de 1024px e 796 KB para preencher um
+       furo de 21 pixels no alfinete -- e a home carrega um por ponto. */
+    const LOGO_CLIENTE_PADRAO = "{% estatico 'images/logo-96.png' %}";
     const CATEGORIAS_PADRAO = ['Kid Play', 'Brinquedão', 'Trampolins', 'Eletrônicos'];
 
     const PINO_PATH_D = "M215.7 499.2C267 435 384 279.4 384 192C384 86 298 0 192 0S0 86 0 192c0 87.4 117 243 168.3 307.2c12.3 15.3 35.1 15.3 47.4 0z";

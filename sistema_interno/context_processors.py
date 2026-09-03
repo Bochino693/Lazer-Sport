@@ -181,4 +181,7 @@ def fab_counts(request):
     }
     contexto["eh_gestor_interno"] = acesso["gestao"]
     contexto["permissoes_interno"] = acesso
+    # O freio de mão da banda, lido pelo JavaScript do painel a partir do
+    # corpo da página. Ver `ECONOMIA_DE_DADOS` em settings.
+    contexto["economia_de_dados"] = getattr(settings, "ECONOMIA_DE_DADOS", True)
     return contexto

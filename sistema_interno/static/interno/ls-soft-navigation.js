@@ -16,7 +16,7 @@
   var navegacao = 0;
   var prefetchTimer = null;
   var prefetchsExecutados = 0;
-  var LIMITE_PREFETCH = 6;
+  var LIMITE_PREFETCH = 3;
   /* UMA SONDAGEM CURTA, DEPOIS UMA ESPERA LONGA -- E SÓ.
 
      Eram quatro tentativas de doze segundos: até 52 segundos por tela,
@@ -938,23 +938,52 @@
      A cota era de DUAS buscas por aba, para a sessão inteira. Depois da
      segunda, todo clique voltava a esperar a rede -- e como o painel fica
      aberto o dia todo na bancada, isso significa que a antecipação valia
-     nos dois primeiros cliques da manhã e em mais nenhum. Agora a cota se
+     nos dois primeiros cliques da manhã e em mais nenhum. A cota se
      renova por minuto: protege de disparar dezenas de pedidos quando
      alguém passa o dedo pelo menu, sem desligar a antecipação para o
      resto do dia.
 
-     Dois momentos disparam, e são diferentes de propósito:
+     O QUE ESTA ANTECIPAÇÃO CUSTOU, E O QUE MUDOU.
 
-       * PASSAR POR CIMA espera 90ms. O dedo cruzando o menu passa por
-         cinco itens; a intenção só existe quando ele para em um.
-       * ENCOSTAR (`pointerdown`) dispara na hora. Entre encostar e
-         soltar existem uns 100ms de graça no toque, e é neles que a tela
-         chega -- é o que faz a navegação parecer instantânea no tablet.
+     Ela esperava 90ms de mouse parado para decidir que havia intenção.
+     Noventa milissegundos é menos que um piscar: um mouse ATRAVESSANDO o
+     menu lateral -- vinte e cinco itens, um do lado do outro -- para
+     mais de 90ms em cada um que cruza. Cada parada dessas baixava uma
+     TELA INTEIRA, de 40 a 150 KB, que quase nunca era aberta e que expira
+     da gaveta em 90 segundos. Seis por minuto, o dia inteiro, para um
+     painel com um punhado de usuários: foi o maior consumidor de banda do
+     sistema depois do CSS que morava dentro do HTML.
+
+     A correção não é desligar -- a antecipação é o que faz o clique
+     parecer instantâneo no tablet. É pedir INTENÇÃO DE VERDADE:
+
+       * PASSAR POR CIMA agora espera 320ms. Atravessar não para tanto
+         tempo; escolher, sim. Foi o número que separou os dois no teste
+         com mouse e com dedo.
+       * ENCOSTAR (`pointerdown`) continua disparando na hora, e continua
+         sendo o caminho sem desperdício: entre encostar e soltar há uns
+         100ms de graça, e a tela que chega neles é sempre a tela que a
+         pessoa pediu.
+       * A cota caiu de seis para três por minuto. Ninguém abre três
+         telas por minuto por muito tempo; o que fazia seis era o mouse
+         passeando.
+
+     E há o freio de mão: com a economia de dados ligada na hospedagem
+     (`data-ls-economia` no corpo), nada é antecipado. Ver `economia()`.
      ====================================================================== */
   var JANELA_DA_COTA = 60000;
   var cotaAberta = 0;
+  var ESPERA_DE_INTENCAO = 320;
+
+  /* O freio de mão da hospedagem. Quando a banda do mês está no fim, o
+     que se corta primeiro é o que ninguém pediu -- e antecipação é
+     exatamente isso: um palpite que às vezes acerta. */
+  function economia() {
+    return document.body && document.body.getAttribute("data-ls-economia") === "1";
+  }
 
   function podeAntecipar() {
+    if (economia()) return false;
     if (document.querySelector(".modal.show")) return false;
     if (document.visibilityState !== "visible") return false;
 
@@ -1004,7 +1033,7 @@
 
   document.addEventListener("pointerover", function (evento) {
     var link = evento.target.closest ? evento.target.closest("a[href]") : null;
-    if (link) agendarPrefetch(link, evento, 90);
+    if (link) agendarPrefetch(link, evento, ESPERA_DE_INTENCAO);
   });
 
   /* Encostar já é intenção: aqui não se espera. */
@@ -1015,7 +1044,7 @@
 
   document.addEventListener("focusin", function (evento) {
     var link = evento.target.closest ? evento.target.closest("a[href]") : null;
-    if (link) agendarPrefetch(link, evento, 90);
+    if (link) agendarPrefetch(link, evento, ESPERA_DE_INTENCAO);
   });
 
   window.addEventListener("popstate", function () {

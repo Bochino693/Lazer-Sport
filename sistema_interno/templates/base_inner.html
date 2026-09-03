@@ -7,8 +7,11 @@
   {# `color-scheme` real vem de cada tema no CSS; aqui só o palpite inicial. #}
   <meta name="color-scheme" content="dark light">
 
-  <link rel="icon" type="image/png" href="{% estatico 'images/lgooo.png' %}">
-  <link rel="shortcut icon" type="image/png" href="{% estatico 'images/lgooo.png' %}">
+  {% comment %} 5 KB no lugar de 150 KB. O ícone da aba tem 16 pixels de lado; o
+     arquivo de 500x500 era baixado inteiro, duas vezes, em toda aba
+     nova do painel. {% endcomment %}
+  <link rel="icon" type="image/png" href="{% estatico 'images/favicon-64.png' %}">
+  <link rel="shortcut icon" type="image/png" href="{% estatico 'images/favicon-64.png' %}">
 
   {% comment %}
     APLICATIVO DE VERDADE NO TABLET.
@@ -239,7 +242,18 @@
   <link rel="stylesheet" href="{% estatico 'site/ls-page-loader.css' %}">
   <script src="{% estatico 'site/ls-page-loader.js' %}" defer></script>
 </head>
-<body class="ls-body {% block body_class %}{% endblock %}" data-avisos="{% url 'avisos_estado' %}" data-aparelho="{% url 'avisos_aparelho' %}">
+{% comment %}
+  `data-ls-economia` é o freio de mão da banda, ligado na hospedagem por
+  ECONOMIA_DE_DADOS. Com ele, o painel desiste dos dois palpites que
+  gastam sem ninguém pedir: a antecipação de tela (que baixa 100 KB
+  porque o mouse parou num link) e o ritmo curto da sondagem de avisos.
+  Nada deixa de funcionar -- o clique passa a esperar a rede, e o aviso
+  chega um pouco depois. Ver settings.ECONOMIA_DE_DADOS.
+{% endcomment %}
+<body class="ls-body {% block body_class %}{% endblock %}"
+      data-avisos="{% url 'avisos_estado' %}"
+      data-aparelho="{% url 'avisos_aparelho' %}"
+      data-ls-economia="{% if economia_de_dados %}1{% else %}0{% endif %}">
 <svg width="0" height="0" aria-hidden="true" focusable="false" style="position:absolute">
   <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></symbol>
   <symbol id="i-map-pin" viewBox="0 0 24 24"><path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></symbol>

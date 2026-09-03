@@ -7,7 +7,10 @@
   <title>{% block title %} Lazer & Sports {% endblock %}</title>
   <meta name="description" content="{% block meta_description %}Lazer & Sport Brinquedos: fábrica e loja de brinquedos, fliperama, mecânicos e simuladores para shoppings, quiosques e parques. Compra e reposição de peças.{% endblock %}">
   <link rel="canonical" href="https://www.lazersport.com.br{% block canonical_path %}{{ request.path }}{% endblock %}">
-  <link rel="icon" type="image/x-icon" href="{% static 'images/logoofi.png' %}">
+  {% comment %} 64x64 (5 KB) no lugar do logotipo de 1280px (155 KB): o navegador
+     desenha o ícone com 16 pixels de lado e baixava o arquivo inteiro
+     em toda visita nova. O logotipo grande continua onde é grande. {% endcomment %}
+  <link rel="icon" type="image/png" href="{% estatico 'images/favicon-64.png' %}">
   <meta name="theme-color" content="#004AAD">
 
   {% comment %}
@@ -23,39 +26,39 @@
     alcançar. De quebra, o visitante para de ter o IP entregue a
     terceiros a cada visita.
   {% endcomment %}
-  <link rel="stylesheet" href="{% static 'vendor/fontes.css' %}?v=1">
-  <link rel="stylesheet" href="{% static 'vendor/fontawesome/css/all.min.css' %}?v=1">
+  <link rel="stylesheet" href="{% estatico 'vendor/fontes.css' %}">
+  <link rel="stylesheet" href="{% estatico 'vendor/fontawesome/css/all.min.css' %}">
 
   <!-- Experiência de rolagem: skeletons, entrada dos blocos e barra de progresso. -->
-  <link rel="stylesheet" href="{% static 'site/ls-reveal.css' %}?v=3">
+  <link rel="stylesheet" href="{% estatico 'site/ls-reveal.css' %}">
 
   <!-- Token do CSRF para o JS que salva curtida e lista de desejos.
        Citar {{ csrf_token }} aqui também garante o cookie na resposta. -->
   <meta name="csrf-token" content="{{ csrf_token }}">
 
   <!-- Curtir e guardar na lista de desejos, com ou sem conta. -->
-  <link rel="stylesheet" href="{% static 'site/ls-favoritos.css' %}?v=3">
-  <script src="{% static 'site/ls-favoritos.js' %}?v=2" defer></script>
+  <link rel="stylesheet" href="{% estatico 'site/ls-favoritos.css' %}">
+  <script src="{% estatico 'site/ls-favoritos.js' %}" defer></script>
 
   <!-- Âncoras # param abaixo do cabeçalho sticky, com destaque no destino. -->
-  <link rel="stylesheet" href="{% static 'site/ls-ancoras.css' %}?v=1">
-  <script src="{% static 'site/ls-ancoras.js' %}?v=1" defer></script>
+  <link rel="stylesheet" href="{% estatico 'site/ls-ancoras.css' %}">
+  <script src="{% estatico 'site/ls-ancoras.js' %}" defer></script>
 
   <!-- Barra de carregamento no topo. A ordem importa: este script entra
        depois do de âncoras, para o clique em link interno já chegar
        marcado como tratado e a barra não correr à toa. -->
-  <link rel="stylesheet" href="{% static 'site/ls-page-loader.css' %}?v=2">
-  <script src="{% static 'site/ls-page-loader.js' %}?v=2" defer></script>
+  <link rel="stylesheet" href="{% estatico 'site/ls-page-loader.css' %}">
+  <script src="{% estatico 'site/ls-page-loader.js' %}" defer></script>
 {% if user.is_authenticated %}
   <!-- Aviso de pagamento aprovado confirmado fora da aba (webhook). -->
-  <link rel="stylesheet" href="{% static 'site/ls-confirmacao.css' %}?v=1">
+  <link rel="stylesheet" href="{% estatico 'site/ls-confirmacao.css' %}">
 {% endif %}
-  <script src="{% static 'site/ls-reveal.js' %}?v=3" defer></script>
+  <script src="{% estatico 'site/ls-reveal.js' %}" defer></script>
 {% if not usuario_da_equipe %}
   <!-- Convite para receber aviso da loja no celular. Ele mesmo decide se
        aparece: sem push no navegador, ou no iPhone fora da tela de
        início, a caixa continua escondida. -->
-  <script src="{% static 'site/ls-app-avisos.js' %}?v=1" defer></script>
+  <script src="{% estatico 'site/ls-app-avisos.js' %}" defer></script>
 {% endif %}
   <script>
     /* Marca a plataforma no <html> antes da primeira pintura. A caixa do
@@ -1201,7 +1204,7 @@ window.addEventListener("pageshow", function (event) {
 {% if user.is_authenticated %}
   {# URLs pelo template para o JS nao precisar chutar caminho. #}
   {{ ls_confirmacao_urls|json_script:"ls-confirmacao-config" }}
-  <script src="{% static 'site/ls-confirmacao.js' %}?v=1" defer></script>
+  <script src="{% estatico 'site/ls-confirmacao.js' %}" defer></script>
 {% endif %}
 </body>
 </html>

@@ -1886,7 +1886,10 @@
 
     parar: function () {
       avisos.parado = true;
-      if (avisos.relogio) global.clearInterval(avisos.relogio);
+      /* clearTimeout, e não clearInterval: o relógio virou uma corrente
+         de setTimeout para poder mudar de passo entre uma batida e
+         outra (ver `bater`). */
+      if (avisos.relogio) global.clearTimeout(avisos.relogio);
       avisos.relogio = null;
     },
   };
@@ -1916,9 +1919,59 @@
        redesenha uma central que já está certa. */
     buscarAvisos();
 
-    avisos.relogio = global.setInterval(function () {
-      if (document.visibilityState === "visible") buscarAvisos();
-    }, avisos.intervalo);
+    /* ==================================================================
+       O RELÓGIO ACOMPANHA QUEM ESTÁ TRABALHANDO
+
+       Perguntar de doze em doze segundos faz sentido enquanto alguém
+       mexe no painel: é o tempo entre um colega salvar um orçamento e a
+       bolinha aparecer aqui. Não faz sentido nenhum na quarta hora de
+       uma aba esquecida aberta na bancada -- e era isso que acontecia,
+       o dia inteiro, em toda aba de todo mundo.
+
+       Agora o intervalo respira. Enquanto há toque, teclado ou rolagem,
+       são doze segundos. Passados três minutos sem sinal de vida, o
+       relógio recua para um minuto; qualquer toque o traz de volta na
+       hora, junto com uma pergunta imediata -- então quem volta para o
+       painel nunca olha para um número velho.
+
+       Com a economia de dados ligada, o passo lento é o dobro: dois
+       minutos. Ver `ECONOMIA_DE_DADOS` em settings.
+       ================================================================== */
+    var OCIOSO_APOS = 180000;
+    var ultimoSinalDeVida = Date.now();
+
+    function economiaLigada() {
+      return document.body
+        && document.body.getAttribute("data-ls-economia") === "1";
+    }
+
+    function passoDoRelogio() {
+      var parado = Date.now() - ultimoSinalDeVida > OCIOSO_APOS;
+      if (!parado) return avisos.intervalo;
+      return economiaLigada() ? avisos.intervalo * 10 : avisos.intervalo * 5;
+    }
+
+    function bater() {
+      if (avisos.parado) return;
+      avisos.relogio = global.setTimeout(function () {
+        if (document.visibilityState === "visible") buscarAvisos();
+        bater();
+      }, passoDoRelogio());
+    }
+    bater();
+
+    /* Qualquer sinal de que há gente ali. `passive` porque nenhum deles
+       cancela nada -- e sem isso a rolagem no tablet engasga. */
+    ["pointerdown", "keydown", "scroll", "focusin"].forEach(function (evento) {
+      document.addEventListener(evento, function () {
+        var estavaParado = Date.now() - ultimoSinalDeVida > OCIOSO_APOS;
+        ultimoSinalDeVida = Date.now();
+        /* Voltou depois de um tempo parado: o número na tela pode estar
+           velho, e esperar o próximo pulso seria mostrar o passado a
+           quem acabou de chegar. */
+        if (estavaParado) buscarAvisos(true);
+      }, { passive: true });
+    });
 
     document.addEventListener("visibilitychange", function () {
       /* Voltar para a aba é o momento em que a pessoa QUER ver o estado

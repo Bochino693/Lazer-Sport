@@ -6,14 +6,14 @@
 
 {% block extra_css %}
 {{ block.super }}
-{# data-ls-tela: uma biblioteca de ícones inteira só desta tela. Sem a
-   marca ela ficaria carregada em todas as telas seguintes da sessão. #}
+{% comment %} data-ls-tela: uma biblioteca de ícones inteira só desta tela. Sem a
+   marca ela ficaria carregada em todas as telas seguintes da sessão. {% endcomment %}
 <link rel="stylesheet" data-ls-tela="1"
-      href="{% static 'vendor/fontawesome/css/all.min.css' %}?v=1">
+      href="{% estatico 'vendor/fontawesome/css/all.min.css' %}">
 
-  {# `data-ls-tela`: esta folha é de UMA tela. Sem a marca, a navegação
+  {% comment %} `data-ls-tela`: esta folha é de UMA tela. Sem a marca, a navegação
    suave a deixaria no <head> e as regras desta tela continuariam
-   valendo por cima da próxima. Ver `tests_navegacao`. #}
+   valendo por cima da próxima. Ver `tests_navegacao`. {% endcomment %}
   <link rel="stylesheet" data-ls-tela="1"
         href="{% estatico 'site/paginas/gestao-manutencao_adm.css' %}">
 {% endblock %}
