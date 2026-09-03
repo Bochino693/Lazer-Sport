@@ -1,5 +1,5 @@
 {% extends "gestao/base_adm.html" %}
-{% load l10n %}
+{% load l10n interno_extras %}
 
 {% block title %}Cupons{% endblock %}
 {% block page_heading %}Cupons de desconto{% endblock %}
@@ -556,7 +556,7 @@
           </span>
         </div>
 
-        <div class="cup-discount">{{ cupom.desconto_percentual|floatformat:2 }}<span>% OFF</span></div>
+        <div class="cup-discount">{{ cupom.desconto_percentual|porcento }}<span> OFF</span></div>
 
         <div class="cup-meta">
           <span class="cup-meta-line">

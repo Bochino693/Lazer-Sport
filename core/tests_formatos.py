@@ -95,6 +95,12 @@ class FiltrosDeTemplateTests(TestCase):
         self.assertEqual(self.render("{{ v|moeda }}", v=Decimal("1250")), "1.250,00")
         self.assertEqual(self.render("{{ v|reais }}", v=Decimal("1250")), "R$ 1.250,00")
 
+    def test_porcento_sem_zero_a_toa(self):
+        """"20,00% OFF" num selo de promoção diz menos ocupando mais."""
+        self.assertEqual(self.render("{{ v|porcento }}", v=Decimal("20.00")), "20%")
+        self.assertEqual(self.render("{{ v|porcento }}", v=Decimal("12.5")), "12,5%")
+        self.assertEqual(self.render("{{ v|porcento }}", v=None), "")
+
     def test_medida_no_template_com_unidade_escolhida(self):
         self.assertEqual(self.render("{{ v|medida }}", v=Decimal("2.50")), "2,5 m")
         self.assertEqual(self.render('{{ v|medida:"kg" }}', v=Decimal("80")), "80 kg")
