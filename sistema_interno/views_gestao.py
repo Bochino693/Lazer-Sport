@@ -68,6 +68,7 @@ from . import etapas_padrao
 from . import fragmento
 from .sincronia import revisao_modulo
 from . import financeiro as fin
+from .recibos import ReciboIndisponivel, emitir_recibo, valor_a_documentar
 from .models import (
     AtividadeOrcamento,
     Cliente,
@@ -86,6 +87,7 @@ from .models import (
     OrdemServico,
     OrdemProducao,
     ProdutoInterno,
+    ReciboOrcamento,
     Setores,
 )
 from .exclusoes import forcando, pode_excluir, remover
@@ -364,7 +366,13 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
                     queryset=ItemOrcamento.objects
                     .select_related("brinquedo", "produto__brinquedo", "peca")
                     .prefetch_related("peca__imagem_peca_reposicao"),
-                )
+                ),
+                # Os recibos vêm junto porque a janela de recibo mostra os
+                # já emitidos e a linha precisa saber se ainda falta
+                # documentar dinheiro. Uma consulta para a página inteira,
+                # e não uma por proposta -- esta tela já estourou o tempo
+                # do servidor uma vez por carregar demais por linha.
+                "recibos",
             )
         ))
 
@@ -480,6 +488,18 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
                 orcamento.whatsapp_destinatario,
                 orcamento.mensagem_whatsapp,
             )
+            # O QUE A JANELA DE RECIBO PRECISA SABER.
+            #
+            # `recibos_emitidos` são os papéis que já existem, com link
+            # pronto para mandar ao cliente; `recibo_pendente` é o
+            # dinheiro que entrou e ainda não virou documento -- é ele
+            # que decide se o botão "Emitir recibo" aparece com valor ou
+            # se a janela diz que está tudo documentado.
+            orcamento.recibos_emitidos = [
+                self.serializar_recibo(recibo, base_publica)
+                for recibo in orcamento.recibos.all()
+            ]
+            orcamento.recibo_pendente = valor_a_documentar(orcamento)
             orcamento.pode_excluir = pode_excluir_orcamento(
                 request.user,
                 orcamento,
@@ -658,6 +678,16 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
             "saldo_pagamento": f"{orcamento.saldo_pagamento:.2f}".replace(".", ","),
             "total": f"{orcamento.total:.2f}".replace(".", ","),
             "pode_receber_pagamento": orcamento.pode_receber_pagamento,
+            # O RECIBO VIAJA COM A PROPOSTA. A janela mostra os papéis já
+            # emitidos (com link para mandar ao cliente) e o quanto ainda
+            # falta documentar; sem isso ela teria de perguntar ao
+            # servidor a cada abertura.
+            "pode_emitir_recibo": orcamento.pode_emitir_recibo,
+            "recibos": getattr(orcamento, "recibos_emitidos", []),
+            "recibo_pendente": (
+                f"{getattr(orcamento, 'recibo_pendente', Decimal('0.00')):.2f}"
+                .replace(".", ",")
+            ),
             "origem": orcamento.origem,
             "origem_rotulo": orcamento.get_origem_display(),
             "bloco_comercial": OrcamentosInnerView.serializar_avaliacao(
@@ -1422,6 +1452,75 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
             valor_pago=f"{orcamento.valor_pago:.2f}".replace(".", ","),
             saldo=f"{orcamento.saldo_pagamento:.2f}".replace(".", ","),
         )
+
+    def acao_recibo(self, request):
+        """Emite o recibo do que já entrou -- e nunca de um valor digitado.
+
+        A ação não recebe quantia nenhuma: ela lê o pagamento registrado
+        e documenta o que ainda não tinha papel (ver
+        `sistema_interno/recibos.py`). Recibo e planilha não podem
+        divergir, senão o papel deixa de valer como prova.
+
+        QUEM REGISTRA O DINHEIRO É QUEM ASSINA O RECIBO. A permissão é a
+        mesma de `acao_pagamento`: quem não pode dizer que o dinheiro
+        entrou também não pode emitir o documento que afirma isso. O
+        comercial continua vendo e compartilhando o recibo já emitido --
+        o que ele não faz é declarar o recebimento.
+        """
+        if not capacidades(request.user)["orcamentos_editar_financeiro"]:
+            return self.erro(
+                request,
+                "Somente Financeiro ou Gestão emite recibo: o documento "
+                "afirma um recebimento, e quem o registra responde por ele.",
+                status=403,
+            )
+
+        # select_for_update trava a proposta entre medir o que falta
+        # documentar e gravar: sem isso, dois cliques juntos emitiriam
+        # dois recibos do mesmo pagamento, cada um com seu número -- a
+        # forma mais silenciosa de duplicar receita na contabilidade de
+        # quem recebe.
+        orcamento = get_object_or_404(
+            limitar_orcamentos(request.user, Orcamento.objects.select_for_update()),
+            pk=request.POST.get("id"),
+        )
+        try:
+            recibo = emitir_recibo(orcamento, request.user)
+        except ReciboIndisponivel as impedimento:
+            raise ErroDeFormulario(str(impedimento))
+
+        registrar_atividade_orcamento(
+            orcamento,
+            request,
+            AtividadeOrcamento.Tipo.PAGAMENTO,
+            resumo=f"recibo {recibo.numero_documento} de R$ {recibo.valor:.2f}",
+        )
+        return self.sucesso(
+            request,
+            f"Recibo {recibo.numero_documento} emitido: "
+            f"R$ {moeda_br(recibo.valor)}"
+            + (" (quitação)" if recibo.quitacao else " (parcial)"),
+            recibo=self.serializar_recibo(recibo, endereco_do_site(request)),
+        )
+
+    @staticmethod
+    def serializar_recibo(recibo, base_publica=""):
+        """O recibo como a janela do painel o mostra."""
+        return {
+            "id": recibo.pk,
+            "numero": recibo.numero_documento,
+            "sequencia": recibo.sequencia,
+            # `moeda_br`, e não o número cru: "R$ 5000,00" no meio da
+            # janela é o tipo de valor que se lê errado com pressa.
+            "valor": moeda_br(recibo.valor),
+            "quitacao": recibo.quitacao,
+            "emitido_em": (
+                timezone.localtime(recibo.emitido_em).strftime("%d/%m/%Y %H:%M")
+                if recibo.emitido_em else ""
+            ),
+            "emitido_por": recibo.emitido_por_nome,
+            "link": f"{base_publica}{recibo.caminho_publico}",
+        }
 
     def acao_gerar_ordem_servico(self, request):
         """Não gera mais -- e diz onde a O.S. nasce agora.

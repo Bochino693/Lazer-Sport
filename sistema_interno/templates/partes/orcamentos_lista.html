@@ -142,6 +142,24 @@
                 {% else %}
                   <span class="text-muted">—</span>
                 {% endif %}
+                {% comment %}
+                  O RECIBO APARECE ONDE O DINHEIRO APARECE.
+
+                  Quem procura o comprovante procura na coluna do
+                  pagamento, e não no menu de ações. Aqui fica o número do
+                  último recibo, que é também a resposta rápida para "esse
+                  já tem recibo?" -- sem abrir janela nenhuma.
+                {% endcomment %}
+                {% for recibo in orcamento.recibos_emitidos %}
+                  {% if forloop.first %}
+                    <a class="material-sub d-block mt-1 ls-recibo-link"
+                       href="{{ recibo.link }}" target="_blank" rel="noopener"
+                       title="Abrir o recibo {{ recibo.numero }}">
+                      <i class="bi bi-receipt" aria-hidden="true"></i> {{ recibo.numero }}
+                      {% if not recibo.quitacao %}· parcial{% endif %}
+                    </a>
+                  {% endif %}
+                {% endfor %}
               </td>
               {% comment %}
                 data-situacao: a célula que o painel repinta sozinho
@@ -271,6 +289,31 @@
                         data-pago="{{ orcamento.valor_pago }}" data-nome="Orçamento ID {{ orcamento.id }} — {{ orcamento.destinatario }}"
                         title="Registrar o total recebido até agora">
                   <i class="bi bi-cash-coin"></i><span class="ls-action-label">{% if orcamento.status_pagamento == 'parcial' %}Completar pagamento{% else %}Registrar pagamento{% endif %}</span>
+                </button>
+                {% endif %}
+                {% comment %}
+                  O DINHEIRO QUE ENTROU VIRA DOCUMENTO.
+
+                  Antes o pagamento acabava num campo e num selo "Pago":
+                  bastava para a empresa e não bastava para o cliente. Quem
+                  paga uma festa de R$ 23.980,00 pede o comprovante com
+                  CNPJ, número e valor por extenso -- e buffet, condomínio e
+                  prefeitura PRECISAM anexá-lo à prestação de contas. Sem
+                  este botão, alguém escrevia o recibo à mão num modelo de
+                  Word, com o número do orçamento copiado de cabeça.
+
+                  Aparece para quem enxerga a proposta, e não só para o
+                  Financeiro: o comercial precisa MANDAR o recibo ao
+                  cliente. Emitir, esse sim, é do Financeiro -- a janela
+                  cuida disso, e o servidor confere de novo.
+                {% endcomment %}
+                {% if orcamento.pode_emitir_recibo %}
+                <button type="button" class="btn btn-sm btn-outline-info"
+                        data-recibo="{{ orcamento.id }}"
+                        data-nome="Orçamento ID {{ orcamento.id }} — {{ orcamento.destinatario }}"
+                        aria-label="Recibo de pagamento do orçamento {{ orcamento.id }}"
+                        title="{% if orcamento.recibos_emitidos %}Ver e compartilhar o recibo{% else %}Gerar o recibo do valor recebido{% endif %}">
+                  <i class="bi bi-receipt"></i><span class="ls-action-label">{% if orcamento.recibos_emitidos %}Recibo{% else %}Gerar recibo{% endif %}</span>
                 </button>
                 {% endif %}
                 {% comment %}

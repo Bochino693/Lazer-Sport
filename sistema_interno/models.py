@@ -1831,6 +1831,25 @@ class Orcamento(Prime):
         return self.status_pagamento == self.StatusPagamento.PAGO
 
     @property
+    def pode_emitir_recibo(self):
+        """Existe dinheiro recebido para virar documento?
+
+        A regra é o dinheiro, e não a quitação: quem paga metade da festa
+        na assinatura precisa do recibo do sinal na hora, e não só no fim
+        da montagem. O que muda entre um caso e outro é o que o papel diz
+        -- "recebimento parcial" ou "quitação" --, e isso quem decide é
+        `sistema_interno/recibos.py`, na hora de emitir.
+
+        Aprovado, porque pagamento só é registrado depois da aprovação
+        (ver `pode_receber_pagamento`): recibo de proposta recusada
+        documentaria um dinheiro que não deveria estar ali.
+        """
+        return (
+            self.status == self.Status.APROVADO
+            and (self.valor_pago or Decimal("0.00")) > Decimal("0.00")
+        )
+
+    @property
     def pode_refazer(self):
         """Vale criar uma versão nova a partir desta?
 
@@ -2119,6 +2138,137 @@ class AceiteOrcamento(models.Model):
 
     def __str__(self):
         return f"Aceite {self.codigo_publico}"
+
+
+class ReciboOrcamento(models.Model):
+    """Recibo de pagamento emitido a partir de uma proposta.
+
+    POR QUE UM DOCUMENTO, E NÃO UMA TELA.
+
+    O dinheiro entrava e ficava registrado num campo: `valor_pago`, com o
+    selo "Pago" na lista. Isso resolve a conta da empresa e não resolve o
+    que o cliente pede depois -- o papel. Quem paga R$ 23.980,00 numa
+    festa quer um comprovante com CNPJ, número, data e o valor por
+    extenso; e quem trabalha com buffet e prefeitura PRECISA anexar esse
+    comprovante à prestação de contas. Sem ele, alguém da empresa
+    escrevia um recibo à mão, num modelo de Word, com o número do
+    orçamento copiado errado.
+
+    O RECIBO NÃO É UMA CONSULTA AO ORÇAMENTO -- É UMA FOTOGRAFIA DELE.
+
+    Os valores ficam gravados aqui, e não lidos da proposta na hora de
+    desenhar a página. Um recibo é a prova de um pagamento que aconteceu
+    numa data: se amanhã alguém corrigir o total do orçamento, o papel
+    que o cliente já guardou não pode mudar de valor sozinho. Pela mesma
+    razão ele é imutável -- o `save` recusa a segunda gravação, do mesmo
+    jeito que o comprovante de aceite (ver `AceiteOrcamento`).
+
+    PARCELA, E NÃO SALDO. `valor` é o que ENTROU nesta vez. Uma proposta
+    paga em duas vezes gera dois recibos, cada um pelo que recebeu, e o
+    segundo carrega o acumulado para dizer "quitado". Recibo pelo saldo
+    acumulado faria o segundo papel repetir o dinheiro do primeiro, e
+    dois recibos somando mais do que a venda é problema na contabilidade
+    de quem recebe.
+    """
+
+    orcamento = models.ForeignKey(
+        Orcamento,
+        on_delete=models.PROTECT,
+        related_name="recibos",
+    )
+    #: Código conferível, impresso no rodapé do documento.
+    codigo_publico = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    #: Chave da página que o cliente abre. Própria, e não a da proposta:
+    #: o recibo pode ser mandado a quem paga (o buffet, a prefeitura) sem
+    #: entregar junto a negociação inteira, com preço unitário e margem.
+    token = models.CharField(
+        max_length=64,
+        unique=True,
+        default=gerar_token_orcamento,
+        editable=False,
+        db_index=True,
+    )
+    #: 1º, 2º, 3º recibo DESTA proposta. Aparece no documento.
+    sequencia = models.PositiveIntegerField(default=1)
+
+    valor = models.DecimalField(max_digits=12, decimal_places=2)
+    valor_acumulado = models.DecimalField(max_digits=12, decimal_places=2)
+    total_documento = models.DecimalField(max_digits=12, decimal_places=2)
+    quitacao = models.BooleanField(default=False)
+
+    pagador_nome = models.CharField(max_length=120)
+    pagador_documento = models.CharField(max_length=20, blank=True)
+    referencia = models.CharField(max_length=240, blank=True)
+    forma_pagamento = models.CharField(max_length=120, blank=True)
+    observacao = models.CharField(max_length=240, blank=True)
+
+    #: SHA-256 do conteúdo canônico (ver `sistema_interno/recibos.py`).
+    #: É o que permite conferir, anos depois, que o papel na mão do
+    #: cliente é o mesmo documento que o sistema emitiu.
+    conteudo_hash = models.CharField(max_length=64)
+
+    emitido_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name="recibos_emitidos",
+        null=True,
+        blank=True,
+    )
+    emitido_por_nome = models.CharField(max_length=150)
+    emitido_em = models.DateTimeField(auto_now_add=True)
+
+    def save(self, *args, **kwargs):
+        if self.pk and type(self).objects.filter(pk=self.pk).exists():
+            raise ValueError("O recibo é imutável.")
+        return super().save(*args, **kwargs)
+
+    @property
+    def numero_documento(self):
+        """Número legível do recibo, estável e separado por ano."""
+        ano = self.emitido_em.year if self.emitido_em else timezone.localdate().year
+        return f"REC {(self.pk or 0):04d}/{ano}"
+
+    @property
+    def saldo(self):
+        return max(
+            self.total_documento - self.valor_acumulado, Decimal("0.00")
+        ).quantize(Decimal("0.01"))
+
+    @property
+    def parcial(self):
+        return not self.quitacao
+
+    @property
+    def caminho_publico(self):
+        """Caminho da página do recibo, sem domínio.
+
+        O urlconf raiz é passado na mão pelo mesmo motivo do orçamento:
+        no subdomínio interno o reverse enxerga só as rotas do painel, e
+        o link do cliente mora no site principal. Ver
+        `Orcamento.caminho_publico`.
+        """
+        from django.conf import settings as configuracoes
+        from django.urls import reverse
+
+        return reverse(
+            "recibo_publico",
+            args=[self.token],
+            urlconf=configuracoes.ROOT_URLCONF,
+        )
+
+    def __str__(self):
+        return f"{self.numero_documento} — {self.pagador_nome}"
+
+    class Meta:
+        verbose_name = "Recibo de pagamento"
+        verbose_name_plural = "Recibos de pagamento"
+        ordering = ("-emitido_em", "-id")
+        constraints = [
+            models.UniqueConstraint(
+                fields=("orcamento", "sequencia"),
+                name="recibo_sequencia_por_orcamento",
+            ),
+        ]
 
 
 class AvaliacaoBlocoOrcamento(Prime):

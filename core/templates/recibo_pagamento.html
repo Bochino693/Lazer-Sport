@@ -1,0 +1,218 @@
+{% load static interno_extras %}<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+{% comment %}
+  noindex não é detalhe: a página é aberta por link, e um recibo indexado
+  pelo Google seria o nome de um cliente e o valor que ele pagou, à vista
+  de qualquer um.
+{% endcomment %}
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#0A1046">
+<title>Recibo {{ recibo.numero_documento }} | Lazer &amp; Sport Brinquedos</title>
+
+{% comment %}
+  O cartão que o WhatsApp desenha quando o recibo é mandado. Sem ele
+  chega um endereço cru, que parece golpe -- e "clique aqui para ver seu
+  recibo" sem cartão nenhum é exatamente o formato que golpista usa. O
+  cartão NÃO leva o valor: um comprovante que anuncia a quantia na
+  pré-visualização da conversa expõe o cliente para quem estiver olhando
+  a tela dele.
+{% endcomment %}
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Lazer &amp; Sport Brinquedos">
+<meta property="og:title" content="Recibo {{ recibo.numero_documento }} — Lazer &amp; Sport">
+<meta property="og:description" content="Comprovante de pagamento emitido por {{ empresa_nome }}.">
+<meta property="og:url" content="{{ endereco_publico }}">
+<link rel="canonical" href="{{ endereco_publico }}">
+<link rel="icon" type="image/png" href="{% estatico 'images/favicon-64.png' %}">
+<link rel="stylesheet" href="{% estatico 'vendor/fontes.css' %}">
+<link rel="stylesheet" href="{% static 'interno/vendor/bootstrap-icons.min.css' %}">
+<link rel="stylesheet" href="{% estatico 'site/paginas/recibo_pagamento.css' %}">
+</head>
+<body>
+
+<div class="envelope">
+
+  {% if not integro %}
+    {% comment %}
+      O DOCUMENTO DIZ QUANDO NÃO BATE CONSIGO MESMO.
+
+      O recibo guarda o sha256 do que afirma (ver `recibos.hash_recibo`).
+      Se alguém alterar a linha no banco, o hash deixa de fechar -- e a
+      página avisa, em vez de exibir um comprovante adulterado com cara
+      de bom. É o aviso que dá valor ao código conferível no rodapé.
+    {% endcomment %}
+    <div class="faixa vermelha nao-imprime">
+      <span class="faixa-icone"><i class="bi bi-exclamation-octagon"></i></span>
+      <span>
+        <strong>Este recibo não confere com o registro original.</strong>
+        Fale com {{ empresa_nome }} antes de usá-lo: os dados abaixo foram
+        alterados depois da emissão.
+      </span>
+    </div>
+  {% endif %}
+
+  <article class="folha">
+
+    <!-- ==================================================== cabeçalho -->
+    <header class="topo">
+      <div class="topo-marca">
+        <img src="{% static 'images/logoofi.png' %}" alt="Lazer &amp; Sport Brinquedos">
+        <div>
+          <strong>{{ empresa_nome }}</strong>
+          <span>CNPJ {{ empresa_cnpj }}</span>
+          {% if empresa %}
+            <span>
+              {{ empresa.rua }}{% if empresa.numero %}, {{ empresa.numero }}{% endif %}
+              {% if empresa.bairro %} · {{ empresa.bairro }}{% endif %}
+            </span>
+            <span>{{ empresa.cidade }}/{{ empresa.estado }}{% if empresa.cep %} · CEP {{ empresa.cep }}{% endif %}</span>
+          {% endif %}
+          {% if telefone_empresa %}<span>{{ telefone_empresa }}</span>{% endif %}
+          {% if email_empresa %}<span>{{ email_empresa }}</span>{% endif %}
+        </div>
+      </div>
+
+      <div class="topo-documento">
+        <span class="kicker">Comprovante de pagamento</span>
+        <h1>Recibo</h1>
+        <p class="numero">{{ recibo.numero_documento }}</p>
+        <p class="emissao">Emitido em {{ recibo.emitido_em|date:"d/m/Y \à\s H:i" }}</p>
+        {% if recibo.quitacao %}
+          <span class="selo verde"><i class="bi bi-patch-check-fill"></i> Quitação total</span>
+        {% else %}
+          <span class="selo ambar"><i class="bi bi-clock-history"></i> Recebimento parcial</span>
+        {% endif %}
+      </div>
+    </header>
+
+    <!-- ======================================================= quantia -->
+    {% comment %}
+      O VALOR APARECE DUAS VEZES, E É ASSIM QUE TEM DE SER. Em
+      algarismos, para conferir de longe; por extenso, porque é o
+      extenso que impede um "1.500,00" de virar "11.500,00" com uma
+      canetada depois de impresso. Ver `core.formatos.por_extenso`.
+    {% endcomment %}
+    <section class="quantia">
+      <span class="quantia-rotulo">Valor recebido</span>
+      <strong class="quantia-numero">R$ {{ recibo.valor|moeda }}</strong>
+      <span class="quantia-extenso">({{ valor_escrito }})</span>
+    </section>
+
+    <!-- ===================================================== declaração -->
+    <section class="declaracao">
+      <p>
+        Recebemos de <strong>{{ recibo.pagador_nome }}</strong>{% if recibo.pagador_documento %},
+        inscrito(a) sob o documento <strong>{{ recibo.pagador_documento }}</strong>{% endif %},
+        a quantia de <strong>R$ {{ recibo.valor|moeda }}</strong> ({{ valor_escrito }}),
+        referente a <strong>{{ recibo.referencia }}</strong>{% if recibo.forma_pagamento %},
+        pago por <strong>{{ recibo.forma_pagamento }}</strong>{% endif %}.
+      </p>
+      <p>
+        {% if recibo.quitacao %}
+          Dando plena e geral quitação do valor contratado nesta proposta,
+          para que nada mais reste a reclamar a este título.
+        {% else %}
+          Este recibo cobre o valor acima. O restante do contratado segue
+          em aberto conforme o quadro abaixo.
+        {% endif %}
+      </p>
+      {% if recibo.observacao %}<p class="observacao">Observação: {{ recibo.observacao }}</p>{% endif %}
+    </section>
+
+    <!-- ========================================================= conta -->
+    <section class="conta">
+      <div class="conta-item">
+        <span>Orçamento</span>
+        <strong>nº {{ orcamento.numero_documento }}</strong>
+      </div>
+      <div class="conta-item">
+        <span>Valor do documento</span>
+        <strong>R$ {{ recibo.total_documento|moeda }}</strong>
+      </div>
+      <div class="conta-item">
+        <span>Total recebido até aqui</span>
+        <strong>R$ {{ recibo.valor_acumulado|moeda }}</strong>
+      </div>
+      <div class="conta-item {% if recibo.quitacao %}quitado{% else %}devendo{% endif %}">
+        <span>{% if recibo.quitacao %}Situação{% else %}Saldo em aberto{% endif %}</span>
+        <strong>{% if recibo.quitacao %}Quitado{% else %}R$ {{ recibo.saldo|moeda }}{% endif %}</strong>
+      </div>
+    </section>
+
+    <!-- ========================================================= itens -->
+    {% if itens %}
+      {% comment %}
+        A LISTA DIZ O QUE FOI PAGO, E NÃO QUANTO CUSTOU CADA COISA.
+
+        Sem preço unitário de propósito: o recibo vai para quem paga --
+        o financeiro do buffet, o setor de compras, a prestação de
+        contas --, e não necessariamente para quem negociou. Quantidade
+        e descrição bastam para provar o que foi contratado; a
+        composição do preço continua na proposta, que tem link próprio.
+      {% endcomment %}
+      <section class="itens">
+        <h2>Referente aos itens</h2>
+        <ul>
+          {% for item in itens %}
+            <li><span class="quantidade">{{ item.quantidade }}×</span> {{ item.descricao }}</li>
+          {% endfor %}
+        </ul>
+      </section>
+    {% endif %}
+
+    <!-- ===================================================== assinatura -->
+    <section class="assinatura">
+      <div class="assinatura-local">
+        {% if empresa %}{{ empresa.cidade }}/{{ empresa.estado }}, {% endif %}
+        {{ recibo.emitido_em|date:"d \d\e F \d\e Y"|lower }}.
+      </div>
+      <div class="assinatura-linha">
+        <span></span>
+        <strong>{{ empresa_nome }}</strong>
+        <small>CNPJ {{ empresa_cnpj }}</small>
+      </div>
+    </section>
+
+    <!-- ======================================================== rodapé -->
+    {% comment %}
+      O RODAPÉ É O QUE FAZ ESTE PAPEL SER CONFERÍVEL.
+
+      Código público, impressão digital do conteúdo e o nome de quem
+      emitiu. Com eles, o cliente que precisa provar o pagamento anos
+      depois tem como pedir a conferência -- e a empresa tem como
+      responder sem depender da memória de ninguém.
+    {% endcomment %}
+    <footer class="rodape">
+      <div class="rodape-conferencia">
+        <span>Código de verificação<strong>{{ recibo.codigo_publico }}</strong></span>
+        <span>Integridade<strong>{{ recibo.conteudo_hash|slice:":16" }}…</strong></span>
+        <span>Emitido por<strong>{{ recibo.emitido_por_nome }}</strong></span>
+        <span>Recibo<strong>{{ recibo.sequencia }}º desta proposta</strong></span>
+      </div>
+      <p>
+        Documento emitido eletronicamente por {{ empresa_nome }}.
+        {% if telefone_empresa %}Dúvidas: {{ telefone_empresa }}.{% endif %}
+        {% if email_empresa %} {{ email_empresa }}{% endif %}
+      </p>
+    </footer>
+  </article>
+
+  <div class="documento-acoes nao-imprime">
+    <span>Guarde este recibo. Você pode salvá-lo em PDF ou imprimir.</span>
+    <button type="button" id="imprimirRecibo">
+      <i class="bi bi-printer"></i> Imprimir ou salvar em PDF
+    </button>
+  </div>
+</div>
+
+<script>
+(function () {
+  var botao = document.getElementById("imprimirRecibo");
+  if (botao) botao.addEventListener("click", function () { window.print(); });
+})();
+</script>
+</body>
+</html>

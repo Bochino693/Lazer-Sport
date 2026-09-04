@@ -1054,6 +1054,89 @@ Cadastro mínimo de propósito: nome, valor e categoria. Foto e texto de
   </div>
 </div>
 
+<!-- ================= MODAL: recibo de pagamento ================= -->
+{% comment %}
+  A JANELA DO RECIBO NÃO PERGUNTA VALOR NENHUM.
+
+  Recibo e planilha não podem divergir: o documento sai do pagamento já
+  registrado, e por isso aqui não há campo de quantia -- só a
+  confirmação do que o sistema recebeu. Um campo livre seria o caminho
+  mais curto para um papel que afirma um dinheiro que não entrou.
+
+  A janela serve a dois trabalhos: EMITIR (Financeiro e Gestão) e
+  COMPARTILHAR (quem enxerga a proposta). Por isso a lista dos recibos
+  já emitidos aparece para todo mundo, e o botão de emitir só para quem
+  o servidor deixa -- que confere de novo, sempre.
+{% endcomment %}
+<div class="modal fade" id="modalRecibo" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+    <form class="modal-content" id="formRecibo" method="post" action="{% url 'orcamentos_inner' %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="recibo">
+      <input type="hidden" name="id" id="reciboId">
+      <div class="modal-header">
+        <div>
+          <span class="ls-modal-kicker">Documento de pagamento</span>
+          <h5 class="modal-title" id="reciboNome">Recibo</h5>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body">
+        <div id="reciboErro" class="alert alert-danger d-none" role="alert"></div>
+
+        <div class="ls-pagamento-quadro" id="reciboQuadro">
+          <div class="ls-pagamento-linhas">
+            <div><span>Total da proposta</span><strong id="reciboTotal">R$ 0,00</strong></div>
+            <div><span>Já recebido</span><strong id="reciboRecebido">R$ 0,00</strong></div>
+          </div>
+          <div class="ls-pagamento-falta">
+            <span id="reciboPendenteRotulo">Sem recibo ainda</span>
+            <strong id="reciboPendente">R$ 0,00</strong>
+          </div>
+        </div>
+
+        <h6 class="ls-modal-kicker mt-3 mb-2">Recibos emitidos</h6>
+        <div id="reciboLista" class="ls-recibo-lista">
+          <p class="text-muted small mb-0" id="reciboVazio">
+            Nenhum recibo emitido para esta proposta ainda.
+          </p>
+        </div>
+
+        {% comment %}
+          O link do último recibo fica à mão porque é o que a pessoa faz
+          logo depois de emitir: mandar para quem pagou. Copiar e abrir
+          o WhatsApp são os dois caminhos que o comercial já usa para a
+          proposta -- aqui é o mesmo gesto, com outro documento.
+        {% endcomment %}
+        <div id="reciboCompartilhar" class="mt-3" hidden>
+          <label class="form-label" for="reciboLink">Link do recibo</label>
+          <div class="input-group">
+            <input class="form-control" id="reciboLink" readonly>
+            <button class="btn btn-outline-secondary" type="button" id="reciboCopiar">
+              <i class="bi bi-clipboard"></i> Copiar
+            </button>
+            <a class="btn btn-outline-primary" id="reciboAbrir" href="#" target="_blank" rel="noopener">
+              <i class="bi bi-box-arrow-up-right"></i> Abrir
+            </a>
+          </div>
+          <span class="form-text">
+            O cliente abre uma página da Lazer &amp; Sport com o comprovante,
+            e pode salvar em PDF ou imprimir.
+          </span>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Fechar</button>
+        {% if pode_editar_financeiro %}
+        <button type="submit" class="btn btn-info" id="reciboEmitir">
+          <i class="bi bi-receipt me-1"></i> Emitir recibo
+        </button>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+</div>
+
 {% if pode_avaliar_blocos %}
 <!-- ================ MODAL: avaliação setorizada ================= -->
 <div class="modal fade" id="modalAvaliacaoBloco" tabindex="-1" aria-hidden="true">
@@ -2127,6 +2210,129 @@ LSTela.pronto(function () {
     Painel.abrirFilho("modalPagamento", "modalOrcamento");
   });
   Painel.ligar({ form: "formPagamento", erro: "pagamentoErro" });
+
+  /* ------------------------------------------------------------------
+     Recibo de pagamento
+
+     A janela não pergunta valor: ela mostra o que o financeiro já
+     registrou e o quanto disso ainda não virou papel. Quem emite manda
+     apenas o id da proposta -- o servidor faz a conta, porque um valor
+     digitado aqui poderia afirmar um recebimento que não existe.
+     ------------------------------------------------------------------ */
+  function desenharRecibo(orcamento, titulo) {
+    var lista = document.getElementById("reciboLista");
+    var vazio = document.getElementById("reciboVazio");
+    var emitir = document.getElementById("reciboEmitir");
+    var compartilhar = document.getElementById("reciboCompartilhar");
+    var recibos = (orcamento && orcamento.recibos) || [];
+    var pendente = paraNumero(orcamento ? orcamento.recibo_pendente : "0");
+
+    document.getElementById("reciboNome").textContent = titulo || "Recibo";
+    document.getElementById("reciboTotal").textContent =
+      moeda(paraNumero(orcamento ? orcamento.total : "0"));
+    document.getElementById("reciboRecebido").textContent =
+      moeda(paraNumero(orcamento ? orcamento.valor_pago : "0"));
+    document.getElementById("reciboPendenteRotulo").textContent =
+      pendente > 0 ? "Falta emitir recibo de" : "Situação";
+    document.getElementById("reciboPendente").textContent =
+      pendente > 0 ? moeda(pendente) : "Tudo documentado";
+    document.getElementById("reciboQuadro").classList.toggle("quitado", pendente <= 0);
+
+    /* Limpa as linhas antigas sem apagar o parágrafo de "nenhum ainda":
+       ele volta a aparecer sozinho quando não há recibo. */
+    lista.querySelectorAll("[data-recibo-linha]").forEach(function (linha) {
+      linha.remove();
+    });
+    vazio.hidden = recibos.length > 0;
+
+    recibos.forEach(function (recibo) {
+      var linha = document.createElement("div");
+      linha.className = "ls-recibo-item";
+      linha.setAttribute("data-recibo-linha", "1");
+
+      var texto = document.createElement("div");
+      var numero = document.createElement("strong");
+      numero.textContent = recibo.numero;
+      var detalhe = document.createElement("span");
+      detalhe.textContent =
+        "R$ " + recibo.valor
+        + (recibo.quitacao ? " · quitação" : " · parcial")
+        + (recibo.emitido_em ? " · " + recibo.emitido_em : "")
+        + (recibo.emitido_por ? " · " + recibo.emitido_por : "");
+      texto.appendChild(numero);
+      texto.appendChild(detalhe);
+
+      var abrir = document.createElement("a");
+      abrir.className = "btn btn-sm btn-outline-primary";
+      abrir.href = recibo.link;
+      abrir.target = "_blank";
+      abrir.rel = "noopener";
+      abrir.textContent = "Abrir";
+
+      linha.appendChild(texto);
+      linha.appendChild(abrir);
+      lista.appendChild(linha);
+    });
+
+    var ultimo = recibos[0];
+    compartilhar.hidden = !ultimo;
+    if (ultimo) {
+      Painel.valor("reciboLink", ultimo.link);
+      document.getElementById("reciboAbrir").href = ultimo.link;
+    }
+
+    if (emitir) {
+      emitir.disabled = pendente <= 0;
+      emitir.innerHTML = pendente > 0
+        ? '<i class="bi bi-receipt me-1"></i> Emitir recibo de ' + moeda(pendente)
+        : '<i class="bi bi-check2-circle me-1"></i> Nada a emitir';
+    }
+  }
+
+  Painel.aoClicar("[data-recibo]", function (botao) {
+    var orcamento = achar(botao.dataset.recibo);
+    Painel.erro("reciboErro", "");
+    Painel.valor("reciboId", botao.dataset.recibo);
+    desenharRecibo(orcamento, botao.dataset.nome);
+    Painel.abrir("modalRecibo");
+  });
+
+  document.getElementById("reciboCopiar")?.addEventListener("click", function () {
+    var campo = document.getElementById("reciboLink");
+    campo.select();
+    try { document.execCommand("copy"); } catch (e) {}
+    if (navigator.clipboard) navigator.clipboard.writeText(campo.value).catch(function () {});
+    Painel.aviso("Link do recibo copiado.", "ok");
+  });
+
+  Painel.ligar({
+    form: "formRecibo",
+    erro: "reciboErro",
+    rotuloCarregando: "Emitindo…",
+    mensagemPronta: "Recibo emitido.",
+    /* `depois` de propósito: a janela FICA ABERTA. Quem emite o recibo
+       quase sempre vai mandá-lo em seguida, e fechar a janela para
+       reabrir e procurar o link seria trabalho a mais no gesto mais
+       comum. A lista atrás se atualiza sozinha, em segundo plano. */
+    depois: function (json) {
+      var orcamento = achar(document.getElementById("reciboId").value);
+      if (orcamento && json.recibo) {
+        orcamento.recibos = [json.recibo].concat(orcamento.recibos || []);
+        orcamento.recibo_pendente = "0,00";
+        /* Redesenhar num tempo à parte não é firula: logo depois de
+           `depois`, o Painel destrava o botão e devolve a ele o rótulo
+           que tinha ao ligar o formulário. Desenhar antes disso deixaria
+           "Emitir recibo" aceso numa proposta que já não tem o que
+           emitir -- e o segundo clique só descobriria isso no servidor. */
+        window.setTimeout(function () {
+          desenharRecibo(orcamento, document.getElementById("reciboNome").textContent);
+        }, 0);
+      }
+      if (typeof window.LSAtualizarTela === "function") {
+        window.LSAtualizarTela({ partes: true });
+      }
+    },
+  });
 
   var formAvaliacao = document.getElementById("formAvaliacaoBloco");
   if (formAvaliacao) {

@@ -48,6 +48,19 @@ def reais(valor):
 
 
 @register.filter
+def extenso(valor):
+    """1250.5 -> 'mil, duzentos e cinquenta reais e cinquenta centavos'.
+
+    O recibo escreve o valor duas vezes -- em algarismos e por extenso --
+    porque é o extenso que impede um "1.500,00" de virar "11.500,00" com
+    uma canetada depois de assinado.
+    """
+    from core.formatos import por_extenso
+
+    return por_extenso(valor)
+
+
+@register.filter
 def porcento(valor):
     """20 -> 20%; 12.5 -> 12,5%.
 

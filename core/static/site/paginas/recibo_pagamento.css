@@ -1,0 +1,187 @@
+/* Estilo do recibo de pagamento — o comprovante que o cliente guarda.
+ *
+ * Mesma família visual da proposta (`orcamento_publico.css`) e outra
+ * intenção: a proposta vende, o recibo prova. Aqui não há foto de
+ * brinquedo, não há botão que decide nada e não há cor chamando para
+ * ação -- é papel timbrado, e a única coisa que salta é o valor.
+ *
+ * Fora do HTML pelo mesmo motivo do resto: estilo dentro da página não
+ * tem endereço para o navegador guardar, e este documento é aberto
+ * várias vezes pela mesma pessoa (na hora, na prestação de contas, no
+ * ano seguinte).
+ */
+:root{
+  --tinta:#0F172A;
+  --tinta-2:#475569;
+  --tinta-3:#7C8CA5;
+  --papel:#FFFFFF;
+  --linha:#DFE6F1;
+  --linha-forte:#C7D3E6;
+  --marca:#071D68;
+  --verde:#0F9D58;
+  --verde-claro:#E9F8F0;
+  --ambar:#B45309;
+  --ambar-claro:#FEF6E7;
+  --vermelho:#E21A2C;
+  --vermelho-claro:#FFF1F4;
+  --raio:16px;
+  --sombra:0 18px 50px rgba(15,23,42,.09);
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;background:#e9edf5;color:var(--tinta);
+  font-family:Manrope,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  line-height:1.55;-webkit-font-smoothing:antialiased;
+}
+.envelope{max-width:880px;margin:0 auto;padding:24px 16px 64px}
+
+.faixa{
+  display:flex;gap:12px;align-items:flex-start;padding:14px 16px;
+  border-radius:var(--raio);font-size:.9rem;margin-bottom:16px;
+}
+.faixa.vermelha{background:var(--vermelho-claro);border:1px solid #F8C9D4;color:#9F1239}
+.faixa strong{display:block;margin-bottom:2px}
+.faixa-icone{font-size:1.15rem;line-height:1.2}
+
+.folha{
+  background:var(--papel);border:1px solid var(--linha);border-radius:22px;
+  box-shadow:var(--sombra);padding:34px 32px 26px;
+}
+
+/* ---------------------------------------------------------- cabeçalho */
+.topo{
+  display:flex;justify-content:space-between;gap:24px;flex-wrap:wrap;
+  padding-bottom:20px;border-bottom:2px solid var(--marca);
+}
+.topo-marca{display:flex;gap:14px;align-items:flex-start;min-width:0}
+.topo-marca img{width:64px;height:64px;object-fit:contain;flex:0 0 64px}
+.topo-marca strong{display:block;font-size:1.02rem;color:var(--marca);letter-spacing:-.2px}
+.topo-marca span{display:block;font-size:.78rem;color:var(--tinta-2);line-height:1.45}
+.topo-documento{text-align:right;min-width:200px}
+.topo-documento .kicker{
+  display:block;font-size:.68rem;font-weight:800;letter-spacing:.9px;
+  text-transform:uppercase;color:var(--tinta-3);
+}
+.topo-documento h1{
+  margin:2px 0 4px;font-size:2rem;font-weight:800;letter-spacing:-1px;color:var(--marca);
+}
+.topo-documento .numero{margin:0;font-size:1rem;font-weight:800;color:var(--tinta)}
+.topo-documento .emissao{margin:2px 0 8px;font-size:.8rem;color:var(--tinta-2)}
+.selo{
+  display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;
+  font-size:.76rem;font-weight:800;letter-spacing:.2px;
+}
+.selo.verde{background:var(--verde-claro);border:1px solid #B7E4CB;color:#0B6B3E}
+.selo.ambar{background:var(--ambar-claro);border:1px solid #F5DFAE;color:var(--ambar)}
+
+/* ------------------------------------------------------------ quantia */
+/* O ÚNICO LUGAR ONDE O DOCUMENTO LEVANTA A VOZ. Quem abre um recibo
+   procura uma coisa antes de qualquer outra: quanto. */
+.quantia{
+  margin:22px 0;padding:18px 22px;border-radius:var(--raio);
+  background:linear-gradient(180deg,#F7F9FE,#EEF2FB);border:1px solid var(--linha-forte);
+  text-align:center;
+}
+.quantia-rotulo{
+  display:block;font-size:.7rem;font-weight:800;letter-spacing:.8px;
+  text-transform:uppercase;color:var(--tinta-3);
+}
+.quantia-numero{
+  display:block;margin:2px 0 4px;color:var(--marca);
+  font-size:clamp(2rem,7vw,2.9rem);font-weight:800;letter-spacing:-1.6px;
+}
+.quantia-extenso{
+  display:block;color:var(--tinta-2);font-size:.92rem;font-style:italic;
+  /* Primeira letra maiúscula sem duplicar o texto no HTML: o extenso é
+     gerado em minúsculas porque também é lido dentro de frases. */
+  text-transform:none;
+}
+.quantia-extenso::first-letter{text-transform:uppercase}
+
+/* --------------------------------------------------------- declaração */
+.declaracao p{margin:0 0 10px;font-size:.98rem;line-height:1.65}
+.declaracao p:last-child{margin-bottom:0}
+.declaracao strong{color:var(--marca)}
+.declaracao .observacao{
+  margin-top:12px;padding:10px 14px;border-left:3px solid var(--linha-forte);
+  color:var(--tinta-2);font-size:.88rem;background:#F8FAFE;border-radius:0 10px 10px 0;
+}
+
+/* --------------------------------------------------------------- conta */
+.conta{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1px;
+  margin:22px 0;padding:1px;background:var(--linha);
+  border:1px solid var(--linha);border-radius:var(--raio);overflow:hidden;
+}
+.conta-item{background:#fff;padding:14px 16px;min-width:0}
+.conta-item span{
+  display:block;color:var(--tinta-3);font-size:.68rem;font-weight:800;
+  letter-spacing:.6px;text-transform:uppercase;margin-bottom:4px;
+}
+.conta-item strong{display:block;color:var(--tinta);font-size:1.02rem;overflow-wrap:anywhere}
+.conta-item.quitado strong{color:var(--verde)}
+.conta-item.devendo strong{color:var(--ambar)}
+
+/* --------------------------------------------------------------- itens */
+.itens h2{
+  margin:0 0 8px;font-size:.72rem;font-weight:800;letter-spacing:.8px;
+  text-transform:uppercase;color:var(--tinta-3);
+}
+.itens ul{margin:0;padding:0;list-style:none;border-top:1px solid var(--linha)}
+.itens li{
+  padding:8px 0;border-bottom:1px solid var(--linha);font-size:.92rem;
+  display:flex;gap:10px;align-items:baseline;
+}
+.itens .quantidade{font-weight:800;color:var(--marca);flex:0 0 auto}
+
+/* ---------------------------------------------------------- assinatura */
+.assinatura{margin:30px 0 8px;text-align:center}
+.assinatura-local{color:var(--tinta-2);font-size:.9rem;margin-bottom:34px}
+.assinatura-linha{display:inline-block;min-width:280px}
+.assinatura-linha span{display:block;border-top:1px solid var(--tinta-2);margin-bottom:6px}
+.assinatura-linha strong{display:block;font-size:.95rem;color:var(--tinta)}
+.assinatura-linha small{display:block;font-size:.76rem;color:var(--tinta-3)}
+
+/* -------------------------------------------------------------- rodapé */
+.rodape{margin-top:24px;padding-top:16px;border-top:1px dashed var(--linha-forte)}
+.rodape-conferencia{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:8px 18px;
+}
+.rodape-conferencia span{font-size:.7rem;color:var(--tinta-3);overflow-wrap:anywhere}
+.rodape-conferencia strong{display:block;color:var(--tinta);font-size:.8rem;margin-top:2px}
+.rodape p{margin:12px 0 0;font-size:.76rem;color:var(--tinta-3)}
+
+/* --------------------------------------------------------- ações */
+.documento-acoes{
+  display:flex;justify-content:space-between;align-items:center;gap:14px;
+  flex-wrap:wrap;margin-top:18px;padding:14px 18px;background:#fff;
+  border:1px solid var(--linha);border-radius:var(--raio);
+  font-size:.86rem;color:var(--tinta-2);
+}
+.documento-acoes button{
+  border:0;border-radius:12px;padding:11px 18px;font:inherit;font-weight:800;
+  background:var(--marca);color:#fff;cursor:pointer;
+}
+.documento-acoes button:hover{filter:brightness(1.12)}
+
+/* ==================================================================== */
+@media print{
+  /* UMA FOLHA, E A FOLHA INTEIRA. Mesma decisão da proposta e da O.S.:
+     o recibo é curto por natureza -- uma quantia, uma declaração e uma
+     assinatura --, então aqui não há degraus de densidade a calcular.
+     O que precisa sair é a moldura de tela: sombra, fundo cinza e os
+     botões, que em papel viram retângulos sem função. */
+  @page{size:A4 portrait;margin:12mm}
+  html,body{width:186mm;background:#fff;font-size:10.5pt;line-height:1.45}
+  .envelope{width:186mm;max-width:none;margin:0;padding:0}
+  .nao-imprime{display:none!important}
+  .folha{border:0;border-radius:0;box-shadow:none;padding:0}
+  .quantia{background:#fff;border:1.5px solid #000;border-radius:0}
+  .conta{border-color:#999;background:#999}
+  .topo{border-bottom-width:1.5pt}
+  /* Assinatura e rodapé não podem cair sozinhos numa segunda página:
+     recibo com a assinatura numa folha e o valor noutra levanta a
+     pergunta que o documento existe para não levantar. */
+  .assinatura,.rodape{break-inside:avoid}
+}

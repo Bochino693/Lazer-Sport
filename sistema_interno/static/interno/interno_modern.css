@@ -1386,6 +1386,32 @@ textarea.form-control{min-height:100px!important}
 .ls-pagamento-atalhos{display:flex;gap:7px;flex-wrap:wrap;margin:9px 0 3px}
 .ls-pagamento-atalhos .ls-chip{cursor:pointer}
 
+/* ======================================================================
+   RECIBO — O PAPEL DO DINHEIRO QUE ENTROU
+
+   O pagamento registrado virava um selo "Pago" e parava ali; quem pagou
+   pedia o comprovante e alguém escrevia um à mão no Word. A janela de
+   recibo lista os documentos já emitidos com o link pronto para mandar,
+   porque emitir e COMPARTILHAR são o mesmo gesto: ninguém emite recibo
+   para deixar guardado.
+   ====================================================================== */
+.ls-recibo-lista{display:flex;flex-direction:column;gap:8px}
+.ls-recibo-item{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:10px 13px;border:1px solid var(--line);border-radius:13px;
+  background:var(--panel-2);
+}
+.ls-recibo-item>div{display:flex;flex-direction:column;gap:2px;min-width:0}
+.ls-recibo-item strong{color:var(--text);font-size:.92rem}
+.ls-recibo-item span{color:var(--muted);font-size:.72rem;overflow-wrap:anywhere}
+
+/* O número do recibo na coluna de pagamento da lista: é a resposta
+   rápida para "esse já tem recibo?", sem abrir janela nenhuma. */
+.ls-recibo-link{
+  color:var(--acento-claro);text-decoration:none;font-weight:800;
+}
+.ls-recibo-link:hover{text-decoration:underline}
+
 /* A etiqueta de quitado na lista. Some do meio das outras situações: o
    visto e o verde dizem antes de a pessoa ler. */
 .ls-pago{

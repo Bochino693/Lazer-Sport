@@ -17,7 +17,7 @@ from decimal import Decimal
 from django.template import Context, Template
 from django.test import SimpleTestCase, TestCase, override_settings
 
-from core.formatos import dimensoes, dinheiro, medida
+from core.formatos import dimensoes, dinheiro, medida, por_extenso
 
 
 class DinheiroTests(SimpleTestCase):
@@ -83,6 +83,58 @@ class DimensoesTests(SimpleTestCase):
         self.assertEqual(dimensoes(Decimal("2"), None, Decimal("3")), "")
 
 
+class PorExtensoTests(SimpleTestCase):
+    """O valor escrito, que é o que faz um recibo ser recibo.
+
+    Um comprovante com a quantia só em algarismos aceita uma canetada:
+    "1.500,00" vira "11.500,00" e ninguém sabe dizer qual era. Por
+    extenso, o número está escrito duas vezes e as duas têm de bater.
+    """
+
+    def test_o_basico_como_se_le(self):
+        self.assertEqual(por_extenso(Decimal("1")), "um real")
+        self.assertEqual(por_extenso(Decimal("520")), "quinhentos e vinte reais")
+        self.assertEqual(por_extenso(Decimal("100")), "cem reais")
+        self.assertEqual(por_extenso(Decimal("101")), "cento e um reais")
+
+    def test_mil_nao_e_um_mil(self):
+        self.assertEqual(por_extenso(Decimal("1000")), "mil reais")
+        self.assertEqual(por_extenso(Decimal("1500")), "mil e quinhentos reais")
+
+    def test_a_virgula_entra_quando_o_e_nao_cabe(self):
+        """"mil e quinhentos e vinte" não é como se escreve."""
+        self.assertEqual(
+            por_extenso(Decimal("1520")), "mil, quinhentos e vinte reais",
+        )
+        self.assertEqual(
+            por_extenso(Decimal("23980")),
+            "vinte e três mil, novecentos e oitenta reais",
+        )
+
+    def test_milhao_redondo_pede_a_preposicao(self):
+        """"dois milhões reais" é o erro que faz duvidar do documento."""
+        self.assertEqual(por_extenso(Decimal("1000000")), "um milhão de reais")
+        self.assertEqual(por_extenso(Decimal("2000000")), "dois milhões de reais")
+        self.assertEqual(
+            por_extenso(Decimal("1500000")), "um milhão e quinhentos mil reais",
+        )
+
+    def test_os_centavos_entram_com_a_propria_palavra(self):
+        self.assertEqual(por_extenso(Decimal("1.01")), "um real e um centavo")
+        self.assertEqual(
+            por_extenso(Decimal("23980.55")),
+            "vinte e três mil, novecentos e oitenta reais "
+            "e cinquenta e cinco centavos",
+        )
+        self.assertEqual(por_extenso(Decimal("0.05")), "cinco centavos")
+
+    def test_zero_e_zero_reais_mas_vazio_continua_vazio(self):
+        """Zero é uma quantia; campo em branco não é."""
+        self.assertEqual(por_extenso(Decimal("0")), "zero reais")
+        self.assertEqual(por_extenso(None), "")
+        self.assertEqual(por_extenso("abacaxi"), "")
+
+
 @override_settings(ALLOWED_HOSTS=["testserver"])
 class FiltrosDeTemplateTests(TestCase):
 
@@ -100,6 +152,12 @@ class FiltrosDeTemplateTests(TestCase):
         self.assertEqual(self.render("{{ v|porcento }}", v=Decimal("20.00")), "20%")
         self.assertEqual(self.render("{{ v|porcento }}", v=Decimal("12.5")), "12,5%")
         self.assertEqual(self.render("{{ v|porcento }}", v=None), "")
+
+    def test_extenso_no_template(self):
+        self.assertEqual(
+            self.render("{{ v|extenso }}", v=Decimal("1250")),
+            "mil, duzentos e cinquenta reais",
+        )
 
     def test_medida_no_template_com_unidade_escolhida(self):
         self.assertEqual(self.render("{{ v|medida }}", v=Decimal("2.50")), "2,5 m")

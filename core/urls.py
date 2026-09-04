@@ -12,6 +12,7 @@ from .views_gestao_produtos import EngajamentoAdminView, PecaAdminView
 from .views_app_avisos import service_worker_do_site
 from sistema_interno.views_avisos_app import InscricaoDoAplicativoView
 from .views_orcamento import orcamento_publico
+from .views_recibo import recibo_publico
 from .views_ordem_servico import ordem_servico_publica
 from sistema_interno.views_campanhas import CampanhaPublicaDestinoView, CampanhaPublicaView
 from .views_redirects import redirecionar_interno
@@ -381,6 +382,16 @@ urlpatterns = [
         "ordem-servico/<str:token>/",
         ordem_servico_publica,
         name="ordem_servico_publica",
+    ),
+
+    # ---- Recibo de pagamento ----
+    # Documento separado do orçamento, com token próprio: quem paga nem
+    # sempre é quem negociou, e o comprovante circula sem levar junto o
+    # preço unitário e a margem da proposta. Ver `core/views_recibo.py`.
+    path(
+        "recibo/<str:token>/",
+        recibo_publico,
+        name="recibo_publico",
     ),
 
     # O ÍCONE DA ABA, ANTES DO CURINGA.
