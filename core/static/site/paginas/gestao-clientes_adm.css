@@ -382,6 +382,20 @@
     white-space: nowrap;
   }
 
+  /* Segunda linha da identidade: quem responde pelo estabelecimento.
+     Nome da casa em cima, pessoa embaixo -- e, quando não há casa
+     cadastrada, a pessoa ocupa a linha de cima e esta some. */
+  .client-identity small {
+    display: block;
+    max-width: 280px;
+    margin-top: 1px;
+    overflow: hidden;
+    color: #C4B49B;
+    font-size: .74rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   .client-site {
     display: block;
     max-width: 230px;

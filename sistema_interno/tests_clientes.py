@@ -794,6 +794,46 @@ class ClientesNoMapaTests(TestCase):
 
         self.assertContains(resposta, "Colégio Sol")
 
+    def test_a_lista_mostra_o_estabelecimento_e_o_responsavel_embaixo(self):
+        """No mapa quem aparece é a casa, não quem assina por ela.
+
+        A lista trazia "Marta Responsável" em destaque e o buffet em
+        letra miúda embaixo -- o contrário do que o alfinete mostra no
+        site, e do que quem confere a tela procura.
+        """
+        Cliente.objects.create(
+            nome_cliente="Marta Responsável",
+            nome_estabelecimento="Buffet Estrela",
+            tipo=Cliente.Tipo.COMERCIAL,
+            telefone="(11) 95555-1010",
+        )
+
+        html = self.client.get(
+            self.URL, HTTP_HOST="interno.testserver"
+        ).content.decode()
+
+        self.assertIn('<strong class="client-name">Buffet Estrela</strong>', html)
+        self.assertIn("<small>Marta Responsável</small>", html)
+        self.assertNotIn(
+            '<strong class="client-name">Marta Responsável</strong>', html
+        )
+
+    def test_sem_estabelecimento_o_nome_do_cliente_sobe_para_a_linha_de_cima(self):
+        """Sem casa cadastrada, a pessoa é o nome que existe -- e aparece."""
+        Cliente.objects.create(
+            nome_cliente="Condomínio Vista Verde",
+            tipo=Cliente.Tipo.COMERCIAL,
+            telefone="(11) 95555-2020",
+        )
+
+        html = self.client.get(
+            self.URL, HTTP_HOST="interno.testserver"
+        ).content.decode()
+
+        self.assertIn(
+            '<strong class="client-name">Condomínio Vista Verde</strong>', html
+        )
+
     def test_mesma_regra_de_contato_obrigatorio(self):
         """Cadastro sem telefone nem e-mail é linha morta em qualquer tela."""
         resposta = self.post({

@@ -209,6 +209,18 @@ class Cliente(Prime):
         return self.tipo == self.Tipo.BUFFET
 
     @property
+    def nome_publico(self) -> str:
+        """O nome pelo qual o cliente é conhecido de fora.
+
+        QUEM APARECE NO MAPA É A CASA, NÃO O RESPONSÁVEL. Quem vê o
+        alfinete procura o buffet, a escola ou o condomínio -- o nome da
+        pessoa que assina o contrato não diz nada a ele, e na lista da
+        gestão dizia menos ainda do que o estabelecimento logo abaixo.
+        Sem estabelecimento cadastrado, o nome do cliente é o que há.
+        """
+        return (self.nome_estabelecimento or "").strip() or (self.nome_cliente or "").strip()
+
+    @property
     def contato_curto(self) -> str:
         """Primeira forma de falar com o cliente, para caber na lista."""
         return self.telefone or (self.email or "") or "sem contato"
