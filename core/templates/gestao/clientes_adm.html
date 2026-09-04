@@ -110,7 +110,7 @@
               {% with cliente=ficha.obj endereco=ficha.endereco %}
               <tr
                 data-client-id="{{ cliente.id }}"
-                data-client-name="{{ cliente.nome_cliente|default:''|lower }} {{ cliente.nome_estabelecimento|lower }} {{ cliente.cnpj_estabelecimento }}"
+                data-client-name="{{ cliente.nome_estabelecimento|lower }} {{ cliente.nome_cliente|default:''|lower }} {{ cliente.cnpj_estabelecimento }}"
                 data-client-location="{{ endereco.cidade|default:''|lower }} {{ endereco.estado|default:''|lower }} {{ endereco.pais|default:'Brasil'|lower }}"
                 data-active="{% if cliente.ativo %}true{% else %}false{% endif %}"
                 data-published="{% if ficha.no_mapa %}true{% else %}false{% endif %}"
@@ -119,13 +119,21 @@
                   <div class="client-identity">
                     <div class="client-logo">
                       {% if cliente.logo %}
-                        <img src="{{ cliente.logo.url }}" alt="Logo de {{ cliente.nome_cliente }}" loading="lazy" decoding="async">
+                        <img src="{{ cliente.logo.url }}" alt="Logo de {{ cliente.nome_publico }}" loading="lazy" decoding="async">
                       {% else %}
-                        {{ cliente.nome_cliente|default:"C"|slice:":1"|upper }}
+                        {{ cliente.nome_publico|default:"C"|slice:":1"|upper }}
                       {% endif %}
                     </div>
                     <div>
-                      <strong class="client-name">{{ cliente.nome_cliente }}</strong>{% if cliente.nome_estabelecimento %}<small>{{ cliente.nome_estabelecimento }}</small>{% endif %}
+                      {% comment %}
+                        O NOME DE CIMA É O DO ESTABELECIMENTO.
+
+                        Esta tela é o mapa visto por dentro, e no mapa quem
+                        aparece é a casa. O responsável continua logo abaixo,
+                        para quem precisa ligar; sem estabelecimento
+                        cadastrado, ele sobe e ocupa a linha de cima.
+                      {% endcomment %}
+                      <strong class="client-name">{{ cliente.nome_publico }}</strong>{% if cliente.nome_estabelecimento and cliente.nome_cliente %}<small>{{ cliente.nome_cliente }}</small>{% endif %}
                       <span class="client-kind">{{ cliente.get_tipo_display }}</span>
                       {% if cliente.site_cliente %}
                         <a class="client-site" href="{{ cliente.site_cliente }}" target="_blank" rel="noopener">
@@ -170,7 +178,7 @@
                 </td>
                 <td>
                   <div class="client-actions">
-                    <button type="button" class="client-action" data-edit-client="{{ cliente.id }}" title="Editar cliente" aria-label="Editar {{ cliente.nome_cliente }}">
+                    <button type="button" class="client-action" data-edit-client="{{ cliente.id }}" title="Editar cliente" aria-label="Editar {{ cliente.nome_publico }}">
                       <svg><use href="#client-i-edit"/></svg>
                     </button>
 
@@ -178,7 +186,7 @@
                       {% csrf_token %}
                       <input type="hidden" name="action" value="recalcular">
                       <input type="hidden" name="id" value="{{ cliente.id }}">
-                      <button type="submit" class="client-action" title="Recalcular localização" aria-label="Recalcular localização de {{ cliente.nome_cliente }}">
+                      <button type="submit" class="client-action" title="Recalcular localização" aria-label="Recalcular localização de {{ cliente.nome_publico }}">
                         <svg><use href="#client-i-refresh"/></svg>
                       </button>
                     </form>
@@ -187,9 +195,9 @@
                       type="button"
                       class="client-action is-danger"
                       data-delete-client="{{ cliente.id }}"
-                      data-delete-name="{{ cliente.nome_cliente }}"
+                      data-delete-name="{{ cliente.nome_publico }}"
                       title="Excluir cliente"
-                      aria-label="Excluir {{ cliente.nome_cliente }}">
+                      aria-label="Excluir {{ cliente.nome_publico }}">
                       <svg><use href="#client-i-trash"/></svg>
                     </button>
                   </div>

@@ -95,3 +95,37 @@ class SemCdnNoSiteTests(TestCase):
         ]
 
         self.assertEqual(faltando, [], f"Fonte referenciada e ausente: {faltando}")
+
+
+class AncoraNaoEmolduraASecaoTests(TestCase):
+    """Clicar no menu leva à seção -- e não deixa uma moldura em volta dela.
+
+    Para o leitor de tela e o teclado continuarem de onde a rolagem
+    parou, ls-ancoras.js põe tabindex="-1" no destino e dá foco a ele.
+    Foco dado por programa não é foco de teclado, mas o navegador
+    desenha o anel padrão do mesmo jeito: um retângulo preto em volta do
+    bloco inteiro, que ficava lá depois de cada clique em "Mapa de
+    Clientes", "Combos" ou "Brinquedos".
+
+    Os dois testes andam juntos de propósito: enquanto o script der
+    foco, o CSS precisa apagar o anel.
+    """
+
+    SITE = Path(__file__).resolve().parent / "static" / "site"
+
+    def test_o_destino_da_ancora_nao_ganha_anel_de_foco(self):
+        css = (self.SITE / "ls-ancoras.css").read_text(encoding="utf-8")
+
+        regra = re.search(r'\[tabindex="-1"\]:focus[^{]*\{([^}]*)\}', css)
+
+        self.assertIsNotNone(
+            regra,
+            'ls-ancoras.css precisa apagar o anel de foco de [tabindex="-1"].',
+        )
+        self.assertIn("outline: none", regra.group(1))
+
+    def test_o_script_continua_dando_foco_ao_destino(self):
+        js = (self.SITE / "ls-ancoras.js").read_text(encoding="utf-8")
+
+        self.assertIn('setAttribute("tabindex", "-1")', js)
+        self.assertIn("focus({ preventScroll: true })", js)

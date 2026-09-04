@@ -368,7 +368,7 @@ class HomeView(View):
         clientes_mapa = [
             {
                 "tipo": "cliente",
-                "nome": e.cliente.nome_estabelecimento or e.cliente.nome_cliente or "Cliente Lazer & Sport",
+                "nome": e.cliente.nome_publico or "Cliente Lazer & Sport",
                 "logo": logo_da_casa,
                 "cidade": e.cidade or "",
                 "estado": e.estado or "",

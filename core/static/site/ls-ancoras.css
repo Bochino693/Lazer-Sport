@@ -10,6 +10,23 @@ html {
     scroll-padding-top: var(--ls-ancora-offset);
 }
 
+/* A MOLDURA PRETA EM VOLTA DA SEÇÃO INTEIRA.
+
+   Para o leitor de tela e o teclado continuarem de onde a rolagem parou,
+   o destino recebe tabindex="-1" e foco (ver ls-ancoras.js). Só que foco
+   dado por programa não é foco de teclado: o navegador desenhava mesmo
+   assim o anel padrão -- um retângulo preto em volta do bloco todo, que
+   ficava lá depois de cada clique no menu.
+
+   tabindex="-1" quer dizer, por definição, "não está na ordem de
+   tabulação": ninguém chega aqui de Tab, então não há o que sinalizar.
+   Quem se navega de verdade -- link, botão, campo -- tem foco próprio e
+   segue com o anel amarelo definido em ls-base.css. */
+[tabindex="-1"]:focus,
+[tabindex="-1"]:focus-visible {
+    outline: none;
+}
+
 /* Destino recém-alcançado pisca uma vez: em página longa, chegar sem sinal
    nenhum deixa a pessoa sem saber se algo aconteceu. */
 .ls-ancora-alvo {
