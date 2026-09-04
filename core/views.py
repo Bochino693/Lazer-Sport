@@ -1,5 +1,9 @@
+import hmac
+from functools import wraps
+
 from django.db.models import Subquery, OuterRef
 from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_protect
 from django.views.generic import View
 from django.contrib.auth.models import User
 
@@ -734,11 +738,13 @@ class ManutencaoView(View):
         return render(request, self.template_name, contexto)
 
 
+from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
 from django.shortcuts import redirect, get_object_or_404
 from django.contrib import messages
 
 
+@login_required
 @require_POST
 def cancelar_manutencao(request):
     usuario = request.user.perfil
@@ -4390,21 +4396,29 @@ class CarrinhoView(LoginRequiredMixin, View):
         return render(request, 'carrinho.html', context)
 
 
-from django.views.decorators.csrf import csrf_exempt
 import json
+
+from django.views.decorators.http import require_POST
+
 from .models import Carrinho, Frete
 from .utils import calcular_frete_por_cep
 
 
-@csrf_exempt
+# O CSRF VOLTOU A VALER AQUI.
+#
+# Esta rota grava o endereço de entrega no carrinho de QUEM ESTÁ LOGADO,
+# e estava isenta de CSRF: uma página qualquer, aberta noutra aba,
+# conseguia trocar o endereço do carrinho do cliente sem que ele
+# soubesse -- o navegador manda o cookie de sessão sozinho. A tela do
+# carrinho já enviava o cabeçalho `X-CSRFToken`, então a isenção não
+# servia sequer para o site funcionar.
+@login_required
+@require_POST
 def calcular_frete(request):
-    if request.method != "POST":
-        return JsonResponse({"status": "erro"})
-
     try:
         data = json.loads(request.body)
-    except:
-        return JsonResponse({"status": "erro"})
+    except (ValueError, TypeError):
+        return JsonResponse({"status": "erro"}, status=400)
 
     cep = data.get("cep")
     rua = data.get("rua")
@@ -4627,20 +4641,32 @@ def aplicar_cupom(request):
     })
 
 
+@login_required
+@require_POST
 def salvar_cpf_carrinho(request):
-    if request.method != "POST":
-        return JsonResponse({"status": "erro"})
+    """Guarda o CPF/CNPJ que vai na nota do pedido.
 
+    Pedia login sem dizer: `request.user.perfil` não existe em visitante,
+    e o que a pessoa via era um erro 500 em vez de um convite a entrar.
+    O documento também passou a ser guardado só como dígitos -- é o que
+    a cobrança usa, e evita gravar texto livre num campo de identidade.
+    """
     try:
         data = json.loads(request.body)
-        cpf = data.get("cpf")
-    except:
-        return JsonResponse({"status": "erro"})
+    except (ValueError, TypeError):
+        return JsonResponse({"status": "erro"}, status=400)
+
+    cpf = "".join(c for c in str(data.get("cpf") or "") if c.isdigit())[:14]
+    if len(cpf) not in (11, 14):
+        return JsonResponse(
+            {"status": "erro", "message": "Informe um CPF ou CNPJ válido."},
+            status=400,
+        )
 
     carrinho = Carrinho.objects.filter(cliente=request.user.perfil).first()
 
     if not carrinho:
-        return JsonResponse({"status": "erro"})
+        return JsonResponse({"status": "erro"}, status=404)
 
     carrinho.cpf_cnpj = cpf
     carrinho.save(update_fields=["cpf_cnpj"])
@@ -5224,6 +5250,52 @@ from django.db import transaction
 from .models import Carrinho, Pedido, ItemPedido
 
 
+def _assinatura_do_mercado_pago_confere(request, payment_id) -> bool:
+    """A notificação veio mesmo do Mercado Pago?
+
+    ELA JÁ ERA INOFENSIVA, E MESMO ASSIM VALE CONFERIR. Um forjador não
+    consegue aprovar pedido nenhum por aqui: o que decide é a consulta
+    que fazemos ao Mercado Pago logo abaixo, com a nossa credencial --
+    a mensagem recebida serve só para dizer QUAL cobrança olhar. O que a
+    assinatura evita é o resto: alguém disparando milhares de avisos
+    falsos e nos fazendo consultar a API de terceiros por conta disso.
+
+    Sem `MP_WEBHOOK_SECRET` configurado, nada muda -- a proteção continua
+    sendo a consulta. Configurado, a mensagem sem assinatura válida é
+    descartada antes de custar qualquer coisa.
+
+    O formato é o do painel do Mercado Pago:
+    `x-signature: ts=<carimbo>,v1=<hash>`, com o hash calculado sobre
+    `id:<id>;request-id:<x-request-id>;ts:<carimbo>;`.
+    """
+    segredo = (getattr(settings, "MP_WEBHOOK_SECRET", "") or "").strip()
+    if not segredo:
+        return True
+
+    partes = {}
+    for pedaco in (request.headers.get("x-signature") or "").split(","):
+        chave, _, valor = pedaco.partition("=")
+        partes[chave.strip()] = valor.strip()
+
+    carimbo = partes.get("ts")
+    recebido = partes.get("v1")
+    if not carimbo or not recebido:
+        return False
+
+    manifesto = (
+        f"id:{str(payment_id).lower()};"
+        f"request-id:{request.headers.get('x-request-id', '')};"
+        f"ts:{carimbo};"
+    )
+    calculado = hmac.new(
+        segredo.encode("utf-8"),
+        manifesto.encode("utf-8"),
+        hashlib.sha256,
+    ).hexdigest()
+
+    return hmac.compare_digest(calculado, recebido)
+
+
 @csrf_exempt
 def webhook_mercadopago(request):
     if request.method != "POST":
@@ -5240,6 +5312,13 @@ def webhook_mercadopago(request):
     payment_id = data.get("data", {}).get("id")
     if not payment_id:
         return HttpResponse(status=200)
+
+    if not _assinatura_do_mercado_pago_confere(request, payment_id):
+        payment_logger.warning(
+            "Webhook descartado por assinatura inválida: payment=%s",
+            payment_id,
+        )
+        return HttpResponse(status=401)
 
     sdk = mercadopago.SDK(settings.MP_ACCESS_TOKEN)
 
@@ -6108,6 +6187,67 @@ def atualizar_tipo_envio(request, carrinho_id):
     })
 
 
+# ======================================================================
+# A ESTAÇÃO DE IMPRESSÃO É A ÚNICA QUE ENTRA AQUI
+#
+# Estas duas rotas nasceram abertas: qualquer pessoa na internet podia
+# pedir /api/v1/pedidos-impressao/ e receber, em JSON, o NOME, o
+# TELEFONE e o ENDEREÇO COMPLETO de todo cliente com pedido em aberto,
+# com itens e valores -- e podia marcar qualquer pedido como impresso,
+# fazendo com que ele nunca fosse impresso de verdade.
+#
+# Quem chama isso é um programa, não uma pessoa, e programa não tem
+# sessão de navegador. Por isso são duas portas:
+#
+#   * TOKEN -- a estação manda `Authorization: Token <IMPRESSAO_API_TOKEN>`.
+#     Sem cookie não há CSRF a proteger, e a comparação é em tempo
+#     constante para não vazar o token letra por letra;
+#   * SESSÃO DE EQUIPE -- quem está logado no painel também abre, e aí o
+#     CSRF vale como em qualquer outra tela, porque o navegador manda
+#     cookie sozinho.
+#
+# Sem token configurado na hospedagem, sobra a segunda porta. O que não
+# existe mais é a terceira, que era ninguém nenhum.
+# ======================================================================
+def _token_da_estacao_confere(request) -> bool:
+    esperado = (getattr(settings, "IMPRESSAO_API_TOKEN", "") or "").strip()
+    if not esperado:
+        return False
+
+    prefixo = "Token "
+    enviado = request.headers.get("Authorization", "")
+    if not enviado.startswith(prefixo):
+        return False
+
+    return hmac.compare_digest(enviado[len(prefixo):].strip(), esperado)
+
+
+def somente_estacao_de_impressao(view):
+    """Token da estação, ou conta de equipe logada. Mais ninguém."""
+
+    @wraps(view)
+    def porteiro(request, *args, **kwargs):
+        if _token_da_estacao_confere(request):
+            return view(request, *args, **kwargs)
+
+        from sistema_interno.permissoes import faz_parte_da_equipe
+
+        usuario = getattr(request, "user", None)
+        if getattr(usuario, "is_authenticated", False) and (
+            usuario.is_staff or faz_parte_da_equipe(usuario)
+        ):
+            # Sessão de navegador: o CSRF volta a valer aqui dentro.
+            return csrf_protect(view)(request, *args, **kwargs)
+
+        return JsonResponse({"erro": "sem_acesso"}, status=403)
+
+    # O middleware precisa deixar o pedido chegar até aqui para o caminho
+    # do token existir; a proteção de verdade é a de cima.
+    porteiro.csrf_exempt = True
+    return porteiro
+
+
+@method_decorator(somente_estacao_de_impressao, name="dispatch")
 class PedidosParaImpressaoAPI(View):
     def get(self, request):
         pedidos = (
@@ -6192,7 +6332,7 @@ class PedidosParaImpressaoAPI(View):
 from django.views.decorators.csrf import csrf_exempt
 
 
-@method_decorator(csrf_exempt, name='dispatch')
+@method_decorator(somente_estacao_de_impressao, name="dispatch")
 class MarcarPedidoImpressoAPI(View):
 
     def post(self, request, pedido_id):
@@ -6210,30 +6350,20 @@ class MarcarPedidoImpressoAPI(View):
             return JsonResponse({"erro": "Pedido não encontrado"}, status=404)
 
 
-# No Django (Produção)
-from django.http import JsonResponse
-from django.contrib.auth import authenticate
-from django.views.decorators.csrf import csrf_exempt
-
-
-@csrf_exempt  # Isento para permitir o POST do seu Flask local
-def verify_auth_api(request):
-    u = request.POST.get('username')
-    p = request.POST.get('password')
-    key = request.POST.get('app_key')
-
-    # Proteção simples para garantir que só o seu Flask chame esta rota
-    if key != 'SUA_CHAVE_DE_SEGURANCA_ENTRE_APPS':
-        return JsonResponse({'valid': False}, status=403)
-
-    user = authenticate(username=u, password=p)
-    if user:
-        return JsonResponse({
-            'valid': True,
-            'is_staff': user.is_staff,
-            'is_superuser': user.is_superuser
-        })
-    return JsonResponse({'valid': False}, status=401)
+# AQUI EXISTIA UM PROVADOR DE SENHAS, E ELE FOI EMBORA.
+#
+# `verify_auth_api` recebia usuário e senha de qualquer um, sem sessão e
+# sem CSRF, e respondia se o par valia -- dizendo de quebra se a conta
+# era staff ou superusuário. A única tranca era comparar um campo do
+# formulário com uma chave de exemplo escrita aqui mesmo, no repositório:
+# quem lesse o código passava, e teria um endereço para testar senhas
+# sem limite nenhum.
+#
+# Ela não tinha rota em urls.py -- nunca chegou a atender ninguém --, e
+# era isso que a tornava perigosa: bastava alguém ligar a rota um dia,
+# sem reler o corpo. Se um dia a integração voltar a ser necessária, o
+# caminho é o mesmo da estação de impressão, mais acima: token secreto
+# fora do código, comparado em tempo constante.
 
 
 def robots_txt(request):

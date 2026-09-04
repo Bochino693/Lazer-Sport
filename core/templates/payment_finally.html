@@ -213,24 +213,27 @@ button {
         <!-- CEP -->
         <div class="form-group" style="display:flex; justify-content:center;">
             <div>
-                <label>CEP</label>
+                <label for="cep">CEP</label>
                 <input
                     type="text"
                     name="cep"
                     id="cep"
+                    aria-describedby="erroCep"
                     class="input-md input-cep"
                     maxlength="9"
                     placeholder="12345-678"
                     inputmode="numeric"
                 >
-                <div class="erro" id="erroCep">CEP inválido ou não encontrado</div>
+                {# `role=alert` faz o leitor de tela anunciar o erro no
+                   instante em que ele aparece, sem esperar o foco. #}
+                <div class="erro" id="erroCep" role="alert">CEP inválido ou não encontrado</div>
             </div>
         </div>
 
         <!-- Telefone -->
         <div class="form-group" style="display:flex; justify-content:center;">
             <div>
-                <label>Telefone para contato</label>
+                <label for="telefone">Telefone para contato</label>
                 <input
                     type="tel"
                     name="telefone"
@@ -247,7 +250,7 @@ button {
 
         <!-- Rua -->
         <div class="form-group">
-            <label>Rua</label>
+            <label for="rua">Rua</label>
             <input
                 type="text"
                 name="rua"
@@ -260,7 +263,7 @@ button {
         <!-- Número + Complemento -->
         <div class="form-row">
             <div class="form-group">
-                <label>Número</label>
+                <label for="numero">Número</label>
                 <input
                     type="text"
                     name="numero"
@@ -271,7 +274,7 @@ button {
             </div>
 
             <div class="form-group">
-                <label>Complemento</label>
+                <label for="complemento">Complemento</label>
                 <input
                     type="text"
                     name="complemento"
@@ -284,7 +287,7 @@ button {
 
         <!-- Bairro -->
         <div class="form-group">
-            <label>Bairro</label>
+            <label for="bairro">Bairro</label>
             <input
                 type="text"
                 name="bairro"
@@ -297,7 +300,7 @@ button {
         <!-- Cidade + Estado -->
         <div class="form-row">
             <div class="form-group">
-                <label>Cidade</label>
+                <label for="cidade">Cidade</label>
                 <input
                     type="text"
                     name="cidade"
@@ -308,7 +311,7 @@ button {
             </div>
 
             <div class="form-group">
-                <label>UF</label>
+                <label for="estado">UF</label>
                 <input
                     type="text"
                     name="estado"

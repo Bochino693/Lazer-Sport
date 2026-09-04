@@ -131,10 +131,15 @@
                 </div>
             {% else %}
                 <div class="cupom-input">
-                    <input type="text" id="cupomCodigo" placeholder="Digite seu cupom">
-                    <button onclick="aplicarCupom()">Aplicar</button>
+                    {# Sem rótulo ligado ao campo, o leitor de tela anunciava
+                       "caixa de texto" e mais nada. #}
+                    <label class="ls-so-leitor-de-tela" for="cupomCodigo">Código do cupom</label>
+                    <input type="text" id="cupomCodigo" placeholder="Digite seu cupom"
+                           autocomplete="off" aria-describedby="cupom-msg">
+                    <button type="button" onclick="aplicarCupom()">Aplicar</button>
                 </div>
-                <small id="cupom-msg" style="color:red;"></small>
+                {# `role=status` faz o resultado ser falado assim que chega. #}
+                <small id="cupom-msg" role="status" style="color:red;"></small>
             {% endif %}
 
         </div><!-- cupom-box -->

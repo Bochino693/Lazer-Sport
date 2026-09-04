@@ -4,9 +4,13 @@ import time
 import uuid
 from urllib.parse import urlencode
 
+from django.conf import settings
 from django.db import InterfaceError, OperationalError, close_old_connections
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import redirect
 from django.urls import reverse
+
+from . import protecao_login
 
 
 logger_performance = logging.getLogger("lazer.performance")
@@ -394,3 +398,164 @@ class LojaSomenteDeClienteMiddleware:
         if not user or not user.is_authenticated:
             return True
         return not e_da_equipe(user)
+
+
+class PoliticaDeConteudoMiddleware:
+    """Content-Security-Policy: de onde a página pode carregar o que carrega.
+
+    POR QUE ELA EXISTE. Um XSS -- um texto de cliente que vire código na
+    tela de outra pessoa -- normalmente termina em duas coisas: puxar um
+    script de fora ou mandar o formulário para fora. A CSP fecha as duas
+    portas no navegador, mesmo que um dia um `escape` falhe em algum
+    canto do sistema. É a rede de baixo do trapézio, não o trapézio.
+
+    O QUE FICA ABERTO, E POR QUÊ. `'unsafe-inline'` continua em script e
+    style: o site tem estilo e script escritos dentro do HTML em dezenas
+    de telas, e uma CSP que quebra a página é desligada no dia seguinte.
+    Isso reduz o alcance da política, mas o que ela ainda barra é o que
+    mais importa e é o que um ataque precisa:
+
+      * `script-src` sem curinga -- nada de `<script src="site-do-mal">`;
+      * `object-src 'none'` -- nada de Flash/applet embutido;
+      * `base-uri 'self'` -- ninguém reescreve a base dos links relativos;
+      * `form-action 'self'` -- formulário não é redirecionado para fora
+        levando o que a pessoa digitou;
+      * `frame-ancestors 'none'` -- a página não é emoldurada por outro
+        site (clickjacking), o mesmo que o X-Frame-Options diz.
+
+    OS ENDEREÇOS DE FORA SÃO OS QUE O SITE JÁ USA HOJE: o SDK do Mercado
+    Pago (checkout), o mapa embutido do Google, os ladrilhos do
+    OpenStreetMap e o ViaCEP. Fonte, ícone e folha de estilo saem todos
+    do próprio servidor, então não há nada a liberar aí.
+
+    Se algum dia uma tela quebrar por causa disto, `CSP_SOMENTE_RELATO=1`
+    troca a política por modo de relato: o navegador avisa no console e
+    não bloqueia nada, e dá tempo de achar o que faltou sem tirar a
+    proteção do resto do site.
+    """
+
+    POLITICA = (
+        "default-src 'self'",
+        "base-uri 'self'",
+        "object-src 'none'",
+        "frame-ancestors 'none'",
+        "form-action 'self'",
+        "script-src 'self' 'unsafe-inline' https://sdk.mercadopago.com",
+        "style-src 'self' 'unsafe-inline'",
+        "font-src 'self' data:",
+        # Imagem não executa nada, e as do catálogo vêm do Cloudinary com
+        # domínio que muda por conta. Aqui a lista fechada só criaria
+        # buraco visual sem fechar buraco de segurança.
+        "img-src 'self' data: blob: https:",
+        "media-src 'self' https:",
+        "connect-src 'self' https://viacep.com.br https://*.mercadopago.com"
+        " https://*.mercadolibre.com",
+        "frame-src 'self' https://maps.google.com https://www.google.com"
+        " https://*.mercadopago.com",
+        "worker-src 'self'",
+        "manifest-src 'self'",
+        "upgrade-insecure-requests",
+    )
+
+    #: Onde o cabeçalho não ajuda e só pesa: resposta que não é página.
+    TIPOS_IGNORADOS = ("image/", "font/", "video/", "audio/")
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+        self.valor = "; ".join(self.POLITICA)
+        self.cabecalho = (
+            "Content-Security-Policy-Report-Only"
+            if getattr(settings, "CSP_SOMENTE_RELATO", False)
+            else "Content-Security-Policy"
+        )
+
+    def __call__(self, request):
+        response = self.get_response(request)
+
+        tipo = (response.get("Content-Type") or "").lower()
+        if tipo.startswith(self.TIPOS_IGNORADOS):
+            return response
+
+        response.setdefault(self.cabecalho, self.valor)
+        # Só o que a própria página precisa. O navegador para de oferecer
+        # câmera, microfone e localização em nome deste site.
+        response.setdefault(
+            "Permissions-Policy",
+            "geolocation=(), camera=(), microphone=(), payment=(), usb=()",
+        )
+        return response
+
+
+class ProtecaoDeLoginMiddleware:
+    """Recusa o POST de senha quando a origem já errou vezes demais.
+
+    A CONTAGEM É DE OUTRO LUGAR. Quem soma as falhas é o sinal
+    ``user_login_failed`` do Django, em `core/protecao_login.py`, e por
+    isso vale para toda porta: site, painel, /system/, allauth e a API do
+    aplicativo. Aqui só se decide se o pedido chega ou não à view --
+    coisa que o sinal, disparado depois da tentativa, não faria a tempo.
+
+    A resposta é 429 com ``Retry-After``, e não uma página de erro
+    genérica: quem está do outro lado é, na esmagadora maioria das vezes,
+    uma pessoa que esqueceu a senha. Ela precisa entender que é espera, e
+    não conta apagada.
+    """
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        if request.method == "POST" and self._e_porta_de_senha(request):
+            identidade = (
+                request.POST.get("username")
+                or request.POST.get("login")
+                or request.POST.get("email")
+                or ""
+            )
+            espera = protecao_login.espera_restante(request, str(identidade)[:150])
+            if espera:
+                return self._recusar(request, espera)
+
+        return self.get_response(request)
+
+    def _e_porta_de_senha(self, request) -> bool:
+        caminho = request.path
+        return any(
+            caminho.startswith(rota)
+            for rota in protecao_login.CAMINHOS_DE_LOGIN
+        )
+
+    def _recusar(self, request, espera):
+        minutos = max(1, round(espera / 60))
+        recado = (
+            "Muitas tentativas de entrada a partir deste dispositivo. "
+            f"Espere {minutos} minuto(s) e tente de novo. "
+            "Se você esqueceu a senha, use a opção de recuperação."
+        )
+
+        if request.path.startswith("/api/") or "application/json" in (
+            request.headers.get("Accept") or ""
+        ):
+            resposta = JsonResponse(
+                {"detail": recado, "erro": "muitas_tentativas"},
+                status=429,
+            )
+        else:
+            resposta = HttpResponse(
+                "<!doctype html>"
+                '<html lang="pt-BR"><head><meta charset="utf-8">'
+                '<meta name="viewport" content="width=device-width, initial-scale=1">'
+                "<title>Espere um momento para tentar de novo</title></head>"
+                '<body style="font-family:system-ui,sans-serif;margin:0;'
+                'padding:2.5rem 1.25rem;background:#f5f8ff;color:#20242c">'
+                '<main style="max-width:34rem;margin:0 auto">'
+                "<h1>Espere um momento para tentar de novo</h1>"
+                f"<p>{recado}</p>"
+                '<p><a href="/" style="color:#0b5cd5">Voltar para a página inicial</a></p>'
+                "</main></body></html>",
+                status=429,
+                content_type="text/html; charset=utf-8",
+            )
+
+        resposta["Retry-After"] = str(int(espera))
+        return resposta

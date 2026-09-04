@@ -52,8 +52,13 @@ ALLOWED_HOSTS = [
     "lazersport.com",
     "www.lazersport.com",
     "interno.lazersport.com",
-    ".vercel.app",
-    ".onrender.com",
+    # SEM CURINGA DE HOSPEDAGEM AQUI.
+    #
+    # Eram ".vercel.app" e ".onrender.com": qualquer projeto de qualquer
+    # pessoa nessas plataformas é um subdomínio desses domínios, e um
+    # host aceito é usado para montar link absoluto -- e-mail de proposta,
+    # redefinição de senha. O endereço real da hospedagem entra logo
+    # abaixo, pela variável que a própria plataforma publica.
     "localhost",
     # Em desenvolvimento, http://interno.localhost:8000 cai no
     # SubdomainURLMiddleware e abre o painel interno sem precisar de
@@ -71,18 +76,26 @@ CSRF_TRUSTED_ORIGINS = [
     "https://lazersport.com",
     "https://www.lazersport.com",
     "https://interno.lazersport.com",
-    "https://*.vercel.app",
-    "https://*.onrender.com",
+    # Mesma razão da lista de hosts: origem confiável para CSRF é uma
+    # lista de endereços nossos, não de uma plataforma inteira.
     "http://interno.localhost:8000",
 ]
 
-VERCEL_URL = os.getenv("VERCEL_URL", "").strip()
-if VERCEL_URL:
-    if VERCEL_URL not in ALLOWED_HOSTS:
-        ALLOWED_HOSTS.append(VERCEL_URL)
-    vercel_origin = f"https://{VERCEL_URL}"
-    if vercel_origin not in CSRF_TRUSTED_ORIGINS:
-        CSRF_TRUSTED_ORIGINS.append(vercel_origin)
+# O endereço que a hospedagem publica para ESTE serviço -- e só ele.
+# `RENDER_EXTERNAL_HOSTNAME` e `VERCEL_URL` são postas pela própria
+# plataforma; é assim que o deploy continua funcionando sem precisar de
+# curinga e sem editar código a cada ambiente novo.
+for _hospedagem in (
+    os.getenv("RENDER_EXTERNAL_HOSTNAME", "").strip(),
+    os.getenv("VERCEL_URL", "").strip(),
+):
+    if not _hospedagem:
+        continue
+    if _hospedagem not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append(_hospedagem)
+    _origem = f"https://{_hospedagem}"
+    if _origem not in CSRF_TRUSTED_ORIGINS:
+        CSRF_TRUSTED_ORIGINS.append(_origem)
 
 extra_hosts = os.getenv("DJANGO_ALLOWED_HOSTS", "")
 for host in extra_hosts.split(","):
@@ -167,11 +180,21 @@ MIDDLEWARE = [
     "core.middleware.RequestTimingMiddleware",
     "core.middleware.BandwidthEconomyMiddleware",
     "django.middleware.security.SecurityMiddleware",
+    # De onde a página pode carregar script, estilo, imagem e moldura.
+    # Fica no alto de propósito: assim o cabeçalho acompanha TODA
+    # resposta, inclusive as que nascem aqui em cima e nunca chegam à
+    # view -- redirecionamento, 404, 500 e a recusa por excesso de
+    # tentativas. Ver `core.middleware.PoliticaDeConteudoMiddleware`.
+    "core.middleware.PoliticaDeConteudoMiddleware",
     "django.middleware.gzip.GZipMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "core.middleware.SubdomainURLMiddleware",
+    # Freio de tentativas de senha. Precisa vir DEPOIS da sessão (lê
+    # POST) e ANTES da autenticação, para recusar antes de conferir a
+    # senha. Ver `core/protecao_login.py`.
+    "core.middleware.ProtecaoDeLoginMiddleware",
     "core.middleware.InternalResponseRecoveryMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -635,11 +658,77 @@ REST_FRAMEWORK = {
 APP_DEEP_LINK = os.getenv("APP_DEEP_LINK", "lazersport://auth").strip()
 
 # ============================================================
+# ESTAÇÃO DE IMPRESSÃO DOS PEDIDOS
+# ============================================================
+# O programa que imprime os pedidos na loja não tem sessão de navegador:
+# ele se identifica por este segredo, no cabeçalho
+# `Authorization: Token <valor>`. Sem ele configurado, as rotas de
+# impressão só atendem quem está logado no painel -- que é o estado
+# seguro, e não o antigo, em que atendiam a internet inteira.
+#
+# Vale um valor longo e sorteado, guardado só na hospedagem:
+#     python -c "import secrets; print(secrets.token_urlsafe(32))"
+IMPRESSAO_API_TOKEN = os.getenv("IMPRESSAO_API_TOKEN", "").strip()
+
+# ============================================================
 # SEGURANÇA / COOKIES / PROXY HTTPS
 # ============================================================
 SESSION_COOKIE_SECURE = ENVIRONMENT == "production"
 CSRF_COOKIE_SECURE = ENVIRONMENT == "production"
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
+# ------------------------------------------------------------------
+# O QUE O NAVEGADOR PRECISA OUVIR DE NÓS, E SÓ UMA VEZ
+# ------------------------------------------------------------------
+# O cookie de sessão é a identidade de quem está logado. Faltavam três
+# coisas para ele não vazar no caminho:
+#
+#   * HTTPS OBRIGATÓRIO. Sem `SECURE_SSL_REDIRECT`, um link http:// era
+#     atendido em texto puro antes de qualquer redirecionamento nosso --
+#     e numa rede aberta o cookie ia junto, legível.
+#   * HSTS. Depois da primeira visita, o navegador passa a recusar http://
+#     para este domínio POR CONTA PRÓPRIA, sem sequer pedir. É o que
+#     fecha a janela do primeiro pedido, que é onde o ataque mora.
+#   * SAMESITE. "Lax" já é o padrão do Django, mas escrito aqui ele deixa
+#     de depender de padrão: o cookie não acompanha requisição vinda de
+#     outro site, que é a base do CSRF.
+#
+# Tudo condicionado a produção -- em desenvolvimento não há HTTPS, e o
+# redirecionamento deixaria o `runserver` inalcançável.
+SECURE_SSL_REDIRECT = ENVIRONMENT == "production"
+# O health check da hospedagem bate em http interno; redirecioná-lo faria
+# a instância parecer fora do ar.
+SECURE_REDIRECT_EXEMPT = [r"^healthz/$"]
+
+# Um ano, o mínimo que a lista de pré-carga dos navegadores aceita.
+# `SECURE_HSTS_PRELOAD` fica desligado por padrão: entrar na lista é fácil
+# e sair leva meses, então é uma decisão a tomar de propósito, com todos os
+# subdomínios já em HTTPS.
+SECURE_HSTS_SECONDS = 31536000 if ENVIRONMENT == "production" else 0
+SECURE_HSTS_INCLUDE_SUBDOMAINS = ENVIRONMENT == "production"
+SECURE_HSTS_PRELOAD = os.getenv(
+    "SECURE_HSTS_PRELOAD", "0"
+).strip().lower() in ("1", "true", "yes", "on")
+
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = "Lax"
+CSRF_COOKIE_SAMESITE = "Lax"
+
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
+SECURE_CROSS_ORIGIN_OPENER_POLICY = "same-origin"
+X_FRAME_OPTIONS = "DENY"
+
+# Modo de relato da CSP: o navegador avisa e não bloqueia. Serve para
+# descobrir o que falta liberar sem tirar a proteção do resto do site.
+# Desligável só para depuração local; em produção fica ligado.
+PROTECAO_LOGIN_ATIVA = os.getenv(
+    "PROTECAO_LOGIN_ATIVA", "1"
+).strip().lower() in ("1", "true", "yes", "on")
+
+CSP_SOMENTE_RELATO = os.getenv(
+    "CSP_SOMENTE_RELATO", "0"
+).strip().lower() in ("1", "true", "yes", "on")
 
 # Opcional. Configure COOKIE_DOMAIN=.lazersport.com.br somente quando estiver
 # usando o domínio próprio. Não configure durante testes em *.vercel.app.
@@ -673,6 +762,13 @@ def _credencial_mp(nome, remover_bearer=False):
 
 MP_ACCESS_TOKEN = _credencial_mp("MP_ACCESS_TOKEN", remover_bearer=True)
 MP_PUBLIC_KEY = _credencial_mp("MP_PUBLIC_KEY")
+
+# Assinatura das notificações de pagamento. Sai do painel do Mercado Pago,
+# em "Suas integrações > Webhooks > Chave secreta". Vazia, o webhook
+# continua funcionando como antes -- quem decide se um pagamento foi
+# aprovado é sempre a consulta que fazemos com a credencial acima, nunca a
+# mensagem recebida. Preenchida, mensagem forjada é descartada na porta.
+MP_WEBHOOK_SECRET = _credencial_mp("MP_WEBHOOK_SECRET")
 
 # ============================================================
 # E-MAIL (SMTP) -- usado pra avisar o cliente quando o status de

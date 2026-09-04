@@ -26,9 +26,11 @@
             <!-- IMAGEM PRINCIPAL -->
             <div class="proj-image">
                 {% if projeto.brinquedo_projetado.imagens_brinquedo_projeto.first %}
-                <img src="{{ projeto.brinquedo_projetado.imagens_brinquedo_projeto.first.imagem.url }}">
+                <img src="{{ projeto.brinquedo_projetado.imagens_brinquedo_projeto.first.imagem.url }}"
+                     alt="{{ projeto.titulo }}" loading="lazy" decoding="async">
                 {% else %}
-                <img src="{% static 'images/sem-imagem.svg' %}">
+                {# Decorativa: o título do projeto está logo abaixo. #}
+                <img src="{% static 'images/sem-imagem.svg' %}" alt="" aria-hidden="true">
                 {% endif %}
             </div>
 
@@ -54,7 +56,9 @@
                 <div class="modal-gallery">
                     {% for img in projeto.brinquedo_projetado.imagens_brinquedo_projeto.all %}
                     <div class="modal-img">
-                        <img src="{{ img.imagem.url }}">
+                        <img src="{{ img.imagem.url }}"
+                             alt="{{ img.legenda|default:projeto.titulo }}"
+                             loading="lazy" decoding="async">
                         {% if img.legenda %}
                         <span>{{ img.legenda }}</span>
                         {% endif %}

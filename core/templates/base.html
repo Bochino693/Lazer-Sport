@@ -102,6 +102,17 @@
 </head>
 <body>
 
+{% comment %}
+  PULAR PARA O CONTEÚDO.
+
+  Antes desta linha, quem navega por teclado -- e quem usa leitor de tela
+  -- passava por catorze itens de menu, a busca e o carrinho ANTES de
+  chegar ao texto da página, em toda página. O atalho é o primeiro ponto
+  de tabulação do documento, fica invisível até receber foco e leva
+  direto ao <main>.
+{% endcomment %}
+<a class="ls-pular-para-conteudo" href="#conteudo">Pular para o conteúdo</a>
+
 <!-- ======= CABEÇALHO ======= -->
 <header>
 
@@ -250,7 +261,10 @@
 
     <!-- Campo de busca (único do site) -->
     <form class="search-box" action="{% url 'search' %}" method="get">
-      <input type="text" name="q" value="{{ request.GET.q }}" placeholder="Digite o nome do brinquedo, categoria ou modelo..." required>
+      {# O rótulo é o título acima do campo; sem esta ligação, o leitor de
+         tela anunciava só "caixa de texto". #}
+      <label class="ls-so-leitor-de-tela" for="ls-busca-do-site">O que você procura</label>
+      <input id="ls-busca-do-site" type="text" name="q" value="{{ request.GET.q }}" placeholder="Digite o nome do brinquedo, categoria ou modelo..." required>
       <button type="submit"><i class="fas fa-search"></i> Buscar</button>
     </form>
 
@@ -285,7 +299,7 @@
 </section>
 
 <!-- ======= CONTEÚDO DINÂMICO ======= -->
-<main class="content-section{% block main_class %}{% endblock %}">
+<main id="conteudo" tabindex="-1" class="content-section{% block main_class %}{% endblock %}">
   {% block content %}
   {% endblock %}
 </main>

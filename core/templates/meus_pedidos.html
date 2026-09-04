@@ -186,7 +186,9 @@
             <div class="item-detalhe">
                 <div class="item-img">
                     {% if item.imagem_brinquedo %}
-                        <img src="{{ item.imagem_brinquedo.url }}">
+                        <img src="{{ item.imagem_brinquedo.url }}"
+                             alt="{{ item.nome_item|default:'Item do pedido' }}"
+                             loading="lazy" decoding="async">
                     {% else %}
                         <div class="img-placeholder">📦</div>
                     {% endif %}

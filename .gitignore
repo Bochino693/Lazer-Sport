@@ -1,3 +1,22 @@
 .venv/
 __pycache__/
 *.py[cod]
+
+# SEGREDO NÃO ENTRA NO REPOSITÓRIO.
+# Chave do Django, credenciais do banco, do Cloudinary, do Mercado Pago e
+# do SMTP moram na hospedagem. Quem clona o projeto cria o próprio .env.
+.env
+.env.*
+!.env.example
+
+# Banco de desenvolvimento. Estava versionado, com contas (hashes de
+# senha) e perfis de clientes dentro -- ou seja, dado pessoal viajando em
+# cada clone do repositório. O banco de verdade é o Supabase.
+*.sqlite3
+*.sqlite3-journal
+
+# Uploads locais: são arquivos de gente, e em produção vão para o
+# Cloudinary. Não é conteúdo de código.
+/media/
+
+.DS_Store

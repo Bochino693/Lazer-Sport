@@ -218,9 +218,11 @@
 
     <div class="img-area">
         {% if item.imagem_brinquedo %}
-            <img src="{{ item.imagem_brinquedo.url }}">
+            <img src="{{ item.imagem_brinquedo.url }}"
+                 alt="{{ item.nome_brinquedo }}" loading="lazy" decoding="async">
         {% else %}
-            <img src="{% static 'images/sem-imagem.svg' %}">
+            {# Decorativa: o nome do brinquedo já está escrito ao lado. #}
+            <img src="{% static 'images/sem-imagem.svg' %}" alt="" aria-hidden="true">
         {% endif %}
     </div>
 
