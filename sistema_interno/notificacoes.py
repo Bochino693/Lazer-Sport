@@ -218,6 +218,31 @@ def avisar_ciencia_ordem_servico(ordem):
     )
 
 
+def avisar_venda_assinada(venda):
+    """Cliente assinou o comprovante de uma venda.
+
+    Vai para quem cuida de dinheiro e para quem registrou a venda: é o
+    aviso de que existe um documento assinado no lugar de uma promessa.
+    """
+    pessoas = {}
+    for usuario in User.objects.filter(is_active=True):
+        if tem_funcao(usuario, FINANCEIRO) or tem_funcao(usuario, GESTAO):
+            pessoas[usuario.pk] = usuario
+    if venda.registrada_por is not None and venda.registrada_por.is_active:
+        pessoas[venda.registrada_por.pk] = venda.registrada_por
+
+    return _entregar(
+        pessoas.values(),
+        {
+            "titulo": f"Venda {venda.numero_documento} assinada pelo cliente",
+            "corpo": f"{venda.destinatario} assinou o comprovante.",
+            "url": "/vendas/inner/",
+            "marca": _marca(f"venda:{venda.pk}:assinada"),
+            "urgente": False,
+        },
+    )
+
+
 def enviar_pendencias_urgentes(usuario, avisos):
     """Resumo individual usado pelo observador; levanta erro para poder repetir."""
     linhas = [f"{aviso.titulo}: {aviso.quantidade} — {aviso.detalhe}" for aviso in avisos]

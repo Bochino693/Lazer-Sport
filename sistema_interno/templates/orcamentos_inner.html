@@ -1054,6 +1054,70 @@ Cadastro mínimo de propósito: nome, valor e categoria. Foto e texto de
   </div>
 </div>
 
+<!-- ============== MODAL: comprovante de venda ==================== -->
+{% comment %}
+  O QUE ESTA JANELA ENTREGA. O link do comprovante daquele recebimento --
+  a página em que o cliente confere o que comprou, quanto pagou e quanto
+  falta, e assina eletronicamente. É o mesmo caminho do envio da
+  proposta, e por isso repete os gestos dali: copiar, abrir, WhatsApp.
+{% endcomment %}
+<div class="modal fade" id="modalDocumentoVenda" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div>
+          <span class="ls-modal-kicker">Financeiro</span>
+          <h5 class="modal-title">Comprovante de venda</h5>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-danger d-none" id="vendaErro" role="alert"></div>
+        <p class="text-muted small mb-2">
+          Documento de <strong id="vendaCliente">cliente</strong>. O cliente
+          abre a página, confere os valores e assina — a equipe é avisada
+          na hora da assinatura.
+        </p>
+
+        <div class="ls-pagamento-quadro" id="vendaQuadro">
+          <div class="ls-pagamento-linhas">
+            <div><span>Total da proposta</span><strong id="vendaTotal">R$ 0,00</strong></div>
+            <div><span>Pago nesta venda</span><strong id="vendaValor">R$ 0,00</strong></div>
+          </div>
+          <div class="ls-pagamento-falta">
+            <span>Documento</span>
+            <strong id="vendaNumero">—</strong>
+          </div>
+        </div>
+
+        <label class="form-label mt-3" for="vendaLink">Link do comprovante</label>
+        <div class="input-group">
+          <input class="form-control" id="vendaLink" readonly
+                 placeholder="Gerando documento…">
+          <button class="btn btn-outline-secondary" type="button" id="vendaCopiar" disabled>
+            <i class="bi bi-clipboard" aria-hidden="true"></i> Copiar
+          </button>
+          <a class="btn btn-outline-primary" id="vendaAbrir" href="#" target="_blank" rel="noopener" hidden>
+            <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i> Abrir
+          </a>
+        </div>
+
+        <div class="d-flex flex-wrap gap-2 mt-3">
+          <a class="btn btn-outline-secondary btn-sm" id="vendaPrevia" href="#" target="_blank" rel="noopener" hidden>
+            <i class="bi bi-printer" aria-hidden="true"></i> Conferir e imprimir
+          </a>
+          <button type="button" class="btn btn-success btn-sm" id="vendaWhatsapp" hidden>
+            <i class="bi bi-whatsapp" aria-hidden="true"></i> Mandar no WhatsApp
+          </button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Fechar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 {% if pode_avaliar_blocos %}
 <!-- ================ MODAL: avaliação setorizada ================= -->
 <div class="modal fade" id="modalAvaliacaoBloco" tabindex="-1" aria-hidden="true">
@@ -2127,6 +2191,114 @@ LSTela.pronto(function () {
     Painel.abrirFilho("modalPagamento", "modalOrcamento");
   });
   Painel.ligar({ form: "formPagamento", erro: "pagamentoErro" });
+
+  /* ------------------------------------------------------------------
+     COMPROVANTE DE VENDA
+
+     Um clique só: o servidor emite o documento daquele recebimento e
+     devolve o link. Não há formulário porque não há nada a digitar -- o
+     valor, o cliente e os itens já estão no orçamento, e inventar uma
+     tela de preenchimento aqui seria pedir de novo o que o sistema já
+     sabe.
+     ------------------------------------------------------------------ */
+  var vendaAtual = { link: "", nome: "", numero: "" };
+
+  function mostrarComprovante(json) {
+    var campo = document.getElementById("vendaLink");
+    var copiar = document.getElementById("vendaCopiar");
+    var abrir = document.getElementById("vendaAbrir");
+    var previa = document.getElementById("vendaPrevia");
+    var whats = document.getElementById("vendaWhatsapp");
+
+    vendaAtual.link = json.link || "";
+    vendaAtual.numero = json.numero || "";
+
+    campo.value = vendaAtual.link;
+    campo.placeholder = vendaAtual.link ? "" : "Link indisponível";
+    copiar.disabled = !vendaAtual.link;
+    abrir.hidden = !vendaAtual.link;
+    if (vendaAtual.link) abrir.href = vendaAtual.link;
+    previa.hidden = !json.previa;
+    if (json.previa) previa.href = json.previa;
+    whats.hidden = !vendaAtual.link;
+
+    document.getElementById("vendaNumero").textContent = json.numero || "—";
+    if (json.valor) document.getElementById("vendaValor").textContent = "R$ " + json.valor;
+    if (json.valor_documento) {
+      document.getElementById("vendaTotal").textContent = "R$ " + json.valor_documento;
+    }
+  }
+
+  Painel.aoClicar("[data-documento-venda]", function (botao) {
+    var id = String(botao.dataset.documentoVenda || "").trim();
+
+    vendaAtual = {
+      link: "",
+      nome: botao.dataset.nome || "cliente",
+      numero: "",
+      whatsapp: botao.dataset.whatsapp || ""
+    };
+
+    document.getElementById("vendaCliente").textContent = vendaAtual.nome;
+    document.getElementById("vendaTotal").textContent = botao.dataset.total || "R$ 0,00";
+    document.getElementById("vendaValor").textContent = botao.dataset.valor || "R$ 0,00";
+    document.getElementById("vendaNumero").textContent = "—";
+    Painel.erro("vendaErro", "");
+    mostrarComprovante({ link: "", previa: "" });
+    document.getElementById("vendaLink").placeholder = "Gerando documento…";
+    Painel.abrir("modalDocumentoVenda");
+
+    var dados = new FormData();
+    dados.set("action", "documento_venda");
+    dados.set("id", id);
+    dados.set(
+      "csrfmiddlewaretoken",
+      (document.querySelector("[name=csrfmiddlewaretoken]") || {}).value || ""
+    );
+
+    Painel.rede.post("{% url 'orcamentos_inner' %}", {
+      method: "POST",
+      body: dados,
+      headers: { "X-Requested-With": "XMLHttpRequest" },
+      credentials: "same-origin"
+    })
+      .then(function (resposta) {
+        return resposta.json().catch(function () { return null; })
+          .then(function (json) {
+            if (!resposta.ok || !json || json.status !== "sucesso") {
+              throw new Error(
+                (json && json.msg) || "Não consegui emitir o comprovante."
+              );
+            }
+            return json;
+          });
+      })
+      .then(mostrarComprovante)
+      .catch(function (erro) {
+        document.getElementById("vendaLink").placeholder = "Link indisponível";
+        Painel.erro("vendaErro", erro.message);
+      });
+  });
+
+  document.getElementById("vendaCopiar")?.addEventListener("click", function () {
+    var campo = document.getElementById("vendaLink");
+    if (!campo.value) return;
+    campo.select();
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(campo.value);
+    } else {
+      document.execCommand("copy");
+    }
+    Painel.aviso("Link copiado.", "ok");
+  });
+
+  document.getElementById("vendaWhatsapp")?.addEventListener("click", function () {
+    if (!vendaAtual.link) return;
+    var texto = "Olá! Segue o comprovante da sua compra na Lazer & Sport"
+      + (vendaAtual.numero ? " (" + vendaAtual.numero + ")" : "")
+      + ": " + vendaAtual.link;
+    Painel.whatsapp.abrir(vendaAtual.whatsapp || "", texto);
+  });
 
   var formAvaliacao = document.getElementById("formAvaliacaoBloco");
   if (formAvaliacao) {

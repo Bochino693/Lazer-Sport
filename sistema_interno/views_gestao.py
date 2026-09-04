@@ -68,6 +68,7 @@ from . import etapas_padrao
 from . import fragmento
 from .sincronia import revisao_modulo
 from . import financeiro as fin
+from . import vendas as servico_vendas
 from .models import (
     AtividadeOrcamento,
     Cliente,
@@ -1423,6 +1424,72 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
             saldo=f"{orcamento.saldo_pagamento:.2f}".replace(".", ","),
         )
 
+    def acao_documento_venda(self, request):
+        """Emite o comprovante da venda desta proposta, para o cliente assinar.
+
+        POR QUE ELA EXISTE. Uma proposta aprovada costuma ser paga em
+        pedaços -- entrada agora, o resto na entrega -- e até aqui o que
+        existia dessa entrada era um número dentro do orçamento. Nem o
+        cliente tinha comprovante do que pagou, nem a empresa tinha um
+        papel assinado dizendo o que foi vendido e quanto entrou.
+
+        O QUE ELA FAZ. Pega a venda daquele recebimento (ela já nasceu com
+        o pagamento -- ver `sistema_interno/vendas.py`), marca o
+        comprovante como emitido e devolve o link público. A partir daí é
+        o mesmo caminho do envio da proposta: o cliente abre, confere e
+        assina eletronicamente.
+
+        SÓ APARECE COM DINHEIRO REGISTRADO. Comprovante de venda sem
+        valor recebido é um papel que afirma o que não aconteceu.
+        """
+        if not capacidades(request.user)["orcamentos_editar_financeiro"]:
+            return self.erro(
+                request,
+                "Somente Financeiro ou Gestão emite comprovante de venda.",
+                status=403,
+            )
+
+        orcamento = self._orcamento_do_usuario(request, request.POST.get("id"))
+
+        if (orcamento.valor_pago or Decimal("0.00")) <= 0:
+            raise ErroDeFormulario(
+                "Esta proposta ainda não recebeu nenhum valor. Registre o "
+                "pagamento primeiro -- o comprovante nasce do dinheiro que "
+                "entrou."
+            )
+
+        venda = servico_vendas.venda_para_documento(
+            orcamento, usuario=request.user
+        )
+        if venda is None:
+            raise ErroDeFormulario(
+                "Não encontrei o recebimento desta proposta para documentar."
+            )
+
+        servico_vendas.emitir_documento(venda)
+        registrar_atividade_orcamento(
+            orcamento,
+            request,
+            AtividadeOrcamento.Tipo.PAGAMENTO,
+            resumo=f"Comprovante de venda {venda.numero_documento} emitido",
+        )
+
+        return self.sucesso(
+            request,
+            f"Comprovante {venda.numero_documento} pronto para assinatura.",
+            venda_id=venda.pk,
+            numero=venda.numero_documento,
+            valor=f"{venda.valor:.2f}".replace(".", ","),
+            valor_documento=f"{venda.valor_documento:.2f}".replace(".", ","),
+            assinada=venda.assinada,
+            link=endereco_do_site(request) + venda.caminho_publico,
+            previa=reverse(
+                "venda_previa_inner",
+                args=[venda.pk],
+                urlconf="sistema_interno.urls",
+            ),
+        )
+
     def acao_gerar_ordem_servico(self, request):
         """Não gera mais -- e diz onde a O.S. nasce agora.
 
@@ -2101,6 +2168,28 @@ class OrcamentoPreviaInnerView(OrcamentoInternoRequiredMixin, View):
             padrao=reverse("orcamentos_inner", urlconf="sistema_interno.urls"),
         )
         return render(request, "orcamento_publico.html", contexto)
+
+
+class VendaPreviaInnerView(FinanceiroInternoRequiredMixin, View):
+    """O comprovante de venda visto por dentro, antes de mandar ao cliente.
+
+    Mesmo documento da página pública, com a assinatura desativada: quem
+    abre aqui é a equipe conferindo o papel, e uma assinatura da equipe no
+    lugar da do cliente é exatamente o que este documento existe para não
+    deixar acontecer. Serve também para imprimir.
+    """
+
+    def get(self, request, pk):
+        from core.views_venda import carregar_venda, contexto_venda
+
+        venda = carregar_venda(pk=pk)
+        contexto = contexto_venda(venda, previsualizacao=True, request=request)
+        contexto["voltar_url"] = destino_de_retorno(
+            request,
+            request.GET.get("voltar"),
+            padrao=reverse("vendas_inner", urlconf="sistema_interno.urls"),
+        )
+        return render(request, "venda_publica.html", contexto)
 
 
 class BuscaItensOrcamentoView(OrcamentoInternoRequiredMixin, View):

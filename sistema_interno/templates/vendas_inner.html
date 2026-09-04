@@ -1,86 +1,229 @@
 {% extends "base_inner.html" %}
-{% load interno_extras %}
-{% block title %}Vendas | Lazer & Sport{% endblock %}
-{% block top_title %}Vendas da loja{% endblock %}
+{% load interno_extras l10n %}
+
+{% comment %}
+  Números que entram em CSS passam por |unlocalize: em pt-BR o Django
+  renderiza 100.0 como "100,0", e "height: 100,0%" é declaração inválida
+  -- a barra simplesmente não desenha.
+{% endcomment %}
+
+{% block title %}Vendas | Lazer &amp; Sport{% endblock %}
+{% block top_title %}Vendas{% endblock %}
 {% block body_class %}ls-commercial-body{% endblock %}
 
 {% block content %}
-{% comment %}
-  Mesma correção da tela de Pedidos: a bolinha do menu conta as vendas
-  da loja que ainda não foram confirmadas (`core.Venda`), e esta tela
-  listava `CentralVendas`, tabela interna antiga e vazia. O número do
-  menu e o conteúdo da tela nunca falavam da mesma coisa.
-{% endcomment %}
 <section class="ls-page-hero">
   <div class="ls-page-hero-copy">
-    <span class="ls-page-kicker">Loja · financeiro</span>
+    <span class="ls-page-kicker">Dinheiro que entrou</span>
     <h1>Vendas</h1>
-    <p>Cada venda nasce de um pedido finalizado. A bolinha do menu conta as que ainda esperam confirmação.</p>
+    <p>
+      Orçamentos, ordens de serviço e loja online no mesmo caixa — de
+      {{ inicio|date:"m/Y" }} a {{ fim|date:"m/Y" }}. Cada recebimento
+      aparece na data em que entrou, e não na última vez que o documento
+      foi mexido.
+    </p>
+  </div>
+  <div class="ls-page-hero-actions">
+    {% for opcao in janelas %}
+      <a class="btn {% if opcao == janela %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+         href="?meses={{ opcao }}">{{ opcao }} meses</a>
+    {% endfor %}
   </div>
 </section>
 
 <section class="ls-metrics">
-  {% for chave, rotulo, valor, icone, cor, nota in cartoes %}
-    <a class="ls-metric-card ls-budget-filter-card {{ cor }} {% if filtro_ativo == chave %}active{% endif %}"
-       href="?filtro={{ chave }}"
-       aria-current="{% if filtro_ativo == chave %}page{% else %}false{% endif %}">
-      <div class="ls-metric-head">
-        <span class="ls-metric-label">{{ rotulo }}</span>
-        <span class="ls-metric-icon"><i class="bi {{ icone }}"></i></span>
-      </div>
-      <strong class="ls-metric-value">{{ valor }}</strong>
-      <span class="ls-metric-note">{% if filtro_ativo == chave %}Filtro ativo{% else %}{{ nota }}{% endif %}</span>
-    </a>
+  <article class="ls-metric-card green">
+    <div class="ls-metric-head">
+      <span class="ls-metric-label">Recebido no período</span>
+      <span class="ls-metric-icon"><i class="bi bi-graph-up-arrow"></i></span>
+    </div>
+    <strong class="ls-metric-value">R$ {{ total_recebido|moeda }}</strong>
+    <span class="ls-metric-note">
+      {{ quantidade_vendas }} venda{{ quantidade_vendas|pluralize }} ·
+      ticket médio R$ {{ ticket_medio|moeda }}
+    </span>
+  </article>
+
+  <article class="ls-metric-card yellow">
+    <div class="ls-metric-head">
+      <span class="ls-metric-label">Ainda a receber</span>
+      <span class="ls-metric-icon"><i class="bi bi-hourglass-split"></i></span>
+    </div>
+    <strong class="ls-metric-value">R$ {{ a_receber.total|moeda }}</strong>
+    {% comment %}
+      Saldo a receber NÃO é venda: é promessa. Fica ao lado, e nunca
+      dentro do recebido -- misturar os dois é como uma empresa descobre
+      tarde que faturou no papel e não no caixa.
+    {% endcomment %}
+    <span class="ls-metric-note">
+      Propostas R$ {{ a_receber.orcamentos|moeda }} · O.S. R$ {{ a_receber.ordens_servico|moeda }}
+    </span>
+  </article>
+
+  <article class="ls-metric-card blue">
+    <div class="ls-metric-head">
+      <span class="ls-metric-label">Comprovantes assinados</span>
+      <span class="ls-metric-icon"><i class="bi bi-patch-check"></i></span>
+    </div>
+    <strong class="ls-metric-value">{{ documentos_assinados }}</strong>
+    <span class="ls-metric-note">{{ documentos_pendentes }} aguardando assinatura</span>
+  </article>
+
+  <article class="ls-metric-card violet">
+    <div class="ls-metric-head">
+      <span class="ls-metric-label">Sem documento</span>
+      <span class="ls-metric-icon"><i class="bi bi-file-earmark-x"></i></span>
+    </div>
+    <strong class="ls-metric-value">{{ a_documentar }}</strong>
+    <span class="ls-metric-note">Recebimentos que ainda não viraram comprovante</span>
+  </article>
+</section>
+
+<section class="ls-origin-finance-grid mb-3" aria-label="Recebido por origem">
+  {% for origem in origens %}
+  <article class="ls-origin-finance-card">
+    <div class="ls-origin-finance-head">
+      <span class="ls-origin-badge">
+        <i class="bi {% if origem.codigo == 'orcamento' %}bi-file-earmark-text{% elif origem.codigo == 'ordem_servico' %}bi-wrench-adjustable{% else %}bi-bag-check{% endif %}"></i>
+        {{ origem.rotulo }}
+      </span>
+      <strong>{{ origem.quantidade }} venda{{ origem.quantidade|pluralize }}</strong>
+    </div>
+    <div class="ls-origin-finance-values">
+      <span><small>Recebido</small><strong>R$ {{ origem.total|moeda }}</strong></span>
+    </div>
+  </article>
   {% endfor %}
 </section>
 
-<section class="ls-budget-money-strip">
-  <div class="success"><span>Recebido e confirmado</span><strong>R$ {{ valor_confirmado|moeda }}</strong></div>
+<section class="ls-panel mb-3">
+  <div class="ls-panel-header">
+    <div>
+      <h2>Entrou por mês</h2>
+      <p>Cada barra é o mês; as faixas mostram de onde veio o dinheiro.</p>
+    </div>
+    <span class="ls-chart-legend">
+      {% for origem in origens %}
+        <span><i class="ls-dot origem-{{ origem.codigo }}"></i> {{ origem.rotulo }}</span>
+      {% endfor %}
+    </span>
+  </div>
+
+  <div class="ls-panel-body">
+    {% if teto %}
+      {% comment %}
+        Empilhada, e não três barras lado a lado: a primeira pergunta é
+        "quanto entrou neste mês", e a composição vem depois. Três barras
+        separadas invertem essa ordem e obrigam a somar de cabeça.
+      {% endcomment %}
+      <div class="ls-bars" role="img"
+           aria-label="Recebimentos por mês e por origem, de {{ inicio|date:'m/Y' }} a {{ fim|date:'m/Y' }}">
+        {% for linha in serie %}
+          <div class="ls-bar-col"
+               title="{{ linha.rotulo_longo }} — R$ {{ linha.total|moeda }}">
+            <div class="ls-bar-pair">
+              <span class="ls-bar ls-bar-empilhada" style="height: {{ linha.altura|unlocalize }}%">
+                {% for parte in linha.partes %}{% if parte.valor %}<span class="ls-bar-fatia origem-{{ parte.codigo }}" style="height: {{ parte.altura|unlocalize }}%"></span>{% endif %}{% endfor %}
+              </span>
+            </div>
+            <span class="ls-bar-label">{{ linha.rotulo }}</span>
+          </div>
+        {% endfor %}
+      </div>
+      <div class="ls-chart-foot">
+        <span>Maior mês do período: R$ {{ teto|moeda }}</span>
+        <span>Total recebido: R$ {{ total_recebido|moeda }}</span>
+      </div>
+    {% else %}
+      <div class="ls-empty">
+        <i class="bi bi-bar-chart"></i>
+        Nenhum recebimento neste período. Um pagamento registrado num
+        orçamento ou numa ordem de serviço aparece aqui na hora.
+      </div>
+    {% endif %}
+  </div>
 </section>
 
 <section class="ls-data-panel">
   <div class="ls-data-header">
     <div>
-      <h2>Registros de venda</h2>
-      <p>Pedido de origem, cliente, valor e forma de pagamento.</p>
+      <h2>Últimas vendas</h2>
+      <p>Origem, documento, cliente, valor e situação do comprovante.</p>
     </div>
   </div>
   <div class="ls-data-body">
     <div class="table-responsive ls-commercial-table-wrap">
       <table class="ls-table ls-commercial-table ls-vendas-table">
         <thead>
-          <tr><th>#</th><th>Pedido</th><th>Cliente</th><th class="text-end">Valor</th><th>Pagamento</th><th>Situação</th><th>Data</th></tr>
+          <tr>
+            <th scope="col">Origem</th>
+            <th scope="col">Documento</th>
+            <th scope="col">Cliente</th>
+            <th scope="col" class="text-end">Valor</th>
+            <th scope="col">Comprovante</th>
+            <th scope="col">Quando</th>
+            <th scope="col" class="text-end">Ações</th>
+          </tr>
         </thead>
         <tbody>
-          {% for venda in vendas %}
+          {% for linha in vendas %}
             <tr>
-              <td data-rotulo="Nº"><strong>#{{ venda.id }}</strong></td>
-              <td data-rotulo="Pedido">{% if venda.pedido_id %}<strong>#{{ venda.pedido_id }}</strong>{% else %}<span class="text-muted">—</span>{% endif %}</td>
-              <td data-rotulo="Cliente">{% firstof venda.pedido.cliente.user.get_full_name venda.pedido.cliente.user.username "Cliente do site" %}</td>
-              <td data-rotulo="Valor" class="text-end"><strong>R$ {{ venda.valor_pago|moeda }}</strong></td>
-              <td data-rotulo="Pagamento">{{ venda.get_forma_pagamento_display|default:"—" }}</td>
-              <td data-rotulo="Situação">
-                {% if venda.confirmado %}<span class="ls-status success">Confirmada</span>
-                {% else %}<span class="ls-status warning">Aguardando confirmação</span>{% endif %}
+              <td data-rotulo="Origem">
+                <span class="ls-status neutral">{{ linha.origem }}</span>
               </td>
-              <td data-rotulo="Data">{{ venda.criacao|date:"d/m/Y H:i"|default:"—" }}</td>
+              <td data-rotulo="Documento">
+                <span class="material-nome">{{ linha.documento }}</span>
+                {% if linha.tipo == "interna" %}
+                  <span class="material-sub d-block">{{ linha.venda.numero_documento }}</span>
+                {% endif %}
+              </td>
+              <td data-rotulo="Cliente">{{ linha.cliente }}</td>
+              <td data-rotulo="Valor" class="text-end">
+                <span class="ls-money">R$ {{ linha.valor|moeda }}</span>
+                {% if linha.tipo == "interna" and linha.venda.parcial %}
+                  <span class="material-sub d-block">de R$ {{ linha.venda.valor_documento|moeda }}</span>
+                {% endif %}
+              </td>
+              <td data-rotulo="Comprovante">
+                {% if linha.assinada %}
+                  <span class="ls-pago"><i class="bi bi-patch-check-fill" aria-hidden="true"></i> Assinado</span>
+                {% elif linha.tipo == "interna" and linha.venda.documento_emitido %}
+                  <span class="ls-status warning">Aguardando assinatura</span>
+                {% elif linha.tipo == "interna" %}
+                  <span class="ls-status neutral">Não emitido</span>
+                {% else %}
+                  <span class="text-muted">—</span>
+                {% endif %}
+              </td>
+              <td data-rotulo="Quando">{{ linha.quando|date:"d/m/Y H:i"|default:"—" }}</td>
+              <td data-rotulo="Ações" class="ls-actions text-end">
+                {% if linha.tipo == "interna" %}
+                  <a class="btn btn-sm btn-outline-primary"
+                     href="{% url 'venda_previa_inner' linha.venda.id %}"
+                     target="_blank" rel="noopener"
+                     title="Conferir e imprimir o comprovante"
+                     aria-label="Abrir comprovante {{ linha.venda.numero_documento }}">
+                    <i class="bi bi-file-earmark-text" aria-hidden="true"></i><span class="ls-action-label">Documento</span>
+                  </a>
+                {% else %}
+                  <span class="text-muted">—</span>
+                {% endif %}
+              </td>
             </tr>
           {% empty %}
-            <tr><td colspan="7">
-              <div class="ls-empty">
-                <i class="bi bi-receipt"></i>
-                {% if filtro_ativo == "a_confirmar" %}
-                  Nenhuma venda esperando confirmação. Está tudo em dia.
-                {% else %}
-                  Nenhuma venda nesta situação.
-                {% endif %}
-              </div>
-            </td></tr>
+            <tr>
+              <td colspan="7">
+                <div class="ls-empty">
+                  <i class="bi bi-receipt"></i>
+                  Nenhuma venda registrada ainda. Um pagamento lançado num
+                  orçamento ou numa ordem de serviço entra aqui na hora.
+                </div>
+              </td>
+            </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
-    {% include "includes/paginacao.html" with pagina=page_obj %}
   </div>
 </section>
 {% endblock %}

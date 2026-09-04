@@ -1,0 +1,179 @@
+{% load static interno_extras %}<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#1F2937">
+<title>{{ venda.numero_documento }} | Lazer &amp; Sport</title>
+<link rel="icon" type="image/png" href="{% estatico 'images/favicon-64.png' %}">
+<link rel="stylesheet" href="{% estatico 'vendor/fontes.css' %}">
+<link rel="stylesheet" href="{% static 'interno/vendor/bootstrap-icons.min.css' %}">
+<link rel="stylesheet" href="{% estatico 'site/paginas/venda_publica.css' %}">
+</head>
+<body>
+<main class="documento" id="conteudo">
+
+{% comment %}
+  A barra da prévia também é a saída: o documento abre em outra aba, e o
+  painel mora em outro subdomínio -- o "voltar" do navegador não tem para
+  onde ir.
+{% endcomment %}
+{% if previsualizacao %}
+<div class="previa">
+  {% if voltar_url %}<a class="previa-voltar" href="{{ voltar_url }}"><i class="bi bi-arrow-left" aria-hidden="true"></i> Voltar ao painel</a>{% endif %}
+  <span><i class="bi bi-eye" aria-hidden="true"></i> Prévia interna · a assinatura do cliente fica desativada</span>
+</div>
+{% endif %}
+
+<header class="capa">
+  <div class="marca">
+    <img src="{% static 'images/logoofi.png' %}" alt="Lazer &amp; Sport" width="132" height="44">
+    <div class="empresa">
+      <strong>{{ empresa_nome }}</strong>
+      <span>CNPJ: {{ empresa_cnpj }}</span>
+    </div>
+  </div>
+  <div class="titulo">
+    <span class="kicker">Comprovante de venda</span>
+    <h1>{% if venda.parcial %}Pagamento parcial registrado{% else %}Venda quitada{% endif %}</h1>
+    <dl class="meta">
+      <div class="meta-linha"><i class="bi bi-receipt" aria-hidden="true"></i><dt>Número</dt><dd>{{ venda.numero_documento }}</dd></div>
+      <div class="meta-linha"><i class="bi bi-calendar3" aria-hidden="true"></i><dt>Recebido em</dt><dd>{{ venda.recebida_em|date:"d/m/Y" }}</dd></div>
+      {% if documento %}<div class="meta-linha"><i class="bi bi-file-earmark-text" aria-hidden="true"></i><dt>{{ venda.get_origem_display }}</dt><dd>{{ documento.numero_documento }}</dd></div>{% endif %}
+      {% if venda.forma_pagamento %}<div class="meta-linha"><i class="bi bi-wallet2" aria-hidden="true"></i><dt>Pagamento</dt><dd>{{ venda.forma_pagamento }}</dd></div>{% endif %}
+    </dl>
+  </div>
+</header>
+
+<section class="bloco">
+  <h2 class="secao-titulo"><i class="bi bi-person-vcard" aria-hidden="true"></i>Cliente</h2>
+  <div class="cliente-grade">
+    <div class="cliente-linha"><b>Nome</b><span>{{ venda.destinatario }}</span></div>
+    {% if venda.cliente and venda.cliente.documento %}<div class="cliente-linha"><b>CPF/CNPJ</b><span>{{ venda.cliente.documento }}</span></div>{% endif %}
+    {% if documento.contato %}<div class="cliente-linha"><b>Contato</b><span>{{ documento.contato }}</span></div>{% endif %}
+  </div>
+</section>
+
+{% if itens %}
+<section class="bloco">
+  <h2 class="secao-titulo"><i class="bi bi-list-check" aria-hidden="true"></i>O que foi comprado</h2>
+  <div class="tabela-envolucro">
+    <table class="itens">
+      <caption class="so-leitor">Itens do {{ venda.get_origem_display|lower }} {{ documento.numero_documento }}</caption>
+      <thead>
+        <tr>
+          <th scope="col">Descrição</th>
+          <th scope="col" class="num">Qtd.</th>
+          <th scope="col" class="num">Valor unit.</th>
+          <th scope="col" class="num">Subtotal</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in itens %}
+        <tr>
+          <td class="desc">{{ item.descricao }}</td>
+          <td class="num">{{ item.quantidade }}</td>
+          <td class="num">R$ {{ item.valor_unitario|moeda }}</td>
+          <td class="num">R$ {{ item.subtotal|moeda }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+
+<section class="bloco valores">
+  <h2 class="secao-titulo"><i class="bi bi-cash-coin" aria-hidden="true"></i>Valores</h2>
+  <div class="valores-grade">
+    <div><span>Total do documento</span><strong>R$ {{ venda.valor_documento|moeda }}</strong></div>
+    <div class="destaque"><span>Pago nesta venda</span><strong>R$ {{ venda.valor|moeda }}</strong></div>
+    <div class="{% if saldo %}pendente{% else %}quitado{% endif %}">
+      <span>{% if saldo %}Saldo a pagar{% else %}Situação{% endif %}</span>
+      <strong>{% if saldo %}R$ {{ saldo|moeda }}{% else %}Quitado{% endif %}</strong>
+    </div>
+  </div>
+  {% if venda.observacao %}<p class="observacao">{{ venda.observacao }}</p>{% endif %}
+</section>
+
+{% if erro %}
+<div class="aviso ambar" role="alert">
+  <span class="aviso-icone"><i class="bi bi-exclamation-lg" aria-hidden="true"></i></span>
+  <span><strong>{{ erro }}</strong></span>
+</div>
+{% endif %}
+
+{% if aceite %}
+<section class="bloco assinatura assinado">
+  <span class="assinatura-selo"><i class="bi bi-patch-check-fill" aria-hidden="true"></i></span>
+  <h2>Comprovante assinado</h2>
+  <dl class="assinatura-dados">
+    <div><dt>Assinado por</dt><dd>{{ aceite.assinante_nome }}</dd></div>
+    <div><dt>Documento</dt><dd>{{ documento_assinante }}</dd></div>
+    <div><dt>Data</dt><dd>{{ aceite.assinado_em|date:"d/m/Y \à\s H:i" }}</dd></div>
+    <div><dt>Código de verificação</dt><dd class="codigo">{{ aceite.codigo_publico }}</dd></div>
+  </dl>
+  <p class="assinatura-nota">
+    O conteúdo assinado foi congelado em uma impressão digital
+    (<span class="codigo">{{ aceite.venda_hash|slice:":16" }}…</span>).
+    Guarde este link: ele é o seu recibo.
+  </p>
+</section>
+{% elif pode_assinar %}
+<section class="bloco assinatura">
+  <span class="assinatura-selo"><i class="bi bi-pen" aria-hidden="true"></i></span>
+  <h2>Assinar o comprovante</h2>
+  <p>
+    Confira os valores acima. Ao assinar, você confirma o pagamento
+    registrado e recebe um código de verificação — nossa equipe é avisada
+    na hora.
+  </p>
+  <form method="post" class="formulario">
+    {% csrf_token %}
+    <div class="campo">
+      <label for="nome-assinante">Seu nome completo</label>
+      <input id="nome-assinante" name="nome" maxlength="120" autocomplete="name"
+             value="{{ nome_tentado|default:'' }}" required>
+    </div>
+    <div class="campo">
+      <label for="documento-assinante">CPF ou CNPJ</label>
+      <input id="documento-assinante" name="documento_assinante" maxlength="18"
+             inputmode="numeric" value="{{ documento_tentado|default:'' }}" required>
+      <small>Guardamos apenas os números, para conferência.</small>
+    </div>
+    <label class="aceite">
+      <input type="checkbox" name="consentimento" value="1"
+             {% if consentimento_tentado %}checked{% endif %} required>
+      <span>
+        Confirmo o pagamento descrito neste comprovante e concordo com o
+        registro eletrônico da minha assinatura.
+      </span>
+    </label>
+    <button type="submit"><i class="bi bi-check-lg" aria-hidden="true"></i> Assinar comprovante</button>
+  </form>
+</section>
+{% endif %}
+
+<div class="ferramentas so-tela">
+  <span>Documento gerado em {{ venda.documento_emitido_em|date:"d/m/Y \à\s H:i"|default:"—" }}.</span>
+  <button class="imprimir" type="button" onclick="window.print()">
+    <i class="bi bi-printer" aria-hidden="true"></i> Imprimir ou salvar em PDF
+  </button>
+</div>
+
+<footer class="rodape">
+  <div class="rodape-empresa">
+    <strong>{{ empresa_nome }}</strong> · CNPJ {{ empresa_cnpj }}<br>
+    Brinquedos · Cenografia · Parques
+  </div>
+  <div class="rodape-contato">
+    {% if telefone_empresa %}<span><i class="bi bi-whatsapp" aria-hidden="true"></i>{{ telefone_empresa }}</span>{% endif %}
+    {% if email_empresa %}<span><i class="bi bi-envelope" aria-hidden="true"></i>{{ email_empresa }}</span>{% endif %}
+    {% if instagram_empresa %}<span><i class="bi bi-instagram" aria-hidden="true"></i>{{ instagram_empresa }}</span>{% endif %}
+  </div>
+</footer>
+
+</main>
+</body>
+</html>

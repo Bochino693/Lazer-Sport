@@ -14,14 +14,34 @@ Estes testes cruzam as duas: contam pela central de avisos e contam pela
 tela, e exigem o mesmo número.
 """
 
+from datetime import timedelta
 from decimal import Decimal
 
 from django.contrib.auth.models import User
 from django.test import TestCase, override_settings
+from django.utils import timezone
 
 from core.models import Pedido, Venda
 
 from .avisos import coletar
+from .models import ItemOrcamento, Orcamento, OrdemServico
+
+
+def _orcamento_pago(total, pago):
+    """Proposta aprovada com dinheiro registrado -- que é o que cria a venda."""
+    orcamento = Orcamento.objects.create(
+        nome_cliente="Buffet Alegria",
+        validade=timezone.localdate() + timedelta(days=5),
+        status=Orcamento.Status.APROVADO,
+    )
+    ItemOrcamento.objects.create(
+        orcamento=orcamento,
+        descricao="Cama elástica",
+        quantidade=1,
+        valor_unitario=total,
+    )
+    orcamento.registrar_pagamento(pago)
+    return orcamento
 
 
 @override_settings(ALLOWED_HOSTS=["interno.testserver", "testserver"])
@@ -98,37 +118,55 @@ class BolinhaETelaContamOMesmoTests(TestCase):
         self.assertContains(resposta, "São Paulo")
 
     # --------------------------------------------------------- vendas
+    #
+    # O CONTRATO MUDOU, E MUDOU DOS DOIS LADOS.
+    #
+    # A bolinha contava `core.Venda` não confirmada -- linhas que nada no
+    # sistema cria mais -- e a tela listava só a loja online, que é o
+    # menor dos três caminhos por onde esta empresa recebe. O acordo
+    # continua o mesmo ("a bolinha conta o que a tela mostra"), mas agora
+    # sobre o trabalho que existe de verdade: recebimento sem comprovante
+    # emitido.
     def test_a_tela_de_vendas_mostra_o_que_a_bolinha_conta(self):
-        for confirmado in (False, False, True):
-            Venda.objects.create(
-                valor_pago=Decimal("200.00"), confirmado=confirmado,
-            )
+        _orcamento_pago(Decimal("1000.00"), Decimal("400.00"))
+        _orcamento_pago(Decimal("800.00"), Decimal("200.00"))
+        documentada = _orcamento_pago(Decimal("500.00"), Decimal("500.00"))
+        documentada.vendas.first().emitir_documento()
 
         contado = self.quantidade_no_aviso("vendas")
-        listado = self.abrir(
-            "/vendas/inner/", filtro="a_confirmar",
-        ).context["page_obj"].paginator.count
+        listado = self.abrir("/vendas/inner/").context["a_documentar"]
 
         self.assertEqual(contado, 2)
-        self.assertEqual(listado, contado)
-
-    def test_vendas_abre_no_que_a_bolinha_conta(self):
         self.assertEqual(
-            self.abrir("/vendas/inner/").context["filtro_ativo"], "a_confirmar",
+            listado, contado,
+            "A bolinha e a tela precisam contar a mesma fila -- foi a "
+            "divergência entre as duas que fez o menu falar de uma tela "
+            "que mostrava outra coisa.",
         )
 
-    def test_a_tela_de_vendas_soma_o_que_ja_entrou(self):
+    def test_a_tela_de_vendas_soma_as_tres_origens(self):
+        """Proposta, ordem de serviço e loja entram no mesmo caixa."""
+        _orcamento_pago(Decimal("1000.00"), Decimal("400.00"))
+        OrdemServico.objects.create(
+            nome_cliente="Escola", equipamento="Tobogã",
+        ).registrar_pagamento(Decimal("100.50"))
         Venda.objects.create(valor_pago=Decimal("200.00"), confirmado=True)
-        Venda.objects.create(valor_pago=Decimal("300.50"), confirmado=True)
-        Venda.objects.create(valor_pago=Decimal("999.00"), confirmado=False)
 
         resposta = self.abrir("/vendas/inner/")
 
-        # A faixa de dinheiro soma só o que foi confirmado. A venda de
-        # 999 aparece na LISTA (é justamente a que espera confirmação),
-        # mas não pode entrar na conta de "já entrou".
-        self.assertEqual(resposta.context["valor_confirmado"], Decimal("500.50"))
-        self.assertContains(resposta, "500,50")
+        self.assertEqual(resposta.context["total_recebido"], Decimal("700.50"))
+        self.assertContains(resposta, "700,50")
+
+    def test_o_que_falta_receber_fica_fora_do_recebido(self):
+        """Saldo a receber é promessa; promessa não é caixa."""
+        _orcamento_pago(Decimal("1000.00"), Decimal("400.00"))
+
+        resposta = self.abrir("/vendas/inner/")
+
+        self.assertEqual(resposta.context["total_recebido"], Decimal("400.00"))
+        self.assertEqual(
+            resposta.context["a_receber"]["orcamentos"], Decimal("600.00")
+        )
 
     def test_nenhuma_das_duas_telas_le_a_central_antiga(self):
         """`CentralPedidos` e `CentralVendas` nunca receberam uma linha.

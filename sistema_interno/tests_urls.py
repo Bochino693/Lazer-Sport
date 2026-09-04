@@ -79,6 +79,9 @@ class TodasAsTelasAbremTests(TestCase):
             produto=ProdutoInterno.objects.create(nome="Cama elástica 3m"),
             quantidade=1,
         )
+        # Registrar pagamento é o que cria a venda -- é assim que ela
+        # nasce no sistema, e é assim que a varredura deve encontrá-la.
+        cls.venda = cls.orcamento.registrar_pagamento(Decimal("200.00"))
 
     def setUp(self):
         self.client.force_login(self.chefe)
@@ -91,6 +94,7 @@ class TodasAsTelasAbremTests(TestCase):
                 "dossie_cliente": self.cliente_cadastrado.pk,
                 "producao_ordem_detalhe": self.producao.pk,
                 "atualizar_etapa_producao": self.producao.pk,
+                "venda_previa_inner": self.venda.pk,
             }.get(nome_rota, 1)
         if parametro.endswith("token"):
             return "00000000-0000-0000-0000-000000000000"

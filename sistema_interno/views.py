@@ -37,6 +37,8 @@ from .models import (
     TipoMaterial,
 )
 from .context_processors import invalidar_avisos
+from . import financeiro as fin
+from . import vendas as servico_vendas
 from .permissoes import (
     AMBULANTE,
     CRIACAO,
@@ -1288,43 +1290,45 @@ class DashboardEstoqueView(EstoqueInternoRequiredMixin, View):
 # Agora as telas leem a MESMA tabela que o selo conta. `tests_pedidos.py`
 # compara os dois números e reprova se voltarem a divergir.
 class VendasView(FinanceiroInternoRequiredMixin, View):
-    POR_PAGINA = 30
+    """Todo o dinheiro que entrou, das três portas, numa tela só.
+
+    ANTES ELA MOSTRAVA UM TERÇO DA EMPRESA. Listava apenas as vendas da
+    loja online (`core.Venda`) -- e a loja é o menor dos três caminhos.
+    Uma proposta de R$ 20.000 paga no balcão e um serviço executado e
+    cobrado não apareciam em lugar nenhum: quem abria "Vendas" via um
+    número que não era o da empresa.
+
+    Agora as três origens chegam juntas -- orçamento, ordem de serviço e
+    loja --, cada uma com o seu registro, sem contar ninguém duas vezes
+    (ver `sistema_interno/vendas.py`). O gráfico é desenhado no servidor,
+    em CSS: a tela abre pronta, sem biblioteca e sem segunda requisição.
+    """
+
+    JANELAS = (6, 12, 24)
 
     def get(self, request):
-        consulta = (
-            Venda.objects
-            .select_related("pedido", "pedido__cliente__user")
-            .order_by("-criacao", "-id")
-        )
-        # Abre no que a bolinha conta, como em Pedidos: quem entra aqui
-        # quer ver o que ainda espera confirmação, não o histórico.
-        filtro = (request.GET.get("filtro") or "a_confirmar").strip()
-        if filtro == "a_confirmar":
-            consulta = consulta.filter(confirmado=False)
-        elif filtro == "confirmadas":
-            consulta = consulta.filter(confirmado=True)
+        try:
+            janela = int(request.GET.get("meses", 12))
+        except (TypeError, ValueError):
+            janela = 12
+        if janela not in self.JANELAS:
+            janela = 12
 
-        pagina = Paginator(consulta, self.POR_PAGINA).get_page(
-            request.GET.get("page")
-        )
+        meses = fin.janela_de_meses(janela)
+        linhas, teto = servico_vendas.serie_mensal(meses)
+        indicadores = servico_vendas.indicadores(meses[0])
+
         return render(request, "vendas_inner.html", {
-            "vendas": pagina.object_list,
-            "page_obj": pagina,
-            "total_registros": pagina.paginator.count,
-            "filtro_ativo": filtro,
-            "valor_confirmado": Venda.objects.filter(confirmado=True).aggregate(
-                soma=Sum("valor_pago"),
-            )["soma"] or Decimal("0.00"),
-            "cartoes": (
-                ("a_confirmar", "A confirmar",
-                 Venda.objects.filter(confirmado=False).count(),
-                 "bi-hourglass-split", "yellow", "É o que a bolinha conta"),
-                ("confirmadas", "Confirmadas",
-                 Venda.objects.filter(confirmado=True).count(),
-                 "bi-check2-circle", "green", "Toque para filtrar"),
-                ("todas", "Tudo", Venda.objects.count(),
-                 "bi-list-ul", "blue", "Toque para filtrar"),
-            ),
+            "janela": janela,
+            "janelas": self.JANELAS,
+            "inicio": meses[0],
+            "fim": meses[-1],
+            "serie": linhas,
+            "teto": teto,
+            "vendas": servico_vendas.ultimas(),
+            "a_receber": servico_vendas.em_aberto_por_documento(),
+            "a_documentar": servico_vendas.a_documentar().count(),
+            **indicadores,
         })
 
 

@@ -13,6 +13,7 @@ from .views_app_avisos import service_worker_do_site
 from sistema_interno.views_avisos_app import InscricaoDoAplicativoView
 from .views_orcamento import orcamento_publico
 from .views_ordem_servico import ordem_servico_publica
+from .views_venda import venda_publica
 from sistema_interno.views_campanhas import CampanhaPublicaDestinoView, CampanhaPublicaView
 from .views_redirects import redirecionar_interno
 from .sitemaps import (
@@ -381,6 +382,14 @@ urlpatterns = [
         "ordem-servico/<str:token>/",
         ordem_servico_publica,
         name="ordem_servico_publica",
+    ),
+    # Comprovante de venda: o cliente confere o que pagou e assina.
+    # Mesma regra dos dois acima -- antes do catch-all, e a chave é o
+    # token, nunca um id sequencial.
+    path(
+        "venda/<str:token>/",
+        venda_publica,
+        name="venda_publica",
     ),
 
     # O ÍCONE DA ABA, ANTES DO CURINGA.

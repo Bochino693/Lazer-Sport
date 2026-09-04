@@ -12,8 +12,6 @@ from django.db.models import Count, DecimalField, F, Sum, Value
 from django.db.models.functions import Coalesce, TruncMonth
 from django.utils import timezone
 
-from core.models import Venda
-
 from .models import (
     ComprasMensais,
     DespesasMensais,
@@ -83,14 +81,22 @@ def _somar_por_mes(queryset, campo_data, campo_valor):
 
 
 def montar_series(meses):
-    """Receita, despesa (despesas + compras) e lucro mês a mês."""
+    """Receita, despesa (despesas + compras) e lucro mês a mês.
+
+    A RECEITA DEIXOU DE SER SÓ A DA LOJA. Ela vinha apenas do
+    `core.Venda`, que é o pedido do site -- o menor dos três caminhos por
+    onde esta empresa recebe. Uma proposta de R$ 20.000 paga no balcão e
+    um serviço executado e cobrado não entravam em lugar nenhum, e o
+    gráfico mostrava uma empresa que não existe.
+
+    Agora as três origens vêm somadas de `sistema_interno/vendas.py`,
+    cada uma pelo seu registro e nenhuma contada duas vezes.
+    """
     inicio = meses[0]
 
-    receitas = _somar_por_mes(
-        Venda.objects.filter(confirmado=True, criacao__date__gte=inicio),
-        "criacao",
-        "valor_pago",
-    )
+    from . import vendas as servico_vendas
+
+    receitas = servico_vendas.receita_por_mes(inicio)
     despesas = _somar_por_mes(
         DespesasMensais.objects.filter(criacao__date__gte=inicio),
         "criacao",
@@ -290,22 +296,24 @@ def indicadores(serie):
 
 
 def _ticket_medio(serie):
+    """Valor médio de uma venda -- das três origens, como a receita.
+
+    Contava só os pedidos da loja, então o "ticket médio" da fábrica era
+    o ticket médio de quem compra peça pelo site: uma conta certa sobre o
+    conjunto errado.
+    """
     inicio = serie[0]["mes"] if serie else timezone.localdate()
 
-    resumo = Venda.objects.filter(
-        confirmado=True, criacao__date__gte=inicio,
-    ).aggregate(
-        total=Coalesce(
-            Sum("valor_pago"),
-            Value(ZERO, output_field=DecimalField(max_digits=14, decimal_places=2)),
-        ),
-        vendas=Count("id"),
-    )
+    from . import vendas as servico_vendas
 
-    if not resumo["vendas"]:
+    origens = servico_vendas.resumo_por_origem(inicio)
+    total = sum((linha["total"] for linha in origens), ZERO)
+    quantidade = sum(linha["quantidade"] for linha in origens)
+
+    if not quantidade:
         return ZERO
 
-    return _dinheiro(resumo["total"] / resumo["vendas"])
+    return _dinheiro(total / quantidade)
 
 
 def funil_de_orcamentos(inicio):

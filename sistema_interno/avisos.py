@@ -25,7 +25,7 @@ from django.db.models import Count, Max
 from django.urls import reverse
 from django.utils import timezone
 
-from core.models import Manutencao, Pedido, Venda
+from core.models import Manutencao, Pedido
 
 from .completude_clientes import filtro_incompletos
 from .models import (
@@ -499,12 +499,26 @@ def _operacao(acesso):
             ))
 
     if acesso["vendas_financeiro"]:
-        vendas = Venda.objects.filter(confirmado=False).count()
+        # A BOLINHA CONTA O QUE A TELA MOSTRA COMO TRABALHO.
+        #
+        # Ela contava `core.Venda` não confirmada -- linhas que nada no
+        # sistema cria mais, e que a tela de Vendas nem lista: o número do
+        # menu e o conteúdo da tela nunca falavam da mesma coisa.
+        #
+        # O que espera alguém hoje é o recebimento sem comprovante: o
+        # cliente pagou e não assinou nada. É um clique em "Gerar
+        # documento", e é o que a tela mostra no cartão "Sem documento".
+        from .vendas import a_documentar
+
+        vendas = a_documentar().count()
         if vendas:
             avisos.append(Aviso(
                 chave="vendas",
-                titulo="Venda a confirmar" if vendas == 1 else "Vendas a confirmar",
-                detalhe="Pagamento registrado, confirmação pendente.",
+                titulo=(
+                    "Venda sem comprovante" if vendas == 1
+                    else "Vendas sem comprovante"
+                ),
+                detalhe="Dinheiro recebido, documento ainda não emitido.",
                 quantidade=vendas,
                 url=reverse("vendas_inner", urlconf=URLCONF),
                 nivel="atencao",

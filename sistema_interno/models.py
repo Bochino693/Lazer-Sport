@@ -2016,8 +2016,18 @@ class Orcamento(Prime):
 
         return bool(alterado)
 
-    def registrar_pagamento(self, valor, observacao=""):
-        """Atualiza o recebido e deriva a situação sem aceitar saldo negativo."""
+    def registrar_pagamento(self, valor, observacao="", usuario=None):
+        """Atualiza o recebido, deriva a situação e registra a venda.
+
+        A VENDA NASCE AQUI, e não num segundo botão. `valor_pago` é um
+        acumulado: ele diz quanto falta e esquece quando cada pedaço
+        entrou -- com entrada em janeiro e o resto em abril, janeiro
+        ficava vazio no gráfico e abril recebia o valor inteiro. A venda
+        guarda a PARCELA, com data e origem (ver `sistema_interno/vendas.py`).
+
+        Registrar pagamento e registrar venda são o mesmo ato. Separá-los
+        em dois cliques garantiria que um dia só o primeiro aconteceria.
+        """
         valor = max(Decimal(valor or 0), Decimal("0.00")).quantize(Decimal("0.01"))
         self.valor_pago = valor
         self.observacao_pagamento = (observacao or "").strip()[:240]
@@ -2034,6 +2044,10 @@ class Orcamento(Prime):
             "valor_pago", "status_pagamento", "pago_em",
             "observacao_pagamento", "atualizado",
         ])
+
+        from .vendas import registrar_parcela
+
+        return registrar_parcela(self, usuario=usuario, observacao=observacao)
 
     def registrar_resposta(self, aprovado, nome="", motivo=""):
         """Grava a decisão do cliente vinda da página pública."""
@@ -3037,7 +3051,13 @@ class OrdemServico(Prime):
         self.save(update_fields=alterados)
         return True
 
-    def registrar_pagamento(self, valor, observacao=""):
+    def registrar_pagamento(self, valor, observacao="", usuario=None):
+        """Mesma regra do orçamento: o recebido vira uma venda com data.
+
+        Sem isto, o serviço executado e pago no balcão entrava no
+        financeiro como se fosse do dia em que alguém abriu a O.S. pela
+        última vez -- ou não entrava.
+        """
         valor = max(Decimal(valor or 0), Decimal("0.00")).quantize(Decimal("0.01"))
         self.valor_pago = valor
         self.observacao_pagamento = (observacao or "").strip()[:240]
@@ -3054,6 +3074,10 @@ class OrdemServico(Prime):
             "valor_pago", "status_pagamento", "pago_em",
             "observacao_pagamento", "atualizado",
         ])
+
+        from .vendas import registrar_parcela
+
+        return registrar_parcela(self, usuario=usuario, observacao=observacao)
 
     def __str__(self):
         return f"{self.numero_documento} — {self.destinatario}"
@@ -3676,3 +3700,245 @@ class EmailIdentidade(models.Model):
 
     def __str__(self):
         return f"{self.email} ({self.get_escopo_display()})"
+
+
+# ======================================================================
+# VENDAS — o dinheiro que entrou, com data, origem e comprovante
+# ======================================================================
+def gerar_token_venda():
+    """Mesma força do token da proposta: a página é aberta por quem tem o link."""
+    return "".join(
+        secrets.choice(ALFABETO_DO_TOKEN) for _ in range(TAMANHO_DO_TOKEN)
+    )
+
+
+class Venda(Prime):
+    """Uma parcela recebida, registrada como venda.
+
+    POR QUE ELA EXISTE. O orçamento e a ordem de serviço guardam quanto
+    já foi recebido -- um número que vai sendo SOBRESCRITO a cada
+    pagamento. Isso responde "quanto falta", e só. Não responde "quanto
+    entrou em março", que é a pergunta do financeiro: uma proposta de
+    R$ 20.000 com entrada em janeiro e o resto em abril aparecia como um
+    valor só, na data da última mexida, e o gráfico do mês mentia.
+
+    Cada linha aqui é uma ENTRADA de dinheiro: valor, data, origem e de
+    qual documento veio. É o que permite somar receita por mês sem
+    contar duas vezes e sem inventar data.
+
+    NASCE SOZINHA. Quem cria é o próprio `registrar_pagamento` do
+    documento de origem (ver `sistema_interno/vendas.py`): registrar
+    pagamento e registrar venda são o mesmo ato, e separar os dois em
+    dois cliques garantiria que um dia só o primeiro aconteceria.
+
+    O DOCUMENTO É OUTRA COISA, E É OPCIONAL. A venda existe assim que o
+    dinheiro entra; o documento assinado pelo cliente é emitido quando a
+    equipe quer o comprovante -- e é ele que carrega o token público e a
+    assinatura eletrônica.
+    """
+
+    class Origem(models.TextChoices):
+        ORCAMENTO = "orcamento", "Orçamento"
+        ORDEM_SERVICO = "ordem_servico", "Ordem de serviço"
+        LOJA = "loja", "Pedido da loja"
+
+    class Situacao(models.TextChoices):
+        REGISTRADA = "registrada", "Registrada"
+        DOCUMENTO_EMITIDO = "documento", "Documento emitido"
+        ASSINADA = "assinada", "Assinada pelo cliente"
+        CANCELADA = "cancelada", "Cancelada"
+
+    origem = models.CharField(
+        max_length=16,
+        choices=Origem.choices,
+        default=Origem.ORCAMENTO,
+        db_index=True,
+    )
+    orcamento = models.ForeignKey(
+        Orcamento,
+        on_delete=models.PROTECT,
+        related_name="vendas",
+        null=True,
+        blank=True,
+    )
+    ordem_servico = models.ForeignKey(
+        "OrdemServico",
+        on_delete=models.PROTECT,
+        related_name="vendas",
+        null=True,
+        blank=True,
+    )
+    cliente = models.ForeignKey(
+        Cliente,
+        on_delete=models.SET_NULL,
+        related_name="vendas",
+        null=True,
+        blank=True,
+    )
+    #: Nome de quem comprou, congelado no dia. O cadastro do cliente pode
+    #: mudar de nome depois; o comprovante não.
+    nome_cliente = models.CharField(max_length=120, blank=True)
+
+    valor = models.DecimalField(
+        "Valor desta venda",
+        max_digits=12,
+        decimal_places=2,
+        default=Decimal("0.00"),
+    )
+    #: Total do documento de origem no momento da venda. É o que permite
+    #: dizer "R$ 5.000 de R$ 20.000" sem consultar o orçamento de novo --
+    #: e continuar dizendo a verdade se a proposta for refeita depois.
+    valor_documento = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=Decimal("0.00"),
+    )
+    forma_pagamento = models.CharField(max_length=120, blank=True)
+    observacao = models.CharField(max_length=240, blank=True)
+
+    #: Quando o dinheiro entrou. Separado de `criacao` porque a venda do
+    #: histórico foi criada hoje e recebida em outro mês.
+    recebida_em = models.DateTimeField(default=timezone.now, db_index=True)
+
+    situacao = models.CharField(
+        max_length=12,
+        choices=Situacao.choices,
+        default=Situacao.REGISTRADA,
+        db_index=True,
+    )
+    token = models.CharField(
+        max_length=64,
+        unique=True,
+        default=gerar_token_venda,
+        editable=False,
+        db_index=True,
+        help_text="Chave do documento que o cliente abre e assina.",
+    )
+    documento_emitido_em = models.DateTimeField(null=True, blank=True)
+    registrada_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name="vendas_registradas",
+        null=True,
+        blank=True,
+    )
+
+    class Meta:
+        verbose_name = "Venda"
+        verbose_name_plural = "Vendas"
+        ordering = ("-recebida_em", "-id")
+        indexes = [
+            models.Index(
+                fields=("origem", "recebida_em"),
+                name="venda_origem_data_idx",
+            ),
+        ]
+
+    # ------------------------------------------------------------ leitura
+    @property
+    def documento_de_origem(self):
+        return self.orcamento or self.ordem_servico
+
+    @property
+    def destinatario(self):
+        if self.nome_cliente:
+            return self.nome_cliente
+        documento = self.documento_de_origem
+        if documento:
+            return documento.destinatario
+        return "Cliente Lazer & Sport"
+
+    @property
+    def numero_documento(self):
+        ano = self.recebida_em.year if self.recebida_em else timezone.localdate().year
+        return f"VD-{(self.pk or 0):05d}/{ano}"
+
+    @property
+    def parcial(self):
+        """Esta venda cobre o documento inteiro ou só um pedaço dele?"""
+        return bool(self.valor_documento) and self.valor < self.valor_documento
+
+    @property
+    def assinada(self):
+        return hasattr(self, "aceite_eletronico")
+
+    @property
+    def documento_emitido(self):
+        return bool(self.documento_emitido_em)
+
+    @property
+    def itens_do_documento(self):
+        documento = self.documento_de_origem
+        return list(documento.itens.all()) if documento else []
+
+    @property
+    def caminho_publico(self):
+        """Caminho da página do cliente, sem domínio.
+
+        `urlconf` na mão pelo mesmo motivo do orçamento: no subdomínio
+        interno o middleware troca o urlconf do request, e a rota pública
+        mora no urlconf raiz.
+        """
+        from django.urls import reverse
+
+        return reverse(
+            "venda_publica",
+            args=[self.token],
+            urlconf=settings.ROOT_URLCONF,
+        )
+
+    def __str__(self):
+        return f"{self.numero_documento} — {self.destinatario}"
+
+    # ------------------------------------------------------------ escrita
+    def emitir_documento(self):
+        """Marca que o comprovante foi emitido para o cliente assinar."""
+        if self.situacao == self.Situacao.REGISTRADA:
+            self.situacao = self.Situacao.DOCUMENTO_EMITIDO
+        if not self.documento_emitido_em:
+            self.documento_emitido_em = timezone.now()
+        self.save(update_fields=["situacao", "documento_emitido_em", "atualizado"])
+        return self
+
+    def marcar_assinada(self):
+        self.situacao = self.Situacao.ASSINADA
+        self.save(update_fields=["situacao", "atualizado"])
+        return self
+
+
+class AceiteVenda(models.Model):
+    """Prova imutável da assinatura do comprovante de venda.
+
+    Mesma trilha do aceite da proposta (ver `AceiteOrcamento`): guarda o
+    nome, a chave do documento informado e HMACs do contexto -- nunca IP
+    ou navegador em texto. O `venda_hash` congela o conteúdo assinado:
+    se alguém mexer no documento depois, a conferência acusa.
+    """
+
+    venda = models.OneToOneField(
+        Venda,
+        on_delete=models.PROTECT,
+        related_name="aceite_eletronico",
+    )
+    codigo_publico = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    assinante_nome = models.CharField(max_length=120)
+    assinante_documento = models.CharField(max_length=14)
+    consentimento = models.BooleanField(default=True)
+    venda_hash = models.CharField(max_length=64)
+    ip_hash = models.CharField(max_length=64)
+    navegador_hash = models.CharField(max_length=64)
+    termos_versao = models.CharField(max_length=20, default="2026-08")
+    assinado_em = models.DateTimeField(auto_now_add=True)
+
+    def save(self, *args, **kwargs):
+        if self.pk and type(self).objects.filter(pk=self.pk).exists():
+            raise ValueError("O comprovante de assinatura é imutável.")
+        return super().save(*args, **kwargs)
+
+    class Meta:
+        verbose_name = "Assinatura de venda"
+        verbose_name_plural = "Assinaturas de vendas"
+        ordering = ("-assinado_em",)
+
+    def __str__(self):
+        return f"Assinatura {self.codigo_publico}"

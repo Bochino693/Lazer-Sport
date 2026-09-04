@@ -66,6 +66,7 @@ from .views_gestao import (
     OrdemProducaoDetalheView,
     OrdensProducaoView,
     ProdutosProducaoView,
+    VendaPreviaInnerView,
 )
 from .views_site import LinkSitePublicoView
 from .views_ordens_servico import (
@@ -274,6 +275,13 @@ urlpatterns = [
 
     # ---------------- demais telas ----------------
     path('vendas/inner/', VendasView.as_view(), name='vendas_inner'),
+    # O comprovante de venda visto por dentro: mesma folha que vai ao
+    # cliente, com a assinatura desativada. Serve para conferir e imprimir.
+    path(
+        'vendas/<int:pk>/documento/',
+        VendaPreviaInnerView.as_view(),
+        name='venda_previa_inner',
+    ),
     path('pedidos/inner/', PedidosView.as_view(), name='pedidos_inner'),
     path('manutencoes/inner/', ManutencaoInnerView.as_view(), name='manutencao_inner'),
 ]

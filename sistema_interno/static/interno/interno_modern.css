@@ -1218,6 +1218,20 @@ textarea.form-control{min-height:100px!important}
 .ls-bar.receita{background:linear-gradient(180deg,var(--green),var(--green-2))}
 .ls-bar.saida{background:linear-gradient(180deg,var(--red-brilho),var(--red))}
 .ls-bar-col:hover .ls-bar{filter:brightness(1.18)}
+
+/* ---- barra empilhada: quanto entrou, e de onde veio ----
+   A barra é o mês; as fatias, as origens. Empilhar mantém a leitura na
+   ordem em que a pergunta é feita -- primeiro o total do mês, depois a
+   composição. `flex-direction:column-reverse` faz a primeira fatia da
+   lista nascer embaixo, na mesma ordem da legenda. */
+.ls-bar-empilhada{
+  display:flex;flex-direction:column-reverse;overflow:hidden;
+  background:var(--acento-fundo-2);
+}
+.ls-bar-fatia{display:block;width:100%;min-height:2px}
+.ls-bar-fatia.origem-orcamento,.ls-dot.origem-orcamento{background:var(--green)}
+.ls-bar-fatia.origem-ordem_servico,.ls-dot.origem-ordem_servico{background:var(--acento)}
+.ls-bar-fatia.origem-loja,.ls-dot.origem-loja{background:var(--info)}
 .ls-bar-label{
   color:var(--muted);font-size:.72rem;font-weight:900;text-align:center;
   text-transform:uppercase;letter-spacing:.04em;
